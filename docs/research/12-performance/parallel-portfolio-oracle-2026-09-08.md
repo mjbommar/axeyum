@@ -242,10 +242,15 @@ covers them, and it had reached 35 of that division's 58 files.
 | QF_BV | 6 | 0 | 6 | **0** | 6 |
 | QF_LRA | 54 | 5 | 49 | **0** | 49 |
 | QF_NIA (files 32-61) | 30 | 3 | 27 | **0** | 27 |
+| QF_IDL | 54 | 38 | 16 | **7** | 9 |
+| QF_LIA | 27 | 5 | 22 | **6** | 16 |
+| QF_NIA (1-31) | 61 | 3 | 58 | **0** | 58 |
+| QF_RDL | 47 | 37 | 10 | **3** | 7 |
+| QF_SLIA | 7 | 0 | 7 | **1** | 6 |
 | QF_UF | 38 | 35 | 3 | **0** | 3 |
 | QF_UFLIA | 58 | 11 | 47 | **6** | 41 |
 | UF | 32 | 0 | 32 | **0** | 32 |
-| **total** | **237** | **61** | **176** | **8** | **168** |
+| **total (all 11 divisions)** | **403** | **141** | **262** | **25** | **237** |
 
 `QF_NIA`'s second half is worth its own line: three files *are* decided alone
 there, and all three are files **the ladder already wins**. They never were
@@ -270,24 +275,73 @@ same computation through different doors, not four arms.
 
 ### The band that decides it
 
-From the **solo** arm, over the seven divisions where it is complete — 176
+From the **solo** arm, now complete for **all eleven divisions** — 262
 ladder-losing files:
 
 ```
 fastest route that decides ALONE, on files the ladder loses:
-  under 1 s (a reserve reaches it)                       7
-  6 s to 24 s (MIDDLE BAND: only a portfolio)            1
-  over 24 s (neither reaches it)                         1
-  no route decides alone at all                        168
+  under 1 s (a reserve reaches it)                      12
+  1 s to 6 s (a reserve reaches it)                      5
+  6 s to 24 s (MIDDLE BAND: only a portfolio)            8
+  over 24 s (neither reaches it)                         2
+  no route decides alone at all                        237
 ```
 
-**One file in 176 is in the band only a portfolio serves** — 0.6%. That, not the
-count of prizes, is what the decision turns on.
+**Eight files are in the band only a portfolio serves, and seven of the eight
+reproduce.** That, not the count of prizes, is what the decision turns on — and
+it is the number that reverses this note's earlier answer.
 
 Note what the other seven prizes are. Five are `euf-online` at 1–10 ms, which is
 the `check_auto` normalization defect below and not a scheduling problem at all;
 two are `qf-bv` at 567 ms and 611 ms, which a one-second reserve reaches. **Only
 one of the eight is a file a portfolio would win and a reserve would not.**
+
+### Every middle-band file, reproduction-tested
+
+Eight files, two extra runs each at the competition budget, verdicts checked
+against the census. **Seven of eight reproduce.**
+
+| division | file | route | sweep | run a | run b | ref | |
+|---|---|---|---:|---:|---:|---|---|
+| QF_UFLIA | `hash_sat_08_05` | `uflia-online` | 18,380 | 18,173 | 18,885 | sat | **confirmed** (3 runs) |
+| QF_RDL | `fischer6-mutex-17` | `datatype-elim` | 15,349 | 18,856 | 17,978 | unsat | **confirmed** |
+| QF_RDL | `orb06_900` | `datatype-native` | 14,941 | 14,803 | 14,281 | unsat | **confirmed** |
+| QF_IDL | `super_queen61-1` | `nra` | 13,690 | 17,228 | 17,167 | sat | **confirmed** |
+| QF_IDL | `super_queen83-1` | `nra` | 10,125 | 14,491 | 14,573 | sat | **confirmed** |
+| QF_LIA | `182-incremental_scheduling…` | `nra` | 8,681 | 16,845 | 16,837 | sat | **confirmed** |
+| QF_IDL | `queen42-1` | `nra` | 10,741 | 23,000 | 19,240 | sat | confirmed, **marginal** (96% of budget) |
+| QF_RDL | `fischer9-mutex-12` | `uf-arithmetic` | 17,285 | 24,065 | 24,137 | — | **refuted** |
+
+Two things to carry with the number. Run-to-run cost moves by up to 2x
+(`182-incremental_scheduling` 8.7 s → 16.8 s; `super_queen83-1` 10.1 s →
+14.5 s), so an arm at 19 s of a 24 s budget will flip under contention —
+`queen42-1` is already at 96%. And `orb06_900` is the file the *probe* nominated
+via `dl-online` and that route was refuted at 33-34 s; the solo arm finds a
+**different** route deciding it in 14.5 s. Running both instruments is what
+found it.
+
+### The four divisions I extrapolated over, and why that was wrong
+
+An earlier revision of this note reported **one** middle-band file in 176 and
+recommended not building the portfolio. That was measured over seven divisions,
+with `QF_IDL`, `QF_LIA`, `QF_RDL` and half of `QF_NIA` still running. The
+reasoning for not waiting was: *their probe arms returned 0, 1 and 0 candidates,
+and their nearest finished analogues returned zero prizes, so a surprise is
+possible but not expected.*
+
+**Six of the eight middle-band files were in those four divisions.**
+
+The error is not the extrapolation's arithmetic, it is its instrument. The
+section above this one establishes that the probe arm **cannot establish a
+prize** — and I then used its candidate counts as a *predictor* of solo-arm
+prizes. A measurement retired as an oracle two sections earlier does not become
+a forecaster; if it had predictive power over the quantity it cannot measure,
+that would itself need showing. `QF_IDL` returned 0 probe candidates and 7 solo
+prizes.
+
+The general form, since this repository collects these: **an instrument you have
+just shown to be invalid for a quantity is not evidence about that quantity in
+any direction, including "probably nothing there".**
 
 ### The probe's middle-band candidates, and why none of them survived
 
@@ -372,9 +426,10 @@ prober — can, and that is the arm whose band table is above.
 So each of the probe's middle-band candidates was an artifact of measuring a
 route under a budget it will never be given.
 
-### One confirmed middle-band file, found by the right instrument
+### The first confirmed middle-band file, and the mechanism in one picture
 
-The solo prober then produced one, and it survives every check:
+The solo prober produced this one first, and it survives every check — the other
+six are in the reproduction table above:
 
 `QF_UFLIA/mathsat/Hash/hash_sat_08_05.smt2` is `unknown` at 24 s and `unknown`
 at 120 s. `uflia-online`, run **alone at the 24 s competition budget**, decides
@@ -392,11 +447,10 @@ definition of the band only a portfolio reaches. This one is not an artifact of
 an enlarged budget — it was measured at the budget that counts, by the
 instrument that runs one route and nothing else, and it reproduces.
 
-**So the middle band is not empty. It has one confirmed member in the roughly
-330 files measured**, and the earlier "empty" reading in this note is corrected
-by it. The recommendation below does not change — one file does not pay for a
-concurrent dispatcher — but the mechanism is real rather than theoretical, and
-the honest form of the negative is *"one confirmed case in 330"*, not *"none"*.
+**So the middle band is not empty**, and the earlier "empty" reading in this
+note is corrected by it. It was the first of seven confirmed members; at the
+time it was the only one, and this section is kept in that order because the
+mechanism reads most clearly on a single file.
 
 And the ladder's own trail on it is the mechanism in one picture:
 
@@ -423,10 +477,11 @@ that wins other files. Two cores serve both trivially. That is the portfolio's
 case, demonstrated rather than argued.
 
 This file came out of `QF_UFLIA` — a division whose ladder happens to contain
-two eighteen-second routes. When it was found, that sweep had covered 35 of 58
-files, and finishing it was the cheapest thing that could have changed this
-note's answer. **It is now complete at 58 of 58, and files 36–58 added no second
-member of the band.** One in 176 is the number.
+two eighteen-second routes. `QF_UFLIA` is now complete at 58 of 58 and files
+36–58 added no second member of the band; the other six came from `QF_IDL`,
+`QF_LIA` and `QF_RDL`, which had not been measured when this section was
+written. The same shape holds on all of them: a route wanting 14–19 s of a 24 s
+clock, queued behind one that takes most of it.
 
 ## Neither instrument confirms a prize on its own, and the first two did not survive
 
@@ -606,31 +661,41 @@ That band is, in this population, close to empty — and the two ends explain wh
   87.2 s, 94.5 s, 107.0 s of a single route's own time. No arm of a 24 s
   portfolio reaches any of them. They need a faster route.
 
-That band is, in this population, nearly empty — **one confirmed member in
-roughly 330 files measured** (`hash_sat_08_05.smt2`, above) — and the two ends
-explain why the rest is not in it.
+That band holds **eight of the 262 files the ladder loses, seven of which
+reproduce** — 2.7%. Over the whole 403-file competition population that is seven
+more benchmarks solved, from routes the system already has.
 
-So the recommendation is **do not build the portfolio yet**, and the reason is
-not the one the 2026-09-07 sweep gave. That sweep said parallelism cannot help
-because the binder already holds the clock; that is refuted — on
-`hash_sat_08_05` there are two routes each wanting 18 s of one 24 s clock, and
-handing the binder more cores is exactly what would help. The measured reason to
-wait is narrower and honest: **the band a portfolio uniquely serves has one
-confirmed member in 176 ladder-losing files with complete solo coverage — 0.6%,
-and the sweep that found it has since finished without producing a second.**
-One file does not pay for a concurrent dispatcher.
+So the recommendation is **build it**, and the 2026-09-07 negative is refuted on
+its own terms. That sweep said parallelism cannot help because the binder
+already holds the clock. On `hash_sat_08_05` two routes each want 18 s of one
+24 s clock; on `orb06_900`, `fischer6-mutex-17` and the three
+`queen`/`super_queen` files a route wanting 14–19 s never gets a turn. Handing
+the binder more cores is exactly what helps.
+
+Scope it small. The arms are few — median 2–3 distinct real routes per file, and
+the "four deciders" on a file are usually one computation behind four entry
+points — so **two or three workers** covers every case measured here, which is
+also what the memory ceiling allows (a competition limit is per solver, and one
+file already aborts at 8 GiB with a single arm). Five of the seven live in
+`QF_IDL`, `QF_LIA` and `QF_RDL`, so a policy fusing one contiguous group in the
+arithmetic ladders collects most of the prize.
+
+Two qualifications to carry with the number. Run-to-run arm cost moves by up to
+2x, and an arm at 19 s of a 24 s budget flips under contention — `queen42-1` is
+already at 96% — so call the expected yield **five to seven files, not eight**.
+And a portfolio does nothing for the 237 files no route decides alone; those
+need better routes, which remains the larger prize.
 
 What to do next, in the order the measurements support it:
 
-0. **Finish the four remaining solo sweeps** — `QF_IDL`, `QF_RDL`, `QF_LIA` and
-   `QF_NIA`'s first half (`scripts/route-solo-slot.sh`; partial progress logs
-   are committed, collection is two `scp` lines in the artifact README). They
-   are the only measurement that can still move the band count. Their probe arms
-   returned 0, 1 and 0 candidates respectively, and their nearest finished
-   analogues (`QF_LRA`, `QF_NIA`'s second half) returned zero prizes between
-   them, so a surprise there is possible but not expected.
+0. **Build the portfolio**, two or three arms, as a fused contiguous group in
+   the policy described below — the sequential path stays the default and stays
+   byte-identical with one worker. Gate it on the seven files above as a
+   regression set, and on the cross-route soundness check
+   (`scripts/route-solo-sweep.py` exits 2 on a disagreement, 3 on a verdict that
+   contradicts the reference).
 
-These three are worth more per hour than a concurrent dispatcher regardless:
+These three are worth at least as much per hour, and two of them are cheaper:
 
 1. **Clamp `dispatch_abv_online`.** It is the only dispatch site of its kind
    that passes `config` through unmodified, it costs nine QF_ABV files their
