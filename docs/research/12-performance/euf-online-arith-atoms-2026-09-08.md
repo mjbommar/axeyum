@@ -198,6 +198,35 @@ file in this population.
 under it. The bounds are insurance against a query outside this population, and
 this note says so rather than implying a fit.
 
+### The neighbour division, and the reading I nearly published
+
+`QF_UF` is the division this route owns, so a change to its encoder has to be
+measured there too. First run, 200-file committed parity list:
+
+| arm | decided / 200 |
+|---|---:|
+| `refuse` (s7, cores 0–7) | 195 |
+| `sliced` (s5, cores 8–15, **beside another sweep on cores 0–7**) | 192 |
+
+**−3 — and it is entirely the host placement.** The three files
+(`gensys_brn838`, `gensys_icl591`, `iso_brn_nogen005`) are ones `euf-online`
+decides at **21.2 s of a 24 s budget**; on the busier host it ran out of clock.
+The counter is what settles it rather than an argument: on all 198 `QF_UF`
+queries the route was entered on, `abstracted_queries=0`. Nothing was abstracted,
+so `route_timeout` returned the caller's timeout unchanged and **the two arms ran
+identical code**.
+
+Re-run of the `sliced` arm on the SAME host and the SAME cores as the baseline:
+
+| arm | decided / 200 | vs `refuse` |
+|---|---:|---|
+| `refuse` (s7, cores 0–7) | 195 | baseline |
+| `sliced` (s7, cores 0–7) | **195** | **+0 / −0** |
+
+Both runs are committed (`QF_UF.sliced.tsv` is the confounded one and is labelled
+as such), because a measurement that moved for a reason other than the change is
+worth more in the record than out of it.
+
 ### Reference frame
 
 Hosts were **not** idle and this is not a timing claim. `s4` (this worktree)

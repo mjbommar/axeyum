@@ -1,0 +1,14 @@
+files: 200
+  QF_UF.refuse             decided 195/200
+  QF_UF.sliced             decided 192/200
+
+QF_UF.sliced vs QF_UF.refuse: +0 / -3
+  LOST   gensys_brn838.smt2	was unsat (decided_by=euf-online) -> unsolved (bound_by=, euf_online=declined@23997ms)
+  LOST   gensys_icl591.smt2	was unsat (decided_by=euf-online) -> unsolved (bound_by=, euf_online=declined@24000ms)
+  LOST   iso_brn_nogen005.smt2	was sat (decided_by=euf-online) -> unsolved (bound_by=, euf_online=declined@21485ms)
+
+QF_UF.refuse: euf-online decided 191 files; its own cost min=0ms median=69ms max=21274ms
+QF_UF.refuse: euf-online declined 8 files after min=1ms median=23841ms max=24004ms
+
+QF_UF.sliced: euf-online decided 188 files; its own cost min=0ms median=98ms max=21175ms
+QF_UF.sliced: euf-online declined 11 files after min=1ms median=23755ms max=24056ms

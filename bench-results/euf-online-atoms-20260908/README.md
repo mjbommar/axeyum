@@ -26,6 +26,10 @@ not "does it fix the five" but **what it does to the whole division**.
   Columns: `file`, `verdict`, `wall_ms`, `euf_online_outcome`, `euf_online_ms`,
   `decided_by`, `bound_by`, `atoms_line`.
 - `compare.txt` — `scripts/euf-online-atoms-compare.py` over the three.
+- `QF_UF.refuse.tsv` / `QF_UF.sliced2.tsv` — the neighbour division, both arms on
+  the SAME host and cores. `compare-QF_UF.txt`.
+- `QF_UF.sliced.tsv` — **a confounded first run, kept deliberately.**
+  `compare-QF_UF-confounded.txt`.
 
 ## Result
 
@@ -44,6 +48,26 @@ loss; it exited 0).
 `sliced` and `whole` decide the same set, so the budget slice costs nothing on
 this population — which is the finding that lets it ship as the default rather
 than as the arm that has to be justified.
+
+## The neighbour division, and a −3 that was the host
+
+`QF_UF` is the division this route owns. First run: `refuse` 195/200 (s7, cores
+0–7), `sliced` **192**/200 (s5, cores 8–15, beside another sweep on cores 0–7).
+
+The three files (`gensys_brn838`, `gensys_icl591`, `iso_brn_nogen005`) are ones
+`euf-online` decides at ~21.2 s of a 24 s budget, so a busier host loses them.
+**The counter settles it rather than an argument**: on all 198 `QF_UF` queries the
+route was entered on, `abstracted_queries=0` — nothing was abstracted, so
+`route_timeout` returned the caller's timeout unchanged and the two arms executed
+identical code.
+
+Re-run of `sliced` on the SAME host and cores as the baseline: **195/200,
++0 / −0** (`compare-QF_UF.txt`, exit 0).
+
+The confounded run is committed as `QF_UF.sliced.tsv` and labelled here rather
+than deleted: a measurement that moved for a reason other than the change is
+worth more in the record than out of it, and this one is the reason the matched
+re-run exists.
 
 ### What the abstraction costs
 

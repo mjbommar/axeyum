@@ -86,6 +86,11 @@ struct Route {
 /// literals at ~85 recording sites, with no registry to read. So the coverage
 /// claim here is exactly "these routes", never "every route", and a name absent
 /// from this table is untested rather than shown irrelevant.
+// A flat table of route entry points, one `Route` literal per line group. It is
+// long because the dispatcher has many routes, and splitting it would put half
+// the table somewhere a reader looking for "is my route here?" would not find
+// — which is the exact question this file exists to answer.
+#[allow(clippy::too_many_lines)]
 fn routes() -> Vec<Route> {
     vec![
         Route {
@@ -326,16 +331,13 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    match worker.join() {
-        Ok((verdict, wall_ms, detail)) => {
-            println!("{name}\t{verdict}\t{wall_ms}\t{detail}");
-            ExitCode::SUCCESS
-        }
-        Err(_) => {
-            // A panic is a real answer about this route on this file, and one a
-            // portfolio arm would have to survive; it is never silence.
-            println!("{name}\tpanic\t0\t");
-            ExitCode::FAILURE
-        }
+    if let Ok((verdict, wall_ms, detail)) = worker.join() {
+        println!("{name}\t{verdict}\t{wall_ms}\t{detail}");
+        ExitCode::SUCCESS
+    } else {
+        // A panic is a real answer about this route on this file, and one a
+        // portfolio arm would have to survive; it is never silence.
+        println!("{name}\tpanic\t0\t");
+        ExitCode::FAILURE
     }
 }
