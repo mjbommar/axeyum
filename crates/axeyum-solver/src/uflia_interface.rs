@@ -650,6 +650,46 @@ mod tests {
         );
     }
 
+    /// The care graph pairs CORRESPONDING argument positions, not any two
+    /// arguments of two applications: `f(a, b)` and `f(c, d)` give `(a, c)` and
+    /// `(b, d)`, never `(a, d)` or `(b, c)`.
+    ///
+    /// Written from the mutation battery, which found that reversing the
+    /// position zip killed nothing — every other care-graph test used a UNARY
+    /// function, where reversal is the identity. A congruence fires only when
+    /// EVERY position agrees, so a graph that proposes a cross-position
+    /// equality is proposing a split that can never fire one.
+    #[test]
+    fn care_pairs_are_position_wise_not_any_two_arguments() {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("f", &[Sort::Int, Sort::Int], Sort::Int)
+            .expect("f");
+        let arg_a = int(&mut arena, "a");
+        let arg_b = int(&mut arena, "b");
+        let arg_c = int(&mut arena, "c");
+        let arg_d = int(&mut arena, "d");
+        let fab = arena.apply(f, &[arg_a, arg_b]).expect("f(a,b)");
+        let fcd = arena.apply(f, &[arg_c, arg_d]).expect("f(c,d)");
+        let root = sum(&mut arena, &[fab, fcd]);
+
+        let care = care_graph_pairs(&arena, &[root]);
+        let key = |x: TermId, y: TermId| if x < y { (x, y) } else { (y, x) };
+        assert!(
+            care.contains(&key(arg_a, arg_c)),
+            "position 0 pairs with position 0"
+        );
+        assert!(
+            care.contains(&key(arg_b, arg_d)),
+            "position 1 pairs with position 1"
+        );
+        assert!(
+            !care.contains(&key(arg_a, arg_d)) && !care.contains(&key(arg_b, arg_c)),
+            "a cross-position pair can never fire a congruence: {care:?}"
+        );
+        assert_eq!(care.len(), 2);
+    }
+
     /// Two applications at DIFFERENT arities cannot be congruent, so they share
     /// no care pair. A `zip` over the shorter tuple would silently pair position
     /// 0 of a unary application with position 0 of a binary one.
@@ -770,6 +810,73 @@ mod tests {
                 "`c` is in no application, so no congruence can fire on it"
             );
         }
+    }
+
+    /// The filter is APPLIED by [`apply_interface_policy`], not merely
+    /// available: on a proposal whose all-pairs set is over the ceiling but
+    /// whose care set is under it, `care` admits and `all` declines.
+    ///
+    /// This test exists because the mutation battery found nothing else pinning
+    /// it — making `UfliaInterfacePolicy::filters` return `false` for every arm
+    /// killed no test at all, because every other test either calls
+    /// `care_graph_pairs` directly or exercises a proposal the filter cannot
+    /// shrink. A policy that is never consulted is the exact shape of a knob
+    /// that reads as configured and behaves as absent.
+    #[test]
+    fn the_care_filter_is_actually_applied_by_the_policy() {
+        let mut arena = TermArena::new();
+        let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).expect("f");
+        // Eleven applications: C(11,2) = 55 care pairs, under the ceiling.
+        let mut apps = Vec::new();
+        let mut args = Vec::new();
+        for i in 0..11 {
+            let v = arena.int_var(&format!("x{i}")).expect("int var");
+            args.push(v);
+            apps.push(arena.apply(f, &[v]).expect("f(x)"));
+        }
+        // Five bare integer symbols in no application: the all-pairs rule pairs
+        // each of them with each UF argument, which no congruence can use.
+        let mut bare = Vec::new();
+        for i in 0..5 {
+            bare.push(arena.int_var(&format!("c{i}")).expect("int var"));
+        }
+        let mut terms = apps.clone();
+        terms.extend(bare.iter().copied());
+        let root = sum(&mut arena, &terms);
+
+        let mut candidates = args.clone();
+        candidates.extend(bare.iter().copied());
+        let mut proposed = Vec::new();
+        for i in 0..candidates.len() {
+            for j in (i + 1)..candidates.len() {
+                // The all-pairs rule keeps a pair with at least one EUF endpoint.
+                if i < args.len() || j < args.len() {
+                    proposed.push((candidates[i], candidates[j]));
+                }
+            }
+        }
+        assert!(
+            proposed.len() > MAX_INTERFACE_PAIRS,
+            "the unfiltered proposal must be over the ceiling: {}",
+            proposed.len()
+        );
+        assert_eq!(care_graph_pairs(&arena, &[root]).len(), 55);
+
+        {
+            let _guard = UfliaInterfacePolicyGuard::set(UfliaInterfacePolicy::All);
+            assert!(
+                apply_interface_policy(&arena, &[root], proposed.clone()).is_none(),
+                "`all` declines this proposal"
+            );
+        }
+        let _guard = UfliaInterfacePolicyGuard::set(UfliaInterfacePolicy::CareGraph);
+        let kept = apply_interface_policy(&arena, &[root], proposed)
+            .expect("`care` filters it under the ceiling and admits");
+        assert_eq!(
+            kept.len(),
+            55,
+            "exactly the care pairs survive, and nothing is truncated"
+        );
     }
 
     /// Every policy is representable by its own name, and the default is the
