@@ -350,7 +350,14 @@ pub struct ModeTransition {
     pub at_ticks: u64,
     /// Ticks the phase that just ended consumed.
     pub phase_ticks: u64,
-    /// The entered mode's accumulated-tick budget for this phase.
+    /// Ticks granted to the phase now beginning — the reference's
+    /// `next_delta_ticks`. This is the quantity that grows quadratically, and
+    /// the one to assert growth on.
+    pub budget_ticks: u64,
+    /// The absolute threshold that budget becomes, on the **entered mode's own**
+    /// tick counter (`lim.stabilize = stats.ticks.search[next_stable] +
+    /// next_delta_ticks`). Not comparable against
+    /// [`ModeTransition::at_ticks`], which is the whole-search total.
     pub next_limit_ticks: u64,
 }
 
@@ -533,11 +540,25 @@ impl RestartPolicy {
     /// grows quadratically.
     #[must_use]
     pub fn mode_switching() -> Self {
+        Self::mode_switching_after(RestartConfig::default().bootstrap_conflicts)
+    }
+
+    /// [`RestartPolicy::mode_switching`] with a different first interval.
+    ///
+    /// The bootstrap length is the one interval a caller might reasonably want
+    /// to shorten: it is the only one not calibrated from the instance, and a
+    /// test that needs several phases inside a small search cannot get them at
+    /// the shipped 1000 conflicts.
+    #[must_use]
+    pub fn mode_switching_after(bootstrap_conflicts: u64) -> Self {
         Self::new(RestartConfig {
-            switching: true,
-            focused: RestartSchedule::Ema,
-            stable: RestartSchedule::Luby,
-            ..RestartConfig::default()
+            bootstrap_conflicts,
+            ..RestartConfig {
+                switching: true,
+                focused: RestartSchedule::Ema,
+                stable: RestartSchedule::Luby,
+                ..RestartConfig::default()
+            }
         })
     }
 
@@ -649,6 +670,7 @@ impl RestartPolicy {
                 at_conflicts: conflicts,
                 at_ticks: ticks,
                 phase_ticks,
+                budget_ticks: next_delta,
                 next_limit_ticks: next_limit,
             });
         } else {
