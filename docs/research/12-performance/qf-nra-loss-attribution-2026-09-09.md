@@ -263,3 +263,26 @@ The cold arm was confirmed byte-identical to the pre-change engine against this
 population's own baseline sweep: identical verdicts on all 16, with
 `sin-problem-7-chunk-0353` at 1,909 ms vs 1,909 ms and `sqrt-1mcosq-8-chunk-0627`
 at 306 ms vs 308 ms.
+
+### The warm arm is validated against z3, so the default is a policy call, not a risk
+
+The default arm is `cold`, which is byte-identical to the pre-change engine, so
+the differentials would have been vacuous on it. They were run under
+`AXEYUM_LAZY_SKELETON=warm` instead — the arm that actually needs an independent
+verdict check — all with nonzero test counts:
+
+| suite                                     | tests | result |
+|-------------------------------------------|------:|--------|
+| `nra_differential_fuzz`                    |     3 | ok     |
+| `qf_lra_differential_fuzz`                 |     5 | ok     |
+| `qf_nia_divmod_const_differential_fuzz`    |     1 | ok     |
+| `qf_nia_divmod_var_differential_fuzz`      |     1 | ok     |
+
+Plus `cargo test -p axeyum-solver --features full --lib` (1,634 passed),
+`--test corpus_regression` (1), and the capability ratchet
+`--test progress_frontier --features full -- --test-threads=1` (12), the last on
+a quiet box (load 0.85).
+
+So flipping `SKELETON_SOLVE_DEFAULT` to `WARM` is a decision about how much
+evidence a workspace-wide default needs, not an open question about whether the
+arm is sound. What is missing is the division-wide A/B, which is one env var.
