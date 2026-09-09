@@ -232,6 +232,7 @@ macro_rules! full_modules {
         mod uf_fmf;
         mod ufbv_finite;
         mod ufbv_online;
+        mod uflia_interface;
         mod uflia_interpolant;
         mod uflia_online;
         mod uflra_interpolant;
@@ -1491,6 +1492,11 @@ macro_rules! full_exports {
         };
         #[doc(hidden)]
         pub use ufbv_online::{check_qf_aufbv_online_cdclt, check_qf_ufbv_online_cdclt};
+        pub use uflia_interface::{
+            MAX_INTERFACE_PAIRS, UfliaInterfaceCounters, UfliaInterfaceCountersGuard,
+            UfliaInterfacePolicy, UfliaInterfacePolicyGuard, care_graph_pairs,
+            last_uflia_interface_counters, uflia_interface_policy,
+        };
         #[doc(hidden)]
         pub use uflia_interpolant::{
             UfliaInterpolantCertificate, uflia_interpolant, uflia_interpolant_certified,

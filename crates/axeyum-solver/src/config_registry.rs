@@ -3400,7 +3400,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
     ConfigEntry {
         name: "MAX_SPLIT_PAIRS",
         module: "crates/axeyum-solver/src/combined_theory_lia.rs",
-        value: "64",
+        value: "crate::uflia_interface::MAX_INTERFACE_PAIRS",
         unit: "interface case-split pairs",
         protects: Protects::Termination,
         on_exceed: OnExceed::RefuseUnknown,
@@ -3408,7 +3408,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "",
         env_override: None,
         justification: undated("doc comment"),
-        note: "Byte-identical doc comment to `combined_theory.rs::MAX_SPLIT_PAIRS` ('mirroring the cold core's `MAX_SPLIT_DEPTH` decline...'), same value, independent definition — see that entry's note for the full four-copy chain across this file, `combined_theory.rs`, `uflia_online.rs::MAX_SPLIT_DEPTH`, and `uflra_online.rs::MAX_SPLIT_DEPTH`.",
+        note: "Effective value 64, through `crate::uflia_interface::MAX_INTERFACE_PAIRS` since 2026-09-08 — this copy and `uflia_online.rs::MAX_SPLIT_DEPTH` are now ONE definition, so the \"mirrors the cold core\" claim below is enforced by the compiler instead of by prose. Byte-identical doc comment to `combined_theory.rs::MAX_SPLIT_PAIRS` ('mirroring the cold core's `MAX_SPLIT_DEPTH` decline...'), same value, independent definition — see that entry's note for the full four-copy chain across this file, `combined_theory.rs`, `uflia_online.rs::MAX_SPLIT_DEPTH`, and `uflra_online.rs::MAX_SPLIT_DEPTH`.",
     },
     ConfigEntry {
         name: "MAX_CYCLE_WALK",
@@ -7332,17 +7332,65 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Two sites: a static pre-check (`build_unknown(...\"has {} semantic atoms, exceeding the cap\"...)`, ufbv_online.rs:2167-2174) and a dynamic one during retained search (`\"dynamic theory atoms exceed the cap\"`, ufbv_online.rs:847-851).",
     },
     ConfigEntry {
+        name: "MAX_INTERFACE_PAIRS",
+        module: "crates/axeyum-solver/src/uflia_interface.rs",
+        value: "64",
+        unit: "proposed interface case-split pairs",
+        protects: Protects::Termination,
+        on_exceed: OnExceed::RefuseUnknown,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: Some("AXEYUM_UFLIA_INTERFACE_PAIRS"),
+        justification: dated(
+            "docs/research/12-performance/uflia-interface-caps-2026-09-08.md",
+            "2026-09-08",
+            None,
+            &[
+                sym(
+                    "crates/axeyum-solver/src/uflia_online.rs",
+                    "MAX_SPLIT_DEPTH",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/combined_theory_lia.rs",
+                    "MAX_SPLIT_PAIRS",
+                ),
+            ],
+            &[doc(
+                "docs/research/12-performance/uflia-interface-caps-2026-09-08.md",
+            )],
+        ),
+        note: "THE SHARED CEILING the two QF_UFLIA copies now read (`uflia_online::MAX_SPLIT_DEPTH` and `combined_theory_lia::MAX_SPLIT_PAIRS` are `= crate::uflia_interface::MAX_INTERFACE_PAIRS`), closing two of the four unlinked copies the registry recorded. The value is UNCHANGED at 64 and deliberately so: pairs are quadratic in the interface-term count, so a raise big enough to admit the losing population is the removal of a termination bound, not a raise. `AXEYUM_UFLIA_INTERFACE_PAIRS` selects the PROPOSAL POLICY (`all` / `care` / `care-truncate`), not the number; `care-truncate` answers the ceiling by keeping a bounded care-graph subset instead of declining, which is sound in both directions (sat is replay-gated, unsat is a relaxation refutation) and incomplete by construction.",
+    },
+    ConfigEntry {
         name: "MAX_BOOLEAN_ATOMS",
         module: "crates/axeyum-solver/src/uflia_online.rs",
-        value: "512",
+        value: "8192",
         unit: "distinct theory atoms",
         protects: Protects::Completeness,
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
         env_override: Some("AXEYUM_UFLIA_MAX_BOOLEAN_ATOMS"),
-        justification: undated("doc comment"),
-        note: "Effective value read through `max_boolean_atoms()`, which the env var can only RAISE (`v.max(MAX_BOOLEAN_ATOMS)`), never lower — the compiled 512 is a floor, not an overridable default. Doc: deliberately set above the `bug330` fair-slice frontier (339 atoms) so the deadline-aware CDCL(T) spine, not admission, decides tractability. `uflra_online.rs::MAX_BOOLEAN_ATOMS` is the UFLRA sibling with the SAME name but a DIFFERENT value (48) and no env override — divergent twins, not duplicates.",
+        justification: dated(
+            "docs/research/12-performance/uflia-interface-caps-2026-09-08.md",
+            "2026-09-08",
+            None,
+            &[
+                sym(
+                    "crates/axeyum-solver/src/uflia_online.rs",
+                    "MAX_BOOLEAN_ATOMS",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/uflia_online.rs",
+                    "max_boolean_atoms",
+                ),
+            ],
+            &[
+                adr("ADR-1801"),
+                doc("docs/research/12-performance/uflia-interface-caps-2026-09-08.md"),
+            ],
+        ),
+        note: "RAISED 512 -> 8192 on 2026-09-08 (ADR-1801) against the committed 200-file QF_UFLIA list. At 512 this ceiling was the LAST thing 27 of the 50 files we lose reported, at atom counts of 595-2,972, each refused in 0.1-0.3 ms; raised, the route decides files at 595-1,442 atoms, decides none above that within 24 s (the deadline stops it, which is what the ceiling's own rationale asks for), gains ten files on the loss population and loses none, with zero disagreements against cvc5's committed verdicts. Effective value still read through `max_boolean_atoms()`, which the env var can only RAISE (`v.max(MAX_BOOLEAN_ATOMS)`), never lower. `uflra_online.rs::MAX_BOOLEAN_ATOMS` is the UFLRA sibling with the SAME name but a DIFFERENT value (48) and no env override — divergent twins, not duplicates, and NOT raised here because this lane did not measure that division.",
     },
     ConfigEntry {
         name: "MAX_BOOLEAN_CLAUSES",
@@ -7381,12 +7429,12 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "",
         env_override: Some("AXEYUM_UFLIA_MAX_OPAQUE_BOOLEAN_ATOMS"),
         justification: undated("doc comment"),
-        note: "Doc: the opaque-app arithmetic abstraction 'is not yet deadline-aware during combined-state construction and theory assertion, so keep the online slice bounded.' Same env-raise-only pattern as MAX_BOOLEAN_ATOMS above (`v.max(MAX_OPAQUE_BOOLEAN_ATOMS)`).",
+        note: "Doc: the opaque-app arithmetic abstraction 'is not yet deadline-aware during combined-state construction and theory assertion, so keep the online slice bounded.' Same env-raise-only pattern as MAX_BOOLEAN_ATOMS above (`v.max(MAX_OPAQUE_BOOLEAN_ATOMS)`). DELIBERATELY NOT RAISED with MAX_BOOLEAN_ATOMS on 2026-09-08: the isolation arm (general ceiling raised, this one left at 128) decides the SAME ten files, and `UfliaInterfaceCounters::opaque_atom_cap_declines` is 0 across every file in every arm of that measurement, so on the QF_UFLIA population this constant never fires. It guards the one place on this route where construction is not deadline-aware, so raising a bound that buys nothing measured would be a cost with no benefit.",
     },
     ConfigEntry {
         name: "MAX_SPLIT_DEPTH",
         module: "crates/axeyum-solver/src/uflia_online.rs",
-        value: "64",
+        value: "crate::uflia_interface::MAX_INTERFACE_PAIRS",
         unit: "interface case-split recursion depth",
         protects: Protects::Termination,
         on_exceed: OnExceed::RefuseUnknown,
@@ -7394,7 +7442,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "",
         env_override: None,
         justification: undated("doc comment"),
-        note: "FINDING (four unlinked copies of one bound). Byte-identical doc comment AND value to `uflra_online.rs::MAX_SPLIT_DEPTH` ('Hard ceiling on interface case-split recursion depth (one level per shared pair). Above it the search declines to a graceful CheckResult::Unknown - never a wrong verdict.'). Also mirrored (per THEIR doc comments, not this one) by `combined_theory.rs::MAX_SPLIT_PAIRS` and `combined_theory_lia.rs::MAX_SPLIT_PAIRS` (both = 64). Four independent copies across four files, one intended meaning, no code-level link between any pair.",
+        note: "Effective value 64, through the alias. PARTLY CLOSED 2026-09-08: this constant is now `= crate::uflia_interface::MAX_INTERFACE_PAIRS`, as is `combined_theory_lia.rs::MAX_SPLIT_PAIRS`, so the two QF_UFLIA copies are one definition. The QF_UFLRA pair is untouched because this lane did not measure that division. ORIGINAL FINDING (four unlinked copies of one bound). Byte-identical doc comment AND value to `uflra_online.rs::MAX_SPLIT_DEPTH` ('Hard ceiling on interface case-split recursion depth (one level per shared pair). Above it the search declines to a graceful CheckResult::Unknown - never a wrong verdict.'). Also mirrored (per THEIR doc comments, not this one) by `combined_theory.rs::MAX_SPLIT_PAIRS` and `combined_theory_lia.rs::MAX_SPLIT_PAIRS` (both = 64). Four independent copies across four files, one intended meaning, no code-level link between any pair.",
     },
     ConfigEntry {
         name: "MAX_BOOLEAN_ATOMS",

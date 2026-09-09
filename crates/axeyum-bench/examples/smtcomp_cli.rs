@@ -337,10 +337,11 @@ use axeyum_solver::{
     ConfigTraceGuard, DlOnlineStatsGuard, Evidence, EvidenceCheck, EvidenceReport, FrontDoorStats,
     FrontDoorStatsGuard, LazySmtCountersGuard, LiaCountersGuard, LiveInstruments, ProofProgress,
     RouteAttributionGuard, RouteTrace, Sampled, SolverConfig, SpanLog, SpanLogInputs, Termination,
-    UfArithOverboundStats, UfArithOverboundStatsGuard, config_trace_line, division_from_path,
-    install_live_instruments, instrument, last_abv_stats, last_bv_layer_stats,
-    last_dl_online_stats, last_front_door_stats, last_lazy_smt_counters, last_lia_counters,
-    last_route_attribution, last_uf_arith_overbound_stats, live_bv_layer_stats,
+    UfArithOverboundStats, UfArithOverboundStatsGuard, UfliaInterfaceCounters,
+    UfliaInterfaceCountersGuard, config_trace_line, division_from_path, install_live_instruments,
+    instrument, last_abv_stats, last_bv_layer_stats, last_dl_online_stats, last_front_door_stats,
+    last_lazy_smt_counters, last_lia_counters, last_route_attribution,
+    last_uf_arith_overbound_stats, last_uflia_interface_counters, live_bv_layer_stats,
     live_config_trace_line, live_lazy_smt_counters, live_lia_counters, live_theory_layer_stats,
     produce_evidence_smtlib, solve_smtlib,
 };
@@ -918,6 +919,16 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
     {
         lines.push(partial_line(&uf.value.trace_line()));
         note("uf-overbound", uf.sampled);
+    }
+    // Same gate, and the same reason it has to survive a kill: on the `QF_UFLIA`
+    // losses the route that could decide the file declines in well under a
+    // millisecond and the budget is then spent elsewhere, so the run this
+    // instrument describes is exactly the run that never returns.
+    if let Some(uflia) = board.sample::<UfliaInterfaceCounters>(instrument::UFLIA_INTERFACE)
+        && uflia.value.engaged()
+    {
+        lines.push(partial_line(&uflia.value.trace_line()));
+        note("uflia-interface", uflia.sampled);
     }
     // The integer routes, which are what the `QF_LIA` losses are made of. Every
     // field is a monotone total, so a partial reading is a LOWER BOUND on each
@@ -1699,6 +1710,12 @@ fn main() -> ExitCode {
         // with nothing after it is invisible in a verdict and nearly invisible
         // in a trail; `terminal_unknown` names it outright.
         let _uf_overbound_guard = instruments_on.then(UfArithOverboundStatsGuard::enable);
+        // The `QF_UFLIA` online combination's interface layer. `uf-overbound`
+        // says whether the route got to RUN; this says what it did once it did,
+        // and in particular how big the interface proposal was against the
+        // ceiling that admits it — the field that turns "the combination
+        // declined" into a number a reader can act on.
+        let _uflia_interface_guard = instruments_on.then(UfliaInterfaceCountersGuard::enable);
         // The eighth: the integer-arithmetic routes' own counters. `QF_LIA` and
         // `QF_UFLIA` produced no engine figure at all before this — the online
         // integer theory implements no `engine_counters`, and the offline
@@ -1780,6 +1797,13 @@ fn main() -> ExitCode {
             let uf_overbound = last_uf_arith_overbound_stats();
             if uf_overbound.engaged > 0 {
                 trace_lines.push(uf_overbound.trace_line());
+            }
+            // Only when the online UFLIA interface layer was reached: on every
+            // other query the absence of the line is the information, exactly as
+            // for `; uf-overbound` above.
+            let uflia_interface = last_uflia_interface_counters();
+            if uflia_interface.engaged() {
+                trace_lines.push(uflia_interface.trace_line());
             }
             // Only when a snapshot exists: a `None` here means the guard was
             // never armed on this thread, which is not the same as "the integer
