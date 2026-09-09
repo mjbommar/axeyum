@@ -4134,6 +4134,79 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "`if count >= MAX .. { return Ok(count) }` — silent truncation of the seeding loop, one line of doc.",
     },
     ConfigEntry {
+        name: "EUF_ONLINE_ABSTRACT_CEILING",
+        module: "crates/axeyum-solver/src/euf_egraph.rs",
+        value: "Duration::from_secs(2)",
+        unit: "seconds of the caller's remaining budget",
+        protects: Protects::Completeness,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: Some("AXEYUM_EUF_ONLINE_ATOMS"),
+        justification: dated(
+            "docs/research/12-performance/euf-online-arith-atoms-2026-09-08.md",
+            "2026-09-08",
+            None,
+            // The ceiling rests on `euf-online` remaining a cheap SCREEN on a
+            // UF+arithmetic query rather than the ladder's main hope. If
+            // `dispatch_uf_arith_online` -- the online model-based EUF+LIA
+            // combination that runs after it -- leaves `auto.rs`, or if this
+            // route stops being reached from `dispatch_uf_fast_paths`, then
+            // capping it at two seconds is capping the only route left and the
+            // reasoning inverts.
+            &[
+                sym("crates/axeyum-solver/src/auto.rs", "dispatch_uf_fast_paths"),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "dispatch_uf_arith_online",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/euf_egraph.rs",
+                    "check_qf_uf_online_cdclt",
+                ),
+            ],
+            &[
+                live(
+                    "dispatch_uf_arith_online",
+                    "crates/axeyum-solver/src/auto.rs",
+                ),
+                doc("docs/research/12-performance/euf-online-arith-atoms-2026-09-08.md"),
+            ],
+        ),
+        note: "The flat half of `min(remaining/4, 2s)`, applied ONLY on a query where the skeleton encoder had to abstract a Boolean-position subterm. WHAT THE MEASUREMENT ESTABLISHES, and what it does not. On the committed 200-file `QF_UFLIA` parity list, one binary and three arms (`scripts/euf-online-atoms-sweep.sh`, 2026-09-08): the route abstracted on 68 files, DECIDED 6 of them in 1-9 ms (max 9 ms), and on the other 62 spent a median of 8 ms and a maximum of 1,159 ms before declining. So this ceiling is 200x the slowest decision -- it cannot cost a decision -- and **it did not fire on any file in this population**: the SHARE binds first at the 24 s competition budget (the route receives ~6 s after the over-bound CEGAR, and 6/4 = 1.5 s < 2 s), and 1,159 ms is under both. It is insurance against a query outside this population, not a bound anything was measured against, and this note says so rather than implying a fit. It exists because abstracting turns a 1.3 ms decline into a route that SPENDS time on every UF+arithmetic query, and the routes below it -- `euf-offline`, `ufbv-online`, `uf-arith-online` -- run on what it leaves. A query that abstracted NOTHING keeps the caller's whole timeout under every arm, so pure `QF_UF` is unaffected in budget as well as in verdict. The env override selects the whole policy (`refuse` restores the pre-2026-09-08 behaviour, `whole` removes the slice), not just this ceiling.",
+    },
+    ConfigEntry {
+        name: "EUF_ONLINE_ABSTRACT_SHARE",
+        module: "crates/axeyum-solver/src/euf_egraph.rs",
+        value: "4",
+        unit: "divisor of the caller's remaining budget granted to the route",
+        protects: Protects::Completeness,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: Some("AXEYUM_EUF_ONLINE_ATOMS"),
+        justification: dated(
+            "docs/research/12-performance/euf-online-arith-atoms-2026-09-08.md",
+            "2026-09-08",
+            None,
+            &[
+                sym("crates/axeyum-solver/src/auto.rs", "dispatch_uf_fast_paths"),
+                sym(
+                    "crates/axeyum-solver/src/euf_egraph.rs",
+                    "check_qf_uf_online_cdclt",
+                ),
+            ],
+            &[
+                live(
+                    "dispatch_uf_arith_online",
+                    "crates/axeyum-solver/src/auto.rs",
+                ),
+                doc("docs/research/12-performance/euf-online-arith-atoms-2026-09-08.md"),
+            ],
+        ),
+        note: "A FRACTION, not a reserve -- the fourth copy of this quarter and the first that GRANTS rather than withholds. `ABV_ONLINE_LADDER_RESERVE_SHARE`, `DL_LADDER_RESERVE_SHARE` and `UF_ARITH_LADDER_RESERVE_SHARE` each hold a quarter BACK from a route that is the ladder's main hope; this one hands a quarter TO a route that is a screen, because on a UF+arithmetic query the architecture's bet is `uf-arith-online` below it (the shape Z3's `setup_QF_UFLIA` registers). This is the operative half of `min(remaining/4, 2s)` at the 24 s competition budget: the route is entered with ~6 s left after the over-bound CEGAR, so this divisor yields 1.5 s and the ceiling (2 s) never binds. Same 2026-09-08 measurement as `EUF_ONLINE_ABSTRACT_CEILING`, and the same honest limit -- the largest spend observed on the 200-file list was 1,159 ms, UNDER the 1.5 s this grants, so neither bound actually truncated a run in the population that justified them. What the population does establish is the delta they made safe: 151 -> 156 decided, +5 / -0, with no verdict disagreement between the three arms.",
+    },
+    ConfigEntry {
         name: "PRE_SOLVE_ALETHE_MAX_NODES",
         module: "crates/axeyum-solver/src/evidence.rs",
         value: "2_000",

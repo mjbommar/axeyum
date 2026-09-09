@@ -22,7 +22,7 @@
 //! theory propagation, the rest of P1.5) and theory combination (P1.6) build on.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use axeyum_egraph::{EGraph, ENodeId, check_congruence};
 use axeyum_ir::{
@@ -841,6 +841,305 @@ pub fn solve_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) -> Check
     check_qf_uf_online_cdclt(arena, assertions, &SolverConfig::default())
 }
 
+/// The share of `euf-online`'s remaining ladder clock it may spend once the
+/// query forced it to abstract an arithmetic (or otherwise unencodable)
+/// Boolean-position atom.
+///
+/// A *quarter*, not a reserve: on a UF+arithmetic query this route is a cheap
+/// congruence SCREEN, not the ladder's main hope — `uf-arith-online`, the online
+/// model-based EUF+LIA combination, runs after it and is the route the
+/// architecture bets on. Handing the screen the whole remaining clock is how
+/// `abv-online-cdclt` starved the array ladder (see
+/// [`crate::auto`]'s `ABV_ONLINE_LADDER_RESERVE_SHARE`).
+const EUF_ONLINE_ABSTRACT_SHARE: u32 = 4;
+
+/// Flat ceiling on that share.
+///
+/// Measured 2026-09-08 on the committed 200-file `QF_UFLIA` parity list: every
+/// file this route decides under abstraction decides in under 250 ms, so a
+/// two-second ceiling is eight times the slowest observed decision and still
+/// leaves ~22 s of a 24 s budget to the combination route below. See
+/// `docs/research/12-performance/euf-online-arith-atoms-2026-09-08.md`.
+const EUF_ONLINE_ABSTRACT_CEILING: Duration = Duration::from_secs(2);
+
+/// `euf-online`'s slice when it abstracted at least one Boolean-position atom.
+const EUF_ONLINE_ABSTRACT_SLICE: crate::auto::LadderSlice =
+    crate::auto::LadderSlice::capped_fraction(
+        "euf-online",
+        EUF_ONLINE_ABSTRACT_SHARE,
+        EUF_ONLINE_ABSTRACT_CEILING,
+    );
+
+/// What [`check_qf_uf_online_cdclt`] does when the Boolean skeleton contains a
+/// subterm its Tseitin encoder has no arm for.
+///
+/// # Why this is a policy and not a constant
+///
+/// Until 2026-09-08 the answer was "refuse the whole query", and that single
+/// branch is what removed the route on five `QF_UFLIA` files the route decides
+/// `unsat` in **2–13 ms** when run alone. The dispatcher's own
+/// `lift_arith_ite` normalization is what creates the offending atom: it hoists
+/// each Int/Real `ite(c, a, b)` into `¬c ∨ t=a` / `c ∨ t=b`, which moves an
+/// arithmetic condition like `(< (+ x y) 9)` — harmlessly buried inside an
+/// opaque congruence term in the source file — to **Boolean position**, where
+/// this encoder has no arm for `Op::Lt` and gave up on the entire formula.
+/// Measured on `mathsat/EufLaArithmetic/medium/medium9.smt2`: solo `euf-online`
+/// answers `unsat` in 2 ms; through the front door the same route declines in
+/// 1.3 ms with "boolean skeleton outside the online CDCL(T) encoder", and
+/// deleting the file's two `ite`-carrying conjuncts makes the front door decide
+/// it. Full writeup:
+/// `docs/research/12-performance/euf-online-arith-atoms-2026-09-08.md`.
+///
+/// Abstracting instead is sound in one direction only, which is why the arms
+/// differ in BUDGET as well as behaviour: `unsat` transfers (the abstraction
+/// only adds models), `sat` does not and is replay-gated, and a query the
+/// abstraction cannot decide is now a route that SPENDS time where it used to
+/// decline in a millisecond. [`Self::AbstractSliced`] is the arm that pays for
+/// that with a bounded slice; [`Self::AbstractWholeBudget`] is the arm that
+/// measures what the slice costs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EufOnlineAtomPolicy {
+    /// The historical behaviour, kept as a named arm so the change can be
+    /// measured against it rather than only remembered: any Boolean-position
+    /// subterm outside the encoder's connective set makes the whole route
+    /// return `Unknown`.
+    Refuse,
+    /// Abstract each such subterm to a fresh opaque skeleton variable, and — on
+    /// a query where that fired — run under
+    /// [`EUF_ONLINE_ABSTRACT_SLICE`] of the caller's remaining budget so the
+    /// routes below keep theirs. A query needing no abstraction is byte-identical
+    /// to [`Self::Refuse`], budget included. Default.
+    AbstractSliced,
+    /// Abstract, and take the caller's whole remaining budget. The measurement
+    /// arm for what the slice costs and buys; never the shipped default.
+    AbstractWholeBudget,
+}
+
+impl EufOnlineAtomPolicy {
+    /// The short name this policy is selected by and reported as.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Refuse => "refuse",
+            Self::AbstractSliced => "sliced",
+            Self::AbstractWholeBudget => "whole",
+        }
+    }
+
+    /// Whether the encoder abstracts rather than refuses under this policy.
+    #[must_use]
+    pub const fn abstracts(self) -> bool {
+        matches!(self, Self::AbstractSliced | Self::AbstractWholeBudget)
+    }
+
+    /// The timeout this route runs under, given the caller's `config` and
+    /// whether the encoding actually abstracted anything.
+    ///
+    /// `abstracted == false` returns the caller's timeout unchanged under EVERY
+    /// arm: a pure-`QF_UF` query is not paying for a policy about arithmetic
+    /// atoms.
+    #[must_use]
+    fn route_timeout(self, config: &SolverConfig, abstracted: bool) -> Option<Duration> {
+        let remaining = config.timeout?;
+        if !abstracted || self == Self::AbstractWholeBudget {
+            return Some(remaining);
+        }
+        Some(EUF_ONLINE_ABSTRACT_SLICE.slice_of(remaining))
+    }
+}
+
+std::thread_local! {
+    /// A per-thread override of the process policy, set by
+    /// [`EufOnlineAtomPolicyGuard`]. The process policy is read once from the
+    /// environment, so without this no test could exercise more than one arm.
+    static EUF_ONLINE_ATOM_OVERRIDE: std::cell::Cell<Option<EufOnlineAtomPolicy>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Forces `policy` on this thread for the lifetime of the guard, restoring the
+/// previous setting on drop.
+pub struct EufOnlineAtomPolicyGuard(Option<EufOnlineAtomPolicy>);
+
+impl EufOnlineAtomPolicyGuard {
+    /// Overrides the process policy on this thread.
+    #[must_use]
+    pub fn set(policy: EufOnlineAtomPolicy) -> Self {
+        EufOnlineAtomPolicyGuard(EUF_ONLINE_ATOM_OVERRIDE.with(|c| c.replace(Some(policy))))
+    }
+}
+
+impl Drop for EufOnlineAtomPolicyGuard {
+    fn drop(&mut self) {
+        EUF_ONLINE_ATOM_OVERRIDE.with(|c| c.set(self.0));
+    }
+}
+
+/// The [`EufOnlineAtomPolicy`] in force on this thread: a live
+/// [`EufOnlineAtomPolicyGuard`]'s choice, else the process policy resolved once
+/// from `AXEYUM_EUF_ONLINE_ATOMS`. An unset or unrecognised value is the
+/// default, so a typo degrades to the shipped behaviour rather than to an arm
+/// nobody chose.
+#[must_use]
+pub fn euf_online_atom_policy() -> EufOnlineAtomPolicy {
+    static RESOLVED: std::sync::OnceLock<EufOnlineAtomPolicy> = std::sync::OnceLock::new();
+    if let Some(policy) = EUF_ONLINE_ATOM_OVERRIDE.with(std::cell::Cell::get) {
+        return policy;
+    }
+    *RESOLVED.get_or_init(
+        || match std::env::var("AXEYUM_EUF_ONLINE_ATOMS").as_deref() {
+            Ok("refuse") => EufOnlineAtomPolicy::Refuse,
+            Ok("whole") => EufOnlineAtomPolicy::AbstractWholeBudget,
+            _ => EufOnlineAtomPolicy::AbstractSliced,
+        },
+    )
+}
+
+/// Clock-free counters for `euf-online`'s Boolean-skeleton admission decision:
+/// how often the route was entered, how often the encoder had to abstract a
+/// Boolean-position subterm, and how many it abstracted.
+///
+/// Every field is a count, never a duration — timing for this route is already
+/// carried by [`crate::RouteTrace`]'s per-attempt `elapsed_ns`. What the route
+/// trail cannot say is *why* the encoder gave up: before 2026-09-08 the only
+/// evidence that this decision point existed at all was the string "boolean
+/// skeleton outside the online CDCL(T) encoder" in a decline, which names the
+/// encoder but not the atom, not the count, and not the policy in force.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[non_exhaustive]
+pub struct EufOnlineAtomStats {
+    /// Queries whose skeleton this route encoded at all (past the "no equality
+    /// atoms" gate).
+    pub entered: u32,
+    /// Of those, the ones on which at least one Boolean-position subterm was
+    /// abstracted (under [`EufOnlineAtomPolicy::Refuse`] this is always zero and
+    /// [`Self::refused`] counts them instead).
+    pub abstracted_queries: u32,
+    /// Total distinct Boolean-position subterms abstracted across those queries.
+    pub abstracted_atoms: u32,
+    /// Of those entered, the ones the encoder gave up on entirely — the
+    /// historical behaviour, and the field this instrument exists for. A
+    /// nonzero count on a division we lose is the signal: the route was reached
+    /// and threw the query away.
+    pub refused: u32,
+    /// The policy in force, as [`EufOnlineAtomPolicy::name`] reports it.
+    pub policy: &'static str,
+}
+
+impl EufOnlineAtomStats {
+    /// All-zero counters with no policy recorded yet.
+    pub(crate) const ZERO: Self = Self {
+        entered: 0,
+        abstracted_queries: 0,
+        abstracted_atoms: 0,
+        refused: 0,
+        policy: "unset",
+    };
+
+    /// The `; euf-online-atoms …` trace line, one `key=value` per field.
+    #[must_use]
+    pub fn trace_line(&self) -> String {
+        format!(
+            "euf-online-atoms policy={} entered={} abstracted_queries={} \
+             abstracted_atoms={} refused={}",
+            self.policy, self.entered, self.abstracted_queries, self.abstracted_atoms, self.refused
+        )
+    }
+}
+
+/// What the skeleton encoding did on one query — the three states a reader has
+/// to be able to tell apart, and the reason the recording is a single call with
+/// an enum rather than two booleans nobody can order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EncodeOutcome {
+    /// Everything was inside the encoder's connective set; the abstraction never
+    /// fired and the route runs exactly as it did before this policy existed.
+    Clean,
+    /// `n` Boolean-position subterms became opaque skeleton variables.
+    Abstracted(usize),
+    /// The encoder gave up and the route returned `Unknown` (the
+    /// [`EufOnlineAtomPolicy::Refuse`] arm, or an unencodable NON-Boolean
+    /// position that no policy abstracts).
+    Refused,
+}
+
+std::thread_local! {
+    /// Whether `euf-online` skeleton-admission counters are being collected on
+    /// this thread. See [`EufOnlineAtomStatsGuard`].
+    static COLLECT_EUF_ONLINE_ATOM_STATS: std::cell::Cell<bool> =
+        const { std::cell::Cell::new(false) };
+    /// The counters accumulated since the active guard was created.
+    static EUF_ONLINE_ATOM_STATS: std::cell::Cell<EufOnlineAtomStats> =
+        const { std::cell::Cell::new(EufOnlineAtomStats::ZERO) };
+}
+
+/// Enables `euf-online` skeleton-admission counter collection on this thread for
+/// the lifetime of the guard, resetting the counters on construction and
+/// restoring the previous setting on drop. Same opt-in, off-by-default
+/// convention as [`crate::UfArithOverboundStatsGuard`]: with no guard live, the
+/// recording path reads one thread-local `Cell<bool>` and returns.
+pub struct EufOnlineAtomStatsGuard(bool);
+
+impl EufOnlineAtomStatsGuard {
+    /// Enables collection for the lifetime of the returned guard.
+    #[must_use]
+    pub fn enable() -> Self {
+        let previous = COLLECT_EUF_ONLINE_ATOM_STATS.with(|c| c.replace(true));
+        EUF_ONLINE_ATOM_STATS.with(|c| c.set(EufOnlineAtomStats::ZERO));
+        EufOnlineAtomStatsGuard(previous)
+    }
+}
+
+impl Drop for EufOnlineAtomStatsGuard {
+    /// Restores the previous setting and publishes the finished counters.
+    fn drop(&mut self) {
+        COLLECT_EUF_ONLINE_ATOM_STATS.with(|c| c.set(self.0));
+        crate::live_instruments::publish_live(
+            crate::live_instruments::instrument::EUF_ONLINE_ATOMS,
+            EUF_ONLINE_ATOM_STATS.with(std::cell::Cell::get),
+            crate::live_instruments::Sampled::Complete,
+        );
+    }
+}
+
+/// The counters accumulated on this thread since the active
+/// [`EufOnlineAtomStatsGuard`] (or the most recently dropped one) was created.
+#[must_use]
+pub fn last_euf_online_atom_stats() -> EufOnlineAtomStats {
+    EUF_ONLINE_ATOM_STATS.with(std::cell::Cell::get)
+}
+
+/// Records one `euf-online` skeleton encoding when collection is enabled;
+/// otherwise reads one `Cell<bool>` and returns.
+fn note_euf_online_atoms(policy: EufOnlineAtomPolicy, outcome: EncodeOutcome) {
+    if !COLLECT_EUF_ONLINE_ATOM_STATS.with(std::cell::Cell::get) {
+        return;
+    }
+    let stats = EUF_ONLINE_ATOM_STATS.with(|c| {
+        let mut stats = c.get();
+        stats.policy = policy.name();
+        stats.entered = stats.entered.saturating_add(1);
+        match outcome {
+            EncodeOutcome::Clean => {}
+            EncodeOutcome::Abstracted(atoms) => {
+                stats.abstracted_queries = stats.abstracted_queries.saturating_add(1);
+                stats.abstracted_atoms = stats
+                    .abstracted_atoms
+                    .saturating_add(u32::try_from(atoms).unwrap_or(u32::MAX));
+            }
+            EncodeOutcome::Refused => stats.refused = stats.refused.saturating_add(1),
+        }
+        c.set(stats);
+        stats
+    });
+    // Republished on every recording rather than through a handle on a cadence:
+    // the route is entered a handful of times per query, never inside a loop.
+    crate::live_instruments::publish_live(
+        crate::live_instruments::instrument::EUF_ONLINE_ATOMS,
+        stats,
+        crate::live_instruments::Sampled::InFlight,
+    );
+}
+
 /// Decides the `QF_UF`(-equality) fragment via the **generic online CDCL(T)**
 /// driver `crate::cdclt::CdclT` with [`EufTheory`] as the first theory (Track 1,
 /// P1.5 slice a). This is the canonical production online route behind
@@ -864,10 +1163,16 @@ pub fn solve_qf_uf_online(arena: &mut TermArena, assertions: &[TermId]) -> Check
 /// - Deadline-bounded (`config.timeout`), returning [`CheckResult::Unknown`] under a
 ///   deterministic resource bound rather than running unbounded.
 ///
-/// Returns [`CheckResult::Unknown`] when there are no equality atoms or the Boolean
-/// skeleton has structure the encoder does not cover (the same conservative give-ups
-/// as [`solve_qf_uf_online`]). The `QF_UF` front-door default remains the offline
-/// route until the default-dispatch measurement/ADR flip lands.
+/// Returns [`CheckResult::Unknown`] when there are no equality atoms, or when the
+/// Boolean skeleton has structure the encoder does not cover *and*
+/// [`EufOnlineAtomPolicy`] says to refuse it. Under the default arm a
+/// Boolean-position subterm outside the encoder's connective set — an arithmetic
+/// comparison, a `distinct` — is instead abstracted to an opaque skeleton
+/// variable, which weakens the formula (so `unsat` still transfers and the `sat`
+/// replay above is what keeps that direction honest) and costs the route a
+/// bounded slice of the caller's budget. See [`EufOnlineAtomPolicy`] for the
+/// measurement that made this a policy. The `QF_UF` front-door default remains
+/// the offline route until the default-dispatch measurement/ADR flip lands.
 #[must_use]
 pub fn check_qf_uf_online_cdclt(
     arena: &mut TermArena,
@@ -886,10 +1191,21 @@ pub fn check_qf_uf_online_cdclt(
         return CheckResult::Unknown(unknown("no equality atoms for the online CDCL(T) path"));
     }
 
-    let mut enc = Encoder::new(&atom_terms).with_bool_apply_atoms();
+    let policy = euf_online_atom_policy();
+    let mut enc = Encoder::new(&atom_terms)
+        .with_bool_apply_atoms()
+        .with_opaque_bool_atoms(policy.abstracts());
     let mut clauses: Vec<Vec<Lit>> = Vec::new();
     for &assertion in assertions {
         let Some(top) = enc.encode(arena, assertion, &mut clauses) else {
+            // RECORDED, not just returned. The refusal is the whole reason this
+            // instrument exists, and an early `return` that skipped the counter
+            // would leave the refusing arm reporting an all-zero line — the
+            // exact blind spot that cost a division-sized measurement to find.
+            // Caught by
+            // `the_counters_separate_abstracted_from_refused_from_merely_entered`,
+            // which read `policy="unset"` on the `Refuse` arm.
+            note_euf_online_atoms(policy, EncodeOutcome::Refused);
             return CheckResult::Unknown(unknown(
                 "boolean skeleton outside the online CDCL(T) encoder",
             ));
@@ -915,7 +1231,22 @@ pub fn check_qf_uf_online_cdclt(
         .collect();
 
     let eq_count = atom_terms.len();
-    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    // The budget is decided AFTER the encoding, because the policy's slice
+    // applies only when the encoding actually abstracted something. A query with
+    // no abstracted atom keeps the caller's whole timeout under every arm, so
+    // pure `QF_UF` is byte-identical to the pre-policy behaviour.
+    let abstracted = enc.opaque_atoms > 0;
+    note_euf_online_atoms(
+        policy,
+        if abstracted {
+            EncodeOutcome::Abstracted(enc.opaque_atoms)
+        } else {
+            EncodeOutcome::Clean
+        },
+    );
+    let deadline = policy
+        .route_timeout(config, abstracted)
+        .and_then(|t| Instant::now().checked_add(t));
     let mut theory = EufTheory::new(arena, &atom_terms).with_deadline(deadline);
     // The NATIVE proof-producing core, not `CdclT` (plan slice S7b step 4, this
     // lane). Same watch scheme, same order heap, same clause minimizer -- S1 and
@@ -1549,6 +1880,21 @@ pub(crate) struct Encoder {
     /// connective. Off by default so the arithmetic/string routes that share
     /// this encoder keep their exact accepted fragment.
     bool_apply_atoms: bool,
+    /// Opt-in: a Boolean-sorted application this encoder has no connective arm
+    /// for (an arithmetic comparison, a `distinct`, …) becomes a fresh opaque
+    /// skeleton variable instead of failing the whole encode.
+    ///
+    /// Off by default, for the same reason `bool_apply_atoms` is: the arithmetic
+    /// and string routes that share this encoder REGISTER their comparisons as
+    /// theory atoms, and silently abstracting one they failed to register would
+    /// drop exactly the theory reasoning that is their job. It is sound only for
+    /// a route whose `unsat` needs no information from the abstracted atom and
+    /// whose `sat` is replay-gated — see [`check_qf_uf_online_cdclt`].
+    opaque_bool_atoms: bool,
+    /// How many Boolean-position subterms `opaque_bool_atoms` abstracted. Zero
+    /// means the encoding is byte-identical to the refusing arm, which is what
+    /// the route's budget policy branches on.
+    pub(crate) opaque_atoms: usize,
 }
 
 impl Encoder {
@@ -1561,12 +1907,21 @@ impl Encoder {
             term_var,
             var_count: atom_terms.len(),
             bool_apply_atoms: false,
+            opaque_bool_atoms: false,
+            opaque_atoms: 0,
         }
     }
 
     /// Enables the EUF-predicate skeleton extension (see `bool_apply_atoms`).
     pub(crate) fn with_bool_apply_atoms(mut self) -> Self {
         self.bool_apply_atoms = true;
+        self
+    }
+
+    /// Enables (or leaves off) opaque abstraction of Boolean-position subterms
+    /// this encoder has no arm for — see `opaque_bool_atoms`.
+    pub(crate) fn with_opaque_bool_atoms(mut self, on: bool) -> Self {
+        self.opaque_bool_atoms = on;
         self
     }
 
@@ -1613,7 +1968,34 @@ impl Encoder {
             TermNode::App { op, args } => {
                 let op = *op;
                 let args = args.clone();
-                self.encode_app(arena, op, &args, clauses)?
+                match self.encode_app(arena, op, &args, clauses) {
+                    Some(v) => v,
+                    // ABSTRACTION, not a give-up. A Boolean-sorted application
+                    // with no connective arm here — an arithmetic comparison
+                    // `(< (+ x y) 9)`, a `distinct`, an `is_int` — becomes a
+                    // fresh skeleton variable rather than failing the encode of
+                    // the whole query. The recursive `encode` above already
+                    // abstracts a Boolean-sorted ARGUMENT at its own level, so
+                    // the DEEPEST failing Boolean node is the one abstracted:
+                    // `(and p (< a b))` keeps `p` and abstracts only the
+                    // comparison.
+                    //
+                    // SOUNDNESS. Replacing an atom by a fresh variable only ADDS
+                    // models — every model of the original induces one of the
+                    // skeleton by giving the variable the atom's truth value —
+                    // so `unsat` of the skeleton transfers to the original.
+                    // Structural sharing keeps one variable per distinct term
+                    // (`term_var` is keyed on the hash-consed `TermId`), so a
+                    // repeated or negated occurrence stays consistent. `sat`
+                    // says nothing about the original and MUST be replay-gated
+                    // by the caller. This is the argument `bool_apply_atoms`
+                    // above already rests on, applied one level further out.
+                    None if self.opaque_bool_atoms && arena.sort_of(t) == Sort::Bool => {
+                        self.opaque_atoms += 1;
+                        self.fresh()
+                    }
+                    None => return None,
+                }
             }
             // Non-Boolean leaf at a Boolean position cannot be encoded.
             _ => return None,

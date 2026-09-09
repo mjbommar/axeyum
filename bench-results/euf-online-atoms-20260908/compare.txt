@@ -1,0 +1,25 @@
+files: 200
+  QF_UFLIA.refuse          decided 151/200
+  QF_UFLIA.sliced          decided 156/200
+  QF_UFLIA.whole           decided 156/200
+
+QF_UFLIA.sliced vs QF_UFLIA.refuse: +5 / -0
+  GAINED medium10.smt2	unsat	decided_by=euf-online	euf_online=decided@4ms
+  GAINED medium13.smt2	unsat	decided_by=euf-online	euf_online=decided@4ms
+  GAINED medium16.smt2	unsat	decided_by=euf-online	euf_online=decided@7ms
+  GAINED medium19.smt2	unsat	decided_by=euf-online	euf_online=decided@9ms
+  GAINED medium9.smt2	unsat	decided_by=euf-online	euf_online=decided@2ms
+
+QF_UFLIA.whole vs QF_UFLIA.refuse: +5 / -0
+  GAINED medium10.smt2	unsat	decided_by=euf-online	euf_online=decided@3ms
+  GAINED medium13.smt2	unsat	decided_by=euf-online	euf_online=decided@4ms
+  GAINED medium16.smt2	unsat	decided_by=euf-online	euf_online=decided@6ms
+  GAINED medium19.smt2	unsat	decided_by=euf-online	euf_online=decided@9ms
+  GAINED medium9.smt2	unsat	decided_by=euf-online	euf_online=decided@4ms
+QF_UFLIA.refuse: euf-online declined 68 files after min=0ms median=1ms max=6ms
+
+QF_UFLIA.sliced: euf-online decided 6 files; its own cost min=1ms median=4ms max=9ms
+QF_UFLIA.sliced: euf-online declined 62 files after min=0ms median=8ms max=1159ms
+
+QF_UFLIA.whole: euf-online decided 6 files; its own cost min=1ms median=4ms max=9ms
+QF_UFLIA.whole: euf-online declined 62 files after min=0ms median=8ms max=1059ms

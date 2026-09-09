@@ -1,0 +1,11 @@
+files: 200
+  QF_UF.refuse             decided 195/200
+  QF_UF.sliced2            decided 195/200
+
+QF_UF.sliced2 vs QF_UF.refuse: +0 / -0
+
+QF_UF.refuse: euf-online decided 191 files; its own cost min=0ms median=69ms max=21274ms
+QF_UF.refuse: euf-online declined 8 files after min=1ms median=23841ms max=24004ms
+
+QF_UF.sliced2: euf-online decided 191 files; its own cost min=0ms median=66ms max=21754ms
+QF_UF.sliced2: euf-online declined 8 files after min=1ms median=23838ms max=24004ms

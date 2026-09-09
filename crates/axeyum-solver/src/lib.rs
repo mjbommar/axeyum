@@ -708,7 +708,9 @@ pub mod theories {
             check_qf_ufbv_lazy_with_pair_bound, check_with_function_elimination,
         };
         pub use crate::euf_egraph::{
-            EufConflict, EufTheory, check_qf_uf, check_qf_uf_online_cdclt, check_qf_uf_with_config,
+            EufConflict, EufOnlineAtomPolicy, EufOnlineAtomPolicyGuard, EufOnlineAtomStats,
+            EufOnlineAtomStatsGuard, EufTheory, check_qf_uf, check_qf_uf_online_cdclt,
+            check_qf_uf_with_config, euf_online_atom_policy, last_euf_online_atom_stats,
             prove_unsat_by_congruence, prove_unsat_lazy, prove_unsat_qf_uf_online,
             solve_qf_uf_online,
         };
@@ -1119,10 +1121,12 @@ macro_rules! full_exports {
         pub use euf_alethe::prove_qf_uf_unsat_alethe;
         #[doc(hidden)]
         pub use euf_egraph::{
-            EufConflict, EufTheory, ExplanationId, FinalCheckOutcome, PropagationQueue,
+            EufConflict, EufOnlineAtomPolicy, EufOnlineAtomPolicyGuard, EufOnlineAtomStats,
+            EufOnlineAtomStatsGuard, EufTheory, ExplanationId, FinalCheckOutcome, PropagationQueue,
             TheoryExplanation, TheoryLit, TheoryProp, TheorySolver, check_qf_uf,
-            check_qf_uf_online_cdclt, check_qf_uf_with_config, prove_unsat_by_congruence,
-            prove_unsat_lazy, prove_unsat_qf_uf_online, solve_qf_uf_online,
+            check_qf_uf_online_cdclt, check_qf_uf_with_config, euf_online_atom_policy,
+            last_euf_online_atom_stats, prove_unsat_by_congruence, prove_unsat_lazy,
+            prove_unsat_qf_uf_online, solve_qf_uf_online,
         };
         #[doc(hidden)]
         pub use euf_interpolant::{
