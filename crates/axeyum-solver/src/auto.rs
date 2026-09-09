@@ -5560,8 +5560,14 @@ fn dispatch_pure_qf_abv(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<Option<CheckResult>, SolverError> {
+    // One backend and one WARM bit-blaster for the whole query. The lazy-ROW
+    // CEGAR loop only ever appends lemmas, so round n+1 reuses round n's
+    // lowering and CNF instead of re-blasting the abstraction from scratch
+    // (roadmap item 1.1). `backend` stays live as the loop's fallback for any
+    // round the warm engine refuses, so no verdict the cold form decides
+    // becomes unreachable.
     let mut backend = SatBvBackend::new();
-    match crate::abv::check_qf_abv_lazy_row(&mut backend, arena, assertions, config)? {
+    match crate::abv::check_qf_abv_lazy_row_warm(&mut backend, arena, assertions, config)? {
         CheckResult::Sat(model) => Ok(Some(CheckResult::Sat(model))),
         CheckResult::Unsat => Ok(Some(CheckResult::Unsat)),
         CheckResult::Unknown(reason) if is_budget_unknown_kind(reason.kind) => {

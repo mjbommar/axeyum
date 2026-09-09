@@ -1,11 +1,11 @@
 use super::{
     ArrayDefs, Assignment, CheckResult, HashSet, Instant, LastExtReplay, MAX_DIFF_SKOLEMS,
-    MAX_ROW_ROUNDS, ReplayTargets, RowCtx, RowKind, SolverBackend, SolverConfig, SolverError,
-    SymbolId, TermArena, TermId, UnknownReason, Value, check_row_cegar, check_scalar_abstraction,
-    complete_assignment, config_with_remaining_deadline, ext_unknown, past_deadline,
-    project_replay_ext, read_indices_for, read_terms_differ, replay_last_ext_candidate,
-    row_axiom_lemma, row_violated, select_congruence_lemma, var_congruence_sites,
-    violated_congruence_pairs,
+    MAX_ROW_ROUNDS, ReplayTargets, RowCtx, RowEngine, RowKind, SolverBackend, SolverConfig,
+    SolverError, SymbolId, TermArena, TermId, UnknownReason, Value, check_row_cegar,
+    check_scalar_abstraction, complete_assignment, config_with_remaining_deadline, ext_unknown,
+    past_deadline, project_replay_ext, read_indices_for, read_terms_differ,
+    replay_last_ext_candidate, row_axiom_lemma, row_violated, select_congruence_lemma,
+    var_congruence_sites, violated_congruence_pairs,
 };
 
 #[derive(Clone, Copy)]
@@ -123,7 +123,12 @@ pub(super) fn check_qf_abv_lazy_ext<B: SolverBackend>(
             originals: assertions,
             defs: &defs,
         };
-        return check_row_cegar(backend, arena, assertions, &replay, config, deadline);
+        // The lazy-extensionality path keeps the one-shot backend for now: its
+        // own refinement loop (`ext_cegar_loop`) retracts nothing either, but
+        // wiring it onto the warm engine is a separate, separately measured
+        // step. `RowEngine::cold` is the historical behaviour, unchanged.
+        let mut engine = RowEngine::cold(backend);
+        return check_row_cegar(&mut engine, arena, assertions, &replay, config, deadline);
     }
 
     add_const_lemmas(arena, &ctx, &mut working)?;

@@ -682,7 +682,44 @@ pub fn check_qf_abv_lazy_row<B: SolverBackend>(
     // `lazy_returned` is recorded by the wrapper below, so the difference of
     // the two names the in-flight route (`AbvStats::in_flight_route`).
     note_abv(|stats| stats.lazy_entered += 1);
-    let result = check_qf_abv_lazy_row_inner(backend, arena, assertions, config);
+    let result = check_qf_abv_lazy_row_inner(backend, arena, assertions, config, RowWarmth::Cold);
+    note_abv(|stats| stats.lazy_returned += 1);
+    result
+}
+
+/// Whether the lazy-ROW CEGAR loop retains one bit-blasting engine across its
+/// refinement rounds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum RowWarmth {
+    /// Re-submit the whole working set to the one-shot backend each round.
+    Cold,
+    /// Hold one [`crate::incremental::IncrementalBvSolver`] for the life of the
+    /// query and assert only each round's new lemmas into it.
+    Warm,
+}
+
+/// [`check_qf_abv_lazy_row`] with the refinement loop on the **warm** engine:
+/// one retained bit-blaster for the query, handed only the lemmas each round
+/// adds, instead of a full re-lowering per round (roadmap item 1.1).
+///
+/// This is a routing change, not a capability change. The one-shot `backend` is
+/// still used for the eager/extensionality delegations and as the per-round
+/// fallback whenever the warm engine refuses a shape, so no verdict the cold
+/// form decides becomes unreachable. Every `sat` is still projected and replayed
+/// against the original array assertions, and `unsat` still transfers from the
+/// relaxation, so the soundness argument is unchanged.
+///
+/// # Errors
+///
+/// Same as [`check_qf_abv_lazy_row`].
+pub fn check_qf_abv_lazy_row_warm<B: SolverBackend>(
+    backend: &mut B,
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    note_abv(|stats| stats.lazy_entered += 1);
+    let result = check_qf_abv_lazy_row_inner(backend, arena, assertions, config, RowWarmth::Warm);
     note_abv(|stats| stats.lazy_returned += 1);
     result
 }
@@ -694,6 +731,7 @@ fn check_qf_abv_lazy_row_inner<B: SolverBackend>(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    warmth: RowWarmth,
 ) -> Result<CheckResult, SolverError> {
     // If the eager elimination accepts the query, it (or the existing lazy
     // select-congruence path built on it) already decides it — delegate and never
@@ -718,7 +756,11 @@ fn check_qf_abv_lazy_row_inner<B: SolverBackend>(
         originals: assertions,
         defs: &defs,
     };
-    check_row_cegar(backend, arena, &substituted, &replay, config, deadline)
+    let mut engine = match warmth {
+        RowWarmth::Cold => RowEngine::cold(backend),
+        RowWarmth::Warm => RowEngine::warm(backend, config),
+    };
+    check_row_cegar(&mut engine, arena, &substituted, &replay, config, deadline)
 }
 
 /// Decides the scalar linear-arithmetic array slice (currently `Array Int E`
@@ -3251,9 +3293,167 @@ fn check_scalar_abstraction<B: SolverBackend>(
     }
 }
 
+/// How the lazy-ROW CEGAR loop solves each round's scalar abstraction.
+///
+/// The loop's `working` set only ever GROWS: each round appends the ROW /
+/// congruence lemmas the previous candidate violated and re-solves. Handing the
+/// whole set to a one-shot backend every round re-lowers, re-blasts and
+/// re-encodes every assertion the loop has already encoded — the cost this type
+/// exists to remove (roadmap item 1.1).
+///
+/// Both engines are always present in the warm form:
+///
+/// * `warm` is the retained [`IncrementalBvSolver`]. It is handed only the
+///   assertions appended since the previous round, so each one is lowered and
+///   Tseitin-encoded exactly once for the life of the query.
+/// * `cold` is the one-shot backend. It is the only engine for the scalar
+///   adapters whose theories the warm bit-blaster does not carry
+///   (`ArithDpllBackend`, `UfliaDpllBackend`, `DeclaredSortEufBackend`), and the
+///   fallback whenever the warm engine refuses a shape or declines for a reason
+///   that is not a budget. Keeping it reachable is what makes the warm route a
+///   routing change rather than a capability change: every verdict the one-shot
+///   path decides today is still decided.
+///
+/// Warmth is not observable from a verdict, so the loop records what it did
+/// through [`crate::abv::note_row_warmth`]; see
+/// [`crate::RowCegarWarmth::encodes_each_assertion_once`] for the invariant a
+/// silent rebuild breaks (and why the clause count alone cannot catch one).
+pub(crate) struct RowEngine<'b, B: SolverBackend> {
+    cold: &'b mut B,
+    warm: Option<Box<crate::incremental::IncrementalBvSolver>>,
+    /// How many of `working`'s assertions the warm engine already holds.
+    encoded: usize,
+}
+
+impl<'b, B: SolverBackend> RowEngine<'b, B> {
+    /// The historical behaviour: re-submit the whole working set to `backend`
+    /// every round.
+    pub(crate) fn cold(backend: &'b mut B) -> Self {
+        Self {
+            cold: backend,
+            warm: None,
+            encoded: 0,
+        }
+    }
+
+    /// One retained bit-blasting engine for the life of the query, with
+    /// `backend` kept as the fallback.
+    pub(crate) fn warm(backend: &'b mut B, config: &SolverConfig) -> Self {
+        note_row_warmth(|w| w.engine_generations += 1);
+        Self {
+            cold: backend,
+            warm: Some(Box::new(
+                crate::incremental::IncrementalBvSolver::with_config(config.clone()),
+            )),
+            encoded: 0,
+        }
+    }
+
+    /// Discards the warm engine; every later round runs one-shot.
+    fn go_cold(&mut self) {
+        self.warm = None;
+    }
+
+    /// Solves one round's `working` set, which must extend the previous round's.
+    fn solve_round(
+        &mut self,
+        arena: &mut TermArena,
+        working: &[TermId],
+        config: &SolverConfig,
+    ) -> Result<CheckResult, SolverError> {
+        note_row_warmth(|w| {
+            w.rounds += 1;
+            w.working_terms_final = working.len() as u64;
+        });
+        if self.warm.is_some()
+            && let Some(result) = self.solve_round_warm(arena, working, config)?
+        {
+            return Ok(result);
+        }
+        note_row_warmth(|w| w.cold_rounds += 1);
+        check_scalar_abstraction(self.cold, arena, working, config)
+    }
+
+    /// The warm half of [`Self::solve_round`]. `Ok(None)` means the warm engine
+    /// declined and the caller must fall back to the one-shot backend; the warm
+    /// engine is discarded in that case, so a decline costs one round, not one
+    /// per round.
+    fn solve_round_warm(
+        &mut self,
+        arena: &mut TermArena,
+        working: &[TermId],
+        config: &SolverConfig,
+    ) -> Result<Option<CheckResult>, SolverError> {
+        // The loop only appends, so anything shorter than what the engine holds
+        // is a caller bug rather than a retraction to model.
+        if working.len() < self.encoded {
+            self.go_cold();
+            return Ok(None);
+        }
+        let Some(warm) = self.warm.as_mut() else {
+            return Ok(None);
+        };
+        // The round's shrinking deadline, not the query's full budget.
+        warm.set_timeout(config.timeout);
+
+        let mut added = 0u64;
+        for index in self.encoded..working.len() {
+            let term = working[index];
+            // Arrays and UF applications are not on the warm bit-blaster's
+            // path. The ROW abstraction should have removed them; one that
+            // survived must send the round to the one-shot backend rather than
+            // be silently dropped.
+            if crate::incremental::IncrementalBvSolver::term_needs_deferred_theory(arena, term) {
+                self.go_cold();
+                return Ok(None);
+            }
+            match warm.assert(arena, term) {
+                Ok(()) => added += 1,
+                Err(SolverError::Unsupported(_) | SolverError::NonBooleanAssertion(_)) => {
+                    self.go_cold();
+                    return Ok(None);
+                }
+                Err(error) => return Err(error),
+            }
+        }
+
+        let result = warm.check(arena)?;
+        note_row_warmth(|w| {
+            w.warm_asserted_terms += added;
+            w.clause_counts.push(warm_clause_count(warm));
+            w.aig_node_counts.push(warm_aig_node_count(warm));
+        });
+        self.encoded = working.len();
+
+        match result {
+            // A budget decline is the same answer the one-shot path would spend
+            // the rest of the budget reaching; return it.
+            CheckResult::Unknown(reason) if is_budget_unknown_kind(reason.kind) => {
+                Ok(Some(CheckResult::Unknown(reason)))
+            }
+            // A capability decline must not lose a verdict the one-shot path
+            // (with its word-level preprocessing and local-search probe) still
+            // decides.
+            CheckResult::Unknown(_) => {
+                self.go_cold();
+                Ok(None)
+            }
+            decided => Ok(Some(decided)),
+        }
+    }
+}
+
+fn warm_clause_count(warm: &crate::incremental::IncrementalBvSolver) -> u64 {
+    warm.encoded_clause_count() as u64
+}
+
+fn warm_aig_node_count(warm: &crate::incremental::IncrementalBvSolver) -> u64 {
+    warm.lowered_aig_node_count() as u64
+}
+
 #[allow(clippy::too_many_lines)]
 fn check_row_cegar<B: SolverBackend>(
-    backend: &mut B,
+    engine: &mut RowEngine<'_, B>,
     arena: &mut TermArena,
     substituted: &[TermId],
     replay: &ReplayTargets<'_>,
@@ -3306,7 +3506,7 @@ fn check_row_cegar<B: SolverBackend>(
         }
         note_abv(|stats| stats.cegar_rounds += 1);
         let round_config = config_with_remaining_deadline(config, deadline);
-        let assignment = match check_scalar_abstraction(backend, arena, &working, &round_config)? {
+        let assignment = match engine.solve_round(arena, &working, &round_config)? {
             // The abstraction is a relaxation; its UNSAT implies the original's.
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
             CheckResult::Unknown(reason) => {
@@ -10969,9 +11169,12 @@ fn first_false_replay_conjunct(
 mod array_elim_certificate;
 mod instruments;
 mod lazy_ext;
+mod row_warmth;
 pub use array_elim_certificate::{ArrayElimUnsatCertificate, certify_array_elim_unsat};
 pub(crate) use instruments::note_abv;
 pub use instruments::{AbvStats, AbvStatsGuard, last_abv_stats};
+pub(crate) use row_warmth::note_row_warmth;
+pub use row_warmth::{RowCegarWarmth, RowCegarWarmthGuard, last_row_cegar_warmth};
 
 #[cfg(test)]
 #[path = "abv/tests.rs"]
