@@ -119,6 +119,14 @@ pub mod instrument {
     /// than mirrored through a handle, because the decision point is reached a
     /// handful of times per query, never in a loop.
     pub const UF_OVERBOUND: &str = "uf-overbound";
+    /// `crate::EufOnlineAtomStats` for `euf-online`'s Boolean-skeleton
+    /// admission decision. Republished on every recording, for the same reason
+    /// [`UF_OVERBOUND`] is: the route is entered a handful of times per query,
+    /// never in a loop. It has to survive a watchdog kill for exactly the reason
+    /// [`UFLIA_INTERFACE`] does — the query where this route declines in a
+    /// millisecond is the query that then spends 24 s elsewhere and never
+    /// returns.
+    pub const EUF_ONLINE_ATOMS: &str = "euf-online-atoms";
     /// `crate::UfliaInterfaceCounters` for the `QF_UFLIA` online combination's
     /// interface layer. Unlike [`UF_OVERBOUND`] this instrument records once
     /// per interface-DFS node, so it is flushed on a fixed cadence rather than

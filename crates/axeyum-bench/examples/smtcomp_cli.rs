@@ -340,12 +340,13 @@ use std::time::{Duration, Instant};
 use axeyum_solver::theories::cdclt_diagnostics::{TheoryLayerStatsGuard, last_theory_layer_stats};
 use axeyum_solver::{
     AbvStats, AbvStatsGuard, BvLayerStatsGuard, CheckProgress, CheckResult, CheckingProgress,
-    ConfigTraceGuard, DlOnlineStatsGuard, Evidence, EvidenceCheck, EvidenceReport, FrontDoorStats,
-    FrontDoorStatsGuard, LazySmtCountersGuard, LiaCountersGuard, LiveInstruments, ProofProgress,
-    RouteAttributionGuard, RouteTrace, Sampled, SolverConfig, SpanLog, SpanLogInputs, Termination,
-    UfArithOverboundStats, UfArithOverboundStatsGuard, UfliaInterfaceCounters,
-    UfliaInterfaceCountersGuard, config_trace_line, division_from_path, install_live_instruments,
-    instrument, last_abv_stats, last_bv_layer_stats, last_dl_online_stats, last_front_door_stats,
+    ConfigTraceGuard, DlOnlineStatsGuard, EufOnlineAtomStats, EufOnlineAtomStatsGuard, Evidence,
+    EvidenceCheck, EvidenceReport, FrontDoorStats, FrontDoorStatsGuard, LazySmtCountersGuard,
+    LiaCountersGuard, LiveInstruments, ProofProgress, RouteAttributionGuard, RouteTrace, Sampled,
+    SolverConfig, SpanLog, SpanLogInputs, Termination, UfArithOverboundStats,
+    UfArithOverboundStatsGuard, UfliaInterfaceCounters, UfliaInterfaceCountersGuard,
+    config_trace_line, division_from_path, install_live_instruments, instrument, last_abv_stats,
+    last_bv_layer_stats, last_dl_online_stats, last_euf_online_atom_stats, last_front_door_stats,
     last_lazy_smt_counters, last_lia_counters, last_route_attribution,
     last_uf_arith_overbound_stats, last_uflia_interface_counters, live_bv_layer_stats,
     live_config_trace_line, live_lazy_smt_counters, live_lia_counters, live_theory_layer_stats,
@@ -925,6 +926,15 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
     {
         lines.push(partial_line(&uf.value.trace_line()));
         note("uf-overbound", uf.sampled);
+    }
+    // Same gate, same reason it has to survive a kill: this route's decline is
+    // sub-millisecond and the budget then goes elsewhere, so the query this
+    // instrument describes is exactly the query that never returns.
+    if let Some(euf) = board.sample::<EufOnlineAtomStats>(instrument::EUF_ONLINE_ATOMS)
+        && euf.value.entered > 0
+    {
+        lines.push(partial_line(&euf.value.trace_line()));
+        note("euf-online-atoms", euf.sampled);
     }
     // Same gate, and the same reason it has to survive a kill: on the `QF_UFLIA`
     // losses the route that could decide the file declines in well under a
@@ -1716,6 +1726,13 @@ fn main() -> ExitCode {
         // with nothing after it is invisible in a verdict and nearly invisible
         // in a trail; `terminal_unknown` names it outright.
         let _uf_overbound_guard = instruments_on.then(UfArithOverboundStatsGuard::enable);
+        // `euf-online`'s Boolean-skeleton admission. Measured 2026-09-08: on
+        // five `QF_UFLIA` files this route declines in ~1 ms with "boolean
+        // skeleton outside the online CDCL(T) encoder" and the same route,
+        // run alone on the same file, answers `unsat` in 2-13 ms. That decline
+        // string names the encoder but not the ATOM, the count, or the policy
+        // in force, which is why finding it cost a division-sized measurement.
+        let _euf_online_atom_guard = instruments_on.then(EufOnlineAtomStatsGuard::enable);
         // The `QF_UFLIA` online combination's interface layer. `uf-overbound`
         // says whether the route got to RUN; this says what it did once it did,
         // and in particular how big the interface proposal was against the
@@ -1803,6 +1820,13 @@ fn main() -> ExitCode {
             let uf_overbound = last_uf_arith_overbound_stats();
             if uf_overbound.engaged > 0 {
                 trace_lines.push(uf_overbound.trace_line());
+            }
+            // Only when `euf-online` was entered at all: on a query with no
+            // equality atoms the route returns before encoding anything, and a
+            // row of zeros would claim a decision point that was never reached.
+            let euf_online_atoms = last_euf_online_atom_stats();
+            if euf_online_atoms.entered > 0 {
+                trace_lines.push(euf_online_atoms.trace_line());
             }
             // Only when the online UFLIA interface layer was reached: on every
             // other query the absence of the line is the information, exactly as
