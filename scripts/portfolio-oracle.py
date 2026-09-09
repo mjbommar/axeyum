@@ -153,7 +153,18 @@ def run_one(binary, path, timeout_ms, cores, mem_mb, wall_slack_s):
 
 
 def classify(row, probe, args):
-    """Score one probed file.  Mutates and returns `row`."""
+    """Score one probed file.  Mutates and returns `row`.
+
+    `verdict == "none"` means the process printed no verdict at all: it aborted.
+    Measured on `QF_ABV/brummayerbiere/wchains140se.smt2`, which fails a
+    127 MB allocation under the 8 GiB `ulimit -v` and exits 134.  That is a
+    memory bound, not an absence of routes, and filing it as `NO-ROUTE` would be
+    exactly the "the message is not the event" error this division's own
+    attribution note was written to correct.
+    """
+    if probe["verdict"] == "none":
+        row["status"] = "ABORTED"
+        return row
     if probe["verdict"] not in DECIDED_VERDICTS:
         row["status"] = "NO-ROUTE" if probe["trail_present"] else "NO-ROUTE-NO-TRAIL"
         return row
