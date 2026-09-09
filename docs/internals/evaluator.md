@@ -28,18 +28,30 @@ the model, the assignment carries that choice. Missing assignments, sort
 mismatches, malformed applications, and exceeded representation limits remain
 explicit failures.
 
-Concrete `Int` values are `i128`-based, and integer arithmetic outside that
-reference range returns `IrError::ArithmeticOverflow`; a solver route must
-decline the dependent model or verdict rather than wrap, panic, or reinterpret
-the formula.
+`Int` arithmetic among purely `i128`-representable operands still returns
+`IrError::ArithmeticOverflow` when the `i128` computation itself overflows; a
+solver route must decline the dependent model or verdict rather than wrap,
+panic, or reinterpret the formula. But `Int` is no longer `i128`-only (ADR-1702
+slice 2, landed): an integer literal or intermediate result outside the `i128`
+reference range is `Value::WideInt`/`TermNode::WideIntConst`
+(`crates/axeyum-ir/src/int_wide.rs`), an exact `BigInt`. Once *either* operand
+of `Eq`, `IntNeg/Add/Sub/Mul/Div/Mod/Abs`, or an int comparison is `WideInt`,
+the evaluator takes the exact wide-int path (`apply_wide_int`,
+`crates/axeyum-ir/src/eval.rs:548-564` and following) instead of the narrow
+`i128` closure, and cannot fail: `BigInt` has no overflow. Every wide result
+demotes back to `Value::Int` when it fits, so a computation that grows past
+`i128` and cancels back returns the ordinary narrow representation.
 
-Rational arithmetic can exceed `i128`, but only where a route opts in
-(ADR-1702). The evaluator's `Real` path uses the **declining** family, so
+Rational arithmetic can similarly exceed `i128`, but only where a route opts in
+(ADR-1702 slice 1). The evaluator's `Real` path uses the **declining** family, so
 `real_add`/`real_mul`/`real_neg` still return `IrError::ArithmeticOverflow`
 outside `i128` range; the opt-in `Rational::wide_*` family, used by the
 exact-rational simplex, promotes instead. Both families compute the same
 mathematical value, so widening a route can only turn an `unknown` into a
-decision.
+decision. `Int`'s wide path (above) is not opt-in in the same sense — it
+engages automatically whenever a `WideInt` value is already present, most
+commonly because the SMT-LIB integer-literal parser produced one directly for
+an out-of-`i128`-range literal.
 
 ## Replay is a pipeline property
 
