@@ -303,6 +303,17 @@ committed 200-file `QF_LRA` list on **s7**, 24 s and 8 GiB per file. Artifact:
 | files where some call is over the 4 M cap | **7** |
 | ...whose final verdict is a decision | **0** |
 
+**One caveat, stated because it is checkable in the artifact's own header.** s7
+was carrying another lane's two-process portfolio sweep throughout (`loadavg`
+3.05 at start), so the seven files' `unknown` is a verdict taken under
+contention, and a quieter host might decide one of them. The cell counts are
+not affected — they are deterministic counts of what the program allocates, not
+timings — so "seven files build a tableau over the cap" is exact and "all seven
+are undecided" is the weaker of the two claims. Both point the same way here,
+and the stronger one is the one the decision rests on: **a fixed 4 M cell cap
+and an 8 GiB memory gate are 67x apart on the same allocation**, whatever those
+seven files decide.
+
 **Not added, and the measurement says why twice.**
 
 - Adding the cap would refuse seven files that decide nothing today, and would
