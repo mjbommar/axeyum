@@ -1,0 +1,9 @@
+[1/27] QF_LIA deciders=0 best=no-route (218s)  v30_problem_2__023.smt2.slack.smt2
+[2/27] QF_LIA deciders=5 best=uf-arithmetic@1211ms (57s)  0006-still_live-11-1.smt2
+[3/27] QF_LIA deciders=2 best=nra@8681ms (132s)  182-incremental_scheduling-17280-0.smt2
+[4/27] QF_LIA deciders=0 best=no-route (460s)  apache-get-tag-O0.smt2
+[5/27] QF_LIA deciders=0 best=no-route (749s)  jm2006_variant-O0.smt2
+[6/27] QF_LIA deciders=5 best=datatype-elim@8859ms (80s)  RF-13.smt2
+[7/27] QF_LIA deciders=0 best=no-route (207s)  RC-07.smt2
+[8/27] QF_LIA deciders=0 best=no-route (242s)  RC-09.smt2
+[9/27] QF_LIA deciders=0 best=no-route (228s)  RC-11.smt2

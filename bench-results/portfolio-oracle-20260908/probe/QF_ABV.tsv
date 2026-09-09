@@ -1,0 +1,26 @@
+file	division	status	control_verdict	control_ms	control_trail	probe_verdict	probe_ms	probe_trail	winner	winner_own_ms	preamble_ms	arm_ms	confirm_own_ms
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/2018-Mann/arbiter_array_cex_w32d32q16n4b34.smt2	QF_ABV	NO-ROUTE	unknown	24597	1	unknown	120328	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/bmc-arrays/bubbleSort.smt2	QF_ABV	NO-ROUTE-NO-TRAIL	unknown	25004	0	unknown	121003	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/brummayerbiere/fifo32ia04k08.smt2	QF_ABV	TOO-SLOW-ARM	unknown	25016	0	sat	86940	1	array-fast-path	86907.4	3.1	86910.5	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/brummayerbiere/wchains140se.smt2	QF_ABV	ABORTED	none	12868	0	none	13088	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try3_noof_functions_dwp_md5sum.set_char_quoting.il.dwp.smt2	QF_ABV	STALE-DECIDED	sat	24222	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try3_noof_functions_dwp_ptx.bkm_scale.il.dwp.smt2	QF_ABV	STALE-DECIDED	sat	24209	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try3_noof_functions_dwp_sum.set_char_quoting.il.dwp.smt2	QF_ABV	STALE-DECIDED	sat	24199	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_cat.next_line_num.il.dwp.smt2	QF_ABV	NO-ROUTE	unknown	1501	1	unknown	1492	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_mkfifo.get_quoting_style.il.dwp.smt2	QF_ABV	TOO-SLOW-ARM	unknown	25026	0	unsat	94463	1	abv-online-cdclt	94457.0	0.6	94457.6	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_stty.visible.il.dwp.smt2	QF_ABV	STALE-DECIDED	sat	4090	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_vdir.strcmp_size.il.dwp.smt2	QF_ABV	NO-ROUTE	unknown	6664	1	unknown	6560	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try5_small_noof_functions_dwp_env.set_char_quoting.il.dwp.smt2	QF_ABV	STALE-DECIDED	sat	24220	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/klee-selected-smt2/cu-large-qids/_lbracket-query-052.smt2	QF_ABV	STALE-DECIDED	sat	2539	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000018.smt2	QF_ABV	NO-ROUTE	unknown	24050	1	unknown	120040	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000093.smt2	QF_ABV	NO-ROUTE	unknown	24051	1	unknown	120078	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000188.smt2	QF_ABV	NO-ROUTE	unknown	24030	1	unknown	120041	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000263.smt2	QF_ABV	NO-ROUTE	unknown	24036	1	unknown	120028	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/klee-selected-smt2/cu-no-caches/_lbracket-query-000333.smt2	QF_ABV	STALE-DECIDED	sat	2629	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/platania/no_init_simple_delete/no_init_simple_delete55.smt2	QF_ABV	NO-ROUTE-NO-TRAIL	unknown	25012	0	unknown	121007	0					
+# division=QF_ABV files=19 budget_ms=24000 probe_ms=120000 cores=8-11 mem_mb=8192
+# ABORTED	1
+# NO-ROUTE	7
+# NO-ROUTE-NO-TRAIL	2
+# STALE-DECIDED	7
+# TOO-SLOW-ARM	2

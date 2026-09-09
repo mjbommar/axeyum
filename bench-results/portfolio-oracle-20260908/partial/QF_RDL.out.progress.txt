@@ -1,0 +1,47 @@
+[1/47] TOO-SLOW-ARM         dl-online arm=42002.6ms  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-5.smt2
+[2/47] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-6.smt2
+[3/47] NO-ROUTE-NO-TRAIL    - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-7.smt2
+[4/47] TOO-SLOW-ARM         dl-online arm=106984.7ms  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-matrix2x2.pddl.smt2
+[5/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-4.smt2
+[6/47] TOO-SLOW-ARM         dl-online arm=62694.4ms  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-5.smt2
+[7/47] NO-ROUTE-NO-TRAIL    - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-6.smt2
+[8/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-30.smt2
+[9/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-40.smt2
+[10/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-60.smt2
+[11/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-70.smt2
+[12/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-80.smt2
+[13/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-90.smt2
+[14/47] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/check/bignum_rdl1.smt2
+[15/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-12.smt2
+[16/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-13.smt2
+[17/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-14.smt2
+[18/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-15.smt2
+[19/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-16.smt2
+[20/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-17.smt2
+[21/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-18.smt2
+[22/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-19.smt2
+[23/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-20.smt2
+[24/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-10.smt2
+[25/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-11.smt2
+[26/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-12.smt2
+[27/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-13.smt2
+[28/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-14.smt2
+[29/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-15.smt2
+[30/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-16.smt2
+[31/47] TOO-SLOW-ARM         dl-online arm=26458.7ms  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-17.smt2
+[32/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-9.smt2
+[33/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-10.smt2
+[34/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-11.smt2
+[35/47] TOO-SLOW-ARM         dl-online arm=29446.8ms  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-12.smt2
+[36/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-9.smt2
+[37/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz5_1200.smt2
+[38/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz7_500.smt2
+[39/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb01_900.smt2
+[40/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb04_950.smt2
+[41/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb06_1100.smt2
+[42/47] PRIZE                dl-online arm=19694.3ms  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb06_900.smt2
+[43/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb07_397.smt2
+[44/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb08_888.smt2
+[45/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb08_930.smt2
+[46/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb10_944.smt2
+[47/47] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/yn1_750.smt2
