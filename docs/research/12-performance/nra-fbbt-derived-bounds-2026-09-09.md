@@ -44,6 +44,12 @@ Three properties, each of which would have to be *removed* for a `sat` to escape
 Reporting `sat` from this route therefore requires adding a variant, a field and
 a branch. It is not a `return` anyone can forget.
 
+Measured rather than argued, on the shipped source: `nra_fbbt.rs` mentions
+`CheckResult::Sat`, `ComponentOutcome::Sat` and `Model` **zero times** — there is
+no `sat` and no model anywhere in the module — and the glue's single
+`Refutation::new` call site sits inside
+`matches!(decide_component(&refs), Some(ComponentOutcome::Unsat))`.
+
 ## Untrusted search, trusted checking
 
 The propagation in `derive_bounds` is ordinary interval FBBT and is **not
@@ -218,8 +224,9 @@ wall and 8 GiB via `scripts/mem-run.sh`, `taskset -c 0-7`, arms **interleaved pe
 file** so ambient load falls on both equally. One binary, sha256
 `baf82911718a1d269823bf8722bd2dec1dc8b878a3d4096f1828b493e82d3118`; the arms
 differ only in `AXEYUM_NRA_FBBT`. The host was not idle (load 1.5–9.4 across the
-sweep, other lanes on the box), which is why the conclusion is stated in decided
-counts.
+sweep — this lane's own cargo builds are among the causes, checked in `ps`, not
+assumed to be other lanes), which is why the conclusion is stated in decided
+counts and not in seconds.
 
 | | `off` | `derived-bounds` |
 |---|---:|---:|
@@ -238,8 +245,11 @@ Three files changed and only two are verdicts:
 | `sqrt-1mcosq-8-chunk-0485` | unknown (0.1 s) | **unsat** (0.1 s) |
 | `sin-cos-346-b-chunk-0543` | no answer (24 s) | unknown (20.4 s) |
 
-The third is a timing artifact under contention, not a verdict change. Both new
-results agree with the files' own `:status unsat`.
+The third is a timing artifact under contention, not a verdict change.
+
+Both new results were adjudicated three ways: the files' own `:status unsat`,
+z3 run directly on each (`unsat`, `unsat`), and the fact that the route producing
+them cannot express any other verdict.
 
 ## What this did not do
 
