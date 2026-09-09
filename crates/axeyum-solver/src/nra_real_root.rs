@@ -8177,12 +8177,18 @@ fn refute_with_derived_bounds(
         }
         let derived_count = owned.len();
 
-        let mut refs: Vec<&MultiAtom> = comp.iter().copied().collect();
+        let mut refs: Vec<&MultiAtom> = comp.clone();
         // Free strengthening: linear atoms already INSIDE the component's
         // variables are part of the query, so adding them keeps the subset
         // property and can only make the system harder to satisfy.
         for atom in &linear {
-            if atom.poly.vars().is_subset(&comp_vars) {
+            let vars = atom.poly.vars();
+            // A CONSTANT atom has no variables, so it is vacuously "inside" the
+            // component. `decompose_multivariate` folds those out before it forms
+            // components at all (`fold_constant_atoms`), and the deciders below are
+            // only ever exercised on variable-bearing atoms — so this excludes
+            // them rather than hand a decider a shape nothing has explored.
+            if !vars.is_empty() && vars.is_subset(&comp_vars) {
                 refs.push(atom);
             }
         }

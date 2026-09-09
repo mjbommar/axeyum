@@ -560,6 +560,10 @@ pub(crate) struct DerivedBounds {
 /// is what makes the propagation *transitive* — the property
 /// `nra::extract_bounds` explicitly does not have.
 pub(crate) fn derive_bounds(facts: &[LinearFact], policy: &FbbtPolicy) -> DerivedBounds {
+    // INVARIANT the certificates depend on: `pool` STARTS as a copy of `facts`,
+    // so for every `fi < facts.len()`, `pool[fi] == facts[fi]` and a proposal may
+    // cite its source fact by its `facts` index. Derived bounds are appended
+    // after, never inserted, so that correspondence is stable for the whole run.
     let mut pool: Vec<LinearFact> = facts.to_vec();
     let mut ranges: BTreeMap<SymbolId, Range> = BTreeMap::new();
     let mut accepted: Vec<CertifiedBound> = Vec::new();
@@ -567,13 +571,13 @@ pub(crate) fn derive_bounds(facts: &[LinearFact], policy: &FbbtPolicy) -> Derive
 
     'rounds: for _ in 0..policy.max_rounds {
         let mut progressed = false;
-        for fi in 0..facts.len() {
-            let vars: Vec<SymbolId> = facts[fi].coeffs.keys().copied().collect();
+        for (fi, fact) in facts.iter().enumerate() {
+            let vars: Vec<SymbolId> = fact.coeffs.keys().copied().collect();
             for k in vars {
                 if accepted.len() >= policy.max_derived_bounds {
                     break 'rounds;
                 }
-                let Some(proposal) = propose(&facts[fi], fi, k, &ranges) else {
+                let Some(proposal) = propose(fact, fi, k, &ranges) else {
                     continue;
                 };
                 if !improves(&ranges, &proposal.claim) {
@@ -765,6 +769,14 @@ impl Refutation {
     /// The body is the constant `CheckResult::Unsat`: it reads no field and takes
     /// no branch, so no computation in this module can steer it to `Sat` or
     /// `Unknown`.
+    #[allow(
+        clippy::unused_self,
+        reason = "the unused `self` IS the soundness property: this function must \
+                  read no field and take no branch, so nothing this module computes \
+                  can steer it away from `Unsat`. Refactoring it to an associated \
+                  function would keep the constant body but lose the guarantee that \
+                  a Refutation is what reached it."
+    )]
     pub(crate) fn into_check_result(self) -> crate::CheckResult {
         crate::CheckResult::Unsat
     }
@@ -1067,7 +1079,7 @@ mod tests {
     fn the_off_arm_derives_nothing() {
         let facts = vec![fact(&[(0, -1)], 10, false)];
         assert!(derive_bounds(&facts, &FbbtPolicy::OFF).bounds.is_empty());
-        assert!(!FbbtPolicy::OFF.enabled);
+        const { assert!(!FbbtPolicy::OFF.enabled) };
     }
 
     /// The bridge to a verdict is `Unsat` for every refutation, whatever counters

@@ -171,6 +171,35 @@ components_offered: 564, refutations: 65
 
 **65 refutations for Z3 to adjudicate**, where there had been none.
 
+### The gate itself
+
+The full 2,000-instance sweep, one binary, with the redesigned class in place:
+
+| | |
+|---|---:|
+| total instances | 2,000 |
+| jointly decided | 1,799 |
+| agreements | 1,799 |
+| **DISAGREEMENTS** | **0** |
+| axeyum `Unknown` | 4 |
+| axeyum timeout (adjudication-neutral) | 197 |
+| `Sat` models replayed through the ground evaluator | 1,265 |
+
+and the funnel:
+
+```
+consulted: 2263, split_ok: 589, bounds_derived: 579,
+components_offered: 575, refutations: 66
+```
+
+**66 refutations from this route, every one adjudicated by Z3, zero
+disagreements.** That is the sentence the seed class exists to make sayable; the
+first version of it could not say anything at all.
+
+The other two `z3`-gated differentials named for this fragment also pass with
+nonzero counts: `qf_nia_divmod_const_differential_fuzz` (1 test) and
+`qf_nia_divmod_var_differential_fuzz` (1 test).
+
 ## The A/B on the loss population
 
 `bench-results/parity-losses-20260908/QF_NRA.txt` (75 files), `smtcomp_cli`, 24 s
@@ -211,7 +240,30 @@ results agree with the files' own `:status unsat`.
   11,960–36,945 linear-real atoms against `lra_theory::MAX_ONLINE_LRA_ATOMS`'s
   1,024. Deriving bounds does not move a number that is 11–36× out.
 - **The cost is not zero on the fuzz population.** With the redesigned seed class
-  the sweep's `axeyum timeout` count roughly triples, because the class itself is
-  higher-degree than the general one — a property of the population, not a
-  measured cost of the route. On the parity list the total wall clock moved by
-  0.4% in the route's favour.
+  the sweep's `axeyum timeout` count rises from 66 to 197 of 2,000, because the
+  class itself is higher-degree than the general one — a property of the
+  population, not a measured cost of the route. On the parity list the total wall
+  clock moved by 0.4% in the route's favour.
+
+## Gates
+
+Every count read off the run. `--features full` and `--features z3` where the
+suite requires them; a zero count would mean the suite compiled to nothing.
+
+| gate | result |
+|---|---|
+| `-p axeyum-solver --lib --features full` | **1,653 passed**, 0 failed |
+| `--features full --test corpus_regression` | 1 passed |
+| `--features full --test nra` / `nra_real_root` / `nra_fbbt_route` | 37 / 86 / 6 passed |
+| `--features z3 --test nra_differential_fuzz` | 3 passed, 0 disagreements |
+| `--features z3 --test qf_nia_divmod_const_differential_fuzz` | 1 passed |
+| `--features z3 --test qf_nia_divmod_var_differential_fuzz` | 1 passed |
+| `--test progress_frontier --features full -- --test-threads=1` | 12 passed, no REGRESSION |
+| `scripts/check-clippy-complete.sh` | 839 of 839 targets, 0 diagnostics |
+| `cargo fmt --all --check` | clean |
+| `check-config-registry-staleness.py` | 475 entries, no stale justification |
+| `check-admission-limit-basis.py` | 156 declarations, every basis resolves |
+| `scripts/check-merge-hygiene.sh` | PASS |
+| `scripts/check-links.sh` | all links ok |
+| `mutation_controls.py nra-fbbt-checker` | 7 of 7 guards killed |
+| `mutation_controls.py nra-fbbt-route` | 2 of 2 mutations killed |

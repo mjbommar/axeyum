@@ -33,6 +33,11 @@
 //!   CAD, so it says nothing about this route specifically, and it is labelled
 //!   that way rather than counted as coverage of it.
 #![cfg(feature = "full")]
+// `x`, `y`, `z` and the arena `a` are the names these queries are DISCUSSED
+// under, in the doc comments and in the assertion messages; renaming them to
+// satisfy the lint would make the tests harder to read against their own
+// explanation. `tests/nra.rs` carries the same allow for the same reason.
+#![allow(clippy::many_single_char_names)]
 
 use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_solver::{CheckResult, SolverConfig, check_with_nra};

@@ -288,6 +288,12 @@ impl Instance {
     ///   has to justify (its `GUARD 4`).
     ///
     /// Z3 adjudicates, exactly as for the other classes.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one seed class, written out atom by atom: the atoms and their \
+                  comparators ARE the shape being generated, and splitting them \
+                  across helpers hides which corner this class covers"
+    )]
     fn generate_fbbt_bound_chain(rng: &mut Lcg) -> Instance {
         let num_vars = rng.below(2) + 3; // 3..=4
         // One variable carries the nonlinear content (index 0); every other
@@ -769,6 +775,11 @@ fn z3_decide(inst: &Instance) -> Verdict {
 }
 
 #[test]
+#[allow(
+    clippy::too_many_lines,
+    reason = "one sweep with its adjudication table and its tally; splitting it \
+              would separate a verdict from the counters that qualify it"
+)]
 fn nra_differential_fuzz_disagree_zero() {
     let mut total = 0u64;
     let mut jointly_decided = 0u64;
