@@ -1668,6 +1668,43 @@ fn farkas_holds(
 mod tests {
     use super::*;
 
+    /// `Incremental::policy` reports the policy the engine is actually
+    /// running, and `with_policy` is honoured rather than silently replaced by
+    /// the configured default.
+    ///
+    /// Added 2026-09-09, because the shipped entering rule and its Bland
+    /// fallback threshold were pinned by nothing. The reference comparison in
+    /// `docs/solver-comparison-2026-09/05-yices-opensmt-smtinterpol.md` records
+    /// them as the choice that distinguishes this simplex from Yices2,
+    /// `OpenSMT` and `SMTInterpol`, so they are worth a test that fails when
+    /// they move.
+    ///
+    /// A note on the dead-code lint, since three separate lanes reported it as
+    /// a push blocker on the same day and it is not one: `policy()` has no
+    /// non-test caller, and under `--features full` alone `clippy -D warnings`
+    /// does fail on it. Under `--all-features` it does NOT, because
+    /// `bench_internals` (`lib.rs:273`) re-exports `Incremental` and the method
+    /// becomes reachable public API. The gate the pre-push hook actually runs
+    /// (`scripts/check-clippy-complete.sh`) passes `--all-features`, so it was
+    /// always green. Measure the gate, not a narrower proxy for it.
+    #[test]
+    fn the_engine_reports_the_pivot_policy_it_was_built_with() {
+        let rows = vec![vec![(0usize, r(1))]];
+
+        // The shipped default: fill-in minimising, Bland as a fallback.
+        let dflt = Incremental::with_policy(1, rows.clone(), PivotPolicy::new())
+            .expect("1x1 tableau is far below MAX_TABLEAU_CELLS");
+        assert_eq!(dflt.policy().entering, EnteringRule::MinimiseFillIn);
+        assert_eq!(dflt.policy().bland_threshold, 1_000);
+
+        // The pre-2026-09-08 baseline is still selectable and still reports
+        // itself. A baseline you cannot run is a remembered number.
+        let bland = Incremental::with_policy(1, rows, PivotPolicy::bland())
+            .expect("1x1 tableau is far below MAX_TABLEAU_CELLS");
+        assert_eq!(bland.policy().entering, EnteringRule::Bland);
+        assert_ne!(dflt.policy().entering, bland.policy().entering);
+    }
+
     fn r(n: i128) -> Rational {
         Rational::integer(n)
     }
