@@ -24,9 +24,9 @@ that the file list underneath the brief had moved again.
   group, and three already decided by the current tree with no portfolio at
   all.**
 - Measured yield on the **divisions**, which is the number that decides it:
-  **+4 files, -0, zero verdict disagreements, zero aborts, no decided file
-  materially slower**, over 128 of 200 QF_LIA and 25 of 100 QF_IDL paired files.
-  Three of the four gains are files the brief never named.
+  **+5 files, -0, zero verdict disagreements, zero aborts, no decided file
+  materially slower**, over 145 of 200 QF_LIA and 65 of 100 QF_IDL paired files.
+  Four of the five gains are files the brief never named.
 
 ## What the seven files actually are, re-measured on an idle host
 
@@ -68,8 +68,8 @@ so these frames are clean.
 
 | division | paired files | decided w1 | decided w2 | gained | **lost** | verdict disagreements | aborts | files >1.5x slower and still decided | total wall |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| QF_LIA | 128 of 200 | 104 | **107** | **+3** | **0** | 0 | 0 | 0 | -0.6 % |
-| QF_IDL | 25 of 100 | 2 | **3** | **+1** | **0** | 0 | 0 | 0 | +0.6 % |
+| QF_LIA | 145 of 200 | 114 | **117** | **+3** | **0** | 0 | 0 | 0 | -3.9 % |
+| QF_IDL | 65 of 100 | 34 | **36** | **+2** | **0** | 0 | 0 | 0 | +0.9 % |
 
 The gains:
 
@@ -79,8 +79,9 @@ The gains:
 | `QF_LIA/bofill-scheduling/SMT_random_LIA/ex20400_2600_100` | unknown 24.12 s | sat 8.11 s |
 | `QF_LIA/bofill-scheduling/SMT_random_LIA/ex27000_2600_100` | unknown 24.12 s | sat 8.11 s |
 | `QF_IDL/20210312-Bouvier/vlsat3_i08` | unknown 18.13 s | sat 20.93 s |
+| `QF_IDL/qlock/rand_55_250_1235855873_0_k=8_sat.gph` | unknown 25.13 s | sat 12.93 s |
 
-**Three of the four are files the brief did not name**, which is the more useful
+**Four of the five are files the brief did not name**, which is the more useful
 half of this table: the group is not a fix for a hand-picked list, it is a
 policy over a rung, and the rung has more traffic than the oracle's
 `decided alone` column found. (The oracle runs one route per process on the flat
@@ -95,7 +96,7 @@ QF_LIA, because a file that returns in 8 s instead of spending 24 pays for the
 contention everywhere else.
 
 **Coverage is partial and stated as such.** The sweeps were still running at
-128 of 200 (QF_LIA) and 25 of 100 (QF_IDL) when this note landed; the rows are
+145 of 200 (QF_LIA) and 65 of 100 (QF_IDL) when this note landed; the rows are
 the committed list in order, not a sample chosen after the fact, and the harness
 writes each pair as it completes. A larger denominator can only add files; it
 cannot retract the four gains or the zero losses already recorded.
