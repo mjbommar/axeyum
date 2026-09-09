@@ -95,7 +95,7 @@ def main() -> int:
             per_div[div]["not_probed"] += 1
         per_div[div]["ladder_loses"] += 1
         if winners:
-            per_div[div]["PRIZE"] += 1
+            per_div[div]["PRIZE-CANDIDATE"] += 1
             prizes.append((div, path, winners))
         else:
             per_div[div]["no_solo_route"] += 1
@@ -128,6 +128,36 @@ def main() -> int:
         print("\nprize count by fastest route:")
         for route, n in fastest.most_common():
             print(f"  {route:<24} {n}")
+
+    # The band table IS the decision, so it is computed rather than asserted.
+    #
+    # A portfolio uniquely serves ONE band: a winner that needs a large fraction
+    # of the budget, queued behind a route that needs the same.  A per-route
+    # reserve cannot serve that band, because splitting one clock N ways leaves
+    # the winner too little.  Either end of it belongs to something cheaper: a
+    # sub-second winner is reached by a one-second reserve, and a winner that
+    # wants more than the whole budget is reached by neither.
+    bands = collections.Counter()
+    for div, path, winners in prizes:
+        ms = winners[0][0]
+        if ms < 1_000:
+            bands["under 1 s (a reserve reaches it)"] += 1
+        elif ms < args.budget_ms // 4:
+            bands[f"1 s to {args.budget_ms // 4000} s (a reserve reaches it)"] += 1
+        else:
+            bands[f"{args.budget_ms // 4000} s to {args.budget_ms // 1000} s "
+                  f"(MIDDLE BAND: only a portfolio)"] += 1
+    for path, rs in sorted(solo.items()):
+        if ladder.get(path, ("?", "NOT-PROBED"))[1] == "STALE-DECIDED":
+            continue
+        over = [w for _, (v, w) in rs.items() if v in DECIDED and w > args.budget_ms]
+        if over and not any(w <= args.budget_ms for _, (v, w) in rs.items() if v in DECIDED):
+            bands[f"over {args.budget_ms // 1000} s (neither reaches it)"] += 1
+    print("\nfastest route that decides ALONE, on files the ladder loses:")
+    if not bands:
+        print("  (no file the ladder loses is decided alone by any probed route)")
+    for band in sorted(bands):
+        print(f"  {band:<48} {bands[band]:>4}")
 
     if disagreements:
         print("\nCROSS-ROUTE VERDICT DISAGREEMENT -- soundness alarm:", file=sys.stderr)
