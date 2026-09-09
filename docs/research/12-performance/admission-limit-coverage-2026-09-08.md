@@ -307,6 +307,95 @@ Worth recording *how nearly this was missed*: `git log -G'fn eliminate_functions
 is **empty** over the same window. The signature never moved; the body did. A
 survey that asks about the declaration line gets a clean bill of health.
 
+## The rustdoc trap, third and fourth instances — and what was NOT re-based
+
+`79a7c5297` (the memory-limit lane) turned the staleness gate red on
+`lra_online::DEFAULT_ONLINE_LRA_BUDGET_BYTES` and
+`lra_theory::MAX_ONLINE_LRA_ATOMS`. Its entire touch of that symbol in
+`lra_online.rs` is **one added line inside a doc comment**:
+
+```rust
+/// [`DEFAULT_ONLINE_LRA_BUDGET_BYTES`] it reproduces `MAX_ONLINE_LRA_ATOMS`
+```
+
+The value is untouched at `640 * 1_024 * 1_024`, and `lra_theory.rs` was not in
+the commit at all. Same shape as `drat::CACHE_DROP_INTERVAL_BYTES` and
+`euf::MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS`: **four instances now, all from a
+`rests_on` that names the constant itself.** Treat that as a rule, not a
+coincidence — a dependency should name the mechanism a measurement was *of*.
+
+### Why re-basing is honest here, and what was checked before deciding
+
+Re-basing is the wrong answer when a measurement genuinely needs re-taking, and
+`79a7c5297` is not a harmless commit: it established that `memory_limit_mb`
+**did not bind at all** until 2026-09-08, and it re-attributed one of ADR-1752's
+three cost-model refutations (the 7.8 GB abort on
+`_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2`) to the *offline* Fourier–Motzkin
+route via a live stack sample. Either could have invalidated the ADR.
+
+Neither does, and the reason is in ADR-1752's own text. The two entries do not
+rest on that refuted evidence. They rest on a **calibration identity**: the
+budget is chosen so `NormalizationLimits::for_budget`'s derived ceilings sit
+right, and so `budget_bytes / BYTES_PER_ADMITTED_ATOM` reproduces `1_024`
+*exactly* at the default. That identity is checkable in the tree, not in a
+corpus run, and nothing in `79a7c5297` moves it — the same argument the
+memory-limit lane itself used when it re-derived `BYTES_PER_ADMITTED_ATOM` on
+2026-09-08 and **kept the value**.
+
+So the dates stay at 2026-09-07 and the dependencies move to the mechanisms:
+
+| entry | was | now |
+|---|---|---|
+| `DEFAULT_ONLINE_LRA_BUDGET_BYTES` | the constant + `MAX_ONLINE_LRA_ATOMS` | `for_budget` (the derivation) + `check_qf_lra_online_cdclt` (the route that takes it) |
+| `MAX_ONLINE_LRA_ATOMS` | the constant + `MAX_LRA_CACHED_COEFFICIENTS` + `DEFAULT_ONLINE_LRA_BUDGET_BYTES` | `MAX_LRA_CACHED_COEFFICIENTS` (**kept**) + `check_qf_lra_online_cdclt` + `nra::admission_fits_consumer` |
+
+`MAX_LRA_CACHED_COEFFICIENTS` is kept as a named *constant* deliberately and is
+now the only one: it is ADR-1752's founding example, the dependency whose absence
+let a 2026-08-03 measurement stand after the 2026-08-06 commit that falsified it.
+
+Each replacement was checked before it was written, in both directions —
+`git log -G'<symbol>' --since=2026-09-07` is **empty** for all three (so none is
+a real staleness being hidden), and `git log -G'<symbol>'` over all history
+**matches** for all three (so none is a dead query that can never fire). A
+symbol chosen only to make a gate green would fail the second check, and that is
+the check worth running.
+
+### The finding that came out of it
+
+`MAX_ONLINE_LRA_ATOMS` is no longer the LRA route's own gate — ADR-1752 replaced
+it with `budget_bytes / BYTES_PER_ADMITTED_ATOM`, which is 1,024 at the default
+budget and **13,107 at `--memory-limit-mb 8192`**. But
+`nra::admission_fits_consumer` still projects against the **static 1,024** and
+calls it the consuming engine's capacity, per ADR-1751.
+
+So above the default budget the two are incommensurable again: the LRA consumer
+admits 13,107 atoms while the NRA gate refuses above 1,024. **That is the exact
+defect ADR-1751 existed to remove, reintroduced in a new form by ADR-1752**, and
+it is the same shape as the `MAX_TABLEAU_CELLS` (4 M cells) against
+`simplex_admission` (268 M at 8 GiB) divergence the budget-discipline lane
+recorded — 67x apart, in different units, on one allocation. Recorded on the
+entry, not resolved: it needs a measurement of what the NRA route can actually
+afford at a raised budget, not an edit.
+
+## The undated share is now in the run's own output
+
+459 entries, 77 dated. The sweep took the table from 114 to over 450 by reading
+code, and reading code establishes what a bound DOES, never what its value
+should BE — so roughly **five undated entries for every dated one** is the
+honest headline, and it was visible only in a checker's first line.
+
+- `undated_count()` sits beside `dated_count()`, derived, never written down.
+- `config_trace_line` prints `undated=` on every `--trace` run, from the one
+  shared formatter, so the watchdog's partial line carries it too.
+- The module doc leads with it, where a reader of the table arrives.
+- `DATED_FLOOR` + `the_dated_count_only_rises` ratchet the **dated count**, not
+  the share. Ratcheting the share would pay a lane to leave a bound
+  unregistered, since registering an unmeasured value moves the percentage the
+  wrong way. What must never happen quietly is *losing* a date — most temptingly
+  by downgrading an entry to `undated` when its `rests_on` goes red instead of
+  re-deriving it, which turns a finding into a silence. That exact edit is a
+  registered mutation and it kills exactly one test.
+
 ## Two rules the gates themselves taught
 
 Both came out of gates going red on this lane's own work, which is the only kind

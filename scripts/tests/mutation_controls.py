@@ -9184,6 +9184,22 @@ SUITES["admission-limit-attribution"] = (
             "crates/axeyum-solver/src/dl_online.rs",
         ),
         (
+            # The tempting failure mode, exactly: an entry's `rests_on` goes red
+            # and the cheap way out is to drop the date rather than re-derive or
+            # re-base. This is that edit, on the entry that actually went red on
+            # 2026-09-08.
+            "a dated entry is downgraded to undated instead of re-derived",
+            '        justification: dated(\n            "ADR-1752",\n            "2026-09-07",\n            None,\n            // NOT the constant\'s own name, and not `MAX_ONLINE_LRA_ATOMS`. Both\n            // were, and `79a7c5297` tripped this entry STALE on a single added\n            // line: a rustdoc reference to `DEFAULT_ONLINE_LRA_BUDGET_BYTES`\n            // inside a doc comment. `git log -G` cannot tell that from a code\n            // change, and it should not try. These two name the MECHANISMS\n            // ADR-1752\'s decision is about — the derivation of the coefficient\n            // ceilings out of the budget, and the route that takes it — so a\n            // change to either is a change to what was measured.\n            &[\n                sym("crates/axeyum-solver/src/lra_online.rs", "for_budget"),\n                sym(\n                    "crates/axeyum-solver/src/lra_theory.rs",\n                    "check_qf_lra_online_cdclt",\n                ),\n            ],\n            &[adr("ADR-1752")],\n        ),\n',
+            '        justification: undated("ADR-1752"),\n',
+        ),
+        (
+            # The undated share is this module's honest headline, and a headline
+            # only a checker prints is one most readers never see.
+            "the trace line stops reporting what is unmeasured",
+            '"; config digest={:016x} entries={} dated={} undated={}"',
+            '"; config digest={:016x} entries={} dated={} seen={}"',
+        ),
+        (
             # ADDS a line rather than replacing one, so the first guard is
             # untouched: `MAX_DL_ATOMS` stays wired and stays covered. Only the
             # discipline on the exemption list is broken.

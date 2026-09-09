@@ -219,11 +219,17 @@
 //! leaving no trace in the output. `--trace` now prints one more line, first:
 //!
 //! ```text
-//! ; config digest=3f2a9c4e17b05d88 entries=113 dated=24 \
+//! ; config digest=3f2a9c4e17b05d88 entries=113 dated=24 undated=89 \
 //!   env:AXEYUM_NRA_ADMISSION=legacy consulted=2 \
 //!   crates/axeyum-solver/src/lra_theory.rs::MAX_ONLINE_LRA_ATOMS \
 //!   crates/axeyum-solver/src/nra.rs::MCCORMICK_ATOMS_PER_TRIPLE
 //! ```
+//!
+//! (`entries`/`dated`/`undated` are illustrative: they were 113/24/89 when this
+//! was written and the sweep of 2026-09-08 moved them by hundreds. What is
+//! stable is the FIELD SET, and `undated` is there because the share of this
+//! surface nobody has measured is the number the registry is worst at and so
+//! the one it must not leave to a gate's output.)
 //!
 //! - `digest` — FNV-1a over the registry's sorted `key=value` pairs AND the
 //!   active environment overrides. Two runs printing the same digest used the
