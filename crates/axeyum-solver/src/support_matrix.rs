@@ -27,6 +27,17 @@
 //! public promise). Each cell is derived from a real code path; the most
 //! load-bearing solver/proof cells are additionally exercised by probes in the
 //! golden test (see that file's `probe_*` tests).
+//!
+//! **The `solver-decides` column is behaviorally probed, row by row**, by
+//! `tests/support_matrix_probes.rs`: one `#[test]` per [`SUPPORT_MATRIX`] row
+//! runs small queries through the public front door, records the observed
+//! verdict classes, *derives* a [`SolverStatus`] from those observations alone,
+//! and asserts it equals what the row claims. That suite also derives its
+//! required row set from this constant, so adding a row without a probe fails.
+//! Editing a `solver` cell here without changing the engine therefore fails
+//! exactly that row's probe — the table is a check, not a caption. (The golden
+//! doc test in `tests/support_matrix.rs` will also fail on any edited cell,
+//! because the rendered markdown moves; that one is a drift guard, not a probe.)
 
 use core::fmt::Write as _;
 

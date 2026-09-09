@@ -125,9 +125,15 @@ mod probes {
             })
     }
 
+    /// Probes run in an aggregate gate, so they are deliberately small. The
+    /// slowest case measured 2.6 s (the `QF_NIA` Pell witness) and the whole
+    /// suite ran in well under a minute; this budget exists only so a route that
+    /// regresses into a search cannot hang the gate. A probe that NEEDS this
+    /// budget is a bug in the probe: an `unknown` produced by hitting it carries
+    /// `UnknownKind::Timeout`, which `classify` rejects.
     fn config() -> SolverConfig {
         SolverConfig {
-            timeout: Some(std::time::Duration::from_secs(60)),
+            timeout: Some(std::time::Duration::from_secs(30)),
             ..SolverConfig::default()
         }
     }
@@ -205,12 +211,21 @@ mod probes {
 
         let mut observed = Vec::with_capacity(cases.len());
         for c in cases {
+            let started = std::time::Instant::now();
             let got = match probe.kind {
                 Kind::Optimize(_) => {
                     classify_opt(axeyum_solver::optimize_smtlib(c.script, &config()))
                 }
                 _ => classify(solve_smtlib(c.script, &config())),
             };
+            // Printed, not asserted: probe COST is a thing a reader of this gate
+            // must be able to see, but a wall-clock assertion would be flaky
+            // under lane contention and would fail for the wrong reason.
+            eprintln!(
+                "probe {fragment} :: {:?} in {:.2}s",
+                got,
+                started.elapsed().as_secs_f64()
+            );
             assert_eq!(
                 got, c.expect,
                 "\nrow: {fragment}\nscript: {}\nexpected {:?}, observed {got:?}",
@@ -294,18 +309,28 @@ mod probes {
             case("(declare-const x Int)(assert (= (* x x) 2))(check-sat)", Class::Unsat),
             case("(declare-const x Int)(declare-const y Int)\
                   (assert (= (* x y) 6))(assert (> x 1))(assert (> y 1))(check-sat)", Class::Sat),
-            case("(declare-const x Int)(declare-const y Int)(declare-const z Int)\
-                  (assert (> x 0))(assert (> y 0))(assert (> z 0))\
-                  (assert (= (+ (* x x x) (* y y y)) (* z z z)))(check-sat)", Class::UnknownIncomplete),
+            // Incompleteness witness. Pell: x² − 2y² = 1 with y > 10⁹ IS
+            // satisfiable (y = 15,994,428 is the first such solution), but the
+            // witness lies outside the bounded integer blast, so the route
+            // returns a sound structural unknown ("no model within the bounded
+            // integer width 32") rather than a wrong `unsat`. Measured 2.6 s.
+            case("(declare-const x Int)(declare-const y Int)\
+                  (assert (= (- (* x x) (* 2 (* y y))) 1))\
+                  (assert (> y 1000000000))(check-sat)", Class::UnknownIncomplete),
         ]),
 
         probe_qf_nra_general: "QF_NRA (general nonlinear real)" => Kind::Scripts(&[
             case("(declare-const x Real)(assert (> (* x x) 4.0))(assert (< x 1.0))(assert (> x 0.0))(check-sat)", Class::Unsat),
             case("(declare-const x Real)(assert (> (* x x) 4.0))(check-sat)", Class::Sat),
-            case("(declare-const x Real)(declare-const y Real)(declare-const z Real)\
-                  (assert (= (* x y z) 1.0))\
-                  (assert (= (+ (* x x x x x) (* y y y y y) (* z z z z z)) 7.0))\
-                  (assert (= (+ (* x x y y) (* y y z z) (* z z x x)) 3.0))(check-sat)", Class::UnknownIncomplete),
+            // Incompleteness witness: a coupled degree-4 two-variable system the
+            // resultant/CAD side declines ("2-variable resultant elimination
+            // could not certify"), and which the general fallback also cannot
+            // settle — so the front door returns a sound structural unknown.
+            // Measured 0.1 s.
+            case("(declare-const x Real)(declare-const y Real)\
+                  (assert (= (+ (* x x x x) (* y y y y)) 1.0))\
+                  (assert (= (* x x y y) 0.3))\
+                  (assert (> x 0.0))(assert (> y 0.0))(check-sat)", Class::UnknownIncomplete),
         ]),
 
         probe_qf_nra_cad: "QF_NRA · cylindrical decomposition (coupled, mixed/non-strict, any dimension)" => Kind::Scripts(&[
@@ -351,23 +376,34 @@ mod probes {
         ]),
 
         probe_datatypes: "datatypes (algebraic)" => Kind::Scripts(&[
-            case("(declare-datatype Color ((red) (green) (blue)))(declare-const c Color)\
+            case("(declare-datatypes ((Color 0)) (((red) (green) (blue))))(declare-const c Color)\
                   (assert (not (= c red)))(assert (not (= c green)))(assert (not (= c blue)))(check-sat)", Class::Unsat),
-            case("(declare-datatype Color ((red) (green) (blue)))(declare-const c Color)\
+            case("(declare-datatypes ((Color 0)) (((red) (green) (blue))))(declare-const c Color)\
                   (assert (not (= c red)))(check-sat)", Class::Sat),
         ]),
 
         probe_strings: "strings (bounded)" => Kind::Scripts(&[
             case("(declare-const s String)(assert (= s \"a\"))(assert (= (str.len s) 2))(check-sat)", Class::Unsat),
             case("(declare-const s String)(assert (= (str.len s) 2))(check-sat)", Class::Sat),
-            case("(declare-const s String)(declare-const t String)\
-                  (assert (= (str.++ s t) (str.++ t s)))\
-                  (assert (not (= s t)))(assert (> (str.len s) 40))(check-sat)", Class::UnknownIncomplete),
+            // Incompleteness witness: an unbounded word/Int combination. The
+            // recorded length facts force a length past the packed-BV window,
+            // so the route reports a structural unknown instead of an
+            // encoding-bound "unsat". Measured 0.6-1.3 s.
+            case("(declare-const s String)(declare-const n Int)\
+                  (assert (= n (str.to_int s)))(assert (> n 1000000000))\
+                  (assert (= (str.len s) 40))(check-sat)", Class::UnknownIncomplete),
         ]),
 
         probe_optimization: "optimization (OMT: box/lex/Pareto, MaxSAT, MILP)" => Kind::Optimize(&[
             case("(declare-const x Int)(assert (<= x 10))(assert (>= x 0))(maximize x)(check-sat)", Class::Sat),
             case("(declare-const x Int)(assert (<= x 10))(assert (>= x 20))(maximize x)(check-sat)", Class::Unsat),
+            // Incompleteness witness, and the row's own note verbatim: the
+            // optimum "degrades to a sound OptOutcome::Unknown when a probe is
+            // undecided". The feasibility probe here is the same undecided
+            // string/Int query the strings row uses. Measured 0.1 s.
+            case("(declare-const s String)(declare-const n Int)\
+                  (assert (= n (str.to_int s)))(assert (> n 1000000000))\
+                  (assert (= (str.len s) 40))(maximize n)(check-sat)", Class::UnknownIncomplete),
         ]),
 
         probe_incremental: "incremental (push/pop, reset-assertions)" => Kind::Scripts(&[
