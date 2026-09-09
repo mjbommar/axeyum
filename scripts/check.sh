@@ -1287,6 +1287,24 @@ step lean-toolchain-policy ./scripts/tests/test-lean-toolchain-policy.sh
 # download and no dependency on which toolchains happen to be installed.
 step lean-toolchain-pin-regex ./scripts/tests/test-lean-toolchain-pin-regex.sh
 step lean-gate ./scripts/check-lean-gate.sh
+# The real-Carcara gate, the Alethe counterpart of the line above and registered
+# in BOTH aggregate gates because these two files have diverged before (`just
+# check` ran 112 script steps to check.sh's 61, each missing something the other
+# had; docs/refactor-2026-08/gate-divergence-2026-08-14.md).
+#
+# Until 2026-09-09 no gate in this repository ever ran Carcara: all 87 tests in
+# `crates/axeyum-solver/tests/carcara_crosscheck.rs` skipped and PASSED when the
+# binary was absent, so an absent checker looked exactly like one that accepted
+# every proof we emit. `AXEYUM_REQUIRE_CARCARA=1` makes absence a failure; the
+# gate counts invocations against a floor; and the verdict is read from the
+# stdout LINE because `carcara check` prints `holey` and EXITS 0 on a proof
+# whose steps it declined to check. `AXEYUM_ALLOW_NO_CARCARA=1` on a machine
+# with no Carcara, which prints that zero external checks ran.
+#
+# `--self-check` is the cheap control (four three-line proofs, no cargo build)
+# and runs first, so a broken verdict parser fails in under a second.
+step carcara-gate-self-check ./scripts/check-carcara-gate.sh --self-check
+step carcara-gate ./scripts/check-carcara-gate.sh
 # ADR-1664's measurement. Registered here because it is the EVIDENCE for a
 # decision -- that an originated theorem inherits an import's axioms
 # transitively and per proof term, so a composed tier is decidable per theorem --

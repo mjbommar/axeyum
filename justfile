@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness parity-ancestry episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential kernel-conformance lean-divergences declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter lean-tactic declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls lean-creal-library-slice lean-read-round-trip
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate carcara-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness parity-ancestry episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential kernel-conformance lean-divergences declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter lean-tactic declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls lean-creal-library-slice lean-read-round-trip
 
 fmt:
     cargo fmt --all --check
@@ -1340,6 +1340,31 @@ lean-gate:
     # one-time MEASUREMENTS are `#[ignore]`d because they cost 81 s between them.
     # Confirm a NONZERO count -- "2 passed".
     cargo test -p axeyum-lean-import --test imported_composition_footprint
+
+# The real-Carcara gate: the suite that hands our emitted Alethe proofs to an
+# EXTERNAL `carcara` binary, with `AXEYUM_REQUIRE_CARCARA=1` set so a missing
+# binary FAILS instead of printing a skip note and passing. Same shape as
+# `lean-gate` above, and for the same reason: until 2026-09-09 every one of the
+# 87 tests in `crates/axeyum-solver/tests/carcara_crosscheck.rs` returned early
+# and passed when the binary was absent, and no gate anywhere in this repository
+# ever ran Carcara. An absent checker was indistinguishable from a checker that
+# accepted every proof we emit.
+#
+# The gate also COUNTS invocations against a floor, because an exit status
+# cannot tell "checked 87 proofs" from "checked none"; and it reads Carcara's
+# verdict from the STDOUT LINE, because `carcara check` prints `holey` and
+# EXITS 0 when a proof contains rules it declined to check
+# (`cli/src/main.rs:35-45`). Measured 2026-09-09 on carcara 1.1.0 (git 6624ea8):
+# renaming one rule of a valid proof to `hole` gives "holey" with exit 0.
+#
+# `--self-check` runs FIRST and is the cheap control (four three-line Alethe
+# proofs, no cargo build): it asserts the four verdicts and that the two holed
+# ones really do exit 0. On a machine with no Carcara at all:
+# AXEYUM_ALLOW_NO_CARCARA=1 -- which prints, in words, that zero external
+# Alethe checks ran.
+carcara-gate:
+    ./scripts/check-carcara-gate.sh --self-check
+    ./scripts/check-carcara-gate.sh
 
 # ADR-0717 S5: the kernel differential (Axeyum vs. pinned Lean) across all
 # eight named subsystems -- conversion, universes, inductives, recursors,
