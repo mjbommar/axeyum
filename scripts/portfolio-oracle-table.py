@@ -101,12 +101,12 @@ def main() -> int:
             per_div[div]["no_solo_route"] += 1
 
     print(f"{'division':<10} {'solo files':>10} {'ladder wins':>12} "
-          f"{'ladder loses':>13} {'PRIZE':>6} {'no route':>9}")
+          f"{'ladder loses':>13} {'CAND':>6} {'no route':>9}")
     total = collections.Counter()
     for div in sorted(per_div):
         c = per_div[div]
         print(f"{div:<10} {c['solo_files']:>10} {c['ladder_wins']:>12} "
-              f"{c['ladder_loses']:>13} {c['PRIZE']:>6} {c['no_solo_route']:>9}")
+              f"{c['ladder_loses']:>13} {c['PRIZE-CANDIDATE']:>6} {c['no_solo_route']:>9}")
         total.update(c)
     print(f"{'TOTAL':<10} {total['solo_files']:>10} {total['ladder_wins']:>12} "
           f"{total['ladder_loses']:>13} {total['PRIZE']:>6} {total['no_solo_route']:>9}")

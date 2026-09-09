@@ -195,7 +195,27 @@ def classify(row, probe, args):
         preamble_ms=round(pre_ns / 1e6, 1),
         arm_ms=round(arm_ms, 1),
     )
-    row["status"] = "PRIZE" if arm_ms <= args.budget_ms else "TOO-SLOW-ARM"
+    # `winner_count` is how many times the winning route appears in the trail.
+    # More than once means the front door LOOPED (a string-bound ladder, a
+    # quantifier-instantiation loop, a CEGAR refinement), and then the winner's
+    # own segment is ONE ROUND OF MANY rather than an arm's cost.  Scoring such
+    # a file on that segment understates the work enormously: on
+    # `QF_SLIA/.../new.8618.corecstrs.readable.smt2` the deciding segment is
+    # 1,172 ms and the file needs 110,546 ms of front-door work.
+    winner_count = sum(
+        1 for a in probe["attempts"] if a.get("outcome") == "decided" and a["route"] == route
+    )
+    row["attempts"] = len(probe["attempts"])
+    row["winner_count"] = winner_count
+    if winner_count > 1:
+        row["status"] = "LOOPED-NOT-SCORED"
+    elif arm_ms <= args.budget_ms:
+        # CANDIDATE, not PRIZE: this instrument cannot confirm that the route
+        # decides in that time when it runs FIRST.  Confirmation is a separate
+        # measurement -- see the module docstring.
+        row["status"] = "PRIZE-CANDIDATE"
+    else:
+        row["status"] = "TOO-SLOW-ARM"
     return row
 
 
@@ -275,14 +295,14 @@ def main() -> int:
         )
         classify(row, probe, args)
 
-        if args.confirm and row["status"] == "PRIZE":
+        if args.confirm and row["status"] == "PRIZE-CANDIDATE":
             again, _ = run_one(
                 args.binary, path, args.probe_ms, args.cores,
                 args.memory_limit_mb, args.wall_slack_s,
             )
             repeat = deciding(again["attempts"]) if again["trail_present"] else None
             if repeat is None or repeat[0] != row["winner"]:
-                row["status"] = "PRIZE-UNCONFIRMED"
+                row["status"] = "CANDIDATE-UNREPRODUCED"
             else:
                 own2 = repeat[1] / 1e6
                 row["confirm_own_ms"] = round(own2, 1)
@@ -292,7 +312,7 @@ def main() -> int:
                 # because these hosts carry other lanes' sweeps, and it is a
                 # reproducibility check, not a timing claim.
                 if own2 > max(2.0 * first, first + 200.0):
-                    row["status"] = "PRIZE-UNSTABLE"
+                    row["status"] = "CANDIDATE-UNSTABLE"
 
         rows.append(row)
         print(

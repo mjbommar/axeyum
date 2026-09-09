@@ -20,9 +20,10 @@ import pathlib
 import sys
 
 ORDER = [
-    "PRIZE",
-    "PRIZE-UNCONFIRMED",
-    "PRIZE-UNSTABLE",
+    "PRIZE-CANDIDATE",
+    "CANDIDATE-UNREPRODUCED",
+    "CANDIDATE-UNSTABLE",
+    "LOOPED-NOT-SCORED",
     "TOO-SLOW-ARM",
     "NO-ROUTE",
     "NO-ROUTE-NO-TRAIL",
@@ -54,6 +55,17 @@ def read(path: pathlib.Path):
             row = dict(zip(header, vals))
             if row.get("control_verdict") == "none" or row.get("probe_verdict") == "none":
                 row["status"] = "ABORTED"
+            # Sweeps produced before the rename wrote `PRIZE`, which claimed more
+            # than the instrument can establish: the probe estimates an arm cost,
+            # it does not confirm one.  Those rows also predate `winner_count`, so
+            # a LOOPED front door cannot be detected in them and every one has to
+            # be checked by hand -- see the note.
+            if row.get("status") == "PRIZE":
+                row["status"] = "PRIZE-CANDIDATE"
+            elif row.get("status") == "PRIZE-UNCONFIRMED":
+                row["status"] = "CANDIDATE-UNREPRODUCED"
+            elif row.get("status") == "PRIZE-UNSTABLE":
+                row["status"] = "CANDIDATE-UNSTABLE"
             rows.append(row)
     return rows
 
@@ -69,41 +81,41 @@ def main() -> int:
         for r in read(pathlib.Path(p)):
             by_div[r.get("division", "?")].append(r)
 
-    print(f"{'division':<10} {'files':>5} {'stale':>6} {'PRIZE':>6} {'unconf':>7} "
+    print(f"{'division':<10} {'files':>5} {'stale':>6} {'CAND':>6} {'unconf':>7} "
           f"{'slow-arm':>9} {'no-route':>9} {'abort':>6} {'blind':>6}")
     totals = collections.Counter()
     for div in sorted(by_div):
         rows = by_div[div]
         c = collections.Counter(r.get("status", "?") for r in rows)
         blind = c["NO-ROUTE-NO-TRAIL"] + c["DECIDED-NO-TRAIL"] + c["DECIDED-NO-WINNER"]
-        c["PRIZE-UNCONFIRMED"] += c["PRIZE-UNSTABLE"]
-        print(f"{div:<10} {len(rows):>5} {c['STALE-DECIDED']:>6} {c['PRIZE']:>6} "
-              f"{c['PRIZE-UNCONFIRMED']:>7} {c['TOO-SLOW-ARM']:>9} {c['NO-ROUTE']:>9} "
+        c["CANDIDATE-UNREPRODUCED"] += c["CANDIDATE-UNSTABLE"]
+        print(f"{div:<10} {len(rows):>5} {c['STALE-DECIDED']:>6} {c['PRIZE-CANDIDATE']:>6} "
+              f"{c['CANDIDATE-UNREPRODUCED']:>7} {c['TOO-SLOW-ARM']:>9} {c['NO-ROUTE']:>9} "
               f"{c['ABORTED']:>6} {blind:>6}")
         totals.update(c)
         totals["files"] += len(rows)
     blind = (totals["NO-ROUTE-NO-TRAIL"] + totals["DECIDED-NO-TRAIL"]
              + totals["DECIDED-NO-WINNER"])
     print(f"{'TOTAL':<10} {totals['files']:>5} {totals['STALE-DECIDED']:>6} "
-          f"{totals['PRIZE']:>6} {totals['PRIZE-UNCONFIRMED']:>7} "
+          f"{totals['PRIZE-CANDIDATE']:>6} {totals['CANDIDATE-UNREPRODUCED']:>7} "
           f"{totals['TOO-SLOW-ARM']:>9} {totals['NO-ROUTE']:>9} "
           f"{totals['ABORTED']:>6} {blind:>6}")
 
-    print("\nprizes, by winning route:")
+    print("\nPRIZE CANDIDATES (unconfirmed), by winning route:")
     winners = collections.Counter(
         r["winner"] for rows in by_div.values() for r in rows
-        if r.get("status") == "PRIZE" and r.get("winner")
+        if r.get("status") == "PRIZE-CANDIDATE" and r.get("winner")
     )
     if not winners:
         print("  (none)")
     for route, n in winners.most_common():
         print(f"  {route:<40} {n}")
 
-    print("\nevery prize, with the arm time a portfolio would have paid:")
+    print("\nevery candidate, with the arm time the probe estimates (NOT confirmed):")
     any_prize = False
     for div in sorted(by_div):
         for r in by_div[div]:
-            if r.get("status") != "PRIZE":
+            if r.get("status") != "PRIZE-CANDIDATE":
                 continue
             any_prize = True
             print(f"  {div:<9} {r['winner']:<26} arm={r.get('arm_ms'):>9} ms "

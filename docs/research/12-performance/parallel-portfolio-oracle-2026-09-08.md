@@ -208,6 +208,42 @@ lands). Everything above this heading is measured and complete on its own terms;
 the per-division prize table is what this section will carry, and no conclusion
 about whether to build a portfolio is drawn until it is here.
 
+## Neither instrument confirms a prize on its own, and the first two did not survive
+
+The probe scores a file by `preamble + deciding route's own segment`. That is a
+valid arm cost **only when the ladder is a single pass**. Both of the first two
+candidates broke it, in opposite directions, and both were caught by testing the
+claim rather than by a check failing:
+
+**`QF_SLIA/…/new.8618.corecstrs.readable.smt2` — the front door LOOPS.** The
+probe reports `int-blast-ladder` with an own cost of 1,172 ms and scores it a
+1.2 s prize. Traced at 24 s the same file prints
+`; partial route decided_by=int-blast-ladder bound_by=lia-dpll bound_ms=8044
+total_ms=24622 attempts=55`, and the probe needed **110,546 ms** of the 120 s
+budget to finish. The front door is walking a string-bound ladder and
+re-dispatching the whole query per round; the deciding segment is one round of
+fifty-five, not an arm's cost. A portfolio arm started at t = 0 would have to
+walk the same rounds.
+
+The oracle now counts how many times the winning route appears in the trail and
+files a file with more than one as `LOOPED-NOT-SCORED` rather than scoring it.
+
+**`QF_RDL/scheduling/orb06_900.smt2` — the solo prober cannot confirm it
+either.** Run alone at the competition budget, `dl-online` reports
+`unknown, 24,018 ms, budget exhausted`. That is not evidence against the file:
+the solo prober skips preprocessing and passes no `extended_dl_probe_timeout`,
+so it is not running the computation the dispatcher runs. It is evidence that
+**"not shown" is all the solo prober can say about a negative**, exactly as its
+own module docs claim — and therefore that it cannot serve as the confirmation
+instrument for a probe candidate.
+
+So every count below is `PRIZE-CANDIDATE`, never `PRIZE`. Confirming a candidate
+needs the route-selection knob `SolverConfig` does not have — the same gap the
+2026-09-07 sweep hit. **Two instruments that each see what the other misses do
+not add up to one that sees everything**, and the honest form of this table is a
+candidate column with the confirmation gap named, not a prize column with a
+footnote.
+
 ## The reservation itself costs a win, and that is the portfolio's structural edge
 
 `QF_RDL/scheduling/orb06_900.smt2` is on the committed loss list and is still
@@ -234,12 +270,25 @@ on a file the leading route would have won, the guarantee is the loss. A
 portfolio arm has no such trade — it starts at t = 0 and gets the whole budget,
 and so does every other arm.
 
-The bound is tight rather than comfortable, and the note says so: at 27 s the
-route finished in 17.7 s, *less* than the 18.0 s it was refused at 24 s, because
-its deadline checks are wall-clock and the host was carrying other lanes. This
-file sits on the edge and flips with load. The structural point does not depend
-on which side of the edge it lands on today; the measured `bound_ms=18010`
-against a 24,003 ms total does.
+**Correction, same evening, heavier load: the win does not reproduce.** Re-run
+after the host picked up two more sweeps:
+
+```
+budget=24000  unknown  bound_by=dl-online bound_ms=18013 total_ms=24004 attempts=14
+budget=25000  unknown  bound_by=dl-online bound_ms=19012 total_ms=25003 attempts=14
+budget=26000  unknown  bound_by=dl-online bound_ms=20010 total_ms=26003 attempts=14
+budget=27000  unknown  bound_by=dl-online bound_ms=21011 total_ms=27003 attempts=14
+```
+
+At 27 s it now loses where an hour earlier it won in 17.7 s. So `orb06_900` is a
+**contention-sensitive near-miss, not a stable prize**, and the earlier "raise
+the budget and it decides" reading is withdrawn as a claim about the file.
+
+What survives is the part that does not move: `bound_ms` is `budget − 6000` at
+every one of the four budgets — 18013, 19012, 20010, 21011. The reserve costs
+`dl-online` exactly six seconds of every budget on this file, reproducibly. That
+is the measurement. Whether six more seconds wins *this* file was observed both
+ways in one evening, and neither observation is worth more than the other.
 
 The same division's five `TOO-SLOW-ARM` files are the honest other half:
 `dl-online` needs 26.4 s, 29.4 s, 42.0 s, 62.7 s and 107.0 s of its own time
