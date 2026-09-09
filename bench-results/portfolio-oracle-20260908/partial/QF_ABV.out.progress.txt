@@ -1,0 +1,19 @@
+[1/19] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/2018-Mann/arbiter_array_cex_w32d32q16n4b34.smt2
+[2/19] NO-ROUTE-NO-TRAIL    - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/bmc-arrays/bubbleSort.smt2
+[3/19] TOO-SLOW-ARM         array-fast-path arm=86910.5ms  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/brummayerbiere/fifo32ia04k08.smt2
+[4/19] ABORTED              - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/brummayerbiere/wchains140se.smt2
+[5/19] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try3_noof_functions_dwp_md5sum.set_char_quoting.il.dwp.smt2
+[6/19] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try3_noof_functions_dwp_ptx.bkm_scale.il.dwp.smt2
+[7/19] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try3_noof_functions_dwp_sum.set_char_quoting.il.dwp.smt2
+[8/19] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_cat.next_line_num.il.dwp.smt2
+[9/19] TOO-SLOW-ARM         abv-online-cdclt arm=94457.6ms  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_mkfifo.get_quoting_style.il.dwp.smt2
+[10/19] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_stty.visible.il.dwp.smt2
+[11/19] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_vdir.strcmp_size.il.dwp.smt2
+[12/19] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/dwp_formulas/try5_small_noof_functions_dwp_env.set_char_quoting.il.dwp.smt2
+[13/19] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/klee-selected-smt2/cu-large-qids/_lbracket-query-052.smt2
+[14/19] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000018.smt2
+[15/19] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000093.smt2
+[16/19] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000188.smt2
+[17/19] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000263.smt2
+[18/19] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/klee-selected-smt2/cu-no-caches/_lbracket-query-000333.smt2
+[19/19] NO-ROUTE-NO-TRAIL    - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_ABV/platania/no_init_simple_delete/no_init_simple_delete55.smt2

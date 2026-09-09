@@ -1,0 +1,28 @@
+[1/19] QF_ABV deciders=0 best=no-route (227s)  arbiter_array_cex_w32d32q16n4b34.smt2
+[2/19] QF_ABV deciders=5 best=lra-dpll@653ms (225s)  bubbleSort.smt2
+[3/19] QF_ABV deciders=4 best=lra-dpll@612ms (134s)  fifo32ia04k08.smt2
+[4/19] QF_ABV deciders=0 best=no-route (149s)  wchains140se.smt2
+[5/19] QF_ABV deciders=5 best=abv-lazy-row@436ms (121s)  try3_noof_functions_dwp_md5sum.set_char_quoting.il.dwp.smt2
+[6/19] QF_ABV deciders=5 best=abv-lazy-row@405ms (121s)  try3_noof_functions_dwp_ptx.bkm_scale.il.dwp.smt2
+[7/19] QF_ABV deciders=5 best=abv-lazy-row@539ms (122s)  try3_noof_functions_dwp_sum.set_char_quoting.il.dwp.smt2
+[8/19] QF_ABV deciders=0 best=no-route (11s)  try5_small_difret_functions_dwp_cat.next_line_num.il.dwp.smt2
+[9/19] QF_ABV deciders=0 best=no-route (224s)  try5_small_difret_functions_dwp_mkfifo.get_quoting_style.il.dwp.smt2
+[10/19] QF_ABV deciders=4 best=datatype-native@4238ms (23s)  try5_small_difret_functions_dwp_stty.visible.il.dwp.smt2
+[11/19] QF_ABV deciders=0 best=no-route (33s)  try5_small_difret_functions_dwp_vdir.strcmp_size.il.dwp.smt2
+[12/19] QF_ABV deciders=6 best=abv-online-cdclt@35ms (97s)  try5_small_noof_functions_dwp_env.set_char_quoting.il.dwp.smt2
+[13/19] QF_ABV deciders=9 best=abv-lazy-row@2657ms (46s)  _lbracket-query-052.smt2
+[14/19] QF_ABV deciders=0 best=no-route (205s)  _csplit-query-000018.smt2
+[15/19] QF_ABV deciders=0 best=no-route (205s)  _csplit-query-000093.smt2
+[16/19] QF_ABV deciders=0 best=no-route (211s)  _csplit-query-000188.smt2
+[17/19] QF_ABV deciders=0 best=no-route (218s)  _csplit-query-000263.smt2
+[18/19] QF_ABV deciders=9 best=datatype-elim@2585ms (45s)  _lbracket-query-000333.smt2
+[19/19] QF_ABV deciders=0 best=no-route (177s)  no_init_simple_delete55.smt2
+
+QF_ABV: 19 files, 9 decided by at least one route running alone
+  fastest-alone abv-lazy-row           4
+  fastest-alone lra-dpll               2
+  fastest-alone datatype-native        1
+  fastest-alone abv-online-cdclt       1
+  fastest-alone datatype-elim          1
+cross-route soundness: no two routes disagreed on any file
+SOLO QF_ABV EXIT=0

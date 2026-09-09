@@ -38,6 +38,23 @@
 //! entry cannot make the solver behave differently — it can only fail this
 //! module's own checks.
 //!
+//! # How much of this is measured
+//!
+//! **Most of it is not.** [`dated_count`] and [`undated_count`] are derived
+//! from the table, `config_trace_line` prints both on every `--trace` run, and
+//! `scripts/check-config-registry-staleness.py` leads with the ratio. As of the
+//! 2026-09-08 coverage sweep it is roughly **five undated entries for every
+//! dated one** — the sweep took the table from 114 entries to over 450 by
+//! reading code, and reading code establishes what a bound DOES, never what its
+//! value should BE.
+//!
+//! That is the honest state and not a defect to hide: an undated entry says
+//! "nobody has measured this", which is strictly more than the silence it
+//! replaced. What it must not do is get worse quietly, so `DATED_FLOOR` pins
+//! the count of dated entries and `the_dated_count_only_rises` fails if a date
+//! is ever lost — including the tempting loss, where an entry whose `rests_on`
+//! went red is downgraded to `undated` instead of being re-derived.
+//!
 //! # How far to trust the judgement fields
 //!
 //! `name`, `module` and `value` are checked against the source, and
@@ -2601,6 +2618,53 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "`finite_bv_domain_size` returns `None` (declining the finite-domain array-extensionality refuter) when `2^width > MAX_FINITE_ARRAY_EXT_READS`. Doc comment frames it as keeping the certificate 'small enough to be readable in Lean and cheap in dominance audits' -- an evidence-size rationale, not a search-cost one, though the effect is the same admission gate.",
     },
     ConfigEntry {
+        name: "ABV_ONLINE_LADDER_RESERVE_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "4",
+        unit: "divisor of the dispatcher's remaining deadline, held back for the array ladder",
+        protects: Protects::Completeness,
+        on_exceed: OnExceed::DeclineRoute,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: Some("AXEYUM_ABV_ONLINE_RESERVE"),
+        justification: dated(
+            "docs/research/12-performance/ladder-budget-discipline-2026-09-08.md",
+            "2026-09-08",
+            None,
+            // The measurement is "on four QF_ABV files `abv-online-cdclt` spent
+            // 24.009 s of a 24 s budget, declined, and `array-fast-path` then
+            // decided the file in 0.007-0.174 s". It rests on the online route
+            // still being the first thing an array query enters, on the array
+            // fast paths still being what runs after it, and on the online
+            // route still honouring the `timeout` it is handed -- change any of
+            // the three and the numbers stop describing this tree.
+            &[
+                sym("crates/axeyum-solver/src/auto.rs", "dispatch_abv_online"),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "dispatch_array_fast_paths",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/ufbv_online.rs",
+                    "check_qf_aufbv_online_cdclt",
+                ),
+            ],
+            // The basis names the route the reserve is FOR. If
+            // `dispatch_array_fast_paths` leaves auto.rs, this constant holds a
+            // quarter of every array query's clock back for a ladder with no
+            // rung left, and the reasoning above stops meaning anything --
+            // while a basis naming the constant or the doc would keep passing.
+            &[
+                live(
+                    "dispatch_array_fast_paths",
+                    "crates/axeyum-solver/src/auto.rs",
+                ),
+                doc("docs/research/12-performance/qf-abv-route-attribution-2026-09-08.md"),
+            ],
+        ),
+        note: "The slice of the budget held back from `abv-online-cdclt` -- the FIRST route every array query tries -- for the array ladder under it. Before this constant existed that route took `config.timeout` in FULL, so on any file it could not decide, `array-fast-path` ran only inside the harness watchdog's grace period (24 s spent above plus a fresh 24 s budget below is 48 s of a 24 s promise). Chosen against BOTH bounds the sweep gives, the method `UF_ARITH_LADDER_RESERVE_SHARE` paid four files to establish: 18 s left to the online route is above its slowest decision in the sweep (5.723 s, of 24 decisions), and 6 s to the ladder is twice its slowest decision (2.898 s) and 35x its median (168 ms). A route needing 99% of the clock is not recoverable by any reserve; none in this population does, unlike QF_UFLIA's `hash_uns_05_20`. The env override selects the whole policy (`off` restores the unreserved budget), not just this divisor.",
+    },
+    ConfigEntry {
         name: "DL_EXTENDED_FALLBACK_RESERVE",
         module: "crates/axeyum-solver/src/auto.rs",
         value: "Duration::from_secs(3)",
@@ -2614,6 +2678,19 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "`min(t/8, 3s)` withheld from the extended difference-logic probe so later routes keep budget. Unlike its sibling below it cites no measurement at all.",
     },
     ConfigEntry {
+        name: "DL_EXTENDED_LADDER_RESERVE_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "8",
+        unit: "divisor of the caller's deadline, held back for the routes below the probe",
+        protects: Protects::Completeness,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: undated("doc comment"),
+        note: "The `/ 8` half of `min(t/8, 3s)`, given a name on 2026-09-08 when the four hand-rolled copies of this arithmetic were replaced by one `LadderSlice` policy. A divisor written as a literal at a call site cannot be found by name, and finding the four copies is what cost this lane's predecessors a division-sized measurement each. The VALUE is unchanged and, like its `DL_EXTENDED_FALLBACK_RESERVE` sibling, cites no measurement at all.",
+    },
+    ConfigEntry {
         name: "DL_FALLBACK_RESERVE",
         module: "crates/axeyum-solver/src/auto.rs",
         value: "Duration::from_secs(6)",
@@ -2625,6 +2702,19 @@ pub static REGISTRY: &[ConfigEntry] = &[
         env_override: None,
         justification: undated("doc comment"),
         note: "`min(t/4, 6s)` withheld from the difference-logic probe. The doc names a real regression (`QF_IDL/sal/lpsat/lpsat-goal-18`, decided unsat by lia-dpll in 4.2 s, turned `unknown` by an unreserved probe) but gives it no date.",
+    },
+    ConfigEntry {
+        name: "DL_LADDER_RESERVE_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "4",
+        unit: "divisor of the caller's deadline, held back for the routes below the probe",
+        protects: Protects::Completeness,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: undated("doc comment"),
+        note: "The `/ 4` half of `min(t/4, 6s)`, named on 2026-09-08 alongside `ABV_ONLINE_LADDER_RESERVE_SHARE` and `UF_ARITH_LADDER_RESERVE_SHARE` -- three copies of the same quarter, in three ladders, none of which could be found from the others by name. The regression the reserve prevents is recorded on `DL_FALLBACK_RESERVE` (`QF_IDL/sal/lpsat/lpsat-goal-18`, decided unsat by lia-dpll in 4.2 s, turned `unknown` by an unreserved probe) and is undated there; naming this divisor does not date it. FINDING, measured 2026-09-08 and NOT acted on: on the first 50 QF_IDL files of the committed parity list, `dl-online` spends 421.9 s without deciding and the routes its reserve pays for decide ZERO of them -- the reserve's justification rests entirely on one file outside that sample.",
     },
     ConfigEntry {
         name: "INT_BLAST_DENSE_MAX_WIDTH",
@@ -2947,6 +3037,47 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Records a `ResourceLimit` decline through the route recorder, so the decline is traceable even though the verdict is unaffected.",
     },
     ConfigEntry {
+        name: "MBQI_FIRST_REFUSAL_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "8",
+        unit: "divisor of the remaining deadline granted to the route",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: undated("doc comment"),
+        note: "The first-refusal MBQI rung's eighth of the remaining budget. A FRACTION, not a reserve: the route takes 1/8 and the rungs below keep 7/8, which is the opposite division from the `*_LADDER_RESERVE_SHARE` entries and the distinction the 2026-09-08 QF_UFLIA measurement paid four files to learn. Named on 2026-09-08; value unchanged and unmeasured.",
+    },
+    ConfigEntry {
+        name: "MIN_LADDER_SLICE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "Duration::from_millis(1)",
+        unit: "milliseconds, floor on any route's slice of a ladder's clock",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: dated(
+            "docs/research/12-performance/ladder-budget-discipline-2026-09-08.md",
+            "2026-09-08",
+            None,
+            &[
+                sym("crates/axeyum-solver/src/auto.rs", "int_real_relax_budget"),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "pre_lia_uf_probe_budget",
+                ),
+            ],
+            &[
+                live("int_real_relax_budget", "crates/axeyum-solver/src/auto.rs"),
+                doc("docs/research/12-performance/ladder-budget-discipline-2026-09-08.md"),
+            ],
+        ),
+        note: "CLOSES A FINDING recorded against `INT_REAL_RELAX_BUDGET_SHARE`: a route asked for one sixth of the clock used to be handed ALL of it whenever `timeout / 6` rounded to zero, because the helper returned the caller's config unchanged. `pre_lia_uf_probe_budget` had the identical inversion at `timeout / 10`. Both now clamp here instead, so the sharing policy cannot invert at the small-budget end where starvation matters most; the behaviour differs from the old code only under 6 ms and 10 ms respectively. A millisecond rather than zero because a route handed no clock at all is a route DELETED, which is a different policy from a route shared, and this constant is not the place to choose it.",
+    },
+    ConfigEntry {
         name: "MIN_QUANTIFIED_CONJUNCTS",
         module: "crates/axeyum-solver/src/auto.rs",
         value: "32",
@@ -2960,6 +3091,45 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "A FLOOR, not a ceiling: the ground-core accelerator fires only ABOVE it, so it gates where the accelerator's cost is repaid. The only lower-bound gate in this registry.",
     },
     ConfigEntry {
+        name: "PRE_LIA_UF_PROBE_CEILING",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "Duration::from_millis(250)",
+        unit: "milliseconds, ceiling on the slice granted to the route",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: undated("doc comment"),
+        note: "The `250 ms` half of `min(t/10, 250ms)` for the pre-LIA UF probe: a quick screen whose usefulness does not scale with the clock, so its slice is capped as well as divided. Named on 2026-09-08 when the budget arithmetic moved into one policy; value unchanged and unmeasured.",
+    },
+    ConfigEntry {
+        name: "PRE_LIA_UF_PROBE_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "10",
+        unit: "divisor of the caller's deadline granted to the route",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: undated("doc comment"),
+        note: "The `/ 10` half of `min(t/10, 250ms)`. Its helper carried the same inversion as `INT_REAL_RELAX_BUDGET_SHARE` -- a tenth that rounded to zero became the FULL timeout -- which `MIN_LADDER_SLICE` now closes. That defect was found by looking for a second instance of a registered FINDING, which is the argument for writing findings down rather than fixing one site quietly.",
+    },
+    ConfigEntry {
+        name: "QINST_EGRAPH_RETRY_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "2",
+        unit: "divisor of the remaining deadline granted to the route",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: undated("doc comment"),
+        note: "Half the remaining budget for the incremental e-graph quantifier retry, so the callers' later SAT-only stages are not starved. Was a bare `timeout / 2` inside the dispatch body until 2026-09-08; the doc comment beside it already stated the sharing INTENT, which is exactly the kind of policy a name-keyed registry cannot see while it is written as a literal.",
+    },
+    ConfigEntry {
         name: "TIMED_ARRAY_REFUTER_SLICE",
         module: "crates/axeyum-solver/src/auto.rs",
         value: "Duration::from_millis(250)",
@@ -2971,6 +3141,19 @@ pub static REGISTRY: &[ConfigEntry] = &[
         env_override: None,
         justification: undated("doc comment"),
         note: "Caps the fast-path array-refuter chain. One line of doc, no measurement.",
+    },
+    ConfigEntry {
+        name: "UFBV_ONLINE_PROBE_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "2",
+        unit: "divisor of the caller's deadline granted to the route",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: undated("doc comment"),
+        note: "The declared-sort QF_UFBV online probe's half of the budget. Deliberately left a HALF and not converted to a reserve: the eager fallback below it computes a FRESH deadline at entry, so this is a split across two clocks rather than a share of one, and the 2026-09-08 QF_UFLIA measurement that condemned a half-budget split was about two routes sharing ONE clock. Whether it is wrong here is unmeasured. `UF_ARITH_LADDER_RESERVE_SHARE`'s doc names this constant as the precedent its own first version copied and the measurement then rejected.",
     },
     ConfigEntry {
         name: "UF_ARITH_LADDER_RESERVE_SHARE",
@@ -4441,19 +4624,24 @@ pub static REGISTRY: &[ConfigEntry] = &[
             "ADR-1752",
             "2026-09-07",
             None,
+            // NOT the constant's own name, and not `MAX_ONLINE_LRA_ATOMS`. Both
+            // were, and `79a7c5297` tripped this entry STALE on a single added
+            // line: a rustdoc reference to `DEFAULT_ONLINE_LRA_BUDGET_BYTES`
+            // inside a doc comment. `git log -G` cannot tell that from a code
+            // change, and it should not try. These two name the MECHANISMS
+            // ADR-1752's decision is about — the derivation of the coefficient
+            // ceilings out of the budget, and the route that takes it — so a
+            // change to either is a change to what was measured.
             &[
-                sym(
-                    "crates/axeyum-solver/src/lra_online.rs",
-                    "DEFAULT_ONLINE_LRA_BUDGET_BYTES",
-                ),
+                sym("crates/axeyum-solver/src/lra_online.rs", "for_budget"),
                 sym(
                     "crates/axeyum-solver/src/lra_theory.rs",
-                    "MAX_ONLINE_LRA_ATOMS",
+                    "check_qf_lra_online_cdclt",
                 ),
             ],
             &[adr("ADR-1752")],
         ),
-        note: "THE REPLACEMENT for the stale flat atom cap. Used when `SolverConfig::memory_limit_mb` is unset; when it is set, that is the budget instead — so this is the first bound in the registry that MOVES with a caller-supplied resource limit rather than being fixed at compile time.",
+        note: "THE REPLACEMENT for the stale flat atom cap. Used when `SolverConfig::memory_limit_mb` is unset; when it is set, that is the budget instead — so this is the first bound in the registry that MOVES with a caller-supplied resource limit rather than being fixed at compile time. The 2026-09-07 date SURVIVES the 2026-09-08 re-derivation of `BYTES_PER_ADMITTED_ATOM` deliberately: that re-derivation changed which EVIDENCE the screen rests on (a 7.8 GB abort turned out to be on the offline Fourier-Motzkin route) and established that `memory_limit_mb` did not bind until 2026-09-08. Neither touches this value, which is chosen so `NormalizationLimits::for_budget`'s derived ceilings sit right and so the screen reproduces 1,024 exactly — a calibration identity checkable in the tree, not a corpus measurement.",
     },
     ConfigEntry {
         name: "DEFAULT_STEP_BUDGET",
@@ -4722,25 +4910,33 @@ pub static REGISTRY: &[ConfigEntry] = &[
             "2026-09-07",
             Some("e62086742"),
             &[
-                sym(
-                    "crates/axeyum-solver/src/lra_theory.rs",
-                    "MAX_ONLINE_LRA_ATOMS",
-                ),
+                // `MAX_LRA_CACHED_COEFFICIENTS` names a CONSTANT on purpose, and
+                // it is the only one here that does: it is this ADR's founding
+                // example, the dependency whose absence let a 2026-08-03
+                // measurement stand for thirteen months after the 2026-08-06
+                // commit that falsified it. The other two named constants were
+                // replaced — `DEFAULT_ONLINE_LRA_BUDGET_BYTES` tripped this
+                // entry STALE on `79a7c5297`, whose only touch of that symbol
+                // is a rustdoc link inside a doc comment.
                 sym(
                     "crates/axeyum-solver/src/lra_online.rs",
                     "MAX_LRA_CACHED_COEFFICIENTS",
                 ),
+                // The screen that reproduces this value at the default budget.
                 sym(
-                    "crates/axeyum-solver/src/lra_online.rs",
-                    "DEFAULT_ONLINE_LRA_BUDGET_BYTES",
+                    "crates/axeyum-solver/src/lra_theory.rs",
+                    "check_qf_lra_online_cdclt",
                 ),
+                // The OTHER live consumer, and the reason 1,024 still governs
+                // anything: `nra` projects its abstraction against this ceiling.
+                sym("crates/axeyum-solver/src/nra.rs", "admission_fits_consumer"),
             ],
             &[
                 adr("ADR-1752"),
                 commit("e62086742", "the online theory decides on"),
             ],
         ),
-        note: "THE WORKED EXAMPLE. It is no longer the LRA route's own admission gate (ADR-1752 replaced that with a byte budget) but it IS still live as the atom ceiling `nra.rs` projects against (ADR-1751), and the byte budget is calibrated to reproduce it exactly at the default. Its `rests_on` names `MAX_LRA_CACHED_COEFFICIENTS` — the dependency whose absence let a 2026-08-03 measurement stand for thirteen months after the 2026-08-06 commit that falsified it.",
+        note: "THE WORKED EXAMPLE, and now a DIVERGENCE nobody has written down. It is no longer the LRA route's own admission gate — ADR-1752 replaced that with `budget_bytes / BYTES_PER_ADMITTED_ATOM`, which is 1,024 at the DEFAULT budget and 13,107 at `--memory-limit-mb 8192`. But `nra::admission_fits_consumer` still projects against this STATIC 1,024 and calls it that engine's capacity (ADR-1751). So above the default budget the two numbers are incommensurable again: the LRA consumer admits 13,107 atoms while the NRA gate refuses above 1,024. That is the same defect ADR-1751 existed to remove, reintroduced in a new form by ADR-1752, and it is recorded here rather than resolved — it needs a measurement, not an edit.",
     },
     ConfigEntry {
         name: "DEFAULT_REPAIR_CANDIDATE_CAP",
@@ -6893,8 +7089,26 @@ pub static REGISTRY: &[ConfigEntry] = &[
         signal: Signal::ToCaller,
         guarded_by: "",
         env_override: None,
-        justification: undated("doc comment"),
-        note: "About 128 MB at two `i128`s per cell. `Incremental::new` returns `None`, so the caller falls back to Fourier-Motzkin. Deterministic (no clock, no resident-set probe), which is what lets it be part of a reproducible verdict.",
+        justification: dated(
+            "docs/research/12-performance/ladder-budget-discipline-2026-09-08.md",
+            "2026-09-08",
+            None,
+            &[
+                sym("crates/axeyum-solver/src/simplex.rs", "MAX_TABLEAU_CELLS"),
+                sym("crates/axeyum-solver/src/lra.rs", "simplex_admission"),
+                sym("crates/axeyum-solver/src/lra.rs", "simplex_fallback"),
+            ],
+            // The measurement is about the OTHER constructor: it says what a
+            // cell bound in `feasible` would refuse. It rests on
+            // `simplex_admission` still being the gate that runs first on that
+            // route, because that gate is why the unbounded constructor is not
+            // the catastrophe the 360-million-cell reading suggests.
+            &[
+                live("simplex_admission", "crates/axeyum-solver/src/lra.rs"),
+                doc("docs/research/12-performance/ladder-budget-discipline-2026-09-08.md"),
+            ],
+        ),
+        note: "About 128 MB at two `i128`s per cell. `Incremental::new` returns `None`, so the caller falls back to Fourier-Motzkin. Deterministic (no clock, no resident-set probe), which is what lets it be part of a reproducible verdict. THE GAP `lra_online::BYTES_PER_ADMITTED_ATOM`'s note reports -- this bound is checked ONLY in `Incremental::new`, while `feasible` (what `lra::simplex_fallback` calls) consults no cell bound at all -- was MEASURED on 2026-09-08 over the committed 200-file QF_LRA list, 24 s and 8 GiB per file, with the instrumented binary named in the doc. 36 files reach `simplex_fallback` at all (3,129 calls); SEVEN build a tableau over this cap, at 4.2 to 8.8 million cells, and all seven end `unknown`. So adding the check here would refuse a population that decides nothing today -- and would buy nothing either, since nothing runs after `lra` on those files. NOT ADDED, and the reason is the second half of the measurement: the largest tableau observed is 8.8 M cells (282 MB), 30x smaller than the 360 M the earlier reading found, because `lra::simplex_admission` (2026-09-08) now prices that allocation against `memory_limit_mb` BEFORE `feasible` is called. At 8 GiB that gate admits 268 M cells, so the two bounds on one allocation differ by 67x in opposite units -- a fixed cell count and a memory budget. The residual unguarded caller is one that sets NO memory limit; a fixed 4 M cap is the wrong instrument for it, and choosing the right one needs its own ADR rather than a line here.",
     },
     ConfigEntry {
         name: "DEFAULT_STRING_BOUND",
@@ -8135,6 +8349,30 @@ pub fn dated_count() -> usize {
     REGISTRY.iter().filter(|e| e.is_dated()).count()
 }
 
+/// How many registry entries carry NO date — the number this module is
+/// currently worst at, and therefore the one it should be hardest to overlook.
+///
+/// It is derived, never written down: a count in prose is a wish, and this one
+/// has moved by 300 in two days. [`config_trace_line`] prints it, so a run's own
+/// output says what fraction of its configuration nobody has measured.
+#[must_use]
+pub fn undated_count() -> usize {
+    REGISTRY.len() - dated_count()
+}
+
+/// The floor under [`dated_count`], asserted by `the_dated_count_only_rises`.
+///
+/// A ratchet on DATES, deliberately not on the undated share. Ratcheting the
+/// share would punish honest coverage work — registering a governing value
+/// nobody has measured is exactly what this module wants a lane to do, and it
+/// moves the percentage the wrong way. What must never happen is *losing* a
+/// date: a measurement deleted, or an entry quietly downgraded to `undated`
+/// because its `rests_on` went red and that was the cheap way out.
+///
+/// Raise it when dates are added. Lowering it is the edit that needs an
+/// argument, and the test says so in its failure message.
+pub const DATED_FLOOR: usize = 77;
+
 /// The one-line configuration summary a `--trace` run prints.
 ///
 /// Deliberately one line and digest-first: a corpus sweep's output is grepped,
@@ -8185,11 +8423,15 @@ fn config_trace_line_from(
     consulted: &[&'static str],
     crossed: &[(&'static str, u64, u64)],
 ) -> String {
+    // `undated=` is here rather than left to a gate's output because the
+    // undated share is the honest headline of this module and a number that
+    // only a checker prints is a number most readers never see.
     let mut s = format!(
-        "; config digest={:016x} entries={} dated={}",
+        "; config digest={:016x} entries={} dated={} undated={}",
         digest(),
         REGISTRY.len(),
-        dated_count()
+        dated_count(),
+        undated_count()
     );
     for (k, v) in active_env_overrides() {
         let _ = write!(s, " env:{k}={v}");
@@ -8932,6 +9174,55 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// A date may be added but never lost.
+    ///
+    /// The ratchet is on DATES rather than on the undated share on purpose:
+    /// registering an unmeasured governing value is work this module wants, and
+    /// it moves the share the wrong way, so a share ratchet would pay a lane to
+    /// leave a bound unregistered. Losing a date is the thing that must not
+    /// happen quietly — most temptingly by downgrading an entry to `undated`
+    /// when its `rests_on` goes red, which turns a finding into a silence.
+    #[test]
+    fn the_dated_count_only_rises() {
+        assert!(
+            dated_count() >= DATED_FLOOR,
+            "dated entries fell to {} against a floor of {DATED_FLOOR}. If a measurement was \
+             genuinely re-taken and an entry is honestly undated again, lower DATED_FLOOR in the \
+             same commit and say why; do not lower it to make this pass.",
+            dated_count()
+        );
+        assert_eq!(
+            dated_count() + undated_count(),
+            REGISTRY.len(),
+            "dated + undated must partition the table"
+        );
+        // The floor must track the table, or it stops being a ratchet and
+        // becomes a number that was true once.
+        assert!(
+            dated_count() <= DATED_FLOOR + 64,
+            "dated_count() is {} against a floor of {DATED_FLOOR}: raise DATED_FLOOR so the \
+             ratchet keeps holding what has been achieved",
+            dated_count()
+        );
+    }
+
+    /// The trace line reports the undated share, not only the dated count.
+    ///
+    /// The share is this module's honest headline, and a headline only a
+    /// checker prints is one most readers never see.
+    #[test]
+    fn the_trace_line_reports_what_is_unmeasured() {
+        let line = config_trace_line();
+        assert!(
+            line.contains(&format!("undated={}", undated_count())),
+            "the trace line does not report the undated count: {line}"
+        );
+        assert!(
+            undated_count() > 0,
+            "no undated entries, so this test is asserting nothing; delete it or re-derive it"
+        );
     }
 
     /// The emitted line must be deterministic and byte-identical across calls.

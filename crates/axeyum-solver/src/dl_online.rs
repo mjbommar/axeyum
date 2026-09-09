@@ -2174,7 +2174,19 @@ pub fn last_dl_online_stats() -> (Duration, u64) {
 ///
 /// There is deliberately no error channel: every give-up is either `None` (not
 /// our fragment) or a conservative [`CheckResult::Unknown`].
-pub(crate) fn try_check_qf_dl(
+///
+/// # Visibility
+///
+/// `pub` (and `#[doc(hidden)]` at the re-export) so a measurement harness can
+/// run this route ALONE on a file, which the dispatcher offers no way to do:
+/// `SolverConfig` has no route-selection field, so the only sequential evidence
+/// about a route is "it ran and lost" or "it never got a turn". `dl-online` is
+/// the single largest binder on files we lose (95 of 350 in the 2026-09-07
+/// sweep) and the single largest decider on files we win (161 of 754), so a
+/// solo prober without it is blind on the route that matters most. Callers
+/// inside the dispatcher are unchanged; see
+/// `crates/axeyum-bench/examples/route_solo.rs`.
+pub fn try_check_qf_dl(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,

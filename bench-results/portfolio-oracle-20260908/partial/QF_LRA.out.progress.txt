@@ -1,0 +1,54 @@
+[1/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_count_by_k.i_3_3_2.bpl_7.smt2
+[2/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_half_2.i_3_6_2.bpl_7.smt2
+[3/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_copy3_ground.i_3_2_2.bpl_7.smt2
+[4/54] TOO-SLOW-ARM         nra arm=92263.6ms  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_two_index_06.i_3_2_2.bpl_7.smt2
+[5/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2019-ezsmt/Labyrinth/SCC_Strong/0051-labyrinth-12-0.smt2
+[6/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2019-ezsmt/Labyrinth/SCC_Strong/0132-labyrinth-12-0.smt2
+[7/54] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2019-ezsmt/blending/1.smt2
+[8/54] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2019-ezsmt/blending/5.smt2
+[9/54] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2019-ezsmt/travellingSalesperson/rand_70_300_1155482584_12.lp.smt2
+[10/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2019-ezsmt/travellingSalesperson/rand_80_340_1159656267_0.lp.smt2
+[11/54] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/2019-ezsmt/travellingSalesperson/rand_80_340_1159656267_4.lp.smt2
+[12/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/CooperatingT2/afagp-fail.t2.c_Iteration1_Lasso_7-phaseTemplate.smt2
+[13/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/CooperatingT2/collatz.t2.c_Iteration3_Loop_7-phaseTemplate.smt2
+[14/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/CooperatingT2/ludcmp.c.i.ludcmp.pl.t2.fixed.t2.c_Iteration8_Loop_7-phaseTemplate.smt2
+[15/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/CooperatingT2/matrixsqrt.t2.c_Iteration12_Loop_7-phaseTemplate.smt2
+[16/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/CooperatingT2/p-43.t2.c_Iteration4_Loop_4-pieceTemplate.smt2
+[17/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/CooperatingT2/queens.t2.c_Iteration19_Loop_7-phaseTemplate.smt2
+[18/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/CooperatingT2/sas2.t2.c_Iteration3_Lasso_5-phaseTemplate.smt2
+[19/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/SV-COMP/NoriSharma-2013FSE-Fig8_true-termination.c_Iteration1_Loop_5-phaseTemplate.smt2
+[20/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/SV-COMP/joey_false-termination.c_Iteration1_Loop_7-phaseTemplate.smt2
+[21/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/Ultimate/Canberra.bpl_Iteration1_Lasso_6-phaseTemplate.smt2
+[22/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/Ultimate/Gcd_havoc.bpl_Iteration1_Lasso_6-phaseTemplate.smt2
+[23/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/Ultimate/OpposedDisjuncts.bpl_Iteration1_Lasso_2-pieceTemplate.smt2
+[24/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/Ultimate/SyntaxSupportBooleans5.bpl_Iteration1_Loop_4-pieceTemplate.smt2
+[25/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/TM/p7-driverlogNumeric_s8.smt2
+[26/54] TOO-SLOW-ARM         nra arm=56866.9ms  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/clock_synchro/clocksynchro_4clocks.main_invar.base.smt2
+[27/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/clock_synchro/clocksynchro_6clocks.main_invar.base.smt2
+[28/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/clock_synchro/clocksynchro_8clocks.main_invar.base.smt2
+[29/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/miplib/danoint-266.smt2
+[30/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/miplib/pp08a-1000.smt2
+[31/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/miplib/vpm2-5.smt2
+[32/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sal/carpark/Carpark2-ausgabe-8.smt2
+[33/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sal/gasburner/gasburner-prop3-12.smt2
+[34/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sal/gasburner/gasburner-prop3-9.smt2
+[35/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sal/pursuit/pursuit-safety-16.smt2
+[36/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sal/pursuit/pursuit-safety-5.smt2
+[37/54] TOO-SLOW-ARM         nra arm=53701.1ms  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sal/tgc/tgc_io-nosafe-4.smt2
+[38/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sal/tgc/tgc_io-safe-13.smt2
+[39/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sal/tgc/tgc_io-safe-20.smt2
+[40/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sc/sc-11.base.cvc.smt2
+[41/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sc/sc-13.base.cvc.smt2
+[42/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sc/sc-15.base.cvc.smt2
+[43/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sc/sc-17.base.cvc.smt2
+[44/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sc/sc-19.base.cvc.smt2
+[45/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sc/sc-21.base.cvc.smt2
+[46/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sc/sc-23.base.cvc.smt2
+[47/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sc/sc-25.base.cvc.smt2
+[48/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sc/sc-27.base.cvc.smt2
+[49/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sc/sc-29.base.cvc.smt2
+[50/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sc/sc-5.base.cvc.smt2
+[51/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sc/sc-7.base.cvc.smt2
+[52/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sc/sc-9.base.cvc.smt2
+[53/54] STALE-DECIDED        /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/spider_benchmarks/no_op_accs.base.smt2
+[54/54] NO-ROUTE             - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/spider_benchmarks/reint_to_least.base.smt2

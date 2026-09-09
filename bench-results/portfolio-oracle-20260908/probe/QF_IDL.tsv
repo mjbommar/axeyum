@@ -1,0 +1,60 @@
+file	division	status	control_verdict	control_ms	control_trail	probe_verdict	probe_ms	probe_trail	winner	winner_own_ms	preamble_ms	arm_ms	confirm_own_ms
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20210312-Bouvier/vlsat3_c00.smt2	QF_IDL	NO-ROUTE-NO-TRAIL	unknown	25006	0	unknown	121005	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/20220214-RVpredict-BohanLi/RVpredict_13.smt2	QF_IDL	STALE-DECIDED	sat	1530	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/BlockedNQueens/156.48.1960.36.1721325133.dat.smt2	QF_IDL	STALE-DECIDED	unsat	3755	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/ChannelRouting/channelRoute.in9.smt2	QF_IDL	STALE-DECIDED	sat	6757	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Fastfood/a9.8.11.asp.smt2	QF_IDL	STALE-DECIDED	unsat	6445	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GeneralizedSlitherlink/penrose.34.asp.smt2	QF_IDL	STALE-DECIDED	sat	1382	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GeneralizedSlitherlink/trisquares.41.asp.smt2	QF_IDL	STALE-DECIDED	sat	5057	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GraphColouring/graph-colouring-nodes=130-density=0.1-instance=10.smt2	QF_IDL	NO-ROUTE	unknown	21200	1	unknown	117259	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/HamiltonianPath/gryzzles.12.lp.smt2	QF_IDL	STALE-DECIDED	sat	730	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/HamiltonianPath/gryzzles.31.lp.smt2	QF_IDL	STALE-DECIDED	sat	1587	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/HamiltonianPath/gryzzles.7.lp.smt2	QF_IDL	STALE-DECIDED	sat	1333	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/HierarchicalClustering/xy.12.x.12.r.3.274440616.806497.data_k=3_l=4_sat.gph.smt2	QF_IDL	STALE-DECIDED	sat	12910	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/MazeGeneration/maze-generation-width=19-height=19-density=0.01-run=5.smt2	QF_IDL	STALE-DECIDED	sat	609	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/SchurNumbers/15.3.schur.lp.smt2	QF_IDL	NO-ROUTE	unknown	21316	1	unknown	117462	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/SchurNumbers/20.18.schur.lp.smt2	QF_IDL	STALE-DECIDED	unsat	6062	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Sokoban/dimitri_yorick.59.steps.8.asp.smt2	QF_IDL	STALE-DECIDED	unsat	1465	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Sokoban/duthen-990602.51.steps.12.asp.smt2	QF_IDL	STALE-DECIDED	unsat	2030	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Sokoban/duthen-990602.77.steps.9.asp.smt2	QF_IDL	STALE-DECIDED	unsat	622	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Solitaire/solitaire-center-time=26.smt2	QF_IDL	STALE-DECIDED	sat	20361	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/Solitaire/solitaire-edge-time=29.smt2	QF_IDL	TOO-SLOW-ARM	unknown	21644	1	sat	43992	1	dl-online	43734.3	163.9	43898.3	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/WireRouting/wire.10.x.10.b.5.a.20_unsat.data.smt2	QF_IDL	TOO-SLOW-ARM	unknown	21722	1	unsat	38010	1	dl-online	37805.5	144.9	37950.4	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/cellar/scen09.smt2	QF_IDL	STALE-DECIDED	unsat	7034	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/diamonds/diamonds.15.2.i.a.u.smt2	QF_IDL	STALE-DECIDED	unsat	3490	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/mathsat/fischer/FISCHER14-9-ninc.smt2	QF_IDL	STALE-DECIDED	unsat	7488	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/01.500.graph.smt2	QF_IDL	STALE-DECIDED	unsat	2657	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/04.500.graph.smt2	QF_IDL	STALE-DECIDED	sat	3736	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/07.500.graph.smt2	QF_IDL	STALE-DECIDED	sat	2962	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/10.500.graph.smt2	QF_IDL	STALE-DECIDED	sat	3084	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/13.500.graph.smt2	QF_IDL	STALE-DECIDED	unsat	2897	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/16.500.graph.smt2	QF_IDL	STALE-DECIDED	sat	2919	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/19.500.graph.smt2	QF_IDL	STALE-DECIDED	sat	3305	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/22.500.graph.smt2	QF_IDL	STALE-DECIDED	sat	3369	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/28.500.graph.smt2	QF_IDL	STALE-DECIDED	unsat	3696	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/parity/31.500.graph.smt2	QF_IDL	STALE-DECIDED	sat	3607	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/planning/plan-30.cvc.smt2	QF_IDL	STALE-DECIDED	unsat	389	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/planning/plan-42.cvc.smt2	QF_IDL	STALE-DECIDED	unsat	733	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/qlock/qlock-4-10-15.induction.cvc.smt2	QF_IDL	STALE-DECIDED	sat	4019	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/qlock/qlock-4-10-21.induction.cvc.smt2	QF_IDL	STALE-DECIDED	sat	12975	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/qlock/qlock-4-10-27.induction.cvc.smt2	QF_IDL	STALE-DECIDED	sat	16072	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/qlock/qlock-4-10-33.induction.cvc.smt2	QF_IDL	TOO-SLOW-ARM	unknown	21529	1	sat	51637	1	dl-online	51454.5	150.6	51605.2	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/qlock/qlock-4-10-39.induction.cvc.smt2	QF_IDL	TOO-SLOW-ARM	unknown	21619	1	sat	87634	1	dl-online	87387.7	200.2	87587.9	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/n_queen/queen31-1.smt2	QF_IDL	STALE-DECIDED	sat	19300	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/n_queen/queen42-1.smt2	QF_IDL	NO-ROUTE-NO-TRAIL	unknown	25029	0	unknown	121009	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/super_queen/super_queen29-1.smt2	QF_IDL	TOO-SLOW-ARM	unknown	25034	0	sat	24945	1	dl-online	24931.0	4.7	24935.8	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/super_queen/super_queen61-1.smt2	QF_IDL	NO-ROUTE	unknown	21210	1	unknown	117161	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/queens_bench/super_queen/super_queen83-1.smt2	QF_IDL	NO-ROUTE	unknown	21427	1	unknown	117390	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/sal/lpsat/lpsat-goal-18.smt2	QF_IDL	STALE-DECIDED	unsat	6318	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/gp10_03_mkspan1079.smt2	QF_IDL	NO-ROUTE-NO-TRAIL	unknown	25027	0	unknown	121006	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/j6_per0_0_mkspan1057.smt2	QF_IDL	STALE-DECIDED	sat	1548	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/j8_per0_2_mkspan1054.smt2	QF_IDL	TOO-SLOW-ARM	unknown	25026	0	sat	24482	1	dl-online	24473.4	3.6	24477.0	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/j8_per10_1_mkspan1036.smt2	QF_IDL	STALE-DECIDED	sat	15374	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/j8_per20_0_mkspan1008.smt2	QF_IDL	TOO-SLOW-ARM	unknown	25030	0	sat	30571	1	dl-online	30561.7	3.5	30565.2	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/tai_10x10_1_mkspan639.smt2	QF_IDL	NO-ROUTE-NO-TRAIL	unknown	25027	0	unknown	121007	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/schedulingIDL/tai_10x10_7_mkspan617.smt2	QF_IDL	NO-ROUTE-NO-TRAIL	unknown	25026	0	unknown	121006	0					
+# division=QF_IDL files=54 budget_ms=24000 probe_ms=120000 cores=4-7 mem_mb=8192
+# NO-ROUTE	4
+# NO-ROUTE-NO-TRAIL	5
+# STALE-DECIDED	38
+# TOO-SLOW-ARM	7
