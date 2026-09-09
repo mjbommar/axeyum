@@ -1,15 +1,22 @@
 # Support Matrix
 
 The authoritative table is the
-[generated support matrix](../research/08-planning/support-matrix.md). It keeps
-these layers separate for each feature/fragment:
+[generated support matrix](../research/08-planning/support-matrix.md). Its
+source, `SupportRow` (`crates/axeyum-solver/src/support_matrix.rs:156-169`),
+keeps four independent status axes per feature/fragment, plus a row key and a
+grounding note:
 
-- typed IR;
-- ground evaluator;
-- SMT-LIB parser/writer;
-- native oracle;
-- pure-Rust decision route; and
-- evidence/model/proof support.
+- **parser** — does `axeyum-smtlib` accept it (`ParserStatus`)?
+- **ir** — does `axeyum-ir`'s typed term IR and ground evaluator model its
+  semantics (`IrStatus`)?
+- **solver** — does the pure-Rust decision route decide it (`SolverStatus`)?
+- **proof** — what assurance backs an `unsat`/`sat` verdict for it
+  (`ProofStatus`)?
+
+so "the parser accepts it" is never conflated with "the solver decides it" or
+"the result carries a proof". Native-oracle comparison and SMT-LIB writer
+support are not separate columns of this table; they show up in the note text
+and the [trust ledger](trust-ledger.md) instead.
 
 Do not duplicate the rows here. The source table is rendered from
 `axeyum_solver::support_matrix` and protected by a golden test:
