@@ -24,3 +24,12 @@
 [24/38] QF_UF deciders=6 best=euf-online@1095ms (37s)  gensys_icl628.smt2
 [25/38] QF_UF deciders=6 best=datatype-native@1738ms (52s)  gensys_icl702.smt2
 [26/38] QF_UF deciders=2 best=datatype-native@22454ms (141s)  gensys_icl776.smt2
+[27/38] QF_UF deciders=4 best=datatype-native@6945ms (93s)  gensys_icl813.smt2
+[28/38] QF_UF deciders=4 best=datatype-elim@10311ms (99s)  gensys_icl850.smt2
+[29/38] QF_UF deciders=6 best=datatype-elim@1367ms (30s)  gensys_icl887.smt2
+[30/38] QF_UF deciders=6 best=datatype-native@2288ms (30s)  gensys_icl924.smt2
+[31/38] QF_UF deciders=6 best=datatype-native@2927ms (39s)  gensys_icl961.smt2
+[32/38] QF_UF deciders=6 best=datatype-elim@2174ms (53s)  gensys_icl998.smt2
+[33/38] QF_UF deciders=2 best=datatype-native@18644ms (113s)  iso_icl_nogen_sk009.smt2
+[34/38] QF_UF deciders=3 best=datatype-native@4169ms (71s)  gensys_brn_sk015.smt2
+[35/38] QF_UF deciders=3 best=euf-online@4461ms (64s)  gensys_brn_sk052.smt2

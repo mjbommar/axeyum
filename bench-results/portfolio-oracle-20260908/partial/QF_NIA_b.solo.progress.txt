@@ -18,3 +18,11 @@
 [18/30] QF_NIA_b deciders=0 best=no-route (147s)  341.smt2
 [19/30] QF_NIA_b deciders=0 best=no-route (67s)  456.smt2
 [20/30] QF_NIA_b deciders=0 best=no-route (100s)  571.smt2
+[21/30] QF_NIA_b deciders=0 best=no-route (68s)  687.smt2
+[22/30] QF_NIA_b deciders=0 best=no-route (66s)  803.smt2
+[23/30] QF_NIA_b deciders=0 best=no-route (5s)  array_3-1-O0.smt2
+[24/30] QF_NIA_b deciders=0 best=no-route (47s)  geo1-u_valuebound2-O0.smt2
+[25/30] QF_NIA_b deciders=0 best=no-route (76s)  ps2-ll_unwindbound50-O0.smt2
+[26/30] QF_NIA_b deciders=0 best=no-route (51s)  aproveSMT4687047739446499948.smt2
+[27/30] QF_NIA_b deciders=0 best=no-route (76s)  aproveSMT5048239408100334127.smt2
+[28/30] QF_NIA_b deciders=0 best=no-route (152s)  aproveSMT6461796824751951221.smt2

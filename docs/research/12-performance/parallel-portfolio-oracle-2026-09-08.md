@@ -217,16 +217,23 @@ Committed population, three hosts, `taskset`-pinned slots, 24 s control /
 | QF_RDL | 47 | 37 | 1 | 5 | 2 | 0 | 2 | 0 |
 | QF_SLIA | 7 | 0 | 1 | 0 | 5 | 0 | 1 | 0 |
 | QF_UF | 38 | 35 | 0 | 2 | 1 | 0 | 0 | 0 |
+| QF_UFLIA | 58 | 11 | 1 | 6 | 6 | 0 | **34** | 0 |
 | UF | 32 | 0 | 0 | 0 | 27 | 5 | 0 | 0 |
-| **total** | **284** | **127** | **2** | **23** | **107** | **6** | **19** | **4** |
+| **total** | **342** | **138** | **3** | **29** | **113** | **6** | **53** | **4** |
 
-Both candidates failed confirmation (§"neither instrument confirms a prize"):
-the `QF_SLIA` one is a looped front door scored on one round of fifty-five, and
-the `QF_RDL` one does not reproduce under load.
+**All three candidates failed confirmation** (§"neither instrument confirms a
+prize"): the `QF_SLIA` one is a looped front door scored on one round of
+fifty-five, the `QF_RDL` one does not reproduce under load, and the `QF_UFLIA`
+one is `hash_sat_05_17`, whose real cost a budget walk puts at 33–34 s against a
+21.3 s estimate.
 
-`QF_NIA` (61) and `QF_UFLIA` (58) were still running when this was written; their
-per-file progress logs are committed under `partial/` so the coverage is visible
-rather than implied.
+`QF_NIA` (61) was still running at 60 of 61; its per-file progress log is
+committed under `partial/` so the coverage is visible rather than implied.
+
+**`QF_UFLIA`'s 34 no-trail rows are the largest blind spot in this table.** They
+are watchdog kills where no route returned, so the probe can say only that the
+file is lost — which route held the clock is unrecorded. The solo arm is what
+covers them, and it had reached 35 of that division's 58 files.
 
 ### The solo arm, where it is complete
 
