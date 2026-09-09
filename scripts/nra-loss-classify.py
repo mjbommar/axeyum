@@ -44,7 +44,18 @@ CLASSES = [
     ("branch-and-bound depth budget", "d_other:bnb-depth-budget"),
     ("could not certify", "d_other:resultant-uncertified"),
     ("refinement", "d_other:refine-fixpoint"),
+    ("no combination of the asserted equations", "d_other:cas-ideal-declined"),
 ]
+
+# The `; give-up` line does NOT always name the branch that returned. When the
+# preprocessing wrapper's own deadline has passed it REPLACES the inner reason
+# with its own text, so a query the relaxation gave up on for a structural
+# reason is reported as a wrapper timeout. These texts are wrapper markers:
+# the real reason is the last non-front-door route's detail in the trail.
+WRAPPER_TIMEOUTS = (
+    "preprocessed dispatch timeout after reduced solve",
+    "auto-dispatch timeout",
+)
 
 
 def classify(detail, watchdog):
@@ -57,7 +68,7 @@ def classify(detail, watchdog):
             return name
     if d:
         return "d_other:" + d[:56]
-    return "d_other:no-give-up-line"
+    return "d_other:no-reason-recorded"
 
 
 def parse_log(path):
@@ -71,9 +82,14 @@ def parse_log(path):
         "total_ms": None,
         "trail": [],
         "route_ms": {},
+        "lazy": {},
+        "lazy_partial": False,
     }
     for line in text.splitlines():
-        if line.startswith("; give-up "):
+        if line.startswith("; lazy-smt ") or line.startswith("; partial lazy-smt "):
+            rec["lazy"] = dict(re.findall(r"\b(\w+)=(\S+)", line))
+            rec["lazy_partial"] = line.startswith("; partial")
+        elif line.startswith("; give-up "):
             m = re.search(r"detail=(.*)$", line)
             rec["give_up"] = m.group(1) if m else line
         elif line.startswith("; route ") or line.startswith("; partial route "):
@@ -93,19 +109,28 @@ def parse_log(path):
                      a.get("detail", ""), ms)
                 )
                 rec["route_ms"][a.get("route")] = ms
-    if not rec["give_up"]:
-        # A watchdog-killed run prints no `; give-up`; the trail's last detail
-        # is then the nearest thing to a reason and is labelled as such.
-        #
-        # Only NON-front-door routes are consulted. Every `fd:` attempt after a
-        # theory route COPIES that route's decline text, and `fd:parse` carries a
-        # probe string (`string_bound=12`) that is not a reason at all — reading
-        # the trail's literal last entry classified one file by the parser's
-        # probe note. The branch that returned is always a theory route here.
-        for route, _outcome, _reason, detail, _ms in reversed(rec["trail"]):
-            if detail and not str(route).startswith("fd:"):
-                rec["give_up"] = detail
-                break
+    # The reason of record is the last NON-front-door route's detail, not the
+    # `; give-up` line. Two things make the give-up line unreliable here:
+    #   * every `fd:` attempt after a theory route copies that route's text, and
+    #     `fd:parse` carries a probe note (`string_bound=12`) that is not a
+    #     reason at all — reading the trail's literal last entry classified one
+    #     file by the parser's probe string; and
+    #   * the preprocessing wrapper REPLACES the inner reason with its own
+    #     timeout text once its deadline has passed, so four files reported a
+    #     wrapper timeout for a relaxation that had given up structurally.
+    # The give-up line is kept as a fallback for a run with no usable trail.
+    rec["inner_reason"] = None
+    for route, _outcome, _reason, detail, _ms in reversed(rec["trail"]):
+        if detail and not str(route).startswith("fd:"):
+            rec["inner_reason"] = detail
+            break
+    rec["wrapper_masked"] = bool(
+        rec["give_up"]
+        and any(w in rec["give_up"] for w in WRAPPER_TIMEOUTS)
+        and rec["inner_reason"]
+        and rec["inner_reason"] != rec["give_up"]
+    )
+    rec["reason"] = rec["inner_reason"] or rec["give_up"]
     return rec
 
 
@@ -119,7 +144,7 @@ def main(sweep_dir):
             rec["file"] = path
             rec["verdict"] = verdict
             rec["wall"] = int(wall)
-            rec["class"] = classify(rec["give_up"], rec["watchdog"])
+            rec["class"] = classify(rec["reason"], rec["watchdog"])
             rows.append(rec)
 
     total_ms = sum(r["wall"] for r in rows)
@@ -128,6 +153,13 @@ def main(sweep_dir):
     print("== verdicts ==")
     for v, c in collections.Counter(r["verdict"] for r in rows).most_common():
         print(f"  {v:10s} {c:3d}")
+
+    masked = [r for r in rows if r["wrapper_masked"]]
+    print(f"\n== give-up line masked the inner reason on {len(masked)} of "
+          f"{len(rows)} files ==")
+    for r in masked[:6]:
+        print(f"  {os.path.basename(r['file'])[:40]:40s} printed "
+              f"{r['give_up'][:38]!r} -> really {r['reason'][:44]!r}")
 
     print("\n== STEP-1 SPLIT (from the branch that returned) ==")
     by_class = collections.defaultdict(list)
@@ -161,13 +193,59 @@ def main(sweep_dir):
         print(f"  {route:24s} {len(v):3d} files  total {sum(v) / 1000:7.1f}s  "
               f"mean {sum(v) / len(v):8.0f}ms  max {max(v):8.0f}ms")
 
+    # The budget axis, kept SEPARATE from the reason axis. A file can give up
+    # for a structural reason and still have consumed the whole clock, and the
+    # two questions ("why did it stop" / "did it run out") have different fixes.
+    print("\n== budget axis (24s protocol) ==")
+    exhausted = [r for r in rows if r["watchdog"] or r["wall"] >= 23_000]
+    half = [r for r in rows
+            if r not in exhausted and 10_000 <= r["wall"] <= 15_000]
+    early = [r for r in rows if r["wall"] < 1_000]
+    print(f"  spent the whole 24s (watchdog or >=23s) : {len(exhausted):3d}")
+    print(f"  returned near HALF the budget (10-15s)  : {len(half):3d}")
+    print(f"  returned in under 1s                    : {len(early):3d}")
+    print(f"  everything else                         : "
+          f"{len(rows) - len(exhausted) - len(half) - len(early):3d}")
+
+    # Inside the lazy-SMT loop the budget splits between the BOOLEAN SKELETON
+    # solve (enumerating cubes) and the THEORY solve (deciding one cube). Which
+    # of the two dominates decides what a fix would even be, and the two are not
+    # visible from any wall-clock number. Reported per file, never averaged into
+    # a rate: a `; partial` reading is a lower bound.
+    def as_int(rec, key):
+        try:
+            return int(rec["lazy"].get(key, 0))
+        except ValueError:
+            return 0
+
+    lazy_rows = [r for r in rows if r["lazy"]]
+    print(f"\n== inside the lazy-SMT loop ({len(lazy_rows)} files report it) ==")
+    print(f"{'file':40s} {'part':>5s} {'skel_ms':>8s} {'theory_ms':>9s} "
+          f"{'skel%':>6s} {'nra_rnd':>8s} {'lra_rnd':>8s} {'atoms':>7s}")
+    skel_dom = 0
+    for r in sorted(lazy_rows, key=lambda x: -as_int(x, "skeleton_ms")):
+        skel = as_int(r, "skeleton_ms")
+        thy = as_int(r, "theory_ms")
+        acct = as_int(r, "accounted_ms")
+        pct = f"{skel / acct:.0%}" if acct else "n/a"
+        if acct and skel / acct >= 0.5:
+            skel_dom += 1
+        print(f"{os.path.basename(r['file'])[:40]:40s} "
+              f"{'yes' if r['lazy_partial'] else 'no':>5s} {skel:8d} {thy:9d} "
+              f"{pct:>6s} {as_int(r, 'nra_rounds'):8d} "
+              f"{as_int(r, 'lra_rounds'):8d} {as_int(r, 'atoms'):7d}")
+    print(f"  -> the BOOLEAN SKELETON is >=50% of accounted time on "
+          f"{skel_dom} of {len(lazy_rows)} files")
+
     print("\n== per file ==")
-    hdr = f"{'file':46s} {'wall':>6s} {'verdict':8s} {'class'}"
+    hdr = (f"{'file':44s} {'wall':>6s} {'nra_ms':>7s} {'rroot_ms':>8s} "
+           f"{'class'}")
     print(hdr)
-    print("-" * 100)
+    print("-" * 110)
     for r in sorted(rows, key=lambda x: (x["class"], -x["wall"])):
-        print(f"{os.path.basename(r['file'])[:46]:46s} {r['wall']:6d} "
-              f"{r['verdict']:8s} {r['class']}")
+        print(f"{os.path.basename(r['file'])[:44]:44s} {r['wall']:6d} "
+              f"{r['route_ms'].get('nra', 0):7.0f} "
+              f"{r['route_ms'].get('nra-real-root', 0):8.0f} {r['class']}")
 
 
 if __name__ == "__main__":
