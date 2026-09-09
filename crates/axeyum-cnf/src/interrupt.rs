@@ -76,9 +76,10 @@ mod tests {
         // binary), so the predicate must reduce to the deadline test.
         assert!(!stop_requested());
         assert!(!past_deadline(None));
-        assert!(past_deadline(Some(
-            std::time::Instant::now() - std::time::Duration::from_secs(1)
-        )));
+        let a_second_ago = std::time::Instant::now()
+            .checked_sub(std::time::Duration::from_secs(1))
+            .expect("the monotonic clock is at least a second old");
+        assert!(past_deadline(Some(a_second_ago)));
         assert!(!past_deadline(Some(
             std::time::Instant::now() + std::time::Duration::from_secs(60)
         )));

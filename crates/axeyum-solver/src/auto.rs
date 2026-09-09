@@ -2860,6 +2860,7 @@ fn dispatch_int_linear_refuters(
         });
         return Ok(None);
     }
+    let mut group: Option<IntLinearGroup> = None;
     // The integer-linear ladder's fused group (`crate::portfolio`). At one
     // worker this branch is not taken at all: the call below is the same call
     // this function has always made, on the caller's arena, with the caller's
@@ -2882,11 +2883,30 @@ fn dispatch_int_linear_refuters(
         // not do -- and `lia-dpll` does not have the same exposure, because it
         // is the route the ladder was going to run either way.
         let group_config = config_with_remaining_deadline(config, dispatch_deadline);
-        if let Some(decided) = run_int_linear_group(arena, &lin, &group_config, congruence, rec)? {
+        group = Some(run_int_linear_group(
+            arena,
+            &lin,
+            &group_config,
+            congruence,
+            rec,
+        )?);
+        if let Some(group) = &mut group
+            && let Some(decided) = group.decided_by_a_later_arm.take()
+        {
             return Ok(Some(decided));
         }
     }
-    match check_with_lia_dpll(arena, &lin, config) {
+    // `lia-dpll` is the group's FIRST arm, so when the group ran it has already
+    // been run -- on the group's clock, on its own arena clone, and recorded.
+    // Calling it again here would run the ladder's main integer route TWICE per
+    // query and put two `lia-dpll` rows in the trail. Taking the group's result
+    // is not an optimisation; it is the difference between one dispatch and two.
+    let already_recorded = group.is_some();
+    let lia_result = match group {
+        Some(group) => group.first_arm,
+        None => check_with_lia_dpll(arena, &lin, config),
+    };
+    match lia_result {
         Ok(mut result) => {
             result = guard_zero_divisor_sat(result, congruence);
             if let CheckResult::Unknown(reason) = &result
@@ -2896,7 +2916,9 @@ fn dispatch_int_linear_refuters(
                 result =
                     CheckResult::Unknown(annotate_lia_budget_before_uf(arena, assertions, reason));
             }
-            with_recorder(rec, |t| t.record_result("lia-dpll", &result));
+            if !already_recorded {
+                with_recorder(rec, |t| t.record_result("lia-dpll", &result));
+            }
             match &result {
                 CheckResult::Unknown(reason)
                     if features.has_function && !is_budget_unknown_kind(reason.kind) =>
@@ -2907,9 +2929,11 @@ fn dispatch_int_linear_refuters(
             }
         }
         Err(SolverError::Unsupported(_)) => {
-            with_recorder(rec, |t| {
-                t.record_declined("lia-dpll", DeclineReason::Unsupported);
-            });
+            if !already_recorded {
+                with_recorder(rec, |t| {
+                    t.record_declined("lia-dpll", DeclineReason::Unsupported);
+                });
+            }
             Ok(None)
         }
         Err(other) => Err(other),
@@ -3009,14 +3033,25 @@ const INT_LINEAR_PORTFOLIO_ARMS: [crate::portfolio::Arm; 2] = [
     },
 ];
 
+/// What the integer-linear fused group produced.
+///
+/// Split into the first arm and the rest because the caller's handling of
+/// `lia-dpll`'s own result is established behaviour -- the `has_function`
+/// fall-through, the budget annotation, the zero-divisor guard -- and belongs to
+/// that route, not to the group.
+struct IntLinearGroup {
+    /// `lia-dpll`'s result, for the caller's established handling.
+    first_arm: Result<CheckResult, SolverError>,
+    /// A verdict from an arm AFTER `lia-dpll`, when one decided.
+    decided_by_a_later_arm: Option<CheckResult>,
+}
+
 /// Runs the integer-linear fused group over `lin` (the div/mod-eliminated
 /// assertions -- **one query**, which is what makes the group's cross-arm
 /// disagreement gate meaningful).
 ///
-/// Returns `Some(verdict)` when an arm **other than** `lia-dpll` decided, so the
-/// caller keeps its established handling of `lia-dpll`'s own result --
-/// including the `has_function` fall-through, which is a property of that
-/// route's decline and not of the group.
+/// Records every arm it ran, in **declared** order: the trail's contents depend
+/// on the race but its shape must not.
 ///
 /// # Errors
 ///
@@ -3030,39 +3065,44 @@ fn run_int_linear_group(
     config: &SolverConfig,
     congruence: axeyum_rewrite::ZeroDivisorCongruence,
     rec: &mut Recorder<'_>,
-) -> Result<Option<CheckResult>, SolverError> {
+) -> Result<IntLinearGroup, SolverError> {
     let group = crate::portfolio::FusedGroup::new(
         &INT_LINEAR_PORTFOLIO_ARMS,
         int_linear_portfolio_workers(),
     );
     let outcome = group.run(arena, lin, config)?;
-    // Record in DECLARED order, never finishing order: the trail's contents
-    // depend on the race but its shape must not.
-    let mut decided: Option<(&'static str, CheckResult)> = None;
     let winner = outcome.winner;
+    let mut first_arm = Ok(CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Other,
+        detail: String::from("portfolio first arm produced no outcome"),
+    }));
+    let mut decided_by_a_later_arm = None;
     for (index, arm) in outcome.arms.into_iter().enumerate() {
         match arm.result {
             Ok(result) => {
                 let result = guard_zero_divisor_sat(result, congruence);
                 with_recorder(rec, |t| t.record_result(arm.route, &result));
-                if winner == Some(index) {
-                    decided = Some((arm.route, result));
+                if index == 0 {
+                    first_arm = Ok(result);
+                } else if winner == Some(index) {
+                    decided_by_a_later_arm = Some(result);
                 }
             }
-            Err(SolverError::Unsupported(_)) => {
+            Err(SolverError::Unsupported(message)) => {
                 with_recorder(rec, |t| {
                     t.record_declined(arm.route, DeclineReason::Unsupported);
                 });
+                if index == 0 {
+                    first_arm = Err(SolverError::Unsupported(message));
+                }
             }
             Err(other) => return Err(other),
         }
     }
-    match decided {
-        // `lia-dpll` winning is the sequential outcome; hand it back to the
-        // caller's own handling rather than duplicating that logic here.
-        Some(("lia-dpll", _)) | None => Ok(None),
-        Some((_, result)) => Ok(Some(result)),
-    }
+    Ok(IntLinearGroup {
+        first_arm,
+        decided_by_a_later_arm,
+    })
 }
 
 fn should_route_uf_arith_before_lia_dpll(

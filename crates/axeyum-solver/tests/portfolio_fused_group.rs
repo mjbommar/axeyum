@@ -276,6 +276,25 @@ fn a_raced_group_never_relaxes_integers_to_reals() {
 }
 
 #[test]
+fn racing_runs_lia_dpll_once_per_query_not_twice() {
+    // `lia-dpll` is the group's first arm, so the caller must take the group's
+    // result rather than calling the route again. The first version of this
+    // wiring did call it again: the ladder's main integer route ran TWICE per
+    // query at two workers and the trail carried two `lia-dpll` rows. Neither a
+    // verdict comparison nor the degeneracy counter can see that -- both paths
+    // answer the same thing, and the group did run -- so the row count in the
+    // trail is the only instrument that catches it.
+    let _workers = IntLinearPortfolioWorkersGuard::set(2);
+    let (_verdict, trail) = decide(satisfiable, 5_000);
+    let rows = trail.matches("\"route\":\"lia-dpll\"").count();
+    assert_eq!(
+        rows, 1,
+        "the group's first arm must run once, not once in the group and once in \
+         the caller: {trail}"
+    );
+}
+
+#[test]
 fn a_raced_group_records_every_arm_it_ran_in_declared_order() {
     let _workers = IntLinearPortfolioWorkersGuard::set(2);
     let (_verdict, trail) = decide(satisfiable, 5_000);
