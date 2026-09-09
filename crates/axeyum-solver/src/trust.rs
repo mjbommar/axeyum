@@ -4,11 +4,17 @@
 //! caveat into an auditable list — the precondition for shrinking the trusted
 //! base to zero (Track 3 in `docs/plan/track-3-proof-lean/`).
 //!
-//! A reduction is **certified** when an independent per-query checker re-derives
-//! it (bit-blast via the exhaustive miter; Tseitin/SAT via DRAT; Farkas /
-//! lazy-SMT / term-level enumeration by their verifiers) and a **trust hole**
-//! when it is a sound (equi)satisfiability transform with no per-query
-//! certificate yet. A produced [`crate::EvidenceReport`] records the
+//! A reduction is **certified** when every evidence route that records it has an
+//! independent per-query checker that re-derives it, **partially certified** when
+//! some routes do and some do not, and a **trust hole** when none do. That status
+//! is not typed per id: it is folded from [`EVIDENCE_ROUTES`], one row per
+//! (reduction, does-the-checker-re-derive-it) route, by [`TrustId::coverage`]
+//! (P0.5). `tests/trust_ledger_derivation.rs` rebuilds the same fold from the
+//! `(TrustId::…, <certified>)` pairs the producing code actually writes and fails
+//! on disagreement, so a reduction cannot be graded by memory and cannot be added
+//! without saying what produces and checks it.
+//!
+//! A produced [`crate::EvidenceReport`] records the
 //! [`TrustStep`]s a given result depended on (with whether *this run* certified
 //! each), so a consumer can see exactly what it is trusting.
 //!
@@ -162,6 +168,262 @@ pub const ALL_TRUST_IDS: &[TrustId] = &[
     TrustId::Diophantine,
 ];
 
+/// A sentinel [`EvidenceRoute::checker`]: this route attaches **no** checkable
+/// artifact at all (a bare `Evidence::Unsat(None)`, a search-only refutation, an
+/// undischarged theory lemma). A route whose checker is [`NO_CHECKER`] can never
+/// carry `certifies: true` — there is nothing to re-derive the step with — and
+/// `tests/trust_ledger_derivation.rs` enforces exactly that.
+pub const NO_CHECKER: &str = "(none)";
+
+/// How much of a reduction's **recorded** use the in-tree checkers re-derive.
+///
+/// This is the ledger status, and since P0.5 it is *computed* from
+/// [`EVIDENCE_ROUTES`] rather than typed per id. The three real values are
+/// distinctions the producing code already makes and a boolean cannot hold: a
+/// DRAT-checked SAT refutation and an undischarged theory lemma are not the same
+/// kind of thing, yet both used to render as one word.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum CertifiedCoverage {
+    /// **certified** — every route that records this reduction re-derives it, so
+    /// no result relying on it is trusted-uncertified. This is the conservative
+    /// bit [`TrustId::is_certified`] returns.
+    Full,
+    /// **partially certified** — at least one route re-derives the reduction and
+    /// at least one does not. The per-run [`TrustStep::certified`] flag, not the
+    /// ledger, says which happened for a *given* result.
+    Partial,
+    /// **trust hole** — no route that records this reduction re-derives it. What
+    /// Track 3 P3.5 drives to zero.
+    Uncertified,
+    /// **no evidence route declared** — a [`TrustId`] with no entry in
+    /// [`EVIDENCE_ROUTES`]. Never a valid state: it means a reduction was added
+    /// to the enum without saying what produces and checks it. The ledger renders
+    /// it loudly rather than defaulting it to either honest value.
+    Unrouted,
+}
+
+impl CertifiedCoverage {
+    /// The word the rendered ledger prints in its `Status` column.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            CertifiedCoverage::Full => "certified",
+            CertifiedCoverage::Partial => "partially certified",
+            CertifiedCoverage::Uncertified => "trust hole",
+            CertifiedCoverage::Unrouted => "UNROUTED (no evidence route declared)",
+        }
+    }
+}
+
+/// One **evidence route** through a reduction: a producing site, the artifact it
+/// attaches, the in-tree checker that consumes that artifact, and — the
+/// load-bearing field — whether that checker re-derives *this* reduction.
+///
+/// `certifies` is not "the result was checked". A DRAT proof of the bit-blasted
+/// CNF *is* checked, and re-derives Tseitin and the SAT refutation, and says
+/// **nothing** about whether the term → AIG bit-blasting was faithful. That is
+/// why `drat_qf_bv_evidence` records `(TrustId::BitBlast, false)` beside
+/// `(TrustId::SatRefutation, true)`, and why this table carries a row per route
+/// rather than a bit per reduction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EvidenceRoute {
+    /// The reduction this route goes through.
+    pub id: TrustId,
+    /// The producing function, as an in-tree symbol name.
+    pub producer: &'static str,
+    /// The artifact this route attaches to its result.
+    pub evidence: &'static str,
+    /// The in-tree checker that consumes that artifact, or [`NO_CHECKER`].
+    pub checker: &'static str,
+    /// Whether `checker` re-derives **this** reduction on this route.
+    pub certifies: bool,
+}
+
+/// Every evidence route that records a [`TrustStep`], one row per
+/// (reduction, does-the-checker-re-derive-it) pair.
+///
+/// This is the ledger's source of truth: [`TrustId::coverage`] folds this table
+/// and [`TrustId::is_certified`] reads that fold. The table is a *declaration*,
+/// so on its own it would be one more hand-written list — what makes it a
+/// derivation is `tests/trust_ledger_derivation.rs`, which rebuilds the same fold
+/// from the `(TrustId::…, <certified>)` pairs the producing code actually writes,
+/// fails on any disagreement, and fails when a `producer` or `checker` names a
+/// symbol that is not in the tree.
+///
+/// Routes that certify a sub-case but record **no** [`TrustStep`] are
+/// deliberately absent: `ArrayElimUnsatCertificate::recheck`,
+/// `AckermannUnsatCertificate::recheck` and the datatype compositions each
+/// re-derive their reduction, but they run outside `produce_evidence`, so a
+/// consumer reading `crate::EvidenceReport::trusted_steps` never sees them. A
+/// certificate the ledger cannot observe must not raise the ledger.
+pub const EVIDENCE_ROUTES: &[EvidenceRoute] = &[
+    EvidenceRoute {
+        id: TrustId::BitBlast,
+        producer: "prove_qf_bv_unsat_alethe",
+        evidence: "Evidence::UnsatAletheProof",
+        checker: "check_alethe",
+        // The Alethe proof carries a `bitblast_<op>` step per lowered operator
+        // and `check_alethe` structurally re-derives each one, so bit-blasting
+        // itself is checked on this route. NOT the miter: `bitblast_miter.rs`
+        // has no caller inside `axeyum-solver`.
+        certifies: true,
+    },
+    EvidenceRoute {
+        id: TrustId::BitBlast,
+        producer: "drat_qf_bv_evidence",
+        evidence: "Evidence::Unsat(Some(UnsatProof))",
+        checker: "UnsatProof",
+        // A DRAT refutation of the CNF is silent about whether the CNF encodes
+        // the term. This is the route the default QF_BV front door takes.
+        certifies: false,
+    },
+    EvidenceRoute {
+        id: TrustId::Tseitin,
+        producer: "prove_qf_bv_unsat_alethe",
+        evidence: "Evidence::UnsatAletheProof",
+        checker: "check_alethe",
+        certifies: true,
+    },
+    EvidenceRoute {
+        id: TrustId::Tseitin,
+        producer: "pure_gauss_xor_unsat_certificate_for_query",
+        evidence: "Evidence::Unsat(Some(UnsatProof))",
+        checker: "check_drat",
+        // The pure-Gauss certificate refutes the conflict subset `CNF(S)`; the
+        // encoding that produced those clauses is not re-derived.
+        certifies: false,
+    },
+    EvidenceRoute {
+        id: TrustId::SatRefutation,
+        producer: "drat_qf_bv_evidence",
+        evidence: "Evidence::Unsat(Some(UnsatProof))",
+        checker: "UnsatProof",
+        certifies: true,
+    },
+    EvidenceRoute {
+        id: TrustId::SatRefutation,
+        producer: "drat_qf_bv_evidence",
+        evidence: "Evidence::Unsat(None)",
+        checker: NO_CHECKER,
+        // Proof production is a second search. When the deadline is already spent
+        // or the search / checking stage runs out, the verdict stands and the
+        // certificate does not exist — a result relying on the SAT refutation
+        // with nothing to re-derive it.
+        certifies: false,
+    },
+    EvidenceRoute {
+        id: TrustId::SatRefutationModuloTheory,
+        producer: "theory_refutation_trust_step",
+        evidence: "TheoryRefutation with theory_lemma_count() > 0",
+        checker: NO_CHECKER,
+        // ADR-1704: the Boolean half is DRAT-checked, but the lemmas it assumed
+        // are undischarged obligations, so nothing re-derives the step itself.
+        certifies: false,
+    },
+    EvidenceRoute {
+        id: TrustId::ArrayElim,
+        producer: "reduction_unsat_certificate",
+        evidence: "Evidence::Unsat(Some(UnsatProof))",
+        checker: "export_qf_aufbv_unsat_proof_within",
+        certifies: false,
+    },
+    EvidenceRoute {
+        id: TrustId::Ackermann,
+        producer: "reduction_unsat_certificate",
+        evidence: "Evidence::Unsat(Some(UnsatProof))",
+        checker: "export_qf_aufbv_unsat_proof_within",
+        certifies: false,
+    },
+    EvidenceRoute {
+        id: TrustId::IntBlast,
+        producer: "certify_bounded_int_blast",
+        evidence: "Evidence::UnsatBoundedIntBlast",
+        checker: "BoundedIntBlastCertificate",
+        certifies: true,
+    },
+    EvidenceRoute {
+        id: TrustId::IntBlast,
+        producer: "prove_lia_unsat_alethe",
+        evidence: "Evidence::UnsatArithAletheProof",
+        checker: "check_alethe_lra",
+        // The LIA refutation is re-derived; the `bv2nat` range abstraction that
+        // produced it is the trusted int/BV-width bridge.
+        certifies: false,
+    },
+    EvidenceRoute {
+        id: TrustId::DatatypeElim,
+        producer: "reduction_unsat_certificate",
+        evidence: "Evidence::Unsat(Some(UnsatProof))",
+        checker: "export_datatype_unsat_proof",
+        certifies: false,
+    },
+    EvidenceRoute {
+        id: TrustId::Fpa2Bv,
+        producer: "with_fpa2bv_step",
+        evidence: "unsat evidence over an FP query whose operators are all faithful by construction",
+        checker: "fpa2bv_simple_op_certified",
+        certifies: true,
+    },
+    EvidenceRoute {
+        id: TrustId::Fpa2Bv,
+        producer: "with_fpa2bv_step",
+        evidence: "unsat evidence over a rounding-bearing or large-format FP query",
+        checker: NO_CHECKER,
+        certifies: false,
+    },
+    EvidenceRoute {
+        id: TrustId::TermLevelEnum,
+        producer: "certify_qf_bv_by_enumeration",
+        evidence: "Evidence::UnsatTermLevel",
+        checker: "certify_qf_bv_by_enumeration",
+        certifies: true,
+    },
+    EvidenceRoute {
+        id: TrustId::Farkas,
+        producer: "lra_farkas_certificate",
+        evidence: "Evidence::UnsatFarkas",
+        checker: "FarkasCertificate",
+        certifies: true,
+    },
+    EvidenceRoute {
+        id: TrustId::LraDpll,
+        producer: "certify_lra_dpll_unsat",
+        evidence: "Evidence::UnsatLraDpll",
+        checker: "LraDpllRefutation",
+        certifies: true,
+    },
+    EvidenceRoute {
+        id: TrustId::XorGaussian,
+        producer: "pure_gauss_xor_unsat_certificate_for_query",
+        evidence: "Evidence::Unsat(Some(UnsatProof))",
+        checker: "check_drat",
+        certifies: true,
+    },
+    EvidenceRoute {
+        id: TrustId::XorGaussian,
+        producer: "produce_qf_bv_evidence",
+        evidence: "Evidence::Unsat(None)",
+        checker: NO_CHECKER,
+        // The interleaved CDCL(XOR) sub-case: branching was needed, so there is
+        // no RUP-checkable proof (ADR-0035).
+        certifies: false,
+    },
+    EvidenceRoute {
+        id: TrustId::Sos,
+        producer: "reconstruct_sos_to_lean_module",
+        evidence: "Evidence::UnsatSos",
+        checker: "SosCertificate",
+        certifies: true,
+    },
+    EvidenceRoute {
+        id: TrustId::Diophantine,
+        producer: "reconstruct_diophantine_to_lean_module",
+        evidence: "Evidence::UnsatDiophantine",
+        checker: "check_diophantine_certificate",
+        certifies: true,
+    },
+];
+
 impl TrustId {
     /// Stable label used in the rendered ledger and provenance.
     #[must_use]
@@ -238,13 +500,60 @@ impl TrustId {
         }
     }
 
+    /// The ledger status of this reduction, **folded from [`EVIDENCE_ROUTES`]**
+    /// rather than typed per id (P0.5): [`CertifiedCoverage::Full`] when every
+    /// declared route re-derives the step, [`CertifiedCoverage::Partial`] when
+    /// some do and some do not, [`CertifiedCoverage::Uncertified`] when none do,
+    /// and [`CertifiedCoverage::Unrouted`] when the id has no declared route at
+    /// all — a state `tests/trust_ledger_derivation.rs` rejects.
+    #[must_use]
+    pub const fn coverage(self) -> CertifiedCoverage {
+        let mut index = 0;
+        let mut found = false;
+        let mut any_certifies = false;
+        let mut all_certify = true;
+        while index < EVIDENCE_ROUTES.len() {
+            let route = EVIDENCE_ROUTES[index];
+            if route.id as u8 == self as u8 {
+                found = true;
+                if route.certifies {
+                    any_certifies = true;
+                } else {
+                    all_certify = false;
+                }
+            }
+            index += 1;
+        }
+        if !found {
+            return CertifiedCoverage::Unrouted;
+        }
+        if all_certify {
+            CertifiedCoverage::Full
+        } else if any_certifies {
+            CertifiedCoverage::Partial
+        } else {
+            CertifiedCoverage::Uncertified
+        }
+    }
+
     /// Whether *every* result depending on this reduction has an independent
-    /// per-query checker today (the bit-blast miter; DRAT for Tseitin/SAT;
-    /// Farkas/lazy-SMT/enumeration verifiers). Trust holes return `false` — these
-    /// are what Track 3 P3.5 drives to zero.
+    /// per-query checker today. Derived: `coverage() == CertifiedCoverage::Full`.
     ///
     /// This is the **conservative** ledger status: a reduction returns `true` only
-    /// when no result that relies on it is trusted-uncertified. [`XorGaussian`]
+    /// when no result that relies on it is trusted-uncertified — which is what the
+    /// prose has always claimed, and what the hand-written `match` this replaced
+    /// did not do. Three ids read `true` under a *different*, looser rule ("a
+    /// certifying route exists somewhere"): [`BitBlast`], [`Tseitin`] and
+    /// [`SatRefutation`]. All three are recorded `certified: false` on live
+    /// routes — the default DRAT front door attaches a *checked* DRAT proof while
+    /// leaving the bit-blasting trusted, and a proof-production timeout returns a
+    /// bare `Evidence::Unsat(None)` that relies on the SAT refutation with nothing
+    /// to re-check it — so under the conservative rule they are
+    /// [`CertifiedCoverage::Partial`], not certified.
+    ///
+    /// Because "partial" is not the same claim as "no certificate exists", the
+    /// rendered ledger prints three statuses; a reader of `partially certified`
+    /// still sees that DRAT and Alethe are real. [`XorGaussian`]
     /// stays `false` even though its **pure-Gaussian-level-0** sub-case now carries
     /// a `check_drat` certificate (a freshly re-checkable `Evidence::Unsat(Some(_))`
     /// over `CNF(S)`), because the **interleaved CDCL(XOR)** sub-case (branching
@@ -320,23 +629,7 @@ impl TrustId {
     /// [`Fpa2Bv`]: TrustId::Fpa2Bv
     #[must_use]
     pub const fn is_certified(self) -> bool {
-        match self {
-            TrustId::BitBlast
-            | TrustId::Tseitin
-            | TrustId::SatRefutation
-            | TrustId::TermLevelEnum
-            | TrustId::Farkas
-            | TrustId::LraDpll
-            | TrustId::Sos
-            | TrustId::Diophantine => true,
-            TrustId::SatRefutationModuloTheory
-            | TrustId::ArrayElim
-            | TrustId::Ackermann
-            | TrustId::IntBlast
-            | TrustId::DatatypeElim
-            | TrustId::Fpa2Bv
-            | TrustId::XorGaussian => false,
-        }
+        matches!(self.coverage(), CertifiedCoverage::Full)
     }
 
     /// The governing architecture-decision record.
@@ -369,9 +662,13 @@ impl fmt::Display for TrustId {
 
 /// A trust step a particular result depended on: the reduction and whether the
 /// run that produced this result actually carried an independent certificate for
-/// it (e.g. bit-blast is `certified: true` only on the end-to-end miter route,
-/// `false` on the plain DRAT export route — even though a miter route *exists*,
-/// per [`TrustId::is_certified`]).
+/// it. Bit-blast is `certified: true` on the `QF_BV` **Alethe** route, where
+/// `check_alethe` re-derives every `bitblast_<op>` step, and `false` on the plain
+/// DRAT export route, whose proof re-derives the CNF refutation and says nothing
+/// about the lowering. That split is exactly what makes
+/// [`TrustId::coverage`] report [`CertifiedCoverage::Partial`] for
+/// [`TrustId::BitBlast`] — it is not an exception to the ledger, it is the input
+/// the ledger is folded from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TrustStep {
     /// The reduction.
@@ -395,16 +692,34 @@ pub fn trust_ledger_markdown() -> String {
     );
     out.push_str(
         "Pedantic levels mirror cvc5's `TrustId` grading: 0 = hard fail \u{2026} 10 = minor.\n\
-         **certified** = an independent per-query checker re-derives the step \
-         (bit-blast miter / DRAT / Farkas / enumeration); **trust hole** = a sound \
-         reduction with no per-query certificate yet (the base Track 3 P3.5 drives to \
-         zero).\n\n",
+         **certified** = every evidence route that records the step re-derives it \
+         (an independent per-query checker: the QF_BV Alethe `bitblast_*` steps / \
+         DRAT / Farkas / enumeration); **trust hole** = at least one route relies on \
+         the reduction with nothing to re-derive it (the base Track 3 P3.5 drives to \
+         zero). Both words are **folded from `trust::EVIDENCE_ROUTES`** by \
+         `TrustId::coverage`, not typed per id; the coverage table below splits the \
+         holes into *partially certified* and *no certified route at all*, which the \
+         single Status word cannot.\n\n",
     );
+    let count = |want: CertifiedCoverage| {
+        ALL_TRUST_IDS
+            .iter()
+            .filter(|id| id.coverage() == want)
+            .count()
+    };
     let holes = ALL_TRUST_IDS.iter().filter(|t| !t.is_certified()).count();
     let _ = writeln!(
         out,
         "Trusted base: **{holes}** reduction(s) remain trust holes.\n"
     );
+    let unrouted = count(CertifiedCoverage::Unrouted);
+    if unrouted > 0 {
+        let _ = writeln!(
+            out,
+            "\u{26a0} **{unrouted}** reduction(s) declare NO evidence route in \
+             `trust::EVIDENCE_ROUTES`. The ledger cannot grade them.\n"
+        );
+    }
     out.push_str("| Reduction | Meaning | Pedantic | Status | Ref |\n");
     out.push_str("|---|---|---|---|---|\n");
     for &id in ALL_TRUST_IDS {
@@ -422,6 +737,36 @@ pub fn trust_ledger_markdown() -> String {
             status,
             id.reference(),
         );
+    }
+    let _ = writeln!(
+        out,
+        "\n## Coverage, and the routes it is folded from\n\n\
+         Of the {holes} trust hole(s), **{}** are *partially certified* \u{2014} at least \
+         one evidence route re-derives the reduction and at least one does not \u{2014} and \
+         **{}** have no certified route at all. For a *given* `unsat`, read \
+         `TrustStep::certified` on the produced `EvidenceReport`, never this table.\n",
+        count(CertifiedCoverage::Partial),
+        count(CertifiedCoverage::Uncertified),
+    );
+    out.push_str("| Reduction | Coverage | Producer | Artifact | Checker | Re-derives it |\n");
+    out.push_str("|---|---|---|---|---|---|\n");
+    for &id in ALL_TRUST_IDS {
+        for route in EVIDENCE_ROUTES.iter().filter(|r| r.id == id) {
+            let _ = writeln!(
+                out,
+                "| {} | {} | `{}` | {} | {} | {} |",
+                id.label(),
+                id.coverage().label(),
+                route.producer,
+                route.evidence,
+                if route.checker == NO_CHECKER {
+                    "none".to_owned()
+                } else {
+                    format!("`{}`", route.checker)
+                },
+                if route.certifies { "yes" } else { "no" },
+            );
+        }
     }
     out
 }
