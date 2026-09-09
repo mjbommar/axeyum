@@ -208,6 +208,69 @@ lands). Everything above this heading is measured and complete on its own terms;
 the per-division prize table is what this section will carry, and no conclusion
 about whether to build a portfolio is drawn until it is here.
 
+## A portfolio and a reservation are the same policy in two execution modes
+
+A sibling lane is building the **sequential reservation**: a route that runs
+first must leave the ones after it something. That is the same problem's
+sequential approximation, and the two must not both edit the ladder.
+
+They are not competitors, and the boundary between them is not a matter of
+taste:
+
+- **A reservation is the right fix when cores are scarce or memory is the
+  binding limit.** It costs nothing but clock arithmetic, it needs no second
+  arena, and a competition memory limit is per solver — so under a tight limit
+  the reservation is the only one of the two that can run at all.
+- **A portfolio is the right fix when a genuinely different engine may win and
+  the cores are free.** It buys what a reservation cannot: a route whose own
+  cost is a large fraction of the budget still gets the *whole* budget, because
+  it does not have to wait for anything.
+
+They compose as **one policy object with two execution modes**, expressed over
+the same ladder order:
+
+1. The reservation assigns each ladder position a share of the budget. This is
+   already the shipped shape — `cegar_probe_budget`'s
+   `UF_ARITH_LADDER_RESERVE_SHARE` quarter, `dl_probe_budget`'s
+   `min(timeout/4, 6 s)`, `int_real_relax_budget`'s sixth.
+2. A portfolio policy names a **contiguous group** of positions to fuse. Every
+   arm of a fused group starts at t = 0 and gets the group's whole share.
+3. **With one worker, a fused group degenerates exactly to the reserved
+   sequence.** That is the property that makes this safe to ship: the sequential
+   path stays the default and stays byte-identical, and a portfolio is a
+   configuration, not a fork of the dispatcher.
+
+The deterministic budget primitive already has the right shape for step 1 and
+nobody calls it: `axeyum_ir::budget::Budget::split` produces cumulative slices
+with carry-over, so an under-spending arm donates its remainder to the next —
+and it is clock-free, so two runs of the same policy allot the same work. Today
+every reserve in `auto.rs` is `Duration` arithmetic over `Instant::now()`. The
+reservation lane and a portfolio are the two natural first callers of `split`,
+and that is the concrete thing to share rather than duplicate.
+
+### What determinism means for a racing dispatcher
+
+Determinism is a public API promise here, and a race does not have to break it,
+but the promise has to be stated at the right granularity:
+
+- **The verdict must be deterministic**, and it is — provided every arm is
+  sound, `sat` and `unsat` are not two answers to one query but one answer and
+  one bug. That is why the cross-route disagreement check in
+  `scripts/route-solo-sweep.py` exits non-zero rather than printing.
+- **The attribution may vary**, and the trace must say so: which arm won, and
+  that the run was concurrent. A `; route decided_by=X` line that silently means
+  "X happened to be scheduled first today" is worse than no line.
+- **Arms must be top-level dispatches of the original query.** At the
+  granularity of route *attempts* a disagreement is normal (79 of 796 files
+  above), because attempts are refinement rounds over different queries. A
+  portfolio that raced attempts would have to choose between a false alarm on
+  79 files and a soundness check that cannot fire, and both are worse than the
+  restriction.
+- **Simultaneous winners need a fixed priority**, not a race: when two arms
+  finish within the same scheduler tick, the reported `decided_by` should be the
+  earlier ladder position, so re-running the same file on the same input yields
+  the same attribution as well as the same verdict.
+
 ## Method notes
 
 Populations are the committed
