@@ -19,39 +19,41 @@ that the file list underneath the brief had moved again.
   terminal.
 - **Default is one worker, and at one worker no group is constructed at all.**
   The shipped path is the pre-portfolio path, not an equivalent of it.
-- Measured yield at two workers: **one file converted reliably, one marginally**
-  of the four in scope. Two more are blocked by a reserve ABOVE the group, and
-  three of the brief's seven files are decided by the current tree with no
-  portfolio at all.
+- Measured yield at two workers, on the seven files the brief named: **one
+  converted 3 of 3, one converted 2 of 3, two blocked by a reserve ABOVE the
+  group, and three already decided by the current tree with no portfolio at
+  all.** A divisional sweep found one further conversion the brief did not name
+  (`QF_IDL/20210312-Bouvier/vlsat3_i08.smt2`).
 
 ## What the seven files actually are, re-measured on an idle host
 
-Every row below is the shipped front door at the 24 s competition budget, twice
-per arm, on `s5` (`taskset -c 0-7`, load 1.0 at both ends). "w1" is the shipped
-default; "w2" is `AXEYUM_PORTFOLIO_WORKERS=2`.
+Every row is the shipped front door at the 24 s competition budget, **three runs
+per arm**, on `s5` (`taskset -c 0-7`, load 1.8-2.1 at both ends, nothing else on
+those cores). "w1" is the shipped default; "w2" is
+`AXEYUM_PORTFOLIO_WORKERS=2`. Both arms are the SAME binary, so a difference
+cannot be a build difference.
 
-| file | division | w1 | w2 | what it is |
+| file | division | w1 (x3) | w2 (x3) | verdict on the file |
 |---|---|---|---|---|
-| `182-incremental_scheduling-17280-0` | QF_LIA | unknown 24.1 s ×2 | **sat 7.9 / 8.1 s** | the group's case |
-| `queen42-1` | QF_IDL | unknown 25.0 s ×2 | **sat 21.9 s**, unknown ×1 | the group's case, marginal |
-| `super_queen61-1` | QF_IDL | unknown 21.2 s ×2 | not reached | blocked by `dl-online`'s reserve |
-| `super_queen83-1` | QF_IDL | unknown 21.4 s ×2 | not reached | blocked by `dl-online`'s reserve |
-| `hash_sat_08_05` | QF_UFLIA | **sat 18.4 s ×2** | sat 18.3 s ×2 | **already decided** |
-| `fischer6-mutex-17` | QF_RDL | **unsat 15.8 / 16.1 s** | unsat 15.6 / 15.9 s | **already decided** |
-| `orb06_900` | QF_RDL | **unsat 14.8 / 14.6 s** | unsat 15.1 s | **already decided** |
+| `182-incremental_scheduling-17280-0` | QF_LIA | unknown 24.13 / 24.13 / 24.13 s | **sat 8.12 / 8.11 / 7.91 s** | **converted, 3 of 3** |
+| `queen42-1` | QF_IDL | unknown 25.03 / 25.03 / 25.03 s | **sat 21.73 / 21.73 s**, unknown 25.03 s | **converted, 2 of 3** |
+| `super_queen61-1` | QF_IDL | unknown 21.23 / 21.23 / 21.23 s | unknown 24.13 / 24.23 / 24.23 s | not collected |
+| `super_queen83-1` | QF_IDL | unknown 21.43 / 21.43 / 21.42 s | unknown 24.23 / 24.43 / 24.43 s | not collected |
+| `hash_sat_08_05` | QF_UFLIA | **sat 18.32 s x3** | sat 18.32 s x3 | **already decided** |
+| `fischer6-mutex-17` | QF_RDL | **unsat 15.52 / 15.92 / 15.42 s** | unsat 15.72 / 15.62 / 15.82 s | **already decided** |
+| `orb06_900` | QF_RDL | **unsat 14.52 / 14.52 / 14.42 s** | unsat 14.42 / 14.72 / 14.62 s | **already decided** |
 
-Three of the seven are not lost. The measurement that produced the brief was
-taken on contended hosts — the oracle's own README says every timing in it is
-advisory — and `hash_sat_08_05`, the file the earlier note called "the confirmed
-middle-band case", is `sat` in 18.4 s on an idle box with no portfolio. That is
-the same hazard the parent note already recorded at a larger scale ("141 of the
-403 loss files are already decided"), reappearing four days later on a
-seven-file list.
+Three of the seven are not lost by the current tree. The measurement that
+produced the brief was taken on contended hosts -- the oracle's own README says
+every timing in it is advisory -- and `hash_sat_08_05`, which the earlier note
+called "the confirmed middle-band case", is `sat` in 18.3 s on an idle box with
+no portfolio at all, reproducibly, in all six runs here.
 
 **Re-measure a loss list on the host you will report from, before building for
-it.** Not because the earlier measurement was careless — it says so itself —
-but because a list of losses is a claim with a short half-life in a tree this
-active.
+it.** Not because the earlier measurement was careless (it says so itself) but
+because a list of losses has a short half-life in a tree this active. The parent
+note recorded the same hazard at larger scale four days earlier -- "141 of the
+403 loss files are already decided" -- and it reappeared on a seven-file list.
 
 ## What the winning arm actually is, and why "three routes" was one route
 
@@ -97,8 +99,9 @@ it is why the group is a group rather than a fifth `LadderSlice`.
 
 ## What the group does NOT collect, and the reason is a reserve above it
 
-`super_queen61-1` and `super_queen83-1` are **not** collected, and the reason is
-worth more than the two files.
+`super_queen61-1` and `super_queen83-1` are **not** collected -- measured, three
+runs each, `unknown` at both worker counts -- and the reason is worth more than
+the two files.
 
 The group's clock is what is LEFT of the dispatcher's entry deadline. It has to
 be: unclamped, the group would start at t = 21 s (after `dl-online`) and run its
@@ -213,6 +216,76 @@ requested on it.
 Measured effect of the stop, from the mutation table below: with the request
 removed, the group's own liveness test goes from 0.00 s to 30.00 s. That is the
 whole regression the mechanism prevents, on one test.
+
+## The gate that went red, and why it was the frame and not the change
+
+`cargo test -p axeyum-solver --test progress_frontier --features full` failed on
+`frontier_bv_reduction` with
+
+```
+TIMING REGRESSION [bv_reduction]: pinned N=[12, 15, 18] took 2354.2 ms
+calibrated, over the committed ceiling of 2264.3 ms
+```
+
+The same run reported `FRONTIER bv_reduction = 34 (baseline 30), PROGRESS`, so
+it is a **timing** finding and not a capability one, and the arithmetic points
+at one pin: `N=18` took 2138.9 ms against a committed 804.9 ms while `N=12` was
+*faster* than committed (109 vs 167 ms) and `N=15` unchanged. A uniform slowdown
+would move all three.
+
+That is a shape, not a proof, so it was measured rather than argued. Re-run of
+that one family alone, same commit, on a quiet host (`s5`, `taskset -c 8-15`):
+
+```
+FRONTIER bv_reduction = 34 (baseline 30), PROGRESS (+4 over baseline, ratchetable)
+  reference frame: load 2.09 -> 2.06, scale 1.18x, comparable: true, ratchetable: true
+TIMING bv_reduction = 1139.1 ms calibrated over pinned N=[12, 15, 18]
+  (baseline median 1293.1 ms, ceiling 2264.3 ms)   verdict: ok
+  pinned: N=12 100.3 ms, N=15 358.9 ms, N=18 679.9 ms
+```
+
+**1139.1 ms — below the baseline MEDIAN, half the ceiling, with the ratchet
+enforced.** The failing run was taken on `s4` with another lane's sweep and a
+workspace clippy resident: load 8.93 at the start, 10.06 at the end of the
+family, 22.5 by the time the suite finished. The frame's own `comparable: true`
+was computed from a calibration that happened to land in band *before* the load
+climbed, which is the one thing the calibration cannot catch — it samples at the
+ends, and this contention arrived in the middle.
+
+Two consequences worth carrying:
+
+- **`comparable: true` is a statement about the calibration samples, not about
+  the run.** A run whose load doubles between the two samples can still be
+  marked comparable. Read `load_start` and `load_end` yourself; if they differ by
+  more than a little, the flag is describing something narrower than you want.
+- The five `bench-results/frontier/*.json` frames this lane's runs rewrote are
+  **reverted, not committed**. A contaminated frame committed as a baseline is
+  how a roadmap floor gets ratcheted down on a bad reading, and this file names
+  the incident where that happened.
+
+## Gates at this commit
+
+| gate | result |
+|---|---|
+| `check-clippy-complete.sh` | 840 of 840 workspace targets, 27 of 27 crates, **0 diagnostics** |
+| `cargo fmt --all --check` | clean |
+| `cargo doc --workspace --all-features --no-deps`, `RUSTDOCFLAGS=-D warnings` | clean |
+| `cargo test -p axeyum-solver --lib --features full` | 1,661 passed (the one failure was `every_governing_constant_is_registered` demanding the two new constants; both are now in `config_registry`) |
+| `--test corpus_regression --features full` | 1 test, ok (nonzero count confirmed) |
+| `--test portfolio_fused_group --features full` | 8 tests, ok |
+| `--lib --features full portfolio::` | 9 tests, ok |
+| `--test progress_frontier --features full` | 11 of 12; `frontier_bv_reduction` red on a contended frame and **ok on a clean one** (above) |
+| `--features z3 --test qf_lra_differential_fuzz` | 5 tests, ok |
+| `--features z3 --test simplex_lra_fallback_differential` | 1 test, ok |
+| `--features z3 --test qf_uflra_differential_fuzz` | 1 test, ok |
+
+The three z3 differentials are the only checks in this tree that compare our
+verdicts against an independent solver, and they compile to ZERO tests without
+`--features z3`. The counts above (5 / 1 / 1) are the documented expectation, so
+the nonzero check is met rather than assumed. They are linear-REAL suites and
+this change is in the integer-linear ladder, so what they cover here is the
+shared `past_deadline` delegation the change routed through one authority --
+not the group itself, which has no real-arithmetic arm.
 
 ## Mutations run
 
