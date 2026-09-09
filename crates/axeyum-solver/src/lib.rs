@@ -63,6 +63,7 @@ mod model;
 /// solver run's memory appeared was `dmesg` after the kernel had killed it —
 /// which is the one place a span log can never read.
 pub use memory_budget::peak_resident_bytes;
+mod portfolio;
 mod proof;
 mod sat_bv_backend;
 

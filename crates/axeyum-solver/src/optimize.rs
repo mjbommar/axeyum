@@ -36,7 +36,7 @@ use web_time::Instant;
 
 /// Whether `deadline` (if set) has passed.
 fn past_deadline(deadline: Option<Instant>) -> bool {
-    deadline.is_some_and(|d| Instant::now() >= d)
+    crate::portfolio::stop_or_past_deadline(deadline)
 }
 
 /// An [`UnknownReason`] attributed to the wall-clock timeout (a resource limit,

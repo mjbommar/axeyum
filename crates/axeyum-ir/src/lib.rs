@@ -53,6 +53,12 @@ mod rational;
 mod real_algebraic;
 mod sort;
 mod stats;
+/// Cooperative stop: "this thread's search is no longer wanted".
+///
+/// Here for the same reason [`budget`] is: it is the one channel that both
+/// `axeyum-solver`'s theory routes and `axeyum-cnf`'s CDCL core have to be
+/// able to read, and this is the lowest crate both already depend on.
+pub mod stop;
 mod term;
 mod value;
 mod wide;

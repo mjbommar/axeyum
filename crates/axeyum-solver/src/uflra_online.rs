@@ -94,7 +94,7 @@ const MAX_BOOLEAN_CLAUSES: usize = 200_000;
 /// the UFLIA sibling so a hard interface split degrades to a graceful `Unknown` rather
 /// than grinding past `config.timeout`.
 pub(crate) fn past_deadline(deadline: Option<Instant>) -> bool {
-    deadline.is_some_and(|d| Instant::now() >= d)
+    crate::portfolio::stop_or_past_deadline(deadline)
 }
 
 /// A classified literal of the conjunction: the atom term and its asserted polarity.

@@ -176,7 +176,7 @@ const MAX_BOOLEAN_CLAUSES: usize = 200_000;
 /// `past_deadline` helpers in the arithmetic backends: a `None` deadline never
 /// expires, so callers with no `config.timeout` keep their full power.
 fn past_deadline(deadline: Option<Instant>) -> bool {
-    deadline.is_some_and(|d| Instant::now() >= d)
+    crate::portfolio::stop_or_past_deadline(deadline)
 }
 
 /// A classified literal of the conjunction: the atom term and its asserted polarity.

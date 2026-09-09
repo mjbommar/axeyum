@@ -1071,7 +1071,7 @@ impl IncrementalArithDpll {
                     ),
                 }));
             }
-            if deadline.is_some_and(|d| Instant::now() >= d) {
+            if crate::portfolio::stop_or_past_deadline(deadline) {
                 return Ok(CheckResult::Unknown(UnknownReason {
                     kind: UnknownKind::ResourceLimit,
                     detail: format!(
@@ -1579,7 +1579,7 @@ fn real_theory_oracle(
 
 /// Whether `deadline` (if set) has passed.
 fn past_deadline(deadline: Option<Instant>) -> bool {
-    deadline.is_some_and(|d| Instant::now() >= d)
+    crate::portfolio::stop_or_past_deadline(deadline)
 }
 
 /// One theory's side of a conflict scan: which theory, the deadline-bounded
@@ -3769,10 +3769,7 @@ impl ArithAbstractor {
         arena: &mut TermArena,
         term: TermId,
     ) -> Result<TermId, SolverError> {
-        if self
-            .deadline
-            .is_some_and(|deadline| Instant::now() >= deadline)
-        {
+        if crate::portfolio::stop_or_past_deadline(self.deadline) {
             self.timed_out = true;
             return Ok(arena.bool_const(false));
         }

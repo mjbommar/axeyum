@@ -255,7 +255,7 @@ pub fn check_with_all_theories<B: SolverBackend>(
 }
 
 fn past_deadline(deadline: Option<Instant>) -> bool {
-    deadline.is_some_and(|deadline| Instant::now() >= deadline)
+    crate::portfolio::stop_or_past_deadline(deadline)
 }
 
 fn config_with_remaining_deadline(

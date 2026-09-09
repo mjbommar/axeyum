@@ -82,7 +82,7 @@ const MAX_PIVOTS: u64 = 2_000_000;
 
 /// Whether a caller-owned absolute deadline has passed.
 fn past_deadline(deadline: Option<Instant>) -> bool {
-    deadline.is_some_and(|d| Instant::now() >= d)
+    crate::portfolio::stop_or_past_deadline(deadline)
 }
 
 /// How the pivot loop chooses the **entering** variable once the leaving row is
