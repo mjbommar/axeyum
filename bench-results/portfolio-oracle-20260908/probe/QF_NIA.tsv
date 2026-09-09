@@ -1,0 +1,68 @@
+file	division	status	control_verdict	control_ms	control_trail	probe_verdict	probe_ms	probe_trail	winner	winner_own_ms	preamble_ms	arm_ms	confirm_own_ms
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__svcomp_ex2.c__p25866_terminationG_0.smt2	QF_NIA	NO-ROUTE	unknown	25077	0	unknown	100291	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__FlattenTreeListRec.jar-obl-10__p29567_safety_0.smt2	QF_NIA	NO-ROUTE	unknown	24639	1	unknown	76463	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__SortCount.jar-obl-10__terminationS_2_0.smt2	QF_NIA	NO-ROUTE	unknown	10805	1	unknown	53460	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__Test6.jar-obl-13__terminationS_36_0.smt2	QF_NIA	NO-ROUTE	unknown	24697	1	unknown	73058	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__Velroyen08-factorial.jar-obl-8__p13829_terminationG_0.smt2	QF_NIA	NO-ROUTE	unknown	24930	1	unknown	120887	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__cousot_rec.jar-obl-8__p28312_terminationG_0.smt2	QF_NIA	NO-ROUTE	unknown	24517	1	unknown	120147	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreate.jar-obl-10__p4943_safety_0.smt2	QF_NIA	NO-ROUTE	unknown	10906	1	unknown	30495	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateClear.jar-obl-11__p30726_safety_0.smt2	QF_NIA	NO-ROUTE	unknown	10900	1	unknown	30306	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsKey.jar-obl-11__p31253_safety_0.smt2	QF_NIA	NO-ROUTE	unknown	12266	1	unknown	62113	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsKey.jar-obl-11__p31818_safety_0.smt2	QF_NIA	TOO-SLOW-ARM	unknown	24097	1	sat	51745	1	nia-linearize	31661.9	2.8	31664.7	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsValue.jar-obl-11__p32598_safety_0.smt2	QF_NIA	NO-ROUTE	unknown	11171	1	unknown	30595	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p1784_safety_0.smt2	QF_NIA	NO-ROUTE	unknown	23753	1	unknown	120083	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p2235_terminationG_0.smt2	QF_NIA	NO-ROUTE	unknown	11767	1	unknown	55572	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateRemove.jar-obl-11__p6984_safety_0.smt2	QF_NIA	NO-ROUTE	unknown	11824	1	unknown	55887	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateSize.jar-obl-10__p7265_safety_0.smt2	QF_NIA	NO-ROUTE	unknown	10954	1	unknown	30548	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p7725_safety_0.smt2	QF_NIA	NO-ROUTE	unknown	24124	1	unknown	82319	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p7871_safety_0.smt2	QF_NIA	NO-ROUTE-NO-TRAIL	unknown	25095	0	unknown	121077	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8261_safety_0.smt2	QF_NIA	NO-ROUTE	unknown	25070	0	unknown	120064	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8651_safety_0.smt2	QF_NIA	NO-ROUTE	unknown	25119	0	unknown	120573	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8809_safety_0.smt2	QF_NIA	NO-ROUTE	unknown	25072	0	unknown	83179	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8992_safety_0.smt2	QF_NIA	NO-ROUTE-NO-TRAIL	unknown	24213	1	unknown	121054	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__broydn.c.i.broydn.pl.t2.fixed.t2__term_unfeasibility_3_0.smt2	QF_NIA	NO-ROUTE	unknown	24958	1	unknown	65958	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__db2.t2_fixed__terminationS_29_0.smt2	QF_NIA	NO-ROUTE	unknown	25098	0	unknown	82835	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__disj_nightmare.t2__p18944_edge_closing_0.smt2	QF_NIA	NO-ROUTE	unknown	25107	0	unknown	120195	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__efegp.t2__p21963_edge_closing_0.smt2	QF_NIA	NO-ROUTE	unknown	25110	0	unknown	92830	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__ex36.t2__p26914_safety_0.smt2	QF_NIA	PRIZE	unknown	24585	1	sat	24719	1	nia-linearize	4593.5	1.7	4595.2	4591.2
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__ex36.t2__p28763_safety_0.smt2	QF_NIA	PRIZE	unknown	24208	1	sat	23915	1	nia-linearize	3776.5	1.1	3777.6	3808.3
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__ex36.t2__p29986_safety_0.smt2	QF_NIA	PRIZE	unknown	21456	1	unsat	25473	1	nia-linearize	4185.5	0.7	4186.2	4221.0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__ex36.t2__p31135_safety_0.smt2	QF_NIA	NO-ROUTE	unknown	25043	0	unknown	90638	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__fun1b.t2__terminationS_11_0.smt2	QF_NIA	NO-ROUTE	unknown	25079	0	unknown	64830	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__hqr.c.i.hqr.pl.t2.fixed.t2_fixed__terminationS_36_0.smt2	QF_NIA	NO-ROUTE-NO-TRAIL	unknown	24593	1	unknown	121129	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__hqr.c.i.hqr.pl.t2.nor.t2.rlgfixed.t2_fixed__terminationS_45_0.smt2	QF_NIA	NO-ROUTE-NO-TRAIL	unknown	25092	0	unknown	121132	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__hqr.t2_fixed__terminationS_36_0.smt2	QF_NIA	NO-ROUTE-NO-TRAIL	unknown	24577	1	unknown	121134	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__n-21.t2__p3959_terminationG_0.smt2	QF_NIA	STALE-DECIDED	unsat	8637	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__n-7.t2_fixed__p4922_terminationG_0.smt2	QF_NIA	STALE-DECIDED	unsat	6407	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__p-43-terminate.t2__term_unfeasibility_1_0.smt2	QF_NIA	NO-ROUTE	unknown	25094	0	unknown	71654	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__queens.t2__term_unfeasibility_1_0.smt2	QF_NIA	NO-ROUTE	unknown	24617	1	unknown	76859	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__s1-striped.t2__p14253_safety_0.smt2	QF_NIA	STALE-DECIDED	sat	12605	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__s1-striped.t2_fixed__p11698_safety_0.smt2	QF_NIA	NO-ROUTE	unknown	19105	1	unknown	77854	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__s1.t2__p18409_safety_0.smt2	QF_NIA	NO-ROUTE	unknown	19258	1	unknown	78177	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__s1.t2__p20015_safety_0.smt2	QF_NIA	NO-ROUTE-NO-TRAIL	unknown	24352	1	unknown	121074	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__streamserver.bug.t2__terminationS_1_0.smt2	QF_NIA	NO-ROUTE	unknown	25080	0	unknown	94586	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__ud.t2__term_unfeasibility_1_0.smt2	QF_NIA	NO-ROUTE	unknown	16095	1	unknown	59156	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__zlib-adler32.c.t2__p25902_terminationG_0.smt2	QF_NIA	NO-ROUTE	unknown	24173	1	unknown	59825	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/1051.smt2	QF_NIA	NO-ROUTE	unknown	17958	1	unknown	90065	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/1509.smt2	QF_NIA	PRIZE	unknown	17844	1	sat	30203	1	nia-linearize	10143.6	5.4	10149.0	10087.4
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/1738.smt2	QF_NIA	NO-ROUTE-NO-TRAIL	unknown	24848	1	unknown	121062	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/227.smt2	QF_NIA	NO-ROUTE	unknown	24251	1	unknown	120269	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/341.smt2	QF_NIA	NO-ROUTE-NO-TRAIL	unknown	24292	1	unknown	121081	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/456.smt2	QF_NIA	PRIZE	unknown	16683	1	sat	31576	1	nia-linearize	11511.3	6.6	11517.9	11033.9
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/571.smt2	QF_NIA	NO-ROUTE	unknown	25140	0	unknown	120201	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/687.smt2	QF_NIA	PRIZE	unknown	17073	1	sat	37631	1	nia-linearize	17556.7	6.2	17562.9	17851.8
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/803.smt2	QF_NIA	PRIZE	unknown	16566	1	sat	29571	1	nia-linearize	9521.3	3.9	9525.2	9352.5
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20210219-Dartagnan/ReachSafety-Loops/array_3-1-O0.smt2	QF_NIA	NO-ROUTE	unknown	420	1	unknown	483	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20210219-Dartagnan/ReachSafety-Loops/geo1-u_valuebound2-O0.smt2	QF_NIA	NO-ROUTE	unknown	11662	1	unknown	38977	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20210219-Dartagnan/ReachSafety-Loops/ps2-ll_unwindbound50-O0.smt2	QF_NIA	NO-ROUTE	unknown	24225	1	unknown	114229	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/AProVE/aproveSMT4687047739446499948.smt2	QF_NIA	NO-ROUTE	unknown	12129	1	unknown	49313	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/AProVE/aproveSMT5048239408100334127.smt2	QF_NIA	NO-ROUTE	unknown	16939	1	unknown	48972	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/AProVE/aproveSMT6461796824751951221.smt2	QF_NIA	NO-ROUTE	unknown	24411	1	unknown	120770	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/AProVE/aproveSMT7795667227375240089.smt2	QF_NIA	NO-ROUTE	unknown	13103	1	unknown	45082	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/UltimateLassoRanker/LarrazOliverasRodriguez-CarbonellRubio-2013FMCAD-Fig1-alloca_unknown-termination.c.i_Iteration6_Lasso+nonterminationTemplate.smt2	QF_NIA	NO-ROUTE	unknown	24274	1	unknown	120316	1					
+# division=QF_NIA files=61 budget_ms=24000 probe_ms=120000 cores=0-3 mem_mb=8192
+# NO-ROUTE	42
+# NO-ROUTE-NO-TRAIL	8
+# PRIZE	7
+# STALE-DECIDED	3
+# TOO-SLOW-ARM	1

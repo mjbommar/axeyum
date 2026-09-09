@@ -7,3 +7,7 @@
 [7/27] QF_LIA deciders=0 best=no-route (207s)  RC-07.smt2
 [8/27] QF_LIA deciders=0 best=no-route (242s)  RC-09.smt2
 [9/27] QF_LIA deciders=0 best=no-route (228s)  RC-11.smt2
+[10/27] QF_LIA deciders=0 best=no-route (273s)  RC-15.smt2
+[11/27] QF_LIA deciders=0 best=no-route (105s)  problem__006.smt2
+[12/27] QF_LIA deciders=0 best=no-route (217s)  problem_2__034.smt2
+[13/27] QF_LIA deciders=0 best=no-route (217s)  problem_2__026.smt2

@@ -217,25 +217,42 @@ Committed population, three hosts, `taskset`-pinned slots, 24 s control /
 | QF_RDL | 47 | 37 | 1 | 5 | 2 | 0 | 2 | 0 |
 | QF_SLIA | 7 | 0 | 1 | 0 | 5 | 0 | 1 | 0 |
 | QF_UF | 38 | 35 | 0 | 2 | 1 | 0 | 0 | 0 |
+| QF_UFLIA | 58 | 11 | 1 | 6 | 6 | 0 | **34** | 0 |
 | UF | 32 | 0 | 0 | 0 | 27 | 5 | 0 | 0 |
-| **total** | **284** | **127** | **2** | **23** | **107** | **6** | **19** | **4** |
+| **total** | **342** | **138** | **3** | **29** | **113** | **6** | **53** | **4** |
 
-Both candidates failed confirmation (§"neither instrument confirms a prize"):
-the `QF_SLIA` one is a looped front door scored on one round of fifty-five, and
-the `QF_RDL` one does not reproduce under load.
+**All three candidates failed confirmation** (§"neither instrument confirms a
+prize"): the `QF_SLIA` one is a looped front door scored on one round of
+fifty-five, the `QF_RDL` one does not reproduce under load, and the `QF_UFLIA`
+one is `hash_sat_05_17`, whose real cost a budget walk puts at 33–34 s against a
+21.3 s estimate.
 
-`QF_NIA` (61) and `QF_UFLIA` (58) were still running when this was written; their
-per-file progress logs are committed under `partial/` so the coverage is visible
-rather than implied.
+`QF_NIA` (61) was still running at 60 of 61; its per-file progress log is
+committed under `partial/` so the coverage is visible rather than implied.
+
+**`QF_UFLIA`'s 34 no-trail rows are the largest blind spot in this table.** They
+are watchdog kills where no route returned, so the probe can say only that the
+file is lost — which route held the clock is unrecorded. The solo arm is what
+covers them, and it had reached 35 of that division's 58 files.
 
 ### The solo arm, where it is complete
 
 | division | files | ladder wins | ladder loses | decided alone in budget | no route decides alone |
 |---|---:|---:|---:|---:|---:|
 | QF_ABV | 19 | 7 | 12 | **2** | 10 |
+| QF_BV | 6 | 0 | 6 | **0** | 6 |
 | QF_LRA | 54 | 5 | 49 | **0** | 49 |
+| QF_NIA (files 32-61) | 30 | 3 | 27 | **0** | 27 |
+| QF_UF | 38 | 35 | 3 | **0** | 3 |
 | UF | 32 | 0 | 32 | **0** | 32 |
-| **total** | **105** | **12** | **93** | **2** | **91** |
+| **total** | **179** | **50** | **129** | **2** | **127** |
+
+`QF_NIA`'s second half is worth its own line: three files *are* decided alone
+there, and all three are files **the ladder already wins**. They never were
+prizes. (Re-run on another host two of the three do not even reproduce —
+`datatype-native` / `datatype-elim` internally run a preprocessed dispatch, so
+their cost moves between machines. Either reading disqualifies them; the
+`STALE-DECIDED` one is the cheaper check.)
 
 `QF_UFLIA`'s sweep was still running: over its first 35 files it found 7
 ladder-losses with a solo decider — five are the 2 ms `euf-online` class above
@@ -249,18 +266,18 @@ same computation through different doors, not four arms.
 
 ### The band that decides it
 
-From the **solo** arm, over the three divisions where it is complete (`QF_ABV`,
-`QF_LRA`, `UF` — 93 ladder-losing files):
+From the **solo** arm, over the six divisions where it is complete — 129
+ladder-losing files:
 
 ```
 fastest route that decides ALONE, on files the ladder loses:
   under 1 s (a reserve reaches it)                       2
   1 s to 6 s (a reserve reaches it)                      0
   6 s to 24 s (MIDDLE BAND: only a portfolio)            0
-  no route decides alone at all                         91
+  no route decides alone at all                        127
 ```
 
-**The middle band is empty across those 93 files.** That, not the count, is what
+**The middle band is empty across those 129 files.** That, not the count, is what
 the decision turns on. `QF_UFLIA`'s incomplete sweep then supplied exactly one
 member of it, which is why the answer below is "not yet" rather than "no".
 
@@ -305,6 +322,27 @@ credited with. The single 17,819 ms reading was the outlier, not the signal.
 returns `unknown`. Nothing ran out of clock. `nia-linearize` declines on a
 **deterministic bound that scales with the configured budget**, so at 120 s it is
 a more capable procedure than at 24 s — not the same procedure with more time.
+
+**`QF_NIA`'s seven candidates are the same thing, seven times.** They are the
+largest candidate cluster in the sweep, four of them nominally in the middle
+band (9.5 s, 10.1 s, 11.5 s, 17.6 s). One question settles each: at the 24 s
+budget, does the ladder run out of clock, or stop early? Measured on all seven:
+
+| file | `nia-linearize` held | ladder total of 24,000 ms |
+|---|---:|---:|
+| `From_T2__ex36…p26914` | 6,670 ms | 15,773 ms |
+| `From_T2__ex36…p28763` | 6,668 ms | 14,579 ms |
+| `From_T2__ex36…p29986` | 6,666 ms | 12,860 ms |
+| `SAT14/456` | 6,667 ms | 10,781 ms |
+| `SAT14/687` | 6,678 ms | 10,800 ms |
+| `SAT14/803` | 6,663 ms | 10,750 ms |
+| `SAT14/1509` | 6,691 ms | 10,860 ms |
+
+**Nothing was starved.** The ladder finishes in 11–16 seconds of a 24-second
+budget and returns `unknown`; `nia-linearize` takes the same ~6.67 s share every
+time and declines on a **deterministic bound that scales with the configured
+budget**. At 120 s it is a stronger procedure, which is the whole of why the
+probe saw a "prize". A portfolio arm at 24 s would hit the same bound.
 
 ### Why the enlarged-budget probe can never confirm a prize
 
