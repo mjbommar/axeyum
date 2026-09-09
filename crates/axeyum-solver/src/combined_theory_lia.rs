@@ -48,7 +48,69 @@ use crate::uflia_online::{
 
 /// Hard ceiling on interface case-split pairs, mirroring the cold core's `MAX_SPLIT_DEPTH`
 /// decline so the warm and cold paths reject the same oversized splits identically.
-const MAX_SPLIT_PAIRS: usize = 64;
+///
+/// **Now the same constant, not a copy of its value.** The config registry
+/// recorded this, `uflia_online::MAX_SPLIT_DEPTH`, `combined_theory::MAX_SPLIT_PAIRS`
+/// and `uflra_online::MAX_SPLIT_DEPTH` as four independent `= 64` definitions
+/// carrying the "mirrors the cold core" claim in prose and nothing in code — so
+/// the mirror was a comment, and moving one moved nothing else. The two on the
+/// `QF_UFLIA` path now read [`crate::uflia_interface::MAX_INTERFACE_PAIRS`].
+const MAX_SPLIT_PAIRS: usize = crate::uflia_interface::MAX_INTERFACE_PAIRS;
+
+/// Why [`CombinedIncrementalLia::new_explained`] could not build the incremental
+/// combined state.
+///
+/// One variant per `None` site. The caller used to print one string for all of
+/// them; [`Self::detail`] prints what actually happened, including the ceiling
+/// and the size that crossed it, because a bound that does not name itself is
+/// indistinguishable in a bench trace from a modelling gap — and on the
+/// `QF_UFLIA` losses it was read as one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum CombinedBuildFailure {
+    /// The caller's wall-clock deadline passed during construction.
+    Deadline,
+    /// An atom is outside the EUF/LIA fragment the partition covers.
+    AtomOutsideFragment,
+    /// The interface proposal exceeded [`MAX_SPLIT_PAIRS`] and the thread's
+    /// interface policy declines rather than filters.
+    TooManyInterfacePairs {
+        /// How many pairs the all-pairs rule proposed.
+        proposed: usize,
+        /// The ceiling it crossed.
+        ceiling: usize,
+    },
+    /// An arena build of an interface `=` / `<` / `>` term failed.
+    InterfaceTermBuild,
+}
+
+impl CombinedBuildFailure {
+    /// The `unknown` detail this failure should be reported as.
+    pub(crate) fn detail(self) -> String {
+        match self {
+            Self::Deadline => {
+                "deadline reached while building the online UFLIA combined state".to_owned()
+            }
+            Self::AtomOutsideFragment => {
+                "atom outside QF_UFLIA while building the online UFLIA combined state".to_owned()
+            }
+            Self::TooManyInterfacePairs { proposed, ceiling } => format!(
+                "too many interface pairs to build the online UFLIA combined state: \
+                 {proposed} > {ceiling} (crate::uflia_interface::MAX_INTERFACE_PAIRS)"
+            ),
+            Self::InterfaceTermBuild => {
+                "interface term build failed while building the online UFLIA combined state"
+                    .to_owned()
+            }
+        }
+    }
+
+    /// Whether this failure is the caller's budget running out, which the
+    /// caller reports as [`crate::backend::UnknownKind::Timeout`] rather than
+    /// as an incompleteness.
+    pub(crate) fn is_deadline(self) -> bool {
+        matches!(self, Self::Deadline)
+    }
+}
 
 /// Mirror the pure-LIA online large-query threshold: once the combined UFLIA
 /// layout reaches this size, the live LIA sub-theory records assignments and
@@ -561,6 +623,29 @@ impl CombinedIncrementalLia {
         Self::new_with_deadline(arena, atom_terms, None)
     }
 
+    /// [`Self::new_with_deadline`], but the failure carries **which** guard
+    /// stopped it.
+    ///
+    /// # Why the plain `Option` was not enough
+    ///
+    /// The four `None` sites below are a deadline, a partition failure, the
+    /// [`MAX_SPLIT_PAIRS`] ceiling and an arena build error — three different
+    /// KINDS of give-up. The caller collapsed all four into one string,
+    /// "opaque-app online UFLIA incremental combined state could not be built
+    /// safely", which reads as a safety/modelling gap and names no bound at all.
+    /// Measured by this lane on the committed 200-file `QF_UFLIA` list
+    /// (2026-09-08): that string is the LAST thing 8 of the 50 files we lose
+    /// print, so on 16% of the division's remaining gap the only diagnostic the
+    /// solver emitted was one that could not distinguish a 64-pair ceiling from
+    /// an arena error.
+    pub(crate) fn new_explained(
+        arena: &mut TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Result<Self, CombinedBuildFailure> {
+        Self::build(arena, atom_terms, deadline)
+    }
+
     /// Builds the incremental combined state with a caller-owned deadline. The
     /// deadline is forwarded to the `LIA` sub-theory so expensive theory asserts
     /// and model reconstruction degrade to `Unknown` once the caller's budget is
@@ -571,8 +656,17 @@ impl CombinedIncrementalLia {
         atom_terms: &[TermId],
         deadline: Option<Instant>,
     ) -> Option<Self> {
+        Self::build(arena, atom_terms, deadline).ok()
+    }
+
+    /// The body shared by [`Self::new_with_deadline`] and [`Self::new_explained`].
+    fn build(
+        arena: &mut TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Result<Self, CombinedBuildFailure> {
         if deadline.is_some_and(|d| Instant::now() >= d) {
-            return None;
+            return Err(CombinedBuildFailure::Deadline);
         }
         let original_atoms: Vec<TermId> = atom_terms.to_vec();
 
@@ -583,25 +677,38 @@ impl CombinedIncrementalLia {
             .iter()
             .map(|&atom| Literal { atom, value: true })
             .collect();
-        let part = partition(arena, &all_true)?;
+        let Some(part) = partition(arena, &all_true) else {
+            return Err(CombinedBuildFailure::AtomOutsideFragment);
+        };
         if deadline.is_some_and(|d| Instant::now() >= d) {
-            return None;
+            return Err(CombinedBuildFailure::Deadline);
         }
         let interface = interface_terms(arena, &part);
-        let raw_pairs = interface_pairs(&interface);
-        if raw_pairs.len() > MAX_SPLIT_PAIRS {
-            return None;
-        }
+        let proposed = interface_pairs(&interface);
+        let proposed_len = proposed.len();
+        // The pair set goes through the thread's interface policy, exactly as
+        // the cold core's does, so the warm and cold paths still reject (or
+        // accept) the same proposals — which is what `MAX_SPLIT_PAIRS`'s doc
+        // comment has always claimed and what reading one constant now makes
+        // true rather than asserted.
+        let Some(raw_pairs) =
+            crate::uflia_interface::apply_interface_policy(arena, &original_atoms, proposed)
+        else {
+            return Err(CombinedBuildFailure::TooManyInterfacePairs {
+                proposed: proposed_len,
+                ceiling: MAX_SPLIT_PAIRS,
+            });
+        };
 
         let mut combined: Vec<TermId> = original_atoms.clone();
         let mut pairs: Vec<InterfacePair> = Vec::with_capacity(raw_pairs.len());
         for &(s, t) in &raw_pairs {
             if deadline.is_some_and(|d| Instant::now() >= d) {
-                return None;
+                return Err(CombinedBuildFailure::Deadline);
             }
             let (Ok(eq), Ok(lt), Ok(gt)) = (arena.eq(s, t), arena.int_lt(s, t), arena.int_gt(s, t))
             else {
-                return None;
+                return Err(CombinedBuildFailure::InterfaceTermBuild);
             };
             let eq_var = combined.len();
             combined.push(eq);
@@ -618,7 +725,7 @@ impl CombinedIncrementalLia {
         }
 
         if deadline.is_some_and(|d| Instant::now() >= d) {
-            return None;
+            return Err(CombinedBuildFailure::Deadline);
         }
         let routes = build_routes(&part, &original_atoms, &combined, &pairs);
         let euf = EufTheory::new(arena, &combined);
@@ -629,10 +736,10 @@ impl CombinedIncrementalLia {
         }
         .with_deadline(deadline);
         if deadline.is_some_and(|d| Instant::now() >= d) {
-            return None;
+            return Err(CombinedBuildFailure::Deadline);
         }
         let n = combined.len();
-        Some(Self {
+        Ok(Self {
             euf,
             lia,
             routes,

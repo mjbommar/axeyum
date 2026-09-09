@@ -76,11 +76,25 @@ use crate::euf_egraph::{EufTheory, TheorySolver};
 use crate::lia_online::LiaTheory;
 use crate::model::Model;
 use crate::theory_combination::{InterfaceStatus, classify_interface_equalities};
+use crate::uflia_interface::{
+    apply_interface_policy, note as note_interface, note_admission as note_interface_admission,
+};
 
 /// Hard ceiling on interface case-split recursion depth (one level per shared pair).
 /// Above it the search declines to a graceful [`CheckResult::Unknown`] — never a
 /// wrong verdict.
-const MAX_SPLIT_DEPTH: usize = 64;
+///
+/// **Reads the shared ceiling rather than repeating its value.** The config
+/// registry recorded this constant, `uflra_online::MAX_SPLIT_DEPTH`,
+/// `combined_theory::MAX_SPLIT_PAIRS` and `combined_theory_lia::MAX_SPLIT_PAIRS`
+/// as *four unlinked copies of one bound* — same value, same intended meaning,
+/// byte-identical doc comments, and no code-level link, so moving one moved
+/// nothing else. The two on the `QF_UFLIA` path (this one and
+/// `combined_theory_lia`'s) now both name
+/// [`crate::uflia_interface::MAX_INTERFACE_PAIRS`]; the `QF_UFLRA` pair is left
+/// alone deliberately, because this lane did not measure that division and a
+/// silent re-link would claim it had.
+const MAX_SPLIT_DEPTH: usize = crate::uflia_interface::MAX_INTERFACE_PAIRS;
 
 /// Hard ceiling on the number of propositional models the Boolean `DPLL(T)` layer
 /// enumerates before declining to a graceful [`CheckResult::Unknown`]. Bounds the
@@ -91,10 +105,35 @@ const MAX_BOOLEAN_MODELS: usize = 100_000;
 /// Above it the layer declines (the propositional search space is too large to
 /// enumerate soundly within budget).
 ///
-/// This is deliberately above the current `QF_AUFLIA` fair-slice frontier
-/// (`bug330` has 339 atoms) so the deadline-aware CDCL(T) spine, not admission,
-/// decides whether that scalar abstraction is tractable.
-const MAX_BOOLEAN_ATOMS: usize = 512;
+/// The intent has always been that **the deadline-aware CDCL(T) spine, not
+/// admission, decides whether a scalar abstraction is tractable** — the previous
+/// value, 512, was set above the `QF_AUFLIA` fair-slice frontier (`bug330`, 339
+/// atoms) for exactly that reason. It had never been measured against a
+/// population, and on 2026-09-08 it was:
+///
+/// - On the committed 200-file `QF_UFLIA` division list, this ceiling is the
+///   **last thing 27 of the 50 files we lose** report, at atom counts of
+///   **595 to 2,972** — one to six times the ceiling — each refused in
+///   0.1–0.3 ms while the budget went to routes that could not decide them.
+/// - Raised, the route **decides** files at 595–1,442 atoms and decides none
+///   above 1,442 within a 24 s budget: above that the deadline stops it, which
+///   is the behaviour the ceiling's own rationale asks for.
+/// - Raised, it costs **nothing** on the same list: the arm that raised it
+///   gained ten files and lost none, with zero disagreements against `cvc5`'s
+///   committed verdicts.
+///
+/// So the value is now `8192` — the value the winning arm was measured at, and
+/// above the whole observed range, so on this population admission no longer
+/// decides anything and the deadline does. It is a ceiling on a
+/// **deadline-aware** search (`CdclT::solve` carries the caller's deadline and
+/// every route below re-derives it); the encoding stays bounded independently by
+/// [`MAX_BOOLEAN_CLAUSES`], and the interface split by
+/// [`crate::uflia_interface::MAX_INTERFACE_PAIRS`], so raising this one does not
+/// uncap the others.
+///
+/// ADR-1801. Measurement:
+/// `docs/research/12-performance/uflia-interface-caps-2026-09-08.md`.
+const MAX_BOOLEAN_ATOMS: usize = 8192;
 
 /// Opaque Int-UF applications make each online LIA feasibility/probe call use the
 /// heavier opaque-app arithmetic abstraction. That path is sound, but it is not
@@ -189,6 +228,7 @@ pub fn check_qf_uflia_online(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    note_interface_admission(|c| c.entries = c.entries.saturating_add(1));
     // 1. The conjunctive fast-path: if every assertion flattens to a conjunction of
     //    literals, decide it directly by the model-based combination — the behaviour
     //    this module shipped with, kept verbatim.
@@ -303,10 +343,23 @@ pub(crate) fn decide_conjunction(
     //    miss the load-bearing `(x, 1)` pair. Pairs with at least one `EUF`-interface
     //    endpoint suffice for congruence; a pure `LIA`-`LIA` pair adds no `EUF` fact.)
     let interface = interface_terms(arena, &part);
-    let pairs = interface_pairs(&interface);
-    if pairs.len() > MAX_SPLIT_DEPTH {
-        return decline("too many interface pairs for the online combination split");
-    }
+    let proposed = interface_pairs(&interface);
+    // The pair set goes through the thread's `UfliaInterfacePolicy` before it
+    // becomes a split. Under the shipped `all` arm this is the historical
+    // behaviour verbatim — no filtering, and a decline above the ceiling — but
+    // the decline now NAMES the ceiling and the size that hit it, because
+    // "too many interface pairs" said neither and a reader could not tell a
+    // proposal of 65 from one of 6,000. `roots` is the literal atom set, which
+    // is where the applications the care graph is read off live.
+    let roots: Vec<TermId> = literals.iter().map(|l| l.atom).collect();
+    let proposed_len = proposed.len();
+    let Some(pairs) = apply_interface_policy(arena, &roots, proposed) else {
+        return decline(format!(
+            "too many interface pairs for the online combination split: {proposed_len} > {} \
+             (crate::uflia_interface::MAX_INTERFACE_PAIRS)",
+            crate::uflia_interface::MAX_INTERFACE_PAIRS
+        ));
+    };
     if past_deadline(deadline) {
         return decline("deadline reached building the UFLIA interface pairs");
     }
@@ -444,10 +497,18 @@ impl Search<'_> {
         forced: &mut Vec<(usize, bool)>,
         index: usize,
     ) -> Outcome {
+        note_interface(|c| {
+            c.split_nodes = c.split_nodes.saturating_add(1);
+            c.split_max_depth = c
+                .split_max_depth
+                .max(u32::try_from(forced.len()).unwrap_or(u32::MAX));
+        });
         if past_deadline(self.deadline) {
+            note_interface(|c| c.deadline_hits = c.deadline_hits.saturating_add(1));
             return Outcome::Unknown("interface split reached its deadline");
         }
         if forced.len() > MAX_SPLIT_DEPTH {
+            note_interface(|c| c.depth_cap_hits = c.depth_cap_hits.saturating_add(1));
             return Outcome::Unknown("interface split exceeded the depth bound");
         }
         if index >= self.pairs.len() {
@@ -456,19 +517,30 @@ impl Search<'_> {
         let (s, t) = self.pairs[index];
 
         match self.euf_status(s, t, forced) {
-            InterfaceStatus::Refuted => self.distinct(lia, forced, index),
-            InterfaceStatus::Entailed => self.equal(lia, forced, index),
+            InterfaceStatus::Refuted => {
+                note_interface(|c| c.split_refuted = c.split_refuted.saturating_add(1));
+                self.distinct(lia, forced, index)
+            }
+            InterfaceStatus::Entailed => {
+                note_interface(|c| c.split_entailed = c.split_entailed.saturating_add(1));
+                self.equal(lia, forced, index)
+            }
             // Try equal; a `Sat` wins immediately, an `Unsat` falls through to
             // distinct, and an `Unknown` still tries distinct (a sibling may be `Sat`)
             // before reporting the conservative `Unknown`.
-            InterfaceStatus::Undetermined => match self.equal(lia, forced, index) {
-                Outcome::Sat(model) => Outcome::Sat(model),
-                Outcome::Unsat => self.distinct(lia, forced, index),
-                Outcome::Unknown(detail) => match self.distinct(lia, forced, index) {
+            InterfaceStatus::Undetermined => {
+                note_interface(|c| {
+                    c.split_undetermined = c.split_undetermined.saturating_add(1);
+                });
+                match self.equal(lia, forced, index) {
                     Outcome::Sat(model) => Outcome::Sat(model),
-                    _ => Outcome::Unknown(detail),
-                },
-            },
+                    Outcome::Unsat => self.distinct(lia, forced, index),
+                    Outcome::Unknown(detail) => match self.distinct(lia, forced, index) {
+                        Outcome::Sat(model) => Outcome::Sat(model),
+                        _ => Outcome::Unknown(detail),
+                    },
+                }
+            }
         }
     }
 
@@ -538,12 +610,26 @@ impl Search<'_> {
         if euf_unsat(self.arena, &augmented) {
             return Outcome::Unsat;
         }
+        note_interface(|c| c.leaves = c.leaves.saturating_add(1));
         let Some(model) = self.combined_model(lia, &augmented) else {
-            return Outcome::Unknown("combined model build failed (overflow / coverage)");
+            note_interface(|c| {
+                c.leaf_model_build_failures = c.leaf_model_build_failures.saturating_add(1);
+            });
+            // The string names the two structural causes, but `integer_model`
+            // also returns `None` on a LIA DEADLINE and on its branch-and-bound
+            // / tableau caps, so this reason is a UNION and says so rather than
+            // asserting the modelling half of it.
+            return Outcome::Unknown(
+                "combined model build failed (LIA model unavailable: overflow, coverage, \
+                 deadline, or an integer-search cap)",
+            );
         };
         if replays_literals(self.arena, self.literals, &model) {
             Outcome::Sat(model)
         } else {
+            note_interface(|c| {
+                c.leaf_replay_failures = c.leaf_replay_failures.saturating_add(1);
+            });
             // The arrangement is consistent in both theories (the leaf passed the
             // EUF/LIA checks) but the assembled model did not replay — the combination
             // could not *certify* a model here. This is a sound decline, NOT an UNSAT:
@@ -1593,7 +1679,13 @@ fn check_qf_uflia_boolean_cdclt(
     if atom_terms.is_empty() {
         return decline("no UFLIA atoms for the online combination boolean layer");
     }
+    note_interface_admission(|c| {
+        c.atoms_max = c
+            .atoms_max
+            .max(u32::try_from(atom_terms.len()).unwrap_or(u32::MAX));
+    });
     if atom_terms.len() > max_boolean_atoms() {
+        note_interface_admission(|c| c.atom_cap_declines = c.atom_cap_declines.saturating_add(1));
         return decline(format!(
             "too many theory atoms for the online combination boolean layer: {} > {}",
             atom_terms.len(),
@@ -1602,24 +1694,39 @@ fn check_qf_uflia_boolean_cdclt(
     }
     let opaque_atoms = opaque_lia_order_atom_count(arena, &atom_terms);
     if opaque_atoms > max_opaque_boolean_atoms() {
+        note_interface_admission(|c| {
+            c.opaque_atom_cap_declines = c.opaque_atom_cap_declines.saturating_add(1);
+        });
         return decline(large_opaque_online_detail(atom_terms.len(), opaque_atoms));
     }
     // Build the live combined state: it registers the interface eq/lt/gt variables beyond
     // the original `atom_count`. If it cannot be built, fall back to the enumerative layer.
-    let Some(combined) = crate::combined_theory_lia::CombinedIncrementalLia::new_with_deadline(
+    let combined = match crate::combined_theory_lia::CombinedIncrementalLia::new_explained(
         arena,
         &atom_terms,
         deadline,
-    ) else {
-        if deadline.is_some_and(|d| Instant::now() >= d) {
-            return timeout_unknown("timeout while building online UFLIA combined state");
+    ) {
+        Ok(combined) => combined,
+        Err(failure) => {
+            note_interface_admission(|c| {
+                c.combined_build_declines = c.combined_build_declines.saturating_add(1);
+            });
+            // The failure now NAMES the guard that stopped construction. It used
+            // to be a bare `None` reported as "could not be built safely" — one
+            // string for a deadline, an out-of-fragment atom, the 64-pair
+            // ceiling and an arena error alike. Measured on the committed
+            // 200-file `QF_UFLIA` list (2026-09-08), that one string was the
+            // last thing 8 of the 50 losses printed, so a sixth of the division's
+            // remaining gap was diagnosed by a message that could not tell a
+            // capacity bound from a modelling gap.
+            if failure.is_deadline() {
+                return timeout_unknown(failure.detail());
+            }
+            if opaque_atoms > 0 {
+                return decline(failure.detail());
+            }
+            return check_qf_uflia_boolean_enumerative(arena, assertions, config, true, None);
         }
-        if opaque_atoms > 0 {
-            return decline(
-                "opaque-app online UFLIA incremental combined state could not be built safely",
-            );
-        }
-        return check_qf_uflia_boolean_enumerative(arena, assertions, config, true, None);
     };
     cdclt_combined(
         arena,
@@ -1665,6 +1772,9 @@ fn cdclt_combined(
             ));
         };
         if bool_clauses.len() > MAX_BOOLEAN_CLAUSES {
+            note_interface_admission(|c| {
+                c.clause_cap_declines = c.clause_cap_declines.saturating_add(1);
+            });
             return decline("too many clauses for the online combination boolean layer");
         }
         bool_clauses.push(vec![BoolLit {
@@ -1746,9 +1856,23 @@ fn cdclt_combined(
         }
         // CdclT found the combined theory consistent at this leaf, but the conjunctive
         // core could not certify a replaying model. Degrade — never call it Unsat.
-        CheckResult::Unsat | CheckResult::Unknown(_) => {
-            decline("combined CDCL(T) leaf did not rebuild a replaying model")
-        }
+        //
+        // FORWARD THE INNER REASON. This arm used to print the same string as the
+        // replay failure above it, which made it absorb every cause
+        // `decide_conjunction` has — its deadline, its `MAX_SPLIT_DEPTH`
+        // ceiling, an out-of-fragment atom, an unavailable LIA model — and
+        // report all of them as a model-rebuilding failure. The inner
+        // `UnknownReason.detail` was in scope the whole time and discarded.
+        // Measured on the committed 200-file `QF_UFLIA` list (2026-09-08): this
+        // string was the last thing 4 of the 50 losses printed.
+        CheckResult::Unknown(reason) => decline(format!(
+            "combined CDCL(T) leaf did not rebuild a replaying model: {}",
+            reason.detail
+        )),
+        CheckResult::Unsat => decline(
+            "combined CDCL(T) leaf did not rebuild a replaying model: the conjunctive core \
+             refuted the leaf arrangement",
+        ),
     }
 }
 
@@ -1941,7 +2065,13 @@ fn check_qf_uflia_boolean_enumerative(
     if atom_terms.is_empty() {
         return decline("no UFLIA atoms for the online combination boolean layer");
     }
+    note_interface_admission(|c| {
+        c.atoms_max = c
+            .atoms_max
+            .max(u32::try_from(atom_terms.len()).unwrap_or(u32::MAX));
+    });
     if atom_terms.len() > max_boolean_atoms() {
+        note_interface_admission(|c| c.atom_cap_declines = c.atom_cap_declines.saturating_add(1));
         return decline(format!(
             "too many theory atoms for the online combination boolean layer: {} > {}",
             atom_terms.len(),
@@ -1950,6 +2080,9 @@ fn check_qf_uflia_boolean_enumerative(
     }
     let opaque_atoms = opaque_lia_order_atom_count(arena, &atom_terms);
     if opaque_atoms > max_opaque_boolean_atoms() {
+        note_interface_admission(|c| {
+            c.opaque_atom_cap_declines = c.opaque_atom_cap_declines.saturating_add(1);
+        });
         return decline(large_opaque_online_detail(atom_terms.len(), opaque_atoms));
     }
 
@@ -1967,6 +2100,9 @@ fn check_qf_uflia_boolean_enumerative(
             ));
         };
         if clauses.len() > MAX_BOOLEAN_CLAUSES {
+            note_interface_admission(|c| {
+                c.clause_cap_declines = c.clause_cap_declines.saturating_add(1);
+            });
             return decline("too many clauses for the online combination boolean layer");
         }
         clauses.push(vec![BoolLit {
@@ -2334,6 +2470,9 @@ impl BoolSearch<'_> {
                 None => {
                     // A total propositional model: decide its theory conjunction.
                     if self.models_tried >= MAX_BOOLEAN_MODELS {
+                        note_interface_admission(|c| {
+                            c.model_cap_declines = c.model_cap_declines.saturating_add(1);
+                        });
                         return decline(
                             "propositional model budget exhausted in the boolean layer",
                         );

@@ -3400,7 +3400,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
     ConfigEntry {
         name: "MAX_SPLIT_PAIRS",
         module: "crates/axeyum-solver/src/combined_theory_lia.rs",
-        value: "64",
+        value: "crate::uflia_interface::MAX_INTERFACE_PAIRS",
         unit: "interface case-split pairs",
         protects: Protects::Termination,
         on_exceed: OnExceed::RefuseUnknown,
@@ -3408,7 +3408,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "",
         env_override: None,
         justification: undated("doc comment"),
-        note: "Byte-identical doc comment to `combined_theory.rs::MAX_SPLIT_PAIRS` ('mirroring the cold core's `MAX_SPLIT_DEPTH` decline...'), same value, independent definition — see that entry's note for the full four-copy chain across this file, `combined_theory.rs`, `uflia_online.rs::MAX_SPLIT_DEPTH`, and `uflra_online.rs::MAX_SPLIT_DEPTH`.",
+        note: "Effective value 64, through `crate::uflia_interface::MAX_INTERFACE_PAIRS` since 2026-09-08 — this copy and `uflia_online.rs::MAX_SPLIT_DEPTH` are now ONE definition, so the \"mirrors the cold core\" claim below is enforced by the compiler instead of by prose. Byte-identical doc comment to `combined_theory.rs::MAX_SPLIT_PAIRS` ('mirroring the cold core's `MAX_SPLIT_DEPTH` decline...'), same value, independent definition — see that entry's note for the full four-copy chain across this file, `combined_theory.rs`, `uflia_online.rs::MAX_SPLIT_DEPTH`, and `uflra_online.rs::MAX_SPLIT_DEPTH`.",
     },
     ConfigEntry {
         name: "MAX_CYCLE_WALK",
@@ -4159,6 +4159,44 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Clause-count companion to `DEFER_LIA_FEASIBILITY_ATOMS`; doc: 'for generated Boolean skeletons with fewer theory atoms but a large Tseitin surface.'",
     },
     ConfigEntry {
+        name: "BYTES_PER_FARKAS_MULTIPLIER",
+        module: "crates/axeyum-solver/src/lra.rs",
+        value: "32",
+        unit: "bytes per retained Farkas multiplier",
+        protects: Protects::Memory,
+        on_exceed: OnExceed::RefuseUnknown,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: Some("AXEYUM_MEMORY_LIMIT_MB"),
+        justification: dated(
+            "docs/research/12-performance/span-log-sweep-2026-09-08.md",
+            "2026-09-08",
+            Some("5d406a12b"),
+            &[
+                sym(
+                    "crates/axeyum-solver/src/lra.rs",
+                    "BYTES_PER_FARKAS_MULTIPLIER",
+                ),
+                sym("crates/axeyum-solver/src/lra.rs", "MAX_FM_CONSTRAINTS"),
+            ],
+            // The value is STRUCTURAL, so what has to still exist is the shape
+            // it counts (`Rational` is two `i128`s inside `LinExpr`'s home
+            // crate) and the two gates that spend it, plus the sweep the
+            // measurement is written up in.
+            &[
+                live("pub struct Rational", "crates/axeyum-ir/src/rational.rs"),
+                live("fn fm_admission", "crates/axeyum-solver/src/lra.rs"),
+                live(
+                    "fn simplex_tableau_bytes",
+                    "crates/axeyum-solver/src/lra.rs",
+                ),
+                live("fn reset_structure", "crates/axeyum-solver/src/simplex.rs"),
+                doc("docs/research/12-performance/span-log-sweep-2026-09-08.md"),
+            ],
+        ),
+        note: "The constant behind the 2026-09-08 kernel OOM. `decide_within` gave every collected constraint a dense unit multiplier vector of length `n`, so `32*n^2` bytes, allocated BEFORE `MAX_FM_CONSTRAINTS` -- the one bound that could have stopped it -- was consulted inside `eliminate`. At ~29 200 constraints that matrix is the kernel's own `anon-rss:26639452kB`. Unlike a divided peak-RSS figure this is a count of what the program allocates, so it cannot drift with corpus or host; the only thing that invalidates it is changing `Rational`'s representation, which is what the first `Basis` watches. `simplex_admission` charges the exact-rational simplex retry at the same rate deliberately -- two gates metering one resource in different units is the defect this registry exists to surface -- but on its TABLEAU and not on its input rows: `Tableau::reset_structure` builds `m` dense rows of `nvars + m` cells, so it is quadratic in the row count too. Pricing it as `n * nvars` was tried and let 11.8 GB through after the multiplier matrix was already gated; a stack sample found the real allocation inside `reset_structure`, 17x the projection. Related gap, reported and NOT closed here: `simplex::MAX_TABLEAU_CELLS` (4 000 000) is checked only in `Incremental::new`, so `feasible` -- the constructor this route calls -- consults no cell bound at all and reached 360 million cells on the measured file.",
+    },
+    ConfigEntry {
         name: "GOMORY_MAGNITUDE_LIMIT",
         module: "crates/axeyum-solver/src/lra.rs",
         value: "1 << 40",
@@ -4313,8 +4351,8 @@ pub static REGISTRY: &[ConfigEntry] = &[
         env_override: None,
         justification: dated(
             "ADR-1752",
-            "2026-09-07",
-            None,
+            "2026-09-08",
+            Some("5d406a12b"),
             &[
                 sym(
                     "crates/axeyum-solver/src/lra_online.rs",
@@ -4325,9 +4363,25 @@ pub static REGISTRY: &[ConfigEntry] = &[
                     "MAX_ONLINE_LRA_ATOMS",
                 ),
             ],
-            &[adr("ADR-1752")],
+            // Re-derived 2026-09-08. The value is kept for the ONE property that
+            // is checkable in the tree rather than in a corpus run -- it
+            // reproduces `MAX_ONLINE_LRA_ATOMS` exactly at the default budget --
+            // so `MAX_ONLINE_LRA_ATOMS` is a basis, not just a dependency. The
+            // sweep is a basis because it is where the mis-attribution that the
+            // re-derivation corrects is written down, and `fm_admission` is a
+            // basis because it is the gate that now owns the bytes this
+            // constant was blamed for.
+            &[
+                adr("ADR-1752"),
+                live(
+                    "MAX_ONLINE_LRA_ATOMS",
+                    "crates/axeyum-solver/src/lra_theory.rs",
+                ),
+                live("fn fm_admission", "crates/axeyum-solver/src/lra.rs"),
+                doc("docs/research/12-performance/span-log-sweep-2026-09-08.md"),
+            ],
         ),
-        note: "A SCREEN, explicitly not a cost model — the doc names three replacement cost models the corpus falsified. Calibrated so the default budget reproduces the flat 1,024-atom cap byte-identically, which is why its definition divides by exactly that number.",
+        note: "A SCREEN, explicitly not a cost model. RE-DERIVED 2026-09-08 and the value KEPT, but its evidence changed: the doc named `_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2` aborting at 7.8 GB as the falsification of cost model 1, and a live stack sample at 4.4 GB on the way to a 26.6 GB kernel OOM put those bytes in `lra::decide_within` -- the OFFLINE Fourier-Motzkin route, which no cost model of the ONLINE construction could have predicted. The value survives on the property that is checkable in-tree (it reproduces the flat 1,024-atom cap byte-identically at the default budget) rather than on a corpus measurement that belonged to another route. The 8 GiB this screen derives 13,107 atoms from was ALSO not an enforced budget until 2026-09-08; it is one now.",
     },
     ConfigEntry {
         name: "BYTES_PER_LRA_COEFFICIENT",
@@ -4764,6 +4818,60 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "THE BEST-JUSTIFIED ENTRY IN THIS REGISTRY, and the model for the rest: the doc carries a table of measured peaks over `bvmul` commutativity miters, names the host, gives the date, AND ships a re-measurement test (`crates/axeyum-solver/tests/memory_budget.rs`) so the number can be re-taken rather than re-argued. Converts a byte budget into `clause_ceiling()`.",
     },
     ConfigEntry {
+        name: "WATCHDOG_IDLE_INTERVAL",
+        module: "crates/axeyum-solver/src/memory_budget.rs",
+        value: "Duration::from_millis(500)",
+        unit: "milliseconds between wake-ups while NO budget is installed",
+        protects: Protects::Time,
+        on_exceed: OnExceed::SearchEvent,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: dated(
+            "doc comment",
+            "2026-09-08",
+            Some("5d406a12b"),
+            &[sym(
+                "crates/axeyum-solver/src/memory_budget.rs",
+                "WATCHDOG_IDLE_INTERVAL",
+            )],
+            &[live(
+                "watchdog_loop",
+                "crates/axeyum-solver/src/memory_budget.rs",
+            )],
+        ),
+        note: "NOT an admission bound, which is why it carries the `SearchEvent`/`NotApplicable` class: it is the backstop period on a condvar wait, and crossing it means the sampler woke up, found no budget installed, and went back to sleep. It cannot delay the arming of a budget -- every install notifies the condvar -- so it only bounds how long a MISSED notification could go unnoticed, and even then no verdict changes, because the projection gates (`fm_admission`, `simplex_admission`, `clause_ceiling`) do not consult the sampler at all. The cost is two wake-ups a second in a process that has installed a budget at least once; a process that never sets `memory_limit_mb` never spawns the thread.",
+    },
+    ConfigEntry {
+        name: "WATCHDOG_SAMPLE_INTERVAL",
+        module: "crates/axeyum-solver/src/memory_budget.rs",
+        value: "Duration::from_millis(20)",
+        unit: "milliseconds between resident-set samples while a budget is installed",
+        protects: Protects::Memory,
+        on_exceed: OnExceed::RefuseUnknown,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: Some("AXEYUM_MEMORY_LIMIT_MB"),
+        justification: dated(
+            "docs/research/12-performance/span-log-sweep-2026-09-08.md",
+            "2026-09-08",
+            Some("5d406a12b"),
+            &[sym(
+                "crates/axeyum-solver/src/memory_budget.rs",
+                "WATCHDOG_SAMPLE_INTERVAL",
+            )],
+            &[
+                live("watchdog_tripped", "crates/axeyum-solver/src/lra.rs"),
+                live(
+                    "the_watchdog_samples_and_trips_on_an_over_limit_reading",
+                    "crates/axeyum-solver/src/memory_budget.rs",
+                ),
+                doc("docs/research/12-performance/span-log-sweep-2026-09-08.md"),
+            ],
+        ),
+        note: "Sets how far past `memory_limit_mb` a route can get before anything notices: at 20 ms a route allocating 1 GiB/s is at most ~20 MiB over when the flag is set. Derived from the module's own measured 9.4 us `/proc/self/status` read -- 0.047 % of one core -- which is also the reason this is a THREAD and not another inline probe: the inline probes cost 32 us per check and therefore could never go in a loop, which is exactly why the field did not bind on the route that reached 26.6 GB. The two `Basis` entries are the deepest consumer of the flag and the test that pins BOTH directions of the trip; a sampler that trips unconditionally is as useless as one that never does.",
+    },
+    ConfigEntry {
         name: "PROOF_LITERAL_BUDGET",
         module: "crates/axeyum-solver/src/native_cdclt.rs",
         value: "8_000_000",
@@ -4889,9 +4997,24 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::Truncate,
         signal: Signal::NotApplicable,
         guarded_by: "",
-        env_override: None,
-        justification: undated("doc comment"),
-        note: "Grants an extra slice only when envelopes were actually emitted.",
+        env_override: Some("AXEYUM_NIA_REFINEMENT"),
+        justification: dated(
+            "docs/research/12-performance/nia-refinement-round-2026-09-08.md",
+            "2026-09-08",
+            Some("5d406a12b"),
+            &[sym(
+                "crates/axeyum-solver/src/nia_linearize.rs",
+                "NIA_MCCORMICK_BUDGET_SHARE",
+            )],
+            &[
+                doc("docs/research/12-performance/nia-refinement-round-2026-09-08.md"),
+                live(
+                    "the_off_arm_reproduces_the_committed_slice_and_round_budget",
+                    "crates/axeyum-solver/src/nia_linearize.rs",
+                ),
+            ],
+        ),
+        note: "MEASURED, AND THE MEASUREMENT DID NOT MOVE IT. First 50 files of the committed `QF_NIA` parity list, 24 s budget, one process per host on idle s6/s7. At 3 the loop gets a median 6.65 s slice, runs 1-15 rounds (median 1, 26 of 50 files exactly one) and emits 2,476 tangent lemmas. The `AXEYUM_NIA_REFINEMENT=1/1` arm hands it the whole remaining budget (median 19.96 s): 22 files get more rounds, 1,280 more tangent lemmas are emitted, and TWO files move `unknown` -> `sat` -- neither reproducibly (file 13 sat in 3 of 4 repeats, file 30 in 1 of 7). The inner search consumes whatever budget it is given rather than converging, exactly as `OVERSIZED_ADMISSION_PROBE_BUDGET`'s justification already records, so a larger slice moves which states are visited and not how deep the search goes. Left at 3; the lever ships OFF so the next A/B needs no rebuild.",
     },
     ConfigEntry {
         name: "NIA_SLICE_MS",
@@ -4902,9 +5025,24 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::Truncate,
         signal: Signal::NotApplicable,
         guarded_by: "",
-        env_override: None,
-        justification: undated("doc comment"),
-        note: "Default slice for the pre-ladder NIA relaxation so it cannot hang before the width ladder is reached.",
+        env_override: Some("AXEYUM_NIA_REFINEMENT"),
+        justification: dated(
+            "docs/research/12-performance/nia-refinement-round-2026-09-08.md",
+            "2026-09-08",
+            Some("5d406a12b"),
+            &[sym(
+                "crates/axeyum-solver/src/nia_linearize.rs",
+                "NIA_SLICE_MS",
+            )],
+            &[
+                doc("docs/research/12-performance/nia-refinement-round-2026-09-08.md"),
+                live(
+                    "the_off_arm_reproduces_the_committed_slice_and_round_budget",
+                    "crates/axeyum-solver/src/nia_linearize.rs",
+                ),
+            ],
+        ),
+        note: "Default slice for the pre-ladder NIA relaxation so it cannot hang before the width ladder is reached. THE ARM THAT SELECTS IT IS NARROW: measured 2026-09-08 over the first 50 files of the committed `QF_NIA` parity list, only 3 of 50 top-level calls take this floor at all -- the other 47 have `McCormick` envelopes or exact splits and take `NIA_MCCORMICK_BUDGET_SHARE` instead. It bounds a hang, not a search, and `NiaRefinementPolicy` deliberately does not move it: raising the hang guard is a different decision from raising the search budget.",
     },
     ConfigEntry {
         name: "POW2_TABLE_MAX_CASES",
@@ -7225,17 +7363,65 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Two sites: a static pre-check (`build_unknown(...\"has {} semantic atoms, exceeding the cap\"...)`, ufbv_online.rs:2167-2174) and a dynamic one during retained search (`\"dynamic theory atoms exceed the cap\"`, ufbv_online.rs:847-851).",
     },
     ConfigEntry {
+        name: "MAX_INTERFACE_PAIRS",
+        module: "crates/axeyum-solver/src/uflia_interface.rs",
+        value: "64",
+        unit: "proposed interface case-split pairs",
+        protects: Protects::Termination,
+        on_exceed: OnExceed::RefuseUnknown,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: Some("AXEYUM_UFLIA_INTERFACE_PAIRS"),
+        justification: dated(
+            "docs/research/12-performance/uflia-interface-caps-2026-09-08.md",
+            "2026-09-08",
+            None,
+            &[
+                sym(
+                    "crates/axeyum-solver/src/uflia_online.rs",
+                    "MAX_SPLIT_DEPTH",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/combined_theory_lia.rs",
+                    "MAX_SPLIT_PAIRS",
+                ),
+            ],
+            &[doc(
+                "docs/research/12-performance/uflia-interface-caps-2026-09-08.md",
+            )],
+        ),
+        note: "THE SHARED CEILING the two QF_UFLIA copies now read (`uflia_online::MAX_SPLIT_DEPTH` and `combined_theory_lia::MAX_SPLIT_PAIRS` are `= crate::uflia_interface::MAX_INTERFACE_PAIRS`), closing two of the four unlinked copies the registry recorded. The value is UNCHANGED at 64 and deliberately so: pairs are quadratic in the interface-term count, so a raise big enough to admit the losing population is the removal of a termination bound, not a raise. `AXEYUM_UFLIA_INTERFACE_PAIRS` selects the PROPOSAL POLICY (`all` / `care` / `care-truncate`), not the number; `care-truncate` answers the ceiling by keeping a bounded care-graph subset instead of declining, which is sound in both directions (sat is replay-gated, unsat is a relaxation refutation) and incomplete by construction.",
+    },
+    ConfigEntry {
         name: "MAX_BOOLEAN_ATOMS",
         module: "crates/axeyum-solver/src/uflia_online.rs",
-        value: "512",
+        value: "8192",
         unit: "distinct theory atoms",
         protects: Protects::Completeness,
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
         env_override: Some("AXEYUM_UFLIA_MAX_BOOLEAN_ATOMS"),
-        justification: undated("doc comment"),
-        note: "Effective value read through `max_boolean_atoms()`, which the env var can only RAISE (`v.max(MAX_BOOLEAN_ATOMS)`), never lower — the compiled 512 is a floor, not an overridable default. Doc: deliberately set above the `bug330` fair-slice frontier (339 atoms) so the deadline-aware CDCL(T) spine, not admission, decides tractability. `uflra_online.rs::MAX_BOOLEAN_ATOMS` is the UFLRA sibling with the SAME name but a DIFFERENT value (48) and no env override — divergent twins, not duplicates.",
+        justification: dated(
+            "docs/research/12-performance/uflia-interface-caps-2026-09-08.md",
+            "2026-09-08",
+            None,
+            &[
+                sym(
+                    "crates/axeyum-solver/src/uflia_online.rs",
+                    "MAX_BOOLEAN_ATOMS",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/uflia_online.rs",
+                    "max_boolean_atoms",
+                ),
+            ],
+            &[
+                adr("ADR-1801"),
+                doc("docs/research/12-performance/uflia-interface-caps-2026-09-08.md"),
+            ],
+        ),
+        note: "RAISED 512 -> 8192 on 2026-09-08 (ADR-1801) against the committed 200-file QF_UFLIA list. At 512 this ceiling was the LAST thing 27 of the 50 files we lose reported, at atom counts of 595-2,972, each refused in 0.1-0.3 ms; raised, the route decides files at 595-1,442 atoms, decides none above that within 24 s (the deadline stops it, which is what the ceiling's own rationale asks for), gains ten files on the loss population and loses none, with zero disagreements against cvc5's committed verdicts. Effective value still read through `max_boolean_atoms()`, which the env var can only RAISE (`v.max(MAX_BOOLEAN_ATOMS)`), never lower. `uflra_online.rs::MAX_BOOLEAN_ATOMS` is the UFLRA sibling with the SAME name but a DIFFERENT value (48) and no env override — divergent twins, not duplicates, and NOT raised here because this lane did not measure that division.",
     },
     ConfigEntry {
         name: "MAX_BOOLEAN_CLAUSES",
@@ -7274,12 +7460,12 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "",
         env_override: Some("AXEYUM_UFLIA_MAX_OPAQUE_BOOLEAN_ATOMS"),
         justification: undated("doc comment"),
-        note: "Doc: the opaque-app arithmetic abstraction 'is not yet deadline-aware during combined-state construction and theory assertion, so keep the online slice bounded.' Same env-raise-only pattern as MAX_BOOLEAN_ATOMS above (`v.max(MAX_OPAQUE_BOOLEAN_ATOMS)`).",
+        note: "Doc: the opaque-app arithmetic abstraction 'is not yet deadline-aware during combined-state construction and theory assertion, so keep the online slice bounded.' Same env-raise-only pattern as MAX_BOOLEAN_ATOMS above (`v.max(MAX_OPAQUE_BOOLEAN_ATOMS)`). DELIBERATELY NOT RAISED with MAX_BOOLEAN_ATOMS on 2026-09-08: the isolation arm (general ceiling raised, this one left at 128) decides the SAME ten files, and `UfliaInterfaceCounters::opaque_atom_cap_declines` is 0 across every file in every arm of that measurement, so on the QF_UFLIA population this constant never fires. It guards the one place on this route where construction is not deadline-aware, so raising a bound that buys nothing measured would be a cost with no benefit.",
     },
     ConfigEntry {
         name: "MAX_SPLIT_DEPTH",
         module: "crates/axeyum-solver/src/uflia_online.rs",
-        value: "64",
+        value: "crate::uflia_interface::MAX_INTERFACE_PAIRS",
         unit: "interface case-split recursion depth",
         protects: Protects::Termination,
         on_exceed: OnExceed::RefuseUnknown,
@@ -7287,7 +7473,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "",
         env_override: None,
         justification: undated("doc comment"),
-        note: "FINDING (four unlinked copies of one bound). Byte-identical doc comment AND value to `uflra_online.rs::MAX_SPLIT_DEPTH` ('Hard ceiling on interface case-split recursion depth (one level per shared pair). Above it the search declines to a graceful CheckResult::Unknown - never a wrong verdict.'). Also mirrored (per THEIR doc comments, not this one) by `combined_theory.rs::MAX_SPLIT_PAIRS` and `combined_theory_lia.rs::MAX_SPLIT_PAIRS` (both = 64). Four independent copies across four files, one intended meaning, no code-level link between any pair.",
+        note: "Effective value 64, through the alias. PARTLY CLOSED 2026-09-08: this constant is now `= crate::uflia_interface::MAX_INTERFACE_PAIRS`, as is `combined_theory_lia.rs::MAX_SPLIT_PAIRS`, so the two QF_UFLIA copies are one definition. The QF_UFLRA pair is untouched because this lane did not measure that division. ORIGINAL FINDING (four unlinked copies of one bound). Byte-identical doc comment AND value to `uflra_online.rs::MAX_SPLIT_DEPTH` ('Hard ceiling on interface case-split recursion depth (one level per shared pair). Above it the search declines to a graceful CheckResult::Unknown - never a wrong verdict.'). Also mirrored (per THEIR doc comments, not this one) by `combined_theory.rs::MAX_SPLIT_PAIRS` and `combined_theory_lia.rs::MAX_SPLIT_PAIRS` (both = 64). Four independent copies across four files, one intended meaning, no code-level link between any pair.",
     },
     ConfigEntry {
         name: "MAX_BOOLEAN_ATOMS",
@@ -7365,6 +7551,11 @@ pub static GOVERNED_FILES: &[&str] = &[
     "crates/axeyum-solver/src/dl_online.rs",
     "crates/axeyum-solver/src/dpll_lia.rs",
     "crates/axeyum-solver/src/euf.rs",
+    // Joined the governed set on 2026-09-08 with the memory-limit work. Nine of
+    // its ten constants were already registered, so the file was one entry away
+    // from claimable and nobody had claimed it -- and it is the file the three
+    // OOM-killed `QF_LRA` runs actually died in.
+    "crates/axeyum-solver/src/lra.rs",
     "crates/axeyum-solver/src/lra_online.rs",
     "crates/axeyum-solver/src/lra_theory.rs",
     "crates/axeyum-solver/src/memory_budget.rs",

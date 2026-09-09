@@ -1655,8 +1655,46 @@ pub(crate) const BYTES_PER_LRA_COEFFICIENT: usize = 224;
 /// caller that can afford 8 GiB gets 13 107 atoms by asking, where before no
 /// amount of memory bought a single atom past 1 024.
 ///
-/// Replacing this with a real cost model is the open work, and the thing it
-/// needs first is an answer to "where do `danoint-266`'s 7.8 GB go".
+/// # Re-derived 2026-09-08: the falsifying bytes were on a DIFFERENT ROUTE
+///
+/// The three falsifications above are real, and one of them was attributed to
+/// the wrong place — which is why three cost models in a row could not catch
+/// it. `_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2` is named above as the file
+/// that "aborted at 7.8 GB". On 2026-09-08 it was measured again, at
+/// `--memory-limit-mb 8192`, and this time a live stack sample was taken while
+/// the process was at 4.4 GB on its way to a kernel OOM kill at 26.6 GB:
+///
+/// ```text
+/// lra::decide_within
+/// lra::check_with_lra_within_certified
+/// dpll_t::check_with_lra_dpll_within
+/// nra::check_with_nra
+/// auto::check_auto_dispatch
+/// ```
+///
+/// That is the **offline** Fourier–Motzkin route. It is not the online CDCL(T)
+/// construction this constant admits into, so no cost model of THIS
+/// construction — coefficients, dense tableau, or Fourier–Motzkin's own entry
+/// cost — could have predicted those bytes, and none of the three should be
+/// read as having been refuted by them. The allocation was
+/// `decide_within`'s `n x n` Farkas multiplier matrix at
+/// `lra::BYTES_PER_FARKAS_MULTIPLIER` = 32 B, priced from 2026-09-08 by
+/// `lra::fm_admission` and now refused before it is made.
+///
+/// So the re-derivation KEEPS the value, for the reason it was chosen and not
+/// for the evidence that turned out to belong elsewhere: at
+/// [`DEFAULT_ONLINE_LRA_BUDGET_BYTES`] it reproduces `MAX_ONLINE_LRA_ATOMS`
+/// exactly, and that property is checkable in the tree today rather than
+/// resting on a corpus run. What the re-derivation removes is the belief that
+/// 8 GiB of admission arithmetic was arithmetic on an ENFORCED budget: until
+/// 2026-09-08 it was not, on this route or any other that allocates in a loop.
+/// Now that `memory_limit_mb` binds, a screen derived from it means what it
+/// says.
+///
+/// Replacing this with a real cost model is still the open work, and the thing
+/// it needs first is an answer to "where do `danoint-266`'s 7.8 GB go" — a
+/// question the 2026-09-08 finding makes worth re-asking with a stack sample
+/// rather than a model, since that is what settled this one in a minute.
 pub(crate) const BYTES_PER_ADMITTED_ATOM: usize = DEFAULT_ONLINE_LRA_BUDGET_BYTES / 1_024;
 
 /// Resident bytes one dense simplex tableau cell costs: a [`Rational`] is two
@@ -2137,6 +2175,16 @@ fn solve(
         if past_deadline(deadline) {
             return Feasibility::Unknown;
         }
+        // The memory bound, at the same boundary as the wall-clock one. The two
+        // ceilings above are PER STEP; nothing bounds their SUM, and on
+        // 2026-09-08 a stack sample found this exact frame at 15.3 GB resident
+        // under an 8 GiB `memory_limit_mb`, with every individual step inside
+        // its own budget. One relaxed atomic load
+        // (`memory_budget::watchdog_tripped`), which is why it can sit in a loop
+        // where the module's 9.4 us `/proc` probe could not.
+        if crate::memory_budget::watchdog_tripped() {
+            return Feasibility::Unknown;
+        }
         match eliminate(&current, v, deadline, budget_bytes) {
             Some(next) => current = next,
             None => return Feasibility::Unknown,
@@ -2179,6 +2227,12 @@ fn solve_values(
     }
     for v in (0..nvars).rev() {
         if past_deadline(deadline) {
+            return None;
+        }
+        // Same boundary, same reason as in `solve`, and this loop is the worse
+        // of the two: `saved` keeps a full CLONE of the system per variable, so
+        // its footprint grows monotonically with no ceiling of its own.
+        if crate::memory_budget::watchdog_tripped() {
             return None;
         }
         saved.push((v, current.clone()));
@@ -2232,6 +2286,13 @@ fn eliminate(
     let zero = Rational::zero();
     for (i, c) in system.iter().enumerate() {
         if i % 64 == 0 && past_deadline(deadline) {
+            return None;
+        }
+        // This loop CLONES a constraint, with its length-`n` multiplier vector,
+        // for every row that does not mention `v`, so it is a growth site in its
+        // own right and not only a scan. The caller reads the reason off the
+        // watchdog; here the decline is the same `None` a size breach gives.
+        if crate::memory_budget::watchdog_tripped() {
             return None;
         }
         let a = c.expr.coeff(v);
@@ -3863,12 +3924,26 @@ impl Encoder {
             }
             // Boolean equality (`iff`). Behind [`SkeletonEncoding::bool_eq`]
             // because it is the gap that decided a route: measured 2026-09-08,
-            // every one of the nineteen `QF_LRA` files that exhaust 24 s in the
-            // OFFLINE lazy-SMT loop got there because this arm was missing and
-            // the online CDCL(T) probe declined `skeleton-unsupported`. The
-            // offline abstractor has covered the same shape since it was
-            // written (`dpll_t.rs`, `Op::Eq if sort_of(args[0]) == Bool`), so
-            // the two halves of one route disagreed about the input language.
+            // ALL 22 `QF_LRA` files bound by the offline lazy-SMT loop printed
+            // `online_probe=skeleton-unsupported`, and every one of them was
+            // there because this arm was missing. The offline abstractor has
+            // covered the same shape since it was written (`dpll_t.rs`,
+            // `Op::Eq if sort_of(args[0]) == Bool`), so the two halves of one
+            // route disagreed about the input language and the weaker half
+            // silently took every query the stronger half could not parse.
+            //
+            // **A local workaround that documents a shared defect is how a bug
+            // survives.** `dl_online` hit this exact missing case on the
+            // `fischer` family and routed around it in its own scan — see
+            // `dl_online.rs`'s `bool_eq_gates`, whose comment reads "The
+            // skeleton encoder has no `Eq` case, so these carry their own
+            // `XNOR` gate rather than making the query fall through". That note
+            // was correct, was written down, and was left where only a reader of
+            // `dl_online` would find it. The encoder was never fixed, so
+            // `QF_LRA` — which had no such workaround — lost the whole
+            // division's hardest family to the fallback route for as long as
+            // nobody read both files. Fix the shared thing, or the next
+            // consumer pays it again.
             //
             // Sort-guarded: a REAL equality is a registered atom and never
             // reaches here, and an equality at any other sort has unencodable

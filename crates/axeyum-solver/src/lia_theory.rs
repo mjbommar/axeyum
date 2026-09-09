@@ -66,11 +66,11 @@ use axeyum_ir::{Sort, TermArena, TermId, TermNode, Value};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::cdclt::Lit as CdcltLit;
-use crate::native_cdclt::{NativeModel, NativeSolveOutcome};
 use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
 use crate::lia_online::{Encoder, LiaTheory, collect_lia_atoms, replays_integer};
 use crate::lra_online::Lit;
 use crate::model::Model;
+use crate::native_cdclt::{NativeModel, NativeSolveOutcome};
 
 /// Adapts the validated online [`LiaTheory`] to the generic [`CdclT`] driver's
 /// **trigger-literal precondition**.

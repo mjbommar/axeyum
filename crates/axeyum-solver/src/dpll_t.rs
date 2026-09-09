@@ -135,8 +135,17 @@ pub fn check_with_lra_dpll_within(
         // budget entirely unspent and the offline loop, which is exactly their
         // fallback, unrun. `past_deadline` is the observation that separates
         // the two, so the rule tests it instead of the reason kind.
+        //
+        // `MemoryLimit` is the exception the memory-watchdog lane established
+        // and it is NOT a cheap decline: the flag is sticky, so the reason says
+        // the PROCESS is already over `memory_limit_mb`. Falling through would
+        // start a whole second search — its own skeleton, its own tableaux — on
+        // a process that has nothing left to spend, which is the same reasoning
+        // as `lra.rs`'s `Feasibility::OutOfMemory` arm declining to retry on the
+        // simplex. It ends the query whatever the policy arm says.
         CheckResult::Unknown(reason)
             if past_deadline(deadline)
+                || reason.kind == UnknownKind::MemoryLimit
                 || (!route.fall_through_on_cheap_decline
                     && matches!(
                         reason.kind,
@@ -179,6 +188,14 @@ pub fn check_with_lra_dpll_within(
                 kind: UnknownKind::ResourceLimit,
                 detail: "lazy SMT: wall-clock timeout reached".to_owned(),
             }));
+        }
+        // Memory bound, at the same boundary and for the same reason: the
+        // per-round work grows as blocking clauses accumulate, so this loop is
+        // where an over-budget process spends the rest of its life. One relaxed
+        // atomic load, and it reports the memory reason rather than borrowing
+        // the timeout's — the two demand opposite fixes.
+        if let Some(reason) = crate::memory_budget::watchdog_decline("lazy SMT refinement round") {
+            return Ok(CheckResult::Unknown(reason));
         }
         // 2. Decide the skeleton (real atoms abstracted to props; every other
         //    theory — bit-vectors, arrays, functions, bounded integers — left

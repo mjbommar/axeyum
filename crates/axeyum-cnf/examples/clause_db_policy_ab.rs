@@ -104,6 +104,30 @@ fn tiered_tuned(max_used: u8, permille: u32) -> SearchPolicies {
 /// sits in the p4dfa range rather than the pigeonhole range.
 ///
 /// Deterministic and seed-free: the two integers in the name fix the formula.
+///
+/// # Two ways this will mislead you, both measured
+///
+/// **`constraints` buys size, not difficulty.** The conjuncts are independent,
+/// and inside a conflict budget the search never leaves the first one's cone:
+/// `bitblast:32x6` and `bitblast:32x12` were measured 2026-09-08 to differ by
+/// **372 watch visits out of 357 million**, i.e. they are the same search on
+/// formulas of very different size. Raising `constraints` to get a harder
+/// instance does not work; it only adds variables the search never reaches
+/// (which does move the tick model's per-conflict mark-array term, so two such
+/// instances differ in ticks while agreeing on everything else — a difference
+/// that looks like a result and is not).
+///
+/// **`factor_width < 32` is not a factoring instance at all.** The primes below
+/// are masked to `factor_width` bits, which destroys their primality, so the
+/// "semiprime" has small factors and the instance falls over immediately.
+/// Measured: 20, 24 and 28 bits are all `sat` inside 1600 conflicts, while 32
+/// bits exhausts every budget tried. **Use `factor_width = 32`**; anything
+/// narrower is an easy satisfiable instance wearing a hard instance's name.
+///
+/// The fix for the first one is to chain the factor pairs so the constraint
+/// graph is connected. It is not done here because it would invalidate the
+/// fixtures the 2026-09-08 `max_used` sweep ran on
+/// (`docs/research/12-performance/max-used-curve-2026-09-08.md`).
 fn bitblast_formula(factor_width: u32, constraints: usize) -> CnfFormula {
     // Primes just under 2^31, so both factors of every product need the full
     // 32-bit width and the degenerate `N x 1` factorisation is unrepresentable.

@@ -56,6 +56,7 @@
 //! anywhere finer than a round.
 
 use std::cell::{Cell, RefCell};
+use std::fmt::Write as _;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
@@ -91,19 +92,204 @@ impl LazySmtReading {
     }
 }
 
-/// Which of the two lazy-SMT loops a recording belongs to.
+/// Which of the three lazy-SMT loops a recording belongs to.
 ///
 /// Counted separately because they are different deciders behind one route
 /// label: the linear loop decides each cube with the exact-rational
-/// `check_with_lra_within`, the nonlinear one with the sign-cell CAD. Summing
-/// them would produce a "theory check" total whose mean says nothing about
-/// either engine.
+/// `check_with_lra_within`, the nonlinear one with the sign-cell CAD, and the
+/// integer one re-solves a whole linear relaxation per round. Summing them
+/// would produce a "theory check" total whose mean says nothing about any of
+/// the three engines.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LazySmtLoop {
     /// [`crate::dpll_t::check_with_lra_dpll_within`], linear real arithmetic.
     Lra,
     /// `check_with_nra_dpll_within`, nonlinear real arithmetic over the CAD.
     Nra,
+    /// `crate::nia_linearize::solve_with_refinement`, the integer
+    /// **incremental-linearization** loop: each round re-solves the linear
+    /// relaxation and, on a spurious model, cuts it off with tangent-plane
+    /// lemmas.
+    ///
+    /// Added 2026-09-08 because it was the loop the `QF_NIA` files actually
+    /// spend their budget in and the only one of the three with no instrument
+    /// at all. The 2026-09-08 span-log sweep read "all 50 `QF_NIA` files enter
+    /// the refinement loop, 25 of them for exactly one round" off
+    /// [`LazySmtLoop::Nra`] — a *different* loop, reached from
+    /// `int_real_relax::refute_int_via_real_relaxation` before the nonlinear
+    /// integer route is entered at all. Two loops behind one span is how that
+    /// happened; three named arms is the fix.
+    Nia,
+}
+
+impl LazySmtLoop {
+    /// Index into [`LazySmtCounters::round_hist`]. `as usize` on the enum would
+    /// do the same thing and would silently follow a reordering of the
+    /// variants; this will not compile through one.
+    #[must_use]
+    pub const fn index(self) -> usize {
+        match self {
+            LazySmtLoop::Lra => 0,
+            LazySmtLoop::Nra => 1,
+            LazySmtLoop::Nia => 2,
+        }
+    }
+
+    /// The token a report line prints for this loop.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            LazySmtLoop::Lra => "lra",
+            LazySmtLoop::Nra => "nra",
+            LazySmtLoop::Nia => "nia",
+        }
+    }
+
+    /// The three loops in [`LazySmtLoop::index`] order, so a consumer that
+    /// walks the histograms cannot disagree with the recorder about which slot
+    /// is which.
+    pub const ALL: [LazySmtLoop; LAZY_SMT_LOOPS] =
+        [LazySmtLoop::Lra, LazySmtLoop::Nra, LazySmtLoop::Nia];
+}
+
+/// How many distinct lazy-SMT loops [`LazySmtCounters`] keeps a histogram for.
+pub const LAZY_SMT_LOOPS: usize = 3;
+
+/// Buckets in a [`RoundHistogram`]: bucket `0` is `<1 ms`, bucket `k` is
+/// `[2^(k-1), 2^k)` ms for `1 <= k <= 14`, and bucket `15` is the saturating
+/// tail `>= 2^14 ms = 16.4 s` — so the standard 24 s budget lands inside the
+/// range rather than at its edge.
+pub const ROUND_BUCKETS: usize = 16;
+
+/// The per-round wall-clock **distribution** of one refinement loop.
+///
+/// # Why a distribution and not a mean
+///
+/// A refinement loop's round count and its round cost need opposite fixes and,
+/// until this existed, looked identical from outside: a route that returned
+/// `unknown` after 24 s reported one number, `rounds`, and a consumer was left
+/// to guess whether that was four enormous rounds or forty thousand small ones.
+/// The 2026-09-08 span log went one step further and reported `loop_hist: null`
+/// with `loop_hist_available: false` — an honest refusal, and the gap this type
+/// closes.
+///
+/// The measurement that made it decisive: 25 of 50 `QF_NIA` files ran exactly
+/// one round of the [`LazySmtLoop::Nra`] loop, and the question "is that round
+/// enormous, or is the loop not iterating" had no answer in the data. It has a
+/// third answer, which a histogram shows at a glance — those 25 single rounds
+/// all land in the **same bucket**, because each is exactly the size of the
+/// slice that loop's caller was handed
+/// (`auto::INT_REAL_RELAX_BUDGET_SHARE`, 24 s / 6 = 4.00 s; 23 of the 25 fall
+/// between 3.993 and 4.009 s). A count cannot say that; a bucketed
+/// distribution says it without a per-round log.
+///
+/// # Clock-free
+///
+/// This type reads no clock. It is fed the per-stage durations the loops
+/// already measure (and only measure when counting is armed), summed over one
+/// round — so arming the histogram adds no clock read anywhere, and disarming
+/// it costs the same single thread-local `bool` read as the rest of this
+/// module.
+///
+/// # Fixed size
+///
+/// [`LazySmtCounters`] lives in a `Cell` and is `Copy`, so a histogram here
+/// cannot allocate. Log2 buckets give the full dynamic range from a
+/// microsecond round to a whole budget in 16 `u32`s.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct RoundHistogram {
+    buckets: [u32; ROUND_BUCKETS],
+    rounds: u32,
+    total_ns: u64,
+    max_ns: u64,
+    max_round: u32,
+}
+
+impl RoundHistogram {
+    /// The bucket a duration falls in; see [`ROUND_BUCKETS`].
+    #[must_use]
+    pub fn bucket_of(elapsed: Duration) -> usize {
+        let ms = elapsed.as_millis();
+        if ms == 0 {
+            return 0;
+        }
+        // `k` such that `2^(k-1) <= ms < 2^k`, clamped to the tail bucket.
+        let k = 128 - u128::leading_zeros(ms) as usize;
+        k.min(ROUND_BUCKETS - 1)
+    }
+
+    /// Files one completed round.
+    fn record(&mut self, elapsed: Duration) {
+        let slot = Self::bucket_of(elapsed);
+        self.buckets[slot] = self.buckets[slot].saturating_add(1);
+        self.rounds = self.rounds.saturating_add(1);
+        let ns = u64::try_from(elapsed.as_nanos()).unwrap_or(u64::MAX);
+        self.total_ns = self.total_ns.saturating_add(ns);
+        if ns > self.max_ns {
+            self.max_ns = ns;
+            self.max_round = self.rounds;
+        }
+    }
+
+    /// Rounds filed. **Not** the loop's round count: a round whose stages were
+    /// never timed (counting armed mid-loop) is not here, and the loop's own
+    /// `*_rounds` counter is the authority on how many rounds ran.
+    #[must_use]
+    pub const fn rounds(&self) -> u32 {
+        self.rounds
+    }
+
+    /// The per-bucket counts, bucket `0` first.
+    #[must_use]
+    pub const fn buckets(&self) -> &[u32; ROUND_BUCKETS] {
+        &self.buckets
+    }
+
+    /// The longest round filed.
+    #[must_use]
+    pub const fn max(&self) -> Duration {
+        Duration::from_nanos(self.max_ns)
+    }
+
+    /// Which round (1-based) was the longest.
+    #[must_use]
+    pub const fn max_round(&self) -> u32 {
+        self.max_round
+    }
+
+    /// Total time across filed rounds.
+    #[must_use]
+    pub const fn total(&self) -> Duration {
+        Duration::from_nanos(self.total_ns)
+    }
+
+    /// Whether anything was filed. A consumer must check this before quoting
+    /// any other method — an all-zero histogram and a loop that never ran are
+    /// the same bytes, and only the caller's `*_entries` can tell them apart.
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.rounds == 0
+    }
+
+    /// The non-empty buckets as `index:count`, comma-separated — the compact
+    /// form a `--trace` line and a span-log `loop_hist` both carry.
+    ///
+    /// Empty string when nothing was filed, so a reader never mistakes an
+    /// absent distribution for a distribution concentrated at zero.
+    #[must_use]
+    pub fn compact(&self) -> String {
+        let mut out = String::new();
+        for (i, &count) in self.buckets.iter().enumerate() {
+            if count == 0 {
+                continue;
+            }
+            if !out.is_empty() {
+                out.push(',');
+            }
+            let _ = write!(out, "{i}:{count}");
+        }
+        out
+    }
 }
 
 /// Counters for one query's lazy-SMT refinement loops.
@@ -122,6 +308,31 @@ pub struct LazySmtCounters {
     pub nra_entries: u64,
     /// Refinement rounds the nonlinear loop completed the propositional half of.
     pub nra_rounds: u64,
+    /// Calls into the integer incremental-linearization loop
+    /// ([`LazySmtLoop::Nia`]).
+    pub nia_entries: u64,
+    /// Refinement rounds that loop completed the relaxation solve of.
+    pub nia_rounds: u64,
+
+    /// Per-round wall-clock distribution, one histogram per loop, indexed by
+    /// `LazySmtLoop::index`. See [`RoundHistogram`] for why a distribution and
+    /// not a mean, and [`LazySmtCounters::hist`] for the accessor that keeps
+    /// the index honest.
+    ///
+    /// Filed from the stage clocks the loops already take, so this adds no
+    /// clock read; a round is filed when the NEXT round opens or when the
+    /// guard drops, and the round in flight at a watchdog kill is
+    /// [`LazySmtCounters::pending_round`] instead of being lost.
+    pub round_hist: [RoundHistogram; LAZY_SMT_LOOPS],
+    /// The stage time accumulated by the round that has not been filed yet.
+    ///
+    /// Non-zero in a mirror sample taken mid-round — which, on a watchdog kill,
+    /// is every sample that matters. It is a PARTIAL round: the stages that had
+    /// finished when the sample was taken, not the round's eventual cost.
+    pub pending_round: Duration,
+    /// Which loop [`Self::pending_round`] belongs to, by
+    /// `LazySmtLoop::index`. Meaningless when `pending_round` is zero.
+    pub pending_loop: usize,
 
     /// Time inside the round's propositional solve (`check_with_all_theories`,
     /// i.e. a full `sat-bv` check over the skeleton plus every blocking clause
@@ -242,6 +453,15 @@ pub struct LazySmtCounters {
     pub cube_simplex: Duration,
     /// Simplex fallback calls.
     pub cube_simplex_calls: u64,
+    /// Decisions that built the dense `n x n` Farkas multiplier matrix.
+    ///
+    /// The largest allocation on this route — `32*n^2` bytes, the one
+    /// `lra::fm_admission` exists to price after three `QF_LRA` files reached
+    /// 26.6 GB under an 8 GiB flag — and the one the simplex-first arm skips
+    /// entirely rather than merely pricing. Counted because "the matrix was not
+    /// built" is otherwise not observable from outside `lra::decide_within`,
+    /// and an ORDER that no test can see is an order the next refactor undoes.
+    pub cube_matrices: u64,
 
     /// What the online CDCL(T) LRA probe at the head of the linear loop did.
     ///
@@ -307,7 +527,7 @@ impl LazySmtCounters {
     /// [`LazySmtReading`].
     #[must_use]
     pub fn reading(&self) -> LazySmtReading {
-        if self.lra_entries == 0 && self.nra_entries == 0 {
+        if self.entries() == 0 {
             LazySmtReading::NotReached
         } else if self.rounds() == 0 {
             LazySmtReading::EnteredNoRounds
@@ -316,10 +536,50 @@ impl LazySmtCounters {
         }
     }
 
-    /// Rounds across both loops.
+    /// Entries across all three loops.
+    #[must_use]
+    pub fn entries(&self) -> u64 {
+        self.lra_entries
+            .saturating_add(self.nra_entries)
+            .saturating_add(self.nia_entries)
+    }
+
+    /// Rounds across all three loops.
     #[must_use]
     pub fn rounds(&self) -> u64 {
-        self.lra_rounds.saturating_add(self.nra_rounds)
+        self.lra_rounds
+            .saturating_add(self.nra_rounds)
+            .saturating_add(self.nia_rounds)
+    }
+
+    /// Entries into one loop.
+    #[must_use]
+    pub fn entries_of(&self, which: LazySmtLoop) -> u64 {
+        match which {
+            LazySmtLoop::Lra => self.lra_entries,
+            LazySmtLoop::Nra => self.nra_entries,
+            LazySmtLoop::Nia => self.nia_entries,
+        }
+    }
+
+    /// Rounds in one loop.
+    #[must_use]
+    pub fn rounds_of(&self, which: LazySmtLoop) -> u64 {
+        match which {
+            LazySmtLoop::Lra => self.lra_rounds,
+            LazySmtLoop::Nra => self.nra_rounds,
+            LazySmtLoop::Nia => self.nia_rounds,
+        }
+    }
+
+    /// One loop's per-round distribution.
+    ///
+    /// The accessor exists so no consumer indexes `round_hist` with a literal:
+    /// a slot chosen by hand is a slot that can disagree with the recorder, and
+    /// a histogram attributed to the wrong loop is worse than none.
+    #[must_use]
+    pub fn hist(&self, which: LazySmtLoop) -> &RoundHistogram {
+        &self.round_hist[which.index()]
     }
 
     /// Farkas certificates the core extraction had to derive a **second** time,
@@ -348,6 +608,38 @@ impl LazySmtCounters {
         self.skeleton_solve + self.theory_check + self.core_extraction
     }
 
+    /// The three per-round distributions in `key=value` shape, one group per
+    /// loop: `<loop>_hist=<bucket:count,...> <loop>_max_ms=<n>
+    /// <loop>_max_round=<n>`.
+    ///
+    /// A loop with nothing filed prints `<loop>_hist=-`, not an empty value: an
+    /// absent distribution and a distribution concentrated in bucket 0 are
+    /// different statements and a reader must not have to tell them apart by
+    /// whitespace.
+    #[must_use]
+    pub fn hist_line(&self) -> String {
+        let mut out = String::new();
+        for which in LazySmtLoop::ALL {
+            let hist = self.hist(which);
+            let name = which.label();
+            if !out.is_empty() {
+                out.push(' ');
+            }
+            let compact = if hist.is_empty() {
+                "-".to_owned()
+            } else {
+                hist.compact()
+            };
+            let _ = write!(
+                out,
+                "{name}_hist={compact} {name}_max_ms={} {name}_max_round={}",
+                hist.max().as_millis(),
+                hist.max_round(),
+            );
+        }
+        out
+    }
+
     /// One `;`-prefixed `--trace` line, in the `key=value` shape every other
     /// instrument in this tree prints.
     ///
@@ -357,6 +649,7 @@ impl LazySmtCounters {
     pub fn trace_line(&self) -> String {
         format!(
             "; lazy-smt reading={} lra_entries={} lra_rounds={} nra_entries={} nra_rounds={} \
+             nia_entries={} nia_rounds={} {} pending_round_ms={} \
              skeleton_ms={} skeleton_sat={} skeleton_unsat={} skeleton_unknown={} \
              theory_ms={} theory_sat={} theory_unsat={} theory_unknown={} \
              core_ms={} blocking_clauses={} blocking_literals={} atoms={} \
@@ -365,12 +658,16 @@ impl LazySmtCounters {
              cores_full_assignment={} accounted_ms={} \
              cube_flips={} cube_identical={} cube_decisions={} cube_collect_ms={} \
              cube_fm_ms={} cube_fm_declines={} cube_simplex_ms={} cube_simplex_calls={} \
-             online_probe={}",
+             cube_matrices={} online_probe={}",
             self.reading().label(),
             self.lra_entries,
             self.lra_rounds,
             self.nra_entries,
             self.nra_rounds,
+            self.nia_entries,
+            self.nia_rounds,
+            self.hist_line(),
+            self.pending_round.as_millis(),
             self.skeleton_solve.as_millis(),
             self.skeleton_sat,
             self.skeleton_unsat,
@@ -398,6 +695,7 @@ impl LazySmtCounters {
             self.cube_fm_declines,
             self.cube_simplex.as_millis(),
             self.cube_simplex_calls,
+            self.cube_matrices,
             self.online_probe.label(),
         )
     }
@@ -430,12 +728,26 @@ std::thread_local! {
 }
 
 /// The all-zero counters, so the thread-local can be a `const` initializer.
+/// A zeroed histogram, so [`zero_counters`] stays `const` (`Default` is not).
+const ZERO_HISTOGRAM: RoundHistogram = RoundHistogram {
+    buckets: [0; ROUND_BUCKETS],
+    rounds: 0,
+    total_ns: 0,
+    max_ns: 0,
+    max_round: 0,
+};
+
 const fn zero_counters() -> LazySmtCounters {
     LazySmtCounters {
         lra_entries: 0,
         lra_rounds: 0,
         nra_entries: 0,
         nra_rounds: 0,
+        nia_entries: 0,
+        nia_rounds: 0,
+        round_hist: [ZERO_HISTOGRAM; LAZY_SMT_LOOPS],
+        pending_round: Duration::ZERO,
+        pending_loop: 0,
         skeleton_solve: Duration::ZERO,
         skeleton_sat: 0,
         skeleton_unsat: 0,
@@ -461,6 +773,7 @@ const fn zero_counters() -> LazySmtCounters {
         cube_fm_declines: 0,
         cube_simplex: Duration::ZERO,
         cube_simplex_calls: 0,
+        cube_matrices: 0,
         online_probe: OnlineProbe::NotProbed,
     }
 }
@@ -577,6 +890,16 @@ impl Drop for LazySmtCountersGuard {
     /// only COMPLETE publish point this instrument has, since its fields
     /// accumulate across the whole query rather than being lifted at a stage.
     fn drop(&mut self) {
+        // The loop's LAST round closes here and nowhere else: it exits between
+        // its two halves, so no later `record_skeleton` will ever file it.
+        // Without this the histogram is systematically missing exactly the
+        // round that ended the loop — which, on a route bound by its budget, is
+        // the round that spent it.
+        COUNTERS.with(|c| {
+            let mut counters = c.get();
+            file_pending(&mut counters);
+            c.set(counters);
+        });
         ENABLED.with(|c| c.set(self.0));
         if ARMED.with(Cell::get) {
             crate::live_instruments::publish_live(
@@ -594,9 +917,28 @@ impl Drop for LazySmtCountersGuard {
 ///
 /// `None` means **collection was never enabled on this thread**. A `Some` is a
 /// real statement, and [`LazySmtCounters::reading`] says which one.
+///
+/// # The pending round is FOLDED IN here, and only here
+///
+/// A round is filed into its histogram when the next one opens or the guard
+/// drops, so a loop's LAST round has no closing event until the query ends.
+/// This is the *completed-query* read — every caller takes it after the solve
+/// returned — so folding is what the data actually says, and not folding made
+/// the common case report `nia_hist=-` on a loop that had just run a round
+/// (measured on `QF_NIA` file 34, 2026-09-08: one 6.7 s round, invisible).
+///
+/// [`live_lazy_smt_counters`] deliberately does NOT fold: that read happens
+/// *during* the solve, where the pending round is a PARTIAL round and filing it
+/// would put a lower bound into a bucket as if it were the round's cost. The
+/// two reads correspond exactly to the span log's `Complete` and `InFlight`
+/// samplings, which is why they differ here rather than at the call site.
 #[must_use]
 pub fn last_lazy_smt_counters() -> Option<LazySmtCounters> {
-    ARMED.with(Cell::get).then(|| COUNTERS.with(Cell::get))
+    ARMED.with(Cell::get).then(|| {
+        let mut counters = COUNTERS.with(Cell::get);
+        file_pending(&mut counters);
+        counters
+    })
 }
 
 /// Applies `f` to this thread's counters when collection is on; otherwise reads
@@ -613,6 +955,30 @@ fn record(f: impl FnOnce(&mut LazySmtCounters)) {
     });
 }
 
+/// Files the round now complete into its loop's histogram and clears the
+/// pending slot.
+///
+/// Called at the three points a round CLOSES on the live counters: the opening
+/// of the next one ([`record_skeleton`]), a fresh loop entry
+/// ([`record_entry`]), and the guard's drop. A loop that exits between its two
+/// halves closes its last round at none of the first two, which is why the
+/// guard's drop is one of them.
+///
+/// [`last_lazy_smt_counters`] applies it to a COPY as well, so a read taken
+/// while the guard is still alive — which is every `--trace` read — sees the
+/// finished round rather than an empty distribution beside a non-zero round
+/// count. [`live_lazy_smt_counters`] deliberately does not: there the pending
+/// round is partial.
+fn file_pending(c: &mut LazySmtCounters) {
+    if c.pending_round.is_zero() {
+        return;
+    }
+    let slot = c.pending_loop.min(LAZY_SMT_LOOPS - 1);
+    let pending = c.pending_round;
+    c.round_hist[slot].record(pending);
+    c.pending_round = Duration::ZERO;
+}
+
 /// Whether collection is on, so a caller can skip building a value that exists
 /// only to be recorded — here, so the loops do not read the clock when nothing
 /// is counting.
@@ -625,9 +991,13 @@ pub(crate) fn enabled() -> bool {
 /// produced.
 pub(crate) fn record_entry(which: LazySmtLoop, atoms: u64) {
     record(|c| {
+        // A nested entry (one loop calling into another) would otherwise file
+        // the outer loop's half-round against the inner one's histogram.
+        file_pending(c);
         match which {
             LazySmtLoop::Lra => c.lra_entries = c.lra_entries.saturating_add(1),
             LazySmtLoop::Nra => c.nra_entries = c.nra_entries.saturating_add(1),
+            LazySmtLoop::Nia => c.nia_entries = c.nia_entries.saturating_add(1),
         }
         c.atoms = c.atoms.saturating_add(atoms);
     });
@@ -657,9 +1027,15 @@ pub(crate) enum RoundOutcome {
 /// runs — a round that ends in the theory half still ran this one.
 pub(crate) fn record_skeleton(which: LazySmtLoop, elapsed: Duration, outcome: RoundOutcome) {
     record(|c| {
+        // The propositional solve OPENS a round, so this is where the previous
+        // one is complete and can be filed. See [`file_pending`].
+        file_pending(c);
+        c.pending_loop = which.index();
+        c.pending_round = elapsed;
         match which {
             LazySmtLoop::Lra => c.lra_rounds = c.lra_rounds.saturating_add(1),
             LazySmtLoop::Nra => c.nra_rounds = c.nra_rounds.saturating_add(1),
+            LazySmtLoop::Nia => c.nia_rounds = c.nia_rounds.saturating_add(1),
         }
         c.skeleton_solve += elapsed;
         match outcome {
@@ -674,6 +1050,7 @@ pub(crate) fn record_skeleton(which: LazySmtLoop, elapsed: Duration, outcome: Ro
 /// One round's theory decision on the chosen cube.
 pub(crate) fn record_theory(elapsed: Duration, outcome: RoundOutcome) {
     record(|c| {
+        c.pending_round += elapsed;
         c.theory_check += elapsed;
         match outcome {
             RoundOutcome::Sat => c.theory_sat = c.theory_sat.saturating_add(1),
@@ -739,6 +1116,7 @@ pub(crate) fn record_cube_stages(
     fm: Duration,
     fm_declined: bool,
     simplex: Option<Duration>,
+    matrix_built: bool,
 ) {
     record(|c| {
         c.cube_decisions = c.cube_decisions.saturating_add(1);
@@ -750,6 +1128,9 @@ pub(crate) fn record_cube_stages(
         if let Some(simplex) = simplex {
             c.cube_simplex += simplex;
             c.cube_simplex_calls = c.cube_simplex_calls.saturating_add(1);
+        }
+        if matrix_built {
+            c.cube_matrices = c.cube_matrices.saturating_add(1);
         }
     });
 }
@@ -768,6 +1149,7 @@ pub(crate) fn record_full_assignment_core() {
 /// One blocking clause learned, with its literal count.
 pub(crate) fn record_blocking(literals: u64, elapsed: Duration) {
     record(|c| {
+        c.pending_round += elapsed;
         c.blocking_clauses = c.blocking_clauses.saturating_add(1);
         c.blocking_literals = c.blocking_literals.saturating_add(literals);
         c.core_extraction += elapsed;
@@ -929,6 +1311,57 @@ mod tests {
     /// Off by default: with no guard, every recording site is a thread-local
     /// read and a return. A suite that only ever ran WITH a guard could not
     /// tell an opt-in instrument from an unconditional one.
+    /// A loop's LAST round has no closing event of its own, so the two reads
+    /// must disagree about it -- and the disagreement is the point.
+    ///
+    /// The in-flight read (the watchdog path) must show it PENDING and keep it
+    /// out of the buckets, because at that moment it is a partial round and
+    /// filing it would put a lower bound into a bucket as if it were the cost.
+    /// The completed read must show it FILED, because by then the query is over
+    /// and a round that ran is a round that ran. Without the fold every loop
+    /// that ends between its halves -- which on `QF_NIA` is most of them --
+    /// reports an empty distribution beside a non-zero round count.
+    #[test]
+    fn the_last_round_is_pending_in_flight_and_filed_once_the_query_is_over() {
+        let board = LiveInstruments::new();
+        let _live = install(&board);
+        let guard = LazySmtCountersGuard::enable();
+        record_entry(LazySmtLoop::Nia, 4);
+        record_skeleton(
+            LazySmtLoop::Nia,
+            Duration::from_millis(6_700),
+            RoundOutcome::Unknown,
+        );
+
+        let in_flight = live_lazy_smt_counters(&board).expect("a mirror is installed");
+        assert_eq!(
+            in_flight.value.pending_round,
+            Duration::from_millis(6_700),
+            "the round in flight must be reported as pending"
+        );
+        assert!(
+            in_flight.value.hist(LazySmtLoop::Nia).is_empty(),
+            "and must NOT be in a bucket yet: it is a lower bound, not a cost"
+        );
+
+        let completed = last_lazy_smt_counters().expect("armed");
+        let hist = completed.hist(LazySmtLoop::Nia);
+        assert_eq!(
+            hist.rounds(),
+            1,
+            "the completed read folds the last round in"
+        );
+        assert_eq!(hist.max(), Duration::from_millis(6_700));
+        assert_eq!(
+            hist.buckets()[13],
+            1,
+            "6700 ms is bucket 13 ([4096, 8192) ms); got {:?}",
+            hist.buckets()
+        );
+        assert_eq!(completed.nia_rounds, 1, "and the round count is unchanged");
+        drop(guard);
+    }
+
     #[test]
     fn recording_without_a_guard_records_nothing() {
         record_entry(LazySmtLoop::Lra, 3);

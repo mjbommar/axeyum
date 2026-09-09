@@ -500,6 +500,11 @@ pub fn solve(
     if let Some(decline) = memory_budget_decline(config, "solve entry") {
         return Ok(decline);
     }
+    // Arms the sampling watchdog for the whole call. The entry probe above only
+    // answers "did this query ARRIVE over budget"; the watchdog is what makes
+    // the field bind while a route allocates. Nested `solve`/`check_auto` calls
+    // see a nonzero install depth and leave the outermost budget alone.
+    let _memory_watchdog = crate::memory_budget::MemoryWatchdog::install(config);
     let is_quantified = has_quantifier(arena, assertions);
     if is_quantified && ground_subset_refutes_quantified_query(arena, assertions, config)? {
         return Ok(CheckResult::Unsat);
@@ -1140,6 +1145,12 @@ pub fn check_auto(
     if let Some(decline) = memory_budget_decline(config, "check_auto entry") {
         return Ok(decline);
     }
+    // Same reason as in `solve`, and it has to be here TOO rather than only
+    // there: `check_auto` is a front door in its own right (the SMT-LIB path,
+    // every `-p axeyum-solver` consumer that skips the quantifier ladder), so a
+    // watchdog armed only in `solve` would leave those callers exactly as
+    // unbounded as before.
+    let _memory_watchdog = crate::memory_budget::MemoryWatchdog::install(config);
     if let Some(attributed) = route_trace::with_outermost_dispatch(|outermost| {
         if !outermost {
             return None;
@@ -4687,11 +4698,21 @@ fn dispatch_nonlinear_int_tail(
         // resetting the clock.
         let remaining_config = config_with_remaining_deadline(config, deadline);
         let relax_config = int_real_relax_budget(&remaining_config);
-        if crate::int_real_relax::refute_int_via_real_relaxation(arena, assertions, &relax_config)?
-        {
+        let mut relax_why = None;
+        if crate::int_real_relax::refute_int_via_real_relaxation(
+            arena,
+            assertions,
+            &relax_config,
+            &mut relax_why,
+        )? {
             with_recorder(rec, |t| t.record_decided("int-real-relax", Verdict::Unsat));
             return Ok(CheckResult::Unsat);
         }
+        // Recorded on the DECLINE too. A trace attempt's `elapsed` runs from the
+        // previous recorded attempt, so without this row every second this route
+        // spends is charged to `nia-linearize` below — measured at 4.04 s of the
+        // 10.73 s that route was credited with on `QF_NIA` file 34, 2026-09-08.
+        record_nia_decline(rec, "int-real-relax", relax_why);
         if past_deadline(deadline) {
             return Ok(CheckResult::Unknown(timeout_reason(
                 "auto-dispatch timeout after nonlinear integer real relaxation",

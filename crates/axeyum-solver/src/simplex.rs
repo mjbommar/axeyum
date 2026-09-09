@@ -858,6 +858,17 @@ impl Tableau {
             if pivots.is_multiple_of(64) && past_deadline(deadline) {
                 break RunOutcome::Unknown;
             }
+            // The memory bound, at the same boundary as the wall-clock one and
+            // unconditional because it costs one relaxed atomic load rather
+            // than the `Instant::now()` this loop rations to one pivot in 64.
+            // Pivoting rewrites `Rational` cells in place, so it is not itself
+            // the growth site; what it is, is a place a query can spend seconds
+            // AFTER the process went over budget, which on the three files
+            // measured 2026-09-08 is where the limit was overshot by 1.9x
+            // before anything else looked.
+            if crate::memory_budget::watchdog_tripped() {
+                break RunOutcome::Unknown;
+            }
             if pivots >= budget {
                 // The deadline break above yields the SAME `RunOutcome::Unknown`,
                 // and `Status::Unknown`'s own doc admits it covers "the

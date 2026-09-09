@@ -449,3 +449,57 @@ fn nested_dispatch_does_not_flood_the_attribution() {
         CheckResult::Unknown(_) => {}
     }
 }
+
+/// A route that declines must still get a ROW, or its wall clock is charged to
+/// the next route that records.
+///
+/// A trace attempt's `elapsed` runs from the previous recorded attempt, so an
+/// unrecorded route is not merely missing from the trail — it inflates its
+/// successor. `int-real-relax` recorded only when it refuted, which on the
+/// committed `QF_NIA` parity list is never: measured 2026-09-08 over the first
+/// 50 files at a 24 s budget on idle `s6`, it holds 188.5 s of the population's
+/// 762.6 s (24.7%) and decides none of them, and every one of those seconds was
+/// previously printed under `nia-linearize`.
+///
+/// The fixture is a nonlinear-integer query whose real relaxation is
+/// SATISFIABLE, so the route is genuinely reached, genuinely runs, and
+/// genuinely declines — the exact shape that used to leave no row.
+#[test]
+fn a_declining_route_still_gets_a_row_so_its_time_is_not_charged_to_its_successor() {
+    let text = "\
+(set-logic QF_NIA)
+(declare-fun x () Int)
+(declare-fun y () Int)
+(assert (> x 1))
+(assert (> y 1))
+(assert (= (* x y) 6))
+(check-sat)
+";
+    let (plain, attributed, trace) = solve_both(text);
+    assert_eq!(plain, attributed, "attribution must not move the verdict");
+    let rows: Vec<&str> = trace
+        .attempts()
+        .iter()
+        .map(|a| a.route)
+        .filter(|r| *r == "int-real-relax")
+        .collect();
+    assert_eq!(
+        rows.len(),
+        1,
+        "the real-relaxation refuter ran and declined, so it must appear exactly \
+         once in the trail; got {}",
+        trace.to_json_with_timing()
+    );
+    let attempt = trace
+        .attempts()
+        .iter()
+        .find(|a| a.route == "int-real-relax")
+        .expect("just asserted present");
+    // Declined, and not with the catch-all: this query's relaxation is real-SAT,
+    // which is a different statement from "the CAD ran out of clock", and the
+    // trail has to be able to tell a reader which one it was.
+    assert!(
+        matches!(attempt.outcome, RouteOutcome::Declined(_)),
+        "a route that did not refute must be recorded as declining, got {attempt}"
+    );
+}

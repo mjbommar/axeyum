@@ -54,6 +54,15 @@ mod lazy_smt_counters;
 pub mod live_instruments;
 mod memory_budget;
 mod model;
+
+/// The process's peak resident set (`VmHWM` on Linux), or `None` where the
+/// target has no mechanism.
+///
+/// Exported so a harness can put a run's memory cost in its own artifacts
+/// beside wall time and deterministic work. Before this, the only place a
+/// solver run's memory appeared was `dmesg` after the kernel had killed it —
+/// which is the one place a span log can never read.
+pub use memory_budget::peak_resident_bytes;
 mod proof;
 mod sat_bv_backend;
 
@@ -224,6 +233,7 @@ macro_rules! full_modules {
         mod uf_fmf;
         mod ufbv_finite;
         mod ufbv_online;
+        mod uflia_interface;
         mod uflia_interpolant;
         mod uflia_online;
         mod uflra_interpolant;
@@ -1483,6 +1493,11 @@ macro_rules! full_exports {
         };
         #[doc(hidden)]
         pub use ufbv_online::{check_qf_aufbv_online_cdclt, check_qf_ufbv_online_cdclt};
+        pub use uflia_interface::{
+            MAX_INTERFACE_PAIRS, UfliaInterfaceCounters, UfliaInterfaceCountersGuard,
+            UfliaInterfacePolicy, UfliaInterfacePolicyGuard, care_graph_pairs,
+            last_uflia_interface_counters, uflia_interface_policy,
+        };
         #[doc(hidden)]
         pub use uflia_interpolant::{
             UfliaInterpolantCertificate, uflia_interpolant, uflia_interpolant_certified,

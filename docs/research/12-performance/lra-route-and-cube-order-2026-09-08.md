@@ -194,6 +194,62 @@ relaxed candidate against the original int↔real coupling. Their verdict is
 `unknown` in every arm; what changed is that the relaxation now produces a
 candidate in 80 ms instead of never producing one in 24 s.
 
+## Composed with the memory-watchdog lane
+
+This branch and the `--memory-limit-mb` lane (`f833198a3`, `79a7c5297`,
+`8cfe1fd6e`) both rewrote `lra::decide_within`, and the merge is worth reading
+because the resolution is better than either side.
+
+That lane found three `QF_LRA` files reaching **26.6 GB under an 8 GiB flag**
+and named the cause: `decide_within` tags every collected constraint with a
+dense unit multiplier vector before Fourier–Motzkin runs — an `n x n` matrix of
+`Rational`, `32*n^2` bytes — which `MAX_FM_CONSTRAINTS` never bounded because it
+prices the *derived* system inside `eliminate`, i.e. after the runaway. Their
+fix prices it up front (`fm_admission`) and refuses.
+
+This lane found that the elimination that matrix exists for decides **nothing**
+on this population.
+
+Put together, the `simplex_first` check goes **above both** `fm_admission` and
+the tagging loop. When it fires, the largest allocation on the route is not
+merely priced — it is never made. Neither lane wrote that ordering; it falls out
+of the two together. Their gate still guards the path that does run, and
+`simplex_admission` is checked before the simplex-first arm for exactly the
+reason their second commit exists (the simplex's own dense
+`n x (nvars + n)` tableau was the *second* unpriced matrix).
+
+Three details the merge had to get right, none of them textual:
+
+1. **No double solve.** With the simplex-first arm above it, the
+   `fm_admission`-refusal branch and the `Feasibility::TimedOut` arm would each
+   call `simplex_fallback` a second time on the identical system. Both are now
+   guarded on `stages.simplex.is_none()` — the same shape as the 48.6%-of-budget
+   double solve removed from `dpll_t` earlier the same day.
+2. **`Feasibility::OutOfMemory` is untouched**, including its comment on why the
+   simplex retry is deliberately not attempted after a memory decline. It is
+   also not an FM *decline* in the counter's sense: it hands the cube to nobody.
+3. **A `MemoryLimit` decline does not fall through.** This lane's
+   `fall_through_on_cheap_decline` sends a probe decline that spent none of the
+   budget to the offline loop. A memory decline is sticky and means the *process*
+   is over budget, so falling through would start a second full search with
+   nothing left to spend — the same reasoning as their `OutOfMemory` arm.
+   `dpll_t` now ends the query on `UnknownKind::MemoryLimit` whatever the policy
+   arm says.
+
+### The ordering is pinned by a test, not by a comment
+
+`lra::cube_order_tests` asserts on the counters, because the verdict cannot see
+the difference: moving the simplex-first arm below the tagging leaves the answer
+identical *and* leaves the elimination unrun, so `cube_fm_ms` alone does not
+catch it. `cube_matrices` — incremented at the tagging loop itself — does.
+
+**Mutation control, run:** moving the arm below the tagging took the
+`-p axeyum-solver --lib --features full` sweep from `1622 passed; 0 failed` to
+`1621 passed; 1 failed`, and the one failure is
+`a_large_system_is_decided_without_entering_fourier_motzkin` on its
+`cube_matrices` assertion. The below-threshold test is the positive control: it
+requires `cube_matrices == 1`, so the pair cannot both pass by counting nothing.
+
 ## Reproducing
 
 ```sh

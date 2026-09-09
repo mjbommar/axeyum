@@ -27,25 +27,6 @@ use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError};
 
-/// Tries to refute an integer query by its **real relaxation**: build the
-/// faithful real reinterpretation of every assertion and run [`crate::check_with_nra`]
-/// on it. Returns `Ok(true)` only when the relaxation is **provably** `unsat`
-/// (which transfers soundly to the original integer query, integers ⊆ reals);
-/// `Ok(false)` when the relaxation could not be built (a construct with no clean
-/// real analogue) or did not refute.
-///
-/// Soundness: only `Unsat` of the relaxation ever yields `true`. A real model is
-/// never returned (and need not be integral), so this can never produce a wrong
-/// `sat` and never strengthens a currently-decided result — it only turns a prior
-/// `unknown` into `unsat` for the real-refutable integer cases.
-///
-/// The relaxation declares fresh `!relax.*` real symbols and is only used to
-/// derive `unsat`, so it runs on an isolated **clone** of the arena: nothing
-/// leaks back into the caller's arena or any model.
-///
-/// # Errors
-///
-/// Returns [`SolverError`] from the underlying NRA engine.
 /// The faithful real reinterpretation of an integer query: a scratch arena and
 /// the relaxed assertions, or `None` when some assertion has no clean real
 /// analogue (the caller must then abandon the whole relaxation rather than
@@ -85,18 +66,76 @@ pub(crate) fn relax_int_assertions_to_real(
     Ok(Some((scratch, relaxed)))
 }
 
+/// Tries to refute an integer query by its **real relaxation**: build the
+/// faithful real reinterpretation of every assertion and run [`crate::check_with_nra`]
+/// on it. Returns `Ok(true)` only when the relaxation is **provably** `unsat`
+/// (which transfers soundly to the original integer query, integers ⊆ reals);
+/// `Ok(false)` when the relaxation could not be built (a construct with no clean
+/// real analogue) or did not refute.
+///
+/// Soundness: only `Unsat` of the relaxation ever yields `true`. A real model is
+/// never returned (and need not be integral), so this can never produce a wrong
+/// `sat` and never strengthens a currently-decided result — it only turns a prior
+/// `unknown` into `unsat` for the real-refutable integer cases.
+///
+/// The relaxation declares fresh `!relax.*` real symbols and is only used to
+/// derive `unsat`, so it runs on an isolated **clone** of the arena: nothing
+/// leaks back into the caller's arena or any model.
+///
+/// # Errors
+///
+/// Returns [`SolverError`] from the underlying NRA engine.
+///
+/// # Why `why` is not optional
+///
+/// This route is called from the dispatcher's nonlinear-integer tail and, until
+/// 2026-09-08, recorded a [`crate::RouteTrace`] entry **only when it refuted**.
+/// A trace attempt's `elapsed` is the time since the PREVIOUS recorded attempt,
+/// so every second this route spent declining was charged to the next route
+/// that did record — `nia-linearize`. Measured 2026-09-08 on file 34 of
+/// `bench-results/parity-lists/QF_NIA.txt` at commit `5d406a12b`, 24 s budget,
+/// idle `s7`: the trail reported `nia-linearize` at 10.73 s of a 10.86 s run,
+/// and 4.04 s of that was this route — 37% of a route's attributed budget spent
+/// by a route with no row. It was invisible in exactly the population a sweep
+/// was reading.
+///
+/// `why` is a **write-only** telemetry channel; the verdict never depends on
+/// it. It is a required parameter rather than a second entry point for the
+/// reason the registry states about its own `basis` field: a channel that can
+/// be omitted is omitted, and the omission is what made this route invisible.
+///
+/// # Errors
+///
+/// Returns [`SolverError`] from the underlying NRA engine.
 pub fn refute_int_via_real_relaxation(
     arena: &TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    why: &mut Option<crate::route_trace::DeclineReason>,
 ) -> Result<bool, SolverError> {
     let Some((mut scratch, relaxed)) = relax_int_assertions_to_real(arena, assertions)? else {
+        *why = Some(crate::route_trace::DeclineReason::NotApplicable);
         return Ok(false);
     };
-    Ok(matches!(
-        crate::nra::check_with_nra(&mut scratch, &relaxed, config)?,
-        CheckResult::Unsat
-    ))
+    match crate::nra::check_with_nra(&mut scratch, &relaxed, config)? {
+        CheckResult::Unsat => Ok(true),
+        // A `sat` over the reals says NOTHING about the integers, so this is a
+        // decline and not a verdict — and it is a different statement from the
+        // CAD running out of clock, which is why the two are not merged. Which
+        // of them a file reports is what says whether this route's budget share
+        // is buying anything on that file.
+        CheckResult::Sat(_) => {
+            *why = Some(crate::route_trace::DeclineReason::VerifierRejected(
+                "the real relaxation is satisfiable, which does not transfer to the integers"
+                    .to_owned(),
+            ));
+            Ok(false)
+        }
+        CheckResult::Unknown(reason) => {
+            *why = Some(crate::route_trace::DeclineReason::from_unknown(&reason));
+            Ok(false)
+        }
+    }
 }
 
 /// Orders the two operands of a commutative operator by interned `TermId` index so
