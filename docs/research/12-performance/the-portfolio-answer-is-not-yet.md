@@ -1,4 +1,47 @@
-# The portfolio: not yet, one live example, and a method that could not answer it
+# The portfolio: NO — 1 file in 176, on a finished measurement
+
+**CLOSED 2026-09-08.** The title below said "not yet" while the sweeps were
+partial. They finished. The answer is no, and the reason is not the one the
+first negative gave.
+
+## The finished table — seven divisions, solo arm, one route alone at 24 s
+
+| division | files | ladder wins | ladder loses | decided alone | none |
+|---|---:|---:|---:|---:|---:|
+| QF_ABV | 19 | 7 | 12 | 2 | 10 |
+| QF_BV | 6 | 0 | 6 | 0 | 6 |
+| QF_LRA | 54 | 5 | 49 | 0 | 49 |
+| QF_NIA | 30 | 3 | 27 | 0 | 27 |
+| QF_UF | 38 | 35 | 3 | 0 | 3 |
+| QF_UFLIA | 58 | 11 | 47 | 6 | 41 |
+| UF | 32 | 0 | 32 | 0 | 32 |
+| **total** | **237** | **61** | **176** | **8** | **168** |
+
+**What the eight prizes ARE decides this, not that there are eight:**
+
+- **5** are `euf-online` deciding in **1-10 ms** — the `check_auto` normalization
+  defect. Not a scheduling problem; a route that is never admitted.
+- **2** are `qf-bv` at 567 ms and 611 ms — a one-second reserve reaches both.
+- **1** is the genuine portfolio case.
+
+**One file in 176. 0.6%. It does not pay for a concurrent dispatcher.**
+
+The decisive detail: the count was **1 at 35 files and 1 at 58** when QF_UFLIA's
+sweep finished. It was closed by the sweep that raised it, not by an argument.
+
+## The mechanism is real and stays on record
+
+`hash_sat_08_05.smt2`: `uf-arith-lazy-overbound` takes 18,006 ms — exactly
+24000 x 3/4 — fails, and hands the winner the 5.5 s left. `uflia-online` alone
+decides it in 18,380 ms. **Two routes each needing ~18 s of one 24 s clock: no
+split serves both, two cores do trivially.**
+
+That refutes the 2026-09-07 reason for the original negative ("more cores hand
+the binder nothing") **even though it reaches the same conclusion.** The first
+negative was right by luck; this one is right by measurement, and the difference
+matters if the population ever changes.
+
+
 
 Measured 2026-09-08. Records a correction to my own framing AND a correction to
 the correction, because both matter.
