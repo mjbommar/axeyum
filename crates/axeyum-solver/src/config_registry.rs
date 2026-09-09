@@ -6115,9 +6115,25 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
-        justification: undated("doc comment"),
-        note: "The \"never hang\" ceiling: `egraph_ground_limit()` returns `CheckResult::Unknown` with detail \"e-matching: ground-term count budget exhausted\" (qinst_egraph.rs:1360-1361, 1692-1697) even with no wall-clock budget configured. Also the base of MAX_JOINED_SUBSTITUTIONS_PER_ROUND (`= MAX_GROUND_TERMS`) and INVENTION_GROUND_CEILING (`= MAX_GROUND_TERMS / 2`), so all three move together.",
+        env_override: Some("AXEYUM_QINST_GROUND"),
+        justification: dated(
+            "docs/research/12-performance/uf-quantified-loss-attribution-2026-09-09.md",
+            "2026-09-09",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/qinst_egraph.rs",
+                "GroundBudget",
+            )],
+            &[
+                doc("docs/research/12-performance/uf-quantified-loss-attribution-2026-09-09.md"),
+                live("GroundBudget", "crates/axeyum-solver/src/qinst_egraph.rs"),
+                live(
+                    "floodprobe_cap_census",
+                    "crates/axeyum-solver/src/qinst_egraph.rs",
+                ),
+            ],
+        ),
+        note: "The \"never hang\" ceiling: `egraph_ground_limit()` returns `CheckResult::Unknown` with detail \"e-matching: ground-term count budget exhausted\" even with no wall-clock budget configured. It is now the `ceiling` of `GroundBudget::SHIPPED`, and the use sites read `ground_budget()`, so the value is A/B-able through `AXEYUM_QINST_GROUND=<n>` without a patch; `MAX_JOINED_SUBSTITUTIONS_PER_ROUND` (`= ceiling`) and `INVENTION_GROUND_CEILING` (`= ceiling / 2`) move with it, which `shipped_ground_budget_is_the_scaled_shipped_ceiling` pins. MEASURED 2026-09-09 on `bench-results/parity-losses-20260908/UF.txt` (32 files, 24 s / 8 GiB, s4): 24 of 32 reach an e-matching fixpoint at exactly this ceiling, so it IS the operative stop for the division -- and raising it is still the wrong lever, because `AXEYUM_FLOODPROBE=1`'s cap census reports ZERO conflicting and ZERO unit clauses among the ~8100 admitted instances on every one of those files, with the large majority already TRUE under the current congruence and generation >= 2. The ceiling is full of instances that decide nothing; a bigger ceiling holds more of them. The bound this division needs is on instance SELECTION, which no value of this field expresses.",
     },
     ConfigEntry {
         name: "MAX_INSTANTIATION_ROUNDS",
@@ -6360,6 +6376,19 @@ pub static REGISTRY: &[ConfigEntry] = &[
         env_override: None,
         justification: undated("doc comment"),
         note: "Mid-loop (extended-cadence) ground checks run under `remaining / divisor` of the shared budget via `fractional_deadline`, so one large mid-loop check cannot starve later rounds or the final check.",
+    },
+    ConfigEntry {
+        name: "ONLINE_QUANTIFIER_LIMITS",
+        module: "crates/axeyum-solver/src/qinst_egraph.rs",
+        value: "variables 65_536 / clauses 262_144 / literals 262_144",
+        unit: "Boolean variables, clauses, and literals in the retained CDCL(T) session",
+        protects: Protects::Memory,
+        on_exceed: OnExceed::DeclineRoute,
+        signal: Signal::None,
+        guarded_by: "the accelerator is an OPTIMIZATION: `OnlineQuantifierClauseSession::new` returns `None` past any of the three and the caller falls back to the established fresh quantifier-free refutation check, which decides the same conjunction -- so a silent crossing costs a warm session, never a verdict (ADR-0119)",
+        env_override: None,
+        justification: undated("doc comment + ADR-0119"),
+        note: "Found UNREGISTERED on 2026-09-09 while attributing the `UF` loss population. It is the only constant in `qinst_egraph.rs` (31 of them) that this registry did not carry, and the reason is mechanical rather than an oversight: it is a STRUCT-valued constant (`OnlineQuantifierLimits`), and the coverage scanner in this file matches only scalar and `Duration` types, so `every_governing_constant_is_registered` could never have named it even had the file been in `GOVERNED_FILES`. That blind spot is the finding; this entry closes the instance. Exceeding any of the three disables only the retained-CDCL(T) accelerator (ADR-0119) -- the established fresh-QF route stays live, so a crossing costs speed and never a verdict.",
     },
     ConfigEntry {
         name: "ROUND_GROWTH_HEADROOM",

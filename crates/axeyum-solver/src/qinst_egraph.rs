@@ -206,17 +206,27 @@ pub fn ground_budget() -> GroundBudget {
     if let Some(budget) = GROUND_BUDGET_OVERRIDE.with(std::cell::Cell::get) {
         return budget;
     }
-    *RESOLVED.get_or_init(|| {
-        match std::env::var("AXEYUM_QINST_GROUND")
-            .ok()
-            .and_then(|raw| raw.trim().parse::<usize>().ok())
-        {
-            Some(ceiling) if ceiling > 0 && ceiling != MAX_GROUND_TERMS => {
-                GroundBudget::from_ceiling("env", ceiling)
-            }
-            _ => GroundBudget::SHIPPED,
+    *RESOLVED
+        .get_or_init(|| parse_ground_budget(std::env::var("AXEYUM_QINST_GROUND").ok().as_deref()))
+}
+
+/// The arm `AXEYUM_QINST_GROUND`'s raw value selects.
+///
+/// Split out of [`ground_budget`] so the degradation rules are testable: the
+/// resolver caches in a `OnceLock` and reads a process-wide variable, so a test
+/// that went through it could only ever exercise the arm that process started
+/// with — which is how a "degrades to shipped" promise stays untested and then
+/// stops being true.
+fn parse_ground_budget(raw: Option<&str>) -> GroundBudget {
+    match raw.and_then(|raw| raw.trim().parse::<usize>().ok()) {
+        // `0` resolves to SHIPPED rather than to an unbounded loop: the "never
+        // hang" ceiling is the one property of this bound that is not a
+        // preference, so the override cannot switch it off.
+        Some(ceiling) if ceiling > 0 && ceiling != MAX_GROUND_TERMS => {
+            GroundBudget::from_ceiling("env", ceiling)
         }
-    })
+        _ => GroundBudget::SHIPPED,
+    }
 }
 
 /// Flood-regime budget for one round's *deferred* (undetermined-clause)
@@ -2620,6 +2630,26 @@ impl OnlineQuantifierClauseSession {
             || clauses.len() > limits.clauses
             || literal_count > limits.literals
         {
+            // Records the crossing under the registry key and in the unit the
+            // entry declares, so a `--trace` run says which of the three
+            // ceilings disabled the retained accelerator and by how much.
+            // Required by `config_registry`'s coverage ratchet: the entry is
+            // `Signal::None` -- declining here is invisible to the caller,
+            // which sees only the (correct) fresh quantifier-free route -- so
+            // without a record the crossing is unattributable. The three share
+            // one key because they share one constant and one decline.
+            let (observed, bound) = if encoder.var_count > limits.variables {
+                (encoder.var_count, limits.variables)
+            } else if clauses.len() > limits.clauses {
+                (clauses.len(), limits.clauses)
+            } else {
+                (literal_count, limits.literals)
+            };
+            crate::config_registry::note_crossed(
+                "crates/axeyum-solver/src/qinst_egraph.rs::ONLINE_QUANTIFIER_LIMITS",
+                observed as u64,
+                bound as u64,
+            );
             return None;
         }
         let clauses = clauses
@@ -6875,25 +6905,47 @@ mod tests {
     /// query.
     #[test]
     fn ground_budget_override_is_scoped_to_the_guard() {
+        // The arm is compared WHOLE against the value that was set, not
+        // re-derived field by field: what the ratios are is
+        // `shipped_ground_budget_is_the_scaled_shipped_ceiling`'s question, and
+        // duplicating it here would make two tests die for one defect and
+        // neither of them die for a scoping one.
+        let wide = GroundBudget::from_ceiling("test-wide", 4 * MAX_GROUND_TERMS);
         let outside = ground_budget();
+        assert_ne!(wide, outside, "the override must differ from the default");
         {
-            let _guard = GroundBudgetGuard::set(GroundBudget::from_ceiling(
-                "test-wide",
-                4 * MAX_GROUND_TERMS,
-            ));
-            let inside = ground_budget();
-            assert_eq!(inside.name, "test-wide");
-            assert_eq!(inside.ceiling, 4 * MAX_GROUND_TERMS);
-            // The derived ceilings move WITH the ceiling; that they always have
-            // is the reason this is one object and not three constants.
-            assert_eq!(inside.join_ceiling, 4 * MAX_GROUND_TERMS);
-            assert_eq!(inside.invention_ceiling, 2 * MAX_GROUND_TERMS);
+            let _guard = GroundBudgetGuard::set(wide);
+            assert_eq!(ground_budget(), wide, "the guard's arm must be in force");
         }
         assert_eq!(ground_budget(), outside, "the guard must restore on drop");
     }
 
     /// Nested guards restore the ENCLOSING arm, not the process default — the
     /// property that makes a per-file A/B inside a suite honest.
+    /// Every way of writing the override badly resolves to the shipped arm,
+    /// and `0` in particular cannot switch off the "never hang" ceiling.
+    #[test]
+    fn a_bad_ground_budget_override_degrades_to_the_shipped_arm() {
+        for raw in [
+            None,
+            Some(""),
+            Some("  "),
+            Some("nope"),
+            Some("-1"),
+            Some("0"),
+            Some("8192"),
+        ] {
+            assert_eq!(
+                parse_ground_budget(raw),
+                GroundBudget::SHIPPED,
+                "AXEYUM_QINST_GROUND={raw:?} must resolve to the shipped arm"
+            );
+        }
+        let wide = parse_ground_budget(Some(" 32768 "));
+        assert_eq!(wide.name, "env");
+        assert_eq!(wide, GroundBudget::from_ceiling("env", 32_768));
+    }
+
     #[test]
     fn nested_ground_budget_guards_restore_the_enclosing_arm() {
         let outer = GroundBudget::from_ceiling("outer", 512);
