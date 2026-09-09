@@ -3674,3 +3674,55 @@ fn the_check_arguments_put_the_positionals_before_the_greedy_flag() {
         "the greedy flag must follow both positionals"
     );
 }
+
+/// **The exit criterion of roadmap item 0.2**, as a standing test: take a
+/// shipped proof Carcara reports `valid`, rename ONE rule to `hole`, and the
+/// gate must reject it.
+///
+/// `hole` is Carcara's own unconditional-accept rule
+/// (`carcara/src/checker/shared.rs:405-409` returns `Ok(())` without looking at
+/// the step). The CLI therefore prints `holey` and **exits 0**, so this proof is
+/// accepted by every gate that reads `$?` and by every gate that greps for the
+/// substring `valid`. It is rejected only by reading the verdict LINE.
+///
+/// Only the rule name differs from `shipped_abv_row_same_proof_is_accepted_by_
+/// carcara` above, so the verdict difference is attributable to the rename and
+/// to nothing else.
+#[test]
+fn a_shipped_proof_with_one_rule_renamed_to_hole_is_rejected() {
+    let Some(bin) = carcara_bin() else {
+        eprintln!("[skip] carcara binary not found; build references/carcara to enable");
+        return;
+    };
+    let mut arena = TermArena::new();
+    let neq = row_same_diseq(&mut arena);
+    let mut proof = axeyum_solver::prove_qf_abv_unsat_alethe(&arena, &[neq])
+        .expect("the shipped ROW-same emitter covers this shape");
+    let mut renamed = false;
+    for cmd in &mut proof {
+        if let AletheCommand::Step { rule, .. } = cmd
+            && rule == "arrays_idx"
+        {
+            *rule = "hole".to_owned();
+            renamed = true;
+        }
+    }
+    assert!(renamed, "expected an `arrays_idx` step to rename");
+
+    let report = carcara_output(&bin, "abv_row_same_holed", ROW_SAME_ONLY_SMT2, &proof);
+    assert_eq!(
+        carcara_verdict(&report),
+        CarcaraVerdict::Holey,
+        "one rule renamed to `hole` must make Carcara report `holey`, got:\n{report}"
+    );
+    assert_ne!(
+        carcara_verdict(&report),
+        CarcaraVerdict::Valid,
+        "a proof whose step Carcara declined to check is not an externally-checked artifact"
+    );
+    // And the reason a verdict is needed at all: Carcara is perfectly happy.
+    assert!(
+        !report.lines().any(|l| l.trim() == "invalid"),
+        "expected Carcara to ACCEPT the holed proof (that is the trap), got:\n{report}"
+    );
+}
