@@ -9263,6 +9263,119 @@ SUITES["admission-crossing-numbers"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `nra-fbbt-checker` — the Farkas check that stands between an untrusted
+# interval propagation and a NEW `unsat` producer.
+#
+# `nra_fbbt::derive_bounds` proposes constant bounds on a nonlinear component's
+# variables; `nra_fbbt::verify` is the only thing that lets one through, and a
+# bound tighter than the linear atoms entail is a WRONG UNSAT. So every guard in
+# `verify` is soundness-critical, and each one below has its own killer test —
+# the point being that deleting any single guard must leave a test red, not that
+# some test somewhere goes red.
+#
+# The rejection REASON is asserted in each test, not just `is_err()`. Without
+# that, several guards share one killer: a certificate that violates two guards
+# is rejected by whichever runs first, and deleting the second changes nothing
+# observable. Asserting the reason makes the guards separable.
+# --------------------------------------------------------------------------
+
+SUITES["nra-fbbt-checker"] = (
+    "crates/axeyum-solver/src/nra_fbbt.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "nra_fbbt"),
+        "nra-fbbt-checker",
+    ),
+    [
+        (
+            # THE guard. Without it a bound tighter than the facts entail is
+            # accepted, and the component it bounds is refuted on a claim
+            # nothing supports.
+            "a bound tighter than the facts entail is refused",
+            "    if residual < Rational::zero() {",
+            "    if false {",
+        ),
+        (
+            "a nonpositive Farkas multiplier is refused",
+            "        if lambda <= Rational::zero() {",
+            "        if false {",
+        ),
+        (
+            "an uncancelled variable is refused",
+            "        if a != b {",
+            "        if false {",
+        ),
+        (
+            "an unjustified strict bound is refused",
+            "    if claim.strict && !combo_strict && residual <= Rational::zero() {",
+            "    if false {",
+        ),
+        (
+            "an empty certificate is refused",
+            "    if cert.is_empty() {",
+            "    if false {",
+        ),
+        (
+            "a citation outside the pool is refused",
+            "        if idx >= pool.len() {",
+            "        if idx >= usize::MAX {",
+        ),
+        (
+            "a fact cited twice is refused",
+            "        if !seen.insert(idx) {",
+            "        if !seen.insert(idx) && false {",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `nra-fbbt-route` — the same route end to end.
+#
+# The route's negative tests are all over SATISFIABLE queries whose
+# satisfiability rests on a derived bound being no tighter than the linear atoms
+# entail. Two mutations below, and they say different things:
+#
+# - reversing the derived bound's SENSE is caught by `verify` (every bound is
+#   dropped, `rejected` goes nonzero and the debug assertion in the glue fires),
+#   so what dies is the POSITIVE control — the checker did its job and no wrong
+#   verdict appeared;
+# - the combination of a too-tight derivation with GUARD 3 deleted is what a
+#   checker without its residual test would do, and it kills the ADVERSARIAL
+#   test with a wrong `unsat` on a satisfiable query. That is the mutation that
+#   proves the adversarial test is not vacuous. It is a two-anchor edit, which
+#   this harness's single-anchor mutations cannot express; it is recorded with
+#   its measured result in
+#   `docs/research/12-performance/nra-fbbt-derived-bounds-2026-09-09.md`.
+# --------------------------------------------------------------------------
+
+SUITES["nra-fbbt-route"] = (
+    "crates/axeyum-solver/src/nra_fbbt.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--test", "nra_fbbt_route"),
+        "nra-fbbt-route",
+    ),
+    [
+        (
+            # The derivation, weakened: every bound proposed on the wrong side
+            # of the isolated variable. `verify` refuses them all, so the route
+            # produces no refutation and the positive control dies -- which is
+            # the checker working, not failing.
+            "the propagation's bound sense is load-bearing",
+            "    let (side, value) = if a_k > Rational::zero() {",
+            "    let (side, value) = if a_k < Rational::zero() {",
+        ),
+        (
+            # The component-size policy is what puts this route on the cheap
+            # deciders at all. Zeroing it turns the route off for every shape.
+            "the nonlinear component reaches the cheap deciders",
+            "        max_component_vars: 2,",
+            "        max_component_vars: 0,",
+        ),
+    ],
+)
+
+
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))

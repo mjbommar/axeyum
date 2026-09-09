@@ -5581,6 +5581,58 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Bounds the cheap sign/zero and threshold-1 pre-refutation passes so a capped instance declines promptly even with no global timeout. Only `Unsat` is acted on, so a timeout here can never produce a wrong verdict.",
     },
     ConfigEntry {
+        name: "FBBT_DEFAULT",
+        module: "crates/axeyum-solver/src/nra_fbbt.rs",
+        value: "FbbtPolicy::DERIVED_BOUNDS",
+        unit: "policy arm for the derived-bound refutation route",
+        protects: Protects::Completeness,
+        on_exceed: OnExceed::DeclineRoute,
+        signal: Signal::None,
+        guarded_by: "the route can produce exactly ONE verdict and it is `unsat`. Its success type `nra_fbbt::Refutation` carries three `usize` counters and no model, has no `Sat` or `Unknown` variant to construct, and `Refutation::into_check_result` has a constant body -- so a decider's `ComponentOutcome::Sat` bindings have nowhere to go and reporting `sat` would take a new variant plus a new branch, not a forgotten `return`. Everything the route hands a decider is entailed by the query: the component's nonlinear atoms and the in-scope linear atoms are a SUBSET of it, and every derived bound carries a Farkas certificate that `nra_fbbt::verify` re-checks (`target - sum(lambda_j * p_j)` must be a nonnegative constant with every `lambda_j > 0`) against a pool whose every entry was itself checked before being appended. The seven guards in that checker are mutation-controlled as the `nra-fbbt-checker` suite (each deletion killed only its own tests, 7 of 7); the route's own adversarial test dies with `got Unsat` on a query satisfied by `x = 8, y = 5, z = 0` when the residual guard is deleted and the derivation made 20x too tight",
+        env_override: Some("AXEYUM_NRA_FBBT"),
+        justification: dated(
+            "docs/research/12-performance/nra-fbbt-derived-bounds-2026-09-09.md",
+            "2026-09-09",
+            None,
+            // The measurement is "37 of the 75 QF_NRA parity losses have every
+            // nonlinear atom in one or two variables while declaring more, and
+            // `decide_component` dispatches on the CONNECTED COMPONENT's variable
+            // count while `connected_components` unions over the linear atoms
+            // too". It rests on that dispatch still being by component variable
+            // count, on the components still being built over every atom, and on
+            // `extract_bounds` still being syntactic (which is why a transitive
+            // bound is not already available). Change any of the three and the
+            // numbers stop describing this tree.
+            &[
+                sym(
+                    "crates/axeyum-solver/src/nra_real_root.rs",
+                    "decide_component",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/nra_real_root.rs",
+                    "connected_components",
+                ),
+                sym("crates/axeyum-solver/src/nra.rs", "extract_bounds"),
+            ],
+            // The basis names the checker the whole soundness argument runs
+            // through and the decider the route re-offers its component to. If
+            // `verify` leaves `nra_fbbt.rs` the derived bounds are unchecked and
+            // this is an unguarded `unsat` producer; if `decide_component` leaves
+            // `nra_real_root.rs` there is no cheap decider to re-offer to and the
+            // measured gain describes nothing.
+            &[
+                live("verify", "crates/axeyum-solver/src/nra_fbbt.rs"),
+                live(
+                    "decide_component",
+                    "crates/axeyum-solver/src/nra_real_root.rs",
+                ),
+                doc("docs/research/12-performance/nra-fbbt-derived-bounds-2026-09-09.md"),
+                doc("docs/research/12-performance/qf-nra-loss-attribution-2026-09-09.md"),
+            ],
+        ),
+        note: "Whether the derived-bound refutation route runs. `nra_real_root::decide_component` dispatches on the CONNECTED COMPONENT's variable count and `connected_components` unions over every atom, the linear ones included -- so a query whose nonlinear content sits inside the 1-variable sign-cell decider or the 2-variable resultant/CAD decider is handed to the >=3-variable CAD, which declines. Measured 2026-09-09 on the 75-file QF_NRA loss list: 37 of 75 have every nonlinear atom in one or two variables and ALL of them declare more, the extras occurring only in linear atoms. This route derives constant bounds on the nonlinear component's variables from those linear atoms (feasibility-based bound tightening -- TRANSITIVE, which `nra::extract_bounds` explicitly is not: its own doc says 'only syntactic operand-vs-constant bounds are recognised') and re-offers the component plus its bounds to the cheap deciders. DEFAULT is ON, from the A/B: on the 75-file list, one binary, arms differing only in this env override, `derived-bounds` decides 2 files `off` does not (`sqrt-1mcosq-8-chunk-0014`, `sqrt-1mcosq-8-chunk-0485`, both declared `:status unsat`, both in 0.1 s), with ZERO verdict regressions and total wall clock 819 s vs 822 s. The gain is 2, not 37: the other 35 are consulted and the derived bounds do not close them, which is a capability statement about the deciders, not about admission. `max_component_vars = 2` keeps the route on the cheap deciders -- 3 is the N-variable CAD that already declined. NOT a fix for the 14-file atom-capacity class, which is 11-36x past `lra_theory::MAX_ONLINE_LRA_ATOMS` and which no bound derivation reaches.",
+    },
+    ConfigEntry {
         name: "MAX_GENERATORS",
         module: "crates/axeyum-solver/src/nra_handelman_cert.rs",
         value: "48",

@@ -396,7 +396,23 @@ pub fn decide_real_poly_constraint(
     // of single-variable sub-systems). It declines (`None`) on any genuinely
     // coupled / nonlinear-multivariate / non-polynomial / overflow shape, leaving
     // the query to the NRA layer.
-    Ok(decompose_multivariate(arena, assertions, deadline))
+    let decomposed = decompose_multivariate(arena, assertions, deadline);
+    match decomposed {
+        // A definitive verdict from the decomposition wins; nothing below can
+        // improve on it, and re-deriving it would only cost time.
+        Some(res @ (CheckResult::Unsat | CheckResult::Sat(_))) => Ok(Some(res)),
+        // The decomposition declined (`None`) or could not certify
+        // (`Some(Unknown)`). Either way the query is still open, so try the
+        // FBBT refutation route: derive constant bounds on the nonlinear
+        // component's variables from the LINEAR atoms and re-offer the
+        // component to the cheap exact deciders. It can only return `Unsat`
+        // (see [`crate::nra_fbbt`]), so it can only turn an open query into a
+        // decided one -- it cannot overturn a verdict, because it never sees a
+        // query that has one.
+        other => Ok(refute_with_derived_bounds(arena, assertions, deadline)
+            .map(crate::nra_fbbt::Refutation::into_check_result)
+            .or(other)),
+    }
 }
 
 /// Equality-anchored decision for a single-variable polynomial conjunction whose
@@ -7950,4 +7966,242 @@ mod real_algebra_parity {
             assert_eq!(count, *expected, "cas interval count for {name}");
         }
     }
+}
+
+// ============================================================================
+// FBBT: refute a nonlinear component against bounds derived from the LINEAR atoms
+// ============================================================================
+//
+// The glue between [`crate::nra_fbbt`] (the propagation and its Farkas checker,
+// which know nothing about terms or `MultiPoly`) and the deciders in this file.
+// Three small conversions and one loop; the soundness argument, and the reason
+// this route cannot report `sat`, are in that module's docs.
+
+/// Split `atom` into the `≥ 0` / `> 0` facts it entails, or `None` when it is not
+/// linear (or is a `≠`, which entails no half-space).
+///
+/// An `=` yields TWO facts (`p ≥ 0` and `−p ≥ 0`), which is what lets the
+/// propagation use an equation in both directions.
+fn atom_as_linear_facts(atom: &MultiAtom) -> Option<Vec<crate::nra_fbbt::LinearFact>> {
+    // Reject any nonlinear monomial: this is the LINEAR half of the split.
+    let mut coeffs: BTreeMap<SymbolId, Rational> = BTreeMap::new();
+    let mut constant = Rational::zero();
+    for (k, &c) in &atom.poly.terms {
+        match k.as_slice() {
+            [] => constant = c,
+            [(v, 1)] => {
+                coeffs.insert(*v, c);
+            }
+            _ => return None,
+        }
+    }
+    let neg = |m: &BTreeMap<SymbolId, Rational>| -> Option<BTreeMap<SymbolId, Rational>> {
+        let mut out = BTreeMap::new();
+        for (&v, &c) in m {
+            out.insert(v, c.checked_neg()?);
+        }
+        Some(out)
+    };
+    Some(match atom.cmp {
+        // `p ⋈ 0` is already in `≥ 0` / `> 0` orientation.
+        Cmp::Ge => vec![crate::nra_fbbt::LinearFact::new(coeffs, constant, false)],
+        Cmp::Gt => vec![crate::nra_fbbt::LinearFact::new(coeffs, constant, true)],
+        // `p ≤ 0` ⟺ `−p ≥ 0`. Real-valued, so NO integer `−1` tightening here —
+        // that is `atom_as_ge`'s job on the integer route and would be unsound on ℝ.
+        Cmp::Le => vec![crate::nra_fbbt::LinearFact::new(
+            neg(&coeffs)?,
+            constant.checked_neg()?,
+            false,
+        )],
+        Cmp::Lt => vec![crate::nra_fbbt::LinearFact::new(
+            neg(&coeffs)?,
+            constant.checked_neg()?,
+            true,
+        )],
+        // `p = 0` entails both halves.
+        Cmp::Eq => vec![
+            crate::nra_fbbt::LinearFact::new(coeffs.clone(), constant, false),
+            crate::nra_fbbt::LinearFact::new(neg(&coeffs)?, constant.checked_neg()?, false),
+        ],
+        // `p ≠ 0` entails no half-space.
+        Cmp::Ne => return None,
+    })
+}
+
+/// Whether every monomial of `poly` has total degree ≤ 1.
+fn multipoly_is_linear(poly: &MultiPoly) -> bool {
+    poly.terms.keys().all(|k| mono_total_degree(k) <= 1)
+}
+
+/// A certified constant bound as an atom this file's deciders consume:
+/// `x − value ⋈ 0`, with the comparison carrying the bound's side and strictness.
+fn certified_bound_as_atom(claim: crate::nra_fbbt::BoundClaim) -> Option<MultiAtom> {
+    let mut poly = MultiPoly::var(claim.var);
+    poly.add_term(Vec::new(), claim.value.checked_neg()?)?;
+    let cmp = match (claim.side, claim.strict) {
+        (crate::nra_fbbt::BoundSide::Lower, true) => Cmp::Gt,
+        (crate::nra_fbbt::BoundSide::Lower, false) => Cmp::Ge,
+        (crate::nra_fbbt::BoundSide::Upper, true) => Cmp::Lt,
+        (crate::nra_fbbt::BoundSide::Upper, false) => Cmp::Le,
+    };
+    Some(MultiAtom { cmp, poly })
+}
+
+/// Try to refute `assertions` by handing a NONLINEAR connected component, plus
+/// constant bounds derived from the query's LINEAR atoms, to the cheap exact
+/// deciders in this file.
+///
+/// # Why this can only be an `unsat`
+///
+/// Everything handed to [`decide_component`] is entailed by `assertions`:
+///
+/// - the component's own nonlinear atoms are a **subset** of the query;
+/// - the in-scope linear atoms (those whose variables lie inside the component)
+///   are also a subset;
+/// - every derived bound carries a Farkas certificate that
+///   `crate::nra_fbbt::verify` checked against facts the query entails.
+///
+/// So `Unsat` on that set refutes the query. A `Sat` on it says nothing — a model
+/// of a subset need not satisfy the atoms that were dropped — and there is
+/// nowhere for one to go: the return type is `crate::nra_fbbt::Refutation`, which
+/// carries no model and converts to exactly one verdict.
+fn refute_with_derived_bounds(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Option<crate::nra_fbbt::Refutation> {
+    let policy = crate::nra_fbbt::fbbt_policy();
+    if !policy.enabled || deadline_reached(deadline) || isolate_deadline_reached() {
+        return None;
+    }
+    crate::nra_fbbt::note_consulted();
+
+    let mut atoms: Vec<MultiAtom> = Vec::new();
+    for &a in assertions {
+        collect_multi_conjuncts(arena, a, &mut atoms)?;
+    }
+
+    // Split by SHAPE, not by variable count: an atom is "linear" iff every
+    // monomial has total degree ≤ 1. This is the split the loss census measured —
+    // 37 of 75 files carry all their nonlinear content in ≤ 2 variables while
+    // declaring more, and the extras occur only on the linear side.
+    let (linear, nonlinear): (Vec<&MultiAtom>, Vec<&MultiAtom>) =
+        atoms.iter().partition(|a| multipoly_is_linear(&a.poly));
+    if nonlinear.len() > policy.max_nonlinear_atoms {
+        // Silent decline: the query goes back to whatever the decomposition
+        // returned, with nothing in the result saying a cap was the reason. So
+        // the crossing is RECORDED -- otherwise "how many files did this cap cost
+        // us?" is unanswerable by construction, which is the gap the config
+        // registry exists to close.
+        crate::config_registry::note_crossed(
+            "crates/axeyum-solver/src/nra_fbbt.rs::FBBT_DEFAULT",
+            u64::try_from(nonlinear.len()).unwrap_or(u64::MAX),
+            u64::try_from(policy.max_nonlinear_atoms).unwrap_or(u64::MAX),
+        );
+        return None;
+    }
+    if nonlinear.is_empty() || linear.is_empty() {
+        return None;
+    }
+
+    let mut facts: Vec<crate::nra_fbbt::LinearFact> = Vec::new();
+    for atom in &linear {
+        if facts.len() > policy.max_linear_facts {
+            crate::config_registry::note_crossed(
+                "crates/axeyum-solver/src/nra_fbbt.rs::FBBT_DEFAULT",
+                u64::try_from(facts.len()).unwrap_or(u64::MAX),
+                u64::try_from(policy.max_linear_facts).unwrap_or(u64::MAX),
+            );
+            return None;
+        }
+        if let Some(fs) = atom_as_linear_facts(atom) {
+            facts.extend(fs);
+        }
+    }
+    if facts.is_empty() {
+        return None;
+    }
+    crate::nra_fbbt::note_split_ok();
+
+    let derived = crate::nra_fbbt::derive_bounds(&facts, &policy);
+    // The propagation and its checker must AGREE on every proposal: a rejection
+    // means `propose` computed a value its OWN certificate does not support,
+    // which is a bug in the search, not an ordinary decline. The bound is dropped
+    // either way (sound), so this must be an assertion or the disagreement is
+    // invisible. Debug-only: the gates run debug, and in release a bad proposal
+    // still cannot reach a verdict.
+    debug_assert_eq!(
+        derived.rejected, 0,
+        "FBBT propagation proposed a bound its own certificate does not support"
+    );
+    if derived.bounds.is_empty() {
+        return None;
+    }
+    crate::nra_fbbt::note_bounds_derived();
+
+    // Components over the NONLINEAR atoms ALONE. This is the whole point: the
+    // existing `decompose_multivariate` unions over every atom, so one linear atom
+    // mentioning a third variable pushes a 1-variable nonlinear system into the
+    // ≥3-variable CAD.
+    for comp in &connected_components(&nonlinear) {
+        if deadline_reached(deadline) || isolate_deadline_reached() {
+            return None;
+        }
+        let comp_vars: BTreeSet<SymbolId> = comp.iter().flat_map(|a| a.poly.vars()).collect();
+        if comp_vars.len() > policy.max_component_vars {
+            crate::config_registry::note_crossed(
+                "crates/axeyum-solver/src/nra_fbbt.rs::FBBT_DEFAULT",
+                u64::try_from(comp_vars.len()).unwrap_or(u64::MAX),
+                u64::try_from(policy.max_component_vars).unwrap_or(u64::MAX),
+            );
+            continue;
+        }
+        if comp_vars.is_empty() {
+            continue;
+        }
+        // The derived bounds on this component's variables. `owned` is declared
+        // before `refs` so the atoms it holds outlive the references to them.
+        let mut owned: Vec<MultiAtom> = Vec::new();
+        for b in &derived.bounds {
+            let claim = b.claim();
+            if comp_vars.contains(&claim.var)
+                && let Some(atom) = certified_bound_as_atom(claim)
+            {
+                owned.push(atom);
+            }
+        }
+        if owned.is_empty() {
+            // No bound reaches this component; handing it over unchanged would
+            // just re-run the decider that already declined.
+            continue;
+        }
+        let derived_count = owned.len();
+
+        let mut refs: Vec<&MultiAtom> = comp.clone();
+        // Free strengthening: linear atoms already INSIDE the component's
+        // variables are part of the query, so adding them keeps the subset
+        // property and can only make the system harder to satisfy.
+        for atom in &linear {
+            let vars = atom.poly.vars();
+            // A CONSTANT atom has no variables, so it is vacuously "inside" the
+            // component. `decompose_multivariate` folds those out before it forms
+            // components at all (`fold_constant_atoms`), and the deciders below are
+            // only ever exercised on variable-bearing atoms — so this excludes
+            // them rather than hand a decider a shape nothing has explored.
+            if !vars.is_empty() && vars.is_subset(&comp_vars) {
+                refs.push(atom);
+            }
+        }
+        refs.extend(owned.iter());
+
+        crate::nra_fbbt::note_component_offered();
+        if matches!(decide_component(&refs), Some(ComponentOutcome::Unsat)) {
+            return Some(crate::nra_fbbt::Refutation::new(
+                comp.len(),
+                derived_count,
+                comp_vars.len(),
+            ));
+        }
+    }
+    None
 }

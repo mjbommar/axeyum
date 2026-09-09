@@ -150,6 +150,7 @@ macro_rules! full_modules {
         mod nia_univariate_cert;
         mod nra;
         mod nra_even_power;
+        mod nra_fbbt;
         mod nra_handelman_cert;
         mod nra_monomial_bound_cert;
         mod nra_product_cert;
@@ -1231,6 +1232,7 @@ macro_rules! full_exports {
         pub use nra::check_with_nra;
         #[doc(hidden)]
         pub use nra_even_power::{NraEvenPowerRefutationCertificate, nra_even_power_refutation};
+        pub use nra_fbbt::{NraDerivedBoundCoverage, nra_derived_bound_coverage};
         #[doc(hidden)]
         pub use nra_real_root::SosCertificate;
         #[doc(hidden)]
