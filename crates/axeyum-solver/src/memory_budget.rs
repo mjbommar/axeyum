@@ -386,16 +386,19 @@ impl MemoryBudget {
 /// 20 ms also bounds the overshoot: a route allocating at 1 GiB/s can be at
 /// most ~20 MiB past the limit before the flag is set, plus whatever it
 /// allocates before the next cooperative check site.
+#[cfg(feature = "full")]
 pub(crate) const WATCHDOG_SAMPLE_INTERVAL: Duration = Duration::from_millis(20);
 
 /// How long the watchdog thread waits before re-checking for a newly installed
 /// budget when none is installed. It is parked on a condvar that an install
 /// notifies, so this is a backstop against a missed notification, not a poll
 /// rate.
+#[cfg(feature = "full")]
 const WATCHDOG_IDLE_INTERVAL: Duration = Duration::from_millis(500);
 
 /// The installed budget in bytes; `0` means no budget is installed. Written
 /// only by [`MemoryWatchdog::install`] and its `Drop`.
+#[cfg(feature = "full")]
 static WATCHDOG_LIMIT_BYTES: AtomicU64 = AtomicU64::new(0);
 
 /// Set by the sampler the first time it reads a resident set over the installed
@@ -403,28 +406,34 @@ static WATCHDOG_LIMIT_BYTES: AtomicU64 = AtomicU64::new(0);
 /// for the life of the guard: once the process has been over the limit, every
 /// cooperative check site declines, and whichever route reaches one first is
 /// the one that reports it.
+#[cfg(feature = "full")]
 static WATCHDOG_TRIPPED: AtomicBool = AtomicBool::new(false);
 
 /// The largest resident set the sampler observed since the budget was
 /// installed. Reported in the decline, so a consumer learns HOW far over it
 /// went rather than only that it went over.
+#[cfg(feature = "full")]
 static WATCHDOG_PEAK_BYTES: AtomicU64 = AtomicU64::new(0);
 
 /// How many samples the watchdog thread has taken in this process. A test uses
 /// it to wait for a sample rather than sleeping a guessed duration.
+#[cfg(feature = "full")]
 static WATCHDOG_SAMPLES: AtomicU64 = AtomicU64::new(0);
 
 /// Install depth. Only the outermost install owns the budget: `check_auto`
 /// recurses (CEGAR refinement, quantifier instantiation, the fallback ladder),
 /// and an inner install that reset the trip flag would erase the observation
 /// the outer one is about to act on.
+#[cfg(feature = "full")]
 static WATCHDOG_DEPTH: AtomicU64 = AtomicU64::new(0);
 
+#[cfg(feature = "full")]
 static WATCHDOG_THREAD: Once = Once::new();
 
 /// Woken by [`MemoryWatchdog::install`] so a newly installed budget starts
 /// being sampled immediately rather than up to [`WATCHDOG_IDLE_INTERVAL`]
 /// later.
+#[cfg(feature = "full")]
 static WATCHDOG_WAKE: (Mutex<bool>, Condvar) = (Mutex::new(false), Condvar::new());
 
 /// Test seam: a resident-set reading the SAMPLER sees instead of the real one.
@@ -433,7 +442,7 @@ static WATCHDOG_WAKE: (Mutex<bool>, Condvar) = (Mutex::new(false), Condvar::new(
 /// one is thread-local, so it is invisible to the sampler, which runs on its
 /// own thread. Nothing else can express "the process is over its budget"
 /// without really allocating gigabytes inside a `cargo test` binary.
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 pub(crate) static SAMPLER_OVERRIDE_BYTES: AtomicU64 = AtomicU64::new(0);
 
 /// What the sampler reads.
@@ -443,6 +452,7 @@ pub(crate) static SAMPLER_OVERRIDE_BYTES: AtomicU64 = AtomicU64::new(0);
 /// and the sampler must never touch [`PROBE_COUNT`], which pins the number of
 /// INLINE probes in a check and would otherwise become a measurement of how
 /// long that check took.
+#[cfg(feature = "full")]
 fn sampled_resident_bytes() -> Option<u64> {
     #[cfg(test)]
     {
@@ -510,6 +520,7 @@ pub fn peak_resident_bytes() -> Option<u64> {
 /// running two queries with different limits on two threads gets the outermost
 /// installer's limit for both. That is the same limitation the resident-set
 /// probe already has.
+#[cfg(feature = "full")]
 #[must_use]
 pub(crate) fn current_limit_bytes() -> Option<u64> {
     match WATCHDOG_LIMIT_BYTES.load(Ordering::Relaxed) {
@@ -525,6 +536,7 @@ pub(crate) fn current_limit_bytes() -> Option<u64> {
 /// what makes it affordable inside a Fourier–Motzkin cross product or a pivot
 /// loop, the places an inline `/proc` read could never go and therefore
 /// precisely the places where the limit never bound.
+#[cfg(feature = "full")]
 #[must_use]
 #[inline]
 pub(crate) fn watchdog_tripped() -> bool {
@@ -533,6 +545,7 @@ pub(crate) fn watchdog_tripped() -> bool {
 
 /// The largest resident set the sampler has seen since the budget was
 /// installed, or 0 when it has taken no sample.
+#[cfg(feature = "full")]
 #[must_use]
 pub(crate) fn watchdog_peak_bytes() -> u64 {
     WATCHDOG_PEAK_BYTES.load(Ordering::Relaxed)
@@ -544,6 +557,7 @@ pub(crate) fn watchdog_peak_bytes() -> u64 {
 /// `phase` names the loop that noticed, so a consumer can tell WHICH route was
 /// holding the bytes — the distinction a kernel OOM kill destroys, and the
 /// reason this exists at all.
+#[cfg(feature = "full")]
 #[must_use]
 pub(crate) fn watchdog_decline(phase: &str) -> Option<UnknownReason> {
     if !watchdog_tripped() {
@@ -569,12 +583,14 @@ pub(crate) fn watchdog_decline(phase: &str) -> Option<UnknownReason> {
 /// Only the outermost guard owns the budget. `check_auto` re-enters itself, and
 /// an inner install that cleared [`WATCHDOG_TRIPPED`] would erase an
 /// observation the outer route is about to act on.
+#[cfg(feature = "full")]
 #[derive(Debug)]
 pub(crate) struct MemoryWatchdog {
     /// Whether this guard is the one that installed the budget.
     outermost: bool,
 }
 
+#[cfg(feature = "full")]
 impl MemoryWatchdog {
     /// Installs the budget, or `None` when the caller set no limit or the
     /// target cannot observe a resident set.
@@ -610,6 +626,7 @@ impl MemoryWatchdog {
     }
 }
 
+#[cfg(feature = "full")]
 impl Drop for MemoryWatchdog {
     fn drop(&mut self) {
         if self.outermost {
@@ -622,6 +639,7 @@ impl Drop for MemoryWatchdog {
     }
 }
 
+#[cfg(feature = "full")]
 fn wake_watchdog() {
     let (lock, condvar) = &WATCHDOG_WAKE;
     if let Ok(mut armed) = lock.lock() {
@@ -634,6 +652,7 @@ fn wake_watchdog() {
 /// joined. It parks on a condvar whenever no budget is installed, so a process
 /// that sets a limit once does not pay for a thread that polls forever, and a
 /// process that never sets one never spawns it at all.
+#[cfg(feature = "full")]
 fn spawn_watchdog() {
     let spawned = std::thread::Builder::new()
         .name("axeyum-memory-watchdog".to_owned())
@@ -644,6 +663,7 @@ fn spawn_watchdog() {
     drop(spawned);
 }
 
+#[cfg(feature = "full")]
 fn watchdog_loop() {
     loop {
         let limit = WATCHDOG_LIMIT_BYTES.load(Ordering::Acquire);
@@ -671,7 +691,7 @@ fn watchdog_loop() {
 /// called, or the wait times out; returns whether a sample was observed. A test
 /// that slept a guessed duration instead would be a test of this host's
 /// scheduler.
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 pub(crate) fn wait_for_watchdog_sample(timeout: Duration) -> bool {
     let before = WATCHDOG_SAMPLES.load(Ordering::Relaxed);
     let deadline = std::time::Instant::now() + timeout;
@@ -693,7 +713,7 @@ pub(crate) fn wait_for_watchdog_sample(timeout: Duration) -> bool {
 /// whatever else `cargo test` is running in parallel. Measured: a 1 MiB budget
 /// installed for real trips the watchdog on the FIRST check site, so the
 /// projection under test never runs.
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 pub(crate) fn set_limit_for_test(limit_bytes: u64) {
     WATCHDOG_LIMIT_BYTES.store(limit_bytes, Ordering::Relaxed);
     WATCHDOG_TRIPPED.store(false, Ordering::Relaxed);
@@ -710,7 +730,7 @@ pub(crate) fn set_limit_for_test(limit_bytes: u64) {
 /// (this seam). Arranging both at once needs a test that really allocates past
 /// a real limit inside a parallel `cargo test` binary, where the resident set
 /// is mostly other tests.
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 pub(crate) fn trip_watchdog_for_test(limit_bytes: u64, peak_bytes: u64) {
     WATCHDOG_LIMIT_BYTES.store(limit_bytes, Ordering::Relaxed);
     WATCHDOG_PEAK_BYTES.store(peak_bytes, Ordering::Relaxed);
@@ -720,7 +740,7 @@ pub(crate) fn trip_watchdog_for_test(limit_bytes: u64, peak_bytes: u64) {
 /// Undoes [`trip_watchdog_for_test`]. Every test that trips must clear: the
 /// state is process-global, and a leaked trip declines every later test in the
 /// binary.
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 pub(crate) fn clear_watchdog_for_test() {
     WATCHDOG_TRIPPED.store(false, Ordering::Relaxed);
     WATCHDOG_LIMIT_BYTES.store(0, Ordering::Relaxed);
@@ -732,7 +752,7 @@ pub(crate) fn clear_watchdog_for_test() {
 /// the same reason [`PROBE_LOCK`] exists: the state is one word shared by the
 /// whole test binary, and two tests scripting it concurrently read each other's
 /// script.
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 pub(crate) static WATCHDOG_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 #[cfg(test)]
@@ -972,6 +992,7 @@ mod tests {
 
 /// The sampling watchdog: the half of the memory limit that binds while a route
 /// is allocating, rather than only at the door.
+#[cfg(feature = "full")]
 #[cfg(test)]
 mod watchdog_tests {
     use super::*;
