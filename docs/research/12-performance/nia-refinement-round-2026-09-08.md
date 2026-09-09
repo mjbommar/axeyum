@@ -191,6 +191,32 @@ for.
   `OFF` reproducing the committed behaviour and a malformed lever parsing to
   `OFF` rather than to a silent third arm.
 
+## The killed runs, which are the ones that matter
+
+Forty-two of the fifty end `unknown` and seven never return at all, so the
+instrument is worth little if it dies with the worker. It does not. Same file
+(`QF_NIA` #5) at a 24 s budget, watchdog fired:
+
+```
+; partial at=watchdog-kill recovered=8 sampled=...,lazy-smt:in-flight,route:in-flight
+; partial lazy-smt reading=measured nra_entries=1 nra_rounds=1 nia_entries=1 nia_rounds=1
+    nra_hist=12:1 nra_max_ms=3999 nra_max_round=1
+    nia_hist=-    nia_max_ms=0    nia_max_round=0    pending_round_ms=6673
+; partial route bound_by=nia-linearize bound_ms=6674 total_ms=10692
+; partial route-open ms=14307 after=cas-ideal-refuter
+```
+
+The finished CAD round is in bucket 12 (3,999 ms = 24 s / 6, again). The
+refinement round that was **still running when the process died** is
+`pending_round_ms=6673` and is deliberately not in a bucket: at that moment it
+is a lower bound on its own cost, and filing it would put a lower bound into a
+distribution as though it were a measurement.
+
+The same file at a 12 s budget returns normally and reads
+`nra_hist=11:1 nra_max_ms=1999` (12 s / 6) and `nia_hist=12:1 nia_max_ms=3342`
+— both slices track the budget exactly, which is the check that these are
+slice-sized rounds and not a coincidence at 24 s.
+
 ## One thing a consumer has to change
 
 A `refinement_loop` span's `route` was `"lazy-smt"`. It is now
