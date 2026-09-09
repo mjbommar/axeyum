@@ -588,10 +588,18 @@ impl MemoryWatchdog {
         let limit = config
             .memory_limit_mb
             .map(|mb| mb.saturating_mul(1024 * 1024))?;
-        sampled_resident_bytes()?;
         let depth = WATCHDOG_DEPTH.fetch_add(1, Ordering::AcqRel);
         if depth != 0 {
             return Some(Self { outermost: false });
+        }
+        // The observability check reads `/proc`, which is 9.4 us, so it happens
+        // ONCE per outermost install and not on every nested one. `check_auto`
+        // re-enters itself per fallback rung and per CEGAR round; a caller
+        // making ten thousand inner solves would otherwise pay 94 ms for a
+        // question whose answer cannot change inside one process.
+        if sampled_resident_bytes().is_none() {
+            WATCHDOG_DEPTH.fetch_sub(1, Ordering::AcqRel);
+            return None;
         }
         WATCHDOG_PEAK_BYTES.store(0, Ordering::Relaxed);
         WATCHDOG_TRIPPED.store(false, Ordering::Relaxed);

@@ -2175,6 +2175,16 @@ fn solve(
         if past_deadline(deadline) {
             return Feasibility::Unknown;
         }
+        // The memory bound, at the same boundary as the wall-clock one. The two
+        // ceilings above are PER STEP; nothing bounds their SUM, and on
+        // 2026-09-08 a stack sample found this exact frame at 15.3 GB resident
+        // under an 8 GiB `memory_limit_mb`, with every individual step inside
+        // its own budget. One relaxed atomic load
+        // (`memory_budget::watchdog_tripped`), which is why it can sit in a loop
+        // where the module's 9.4 us `/proc` probe could not.
+        if crate::memory_budget::watchdog_tripped() {
+            return Feasibility::Unknown;
+        }
         match eliminate(&current, v, deadline, budget_bytes) {
             Some(next) => current = next,
             None => return Feasibility::Unknown,
@@ -2217,6 +2227,12 @@ fn solve_values(
     }
     for v in (0..nvars).rev() {
         if past_deadline(deadline) {
+            return None;
+        }
+        // Same boundary, same reason as in `solve`, and this loop is the worse
+        // of the two: `saved` keeps a full CLONE of the system per variable, so
+        // its footprint grows monotonically with no ceiling of its own.
+        if crate::memory_budget::watchdog_tripped() {
             return None;
         }
         saved.push((v, current.clone()));
@@ -2270,6 +2286,13 @@ fn eliminate(
     let zero = Rational::zero();
     for (i, c) in system.iter().enumerate() {
         if i % 64 == 0 && past_deadline(deadline) {
+            return None;
+        }
+        // This loop CLONES a constraint, with its length-`n` multiplier vector,
+        // for every row that does not mention `v`, so it is a growth site in its
+        // own right and not only a scan. The caller reads the reason off the
+        // watchdog; here the decline is the same `None` a size breach gives.
+        if crate::memory_budget::watchdog_tripped() {
             return None;
         }
         let a = c.expr.coeff(v);

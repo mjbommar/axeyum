@@ -363,10 +363,21 @@ pub fn check_qf_lra_online_cdclt(
     );
     match solved {
         NativeSolveOutcome::Unsat => Ok(CheckResult::Unsat),
-        NativeSolveOutcome::Unknown => Ok(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Timeout,
-            detail: "timeout in the online CDCL(T) LRA driver".to_owned(),
-        })),
+        // The driver reports one `Unknown` whatever produced it, so ask the
+        // memory watchdog first: this route's Fourier–Motzkin fallback was
+        // measured at 15.3 GB under an 8 GiB `memory_limit_mb` on 2026-09-08,
+        // and reporting that as a TIMEOUT would send a reader to the clock when
+        // the machine is what ran out. The flag is sticky for the life of the
+        // guard, so a `Some` here is a real observation of this query having
+        // been over budget.
+        NativeSolveOutcome::Unknown => Ok(CheckResult::Unknown(
+            crate::memory_budget::watchdog_decline("online CDCL(T) LRA driver").unwrap_or(
+                UnknownReason {
+                    kind: UnknownKind::Timeout,
+                    detail: "timeout in the online CDCL(T) LRA driver".to_owned(),
+                },
+            ),
+        )),
         NativeSolveOutcome::Sat(assignment) => {
             // Reconstruct a real model from the live atoms (the simplex's feasible
             // point, materialized), inject Boolean skeleton leaves from

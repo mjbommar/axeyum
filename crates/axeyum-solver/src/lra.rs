@@ -3527,14 +3527,14 @@ mod memory_limit_tests {
         );
     }
 
-    /// The cooperative gate: a watchdog that tripped WHILE the elimination ran
-    /// becomes a reported `unknown` naming the watchdog, not a kernel kill.
+    /// The cooperative gate at the FIRST site a query reaches: a watchdog that
+    /// was already tripped when `decide_within` started collecting becomes a
+    /// reported `unknown` naming the watchdog, not a kernel kill.
     ///
-    /// The budget here is deliberately enormous, so the projection gate above
-    /// admits the system and this test can only pass through the check inside
-    /// `solve`'s elimination loop.
+    /// The budget here is deliberately enormous, so the projection gate cannot
+    /// fire and only a cooperative site can produce this verdict.
     #[test]
-    fn a_tripped_watchdog_stops_the_elimination_and_says_so() {
+    fn a_tripped_watchdog_stops_the_collection_and_says_so() {
         let _lock = WATCHDOG_LOCK
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
@@ -3551,10 +3551,67 @@ mod memory_limit_tests {
             panic!("a tripped watchdog must decline, not decide: {result:?}");
         };
         assert_eq!(reason.kind, UnknownKind::MemoryLimit, "{}", reason.detail);
+        // The PHASE, not just the mechanism.
+        //
+        // Asserting only "memory watchdog" made this test pass with the
+        // collection guard deleted — the elimination guard downstream rejected
+        // in its place, and a mutation run measured exactly that: removing
+        // either of the two killed ZERO tests. Two guards, one shared
+        // rejection. The phase name is the distinction the producer makes, so
+        // it is the distinction the test has to consume.
         assert!(
-            reason.detail.contains("memory watchdog"),
-            "the decline must name the mechanism that observed it: {}",
+            reason.detail.contains("at lra constraint collection"),
+            "the decline must name the site that observed it, or a later site \
+             can stand in for this one: {}",
             reason.detail
+        );
+    }
+
+    /// The elimination loop's OWN guard, exercised where nothing else can reach
+    /// it.
+    ///
+    /// This test exists because of a measured mutation result, not a hunch:
+    /// with only the end-to-end test above, deleting the `watchdog_tripped`
+    /// check from `solve`'s per-variable loop killed **zero** tests. The
+    /// collection-loop guard, which runs first, was rejecting for it — the
+    /// "several guards, one shared rejection" shape that makes a suite look
+    /// like it covers more than it does. Calling `solve` directly skips
+    /// collection, so this is the only caller that can distinguish the two.
+    #[test]
+    fn a_tripped_watchdog_stops_the_elimination_loop_itself() {
+        let _lock = WATCHDOG_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        clear_watchdog_for_test();
+
+        // Two already-collected constraints over two variables (`x0 <= 0`,
+        // `x1 <= 1`), so the elimination loop runs at least one iteration.
+        let constraints: Vec<Constraint> = (0..2usize)
+            .map(|i| Constraint {
+                expr: LinExpr {
+                    coeffs: std::iter::once((i, Rational::integer(1))).collect(),
+                    constant: Rational::integer(-(i as i128)),
+                },
+                strict: false,
+                mult: unit_vec(2, i),
+                origin: i,
+            })
+            .collect();
+
+        // Control FIRST: untripped, the same call decides. Without it a guard
+        // that refused everything would pass the assertion below.
+        assert!(
+            matches!(solve(&constraints, 2, None), Feasibility::Sat(_)),
+            "the control must decide, or the assertion below proves nothing"
+        );
+
+        trip_watchdog_for_test(1 << 40, 1 << 41);
+        let outcome = solve(&constraints, 2, None);
+        clear_watchdog_for_test();
+        assert!(
+            matches!(outcome, Feasibility::OutOfMemory),
+            "the elimination loop must report a MEMORY decline — not a timeout, \
+             and not a verdict it computed while over budget"
         );
     }
 
@@ -3597,12 +3654,15 @@ mod memory_limit_tests {
     /// process died before it could report anything.
     #[test]
     fn the_multiplier_matrix_cost_is_quadratic_and_reaches_the_measured_oom() {
+        /// The kernel's own line for one of the three files:
+        /// `anon-rss:26639452kB`.
+        const MEASURED_ANON_RSS_BYTES: u64 = 26_639_452 * 1024;
+
         assert_eq!(fm_multiplier_bytes(0), 0);
         assert_eq!(fm_multiplier_bytes(1), 32 + 24);
         // Doubling the constraint count quadruples the matrix.
         assert!(fm_multiplier_bytes(2_000) > 3 * fm_multiplier_bytes(1_000));
 
-        const MEASURED_ANON_RSS_BYTES: u64 = 26_639_452 * 1024;
         assert!(
             fm_multiplier_bytes(29_000) < MEASURED_ANON_RSS_BYTES,
             "the matrix is already at the measured OOM by 29 000 constraints"
