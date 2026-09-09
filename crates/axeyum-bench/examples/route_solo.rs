@@ -86,6 +86,11 @@ struct Route {
 /// literals at ~85 recording sites, with no registry to read. So the coverage
 /// claim here is exactly "these routes", never "every route", and a name absent
 /// from this table is untested rather than shown irrelevant.
+// The length IS the coverage claim this function's doc comment makes: one entry
+// per route the table asserts it exercises. Splitting it to satisfy a line count
+// would spread that claim across two places and make "these routes, and no
+// others" harder to check, not easier.
+#[allow(clippy::too_many_lines)]
 fn routes() -> Vec<Route> {
     vec![
         Route {
@@ -326,16 +331,13 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    match worker.join() {
-        Ok((verdict, wall_ms, detail)) => {
-            println!("{name}\t{verdict}\t{wall_ms}\t{detail}");
-            ExitCode::SUCCESS
-        }
-        Err(_) => {
-            // A panic is a real answer about this route on this file, and one a
-            // portfolio arm would have to survive; it is never silence.
-            println!("{name}\tpanic\t0\t");
-            ExitCode::FAILURE
-        }
+    if let Ok((verdict, wall_ms, detail)) = worker.join() {
+        println!("{name}\t{verdict}\t{wall_ms}\t{detail}");
+        ExitCode::SUCCESS
+    } else {
+        // A panic is a real answer about this route on this file, and one a
+        // portfolio arm would have to survive; it is never silence.
+        println!("{name}\tpanic\t0\t");
+        ExitCode::FAILURE
     }
 }
