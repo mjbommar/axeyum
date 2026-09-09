@@ -50,6 +50,15 @@ carry no information.
 | [10-verification-log.md](10-verification-log.md) | Which lane claims the coordinator re-checked, and the four checks that changed a result | audit |
 | [11-wiring-and-integration.md](11-wiring-and-integration.md) | Is it all actually wired up? One uniform measurement, and the nine integration gaps that matter more than dead code | audit |
 
+## The other half: how we compare
+
+[`docs/solver-comparison-2026-09/`](../solver-comparison-2026-09/00-README.md)
+inventories the reference SAT/SMT solvers against the same subject matter, and
+[its gap analysis](../solver-comparison-2026-09/10-gap-analysis.md) joins the
+two. Its headline bears on how you read this folder: the largest gaps against
+the reference solvers are not missing capability but capability recorded here as
+built-and-unwired.
+
 ## Workspace census
 
 Measured at `ea8515407` by counting files under `crates/*/src` and `crates/*/tests`:
