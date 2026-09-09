@@ -191,6 +191,17 @@ for.
   `OFF` reproducing the committed behaviour and a malformed lever parsing to
   `OFF` rather than to a silent third arm.
 
+## One thing a consumer has to change
+
+A `refinement_loop` span's `route` was `"lazy-smt"`. It is now
+`"lazy-smt:lra"`, `"lazy-smt:nra"` or `"lazy-smt:nia"`, and there can be more
+than one such span per run. A renderer that matches the route exactly — the
+gallery's `scripts/sync_spans.mjs` in the `axeyum.com` repository is the one
+known consumer — must match the prefix instead, or it will show no refinement
+loop at all. The `instruments` list is unchanged (`lazy-smt:<sampled>`), and
+`loop_hist` is now an array of 16 counts rather than `null` whenever
+`loop_hist_available` is true.
+
 ## Reproducing
 
 ```sh
