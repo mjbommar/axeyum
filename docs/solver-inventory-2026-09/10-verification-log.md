@@ -176,6 +176,35 @@ exist. Corrected in `00-README.md` §1, `02-frontend-ir-and-rewriting.md`, and
 roadmap items 1.3 and 1.4, each carrying a dated correction note rather than a
 silent edit.
 
+## Seventh correction: an exit criterion I wrote could not fail (2026-09-09)
+
+Roadmap item 1.1 said the warm-CEGAR change was done when "round *n*+1 reuses
+round *n*'s clauses (assert clause count is monotone, lowering map unchanged)".
+
+The executing lane measured it and reported that the criterion is vacuous. A
+*fresh* engine at round *n*+1 encodes the whole, larger working set, so its
+clause count is monotone as well — the counts came out byte-identical between
+warm and rebuilt runs, `[673, 1143, 2099, 2800]` either way. The criterion
+cannot fail on the thing it exists to detect.
+
+The load-bearing property is `encodes_each_assertion_once`: across the loop the
+warm engine is handed exactly as many assertions as the final working set holds.
+Warm, 18 for 18. Rebuilt, 56 for 18. That is what dies under the negative
+control, and it is now what the roadmap asks for.
+
+This is the second criterion-level defect this folder has produced (the first
+was item 1.3's "the other's file is gone", which ADR-1810 replaced because no
+file disappears). Both share a shape: **I wrote a criterion by describing what
+the change would look like, rather than by asking what a broken version would
+print.** A criterion that a broken implementation also satisfies is a checker
+that cannot fail, one level up.
+
+Also recorded from the same lane, because it bears on how much any of this is
+worth: on the 152-file `:status` sweep the new warm engine is constructed
+**zero** times, and across 267 array-bearing files under `corpus/` it runs on
+one. The structural win is real and measured on a fixture; the payoff on
+committed corpora today is nil. The lane made no performance claim, correctly.
+
 ## What was not verified
 
 - No claim in this folder was confirmed by execution. Nothing here was built,
