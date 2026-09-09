@@ -201,12 +201,57 @@ want a second opinion are the ones a naive N-way portfolio kills outright.
 
 ## The oracle sweep
 
-**Running; this section is empty because the sweep has not finished, not because
-it found nothing.** The three-host run over the 403-file committed loss
-population is in flight (`bench-results/portfolio-oracle-20260908/` when it
-lands). Everything above this heading is measured and complete on its own terms;
-the per-division prize table is what this section will carry, and no conclusion
-about whether to build a portfolio is drawn until it is here.
+Committed population, three hosts, `taskset`-pinned slots, 24 s control /
+120 s probe, 8 GiB `ulimit -v`. Data in
+`bench-results/portfolio-oracle-20260908/`.
+
+### The probe arm, per division
+
+| division | files | ladder already wins | candidate | too-slow arm | no route at 120 s | aborted | no trail | win only by overrunning |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| QF_ABV | 19 | 7 | 0 | 2 | 7 | 1 | 2 | **4** |
+| QF_BV | 6 | 0 | 0 | 2 | 2 | 0 | 2 | 0 |
+| QF_IDL | 54 | 38 | 0 | 7 | 4 | 0 | 5 | 0 |
+| QF_LIA | 27 | 5 | 0 | 2 | 13 | 0 | 7 | 0 |
+| QF_LRA | 54 | 5 | 0 | 3 | 46 | 0 | 0 | 0 |
+| QF_RDL | 47 | 37 | 1 | 5 | 2 | 0 | 2 | 0 |
+| QF_SLIA | 7 | 0 | 1 | 0 | 5 | 0 | 1 | 0 |
+| QF_UF | 38 | 35 | 0 | 2 | 1 | 0 | 0 | 0 |
+| UF | 32 | 0 | 0 | 0 | 27 | 5 | 0 | 0 |
+| **total** | **284** | **127** | **2** | **23** | **107** | **6** | **19** | **4** |
+
+Both candidates failed confirmation (§"neither instrument confirms a prize"):
+the `QF_SLIA` one is a looped front door scored on one round of fifty-five, and
+the `QF_RDL` one does not reproduce under load.
+
+`QF_NIA` (61) and `QF_UFLIA` (58) were still running when this was written; their
+per-file progress logs are committed under `partial/` so the coverage is visible
+rather than implied.
+
+### The solo arm, where it is complete
+
+| division | files | ladder wins | ladder loses | decided alone in budget | no route decides alone |
+|---|---:|---:|---:|---:|---:|
+| QF_ABV | 19 | 7 | 12 | **2** | 10 |
+| UF | 32 | 0 | 32 | **0** | 32 |
+
+Both `QF_ABV` wins are `qf-bv` — 611 ms (`unsat`) and 567 ms (`sat`), verdicts
+matching the census. The other entry points that "decide" them
+(`lra-dpll` 653 ms, `nra` 656 ms, `array-elim` 769 ms, `aufbv` 772 ms) are the
+same computation through different doors, not four arms.
+
+### The band that decides it
+
+```
+fastest route that decides ALONE, on files the ladder loses:
+  under 1 s (a reserve reaches it)                       2
+  1 s to 6 s (a reserve reaches it)                      0
+  6 s to 24 s (MIDDLE BAND: only a portfolio)            0
+  over 24 s (neither reaches it)                        23
+  no route decides alone at all                         42
+```
+
+**The middle band is empty.** That, not the count, is the answer.
 
 ## Neither instrument confirms a prize on its own, and the first two did not survive
 

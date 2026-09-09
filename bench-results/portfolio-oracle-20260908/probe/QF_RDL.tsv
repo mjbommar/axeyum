@@ -1,0 +1,54 @@
+file	division	status	control_verdict	control_ms	control_trail	probe_verdict	probe_ms	probe_trail	winner	winner_own_ms	preamble_ms	arm_ms	confirm_own_ms
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-5.smt2	QF_RDL	TOO-SLOW-ARM	unknown	19089	1	sat	42040	1	dl-online	41162.6	840.0	42002.6	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-6.smt2	QF_RDL	NO-ROUTE	unknown	21188	1	unknown	116908	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-depth-7.smt2	QF_RDL	NO-ROUTE-NO-TRAIL	unknown	25034	0	unknown	121036	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-matrix2x2.pddl.smt2	QF_RDL	TOO-SLOW-ARM	unknown	25110	0	sat	107187	1	dl-online	90583.9	16400.8	106984.7	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-4.smt2	QF_RDL	STALE-DECIDED	sat	7021	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-5.smt2	QF_RDL	TOO-SLOW-ARM	unknown	25073	0	sat	62813	1	dl-online	55999.3	6695.1	62694.4	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tempo-width-6.smt2	QF_RDL	NO-ROUTE-NO-TRAIL	unknown	25077	0	unknown	121065	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-30.smt2	QF_RDL	STALE-DECIDED	sat	3440	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-40.smt2	QF_RDL	STALE-DECIDED	sat	1015	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-60.smt2	QF_RDL	STALE-DECIDED	sat	2048	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-70.smt2	QF_RDL	STALE-DECIDED	sat	2755	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-80.smt2	QF_RDL	STALE-DECIDED	sat	3761	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/SMT-Temporal-Planning-Benchmarks/tms-2-3-light-90.smt2	QF_RDL	STALE-DECIDED	sat	4669	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/check/bignum_rdl1.smt2	QF_RDL	NO-ROUTE	unknown	68	1	unknown	50	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-12.smt2	QF_RDL	STALE-DECIDED	unsat	592	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-13.smt2	QF_RDL	STALE-DECIDED	unsat	990	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-14.smt2	QF_RDL	STALE-DECIDED	unsat	1114	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-15.smt2	QF_RDL	STALE-DECIDED	unsat	1326	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-16.smt2	QF_RDL	STALE-DECIDED	unsat	1672	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-17.smt2	QF_RDL	STALE-DECIDED	unsat	2581	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-18.smt2	QF_RDL	STALE-DECIDED	unsat	1639	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-19.smt2	QF_RDL	STALE-DECIDED	unsat	2687	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer3-mutex-20.smt2	QF_RDL	STALE-DECIDED	unsat	3159	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-10.smt2	QF_RDL	STALE-DECIDED	unsat	2803	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-11.smt2	QF_RDL	STALE-DECIDED	unsat	5484	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-12.smt2	QF_RDL	STALE-DECIDED	unsat	7151	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-13.smt2	QF_RDL	STALE-DECIDED	unsat	9634	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-14.smt2	QF_RDL	STALE-DECIDED	unsat	13846	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-15.smt2	QF_RDL	STALE-DECIDED	unsat	10571	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-16.smt2	QF_RDL	STALE-DECIDED	unsat	13907	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-17.smt2	QF_RDL	TOO-SLOW-ARM	unknown	24247	1	unsat	26469	1	dl-online	26406.8	51.9	26458.7	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer6-mutex-9.smt2	QF_RDL	STALE-DECIDED	unsat	1395	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-10.smt2	QF_RDL	STALE-DECIDED	unsat	12472	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-11.smt2	QF_RDL	STALE-DECIDED	unsat	13645	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-12.smt2	QF_RDL	TOO-SLOW-ARM	unknown	24209	1	unsat	29459	1	dl-online	29383.5	63.3	29446.8	
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/sal/fischer9-mutex-9.smt2	QF_RDL	STALE-DECIDED	unsat	3457	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz5_1200.smt2	QF_RDL	STALE-DECIDED	unsat	7404	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/abz7_500.smt2	QF_RDL	STALE-DECIDED	unsat	9160	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb01_900.smt2	QF_RDL	STALE-DECIDED	unsat	6142	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb04_950.smt2	QF_RDL	STALE-DECIDED	unsat	6633	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb06_1100.smt2	QF_RDL	STALE-DECIDED	sat	1681	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb06_900.smt2	QF_RDL	PRIZE	unknown	24032	1	unsat	19700	1	dl-online	19690.4	3.9	19694.3	18706.1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb07_397.smt2	QF_RDL	STALE-DECIDED	sat	6350	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb08_888.smt2	QF_RDL	STALE-DECIDED	unsat	15852	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb08_930.smt2	QF_RDL	STALE-DECIDED	sat	7878	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/orb10_944.smt2	QF_RDL	STALE-DECIDED	sat	1112	1								
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_RDL/scheduling/yn1_750.smt2	QF_RDL	STALE-DECIDED	unsat	1262	1								
+# division=QF_RDL files=47 budget_ms=24000 probe_ms=120000 cores=8-11 mem_mb=8192
+# NO-ROUTE	2
+# NO-ROUTE-NO-TRAIL	2
+# PRIZE	1
+# STALE-DECIDED	37
+# TOO-SLOW-ARM	5

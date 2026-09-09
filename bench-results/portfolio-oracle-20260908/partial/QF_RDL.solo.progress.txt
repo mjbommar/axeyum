@@ -1,0 +1,6 @@
+[1/47] QF_RDL deciders=0 best=no-route (72s)  tempo-depth-5.smt2
+[2/47] QF_RDL deciders=0 best=no-route (114s)  tempo-depth-6.smt2
+[3/47] QF_RDL deciders=0 best=no-route (233s)  tempo-depth-7.smt2
+[4/47] QF_RDL deciders=0 best=no-route (452s)  tempo-matrix2x2.pddl.smt2
+[5/47] QF_RDL deciders=3 best=datatype-native@5689ms (36s)  tempo-width-4.smt2
+[6/47] QF_RDL deciders=0 best=no-route (178s)  tempo-width-5.smt2

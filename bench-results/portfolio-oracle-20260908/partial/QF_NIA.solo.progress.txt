@@ -1,0 +1,16 @@
+[1/61] QF_NIA deciders=0 best=no-route (165s)  Stroeder_15__svcomp_ex2.c__p25866_terminationG_0.smt2
+[2/61] QF_NIA deciders=0 best=no-route (124s)  From_AProVE_2014__FlattenTreeListRec.jar-obl-10__p29567_safety_0.smt2
+[3/61] QF_NIA deciders=0 best=no-route (67s)  From_AProVE_2014__SortCount.jar-obl-10__terminationS_2_0.smt2
+[4/61] QF_NIA deciders=0 best=no-route (121s)  From_AProVE_2014__Test6.jar-obl-13__terminationS_36_0.smt2
+[5/61] QF_NIA deciders=0 best=no-route (110s)  From_AProVE_2014__Velroyen08-factorial.jar-obl-8__p13829_terminationG_0.smt2
+[6/61] QF_NIA deciders=0 best=no-route (149s)  From_AProVE_2014__cousot_rec.jar-obl-8__p28312_terminationG_0.smt2
+[7/61] QF_NIA deciders=0 best=no-route (55s)  From_AProVE_2014__juHashMapCreate.jar-obl-10__p4943_safety_0.smt2
+[8/61] QF_NIA deciders=0 best=no-route (59s)  From_AProVE_2014__juHashMapCreateClear.jar-obl-11__p30726_safety_0.smt2
+[9/61] QF_NIA deciders=0 best=no-route (69s)  From_AProVE_2014__juHashMapCreateContainsKey.jar-obl-11__p31253_safety_0.smt2
+[10/61] QF_NIA deciders=0 best=no-route (104s)  From_AProVE_2014__juHashMapCreateContainsKey.jar-obl-11__p31818_safety_0.smt2
+[11/61] QF_NIA deciders=0 best=no-route (69s)  From_AProVE_2014__juHashMapCreateContainsValue.jar-obl-11__p32598_safety_0.smt2
+[12/61] QF_NIA deciders=0 best=no-route (102s)  From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p1784_safety_0.smt2
+[13/61] QF_NIA deciders=0 best=no-route (71s)  From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p2235_terminationG_0.smt2
+[14/61] QF_NIA deciders=0 best=no-route (62s)  From_AProVE_2014__juHashMapCreateRemove.jar-obl-11__p6984_safety_0.smt2
+[15/61] QF_NIA deciders=0 best=no-route (68s)  From_AProVE_2014__juHashMapCreateSize.jar-obl-10__p7265_safety_0.smt2
+[16/61] QF_NIA deciders=0 best=no-route (132s)  From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p7725_safety_0.smt2

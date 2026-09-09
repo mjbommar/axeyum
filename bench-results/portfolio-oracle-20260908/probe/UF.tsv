@@ -1,0 +1,36 @@
+file	division	status	control_verdict	control_ms	control_trail	probe_verdict	probe_ms	probe_trail	winner	winner_own_ms	preamble_ms	arm_ms	confirm_own_ms
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/bindag/x2015_09_10_16_53_56_537_1094926.smt_in.smt2	UF	NO-ROUTE	unknown	15607	1	unknown	61648	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_16_57_47_544_1522663.smt_in.smt2	UF	NO-ROUTE	unknown	25246	0	unknown	30669	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_00_37_157_1687977.smt_in.smt2	UF	NO-ROUTE	unknown	10010	1	unknown	11642	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_04_05_259_1960786.smt_in.smt2	UF	NO-ROUTE	unknown	8070	1	unknown	6317	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_09_42_195_2416479.smt_in.smt2	UF	NO-ROUTE	unknown	23031	1	unknown	29720	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_10_47_003_2500061.smt_in.smt2	UF	NO-ROUTE	unknown	10756	1	unknown	17369	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_20_02_499_2906170.smt_in.smt2	UF	ABORTED	none	21979	0	none	23304	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_stream/x2015_09_10_17_25_01_009_1227491.smt_in.smt2	UF	NO-ROUTE	unknown	19459	1	unknown	24361	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/afp/huffman/x2015_09_10_16_46_58_732_1021788.smt_in.smt2	UF	NO-ROUTE	unknown	10763	1	unknown	11316	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/distro/gram_lang/x2015_09_10_16_53_37_371_1432776.smt_in.smt2	UF	NO-ROUTE	unknown	22162	1	unknown	50147	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/distro/parallel/x2015_09_10_16_57_14_271_1048482.smt_in.smt2	UF	NO-ROUTE	unknown	25459	0	unknown	29527	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/distro/rbt_impl/x2015_09_10_16_49_54_437_992499.smt_in.smt2	UF	NO-ROUTE	unknown	6308	1	unknown	6392	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/20170428-Barrett/cdt-cade2015/nada/gandl/stern_brocot_tree/x2015_09_10_16_51_44_982_1071529.smt_in.smt2	UF	NO-ROUTE	unknown	17709	1	unknown	68588	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/grasshopper/instantiated/dl_remove_postcondition_of_dl_remove_50_4.smt2	UF	NO-ROUTE	unknown	24114	1	unknown	74036	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/grasshopper/uninstantiated/dl_copy_invariant_19_2.smt2	UF	NO-ROUTE	unknown	24458	1	unknown	120509	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/grasshopper/uninstantiated/dl_remove_loop_invariant_35_5.smt2	UF	NO-ROUTE	unknown	9206	1	unknown	9720	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/sledgehammer/Arrow_Order/smtlib.663965.smt2	UF	ABORTED	none	8886	0	none	8870	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/sledgehammer/Arrow_Order/uf.704291.smt2	UF	ABORTED	unknown	25230	0	none	15937	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/sledgehammer/Arrow_Order/uf.813308.smt2	UF	NO-ROUTE	unknown	25130	0	unknown	30042	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/sledgehammer/Arrow_Order/uf.850780.smt2	UF	ABORTED	unknown	25201	0	none	50372	0					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/sledgehammer/FFT/uf.573210.smt2	UF	NO-ROUTE	unknown	24310	1	unknown	120487	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/sledgehammer/FFT/uf.863296.smt2	UF	NO-ROUTE	unknown	25121	0	unknown	40337	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/sledgehammer/Fundamental_Theorem_Algebra/uf.1065126.smt2	UF	NO-ROUTE	unknown	25056	0	unknown	93962	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/sledgehammer/Fundamental_Theorem_Algebra/uf.1158058.smt2	UF	NO-ROUTE	unknown	25096	0	unknown	54341	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/sledgehammer/Fundamental_Theorem_Algebra/uf.1198393.smt2	UF	NO-ROUTE	unknown	23030	1	unknown	50165	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/sledgehammer/Fundamental_Theorem_Algebra/uf.974621.smt2	UF	NO-ROUTE	unknown	24707	1	unknown	71963	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/sledgehammer/Hoare/smtlib.1116374.smt2	UF	NO-ROUTE	unknown	24073	1	unknown	120183	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/sledgehammer/Hoare/uf.834137.smt2	UF	NO-ROUTE	unknown	6377	1	unknown	6502	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/sledgehammer/Hoare/uf.966336.smt2	UF	NO-ROUTE	unknown	24106	1	unknown	120176	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/sledgehammer/NS_Shared/smtlib.678332.smt2	UF	NO-ROUTE	unknown	5906	1	unknown	5791	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/sledgehammer/TypeSafe/smtlib.1098821.smt2	UF	NO-ROUTE	unknown	24219	1	unknown	120652	1					
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UF/sledgehammer/TypeSafe/uf.1008626.smt2	UF	ABORTED	unknown	25248	0	none	48115	0					
+# division=UF files=32 budget_ms=24000 probe_ms=120000 cores=4-7 mem_mb=8192
+# ABORTED	5
+# NO-ROUTE	27

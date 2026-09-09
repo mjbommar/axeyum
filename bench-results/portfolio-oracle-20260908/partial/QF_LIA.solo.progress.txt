@@ -1,0 +1,4 @@
+[1/27] QF_LIA deciders=0 best=no-route (218s)  v30_problem_2__023.smt2.slack.smt2
+[2/27] QF_LIA deciders=5 best=uf-arithmetic@1211ms (57s)  0006-still_live-11-1.smt2
+[3/27] QF_LIA deciders=2 best=nra@8681ms (132s)  182-incremental_scheduling-17280-0.smt2
+[4/27] QF_LIA deciders=0 best=no-route (460s)  apache-get-tag-O0.smt2

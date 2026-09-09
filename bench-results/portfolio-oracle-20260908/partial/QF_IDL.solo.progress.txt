@@ -1,0 +1,16 @@
+[1/54] QF_IDL deciders=1 best=euf-online@2795ms (250s)  vlsat3_c00.smt2
+[2/54] QF_IDL deciders=3 best=uf-arithmetic@2261ms (134s)  RVpredict_13.smt2
+[3/54] QF_IDL deciders=3 best=uf-arithmetic@10523ms (88s)  156.48.1960.36.1721325133.dat.smt2
+[4/54] QF_IDL deciders=5 best=lra-dpll@5449ms (68s)  channelRoute.in9.smt2
+[5/54] QF_IDL deciders=3 best=datatype-native@10028ms (154s)  a9.8.11.asp.smt2
+[6/54] QF_IDL deciders=3 best=datatype-native@2192ms (61s)  penrose.34.asp.smt2
+[7/54] QF_IDL deciders=3 best=uf-arithmetic@9215ms (82s)  trisquares.41.asp.smt2
+[8/54] QF_IDL deciders=0 best=no-route (118s)  graph-colouring-nodes=130-density=0.1-instance=10.smt2
+[9/54] QF_IDL deciders=3 best=uf-arithmetic@997ms (55s)  gryzzles.12.lp.smt2
+[10/54] QF_IDL deciders=3 best=uf-arithmetic@3114ms (64s)  gryzzles.31.lp.smt2
+[11/54] QF_IDL deciders=3 best=datatype-elim@2189ms (57s)  gryzzles.7.lp.smt2
+[12/54] QF_IDL deciders=2 best=lra-dpll@11966ms (91s)  xy.12.x.12.r.3.274440616.806497.data_k=3_l=4_sat.gph.smt2
+[13/54] QF_IDL deciders=4 best=datatype-elim@958ms (53s)  maze-generation-width=19-height=19-density=0.01-run=5.smt2
+[14/54] QF_IDL deciders=0 best=no-route (118s)  15.3.schur.lp.smt2
+[15/54] QF_IDL deciders=3 best=datatype-native@9474ms (85s)  20.18.schur.lp.smt2
+[16/54] QF_IDL deciders=3 best=uf-arithmetic@1689ms (55s)  dimitri_yorick.59.steps.8.asp.smt2
