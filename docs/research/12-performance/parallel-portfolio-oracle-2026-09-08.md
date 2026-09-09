@@ -343,6 +343,69 @@ The same division's five `TOO-SLOW-ARM` files are the honest other half:
 there. Removing the reserve would hand it 24 s and still lose all five. Neither
 a reservation nor a portfolio reaches them; they need a faster route.
 
+## The two QF_ABV prizes, and the chain that explains all of them
+
+`bmc-arrays/bubbleSort.smt2` and `brummayerbiere/fifo32ia04k08.smt2` are the two
+files in this whole measurement where the finding is unambiguous: the ladder
+loses both, and **`qf-bv` — the plain bit-blaster, called with the same
+arguments `check_auto_dispatch` calls it with — decides them alone in 611 ms
+(`unsat`) and 567 ms (`sat`)**. Both verdicts match the census's
+`reference_verdict`.
+
+`qf-bv` is *reachable* for these queries: the array branch falls through to it
+whenever `has_non_bv_array` is false. It never gets a turn, because the two
+routes in front of it can each consume the whole clock —
+`abv-online-cdclt` (which takes `config` unmodified, §"wins we keep only by
+overrunning") and then `array-fast-path`, whose own cost on `fifo32ia04k08` is
+**86,910 ms**.
+
+That is the same shape as the QF_UFLIA control above: remove the route that eats
+the budget and the next one eats it instead. It is worth naming, because it is
+the structure underneath every case in this note:
+
+> **A per-route reserve divides one clock N ways; a portfolio gives every arm
+> the whole clock on its own core.** Where a ladder has several routes each able
+> to consume the entire budget ahead of a cheap winner, a reserve must be
+> applied at every position, and each one is zero-sum against the routes it
+> protects — the `orb06_900` case is that trade going the wrong way.
+
+## The answer to the strategic question, and why it is still no
+
+The middle band is where a portfolio uniquely wins: a winner that needs a
+**large fraction** of the budget, queued behind another route that needs the
+same. A reserve cannot serve that band, because splitting the clock leaves the
+winner too little. Sixteen idle cores can.
+
+That band is, in this population, close to empty — and the two ends explain why.
+
+- **The winners we found are cheap.** 611 ms, 567 ms, 1,202 ms, 2–13 ms. A
+  winner that needs under a second does not need a core of its own; it needs a
+  reserve of one second, which is free.
+- **The winners that need the whole budget need more than it.** Every
+  `TOO-SLOW-ARM` file wants 26.4 s, 29.4 s, 42.0 s, 50.1 s, 62.7 s, 86.9 s,
+  87.2 s, 94.5 s, 107.0 s of a single route's own time. No arm of a 24 s
+  portfolio reaches any of them. They need a faster route.
+
+So the recommendation is **do not build the portfolio**, and the reason is not
+the one the 2026-09-07 sweep gave. That sweep said parallelism cannot help
+because the binder already holds the clock. The measured reason is different and
+more useful: **every file we found that a portfolio would win is also won by a
+sub-second reserve, and every file a reserve cannot win is out of a portfolio's
+reach as well.**
+
+What to build instead, in the order the measurements support it:
+
+1. **Clamp `dispatch_abv_online`.** It is the only dispatch site of its kind
+   that passes `config` through unmodified, it costs nine QF_ABV files their
+   verdict under a strict limit today, and it is one line. (Coordinate with the
+   `budget-discipline` lane; this is their shape of change, not this lane's.)
+2. **Find what takes `euf-online`'s admission away inside `check_auto`.** Five
+   files, `unsat` in 2–13 ms, lost at 120 s. Not `preprocess_reduce`; the
+   remaining candidate is `check_auto_inner`'s `to_real`/`to_int` normalization.
+3. **Re-cut the loss population.** 122 of the 230 files probed are already
+   decided by the current tree. Any planning against the 2026-09-05 lists is
+   planning against a number that has moved.
+
 ## A portfolio and a reservation are the same policy in two execution modes
 
 A sibling lane is building the **sequential reservation**: a route that runs
