@@ -799,6 +799,7 @@ pub const CARCARA_CHECKED_RULES: &[&str] = &[
     "miniscope_distribute",
     "miniscope_ite",
     "miniscope_split",
+    "minus_simplify",
     "mod_simplify",
     "nary_elim",
     "not_and",
