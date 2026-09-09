@@ -971,8 +971,8 @@ fn u64_as_f64(value: u64) -> f64 {
 mod tests {
     use super::*;
     use crate::{
-        CnfClause, CnfFormula, CnfLit, CnfVar, SatResult, VecProofSink, check_drat,
-        solve_with_native_core,
+        CnfClause, CnfFormula, CnfLit, CnfVar, ProofSolveOutcome, SatResult, VecProofSink,
+        check_drat, solve_with_drat_proof, solve_with_native_core,
     };
 
     fn v(i: usize) -> CnfVar {
@@ -1104,5 +1104,303 @@ mod tests {
                 "{name}: lifted model must satisfy the ORIGINAL formula"
             );
         }
+    }
+
+    // --- The shipping schedule (ADR-1810) ---------------------------------
+
+    /// Everything on, as the shipping backend configures it under
+    /// `prove_unsat`.
+    fn full_schedule() -> InprocessSchedule {
+        InprocessSchedule {
+            xor_propagate: true,
+            xor_propagate_max_clauses: 20_000,
+            vivify: true,
+            vivify_step_guard: true,
+            recording: true,
+            ..InprocessSchedule::OFF
+        }
+    }
+
+    /// A pigeonhole big enough that the search still has work after the passes
+    /// have run: 4 pigeons into 3 holes.
+    fn pigeonhole_4_3() -> CnfFormula {
+        let mut f = CnfFormula::new(12);
+        for pigeon in 0..4 {
+            f.add_clause(CnfClause::new(vec![
+                p(3 * pigeon),
+                p(3 * pigeon + 1),
+                p(3 * pigeon + 2),
+            ]))
+            .expect("in range");
+        }
+        for hole in 0..3 {
+            for a in 0..4 {
+                for b in (a + 1)..4 {
+                    f.add_clause(CnfClause::new(vec![n(3 * a + hole), n(3 * b + hole)]))
+                        .expect("in range");
+                }
+            }
+        }
+        f
+    }
+
+    /// THE property the whole schedule exists to preserve: a refutation of the
+    /// formula the search actually ran over lifts, through the link, into a
+    /// refutation of the formula the CALLER handed in — across a reduction that
+    /// both derived clauses and renumbered variables.
+    ///
+    /// Three assertions exist to stop the headline one from passing vacuously.
+    /// `prefix_len > 0` says the passes actually derived something; a reduction
+    /// that changed nothing makes "covers the original" true and meaningless.
+    /// A non-empty search proof says the search contributed a refutation rather
+    /// than the prefix having refuted the formula on its own, which is a real
+    /// vacuity trap on small pigeonholes. `has_renaming` says compaction
+    /// actually renumbered, so the lift really had to run.
+    #[test]
+    fn the_schedules_certificate_covers_the_original_formula() {
+        let f = pigeonhole_4_3();
+        let mut observer = RecordingObserver::granting(u64::MAX);
+        let out = inprocess_scheduled(&f, full_schedule(), None, &mut observer);
+
+        assert!(
+            out.link.prefix_len() > 0,
+            "the passes must have derived something: {:?}",
+            observer.counts
+        );
+        assert!(
+            out.link.has_renaming(),
+            "compaction must renumber, or the lift is untested"
+        );
+        assert!(
+            out.link.is_checkable(),
+            "no pass may leave the link unusable"
+        );
+
+        let ProofSolveOutcome::Unsat(search_proof) = solve_with_drat_proof(&out.formula) else {
+            panic!("the reduced formula must still be unsatisfiable");
+        };
+        assert!(
+            !search_proof.is_empty(),
+            "the search must contribute steps, or the prefix refuted alone"
+        );
+
+        let check = out
+            .link
+            .check_unsat(&f, &out.formula, &search_proof, usize::MAX);
+        assert!(
+            check.verified,
+            "the concatenation must verify: {:?}",
+            check.error
+        );
+        assert!(
+            check.coverage.is_original(),
+            "and it must cover the ORIGINAL formula, not the reduced one: {:?}",
+            check.coverage
+        );
+        assert_eq!(
+            check.prefix_steps,
+            out.link.prefix_len(),
+            "every step the passes recorded must be part of the checked proof"
+        );
+    }
+
+    /// The schedule preserves satisfiability, and a `sat` model of the searched
+    /// formula lifts back through `compaction.expand` and then
+    /// `reconstruction.extend` — in that order — to a model of the caller's.
+    #[test]
+    fn a_scheduled_sat_model_replays_against_the_original() {
+        let f = formula(
+            4,
+            &[
+                &[p(0), p(1)],
+                &[p(2), p(3)],
+                &[n(0), n(2)],
+                &[n(1), n(3)],
+                &[p(0), p(1)],
+                &[p(0), p(1), p(2)],
+            ],
+        );
+        let mut observer = RecordingObserver::granting(u64::MAX);
+        let out = inprocess_scheduled(&f, full_schedule(), None, &mut observer);
+        let SatResult::Sat(model) =
+            solve_with_native_core(&out.formula).expect("core reports a valid model")
+        else {
+            panic!("the reduced formula must stay satisfiable");
+        };
+        let reduced = out.compaction.expand(model.values());
+        let lifted = out.reconstruction.extend(&reduced);
+        assert_eq!(
+            f.evaluate(&lifted),
+            Ok(true),
+            "the lifted model must satisfy the ORIGINAL formula"
+        );
+    }
+
+    /// Recording is keyed on the caller's intent, not on whether a pass ran.
+    ///
+    /// The point is the pairing: the reduction is the SAME reduction either way
+    /// — same reduced formula, same counters — and the only difference is
+    /// whether a prefix proportional to the formula was built. Asserting the
+    /// empty link alone would pass for a build where the passes had silently
+    /// stopped running.
+    #[test]
+    fn a_non_recording_run_pays_nothing_for_a_prefix_it_will_not_check() {
+        let f = pigeonhole_4_3();
+
+        let mut recording_obs = RecordingObserver::granting(u64::MAX);
+        let recorded = inprocess_scheduled(&f, full_schedule(), None, &mut recording_obs);
+
+        let quiet_schedule = InprocessSchedule {
+            recording: false,
+            vivify_step_guard: false,
+            ..full_schedule()
+        };
+        let mut quiet_obs = RecordingObserver::granting(u64::MAX);
+        let quiet = inprocess_scheduled(&f, quiet_schedule, None, &mut quiet_obs);
+
+        assert!(
+            recorded.link.prefix_len() > 0,
+            "the recording arm must actually record"
+        );
+        assert_eq!(
+            quiet.link.prefix_len(),
+            0,
+            "a non-proof solve must not build a prefix"
+        );
+        assert_eq!(
+            quiet.formula, recorded.formula,
+            "recording must not change the reduction it observes"
+        );
+        assert_eq!(
+            quiet_obs.get("bve_variables_eliminated"),
+            recording_obs.get("bve_variables_eliminated"),
+            "...nor what the passes did"
+        );
+        assert_eq!(
+            quiet_obs.get("inprocess_proof_steps"),
+            None,
+            "and the prefix counter is absent rather than zero, so a reader can \
+             tell 'not recorded' from 'recorded nothing'"
+        );
+    }
+
+    /// A declined grant means the pass did not run — including through the
+    /// schedule, which is the only route the solver takes.
+    #[test]
+    fn declining_every_grant_leaves_the_clause_set_alone() {
+        let f = pigeonhole_4_3();
+        let mut observer = NoObserver;
+        let out = inprocess_scheduled(&f, InprocessSchedule::OFF, None, &mut observer);
+        assert_eq!(
+            out.formula.clauses().len(),
+            f.clauses().len(),
+            "no pass ran, so no clause moved"
+        );
+        assert_eq!(out.link.prefix_len(), 0);
+    }
+
+    /// The per-stage telemetry `span_log` and the cost reports read.
+    ///
+    /// Each key is checked for a distinct reason: the `*_ms` triple is what
+    /// attributes a spend to a stage rather than to "inprocessing"; the
+    /// `*_deadline_expired` pair is the only observable that separates "the pass
+    /// is expensive" from "the clock cut it off"; and the deadline keys must be
+    /// ABSENT with no deadline, so a missing key reads as "truncation was
+    /// impossible", never as "did not happen".
+    #[test]
+    fn the_schedule_emits_the_per_stage_telemetry_its_consumers_read() {
+        let f = pigeonhole_4_3();
+
+        let mut undated = RecordingObserver::granting(u64::MAX);
+        let _ = inprocess_scheduled(&f, full_schedule(), None, &mut undated);
+        for key in [
+            "inprocess_literals_before",
+            "xor_propagate_ms",
+            "subsume_ms",
+            "vivify_ms",
+            "bve_ms",
+            "compact_ms",
+            "subsume_work_spent",
+            "bve_work_spent",
+            "inprocess_literals_after",
+            "cnf_inprocessing",
+        ] {
+            assert!(
+                undated.get(key).is_some(),
+                "{key} must be recorded; got {:?}",
+                undated.counts
+            );
+        }
+        for key in [
+            "subsume_deadline_expired",
+            "vivify_deadline_expired",
+            "bve_deadline_expired",
+        ] {
+            assert_eq!(
+                undated.get(key),
+                None,
+                "{key} must be ABSENT with no deadline, not zero"
+            );
+        }
+
+        let mut dated = RecordingObserver::granting(u64::MAX);
+        let far = Instant::now() + Duration::from_secs(600);
+        let _ = inprocess_scheduled(&f, full_schedule(), Some(far), &mut dated);
+        for key in [
+            "subsume_deadline_expired",
+            "vivify_deadline_expired",
+            "bve_deadline_expired",
+        ] {
+            assert_eq!(
+                dated.get(key),
+                Some(0.0),
+                "{key} must be recorded (and unexpired) under a generous deadline"
+            );
+        }
+    }
+
+    /// Vivification's stage keys, and its step-guard, are gated by their own
+    /// flags rather than by the schedule running at all.
+    ///
+    /// The negative half matters as much as the positive: `preprocess()` has
+    /// `vivify: false` while the shipping SMT default is `cnf_vivify: true`, so
+    /// a caller that picks an arm by NAME instead of building it from its own
+    /// config changes behaviour silently. This test is what makes that visible.
+    #[test]
+    fn vivification_and_its_guard_are_gated_by_their_own_flags() {
+        let f = pigeonhole_4_3();
+
+        let mut on = RecordingObserver::granting(u64::MAX);
+        let _ = inprocess_scheduled(&f, full_schedule(), None, &mut on);
+        assert!(on.get("vivify_clauses_strengthened").is_some());
+        assert_eq!(
+            on.get("vivify_drat_step_checked"),
+            Some(1.0),
+            "the step-guard must run and hold under `prove_unsat`"
+        );
+
+        let mut off = RecordingObserver::granting(u64::MAX);
+        let no_vivify = InprocessSchedule {
+            vivify: false,
+            ..full_schedule()
+        };
+        let _ = inprocess_scheduled(&f, no_vivify, None, &mut off);
+        assert!(
+            !off.counts.iter().any(|(key, _)| key.starts_with("vivify_")),
+            "no vivify_* key may appear with the pass off: {:?}",
+            off.counts
+        );
+
+        let mut unguarded = RecordingObserver::granting(u64::MAX);
+        let no_guard = InprocessSchedule {
+            vivify_step_guard: false,
+            ..full_schedule()
+        };
+        let _ = inprocess_scheduled(&f, no_guard, None, &mut unguarded);
+        assert_eq!(
+            unguarded.get("vivify_drat_step_checked"),
+            None,
+            "the guard is the flag's, not the pass's"
+        );
     }
 }
