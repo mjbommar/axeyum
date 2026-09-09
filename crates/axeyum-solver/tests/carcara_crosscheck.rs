@@ -123,7 +123,7 @@ fn carcara_verdict(output: &str) -> CarcaraVerdict {
 /// (`references/carcara/cli/src/app.rs:175-177`), so it greedily consumes the
 /// positionals that follow it. Measured 2026-09-09 against carcara 1.1.0:
 /// `check --allowed-rules a --allowed-rules b PROOF PROBLEM` fails with
-/// "the following required arguments were not provided: <PROOF_FILE>", while
+/// "the following required arguments were not provided: `<PROOF_FILE>`", while
 /// putting the positionals first works. Hence proof, problem, then the flag.
 fn carcara_check_args(alethe: &Path, smt2: &Path) -> Vec<std::ffi::OsString> {
     let mut args: Vec<std::ffi::OsString> = vec![
@@ -162,21 +162,18 @@ fn carcara_bin() -> Option<PathBuf> {
             .join("../../references/carcara/target/release/carcara");
         path.is_file().then_some(path)
     };
-    match resolved {
-        Some(path) => {
-            carcara_banner(&path);
-            Some(path)
-        }
-        None => {
-            assert!(
-                !carcara_required(),
-                "AXEYUM_REQUIRE_CARCARA=1 but no carcara binary was found. Set \
-                 AXEYUM_CARCARA_BIN, or build references/carcara/target/release/carcara. A skip \
-                 here would be indistinguishable from a Carcara that accepted every proof."
-            );
-            println!("AXEYUM-CARCARA-SKIPPED no carcara binary");
-            None
-        }
+    if let Some(path) = resolved {
+        carcara_banner(&path);
+        Some(path)
+    } else {
+        assert!(
+            !carcara_required(),
+            "AXEYUM_REQUIRE_CARCARA=1 but no carcara binary was found. Set \
+             AXEYUM_CARCARA_BIN, or build references/carcara/target/release/carcara. A skip \
+             here would be indistinguishable from a Carcara that accepted every proof."
+        );
+        println!("AXEYUM-CARCARA-SKIPPED no carcara binary");
+        None
     }
 }
 
@@ -186,12 +183,10 @@ fn carcara_bin() -> Option<PathBuf> {
 fn carcara_banner(bin: &Path) {
     static ONCE: std::sync::Once = std::sync::Once::new();
     ONCE.call_once(|| {
-        let version = Command::new(bin)
-            .arg("--version")
-            .output()
-            .ok()
-            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
-            .unwrap_or_else(|| "<unknown>".to_owned());
+        let version = Command::new(bin).arg("--version").output().map_or_else(
+            |_| "<unknown>".to_owned(),
+            |o| String::from_utf8_lossy(&o.stdout).trim().to_owned(),
+        );
         println!("AXEYUM-CARCARA-BIN bin={} version={version}", bin.display());
     });
 }
@@ -3670,7 +3665,7 @@ fn the_check_arguments_put_the_positionals_before_the_greedy_flag() {
     );
     let flag = args.iter().position(|a| a == "--allowed-rules").unwrap();
     assert!(
-        flag > args.iter().position(|a| a.ends_with(".smt2")).unwrap(),
+        flag > args.iter().position(|a| a.contains(".smt2")).unwrap(),
         "the greedy flag must follow both positionals"
     );
 }
