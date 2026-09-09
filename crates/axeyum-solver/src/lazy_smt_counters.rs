@@ -821,12 +821,17 @@ fn record(f: impl FnOnce(&mut LazySmtCounters)) {
 /// Files the round now complete into its loop's histogram and clears the
 /// pending slot.
 ///
-/// Called at the point a round CLOSES, which is the opening of the next one
-/// ([`record_skeleton`]), a fresh loop entry ([`record_entry`]), or the guard's
-/// drop. There is no fourth closing point: a loop that exits between its two
-/// halves leaves its last round pending, and that is what
-/// [`LazySmtCounters::pending_round`] reports rather than a round silently
-/// missing from the distribution.
+/// Called at the three points a round CLOSES on the live counters: the opening
+/// of the next one ([`record_skeleton`]), a fresh loop entry
+/// ([`record_entry`]), and the guard's drop. A loop that exits between its two
+/// halves closes its last round at none of the first two, which is why the
+/// guard's drop is one of them.
+///
+/// [`last_lazy_smt_counters`] applies it to a COPY as well, so a read taken
+/// while the guard is still alive — which is every `--trace` read — sees the
+/// finished round rather than an empty distribution beside a non-zero round
+/// count. [`live_lazy_smt_counters`] deliberately does not: there the pending
+/// round is partial.
 fn file_pending(c: &mut LazySmtCounters) {
     if c.pending_round.is_zero() {
         return;
