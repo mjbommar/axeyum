@@ -204,8 +204,7 @@ fn skeleton_is_pure_boolean(arena: &TermArena, terms: &[TermId]) -> bool {
             return false;
         }
         match arena.node(t) {
-            TermNode::BoolConst(_) => {}
-            TermNode::Symbol(_) => {}
+            TermNode::BoolConst(_) | TermNode::Symbol(_) => {}
             // GUARD 2 — the operator whitelist. A `Bool`-sorted THEORY atom
             // (`x < 0`, `bvult a b`, an uninterpreted predicate) passes guard 1
             // unharmed; only this refuses it.
@@ -220,7 +219,7 @@ fn skeleton_is_pure_boolean(arena: &TermArena, terms: &[TermId]) -> bool {
                     | Op::Eq => {}
                     _ => return false,
                 }
-                for &a in args.iter() {
+                for &a in args {
                     stack.push(a);
                 }
             }
