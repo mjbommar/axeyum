@@ -37,10 +37,12 @@ flowchart LR
 ```
 
 The arrows show possible relationships, not a requirement that every result
-passes through every box. For example, a supported RUP-only DRAT proof can be
-elaborated to the current positive-hint LRAT slice for a more explicit
-propositional check; RAT additions are rejected. A linear-arithmetic certificate
-has a different structure.
+passes through every box. For example, a DRAT proof can be elaborated to LRAT
+for a more explicit propositional check — the LRAT checker and the *forward*
+elaborator both handle RUP and RAT steps; only the separate *backward*,
+core-first elaborator (`elaborate_drat_to_lrat_backward`, ADR-0382) still
+declines a RAT core lemma. A linear-arithmetic certificate has a different
+structure.
 
 ## Evidence reports and trust IDs
 
@@ -64,8 +66,9 @@ No row establishes a different row without a checked bridge.
 
 ## Current checker families
 
-- `axeyum-cnf` provides DRAT, a RUP-only positive-hint LRAT checker and
-  elaborator, and a selected Alethe core.
+- `axeyum-cnf` provides DRAT, an LRAT checker and forward elaborator that both
+  handle RUP and RAT steps (the separate backward elaborator does not yet
+  elaborate RAT core lemmas), and a selected Alethe core.
 - `axeyum-solver::certificates` groups fragment-specific certificate checkers.
 - `axeyum-solver::proofs` groups proof-facing APIs and reconstruction routes.
 - `axeyum-lean-kernel` checks selected reconstructed Lean terms independently;
