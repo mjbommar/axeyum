@@ -120,7 +120,7 @@ pub struct GroundBudget {
     pub name: &'static str,
     /// Ceiling on accumulated ground terms across the whole instantiation loop.
     /// Crossing it makes the loop run one final refutation check and return
-    /// `unknown` ([`egraph_ground_limit`]), even with no wall clock configured
+    /// `unknown` (`egraph_ground_limit`), even with no wall clock configured
     /// — this is the "never hang" ceiling.
     pub ceiling: usize,
     /// Ceiling on one retained matching round's tuple join, which prevents a

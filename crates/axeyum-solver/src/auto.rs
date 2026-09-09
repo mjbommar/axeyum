@@ -4273,7 +4273,7 @@ const DL_FALLBACK_RESERVE: Duration = Duration::from_secs(6);
 /// difference-logic probe, before [`DL_FALLBACK_RESERVE`] caps it. Named rather
 /// than written as a `/ 4` at the call site so the registry can key an entry on
 /// it: it is the same policy number as [`UF_ARITH_LADDER_RESERVE_SHARE`] and
-/// [`ABV_ONLINE_LADDER_RESERVE_SHARE`], and three copies of a quarter that
+/// `ABV_ONLINE_LADDER_RESERVE_SHARE`, and three copies of a quarter that
 /// cannot be found by name is how a fourth gets hand-rolled.
 const DL_LADDER_RESERVE_SHARE: u32 = 4;
 
@@ -4725,7 +4725,7 @@ pub enum AbvOnlineReservePolicy {
     /// measured against it rather than only remembered.
     WholeBudget,
     /// The online route receives the remaining budget less the ladder's reserve
-    /// (`1/`[`ABV_ONLINE_LADDER_RESERVE_SHARE`]), and the ladder below runs on
+    /// (`1/``ABV_ONLINE_LADDER_RESERVE_SHARE`), and the ladder below runs on
     /// the reserve, out of the same clock. Default.
     LadderReserve,
 }

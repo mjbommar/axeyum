@@ -477,7 +477,7 @@ fn sampled_resident_bytes() -> Option<u64> {
 ///
 /// This is the kernel's own high-water mark, so it needs no sampling and cannot
 /// miss a spike between two samples — which is why the span log reports THIS
-/// and not [`watchdog_peak_bytes`]. It is monotone per process, so on a
+/// and not `watchdog_peak_bytes`. It is monotone per process, so on a
 /// one-query-per-process harness (`smtcomp_cli`) it is that query's peak, and
 /// in a long-lived process it is the peak since the process started; a consumer
 /// that needs a per-query figure must fork.

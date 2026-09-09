@@ -100,7 +100,7 @@ pub struct BveOptions {
     /// total resolution attempts (the near-linear guarantee's safety net).
     pub max_rounds: usize,
     /// Deterministic **total** work budget in [`BveStats::work_spent`]'s unit
-    /// (occurrence-list steps, see [`crate::bve`]'s "the work unit" section).
+    /// (occurrence-list steps, see `crate::bve`'s "the work unit" section).
     /// `None` is unbounded — the pass then stops only at [`Self::max_rounds`]'s
     /// resolution cap or the caller's wall-clock deadline.
     ///

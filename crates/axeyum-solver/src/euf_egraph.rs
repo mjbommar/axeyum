@@ -906,7 +906,7 @@ pub enum EufOnlineAtomPolicy {
     Refuse,
     /// Abstract each such subterm to a fresh opaque skeleton variable, and — on
     /// a query where that fired — run under
-    /// [`EUF_ONLINE_ABSTRACT_SLICE`] of the caller's remaining budget so the
+    /// `EUF_ONLINE_ABSTRACT_SLICE` of the caller's remaining budget so the
     /// routes below keep theirs. A query needing no abstraction is byte-identical
     /// to [`Self::Refuse`], budget included. Default.
     AbstractSliced,

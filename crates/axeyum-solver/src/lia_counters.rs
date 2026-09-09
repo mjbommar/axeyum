@@ -79,7 +79,7 @@ pub struct LiaCounterPolicy {
     /// Collect the online theory's propagation group: propagate calls, atoms
     /// scanned, LP entailment probes and literals offered.
     pub propagation: bool,
-    /// Collect the warm offline decider's group ([`crate::lra::warm`]): how each
+    /// Collect the warm offline decider's group (`crate::lra::warm`): how each
     /// check's constraint system was assembled, the trail delta it was updated
     /// by, and the per-literal collection cache's hit rate.
     ///
@@ -161,7 +161,7 @@ pub enum LiaCounterGroup {
     Theory,
     /// The online theory's propagation path.
     Propagation,
-    /// The warm offline decider ([`crate::lra::warm`]): how each check's system
+    /// The warm offline decider (`crate::lra::warm`): how each check's system
     /// was assembled and what the per-literal cache saved.
     Warm,
 }

@@ -3,7 +3,7 @@
 //!
 //! # Why this is one type and not two copies
 //!
-//! [`crate::bve`] and [`crate::simplify`] are the same shape of pass: build
+//! `crate::bve` and [`crate::simplify`] are the same shape of pass: build
 //! literal occurrence lists over the whole formula, walk them repeatedly, and
 //! remove clauses *lazily* (a removed clause's id stays in every list it was
 //! ever in and is skipped on scan). They therefore have the same cost

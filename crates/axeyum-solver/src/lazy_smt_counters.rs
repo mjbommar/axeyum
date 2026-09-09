@@ -11,7 +11,7 @@
 //! silent because the route that consumed the budget has **no instrument at
 //! all**.
 //!
-//! That route is [`crate::dpll_t::check_with_lra_dpll_within`]'s abstraction /
+//! That route is `crate::dpll_t::check_with_lra_dpll_within`'s abstraction /
 //! refinement loop (the `nra` label in the route trail covers both lazy-SMT
 //! loops). Each round runs a full `sat-bv` check on a Boolean skeleton plus the
 //! blocking clauses learned so far, then decides the chosen cube with the exact
@@ -102,7 +102,7 @@ impl LazySmtReading {
 /// the three engines.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LazySmtLoop {
-    /// [`crate::dpll_t::check_with_lra_dpll_within`], linear real arithmetic.
+    /// `crate::dpll_t::check_with_lra_dpll_within`, linear real arithmetic.
     Lra,
     /// `check_with_nra_dpll_within`, nonlinear real arithmetic over the CAD.
     Nra,
@@ -155,7 +155,7 @@ impl LazySmtLoop {
 /// How many distinct lazy-SMT loops [`LazySmtCounters`] keeps a histogram for.
 pub const LAZY_SMT_LOOPS: usize = 3;
 
-/// Buckets in a [`RoundHistogram`]: bucket `0` is `<1 ms`, bucket `k` is
+/// Buckets in a `RoundHistogram`: bucket `0` is `<1 ms`, bucket `k` is
 /// `[2^(k-1), 2^k)` ms for `1 <= k <= 14`, and bucket `15` is the saturating
 /// tail `>= 2^14 ms = 16.4 s` — so the standard 24 s budget lands inside the
 /// range rather than at its edge.
@@ -315,7 +315,7 @@ pub struct LazySmtCounters {
     pub nia_rounds: u64,
 
     /// Per-round wall-clock distribution, one histogram per loop, indexed by
-    /// `LazySmtLoop::index`. See [`RoundHistogram`] for why a distribution and
+    /// `LazySmtLoop::index`. See `RoundHistogram` for why a distribution and
     /// not a mean, and [`LazySmtCounters::hist`] for the accessor that keeps
     /// the index honest.
     ///
@@ -433,7 +433,7 @@ pub struct LazySmtCounters {
     /// denominator for the three stage timings below.
     ///
     /// Not the same as [`Self::theory_check`]'s round count: this counts every
-    /// [`crate::lra::decide_within`] under the armed guard, which on the
+    /// `crate::lra::decide_within` under the armed guard, which on the
     /// lazy-SMT route is one per round but on any other route is whatever that
     /// route does. Read the two together before dividing.
     pub cube_decisions: u64,
@@ -476,7 +476,7 @@ pub struct LazySmtCounters {
 }
 
 /// What the online CDCL(T) LRA probe at the head of
-/// [`crate::dpll_t::check_with_lra_dpll_within`] did with the query.
+/// `crate::dpll_t::check_with_lra_dpll_within` did with the query.
 ///
 /// Every variant except [`OnlineProbe::Took`] means the query fell through to
 /// the offline refinement loop.
