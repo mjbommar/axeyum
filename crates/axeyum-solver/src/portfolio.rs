@@ -138,6 +138,33 @@ pub fn groups_run() -> u64 {
     GROUPS_RUN.with(std::cell::Cell::get)
 }
 
+/// Stack each portfolio arm gets.
+///
+/// **Not the default 2 MiB, and this was measured rather than anticipated.**
+/// `smtcomp_cli` runs the whole solve on a 512 MiB worker because a deeply
+/// nested input otherwise turns a decline into a stack-overflow abort. An arm
+/// runs the *same* routes on the *same* query, but `std::thread::scope` hands a
+/// spawned thread the platform default -- so the first raced run of
+/// `QF_IDL/queens_bench/super_queen/super_queen61-1.smt2` (19,501 DAG nodes)
+/// printed
+///
+/// ```text
+/// thread '<unknown>' has overflowed its stack
+/// fatal runtime error: stack overflow, aborting
+/// ```
+///
+/// and exited 134, where the sequential ladder on the same file returned
+/// `unknown`. An abort is strictly worse than an `unknown` -- it loses the file
+/// *and* the process -- and it is INVISIBLE to any check that compares
+/// verdicts, because there is no verdict to compare.
+///
+/// 256 MiB rather than the harness's 512 MiB because a group reserves this per
+/// arm and a competition run is commonly under an address-space `ulimit`. It is
+/// a **reservation**: pages are committed as they are touched, so two arms at
+/// 256 MiB cost the same address space as the one 512 MiB worker the harness
+/// already creates, and no resident memory until a route actually recurses.
+const ARM_STACK_BYTES: usize = 256 * 1024 * 1024;
+
 /// One route as a portfolio arm.
 ///
 /// The `run` signature is the shape every ladder route already has, so an arm
@@ -370,25 +397,56 @@ impl<'a> FusedGroup<'a> {
             let mut handles = Vec::with_capacity(self.arms.len());
             for (index, arm) in self.arms.iter().enumerate() {
                 let tx = tx.clone();
+                let spawn_failure_tx = tx.clone();
                 let token = tokens[index].clone();
                 let mut scratch = arena.clone();
                 let arm_config = arm_config.clone();
                 let arm = *arm;
-                handles.push(scope.spawn(move || {
-                    let _installed = StopScope::install(&token);
-                    let started = Instant::now();
-                    let result = (arm.run)(&mut scratch, assertions, &arm_config);
-                    let outcome = ArmOutcome {
-                        route: arm.route,
-                        result,
-                        elapsed: started.elapsed(),
-                        stopped: token.is_requested(),
-                    };
-                    // A send failure means the coordinator is already gone,
-                    // which cannot happen while it holds `rx` across the whole
-                    // scope; drop the outcome rather than panicking a worker.
-                    drop(tx.send((index, outcome)));
-                }));
+                let spawned = std::thread::Builder::new()
+                    .name(format!("portfolio-arm-{}", arm.route))
+                    .stack_size(ARM_STACK_BYTES)
+                    .spawn_scoped(scope, move || {
+                        let _installed = StopScope::install(&token);
+                        let started = Instant::now();
+                        let result = (arm.run)(&mut scratch, assertions, &arm_config);
+                        let outcome = ArmOutcome {
+                            route: arm.route,
+                            result,
+                            elapsed: started.elapsed(),
+                            stopped: token.is_requested(),
+                        };
+                        // A send failure means the coordinator is already gone,
+                        // which cannot happen while it holds `rx` across the
+                        // whole scope; drop the outcome rather than panicking a
+                        // worker.
+                        drop(tx.send((index, outcome)));
+                    });
+                match spawned {
+                    Ok(handle) => handles.push(handle),
+                    Err(_) => {
+                        // Out of threads or address space. The arm simply does
+                        // not run: the group falls back to whatever the other
+                        // arms return and the query still gets an answer.
+                        // Refusing the whole query because a worker could not
+                        // be spawned would turn a resource shortage into a lost
+                        // file.
+                        drop(spawn_failure_tx.send((
+                            index,
+                            ArmOutcome {
+                                route: arm.route,
+                                result: Ok(CheckResult::Unknown(crate::UnknownReason {
+                                    kind: crate::UnknownKind::ResourceLimit,
+                                    detail: format!(
+                                        "portfolio arm {} could not be spawned",
+                                        arm.route
+                                    ),
+                                })),
+                                elapsed: Duration::ZERO,
+                                stopped: false,
+                            },
+                        )));
+                    }
+                }
             }
             // The coordinator's own copy must go, or `rx` never sees a
             // disconnect and a group whose arms all panicked would block here.
@@ -569,6 +627,60 @@ mod tests {
             timeout: Some(Duration::from_millis(timeout_ms)),
             ..SolverConfig::default()
         }
+    }
+
+    /// Burns 6 MiB of stack, then decides. On a thread with the platform
+    /// default stack this aborts the process; on a portfolio arm it must not.
+    fn eats_six_megabytes_of_stack(
+        _: &mut TermArena,
+        _: &[TermId],
+        _: &SolverConfig,
+    ) -> Result<CheckResult, SolverError> {
+        fn frame(depth: u32) -> u8 {
+            let block = [7u8; 64 * 1024];
+            let block = std::hint::black_box(&block);
+            if depth == 0 {
+                return block[0];
+            }
+            frame(depth - 1).wrapping_add(block[1])
+        }
+        let _burned = std::hint::black_box(frame(95));
+        Ok(CheckResult::Unsat)
+    }
+
+    #[test]
+    fn an_arm_gets_a_deep_stack_not_the_platform_default() {
+        // A REGRESSION TEST FOR AN ABORT, so it fails by killing this binary
+        // rather than by returning a wrong answer -- which is exactly why it
+        // has to exist. `std::thread::scope` hands a spawned thread the
+        // platform default (2 MiB) while `smtcomp_cli` runs the same routes on
+        // a 512 MiB worker, precisely because a deeply nested input otherwise
+        // turns a decline into a stack-overflow abort.
+        //
+        // Measured, not anticipated: the first raced run of
+        // `QF_IDL/queens_bench/super_queen/super_queen61-1.smt2` (19,501 DAG
+        // nodes) exited 134 with "fatal runtime error: stack overflow", where
+        // the sequential ladder on the same file returned `unknown`. Setting
+        // `ARM_STACK_BYTES` back to 2 MiB kills this test and nothing else.
+        let arena = TermArena::new();
+        let arms = [
+            Arm {
+                route: "deep",
+                weight: 1,
+                run: eats_six_megabytes_of_stack,
+            },
+            Arm {
+                route: "also-deep",
+                weight: 1,
+                run: eats_six_megabytes_of_stack,
+            },
+        ];
+        let outcome = FusedGroup::new(&arms, 2)
+            .run(&arena, &[], &config_with(30_000))
+            .expect("group ran");
+        let (route, result) = outcome.into_decision().expect("decided");
+        assert_eq!(route, "deep");
+        assert!(matches!(result, CheckResult::Unsat));
     }
 
     #[test]

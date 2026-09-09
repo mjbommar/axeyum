@@ -2790,6 +2790,7 @@ fn dispatch_int_linear_refuters(
     assertions: &[TermId],
     config: &SolverConfig,
     features: &Features,
+    dispatch_deadline: Option<Instant>,
     rec: &mut Recorder<'_>,
 ) -> Result<Option<CheckResult>, SolverError> {
     // `bv2nat(b)` finite-range refutation (G2): abstract each distinct `bv2nat(b)`
@@ -2865,10 +2866,25 @@ fn dispatch_int_linear_refuters(
     // config. That is the strongest available form of the degeneracy property --
     // the sequential path is not merely equivalent to a one-worker group, it
     // does not construct one.
-    if int_linear_portfolio_workers() > 1
-        && let Some(decided) = run_int_linear_group(arena, &lin, config, congruence, rec)?
-    {
-        return Ok(Some(decided));
+    if int_linear_portfolio_workers() > 1 {
+        // The group's clock is what is LEFT of the dispatcher's entry deadline,
+        // not a fresh `config.timeout`. Measured 2026-09-09, and it is the
+        // difference between a portfolio and a budget overrun: on
+        // `QF_IDL/.../super_queen83-1.smt2` the difference-logic probe above
+        // spends 21 s of the 24 s budget, so an unclamped group would run its
+        // arms for a further 24 s and answer at 45 s -- past a wall the
+        // competition harness enforces by killing the process, which scores as
+        // a loss whatever the arms found.
+        //
+        // The sequential call below is deliberately NOT clamped: it takes
+        // `config` exactly as it always has. Clamping it would be a behaviour
+        // change to the shipped path, which is the one thing this wiring must
+        // not do -- and `lia-dpll` does not have the same exposure, because it
+        // is the route the ladder was going to run either way.
+        let group_config = config_with_remaining_deadline(config, dispatch_deadline);
+        if let Some(decided) = run_int_linear_group(arena, &lin, &group_config, congruence, rec)? {
+            return Ok(Some(decided));
+        }
     }
     match check_with_lia_dpll(arena, &lin, config) {
         Ok(mut result) => {
@@ -4721,9 +4737,14 @@ fn check_auto_dispatch(
         // non-`unsat` outcome is discarded — the original query (with `bv2nat`
         // intact, which the bit-blaster handles natively) decides sat below. This
         // is strictly additive: it only ever turns a prior `unknown` into `unsat`.
-        if let Some(result) =
-            dispatch_int_linear_refuters(arena, assertions, config, &features, rec)?
-        {
+        if let Some(result) = dispatch_int_linear_refuters(
+            arena,
+            assertions,
+            config,
+            &features,
+            dispatch_deadline,
+            rec,
+        )? {
             return Ok(result);
         }
     }
@@ -10321,6 +10342,7 @@ mod tests {
             &assertions,
             &SolverConfig::default(),
             &features,
+            None,
             &mut rec,
         )
         .expect("dispatch");
@@ -10431,14 +10453,20 @@ mod tests {
             timeout: Some(Duration::from_secs(24)),
             ..SolverConfig::default()
         };
-        let result =
-            dispatch_int_linear_refuters(&mut arena, &assertions, &config, &features, &mut rec)
-                .expect("dispatch")
-                .expect(
-                    "lia-dpll decides Unknown (an admission decline is still a decision \
+        let result = dispatch_int_linear_refuters(
+            &mut arena,
+            &assertions,
+            &config,
+            &features,
+            None,
+            &mut rec,
+        )
+        .expect("dispatch")
+        .expect(
+            "lia-dpll decides Unknown (an admission decline is still a decision \
                          `dispatch_int_linear_refuters` returns as `Some`, not a fallthrough \
                          `None` — only an `Unsupported` error falls through)",
-                );
+        );
         let CheckResult::Unknown(reason) = result else {
             panic!("expected an Unknown admission decline, got {result:?}");
         };
