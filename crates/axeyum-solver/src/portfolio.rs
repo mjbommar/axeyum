@@ -132,7 +132,19 @@ std::thread_local! {
     static GROUPS_RUN: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
 }
 
-/// How many fused groups this thread has run. See [`GROUPS_RUN`].
+/// How many fused groups this thread has run.
+///
+/// The degeneracy property -- "at one worker the sequential path is the
+/// pre-portfolio path" -- is enforced in `auto.rs` by not constructing a group
+/// at all, and that is a claim about control flow that no verdict comparison
+/// can check: two paths agreeing on every answer is exactly what a *correct*
+/// portfolio also looks like. This counter makes the claim falsifiable, and
+/// `crates/axeyum-solver/tests/portfolio_fused_group.rs` asserts it does not
+/// move across a batch of integer queries at the default worker count.
+///
+/// Per **thread**, not per process: the assertion is about the dispatch the
+/// caller just made, and a test binary runs its cases in parallel, so a global
+/// counter would be moved by a sibling case racing a group of its own.
 #[must_use]
 pub fn groups_run() -> u64 {
     GROUPS_RUN.with(std::cell::Cell::get)
