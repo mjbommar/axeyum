@@ -459,12 +459,21 @@ mod probes {
         );
     }
 
-    /// The number of rows we could NOT probe is a finding, so it is pinned: it
-    /// may go down freely, but going up requires editing this ratchet and
-    /// justifying the new unprobed row's reason.
+    /// How many rows we could NOT probe. Measured 2026-09-09: **zero** — every
+    /// one of the 19 `SUPPORT_MATRIX` rows has a behavioral probe.
+    const UNPROBED_ROWS: usize = 0;
+
+    /// The unprobed count is a FINDING, so it is pinned exactly. Marking a row
+    /// `Kind::Unprobed` fails here until someone edits this number, which is the
+    /// point: silently dropping a row's coverage should cost an edit and a
+    /// reason, not nothing.
+    ///
+    /// `assert_eq!`, not `<=`: the first draft of this guard wrote
+    /// `unprobed.len() <= MAX_UNPROBED` with `MAX_UNPROBED = 0`, which is a
+    /// comparison a `usize` can never fail — a checker that cannot fail, the
+    /// exact thing this whole item exists to remove. Clippy caught it.
     #[test]
-    fn unprobed_row_count_does_not_grow() {
-        const MAX_UNPROBED: usize = 0;
+    fn unprobed_rows_are_pinned_at_the_measured_count() {
         let unprobed: Vec<(&str, &str)> = PROBES
             .iter()
             .filter_map(|p| match p.kind {
@@ -475,10 +484,12 @@ mod probes {
         for (frag, reason) in &unprobed {
             eprintln!("UNPROBED  {frag}\n          reason: {reason}");
         }
-        assert!(
-            unprobed.len() <= MAX_UNPROBED,
-            "unprobed rows grew to {} (max {MAX_UNPROBED}): {unprobed:?}",
-            unprobed.len()
+        assert_eq!(
+            unprobed.len(),
+            UNPROBED_ROWS,
+            "the unprobed-row count moved: {unprobed:?}. If a row genuinely \
+             cannot be probed at the front door, say so in its `Kind::Unprobed` \
+             reason and update `UNPROBED_ROWS` — do not widen this check."
         );
     }
 }
