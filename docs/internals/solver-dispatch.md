@@ -7,7 +7,8 @@ or evidence obligations are met.
 
 ## Front doors
 
-The unified `solve` front door accepts an arena, assertions, and a `SolveConfig`.
+The unified `solve` front door accepts an arena, assertions, and a
+[`SolverConfig`](../../crates/axeyum-solver/src/backend.rs).
 It normalizes the query, considers quantified and ground paths, dispatches the
 quantifier-free subset, and safely falls back to incomplete quantified routes.
 The quantifier-free `check_auto` dispatcher selects among theory-specific and

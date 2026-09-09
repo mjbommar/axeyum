@@ -24,9 +24,18 @@ Validate it with:
 python3 scripts/gen-smtlib-api-conformance.py --check
 ```
 
-The planned ordered session semantics are separately modeled by the generated
+Ordered, one-response-per-command-point session semantics are implemented
+today by `solve_smtlib_session` (`crates/axeyum-solver/src/smtlib.rs`) — it is
+the driver behind `axeyum_cli`, and `solve_smtlib_incremental` is `run_session`
+with `SessionPolicy::VerdictsOnly`, so the two cannot disagree about a
+`check-sat`. A richer, still-unimplemented protocol contract — explicit
+modes, `reset`/`reset-assertions` epochs, `print-success`/output-channel
+routing, `produce-*` option gates, and 14 numbered invariants in total — is
+separately modeled by the generated
 [SMT-LIB session contract](../plan/generated/smtlib-session-contract.md). That
-prototype is executable planning evidence, not the current production runner.
+document is executable planning evidence for the parts of the protocol not yet
+built, not a description of the whole session surface: the ordered
+command-point walk it partly plans for already exists in production.
 
 ## Current Rust-facing front doors
 
@@ -35,7 +44,8 @@ With `axeyum-solver/full`:
 | API | Contract |
 |---|---|
 | `solve_smtlib` | One effective satisfiability query; returns `SmtLibOutcome` |
-| `solve_smtlib_incremental` | One typed result per recorded check point with assertion-stack behavior |
+| `solve_smtlib_incremental` | One typed `CheckResult` per recorded check point with assertion-stack behavior; delegates to `solve_smtlib_session`'s ordered walk, verdicts only |
+| `solve_smtlib_session` | One `SmtLibResponse` per output command, in script order; also honors `get-model`/`get-value`/`get-unsat-core`/`get-proof`/`echo`; the driver behind `axeyum_cli` |
 | `solve_smtlib_get_model` / `solve_smtlib_model` | Typed declared constants/functions for one SAT query |
 | `solve_smtlib_get_value` | Typed evaluated requested terms |
 | `solve_smtlib_get_assignment` | Typed values for supported named assertions |

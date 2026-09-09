@@ -287,6 +287,7 @@ length↔LIA route.
 | `str.replace` | yes | Bounded (`string_replace`, `parse.rs:9602`) | yes | Symbolic-operand form declines to Unknown (fuzz doc note) |
 | `str.replace_all` | yes | Bounded (`string_replace_all`, `parse.rs:9862`) | yes | Non-overlapping, left-to-right |
 | `str.replace_re` / `str.replace_re_all` | yes | Bounded (`string_replace_re[_all]`, `parse.rs:9917,9970`) | yes | Regex-driven variants of the above |
+| `str.update` | yes | Bounded (`string_update`, `parse.rs:9535`, dispatched from `apply_op` at `parse.rs:19308`) | yes | ADR-0029: overwrite `len(t)` bytes of `s` at index `i` with `t` (clipped to `s`; out-of-`[0, len(s))` index leaves `s` unchanged); result length always `len(s)` |
 | `str.to_int` | yes | Bounded (`string_to_int`, `parse.rs:10126`), Mem (exact decimal-language translation) | yes | TOTAL-BY-DEF `-1` on non-numeral (§5) |
 | `str.from_int` | yes | Bounded (`string_from_int[_const]`, `parse.rs:10180,10249`) | yes | `fits` flag guards out-of-window values |
 | `str.to_code` | yes | Bounded (`string_to_code`, `parse.rs:10024`) | yes | TOTAL-BY-DEF `-1` on empty/multi-char (§5) |
@@ -303,6 +304,39 @@ length↔LIA route.
 | `re.diff` | yes | both engines | n/a | **Not a native AST node in either engine** — desugared to `Inter(a, Comp(b))` at the front end (`regex.rs:679-682`, `regex_membership.rs:1295-1298`) |
 | `re.*` / `re.+` / `re.opt` | yes | both engines | n/a | |
 | `re.loop` / `re.^` | yes | both engines | n/a | Byte engine: unrolled, capped at `MAX_LOOP_EXPANSION=256`; code-point engine: native `Regex::Loop`/`repeat`, no unrolling |
+
+### 1a. The `seq.*` family (ADR-0029/ADR-0051, generic-element `(Seq E)`)
+
+The operator tables above cover `String` (`Seq(BitVec(18))` fixed-element
+strings) and its `str.*` spelling. A separate, generic-element `(Seq E)` sort
+(`E` any registered element sort — `Bool`/`Int`/`BitVec`) is dispatched
+through `apply_seq_op` (`parse.rs:18688-18987`) to the same packed-BV bounded
+encoding family — `op.starts_with("seq.")` marks the bounded length
+abstraction used (`parse.rs:18696`, P2.7 A.2), same as a `str.*` call. This
+family was previously undocumented here:
+
+| Operator | Site (`parse.rs`) | Notes |
+|---|---|---|
+| `seq.len` | `18707` | |
+| `seq.++` / `seq.concat` | `18716` | |
+| `seq.unit` | `18728` | Declines when the element width cannot be determined (no declared `(Seq E)` sort names it) |
+| `seq.extract` | `18747` | |
+| `seq.prefixof` | `18751` | |
+| `seq.suffixof` | `18761` | |
+| `seq.contains` | `18771` | |
+| `seq.nth` | `18785` | |
+| `seq.at` | `18797` | |
+| `seq.update` | `18804` | |
+| `seq.rev` | `18810` | |
+| `seq.replace` | `18818` | |
+| `seq.indexof` | `18827` | |
+| `seq.replace_all` | `18839` | |
+| `seq.nth_total` | `18844` | |
+
+`seq.len`/`seq.++` on a `String`-sorted argument are also accepted as
+synonyms for `str.len`/`str.++` in several term-shape matchers throughout
+`parse.rs` (e.g. `length_int_expr` at `parse.rs:2643`); this table is about
+the dedicated generic-`(Seq E)` dispatch, not that alias.
 
 ## 2. The decision procedure, in call order
 

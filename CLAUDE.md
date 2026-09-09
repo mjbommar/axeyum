@@ -316,8 +316,8 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   (classification, comparison, abs/neg/min/max, arithmetic incl. rem/fma/sub,
   and int/real conversions) over the typed IR; the GPU/ML precisions are free
   from the generic `(exp_bits, sig_bits)` design (ADR-0023). Extracted from
-  `axeyum-solver` so the SMT-LIB front-end can share it (depends only on
-  `axeyum-ir`).
+  `axeyum-solver` so the SMT-LIB front-end can share it (depends on
+  `axeyum-ir` and `axeyum-arith`).
 - `crates/axeyum-query` — query object: assertions, assumptions, scopes,
   stable labels.
 - `crates/axeyum-rewrite` — rewrite manifest contracts, the first
@@ -646,9 +646,12 @@ attributions for one slow build were propagated in briefs before anyone measured
 - The `z3` crate ≥ 0.20 removed the old `'ctx` lifetime API; `Solver::new()`
   takes no arguments and contexts are managed internally
   (`with_z3_context`/`with_z3_config`). Don't copy pre-0.20 examples.
-- varisat is effectively unmaintained (last release 2019) but is the only
-  Rust SAT solver with DRAT/LRAT proof output; treat it as a design reference
-  and benchmark candidate, not a guaranteed dependency.
+- varisat is effectively unmaintained (last release 0.2.2, 2020-09-09) but
+  remains the only Rust SAT solver with **LRAT** proof output; splr (actively
+  released, 0.19.0 as of 2026-08-22) also ships DRAT via `--certify`, so
+  "only ... DRAT" is no longer true, but splr has no LRAT support. Treat
+  varisat as a design reference and benchmark candidate, not a guaranteed
+  dependency.
 - The first pure-Rust SAT adapter is `rustsat-batsat` through RustSAT
   (ADR-0007). Its UNSAT results are lower-assurance until a proof-producing
   route and checker exist.

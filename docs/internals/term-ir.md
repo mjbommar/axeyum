@@ -73,9 +73,18 @@ never produces a wrong answer anywhere. The one place representation shows
 through is `numerator()`/`denominator()`, which return `i128` and therefore panic
 rather than truncate on a promoted value; a route that opts in must keep such
 values internal or use `checked_numerator()` / `numerator_big()`. The first —
-and so far only — route to opt in is the exact-rational simplex, which narrows
-at its own boundary. Raising the same ceiling for `Value::Int` and the SMT-LIB
-integer-literal parser is ADR-1702's slice 2, and is not landed.
+and so far only — route to opt in for `Real`/`Rational` is the exact-rational
+simplex, which narrows at its own boundary.
+
+ADR-1702's slice 2 raises the same ceiling for `Value::Int`, and **is landed**:
+`TermNode::WideIntConst` / `Value::WideInt` (`crates/axeyum-ir/src/int_wide.rs`)
+hold an exact `BigInt` for an integer literal or arithmetic result outside the
+`i128` reference range, the SMT-LIB integer-literal parser constructs
+`WideIntConst` directly for an out-of-range literal
+(`crates/axeyum-smtlib/src/parse.rs:16055`), and the ground evaluator's
+`apply_wide_int` path (`crates/axeyum-ir/src/eval.rs:548-564`) computes exactly
+and demotes back to `Value::Int` whenever the result fits — the same
+opt-in/demote shape as the `Real` family above.
 
 The canonical bit convention is
 **least significant bit first** when a value is converted to a vector of

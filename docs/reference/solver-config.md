@@ -29,8 +29,14 @@ specific, so artifacts must record both the value and backend/unit.
 | `cnf_vivify` | Add clause vivification when CNF inprocessing is enabled |
 
 `preprocess` defaults on because the denotation-preserving canonicalizer is a
-measured, replay-safe default. The other assurance/inprocessing levers in this
-table default off.
+measured, replay-safe default. `cnf_inprocessing` defaults off. `cnf_vivify`
+defaults **on** (`SolverConfig::default`,
+`crates/axeyum-solver/src/backend.rs:391`) but is currently a documented
+no-op at that default: the vivification pass it gates (`maybe_vivify`) is only
+ever invoked from inside CNF inprocessing (`maybe_inprocess`,
+`crates/axeyum-solver/src/sat_bv_backend.rs:1763-1773`, `:1948`), which itself
+returns immediately when `cnf_inprocessing` is `false`. So `cnf_vivify` has no
+observable effect unless `cnf_inprocessing` is also enabled.
 
 `prove_unsat` is a high-assurance verdict mode for bounded instances. On the
 current SAT-BV path the proof-producing native core is the primary SAT search

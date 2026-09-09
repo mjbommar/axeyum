@@ -33,8 +33,10 @@ being inferred later from solver state.
 ([ADR-1703](../research/09-decisions/adr-1703-the-native-core-is-the-sat-engine-batsat-is-demoted-to-a-differential-oracle.md)).
 It is `crates/axeyum-cnf/src/proof_sat.rs`: a flat clause arena with per-clause
 headers, blocking-literal watch lists, VSIDS with geometric decay and rescale,
-phase saving plus target rephasing, Luby restarts (EMA-glue implemented and
-selectable), LBD glue tiers and `reduce_db`.
+phase saving plus target rephasing, Luby restarts by default (an EMA/Glucose
+restart schedule is implemented behind the private `use_ema_restart` field but
+has no public setter — reachable only from `#[cfg(test)]` code, not a
+runtime-selectable option), LBD glue tiers and `reduce_db`.
 
 Three entry shapes:
 
@@ -128,12 +130,16 @@ before believing one of them passed.
 
 ## DRAT, LRAT, Alethe, and XOR
 
-The crate can produce and check DRAT, elaborate supported **RUP-only** DRAT
-proofs into LRAT, check that positive-hint LRAT slice, and parse/write/check a
-selected Alethe core. RAT additions (negative hints) are outside the current
-LRAT checker and elaborator and are rejected rather than silently accepted. It
-also includes XOR extraction and GF(2) reasoning; bounded Gaussian conflicts
-can emit a propositional justification for the conflict subset.
+The crate can produce and check DRAT; the LRAT checker (`check_lrat`) and the
+*forward* elaborator (`elaborate_drat_to_lrat`) both handle RUP **and RAT**
+additions (`LratStep::AddRat`, `verify_rat_addition`), and it can
+parse/write/check a selected Alethe core. The *backward*, core-first
+elaborator (`elaborate_drat_to_lrat_backward`/`certify_unsat_via_lrat`,
+ADR-0382) is narrower: it still declines to elaborate a RAT core lemma
+(`RatNotSupported`) — a gap specific to that one engine's backward walk, not a
+format or checker limitation. It also includes XOR extraction and GF(2)
+reasoning; bounded Gaussian conflicts can emit a propositional justification
+for the conflict subset.
 
 A checked DRAT or LRAT proof establishes that the encoded **CNF** is
 unsatisfiable. It does not by itself prove that every earlier word-level or
