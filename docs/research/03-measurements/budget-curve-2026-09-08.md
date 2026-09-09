@@ -91,3 +91,28 @@ Two consequences, both stated before the data:
   marked NOT COMPARABLE below rather than quietly averaged.
 
 <!-- RESULTS SECTION FOLLOWS ONCE THE SWEEPS LAND -->
+
+## Addendum, pinned at 04:40 UTC — a repeated 24 s pass, and why
+
+Between dispatch and the start of the 60 s passes the boxes got **quieter**: the
+`parallel-portfolio` lane's `route_solo` sweep wound down, and the loads that
+were 3.0–4.1 at dispatch read 1.29 (`s5`), 2.00 (`s6`) and 2.01 (`s7`) at
+04:39 UTC.
+
+That is a confound pointing in the **dangerous** direction. The 60 s pass runs
+last, so it runs on the quietest machine; some of its gain would be the quiet
+box rather than the longer clock, and every file it recovers that way would be
+scored TIME-BOUND — which is the answer that says "keep optimising."
+
+So a **second 24 s pass is queued behind each 60 s pass**, decided here before
+any 60 s number was read. It does two things:
+
+1. It is a load-matched partner for the 60 s row, so the 24→60 increment is not
+   read across two different machines.
+2. **24 s versus 24 s-repeat, same list, same binary, same day, is the
+   contention noise floor** for this whole exercise — a number we have been
+   guessing at rather than measuring.
+
+Where the two 24 s passes disagree, the classification below uses the
+**repeat** (load-matched to 60 s), and the difference between them is reported
+as noise rather than absorbed.
