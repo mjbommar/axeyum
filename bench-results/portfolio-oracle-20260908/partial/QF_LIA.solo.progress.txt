@@ -11,3 +11,17 @@
 [11/27] QF_LIA deciders=0 best=no-route (105s)  problem__006.smt2
 [12/27] QF_LIA deciders=0 best=no-route (217s)  problem_2__034.smt2
 [13/27] QF_LIA deciders=0 best=no-route (217s)  problem_2__026.smt2
+[14/27] QF_LIA deciders=0 best=no-route (193s)  ex13800_2600_100.smt2
+[15/27] QF_LIA deciders=2 best=lra-dpll@1928ms (149s)  ex20400_2600_100.smt2
+[16/27] QF_LIA deciders=2 best=nra@475ms (146s)  ex27000_2600_100.smt2
+[17/27] QF_LIA deciders=1 best=lia-online-cdclt@24047ms (155s)  ex8500_2600_100.smt2
+[18/27] QF_LIA deciders=0 best=no-route (193s)  ex5640_2400_100.smt2
+[19/27] QF_LIA deciders=7 best=nra@838ms (114s)  ex6960_2400_100.smt2
+[20/27] QF_LIA deciders=7 best=lra-dpll@800ms (93s)  ex8280_2400_100.smt2
+[21/27] QF_LIA deciders=7 best=lra-dpll@371ms (87s)  ex9600_2400_100.smt2
+[22/27] QF_LIA deciders=0 best=no-route (145s)  convert-jpg2gif-query-1423.smt2
+[23/27] QF_LIA deciders=0 best=no-route (199s)  FISCHER10-13-fair.smt2
+[24/27] QF_LIA deciders=2 best=lra-dpll@43ms (156s)  prp-0-19.smt2
+[25/27] QF_LIA deciders=2 best=lra-dpll@75ms (265s)  prp-8-22.smt2
+[26/27] QF_LIA deciders=2 best=lra-dpll@20ms (220s)  prp-0-47.smt2
+[27/27] QF_LIA deciders=0 best=no-route (96s)  ring_2exp8_4vars_1ite_unsat.smt2

@@ -1,0 +1,7 @@
+[1/7] QF_SLIA deciders=9 best=abv-lazy-row@3ms (0s)  norn-benchmark-10.smt2
+[2/7] QF_SLIA deciders=0 best=no-route (8s)  new.8618.corecstrs.readable.smt2
+[3/7] QF_SLIA deciders=0 best=no-route (23s)  slent_stranger_str_rep_20496_sink.smt2
+[4/7] QF_SLIA deciders=0 best=no-route (1s)  964.smt2
+[5/7] QF_SLIA deciders=0 best=no-route (184s)  586.smt2
+[6/7] QF_SLIA deciders=0 best=no-route (0s)  htmlUnescape-htmlEscape.smt2
+[7/7] QF_SLIA deciders=0 best=no-route (0s)  str_replace_all62.smt2
