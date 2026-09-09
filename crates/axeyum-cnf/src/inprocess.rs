@@ -485,6 +485,13 @@ impl InprocessObserver for RecordingObserver {
 /// `None` is the only way to say "do not run this pass", and keeping that in one
 /// place is what stops "budget computed, pass run with defaults" from being a
 /// one-character edit that compiles.
+// A flat set of independent stage switches, every one of which is named at the
+// only call site that builds it. The lint targets boolean-blind *positional*
+// arguments; folding these into nested option types would hide the one property
+// the shipping caller has to be able to read off in one glance -- which stages
+// are on -- and ADR-1810 records that reaching for a preset by name is exactly
+// how the `vivify` default was nearly changed by accident.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct InprocessSchedule {
     /// Recover the XOR gates entailed by the formula, Gaussian-solve them and
