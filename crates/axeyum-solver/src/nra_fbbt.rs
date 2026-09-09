@@ -98,6 +98,7 @@ static REFUTATIONS: AtomicU64 = AtomicU64::new(0);
 /// So the fuzz reads these instead of inferring coverage from verdicts, and a
 /// zero here fails it. An instrument whose reading nothing depends on is not an
 /// instrument.
+///
 /// The counters are a **funnel**, not one number, because "the route did
 /// nothing" has four different causes and they have four different fixes:
 /// the query never got here, its atoms did not split into a usable
@@ -491,7 +492,11 @@ pub(crate) fn verify(
     vars.extend(target.coeffs.keys().copied());
     for v in vars {
         let a = combo_coeffs.get(&v).copied().unwrap_or_else(Rational::zero);
-        let b = target.coeffs.get(&v).copied().unwrap_or_else(Rational::zero);
+        let b = target
+            .coeffs
+            .get(&v)
+            .copied()
+            .unwrap_or_else(Rational::zero);
         if a != b {
             return Err(Rejected::VariablesDoNotCancel);
         }
@@ -989,7 +994,11 @@ mod tests {
             .map(CertifiedBound::claim)
             .filter(|b| b.var == sym(0))
             .collect();
-        assert_eq!(sko_y.len(), 2, "skoY must be bounded on both sides: {sko_y:?}");
+        assert_eq!(
+            sko_y.len(),
+            2,
+            "skoY must be bounded on both sides: {sko_y:?}"
+        );
 
         let lo = sko_y.iter().find(|b| b.side == BoundSide::Lower).unwrap();
         let hi = sko_y.iter().find(|b| b.side == BoundSide::Upper).unwrap();
@@ -1016,10 +1025,10 @@ mod tests {
     fn a_derived_bound_is_never_stronger_than_a_direct_one() {
         // x ≥ 0, x ≤ 10, y = x + 1 as two inequalities.
         let facts = vec![
-            fact(&[(0, 1)], 0, false),                 // x ≥ 0
-            fact(&[(0, -1)], 10, false),               // x ≤ 10
-            fact(&[(1, 1), (0, -1)], -1, false),       // y − x − 1 ≥ 0  ⇒ y ≥ x+1
-            fact(&[(1, -1), (0, 1)], 1, false),        // −y + x + 1 ≥ 0 ⇒ y ≤ x+1
+            fact(&[(0, 1)], 0, false),           // x ≥ 0
+            fact(&[(0, -1)], 10, false),         // x ≤ 10
+            fact(&[(1, 1), (0, -1)], -1, false), // y − x − 1 ≥ 0  ⇒ y ≥ x+1
+            fact(&[(1, -1), (0, 1)], 1, false),  // −y + x + 1 ≥ 0 ⇒ y ≤ x+1
         ];
         let derived = derive_bounds(&facts, &FbbtPolicy::DERIVED_BOUNDS);
         assert_eq!(derived.rejected, 0, "the checker rejected a proposal");

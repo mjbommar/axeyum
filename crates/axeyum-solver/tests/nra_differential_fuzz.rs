@@ -251,7 +251,6 @@ impl Instance {
         Instance { num_vars, atoms }
     }
 
-
     /// The **FBBT seed class**: a nonlinear component in 1–2 variables, coupled
     /// to the rest of the query through LINEAR atoms only, with a chain of linear
     /// atoms that bounds the nonlinear variables TRANSITIVELY.

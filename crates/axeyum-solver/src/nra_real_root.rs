@@ -8087,13 +8087,31 @@ fn refute_with_derived_bounds(
     // declaring more, and the extras occur only on the linear side.
     let (linear, nonlinear): (Vec<&MultiAtom>, Vec<&MultiAtom>) =
         atoms.iter().partition(|a| multipoly_is_linear(&a.poly));
-    if nonlinear.is_empty() || nonlinear.len() > policy.max_nonlinear_atoms || linear.is_empty() {
+    if nonlinear.len() > policy.max_nonlinear_atoms {
+        // Silent decline: the query goes back to whatever the decomposition
+        // returned, with nothing in the result saying a cap was the reason. So
+        // the crossing is RECORDED -- otherwise "how many files did this cap cost
+        // us?" is unanswerable by construction, which is the gap the config
+        // registry exists to close.
+        crate::config_registry::note_crossed(
+            "crates/axeyum-solver/src/nra_fbbt.rs::FBBT_DEFAULT",
+            u64::try_from(nonlinear.len()).unwrap_or(u64::MAX),
+            u64::try_from(policy.max_nonlinear_atoms).unwrap_or(u64::MAX),
+        );
+        return None;
+    }
+    if nonlinear.is_empty() || linear.is_empty() {
         return None;
     }
 
     let mut facts: Vec<crate::nra_fbbt::LinearFact> = Vec::new();
     for atom in &linear {
         if facts.len() > policy.max_linear_facts {
+            crate::config_registry::note_crossed(
+                "crates/axeyum-solver/src/nra_fbbt.rs::FBBT_DEFAULT",
+                u64::try_from(facts.len()).unwrap_or(u64::MAX),
+                u64::try_from(policy.max_linear_facts).unwrap_or(u64::MAX),
+            );
             return None;
         }
         if let Some(fs) = atom_as_linear_facts(atom) {
@@ -8130,7 +8148,15 @@ fn refute_with_derived_bounds(
             return None;
         }
         let comp_vars: BTreeSet<SymbolId> = comp.iter().flat_map(|a| a.poly.vars()).collect();
-        if comp_vars.is_empty() || comp_vars.len() > policy.max_component_vars {
+        if comp_vars.len() > policy.max_component_vars {
+            crate::config_registry::note_crossed(
+                "crates/axeyum-solver/src/nra_fbbt.rs::FBBT_DEFAULT",
+                u64::try_from(comp_vars.len()).unwrap_or(u64::MAX),
+                u64::try_from(policy.max_component_vars).unwrap_or(u64::MAX),
+            );
+            continue;
+        }
+        if comp_vars.is_empty() {
             continue;
         }
         // The derived bounds on this component's variables. `owned` is declared
