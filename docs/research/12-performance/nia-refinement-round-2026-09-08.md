@@ -109,6 +109,11 @@ anything, and they are now different decline reasons.
 
 `nia-linearize`'s attributed budget on file 34 drops from 10,738 ms to 6,719 ms.
 
+The share does not depend on what the routes after it do: on **s7**, with the
+`1/1` arm selected so every later route behaves differently, the same 49 rows
+sum to **184.2 s** against s6's 188.5 s over 50. It is a fixed sixth of every
+file's budget, spent before the division's own routes are reached.
+
 ### 2. Fifteen of fifty files build a relaxation the next stage refuses on size
 
 The linearizer's own `small_domain_lemmas` pass grows the query past the
@@ -147,6 +152,13 @@ agree at 47/2/1 on three independent control sweeps.
 | top-level rounds, max | 15 | 18 |
 | tangent lemmas | 2,476 | 3,756 |
 | files whose round count moved | — | 22 |
+| `check_with_nia` calls over the population | 412 | **91** |
+| files where `nia-linearize` is `bound_by` | 26 | 42 |
+
+The call count collapsing from 412 to 91 is the cost side stated plainly: under
+`OFF` the width ladder re-enters the route on sub-queries dozens of times per
+file, and under the arm the first loop holds the budget and it never gets a
+turn. No verdict was lost to that, on this population.
 
 Two files move `unknown → sat` and none regress. **But neither move is
 reproducible.** On repeat runs, pinned per host:
