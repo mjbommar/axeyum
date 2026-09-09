@@ -82,16 +82,17 @@ use axeyum_ir::{FuncId, Op, TermArena, TermId, TermNode};
 /// Which interface pairs the `QF_UFLIA` online combination proposes, and what it
 /// does when the proposal exceeds the split ceiling.
 ///
-/// Selected by `AXEYUM_UFLIA_INTERFACE_PAIRS` or, in-process, by
-/// [`UfliaInterfacePolicyGuard`], so the arms can be A/B-ed on ONE binary rather
-/// than on one build per arm.
+/// Selected by `AXEYUM_UFLIA_INTERFACE_PAIRS` (`all` / `care` / `care-truncate`)
+/// or, in-process, by [`UfliaInterfacePolicyGuard`], so the arms can be A/B-ed on
+/// ONE binary rather than on one build per arm. An unset or unrecognised value is
+/// the default; `all` names the historical behaviour explicitly, so a bisect
+/// against it is one environment variable rather than a build.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum UfliaInterfacePolicy {
     /// Every unordered pair of atomic integer terms with at least one EUF
     /// endpoint, and a **decline** when there are more than the ceiling. The
     /// historical behaviour, kept as a named arm so the change is measured
     /// against it rather than only remembered.
-    #[default]
     All,
     /// cvc5's care graph: keep only a pair that could fire a congruence —
     /// corresponding arguments of two applications of the same function at the
@@ -100,7 +101,15 @@ pub enum UfliaInterfacePolicy {
     /// The care graph, and when it is still over the ceiling, keep the first
     /// [`MAX_INTERFACE_PAIRS`] in the deterministic care order instead of
     /// declining. Sound in both directions (see the module docs); incomplete by
-    /// construction, which is the trade being measured.
+    /// construction, which is the trade being made.
+    ///
+    /// **The default since 2026-09-08 (ADR-1801).** On the committed 200-file
+    /// `QF_UFLIA` list, with the Boolean-layer atom ceiling also raised, this arm
+    /// decides 31 of the 50 files we lose against 14 for `All`, and loses none.
+    /// On its own — atom ceiling unchanged — it decides one, because the atom
+    /// ceiling refuses those queries before the interface layer is reached; the
+    /// two changes are not independent and neither is sufficient.
+    #[default]
     CareGraphTruncate,
 }
 
@@ -186,9 +195,9 @@ pub fn uflia_interface_policy() -> UfliaInterfacePolicy {
     }
     *RESOLVED.get_or_init(
         || match std::env::var("AXEYUM_UFLIA_INTERFACE_PAIRS").as_deref() {
+            Ok("all") => UfliaInterfacePolicy::All,
             Ok("care") => UfliaInterfacePolicy::CareGraph,
-            Ok("care-truncate") => UfliaInterfacePolicy::CareGraphTruncate,
-            _ => UfliaInterfacePolicy::All,
+            _ => UfliaInterfacePolicy::CareGraphTruncate,
         },
     )
 }
@@ -242,6 +251,17 @@ pub fn care_graph_pairs(arena: &TermArena, roots: &[TermId]) -> BTreeSet<(TermId
     pairs
 }
 
+/// `n` as a `u32`, saturating at [`u32::MAX`] rather than truncating.
+///
+/// These fields are `pairs_max_*`, whose whole job is to say how far over the
+/// ceiling a proposal was. A wrapping cast would report a 4-billion-and-one pair
+/// proposal as `1`, i.e. as comfortably inside a ceiling of 64 — a counter that
+/// reads as the opposite of the truth at exactly the size that would matter
+/// most. Saturating is the only reading that stays honest at the top.
+fn saturating_u32(n: usize) -> u32 {
+    u32::try_from(n).unwrap_or(u32::MAX)
+}
+
 /// Applies the thread's [`UfliaInterfacePolicy`] to an all-pairs proposal.
 ///
 /// `proposed` is the set [`crate::uflia_online::interface_pairs`] built;
@@ -281,7 +301,7 @@ pub fn apply_interface_policy(
             note_admission(|c| {
                 c.proposals = c.proposals.saturating_add(1);
                 c.pairs_proposed = c.pairs_proposed.saturating_add(before as u64);
-                c.pairs_max_proposed = c.pairs_max_proposed.max(before as u32);
+                c.pairs_max_proposed = c.pairs_max_proposed.max(saturating_u32(before));
                 c.care_filtered = c.care_filtered.saturating_add(filtered as u64);
                 c.pair_cap_declines = c.pair_cap_declines.saturating_add(1);
             });
@@ -295,8 +315,8 @@ pub fn apply_interface_policy(
         c.proposals = c.proposals.saturating_add(1);
         c.pairs_proposed = c.pairs_proposed.saturating_add(before as u64);
         c.pairs_kept = c.pairs_kept.saturating_add(after as u64);
-        c.pairs_max_proposed = c.pairs_max_proposed.max(before as u32);
-        c.pairs_max_kept = c.pairs_max_kept.max(after as u32);
+        c.pairs_max_proposed = c.pairs_max_proposed.max(saturating_u32(before));
+        c.pairs_max_kept = c.pairs_max_kept.max(saturating_u32(after));
         c.care_filtered = c.care_filtered.saturating_add(filtered as u64);
         c.truncated = c.truncated.saturating_add(truncated as u64);
     });
@@ -569,7 +589,7 @@ fn record(f: impl FnOnce(&mut UfliaInterfaceCounters), always_publish: bool) {
         c.set(next);
         next
     });
-    if always_publish || records % LIVE_MIRROR_RECORDS == 0 {
+    if always_publish || records.is_multiple_of(LIVE_MIRROR_RECORDS) {
         crate::live_instruments::publish_live(
             crate::live_instruments::instrument::UFLIA_INTERFACE,
             counters,
@@ -603,18 +623,22 @@ mod tests {
     #[test]
     fn care_graph_is_corresponding_arguments_of_one_function() {
         let mut arena = TermArena::new();
-        let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).expect("f");
-        let g = arena.declare_fun("g", &[Sort::Int], Sort::Int).expect("g");
-        let x = int(&mut arena, "x");
-        let y = int(&mut arena, "y");
-        let z = int(&mut arena, "z");
-        let fx = arena.apply(f, &[x]).expect("f(x)");
-        let fy = arena.apply(f, &[y]).expect("f(y)");
-        let gz = arena.apply(g, &[z]).expect("g(z)");
+        let fun_f = arena.declare_fun("f", &[Sort::Int], Sort::Int).expect("f");
+        let fun_g = arena.declare_fun("g", &[Sort::Int], Sort::Int).expect("g");
+        let arg_x = int(&mut arena, "x");
+        let arg_y = int(&mut arena, "y");
+        let arg_z = int(&mut arena, "z");
+        let fx = arena.apply(fun_f, &[arg_x]).expect("f(x)");
+        let fy = arena.apply(fun_f, &[arg_y]).expect("f(y)");
+        let gz = arena.apply(fun_g, &[arg_z]).expect("g(z)");
         let root = sum(&mut arena, &[fx, fy, gz]);
 
         let care = care_graph_pairs(&arena, &[root]);
-        let expected = if x < y { (x, y) } else { (y, x) };
+        let expected = if arg_x < arg_y {
+            (arg_x, arg_y)
+        } else {
+            (arg_y, arg_x)
+        };
         assert!(
             care.contains(&expected),
             "f's two arguments are a care pair"
@@ -751,7 +775,7 @@ mod tests {
     /// Every policy is representable by its own name, and the default is the
     /// historical behaviour.
     #[test]
-    fn policy_names_round_trip_and_the_default_is_the_historical_arm() {
+    fn policy_names_round_trip_and_the_default_is_the_measured_arm() {
         for policy in [
             UfliaInterfacePolicy::All,
             UfliaInterfacePolicy::CareGraph,
@@ -761,7 +785,11 @@ mod tests {
             assert_eq!(uflia_interface_policy(), policy);
             assert!(!policy.name().is_empty());
         }
-        assert_eq!(UfliaInterfacePolicy::default(), UfliaInterfacePolicy::All);
+        assert_eq!(
+            UfliaInterfacePolicy::default(),
+            UfliaInterfacePolicy::CareGraphTruncate,
+            "the shipped default is the arm ADR-1801 measured, not the historical one"
+        );
     }
 
     /// The counters are off by default: with a guard armed but nothing recorded

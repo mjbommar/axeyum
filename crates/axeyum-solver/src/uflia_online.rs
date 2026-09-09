@@ -105,10 +105,35 @@ const MAX_BOOLEAN_MODELS: usize = 100_000;
 /// Above it the layer declines (the propositional search space is too large to
 /// enumerate soundly within budget).
 ///
-/// This is deliberately above the current `QF_AUFLIA` fair-slice frontier
-/// (`bug330` has 339 atoms) so the deadline-aware CDCL(T) spine, not admission,
-/// decides whether that scalar abstraction is tractable.
-const MAX_BOOLEAN_ATOMS: usize = 512;
+/// The intent has always been that **the deadline-aware CDCL(T) spine, not
+/// admission, decides whether a scalar abstraction is tractable** — the previous
+/// value, 512, was set above the `QF_AUFLIA` fair-slice frontier (`bug330`, 339
+/// atoms) for exactly that reason. It had never been measured against a
+/// population, and on 2026-09-08 it was:
+///
+/// - On the committed 200-file `QF_UFLIA` division list, this ceiling is the
+///   **last thing 27 of the 50 files we lose** report, at atom counts of
+///   **595 to 2,972** — one to six times the ceiling — each refused in
+///   0.1–0.3 ms while the budget went to routes that could not decide them.
+/// - Raised, the route **decides** files at 595–1,442 atoms and decides none
+///   above 1,442 within a 24 s budget: above that the deadline stops it, which
+///   is the behaviour the ceiling's own rationale asks for.
+/// - Raised, it costs **nothing** on the same list: the arm that raised it
+///   gained ten files and lost none, with zero disagreements against `cvc5`'s
+///   committed verdicts.
+///
+/// So the value is now `8192` — the value the winning arm was measured at, and
+/// above the whole observed range, so on this population admission no longer
+/// decides anything and the deadline does. It is a ceiling on a
+/// **deadline-aware** search (`CdclT::solve` carries the caller's deadline and
+/// every route below re-derives it); the encoding stays bounded independently by
+/// [`MAX_BOOLEAN_CLAUSES`], and the interface split by
+/// [`crate::uflia_interface::MAX_INTERFACE_PAIRS`], so raising this one does not
+/// uncap the others.
+///
+/// ADR-1801. Measurement:
+/// `docs/research/12-performance/uflia-interface-caps-2026-09-08.md`.
+const MAX_BOOLEAN_ATOMS: usize = 8192;
 
 /// Opaque Int-UF applications make each online LIA feasibility/probe call use the
 /// heavier opaque-app arithmetic abstraction. That path is sound, but it is not
@@ -1748,7 +1773,7 @@ fn cdclt_combined(
         };
         if bool_clauses.len() > MAX_BOOLEAN_CLAUSES {
             note_interface_admission(|c| {
-                c.clause_cap_declines = c.clause_cap_declines.saturating_add(1)
+                c.clause_cap_declines = c.clause_cap_declines.saturating_add(1);
             });
             return decline("too many clauses for the online combination boolean layer");
         }
@@ -2076,7 +2101,7 @@ fn check_qf_uflia_boolean_enumerative(
         };
         if clauses.len() > MAX_BOOLEAN_CLAUSES {
             note_interface_admission(|c| {
-                c.clause_cap_declines = c.clause_cap_declines.saturating_add(1)
+                c.clause_cap_declines = c.clause_cap_declines.saturating_add(1);
             });
             return decline("too many clauses for the online combination boolean layer");
         }

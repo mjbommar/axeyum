@@ -223,4 +223,151 @@ arm; the measured arms are named.
 
 ## 5. The measured effect
 
+All arms run on the 50-file loss population derived from the §1 sweep, with the
+**same** pinned binary per column, one file at a time under the parity protocol,
+on idle 16-core hosts. `AXEYUM_UFLIA_MAX_BOOLEAN_ATOMS` and
+`AXEYUM_UFLIA_MAX_OPAQUE_BOOLEAN_ATOMS` can only RAISE the compiled ceiling (the
+override is `v.max(default)`), which is exactly what makes an atom-cap arm
+possible without a second build; `AXEYUM_UFLIA_INTERFACE_PAIRS` and
+`AXEYUM_UF_ARITH_OVERBOUND` select the two policies. **Baseline is the §1 sweep,
+where all 50 are `unknown` by construction.**
+
+| arm | atom ceiling | interface policy | over-bound policy | decided | lost | disagreements |
+|---|---|---|---|---:|---:|---:|
+| base (§1) | 512 / 128 | `all` | `probe` (shipped) | 0 | — | 0 |
+| care only | 512 / 128 | `care-truncate` | `probe` | **1** | 0 | 0 |
+| atoms | 8192 / 8192 | `all` | `probe` | **10** | 0 | 0 |
+| atoms + skip | 8192 / 8192 | `all` | `skip` | **14** | 0 | 0 |
+| atoms + care + skip | 8192 / 8192 | `care-truncate` | `skip` | **31** | 0 | 0 |
+
+<!-- RESULTS-ARMS -->
+
+Four things this table says, in the order they matter:
+
+**The two ceilings together account for 31 of the 50 remaining losses.** Not
+"could account for" — decided, with every verdict agreeing with `cvc5`'s
+committed verdict on the same file and no disagreement in any arm. The
+comparison script's exit status is 1 on a disagreement, so this is a check that
+can fail rather than a sentence.
+
+**Neither ceiling alone gets there, and the order is not symmetric.** The
+care-graph filter ON ITS OWN decides **one** file: on 27 of the 50 the atom
+ceiling fires first, so the interface layer is never reached and the filter has
+nothing to filter. It is not inert — on 12 files the last reported reason moves
+from the pair-ceiling decline to `interface distinct branch inconclusive`, i.e.
+the DFS now runs and reaches leaves — but the route cannot finish while the atom
+ceiling is still refusing the queries around it. Raising the atom ceiling alone
+gets 14; adding the filter on top more than doubles that to 31. A lane that
+measured the pair ceiling without first lifting the atom ceiling would have
+concluded the care graph was worth one file.
+
+**Most of the wins are fast, and that is a fact about dispatch order.** Of the
+31, twenty-three decide in **0.4–2.0 s** and four more in 6.6–10.7 s. They are
+currently reached only after the lazy CEGAR has spent 18 s of a 24 s budget, and
+the `probe` arm's 6 s reserve is why the shipped policy captures fewer of them
+than `skip` does. `skip` is not a shippable arm — the previous lane measured
+four files the CEGAR needs 12.7–23.7 s for — so the honest reading is that the
+reserve, set on 2026-09-08 against a ladder that decided in 307–625 ms, is now
+sized against a ladder that is much more capable. Re-deriving it, or reordering
+so the combination runs first as Z3 and cvc5 do, is the next measurement and is
+NOT claimed here.
+
+**Soundness of the filter is checked against an independent solver, not
+argued.** The three z3 differential suites run with `care-truncate` forced:
+`qf_uflra_differential_fuzz` (1 test), `uf_arith_dispatch_differential`
+(2 tests), `uflia_differential_fuzz` (1 test, 328 s) — **4 tests, a nonzero
+count confirmed on each, all passing**. The fuzz panics on a wrong `sat` or a
+wrong `unsat` and independently replays every `sat` model through the ground
+evaluator. It cannot see a completeness loss (an extra `Unknown` is allowed by
+design), so it is evidence about the direction that matters and silent on the
+one the counters are for.
+
+### Which of the two atom ceilings, separated
+
+The winning arm raised **both** `MAX_BOOLEAN_ATOMS` (512) and
+`MAX_OPAQUE_BOOLEAN_ATOMS` (128), so it cannot say which mattered. A separating
+arm — general ceiling raised to 8192, the opaque one left at 128 — decides
+**the same ten files, by name**. And the new counters answer it directly:
+`opaque_atom_cap_declines` is **0 on every file in every arm**, including the
+33 files of the 200-file candidate run where the route was entered at all. On
+this population the opaque ceiling never fires.
+
+So it is **not** raised. Its own doc comment says the opaque path is the one
+place on this route where combined-state construction is *not* deadline-aware;
+raising a bound that buys nothing measured and guards the least deadline-aware
+code is a cost with no benefit. Only `MAX_BOOLEAN_ATOMS` moves.
+
+## 6. The shipped default, over the whole division list
+
+The shipped configuration is the measured one: `MAX_BOOLEAN_ATOMS = 8192`,
+interface policy `care-truncate`, over-bound policy unchanged at `probe`. Run as
+two 100-file halves of the committed 200-file list against the same base sweep
+from §1, one file at a time, pinned binary digest `e696107665d8`.
+
+| | base (§1) | shipped default |
+|---|---:|---:|
+| files | 200 | 200 |
+| decided | 130 | **151** |
+| gained | — | **23** |
+| lost | — | **2** |
+| disagreements | — | **0** |
+| against the reference's 180 | 72.2% | **83.9%** |
+
+**Both losses are base-side outliers at the watchdog wire, and that is
+checked rather than assumed.** Each was decided by the base run at 25.0–25.1 s —
+past the 24 s internal budget, i.e. right at the harness watchdog — and neither
+reproduces:
+
+| file | base, in the §1 sweep | base, re-run | candidate, re-run |
+|---|---|---|---|
+| `xs_16_26` | `sat` 25,032 ms | `unknown` ×4 | `unknown` ×4 |
+| `hash_uns_05_20` | `unsat` 25,131 ms | `unknown` ×4 | `unknown` ×1+ |
+
+`hash_uns_05_20` is the same file the previous lane named as the one its reserve
+could not recover ("a route that needs 99% of the clock cannot share it"). The
+honest statement is **+23 / −2**, with the note that a re-measured baseline
+would likely not have had those two to lose; it is not **+23 / −0**, because
+this lane did not re-run the whole baseline.
+
+### What is still lost, and what it needs
+
+Twenty-nine remain on the same denominator §1 used — reference-solved, we did
+not — and every one of them is a route that RAN:
+
+| last route and reason | files |
+|---|---:|
+| `uf-arith-online` — `combined CDCL(T) leaf did not rebuild a replaying model: interface distinct branch inconclusive` | **14** |
+| `uf-arith-online` — `timeout in the online combination boolean layer` | **9** |
+| `fd:bounded-completeness-unsat` — wide integer literal (ADR-1702) | 6 |
+
+**The shape has changed completely, and that is the result underneath the file
+count.** Before this lane, 40 of the 44 solver-side losses were **admission
+declines** costing 0.1–0.3 ms; now **zero** are. The largest class is a leaf
+failure inside a search that ran to a leaf and could not separate the distinct
+branch — a capability gap in the interface search and the LIA sub-solve under
+it, not a bound, and the next thing to measure. The 6 wide-integer files are
+unchanged and untouched.
+
+The `combined CDCL(T) leaf …: interface distinct branch inconclusive` string is
+also a demonstration that §2's attribution fix earns its place: under the code
+this lane replaced, all 14 would have printed `combined CDCL(T) leaf did not
+rebuild a replaying model` with nothing after the colon, and the next lane would
+have gone looking at model reconstruction.
+
+## 7. What this lane did not do
+
+- **Dispatch order.** Twenty-three of the wins arrive at 18.3–20.2 s wall,
+  because the online combination runs on the ladder's 6 s reserve after the lazy
+  CEGAR has spent 18 s. With the CEGAR skipped entirely the same configuration
+  decides **31** of the 50 and most of them in **0.4–2.0 s**. Z3 and cvc5 run the
+  combination first. Re-deriving `UF_ARITH_LADDER_RESERVE_SHARE` — set on
+  2026-09-08 against a ladder that then decided in 307–625 ms — or reordering
+  outright is the obvious next lever and needs its own measurement against the
+  files the CEGAR decides.
+- **The EUF driver's quadratic `propagate` / `first_conflict`.** Still real,
+  still unmeasured on this population, and still not what loses these files.
+- **Z3's randomisation filter**, for the architectural reason in §3.
+- **`QF_UFLRA`.** Its copies of both constants are untouched; this lane did not
+  measure that division.
+
 <!-- RESULTS-AB -->
