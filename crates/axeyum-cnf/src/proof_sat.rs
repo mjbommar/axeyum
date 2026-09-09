@@ -28,7 +28,9 @@ use std::time::Duration;
 use crate::clause_db_policy::{ClauseDbPolicy, KeepReason, Tier, WatchSweep};
 use crate::drat::{DratSink, DratStep, ProofSinkError, VecProofSink};
 use crate::inprocess::{InprocessOptions, InprocessStats, inprocess_into};
-use crate::phase_policy::{PhasePolicy, RephaseAction};
+use crate::phase_policy::{
+    ModeSchedule, PhasePolicy, RephaseAction, RestartPolicy, RestartSchedule,
+};
 use crate::{CnfAssignment, CnfFormula, CnfLit, CnfVar};
 
 pub mod theory;
@@ -381,6 +383,26 @@ pub struct SearchCounters {
     /// Rephases performed (a scheduled reinstallation of a whole phase vector),
     /// as distinct from the per-restart copy of the target phase.
     pub rephases: u64,
+    /// Restart-time rephase opportunities the mode gate refused because the
+    /// search was in focused mode.
+    ///
+    /// This is the *observation* that the rephase confinement is real. The
+    /// rephase COUNT is not: `PhasePolicy::should_rephase` is a threshold that
+    /// stays true until it fires, so confining rephases to stable mode defers
+    /// them rather than dropping them, and both arms of an A/B end up rephasing
+    /// the same number of times. Zero whenever the gate is off, so deleting the
+    /// gate makes this read zero.
+    pub rephase_deferrals: u64,
+    /// Stable/focused mode switches performed. Zero under every policy that
+    /// does not switch, which is all of them by default.
+    ///
+    /// A scalar count is the summary; the *schedule* — which mode, at which
+    /// conflict and tick count — is [`crate::phase_policy::ModeSchedule`], read
+    /// from `solve_with_drat_proof_mode_traced` (not yet re-exported from
+    /// `lib.rs`, so the link cannot be resolved here). Both exist because this
+    /// counter alone cannot distinguish a schedule that alternates on the
+    /// intended budget from one that alternates on the wrong one.
+    pub mode_switches: u64,
 }
 
 impl SearchCounters {
@@ -558,6 +580,14 @@ pub struct SearchPolicies {
     pub clause_db: ClauseDbPolicy,
     /// The target/best phase split and the rephase schedule.
     pub phase: PhasePolicy,
+    /// The stable/focused mode schedule and the restart rule each mode runs.
+    ///
+    /// This is the production path to the glue-EMA restart schedule. Before it
+    /// existed the schedule was selected by assigning `Cdcl::use_ema_restart`,
+    /// a private field, and the only assignment of `true` in the crate was
+    /// inside a `#[cfg(test)]` module — so the rule was implemented, sound and
+    /// unreachable at the same time.
+    pub restart: RestartPolicy,
 }
 
 impl Default for SearchPolicies {
@@ -571,10 +601,18 @@ impl Default for SearchPolicies {
     /// implemented and tested, but changing two heuristics at once makes
     /// neither measurable; this default flips only when the measurement says it
     /// should.
+    /// `restart` is [`RestartPolicy::luby`] for the same reason: the mode
+    /// schedule and the EMA rule it selects in focused mode are both new
+    /// reachable surface, and the roadmap item that asked for them
+    /// (`docs/solver-comparison-2026-09/11-roadmap-and-plan.md`, 1.6) asks for
+    /// a production setter and a non-regressing ratchet, not for a default
+    /// flip. Flipping it also turns on [`SearchCounters`] collection, because
+    /// the switch is denominated in ticks — see [`SearchPolicies::restart`].
     fn default() -> Self {
         Self {
             clause_db: ClauseDbPolicy::tiered(),
             phase: PhasePolicy::pinned(),
+            restart: RestartPolicy::luby(),
         }
     }
 }
@@ -616,6 +654,42 @@ impl SearchPolicies {
         Self {
             clause_db: ClauseDbPolicy::legacy(),
             phase: PhasePolicy::pinned(),
+            restart: RestartPolicy::luby(),
+        }
+    }
+
+    /// The Glucose glue-EMA restart schedule for the whole solve, with no mode
+    /// switching — the shipping way to select what `use_ema_restart = true`
+    /// used to mean, and the A/B arm against [`SearchPolicies::default`].
+    #[must_use]
+    pub fn ema_restart() -> Self {
+        Self {
+            restart: RestartPolicy::ema(),
+            ..Self::default()
+        }
+    }
+
+    /// The reference's stable/focused arrangement: start focused with glue-EMA
+    /// restarts, alternate into stable with reluctant doubling on a
+    /// quadratically growing tick budget, and confine the rephase schedule to
+    /// stable mode.
+    ///
+    /// Pair it with [`PhasePolicy::scheduled`] to exercise the rephase gate;
+    /// with the default [`PhasePolicy::pinned`] there is no rephase to gate and
+    /// only the restart rule alternates.
+    ///
+    /// **This turns [`SearchCounters`] collection on for the search**, because
+    /// the switch is denominated in ticks and ticks are derived from the
+    /// counters. That is the one place in this core where the counters stop
+    /// being pure output: with this policy the search reads them, so
+    /// "collecting counters cannot change the trajectory" holds for every other
+    /// policy but not for this one. The tick total is an exact integer function
+    /// of integer event counts, so the schedule stays deterministic.
+    #[must_use]
+    pub fn mode_switching() -> Self {
+        Self {
+            restart: RestartPolicy::mode_switching(),
+            ..Self::default()
         }
     }
 }
@@ -635,9 +709,65 @@ pub fn solve_with_drat_proof_counted_with_policies(
     sink: &mut impl DratSink,
     policies: &SearchPolicies,
 ) -> (StreamingProofOutcome, SearchCounters) {
+    let search =
+        solve_with_drat_proof_mode_traced(formula, deadline, max_conflicts, sink, policies);
+    (search.outcome, search.counters)
+}
+
+/// A search under an explicit policy set, together with the mode schedule it
+/// followed.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ModeTracedSearch {
+    /// The verdict.
+    pub outcome: StreamingProofOutcome,
+    /// Search counters over the whole solve.
+    pub counters: SearchCounters,
+    /// Which modes the search occupied, when it switched, and on what budget.
+    /// Empty and focused under a policy that does not switch.
+    pub modes: ModeSchedule,
+}
+
+/// [`solve_with_drat_proof_counted_with_policies`], also returning the
+/// stable/focused schedule the search followed.
+///
+/// # Why this exists as a separate entry point
+///
+/// A mode switch is easy to add and hard to observe. Every verdict-level check
+/// — the corpus sweep, the `DRAT` checker, a differential fuzz — passes
+/// identically whether the switch fires or is disabled, because none of them is
+/// a claim about the schedule. So the schedule has to be readable, or the
+/// feature is exactly the kind of unfalsifiable mechanism this repository keeps
+/// finding after the fact. [`ModeSchedule::mode_sequence`] is the assertion
+/// surface; [`ModeSchedule::transitions`] carries the tick and conflict counts
+/// that placed each switch.
+///
+/// The schedule is deterministic: every quantity it reads is an integer count
+/// of search events, so the same formula under the same policy produces the
+/// same transition list on any host under any load.
+///
+/// # Reaching the span log
+///
+/// `axeyum-solver`'s `span_log` cannot be written from here — `axeyum-cnf` does
+/// not depend on `axeyum-solver`, the dependency runs the other way. A lane
+/// that wants the schedule in a span needs a solver-side route that calls this
+/// entry point (or threads a [`ModeSchedule`] out of the backend that does) and
+/// emits `mode_sequence()` plus each transition's `at_ticks`. Nothing in this
+/// crate can do it, and no claim here says otherwise.
+pub fn solve_with_drat_proof_mode_traced(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    max_conflicts: usize,
+    sink: &mut impl DratSink,
+    policies: &SearchPolicies,
+) -> ModeTracedSearch {
     let mut cdcl = Cdcl::new(formula, sink);
     cdcl.set_policies(policies);
-    cdcl.solve_counted(deadline, max_conflicts)
+    let (outcome, counters, modes) = cdcl.solve_counted_traced(deadline, max_conflicts);
+    ModeTracedSearch {
+        outcome,
+        counters,
+        modes,
+    }
 }
 
 /// A search that ran over an inprocessed formula: the verdict, the search
@@ -1861,8 +1991,14 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     /// Slow exponential moving average of trail size at conflict — the reference
     /// for blocking restarts.
     trail_slow: f64,
-    /// Restart schedule selector (T1.3.2). When set, the Glucose EMA glue rule
-    /// drives restarts; otherwise the Luby schedule does.
+    /// Restart schedule **currently in force** (T1.3.2). When set, the Glucose
+    /// EMA glue rule drives restarts; otherwise the Luby schedule does.
+    ///
+    /// This is no longer a knob a caller sets. It is derived state, rewritten
+    /// from [`Cdcl::restart_policy`] by [`Cdcl::sync_restart_schedule`] at
+    /// construction, at [`Cdcl::set_policies`], and at every mode switch — so
+    /// under [`SearchPolicies::mode_switching`] it flips back and forth within
+    /// one solve, which is the whole point of the mode schedule.
     ///
     /// **Default is Luby (`false`).** The EMA rule is implemented, sound
     /// (verdict-preserving, DRAT-checked, deterministic) and measured on the public
@@ -1870,11 +2006,21 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     /// both margins tried (`CaDiCaL` 1.10, `Glucose` 1.25) it improved `PAR-2` on the
     /// `MobileDevice` family (~18%) but lost one decide on `Composition`, and made no
     /// difference on the search-bound families (all timeout under either schedule).
-    /// So it is banked as a selectable option, not switched on by default, pending a
-    /// full-corpus or different-corpus re-measure (and likely combination with
-    /// rephasing / mode switching before it pays off) — mirroring the built-but-off
-    /// discipline of `ADR-0059`.
+    /// Combining it with rephasing and mode switching was the named next step;
+    /// [`SearchPolicies::mode_switching`] is that combination, and it is
+    /// selectable rather than default for the same measurement reason.
     use_ema_restart: bool,
+    /// Whether the glue and trail moving averages are maintained.
+    ///
+    /// Distinct from [`Cdcl::use_ema_restart`], and deliberately so: under mode
+    /// switching the averages must stay current *through* a stable phase, or
+    /// re-entering focused mode would compare a fast average from before the
+    /// gap against a slow one from after it. False under the default policy, so
+    /// the default search executes no EMA arithmetic.
+    track_restart_emas: bool,
+    /// The stable/focused mode schedule. Under the default policy this never
+    /// switches and every call into it is a `bool` test.
+    restart_policy: RestartPolicy,
     /// Per-clause "this is a learned clause" flag, parallel to
     /// [`Cdcl::headers`]. Only learned clauses carry activity and only learned
     /// clauses are deletable by `reduce_db`.
@@ -2174,8 +2320,13 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             trail_slow: 0.0,
             // Default is Luby: the EMA schedule is implemented and sound but measured
             // neutral-to-slightly-negative on the public p4dfa slice (see the field
-            // doc), so it stays a selectable option, not the default.
+            // doc), so it stays a selectable option, not the default. Both flags
+            // below are derived from `restart_policy` and are re-synced by
+            // `sync_restart_schedule` after this initializer runs, so they can
+            // never disagree with the policy that owns them.
             use_ema_restart: false,
+            track_restart_emas: false,
+            restart_policy: policies.restart,
             learned: vec![false; num_clauses],
             lbd: vec![0; num_clauses],
             lbd_stamp: vec![0; n + 1],
@@ -2232,6 +2383,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 cdcl.heap_insert(v);
             }
         }
+        cdcl.sync_restart_schedule();
         cdcl
     }
 
@@ -2380,6 +2532,8 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         self.best_trail_len = 0;
         self.target_trail_len = 0;
         self.phase_policy.reset();
+        self.restart_policy.reset();
+        self.sync_restart_schedule();
         self.reduce_backoff_until = 0;
         self.next_reduce_conflicts = self.db_policy.next_reduce_limit(0, 0);
         for var in 0..self.branchable.len() {
@@ -2394,7 +2548,63 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     fn set_policies(&mut self, policies: &SearchPolicies) {
         self.db_policy = policies.clause_db.clone();
         self.phase_policy = policies.phase.clone();
+        self.restart_policy = policies.restart.clone();
         self.next_reduce_conflicts = self.db_policy.next_reduce_limit(0, 0);
+        self.sync_restart_schedule();
+        // The mode switch is denominated in ticks, and ticks are an exact
+        // function of `SearchCounters`, so a policy that switches modes cannot
+        // work with counting off — it would read zero ticks forever and never
+        // leave its first phase. Enabling counting here rather than requiring
+        // the caller to remember is the only arrangement in which the feature
+        // cannot be silently inert, which is the failure mode this whole item
+        // exists to remove.
+        if self.restart_policy.needs_ticks() {
+            self.count_search = true;
+        }
+    }
+
+    /// Rewrites the derived restart flags from [`Cdcl::restart_policy`].
+    ///
+    /// Called at construction, when policies are installed, and after every
+    /// mode switch. The flags exist so the hot paths (`should_restart`, the
+    /// per-conflict EMA update) read one `bool` instead of matching on a mode.
+    fn sync_restart_schedule(&mut self) {
+        self.use_ema_restart = self.restart_policy.schedule() == RestartSchedule::Ema;
+        self.track_restart_emas = self.restart_policy.tracks_emas();
+    }
+
+    /// Considers a mode switch. Called once per analysed conflict, which is
+    /// where the reference calls `stabilizing()` from too (`restarting()`, once
+    /// per restart check, itself gated on the conflict count).
+    ///
+    /// Returns early on one `bool` test unless mode switching is enabled, so
+    /// the default search pays nothing — in particular it never evaluates the
+    /// tick total.
+    fn consider_mode_switch(&mut self) {
+        if !self.restart_policy.needs_ticks() {
+            return;
+        }
+        let conflicts = self.conflicts as u64;
+        let ticks = self.counters.ticks();
+        if !self.restart_policy.should_switch(conflicts, ticks) {
+            return;
+        }
+        self.restart_policy.switch(conflicts, ticks);
+        self.sync_restart_schedule();
+        self.counters.mode_switches += 1;
+        // A mode change replaces the restart rule, so the interval counter the
+        // outgoing rule was accumulating means nothing to the incoming one:
+        // carrying it over would make the first Luby phase after a long focused
+        // phase fire immediately. The reluctant-doubling INDEX is deliberately
+        // not reset — the reference keeps one persistent reluctant sequence
+        // across the whole solve rather than restarting it per phase.
+        self.conflicts_since_restart = 0;
+    }
+
+    /// What the mode schedule did, at the current tick total. Zero-valued and
+    /// focused under every policy that does not switch.
+    fn mode_schedule(&self) -> ModeSchedule {
+        self.restart_policy.snapshot(self.counters.ticks())
     }
 
     /// Installs a progress callback, polled every `interval` conflicts (and
@@ -2836,13 +3046,25 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// search accumulated. Counting is switched on here and nowhere else on the
     /// one-shot path.
     fn solve_counted(
-        mut self,
+        self,
         deadline: Option<Instant>,
         max_conflicts: usize,
     ) -> (StreamingProofOutcome, SearchCounters) {
+        let (outcome, counters, _modes) = self.solve_counted_traced(deadline, max_conflicts);
+        (outcome, counters)
+    }
+
+    /// [`Cdcl::solve_counted`], additionally returning the stable/focused mode
+    /// schedule the search followed.
+    fn solve_counted_traced(
+        mut self,
+        deadline: Option<Instant>,
+        max_conflicts: usize,
+    ) -> (StreamingProofOutcome, SearchCounters, ModeSchedule) {
         self.count_search = true;
         let outcome = self.solve_inner(deadline, max_conflicts);
-        (outcome, self.counters)
+        let modes = self.mode_schedule();
+        (outcome, self.counters, modes)
     }
 
     fn solve(mut self, deadline: Option<Instant>, max_conflicts: usize) -> StreamingProofOutcome {
@@ -3049,10 +3271,25 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                     // copy, so a rephase both replaces this restart's phases and
                     // opens the next interval. Nothing here is read by the
                     // verdict -- phases only order decisions.
+                    //
+                    // Confined to stable mode when the mode schedule is on
+                    // (Kissat `rephase.c:34-36`); unconditional otherwise,
+                    // because with no mode schedule there is no stable half to
+                    // confine it to and gating would disable the schedule
+                    // instead of halving it.
                     let conflicts = self.conflicts as u64;
                     if self.use_target_rephase && self.phase_policy.should_rephase(conflicts) {
-                        let action = self.phase_policy.next_action(conflicts);
-                        self.apply_rephase(action);
+                        if self.restart_policy.rephase_allowed() {
+                            let action = self.phase_policy.next_action(conflicts);
+                            self.apply_rephase(action);
+                        } else if self.count_search {
+                            // Deferred, not dropped: `should_rephase` stays true
+                            // until it fires, so this rephase happens at the
+                            // first restart of the next stable phase. Counting
+                            // the refusals is the only way to see the gate
+                            // working -- the rephase TOTAL is unchanged by it.
+                            self.counters.rephase_deferrals += 1;
+                        }
                     }
                     continue;
                 }
@@ -3229,12 +3466,18 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         };
         // Update the Glucose EMA restart state from this conflict -- the glue
         // (LBD) averages and the blocking trail average, sampled at the
-        // conflict trail (before the backjump below). Only when the EMA schedule
-        // is active (the default is Luby; see `use_ema_restart`), so the
+        // conflict trail (before the backjump below). Only when SOME mode runs
+        // the EMA schedule (the default is Luby in both; see
+        // `track_restart_emas` for why this is not `use_ema_restart`), so the
         // averages cost nothing on the default path.
-        if self.use_ema_restart {
+        if self.track_restart_emas {
             self.update_restart_emas(lbd);
         }
+        // The mode switch, once per analysed conflict. Placed after `analyze`
+        // so the tick total it reads includes this conflict's resolution steps
+        // and mark array, and before the restart check in the search loop so a
+        // switch takes effect at the very next restart decision.
+        self.consider_mode_switch();
         self.record_proof_step(false, &learned);
         self.sink.add_clause(&learned)?;
         if learned.is_empty() {
@@ -4710,12 +4953,13 @@ mod tests {
     use crate::{SatResult, solve_with_rustsat_batsat};
 
     use super::{
-        CRef, Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, Instant, ProofSearchProgress,
-        ProofSolveOutcome, Reason, StreamingProofOutcome, TheoryProofOutcome,
+        CRef, Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, Duration, Instant, ProofSearchProgress,
+        ProofSolveOutcome, Reason, SearchPolicies, StreamingProofOutcome, TheoryProofOutcome,
         WATCH_BYTES_ON_TARGET, Watch, WatchSweep, lit_code, solve_with_drat_proof,
-        solve_with_drat_proof_counted, solve_with_drat_proof_streaming,
-        solve_with_drat_proof_with_limits, solve_with_drat_proof_with_limits_and_progress,
-        solve_with_drat_proof_within, solve_with_theory_and_drat_proof,
+        solve_with_drat_proof_counted, solve_with_drat_proof_mode_traced,
+        solve_with_drat_proof_streaming, solve_with_drat_proof_with_limits,
+        solve_with_drat_proof_with_limits_and_progress, solve_with_drat_proof_within,
+        solve_with_theory_and_drat_proof,
     };
     use crate::{
         CnfClause, CnfFormula, CnfLit, CnfVar, DratSink, ProofSinkError, TextProofSink,
@@ -4801,6 +5045,303 @@ mod tests {
         }
         let refs: Vec<&[i64]> = clauses.iter().map(Vec::as_slice).collect();
         assert_unsat_with_checked_proof(&formula(12, &refs));
+    }
+
+    // -----------------------------------------------------------------------
+    // Stable/focused mode switching.
+    //
+    // These assert on the SCHEDULE, not on the verdict. A verdict assertion
+    // passes with the switch disabled -- both arms decide the same formula --
+    // so it cannot tell a working mode switch from a dead one.
+    // -----------------------------------------------------------------------
+
+    /// A deterministic random 3-SAT instance at the phase transition. Fixed
+    /// xorshift, so the formula is a function of `(vars, ratio_tenths, seed)`
+    /// and nothing else.
+    fn random_3sat(vars: usize, ratio_tenths: usize, seed: u64) -> CnfFormula {
+        let mut state = seed | 1;
+        let mut next = move || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        let mut f = CnfFormula::new(vars);
+        let bound = u64::try_from(vars).unwrap();
+        for _ in 0..(vars * ratio_tenths / 10) {
+            let mut lits = Vec::with_capacity(3);
+            for _ in 0..3 {
+                let v = i64::try_from(next() % bound).unwrap() + 1;
+                lits.push(if next() & 1 == 0 { lit(v) } else { lit(-v) });
+            }
+            f.add_clause(CnfClause::new(lits)).unwrap();
+        }
+        f
+    }
+
+    /// The instance the schedule tests run on: hard enough that the search
+    /// analyses tens of thousands of conflicts, so several mode phases complete
+    /// inside one solve. Pigeonhole rather than random 3-SAT because its
+    /// difficulty is structural: a random instance that happens to be easy would
+    /// make these tests vacuous, and 90-variable random 3-SAT at ratio 4.3 was
+    /// measured deciding in 25 conflicts.
+    fn mode_schedule_instance() -> CnfFormula {
+        pigeonhole(10)
+    }
+
+    /// The default policy must not switch at all. This is the control for every
+    /// assertion below: if it fired, "the schedule alternates" would say nothing
+    /// about the policy that asked for alternation.
+    #[test]
+    fn the_default_policy_never_switches_modes() {
+        let f = mode_schedule_instance();
+        let mut sink = VecProofSink::new();
+        let search = solve_with_drat_proof_mode_traced(
+            &f,
+            None,
+            20_000,
+            &mut sink,
+            &SearchPolicies::default(),
+        );
+        assert!(
+            search.counters.conflicts > 5_000,
+            "the fixture must reach the switching regime, saw {} conflicts",
+            search.counters.conflicts
+        );
+        assert_eq!(search.modes.switches, 0);
+        assert_eq!(search.counters.mode_switches, 0);
+        assert_eq!(search.modes.mode_sequence(), vec!["focused"]);
+        assert_eq!(search.modes.stable_ticks, 0);
+    }
+
+    /// The schedule itself: starts focused, alternates, and each phase is
+    /// budgeted in ticks with the intervals growing.
+    #[test]
+    fn mode_switching_alternates_from_focused_on_a_growing_tick_budget() {
+        let f = mode_schedule_instance();
+        let mut sink = VecProofSink::new();
+        let search = solve_with_drat_proof_mode_traced(
+            &f,
+            None,
+            20_000,
+            &mut sink,
+            &SearchPolicies::mode_switching(),
+        );
+        let modes = &search.modes;
+        assert!(
+            modes.switches >= 4,
+            "the fixture must complete several phases, saw {} switches at {} \
+             conflicts / {} ticks",
+            modes.switches,
+            search.counters.conflicts,
+            search.counters.ticks()
+        );
+        assert_eq!(
+            u64::try_from(modes.transitions.len()).unwrap(),
+            modes.switches,
+            "every switch must be recorded below the truncation cap"
+        );
+        assert_eq!(
+            modes.mode_sequence()[..5],
+            ["focused", "stable", "focused", "stable", "focused"],
+            "the search must open focused and alternate strictly"
+        );
+        assert_eq!(modes.switches, search.counters.mode_switches);
+        // Both modes did real work: a schedule that "switches" but spends no
+        // ticks on one side is not running two policies.
+        assert!(modes.focused_ticks > 0 && modes.stable_ticks > 0);
+        assert_eq!(
+            modes.focused_ticks + modes.stable_ticks,
+            search.counters.ticks(),
+            "the per-mode split must partition the run's ticks"
+        );
+        // The first switch is the conflict bootstrap; every later one is a tick
+        // budget the previous phase calibrated.
+        assert_eq!(modes.transitions[0].at_conflicts, 1_001);
+        assert!(modes.transitions[0].phase_ticks > 0);
+        // Quadratic growth: the budget granted at each switch never shrinks, and
+        // the fourth is strictly larger than the first. The reference's
+        // multiplier sequence is `stabphases^2` with `stabphases` advancing only
+        // on entry to stable, i.e. 1, 4, 4, 9, 9, 16, ...
+        let budgets: Vec<u64> = modes.transitions.iter().map(|t| t.budget_ticks).collect();
+        for w in budgets.windows(2) {
+            assert!(w[1] >= w[0], "budgets must not shrink: {budgets:?}");
+        }
+        assert!(
+            budgets[3] > budgets[0],
+            "budgets must grow across a stable-phase increment: {budgets:?}"
+        );
+        let unit = budgets[0];
+        assert_eq!(
+            budgets[..6],
+            [unit, 4 * unit, 4 * unit, 9 * unit, 9 * unit, 16 * unit],
+            "the multiplier sequence must be the reference's stabphases^2"
+        );
+    }
+
+    /// A `DratSink` that burns wall time without changing anything the search
+    /// reads. Wrapping a solve in it makes the same trajectory take several
+    /// times longer, which is the only way to tell a tick-denominated schedule
+    /// from a wall-clock one from inside a single-process test.
+    struct PacedSink {
+        inner: VecProofSink,
+        remaining_pauses: usize,
+        pause: Duration,
+    }
+
+    impl DratSink for PacedSink {
+        fn add_clause(&mut self, literals: &[CnfLit]) -> Result<(), ProofSinkError> {
+            if self.remaining_pauses > 0 {
+                self.remaining_pauses -= 1;
+                let until = Instant::now() + self.pause;
+                while Instant::now() < until {
+                    core::hint::spin_loop();
+                }
+            }
+            self.inner.add_clause(literals)
+        }
+
+        fn delete_clause(&mut self, literals: &[CnfLit]) -> Result<(), ProofSinkError> {
+            self.inner.delete_clause(literals)
+        }
+    }
+
+    /// **Determinism.** The mode schedule must be a function of the formula and
+    /// the policy, and of nothing else — determinism is a public API promise
+    /// here, and a restart schedule that moved with host load would break it
+    /// invisibly: the trajectory and therefore the emitted `DRAT` stream would
+    /// depend on how busy the machine was.
+    ///
+    /// The second arm runs the identical search through a sink that deliberately
+    /// wastes wall time. Every integer the search counts is unchanged; only the
+    /// clock differs. A schedule denominated in `Instant`s cannot survive this;
+    /// one denominated in ticks is bit-identical.
+    #[test]
+    fn the_mode_schedule_does_not_depend_on_how_long_the_search_takes() {
+        // A smaller instance than the schedule tests use: the paced arm has to
+        // be several times slower than the plain one for the comparison to
+        // discriminate, and padding a six-second search by that factor is not
+        // worth the gate time.
+        let f = pigeonhole(8);
+        // A shorter bootstrap than the shipped 1000 conflicts, so several
+        // phases complete inside a search small enough to pad. The quantity
+        // under test is the schedule's *independence from the clock*, and that
+        // does not depend on the interval sizes.
+        let policies = SearchPolicies {
+            restart: crate::phase_policy::RestartPolicy::mode_switching_after(200),
+            ..SearchPolicies::default()
+        };
+        let budget = 6_000;
+
+        let mut fast = VecProofSink::new();
+        let started = Instant::now();
+        let quick = solve_with_drat_proof_mode_traced(&f, None, budget, &mut fast, &policies);
+        let fast_elapsed = started.elapsed();
+
+        let mut slow = PacedSink {
+            inner: VecProofSink::new(),
+            remaining_pauses: 5_000,
+            pause: Duration::from_micros(500),
+        };
+        let started = Instant::now();
+        let paced = solve_with_drat_proof_mode_traced(&f, None, budget, &mut slow, &policies);
+        let slow_elapsed = started.elapsed();
+
+        assert!(
+            quick.modes.switches >= 4,
+            "a schedule with too few switches cannot discriminate, saw {}",
+            quick.modes.switches
+        );
+        assert!(
+            slow_elapsed > fast_elapsed * 2,
+            "the paced arm must actually be much slower, else this test cannot \
+             tell a clock from a tick meter ({fast_elapsed:?} vs {slow_elapsed:?})"
+        );
+        assert_eq!(
+            quick.modes, paced.modes,
+            "the mode schedule moved when only wall time changed"
+        );
+        assert_eq!(quick.outcome, paced.outcome);
+        assert_eq!(quick.counters, paced.counters);
+    }
+
+    /// The rephase schedule is confined to stable mode when the mode schedule is
+    /// running (Kissat `rephase.c:34-36`), and unconfined when it is not.
+    ///
+    /// Asserted on `rephase_deferrals`, not on the rephase count.
+    /// [`PhasePolicy::should_rephase`] is a threshold that stays true until it
+    /// fires, so the gate *defers* a due rephase to the next stable restart
+    /// rather than dropping it, and the two arms rephase the same number of
+    /// times. Measured before this was understood: 5 and 5. A test on the count
+    /// would have passed with the gate deleted.
+    #[test]
+    fn rephasing_is_confined_to_stable_mode_only_when_modes_switch() {
+        let f = mode_schedule_instance();
+
+        let unconfined = SearchPolicies::scheduled_phase();
+        let mut sink = VecProofSink::new();
+        let a = solve_with_drat_proof_mode_traced(&f, None, 20_000, &mut sink, &unconfined);
+        assert_eq!(a.modes.switches, 0, "this arm must not switch modes");
+        assert!(
+            a.counters.rephases > 0,
+            "with no mode schedule the rephase schedule must still run"
+        );
+        assert_eq!(
+            a.counters.rephase_deferrals, 0,
+            "with no mode schedule there is no stable half, so nothing may be \
+             deferred -- gating here would silently disable `scheduled_phase`"
+        );
+
+        let confined = SearchPolicies {
+            phase: crate::phase_policy::PhasePolicy::scheduled(),
+            ..SearchPolicies::mode_switching()
+        };
+        let mut sink = VecProofSink::new();
+        let b = solve_with_drat_proof_mode_traced(&f, None, 20_000, &mut sink, &confined);
+        assert!(b.modes.switches >= 4);
+        assert!(
+            b.counters.rephase_deferrals > 0,
+            "the mode gate must actually refuse focused-mode rephases"
+        );
+        assert!(
+            b.counters.rephases > 0,
+            "a deferred rephase must still eventually happen"
+        );
+    }
+
+    /// Mode switching is a search-order change and must preserve the verdict and
+    /// the certificate. `sat` models still satisfy; `unsat` proofs still
+    /// `DRAT`-check.
+    #[test]
+    fn mode_switching_preserves_verdicts_and_certificates() {
+        for seed in 0..12u64 {
+            let f = random_3sat(24, 43, 0xabc0_0000_0000_0001 + seed * 0x9e37_79b9);
+            let baseline = solve_with_drat_proof(&f);
+            let mut sink = VecProofSink::new();
+            let switched = solve_with_drat_proof_mode_traced(
+                &f,
+                None,
+                DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+                &mut sink,
+                &SearchPolicies::mode_switching(),
+            );
+            match (&baseline, &switched.outcome) {
+                (ProofSolveOutcome::Sat(_), StreamingProofOutcome::Sat(model)) => {
+                    assert!(
+                        model.satisfies(&f).unwrap(),
+                        "seed {seed}: model must satisfy"
+                    );
+                }
+                (ProofSolveOutcome::Unsat(_), StreamingProofOutcome::Unsat) => {
+                    assert_eq!(
+                        check_drat(&f, &sink.into_steps()),
+                        Ok(true),
+                        "seed {seed}: unsat proof must DRAT-check"
+                    );
+                }
+                (a, b) => panic!("seed {seed}: verdict moved: {a:?} vs {b:?}"),
+            }
+        }
     }
 
     #[test]
@@ -5385,14 +5926,19 @@ mod tests {
         }
     }
 
-    /// The EMA (Glucose) restart schedule (T1.3.2, `use_ema_restart = true`) is a
-    /// pure search-order change: it must preserve every verdict. Over harder random
-    /// CNFs near the 3-SAT phase transition (~4.2 clauses/var — enough conflicts to
-    /// pass the EMA warmup and actually fire glue restarts, unlike the tiny instances
-    /// above), the EMA-driven core agrees with `BatSat` on every instance
-    /// (`DISAGREE = 0`), every `sat` model satisfies, and every `unsat` proof
-    /// DRAT-checks — the same soundness net as the default Luby schedule. This keeps
-    /// the (default-off) EMA path covered.
+    /// The EMA (Glucose) restart schedule (T1.3.2, [`SearchPolicies::ema_restart`])
+    /// is a pure search-order change: it must preserve every verdict. Over harder
+    /// random CNFs near the 3-SAT phase transition (~4.2 clauses/var — enough
+    /// conflicts to pass the EMA warmup and actually fire glue restarts, unlike the
+    /// tiny instances above), the EMA-driven core agrees with `BatSat` on every
+    /// instance (`DISAGREE = 0`), every `sat` model satisfies, and every `unsat`
+    /// proof DRAT-checks — the same soundness net as the default Luby schedule. This
+    /// keeps the (default-off) EMA path covered.
+    ///
+    /// It now drives the core through the **production** policy rather than by
+    /// assigning the private `use_ema_restart` field, which is what this test
+    /// used to do and was, until 2026-09-09, the only assignment of `true` to
+    /// that field anywhere in the crate.
     #[test]
     #[cfg(feature = "batsat-reference")]
     fn ema_restart_schedule_agrees_with_batsat_disagree_zero() {
@@ -5419,10 +5965,15 @@ mod tests {
                 f.add_clause(CnfClause::new(lits)).unwrap();
             }
             let batsat = solve_with_rustsat_batsat(&f).unwrap();
-            // Drive the solver with the EMA restart schedule enabled.
+            // Drive the solver with the EMA restart schedule enabled, through
+            // the production policy surface.
             let mut sink = VecProofSink::new();
             let mut cdcl = Cdcl::new(&f, &mut sink);
-            cdcl.use_ema_restart = true;
+            cdcl.set_policies(&SearchPolicies::ema_restart());
+            assert!(
+                cdcl.use_ema_restart,
+                "`SearchPolicies::ema_restart` must actually select the EMA rule"
+            );
             let outcome = cdcl.solve(None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT);
             match (outcome, batsat) {
                 (StreamingProofOutcome::Sat(model), SatResult::Sat(_)) => {
