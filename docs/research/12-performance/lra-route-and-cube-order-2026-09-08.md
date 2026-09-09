@@ -120,7 +120,79 @@ observed to fail, and **nothing has measured its success rate below that**.
 Base is `AXEYUM_LRA_ROUTE=legacy` through the same binary, so the arms differ in
 the policy and in nothing else.
 
-<!-- A/B RESULTS -->
+Four arms through **one** binary, s5 idle, `taskset -c 0-7`, 24 s, serial.
+`arm_legacy` is the same-binary control and reproduces the base run exactly —
+3 `unsat` / 19 `unknown`, the same three files.
+
+| arm (`AXEYUM_LRA_ROUTE`) | decided | total wall |
+|---|---|---|
+| `legacy` — the whole pre-2026-09-08 behaviour | 3/22 | 476,303 ms |
+| `cube-order-only` — simplex first, nothing else changed | 7/22 | 376,588 ms |
+| `fm-first` — encoder + fall-through, old cube order | 8/22 | 306,136 ms |
+| default — all three | **9/22** | 300,421 ms |
+
+Per file, wall clock in ms (`u` = `unknown`):
+
+| file | legacy | cube-order | route | all |
+|---|---|---|---|---|
+| `Carpark2-ausgabe-8` | u 24,230 | u 13,819 | u 208 | u 207 |
+| `gasburner-prop3-12` | u 24,129 | u 24,127 | **unsat 6,011** | **unsat 6,412** |
+| `gasburner-prop3-9` | u 24,128 | u 24,125 | **unsat 506** | **unsat 507** |
+| `pursuit-safety-16` | u 24,331 | u 24,128 | u 24,330 | u 24,129 |
+| `pursuit-safety-5` | u 24,130 | **unsat 4,810** | **unsat 207** | **unsat 207** |
+| `tgc_io-nosafe-4` | u 24,130 | **unsat 907** | **unsat 106** | **unsat 107** |
+| `tgc_io-safe-20` | u 24,429 | u 24,129 | u 5,011 | u 6,112 |
+| `sc-5.base.cvc` | u 24,129 | **unsat 11,817** | u 24,130 | **unsat 17,523** |
+| `sc-7` … `sc-25` (9 files) | u ~24,130 | u ~24,100 | u ~24,150 | u ~24,100 |
+| `frame_prop.base` | unsat 3,810 | unsat 1,208 | unsat 1,208 | unsat 1,308 |
+| `fs_not_sc_seen.base` | unsat 3,009 | unsat 1,310 | unsat 1,308 | unsat 1,409 |
+| `no_op_accs.base` | unsat 10,016 | unsat 1,508 | unsat 1,307 | unsat 1,408 |
+| `reint_to_least.base` | u 24,130 | **unsat 4,010** | **unsat 207** | **unsat 207** |
+
+**Zero disagreements.** No file is decided differently by any two arms, and
+every one of the nine decided verdicts matches the benchmark's own
+`(set-info :status unsat)`. The three files that already decided are 2.9-7.6x
+faster.
+
+The two changes are largely independent, because they act on different halves:
+the routing moves a file onto the online CDCL(T) engine, and the cube order
+makes the offline loop 20-50x faster for the files that stay on it. Four files
+from the order alone, five from the routing alone, six together.
+
+### Where the budget goes now
+
+Same instrument, default arm. `cube_fm_ms` is **0** on every file that still
+runs the offline loop, and `theory_ms` has gone from 96-99% of the budget to
+16-58% of it, with the propositional half now the larger share on the smaller
+files:
+
+| file | rounds (legacy → all) | `theory_ms` | `cube_fm_ms` | `cube_simplex_ms` | `skeleton_ms` |
+|---|---|---|---|---|---|
+| `sc-7` | 255 → **1,447** | 4,633 | 0 | 3,718 | 19,031 |
+| `sc-13` | 86 → **1,027** | 9,614 | 0 | 7,808 | 12,881 |
+| `sc-19` | 49 → **764** | 14,060 | 0 | 11,730 | 9,206 |
+| `sc-25` | 33 → **328** | 11,358 | 0 | 9,689 | 3,623 |
+| `pursuit-safety-16` | 29 → **394** | 13,602 | 0 | 12,170 | 3,422 |
+
+5.7x to 13.6x the refinement rounds, and the mean learned core width rises with
+them (2.2 → 3.3-32.1), so the extra rounds are buying wider lemmas rather than
+repeating the narrow ones.
+
+### The next lever, named by the instrument rather than inferred
+
+Twelve of the thirteen files that still lose print
+`online_probe=model-did-not-replay`. The online CDCL(T) engine now **parses
+these files, searches them, and reaches a satisfying Boolean assignment** — and
+then `LraTheory::real_model()`'s reconstruction fails to replay against the
+original assertions, so it declines a decision it had in hand and hands the
+query back to the offline loop. That is a different defect from either of the
+two this lane fixed, and it is where the whole `sc/` family now sits.
+
+`Carpark2-ausgabe-8` and `tgc_io-safe-20` are not that shape: both are mixed
+`{real,int}` files on the `coercion-relax` route, whose verifier rejects the
+relaxed candidate against the original int↔real coupling. Their verdict is
+`unknown` in every arm; what changed is that the relaxation now produces a
+candidate in 80 ms instead of never producing one in 24 s.
 
 ## Reproducing
 

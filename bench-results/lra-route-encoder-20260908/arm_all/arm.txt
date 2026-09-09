@@ -1,0 +1,1 @@
+arm=<unset> bin=./bin/smtcomp_cli_arm

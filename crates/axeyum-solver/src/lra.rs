@@ -358,8 +358,8 @@ fn decide_within(
     // Farkas fix, and one number for a decider with three stages cannot say
     // which of them to attack. Off, this is one thread-local `bool` read per
     // decision — a decision that collects and eliminates over the whole cube.
-    let staged = crate::lazy_smt_counters::enabled();
-    let collect_started = staged.then(Instant::now);
+    let counting = crate::lazy_smt_counters::enabled();
+    let collect_started = counting.then(Instant::now);
     let mut ctx = Collector::default();
     for (index, &assertion) in assertions.iter().enumerate() {
         ctx.current_origin = index;
@@ -375,7 +375,7 @@ fn decide_within(
             collect: collect_elapsed,
             ..CubeStages::default()
         }
-        .record(staged);
+        .record(counting);
         return Ok(Decision::TimedOut);
     }
     if ctx.trivially_unsat {
@@ -383,7 +383,7 @@ fn decide_within(
             collect: collect_elapsed,
             ..CubeStages::default()
         }
-        .record(staged);
+        .record(counting);
         return Ok(Decision::UnsatTrivial(ctx.trivial_origin.unwrap_or(0)));
     }
 
@@ -405,41 +405,18 @@ fn decide_within(
         ..CubeStages::default()
     };
 
-    // Which engine gets the system first. Both are sound and each declines on
-    // cases the other decides, so the ORDER is a pure cost choice and the union
-    // of what the pair decides does not depend on it.
-    //
-    // Measured 2026-09-08 over the 22 `QF_LRA` files bound by the offline
-    // lazy-SMT loop: Fourier–Motzkin declined on **every one of the 2,745
-    // cubes**, a 0% success rate, having spent 96-99.9% of `theory_ms` — 21.5
-    // to 23.7 s of a 24 s budget — reaching its size guard. The simplex then
-    // decided every one of those same cubes in 43-696 ms IN TOTAL. That is not
-    // a tuning ratio; it is a first choice that is never right on this
-    // population, and the elimination's cost is doubly exponential in the
-    // variable count while the simplex's is polynomial.
-    if crate::lra_route::configured().simplex_first(ctx.constraints.len()) {
-        let started = staged.then(Instant::now);
-        let fallback = simplex_fallback(arena, assertions, &ctx);
-        stages.simplex = Some(started.map_or(Duration::ZERO, |s| s.elapsed()));
-        match fallback {
-            Ok(Some(decision)) => {
-                stages.record(staged);
-                return Ok(decision);
-            }
-            Ok(None) => {}
-            Err(error) => {
-                stages.record(staged);
-                return Err(error);
-            }
-        }
+    if crate::lra_route::configured().simplex_first(ctx.constraints.len())
+        && let Some(decision) = simplex_first(arena, assertions, &ctx, counting, &mut stages)?
+    {
+        return Ok(decision);
     }
 
-    let fm_started = staged.then(Instant::now);
+    let fm_started = counting.then(Instant::now);
     let feasibility = solve(&ctx.constraints, nvars, deadline);
     stages.fm = fm_started.map_or(Duration::ZERO, |s| s.elapsed());
     stages.fm_declined = matches!(feasibility, Feasibility::TimedOut);
     if !stages.fm_declined {
-        stages.record(staged);
+        stages.record(counting);
     }
     match feasibility {
         Feasibility::TimedOut => {
@@ -453,13 +430,13 @@ fn decide_within(
             // would be on the identical constraint system, so the second cannot
             // decide what the first did not.
             if stages.simplex.is_some() {
-                stages.record(staged);
+                stages.record(counting);
                 return Ok(Decision::TimedOut);
             }
-            let simplex_started = staged.then(Instant::now);
+            let simplex_started = counting.then(Instant::now);
             let fallback = simplex_fallback(arena, assertions, &ctx);
             stages.simplex = Some(simplex_started.map_or(Duration::ZERO, |s| s.elapsed()));
-            stages.record(staged);
+            stages.record(counting);
             if let Some(decision) = fallback? {
                 return Ok(decision);
             }
@@ -484,37 +461,94 @@ fn decide_within(
             })
         }
         Feasibility::Bug(message) => Err(SolverError::Backend(message)),
-        Feasibility::Sat(values) => {
-            // Build a model over the original real symbols and replay (the trust
-            // anchor for `sat`).
-            let mut model = Model::new();
-            let mut assignment = axeyum_ir::Assignment::new();
-            for (&symbol, &index) in &ctx.var_index {
-                model.set(symbol, Value::Real(values[index]));
-                assignment.set(symbol, Value::Real(values[index]));
+        Feasibility::Sat(values) => replayed_sat(arena, assertions, &ctx, &values),
+    }
+}
+
+/// Builds a model over the original real symbols from a Fourier–Motzkin
+/// feasible point and **replays it against every assertion** — the trust anchor
+/// for `sat` on this route.
+///
+/// # Errors
+///
+/// A model that definitely violates an assertion is a procedure bug and stays a
+/// loud [`SolverError::Backend`] alarm. A model that cannot be *evaluated* (an
+/// `i128` overflow in an exact rational comparison) is not a wrong model, only
+/// an uncertifiable one, and degrades to [`Decision::Incomplete`].
+fn replayed_sat(
+    arena: &TermArena,
+    assertions: &[TermId],
+    ctx: &Collector,
+    values: &[Rational],
+) -> Result<Decision, SolverError> {
+    let mut model = Model::new();
+    let mut assignment = axeyum_ir::Assignment::new();
+    for (&symbol, &index) in &ctx.var_index {
+        model.set(symbol, Value::Real(values[index]));
+        assignment.set(symbol, Value::Real(values[index]));
+    }
+    for &assertion in assertions {
+        match eval(arena, assertion, &assignment) {
+            Ok(Value::Bool(true)) => {}
+            Ok(_) => {
+                return Err(SolverError::Backend(format!(
+                    "lra sat model replay failed: assertion #{} not satisfied",
+                    assertion.index()
+                )));
             }
-            for &assertion in assertions {
-                match eval(arena, assertion, &assignment) {
-                    Ok(Value::Bool(true)) => {}
-                    Ok(_) => {
-                        return Err(SolverError::Backend(format!(
-                            "lra sat model replay failed: assertion #{} not satisfied",
-                            assertion.index()
-                        )));
-                    }
-                    Err(error) => {
-                        // The candidate could not be *evaluated* (e.g. the exact
-                        // rational comparison overflowed `i128`). This is not a
-                        // wrong model — we simply cannot certify `sat` — so decline
-                        // to a graceful `unknown` rather than raise a backend error.
-                        return Ok(Decision::Incomplete(format!(
-                            "lra: sat model replay could not be verified (assertion #{}): {error}",
-                            assertion.index()
-                        )));
-                    }
-                }
+            Err(error) => {
+                return Ok(Decision::Incomplete(format!(
+                    "lra: sat model replay could not be verified (assertion #{}): {error}",
+                    assertion.index()
+                )));
             }
-            Ok(Decision::Sat(model))
+        }
+    }
+    Ok(Decision::Sat(model))
+}
+
+/// Runs the exact-rational simplex on the collected system **before**
+/// Fourier–Motzkin, timing it into `stages` and recording the stage split on
+/// every exit it owns.
+///
+/// Both engines are sound and each declines on cases the other decides, so the
+/// order is a pure cost choice and the union of what the pair decides does not
+/// depend on it. What the order decides is how much of a budget is spent before
+/// the cube is decided at all: measured 2026-09-08 over the 22 `QF_LRA` files
+/// bound by the offline lazy-SMT loop, Fourier–Motzkin declined on **all 2,745
+/// cubes** — a 0% success rate — having spent 96-99.9% of `theory_ms`, 21.5 to
+/// 23.7 s of a 24 s budget, reaching its size guard; the simplex then decided
+/// every one of those same cubes in 43-696 ms in total. Elimination is doubly
+/// exponential in the variable count and the simplex is polynomial, so above
+/// `lra_route::SIMPLEX_FIRST_AT_CONSTRAINTS` the elimination goes second.
+///
+/// `Ok(None)` means the simplex declined and the caller should continue into
+/// the elimination; the stage record is then left to the caller, which knows
+/// what the elimination went on to do.
+///
+/// # Errors
+///
+/// Propagates [`simplex_fallback`]'s error, recording the stages first so a
+/// failed decision is still counted.
+fn simplex_first(
+    arena: &TermArena,
+    assertions: &[TermId],
+    ctx: &Collector,
+    counting: bool,
+    stages: &mut CubeStages,
+) -> Result<Option<Decision>, SolverError> {
+    let started = counting.then(Instant::now);
+    let fallback = simplex_fallback(arena, assertions, ctx);
+    stages.simplex = Some(started.map_or(Duration::ZERO, |s| s.elapsed()));
+    match fallback {
+        Ok(Some(decision)) => {
+            stages.record(counting);
+            Ok(Some(decision))
+        }
+        Ok(None) => Ok(None),
+        Err(error) => {
+            stages.record(counting);
+            Err(error)
         }
     }
 }

@@ -232,22 +232,7 @@ pub fn check_with_lra_dpll_within(
             });
         }
 
-        if crate::lazy_smt_counters::enabled() {
-            let cube: Vec<bool> = assignment.iter().map(|&(_, truth)| truth).collect();
-            if let Some(previous) = previous_cube.as_ref()
-                && previous.len() == cube.len()
-            {
-                let flips = previous
-                    .iter()
-                    .zip(&cube)
-                    .filter(|(a, b)| a != b)
-                    .count()
-                    .try_into()
-                    .unwrap_or(u64::MAX);
-                crate::lazy_smt_counters::record_cube_churn(flips);
-            }
-            previous_cube = Some(cube);
-        }
+        record_cube_churn(&assignment, &mut previous_cube);
 
         let (verdict, carried) = decide_cube(arena, &theory_lits, deadline)?;
         match verdict {
@@ -822,6 +807,39 @@ fn finish_sat(
 /// # Errors
 ///
 /// Propagates the theory decision's errors.
+/// Counts how far the round's cube moved from the previous round's, and keeps
+/// the cube for the next comparison.
+///
+/// The question the Farkas fix left open. With the second LP gone the loop runs
+/// 1.63x the rounds and still loses, so either each round hands the theory a
+/// genuinely different problem or it hands it nearly the same one and pays a
+/// cold decision for the difference. Measured 2026-09-08 over the 22 `QF_LRA`
+/// files bound by this loop, the answer is the second: **1.1 to 4.2 flipped
+/// literals out of 265 to 1,736 atoms**, with `cube_identical` zero everywhere.
+///
+/// The first round of an entry has no predecessor and is not recorded, so the
+/// churn denominator is `rounds - entries` and never `rounds`. Costs one
+/// thread-local `bool` read when counting is off.
+fn record_cube_churn(assignment: &[(SymbolId, bool)], previous: &mut Option<Vec<bool>>) {
+    if !crate::lazy_smt_counters::enabled() {
+        return;
+    }
+    let cube: Vec<bool> = assignment.iter().map(|&(_, truth)| truth).collect();
+    if let Some(previous) = previous.as_ref()
+        && previous.len() == cube.len()
+    {
+        let flips = previous
+            .iter()
+            .zip(&cube)
+            .filter(|(a, b)| a != b)
+            .count()
+            .try_into()
+            .unwrap_or(u64::MAX);
+        crate::lazy_smt_counters::record_cube_churn(flips);
+    }
+    *previous = Some(cube);
+}
+
 fn decide_cube(
     arena: &TermArena,
     theory_lits: &[TermId],
