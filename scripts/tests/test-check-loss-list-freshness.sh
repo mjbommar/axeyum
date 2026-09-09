@@ -17,8 +17,7 @@
 #
 #   mutation                                          cases killed
 #   per-division authority collapsed to               addition-is-not-supersession,
-#     "the newest set wins"                           partial-supersession-marked,
-#                                                     real-tree
+#     "the newest set wins"                           partial-supersession-marked
 #   the `SUPERSEDED-BY:` requirement removed          unsuperseded
 #   the SUPERSEDED-BY target check removed            misdirected-supersession
 #   the self-naming SUPERSEDED-BY check removed       self-supersession
@@ -34,17 +33,14 @@
 #                                                     partial-supersession-marked,
 #                                                     helper-txt-is-not-a-division,
 #                                                     real-tree
-#   DIVISION_RE relaxed to `.*`                       helper-txt-is-not-a-division,
-#                                                     real-tree
+#   DIVISION_RE relaxed to `.*`                       helper-txt-is-not-a-division
 #
-# Seven of the twelve kill exactly one case. The five that kill more do so for
+# Nine of the twelve kill exactly one case. The three that kill more do so for
 # reasons worth stating rather than tidying away:
 #
-#   * Collapsing per-division authority kills three because that IS the
-#     checker's central model. `addition-is-not-supersession` is the guard;
-#     the other two are the shapes it produces (a partly-superseded set, and
-#     the real tree, where a QF_NRA-only set sits beside an eleven-division
-#     one).
+#   * Collapsing per-division authority kills two because that IS the checker's
+#     central model. `addition-is-not-supersession` is the guard;
+#     `partial-supersession-marked` is the shape it produces.
 #   * Emptying REQUIRED_MANIFEST_FIELDS kills two because both manifest-content
 #     cases read that list. The `no MANIFEST.json` branch returns before it and
 #     therefore dies alone, which is the check that the two are independent.
@@ -53,10 +49,20 @@
 #     lanes legitimately measuring from their own worktrees), and
 #     `currency-is-advisory` exists so that decision has a control of its own
 #     rather than being an emergent property of the others.
-#   * Relaxing DIVISION_RE kills the real-tree case too, because the committed
-#     sets contain helper `.txt` files (`abv-watchdog-blind.txt`,
-#     `UF.axeyum-only24.ab.txt`). That is COVERAGE working: a fixture-only
-#     suite would stay green if the shipped directories' shape drifted.
+#
+# WHAT CHANGED WHEN THE TREE DID, and it is worth writing down. On the FIRST run
+# of this table the tree held two loss-list sets, one of them a QF_NRA-only
+# addition with no supersession banner, and `real-tree` died under BOTH the
+# authority-collapse and the DIVISION_RE mutations. After the 2026-09-08 re-cut
+# landed -- a third set that is the authority for every division, with both
+# older sets marked -- neither mutation moves it any more: with one set on top
+# of everything, "newest set wins" and "newest set per division" agree.
+#
+# So `real-tree` is COVERAGE, not a guard, and its sensitivity is a property of
+# the tree rather than of the checker. It stays because a fixture-only suite
+# would remain green if the shipped directories' shape drifted away from what
+# the parser reads; it must not be counted as evidence that either of those two
+# guards is tested. Their fixtures are.
 set -uo pipefail
 cd "$(dirname "$0")/../.." || exit 2
 
