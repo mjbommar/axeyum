@@ -227,8 +227,7 @@ fifty-five, the `QF_RDL` one does not reproduce under load, and the `QF_UFLIA`
 one is `hash_sat_05_17`, whose real cost a budget walk puts at 33–34 s against a
 21.3 s estimate.
 
-`QF_NIA` (61) was still running at 60 of 61; its per-file progress log is
-committed under `partial/` so the coverage is visible rather than implied.
+The probe arm is complete: 403 of 403 files, all eleven divisions.
 
 **`QF_UFLIA`'s 34 no-trail rows are the largest blind spot in this table.** They
 are watchdog kills where no route returned, so the probe can say only that the
@@ -244,8 +243,9 @@ covers them, and it had reached 35 of that division's 58 files.
 | QF_LRA | 54 | 5 | 49 | **0** | 49 |
 | QF_NIA (files 32-61) | 30 | 3 | 27 | **0** | 27 |
 | QF_UF | 38 | 35 | 3 | **0** | 3 |
+| QF_UFLIA | 58 | 11 | 47 | **6** | 41 |
 | UF | 32 | 0 | 32 | **0** | 32 |
-| **total** | **179** | **50** | **129** | **2** | **127** |
+| **total** | **237** | **61** | **176** | **8** | **168** |
 
 `QF_NIA`'s second half is worth its own line: three files *are* decided alone
 there, and all three are files **the ladder already wins**. They never were
@@ -254,10 +254,14 @@ prizes. (Re-run on another host two of the three do not even reproduce —
 their cost moves between machines. Either reading disqualifies them; the
 `STALE-DECIDED` one is the cheaper check.)
 
-`QF_UFLIA`'s sweep was still running: over its first 35 files it found 7
-ladder-losses with a solo decider — five are the 2 ms `euf-online` class above
-(a normalization defect, not a scheduling one), one wants 37 s, and one is
-`hash_sat_08_05.smt2`, the confirmed middle-band case.
+`QF_UFLIA`'s six are the interesting row, and its sweep is now **complete at
+58 of 58**: five are the 1–10 ms `euf-online` class (a normalization defect, not
+a scheduling one), and one is `hash_sat_08_05.smt2`, the confirmed middle-band
+case. A seventh ladder-loss is decided alone only at 37 s, past the budget.
+
+**Files 36–58 added no new middle-band case.** The count that was 1 at 35 files
+is 1 at 58, so the open question this note flagged as step 0 is closed by the
+sweep that raised it, not by an argument.
 
 Both `QF_ABV` wins are `qf-bv` — 611 ms (`unsat`) and 567 ms (`sat`), verdicts
 matching the census. The other entry points that "decide" them
@@ -266,26 +270,29 @@ same computation through different doors, not four arms.
 
 ### The band that decides it
 
-From the **solo** arm, over the six divisions where it is complete — 129
+From the **solo** arm, over the seven divisions where it is complete — 176
 ladder-losing files:
 
 ```
 fastest route that decides ALONE, on files the ladder loses:
-  under 1 s (a reserve reaches it)                       2
-  1 s to 6 s (a reserve reaches it)                      0
-  6 s to 24 s (MIDDLE BAND: only a portfolio)            0
-  no route decides alone at all                        127
+  under 1 s (a reserve reaches it)                       7
+  6 s to 24 s (MIDDLE BAND: only a portfolio)            1
+  over 24 s (neither reaches it)                         1
+  no route decides alone at all                        168
 ```
 
-**The middle band is empty across those 129 files.** That, not the count, is what
-the decision turns on. `QF_UFLIA`'s incomplete sweep then supplied exactly one
-member of it, which is why the answer below is "not yet" rather than "no".
+**One file in 176 is in the band only a portfolio serves** — 0.6%. That, not the
+count of prizes, is what the decision turns on.
 
-### Two outstanding middle-band candidates, and they are the ones to settle
+Note what the other seven prizes are. Five are `euf-online` at 1–10 ms, which is
+the `check_auto` normalization defect below and not a scheduling problem at all;
+two are `qf-bv` at 567 ms and 611 ms, which a one-second reserve reaches. **Only
+one of the eight is a file a portfolio would win and a reserve would not.**
 
-Honesty requires the other half. The **probe** arm proposes five more candidates
-in the two divisions whose solo sweeps had not finished, and two of them land in
-the middle band:
+### The probe's middle-band candidates, and why none of them survived
+
+Honesty requires the other half. The **probe** arm proposed five further
+candidates, two of them nominally in the middle band:
 
 | division | file | winning route | probe's arm estimate | band |
 |---|---|---|---:|---|
@@ -415,11 +422,11 @@ that does either — any reserve large enough for the winner starves the route
 that wins other files. Two cores serve both trivially. That is the portfolio's
 case, demonstrated rather than argued.
 
-The `QF_UFLIA` solo sweep had covered 35 of 58 files when this was written, and
-this file came out of those 35 — a division whose ladder happens to contain two
-eighteen-second routes. **Finishing that sweep, and `QF_NIA`'s, is the cheapest
-thing anyone can do to change this answer**, and it is the first thing to do
-before the question is treated as closed.
+This file came out of `QF_UFLIA` — a division whose ladder happens to contain
+two eighteen-second routes. When it was found, that sweep had covered 35 of 58
+files, and finishing it was the cheapest thing that could have changed this
+note's answer. **It is now complete at 58 of 58, and files 36–58 added no second
+member of the band.** One in 176 is the number.
 
 ## Neither instrument confirms a prize on its own, and the first two did not survive
 
@@ -609,20 +616,21 @@ because the binder already holds the clock; that is refuted — on
 `hash_sat_08_05` there are two routes each wanting 18 s of one 24 s clock, and
 handing the binder more cores is exactly what would help. The measured reason to
 wait is narrower and honest: **the band a portfolio uniquely serves has one
-confirmed member so far, and the solo sweep that found it had covered 35 of that
-division's 58 files.** One file does not pay for a concurrent dispatcher; three
-or four might, and the measurement that would say so is already running.
+confirmed member in 176 ladder-losing files with complete solo coverage — 0.6%,
+and the sweep that found it has since finished without producing a second.**
+One file does not pay for a concurrent dispatcher.
 
 What to do next, in the order the measurements support it:
 
-0. **Finish the `QF_UFLIA` and `QF_NIA` solo sweeps** (`scripts/route-solo-slot.sh`;
-   partial progress logs are committed). They are the only measurement that can
-   move the band count, and the single confirmed portfolio case came out of the
-   35 `QF_UFLIA` files already covered. Decide the portfolio on the finished
-   number, not on this one.
+0. **Finish the four remaining solo sweeps** — `QF_IDL`, `QF_RDL`, `QF_LIA` and
+   `QF_NIA`'s first half (`scripts/route-solo-slot.sh`; partial progress logs
+   are committed, collection is two `scp` lines in the artifact README). They
+   are the only measurement that can still move the band count. Their probe arms
+   returned 0, 1 and 0 candidates respectively, and their nearest finished
+   analogues (`QF_LRA`, `QF_NIA`'s second half) returned zero prizes between
+   them, so a surprise there is possible but not expected.
 
-Then, whatever that number says, these three are worth more per hour than a
-concurrent dispatcher:
+These three are worth more per hour than a concurrent dispatcher regardless:
 
 1. **Clamp `dispatch_abv_online`.** It is the only dispatch site of its kind
    that passes `config` through unmodified, it costs nine QF_ABV files their

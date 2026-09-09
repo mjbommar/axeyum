@@ -71,7 +71,6 @@ out of `QF_UFLIA`'s first 35 files, and no other finished division has one.
 
 | host | slot | divisions | state at hand-off |
 |---|---|---|---|
-| s7 | 12-15 | `QF_UFLIA` | 42 of 58 |
 | s5 | 0-3 | `QF_NIA` (files 1-31) | 30 of 31 |
 | s7 | 8-11 | `QF_NIA_b` (files 32-61) | **done**, in `solo/` |
 | s6 | 4-7 | `QF_IDL` | 21 of 54 |
@@ -79,7 +78,9 @@ out of `QF_UFLIA`'s first 35 files, and no other finished division has one.
 | s5 | 4-7 | `QF_LIA` | 13 of 27 |
 
 The probe arm is **complete** (all 403 files, 11 divisions, in `probe/`). The
-solo arm is complete for QF_ABV, QF_BV, QF_LRA, QF_NIA_b, QF_UF and UF.
+solo arm is complete for QF_ABV, QF_BV, QF_LRA, QF_NIA_b, QF_UF, **QF_UFLIA**
+and UF — 176 ladder-losing files, of which exactly one is in the band only a
+portfolio serves.
 
 Each writes its TSV only on completion; the per-file lines already produced are
 in `partial/<DIV>.solo.progress.txt` here, so the coverage is visible rather
