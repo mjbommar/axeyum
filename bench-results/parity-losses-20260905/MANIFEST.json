@@ -1,0 +1,13 @@
+{
+  "as_of": "2026-09-05T00:00:00Z",
+  "solver_commit": "9914a1c0e",
+  "binary_sha256": "unrecorded: this set predates the MANIFEST.json convention, which was added on 2026-09-08 with scripts/check-loss-list-freshness.py. Its README records the solver commit, the hosts, the sidecar paths and the extraction recipe, which is what was kept at the time; the binary digest was not.",
+  "budget_s": 24,
+  "memory_gb": 8,
+  "divisions": [
+    "QF_SLIA", "QF_BV", "UF", "QF_ABV", "QF_LIA", "QF_UF",
+    "QF_RDL", "QF_UFLIA", "QF_LRA", "QF_IDL", "QF_NIA"
+  ],
+  "files": 403,
+  "note": "Written retrospectively on 2026-09-08 from this set's own README.md. No measurement here was re-derived, re-run or altered; the lists and census TSVs are byte-identical to what the S3 census committed. The purpose of the file is to make the set legible to scripts/check-loss-list-freshness.py -- a set with no manifest cannot answer 'was fix X in this measurement?', which is the question that made the 2026-09-05 lists expensive to keep reading."
+}

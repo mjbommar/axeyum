@@ -737,6 +737,14 @@ gate-controls:
     # the REAL committed ledger, because a parser never pointed at its subject
     # returns the same empty answer as a strong negative result.
     scripts/tests/test-check-parity-freshness.sh
+    # Controls for `loss-list-freshness` below. Fifteen cases, twelve guard
+    # mutations, all twelve killed (the table is in the suite's header and was
+    # recorded from `scripts/tests/loss_list_freshness_mutations.py`, not
+    # predicted). An unmarked superseded set, a SUPERSEDED-BY pointing at
+    # nothing or at itself, a set past the age budget, a missing manifest field
+    # and a bare `unrecorded` must each red it; a set that merely ADDS a
+    # division must not. One case runs against the REAL committed sets.
+    scripts/tests/test-check-loss-list-freshness.sh
     # Controls for the gate-ADMISSION mechanism (2026-08-27). The push battery
     # was starved because `scripts/cargo-serialized.sh` bounds MEMORY and
     # nothing bounded CPU, and because pre-push, check.sh and this file called
@@ -923,6 +931,20 @@ local-ci-freshness:
 # going down stays visible.
 parity-freshness:
     scripts/check-parity-freshness.py
+
+# Is the loss population a lane is briefed against the CURRENT one?
+# `bench-results/parity-losses-<date>/<DIV>.txt` is what every "the N files we
+# lose in <DIV>" brief cites. Measured 2026-09-08: 141 of the 403 files on the
+# 2026-09-05 lists were already decided -- QF_UFLIA 122 -> 151 solved, QF_LIA
+# 113 -> 119, QF_LRA 93 -> 97, QF_ABV 179 -> 186 in three days -- and lanes had
+# already been dispatched at files the tree wins.
+#
+# Authority is PER DIVISION, not per directory: a set that adds a division is
+# not a supersession of the sets before it. Remedy for a red is usually one
+# re-cut (`bench-results/parity-losses-20260908/scripts/run-all.sh`, ~30 min on
+# a busy box) plus a `SUPERSEDED-BY:` line in the old set's README.
+loss-list-freshness:
+    scripts/check-loss-list-freshness.py
 
 # L1 phase G0 (docs/plan/graph-directed-library-roadmap-2026-08-30.md): the
 # Mathlib module-import baseline receipt. Re-parses the pinned mathlib4

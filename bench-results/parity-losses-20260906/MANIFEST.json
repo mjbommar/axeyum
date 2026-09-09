@@ -1,0 +1,10 @@
+{
+  "as_of": "2026-09-07T01:33:46Z",
+  "solver_commit": "00373a7d42",
+  "binary_sha256": "unrecorded: this set predates the MANIFEST.json convention, which was added on 2026-09-08 with scripts/check-loss-list-freshness.py. Its README records the solver commit, the PARITY.md entry it was cut from, and the extraction recipe; the binary digest was not kept.",
+  "budget_s": 24,
+  "memory_gb": 8,
+  "divisions": ["QF_NRA"],
+  "files": 77,
+  "note": "Written retrospectively on 2026-09-08 from this set's own README.md; nothing was re-measured. as_of is the timestamp of the PARITY.md entry the population was extracted from (`## QF_NRA -- 2026-09-07T01:33:46Z`), not the directory's date, because the sweep is what the age budget is about."
+}
