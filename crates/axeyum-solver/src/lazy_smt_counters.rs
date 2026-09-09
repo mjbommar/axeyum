@@ -156,8 +156,9 @@ impl LazySmtLoop {
 pub const LAZY_SMT_LOOPS: usize = 3;
 
 /// Buckets in a [`RoundHistogram`]: bucket `0` is `<1 ms`, bucket `k` is
-/// `[2^(k-1), 2^k)` ms, and the last bucket is the saturating tail
-/// (`>= 16.4 s`), which covers the whole of the standard 24 s budget.
+/// `[2^(k-1), 2^k)` ms for `1 <= k <= 14`, and bucket `15` is the saturating
+/// tail `>= 2^14 ms = 16.4 s` — so the standard 24 s budget lands inside the
+/// range rather than at its edge.
 pub const ROUND_BUCKETS: usize = 16;
 
 /// The per-round wall-clock **distribution** of one refinement loop.
@@ -173,12 +174,14 @@ pub const ROUND_BUCKETS: usize = 16;
 /// closes.
 ///
 /// The measurement that made it decisive: 25 of 50 `QF_NIA` files ran exactly
-/// one round, and the question "is that round enormous, or is the loop not
-/// iterating" had no answer in the data. It has a third answer, which a
-/// histogram shows at a glance — every one of those single rounds lands in the
-/// **same bucket**, because the round is exactly the size of the slice the loop
-/// was handed (`INT_REAL_RELAX_BUDGET_SHARE`, 24 s / 6 = 4.00 s). A count
-/// cannot say that; a bucketed distribution says it without a per-round log.
+/// one round of the [`LazySmtLoop::Nra`] loop, and the question "is that round
+/// enormous, or is the loop not iterating" had no answer in the data. It has a
+/// third answer, which a histogram shows at a glance — those 25 single rounds
+/// all land in the **same bucket**, because each is exactly the size of the
+/// slice that loop's caller was handed
+/// (`auto::INT_REAL_RELAX_BUDGET_SHARE`, 24 s / 6 = 4.00 s; 23 of the 25 fall
+/// between 3.993 and 4.009 s). A count cannot say that; a bucketed
+/// distribution says it without a per-round log.
 ///
 /// # Clock-free
 ///
