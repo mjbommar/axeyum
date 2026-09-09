@@ -150,6 +150,7 @@ macro_rules! full_modules {
         mod nia_univariate_cert;
         mod nra;
         mod nra_even_power;
+        mod nra_fbbt;
         mod nra_handelman_cert;
         mod nra_monomial_bound_cert;
         mod nra_product_cert;
