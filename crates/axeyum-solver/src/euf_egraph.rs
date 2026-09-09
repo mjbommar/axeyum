@@ -1163,10 +1163,16 @@ fn note_euf_online_atoms(policy: EufOnlineAtomPolicy, outcome: EncodeOutcome) {
 /// - Deadline-bounded (`config.timeout`), returning [`CheckResult::Unknown`] under a
 ///   deterministic resource bound rather than running unbounded.
 ///
-/// Returns [`CheckResult::Unknown`] when there are no equality atoms or the Boolean
-/// skeleton has structure the encoder does not cover (the same conservative give-ups
-/// as [`solve_qf_uf_online`]). The `QF_UF` front-door default remains the offline
-/// route until the default-dispatch measurement/ADR flip lands.
+/// Returns [`CheckResult::Unknown`] when there are no equality atoms, or when the
+/// Boolean skeleton has structure the encoder does not cover *and*
+/// [`EufOnlineAtomPolicy`] says to refuse it. Under the default arm a
+/// Boolean-position subterm outside the encoder's connective set — an arithmetic
+/// comparison, a `distinct` — is instead abstracted to an opaque skeleton
+/// variable, which weakens the formula (so `unsat` still transfers and the `sat`
+/// replay above is what keeps that direction honest) and costs the route a
+/// bounded slice of the caller's budget. See [`EufOnlineAtomPolicy`] for the
+/// measurement that made this a policy. The `QF_UF` front-door default remains
+/// the offline route until the default-dispatch measurement/ADR flip lands.
 #[must_use]
 pub fn check_qf_uf_online_cdclt(
     arena: &mut TermArena,
@@ -1196,7 +1202,8 @@ pub fn check_qf_uf_online_cdclt(
             // instrument exists, and an early `return` that skipped the counter
             // would leave the refusing arm reporting an all-zero line — the
             // exact blind spot that cost a division-sized measurement to find.
-            // Caught by `the_counters_separate_abstracted_from_merely_entered`,
+            // Caught by
+            // `the_counters_separate_abstracted_from_refused_from_merely_entered`,
             // which read `policy="unset"` on the `Refuse` arm.
             note_euf_online_atoms(policy, EncodeOutcome::Refused);
             return CheckResult::Unknown(unknown(

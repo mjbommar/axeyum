@@ -84,6 +84,15 @@ scripts/euf-online-atoms-sweep.sh sliced …
 scripts/euf-online-atoms-compare.py /tmp/QF_UFLIA.refuse.tsv /tmp/QF_UFLIA.sliced.tsv
 ```
 
-Measured at lane commit `91389a959` (the `refused` counter added in that commit
-changes no verdict — it is inside the stats guard — so the `atoms_line` column in
-these TSVs is the pre-`refused=` format while every verdict is current).
+Measured with the binary built at lane commit `a962cb307`; the `refused` counter
+landed one commit later (`91389a959`) and changes no verdict — it lives inside the
+stats guard — so every verdict here is current while the `atoms_line` column is
+the pre-`refused=` format.
+
+**That older format is itself visible in the data, and it is the finding the
+counter fix came from.** `QF_UFLIA.refuse.tsv` has `atoms_line` EMPTY on all 200
+rows, including the 68 files where the route was entered and gave up, because the
+first version of the instrument recorded only after the encoding *finished* — so
+the arm it exists to expose published nothing. `QF_UFLIA.sliced.tsv` carries
+`abstracted_queries=1` on 49 rows. Re-running these sweeps with a binary at
+`91389a959` or later fills the refuse column in with `refused=1`.

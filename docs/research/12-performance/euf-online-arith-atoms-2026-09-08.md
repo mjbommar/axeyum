@@ -225,7 +225,66 @@ sat after the encoding finished, so the `Refuse` arm returned early and publishe
 failed on its first run and is what found it. That is the shape this repository
 keeps meeting: an instrument whose happy path is the only path it measures.
 
-## 5. What this does not fix
+## 5. Gates
+
+| gate | result |
+|---|---|
+| `--features full --test euf_online_arith_atoms` | 4 tests, 4 passed (NONZERO) |
+| `--features full --lib config_registry` | 17 passed |
+| `check-config-registry-staleness.py` | 0 — 471 entries, 84 dated, none stale |
+| `check-admission-limit-basis.py` | 0 — 143 declarations, all resolve |
+| `check-fmt-complete.sh` | 0 — 2,161 files checked |
+| `check-merge-hygiene.sh` | PASS |
+| `check-links.sh` | all links ok |
+| `--features full --test corpus_regression` | 1 test, `corpus_regression_is_sound` ok |
+| `--lib --features full -- --test-threads=4` | 1,620 / 1,622 then 1,621 / 1,622 — see below |
+
+The instrument was also verified end to end on the shipped binary, on both arms
+and through a watchdog kill:
+
+```
+$ AXEYUM_EUF_ONLINE_ATOMS=refuse smtcomp_cli medium9.smt2 --timeout-ms 3000 --trace
+; partial euf-online-atoms policy=refuse entered=1 abstracted_queries=0 abstracted_atoms=0 refused=1
+unknown
+$ AXEYUM_EUF_ONLINE_ATOMS=sliced smtcomp_cli medium9.smt2 --timeout-ms 3000 --trace
+euf-online-atoms policy=sliced entered=1 abstracted_queries=1 abstracted_atoms=3 refused=0
+unsat
+```
+
+Three atoms abstracted, and at a **3 s** budget — not just 24 s — the shipped arm
+decides it.
+
+### Two `--lib` failures that are not this change
+
+The full `-p axeyum-solver --lib --features full -- --test-threads=4` sweep
+(1,622 tests) reported two failures on a box at load 20 of 16 cores with 16
+sibling `smtcomp_cli` processes. Both are load artefacts with documented
+mechanisms, and neither can reach this diff:
+
+- `lra::memory_limit_tests::a_multiplier_matrix_over_the_budget_is_refused_before_it_is_allocated`
+  — got a WATCHDOG trip ("resident set reached 239 MiB over the 1 MiB
+  `memory_limit_mb`") where it wanted the PROJECTION refusal.
+  `memory_budget::set_limit_for_test` writes a **process-global** atomic while
+  `WATCHDOG_LOCK` only serialises tests inside that one module, so any
+  concurrent test in another module can start the sampler against the 1 MiB
+  limit. Verified: passes with `--test-threads=1` (7 passed).
+- `euf_egraph::tests::check_qf_uf_with_config_is_bounded_by_timeout` — got
+  `Unknown("boolean skeleton undecided")` on the 600 s half, in **both** sweeps.
+  This exact failure has a commit of its own: `0d10aebac` (2026-07-01, "repair
+  the six red CI jobs") raised this budget from 60 s to 600 s because *"the
+  solve takes ~50 s on a fast dev box, so 60 s flaked on slower CI runners
+  (deadline hit mid-solve → 'boolean skeleton undecided')"*. At load 20 of 16
+  cores with 16 sibling solver processes, 600 s is again not enough. It
+  exercises `check_qf_uf_with_config`, the **offline** route, which does not
+  touch `Encoder` at all: the only two `Encoder::new` sites in `euf_egraph.rs`
+  are `check_qf_uf_online_cdclt` (line 1189) and the test-only `run_online_diag`
+  (line 2606, flag off, byte-identical). This diff cannot reach it.
+
+The second sweep (1,621 passed, 1 failed) is what separates the two: the LRA one
+passed there, which is what a race looks like; the timeout one failed in both,
+which is what a too-slow budget looks like.
+
+## 6. What this does not fix
 
 The five files land at **~18.3 s of a 24 s budget**, because
 `uf-arith-lazy-overbound` still spends `24000 × 3/4 = 18,006 ms` on them before
