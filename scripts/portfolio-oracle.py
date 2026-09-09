@@ -45,11 +45,21 @@ What this does NOT measure, stated rather than absorbed
 1. Routes the ladder never *admits* are invisible here.  Raising the budget lets
    later routes run; it does not make an inadmissible route admissible.  So this
    is a **lower bound** on the portfolio prize, never an upper bound.
-2. A route is handed a clamped `config.timeout`, so a route may behave
-   differently under a 150 s budget than under a 24 s one.  `--confirm` re-runs
-   each scored winner at the competition budget with the *same* command and
-   requires the same route to decide; a winner that does not reproduce is
-   reported `PRIZE-UNCONFIRMED` and is not counted.
+2. A route is handed a clamped `config.timeout`, and several of the ladder's
+   internal shares are *fractions* of it (`cegar_probe_budget` takes 3/4 of what
+   remains, `dl_probe_budget` `min(timeout/4, 6 s)`), so the ladder under a
+   150 s budget is a different schedule, not the 24 s schedule with more room.
+   `--confirm` therefore checks **reproducibility of the probe**, not the
+   budget: it re-runs the probe and requires the same route to decide at a
+   comparable cost (`PRIZE-UNCONFIRMED` / `PRIZE-UNSTABLE` otherwise).
+
+   It deliberately does NOT re-run at the competition budget.  That was this
+   script's first version and it is a control that cannot pass: a `PRIZE` is by
+   construction a file the ladder does not decide at the competition budget, so
+   a confirmation run there returns `unknown` every time and would have marked
+   every prize unconfirmed while looking like diligence.  Confirming the
+   route's own cost under the competition budget needs a route-selection knob,
+   which `SolverConfig` does not have; that gap is the finding, not a caveat.
 3. The harness allows `WATCHDOG_GRACE` (1 s, `smtcomp_cli.rs`) past the
    configured timeout, so the control arm can report a verdict for a file a real
    external limit would kill.  `control_ms` is printed so that case stays
@@ -267,14 +277,22 @@ def main() -> int:
 
         if args.confirm and row["status"] == "PRIZE":
             again, _ = run_one(
-                args.binary, path, args.budget_ms, args.cores,
+                args.binary, path, args.probe_ms, args.cores,
                 args.memory_limit_mb, args.wall_slack_s,
             )
             repeat = deciding(again["attempts"]) if again["trail_present"] else None
             if repeat is None or repeat[0] != row["winner"]:
                 row["status"] = "PRIZE-UNCONFIRMED"
             else:
-                row["confirm_own_ms"] = round(repeat[1] / 1e6, 1)
+                own2 = repeat[1] / 1e6
+                row["confirm_own_ms"] = round(own2, 1)
+                first = row["winner_own_ms"]
+                # A win whose own cost is not reproducible is not a number to
+                # plan a portfolio on.  The gate is deliberately loose (2x)
+                # because these hosts carry other lanes' sweeps, and it is a
+                # reproducibility check, not a timing claim.
+                if own2 > max(2.0 * first, first + 200.0):
+                    row["status"] = "PRIZE-UNSTABLE"
 
         rows.append(row)
         print(

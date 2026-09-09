@@ -22,6 +22,7 @@ import sys
 ORDER = [
     "PRIZE",
     "PRIZE-UNCONFIRMED",
+    "PRIZE-UNSTABLE",
     "TOO-SLOW-ARM",
     "NO-ROUTE",
     "NO-ROUTE-NO-TRAIL",
@@ -75,6 +76,7 @@ def main() -> int:
         rows = by_div[div]
         c = collections.Counter(r.get("status", "?") for r in rows)
         blind = c["NO-ROUTE-NO-TRAIL"] + c["DECIDED-NO-TRAIL"] + c["DECIDED-NO-WINNER"]
+        c["PRIZE-UNCONFIRMED"] += c["PRIZE-UNSTABLE"]
         print(f"{div:<10} {len(rows):>5} {c['STALE-DECIDED']:>6} {c['PRIZE']:>6} "
               f"{c['PRIZE-UNCONFIRMED']:>7} {c['TOO-SLOW-ARM']:>9} {c['NO-ROUTE']:>9} "
               f"{c['ABORTED']:>6} {blind:>6}")
