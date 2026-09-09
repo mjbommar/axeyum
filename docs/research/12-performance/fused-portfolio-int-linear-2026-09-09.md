@@ -23,11 +23,12 @@ that the file list underneath the brief had moved again.
   converted 3 of 3, one converted 2 of 3, two blocked by a reserve ABOVE the
   group, and three already decided by the current tree with no portfolio at
   all.**
-- Measured yield on the **divisions**, which is the number that decides it:
-  **+5 files, -0, zero verdict disagreements, zero aborts, one decided file
-  more than half a second slower**, over a COMPLETE 100-file QF_IDL sweep and
-  164 of 200 QF_LIA. Four of the five gains are files the brief never named,
-  and the whole wall-clock cost sits on files lost at both worker counts.
+- Measured yield on the **divisions**, which is the number that decides it, over
+  **complete** sweeps of both (300 paired files): **+6 files, -0, zero verdict
+  disagreements, zero aborts, one decided file more than half a second slower.**
+  Five of the six gains are files the brief never named, the whole wall-clock
+  cost sits on files lost at both worker counts, and on files we DECIDE two
+  workers are net faster.
 
 ## What the seven files actually are, re-measured on an idle host
 
@@ -67,10 +68,13 @@ one run per arm, over the committed 200-file `bench-results/parity-lists/`
 samples. Hosts held steady throughout (`s7` load 2.1-2.3, `s6` load 1.9-2.0),
 so these frames are clean.
 
-| division | paired files | decided w1 | decided w2 | gained | **lost** | verdict disagreements | aborts | files >1.5x slower and still decided | total wall |
+Both sweeps are **complete**.
+
+| division | paired files | decided w1 | decided w2 | gained | **lost** | verdict disagreements | aborts | decided files >500 ms slower | total wall |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| QF_LIA | 164 of 200 | 114 | **117** | **+3** | **0** | 0 | 0 | 0 | -1.4 % |
-| QF_IDL | **100 of 100 (complete)** | 54 | **56** | **+2** | **0** | 0 | 0 | 0 | +2.6 % |
+| QF_LIA | 200 of 200 | 119 | **123** | **+4** | **0** | 0 | 0 | **0** | -1.2 % |
+| QF_IDL | 100 of 100 | 54 | **56** | **+2** | **0** | 0 | 0 | **1** | +2.6 % |
+| **total** | **300** | **173** | **179** | **+6** | **0** | **0** | **0** | **1** | |
 
 The gains:
 
@@ -80,37 +84,41 @@ The gains:
 | `QF_LIA/bofill-scheduling/SMT_random_LIA/ex20400_2600_100` | unknown 24.12 s | sat 8.11 s |
 | `QF_LIA/bofill-scheduling/SMT_random_LIA/ex27000_2600_100` | unknown 24.12 s | sat 8.11 s |
 | `QF_IDL/20210312-Bouvier/vlsat3_i08` | unknown 18.13 s | sat 20.93 s |
-| `QF_IDL/qlock/rand_55_250_1235855873_0_k=8_sat.gph` | unknown 25.13 s | sat 12.93 s |
+| `QF_LIA/checkpass_pwd/prp-0-19` | unknown 24.12 s | sat 11.12 s |
+| `QF_IDL/ConnectedDominatingSet/rand_55_250_1235855873_0_k=8_sat.gph` | unknown 25.13 s | sat 12.93 s |
 
-**Four of the five are files the brief did not name**, which is the more useful
+**Five of the six are files the brief did not name**, which is the more useful
 half of this table: the group is not a fix for a hand-picked list, it is a
 policy over a rung, and the rung has more traffic than the oracle's
 `decided alone` column found. (The oracle runs one route per process on the flat
 assertion view; it cannot see a route the shipped front door reaches with a
 different query, which is the same blind spot its own README declares.)
 
-### Where QF_IDL's +2.6 % wall clock goes, which is the whole cost story
+### Where the wall clock goes, which is the whole cost story
 
-QF_IDL is the completed sweep, so its wall column can be decomposed exactly.
-The +31.8 s over 100 files splits as:
+A single per-division wall percentage hides the only distinction that matters,
+so both completed sweeps are decomposed by outcome:
 
-| population | files | wall delta at two workers |
-|---|---:|---:|
-| lost at **both** worker counts | 44 | **+39.8 s** |
-| decided at **both** | 54 | **+1.4 s** (26 ms per file) |
+| division | population | files | wall delta at two workers |
+|---|---|---:|---:|
+| QF_LIA | lost at **both** worker counts | 77 | +88.8 s |
+| QF_LIA | decided at **both** | 119 | **-52.1 s** |
+| QF_IDL | lost at **both** | 44 | +39.8 s |
+| QF_IDL | decided at **both** | 54 | +1.4 s (26 ms per file) |
 
 **The cost is entirely on files we lose either way**, and it is the ladder
-*spending* budget it previously left on the floor: those files go from ~21.2 s
-to ~24.3 s because `dl-online` ends at 21 s and today the ladder gives up with
-2.6 s unspent. A lost file is charged the whole budget by PAR-2 and killed at
-the wall by the harness whichever way it ends, so those 39.8 s buy nothing and
-cost nothing.
+*spending* budget it previously left on the floor: on QF_IDL those files go from
+~21.2 s to ~24.3 s because `dl-online` ends at 21 s and the ladder today gives
+up with 2.6 s unspent. A lost file is charged the whole budget by PAR-2 and
+killed at the wall by the harness whichever way it ends, so those seconds buy
+nothing and cost nothing.
 
-On the 54 files decided at both, the total delta is 1.4 s and exactly **one**
-file is more than half a second slower (`wire.10.x.10.b.5.a.20_unsat`, 16.5 s ->
-18.8 s). That is the number a portfolio has to defend, and it is the one the
-cooperative stop exists to hold down: without the stop, every one of those 54
-would have waited for the losing arm's deadline.
+**On files we decide, two workers are FASTER in QF_LIA (-52.1 s over 119 files)
+and flat in QF_IDL (+1.4 s over 54).** Across both divisions exactly **one**
+decided file is more than half a second slower -- `wire.10.x.10.b.5.a.20_unsat`,
+16.5 s -> 18.8 s. That single number is what a portfolio actually has to defend.
+It is what the cooperative stop exists to hold down: without the stop every one
+of those 173 decided files would have waited for the losing arm's deadline.
 
 **Nothing was lost, nothing disagreed, nothing aborted, and no decided file got
 materially slower.** That last column is the one a portfolio is supposed to
@@ -119,9 +127,9 @@ cooperative stop is why it is zero. Total wall clock is *down* slightly in
 QF_LIA, because a file that returns in 8 s instead of spending 24 pays for the
 contention everywhere else.
 
-**Coverage: QF_IDL is complete at 100 of 100; QF_LIA was at 164 of 200 and
-still running** when this note landed (load 1.59 -> 1.98 across the QF_IDL run,
-so that frame is clean); the rows are
+**Coverage is complete for both divisions** -- 200 of 200 QF_LIA, 100 of 100
+QF_IDL, on frames that held steady end to end (QF_LIA load 1.67 -> 2.07, QF_IDL
+1.59 -> 1.98); the rows are
 the committed list in order, not a sample chosen after the fact, and the harness
 writes each pair as it completes. A larger denominator can only add files; it
 cannot retract the four gains or the zero losses already recorded.
