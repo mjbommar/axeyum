@@ -251,6 +251,21 @@ pub struct SpanLogInputs<'a> {
     pub wall_ns: u64,
     /// The configured wall budget, when one was set.
     pub budget_ns: Option<u64>,
+    /// Peak resident set for the process, in bytes
+    /// (`axeyum_solver::peak_resident_bytes`), or `None` where the target has no
+    /// mechanism.
+    ///
+    /// The third axis, beside wall time and deterministic work, and the one
+    /// that was missing when it was needed most: on 2026-09-08 three `QF_LRA`
+    /// files reached **26.6 GB under `--memory-limit-mb 8192`** and the only
+    /// record of it was `dmesg`. A run's memory cost belongs in the run's own
+    /// artifact.
+    ///
+    /// It is the kernel's `VmHWM`, so it is a true peak and not a sample — it
+    /// cannot miss a spike between two watchdog samples — and it is monotone
+    /// per process, so it is this query's peak only on a one-query-per-process
+    /// harness. `None` is "not observable here", never zero.
+    pub peak_rss_bytes: Option<u64>,
     /// How the run ended.
     pub termination: Termination,
     /// Host the run happened on, for a reader comparing two sweeps.
@@ -342,6 +357,7 @@ struct RunHeader {
     verdict: String,
     wall_ns: u64,
     budget_ns: Option<u64>,
+    peak_rss_bytes: Option<u64>,
     termination: Termination,
     host: Option<String>,
     solver_commit: Option<String>,
@@ -437,6 +453,7 @@ impl SpanLog {
                 verdict: inputs.verdict.to_owned(),
                 wall_ns: inputs.wall_ns,
                 budget_ns: inputs.budget_ns,
+                peak_rss_bytes: inputs.peak_rss_bytes,
                 termination: inputs.termination,
                 host: inputs.host.map(str::to_owned),
                 solver_commit: inputs.solver_commit.map(str::to_owned),
@@ -503,6 +520,10 @@ impl SpanLog {
         let _ = write!(out, ",\"wall_ns\":{}", r.wall_ns);
         out.push_str(",\"budget_ns\":");
         push_opt_u64(&mut out, r.budget_ns);
+        // Peak resident set, beside the wall clock and the deterministic work.
+        // `null` means the target has no `VmHWM`, never that the run was free.
+        out.push_str(",\"peak_rss_bytes\":");
+        push_opt_u64(&mut out, r.peak_rss_bytes);
         out.push_str(",\"termination\":");
         push_str(&mut out, r.termination.label());
         out.push_str(",\"host\":");
