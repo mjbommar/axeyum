@@ -780,9 +780,28 @@ impl Drop for LazySmtCountersGuard {
 ///
 /// `None` means **collection was never enabled on this thread**. A `Some` is a
 /// real statement, and [`LazySmtCounters::reading`] says which one.
+///
+/// # The pending round is FOLDED IN here, and only here
+///
+/// A round is filed into its histogram when the next one opens or the guard
+/// drops, so a loop's LAST round has no closing event until the query ends.
+/// This is the *completed-query* read — every caller takes it after the solve
+/// returned — so folding is what the data actually says, and not folding made
+/// the common case report `nia_hist=-` on a loop that had just run a round
+/// (measured on `QF_NIA` file 34, 2026-09-08: one 6.7 s round, invisible).
+///
+/// [`live_lazy_smt_counters`] deliberately does NOT fold: that read happens
+/// *during* the solve, where the pending round is a PARTIAL round and filing it
+/// would put a lower bound into a bucket as if it were the round's cost. The
+/// two reads correspond exactly to the span log's `Complete` and `InFlight`
+/// samplings, which is why they differ here rather than at the call site.
 #[must_use]
 pub fn last_lazy_smt_counters() -> Option<LazySmtCounters> {
-    ARMED.with(Cell::get).then(|| COUNTERS.with(Cell::get))
+    ARMED.with(Cell::get).then(|| {
+        let mut counters = COUNTERS.with(Cell::get);
+        file_pending(&mut counters);
+        counters
+    })
 }
 
 /// Applies `f` to this thread's counters when collection is on; otherwise reads
@@ -1102,6 +1121,57 @@ mod tests {
     /// Off by default: with no guard, every recording site is a thread-local
     /// read and a return. A suite that only ever ran WITH a guard could not
     /// tell an opt-in instrument from an unconditional one.
+    /// A loop's LAST round has no closing event of its own, so the two reads
+    /// must disagree about it -- and the disagreement is the point.
+    ///
+    /// The in-flight read (the watchdog path) must show it PENDING and keep it
+    /// out of the buckets, because at that moment it is a partial round and
+    /// filing it would put a lower bound into a bucket as if it were the cost.
+    /// The completed read must show it FILED, because by then the query is over
+    /// and a round that ran is a round that ran. Without the fold every loop
+    /// that ends between its halves -- which on `QF_NIA` is most of them --
+    /// reports an empty distribution beside a non-zero round count.
+    #[test]
+    fn the_last_round_is_pending_in_flight_and_filed_once_the_query_is_over() {
+        let board = LiveInstruments::new();
+        let _live = install(&board);
+        let guard = LazySmtCountersGuard::enable();
+        record_entry(LazySmtLoop::Nia, 4);
+        record_skeleton(
+            LazySmtLoop::Nia,
+            Duration::from_millis(6_700),
+            RoundOutcome::Unknown,
+        );
+
+        let in_flight = live_lazy_smt_counters(&board).expect("a mirror is installed");
+        assert_eq!(
+            in_flight.value.pending_round,
+            Duration::from_millis(6_700),
+            "the round in flight must be reported as pending"
+        );
+        assert!(
+            in_flight.value.hist(LazySmtLoop::Nia).is_empty(),
+            "and must NOT be in a bucket yet: it is a lower bound, not a cost"
+        );
+
+        let completed = last_lazy_smt_counters().expect("armed");
+        let hist = completed.hist(LazySmtLoop::Nia);
+        assert_eq!(
+            hist.rounds(),
+            1,
+            "the completed read folds the last round in"
+        );
+        assert_eq!(hist.max(), Duration::from_millis(6_700));
+        assert_eq!(
+            hist.buckets()[13],
+            1,
+            "6700 ms is bucket 13 ([4096, 8192) ms); got {:?}",
+            hist.buckets()
+        );
+        assert_eq!(completed.nia_rounds, 1, "and the round count is unchanged");
+        drop(guard);
+    }
+
     #[test]
     fn recording_without_a_guard_records_nothing() {
         record_entry(LazySmtLoop::Lra, 3);
