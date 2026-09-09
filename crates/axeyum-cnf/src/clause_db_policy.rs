@@ -468,6 +468,38 @@ pub struct ClauseDbPolicy {
     /// clauses and examines 2x the watch entries per conflict.
     ///
     /// Must be at least 1; 1 means "survives only the round it was used in".
+    ///
+    /// # The curve, measured
+    ///
+    /// Swept 2026-09-08 against the pre-2026-09 database over the seven corpus
+    /// instances that decide and reduce (geometric means; the full method and
+    /// the fixed-work half are in
+    /// `docs/research/12-performance/max-used-curve-2026-09-08.md`):
+    ///
+    /// | `max_used` | conflicts | watch visits | ticks |
+    /// | --- | ---: | ---: | ---: |
+    /// | 31 | 0.860 | 1.254 | 1.088 |
+    /// | 8 | **0.851** | 1.210 | 1.070 |
+    /// | 2 | 0.880 | 1.151 | 1.046 |
+    /// | 1 | 0.879 | **1.003** | **0.954** |
+    ///
+    /// Two things that are not obvious from the value alone:
+    ///
+    /// * **The conflict column is non-monotone and 31 is not its optimum** — it
+    ///   improves down to 8 and degrades below that. The reference value is not
+    ///   the best setting even for the metric the tier policy exists to improve.
+    /// * **`max_used = 1` is a different policy, not the end of a slide.** The
+    ///   tier2 grace is floored at `max(max_used - 1, 1)` and tier1 keeps on
+    ///   `used_before > 0`, so at 1 the two predicates coincide and tier1/tier2
+    ///   **collapse into a single rule**: keep if `glue <= tier2` and the clause
+    ///   was resolved since the previous round. That is why the watch-visit
+    ///   column steps rather than slides there.
+    ///
+    /// The default stays at the reference 31 because the corpus is seven
+    /// instances, five of them combinatorial, and on the one genuinely hard
+    /// bit-blasted instance the curve runs the *other* way (8 best, 1 worse
+    /// than 31). 1 and 8 are the two candidates a wider corpus should decide
+    /// between.
     pub max_used: u8,
     /// Whether to recompute a clause's glue when it is resolved and lower it if
     /// the new value is smaller (promotion). Never raises glue: there is no
