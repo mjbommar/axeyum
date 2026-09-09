@@ -56,6 +56,7 @@ from __future__ import annotations
 import fnmatch
 import json
 import math
+import os
 import re
 import subprocess
 import sys
@@ -68,6 +69,45 @@ CLAIMS = ROOT / "artifacts" / "claims"
 # tree. Reported explicitly in the summary: an unchecked row must never be
 # indistinguishable from a checked one.
 NOT_RECHECKED: list[str] = []
+
+# How many times the external DRAT checker actually ran. A `--drat-checker`
+# run that made ZERO invocations is a failure, not a pass: it is the same
+# green-over-nothing shape as the `--only` glob that matches no claim.
+EXTERNAL_DRAT_RUNS = 0
+
+# Wall-clock ceiling per external invocation. A checker that hangs must fail
+# this gate, not stall it; `TimeoutExpired` is handled as NOT VERIFIED below.
+DRAT_TIMEOUT_S = 900
+
+
+def drat_trim_verdict(stdout: str) -> str:
+    """Classify drat-trim's report. `verified` ONLY on an exact `s VERIFIED`.
+
+    THE EXIT STATUS IS NOT THE VERDICT. `references/drat-trim/drat-trim.c` has
+    **seventeen** `exit (0)` sites -- note the space, which is why a search for
+    `exit(0)` finds none of them -- and they include every memory-allocation
+    failure (`c MEMOUT: ...`), a malformed input (`:1065`, "did not find p cnf
+    line in input file"), and `printf ("s TIMEOUT\\n"), exit (0);` at `:905`.
+    So drat-trim reports SUCCESS to the shell on out-of-memory, on garbage
+    input, and on timeout.
+
+    Measured 2026-09-09 against the 2026 build in `references/drat-trim`:
+
+        f.cnf (unsat) + a correct proof        -> "s VERIFIED"      exit 0
+        a satisfiable formula + that proof     -> "s NOT VERIFIED"  exit 1
+        a file with no `p cnf` line            -> (no `s` line)     exit 0  <--
+
+    The third row is the trap: a recipe that trusted `$?` would pass it.
+    """
+    if "s VERIFIED" in stdout:
+        return "verified"
+    if "s NOT VERIFIED" in stdout:
+        return "not-verified"
+    if "s TIMEOUT" in stdout:
+        return "timeout"
+    # No `s` line at all: a MEMOUT, a parse refusal, a crash, a kill. Never a
+    # pass, and named separately so the failure message says which.
+    return "no-verdict"
 
 # The tree named by --root, when one is given. Artifact paths are written
 # relative to whatever tree the claim lives in: bundle-relative in a shipped
@@ -1218,15 +1258,24 @@ def check_unsat_certificate(path: Path, ev: dict, a: int, b: int, k: int,
     if drat_checker and not errors and fmt in ("drat-text", "drat-text-gzip",
                                                "drat-binary", "drat-binary-gzip"):
         import tempfile
+        global EXTERNAL_DRAT_RUNS
         with tempfile.NamedTemporaryFile(suffix=".drat") as tmp:
             tmp.write(payload)
             tmp.flush()
-            result = subprocess.run(
-                [drat_checker, str(cnf_path), tmp.name],
-                capture_output=True, text=True)
-            if "s VERIFIED" not in result.stdout:
+            EXTERNAL_DRAT_RUNS += 1
+            try:
+                result = subprocess.run(
+                    [drat_checker, str(cnf_path), tmp.name],
+                    capture_output=True, text=True, timeout=DRAT_TIMEOUT_S)
+                stdout = result.stdout
+            except subprocess.TimeoutExpired:
+                # Not a pass. drat-trim's own `s TIMEOUT` path exits 0, and a
+                # kill from out here must not be softer than that.
+                stdout = f"(no output: killed after {DRAT_TIMEOUT_S}s)"
+            verdict = drat_trim_verdict(stdout)
+            if verdict != "verified":
                 errors.append(f"{path}: '{eid}' external checker did not "
-                              f"verify: {result.stdout[-200:]}")
+                              f"verify ({verdict}): {stdout[-200:]}")
             else:
                 print(f"  external cross-check {eid}: s VERIFIED")
     return errors
@@ -1537,6 +1586,19 @@ def main() -> int:
     if "--drat-checker" in args:
         i = args.index("--drat-checker")
         drat_checker = args[i + 1]
+        # Resolve it HERE rather than at the first evidence row. A missing
+        # binary used to surface as a FileNotFoundError traceback from deep
+        # inside a claim, which is loud but says nothing about what to do; and
+        # if no row happened to reach the external branch it said nothing at
+        # all. `references/` is a gitignored clone, so "not built yet" is the
+        # common case and must have a message.
+        if not (Path(drat_checker).is_file()
+                and os.access(drat_checker, os.X_OK)):
+            print(f"--drat-checker '{drat_checker}' is not an executable file. "
+                  f"Build it with scripts/fetch-references.sh, or drop the flag "
+                  f"to run the in-file checks only (which are NOT an external "
+                  f"cross-check).", file=sys.stderr)
+            return 1
     if "--only" in args:
         i = args.index("--only")
         only = args[i + 1]
@@ -1573,6 +1635,19 @@ def main() -> int:
             print(f"  - {m}")
     print(f"\n{len(claim_files)} claims re-checked, {len(all_errors)} errors, "
           f"{len(NOT_RECHECKED)} row(s) not re-checked here")
+    if drat_checker:
+        print(f"external DRAT cross-checks run: {EXTERNAL_DRAT_RUNS}")
+        # A `--drat-checker` run that invoked the checker ZERO times told you
+        # nothing and exited 0. That is the shape this repository's gates keep
+        # failing in, so it is an error here -- the same rule as `--only`
+        # matching no claim id.
+        if EXTERNAL_DRAT_RUNS == 0:
+            print("--drat-checker was given but the external checker ran ZERO "
+                  "times, so nothing was cross-checked. Either no selected "
+                  "claim carries a DRAT certificate (narrow --only?), or the "
+                  "in-file checks failed first and suppressed every external "
+                  "run.", file=sys.stderr)
+            return 1
     return 1 if all_errors else 0
 
 

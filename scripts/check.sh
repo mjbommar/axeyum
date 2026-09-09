@@ -1287,6 +1287,24 @@ step lean-toolchain-policy ./scripts/tests/test-lean-toolchain-policy.sh
 # download and no dependency on which toolchains happen to be installed.
 step lean-toolchain-pin-regex ./scripts/tests/test-lean-toolchain-pin-regex.sh
 step lean-gate ./scripts/check-lean-gate.sh
+# The real-Carcara gate, the Alethe counterpart of the line above and registered
+# in BOTH aggregate gates because these two files have diverged before (`just
+# check` ran 112 script steps to check.sh's 61, each missing something the other
+# had; docs/refactor-2026-08/gate-divergence-2026-08-14.md).
+#
+# Until 2026-09-09 no gate in this repository ever ran Carcara: all 87 tests in
+# `crates/axeyum-solver/tests/carcara_crosscheck.rs` skipped and PASSED when the
+# binary was absent, so an absent checker looked exactly like one that accepted
+# every proof we emit. `AXEYUM_REQUIRE_CARCARA=1` makes absence a failure; the
+# gate counts invocations against a floor; and the verdict is read from the
+# stdout LINE because `carcara check` prints `holey` and EXITS 0 on a proof
+# whose steps it declined to check. `AXEYUM_ALLOW_NO_CARCARA=1` on a machine
+# with no Carcara, which prints that zero external checks ran.
+#
+# `--self-check` is the cheap control (four three-line proofs, no cargo build)
+# and runs first, so a broken verdict parser fails in under a second.
+step carcara-gate-self-check ./scripts/check-carcara-gate.sh --self-check
+step carcara-gate ./scripts/check-carcara-gate.sh
 # ADR-1664's measurement. Registered here because it is the EVIDENCE for a
 # decision -- that an originated theorem inherits an import's axioms
 # transitively and per proof term, so a composed tier is decidable per theorem --
@@ -1415,6 +1433,16 @@ step foundational-resources ./scripts/check-foundational-resources.sh
 # actual 104. See docs/refactor-2026-08/gate-divergence-2026-08-14.md.
 step claims-validate python3 scripts/validate-claims.py
 step claims-dashboard python3 scripts/gen-claims-dashboard.py --check
+# The drat-trim EXIT CONTRACT (roadmap item 0.3). drat-trim has seventeen
+# `exit (0)` sites -- MEMOUT, a malformed input, and `s TIMEOUT` among them --
+# so it reports SUCCESS to the shell on out-of-memory, on garbage, and on
+# timeout. Both halves of the discipline are pinned here: the verdict parser
+# against the literal strings (no binary needed, which is why this belongs in
+# the default gate rather than in `just claims`), and the two ways
+# `check-claim-certificates.py --drat-checker` used to pass without
+# cross-checking anything. The end-to-end half against the real binary skips
+# when the gitignored clone is absent.
+step drat-trim-exit-contract python3 -m unittest scripts.tests.test_drat_trim_exit_contract
 step rules-as-code-generate python3 scripts/gen-rules-as-code-dashboard.py
 step rules-as-code-validate python3 scripts/validate-rules-as-code.py
 step rules-as-code-query-summary python3 scripts/query-rules-as-code.py summary
