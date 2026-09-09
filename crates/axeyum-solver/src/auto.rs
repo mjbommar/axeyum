@@ -3078,10 +3078,15 @@ fn run_int_linear_group(
     }));
     let mut decided_by_a_later_arm = None;
     for (index, arm) in outcome.arms.into_iter().enumerate() {
-        match arm.result {
+        let route = arm.route;
+        // `labelled` is what puts "stopped because another arm decided" into a
+        // cancelled arm's `unknown`. Without it a reader of the trail sees a
+        // plain budget `unknown` and concludes the route ran out of time, which
+        // is the opposite of what happened.
+        match arm.labelled() {
             Ok(result) => {
                 let result = guard_zero_divisor_sat(result, congruence);
-                with_recorder(rec, |t| t.record_result(arm.route, &result));
+                with_recorder(rec, |t| t.record_result(route, &result));
                 if index == 0 {
                     first_arm = Ok(result);
                 } else if winner == Some(index) {
@@ -3090,7 +3095,7 @@ fn run_int_linear_group(
             }
             Err(SolverError::Unsupported(message)) => {
                 with_recorder(rec, |t| {
-                    t.record_declined(arm.route, DeclineReason::Unsupported);
+                    t.record_declined(route, DeclineReason::Unsupported);
                 });
                 if index == 0 {
                     first_arm = Err(SolverError::Unsupported(message));

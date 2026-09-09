@@ -157,7 +157,7 @@ fn verdict_name(result: &CheckResult) -> &'static str {
     }
 }
 
-fn decide(assertions: fn(&mut TermArena) -> Vec<TermId>, ms: u64) -> (String, String) {
+fn decide(assertions: Query, ms: u64) -> (String, String) {
     let mut arena = TermArena::new();
     let terms = assertions(&mut arena);
     let (result, trace) =
@@ -165,8 +165,12 @@ fn decide(assertions: fn(&mut TermArena) -> Vec<TermId>, ms: u64) -> (String, St
     (verdict_name(&result).to_owned(), trace.to_json())
 }
 
+/// A query builder: it declares its own symbols into a fresh arena and returns
+/// the assertions.
+type Query = fn(&mut TermArena) -> Vec<TermId>;
+
 /// The queries that are checked to reach the integer-linear ladder.
-const QUERIES: [(&str, fn(&mut TermArena) -> Vec<TermId>); 2] = [
+const QUERIES: [(&str, Query); 2] = [
     ("satisfiable", satisfiable),
     ("unsatisfiable", unsatisfiable),
 ];

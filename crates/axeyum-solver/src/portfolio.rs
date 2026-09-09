@@ -231,6 +231,31 @@ impl ArmOutcome {
     }
 }
 
+impl ArmOutcome {
+    /// The arm's result with a cancelled arm's `unknown` saying so.
+    ///
+    /// A trail that reports a stopped arm as a plain budget `unknown` is
+    /// telling a reader the route ran out of time, when in fact another arm had
+    /// already decided and this one was asked to stop -- the two look identical
+    /// in the reason and mean opposite things about the route.
+    pub(crate) fn labelled(self) -> Result<CheckResult, SolverError> {
+        let elapsed_ms = self.elapsed.as_millis();
+        match self.result {
+            Ok(CheckResult::Unknown(reason)) if self.stopped => {
+                Ok(CheckResult::Unknown(crate::UnknownReason {
+                    kind: reason.kind,
+                    detail: format!(
+                        "{} [portfolio: stopped after {elapsed_ms} ms because another arm \
+                         decided; this is not the route running out of budget]",
+                        reason.detail
+                    ),
+                }))
+            }
+            other => other,
+        }
+    }
+}
+
 /// The result of running a fused group.
 #[derive(Debug)]
 pub(crate) struct GroupOutcome {
@@ -239,22 +264,6 @@ pub(crate) struct GroupOutcome {
     /// Index into [`Self::arms`] of the arm whose verdict the group returns, if
     /// any arm decided.
     pub(crate) winner: Option<usize>,
-}
-
-impl GroupOutcome {
-    /// The winning arm's route name and verdict, consuming the outcome.
-    pub(crate) fn into_decision(mut self) -> Option<(&'static str, CheckResult)> {
-        let index = self.winner?;
-        let arm = self.arms.swap_remove(index);
-        match arm.result {
-            Ok(result @ (CheckResult::Sat(_) | CheckResult::Unsat)) => Some((arm.route, result)),
-            // `winner` is only ever set to a decisive arm, so this is
-            // unreachable through `run`; returning `None` rather than
-            // panicking keeps a future caller that builds a `GroupOutcome` by
-            // hand from turning a bookkeeping slip into an abort.
-            _ => None,
-        }
-    }
 }
 
 /// A contiguous run of ladder positions, raced.
@@ -277,11 +286,6 @@ impl<'a> FusedGroup<'a> {
             arms,
             workers: workers.clamp(1, arms.len().max(1)),
         }
-    }
-
-    /// The number of arms that will actually run at once.
-    pub(crate) fn workers(self) -> usize {
-        self.workers
     }
 
     /// Runs the group over `assertions`.
@@ -545,6 +549,10 @@ fn pick_winner(outcomes: &[ArmOutcome]) -> Result<Option<usize>, SolverError> {
 }
 
 #[cfg(test)]
+// The arm helpers below return `Result<CheckResult, SolverError>` because that
+// is `ArmFn`'s signature, not because they can fail; and the deep-stack arm
+// allocates a large local array because that is the whole point of it.
+#[allow(clippy::unnecessary_wraps, clippy::large_stack_arrays)]
 mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::Duration;
@@ -553,6 +561,27 @@ mod tests {
 
     use super::{Arm, FusedGroup};
     use crate::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
+
+    // The tests are the only consumer of this projection; production reads
+    // `arms` and `winner` directly, so keeping it here rather than on the
+    // type stops it reading as shipped API that nothing calls.
+    impl super::GroupOutcome {
+        /// The winning arm's route name and verdict, consuming the outcome.
+        fn into_decision(mut self) -> Option<(&'static str, CheckResult)> {
+            let index = self.winner?;
+            let arm = self.arms.swap_remove(index);
+            match arm.result {
+                Ok(result @ (CheckResult::Sat(_) | CheckResult::Unsat)) => {
+                    Some((arm.route, result))
+                }
+                // `winner` is only ever set to a decisive arm, so this is
+                // unreachable through `run`; returning `None` rather than
+                // panicking keeps a future caller that builds a `GroupOutcome` by
+                // hand from turning a bookkeeping slip into an abort.
+                _ => None,
+            }
+        }
+    }
 
     const fn is_send<T: Send>() {}
 
@@ -692,15 +721,14 @@ mod tests {
             run: says_unsat,
         }];
         for workers in [1, 2, 8] {
-            let group = FusedGroup::new(&arms, workers);
-            assert_eq!(
-                group.workers(),
-                1,
-                "a one-arm group must never claim more than one worker"
-            );
-            let outcome = group
+            let outcome = FusedGroup::new(&arms, workers)
                 .run(&arena, &[], &config_with(1_000))
                 .expect("group ran");
+            assert_eq!(
+                outcome.arms.len(),
+                1,
+                "a one-arm group runs one arm at every worker count"
+            );
             let (route, result) = outcome.into_decision().expect("decided");
             assert_eq!(route, "only");
             assert!(matches!(result, CheckResult::Unsat));
