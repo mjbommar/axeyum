@@ -62,7 +62,7 @@ use std::time::{Duration, Instant};
 
 use axeyum_ir::{TermArena, TermId};
 use axeyum_smtlib::parse_script;
-use axeyum_solver::{CheckResult, SatBvBackend, SolverConfig, SolverError};
+use axeyum_solver::{CheckResult, DEFAULT_INT_WIDTH, SatBvBackend, SolverConfig, SolverError};
 
 /// Worker stack, sized like `smtcomp_cli`'s: a deeply nested input must not turn
 /// a decline into a stack-overflow abort.
@@ -164,6 +164,35 @@ fn routes() -> Vec<Route> {
             run: |arena, assertions, config| {
                 let mut backend = SatBvBackend::default();
                 axeyum_solver::check_with_array_elimination(&mut backend, arena, assertions, config)
+            },
+        },
+        Route {
+            name: "dl-online",
+            run: |arena, assertions, config| {
+                // `None` is "not my fragment". Reported through the SAME channel
+                // every other route's fragment decline uses (`Unsupported`), so
+                // the sweep's decline/decide partition does not depend on which
+                // route it is looking at.
+                axeyum_solver::try_check_qf_dl(arena, assertions, config, None).ok_or_else(|| {
+                    SolverError::Unsupported(String::from(
+                        "dl-online: not the difference-logic fragment",
+                    ))
+                })
+            },
+        },
+        Route {
+            name: "qf-bv",
+            run: |arena, assertions, config| {
+                // The ladder's terminal fallback, spelled exactly as
+                // `check_auto_dispatch` spells it.
+                let mut backend = SatBvBackend::default();
+                axeyum_solver::check_with_all_theories(
+                    &mut backend,
+                    arena,
+                    assertions,
+                    DEFAULT_INT_WIDTH,
+                    config,
+                )
             },
         },
         Route {

@@ -1091,7 +1091,7 @@ macro_rules! full_exports {
         #[doc(hidden)]
         pub use distinct::distinct;
         #[doc(hidden)]
-        pub use dl_online::{DlOnlineStatsGuard, last_dl_online_stats};
+        pub use dl_online::{DlOnlineStatsGuard, last_dl_online_stats, try_check_qf_dl};
         #[doc(hidden)]
         pub use dpll_lia::{
             ArithDpllOutcome, ArithDpllRefutation, ArithLemmaLiteral, certify_arith_dpll_unsat,

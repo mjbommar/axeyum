@@ -49,6 +49,26 @@ import time
 DECIDED = ("sat", "unsat")
 
 
+def load_expected(paths) -> dict:
+    """`file -> reference verdict`, from the committed `<DIV>.census.tsv` files.
+
+    Cross-route agreement is NOT a correctness check: five routes can agree with
+    each other and all be wrong, and a portfolio built on that agreement would
+    ship the error faster.  The census carries `declared` (the benchmark's own
+    `:status`) and `reference_verdict`, and this compares against them.
+    """
+    expected = {}
+    for p in paths:
+        with open(p) as fh:
+            header = fh.readline().rstrip("\n").split("\t")
+            for line in fh:
+                row = dict(zip(header, line.rstrip("\n").split("\t")))
+                want = row.get("reference_verdict") or row.get("declared") or ""
+                if row.get("file") and want in DECIDED:
+                    expected[row["file"]] = want
+    return expected
+
+
 def route_names(binary: str) -> list[str]:
     out = subprocess.run([binary, "--list"], capture_output=True, text=True, check=True)
     names = [l.strip() for l in out.stdout.splitlines() if l.strip()]
@@ -94,15 +114,38 @@ def main() -> int:
     ap.add_argument("--cores", default=None)
     ap.add_argument("--slack-s", type=int, default=20)
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument(
+        "--expected",
+        nargs="*",
+        default=[],
+        help="committed <DIV>.census.tsv files; a route whose verdict "
+        "contradicts the reference is a WRONG VERDICT and exits 3",
+    )
+    ap.add_argument(
+        "--only",
+        default=None,
+        help="comma-separated route subset (for a second pass adding routes to "
+        "an existing sweep; merge the TSVs, do not re-run what you have)",
+    )
     args = ap.parse_args()
 
     routes = route_names(args.binary)
+    if args.only:
+        wanted = [r.strip() for r in args.only.split(",") if r.strip()]
+        unknown = [r for r in wanted if r not in routes]
+        if unknown:
+            # An unknown name must fail loudly: a filter that silently matched
+            # nothing would report a clean sweep of zero routes.
+            raise SystemExit(f"--only names routes route_solo does not have: {unknown}")
+        routes = wanted
     files = [l.strip() for l in pathlib.Path(args.files).read_text().splitlines() if l.strip()]
     if args.limit:
         files = files[: args.limit]
 
+    expected = load_expected(args.expected)
     rows = []
     disagreements = []
+    wrong = []
     for i, path in enumerate(files, 1):
         if not os.path.exists(path):
             continue
@@ -121,6 +164,11 @@ def main() -> int:
         deciders = {r: v for r, (v, _, _) in verdicts.items() if v in DECIDED}
         if len(set(deciders.values())) > 1:
             disagreements.append((path, deciders))
+        want = expected.get(path)
+        if want:
+            for route, verdict in deciders.items():
+                if verdict != want:
+                    wrong.append((path, route, verdict, want))
         best = sorted(
             ((verdicts[r][1], r) for r in deciders),
         )
@@ -152,15 +200,26 @@ def main() -> int:
     for route, n in fast.most_common():
         print(f"  fastest-alone {route:<22} {n}")
 
+    if wrong:
+        print("\nWRONG VERDICT against the reference -- soundness alarm:", file=sys.stderr)
+        for path, route, got, want in wrong:
+            print(f"  {route:<22} said {got}, reference says {want}   {path}", file=sys.stderr)
+        return 3
     if disagreements:
-        print("\nCROSS-ROUTE VERDICT DISAGREEMENT -- this is a soundness alarm:",
-              file=sys.stderr)
+        print("\nCROSS-ROUTE VERDICT DISAGREEMENT -- soundness alarm:", file=sys.stderr)
         for path, deciders in disagreements:
             print(f"  {path}", file=sys.stderr)
             for route, verdict in sorted(deciders.items()):
                 print(f"    {route:<22} {verdict}", file=sys.stderr)
         return 2
-    print("cross-route soundness: no two routes disagreed on any file")
+    checked = sum(1 for p in per_file if p in expected)
+    print(f"cross-route soundness: no two routes disagreed on any file; "
+          f"{checked} of {len(per_file)} files also checked against the reference verdict")
+    if expected and checked == 0:
+        # An "all clear" from a check that examined nothing is worse than no
+        # check: the census paths must match the sweep's paths exactly.
+        print("reference check matched ZERO files -- it did not run", file=sys.stderr)
+        return 4
     return 0
 
 
