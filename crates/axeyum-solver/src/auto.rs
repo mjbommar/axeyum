@@ -2859,6 +2859,17 @@ fn dispatch_int_linear_refuters(
         });
         return Ok(None);
     }
+    // The integer-linear ladder's fused group (`crate::portfolio`). At one
+    // worker this branch is not taken at all: the call below is the same call
+    // this function has always made, on the caller's arena, with the caller's
+    // config. That is the strongest available form of the degeneracy property --
+    // the sequential path is not merely equivalent to a one-worker group, it
+    // does not construct one.
+    if int_linear_portfolio_workers() > 1
+        && let Some(decided) = run_int_linear_group(arena, &lin, config, congruence, rec)?
+    {
+        return Ok(Some(decided));
+    }
     match check_with_lia_dpll(arena, &lin, config) {
         Ok(mut result) => {
             result = guard_zero_divisor_sat(result, congruence);
@@ -2886,6 +2897,155 @@ fn dispatch_int_linear_refuters(
             Ok(None)
         }
         Err(other) => Err(other),
+    }
+}
+
+/// The default worker count for the integer-linear fused group.
+///
+/// `1` is the sequential ladder: [`dispatch_int_linear_refuters`] does not even
+/// construct a group at this setting, so the single-threaded path is the
+/// pre-portfolio path unchanged rather than a re-derivation of it.
+const DEFAULT_INT_LINEAR_PORTFOLIO_WORKERS: usize = 1;
+
+/// How many workers the integer-linear fused group may use.
+///
+/// Read once per process from `AXEYUM_PORTFOLIO_WORKERS`. A resource decision
+/// belongs to the operator, not to the query: the arms of this group each want
+/// a whole core for most of a competition budget, and how many cores exist is
+/// not something the dispatcher can read off the formula.
+fn int_linear_portfolio_workers() -> usize {
+    static RESOLVED: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+    if let Some(workers) = INT_LINEAR_PORTFOLIO_WORKERS_OVERRIDE.with(std::cell::Cell::get) {
+        return workers;
+    }
+    *RESOLVED.get_or_init(|| {
+        std::env::var("AXEYUM_PORTFOLIO_WORKERS")
+            .ok()
+            .and_then(|value| value.trim().parse::<usize>().ok())
+            .unwrap_or(DEFAULT_INT_LINEAR_PORTFOLIO_WORKERS)
+    })
+}
+
+std::thread_local! {
+    /// Per-thread override of [`int_linear_portfolio_workers`].
+    ///
+    /// The env-var reading is a process-wide `OnceLock`, which makes an
+    /// in-process A/B between one worker and two impossible -- and that A/B is
+    /// the only way to test a scheduling change against the schedule it
+    /// replaced. Thread-local rather than global for the same reason lane
+    /// identity is: a test binary runs its cases in parallel, and a global
+    /// would let one case decide another case's policy.
+    static INT_LINEAR_PORTFOLIO_WORKERS_OVERRIDE: std::cell::Cell<Option<usize>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Sets the integer-linear group's worker count on this thread until dropped.
+///
+/// Restores the previous value rather than clearing it, so nesting is safe.
+#[derive(Debug)]
+pub struct IntLinearPortfolioWorkersGuard(Option<usize>);
+
+impl IntLinearPortfolioWorkersGuard {
+    /// Overrides the worker count on this thread.
+    #[must_use]
+    pub fn set(workers: usize) -> Self {
+        Self(INT_LINEAR_PORTFOLIO_WORKERS_OVERRIDE.with(|cell| cell.replace(Some(workers))))
+    }
+}
+
+impl Drop for IntLinearPortfolioWorkersGuard {
+    fn drop(&mut self) {
+        INT_LINEAR_PORTFOLIO_WORKERS_OVERRIDE.with(|cell| cell.set(self.0));
+    }
+}
+
+/// The arms of the integer-linear fused group, in priority order.
+///
+/// **Why these two.** On the committed loss population, four files are decided
+/// alone at the competition budget by the bounded integer blast -- 8.5 s to
+/// 17.3 s -- while the ladder spends the same clock inside `lia-dpll` (or
+/// arrives with 2.6 s left, having spent 21 s in `dl-online`). No reservation
+/// collects them: on `QF_LIA/.../182-incremental_scheduling-17280-0` the whole
+/// 24 s is *inside* `lia-dpll`, so any slice large enough for the blast is a
+/// slice taken from the route that decides the rest of the division. Two arms,
+/// two cores, both get the whole budget.
+///
+/// `lia-dpll` is first because it is the ladder's own next route and decides
+/// the overwhelming majority of this fragment; the declared order is also the
+/// tie-break, so the group's verdict on a query both arms decide is
+/// `lia-dpll`'s -- the verdict the sequential ladder would have returned.
+///
+/// The blast arm is the tree's existing width ladder, not a fresh call to
+/// `check_with_all_theories`: with integers present the combined path reports
+/// `Unknown` for an in-range `unsat`, so only the width ladder's
+/// replay-checked `Sat` and integer-free `Unsat` are sound here, and a second
+/// hand-rolled copy of that reasoning is how a wrong `unsat` gets shipped.
+const INT_LINEAR_PORTFOLIO_ARMS: [crate::portfolio::Arm; 2] = [
+    crate::portfolio::Arm {
+        route: "lia-dpll",
+        weight: 3,
+        run: check_with_lia_dpll,
+    },
+    crate::portfolio::Arm {
+        route: "int-blast-ladder",
+        weight: 1,
+        run: dispatch_int_blast_width_ladder,
+    },
+];
+
+/// Runs the integer-linear fused group over `lin` (the div/mod-eliminated
+/// assertions -- **one query**, which is what makes the group's cross-arm
+/// disagreement gate meaningful).
+///
+/// Returns `Some(verdict)` when an arm **other than** `lia-dpll` decided, so the
+/// caller keeps its established handling of `lia-dpll`'s own result --
+/// including the `has_function` fall-through, which is a property of that
+/// route's decline and not of the group.
+///
+/// # Errors
+///
+/// Propagates a cross-arm disagreement from
+/// [`crate::portfolio::FusedGroup::run`] as a [`SolverError`]: two routes
+/// contradicting each other on one query is a soundness defect and must not be
+/// resolved into a verdict.
+fn run_int_linear_group(
+    arena: &TermArena,
+    lin: &[TermId],
+    config: &SolverConfig,
+    congruence: axeyum_rewrite::ZeroDivisorCongruence,
+    rec: &mut Recorder<'_>,
+) -> Result<Option<CheckResult>, SolverError> {
+    let group = crate::portfolio::FusedGroup::new(
+        &INT_LINEAR_PORTFOLIO_ARMS,
+        int_linear_portfolio_workers(),
+    );
+    let outcome = group.run(arena, lin, config)?;
+    // Record in DECLARED order, never finishing order: the trail's contents
+    // depend on the race but its shape must not.
+    let mut decided: Option<(&'static str, CheckResult)> = None;
+    let winner = outcome.winner;
+    for (index, arm) in outcome.arms.into_iter().enumerate() {
+        match arm.result {
+            Ok(result) => {
+                let result = guard_zero_divisor_sat(result, congruence);
+                with_recorder(rec, |t| t.record_result(arm.route, &result));
+                if winner == Some(index) {
+                    decided = Some((arm.route, result));
+                }
+            }
+            Err(SolverError::Unsupported(_)) => {
+                with_recorder(rec, |t| {
+                    t.record_declined(arm.route, DeclineReason::Unsupported);
+                });
+            }
+            Err(other) => return Err(other),
+        }
+    }
+    match decided {
+        // `lia-dpll` winning is the sequential outcome; hand it back to the
+        // caller's own handling rather than duplicating that logic here.
+        Some(("lia-dpll", _)) | None => Ok(None),
+        Some((_, result)) => Ok(Some(result)),
     }
 }
 

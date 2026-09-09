@@ -110,6 +110,34 @@ pub(crate) fn stop_or_past_deadline(deadline: Option<Instant>) -> bool {
     axeyum_ir::stop::past_deadline(deadline)
 }
 
+std::thread_local! {
+    /// How many fused groups this **thread** has run.
+    ///
+    /// The degeneracy property -- "at one worker the sequential path is the
+    /// pre-portfolio path" -- is enforced in `auto.rs` by not constructing a
+    /// group at all, and that is a claim about control flow that no verdict
+    /// comparison can check: two paths agreeing on every answer is exactly what
+    /// a *correct* portfolio also looks like. This counter makes the claim
+    /// falsifiable, and
+    /// `crates/axeyum-solver/tests/portfolio_fused_group.rs` asserts it does
+    /// not move across a batch of integer queries at the default worker count.
+    ///
+    /// Thread-local, not process-global, and the difference is load-bearing:
+    /// the assertion is about the dispatch the test just made, and a test
+    /// binary runs its cases in parallel, so a global counter would be moved by
+    /// a sibling case racing a group of its own. That is not a hypothetical --
+    /// it is what the process-global first version of this counter did, and the
+    /// failure looked like a broken degeneracy property rather than a broken
+    /// instrument.
+    static GROUPS_RUN: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+/// How many fused groups this thread has run. See [`GROUPS_RUN`].
+#[must_use]
+pub fn groups_run() -> u64 {
+    GROUPS_RUN.with(std::cell::Cell::get)
+}
+
 /// One route as a portfolio arm.
 ///
 /// The `run` signature is the shape every ladder route already has, so an arm
@@ -246,6 +274,7 @@ impl<'a> FusedGroup<'a> {
         assertions: &[TermId],
         config: &SolverConfig,
     ) -> Result<GroupOutcome, SolverError> {
+        GROUPS_RUN.with(|runs| runs.set(runs.get().saturating_add(1)));
         if self.arms.is_empty() {
             return Ok(GroupOutcome {
                 arms: Vec::new(),
@@ -324,6 +353,14 @@ impl<'a> FusedGroup<'a> {
         assertions: &[TermId],
         config: &SolverConfig,
     ) -> Vec<ArmOutcome> {
+        // The CDCL core is in `axeyum-cnf`, which must not depend on the term
+        // IR for one `bool`, so it consults an embedder hook instead. Installing
+        // it here rather than at crate init keeps a solver that never races
+        // exactly as it was: no hook, and the core's check is its deadline.
+        static INSTALL_CNF_STOP_HOOK: std::sync::Once = std::sync::Once::new();
+        INSTALL_CNF_STOP_HOOK.call_once(|| {
+            axeyum_cnf::interrupt::set_stop_hook(axeyum_ir::stop::stop_requested);
+        });
         let arm_config = self.arm_config(config);
         let tokens: Vec<StopToken> = self.arms.iter().map(|_| StopToken::new()).collect();
         let mut outcomes: Vec<Option<ArmOutcome>> = (0..self.arms.len()).map(|_| None).collect();
