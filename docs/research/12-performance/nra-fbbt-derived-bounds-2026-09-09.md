@@ -251,6 +251,32 @@ Both new results were adjudicated three ways: the files' own `:status unsat`,
 z3 run directly on each (`unsat`, `unsat`), and the fact that the route producing
 them cannot express any other verdict.
 
+## Non-regression beyond the loss list — and what was NOT swept
+
+The 75-file loss list is where the gain is, but it is not where a REGRESSION
+would show: a regression is a file the engine decides today and stops deciding,
+and those are the other 125 files of `bench-results/parity-lists/QF_NRA.txt`.
+Two partial A/Bs were run against them, same protocol and same binary
+(sha256 `4f1e59e4f5441ec27285e0e56277cba921ef16a14a3bd005249fbafe7648be4f`):
+
+| population | pairs completed | verdict differences | wall `off` / `derived-bounds` |
+|---|---:|---:|---|
+| the full 200-file list, from the top | 27 of 200 | **0** | 394 s / 394 s |
+| the 125-file complement (the list minus the losses) | 7 of 125 | **0** | 96 s / 96 s |
+
+**Both are PARTIAL and are reported as partial.** They were stopped rather than
+run to completion: at the observed rate the pair of them needed another five to
+six hours of a shared box, and the marginal confidence over what the rest of the
+battery already establishes did not justify it. What they do say, on 34 file
+pairs including every verdict class, is that no verdict moved and the wall clock
+did not either.
+
+The stronger non-regression evidence is elsewhere and is complete: the full
+solver unit sweep (1,653 tests), the corpus `:status` sweep, all three NRA
+integration suites, the capability ratchet (12 tests, no REGRESSION), and above
+all the 2,000-instance Z3 differential, in which this route produced 66 `unsat`
+verdicts and disagreed with Z3 on none of them.
+
 ## What this did not do
 
 - **The gain is 2, not 37.** The other 35 files in the shape class are consulted,
