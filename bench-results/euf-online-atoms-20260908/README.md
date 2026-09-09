@@ -77,6 +77,24 @@ the same 68 declined after at most 6 ms. So the change buys 5 files and spends u
 to ~1.2 s on the worst single file, out of a budget the routes below it did not
 need on any file here.
 
+## `UF` — attempted, and NOT in this directory
+
+The `UF` division was swept as a second control and **is not included, because
+the run was not sound.** It emitted 198 rows in one arm and 196 in the other for
+a 200-file list, and the first version of `euf-online-atoms-sweep.sh` printed
+`decided=84/198` / `decided=85/196` without mentioning the missing files — two
+measurements of two different populations, in the format of a comparison.
+`euf-online-atoms-compare.py` refuses that pair (exit 3), which is how it was
+caught.
+
+That is fixed at the producer: a coverage shortfall now **exits 4** and names the
+missing files. A re-run of both arms on one host with symmetric core sets was
+still in flight when this landed; its outputs are
+`UF.refuse2.tsv` / `UF.sliced2.tsv` under
+`/nas3/data/axeyum/scratch/euf-online-admission/`. **No `UF` number is claimed
+here.** The conclusions rest on `QF_UFLIA` and `QF_UF`, both of which were
+complete at 200/200 in every arm.
+
 ## Three things to know before quoting a number from here
 
 1. **`unsolved` is the denominator rule, not a category.** Timeout, `unknown`,
