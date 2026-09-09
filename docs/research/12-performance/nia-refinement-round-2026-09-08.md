@@ -138,6 +138,45 @@ Neither file mentions the other. This is the same shape ADR-1751 fixed for
 `nra.rs` / `lra_theory.rs` (a producer's cap in one unit, the consumer's ceiling
 in another) and it is the largest untouched lever this measurement found.
 
+#### And it is ONE HALF of the rectangle that refuses them
+
+The admission is conjunctive over two dimensions. Splitting the fifteen by
+which dimension is actually over:
+
+| | files |
+|---|---:|
+| over the CNF-variable ceiling **alone** (atoms fit) | **14** |
+| over both | 1 (file 36) |
+| over the atom ceiling alone | 0 |
+
+The atom count on those fourteen runs at **54–96%** of its own 10,240 ceiling.
+It is the 16,384 CNF-variable half that refuses every one of them, and seven are
+over it by less than 10%:
+
+| file | CNF vars | over by | in variables | atoms, as % of its own ceiling |
+|---:|---:|---:|---:|---:|
+| 40 | 16,629 | **1.5%** | 245 | 59% |
+| 39 | 16,657 | 1.7% | 273 | 59% |
+| 37 | 16,863 | 2.9% | 479 | 60% |
+| 38 | 16,894 | 3.1% | 510 | 61% |
+| 6 | 17,291 | 5.5% | 907 | 54% |
+| 35 | 17,322 | 5.7% | 938 | 62% |
+| 48 | 17,960 | 9.6% | 1,576 | 65% |
+
+The [span-log sweep](span-log-sweep-2026-09-08.md) found one `QF_ABV` refusal
+2.3% over a fixed cap and called it out as a shape. Here are seven more of it,
+in a second division, against a *different* screen. `MAX_MODERATE_PRE_SAT_CNF_VARS`
+is 16,384 because the largest point measured safe was 12,155 CNF variables,
+"rounded up to the next power of two in each dimension" — on a `QF_LIA`
+population, at a peak RSS of 71 MiB against an 8 GiB ceiling. Its own doc
+already says what is owed: "a rectangle in (atoms, CNF vars) is the wrong shape
+for a memory bound at all". This is the second population to demonstrate it, and
+the first where the CNF dimension alone decides the whole outcome.
+
+Not raised here. Raising it needs the RSS measurement that ADR-1752 did for
+`lra_online`, and this lane has not taken it — what is established is only
+*which* half refuses, and by how little.
+
 ### 3. Giving the loop three times the budget buys rounds and lemmas, not verdicts
 
 `AXEYUM_NIA_REFINEMENT=1/1` hands the loop the whole remaining budget instead of
