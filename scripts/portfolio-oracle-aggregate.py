@@ -82,16 +82,23 @@ def main() -> int:
             by_div[r.get("division", "?")].append(r)
 
     print(f"{'division':<10} {'files':>5} {'stale':>6} {'CAND':>6} {'unconf':>7} "
-          f"{'slow-arm':>9} {'no-route':>9} {'abort':>6} {'blind':>6}")
+          f"{'slow-arm':>9} {'no-route':>9} {'abort':>6} {'blind':>6} {'grace':>6}")
     totals = collections.Counter()
     for div in sorted(by_div):
         rows = by_div[div]
         c = collections.Counter(r.get("status", "?") for r in rows)
         blind = c["NO-ROUTE-NO-TRAIL"] + c["DECIDED-NO-TRAIL"] + c["DECIDED-NO-WINNER"]
+        # A `STALE-DECIDED` verdict produced AFTER the budget exists only because
+        # `smtcomp_cli`'s `WATCHDOG_GRACE` is 1 s.  Under a real external limit
+        # the file is still a loss, so it is not evidence the tree caught up.
+        c["GRACE-ONLY"] = sum(
+            1 for r in rows
+            if r.get("status") == "STALE-DECIDED" and int(r.get("control_ms") or 0) > 24_000
+        )
         c["CANDIDATE-UNREPRODUCED"] += c["CANDIDATE-UNSTABLE"]
         print(f"{div:<10} {len(rows):>5} {c['STALE-DECIDED']:>6} {c['PRIZE-CANDIDATE']:>6} "
               f"{c['CANDIDATE-UNREPRODUCED']:>7} {c['TOO-SLOW-ARM']:>9} {c['NO-ROUTE']:>9} "
-              f"{c['ABORTED']:>6} {blind:>6}")
+              f"{c['ABORTED']:>6} {blind:>6} {c['GRACE-ONLY']:>6}")
         totals.update(c)
         totals["files"] += len(rows)
     blind = (totals["NO-ROUTE-NO-TRAIL"] + totals["DECIDED-NO-TRAIL"]
@@ -99,7 +106,7 @@ def main() -> int:
     print(f"{'TOTAL':<10} {totals['files']:>5} {totals['STALE-DECIDED']:>6} "
           f"{totals['PRIZE-CANDIDATE']:>6} {totals['CANDIDATE-UNREPRODUCED']:>7} "
           f"{totals['TOO-SLOW-ARM']:>9} {totals['NO-ROUTE']:>9} "
-          f"{totals['ABORTED']:>6} {blind:>6}")
+          f"{totals['ABORTED']:>6} {blind:>6} {totals['GRACE-ONLY']:>6}")
 
     print("\nPRIZE CANDIDATES (unconfirmed), by winning route:")
     winners = collections.Counter(

@@ -195,6 +195,25 @@ fn routes() -> Vec<Route> {
                 )
             },
         },
+        // Two whole-dispatcher arms, present as a CONTROL rather than as routes.
+        // A solo route runs the query as parsed; `check_auto` runs it through
+        // `preprocess_reduce` first (`config.preprocess` defaults on) and
+        // dispatches on the REDUCED assertions. When a solo route decides a file
+        // the ladder loses, these two say whether the difference is the ladder's
+        // order or the reduction: if `auto-nopre` decides and `auto` does not,
+        // the canonicalizer is what took the route's admission away.
+        Route {
+            name: "auto",
+            run: |arena, assertions, config| axeyum_solver::check_auto(arena, assertions, config),
+        },
+        Route {
+            name: "auto-nopre",
+            run: |arena, assertions, config| {
+                let mut cold = config.clone();
+                cold.preprocess = false;
+                axeyum_solver::check_auto(arena, assertions, &cold)
+            },
+        },
         Route {
             name: "aufbv",
             run: |arena, assertions, config| {
