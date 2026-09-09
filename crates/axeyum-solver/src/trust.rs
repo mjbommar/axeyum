@@ -692,12 +692,14 @@ pub fn trust_ledger_markdown() -> String {
     );
     out.push_str(
         "Pedantic levels mirror cvc5's `TrustId` grading: 0 = hard fail \u{2026} 10 = minor.\n\
-         The status is **folded from `trust::EVIDENCE_ROUTES`**, one row per \
-         (reduction, does-the-checker-re-derive-it) route: **certified** = every \
-         route that records the step re-derives it; **partially certified** = some \
-         routes do and some do not (read the per-result `TrustStep::certified`, not \
-         this column, for a given `unsat`); **trust hole** = no route re-derives it \
-         (the base Track 3 P3.5 drives to zero).\n\n",
+         **certified** = every evidence route that records the step re-derives it \
+         (an independent per-query checker: the QF_BV Alethe `bitblast_*` steps / \
+         DRAT / Farkas / enumeration); **trust hole** = at least one route relies on \
+         the reduction with nothing to re-derive it (the base Track 3 P3.5 drives to \
+         zero). Both words are **folded from `trust::EVIDENCE_ROUTES`** by \
+         `TrustId::coverage`, not typed per id; the coverage table below splits the \
+         holes into *partially certified* and *no certified route at all*, which the \
+         single Status word cannot.\n\n",
     );
     let count = |want: CertifiedCoverage| {
         ALL_TRUST_IDS
@@ -705,34 +707,66 @@ pub fn trust_ledger_markdown() -> String {
             .filter(|id| id.coverage() == want)
             .count()
     };
-    let full = count(CertifiedCoverage::Full);
-    let partial = count(CertifiedCoverage::Partial);
-    let holes = count(CertifiedCoverage::Uncertified);
-    let unrouted = count(CertifiedCoverage::Unrouted);
+    let holes = ALL_TRUST_IDS.iter().filter(|t| !t.is_certified()).count();
     let _ = writeln!(
         out,
-        "Trusted base: **{holes}** reduction(s) are trust holes and **{partial}** are \
-         only partially certified; **{full}** are fully certified.\n"
+        "Trusted base: **{holes}** reduction(s) remain trust holes.\n"
     );
+    let unrouted = count(CertifiedCoverage::Unrouted);
     if unrouted > 0 {
         let _ = writeln!(
             out,
-            "\u{26a0} **{unrouted}** reduction(s) declare NO evidence route \
-             (`trust::EVIDENCE_ROUTES`). The ledger cannot grade them.\n"
+            "\u{26a0} **{unrouted}** reduction(s) declare NO evidence route in \
+             `trust::EVIDENCE_ROUTES`. The ledger cannot grade them.\n"
         );
     }
     out.push_str("| Reduction | Meaning | Pedantic | Status | Ref |\n");
     out.push_str("|---|---|---|---|---|\n");
     for &id in ALL_TRUST_IDS {
+        let status = if id.is_certified() {
+            "certified"
+        } else {
+            "trust hole"
+        };
         let _ = writeln!(
             out,
             "| {} | {} | {} | {} | {} |",
             id.label(),
             id.meaning(),
             id.pedantic_level(),
-            id.coverage().label(),
+            status,
             id.reference(),
         );
+    }
+    let _ = writeln!(
+        out,
+        "\n## Coverage, and the routes it is folded from\n\n\
+         Of the {holes} trust hole(s), **{}** are *partially certified* \u{2014} at least \
+         one evidence route re-derives the reduction and at least one does not \u{2014} and \
+         **{}** have no certified route at all. For a *given* `unsat`, read \
+         `TrustStep::certified` on the produced `EvidenceReport`, never this table.\n",
+        count(CertifiedCoverage::Partial),
+        count(CertifiedCoverage::Uncertified),
+    );
+    out.push_str("| Reduction | Coverage | Producer | Artifact | Checker | Re-derives it |\n");
+    out.push_str("|---|---|---|---|---|---|\n");
+    for &id in ALL_TRUST_IDS {
+        for route in EVIDENCE_ROUTES.iter().filter(|r| r.id == id) {
+            let _ = writeln!(
+                out,
+                "| {} | {} | `{}` | {} | {} | {} |",
+                id.label(),
+                id.coverage().label(),
+                route.producer,
+                route.evidence,
+                if route.checker == NO_CHECKER {
+                    "none".to_owned()
+                } else {
+                    format!("`{}`", route.checker)
+                },
+                if route.certifies { "yes" } else { "no" },
+            );
+        }
     }
     out
 }

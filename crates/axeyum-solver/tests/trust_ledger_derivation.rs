@@ -417,32 +417,70 @@ fn every_route_names_a_symbol_that_exists() {
 #[test]
 fn the_rendered_ledger_is_the_derived_set() {
     let markdown = trust_ledger_markdown();
+
+    // The Status column is `is_certified()`, which is the fold, not a literal.
     for &id in ALL_TRUST_IDS {
-        let row = markdown
-            .lines()
-            .find(|line| line.starts_with(&format!("| {} |", id.label())))
-            .unwrap_or_else(|| panic!("{} has no row in the rendered ledger", id.label()));
+        let status = if id.is_certified() {
+            "certified"
+        } else {
+            "trust hole"
+        };
+        let row = format!(
+            "| {} | {} | {} | {} | {} |",
+            id.label(),
+            id.meaning(),
+            id.pedantic_level(),
+            status,
+            id.reference()
+        );
         assert!(
-            row.contains(&format!("| {} |", id.coverage().label())),
-            "{} renders as {row:?} but its derived coverage is {:?}",
+            markdown.contains(&row),
+            "{} has no Status row matching its derived coverage {:?}",
             id.label(),
             id.coverage(),
         );
     }
-    let holes = ALL_TRUST_IDS
-        .iter()
-        .filter(|id| id.coverage() == CertifiedCoverage::Uncertified)
-        .count();
+
+    // Every declared route renders, with the coverage word the fold produced.
+    for route in EVIDENCE_ROUTES {
+        let row = format!(
+            "| {} | {} | `{}` |",
+            route.id.label(),
+            route.id.coverage().label(),
+            route.producer,
+        );
+        assert!(
+            markdown.contains(&row),
+            "the coverage table is missing {row:?}",
+        );
+    }
+
+    let holes = ALL_TRUST_IDS.iter().filter(|id| !id.is_certified()).count();
     let partial = ALL_TRUST_IDS
         .iter()
         .filter(|id| id.coverage() == CertifiedCoverage::Partial)
         .count();
-    assert!(
-        markdown.contains(&format!("**{holes}** reduction(s) are trust holes")),
-        "the header's trust-hole count is not the derived one ({holes})",
+    let uncertified = ALL_TRUST_IDS
+        .iter()
+        .filter(|id| id.coverage() == CertifiedCoverage::Uncertified)
+        .count();
+    assert_eq!(
+        holes,
+        partial + uncertified,
+        "a trust hole is exactly a reduction that is not fully covered",
     );
     assert!(
-        markdown.contains(&format!("**{partial}** are only partially certified")),
-        "the header's partial count is not the derived one ({partial})",
+        markdown.contains(&format!(
+            "Trusted base: **{holes}** reduction(s) remain trust holes."
+        )),
+        "the headline count is not the derived one ({holes})",
+    );
+    assert!(
+        markdown.contains(&format!("**{partial}** are *partially certified*")),
+        "the coverage split's partial count is not the derived one ({partial})",
+    );
+    assert!(
+        markdown.contains(&format!("**{uncertified}** have no certified route")),
+        "the coverage split's uncertified count is not the derived one ({uncertified})",
     );
 }
