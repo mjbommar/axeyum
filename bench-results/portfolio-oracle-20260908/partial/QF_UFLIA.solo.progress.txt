@@ -29,3 +29,9 @@
 [29/58] QF_UFLIA deciders=3 best=uflia-online@2006ms (101s)  hash_sat_07_05.smt2
 [30/58] QF_UFLIA deciders=0 best=no-route (156s)  hash_sat_07_08.smt2
 [31/58] QF_UFLIA deciders=0 best=no-route (181s)  hash_sat_07_11.smt2
+[32/58] QF_UFLIA deciders=0 best=no-route (181s)  hash_sat_07_14.smt2
+[33/58] QF_UFLIA deciders=0 best=no-route (181s)  hash_sat_07_17.smt2
+[34/58] QF_UFLIA deciders=0 best=no-route (181s)  hash_sat_07_20.smt2
+[35/58] QF_UFLIA deciders=1 best=uflia-online@18380ms (174s)  hash_sat_08_05.smt2
+[36/58] QF_UFLIA deciders=0 best=no-route (180s)  hash_sat_08_08.smt2
+[37/58] QF_UFLIA deciders=0 best=no-route (181s)  hash_sat_08_11.smt2

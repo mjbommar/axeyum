@@ -4,3 +4,17 @@
 [4/47] QF_RDL deciders=0 best=no-route (452s)  tempo-matrix2x2.pddl.smt2
 [5/47] QF_RDL deciders=3 best=datatype-native@5689ms (36s)  tempo-width-4.smt2
 [6/47] QF_RDL deciders=0 best=no-route (178s)  tempo-width-5.smt2
+[7/47] QF_RDL deciders=0 best=no-route (660s)  tempo-width-6.smt2
+[8/47] QF_RDL deciders=3 best=datatype-native@2967ms (11s)  tms-2-3-light-30.smt2
+[9/47] QF_RDL deciders=3 best=uf-arithmetic@459ms (6s)  tms-2-3-light-40.smt2
+[10/47] QF_RDL deciders=3 best=uf-arithmetic@1269ms (13s)  tms-2-3-light-60.smt2
+[11/47] QF_RDL deciders=3 best=uf-arithmetic@1526ms (17s)  tms-2-3-light-70.smt2
+[12/47] QF_RDL deciders=3 best=datatype-elim@1712ms (21s)  tms-2-3-light-80.smt2
+[13/47] QF_RDL deciders=3 best=datatype-elim@1990ms (24s)  tms-2-3-light-90.smt2
+[14/47] QF_RDL deciders=0 best=no-route (0s)  bignum_rdl1.smt2
+[15/47] QF_RDL deciders=3 best=datatype-native@482ms (98s)  fischer3-mutex-12.smt2
+[16/47] QF_RDL deciders=3 best=uf-arithmetic@867ms (99s)  fischer3-mutex-13.smt2
+[17/47] QF_RDL deciders=3 best=uf-arithmetic@1011ms (100s)  fischer3-mutex-14.smt2
+[18/47] QF_RDL deciders=3 best=datatype-elim@1191ms (100s)  fischer3-mutex-15.smt2
+[19/47] QF_RDL deciders=3 best=uf-arithmetic@1476ms (101s)  fischer3-mutex-16.smt2
+[20/47] QF_RDL deciders=3 best=datatype-elim@2207ms (104s)  fischer3-mutex-17.smt2

@@ -44,3 +44,11 @@
 [44/54] QF_LRA deciders=0 best=no-route (97s)  sc-19.base.cvc.smt2
 [45/54] QF_LRA deciders=0 best=no-route (97s)  sc-21.base.cvc.smt2
 [46/54] QF_LRA deciders=0 best=no-route (97s)  sc-23.base.cvc.smt2
+[47/54] QF_LRA deciders=0 best=no-route (97s)  sc-25.base.cvc.smt2
+[48/54] QF_LRA deciders=0 best=no-route (97s)  sc-27.base.cvc.smt2
+[49/54] QF_LRA deciders=0 best=no-route (97s)  sc-29.base.cvc.smt2
+[50/54] QF_LRA deciders=0 best=no-route (97s)  sc-5.base.cvc.smt2
+[51/54] QF_LRA deciders=0 best=no-route (96s)  sc-7.base.cvc.smt2
+[52/54] QF_LRA deciders=0 best=no-route (96s)  sc-9.base.cvc.smt2
+[53/54] QF_LRA deciders=4 best=datatype-elim@11464ms (49s)  no_op_accs.base.smt2
+[54/54] QF_LRA deciders=0 best=no-route (97s)  reint_to_least.base.smt2

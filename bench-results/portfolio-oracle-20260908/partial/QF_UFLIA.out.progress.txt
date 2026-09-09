@@ -44,3 +44,10 @@
 [44/58] NO-ROUTE-NO-TRAIL    - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_14.smt2
 [45/58] NO-ROUTE-NO-TRAIL    - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_17.smt2
 [46/58] NO-ROUTE-NO-TRAIL    - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_09_20.smt2
+[47/58] NO-ROUTE-NO-TRAIL    - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_05.smt2
+[48/58] NO-ROUTE-NO-TRAIL    - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_08.smt2
+[49/58] NO-ROUTE-NO-TRAIL    - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_11.smt2
+[50/58] NO-ROUTE-NO-TRAIL    - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_14.smt2
+[51/58] NO-ROUTE-NO-TRAIL    - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_17.smt2
+[52/58] NO-ROUTE-NO-TRAIL    - arm=Nonems  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_sat_10_20.smt2
+[53/58] TOO-SLOW-ARM         uf-arith-lazy-overbound arm=55367.3ms  /nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_UFLIA/mathsat/Hash/hash_uns_04_14.smt2

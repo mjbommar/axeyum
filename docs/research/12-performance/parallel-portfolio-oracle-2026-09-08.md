@@ -233,7 +233,14 @@ rather than implied.
 | division | files | ladder wins | ladder loses | decided alone in budget | no route decides alone |
 |---|---:|---:|---:|---:|---:|
 | QF_ABV | 19 | 7 | 12 | **2** | 10 |
+| QF_LRA | 54 | 5 | 49 | **0** | 49 |
 | UF | 32 | 0 | 32 | **0** | 32 |
+| **total** | **105** | **12** | **93** | **2** | **91** |
+
+`QF_UFLIA`'s sweep was still running: over its first 35 files it found 7
+ladder-losses with a solo decider — five are the 2 ms `euf-online` class above
+(a normalization defect, not a scheduling one), one wants 37 s, and one is
+`hash_sat_08_05.smt2`, the confirmed middle-band case.
 
 Both `QF_ABV` wins are `qf-bv` — 611 ms (`unsat`) and 567 ms (`sat`), verdicts
 matching the census. The other entry points that "decide" them
@@ -242,20 +249,20 @@ same computation through different doors, not four arms.
 
 ### The band that decides it
 
-From the **solo** arm, over the divisions where it is complete (`QF_ABV` and
-`UF`, 44 ladder-losing files):
+From the **solo** arm, over the three divisions where it is complete (`QF_ABV`,
+`QF_LRA`, `UF` — 93 ladder-losing files):
 
 ```
 fastest route that decides ALONE, on files the ladder loses:
   under 1 s (a reserve reaches it)                       2
   1 s to 6 s (a reserve reaches it)                      0
   6 s to 24 s (MIDDLE BAND: only a portfolio)            0
-  over 24 s (neither reaches it)                        23
-  no route decides alone at all                         42
+  no route decides alone at all                         91
 ```
 
-**The middle band is empty there.** That, not the count, is what the decision
-turns on — and it is why the answer below is what it is.
+**The middle band is empty across those 93 files.** That, not the count, is what
+the decision turns on. `QF_UFLIA`'s incomplete sweep then supplied exactly one
+member of it, which is why the answer below is "not yet" rather than "no".
 
 ### Two outstanding middle-band candidates, and they are the ones to settle
 

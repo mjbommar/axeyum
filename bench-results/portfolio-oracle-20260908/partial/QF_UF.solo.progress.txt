@@ -11,3 +11,16 @@
 [11/38] QF_UF deciders=6 best=euf-online@1781ms (24s)  gensys_brn1195.smt2
 [12/38] QF_UF deciders=4 best=datatype-native@2017ms (58s)  gensys_brn1262.smt2
 [13/38] QF_UF deciders=2 best=datatype-elim@16532ms (130s)  gensys_brn838.smt2
+[14/38] QF_UF deciders=6 best=datatype-elim@13220ms (99s)  gensys_brn875.smt2
+[15/38] QF_UF deciders=5 best=datatype-elim@9125ms (77s)  gensys_icl1031.smt2
+[16/38] QF_UF deciders=6 best=datatype-native@2592ms (30s)  gensys_icl1166.smt2
+[17/38] QF_UF deciders=6 best=datatype-elim@6165ms (64s)  gensys_icl147.smt2
+[18/38] QF_UF deciders=5 best=datatype-elim@2648ms (67s)  gensys_icl295.smt2
+[19/38] QF_UF deciders=5 best=datatype-elim@5341ms (82s)  gensys_icl332.smt2
+[20/38] QF_UF deciders=6 best=datatype-elim@2411ms (34s)  gensys_icl443.smt2
+[21/38] QF_UF deciders=6 best=datatype-native@2680ms (57s)  gensys_icl517.smt2
+[22/38] QF_UF deciders=4 best=datatype-native@6055ms (80s)  gensys_icl554.smt2
+[23/38] QF_UF deciders=3 best=datatype-elim@14669ms (123s)  gensys_icl591.smt2
+[24/38] QF_UF deciders=6 best=euf-online@1095ms (37s)  gensys_icl628.smt2
+[25/38] QF_UF deciders=6 best=datatype-native@1738ms (52s)  gensys_icl702.smt2
+[26/38] QF_UF deciders=2 best=datatype-native@22454ms (141s)  gensys_icl776.smt2

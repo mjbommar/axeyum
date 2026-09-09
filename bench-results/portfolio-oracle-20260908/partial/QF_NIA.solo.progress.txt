@@ -14,3 +14,9 @@
 [14/61] QF_NIA deciders=0 best=no-route (62s)  From_AProVE_2014__juHashMapCreateRemove.jar-obl-11__p6984_safety_0.smt2
 [15/61] QF_NIA deciders=0 best=no-route (68s)  From_AProVE_2014__juHashMapCreateSize.jar-obl-10__p7265_safety_0.smt2
 [16/61] QF_NIA deciders=0 best=no-route (132s)  From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p7725_safety_0.smt2
+[17/61] QF_NIA deciders=0 best=no-route (122s)  From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p7871_safety_0.smt2
+[18/61] QF_NIA deciders=0 best=no-route (126s)  From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8261_safety_0.smt2
+[19/61] QF_NIA deciders=0 best=no-route (231s)  From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8651_safety_0.smt2
+[20/61] QF_NIA deciders=0 best=no-route (121s)  From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8809_safety_0.smt2
+[21/61] QF_NIA deciders=0 best=no-route (122s)  From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8992_safety_0.smt2
+[22/61] QF_NIA deciders=0 best=no-route (122s)  From_T2__broydn.c.i.broydn.pl.t2.fixed.t2__term_unfeasibility_3_0.smt2
