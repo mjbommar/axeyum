@@ -236,6 +236,32 @@ Three details the merge had to get right, none of them textual:
    `dpll_t` now ends the query on `UnknownKind::MemoryLimit` whatever the policy
    arm says.
 
+### Re-measured after the merge, on the merged tree
+
+The A/B above was taken before the merge, so it is a statement about a tree
+nobody will run. Both decisive arms were re-run through a binary built from the
+merge commit — s5, `taskset -c 0-7`, 24 s, serial, load 4.1-5.0 (**not** the
+idle host the first run had; the wall-clock totals are therefore not comparable
+to it, and the decided counts are what this run is for).
+
+| run | decided | total wall |
+|---|---|---|
+| `arm_legacy` (pre-merge control, idle) | 3/22 | 476,303 ms |
+| `merged_legacy` (post-merge control, load ~4.5) | 3/22 | 477,430 ms |
+| `arm_all` (pre-merge default, idle) | 9/22 | 300,421 ms |
+| `merged_all` (post-merge default, load ~4.5) | **9/22** | 295,615 ms |
+
+The two legacy controls land 0.24% apart on wall clock and decide the same three
+files, so the merge moved nothing on the baseline. The default arm decides the
+same nine, and **no file's verdict changed between the pre- and post-merge
+runs**. Still zero disagreements across all four runs, and every decided verdict
+still matches the benchmark's own `(set-info :status unsat)`.
+
+The memory lane's `fm_admission` and `simplex_admission` gates therefore do not
+refuse anything on this population at the default budget — which is the result
+that had to be checked, since a gate that refused here would have taken the gain
+back without changing a single verdict.
+
 ### The ordering is pinned by a test, not by a comment
 
 `lra::cube_order_tests` asserts on the counters, because the verdict cannot see
