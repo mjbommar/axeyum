@@ -23,3 +23,4 @@
 [23/47] QF_RDL deciders=3 best=datatype-elim@2953ms (108s)  fischer3-mutex-20.smt2
 [24/47] QF_RDL deciders=3 best=uf-arithmetic@2499ms (105s)  fischer6-mutex-10.smt2
 [25/47] QF_RDL deciders=3 best=uf-arithmetic@5041ms (112s)  fischer6-mutex-11.smt2
+[26/47] QF_RDL deciders=3 best=uf-arithmetic@6695ms (119s)  fischer6-mutex-12.smt2

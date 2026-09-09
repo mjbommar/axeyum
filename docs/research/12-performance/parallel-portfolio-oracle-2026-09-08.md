@@ -313,6 +313,27 @@ returns `unknown`. Nothing ran out of clock. `nia-linearize` declines on a
 **deterministic bound that scales with the configured budget**, so at 120 s it is
 a more capable procedure than at 24 s — not the same procedure with more time.
 
+**`QF_NIA`'s seven candidates are the same thing, seven times.** They are the
+largest candidate cluster in the sweep, four of them nominally in the middle
+band (9.5 s, 10.1 s, 11.5 s, 17.6 s). One question settles each: at the 24 s
+budget, does the ladder run out of clock, or stop early? Measured on all seven:
+
+| file | `nia-linearize` held | ladder total of 24,000 ms |
+|---|---:|---:|
+| `From_T2__ex36…p26914` | 6,670 ms | 15,773 ms |
+| `From_T2__ex36…p28763` | 6,668 ms | 14,579 ms |
+| `From_T2__ex36…p29986` | 6,666 ms | 12,860 ms |
+| `SAT14/456` | 6,667 ms | 10,781 ms |
+| `SAT14/687` | 6,678 ms | 10,800 ms |
+| `SAT14/803` | 6,663 ms | 10,750 ms |
+| `SAT14/1509` | 6,691 ms | 10,860 ms |
+
+**Nothing was starved.** The ladder finishes in 11–16 seconds of a 24-second
+budget and returns `unknown`; `nia-linearize` takes the same ~6.67 s share every
+time and declines on a **deterministic bound that scales with the configured
+budget**. At 120 s it is a stronger procedure, which is the whole of why the
+probe saw a "prize". A portfolio arm at 24 s would hit the same bound.
+
 ### Why the enlarged-budget probe can never confirm a prize
 
 Four candidates tested, four refuted, and the fourth one gives the mechanism:

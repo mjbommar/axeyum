@@ -33,3 +33,4 @@
 [33/38] QF_UF deciders=2 best=datatype-native@18644ms (113s)  iso_icl_nogen_sk009.smt2
 [34/38] QF_UF deciders=3 best=datatype-native@4169ms (71s)  gensys_brn_sk015.smt2
 [35/38] QF_UF deciders=3 best=euf-online@4461ms (64s)  gensys_brn_sk052.smt2
+[36/38] QF_UF deciders=3 best=euf-online@11297ms (64s)  iso_brn_nogen005.smt2

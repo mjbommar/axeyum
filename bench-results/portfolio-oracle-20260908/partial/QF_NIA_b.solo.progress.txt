@@ -26,3 +26,4 @@
 [26/30] QF_NIA_b deciders=0 best=no-route (51s)  aproveSMT4687047739446499948.smt2
 [27/30] QF_NIA_b deciders=0 best=no-route (76s)  aproveSMT5048239408100334127.smt2
 [28/30] QF_NIA_b deciders=0 best=no-route (152s)  aproveSMT6461796824751951221.smt2
+[29/30] QF_NIA_b deciders=0 best=no-route (61s)  aproveSMT7795667227375240089.smt2
