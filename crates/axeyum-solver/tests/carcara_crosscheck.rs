@@ -61,17 +61,139 @@ use axeyum_solver::{
     qf_uf_interpolant_certified, uflra_interpolant_certified,
 };
 
-/// Resolves the Carcara binary: `AXEYUM_CARCARA_BIN` if set, otherwise the
-/// conventional reference build path. Returns `None` (→ skip) if unavailable.
-fn carcara_bin() -> Option<PathBuf> {
-    if let Ok(p) = std::env::var("AXEYUM_CARCARA_BIN") {
-        let path = PathBuf::from(p);
-        return path.is_file().then_some(path);
+/// The three rule names our Alethe emitters produce that Carcara has no checker
+/// for, passed to it EXPLICITLY as `--allowed-rules`.
+///
+/// `read_over_write` and `read_over_write_same` are our array rules (Carcara
+/// spells the ones it checks `arrays_idx`/`arrays_row`); `bv_poly_simp` is the
+/// Route-2 `bvsub` rewrite. See `crates/axeyum-cnf/src/alethe.rs`
+/// (`the_axeyum_internal_array_rules_are_not_carcara_rules`) and
+/// `docs/solver-inventory-2026-09/08-models-proofs-and-evidence.md:285-291`.
+///
+/// Declaring them is cvc5's discipline (`references/cvc5/test/regress/cli/
+/// run_regression.py:312-335` passes `--allowed-rules undefined la_mult_sign
+/// la_mult_abs_comparison`): a rule Carcara cannot check becomes a declared
+/// HOLE, so the proof reports `holey` — which this suite still rejects — while
+/// an *unexpected* unknown rule reports `invalid`. Without the declaration the
+/// two are the same `invalid`, and a newly-introduced unknown rule is
+/// indistinguishable from a known gap.
+const CARCARA_ALLOWED_RULES: [&str; 3] =
+    ["read_over_write", "read_over_write_same", "bv_poly_simp"];
+
+/// Carcara's `check` verdict, read from its stdout **as a whole line**.
+///
+/// `cli/src/main.rs:35-45` prints exactly one of `valid` / `holey` / `invalid`
+/// and returns normally (exit 0) for the first two — only `Err` reaches
+/// `std::process::exit(1)`. So the exit status cannot distinguish a fully
+/// checked proof from one whose steps are holes, and a `contains("valid")`
+/// substring test is worse still: `"invalid".contains("valid")` is `true`, so
+/// it reads Carcara's *rejection* as an acceptance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CarcaraVerdict {
+    /// Every step checked, no holes. The only verdict this suite accepts.
+    Valid,
+    /// Checked, but one or more steps were holes (`hole`, `lia_generic`,
+    /// `rare_rewrite` without a RARE file, or a `--allowed-rules` name).
+    Holey,
+    /// Carcara refused the proof: an unknown rule, a step that does not follow,
+    /// or a proof that never derives the empty clause.
+    Invalid,
+    /// No verdict line at all — a crash, a usage error, a kill. Never a pass.
+    Unparsed,
+}
+
+/// Parses [`CarcaraVerdict`] from Carcara's combined output, taking the last
+/// verdict line if several appear.
+fn carcara_verdict(output: &str) -> CarcaraVerdict {
+    let mut verdict = CarcaraVerdict::Unparsed;
+    for line in output.lines() {
+        match line.trim() {
+            "valid" => verdict = CarcaraVerdict::Valid,
+            "holey" => verdict = CarcaraVerdict::Holey,
+            "invalid" => verdict = CarcaraVerdict::Invalid,
+            _ => {}
+        }
     }
-    // crates/axeyum-solver → workspace root → references/carcara/...
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../references/carcara/target/release/carcara");
-    path.is_file().then_some(path)
+    verdict
+}
+
+/// The `carcara check` argument list for one (proof, problem) pair.
+///
+/// ORDER IS LOAD-BEARING. `--allowed-rules` is declared `multiple = true`
+/// (`references/carcara/cli/src/app.rs:175-177`), so it greedily consumes the
+/// positionals that follow it. Measured 2026-09-09 against carcara 1.1.0:
+/// `check --allowed-rules a --allowed-rules b PROOF PROBLEM` fails with
+/// "the following required arguments were not provided: <PROOF_FILE>", while
+/// putting the positionals first works. Hence proof, problem, then the flag.
+fn carcara_check_args(alethe: &Path, smt2: &Path) -> Vec<std::ffi::OsString> {
+    let mut args: Vec<std::ffi::OsString> = vec![
+        "check".into(),
+        alethe.as_os_str().to_owned(),
+        smt2.as_os_str().to_owned(),
+        "--allowed-rules".into(),
+    ];
+    args.extend(CARCARA_ALLOWED_RULES.iter().map(Into::into));
+    args
+}
+
+/// Whether `AXEYUM_REQUIRE_CARCARA=1` is set: an absent binary is then a
+/// FAILURE rather than a skip. `scripts/check-carcara-gate.sh` sets it.
+fn carcara_required() -> bool {
+    std::env::var("AXEYUM_REQUIRE_CARCARA").unwrap_or_default() == "1"
+}
+
+/// Resolves the Carcara binary: `AXEYUM_CARCARA_BIN` if set, otherwise the
+/// conventional reference build path. Returns `None` (→ skip) if unavailable —
+/// **unless** `AXEYUM_REQUIRE_CARCARA=1`, in which case absence panics.
+///
+/// The skip default is right for an ordinary developer run (Carcara is a
+/// gitignored clone). It is wrong for a gate, and for as long as this file
+/// existed there was no gate: every test here returned early and passed, so an
+/// absent Carcara was indistinguishable from a Carcara that accepted
+/// everything we emit. `scripts/check-carcara-gate.sh` is the entry point that
+/// sets the variable and counts the invocations.
+fn carcara_bin() -> Option<PathBuf> {
+    let resolved = if let Ok(p) = std::env::var("AXEYUM_CARCARA_BIN") {
+        let path = PathBuf::from(p);
+        path.is_file().then_some(path)
+    } else {
+        // crates/axeyum-solver → workspace root → references/carcara/...
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../references/carcara/target/release/carcara");
+        path.is_file().then_some(path)
+    };
+    match resolved {
+        Some(path) => {
+            carcara_banner(&path);
+            Some(path)
+        }
+        None => {
+            assert!(
+                !carcara_required(),
+                "AXEYUM_REQUIRE_CARCARA=1 but no carcara binary was found. Set \
+                 AXEYUM_CARCARA_BIN, or build references/carcara/target/release/carcara. A skip \
+                 here would be indistinguishable from a Carcara that accepted every proof."
+            );
+            println!("AXEYUM-CARCARA-SKIPPED no carcara binary");
+            None
+        }
+    }
+}
+
+/// Prints, once per process, the banner `scripts/check-carcara-gate.sh` reads to
+/// confirm that the invocations it counted came from the binary it resolved.
+/// Exporting `AXEYUM_CARCARA_BIN` is an instruction; this is the evidence.
+fn carcara_banner(bin: &Path) {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        let version = Command::new(bin)
+            .arg("--version")
+            .output()
+            .ok()
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
+            .unwrap_or_else(|| "<unknown>".to_owned());
+        println!("AXEYUM-CARCARA-BIN bin={} version={version}", bin.display());
+    });
 }
 
 /// Writes the given `.smt2` text + `proof` to a temp dir and runs `carcara
@@ -90,10 +212,28 @@ fn carcara_accepts_smt2(
     std::fs::write(&smt2, smt2_text).expect("write smt2");
     std::fs::write(&alethe, write_alethe(proof)).expect("write alethe");
 
+    let combined = run_carcara(bin, tag, &alethe, &smt2);
+    let verdict = carcara_verdict(&combined);
+    assert!(
+        verdict == CarcaraVerdict::Valid,
+        "carcara did not fully check the {tag} proof: verdict {verdict:?}. `holey` means one or \
+         more steps were declined (a `hole`, or one of {CARCARA_ALLOWED_RULES:?}), and Carcara \
+         exits 0 in that case -- an artifact whose steps are holes is not an externally-checked \
+         artifact.\n{combined}"
+    );
+    combined
+}
+
+/// Runs `carcara check` on an already-written (proof, problem) pair and returns
+/// its combined stdout/stderr, printing the marker
+/// `scripts/check-carcara-gate.sh` counts.
+///
+/// The exit status is deliberately dropped: it cannot distinguish `valid` from
+/// `holey` (see [`CarcaraVerdict`]), so every caller must read the verdict from
+/// the output instead.
+fn run_carcara(bin: &Path, tag: &str, alethe: &Path, smt2: &Path) -> String {
     let out = Command::new(bin)
-        .arg("check")
-        .arg(&alethe)
-        .arg(&smt2)
+        .args(carcara_check_args(alethe, smt2))
         .output()
         .expect("run carcara");
     let combined = format!(
@@ -101,9 +241,9 @@ fn carcara_accepts_smt2(
         String::from_utf8_lossy(&out.stdout),
         String::from_utf8_lossy(&out.stderr)
     );
-    assert!(
-        out.status.success() && combined.contains("valid") && !combined.contains("holey"),
-        "carcara rejected the {tag} proof:\n{combined}"
+    println!(
+        "AXEYUM-CARCARA-CHECKED {tag} verdict={:?}",
+        carcara_verdict(&combined)
     );
     combined
 }
@@ -125,17 +265,43 @@ fn carcara_output(
     std::fs::write(&smt2, smt2_text).expect("write smt2");
     std::fs::write(&alethe, write_alethe(proof)).expect("write alethe");
 
+    run_carcara(bin, tag, &alethe, &smt2)
+}
+
+/// Like [`carcara_output`] but WITHOUT `--allowed-rules`, so one of our three
+/// in-tree-only rules reports `invalid` / "unknown rule" rather than becoming a
+/// declared hole. Used only by the two tests that measure exactly that: that
+/// Carcara has no checker for the rule, as distinct from having been told to
+/// hole it.
+fn carcara_output_undeclared(
+    bin: &Path,
+    tag: &str,
+    smt2_text: &str,
+    proof: &[axeyum_cnf::AletheCommand],
+) -> String {
+    let dir = std::env::temp_dir().join(format!("axeyum_carcara_{tag}_undeclared"));
+    std::fs::create_dir_all(&dir).expect("create temp dir");
+    let smt2 = dir.join("problem.smt2");
+    let alethe = dir.join("proof.alethe");
+    std::fs::write(&smt2, smt2_text).expect("write smt2");
+    std::fs::write(&alethe, write_alethe(proof)).expect("write alethe");
+
     let out = Command::new(bin)
         .arg("check")
         .arg(&alethe)
         .arg(&smt2)
         .output()
         .expect("run carcara");
-    format!(
+    let combined = format!(
         "{}{}",
         String::from_utf8_lossy(&out.stdout),
         String::from_utf8_lossy(&out.stderr)
-    )
+    );
+    println!(
+        "AXEYUM-CARCARA-CHECKED {tag}_undeclared verdict={:?}",
+        carcara_verdict(&combined)
+    );
+    combined
 }
 
 /// Emits `proof` + the matching IR-derived `.smt2` to a temp dir and runs
@@ -2170,15 +2336,37 @@ fn route2_bvsub_rewrite_proof_is_checked_by_neither_checker() {
         eprintln!("[skip] carcara binary not found; build references/carcara to enable");
         return;
     };
+    // Declared as an allowed rule (this suite's default), Carcara treats the
+    // step as a HOLE and the proof reports `holey` -- with EXIT STATUS 0. That
+    // is the shape a gate must reject on the verdict line, never on `$?`.
     let report = carcara_output_ir(&bin, "route2_bvsub", &arena, &assertions, &proof);
-    assert!(
-        !report.lines().any(|l| l.trim() == "valid"),
-        "expected Carcara to reject `bv_poly_simp`; if this now passes, add the rule \
-         to CARCARA_CHECKED_RULES and restore the acceptance assertion:\n{report}"
+    assert_eq!(
+        carcara_verdict(&report),
+        CarcaraVerdict::Holey,
+        "with `bv_poly_simp` declared in CARCARA_ALLOWED_RULES, Carcara must report the proof \
+         `holey` -- checked, but with a step it declined. If this now says `valid`, Carcara has \
+         gained a checker for the rule: add it to CARCARA_CHECKED_RULES.\n{report}"
+    );
+
+    // Undeclared, the same proof reports `invalid` with an `unknown rule`
+    // diagnostic. This is the measurement that makes the declaration honest:
+    // Carcara has NO checker for `bv_poly_simp`, as distinct from having been
+    // told to hole it. Losing this leg would make an unexpected new unknown
+    // rule indistinguishable from a known gap.
+    let undeclared = carcara_output_undeclared(
+        &bin,
+        "route2_bvsub",
+        &write_script(&arena, &assertions),
+        &proof,
+    );
+    assert_eq!(
+        carcara_verdict(&undeclared),
+        CarcaraVerdict::Invalid,
+        "expected Carcara to reject `bv_poly_simp` when it is not declared:\n{undeclared}"
     );
     assert!(
-        report.contains("unknown rule"),
-        "expected Carcara's `unknown rule` diagnostic for `bv_poly_simp`, got:\n{report}"
+        undeclared.contains("unknown rule"),
+        "expected Carcara's `unknown rule` diagnostic for `bv_poly_simp`, got:\n{undeclared}"
     );
 }
 
@@ -3260,19 +3448,37 @@ fn the_internal_rule_name_is_rejected_by_carcara() {
         }
     }
     assert!(renamed, "expected an `arrays_idx` step to rename");
+    // Declared (the suite default): the step becomes a HOLE, so Carcara says
+    // `holey` and EXITS 0. The verdict, not the exit status, is what rejects it.
     let report = carcara_output(
         &bin,
         "abv_row_same_internal_name",
         ROW_SAME_ONLY_SMT2,
         &proof,
     );
-    assert!(
-        !report.lines().any(|l| l.trim() == "valid"),
+    assert_eq!(
+        carcara_verdict(&report),
+        CarcaraVerdict::Holey,
         "the axeyum-internal rule name must NOT be reported valid, got:\n{report}"
     );
+
+    // Undeclared: `invalid`, with the `unknown rule` diagnostic. This leg is
+    // what establishes that Carcara has no checker for the name at all.
+    let undeclared = carcara_output_undeclared(
+        &bin,
+        "abv_row_same_internal_name",
+        ROW_SAME_ONLY_SMT2,
+        &proof,
+    );
+    assert_eq!(
+        carcara_verdict(&undeclared),
+        CarcaraVerdict::Invalid,
+        "the axeyum-internal rule name must be rejected outright when undeclared, got:\n\
+         {undeclared}"
+    );
     assert!(
-        report.contains("unknown rule"),
-        "expected Carcara's `unknown rule` diagnostic, got:\n{report}"
+        undeclared.contains("unknown rule"),
+        "expected Carcara's `unknown rule` diagnostic, got:\n{undeclared}"
     );
 }
 
@@ -3365,5 +3571,106 @@ fn tampered_shipped_abv_row_same_proof_is_rejected_in_tree() {
     assert!(
         !matches!(axeyum_cnf::check_alethe(&proof), Ok(true)),
         "check_alethe must reject a tampered arrays_idx conclusion"
+    );
+}
+
+// --- The gate's own parsing and argument construction -------------------------
+//
+// These four tests need no Carcara binary. They exist because the end-to-end
+// half of this suite is only exercised on a host that has one, and the two
+// pieces most likely to be silently wrong -- how a verdict is read out of
+// stdout, and how `--allowed-rules` is placed on the command line -- can both be
+// pinned against the literal strings and the measured argument order.
+
+#[test]
+fn the_verdict_is_read_from_a_whole_line_not_a_substring() {
+    // Carcara's three literal outputs (`cli/src/main.rs:35-45`).
+    assert_eq!(carcara_verdict("valid\n"), CarcaraVerdict::Valid);
+    assert_eq!(carcara_verdict("holey\n"), CarcaraVerdict::Holey);
+    assert_eq!(carcara_verdict("invalid\n"), CarcaraVerdict::Invalid);
+
+    // THE BUG THIS EXISTS FOR: `"invalid".contains("valid")` is true, so a
+    // substring test reads Carcara's rejection as an acceptance. cvc5's own
+    // harness (`run_regression.py:335`) uses `if "valid" not in output` and is
+    // saved only by having checked the exit status first.
+    assert!("invalid".contains("valid"));
+    assert_ne!(carcara_verdict("invalid\n"), CarcaraVerdict::Valid);
+
+    // A real rejection carries a diagnostic line before the verdict.
+    assert_eq!(
+        carcara_verdict(
+            "[ERROR] checking failed on step 't1' with rule 'read_over_write_same': unknown rule\n\
+             invalid\n"
+        ),
+        CarcaraVerdict::Invalid
+    );
+
+    // No verdict at all is never a pass: a clap usage error, a crash, a kill.
+    assert_eq!(
+        carcara_verdict("error: The following required arguments were not provided:\n"),
+        CarcaraVerdict::Unparsed
+    );
+    assert_eq!(carcara_verdict(""), CarcaraVerdict::Unparsed);
+}
+
+#[test]
+fn holey_is_not_an_acceptance() {
+    // The distinction the exit status cannot make. `check()` returns
+    // `Result<bool, Error>` with the bool being `is_holey`; the CLI prints
+    // "holey" and RETURNS NORMALLY, so a gate on `$?` accepts a proof whose
+    // steps were never checked. Measured 2026-09-09: renaming one rule to
+    // `hole` in a three-line proof gives "holey" with exit 0.
+    assert_ne!(carcara_verdict("holey\n"), CarcaraVerdict::Valid);
+    assert_ne!(carcara_verdict("valid\nholey\n"), CarcaraVerdict::Valid);
+}
+
+#[test]
+fn the_allowed_rules_are_the_three_carcara_cannot_check() {
+    // Derived from the authority, not from this list: every declared name must
+    // actually be one `axeyum-cnf` reports as outside Carcara's vocabulary. If
+    // Carcara gains a checker for one of them, `CARCARA_CHECKED_RULES` gains
+    // the name and this test fails -- rather than the suite quietly continuing
+    // to hole a rule that is now checkable.
+    for rule in CARCARA_ALLOWED_RULES {
+        assert!(
+            !axeyum_cnf::is_carcara_checked_rule(rule),
+            "{rule} is declared as an allowed hole but Carcara now has a checker for it; drop it \
+             from CARCARA_ALLOWED_RULES so the proof is checked instead of holed"
+        );
+    }
+    // ...and the positive control, so an `is_carcara_checked_rule` that always
+    // answered `false` would not make the loop above vacuous.
+    assert!(axeyum_cnf::is_carcara_checked_rule("arrays_idx"));
+    assert!(axeyum_cnf::is_carcara_checked_rule("resolution"));
+}
+
+#[test]
+fn the_check_arguments_put_the_positionals_before_the_greedy_flag() {
+    // `--allowed-rules` is `multiple = true` (`carcara/cli/src/app.rs:175-177`)
+    // and eats following positionals. Measured 2026-09-09 against carcara
+    // 1.1.0: `check --allowed-rules a --allowed-rules b PROOF PROBLEM` exits 2
+    // with "the following required arguments were not provided: <PROOF_FILE>".
+    // So the two files must come first and the flag last.
+    let args = carcara_check_args(Path::new("/tmp/p.alethe"), Path::new("/tmp/q.smt2"));
+    let args: Vec<String> = args
+        .iter()
+        .map(|a| a.to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(
+        args,
+        vec![
+            "check".to_owned(),
+            "/tmp/p.alethe".to_owned(),
+            "/tmp/q.smt2".to_owned(),
+            "--allowed-rules".to_owned(),
+            "read_over_write".to_owned(),
+            "read_over_write_same".to_owned(),
+            "bv_poly_simp".to_owned(),
+        ]
+    );
+    let flag = args.iter().position(|a| a == "--allowed-rules").unwrap();
+    assert!(
+        flag > args.iter().position(|a| a.ends_with(".smt2")).unwrap(),
+        "the greedy flag must follow both positionals"
     );
 }
