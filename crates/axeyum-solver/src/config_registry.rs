@@ -38,6 +38,23 @@
 //! entry cannot make the solver behave differently — it can only fail this
 //! module's own checks.
 //!
+//! # How much of this is measured
+//!
+//! **Most of it is not.** [`dated_count`] and [`undated_count`] are derived
+//! from the table, `config_trace_line` prints both on every `--trace` run, and
+//! `scripts/check-config-registry-staleness.py` leads with the ratio. As of the
+//! 2026-09-08 coverage sweep it is roughly **five undated entries for every
+//! dated one** — the sweep took the table from 114 entries to over 450 by
+//! reading code, and reading code establishes what a bound DOES, never what its
+//! value should BE.
+//!
+//! That is the honest state and not a defect to hide: an undated entry says
+//! "nobody has measured this", which is strictly more than the silence it
+//! replaced. What it must not do is get worse quietly, so `DATED_FLOOR` pins
+//! the count of dated entries and `the_dated_count_only_rises` fails if a date
+//! is ever lost — including the tempting loss, where an entry whose `rests_on`
+//! went red is downgraded to `undated` instead of being re-derived.
+//!
 //! # How far to trust the judgement fields
 //!
 //! `name`, `module` and `value` are checked against the source, and
@@ -4607,19 +4624,24 @@ pub static REGISTRY: &[ConfigEntry] = &[
             "ADR-1752",
             "2026-09-07",
             None,
+            // NOT the constant's own name, and not `MAX_ONLINE_LRA_ATOMS`. Both
+            // were, and `79a7c5297` tripped this entry STALE on a single added
+            // line: a rustdoc reference to `DEFAULT_ONLINE_LRA_BUDGET_BYTES`
+            // inside a doc comment. `git log -G` cannot tell that from a code
+            // change, and it should not try. These two name the MECHANISMS
+            // ADR-1752's decision is about — the derivation of the coefficient
+            // ceilings out of the budget, and the route that takes it — so a
+            // change to either is a change to what was measured.
             &[
-                sym(
-                    "crates/axeyum-solver/src/lra_online.rs",
-                    "DEFAULT_ONLINE_LRA_BUDGET_BYTES",
-                ),
+                sym("crates/axeyum-solver/src/lra_online.rs", "for_budget"),
                 sym(
                     "crates/axeyum-solver/src/lra_theory.rs",
-                    "MAX_ONLINE_LRA_ATOMS",
+                    "check_qf_lra_online_cdclt",
                 ),
             ],
             &[adr("ADR-1752")],
         ),
-        note: "THE REPLACEMENT for the stale flat atom cap. Used when `SolverConfig::memory_limit_mb` is unset; when it is set, that is the budget instead — so this is the first bound in the registry that MOVES with a caller-supplied resource limit rather than being fixed at compile time.",
+        note: "THE REPLACEMENT for the stale flat atom cap. Used when `SolverConfig::memory_limit_mb` is unset; when it is set, that is the budget instead — so this is the first bound in the registry that MOVES with a caller-supplied resource limit rather than being fixed at compile time. The 2026-09-07 date SURVIVES the 2026-09-08 re-derivation of `BYTES_PER_ADMITTED_ATOM` deliberately: that re-derivation changed which EVIDENCE the screen rests on (a 7.8 GB abort turned out to be on the offline Fourier-Motzkin route) and established that `memory_limit_mb` did not bind until 2026-09-08. Neither touches this value, which is chosen so `NormalizationLimits::for_budget`'s derived ceilings sit right and so the screen reproduces 1,024 exactly — a calibration identity checkable in the tree, not a corpus measurement.",
     },
     ConfigEntry {
         name: "DEFAULT_STEP_BUDGET",
@@ -4857,25 +4879,33 @@ pub static REGISTRY: &[ConfigEntry] = &[
             "2026-09-07",
             Some("e62086742"),
             &[
-                sym(
-                    "crates/axeyum-solver/src/lra_theory.rs",
-                    "MAX_ONLINE_LRA_ATOMS",
-                ),
+                // `MAX_LRA_CACHED_COEFFICIENTS` names a CONSTANT on purpose, and
+                // it is the only one here that does: it is this ADR's founding
+                // example, the dependency whose absence let a 2026-08-03
+                // measurement stand for thirteen months after the 2026-08-06
+                // commit that falsified it. The other two named constants were
+                // replaced — `DEFAULT_ONLINE_LRA_BUDGET_BYTES` tripped this
+                // entry STALE on `79a7c5297`, whose only touch of that symbol
+                // is a rustdoc link inside a doc comment.
                 sym(
                     "crates/axeyum-solver/src/lra_online.rs",
                     "MAX_LRA_CACHED_COEFFICIENTS",
                 ),
+                // The screen that reproduces this value at the default budget.
                 sym(
-                    "crates/axeyum-solver/src/lra_online.rs",
-                    "DEFAULT_ONLINE_LRA_BUDGET_BYTES",
+                    "crates/axeyum-solver/src/lra_theory.rs",
+                    "check_qf_lra_online_cdclt",
                 ),
+                // The OTHER live consumer, and the reason 1,024 still governs
+                // anything: `nra` projects its abstraction against this ceiling.
+                sym("crates/axeyum-solver/src/nra.rs", "admission_fits_consumer"),
             ],
             &[
                 adr("ADR-1752"),
                 commit("e62086742", "the online theory decides on"),
             ],
         ),
-        note: "THE WORKED EXAMPLE. It is no longer the LRA route's own admission gate (ADR-1752 replaced that with a byte budget) but it IS still live as the atom ceiling `nra.rs` projects against (ADR-1751), and the byte budget is calibrated to reproduce it exactly at the default. Its `rests_on` names `MAX_LRA_CACHED_COEFFICIENTS` — the dependency whose absence let a 2026-08-03 measurement stand for thirteen months after the 2026-08-06 commit that falsified it.",
+        note: "THE WORKED EXAMPLE, and now a DIVERGENCE nobody has written down. It is no longer the LRA route's own admission gate — ADR-1752 replaced that with `budget_bytes / BYTES_PER_ADMITTED_ATOM`, which is 1,024 at the DEFAULT budget and 13,107 at `--memory-limit-mb 8192`. But `nra::admission_fits_consumer` still projects against this STATIC 1,024 and calls it that engine's capacity (ADR-1751). So above the default budget the two numbers are incommensurable again: the LRA consumer admits 13,107 atoms while the NRA gate refuses above 1,024. That is the same defect ADR-1751 existed to remove, reintroduced in a new form by ADR-1752, and it is recorded here rather than resolved — it needs a measurement, not an edit.",
     },
     ConfigEntry {
         name: "DEFAULT_REPAIR_CANDIDATE_CAP",
@@ -8288,6 +8318,30 @@ pub fn dated_count() -> usize {
     REGISTRY.iter().filter(|e| e.is_dated()).count()
 }
 
+/// How many registry entries carry NO date — the number this module is
+/// currently worst at, and therefore the one it should be hardest to overlook.
+///
+/// It is derived, never written down: a count in prose is a wish, and this one
+/// has moved by 300 in two days. [`config_trace_line`] prints it, so a run's own
+/// output says what fraction of its configuration nobody has measured.
+#[must_use]
+pub fn undated_count() -> usize {
+    REGISTRY.len() - dated_count()
+}
+
+/// The floor under [`dated_count`], asserted by `the_dated_count_only_rises`.
+///
+/// A ratchet on DATES, deliberately not on the undated share. Ratcheting the
+/// share would punish honest coverage work — registering a governing value
+/// nobody has measured is exactly what this module wants a lane to do, and it
+/// moves the percentage the wrong way. What must never happen is *losing* a
+/// date: a measurement deleted, or an entry quietly downgraded to `undated`
+/// because its `rests_on` went red and that was the cheap way out.
+///
+/// Raise it when dates are added. Lowering it is the edit that needs an
+/// argument, and the test says so in its failure message.
+pub const DATED_FLOOR: usize = 77;
+
 /// The one-line configuration summary a `--trace` run prints.
 ///
 /// Deliberately one line and digest-first: a corpus sweep's output is grepped,
@@ -8338,11 +8392,15 @@ fn config_trace_line_from(
     consulted: &[&'static str],
     crossed: &[(&'static str, u64, u64)],
 ) -> String {
+    // `undated=` is here rather than left to a gate's output because the
+    // undated share is the honest headline of this module and a number that
+    // only a checker prints is a number most readers never see.
     let mut s = format!(
-        "; config digest={:016x} entries={} dated={}",
+        "; config digest={:016x} entries={} dated={} undated={}",
         digest(),
         REGISTRY.len(),
-        dated_count()
+        dated_count(),
+        undated_count()
     );
     for (k, v) in active_env_overrides() {
         let _ = write!(s, " env:{k}={v}");
@@ -9085,6 +9143,55 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// A date may be added but never lost.
+    ///
+    /// The ratchet is on DATES rather than on the undated share on purpose:
+    /// registering an unmeasured governing value is work this module wants, and
+    /// it moves the share the wrong way, so a share ratchet would pay a lane to
+    /// leave a bound unregistered. Losing a date is the thing that must not
+    /// happen quietly — most temptingly by downgrading an entry to `undated`
+    /// when its `rests_on` goes red, which turns a finding into a silence.
+    #[test]
+    fn the_dated_count_only_rises() {
+        assert!(
+            dated_count() >= DATED_FLOOR,
+            "dated entries fell to {} against a floor of {DATED_FLOOR}. If a measurement was \
+             genuinely re-taken and an entry is honestly undated again, lower DATED_FLOOR in the \
+             same commit and say why; do not lower it to make this pass.",
+            dated_count()
+        );
+        assert_eq!(
+            dated_count() + undated_count(),
+            REGISTRY.len(),
+            "dated + undated must partition the table"
+        );
+        // The floor must track the table, or it stops being a ratchet and
+        // becomes a number that was true once.
+        assert!(
+            dated_count() <= DATED_FLOOR + 64,
+            "dated_count() is {} against a floor of {DATED_FLOOR}: raise DATED_FLOOR so the \
+             ratchet keeps holding what has been achieved",
+            dated_count()
+        );
+    }
+
+    /// The trace line reports the undated share, not only the dated count.
+    ///
+    /// The share is this module's honest headline, and a headline only a
+    /// checker prints is one most readers never see.
+    #[test]
+    fn the_trace_line_reports_what_is_unmeasured() {
+        let line = config_trace_line();
+        assert!(
+            line.contains(&format!("undated={}", undated_count())),
+            "the trace line does not report the undated count: {line}"
+        );
+        assert!(
+            undated_count() > 0,
+            "no undated entries, so this test is asserting nothing; delete it or re-derive it"
+        );
     }
 
     /// The emitted line must be deterministic and byte-identical across calls.

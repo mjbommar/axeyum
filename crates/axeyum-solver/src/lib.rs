@@ -911,10 +911,11 @@ pub use backend::{
     SolverBackend, SolverConfig, SolverError, UnknownKind, UnknownReason,
 };
 pub use config_registry::{
-    Basis, ConfigEntry, ConfigTraceGuard, ConfigTraceMirror, Dependency, EXEMPT, GOVERNED_FILES,
-    Justification, OnExceed, Protects, REGISTRY, SILENT_UNATTRIBUTED, SILENT_UNATTRIBUTED_MAX,
-    SILENT_UNINSTRUMENTED, Signal, active_env_overrides, config_trace_line, consulted, crossings,
-    dated_count, digest, live_config_trace_line, note_consulted, note_crossed,
+    Basis, ConfigEntry, ConfigTraceGuard, ConfigTraceMirror, DATED_FLOOR, Dependency, EXEMPT,
+    GOVERNED_FILES, Justification, OnExceed, Protects, REGISTRY, SILENT_UNATTRIBUTED,
+    SILENT_UNATTRIBUTED_MAX, SILENT_UNINSTRUMENTED, Signal, active_env_overrides,
+    config_trace_line, consulted, crossings, dated_count, digest, live_config_trace_line,
+    note_consulted, note_crossed, undated_count,
 };
 pub use incremental::{
     AssumptionOutcome, IncrementalBvSolver, IncrementalBvStats, IncrementalModelLiftStats,
