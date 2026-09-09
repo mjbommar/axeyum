@@ -4005,6 +4005,62 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Backstop against a refinement-loop bug (doc: 'the loop is otherwise bounded by the number of distinct atom assignments'). Three call sites (dpll_t.rs:146, 256, 421) all format the bound into the `Unknown` detail. Distinct value from `dpll_lia.rs::MAX_DPLL_ROUNDS` (10_000, registered) — different file, different number, not a duplicate.",
     },
     ConfigEntry {
+        name: "SKELETON_SOLVE_DEFAULT",
+        module: "crates/axeyum-solver/src/dpll_t.rs",
+        value: "SkeletonSolvePolicy::COLD",
+        unit: "policy arm for the lazy-SMT propositional half",
+        protects: Protects::Time,
+        on_exceed: OnExceed::SearchEvent,
+        signal: Signal::None,
+        guarded_by: "both arms decide the SAME clause set in every round -- the warm solver holds the skeleton plus every blocking clause learned so far, which is exactly what the cold arm rebuilds from `skeleton + blocking` -- so the round's verdict cannot differ between them and only the cost can; `dpll_t::tests::the_warm_and_cold_arms_agree_round_by_round` drives a whole blocking sequence to exhaustion comparing the two rather than comparing one call, because a single-round comparison cannot see an assertion that diverges across rounds, which is the warm arm's only failure mode. A skeleton outside the warm arm's scope falls back to the cold arm (`skeleton_is_pure_boolean`), so an unsupported shape is never silently dropped",
+        env_override: Some("AXEYUM_LAZY_SKELETON"),
+        justification: dated(
+            "docs/research/12-performance/qf-nra-loss-attribution-2026-09-09.md",
+            "2026-09-09",
+            None,
+            // The measurement is "on the seven `LassoRanker` files of the
+            // `QF_NRA` loss population the lazy-SMT loop spent 97-99% of a 24 s
+            // budget in the propositional half and ~1% in the theory, with a
+            // per-round histogram monotone in the round number". It rests on
+            // the loops still rebuilding `skeleton + blocking` per round (the
+            // thing the warm arm removes), on the warm solver still taking
+            // monotone assertions, and on the counters that split a round into
+            // its two halves. Change any of the three and the numbers stop
+            // describing this tree.
+            &[
+                sym(
+                    "crates/axeyum-solver/src/dpll_t.rs",
+                    "check_with_nra_dpll_within",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/incremental.rs",
+                    "IncrementalBvSolver",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/lazy_smt_counters.rs",
+                    "record_skeleton",
+                ),
+            ],
+            // The basis names the applicability guard and the warm solver the
+            // arm is built on. If `skeleton_is_pure_boolean` leaves `dpll_t.rs`
+            // the warm arm has no admission test and would take skeletons that
+            // still carry theory content; a basis naming only the doc would
+            // keep passing through exactly that change.
+            &[
+                live(
+                    "skeleton_is_pure_boolean",
+                    "crates/axeyum-solver/src/dpll_t.rs",
+                ),
+                live(
+                    "IncrementalBvSolver",
+                    "crates/axeyum-solver/src/incremental.rs",
+                ),
+                doc("docs/research/12-performance/qf-nra-loss-attribution-2026-09-09.md"),
+            ],
+        ),
+        note: "Which arm the lazy-SMT loops use for the propositional half. The skeleton NEVER changes between rounds — only the learned blocking clauses grow, monotonically — so the pre-2026-09-09 `cold` arm re-bit-blasted an identical formula and reran CDCL from scratch over a strictly larger clause set every round, and the per-round cost rose with the round number (`polyrank4` reads `nra_hist=2:3,3:12,4:23,5:34,6:61,7:118,8:62`, `nra_max_round=306`: ~4 ms early, ~256 ms late). The `warm` arm asserts the skeleton once into an `IncrementalBvSolver` (ADR-0009) and appends each blocking clause. The DEFAULT is `cold`, set from the A/B and not from the mechanism: on the 16 skeleton-dominated QF_NRA parity losses (one binary, arms differing only in this env override) `warm` is a 3-4x speedup of the propositional half where that half is not already the whole budget (1,211 -> 263 ms, 1,674 -> 570 ms, 480 -> 122 ms) and DECIDED NOTHING NEW (cold 2 of 16, warm 2 of 16, the same two files); on the seven LassoRanker files it is a wash, because there the cost is the CDCL search over hundreds of whole-cube blocking clauses, not the re-encoding. This switch changes the propositional half of EVERY lazy-SMT query in the workspace, and 16 files of one division is not a basis for that; a division-wide A/B is now one binary and one env var. Both arms decide the SAME clause set in every round, so a verdict cannot differ between them; `the_warm_and_cold_arms_agree_round_by_round` drives a whole blocking sequence to hold that. The warm arm is only applicable to a pure propositional skeleton (`skeleton_is_pure_boolean`); anything else falls back to `cold`, which is also what `AXEYUM_LAZY_SKELETON=cold` selects, so the A/B is one binary. This is NOT a fix for the largest QF_NRA class — 14 files decline on an atom capacity they exceed by 11-36x, which no scheduling change reaches.",
+    },
+    ConfigEntry {
         name: "DECLARED_SORT_CEGAR_PAIRS_TERMINAL_RUNG",
         module: "crates/axeyum-solver/src/euf.rs",
         value: "16_384",

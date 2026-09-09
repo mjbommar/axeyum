@@ -58,6 +58,263 @@ use crate::sat_bv_backend::SatBvBackend;
 /// is otherwise bounded by the number of distinct atom assignments).
 const MAX_ROUNDS: usize = 100_000;
 
+/// How a lazy-SMT loop decides its propositional skeleton each round.
+///
+/// **The skeleton never changes between rounds.** Only the learned blocking
+/// clauses grow, and they grow monotonically — a round adds clauses, never
+/// retracts one. Rebuilding `skeleton.clone() + blocking` and handing it to a
+/// cold [`SatBvBackend`] therefore re-bit-blasts an IDENTICAL formula and reruns
+/// CDCL from scratch over a strictly larger clause set every round, so the
+/// per-round cost rises with the round number.
+///
+/// # What that costs, measured 2026-09-09
+///
+/// The `QF_NRA` parity-loss population
+/// (`bench-results/parity-losses-20260908/QF_NRA.txt`, 75 files, the largest
+/// single division gap after the 2026-09-08 re-cut) was swept at the parity
+/// protocol (24 s, 8 GiB, `taskset -c 0-7`) with `--trace`. On the
+/// `LassoRanker` template family the loop's own counters read:
+///
+/// | file (abbrev)            | rounds | `skeleton_ms` | `theory_ms` |
+/// |--------------------------|-------:|--------------:|------------:|
+/// | `polyrank4…Loop_2`       |    313 |        23,702 |         225 |
+/// | `Brockschmidt…Fig1`      |    217 |        23,649 |         273 |
+/// | `heidy7…Lasso_2`         |    217 |        23,620 |         271 |
+/// | `eric2…Loop_3`           |    153 |        23,448 |         444 |
+/// | `spiral…Loop_4`          |    119 |        23,224 |         544 |
+///
+/// 97–99% of a 24 s budget in the propositional half, ~1% in the theory. The
+/// per-round histogram is monotone in the round number — `polyrank4` reads
+/// `nra_hist=2:3,3:12,4:23,5:34,6:61,7:118,8:62` with `nra_max_round=306`, i.e.
+/// the first rounds cost ~4 ms and the last ~256 ms — which is the signature of
+/// re-solving a growing formula from cold, not of a hard propositional problem.
+///
+/// The warm machinery for this already exists and is not new work: ADR-0009's
+/// [`crate::incremental::IncrementalBvSolver`] takes monotone assertions over a
+/// persistent lowering and CNF encoding, which is exactly the shape of "assert
+/// the skeleton once, add one blocking clause per round".
+///
+/// # Why it is a policy and not a rewrite
+///
+/// The warm path is only applicable when the skeleton is a pure propositional
+/// formula (see [`skeleton_is_pure_boolean`]); a skeleton that still carries
+/// bit-vector, array, integer or uninterpreted content must go through the full
+/// bit-blasting composition. Both arms are kept, selected by one value, so the
+/// cold arm reproduces the pre-2026-09-09 behaviour byte for byte and an A/B is
+/// one binary rather than two builds.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SkeletonSolvePolicy {
+    /// The arm's name, as `AXEYUM_LAZY_SKELETON` spells it. Carried so a trace
+    /// or a registry row can name the arm that ran; nothing branches on it.
+    pub name: &'static str,
+    /// Keep ONE warm solver for the whole loop and add each round's blocking
+    /// clause to it, instead of rebuilding a cold backend from
+    /// `skeleton + blocking` every round.
+    ///
+    /// `false` is the pre-2026-09-09 behaviour on every loop.
+    pub warm: bool,
+}
+
+impl SkeletonSolvePolicy {
+    /// A cold [`SatBvBackend`] per round over `skeleton + blocking` — what every
+    /// lazy-SMT loop did before 2026-09-09. Kept as the A/B control arm.
+    pub const COLD: Self = Self {
+        name: "cold",
+        warm: false,
+    };
+
+    /// One [`crate::incremental::IncrementalBvSolver`] for the whole loop, with
+    /// each blocking clause asserted as it is learned. Falls back to
+    /// [`Self::COLD`] for a skeleton the warm solver does not cover.
+    pub const WARM: Self = Self {
+        name: "warm",
+        warm: true,
+    };
+}
+
+/// The skeleton-solve policy in force, read once from `AXEYUM_LAZY_SKELETON`.
+///
+/// Read once into a `OnceLock`: determinism is a public API promise, so the
+/// policy cannot change between two solves in one process. `scripts/parity-run.sh`
+/// records any `AXEYUM_*` lever it sees in the ledger entry, so a swept arm can
+/// never be mistaken for a default-configuration one.
+fn skeleton_solve_policy() -> SkeletonSolvePolicy {
+    use std::sync::OnceLock;
+    static POLICY: OnceLock<SkeletonSolvePolicy> = OnceLock::new();
+    *POLICY.get_or_init(|| match std::env::var("AXEYUM_LAZY_SKELETON") {
+        Ok(v) if v.trim() == "cold" => SkeletonSolvePolicy::COLD,
+        Ok(v) if v.trim() == "warm" => SkeletonSolvePolicy::WARM,
+        _ => SKELETON_SOLVE_DEFAULT,
+    })
+}
+
+/// The arm used when `AXEYUM_LAZY_SKELETON` is unset or unrecognized.
+///
+/// **`COLD`, and set from the A/B, not from the mechanism.** The warm arm is a
+/// 3–4x speedup of the propositional half where that half is not already the
+/// whole budget — measured 2026-09-09 on the 16 skeleton-dominated `QF_NRA`
+/// parity losses, one binary, arms differing only in this env override:
+///
+/// | file                          | cold `skeleton_ms` | warm `skeleton_ms` |
+/// |-------------------------------|-------------------:|-------------------:|
+/// | `atan-vega-3-chunk-0242`      |              1,211 |                263 |
+/// | `sin-cos-346-b-chunk-0419`    |                480 |                122 |
+/// | `MulliganEconomicsModel0051a` |              1,674 |                570 |
+/// | `sqrt-1mcosq-8-chunk-0627`    |                147 |                 35 |
+///
+/// and it **decided nothing new**: cold 2 of 16, warm 2 of 16, the same two
+/// files. On the seven `LassoRanker` files it is a wash (23,708 → 23,323 ms),
+/// because there the cost is the CDCL search over a few hundred whole-cube
+/// blocking clauses, not the re-encoding the warm arm removes.
+///
+/// So the default stays `COLD` for a reason about EVIDENCE, not about the
+/// mechanism: this switch changes the propositional half of **every** lazy-SMT
+/// query in the workspace — `QF_LRA`, `QF_NRA`, and every combination that runs
+/// through these two loops — and 16 files of one division is not a basis for
+/// that. A division-wide A/B is now one binary and one env var; whoever runs it
+/// owns flipping this line. The cold arm is byte-identical to the pre-2026-09-09
+/// engine, confirmed against the same population's baseline sweep (identical
+/// verdicts on all 16, `sin-problem-7-chunk-0353` 1,909 ms vs 1,909 ms,
+/// `sqrt-1mcosq-8-chunk-0627` 306 ms vs 308 ms).
+///
+/// Full record: `docs/research/12-performance/qf-nra-loss-attribution-2026-09-09.md`.
+const SKELETON_SOLVE_DEFAULT: SkeletonSolvePolicy = SkeletonSolvePolicy::COLD;
+
+/// Whether every node reachable from `terms` is `Bool`-sorted and built only
+/// from Boolean connectives, constants and `Bool` symbols.
+///
+/// This is the applicability test for the warm arm. It is deliberately a
+/// whitelist over the node kinds rather than a sort test alone: a `Bool`-sorted
+/// `Op::Apply` (an uninterpreted predicate) or a `Bool`-sorted `Op::Eq` over
+/// non-`Bool` operands would pass a sort test while carrying theory content the
+/// warm solver must not silently drop. Anything not on the list declines, and a
+/// decline costs only the cold arm we would have run anyway.
+fn skeleton_is_pure_boolean(arena: &TermArena, terms: &[TermId]) -> bool {
+    let mut seen: std::collections::HashSet<TermId> = std::collections::HashSet::new();
+    let mut stack: Vec<TermId> = terms.to_vec();
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        // GUARD 1 — the sort of EVERY node, not just the roots. `Eq` and `Ite`
+        // are polymorphic and `Bool` at the root, so a root-only test admits
+        // `(= x y)` over two reals. This is what excludes it, and it is the
+        // ONLY thing that does.
+        if arena.sort_of(t) != Sort::Bool {
+            return false;
+        }
+        match arena.node(t) {
+            TermNode::BoolConst(_) => {}
+            TermNode::Symbol(_) => {}
+            // GUARD 2 — the operator whitelist. A `Bool`-sorted THEORY atom
+            // (`x < 0`, `bvult a b`, an uninterpreted predicate) passes guard 1
+            // unharmed; only this refuses it.
+            TermNode::App { op, args } => {
+                match op {
+                    Op::BoolNot
+                    | Op::BoolAnd
+                    | Op::BoolOr
+                    | Op::BoolXor
+                    | Op::BoolImplies
+                    | Op::Ite
+                    | Op::Eq => {}
+                    _ => return false,
+                }
+                for &a in args.iter() {
+                    stack.push(a);
+                }
+            }
+            // Every non-`Bool` constant node. Unreachable through guard 1
+            // today, kept because the match must be total and a silent
+            // `true` here would be the wrong direction.
+            _ => return false,
+        }
+    }
+    true
+}
+
+/// The propositional half of a lazy-SMT loop: either a cold backend rebuilt from
+/// `skeleton + blocking` every round ([`SkeletonSolvePolicy::COLD`]) or one warm
+/// solver carried across rounds ([`SkeletonSolvePolicy::WARM`]).
+///
+/// The two arms decide the SAME set of clauses in every round — the warm arm
+/// holds the skeleton plus every blocking clause learned so far, which is
+/// exactly what the cold arm rebuilds — so the round's verdict cannot differ
+/// between them. Only the cost does.
+enum SkeletonSolver {
+    /// The cold arm: one `SatBvBackend`, re-fed the whole formula each round.
+    Cold(SatBvBackend),
+    /// The warm arm: the skeleton asserted once, blocking clauses appended.
+    Warm {
+        solver: Box<crate::incremental::IncrementalBvSolver>,
+        /// How many entries of the caller's `blocking` vector have already been
+        /// asserted into `solver`. The caller only ever pushes, so the tail past
+        /// this index is exactly what is new this round.
+        asserted_blocking: usize,
+    },
+}
+
+impl SkeletonSolver {
+    /// Builds the solver for `policy`, asserting `skeleton` up front on the warm
+    /// arm. Falls back to the cold arm when the skeleton is out of the warm
+    /// arm's scope, or when asserting it fails — a fallback costs only the cold
+    /// work we would otherwise have done, and never changes a verdict.
+    fn new(
+        policy: SkeletonSolvePolicy,
+        arena: &TermArena,
+        skeleton: &[TermId],
+        config: &SolverConfig,
+    ) -> Self {
+        if !policy.warm || !skeleton_is_pure_boolean(arena, skeleton) {
+            return Self::Cold(SatBvBackend::new());
+        }
+        let mut solver = Box::new(crate::incremental::IncrementalBvSolver::with_config(
+            config.clone(),
+        ));
+        for &term in skeleton {
+            if solver.assert(arena, term).is_err() {
+                return Self::Cold(SatBvBackend::new());
+            }
+        }
+        Self::Warm {
+            solver,
+            asserted_blocking: 0,
+        }
+    }
+
+    /// Decides `skeleton + blocking` for this round under `config`'s timeout.
+    ///
+    /// `blocking` is the caller's whole learned-clause vector, append-only. The
+    /// warm arm asserts just the tail it has not seen; the cold arm rebuilds the
+    /// full formula, as it always did.
+    fn solve_round(
+        &mut self,
+        arena: &mut TermArena,
+        skeleton: &[TermId],
+        blocking: &[TermId],
+        config: &SolverConfig,
+    ) -> Result<CheckResult, SolverError> {
+        match self {
+            Self::Cold(backend) => {
+                let mut sat_assertions = skeleton.to_vec();
+                sat_assertions.extend(blocking.iter().copied());
+                check_with_all_theories(backend, arena, &sat_assertions, DEFAULT_INT_WIDTH, config)
+            }
+            Self::Warm {
+                solver,
+                asserted_blocking,
+            } => {
+                for &clause in &blocking[*asserted_blocking..] {
+                    solver.assert(arena, clause)?;
+                }
+                *asserted_blocking = blocking.len();
+                solver.set_timeout(config.timeout);
+                solver.check(arena)
+            }
+        }
+    }
+}
+
 /// Decides a Boolean combination of linear real order constraints by lazy SMT.
 ///
 /// The returned [`Model`] carries real variable values (and original Boolean
@@ -165,7 +422,8 @@ pub fn check_with_lra_dpll_within(
         skeleton.push(ctx.abstract_term(arena, assertion)?);
     }
 
-    let mut backend = SatBvBackend::new();
+    let mut solver =
+        SkeletonSolver::new(skeleton_solve_policy(), arena, &skeleton, &fallback_config);
     let mut blocking: Vec<TermId> = Vec::new();
     // The previous round's cube polarities, for the churn counter. The question
     // the Farkas fix left open: the loop now runs 1.63x the rounds and still
@@ -202,19 +460,11 @@ pub fn check_with_lra_dpll_within(
         //    intact) plus learned blocking clauses, with the full bit-blasting
         //    composition. Reals share no sort with those theories, so the only
         //    coupling is propositional and this loop is a complete combination.
-        let mut sat_assertions = skeleton.clone();
-        sat_assertions.extend(blocking.iter().copied());
         // Clocked only when counting is armed: `--trace` off is one
         // thread-local `bool` read, and a round already contains a whole
         // `sat-bv` check, so four clock reads per round cannot perturb it.
         let skeleton_started = crate::lazy_smt_counters::enabled().then(Instant::now);
-        let skeleton_result = check_with_all_theories(
-            &mut backend,
-            arena,
-            &sat_assertions,
-            DEFAULT_INT_WIDTH,
-            &fallback_config,
-        );
+        let skeleton_result = solver.solve_round(arena, &skeleton, &blocking, &fallback_config);
         if let Some(started) = skeleton_started {
             let outcome = match &skeleton_result {
                 Ok(CheckResult::Sat(_)) => RoundOutcome::Sat,
@@ -312,7 +562,7 @@ pub fn check_with_nra_dpll_within(
     for &assertion in assertions {
         skeleton.push(ctx.abstract_term(arena, assertion)?);
     }
-    let mut backend = SatBvBackend::new();
+    let mut solver = SkeletonSolver::new(skeleton_solve_policy(), arena, &skeleton, config);
     let mut blocking: Vec<TermId> = Vec::new();
     crate::lazy_smt_counters::record_entry(LazySmtLoop::Nra, ctx.atoms.len() as u64);
 
@@ -323,8 +573,6 @@ pub fn check_with_nra_dpll_within(
                 detail: "nra lazy SMT: wall-clock timeout reached".to_owned(),
             }));
         }
-        let mut sat_assertions = skeleton.clone();
-        sat_assertions.extend(blocking.iter().copied());
         // Bound this round's propositional solve by the budget REMAINING to the
         // shared deadline, so a round entered near the deadline cannot run a further
         // full `config.timeout` past it (the loop-head check then bails promptly).
@@ -336,13 +584,7 @@ pub fn check_with_nra_dpll_within(
             c
         };
         let skeleton_started = crate::lazy_smt_counters::enabled().then(Instant::now);
-        let skeleton_result = check_with_all_theories(
-            &mut backend,
-            arena,
-            &sat_assertions,
-            DEFAULT_INT_WIDTH,
-            &round_config,
-        );
+        let skeleton_result = solver.solve_round(arena, &skeleton, &blocking, &round_config);
         if let Some(started) = skeleton_started {
             let outcome = match &skeleton_result {
                 Ok(CheckResult::Sat(_)) => RoundOutcome::Sat,
@@ -1173,7 +1415,10 @@ impl Abstractor {
 
 #[cfg(test)]
 mod tests {
-    use super::{CarriedCertificate, conflict_core};
+    use super::{
+        CarriedCertificate, SkeletonSolvePolicy, SkeletonSolver, conflict_core,
+        skeleton_is_pure_boolean,
+    };
     use axeyum_ir::{Rational, Sort, SymbolId, TermArena, TermId};
 
     use crate::lazy_smt_counters::{LazySmtCountersGuard, last_lazy_smt_counters};
@@ -1367,5 +1612,162 @@ mod tests {
         assert_eq!(counters.cores_reused, 0);
         assert_eq!(counters.cores_full_assignment, 1);
         assert_eq!(core, assignment);
+    }
+    // --- the skeleton-solve policy (2026-09-09) --------------------------------
+
+    /// Three `Bool` propositions and a skeleton over them, the shape the lazy-SMT
+    /// loops build: two clauses with room for blocking clauses to accumulate.
+    fn bool_skeleton(arena: &mut TermArena) -> (Vec<TermId>, Vec<SymbolId>) {
+        let p0 = arena.declare("p0", Sort::Bool).unwrap();
+        let p1 = arena.declare("p1", Sort::Bool).unwrap();
+        let p2 = arena.declare("p2", Sort::Bool).unwrap();
+        let (a, b, c) = (arena.var(p0), arena.var(p1), arena.var(p2));
+        let ab = arena.or(a, b).unwrap();
+        let bc = arena.or(b, c).unwrap();
+        (vec![ab, bc], vec![p0, p1, p2])
+    }
+
+    /// The applicability test admits a pure propositional skeleton.
+    #[test]
+    fn a_pure_boolean_skeleton_is_admitted_to_the_warm_arm() {
+        let mut arena = TermArena::new();
+        let (skeleton, _) = bool_skeleton(&mut arena);
+        assert!(skeleton_is_pure_boolean(&arena, &skeleton));
+    }
+
+    /// ...and refuses one that still carries a real atom. A `Bool`-sorted atom
+    /// at the root, so a root-only sort test would have admitted it.
+    ///
+    /// This term is refused by EITHER guard on its own (the whitelist rejects
+    /// `Op::RealLt`; the per-node sort test rejects the real operand), so it is
+    /// a coverage case, not a discriminating one — `a_bool_sorted_uninterpreted
+    /// _predicate_is_refused_by_the_operator_whitelist` is what pins GUARD 2.
+    #[test]
+    fn a_skeleton_carrying_a_real_atom_is_refused_by_the_warm_arm() {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let atom = arena.real_lt(x, zero).unwrap();
+        assert_eq!(arena.sort_of(atom), Sort::Bool);
+        assert!(!skeleton_is_pure_boolean(&arena, &[atom]));
+    }
+
+    /// GUARD 2's case and only GUARD 2's: an uninterpreted predicate over a
+    /// `Bool` argument, `p(q)`. EVERY node of it is `Bool`-sorted — the
+    /// application, the argument, the result — so the per-node sort test passes
+    /// it unharmed and the operator whitelist is the only thing that refuses
+    /// it. Removing the whitelist kills this test and nothing else.
+    ///
+    /// It exists because the obvious fixture does not discriminate: `x < 0` is
+    /// refused by both guards, so deleting the whitelist left every test green.
+    /// A guard needs a term the OTHER guard admits, or the mutation says
+    /// nothing.
+    #[test]
+    fn a_bool_sorted_uninterpreted_predicate_is_refused_by_the_operator_whitelist() {
+        let mut arena = TermArena::new();
+        let q = arena.declare("q", Sort::Bool).unwrap();
+        let arg = arena.var(q);
+        let p = arena.declare_fun("p", &[Sort::Bool], Sort::Bool).unwrap();
+        let app = arena.apply(p, &[arg]).unwrap();
+        assert_eq!(arena.sort_of(app), Sort::Bool);
+        assert_eq!(arena.sort_of(arg), Sort::Bool);
+        assert!(!skeleton_is_pure_boolean(&arena, &[app]));
+    }
+
+    /// A `Bool`-sorted `Eq` between two REALS must still be refused. This is
+    /// GUARD 1's case and only GUARD 1's: `Op::Eq` is ON the whitelist, so the
+    /// per-node sort test is the only thing that refuses it. Removing that test
+    /// kills this test and nothing else.
+    ///
+    /// An earlier version of this function ALSO tested each `App`'s arguments,
+    /// and the two tests were redundant — each alone refused this term, so
+    /// deleting either one left every test green. Two guards that reject
+    /// through the same case cannot be told apart by a single-guard mutation,
+    /// which is exactly why the mutation was run before the shape was trusted.
+    #[test]
+    fn a_real_equality_is_refused_even_though_its_sort_is_bool() {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").unwrap();
+        let y = arena.real_var("y").unwrap();
+        let eq = arena.eq(x, y).unwrap();
+        assert_eq!(arena.sort_of(eq), Sort::Bool);
+        assert!(!skeleton_is_pure_boolean(&arena, &[eq]));
+    }
+
+    /// THE POINT OF THE POLICY: the two arms return the same verdict in every
+    /// round of the same blocking sequence. They decide the same clause set —
+    /// the warm arm holds the skeleton plus everything learned so far, which is
+    /// exactly what the cold arm rebuilds — so only the cost may differ.
+    ///
+    /// Driven over a real blocking sequence rather than one call: the warm arm's
+    /// whole risk is that an assertion carried across rounds diverges from the
+    /// formula the cold arm rebuilds, and a single-round comparison cannot see
+    /// that.
+    #[test]
+    fn the_warm_and_cold_arms_agree_round_by_round() {
+        let mut arena = TermArena::new();
+        let (skeleton, props) = bool_skeleton(&mut arena);
+        let config = crate::SolverConfig::new();
+
+        let mut warm = SkeletonSolver::new(SkeletonSolvePolicy::WARM, &arena, &skeleton, &config);
+        let mut cold = SkeletonSolver::new(SkeletonSolvePolicy::COLD, &arena, &skeleton, &config);
+        assert!(
+            matches!(warm, SkeletonSolver::Warm { .. }),
+            "a pure Boolean skeleton must reach the warm arm, else this test is vacuous"
+        );
+
+        // Block every model one at a time, exactly as the loops do, until the
+        // formula is exhausted. Both arms must agree at every step, INCLUDING
+        // the final `unsat`.
+        let mut blocking: Vec<TermId> = Vec::new();
+        let mut rounds = 0usize;
+        loop {
+            let w = warm
+                .solve_round(&mut arena, &skeleton, &blocking, &config)
+                .expect("warm round");
+            let c = cold
+                .solve_round(&mut arena, &skeleton, &blocking, &config)
+                .expect("cold round");
+            match (&w, &c) {
+                (CheckResult::Sat(_), CheckResult::Sat(_)) => {}
+                (CheckResult::Unsat, CheckResult::Unsat) => break,
+                _ => panic!("arms disagreed at round {rounds}: warm={w:?} cold={c:?}"),
+            }
+            let CheckResult::Sat(model) = &w else {
+                unreachable!()
+            };
+            // Block this model: the clause is the negation of the assignment.
+            let assignment = model.to_assignment();
+            let mut lits = Vec::new();
+            for &p in &props {
+                let truth = assignment.get(p).and_then(|v| v.as_bool()).unwrap_or(false);
+                let v = arena.var(p);
+                lits.push(if truth { arena.not(v).unwrap() } else { v });
+            }
+            let mut clause = lits[0];
+            for &l in &lits[1..] {
+                clause = arena.or(clause, l).unwrap();
+            }
+            blocking.push(clause);
+            rounds += 1;
+            assert!(rounds < 32, "the blocking sequence should exhaust quickly");
+        }
+        assert!(
+            rounds >= 2,
+            "the comparison must run several rounds to be worth anything, ran {rounds}"
+        );
+    }
+
+    /// A skeleton the warm arm cannot take falls back to the cold arm rather
+    /// than erroring — the fallback is what makes the policy safe to default on.
+    #[test]
+    fn an_out_of_scope_skeleton_falls_back_to_the_cold_arm() {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let atom = arena.real_lt(x, zero).unwrap();
+        let config = crate::SolverConfig::new();
+        let solver = SkeletonSolver::new(SkeletonSolvePolicy::WARM, &arena, &[atom], &config);
+        assert!(matches!(solver, SkeletonSolver::Cold(_)));
     }
 }
