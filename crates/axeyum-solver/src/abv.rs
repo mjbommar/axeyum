@@ -586,7 +586,7 @@ fn row_unknown(detail: String) -> CheckResult {
 
 /// Whether `deadline` (if set) has passed.
 fn past_deadline(deadline: Option<Instant>) -> bool {
-    deadline.is_some_and(|d| Instant::now() >= d)
+    crate::portfolio::stop_or_past_deadline(deadline)
 }
 
 fn config_with_remaining_deadline(

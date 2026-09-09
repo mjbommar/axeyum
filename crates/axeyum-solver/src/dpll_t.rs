@@ -337,7 +337,7 @@ pub fn check_with_lra_dpll(
 
 /// Whether `deadline` (if set) has passed.
 fn past_deadline(deadline: Option<Instant>) -> bool {
-    deadline.is_some_and(|d| Instant::now() >= d)
+    crate::portfolio::stop_or_past_deadline(deadline)
 }
 
 /// Re-bases a relative solver timeout onto the caller-owned absolute deadline

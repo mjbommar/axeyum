@@ -54,6 +54,12 @@ mod drat_resource;
 mod gf2;
 pub mod inprocess;
 mod interpolant;
+/// An embedder-installed "stop now" hook for the CDCL core's deadline poll.
+///
+/// The flag itself lives in `axeyum_ir::stop`, where the theory routes read it;
+/// this crate must not depend on the term IR for one `bool`, so the embedder
+/// installs a predicate instead. See the module docs.
+pub mod interrupt;
 mod lrat;
 pub mod pass_work;
 pub mod phase_policy;

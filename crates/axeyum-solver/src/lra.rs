@@ -52,7 +52,7 @@ use crate::model::Model;
 
 /// Whether `deadline` (if set) has passed.
 fn past_deadline(deadline: Option<Instant>) -> bool {
-    deadline.is_some_and(|d| Instant::now() >= d)
+    crate::portfolio::stop_or_past_deadline(deadline)
 }
 
 /// Non-negative gcd of two `i128`s (`gcd(0, x) = |x|`), for integer-tightening.

@@ -991,7 +991,7 @@ impl CdclT {
 
     /// Whether the deadline (if any) has elapsed.
     fn timed_out(&self) -> bool {
-        self.deadline.is_some_and(|d| Instant::now() >= d)
+        crate::portfolio::stop_or_past_deadline(self.deadline)
     }
 
     fn lit_sat(&self, lit: Lit) -> Option<bool> {

@@ -2665,6 +2665,37 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "The slice of the budget held back from `abv-online-cdclt` -- the FIRST route every array query tries -- for the array ladder under it. Before this constant existed that route took `config.timeout` in FULL, so on any file it could not decide, `array-fast-path` ran only inside the harness watchdog's grace period (24 s spent above plus a fresh 24 s budget below is 48 s of a 24 s promise). Chosen against BOTH bounds the sweep gives, the method `UF_ARITH_LADDER_RESERVE_SHARE` paid four files to establish: 18 s left to the online route is above its slowest decision in the sweep (5.723 s, of 24 decisions), and 6 s to the ladder is twice its slowest decision (2.898 s) and 35x its median (168 ms). A route needing 99% of the clock is not recoverable by any reserve; none in this population does, unlike QF_UFLIA's `hash_uns_05_20`. The env override selects the whole policy (`off` restores the unreserved budget), not just this divisor.",
     },
     ConfigEntry {
+        name: "DEFAULT_INT_LINEAR_PORTFOLIO_WORKERS",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "1",
+        unit: "concurrent workers for the integer-linear fused group",
+        protects: Protects::Completeness,
+        on_exceed: OnExceed::DeclineRoute,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: Some("AXEYUM_PORTFOLIO_WORKERS"),
+        justification: dated(
+            "docs/research/12-performance/fused-portfolio-int-linear-2026-09-09.md",
+            "2026-09-09",
+            None,
+            &[
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "INT_LINEAR_PORTFOLIO_ARMS",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "dispatch_int_blast_width_ladder",
+                ),
+            ],
+            &[
+                doc("docs/research/12-performance/fused-portfolio-int-linear-2026-09-09.md"),
+                doc("docs/research/12-performance/the-portfolio-answer-is-not-yet.md"),
+            ],
+        ),
+        note: "The DEFAULT is 1, and 1 is not a tuning choice -- it is the switch that keeps the shipped ladder sequential. At 1 `dispatch_int_linear_refuters` does not construct a group at all, so the pre-portfolio path is not approximated, it is taken. Raising it is a RESOURCE decision (each arm wants a whole core for most of a competition budget), which is why it is an operator env var and not something the dispatcher reads off the formula. Measured effect at 2 on the committed lists, 2026-09-09: see the doc.",
+    },
+    ConfigEntry {
         name: "DL_EXTENDED_FALLBACK_RESERVE",
         module: "crates/axeyum-solver/src/auto.rs",
         value: "Duration::from_secs(3)",
@@ -5906,6 +5937,30 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Companion to MAX_PARETO_POINTS: caps guided-improvement steps spent certifying one point as maximal (optimize.rs:551, 923, `for _ in 0..MAX_PARETO_PUSH`); also feeds `ParetoOutcome::Truncated`.",
     },
     ConfigEntry {
+        name: "ARM_STACK_BYTES",
+        module: "crates/axeyum-solver/src/portfolio.rs",
+        value: "256 * 1024 * 1024",
+        unit: "bytes of stack reserved per portfolio arm thread",
+        protects: Protects::Termination,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::None,
+        guarded_by: "crossing it aborts the process rather than declining, so the guard cannot be a signal and has to be a test: `portfolio::tests::an_arm_gets_a_deep_stack_not_the_platform_default` runs an arm that consumes 6 MiB of stack and requires it to return a verdict. Setting this constant back to the platform default (2 MiB) kills that test and nothing else, which is the mutation that was actually run",
+        env_override: None,
+        justification: dated(
+            "docs/research/12-performance/fused-portfolio-int-linear-2026-09-09.md",
+            "2026-09-09",
+            None,
+            &[sym(
+                "crates/axeyum-bench/examples/smtcomp_cli.rs",
+                "WORKER_STACK_BYTES",
+            )],
+            &[doc(
+                "docs/research/12-performance/fused-portfolio-int-linear-2026-09-09.md",
+            )],
+        ),
+        note: "Crossing it is a stack-overflow ABORT, not a decline -- which is why `on_exceed` is the least honest field here and the note has to carry it. Measured 2026-09-09: with `std::thread::scope`'s platform default (2 MiB) the first raced run of `QF_IDL/queens_bench/super_queen/super_queen61-1.smt2` (19,501 DAG nodes) exited 134 with `fatal runtime error: stack overflow`, where the sequential ladder returned `unknown`. `smtcomp_cli::WORKER_STACK_BYTES` is 512 MiB for the same reason on the main solve; this is half of that because a group reserves it PER ARM and a competition run is commonly under an address-space ulimit. Reservation, not residency: two arms at 256 MiB is the same address space as the one 512 MiB worker the harness already creates.",
+    },
+    ConfigEntry {
         name: "MAX_PREPROCESS_ROUNDS",
         module: "crates/axeyum-solver/src/preprocess.rs",
         value: "8",
@@ -7985,6 +8040,11 @@ pub static GOVERNED_FILES: &[&str] = &[
     "crates/axeyum-solver/src/memory_budget.rs",
     "crates/axeyum-solver/src/nia_linearize.rs",
     "crates/axeyum-solver/src/nra.rs",
+    // Joined the governed set on 2026-09-09 with the fused portfolio. It has
+    // exactly one constant and that constant is a stack RESERVATION whose
+    // failure mode is a process abort rather than a decline, which is the kind
+    // of value this registry exists to make someone write down.
+    "crates/axeyum-solver/src/portfolio.rs",
     "crates/axeyum-solver/src/simplex.rs",
 ];
 

@@ -2950,9 +2950,8 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 // reaches. Read it on an iteration cadence too, at the same
                 // interval, so a CDCL(T) search is deadline-bounded on every
                 // path and not only on the conflicting one.
-                if let Some(deadline) = deadline
-                    && self.theory_steps.is_multiple_of(DEADLINE_CHECK_INTERVAL)
-                    && Instant::now() >= deadline
+                if self.theory_steps.is_multiple_of(DEADLINE_CHECK_INTERVAL)
+                    && crate::interrupt::past_deadline(deadline)
                 {
                     self.report_progress();
                     return Ok(SearchOutcome::Interrupted);
@@ -3214,9 +3213,8 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         // Deterministic deadline cadence: only read the clock once every
         // `DEADLINE_CHECK_INTERVAL` conflicts. On expiry, abandon the
         // search with an *undecided* verdict (never sat/unsat by timeout).
-        if let Some(deadline) = deadline
-            && self.conflicts.is_multiple_of(DEADLINE_CHECK_INTERVAL)
-            && Instant::now() >= deadline
+        if self.conflicts.is_multiple_of(DEADLINE_CHECK_INTERVAL)
+            && crate::interrupt::past_deadline(deadline)
         {
             self.report_progress();
             return Ok(Some(SearchOutcome::Interrupted));

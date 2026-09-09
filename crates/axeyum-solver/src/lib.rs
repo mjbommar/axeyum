@@ -63,6 +63,7 @@ mod model;
 /// solver run's memory appeared was `dmesg` after the kernel had killed it —
 /// which is the one place a span log can never read.
 pub use memory_budget::peak_resident_bytes;
+mod portfolio;
 mod proof;
 mod sat_bv_backend;
 
@@ -1006,10 +1007,12 @@ macro_rules! full_exports {
         #[doc(hidden)]
         pub use auto::{BoundedIntBlastCertificate, certify_bounded_int_blast};
         pub use auto::{
+            IntLinearPortfolioWorkersGuard, check_auto, check_auto_explained, solve, unsat_core,
+        };
+        pub use auto::{
             UfArithOverboundPolicy, UfArithOverboundPolicyGuard, UfArithOverboundStats,
             UfArithOverboundStatsGuard, last_uf_arith_overbound_stats,
         };
-        pub use auto::{check_auto, check_auto_explained, solve, unsat_core};
         #[doc(hidden)]
         pub use auto::{
             check_with_quantifiers, prove_unsat_by_ematching, prove_unsat_by_instantiation,
@@ -1259,6 +1262,7 @@ macro_rules! full_exports {
         pub use pdr_lia::{PdrLiaOutcome, prove_safety_pdr_lia};
         #[doc(hidden)]
         pub use pdr_lra::{PdrLraOutcome, prove_safety_pdr_lra};
+        pub use portfolio::groups_run as portfolio_groups_run;
         pub use preprocess::check_with_preprocessing;
         #[doc(hidden)]
         pub use qfabv_alethe::{

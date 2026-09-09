@@ -105,7 +105,7 @@ const MAX_BOUND_PROPAGATIONS_PER_CALL: usize = 256;
 
 /// Whether the caller-owned absolute deadline has passed.
 fn past_deadline(deadline: Option<Instant>) -> bool {
-    deadline.is_some_and(|d| Instant::now() >= d)
+    crate::portfolio::stop_or_past_deadline(deadline)
 }
 
 /// A linear expression `Σ coeff_i · x_i + constant` over densely-indexed real

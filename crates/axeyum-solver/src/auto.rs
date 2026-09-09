@@ -2790,6 +2790,7 @@ fn dispatch_int_linear_refuters(
     assertions: &[TermId],
     config: &SolverConfig,
     features: &Features,
+    dispatch_deadline: Option<Instant>,
     rec: &mut Recorder<'_>,
 ) -> Result<Option<CheckResult>, SolverError> {
     // `bv2nat(b)` finite-range refutation (G2): abstract each distinct `bv2nat(b)`
@@ -2859,7 +2860,53 @@ fn dispatch_int_linear_refuters(
         });
         return Ok(None);
     }
-    match check_with_lia_dpll(arena, &lin, config) {
+    let mut group: Option<IntLinearGroup> = None;
+    // The integer-linear ladder's fused group (`crate::portfolio`). At one
+    // worker this branch is not taken at all: the call below is the same call
+    // this function has always made, on the caller's arena, with the caller's
+    // config. That is the strongest available form of the degeneracy property --
+    // the sequential path is not merely equivalent to a one-worker group, it
+    // does not construct one.
+    if int_linear_portfolio_workers() > 1 {
+        // The group's clock is what is LEFT of the dispatcher's entry deadline,
+        // not a fresh `config.timeout`. Measured 2026-09-09, and it is the
+        // difference between a portfolio and a budget overrun: on
+        // `QF_IDL/.../super_queen83-1.smt2` the difference-logic probe above
+        // spends 21 s of the 24 s budget, so an unclamped group would run its
+        // arms for a further 24 s and answer at 45 s -- past a wall the
+        // competition harness enforces by killing the process, which scores as
+        // a loss whatever the arms found.
+        //
+        // The sequential call below is deliberately NOT clamped: it takes
+        // `config` exactly as it always has. Clamping it would be a behaviour
+        // change to the shipped path, which is the one thing this wiring must
+        // not do -- and `lia-dpll` does not have the same exposure, because it
+        // is the route the ladder was going to run either way.
+        let group_config = config_with_remaining_deadline(config, dispatch_deadline);
+        group = Some(run_int_linear_group(
+            arena,
+            &lin,
+            &group_config,
+            congruence,
+            rec,
+        )?);
+        if let Some(group) = &mut group
+            && let Some(decided) = group.decided_by_a_later_arm.take()
+        {
+            return Ok(Some(decided));
+        }
+    }
+    // `lia-dpll` is the group's FIRST arm, so when the group ran it has already
+    // been run -- on the group's clock, on its own arena clone, and recorded.
+    // Calling it again here would run the ladder's main integer route TWICE per
+    // query and put two `lia-dpll` rows in the trail. Taking the group's result
+    // is not an optimisation; it is the difference between one dispatch and two.
+    let already_recorded = group.is_some();
+    let lia_result = match group {
+        Some(group) => group.first_arm,
+        None => check_with_lia_dpll(arena, &lin, config),
+    };
+    match lia_result {
         Ok(mut result) => {
             result = guard_zero_divisor_sat(result, congruence);
             if let CheckResult::Unknown(reason) = &result
@@ -2869,7 +2916,9 @@ fn dispatch_int_linear_refuters(
                 result =
                     CheckResult::Unknown(annotate_lia_budget_before_uf(arena, assertions, reason));
             }
-            with_recorder(rec, |t| t.record_result("lia-dpll", &result));
+            if !already_recorded {
+                with_recorder(rec, |t| t.record_result("lia-dpll", &result));
+            }
             match &result {
                 CheckResult::Unknown(reason)
                     if features.has_function && !is_budget_unknown_kind(reason.kind) =>
@@ -2880,13 +2929,185 @@ fn dispatch_int_linear_refuters(
             }
         }
         Err(SolverError::Unsupported(_)) => {
-            with_recorder(rec, |t| {
-                t.record_declined("lia-dpll", DeclineReason::Unsupported);
-            });
+            if !already_recorded {
+                with_recorder(rec, |t| {
+                    t.record_declined("lia-dpll", DeclineReason::Unsupported);
+                });
+            }
             Ok(None)
         }
         Err(other) => Err(other),
     }
+}
+
+/// The default worker count for the integer-linear fused group.
+///
+/// `1` is the sequential ladder: [`dispatch_int_linear_refuters`] does not even
+/// construct a group at this setting, so the single-threaded path is the
+/// pre-portfolio path unchanged rather than a re-derivation of it.
+const DEFAULT_INT_LINEAR_PORTFOLIO_WORKERS: usize = 1;
+
+/// How many workers the integer-linear fused group may use.
+///
+/// Read once per process from `AXEYUM_PORTFOLIO_WORKERS`. A resource decision
+/// belongs to the operator, not to the query: the arms of this group each want
+/// a whole core for most of a competition budget, and how many cores exist is
+/// not something the dispatcher can read off the formula.
+fn int_linear_portfolio_workers() -> usize {
+    static RESOLVED: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+    if let Some(workers) = INT_LINEAR_PORTFOLIO_WORKERS_OVERRIDE.with(std::cell::Cell::get) {
+        return workers;
+    }
+    *RESOLVED.get_or_init(|| {
+        std::env::var("AXEYUM_PORTFOLIO_WORKERS")
+            .ok()
+            .and_then(|value| value.trim().parse::<usize>().ok())
+            .unwrap_or(DEFAULT_INT_LINEAR_PORTFOLIO_WORKERS)
+    })
+}
+
+std::thread_local! {
+    /// Per-thread override of [`int_linear_portfolio_workers`].
+    ///
+    /// The env-var reading is a process-wide `OnceLock`, which makes an
+    /// in-process A/B between one worker and two impossible -- and that A/B is
+    /// the only way to test a scheduling change against the schedule it
+    /// replaced. Thread-local rather than global for the same reason lane
+    /// identity is: a test binary runs its cases in parallel, and a global
+    /// would let one case decide another case's policy.
+    static INT_LINEAR_PORTFOLIO_WORKERS_OVERRIDE: std::cell::Cell<Option<usize>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Sets the integer-linear group's worker count on this thread until dropped.
+///
+/// Restores the previous value rather than clearing it, so nesting is safe.
+#[derive(Debug)]
+pub struct IntLinearPortfolioWorkersGuard(Option<usize>);
+
+impl IntLinearPortfolioWorkersGuard {
+    /// Overrides the worker count on this thread.
+    #[must_use]
+    pub fn set(workers: usize) -> Self {
+        Self(INT_LINEAR_PORTFOLIO_WORKERS_OVERRIDE.with(|cell| cell.replace(Some(workers))))
+    }
+}
+
+impl Drop for IntLinearPortfolioWorkersGuard {
+    fn drop(&mut self) {
+        INT_LINEAR_PORTFOLIO_WORKERS_OVERRIDE.with(|cell| cell.set(self.0));
+    }
+}
+
+/// The arms of the integer-linear fused group, in priority order.
+///
+/// **Why these two.** On the committed loss population, four files are decided
+/// alone at the competition budget by the bounded integer blast -- 8.5 s to
+/// 17.3 s -- while the ladder spends the same clock inside `lia-dpll` (or
+/// arrives with 2.6 s left, having spent 21 s in `dl-online`). No reservation
+/// collects them: on `QF_LIA/.../182-incremental_scheduling-17280-0` the whole
+/// 24 s is *inside* `lia-dpll`, so any slice large enough for the blast is a
+/// slice taken from the route that decides the rest of the division. Two arms,
+/// two cores, both get the whole budget.
+///
+/// `lia-dpll` is first because it is the ladder's own next route and decides
+/// the overwhelming majority of this fragment; the declared order is also the
+/// tie-break, so the group's verdict on a query both arms decide is
+/// `lia-dpll`'s -- the verdict the sequential ladder would have returned.
+///
+/// The blast arm is the tree's existing width ladder, not a fresh call to
+/// `check_with_all_theories`: with integers present the combined path reports
+/// `Unknown` for an in-range `unsat`, so only the width ladder's
+/// replay-checked `Sat` and integer-free `Unsat` are sound here, and a second
+/// hand-rolled copy of that reasoning is how a wrong `unsat` gets shipped.
+const INT_LINEAR_PORTFOLIO_ARMS: [crate::portfolio::Arm; 2] = [
+    crate::portfolio::Arm {
+        route: "lia-dpll",
+        weight: 3,
+        run: check_with_lia_dpll,
+    },
+    crate::portfolio::Arm {
+        route: "int-blast-ladder",
+        weight: 1,
+        run: dispatch_int_blast_width_ladder,
+    },
+];
+
+/// What the integer-linear fused group produced.
+///
+/// Split into the first arm and the rest because the caller's handling of
+/// `lia-dpll`'s own result is established behaviour -- the `has_function`
+/// fall-through, the budget annotation, the zero-divisor guard -- and belongs to
+/// that route, not to the group.
+struct IntLinearGroup {
+    /// `lia-dpll`'s result, for the caller's established handling.
+    first_arm: Result<CheckResult, SolverError>,
+    /// A verdict from an arm AFTER `lia-dpll`, when one decided.
+    decided_by_a_later_arm: Option<CheckResult>,
+}
+
+/// Runs the integer-linear fused group over `lin` (the div/mod-eliminated
+/// assertions -- **one query**, which is what makes the group's cross-arm
+/// disagreement gate meaningful).
+///
+/// Records every arm it ran, in **declared** order: the trail's contents depend
+/// on the race but its shape must not.
+///
+/// # Errors
+///
+/// Propagates a cross-arm disagreement from
+/// [`crate::portfolio::FusedGroup::run`] as a [`SolverError`]: two routes
+/// contradicting each other on one query is a soundness defect and must not be
+/// resolved into a verdict.
+fn run_int_linear_group(
+    arena: &TermArena,
+    lin: &[TermId],
+    config: &SolverConfig,
+    congruence: axeyum_rewrite::ZeroDivisorCongruence,
+    rec: &mut Recorder<'_>,
+) -> Result<IntLinearGroup, SolverError> {
+    let group = crate::portfolio::FusedGroup::new(
+        &INT_LINEAR_PORTFOLIO_ARMS,
+        int_linear_portfolio_workers(),
+    );
+    let outcome = group.run(arena, lin, config)?;
+    let winner = outcome.winner;
+    let mut first_arm = Ok(CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Other,
+        detail: String::from("portfolio first arm produced no outcome"),
+    }));
+    let mut decided_by_a_later_arm = None;
+    for (index, arm) in outcome.arms.into_iter().enumerate() {
+        let route = arm.route;
+        // `labelled` is what puts "stopped because another arm decided" into a
+        // cancelled arm's `unknown`. Without it a reader of the trail sees a
+        // plain budget `unknown` and concludes the route ran out of time, which
+        // is the opposite of what happened.
+        match arm.labelled() {
+            Ok(result) => {
+                let result = guard_zero_divisor_sat(result, congruence);
+                with_recorder(rec, |t| t.record_result(route, &result));
+                if index == 0 {
+                    first_arm = Ok(result);
+                } else if winner == Some(index) {
+                    decided_by_a_later_arm = Some(result);
+                }
+            }
+            Err(SolverError::Unsupported(message)) => {
+                with_recorder(rec, |t| {
+                    t.record_declined(route, DeclineReason::Unsupported);
+                });
+                if index == 0 {
+                    first_arm = Err(SolverError::Unsupported(message));
+                }
+            }
+            Err(other) => return Err(other),
+        }
+    }
+    Ok(IntLinearGroup {
+        first_arm,
+        decided_by_a_later_arm,
+    })
 }
 
 fn should_route_uf_arith_before_lia_dpll(
@@ -4561,9 +4782,14 @@ fn check_auto_dispatch(
         // non-`unsat` outcome is discarded — the original query (with `bv2nat`
         // intact, which the bit-blaster handles natively) decides sat below. This
         // is strictly additive: it only ever turns a prior `unknown` into `unsat`.
-        if let Some(result) =
-            dispatch_int_linear_refuters(arena, assertions, config, &features, rec)?
-        {
+        if let Some(result) = dispatch_int_linear_refuters(
+            arena,
+            assertions,
+            config,
+            &features,
+            dispatch_deadline,
+            rec,
+        )? {
             return Ok(result);
         }
     }
@@ -5347,7 +5573,7 @@ fn dispatch_pure_qf_abv(
 
 /// Whether `deadline` (if set) has passed.
 fn past_deadline(deadline: Option<Instant>) -> bool {
-    deadline.is_some_and(|d| Instant::now() >= d)
+    crate::portfolio::stop_or_past_deadline(deadline)
 }
 
 // ===========================================================================
@@ -10161,6 +10387,7 @@ mod tests {
             &assertions,
             &SolverConfig::default(),
             &features,
+            None,
             &mut rec,
         )
         .expect("dispatch");
@@ -10271,14 +10498,20 @@ mod tests {
             timeout: Some(Duration::from_secs(24)),
             ..SolverConfig::default()
         };
-        let result =
-            dispatch_int_linear_refuters(&mut arena, &assertions, &config, &features, &mut rec)
-                .expect("dispatch")
-                .expect(
-                    "lia-dpll decides Unknown (an admission decline is still a decision \
+        let result = dispatch_int_linear_refuters(
+            &mut arena,
+            &assertions,
+            &config,
+            &features,
+            None,
+            &mut rec,
+        )
+        .expect("dispatch")
+        .expect(
+            "lia-dpll decides Unknown (an admission decline is still a decision \
                          `dispatch_int_linear_refuters` returns as `Some`, not a fallthrough \
                          `None` — only an `Unsupported` error falls through)",
-                );
+        );
         let CheckResult::Unknown(reason) = result else {
             panic!("expected an Unknown admission decline, got {result:?}");
         };
