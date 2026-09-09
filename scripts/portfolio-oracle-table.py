@@ -109,7 +109,7 @@ def main() -> int:
               f"{c['ladder_loses']:>13} {c['PRIZE-CANDIDATE']:>6} {c['no_solo_route']:>9}")
         total.update(c)
     print(f"{'TOTAL':<10} {total['solo_files']:>10} {total['ladder_wins']:>12} "
-          f"{total['ladder_loses']:>13} {total['PRIZE']:>6} {total['no_solo_route']:>9}")
+          f"{total['ladder_loses']:>13} {total['PRIZE-CANDIDATE']:>6} {total['no_solo_route']:>9}")
     if total["not_probed"]:
         print(f"\n{total['not_probed']} file(s) had no probe row and are counted as "
               f"ladder-loses; that is an assumption, not a measurement.")
