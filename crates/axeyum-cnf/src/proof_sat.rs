@@ -398,7 +398,8 @@ pub struct SearchCounters {
     ///
     /// A scalar count is the summary; the *schedule* — which mode, at which
     /// conflict and tick count — is [`crate::phase_policy::ModeSchedule`], read
-    /// from [`solve_with_drat_proof_mode_traced`]. Both exist because this
+    /// from `solve_with_drat_proof_mode_traced` (not yet re-exported from
+    /// `lib.rs`, so the link cannot be resolved here). Both exist because this
     /// counter alone cannot distinguish a schedule that alternates on the
     /// intended budget from one that alternates on the wrong one.
     pub mode_switches: u64,
