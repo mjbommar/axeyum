@@ -222,12 +222,12 @@ because those routes call `CdclT` directly and `CdclT` emits no proof.
 
 ### 5. Public API with no caller
 
-Roughly 5,200 lines of public surface have no production caller. Each was found
+Roughly 4,200 lines of public surface have no production caller (the figure was 5,200 before `bitblast_miter` was found to be called from `axeyum-bench`). Each was found
 with an explicit search and a positive control:
 
 | Module | LOC | External references |
 |---|---|---|
-| `bitblast_miter.rs` | 1,030 | 2 `pub use` re-exports in `lib.rs` only — yet `TrustId::BitBlast` is marked certified and the ledger prose names the miter |
+| `bitblast_miter.rs` | 1,030 | No caller inside `axeyum-solver`, but **it is called from outside**: `axeyum-bench/src/main.rs:5782` and `certificate_process.rs:170` use `certify_qf_bv_unsat_end_to_end_within`. Not dead — off the solve path, on the bench path. (Corrected 2026-09-09; see [10-verification-log.md](10-verification-log.md).) |
 | `pdr_lia.rs` + `imc_lia.rs` | 1,771 | 4 `pub use` lines in `lib.rs` only |
 | `strings.rs` (`BoundedString`) | 1,305 | test-only (see §1) |
 | `prove_quant_unsat_alethe` | ~1,100 | no caller outside its own tests |

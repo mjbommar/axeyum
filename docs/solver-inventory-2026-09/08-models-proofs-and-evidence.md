@@ -80,7 +80,9 @@ this lane it is a real finding rather than boilerplate.
 - **Reachability tally for this area** (within the `full` baseline): 8 of 8
   interpolators WIRED into `solver.rs:305 dispatch_interpolant`, but **all 7
   `*_certified` variants have no caller in `src/`**; the entire
-  `bitblast_miter.rs` (1,030 lines) has **no production caller**;
+  `bitblast_miter.rs` (1,030 lines) has no caller inside `axeyum-solver`, but IS
+  called from outside the crate (`axeyum-bench/src/main.rs:5782`,
+  `certificate_process.rs:170`) — **corrected 2026-09-09**, see below;
   `faithfulness.rs` (132 lines) is **test-only**;
   `prove_quant_unsat_alethe` (`quant_alethe.rs`, 1,100 lines) has **no caller
   outside its own test module**; the public `bitblast_step` re-export
@@ -481,6 +483,17 @@ DRAT proofs from text alone.
 crates/axeyum-solver/src` returns only `lib.rs:352,353,1027,1028`
 (re-exports), the functions' own definitions and self-delegation, and the
 in-file `#[cfg(test)]` module (`:785,803,823,839,862`). The one external
+**Correction (2026-09-09, coordinator).** The claim above that the miter has no
+production caller is WRONG, and the error was a search that looked for the
+module name. Its exported entry point is
+`certify_qf_bv_unsat_end_to_end_within`, whose name does not contain "miter",
+and it is called from `axeyum-bench/src/main.rs:5782`,
+`axeyum-bench/src/certificate_process.rs:170` (both in the shipped bench binary,
+not tests) and `axeyum-verify/tests/tock_log2_external.rs:211`. So the module is
+reachable — from the benchmark harness, not from the solve path. The narrower
+observation that survives is that nothing in `axeyum-solver` itself calls it, so
+a `Solver` user gets no miter check unless they go through the bench crate.
+
 caller is `tests/bitblast_miter.rs:32`. This matters because the trust ledger
 lists `TrustId::BitBlast` as **certified** (`trust.rs:324,331`) and the ledger
 doc names "the bit-blast miter" as one of the certifying mechanisms

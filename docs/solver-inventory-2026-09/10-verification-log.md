@@ -30,6 +30,8 @@ evidence.
 | L8 | Models, proofs, evidence | 4 | 4 pass |
 | L9 | Harnesses, gates | 3 | 3 pass, corrected the coordinator |
 
+A later follow-up measurement (below) corrected L8 on `bitblast_miter`.
+
 ## The four checks that changed something
 
 **L9 corrected the coordinator's own count.** The README first said
@@ -80,6 +82,58 @@ The coordinator added one fact to L8's picture: because that gate classifies the
 free-prose `evidence` field of `capabilities.rs` by regex, the repository's
 "external-artifact-checker" tier is populated by pattern-matching sentences
 about Carcara rather than by Carcara accepting an artifact.
+
+## Follow-up measurement: "is everything wired?" (2026-09-09)
+
+Asked directly whether the implemented surface is integrated, the coordinator
+ran a uniform module-level measurement rather than summing the lanes' tallies,
+which use different units (files, functions, routes) and share no denominator.
+
+Method: take every `mod X;` declared in `crates/axeyum-solver/src/lib.rs` (176,
+counting the default set and the 165 inside `full_modules!()`). For each, search
+every *other* file in the crate for either the module path (`X::`,
+`use crate::X`) **or** any item name `lib.rs` re-exports from it. The second half
+matters: `evidence.rs:4376` calls `crate::prove_qf_abv_unsat_alethe(...)`, the
+crate-root re-exported name, so a module-path search alone reports it absent.
+
+| Result | Count |
+|---|---|
+| Modules declared in `lib.rs` | 176 |
+| Referenced by at least one other module in the crate | 161 |
+| Referenced by no other module | 15 |
+
+Resolving those 15 against consumers outside the crate:
+
+| Module(s) | Status |
+|---|---|
+| `solver` | The `Solver` façade itself — it *is* the public API. Referenced by 44 solver test files and 8 other crates. |
+| `strategy` | Reachable, but only from the Python bindings (`axeyum-py/src/solver/core.rs:201` calls `axeyum_solver::solve_with_strategy`). |
+| `bitblast_miter` | Reachable from `axeyum-bench` (see the correction below). |
+| `aufbv` | Reachable only from a bench example (`axeyum-bench/examples/route_solo.rs`). |
+| `abduct`, `enums`, `faithfulness`, `horn`, `hypothesis_min`, `imc_lia`, `lex_reconstruct`, `pb`, `pdr_lia`, `records`, `toy_bv_vm` | Reachable only from `axeyum-solver`'s own test suite. Apparent hits in `axeyum-cas` and `axeyum-lean-kernel` are name collisions — neither crate depends on `axeyum-solver`. |
+
+So about 11 of 176 modules are test-only at module granularity. That figure is a
+floor, not the whole answer: it cannot see dead *functions* inside live modules,
+and the lanes found several (all 7 `*_certified` interpolant variants, four
+`theory_combination` functions, `prove_quant_unsat_alethe`).
+
+## Fifth correction: `bitblast_miter` is not dead
+
+L8 reported that `bitblast_miter.rs` (1,030 lines) has "no production caller."
+That is wrong, and the coordinator's own first two searches repeated the error
+before catching it. The module's exported entry point is
+`certify_qf_bv_unsat_end_to_end_within` — a name that does not contain "miter" —
+and it is called from `axeyum-bench/src/main.rs:5782` and
+`axeyum-bench/src/certificate_process.rs:170`, both in the shipped bench binary,
+plus `axeyum-verify/tests/tock_log2_external.rs:211`.
+
+Corrected in `08-models-proofs-and-evidence.md` and in the README's synthesis.
+The narrower true statement: nothing inside `axeyum-solver` calls the miter, so
+a `Solver` user gets no miter check unless they go through `axeyum-bench`.
+
+This is the fifth instance in this session of the same failure — **searching for
+a module or concept by name instead of by the identifier a caller would actually
+write**. Four of the five were the coordinator's.
 
 ## What was not verified
 
