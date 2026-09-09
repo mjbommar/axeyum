@@ -56,6 +56,7 @@
 //! anywhere finer than a round.
 
 use std::cell::{Cell, RefCell};
+use std::fmt::Write as _;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
@@ -282,7 +283,7 @@ impl RoundHistogram {
             if !out.is_empty() {
                 out.push(',');
             }
-            out.push_str(&format!("{i}:{count}"));
+            let _ = write!(out, "{i}:{count}");
         }
         out
     }
@@ -515,11 +516,12 @@ impl LazySmtCounters {
             } else {
                 hist.compact()
             };
-            out.push_str(&format!(
+            let _ = write!(
+                out,
                 "{name}_hist={compact} {name}_max_ms={} {name}_max_round={}",
                 hist.max().as_millis(),
                 hist.max_round(),
-            ));
+            );
         }
         out
     }
@@ -659,10 +661,10 @@ impl LazySmtCountersMirror {
     /// Stores `counters`, overwriting the previous flush. A poisoned lock is
     /// recovered rather than propagated: telemetry must never turn one panic
     /// into two.
-    fn store(&self, counters: LazySmtCounters) {
+    fn store(&self, counters: &LazySmtCounters) {
         let mut slot = self.slot.lock().unwrap_or_else(PoisonError::into_inner);
         let flushes = slot.map_or(0, |(_, n)| n).saturating_add(1);
-        *slot = Some((counters, flushes));
+        *slot = Some((*counters, flushes));
     }
 
     /// The most recent flush and the flush count, readable from any thread at
@@ -739,7 +741,7 @@ impl LazySmtCountersGuard {
             // route then SAYS so, instead of being silent in a way that a reader
             // has to tell apart from a broken instrument. Safe because
             // `record_entry` and every round flush over it immediately.
-            mirror.store(COUNTERS.with(Cell::get));
+            mirror.store(&COUNTERS.with(Cell::get));
         }
         MIRROR.with(|c| *c.borrow_mut() = mirror);
         LazySmtCountersGuard(previous)
@@ -965,7 +967,7 @@ fn flush() {
         if let Ok(slot) = c.try_borrow()
             && let Some(mirror) = slot.as_ref()
         {
-            mirror.store(counters);
+            mirror.store(&counters);
         }
     });
 }

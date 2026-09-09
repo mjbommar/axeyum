@@ -998,115 +998,139 @@ fn push_lazy_loop(
     }
     let mut emitted_stages = false;
     for which in LazySmtLoop::ALL {
-        let rounds = s.rounds_of(which);
-        let entries = s.entries_of(which);
-        let hist = s.hist(which);
-        if entries > 0 {
-            let route = format!("lazy-smt:{}", which.label());
-            let (parent, basis) = attach_to("lazy-smt", ladder_ids);
-            let id = *next_id;
-            *next_id += 1;
-            let opened = span_start(spans, parent);
-            // The loop's OWN cost, from its own histogram, not the query-wide
-            // stage totals: with three loops behind one counter set those
-            // totals are a sum over all of them and would attribute another
-            // loop's seconds to this span.
-            let accounted = nanos(hist.total());
-            spans.push(Span {
-                id,
-                parent: Some(parent),
-                kind: SpanKind::RefinementLoop,
-                route: Some(route),
-                phase: "refinement",
-                opened_ns: opened,
-                closed_ns: Some(opened.saturating_add(accounted)),
-                edge: Some(EdgeType::RefinementRound),
-                outcome: Outcome::Ran,
-                verdict: None,
-                reason: None,
-                detail: Some(format!(
-                    "loop={} entries={entries} rounds={rounds} filed_rounds={} \
-                     max_round_ms={} max_round_index={} pending_round_ms={}",
-                    which.label(),
-                    hist.rounds(),
-                    hist.max().as_millis(),
-                    hist.max_round(),
-                    if s.pending_loop == which.index() {
-                        s.pending_round.as_millis()
-                    } else {
-                        0
-                    },
-                )),
-                bound: None,
-                wall_ns: Some(accounted),
-                work_unit: Some("rounds"),
-                work: Some(rounds),
-                loop_count: Some(rounds),
-                loop_hist: (!hist.is_empty()).then(|| hist.buckets().to_vec()),
-                loop_hist_available: !hist.is_empty(),
-                complete: lazy.sampled == Sampled::Complete,
-                time_basis: "duration-only",
-                parent_basis: Some(basis),
-                note: Some(
-                    "loop_hist is log2 MILLISECOND buckets: index 0 is <1 ms, index k is \
-                     [2^(k-1), 2^k) ms, the last index is the tail. A round still in \
-                     flight is NOT in it -- see pending_round_ms in the detail. The three \
-                     stage children below are query-wide totals across ALL lazy loops, \
-                     not this loop's alone"
-                        .to_owned(),
-                ),
-            });
-            // The three-way split, so "the propositional solve grew" is
-            // distinguishable from "the second LP per round is the cost" — the
-            // two have opposite fixes and both scale with the round count.
-            //
-            // Emitted ONCE, under the first loop span, because the underlying
-            // fields are query-wide sums across every lazy loop. Hanging the
-            // same seconds under each of three parents would make the tree sum
-            // to three times the query.
-            if emitted_stages {
-                continue;
-            }
-            emitted_stages = true;
-            for spec in &[
-                StageSpec {
-                    phase: "skeleton_solve",
-                    ns: nanos(s.skeleton_solve),
-                    work_unit: Some("skeleton_solves"),
-                    work: Some(
-                        s.skeleton_sat
-                            .saturating_add(s.skeleton_unsat)
-                            .saturating_add(s.skeleton_unknown),
-                    ),
-                },
-                StageSpec {
-                    phase: "theory_check",
-                    ns: nanos(s.theory_check),
-                    work_unit: Some("cubes"),
-                    work: Some(
-                        s.theory_sat
-                            .saturating_add(s.theory_unsat)
-                            .saturating_add(s.theory_unknown),
-                    ),
-                },
-                StageSpec {
-                    phase: "core_extraction",
-                    ns: nanos(s.core_extraction),
-                    work_unit: Some("blocking_clauses"),
-                    work: Some(s.blocking_clauses),
-                },
-            ] {
-                push_stage(
-                    spans,
-                    next_id,
-                    id,
-                    "loop-parent",
-                    Some("lazy-smt"),
-                    spec,
-                    lazy.sampled,
-                );
-            }
+        if s.entries_of(which) == 0 {
+            continue;
         }
+        let (parent, basis) = attach_to("lazy-smt", ladder_ids);
+        let id = *next_id;
+        *next_id += 1;
+        let opened = span_start(spans, parent);
+        spans.push(lazy_loop_span(id, parent, basis, opened, lazy, which));
+        // The three-way split, so "the propositional solve grew" is
+        // distinguishable from "the second LP per round is the cost" — the two
+        // have opposite fixes and both scale with the round count.
+        //
+        // Emitted ONCE, under the first loop span, because the underlying
+        // fields are query-wide sums across every lazy loop. Hanging the same
+        // seconds under each of three parents would make the tree sum to three
+        // times the query.
+        if emitted_stages {
+            continue;
+        }
+        emitted_stages = true;
+        push_lazy_stage_children(spans, next_id, id, s, lazy.sampled);
+    }
+}
+
+/// One loop's span. Split out of [`push_lazy_loop`] so the emitter stays under
+/// the line cap now that there are three loops rather than one.
+fn lazy_loop_span(
+    id: u64,
+    parent: u64,
+    basis: &'static str,
+    opened: u64,
+    lazy: &Reading<LazySmtCounters>,
+    which: LazySmtLoop,
+) -> Span {
+    let s = &lazy.value;
+    let rounds = s.rounds_of(which);
+    let entries = s.entries_of(which);
+    let hist = s.hist(which);
+    // The loop's OWN cost, from its own histogram, not the query-wide stage
+    // totals: with three loops behind one counter set those totals are a sum
+    // over all of them and would attribute another loop's seconds to this span.
+    let accounted = nanos(hist.total());
+    let pending_ms = if s.pending_loop == which.index() {
+        s.pending_round.as_millis()
+    } else {
+        0
+    };
+    Span {
+        id,
+        parent: Some(parent),
+        kind: SpanKind::RefinementLoop,
+        route: Some(format!("lazy-smt:{}", which.label())),
+        phase: "refinement",
+        opened_ns: opened,
+        closed_ns: Some(opened.saturating_add(accounted)),
+        edge: Some(EdgeType::RefinementRound),
+        outcome: Outcome::Ran,
+        verdict: None,
+        reason: None,
+        detail: Some(format!(
+            "loop={} entries={entries} rounds={rounds} filed_rounds={} \
+             max_round_ms={} max_round_index={} pending_round_ms={pending_ms}",
+            which.label(),
+            hist.rounds(),
+            hist.max().as_millis(),
+            hist.max_round(),
+        )),
+        bound: None,
+        wall_ns: Some(accounted),
+        work_unit: Some("rounds"),
+        work: Some(rounds),
+        loop_count: Some(rounds),
+        loop_hist: (!hist.is_empty()).then(|| hist.buckets().to_vec()),
+        loop_hist_available: !hist.is_empty(),
+        complete: lazy.sampled == Sampled::Complete,
+        time_basis: "duration-only",
+        parent_basis: Some(basis),
+        note: Some(
+            "loop_hist is log2 MILLISECOND buckets: index 0 is <1 ms, index k is \
+             [2^(k-1), 2^k) ms, the last index is the tail. A round still in flight \
+             is NOT in it -- see pending_round_ms in the detail. The three stage \
+             children are query-wide totals across ALL lazy loops, not this loop's \
+             alone, and hang under the FIRST loop span only"
+                .to_owned(),
+        ),
+    }
+}
+
+/// The three query-wide stage children, emitted once under `parent`.
+fn push_lazy_stage_children(
+    spans: &mut Vec<Span>,
+    next_id: &mut u64,
+    parent: u64,
+    s: &LazySmtCounters,
+    sampled: Sampled,
+) {
+    for spec in &[
+        StageSpec {
+            phase: "skeleton_solve",
+            ns: nanos(s.skeleton_solve),
+            work_unit: Some("skeleton_solves"),
+            work: Some(
+                s.skeleton_sat
+                    .saturating_add(s.skeleton_unsat)
+                    .saturating_add(s.skeleton_unknown),
+            ),
+        },
+        StageSpec {
+            phase: "theory_check",
+            ns: nanos(s.theory_check),
+            work_unit: Some("cubes"),
+            work: Some(
+                s.theory_sat
+                    .saturating_add(s.theory_unsat)
+                    .saturating_add(s.theory_unknown),
+            ),
+        },
+        StageSpec {
+            phase: "core_extraction",
+            ns: nanos(s.core_extraction),
+            work_unit: Some("blocking_clauses"),
+            work: Some(s.blocking_clauses),
+        },
+    ] {
+        push_stage(
+            spans,
+            next_id,
+            parent,
+            "loop-parent",
+            Some("lazy-smt"),
+            spec,
+            sampled,
+        );
     }
 }
 

@@ -1196,6 +1196,153 @@ fn add_entailed_bound_lemmas(
 /// envelopes (a third). See [`NIA_SLICE_MS`] for why the default slice is tiny.
 const NIA_MCCORMICK_BUDGET_SHARE: u32 = 3;
 
+/// How much wall clock the incremental-linearization loop gets, and how it is
+/// divided between the rounds inside it.
+///
+/// # Why this is an object and not two constants
+///
+/// The 2026-09-08 span-log sweep asked whether the `QF_NIA` division's "one
+/// round" files were running one enormous round or failing to iterate, and the
+/// answer needed an A/B on two independent knobs. Two constants cannot be A/B'd
+/// without a rebuild; one named policy with an [`NiaRefinementPolicy::OFF`] arm
+/// can, and `AXEYUM_NIA_REFINEMENT` selects it in one binary.
+///
+/// **`OFF` reproduces the committed behaviour exactly**, so a difference
+/// measured against it is caused by the arm and not by the plumbing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NiaRefinementPolicy {
+    /// Denominator of the caller's REMAINING budget the loop may use, on a
+    /// query whose entailed bounds produced `McCormick` envelopes or exact
+    /// splits. `3` is the committed value; `1` gives the loop everything left.
+    ///
+    /// Never raises the slice above the caller's own timeout — this divides an
+    /// existing budget and never invents one.
+    pub slice_denominator: u32,
+    /// Denominator of the loop's REMAINING slice that any single round may use.
+    ///
+    /// `1` (the committed value) hands round 0 the entire slice, so a round that
+    /// cannot decide ends the loop having learned nothing: measured 2026-09-08
+    /// on `bench-results/parity-lists/QF_NIA.txt`, the loop's first round is
+    /// also its last on a large share of the division. A denominator above 1
+    /// bounds one round so a later round can still run — which only helps when
+    /// the round that timed out would have produced a spurious model to cut off,
+    /// and the arm exists so that "would it" is measured rather than argued.
+    pub round_denominator: u32,
+    /// Floor on any single round, so a large `round_denominator` on a small
+    /// slice cannot hand a round a budget too short to reach the solver at all.
+    pub round_floor_ms: u64,
+}
+
+impl NiaRefinementPolicy {
+    /// The committed behaviour: a third of the remaining budget for the loop,
+    /// all of it available to any one round.
+    ///
+    /// This is the arm every measurement is compared against, so it must stay
+    /// byte-for-byte what the tree did before the policy existed.
+    pub const OFF: Self = Self {
+        slice_denominator: NIA_MCCORMICK_BUDGET_SHARE,
+        round_denominator: 1,
+        round_floor_ms: 0,
+    };
+
+    /// Whether this policy is the committed one, so a caller can assert an
+    /// experiment actually selected an arm rather than silently running `OFF`.
+    #[must_use]
+    pub const fn is_off(self) -> bool {
+        self.slice_denominator == Self::OFF.slice_denominator
+            && self.round_denominator == Self::OFF.round_denominator
+            && self.round_floor_ms == Self::OFF.round_floor_ms
+    }
+
+    /// The loop's slice out of `remaining`, given whether the entailed-bound
+    /// pass emitted anything.
+    ///
+    /// Without envelopes the slice is [`NIA_SLICE_MS`] regardless of policy:
+    /// that arm is the pre-ladder hang guard, not a search budget, and moving
+    /// it is a different decision from moving this one.
+    fn slice(
+        self,
+        remaining: Option<std::time::Duration>,
+        has_envelopes: bool,
+    ) -> std::time::Duration {
+        let base = std::time::Duration::from_millis(NIA_SLICE_MS);
+        let slice = match (has_envelopes, remaining) {
+            (true, Some(total)) => base.max(total / self.slice_denominator.max(1)),
+            _ => base,
+        };
+        remaining.map_or(slice, |t| t.min(slice))
+    }
+
+    /// One round's budget out of the slice still left.
+    fn round(self, slice_left: std::time::Duration) -> std::time::Duration {
+        if self.round_denominator <= 1 {
+            return slice_left;
+        }
+        let share = slice_left / self.round_denominator;
+        let floor = std::time::Duration::from_millis(self.round_floor_ms);
+        share.max(floor).min(slice_left)
+    }
+}
+
+/// Everything [`solve_with_refinement`] needs that is not a term: the policy in
+/// force and whether this query has entailed-bound structure at all.
+///
+/// One struct rather than two parameters because the loop already takes four
+/// term-shaped arguments and a config, and the two travel together at the only
+/// call site — they are decided by the same pass over the products.
+#[derive(Debug, Clone, Copy)]
+struct RefinementSetup {
+    /// See [`NiaRefinementPolicy`].
+    policy: NiaRefinementPolicy,
+    /// Whether the entailed-bound pass emitted anything. Without it a spurious
+    /// model ends the loop instead of being cut off, because there is no
+    /// structure for a tangent lemma to bite on and the loop would be a pure
+    /// budget tax.
+    refine: bool,
+}
+
+/// The refinement policy in force, read once from `AXEYUM_NIA_REFINEMENT`.
+///
+/// Format: `slice/rounds` or `slice/rounds/floor_ms`, e.g. `1/4` (whole
+/// remaining budget, four rounds' worth per round) or `3/1` (the default).
+/// Anything unparseable is [`NiaRefinementPolicy::OFF`] — a malformed sweep
+/// variable must not silently become a third arm.
+///
+/// Read once into a `OnceLock`: determinism is a public API promise, so the
+/// policy cannot change between two solves in one process.
+/// `scripts/parity-run.sh` records any `AXEYUM_*` lever it sees, so a swept
+/// number can never be mistaken for a default-configuration one.
+fn refinement_policy() -> NiaRefinementPolicy {
+    use std::sync::OnceLock;
+    static POLICY: OnceLock<NiaRefinementPolicy> = OnceLock::new();
+    *POLICY.get_or_init(|| {
+        let Ok(raw) = std::env::var("AXEYUM_NIA_REFINEMENT") else {
+            return NiaRefinementPolicy::OFF;
+        };
+        parse_refinement_policy(raw.trim()).unwrap_or(NiaRefinementPolicy::OFF)
+    })
+}
+
+/// See [`refinement_policy`]. Separated so the parse is testable without an
+/// environment variable and without the `OnceLock`'s one-shot behaviour.
+fn parse_refinement_policy(raw: &str) -> Option<NiaRefinementPolicy> {
+    let mut parts = raw.split('/');
+    let slice_denominator = parts.next()?.parse::<u32>().ok()?;
+    let round_denominator = parts.next()?.parse::<u32>().ok()?;
+    let round_floor_ms = match parts.next() {
+        None => 0,
+        Some(f) => f.parse::<u64>().ok()?,
+    };
+    if parts.next().is_some() || slice_denominator == 0 || round_denominator == 0 {
+        return None;
+    }
+    Some(NiaRefinementPolicy {
+        slice_denominator,
+        round_denominator,
+        round_floor_ms,
+    })
+}
+
 /// `why` is a **write-only** telemetry channel recording the decline reason for the
 /// route trace; without it this route declined silently, which is precisely why an
 /// unrefuted nonlinear-integer query used to leave no trace of the cause. The
@@ -1302,12 +1449,25 @@ pub(crate) fn check_with_nia(
     let (mccormick, splits) = add_entailed_bound_lemmas(arena, &rewritten_triples, &mut relaxed)?;
     if std::env::var_os("AXEYUM_NIA_DEBUG").is_some() {
         eprintln!(
-            "[nia] products={} mccormick={} splits={} relaxed={} timeout={:?}",
+            "[nia] products={} mccormick={} splits={} relaxed={} timeout={:?} policy={}",
             rewritten_triples.len(),
             mccormick,
             splits,
             relaxed.len(),
-            config.timeout
+            config.timeout,
+            // Printed, not assumed: an A/B whose lever failed to parse is
+            // `OFF`, and a sweep that cannot see that reports an arm it never
+            // ran. `is_off` is the only thing that distinguishes them.
+            if refinement_policy().is_off() {
+                "off".to_owned()
+            } else {
+                format!(
+                    "{}/{}/{}",
+                    refinement_policy().slice_denominator,
+                    refinement_policy().round_denominator,
+                    refinement_policy().round_floor_ms
+                )
+            }
         );
     }
 
@@ -1331,15 +1491,15 @@ pub(crate) fn check_with_nia(
     //    products. Grant it a SHARE of the caller's REMAINING budget in that case
     //    (never more than the caller allows), and keep the tiny default slice
     //    everywhere else so the ladder is never starved.
-    let capped = {
-        let base = std::time::Duration::from_millis(NIA_SLICE_MS);
-        let slice = match (mccormick + splits > 0, config.timeout) {
-            (true, Some(total)) => base.max(total / NIA_MCCORMICK_BUDGET_SHARE),
-            _ => base,
-        };
-        let bound = config.timeout.map_or(slice, |t| t.min(slice));
-        config.clone().with_timeout(bound)
+    let setup = RefinementSetup {
+        policy: refinement_policy(),
+        // The "this query has entailed-bound structure" signal: without it the
+        // loop is a pure budget tax (see `RefinementSetup::refine`).
+        refine: mccormick + splits > 0,
     };
+    let capped = config
+        .clone()
+        .with_timeout(setup.policy.slice(config.timeout, setup.refine));
     //
     // 5. **Refinement loop (incremental linearization).** A one-shot relaxation is
     //    hopeless on a Farkas/ranking system: the products whose factors are only
@@ -1357,9 +1517,82 @@ pub(crate) fn check_with_nia(
         &relaxed,
         &rewritten_triples,
         &capped,
-        mccormick + splits > 0,
+        setup,
         why,
     )
+}
+
+/// One round's relaxation solve, timed as this loop's round-opening half.
+///
+/// The exact counterpart of the other two lazy loops' propositional skeleton
+/// solve: it is what every round runs, and it is where the round count lives.
+/// The clock is read only when counting is armed.
+fn timed_relaxation_solve(
+    arena: &mut TermArena,
+    relaxed: &[TermId],
+    round_config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    let started = crate::lazy_smt_counters::enabled().then(std::time::Instant::now);
+    let outcome = check_with_lia_dpll(arena, relaxed, round_config);
+    if let Some(started) = started {
+        let stage_outcome = match &outcome {
+            Ok(CheckResult::Sat(_)) => RoundOutcome::Sat,
+            Ok(CheckResult::Unsat) => RoundOutcome::Unsat,
+            Ok(CheckResult::Unknown(_)) | Err(_) => RoundOutcome::Unknown,
+        };
+        crate::lazy_smt_counters::record_skeleton(
+            LazySmtLoop::Nia,
+            started.elapsed(),
+            stage_outcome,
+        );
+    }
+    outcome
+}
+
+/// The ground-evaluator replay, timed as this loop's theory half: it is what
+/// decides whether the round's model is real, and its outcome is the round's
+/// verdict on the cube.
+fn timed_replay(arena: &TermArena, assertions: &[TermId], model: &Model) -> Option<CheckResult> {
+    let started = crate::lazy_smt_counters::enabled().then(std::time::Instant::now);
+    let replayed = replay_sat(arena, assertions, model);
+    if let Some(started) = started {
+        crate::lazy_smt_counters::record_theory(
+            started.elapsed(),
+            if replayed.is_some() {
+                RoundOutcome::Sat
+            } else {
+                // A spurious model is this loop's conflict: it is what the next
+                // round's tangent lemmas cut off.
+                RoundOutcome::Unsat
+            },
+        );
+    }
+    replayed
+}
+
+/// The tangent-plane refinement, timed as this loop's blocking-clause half.
+///
+/// Each lemma rules out a region of the relaxation the round has just shown to
+/// be spurious, so it is counted through the same field as the other loops'
+/// blocking clauses — "how fast is the learned set growing" then reads the same
+/// way on all three.
+///
+/// # Errors
+///
+/// Propagates term-construction failures.
+fn timed_refine(
+    arena: &mut TermArena,
+    triples: &[(TermId, TermId, TermId)],
+    model: &Model,
+    emitted: &mut BTreeSet<TermId>,
+    relaxed: &mut Vec<TermId>,
+) -> Result<usize, SolverError> {
+    let started = crate::lazy_smt_counters::enabled().then(std::time::Instant::now);
+    let added = refine_with_tangents(arena, triples, model, emitted, relaxed)?;
+    if let Some(started) = started {
+        crate::lazy_smt_counters::record_blocking(added as u64, started.elapsed());
+    }
+    Ok(added)
 }
 
 /// Runs the relaxation solve under `capped`, refining with tangent planes whenever
@@ -1375,9 +1608,10 @@ fn solve_with_refinement(
     base: &[TermId],
     triples: &[(TermId, TermId, TermId)],
     capped: &SolverConfig,
-    refine: bool,
+    setup: RefinementSetup,
     why: &mut Option<DeclineReason>,
 ) -> Result<Option<CheckResult>, SolverError> {
+    let RefinementSetup { policy, refine } = setup;
     let mut relaxed = base.to_vec();
     let slice_deadline = std::time::Instant::now() + capped.timeout.unwrap_or_default();
     let debug = std::env::var_os("AXEYUM_NIA_DEBUG").is_some();
@@ -1397,24 +1631,12 @@ fn solve_with_refinement(
             ));
             return Ok(None);
         };
-        let round_config = capped.clone().with_timeout(remaining);
-        // The relaxation solve is this loop's round-opening half, the exact
-        // counterpart of the other two loops' propositional skeleton solve: it
-        // is what every round runs, and it is where the round count lives.
-        let solve_started = crate::lazy_smt_counters::enabled().then(std::time::Instant::now);
-        let outcome = check_with_lia_dpll(arena, &relaxed, &round_config);
-        if let Some(started) = solve_started {
-            let stage_outcome = match &outcome {
-                Ok(CheckResult::Sat(_)) => RoundOutcome::Sat,
-                Ok(CheckResult::Unsat) => RoundOutcome::Unsat,
-                Ok(CheckResult::Unknown(_)) | Err(_) => RoundOutcome::Unknown,
-            };
-            crate::lazy_smt_counters::record_skeleton(
-                LazySmtLoop::Nia,
-                started.elapsed(),
-                stage_outcome,
-            );
-        }
+        // `remaining` is the whole slice left; the policy decides how much of it
+        // ONE round may spend. Under `OFF` these are the same value, which is
+        // why the loop's first round is also its last whenever the relaxation
+        // solve cannot decide.
+        let round_config = capped.clone().with_timeout(policy.round(remaining));
+        let outcome = timed_relaxation_solve(arena, &relaxed, &round_config);
         if debug {
             eprintln!(
                 "[nia] round {round}: {:?} (relaxed={}, {remaining:?} left)",
@@ -1429,25 +1651,7 @@ fn solve_with_refinement(
         match outcome {
             Ok(CheckResult::Unsat) => return Ok(Some(CheckResult::Unsat)),
             Ok(CheckResult::Sat(model)) => {
-                // The ground-evaluator replay is this loop's theory half: it is
-                // what decides whether the round's model is real, and its
-                // outcome is the round's verdict on the cube.
-                let replay_started =
-                    crate::lazy_smt_counters::enabled().then(std::time::Instant::now);
-                let replayed = replay_sat(arena, assertions, &model);
-                if let Some(started) = replay_started {
-                    crate::lazy_smt_counters::record_theory(
-                        started.elapsed(),
-                        if replayed.is_some() {
-                            RoundOutcome::Sat
-                        } else {
-                            // A spurious model is this loop's conflict: it is
-                            // what the next round's tangent lemmas cut off.
-                            RoundOutcome::Unsat
-                        },
-                    );
-                }
-                if let Some(sat) = replayed {
+                if let Some(sat) = timed_replay(arena, assertions, &model) {
                     return Ok(Some(sat));
                 }
                 if !refine {
@@ -1463,18 +1667,7 @@ fn solve_with_refinement(
                     ));
                     return Ok(None);
                 }
-                let refine_started =
-                    crate::lazy_smt_counters::enabled().then(std::time::Instant::now);
-                let added =
-                    refine_with_tangents(arena, triples, &model, &mut emitted, &mut relaxed)?;
-                if let Some(started) = refine_started {
-                    // Tangent lemmas are this loop's blocking clauses: each one
-                    // rules out a region of the relaxation the round has just
-                    // shown to be spurious. Counted through the same field so
-                    // "how fast is the learned set growing" reads the same way
-                    // on all three loops.
-                    crate::lazy_smt_counters::record_blocking(added as u64, started.elapsed());
-                }
+                let added = timed_refine(arena, triples, &model, &mut emitted, &mut relaxed)?;
                 if debug {
                     eprintln!("[nia] round {round}: refined with {added} tangent lemmas");
                 }
@@ -1654,6 +1847,110 @@ fn replay_sat(arena: &TermArena, assertions: &[TermId], model: &Model) -> Option
 mod tests {
     use super::*;
     use axeyum_ir::Assignment;
+    use std::time::Duration;
+
+    /// The `OFF` arm must reproduce the committed slice EXACTLY, so an A/B
+    /// difference is caused by the arm and not by the plumbing that introduced
+    /// the arm.
+    ///
+    /// The expectation is the pre-policy expression, written out, not a call
+    /// back into `NiaRefinementPolicy::slice` — a test that computes its
+    /// expectation the way the subject does cannot fail.
+    #[test]
+    fn the_off_arm_reproduces_the_committed_slice_and_round_budget() {
+        assert!(NiaRefinementPolicy::OFF.is_off());
+        for total_ms in [0_u64, 1, 599, 600, 1_800, 24_000, 600_000] {
+            for has_envelopes in [false, true] {
+                let total = Duration::from_millis(total_ms);
+                let base = Duration::from_millis(NIA_SLICE_MS);
+                let want_slice = if has_envelopes {
+                    base.max(total / NIA_MCCORMICK_BUDGET_SHARE)
+                } else {
+                    base
+                };
+                let want = total.min(want_slice);
+                assert_eq!(
+                    NiaRefinementPolicy::OFF.slice(Some(total), has_envelopes),
+                    want,
+                    "OFF must reproduce the committed slice at {total_ms} ms, \
+                     envelopes={has_envelopes}"
+                );
+                // Under OFF a round may spend the WHOLE remaining slice, which
+                // is why the loop's first round is also its last whenever the
+                // relaxation solve cannot decide inside it.
+                assert_eq!(NiaRefinementPolicy::OFF.round(want), want);
+            }
+        }
+        // No caller budget: the pre-ladder hang guard, unchanged.
+        assert_eq!(
+            NiaRefinementPolicy::OFF.slice(None, true),
+            Duration::from_millis(NIA_SLICE_MS)
+        );
+    }
+
+    /// The arm must actually differ from `OFF`, in both knobs, or an A/B run
+    /// with it selected would measure nothing and report agreement.
+    #[test]
+    fn a_selected_arm_moves_the_slice_and_bounds_one_round_below_it() {
+        let whole = NiaRefinementPolicy {
+            slice_denominator: 1,
+            round_denominator: 4,
+            round_floor_ms: 250,
+        };
+        assert!(!whole.is_off());
+        let total = Duration::from_secs(24);
+        assert_eq!(
+            whole.slice(Some(total), true),
+            total,
+            "slice_denominator=1 must hand the loop the whole remaining budget"
+        );
+        assert_eq!(
+            NiaRefinementPolicy::OFF.slice(Some(total), true),
+            Duration::from_secs(8),
+            "and OFF must not, or the two arms are the same experiment"
+        );
+        assert_eq!(whole.round(total), Duration::from_secs(6));
+        // The floor is what stops a large denominator on a small slice from
+        // handing a round a budget too short to reach the solver at all.
+        assert_eq!(
+            whole.round(Duration::from_millis(400)),
+            Duration::from_millis(250)
+        );
+        // ...and it never exceeds what is left.
+        assert_eq!(
+            whole.round(Duration::from_millis(100)),
+            Duration::from_millis(100)
+        );
+    }
+
+    /// A malformed sweep variable must be `OFF`, never a silent third arm: a
+    /// run whose lever did not parse has to be indistinguishable from a default
+    /// run, or a sweep reports an arm it never ran.
+    #[test]
+    fn a_malformed_policy_string_is_off_and_not_a_third_arm() {
+        for bad in [
+            "", "3", "3/", "/1", "a/b", "3/1/x", "3/1/2/4", "0/1", "3/0", "-3/1", "3 / 1",
+        ] {
+            assert_eq!(
+                parse_refinement_policy(bad),
+                None,
+                "{bad:?} must not parse into an arm"
+            );
+        }
+        assert_eq!(
+            parse_refinement_policy("3/1"),
+            Some(NiaRefinementPolicy::OFF),
+            "the committed shape must round-trip to OFF"
+        );
+        assert_eq!(
+            parse_refinement_policy("1/4/250"),
+            Some(NiaRefinementPolicy {
+                slice_denominator: 1,
+                round_denominator: 4,
+                round_floor_ms: 250,
+            })
+        );
+    }
 
     /// Builds `a`, `b`, `r` as three fresh `Int` variables over a fresh arena.
     fn triple() -> (
