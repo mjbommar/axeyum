@@ -1433,6 +1433,16 @@ step foundational-resources ./scripts/check-foundational-resources.sh
 # actual 104. See docs/refactor-2026-08/gate-divergence-2026-08-14.md.
 step claims-validate python3 scripts/validate-claims.py
 step claims-dashboard python3 scripts/gen-claims-dashboard.py --check
+# The drat-trim EXIT CONTRACT (roadmap item 0.3). drat-trim has seventeen
+# `exit (0)` sites -- MEMOUT, a malformed input, and `s TIMEOUT` among them --
+# so it reports SUCCESS to the shell on out-of-memory, on garbage, and on
+# timeout. Both halves of the discipline are pinned here: the verdict parser
+# against the literal strings (no binary needed, which is why this belongs in
+# the default gate rather than in `just claims`), and the two ways
+# `check-claim-certificates.py --drat-checker` used to pass without
+# cross-checking anything. The end-to-end half against the real binary skips
+# when the gitignored clone is absent.
+step drat-trim-exit-contract python3 -m unittest scripts.tests.test_drat_trim_exit_contract
 step rules-as-code-generate python3 scripts/gen-rules-as-code-dashboard.py
 step rules-as-code-validate python3 scripts/validate-rules-as-code.py
 step rules-as-code-query-summary python3 scripts/query-rules-as-code.py summary

@@ -637,6 +637,15 @@ facts:
     # no-C-dependency default gate must not require. That recipe's own comment
     # calls the first two "a seconds-long structural gate"; this is the first.
     python3 scripts/validate-claims.py
+    # The drat-trim EXIT CONTRACT (roadmap item 0.3). drat-trim has seventeen
+    # `exit (0)` sites -- MEMOUT, a malformed input, and `s TIMEOUT` among them
+    # -- so it reports SUCCESS to the shell on out-of-memory, on garbage input,
+    # and on timeout, and the verdict is the `s ` line. Measured 2026-09-09: a
+    # CNF with no `p cnf` header prints `c ERROR: ...` and EXITS 0. The parser
+    # controls need no binary, which is why they belong in the default gate and
+    # not in `just claims`; the end-to-end half skips when the gitignored clone
+    # is absent (AXEYUM_DRAT_TRIM_BIN points at one elsewhere).
+    python3 -m unittest scripts.tests.test_drat_trim_exit_contract
     # A settled SMT-route fact's evidence command tests the VERDICT and not the
     # CERTIFICATION: `test "$(... | tail -1)" = unsat` exits 0 on an uncertified
     # refutation, verified against a dedicated uncertified integer-square fixture.
