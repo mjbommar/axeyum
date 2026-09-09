@@ -7028,8 +7028,26 @@ pub static REGISTRY: &[ConfigEntry] = &[
         signal: Signal::ToCaller,
         guarded_by: "",
         env_override: None,
-        justification: undated("doc comment"),
-        note: "About 128 MB at two `i128`s per cell. `Incremental::new` returns `None`, so the caller falls back to Fourier-Motzkin. Deterministic (no clock, no resident-set probe), which is what lets it be part of a reproducible verdict.",
+        justification: dated(
+            "docs/research/12-performance/ladder-budget-discipline-2026-09-08.md",
+            "2026-09-08",
+            None,
+            &[
+                sym("crates/axeyum-solver/src/simplex.rs", "MAX_TABLEAU_CELLS"),
+                sym("crates/axeyum-solver/src/lra.rs", "simplex_admission"),
+                sym("crates/axeyum-solver/src/lra.rs", "simplex_fallback"),
+            ],
+            // The measurement is about the OTHER constructor: it says what a
+            // cell bound in `feasible` would refuse. It rests on
+            // `simplex_admission` still being the gate that runs first on that
+            // route, because that gate is why the unbounded constructor is not
+            // the catastrophe the 360-million-cell reading suggests.
+            &[
+                live("simplex_admission", "crates/axeyum-solver/src/lra.rs"),
+                doc("docs/research/12-performance/ladder-budget-discipline-2026-09-08.md"),
+            ],
+        ),
+        note: "About 128 MB at two `i128`s per cell. `Incremental::new` returns `None`, so the caller falls back to Fourier-Motzkin. Deterministic (no clock, no resident-set probe), which is what lets it be part of a reproducible verdict. THE GAP `lra_online::BYTES_PER_ADMITTED_ATOM`'s note reports -- this bound is checked ONLY in `Incremental::new`, while `feasible` (what `lra::simplex_fallback` calls) consults no cell bound at all -- was MEASURED on 2026-09-08 over the committed 200-file QF_LRA list, 24 s and 8 GiB per file, with the instrumented binary named in the doc. 36 files reach `simplex_fallback` at all (3,129 calls); SEVEN build a tableau over this cap, at 4.2 to 8.8 million cells, and all seven end `unknown`. So adding the check here would refuse a population that decides nothing today -- and would buy nothing either, since nothing runs after `lra` on those files. NOT ADDED, and the reason is the second half of the measurement: the largest tableau observed is 8.8 M cells (282 MB), 30x smaller than the 360 M the earlier reading found, because `lra::simplex_admission` (2026-09-08) now prices that allocation against `memory_limit_mb` BEFORE `feasible` is called. At 8 GiB that gate admits 268 M cells, so the two bounds on one allocation differ by 67x in opposite units -- a fixed cell count and a memory budget. The residual unguarded caller is one that sets NO memory limit; a fixed 4 M cap is the wrong instrument for it, and choosing the right one needs its own ADR rather than a line here.",
     },
     ConfigEntry {
         name: "DEFAULT_STRING_BOUND",

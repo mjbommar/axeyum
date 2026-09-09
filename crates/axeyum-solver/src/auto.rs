@@ -1879,25 +1879,37 @@ fn config_with_remaining_deadline(
 // One ladder, one clock: how much of it each route may spend
 // ---------------------------------------------------------------------------
 
-/// The floor on any route's slice of a ladder's clock.
+/// The floor on any route's slice of a ladder's clock, capped at **half** the
+/// remaining budget by [`LadderSlice::slice_of`].
 ///
-/// It exists because **a slice that rounds to zero used to hand the route the
-/// WHOLE budget**, in the two places that divided rather than reserved:
+/// It replaces a branch that handed the route the WHOLE budget when its share
+/// rounded to zero, in the two places that divided rather than reserved:
 /// `int_real_relax_budget` returned `config` unchanged when `timeout / 6` was
 /// zero, and `pre_lia_uf_probe_budget` returned the full `timeout` when
-/// `timeout / 10` was. Both are the sharing policy inverting itself at exactly
-/// the small-budget end where starvation is most likely — the first is recorded
-/// as a FINDING against `INT_REAL_RELAX_BUDGET_SHARE` in
-/// [`crate::config_registry`], the second was found by this lane looking for
-/// more of the same shape.
+/// `timeout / 10` was. The first is recorded as a FINDING against
+/// `INT_REAL_RELAX_BUDGET_SHARE` in [`crate::config_registry`]; the second was
+/// found by this lane looking for more of the same shape.
+///
+/// **How reachable that was, corrected.** The FINDING says the policy is
+/// bypassed "at exactly the small-budget end where starvation matters most",
+/// and this lane repeated that before measuring it. `Duration` division is in
+/// NANOSECONDS: `Duration::from_millis(5) / 6` is 833 µs, not zero. `is_zero()`
+/// there needs a budget under **six nanoseconds**, so the band the old branch
+/// actually inverted on is six nanoseconds wide and no caller has ever been in
+/// it. The defect was structural, not behavioural, and saying otherwise is the
+/// kind of claim this file's own rules exist to stop. Removing the special case
+/// is still right — a branch that returns the unshared budget is one edit away
+/// from being reachable — but it bought no measured behaviour.
 ///
 /// A millisecond is chosen because it is the smallest slice any route in this
-/// tree can act on (every deadline poll here reads a `Instant`, and the routes
-/// that check one do so between search steps that cost more than that), and
-/// because the alternative — skipping the route entirely when its share
-/// underflows — is a *different* policy that changes which routes run, not just
-/// how long they run for. Clamping keeps the ladder's shape and only bounds the
-/// arithmetic.
+/// tree can act on, and because the alternative — skipping the route entirely
+/// when its share underflows — is a *different* policy that changes which routes
+/// run, not just how long they run for. The **half** cap is the load-bearing
+/// half: without it this constant recreates the very inversion it replaced on
+/// every budget under a millisecond, which is a band a hundred thousand times
+/// wider than the one it closed. That is not hypothetical — it is what the first
+/// version of this code did, and the mutation that restores the old branch is
+/// what found it, by making no test fail at all.
 const MIN_LADDER_SLICE: Duration = Duration::from_millis(1);
 
 /// The shape of one route's claim on a ladder's remaining wall clock.
@@ -2041,7 +2053,15 @@ impl LadderSlice {
                 slice
             }
         };
-        want.clamp(MIN_LADDER_SLICE.min(remaining), remaining)
+        // The floor is capped at HALF the remaining budget, not at the whole of
+        // it. `MIN_LADDER_SLICE.min(remaining)` was written first and is wrong
+        // in the direction this whole type exists to prevent: on any budget
+        // under a millisecond it resolves to `remaining`, so the clamp hands
+        // the route the entire clock and the ladder nothing — the same
+        // inversion as the code it replaced, with a band a hundred thousand
+        // times wider. Caught by the mutation that restores the old
+        // `share.is_zero()` branch and found it made NO test fail.
+        want.clamp(MIN_LADDER_SLICE.min(remaining / 2), remaining)
     }
 
     /// What the ladder below this route keeps out of `remaining`.
@@ -4568,7 +4588,19 @@ fn check_auto_dispatch(
         // harness watchdog's grace period: 24 s spent above plus a fresh 24 s
         // budget here is 48 s of a 24 s promise, and a hard external limit
         // would have taken all four.
-        let ladder_config = config_with_remaining_deadline(config, dispatch_deadline);
+        //
+        // The `off` arm keeps the ORIGINAL config here, not the remaining
+        // deadline, because it exists to reproduce the historical behaviour
+        // exactly. An arm that gave the online route the whole budget AND then
+        // handed this route what was left of it would leave the ladder zero
+        // milliseconds — strictly worse than the code it is meant to be a
+        // control for, and a mislabelled arm is a measurement of nothing.
+        let ladder_config = match abv_online_reserve_policy() {
+            AbvOnlineReservePolicy::WholeBudget => config.clone(),
+            AbvOnlineReservePolicy::LadderReserve => {
+                config_with_remaining_deadline(config, dispatch_deadline)
+            }
+        };
         if let Some(result) =
             dispatch_array_fast_paths(arena, assertions, &ladder_config, &features)?
         {
@@ -11191,33 +11223,47 @@ mod tests {
         // THE INVERSION GUARD. Two helpers used to return the caller's config
         // UNCHANGED when their share underflowed -- `int_real_relax_budget` at
         // `timeout / 6 == 0` and `pre_lia_uf_probe_budget` at `timeout / 10 ==
-        // 0` -- so a route asked for a sixth of the clock got all of it at
-        // exactly the small-budget end where starvation matters most. The first
-        // is recorded as a FINDING in `crate::config_registry`; the second was
-        // found looking for more of the same shape.
+        // 0` -- so a route asked for a sixth of the clock got all of it. The
+        // first is recorded as a FINDING in `crate::config_registry`; the
+        // second was found looking for more of the same shape.
         //
-        // The values below are chosen so the OLD code returns the full budget
-        // and the new code cannot: 5 ms / 6 and 9 ms / 10 are both zero.
-        let tight = Duration::from_millis(5);
-        let config = SolverConfig::new().with_timeout(tight);
-        assert!(
-            int_real_relax_budget(&config).timeout.unwrap() < tight,
-            "a sixth of the clock must not become the whole clock"
-        );
-        let tight = Duration::from_millis(9);
-        let config = SolverConfig::new().with_timeout(tight);
-        assert!(
-            pre_lia_uf_probe_budget(&config).timeout.unwrap() < tight,
-            "a tenth of the clock must not become the whole clock"
-        );
-        // ...and it must not become ZERO either: a route handed no clock at all
-        // is a route deleted, which is a different policy from a route shared.
-        assert!(
-            !int_real_relax_budget(&SolverConfig::new().with_timeout(tight))
-                .timeout
-                .unwrap()
-                .is_zero()
-        );
+        // THE BUDGETS BELOW ARE IN NANOSECONDS, and that is the whole point of
+        // this test. `Duration` division is nanosecond-based, so
+        // `from_millis(5) / 6` is 833 us, NOT zero: the old branch could only
+        // fire under SIX NANOSECONDS. A first version of this test used 5 ms
+        // and 9 ms, believing the FINDING's "small-budget end" was milliseconds
+        // -- and the mutation that restores the old branch made no test fail at
+        // all. A guard for a band six nanoseconds wide has to be written in
+        // nanoseconds.
+        for tight in [
+            Duration::from_nanos(1),
+            Duration::from_nanos(5),
+            Duration::from_nanos(9),
+            Duration::from_nanos(100),
+            Duration::from_micros(1),
+            Duration::from_millis(1),
+            Duration::from_millis(5),
+        ] {
+            let config = SolverConfig::new().with_timeout(tight);
+            let relax = int_real_relax_budget(&config).timeout.unwrap();
+            assert!(
+                relax < tight,
+                "a sixth of {tight:?} became {relax:?} -- the whole clock"
+            );
+            let pre_lia = pre_lia_uf_probe_budget(&config).timeout.unwrap();
+            assert!(
+                pre_lia < tight,
+                "a tenth of {tight:?} became {pre_lia:?} -- the whole clock"
+            );
+            // ...and it must not become ZERO either: a route handed no clock at
+            // all is a route deleted, which is a different policy from a route
+            // shared. Below 2 ns there is no nonzero slice smaller than the
+            // budget, so that is where the promise stops.
+            if tight >= Duration::from_nanos(2) {
+                assert!(!relax.is_zero(), "a sixth of {tight:?} became nothing");
+                assert!(!pre_lia.is_zero(), "a tenth of {tight:?} became nothing");
+            }
+        }
         // An unbounded caller stays unbounded: this divides a budget, it never
         // invents one.
         assert_eq!(int_real_relax_budget(&SolverConfig::new()).timeout, None);

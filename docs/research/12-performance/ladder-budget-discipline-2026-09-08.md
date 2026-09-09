@@ -176,15 +176,177 @@ reliance on watchdog grace.
 
 ## 3. The A/B
 
-<!-- RESULTS-AB -->
+Three arms over the **whole committed 200-file `QF_ABV` division list**, run
+**concurrently on s6** (16 cores, otherwise idle) so contention is common-mode,
+one pinned binary (`sha256 83d0e50b43fb…`), 24 s and 8 GiB per file, matching
+`scripts/parity-run.sh`. Artifacts: `bench-results/ladder-budget-20260908/`.
 
-## 4. Reproducing
+`off` is a faithful control, not merely the reserve disabled: under it the array
+ladder also keeps the caller's original config rather than the remaining
+deadline. An arm that gave the online route the whole budget **and** handed the
+ladder what was left of it would leave the ladder zero milliseconds — strictly
+worse than the code it is a control for, which is a measurement of nothing.
+
+### Same-binary control first
+
+| | |
+|---|---|
+| decided set, `off-a` vs `off-b` | **identical**, 186 of 200 both |
+| verdict disagreements | 0 |
+| total wall | 714 s vs 710 s (0.6%) |
+
+### The three arms
+
+| arm | decided | sat | unsat | unknown | total wall |
+|---|---:|---:|---:|---:|---:|
+| `off-a` | 186 | 129 | 57 | 14 | 714 s |
+| `off-b` | 186 | 129 | 57 | 14 | 710 s |
+| **`on` (shipped)** | **186** | 129 | 57 | 14 | **627 s** |
+
+**+0 / −0, zero disagreements.** The reserve neither gains nor loses a file on
+this division, which is the safety half of the result and the half a reservation
+most often fails.
+
+### What it did change, and it is the thing the reserve was for
+
+| | `off-a` | `off-b` | `on` |
+|---|---:|---:|---:|
+| runs exceeding the 24 s budget | 24 | 24 | **10** |
+| ...of those, **decided** | **14** | 14 | **0** |
+
+**Fourteen files were decided only PAST the budget they were given, and all
+fourteen are now decided inside it** — each about six seconds faster, 24.2 s →
+18.2 s, which is the reserve exactly: the online route stops at 18 s and
+`array-fast-path` decides in milliseconds. Under the reserve **no decided file
+exceeds the budget at all**; the ten runs that still do are every one of them
+`unknown`, i.e. genuine search timeouts the watchdog ends.
+
+The fourteen (all `sat`, all `dwp_formulas`/`flanagansaxe`/`wp` family except
+the last):
+
+`try3_noof_functions_dwp_md5sum.set_char_quoting`, `…dwp_ptx.bkm_scale`,
+`…dwp_sum.set_char_quoting`, `try4_difret_functions_disjunctions_vdir.strmode`,
+`…flanagansaxe_chroot.get_quoting_style`,
+`…flanagansaxe_id.close_stdout_set_file_name`,
+`…flanagansaxe_printf.get_quoting_style`, `…flanagansaxe_yes.get_quoting_style`,
+`…wp_dd.advance_input_offset`, `…wp_mkdir.set_char_quoting`,
+`…wp_seq.set_char_quoting`, `…dwp_env.set_char_quoting`,
+`…flanagansaxe_cat.next_line_num`, `copy_array11.c`.
+
+Under the parity protocol's 24 s wall these were counted as solved because the
+harness kills at 40 s. Under a hard external limit — which is what a competition
+or a CI budget is — they were losses.
+
+**The claim this A/B does NOT support:** the reserve does not decide anything new
+here. It converts "decided by grace" into "decided by budget". Whether a `QF_ABV`
+file exists that the online route needs more than 18 s for is unmeasured; the
+`off` arm is what would find it.
+
+The binary used for this A/B predates the `MIN_LADDER_SLICE` correction below,
+which changes only slices under a millisecond and therefore cannot touch a 24 s
+run.
+
+## 4. Two guards that could not fail, and how they were found
+
+**The mutation discipline is the reason this section exists.** Three mutations,
+each applied in an isolated worktree with a restoring trap and an anchor
+assertion (so a green run cannot come from a mutation that never applied), each
+run against the **whole** `--lib --features full` suite (1,609 tests, baseline
+green):
+
+| mutation | tests that died |
+|---|---|
+| `ABV_ONLINE_SLICE` stops reserving | **exactly 1** — `abv_online_probe_keeps_all_but_the_array_ladder_reserve` |
+| a fifth hand-rolled divisor is added to the file | **exactly 1** — `every_route_budget_in_this_file_goes_through_the_slice_policy` |
+| the old `share.is_zero() → return the whole budget` branch is restored | **ZERO** |
+
+The third result is the finding. Two things were wrong, and neither would have
+been visible from reading the code:
+
+1. **The registered FINDING overstates its own reach.** It says the sharing
+   policy is "bypassed silently at exactly the small-budget end where starvation
+   matters most". `Duration` division is in **nanoseconds**:
+   `Duration::from_millis(5) / 6` is 833 µs, not zero. `is_zero()` there needs a
+   budget under **six nanoseconds**, so the band the old branch inverted on is
+   six nanoseconds wide and no caller has ever been in it. The defect was
+   structural, not behavioural. This lane repeated the FINDING's framing in a
+   commit message before measuring it, which is the same error one level up.
+2. **The first version of the fix recreated the inversion a hundred thousand
+   times wider.** `want.clamp(MIN_LADDER_SLICE.min(remaining), remaining)`
+   resolves, for any `remaining` under a millisecond, to
+   `clamp(want, remaining, remaining)` — the route gets the entire clock and the
+   ladder nothing. The floor is now capped at **half** the remaining budget, and
+   the guard is written in nanoseconds, where the band it is guarding actually
+   lives. Re-run: the third mutation now kills exactly one test.
+
+A guard for a six-nanosecond band written in milliseconds is a guard that cannot
+fail, and it passed review, passed clippy, and passed its own name.
+
+## 5. The unchecked cell bound in `simplex::feasible`
+
+`simplex::MAX_TABLEAU_CELLS` (4,000,000) is checked only in
+`Incremental::new`. `feasible` — the constructor `lra::simplex_fallback` calls —
+consults no cell bound at all, and was reported reaching **360 million cells** on
+one file. Closing that changes default admission, so the population it would
+refuse was measured first.
+
+**Method:** an instrumented build (`AXEYUM_LRA_CELLS=1`, printing
+`cells=<rows × (nvars + rows)> outcome=<…>` at every `feasible` call), the
+committed 200-file `QF_LRA` list on **s7**, 24 s and 8 GiB per file. Artifact:
+`bench-results/ladder-budget-20260908/cells-QF_LRA200.tsv`.
+
+| | |
+|---|---:|
+| files reaching `lra::simplex_fallback` | 36 of 200 |
+| total `feasible` calls | 3,129 |
+| **largest tableau built** | **8,797,712 cells** (282 MB) |
+| files where some call is over the 4 M cap | **7** |
+| ...whose final verdict is a decision | **0** |
+
+**Not added, and the measurement says why twice.**
+
+- Adding the cap would refuse seven files that decide nothing today, and would
+  buy nothing: nothing runs after `lra` on them, so the freed budget has no
+  consumer. A completeness bound that costs seven files' worth of search and
+  returns no verdict is not obviously better than the search.
+- The 360-million-cell reading no longer describes this tree. `lra::simplex_admission`
+  (landed 2026-09-08, same day) prices that exact allocation against
+  `memory_limit_mb` **before** `feasible` is called, so the catastrophic case is
+  already refused; the worst case with a limit set is 282 MB. At 8 GiB that gate
+  admits 268 M cells while this constant admits 4 M — **two gates on one
+  allocation, 67x apart, in different units**, which is the defect the config
+  registry exists to surface rather than to paper over with a third number.
+
+The residual gap is real and named: a caller that sets **no** `memory_limit_mb`
+has nothing bounding this allocation. That is an admission-policy question with
+its own ADR, not a line in a lane's diff. The measurement is recorded on the
+`MAX_TABLEAU_CELLS` registry entry so the next lane starts from it.
+
+## 6. Reproducing
 
 ```sh
 # the enumeration, from the committed span shards
 python3 scripts/analyze-ladder-slices.py
 
-# the A/B, one arm per host
-AXEYUM_ABV_ONLINE_RESERVE=off scripts/span-log-sweep.sh QF_ABV /tmp/off.jsonl 200 24000
-AXEYUM_ABV_ONLINE_RESERVE=on  scripts/span-log-sweep.sh QF_ABV /tmp/on.jsonl  200 24000
+# the A/B: three arms, ONE host, concurrently, from one pinned binary
+cargo build --release -p axeyum-bench --example smtcomp_cli
+cp target/release/examples/smtcomp_cli /tmp/smtcomp_cli.pinned
+for arm in off-a:off off-b:off on:on; do
+  bench-results/ladder-budget-20260908/sweep.sh \
+    bench-results/parity-lists/QF_ABV.txt /tmp/smtcomp_cli.pinned \
+    "${arm%%:*}-QF_ABV200.tsv" "${arm##*:}" &
+done; wait
+python3 bench-results/ladder-budget-20260908/analyze.py off-a-*.tsv off-b-*.tsv on-*.tsv
+python3 bench-results/ladder-budget-20260908/overrun.py off-a-*.tsv off-b-*.tsv on-*.tsv
+
+# the guards, against their own removal (isolated worktree, restoring trap)
+bench-results/ladder-budget-20260908/mutate.sh reserve
+bench-results/ladder-budget-20260908/mutate.sh handroll
+bench-results/ladder-budget-20260908/mutate.sh inversion
 ```
+
+The tableau-cell sweep needs the instrumented build described in §5; the
+`AXEYUM_LRA_CELLS` `eprintln!` is a two-line diff to `lra::simplex_fallback`
+recorded in `bench-results/ladder-budget-20260908/lra-cells.patch` rather than
+carried in the shipped source, because a permanent counter for a bound this lane
+recommends NOT adding would be instrumentation for a decision already made.

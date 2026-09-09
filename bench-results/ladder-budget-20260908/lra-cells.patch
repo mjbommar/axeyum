@@ -1,0 +1,27 @@
+--- crates/axeyum-solver/src/lra.rs	2026-09-08 21:31:11.612759211 -0400
++++ .lane-budget-discipline/lra.rs.instrumented	2026-09-08 21:28:43.878194320 -0400
+@@ -656,7 +656,23 @@
+         rows.push(crate::simplex::Constraint { coeffs, rel, rhs });
+     }
+ 
+-    match crate::simplex::feasible(nvars, &rows) {
++    let outcome = crate::simplex::feasible(nvars, &rows);
++    if std::env::var_os("AXEYUM_LRA_CELLS").is_some() {
++        let m = rows.len();
++        let cells = m.saturating_mul(nvars.saturating_add(m));
++        let kind = match &outcome {
++            crate::simplex::SimplexOutcome::Feasible(_) => "feasible",
++            crate::simplex::SimplexOutcome::Infeasible(v) if !v.is_empty() => "infeasible",
++            crate::simplex::SimplexOutcome::Infeasible(_) => "infeasible-nocert",
++            crate::simplex::SimplexOutcome::Unknown => "unknown",
++        };
++        eprintln!(
++            "; lra-simplex-fallback cells={cells} rows={m} nvars={nvars} outcome={kind} \
++             over_cap={}",
++            cells > crate::simplex::MAX_TABLEAU_CELLS
++        );
++    }
++    match outcome {
+         crate::simplex::SimplexOutcome::Feasible(point) => {
+             // Build a model over the original symbols and replay-check it (the trust
+             // anchor for `sat`); decline to `unknown` if it does not verify.
