@@ -72,9 +72,13 @@
 //! `a ≥ b` joined by a Tseitin `and` gate, so its *negation* is the ordinary
 //! clause `¬(a ≤ b) ∨ ¬(a ≥ b)` that the CDCL search case-splits on — the
 //! theory never has to reason about a disequality, which is not a difference
-//! constraint. A **Boolean** `p = q` gets an `XNOR` gate for the same reason:
-//! the skeleton encoder has no equality case, and without the gate every query
-//! carrying Boolean frame axioms (the `fischer` family) would fall through.
+//! constraint. A **Boolean** `p = q` gets an `XNOR` gate for the same reason.
+//! It was added because the skeleton encoder had no equality case; it has one
+//! since 2026-09-08 (`lra_online::SkeletonEncoding::bool_eq`, added after the
+//! same gap was found sending all 22 of `QF_LRA`'s hardest measured files to a
+//! weaker route). The gate is still what runs here — the scan pre-registers
+//! each equality, so the encoder's arm never sees it — and removing it is a
+//! behaviour change on the `fischer` family that needs its own measurement.
 //! - Deterministic throughout: vertices are numbered in first-seen term order,
 //!   atoms in collection order, and every container is a `Vec`/`BTreeMap`.
 //!   Deadlines are polled in the detection and propagation loops.
@@ -299,8 +303,22 @@ struct DlScan {
     eq_gates: Vec<(TermId, usize, usize)>,
     /// Boolean equality terms `(= a b)` over `Bool` operands, in **post-order**
     /// (children before parents) so each can be encoded once its operands are.
-    /// The skeleton encoder has no `Eq` case, so these carry their own `XNOR`
-    /// gate rather than making the query fall through.
+    /// These carry their own `XNOR` gate rather than making the query fall
+    /// through.
+    ///
+    /// The reason this exists was "the skeleton encoder has no `Eq` case". As
+    /// of 2026-09-08 it does — `lra_online::Encoder` covers Boolean equality
+    /// behind `SkeletonEncoding::bool_eq` — because that same missing arm sent
+    /// **all 22** of `QF_LRA`'s hardest measured files to the weak offline
+    /// route, a division that had no local workaround to hide it. This note is
+    /// corrected rather than deleted: a workaround whose stated reason has gone
+    /// away is the thing that stops anyone from noticing the shared fix.
+    ///
+    /// The gate itself stays. The scan pre-registers each equality in
+    /// post-order, so the term is in `term_var` before `Encoder::encode` ever
+    /// reaches it and the encoder's arm does not fire here — removing this is a
+    /// behaviour change on the `fischer` family and belongs to a lane that
+    /// measures it.
     bool_eq_gates: Vec<(TermId, TermId, TermId)>,
 }
 

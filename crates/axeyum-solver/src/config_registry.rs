@@ -4843,6 +4843,37 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "The trigger for the rescale above.",
     },
     ConfigEntry {
+        name: "SIMPLEX_FIRST_AT_CONSTRAINTS",
+        module: "crates/axeyum-solver/src/lra_route.rs",
+        value: "256",
+        unit: "collected linear constraints in one conjunctive system",
+        protects: Protects::Time,
+        on_exceed: OnExceed::SearchEvent,
+        signal: Signal::None,
+        guarded_by: "neither engine is skipped: crossing the bound only swaps which of the two sound deciders runs FIRST, and whichever declines hands the identical system to the other, so the set of systems the pair decides is unchanged and no verdict can depend on the order",
+        env_override: Some("AXEYUM_LRA_ROUTE"),
+        justification: dated(
+            "docs/research/12-performance/lra-route-and-cube-order-2026-09-08.md",
+            "2026-09-08",
+            None,
+            &[
+                sym("crates/axeyum-solver/src/lra.rs", "decide_within"),
+                sym("crates/axeyum-solver/src/lra.rs", "simplex_fallback"),
+                sym("crates/axeyum-solver/src/lra.rs", "MAX_FM_CONSTRAINTS"),
+                sym("crates/axeyum-solver/src/lra_route.rs", "LraRoutePolicy"),
+            ],
+            &[
+                doc("docs/research/12-performance/lra-route-and-cube-order-2026-09-08.md"),
+                live(
+                    "SIMPLEX_FIRST_AT_CONSTRAINTS",
+                    "crates/axeyum-solver/src/lra_route.rs",
+                ),
+                live("MAX_FM_CONSTRAINTS", "crates/axeyum-solver/src/lra.rs"),
+            ],
+        ),
+        note: "Set at the BOTTOM of the measured range, not lower. Fourier-Motzkin declined on 2,745 of 2,745 cubes across the 22 `QF_LRA` files bound by the offline lazy-SMT loop (265-1,736 constraints each), after consuming 96-99.9% of that loop's theory time reaching `lra.rs::MAX_FM_CONSTRAINTS`; the simplex then decided all 2,745 in 43-696 ms in total. Below 265 there is NO measurement, and the elimination is exact, so on a small system it yields the tightest refutation: dropping this to 0 measurably changed `nra_handelman_cert`'s pinned residual from -31/400 to -31/1580. `usize::MAX` (`AXEYUM_LRA_ROUTE=fm-first` or `legacy`) is the pre-2026-09-08 order.",
+    },
+    ConfigEntry {
         name: "DEFAULT_ONLINE_LRA_BUDGET_BYTES",
         module: "crates/axeyum-solver/src/lra_theory.rs",
         value: "crate::lra_online::DEFAULT_ONLINE_LRA_BUDGET_BYTES",

@@ -1,0 +1,1 @@
+arm=cube-order-only bin=./bin/smtcomp_cli_arm

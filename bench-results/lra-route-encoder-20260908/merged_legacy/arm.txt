@@ -1,0 +1,1 @@
+arm=legacy bin=./bin/smtcomp_cli_merged

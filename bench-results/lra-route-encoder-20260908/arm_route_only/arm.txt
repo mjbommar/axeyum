@@ -1,0 +1,1 @@
+arm=fm-first bin=./bin/smtcomp_cli_arm

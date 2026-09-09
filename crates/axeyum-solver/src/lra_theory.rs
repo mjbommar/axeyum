@@ -71,6 +71,7 @@ use crate::cdclt::Lit as CdcltLit;
 use crate::euf_egraph::{
     FinalCheckOutcome, PropagationQueue, TheoryEngineCounters, TheoryLit, TheoryProp, TheorySolver,
 };
+use crate::lazy_smt_counters::OnlineProbe;
 use crate::lra_online::{Encoder, Lit, LraTheory, LraTheoryBuildStop, collect_lra_atoms, replays};
 use crate::model::Model;
 use crate::native_cdclt::{NativeModel, NativeSolveOutcome};
@@ -252,6 +253,7 @@ pub fn check_qf_lra_online_cdclt(
         collect_lra_atoms(arena, a, &mut atom_terms, &mut seen);
     }
     if atom_terms.is_empty() {
+        crate::lazy_smt_counters::record_online_probe(OnlineProbe::NoAtoms);
         return Ok(CheckResult::Unknown(unknown(
             "no linear-real atoms for the online CDCL(T) LRA path",
         )));
@@ -261,6 +263,7 @@ pub fn check_qf_lra_online_cdclt(
     let mut clauses: Vec<Vec<Lit>> = Vec::new();
     for &assertion in assertions {
         let Some(top) = enc.encode(arena, assertion, &mut clauses) else {
+            crate::lazy_smt_counters::record_online_probe(OnlineProbe::SkeletonUnsupported);
             return Ok(CheckResult::Unknown(unknown(
                 "boolean skeleton outside the online CDCL(T) LRA encoder",
             )));
@@ -301,6 +304,7 @@ pub fn check_qf_lra_online_cdclt(
     // built, measured and falsified before settling for a screen.
     let admitted_atoms = budget_bytes / crate::lra_online::BYTES_PER_ADMITTED_ATOM;
     if atom_terms.len() > admitted_atoms {
+        crate::lazy_smt_counters::record_online_probe(OnlineProbe::AdmissionScreen);
         return Ok(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::ResourceLimit,
             detail: format!(
@@ -321,6 +325,7 @@ pub fn check_qf_lra_online_cdclt(
             }));
         }
         Err(LraTheoryBuildStop::ResourceLimit) => {
+            crate::lazy_smt_counters::record_online_probe(OnlineProbe::BuildNodeCeiling);
             return Ok(CheckResult::Unknown(UnknownReason {
                 kind: UnknownKind::ResourceLimit,
                 detail: "online CDCL(T) LRA normalization node ceiling exceeded".to_owned(),
@@ -336,6 +341,7 @@ pub fn check_qf_lra_online_cdclt(
             atoms,
             vars,
         }) => {
+            crate::lazy_smt_counters::record_online_probe(OnlineProbe::BuildMemoryBudget);
             return Ok(CheckResult::Unknown(UnknownReason {
                 kind: UnknownKind::ResourceLimit,
                 detail: format!(
@@ -362,7 +368,10 @@ pub fn check_qf_lra_online_cdclt(
         &mut theory,
     );
     match solved {
-        NativeSolveOutcome::Unsat => Ok(CheckResult::Unsat),
+        NativeSolveOutcome::Unsat => {
+            crate::lazy_smt_counters::record_online_probe(OnlineProbe::Took);
+            Ok(CheckResult::Unsat)
+        }
         // The driver reports one `Unknown` whatever produced it, so ask the
         // memory watchdog first: this route's Fourier–Motzkin fallback was
         // measured at 15.3 GB under an 8 GiB `memory_limit_mb` on 2026-09-08,
@@ -370,27 +379,39 @@ pub fn check_qf_lra_online_cdclt(
         // the machine is what ran out. The flag is sticky for the life of the
         // guard, so a `Some` here is a real observation of this query having
         // been over budget.
-        NativeSolveOutcome::Unknown => Ok(CheckResult::Unknown(
-            crate::memory_budget::watchdog_decline("online CDCL(T) LRA driver").unwrap_or(
-                UnknownReason {
-                    kind: UnknownKind::Timeout,
-                    detail: "timeout in the online CDCL(T) LRA driver".to_owned(),
-                },
-            ),
-        )),
+        //
+        // `Took` either way: the probe is recorded by what the engine DID, not
+        // by what stopped it, and in both cases it built its theory and ran the
+        // search. `dpll_t` separately refuses to fall through to the offline
+        // loop on a `MemoryLimit` reason, which is where that distinction
+        // belongs.
+        NativeSolveOutcome::Unknown => {
+            crate::lazy_smt_counters::record_online_probe(OnlineProbe::Took);
+            Ok(CheckResult::Unknown(
+                crate::memory_budget::watchdog_decline("online CDCL(T) LRA driver").unwrap_or(
+                    UnknownReason {
+                        kind: UnknownKind::Timeout,
+                        detail: "timeout in the online CDCL(T) LRA driver".to_owned(),
+                    },
+                ),
+            ))
+        }
         NativeSolveOutcome::Sat(assignment) => {
             // Reconstruct a real model from the live atoms (the simplex's feasible
             // point, materialized), inject Boolean skeleton leaves from
             // the driver trail, and replay against the originals — the soundness gate.
             let Some(mut model) = theory.inner().real_model() else {
+                crate::lazy_smt_counters::record_online_probe(OnlineProbe::ModelDidNotReplay);
                 return Ok(CheckResult::Unknown(unknown(
                     "online CDCL(T) LRA model did not replay (arithmetic outside the incremental engine)",
                 )));
             };
             add_boolean_leaf_values(arena, &enc, atom_count, &assignment, &mut model);
             if replays(arena, assertions, &model) {
+                crate::lazy_smt_counters::record_online_probe(OnlineProbe::Took);
                 Ok(CheckResult::Sat(model))
             } else {
+                crate::lazy_smt_counters::record_online_probe(OnlineProbe::ModelDidNotReplay);
                 Ok(CheckResult::Unknown(unknown(
                     "online CDCL(T) LRA model did not replay (arithmetic outside the incremental engine)",
                 )))

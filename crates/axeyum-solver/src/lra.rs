@@ -40,7 +40,7 @@ pub(crate) mod warm;
 
 // Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
 #[cfg(not(target_arch = "wasm32"))]
-use std::time::Instant;
+use std::time::{Duration, Instant};
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
@@ -336,6 +336,42 @@ enum Decision {
     OutOfMemory(String),
 }
 
+/// One conjunctive decision's stage timings, so every exit records the same
+/// shape.
+///
+/// A struct rather than four locals because the decider has five exits and an
+/// exit that forgets to record is invisible: the counters would still add up
+/// against each other and simply describe fewer decisions than happened. With
+/// this, `cube_decisions` is the count of decisions that got past collection
+/// and the three timings are that population's.
+#[derive(Debug, Clone, Copy, Default)]
+struct CubeStages {
+    collect: Duration,
+    fm: Duration,
+    fm_declined: bool,
+    simplex: Option<Duration>,
+    /// Whether the dense `n x n` Farkas multiplier matrix was allocated. Set at
+    /// the tagging loop itself, never inferred from which engine ran, so a
+    /// refactor that moves the simplex-first arm below the tagging is visible
+    /// in a counter instead of only in the peak RSS of a benchmark nobody is
+    /// running that day.
+    matrix_built: bool,
+}
+
+impl CubeStages {
+    fn record(self, staged: bool) {
+        if staged {
+            crate::lazy_smt_counters::record_cube_stages(
+                self.collect,
+                self.fm,
+                self.fm_declined,
+                self.simplex,
+                self.matrix_built,
+            );
+        }
+    }
+}
+
 fn decide(arena: &TermArena, assertions: &[TermId]) -> Result<Decision, SolverError> {
     decide_within(arena, assertions, None)
 }
@@ -459,42 +495,108 @@ fn simplex_admission(n: usize, nvars: usize) -> Option<Decision> {
     )))
 }
 
+/// Linearizes every assertion into the collected constraint system, or `None`
+/// when the memory watchdog trips part-way through.
+///
+/// Collection is itself a growth site — one `LinExpr` (a `BTreeMap`) per atom,
+/// tens of thousands of them on these benchmarks — and it runs before any of
+/// the admission gates can price anything, because the constraint count they
+/// price is what this loop is producing. One relaxed atomic load per assertion.
+///
+/// Returns `None` rather than the [`Decision`] so the phase name in the
+/// refusal stays at the call site, next to the other phases that can produce
+/// one.
+///
+/// # Errors
+///
+/// Propagates [`Collector::collect`]'s error.
+fn collect_constraints(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<Option<Collector>, SolverError> {
+    let mut ctx = Collector::default();
+    for (index, &assertion) in assertions.iter().enumerate() {
+        if crate::memory_budget::watchdog_tripped() {
+            return Ok(None);
+        }
+        ctx.current_origin = index;
+        ctx.collect(arena, assertion, false)?;
+    }
+    Ok(Some(ctx))
+}
+
 fn decide_within(
     arena: &TermArena,
     assertions: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<Decision, SolverError> {
-    let mut ctx = Collector::default();
-    for (index, &assertion) in assertions.iter().enumerate() {
-        // Collection is itself a growth site — one `LinExpr` (a `BTreeMap`) per
-        // atom, tens of thousands of them on these benchmarks — and it runs
-        // before any of the gates below can price anything, because the
-        // constraint count they price is what this loop is producing. One
-        // relaxed atomic load per assertion.
-        if crate::memory_budget::watchdog_tripped() {
-            return Ok(Decision::OutOfMemory(
-                crate::memory_budget::watchdog_decline("lra constraint collection").map_or_else(
-                    || "lra: memory budget exceeded while collecting constraints".to_owned(),
-                    |reason| reason.detail,
-                ),
-            ));
-        }
-        ctx.current_origin = index;
-        ctx.collect(arena, assertion, false)?;
-    }
+    // Stage clocks, armed only when the lazy-SMT instrument is on: the
+    // refinement loop's `theory_ms` is 97.9% of that route's budget after the
+    // Farkas fix, and one number for a decider with three stages cannot say
+    // which of them to attack. Off, this is one thread-local `bool` read per
+    // decision — a decision that collects and eliminates over the whole cube.
+    let counting = crate::lazy_smt_counters::enabled();
+    let collect_started = counting.then(Instant::now);
+    let Some(mut ctx) = collect_constraints(arena, assertions)? else {
+        return Ok(Decision::OutOfMemory(
+            crate::memory_budget::watchdog_decline("lra constraint collection").map_or_else(
+                || "lra: memory budget exceeded while collecting constraints".to_owned(),
+                |reason| reason.detail,
+            ),
+        ));
+    };
+    let collect_elapsed = collect_started.map_or(Duration::ZERO, |s| s.elapsed());
     // An `i128` overflow while linearizing poisons the collection: the
     // placeholder constraints are garbage and must not be interpreted. Degrade to
     // a graceful `unknown` BEFORE any constraint is solved (overflow never becomes
     // a wrong sat/unsat).
     if ctx.overflow {
+        CubeStages {
+            collect: collect_elapsed,
+            ..CubeStages::default()
+        }
+        .record(counting);
         return Ok(Decision::TimedOut);
     }
     if ctx.trivially_unsat {
+        CubeStages {
+            collect: collect_elapsed,
+            ..CubeStages::default()
+        }
+        .record(counting);
         return Ok(Decision::UnsatTrivial(ctx.trivial_origin.unwrap_or(0)));
     }
 
     let n = ctx.constraints.len();
     let nvars = ctx.vars.len();
+    let mut stages = CubeStages {
+        collect: collect_elapsed,
+        ..CubeStages::default()
+    };
+
+    // Which engine gets the system first — and this sits ahead of BOTH the
+    // Fourier–Motzkin admission gate and the multiplier matrix on purpose,
+    // which is a composition neither of the two lanes that met here wrote.
+    //
+    // The memory lane priced the `32*n^2`-byte unit-multiplier matrix
+    // (`fm_admission`, `BYTES_PER_FARKAS_MULTIPLIER`) after finding three
+    // `QF_LRA` files reaching 26.6 GB under an 8 GiB flag. This lane found that
+    // the elimination that matrix exists for decided **0 of 2,745** cubes on
+    // the offline lazy-SMT population. Put together: when the simplex goes
+    // first and decides, the matrix is never allocated at all, so the largest
+    // allocation on this route is not merely priced, it is not made. The gate
+    // still protects the path that does run.
+    //
+    // `simplex_admission` is checked first for exactly the reason that lane
+    // exists: the simplex's own dense `n x (nvars + n)` tableau was the second
+    // unpriced matrix. When it refuses, the elimination gets the query and
+    // reports its own refusal.
+    if crate::lra_route::configured().simplex_first(n)
+        && simplex_admission(n, nvars).is_none()
+        && let Some(decision) = simplex_first(arena, assertions, &ctx, counting, &mut stages)?
+    {
+        return Ok(decision);
+    }
 
     if let Some(fm_refusal) = fm_admission(n, nvars) {
         // Fourier–Motzkin is not entered at all, so the multiplier matrix is
@@ -503,13 +605,21 @@ fn decide_within(
         // or a Farkas-verified `unsat` — so trying it here cannot produce a
         // wrong verdict. Its own dense tableau is priced first, for exactly the
         // reason this branch exists.
-        if simplex_admission(n, nvars).is_none()
+        //
+        // `stages.simplex.is_none()` guards the composition: when the
+        // simplex-first arm above already ran and declined, this would be a
+        // SECOND solve of the identical constraint system, which is the shape
+        // of the 48.6%-of-budget double-solve removed from `dpll_t` earlier the
+        // same day.
+        if stages.simplex.is_none()
+            && simplex_admission(n, nvars).is_none()
             && let Some(decision) = simplex_fallback(arena, assertions, &ctx)?
         {
             return Ok(decision);
         }
         // FM's refusal is the one reported: it is the gate that fired first,
         // and its number is the one the caller would have to raise.
+        stages.record(counting);
         return Ok(fm_refusal);
     }
 
@@ -527,8 +637,19 @@ fn decide_within(
     for (i, constraint) in ctx.constraints.iter_mut().enumerate() {
         constraint.mult = unit_vec(n, i);
     }
-
-    match solve(&ctx.constraints, nvars, deadline) {
+    stages.matrix_built = true;
+    let fm_started = counting.then(Instant::now);
+    let feasibility = solve(&ctx.constraints, nvars, deadline);
+    stages.fm = fm_started.map_or(Duration::ZERO, |s| s.elapsed());
+    // Only `TimedOut` hands the cube to the simplex, so only `TimedOut` is a
+    // decline in the counter's sense; a memory decline hands it to nobody.
+    // Every other outcome is recorded here, which is why the `OutOfMemory` arm
+    // below records nothing of its own.
+    stages.fm_declined = matches!(feasibility, Feasibility::TimedOut);
+    if !stages.fm_declined {
+        stages.record(counting);
+    }
+    match feasibility {
         Feasibility::OutOfMemory => {
             // The watchdog observed the process over `memory_limit_mb` while the
             // elimination ran. The simplex retry is deliberately NOT attempted:
@@ -543,18 +664,7 @@ fn decide_within(
             ))
         }
         Feasibility::TimedOut => {
-            // Fourier–Motzkin exhausted its size budget (it is doubly-exponential in
-            // the variable count). Retry on the exact-rational simplex (P1.9 · T1.9.2),
-            // which scales polynomially. Sound: `simplex_fallback` returns a decision
-            // only for a replay-checked `sat` or a Farkas-verified `unsat`; otherwise
-            // we keep the FM `unknown`.
-            if let Some(refusal) = simplex_admission(n, nvars) {
-                return Ok(refusal);
-            }
-            if let Some(decision) = simplex_fallback(arena, assertions, &ctx)? {
-                return Ok(decision);
-            }
-            Ok(Decision::TimedOut)
+            simplex_after_elimination(arena, assertions, &ctx, n, nvars, counting, &mut stages)
         }
         Feasibility::Unsat(multipliers) => {
             let certificate = FarkasCertificate {
@@ -575,37 +685,142 @@ fn decide_within(
             })
         }
         Feasibility::Bug(message) => Err(SolverError::Backend(message)),
-        Feasibility::Sat(values) => {
-            // Build a model over the original real symbols and replay (the trust
-            // anchor for `sat`).
-            let mut model = Model::new();
-            let mut assignment = axeyum_ir::Assignment::new();
-            for (&symbol, &index) in &ctx.var_index {
-                model.set(symbol, Value::Real(values[index]));
-                assignment.set(symbol, Value::Real(values[index]));
+        Feasibility::Sat(values) => replayed_sat(arena, assertions, &ctx, &values),
+    }
+}
+
+/// Builds a model over the original real symbols from a Fourier–Motzkin
+/// feasible point and **replays it against every assertion** — the trust anchor
+/// for `sat` on this route.
+///
+/// # Errors
+///
+/// A model that definitely violates an assertion is a procedure bug and stays a
+/// loud [`SolverError::Backend`] alarm. A model that cannot be *evaluated* (an
+/// `i128` overflow in an exact rational comparison) is not a wrong model, only
+/// an uncertifiable one, and degrades to [`Decision::Incomplete`].
+fn replayed_sat(
+    arena: &TermArena,
+    assertions: &[TermId],
+    ctx: &Collector,
+    values: &[Rational],
+) -> Result<Decision, SolverError> {
+    let mut model = Model::new();
+    let mut assignment = axeyum_ir::Assignment::new();
+    for (&symbol, &index) in &ctx.var_index {
+        model.set(symbol, Value::Real(values[index]));
+        assignment.set(symbol, Value::Real(values[index]));
+    }
+    for &assertion in assertions {
+        match eval(arena, assertion, &assignment) {
+            Ok(Value::Bool(true)) => {}
+            Ok(_) => {
+                return Err(SolverError::Backend(format!(
+                    "lra sat model replay failed: assertion #{} not satisfied",
+                    assertion.index()
+                )));
             }
-            for &assertion in assertions {
-                match eval(arena, assertion, &assignment) {
-                    Ok(Value::Bool(true)) => {}
-                    Ok(_) => {
-                        return Err(SolverError::Backend(format!(
-                            "lra sat model replay failed: assertion #{} not satisfied",
-                            assertion.index()
-                        )));
-                    }
-                    Err(error) => {
-                        // The candidate could not be *evaluated* (e.g. the exact
-                        // rational comparison overflowed `i128`). This is not a
-                        // wrong model — we simply cannot certify `sat` — so decline
-                        // to a graceful `unknown` rather than raise a backend error.
-                        return Ok(Decision::Incomplete(format!(
-                            "lra: sat model replay could not be verified (assertion #{}): {error}",
-                            assertion.index()
-                        )));
-                    }
-                }
+            Err(error) => {
+                return Ok(Decision::Incomplete(format!(
+                    "lra: sat model replay could not be verified (assertion #{}): {error}",
+                    assertion.index()
+                )));
             }
-            Ok(Decision::Sat(model))
+        }
+    }
+    Ok(Decision::Sat(model))
+}
+
+/// The elimination gave up; decide the same system on the exact-rational
+/// simplex if it has not already run and its own tableau is affordable.
+///
+/// Fourier–Motzkin exhausted its size budget (it is doubly-exponential in the
+/// variable count). The simplex (P1.9 · T1.9.2) scales polynomially and is
+/// sound here for the same reason it is sound anywhere: it returns a decision
+/// only for a replay-checked `sat` or a Farkas-verified `unsat`, and otherwise
+/// the elimination's `unknown` stands.
+///
+/// Two guards, one from each of the lanes that met in this function:
+///
+/// - `stages.simplex.is_some()` — the simplex-first arm already ran and
+///   declined, on the identical constraint system, so a second call cannot
+///   decide what the first did not.
+/// - `simplex_admission` — the simplex's own dense `n x (nvars + n)` tableau
+///   was the *second* unpriced matrix behind the 26.6 GB measurement.
+///
+/// # Errors
+///
+/// Propagates [`simplex_fallback`]'s error, after recording the stages so a
+/// failed decision is still counted.
+fn simplex_after_elimination(
+    arena: &TermArena,
+    assertions: &[TermId],
+    ctx: &Collector,
+    n: usize,
+    nvars: usize,
+    counting: bool,
+    stages: &mut CubeStages,
+) -> Result<Decision, SolverError> {
+    if stages.simplex.is_some() {
+        stages.record(counting);
+        return Ok(Decision::TimedOut);
+    }
+    if let Some(refusal) = simplex_admission(n, nvars) {
+        stages.record(counting);
+        return Ok(refusal);
+    }
+    let started = counting.then(Instant::now);
+    let fallback = simplex_fallback(arena, assertions, ctx);
+    stages.simplex = Some(started.map_or(Duration::ZERO, |s| s.elapsed()));
+    stages.record(counting);
+    if let Some(decision) = fallback? {
+        return Ok(decision);
+    }
+    Ok(Decision::TimedOut)
+}
+
+/// Runs the exact-rational simplex on the collected system **before**
+/// Fourier–Motzkin, timing it into `stages` and recording the stage split on
+/// every exit it owns.
+///
+/// Both engines are sound and each declines on cases the other decides, so the
+/// order is a pure cost choice and the union of what the pair decides does not
+/// depend on it. What the order decides is how much of a budget is spent before
+/// the cube is decided at all: measured 2026-09-08 over the 22 `QF_LRA` files
+/// bound by the offline lazy-SMT loop, Fourier–Motzkin declined on **all 2,745
+/// cubes** — a 0% success rate — having spent 96-99.9% of `theory_ms`, 21.5 to
+/// 23.7 s of a 24 s budget, reaching its size guard; the simplex then decided
+/// every one of those same cubes in 43-696 ms in total. Elimination is doubly
+/// exponential in the variable count and the simplex is polynomial, so above
+/// `lra_route::SIMPLEX_FIRST_AT_CONSTRAINTS` the elimination goes second.
+///
+/// `Ok(None)` means the simplex declined and the caller should continue into
+/// the elimination; the stage record is then left to the caller, which knows
+/// what the elimination went on to do.
+///
+/// # Errors
+///
+/// Propagates [`simplex_fallback`]'s error, recording the stages first so a
+/// failed decision is still counted.
+fn simplex_first(
+    arena: &TermArena,
+    assertions: &[TermId],
+    ctx: &Collector,
+    counting: bool,
+    stages: &mut CubeStages,
+) -> Result<Option<Decision>, SolverError> {
+    let started = counting.then(Instant::now);
+    let fallback = simplex_fallback(arena, assertions, ctx);
+    stages.simplex = Some(started.map_or(Duration::ZERO, |s| s.elapsed()));
+    match fallback {
+        Ok(Some(decision)) => {
+            stages.record(counting);
+            Ok(Some(decision))
+        }
+        Ok(None) => Ok(None),
+        Err(error) => {
+            stages.record(counting);
+            Err(error)
         }
     }
 }
@@ -3568,6 +3783,127 @@ mod gomory_internal_tests {
 /// `dpll_t::check_with_lra_dpll_within` <- `nra::check_with_nra` <-
 /// `auto::check_auto_dispatch`. So the bound has to be tested where the bytes
 /// are, and the bytes are here.
+#[cfg(test)]
+mod cube_order_tests {
+    use super::*;
+
+    use crate::lazy_smt_counters::{LazySmtCountersGuard, last_lazy_smt_counters};
+
+    /// `count` real constraints `x_i <= i` over `count` distinct variables plus
+    /// one contradiction on `x0`, so the system is UNSAT and large enough to be
+    /// over [`crate::lra_route::SIMPLEX_FIRST_AT_CONSTRAINTS`].
+    fn wide_unsatisfiable_system(count: usize) -> (TermArena, Vec<TermId>) {
+        let mut arena = TermArena::new();
+        let mut assertions = Vec::with_capacity(count + 1);
+        for i in 0..count {
+            let x = arena
+                .real_var(&format!("cube_order_x{i}"))
+                .expect("a real variable");
+            let bound = arena.real_const(Rational::integer(i as i128));
+            assertions.push(arena.real_le(x, bound).expect("x_i <= i"));
+        }
+        let x0 = arena.real_var("cube_order_x0").expect("a real variable");
+        let one = arena.real_const(Rational::integer(1));
+        assertions.push(arena.real_ge(x0, one).expect("x0 >= 1"));
+        (arena, assertions)
+    }
+
+    /// **The elimination does not run at all on a large system, so the
+    /// `32*n^2` multiplier matrix is never allocated.**
+    ///
+    /// This pins the ORDER, which is the composition of two lanes and is what a
+    /// refactor would silently undo. The multiplier matrix is built on the
+    /// statement immediately before `solve`, so "Fourier–Motzkin did not run" and
+    /// "the matrix was not built" are the same observation, and the counters
+    /// make it one a test can take: `cube_fm_ms == 0` and `cube_fm_declines == 0`
+    /// while `cube_simplex_calls == 1`.
+    ///
+    /// Moving the `simplex_first` call after the tagging — the arrangement
+    /// either lane would have written alone — leaves the verdict identical and
+    /// turns all three of those numbers over, which is why the assertion is on
+    /// the counters and not on the result.
+    #[test]
+    fn a_large_system_is_decided_without_entering_fourier_motzkin() {
+        let n = crate::lra_route::SIMPLEX_FIRST_AT_CONSTRAINTS + 8;
+        let (arena, assertions) = wide_unsatisfiable_system(n);
+
+        let guard = LazySmtCountersGuard::enable();
+        let decision = decide(&arena, &assertions).expect("a decision");
+        let counters = last_lazy_smt_counters().expect("counting was enabled");
+        drop(guard);
+
+        assert!(
+            matches!(decision, Decision::UnsatFarkas { .. }),
+            "the simplex must decide this system and certify it"
+        );
+        assert_eq!(
+            counters.cube_decisions, 1,
+            "exactly one conjunctive decision should have been counted"
+        );
+        assert_eq!(
+            counters.cube_simplex_calls, 1,
+            "the simplex should have run exactly once"
+        );
+        assert_eq!(
+            counters.cube_fm_declines, 0,
+            "Fourier–Motzkin must not have run, so it cannot have declined"
+        );
+        assert_eq!(
+            counters.cube_fm,
+            std::time::Duration::ZERO,
+            "no time may be spent inside Fourier–Motzkin"
+        );
+        assert_eq!(
+            counters.cube_matrices, 0,
+            "the `32*n^2` multiplier matrix must never be allocated — the whole \
+             point of the ordering, and a SEPARATE observation from whether the \
+             elimination ran, since moving the simplex-first arm below the \
+             tagging leaves the elimination unrun and the matrix built"
+        );
+    }
+
+    /// The mirror of the test above, and the reason the threshold is a bound
+    /// rather than a swap: BELOW it the elimination still goes first, which is
+    /// what keeps the exact refutation small systems get.
+    ///
+    /// Derived from the constant, never a literal — a test that spelled `256`
+    /// would keep passing after somebody moved the bound and would then be
+    /// measuring nothing.
+    #[test]
+    fn a_small_system_still_enters_fourier_motzkin_first() {
+        let n = 4;
+        assert!(
+            n < crate::lra_route::SIMPLEX_FIRST_AT_CONSTRAINTS,
+            "this test is only meaningful below the threshold"
+        );
+        let (arena, assertions) = wide_unsatisfiable_system(n);
+
+        let guard = LazySmtCountersGuard::enable();
+        let decision = decide(&arena, &assertions).expect("a decision");
+        let counters = last_lazy_smt_counters().expect("counting was enabled");
+        drop(guard);
+
+        assert!(
+            matches!(decision, Decision::UnsatFarkas { .. }),
+            "the elimination must decide this system"
+        );
+        assert_eq!(
+            counters.cube_simplex_calls, 0,
+            "below the threshold the simplex must not be reached at all"
+        );
+        assert_eq!(
+            counters.cube_decisions, 1,
+            "exactly one conjunctive decision should have been counted"
+        );
+        assert_eq!(
+            counters.cube_matrices, 1,
+            "below the threshold the elimination runs, so its matrix IS built — \
+             the positive control that stops the assertion above from passing \
+             merely because nothing is ever counted"
+        );
+    }
+}
+
 #[cfg(test)]
 mod memory_limit_tests {
     use super::*;
