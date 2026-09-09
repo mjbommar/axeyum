@@ -8481,6 +8481,19 @@ pub fn prove_unsat_by_ematching(
     // skolemized set transfers back through skolemization; any other outcome
     // falls through to the established decline. Half the remaining budget, so
     // the callers' later SAT-only stages are not starved.
+    // What the e-matching loop said when it gave up, kept so the caller is told
+    // the OPERATIVE stop rather than a shape message. Measured 2026-09-09 on
+    // `bench-results/parity-losses-20260908/UF.txt`: on 26 of the 32 files the
+    // loop stops at its accumulated-ground ceiling
+    // (`e-matching: ground-term count budget exhausted`) or at its final
+    // refutation check, and the reason the CLI then printed was
+    // `decide_instantiation`'s "query has quantifiers instantiation does not
+    // reach (nested, existential, or non-top-level)" -- which is a claim about
+    // the query's SHAPE, and the shape is not what stopped these runs. The
+    // skolemizer reached every one of them (`AXEYUM_QPROBE` reports zero
+    // `skolem-bail`), so the printed reason sent every reader looking at the
+    // wrong subsystem. It costs one `Option` to say what actually happened.
+    let mut loop_decline: Option<UnknownReason> = None;
     if retried.residual_quantifier
         && let Some(remaining_config) = config_with_remaining_timeout(config, deadline)
     {
@@ -8509,8 +8522,10 @@ pub fn prove_unsat_by_ematching(
                 }
             );
         }
-        if matches!(loop_result, CheckResult::Unsat) {
-            return Ok(CheckResult::Unsat);
+        match loop_result {
+            CheckResult::Unsat => return Ok(CheckResult::Unsat),
+            CheckResult::Unknown(reason) => loop_decline = Some(reason),
+            CheckResult::Sat(_) => {}
         }
     }
     // Skolemization preserves satisfiability, not equivalence, so only `unsat`
@@ -8526,7 +8541,12 @@ pub fn prove_unsat_by_ematching(
                      back through skolemization"
                 .to_owned(),
         })),
-        CheckResult::Unknown(reason) => Ok(CheckResult::Unknown(reason)),
+        // The loop's own decline wins over the residual-shape message: it ran,
+        // and it is the thing that gave up. `decide_instantiation`'s shape
+        // decline is kept for the case where the loop never ran at all (no
+        // remaining budget, or no residual quantifier to hand it), because
+        // there the shape IS the reason.
+        CheckResult::Unknown(reason) => Ok(CheckResult::Unknown(loop_decline.unwrap_or(reason))),
     }
 }
 

@@ -74,7 +74,150 @@ const ROUND_GROWTH_HEADROOM: u32 = 8;
 /// instances generate ever-deeper terms (e.g. `∀x.(x≤y ∨ x≥y+1)` ⇒ `y, y+1, y+2, …`)
 /// can explode a single round's `check_auto`, so the loop bails to `unknown` past this
 /// many ground terms even with no wall-clock budget (the "never hang" rule).
+///
+/// This is the SHIPPED ceiling, not the only one the loop can run under: it is
+/// the `ceiling` of [`GroundBudget::SHIPPED`], and every use site reads
+/// [`ground_budget`] rather than this constant so an A/B can move the ceiling
+/// without editing the loop. Read the type's docs before changing the number —
+/// on the division this bound governs, moving it is measured to do nothing.
 const MAX_GROUND_TERMS: usize = 8192;
+
+/// The accumulated-ground admission policy of the e-matching instantiation
+/// loop: one named object for the three ceilings that have always moved
+/// together, instead of two `const` expressions derived from a third.
+///
+/// # Why this is a policy and not three constants
+///
+/// `MAX_GROUND_TERMS` was a bare `usize` with no environment override and an
+/// undated justification, and `MAX_JOINED_SUBSTITUTIONS_PER_ROUND` and
+/// `INVENTION_GROUND_CEILING` were `const` expressions over it — so the only
+/// way to ask "does this bound decide the division?" was to edit the source and
+/// rebuild. It is the operative stop on the `UF` loss population: on the
+/// 2026-09-08 loss list (`bench-results/parity-losses-20260908/UF.txt`), 26 of
+/// the 32 files drive the loop to this ceiling, and they do it with wall clock
+/// still unspent.
+///
+/// # What the A/B found, 2026-09-09
+///
+/// Raising the ceiling **decides nothing**. The pool at the ceiling is inert:
+/// `AXEYUM_FLOODPROBE=1` reports the overwhelming majority of admitted
+/// instances still `Undetermined` as clauses when the cap fires, so more of the
+/// same traffic is more of the same nothing. The ceiling is a symptom of
+/// instance *selection*, and no value of this field is a fix for that. The
+/// object exists so the next lane can re-ask the question in one environment
+/// variable rather than in a patch — and so the answer is recorded next to the
+/// number instead of in a lane report nobody reads.
+///
+/// # Fields
+///
+/// Every field is a ceiling on a different resource, spelled at the use site
+/// through the accessor of the same name, so a reader of one number can see the
+/// other two it is tied to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GroundBudget {
+    /// The arm this value came from, as it appears in a `--trace` reading.
+    /// Carried for attribution; nothing branches on it.
+    pub name: &'static str,
+    /// Ceiling on accumulated ground terms across the whole instantiation loop.
+    /// Crossing it makes the loop run one final refutation check and return
+    /// `unknown` ([`egraph_ground_limit`]), even with no wall clock configured
+    /// — this is the "never hang" ceiling.
+    pub ceiling: usize,
+    /// Ceiling on one retained matching round's tuple join, which prevents a
+    /// multi-pattern Cartesian product from allocating beyond the loop's own
+    /// accumulated-ground budget. Equal to `ceiling` in every arm: a join that
+    /// could emit more tuples than the loop can ever hold is allocating for a
+    /// cap it cannot reach.
+    pub join_ceiling: usize,
+    /// Ceiling below which term *invention* may add traffic. Half of `ceiling`
+    /// in every arm: the flood class (files that drive ground to the cap) must
+    /// not gain extra term traffic from that route, so invention stops well
+    /// before the loop does.
+    pub invention_ceiling: usize,
+}
+
+impl GroundBudget {
+    /// The shipped policy, built from the three shipped constants themselves so
+    /// the arm cannot drift from them by editing one and forgetting the others.
+    pub const SHIPPED: Self = Self {
+        name: "shipped",
+        ceiling: MAX_GROUND_TERMS,
+        join_ceiling: MAX_JOINED_SUBSTITUTIONS_PER_ROUND,
+        invention_ceiling: INVENTION_GROUND_CEILING,
+    };
+
+    /// A budget scaled from one ceiling, keeping the shipped RATIOS between the
+    /// three. `from_ceiling(_, MAX_GROUND_TERMS)` must equal [`Self::SHIPPED`],
+    /// which `shipped_ground_budget_is_the_scaled_shipped_ceiling` pins: an
+    /// A/B that moved the ceiling while silently changing a ratio would not be
+    /// measuring the ceiling.
+    #[must_use]
+    pub const fn from_ceiling(name: &'static str, ceiling: usize) -> Self {
+        Self {
+            name,
+            ceiling,
+            join_ceiling: ceiling,
+            invention_ceiling: ceiling / 2,
+        }
+    }
+}
+
+std::thread_local! {
+    /// A per-thread override of the process policy, set by
+    /// [`GroundBudgetGuard`]. The process policy is read once from the
+    /// environment, so without this no test could exercise more than one arm.
+    static GROUND_BUDGET_OVERRIDE: std::cell::Cell<Option<GroundBudget>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Forces `budget` on this thread for the lifetime of the guard, restoring the
+/// previous setting on drop.
+pub struct GroundBudgetGuard(Option<GroundBudget>);
+
+impl GroundBudgetGuard {
+    /// Overrides the process policy on this thread.
+    #[must_use]
+    pub fn set(budget: GroundBudget) -> Self {
+        GroundBudgetGuard(GROUND_BUDGET_OVERRIDE.with(|cell| cell.replace(Some(budget))))
+    }
+}
+
+impl Drop for GroundBudgetGuard {
+    fn drop(&mut self) {
+        GROUND_BUDGET_OVERRIDE.with(|cell| cell.set(self.0));
+    }
+}
+
+/// The [`GroundBudget`] in force on this thread: a live [`GroundBudgetGuard`]'s
+/// choice, else the process policy resolved once from `AXEYUM_QINST_GROUND`.
+///
+/// The variable holds a decimal ceiling (`AXEYUM_QINST_GROUND=32768`). An
+/// unset, unparseable, or zero value is [`GroundBudget::SHIPPED`], so a typo
+/// degrades to the shipped behaviour rather than to a ceiling nobody chose —
+/// and in particular `AXEYUM_QINST_GROUND=0` cannot disable the "never hang"
+/// ceiling, which is the one property of this bound that is not a preference.
+///
+/// The resolved arm's `name` is `"shipped"` when it matched the shipped
+/// ceiling exactly, whatever route it arrived by, because two runs printing
+/// `shipped` must have run the same loop.
+#[must_use]
+pub fn ground_budget() -> GroundBudget {
+    static RESOLVED: std::sync::OnceLock<GroundBudget> = std::sync::OnceLock::new();
+    if let Some(budget) = GROUND_BUDGET_OVERRIDE.with(std::cell::Cell::get) {
+        return budget;
+    }
+    *RESOLVED.get_or_init(|| {
+        match std::env::var("AXEYUM_QINST_GROUND")
+            .ok()
+            .and_then(|raw| raw.trim().parse::<usize>().ok())
+        {
+            Some(ceiling) if ceiling > 0 && ceiling != MAX_GROUND_TERMS => {
+                GroundBudget::from_ceiling("env", ceiling)
+            }
+            _ => GroundBudget::SHIPPED,
+        }
+    })
+}
 
 /// Flood-regime budget for one round's *deferred* (undetermined-clause)
 /// admissions; conflict and unit instances stay eager and unbudgeted. The
@@ -124,6 +267,10 @@ const FLOOD_FINAL_SUBSET_MAX_GENERATION: u32 = 1;
 /// Internal tuple-join cap per retained matching round. This prevents a
 /// multi-pattern Cartesian product from allocating beyond the solver's own
 /// accumulated-ground budget. The public one-shot witness API remains complete.
+///
+/// The SHIPPED value. Use sites read [`GroundBudget::join_ceiling`]; this
+/// constant is what the shipped arm must equal, pinned by
+/// `shipped_ground_budget_is_the_scaled_shipped_ceiling`.
 const MAX_JOINED_SUBSTITUTIONS_PER_ROUND: usize = MAX_GROUND_TERMS;
 
 /// Slice-3 lazy-discovery caps (`AXEYUM_NESTED_QUANT` only; all zero-effect
@@ -189,6 +336,10 @@ const MAX_INVENTION_SEEDS_PER_SORT: usize = 12;
 /// Invention runs only while the accumulated ground set is comfortably below
 /// [`MAX_GROUND_TERMS`]: the flood class (fixpoint-free files that drive
 /// ground to the cap) must not gain extra term traffic from this route.
+///
+/// The SHIPPED value. Use sites read [`GroundBudget::invention_ceiling`]; this
+/// constant is what the shipped arm must equal, pinned by
+/// `shipped_ground_budget_is_the_scaled_shipped_ceiling`.
 const INVENTION_GROUND_CEILING: usize = MAX_GROUND_TERMS / 2;
 /// Direct staged instances for universals the matching/join schedules starve
 /// completely (measured on `Arrow_Order/uf.616692`: the 4-var universal's
@@ -816,7 +967,7 @@ impl NestedDiscovery {
                 .unwrap_or(0)
                 .saturating_add(1);
             if peel_foralls(arena, formula).0.is_empty() {
-                if ground.len() < MAX_GROUND_TERMS && seen.insert(formula) {
+                if ground.len() < ground_budget().ceiling && seen.insert(formula) {
                     generations.record_admitted(arena, formula, generation);
                     ground.push(formula);
                     self.admitted_ground += 1;
@@ -1338,7 +1489,7 @@ fn prove_quantified_unsat_via_egraph_impl(
         {
             break;
         }
-        if ground.len() > MAX_GROUND_TERMS {
+        if ground.len() > ground_budget().ceiling {
             if floodprobe_enabled() {
                 eprintln!("FLOODPROBE cap-hit round={round} ground={}", ground.len());
                 floodprobe_cap_census(arena, &matcher, &ground_derivations, &assertions);
@@ -1496,7 +1647,7 @@ fn prove_quantified_unsat_via_egraph_impl(
             // while the budget drains). The refutations this route wins are
             // small-ground refutations; past the ceiling the final ground
             // check is the better spend.
-            if ground.len() <= INVENTION_GROUND_CEILING
+            if ground.len() <= ground_budget().invention_ceiling
                 && deadline.is_none_or(|d| Instant::now() < d)
             {
                 let seeded =
@@ -2364,7 +2515,7 @@ fn admit_generated_ground(
 ) -> Vec<TermId> {
     let mut added = Vec::new();
     for term in terms {
-        if ground.len() >= MAX_GROUND_TERMS {
+        if ground.len() >= ground_budget().ceiling {
             break;
         }
         let Some(derivation) = candidates.get(&term) else {
@@ -4063,7 +4214,7 @@ impl IncrementalEmatchSession {
                 }
             }
         }
-        let mut remaining = MAX_JOINED_SUBSTITUTIONS_PER_ROUND;
+        let mut remaining = ground_budget().join_ceiling;
         let mut tuple_batches = Vec::with_capacity(impacted_quantifiers.len());
         for index in impacted_quantifiers {
             let joined = self.witness_tuples_with_overrides(
@@ -4454,7 +4605,7 @@ impl IncrementalEmatchSession {
         }
         self.match_rounds += 1;
         let join_seg = Instant::now();
-        let mut remaining = MAX_JOINED_SUBSTITUTIONS_PER_ROUND;
+        let mut remaining = ground_budget().join_ceiling;
         let mut batches = Vec::with_capacity(self.quantifiers.len());
         if self.join_stats.is_empty() {
             self.join_stats = vec![(0usize, 0usize); self.quantifiers.len()];
@@ -4509,7 +4660,7 @@ impl IncrementalEmatchSession {
             quantifier,
             pattern_matches,
             None,
-            MAX_JOINED_SUBSTITUTIONS_PER_ROUND,
+            ground_budget().join_ceiling,
             None,
         )
         .map(|(tuples, _)| tuples)
@@ -6691,6 +6842,68 @@ mod tests {
 
     use super::*;
     use axeyum_ir::Sort;
+
+    /// The shipped [`GroundBudget`] arm must reproduce the three constants the
+    /// loop used before it became a policy — otherwise "shipped" names a
+    /// configuration nobody shipped.
+    ///
+    /// This is the guard that dies if either side drifts. The constants are
+    /// otherwise unreferenced outside this test, which is deliberate: they are
+    /// now the DEFINITION of the shipped arm rather than the values the loop
+    /// reads, so the only thing that may consult them is the check that they
+    /// still agree with it.
+    #[test]
+    fn shipped_ground_budget_is_the_scaled_shipped_ceiling() {
+        let shipped = GroundBudget::SHIPPED;
+        assert_eq!(shipped.name, "shipped");
+        assert_eq!(shipped.ceiling, MAX_GROUND_TERMS);
+        assert_eq!(shipped.join_ceiling, MAX_JOINED_SUBSTITUTIONS_PER_ROUND);
+        assert_eq!(shipped.invention_ceiling, INVENTION_GROUND_CEILING);
+        // The ratios `from_ceiling` scales by must be the shipped ones. Without
+        // this an override arm would silently change the join or invention
+        // ratio as well as the ceiling, so an A/B on the ceiling would not be
+        // an A/B on the ceiling.
+        assert_eq!(
+            GroundBudget::from_ceiling("shipped", MAX_GROUND_TERMS),
+            shipped,
+            "from_ceiling at the shipped ceiling must reproduce the shipped arm"
+        );
+    }
+
+    /// With no override in force, the loop runs the shipped arm. A guard
+    /// restores it on drop, so an A/B in one process cannot leak into the next
+    /// query.
+    #[test]
+    fn ground_budget_override_is_scoped_to_the_guard() {
+        let outside = ground_budget();
+        {
+            let _guard = GroundBudgetGuard::set(GroundBudget::from_ceiling(
+                "test-wide",
+                4 * MAX_GROUND_TERMS,
+            ));
+            let inside = ground_budget();
+            assert_eq!(inside.name, "test-wide");
+            assert_eq!(inside.ceiling, 4 * MAX_GROUND_TERMS);
+            // The derived ceilings move WITH the ceiling; that they always have
+            // is the reason this is one object and not three constants.
+            assert_eq!(inside.join_ceiling, 4 * MAX_GROUND_TERMS);
+            assert_eq!(inside.invention_ceiling, 2 * MAX_GROUND_TERMS);
+        }
+        assert_eq!(ground_budget(), outside, "the guard must restore on drop");
+    }
+
+    /// Nested guards restore the ENCLOSING arm, not the process default — the
+    /// property that makes a per-file A/B inside a suite honest.
+    #[test]
+    fn nested_ground_budget_guards_restore_the_enclosing_arm() {
+        let outer = GroundBudget::from_ceiling("outer", 512);
+        let _outer_guard = GroundBudgetGuard::set(outer);
+        {
+            let _inner = GroundBudgetGuard::set(GroundBudget::from_ceiling("inner", 64));
+            assert_eq!(ground_budget().ceiling, 64);
+        }
+        assert_eq!(ground_budget(), outer);
+    }
 
     /// A quantifier-free formula whose arena representation is a *shared chain*:
     /// each level is `or(prev, prev)`, so the DAG has `depth + 1` nodes while its

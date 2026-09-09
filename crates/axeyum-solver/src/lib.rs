@@ -534,12 +534,12 @@ pub mod certificates {
     /// Quantifier certificate families and their independent checkers.
     pub mod quantifiers {
         pub use crate::qinst_egraph::{
-            QuantifierClausePropagationCertificate, QuantifierFalseSiblingJustification,
-            QuantifierGroundDerivation, QuantifierInstanceCertificate,
-            check_quantifier_clause_propagation, check_quantifier_clause_propagations,
-            check_quantifier_ground_derivation, instantiate_forall_via_egraph,
-            prove_quantified_unsat_via_egraph, prove_quantified_unsat_via_egraph_with_instances,
-            witness_tuples_via_egraph,
+            GroundBudget, GroundBudgetGuard, QuantifierClausePropagationCertificate,
+            QuantifierFalseSiblingJustification, QuantifierGroundDerivation,
+            QuantifierInstanceCertificate, check_quantifier_clause_propagation,
+            check_quantifier_clause_propagations, check_quantifier_ground_derivation,
+            ground_budget, instantiate_forall_via_egraph, prove_quantified_unsat_via_egraph,
+            prove_quantified_unsat_via_egraph_with_instances, witness_tuples_via_egraph,
         };
         pub use crate::quant_affine_growth_cert::{
             IntAffineGrowthRefutationCertificate, int_affine_growth_refutation,
@@ -1281,12 +1281,12 @@ macro_rules! full_exports {
         pub use qfuflia_alethe::prove_qf_uflia_unsat_alethe;
         #[doc(hidden)]
         pub use qinst_egraph::{
-            QuantifierClausePropagationCertificate, QuantifierFalseSiblingJustification,
-            QuantifierGroundDerivation, QuantifierInstanceCertificate,
-            check_quantifier_clause_propagation, check_quantifier_clause_propagations,
-            check_quantifier_ground_derivation, instantiate_forall_via_egraph,
-            prove_quantified_unsat_via_egraph, prove_quantified_unsat_via_egraph_with_instances,
-            witness_tuples_via_egraph,
+            GroundBudget, GroundBudgetGuard, QuantifierClausePropagationCertificate,
+            QuantifierFalseSiblingJustification, QuantifierGroundDerivation,
+            QuantifierInstanceCertificate, check_quantifier_clause_propagation,
+            check_quantifier_clause_propagations, check_quantifier_ground_derivation,
+            ground_budget, instantiate_forall_via_egraph, prove_quantified_unsat_via_egraph,
+            prove_quantified_unsat_via_egraph_with_instances, witness_tuples_via_egraph,
         };
         #[doc(hidden)]
         pub use quant_affine_growth_cert::{
