@@ -48,6 +48,7 @@ carry no information.
 | [08-models-proofs-and-evidence.md](08-models-proofs-and-evidence.md) | Models, Alethe, kernel reconstruction, interpolants, the trust ledger | **post-processing** |
 | [09-harnesses-benchmarks-and-gates.md](09-harnesses-benchmarks-and-gates.md) | Bench harness, scenarios, test census, feature-gate-to-zero audit, gates | measurement |
 | [10-verification-log.md](10-verification-log.md) | Which lane claims the coordinator re-checked, and the four checks that changed a result | audit |
+| [11-wiring-and-integration.md](11-wiring-and-integration.md) | Is it all actually wired up? One uniform measurement, and the nine integration gaps that matter more than dead code | audit |
 
 ## Workspace census
 
