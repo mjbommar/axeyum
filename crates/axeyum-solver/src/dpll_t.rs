@@ -147,6 +147,12 @@ pub fn check_with_lra_dpll_within(
 
     let mut backend = SatBvBackend::new();
     let mut blocking: Vec<TermId> = Vec::new();
+    // The previous round's cube polarities, for the churn counter. The question
+    // the Farkas fix left open: the loop now runs 1.63x the rounds and still
+    // loses, so either each round hands the theory a genuinely different problem
+    // or it hands it nearly the same one and pays a cold decision for it. Only
+    // allocated when counting is armed.
+    let mut previous_cube: Option<Vec<bool>> = None;
     // The route trail labels this whole function `nra` and reports its share of
     // the budget; nothing said how that time divides between the two halves of
     // a round, or how many rounds there were. On the 22 `QF_LRA` files that
@@ -213,6 +219,23 @@ pub fn check_with_lra_dpll_within(
             } else {
                 arena.not(atom.term)?
             });
+        }
+
+        if crate::lazy_smt_counters::enabled() {
+            let cube: Vec<bool> = assignment.iter().map(|&(_, truth)| truth).collect();
+            if let Some(previous) = previous_cube.as_ref()
+                && previous.len() == cube.len()
+            {
+                let flips = previous
+                    .iter()
+                    .zip(&cube)
+                    .filter(|(a, b)| a != b)
+                    .count()
+                    .try_into()
+                    .unwrap_or(u64::MAX);
+                crate::lazy_smt_counters::record_cube_churn(flips);
+            }
+            previous_cube = Some(cube);
         }
 
         let (verdict, carried) = decide_cube(arena, &theory_lits, deadline)?;

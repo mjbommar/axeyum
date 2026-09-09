@@ -198,6 +198,108 @@ pub struct LazySmtCounters {
     /// Sound but coarse: a wide blocking clause rules out fewer assignments, so
     /// this is the counter that says the loop is learning weak lemmas.
     pub cores_full_assignment: u64,
+
+    /// Literals whose polarity differs from the PREVIOUS round's cube, summed
+    /// over rounds that had a predecessor.
+    ///
+    /// The question the Farkas fix left open. With the second LP gone the loop
+    /// runs 1.63x the rounds and still loses, so either each round buys little
+    /// or the rounds repeat each other. `cube_flips / (rounds - entries)` is the
+    /// mean churn: near [`Self::atoms`] means every round hands the theory a
+    /// genuinely different problem and there is nothing to warm-start; a
+    /// handful means round *n+1* differs from round *n* in a few bounds and the
+    /// cold re-decision is redundant work, not search.
+    pub cube_flips: u64,
+    /// Rounds whose cube is IDENTICAL to the previous round's.
+    ///
+    /// A tripwire, not a statistic: the blocking clause learned from a cube
+    /// falsifies that cube, so the propositional half cannot legitimately hand
+    /// back the same one. Any non-zero reading means a learned clause did not
+    /// reach the skeleton solve.
+    pub cube_identical: u64,
+
+    /// Calls into the conjunctive `QF_LRA` decision that were counted, i.e. the
+    /// denominator for the three stage timings below.
+    ///
+    /// Not the same as [`Self::theory_check`]'s round count: this counts every
+    /// [`crate::lra::decide_within`] under the armed guard, which on the
+    /// lazy-SMT route is one per round but on any other route is whatever that
+    /// route does. Read the two together before dividing.
+    pub cube_decisions: u64,
+    /// Time turning the cube's literals into linear constraints, summed.
+    pub cube_collect: Duration,
+    /// Time inside Fourier–Motzkin, summed — the FIRST thing the conjunctive
+    /// decision tries, on the whole cube.
+    pub cube_fm: Duration,
+    /// Fourier–Motzkin runs that gave up (size guard or deadline) and handed
+    /// the cube to the simplex fallback.
+    ///
+    /// Read against [`Self::cube_decisions`]: at a ratio near 1 the elimination
+    /// is pure overhead on this population and the fallback is the real
+    /// decider, which is a routing question, not a simplex question.
+    pub cube_fm_declines: u64,
+    /// Time inside the exact-rational simplex fallback, summed.
+    pub cube_simplex: Duration,
+    /// Simplex fallback calls.
+    pub cube_simplex_calls: u64,
+
+    /// What the online CDCL(T) LRA probe at the head of the linear loop did.
+    ///
+    /// The loop below that probe is the WEAK route: offline lazy SMT with total
+    /// assignments and a cold theory decision per round. A file only reaches it
+    /// because the probe declined, and the probe's `CheckResult::Unknown` reason
+    /// was discarded at the call site, so nothing said which decline it was.
+    /// The remedies are disjoint — an admission screen is a budget number, an
+    /// unsupported skeleton is an encoder gap — so this is recorded as an enum
+    /// rather than a count.
+    pub online_probe: OnlineProbe,
+}
+
+/// What the online CDCL(T) LRA probe at the head of
+/// [`crate::dpll_t::check_with_lra_dpll_within`] did with the query.
+///
+/// Every variant except [`OnlineProbe::Took`] means the query fell through to
+/// the offline refinement loop.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum OnlineProbe {
+    /// The probe was never run (no lazy-SMT entry, or the NRA loop).
+    #[default]
+    NotProbed,
+    /// The probe answered `sat`/`unsat`, or timed out owning the budget: the
+    /// offline loop was never entered.
+    Took,
+    /// No linear-real atoms to register.
+    NoAtoms,
+    /// The Boolean skeleton contains structure the online encoder does not
+    /// cover, so it declined before building a theory.
+    SkeletonUnsupported,
+    /// The atom count exceeded what the memory budget admits (ADR-1752's outer
+    /// screen).
+    AdmissionScreen,
+    /// Theory construction hit the normalization node ceiling.
+    BuildNodeCeiling,
+    /// Theory construction's own memory projection exceeded the budget.
+    BuildMemoryBudget,
+    /// The driver answered `sat` but the model did not replay against the
+    /// original assertions.
+    ModelDidNotReplay,
+}
+
+impl OnlineProbe {
+    /// The token this variant prints in the `--trace` line.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            OnlineProbe::NotProbed => "not-probed",
+            OnlineProbe::Took => "took",
+            OnlineProbe::NoAtoms => "no-atoms",
+            OnlineProbe::SkeletonUnsupported => "skeleton-unsupported",
+            OnlineProbe::AdmissionScreen => "admission-screen",
+            OnlineProbe::BuildNodeCeiling => "build-node-ceiling",
+            OnlineProbe::BuildMemoryBudget => "build-memory-budget",
+            OnlineProbe::ModelDidNotReplay => "model-did-not-replay",
+        }
+    }
 }
 
 impl LazySmtCounters {
@@ -260,7 +362,10 @@ impl LazySmtCounters {
              core_ms={} blocking_clauses={} blocking_literals={} atoms={} \
              cores_reused={} cores_rederived={} cores_rederived_absent={} \
              cores_rederived_stale={} cores_rederived_unverified={} \
-             cores_full_assignment={} accounted_ms={}",
+             cores_full_assignment={} accounted_ms={} \
+             cube_flips={} cube_identical={} cube_decisions={} cube_collect_ms={} \
+             cube_fm_ms={} cube_fm_declines={} cube_simplex_ms={} cube_simplex_calls={} \
+             online_probe={}",
             self.reading().label(),
             self.lra_entries,
             self.lra_rounds,
@@ -285,6 +390,15 @@ impl LazySmtCounters {
             self.cores_rederived_unverified,
             self.cores_full_assignment,
             self.accounted().as_millis(),
+            self.cube_flips,
+            self.cube_identical,
+            self.cube_decisions,
+            self.cube_collect.as_millis(),
+            self.cube_fm.as_millis(),
+            self.cube_fm_declines,
+            self.cube_simplex.as_millis(),
+            self.cube_simplex_calls,
+            self.online_probe.label(),
         )
     }
 }
@@ -339,6 +453,15 @@ const fn zero_counters() -> LazySmtCounters {
         cores_rederived_stale: 0,
         cores_rederived_unverified: 0,
         cores_full_assignment: 0,
+        cube_flips: 0,
+        cube_identical: 0,
+        cube_decisions: 0,
+        cube_collect: Duration::ZERO,
+        cube_fm: Duration::ZERO,
+        cube_fm_declines: 0,
+        cube_simplex: Duration::ZERO,
+        cube_simplex_calls: 0,
+        online_probe: OnlineProbe::NotProbed,
     }
 }
 
@@ -590,6 +713,50 @@ pub(crate) fn record_core_source(source: CoreSource) {
         };
         *field = field.saturating_add(1);
     });
+}
+
+/// One round's cube churn against the previous round's, and whether the two
+/// were identical.
+///
+/// `flips` is the Hamming distance over the atom assignment. The first round of
+/// an entry has no predecessor and must not be recorded.
+pub(crate) fn record_cube_churn(flips: u64) {
+    record(|c| {
+        c.cube_flips = c.cube_flips.saturating_add(flips);
+        if flips == 0 {
+            c.cube_identical = c.cube_identical.saturating_add(1);
+        }
+    });
+}
+
+/// One conjunctive `QF_LRA` decision, split into the three stages the decider
+/// actually has.
+///
+/// `simplex` is `None` when Fourier–Motzkin decided the system itself, so
+/// `cube_simplex_calls` counts fallbacks rather than decisions.
+pub(crate) fn record_cube_stages(
+    collect: Duration,
+    fm: Duration,
+    fm_declined: bool,
+    simplex: Option<Duration>,
+) {
+    record(|c| {
+        c.cube_decisions = c.cube_decisions.saturating_add(1);
+        c.cube_collect += collect;
+        c.cube_fm += fm;
+        if fm_declined {
+            c.cube_fm_declines = c.cube_fm_declines.saturating_add(1);
+        }
+        if let Some(simplex) = simplex {
+            c.cube_simplex += simplex;
+            c.cube_simplex_calls = c.cube_simplex_calls.saturating_add(1);
+        }
+    });
+}
+
+/// What the online CDCL(T) LRA probe did with the query; see [`OnlineProbe`].
+pub(crate) fn record_online_probe(outcome: OnlineProbe) {
+    record(|c| c.online_probe = outcome);
 }
 
 /// One conflict blocked by the whole cube because no certificate lined up with

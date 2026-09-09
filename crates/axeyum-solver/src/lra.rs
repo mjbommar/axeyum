@@ -40,7 +40,7 @@ pub(crate) mod warm;
 
 // Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
 #[cfg(not(target_arch = "wasm32"))]
-use std::time::Instant;
+use std::time::{Duration, Instant};
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
@@ -324,19 +324,43 @@ fn decide_within(
     assertions: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<Decision, SolverError> {
+    // Stage clocks, armed only when the lazy-SMT instrument is on: the
+    // refinement loop's `theory_ms` is 97.9% of that route's budget after the
+    // Farkas fix, and one number for a decider with three stages cannot say
+    // which of them to attack. Off, this is one thread-local `bool` read per
+    // decision — a decision that collects and eliminates over the whole cube.
+    let staged = crate::lazy_smt_counters::enabled();
+    let collect_started = staged.then(Instant::now);
     let mut ctx = Collector::default();
     for (index, &assertion) in assertions.iter().enumerate() {
         ctx.current_origin = index;
         ctx.collect(arena, assertion, false)?;
     }
+    let collect_elapsed = collect_started.map_or(Duration::ZERO, |s| s.elapsed());
     // An `i128` overflow while linearizing poisons the collection: the
     // placeholder constraints are garbage and must not be interpreted. Degrade to
     // a graceful `unknown` BEFORE any constraint is solved (overflow never becomes
     // a wrong sat/unsat).
     if ctx.overflow {
+        if staged {
+            crate::lazy_smt_counters::record_cube_stages(
+                collect_elapsed,
+                Duration::ZERO,
+                false,
+                None,
+            );
+        }
         return Ok(Decision::TimedOut);
     }
     if ctx.trivially_unsat {
+        if staged {
+            crate::lazy_smt_counters::record_cube_stages(
+                collect_elapsed,
+                Duration::ZERO,
+                false,
+                None,
+            );
+        }
         return Ok(Decision::UnsatTrivial(ctx.trivial_origin.unwrap_or(0)));
     }
 
@@ -353,14 +377,31 @@ fn decide_within(
     let origins: Vec<usize> = ctx.constraints.iter().map(|c| c.origin).collect();
 
     let nvars = ctx.vars.len();
-    match solve(&ctx.constraints, nvars, deadline) {
+    let fm_started = staged.then(Instant::now);
+    let feasibility = solve(&ctx.constraints, nvars, deadline);
+    let fm_elapsed = fm_started.map_or(Duration::ZERO, |s| s.elapsed());
+    let fm_declined = matches!(feasibility, Feasibility::TimedOut);
+    if staged && !fm_declined {
+        crate::lazy_smt_counters::record_cube_stages(collect_elapsed, fm_elapsed, false, None);
+    }
+    match feasibility {
         Feasibility::TimedOut => {
             // Fourier–Motzkin exhausted its size budget (it is doubly-exponential in
             // the variable count). Retry on the exact-rational simplex (P1.9 · T1.9.2),
             // which scales polynomially. Sound: `simplex_fallback` returns a decision
             // only for a replay-checked `sat` or a Farkas-verified `unsat`; otherwise
             // we keep the FM `unknown`.
-            if let Some(decision) = simplex_fallback(arena, assertions, &ctx)? {
+            let simplex_started = staged.then(Instant::now);
+            let fallback = simplex_fallback(arena, assertions, &ctx);
+            if staged {
+                crate::lazy_smt_counters::record_cube_stages(
+                    collect_elapsed,
+                    fm_elapsed,
+                    true,
+                    Some(simplex_started.map_or(Duration::ZERO, |s| s.elapsed())),
+                );
+            }
+            if let Some(decision) = fallback? {
                 return Ok(decision);
             }
             Ok(Decision::TimedOut)
