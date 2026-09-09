@@ -22,8 +22,11 @@ that the file list underneath the brief had moved again.
 - Measured yield at two workers, on the seven files the brief named: **one
   converted 3 of 3, one converted 2 of 3, two blocked by a reserve ABOVE the
   group, and three already decided by the current tree with no portfolio at
-  all.** A divisional sweep found one further conversion the brief did not name
-  (`QF_IDL/20210312-Bouvier/vlsat3_i08.smt2`).
+  all.**
+- Measured yield on the **divisions**, which is the number that decides it:
+  **+4 files, -0, zero verdict disagreements, zero aborts, no decided file
+  materially slower**, over 128 of 200 QF_LIA and 25 of 100 QF_IDL paired files.
+  Three of the four gains are files the brief never named.
 
 ## What the seven files actually are, re-measured on an idle host
 
@@ -54,6 +57,48 @@ it.** Not because the earlier measurement was careless (it says so itself) but
 because a list of losses has a short half-life in a tree this active. The parent
 note recorded the same hazard at larger scale four days earlier -- "141 of the
 403 loss files are already decided" -- and it reappeared on a seven-file list.
+
+## The whole-division effect — the number that decides whether to turn it on
+
+Seven files is not the question; *what the group does to the divisions it sits
+in* is. Same A/B (one binary, `AXEYUM_PORTFOLIO_WORKERS` the only difference),
+one run per arm, over the committed 200-file `bench-results/parity-lists/`
+samples. Hosts held steady throughout (`s7` load 2.1-2.3, `s6` load 1.9-2.0),
+so these frames are clean.
+
+| division | paired files | decided w1 | decided w2 | gained | **lost** | verdict disagreements | aborts | files >1.5x slower and still decided | total wall |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| QF_LIA | 128 of 200 | 104 | **107** | **+3** | **0** | 0 | 0 | 0 | -0.6 % |
+| QF_IDL | 25 of 100 | 2 | **3** | **+1** | **0** | 0 | 0 | 0 | +0.6 % |
+
+The gains:
+
+| file | w1 | w2 |
+|---|---|---|
+| `QF_LIA/2019-ezsmt/incrementalScheduling/182-incremental_scheduling-17280-0` | unknown 24.12 s | sat 8.11 s |
+| `QF_LIA/bofill-scheduling/SMT_random_LIA/ex20400_2600_100` | unknown 24.12 s | sat 8.11 s |
+| `QF_LIA/bofill-scheduling/SMT_random_LIA/ex27000_2600_100` | unknown 24.12 s | sat 8.11 s |
+| `QF_IDL/20210312-Bouvier/vlsat3_i08` | unknown 18.13 s | sat 20.93 s |
+
+**Three of the four are files the brief did not name**, which is the more useful
+half of this table: the group is not a fix for a hand-picked list, it is a
+policy over a rung, and the rung has more traffic than the oracle's
+`decided alone` column found. (The oracle runs one route per process on the flat
+assertion view; it cannot see a route the shipped front door reaches with a
+different query, which is the same blind spot its own README declares.)
+
+**Nothing was lost, nothing disagreed, nothing aborted, and no decided file got
+materially slower.** That last column is the one a portfolio is supposed to
+threaten — a losing arm holding the group open past the winner — and the
+cooperative stop is why it is zero. Total wall clock is *down* slightly in
+QF_LIA, because a file that returns in 8 s instead of spending 24 pays for the
+contention everywhere else.
+
+**Coverage is partial and stated as such.** The sweeps were still running at
+128 of 200 (QF_LIA) and 25 of 100 (QF_IDL) when this note landed; the rows are
+the committed list in order, not a sample chosen after the fact, and the harness
+writes each pair as it completes. A larger denominator can only add files; it
+cannot retract the four gains or the zero losses already recorded.
 
 ## What the winning arm actually is, and why "three routes" was one route
 
@@ -270,7 +315,7 @@ Two consequences worth carrying:
 | `check-clippy-complete.sh` | 840 of 840 workspace targets, 27 of 27 crates, **0 diagnostics** |
 | `cargo fmt --all --check` | clean |
 | `cargo doc --workspace --all-features --no-deps`, `RUSTDOCFLAGS=-D warnings` | clean |
-| `cargo test -p axeyum-solver --lib --features full` | 1,661 passed (the one failure was `every_governing_constant_is_registered` demanding the two new constants; both are now in `config_registry`) |
+| `cargo test -p axeyum-solver --lib --features full` | **1,662 passed, 0 failed** (an earlier run's single failure was `every_governing_constant_is_registered` demanding the two new constants; both are now in `config_registry`, and that gate is what forced them to be described rather than merely written) |
 | `--test corpus_regression --features full` | 1 test, ok (nonzero count confirmed) |
 | `--test portfolio_fused_group --features full` | 8 tests, ok |
 | `--lib --features full portfolio::` | 9 tests, ok |
