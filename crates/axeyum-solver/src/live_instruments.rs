@@ -119,6 +119,13 @@ pub mod instrument {
     /// than mirrored through a handle, because the decision point is reached a
     /// handful of times per query, never in a loop.
     pub const UF_OVERBOUND: &str = "uf-overbound";
+    /// `crate::UfliaInterfaceCounters` for the `QF_UFLIA` online combination's
+    /// interface layer. Unlike [`UF_OVERBOUND`] this instrument records once
+    /// per interface-DFS node, so it is flushed on a fixed cadence rather than
+    /// on every recording — a `Sampled::InFlight` reading here is a lower bound
+    /// on every field, and the `Sampled::Complete` one is published when the
+    /// `UfliaInterfaceCountersGuard` drops.
+    pub const UFLIA_INTERFACE: &str = "uflia-interface";
     /// `crate::LazySmtCounters` as of the last completed lazy-SMT query, i.e.
     /// when the `LazySmtCountersGuard` was dropped.
     pub const LAZY_SMT: &str = "lazy-smt";
