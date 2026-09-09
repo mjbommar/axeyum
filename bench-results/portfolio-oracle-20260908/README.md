@@ -63,40 +63,18 @@ disagreement, and `route-solo-sweep.py --expected` exits 3 on a verdict that
 contradicts the census's `reference_verdict` — cross-route agreement is not a
 correctness check, since routes can agree with each other and all be wrong.
 
-## Unfinished sweeps, and how to collect them
+## Both arms are complete
 
-Five solo sweeps were still running when this landed. **They are the measurement
-that decides the open question** — the one confirmed portfolio-only file came
-out of `QF_UFLIA`'s first 35 files, and no other finished division has one.
+All 403 committed loss files, all eleven divisions, through both instruments.
+`solo/QF_NIA_b.tsv` is the second half of `QF_NIA`'s list run on a separate core
+set; its rows merge with `solo/QF_NIA.tsv` without overlap. `solo2/` holds a
+second pass adding `dl-online` and `qf-bv` for the four divisions whose first
+sweep predated those routes.
 
-| host | slot | divisions | state at hand-off |
-|---|---|---|---|
-| s5 | 0-3 | `QF_NIA` (files 1-31) | 30 of 31 |
-| s7 | 8-11 | `QF_NIA_b` (files 32-61) | **done**, in `solo/` |
-| s6 | 4-7 | `QF_IDL` | 21 of 54 |
-| s6 | 8-11 | `QF_RDL`, then `QF_SLIA` | 28 of 47 |
-| s5 | 4-7 | `QF_LIA` | 13 of 27 |
-
-The probe arm is **complete** (all 403 files, 11 divisions, in `probe/`). The
-solo arm is complete for QF_ABV, QF_BV, QF_LRA, QF_NIA_b, QF_UF, **QF_UFLIA**
-and UF — 176 ladder-losing files, of which exactly one is in the band only a
-portfolio serves.
-
-Each writes its TSV only on completion; the per-file lines already produced are
-in `partial/<DIV>.solo.progress.txt` here, so the coverage is visible rather
-than implied. To collect a finished one:
-
-```sh
-scp <host>:~/pp-oracle/solo/<DIV>.tsv   bench-results/portfolio-oracle-20260908/solo/
-scp <host>:~/pp-oracle/solo/<DIV>.frame bench-results/portfolio-oracle-20260908/frames/<DIV>.solo.frame
-```
-
-`QF_NIA_b` is the second half of `QF_NIA`'s list run on a separate core set; its
-rows merge with `QF_NIA`'s without overlap.
-
-A second pass adding `dl-online` and `qf-bv` (which the first sweeps predate) is
-queued behind `QF_LRA` and `QF_UFLIA` on s6/s7 and has already run for the four
-divisions in `solo2/`.
+The headline: of the 262 files the ladder loses, 25 are decided by some single
+route alone inside the budget, and **8 of those need 6-24 s — the band only a
+portfolio serves. Seven of the eight reproduce** under two further runs each
+with verdicts checked against the census.
 
 ## Reproducing
 

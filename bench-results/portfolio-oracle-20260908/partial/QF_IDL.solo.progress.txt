@@ -40,14 +40,16 @@
 [40/54] QF_IDL deciders=2 best=lra-dpll@1764ms (70s)  qlock-4-10-33.induction.cvc.smt2
 [41/54] QF_IDL deciders=2 best=lra-dpll@2138ms (73s)  qlock-4-10-39.induction.cvc.smt2
 [42/54] QF_IDL deciders=5 best=lra-dpll@963ms (94s)  queen31-1.smt2
-_IDL deciders=2 best=lra-dpll@15633ms (214s)  queen42-1.smt2
-[44/54] QF_IDL deciders=2 best=lra-dpll@3229ms (187s)  super_queen29-1.smt2
-[45/54] QF_IDL deciders=2 best=nra@15763ms (96s)  super_queen61-1.smt2
-[46/54] QF_IDL deciders=2 best=nra@10923ms (91s)  super_queen83-1.smt2
-[47/54] QF_IDL deciders=5 best=datatype-native@6084ms (71s)  lpsat-goal-18.smt2
+[43/54] QF_IDL deciders=2 best=nra@10741ms (204s)  queen42-1.smt2
+[44/54] QF_IDL deciders=3 best=nra@1681ms (160s)  super_queen29-1.smt2
+[45/54] QF_IDL deciders=2 best=nra@13690ms (92s)  super_queen61-1.smt2
+[46/54] QF_IDL deciders=2 best=nra@10125ms (87s)  super_queen83-1.smt2
+[47/54] QF_IDL deciders=5 best=uf-arithmetic@5051ms (70s)  lpsat-goal-18.smt2
 [48/54] QF_IDL deciders=0 best=no-route (247s)  gp10_03_mkspan1079.smt2
-[49/54] QF_IDL deciders=3 best=datatype-native@1694ms (150s)  j6_per0_0_mkspan1057.smt2
+[49/54] QF_IDL deciders=3 best=datatype-elim@1713ms (150s)  j6_per0_0_mkspan1057.smt2
 [50/54] QF_IDL deciders=0 best=no-route (247s)  j8_per0_2_mkspan1054.smt2
 [51/54] QF_IDL deciders=0 best=no-route (247s)  j8_per10_1_mkspan1036.smt2
 [52/54] QF_IDL deciders=0 best=no-route (246s)  j8_per20_0_mkspan1008.smt2
 [53/54] QF_IDL deciders=0 best=no-route (247s)  tai_10x10_1_mkspan639.smt2
+[54/54] QF_IDL deciders=0 best=no-route (247s)  tai_10x10_7_mkspan617.smt2
+mt2

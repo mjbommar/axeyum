@@ -1,4 +1,7 @@
-cores=4-7
-host=server5
-before=1.19 1.60 2.11
-start=2026-09-08T22:12:52-04:00
+cores=12-15
+host=server7
+before=2.03 2.02 2.04
+start=2026-09-09T01:33:05-04:00
+after=1.06 1.08 1.17
+end=2026-09-09T03:02:11-04:00
+exit=0
