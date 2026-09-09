@@ -267,6 +267,21 @@ keeps meeting: an instrument whose happy path is the only path it measures.
 | `check-links.sh` | all links ok |
 | `--features full --test corpus_regression` | 1 test, `corpus_regression_is_sound` ok |
 | `--lib --features full -- --test-threads=4` | 1,620 / 1,622 then 1,621 / 1,622 — see below |
+| `check-clippy-complete.sh` | 0 — after repairing two `route_solo.rs` diagnostics that were red on main |
+
+**The z3 differentials — the only independent check of our verdicts here** — all
+green, all with a nonzero count confirmed (the suites compile to *nothing*
+without `--features z3`):
+
+| suite | tests | result |
+|---|---:|---|
+| `qf_uf_differential_fuzz` | 2 | ok, 61.60 s |
+| `qf_uflra_differential_fuzz` | 1 | ok, 16.87 s |
+| `uflia_differential_fuzz` | 1 | ok, 367.18 s |
+
+`qf_uf_differential_fuzz` is the one that matters most: it fuzzes the exact route
+whose encoder this change touches, against z3, and a `sat`/`unsat` split there
+is a soundness bug rather than a score.
 
 The instrument was also verified end to end on the shipped binary, on both arms
 and through a watchdog kill:
@@ -303,11 +318,18 @@ mechanisms, and neither can reach this diff:
   the six red CI jobs") raised this budget from 60 s to 600 s because *"the
   solve takes ~50 s on a fast dev box, so 60 s flaked on slower CI runners
   (deadline hit mid-solve → 'boolean skeleton undecided')"*. At load 20 of 16
-  cores with 16 sibling solver processes, 600 s is again not enough. It
-  exercises `check_qf_uf_with_config`, the **offline** route, which does not
-  touch `Encoder` at all: the only two `Encoder::new` sites in `euf_egraph.rs`
-  are `check_qf_uf_online_cdclt` (line 1189) and the test-only `run_online_diag`
+  cores with 16 sibling solver processes, 600 s is again not enough. **Run
+  alone on this box it passes in 581.08 s** — 19 s of headroom on a 600 s
+  budget, so any concurrency at all puts it over. It exercises
+  `check_qf_uf_with_config`, the **offline** route, which does not touch
+  `Encoder` at all: the only two `Encoder::new` sites in `euf_egraph.rs` are
+  `check_qf_uf_online_cdclt` (line 1189) and the test-only `run_online_diag`
   (line 2606, flag off, byte-identical). This diff cannot reach it.
+
+  That 19 s of headroom is a finding for whoever owns this test, not for this
+  lane: the budget was raised 60 s → 600 s once already and the machine has
+  caught up with it again. A budget is the wrong instrument for "this solve is
+  slow"; the test wants a size it can afford, not a clock it keeps outgrowing.
 
 The second sweep (1,621 passed, 1 failed) is what separates the two: the LRA one
 passed there, which is what a race looks like; the timeout one failed in both,
