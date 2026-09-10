@@ -404,19 +404,67 @@ fn cmp(a: Rational, b: Rational) -> core::cmp::Ordering {
     a.wide_cmp(&b)
 }
 
-/// The **containment boundary** for ADR-1702 promotion.
+/// The **containment boundary** for ADR-1702 promotion — and, measured
+/// 2026-09-09, a decline on satisfiable problems.
 ///
 /// The tableau computes over promoted rationals, but every value this module
-/// hands back — a feasible point, a Farkas multiplier vector — must be an
-/// ordinary `i128` rational, because the consumers downstream (`lra`,
-/// `lra_online`, model lifting, certificate serialization) read
-/// `Rational::numerator()`, which panics rather than truncate on a promoted
-/// value. A witness or certificate that genuinely does not fit therefore
-/// declines to `unknown`, exactly as the whole call declined before.
+/// hands back — a feasible point, a Farkas multiplier vector — is narrowed to an
+/// ordinary `i128` rational, and a vector that does not fit declines to
+/// [`SimplexOutcome::Unknown`].
 ///
-/// This is what makes the widening strictly a gain: intermediate growth no
-/// longer abandons the search, and nothing outside this module can observe that
-/// a promoted value ever existed.
+/// # The claim this comment used to make, and why it was wrong
+///
+/// It said the widening was "strictly a gain" because "nothing outside this
+/// module can observe that a promoted value ever existed". The first clause is
+/// true of *intermediate* growth. The second is not a property of this
+/// boundary: what the outside observes is an `unknown` on a query that has a
+/// model. `the_witness_boundary_discards_an_exact_model_that_exceeds_i128`
+/// below builds one — a 131-variable doubling chain whose coefficients are all
+/// small integers and whose exact vertex is `x_0 = 2^130` — and this function
+/// throws that witness away. Yices2, `OpenSMT` and `SMTInterpol` all keep growing
+/// the number instead
+/// (`docs/solver-comparison-2026-09/05-yices-opensmt-smtinterpol.md`: "Three
+/// independent implementations chose 'grow the number'; we chose 'give up'").
+/// Opening this boundary is roadmap item 2.3.
+///
+/// # Why it is nevertheless still closed
+///
+/// Not because the boundary is right, but because it is the LAST brick rather
+/// than the first. `Rational::numerator()` / `denominator()` **panic** on a
+/// promoted value, and the declining `checked_*` family computes exactly and
+/// then demotes — so it returns `None` for **any** result outside `i128`, even
+/// `x + 0` when `x` is promoted. Measured 2026-09-09, each exit route hits one
+/// of those before anything replays:
+///
+/// - **Feasible point → `Value::Real` in a model.** `axeyum_ir::eval` declines
+///   every real arithmetic operator on a promoted operand, so the replay that
+///   is the trust anchor for `sat` can never succeed — a sound `unknown`, but
+///   the *same* `unknown` we have now. Beyond that it is not sound: `eval.rs`
+///   `Op::RealToInt` (`:772`) and `RealAlgebraic::from_rational`
+///   (`real_algebraic.rs:164`) panic, `auto::milp_bnb` panics twice
+///   (`auto.rs:2537`, `:2570` — its `is_integer()` guard passes for a promoted
+///   integer), and `smtlib_value_text` (`smtlib.rs:3904`) panics, which is the
+///   `get-model` / `get-value` path, so even a model that replayed could not be
+///   printed. `axeyum-py`'s `convert.rs:144` is the same shape.
+/// - **Farkas multipliers → `crate::lra::FarkasCertificate`.** Mostly
+///   self-limiting: `verify()` is all `checked_*`, so a promoted multiplier
+///   makes the self-check return `false` and `lra.rs` declines. What survives
+///   that filter reaches `alethe_lra::rational_to_alethe` (`:944`) and the Lean
+///   reconstruction (`reconstruct/arithmetic.rs:4778`, `:5043`), which panic.
+///
+/// So deleting the `is_big` test here, on its own, converts a sound `unknown`
+/// into a crash on the `get-model` path — strictly worse. The order of work is:
+/// give the evaluator a promoted-real path (the shape `Value::WideInt` already
+/// has at `eval.rs:554`), move the model consumers to `checked_numerator()` /
+/// `numerator_big()` or an explicit decline, and only then open this. That is
+/// ADR-1702's own rule: "Every future opt-in must repeat that discipline:
+/// either keep promoted values inside the route, or use the checked accessors
+/// at the boundary."
+///
+/// The two blockers are pinned by
+/// `crates/axeyum-solver/tests/wide_witness_boundary.rs`, whose tests are
+/// written to FAIL when they are removed — that failure is the signal that this
+/// boundary is now landable.
 fn narrow(values: Vec<Rational>) -> Option<Vec<Rational>> {
     if values.iter().any(|v| v.is_big()) {
         return None;
@@ -1715,6 +1763,97 @@ mod tests {
             .expect("1x1 tableau is far below MAX_TABLEAU_CELLS");
         assert_eq!(bland.policy().entering, EnteringRule::Bland);
         assert_ne!(dflt.policy().entering, bland.policy().entering);
+    }
+
+    /// `x_i = 2·x_{i+1}` for `i` in `0..n-1`, plus `x_{n-1} ≥ 1`: satisfiable,
+    /// with the unique vertex `x_j = 2^(n-1-j)`. Small integer coefficients
+    /// throughout, so nothing about the INPUT is out of range — only the answer.
+    fn doubling_chain(n: usize) -> Vec<Constraint> {
+        let mut rows: Vec<Constraint> = Vec::with_capacity(n);
+        for i in 0..(n - 1) {
+            let mut coeffs = vec![Rational::zero(); n];
+            coeffs[i] = r(1);
+            coeffs[i + 1] = r(-2);
+            rows.push(Constraint {
+                coeffs,
+                rel: Rel::Eq,
+                rhs: r(0),
+            });
+        }
+        let mut coeffs = vec![Rational::zero(); n];
+        coeffs[n - 1] = r(1);
+        rows.push(Constraint {
+            coeffs,
+            rel: Rel::Ge,
+            rhs: r(1),
+        });
+        rows
+    }
+
+    /// `2^k` as an exact rational, built by the promoting family so the test
+    /// itself never depends on `i128` range.
+    fn pow2(k: u32) -> Rational {
+        let mut acc = Rational::integer(1);
+        for _ in 0..k {
+            acc = acc.wide_add(acc).expect("big-rational pool has room");
+        }
+        acc
+    }
+
+    /// The `i128` witness boundary, pinned together with the query it costs.
+    ///
+    /// The 131-variable doubling chain is SATISFIABLE and the tableau finds its
+    /// exact vertex, `x_0 = 2^130`. Four of the 131 coordinates are outside
+    /// `i128`, so [`narrow`] discards the whole witness and [`feasible`] answers
+    /// `Unknown` on a query that has a model. That decline is roadmap item 2.3
+    /// (`docs/solver-comparison-2026-09/11-roadmap-and-plan.md`), and this test
+    /// is what must change when it is closed — [`narrow`]'s doc comment lists
+    /// the consumers that have to be able to read a promoted value first.
+    ///
+    /// The assertions are ordered so a failure says WHICH half moved. If the
+    /// tableau stopped finding the exact vertex, the first three fail; if the
+    /// boundary opened, only the last two do. A test that asserted `Unknown` and
+    /// nothing else could not tell those apart, and would pass just as happily
+    /// on a simplex that had stopped working.
+    #[test]
+    fn the_witness_boundary_discards_an_exact_model_that_exceeds_i128() {
+        const N: usize = 131; // x0 .. x130
+        let rows = doubling_chain(N);
+
+        // 1. The tableau itself decides the system, before any narrowing.
+        let mut tab = Tableau::new(N, &rows);
+        assert!(
+            matches!(tab.run(None, MAX_PIVOTS), Ok(RunOutcome::Feasible)),
+            "the doubling chain is satisfiable and the tableau must find it"
+        );
+
+        // 2. And the witness it materializes is exact, not approximate.
+        let point = tab
+            .materialize()
+            .unwrap_or_else(|Overflow| panic!("materialize declined on the doubling chain"));
+        assert_eq!(point.len(), N);
+        assert_eq!(point[N - 1], r(1), "x_130 sits on its lower bound");
+        assert_eq!(point[0], pow2(130), "x_0 is exactly 2^130");
+
+        // 3. Four coordinates (2^127 .. 2^130) are outside `i128`.
+        assert_eq!(
+            point.iter().filter(|v| v.is_big()).count(),
+            4,
+            "2^127, 2^128, 2^129 and 2^130 exceed i128::MAX = 2^127 - 1"
+        );
+
+        // 4. Which is the whole reason the boundary refuses …
+        assert!(
+            narrow(point).is_none(),
+            "narrow declines the moment any coordinate is promoted"
+        );
+
+        // 5. … and the reason a satisfiable query answers `Unknown`.
+        assert_eq!(
+            feasible(N, &rows),
+            SimplexOutcome::Unknown,
+            "roadmap item 2.3: this must become Feasible, with a replayable model"
+        );
     }
 
     fn r(n: i128) -> Rational {
