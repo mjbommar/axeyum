@@ -311,6 +311,13 @@ fn run_egraph_quantified_fallback(
     }
 }
 
+// A dispatch ladder's ORDER is its meaning: each rung is tried only because the
+// ones above it declined, and the `q:` route records added for roadmap item 1.8
+// must appear at the rung that decided, not at a helper's boundary. Splitting
+// this into per-rung helpers would hide that sequence behind call sites and make
+// the recording harder to audit, which is the opposite of what 1.8 was for.
+// Kept flat deliberately; the lint's 100-line default does not fit this shape.
+#[allow(clippy::too_many_lines)]
 fn finish_quantified_solve(
     arena: &mut TermArena,
     assertions: &[TermId],
