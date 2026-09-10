@@ -171,6 +171,13 @@
 //! quantified implication assertions as a Horn system and routing them here —
 //! which lives in the front door, not in this module.
 //!
+//! Note what that gap actually looks like, measured 2026-09-09: `smtlib.rs`
+//! **accepts** `(set-logic HORN)` as a known logic name (`smtlib.rs:3378`) and
+//! then sends the script through the ordinary quantified dispatch. So a CHC
+//! benchmark is not rejected — it is silently decided by something other than
+//! the CHC front-end. Wiring the recognition is the real work; the logic name
+//! alone routes nothing.
+//!
 //! **That is not why this module mattered to ADR-1812.** Until 2026-09-09 its
 //! `state_class` classified an all-`Int` predicate vocabulary as
 //! `StateClass::Unsupported`, and that one decline was the reason
