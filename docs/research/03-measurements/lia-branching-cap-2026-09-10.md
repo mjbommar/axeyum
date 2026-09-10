@@ -167,9 +167,11 @@ has moved since the census.
 The full division is 13,306 files at
 `/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LIA`.
 **The NAS mount was up** (`nas3:/volume1/data on /nas3/data type nfs4`). Sample
-is every 20th file of the sorted list — deterministic, and it spans all 30-odd
-families. Deadline-free (tight cap), 10 s external bound per file, 6-way
-parallel.
+is every 20th file of the sorted list — deterministic, and it covers **27 of the
+division's 32 families** (missing: `20230321-UltimateAutomizerSvcomp2023`,
+`RTCL`, `check`, `fft`, `wisa` — 23 files in total, each family 2-9 files,
+so a stride of 20 legitimately misses them).
+Deadline-free (tight cap), 10 s external bound per file, 6-way parallel.
 
 ```
 rows: 666
@@ -243,11 +245,16 @@ three places:
 1. **`UnknownKind` never distinguishes it.** Every branch-and-bound stop is
    `Incomplete` (`lra.rs:1723`). A caller switching on `kind` cannot tell the cap
    from a deadline, an overflow, or an out-of-range branch constant.
-2. **`dpll_lia` discards the reason.** The lazy loop's integer oracle is
-   `check_with_lia_opaque_apps_within_node_cap` (`dpll_lia.rs:1556`), which keeps
-   the **tight 50,000 cap even when a deadline is set** — and the loop treats any
-   inner `Unknown` as "no conflict found" (`dpll_lia.rs:1538-1544`). A node-cap
-   exhaustion inside the lazy route is invisible in the query's verdict.
+2. **`dpll_lia`'s conflict scan discards the reason.** The lazy loop's integer
+   oracle is `check_with_lia_opaque_apps_within_node_cap` (`dpll_lia.rs:1556`),
+   which keeps the **tight 50,000 cap even when a deadline is set**. The scan
+   then does `if !matches!(oracle(...)?, CheckResult::Unsat) { return
+   Ok(Vec::new()) }` (`dpll_lia.rs:1657`): anything not `Unsat` — a node-cap
+   `unknown` included — becomes "no conflict found", by documented design
+   (`dpll_lia.rs:1534-1544`). A node-cap exhaustion inside the lazy route is
+   invisible in the query's verdict. (The *sat*-reconstruction path is the
+   exception: `theory_model` at `dpll_lia.rs:2949` does carry the reason through
+   as `TheoryModelOutcome::Declined`.)
 3. **`lia_online` discards it too.** `Ok(CheckResult::Unknown(_)) | Err(_) =>
    Feasibility::Unknown` at `lia_online.rs:1062` and `:1085` drops the
    `UnknownReason` on the floor on both the cold and warm theory-check paths.
@@ -289,6 +296,20 @@ The stop that fired was the **wall-clock deadline**. `20000000` is the cap that
 was *in force and not approached* — it is context in the message, not the cause.
 Re-run here at 24 s (§3.2), none of the three even produces a branch-and-bound
 `unknown` any more; they time out in dispatch.
+
+One of the three is now decided outright. Run deadline-free (the **tight**
+50,000 cap) with no external bound:
+
+```
+$ ./target/release/examples/lia_cap_probe <...>/CAV_2009_benchmarks/smt/25-vars/problem_2__034.smt2 0 1200000
+ROW  problem_2__034.smt2  sat  -  bnb_roots=1  bnb_nodes=409  bnb_exhausted=0
+                                  offline_calls=1  gomory_decided=0
+```
+
+**409 nodes — 0.8% of the cap the plan says it was lost to — and the verdict is
+`sat`.** Its sibling `v30_problem_2__023.smt2.slack.smt2` was run in the same
+configuration for **30 minutes** and neither returned nor tripped the cap
+(`bnb_budget_exhausted = 0`), which is the same story from the other side.
 
 This is precisely the failure `LiaBnb::Unknown`'s own doc comment
 (`lra.rs:2248-2259`) was written to prevent: *"an `unknown` that misattributes
