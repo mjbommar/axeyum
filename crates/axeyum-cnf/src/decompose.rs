@@ -139,9 +139,14 @@ pub struct DecomposeStats {
     /// Whether the pass ran at all (false when the formula has no binary clause
     /// or the budget did not cover graph construction).
     pub ran: bool,
-    /// Rounds actually executed.
+    /// Rounds that built a graph and ran Tarjan. The last of these is normally
+    /// the round that found nothing — a round is what *establishes* that there
+    /// is no further equivalence, so counting only fruitful ones would report a
+    /// pass that stopped early and one that reached its fixpoint identically.
     pub rounds: usize,
-    /// Binary clauses seen in the final round's graph.
+    /// Binary clauses in the **first** round's graph. The first round is the
+    /// one whose graph describes the caller's formula; a later round's count
+    /// describes a formula only this pass has ever seen.
     pub binary_clauses: usize,
     /// Equivalence classes with more than one variable, summed over rounds.
     /// This is the *k* an exit criterion counts.
@@ -346,7 +351,9 @@ pub fn decompose_within_recorded(
             proof.as_deref_mut(),
         );
         stats.ran |= round.ran;
-        stats.binary_clauses = round.binary_clauses;
+        if stats.rounds == 0 {
+            stats.binary_clauses = round.binary_clauses;
+        }
         stats.classes += round.classes;
         stats.variables_substituted += round.variables_substituted;
         stats.clauses_rewritten += round.clauses_rewritten;
@@ -886,15 +893,18 @@ mod tests {
         f
     }
 
-    /// `x0 ↔ x1` written as the two binaries, plus a clause mentioning both.
+    /// `x0 ↔ x1` written as the two binaries, plus payload clauses that survive
+    /// the substitution without creating a *new* equivalence — so a second round
+    /// finds nothing and every count below is the first round's.
     fn one_class() -> CnfFormula {
         formula(
-            3,
+            4,
             &[
                 &[n(0), p(1)],
                 &[p(0), n(1)],
                 &[p(0), p(1), p(2)],
-                &[n(1), n(2)],
+                &[n(1), p(2), p(3)],
+                &[p(2), n(3)],
             ],
         )
     }
@@ -910,8 +920,15 @@ mod tests {
         // x1 is substituted by x0: the minimum-variable representative.
         assert_eq!(out.equivalences.representative(v(1)), Some(p(0)));
         assert_eq!(out.equivalences.representative(v(0)), None);
+        // Two rounds ran: the substitution shortened `(x0 ∨ x1 ∨ x2)` to a
+        // binary, so a second graph was worth building. It found no new
+        // component, which is why `variables_substituted` is still 1.
+        assert_eq!(out.stats.rounds, 2);
         // Both equivalence binaries became tautologies and left.
-        assert_eq!(out.occurring_variables(), 2);
+        assert_eq!(out.stats.clauses_removed, 2);
+        assert_eq!(out.stats.clauses_rewritten, 2);
+        // 4 variables, 1 substituted.
+        assert_eq!(out.occurring_variables(), 3);
     }
 
     #[test]
@@ -1128,7 +1145,10 @@ mod tests {
 
     #[test]
     fn the_valve_refuses_until_the_search_has_done_enough_work() {
-        let mut valve = DecomposeValve::DEFAULT;
+        let mut valve = DecomposeValve {
+            min_reference: 0,
+            ..DecomposeValve::DEFAULT
+        };
         // 1% of 100_000 ticks is 1_000 units; a 2_000-clause formula needs
         // 2_000, so this is refused.
         assert_eq!(valve.admit(100_000, 2_000), None);

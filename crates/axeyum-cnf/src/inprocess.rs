@@ -78,6 +78,9 @@ use crate::bve::{
     BveOptions, BveOutcome, BveStats, Reconstruction, eliminate_variables_within_recorded,
 };
 use crate::compact::{CompactMap, compact};
+use crate::decompose::{
+    DecomposeOptions, DecomposeStats, EquivalenceMap, decompose_within_recorded,
+};
 use crate::simplify::{SubsumeOptions, SubsumeStats, simplify_within_recorded};
 use crate::vivify::{VivifyOptions, VivifyStats, vivify_within};
 use crate::xor_propagate::{XorPropagation, xor_propagate};
@@ -422,6 +425,25 @@ pub trait InprocessObserver {
     /// Records one counter. Called at most once per key per run, in schedule
     /// order.
     fn count(&mut self, name: &str, value: f64);
+
+    /// Work grant for equivalent-literal substitution ([`crate::decompose`])
+    /// over `formula`, in graph steps. `None` means the pass does not run.
+    ///
+    /// **Defaulted to `None` on purpose.** The two occurrence-list passes get a
+    /// grant through [`Self::grant`], whose [`OccurrencePass`] is matched
+    /// exhaustively by the shipping caller; adding a variant there would make
+    /// registering a new pass a change to every implementor, and the change that
+    /// compiles is the one that quietly grants the new pass a budget nobody
+    /// chose. A defaulted method registers the pass without touching a single
+    /// existing observer, and an observer that has not opted in declines it.
+    ///
+    /// `CaDiCaL`'s own admission rule for this pass —
+    /// `effort/1000 x ticks-since-last-run`, refused below `thresh x clauses`,
+    /// with `Delay` back-off — is [`crate::DecomposeValve`], which an
+    /// implementor of this method can drive directly.
+    fn decompose_grant(&mut self, _formula: &CnfFormula) -> Option<u64> {
+        None
+    }
 }
 
 /// An [`InprocessObserver`] that declines every pass and records nothing.
@@ -476,6 +498,9 @@ impl InprocessObserver for RecordingObserver {
     fn count(&mut self, name: &str, value: f64) {
         self.counts.push((name.to_owned(), value));
     }
+    fn decompose_grant(&mut self, _formula: &CnfFormula) -> Option<u64> {
+        self.budget
+    }
 }
 
 /// Which stages of the shipping schedule run, and how each is tuned.
@@ -506,6 +531,22 @@ pub struct InprocessSchedule {
     /// elimination over the recovered system is `O(gates²·vars)` and carries no
     /// internal deadline, so it needs a cap of its own.
     pub xor_propagate_max_clauses: usize,
+    /// Run equivalent-literal substitution ([`crate::decompose`]) before the
+    /// occurrence-list passes.
+    ///
+    /// It goes first because it is the cheapest pass and the one whose output
+    /// every later pass benefits from — a formula with `k` fewer variables is a
+    /// smaller occurrence-list problem for both subsumption and BVE. It is also
+    /// the pass most helped by running *again* afterwards, since both of those
+    /// shorten clauses and a clause shortened to two literals is a new edge;
+    /// `DecomposeOptions::max_rounds` covers the rounds this pass creates for
+    /// itself, and a second scheduled offer would cover the rest.
+    ///
+    /// The flag alone does not run it: [`InprocessObserver::decompose_grant`]
+    /// must also return a budget, which no existing observer does.
+    pub decompose: bool,
+    /// Tuning for the substitution pass (ignored unless [`Self::decompose`]).
+    pub decompose_options: DecomposeOptions,
     /// Run clause vivification between subsumption and elimination.
     pub vivify: bool,
     /// Tuning for vivification (ignored unless [`Self::vivify`]).
@@ -535,6 +576,8 @@ impl InprocessSchedule {
     pub const OFF: Self = Self {
         xor_propagate: false,
         xor_propagate_max_clauses: 0,
+        decompose: false,
+        decompose_options: DecomposeOptions::DEFAULT,
         vivify: false,
         vivify_options: VivifyOptions::DEFAULT,
         vivify_step_guard: false,
@@ -566,11 +609,52 @@ pub struct ScheduledInprocess {
     pub compaction: CompactMap,
     /// Lifts a reduced model back to the original pre-BVE variables.
     pub reconstruction: Reconstruction,
+    /// Fills in the variables equivalent-literal substitution removed. Identity
+    /// unless [`InprocessSchedule::decompose`] ran and substituted something.
+    ///
+    /// **A caller that lifts a model must apply this too.** A substituted
+    /// variable does not occur in [`Self::formula`], so its slot in a search's
+    /// model is a placeholder, not a value — and a placeholder that happens to
+    /// replay is the failure mode this field exists to prevent.
+    /// [`Self::lift_model`] applies all three lifts in the one order that is
+    /// correct.
+    pub equivalences: EquivalenceMap,
+    /// Whether substitution found a component holding both polarities of one
+    /// variable, which refutes the formula outright.
+    ///
+    /// [`Self::formula`] is then the **unreduced** formula and [`Self::link`],
+    /// under [`InprocessSchedule::recording`], already derives the empty clause.
+    /// A caller that ignores this flag searches a formula that is genuinely
+    /// unsatisfiable and decides it independently, so ignoring it costs time,
+    /// never correctness.
+    pub decompose_unsat: bool,
     /// The passes' own `DRAT` derivation plus the compaction's variable
     /// bijection, so a refutation of [`Self::formula`] lifts to a refutation of
     /// the caller's formula. Empty and identity unless
     /// [`InprocessSchedule::recording`] asked for it.
     pub link: ReductionLink,
+}
+
+impl ScheduledInprocess {
+    /// Lifts a model of [`Self::formula`] all the way back to the caller's
+    /// variables, applying every lift in the only order that is correct.
+    ///
+    /// `compaction.expand` first (the search's model is over compacted
+    /// variables), then `reconstruction.extend` (BVE's eliminated variables are
+    /// defined by clauses over the *post-substitution* formula, so they need
+    /// their neighbours' values, not their neighbours' pre-images), then
+    /// `equivalences.extend` (a substituted variable's representative may itself
+    /// have been eliminated by BVE, so it must already be filled in).
+    ///
+    /// Existing callers compose the first two by hand. This method exists so
+    /// that adding the third is not something a caller can forget: the order is
+    /// stated once, here, rather than at every lift site.
+    #[must_use]
+    pub fn lift_model(&self, compacted: &[bool]) -> Vec<bool> {
+        let reduced = self.compaction.expand(compacted);
+        let extended = self.reconstruction.extend(&reduced);
+        self.equivalences.extend(&extended)
+    }
 }
 
 /// Runs the shipping inprocessing schedule — XOR propagation, subsumption,
@@ -669,6 +753,57 @@ pub fn inprocess_scheduled(
     let mut link = ReductionLink::identity();
     let recording = schedule.recording;
     let mut steps: Vec<DratStep> = Vec::new();
+
+    // --- Equivalent-literal substitution -----------------------------------
+    // Equisatisfiable, not model-preserving: a substituted variable leaves the
+    // formula entirely, so its slot in a model is filled by `equivalences`
+    // rather than by the search. Every step it emits is plain `RUP` and the
+    // derivation order is the pass's own contract (`crate::decompose`), so its
+    // prefix joins the link like any other pass's.
+    let decompose_start = Instant::now();
+    let (substituted, equivalences, decompose_stats) =
+        run_decompose(&schedule, base, observer, recording.then_some(&mut steps));
+    if schedule.decompose {
+        if recording {
+            observer.count("decompose_proof_steps", usize_as_f64(steps.len()));
+            link.record(steps.drain(..));
+        } else {
+            steps.clear();
+        }
+        count_duration_ms(observer, "decompose_ms", decompose_start.elapsed());
+        observer.count("decompose_ran", f64::from(u8::from(decompose_stats.ran)));
+        observer.count("decompose_rounds", usize_as_f64(decompose_stats.rounds));
+        observer.count(
+            "decompose_binary_clauses",
+            usize_as_f64(decompose_stats.binary_clauses),
+        );
+        observer.count("decompose_classes", usize_as_f64(decompose_stats.classes));
+        observer.count(
+            "decompose_variables_substituted",
+            usize_as_f64(decompose_stats.variables_substituted),
+        );
+        observer.count(
+            "decompose_clauses_rewritten",
+            usize_as_f64(decompose_stats.clauses_rewritten),
+        );
+        observer.count(
+            "decompose_clauses_removed",
+            usize_as_f64(decompose_stats.clauses_removed),
+        );
+        observer.count(
+            "decompose_work_spent",
+            u64_as_f64(decompose_stats.work_spent),
+        );
+        observer.count(
+            "decompose_work_exhausted",
+            f64::from(u8::from(decompose_stats.work_exhausted)),
+        );
+        observer.count(
+            "decompose_unsat",
+            f64::from(u8::from(decompose_stats.unsat)),
+        );
+    }
+    let base: &CnfFormula = &substituted;
 
     // --- Subsumption -------------------------------------------------------
     // The timer starts before the grant is requested: deciding admission reads
@@ -823,8 +958,54 @@ pub fn inprocess_scheduled(
         formula: compacted,
         compaction,
         reconstruction: bve.reconstruction,
+        equivalences,
+        decompose_unsat: decompose_stats.unsat,
         link,
     }
+}
+
+/// Runs equivalent-literal substitution when the schedule asks for it **and**
+/// the observer grants a budget, returning the substituted formula, the model
+/// lift, and the accounting.
+///
+/// A named function rather than a `match` at the call site, for the reason
+/// [`run_subsume`] gives and with the same mutation history behind it: with the
+/// decision inline, computing a budget and then handing the pass
+/// `DecomposeOptions::DEFAULT` compiles, runs, and is caught by nothing.
+///
+/// `None` from the grant means the pass does not run at all — not a budget of
+/// zero. A zero-budget call still scans every clause to size the implication
+/// graph, and that `O(|F|)` scan is exactly what a refusal declines to pay.
+fn run_decompose(
+    schedule: &InprocessSchedule,
+    formula: &CnfFormula,
+    observer: &mut impl InprocessObserver,
+    proof: Option<&mut Vec<DratStep>>,
+) -> (CnfFormula, EquivalenceMap, DecomposeStats) {
+    if !schedule.decompose {
+        return (
+            formula.clone(),
+            EquivalenceMap::identity(formula.variable_count()),
+            DecomposeStats::default(),
+        );
+    }
+    let Some(work_budget) = observer.decompose_grant(formula) else {
+        observer.count("decompose_declined", 1.0);
+        return (
+            formula.clone(),
+            EquivalenceMap::identity(formula.variable_count()),
+            DecomposeStats::default(),
+        );
+    };
+    let outcome = decompose_within_recorded(
+        formula,
+        DecomposeOptions {
+            work_budget: Some(work_budget),
+            ..schedule.decompose_options
+        },
+        proof,
+    );
+    (outcome.formula, outcome.equivalences, outcome.stats)
 }
 
 /// Runs subsumption under `grant`, or not at all.
