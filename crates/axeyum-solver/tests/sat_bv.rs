@@ -1137,7 +1137,19 @@ fn cnf_compaction_admits_a_var_budget_the_uncompacted_count_exceeds() {
 
         // And confirm the un-compacted (inprocessing off) path is refused at this
         // budget, proving admission actually changed.
-        let no_inprocess = SolverConfig::default().with_cnf_variable_budget(budget);
+        //
+        // `.with_cnf_inprocessing(false)` is written EXPLICITLY, not inherited
+        // from the default. It used to read `SolverConfig::default()`, which
+        // gave a variable named `no_inprocess` whose meaning depended on a
+        // default it never set. Roadmap item 1.2 measured flipping that default
+        // on 2026-09-09 and found it would not have FAILED this control, it
+        // would have DELETED it — `no_inprocess` would have meant inprocessing
+        // ON, and the assertion below would have been comparing a path against
+        // itself. A control whose meaning depends on a default is not a
+        // control. (1.2 decided against the flip; this is independent of that.)
+        let no_inprocess = SolverConfig::default()
+            .with_cnf_inprocessing(false)
+            .with_cnf_variable_budget(budget);
         let refused = SatBvBackend::new()
             .check(&arena, &assertions, &no_inprocess)
             .unwrap();
