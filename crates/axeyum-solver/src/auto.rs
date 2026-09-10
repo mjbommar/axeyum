@@ -4169,6 +4169,16 @@ const QINST_EGRAPH_RETRY_SLICE: LadderSlice =
 /// fully anchored verdict (a replay-checked `sat` or the refuter's `unsat`);
 /// every other outcome — including an unsupported shape — declines with
 /// `Ok(None)` so the established rungs below run unchanged.
+/// Reports whether the first-refusal MBQI rung was entered, and on what slice,
+/// under `AXEYUM_QPROBE`. Diagnostic only. Paired with `mbqi_shape_probe`: this
+/// says the rung ran, that one says what the rung actually did.
+fn mbqi_rung_probe(state: &str, budget: Option<Duration>) {
+    if std::env::var_os("AXEYUM_QPROBE").is_some() {
+        let ms = budget.map_or(-1i64, |d| i64::try_from(d.as_millis()).unwrap_or(i64::MAX));
+        eprintln!("[mbqi-rung] state={state} budget_ms={ms}");
+    }
+}
+
 fn mbqi_first_refusal(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -4178,11 +4188,14 @@ fn mbqi_first_refusal(
 ) -> Result<Option<CheckResult>, SolverError> {
     let t0 = Instant::now();
     let Some(quick_config) = config_with_remaining_timeout(config, deadline) else {
+        mbqi_rung_probe("no-remaining-budget", None);
         return Ok(None);
     };
     let Some(quick_config) = mbqi_first_refusal_budget(&quick_config) else {
+        mbqi_rung_probe("unbounded-config", None);
         return Ok(None);
     };
+    mbqi_rung_probe("entered", quick_config.timeout);
     // THROWAWAY CLONE isolation (same rationale as the uf_fmf probe above):
     // MBQI interns skolems and instantiation terms, and letting that traffic
     // leak into the shared arena measurably derails the e-graph refutation
@@ -8379,6 +8392,21 @@ pub fn prove_unsat_by_mbqi(
 }
 
 #[allow(clippy::too_many_lines)]
+/// Names the exit `prove_unsat_by_mbqi_inner` takes, under `AXEYUM_QPROBE`.
+///
+/// Diagnostic only: it never alters routing, budgets, or verdicts. This exists
+/// because the rung's own `qtrace` line cannot distinguish "the MBQI refutation
+/// loop ran and failed" from "a shape guard fired and the call was e-matching
+/// all along" -- the two are the same `Ok(Unknown)` at the call site, and they
+/// are completely different findings.
+fn mbqi_shape_probe(reason: &str, universals: usize, ground: usize) {
+    if std::env::var_os("AXEYUM_QPROBE").is_some() {
+        eprintln!(
+            "[mbqi-shape] exit={reason} single_binder_universals={universals} ground={ground}"
+        );
+    }
+}
+
 fn prove_unsat_by_mbqi_inner(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -8408,12 +8436,14 @@ fn prove_unsat_by_mbqi_inner(
             } = arena.node(matrix)
             {
                 let [body] = &**args else {
+                    mbqi_shape_probe("forall-arity", 0, 0);
                     return prove_unsat_by_ematching(arena, assertions, config);
                 };
                 prefix.push(*sym);
                 matrix = *body;
             }
             if has_quantifier(arena, &[matrix]) {
+                mbqi_shape_probe("nested-binder-in-matrix", 0, 0);
                 return prove_unsat_by_ematching(arena, assertions, config);
             }
             if prefix.len() == 1 {
@@ -8423,6 +8453,7 @@ fn prove_unsat_by_mbqi_inner(
             }
             universal_assertions.push(a);
         } else if has_quantifier(arena, &[a]) {
+            mbqi_shape_probe("quantifier-below-top-level", 0, 0);
             return prove_unsat_by_ematching(arena, assertions, config);
         } else {
             ground.push(a);
@@ -8430,6 +8461,7 @@ fn prove_unsat_by_mbqi_inner(
     }
     if universal_assertions.is_empty() {
         // No top-level universal to instantiate; defer to the trigger fallback.
+        mbqi_shape_probe("no-top-level-universal", 0, ground.len());
         return prove_unsat_by_ematching(arena, assertions, config);
     }
 
@@ -8445,8 +8477,10 @@ fn prove_unsat_by_mbqi_inner(
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
             CheckResult::Unknown(_) => {}
         }
+        mbqi_shape_probe("multi-binder-prefix", universals.len(), ground.len());
         return prove_unsat_by_ematching(arena, assertions, config);
     }
+    mbqi_shape_probe("refutation-loop", universals.len(), ground.len());
     let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
 
     // Honor the wall-clock budget and a deterministic instance cap: a universal whose
