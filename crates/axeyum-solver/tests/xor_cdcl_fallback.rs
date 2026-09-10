@@ -1,9 +1,10 @@
 //! Integration tests for the opt-in CDCL(XOR) search fallback (ADR-0035).
 //!
-//! The fallback only fires when the batsat solve returns `unknown` (timeout /
+//! The fallback only fires when the native CDCL core's solve returns `unknown`
+//! (timeout /
 //! budget) on an XOR-structured formula AND `xor_cdcl_fallback` is set. These
 //! tests pin the **default-off** guarantee (the flag changes nothing on
-//! instances batsat already decides) and the soundness story (a fallback `unsat`
+//! instances the core already decides) and the soundness story (a fallback `unsat`
 //! surfaces the `XorGaussian` trust step in produced evidence; a fallback `sat`
 //! is replay-checked). The unit-level fallback mechanics (verdict upgrade,
 //! gating, stats) are covered inline in `sat_bv_backend.rs`.
@@ -41,7 +42,7 @@ fn flag_off_is_the_default() {
 
 #[test]
 fn fallback_flag_does_not_change_a_decided_verdict() {
-    // On an instance batsat decides outright, turning the fallback on must not
+    // On an instance the native core decides outright, turning the fallback on must not
     // change the verdict (the fallback only ever acts on `unknown`). This is the
     // default-off / no-regression guarantee made observable.
     let (arena, assertions) = xor_query();
@@ -58,12 +59,15 @@ fn fallback_flag_does_not_change_a_decided_verdict() {
         .expect("check on");
 
     assert!(matches!(off, CheckResult::Sat(_)));
-    assert_eq!(off, on, "flag must not change a verdict batsat decides");
+    assert_eq!(
+        off, on,
+        "flag must not change a verdict the native core decides"
+    );
 }
 
 #[test]
 fn decided_unsat_evidence_unaffected_by_flag() {
-    // `x != x` over BV is unsat and batsat decides it: the evidence is a real
+    // `x != x` over BV is unsat and the native core decides it: the evidence is a real
     // certificate (term-level / DRAT), and the `XorGaussian` step must NOT appear
     // — the fallback never fired.
     let mut arena = TermArena::new();
@@ -87,7 +91,7 @@ fn decided_unsat_evidence_unaffected_by_flag() {
             .trusted_steps
             .iter()
             .all(|s| s.id != TrustId::XorGaussian),
-        "no XorGaussian step when batsat decided the unsat"
+        "no XorGaussian step when the native core decided the unsat"
     );
     assert!(report.evidence.check(&arena, &[neq]).expect("re-check"));
 }
@@ -96,7 +100,7 @@ fn decided_unsat_evidence_unaffected_by_flag() {
 fn bv_parity_chain_unsat_evidence_rechecks() {
     // A BV "parity chain" `v0 ^ v1 = 0`, …, `v0 ^ v4 = 1` over 1-bit vectors: a
     // pure-Gaussian-UNSAT XOR system at the CNF level (the certifiable sub-case).
-    // batsat decides this small instance directly, so it takes the standard
+    // the native core decides this small instance directly, so it takes the standard
     // checked route; the point is the verdict is a re-checkable `unsat` and is
     // NOT mislabelled as an interleaved-trusted `XorGaussian` hole. (The
     // pure-Gauss XOR certificate path itself — query→CNF→CNF(S)→check_drat — is
