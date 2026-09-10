@@ -390,8 +390,10 @@ until resume happens to accept it.
   `--prove-unsat` companion uses the proof-producing core and fails closed unless
   every UNSAT carries an inline-checked DRAT proof. Its proof-check time and
   p50/p95 are nested diagnostics within SAT time, never a seventh additive stage;
-  this high-assurance run is kept separate from the default batsat performance
-  artifact because changing the SAT engine would invalidate that comparison.
+  this high-assurance run is kept separate from the default performance artifact
+  because it changes what is measured. Since ADR-1703 both runs use the same
+  native CDCL engine, so the separation is now about proof generation and
+  checking cost, not about swapping engines.
 - Artifact version 20 makes the fixed-environment requirement executable. Every
   run records the Axeyum Git revision/cleanliness, Cargo.lock SHA-256,
   rustc/cargo and build profile, exact solver backend names, CPU model,
@@ -403,19 +405,23 @@ until resume happens to accept it.
   missing, and every Glaurung recipe enables it.
 - Artifact version 21 makes the fixed-seed requirement executable. It removes
   the old benchmark `--seed` label because that value was not consumed by a
-  solver. Each run now records and hashes the actual Cargo.lock-pinned BatSat
-  defaults (seed `91648253`, random-variable frequency `0`, randomized polarity
-  off, and randomized initial activity off), explicitly sets and records Z3
-  `random_seed=0`, and records deterministic corpus ordering. Unit tests pin the
-  reviewed BatSat defaults, and the repetition validator fails closed on profile
-  drift. This establishes configuration identity only; time variance and
+  solver. Each run records and hashes the SAT engine's identity and randomness,
+  explicitly sets and records Z3 `random_seed=0`, and records deterministic
+  corpus ordering. Under ADR-1703 the engine is `axeyum-native-cdcl-v1` and has
+  **no** randomness to seed, so the block records `randomness: none` where it
+  used to record the retired adapter's defaults (seed `91648253`,
+  random-variable frequency `0`, randomized polarity off, randomized initial
+  activity off); artifacts written before that commit still carry those values
+  and are still accurate for their engine. Unit tests pin the recorded profile,
+  and the repetition validator fails closed on profile drift. This establishes configuration identity only; time variance and
   deterministic resource bounds remain separate acceptance gates.
 - Artifact version 22 makes that resource gate executable for the cold QF_BV
   lane. `--require-deterministic-resources` fails before corpus work unless
   positive term-DAG, CNF-variable, CNF-clause, and search limits are present.
-  The search limit is consumed as deterministic `BatSat` `within_budget`
-  progress checks, proof-CDCL conflicts, or Z3 `rlimit` units according to the
-  selected engine. Artifacts state those units and that identical numbers are
+  The search limit is consumed as native proof-CDCL **conflicts** on every
+  Axeyum path since ADR-1703, or as Z3 `rlimit` units in the oracle; artifacts
+  recorded before that commit carry the retired adapter's `within_budget`
+  progress-check unit. Artifacts state those units and that identical numbers are
   not work-equivalent across backends. The provisional named client profile is
   300k DAG nodes / 3M CNF variables / 8M CNF clauses / 2M search units. It may
   be replaced by a versioned profile after real-capture admission measurement,

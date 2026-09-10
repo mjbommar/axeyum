@@ -74,8 +74,11 @@ For `z = a and b`:
   explicit output literals; binary AIGER is deferred until external tooling
   requires it.
 - The current `axeyum-cnf` slice implements Tseitin-style encoding from AIG,
-  DIMACS parse/write, CNF evaluation, a `rustsat-batsat` adapter, and replay
-  from SAT assignments through CNF variables and AIG node values. Its first
+  DIMACS parse/write, CNF evaluation, the proof-producing native CDCL core that
+  is the engine on every shipping route (ADR-1703), and replay from SAT
+  assignments through CNF variables and AIG node values. The `rustsat-batsat`
+  adapter is still in the crate but only behind the optional
+  `batsat-reference` feature, as a differential yardstick. Its first
   sparse encoding optimization recognizes private XOR and mux helper shapes
   before CNF, omits helper variables/clauses, and reconstructs skipped helper
   nodes from their children during AIG replay. `axeyum-bv` reconstructs Axeyum
@@ -98,6 +101,8 @@ For `z = a and b`:
 - [x] Which pure Rust SAT solver is the first adapter?
   - Answer: `rustsat-batsat` through RustSAT; see
     [ADR-0007](../09-decisions/adr-0007-first-pure-rust-sat-adapter.md).
+    Superseded as the *engine* by ADR-1703 (the native core); the answer to the
+    question as asked still stands.
 - [ ] How much circuit rewriting is needed before first benchmarks?
 
 ## Source Pointers

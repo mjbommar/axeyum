@@ -54,9 +54,12 @@ certificate-bearing route, a small independent checker instead re-verifies a
 
 On an independently checked route, a bad search trace cannot produce a checked
 `unsat`: the checker has the last word. This is not yet true of every backend.
-In particular, the default BatSat-backed clausal route reports raw UNSAT
-evidence as `Unchecked`; proof exporters and other certificate-bearing routes
-provide stronger assurance. The full per-route picture is the
+In particular, the default clausal route reports raw UNSAT evidence as
+`Unchecked` because proof emission is off by default, not because the engine
+cannot produce a proof; proof exporters and other certificate-bearing routes
+provide stronger assurance. Since ADR-1703 the engine is the in-tree native
+CDCL core, whose every `unsat` has a DRAT proof available by construction — the
+retired BatSat adapter had none to offer. The full per-route picture is the
 [trust ledger](../reference/trust-ledger.md).
 
 ## `unknown` — a feature, not a failure

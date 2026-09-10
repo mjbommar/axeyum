@@ -66178,14 +66178,24 @@ review; this block is the queue entry, not a restatement.
    calibration and comparable/advisory verdict to fail a committed baseline
    whose `par2_mean_s` worsens beyond the calibrated noise band. Until this
    exists, every timing number in `bench-results/` is advisory.
-2. **Measure gate (b) of the CDCL-priority decision** (see
-   [benchmarking-and-performance-methodology.md](docs/research/08-planning/benchmarking-and-performance-methodology.md)):
-   dump axeyum CNF from the p4dfa and Noetzli QF_BV families (measured SAT
-   share 0.974 and ~0.95) and run BatSat, the native `proof_sat` core, CaDiCaL,
-   and Kissat on identical DIMACS. About a day of work; decides whether the
-   native core becomes the default and whether D1's third engine (`CdclT`)
-   should be replaced rather than tuned. No CaDiCaL or Kissat run exists under
-   `bench-results/` today.
+2. **DONE 2026-09-05 — gate (b) of the CDCL-priority decision is measured.**
+   Four engines (BatSat, the native `proof_sat` core, CaDiCaL, Kissat) ran on
+   byte-identical DIMACS from the p4dfa and Noetzli QF_BV families at a 20 s
+   budget on pinned cores, over 852 (engine, file) pairs with **zero**
+   cross-engine disagreements. The native core is never worse than BatSat
+   (p4dfa 6 vs 4 of 113; Noetzli 86 vs 86 of 100 sampled) and modestly behind
+   CaDiCaL/Kissat. The artifact is `bench-results/sat-core-gate-b-20260905/`
+   and the decision is
+   [ADR-1703](docs/research/09-decisions/adr-1703-the-native-core-is-the-sat-engine-batsat-is-demoted-to-a-differential-oracle.md):
+   the native core IS the engine on every shipping path and BatSat is demoted
+   to an optional differential yardstick. **This entry proposed work that is
+   finished — do not run it again.** What ADR-1703 explicitly deferred is its
+   Slice 2 (removing the feature, the dependencies, and the documentation
+   references), which is Phase A of
+   [12-cdcl-consolidation-plan.md](docs/solver-comparison-2026-09/12-cdcl-consolidation-plan.md).
+   The separate question this entry bundled in — whether `CdclT` should be
+   replaced rather than tuned — is **still open**: ADR-1703 does not mention
+   `CdclT` at all, and it needs its own ADR (Phase B0 of the same plan).
 3. **Micro-benchmarks for six hot paths**, bound to the same calibration
    scheme so they can gate: `CdclT::propagate`, `proof_sat` propagate,
    `tseitin_encode`, `AndUniqueTable` insert, simplex pivot, e-graph merge with
@@ -66212,14 +66222,17 @@ review; this block is the queue entry, not a restatement.
    [frontier-ratchet-reference-frame.md](docs/research/08-planning/frontier-ratchet-reference-frame.md).
 
 **Exit.** Recommendation 1 fails a CI-visible gate on a real PAR-2 regression;
-recommendation 2 has a committed CaDiCaL/Kissat-vs-BatSat-vs-native-core
-artifact on identical CNF; recommendations 3, 6, and 8 have at least one
-committed measurement each.
+recommendation 2's exit is **already met** — `bench-results/sat-core-gate-b-20260905/`
+is the committed CaDiCaL/Kissat-vs-BatSat-vs-native-core artifact on identical
+CNF; recommendations 3, 6, and 8 have at least one committed measurement each.
 
-**Stop.** Do not build recommendation 4 (the theory-trait widening) before
-recommendation 2 is measured — it decides whether `CdclT` should be replaced
-rather than incrementally widened, and building the wider trait first risks
-widening the wrong engine. Do not treat any number produced here as a parity
+**Stop.** Recommendation 2 is measured (2026-09-05), so the block it placed on
+recommendation 4 (the theory-trait widening) is **lifted** as far as the
+Boolean engine goes. What still gates recommendation 4 is the `CdclT` decision
+itself, which gate (b) did not make: ADR-1703 never mentions `CdclT`. Write
+that ADR first (Phase B0 of
+[12-cdcl-consolidation-plan.md](docs/solver-comparison-2026-09/12-cdcl-consolidation-plan.md))
+so the wider trait is not built on the wrong engine. Do not treat any number produced here as a parity
 ledger entry; this is instrumentation, not a `PARITY.md` sweep.
 
 ## Families and divisions

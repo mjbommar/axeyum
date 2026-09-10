@@ -69,10 +69,12 @@ ite
   comparison operators, symbolic shifts, and constant rotates to AIG with
   evaluator-vs-AIG tests. Signed comparison lowering now avoids comparing the
   sign bit twice by using magnitude comparison under equal signs.
-- The first SAT adapter path uses `rustsat-batsat` through RustSAT and only
-  accepts `sat` after replay through CNF, AIG values, reconstructed symbol
-  models, and the original evaluator
-  ([ADR-0007](../09-decisions/adr-0007-first-pure-rust-sat-adapter.md)).
+- The SAT path runs the in-tree native CDCL core and only accepts `sat` after
+  replay through CNF, AIG values, reconstructed symbol models, and the original
+  evaluator. The replay discipline is
+  [ADR-0007](../09-decisions/adr-0007-first-pure-rust-sat-adapter.md)'s and is
+  unchanged; the engine underneath it was `rustsat-batsat` until
+  [ADR-1703](../09-decisions/adr-1703-the-native-core-is-the-sat-engine-batsat-is-demoted-to-a-differential-oracle.md).
 - CNF encoding now recognizes several private helper shapes created by the AIG
   lowering path: XOR, mux/not-ITE, private AND trees, and OR-of-private-AND
   parents. Positive root-only AND trees can also encode private XOR-backed
@@ -103,6 +105,8 @@ ite
 - [x] Which pure Rust SAT solver is the first adapter?
   - Answer: `rustsat-batsat` through RustSAT; see
     [ADR-0007](../09-decisions/adr-0007-first-pure-rust-sat-adapter.md).
+    Superseded as the *engine* by ADR-1703 (the native core); the answer to the
+    question as asked still stands.
 
 ## Source Pointers
 

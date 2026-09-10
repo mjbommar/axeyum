@@ -1267,14 +1267,14 @@ mod tests {
     }
 
     #[test]
-    fn learning_required_matches_batsat_on_chain() {
+    fn learning_required_matches_native_core_on_chain() {
         // Cross-check the learning-required instances against the production
         // solver: same UNSAT verdict.
         for n in [4usize, 8, 12, 16, 20] {
             let f = parity_chain_unsat(n);
             let ours = solve_with_xor_cdcl(&f);
             let theirs = solve_with_native_core_timeout(&f, Some(Duration::from_secs(5)))
-                .expect("batsat solve");
+                .expect("native core solve");
             assert_eq!(ours, XorCdclResult::Unsat);
             assert!(matches!(theirs, SatResult::Unsat(_)));
         }
@@ -1313,7 +1313,7 @@ mod tests {
         // resolves well past the first reduction trigger, firing several
         // clause-DB reductions. The reducer must (a) actually fire (counter > 0)
         // and (b) leave the verdict correct (a watch/locked-clause bug would flip
-        // it or crash) — cross-checked against the `batsat-reference` yardstick adapter (ADR-1703).
+        // it or crash) — cross-checked against the in-tree native CDCL core (ADR-1703).
         let f = pigeonhole_unsat(7);
         let (result, reductions) = solve_with_xor_cdcl_reductions(&f);
         assert_eq!(
@@ -1326,10 +1326,10 @@ mod tests {
             "expected several clause-DB reductions, got {reductions}"
         );
         let theirs = solve_with_native_core_timeout(&f, Some(Duration::from_secs(10)))
-            .expect("batsat solve");
+            .expect("native core solve");
         assert!(
             matches!(theirs, SatResult::Unsat(_)),
-            "batsat must agree PHP(7) is UNSAT"
+            "the native core must agree PHP(7) is UNSAT"
         );
     }
 
@@ -1431,7 +1431,7 @@ mod tests {
     // --- differential vs the production solver ------------------------------
 
     #[test]
-    fn differential_vs_batsat_random() {
+    fn differential_vs_native_core_random() {
         let mut rng = Lcg::new(0xabcd_0099_5eed_2222);
         let runs = 500;
         let timeout = Some(Duration::from_secs(5));
@@ -1439,7 +1439,7 @@ mod tests {
             let f = random_formula(&mut rng);
             let ours = solve_with_xor_cdcl(&f);
             let theirs = solve_with_native_core_timeout(&f, timeout)
-                .expect("batsat solve must not error on a tiny formula");
+                .expect("native core solve must not error on a tiny formula");
 
             if matches!(ours, XorCdclResult::Unknown) || matches!(theirs, SatResult::Unknown(_)) {
                 continue;
@@ -1455,7 +1455,7 @@ mod tests {
                 }
                 (XorCdclResult::Unsat, SatResult::Unsat(_)) => {}
                 (ours, theirs) => {
-                    panic!("verdict disagreement: ours={ours:?}, batsat={theirs:?}");
+                    panic!("verdict disagreement: ours={ours:?}, native_core={theirs:?}");
                 }
             }
         }

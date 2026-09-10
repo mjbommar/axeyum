@@ -26,7 +26,7 @@ flowchart LR
         ir --> pre["Word-level preprocess<br/>canonicalize · solve_eqs ·<br/>propagate · elim_unconstrained"]
         pre --> blast["Bit-blast → AIG circuit"]
         blast --> cnf["Tseitin → CNF"]
-        cnf --> sat["SAT core<br/>batsat / native CDCL"]
+        cnf --> sat["SAT core<br/>native CDCL"]
     end
 
     subgraph check["TRUSTED — small independent checking"]
@@ -74,9 +74,11 @@ assurance report of the selected route:
   and becomes a soundness alarm, never a wrong `sat`.
 - A claimed **`unsat`** is only as trusted as the evidence behind it. Selected
   routes re-check a DRAT/LRAT proof, a theory certificate, an Alethe proof, or a
-  reconstructed term. The default BatSat-backed clausal route instead records
-  its proof status as `Unchecked`; it must not be described as certificate-
-  checked.
+  reconstructed term. The default clausal route does not spend the
+  proof-checking time unless asked, so it records its proof status as
+  `Unchecked`; it must not be described as certificate-checked. The engine can
+  always produce a DRAT proof on request — that is what changed when the native
+  CDCL core replaced the proofless BatSat adapter (ADR-1703).
 - When search runs out of budget or the encoding is too large, the answer is
   **`unknown`** — a valid, deliberate outcome, not a failure.
 

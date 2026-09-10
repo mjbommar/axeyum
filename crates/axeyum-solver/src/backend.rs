@@ -100,10 +100,12 @@ pub struct SolverConfig {
     /// Deterministic backend search budget; reproducible across machines and
     /// preferred for bisecting blowups.
     ///
-    /// Units are backend-specific: Z3 `rlimit` units, `BatSat`
-    /// `within_budget` progress checks on the cold SAT-BV path, or conflicts in
-    /// the proof-producing native CDCL core. Artifacts must record the backend
-    /// and unit; numeric values are not cross-backend work-equivalent.
+    /// Units are backend-specific: Z3 `rlimit` units, or **conflicts** in the
+    /// native CDCL core on every Axeyum path. Before ADR-1703 the cold SAT-BV
+    /// path counted the retired `BatSat` adapter's private `within_budget`
+    /// progress-check polls instead; artifacts recorded then carry that unit.
+    /// Artifacts must record the backend and unit; numeric values are not
+    /// cross-backend work-equivalent.
     pub resource_limit: Option<u64>,
     /// Memory budget in megabytes. Caveat: Z3 applies this process-wide.
     pub memory_limit_mb: Option<u64>,

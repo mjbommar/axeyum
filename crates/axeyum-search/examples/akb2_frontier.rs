@@ -13,7 +13,8 @@
 //!   shares no code with the encoder.
 //! * `climb` warm-starts min-conflicts from a stored colouring, for the
 //!   points where the valuation colouring is not extremal.
-//! * `sat` runs the pure-Rust rustsat-batsat adapter (ADR-0007) as an
+//! * `sat` runs the in-tree native CDCL core (ADR-1703 re-based this route;
+//!   the untrusted-searcher doctrine below is ADR-0007's) as an
 //!   *untrusted searcher* for the satisfiable side only; its model is worth
 //!   nothing until the decoded colouring passes the same three checks, and an
 //!   `unsat` from it is reported as `unsat-unchecked` and is not evidence.
@@ -395,8 +396,8 @@ fn main() -> ExitCode {
             }
         }
         "sat" => {
-            // Untrusted search for the SAT side only (ADR-0007): batsat is a
-            // searcher, and its answer is worth nothing until the decoded
+            // Untrusted search for the SAT side only (ADR-0007): the native
+            // core is a searcher here, and its answer is worth nothing until the decoded
             // colouring passes the family's independent enumerator. An `unsat`
             // from here is reported as `unsat-unchecked` and is NOT evidence.
             if args.len() < 8 {
@@ -419,7 +420,7 @@ fn main() -> ExitCode {
                 &formula,
                 Some(Duration::from_secs_f64(hours * 3600.0)),
             )
-            .expect("batsat");
+            .expect("native core solve");
             let secs = t0.elapsed().as_secs_f64();
             match result {
                 SatResult::Sat(assignment) => {
