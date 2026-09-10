@@ -113,6 +113,52 @@ fn the_evaluator_declines_a_wide_real_model_it_should_be_able_to_replay() {
     }
 }
 
+/// The negative control for blocker 1, and a finding in its own right: **the
+/// `sat` replay cannot currently tell a correct wide witness from a corrupt
+/// one.** It rejects both, with the identical error.
+///
+/// The obvious way to test a widened model path is to corrupt a coordinate and
+/// watch the replay catch it. Run today, that check is vacuous: `eval` declines
+/// on the arithmetic before it ever compares anything, so a *correct* `2^130`
+/// and a deliberately wrong `2^131` produce the same
+/// `ArithmeticOverflow { op: "real_mul" }`. That is sound — a decline is
+/// `unknown`, never a wrong `sat` — but it means the replay contributes **no**
+/// discrimination on this axis, and any future "the replay catches a corrupted
+/// wide witness" claim must be re-measured after the evaluator is widened, not
+/// inherited from here.
+///
+/// When blocker 1 is removed this test fails, and the assertion that replaces
+/// it is the one that matters: correct ⇒ `Bool(true)`, corrupt ⇒ `Bool(false)`.
+#[test]
+fn the_replay_check_cannot_distinguish_a_correct_wide_witness_from_a_corrupt_one() {
+    const N: usize = 131;
+    let (arena, syms, assertions) = doubling_chain(N);
+
+    let mut correct = Assignment::new();
+    for (i, &s) in syms.iter().enumerate() {
+        let exponent = u32::try_from(N - 1 - i).expect("exponent fits u32");
+        correct.set(s, Value::Real(pow2(exponent)));
+    }
+
+    // Same vertex with `x_0` doubled: `x_0 = 2 * x_1` is now FALSE.
+    let mut corrupt = correct.clone();
+    corrupt.set(syms[0], Value::Real(pow2(131)));
+
+    let on_correct = eval(&arena, assertions[0], &correct);
+    let on_corrupt = eval(&arena, assertions[0], &corrupt);
+    assert_eq!(
+        on_correct, on_corrupt,
+        "if these now differ, the replay has gained discrimination on wide \
+         witnesses — that is the good outcome; assert `Bool(true)` vs \
+         `Bool(false)` here instead"
+    );
+    assert_eq!(
+        on_correct,
+        Err(IrError::ArithmeticOverflow { op: "real_mul" }),
+        "and today both are the same decline, so the guard is blind, not strict"
+    );
+}
+
 /// **Blocker 2.** A model consumer that reads `numerator()` panics on exactly
 /// the value the simplex would hand out.
 ///
