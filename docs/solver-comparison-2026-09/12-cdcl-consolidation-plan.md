@@ -1,8 +1,12 @@
 # Consolidating the Boolean and CDCL(T) engines — plan (DRAFT, 2026-09-10)
 
-**Status:** draft. Two research lanes (R-A: migration inventory, R-B: BatSat
-Slice 2 surface) are in flight; sections marked **[pending R-A]** / **[pending
-R-B]** are placeholders and must not be executed from until they land.
+**Status:** iteration 2, 2026-09-10. Both research lanes have landed
+([R-A migration inventory](../research/03-measurements/cdclt-native-migration-inventory-2026-09-10.md),
+[R-B BatSat surface](../research/03-measurements/batsat-slice2-surface-2026-09-10.md))
+and **both corrected iteration 1 on its central facts**. What changed is
+recorded in §6 rather than silently overwritten, because the errors are the
+useful part: one was mine, and the shape of it is a shape this repository keeps
+paying for.
 
 **Scope:** retire the duplicated Boolean/CDCL(T) machinery and close the
 measured gap to the reference solvers. This is the plan the 2026-09-05
@@ -19,31 +23,52 @@ Measured, not recalled.
 `cargo tree -e normal -p axeyum-cnf` returns **zero** batsat, so ADR-1703's
 point 4 holds. What ADR-1703 explicitly deferred is Slice 2: *"removes the
 feature, the dependencies, and the ~70 historical documentation references. This
-ADR does not do that sweep."* It has not run. **104** files under `docs/` still
-mention batsat (the ADR estimated ~70), and ten `.rs` files still reference it,
-not all of which are obviously feature-gated. **[pending R-B]** for the exact
-four-bucket split and what is load-bearing.
+ADR does not do that sweep."* It has not run, and R-B measured the surface.
 
-### 1.2 The CDCL(T) migration is half-done *per module*, not per module
+**Dependencies are clean.** All three crates optional, behind
+`batsat-reference`, only `axeyum-cnf` owning the `dep:` edges.
+`cargo tree -e normal --workspace` over all 27 members: zero hits (positive
+control matches `axeyum-cnf` five times). Including dev and build edges: also
+zero.
 
-`CdclT` (`cdclt.rs`, 4,176 lines) and the native adapter (`native_cdclt.rs`,
-764 lines, onto `proof_sat.rs`'s 8,945) both ship. Crude first count:
+**Docs are 110 tracked files** — not the 104 I counted, not ADR-1703's ~70.
+76 historical and keepable, 21 harmless, **13 live-and-wrong**, of which nine
+are the same sentence copied nine times.
 
-| module | `CdclT::new` | `solve_native` |
-|---|---:|---:|
-| `lia_theory` | 2 | 1 |
-| `lra_theory` | 2 | 1 |
-| `string_theory` | 1 | 1 |
-| `ufbv_online` | 2 | 0 |
-| `uflia_online` | 1 | 0 |
-| `uflra_online` | 1 | 0 |
-| `qinst_egraph` | 1 | 0 |
-| `euf_egraph`, `dl_online` | 0 | 1 |
+**Six live `.rs` files still SAY batsat while calling the native core.** The
+worst emits a JSON key literally named `"batsat"` for native-core numbers, so
+every artifact it has written since 2026-09-05 is mislabelled.
 
-Three modules run **both engines depending on which entry point you hit**. That
-is the fact that shapes the plan: this is not "swap five call sites", it is
-"decide, per entry point, which engine it should be on and why". **[pending
-R-A]** for the verified site-by-site inventory and the feature-parity matrix.
+**Two trip-wires.** `scripts/check-parity-docs.py:1295` *pins* one of the false
+sentences, so correcting the doc turns that gate red unless the checker moves in
+the same commit. And `gate_b_sweep` carries
+`required-features = ["batsat-reference"]` — removing the feature removes the
+tool that produced the artifact ADR-1703 rests on.
+
+### 1.2 The CDCL(T) migration is done-or-not per module — 5 done, 4 remaining
+
+**Iteration 1 said three modules run both engines. That was wrong and it was my
+error**: I counted `#[cfg(test)]` sites as routes. Verified totals for
+`CdclT::new` are **4 shipping, 30 in test modules, 2 in test files**.
+`lia_theory`, `lra_theory` and `string_theory` have **zero** shipping `CdclT` —
+their sites are unit tests, three of which I re-checked by hand. The two sets are
+disjoint: **no module runs both engines.**
+
+Three facts that reshape the plan:
+
+- **There is a third driver.** `Dpll` / `IncrementalArithDpll` has **7 shipping
+  sites against `CdclT`'s 4**, two of them inside `uflra_online` / `uflia_online`
+  themselves. Any plan promising "one driver" must say which of three, and this
+  one does: the native core.
+- **ADR-1703 never mentions `CdclT`** — zero hits, positive control BatSat 30,
+  verified independently. The `CdclT` retirement was never decided. It needs its
+  own ADR and must not ride in as Slice 2's neighbour.
+- **Warm CDCL(T) does not exist on the native side.** `NativeIncrementalCdcl` is
+  `Cdcl<'static, IncrementalSink>` with `T` defaulting to `NullTheory`, and
+  `new_empty` lives in an impl block bound to `NullTheory`. **No public
+  constructor pairs a theory with a persistent `Cdcl`.** The core names the gap
+  itself at `proof_sat.rs:2572-2579`. This is the single blocker under both hard
+  migrations.
 
 ### 1.3 The search-policy layer was unreachable from the theory side
 
@@ -111,27 +136,97 @@ measurement says not to.
 
 ## 3. Phases
 
-### Phase A — retire BatSat (ADR-1703 Slice 2) **[pending R-B]**
+### Phase A — retire BatSat (ADR-1703 Slice 2)
 
-Cheapest, lowest risk, already decided. The only judgement call is what replaces
-the differential suite as the independent check on the native core's verdicts —
-if the answer is "nothing for pure SAT", that must be stated before the feature
-goes, not after.
+**A0 (done, `da911539a`).** `SolverConfig::native_cdcl` was documented "read by
+nobody" and specified by ADR-1703 as a no-op. It was neither: `solver.rs`'s
+warm-route eligibility compared it against its default, so setting a **retired**
+flag silently disqualified a query from the warm engine. Excluded from the
+comparison, doc corrected to name its two remaining readers. This was a live
+defect, not cleanup, which is why it went first and alone.
 
-*Exit:* `batsat`, `rustsat`, `rustsat-batsat` absent from every `Cargo.toml`;
-zero non-historical `.rs` references; docs split into "historical record, keep"
-and "live guidance, fix"; and a named, running independent check on native-core
-verdicts.
+**A1. Build the replacement referee before removing the current one.** R-B
+sharpened the question I asked. The remaining automatic assurance is not
+"nothing": model replay covers `sat` completely, and our own DRAT/LRAT checkers
+cover `unsat` at 269 call sites across 36 files on default builds —
+algorithmically independent, though same-project, and *verifying a refutation is
+stronger than corroborating an opinion*. The real exposure is **a defect the
+core and our own checkers share**.
 
-### Phase B — one CDCL(T) driver **[pending R-A]**
+The batsat differential never covered that either: it hands batsat the same
+`CnfFormula` our parser built. **Only an external binary reading the DIMACS text
+is immune** — the CaDiCaL/Kissat arm, not the in-process one. So the replacement
+is an external-binary referee, which costs no Cargo dependency and is strictly
+stronger than what is being removed.
 
-*Exit:* one driver on every shipping path, `cdclt.rs` deleted or reduced to
-whatever R-A shows is genuinely better there, with the reason recorded. Every
-migrated site verdict-invariant on the committed corpus **and** the parity
-slices — this repo has already measured that moving a route changes give-up
-reasons and models, not just speed.
+Note also that the referee being retired **has never run automatically**: no
+gate, CI job, justfile recipe or hook uses `--features batsat-reference`,
+measured with positive controls. It has provided zero automatic assurance since
+the day it landed.
 
-Sequencing comes from R-A's dependency order, not from module size.
+**A2. Fix the 13 live-and-wrong docs**, moving `check-parity-docs.py:1295` in the
+same commit — it pins one of the false sentences, so fixing the doc alone turns
+that gate red. Leave the 76 historical files alone; they are the record.
+
+**This bucket is pure prose and highly parallelizable.** R-B filtered every
+`docs/` batsat line for command shapes and found **no broken command anywhere**:
+every runnable line still works today (positive control — `cargo test` appears on
+2,520 `docs/` lines, so the empty result is a real negative). All 13 are wrong
+*claims*, not broken *instructions*, so none needs re-verification by running it.
+Nine are the same sentence nine times, which is one edit repeated.
+
+Count caveat, from the same lane: R-B's own note is a `docs/` file mentioning
+batsat, so the sweep returns **111** at or after its landing commit against the
+110 it reports. Subtract the note before comparing.
+
+**A3. Fix the six live `.rs` files that say batsat while calling the native
+core**, starting with the bench that mislabels its JSON key, and re-label or
+re-generate the artifacts it has written since 2026-09-05.
+
+**A4. Remove the feature and the dependencies** — last, and only after A1, since
+`gate_b_sweep` requires the feature and produced ADR-1703's own artifact.
+
+*Exit:* three crates absent from every `Cargo.toml`; zero non-historical `.rs`
+references; the 13 docs corrected with their checker; and a **named, automatically
+running** external-binary check on native-core verdicts.
+
+### Phase B — one CDCL(T) driver, and it is the native core
+
+Sequenced from R-A's dependency order, which inverts the intuitive one.
+
+**B0. Write the ADR.** ADR-1703 does not mention `CdclT`; nothing has decided
+this. The ADR must also state which of *three* drivers survives, since `Dpll`
+has more shipping sites than `CdclT`.
+
+**B1. `uflia` + `uflra`, together — the cheap half.** One dispatch arm split by
+sort. Blocked only by `theory_propagations` not being returned from
+`solve_native`, and their recorded deferral reason (a `--trace` gap) **was fixed
+in the same commit that recorded it**. Half the remaining migration is waiting on
+a stale blocker.
+
+**B2. Build warm CDCL(T) on the native side** — a constructor pairing a theory
+with a persistent `Cdcl`. This is the one missing feature under everything else,
+and the core already names the gap.
+
+**B3. `qinst_egraph`** after B2: it calls `backtrack_to_root` first thing, which
+is already the native between-solves discipline, so it is a swap once B2 exists.
+
+**B4. The warm BV client is a redesign, not a swap, and must be re-argued on
+measured benefit.** It never backtracks; its `add_permanent_clause` runs with a
+full trail that native `add_input_clause` debug-asserts against; and it needs
+dormant variables, which do not exist in `axeyum-cnf` in any form.
+
+**B5. Demote `CdclT`, do not delete it.** It is the differential oracle for the
+native core — its own docstring says it "decides whether a shipping route may be
+moved" — and it caught both defects of the scoping commit, including a
+wrong-`unsat` shape. ADR-1703's precedent applies exactly: demote to oracle, as
+BatSat was.
+
+*Exit:* the native core on every shipping CDCL(T) path; `CdclT` retained only as
+a gated oracle with a **running** differential; every migrated site
+verdict-invariant on the committed corpus and the parity slices — this repo has
+already measured that moving a route changes give-up reasons and models, not just
+speed.
 
 ### Phase C — finish the theory interfaces
 
@@ -194,3 +289,26 @@ today) is what makes those measurable at all from a theory route.
 
    **This is a measurement, not a diagnosis** — do not put a fix in a queue
    from it.
+
+## 6. What iteration 1 got wrong
+
+Recorded rather than overwritten, because both errors are instances of shapes
+this repository keeps paying for.
+
+**Mine, and the load-bearing one.** Iteration 1 said three modules run both
+engines, from a `grep -c` that counted `#[cfg(test)]` sites as routes. The real
+split is 4 shipping against 30 in test modules, and **no module runs both**. A
+plan built on that would have scoped "decide per entry point" work that does not
+exist. The general form: *a count is not an inventory*, and a count over a
+pattern that matches test code is a measurement of the wrong population.
+
+**Inherited.** Iteration 1 took ADR-1703's "~70 documentation references" and my
+own 104 at face value; the verified number is 110, and 111 after R-B's note
+lands. Also `SolverConfig::native_cdcl` was described by its own doc and by
+ADR-1703 as inert, and was silently disqualifying queries from the warm engine.
+*A decision record describes what was decided, not necessarily what shipped.*
+
+**A false lead caught before it entered a queue.** The deferred-code survey
+flagged LRA and LIA as carrying EUF's "Propagation ... (deferred)" defect on the
+strength of a matching capability string. Reading the code showed both already
+propagate in both directions. §4 records the refusal so it is not re-found.
