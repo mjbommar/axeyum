@@ -6,6 +6,20 @@
 //! [`crate::at_most`] family and is the constraint counterpart of weighted
 //! [`crate::max_satisfiable_weighted`] (which *optimizes* the same sum). Everything
 //! reduces to the sound, replayed bit-vector theory — no new core machinery.
+//!
+//! # No in-crate caller by design (ADR-1812)
+//!
+//! These are **term builders**, not a decision route: they hand the caller a
+//! Boolean `TermId` that then goes through the ordinary dispatch like any other
+//! assertion. A builder is called by whoever is *writing* the query, which is
+//! the library's user — so nothing inside this crate calls [`pb_le`] and
+//! nothing should. The unweighted family it generalizes,
+//! [`crate::at_most`] in `cardinality.rs`, has no in-crate caller either, for
+//! exactly the same reason; the two are one category, not two oversights.
+//!
+//! The wiring that would give this module a front-door caller is SMT-LIB
+//! pseudo-Boolean input, which `axeyum-smtlib` does not parse. Until then the
+//! Rust API is the whole surface, and it is the right one.
 
 use axeyum_ir::{IrError, TermArena, TermId};
 

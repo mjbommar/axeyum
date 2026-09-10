@@ -3,7 +3,8 @@
 //! [`TransitionSystem`](crate::TransitionSystem) to arbitrary Horn clauses, with
 //! a *verify-guarded* solver that reduces the tractable case to the
 //! model-checking engines already built ([`prove_safety_pdr_lra`],
-//! [`prove_safety_imc_lra`], [`prove_safety_pdr`], [`prove_safety_imc`]).
+//! [`prove_safety_imc_lra`], [`prove_safety_pdr_lia`], [`prove_safety_imc_lia`],
+//! [`prove_safety_pdr`], [`prove_safety_imc`]).
 //!
 //! # Representation (no new IR — a predicate is a Bool-result uninterpreted function)
 //!
@@ -61,7 +62,8 @@
 //!
 //! A non-trivial `SCC` `{P₁…Pₖ}` is merged into **one self-recursive predicate
 //! `P*`** over a *control-tagged* state `(tag, x₁…xₙ)`: a fresh `tag` selector
-//! (a real or bit-vector constant column, chosen to match the engine family)
+//! (a real, integer, or bit-vector constant column, chosen to match the engine
+//! family)
 //! records which original member is active, and `(x₁…xₙ)` carries the members'
 //! shared argument tuple. This slice handles the **sort-compatible** case — every
 //! `SCC` member must declare the **same argument sort vector** `(τ₁…τₙ)`, so the
@@ -96,6 +98,25 @@
 //! tagged-disjoint-union merge (members of *different* arities/sorts) and genuine
 //! nonlinear recursion are the natural next slices; both would ride the same
 //! verify-before-return discipline.
+//!
+//! # Engine families (the state vocabulary decides)
+//!
+//! The reduced transition system is dispatched by the predicate's argument sorts
+//! ([`state_class`]), and every family is tried PDR-first with an interpolation
+//! fallback:
+//!
+//! | State vocabulary | Engines |
+//! |---|---|
+//! | all-`Real` | [`prove_safety_pdr_lra`] → [`prove_safety_imc_lra`] |
+//! | all-`Int` | [`prove_safety_pdr_lia`] → [`prove_safety_imc_lia`] |
+//! | all-`BitVec`/`Bool` (and nullary) | [`prove_safety_pdr`] → [`prove_safety_imc`] |
+//! | mixed, `Array`, anything else | decline to [`HornOutcome::Unknown`] |
+//!
+//! The `Int` row is the SMT-LIB CHC workhorse — `(declare-fun inv (Int Int) Bool)`
+//! is the shape Z3's Spacer is usually pointed at. It routes to the **native ℤ**
+//! engines, never to a real relaxation of an integer system: an `LRA` invariant
+//! for an `Int` system would be re-checked over ℤ by the verify-before-return
+//! gate below and rejected there, so the relaxation would only ever cost work.
 //!
 //! # Reduction to a transition system (untrusted)
 //!
@@ -139,6 +160,32 @@
 //! Every resource cap and unsupported construct degrades to
 //! [`HornOutcome::Unknown`]; the solver never panics on adversarial or malformed
 //! input.
+//!
+//! # No in-crate caller by design — but read the second half (ADR-1812)
+//!
+//! [`solve_horn`] is a **front-end**, not a step of one: it takes a
+//! [`HornSystem`] the caller assembled and reduces it to something the deciders
+//! already handle, so nothing inside this crate calls it and nothing should. Its
+//! caller is the library user. The wiring that would give it an in-crate caller
+//! is SMT-LIB CHC input — recognising `(declare-fun P (…) Bool)` plus universally
+//! quantified implication assertions as a Horn system and routing them here —
+//! which lives in the front door, not in this module.
+//!
+//! Note what that gap actually looks like, measured 2026-09-09: `smtlib.rs`
+//! **accepts** `(set-logic HORN)` as a known logic name (`smtlib.rs:3378`) and
+//! then sends the script through the ordinary quantified dispatch. So a CHC
+//! benchmark is not rejected — it is silently decided by something other than
+//! the CHC front-end. Wiring the recognition is the real work; the logic name
+//! alone routes nothing.
+//!
+//! **That is not why this module mattered to ADR-1812.** Until 2026-09-09 its
+//! `state_class` classified an all-`Int` predicate vocabulary as
+//! `StateClass::Unsupported`, and that one decline was the reason
+//! [`crate::pdr_lia`] and [`crate::imc_lia`] — 1,771 lines of native-ℤ model
+//! checking — had no production caller anywhere in the tree. A module with no
+//! caller of its own was the thing keeping two others unreachable. The `Int`
+//! branch of [`dispatch`] is that fix; do not remove it to "simplify" the
+//! classifier.
 
 use std::collections::BTreeMap;
 
@@ -148,8 +195,10 @@ use crate::auto::check_auto;
 use crate::backend::{CheckResult, SolverConfig, SolverError};
 use crate::bmc::TransitionSystem;
 use crate::imc::{ImcOutcome, prove_safety_imc};
+use crate::imc_lia::{ImcLiaOutcome, prove_safety_imc_lia};
 use crate::imc_lra::{ImcLraOutcome, prove_safety_imc_lra};
 use crate::pdr::{PdrOutcome, prove_safety_pdr};
+use crate::pdr_lia::{PdrLiaOutcome, prove_safety_pdr_lia};
 use crate::pdr_lra::{PdrLraOutcome, prove_safety_pdr_lra};
 
 /// A single Constrained Horn Clause: `(⋀ body) ∧ constraint ⇒ head`.
@@ -685,9 +734,10 @@ enum Dispatch {
 /// step-0 state symbols (the interpretation parameters the invariant is over).
 ///
 /// * `Real` state ⇒ try [`prove_safety_pdr_lra`], then [`prove_safety_imc_lra`].
+/// * `Int` state ⇒ try [`prove_safety_pdr_lia`], then [`prove_safety_imc_lia`]
+///   (the native-ℤ engines; never a real relaxation).
 /// * `BitVec`/`Bool` state ⇒ try [`prove_safety_pdr`], then [`prove_safety_imc`].
-/// * `Int` (and any other sort) ⇒ decline (an `Int` real-relaxation cannot be
-///   verified over ℤ in this slice).
+/// * Any mixed or otherwise unsupported vocabulary ⇒ decline.
 fn dispatch(
     arena: &mut TermArena,
     reduced: &ReducedSystem,
@@ -716,6 +766,16 @@ fn dispatch(
                 ImcLraOutcome::Unknown { reason } => Dispatch::Unknown(reason),
             },
         },
+        StateClass::Int => match prove_safety_pdr_lia(arena, &pinned, config)? {
+            PdrLiaOutcome::Safe { invariant } => Dispatch::Safe { invariant },
+            PdrLiaOutcome::Reachable { steps, .. } => Dispatch::Unsat { steps },
+            // Fall back to interpolation-based model checking over ℤ.
+            PdrLiaOutcome::Unknown { .. } => match prove_safety_imc_lia(arena, &pinned, config)? {
+                ImcLiaOutcome::Safe { invariant } => Dispatch::Safe { invariant },
+                ImcLiaOutcome::Reachable { steps, .. } => Dispatch::Unsat { steps },
+                ImcLiaOutcome::Unknown { reason } => Dispatch::Unknown(reason),
+            },
+        },
         StateClass::Finite => match prove_safety_pdr(arena, &pinned, config)? {
             PdrOutcome::Safe { invariant } => Dispatch::Safe { invariant },
             PdrOutcome::Reachable { steps, .. } => Dispatch::Unsat { steps },
@@ -726,8 +786,8 @@ fn dispatch(
             },
         },
         StateClass::Unsupported => Dispatch::Unknown(
-            "Horn predicate argument sorts are outside this slice's reach (only Real, BitVec, and \
-             Bool are dispatched; Int/Array/etc. decline)"
+            "Horn predicate argument sorts are outside this slice's reach (only Real, Int, \
+             BitVec, and Bool vocabularies are dispatched, and only unmixed; Array/etc. decline)"
                 .to_owned(),
         ),
     };
@@ -773,21 +833,26 @@ impl TransitionSystem for PinnedReduced<'_> {
 enum StateClass {
     /// All-`Real` state ⇒ the `LRA` engines.
     Real,
+    /// All-`Int` state ⇒ the native-ℤ `LIA` engines.
+    Int,
     /// All-`BitVec`/`Bool` state ⇒ the bit-level engines.
     Finite,
-    /// A mixed or unsupported sort (e.g. `Int`, `Array`) ⇒ decline.
+    /// A mixed or unsupported sort (e.g. `Array`) ⇒ decline.
     Unsupported,
 }
 
 /// Classifies the argument sorts into an engine family. An empty argument list (a
 /// nullary predicate) is `Finite` (a single Boolean reachability bit).
 fn state_class(sorts: &[Sort]) -> StateClass {
+    if sorts.is_empty() {
+        // A nullary predicate is a single Boolean reachability bit.
+        return StateClass::Finite;
+    }
     if sorts.iter().all(|s| *s == Sort::Real) {
-        // All Real (or empty — but empty is caught by the Finite branch first).
-        if sorts.is_empty() {
-            return StateClass::Finite;
-        }
         return StateClass::Real;
+    }
+    if sorts.iter().all(|s| *s == Sort::Int) {
+        return StateClass::Int;
     }
     if sorts
         .iter()
@@ -1749,6 +1814,15 @@ fn dispatch_self(
                 ImcLraOutcome::Unknown { reason } => Dispatch::Unknown(reason),
             },
         },
+        StateClass::Int => match prove_safety_pdr_lia(arena, &pinned, config)? {
+            PdrLiaOutcome::Safe { invariant } => Dispatch::Safe { invariant },
+            PdrLiaOutcome::Reachable { steps, .. } => Dispatch::Unsat { steps },
+            PdrLiaOutcome::Unknown { .. } => match prove_safety_imc_lia(arena, &pinned, config)? {
+                ImcLiaOutcome::Safe { invariant } => Dispatch::Safe { invariant },
+                ImcLiaOutcome::Reachable { steps, .. } => Dispatch::Unsat { steps },
+                ImcLiaOutcome::Unknown { reason } => Dispatch::Unknown(reason),
+            },
+        },
         StateClass::Finite => match prove_safety_pdr(arena, &pinned, config)? {
             PdrOutcome::Safe { invariant } => Dispatch::Safe { invariant },
             PdrOutcome::Reachable { steps, .. } => Dispatch::Unsat { steps },
@@ -1759,8 +1833,8 @@ fn dispatch_self(
             },
         },
         StateClass::Unsupported => Dispatch::Unknown(
-            "Horn predicate argument sorts are outside this slice's reach (only Real, BitVec, and \
-             Bool are dispatched)"
+            "Horn predicate argument sorts are outside this slice's reach (only Real, Int, \
+             BitVec, and Bool vocabularies are dispatched, and only unmixed)"
                 .to_owned(),
         ),
     };
@@ -2177,11 +2251,13 @@ fn prepend(first: SymbolId, rest: Vec<SymbolId>) -> Vec<SymbolId> {
 }
 
 /// The tag column's sort for an `SCC` whose members share `member_sorts`: a `Real`
-/// tag for all-`Real` members, a `BitVec` tag wide enough to hold `member_count`
-/// distinct values for all-`BitVec`/`Bool` members, else `None` (unsupported).
+/// tag for all-`Real` members, an `Int` tag for all-`Int` members, a `BitVec` tag
+/// wide enough to hold `member_count` distinct values for all-`BitVec`/`Bool`
+/// members, else `None` (unsupported).
 fn tag_sort_for(member_sorts: &[Sort], member_count: usize) -> Option<Sort> {
     match state_class(member_sorts) {
         StateClass::Real => Some(Sort::Real),
+        StateClass::Int => Some(Sort::Int),
         StateClass::Finite => {
             // A width holding values 0..member_count (≥ 1 bit).
             let mut width: u32 = 1;
@@ -2195,12 +2271,17 @@ fn tag_sort_for(member_sorts: &[Sort], member_count: usize) -> Option<Sort> {
 }
 
 /// The tag constant term for member index `tag` of sort `tag_sort`: a real literal
-/// for a `Real` tag, a bit-vector constant for a `BitVec` tag.
+/// for a `Real` tag, an integer literal for an `Int` tag, a bit-vector constant for
+/// a `BitVec` tag.
 fn tag_constant(arena: &mut TermArena, tag_sort: Sort, tag: usize) -> TermId {
     match tag_sort {
         Sort::Real => {
             let n = i128::try_from(tag).expect("tag fits i128");
             arena.real_ratio(n, 1)
+        }
+        Sort::Int => {
+            let n = i128::try_from(tag).expect("tag fits i128");
+            arena.int_const(n)
         }
         Sort::BitVec(w) => {
             let v = u128::try_from(tag).expect("tag fits u128");
@@ -2208,7 +2289,7 @@ fn tag_constant(arena: &mut TermArena, tag_sort: Sort, tag: usize) -> TermId {
                 .bv_const(w, v)
                 .expect("tag value fits the tag width by construction")
         }
-        // tag_sort_for only ever returns Real/BitVec; a Bool/other tag is unreachable.
+        // tag_sort_for only ever returns Real/Int/BitVec; a Bool/other tag is unreachable.
         _ => arena.bool_const(false),
     }
 }

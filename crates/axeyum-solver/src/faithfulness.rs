@@ -16,6 +16,22 @@
 //! the open verified-bit-blaster program). It is the differential complement to
 //! model replay, applied to the reduction itself, and it is deterministic (a
 //! fixed seed) so a checker can reproduce it exactly.
+//!
+//! # No in-crate caller by design (ADR-1812)
+//!
+//! This is an **assurance instrument, not a step of a decision**. Calling it on
+//! every solve would slow the front door to buy evidence nobody reads; it is
+//! meant to be pointed at a term deliberately, by a test, a fuzz harness, or a
+//! checker. Its exhaustive sibling
+//! [`crate::bitblast_miter`] — which replaced the sampling with
+//! a DRAT-checked miter against an independently coded reference bit-blaster —
+//! is what the gates use, and it has no in-crate caller either, for the same
+//! reason (it is reached from `axeyum-bench` and `axeyum-verify`).
+//!
+//! The two are not redundant: the miter's refutation is a SAT call that grows
+//! with the term, while this is `O(samples)` and stays cheap exactly where the
+//! miter stops being affordable. Deleting it would lose the cheap end of that
+//! trade, so it stays.
 
 use std::collections::BTreeMap;
 
