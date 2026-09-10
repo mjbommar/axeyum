@@ -19,6 +19,8 @@
 #![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
+mod common_z3;
+
 use std::fmt::Write as _;
 use std::io::Write as _;
 use std::process::{Command, Stdio};
@@ -30,8 +32,6 @@ use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};
 const INSTANCES: u64 = 1500;
 const AXEYUM_TIMEOUT: Duration = Duration::from_secs(2);
 const Z3_TIMEOUT: Duration = Duration::from_secs(3);
-const Z3_BIN: &str = "/usr/bin/z3";
-
 /// Small alphabet so constant clashes (and unsats) are common.
 const ALPHABET: &[u8] = b"ab";
 
@@ -205,7 +205,7 @@ fn axeyum_decide(text: &str) -> Verdict {
 }
 
 fn z3_decide(text: &str) -> Verdict {
-    let Ok(mut child) = Command::new(Z3_BIN)
+    let Ok(mut child) = Command::new(common_z3::z3_bin())
         .arg(format!("-T:{}", Z3_TIMEOUT.as_secs().max(1)))
         .arg("-in")
         .stdin(Stdio::piped())
@@ -236,10 +236,10 @@ fn z3_decide(text: &str) -> Verdict {
 
 #[test]
 fn online_string_front_door_fuzz_disagree_zero() {
-    if z3_decide("(set-logic QF_S)\n(check-sat)\n") == Verdict::Skip
-        && Command::new(Z3_BIN).arg("--version").output().is_err()
-    {
-        eprintln!("[front-door-fuzz] {Z3_BIN} unavailable; skipping (no adjudicator)");
+    if !common_z3::z3_available(
+        "front-door-fuzz",
+        z3_decide("(set-logic QF_S)\n(check-sat)\n") != Verdict::Skip,
+    ) {
         return;
     }
 

@@ -66,15 +66,14 @@
 #![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
+mod common_z3;
+
 use std::fmt::Write as _;
 use std::io::Write as _;
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};
-
-/// Path to the system Z3 binary (full `Seq` theory under `(set-logic ALL)`).
-const Z3_BIN: &str = "/usr/bin/z3";
 
 /// Number of random scripts generated and adjudicated. Each is tiny (≤ 2 seq
 /// vars, shallow trees, lengths ≤ a few) so both sides decide quickly. Many
@@ -361,7 +360,7 @@ fn axeyum_decide(text: &str) -> Verdict {
 /// stack — a bogus verdict that would manufacture a false disagreement. We
 /// capture BOTH streams and treat any error output as a hard SKIP.
 fn z3_decide(text: &str) -> Verdict {
-    let Ok(mut child) = Command::new(Z3_BIN)
+    let Ok(mut child) = Command::new(common_z3::z3_bin())
         .arg(format!("-T:{}", Z3_TIMEOUT.as_secs().max(1)))
         .arg("-in")
         .stdin(Stdio::piped())
@@ -398,8 +397,10 @@ fn z3_decide(text: &str) -> Verdict {
 }
 
 fn z3_available() -> bool {
-    !(z3_decide("(set-logic ALL)\n(check-sat)\n") == Verdict::Skip
-        && Command::new(Z3_BIN).arg("--version").output().is_err())
+    common_z3::z3_available(
+        "seq-fuzz",
+        z3_decide("(set-logic ALL)\n(check-sat)\n") != Verdict::Skip,
+    )
 }
 
 /// Assert a single script agrees (or is jointly-undecided) — the shared body of
@@ -407,7 +408,10 @@ fn z3_available() -> bool {
 /// disagreement panics with the script.
 fn assert_agrees(text: &str, note: &str) {
     if !z3_available() {
-        eprintln!("[seq-fuzz] {Z3_BIN} unavailable; skipping seed '{note}'");
+        eprintln!(
+            "[seq-fuzz] {} unavailable; skipping seed '{note}'",
+            common_z3::z3_bin()
+        );
         return;
     }
     let ax = axeyum_decide(text);
@@ -425,7 +429,10 @@ fn assert_agrees(text: &str, note: &str) {
 #[test]
 fn seq_differential_fuzz_disagree_zero() {
     if !z3_available() {
-        eprintln!("[seq-fuzz] {Z3_BIN} unavailable; skipping (no adjudicator)");
+        eprintln!(
+            "[seq-fuzz] {} unavailable; skipping (no adjudicator)",
+            common_z3::z3_bin()
+        );
         return;
     }
 

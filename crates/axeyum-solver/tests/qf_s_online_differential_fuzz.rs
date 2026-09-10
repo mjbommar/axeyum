@@ -33,6 +33,8 @@
 #![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
+mod common_z3;
+
 use std::fmt::Write as _;
 use std::io::Write as _;
 use std::process::{Command, Stdio};
@@ -51,8 +53,6 @@ const AXEYUM_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// Per-call Z3 wall-clock budget.
 const Z3_TIMEOUT: Duration = Duration::from_secs(3);
-
-const Z3_BIN: &str = "/usr/bin/z3";
 
 const ELEM: ArraySortKey = ArraySortKey::BitVec(8);
 
@@ -295,7 +295,7 @@ fn axeyum_decide(inst: &Instance) -> Verdict {
 }
 
 fn z3_decide(text: &str) -> Verdict {
-    let Ok(mut child) = Command::new(Z3_BIN)
+    let Ok(mut child) = Command::new(common_z3::z3_bin())
         .arg(format!("-T:{}", Z3_TIMEOUT.as_secs().max(1)))
         .arg("-in")
         .stdin(Stdio::piped())
@@ -326,10 +326,10 @@ fn z3_decide(text: &str) -> Verdict {
 
 #[test]
 fn qf_s_online_differential_fuzz_disagree_zero() {
-    if z3_decide("(set-logic QF_S)\n(check-sat)\n") == Verdict::Skip
-        && Command::new(Z3_BIN).arg("--version").output().is_err()
-    {
-        eprintln!("[qf_s-fuzz] {Z3_BIN} unavailable; skipping (no adjudicator)");
+    if !common_z3::z3_available(
+        "qf_s-fuzz",
+        z3_decide("(set-logic QF_S)\n(check-sat)\n") != Verdict::Skip,
+    ) {
         return;
     }
 

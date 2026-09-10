@@ -40,6 +40,8 @@
 #![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
+mod common_z3;
+
 use std::fmt::Write as _;
 use std::io::Write as _;
 use std::process::{Command, Stdio};
@@ -57,10 +59,6 @@ const INSTANCES: u64 = 900;
 /// Per-call Z3 wall-clock budget. Small bounded-string scripts decide far
 /// faster; this only bounds the rare pathological regex shape.
 const Z3_TIMEOUT: Duration = Duration::from_secs(3);
-
-/// Path to the system Z3 binary (it carries the full string theory; the z3
-/// *crate* AST has no string sorts, so we shell the text in).
-const Z3_BIN: &str = "/usr/bin/z3";
 
 /// A deterministic linear-congruential PRNG (the MMIX multiplier/increment).
 /// No clock, no OS entropy: the whole sweep is reproducible from the seed.
@@ -459,7 +457,7 @@ fn axeyum_decide(text: &str) -> Verdict {
 /// wall-clock timeout. Returns [`Verdict::Skip`] on `unknown`/timeout/error.
 fn z3_decide(text: &str) -> Verdict {
     // z3 binary missing/unspawnable → adjudication-neutral SKIP.
-    let Ok(mut child) = Command::new(Z3_BIN)
+    let Ok(mut child) = Command::new(common_z3::z3_bin())
         .arg(format!("-T:{}", Z3_TIMEOUT.as_secs().max(1)))
         .arg("-in")
         .stdin(Stdio::piped())
@@ -505,10 +503,10 @@ fn z3_decide(text: &str) -> Verdict {
 fn string_differential_fuzz_disagree_zero() {
     // Probe the Z3 binary once; if absent, the differential is impossible and the
     // test is a no-op pass (mirrors the other fuzzers' adjudication-neutral skip).
-    if z3_decide("(set-logic QF_S)\n(check-sat)\n") == Verdict::Skip
-        && Command::new(Z3_BIN).arg("--version").output().is_err()
-    {
-        eprintln!("[string-fuzz] {Z3_BIN} unavailable; skipping (no adjudicator)");
+    if !common_z3::z3_available(
+        "string-fuzz",
+        z3_decide("(set-logic QF_S)\n(check-sat)\n") != Verdict::Skip,
+    ) {
         return;
     }
 
