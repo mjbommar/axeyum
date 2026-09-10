@@ -112,7 +112,11 @@ pub use drat_resource::{
     MemoryBudget,
 };
 pub use gf2::{Gf2Outcome, Gf2Solution, Gf2System};
-pub use inprocess::{InprocessOptions, InprocessOutcome, InprocessStats, inprocess_into};
+pub use inprocess::{
+    InprocessObserver, InprocessOptions, InprocessOutcome, InprocessSchedule, InprocessStats,
+    NoObserver, OccurrencePass, RecordingObserver, ScheduledInprocess, inprocess_into,
+    inprocess_scheduled,
+};
 pub use interpolant::{
     BoolExpr, PropositionalInterpolantCertificate, propositional_interpolant,
     propositional_interpolant_certified,

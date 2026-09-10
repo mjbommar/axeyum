@@ -25,16 +25,20 @@ use axeyum_bv::{
     lower_terms_demanded_with_deadline, lower_terms_range_demanded_with_deadline,
     lower_terms_with_deadline, lower_terms_with_deadline_profiled,
 };
+// The seven pass-sequencing names -- `simplify_within_recorded`,
+// `simplify_with_options`, `vivify_within`, `eliminate_variables_within`,
+// `eliminate_variables_within_recorded`, `compact` and `xor_propagate` -- are
+// deliberately absent from this list. Since ADR-1810 this file is a call site of
+// `inprocess_scheduled`, not a second scheduler over the same passes, and the
+// import list is the mechanical statement of that.
 use axeyum_cnf::{
-    BveOptions, BveOutcome, CnfAssignment, CnfConstructionProfile, CnfDuplicateOriginProfile,
-    CnfEncoding, CnfError, CnfFormula, CompactMap, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, DratStep,
-    EncodedLit, ProofCoverage, ProofSolveOutcome, Reconstruction, ReducedReason, ReductionLink,
-    SatProofStatus, SatResult, SatUnknownReason, SatUnsatEvidence, SubsumeOptions, SubsumeStats,
-    VivifyOptions, XorCdclResult, XorPropagation, check_drat, compact, eliminate_variables_within,
-    eliminate_variables_within_recorded, extract_xors, simplify_with_options,
-    simplify_within_recorded, solve_with_drat_proof, solve_with_drat_proof_with_limits,
-    solve_with_xor_cdcl, tseitin_encode, tseitin_encode_profiled_with_origins, vivify_within,
-    write_drat, xor_gauss_drat_refutation, xor_propagate,
+    CnfAssignment, CnfConstructionProfile, CnfDuplicateOriginProfile, CnfEncoding, CnfError,
+    CnfFormula, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, EncodedLit, InprocessObserver, InprocessSchedule,
+    OccurrencePass, ProofCoverage, ProofSolveOutcome, ReducedReason, ReductionLink, SatProofStatus,
+    SatResult, SatUnknownReason, SatUnsatEvidence, ScheduledInprocess, VivifyOptions,
+    XorCdclResult, check_drat, extract_xors, inprocess_scheduled, solve_with_drat_proof,
+    solve_with_drat_proof_with_limits, solve_with_xor_cdcl, tseitin_encode,
+    tseitin_encode_profiled_with_origins, write_drat, xor_gauss_drat_refutation,
 };
 use axeyum_ir::budget::{EffortAccount, EffortPolicy, Grant, WorkMeter};
 use axeyum_ir::{
@@ -1092,38 +1096,22 @@ fn record_duplicate_origin_profile(stats: &mut SolveStats, profile: &CnfDuplicat
 }
 
 /// A Tseitin formula after CNF inprocessing, plus the maps that lift a model of
-/// the reduced formula back to the original CNF variables.
+/// the reduced formula back to the original CNF variables and a refutation of
+/// it back to the formula this backend encoded.
 ///
-/// The lift is a two-step composition. BVE removes clauses/variables but does
-/// not renumber, so its reduced formula keeps the original (wide) variable count;
-/// [`compact`] then densely renumbers the live variables, lowering
-/// [`CnfFormula::variable_count`] so the variable-bound admission gate admits
-/// cases that eliminated millions of variables. The `formula` field is the
-/// *compacted* formula (the one submitted to the SAT solver); a `sat` model of it
-/// is lifted by `compaction.expand` (→ original-width, BVE-reduced model) and then
-/// `reconstruction.extend` (→ full original model), in that order.
-struct Inprocessed {
-    /// The compacted, BVE-reduced formula submitted to the SAT adapter.
-    formula: CnfFormula,
-    /// Lifts a compacted model up to the BVE-reduced (original-width) variables.
-    compaction: CompactMap,
-    /// Lifts a BVE-reduced model back to the original pre-BVE variables.
-    reconstruction: Reconstruction,
-    /// The `unsat` direction of the same reduction: the passes' own `DRAT`
-    /// derivation plus the compaction's variable bijection, so a refutation of
-    /// [`Self::formula`] lifts to a refutation of the formula the caller
-    /// encoded (ADR-1750's open item). Empty and identity unless
-    /// `config.prove_unsat` asked for it — recording a 37.7 M-step BVE prefix
-    /// nobody is going to check is pure cost.
-    ///
-    /// Note which direction each map runs. `compaction`/`reconstruction` carry
-    /// **models** UP from the reduced formula to the original; `link` carries a
-    /// **refutation** the same way. They are not inverses of each other and
-    /// neither substitutes for the other: BVE is equisatisfiable, so the `sat`
-    /// direction needs the reconstruction stack and the `unsat` direction needs
-    /// the resolvents' derivation.
-    link: ReductionLink,
-}
+/// One name for one thing: since ADR-1810 the sequencing that produces it lives
+/// in `axeyum_cnf::inprocess`, so this is that module's own outcome type rather
+/// than a parallel copy of it. The lift is a two-step composition. BVE removes
+/// clauses/variables but does not renumber, so its reduced formula keeps the
+/// original (wide) variable count; `compact` then densely renumbers the live
+/// variables, lowering [`CnfFormula::variable_count`] so the variable-bound
+/// admission gate admits cases that eliminated millions of variables. The
+/// `formula` field is the *compacted* formula (the one submitted to the SAT
+/// solver); a `sat` model of it is lifted by `compaction.expand` (-> original-
+/// width, BVE-reduced model) and then `reconstruction.extend` (-> full original
+/// model), in that order, and an `unsat` proof of it is lifted the other way by
+/// `link`.
+type Inprocessed = ScheduledInprocess;
 
 /// Inprocessing admission bound. Since T1.1.4 both passes are occurrence-list
 /// indexed and near-linear with internal work budgets (`axeyum_cnf::simplify`
@@ -1630,448 +1618,81 @@ fn subsume_admission(
     )
 }
 
-/// Runs BVE under `grant`, or not at all.
+/// The solver's [`InprocessObserver`]: the two things
+/// [`axeyum_cnf::inprocess_scheduled`] cannot decide for itself.
 ///
-/// A named function rather than a `match` at the call site so the wiring itself
-/// is testable. It is a real gap otherwise: with the decision inline, computing
-/// the budget correctly and then handing BVE `BveOptions::DEFAULT` compiles,
-/// runs, produces identical answers, and is caught by nothing — verified by
-/// mutation, where that edit survived the whole `--lib --features full` sweep.
+/// The schedule moved into `axeyum-cnf` with ADR-1810; the *admission policy*
+/// deliberately did not. A grant is derived from the solve deadline and from
+/// host-measured throughput constants ([`BVE_STEPS_PER_MILLISECOND`],
+/// [`SUBSUME_STEPS_PER_MILLISECOND`]) -- neither of which `axeyum-cnf` can see
+/// -- and it pushes its own admission counters into the same [`SolveStats`] the
+/// stage telemetry lands in. So the schedule asks, and this answers.
 ///
-/// `None` means the pass does not run at all, which is **not** the same as
-/// running it with a budget of zero: a zero-budget call still builds the
-/// occurrence lists, and that `O(|F|)` setup is exactly the cost the admission
-/// test declined to pay.
-fn run_bve(formula: &CnfFormula, grant: Option<u64>, deadline: Option<Instant>) -> BveOutcome {
-    match grant {
-        Some(work_budget) => eliminate_variables_within(
-            formula,
-            BveOptions {
-                work_budget: Some(work_budget),
-                compact_occurrences: env_compact_occurrences(BVE_COMPACT_OCCURRENCES),
-                ..BveOptions::DEFAULT
-            },
-            deadline,
-        ),
-        None => BveOutcome::skipped(formula),
-    }
+/// It asks at the moment each pass is offered rather than up front, which is
+/// load-bearing: BVE's grant is computed over the post-subsume, post-vivify
+/// formula, and that formula does not exist until the schedule is half-run.
+struct BackendInprocessObserver<'a> {
+    /// The inprocessing slice's deadline, the input the grants are derived from.
+    deadline: Option<Instant>,
+    /// Where both the admission counters and the schedule's stage telemetry go.
+    stats: &'a mut SolveStats,
 }
 
-/// Runs subsumption under `grant`, or not at all.
-///
-/// The same wiring gap `run_bve` exists to close, in the same shape: with the
-/// decision inline at the call site, computing a budget correctly and then
-/// handing the pass `SubsumeOptions::DEFAULT` compiles, runs, produces
-/// identical answers, and is caught by nothing. Mutation-verified next door,
-/// where exactly that edit survived the whole `--lib --features full` sweep.
-///
-/// `None` means the pass does not run at all, which is **not** the same as a
-/// budget of zero: a zero-budget call still normalizes every clause and builds
-/// the first round's occurrence lists, and that `O(|F|)` setup is exactly what
-/// the admission test declined to pay.
-fn run_subsume(
-    formula: &CnfFormula,
-    grant: Option<u64>,
-    deadline: Option<Instant>,
-) -> (CnfFormula, SubsumeStats) {
-    match grant {
-        Some(work_budget) => simplify_with_options(
-            formula,
-            SubsumeOptions {
-                work_budget: Some(work_budget),
-            },
-            deadline,
-        ),
-        None => (formula.clone(), SubsumeStats::default()),
-    }
-}
-
-/// [`run_subsume`] with the pass's DRAT derivation appended to `proof`.
-///
-/// The merge of two lanes that both touched this call: one gave subsumption
-/// an admission grant, the other a proof recorder. Neither is optional --
-/// dropping the grant reinstates the unbudgeted pass that spends 10.7 s on
-/// one file, and dropping the recorder reinstates the trusted link this
-/// lane exists to remove. Separate from `run_subsume` for the same reason
-/// `run_bve_recorded` is separate from `run_bve`: a shared body makes "the
-/// recording path ran with a different budget" a one-character edit that
-/// compiles and produces identical verdicts.
-fn run_subsume_recorded(
-    formula: &CnfFormula,
-    grant: Option<u64>,
-    deadline: Option<Instant>,
-    proof: &mut Vec<DratStep>,
-) -> (CnfFormula, SubsumeStats) {
-    match grant {
-        Some(work_budget) => simplify_within_recorded(
-            formula,
-            SubsumeOptions {
-                work_budget: Some(work_budget),
-            },
-            deadline,
-            Some(proof),
-        ),
-        None => (formula.clone(), SubsumeStats::default()),
-    }
-}
-
-/// [`run_bve`] with the pass's `DRAT` derivation appended to `proof`.
-///
-/// Deliberately a separate function rather than an `Option<&mut Vec<_>>`
-/// parameter on `run_bve`: the two differ only in whether the recorder is
-/// threaded, and a shared body would make "the recording path ran the pass with
-/// a different budget" a one-character edit that compiles, runs, and produces
-/// identical verdicts — the exact defect class `run_bve`'s own doc comment
-/// records as having survived a full mutation sweep. Both bodies name
-/// `work_budget` explicitly so a divergence is visible side by side.
-fn run_bve_recorded(
-    formula: &CnfFormula,
-    grant: Option<u64>,
-    deadline: Option<Instant>,
-    proof: &mut Vec<DratStep>,
-) -> BveOutcome {
-    match grant {
-        Some(work_budget) => eliminate_variables_within_recorded(
-            formula,
-            BveOptions {
-                work_budget: Some(work_budget),
-                ..BveOptions::DEFAULT
-            },
-            deadline,
-            Some(proof),
-        ),
-        None => BveOutcome::skipped(formula),
-    }
-}
-
-/// Runs clause vivification on `simplified` when `config.cnf_vivify` is set,
-/// returning the strengthened (model-preserving) formula; otherwise returns
-/// `simplified` unchanged.
-///
-/// Vivification has the same satisfying assignments and `variable_count` as its
-/// input (no reconstruction trail), so the caller feeds the result straight into
-/// `BVE` and the model-lift stack is untouched. The `vivify_*` stat keys mirror the
-/// `subsume_*`/`bve_*` accounting.
-///
-/// In `prove_unsat` mode the pass's `DRAT` is *step-checked* as a standalone guard:
-/// every step of `outcome.proof` must verify (RUP/RAT) against the pre-vivify
-/// formula — i.e. [`check_drat`] returns `Ok(_)`, not `Err` (vivify's own contract:
-/// each added clause is RUP by construction). This is not yet composed into the
-/// end-to-end solve proof — the same accounting tier as subsumption/`BVE`. A failed
-/// step-check is a soundness alarm, so the un-vivified formula is returned (the
-/// verdict is unaffected either way, since vivify is model-preserving).
-fn maybe_vivify(
-    config: &SolverConfig,
-    simplified: &CnfFormula,
-    deadline: Option<Instant>,
-    stats: &mut SolveStats,
-    link: Option<&mut ReductionLink>,
-) -> CnfFormula {
-    if !config.cnf_vivify {
-        return simplified.clone();
-    }
-    let outcome = vivify_within(simplified, VivifyOptions::default(), deadline);
-    if config.prove_unsat {
-        // Step-guard: every step of vivify's DRAT must verify (RUP/RAT) against the
-        // formula it acted on. `check_drat` returns `Ok(true)` only when the proof
-        // also derives the empty clause (a strengthening collapsing to `()`), and
-        // `Ok(false)` for an ordinary strengthening that verifies but does not
-        // refute — both are *step-sound*; only `Err` (an unjustified add) is a
-        // soundness alarm. So the guard is `is_ok()`, matching vivify's own tests.
-        let step_ok = check_drat(simplified, &outcome.proof).is_ok();
-        stats.backend.push((
-            "vivify_drat_step_checked".to_owned(),
-            if step_ok { 1.0 } else { 0.0 },
-        ));
-        if !step_ok {
-            // Conservative: discard the (unverifiable) strengthening and proceed on
-            // the pre-vivify formula. Model-preserving either way, so no verdict change.
-            return simplified.clone();
+impl InprocessObserver for BackendInprocessObserver<'_> {
+    fn grant(&mut self, pass: OccurrencePass, formula: &CnfFormula) -> Option<u64> {
+        match pass {
+            OccurrencePass::Subsume => subsume_admission(formula, self.deadline, self.stats),
+            OccurrencePass::Bve => bve_admission(formula, self.deadline, self.stats),
         }
     }
-    // The pass's derivation joins the link, so its strengthenings are part of
-    // the certificate rather than a step-checked side-guard. The `step_ok`
-    // check above stays: it is a cheap local alarm that names vivify as the
-    // culprit, where a link failure only says the concatenation did not verify.
-    if let Some(link) = link {
-        push_count(stats, "vivify_proof_steps", outcome.proof.len() as u64);
-        link.record(outcome.proof.iter().cloned());
+
+    fn count(&mut self, name: &str, value: f64) {
+        self.stats.backend.push((name.to_owned(), value));
     }
-    stats.backend.push((
-        "vivify_clauses_strengthened".to_owned(),
-        usize_to_f64(outcome.stats.clauses_strengthened),
-    ));
-    stats.backend.push((
-        "vivify_literals_removed".to_owned(),
-        usize_to_f64(outcome.stats.literals_removed),
-    ));
-    stats.backend.push((
-        "vivify_clauses_removed".to_owned(),
-        usize_to_f64(outcome.stats.clauses_removed),
-    ));
-    outcome.formula
 }
 
 /// Runs subsumption, optional clause vivification, then bounded variable
-/// elimination on `formula`, recording what each pass removed in `stats`.
-/// Subsumption and vivification are model-preserving; `BVE` is equisatisfiable and
-/// pairs the reduced formula with a reconstruction stack. All passes stop
-/// scheduling new work once `deadline` passes. Vivification runs only when
-/// `config.cnf_vivify` is set.
-// Grew past the 100-line lint when per-stage timing and the shape counters were
-// added. Splitting it would put each stage's `Instant` in a different function
-// from the stage it times, which is exactly the arrangement that let
-// `model_lift` silently include the replay cost (see `BvLayerStats::model_replay`).
-// The clock reads stay next to the work they measure.
-#[allow(clippy::too_many_lines)]
+/// elimination and compaction on `formula`, recording what each pass did in
+/// `stats`.
+///
+/// Since ADR-1810 this is a call site and not a scheduler: the sequencing is
+/// [`axeyum_cnf::inprocess_scheduled`], which is where the passes, `compact` and
+/// [`ReductionLink`] already lived. What stays here is what depends on things
+/// `axeyum-cnf` cannot see -- [`SolverConfig`], [`SolveStats`], and the
+/// deadline-derived work grants -- and it reaches the schedule through
+/// [`BackendInprocessObserver`].
+///
+/// The arms are built from [`SolverConfig`] **field by field** rather than by
+/// naming a preset. `InprocessOptions::preprocess()` has `vivify: false` while
+/// this path's `cnf_vivify` default is `true`, so a merge that reached for a
+/// preset by name would have changed the shipping default silently.
 fn inprocess(
     config: &SolverConfig,
     formula: &CnfFormula,
     deadline: Option<Instant>,
     stats: &mut SolveStats,
 ) -> Inprocessed {
-    // XOR propagation (CDCL(XOR) preprocessing, path 2 of the multiplier wall):
-    // recover the XOR gates entailed by the formula, Gaussian-solve them, and
-    // append the implied unit clauses. Each added unit is entailed by the formula
-    // (the recognized gates are equivalent to clause-subsets of it), so it removes
-    // no models and adds none — the augmented formula is logically equivalent and
-    // needs no extra reconstruction. The contradictory-subsystem (`Unsat`) verdict
-    // is *not* trusted as a certificate here (no XOR proof emitter yet); that
-    // formula is left unchanged for the checked SAT solve to refute independently.
-    // Capped separately because Gaussian carries no internal deadline yet.
-    //
-    // STAGE ATTRIBUTION. Every stage below is timed separately and each records
-    // whether the shared inprocessing deadline had already expired when it
-    // returned. `inprocess_ms` alone attributes the whole spend to "inprocessing",
-    // which is the same mistake as attributing a solve to the last route that
-    // ran: the stage that consumed the time and the stage that was running when
-    // the clock ran out are different questions, and a scheduling decision needs
-    // both. The residual `inprocess_ms - sum(stage_ms)` is the formula copying
-    // between stages, which is not free at these sizes.
-    let inprocess_literals_before = literal_occurrences(formula);
-    stats.backend.push((
-        "inprocess_literals_before".to_owned(),
-        usize_to_f64(inprocess_literals_before),
-    ));
-    let xor_start = Instant::now();
-    let xor_base: Option<CnfFormula> = if formula.clauses().len() <= XOR_PROPAGATE_MAX_CLAUSES {
-        match xor_propagate(formula) {
-            XorPropagation::Propagated {
-                formula: augmented,
-                stats: xstats,
-            } => {
-                stats.backend.push((
-                    "xor_gates_recognized".to_owned(),
-                    usize_to_f64(xstats.xors_recognized),
-                ));
-                stats.backend.push((
-                    "xor_units_added".to_owned(),
-                    usize_to_f64(xstats.units_added),
-                ));
-                stats.backend.push((
-                    "xor_equalities_available".to_owned(),
-                    usize_to_f64(xstats.equalities_available),
-                ));
-                // The units are entailed by the formula but are derived by
-                // GAUSSIAN elimination over the recovered XOR subsystem, and a
-                // Gaussian-implied unit is not RUP in general — ADR-1750 says
-                // so about the XOR route in its own words. So under
-                // `prove_unsat` this augmentation would be the one link in the
-                // chain no `DRAT` step can justify. Skip it rather than emit a
-                // proof that quietly covers less than it claims: the units only
-                // strengthen propagation, and dropping them costs speed, not
-                // soundness. Recorded, so the cost is visible rather than
-                // inferred from a missing key.
-                if config.prove_unsat && xstats.units_added > 0 {
-                    stats
-                        .backend
-                        .push(("xor_propagate_skipped_for_proof".to_owned(), 1.0));
-                    None
-                } else {
-                    (xstats.units_added > 0).then_some(augmented)
-                }
-            }
-            XorPropagation::Unsat => {
-                stats.backend.push(("xor_subsystem_unsat".to_owned(), 1.0));
-                None
-            }
-        }
-    } else {
-        stats
-            .backend
-            .push(("xor_propagate_skipped_size".to_owned(), 1.0));
-        None
+    let schedule = InprocessSchedule {
+        // Gaussian carries no internal deadline yet, hence a cap of its own; the
+        // schedule itself declines to APPLY the units under `recording`, since a
+        // Gaussian-implied unit is not RUP in general.
+        xor_propagate: true,
+        xor_propagate_max_clauses: XOR_PROPAGATE_MAX_CLAUSES,
+        vivify: config.cnf_vivify,
+        vivify_options: VivifyOptions::default(),
+        // The step-guard is a `prove_unsat`-only alarm: it costs a `check_drat`
+        // over the pass's own derivation, and it is only worth paying where a
+        // certificate is being built.
+        vivify_step_guard: config.prove_unsat,
+        bve_compact_occurrences: env_compact_occurrences(BVE_COMPACT_OCCURRENCES),
+        // Recording a prefix costs a `Vec<DratStep>` proportional to the FORMULA
+        // (ADR-1750 measured BVE's at 37.7 M steps on a 3.1 M-variable
+        // instance), which is not something to pay for on a path that will never
+        // look at it.
+        recording: config.prove_unsat,
     };
-    push_duration_ms(stats, "xor_propagate_ms", xor_start.elapsed());
-    let base: &CnfFormula = xor_base.as_ref().unwrap_or(formula);
-
-    // The link is built only when someone is going to check it. Recording a
-    // prefix costs a `Vec<DratStep>` proportional to the FORMULA (ADR-1750
-    // measured BVE's at 37.7 M steps on a 3.1 M-variable instance), which is
-    // not something to pay for on a path that will never look at it.
-    let mut link = ReductionLink::identity();
-    let recording = config.prove_unsat;
-    let mut steps: Vec<DratStep> = Vec::new();
-
-    let subsume_start = Instant::now();
-    let subsume_grant = subsume_admission(base, deadline, stats);
-    let (simplified, subsume) = if recording {
-        let out = run_subsume_recorded(base, subsume_grant, deadline, &mut steps);
-        push_count(stats, "subsume_proof_steps", steps.len() as u64);
-        link.record(steps.drain(..));
-        out
-    } else {
-        run_subsume(base, subsume_grant, deadline)
-    };
-    push_duration_ms(stats, "subsume_ms", subsume_start.elapsed());
-    push_deadline_expired(stats, "subsume_deadline_expired", deadline);
-    push_count(stats, "subsume_work_spent", subsume.work_spent);
-    push_count(
-        stats,
-        "subsume_work_at_last_progress",
-        subsume.work_at_last_progress,
-    );
-    push_count(
-        stats,
-        "subsume_dead_occurrence_entries",
-        subsume.dead_occurrence_entries,
-    );
-    stats.backend.push((
-        "subsume_work_exhausted".to_owned(),
-        f64::from(u8::from(subsume.work_exhausted)),
-    ));
-    // Optional clause vivification between subsumption and BVE. Vivify is
-    // model-preserving (same satisfying assignments, same `variable_count`, no
-    // reconstruction trail), so its output feeds BVE in place of `simplified` and
-    // the model-lift stack is unchanged. See `maybe_vivify`.
-    let vivify_start = Instant::now();
-    let vivified = maybe_vivify(
-        config,
-        &simplified,
-        deadline,
-        stats,
-        recording.then_some(&mut link),
-    );
-    if config.cnf_vivify {
-        push_duration_ms(stats, "vivify_ms", vivify_start.elapsed());
-        push_deadline_expired(stats, "vivify_deadline_expired", deadline);
-    }
-    let bve_start = Instant::now();
-    let bve_grant = bve_admission(&vivified, deadline, stats);
-    let bve = if recording {
-        let out = run_bve_recorded(&vivified, bve_grant, deadline, &mut steps);
-        push_count(stats, "bve_proof_steps", steps.len() as u64);
-        link.record(steps.drain(..));
-        out
-    } else {
-        run_bve(&vivified, bve_grant, deadline)
-    };
-    push_duration_ms(stats, "bve_ms", bve_start.elapsed());
-    push_deadline_expired(stats, "bve_deadline_expired", deadline);
-    push_count(stats, "bve_work_spent", bve.stats.work_spent);
-    push_count(
-        stats,
-        "bve_work_at_last_elimination",
-        bve.stats.work_at_last_elimination,
-    );
-    push_count(
-        stats,
-        "bve_dead_occurrence_entries",
-        bve.stats.dead_occurrence_entries,
-    );
-    stats.backend.push((
-        "bve_work_exhausted".to_owned(),
-        f64::from(u8::from(bve.stats.work_exhausted)),
-    ));
-
-    stats.backend.push(("cnf_inprocessing".to_owned(), 1.0));
-    stats.backend.push((
-        "subsume_tautologies_removed".to_owned(),
-        usize_to_f64(subsume.tautologies_removed),
-    ));
-    stats.backend.push((
-        "subsume_clauses_subsumed".to_owned(),
-        usize_to_f64(subsume.clauses_subsumed),
-    ));
-    stats.backend.push((
-        "subsume_literals_strengthened".to_owned(),
-        usize_to_f64(subsume.literals_strengthened),
-    ));
-    stats.backend.push((
-        "bve_variables_eliminated".to_owned(),
-        usize_to_f64(bve.stats.variables_eliminated),
-    ));
-    stats.backend.push((
-        "bve_clauses_removed".to_owned(),
-        usize_to_f64(bve.stats.clauses_removed),
-    ));
-    stats.backend.push((
-        "bve_clauses_added".to_owned(),
-        usize_to_f64(bve.stats.clauses_added),
-    ));
-    // Compact: BVE removes clauses/variables but never renumbers, so its reduced
-    // formula still reports the original (wide) `variable_count`. Densely
-    // renumber the live variables so the var-bound admission gate sees the real
-    // (much lower) count. Compaction is a pure renumbering bijection on the live
-    // set — it cannot change sat/unsat — and a compacted `sat` model is lifted
-    // back up by `compaction.expand` before the BVE `reconstruction.extend`.
-    let bve_variable_count = bve.formula.variable_count();
-    let compact_start = Instant::now();
-    let (compacted, compaction) = compact(&bve.formula);
-    // Compose the renumbering into the link. THIS is the step whose absence
-    // kept the backend checking against the reduced formula: without it the
-    // prefix talks about original variables and the search's steps talk about
-    // compacted ones, and no concatenation of the two is a proof of anything.
-    if recording {
-        let new_to_old: Vec<usize> = (0..compaction.live_count())
-            .map(|new| compaction.original_of(new))
-            .collect();
-        link.rename(&new_to_old);
-    }
-    push_duration_ms(stats, "compact_ms", compact_start.elapsed());
-    let compacted_variable_count = compacted.variable_count();
-    stats.backend.push((
-        "inprocess_literals_after".to_owned(),
-        usize_to_f64(literal_occurrences(&compacted)),
-    ));
-
-    stats.backend.push((
-        "cnf_compaction_variables_before".to_owned(),
-        usize_to_f64(bve_variable_count),
-    ));
-    stats.backend.push((
-        "cnf_compaction_variables_after".to_owned(),
-        usize_to_f64(compacted_variable_count),
-    ));
-    stats.backend.push((
-        "cnf_compaction_variables_dropped".to_owned(),
-        usize_to_f64(bve_variable_count.saturating_sub(compacted_variable_count)),
-    ));
-    // The clause count is unchanged by compaction (renumbering only), so the
-    // submitted clause count is the BVE-reduced count.
-    stats.backend.push((
-        "cnf_clauses_solved".to_owned(),
-        usize_to_f64(compacted.clauses().len()),
-    ));
-    stats.backend.push((
-        "cnf_variables_solved".to_owned(),
-        usize_to_f64(compacted_variable_count),
-    ));
-
-    if recording {
-        push_count(stats, "inprocess_proof_steps", link.prefix_len() as u64);
-        stats.backend.push((
-            "inprocess_link_checkable".to_owned(),
-            f64::from(u8::from(link.is_checkable())),
-        ));
-    }
-
-    Inprocessed {
-        formula: compacted,
-        compaction,
-        reconstruction: bve.reconstruction,
-        link,
-    }
+    let mut observer = BackendInprocessObserver { deadline, stats };
+    inprocess_scheduled(formula, schedule, deadline, &mut observer)
 }
 
 /// Lifts a compacted `sat` assignment back to the original CNF variable space.
@@ -2966,29 +2587,6 @@ fn push_duration_ms(stats: &mut SolveStats, name: &str, duration: Duration) {
     stats
         .backend
         .push((name.to_owned(), duration.as_secs_f64() * 1000.0));
-}
-
-/// Records whether `deadline` had **already expired** at the moment the calling
-/// stage returned.
-///
-/// This is the direct discriminator between "the pass is expensive" and "the
-/// clock cut the pass off after it paid its setup cost": paired with the stage's
-/// own `*_ms` and with `inprocess_budget_ms`, a stage that spent its whole slice
-/// and returns with the deadline expired was truncated, while one that spent a
-/// fraction of the slice and returns with time left ran to its own fixpoint.
-///
-/// The key is absent when there is no deadline at all, so a missing key means
-/// "truncation was impossible here", not "did not happen". It is deliberately
-/// checked at the stage boundary rather than inside each pass: the passes'
-/// internal break sites conflate an expired deadline with an exhausted work
-/// budget, and this observable does not.
-fn push_deadline_expired(stats: &mut SolveStats, name: &str, deadline: Option<Instant>) {
-    if let Some(dl) = deadline {
-        let expired = Instant::now() >= dl;
-        stats
-            .backend
-            .push((name.to_owned(), if expired { 1.0 } else { 0.0 }));
-    }
 }
 
 /// Total literal occurrences in `formula` — the size the SAT core's propagation
@@ -4059,6 +3657,56 @@ mod tests {
         );
     }
 
+    /// A test [`InprocessObserver`] that offers a budget to exactly ONE pass and
+    /// declines the other, and keeps every counter the schedule emitted.
+    ///
+    /// One pass at a time because the passes compose: subsumption changes the
+    /// formula BVE is then offered, so an observer that grants both cannot
+    /// attribute a change in `bve_work_spent` to BVE's own grant.
+    struct OnePassObserver {
+        pass: OccurrencePass,
+        budget: Option<u64>,
+        counts: Vec<(String, f64)>,
+    }
+
+    impl OnePassObserver {
+        fn new(pass: OccurrencePass, budget: Option<u64>) -> Self {
+            Self {
+                pass,
+                budget,
+                counts: Vec::new(),
+            }
+        }
+
+        fn get(&self, name: &str) -> Option<f64> {
+            self.counts
+                .iter()
+                .find(|(key, _)| key == name)
+                .map(|(_, value)| *value)
+        }
+    }
+
+    impl InprocessObserver for OnePassObserver {
+        fn grant(&mut self, pass: OccurrencePass, _formula: &CnfFormula) -> Option<u64> {
+            if pass == self.pass { self.budget } else { None }
+        }
+        fn count(&mut self, name: &str, value: f64) {
+            self.counts.push((name.to_owned(), value));
+        }
+    }
+
+    /// Runs the SHIPPING schedule over `f` with only `pass` granted `budget`,
+    /// and returns what the schedule recorded.
+    fn schedule_one_pass(
+        f: &CnfFormula,
+        pass: OccurrencePass,
+        budget: Option<u64>,
+    ) -> OnePassObserver {
+        let mut observer = OnePassObserver::new(pass, budget);
+        let _ = inprocess_scheduled(f, InprocessSchedule::OFF, None, &mut observer);
+        observer
+    }
+
     /// The granted budget must reach BVE, not merely be computed.
     ///
     /// This exists because the obvious mutation — compute the budget, then call
@@ -4068,62 +3716,77 @@ mod tests {
     /// than the budget under test, so "budget applied" and "budget ignored"
     /// produce different `work_spent`, and the assertion is on the difference
     /// rather than on an invariant that holds either way.
+    ///
+    /// Since ADR-1810 it runs through [`inprocess_scheduled`] — the shipping
+    /// route — rather than through a solver-local wrapper, and it reads the
+    /// schedule's own `bve_work_spent` counter rather than re-deriving one. The
+    /// wiring under test is therefore the wiring that ships.
     #[test]
     fn the_granted_budget_reaches_the_pass() {
         let f = wide_formula(4000);
-        let unbudgeted = run_bve(&f, Some(u64::MAX), None);
-        let setup = (literal_occurrences(&f) + 2 * f.variable_count()) as u64;
+        let unbudgeted = schedule_one_pass(&f, OccurrencePass::Bve, Some(u64::MAX));
+        let spent_unbudgeted = unbudgeted.get("bve_work_spent").expect("bve_work_spent");
+        let setup = u64_as_f64((literal_occurrences(&f) + 2 * f.variable_count()) as u64);
         assert!(
-            unbudgeted.stats.work_spent > setup,
-            "fixture must spend past setup unbudgeted: {} vs {setup}",
-            unbudgeted.stats.work_spent
+            spent_unbudgeted > setup,
+            "fixture must spend past setup unbudgeted: {spent_unbudgeted} vs {setup}"
         );
 
-        // Half way between the setup floor and what the pass spends when
-        // nothing stops it. Derived from this run rather than written as a
-        // literal, so the test cannot quietly become vacuous when the fixture
-        // or the charging rules change.
-        let tight = setup + (unbudgeted.stats.work_spent - setup) / 2;
-        let budgeted = run_bve(&f, Some(tight), None);
-        assert!(
-            budgeted.stats.work_exhausted,
+        // Half way between the setup floor and what the pass spends when nothing
+        // stops it. Derived from this run rather than written as a literal, so
+        // the test cannot quietly become vacuous when the fixture or the
+        // charging rules change.
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let tight = (setup + (spent_unbudgeted - setup) / 2.0) as u64;
+        let budgeted = schedule_one_pass(&f, OccurrencePass::Bve, Some(tight));
+        assert_eq!(
+            budgeted.get("bve_work_exhausted"),
+            Some(1.0),
             "the budget must be the reason the pass stopped"
         );
+        let spent_budgeted = budgeted.get("bve_work_spent").expect("bve_work_spent");
         assert!(
-            budgeted.stats.work_spent < unbudgeted.stats.work_spent,
-            "a budget that is ignored spends exactly what no budget spends: {} vs {}",
-            budgeted.stats.work_spent,
-            unbudgeted.stats.work_spent
+            spent_budgeted < spent_unbudgeted,
+            "a budget that is ignored spends exactly what no budget spends: \
+             {spent_budgeted} vs {spent_unbudgeted}"
         );
 
         // And the `None` arm really declines rather than running cheaply.
-        let declined = run_bve(&f, None, None);
-        assert_eq!(declined.stats.work_spent, 0);
-        assert_eq!(declined.formula, f);
+        let declined = schedule_one_pass(&f, OccurrencePass::Bve, None);
+        assert_eq!(declined.get("bve_work_spent"), Some(0.0));
+        assert_eq!(
+            declined.get("bve_variables_eliminated"),
+            Some(0.0),
+            "a declined pass eliminates nothing"
+        );
     }
 
-    /// A `None` from the admission test must mean the pass did not run — not
-    /// that it ran with a budget of zero. The two differ by the whole `O(|F|)`
-    /// occurrence-list build, which is the cost being declined.
+    /// A `None` grant must mean the pass did not run — not that it ran with a
+    /// budget of zero. The two differ by the whole `O(|F|)` occurrence-list
+    /// build, which is the cost being declined.
+    ///
+    /// Both arms go through the shipping schedule, so this is a statement about
+    /// what `inprocess_scheduled` does with a `None` from the admission test and
+    /// not about a pass called directly.
     #[test]
     fn skipped_is_not_the_same_as_a_zero_budget() {
         let f = wide_formula(500);
-        let skipped = BveOutcome::skipped(&f);
-        assert_eq!(skipped.formula, f);
-        assert_eq!(skipped.stats.work_spent, 0);
-        assert_eq!(skipped.stats.variables_eliminated, 0);
 
-        let zero_budget = eliminate_variables_within(
-            &f,
-            BveOptions {
-                work_budget: Some(0),
-                ..BveOptions::DEFAULT
-            },
-            None,
+        let skipped = schedule_one_pass(&f, OccurrencePass::Bve, None);
+        assert_eq!(skipped.get("bve_work_spent"), Some(0.0));
+        assert_eq!(skipped.get("bve_variables_eliminated"), Some(0.0));
+        assert_eq!(
+            skipped.get("cnf_clauses_solved"),
+            Some(usize_to_f64(f.clauses().len())),
+            "a declined pass leaves the clause set alone"
         );
+
+        let zero_budget = schedule_one_pass(&f, OccurrencePass::Bve, Some(0));
         assert!(
-            zero_budget.stats.work_spent > 0,
-            "a zero-budget call still pays for setup; that is why `skipped` exists"
+            zero_budget
+                .get("bve_work_spent")
+                .is_some_and(|spent| spent > 0.0),
+            "a zero-budget call still pays for setup; that is why declining exists"
         );
     }
 
@@ -4197,35 +3860,47 @@ mod tests {
     /// looks at `subsume_work_spent`. The budget under test is derived from the
     /// unbudgeted run so the fixture cannot quietly go vacuous when the
     /// charging rules change.
+    ///
+    /// Runs through the shipping schedule since ADR-1810, for the same reason
+    /// its BVE twin does.
     #[test]
     fn the_granted_subsume_budget_reaches_the_pass() {
         let f = wide_formula(4000);
-        let (_, unbudgeted) = run_subsume(&f, Some(u64::MAX), None);
-        let setup = (literal_occurrences(&f) + 2 * f.variable_count()) as u64;
+        let unbudgeted = schedule_one_pass(&f, OccurrencePass::Subsume, Some(u64::MAX));
+        let spent_unbudgeted = unbudgeted
+            .get("subsume_work_spent")
+            .expect("subsume_work_spent");
+        let setup = u64_as_f64((literal_occurrences(&f) + 2 * f.variable_count()) as u64);
         assert!(
-            unbudgeted.work_spent > setup,
-            "fixture must spend past setup unbudgeted: {} vs {setup}",
-            unbudgeted.work_spent
+            spent_unbudgeted > setup,
+            "fixture must spend past setup unbudgeted: {spent_unbudgeted} vs {setup}"
         );
 
-        let tight = setup + (unbudgeted.work_spent - setup) / 2;
-        let (_, budgeted) = run_subsume(&f, Some(tight), None);
-        assert!(
-            budgeted.work_exhausted,
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let tight = (setup + (spent_unbudgeted - setup) / 2.0) as u64;
+        let budgeted = schedule_one_pass(&f, OccurrencePass::Subsume, Some(tight));
+        assert_eq!(
+            budgeted.get("subsume_work_exhausted"),
+            Some(1.0),
             "the budget must be the reason the pass stopped"
         );
+        let spent_budgeted = budgeted
+            .get("subsume_work_spent")
+            .expect("subsume_work_spent");
         assert!(
-            budgeted.work_spent < unbudgeted.work_spent,
-            "a budget that is ignored spends exactly what no budget spends: {} vs {}",
-            budgeted.work_spent,
-            unbudgeted.work_spent
+            spent_budgeted < spent_unbudgeted,
+            "a budget that is ignored spends exactly what no budget spends: \
+             {spent_budgeted} vs {spent_unbudgeted}"
         );
 
         // And the `None` arm declines rather than running cheaply: no
-        // normalization, no occurrence lists, the formula returned verbatim.
-        let (untouched, declined) = run_subsume(&f, None, None);
-        assert_eq!(declined.work_spent, 0);
-        assert_eq!(untouched, f);
+        // normalization, no occurrence lists, the clause set returned verbatim.
+        let declined = schedule_one_pass(&f, OccurrencePass::Subsume, None);
+        assert_eq!(declined.get("subsume_work_spent"), Some(0.0));
+        assert_eq!(
+            declined.get("cnf_clauses_solved"),
+            Some(usize_to_f64(f.clauses().len()))
+        );
     }
 
     /// The measurement lever is a lever, not a default.
