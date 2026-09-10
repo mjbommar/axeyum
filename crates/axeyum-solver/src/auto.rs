@@ -359,7 +359,7 @@ fn finish_quantified_solve(
                 DeclineReason::NotApplicable,
             );
             // Pure-UF finite model finding, probed BEFORE the refutation
-            // family on half the remaining budget (the `probe_budget`
+            // family on half the remaining budget (the `uf_fmf_probe_budget`
             // pattern): the refutation loops below reliably consume their
             // entire budget on satisfiable pure-UF queries, so a post-only
             // placement would starve. The finder applies only to the pure-UF
@@ -387,7 +387,7 @@ fn finish_quantified_solve(
                 && let Some(model) = crate::uf_fmf::find_uf_finite_model(
                     &mut arena.clone(),
                     original_assertions,
-                    &probe_budget(&probe_config),
+                    &uf_fmf_probe_budget(&probe_config),
                     crate::uf_fmf::UF_FMF_PROBE_SOLVE_ASSERTIONS,
                 )?
                 && crate::check_model(arena, original_assertions, &model)?
@@ -3364,7 +3364,7 @@ pub enum UfArithOverboundPolicy {
 /// together stay inside the caller's budget rather than re-spending it.
 ///
 /// **A RESERVE, not a split, and the difference is measured.** The first
-/// version of this constant halved the budget, copying [`probe_budget`]'s
+/// version of this constant halved the budget, copying [`uf_arith_online_probe_budget`]'s
 /// precedent. On the committed 200-file `QF_UFLIA` list that cost **four** files
 /// we previously decided, all of them files the CEGAR needs more than half the
 /// budget for: `hash_sat_05_14` (12.7 s), `xs_23_33` (13.3 s),
@@ -4118,28 +4118,78 @@ fn dispatch_declared_sort_ufbv_lazy(
     }
 }
 
-/// The configuration for the online probe: a copy of `config` with any wall-clock
-/// `timeout` halved, so the probe consumes at most half the configured budget
-/// before the eager fallback (which computes its own fresh deadline at entry) runs
-/// with the full budget. `timeout == None` is left unbounded — there is no
-/// wall-clock budget to split, and both routes then decline only on their
-/// deterministic size guards, so the online combination keeps its full power.
-fn probe_budget(config: &SolverConfig) -> SolverConfig {
-    UFBV_ONLINE_PROBE_SLICE.apply(config, config.timeout)
+/// The configuration for the **UF+arithmetic online** probe: a copy of `config`
+/// with any wall-clock `timeout` halved, so the probe consumes at most half the
+/// configured budget before the eager fallback (which computes its own fresh
+/// deadline at entry) runs with the full budget. `timeout == None` is left
+/// unbounded — there is no wall-clock budget to split, and both routes then
+/// decline only on their deterministic size guards, so the online combination
+/// keeps its full power.
+fn uf_arith_online_probe_budget(config: &SolverConfig) -> SolverConfig {
+    UF_ARITH_ONLINE_PROBE_SLICE.apply(config, config.timeout)
 }
 
-/// Divisor of the caller's budget the declared-sort `QF_UFBV` online probe may
-/// spend. A HALF, not a reserve, and deliberately left as one: the eager
-/// fallback below it computes a fresh deadline at entry, so this is a split
-/// across two clocks rather than a share of one. The `QF_UFLIA` measurement
-/// behind [`UF_ARITH_LADDER_RESERVE_SHARE`] says a half-budget split is the
-/// wrong shape when the two routes share ONE clock; whether it is wrong here is
-/// unmeasured, and this lane did not retune it.
-const UFBV_ONLINE_PROBE_SHARE: u32 = 2;
+/// Divisor of the caller's budget the `QF_UFLIA` / `QF_UFLRA` online probe in
+/// [`dispatch_uf_arith_online`] may spend. A HALF, not a reserve, and
+/// deliberately left as one: the eager fallback below it computes a fresh
+/// deadline at entry, so this is a split across two clocks rather than a share
+/// of one. The `QF_UFLIA` measurement behind [`UF_ARITH_LADDER_RESERVE_SHARE`]
+/// says a half-budget split is the wrong shape when the two routes share ONE
+/// clock; whether it is wrong here is unmeasured.
+///
+/// **This constant and [`UF_FMF_PROBE_SHARE`] were one constant until
+/// 2026-09-10, named `UFBV_ONLINE_PROBE_SHARE`, and that name described a route
+/// that never used it.** `dispatch_ufbv_online` passes `config` through
+/// unsliced; the helper's two callers were this route and the pure-UF
+/// finite-model probe in the quantified ladder, which borrowed it in `c36e3ee33`
+/// (2026-07-31), six weeks before the naming commit `aaa5c2862` (2026-09-08).
+/// They are split because they are not the same policy question: retuning the
+/// quantified ladder's probe for a UF reason silently changed the probe budget
+/// of the route `UF_ARITH_LADDER_RESERVE_SHARE`'s dated +9-file measurement
+/// rests on. Both keep the value they shared, so this split moves no verdict.
+///
+/// The split is recorded in
+/// `docs/research/03-measurements/where-the-uf-clock-goes-2026-09-10.md`. That
+/// measurement is on the pure-UF quantified ladder and says **nothing** about
+/// this route, so **this** constant stays undated in the registry: inheriting
+/// the sibling's date is the error the split exists to prevent.
+const UF_ARITH_ONLINE_PROBE_SHARE: u32 = 2;
 
-/// The declared-sort `QF_UFBV` online probe's slice: half the caller's clock.
-const UFBV_ONLINE_PROBE_SLICE: LadderSlice =
-    LadderSlice::fraction("ufbv-online-probe", UFBV_ONLINE_PROBE_SHARE);
+/// The UF+arithmetic online probe's slice: half the caller's clock.
+const UF_ARITH_ONLINE_PROBE_SLICE: LadderSlice =
+    LadderSlice::fraction("uf-arith-online-probe", UF_ARITH_ONLINE_PROBE_SHARE);
+
+/// The configuration for the quantified ladder's **pure-UF finite-model probe**:
+/// a copy of `config` with any wall-clock `timeout` halved. See
+/// [`UF_FMF_PROBE_SHARE`] for why the half is not the thing that bounds this
+/// rung.
+fn uf_fmf_probe_budget(config: &SolverConfig) -> SolverConfig {
+    UF_FMF_PROBE_SLICE.apply(config, config.timeout)
+}
+
+/// Divisor of the remaining budget the pure-UF finite-model **probe** rung of
+/// [`finish_quantified_solve`] may spend before the refutation family runs.
+///
+/// Retuning this was measured on 2026-09-10 and is **not** warranted
+/// (`docs/research/03-measurements/where-the-uf-clock-goes-2026-09-10.md`):
+///
+/// - It is not what bounds the rung. The half grants ~12 000 ms of a 24 000 ms
+///   budget, and on 13 of the 32 `UF` parity-loss files the probe **spends
+///   more** — up to 19 478 ms, 162% of its grant — because a round inside
+///   `find_uf_finite_model` runs past the shared deadline.
+/// - Turning the probe down does not turn finite model finding off, it defers
+///   it: [`crate::route_trace::quant_rung::UF_FMF_FULL`] is the same producer at
+///   a terminal placement, and it picks up most of what the probe stops finding.
+///   Measured on the 24 files only we solve: at 1/16 all 24 still decide but
+///   PAR-2 goes 19.8 s → 36.1 s, and with the probe effectively off one file is
+///   lost outright and PAR-2 goes to 241.6 s.
+/// - The gain side is empty at its own ceiling: with the probe effectively off —
+///   which is strictly more clock than any larger divisor can hand the refuters
+///   — the 32 declared-`unsat` losses decide the same set.
+const UF_FMF_PROBE_SHARE: u32 = 2;
+
+/// The pure-UF finite-model probe's slice: half of what is left.
+const UF_FMF_PROBE_SLICE: LadderSlice = LadderSlice::fraction("uf-fmf-probe", UF_FMF_PROBE_SHARE);
 
 /// The first-refusal MBQI rung of the quantified effort ladder: 1/8 of the
 /// remaining wall budget. Returns `None` for unbounded configurations — with no
@@ -4292,7 +4342,7 @@ fn dispatch_uf_arith_online(
     // caller's original timeout: an over-bound query may already have spent half
     // its budget in the lazy-CEGAR probe above, and halving the original timeout
     // again there would let this route run past the caller's deadline.
-    let probe_config = probe_budget(
+    let probe_config = uf_arith_online_probe_budget(
         &config_with_remaining_timeout(config, ladder_deadline).unwrap_or_else(|| config.clone()),
     );
     // Int vs Real detection mirrors the surrounding dispatch: a real-sorted term
@@ -11603,7 +11653,8 @@ mod tests {
             ABV_ONLINE_SLICE,
             INT_REAL_RELAX_SLICE,
             PRE_LIA_UF_PROBE_SLICE,
-            UFBV_ONLINE_PROBE_SLICE,
+            UF_ARITH_ONLINE_PROBE_SLICE,
+            UF_FMF_PROBE_SLICE,
             MBQI_FIRST_REFUSAL_SLICE,
             QINST_EGRAPH_RETRY_SLICE,
         ] {

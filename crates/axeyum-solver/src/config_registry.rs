@@ -3174,19 +3174,6 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Caps the fast-path array-refuter chain. One line of doc, no measurement.",
     },
     ConfigEntry {
-        name: "UFBV_ONLINE_PROBE_SHARE",
-        module: "crates/axeyum-solver/src/auto.rs",
-        value: "2",
-        unit: "divisor of the caller's deadline granted to the route",
-        protects: Protects::Time,
-        on_exceed: OnExceed::Truncate,
-        signal: Signal::NotApplicable,
-        guarded_by: "",
-        env_override: None,
-        justification: undated("doc comment"),
-        note: "The declared-sort QF_UFBV online probe's half of the budget. Deliberately left a HALF and not converted to a reserve: the eager fallback below it computes a FRESH deadline at entry, so this is a split across two clocks rather than a share of one, and the 2026-09-08 QF_UFLIA measurement that condemned a half-budget split was about two routes sharing ONE clock. Whether it is wrong here is unmeasured. `UF_ARITH_LADDER_RESERVE_SHARE`'s doc names this constant as the precedent its own first version copied and the measurement then rejected.",
-    },
-    ConfigEntry {
         name: "UF_ARITH_LADDER_RESERVE_SHARE",
         module: "crates/axeyum-solver/src/auto.rs",
         value: "4",
@@ -3246,6 +3233,61 @@ pub static REGISTRY: &[ConfigEntry] = &[
                of 24, is not recoverable by any reserve and is the named cost of the change. The env override selects the \
                whole policy (`terminal` restores the old behaviour, `skip` removes the CEGAR), \
                not just this divisor.",
+    },
+    ConfigEntry {
+        name: "UF_ARITH_ONLINE_PROBE_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "2",
+        unit: "divisor of the caller's deadline granted to the route",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: undated("doc comment"),
+        note: "The `QF_UFLIA`/`QF_UFLRA` online probe's half of the budget in `dispatch_uf_arith_online`. Deliberately left a HALF and not converted to a reserve: the eager fallback below it computes a FRESH deadline at entry, so this is a split across two clocks rather than a share of one, and the 2026-09-08 QF_UFLIA measurement that condemned a half-budget split was about two routes sharing ONE clock. Whether it is wrong here is STILL unmeasured -- this entry was split out of `UFBV_ONLINE_PROBE_SHARE` on 2026-09-10 and deliberately kept undated, because the measurement that motivated the split was on the pure-UF quantified ladder and says nothing about THIS route. Laundering that date onto this row is the exact error the split exists to prevent.",
+    },
+    ConfigEntry {
+        name: "UF_FMF_PROBE_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "2",
+        unit: "divisor of the remaining deadline granted to the route",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: dated(
+            "docs/research/03-measurements/where-the-uf-clock-goes-2026-09-10.md",
+            "2026-09-10",
+            None,
+            // The measurement is "retuning this decides nothing new on the 32
+            // declared-unsat UF losses and costs a file on the 24 we win". It
+            // rests on the finite-model producer being the thing this rung
+            // calls, and on that producer ALSO running at a terminal placement
+            // below the refuters -- which is why turning the probe down defers
+            // the capability instead of removing it. Move either and the
+            // measurement stops describing this tree.
+            &[
+                sym("crates/axeyum-solver/src/uf_fmf.rs", "find_uf_finite_model"),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "finish_quantified_solve",
+                ),
+            ],
+            // The terminal placement is the load-bearing half: the "no verdict
+            // is lost" arm holds because `q:uf-fmf-full` picks up what the
+            // probe stops finding. `UF_FMF_FULL_SOLVE_ASSERTIONS` exists only
+            // for that call site, so it goes when the placement goes.
+            &[
+                live(
+                    "UF_FMF_FULL_SOLVE_ASSERTIONS",
+                    "crates/axeyum-solver/src/uf_fmf.rs",
+                ),
+                live("find_uf_finite_model", "crates/axeyum-solver/src/uf_fmf.rs"),
+            ],
+        ),
+        note: "The pure-UF finite-model PROBE rung's half of what is left, spent before the refutation family runs. MEASURED and deliberately NOT retuned. Three findings, any one of which makes the divisor the wrong lever: (1) it does not bound the rung -- the half grants ~12 000 ms of a 24 000 ms budget and the probe spends up to 19 478 ms, 162% of its grant, on 13 of 32 files; (2) the gain side is empty AT ITS OWN CEILING -- with the probe effectively off, which is strictly more clock than any larger divisor can hand the refuters, the 32 declared-unsat losses decide the same set; (3) the cost side is real -- at 1/16 all 24 axeyum-only wins still decide but PAR-2 goes 19.8 s to 36.1 s, and with the probe off one file is lost outright and PAR-2 goes to 241.6 s. Turning the probe down does not turn finite model finding off, it DEFERS it to the terminal `q:uf-fmf-full` rung, which is why the verdicts mostly survive and the clock does not. Split out of `UFBV_ONLINE_PROBE_SHARE` on 2026-09-10: that name governed no QF_UFBV route at all.",
     },
     ConfigEntry {
         name: "MAX_ATOMS",
