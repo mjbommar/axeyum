@@ -1274,6 +1274,28 @@ pub fn lex_order_verdict(script: &mut Script, config: &SolverConfig) -> Option<C
     }
 }
 
+/// The lex mirror of [`membership_unsat_lean_module`]: when the
+/// lexicographic-order route decides `unsat`, reconstruct that same refutation
+/// into a kernel-checked Lean module.
+///
+/// Wired 2026-09-10 for roadmap item 2.7. `lex_reconstruct` was the one module
+/// in that item's list that SHOULD have had a caller and did not: the lex
+/// *verdict* was wired through [`apply_lex_order_route`], but the lex
+/// *evidence* was not, so an `unsat` this route decided carried nothing a
+/// checker could read. It cannot ride `reconstruct.rs`'s ordinary dispatch
+/// because a `LexProblem` is not a term in the arena.
+///
+/// It cannot fabricate evidence: the reconstructor re-runs
+/// [`refute_lex`](axeyum_strings::refute_lex) as its sole `unsat` gate and
+/// kernel-checks the resulting `False` before returning a module. Never changes
+/// the verdict — this is a pure evidence add-on over an object the route has
+/// already decided.
+#[must_use]
+pub fn lex_unsat_lean_module(script: &Script, _config: &SolverConfig) -> Option<String> {
+    let problem = script.lex_problem.as_ref()?;
+    crate::reconstruct_lex_clash_to_lean_module(problem).ok()
+}
+
 /// The **length↔LIA route** (P2.7 Phase A, `LenAbs` `sat` bridge): the
 /// `str.len`-coupled second chance, run *strictly after* the bounded, word, online,
 /// membership, and lex routes decline, and only when the current verdict is
