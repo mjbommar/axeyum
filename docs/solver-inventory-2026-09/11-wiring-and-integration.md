@@ -85,6 +85,16 @@ seven `*_certified` interpolant variants, four `theory_combination` functions,
 > since been wired (item 2.7) and the remainder carry labels enforced by
 > `tests/test_only_module_labels.rs`.
 
+> **A note on `horn.rs`, added 2026-09-10.** Roadmap item 2.7 fixed
+> `state_class`, which had mapped an all-`Int` predicate vocabulary to
+> `Unsupported` and so left `pdr_lia`/`imc_lia` (1,771 lines) with no caller.
+> That fix is real. It is also NARROWER than first reported: `solve_horn` itself
+> has no caller in `src/` **by design** (`horn.rs:164` — it is a front-end whose
+> caller is the library user), and `auto.rs` contains `horn`/`chc` zero times.
+> So the engines are reachable through the public Rust API, and no SMT-LIB input
+> routes to them. The wiring that would change that is an SMT-LIB CHC front
+> door, which does not exist. See item 3.7's measurement.
+
 ## The integration gaps that matter more
 
 Ranked by how much working capability each one keeps out of a default run.
