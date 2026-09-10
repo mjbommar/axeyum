@@ -247,7 +247,7 @@ impl Corner {
     /// Emits the atoms this corner is defined by and returns a skeleton node
     /// mentioning them, so the corner cannot be generated and then dropped.
     fn emit(self, rng: &mut Lcg, num_vars: usize, atoms: &mut Vec<LinAtom>) -> Node {
-        let mut push = |atoms: &mut Vec<LinAtom>, a: LinAtom| {
+        let push = |atoms: &mut Vec<LinAtom>, a: LinAtom| {
             atoms.push(a);
             atoms.len() - 1
         };
