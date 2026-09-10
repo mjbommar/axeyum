@@ -814,28 +814,56 @@ mod tests {
     /// counters look identical either way.
     #[test]
     fn a_refused_round_does_not_advance_the_watermark_so_the_window_accumulates() {
-        let mut starving = TickValveAccount::new(TickEffort::MAJOR_PASS);
-        // Ten rounds, each adding 4 000 ticks of search. Under the correct rule
-        // the window accumulates and round 2 already clears 5 000; under a rule
-        // that wrote the watermark on refusal, each round would see only the
-        // 4 000 accrued since the last one and NONE would ever clear.
-        let mut granted = 0;
-        for round in 1..=10u64 {
+        // Twenty rounds, each adding 4 000 ticks of search, over a
+        // 1 000-clause formula: the bar is 5 000 ticks of allowance and 10 % of
+        // the window buys it, so a round is admitted the first time the ACCRUED
+        // window reaches 50 000.
+        const ROUNDS: u64 = 20;
+        const PER_ROUND: u64 = 4_000;
+
+        let mut account = TickValveAccount::new(TickEffort::MAJOR_PASS);
+        let mut admitted_at = Vec::new();
+        for round in 1..=ROUNDS {
             if matches!(
-                starving.request(round * 4_000, 1_000),
+                account.request(round * PER_ROUND, 1_000),
                 TickGrant::Granted { .. }
             ) {
-                granted += 1;
+                admitted_at.push(round);
             }
         }
-        assert!(
-            granted > 0,
-            "no round was ever admitted: the accumulate rule is inverted"
+        // Round 13 is the first with 52 000 accrued; the watermark then moves
+        // there and the next admission would need 50 000 more, which twenty
+        // rounds do not reach.
+        assert_eq!(admitted_at, vec![13]);
+        assert_eq!(account.watermark(), 52_000);
+
+        // The falsifiability control: the SAME arithmetic with the watermark
+        // written on the refusal path too. Every round then sees only the 4 000
+        // accrued since the last offer, buys 400, and never clears 5 000 — a
+        // gate that starves. It is one line's difference and no counter in the
+        // granted/refused pair distinguishes them, which is why this is here.
+        let effort = TickEffort::MAJOR_PASS;
+        let mut starving_watermark = 0u64;
+        let mut starving_admitted = 0;
+        for round in 1..=ROUNDS {
+            let now = round * PER_ROUND;
+            let accrued = now - starving_watermark;
+            let reference = if accrued == 0 {
+                effort.bootstrap_reference
+            } else {
+                accrued
+            };
+            starving_watermark = now; // <- the inverted rule
+            if effort.allowance(reference) >= effort.threshold(1_000) {
+                starving_admitted += 1;
+            }
+        }
+        assert_eq!(
+            starving_admitted, 0,
+            "the inverted rule was expected to starve; if it admits, this \
+             control is not distinguishing the two rules and the assertion \
+             above proves nothing"
         );
-        // Concretely: rounds at 8k, 20k, 40k, 72k... 8_000 -> 800 < 5_000, so
-        // the first admission is the round where the accrued window first
-        // reaches 50 000 ticks.
-        assert_eq!(starving.rounds().0, granted);
     }
 
     /// The gate must have a second arm, or "refused" cannot be distinguished
@@ -871,14 +899,13 @@ mod tests {
     /// skip runs rather than as "backoff happened".
     #[test]
     fn a_pass_that_finds_nothing_is_offered_exponentially_less_often() {
-        let mut account = TickValveAccount::new(TickEffort::UNGATED);
-        // UNGATED has `max_backoff_rounds: 0`, i.e. no backoff at all, so use a
-        // policy that gates nothing but still backs off.
-        let effort = TickEffort {
+        // `UNGATED` has `max_backoff_rounds: 0`, i.e. no backoff at all, so the
+        // fixture is the refusal-free policy with the backoff turned back on:
+        // the only gate exercised here is the one under test.
+        let mut account = TickValveAccount::new(TickEffort {
             max_backoff_rounds: 32,
             ..TickEffort::UNGATED
-        };
-        account = TickValveAccount::new(effort);
+        });
 
         let mut runs = Vec::new();
         for _ in 0..4 {
