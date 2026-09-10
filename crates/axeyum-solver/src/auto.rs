@@ -241,10 +241,15 @@ pub(crate) fn qtrace(stage: &str, since: Instant, note: &str) {
 }
 
 fn quantified_timeout(stage: &str) -> CheckResult {
-    CheckResult::Unknown(UnknownReason {
+    let result = CheckResult::Unknown(UnknownReason {
         kind: UnknownKind::ResourceLimit,
         detail: format!("quantified solve time budget exhausted after {stage}"),
-    })
+    });
+    // One sink for every budget exit of the ladder, so a file whose whole
+    // budget went to the quantified rungs is attributed to them rather than to
+    // whichever quantifier-free sub-route a probe last touched.
+    route_trace::record_quant_rung_result(route_trace::quant_rung::TIMEOUT, &result);
+    result
 }
 
 /// Retains an already-classified finite-expansion `unknown` so narrower
@@ -506,10 +511,37 @@ pub fn solve(
     // see a nonzero install depth and leave the outermost budget alone.
     let _memory_watchdog = crate::memory_budget::MemoryWatchdog::install(config);
     let is_quantified = has_quantifier(arena, assertions);
-    if is_quantified && ground_subset_refutes_quantified_query(arena, assertions, config)? {
-        return Ok(CheckResult::Unsat);
+    // ITEM 1.8. The quantified ladder below sits ABOVE `check_auto`, not inside
+    // it, so `with_outermost_dispatch`'s depth counter does not cover it: every
+    // speculative sub-solve a rung makes (a validity check, a witness
+    // validation, an MBQI ground round, an induction base/step query) used to
+    // enter the attribution as an OUTERMOST dispatch and publish its whole QF
+    // route trail. The file was then attributed to whichever QF route one of
+    // those probes decided — on six of the twelve `uflia_induction` corpus
+    // files, to a route recorded as `sat` on a file whose verdict is `unknown`.
+    // Arming the guard makes those sub-solves nested in fact as well as intent;
+    // the rungs below record themselves instead.
+    let mut quant_ladder = route_trace::NestedDispatchGuard::arm_if(is_quantified);
+    if is_quantified {
+        if ground_subset_refutes_quantified_query(arena, assertions, config)? {
+            route_trace::record_quant_rung_result(
+                route_trace::quant_rung::GROUND_SUBSET,
+                &CheckResult::Unsat,
+            );
+            return Ok(CheckResult::Unsat);
+        }
+        route_trace::record_quant_rung_declined(
+            route_trace::quant_rung::GROUND_SUBSET,
+            DeclineReason::NotApplicable,
+        );
     }
     if let Some(result) = checked_quantified_fast_path(arena, assertions, config, is_quantified)? {
+        if is_quantified {
+            route_trace::record_quant_rung_result(
+                route_trace::quant_rung::CHECKED_FAST_PATH,
+                &result,
+            );
+        }
         return Ok(result);
     }
     if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
@@ -545,13 +577,28 @@ pub fn solve(
         let Some(remaining) = config_with_remaining_timeout(config, deadline) else {
             return Ok(quantified_timeout("existential skolemization"));
         };
+        // The residual is quantifier-free and this dispatch IS the answer, so
+        // the ladder guard comes off and the QF routes publish their own trail.
+        // The rung then closes the trail (below), which is what makes
+        // `decided_by` name the rung while the QF detail stays underneath it.
+        if is_quantified {
+            route_trace::record_quant_rung_probe(
+                route_trace::quant_rung::SKOLEM_QF,
+                "quantified input skolemized to a quantifier-free residual",
+            );
+        }
+        quant_ladder.disarm();
         let result = check_auto(arena, assertions, &remaining)?;
-        return Ok(certify_skolemized_negated_universals(
+        let certified = certify_skolemized_negated_universals(
             arena,
             &original_assertions,
             result,
             &remaining,
-        ));
+        );
+        if is_quantified {
+            route_trace::record_quant_rung_result(route_trace::quant_rung::SKOLEM_QF, &certified);
+        }
+        return Ok(certified);
     }
 
     // Valid-universal elimination (sat-side universal-closure validity check):
@@ -579,7 +626,17 @@ pub fn solve(
         let Some(remaining) = config_with_remaining_timeout(config, deadline) else {
             return Ok(quantified_timeout("valid-universal elimination"));
         };
-        return check_auto(arena, assertions, &remaining);
+        route_trace::record_quant_rung_probe(
+            route_trace::quant_rung::VALID_UNIVERSAL_QF,
+            "every universal proven valid; quantifier-free residual",
+        );
+        quant_ladder.disarm();
+        let result = check_auto(arena, assertions, &remaining)?;
+        route_trace::record_quant_rung_result(
+            route_trace::quant_rung::VALID_UNIVERSAL_QF,
+            &result,
+        );
+        return Ok(result);
     }
 
     // Vacuous-universal elimination: a top-level `∀x. body` (QF body) in which the
@@ -596,7 +653,17 @@ pub fn solve(
         let Some(remaining) = config_with_remaining_timeout(config, deadline) else {
             return Ok(quantified_timeout("vacuous-universal elimination"));
         };
-        return check_auto(arena, assertions, &remaining);
+        route_trace::record_quant_rung_probe(
+            route_trace::quant_rung::VACUOUS_UNIVERSAL_QF,
+            "every universal truth-irrelevant in its binder; quantifier-free residual",
+        );
+        quant_ladder.disarm();
+        let result = check_auto(arena, assertions, &remaining)?;
+        route_trace::record_quant_rung_result(
+            route_trace::quant_rung::VACUOUS_UNIVERSAL_QF,
+            &result,
+        );
+        return Ok(result);
     }
 
     // Exact finite equality partition (ADR-0101): a closed Bool/Int formula in
@@ -605,6 +672,10 @@ pub fn solve(
     // only after the independent original-IR checker accepts its certificate.
     if crate::quant_eq_partition_search::equality_partition_refutation(arena, assertions).is_some()
     {
+        route_trace::record_quant_rung_result(
+            route_trace::quant_rung::EQ_PARTITION,
+            &CheckResult::Unsat,
+        );
         return Ok(CheckResult::Unsat);
     }
 
@@ -619,6 +690,10 @@ pub fn solve(
     // and the residual of `∃y.∀x. x ≤ y` (after `∃`-skolemization). Strictly
     // additive: only ever `unknown` → `unsat` for the proven-always-false shape.
     if crate::quant_unsat_universal::detect_unsatisfiable_universal(arena, assertions) {
+        route_trace::record_quant_rung_result(
+            route_trace::quant_rung::UNSAT_UNIVERSAL,
+            &CheckResult::Unsat,
+        );
         return Ok(CheckResult::Unsat);
     }
 
@@ -681,6 +756,10 @@ pub fn solve(
             });
         match outcome {
             Some(crate::quant_fourier_motzkin::FmOutcome::Unsat) => {
+                route_trace::record_quant_rung_result(
+                    route_trace::quant_rung::FOURIER_MOTZKIN,
+                    &CheckResult::Unsat,
+                );
                 return Ok(CheckResult::Unsat);
             }
             Some(crate::quant_fourier_motzkin::FmOutcome::Rewrite(chi)) => {
@@ -699,7 +778,14 @@ pub fn solve(
         let Some(remaining) = config_with_remaining_timeout(config, deadline) else {
             return Ok(quantified_timeout("Fourier-Motzkin elimination"));
         };
-        return check_auto(arena, fm_assertions, &remaining);
+        route_trace::record_quant_rung_probe(
+            route_trace::quant_rung::FOURIER_MOTZKIN,
+            "universals eliminated by Fourier-Motzkin; quantifier-free residual",
+        );
+        quant_ladder.disarm();
+        let result = check_auto(arena, fm_assertions, &remaining)?;
+        route_trace::record_quant_rung_result(route_trace::quant_rung::FOURIER_MOTZKIN, &result);
+        return Ok(result);
     }
     let assertions = fm_assertions;
 

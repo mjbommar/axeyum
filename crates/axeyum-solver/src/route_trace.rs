@@ -716,6 +716,96 @@ pub mod front_door_stage {
     pub const BOUNDED_COMPLETENESS_UNSAT: &str = "fd:bounded-completeness-unsat";
 }
 
+/// Labels for the rungs of the **quantified ladder** (`crate::solve`).
+///
+/// # Why this exists
+///
+/// [`crate::solve`] is the front door for a *quantified* query, and it is a
+/// ladder of its own: a ground-subset refutation, checked fast paths,
+/// skolemization, valid-/vacuous-universal elimination, an equality partition,
+/// an unsatisfiable-universal detector, Fourier-Motzkin, a `∀∃` witness search,
+/// finite expansion, two finite-model-finding rungs, MBQI, an e-graph refuter,
+/// and ℕ-induction. Until 2026-09-09 **not one of them recorded anything**:
+/// they reported to stderr under `AXEYUM_QTRACE` and nowhere else.
+///
+/// The consequence was not a missing trace but a *wrong* one. Most of these
+/// rungs decide their own sub-queries through [`crate::check_auto`], and each
+/// such call was, on the attribution's own accounting, an OUTERMOST dispatch
+/// (`solve` is not itself `check_auto`, so [`DISPATCH_DEPTH`] was still zero).
+/// So a quantified file's attribution was the concatenation of every
+/// speculative sub-solve's QF route trail, and
+/// [`RouteTrace::decided_by`] named whichever QF route last said `sat`/`unsat`
+/// inside one of those probes. Measured on the twelve `uflia_induction`
+/// corpus files before this change: nine were attributed to `uf-arithmetic`,
+/// `lia-dpll`, `uf-arith-online` or `qf-bv`, and on six of them the named
+/// route's recorded verdict was `sat` while the file's verdict was `unknown` —
+/// a route that did not decide the file, reporting a verdict the file does not
+/// have.
+///
+/// The labels are `q:`-prefixed for the same reason the front-door stages are
+/// `fd:`-prefixed: a closed, deterministic vocabulary a consumer can classify
+/// by inspection.
+pub mod quant_rung {
+    /// Ground-subset refutation of the quantified query.
+    pub const GROUND_SUBSET: &str = "q:ground-subset";
+    /// The checked quantified fast paths (`checked_quantified_fast_path`).
+    pub const CHECKED_FAST_PATH: &str = "q:checked-fast-path";
+    /// Top-level existential skolemization left a quantifier-free residual,
+    /// decided by the ordinary QF dispatch.
+    pub const SKOLEM_QF: &str = "q:skolem-qf";
+    /// Valid-universal elimination left a quantifier-free residual.
+    pub const VALID_UNIVERSAL_QF: &str = "q:valid-universal-qf";
+    /// Vacuous-universal elimination left a quantifier-free residual.
+    pub const VACUOUS_UNIVERSAL_QF: &str = "q:vacuous-universal-qf";
+    /// The exact finite equality-partition refutation (ADR-0101).
+    pub const EQ_PARTITION: &str = "q:eq-partition";
+    /// The always-false single-atom universal detector.
+    pub const UNSAT_UNIVERSAL: &str = "q:unsat-universal";
+    /// Fourier-Motzkin universal elimination — an outright `unsat`, or a
+    /// rewrite that left a quantifier-free residual.
+    pub const FOURIER_MOTZKIN: &str = "q:fourier-motzkin";
+    /// Bounded `∀∃` Skolem-witness synthesis.
+    pub const FORALL_EXISTS_WITNESS: &str = "q:forall-exists-witness";
+    /// Finite quantifier expansion.
+    pub const FINITE_EXPANSION: &str = "q:finite-expansion";
+    /// The bounded pure-UF finite-model-finding probe.
+    pub const UF_FMF_PROBE: &str = "q:uf-fmf-probe";
+    /// The bounded first-refusal MBQI rung.
+    pub const MBQI_QUICK: &str = "q:mbqi-quick";
+    /// The e-graph instantiation refuter.
+    pub const EGRAPH: &str = "q:egraph";
+    /// The full MBQI pass.
+    pub const MBQI: &str = "q:mbqi";
+    /// The full pure-UF finite-model finder.
+    pub const UF_FMF_FULL: &str = "q:uf-fmf-full";
+    /// ℕ-induction over a guarded negated universal.
+    pub const NAT_INDUCTION: &str = "q:nat-induction";
+    /// The ladder ran out of wall-clock budget at the named stage.
+    pub const TIMEOUT: &str = "q:timeout";
+
+    /// Every label in this module, for a test that must derive the vocabulary
+    /// from the authority rather than from a maintainer's memory.
+    pub const ALL: &[&str] = &[
+        GROUND_SUBSET,
+        CHECKED_FAST_PATH,
+        SKOLEM_QF,
+        VALID_UNIVERSAL_QF,
+        VACUOUS_UNIVERSAL_QF,
+        EQ_PARTITION,
+        UNSAT_UNIVERSAL,
+        FOURIER_MOTZKIN,
+        FORALL_EXISTS_WITNESS,
+        FINITE_EXPANSION,
+        UF_FMF_PROBE,
+        MBQI_QUICK,
+        EGRAPH,
+        MBQI,
+        UF_FMF_FULL,
+        NAT_INDUCTION,
+        TIMEOUT,
+    ];
+}
+
 std::thread_local! {
     /// Whether front-door route attribution is being collected on this thread.
     /// A single `Cell<bool>` read is the entire cost on the default path.
@@ -899,6 +989,99 @@ impl Drop for DepthGuard {
     fn drop(&mut self) {
         DISPATCH_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
     }
+}
+
+/// Marks the enclosing region as being *inside* a dispatch, so any
+/// [`crate::check_auto`] called from it is not treated as the outermost one and
+/// does not publish its route trail into the attribution.
+///
+/// # Why the quantified ladder needs this
+///
+/// [`with_outermost_dispatch`] keeps a route's *nested* `check_auto` out of the
+/// attribution, and it works because those calls really are nested inside a
+/// `check_auto` frame. The quantified ladder in [`crate::solve`] is not: it sits
+/// *above* `check_auto`, and every speculative sub-solve it makes — the
+/// valid-universal validity checks, the `∀∃` witness validation, MBQI's ground
+/// rounds, ℕ-induction's base and step queries — therefore entered at depth
+/// zero and published as if it had decided the file. Arming this guard for the
+/// span of the quantified ladder makes those sub-solves nested in fact as well
+/// as in intent.
+///
+/// The guard is a no-op (no thread-local write at all) when attribution is not
+/// being collected, which is every default run.
+///
+/// # Verdict invariance
+///
+/// This changes nothing but which telemetry entries are kept. The depth counter
+/// is read by exactly one site ([`with_outermost_dispatch`]) whose only effect
+/// is whether [`crate::check_auto`] takes its result from
+/// [`crate::check_auto_explained`] — and those two agree on every verdict, which
+/// is the invariant this module exists to uphold.
+pub(crate) struct NestedDispatchGuard(bool);
+
+impl NestedDispatchGuard {
+    /// Arms the guard when `armed` is true *and* attribution is being
+    /// collected. A disarmed guard touches no thread-local state on drop.
+    pub(crate) fn arm_if(armed: bool) -> Self {
+        if !armed || !attribution_collecting() {
+            return NestedDispatchGuard(false);
+        }
+        DISPATCH_DEPTH.with(|d| d.set(d.get() + 1));
+        NestedDispatchGuard(true)
+    }
+
+    /// Restores the depth immediately rather than on drop.
+    ///
+    /// Used where the quantified ladder stops being speculative and hands a
+    /// quantifier-free residual to [`crate::check_auto`] as the *whole* answer:
+    /// that dispatch is a genuine outermost one and should publish its route
+    /// trail, so the rung takes the guard off before making it. Idempotent.
+    pub(crate) fn disarm(&mut self) {
+        if self.0 {
+            DISPATCH_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
+            self.0 = false;
+        }
+    }
+}
+
+impl Drop for NestedDispatchGuard {
+    fn drop(&mut self) {
+        if self.0 {
+            DISPATCH_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
+        }
+    }
+}
+
+/// Records one quantified-ladder rung's [`CheckResult`] into this thread's
+/// attribution, if it is being collected.
+///
+/// The ladder is a stage sequence in exactly the sense the front door's is, so
+/// this deliberately writes into the same accumulator through the same sink
+/// rather than introducing a second mechanism; only the label vocabulary
+/// ([`quant_rung`]) differs.
+pub(crate) fn record_quant_rung_result(route: &'static str, result: &CheckResult) {
+    record_front_door_result(route, result);
+}
+
+/// Records that a quantified-ladder rung ran and declined, so the trail shows
+/// the ladder and not only its last step.
+pub(crate) fn record_quant_rung_declined(route: &'static str, reason: DeclineReason) {
+    record_front_door(route, RouteOutcome::Declined(reason));
+}
+
+/// Records that a quantified-ladder rung is about to hand the (now
+/// quantifier-free) residual to [`crate::check_auto`]. The dispatch's own route
+/// entries follow, and the rung's `record_quant_rung_result` closes the trail
+/// after them — so the trace keeps the QF detail while still naming the rung as
+/// the decider.
+pub(crate) fn record_quant_rung_probe(route: &'static str, detail: &str) {
+    // Gated here as well as inside the sink: `to_owned` would otherwise
+    // allocate on every default run, which is the one cost this telemetry
+    // promises not to have.
+    if !attribution_collecting() {
+        return;
+    }
+    record_front_door(route, RouteOutcome::Probe(detail.to_owned()));
 }
 
 #[cfg(test)]
