@@ -723,8 +723,10 @@ const FLOOD_FINAL_SUBSET_MAX_GENERATION: u32 = 1;
 /// `shipped_ground_budget_is_the_scaled_shipped_ceiling`.
 const MAX_JOINED_SUBSTITUTIONS_PER_ROUND: usize = MAX_GROUND_TERMS;
 
-/// Slice-3 lazy-discovery caps (`AXEYUM_NESTED_QUANT` only; all zero-effect
-/// with the flag off). Discovery adds *formulas*, not just terms, so it is
+/// Slice-3 lazy-discovery caps. These are LIVE in the shipped configuration:
+/// discovery is gated on `AXEYUM_NESTED_QUANT`, whose default is ON, so only an
+/// explicit `AXEYUM_NESTED_QUANT=0` makes them zero-effect. Discovery adds
+/// *formulas*, not just terms, so it is
 /// budgeted separately from the ground ceiling: a registration whose join
 /// emits ten thousand tuples must not convert the whole budget into positive
 /// replacements before the ordinary schedules get a round.
@@ -1836,8 +1838,10 @@ fn prove_quantified_unsat_via_egraph_impl(
     // Slice 3 grows this list: a universal *promoted* from a positive-position
     // replacement is a checked consequence of the input, so it joins the trust
     // anchor and its instances take the ordinary certificate route unchanged.
-    // With discovery off (`AXEYUM_NESTED_QUANT` unset) nothing is ever appended
-    // and this is the input list verbatim.
+    // Discovery is ON in the shipped configuration, so this list does grow.
+    // (`AXEYUM_NESTED_QUANT` unset means ENABLED -- this comment asserted the
+    // inverse until 2026-09-10. Only `AXEYUM_NESTED_QUANT=0` leaves the input
+    // list verbatim.)
     let mut assertions: Vec<TermId> = assertions.to_vec();
     let (mut ground, mut foralls) = partition_top_level_foralls(arena, &assertions);
     if foralls.is_empty() {

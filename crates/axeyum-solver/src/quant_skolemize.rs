@@ -85,9 +85,10 @@
 //! [`QuantifierLayout::Nested`] therefore keeps the nesting structure: NNF and
 //! Skolemization run exactly as before (same polarity rules, same bail-outs, same
 //! fresh-name discipline), but a universal-in-force quantifier is re-attached **in
-//! place** rather than collected for the front. It is opt-in behind
-//! `AXEYUM_NESTED_QUANT` and OFF by default, so the shipped route and every
-//! recorded baseline keep their meaning.
+//! place** rather than collected for the front. It is the SHIPPED layout: the
+//! default flipped ON on 2026-08-02 (slice 4) on a measured +4 on the committed
+//! 200-file UF list, and `AXEYUM_NESTED_QUANT=0` is now the opt-OUT. See
+//! [`nested_quantifiers_enabled`] for the head-to-head table.
 //!
 //! Renaming still happens in nested layout even though in-place re-attachment
 //! does not strictly require it. It costs nothing and it keeps one invariant the
@@ -109,7 +110,8 @@ pub(crate) enum QuantifierLayout {
     /// shipped default.
     Prenex,
     /// Re-attach each surviving universal exactly where it occurred, keeping the
-    /// nesting structure for the instantiation driver (opt-in, slice 1).
+    /// nesting structure for the instantiation driver. Added in slice 1 as
+    /// opt-in; the SHIPPED default since slice 4 (2026-08-02).
     Nested,
 }
 
@@ -139,12 +141,23 @@ pub(crate) enum QuantifierLayout {
 /// Read once and cached, so the check costs one atomic load per call site.
 pub(crate) fn nested_quantifiers_enabled() -> bool {
     static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    *ENABLED.get_or_init(|| {
-        // Absent variable means ON. Only an explicit `0`/empty disables, so the
-        // opt-out is deliberate rather than accidental.
-        std::env::var_os("AXEYUM_NESTED_QUANT")
-            .is_none_or(|value| !value.is_empty() && value != "0")
-    })
+    *ENABLED.get_or_init(|| nested_enabled_for(std::env::var_os("AXEYUM_NESTED_QUANT").as_deref()))
+}
+
+/// The `AXEYUM_NESTED_QUANT` decision as a pure function of the raw value, so
+/// the shipped default is a **tested fact** rather than a doc comment.
+///
+/// It had to become one: the default flipped ON on 2026-08-02 and four separate
+/// comments across three files still described it as off, one of them stating
+/// the exact inverse ("with discovery off (`AXEYUM_NESTED_QUANT` unset)"). A
+/// 2026-09-06 census recorded the contradiction and it survived four more days,
+/// because nothing failed when a comment was wrong. Now
+/// `the_shipped_layout_is_nested_when_the_variable_is_absent` does.
+///
+/// Absent means ON. Only an explicit `0` or an empty value disables, so the
+/// opt-out is deliberate rather than accidental.
+fn nested_enabled_for(value: Option<&std::ffi::OsStr>) -> bool {
+    value.is_none_or(|value| !value.is_empty() && value != "0")
 }
 
 /// The layout selected by the environment for this process.
@@ -998,6 +1011,38 @@ mod tests {
         assert!(
             nested_depths.iter().any(|&(depth, _)| depth > 1),
             "nested layout must keep the `or`-side universal below the outer one"
+        );
+    }
+
+    /// The shipped layout is `Nested`, and an absent `AXEYUM_NESTED_QUANT` means
+    /// ENABLED. Pinned here because four comments across three files described
+    /// the opposite for over a month, one of them stating the exact inverse, and
+    /// a 2026-09-06 census that recorded the contradiction did not stop it: a
+    /// wrong comment made nothing fail. This does.
+    ///
+    /// Tests the pure decision function rather than the process-wide accessor,
+    /// which caches in a `OnceLock` and would make the result depend on whichever
+    /// test touched it first.
+    #[test]
+    fn the_shipped_layout_is_nested_when_the_variable_is_absent() {
+        use std::ffi::OsStr;
+
+        assert!(
+            nested_enabled_for(None),
+            "an absent AXEYUM_NESTED_QUANT must mean ENABLED -- the nesting layout \
+             is the shipped default, and the opt-out is deliberate"
+        );
+        assert!(
+            !nested_enabled_for(Some(OsStr::new("0"))),
+            "AXEYUM_NESTED_QUANT=0 is the documented opt-out"
+        );
+        assert!(
+            !nested_enabled_for(Some(OsStr::new(""))),
+            "an empty AXEYUM_NESTED_QUANT is the documented opt-out"
+        );
+        assert!(
+            nested_enabled_for(Some(OsStr::new("1"))),
+            "any other value leaves the shipped layout in force"
         );
     }
 }

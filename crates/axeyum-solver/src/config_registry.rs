@@ -6241,7 +6241,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "a discovered registration is only scanned once it is `trusted` -- asserted, or its derivation already passed `check_quantifier_ground_derivation` at admission (`NestedDiscovery::is_trusted`, qinst_egraph.rs:713-719); truncating discovery can only omit a registration, never trust an unchecked one",
         env_override: None,
         justification: undated("doc comment"),
-        note: "Only takes effect with `AXEYUM_NESTED_QUANT` set (Slice-3 lazy-discovery caps, doc comment at qinst_egraph.rs:129); zero effect with the flag off, since nothing is discovered or appended.",
+        note: "LIVE in the shipped configuration -- gated on `AXEYUM_NESTED_QUANT`, whose default is ON, so only an explicit `AXEYUM_NESTED_QUANT=0` disables it (Slice-3 lazy-discovery caps, doc comment at qinst_egraph.rs:129); zero effect only under an explicit opt-out, since nothing is then discovered or appended.",
     },
     ConfigEntry {
         name: "MAX_DISCOVERY_REBUILDS",
@@ -6254,7 +6254,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "a rebuild only re-compiles patterns and re-ingests the already-admitted ground set; stopping further rebuilds can only forgo picking up new discovered terms sooner, never admit anything unchecked",
         env_override: None,
         justification: undated("doc comment"),
-        note: "Only takes effect with `AXEYUM_NESTED_QUANT` set (Slice-3 lazy-discovery caps); a rebuild re-compiles patterns and re-ingests the ground set, so this is what bounds discovery's overhead.",
+        note: "LIVE in the shipped configuration -- gated on `AXEYUM_NESTED_QUANT`, whose default is ON, so only an explicit `AXEYUM_NESTED_QUANT=0` disables it (Slice-3 lazy-discovery caps); a rebuild re-compiles patterns and re-ingests the ground set, so this is what bounds discovery's overhead.",
     },
     ConfigEntry {
         name: "MAX_EXTENDED_INSTANTIATION_ROUNDS",
@@ -6460,7 +6460,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "a positive replacement is trusted only via the same `is_trusted`/`check_quantifier_ground_derivation` admission path as MAX_DISCOVERED_REGISTRATIONS (qinst_egraph.rs:713-719); truncating this can only omit a replacement, never trust an unchecked one",
         env_override: None,
         justification: undated("doc comment"),
-        note: "Only takes effect with `AXEYUM_NESTED_QUANT` set; total positive replacements admitted or promoted over one attempt.",
+        note: "LIVE in the shipped configuration -- gated on `AXEYUM_NESTED_QUANT`, whose default is ON, so only an explicit `AXEYUM_NESTED_QUANT=0` disables it; total positive replacements admitted or promoted over one attempt.",
     },
     ConfigEntry {
         name: "MAX_POSITIVE_TUPLES_PER_ROUND",
@@ -6473,7 +6473,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "a positive tuple is trusted only via the same `is_trusted`/`check_quantifier_ground_derivation` admission path as MAX_DISCOVERED_REGISTRATIONS (qinst_egraph.rs:713-719); truncating this can only omit a tuple, never trust an unchecked one",
         env_override: None,
         justification: undated("doc comment"),
-        note: "Only takes effect with `AXEYUM_NESTED_QUANT` set. Discovery adds formulas, not just terms, so it is budgeted separately from MAX_GROUND_TERMS: a join emitting ten thousand tuples must not convert the whole budget into positive replacements before the ordinary schedules get a round.",
+        note: "LIVE in the shipped configuration -- gated on `AXEYUM_NESTED_QUANT`, whose default is ON, so only an explicit `AXEYUM_NESTED_QUANT=0` disables it. Discovery adds formulas, not just terms, so it is budgeted separately from MAX_GROUND_TERMS: a join emitting ten thousand tuples must not convert the whole budget into positive replacements before the ordinary schedules get a round.",
     },
     ConfigEntry {
         name: "MAX_PREDECESSOR_RECURRENCE_INDEX",
@@ -6499,7 +6499,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "a promoted universal is trusted only via the same `is_trusted`/`check_quantifier_ground_derivation` admission path as MAX_DISCOVERED_REGISTRATIONS (qinst_egraph.rs:713-719); truncating this can only omit a promotion, never trust an unchecked one",
         env_override: None,
         justification: undated("doc comment"),
-        note: "Only takes effect with `AXEYUM_NESTED_QUANT` set. Universals promoted from a positive replacement that kept binders.",
+        note: "LIVE in the shipped configuration -- gated on `AXEYUM_NESTED_QUANT`, whose default is ON, so only an explicit `AXEYUM_NESTED_QUANT=0` disables it. Universals promoted from a positive replacement that kept binders.",
     },
     ConfigEntry {
         name: "MAX_QUANTIFIER_PROVENANCE_DEPTH",

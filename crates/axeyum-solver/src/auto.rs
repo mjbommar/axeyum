@@ -8767,9 +8767,12 @@ pub fn prove_unsat_by_ematching(
     // surviving universals to the front puts them where trigger instantiation can
     // see them. This is the largest measured gap in UF: 126 of the 159
     // declared-status files in the 300-file slice declined exactly here.
-    // `AXEYUM_NESTED_QUANT` (default off) swaps the flat prefix for the nesting-
-    // preserving layout, which keeps each surviving universal where it occurred
-    // so the instantiation driver can give it its own body-derived triggers.
+    // The nesting-preserving layout is the SHIPPED default (since 2026-08-02); it
+    // keeps each surviving universal where it occurred so the instantiation driver
+    // can give it its own body-derived triggers. `AXEYUM_NESTED_QUANT=0` is the
+    // opt-OUT, back to the flat prefix. This comment said "default off" until
+    // 2026-09-10 -- it was wrong, and it is on the path anyone debugging trigger
+    // selection takes.
     let skolemized = crate::quant_skolemize::skolemize_assertions_with_layout(
         arena,
         assertions,
