@@ -35,6 +35,25 @@
 //! reconstructor), never a wrong verdict. The sole `unsat` gate remains
 //! [`refute_lex`]; a target this slice cannot render is declined after that gate,
 //! not misdecided.
+//!
+//! # No in-crate caller — wiring pending (ADR-1812)
+//!
+//! Unlike the other labelled modules this one **should** have a caller and does
+//! not yet. The *verdict* half is wired: `smtlib.rs`'s `apply_lex_order_route` /
+//! `lex_order_verdict` already turn a [`refute_lex`] `Unsat` into a front-door
+//! `unsat`. What is missing is the *evidence* half — nothing calls
+//! [`reconstruct_lex_clash_to_lean_module`], so a lex `unsat` ships without the
+//! kernel-checked Lean `False` this module can produce.
+//!
+//! It cannot ride the arena-scanning `prove_unsat_to_lean_module` dispatch in
+//! [`crate::reconstruct`], because a [`LexProblem`] is not
+//! represented in the `axeyum-ir` term arena — it lives in the parser's side
+//! channel, exactly like the regex `MembershipProblem` does. The precedent is
+//! therefore `smtlib.rs`'s [`crate::smtlib::membership_unsat_lean_module`], which threads
+//! [`crate::reconstruct_regex_emptiness_to_lean_module`] at the point where the
+//! deciding object is in hand; the lex mirror belongs beside it, reading
+//! `script.lex_problem`. That file is not this module's to edit — the wiring is
+//! recorded in ADR-1812.
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
 use std::collections::{BTreeMap, BTreeSet};

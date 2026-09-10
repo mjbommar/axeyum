@@ -160,6 +160,25 @@
 //! Every resource cap and unsupported construct degrades to
 //! [`HornOutcome::Unknown`]; the solver never panics on adversarial or malformed
 //! input.
+//!
+//! # No in-crate caller by design — but read the second half (ADR-1812)
+//!
+//! [`solve_horn`] is a **front-end**, not a step of one: it takes a
+//! [`HornSystem`] the caller assembled and reduces it to something the deciders
+//! already handle, so nothing inside this crate calls it and nothing should. Its
+//! caller is the library user. The wiring that would give it an in-crate caller
+//! is SMT-LIB CHC input — recognising `(declare-fun P (…) Bool)` plus universally
+//! quantified implication assertions as a Horn system and routing them here —
+//! which lives in the front door, not in this module.
+//!
+//! **That is not why this module mattered to ADR-1812.** Until 2026-09-09 its
+//! `state_class` classified an all-`Int` predicate vocabulary as
+//! `StateClass::Unsupported`, and that one decline was the reason
+//! [`crate::pdr_lia`] and [`crate::imc_lia`] — 1,771 lines of native-ℤ model
+//! checking — had no production caller anywhere in the tree. A module with no
+//! caller of its own was the thing keeping two others unreachable. The `Int`
+//! branch of [`dispatch`] is that fix; do not remove it to "simplify" the
+//! classifier.
 
 use std::collections::BTreeMap;
 

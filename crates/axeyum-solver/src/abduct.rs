@@ -1,5 +1,14 @@
 //! Boolean abduction (`get-abduct`): turn the trusted checker into a generator.
 //!
+//! **No in-crate caller by design** (ADR-1812). Abduction is a *user-facing
+//! query*, like `get-model` or `get-interpolant` — nothing in the decision
+//! ladder needs an abduct in order to decide a formula, so no module in this
+//! crate calls [`abduct`]. It is reached through the crate-root re-export.
+//! The one route that would give it an in-crate caller is the SMT-LIB
+//! `(get-abduct …)` command, which `axeyum-smtlib` does not parse (measured
+//! 2026-09-09: the token appears nowhere in the parser); adding it is the
+//! wiring, and it belongs to the front-end, not here.
+//!
 //! Given Boolean `axioms` and a Boolean `conjecture` `C` that the axioms do
 //! **not** by themselves entail, [`abduct`] searches for a hypothesis (an
 //! *abduct*) `H` such that:

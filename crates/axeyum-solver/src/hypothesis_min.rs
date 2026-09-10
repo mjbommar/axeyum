@@ -64,6 +64,24 @@
 //! Candidate order is a `Vec` sorted by an explicit total key
 //! (cross-product count, then subset size, then ascending index order); no hash
 //! container participates in any output. The same input yields the same subset.
+//!
+//! # No in-crate caller by design (ADR-1812)
+//!
+//! Measured 2026-09-09, this module has no caller **anywhere** — not another
+//! `axeyum-solver` module, not another crate, not even an integration test (its
+//! ten tests are inline). That is not an oversight, and it is not a reason to
+//! delete it: the caller is a **person**, or a proof-search lane driving the
+//! library from outside. Its input is a hypothesis set someone assembled and a
+//! goal they could not close; the solver's own dispatch has no such object and
+//! never will, because [`crate::auto::unsat_core`] — the deletion-based
+//! minimiser dispatch *does* use — cannot even start here (it returns `None`
+//! unless the whole set is already solver-`unsat`, which is the exact
+//! phenomenon this module exists for; see "The measurement this exists for"
+//! above).
+//!
+//! So do not wire it into a decision route. Wire it into a *tool* if you want a
+//! caller: the thing that would use it is a proof-search driver, not
+//! `check_auto`.
 
 use std::time::Duration;
 

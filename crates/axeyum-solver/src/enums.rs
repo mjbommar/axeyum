@@ -13,6 +13,31 @@
 //! Constructors with arguments, selectors, testers over recursive datatypes, and
 //! mutual recursion are out of scope here; those need a first-class datatype sort
 //! in the IR and are a later, larger increment.
+//!
+//! # No in-crate caller by design (ADR-1812)
+//!
+//! **That larger increment landed, and it did not replace this module — it
+//! bypassed it.** `axeyum-ir` now carries a first-class datatype sort
+//! (`Sort::Datatype`, `TermArena::declare_datatype` /
+//! `add_constructor` / `dt_select` / `dt_test`, recursion included),
+//! `axeyum-smtlib` parses `declare-datatype`/`declare-datatypes`, and
+//! [`crate::datatype_native`] decides such queries by eager
+//! tag/field expansion — which is the same tag-bit-vector idea this module
+//! implements, generalized. So **no solve path routes through `EnumSort`**, and
+//! none should: a datatype in a query arrives as a datatype, not as a hand-built
+//! enum.
+//!
+//! What survives is the *builder* role: `EnumSort` gives a Rust caller a finite
+//! enumeration lowered to pure bit-vectors with no datatype declaration and no
+//! expansion pass, which is occasionally what you want when feeding the
+//! bit-blaster directly. It is public API reached through the crate root, kept
+//! because it is sound, tested and cheap — not because anything here needs it.
+//!
+//! It becomes a deletion (this module, [`crate::records`],
+//! `tests/enums.rs`, `tests/records.rs`, the four `lib.rs` re-exports, and their
+//! `tests/api_namespaces.rs` rows) the moment that builder role is shown to have
+//! no user. That check is the thing to do next; do not re-derive the
+//! supersession, it is recorded here.
 
 use axeyum_ir::{Sort, TermArena, TermId, Value};
 

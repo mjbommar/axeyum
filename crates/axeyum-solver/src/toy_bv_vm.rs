@@ -6,6 +6,19 @@
 //! validate a program, lift each instruction into axeyum terms, explore the CFG
 //! through [`SymbolicExecutor`], extract concrete model witnesses, and confirm
 //! those witnesses by independent concrete replay.
+//!
+//! # No in-crate caller by design (ADR-1812)
+//!
+//! **This is an exercised reference, and that is the whole point of it.** A
+//! frontend contract stated in prose drifts; a frontend contract that compiles,
+//! lifts, explores and replays cannot. Its consumer is
+//! `tests/symbolic_execution.rs`, which is exactly the right consumer — a
+//! production caller would mean this crate had grown a binary lifter, which it
+//! has not and should not.
+//!
+//! Do not delete it for lacking a caller, and do not wire it into a solve path.
+//! If it ever stops compiling or its replay stops agreeing with
+//! [`SymbolicExecutor`], that is the signal it exists to give.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;

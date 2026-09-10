@@ -16,6 +16,17 @@
 //!
 //! Recursive and mutually-recursive datatypes (which have no finite width) need a
 //! first-class datatype sort in the IR and are a later increment.
+//!
+//! # No in-crate caller by design (ADR-1812)
+//!
+//! That increment landed — `axeyum-ir`'s first-class datatype sort and
+//! [`crate::datatype_native`]'s tag/field expansion are the
+//! production route for products as well as enumerations, and no solve path
+//! routes through `RecordSort`. This module keeps the same *builder* role as its
+//! sum-type twin [`crate::enums`]: a fixed-width product lowered to pure
+//! `concat`/`extract` with no datatype declaration and no expansion pass. The
+//! full argument, and the condition under which both modules should be deleted,
+//! is recorded once in [`crate::enums`] — read it there.
 
 use axeyum_ir::{MAX_BV_WIDTH, Sort, TermArena, TermId};
 
