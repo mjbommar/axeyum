@@ -81,6 +81,16 @@ Run as `AXEYUM_QGROUNDDUMP=… target/release/examples/axeyum_cli <file>
 --timeout-ms 24000`, four at a time, at the budget the loss list was produced at.
 All 16 return `unknown`.
 
+**Cross-tool control.** The earlier note measured its per-file ground counts
+through `smtcomp_cli`; these dumps come from `axeyum_cli`, so the two front
+doors could in principle take different routes. Three of its four sub-ceiling
+counts reproduce here **exactly**, and all three land on the same block:
+`f29` 273, `f31` 424, `f17` 24 — each is this run's **block 1**. That both
+confirms the dump is measuring the same loop the earlier note measured and
+identifies *which* rung it was reporting (the un-Skolemized one, see below).
+Its fourth, `f22` at 2017, does **not** reproduce — this run's blocks are 1191 /
+1253 / 1825 — and that discrepancy is unexplained.
+
 **`ground` is the ground FORMULA partition, not a term set** — assertions plus
 admitted instances. So the terms a proof instantiates on live in its
 **subterms**, and the comparison is against the subterm closure of every dumped
