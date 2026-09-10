@@ -48,6 +48,7 @@ pub mod clause_db_policy;
 pub mod colouring;
 mod compact;
 pub mod cube;
+pub mod decompose;
 mod drat;
 mod drat_backward;
 mod drat_resource;
@@ -94,6 +95,10 @@ pub use bve::{
     eliminate_variables_within, eliminate_variables_within_recorded,
 };
 pub use compact::{CompactMap, compact};
+pub use decompose::{
+    DecomposeOptions, DecomposeOutcome, DecomposeStats, EquivalenceMap, decompose,
+    decompose_within_recorded,
+};
 #[cfg(unix)]
 pub use drat::CacheDroppingWriter;
 pub use drat::{

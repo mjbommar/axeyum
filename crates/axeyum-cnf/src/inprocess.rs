@@ -78,6 +78,9 @@ use crate::bve::{
     BveOptions, BveOutcome, BveStats, Reconstruction, eliminate_variables_within_recorded,
 };
 use crate::compact::{CompactMap, compact};
+use crate::decompose::{
+    DecomposeOptions, DecomposeStats, EquivalenceMap, decompose_within_recorded,
+};
 use crate::simplify::{SubsumeOptions, SubsumeStats, simplify_within_recorded};
 use crate::ticks::{TickEffort, TickGrant, TickValveAccount};
 use crate::vivify::{VivifyOptions, VivifyStats, vivify_within};
@@ -423,6 +426,25 @@ pub trait InprocessObserver {
     /// Records one counter. Called at most once per key per run, in schedule
     /// order.
     fn count(&mut self, name: &str, value: f64);
+
+    /// Work grant for equivalent-literal substitution ([`crate::decompose`])
+    /// over `formula`, in graph steps. `None` means the pass does not run.
+    ///
+    /// **Defaulted to `None` on purpose.** The two occurrence-list passes get a
+    /// grant through [`Self::grant`], whose [`OccurrencePass`] is matched
+    /// exhaustively by the shipping caller; adding a variant there would make
+    /// registering a new pass a change to every implementor, and the change that
+    /// compiles is the one that quietly grants the new pass a budget nobody
+    /// chose. A defaulted method registers the pass without touching a single
+    /// existing observer, and an observer that has not opted in declines it.
+    ///
+    /// Roadmap item 1.5's admission rule applies here unchanged: [`TickValve`]
+    /// implements this method over a [`TickValveAccount`], so a pass offered
+    /// through a valve gets the same accumulate / refuse / back-off treatment as
+    /// the two occurrence-list passes and none of it is written twice.
+    fn decompose_grant(&mut self, _formula: &CnfFormula) -> Option<u64> {
+        None
+    }
 }
 
 /// An [`InprocessObserver`] that declines every pass and records nothing.
@@ -476,6 +498,9 @@ impl InprocessObserver for RecordingObserver {
     }
     fn count(&mut self, name: &str, value: f64) {
         self.counts.push((name.to_owned(), value));
+    }
+    fn decompose_grant(&mut self, _formula: &CnfFormula) -> Option<u64> {
+        self.budget
     }
 }
 
@@ -581,10 +606,31 @@ pub struct TickValve<O> {
     steps_per_tick: u64,
     subsume: TickValveAccount,
     bve: TickValveAccount,
+    decompose: TickValveAccount,
     subsume_round: PassRound,
     bve_round: PassRound,
+    decompose_round: PassRound,
     log: Vec<TickDecision>,
 }
+
+/// The effort setting equivalent-literal substitution is offered under.
+///
+/// The **cheapest** pass, so it gets the largest slice and the smallest
+/// threshold — the mirror image of [`TickEffort::EXPENSIVE_SETUP`], and for the
+/// same reason stated the other way round: a pass whose whole cost is one linear
+/// scan of the binary clauses should run often and cheaply rather than rarely
+/// and thoroughly. `CaDiCaL` makes the same call without a named option, by
+/// running `decompose()` five times inside one `inprobe` round while every other
+/// pass in that round runs once (`inprobe.cpp`).
+///
+/// A threshold of 1x the clause count is not vacuous — that is
+/// [`TickEffort::UNGATED`], which sets it to zero. It is the smallest gate that
+/// still refuses a round which could not pay for its own scan.
+const DECOMPOSE_EFFORT: TickEffort = TickEffort {
+    per_mille: 100,
+    threshold_per_clause: 1,
+    ..TickEffort::MAJOR_PASS
+};
 
 /// What one pass did in the round now in progress: whether it ran at all, and
 /// whether it achieved anything. Only the pair matters — a pass that did not
@@ -612,10 +658,21 @@ impl<O> TickValve<O> {
             steps_per_tick: 1,
             subsume: TickValveAccount::new(subsume),
             bve: TickValveAccount::new(bve),
+            decompose: TickValveAccount::new(DECOMPOSE_EFFORT),
             subsume_round: PassRound::CLEAR,
             bve_round: PassRound::CLEAR,
+            decompose_round: PassRound::CLEAR,
             log: Vec::new(),
         }
+    }
+
+    /// Sets the effort equivalent-literal substitution is offered under,
+    /// replacing [`DECOMPOSE_EFFORT`]. Resets that account's watermark and
+    /// backoff, so call it before the first round.
+    #[must_use]
+    pub fn with_decompose_effort(mut self, effort: TickEffort) -> Self {
+        self.decompose = TickValveAccount::new(effort);
+        self
     }
 
     /// The shipping pairing: subsumption on [`TickEffort::MAJOR_PASS`], BVE on
@@ -691,6 +748,21 @@ impl<O> TickValve<O> {
         &self.bve
     }
 
+    /// Equivalent-literal substitution's account.
+    ///
+    /// Its decisions do not appear in [`Self::decisions`] or
+    /// [`Self::schedule_log`]: a [`TickDecision`] is labelled by
+    /// [`OccurrencePass`], which has no substitution variant, and adding one
+    /// would break every exhaustive match on it — including the shipping
+    /// backend's, in a crate this change does not touch. The decisions are
+    /// visible in the counter stream instead, under the `decompose_tick_*` keys,
+    /// which is the ordered record anyway because it interleaves with every
+    /// other stage's telemetry.
+    #[must_use]
+    pub const fn decompose_account(&self) -> &TickValveAccount {
+        &self.decompose
+    }
+
     /// The wrapped observer.
     #[must_use]
     pub const fn inner(&self) -> &O {
@@ -717,8 +789,12 @@ impl<O> TickValve<O> {
         if self.bve_round.ran {
             self.bve.record_outcome(self.bve_round.found);
         }
+        if self.decompose_round.ran {
+            self.decompose.record_outcome(self.decompose_round.found);
+        }
         self.subsume_round = PassRound::CLEAR;
         self.bve_round = PassRound::CLEAR;
+        self.decompose_round = PassRound::CLEAR;
     }
 
     /// Runs one round with the valve as its observer and closes it afterwards.
@@ -744,6 +820,11 @@ const SUBSUME_PROGRESS_KEYS: [&str; 3] = [
 
 /// The same, for elimination.
 const BVE_PROGRESS_KEYS: [&str; 1] = ["bve_variables_eliminated"];
+
+/// The same, for equivalent-literal substitution. A round that substituted no
+/// variable found nothing, whatever else it removed: the tautologies it deletes
+/// are a consequence of a substitution, so there are none without one.
+const DECOMPOSE_PROGRESS_KEYS: [&str; 1] = ["decompose_variables_substituted"];
 
 impl<O: InprocessObserver> InprocessObserver for TickValve<O> {
     fn grant(&mut self, pass: OccurrencePass, formula: &CnfFormula) -> Option<u64> {
@@ -819,9 +900,54 @@ impl<O: InprocessObserver> InprocessObserver for TickValve<O> {
                 self.subsume_round.found = true;
             } else if BVE_PROGRESS_KEYS.contains(&name) {
                 self.bve_round.found = true;
+            } else if DECOMPOSE_PROGRESS_KEYS.contains(&name) {
+                self.decompose_round.found = true;
             }
         }
         self.inner.count(name, value);
+    }
+
+    fn decompose_grant(&mut self, formula: &CnfFormula) -> Option<u64> {
+        let clauses = formula.clauses().len() as u64;
+        let search_ticks = self.search_ticks;
+        let decision = self.decompose.request(search_ticks, clauses);
+
+        let budget = match decision {
+            TickGrant::Granted { allowance, .. } => {
+                self.decompose_round.ran = true;
+                match (self.inner.decompose_grant(formula), self.steps_per_tick) {
+                    (Some(steps), 0) => Some(steps),
+                    (Some(steps), per_tick) => Some(steps.min(allowance.saturating_mul(per_tick))),
+                    (None, _) => {
+                        // The valve admitted; the caller's own policy declined.
+                        // The round did not run, so the backoff must not be
+                        // charged for it either.
+                        self.decompose_round.ran = false;
+                        None
+                    }
+                }
+            }
+            TickGrant::Refused { .. } | TickGrant::BackedOff { .. } => None,
+        };
+
+        // No `TickDecision` row: see `decompose_account`. These four keys carry
+        // the same information in the counter stream, in schedule order.
+        let (admitted, allowance, threshold, backoff) = match decision {
+            TickGrant::Granted { allowance, .. } => (1.0, allowance, 0, 0),
+            TickGrant::Refused { accrued, threshold } => (0.0, accrued, threshold, 0),
+            TickGrant::BackedOff { rounds_left } => (0.0, 0, 0, rounds_left),
+        };
+        self.inner
+            .count("decompose_tick_reference", u64_as_f64(search_ticks));
+        self.inner
+            .count("decompose_tick_allowance", u64_as_f64(allowance));
+        self.inner
+            .count("decompose_tick_threshold", u64_as_f64(threshold));
+        self.inner.count("decompose_tick_admitted", admitted);
+        self.inner
+            .count("decompose_tick_backoff_rounds_left", f64::from(backoff));
+
+        budget
     }
 }
 
@@ -853,6 +979,18 @@ pub struct InprocessSchedule {
     /// elimination over the recovered system is `O(gates²·vars)` and carries no
     /// internal deadline, so it needs a cap of its own.
     pub xor_propagate_max_clauses: usize,
+    // Equivalent-literal substitution ([`crate::decompose`]) has no field here,
+    // deliberately, and it is the rule this struct's own doc comment states:
+    // "the two occurrence-list passes are turned on by the observer's grant
+    // rather than by a flag here". [`InprocessObserver::decompose_grant`] is
+    // that grant, and it defaults to `None`, so the pass is off for every
+    // existing observer without a second switch that could disagree with it.
+    //
+    // There is a second reason, measured rather than principled: this struct is
+    // built with a FULL literal at its shipping call site
+    // (`axeyum_solver::sat_bv_backend::inprocess`), so a new field is a
+    // compile error in a crate that has no business changing when a pass is
+    // added to this one.
     /// Run clause vivification between subsumption and elimination.
     pub vivify: bool,
     /// Tuning for vivification (ignored unless [`Self::vivify`]).
@@ -913,11 +1051,52 @@ pub struct ScheduledInprocess {
     pub compaction: CompactMap,
     /// Lifts a reduced model back to the original pre-BVE variables.
     pub reconstruction: Reconstruction,
+    /// Fills in the variables equivalent-literal substitution removed. Identity
+    /// unless [`InprocessSchedule::decompose`] ran and substituted something.
+    ///
+    /// **A caller that lifts a model must apply this too.** A substituted
+    /// variable does not occur in [`Self::formula`], so its slot in a search's
+    /// model is a placeholder, not a value — and a placeholder that happens to
+    /// replay is the failure mode this field exists to prevent.
+    /// [`Self::lift_model`] applies all three lifts in the one order that is
+    /// correct.
+    pub equivalences: EquivalenceMap,
+    /// Whether substitution found a component holding both polarities of one
+    /// variable, which refutes the formula outright.
+    ///
+    /// [`Self::formula`] is then the **unreduced** formula and [`Self::link`],
+    /// under [`InprocessSchedule::recording`], already derives the empty clause.
+    /// A caller that ignores this flag searches a formula that is genuinely
+    /// unsatisfiable and decides it independently, so ignoring it costs time,
+    /// never correctness.
+    pub decompose_unsat: bool,
     /// The passes' own `DRAT` derivation plus the compaction's variable
     /// bijection, so a refutation of [`Self::formula`] lifts to a refutation of
     /// the caller's formula. Empty and identity unless
     /// [`InprocessSchedule::recording`] asked for it.
     pub link: ReductionLink,
+}
+
+impl ScheduledInprocess {
+    /// Lifts a model of [`Self::formula`] all the way back to the caller's
+    /// variables, applying every lift in the only order that is correct.
+    ///
+    /// `compaction.expand` first (the search's model is over compacted
+    /// variables), then `reconstruction.extend` (BVE's eliminated variables are
+    /// defined by clauses over the *post-substitution* formula, so they need
+    /// their neighbours' values, not their neighbours' pre-images), then
+    /// `equivalences.extend` (a substituted variable's representative may itself
+    /// have been eliminated by BVE, so it must already be filled in).
+    ///
+    /// Existing callers compose the first two by hand. This method exists so
+    /// that adding the third is not something a caller can forget: the order is
+    /// stated once, here, rather than at every lift site.
+    #[must_use]
+    pub fn lift_model(&self, compacted: &[bool]) -> Vec<bool> {
+        let reduced = self.compaction.expand(compacted);
+        let extended = self.reconstruction.extend(&reduced);
+        self.equivalences.extend(&extended)
+    }
 }
 
 /// Runs the shipping inprocessing schedule — XOR propagation, subsumption,
@@ -1016,6 +1195,62 @@ pub fn inprocess_scheduled(
     let mut link = ReductionLink::identity();
     let recording = schedule.recording;
     let mut steps: Vec<DratStep> = Vec::new();
+
+    // --- Equivalent-literal substitution -----------------------------------
+    // Equisatisfiable, not model-preserving: a substituted variable leaves the
+    // formula entirely, so its slot in a model is filled by `equivalences`
+    // rather than by the search. Every step it emits is plain `RUP` and the
+    // derivation order is the pass's own contract (`crate::decompose`), so its
+    // prefix joins the link like any other pass's.
+    let decompose_start = Instant::now();
+    let (substituted, equivalences, decompose_stats, decompose_ran) =
+        run_decompose(base, observer, recording.then_some(&mut steps));
+    // Emitted on EVERY run, admitted or not, so "the pass did not run" is a
+    // recorded zero rather than a missing key. An absent key is
+    // indistinguishable from a stage that was never reached at all, and the
+    // whole point of an admission gate is that a refusal is an observation.
+    observer.count("decompose_admitted", f64::from(u8::from(decompose_ran)));
+    if decompose_ran {
+        if recording {
+            observer.count("decompose_proof_steps", usize_as_f64(steps.len()));
+            link.record(steps.drain(..));
+        } else {
+            steps.clear();
+        }
+        count_duration_ms(observer, "decompose_ms", decompose_start.elapsed());
+        observer.count("decompose_ran", f64::from(u8::from(decompose_stats.ran)));
+        observer.count("decompose_rounds", usize_as_f64(decompose_stats.rounds));
+        observer.count(
+            "decompose_binary_clauses",
+            usize_as_f64(decompose_stats.binary_clauses),
+        );
+        observer.count("decompose_classes", usize_as_f64(decompose_stats.classes));
+        observer.count(
+            "decompose_variables_substituted",
+            usize_as_f64(decompose_stats.variables_substituted),
+        );
+        observer.count(
+            "decompose_clauses_rewritten",
+            usize_as_f64(decompose_stats.clauses_rewritten),
+        );
+        observer.count(
+            "decompose_clauses_removed",
+            usize_as_f64(decompose_stats.clauses_removed),
+        );
+        observer.count(
+            "decompose_work_spent",
+            u64_as_f64(decompose_stats.work_spent),
+        );
+        observer.count(
+            "decompose_work_exhausted",
+            f64::from(u8::from(decompose_stats.work_exhausted)),
+        );
+        observer.count(
+            "decompose_unsat",
+            f64::from(u8::from(decompose_stats.unsat)),
+        );
+    }
+    let base: &CnfFormula = &substituted;
 
     // --- Subsumption -------------------------------------------------------
     // The timer starts before the grant is requested: deciding admission reads
@@ -1170,8 +1405,46 @@ pub fn inprocess_scheduled(
         formula: compacted,
         compaction,
         reconstruction: bve.reconstruction,
+        equivalences,
+        decompose_unsat: decompose_stats.unsat,
         link,
     }
+}
+
+/// Runs equivalent-literal substitution when the schedule asks for it **and**
+/// the observer grants a budget, returning the substituted formula, the model
+/// lift, and the accounting.
+///
+/// A named function rather than a `match` at the call site, for the reason
+/// [`run_subsume`] gives and with the same mutation history behind it: with the
+/// decision inline, computing a budget and then handing the pass
+/// `DecomposeOptions::DEFAULT` compiles, runs, and is caught by nothing.
+///
+/// `None` from the grant means the pass does not run at all — not a budget of
+/// zero. A zero-budget call still scans every clause to size the implication
+/// graph, and that `O(|F|)` scan is exactly what a refusal declines to pay.
+fn run_decompose(
+    formula: &CnfFormula,
+    observer: &mut impl InprocessObserver,
+    proof: Option<&mut Vec<DratStep>>,
+) -> (CnfFormula, EquivalenceMap, DecomposeStats, bool) {
+    let Some(work_budget) = observer.decompose_grant(formula) else {
+        return (
+            formula.clone(),
+            EquivalenceMap::identity(formula.variable_count()),
+            DecomposeStats::default(),
+            false,
+        );
+    };
+    let outcome = decompose_within_recorded(
+        formula,
+        DecomposeOptions {
+            work_budget: Some(work_budget),
+            ..DecomposeOptions::DEFAULT
+        },
+        proof,
+    );
+    (outcome.formula, outcome.equivalences, outcome.stats, true)
 }
 
 /// Runs subsumption under `grant`, or not at all.
@@ -1559,8 +1832,17 @@ mod tests {
     }
 
     /// The schedule preserves satisfiability, and a `sat` model of the searched
-    /// formula lifts back through `compaction.expand` and then
-    /// `reconstruction.extend` — in that order — to a model of the caller's.
+    /// formula lifts back to a model of the caller's.
+    ///
+    /// **This test failed the moment equivalent-literal substitution joined the
+    /// schedule, and that failure is why [`ScheduledInprocess::lift_model`]
+    /// exists.** It composed `compaction.expand` then `reconstruction.extend` by
+    /// hand, which was the whole lift while BVE was the only equisatisfiable
+    /// pass. Substitution is a second one, and a by-hand composition that
+    /// predates it silently returns a model whose substituted slots are
+    /// placeholders. Lifting through the outcome's own method makes adding a
+    /// third lift a change in one place rather than a search for every call
+    /// site.
     #[test]
     fn a_scheduled_sat_model_replays_against_the_original() {
         let f = formula(
@@ -1581,12 +1863,29 @@ mod tests {
         else {
             panic!("the reduced formula must stay satisfiable");
         };
-        let reduced = out.compaction.expand(model.values());
-        let lifted = out.reconstruction.extend(&reduced);
+        let lifted = out.lift_model(model.values());
         assert_eq!(
             f.evaluate(&lifted),
             Ok(true),
             "the lifted model must satisfy the ORIGINAL formula"
+        );
+
+        // The anti-vacuity half: this fixture must actually exercise the lift
+        // that was missing, or the assertion above would pass with `lift_model`
+        // reduced back to the two-step composition.
+        assert!(
+            !out.equivalences.is_identity(),
+            "the fixture must substitute something, or the third lift is untested"
+        );
+        let partial = out
+            .reconstruction
+            .extend(&out.compaction.expand(model.values()));
+        assert_eq!(
+            f.evaluate(&partial),
+            Ok(false),
+            "the OLD two-step composition must be visibly wrong on this fixture: \
+             if it still satisfied the original, this test could not tell the \
+             two lifts apart"
         );
     }
 
