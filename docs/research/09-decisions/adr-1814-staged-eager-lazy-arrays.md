@@ -1,7 +1,7 @@
 # ADR-1814: The eager/lazy array stage already exists and is capability-based; a cost-based stage waits until the eager certificate is on the shipping path
 
 Status: accepted
-Index-summary: ADR-0010's eager array elimination is kept, but STP's cost-based staged rule is NOT adopted yet — the staging already exists (the `Unsupported` refusal IS the lazy trigger at `abv.rs:735-741`, so the roadmap's "refused outright" is wrong for the main QF_ABV route), and the certificate a cost rule would trade away is unreachable from the default solve path (`certify_array_elim_unsat` has zero callers in `evidence.rs`), so the trade cannot be priced; the ordered prerequisite is to wire the certificate, then measure
+Index-summary: ADR-0010's eager array elimination is kept, but STP's cost-based staged rule is NOT adopted yet — the staging already exists (the `Unsupported` refusal IS the lazy trigger at `abv.rs:739-744`, so the roadmap's "refused outright" is wrong for the main QF_ABV route), and the certificate a cost rule would trade away is unreachable from the default solve path (`certify_array_elim_unsat` has zero callers in `evidence.rs`), so the trade cannot be priced; the ordered prerequisite is to wire the certificate, then measure
 Date: 2026-09-09
 
 ## Context
@@ -52,7 +52,7 @@ sides do not share a peeled base.
 ### Premise 2: "eager buys us a certificate" — true of the code, false of the shipping path
 
 `crates/axeyum-solver/src/abv/array_elim_certificate.rs` (386 lines) is real and
-strong. `ArrayElimUnsatCertificate::recheck()` (`:159-234`) re-runs
+strong. `ArrayElimUnsatCertificate::recheck()` (`:158-234`) re-runs
 `eliminate_arrays` on a scratch clone of the **original** assertions, runs an
 independent `witness_read_over_write` sampling check, re-derives the select
 congruence and demands exact structural equality, re-exports the QF_BV proof and
@@ -80,7 +80,7 @@ point that dispatch never calls.
 Item 1.1a landed `RowEngine` (`abv.rs:3338-3343`), a warm `IncrementalBvSolver`
 held across CEGAR rounds and routed from `auto.rs:5494`. It changes the cost of
 the lazy arm; it changes nothing about its evidence. The lazy ROW arm's unsat is
-constructed at `abv.rs:3543-3544`:
+constructed at `abv.rs:3535`:
 
 ```rust
 // The abstraction is a relaxation; its UNSAT implies the original's.
@@ -88,11 +88,11 @@ CheckResult::Unsat => return Ok(CheckResult::Unsat),
 ```
 
 `CheckResult::Unsat` is a unit variant (`backend.rs:24-25`) — no payload. The
-identical construction is at `abv.rs:139-140` for the lazy select-congruence
+identical construction is at `abv.rs:140` for the lazy select-congruence
 sibling. Evidence is assigned later and independently in `evidence.rs`, and for
 a query the lazy arm decided — which by construction means eager elimination
 refused — the reduction-certificate arm `reduction_unsat_certificate`
-(`evidence.rs:4595`) calls `export_qf_aufbv_unsat_proof_within`
+(`evidence.rs:4594`) calls `export_qf_aufbv_unsat_proof_within`
 (`proof.rs:766`), whose first act is `eliminate_arrays(...)?` (`proof.rs:771`),
 which errors for the same reason. The result is the bare `Evidence::Unsat(None)`
 at `evidence.rs:3826`.
@@ -177,9 +177,9 @@ Four commitments:
 - `grep -c certify_array_elim_unsat crates/axeyum-solver/src/evidence.rs` → **0**.
   Non-test callers: `crates/axeyum-machine-evidence/src/symbolic_memory.rs:344`,
   `:409`, and nothing else.
-- `crates/axeyum-solver/src/abv.rs:3543-3544` and `:139-140` — the lazy arms'
+- `crates/axeyum-solver/src/abv.rs:3535` and `:140` — the lazy arms'
   payload-free `CheckResult::Unsat`.
-- `crates/axeyum-solver/src/abv/array_elim_certificate.rs:159-234` — the
+- `crates/axeyum-solver/src/abv/array_elim_certificate.rs:158-234` — the
   five-step `recheck`, and `:65-77`, the recorded mutation that only step 2
   catches.
 - The STP quotation at
@@ -253,7 +253,7 @@ writing.
    staging question must be re-decided without it.
 3. **The certified share, once measured, turns out to be small even on the
    eager arm** — because `MAX_ARRAY_ELIM_CONGRUENCE_PAIRS = 256`
-   (`array_elim_certificate.rs:83`) declines above an `O(k²)` pairing bound that
+   (`array_elim_certificate.rs:84`) declines above an `O(k²)` pairing bound that
    nothing has measured. If most eagerly-decided queries exceed it, then "eager
    is the certified arm" is false for a second reason and the whole trade
    collapses to a pure speed question.
