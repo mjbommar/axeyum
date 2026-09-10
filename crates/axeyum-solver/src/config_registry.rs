@@ -9328,6 +9328,16 @@ mod tests {
     /// those queries are all decided before reaching an instrumented gate — and
     /// an instrument nothing has been shown to reach is indistinguishable from
     /// one that does not work.
+    ///
+    /// Gated on `full` because it names `crate::simplex`, which lives inside
+    /// `full_modules!()` (`lib.rs:70`) and does not exist in a default build.
+    /// Without the gate, a plain `cargo check -p axeyum-solver --tests` fails
+    /// with "cannot find `simplex` in `crate`" — which two lanes reported as a
+    /// pre-existing defect on 2026-09-09. It is not one: the gate the pre-push
+    /// hook runs passes `--all-features`. But a developer running the obvious
+    /// command should not meet a build error, so the cfg makes the narrow
+    /// invocation agree with the gate.
+    #[cfg(feature = "full")]
     #[test]
     fn an_instrumented_gate_records_through_the_real_path() {
         let key = "crates/axeyum-solver/src/simplex.rs::MAX_TABLEAU_CELLS";
