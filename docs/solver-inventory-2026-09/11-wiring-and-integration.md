@@ -66,6 +66,25 @@ seven `*_certified` interpolant variants, four `theory_combination` functions,
 `prove_quant_unsat_alethe` (~1,100 lines), `pass_stats.rs` (345),
 `algebraic_bridge.rs` (343).
 
+> **Corrected 2026-09-10.** The counts below UNDERCOUNT. Roadmap item 2.7
+> reimplemented this method rather than trusting it and found two bugs in it,
+> each of which changed an answer:
+>
+> 1. **String literals must be stripped over the whole text, not per line.** A
+>    Rust literal continues across lines with a trailing backslash, so a
+>    line-wise strip leaves `capabilities.rs`'s prose tables looking like code.
+>    That alone made `pdr_lia`, `imc_lia`, `horn` and `hypothesis_min` read as
+>    WIRED in the corrected run's own first pass.
+> 2. **A bare identifier is not an import.** `quant_bool_model_sat.rs` defines
+>    its own `const MAX_CANDIDATES`, which is also `abduct`'s re-exported name.
+>
+> With both fixed, the base figure is **20 test-only modules, not 15** — part
+> stricter method, part drift (176 modules declared when this was written, 184
+> now). Every module this file named is confirmed test-only, so none was an
+> artifact; the error was omission, not invention. `pdr_lia` and `imc_lia` have
+> since been wired (item 2.7) and the remainder carry labels enforced by
+> `tests/test_only_module_labels.rs`.
+
 ## The integration gaps that matter more
 
 Ranked by how much working capability each one keeps out of a default run.
