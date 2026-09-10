@@ -12,6 +12,13 @@ categories.workspace = true
 publish = false
 
 [dependencies]
+# ADR follow-up to the 2026-09-05 architecture review, recommendation D5/6
+# ("swap the hasher ... measure on the intern table first"). That pass landed
+# in `axeyum-ir` and was explicitly scoped to it; this crate was in the
+# untouched remainder. Measured 2026-09-10 on QF_UF/QG-classification: SipHash
+# over `ENodeId` (a `u32` newtype) was 18.5% of a 60 s solve, with another
+# 15.5% in the surrounding map machinery.
+rustc-hash = { workspace = true }
 
 [dev-dependencies]
 criterion.workspace = true

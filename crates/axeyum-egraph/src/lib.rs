@@ -30,8 +30,12 @@
 #![forbid(unsafe_code)]
 
 use std::cell::Cell;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeSet, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
+
+mod fast_map;
+
+use fast_map::FastMap;
 
 /// Cap on the partial-substitution frontier carried between argument positions
 /// while matching one application node.
@@ -169,8 +173,8 @@ pub struct EMatchIndex {
     node_count: usize,
     rollback_epoch: u64,
     merge_event_count: usize,
-    class_index: HashMap<ENodeId, Vec<ENodeId>>,
-    application_nodes: HashMap<u32, Vec<ENodeId>>,
+    class_index: FastMap<ENodeId, Vec<ENodeId>>,
+    application_nodes: FastMap<u32, Vec<ENodeId>>,
     full_rebuilds: usize,
     suffix_extensions: usize,
     merge_updates: usize,
@@ -355,7 +359,7 @@ pub struct EGraph {
     graph_id: u64,
     nodes: Vec<ENode>,
     /// Signature table: a canonical signature maps to the node that owns it.
-    table: HashMap<Signature, ENodeId>,
+    table: FastMap<Signature, ENodeId>,
     /// Pending equalities to process (deferred-merge worklist), each carrying the
     /// justification for the proof forest.
     pending: Vec<(ENodeId, ENodeId, Edge)>,
@@ -397,7 +401,7 @@ impl Default for EGraph {
         Self {
             graph_id: NEXT_EGRAPH_ID.fetch_add(1, Ordering::Relaxed),
             nodes: Vec::new(),
-            table: HashMap::new(),
+            table: FastMap::default(),
             pending: Vec::new(),
             trail: Vec::new(),
             scopes: Vec::new(),
@@ -720,8 +724,8 @@ impl EGraph {
     fn ematch_indexed(
         &self,
         pattern: &Pattern,
-        class_index: &HashMap<ENodeId, Vec<ENodeId>>,
-        application_nodes: &HashMap<u32, Vec<ENodeId>>,
+        class_index: &FastMap<ENodeId, Vec<ENodeId>>,
+        application_nodes: &FastMap<u32, Vec<ENodeId>>,
         work: &mut usize,
     ) -> Vec<Substitution> {
         let Pattern::App(decl, _) = pattern else {
@@ -742,7 +746,7 @@ impl EGraph {
         &self,
         pattern: &Pattern,
         candidates: &[ENodeId],
-        class_index: &HashMap<ENodeId, Vec<ENodeId>>,
+        class_index: &FastMap<ENodeId, Vec<ENodeId>>,
         work: &mut usize,
     ) -> Vec<Substitution> {
         let Pattern::App(decl, subs) = pattern else {
@@ -836,7 +840,7 @@ impl EGraph {
         subs: &[Pattern],
         arg_roots: &[ENodeId],
         subst: Substitution,
-        index: &HashMap<ENodeId, Vec<ENodeId>>,
+        index: &FastMap<ENodeId, Vec<ENodeId>>,
         work: &mut usize,
     ) -> Vec<Substitution> {
         let mut current = vec![subst];
@@ -868,7 +872,7 @@ impl EGraph {
         pattern: &Pattern,
         class_root: ENodeId,
         subst: Substitution,
-        index: &HashMap<ENodeId, Vec<ENodeId>>,
+        index: &FastMap<ENodeId, Vec<ENodeId>>,
         work: &mut usize,
     ) -> Vec<Substitution> {
         match pattern {
@@ -1776,8 +1780,7 @@ mod tests {
         let apps = g.enumerate_apps(10);
         assert_eq!(apps.len(), 2, "f(a) and f(b) collapse to one class");
         // The surviving representatives are f(a)/f(b)'s class and f(c).
-        let roots: std::collections::HashSet<ENodeId> =
-            apps.iter().map(|m| g.root(m.app)).collect();
+        let roots: crate::fast_map::FastSet<ENodeId> = apps.iter().map(|m| g.root(m.app)).collect();
         assert!(roots.contains(&g.root(fa)));
         assert!(roots.contains(&g.root(fc)));
         // Argument class roots are canonical: f(a)'s argument is a's (= b's) class.
@@ -1796,8 +1799,7 @@ mod tests {
         g.add(10, &[b]); // f(b)
         let pat = Pattern::App(10, vec![Pattern::Var(0)]);
         let subs = g.ematch(&pat);
-        let bound: std::collections::HashSet<ENodeId> =
-            subs.iter().map(|s| s[0].unwrap()).collect();
+        let bound: crate::fast_map::FastSet<ENodeId> = subs.iter().map(|s| s[0].unwrap()).collect();
         assert_eq!(bound, [g.root(a), g.root(b)].into_iter().collect());
     }
 
