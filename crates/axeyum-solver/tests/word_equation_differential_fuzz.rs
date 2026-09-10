@@ -46,6 +46,8 @@
 #![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
+mod common_z3;
+
 use std::fmt::Write as _;
 use std::io::Write as _;
 use std::process::{Command, Stdio};
@@ -59,11 +61,6 @@ const INSTANCES: u64 = 600;
 /// Per-call Z3 wall-clock budget. Small word-equation scripts decide fast; this
 /// only bounds the rare pathological shape.
 const Z3_TIMEOUT: Duration = Duration::from_secs(3);
-
-/// Path to the system Z3 binary (it carries the full string theory; the z3
-/// *crate* AST has no string sorts, so we shell the text in — as
-/// `string_differential_fuzz.rs` does).
-const Z3_BIN: &str = "/usr/bin/z3";
 
 /// A deterministic linear-congruential PRNG (the MMIX multiplier/increment).
 struct Lcg(u64);
@@ -313,7 +310,7 @@ fn axeyum_decide(text: &str) -> Verdict {
 
 /// Decide a script with the system Z3 binary, piping the text to `z3 -in`.
 fn z3_decide(text: &str) -> Verdict {
-    let Ok(mut child) = Command::new(Z3_BIN)
+    let Ok(mut child) = Command::new(common_z3::z3_bin())
         .arg(format!("-T:{}", Z3_TIMEOUT.as_secs().max(1)))
         .arg("-in")
         .stdin(Stdio::piped())
@@ -344,12 +341,14 @@ fn z3_decide(text: &str) -> Verdict {
 
 #[test]
 fn word_equation_differential_fuzz_disagree_zero() {
-    // Probe the Z3 binary once; if absent, the differential is impossible and the
-    // test is a no-op pass (mirrors the other fuzzers' adjudication-neutral skip).
-    if z3_decide("(set-logic QF_S)\n(check-sat)\n") == Verdict::Skip
-        && Command::new(Z3_BIN).arg("--version").output().is_err()
-    {
-        eprintln!("[word-fuzz] {Z3_BIN} unavailable; skipping (no adjudicator)");
+    // Probe the Z3 binary once. Absent, the differential is impossible: this is a
+    // skip by default and a FAILURE under `AXEYUM_REQUIRE_Z3=1`. It used to be an
+    // unconditional no-op pass, which made "Z3 is not installed" and "Z3 agreed
+    // with us on all 600 scripts" the same observation.
+    if !common_z3::z3_available(
+        "word-fuzz",
+        z3_decide("(set-logic QF_S)\n(check-sat)\n") != Verdict::Skip,
+    ) {
         return;
     }
 

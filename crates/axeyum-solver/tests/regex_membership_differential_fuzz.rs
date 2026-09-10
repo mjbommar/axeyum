@@ -33,6 +33,7 @@ use std::time::Duration;
 use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};
 
 mod common_cvc5;
+mod common_z3;
 use common_cvc5::{Verdict, cvc5_bin, cvc5_decide};
 
 /// Scripts generated and adjudicated (≥ 600 as required).
@@ -339,9 +340,8 @@ fn regex_membership_differential_fuzz_z3_disagree_zero() {
     use std::io::Write as _;
     use std::process::{Command, Stdio};
 
-    const Z3_BIN: &str = "/usr/bin/z3";
     let z3_decide = |text: &str| -> Verdict {
-        let Ok(mut child) = Command::new(Z3_BIN)
+        let Ok(mut child) = Command::new(common_z3::z3_bin())
             .arg(format!("-T:{}", TIMEOUT.as_secs().max(1)))
             .arg("-in")
             .stdin(Stdio::piped())
@@ -367,10 +367,10 @@ fn regex_membership_differential_fuzz_z3_disagree_zero() {
         }
         Verdict::Skip
     };
-    if z3_decide("(set-logic QF_S)\n(check-sat)\n") == Verdict::Skip
-        && Command::new(Z3_BIN).arg("--version").output().is_err()
-    {
-        eprintln!("[regex-fuzz-z3] {Z3_BIN} unavailable; skipping (no adjudicator)");
+    if !common_z3::z3_available(
+        "regex-fuzz-z3",
+        z3_decide("(set-logic QF_S)\n(check-sat)\n") != Verdict::Skip,
+    ) {
         return;
     }
     let (joint, sat, unsat) = run_against("z3", z3_decide);

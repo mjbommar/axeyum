@@ -75,6 +75,44 @@ Consequence for the gate: `scripts/check.sh` runs the Python steps only when
 `py-check: SKIPPED (no uv)` — skipped, never passed. `just py-check` has no such
 guard: it is the deliberate Python gate and fails loudly if `uv` is missing.
 
+### The `z3` binary — measured 2026-09-10, and it is not everywhere
+
+| host | `/usr/bin/z3` | `command -v z3` |
+|---|---|---|
+| `s4` (the shared checkout) | **4.13.3** | `/usr/bin/z3` |
+| `s5` | **4.13.3** | `/usr/bin/z3` |
+| `s7` | **4.13.3** | `/usr/bin/z3` |
+| `s2` | **ABSENT** | none |
+| `s6` | **ABSENT** | none |
+
+Measured by executing the binary over ssh, on both paths, on 2026-09-10. **Two
+of five hosts have no Z3 at all.**
+
+This column had never been recorded, and that is the finding. `provision-fleet-host.sh`
+has probed z3 since it was written — it prints `z3: MISSING` and sets `fail=1` —
+but it *cannot install it* (`apt-get install z3 libz3-dev` needs root, which the
+script deliberately does not assume), so on s2 and s6 the probe has been failing
+into a log nobody reads back. This file recorded z3 only as a *requirement* of
+two gates, never as a per-host *capability*, so no one could answer "which hosts
+have been running the differential fuzzes green and empty?" The answer is s2 and
+s6, for an unknown length of time — there is no record from which to date it.
+
+Why "green and empty" and not "failed to build": the cargo `z3` feature links
+`libz3` fetched by `z3-sys` at build time, which is independent of whether the
+`z3` *executable* is installed. So on s2 and s6 the thirteen differential suites
+**compiled and ran** — and, until 2026-09-10, each one hit its `/usr/bin/z3`
+probe, printed a note to stderr, and returned a PASS. These are the only checks
+in the repository that compare our verdicts against an independent solver.
+
+`AXEYUM_REQUIRE_Z3=1` now makes that a failure, and
+`scripts/check-z3-differential-gate.sh` sets it — see the gate table below.
+
+**Not determined, and left as questions rather than guesses:** when s2 and s6
+last had Z3 (or ever did); whether `libz3-dev` is present on either (only the
+executable was probed); and what the hosted CI runner carries — `local-ci.sh`
+refuses to start without z3, so a hosted run either had it or did not start, but
+nobody has read that back either.
+
 **All five** hosts report the identical `clippy 0.1.99 (be8e82435e 2026-07-11)`
 and `rustfmt 1.9.0-nightly (be8e82435e 2026-07-11)`, so a lint result is now
 reproducible across the fleet. All five have `core.hooksPath=hooks`,
@@ -103,6 +141,7 @@ reports a result from one.
 | `bubblewrap` | Autogenesis proposers receive a catalog without gaining checkout, proof-body, or network access | `bwrap --version`; provisioning also executes a minimal sandbox |
 | `uv` | `just py-check` — the Python binding gate (build, pytest, stub drift, ruff); `scripts/check.sh` SKIPS its Python steps without it | `uv --version`; then `uv sync --dev` for the `.venv` the steps need |
 | Lean at the **repo pin** (`lean-toolchain`) | the axiom ledger, `check-lean-gate.sh`, and export verification all shell out to a real `lean` | run the binary — see the two layouts below |
+| the `z3` **executable** (not just `libz3`) | the thirteen differential fuzz suites *exec* `/usr/bin/z3`; they are the only checks here that compare our verdicts against an independent solver, and without it they used to pass having adjudicated nothing | `AXEYUM_REQUIRE_Z3=1 scripts/check-z3-differential-gate.sh` — or `/usr/bin/z3 --version`; `apt-get install z3 libz3-dev` needs root, so provisioning reports it and cannot fix it |
 | `core.hooksPath=hooks` in the checkout | `hooks/commit-msg` stamps the `Agent:` trailer; `hooks/pre-push` is the pre-merge gate | `git config --get core.hooksPath` |
 | `/nas3/data` mounted read-write | shared artifacts, logs, staged binaries | `[ -w /nas3/data ]` |
 | `loginctl enable-linger` | transient units must survive ssh disconnect | `loginctl show-user $USER -p Linger` |
@@ -187,7 +226,8 @@ the left column must run on a host that satisfies the right one.
 | lint-visible change | `scripts/check-clippy-complete.sh` | pinned nightly + clippy |
 | the full aggregate | `just check` | **everything**, including `just`, `cargo-deny`, Lean |
 | kernel / library / export | `scripts/check-lean-gate.sh`, the Lean axiom ledger | **Lean at the repo pin** |
-| linear arithmetic | the z3 differential fuzzes (`--features z3`) | `GITHUB_TOKEN` for the `z3/gh-release` fetch |
+| linear arithmetic | the z3 differential fuzzes (`--features z3`) | `GITHUB_TOKEN` for the `z3/gh-release` fetch — that is the LINKED `libz3`, and it is **not** the executable |
+| strings, sequences, FP, NIA, regex — any oracle-adjudicated route | `scripts/check-z3-differential-gate.sh` (13 suites, `AXEYUM_REQUIRE_Z3=1`) | the `z3` **executable** on `/usr/bin/z3` or `AXEYUM_Z3_BIN`. **Absent on s2 and s6** — those hosts must not report these suites as passing |
 | ledgers, claims, facts | `validate-facts.py`, `validate-claims.py`, `check-links.sh` | Python only — runs anywhere |
 | **anything merged to `main`** | `scripts/local-ci.sh` — hosted CI calls this *the authoritative gate for main* | `cargo-nextest`, rust **stable**, rust **1.88.0**, `z3` |
 | Autogenesis proposer isolation | `scripts/check-autogenesis-proposer-isolation.sh` | Python + `bubblewrap` |

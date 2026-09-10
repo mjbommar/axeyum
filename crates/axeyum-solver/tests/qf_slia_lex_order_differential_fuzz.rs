@@ -32,6 +32,8 @@
 //! test passes iff disagreements == 0 over the jointly decided scripts.
 #![cfg(feature = "full")]
 
+mod common_z3;
+
 use std::fmt::Write as _;
 use std::time::Duration;
 
@@ -48,10 +50,6 @@ const INSTANCES: u64 = 800;
 
 /// Per-call oracle wall-clock budget.
 const ORACLE_TIMEOUT: Duration = Duration::from_secs(3);
-
-/// Path to the system Z3 binary (its full string theory adjudicates).
-#[cfg(feature = "z3")]
-const Z3_BIN: &str = "/usr/bin/z3";
 
 /// A deterministic linear-congruential PRNG (the MMIX multiplier/increment).
 struct Lcg(u64);
@@ -349,7 +347,7 @@ fn qf_slia_lex_order_differential_fuzz_z3_disagree_zero() {
     use std::process::{Command, Stdio};
 
     let z3_decide = |text: &str| -> Verdict {
-        let Ok(mut child) = Command::new(Z3_BIN)
+        let Ok(mut child) = Command::new(common_z3::z3_bin())
             .arg(format!("-T:{}", ORACLE_TIMEOUT.as_secs().max(1)))
             .arg("-in")
             .stdin(Stdio::piped())
@@ -375,10 +373,10 @@ fn qf_slia_lex_order_differential_fuzz_z3_disagree_zero() {
         }
         Verdict::Skip
     };
-    if z3_decide("(set-logic QF_SLIA)\n(check-sat)\n") == Verdict::Skip
-        && Command::new(Z3_BIN).arg("--version").output().is_err()
-    {
-        eprintln!("[lex-fuzz-z3] {Z3_BIN} unavailable; skipping (no adjudicator)");
+    if !common_z3::z3_available(
+        "lex-fuzz-z3",
+        z3_decide("(set-logic QF_SLIA)\n(check-sat)\n") != Verdict::Skip,
+    ) {
         return;
     }
     run_against("z3", z3_decide);

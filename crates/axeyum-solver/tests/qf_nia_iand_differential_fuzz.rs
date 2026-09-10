@@ -22,6 +22,8 @@
 #![cfg(feature = "full")]
 #![cfg(feature = "z3")]
 
+mod common_z3;
+
 use std::fmt::Write as _;
 use std::io::Write as _;
 use std::process::{Command, Stdio};
@@ -29,7 +31,6 @@ use std::time::Duration;
 
 use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};
 
-const Z3_BIN: &str = "/usr/bin/z3";
 const INSTANCES: u64 = 3000;
 const ORACLE_TIMEOUT: Duration = Duration::from_secs(3);
 
@@ -157,7 +158,7 @@ fn axeyum_decide(text: &str) -> Verdict {
 }
 
 fn z3_decide(text: &str) -> Verdict {
-    let Ok(mut child) = Command::new(Z3_BIN)
+    let Ok(mut child) = Command::new(common_z3::z3_bin())
         .arg(format!("-T:{}", ORACLE_TIMEOUT.as_secs().max(1)))
         .arg("-in")
         .stdin(Stdio::piped())
@@ -186,10 +187,10 @@ fn z3_decide(text: &str) -> Verdict {
 
 #[test]
 fn qf_nia_iand_differential_fuzz_z3_disagree_zero() {
-    if z3_decide("(set-logic ALL)\n(check-sat)\n") == Verdict::Skip
-        && Command::new(Z3_BIN).arg("--version").output().is_err()
-    {
-        eprintln!("[iand-fuzz-z3] {Z3_BIN} unavailable; skipping (no adjudicator)");
+    if !common_z3::z3_available(
+        "iand-fuzz-z3",
+        z3_decide("(set-logic ALL)\n(check-sat)\n") != Verdict::Skip,
+    ) {
         return;
     }
 
