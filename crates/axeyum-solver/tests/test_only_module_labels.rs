@@ -3,7 +3,8 @@
 //!
 //! `docs/solver-inventory-2026-09/11-wiring-and-integration.md` measured that
 //! eleven `axeyum-solver` modules were reachable only from the crate's own test
-//! suite. Roadmap item 2.7 resolved each one: two were wired, nine were
+//! suite. Roadmap item 2.7 resolved each one: two were wired, one is wire-pending
+//! in a file that lane did not own, and eight were
 //! labelled with a recorded reason. Without a check, both halves rot silently —
 //! a label outlives the condition that justified it, or a wiring is reverted and
 //! nothing notices. Neither failure is visible to a compiler.
