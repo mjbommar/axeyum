@@ -700,6 +700,75 @@ impl Default for Aig {
     }
 }
 
+/// A structurally recognized XOR node.
+///
+/// An AIG has no XOR primitive: [`Aig::xor`] builds `lhs ⊕ rhs` as
+/// `!(lhs & !rhs) & !(!lhs & rhs)`, i.e. one AND node over two inverted helper
+/// AND nodes whose operand pairs are pointwise complementary. That shape is
+/// still *present* in the graph after construction, and this is the recognizer
+/// for it.
+///
+/// The node this is recognized on satisfies `node == lhs ⊕ rhs` **positively**:
+/// with `helper_nodes` the two inverted children, `node = !h0 & !h1` and
+/// `h0 = lhs & !rhs`, `h1 = !lhs & rhs`, so `node` is true exactly when `lhs`
+/// and `rhs` differ.
+///
+/// Recognition is structural and local — two `node()` lookups — so it never
+/// mines a clause database. It is the AIG half of the gate table carried across
+/// the CNF boundary (roadmap item 2.2); the CNF half decides whether a
+/// recognized gate actually reached the formula as a complete clause group.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AigXorGate {
+    /// Left XOR input.
+    pub lhs: AigLit,
+    /// Right XOR input.
+    pub rhs: AigLit,
+    /// The two helper AND nodes the XOR is built from, in child order.
+    pub helper_nodes: [AigNodeId; 2],
+}
+
+/// Recognizes the AIG XOR shape at `node`, if present.
+///
+/// `node` must come from `aig` (use [`Aig::nodes`] or [`Aig::node`]); a node
+/// from a different graph would be read against the wrong children. Returns
+/// `None` for every shape that is not the two-helper XOR pattern, including
+/// inputs, the constant, and ordinary AND gates. A `None` is always safe: it
+/// means "no gate structure recovered here", never "there is no gate".
+///
+/// The returned literals are the XOR's inputs as they appear in the graph, so
+/// `aig.eval(AigLit::positive(id), inputs)` equals
+/// `eval(lhs) ^ eval(rhs)` for the recognized `id`.
+#[must_use]
+pub fn detect_xor_gate(aig: &Aig, node: AigNode) -> Option<AigXorGate> {
+    let AigNode::And(left, right) = node else {
+        return None;
+    };
+    if !left.is_inverted() || !right.is_inverted() {
+        return None;
+    }
+    let left_node = left.node();
+    let right_node = right.node();
+    let AigNode::And(left_a, left_b) = aig.node(left_node)? else {
+        return None;
+    };
+    let AigNode::And(right_a, right_b) = aig.node(right_node)? else {
+        return None;
+    };
+    if unordered_pair_eq([right_a, right_b], [left_a.negated(), left_b.negated()]) {
+        Some(AigXorGate {
+            lhs: left_a,
+            rhs: left_b,
+            helper_nodes: [left_node, right_node],
+        })
+    } else {
+        None
+    }
+}
+
+fn unordered_pair_eq(left: [AigLit; 2], right: [AigLit; 2]) -> bool {
+    (left[0] == right[0] && left[1] == right[1]) || (left[0] == right[1] && left[1] == right[0])
+}
+
 /// AIG evaluation errors.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AigError {
@@ -767,7 +836,7 @@ fn aiger_literal(lit: AigLit) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{Aig, AigError, AigLit, AigNode, fold_hash_to_u32};
+    use super::{Aig, AigError, AigLit, AigNode, detect_xor_gate, fold_hash_to_u32};
 
     #[test]
     fn constants_and_inputs_evaluate() {
@@ -1014,6 +1083,60 @@ mod tests {
                 found: 2
             })
         ));
+    }
+
+    #[test]
+    fn xor_shape_is_recognized_and_agrees_with_evaluation() {
+        let mut aig = Aig::new();
+        let p = aig.input("p");
+        let q = aig.input("q");
+        let root = aig.xor(p, q);
+        // `xor` returns the INVERTED literal of the recognized node.
+        let node_id = root.node();
+        let gate = detect_xor_gate(&aig, aig.node(node_id).unwrap())
+            .expect("the shape `xor` just built must be recognized");
+
+        // The recognized node is the XOR positively, over the recovered inputs.
+        for (a, b) in [(false, false), (false, true), (true, false), (true, true)] {
+            let inputs = [a, b];
+            let node_value = aig.eval(AigLit::positive(node_id), &inputs).unwrap();
+            let lhs = aig.eval(gate.lhs, &inputs).unwrap();
+            let rhs = aig.eval(gate.rhs, &inputs).unwrap();
+            assert_eq!(node_value, lhs ^ rhs, "inputs {inputs:?}");
+        }
+        assert_eq!(gate.helper_nodes.len(), 2);
+        assert_ne!(gate.helper_nodes[0], gate.helper_nodes[1]);
+    }
+
+    #[test]
+    fn plain_and_or_input_and_constant_are_not_xor_gates() {
+        let mut aig = Aig::new();
+        let p = aig.input("p");
+        let q = aig.input("q");
+        let r = aig.input("r");
+        let plain = aig.and(p, q);
+        let disjunction = aig.or(p, q);
+        // A plain AND has non-inverted children.
+        assert!(detect_xor_gate(&aig, aig.node(plain.node()).unwrap()).is_none());
+        // An OR is `!(!p & !q)`: the node has inverted children, but they are
+        // INPUTS, not helper ANDs.
+        assert!(detect_xor_gate(&aig, aig.node(disjunction.node()).unwrap()).is_none());
+        assert!(detect_xor_gate(&aig, aig.node(p.node()).unwrap()).is_none());
+        assert!(detect_xor_gate(&aig, AigNode::ConstFalse).is_none());
+
+        // A mux is the near-miss shape: `!(c & !t) & !(!c & !e)` — inverted
+        // children that ARE helper ANDs, but the operand pairs are not
+        // pointwise complementary unless `e == !t`, which is exactly XOR.
+        let mux = aig.mux(p, q, r);
+        assert!(
+            detect_xor_gate(&aig, aig.node(mux.node()).unwrap()).is_none(),
+            "a genuine 3-input mux must not be recognized as a 2-input XOR"
+        );
+        let mux_is_xor = aig.mux(p, q.negated(), q);
+        assert!(
+            detect_xor_gate(&aig, aig.node(mux_is_xor.node()).unwrap()).is_some(),
+            "`p ? !q : q` IS `p ^ q` and the shared unique table gives the XOR node"
+        );
     }
 
     #[test]
