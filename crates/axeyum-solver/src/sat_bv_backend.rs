@@ -324,7 +324,31 @@ impl SatBvBackend {
         let mut sat_result =
             primary_sat_search(config, solve_formula, deadline, &mut stats, reduction);
         stats.solve = solve_start.elapsed();
-        if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+        // A DEFINITE verdict is kept regardless of the wall clock: the deadline is
+        // a resource budget, not a correctness gate (ADR-1906). Only an UNDECIDED
+        // result degrades to the timeout reason, so every `SatResult::Unknown`
+        // sub-case keeps the exact `kind` and `detail` it had before.
+        //
+        // This gate used to be unconditional, and it discarded answers we had
+        // already computed *and* already paid for: nine instances -- two of them
+        // real SMT-LIB files through the shipping front door -- returned `unknown`
+        // at a 10 s budget after spending 29-43 s, and `sat` at 300 s after
+        // spending the same time. Re-reading the clock after the search cannot
+        // refund the overrun; it only converts an answer into a non-answer. The
+        // per-route safety argument (`sat` replay, the inline `unsat` DRAT check,
+        // the incremental facade, the portfolio, and determinism) is in
+        // `docs/research/03-measurements/late-result-keep-safety-2026-09-10.md`;
+        // the measurement it answers is `why-43-satisfiable-qfbv-miss-2026-09-10.md`.
+        //
+        // Keeping the verdict does mean the model lift and the replay below run
+        // past the deadline. That is bounded, size-proportional work (~164 ms
+        // measured on `pspace/ndist.b.20000`) and it is not skippable in any case:
+        // `handle_sat_result` cannot construct a `Sat` without replaying the model
+        // against the ORIGINAL terms, which is what makes a late `sat` exactly as
+        // checked as a timely one.
+        if matches!(sat_result, SatResult::Unknown(_))
+            && deadline.is_some_and(|deadline| Instant::now() >= deadline)
+        {
             self.stats = Some(stats);
             return Ok(CheckResult::Unknown(UnknownReason {
                 kind: UnknownKind::Timeout,
