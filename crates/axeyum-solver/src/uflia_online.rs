@@ -42,7 +42,8 @@
 //!
 //! - Full (Boolean-structured) `QF_UFLIA` (`check_qf_uflia_boolean`): the Boolean
 //!   structure is Tseitin-encoded over the distinct `EUF` / `LIA` atoms and driven by
-//!   the canonical [`crate::cdclt::CdclT`] loop over a live
+//!   the native proof-producing CDCL(T) core
+//!   ([`crate::native_cdclt::solve_native_counted`], ADR-1908) over a live
 //!   [`crate::combined_theory_lia::CombinedIncrementalLia`]. Original theory atoms and
 //!   registered interface `eq`/`lt`/`gt` variables share one trail, propagation
 //!   fixpoint, and 1-UIP implication graph. A consistent leaf is rebuilt through the
@@ -201,7 +202,8 @@ pub(crate) struct Literal {
 /// `EUF`-entailed equalities and **model-based** case-splitting the remaining pairs
 /// (`LIA` is not convex, so the split — not a single forced equality — is what keeps the
 /// combination complete; `decide_conjunction`). A non-conjunctive (Boolean-structured)
-/// query is driven first by the retained `crate::cdclt::CdclT` layer over
+/// query is driven first by the retained CDCL(T) layer -- the native
+/// proof-producing core since ADR-1908 -- over
 /// `crate::combined_theory_lia::CombinedIncrementalLia`. It Tseitin-encodes the
 /// Boolean structure, keeps EUF/LIA/interface atoms on one trail, and uses joint
 /// propagation plus 1-UIP learning. The older enumerative Boolean search remains a
@@ -301,8 +303,13 @@ pub fn check_qf_uflia_boolean_with_metrics(
 
 /// Diagnostic entry returning the Boolean-`CDCL(T)` verdict together with the
 /// number of literals assigned by combined-theory propagation through the same
-/// canonical [`crate::cdclt::CdclT`] route used in production. Not part of the
-/// supported production surface.
+/// CDCL(T) route used in production. Not part of the supported production
+/// surface.
+///
+/// The count survived the ADR-1908 engine swap unchanged: the native core
+/// counts theory propagations whether or not `--trace` collection is on,
+/// precisely so this entry keeps returning a live number on a default run
+/// rather than a measured zero.
 #[doc(hidden)]
 #[must_use]
 pub fn check_qf_uflia_boolean_prop_metrics(
@@ -1626,7 +1633,7 @@ impl BoolLit {
 }
 
 /// Decides a Boolean-structured `QF_UFLIA` query by the **real `CDCL(T)`** layer
-/// (slice 3c-lia): the canonical [`crate::cdclt::CdclT`] drives a
+/// (slice 3c-lia; the native core since ADR-1908): the driver drives a
 /// [`crate::combined_theory_lia::CombinedIncrementalLia`] (the live `EUF` + `LIA`
 /// combination with registered interface-equality variables) over the **extended**
 /// Tseitin skeleton (theory atoms ++ interface `eq`/`lt`/`gt` vars ++ Tseitin auxiliaries)
@@ -1740,8 +1747,8 @@ fn check_qf_uflia_boolean_cdclt(
 
 /// The real-`CDCL(T)` body (slice 3c-lia): build the extended skeleton (theory atoms ++
 /// interface vars ++ Tseitin auxiliaries) and the interface structural clauses, run the
-/// generic [`crate::cdclt::CdclT`] over
-/// [`crate::combined_theory_lia::CombinedIncrementalLia`], and translate the outcome to the
+/// native proof-producing core ([`crate::native_cdclt::solve_native_counted`],
+/// ADR-1908) over [`crate::combined_theory_lia::CombinedIncrementalLia`], and translate the outcome to the
 /// verdict contract (rebuilding + replaying the leaf **integer** model through
 /// [`decide_conjunction`]).
 fn cdclt_combined(
@@ -1813,28 +1820,52 @@ fn cdclt_combined(
         return timeout_unknown("timeout in the online combination boolean layer");
     }
 
-    // The canonical generic driver owns the live combination: vars
-    // `0..combined_count` are forwarded to `CombinedIncrementalLia` (theory atoms
-    // + interface vars); the rest are Tseitin auxiliaries.
-    let mut solver = crate::cdclt::CdclT::new(enc.var_count, combined_count, lit_clauses, deadline);
-    let outcome = solver.solve(&mut combined);
+    // The NATIVE proof-producing core, not `CdclT` (ADR-1908, C3). Same watch
+    // scheme, same order heap, same clause minimizer -- S1 and S1b ported all
+    // three into `CdclT` verbatim, so this is a swap and not a reconciliation --
+    // and, unlike `CdclT`, it emits a DRAT stream and enumerates every clause
+    // the theory contributed, so a refutation from this arm can reach the
+    // evidence layer as the ADR-1704 two-stream artifact instead of a bare
+    // `unsat` whose theory reasoning is trusted and uncounted.
+    //
+    // The driver owns the live combination exactly as before: vars
+    // `0..combined_count` are forwarded to `CombinedIncrementalLia` (theory
+    // atoms + interface vars); the rest are Tseitin auxiliaries.
+    // `solve_native`'s `theory_atom_count` has the same meaning as
+    // `CdclT::new`'s second argument, so the split is unchanged.
+    //
+    // This route and `uflra_online` moved TOGETHER and must stay together:
+    // `auto.rs` splits ONE dispatch arm between them on whether a real-sorted
+    // term occurs, so leaving one behind puts QF_UFLIA and QF_UFLRA on different
+    // engines with different give-up reasons -- the shape `ea85c9813` recorded.
+    let (outcome, native_propagations) = crate::native_cdclt::solve_native_counted(
+        enc.var_count,
+        combined_count,
+        &lit_clauses,
+        deadline,
+        &mut combined,
+    );
     if let Some(count) = theory_propagations {
-        *count = solver.theory_propagations();
+        *count = native_propagations;
     }
-    match outcome {
-        crate::cdclt::Outcome::Unsat => return CheckResult::Unsat,
-        crate::cdclt::Outcome::Sat => {}
-        crate::cdclt::Outcome::Unknown => {
+    let leaf = match outcome {
+        crate::native_cdclt::NativeSolveOutcome::Unsat => return CheckResult::Unsat,
+        crate::native_cdclt::NativeSolveOutcome::Sat(leaf) => leaf,
+        crate::native_cdclt::NativeSolveOutcome::Unknown => {
             return timeout_unknown("timeout in the online combination boolean layer");
         }
-    }
+    };
     // A Boolean- and theory-consistent total assignment. Read the original theory atoms'
     // truth values off the leaf and rebuild + replay the combined integer model through the
     // trusted conjunctive core. NEVER a wrong Unsat: an unbuildable / non-replaying leaf
     // degrades to Unknown.
+    //
+    // `NativeModel::value` reproduces `CdclT::value`'s contract, `None` for an
+    // unoccurring variable included, so the two loops below (here and the
+    // skeleton-symbol injection) see the same shape they did on the old engine.
     let mut literals: Vec<Literal> = Vec::with_capacity(atom_count);
     for (var, &atom) in atom_terms.iter().enumerate() {
-        if let Some(value) = solver.value(var) {
+        if let Some(value) = leaf.value(var) {
             literals.push(Literal { atom, value });
         }
     }
@@ -1847,15 +1878,16 @@ fn cdclt_combined(
             // Inject each such skeleton-only Bool symbol from the SAT layer's committed
             // value, then replay the completed witness against the ORIGINAL assertions as
             // the acceptance gate — additive and replay-gated, so no wrong `sat`.
-            inject_skeleton_bool_symbols(arena, &enc.term_var, |v| solver.value(v), &mut model);
+            inject_skeleton_bool_symbols(arena, &enc.term_var, |v| leaf.value(v), &mut model);
             if replays_assertions(arena, assertions, &model) {
                 CheckResult::Sat(model)
             } else {
                 decline("combined CDCL(T) leaf did not rebuild a replaying model")
             }
         }
-        // CdclT found the combined theory consistent at this leaf, but the conjunctive
-        // core could not certify a replaying model. Degrade — never call it Unsat.
+        // The driver found the combined theory consistent at this leaf, but the
+        // conjunctive core could not certify a replaying model. Degrade — never call it
+        // Unsat.
         //
         // FORWARD THE INNER REASON. This arm used to print the same string as the
         // replay failure above it, which made it absorb every cause
