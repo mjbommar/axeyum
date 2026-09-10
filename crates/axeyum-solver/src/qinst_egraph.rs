@@ -4419,6 +4419,26 @@ impl IncrementalEmatchSession {
                     }
                 }
             }
+            if qprobe_enabled() && pattern_indices.is_empty() && !vars.is_empty() {
+                let diagnosis = diagnose_triggerless(arena, body, &var_index);
+                let parents: Vec<String> = diagnosis
+                    .parents
+                    .iter()
+                    .map(|(op, count)| format!("{op}:{count}"))
+                    .collect();
+                eprintln!(
+                    "QPROBE triggerless universal[{}] vars={} candidates={} absent={} \
+                     under_binder={} interpreted={} active={active} context={} parents=[{}]",
+                    quantifiers.len(),
+                    vars.len(),
+                    diagnosis.candidates,
+                    diagnosis.absent,
+                    diagnosis.under_binder_only,
+                    diagnosis.interpreted_only,
+                    context.is_some(),
+                    parents.join(","),
+                );
+            }
             quantifiers.push(CompiledUniversal {
                 assertion,
                 vars,
@@ -7244,6 +7264,104 @@ fn select_triggers(arena: &TermArena, body: TermId, vars: &HashMap<SymbolId, u32
         }
     }
     chosen
+}
+
+/// Probe-only classification of a universal that [`select_triggers`] could not
+/// give a trigger to. Counting triggerless universals says how many there are;
+/// this says WHY, which is the only thing that decides whether a fallback
+/// exists. Each bound variable that no candidate application covers is placed
+/// in exactly one bucket, so the buckets partition the uncovered set.
+#[derive(Default, Debug)]
+struct TriggerlessDiagnosis {
+    /// Function-application subterms outside any nested binder that mention at
+    /// least one bound variable — the raw material [`select_triggers`] works
+    /// from.
+    candidates: usize,
+    /// Bound variables occurring nowhere in the body. The universal does not
+    /// depend on them, so any ground term of the sort instantiates them.
+    absent: usize,
+    /// Bound variables occurring only inside a nested binder's subterm, which
+    /// [`collect_app_candidates`] deliberately refuses to mine.
+    under_binder_only: usize,
+    /// Bound variables occurring outside every function application: only under
+    /// interpreted operators (`=`, boolean connectives, `ite`, arithmetic).
+    interpreted_only: usize,
+    /// The interpreted operators those variables sit directly under, as a
+    /// deterministic sorted `op:count` list.
+    parents: Vec<(String, usize)>,
+}
+
+/// Diagnoses one triggerless universal. Probe-only: never called unless
+/// `AXEYUM_QPROBE` is set, and its result is printed, never acted on.
+fn diagnose_triggerless(
+    arena: &TermArena,
+    body: TermId,
+    vars: &HashMap<SymbolId, u32>,
+) -> TriggerlessDiagnosis {
+    let mut candidates: Vec<(TermId, HashSet<u32>)> = Vec::new();
+    collect_app_candidates(arena, body, vars, &mut candidates);
+    let mut diagnosis = TriggerlessDiagnosis {
+        candidates: candidates.len(),
+        ..TriggerlessDiagnosis::default()
+    };
+    let covered: HashSet<u32> = candidates
+        .iter()
+        .flat_map(|(_, cover)| cover.iter().copied())
+        .collect();
+
+    // One walk recording, per bound symbol, whether it occurs at all, whether
+    // every occurrence is under a nested binder, and the operators it sits
+    // directly under outside one.
+    let mut occurs: HashSet<SymbolId> = HashSet::new();
+    let mut occurs_outside_binder: HashSet<SymbolId> = HashSet::new();
+    let mut parents: HashMap<SymbolId, Vec<String>> = HashMap::new();
+    let mut stack: Vec<(TermId, bool)> = vec![(body, false)];
+    let mut seen: HashSet<(TermId, bool)> = HashSet::new();
+    while let Some((term, under_binder)) = stack.pop() {
+        if !seen.insert((term, under_binder)) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            let nested = under_binder || matches!(op, Op::Forall(_) | Op::Exists(_));
+            let label = format!("{op:?}");
+            let args = args.clone();
+            for arg in args {
+                if let TermNode::Symbol(symbol) = arena.node(arg)
+                    && vars.contains_key(symbol)
+                {
+                    occurs.insert(*symbol);
+                    if !nested {
+                        occurs_outside_binder.insert(*symbol);
+                        parents.entry(*symbol).or_default().push(label.clone());
+                    }
+                }
+                stack.push((arg, nested));
+            }
+        }
+    }
+
+    let mut parent_counts: HashMap<String, usize> = HashMap::new();
+    for (symbol, index) in vars {
+        if covered.contains(index) {
+            continue;
+        }
+        if occurs.contains(symbol) {
+            if occurs_outside_binder.contains(symbol) {
+                diagnosis.interpreted_only += 1;
+                for label in parents.get(symbol).into_iter().flatten() {
+                    *parent_counts.entry(label.clone()).or_default() += 1;
+                }
+            } else {
+                diagnosis.under_binder_only += 1;
+            }
+        } else {
+            diagnosis.absent += 1;
+        }
+    }
+    let mut parents: Vec<(String, usize)> = parent_counts.into_iter().collect();
+    parents.sort();
+    diagnosis.parents = parents;
+    diagnosis
 }
 
 /// Collects every function-application subterm of `body`, with the set of bound
