@@ -204,7 +204,13 @@ skip-or-fail pattern already exists for two other external tools
 (`AXEYUM_REQUIRE_ABC`, `tests/abc_crosscheck.rs:231`; `AXEYUM_REQUIRE_CARCARA`,
 `tests/carcara_crosscheck.rs:142`). On a host where `z3` is not at that exact
 path, all 13 string / seq / regex / FP / NIA differentials are green and check
-nothing. **Consequence to act on:** add `AXEYUM_REQUIRE_Z3=1` on the same shape
+nothing. How often that happens is **unmeasured**:
+`docs/contributor-guide/fleet-hosts.md` records `z3` only as a *requirement* of
+the linear-arithmetic and `local-ci.sh` gates (`:190`, `:192`), never as a
+per-host capability the way it does for `lean`, `just` and `cargo-deny` — so the
+exposure is not known, which is itself the finding. On this host `z3` is at
+`/usr/bin/z3` (4.13.3) and the suites do run.
+**Consequence to act on:** add `AXEYUM_REQUIRE_Z3=1` on the same shape
 and set it wherever the z3-gated suites are treated as a gate. This is a
 Phase 0-class defect that Phase 0 did not enumerate; it belongs beside items 0.2
 and 0.3. It is recorded here rather than fixed here because this ADR writes no
