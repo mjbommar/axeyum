@@ -303,9 +303,18 @@ pub(crate) fn replay_preprocessed_model(
     // QF_UFLIA/QF_UFLRA `sat` reconstructs an `Op::Apply` interpretation, and
     // dropping it would leave the returned model unable to replay a UF query
     // (the original assertions reference `f` — `eval` would raise
-    // `UnboundFunction`). This loop is the merge ADR-1811 is about: it existed
-    // only in `auto::dispatch_reduced` until 2026-09-09, so a model handed back
-    // through THIS module silently lost every function interpretation.
+    // `UnboundFunction`).
+    //
+    // Two lanes arrived here independently on 2026-09-09 and the merged comment
+    // keeps both readings. ADR-1811: this loop existed only in
+    // `auto::dispatch_reduced`, so a model handed back through THIS module
+    // silently lost every function interpretation. SOUND-1b: that divergence
+    // was a LIVE wrong `sat` on the public `check_with_preprocessing` — a
+    // backend model carrying `f(5) = 7` replayed fine against `reconstructed`,
+    // and the emitted model came back with `functions: []`, so the CALLER's
+    // `eval` raised `Err(UnboundFunction(FuncId(0)))` on `(= (f x) 7)`.
+    // Same defect class as SOUND-1: the certificate did not carry a
+    // distinction its producer made.
     for (func, _name, _params, _result) in arena.functions() {
         if let Some(interp) = reconstructed.function(func) {
             out.set_function(func, interp.clone());
@@ -317,6 +326,23 @@ pub(crate) fn replay_preprocessed_model(
     // longer replays — a wrong `sat` through the preprocessed path.
     for (numerator, quotient) in reconstructed.real_div_zeros() {
         out.set_real_div_zero(numerator, quotient);
+    }
+
+    // SECOND REPLAY, against the artifact the CALLER actually receives. The loop
+    // above checks `reconstructed`, an `Assignment` strictly richer than the
+    // `Model` rebuilt from it — which is precisely why the missing function loop
+    // stayed invisible here for as long as it did. Re-running the replay through
+    // `Model::to_assignment` closes the class rather than the instance: any
+    // future component the rebuild forgets becomes a loud failure instead of a
+    // silent non-replaying `sat`. Mirrors `euf::project_replay_build`.
+    let emitted = out.to_assignment();
+    for &assertion in assertions {
+        if !matches!(eval(arena, assertion, &emitted), Ok(Value::Bool(true))) {
+            return Err(SolverError::Backend(format!(
+                "preprocessed sat model does not replay as emitted: assertion #{}",
+                assertion.index()
+            )));
+        }
     }
     Ok(CheckResult::Sat(out))
 }
