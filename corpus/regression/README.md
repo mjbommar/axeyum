@@ -18,7 +18,8 @@ flat assertion view is faithful.
   `qf_nia/` (square sat/unsat), `qf_nra/` (√2 sat, `x²=-1` unsat), `qf_dt/` (enum
   constructors).
 - **Reused from cvc5** under `cvc5/<logic>/`: flat, status-annotated, parser-friendly
-  instances for QF_LIA, QF_LRA, QF_ABV, QF_FP, QF_UF, QF_BV, QF_S (strings). See
+  instances for QF_LIA, QF_LRA, QF_ABV, QF_FP, QF_UF, QF_BV, QF_S (strings), QF_SLIA and Seq theory (see `cvc5/qf_slia/README.md` and
+  `cvc5/seq/README.md` for this slice's provenance and per-file status detail). See
   provenance below.
 
 > Note on coverage: pure **QF_UF with `declare-sort` (uninterpreted sorts)** is
