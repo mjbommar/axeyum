@@ -42,7 +42,7 @@
 //! # The gate table (roadmap item 2.2)
 //!
 //! Mining the clauses is what a solver has to do when it *receives* CNF.
-//! CaDiCaL's `congruence.cpp` is 7,925 lines of exactly that, recovering
+//! `CaDiCaL`'s `congruence.cpp` is 7,925 lines of exactly that, recovering
 //! AND/XOR/ITE structure someone else's Tseitin encoding destroyed. We are on
 //! the other side of that boundary: we build the CNF, and the gate structure is
 //! sitting in the AIG one layer up.
@@ -86,7 +86,7 @@
 //!   contract [`crate::ReductionLink`] already imposes on the other passes.
 
 use crate::{CnfClause, CnfEncoding, CnfFormula, EncodedLit, Gf2System};
-use axeyum_aig::{Aig, AigLit, AigXorGate, detect_xor_gate};
+use axeyum_aig::{Aig, AigLit, AigNodeId, AigXorGate, detect_xor_gate};
 use std::collections::{BTreeMap, HashSet};
 use std::hash::{BuildHasherDefault, Hasher};
 
@@ -284,8 +284,8 @@ pub struct XorGateHint {
 
 /// Gate structure carried across the AIG-to-CNF boundary.
 ///
-/// CaDiCaL spends thousands of lines *recovering* AND/XOR/ITE structure from
-/// clauses because it receives CNF and never saw the circuit. We build the CNF,
+/// `CaDiCaL` spends thousands of lines *recovering* AND/XOR/ITE structure
+/// from clauses because it never saw the circuit. We build the CNF,
 /// so the structure is one layer up and nearly free: an AIG XOR node is two
 /// `node()` lookups ([`detect_xor_gate`]) and the encoding's own variable
 /// bindings say which of those nodes actually reached the formula as a complete
@@ -357,160 +357,19 @@ impl XorGateTable {
     /// as a plausible-looking lie.
     #[must_use]
     pub fn from_encoding(aig: &Aig, encoding: &CnfEncoding) -> Self {
-        let mut node_var: Vec<Option<u32>> = vec![None; aig.node_count()];
-        for binding in encoding.variable_bindings() {
-            let index = binding.aig_literal.node().index();
-            if let Some(slot) = node_var.get_mut(index) {
-                *slot = u32::try_from(binding.variable.index()).ok();
-            }
-        }
-
-        // Which nodes the encoder asserted straight into clauses instead of
-        // giving them a variable, and at which polarity. Read off the
-        // encoding's own root list rather than re-derived: `assert_root`
-        // reports a constant-true CNF literal exactly for the roots it
-        // distributed.
-        let mut direct_root: Vec<Option<bool>> = vec![None; aig.node_count()];
-        for root in encoding.roots() {
-            let index = root.aig_literal.node().index();
-            if index == 0 || root.cnf_lit != EncodedLit::Const(true) {
-                continue;
-            }
-            let polarity = !root.aig_literal.is_inverted();
-            match direct_root.get(index).copied().flatten() {
-                Some(existing) if existing != polarity => direct_root[index] = None,
-                _ => direct_root[index] = Some(polarity),
-            }
-        }
-
-        // Every XOR shape whose two helper AND nodes were subsumed. The
-        // encoder subsumes a helper only when it planned a compound gate over
-        // it, and XOR is the first plan it tries, so a recognized shape with
-        // private helpers is an XOR the encoder planned.
-        let mut recognized: Vec<Option<AigXorGate>> = vec![None; aig.node_count()];
-        for (node_id, node) in aig.nodes() {
-            if let Some(gate) = detect_xor_gate(aig, node)
-                && gate
-                    .helper_nodes
-                    .iter()
-                    .all(|helper| node_var[helper.index()].is_none())
-            {
-                recognized[node_id.index()] = Some(gate);
-            }
-        }
-
-        // A variable-less XOR that feeds another variable-less XOR is flattened
-        // INTO its parent: the encoder's AND-tree planner turns a chain of them
-        // into one parity leaf and emits clauses for the chain as a whole. Only
-        // the top of such a chain owns clauses.
-        let mut fused_into_parent = vec![false; aig.node_count()];
-        for (node_id, _) in aig.nodes() {
-            if node_var[node_id.index()].is_some() {
-                continue;
-            }
-            let Some(gate) = recognized[node_id.index()] else {
-                continue;
-            };
-            for input in [gate.lhs, gate.rhs] {
-                let index = input.node().index();
-                if node_var[index].is_none() && recognized[index].is_some() {
-                    fused_into_parent[index] = true;
-                }
-            }
-        }
+        let node_var = encoded_node_variables(aig, encoding);
+        let direct_root = direct_root_polarities(aig, encoding);
+        let recognized = recognized_xor_gates(aig, &node_var);
+        let fused = fused_chain_links(aig, &node_var, &recognized);
 
         let mut hints = Vec::new();
         for (node_id, _) in aig.nodes() {
-            let index = node_id.index();
-            let Some(gate) = recognized[index] else {
-                continue;
-            };
-            // The recognized node equals `gate.lhs ^ gate.rhs` over AIG
-            // literals, so a variable-level constraint carries the input
-            // inversions on its right-hand side.
-            let inversions = gate.lhs.is_inverted() ^ gate.rhs.is_inverted();
-
-            if let Some(out) = node_var[index] {
-                // The gate has its own variable, so all four clauses are there:
-                // `out ^ v_lhs ^ v_rhs = inversions`.
-                let (Some(lhs), Some(rhs)) = (
-                    input_variable(gate.lhs, &node_var),
-                    input_variable(gate.rhs, &node_var),
-                ) else {
-                    continue;
-                };
-                if let Some(hint) = ascending_hint(&[out, lhs, rhs], inversions) {
-                    hints.push(hint);
-                }
-                continue;
-            }
-
-            if let Some(asserted) = direct_root[index] {
-                // No variable, but the encoder asserted this node as a root and
-                // folded the constant output into the clauses. Half the
-                // equivalence is emitted, which for a constant output is the
-                // whole gate: two clauses over the two inputs, encoding
-                // `v_lhs ^ v_rhs = asserted ^ inversions`. A direct-root XOR is
-                // encoded from its immediate inputs, never flattened, so those
-                // inputs necessarily carry variables.
-                let (Some(lhs), Some(rhs)) = (
-                    input_variable(gate.lhs, &node_var),
-                    input_variable(gate.rhs, &node_var),
-                ) else {
-                    continue;
-                };
-                if let Some(hint) = ascending_hint(&[lhs, rhs], asserted ^ inversions) {
-                    hints.push(hint);
-                }
-                continue;
-            }
-
-            if fused_into_parent[index] {
-                // An inner link of a flattened chain: its clauses belong to the
-                // chain's top, not to it.
-                continue;
-            }
-
-            // The top of a flattened chain. The AND-tree planner accepts a
-            // parity leaf only under a positively asserted root, whose output
-            // is the constant true, so the emitted clauses are the leaf's whole
-            // gate over the flattened literals.
-            let mut leaves = Vec::new();
-            let mut inverted = false;
-            if !flatten_xor_chain(
-                AigLit::positive(node_id),
-                &node_var,
-                &recognized,
-                &mut leaves,
-                &mut inverted,
-            ) {
-                continue;
-            }
-            // The planner caps a parity leaf at three literals; a longer chain
-            // is not planned as one, so there is nothing to record.
-            if !(2..=3).contains(&leaves.len()) {
-                continue;
-            }
-            let mut vars = Vec::with_capacity(leaves.len());
-            let mut leaf_inversions = false;
-            for leaf in &leaves {
-                let Some(var) = input_variable(*leaf, &node_var) else {
-                    vars.clear();
-                    break;
-                };
-                leaf_inversions ^= leaf.is_inverted();
-                vars.push(var);
-            }
-            if vars.len() != leaves.len() {
-                continue;
-            }
-            // The leaf constrains its literals to parity `!inverted`; moving to
-            // variables absorbs each leaf literal's own inversion.
-            if let Some(hint) = ascending_hint(&vars, !inverted ^ leaf_inversions) {
+            if let Some(hint) =
+                xor_hint_for_node(node_id, &node_var, &direct_root, &recognized, &fused)
+            {
                 hints.push(hint);
             }
         }
-
         Self::from_hints(hints)
     }
 
@@ -569,6 +428,161 @@ fn hint_key(hint: &XorGateHint) -> Option<GateKey> {
         return None;
     }
     Some((vars, u8::try_from(k).ok()?))
+}
+
+/// CNF variable held by each AIG node, indexed by `AigNodeId::index`.
+///
+/// `None` means the encoder allocated no variable for that node: it subsumed
+/// the node into a compound gate, distributed it straight into root clauses, or
+/// never reached it.
+fn encoded_node_variables(aig: &Aig, encoding: &CnfEncoding) -> Vec<Option<u32>> {
+    let mut node_var: Vec<Option<u32>> = vec![None; aig.node_count()];
+    for binding in encoding.variable_bindings() {
+        let index = binding.aig_literal.node().index();
+        if let Some(slot) = node_var.get_mut(index) {
+            *slot = u32::try_from(binding.variable.index()).ok();
+        }
+    }
+    node_var
+}
+
+/// Which nodes the encoder asserted straight into clauses, and at which
+/// polarity.
+///
+/// Read off the encoding's own root list rather than re-derived: `assert_root`
+/// reports a constant-true CNF literal for exactly the roots it distributed.
+fn direct_root_polarities(aig: &Aig, encoding: &CnfEncoding) -> Vec<Option<bool>> {
+    let mut direct_root: Vec<Option<bool>> = vec![None; aig.node_count()];
+    for root in encoding.roots() {
+        let index = root.aig_literal.node().index();
+        if index == 0 || root.cnf_lit != EncodedLit::Const(true) {
+            continue;
+        }
+        let polarity = !root.aig_literal.is_inverted();
+        match direct_root.get(index).copied().flatten() {
+            Some(existing) if existing != polarity => direct_root[index] = None,
+            _ => direct_root[index] = Some(polarity),
+        }
+    }
+    direct_root
+}
+
+/// Every XOR shape whose two helper AND nodes the encoder subsumed.
+///
+/// The encoder subsumes a helper only when it planned a compound gate over it,
+/// and XOR is the first plan it tries, so a recognized shape with private
+/// helpers is an XOR the encoder planned.
+fn recognized_xor_gates(aig: &Aig, node_var: &[Option<u32>]) -> Vec<Option<AigXorGate>> {
+    let mut recognized: Vec<Option<AigXorGate>> = vec![None; aig.node_count()];
+    for (node_id, node) in aig.nodes() {
+        if let Some(gate) = detect_xor_gate(aig, node)
+            && gate
+                .helper_nodes
+                .iter()
+                .all(|helper| node_var[helper.index()].is_none())
+        {
+            recognized[node_id.index()] = Some(gate);
+        }
+    }
+    recognized
+}
+
+/// Nodes that are inner links of a flattened XOR chain.
+///
+/// A variable-less XOR feeding another variable-less XOR is flattened INTO its
+/// parent: the AND-tree planner turns the chain into one parity leaf and emits
+/// clauses for the chain as a whole, so only the top of the chain owns clauses.
+fn fused_chain_links(
+    aig: &Aig,
+    node_var: &[Option<u32>],
+    recognized: &[Option<AigXorGate>],
+) -> Vec<bool> {
+    let mut fused = vec![false; aig.node_count()];
+    for (node_id, _) in aig.nodes() {
+        if node_var[node_id.index()].is_some() {
+            continue;
+        }
+        let Some(gate) = recognized[node_id.index()] else {
+            continue;
+        };
+        for input in [gate.lhs, gate.rhs] {
+            let index = input.node().index();
+            if node_var[index].is_none() && recognized[index].is_some() {
+                fused[index] = true;
+            }
+        }
+    }
+    fused
+}
+
+/// The entry `node_id` contributes, if the encoder emitted a complete clause
+/// group for it. The three cases are documented on
+/// [`XorGateTable::from_encoding`].
+fn xor_hint_for_node(
+    node_id: AigNodeId,
+    node_var: &[Option<u32>],
+    direct_root: &[Option<bool>],
+    recognized: &[Option<AigXorGate>],
+    fused: &[bool],
+) -> Option<XorGateHint> {
+    let index = node_id.index();
+    let gate = recognized[index]?;
+    // The recognized node equals `gate.lhs ^ gate.rhs` over AIG literals, so a
+    // variable-level constraint carries the input inversions on its right-hand
+    // side.
+    let inversions = gate.lhs.is_inverted() ^ gate.rhs.is_inverted();
+
+    if let Some(out) = node_var[index] {
+        // Its own variable, so all four clauses are there.
+        let lhs = input_variable(gate.lhs, node_var)?;
+        let rhs = input_variable(gate.rhs, node_var)?;
+        return ascending_hint(&[out, lhs, rhs], inversions);
+    }
+
+    if let Some(asserted) = direct_root[index] {
+        // Asserted as a root with the constant output folded in: two clauses
+        // over the two inputs. A direct-root XOR is encoded from its immediate
+        // inputs, never flattened, so those inputs carry variables.
+        let lhs = input_variable(gate.lhs, node_var)?;
+        let rhs = input_variable(gate.rhs, node_var)?;
+        return ascending_hint(&[lhs, rhs], asserted ^ inversions);
+    }
+
+    if fused[index] {
+        // An inner link of a flattened chain: its clauses belong to the top.
+        return None;
+    }
+
+    // The top of a flattened chain. The AND-tree planner accepts a parity leaf
+    // only under a positively asserted root, whose output is the constant true,
+    // so the emitted clauses are the leaf's whole gate over the flattened
+    // literals.
+    let mut leaves = Vec::new();
+    let mut inverted = false;
+    if !flatten_xor_chain(
+        AigLit::positive(node_id),
+        node_var,
+        recognized,
+        &mut leaves,
+        &mut inverted,
+    ) {
+        return None;
+    }
+    // The planner caps a parity leaf at three literals; a longer chain is not
+    // planned as one, so there is nothing to record.
+    if !(2..=3).contains(&leaves.len()) {
+        return None;
+    }
+    let mut vars = Vec::with_capacity(leaves.len());
+    let mut leaf_inversions = false;
+    for leaf in &leaves {
+        let var = input_variable(*leaf, node_var)?;
+        leaf_inversions ^= leaf.is_inverted();
+        vars.push(var);
+    }
+    // The leaf constrains its literals to parity `!inverted`; moving to
+    // variables absorbs each leaf literal's own inversion.
+    ascending_hint(&vars, !inverted ^ leaf_inversions)
 }
 
 /// Builds a hint over `vars` if they are pairwise distinct, ascending.
