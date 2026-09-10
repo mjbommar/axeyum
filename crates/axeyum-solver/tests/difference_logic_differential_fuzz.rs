@@ -81,7 +81,7 @@ use axeyum_ir::{Rational, Sort, TermArena, TermId, render};
 use axeyum_solver::{
     CheckResult, RouteAttributionGuard, RouteOutcome, SolverConfig, last_route_attribution, solve,
 };
-use z3::ast::{Ast, Bool, Int, Real};
+use z3::ast::{Bool, Int, Real};
 use z3::{Params, SatResult, Solver};
 
 /// Instances per fuzz sweep. Difference-logic queries here are tiny (2–4
@@ -280,7 +280,7 @@ impl Corner {
     /// cannot be generated and then dropped on the floor).
     fn emit(self, rng: &mut Lcg, mode: Mode, num_vars: usize, atoms: &mut Vec<Atom>) -> Node {
         let v = |rng: &mut Lcg| rng.below(num_vars as u64);
-        let mut push = |atoms: &mut Vec<Atom>, a: Atom| {
+        let push = |atoms: &mut Vec<Atom>, a: Atom| {
             atoms.push(a);
             atoms.len() - 1
         };
@@ -394,11 +394,7 @@ impl Corner {
                     atoms,
                     Atom {
                         lhs: Side::Var(x),
-                        rhs: if rng.flip() {
-                            Side::Var(y)
-                        } else {
-                            Side::Zero
-                        },
+                        rhs: if rng.flip() { Side::Var(y) } else { Side::Zero },
                         num: big,
                         den: 1,
                         rel: Rel::pick(rng),
@@ -603,11 +599,9 @@ impl Instance {
     fn generate(seed: u64) -> Instance {
         let mut rng = Lcg::new(seed);
         let corner = CORNERS[usize::try_from(seed).unwrap_or(0) % CORNERS.len()];
-        let mode = corner.forced_mode().unwrap_or(if rng.flip() {
-            Mode::Int
-        } else {
-            Mode::Real
-        });
+        let mode = corner
+            .forced_mode()
+            .unwrap_or(if rng.flip() { Mode::Int } else { Mode::Real });
         let num_vars = rng.below(3) + 2; // 2..=4
 
         let mut atoms = Vec::new();
@@ -798,15 +792,13 @@ impl Instance {
     // -- reproduction ------------------------------------------------------
 
     fn dump(&self) -> String {
-        let mut lines = vec![
-            format!(
-                "seed {} | mode {:?} | corner {} | vars {}",
-                self.seed,
-                self.mode,
-                self.corner.name(),
-                VAR_NAMES[..self.num_vars].join(", ")
-            ),
-        ];
+        let mut lines = vec![format!(
+            "seed {} | mode {:?} | corner {} | vars {}",
+            self.seed,
+            self.mode,
+            self.corner.name(),
+            VAR_NAMES[..self.num_vars].join(", ")
+        )];
         for (i, atom) in self.atoms.iter().enumerate() {
             let s = |side: Side| match side {
                 Side::Var(v) => VAR_NAMES[v].to_string(),
@@ -878,7 +870,9 @@ fn build_node_z3(node: &Node, atoms: &[Bool]) -> Bool {
         Node::Or(l, r) => Bool::or(&[build_node_z3(l, atoms), build_node_z3(r, atoms)]),
         Node::Implies(l, r) => build_node_z3(l, atoms).implies(&build_node_z3(r, atoms)),
         Node::Xor(l, r) => build_node_z3(l, atoms).xor(&build_node_z3(r, atoms)),
-        Node::Ite(c, t, e) => build_node_z3(c, atoms).ite(&build_node_z3(t, atoms), &build_node_z3(e, atoms)),
+        Node::Ite(c, t, e) => {
+            build_node_z3(c, atoms).ite(&build_node_z3(t, atoms), &build_node_z3(e, atoms))
+        }
         Node::BoolEq(l, r) => build_node_z3(l, atoms).eq(&build_node_z3(r, atoms)),
     }
 }
@@ -1075,7 +1069,10 @@ fn corner_coverage_is_total() {
     for corner in CORNERS {
         let n = counts.get(corner.name()).copied().unwrap_or(0);
         let (ints, reals) = modes.get(corner.name()).copied().unwrap_or((0, 0));
-        println!("  {:<20} {n:>4} instances (int {ints}, real {reals})", corner.name());
+        println!(
+            "  {:<20} {n:>4} instances (int {ints}, real {reals})",
+            corner.name()
+        );
         assert!(
             n > 0,
             "corner class {} was never generated — the fuzz is blind on it",
