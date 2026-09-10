@@ -158,7 +158,9 @@ pub use weighted::{
 pub use xor_cdcl::{XorCdclResult, solve_with_xor_cdcl};
 pub use xor_dpll::{XorDpllResult, solve_with_xor};
 pub use xor_drat::{MAX_XOR_WIDTH, XorGaussRefutation, xor_gauss_drat_refutation};
-pub use xor_extract::{ExtractedXors, extract_xors};
+pub use xor_extract::{
+    ExtractedXors, XorGateHint, XorGateTable, extract_xors, extract_xors_hinted,
+};
 pub use xor_matrix::{IncrementalXorMatrix, XorMatrixStep};
 pub use xor_propagate::{XorPropagateStats, XorPropagation, xor_propagate};
 pub use xor_search::{
