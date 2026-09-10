@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate carcara-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness parity-ancestry episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential kernel-conformance lean-divergences declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter lean-tactic declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls lean-creal-library-slice lean-read-round-trip
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate carcara-gate abc-crosscheck prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness parity-ancestry episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential kernel-conformance lean-divergences declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter lean-tactic declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls lean-creal-library-slice lean-read-round-trip
 
 fmt:
     cargo fmt --all --check
@@ -1374,6 +1374,31 @@ lean-gate:
 carcara-gate:
     ./scripts/check-carcara-gate.sh --self-check
     ./scripts/check-carcara-gate.sh
+
+# ABC bit-blasting cross-check (roadmap item 2.4,
+# docs/solver-comparison-2026-09/11-roadmap-and-plan.md): two independently
+# built circuits for the same Boolean function (never sharing gate-building
+# code) are exported from `axeyum-aig`, converted from ASCII to binary AIGER
+# via `aigtoaig`, and handed to ABC's `&cec` combinational equivalence
+# checker. Unlike `carcara-gate` above, this dependency's DEFAULT polarity is
+# skip, not fail: `abc` is a 56 MB, ~1.1M-line C application this gate never
+# builds (see `crates/axeyum-solver/tests/abc_crosscheck.rs`'s module doc),
+# so `AXEYUM_REQUIRE_ABC=1` -- set on a host that is supposed to have it, not
+# here -- is what turns an absent binary into a failure. `aigtoaig` (two
+# small C files) IS built automatically when its source is present.
+#
+# The suite's semantic check (brute-force `Aig::eval`, no external tool) and
+# its negative control (a deliberately mis-lowered adder carry formula) run
+# unconditionally, so an absent `abc` never means nothing ran.
+#
+# `--self-check` runs first: a bash-only classifier test against the literal
+# strings ABC's `&cec` prints (measured from source, since ABC returns exit 0
+# regardless of the verdict -- the same trap `carcara-gate` documents for
+# Carcara's `holey`), so a broken parser fails in under a second, no cargo
+# build and no abc/aigtoaig binary required.
+abc-crosscheck:
+    ./scripts/check-abc-crosscheck.sh --self-check
+    ./scripts/check-abc-crosscheck.sh
 
 # ADR-0717 S5: the kernel differential (Axeyum vs. pinned Lean) across all
 # eight named subsystems -- conversion, universes, inductives, recursors,
