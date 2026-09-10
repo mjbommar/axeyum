@@ -194,7 +194,9 @@ proof-producing native core and makes every UNSAT fail closed unless its DRAT
 proof checks; the artifact records checked/missing counts and proof-check
 p50/p95. Proof-check time is already inside SAT time and is marked as nested, so
 it is never added twice. Keep this high-assurance artifact separate from the
-default batsat performance run because it intentionally changes the SAT engine.
+default performance run because it intentionally changes what is measured
+(proof generation and checking), even though since ADR-1703 both runs use the
+same native CDCL engine.
 Version 20 adds `config.experiment`: the Axeyum source revision and source-tree
 cleanliness, Cargo.lock SHA-256, rustc/cargo versions, build profile, exact
 solver backend names, CPU model, OS/kernel, logical parallelism, and total memory. Its
@@ -206,21 +208,26 @@ dirty (excluding generated `bench-results/**`) or a required identity field is
 unavailable. The Glaurung recipes enable this gate by default.
 Version 21 removes the old `--seed` label, which did not configure either
 backend, and records an executable `config.determinism` profile instead. That
-profile binds the actual Cargo.lock-pinned BatSat defaults (seed `91648253`,
-random branching frequency `0`, random polarity disabled, and random initial
-activity disabled), explicitly sets and records Z3 `random_seed=0`, and states
-the deterministic corpus-order rule. These values enter `config_hash`; the
-repetition validator rejects missing or drifting values. The BatSat seed is
-still recorded even though all reviewed randomization switches are off. This
-fixes configuration identity, not wall-clock noise, so repeated trials remain
+profile records the SAT engine's identity and its randomness, explicitly sets
+and records Z3 `random_seed=0`, and states the deterministic corpus-order rule.
+These values enter `config_hash`; the repetition validator rejects missing or
+drifting values. Under ADR-1703 the engine is `axeyum-native-cdcl-v1`, which has
+**no** randomness to seed — branching is VSIDS with a lowest-index tie-break,
+polarity comes from phase saving plus target rephasing, and initial activities
+are zero — so the block records `randomness: none` where it used to record the
+retired adapter's seed `91648253`. Artifacts written before that commit still
+carry the old seed and are still accurate for their engine. This fixes
+configuration identity, not wall-clock noise, so repeated trials remain
 required.
 Version 22 makes the cold QF_BV resource boundary executable.
 `--require-deterministic-resources` rejects a run unless positive
 `--resource-limit`, `--node-budget`, `--cnf-var-budget`, and
 `--cnf-clause-budget` values are all supplied. `resource_limit` now reaches the
-actual search engine: it counts deterministic `BatSat` `within_budget` progress
-checks on the default path, native proof-CDCL conflicts under `--prove-unsat`,
-and Z3 `rlimit` units in the oracle. Artifact `config.resources` records those
+actual search engine: since ADR-1703 it counts native proof-CDCL **conflicts**
+on every Axeyum path — the unit no longer depends on a flag — and Z3 `rlimit`
+units in the oracle. Artifacts recorded before that commit carry the retired
+adapter's `within_budget` progress-check unit and are still accurate for their
+engine; `scripts/summarize-glaurung-repetitions.py` accepts both. Artifact `config.resources` records those
 units, all four limits, and the fact that equal numeric limits are not
 cross-backend work-equivalent. The Glaurung recipes require the named
 `axeyum-qfbv-cold-bounded-v1` profile: 300,000 term-DAG nodes, 3,000,000 CNF

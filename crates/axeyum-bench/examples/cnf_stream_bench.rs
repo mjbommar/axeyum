@@ -1,4 +1,11 @@
-//! Replay captured append-only CNF streams through persistent `BatSat` and Z3.
+//! Replay captured append-only CNF streams through the persistent native CDCL
+//! core and Z3.
+//!
+//! `IncrementalSat` was re-based on the in-tree native CDCL core by ADR-1703;
+//! the numbers this example reports are the native core's, not `BatSat`'s. The
+//! report schema is `v2` for that reason: a `v1` report's `batsat` row really
+//! was produced by the `BatSat` adapter, a `v2` report's `native_core` row is the
+//! native core.
 //!
 //! Usage: `cnf_stream_bench PROFILE.jsonl SNAPSHOT_DIR OUT.json [REPETITIONS]
 //! [TIMEOUT_MS]`.
@@ -39,7 +46,7 @@ struct Snapshot {
     assumptions: Vec<CnfLit>,
 }
 
-struct BatState {
+struct NativeCoreState {
     solver: IncrementalSat,
     persistent: Vec<CnfClause>,
 }
@@ -267,30 +274,32 @@ fn main() -> Result<(), String> {
     let snapshots = load_snapshots(&snapshot_dir, &profile.checks)?;
     let mut rows = Vec::with_capacity(repetitions * snapshots.len());
     for repetition in 0..repetitions {
-        let mut batsat: BTreeMap<u64, BatState> = BTreeMap::new();
+        let mut native: BTreeMap<u64, NativeCoreState> = BTreeMap::new();
         let mut z3: BTreeMap<u64, Z3State> = BTreeMap::new();
         for snapshot in &snapshots {
-            let bat = batsat.entry(snapshot.path_id).or_insert_with(|| BatState {
-                solver: IncrementalSat::new(),
-                persistent: Vec::new(),
-            });
-            verify_prefix(&bat.persistent, &snapshot.persistent, snapshot.path_id)?;
-            let bat_add_started = Instant::now();
-            for clause in &snapshot.persistent[bat.persistent.len()..] {
-                bat.solver
+            let core = native
+                .entry(snapshot.path_id)
+                .or_insert_with(|| NativeCoreState {
+                    solver: IncrementalSat::new(),
+                    persistent: Vec::new(),
+                });
+            verify_prefix(&core.persistent, &snapshot.persistent, snapshot.path_id)?;
+            let core_add_started = Instant::now();
+            for clause in &snapshot.persistent[core.persistent.len()..] {
+                core.solver
                     .add_clause(clause.clone())
                     .map_err(|error| error.to_string())?;
             }
             // Match the producer's gradual clause stream: let each clause
             // introduce its variables in encounter order, then reserve any
             // allocated-but-unused tail variables recorded by the snapshot.
-            bat.solver
+            core.solver
                 .reserve(snapshot.variable_count)
                 .map_err(|error| error.to_string())?;
-            let bat_add_nanos = nanos(bat_add_started);
-            bat.persistent.clone_from(&snapshot.persistent);
-            let bat_solve_started = Instant::now();
-            let bat_outcome = match bat
+            let core_add_nanos = nanos(core_add_started);
+            core.persistent.clone_from(&snapshot.persistent);
+            let core_solve_started = Instant::now();
+            let core_outcome = match core
                 .solver
                 .solve_assuming(&snapshot.assumptions, Some(timeout))
                 .map_err(|error| error.to_string())?
@@ -299,7 +308,7 @@ fn main() -> Result<(), String> {
                 SatResult::Unsat(_) => "unsat",
                 SatResult::Unknown(_) => "unknown",
             };
-            let bat_solve_nanos = nanos(bat_solve_started);
+            let core_solve_nanos = nanos(core_solve_started);
 
             let z3_state = z3
                 .entry(snapshot.path_id)
@@ -334,9 +343,9 @@ fn main() -> Result<(), String> {
                 Z3SatResult::Unknown => "unknown",
             };
             let z3_solve_nanos = nanos(z3_solve_started);
-            if bat_outcome != snapshot.outcome || z3_outcome != snapshot.outcome {
+            if core_outcome != snapshot.outcome || z3_outcome != snapshot.outcome {
                 return Err(format!(
-                    "verdict mismatch at repetition {repetition}, snapshot {}: BatSat={bat_outcome}, Z3={z3_outcome}",
+                    "verdict mismatch at repetition {repetition}, snapshot {}: native_core={core_outcome}, Z3={z3_outcome}",
                     snapshot.sequence
                 ));
             }
@@ -349,13 +358,13 @@ fn main() -> Result<(), String> {
                 "variables": snapshot.variable_count,
                 "persistent_clauses": snapshot.persistent.len(),
                 "active_assumptions": snapshot.assumptions.len(),
-                "batsat": {"outcome": bat_outcome, "add_nanos": bat_add_nanos, "solve_nanos": bat_solve_nanos},
+                "native_core": {"outcome": core_outcome, "add_nanos": core_add_nanos, "solve_nanos": core_solve_nanos},
                 "z3": {"outcome": z3_outcome, "add_nanos": z3_add_nanos, "solve_nanos": z3_solve_nanos},
             }));
         }
     }
     let report = json!({
-        "schema": "axeyum-persistent-cnf-stream-benchmark-v1",
+        "schema": "axeyum-persistent-cnf-stream-benchmark-v2",
         "profile": profile_path,
         "snapshot_directory": snapshot_dir,
         "repetitions": repetitions,

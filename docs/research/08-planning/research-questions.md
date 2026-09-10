@@ -217,8 +217,11 @@ Out of scope:
     `SolverConfig::prove_unsat` selects the in-tree proof-producing CDCL core,
     verifies its DRAT before return, records `SatProofStatus::Checked`, and
     downgrades a failed proof or resource exhaustion to `Unknown`. The default
-    BatSat adapter remains lower-assurance `Unchecked`, and this answer does not
-    claim every theory has an end-to-end proof. See
+    route remains lower-assurance `Unchecked` because proof emission is off by
+    default, not because the engine lacks a proof: since ADR-1703 the engine is
+    the in-tree native CDCL core on every path and every `unsat` it derives has
+    a DRAT proof available by construction. This answer does not claim every
+    theory has an end-to-end proof. See
     [ADR-0012](../09-decisions/adr-0012-proof-producing-sat-core.md) and the
     public [solver configuration](../../reference/solver-config.md).
 - [ ] How are model-lift maps serialized?

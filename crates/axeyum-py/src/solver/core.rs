@@ -644,9 +644,15 @@ pub fn prove(
 /// The Rust solver reuses arena-stable term ids and a persistent lowering, so
 /// it is bound to a single arena for its whole life. Every method takes the
 /// arena and asserts it is that one; a foreign arena raises `EpochError`.
-// `unsendable`: the warm solver embeds a BatSat solver whose callback structs
-// hold `Cell`s, so it is `Send` but `!Sync`. Binding it to its creating thread
-// is exactly right for an object that is also bound to one arena.
+// `unsendable`: this justification originally read that the warm solver embeds a
+// BatSat solver whose callback structs hold `Cell`s, so it is `Send` but `!Sync`.
+// That is no longer true of the embedded engine -- ADR-1703 re-based
+// `IncrementalBvSolver` on the in-tree native CDCL core and there is no BatSat in
+// the default dependency graph. Whether the type is still `!Sync` has NOT been
+// measured (no `Send`/`Sync` assertion has been run), so `unsendable` is retained
+// conservatively rather than relaxed on an unverified claim. Independently of
+// that, binding the object to its creating thread is right for an object that is
+// also bound to one arena.
 #[cfg_attr(
     feature = "stub-gen",
     pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver")

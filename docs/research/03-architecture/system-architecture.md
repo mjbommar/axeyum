@@ -65,13 +65,16 @@ client frontends
 - IDs should be compact and stable within arenas.
 - Query caches should key on normalized structure, not string-rendered formulas.
 - Backends should report capabilities and limits.
-- The first pure-Rust SAT adapter is `rustsat-batsat` through RustSAT; UNSAT
-  through that route is lower-assurance until proof logging and checking land
-  ([ADR-0007](../09-decisions/adr-0007-first-pure-rust-sat-adapter.md)).
+- The first pure-Rust SAT adapter *was* `rustsat-batsat` through RustSAT
+  ([ADR-0007](../09-decisions/adr-0007-first-pure-rust-sat-adapter.md)). The
+  engine on every shipping route is now the in-tree native CDCL core, and the
+  adapter is a differential yardstick behind the optional `batsat-reference`
+  feature
+  ([ADR-1703](../09-decisions/adr-1703-the-native-core-is-the-sat-engine-batsat-is-demoted-to-a-differential-oracle.md)).
 - The first composed pure Rust BV backend is `SatBvBackend` in
   `axeyum-solver`: it lowers supported QF_BV queries through AIG and CNF,
-  solves with BatSat, reconstructs Axeyum models, and replays original terms
-  before accepting `sat`.
+  solves with the native CDCL core, reconstructs Axeyum models, and replays
+  original terms before accepting `sat`.
 
 ## Risks
 
@@ -94,6 +97,9 @@ client frontends
 - [x] Which pure Rust SAT solver is the first adapter?
   - Answer: `rustsat-batsat` through RustSAT; see
     [ADR-0007](../09-decisions/adr-0007-first-pure-rust-sat-adapter.md).
+    Superseded as the *engine* by
+    [ADR-1703](../09-decisions/adr-1703-the-native-core-is-the-sat-engine-batsat-is-demoted-to-a-differential-oracle.md);
+    the answer to the question as asked still stands.
 
 ## Source Pointers
 

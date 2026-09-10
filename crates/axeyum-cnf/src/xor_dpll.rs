@@ -618,7 +618,7 @@ mod tests {
     // --- differential vs the production solver ------------------------------
 
     #[test]
-    fn differential_vs_batsat_random() {
+    fn differential_vs_native_core_random() {
         let mut rng = Lcg::new(0xabcd_0099_5eed_2222);
         let runs = 300;
         let timeout = Some(Duration::from_secs(5));
@@ -626,7 +626,7 @@ mod tests {
             let f = random_formula(&mut rng);
             let ours = solve_with_xor(&f);
             let theirs = solve_with_native_core_timeout(&f, timeout)
-                .expect("batsat solve must not error on a tiny formula");
+                .expect("native core solve must not error on a tiny formula");
 
             // If either side did not decide, there is nothing to cross-check.
             if matches!(ours, XorDpllResult::Unknown) || matches!(theirs, SatResult::Unknown(_)) {
@@ -644,7 +644,7 @@ mod tests {
                 }
                 (XorDpllResult::Unsat, SatResult::Unsat(_)) => {}
                 (ours, theirs) => {
-                    panic!("verdict disagreement: ours={ours:?}, batsat={theirs:?}");
+                    panic!("verdict disagreement: ours={ours:?}, native_core={theirs:?}");
                 }
             }
         }
