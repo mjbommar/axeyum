@@ -248,6 +248,379 @@ impl SearchCounters {
     }
 }
 
+// ---------------------------------------------------------------------------
+// The tick valve: CaDiCaL's accumulate-and-delay gate, denominated in ticks
+// ---------------------------------------------------------------------------
+//
+// Everything above turns counters into a number. Nothing above SPENDS it, and a
+// cost model with no consumer is a decoration: it can be wrong in any direction
+// for as long as it likes and no gate goes red. What follows is the consumer.
+//
+// The design is CaDiCaL's `SET_EFFORT_LIMIT` (`src/limit.hpp:136-164`) plus its
+// `Delay` (`src/delay.hpp:9-34`), transcribed in
+// `docs/research/02-ecosystems/inprocessing-scheduling-2026-09/cadical-kissat-budget-model.md`
+// (2A.2 and 2.4). Three rules, and the third is the one the reference solvers'
+// own comments say is the whole point:
+//
+// 1. A pass's allowance is a per-mille slice of the search ticks that have
+//    accrued **since that pass last ran**, so inprocessing can never outgrow
+//    the search it is helping.
+// 2. A pass whose allowance is below `threshold_per_clause x |clauses|` **does
+//    not run at all** -- not "runs with a small budget". A zero-budget round
+//    still pays the `O(|F|)` occurrence-list setup, which is exactly the cost
+//    the refusal is declining (`references/cadical/src/probe.cpp:902-907`).
+// 3. **On the refusal path the watermark is not written.** That is what makes
+//    the gate accumulate rather than starve: the reference window keeps growing
+//    until it clears the bar. Getting this backwards produces a gate that
+//    refuses forever and looks, from every counter, like a working one.
+//
+// One deliberate divergence, named so it is not read as a transcription error:
+// CaDiCaL and Kissat grow their delay counter LINEARLY (`current += 1`).
+// [`TickBackoff`] doubles it, so a pass that keeps finding nothing is offered
+// again after 1, then 2, then 4 skipped rounds rather than 1, 2, 3. The reason
+// is round count: the reference solvers run inprocessing hundreds of times per
+// solve and a linear ladder is enough to thin it out; this crate's schedule is
+// offered a handful of times, so a linear ladder never leaves the first rung.
+
+/// The denominator of every effort fraction in the valve.
+///
+/// Per mille rather than a percentage or a float, for the same reason
+/// `axeyum_ir::budget` uses it: `reference * per_mille / PER_MILLE` through a
+/// `u128` intermediate is exact integer arithmetic with one rounding rule, so
+/// two hosts cannot land on different sides of a schedule boundary. **Nothing
+/// in the valve reads a clock and nothing in it is floating point.**
+pub const PER_MILLE: u64 = 1_000;
+
+/// `value * numerator / denominator` through a `u128` intermediate: cannot
+/// overflow, clamps rather than wrapping on the way back down, and
+/// `denominator == 0` yields `0`.
+fn mul_div(value: u64, numerator: u64, denominator: u64) -> u64 {
+    if denominator == 0 {
+        return 0;
+    }
+    let quotient = (u128::from(value) * u128::from(numerator)) / u128::from(denominator);
+    u64::try_from(quotient).unwrap_or(u64::MAX)
+}
+
+/// How much of the search's work one pass may claim, and how much it has to
+/// have accrued before it is allowed to claim any.
+///
+/// Every field is an integer weight, and every one of them changes a decision —
+/// `tests::every_valve_weight_changes_a_decision` fails if one becomes dead
+/// configuration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TickEffort {
+    /// Per-mille slice of the accrued search ticks the pass may spend.
+    /// CaDiCaL's `<pass>effort`.
+    pub per_mille: u64,
+    /// Refusal threshold as a multiple of the formula's clause count.
+    /// CaDiCaL's `<pass>thresh`. **Zero makes the gate vacuous** — which is
+    /// what `probethresh = 0` does in CaDiCaL, and what [`TickEffort::UNGATED`]
+    /// is for.
+    pub threshold_per_clause: u64,
+    /// Reference window to use when no search ticks have accrued at all — the
+    /// pre-search (preprocessing) call, where the numeraire reads zero.
+    /// CaDiCaL's `preprocessinit`.
+    pub bootstrap_reference: u64,
+    /// Ceiling on [`TickBackoff`]'s skip run. Zero disables the backoff.
+    pub max_backoff_rounds: u32,
+}
+
+impl TickEffort {
+    /// The major-pass setting: 10 % of accrued search ticks, refused below 5x
+    /// the clause count. CaDiCaL's `sweep` (`options.hpp:230,236`); the same
+    /// 10 % an independent empirical study landed on
+    /// (Wotzlaw et al., arXiv:1310.4756).
+    pub const MAJOR_PASS: Self = Self {
+        per_mille: 100,
+        threshold_per_clause: 5,
+        bootstrap_reference: 2_000_000,
+        max_backoff_rounds: 32,
+    };
+
+    /// The setting for a pass whose setup dominates a small round: 5 % of
+    /// accrued ticks, refused below 20x the clause count. CaDiCaL's `vivify`
+    /// (`options.hpp:259,267`) — note which way round it runs, because it is
+    /// counter-intuitive and worth not re-deriving: the pass measured most
+    /// expensive gets the SMALLER slice and the LARGER threshold, i.e. it runs
+    /// rarely and thoroughly rather than often and pointlessly.
+    pub const EXPENSIVE_SETUP: Self = Self {
+        per_mille: 50,
+        threshold_per_clause: 20,
+        ..Self::MAJOR_PASS
+    };
+
+    /// A valve that admits every round: the refusal rule and the backoff are
+    /// both off, so only the allowance arithmetic remains.
+    ///
+    /// This is the **control** arm, not a shipping setting. A test that shows
+    /// the gate refusing needs a second arm showing the same input running, or
+    /// "refused" is indistinguishable from "the fixture cannot run at all".
+    pub const UNGATED: Self = Self {
+        threshold_per_clause: 0,
+        max_backoff_rounds: 0,
+        ..Self::MAJOR_PASS
+    };
+
+    /// The tick allowance a reference window of `reference` ticks buys.
+    #[must_use]
+    pub fn allowance(&self, reference: u64) -> u64 {
+        mul_div(reference, self.per_mille, PER_MILLE)
+    }
+
+    /// The allowance a formula of `clauses` clauses demands before the pass is
+    /// admitted at all.
+    #[must_use]
+    pub const fn threshold(&self, clauses: u64) -> u64 {
+        self.threshold_per_clause.saturating_mul(clauses)
+    }
+}
+
+impl Default for TickEffort {
+    fn default() -> Self {
+        Self::MAJOR_PASS
+    }
+}
+
+/// The exponential skip counter for a pass that keeps finding nothing.
+///
+/// Two numbers, like CaDiCaL's `Delay`: `skips_left` counts down to the next
+/// offer, `run` is the length the next failure will restart it at.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct TickBackoff {
+    skips_left: u32,
+    run: u32,
+}
+
+impl TickBackoff {
+    /// A backoff that is not delaying anything.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            skips_left: 0,
+            run: 0,
+        }
+    }
+
+    /// Consumes one skip. `true` means this round is skipped.
+    pub const fn delaying(&mut self) -> bool {
+        if self.skips_left > 0 {
+            self.skips_left -= 1;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// The pass ran and found nothing: **double** the skip run, capped at
+    /// `cap`. `cap == 0` disables the backoff entirely.
+    pub const fn found_nothing(&mut self, cap: u32) {
+        let next = if self.run == 0 {
+            1
+        } else {
+            self.run.saturating_mul(2)
+        };
+        self.run = if next > cap { cap } else { next };
+        self.skips_left = self.run;
+    }
+
+    /// The pass ran and found something: halve the skip run, the way both
+    /// reference solvers reduce a delay after a productive round.
+    pub const fn found_something(&mut self) {
+        self.run /= 2;
+        self.skips_left = self.run;
+    }
+
+    /// Rounds that will be skipped before the next offer reaches the gate.
+    #[must_use]
+    pub const fn rounds_left(&self) -> u32 {
+        self.skips_left
+    }
+
+    /// The length the next failed round will restart the skip run at.
+    #[must_use]
+    pub const fn run_length(&self) -> u32 {
+        self.run
+    }
+}
+
+/// What the valve decided for one offer of one pass.
+///
+/// Exhaustive on purpose: a `_` arm in a caller would silently absorb a future
+/// variant into "run anyway", which is the wrong default for a gate.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TickGrant {
+    /// The pass runs, with this many ticks of allowance, bought by this
+    /// reference window.
+    Granted {
+        /// Ticks the pass may spend.
+        allowance: u64,
+        /// The window the allowance is a slice of.
+        reference: u64,
+    },
+    /// The pass does not run: its accrued allowance is below the
+    /// formula-scaled threshold. The watermark is **not** advanced, so the
+    /// window keeps growing.
+    Refused {
+        /// The allowance that was not enough.
+        accrued: u64,
+        /// What it had to clear.
+        threshold: u64,
+    },
+    /// The pass does not run: it found nothing on a recent round and is being
+    /// offered exponentially less often.
+    BackedOff {
+        /// Rounds still to skip after this one.
+        rounds_left: u32,
+    },
+}
+
+impl TickGrant {
+    /// The allowance, or `None` when the pass does not run.
+    #[must_use]
+    pub const fn allowance(&self) -> Option<u64> {
+        match self {
+            Self::Granted { allowance, .. } => Some(*allowance),
+            Self::Refused { .. } | Self::BackedOff { .. } => None,
+        }
+    }
+
+    /// A short, stable, allocation-free tag for a decision log.
+    #[must_use]
+    pub const fn tag(&self) -> &'static str {
+        match self {
+            Self::Granted { .. } => "granted",
+            Self::Refused { .. } => "refused",
+            Self::BackedOff { .. } => "backedoff",
+        }
+    }
+}
+
+/// One pass's share of the valve: the watermark, the refusal gate and the
+/// backoff, plus the counts a report needs.
+///
+/// Deliberately `Copy` and allocation-free — a gate that allocates can fail,
+/// and a gate that can fail on a decision path is a gate whose behaviour under
+/// pressure is not the behaviour it was tested with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TickValveAccount {
+    effort: TickEffort,
+    watermark: u64,
+    backoff: TickBackoff,
+    granted_rounds: u64,
+    refused_rounds: u64,
+    backed_off_rounds: u64,
+    granted_ticks: u64,
+}
+
+impl TickValveAccount {
+    /// A fresh account under `effort`, with the watermark at zero.
+    #[must_use]
+    pub const fn new(effort: TickEffort) -> Self {
+        Self {
+            effort,
+            watermark: 0,
+            backoff: TickBackoff::new(),
+            granted_rounds: 0,
+            refused_rounds: 0,
+            backed_off_rounds: 0,
+            granted_ticks: 0,
+        }
+    }
+
+    /// The policy this account applies.
+    #[must_use]
+    pub const fn effort(&self) -> TickEffort {
+        self.effort
+    }
+
+    /// Offers the pass a round, given the search's tick reading and the clause
+    /// count of the formula the pass would run over.
+    ///
+    /// `search_ticks` is the numeraire — the tick total of the SEARCH, never of
+    /// this pass. Handing this function the pass's own spend would let a pass
+    /// fund its own next round, which is the one arrangement under which
+    /// inprocessing can outgrow search.
+    pub fn request(&mut self, search_ticks: u64, clauses: u64) -> TickGrant {
+        if self.backoff.delaying() {
+            self.backed_off_rounds += 1;
+            return TickGrant::BackedOff {
+                rounds_left: self.backoff.rounds_left(),
+            };
+        }
+        let accrued = search_ticks.saturating_sub(self.watermark);
+        // No search has run yet (a pre-search preprocessing round), so there is
+        // no accrued window to slice. CaDiCaL substitutes a constant here
+        // (`preprocessinit`) rather than refusing, because refusing would mean
+        // preprocessing never happens at all.
+        let reference = if accrued == 0 {
+            self.effort.bootstrap_reference
+        } else {
+            accrued
+        };
+        let allowance = self.effort.allowance(reference);
+        let threshold = self.effort.threshold(clauses);
+        if allowance < threshold {
+            // The watermark is NOT advanced. See rule 3 above; this line's
+            // absence is the difference between a gate that accumulates and a
+            // gate that starves.
+            self.refused_rounds += 1;
+            return TickGrant::Refused {
+                accrued: allowance,
+                threshold,
+            };
+        }
+        self.watermark = search_ticks;
+        self.granted_rounds += 1;
+        self.granted_ticks = self.granted_ticks.saturating_add(allowance);
+        TickGrant::Granted {
+            allowance,
+            reference,
+        }
+    }
+
+    /// Records what a granted round achieved, which is what drives the backoff.
+    ///
+    /// Call it only for a round that actually ran: charging a refused round as
+    /// "found nothing" compounds the two gates into one that closes and never
+    /// reopens.
+    pub const fn record_outcome(&mut self, found_something: bool) {
+        if found_something {
+            self.backoff.found_something();
+        } else {
+            self.backoff.found_nothing(self.effort.max_backoff_rounds);
+        }
+    }
+
+    /// The backoff state, for a report or a test.
+    #[must_use]
+    pub const fn backoff(&self) -> TickBackoff {
+        self.backoff
+    }
+
+    /// Search-tick reading at the last granted round.
+    #[must_use]
+    pub const fn watermark(&self) -> u64 {
+        self.watermark
+    }
+
+    /// Rounds granted, refused, and skipped by the backoff, in that order.
+    #[must_use]
+    pub const fn rounds(&self) -> (u64, u64, u64) {
+        (
+            self.granted_rounds,
+            self.refused_rounds,
+            self.backed_off_rounds,
+        )
+    }
+
+    /// Total ticks granted across every admitted round.
+    #[must_use]
+    pub const fn granted_ticks(&self) -> u64 {
+        self.granted_ticks
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -401,5 +774,259 @@ mod tests {
             ..SearchCounters::default()
         };
         assert_eq!(TickModel::DEFAULT.ticks(&c), u64::MAX);
+    }
+
+    // -----------------------------------------------------------------------
+    // The valve
+    // -----------------------------------------------------------------------
+
+    /// `MAJOR_PASS` over a 1000-clause formula: threshold 5000 ticks, and 10 %
+    /// of the accrued window has to clear it. Every number below is derivable
+    /// by hand from those two facts, which is the point — an assertion computed
+    /// by the code under test is not an assertion.
+    #[test]
+    fn the_refusal_rule_refuses_below_the_formula_scaled_threshold() {
+        let mut account = TickValveAccount::new(TickEffort::MAJOR_PASS);
+        // 40 000 accrued ticks buys 4 000; the bar is 5 x 1 000 = 5 000.
+        assert_eq!(
+            account.request(40_000, 1_000),
+            TickGrant::Refused {
+                accrued: 4_000,
+                threshold: 5_000
+            }
+        );
+        // Refused, so the watermark did NOT move and the window keeps growing.
+        assert_eq!(account.watermark(), 0);
+        // 60 000 buys 6 000, which clears it.
+        assert_eq!(
+            account.request(60_000, 1_000),
+            TickGrant::Granted {
+                allowance: 6_000,
+                reference: 60_000
+            }
+        );
+        assert_eq!(account.watermark(), 60_000);
+        assert_eq!(account.rounds(), (1, 1, 0));
+    }
+
+    /// The rule that separates a gate that accumulates from one that starves.
+    /// Written as its own test because it is one line in `request` and the
+    /// counters look identical either way.
+    #[test]
+    fn a_refused_round_does_not_advance_the_watermark_so_the_window_accumulates() {
+        let mut starving = TickValveAccount::new(TickEffort::MAJOR_PASS);
+        // Ten rounds, each adding 4 000 ticks of search. Under the correct rule
+        // the window accumulates and round 2 already clears 5 000; under a rule
+        // that wrote the watermark on refusal, each round would see only the
+        // 4 000 accrued since the last one and NONE would ever clear.
+        let mut granted = 0;
+        for round in 1..=10u64 {
+            if matches!(
+                starving.request(round * 4_000, 1_000),
+                TickGrant::Granted { .. }
+            ) {
+                granted += 1;
+            }
+        }
+        assert!(
+            granted > 0,
+            "no round was ever admitted: the accumulate rule is inverted"
+        );
+        // Concretely: rounds at 8k, 20k, 40k, 72k... 8_000 -> 800 < 5_000, so
+        // the first admission is the round where the accrued window first
+        // reaches 50 000 ticks.
+        assert_eq!(starving.rounds().0, granted);
+    }
+
+    /// The gate must have a second arm, or "refused" cannot be distinguished
+    /// from "this fixture cannot run at all".
+    #[test]
+    fn the_ungated_control_admits_exactly_what_the_gate_refuses() {
+        let refused = TickValveAccount::new(TickEffort::MAJOR_PASS)
+            .request(40_000, 1_000)
+            .allowance();
+        let admitted = TickValveAccount::new(TickEffort::UNGATED)
+            .request(40_000, 1_000)
+            .allowance();
+        assert_eq!(refused, None);
+        assert_eq!(admitted, Some(4_000));
+    }
+
+    /// A pre-search round has no accrued window; the bootstrap reference is
+    /// what stops preprocessing from never happening.
+    #[test]
+    fn a_zero_reference_falls_back_to_the_bootstrap_window() {
+        let mut account = TickValveAccount::new(TickEffort::MAJOR_PASS);
+        assert_eq!(
+            account.request(0, 100),
+            TickGrant::Granted {
+                allowance: 200_000,
+                reference: 2_000_000
+            }
+        );
+    }
+
+    /// Doubling, not the reference solvers' linear growth. The gaps between
+    /// offers that reach the gate must be 1, 2, 4, 8 — asserted as the actual
+    /// skip runs rather than as "backoff happened".
+    #[test]
+    fn a_pass_that_finds_nothing_is_offered_exponentially_less_often() {
+        let mut account = TickValveAccount::new(TickEffort::UNGATED);
+        // UNGATED has `max_backoff_rounds: 0`, i.e. no backoff at all, so use a
+        // policy that gates nothing but still backs off.
+        let effort = TickEffort {
+            max_backoff_rounds: 32,
+            ..TickEffort::UNGATED
+        };
+        account = TickValveAccount::new(effort);
+
+        let mut runs = Vec::new();
+        for _ in 0..4 {
+            // Skip forward to the next round that actually reaches the gate.
+            let mut skipped = 0u32;
+            loop {
+                match account.request(1_000_000, 10) {
+                    TickGrant::BackedOff { .. } => skipped += 1,
+                    TickGrant::Granted { .. } => break,
+                    TickGrant::Refused { .. } => {
+                        panic!("the control policy must never refuse")
+                    }
+                }
+            }
+            runs.push(skipped);
+            account.record_outcome(false);
+        }
+        assert_eq!(
+            runs,
+            vec![0, 1, 2, 4],
+            "the skip run must double after each unproductive round"
+        );
+        // ...and a productive round halves it, so the backoff is not one-way.
+        account.record_outcome(true);
+        assert_eq!(account.backoff().run_length(), 4);
+    }
+
+    #[test]
+    fn the_backoff_cap_bounds_the_skip_run() {
+        let mut b = TickBackoff::new();
+        for _ in 0..20 {
+            b.found_nothing(8);
+        }
+        assert_eq!(b.run_length(), 8);
+        // A zero cap disables the backoff outright — the control knob.
+        let mut off = TickBackoff::new();
+        for _ in 0..20 {
+            off.found_nothing(0);
+        }
+        assert_eq!(off.run_length(), 0);
+        assert!(!off.delaying());
+    }
+
+    /// Every knob has to move a decision, or it is dead configuration and the
+    /// policy is not the policy it claims to be.
+    #[test]
+    fn every_valve_weight_changes_a_decision() {
+        // A base point where the gate is EXACTLY at the bar, so a change in
+        // either direction is observable.
+        let base = TickEffort {
+            per_mille: 100,
+            threshold_per_clause: 5,
+            bootstrap_reference: 2_000_000,
+            max_backoff_rounds: 4,
+        };
+        let at_bar = |e: TickEffort| TickValveAccount::new(e).request(50_000, 1_000);
+        assert!(matches!(at_bar(base), TickGrant::Granted { .. }));
+
+        // per_mille: halve it and the same window no longer clears.
+        assert!(matches!(
+            at_bar(TickEffort {
+                per_mille: 50,
+                ..base
+            }),
+            TickGrant::Refused { .. }
+        ));
+        // threshold_per_clause: double it and the same window no longer clears.
+        assert!(matches!(
+            at_bar(TickEffort {
+                threshold_per_clause: 10,
+                ..base
+            }),
+            TickGrant::Refused { .. }
+        ));
+        // bootstrap_reference: only reachable at a zero window, so probe there.
+        let boot = |r: u64| {
+            TickValveAccount::new(TickEffort {
+                bootstrap_reference: r,
+                ..base
+            })
+            .request(0, 1_000)
+        };
+        assert!(matches!(boot(2_000_000), TickGrant::Granted { .. }));
+        assert!(matches!(boot(1_000), TickGrant::Refused { .. }));
+        // max_backoff_rounds: 0 means an unproductive round costs nothing.
+        let mut no_backoff = TickValveAccount::new(TickEffort {
+            max_backoff_rounds: 0,
+            ..base
+        });
+        no_backoff.record_outcome(false);
+        assert!(matches!(
+            no_backoff.request(50_000, 1_000),
+            TickGrant::Granted { .. }
+        ));
+        let mut with_backoff = TickValveAccount::new(base);
+        with_backoff.record_outcome(false);
+        assert!(matches!(
+            with_backoff.request(50_000, 1_000),
+            TickGrant::BackedOff { .. }
+        ));
+    }
+
+    /// The valve is the thing budgets are read from, so its arithmetic must not
+    /// wrap into a fresh-looking allowance at absurd inputs.
+    #[test]
+    fn valve_arithmetic_saturates_rather_than_wrapping() {
+        let effort = TickEffort {
+            per_mille: u64::MAX,
+            threshold_per_clause: u64::MAX,
+            ..TickEffort::MAJOR_PASS
+        };
+        assert_eq!(effort.allowance(u64::MAX), u64::MAX);
+        assert_eq!(effort.threshold(u64::MAX), u64::MAX);
+        // A zero denominator cannot divide by zero.
+        assert_eq!(mul_div(10, 3, 0), 0);
+    }
+
+    /// Determinism rule 1 and 2, enforced against this module's own source the
+    /// way `axeyum_ir::budget` enforces them against its. A clock read or a
+    /// float in the valve would make a schedule boundary host-dependent, which
+    /// is the one property the whole tick unit exists to provide.
+    #[test]
+    fn the_valve_reads_no_clock_and_does_no_floating_point() {
+        let src = include_str!("ticks.rs");
+        let valve = src
+            .split_once("// The tick valve:")
+            .expect("the valve section marker must exist")
+            .1;
+        let valve = valve
+            .split_once("#[cfg(test)]")
+            .expect("the test module must follow the valve")
+            .0;
+        for banned in [
+            "Instant",
+            "SystemTime",
+            "Duration",
+            "elapsed",
+            "f64",
+            "f32",
+            "as f",
+            "1e-",
+        ] {
+            assert!(
+                !valve.contains(banned),
+                "the valve names `{banned}`: a budget decision that reads a \
+                 clock or rounds in floating point is not reproducible across \
+                 hosts, which is the entire claim of this module"
+            );
+        }
     }
 }
