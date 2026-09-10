@@ -1,9 +1,9 @@
 # ADR-1810: One inprocessing pipeline — the shipping sequencing survives, and it moves down into `axeyum-cnf`
 
-Status: proposed
+Status: accepted
 Date: 2026-09-09
 Index-summary: Closes roadmap item 1.3. Two CNF inprocessing pipelines sequence the SAME three `axeyum-cnf` passes: `axeyum_cnf::inprocess::inprocess_into` (`inprocess.rs:252`, ADR-1750, zero callers in `axeyum-solver`) and `sat_bv_backend::inprocess` (`sat_bv_backend.rs:1827-2083`, the shipping path). The inventory's framing — "the front door uses the untrusted one" — is stale by one day: ADR-1780 (2026-09-08) made the shipping path check its `unsat` against the ORIGINAL formula through `ReductionLink`, and `inprocess.rs` is the one that structurally cannot, because it has no way to express the `compact()` renumbering the backend runs. So the SEMANTICS that survives is the shipping one; the FILE that survives is `axeyum-cnf/src/inprocess.rs`, whose body is replaced by the shipping sequencing. Every ingredient the move needs — `xor_propagate`, `compact`, `ReductionLink`, and the three passes — is already in `axeyum-cnf`, so this crosses no crate boundary. What must not be lost in the move: the deadline-derived work grants and their env overrides, the `prove_unsat`-keyed recording, the per-stage telemetry `span_log` consumes, the vivify step-guard, and `inprocess.rs`'s own streaming sink — which is the route `MAX_LINKED_PROOF_STEPS` (`sat_bv_backend.rs:1179`) names as the fix for its own thin 4.06x headroom.
-Index-status: proposed
+Index-status: accepted
 
 ## Context
 

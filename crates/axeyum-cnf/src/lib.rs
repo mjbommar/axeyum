@@ -132,16 +132,17 @@ pub use proof_sat::incremental::{IncrementalSolveOutcome, NativeIncrementalCdcl}
 pub use proof_sat::theory;
 pub use proof_sat::{
     DEFAULT_PROGRESS_CONFLICT_INTERVAL, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, InprocessedSearch,
-    NativeLayerStats, NativeLayerStatsMirror, ProofSearchProgress, ProofSolveOutcome,
-    SearchCounters, SearchPolicies, StreamingProofOutcome, TheoryProofOutcome, TheoryRefutation,
-    TheoryRefutationCheck, TheoryRefutationError, TheorySolveOptions, TheorySolveOutcome,
-    solve_with_drat_proof, solve_with_drat_proof_counted,
+    ModeTracedSearch, NativeLayerStats, NativeLayerStatsMirror, ProofSearchProgress,
+    ProofSolveOutcome, SearchCounters, SearchPolicies, StreamingProofOutcome, TheoryProofOutcome,
+    TheoryRefutation, TheoryRefutationCheck, TheoryRefutationError, TheorySolveOptions,
+    TheorySolveOutcome, solve_with_drat_proof, solve_with_drat_proof_counted,
     solve_with_drat_proof_counted_inprocessed, solve_with_drat_proof_counted_with_policies,
-    solve_with_drat_proof_inprocessed, solve_with_drat_proof_streaming,
-    solve_with_drat_proof_streaming_with_progress, solve_with_drat_proof_with_limits,
-    solve_with_drat_proof_with_limits_and_progress, solve_with_drat_proof_within,
-    solve_with_theory_and_drat_proof, solve_with_theory_and_drat_proof_mirrored,
-    solve_with_theory_and_drat_proof_traced, solve_with_theory_and_drat_proof_with_options,
+    solve_with_drat_proof_inprocessed, solve_with_drat_proof_mode_traced,
+    solve_with_drat_proof_streaming, solve_with_drat_proof_streaming_with_progress,
+    solve_with_drat_proof_with_limits, solve_with_drat_proof_with_limits_and_progress,
+    solve_with_drat_proof_within, solve_with_theory_and_drat_proof,
+    solve_with_theory_and_drat_proof_mirrored, solve_with_theory_and_drat_proof_traced,
+    solve_with_theory_and_drat_proof_with_options,
 };
 pub use reduction_link::{
     LiftingSink, LinkedProofCheck, ProofCoverage, ReducedReason, ReductionLink,

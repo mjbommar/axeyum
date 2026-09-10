@@ -66,8 +66,16 @@ fn deterministic_sat_resource_limit_is_classified_unknown() {
             .check(&arena, &[assertion], &config)
             .unwrap(),
         CheckResult::Unknown(reason)
+            // The invariant is the CLASSIFICATION: a deterministic budget of
+            // zero must come back as `Unknown(ResourceLimit)`, never as an
+            // error and never as a verdict. The wording is not the invariant.
+            // This asserted "conflict budget 0 exhausted" until ADR-1703 made
+            // the native core the engine and it began reporting "native CDCL
+            // core exhausted its conflict budget" — same classification, no
+            // budget value in the text. `incremental.rs:7682` keys on the
+            // shorter substring for the same reason, so that is what we pin.
             if reason.kind == UnknownKind::ResourceLimit
-                && reason.detail.contains("conflict budget 0 exhausted")
+                && reason.detail.contains("conflict budget")
     ));
 }
 
@@ -932,7 +940,16 @@ fn cnf_vivify_off_records_no_vivify_stats() {
         .check(
             &arena,
             &[formula],
-            &SolverConfig::default().with_cnf_inprocessing(true),
+            // The point of this test is the vivify FLAG, so it must be set
+            // explicitly. `cnf_vivify` defaults to TRUE (backend.rs:391); when
+            // this test was written on 2026-06-23 it did not, and turning only
+            // inprocessing on was enough to leave vivification off. The default
+            // moved and the test kept passing its own comment rather than its
+            // premise, then started failing when inprocessing began running the
+            // pass. Set both flags here so the assertion tests what it says.
+            &SolverConfig::default()
+                .with_cnf_inprocessing(true)
+                .with_cnf_vivify(false),
         )
         .unwrap();
     let stats = backend.last_stats().expect("stats recorded");
