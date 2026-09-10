@@ -1155,6 +1155,11 @@ fn model_from(asg: &Assignment, vars: &[Var]) -> Model {
             model.set(v.sym, value);
         }
     }
+    // Roadmap 2.11: the acceptance test for this model is `all_satisfied()` over
+    // `asg`, which is strictly richer than the searched-variable entries copied
+    // above -- so the emitted certificate was narrower than the thing that was
+    // checked, exactly the SOUND-1 shape.
+    model.carry_assignment_components(asg);
     model
 }
 
@@ -1451,6 +1456,56 @@ mod tests {
         assert_eq!(
             eval(&arena, assertion, &model.to_assignment()).unwrap(),
             Value::Bool(true)
+        );
+    }
+}
+
+/// Roadmap 2.11 — this file's narrowing site, `model_from`.
+///
+/// Unlike the other ten sites, there is no assertion replay immediately above
+/// this one: the acceptance test is `search.total_cost == 0 &&
+/// search.all_satisfied()` over `search.asg`. That is a replay in substance,
+/// and the emitted model was still narrower than the assignment it checked —
+/// symbol entries for the searched variables only, dropping both other
+/// components.
+#[cfg(test)]
+mod sound2_narrowing_site_tests {
+    use super::{Var, VarKind, model_from};
+    use axeyum_ir::{Assignment, FuncValue, Rational, Sort, TermArena, Value};
+
+    /// DIES ON: removing the `carry_assignment_components` call in `model_from`.
+    #[test]
+    fn model_from_carries_the_assignments_other_components() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).expect("declare x");
+        let func = arena
+            .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+            .expect("declare f");
+
+        let mut asg = Assignment::new();
+        asg.set(x, Value::Int(3));
+        asg.set_function(
+            func,
+            FuncValue::constant(vec![Sort::BitVec(8)], Sort::BitVec(8), 4).define(&[1], 2),
+        );
+        asg.set_real_div_zero(Rational::integer(5), Rational::integer(100));
+
+        let vars = [Var {
+            sym: x,
+            kind: VarKind::Int,
+        }];
+        let model = model_from(&asg, &vars);
+
+        assert_eq!(model.get(x), Some(Value::Int(3)), "the searched variable");
+        assert!(
+            model.function(func).is_some(),
+            "the UF interpretation `all_satisfied` evaluated against was dropped \
+             from the emitted certificate"
+        );
+        assert_eq!(
+            model.real_div_zero(Rational::integer(5)),
+            Some(Rational::integer(100)),
+            "the division-at-zero witness was dropped from the emitted certificate"
         );
     }
 }

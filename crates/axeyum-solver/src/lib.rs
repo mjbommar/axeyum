@@ -1444,7 +1444,7 @@ macro_rules! full_exports {
         pub use skolem_alethe::{SkolemCert, SkolemRecord, prove_skolem_unsat_alethe};
         #[doc(hidden)]
         pub use smtlib::{
-            FrontDoorStats, FrontDoorStatsGuard, SmtLibModel, SmtLibOutcome,
+            FrontDoorStats, FrontDoorStatsGuard, SmtLibModel, SmtLibOutcome, SmtLibSolved,
             confirm_bounded_string_verdict, decide_word_only_script, last_front_door_stats,
             length_lia_verdict, lex_order_verdict, membership_unsat_certificate,
             membership_unsat_lean_module, membership_verdict, online_string_verdict,
@@ -1452,7 +1452,8 @@ macro_rules! full_exports {
             solve_smtlib_get_assertions, solve_smtlib_get_assignment, solve_smtlib_get_info,
             solve_smtlib_get_model, solve_smtlib_get_option, solve_smtlib_get_proof,
             solve_smtlib_get_value, solve_smtlib_incremental, solve_smtlib_model,
-            solve_smtlib_unsat_core, upgrade_bounded_string_unknown, word_route_verdict,
+            solve_smtlib_unsat_core, solve_smtlib_with_model, upgrade_bounded_string_unknown,
+            word_route_verdict,
         };
         /// The SMT-LIB **session** front door: one response per output command
         /// (ADR-0541). Not `doc(hidden)` like its siblings — it is the entry

@@ -269,6 +269,10 @@ fn project_replay_build<P: ArrayModelProjection>(
             out.set(symbol, value);
         }
     }
+    // Roadmap 2.11: this carried symbol entries only, so a `projected` holding a
+    // function interpretation or a real division-at-zero witness replayed here
+    // and then vanished from the emitted certificate.
+    out.carry_assignment_components(&projected);
     Ok(CheckResult::Sat(out))
 }
 
@@ -6639,9 +6643,9 @@ fn project_replay_row(
             out.set(symbol, value);
         }
     }
-    for (func, value) in projected.functions() {
-        out.set_function(func, value.clone());
-    }
+    // Roadmap 2.11 (the lazy-ROW twin of `model_from_projected_assignment`; not
+    // in the item's list, found by deriving the site set from the source).
+    out.carry_assignment_components(&projected);
     Ok(CheckResult::Sat(out))
 }
 
@@ -11121,9 +11125,9 @@ fn model_from_projected_assignment(arena: &TermArena, projected: &Assignment) ->
             out.set(symbol, value);
         }
     }
-    for (func, value) in projected.functions() {
-        out.set_function(func, value.clone());
-    }
+    // Roadmap 2.11: carry every non-symbol component of the assignment the
+    // replay checked, not just the function interpretations.
+    out.carry_assignment_components(projected);
     out
 }
 
@@ -11204,3 +11208,54 @@ pub use row_warmth::{RowCegarWarmth, RowCegarWarmthGuard, last_row_cegar_warmth}
 #[path = "abv/tests.rs"]
 #[allow(clippy::many_single_char_names, clippy::similar_names)]
 mod tests;
+
+/// Roadmap 2.11 — the lazy-extensionality narrowing site,
+/// `model_from_projected_assignment`.
+///
+/// The one site of the three in this file that is a standalone function, so it
+/// is the one that can carry a test of its own; the two inline sites
+/// (`project_replay_model` and the lazy-ROW build) are covered only by
+/// `Model::carry_assignment_components`'s own tests. That asymmetry is recorded
+/// rather than papered over.
+#[cfg(test)]
+mod sound2_narrowing_site_tests {
+    use super::model_from_projected_assignment;
+    use axeyum_ir::{Assignment, FuncValue, Rational, Sort, TermArena, Value};
+
+    /// DIES ON: removing the `carry_assignment_components` call in
+    /// `model_from_projected_assignment`.
+    #[test]
+    fn model_from_projected_assignment_carries_the_other_components() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::BitVec(8)).expect("declare x");
+        let fresh = arena
+            .declare_internal("!row_sel_0", Sort::BitVec(8))
+            .expect("declare fresh");
+        let func = arena
+            .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+            .expect("declare f");
+
+        let mut projected = Assignment::new();
+        projected.set(x, Value::Bv { width: 8, value: 3 });
+        projected.set(fresh, Value::Bv { width: 8, value: 9 });
+        projected.set_function(
+            func,
+            FuncValue::constant(vec![Sort::BitVec(8)], Sort::BitVec(8), 4).define(&[1], 2),
+        );
+        projected.set_real_div_zero(Rational::integer(5), Rational::integer(100));
+
+        let model = model_from_projected_assignment(&arena, &projected);
+
+        assert_eq!(model.get(fresh), None, "the `!row_sel_` scratch symbol");
+        assert_eq!(model.get(x), Some(Value::Bv { width: 8, value: 3 }), "x");
+        assert!(
+            model.function(func).is_some(),
+            "the UF interpretation the replay consulted was dropped"
+        );
+        assert_eq!(
+            model.real_div_zero(Rational::integer(5)),
+            Some(Rational::integer(100)),
+            "the division-at-zero witness was dropped"
+        );
+    }
+}

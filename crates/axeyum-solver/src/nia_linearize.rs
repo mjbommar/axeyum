@@ -1833,13 +1833,15 @@ fn replay_sat(arena: &TermArena, assertions: &[TermId], model: &Model) -> Option
     }
     // Restrict the model to the symbols actually present in the original query, so
     // the returned witness carries no internal `!nia_*` scaffolding.
+    //
+    // Roadmap 2.11: the replay above ran against `model.to_assignment()` and this
+    // rebuilt a model carrying symbol entries ONLY — dropping functions,
+    // `real_div_zero`, `uninterpreted_cardinalities` and the quantified sat
+    // certificates. Narrowing through `retain_symbols` keeps every component the
+    // replay saw, and every component added to `Model` in future.
     let originals = collect_symbols(arena, assertions);
-    let mut clean = Model::new();
-    for (sym, value) in model.iter() {
-        if originals.contains(&sym) {
-            clean.set(sym, value);
-        }
-    }
+    let mut clean = model.clone();
+    clean.retain_symbols(|sym| originals.contains(&sym));
     Some(CheckResult::Sat(clean))
 }
 
@@ -2401,6 +2403,74 @@ mod tests {
                 (MAX_MCCORMICK_PRODUCTS + 1) as u64,
                 MAX_MCCORMICK_PRODUCTS as u64,
             )]
+        );
+    }
+}
+
+/// Roadmap 2.11 — this file's narrowing site, `replay_sat`.
+///
+/// `replay_sat` checks the ORIGINAL assertions against `model.to_assignment()`
+/// and then emitted a model carrying **symbol entries only** — dropping
+/// function interpretations, `real_div_zero`, `uninterpreted_cardinalities` and
+/// the quantified sat certificates. It is the widest loss of the eleven sites
+/// item 2.11 lists, and the row does not mention the function drop at all.
+#[cfg(test)]
+mod sound2_narrowing_site_tests {
+    use super::replay_sat;
+    use crate::backend::CheckResult;
+    use crate::model::Model;
+    use axeyum_ir::{FuncValue, Rational, Sort, TermArena, Value};
+
+    /// DIES ON: rebuilding the emitted model in `replay_sat` instead of
+    /// narrowing the one the replay ran against.
+    #[test]
+    fn replay_sat_keeps_every_component_the_replay_saw() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).expect("declare x");
+        let internal = arena
+            .declare_internal("!nia_scratch", Sort::Int)
+            .expect("declare internal");
+        let func = arena
+            .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+            .expect("declare f");
+        let opaque = arena.declare_uninterpreted_sort("U");
+
+        // One assertion, true under x = 3, mentioning only `x`.
+        let three = arena.int_const(3);
+        let xv = arena.var(x);
+        let assertion = arena.eq(xv, three).expect("eq");
+
+        let mut model = Model::new();
+        model.set(x, Value::Int(3));
+        model.set(internal, Value::Int(9));
+        model.set_function(
+            func,
+            FuncValue::constant(vec![Sort::BitVec(8)], Sort::BitVec(8), 4).define(&[1], 2),
+        );
+        model.set_real_div_zero(Rational::integer(5), Rational::integer(100));
+        model.set_uninterpreted_cardinality(opaque, 3);
+
+        let Some(CheckResult::Sat(clean)) = replay_sat(&arena, &[assertion], &model) else {
+            panic!("the fixture must replay true, or this test measures nothing");
+        };
+
+        assert_eq!(clean.get(internal), None, "the `!nia_` scaffolding symbol");
+        assert_eq!(clean.get(x), Some(Value::Int(3)), "x");
+        assert!(
+            clean.function(func).is_some(),
+            "the UF interpretation the replay consulted was dropped from the emitted \
+             certificate (the 9b259f7c2 shape)"
+        );
+        assert_eq!(
+            clean.real_div_zero(Rational::integer(5)),
+            Some(Rational::integer(100)),
+            "the division-at-zero witness was dropped (the c41dd4264 shape)"
+        );
+        assert_eq!(
+            clean.uninterpreted_cardinality(opaque),
+            Some(3),
+            "the declared carrier size was dropped, and no `to_assignment` replay \
+             would have told you"
         );
     }
 }
