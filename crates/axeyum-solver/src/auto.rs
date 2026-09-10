@@ -26,9 +26,8 @@ use axeyum_ir::{
     Value, eval,
 };
 use axeyum_rewrite::{
-    DEFAULT_SOLVE_EQS_FUEL, ModelReconstructionTrail, QuantExpandError, build_app,
-    canonicalize_terms, elim_unconstrained, expand_quantifiers, instantiate_universals,
-    instantiate_with_triggers, propagate_values, replace_subterms, solve_eqs_bounded,
+    ModelReconstructionTrail, QuantExpandError, build_app, canonicalize_terms, expand_quantifiers,
+    instantiate_universals, instantiate_with_triggers, replace_subterms,
 };
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
@@ -1849,37 +1848,45 @@ fn check_auto_with_recorder(
         // or the reduced solve / model reconstruction — fall back to solving the
         // ORIGINAL unreduced query. Preprocessing is only ever an optimization, never
         // a correctness dependency, so a failure must degrade, not propagate.
-        let preprocessed = match preprocess_reduce(arena, assertions, deadline) {
-            Ok(Some((reduced, trail)))
-                if reduction_shrinks_encoding(arena, assertions, &reduced, deadline) =>
-            {
-                dispatch_reduced(arena, assertions, &reduced, &trail, config, deadline, rec)
-            }
-            // The reduction made the *encoding* bigger, so solve the original
-            // instead. See `reduction_shrinks_encoding`.
-            Ok(Some(_)) => check_auto_dispatch(
-                arena,
-                assertions,
-                &config_with_remaining_deadline(config, deadline),
-                rec,
-            ),
-            Ok(None) => {
-                // Telemetry: record the budget decline so a trace never ends
-                // with only the probe entry under an ultra-tight budget.
-                with_recorder(rec, |t| {
-                    t.record_declined(
-                        "preprocess",
-                        DeclineReason::from_unknown(&timeout_reason(
-                            "preprocessing timeout before reduced dispatch",
-                        )),
-                    );
-                });
-                return Ok(CheckResult::Unknown(timeout_reason(
-                    "preprocessing timeout before reduced dispatch",
-                )));
-            }
-            Err(error) => Err(error),
-        };
+        // The reduction itself lives in `preprocess::reduce_to_fixpoint` (ADR-1811:
+        // one home for word-level preprocessing). The cap stays **1** here: the
+        // `reduction_shrinks_encoding` guard below was calibrated against a
+        // one-round reduction (its measured rows at `:2209` are one-round numbers,
+        // and on `062-bench_2195` the term DAG shrank while the AIG grew 46 %).
+        // More rounds substitute more, which is the exact mechanism those rows
+        // measure — raising the cap is a separate, measured step (ADR-1811 §5).
+        let preprocessed =
+            match crate::preprocess::reduce_to_fixpoint(arena, assertions, deadline, 1) {
+                Ok(Some((reduced, trail)))
+                    if reduction_shrinks_encoding(arena, assertions, &reduced, deadline) =>
+                {
+                    dispatch_reduced(arena, assertions, &reduced, &trail, config, deadline, rec)
+                }
+                // The reduction made the *encoding* bigger, so solve the original
+                // instead. See `reduction_shrinks_encoding`.
+                Ok(Some(_)) => check_auto_dispatch(
+                    arena,
+                    assertions,
+                    &config_with_remaining_deadline(config, deadline),
+                    rec,
+                ),
+                Ok(None) => {
+                    // Telemetry: record the budget decline so a trace never ends
+                    // with only the probe entry under an ultra-tight budget.
+                    with_recorder(rec, |t| {
+                        t.record_declined(
+                            "preprocess",
+                            DeclineReason::from_unknown(&timeout_reason(
+                                "preprocessing timeout before reduced dispatch",
+                            )),
+                        );
+                    });
+                    return Ok(CheckResult::Unknown(timeout_reason(
+                        "preprocessing timeout before reduced dispatch",
+                    )));
+                }
+                Err(error) => Err(error),
+            };
         if let Ok(result) = preprocessed {
             Ok(result)
         } else {
@@ -2234,61 +2241,6 @@ fn contains_quantifier_within(
     Some(false)
 }
 
-/// Run the model-sound word-level preprocessing pipeline (`canonicalize` →
-/// `propagate_values` → fuel-bounded `solve_eqs` → `elim_unconstrained` →
-/// re-`canonicalize`), dispatch the reduced query through [`check_auto_inner`]
-/// (with preprocessing cleared, so it is not re-applied), and on `sat` reconstruct
-/// the eliminated variables and replay against the **original** assertions — the
-/// same checkable-`sat` discipline as [`crate::check_with_preprocessing`]. `unsat`
-/// of the reduced (equisatisfiable) problem transfers directly.
-fn preprocess_reduce(
-    arena: &mut TermArena,
-    assertions: &[TermId],
-    deadline: Option<Instant>,
-) -> Result<Option<(Vec<TermId>, ModelReconstructionTrail)>, SolverError> {
-    if past_deadline(deadline) {
-        return Ok(None);
-    }
-    let canonical = canonicalize_terms(arena, assertions)
-        .map_err(|error| SolverError::Backend(format!("canonicalize failed: {error}")))?
-        .terms;
-    if past_deadline(deadline) {
-        return Ok(None);
-    }
-    let (after_values, mut trail) = propagate_values(arena, &canonical)
-        .map_err(|error| SolverError::Backend(format!("propagate_values failed: {error}")))?
-        .into_parts();
-    if past_deadline(deadline) {
-        return Ok(None);
-    }
-    let (reduced, eq_trail) = solve_eqs_bounded(arena, &after_values, DEFAULT_SOLVE_EQS_FUEL)
-        .map_err(|error| SolverError::Backend(format!("solve_eqs failed: {error}")))?
-        .into_parts();
-    trail.append(eq_trail);
-    if past_deadline(deadline) {
-        return Ok(None);
-    }
-    let (reduced, unconstrained_trail) = elim_unconstrained(arena, &reduced)
-        .map_err(|error| SolverError::Backend(format!("elim_unconstrained failed: {error}")))?
-        .into_parts();
-    trail.append(unconstrained_trail);
-    if past_deadline(deadline) {
-        return Ok(None);
-    }
-    let reduced = canonicalize_terms(arena, &reduced)
-        .map_err(|error| SolverError::Backend(format!("post-solve canonicalize failed: {error}")))?
-        .terms;
-    if past_deadline(deadline) {
-        return Ok(None);
-    }
-    Ok(Some((reduced, trail)))
-}
-
-/// Dispatch the `reduced` query through [`check_auto_inner`] (preprocessing
-/// cleared), and on `sat` reconstruct the eliminated variables via `trail` and
-/// replay against the **original** assertions — the checkable-`sat` discipline of
-/// [`crate::check_with_preprocessing`]. `unsat` of the equisatisfiable reduction
-/// transfers directly.
 /// Whether the reduced query is worth dispatching, judged by the size it
 /// **bit-blasts to** rather than by its term count.
 ///
@@ -2349,6 +2301,11 @@ fn reduction_shrinks_encoding(
     reduced_lowering.aig().node_count() <= original_lowering.aig().node_count()
 }
 
+/// Dispatch the `reduced` query through [`check_auto_inner`] (preprocessing
+/// cleared), and on `sat` reconstruct the eliminated variables via `trail` and
+/// replay against the **original** assertions — the checkable-`sat` discipline of
+/// [`crate::check_with_preprocessing`]. `unsat` of the equisatisfiable reduction
+/// transfers directly.
 fn dispatch_reduced(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -2381,56 +2338,23 @@ fn dispatch_reduced(
         return Ok(result);
     };
 
-    // Reconstruct eliminated variables, then replay against the ORIGINAL assertions.
-    let reconstructed = trail
-        .reconstruct(arena, &model.to_assignment())
-        .map_err(|error| {
-            SolverError::Backend(format!(
-                "preprocessing model reconstruction failed: {error}"
-            ))
-        })?;
-    // No `past_deadline` bail here or in the replay loop below: the reduced solve
+    // Reconstruct eliminated variables, then replay against the ORIGINAL
+    // assertions, and build the returned model from ALL THREE witness kinds
+    // (symbols, uninterpreted-function interpretations, free-division `/0`).
+    //
+    // This is one call into `preprocess::replay_preprocessed_model` (ADR-1811).
+    // It used to be a second, hand-maintained copy here; the two copies drifted
+    // for two months — `auto` gained the function-interpretation carry on
+    // 2026-07-02 and `preprocess` never did — with nothing announcing it.
+    //
+    // No `past_deadline` bail here or inside the replay: the reduced solve
     // already produced a DEFINITE `Sat`, and reconstruction + replay are bounded,
     // cheap O(term-size) validation passes — abandoning them on an expired budget
     // would throw away a real, checkable answer (measured: `nia-bounded-blast`
     // decides bounded nonlinear SATs a hair past the budget, and the old bails
     // turned that decided `sat` into `unknown`). The deadline bounds SEARCH, not
     // the final linear validation of an already-decided model.
-    for &assertion in assertions {
-        if !matches!(
-            eval(arena, assertion, &reconstructed),
-            Ok(Value::Bool(true))
-        ) {
-            return Err(SolverError::Backend(format!(
-                "preprocessed sat model replay failed: assertion #{} did not evaluate to true",
-                assertion.index()
-            )));
-        }
-    }
-    let mut out = Model::new();
-    for (symbol, _name, _sort) in arena.symbols() {
-        if let Some(value) = reconstructed.get(symbol) {
-            out.set(symbol, value);
-        }
-    }
-    // Carry uninterpreted-function interpretations through too: an inner
-    // QF_UFLIA/QF_UFLRA `sat` reconstructs an `Op::Apply` interpretation, and
-    // dropping it would leave the returned model unable to replay a UF query
-    // (the original assertions reference `f` — `eval` would raise
-    // `UnboundFunction`).
-    for (func, _name, _params, _result) in arena.functions() {
-        if let Some(interp) = reconstructed.function(func) {
-            out.set_function(func, interp.clone());
-        }
-    }
-    // Same for the free-division `/0` witness (P2.5): the replay above succeeded
-    // *under* this interpretation (the evaluator consults it on a zero divisor),
-    // so dropping it would hand back a model that no longer replays — a wrong
-    // `sat` through the preprocessed path.
-    for (numerator, quotient) in reconstructed.real_div_zeros() {
-        out.set_real_div_zero(numerator, quotient);
-    }
-    Ok(CheckResult::Sat(out))
+    crate::preprocess::replay_preprocessed_model(arena, assertions, trail, &model.to_assignment())
 }
 
 /// The core auto-dispatcher (coercion handling + theory routing), preprocessing

@@ -1305,6 +1305,23 @@ step lean-gate ./scripts/check-lean-gate.sh
 # and runs first, so a broken verdict parser fails in under a second.
 step carcara-gate-self-check ./scripts/check-carcara-gate.sh --self-check
 step carcara-gate ./scripts/check-carcara-gate.sh
+# ABC bit-blasting cross-check (roadmap item 2.4,
+# docs/solver-comparison-2026-09/11-roadmap-and-plan.md): two independently
+# built circuits for the same Boolean function are exported from
+# `axeyum-aig`, converted ASCII-to-binary AIGER via `aigtoaig`, and handed to
+# ABC's `&cec` combinational equivalence checker
+# (`crates/axeyum-solver/tests/abc_crosscheck.rs`). Unlike `carcara-gate`
+# above, this dependency's default polarity is SKIP, not fail -- `abc` is a
+# 56 MB, ~1.1M-line C application this gate never builds, so
+# `AXEYUM_REQUIRE_ABC=1` (set on a host that is supposed to have it) is what
+# turns an absent binary into a failure. The suite's brute-force `Aig::eval`
+# semantic check and its negative control (a deliberately mis-lowered adder
+# carry formula) run unconditionally, so an absent `abc` never means nothing
+# ran. `--self-check` is the bash-only control against the literal strings
+# ABC's `&cec` prints (it returns exit 0 regardless of the verdict, same trap
+# as Carcara's `holey`) and runs first, no cargo build required.
+step abc-crosscheck-self-check ./scripts/check-abc-crosscheck.sh --self-check
+step abc-crosscheck ./scripts/check-abc-crosscheck.sh
 # ADR-1664's measurement. Registered here because it is the EVIDENCE for a
 # decision -- that an originated theorem inherits an import's axioms
 # transitively and per proof term, so a composed tier is decidable per theorem --

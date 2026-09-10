@@ -861,6 +861,7 @@ pub mod optimization {
 /// aliases hidden from root rustdoc.
 #[cfg(feature = "full")]
 pub mod interpolation {
+    pub use crate::interpolant::{DispatchedInterpolant, InterpolantCertificate};
     pub use crate::solver::InterpolantOutcome;
 
     /// `QF_BV` interpolants and checked certificates.
@@ -1179,7 +1180,8 @@ macro_rules! full_exports {
         };
         #[doc(hidden)]
         pub use interpolant::{
-            LraInterpolantCertificate, lra_interpolant, lra_interpolant_certified,
+            DispatchedInterpolant, InterpolantCertificate, LraInterpolantCertificate,
+            lra_interpolant, lra_interpolant_certified,
         };
         pub use lazy_bv::{
             LazyBvBackend, LazyBvOutcome, check_lazy_bv_abstraction, check_lazy_bv_abstraction_ro,

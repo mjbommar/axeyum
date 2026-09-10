@@ -165,3 +165,145 @@ fn linear_uflra_is_not_routed_through_uf_nra() {
         "linear QF_UFLRA must not be routed through uf-nra, trace: {trace}"
     );
 }
+
+/// The SOUND-1 query: `(= y 0) ∧ (= x 5) ∧ (= (/ x y) 100) ∧ (= (f x) 7)`.
+///
+/// Satisfiable, and only through a chosen interpretation of the SMT-LIB
+/// unspecified `(/ 5 0)` — the total evaluator convention is `x/0 = 0`, so a
+/// model that does not carry the witness `5/0 → 100` cannot satisfy conjunct 2.
+/// The `(= (f x) 7)` conjunct is what pulls the query onto the UF × NRA routes.
+fn div_at_zero_query(a: &mut TermArena) -> [TermId; 4] {
+    let f = a.declare_fun("f", &[Sort::Real], Sort::Real).unwrap();
+    let x = real(a, "wx");
+    let y = real(a, "wy");
+    let zero = ri(a, 0);
+    let five = ri(a, 5);
+    let seven = ri(a, 7);
+    let hundred = ri(a, 100);
+    let quotient = a.real_div(x, y).unwrap();
+    let fx = a.apply(f, &[x]).unwrap();
+    [
+        a.eq(y, zero).unwrap(),
+        a.eq(x, five).unwrap(),
+        a.eq(quotient, hundred).unwrap(),
+        a.eq(fx, seven).unwrap(),
+    ]
+}
+
+/// The two configurations this query is checked under, because **they take
+/// different routes** and only one of them reproduced the defect.
+///
+/// Measured on the fix commit: under `SolverConfig::default()` (no timeout) the
+/// preprocessed path errors, the trace records
+/// `preprocess: declined (incomplete: preprocessed path errored; degraded to the
+/// original query)`, and `uf-nra` decides — that is the arm SOUND-1 shipped on.
+/// Under a 10 s budget the preprocessed path succeeds instead and `uf-arithmetic`
+/// decides. A test pinned to one config would have been green on the other while
+/// the defect stood, so both are checked and neither is pinned to a route name.
+fn div_at_zero_configs() -> [(&'static str, SolverConfig); 2] {
+    [
+        (
+            "default (no timeout) — the arm SOUND-1 shipped on",
+            SolverConfig::default(),
+        ),
+        ("10s budget", cfg()),
+    ]
+}
+
+/// **SOUND-1 regression.** `check_auto` returned `Sat` on the query above with a
+/// model that did NOT replay — the third conjunct evaluated `Bool(false)` against
+/// `model.to_assignment()`, violating the repository's hard rule that every `sat`
+/// must be checkable by evaluating the original term against the lifted model.
+///
+/// The defect was **not** a missing replay. `dispatch_uf_nra` replays, and its
+/// replay passed: it ran against `projected`, an `Assignment` that carried the
+/// chosen division-at-zero witness `5/0 → 100`. `euf::project_replay_build` then
+/// built the emitted `Model` from that assignment copying only symbol values and
+/// function interpretations, dropping `real_div_zero`. The caller's `(/ 5 0)`
+/// therefore fell back to the total `x/0 = 0` convention and the conjunct was
+/// false. The certificate did not carry a distinction its producer made.
+///
+/// This test replays through `model.to_assignment()` — the artifact a CALLER
+/// receives — deliberately, not through any internal state.
+///
+/// **What each revert does**, measured, because "it fails if you revert the fix"
+/// is not one statement when the fix has two halves:
+///
+/// - revert BOTH halves of the `project_replay_build` fix → wrong `Sat`, and THIS
+///   test fails on the default config (`assertion #2` is `Bool(false)`);
+/// - revert only the `real_div_zeros` carry → the second replay catches it and the
+///   verdict degrades to a sound `Unknown`, which this test deliberately
+///   tolerates. [`div_at_zero_query_is_still_decided_sat`] is the test that dies
+///   on that revert;
+/// - revert only the second replay → nothing observable changes today. That guard
+///   is reachable only through a component the model build forgets, and after the
+///   carry there is none: `Assignment` holds exactly bindings, functions and
+///   `real_div_zero`, all three of which `Model` carries. It is a forward guard
+///   against the next such component, not a live check, and this comment says so
+///   rather than letting a green suite imply otherwise.
+///
+/// `unknown` is a sound outcome here and the assertion admits it; what it forbids
+/// is a `Sat` that does not replay.
+#[test]
+fn div_at_zero_witness_survives_into_the_emitted_model() {
+    for (label, config) in div_at_zero_configs() {
+        let mut a = TermArena::new();
+        let asserts = div_at_zero_query(&mut a);
+        let (result, trace) = check_auto_explained(&mut a, &asserts, &config).unwrap();
+        match &result {
+            CheckResult::Sat(model) => {
+                let assignment = model.to_assignment();
+                for (index, &assertion) in asserts.iter().enumerate() {
+                    assert_eq!(
+                        eval(&a, assertion, &assignment),
+                        Ok(Value::Bool(true)),
+                        "[{label}] sat model must replay original assertion #{index} \
+                         (SOUND-1: it evaluated false because the emitted model \
+                         dropped the division-at-zero witness); trace: {trace}"
+                    );
+                }
+                // The witness must be PRESENT, not merely consistent by luck:
+                // `(/ 5 0) = 100` is only representable through `real_div_zero`.
+                assert_eq!(
+                    model.real_div_zero(Rational::integer(5)),
+                    Some(Rational::integer(100)),
+                    "[{label}] the emitted model must carry the chosen (/ 5 0) \
+                     interpretation; trace: {trace}"
+                );
+            }
+            CheckResult::Unsat => {
+                panic!("[{label}] the query is satisfiable, got unsat; trace: {trace}")
+            }
+            // A sound decline is acceptable; a non-replaying `sat` is not.
+            CheckResult::Unknown(_) => {}
+        }
+    }
+}
+
+/// Companion to [`div_at_zero_witness_survives_into_the_emitted_model`]: the
+/// solver must still DECIDE this query, not retreat to `Unknown`.
+///
+/// The two are deliberately separate. The soundness test tolerates `Unknown`,
+/// because a sound decline beats a wrong `sat` — but that tolerance is exactly
+/// what makes it survive a revert of the `real_div_zeros` carry alone (the second
+/// replay then turns the incomplete model into an `Unknown`). This test is the one
+/// that dies on that revert, so the pair distinguishes "we stopped emitting a
+/// wrong answer" from "we stopped emitting an answer".
+///
+/// It asserts the VERDICT, not the route: which route decides depends on the
+/// budget (see [`div_at_zero_configs`]), and pinning a route name here would make
+/// this a routing test rather than a capability one.
+#[test]
+fn div_at_zero_query_is_still_decided_sat() {
+    for (label, config) in div_at_zero_configs() {
+        let mut a = TermArena::new();
+        let asserts = div_at_zero_query(&mut a);
+        let (result, trace) = check_auto_explained(&mut a, &asserts, &config).unwrap();
+        assert!(
+            matches!(result, CheckResult::Sat(_)),
+            "[{label}] the div-at-zero query is satisfiable and the routes can build \
+             the witness; an Unknown here means the emitted model lost a component \
+             the producer chose and a replay declined. Got {result:?}; trace: {trace}"
+        );
+    }
+}

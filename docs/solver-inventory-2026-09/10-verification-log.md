@@ -205,6 +205,34 @@ worth: on the 152-file `:status` sweep the new warm engine is constructed
 one. The structural win is real and measured on a fixture; the payoff on
 committed corpora today is nil. The lane made no performance claim, correctly.
 
+## Eighth correction: a third exit criterion that described appearance, not truth (2026-09-09)
+
+Item 1.5's criterion asked that `span_log.rs:75` "no longer say 'No ticks'".
+The executing lane refused to satisfy it, correctly: the sentence is true.
+`SearchCounters` are filled only by the `count_search` search variants, and
+nothing in `axeyum-solver` calls them — the coordinator confirmed the grep
+matches that comment and nothing else. Editing the words without building the
+feed would have been a documentation change dressed as an implementation, and
+the criterion as written would have accepted it.
+
+That is now three defective criteria from the same author in one roadmap:
+
+| Item | What I wrote | Why it was wrong |
+|---|---|---|
+| 1.1 | "assert clause count is monotone" | A cold rebuild is monotone too — measured byte-identical |
+| 1.3 | "the other's file is gone" | The sequencing moves; no file disappears |
+| 1.5 | "`span_log.rs:75` no longer says 'No ticks'" | Satisfiable by editing a comment |
+
+The shared defect: **each describes what the finished change would LOOK like,
+rather than naming an observation that a broken version would fail.** That is
+the same error as a checker that cannot fail, one level up — and it is
+especially dangerous in a roadmap, because a criterion is what a later reader
+uses to decide the work is done.
+
+The rule that would have caught all three: write the criterion as the negative
+control. Not "X is true when done" but "here is the mutation, and here is the
+command that must fail because of it."
+
 ## What was not verified
 
 - No claim in this folder was confirmed by execution. Nothing here was built,

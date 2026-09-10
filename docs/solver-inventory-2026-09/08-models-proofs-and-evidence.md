@@ -462,8 +462,20 @@ and that recipe is not in `check.sh` or `just check`.
 `lia_interpolant_certified`, `uflia_interpolant_certified`,
 `uflra_interpolant_certified`, `propositional_interpolant_certified`) have
 **no caller in `crates/axeyum-solver/src`** — only `lib.rs` re-exports and
-`tests/`. `uflia_interpolant_certified` has no caller anywhere, including
 `tests/`.
+
+> **Two corrections, 2026-09-09.** (1) The original text continued
+> "`uflia_interpolant_certified` has no caller anywhere, including `tests/`."
+> That was FALSE when written: it has 12 callers in `tests/` — 7 in
+> `tests/uflia_interpolant.rs` and 5 in `tests/lean_crosscheck.rs`. Same
+> correction applies to the `NO CALLER FOUND` row below. (2) The finding itself
+> is now RESOLVED for six of the seven: roadmap item 2.8 wired them, so
+> `dispatch_interpolant` consumes `qf_bv`, `qf_uf`, `lra`, `lia`, `uflra` and
+> `uflia` certified variants. `propositional_interpolant_certified` remains
+> deliberately unwired — its DRAT lives in the CNF encoding's variable space and
+> would not cover the lift back to terms. Note only FOUR of the six are
+> reachable through the shipping ladder: `certify_qf_bv` is shadowed by the
+> ground-EUF rung and `certify_uflia` is unreached (roadmap 2.8b).
 
 ### Miter and end-to-end certification
 
