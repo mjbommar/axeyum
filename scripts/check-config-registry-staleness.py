@@ -165,6 +165,96 @@ def introducing_commit(path: str, symbol: str | None) -> str | None:
     return shas[0] if shas else None
 
 
+def _strip_rust_strings_and_line_comment(line: str) -> tuple[str, bool]:
+    """Return `(code-only text, ambiguous)` for one Rust source line.
+
+    Removes double-quoted string literals (honouring backslash escapes) and any
+    trailing `//` comment. `ambiguous` is True when the line carries a construct
+    a SINGLE diff line cannot resolve -- a block-comment delimiter, a raw-string
+    prefix, or an unterminated quote -- and the caller must then decline to call
+    an occurrence non-code.
+    """
+    ambiguous = "/*" in line or "*/" in line or 'r"' in line or 'r#"' in line
+    out: list[str] = []
+    i, n, in_str = 0, len(line), False
+    while i < n:
+        c = line[i]
+        if in_str:
+            if c == "\\":
+                i += 2
+                continue
+            if c == '"':
+                in_str = False
+            i += 1
+            continue
+        if c == '"':
+            in_str = True
+            i += 1
+            continue
+        if c == "/" and i + 1 < n and line[i + 1] == "/":
+            break
+        out.append(c)
+        i += 1
+    if in_str:
+        ambiguous = True
+    return "".join(out), ambiguous
+
+
+def symbol_occurs_in_code(line: str, symbol: str) -> bool:
+    """Whether `symbol` appears in `line` as CODE, not inside a string or comment.
+
+    WHY THIS EXISTS: `git log -G<symbol>` matches the symbol anywhere in a diff
+    line, including inside a string literal. On 2026-09-10 that made this gate
+    report `simplex.rs::MAX_TABLEAU_CELLS` stale because a commit had added two
+    `.expect("1x1 tableau is far below MAX_TABLEAU_CELLS")` messages to a TEST.
+    The constant's value, its doc comment and its uses were untouched.
+
+    That is the failure mode this repository calls a gate that manufactures a
+    finding, and it is expensive in a specific way: it costs the gate its
+    authority. A checker that fires on a string literal trains its readers to
+    skim past the entries that are real.
+
+    This module's own header states the subject: "code this measurement was
+    about changed". A mention inside a string or a comment is not that.
+
+    Conservative in the direction that keeps findings: anything unresolvable
+    from one diff line counts as code.
+    """
+    code, ambiguous = _strip_rust_strings_and_line_comment(line)
+    if ambiguous:
+        return True
+    return re.search(rf"\b{re.escape(symbol)}\b", code) is not None
+
+
+def _commit_changes_symbol_in_code(sha: str, path: str, symbol: str) -> bool:
+    """Whether `sha` changed a line where `symbol` appears as code, in `path`.
+
+    A commit whose every added/removed mention of the symbol sits in a string or
+    a comment did not change the code the measurement rests on. Any failure to
+    look, and any commit where `-G` matched for a reason not visible in the
+    +/- lines (a rename, a mode change), keeps the commit.
+    """
+    out = subprocess.run(
+        ["git", "-C", str(REPO), "show", "--format=", "--unified=0", sha, "--", path],
+        capture_output=True, text=True, check=False,
+    )
+    if out.returncode != 0:
+        return True
+    saw_occurrence = False
+    for line in out.stdout.splitlines():
+        if not line or line[0] not in "+-":
+            continue
+        if line.startswith("+++") or line.startswith("---"):
+            continue
+        body = line[1:]
+        if symbol not in body:
+            continue
+        saw_occurrence = True
+        if symbol_occurs_in_code(body, symbol):
+            return True
+    return not saw_occurrence
+
+
 def commits_after(date: str, path: str, symbol: str | None) -> list[tuple[str, str, str]]:
     """Commits touching `path` strictly after `date`, optionally mentioning `symbol`.
 
@@ -188,6 +278,11 @@ def commits_after(date: str, path: str, symbol: str | None) -> list[tuple[str, s
         parts = line.split("\t", 2)
         if len(parts) == 3:
             rows.append((parts[0], parts[1], parts[2]))
+    if symbol:
+        # `-G` matched the symbol as TEXT. Keep only the commits that changed it
+        # as CODE -- see `symbol_occurs_in_code` for the false positive this
+        # removes and why it costs the gate more than it saves.
+        rows = [r for r in rows if _commit_changes_symbol_in_code(r[0], path, symbol)]
     return rows
 
 
@@ -197,9 +292,20 @@ def main() -> int:
     ap.add_argument("--list", action="store_true", help="print the registry and exit 0")
     ap.add_argument("--verbose", action="store_true", help="name the commits that made an entry stale")
     ap.add_argument(
+        "--repo",
+        type=Path,
+        default=None,
+        help="repository root to query with git (default: this script's own "
+             "parent-of-parent). Exists so this check's CONTROL can run a "
+             "deliberately mutated COPY of this script against the real "
+             "history without placing that mutant in a shared worktree -- a "
+             "mutant on disk in the shared checkout is in every other lane's "
+             "build, and the failures it causes look like their bug.",
+    )
+    ap.add_argument(
         "--registry",
         type=Path,
-        default=REGISTRY_RS,
+        default=None,
         help="registry source to read (default: the in-tree one). Exists so this "
              "check's own POSITIVE CONTROL can be run against a deliberately "
              "backdated copy without mutating a shared checkout. A staleness "
@@ -208,7 +314,12 @@ def main() -> int:
     )
     args = ap.parse_args()
 
-    registry_rs = args.registry
+    if args.repo is not None:
+        global REPO, REGISTRY_RS
+        REPO = args.repo.resolve()
+        REGISTRY_RS = REPO / "crates" / "axeyum-solver" / "src" / "config_registry.rs"
+
+    registry_rs = args.registry if args.registry is not None else REGISTRY_RS
     if not registry_rs.exists():
         print(f"FAIL: registry not found at {registry_rs}", file=sys.stderr)
         return 2

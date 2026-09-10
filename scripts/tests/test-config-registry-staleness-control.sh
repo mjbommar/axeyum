@@ -121,6 +121,67 @@ else
   fi
 fi
 
+# ---------------------------------------------------------------------------
+# A symbol mentioned inside a string literal or a comment is NOT a change to the
+# code a measurement rests on. `git log -G` cannot tell the difference, and on
+# 2026-09-10 that made this gate report THREE stale entries that were not:
+# `simplex.rs::MAX_TABLEAU_CELLS` (two `.expect("... MAX_TABLEAU_CELLS")` strings
+# added to a test) and both `sat_bv_backend.rs` throughput constants (named in a
+# `///` cross-reference). All three had untouched values, doc text and uses.
+#
+# This step pins the fix in BOTH directions, because a filter that also silences
+# the real entries is worse than the false positives it removes.
+step "4. a symbol changed only inside a string or comment is not stale"
+
+python3 "$CHECK" >"$WORK/code.out" 2>&1
+if grep -q 'MAX_TABLEAU_CELLS' "$WORK/code.out"; then
+  bad "reported MAX_TABLEAU_CELLS, whose only change was inside two .expect() strings"
+  sed 's/^/     /' "$WORK/code.out"
+else
+  ok "does not report a string-literal-only change"
+fi
+
+# The other direction: the filter must still let a genuine code change through.
+# FLOOD_ROUND_ADMISSION_CAP gained `round_admission_cap: FLOOD_ROUND_ADMISSION_CAP,`
+# in d910fa590 -- real code, and its entry is genuinely stale until re-measured.
+if grep -q 'FLOOD_ROUND_ADMISSION_CAP' "$WORK/code.out"; then
+  ok "still reports a genuine code change"
+else
+  bad "the filter also silenced FLOOD_ROUND_ADMISSION_CAP, a real code change -- it is too aggressive and this gate now under-reports"
+  sed 's/^/     /' "$WORK/code.out"
+fi
+
+# ---------------------------------------------------------------------------
+# The mutation test on our own gate: remove the filter and step 4's first half
+# must die. Without this, step 4 could be passing for any reason at all.
+#
+# The mutant is written to the throwaway directory and run with `--repo`, never
+# into `scripts/`: a mutant on disk in a shared worktree is in every other
+# lane's build, and the failures it causes look like their bug.
+step "5. removing the code-vs-text filter brings the false positive back"
+python3 - "$CHECK" "$WORK/mutant.py" <<'MUTPY'
+import sys
+src = open(sys.argv[1], encoding="utf-8").read()
+needle = ("        rows = [r for r in rows "
+          "if _commit_changes_symbol_in_code(r[0], path, symbol)]")
+if needle not in src:
+    sys.exit("control could not be built: the code-vs-text filter no longer has "
+             "the shape this mutation removes")
+open(sys.argv[2], "w", encoding="utf-8").write(
+    src.replace(needle, "        rows = list(rows)", 1))
+MUTPY
+if [ $? -ne 0 ]; then
+  bad "could not build the filter-removed mutant"
+else
+  python3 "$WORK/mutant.py" --repo "$ROOT" >"$WORK/mutant.out" 2>&1
+  if grep -q 'MAX_TABLEAU_CELLS' "$WORK/mutant.out"; then
+    ok "the filter is load-bearing -- without it the false positive returns"
+  else
+    bad "removing the filter changed nothing, so step 4 proves nothing. Either the fixture commit 0bd9aae89 is out of range of the MAX_TABLEAU_CELLS entry date, or the filter is not what removes it."
+    sed 's/^/     /' "$WORK/mutant.out"
+  fi
+fi
+
 printf '\n'
 if [ "$fails" -eq 0 ]; then
   echo "CONFIG_STALENESS_CONTROL|PASSED"
