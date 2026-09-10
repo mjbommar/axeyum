@@ -65,6 +65,16 @@
 //! implementation detail, and why [`crate::ScheduledInprocess::lift_model`]
 //! exists to apply the whole lift stack in one call and in the right order.
 //!
+//! # Admission
+//!
+//! This pass carries no valve of its own. Roadmap item 1.5's
+//! [`crate::ticks::TickValveAccount`] is the shared admission rule — accumulate
+//! a per-mille slice of the ticks the SEARCH has spent since this pass last ran,
+//! refuse below `threshold x clauses`, back off exponentially on a round that
+//! finds nothing — and `crate::inprocess`'s `TickValve` drives it through
+//! [`crate::InprocessObserver::decompose_grant`]. A [`DecomposeOptions`] budget
+//! is what comes out the other side.
+//!
 //! # Determinism
 //!
 //! Node order, edge order, component order and the representative rule are all
@@ -758,119 +768,6 @@ fn decompose_round(
     }
 }
 
-// ---------------------------------------------------------------------------
-// The valve
-// ---------------------------------------------------------------------------
-
-/// The accumulate-and-delay admission gate `CaDiCaL` puts in front of every
-/// inprocessing pass (`limit.hpp:136`, `probe.cpp:902-907`), denominated in
-/// [`crate::ticks`].
-///
-/// Three rules, all of them `CaDiCaL`'s:
-///
-/// * **Accumulate.** A pass may only spend a slice of the search's own work:
-///   `effort_per_mille / 1000 x (ticks since this pass last ran)`. A pass that
-///   has never run gets [`Self::min_reference`] as its reference so a fresh
-///   search is not locked out by having done no work yet.
-/// * **Refuse below a threshold.** If that slice is under
-///   `threshold_per_clause x clauses`, the pass does not run at all. Building
-///   the graph is `O(|F|)` and a budget that cannot cover it buys nothing.
-/// * **Delay.** A run that substitutes nothing doubles the delay, and the next
-///   `delay` offers are declined outright before any of the above is computed.
-///   A successful run resets it. This is what stops the cheapest pass from
-///   becoming the most frequently wasted one.
-///
-/// Roadmap item 1.5 owns the shared `TickValve` type. This valve consumes a
-/// plain `u64` tick reading precisely so that adopting it later is a change of
-/// caller, not of contract: whatever produces the number, the admission rule
-/// here is unchanged.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct DecomposeValve {
-    /// Per-mille of the search's ticks-since-last-run the pass may spend.
-    pub effort_per_mille: u64,
-    /// Work per clause below which the pass is refused outright.
-    pub threshold_per_clause: u64,
-    /// Reference tick count used when the pass has never run.
-    pub min_reference: u64,
-    /// Offers still to be declined by the back-off.
-    delay: u32,
-    /// Delay to reinstate after the next fruitless run.
-    delay_step: u32,
-    /// Tick reading at the last admitted run.
-    last_ticks: u64,
-    /// Whether the pass has ever been admitted.
-    started: bool,
-}
-
-impl DecomposeValve {
-    /// `CaDiCaL`-shaped defaults: 1% of search ticks, refuse below one work unit
-    /// per clause, and a 1e6-tick reference for a search that has not run yet.
-    pub const DEFAULT: Self = Self {
-        effort_per_mille: 10,
-        threshold_per_clause: 1,
-        min_reference: 1_000_000,
-        delay: 0,
-        delay_step: 1,
-        last_ticks: 0,
-        started: false,
-    };
-
-    /// Offers the pass at tick reading `ticks` over a formula of `clauses`
-    /// clauses, returning the work budget to run it with or `None` to refuse.
-    ///
-    /// `None` means **do not run the pass at all**, which is not a budget of
-    /// zero: a zero-budget call still scans every clause to size the graph, and
-    /// that `O(|F|)` scan is exactly what a refusal is declining to pay.
-    pub fn admit(&mut self, ticks: u64, clauses: usize) -> Option<u64> {
-        if self.delay > 0 {
-            self.delay -= 1;
-            return None;
-        }
-        let reference = if self.started {
-            ticks.saturating_sub(self.last_ticks)
-        } else {
-            ticks.max(self.min_reference)
-        };
-        let budget = reference
-            .saturating_mul(self.effort_per_mille)
-            .saturating_div(1000);
-        let floor = u64::try_from(clauses)
-            .unwrap_or(u64::MAX)
-            .saturating_mul(self.threshold_per_clause);
-        if budget < floor {
-            return None;
-        }
-        self.last_ticks = ticks;
-        self.started = true;
-        Some(budget)
-    }
-
-    /// Reports what an admitted run achieved. A run that substituted nothing
-    /// doubles the delay; one that substituted anything clears it.
-    pub fn report(&mut self, variables_substituted: usize) {
-        if variables_substituted > 0 {
-            self.delay = 0;
-            self.delay_step = 1;
-        } else {
-            self.delay = self.delay_step;
-            self.delay_step = self.delay_step.saturating_mul(2);
-        }
-    }
-
-    /// Offers still to be declined by the back-off. Zero means the next offer is
-    /// evaluated on its merits.
-    #[must_use]
-    pub const fn pending_delay(&self) -> u32 {
-        self.delay
-    }
-}
-
-impl Default for DecomposeValve {
-    fn default() -> Self {
-        Self::DEFAULT
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1141,51 +1038,5 @@ mod tests {
             let full = out.equivalences.extend(&assignment);
             assert!(f.evaluate(&full).expect("width"), "inverted lift {full:?}");
         }
-    }
-
-    #[test]
-    fn the_valve_refuses_until_the_search_has_done_enough_work() {
-        let mut valve = DecomposeValve {
-            min_reference: 0,
-            ..DecomposeValve::DEFAULT
-        };
-        // 1% of 100_000 ticks is 1_000 units; a 2_000-clause formula needs
-        // 2_000, so this is refused.
-        assert_eq!(valve.admit(100_000, 2_000), None);
-        // The same tick reading over a 500-clause formula is admitted.
-        assert_eq!(valve.admit(100_000, 500), Some(1_000));
-    }
-
-    #[test]
-    fn the_valve_uses_the_min_reference_before_the_first_run() {
-        let mut valve = DecomposeValve::DEFAULT;
-        // No search work yet: the floor reference applies, not zero.
-        assert_eq!(valve.admit(0, 100), Some(10_000));
-    }
-
-    #[test]
-    fn the_valve_charges_only_ticks_since_the_last_admitted_run() {
-        let mut valve = DecomposeValve::DEFAULT;
-        assert_eq!(valve.admit(2_000_000, 100), Some(20_000));
-        valve.report(1);
-        // Only 1_000_000 further ticks, so the next grant is half.
-        assert_eq!(valve.admit(3_000_000, 100), Some(10_000));
-    }
-
-    #[test]
-    fn a_fruitless_run_backs_the_valve_off_and_a_useful_one_resets_it() {
-        let mut valve = DecomposeValve::DEFAULT;
-        assert!(valve.admit(2_000_000, 10).is_some());
-        valve.report(0);
-        assert_eq!(valve.pending_delay(), 1);
-        assert_eq!(valve.admit(4_000_000, 10), None, "delayed");
-        assert!(valve.admit(4_000_000, 10).is_some());
-        valve.report(0);
-        assert_eq!(valve.pending_delay(), 2, "the delay doubles");
-        assert_eq!(valve.admit(6_000_000, 10), None);
-        assert_eq!(valve.admit(6_000_000, 10), None);
-        assert!(valve.admit(6_000_000, 10).is_some());
-        valve.report(3);
-        assert_eq!(valve.pending_delay(), 0, "a useful run clears the delay");
     }
 }

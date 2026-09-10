@@ -438,10 +438,10 @@ pub trait InprocessObserver {
     /// chose. A defaulted method registers the pass without touching a single
     /// existing observer, and an observer that has not opted in declines it.
     ///
-    /// `CaDiCaL`'s own admission rule for this pass —
-    /// `effort/1000 x ticks-since-last-run`, refused below `thresh x clauses`,
-    /// with `Delay` back-off — is [`crate::DecomposeValve`], which an
-    /// implementor of this method can drive directly.
+    /// Roadmap item 1.5's admission rule applies here unchanged: [`TickValve`]
+    /// implements this method over a [`TickValveAccount`], so a pass offered
+    /// through a valve gets the same accumulate / refuse / back-off treatment as
+    /// the two occurrence-list passes and none of it is written twice.
     fn decompose_grant(&mut self, _formula: &CnfFormula) -> Option<u64> {
         None
     }
@@ -606,10 +606,31 @@ pub struct TickValve<O> {
     steps_per_tick: u64,
     subsume: TickValveAccount,
     bve: TickValveAccount,
+    decompose: TickValveAccount,
     subsume_round: PassRound,
     bve_round: PassRound,
+    decompose_round: PassRound,
     log: Vec<TickDecision>,
 }
+
+/// The effort setting equivalent-literal substitution is offered under.
+///
+/// The **cheapest** pass, so it gets the largest slice and the smallest
+/// threshold — the mirror image of [`TickEffort::EXPENSIVE_SETUP`], and for the
+/// same reason stated the other way round: a pass whose whole cost is one linear
+/// scan of the binary clauses should run often and cheaply rather than rarely
+/// and thoroughly. `CaDiCaL` makes the same call without a named option, by
+/// running `decompose()` five times inside one `inprobe` round while every other
+/// pass in that round runs once (`inprobe.cpp`).
+///
+/// A threshold of 1x the clause count is not vacuous — that is
+/// [`TickEffort::UNGATED`], which sets it to zero. It is the smallest gate that
+/// still refuses a round which could not pay for its own scan.
+const DECOMPOSE_EFFORT: TickEffort = TickEffort {
+    per_mille: 100,
+    threshold_per_clause: 1,
+    ..TickEffort::MAJOR_PASS
+};
 
 /// What one pass did in the round now in progress: whether it ran at all, and
 /// whether it achieved anything. Only the pair matters — a pass that did not
@@ -637,10 +658,21 @@ impl<O> TickValve<O> {
             steps_per_tick: 1,
             subsume: TickValveAccount::new(subsume),
             bve: TickValveAccount::new(bve),
+            decompose: TickValveAccount::new(DECOMPOSE_EFFORT),
             subsume_round: PassRound::CLEAR,
             bve_round: PassRound::CLEAR,
+            decompose_round: PassRound::CLEAR,
             log: Vec::new(),
         }
+    }
+
+    /// Sets the effort equivalent-literal substitution is offered under,
+    /// replacing [`DECOMPOSE_EFFORT`]. Resets that account's watermark and
+    /// backoff, so call it before the first round.
+    #[must_use]
+    pub fn with_decompose_effort(mut self, effort: TickEffort) -> Self {
+        self.decompose = TickValveAccount::new(effort);
+        self
     }
 
     /// The shipping pairing: subsumption on [`TickEffort::MAJOR_PASS`], BVE on
@@ -716,6 +748,21 @@ impl<O> TickValve<O> {
         &self.bve
     }
 
+    /// Equivalent-literal substitution's account.
+    ///
+    /// Its decisions do not appear in [`Self::decisions`] or
+    /// [`Self::schedule_log`]: a [`TickDecision`] is labelled by
+    /// [`OccurrencePass`], which has no substitution variant, and adding one
+    /// would break every exhaustive match on it — including the shipping
+    /// backend's, in a crate this change does not touch. The decisions are
+    /// visible in the counter stream instead, under the `decompose_tick_*` keys,
+    /// which is the ordered record anyway because it interleaves with every
+    /// other stage's telemetry.
+    #[must_use]
+    pub const fn decompose_account(&self) -> &TickValveAccount {
+        &self.decompose
+    }
+
     /// The wrapped observer.
     #[must_use]
     pub const fn inner(&self) -> &O {
@@ -742,8 +789,12 @@ impl<O> TickValve<O> {
         if self.bve_round.ran {
             self.bve.record_outcome(self.bve_round.found);
         }
+        if self.decompose_round.ran {
+            self.decompose.record_outcome(self.decompose_round.found);
+        }
         self.subsume_round = PassRound::CLEAR;
         self.bve_round = PassRound::CLEAR;
+        self.decompose_round = PassRound::CLEAR;
     }
 
     /// Runs one round with the valve as its observer and closes it afterwards.
@@ -769,6 +820,11 @@ const SUBSUME_PROGRESS_KEYS: [&str; 3] = [
 
 /// The same, for elimination.
 const BVE_PROGRESS_KEYS: [&str; 1] = ["bve_variables_eliminated"];
+
+/// The same, for equivalent-literal substitution. A round that substituted no
+/// variable found nothing, whatever else it removed: the tautologies it deletes
+/// are a consequence of a substitution, so there are none without one.
+const DECOMPOSE_PROGRESS_KEYS: [&str; 1] = ["decompose_variables_substituted"];
 
 impl<O: InprocessObserver> InprocessObserver for TickValve<O> {
     fn grant(&mut self, pass: OccurrencePass, formula: &CnfFormula) -> Option<u64> {
@@ -844,9 +900,54 @@ impl<O: InprocessObserver> InprocessObserver for TickValve<O> {
                 self.subsume_round.found = true;
             } else if BVE_PROGRESS_KEYS.contains(&name) {
                 self.bve_round.found = true;
+            } else if DECOMPOSE_PROGRESS_KEYS.contains(&name) {
+                self.decompose_round.found = true;
             }
         }
         self.inner.count(name, value);
+    }
+
+    fn decompose_grant(&mut self, formula: &CnfFormula) -> Option<u64> {
+        let clauses = formula.clauses().len() as u64;
+        let search_ticks = self.search_ticks;
+        let decision = self.decompose.request(search_ticks, clauses);
+
+        let budget = match decision {
+            TickGrant::Granted { allowance, .. } => {
+                self.decompose_round.ran = true;
+                match (self.inner.decompose_grant(formula), self.steps_per_tick) {
+                    (Some(steps), 0) => Some(steps),
+                    (Some(steps), per_tick) => Some(steps.min(allowance.saturating_mul(per_tick))),
+                    (None, _) => {
+                        // The valve admitted; the caller's own policy declined.
+                        // The round did not run, so the backoff must not be
+                        // charged for it either.
+                        self.decompose_round.ran = false;
+                        None
+                    }
+                }
+            }
+            TickGrant::Refused { .. } | TickGrant::BackedOff { .. } => None,
+        };
+
+        // No `TickDecision` row: see `decompose_account`. These four keys carry
+        // the same information in the counter stream, in schedule order.
+        let (admitted, allowance, threshold, backoff) = match decision {
+            TickGrant::Granted { allowance, .. } => (1.0, allowance, 0, 0),
+            TickGrant::Refused { accrued, threshold } => (0.0, accrued, threshold, 0),
+            TickGrant::BackedOff { rounds_left } => (0.0, 0, 0, rounds_left),
+        };
+        self.inner
+            .count("decompose_tick_reference", u64_as_f64(search_ticks));
+        self.inner
+            .count("decompose_tick_allowance", u64_as_f64(allowance));
+        self.inner
+            .count("decompose_tick_threshold", u64_as_f64(threshold));
+        self.inner.count("decompose_tick_admitted", admitted);
+        self.inner
+            .count("decompose_tick_backoff_rounds_left", f64::from(backoff));
+
+        budget
     }
 }
 

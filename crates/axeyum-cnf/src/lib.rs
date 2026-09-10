@@ -96,7 +96,7 @@ pub use bve::{
 };
 pub use compact::{CompactMap, compact};
 pub use decompose::{
-    DecomposeOptions, DecomposeOutcome, DecomposeStats, DecomposeValve, EquivalenceMap, decompose,
+    DecomposeOptions, DecomposeOutcome, DecomposeStats, EquivalenceMap, decompose,
     decompose_within_recorded,
 };
 #[cfg(unix)]
