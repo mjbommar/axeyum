@@ -421,7 +421,7 @@ fn cmp(a: Rational, b: Rational) -> core::cmp::Ordering {
 /// model. `the_witness_boundary_discards_an_exact_model_that_exceeds_i128`
 /// below builds one — a 131-variable doubling chain whose coefficients are all
 /// small integers and whose exact vertex is `x_0 = 2^130` — and this function
-/// throws that witness away. Yices2, OpenSMT and SMTInterpol all keep growing
+/// throws that witness away. Yices2, `OpenSMT` and `SMTInterpol` all keep growing
 /// the number instead
 /// (`docs/solver-comparison-2026-09/05-yices-opensmt-smtinterpol.md`: "Three
 /// independent implementations chose 'grow the number'; we chose 'give up'").

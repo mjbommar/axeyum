@@ -4,7 +4,7 @@
 //!
 //! `simplex.rs`'s `narrow` refuses to hand back a feasible point when any
 //! coordinate has been promoted past `i128`, and the query then answers
-//! `unknown` even though a model exists. Yices2, OpenSMT and SMTInterpol all
+//! `unknown` even though a model exists. Yices2, `OpenSMT` and `SMTInterpol` all
 //! keep growing the number instead
 //! (`docs/solver-comparison-2026-09/05-yices-opensmt-smtinterpol.md`), so the
 //! boundary is a genuine capability gap and the roadmap asks for it to be
