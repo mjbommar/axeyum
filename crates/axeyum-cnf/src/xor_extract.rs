@@ -1058,6 +1058,7 @@ mod gate_table_tests {
     use axeyum_aig::{Aig, AigLit};
     use axeyum_bv::lower_terms;
     use axeyum_ir::{Sort, TermArena};
+    use std::fmt::Write as _;
 
     /// One curated instance: a name and the AIG plus roots handed to the
     /// encoder.
@@ -1067,7 +1068,7 @@ mod gate_table_tests {
         roots: Vec<AigLit>,
     }
 
-    /// Lowers one QF_BV term through `axeyum-bv`, the production route into the
+    /// Lowers one `QF_BV` term through `axeyum-bv`, the production route into
     /// AIG. These are the instances whose gate structure is *not* hand-placed:
     /// whatever XOR nodes exist are the ones bit-blasting actually produced.
     fn lowered(
@@ -1183,20 +1184,20 @@ mod gate_table_tests {
     /// non-XOR shapes sitting next to the ones it must find.
     fn mixed_xor_and_or() -> Instance {
         let mut aig = Aig::new();
-        let a = aig.input("a");
-        let b = aig.input("b");
-        let c = aig.input("c");
-        let d = aig.input("d");
-        let x = aig.xor(a, b);
-        let y = aig.and(c, d);
-        let z = aig.or(x, y);
-        let w = aig.xor(z, c);
-        let m = aig.mux(a, w, y);
-        let root = aig.and(m, x);
+        let in0 = aig.input("a");
+        let in1 = aig.input("b");
+        let in2 = aig.input("c");
+        let in3 = aig.input("d");
+        let first_xor = aig.xor(in0, in1);
+        let conjunction = aig.and(in2, in3);
+        let disjunction = aig.or(first_xor, conjunction);
+        let second_xor = aig.xor(disjunction, in2);
+        let selected = aig.mux(in0, second_xor, conjunction);
+        let root = aig.and(selected, first_xor);
         Instance {
             name: "mixed_xor_and_or",
             aig,
-            roots: vec![root, w, x],
+            roots: vec![root, second_xor, first_xor],
         }
     }
 
@@ -1226,8 +1227,9 @@ mod gate_table_tests {
             let hinted = extract_xors_hinted(formula, Some(&table));
             let agree = hinted.system.constraints() == mined.system.constraints();
 
-            report.push_str(&format!(
-                "  {:<20} vars {:>6} clauses {:>7} entries {:>5} mined {:>5}                  hinted {:>5} {}\n",
+            let _ = writeln!(
+                report,
+                "  {:<20} vars {:>6} clauses {:>7} entries {:>5} mined {:>5} hinted {:>5} {}",
                 instance.name,
                 formula.variable_count(),
                 formula.clauses().len(),
@@ -1235,7 +1237,7 @@ mod gate_table_tests {
                 mined.num_recognized,
                 hinted.num_recognized,
                 if agree { "SAME" } else { "DIFFERENT" },
-            ));
+            );
             if !agree {
                 let mined_set = mined.system.constraints();
                 let hinted_set = hinted.system.constraints();
@@ -1251,9 +1253,8 @@ mod gate_table_tests {
                     .take(4)
                     .cloned()
                     .collect();
-                report.push_str(&format!(
-                    "      missing from the table route: {missing:?}\n                     \x20     found ONLY by the table route: {extra:?}\n"
-                ));
+                let _ = writeln!(report, "      missing from the table route: {missing:?}");
+                let _ = writeln!(report, "      found ONLY by the table route: {extra:?}");
                 mismatches.push(instance.name);
             }
             if mined.num_recognized > 0 {
@@ -1571,9 +1572,8 @@ mod gate_table_tests {
     /// Kept for one reason — it is the **before** side of the measurement. A
     /// ratio quoted against the post-change mining route would understate the
     /// change, because sharing one allocation-free grouping between the two
-    /// routes sped the mining route up too. `baseline_agrees_with_the_shipped
-    /// _mining_route` pins it against the shipped route so it cannot drift into
-    /// measuring something else.
+    /// routes sped the mining route up too. Its own test pins it against the
+    /// shipped mining route so it cannot drift into measuring something else.
     fn mine_as_of_main(cnf: &CnfFormula) -> ExtractedXors {
         let mut groups: BTreeMap<Vec<usize>, Vec<u32>> = BTreeMap::new();
         for clause in cnf.clauses() {
