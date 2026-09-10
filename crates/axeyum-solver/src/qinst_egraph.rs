@@ -3261,21 +3261,50 @@ fn census_enabled() -> bool {
     std::env::var_os("AXEYUM_QPROBE_CENSUS").is_some()
 }
 
-/// EXPERIMENT ARM, off by default: release the deferred admission pool in the
-/// SAME round as urgent/unit traffic instead of only once urgent traffic runs
-/// dry.
+/// SHIPPED as of 2026-09-10: release the deferred admission pool in the SAME
+/// round as urgent/unit traffic, instead of only once urgent traffic runs dry.
 ///
-/// The shipped gate in [`admit_next_source_batch`] is `if admitted.is_empty()`,
-/// a strict priority: conflicts and units first, unresolved clauses only when
-/// there are none. On a file whose urgent traffic never runs dry inside the
-/// budget, that priority is not a delay, it is a permanent exclusion — measured
-/// as the single largest cause of `joined>0 admitted=0` on the UF parity-loss
-/// slice. This flag exists so the alternative can be MEASURED on the whole
-/// slice rather than argued about; it is not a shipped route.
+/// The previous gate in [`admit_next_source_batch`] was `if admitted.is_empty()`,
+/// a strict priority — conflicts and units first, unresolved clauses only when
+/// there are none. Its comment called that a delay. On a file whose urgent
+/// traffic never runs dry inside the budget it is not a delay but a permanent
+/// exclusion: on the large UF files the pool was offered ONCE in the entire run,
+/// at the terminal fixpoint, by which point [`MAX_GROUND_TERMS`] was already
+/// spent. That is why `rej_ceiling` appeared as a *secondary* count in 369 of
+/// 655 `joined>0 admitted=0` rows while dominating only 22 — the ground ceiling
+/// was being blamed for a starvation the release schedule caused.
+///
+/// Measured across **358 UF files, +6 decided, −0**, before flipping:
+///
+/// | population | before | after |
+/// |---|---:|---:|
+/// | 302-file stride sample of the `UF` division | 109 | **113** |
+/// | 32-file parity-loss slice | 1 | **3** |
+/// | 24-file axeyum-only win list | 24 | 24 |
+///
+/// Zero losses, zero verdict flips, and **zero wrong verdicts against declared
+/// `:status` over 155 graded files**. All six gains are `declared=unsat` files
+/// we now return `unsat` for — correct, not merely different. The two on the
+/// parity slice reproduced 4/4 on isolated runs at load ~4.
+///
+/// Gates with this on: `corpus_regression`, `quant_skolem_egraph_routing`, and
+/// `progress_frontier` 12/12 with all five families reporting
+/// `comparable/ratchetable/enforced = true` — the ratchet is the gate that
+/// matters here, because `corpus/regression/` SKIPS `unknown` and structurally
+/// cannot see a `sat`/`unsat` → `unknown` regression.
+///
+/// `AXEYUM_QINST_RELEASE_DEFERRED=0` restores the old strict priority, so the
+/// A/B stays runnable.
+///
+/// NOT measured: quantified logics other than `UF`. The loop runs on those too.
 ///
 /// See `docs/research/03-measurements/what-the-admission-filter-rejects-2026-09-10.md`.
 fn release_deferred_with_urgent() -> bool {
-    std::env::var_os("AXEYUM_QINST_RELEASE_DEFERRED").is_some()
+    // Absent means ENABLED. Only an explicit `0` or empty value opts out — the
+    // same convention as `AXEYUM_NESTED_QUANT`, whose default flipped the same
+    // way and then had five comments describing it backwards for five weeks.
+    std::env::var_os("AXEYUM_QINST_RELEASE_DEFERRED")
+        .is_none_or(|value| !value.is_empty() && value != "0")
 }
 
 /// Z3-style instantiation generations (T2.6.4; `qi_queue.cpp` cost
