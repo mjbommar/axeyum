@@ -8819,34 +8819,12 @@ pub fn prove_unsat_by_ematching(
     // `skolem-bail`), so the printed reason sent every reader looking at the
     // wrong subsystem. It costs one `Option` to say what actually happened.
     let mut loop_decline: Option<UnknownReason> = None;
+    let mut loop_ran = false;
     if retried.residual_quantifier
-        && let Some(remaining_config) = config_with_remaining_timeout(config, deadline)
+        && let Some(loop_result) =
+            skolemized_egraph_retry(arena, &skolemized.assertions, config, deadline, "residual")?
     {
-        let loop_config =
-            QINST_EGRAPH_RETRY_SLICE.apply(&remaining_config, remaining_config.timeout);
-        let probe = std::env::var_os("AXEYUM_QPROBE").is_some();
-        let started = Instant::now();
-        // The skolemized set alone, NOT its union with the originals: the
-        // union was measured strictly worse (doubling the universal partition
-        // with the originals' junk-instance chains drove ground to its cap by
-        // round 10 and LOST a refutation the skolemized-only run finds).
-        let loop_result = crate::qinst_egraph::prove_quantified_unsat_via_egraph(
-            arena,
-            &skolemized.assertions,
-            &loop_config,
-        )?;
-        if probe {
-            eprintln!(
-                "QPROBE skolemized-egraph budget={:?} elapsed={:?} result={}",
-                loop_config.timeout,
-                started.elapsed(),
-                match &loop_result {
-                    CheckResult::Unsat => "unsat",
-                    CheckResult::Sat(_) => "sat",
-                    CheckResult::Unknown(r) => &r.detail,
-                }
-            );
-        }
+        loop_ran = true;
         match loop_result {
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
             CheckResult::Unknown(reason) => loop_decline = Some(reason),
@@ -8858,7 +8836,42 @@ pub fn prove_unsat_by_ematching(
     // weakened, so the result is exact" shortcut inside `decide_instantiation`
     // must NOT be allowed to hand back a `sat` here: that model interprets Skolem
     // symbols the original does not contain, so it could not replay against it.
-    match decide_instantiation(arena, &retried, config)? {
+    let decided = decide_instantiation(arena, &retried, config)?;
+    if matches!(decided, CheckResult::Unsat) {
+        return Ok(CheckResult::Unsat);
+    }
+    // The residual gate above is a proxy for "the one-shot route still has work
+    // left", and on the measured files it is the WRONG proxy. `residual_quantifier`
+    // false means trigger instantiation consumed every quantifier in one pass --
+    // a statement about SHAPE. It says nothing about whether the instances that
+    // pass produced suffice to refute, and when they do not, the e-graph loop --
+    // the machinery built to select instances iteratively -- was never handed the
+    // Skolemized set at any budget.
+    //
+    // Measured 2026-09-10 on `bench-results/parity-losses-20260908/UF.txt` with
+    // `AXEYUM_QPROBE=1` at 24 s: of 62 entries into this function, 58 report
+    // `residual=true` and take the branch above; 4 report `residual=false` and
+    // reached the decline below without the loop ever running. `f27`
+    // (`Hoare/smtlib.1116374`, which z3 refutes in 0.02 s with 2 instantiations)
+    // is one of them, and it logs no `skolemized-egraph` line at all.
+    //
+    // Running the loop here is unsat-only and therefore sound under the same
+    // contract as the branch above: Skolemization preserves satisfiability, so a
+    // refutation of the Skolemized set transfers back to the original, while any
+    // other outcome falls through to the established decline. It costs nothing on
+    // the path that already decided -- the `Unsat` early return above precedes it.
+    if !loop_ran
+        && let Some(loop_result) =
+            skolemized_egraph_retry(arena, &skolemized.assertions, config, deadline, "exhausted")?
+    {
+        match loop_result {
+            CheckResult::Unsat => return Ok(CheckResult::Unsat),
+            CheckResult::Unknown(reason) => loop_decline = Some(reason),
+            CheckResult::Sat(_) => {}
+        }
+    }
+    match decided {
+        // Handled by the early return above.
         CheckResult::Unsat => Ok(CheckResult::Unsat),
         CheckResult::Sat(_) => Ok(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::Incomplete,
@@ -8869,10 +8882,47 @@ pub fn prove_unsat_by_ematching(
         // The loop's own decline wins over the residual-shape message: it ran,
         // and it is the thing that gave up. `decide_instantiation`'s shape
         // decline is kept for the case where the loop never ran at all (no
-        // remaining budget, or no residual quantifier to hand it), because
-        // there the shape IS the reason.
+        // remaining budget to hand it), because there the shape IS the reason.
         CheckResult::Unknown(reason) => Ok(CheckResult::Unknown(loop_decline.unwrap_or(reason))),
     }
+}
+
+/// Hands the Skolemized assertion set to the incremental e-graph instantiation
+/// loop under half the remaining budget, returning `None` when there was no
+/// budget left to give it.
+///
+/// The Skolemized set **alone**, not its union with the originals: the union was
+/// measured strictly worse (doubling the universal partition with the originals'
+/// junk-instance chains drove ground to its cap by round 10 and LOST a refutation
+/// the Skolemized-only run finds). Half the remaining budget, so the callers'
+/// later SAT-only stages are not starved.
+fn skolemized_egraph_retry(
+    arena: &mut TermArena,
+    skolemized: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+    probe_label: &str,
+) -> Result<Option<CheckResult>, SolverError> {
+    let Some(remaining_config) = config_with_remaining_timeout(config, deadline) else {
+        return Ok(None);
+    };
+    let loop_config = QINST_EGRAPH_RETRY_SLICE.apply(&remaining_config, remaining_config.timeout);
+    let started = Instant::now();
+    let loop_result =
+        crate::qinst_egraph::prove_quantified_unsat_via_egraph(arena, skolemized, &loop_config)?;
+    if std::env::var_os("AXEYUM_QPROBE").is_some() {
+        eprintln!(
+            "QPROBE skolemized-egraph({probe_label}) budget={:?} elapsed={:?} result={}",
+            loop_config.timeout,
+            started.elapsed(),
+            match &loop_result {
+                CheckResult::Unsat => "unsat",
+                CheckResult::Sat(_) => "sat",
+                CheckResult::Unknown(reason) => &reason.detail,
+            }
+        );
+    }
+    Ok(Some(loop_result))
 }
 
 /// Shared back half of the instantiation-based refutation entries: decides the
