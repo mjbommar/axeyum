@@ -311,29 +311,50 @@ impl XorGateTable {
     /// [`extract_xors_hinted`] tolerates — it recognizes every group from the
     /// clauses — but which carries no benefit.
     ///
-    /// An AIG XOR node contributes an entry only when the encoder really did
-    /// emit its complete four-clause group:
+    /// # Which XOR nodes reach the CNF, and as what
     ///
-    /// * The node holds a CNF variable of its own. The encoder allocates none
-    ///   for a node it skipped as a subsumed helper, nor for an assertion-only
-    ///   root it distributed straight into clauses. That one check also settles
+    /// Recognizing the shape ([`detect_xor_gate`]) is not enough: what matters
+    /// is whether the encoder emitted its clauses, and over which variables.
+    /// Three cases produce a complete clause group, and they are told apart by
+    /// two things the encoding already reports — the variable bindings and the
+    /// root list.
+    ///
+    /// * **Its own variable.** All four clauses are there:
+    ///   `out ^ v_lhs ^ v_rhs = inversions`. Holding a variable also settles
     ///   clause *direction*: a node loses its variable to
     ///   `plan_direct_root_nodes` exactly when its root polarity is fixed, and
     ///   a fixed polarity is exactly the condition under which only half the
-    ///   equivalence is emitted. A node that still has a variable therefore
-    ///   carries all four clauses, not two.
-    /// * Both helper AND nodes were subsumed, i.e. hold no variable of their
-    ///   own. The encoder subsumes them only when it planned a compound gate
-    ///   over them, and XOR is the first plan it tries, so a recognized XOR
-    ///   shape with private helpers is not confusable with the ITE, NOT-AND, or
-    ///   AND-tree plans that skip helpers under the same privacy rule.
-    /// * The three CNF variables — output, left input, right input — are
-    ///   distinct, and neither input is the constant node. Otherwise the four
-    ///   clauses collapse under tautology and duplicate filtering into
-    ///   something that is not a width-3 group.
+    ///   equivalence is emitted. A node that still has a variable carries all
+    ///   four clauses, not two.
+    /// * **Asserted directly as a root.** No variable; the encoder folded the
+    ///   constant output into the clauses. Half of an equivalence with a
+    ///   constant output is the whole gate: two clauses over the two inputs,
+    ///   `v_lhs ^ v_rhs = asserted ^ inversions`. Which roots those are is read
+    ///   off `encoding.roots()` — `assert_root` reports a constant-true CNF
+    ///   literal for exactly the roots it distributed — rather than re-derived.
+    /// * **The top of a flattened chain.** The AND-tree planner collapses a
+    ///   chain of variable-less XOR nodes into one parity leaf and emits the
+    ///   chain's clauses as a whole. It plans a parity leaf only under a
+    ///   positively asserted root, whose output is the constant true, so those
+    ///   clauses are again the leaf's whole gate — over the flattened literals,
+    ///   capped at three. The chain's inner links own no clauses and are left
+    ///   out.
+    ///
+    /// In every case the two helper AND nodes must be subsumed (no variable of
+    /// their own). The encoder subsumes them only when it planned a compound
+    /// gate over them, and XOR is the first plan it tries, so a recognized XOR
+    /// shape with private helpers is not confusable with the ITE, NOT-AND or
+    /// AND-tree plans that skip helpers under the same privacy rule. The
+    /// variables of an entry must also be pairwise distinct and none of them
+    /// the constant node, since the four clauses otherwise collapse under
+    /// tautology and duplicate filtering into something that is not a group of
+    /// that width.
     ///
     /// Anything else is left out. A missing entry costs a gate, never a wrong
-    /// one.
+    /// one — and `every_recorded_entry_is_implied_by_the_clauses_it_names`
+    /// checks each entry against the clauses by brute force, so an entry that
+    /// named a group the encoder never emitted would fail rather than sit there
+    /// as a plausible-looking lie.
     #[must_use]
     pub fn from_encoding(aig: &Aig, encoding: &CnfEncoding) -> Self {
         let mut node_var: Vec<Option<u32>> = vec![None; aig.node_count()];
@@ -1374,6 +1395,14 @@ mod gate_table_tests {
         .expect("valid DIMACS");
         let mined = extract_xors(&foreign);
         assert_eq!(mined.num_recognized, 2, "the foreign file has two gates");
+        // A table built for a DIFFERENT graph is the honest model of foreign
+        // CNF: there is no encoding behind this formula at all.
+        assert!(XorGateTable::default().is_empty());
+        assert_eq!(
+            extract_xors_hinted(&foreign, Some(&XorGateTable::default())).num_recognized,
+            0,
+            "an empty table admits no group, which is slower, not wrong"
+        );
         assert_eq!(
             extract_xors_hinted(&foreign, None).system.constraints(),
             mined.system.constraints()
@@ -1521,66 +1550,154 @@ mod gate_table_tests {
         );
     }
 
+    /// Clause mining exactly as it stood on `main` at `6dd85fc78`, before this
+    /// change: a `BTreeMap` keyed by a heap-allocated `Vec<usize>`, with a
+    /// second `Vec` allocated per clause to sort the (variable, negated) pairs.
+    ///
+    /// Kept for one reason — it is the **before** side of the measurement. A
+    /// ratio quoted against the post-change mining route would understate the
+    /// change, because sharing one allocation-free grouping between the two
+    /// routes sped the mining route up too. `baseline_agrees_with_the_shipped
+    /// _mining_route` pins it against the shipped route so it cannot drift into
+    /// measuring something else.
+    fn mine_as_of_main(cnf: &CnfFormula) -> ExtractedXors {
+        let mut groups: BTreeMap<Vec<usize>, Vec<u32>> = BTreeMap::new();
+        for clause in cnf.clauses() {
+            let lits = clause.lits();
+            let k = lits.len();
+            if !(2..=MAX_XOR_VARS).contains(&k) {
+                continue;
+            }
+            let mut pairs: Vec<(usize, bool)> = lits
+                .iter()
+                .map(|lit| (lit.var().index(), lit.is_negated()))
+                .collect();
+            pairs.sort_unstable_by_key(|&(var, _)| var);
+            if pairs.windows(2).any(|w| w[0].0 == w[1].0) {
+                continue;
+            }
+            let vars: Vec<usize> = pairs.iter().map(|&(var, _)| var).collect();
+            let mut mask = 0u32;
+            for (bit, &(_, negated)) in pairs.iter().enumerate() {
+                if negated {
+                    mask |= 1u32 << bit;
+                }
+            }
+            groups.entry(vars).or_default().push(mask);
+        }
+        let mut system = Gf2System::new(cnf.variable_count());
+        let mut num_recognized = 0usize;
+        for (vars, masks) in &groups {
+            if let Some(rhs) = recognize_gate(vars.len(), masks) {
+                system.add_constraint(vars, rhs);
+                num_recognized += 1;
+            }
+        }
+        ExtractedXors {
+            system,
+            num_recognized,
+        }
+    }
+
+    /// The measurement baseline must still be the thing it claims to be.
+    #[test]
+    fn baseline_agrees_with_the_shipped_mining_route() {
+        for instance in curated_corpus() {
+            let encoding = encode(&instance);
+            let formula = encoding.formula();
+            assert_eq!(
+                mine_as_of_main(formula).system.constraints(),
+                extract_xors(formula).system.constraints(),
+                "{}: the pre-change baseline and the shipped mining route must \
+                 recover the same set, or the measurement compares two \
+                 different things",
+                instance.name
+            );
+        }
+    }
+
     /// MEASUREMENT, the performance half of the exit criterion.
     ///
     /// Not a ratchet — a wall-clock ratio inside a test on a shared box is not
     /// reproducible, and asserting one would be a gate that fails for reasons
-    /// unrelated to this code. This runs both routes on a large XOR-rich
-    /// instance, asserts they agree, and PRINTS the timings so a measurement
-    /// can be quoted from an actual run (`--release -- --nocapture`) with the
-    /// host and load stated alongside it.
+    /// unrelated to this code. This runs three routes on two instances of very
+    /// different XOR density, asserts they agree, and PRINTS the timings, so a
+    /// number can be quoted from an actual run (`--release -- --nocapture`)
+    /// with the host and load stated alongside it.
     #[test]
     fn measure_table_route_against_mining() {
-        let instance = lowered("bvmul16_measure", |a| {
-            let x = bv(a, "x", 16);
-            let y = bv(a, "y", 16);
-            let z = bv(a, "z", 16);
-            let product = a.bv_mul(x, y).unwrap();
-            let sum = a.bv_add(product, z).unwrap();
-            a.eq(sum, x).unwrap()
-        });
-        let encoding = encode(&instance);
-        let formula = encoding.formula();
-        let table = XorGateTable::from_encoding(&instance.aig, &encoding);
+        for (label, instance) in [
+            (
+                "xor-dense (mul+add+eq)",
+                lowered("dense", |a| {
+                    let x = bv(a, "x", 16);
+                    let y = bv(a, "y", 16);
+                    let z = bv(a, "z", 16);
+                    let product = a.bv_mul(x, y).unwrap();
+                    let sum = a.bv_add(product, z).unwrap();
+                    a.eq(sum, x).unwrap()
+                }),
+            ),
+            (
+                "xor-sparse (and + ult)",
+                lowered("sparse", |a| {
+                    let x = bv(a, "x", 32);
+                    let y = bv(a, "y", 32);
+                    let masked = a.bv_and(x, y).unwrap();
+                    a.bv_ult(masked, y).unwrap()
+                }),
+            ),
+        ] {
+            let encoding = encode(&instance);
+            let formula = encoding.formula();
+            let table = XorGateTable::from_encoding(&instance.aig, &encoding);
 
-        let rounds = 20;
-        let start = std::time::Instant::now();
-        let mut mined = None;
-        for _ in 0..rounds {
-            mined = Some(extract_xors(formula));
+            let rounds = 50;
+            let mut results = Vec::new();
+            let mut timings = Vec::new();
+            for (route, run) in [
+                (
+                    "mining as of main (before)",
+                    Box::new(|| mine_as_of_main(formula)) as Box<dyn Fn() -> ExtractedXors>,
+                ),
+                ("mining, shipped", Box::new(|| extract_xors(formula))),
+                (
+                    "table route (after)",
+                    Box::new(|| extract_xors_hinted(formula, Some(&table))),
+                ),
+            ] {
+                let start = std::time::Instant::now();
+                let mut last = None;
+                for _ in 0..rounds {
+                    last = Some(run());
+                }
+                timings.push((route, start.elapsed() / rounds));
+                results.push(last.expect("ran at least once").system.constraints());
+            }
+            let start = std::time::Instant::now();
+            for _ in 0..rounds {
+                let built = XorGateTable::from_encoding(&instance.aig, &encoding);
+                std::hint::black_box(built.len());
+            }
+            let build = start.elapsed() / rounds;
+
+            assert!(
+                results.windows(2).all(|w| w[0] == w[1]),
+                "{label}: the three routes must agree"
+            );
+            println!(
+                "gate-table measurement [{label}]: {} vars / {} clauses / {} \
+                 gates / {} entries",
+                formula.variable_count(),
+                formula.clauses().len(),
+                results[0].len(),
+                table.len(),
+            );
+            for (route, elapsed) in &timings {
+                println!("    {route:<28} {elapsed:?}");
+            }
+            println!("    {:<28} {build:?}", "table build (once)");
         }
-        let mining = start.elapsed() / rounds;
-
-        let start = std::time::Instant::now();
-        let mut hinted = None;
-        for _ in 0..rounds {
-            hinted = Some(extract_xors_hinted(formula, Some(&table)));
-        }
-        let table_route = start.elapsed() / rounds;
-
-        let start = std::time::Instant::now();
-        for _ in 0..rounds {
-            let built = XorGateTable::from_encoding(&instance.aig, &encoding);
-            assert!(!built.is_empty());
-        }
-        let build = start.elapsed() / rounds;
-
-        let mined = mined.expect("ran at least once");
-        let hinted = hinted.expect("ran at least once");
-        assert_eq!(hinted.system.constraints(), mined.system.constraints());
-        println!(
-            "gate-table measurement: {} vars / {} clauses / {} gates / {} entries\n\
-             mining        {:?}\n\
-             table route   {:?}\n\
-             table build   {:?}",
-            formula.variable_count(),
-            formula.clauses().len(),
-            mined.num_recognized,
-            table.len(),
-            mining,
-            table_route,
-            build,
-        );
     }
 
     /// The table route must examine strictly fewer clause groups than mining on
