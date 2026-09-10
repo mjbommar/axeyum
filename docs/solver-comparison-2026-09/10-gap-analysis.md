@@ -85,6 +85,11 @@ redesign, not a bug fix.
   staged hybrid (eager Ackermannization only when reads < 10 and estimated
   expansion < 200). Our eager-first choice (ADR-0010) buys a checkable UNSAT
   certificate (`array_elim_certificate.rs`) that **neither of them can produce**.
+  **Corrected 2026-09-10 (ADR-1814):** that is true of the CAPABILITY and false
+  of the shipped product. `certify_array_elim_unsat` and
+  `ArrayElimUnsatCertificate` each appear ZERO times in `evidence.rs`, so **0%
+  of QF_ABV `unsat` verdicts actually carry it**. Wiring it is the prerequisite
+  for treating it as an advantage, and for pricing any eager/lazy trade.
   It costs us: array equalities above `MAX_ARRAY_EQ_INDEX_BITS = 8` are refused
   outright, and deep store chains expand — STP's own comment measures that at
   48× slower than refinement.

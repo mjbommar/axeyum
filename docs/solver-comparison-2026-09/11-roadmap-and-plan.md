@@ -40,6 +40,8 @@ trustworthy before anything else is.
 | 0.5 | Trust ledger derived, not typed | `ALL_TRUST_IDS` (15) and `is_certified` are hand-written. Derive the certified set from which `Evidence` variants carry a checked certificate. | Adding a `TrustId` without an evidence route fails a test; the ledger markdown regenerates from the derived set. |
 | 0.6 | Documentation drift | Fix the ten drifted docs and two ADRs listed in the gap analysis §7, and `CLAUDE.md:319` (axeyum-fp deps) and the varisat sentence (splr ships DRAT; varisat remains the only Rust SAT solver with LRAT). Update `07-strings-and-regex.md` to include `str.update` and `seq.*`. | `docs/internals/cnf-and-sat.md` no longer says RAT is rejected; `support-matrix.md` column count matches source; ADR-0009 no longer claims a real incremental façade until 1.1 lands. |
 
+| 0.7 | **The z3 differential fuzzes skip-and-pass** — **NEW, found by the Phase 4 lane. Phase 0 missed it.** | 14 test files hardcode `/usr/bin/z3` and `return` when it is absent — one comment says outright "the test is a no-op pass". There is **no `AXEYUM_REQUIRE_Z3`**, though `AXEYUM_REQUIRE_LEAN`, `_ABC` and `_CARCARA` all exist. These fuzzes are the ONLY checks comparing our verdicts against an independent solver. | Same fix as 0.2: an `AXEYUM_REQUIRE_Z3=1` mode under which an absent binary FAILS. Blast radius unmeasured — `fleet-hosts.md` records z3 as a requirement, never as a per-host capability, so we do not know how many CI/dev hosts have been running these green-and-empty. |
+
 ## Phase 1 — wire what already exists (weeks)
 
 Rationale: the top of the gap analysis. No new algorithms; each item has an
