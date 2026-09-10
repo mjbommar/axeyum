@@ -21,7 +21,9 @@ use std::thread;
 use std::time::Duration;
 
 use axeyum_smtlib::parse_script;
-use axeyum_solver::{CheckResult, SolverConfig, check_auto, solve_smtlib};
+use axeyum_solver::{
+    CheckResult, SolverConfig, check_auto, solve_smtlib, solve_smtlib_incremental,
+};
 
 /// Per-file wall-clock cap. The committed corpora are tiny; the cap only guards
 /// against a future heavy instance hanging the suite.
@@ -251,5 +253,154 @@ fn corpus_regression_is_sound() {
         s.agree,
         s.unknown,
         s.parse_skipped
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Incremental (scoped) corpus — roadmap item 2.9, `corpus/incremental/`.
+//
+// `evaluate_file` above (and the `evaluate_file`-driven sweep it feeds) is
+// correct to SKIP any script containing `push`/`pop`/`reset-assertions`: the
+// flat `assertions` view it compares against `:status` ignores scoping, so a
+// single ground-truth status cannot describe a script whose `check-sat`s
+// legitimately disagree with each other. That skip is not weakened here — this
+// is a SEPARATE evaluation path, over a separate corpus directory
+// (`corpus/incremental/`, not `corpus/regression/`), that walks a scoped
+// script through the production incremental entry point
+// (`solve_smtlib_incremental`) and compares each `check-sat` against that
+// query's own expected verdict.
+// ---------------------------------------------------------------------------
+
+fn incremental_corpus_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/incremental")
+}
+
+/// Parses the `; check-sat-order: sat unsat sat` header directive: one
+/// `sat`/`unsat` token per `check-sat`/`check-sat-assuming` in the script, in
+/// order. Read directly from the file text (not the SMT-LIB parser's `:status`
+/// field, which is singular and cannot carry more than one ground truth).
+fn parse_check_sat_order(text: &str) -> Option<Vec<String>> {
+    for line in text.lines() {
+        let line = line.trim();
+        if let Some(rest) = line.strip_prefix("; check-sat-order:") {
+            let verdicts: Vec<String> = rest
+                .split_whitespace()
+                .map(str::to_ascii_lowercase)
+                .collect();
+            if verdicts.is_empty() || !verdicts.iter().all(|v| v == "sat" || v == "unsat") {
+                return None;
+            }
+            return Some(verdicts);
+        }
+    }
+    None
+}
+
+fn verdict_label(result: &CheckResult) -> &'static str {
+    match result {
+        CheckResult::Sat(_) => "sat",
+        CheckResult::Unsat => "unsat",
+        CheckResult::Unknown(_) => "unknown",
+    }
+}
+
+/// Runs [`solve_smtlib_incremental`] — the production ordered-session entry
+/// point (ADR-0009 lifecycle) — on a worker thread under [`SOLVE_CAP`], the
+/// same wall-clock discipline as [`solve_capped`]. `None` on overrun.
+fn solve_incremental_capped(text: String) -> Option<Result<Vec<CheckResult>, String>> {
+    let (tx, rx) = mpsc::channel();
+    thread::Builder::new()
+        .stack_size(256 * 1024 * 1024)
+        .spawn(move || {
+            let res = solve_smtlib_incremental(&text, &SolverConfig::default())
+                .map_err(|e| e.to_string());
+            let _ = tx.send(res);
+        })
+        .expect("spawn solver thread");
+    rx.recv_timeout(SOLVE_CAP).ok()
+}
+
+/// Soundness gate for scoped SMT-LIB scripts (`corpus/incremental/`), the
+/// prerequisite roadmap item 2.9 names for routing the `Solver` façade through
+/// the warm incremental engine (item 1.1b): every `push`/`pop`/
+/// `reset-assertions`/`check-sat-assuming` combination in the committed corpus
+/// must produce exactly the per-`check-sat` verdict sequence its file
+/// declares, via the real production entry point.
+#[test]
+fn incremental_corpus_is_sound() {
+    let root = incremental_corpus_root();
+    assert!(
+        root.is_dir(),
+        "corpus/incremental not found at {}",
+        root.display()
+    );
+
+    let mut files = Vec::new();
+    collect_smt2(&root, &mut files);
+    assert!(
+        files.len() >= 10,
+        "expected >= 10 scoped scripts under corpus/incremental, found {} — \
+         roadmap item 2.9 asks for a small but real corpus",
+        files.len()
+    );
+
+    let mut checked_files = 0usize;
+    let mut total_checks = 0usize;
+    let mut disagreements: Vec<String> = Vec::new();
+
+    for path in &files {
+        let rel = path
+            .strip_prefix(&root)
+            .unwrap_or(path)
+            .display()
+            .to_string();
+        let text = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("read {rel}: {e}"));
+        let Some(expected) = parse_check_sat_order(&text) else {
+            panic!(
+                "{rel}: missing or malformed `; check-sat-order: sat|unsat ...` header — \
+                 every file in corpus/incremental/ must state one verdict per check-sat"
+            );
+        };
+
+        match solve_incremental_capped(text) {
+            None => panic!("{rel}: timed out — wall-clock cap overran on a corpus file"),
+            Some(Err(e)) => panic!("{rel}: solve_smtlib_incremental errored: {e}"),
+            Some(Ok(results)) => {
+                if results.len() != expected.len() {
+                    disagreements.push(format!(
+                        "{rel}: expected {} check-sat verdict(s) per `check-sat-order`, \
+                         solve_smtlib_incremental returned {} — a query was dropped or \
+                         duplicated",
+                        expected.len(),
+                        results.len()
+                    ));
+                    checked_files += 1;
+                    continue;
+                }
+                for (i, (want, got)) in expected.iter().zip(results.iter()).enumerate() {
+                    let got_label = verdict_label(got);
+                    if got_label != want {
+                        disagreements.push(format!(
+                            "{rel}: check-sat #{} expected {want}, got {got_label}",
+                            i + 1
+                        ));
+                    }
+                }
+                checked_files += 1;
+                total_checks += results.len();
+            }
+        }
+    }
+
+    eprintln!(
+        "incremental_corpus_is_sound: {checked_files} files | {total_checks} check-sat queries | \
+         {} DISAGREE",
+        disagreements.len()
+    );
+
+    assert!(
+        disagreements.is_empty(),
+        "SOUNDNESS FAILURE (scoped script) — verdict contradicts the per-check-sat expectation:\n{}",
+        disagreements.join("\n")
     );
 }
