@@ -670,16 +670,6 @@ pub(crate) fn solve_native<T: TheorySolver>(
     }
 }
 
-/// Lifts the native core's [`axeyum_cnf::NativeLayerStats`] into the
-/// [`TheoryLayerStats`] `--trace` already prints, so one channel means the same
-/// thing whichever engine ran.
-///
-/// The fifteen driver-side fields are a field-for-field port (S7b landed them at
-/// the same increment sites in the native core); the engine-side fields come
-/// from the theory's own `engine_counters`, which is where `CdclT` gets them
-/// too. `None` there means "this theory keeps no feasibility engine", never
-/// "zero".
-
 /// The CDCL(T) search profile for this process, from `AXEYUM_SEARCH_PROFILE`.
 ///
 /// `Shipped` (the default, and any unrecognised value) is exactly what the
@@ -695,6 +685,15 @@ fn configured_search_profile() -> SearchProfile {
     }
 }
 
+/// Lifts the native core's [`axeyum_cnf::NativeLayerStats`] into the
+/// [`TheoryLayerStats`] `--trace` already prints, so one channel means the same
+/// thing whichever engine ran.
+///
+/// The fifteen driver-side fields are a field-for-field port (S7b landed them at
+/// the same increment sites in the native core); the engine-side fields come
+/// from the theory's own `engine_counters`, which is where `CdclT` gets them
+/// too. `None` there means "this theory keeps no feasibility engine", never
+/// "zero".
 fn theory_layer_stats(
     native: &axeyum_cnf::NativeLayerStats,
     engine: Option<crate::euf_egraph::TheoryEngineCounters>,

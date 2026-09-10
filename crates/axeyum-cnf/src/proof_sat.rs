@@ -1142,25 +1142,6 @@ impl NativeLayerStatsMirror {
     }
 }
 
-/// Search knobs a CDCL(T) caller may need to differ from the one-shot SAT
-/// defaults (plan slice S7b).
-///
-/// The defaults ARE the one-shot SAT defaults, so
-/// [`solve_with_theory_and_drat_proof`] is unchanged and so is every
-/// `NullTheory` entry point. They exist because moving a route from
-/// `axeyum_solver::cdclt::CdclT` onto this core has to be a swap of engines and
-/// not, silently, a swap of decision heuristics: `CdclT` decides a variable
-/// TRUE first and does no target rephasing, and a model-based consumer (MBQI
-/// picks its instantiation terms out of the model it is handed) can lose a
-/// verdict when the model changes even though both models are correct.
-/// Measured: with the defaults below,
-/// `auto::tests::mbqi_one_level_fixed_retry_is_guarded_and_replays_unfixed_seed_111_shape`
-/// went `Sat` -> `Unknown` purely because a different satisfying assignment
-/// came back.
-// Three `bool` knobs plus a budget. They are named fields set individually by
-// every caller, never positional arguments, so the confusion this lint guards
-// against cannot arise; grouping them further would only add a level.
-#[allow(clippy::struct_excessive_bools)]
 /// Which named [`SearchPolicies`] arrangement a CDCL(T) search runs.
 ///
 /// See [`TheorySolveOptions::search_profile`] for why this is a selector rather
@@ -1201,6 +1182,25 @@ impl SearchProfile {
     }
 }
 
+/// Search knobs a CDCL(T) caller may need to differ from the one-shot SAT
+/// defaults (plan slice S7b).
+///
+/// The defaults ARE the one-shot SAT defaults, so
+/// [`solve_with_theory_and_drat_proof`] is unchanged and so is every
+/// `NullTheory` entry point. They exist because moving a route from
+/// `axeyum_solver::cdclt::CdclT` onto this core has to be a swap of engines and
+/// not, silently, a swap of decision heuristics: `CdclT` decides a variable
+/// TRUE first and does no target rephasing, and a model-based consumer (MBQI
+/// picks its instantiation terms out of the model it is handed) can lose a
+/// verdict when the model changes even though both models are correct.
+/// Measured: with the defaults below,
+/// `auto::tests::mbqi_one_level_fixed_retry_is_guarded_and_replays_unfixed_seed_111_shape`
+/// went `Sat` -> `Unknown` purely because a different satisfying assignment
+/// came back.
+// Three `bool` knobs plus a budget. They are named fields set individually by
+// every caller, never positional arguments, so the confusion this lint guards
+// against cannot arise; grouping them further would only add a level.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TheorySolveOptions {
     /// The polarity a variable is decided at before phase saving has an
@@ -1217,7 +1217,7 @@ pub struct TheorySolveOptions {
     ///
     /// **This exists because the theory path could not reach them at all.**
     /// `Cdcl::set_policies` had exactly two callers -- the one-shot SAT entry
-    /// and a unit test -- so every CDCL(T) search (QF_UF, QF_UFLIA, the
+    /// and a unit test -- so every CDCL(T) search (`QF_UF`, `QF_UFLIA`, the
     /// quantified ladder's ground checks) ran `SearchPolicies::default()`:
     /// pinned phases and Luby restarts. `RestartPolicy::mode_switching` and
     /// `PhasePolicy::scheduled` were implemented and tested with zero

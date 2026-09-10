@@ -251,9 +251,17 @@ pub struct SolverConfig {
     /// The in-tree proof-producing CDCL core
     /// ([`axeyum_cnf::solve_with_drat_proof_within`]) is now the primary SAT
     /// search on every path, so there is nothing left for this flag to select.
-    /// It is read by nobody: [`crate::SatBvBackend`] dispatches to the native
-    /// core unconditionally. Setting it either way changes no verdict, no
-    /// timing, and no artifact except the recorded config itself.
+    /// It selects nothing: [`crate::SatBvBackend`] dispatches to the native
+    /// core unconditionally.
+    ///
+    /// **It was not, however, "read by nobody" — this doc said so and was
+    /// wrong.** Until 2026-09-10 three sites read it, and one of them mattered:
+    /// `solver.rs`'s warm-route eligibility check compared it against its
+    /// default, so setting a RETIRED flag silently disqualified a query from
+    /// the warm engine. It is now excluded from that comparison. The two
+    /// remaining readers are `axeyum-bench`'s `--certify-end-to-end-unsat`
+    /// validator and its artifact config hash, both of which record the field
+    /// rather than branch on it.
     ///
     /// It survives only because `axeyum-py`, `axeyum-bench` and `axeyum-verify`
     /// name the field; slice 2 of ADR-1703 removes it along with the adapter.

@@ -1087,7 +1087,15 @@ fn warm_config_is_honored(config: &SolverConfig) -> bool {
         xor_cdcl_fallback,
         lazy_bv,
         lazy_bv_abstract_ite,
-        native_cdcl,
+        // RETIRED (ADR-1703 point 3), and deliberately NOT part of the
+        // comparison below. It selected the SAT engine; the native core is now
+        // the engine unconditionally, so the flag selects nothing -- and while
+        // it was still compared, setting it silently disqualified a query from
+        // the warm engine. That is a retired lever changing behaviour, which is
+        // the opposite of what "no-op retained for API compatibility" promises.
+        // Still destructured so a future field cannot be added without a
+        // decision (see the note above).
+        native_cdcl: _,
         proof_progress: ref proof,
         check_progress: ref check,
     } = *config;
@@ -1104,7 +1112,6 @@ fn warm_config_is_honored(config: &SolverConfig) -> bool {
         && xor_cdcl_fallback == defaults.xor_cdcl_fallback
         && lazy_bv == defaults.lazy_bv
         && lazy_bv_abstract_ite == defaults.lazy_bv_abstract_ite
-        && native_cdcl == defaults.native_cdcl
         && proof.is_none()
         && check.is_none()
 }
