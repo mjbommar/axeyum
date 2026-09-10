@@ -258,9 +258,19 @@ cargo test -p axeyum-solver --lib --features full
 # as the corpus sweep. Confirmed 2026-08-03: 0 tests without the feature, 5+1+1
 # with it. `z3` is a C/C++ leaf dependency so it cannot be a default gate
 # (ADR-0002), which is exactly why it has to be run deliberately.
+#
+# NOTE (2026-09-09): until this date the three LRA/UFLRA fuzzes below were the
+# whole list, and this block's own prose claimed they covered DIFFERENCE LOGIC.
+# They did not. DL had NO oracle coverage at all — and it is a COMPLETE decider
+# that runs FIRST in the dispatch ladder, so a wrong answer there is caught by
+# nothing downstream. Pure QF_LIA had none either. Both now exist (roadmap item
+# 2.6) and are the last two lines. Still uncovered: int_real_relax and lia_gcd
+# have no suite of their own, and bmc/imc/pdr have none.
 cargo test -p axeyum-solver --features z3 --test qf_lra_differential_fuzz
 cargo test -p axeyum-solver --features z3 --test simplex_lra_fallback_differential
 cargo test -p axeyum-solver --features z3 --test qf_uflra_differential_fuzz
+cargo test -p axeyum-solver --features z3 --test difference_logic_differential_fuzz
+cargo test -p axeyum-solver --features z3 --test qf_lia_differential_fuzz
 # PRE-MERGE GATE for any solver/decider/dispatch change: the capability
 # ratchets (~60s when healthy). A 17-point nia_unsat frontier regression once
 # shipped and needed an 829-commit bisect because only full sweeps ran this.
