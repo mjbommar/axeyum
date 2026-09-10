@@ -1,5 +1,32 @@
 # Roadmap 3.5 measured: no declined quantified file needs one of cvc5's six strategies
 
+> **CORRECTION 2026-09-10 — Finding 5's headline number is withdrawn. The
+> instrument it was read off was defective, and the defect is now fixed.**
+>
+> Finding 5 published **56.2%** as the share of the UF budget going to SAT-side
+> rungs that cannot produce `unsat`, computed as `q:uf-fmf-probe +
+> q:uf-fmf-full` off the route trail. Method defect 2 below — stated in this
+> document, 120 lines above the number that depends on it — is that
+> `q:uf-fmf-full`'s segment contained the **whole full-MBQI pass**. MBQI, unlike
+> the two finite-model rungs, is perfectly capable of `unsat`, so its seconds do
+> not belong in that total.
+>
+> The instrument is repaired (ADR-1907, commit `72a5adf6f`). Re-derived on the
+> **same instrument and the same 32 files**: the pre-fix reading is **55.2%**,
+> reproducing this note's 56.2% to within a point, and the corrected reading is
+> **38.4%** — a 16.8-point overstatement, exactly `q:mbqi`'s newly visible share.
+> `probe + full + mbqi` is 55.2% in both arms, so the clock was redistributed,
+> not created.
+>
+> **Every figure here that sums the two finite-model rungs, or attributes a
+> segment to `q:uf-fmf-full`, is overstated by MBQI's share**; they are marked
+> inline. `q:uf-fmf-probe`'s own share (26.4%) is NOT affected — the probe runs
+> before MBQI and its segment was always its own.
+>
+> Full measurement, both arms, the ground truth for the split from an
+> independent instrument, and the mutations that pin the fix:
+> [`route-trail-mbqi-attribution-fixed-2026-09-10.md`](route-trail-mbqi-attribution-fixed-2026-09-10.md).
+
 Measured 2026-09-10 on `s4` at `474423c8d`. Roadmap item 3.5
 ([`11-roadmap-and-plan.md`](../../solver-comparison-2026-09/11-roadmap-and-plan.md))
 lists six quantifier instantiation strategies cvc5 has and we do not —
@@ -210,12 +237,16 @@ premature saturation and instance selection — not in the strategies we lack.
 
 ## Finding 5 — 56% of the budget on declared-unsat files goes to a model finder
 
+> **WITHDRAWN as stated — see the correction at the top of this file. The
+> corrected figure on this instrument is 38.4%, not 56.2%: `q:uf-fmf-full`'s
+> segment here contains the whole MBQI pass (ADR-1907).**
+
 Wall clock per route segment, summed over all 32 seed files (from the trail's
 `elapsed_ns`; the `OPEN-after-*` rows are watchdog-killed segments the trace
 could not attribute):
 
 ```
-    199668 ms   29.8%  q:uf-fmf-full          (>=100ms on 25 files)
+    199668 ms   29.8%  q:uf-fmf-full          (>=100ms on 25 files)  <- CONTAINS MBQI
     176329 ms   26.4%  q:uf-fmf-probe         (>=100ms on 31 files)
     164094 ms   24.5%  q:egraph               (>=100ms on 31 files)
      67465 ms   10.1%  OPEN-after-q:egraph    (>=100ms on  5 files)
@@ -228,8 +259,12 @@ could not attribute):
 `q:uf-fmf-probe` and `q:uf-fmf-full` are the **SAT-side finite-model-finding**
 rungs. They can only ever turn an `unknown` into a checked `sat`; by
 construction they cannot produce `unsat`. **30 of these 32 files are declared
-`unsat`.** They take **56.2%** of the total wall clock. On 21 of the 32 the
-widest single segment is one of them.
+`unsat`.** ~~They take **56.2%** of the total wall clock. On 21 of the 32 the
+widest single segment is one of them.~~ **CORRECTED to 38.4% on the repaired
+instrument (ADR-1907): the `q:uf-fmf-full` term above is MBQI plus the finder,
+and MBQI can produce `unsat`. The "widest single segment" census is contaminated
+the same way — `bound_by=q:uf-fmf-full` fell from 6 files to 2, and
+`bound_by=q:mbqi` rose from 0 to 3, when the instrument was fixed.**
 
 `q:uf-fmf-probe`'s share is not incidental. `probe_budget` (`auto.rs:4127`) is
 
@@ -249,7 +284,9 @@ files where it costs almost exactly 12 000 ms of a 24 000 ms budget —
 12066, `dl_copy_invariant_19_2` 12092 — are the slice firing at its documented
 fraction. On the three small files in Finding 4 the e-graph refuter received
 **160 ms, 199 ms and 519 ms** while 23 s went to model finders on a query
-declared unsat.
+declared unsat. **(CORRECTED, ADR-1907: part of that 23 s is the full MBQI
+pass, which is a refuter, not a model finder. The e-graph figures are
+unaffected.)**
 
 This is a budget-allocation defect, not a strategy gap. It is worth naming
 separately because it is cheap and because on its own it does **not** close the
@@ -282,7 +319,10 @@ the table says:
   trigger-selection modes and six match-generator classes are the relevant
   comparison point — not its six strategies.
 - **25 files (C + D) are killed by the clock**, 8 of them inside a model finder
-  running on a declared-unsat query (Finding 5).
+  running on a declared-unsat query (Finding 5). **(CORRECTED, ADR-1907: that
+  count is `bound_by=q:uf-fmf-full`, which named MBQI plus the finder. On the
+  repaired instrument `bound_by=q:uf-fmf-full` is 2 files and `bound_by=q:mbqi`
+  is 3.)**
 - **12 files (G + A)** never reach e-matching at all; nothing about
   instantiation strategy applies to them.
 - **0 files** were classified as needing conflict-based, CEGQI, enumerative,
@@ -338,14 +378,18 @@ in:
 2. **Stop giving half the clock to a model finder on a declared-unsat query.**
    `probe_budget`'s `UFBV_ONLINE_PROBE_SHARE = 2` is documented as unmeasured
    for this call site; it costs **26.4%** of the wall clock on 30 declared-unsat
-   UF files and 56.2% counting both SAT-side rungs. 8 further files in
+   UF files and ~~56.2%~~ **38.4% (corrected, ADR-1907)** counting both
+   SAT-side rungs. The 26.4% is unaffected — the probe runs before MBQI. 8 further files in
    population B are killed by the clock *inside* that probe. Cheap, bounded,
    and independently useful.
 3. **Repair the two item-1.8 recording defects** named under Method, so the next
    lane's attribution does not have to be recovered from `AXEYUM_QPROBE`:
    `q:egraph` should carry the loop's `UnknownReason` instead of
    `NotApplicable`, and `q:mbqi` should be recorded before `q:uf-fmf-full`
-   rather than after it.
+   rather than after it. **The second is DONE (ADR-1907), by a different route
+   than proposed here: reordering the records would have cost MBQI the trail's
+   last word, which the late record exists to give it, so the COST is moved
+   instead of the record. The `q:egraph` half is still open.**
 4. **Do NOT raise `MAX_GROUND_TERMS`.** Measured at 8x: 0 files flip.
 
 ## What I did not measure
