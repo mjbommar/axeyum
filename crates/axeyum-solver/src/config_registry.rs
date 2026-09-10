@@ -5984,19 +5984,28 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "an instance whose generation exceeds this waits for the deferred-pool admission budget rather than being dropped; it is re-materialized and re-classified every later round until admitted or the query decides (doc comment)",
         env_override: None,
         justification: dated(
-            "doc comment",
-            "2026-08-01",
-            Some("8066e48be"),
+            "docs/research/03-measurements/what-the-admission-filter-rejects-2026-09-10.md",
+            "2026-09-10",
+            Some("d1b4aa5df"),
             &[sym(
                 "crates/axeyum-solver/src/qinst_egraph.rs",
                 "FLOOD_EAGER_GENERATION_MAX",
             )],
-            &[commit(
-                "8066e48be",
-                "flood-prevention admission for the UF e-graph instantiation loop",
-            )],
+            &[
+                commit(
+                    "8066e48be",
+                    "flood-prevention admission for the UF e-graph instantiation loop",
+                ),
+                commit(
+                    "d910fa590",
+                    "instance SELECTION becomes a policy object, and the funnel that says whether it ran",
+                ),
+                doc(
+                    "docs/research/03-measurements/what-the-admission-filter-rejects-2026-09-10.md",
+                ),
+            ],
         ),
-        note: "Z3 `qi.eager_threshold` analogue. The doc comment's `x2015..1276224` example (a 418-candidate deferred dump carrying the refutation, lost when eagerness was capped tighter) is the measurement this value rests on.",
+        note: "RE-MEASURED 2026-09-10 on the 32-file UF parity-loss slice, post-`d910fa590`: `budget_flood_slice` classified 492,833 deferred candidates across 243 engaged slices, and 96,631 of them (19.6 %) sat at generation <= 1 and were kept eagerly. The eager exemption is protecting a fifth of the flood-regime traffic from the round cap, not a rounding error. Z3 `qi.eager_threshold` analogue. The doc comment's `x2015..1276224` example (a 418-candidate deferred dump carrying the refutation, lost when eagerness was capped tighter) is the measurement this value rests on.",
     },
     ConfigEntry {
         name: "FLOOD_FINAL_SUBSET_CHECK_MIN_GROUND",
@@ -6059,19 +6068,28 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "an instance held back this round is re-materialized and re-classified next round -- possibly as a conflict by then -- and is never dropped (doc comment)",
         env_override: None,
         justification: dated(
-            "doc comment",
-            "2026-08-01",
-            Some("8066e48be"),
+            "docs/research/03-measurements/what-the-admission-filter-rejects-2026-09-10.md",
+            "2026-09-10",
+            Some("d1b4aa5df"),
             &[sym(
                 "crates/axeyum-solver/src/qinst_egraph.rs",
                 "FLOOD_ROUND_ADMISSION_CAP",
             )],
-            &[commit(
-                "8066e48be",
-                "flood-prevention admission for the UF e-graph instantiation loop",
-            )],
+            &[
+                commit(
+                    "8066e48be",
+                    "flood-prevention admission for the UF e-graph instantiation loop",
+                ),
+                commit(
+                    "d910fa590",
+                    "instance SELECTION becomes a policy object, and the funnel that says whether it ran",
+                ),
+                doc(
+                    "docs/research/03-measurements/what-the-admission-filter-rejects-2026-09-10.md",
+                ),
+            ],
         ),
-        note: "THE FINDING commit's headline measurement: `dl_copy_invariant_19_2` dumped a geometric 34->5957-candidate deferred pool per round, hitting MAX_GROUND_TERMS around round 9-15 on almost entirely inert traffic (8080 of 8164 derived-from-derived). Conflict/unit instances stay eager and unbudgeted; budgeting the unit pool the same way was measured net-negative and reverted.",
+        note: "RE-MEASURED 2026-09-10 on the 32-file UF parity-loss slice, post-`d910fa590`: of 878 deferred-pool releases in the whole slice, 262 reached the throttle and 243 of those also exceeded this cap, so where the throttle engages the cap almost always acts (92.7 %). It truncated 18,576 candidate tuples belonging to universals that ended the run with nothing admitted. THE FINDING commit's headline measurement: `dl_copy_invariant_19_2` dumped a geometric 34->5957-candidate deferred pool per round, hitting MAX_GROUND_TERMS around round 9-15 on almost entirely inert traffic (8080 of 8164 derived-from-derived). Conflict/unit instances stay eager and unbudgeted; budgeting the unit pool the same way was measured net-negative and reverted.",
     },
     ConfigEntry {
         name: "FLOOD_THROTTLE_MIN_GROUND",
@@ -6084,19 +6102,28 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "below this ground-set size every release behaves exactly like the historical dump-everything admission; above it, held-back instances are still re-classified every round and never dropped (doc comment)",
         env_override: None,
         justification: dated(
-            "doc comment",
-            "2026-08-01",
-            Some("8066e48be"),
+            "docs/research/03-measurements/what-the-admission-filter-rejects-2026-09-10.md",
+            "2026-09-10",
+            Some("d1b4aa5df"),
             &[sym(
                 "crates/axeyum-solver/src/qinst_egraph.rs",
                 "FLOOD_THROTTLE_MIN_GROUND",
             )],
-            &[commit(
-                "8066e48be",
-                "flood-prevention admission for the UF e-graph instantiation loop",
-            )],
+            &[
+                commit(
+                    "8066e48be",
+                    "flood-prevention admission for the UF e-graph instantiation loop",
+                ),
+                commit(
+                    "d910fa590",
+                    "instance SELECTION becomes a policy object, and the funnel that says whether it ran",
+                ),
+                doc(
+                    "docs/research/03-measurements/what-the-admission-filter-rejects-2026-09-10.md",
+                ),
+            ],
         ),
-        note: "Doc comment measures the risk of setting this too low: `uf.1001519`'s ~7000-candidate release at ground=1150 is what main refutes from in 4.4s, and throttling its deep tail changed which instances filled the cap and lost the file.",
+        note: "RE-MEASURED 2026-09-10 on the 32-file UF parity-loss slice, post-`d910fa590`: 878 deferred-pool releases, of which only 262 (29.8 %) happened at or past this threshold -- 70.2 % of this population's releases are below it and behave as the historical dump-everything admission. 25 of 32 files engage the throttle at some point. The threshold is not idle, but it sees under a third of the releases. Doc comment measures the risk of setting this too low: `uf.1001519`'s ~7000-candidate release at ground=1150 is what main refutes from in 4.4s, and throttling its deep tail changed which instances filled the cap and lost the file.",
     },
     ConfigEntry {
         name: "INVENTION_GROUND_CEILING",
