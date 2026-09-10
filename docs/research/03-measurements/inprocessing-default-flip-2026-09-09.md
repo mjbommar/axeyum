@@ -160,7 +160,7 @@ panicked at crates/axeyum-solver/tests/sat_bv.rs:1144:9:
 without compaction the var-bound budget must refuse the encoding, got Sat(Model { … })
 ```
 
-The cause is `sat_bv.rs:1139`, the test's own negative control:
+The cause is `sat_bv.rs:1140`, the test's own negative control:
 
 ```rust
 let no_inprocess = SolverConfig::default().with_cnf_variable_budget(budget);
