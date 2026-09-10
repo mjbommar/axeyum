@@ -3611,6 +3611,12 @@ struct CompiledUniversal {
     /// state for it, but `A ∨ (∀y. B(y))` does not entail `B(t)`, so nothing it
     /// produces may enter the ground set or a certificate.
     active: bool,
+    /// A fixed binding for each bound variable no trigger pattern reaches,
+    /// `None` for the variables the patterns bind. Empty for every universal
+    /// whose cover is complete, which is the overwhelming majority — see
+    /// [`select_triggers_with_fixed_bindings`] for when it is populated and why
+    /// binding a variable to a term named by the body is sound.
+    fixed_bindings: Vec<Option<TermId>>,
     /// For a registration (`active == false`), where it sits inside its trusted
     /// owner. Present exactly when the positive replacement `owner ⊨
     /// owner[∀y.B := B(t)]` applies; the driver turns each matched tuple into
@@ -4358,6 +4364,7 @@ impl IncrementalEmatchSession {
                 .collect();
             let mut pattern_indices: Vec<usize> = Vec::new();
             let mut pattern_groups: Vec<Vec<usize>> = Vec::new();
+            let mut fixed_bindings: Vec<Option<TermId>> = Vec::new();
             if !vars.is_empty() {
                 // A user `:pattern` annotation REPLACES trigger selection for
                 // this universal; auto-selection is the fallback when there is
@@ -4387,8 +4394,25 @@ impl IncrementalEmatchSession {
                         user_groups.as_ref().map_or(0, Vec::len)
                     );
                 }
-                let source_groups =
+                let mut source_groups =
                     user_groups.unwrap_or_else(|| vec![select_triggers(arena, body, &var_index)]);
+                // Triggerless after ordinary selection. Try the equality
+                // fallback — but only for a universal whose instances can
+                // actually be USED. A registration with neither `active` nor a
+                // positive context has every tuple it produces discarded
+                // (see `lazy_clause_batches`), so a trigger for it would buy
+                // nothing and spend the shared per-round join ceiling that the
+                // productive universals are already starving on. 360 of the 728
+                // triggerless universals on the UF parity-loss slice are that
+                // kind; this is the line that keeps them out.
+                if source_groups.iter().all(Vec::is_empty)
+                    && (active || context.is_some())
+                    && let Some((group, bindings)) =
+                        select_triggers_with_fixed_bindings(arena, body, &var_index, &binders)
+                {
+                    fixed_bindings = bindings;
+                    source_groups = vec![group];
+                }
                 for group in source_groups {
                     let mut group_indices = Vec::with_capacity(group.len());
                     for trigger in group {
@@ -4428,13 +4452,17 @@ impl IncrementalEmatchSession {
                     .collect();
                 eprintln!(
                     "QPROBE triggerless universal[{}] vars={} candidates={} absent={} \
-                     under_binder={} interpreted={} active={active} context={} parents=[{}]",
+                     under_binder={} interpreted={} eq_ground={} eq_covered={} eq_none={} \
+                     active={active} context={} parents=[{}]",
                     quantifiers.len(),
                     vars.len(),
                     diagnosis.candidates,
                     diagnosis.absent,
                     diagnosis.under_binder_only,
                     diagnosis.interpreted_only,
+                    diagnosis.eq_ground,
+                    diagnosis.eq_covered,
+                    diagnosis.eq_none,
                     context.is_some(),
                     parents.join(","),
                 );
@@ -4446,6 +4474,7 @@ impl IncrementalEmatchSession {
                 body,
                 pattern_indices,
                 pattern_groups,
+                fixed_bindings,
                 active,
                 context,
             });
@@ -5422,6 +5451,15 @@ impl IncrementalEmatchSession {
                     .map(|class| self.bridge.egraph.root(class))
                     .and_then(|root| self.bridge.repr_term.get(&root).copied())
                 {
+                    tuple.push(term);
+                    true
+                } else if let Some(term) = quantifier.fixed_bindings.get(index).copied().flatten() {
+                    // A variable no pattern reaches, bound to the ground term
+                    // the body equates it to (see
+                    // `select_triggers_with_fixed_bindings`). `fixed_bindings`
+                    // is empty for every universal with a complete cover, so
+                    // this arm is unreachable for them and the join is
+                    // unchanged.
                     tuple.push(term);
                     true
                 } else {
@@ -7289,6 +7327,64 @@ struct TriggerlessDiagnosis {
     /// The interpreted operators those variables sit directly under, as a
     /// deterministic sorted `op:count` list.
     parents: Vec<(String, usize)>,
+    /// Of the interpreted-only variables, how many occur as one side of an
+    /// equality whose other side is **ground** for this universal — mentions
+    /// none of its bound variables. Such a variable has a binding available
+    /// with no substitution at all: the equality's other side, a fixed term.
+    eq_ground: usize,
+    /// How many occur as one side of an equality whose other side mentions
+    /// only bound variables the trigger cover already binds. The binding is
+    /// available, but only after substituting the tuple into that term.
+    eq_covered: usize,
+    /// How many have no usable equality partner at all.
+    eq_none: usize,
+}
+
+/// Probe-only: does `symbol` sit on one side of an equality whose other side
+/// could supply a binding for it? `Some(true)` when that side mentions none of
+/// the universal's bound variables (a fixed term, usable with no substitution);
+/// `Some(false)` when it mentions only variables in `covered` (usable after the
+/// tuple is substituted); `None` when no equality partner qualifies. Ground
+/// partners are preferred, so a variable with both reports `Some(true)`.
+fn equality_partner_kind(
+    arena: &TermArena,
+    body: TermId,
+    symbol: SymbolId,
+    vars: &HashMap<SymbolId, u32>,
+    covered: &HashSet<u32>,
+) -> Option<bool> {
+    let mut best: Option<bool> = None;
+    let mut stack = vec![body];
+    let mut seen: HashSet<TermId> = HashSet::new();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(term) else {
+            continue;
+        };
+        if matches!(op, Op::Eq) && args.len() == 2 {
+            for (near, far) in [(args[0], args[1]), (args[1], args[0])] {
+                if !matches!(arena.node(near), TermNode::Symbol(s) if *s == symbol) {
+                    continue;
+                }
+                let mut mentioned = HashSet::new();
+                collect_vars(arena, far, vars, &mut mentioned);
+                if mentioned.is_empty() {
+                    return Some(true);
+                }
+                if mentioned
+                    .iter()
+                    .all(|other| *other != symbol && covered.contains(&vars[other]))
+                {
+                    best = Some(false);
+                }
+            }
+        }
+        let args = args.clone();
+        stack.extend(args);
+    }
+    best
 }
 
 /// Diagnoses one triggerless universal. Probe-only: never called unless
@@ -7351,6 +7447,11 @@ fn diagnose_triggerless(
                 for label in parents.get(symbol).into_iter().flatten() {
                     *parent_counts.entry(label.clone()).or_default() += 1;
                 }
+                match equality_partner_kind(arena, body, *symbol, vars, &covered) {
+                    Some(true) => diagnosis.eq_ground += 1,
+                    Some(false) => diagnosis.eq_covered += 1,
+                    None => diagnosis.eq_none += 1,
+                }
             } else {
                 diagnosis.under_binder_only += 1;
             }
@@ -7362,6 +7463,141 @@ fn diagnose_triggerless(
     parents.sort();
     diagnosis.parents = parents;
     diagnosis
+}
+
+/// Fallback for a universal [`select_triggers`] refuses outright.
+///
+/// `select_triggers` is all-or-nothing: one bound variable occurring in no
+/// function application discards the greedy cover of every OTHER variable, and
+/// the universal is then triggerless forever — no budget, cap or schedule
+/// reaches it. Measured on the 32-file UF parity-loss slice, that variable is
+/// almost always one side of an equality (`Eq` is 988 of the 1,006 operators
+/// such variables sit under) whose other side is a fixed, binder-free term. The
+/// binding it needs is not missing; it is written in the body.
+///
+/// So: cover what the applications reach, and take the rest from those
+/// equalities. Soundness does not rest on the equality being true — **every**
+/// instance of a universal is entailed by it, whatever terms are substituted —
+/// so the equality is only the reason to expect the instance to be USEFUL. What
+/// the fixed term must be is *ground*: it may mention no binder's variable, or
+/// the "instance" would carry a free variable. That is what `binders` checks.
+///
+/// Returns `None` when the fallback does not apply: some uncovered variable has
+/// no ground equality partner, or the applications cover nothing at all so
+/// there is no pattern to match in the first place.
+fn select_triggers_with_fixed_bindings(
+    arena: &TermArena,
+    body: TermId,
+    vars: &HashMap<SymbolId, u32>,
+    binders: &HashSet<SymbolId>,
+) -> Option<(Vec<TermId>, Vec<Option<TermId>>)> {
+    let mut candidates: Vec<(TermId, HashSet<u32>)> = Vec::new();
+    collect_app_candidates(arena, body, vars, &mut candidates);
+    let covered: HashSet<u32> = candidates
+        .iter()
+        .flat_map(|(_, cover)| cover.iter().copied())
+        .collect();
+    if covered.is_empty() {
+        return None;
+    }
+
+    // A ground binding for every variable the applications miss, or nothing.
+    let mut fixed: Vec<Option<TermId>> = vec![None; vars.len()];
+    let mut uncovered: Vec<(SymbolId, u32)> = vars
+        .iter()
+        .filter(|(_, index)| !covered.contains(index))
+        .map(|(symbol, index)| (*symbol, *index))
+        .collect();
+    uncovered.sort_by_key(|(_, index)| *index);
+    if uncovered.is_empty() {
+        // `select_triggers` would have succeeded; nothing for this route to do.
+        return None;
+    }
+    for (symbol, index) in uncovered {
+        let term = ground_equality_partner(arena, body, symbol, binders)?;
+        fixed[index as usize] = Some(term);
+    }
+
+    // Greedy cover of the variables that ARE reachable, unchanged in spirit
+    // from `select_triggers` — a single covering term when one exists.
+    if let Some((term, _)) = candidates.iter().find(|(_, cover)| *cover == covered) {
+        return Some((vec![*term], fixed));
+    }
+    let mut remaining = covered;
+    let mut chosen = Vec::new();
+    while !remaining.is_empty() {
+        let (term, cover) = candidates
+            .iter()
+            .max_by_key(|(_, cover)| cover.intersection(&remaining).count())
+            .filter(|(_, cover)| cover.intersection(&remaining).next().is_some())?;
+        for index in cover {
+            remaining.remove(index);
+        }
+        chosen.push(*term);
+    }
+    Some((chosen, fixed))
+}
+
+/// The ground term `symbol` is equated to somewhere in `body`, if there is one.
+///
+/// "Ground" is the strong reading: the term may contain no symbol bound by ANY
+/// binder in the query, not merely none of this universal's own variables — a
+/// foreign bound variable would make the substituted instance open, and an open
+/// "instance" is not entailed. Ties break on the smallest [`TermId`] so the
+/// choice does not depend on walk order.
+fn ground_equality_partner(
+    arena: &TermArena,
+    body: TermId,
+    symbol: SymbolId,
+    binders: &HashSet<SymbolId>,
+) -> Option<TermId> {
+    let mut best: Option<TermId> = None;
+    let mut stack = vec![body];
+    let mut seen: HashSet<TermId> = HashSet::new();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(term) else {
+            continue;
+        };
+        if matches!(op, Op::Eq) && args.len() == 2 {
+            for (near, far) in [(args[0], args[1]), (args[1], args[0])] {
+                if matches!(arena.node(near), TermNode::Symbol(bound) if *bound == symbol)
+                    && is_binder_free_term(arena, far, binders)
+                    && best.is_none_or(|current| far.index() < current.index())
+                {
+                    best = Some(far);
+                }
+            }
+        }
+        let args = args.clone();
+        stack.extend(args);
+    }
+    best
+}
+
+/// Whether `term` mentions no binder-bound symbol and contains no binder of its
+/// own — the condition for substituting it and still having a ground instance.
+fn is_binder_free_term(arena: &TermArena, term: TermId, binders: &HashSet<SymbolId>) -> bool {
+    let mut stack = vec![term];
+    let mut seen: HashSet<TermId> = HashSet::new();
+    while let Some(current) = stack.pop() {
+        if !seen.insert(current) {
+            continue;
+        }
+        match arena.node(current) {
+            TermNode::Symbol(symbol) if binders.contains(symbol) => return false,
+            TermNode::App { op, args } => {
+                if matches!(op, Op::Forall(_) | Op::Exists(_)) {
+                    return false;
+                }
+                stack.extend(args.iter().copied());
+            }
+            _ => {}
+        }
+    }
+    true
 }
 
 /// Collects every function-application subterm of `body`, with the set of bound
