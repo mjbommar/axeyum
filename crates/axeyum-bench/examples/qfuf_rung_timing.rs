@@ -1,11 +1,11 @@
-//! Times each rung of the QF_UF ladder on one file, in isolation.
+//! Times each rung of the `QF_UF` ladder on one file, in isolation.
 //!
 //! `axeyum_cli` reports one verdict for a ladder of four rungs, so a 24 s
 //! `unknown` says nothing about WHICH rung spent the budget. This calls the
 //! rungs directly, each with its own fresh arena and its own full budget, and
 //! prints what each one does on its own.
 //!
-//! Usage: qfuf_rung_timing <file.smt2> [budget_ms]
+//! Usage: `qfuf_rung_timing <file.smt2> [budget_ms]`
 
 use std::time::{Duration, Instant};
 
