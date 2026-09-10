@@ -364,8 +364,16 @@ those pages can make it.
 - **A confirmed observation of `bnb_budget_exhausted >= 1` through the front
   door.** The exhaustion *branch* is confirmed reachable by the committed unit
   test (§3.5), but I never saw the counter itself non-zero, because reaching it
-  costs the ~24 minutes §3.5 prices. A long-running instance of the cap-forcing control
-  was still running when this note was written.
+  costs the ~24 minutes §3.5 prices. A cap-forcing run was left going and was at
+  889 s of grinding (worker thread confirmed at 87% CPU, so it is searching, not
+  stuck) when this note was finalized — consistent with the predicted ~1,460 s
+  and not yet past it. **Nothing in the recommendation depends on it**: it would
+  confirm the counter can report a cap that takes 24 minutes to fire, which is
+  the note's point either way.
+- **A long-bound re-run of the §3.3 timeouts.** 24 of the 283 (every 12th) were
+  re-launched at a 600 s bound to close the previous bullet's gap directly; two
+  had returned at finalization, neither with `bnb_exhausted > 0`. Whoever picks
+  this up should re-run that arm rather than trust two rows.
 - **The other cap this item's evidence column names**, `MAX_DPLL_ROUNDS = 10_000`
   (`dpll_lia.rs:44`). It is a different stop with a different owner and was out
   of scope.
