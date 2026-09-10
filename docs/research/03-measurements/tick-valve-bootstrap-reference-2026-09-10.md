@@ -282,10 +282,108 @@ lane does not spend a session on it. See §6.
 
 ## 5. Before/after
 
-<!-- T1: pending — the mutation control and the BVE_BUDGET_SETUP_MULTIPLE arms
-     are still running at the time this section was committed. Filled in below
-     once the sweeps land; a section that says "pending" is a section that did
-     not run. -->
+### 5a. The constant: a null, with a positive control that fires
+
+The static argument in §2 is a grep, so it was checked by mutation. Two release
+binaries were built from this tree and run over the **same 60 fixtures**:
+
+* **shipped** — `bootstrap_reference = 2_000_000`, valve unrouted (today's tree).
+* **boot0** — `bootstrap_reference = 0`, valve unrouted. Zero rather than
+  10,000,000 deliberately: it is the most discriminating value there is, because
+  a live constant at zero makes `allowance` zero and refuses *every* pass. If the
+  constant were read at all, this could not be invisible.
+
+The fixtures are the 60 fastest parity-list files on which BVE eliminated
+variables and **no pass hit its deadline**, so every counter compared is
+deterministic and a difference could not be blamed on timing. Verified in the
+run itself: `deadline expiries across BOTH arms: 0`.
+
+```
+fixtures: 60
+shipped-arm totals (the population must be non-vacuous):
+   bve_variables_eliminated                   47,458
+   bve_clauses_removed                       183,294
+   bve_clauses_added                          72,167
+   subsume_clauses_subsumed                   43,886
+   subsume_literals_strengthened              39,946
+   vivify_clauses_strengthened                84,196
+   cnf_compaction_variables_dropped           50,106
+   inprocess_literals_before                 712,608
+   inprocess_literals_after                  299,213
+
+deadline expiries across BOTH arms: 0 (must be 0 for determinism)
+
+verdict differences: 0
+deterministic-counter differences: 0
+```
+
+**Zero differences.** Moving the constant — to the most extreme value in its
+domain — changes nothing the solver does.
+
+A null is worth nothing without a control that the harness can detect a live
+constant, so the identical comparison was run over the identical 60 fixtures
+with two binaries in which the valve **is** routed (§5b's patch),
+`bootstrap_reference` 2,000,000 vs 10,000,000 — a *smaller* change than the
+negative arm's:
+
+```
+verdict differences: 0
+deterministic-counter differences: 255
+```
+
+Same fixtures, same counters, same comparison, a smaller change to the same
+integer: **255 differences when routed, 0 when not.** The harness sees a live
+constant. It does not see this one.
+
+### 5b. The corpus, four arms, one binary
+
+Full pinned 200-file QF_BV parity list, 24,000 ms budget, each arm pinned to a
+**distinct physical P-core** (0/2/4/6) and run concurrently, `measured=200
+rows=200` on every arm. `off` is the no-inprocessing baseline; `base` is today's
+shipping configuration; `bve500`/`bve100` lower
+`BVE_BUDGET_SETUP_MULTIPLE` from 2,000 through the existing
+`AXEYUM_BVE_BUDGET_MULTIPLE` lever — the same binary, so no build difference has
+to be argued away.
+
+Host `s4`; 1-minute load `15.52` at start, `19.14`–`24.59` at the arms' ends.
+**The box was busy** and two release builds overlapped the run; see the caveat
+below.
+
+| arm | decided | sat | unsat | unknown | wall (s) | inprocess (s) | bve (s) | subsume (s) | `bve_deadline_expired` |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `off` | **185** | 56 | 129 | 15 | 574.6 | 0.0 | 0.0 | 0.0 | 0 |
+| `base` (shipping) | **185** | 56 | 129 | 15 | 624.1 | 63.0 | 45.0 | 9.4 | 0 |
+| `bve500` | **185** | 56 | 129 | 15 | 588.9 | 67.7 | 37.8 | 20.4 | 1 |
+| `bve100` | **185** | 56 | 129 | 15 | 603.0 | 35.8 | 15.5 | 11.9 | 0 |
+
+* **Decided count is 185 on every arm, and the decided *sets* are identical** —
+  0 gained, 0 lost, pairwise, in every direction. Not one file's verdict moves.
+* **0 sat/unsat disagreements** across all four arms. Nothing became wrong.
+* Inprocessing spend moves by 1.9x between arms (35.8 s to 67.7 s) and buys no
+  verdict either way.
+
+**Wall clock does not resolve at this load, and the honest reading is that it
+says nothing.** The ordering is not monotone in the lever: `bve100` grants BVE
+the *smallest* budget, does the *least* inprocessing (35.8 s), and finishes
+*slower* (603.0 s) than `bve500` (67.7 s of inprocessing, 588.9 s). A lever whose
+tightest setting is slower than its looser one is being read through contention,
+not through the solver. Nothing about wall clock is claimed from this run.
+
+**Two caveats on comparability, stated because they bound what this table
+supports.** Each arm was pinned to ONE logical CPU (the committed 2026-09-08
+sweep used six), and the box carried other lanes plus two of this lane's own
+release builds. Absolute figures therefore do not match the committed run —
+`off` decides 185 here against 186 there, and `base` records 45.0 s of BVE and
+**0** `bve_deadline_expired` against 209.7 s and 12. The arms are internally
+comparable to each other because they shared conditions; they are **not**
+comparable to the 2026-09-08 rows, and §1's window is derived from those rows,
+not from these.
+
+### 5c. Routing the valve, measured rather than argued
+
+<!-- T1: the three-arm phase-2 sweep (base2 / valve2M / valve10M) was still
+     running when this section was committed. Filled in below when it lands;
+     "pending" here means it did not run, not that it agreed. -->
 
 ---
 
