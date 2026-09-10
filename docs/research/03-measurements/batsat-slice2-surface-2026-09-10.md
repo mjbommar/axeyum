@@ -21,6 +21,10 @@ matching `batsat|rustsat`. The brief's "104 files under `docs/`" was measured
 before this lane merged main; the tracked count on `f91570117` is **110**.
 Both numbers are right about their own tree; quote the tree with the number.
 
+**This note is itself a `docs/` file that mentions batsat.** Re-running the
+sweep on any commit at or after `ac2d4f8ca` returns **111**, and the extra one
+is this file. Subtract it before comparing to the 110 below.
+
 Positive controls, because an empty grep is not a negative result:
 
 | Check | Command | Result | Control |
@@ -311,6 +315,23 @@ file at the line given, not inherited from a summary.
 | 11 | `docs/python-2026-08/inventories/smt-solver.md:434` (also 240, 260, 430, 431) | "`IncrementalSat` (11 methods), `IncrementalCnf` (13 methods) … **`Send` but `!Sync`** — both embed `rustsat_batsat::Solver<DeadlineCallbacks>` whose private callbacks hold `Cell<u64>`…" — `IncrementalSat`'s field is `solver: NativeIncrementalCdcl` (`lib.rs:705`). This is the same stale claim as the `unsendable` comment in `crates/axeyum-py/src/solver/core.rs:647` (§2e), and it is an *inventory* people size Python work from. |
 | 12 | `docs/reference/examples.md:158` | "Replays captured append-only CNF streams **through persistent BatSat and Z3**." — it runs `IncrementalSat`, which is the native core. |
 | 13 | `docs/plan/global/20-next-actions.md:485` (also 516) | A live queue entry proposing "run BatSat, the native `proof_sat` core, CaDiCaL, and Kissat on identical DIMACS… **decides whether the native core becomes the default**". That measurement was run on 2026-09-05 and the decision is ADR-1703. The entry proposes work already finished. |
+
+**No doc gives a batsat command that is broken.** Checked separately: filtering
+every `docs/` batsat line for command shapes (`cargo `, `just `, `scripts/`,
+`--features`, `--test`) returns, apart from this note itself, only commands that
+still work today (`cargo tree -e normal -p axeyum-cnf`,
+`cargo test -p axeyum-cnf --features batsat-reference --test native_vs_batsat_differential`
+in `docs/solver-inventory-2026-09/01-sat-core-and-cnf.md:416`), the ADR's own
+verification line, and one dated audit (`docs/research/08-planning/phase4-exit-audit.md:62`,
+which records what `cargo tree` printed on 2026-06-11 — H, not W). Positive
+control on the same filter: `cargo test` appears on 2,520 `docs/` lines.
+
+So the "runnable instructions that no longer work" subclass of W is **empty**.
+All thirteen W items are wrong *claims*, not broken *commands* — including
+`docs/reference/examples.md:158`, where the invocation and its `--features z3`
+requirement are correct and only the "persistent BatSat" description is false.
+**The Tier B docs fix is therefore pure prose: nothing needs re-verifying by
+running it.**
 
 Two observations about this list rather than its members:
 
