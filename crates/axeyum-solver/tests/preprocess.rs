@@ -4,7 +4,7 @@
 //! the *original* assertions.
 #![cfg(feature = "full")]
 
-use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
+use axeyum_ir::{FuncId, FuncValue, Rational, Sort, SymbolId, TermArena, TermId, Value, eval};
 use axeyum_solver::{
     CheckResult, SatBvBackend, SolverConfig, check_auto, check_with_preprocessing,
 };
@@ -397,4 +397,284 @@ fn fixpoint_resolves_a_deep_definition_chain() {
         solve(&mut arena, &unsat_case, &SolverConfig::default()),
         Ok(CheckResult::Unsat)
     ));
+}
+
+// ===========================================================================
+// ADR-1811: `replay_preprocessed_model` is the ONE place that decides which
+// witness kinds a preprocessed model carries.
+// ===========================================================================
+//
+// Until 2026-09-09 there were two copies of the reduce + replay: this module's
+// and `auto::dispatch_reduced`'s. They drifted — `auto` gained the
+// uninterpreted-function carry on 2026-07-02 (`124e18aa0`) and `preprocess` did
+// not — so a model handed back through `check_with_preprocessing` silently lost
+// every function interpretation. The tests below pin all three carries.
+//
+// The backend here is canned ON PURPOSE. The carries are a property of the
+// replay, not of any theory route, and no shipped route decides a query that
+// needs a `/0` witness AND a function interpretation at once (see the
+// `front_door_*` tests below, which cover the two kinds separately). A canned
+// backend that CHECKS its own candidate against the reduced query is the only
+// way to put both witness kinds through the merged path in one fixture.
+
+/// A backend that answers with a fixed candidate model and **verifies it**
+/// against whatever reduced query the preprocessing pipeline hands it. If the
+/// reduction were unsound, the candidate would stop satisfying the reduced
+/// query and this returns `Unsat` — so the fixture cannot pass vacuously.
+struct CannedWitnessBackend {
+    model: axeyum_solver::Model,
+}
+
+impl axeyum_solver::SolverBackend for CannedWitnessBackend {
+    fn capabilities(&self) -> axeyum_solver::Capabilities {
+        axeyum_solver::Capabilities {
+            name: "canned-witness".to_owned(),
+            produces_models: true,
+            complete: false,
+        }
+    }
+
+    fn check(
+        &mut self,
+        arena: &TermArena,
+        assertions: &[TermId],
+        _config: &SolverConfig,
+    ) -> Result<CheckResult, axeyum_solver::SolverError> {
+        let assignment = self.model.to_assignment();
+        for &assertion in assertions {
+            match eval(arena, assertion, &assignment) {
+                Ok(Value::Bool(true)) => {}
+                // The candidate does not satisfy the REDUCED query: say so
+                // rather than handing back a model the replay would reject.
+                _ => return Ok(CheckResult::Unsat),
+            }
+        }
+        Ok(CheckResult::Sat(self.model.clone()))
+    }
+}
+
+/// The ADR-1811 fixture: `y = 0 ∧ x = 5 ∧ x/y = 100 ∧ f(x) = 7`.
+///
+/// Replaying it needs all three witness kinds — the symbol values for `x`/`y`,
+/// the `/0` witness (without it the evaluator falls back to the total `x/0 = 0`
+/// convention and `0 = 100` is false), and `f`'s interpretation (without it
+/// `eval` raises `UnboundFunction`).
+fn both_witness_kinds_fixture() -> (
+    TermArena,
+    Vec<TermId>,
+    CannedWitnessBackend,
+    SymbolId,
+    FuncId,
+) {
+    let mut arena = TermArena::new();
+    let f = arena.declare_fun("f", &[Sort::Real], Sort::Real).unwrap();
+    let x = arena.declare("wx", Sort::Real).unwrap();
+    let y = arena.declare("wy", Sort::Real).unwrap();
+    let xv = arena.var(x);
+    let yv = arena.var(y);
+    let zero = arena.real_const(Rational::integer(0));
+    let five = arena.real_const(Rational::integer(5));
+    let seven = arena.real_const(Rational::integer(7));
+    let hundred = arena.real_const(Rational::integer(100));
+    let quotient = arena.real_div(xv, yv).unwrap();
+    let y_is_0 = arena.eq(yv, zero).unwrap();
+    let x_is_5 = arena.eq(xv, five).unwrap();
+    let quotient_is_100 = arena.eq(quotient, hundred).unwrap();
+    let fx = arena.apply(f, &[xv]).unwrap();
+    let fx_is_7 = arena.eq(fx, seven).unwrap();
+
+    let mut model = axeyum_solver::Model::new();
+    model.set(x, Value::Real(Rational::integer(5)));
+    model.set(y, Value::Real(Rational::integer(0)));
+    model.set_function(
+        f,
+        FuncValue::constant_value(
+            vec![Sort::Real],
+            Sort::Real,
+            Value::Real(Rational::integer(0)),
+        )
+        .define_value(
+            &[Value::Real(Rational::integer(5))],
+            Value::Real(Rational::integer(7)),
+        ),
+    );
+    model.set_real_div_zero(Rational::integer(5), Rational::integer(100));
+
+    let originals = vec![y_is_0, x_is_5, quotient_is_100, fx_is_7];
+    (arena, originals, CannedWitnessBackend { model }, x, f)
+}
+
+/// **The ADR-1811 exit-criterion fixture.** A query carrying a real `/0`
+/// witness AND an uninterpreted-function interpretation goes through
+/// `check_with_preprocessing`, and the model it hands BACK replays every
+/// original assertion. Dropping any one of the three carries breaks this.
+#[test]
+fn preprocessed_model_with_both_witness_kinds_replays() {
+    let (mut arena, originals, mut backend, _x, _f) = both_witness_kinds_fixture();
+    let result = check_with_preprocessing(
+        &mut backend,
+        &mut arena,
+        &originals,
+        &SolverConfig::default(),
+    )
+    .expect("the canned candidate satisfies the reduced query, so the replay succeeds");
+    let CheckResult::Sat(model) = result else {
+        panic!("expected sat, got {result:?}");
+    };
+    assert_model_satisfies(&arena, &model, &originals);
+}
+
+/// Negative control 1 of 3 — the SYMBOL-value carry.
+#[test]
+fn preprocessed_model_carries_symbol_values() {
+    let (mut arena, originals, mut backend, x, _f) = both_witness_kinds_fixture();
+    let CheckResult::Sat(model) = check_with_preprocessing(
+        &mut backend,
+        &mut arena,
+        &originals,
+        &SolverConfig::default(),
+    )
+    .unwrap() else {
+        panic!("expected sat");
+    };
+    assert_eq!(
+        model.get(x),
+        Some(Value::Real(Rational::integer(5))),
+        "the returned model must carry the symbol values"
+    );
+}
+
+/// Negative control 2 of 3 — the UNINTERPRETED-FUNCTION carry. This is the one
+/// `preprocess.rs` did not have before ADR-1811.
+#[test]
+fn preprocessed_model_carries_function_interpretations() {
+    let (mut arena, originals, mut backend, _x, f) = both_witness_kinds_fixture();
+    let CheckResult::Sat(model) = check_with_preprocessing(
+        &mut backend,
+        &mut arena,
+        &originals,
+        &SolverConfig::default(),
+    )
+    .unwrap() else {
+        panic!("expected sat");
+    };
+    let interp = model
+        .function(f)
+        .expect("the returned model must carry the interpretation of `f`");
+    assert_eq!(
+        interp.apply_value(&[Value::Real(Rational::integer(5))]),
+        Value::Real(Rational::integer(7))
+    );
+}
+
+/// Negative control 3 of 3 — the free-division `/0` carry.
+#[test]
+fn preprocessed_model_carries_the_real_div_zero_witness() {
+    let (mut arena, originals, mut backend, _x, _f) = both_witness_kinds_fixture();
+    let CheckResult::Sat(model) = check_with_preprocessing(
+        &mut backend,
+        &mut arena,
+        &originals,
+        &SolverConfig::default(),
+    )
+    .unwrap() else {
+        panic!("expected sat");
+    };
+    assert_eq!(
+        model.real_div_zero(Rational::integer(5)),
+        Some(Rational::integer(100)),
+        "the returned model must carry the chosen value of 5/0"
+    );
+}
+
+/// The replay is a soundness ALARM, not a formality: a backend whose candidate
+/// needs a `/0` witness it does not supply must never come back as `sat`.
+/// (`5/0` then falls back to the total `x/0 = 0` convention, so `0 = 100` is
+/// false.)
+#[test]
+fn a_candidate_missing_the_div_zero_witness_is_never_sat() {
+    let (mut arena, originals, backend, _x, _f) = both_witness_kinds_fixture();
+    let mut stripped = axeyum_solver::Model::new();
+    for (symbol, value) in backend.model.iter() {
+        stripped.set(symbol, value);
+    }
+    for (func, interp) in backend.model.functions() {
+        stripped.set_function(func, interp.clone());
+    }
+    let mut backend = CannedWitnessBackend { model: stripped };
+    let result = check_with_preprocessing(
+        &mut backend,
+        &mut arena,
+        &originals,
+        &SolverConfig::default(),
+    );
+    if let Ok(CheckResult::Sat(model)) = result {
+        panic!("a candidate with no /0 witness must not come back as sat; got {model:?}");
+    }
+}
+
+/// The FRONT DOOR half of the ADR-1811 exit criterion, part 1: a query whose
+/// model needs the `/0` witness decides `sat` through `check_auto`'s
+/// preprocessed path (route trace: `nra`, inside `dispatch_reduced`) and the
+/// returned model replays.
+#[test]
+fn front_door_preprocessed_model_carries_the_real_div_zero_witness() {
+    let mut arena = TermArena::new();
+    let x = arena.declare("dx", Sort::Real).unwrap();
+    let y = arena.declare("dy", Sort::Real).unwrap();
+    let xv = arena.var(x);
+    let yv = arena.var(y);
+    let zero = arena.real_const(Rational::integer(0));
+    let five = arena.real_const(Rational::integer(5));
+    let hundred = arena.real_const(Rational::integer(100));
+    let quotient = arena.real_div(xv, yv).unwrap();
+    let y_is_0 = arena.eq(yv, zero).unwrap();
+    let x_is_5 = arena.eq(xv, five).unwrap();
+    let quotient_is_100 = arena.eq(quotient, hundred).unwrap();
+    let originals = [y_is_0, x_is_5, quotient_is_100];
+    let config = SolverConfig::default().with_preprocess(true);
+    let CheckResult::Sat(model) = check_auto(&mut arena, &originals, &config).unwrap() else {
+        panic!("x = 5 ∧ y = 0 ∧ x/y = 100 is sat under SMT-LIB free division");
+    };
+    assert_eq!(
+        model.real_div_zero(Rational::integer(5)),
+        Some(Rational::integer(100))
+    );
+    assert_model_satisfies(&arena, &model, &originals);
+}
+
+/// The FRONT DOOR half, part 2: a `QF_UFLIA` query decides `sat` through the
+/// preprocessed path and the returned model carries `g`'s interpretation. Drop
+/// the function loop from the merged replay and `eval` raises `UnboundFunction`
+/// on the original `g(x) = 7`.
+#[test]
+fn front_door_preprocessed_model_carries_the_function_interpretation() {
+    let mut arena = TermArena::new();
+    let g = arena.declare_fun("g", &[Sort::Int], Sort::Int).unwrap();
+    let x = arena.declare("ux", Sort::Int).unwrap();
+    let z = arena.declare("uz", Sort::Int).unwrap();
+    let xv = arena.var(x);
+    let zv = arena.var(z);
+    let one = arena.int_const(1);
+    let five = arena.int_const(5);
+    let six = arena.int_const(6);
+    let seven = arena.int_const(7);
+    let x_plus_1 = arena.int_add(xv, one).unwrap();
+    let gx = arena.apply(g, &[xv]).unwrap();
+    let x_is_5 = arena.eq(xv, five).unwrap();
+    // `z = x + 1` is a definition `solve_eqs` eliminates, so the trail is
+    // non-empty and the reconstruction is exercised, not bypassed.
+    let z_def = arena.eq(zv, x_plus_1).unwrap();
+    let gx_is_7 = arena.eq(gx, seven).unwrap();
+    let z_is_6 = arena.eq(zv, six).unwrap();
+    let originals = [x_is_5, z_def, gx_is_7, z_is_6];
+    let config = SolverConfig::default().with_preprocess(true);
+    let CheckResult::Sat(model) = check_auto(&mut arena, &originals, &config).unwrap() else {
+        panic!("x = 5 ∧ z = x+1 ∧ g(x) = 7 ∧ z = 6 is sat");
+    };
+    assert!(
+        model.function(g).is_some(),
+        "the returned model must carry the interpretation of `g`"
+    );
+    assert_model_satisfies(&arena, &model, &originals);
 }

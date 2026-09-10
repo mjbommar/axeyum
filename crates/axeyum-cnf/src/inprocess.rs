@@ -82,6 +82,7 @@ use crate::decompose::{
     DecomposeOptions, DecomposeStats, EquivalenceMap, decompose_within_recorded,
 };
 use crate::simplify::{SubsumeOptions, SubsumeStats, simplify_within_recorded};
+use crate::ticks::{TickEffort, TickGrant, TickValveAccount};
 use crate::vivify::{VivifyOptions, VivifyStats, vivify_within};
 use crate::xor_propagate::{XorPropagation, xor_propagate};
 use crate::{CnfFormula, DratSink, DratStep, ProofSinkError, ReductionLink, check_drat};
@@ -500,6 +501,352 @@ impl InprocessObserver for RecordingObserver {
     }
     fn decompose_grant(&mut self, _formula: &CnfFormula) -> Option<u64> {
         self.budget
+    }
+}
+
+// ---------------------------------------------------------------------------
+// The tick valve, as an observer
+// ---------------------------------------------------------------------------
+
+/// One offer of one pass to the valve, and what the valve said — the row a
+/// reproducible schedule log is made of.
+///
+/// Every field is an integer or an enum, and none of them is a clock reading:
+/// two runs of the same formula produce byte-identical rows however long each
+/// run took.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TickDecision {
+    /// Which pass was offered.
+    pub pass: OccurrencePass,
+    /// The search-tick numeraire at the moment of the offer.
+    pub search_ticks: u64,
+    /// Clauses in the formula the pass would have run over.
+    pub clauses: u64,
+    /// What the valve decided.
+    pub grant: TickGrant,
+    /// The step budget actually handed to the pass, after the inner observer's
+    /// own policy and the tick allowance were both applied. `None` whenever the
+    /// pass did not run — including the case where the valve admitted it and
+    /// the inner observer declined.
+    pub budget: Option<u64>,
+}
+
+impl TickDecision {
+    /// A stable one-line rendering, for a log whose byte-identity across runs
+    /// is the property under test.
+    #[must_use]
+    pub fn line(&self) -> String {
+        let detail = match self.grant {
+            TickGrant::Granted {
+                allowance,
+                reference,
+            } => format!("allowance={allowance} reference={reference}"),
+            TickGrant::Refused { accrued, threshold } => {
+                format!("accrued={accrued} threshold={threshold}")
+            }
+            TickGrant::BackedOff { rounds_left } => format!("rounds_left={rounds_left}"),
+        };
+        let budget = match self.budget {
+            Some(b) => b.to_string(),
+            None => "none".to_owned(),
+        };
+        format!(
+            "{} {} ticks={} clauses={} {detail} budget={budget}",
+            self.pass.stat_prefix(),
+            self.grant.tag(),
+            self.search_ticks,
+            self.clauses,
+        )
+    }
+}
+
+/// Wraps any [`InprocessObserver`] in a deterministic, tick-denominated
+/// admission gate.
+///
+/// # Why this is a wrapper and not a field on [`InprocessSchedule`]
+///
+/// The schedule cannot decide admission: the numeraire is the **search's** tick
+/// count, and the search belongs to the caller. [`InprocessObserver::grant`] is
+/// already the point where the caller answers "what may this pass spend", asked
+/// at the moment the pass is offered — so the valve belongs there, in front of
+/// whatever policy the caller already had.
+///
+/// # What it changes about a grant
+///
+/// Two things, in this order:
+///
+/// 1. **Admission.** The valve runs first. On [`TickGrant::Refused`] or
+///    [`TickGrant::BackedOff`] the pass does not run *and the inner observer is
+///    never asked* — that is the point of the refusal (a zero-budget round
+///    still pays the `O(|F|)` occurrence-list setup, which is the cost being
+///    declined), and asking anyway would let an inner policy's counters claim a
+///    round the valve refused.
+/// 2. **Capping.** On [`TickGrant::Granted`] the inner observer is asked as
+///    usual, and its answer is capped by the tick allowance.
+///
+/// Step 2 crosses units, so it is named rather than hidden: pass budgets are in
+/// occurrence-list steps and the allowance is in ticks, and
+/// [`Self::steps_per_tick`] is the stated bridge. Both units count *one memory
+/// touch proportional to formula size*, so 1 is the honest default — but it is
+/// a modelling assumption, not a measurement, and [`Self::gate_only`] turns the
+/// cap off entirely for a caller that wants admission from the valve and the
+/// budget from its own policy.
+///
+/// # Rounds
+///
+/// The backoff needs to know what a granted round achieved, and that is only
+/// known after the schedule has emitted its result counters. So a valve is
+/// **held across rounds** by the caller and each round is closed with
+/// [`Self::finish_round`] — or, better, run inside [`Self::round`], which
+/// closes it on the way out.
+#[derive(Debug, Clone)]
+pub struct TickValve<O> {
+    inner: O,
+    search_ticks: u64,
+    steps_per_tick: u64,
+    subsume: TickValveAccount,
+    bve: TickValveAccount,
+    subsume_round: PassRound,
+    bve_round: PassRound,
+    log: Vec<TickDecision>,
+}
+
+/// What one pass did in the round now in progress: whether it ran at all, and
+/// whether it achieved anything. Only the pair matters — a pass that did not
+/// run must not be charged as unproductive — so they travel together rather
+/// than as four loose booleans on the valve.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct PassRound {
+    ran: bool,
+    found: bool,
+}
+
+impl PassRound {
+    const CLEAR: Self = Self {
+        ran: false,
+        found: false,
+    };
+}
+
+impl<O> TickValve<O> {
+    /// A valve applying `subsume` and `bve` efforts over `inner`.
+    pub fn new(inner: O, subsume: TickEffort, bve: TickEffort) -> Self {
+        Self {
+            inner,
+            search_ticks: 0,
+            steps_per_tick: 1,
+            subsume: TickValveAccount::new(subsume),
+            bve: TickValveAccount::new(bve),
+            subsume_round: PassRound::CLEAR,
+            bve_round: PassRound::CLEAR,
+            log: Vec::new(),
+        }
+    }
+
+    /// The shipping pairing: subsumption on [`TickEffort::MAJOR_PASS`], BVE on
+    /// [`TickEffort::EXPENSIVE_SETUP`] — BVE is the pass whose occurrence-list
+    /// setup dominates a small round, so it is the one that gets the smaller
+    /// slice and the larger threshold.
+    pub fn shipping(inner: O) -> Self {
+        Self::new(inner, TickEffort::MAJOR_PASS, TickEffort::EXPENSIVE_SETUP)
+    }
+
+    /// Admission only: the valve decides whether a pass runs, and the inner
+    /// observer's budget is passed through uncapped.
+    #[must_use]
+    pub fn gate_only(mut self) -> Self {
+        self.steps_per_tick = 0;
+        self
+    }
+
+    /// Occurrence-list steps one tick of allowance buys. `0` disables the cap
+    /// (see [`Self::gate_only`]).
+    #[must_use]
+    pub const fn steps_per_tick(&self) -> u64 {
+        self.steps_per_tick
+    }
+
+    /// Sets the unit bridge. See the type docs — this is a modelling
+    /// assumption, so a caller that changes it is making a claim.
+    #[must_use]
+    pub const fn with_steps_per_tick(mut self, steps: u64) -> Self {
+        self.steps_per_tick = steps;
+        self
+    }
+
+    /// Updates the numeraire to the search's current tick reading.
+    ///
+    /// Monotone: a lower reading is ignored rather than rewinding the window,
+    /// because a rewind would hand the pass a second slice of work it already
+    /// spent.
+    pub const fn advance_search_ticks(&mut self, ticks: u64) {
+        if ticks > self.search_ticks {
+            self.search_ticks = ticks;
+        }
+    }
+
+    /// The numeraire as the valve currently reads it.
+    #[must_use]
+    pub const fn search_ticks(&self) -> u64 {
+        self.search_ticks
+    }
+
+    /// Every decision the valve has taken, in order.
+    #[must_use]
+    pub fn decisions(&self) -> &[TickDecision] {
+        &self.log
+    }
+
+    /// The decision log as lines — the artifact whose byte-identity across two
+    /// runs of materially different duration is the determinism claim.
+    #[must_use]
+    pub fn schedule_log(&self) -> Vec<String> {
+        self.log.iter().map(TickDecision::line).collect()
+    }
+
+    /// Subsumption's account.
+    #[must_use]
+    pub const fn subsume_account(&self) -> &TickValveAccount {
+        &self.subsume
+    }
+
+    /// BVE's account.
+    #[must_use]
+    pub const fn bve_account(&self) -> &TickValveAccount {
+        &self.bve
+    }
+
+    /// The wrapped observer.
+    #[must_use]
+    pub const fn inner(&self) -> &O {
+        &self.inner
+    }
+
+    /// Unwraps the observer, dropping the valve.
+    #[must_use]
+    pub fn into_inner(self) -> O {
+        self.inner
+    }
+
+    /// Closes a round: each pass that actually ran records whether it found
+    /// anything, which is what drives the backoff.
+    ///
+    /// A pass the valve refused is **not** charged as unproductive. Charging it
+    /// would compound the two gates into one that closes and never reopens —
+    /// the refusal already delayed the round, and the backoff would then delay
+    /// it again for a failure that never happened.
+    pub const fn finish_round(&mut self) {
+        if self.subsume_round.ran {
+            self.subsume.record_outcome(self.subsume_round.found);
+        }
+        if self.bve_round.ran {
+            self.bve.record_outcome(self.bve_round.found);
+        }
+        self.subsume_round = PassRound::CLEAR;
+        self.bve_round = PassRound::CLEAR;
+    }
+
+    /// Runs one round with the valve as its observer and closes it afterwards.
+    ///
+    /// ```ignore
+    /// let out = valve.round(|v| inprocess_scheduled(&formula, schedule, None, v));
+    /// ```
+    pub fn round<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
+        let out = f(self);
+        self.finish_round();
+        out
+    }
+}
+
+/// Counter keys whose being positive means subsumption did something useful.
+/// Derived from the keys [`inprocess_scheduled`] emits rather than re-counted
+/// here, so a pass that stops reporting progress cannot look productive.
+const SUBSUME_PROGRESS_KEYS: [&str; 3] = [
+    "subsume_clauses_subsumed",
+    "subsume_literals_strengthened",
+    "subsume_tautologies_removed",
+];
+
+/// The same, for elimination.
+const BVE_PROGRESS_KEYS: [&str; 1] = ["bve_variables_eliminated"];
+
+impl<O: InprocessObserver> InprocessObserver for TickValve<O> {
+    fn grant(&mut self, pass: OccurrencePass, formula: &CnfFormula) -> Option<u64> {
+        let clauses = formula.clauses().len() as u64;
+        let search_ticks = self.search_ticks;
+        let decision = match pass {
+            OccurrencePass::Subsume => self.subsume.request(search_ticks, clauses),
+            OccurrencePass::Bve => self.bve.request(search_ticks, clauses),
+        };
+
+        let budget = match decision {
+            TickGrant::Granted { allowance, .. } => {
+                match pass {
+                    OccurrencePass::Subsume => self.subsume_round.ran = true,
+                    OccurrencePass::Bve => self.bve_round.ran = true,
+                }
+                let inner = self.inner.grant(pass, formula);
+                match (inner, self.steps_per_tick) {
+                    (Some(steps), 0) => Some(steps),
+                    (Some(steps), per_tick) => Some(steps.min(allowance.saturating_mul(per_tick))),
+                    (None, _) => {
+                        // The valve admitted; the caller's own policy declined.
+                        // The round did not run, so it must not be charged to
+                        // the backoff either.
+                        match pass {
+                            OccurrencePass::Subsume => self.subsume_round.ran = false,
+                            OccurrencePass::Bve => self.bve_round.ran = false,
+                        }
+                        None
+                    }
+                }
+            }
+            TickGrant::Refused { .. } | TickGrant::BackedOff { .. } => None,
+        };
+
+        self.log.push(TickDecision {
+            pass,
+            search_ticks,
+            clauses,
+            grant: decision,
+            budget,
+        });
+
+        // The valve's own telemetry, under the pass's existing stat prefix and
+        // in a fixed order, so a report of a run is reproducible from the log.
+        let prefix = pass.stat_prefix();
+        let (admitted, allowance, threshold, backoff) = match decision {
+            TickGrant::Granted { allowance, .. } => (1.0, allowance, 0, 0),
+            TickGrant::Refused { accrued, threshold } => (0.0, accrued, threshold, 0),
+            TickGrant::BackedOff { rounds_left } => (0.0, 0, 0, rounds_left),
+        };
+        self.inner.count(
+            &format!("{prefix}_tick_reference"),
+            u64_as_f64(search_ticks),
+        );
+        self.inner
+            .count(&format!("{prefix}_tick_allowance"), u64_as_f64(allowance));
+        self.inner
+            .count(&format!("{prefix}_tick_threshold"), u64_as_f64(threshold));
+        self.inner
+            .count(&format!("{prefix}_tick_admitted"), admitted);
+        self.inner.count(
+            &format!("{prefix}_tick_backoff_rounds_left"),
+            f64::from(backoff),
+        );
+
+        budget
+    }
+
+    fn count(&mut self, name: &str, value: f64) {
+        if value > 0.0 {
+            if SUBSUME_PROGRESS_KEYS.contains(&name) {
+                self.subsume_round.found = true;
+            } else if BVE_PROGRESS_KEYS.contains(&name) {
+                self.bve_round.found = true;
+            }
+        }
+        self.inner.count(name, value);
     }
 }
 

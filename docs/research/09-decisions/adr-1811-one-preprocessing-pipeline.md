@@ -1,9 +1,9 @@
 # ADR-1811: One word-level preprocessing pipeline — `preprocess.rs` is the home, and the witness asymmetry runs the other way
 
-Status: proposed
+Status: accepted
 Date: 2026-09-09
 Index-summary: Closes roadmap item 1.4. Two word-level preprocessing pipelines run the same five reductions: `preprocess.rs` (`check_with_preprocessing`, up to 8 rounds, `MAX_PREPROCESS_ROUNDS` at `:32`) and `auto::preprocess_reduce` (`auto.rs:2158`, one straight-line round, the front door). **The inventory's crux claim is false.** It says the front door does not carry the `real_div_zeros` model witness whose loss `preprocess.rs:221-224` calls "a wrong `sat` through the preprocessed path"; `auto.rs:2339-2346` carries it, added in the same commit `124e18aa0` (2026-07-02) with the same comment. The asymmetry runs the OTHER way: `auto.rs` carries symbols + function interpretations + `/0` and is a strict superset of `preprocess.rs`, which carries symbols + `/0` and drops function interpretations at `:215-227`. Whether that drop is reachable is genuinely open and needs a run, not a read — its one non-test caller is the QF_ABV scalar-abstraction probe (`abv.rs:3242`), and `abv::complete_assignment` (`:3444`) refills a MISSING interpretation with a default rather than raising `UnboundFunction`, so the failure would be quiet. Decision: `preprocess.rs` is the surviving home for the reduction and the replay, parameterized over the solve call; `auto::preprocess_reduce` and `dispatch_reduced`'s model-building block are deleted. Warning attached: `reduction_shrinks_encoding`'s measured AIG-inflation numbers were taken against a ONE-round reduction and do not transfer to the fixpoint.
-Index-status: proposed
+Index-status: accepted
 
 ## Context
 

@@ -436,6 +436,39 @@ pub(crate) fn project_replay_build<P: FunctionModelProjection>(
             out.set_function(func, interp.clone());
         }
     }
+    // The chosen interpretation of real division-at-zero is part of the model,
+    // not scratch state of the replay above. Dropping it emitted a `sat` whose
+    // model did NOT replay for the caller while the internal replay passed:
+    // `(= y 0) ∧ (= x 5) ∧ (= (/ x y) 100) ∧ (= (f x) 7)` returned `Sat` with an
+    // empty `real_div_zero`, so the caller's `(/ 5 0)` fell back to the total
+    // `x/0 = 0` convention and `assertion[2]` evaluated `false` (SOUND-1).
+    for (numerator, quotient) in projected.real_div_zeros() {
+        out.set_real_div_zero(numerator, quotient);
+    }
+
+    // SECOND REPLAY, against the artifact the CALLER actually receives.
+    //
+    // The loop above checks `projected`, an `Assignment` strictly richer than
+    // the `Model` built from it: it keeps the fresh `!fn_app_` symbols and, until
+    // the block above existed, the division-at-zero witnesses. A distinction the
+    // producer makes but the emitted model cannot express is invisible to a
+    // replay run against the producer's own state — that is exactly how SOUND-1
+    // shipped. Re-running the replay through `Model::to_assignment` closes the
+    // class rather than the instance: any FUTURE model component that the build
+    // above forgets to carry turns into a sound `Unknown` here instead of a
+    // non-replaying `sat`.
+    let emitted = out.to_assignment();
+    for &assertion in assertions {
+        if !matches!(eval(arena, assertion, &emitted), Ok(Value::Bool(true))) {
+            return CheckResult::Unknown(crate::backend::UnknownReason {
+                kind: crate::backend::UnknownKind::Incomplete,
+                detail: format!(
+                    "projected sat model does not replay as emitted at assertion #{}",
+                    assertion.index()
+                ),
+            });
+        }
+    }
     CheckResult::Sat(out)
 }
 
