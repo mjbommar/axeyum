@@ -379,6 +379,13 @@ those pages can make it.
   tight cap did not fire in **over an hour**. **Nothing in the recommendation
   depends on ever seeing it fire** — a stop that takes more than an hour on the
   easiest possible input cannot be what costs us a verdict at a 24 s budget.
+
+  The run was then **stopped deliberately** at ~4,500 s rather than left to its
+  own 9,000 s bound: it was one core on a box carrying other Phase 3 measurement
+  lanes at load 22, and each further minute could only make an already
+  conservative number larger. It therefore wrote **no output file** — there is no
+  log to go and read. Anyone wanting the observation should rebuild the instance
+  from §3.5 and budget hours, not minutes.
 - **A long-bound re-run of the §3.3 timeouts.** 24 of the 283 (every 12th) were
   re-launched at a 600 s bound to close the previous bullet's gap directly; two
   had returned at finalization, neither with `bnb_exhausted > 0`. Whoever picks
