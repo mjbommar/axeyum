@@ -444,22 +444,46 @@ fn finish_quantified_solve(
             };
             let mbqi_result = prove_unsat_by_mbqi(arena, assertions, &mbqi_config)?;
             qtrace("mbqi", t0, "returned");
+            // ADR-1906. MBQI's route record is deliberately deferred to the end
+            // of this arm so the trail's LAST WORD is MBQI rather than a
+            // declined finite-model probe -- but the route trail charges a
+            // segment to whoever records NEXT, so deferring the record also
+            // deferred the COST, and `q:mbqi` read 0 ms on every file while its
+            // seconds were billed to `q:uf-fmf-full`. Take the segment here,
+            // where it is unambiguously MBQI's, and re-attach it to the record
+            // below. A move, not a copy: the clock restarts, so the full
+            // finite-model rung's own record ticks only its own segment and
+            // `total_elapsed()` is unchanged. A no-op (not even a clock read)
+            // when attribution is off.
+            let mbqi_elapsed = route_trace::take_attribution_open_segment();
             match mbqi_result {
                 CheckResult::Sat(model)
                     if crate::check_model(arena, original_assertions, &model)? =>
                 {
                     let result = CheckResult::Sat(model);
-                    route_trace::record_quant_rung_result(route_trace::quant_rung::MBQI, &result);
+                    // MBQI's own pass plus the `check_model` gate that ran
+                    // between the take above and this record — the same total
+                    // this record used to tick, now split off explicitly so the
+                    // taken segment is given back rather than dropped
+                    // (ADR-1906).
+                    let elapsed = mbqi_elapsed + route_trace::take_attribution_open_segment();
+                    route_trace::record_quant_rung_result_with_elapsed(
+                        route_trace::quant_rung::MBQI,
+                        &result,
+                        elapsed,
+                    );
                     Ok(result)
                 }
                 CheckResult::Sat(_) => {
-                    route_trace::record_quant_rung_declined(
+                    let elapsed = mbqi_elapsed + route_trace::take_attribution_open_segment();
+                    route_trace::record_quant_rung_declined_with_elapsed(
                         route_trace::quant_rung::MBQI,
                         DeclineReason::VerifierRejected(
                             "MBQI candidate lacks a checked model for the original assertion \
                              sequence"
                                 .to_owned(),
                         ),
+                        elapsed,
                     );
                     Ok(CheckResult::Unknown(UnknownReason {
                         kind: UnknownKind::Incomplete,
@@ -497,21 +521,49 @@ fn finish_quantified_solve(
                     {
                         qtrace("uf-fmf-full", t0, "sat");
                         let result = CheckResult::Sat(model);
+                        // The finder DECIDED, so it — not MBQI — is the trail's
+                        // last word here, and the deferral below does not
+                        // apply. MBQI's declined attempt is recorded first,
+                        // carrying its own taken cost; this record then ticks
+                        // and picks up exactly the finder's own segment
+                        // (ADR-1906).
+                        route_trace::record_quant_rung_result_with_elapsed(
+                            route_trace::quant_rung::MBQI,
+                            &other,
+                            mbqi_elapsed,
+                        );
                         route_trace::record_quant_rung_result(
                             route_trace::quant_rung::UF_FMF_FULL,
                             &result,
                         );
                         return Ok(result);
                     }
-                    qtrace("uf-fmf-full", t0, "declined");
-                    route_trace::record_quant_rung_declined(
-                        route_trace::quant_rung::UF_FMF_FULL,
-                        DeclineReason::NotApplicable,
-                    );
+                    // Guarded on the same condition as the block above, because
+                    // that is the condition under which the rung actually RAN.
+                    // It used to be unguarded, so an MBQI `unsat` — which lands
+                    // in this arm and skips the finder entirely — still emitted
+                    // a `q:uf-fmf-full declined` entry for a rung that never
+                    // executed, and (before the take above) charged it MBQI's
+                    // whole wall clock. Both halves of that entry were false
+                    // (ADR-1906).
+                    if matches!(other, CheckResult::Unknown(_)) {
+                        qtrace("uf-fmf-full", t0, "declined");
+                        route_trace::record_quant_rung_declined(
+                            route_trace::quant_rung::UF_FMF_FULL,
+                            DeclineReason::NotApplicable,
+                        );
+                    }
                     // The ladder is out of rungs above ℕ-induction; record the
                     // MBQI family's own `unknown` against MBQI rather than
-                    // leaving the trail's last word to a declined probe.
-                    route_trace::record_quant_rung_result(route_trace::quant_rung::MBQI, &other);
+                    // leaving the trail's last word to a declined probe. The
+                    // record is deferred, its COST is not: `mbqi_elapsed` was
+                    // taken at the pass's return, so MBQI keeps the last word
+                    // AND its seconds (ADR-1906).
+                    route_trace::record_quant_rung_result_with_elapsed(
+                        route_trace::quant_rung::MBQI,
+                        &other,
+                        mbqi_elapsed,
+                    );
                     Ok(other)
                 }
             }

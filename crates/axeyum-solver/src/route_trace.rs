@@ -329,6 +329,99 @@ impl RouteTrace {
         Instant::now().saturating_duration_since(self.last)
     }
 
+    /// Closes the currently open segment, **removes** it from the running
+    /// clock, and returns its duration. The caller now OWNS that duration and
+    /// is obliged to charge it to exactly one attempt, via
+    /// [`Self::record_result_with_elapsed`].
+    ///
+    /// # Why this exists (ADR-1906)
+    ///
+    /// A segment is charged to whoever records NEXT, so the order of the
+    /// `record_*` calls fixes the attribution — and that holds only while every
+    /// recorder records in the order it ran. The quantified ladder's terminal
+    /// arm does not: it runs the full MBQI pass, then the full finite-model
+    /// finder, and then records MBQI **last**, deliberately, so MBQI owns the
+    /// trail's final word ([`Self::last`], printed as `last=`) instead of a
+    /// declined probe. Under the plain model that charged MBQI's whole wall
+    /// clock to `q:uf-fmf-full` and left `q:mbqi` reading 0 ms on every file.
+    ///
+    /// Timing attribution wants the record immediately after the pass;
+    /// last-word attribution wants it last; recording at both points
+    /// double-counts, because both records tick. This primitive resolves that
+    /// by making the **cost** movable while the **verdict** stays where it
+    /// belongs.
+    ///
+    /// # The obligation, and why the total is the guard
+    ///
+    /// This is a **move**, not a copy: the returned duration is no longer
+    /// inside any future tick. That is what makes
+    /// [`Self::total_elapsed`] invariant — every nanosecond is inside exactly
+    /// one tick or inside exactly one taken segment, and a taken segment is
+    /// re-attached exactly once. It is also the one failure mode this design
+    /// admits that the old one could not have: a caller that takes a segment
+    /// and then **drops** it silently loses time from the total. Any use of
+    /// this method owes a test that pins the total.
+    ///
+    /// A consequence worth stating: `elapsed` stops being chronologically
+    /// monotone with respect to `attempts` order wherever this is used.
+    /// `elapsed()[i]` remains "attempt `i`'s own cost", which is all any
+    /// consumer reads it as — [`Self::bound_by`] maximises, [`Self::total_elapsed`]
+    /// sums, and the JSON renders per attempt — but the intervals are no longer
+    /// in trail order.
+    pub fn take_open_segment(&mut self) -> Duration {
+        let now = Instant::now();
+        let taken = now.saturating_duration_since(self.last);
+        self.last = now;
+        taken
+    }
+
+    /// Records `route`'s terminal [`CheckResult`] carrying a **caller-supplied**
+    /// `elapsed` instead of ticking — the re-attachment half of
+    /// [`Self::take_open_segment`], with which it forms one primitive pair.
+    ///
+    /// Deliberately does **not** tick: the segment that has been open since the
+    /// last record stays open and is charged to whoever records next, exactly as
+    /// it would have been. Ticking here as well would both discard `elapsed` and
+    /// charge this attempt a near-zero interval, which is the defect being
+    /// fixed.
+    ///
+    /// Passing an `elapsed` that did **not** come from [`Self::take_open_segment`]
+    /// inflates [`Self::total_elapsed`] — the denominator every published clock
+    /// share divides by. Use the pair together.
+    pub fn record_result_with_elapsed(
+        &mut self,
+        route: &'static str,
+        result: &CheckResult,
+        elapsed: Duration,
+    ) {
+        let outcome = match result {
+            CheckResult::Sat(_) => RouteOutcome::Decided(Verdict::Sat),
+            CheckResult::Unsat => RouteOutcome::Decided(Verdict::Unsat),
+            CheckResult::Unknown(reason) => {
+                RouteOutcome::Declined(DeclineReason::from_unknown(reason))
+            }
+        };
+        self.record_with_elapsed(route, outcome, elapsed);
+    }
+
+    /// Pushes `outcome` against `route` with a **caller-supplied** `elapsed`
+    /// instead of ticking — the general form of
+    /// [`Self::record_result_with_elapsed`], for a route whose outcome is not a
+    /// [`CheckResult`] (a decline the route classified itself).
+    ///
+    /// Same contract: no tick, so the segment that is open stays open for the
+    /// next recorder, and `elapsed` should have come from
+    /// [`Self::take_open_segment`] or the total inflates.
+    pub fn record_with_elapsed(
+        &mut self,
+        route: &'static str,
+        outcome: RouteOutcome,
+        elapsed: Duration,
+    ) {
+        self.attempts.push(RouteAttempt { route, outcome });
+        self.elapsed.push(elapsed);
+    }
+
     /// The route recorded most recently — the one after which
     /// [`RouteTrace::open_segment`] has been running.
     ///
@@ -1069,6 +1162,67 @@ pub(crate) fn record_quant_rung_declined(route: &'static str, reason: DeclineRea
     record_front_door(route, RouteOutcome::Declined(reason));
 }
 
+/// Closes and **takes** the attribution's currently open segment, returning its
+/// duration — [`RouteTrace::take_open_segment`] applied to this thread's
+/// accumulator.
+///
+/// `Duration::ZERO` when attribution is not being collected, with no clock read
+/// at all, so a default run pays one `Cell<bool>` test. The caller is obliged to
+/// charge the returned duration to exactly one attempt via
+/// [`record_quant_rung_result_with_elapsed`]; dropping it loses the time from
+/// [`RouteTrace::total_elapsed`]. See ADR-1906.
+pub(crate) fn take_attribution_open_segment() -> Duration {
+    if !attribution_collecting() {
+        return Duration::ZERO;
+    }
+    ATTRIBUTION.with(|a| {
+        a.try_borrow_mut()
+            .map_or(Duration::ZERO, |mut trace| trace.take_open_segment())
+    })
+}
+
+/// Records a quantified-ladder rung's [`CheckResult`] carrying a
+/// caller-measured `elapsed` — the re-attachment half of
+/// [`take_attribution_open_segment`].
+///
+/// This is what lets a rung keep the trail's **last word** while still being
+/// charged its **own** wall clock, which the plain sink cannot do when the rung
+/// runs before the record that follows it. See ADR-1906.
+pub(crate) fn record_quant_rung_result_with_elapsed(
+    route: &'static str,
+    result: &CheckResult,
+    elapsed: Duration,
+) {
+    if !attribution_collecting() {
+        return;
+    }
+    ATTRIBUTION.with(|a| {
+        if let Ok(mut trace) = a.try_borrow_mut() {
+            trace.record_result_with_elapsed(route, result, elapsed);
+        }
+    });
+    mirror_attribution();
+}
+
+/// Records that a quantified-ladder rung declined, carrying a caller-measured
+/// `elapsed` — the [`DeclineReason`] counterpart of
+/// [`record_quant_rung_result_with_elapsed`].
+pub(crate) fn record_quant_rung_declined_with_elapsed(
+    route: &'static str,
+    reason: DeclineReason,
+    elapsed: Duration,
+) {
+    if !attribution_collecting() {
+        return;
+    }
+    ATTRIBUTION.with(|a| {
+        if let Ok(mut trace) = a.try_borrow_mut() {
+            trace.record_with_elapsed(route, RouteOutcome::Declined(reason), elapsed);
+        }
+    });
+    mirror_attribution();
+}
+
 /// Records that a quantified-ladder rung is about to hand the (now
 /// quantifier-free) residual to [`crate::check_auto`]. The dispatch's own route
 /// entries follow, and the rung's `record_quant_rung_result` closes the trail
@@ -1264,6 +1418,105 @@ mod json_tests {
         }
         stripped.push_str(rest);
         assert_eq!(stripped, plain);
+    }
+
+    /// Ground truth by construction (ADR-1906): two `sleep`s of known,
+    /// deliberately unequal length stand in for the two passes the quantified
+    /// ladder's terminal arm runs. The expensive one records **last**, the way
+    /// MBQI does, and must still come out carrying its own cost.
+    ///
+    /// This is the shape the defect had: without `take_open_segment` the cheap
+    /// route's tick spans BOTH sleeps and the expensive route reads ~0. The
+    /// assertions below are one-sided against exactly that — `cheap` must be
+    /// well under the long sleep, and `expensive` well over it — so the old
+    /// ordering cannot pass them.
+    #[test]
+    fn a_deferred_verdict_keeps_its_own_cost_and_the_trail_last_word() {
+        let mut trace = RouteTrace::new();
+        trace.record_probe("q");
+
+        // Pass 1: the expensive one, which will be recorded last.
+        std::thread::sleep(Duration::from_millis(60));
+        let expensive = trace.take_open_segment();
+
+        // Pass 2: the cheap one, which records first.
+        std::thread::sleep(Duration::from_millis(5));
+        trace.record_declined("cheap", DeclineReason::NotApplicable);
+
+        trace.record_result_with_elapsed("expensive", &CheckResult::Unsat, expensive);
+
+        let by_route = |name: &str| {
+            let i = trace
+                .attempts()
+                .iter()
+                .position(|a| a.route == name)
+                .expect("route recorded");
+            trace.elapsed()[i]
+        };
+
+        assert!(
+            by_route("expensive") >= Duration::from_millis(50),
+            "the deferred route must carry its OWN 60ms pass, not ~0: {:?}",
+            by_route("expensive")
+        );
+        assert!(
+            by_route("cheap") < Duration::from_millis(40),
+            "the earlier record must NOT be charged the deferred route's pass: {:?}",
+            by_route("cheap")
+        );
+        assert_eq!(
+            trace.bound_by().map(|(_, a, _)| a.route),
+            Some("expensive"),
+            "bound_by must name the route that actually consumed the budget"
+        );
+        assert_eq!(
+            trace.last().map(|a| a.route),
+            Some("expensive"),
+            "the deferred record must still own the trail's last word"
+        );
+        assert_eq!(
+            trace.attempts().len(),
+            trace.elapsed().len(),
+            "the two vectors stay index-aligned"
+        );
+    }
+
+    /// The move, not the copy: taking a segment and giving it back must leave
+    /// `total_elapsed()` where an un-taken run would have left it.
+    ///
+    /// This is the guard for the one failure mode this design admits — a caller
+    /// that takes a segment and drops it silently loses time from the total,
+    /// and `total_ms` is the denominator every published clock share divides by.
+    /// Both traces sleep the same 40 ms and are compared against that, from
+    /// below and from above, so an inflated total fails as loudly as a lost one.
+    #[test]
+    fn taking_and_re_attaching_a_segment_preserves_the_total() {
+        let mut plain = RouteTrace::new();
+        std::thread::sleep(Duration::from_millis(20));
+        plain.record_declined("a", DeclineReason::NotApplicable);
+        std::thread::sleep(Duration::from_millis(20));
+        plain.record_result("b", &CheckResult::Unsat);
+
+        let mut moved = RouteTrace::new();
+        std::thread::sleep(Duration::from_millis(20));
+        let taken = moved.take_open_segment();
+        std::thread::sleep(Duration::from_millis(20));
+        moved.record_declined("a", DeclineReason::NotApplicable);
+        moved.record_result_with_elapsed("b", &CheckResult::Unsat, taken);
+
+        for (label, total) in [
+            ("plain", plain.total_elapsed()),
+            ("moved", moved.total_elapsed()),
+        ] {
+            assert!(
+                total >= Duration::from_millis(38),
+                "{label}: both sleeps must be inside the total, got {total:?}"
+            );
+            assert!(
+                total < Duration::from_millis(200),
+                "{label}: nothing may be double-counted, got {total:?}"
+            );
+        }
     }
 
     #[test]
