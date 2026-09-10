@@ -197,7 +197,36 @@ The 283 external timeouts are the honest limit of this arm: those workers never
 returned inside 10 s, so their counters are `ABSENT` and I cannot claim they are
 zero. §6 says what that does and does not leave open.
 
-### 3.4 Positive controls
+### 3.4 Why the cap never fires: the Gomory round decides 97.7% of integer calls
+
+The three zeros above are a *that*. This is the *why*, aggregated over the
+382 files of §3.3 whose counters were readable (the 284 `ABSENT` rows are
+excluded, not counted as zero):
+
+| counter | total | share of offline calls |
+|---|---:|---:|
+| `offline_calls` (entries to the conjunctive integer decider) | 308,160 | — |
+| `gomory_decided` (returned a verdict; branch-and-bound never ran) | **301,122** | **97.716%** |
+| `bnb_roots` (entries to branch-and-bound) | 6,889 | 2.236% |
+| `bnb_nodes` (summed over every root, every file) | **10,481** | — |
+
+`decide_int_constraints` (`lra.rs:1934`) runs the bounded Gomory fractional-cut
+round **first** and falls through to branch-and-bound only when it declines. On
+this corpus it declines 2.2% of the time, and when branch-and-bound does run it
+closes in a mean of **1.52 nodes per root**.
+
+The scale is the point: **every branch-and-bound node explored across all 382
+files put together is 10,481 — 21% of the budget the cap allows a single
+call.** For the cap to bind, one root would have to explore about 5,000× the
+mean, on a corpus where the deepest thing measured is a few hundred nodes.
+
+One file makes the shape vivid:
+`20210219-Dartagnan/ConcurrencySafety-Main/qrcu-2-O0.smt2` records
+`offline_calls=70650`, `gomory_decided=70649`, `bnb_roots=1` — seventy thousand
+integer decisions, one of which reached branch-and-bound. Its `unknown` is the
+`lia-dpll` admission bound at 65,441 atoms, not anything to do with nodes.
+
+### 3.5 Positive controls
 
 An `unknown`-count of zero is worth nothing without evidence the probe can see a
 non-zero. Three controls, all fired:
@@ -267,7 +296,7 @@ the other two — which is why the number above is carried by
 off by default (one thread-local read when off), so nothing observes this in a
 normal run.
 
-Even §3.4's control shows the erasure: its BnB stop was a wall-clock deadline,
+Even §3.5's control shows the erasure: its BnB stop was a wall-clock deadline,
 but the verdict that reached the API said `Timeout | preprocessed dispatch
 timeout after reduced solve` — the front door's own stop, not the theory's.
 
@@ -329,13 +358,13 @@ those pages can make it.
   are `ABSENT`, not zero. What is *not* open about them: a deadline-free run that
   is still going at 10 s has, by definition, not been stopped by the cap — so
   none of them is a file the cap cost us a *prompt* answer on. What is open: if
-  one were left running for the ~24 minutes §3.4 prices, it might eventually trip
+  one were left running for the ~24 minutes §3.5 prices, it might eventually trip
   the cap. That would be a file we lose to a 24-minute cap, not to a 50,000-node
   one, and no realistic budget reaches it.
 - **A confirmed observation of `bnb_budget_exhausted >= 1` through the front
   door.** The exhaustion *branch* is confirmed reachable by the committed unit
-  test (§3.4), but I never saw the counter itself non-zero, because reaching it
-  costs the ~24 minutes above. A long-running instance of the cap-forcing control
+  test (§3.5), but I never saw the counter itself non-zero, because reaching it
+  costs the ~24 minutes §3.5 prices. A long-running instance of the cap-forcing control
   was still running when this note was written.
 - **The other cap this item's evidence column names**, `MAX_DPLL_ROUNDS = 10_000`
   (`dpll_lia.rs:44`). It is a different stop with a different owner and was out
@@ -412,7 +441,7 @@ measurement is `LiaCountersGuard::enable()` plus
 `LiaCounters::bnb_budget_exhausted`, which is committed, documented, and was
 built for exactly this question. Re-deriving the probe from §2 is a few minutes.
 
-What *is* worth keeping is the cap-forcing instance from §3.4 — it is the only
+What *is* worth keeping is the cap-forcing instance from §3.5 — it is the only
 construction found that reaches branch-and-bound with cheap nodes and a declined
 Gomory round, and any future work on this item needs it. Its recipe is written
-out in §3.4 in full so it can be rebuilt without the file.
+out in §3.5 in full so it can be rebuilt without the file.
