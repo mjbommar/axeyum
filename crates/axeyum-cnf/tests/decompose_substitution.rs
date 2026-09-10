@@ -471,16 +471,14 @@ fn the_valve_refuses_the_pass_when_the_search_has_not_paid_for_it() {
     // the allowance is refused.
     let mut admitted = TickValve::shipping(DecomposeOnly::default());
     let small = no_equivalence();
-    let schedule = InprocessSchedule {
-        decompose: true,
-        ..InprocessSchedule::OFF
-    };
+    let schedule = InprocessSchedule::OFF;
     admitted.round(|valve| inprocess_scheduled(&small, schedule, None, valve));
     assert_eq!(
         admitted.decompose_account().effort().per_mille,
         100,
         "the cheapest pass gets the largest slice"
     );
+    assert_eq!(admitted.inner().get("decompose_admitted"), Some(1.0));
     assert_eq!(
         admitted.inner().get("decompose_tick_admitted"),
         Some(1.0),
@@ -503,13 +501,19 @@ fn the_valve_refuses_the_pass_when_the_search_has_not_paid_for_it() {
     // The discriminator between "refused" and "ran and found nothing" is the
     // meter, not the result: a pass that ran with a budget of zero would still
     // have paid its `O(|F|)` setup.
-    assert_eq!(refused.inner().get("decompose_ran"), Some(0.0));
+    assert_eq!(
+        refused.inner().get("decompose_admitted"),
+        Some(0.0),
+        "a refusal must be a recorded zero, not a missing key"
+    );
+    // The discriminator between "refused" and "ran and found nothing" is the
+    // meter: a pass that ran with a budget of zero would still have paid its
+    // `O(|F|)` graph setup, so it would have reported one.
     assert_eq!(
         refused.inner().get("decompose_work_spent"),
-        Some(0.0),
-        "a refused pass must not have paid its graph setup"
+        None,
+        "a refused pass reports no meter at all, because it never built one"
     );
-    assert_eq!(refused.inner().get("decompose_declined"), Some(1.0));
     let (granted, refused_rounds, backed_off) = refused.decompose_account().rounds();
     assert_eq!((granted, refused_rounds, backed_off), (0, 1, 0));
 }
@@ -519,10 +523,7 @@ fn a_pass_that_keeps_finding_nothing_is_offered_exponentially_less_often() {
     // The back-off half of the 1.5 valve, on a fixture that genuinely has no
     // equivalence to find.
     let f = no_equivalence();
-    let schedule = InprocessSchedule {
-        decompose: true,
-        ..InprocessSchedule::OFF
-    };
+    let schedule = InprocessSchedule::OFF;
     let mut valve = TickValve::shipping(DecomposeOnly::default());
     for round in 0..8u64 {
         valve.advance_search_ticks((round + 1) * 10_000_000);
@@ -556,7 +557,6 @@ fn a_pass_that_keeps_finding_nothing_is_offered_exponentially_less_often() {
 fn the_valve_admits_the_curated_instance_and_the_pass_reports_through_it() {
     let f = curated();
     let schedule = InprocessSchedule {
-        decompose: true,
         recording: true,
         ..InprocessSchedule::OFF
     };
@@ -596,26 +596,30 @@ fn the_valve_admits_the_curated_instance_and_the_pass_reports_through_it() {
 }
 
 #[test]
-fn the_pass_does_not_run_without_both_the_flag_and_a_grant() {
+fn an_observer_that_does_not_override_the_grant_never_runs_the_pass() {
+    // The whole safety story for every existing caller: `decompose_grant`'s
+    // DEFAULT body returns `None`, so a formula full of equivalences comes back
+    // untouched from an observer that has not opted in. `NoDecompose` is exactly
+    // such an observer — it implements the trait and leaves that method alone.
     let f = curated();
-    // Flag on, but the default observer declines every `decompose_grant`.
-    let schedule = InprocessSchedule {
-        decompose: true,
-        ..InprocessSchedule::OFF
-    };
     let mut declining = NoDecompose::default();
-    let out = inprocess_scheduled(&f, schedule, None, &mut declining);
-    assert_eq!(declining.0.get("decompose_declined"), Some(1.0));
+    let out = inprocess_scheduled(&f, InprocessSchedule::OFF, None, &mut declining);
+    assert_eq!(declining.0.get("decompose_admitted"), Some(0.0));
     assert!(out.equivalences.is_identity());
+    assert!(!out.decompose_unsat);
     assert_eq!(occurring(&out.formula), CURATED_VARIABLES);
+    assert_eq!(out.formula.clauses().len(), f.clauses().len());
 
-    // Grant available, but the flag is off.
+    // The control arm: the same fixture, the same schedule, an observer that
+    // DOES override it. Without this, "nothing happened" would be
+    // indistinguishable from "this schedule cannot substitute anything".
     let mut granting = DecomposeOnly::default();
     let out = inprocess_scheduled(&f, InprocessSchedule::OFF, None, &mut granting);
-    assert_eq!(granting.get("decompose_declined"), None);
-    assert_eq!(granting.get("decompose_ran"), None);
-    assert!(out.equivalences.is_identity());
-    assert_eq!(occurring(&out.formula), CURATED_VARIABLES);
+    assert_eq!(granting.get("decompose_admitted"), Some(1.0));
+    assert_eq!(
+        occurring(&out.formula),
+        CURATED_VARIABLES - EXPECTED_SUBSTITUTED
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -743,7 +747,6 @@ fn the_schedule_surfaces_a_substitution_refutation_through_the_link() {
         ],
     );
     let schedule = InprocessSchedule {
-        decompose: true,
         recording: true,
         ..InprocessSchedule::OFF
     };

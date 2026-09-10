@@ -979,22 +979,18 @@ pub struct InprocessSchedule {
     /// elimination over the recovered system is `O(gates²·vars)` and carries no
     /// internal deadline, so it needs a cap of its own.
     pub xor_propagate_max_clauses: usize,
-    /// Run equivalent-literal substitution ([`crate::decompose`]) before the
-    /// occurrence-list passes.
-    ///
-    /// It goes first because it is the cheapest pass and the one whose output
-    /// every later pass benefits from — a formula with `k` fewer variables is a
-    /// smaller occurrence-list problem for both subsumption and BVE. It is also
-    /// the pass most helped by running *again* afterwards, since both of those
-    /// shorten clauses and a clause shortened to two literals is a new edge;
-    /// `DecomposeOptions::max_rounds` covers the rounds this pass creates for
-    /// itself, and a second scheduled offer would cover the rest.
-    ///
-    /// The flag alone does not run it: [`InprocessObserver::decompose_grant`]
-    /// must also return a budget, which no existing observer does.
-    pub decompose: bool,
-    /// Tuning for the substitution pass (ignored unless [`Self::decompose`]).
-    pub decompose_options: DecomposeOptions,
+    // Equivalent-literal substitution ([`crate::decompose`]) has no field here,
+    // deliberately, and it is the rule this struct's own doc comment states:
+    // "the two occurrence-list passes are turned on by the observer's grant
+    // rather than by a flag here". [`InprocessObserver::decompose_grant`] is
+    // that grant, and it defaults to `None`, so the pass is off for every
+    // existing observer without a second switch that could disagree with it.
+    //
+    // There is a second reason, measured rather than principled: this struct is
+    // built with a FULL literal at its shipping call site
+    // (`axeyum_solver::sat_bv_backend::inprocess`), so a new field is a
+    // compile error in a crate that has no business changing when a pass is
+    // added to this one.
     /// Run clause vivification between subsumption and elimination.
     pub vivify: bool,
     /// Tuning for vivification (ignored unless [`Self::vivify`]).
@@ -1024,8 +1020,6 @@ impl InprocessSchedule {
     pub const OFF: Self = Self {
         xor_propagate: false,
         xor_propagate_max_clauses: 0,
-        decompose: false,
-        decompose_options: DecomposeOptions::DEFAULT,
         vivify: false,
         vivify_options: VivifyOptions::DEFAULT,
         vivify_step_guard: false,
@@ -1209,9 +1203,14 @@ pub fn inprocess_scheduled(
     // derivation order is the pass's own contract (`crate::decompose`), so its
     // prefix joins the link like any other pass's.
     let decompose_start = Instant::now();
-    let (substituted, equivalences, decompose_stats) =
-        run_decompose(&schedule, base, observer, recording.then_some(&mut steps));
-    if schedule.decompose {
+    let (substituted, equivalences, decompose_stats, decompose_ran) =
+        run_decompose(base, observer, recording.then_some(&mut steps));
+    // Emitted on EVERY run, admitted or not, so "the pass did not run" is a
+    // recorded zero rather than a missing key. An absent key is
+    // indistinguishable from a stage that was never reached at all, and the
+    // whole point of an admission gate is that a refusal is an observation.
+    observer.count("decompose_admitted", f64::from(u8::from(decompose_ran)));
+    if decompose_ran {
         if recording {
             observer.count("decompose_proof_steps", usize_as_f64(steps.len()));
             link.record(steps.drain(..));
@@ -1425,35 +1424,27 @@ pub fn inprocess_scheduled(
 /// zero. A zero-budget call still scans every clause to size the implication
 /// graph, and that `O(|F|)` scan is exactly what a refusal declines to pay.
 fn run_decompose(
-    schedule: &InprocessSchedule,
     formula: &CnfFormula,
     observer: &mut impl InprocessObserver,
     proof: Option<&mut Vec<DratStep>>,
-) -> (CnfFormula, EquivalenceMap, DecomposeStats) {
-    if !schedule.decompose {
-        return (
-            formula.clone(),
-            EquivalenceMap::identity(formula.variable_count()),
-            DecomposeStats::default(),
-        );
-    }
+) -> (CnfFormula, EquivalenceMap, DecomposeStats, bool) {
     let Some(work_budget) = observer.decompose_grant(formula) else {
-        observer.count("decompose_declined", 1.0);
         return (
             formula.clone(),
             EquivalenceMap::identity(formula.variable_count()),
             DecomposeStats::default(),
+            false,
         );
     };
     let outcome = decompose_within_recorded(
         formula,
         DecomposeOptions {
             work_budget: Some(work_budget),
-            ..schedule.decompose_options
+            ..DecomposeOptions::DEFAULT
         },
         proof,
     );
-    (outcome.formula, outcome.equivalences, outcome.stats)
+    (outcome.formula, outcome.equivalences, outcome.stats, true)
 }
 
 /// Runs subsumption under `grant`, or not at all.
