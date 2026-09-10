@@ -557,18 +557,66 @@ impl EufTheory {
             .collect()
     }
 
-    /// Sound EUF theory propagation: the unassigned equality atoms whose two sides
-    /// are **already congruent** under the current assertions — each entailed
-    /// `true`, with the explanation (the asserted equalities forcing the merge). A
-    /// CDCL(T) loop can assign these without a decision. (Disequality entailment —
-    /// an atom forced `false` — needs the fuller "distinct classes" analysis and is
-    /// deferred.)
+    /// Sound EUF theory propagation, in **both** directions: the unassigned
+    /// equality atoms whose two sides are already congruent (entailed `true`),
+    /// and those whose two sides lie in classes an asserted disequality has
+    /// separated (entailed `false`). Each carries the asserted literals forcing
+    /// it, so a CDCL(T) loop can assign it without a decision.
+    ///
+    /// # Why the `false` direction exists
+    ///
+    /// It used to be absent, and its own doc comment said so — "disequality
+    /// entailment ... needs the fuller distinct-classes analysis and is
+    /// deferred". Measured 2026-09-10 on
+    /// `QF_UF/QG-classification/qg7/iso_icl_repgen004.smt2`, an order-7
+    /// quasigroup this route refutes:
+    ///
+    /// | | z3 4.13.3 | axeyum |
+    /// |---|---:|---:|
+    /// | conflicts | **559** | **94 100** |
+    /// | decisions | 1 699 | 580 871 |
+    /// | wall clock | 0.04 s | 60-75 s |
+    ///
+    /// The instance constrains 49 cells to 7 constants, so ~343 equality atoms
+    /// share a handful of classes. With only the `true` direction, every atom an
+    /// asserted disequality already refutes still had to be *guessed by the SAT
+    /// layer and learned from a conflict*. Three search-heuristic arms
+    /// (rephasing, stable/focused, both) moved the wall clock by ±25% and left
+    /// the conflict count pinned at ~94k — the search was re-deriving what the
+    /// theory knew and would not say.
+    ///
+    /// # Soundness
+    ///
+    /// If `x ~ a` and `y ~ b` and `a ≠ b` is asserted, then `x = y` would give
+    /// `a ~ x = y ~ b`, contradicting the assertion. So `x ≠ y` is entailed, and
+    /// the explanation is exactly the asserted disequality plus the merges
+    /// putting `x` in `a`'s class and `y` in `b`'s. Both directions remain an
+    /// under-approximation: a missing propagation costs search, never soundness.
     #[must_use]
     pub fn propagate(&self) -> Vec<TheoryProp> {
         // Sound early-out past the deadline: propagation is optional.
         if self.deadline.is_some_and(|d| Instant::now() >= d) {
             return Vec::new();
         }
+        // Class-root pairs an asserted disequality has separated, normalised so
+        // the lookup below is order-free. Built once per call rather than
+        // scanned per atom: the naive form is O(atoms x diseqs) and this
+        // instance class has hundreds of each.
+        let mut separated: HashMap<(ENodeId, ENodeId), (usize, ENodeId, ENodeId)> =
+            HashMap::with_capacity(self.diseqs.len());
+        for &(atom, a, b) in &self.diseqs {
+            let (ra, rb) = (self.bridge.egraph.root(a), self.bridge.egraph.root(b));
+            if ra == rb {
+                // An asserted disequality whose sides have since merged is a
+                // CONFLICT, not a propagation source; `first_conflict` owns
+                // that and reports it from `assert`. Skipping it here keeps
+                // this function's contract ("never fabricates an entailment").
+                continue;
+            }
+            let key = if ra <= rb { (ra, rb) } else { (rb, ra) };
+            separated.entry(key).or_insert((atom, a, b));
+        }
+
         let mut out = Vec::new();
         for (atom, sides) in self.atoms.iter().enumerate() {
             if self.assigned[atom].is_some() {
@@ -579,6 +627,29 @@ impl EufTheory {
                 out.push(TheoryProp {
                     lit: TheoryLit { atom, value: true },
                     reason: self.explain_true(a, b),
+                });
+                continue;
+            }
+            let (ra, rb) = (self.bridge.egraph.root(a), self.bridge.egraph.root(b));
+            let key = if ra <= rb { (ra, rb) } else { (rb, ra) };
+            if let Some(&(diseq_atom, da, db)) = separated.get(&key) {
+                // Pair each side with the disequality side it is congruent to.
+                let (pa, pb) = if self.bridge.egraph.equal(a, da) {
+                    (da, db)
+                } else {
+                    (db, da)
+                };
+                let mut reason = vec![TheoryLit {
+                    atom: diseq_atom,
+                    value: false,
+                }];
+                reason.extend(self.explain_true(a, pa));
+                reason.extend(self.explain_true(b, pb));
+                reason.sort_unstable_by_key(|lit| (lit.atom, lit.value));
+                reason.dedup();
+                out.push(TheoryProp {
+                    lit: TheoryLit { atom, value: false },
+                    reason,
                 });
             }
         }
