@@ -922,6 +922,113 @@ mod tests {
         assert!(text.contains("unsound"), "says what it means: {text}");
     }
 
+    /// A decisive arm that takes a little while and polls the stop the way a
+    /// real route does: stopped means `unknown`, exactly as every
+    /// `past_deadline` site in this crate already behaves.
+    ///
+    /// The committed determinism tests all use arms that return
+    /// **instantaneously** (`says_unsat`, `says_sat`), so the stop never
+    /// reaches them and they cannot see the behaviour below.
+    fn slowly_sat_unless_stopped(
+        arena: &mut TermArena,
+        _: &[TermId],
+        _: &SolverConfig,
+    ) -> Result<CheckResult, SolverError> {
+        let until = std::time::Instant::now() + Duration::from_millis(400);
+        while std::time::Instant::now() < until {
+            if axeyum_ir::stop::stop_requested() {
+                return Ok(undecided("stopped by another arm"));
+            }
+            std::thread::yield_now();
+        }
+        let _ = arena.bool_const(true);
+        Ok(CheckResult::Sat(crate::Model::default()))
+    }
+
+    /// CHARACTERIZATION TEST, not an endorsement: it pins a **known**
+    /// non-determinism in the raced group, measured 2026-09-09 (roadmap item
+    /// 1.7). If this test starts failing, the behaviour was fixed and this test
+    /// must be replaced by the invariant, not repaired.
+    ///
+    /// # The finding
+    ///
+    /// `pick_winner` prefers the earlier-declared arm **among the arms that are
+    /// decisive**, and the cooperative stop decides which arms those are. As
+    /// soon as ANY arm reports a verdict the group requests a stop on every
+    /// token, and a slower arm that observes it returns `unknown` — so it is
+    /// not decisive, and declared order never gets to express a preference.
+    ///
+    /// Two consequences, both demonstrated below on one fixture:
+    ///
+    /// 1. **The verdict is race-selected, not declared-order-selected.** The
+    ///    module documentation says "on a query both arms decide, the group
+    ///    returns `lia-dpll`'s verdict — the one the sequential ladder would
+    ///    have returned". That holds only when the second arm finishes before
+    ///    it can observe the stop, which is a property of the machine. Here the
+    ///    same arms on the same query give `sat` at one worker and `unsat` at
+    ///    two.
+    /// 2. **The cross-arm disagreement gate is disabled by the same race.**
+    ///    `two_arms_that_disagree_are_a_hard_failure_not_a_choice` passes only
+    ///    because both of its arms return instantly. Give the first arm any
+    ///    duration at all and the gate never runs: the group silently returns
+    ///    the fast arm's verdict instead of refusing to choose.
+    ///
+    /// Neither is a wrong answer from the shipped default (one worker builds no
+    /// group at all), and neither is a wrong answer at two workers **as long as
+    /// both arms are sound** — the returned verdict is always some arm's own,
+    /// and each arm is independently trusted. What it is, is a safety net whose
+    /// coverage depends on scheduling, on exactly the axis a portfolio is meant
+    /// to be checked.
+    #[test]
+    fn a_stopped_arm_is_not_decisive_so_declared_order_and_the_gate_both_yield_to_the_race() {
+        let arena = TermArena::new();
+        let arms = [
+            Arm {
+                route: "slow-sat",
+                weight: 1,
+                run: slowly_sat_unless_stopped,
+            },
+            Arm {
+                route: "fast-unsat",
+                weight: 1,
+                run: says_unsat,
+            },
+        ];
+
+        // One worker: declared order, first decision wins. `slow-sat` is asked
+        // first, decides `sat`, and `fast-unsat` is never run — so there is no
+        // disagreement to detect and the verdict is the first arm's.
+        let sequential = FusedGroup::new(&arms, 1)
+            .run(&arena, &[], &config_with(30_000))
+            .expect("the sequential group returns a verdict");
+        let (sequential_route, sequential_result) =
+            sequential.into_decision().expect("one worker decides");
+        assert_eq!(sequential_route, "slow-sat");
+        assert!(matches!(sequential_result, CheckResult::Sat(_)));
+
+        // Two workers: `fast-unsat` reports first and stops `slow-sat`, which
+        // returns `unknown` and is therefore NOT decisive. `pick_winner` sees
+        // exactly one decisive arm, has nothing to compare it against, and the
+        // group returns `unsat` — a different verdict from the same arms on the
+        // same query, and no disagreement error.
+        let raced = FusedGroup::new(&arms, 2)
+            .run(&arena, &[], &config_with(30_000))
+            .expect(
+                "MEASURED: the raced group does NOT raise the disagreement error here, because \
+                 the stopped arm is not decisive. If this expect() ever fires, the gate started \
+                 catching this case and the finding is fixed.",
+            );
+        let (raced_route, raced_result) = raced.into_decision().expect("two workers decide");
+        assert_eq!(
+            raced_route, "fast-unsat",
+            "the race, not declared order, selected the winner"
+        );
+        assert!(
+            matches!(raced_result, CheckResult::Unsat),
+            "the same arms on the same query returned sat at one worker and unsat at two"
+        );
+    }
+
     #[test]
     fn each_arm_of_a_raced_group_gets_a_share_of_one_process_memory_limit() {
         static SEEN: std::sync::Mutex<Vec<Option<u64>>> = std::sync::Mutex::new(Vec::new());
