@@ -26,7 +26,7 @@ ledger rather than quoting this table, because it moves whenever a slice lands.
 
 ## Cause
 
-Censused (S3), 27 files: 15 admission declines at the LIA driver's pre-SAT resource boundary, 4 search timeouts, 4 tool artifacts, 3 a branch-and-bound node-cap incompleteness, 1 an i128 overflow inside the exact-rational simplex. Admission outweighs timeout more than three to one, so this is not primarily a search-speed division. **Separately owed:** S2's preflight now declines two `bofill-scheduling` files at 109 ms that the online probe used to refute in 8.1 s.
+Censused (S3), 27 files: 15 admission declines at the LIA driver's pre-SAT resource boundary, 4 search timeouts, 4 tool artifacts, 3 a wall-clock deadline inside branch-and-bound (**corrected 2026-09-10**: the census row reads "wall-clock deadline, node cap 20000000" — the DEADLINE fired and the cap was context; item 3.4 measured 0 of 911 benchmarks stopped by the cap, and one of these three is now decided `sat` in 409 nodes), 1 an i128 overflow inside the exact-rational simplex. Admission outweighs timeout more than three to one, so this is not primarily a search-speed division. **Separately owed:** S2's preflight now declines two `bofill-scheduling` files at 109 ms that the online probe used to refute in 8.1 s.
 
 > Read any census class with the two method corrections in
 > [the parity plan](../../smt-parity-plan-2026-09-05.md) section 6: classify by

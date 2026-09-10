@@ -631,7 +631,7 @@ route still run that probe. Not a watched-literal regression.
 admission-decline (`lia-dpll`'s pre-SAT resource boundary, the same family
 as QF_IDL's dominant class), 4 search-timeout, 4 other
 (explain-corpus-crash on large files; `smtcomp_cli` itself timed out
-normally on all four), 3 other (branch-and-bound node-cap incompleteness),
+normally on all four), 3 other (a wall-clock deadline inside branch-and-bound — **corrected 2026-09-10**, the census reads "wall-clock deadline, node cap 20000000"; see `docs/research/03-measurements/lia-branching-cap-2026-09-10.md`),
 1 other (i128 overflow in the exact-rational simplex -- a second S9 data
 point beyond QF_UFLIA's parser case). Admission-decline outweighs
 search-timeout more than 3:1. Full detail: [parity loss census](../research/11-design-review/2026-09-05-parity-loss-census.md).
