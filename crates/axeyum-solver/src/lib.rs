@@ -539,11 +539,11 @@ pub mod certificates {
             GroundBudget, GroundBudgetGuard, QuantifierClausePropagationCertificate,
             QuantifierFalseSiblingJustification, QuantifierGroundDerivation,
             QuantifierInstanceCertificate, RelevanceCriterion, RelevanceFunnel, RelevancePolicy,
-            RelevancePolicyGuard, check_quantifier_clause_propagation,
+            RelevancePolicyGuard, SkolemPrimeGuard, check_quantifier_clause_propagation,
             check_quantifier_clause_propagations, check_quantifier_ground_derivation,
             ground_budget, instantiate_forall_via_egraph, prove_quantified_unsat_via_egraph,
             prove_quantified_unsat_via_egraph_with_instances, relevance_policy,
-            witness_tuples_via_egraph,
+            skolem_prime_budget, witness_tuples_via_egraph,
         };
         pub use crate::quant_affine_growth_cert::{
             IntAffineGrowthRefutationCertificate, int_affine_growth_refutation,
@@ -1295,11 +1295,11 @@ macro_rules! full_exports {
             GroundBudget, GroundBudgetGuard, QuantifierClausePropagationCertificate,
             QuantifierFalseSiblingJustification, QuantifierGroundDerivation,
             QuantifierInstanceCertificate, RelevanceCriterion, RelevanceFunnel, RelevancePolicy,
-            RelevancePolicyGuard, check_quantifier_clause_propagation,
+            RelevancePolicyGuard, SkolemPrimeGuard, check_quantifier_clause_propagation,
             check_quantifier_clause_propagations, check_quantifier_ground_derivation,
             ground_budget, instantiate_forall_via_egraph, prove_quantified_unsat_via_egraph,
             prove_quantified_unsat_via_egraph_with_instances, relevance_policy,
-            witness_tuples_via_egraph,
+            skolem_prime_budget, witness_tuples_via_egraph,
         };
         #[doc(hidden)]
         pub use quant_affine_growth_cert::{

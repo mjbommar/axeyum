@@ -804,6 +804,140 @@ const MAX_DIRECT_INSTANCES_TOTAL: usize = 1024;
 const MAX_DIRECT_INSTANCES_PER_UNIVERSAL_STEP: usize = 8;
 const MAX_DIRECT_TUPLE_VISITS_PER_UNIVERSAL_STEP: usize = 512;
 
+/// The name prefix `quant_skolemize::fresh_skolem` gives a Skolem **function**
+/// (arity > 0). Its constant sibling is `!qsk_`; only the function matters
+/// here, because a Skolem constant is already a ground term the e-graph holds.
+const SKOLEM_FUNCTION_PREFIX: &str = "!qskf_";
+
+/// Skolem-application **priming**: one bounded pass, run ONCE before the
+/// instantiation loop's first round, that instantiates every active universal
+/// whose body applies a Skolem function to its own bound variables.
+///
+/// # Why this exists, and why it is not the invention route
+///
+/// `does-the-required-instance-enter-our-egraph-2026-09-10.md` measured, on the
+/// 32-file `UF` parity-loss slice, that on **10 of 16 attributable files the
+/// term z3 instantiates on is never built by us** — while **66 of the 71
+/// arguments (93%) of those absent terms are already in our ground set**. Two
+/// facts held with zero exceptions across all 16 files: every required term
+/// containing no Skolem symbol is PRESENT, and **every absent term contains a
+/// Skolem symbol** (22 of 25 a Skolem *function* applied to a compound or
+/// ground argument). So the gap is one function application wide, and it is at
+/// exactly one syntactic place.
+///
+/// The existing term-invention route ([`MAX_INVENTED_TERMS_TOTAL`],
+/// [`MAX_DIRECT_INSTANCES_TOTAL`]) is the machinery for building rather than
+/// finding terms, and it does not run on this class: it sits inside the loop's
+/// `if admitted.is_empty()` starvation arm, and — measured 2026-09-10 — every
+/// flooded file reaches that arm only at a CAP-INDUCED fixpoint with
+/// `ground=8192`, where [`GroundBudget::invention_ceiling`] (4096) then blocks
+/// it. Priming is therefore placed **before** the loop: at that point ground is
+/// the source assertions, no flood has happened, and eligibility is a syntactic
+/// property of the universals rather than of the round.
+///
+/// # Trust
+///
+/// Every primed instance goes through the unchanged
+/// [`QuantifierInstanceCertificate`] gate in [`admit_generated_ground`], the
+/// same check a matched instance passes. This route can only add facts the
+/// universals already entail; it adds no trust surface.
+///
+/// # THE SHIPPED ARM IS OFF, AND THIS IS THE MEASUREMENT THAT PUT IT THERE
+///
+/// [`building-the-skolem-application-2026-09-10.md`] ran the A/B at
+/// [`SKOLEM_PRIME_MEASURED_ARM`] on both `UF` populations, one binary, both
+/// arms, `taskset -c 0-7`, 24 s:
+///
+/// - **The construction gap closes.** On `Hoare/uf.966336` — Q2's sharpest
+///   reproducer — the pass builds `(f18 f29 (!qskf_35 !sk_1 !sk_0))`, the exact
+///   chain link Q2 measured as absent, and Q2's stated observable "zero
+///   applications of any `!qskf_` symbol to `(f19 (f20 f29) f28)`" moves from
+///   **0 to 1**. The OFF arm on the same binary still has zero.
+/// - **The verdict does not move.** The 32-file loss slice decides **1 of 32**
+///   in both arms: gained `[]`, lost `[]`.
+/// - **It costs a win.** `Arrow_Order/uf.558544`, run isolated on one binary at
+///   one moment: OFF `unsat` in 3.6 s, ON `unknown` at the 24 s budget.
+///
+/// So construction was **not** the binding constraint, and paying for it is
+/// strictly negative. The pass is retained at `0` so the question can be
+/// re-asked in one environment variable rather than in a patch — the same
+/// reason [`GroundBudget`] is an object — and so the answer sits next to the
+/// number instead of only in a note.
+const SKOLEM_PRIME_SHIPPED: usize = 0;
+/// The budget the 2026-09-10 A/B ran at. Referenced by the arm's own tests and
+/// by anyone re-running it; the loop reads [`skolem_prime_budget`].
+///
+/// Unused outside `cfg(test)` **by design**: the shipped arm is
+/// [`SKOLEM_PRIME_SHIPPED`], and this constant exists so the measured arm has a
+/// name in the source rather than only in a note. Deleting it would delete the
+/// only in-tree record of which value the A/B ran.
+#[allow(dead_code, reason = "names the measured arm; the shipped arm is 0")]
+const SKOLEM_PRIME_MEASURED_ARM: usize = 512;
+/// Primed instances one universal may contribute in the single pass. Small on
+/// purpose: the point is the all-Skolem-first tuple and its near neighbours,
+/// not a cartesian product.
+const SKOLEM_PRIME_INSTANCES_PER_UNIVERSAL: usize = 4;
+/// Tuple visits one universal may spend before the pass moves on.
+const SKOLEM_PRIME_TUPLE_VISITS_PER_UNIVERSAL: usize = 256;
+
+std::thread_local! {
+    /// Per-thread override of the process-wide priming budget, set by
+    /// [`SkolemPrimeGuard`]. The process value is resolved once from the
+    /// environment, so without this no test could exercise more than one arm.
+    static SKOLEM_PRIME_OVERRIDE: std::cell::Cell<Option<usize>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Forces a Skolem-priming budget on this thread for the guard's lifetime.
+pub struct SkolemPrimeGuard(Option<usize>);
+
+impl SkolemPrimeGuard {
+    /// Overrides the process budget on this thread. `0` disables priming.
+    #[must_use]
+    pub fn set(budget: usize) -> Self {
+        SkolemPrimeGuard(SKOLEM_PRIME_OVERRIDE.with(|cell| cell.replace(Some(budget))))
+    }
+}
+
+impl Drop for SkolemPrimeGuard {
+    fn drop(&mut self) {
+        SKOLEM_PRIME_OVERRIDE.with(|cell| cell.set(self.0));
+    }
+}
+
+/// Total primed instances in force on this thread: a live [`SkolemPrimeGuard`]'s
+/// choice, else the process value resolved once from
+/// `AXEYUM_QINST_SKOLEM_PRIME`.
+///
+/// The variable holds a decimal total; `AXEYUM_QINST_SKOLEM_PRIME=512` is the
+/// arm the 2026-09-10 A/B ran. An unset or unparseable value is
+/// [`SKOLEM_PRIME_SHIPPED`] (`0`, the pass off), so a typo degrades to the
+/// shipped behaviour rather than to a budget nobody chose — and in particular a
+/// typo cannot silently turn on a route measured to cost a win.
+#[must_use]
+pub fn skolem_prime_budget() -> usize {
+    static RESOLVED: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+    if let Some(budget) = SKOLEM_PRIME_OVERRIDE.with(std::cell::Cell::get) {
+        return budget;
+    }
+    *RESOLVED.get_or_init(|| {
+        parse_skolem_prime_budget(std::env::var("AXEYUM_QINST_SKOLEM_PRIME").ok().as_deref())
+    })
+}
+
+/// The budget `AXEYUM_QINST_SKOLEM_PRIME`'s raw value selects.
+///
+/// Split out of [`skolem_prime_budget`] for the same reason
+/// [`parse_ground_budget`] is: the resolver caches in a `OnceLock` over a
+/// process-wide variable, so a test going through it could only ever exercise
+/// the arm the process started with.
+fn parse_skolem_prime_budget(raw: Option<&str>) -> usize {
+    match raw.map(str::trim) {
+        Some(text) => text.parse::<usize>().unwrap_or(SKOLEM_PRIME_SHIPPED),
+        None => SKOLEM_PRIME_SHIPPED,
+    }
+}
+
 /// Tries to refute a (possibly quantified) conjunction by **e-matching
 /// instantiation on the e-graph** (Track 2, P2.6): it separates the ground
 /// assertions from the universals, and repeatedly instantiates each universal over
@@ -1929,6 +2063,31 @@ fn prove_quantified_unsat_via_egraph_impl(
     // that changed mid-loop would make a funnel reading unattributable.
     let policy = relevance_policy();
     let mut funnel = RelevanceFunnel::for_policy(policy);
+    // SKOLEM-APPLICATION PRIMING, once, before any matching round. The terms
+    // this class of refutation needs are Skolem-function applications that do
+    // not exist until the universal carrying them is instantiated, so nothing
+    // downstream can match or rank them into existence. Placed here and not in
+    // the loop's starvation arm because that arm is behind
+    // `if admitted.is_empty()` — on the flood class matching admits thousands
+    // of instances every round, so the arm is never evaluated at all.
+    {
+        let (eligible, primed) = matcher.prime_skolem_application_instances(
+            arena,
+            &assertions,
+            &mut invention,
+            &mut seen,
+            &mut ground,
+            &mut ground_derivations,
+            &mut generations,
+        );
+        if qprobe_enabled() && (eligible > 0 || !primed.is_empty()) {
+            eprintln!(
+                "QPROBE skolem-prime eligible={eligible} admitted={} ground={}",
+                primed.len(),
+                ground.len(),
+            );
+        }
+    }
     for round in 0..MAX_EXTENDED_INSTANTIATION_ROUNDS {
         let round_started = Instant::now();
         if deadline.is_some_and(|d| round_started >= d) {
@@ -5697,6 +5856,148 @@ impl IncrementalEmatchSession {
         )
     }
 
+    /// One bounded **Skolem-application priming** pass, run once before the
+    /// instantiation loop's first round (see
+    /// [`SKOLEM_PRIME_SHIPPED`] for why it is placed there, why the shipped
+    /// budget is `0`, and what the A/B measured).
+    ///
+    /// Eligible universals are the active ones whose body applies a Skolem
+    /// function to their own bound variables — the applications that cannot
+    /// exist as ground terms until the universal is instantiated. Each gets up
+    /// to [`SKOLEM_PRIME_INSTANCES_PER_UNIVERSAL`] instances over the invention
+    /// seed lists, staged by digit sum so the all-Skolem-first tuple comes
+    /// first, and every instance passes the unchanged certificate gate.
+    ///
+    /// Returns `(eligible universals, admitted instances)`.
+    #[allow(clippy::too_many_arguments)]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one staged enumeration with its eligibility gate"
+    )]
+    fn prime_skolem_application_instances(
+        &mut self,
+        arena: &mut TermArena,
+        assertions: &[TermId],
+        state: &mut TermInventionState,
+        seen: &mut HashSet<TermId>,
+        ground: &mut Vec<TermId>,
+        retained: &mut HashMap<TermId, QuantifierGroundDerivation>,
+        generations: &mut TermGenerations,
+    ) -> (usize, Vec<TermId>) {
+        let budget = skolem_prime_budget();
+        if budget == 0 {
+            return (0, Vec::new());
+        }
+        if !state.prepared {
+            state.prepare(arena, assertions, &self.pattern_triggers);
+        }
+        // Registrations (`active == false`) are excluded for the same reason
+        // the direct route excludes them: `A ∨ (∀y. B(y))` does not entail
+        // `B(t)`, so an instance of one is not a consequence of the assertions.
+        let eligible: Vec<(TermId, Vec<TermId>, TermId)> = self
+            .quantifiers
+            .iter()
+            .filter(|quantifier| quantifier.active && !quantifier.vars.is_empty())
+            .map(|quantifier| {
+                (
+                    quantifier.assertion,
+                    quantifier.var_terms.clone(),
+                    quantifier.body,
+                )
+            })
+            .filter(|(_, var_terms, body)| {
+                body_applies_skolem_function_to_own_vars(arena, *body, var_terms)
+            })
+            .collect();
+        if eligible.is_empty() {
+            return (0, Vec::new());
+        }
+        let mut needed: HashSet<Sort> = HashSet::new();
+        for (_, var_terms, _) in &eligible {
+            for &var in var_terms {
+                needed.insert(arena.sort_of(var));
+            }
+        }
+        let seed_lists = self.build_invention_seed_lists(arena, state, &needed);
+
+        let mut order: Vec<TermId> = Vec::new();
+        let mut candidates: HashMap<TermId, QuantifierGroundDerivation> = HashMap::new();
+        let mut total = 0usize;
+        for (assertion, var_terms, body) in &eligible {
+            if total >= budget {
+                break;
+            }
+            let lists: Vec<Vec<TermId>> = var_terms
+                .iter()
+                .map(|&var| {
+                    seed_lists
+                        .get(&arena.sort_of(var))
+                        .cloned()
+                        .unwrap_or_default()
+                })
+                .collect();
+            if lists.iter().any(Vec::is_empty) {
+                continue;
+            }
+            let lens: Vec<usize> = lists.iter().map(Vec::len).collect();
+            let max_sum: usize = lens.iter().map(|&len| len - 1).sum();
+            let mut visits = 0usize;
+            let mut created = 0usize;
+            'stages: for stage in 0..=max_sum {
+                let mut done = false;
+                for_each_tuple_with_sum(&lens, stage, &mut Vec::new(), &mut |digits| {
+                    visits += 1;
+                    let bindings: Vec<TermId> = digits
+                        .iter()
+                        .enumerate()
+                        .map(|(slot, &digit)| lists[slot][digit])
+                        .collect();
+                    let replacements: HashMap<TermId, TermId> = var_terms
+                        .iter()
+                        .copied()
+                        .zip(bindings.iter().copied())
+                        .collect();
+                    let mut memo = HashMap::new();
+                    if let Ok(instance) = replace_subterms(arena, *body, &replacements, &mut memo)
+                        && !seen.contains(&instance)
+                        && !candidates.contains_key(&instance)
+                    {
+                        candidates.insert(
+                            instance,
+                            QuantifierGroundDerivation::Instance(QuantifierInstanceCertificate {
+                                assertion: *assertion,
+                                bindings,
+                                instance,
+                            }),
+                        );
+                        order.push(instance);
+                        created += 1;
+                        total += 1;
+                    }
+                    let stop = visits >= SKOLEM_PRIME_TUPLE_VISITS_PER_UNIVERSAL
+                        || created >= SKOLEM_PRIME_INSTANCES_PER_UNIVERSAL
+                        || total >= budget;
+                    done = stop;
+                    !stop
+                });
+                if done {
+                    break 'stages;
+                }
+            }
+        }
+        let admitted = admit_generated_ground(
+            arena,
+            assertions,
+            order,
+            seen,
+            ground,
+            retained,
+            &candidates,
+            generations,
+        );
+        (eligible.len(), admitted)
+    }
+
     /// Adds one invented ground term to the matcher's e-graph (nodes only —
     /// no assertion, no merge) and registers its new applications as match
     /// candidates for the affected patterns. Returns `false` when the term is
@@ -7719,6 +8020,83 @@ impl TermInventionState {
         self.ground_cache.insert(term, free);
         free
     }
+}
+
+/// Whether `term`'s subterm closure contains any member of `targets`.
+///
+/// `memo` is keyed on the term and is only valid for one `targets` set; callers
+/// build a fresh map per universal.
+fn term_mentions_any(
+    arena: &TermArena,
+    term: TermId,
+    targets: &HashSet<TermId>,
+    memo: &mut HashMap<TermId, bool>,
+) -> bool {
+    if targets.contains(&term) {
+        return true;
+    }
+    if let Some(&known) = memo.get(&term) {
+        return known;
+    }
+    let args: Vec<TermId> = match arena.node(term) {
+        TermNode::App { args, .. } => args.to_vec(),
+        _ => Vec::new(),
+    };
+    let hit = args
+        .iter()
+        .any(|&arg| term_mentions_any(arena, arg, targets, memo));
+    memo.insert(term, hit);
+    hit
+}
+
+/// Whether `body` applies a **Skolem function** ([`SKOLEM_FUNCTION_PREFIX`]) to
+/// an argument mentioning one of `var_terms` — the universal's own bound
+/// variables.
+///
+/// This is the eligibility test for [`SkolemPrimeGuard`]'s pass, and it is
+/// exactly the shape the 2026-09-10 ground-set measurement isolated: an
+/// application that **cannot** exist as a ground term until this universal is
+/// instantiated, so no trigger can match it and no selection policy can rank
+/// it. A Skolem function applied only to *other* universals' variables or to
+/// terms already ground is not eligible: instantiating this universal would not
+/// create it.
+fn body_applies_skolem_function_to_own_vars(
+    arena: &TermArena,
+    body: TermId,
+    var_terms: &[TermId],
+) -> bool {
+    if var_terms.is_empty() {
+        return false;
+    }
+    let targets: HashSet<TermId> = var_terms.iter().copied().collect();
+    let mut mentions: HashMap<TermId, bool> = HashMap::new();
+    let mut seen: HashSet<TermId> = HashSet::new();
+    let mut stack = vec![body];
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        let (head, args) = match arena.node(term) {
+            TermNode::App { op, args } => {
+                let head = match op {
+                    Op::Apply(func) => Some(*func),
+                    _ => None,
+                };
+                (head, args.to_vec())
+            }
+            _ => continue,
+        };
+        if let Some(func) = head
+            && arena.function(func).0.starts_with(SKOLEM_FUNCTION_PREFIX)
+            && args
+                .iter()
+                .any(|&arg| term_mentions_any(arena, arg, &targets, &mut mentions))
+        {
+            return true;
+        }
+        stack.extend(args);
+    }
+    false
 }
 
 /// Enumerates every index tuple over `lens` whose digit sum equals
@@ -13291,5 +13669,215 @@ mod tests {
         let xt = arena.var(x);
         let fx = arena.apply(f, &[xt]).expect("f x");
         arena.set_quantifier_patterns(fx, vec![vec![fx]]);
+    }
+
+    /// Every way of writing the priming override badly resolves to the shipped
+    /// budget, which is `0` — so a typo cannot silently turn on a route
+    /// measured to cost `Arrow_Order/uf.558544`.
+    #[test]
+    fn a_bad_skolem_prime_override_degrades_to_the_shipped_budget() {
+        assert_eq!(
+            SKOLEM_PRIME_SHIPPED, 0,
+            "the shipped arm is OFF; see the constant's own measurement"
+        );
+        for raw in [None, Some(""), Some("  "), Some("nope"), Some("-1")] {
+            assert_eq!(
+                parse_skolem_prime_budget(raw),
+                SKOLEM_PRIME_SHIPPED,
+                "AXEYUM_QINST_SKOLEM_PRIME={raw:?} must resolve to the shipped budget"
+            );
+        }
+        // The measured arm must still be reachable by name, or the constant
+        // recording it would be decoration.
+        assert_eq!(
+            parse_skolem_prime_budget(Some(" 512 ")),
+            SKOLEM_PRIME_MEASURED_ARM,
+            "the 2026-09-10 arm must be selectable in one environment variable"
+        );
+        assert_eq!(parse_skolem_prime_budget(Some("64")), 64);
+    }
+
+    /// The guard is scoped, so an A/B inside one process cannot leak.
+    #[test]
+    fn skolem_prime_override_is_scoped_to_the_guard() {
+        let outside = skolem_prime_budget();
+        let arm = outside.wrapping_add(7);
+        {
+            let _guard = SkolemPrimeGuard::set(arm);
+            assert_eq!(
+                skolem_prime_budget(),
+                arm,
+                "the guard's arm must be in force"
+            );
+        }
+        assert_eq!(
+            skolem_prime_budget(),
+            outside,
+            "the guard must restore on drop"
+        );
+    }
+
+    /// Fixture for the priming tests: an uninterpreted carrier with a constant,
+    /// a Skolem FUNCTION (`!qskf_`-prefixed, exactly as `quant_skolemize`
+    /// names one), an ordinary function of the same shape, and a predicate.
+    fn skolem_prime_fixture() -> (TermArena, Sort, TermId, FuncId, FuncId, FuncId) {
+        let mut arena = TermArena::new();
+        let carrier = arena.declare_uninterpreted_sort("SkpS");
+        let sort = Sort::Uninterpreted(carrier);
+        let c_symbol = arena.declare("skp_c", sort).unwrap();
+        let c = arena.var(c_symbol);
+        let skolem = arena.declare_fun("!qskf_0", &[sort], sort).unwrap();
+        let ordinary = arena.declare_fun("skp_f", &[sort], sort).unwrap();
+        let predicate = arena.declare_fun("skp_p", &[sort], Sort::Bool).unwrap();
+        (arena, sort, c, skolem, ordinary, predicate)
+    }
+
+    /// The eligibility predicate, with the negatives that make it a predicate
+    /// rather than a rubber stamp.
+    ///
+    /// Each negative is a distinct way the pass could waste its budget on a
+    /// universal whose instantiation creates no new Skolem application, which
+    /// is the only thing the 2026-09-10 measurement says is missing.
+    #[test]
+    fn skolem_priming_selects_only_applications_of_a_universal_s_own_vars() {
+        let (mut arena, sort, c, skolem, ordinary, predicate) = skolem_prime_fixture();
+        let x_symbol = arena.declare("skp_x", sort).unwrap();
+        let x = arena.var(x_symbol);
+        let y_symbol = arena.declare("skp_y", sort).unwrap();
+        let y = arena.var(y_symbol);
+
+        let sk_x = arena.apply(skolem, &[x]).unwrap();
+        let body_direct = arena.apply(predicate, &[sk_x]).unwrap();
+        assert!(
+            body_applies_skolem_function_to_own_vars(&arena, body_direct, &[x]),
+            "a Skolem function applied to this universal's own variable is the subject"
+        );
+
+        // Deeper than one level: the application the refutation needs is a
+        // subterm of a subterm on most of the measured files.
+        let nested = arena.apply(ordinary, &[sk_x]).unwrap();
+        let body_nested = arena.apply(predicate, &[nested]).unwrap();
+        assert!(
+            body_applies_skolem_function_to_own_vars(&arena, body_nested, &[x]),
+            "the application may sit anywhere in the body"
+        );
+
+        // NEGATIVE 1 — the argument is already ground, so instantiating this
+        // universal creates no application that did not exist.
+        let sk_c = arena.apply(skolem, &[c]).unwrap();
+        let body_ground = arena.apply(predicate, &[sk_c]).unwrap();
+        assert!(
+            !body_applies_skolem_function_to_own_vars(&arena, body_ground, &[x]),
+            "a Skolem function at a ground argument is already buildable by matching"
+        );
+
+        // NEGATIVE 2 — an ordinary function symbol. Every absent required term
+        // in the measurement contained a Skolem symbol; an ordinary head is a
+        // shape e-matching already reaches.
+        let f_x = arena.apply(ordinary, &[x]).unwrap();
+        let body_ordinary = arena.apply(predicate, &[f_x]).unwrap();
+        assert!(
+            !body_applies_skolem_function_to_own_vars(&arena, body_ordinary, &[x]),
+            "an ordinary application is not this pass's subject"
+        );
+
+        // NEGATIVE 3 — another universal's variable. Instantiating THIS
+        // universal leaves the application open, so priming it builds nothing.
+        let sk_y = arena.apply(skolem, &[y]).unwrap();
+        let body_foreign = arena.apply(predicate, &[sk_y]).unwrap();
+        assert!(
+            !body_applies_skolem_function_to_own_vars(&arena, body_foreign, &[x]),
+            "a foreign bound variable leaves the application open after substitution"
+        );
+
+        // NEGATIVE 4 — no variables at all.
+        assert!(
+            !body_applies_skolem_function_to_own_vars(&arena, body_direct, &[]),
+            "a universal with no binders has nothing to substitute"
+        );
+    }
+
+    /// The pass builds the application, at the arguments it claims, and does
+    /// nothing at all when its budget is `0`.
+    ///
+    /// This is a test of the PASS, not of a verdict, and deliberately so: a
+    /// query small enough to write here is decided by the loop's other rungs
+    /// with priming OFF — an earlier end-to-end form of this test failed on its
+    /// own vacuity guard, which is the measurement that put this form here — so
+    /// no toy can discriminate the two arms on a verdict. What discriminates
+    /// them is the corpus A/B in
+    /// `docs/research/03-measurements/building-the-skolem-application-2026-09-10.md`.
+    /// What this pins is that the pass produces the term that measurement went
+    /// looking for, and that the shipped `0` budget produces nothing.
+    ///
+    /// Delete the eligibility filter, the substitution, or the budget check and
+    /// one of these assertions dies.
+    #[test]
+    fn skolem_priming_builds_the_application_at_the_arguments_it_claims() {
+        let (mut arena, sort, c, skolem, _ordinary, predicate) = skolem_prime_fixture();
+        let x_symbol = arena.declare("skp_x", sort).unwrap();
+        let x = arena.var(x_symbol);
+        let sk_x = arena.apply(skolem, &[x]).unwrap();
+        let body = arena.apply(predicate, &[sk_x]).unwrap();
+        let universal = arena.forall(x_symbol, body).unwrap();
+        // A ground fact naming `c`, so `c` is a source-vocabulary constant the
+        // pass can substitute.
+        let p_c = arena.apply(predicate, &[c]).unwrap();
+        let assertions = vec![p_c, universal];
+
+        // What the pass must produce: `skp_p(!qskf_0(skp_c))`.
+        let sk_c = arena.apply(skolem, &[c]).unwrap();
+        let wanted = arena.apply(predicate, &[sk_c]).unwrap();
+
+        let run = |arena: &mut TermArena, budget: usize| -> Vec<TermId> {
+            let foralls = vec![universal];
+            let mut matcher = IncrementalEmatchSession::new_with_nested(arena, &foralls, &[]);
+            let mut state = TermInventionState::default();
+            let mut seen: HashSet<TermId> = HashSet::new();
+            let mut ground: Vec<TermId> = vec![p_c];
+            let mut retained: HashMap<TermId, QuantifierGroundDerivation> = HashMap::new();
+            let mut generations = TermGenerations::seed_sources(arena, &assertions);
+            let _guard = SkolemPrimeGuard::set(budget);
+            let (_eligible, admitted) = matcher.prime_skolem_application_instances(
+                arena,
+                &assertions,
+                &mut state,
+                &mut seen,
+                &mut ground,
+                &mut retained,
+                &mut generations,
+            );
+            admitted
+        };
+
+        let off = run(&mut arena, 0);
+        assert!(
+            off.is_empty(),
+            "a `0` budget is the SHIPPED arm and must admit nothing, got {off:?}"
+        );
+
+        let on = run(&mut arena, SKOLEM_PRIME_MEASURED_ARM);
+        assert!(
+            on.contains(&wanted),
+            "the pass must build `skp_p(!qskf_0(skp_c))` — the Skolem application at \
+             a constant already in the assertions — got {on:?}"
+        );
+
+        // The instance is a CONSEQUENCE, not a guess: it must pass the same
+        // certificate gate a matched instance passes. Without this the pass
+        // could admit anything of the right shape.
+        let certificate = QuantifierInstanceCertificate {
+            assertion: universal,
+            bindings: vec![c],
+            instance: wanted,
+        };
+        assert!(
+            check_quantifier_ground_derivation(
+                &mut arena,
+                &assertions,
+                &QuantifierGroundDerivation::Instance(certificate),
+            ),
+            "the primed instance must be checkable against its universal"
+        );
     }
 }
