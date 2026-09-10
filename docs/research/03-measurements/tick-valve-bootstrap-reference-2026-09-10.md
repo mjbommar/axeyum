@@ -1,4 +1,4 @@
-# The tick valve's bootstrap constant is out of its window, and it is also unrouted — the shipping gate is a different gate, and that one cannot refuse
+# DO NOT BUILD: the tick valve's bootstrap constant is out of its window, unrouted, and worthless once routed
 
 **Date:** 2026-09-10 · **Lane:** T1 · **Host:** `s4` (12th Gen Intel i5-12600K,
 6 P-cores / 4 E-cores, 16 threads, 123 GB) · **Corpus:** the pinned
@@ -13,7 +13,7 @@ ends with a named next task: `TickEffort::bootstrap_reference` is `2_000_000`,
 the useful window is `[3_375_600, 64_294_400)`, so move it. This lane was sent
 to do that.
 
-Two findings, in the order they change the task:
+Four findings, in the order they change the task:
 
 1. **The window re-derives exactly.** Every number in the 3.2 note's §2, §3b,
    §4 and §5 reproduces from the committed rows — window bounds to the unit,
@@ -29,10 +29,16 @@ Two findings, in the order they change the task:
    of remaining budget on the largest file in the list, and less on all 194
    others, at a call site that runs with ~20 s remaining. Its work budget is
    vacuous too, on 191 of 195 files. §3.
+4. **Routing it and moving it were then measured end to end, and neither is
+   worth doing.** The constant at the most extreme value in its domain produces
+   **0** differences on the shipping path, against a positive control on the
+   same fixtures that fires **255** times. Routed, at 2,000,000 vs 10,000,000,
+   the decided count moves by one file — and the *same binary* moves by one file
+   between two runs, so nothing is resolvable at that scale. §5.
 
 So the finding this lane was sent to act on is **correct about the constant and
-wrong about the lever**. The recommendation and the measured before/after are in
-§4 and §5.
+wrong about the lever**, and the lever it names does not move an outcome even
+once connected. **DO NOT BUILD**; §4 and §6 say why and what to do instead.
 
 ---
 
@@ -248,13 +254,15 @@ clock as the only real bound.
 ## 4. Recommendation
 
 **DO NOT move `TickEffort::bootstrap_reference` as a performance change, and do
-not route `TickValve` into the solver.** Three reasons, in order of weight:
+not route `TickValve` into the solver.** Four reasons; the first three were the
+argument this lane started with and the fourth is what measuring them returned:
 
 1. **Moving it changes no outcome, because nothing on the solve path reads it**
-   (§2, and the mutation control in §5). A before/after table over the corpus
-   for that change would be a table of zeroes, and publishing one would be
+   (§2, and the mutation control in §5a). A before/after table over the corpus
+   for that change is a table of zeroes, and publishing one on its own would be
    worse than not measuring: it reads as "the lever does not work" when the
-   truth is "the lever is not connected".
+   truth is "the lever is not connected". §5a supplies the positive control that
+   separates those two.
 2. **Routing it would replace a formula-relative reference with a fixed
    integer** (§2's table). The shipping gate's window scales with
    `literal_occurrences + 2 x variable_count`; `bootstrap_reference` does not
@@ -269,14 +277,27 @@ not route `TickValve` into the solver.** Three reasons, in order of weight:
    the clock stops at under 12 s (§3). Bounding is strictly better than
    refusing here: a bounded BVE still delivers the reductions it finds early,
    and a refused BVE delivers none.
+4. **Measured with the valve routed, moving the constant moves nothing that can
+   be distinguished from noise, and routing it approximates a flag that is
+   already off** (§5c). At 2,000,000 the routed valve decides 186 of 200; at
+   10,000,000 it decides 185. The shipped binary decides 185 in one run and 186
+   in another. Everything on offer is one boundary file wide. And routing cuts
+   BVE from 108.3 s to 0.4 s — which is not "BVE, budgeted" but "BVE, off", and
+   `cnf_inprocessing: false` is already the shipping default
+   (`backend.rs:390`, item 1.2).
 
-**What to do instead, and it needs no new code:** arm the gate that ships.
-`BVE_BUDGET_SETUP_MULTIPLE` already carries an environment override
-(`AXEYUM_BVE_BUDGET_MULTIPLE`), so the whole sweep is one binary. §5 measures it.
+**What to do instead — and the honest answer is "nothing here".** This lane
+also swept `BVE_BUDGET_SETUP_MULTIPLE` at 500 and 100 through its existing
+`AXEYUM_BVE_BUDGET_MULTIPLE` lever, expecting the shipping gate's vacuous budget
+(§3) to be the real target. It is not: all three arms and the `off` baseline
+decide the identical 185 files (§5b). The gate is vacuous, and arming it changes
+no verdict either.
 
-The one change to `ticks.rs` that *is* warranted is documentation, not a value:
-the constant should say that it is not read on any shipping path, so the next
-lane does not spend a session on it. See §6.
+The one change to `ticks.rs` that would be *defensible* is documentation rather
+than a value — a line saying the constant is read on no shipping path. This lane
+did not make even that change, because the same sentence is now in this note and
+in three roadmap rows (§6), and a comment claiming a routing fact is one more
+thing that can go stale silently when the routing does land.
 
 ---
 
@@ -381,15 +402,139 @@ not from these.
 
 ### 5c. Routing the valve, measured rather than argued
 
-<!-- T1: the three-arm phase-2 sweep (base2 / valve2M / valve10M) was still
-     running when this section was committed. Filled in below when it lands;
-     "pending" here means it did not run, not that it agreed. -->
+§4's second argument — that routing a fixed-constant valve in place of the
+formula-relative gate would be a step down — is an argument, so it was measured.
+Two more binaries were built from this tree, differing from the shipped one by
+the four-line patch that wraps the shipping observer in the valve:
+
+```rust
+let mut observer = axeyum_cnf::inprocess::TickValve::shipping(BackendInprocessObserver {
+    deadline,
+    stats,
+});
+```
+
+`valve2M` keeps `bootstrap_reference` at its shipped 2,000,000; `valve10M` moves
+it to 10,000,000, the mid-scale candidate the 3.2 note names. `base2` is the
+shipped binary re-run under the same conditions as its own control. Full 200-file
+list, 24,000 ms, distinct physical P-cores, `attempted=200 rows=200` on all three.
+
+| arm | decided | sat | unsat | unknown | wall (s) | inprocess (s) | bve (s) | subsume (s) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `base2` (shipping, valve unrouted) | 186 | 57 | 129 | 14 | 669.3 | 145.7 | 108.3 | 28.4 |
+| `valve2M` (routed, 2,000,000) | 186 | 56 | 130 | 14 | 582.0 | 9.3 | 0.4 | 0.7 |
+| `valve10M` (routed, 10,000,000) | 185 | 56 | 129 | 15 | 588.6 | 9.5 | 0.7 | 1.3 |
+
+Per file, against `base2`:
+
+```
+valve2M  vs base2:  GAINED ext_con_008_001_0064  unsat@21,434 ms (base2 unknown@24,112 ms)
+                    LOST   div3.c.50            unknown@25,000 ms (base2 sat@22,671 ms)
+valve10M vs base2:  LOST   div3.c.50            unknown@25,000 ms (base2 sat@22,671 ms)
+off      vs base2:  LOST   div3.c.50            unknown@24,413 ms (base2 sat@22,671 ms)
+0 sat/unsat flips among commonly decided files, in every pair.
+```
+
+**Read the control before reading the table.** `base` in §5b and `base2` here are
+**the same binary on the same corpus at the same budget**, and they report **185
+and 186**. The whole difference is `div3.c.50`, which `base2` decides at
+**22,671 ms of a 24,000 ms budget** — a boundary file, and every arm that "loses"
+it loses it by running out of clock. The gained file is the same shape:
+`ext_con_008_001_0064` at 21,434 ms.
+
+So the shipping arm disagrees with **itself** by one file, and every difference
+observed between arms is exactly one boundary file. **No decided-count claim is
+supportable here in either direction** — not "routing gains", not "moving the
+constant loses". The measurement's resolution on this corpus at this budget is
+±1, and every effect on offer is ±1.
+
+What *does* reproduce, in two independent runs with opposite pairings, is the
+wall-clock direction:
+
+| comparison | inprocessing spend | wall |
+|---|---|---|
+| §5b `off` vs `base` | 0.0 s vs 63.0 s | 574.6 s vs 624.1 s (−49.5 s without) |
+| §5c `valve2M` vs `base2` | 9.3 s vs 145.7 s | 582.0 s vs 669.3 s (−87.3 s with the valve) |
+
+Both say the same thing and it is item 1.2's finding, not a new one: **BVE as
+currently budgeted costs wall time on this corpus and buys no verdict.** Note
+also that routing the valve does not make BVE cheaper so much as make it *not
+happen* — 108.3 s of BVE becomes 0.4 s. That is the 3.2 note's own §3b
+prediction, confirmed: the routed valve is an approximation of
+`cnf_inprocessing: false`.
+
+**And `cnf_inprocessing: false` is already the shipping default**
+(`backend.rs:390`; item 1.2 measured the flip and decided against it). Every arm
+in §5b and §5c is a configuration that is **off by default**. So routing the
+valve buys, at best, a cheaper version of something the default already does not
+do — while replacing a formula-relative reference with a fixed integer, and
+costing the four-line patch and a second admission implementation on the
+shipping path.
 
 ---
 
 ## 6. What changed in the tree
 
-<!-- T1: pending -->
+**No constant changed. No routing landed.** The deliverable is this note, plus
+the corrections it forces on three roadmap rows.
+
+Specifically **not** done, and why:
+
+* **`TickEffort::bootstrap_reference` was left at `2_000_000`.** It is outside
+  its own re-derived window (§1) and that is a real defect in the valve's
+  configuration — but the valve has no consumer, so moving it is a change with a
+  measured null attached (§5a) and no way to be right or wrong about anything.
+  When in-search inprocessing lands and the valve acquires a consumer, the
+  window in §1 is the input to recalibrating it, and it should be recalibrated
+  **then**, against the numeraire it will actually see, rather than now against
+  a numeraire that is structurally zero. Moving it today would put a number
+  inside a window derived from a corpus arm the shipping default does not run,
+  and leave the next lane to trust a date rather than a measurement.
+* **`crates/axeyum-solver/src/config_registry.rs` was not touched.** There is no
+  registry entry for `ticks.rs` (the registry covers `axeyum-solver` only), so
+  nothing needed re-dating. `python3 scripts/check-config-registry-staleness.py`
+  is red on main for unrelated entries and this lane changed neither its input
+  nor its verdict.
+* **`BVE_STEPS_PER_MILLISECOND` / `SUBSUME_STEPS_PER_MILLISECOND` were not
+  re-dated.** These were raised with this lane as stale and then withdrawn as
+  false positives of `git log -G` (fixed on main in `7c3050044`); their
+  2026-09-08 measurements stand. This lane could not have re-taken them anyway —
+  they rest on `bve_work_spent / bve_ms`, and `stats.backend` counters are not
+  serialized into the sweep's JSON rows, so the quantity is not in any data this
+  lane produced. §3's "implied steps/ms" column is granted-budget over
+  milliseconds, an upper bound on throughput and a different quantity; it is not
+  offered as a re-measurement of either constant.
+
+  One bounding fact about them *is* worth recording, because it says how much
+  either constant can matter. Both are read only to convert a wall slice into
+  steps, and that conversion changes the budget **only when the wall arm is the
+  minimum** — i.e. when `remaining_ms < setup x B / SPS`. On the 195 files that
+  ran inprocessing, with roughly 20 s of the 24 s budget left at the call site,
+  the size arm is the minimum on **191 of 195 for BVE** and on **195 of 195 for
+  subsumption**. `SUBSUME_STEPS_PER_MILLISECOND` therefore changes no budget on
+  this corpus at all, and `BVE_STEPS_PER_MILLISECOND` changes four. (Stated with
+  its assumption: `remaining_ms` is not recorded per file, so 20 s is a stand-in;
+  the exact per-pass condition is the inequality above, and for subsumption it
+  needs fewer than `setup / 2,560` ms — 3.5 s on the corpus's largest file and
+  under 40 ms on a median one.)
+
+### The three roadmap rows this corrects
+
+1. **Item 1.2** says "**The lever is one integer at `ticks.rs:337`, not the
+   feed.**" It is neither. Both are inert at the shipping call site because the
+   valve is not routed at all (§2), and the gate that *is* routed refuses
+   nothing (§3).
+2. **Item 1.5** says "the outstanding *feed* is NOT the blocker ...
+   `bootstrap_reference` is the only knob that acts". `bootstrap_reference` does
+   not act either (§5a: 0 differences at the most extreme value in its domain,
+   against a positive control that fires 255 times).
+3. **Item 3.2**'s recommendation orders "recalibrate the constant" before "route
+   the valve". The order is backwards — the constant cannot act until the
+   routing exists — and, measured, the routing itself is not worth doing (§5c).
+
+None of this touches item 3.2's headline verdict, which stands and is
+strengthened: **DO NOT BUILD the 18 missing passes.** What changes is the
+follow-up it named. There is no cheap next task hiding in that integer.
 
 ---
 
