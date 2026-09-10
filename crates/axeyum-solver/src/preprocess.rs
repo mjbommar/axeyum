@@ -13,6 +13,21 @@
 //! so it wraps the backend at the façade layer rather than living inside a
 //! [`SolverBackend`], whose `check` takes an immutable arena. It mirrors
 //! [`crate::check_with_array_elimination`].
+//!
+//! **This module is the ONE home for word-level preprocessing (ADR-1811.)**
+//! [`reduce_to_fixpoint`] is the reduction and [`replay_preprocessed_model`] is
+//! the replay + model build; the front door (`auto::check_auto_preprocessed`)
+//! calls both rather than keeping a second copy. What stays at each call site is
+//! the policy around them, not the pipeline: `auto` keeps
+//! `reduction_shrinks_encoding`, the fall-back-to-unreduced arm and the
+//! definite-verdict-survives-the-deadline rule; this module keeps the
+//! local-search probe. The round cap is a parameter — this entry point runs to
+//! [`MAX_PREPROCESS_ROUNDS`], the front door passes `1`.
+//!
+//! The two copies existed for months and drifted: `auto` gained the
+//! uninterpreted-function carry on 2026-07-02 and this module did not, so a
+//! model handed back from here silently dropped every function interpretation.
+//! One home means the witness set has one answer and one test.
 
 use std::time::{Duration, Instant};
 

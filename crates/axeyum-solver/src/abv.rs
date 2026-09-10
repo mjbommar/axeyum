@@ -3278,6 +3278,26 @@ fn check_scalar_abstraction<B: SolverBackend>(
     for &assertion in assertions {
         collect_positive_conjuncts(arena, assertion, &mut flattened);
     }
+    // ADR-1811's open exposure, MEASURED here on 2026-09-09 and recorded so the
+    // next reader does not have to re-run it.
+    //
+    // The concern was: `check_with_preprocessing_and_local_search` used to drop
+    // uninterpreted-function interpretations from the model it hands back, and
+    // `complete_assignment` below refills a MISSING function with
+    // `default_func_value` instead of raising `UnboundFunction` — so a dropped
+    // interpretation would be evaluated under the WRONG function, quietly.
+    //
+    // The drop is fixed (the merged `replay_preprocessed_model` carries all three
+    // witness kinds). Whether it was ever reachable: instrumenting this call site
+    // and running the six array suites (`abv_lazy_row`, `aufbv`, `arrays`,
+    // `abv_lazy_ext`, `array_valued_uf_online`, `array_scenarios`) reached it 580+
+    // times and the arena carried ZERO declared functions on EVERY reach — and
+    // every `sat` it returned carried no function interpretation and no `/0`
+    // witness. Hand-built AUFBV and QF_AUFLIA queries with a live uninterpreted
+    // function never reach here at all: `aufbv-online-cdclt` and
+    // `uf-arith-online`/`uf-arithmetic` decide them first, before the lazy-ROW
+    // adapter is tried. So the exposure is not demonstrated reachable through the
+    // shipping dispatch. That is a bounded negative, not a proof of unreachability.
     match crate::preprocess::check_with_preprocessing_and_local_search(
         backend,
         arena,
