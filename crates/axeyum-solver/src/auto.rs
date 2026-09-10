@@ -4219,6 +4219,16 @@ const QINST_EGRAPH_RETRY_SLICE: LadderSlice =
 /// fully anchored verdict (a replay-checked `sat` or the refuter's `unsat`);
 /// every other outcome — including an unsupported shape — declines with
 /// `Ok(None)` so the established rungs below run unchanged.
+/// Reports whether the first-refusal MBQI rung was entered, and on what slice,
+/// under `AXEYUM_QPROBE`. Diagnostic only. Paired with `mbqi_shape_probe`: this
+/// says the rung ran, that one says what the rung actually did.
+fn mbqi_rung_probe(state: &str, budget: Option<Duration>) {
+    if std::env::var_os("AXEYUM_QPROBE").is_some() {
+        let ms = budget.map_or(-1i64, |d| i64::try_from(d.as_millis()).unwrap_or(i64::MAX));
+        eprintln!("[mbqi-rung] state={state} budget_ms={ms}");
+    }
+}
+
 fn mbqi_first_refusal(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -4228,11 +4238,14 @@ fn mbqi_first_refusal(
 ) -> Result<Option<CheckResult>, SolverError> {
     let t0 = Instant::now();
     let Some(quick_config) = config_with_remaining_timeout(config, deadline) else {
+        mbqi_rung_probe("no-remaining-budget", None);
         return Ok(None);
     };
     let Some(quick_config) = mbqi_first_refusal_budget(&quick_config) else {
+        mbqi_rung_probe("unbounded-config", None);
         return Ok(None);
     };
+    mbqi_rung_probe("entered", quick_config.timeout);
     // THROWAWAY CLONE isolation (same rationale as the uf_fmf probe above):
     // MBQI interns skolems and instantiation terms, and letting that traffic
     // leak into the shared arena measurably derails the e-graph refutation
@@ -8428,6 +8441,127 @@ pub fn prove_unsat_by_mbqi(
     prove_unsat_by_mbqi_inner(arena, assertions, config, true)
 }
 
+/// Names the exit `prove_unsat_by_mbqi_inner` takes, under `AXEYUM_QPROBE`.
+///
+/// Diagnostic only: it never alters routing, budgets, or verdicts. This exists
+/// because the rung's own `qtrace` line cannot distinguish "the MBQI refutation
+/// loop ran and failed" from "a shape guard fired and the call was e-matching
+/// all along" -- the two are the same `Ok(Unknown)` at the call site, and they
+/// are completely different findings.
+fn mbqi_shape_probe(reason: &str, universals: usize, ground: usize) {
+    if std::env::var_os("AXEYUM_QPROBE").is_some() {
+        eprintln!(
+            "[mbqi-shape] exit={reason} single_binder_universals={universals} ground={ground}"
+        );
+    }
+}
+
+/// One-pass census of the assertion shapes `prove_unsat_by_mbqi_inner` is
+/// handed, under `AXEYUM_QPROBE`. Diagnostic only.
+///
+/// The exit probe says which guard fired first; this says how much of the
+/// assertion set that guard is standing between MBQI and, so a fix can be
+/// priced. Buckets are exclusive and named for what the loop would need:
+///
+/// - `qf` — no quantifier: ground, usable as-is.
+/// - `prenex1` — `forall x. <quantifier-free>`: the ONLY shape the refutation
+///   loop accepts.
+/// - `prenexN` — `forall x…z. <quantifier-free>`, N > 1: prenex but rejected by
+///   the `prefix.len() == 1` split at `auto.rs`'s universal collection.
+/// - `nested` — a `Forall` whose matrix still holds a quantifier after the
+///   prefix is peeled.
+/// - `other` — not a top-level `Forall` but contains a quantifier.
+fn mbqi_assertion_census(arena: &TermArena, assertions: &[TermId]) {
+    if std::env::var_os("AXEYUM_QPROBE").is_none() {
+        return;
+    }
+    let (mut qf, mut prenex1, mut prenex_n, mut nested, mut other) = (0, 0, 0, 0, 0);
+    let mut widths: Vec<usize> = Vec::new();
+    // Of the `prenex1` universals -- the only shape the refutation loop takes --
+    // how many bind a sort `value_to_const` can write a constant for.
+    let mut prenex1_representable = 0usize;
+    let mut prenex1_uninterpreted = 0usize;
+    for &a in assertions {
+        if matches!(
+            arena.node(a),
+            TermNode::App {
+                op: Op::Forall(_),
+                ..
+            }
+        ) {
+            let mut width = 0usize;
+            let mut matrix = a;
+            let mut first_binder = None;
+            while let TermNode::App {
+                op: Op::Forall(sym),
+                args,
+            } = arena.node(matrix)
+            {
+                let [body] = &**args else { break };
+                if first_binder.is_none() {
+                    first_binder = Some(*sym);
+                }
+                width += 1;
+                matrix = *body;
+            }
+            if has_quantifier(arena, &[matrix]) {
+                nested += 1;
+            } else if width == 1 {
+                prenex1 += 1;
+                widths.push(width);
+                if let Some(sym) = first_binder {
+                    match arena.symbol(sym).1 {
+                        Sort::Uninterpreted(_) => prenex1_uninterpreted += 1,
+                        Sort::Bool | Sort::Int | Sort::Real | Sort::BitVec(_) => {
+                            prenex1_representable += 1;
+                        }
+                        _ => {}
+                    }
+                }
+            } else {
+                prenex_n += 1;
+                widths.push(width);
+            }
+        } else if has_quantifier(arena, &[a]) {
+            other += 1;
+        } else {
+            qf += 1;
+        }
+    }
+    let max_width = widths.iter().copied().max().unwrap_or(0);
+    eprintln!(
+        "[mbqi-census] assertions={} qf={qf} prenex1={prenex1} prenexN={prenex_n} \
+nested={nested} other={other} max_prenex_width={max_width} \
+prenex1_representable={prenex1_representable} \
+prenex1_uninterpreted={prenex1_uninterpreted}",
+        assertions.len()
+    );
+}
+
+/// Per-round instantiation accounting for the MBQI refutation loop, under
+/// `AXEYUM_QPROBE`. Diagnostic only.
+///
+/// `unrepresentable` is the count of candidate values the model FALSIFIED the
+/// body at -- a genuine refinement -- that were then dropped because
+/// [`value_to_const`] has no case for their sort. It is the difference between
+/// "MBQI found nothing to instantiate" and "MBQI found it and could not write
+/// it down".
+fn mbqi_instance_probe(
+    round: usize,
+    universals: usize,
+    candidates: usize,
+    falsified: usize,
+    unrepresentable: usize,
+    instances: usize,
+) {
+    if std::env::var_os("AXEYUM_QPROBE").is_some() {
+        eprintln!(
+            "[mbqi-inst] round={round} universals={universals} candidates={candidates} \
+falsified={falsified} unrepresentable={unrepresentable} instances={instances}"
+        );
+    }
+}
+
 #[allow(clippy::too_many_lines)]
 fn prove_unsat_by_mbqi_inner(
     arena: &mut TermArena,
@@ -8442,6 +8576,7 @@ fn prove_unsat_by_mbqi_inner(
     let mut universals: Vec<(axeyum_ir::SymbolId, TermId)> = Vec::new();
     let mut universal_assertions: Vec<TermId> = Vec::new();
     let mut has_multi_binder_prefix = false;
+    mbqi_assertion_census(arena, assertions);
     for &a in assertions {
         if matches!(
             arena.node(a),
@@ -8458,12 +8593,14 @@ fn prove_unsat_by_mbqi_inner(
             } = arena.node(matrix)
             {
                 let [body] = &**args else {
+                    mbqi_shape_probe("forall-arity", 0, 0);
                     return prove_unsat_by_ematching(arena, assertions, config);
                 };
                 prefix.push(*sym);
                 matrix = *body;
             }
             if has_quantifier(arena, &[matrix]) {
+                mbqi_shape_probe("nested-binder-in-matrix", 0, 0);
                 return prove_unsat_by_ematching(arena, assertions, config);
             }
             if prefix.len() == 1 {
@@ -8473,6 +8610,7 @@ fn prove_unsat_by_mbqi_inner(
             }
             universal_assertions.push(a);
         } else if has_quantifier(arena, &[a]) {
+            mbqi_shape_probe("quantifier-below-top-level", 0, 0);
             return prove_unsat_by_ematching(arena, assertions, config);
         } else {
             ground.push(a);
@@ -8480,6 +8618,7 @@ fn prove_unsat_by_mbqi_inner(
     }
     if universal_assertions.is_empty() {
         // No top-level universal to instantiate; defer to the trigger fallback.
+        mbqi_shape_probe("no-top-level-universal", 0, ground.len());
         return prove_unsat_by_ematching(arena, assertions, config);
     }
 
@@ -8495,8 +8634,10 @@ fn prove_unsat_by_mbqi_inner(
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
             CheckResult::Unknown(_) => {}
         }
+        mbqi_shape_probe("multi-binder-prefix", universals.len(), ground.len());
         return prove_unsat_by_ematching(arena, assertions, config);
     }
+    mbqi_shape_probe("refutation-loop", universals.len(), ground.len());
     let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
 
     // Honor the wall-clock budget and a deterministic instance cap: a universal whose
@@ -8593,6 +8734,9 @@ fn prove_unsat_by_mbqi_inner(
         // Candidate instantiation values: the distinct values the model assigns,
         // grouped by sort, plus 0/1 defaults for arithmetic robustness.
         let mut added = false;
+        let mut probe_falsified = 0usize;
+        let mut probe_unrepresentable = 0usize;
+        let mut probe_candidates = 0usize;
         for &(sym, body) in &universals {
             let sort = arena.symbol(sym).1;
             let var = arena.var(sym);
@@ -8670,12 +8814,18 @@ fn prove_unsat_by_mbqi_inner(
                 _ => {}
             }
             let mut this_added = false;
+            probe_candidates += candidates.len();
             for v in candidates {
                 let mut probe = assignment.clone();
                 probe.set(sym, v.clone());
                 if matches!(eval(arena, body, &probe), Ok(Value::Bool(false))) {
                     // The model falsifies `body[x:=v]`; add it (implied by forall).
+                    probe_falsified += 1;
                     let Some(c) = value_to_const(arena, &v) else {
+                        // `value_to_const` covers Bool/Int/Real/Bv only, so a
+                        // `Value::Uninterpreted` from a declared sort has no
+                        // constant term and this refinement is dropped.
+                        probe_unrepresentable += 1;
                         continue;
                     };
                     let var = arena.var(sym);
@@ -8707,6 +8857,14 @@ fn prove_unsat_by_mbqi_inner(
                 added = true;
             }
         }
+        mbqi_instance_probe(
+            round,
+            universals.len(),
+            probe_candidates,
+            probe_falsified,
+            probe_unrepresentable,
+            instances.len(),
+        );
         if !added {
             // No universal could be refined at this model: the trigger-based
             // family may still refute via compound terms. Only after that
