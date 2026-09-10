@@ -99,6 +99,11 @@ const ADDCMP_FILES: usize = 15;
 const MUL_FILES: usize = 14;
 const PSPACE_FILES: usize = 21;
 
+fn is_smt2(path: &Path) -> bool {
+    path.extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("smt2"))
+}
+
 /// One ladder member: its width knob and its text.
 struct Rung {
     width: u32,
@@ -122,7 +127,7 @@ fn read_ladder(prefix: &str) -> Vec<Rung> {
         let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
             continue;
         };
-        if !name.starts_with(prefix) || !name.ends_with(".smt2") {
+        if !name.starts_with(prefix) || !is_smt2(&path) {
             continue;
         }
         let width: u32 = name
@@ -156,7 +161,7 @@ fn read_pspace() -> Vec<(String, String)> {
         let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
             continue;
         };
-        if !name.ends_with(".smt2") {
+        if !is_smt2(&path) {
             continue;
         }
         files.push((
