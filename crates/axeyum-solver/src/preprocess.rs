@@ -218,12 +218,42 @@ fn replay_preprocessed_model(
             out.set(symbol, value);
         }
     }
+    // Carry uninterpreted-function interpretations through too. This loop was
+    // MISSING here while its twin in `auto.rs` (the reduced-dispatch model
+    // rebuild) had it, and the divergence was a live wrong `sat` on the public
+    // `check_with_preprocessing`: a backend model carrying `f(5) = 7` replayed
+    // fine against `reconstructed`, and the emitted model came back with
+    // `functions: []`, so the CALLER's `eval` raised
+    // `Err(UnboundFunction(FuncId(0)))` on `(= (f x) 7)`. Same defect class as
+    // SOUND-1 — the certificate did not carry a distinction its producer made.
+    for (func, _name, _params, _result) in arena.functions() {
+        if let Some(interp) = reconstructed.function(func) {
+            out.set_function(func, interp.clone());
+        }
+    }
     // Carry the free-division `/0` witness (P2.5): the replay above succeeded
     // *under* this interpretation (the evaluator consults it for a zero
     // divisor), so dropping it here would hand the caller a model that no
     // longer replays — a wrong `sat` through the preprocessed path.
     for (numerator, quotient) in reconstructed.real_div_zeros() {
         out.set_real_div_zero(numerator, quotient);
+    }
+
+    // SECOND REPLAY, against the artifact the CALLER actually receives. The loop
+    // above checks `reconstructed`, an `Assignment` strictly richer than the
+    // `Model` rebuilt from it — which is precisely why the missing function loop
+    // stayed invisible here for as long as it did. Re-running the replay through
+    // `Model::to_assignment` closes the class rather than the instance: any
+    // future component the rebuild forgets becomes a loud failure instead of a
+    // silent non-replaying `sat`. Mirrors `euf::project_replay_build`.
+    let emitted = out.to_assignment();
+    for &assertion in assertions {
+        if !matches!(eval(arena, assertion, &emitted), Ok(Value::Bool(true))) {
+            return Err(SolverError::Backend(format!(
+                "preprocessed sat model does not replay as emitted: assertion #{}",
+                assertion.index()
+            )));
+        }
     }
     Ok(CheckResult::Sat(out))
 }

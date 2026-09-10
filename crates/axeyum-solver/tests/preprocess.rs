@@ -398,3 +398,91 @@ fn fixpoint_resolves_a_deep_definition_chain() {
         Ok(CheckResult::Unsat)
     ));
 }
+
+/// A stub backend that returns a fixed model, standing in for any backend whose
+/// `sat` model carries a UF interpretation.
+struct FixedModelBackend {
+    model: axeyum_solver::Model,
+}
+
+impl axeyum_solver::SolverBackend for FixedModelBackend {
+    fn capabilities(&self) -> axeyum_solver::Capabilities {
+        axeyum_solver::Capabilities {
+            name: "fixed-model-stub".to_owned(),
+            produces_models: true,
+            complete: false,
+        }
+    }
+
+    fn check(
+        &mut self,
+        _arena: &TermArena,
+        _assertions: &[TermId],
+        _config: &SolverConfig,
+    ) -> Result<CheckResult, axeyum_solver::SolverError> {
+        Ok(CheckResult::Sat(self.model.clone()))
+    }
+}
+
+/// **SOUND-1b regression.** The public `check_with_preprocessing` returned `Sat`
+/// with `functions: []`, so the caller's replay of `(= (f x) 7)` came back
+/// `Err(UnboundFunction(FuncId(0)))` — a `sat` that is not checkable by
+/// evaluating the original term against the lifted model.
+///
+/// Same defect class as SOUND-1 in `euf::project_replay_build`, found by looking
+/// for siblings of it. `replay_preprocessed_model` replays against
+/// `reconstructed`, an `Assignment` that HAS the interpretation, then rebuilt the
+/// emitted `Model` copying symbol values and `real_div_zero` but **not**
+/// functions. Its twin in `auto.rs` (the reduced-dispatch rebuild) always had the
+/// function loop, and carries a comment predicting this exact `UnboundFunction`;
+/// the two had simply diverged.
+///
+/// The test replays through `Model::to_assignment` — the artifact a CALLER
+/// receives. Deleting the `set_function` loop in `replay_preprocessed_model`
+/// makes it fail; so does deleting the emitted-model replay added beside it,
+/// which turns the same input into a `SolverError::Backend` instead.
+#[test]
+fn preprocessed_model_carries_function_interpretations() {
+    let mut arena = TermArena::new();
+    let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+    let x = arena.declare("x", Sort::Int).unwrap();
+    let xv = arena.var(x);
+    let five = arena.int_const(5);
+    let seven = arena.int_const(7);
+    let fx = arena.apply(f, &[xv]).unwrap();
+    let asserts = [arena.eq(xv, five).unwrap(), arena.eq(fx, seven).unwrap()];
+
+    // A satisfying model in which the FUNCTION interpretation is the only thing
+    // making assertion #1 true — so dropping it cannot be masked by luck.
+    let mut model = axeyum_solver::Model::new();
+    model.set(x, Value::Int(5));
+    model.set_function(
+        f,
+        axeyum_ir::FuncValue::constant_value(vec![Sort::Int], Sort::Int, Value::Int(0))
+            .define_value(&[Value::Int(5)], Value::Int(7)),
+    );
+
+    let mut backend = FixedModelBackend { model };
+    let result =
+        check_with_preprocessing(&mut backend, &mut arena, &asserts, &SolverConfig::default())
+            .expect("preprocessing must not error on a replaying model");
+
+    let CheckResult::Sat(out) = result else {
+        panic!("expected sat, got {result:?}");
+    };
+    let assignment = out.to_assignment();
+    for (index, &assertion) in asserts.iter().enumerate() {
+        assert_eq!(
+            eval(&arena, assertion, &assignment),
+            Ok(Value::Bool(true)),
+            "the emitted model must replay original assertion #{index} \
+             (SOUND-1b: it returned Err(UnboundFunction) because the rebuild \
+             dropped the function interpretation); model: {out:?}"
+        );
+    }
+    assert!(
+        out.functions().next().is_some(),
+        "the emitted model must carry the UF interpretation, not merely satisfy \
+         the assertions by accident; model: {out:?}"
+    );
+}
