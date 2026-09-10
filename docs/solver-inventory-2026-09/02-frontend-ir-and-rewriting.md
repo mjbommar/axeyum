@@ -12,6 +12,16 @@ Dispatch beyond those four files is
 [03-dispatch-routing-and-backends.md](03-dispatch-routing-and-backends.md).
 Base commit `ea8515407`. Source-read only; nothing here was confirmed by a build.
 
+
+> **Superseded in part, 2026-09-09.** This file is a snapshot of the tree at
+> `ea8515407`. Since then ADR-1811 landed and there is now ONE word-level
+> preprocessing pipeline: `preprocess::reduce_to_fixpoint` +
+> `replay_preprocessed_model`. `auto::preprocess_reduce` and
+> `dispatch_reduced`'s model-building block are DELETED, so every table row and
+> diagram below naming `preprocess_reduce` describes history, not the current
+> tree. The front door still runs at round cap 1. See
+> [ADR-1811](../research/09-decisions/adr-1811-one-preprocessing-pipeline.md).
+
 ## Summary
 
 - **The default `check_sat` preprocessing pipeline is five steps and runs
