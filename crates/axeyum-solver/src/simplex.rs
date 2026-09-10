@@ -1460,6 +1460,18 @@ impl Incremental {
 
     /// The policy this engine is running. Read by nothing that decides a
     /// verdict; present so a trace can say which arm produced a number.
+    ///
+    /// Compiled only for tests and for the `bench-internals` profile, which is
+    /// the honest description of who can reach it: `PivotPolicy` is not exported
+    /// from `lib.rs`, so under any other feature set this method returns a type
+    /// no consumer outside this crate can name, and `clippy -D warnings` flags
+    /// it as dead. SIX separate lanes re-reported that as a push blocker on
+    /// 2026-09-09; it never was one, because the gate
+    /// (`scripts/check-clippy-complete.sh`) runs `--all-features`, where
+    /// `bench_internals` re-exports `Incremental` and the method is live. The
+    /// `cfg` makes the narrow `--features full` invocation agree with the gate
+    /// so nobody spends that hour again.
+    #[cfg(any(test, feature = "bench-internals"))]
     #[must_use]
     pub fn policy(&self) -> PivotPolicy {
         self.tab.policy
