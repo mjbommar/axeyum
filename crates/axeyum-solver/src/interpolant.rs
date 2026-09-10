@@ -383,3 +383,130 @@ fn collect_symbols(arena: &TermArena, term: TermId, out: &mut BTreeSet<SymbolId>
         _ => {}
     }
 }
+
+// ---------------------------------------------------------------------------
+// The dispatched-interpolant certificate carrier (roadmap item 2.8).
+//
+// `Solver::interpolant` used to reach only the *`Validated`* interpolators —
+// the `*_certified` variants that additionally emit an externally-checkable
+// refutation for each Craig condition had no caller anywhere in `src/`. The
+// types below let `Solver::dispatch_interpolant` carry whichever certificate
+// the winning theory rung was able to produce, so the shipping route consumes
+// them instead of leaving them reachable only from tests.
+// ---------------------------------------------------------------------------
+
+/// An externally-checkable certificate for a dispatched Craig interpolant,
+/// tagged by the theory rung that produced it.
+///
+/// Every variant carries the *same* interpolant term the uncertified route
+/// returns (each `*_certified` entry point and its plain sibling share one
+/// `build_verified_*` builder), **plus** refutations of the two Craig soundness
+/// conditions that an independent checker can accept on its own:
+///
+/// - [`Lra`](Self::Lra), [`QfUf`](Self::QfUf), [`Uflra`](Self::Uflra) and
+///   [`QfBv`](Self::QfBv) carry Alethe refutations of `A ∧ ¬I` and `I ∧ B`,
+///   self-validated in-tree and checkable by Carcara;
+/// - [`Lia`](Self::Lia) and [`Uflia`](Self::Uflia) carry Lean modules for the
+///   same two conjunctions, kernel-checked (`infer` + `def_eq False`, no
+///   `sorryAx`) before the certificate is constructed.
+///
+/// A rung with no certified route (the two CNF/disjunctive interpolators) and a
+/// query outside a certified route's fragment both yield **no** certificate —
+/// see [`DispatchedInterpolant::certificate`]. That is a decline to the
+/// `Validated` interpolant, never a different interpolant.
+#[derive(Debug, Clone)]
+pub enum InterpolantCertificate {
+    /// Conjunctive `QF_LRA` Farkas interpolant with two Alethe `la_generic`
+    /// refutations ([`lra_interpolant_certified`]).
+    Lra(Box<LraInterpolantCertificate>),
+    /// Conjunctive `QF_LIA` interpolant with two Lean-kernel-checked integer
+    /// modules ([`crate::lia_interpolant_certified`]).
+    Lia(Box<crate::lia_interpolant::LiaInterpolantCertificate>),
+    /// Ground EUF interpolant with two Alethe congruence refutations
+    /// ([`crate::qf_uf_interpolant_certified`]).
+    QfUf(Box<crate::euf_interpolant::QfUfInterpolantCertificate>),
+    /// Combined `QF_UFLRA` interpolant with two Alethe `la_generic` refutations
+    /// ([`crate::uflra_interpolant_certified`]).
+    Uflra(Box<crate::uflra_interpolant::UflraInterpolantCertificate>),
+    /// Combined `QF_UFLIA` interpolant with two Lean-kernel-checked integer
+    /// modules ([`crate::uflia_interpolant_certified`]).
+    Uflia(Box<crate::uflia_interpolant::UfliaInterpolantCertificate>),
+    /// `QF_BV` bit-blast interpolant with two Alethe bit-blast refutations
+    /// ([`crate::qf_bv_interpolant_certified`]).
+    QfBv(Box<crate::bv_interpolant::QfBvInterpolantCertificate>),
+}
+
+impl InterpolantCertificate {
+    /// The certified interpolant term `I`. Always equal to the interpolant the
+    /// uncertified route returned for the same partition — the dispatch drops a
+    /// certificate whose term disagrees rather than substituting it.
+    #[must_use]
+    pub fn interpolant(&self) -> TermId {
+        match self {
+            Self::Lra(cert) => cert.interpolant,
+            Self::Lia(cert) => cert.interpolant,
+            Self::QfUf(cert) => cert.interpolant,
+            Self::Uflra(cert) => cert.interpolant,
+            Self::Uflia(cert) => cert.interpolant,
+            Self::QfBv(cert) => cert.interpolant,
+        }
+    }
+
+    /// A stable, lowercase name for the theory rung that certified this
+    /// interpolant (`"qf_lra"`, `"qf_lia"`, `"qf_uf"`, `"qf_uflra"`,
+    /// `"qf_uflia"`, `"qf_bv"`). Stable output, safe to log.
+    #[must_use]
+    pub fn theory(&self) -> &'static str {
+        match self {
+            Self::Lra(_) => "qf_lra",
+            Self::Lia(_) => "qf_lia",
+            Self::QfUf(_) => "qf_uf",
+            Self::Uflra(_) => "qf_uflra",
+            Self::Uflia(_) => "qf_uflia",
+            Self::QfBv(_) => "qf_bv",
+        }
+    }
+
+    /// Whether the certificate's two refutations are checked by an external
+    /// **kernel** (Lean) rather than by an external proof checker (Carcara).
+    /// Both are `Checked`-assurance; this only says which checker accepts it.
+    #[must_use]
+    pub fn is_lean_kernel_checked(&self) -> bool {
+        matches!(self, Self::Lia(_) | Self::Uflia(_))
+    }
+}
+
+/// The result of the theory-interpolant dispatch: the verified interpolant `I`,
+/// and the externally-checkable certificate for it when the winning theory rung
+/// had a certified route that covered this query.
+///
+/// `interpolant` is exactly what [`crate::Solver::interpolant`] returns — adding
+/// the certificate never changes it.
+#[derive(Debug, Clone)]
+pub struct DispatchedInterpolant {
+    /// The verified Craig interpolant term.
+    pub interpolant: TermId,
+    /// `Some` when the winning rung produced (and self-validated) an
+    /// externally-checkable certificate for `interpolant`; `None` when the rung
+    /// has no certified route (the disjunctive/CNF interpolators), when the
+    /// query fell outside the certified route's fragment, or when the certified
+    /// route's term disagreed with the shipping one (then the shipping term
+    /// wins and the certificate is dropped).
+    pub certificate: Option<InterpolantCertificate>,
+}
+
+impl DispatchedInterpolant {
+    /// An interpolant with no certificate attached.
+    pub(crate) fn uncertified(interpolant: TermId) -> Self {
+        Self {
+            interpolant,
+            certificate: None,
+        }
+    }
+
+    /// Whether an externally-checkable certificate is attached.
+    #[must_use]
+    pub fn is_certified(&self) -> bool {
+        self.certificate.is_some()
+    }
+}
