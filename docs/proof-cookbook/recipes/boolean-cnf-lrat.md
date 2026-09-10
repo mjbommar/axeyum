@@ -37,7 +37,11 @@ Axeyum's CNF layer owns:
 The search that finds the contradiction is not trusted. In this promoted
 resource route, a Boolean `unsat` proof claim is accepted only when the
 generated proof checks against the original CNF. This does not upgrade every
-CNF solver verdict: the default proofless BatSat result remains lower assurance.
+CNF solver verdict: a route that does not emit and check a proof remains lower
+assurance. Since ADR-1703 that is a per-call choice not to spend the
+proof-checking time rather than a limit of the engine, which is the in-tree
+native CDCL core and can always produce a DRAT proof; the retired BatSat
+adapter could not.
 
 ## Evidence Artifact
 

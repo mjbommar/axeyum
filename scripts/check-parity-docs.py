@@ -887,7 +887,7 @@ def main() -> int:
 
     beginner_markers = (
         (LEARN_INTRO, "Malformed input and operational failures remain separate errors"),
-        (LEARN_OUTCOMES, "default BatSat-backed clausal route reports raw UNSAT"),
+        (LEARN_OUTCOMES, "default clausal route reports raw UNSAT"),
         (LEARN_OUTCOMES, "[trust ledger](../reference/trust-ledger.md)"),
         (LEARN_PIPELINE, "The UNSAT arrows are alternatives"),
         (LEARN_PIPELINE, "proof status as `Unchecked`"),
@@ -932,7 +932,7 @@ def main() -> int:
         (USER_GUIDE_INDEX, "not implied by every `unsat` verdict"),
         (
             BOOLEAN_CNF_COOKBOOK,
-            "default proofless BatSat result remains lower assurance",
+            "a route that does not emit and check a proof remains lower assurance",
         ),
         (BOOLEAN_CNF_COOKBOOK, "DRAT addition that requires RAT is rejected"),
     )
@@ -1292,7 +1292,7 @@ def main() -> int:
         "staged barrel-shift network",
         "- [x] Should unsat proof checking be required in high-assurance mode?",
         "records `SatProofStatus::Checked`",
-        "default BatSat adapter remains lower-assurance `Unchecked`",
+        "default route remains lower-assurance `Unchecked`",
         "not an equality-saturation rewrite optimizer",
         "subset promised by a first release remains an explicit release decision",
     ):

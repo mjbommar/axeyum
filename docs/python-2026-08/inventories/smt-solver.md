@@ -237,12 +237,14 @@ that builds `(div x 0)` explicitly, mirroring the fuzz-seed-class rule.
 | `:1077 / :1090 / :1102 / :1123` | `term_needs_deferred_theory(arena, term) -> bool` (assoc fn), `term_supported_by_warm_abstraction(arena, term) -> bool`, `has_deferred_theory_assertions()`, `simplify_memory_for_warm_assertion(arena: &mut TermArena, term) -> TermId` | | R | |
 | `:962` | `profiled_last_cnf_snapshot(&self) -> Result<Option<CnfFormula>, CnfError>` | | R | Bridge into the CNF layer. |
 
-`Send/Sync`: `IncrementalBvSolver` embeds `IncrementalCnf` → a batsat solver whose
-callback structs hold `Cell<u64>`/`Cell<Option<_>>`
-(`crates/axeyum-cnf/src/lib.rs:622-623, 725-726`, both **private**). `Cell` is
-`Send` but `!Sync`, so expect **`Send`, `!Sync`** — fine for a plain
-`#[pyclass]`, wrong for `#[pyclass(frozen)]`. Verify by compiling a
-`fn assert_send<T: Send>()` probe rather than trusting this row.
+`Send/Sync`: **this row is stale and its conclusion is unverified.**
+`IncrementalBvSolver` embeds `IncrementalCnf`, which ADR-1703 re-based on the
+in-tree native CDCL core; it no longer embeds a batsat solver, so the
+`Cell`-in-private-callbacks argument for `!Sync` no longer applies as written.
+Whether the type is still `!Sync` has **not** been measured — no `Send`/`Sync`
+assertion has been run. `crates/axeyum-py` therefore keeps
+`#[pyclass(unsendable)]` conservatively. Do not size Python work from this row:
+compile a `fn assert_sync<T: Sync>()` probe first.
 
 ---
 
@@ -257,7 +259,7 @@ Everything else in this inventory is owned data with no lifetime parameter and i
 | `ProofProgress` / `CheckProgress` (`backend.rs:291`, `:322`) | `mpsc::Sender` channel endpoints. | Defer to v2; if bound, drain on a Rust thread and surface as a Python iterator. |
 | `CheckBudget<'a>` (`proof.rs:376`) | **The only lifetime in the priority surface**: `pub progress: Option<&'a mut dyn FnMut(&CheckingProgress)>`. Also `!Send`. | Do **not** bind `CheckBudget` directly. Bind `export_qf_bv_unsat_proof_within` (deadline only) and, if progress is needed, add a Rust-side shim that constructs the budget internally. |
 | `Solver<B>` (`solver.rs:56`), `check_with_array_elimination<B>` (`abv.rs:36`) | Generic over the backend — PyO3 cannot express it. | Monomorphize on `SatBvBackend` (and `Z3Backend` in the z3 wheel only). |
-| `IncrementalBvSolver` | Likely `!Sync` via batsat's private `Cell` callbacks. | Plain `#[pyclass]`; verify with a compile-time `assert_send` probe. |
+| `IncrementalBvSolver` | `!Sync` status **unmeasured**. The old reason (batsat's private `Cell` callbacks) no longer applies — ADR-1703 re-based `IncrementalCnf` on the native CDCL core. | Ships as `#[pyclass(unsendable)]` conservatively; settle it with a compile-time `assert_sync` probe. |
 | `confirm_bounded_string_verdict` / the five string-route verdict fns | Take `&mut axeyum_smtlib::Script` | Skip in v1, or expose a `Script` pyclass in a later slice. |
 | `eval_with_memo` (`eval.rs:239`) | `&mut HashMap<TermId, Value>` | Hide the memo inside an `Evaluator` pyclass, or bind only `eval`. |
 | `TermId` / `SymbolId` / … | No arena identity in the type. Cross-arena use is a Rust panic, not an error. | The binding **must** carry an arena id on every handle and check it. |
@@ -431,7 +433,7 @@ Tier **C** is the point of this crate; it is the trusted small checker.
 | `lib.rs:548` | `rustsat_batsat_determinism() -> BatSatDeterminism` | | R | |
 | `lib.rs:2874 / :2888 / :2908` | `tseitin_encode(&Aig, &[AigLit]) -> Result<CnfEncoding, CnfError>`, `_profiled`, `_profiled_with_origins` | | P | |
 | `lib.rs:2838` | `CnfEncoding::aig_node_values_from_assignment(&Aig, &CnfAssignment) -> Result<Vec<bool>, CnfError>` | | **C** | The validating replay map — the "never drop lowering/lift maps" hard rule made concrete. Also `assignment_from_aig_inputs:2802`, `cnf_assignment_from_aig_inputs:2818`. |
-| `lib.rs:773 / :1284` | `IncrementalSat` (11 methods), `IncrementalCnf` (13 methods) | | P | **`Send` but `!Sync`** — both embed `rustsat_batsat::Solver<DeadlineCallbacks>` whose private callbacks hold `Cell<u64>`/`Cell<Option<_>>` (`lib.rs:725-726`). Plain `#[pyclass]` is fine; `frozen`/shared access is not. |
+| `lib.rs:773 / :1284` | `IncrementalSat` (11 methods), `IncrementalCnf` (13 methods) | | P | Both were re-based on the in-tree native CDCL core by ADR-1703 (`IncrementalSat`'s field is `solver: NativeIncrementalCdcl`); they no longer embed `rustsat_batsat::Solver<DeadlineCallbacks>`, so the old `Cell`-based `!Sync` reasoning does not apply. Their `Send`/`Sync` status is **unmeasured** — probe before assuming `frozen`/shared access is safe. |
 | `compact.rs:132 / :59 / :96` | `compact(&CnfFormula) -> (CnfFormula, CompactMap)`, `original_of(usize)`, `expand(&[bool]) -> Vec<bool>` | | R | |
 
 Value types (all `Copy`, all hand-rolled JSON): `CnfVar:132`, `CnfLit:159`

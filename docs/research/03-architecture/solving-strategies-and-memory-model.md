@@ -28,7 +28,9 @@ seams matter for the design, so they are stated precisely.
 - **Core decision** behind the `SolverBackend` trait
   (`capabilities / check / check_query / last_stats`):
   - `SatBvBackend` — pure-Rust **eager** path: `term → AIG (axeyum-bv) → Tseitin
-    CNF (axeyum-cnf) → rustsat-batsat`, then lift + **replay**.
+    CNF (axeyum-cnf) → native CDCL core (axeyum-cnf `proof_sat`)`, then lift +
+    **replay**. The `rustsat-batsat` adapter that used to close this pipeline is
+    retired to a differential yardstick (ADR-1703).
   - `Z3Backend` — feature-gated oracle: translate → Z3 → lift.
   - `IncrementalBvSolver` — warm version of the eager path (persistent AIG +
     CNF + SAT), the symbolic-execution front end.
