@@ -228,9 +228,20 @@ enum Corner {
     RationalBound,
 }
 
+/// The number of `Corner` **variants**, pinned deliberately.
+///
+/// [`CORNERS`] is both the seed schedule and the coverage authority, so
+/// `corner_coverage_is_total` comparing against `CORNERS.len()` alone would
+/// move with a deletion and catch nothing — the "a test named *every X* must
+/// derive its X from the authority, not a literal" trap, inverted. The three
+/// exhaustive `match`es over `Corner` (`name`, `forced_mode`, `emit`) force a
+/// NEW variant to be handled; this constant forces a deletion from the
+/// schedule to be noticed.
+const CORNER_VARIANT_COUNT: usize = 13;
+
 /// Order is load-bearing: the mandatory corner for seed `s` is
 /// `CORNERS[s % CORNERS.len()]`, so this list *is* the coverage schedule.
-const CORNERS: [Corner; 13] = [
+const CORNERS: [Corner; CORNER_VARIANT_COUNT] = [
     Corner::SelfDifference,
     Corner::ZeroWeight,
     Corner::NegatedBoundPair,
@@ -1083,6 +1094,18 @@ fn corner_coverage_is_total() {
         counts.len(),
         CORNERS.len(),
         "generated corner classes do not match the declared schedule"
+    );
+    // And the schedule itself must still list every variant, with no
+    // duplicates standing in for a deleted class.
+    let mut distinct: Vec<Corner> = CORNERS.to_vec();
+    distinct.sort_unstable();
+    distinct.dedup();
+    assert_eq!(
+        distinct.len(),
+        CORNER_VARIANT_COUNT,
+        "the corner schedule lists {} distinct classes, not the {CORNER_VARIANT_COUNT} \
+         declared — a class was deleted from `CORNERS` or duplicated",
+        distinct.len()
     );
 }
 
