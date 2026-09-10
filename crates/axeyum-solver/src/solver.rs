@@ -50,6 +50,7 @@ use axeyum_ir::{SymbolId, TermArena, TermId};
 use crate::backend::{
     Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError,
 };
+use crate::interpolant::{DispatchedInterpolant, InterpolantCertificate};
 
 /// A stateful, incremental front end over a [`SolverBackend`].
 #[derive(Debug)]
@@ -249,6 +250,34 @@ impl<B: SolverBackend> Solver<B> {
         Self::dispatch_interpolant(arena, &a, &b)
     }
 
+    /// Like [`Solver::interpolant`], but also returns the **externally-checkable
+    /// certificate** for the interpolant when the winning theory rung had a
+    /// certified route covering this query (roadmap item 2.8).
+    ///
+    /// [`DispatchedInterpolant::interpolant`] is byte-identical to what
+    /// [`Solver::interpolant`] returns for the same partition — the certificate
+    /// is strictly additive assurance, and a rung that cannot certify still
+    /// returns its `Validated` interpolant with
+    /// [`certificate: None`](DispatchedInterpolant::certificate). The
+    /// certificate itself carries Alethe refutations (Carcara-checkable) or
+    /// Lean modules (kernel-checked before the certificate is built) for both
+    /// Craig soundness conditions `A ⇒ I` and `I ∧ B ⇒ ⊥`; see
+    /// [`InterpolantCertificate`].
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`SolverError`] exactly as [`Solver::interpolant`] does;
+    /// certificate production never introduces an error of its own (a certified
+    /// route that fails degrades to `certificate: None`).
+    pub fn interpolant_certified(
+        &self,
+        arena: &mut TermArena,
+        a_indices: &[usize],
+    ) -> Result<Option<DispatchedInterpolant>, SolverError> {
+        let (a, b) = self.partition(a_indices);
+        Self::dispatch_interpolant_certified(arena, &a, &b)
+    }
+
     /// Like [`Solver::interpolant`], but distinguishes *why* no interpolant was
     /// returned — the distinction a CHC/PDR consumer needs to tell "no interpolant
     /// exists" from "we declined". Returns:
@@ -302,37 +331,77 @@ impl<B: SolverBackend> Solver<B> {
     /// disjunctive (CNF) `QF_LIA`, ground EUF, combined `QF_UFLRA`, `QF_UFLIA`,
     /// then the `QF_BV` bit-blast interpolant — each a fallback for the earlier
     /// theories' declines (`Unsupported` or `Ok(None)`).
+    ///
+    /// The term-only projection of [`Self::dispatch_interpolant_certified`].
     fn dispatch_interpolant(
         arena: &mut TermArena,
         a: &[TermId],
         b: &[TermId],
     ) -> Result<Option<TermId>, SolverError> {
+        Ok(Self::dispatch_interpolant_certified(arena, a, b)?
+            .map(|dispatched| dispatched.interpolant))
+    }
+
+    /// The theory-interpolant dispatch, carrying the externally-checkable
+    /// certificate of whichever rung won (roadmap item 2.8).
+    ///
+    /// The rung ORDER and every decline condition are exactly those of the
+    /// uncertified dispatch: each rung is still entered through its plain
+    /// `*_interpolant` entry point, and only *after* that rung has produced an
+    /// interpolant do we ask its `*_certified` sibling for a certificate. So
+    /// certification can never change which rung wins, whether an interpolant is
+    /// produced, or which interpolant it is — a certified route that declines,
+    /// errors, or (impossibly) disagrees on the term leaves the interpolant
+    /// exactly as the uncertified dispatch had it, with `certificate: None`.
+    ///
+    /// The two disjunctive (CNF) rungs have no certified route at all and always
+    /// report `None`; see [`InterpolantCertificate`].
+    fn dispatch_interpolant_certified(
+        arena: &mut TermArena,
+        a: &[TermId],
+        b: &[TermId],
+    ) -> Result<Option<DispatchedInterpolant>, SolverError> {
         match crate::lra_interpolant(arena, a, b) {
-            Ok(Some(interpolant)) => Ok(Some(interpolant)),
+            Ok(Some(interpolant)) => Ok(Some(Self::certify_lra(arena, a, b, interpolant))),
             Ok(None) | Err(SolverError::Unsupported(_)) => {
                 // Disjunctive (CNF) QF_LRA: the conjunctive Farkas interpolant
                 // declines when the assertions carry Boolean structure over real
-                // atoms; the interpolating-SMT construction handles those.
+                // atoms; the interpolating-SMT construction handles those. No
+                // certified route exists for this shape (the certificate emitters
+                // are conjunctive), so it stays `Validated`.
                 if let Some(interpolant) = crate::lra_interpolant_cnf(arena, a, b)? {
-                    return Ok(Some(interpolant));
+                    return Ok(Some(DispatchedInterpolant::uncertified(interpolant)));
                 }
                 // QF_LIA via the rational relaxation (verified over the integers).
                 if let Some(interpolant) = crate::lia_interpolant(arena, a, b)? {
-                    return Ok(Some(interpolant));
+                    return Ok(Some(Self::certify_lia(arena, a, b, interpolant)));
                 }
                 // Disjunctive (CNF) QF_LIA: the conjunctive integer interpolant
                 // declines on Boolean structure over integer atoms; the
                 // relaxation-driven interpolating-SMT construction handles those.
+                // No certified route for this shape either.
                 if let Some(interpolant) = crate::lia_interpolant_cnf(arena, a, b)? {
-                    return Ok(Some(interpolant));
+                    return Ok(Some(DispatchedInterpolant::uncertified(interpolant)));
                 }
                 match crate::qf_uf_interpolant(arena, a, b) {
-                    Ok(Some(interpolant)) => Ok(Some(interpolant)),
+                    Ok(Some(interpolant)) => {
+                        Ok(Some(Self::certify_qf_uf(arena, a, b, interpolant)))
+                    }
                     Ok(None) => match crate::uflra_interpolant(arena, a, b) {
-                        Ok(Some(interpolant)) => Ok(Some(interpolant)),
+                        Ok(Some(interpolant)) => {
+                            Ok(Some(Self::certify_uflra(arena, a, b, interpolant)))
+                        }
                         Ok(None) => match crate::uflia_interpolant(arena, a, b) {
-                            Ok(Some(interpolant)) => Ok(Some(interpolant)),
-                            Ok(None) => Ok(crate::qf_bv_interpolant(arena, a, b)),
+                            Ok(Some(interpolant)) => {
+                                Ok(Some(Self::certify_uflia(arena, a, b, interpolant)))
+                            }
+                            Ok(None) => {
+                                let Some(interpolant) = crate::qf_bv_interpolant(arena, a, b)
+                                else {
+                                    return Ok(None);
+                                };
+                                Ok(Some(Self::certify_qf_bv(arena, a, b, interpolant)))
+                            }
                             Err(other) => Err(other),
                         },
                         Err(other) => Err(other),
@@ -341,6 +410,120 @@ impl<B: SolverBackend> Solver<B> {
                 }
             }
             Err(other) => Err(other),
+        }
+    }
+
+    // --- Per-rung certificate attachment (roadmap item 2.8) -----------------
+    //
+    // Each helper asks one theory's `*_certified` entry point for an
+    // externally-checkable certificate of an interpolant the PLAIN entry point
+    // already produced. Every one of them is verdict-neutral by construction:
+    //   - a certified route that declines (`Ok(None)`) or errors keeps the
+    //     uncertified interpolant with no certificate;
+    //   - a certified route that returns a DIFFERENT term (which the shared
+    //     `build_verified_*` builders make impossible, so this is a guard, not a
+    //     code path) also keeps the uncertified interpolant and drops the
+    //     certificate. The shipping term never comes from the certified route.
+
+    /// Attaches the conjunctive `QF_LRA` Alethe certificate when
+    /// [`crate::lra_interpolant_certified`] covers this partition.
+    fn certify_lra(
+        arena: &mut TermArena,
+        a: &[TermId],
+        b: &[TermId],
+        interpolant: TermId,
+    ) -> DispatchedInterpolant {
+        match crate::lra_interpolant_certified(arena, a, b) {
+            Ok(Some(cert)) if cert.interpolant == interpolant => DispatchedInterpolant {
+                interpolant,
+                certificate: Some(InterpolantCertificate::Lra(Box::new(cert))),
+            },
+            _ => DispatchedInterpolant::uncertified(interpolant),
+        }
+    }
+
+    /// Attaches the conjunctive `QF_LIA` Lean-kernel-checked certificate when
+    /// [`crate::lia_interpolant_certified`] covers this partition.
+    fn certify_lia(
+        arena: &mut TermArena,
+        a: &[TermId],
+        b: &[TermId],
+        interpolant: TermId,
+    ) -> DispatchedInterpolant {
+        match crate::lia_interpolant_certified(arena, a, b) {
+            Ok(Some(cert)) if cert.interpolant == interpolant => DispatchedInterpolant {
+                interpolant,
+                certificate: Some(InterpolantCertificate::Lia(Box::new(cert))),
+            },
+            _ => DispatchedInterpolant::uncertified(interpolant),
+        }
+    }
+
+    /// Attaches the ground-EUF Alethe certificate when
+    /// [`crate::qf_uf_interpolant_certified`] covers this partition.
+    fn certify_qf_uf(
+        arena: &mut TermArena,
+        a: &[TermId],
+        b: &[TermId],
+        interpolant: TermId,
+    ) -> DispatchedInterpolant {
+        match crate::qf_uf_interpolant_certified(arena, a, b) {
+            Ok(Some(cert)) if cert.interpolant == interpolant => DispatchedInterpolant {
+                interpolant,
+                certificate: Some(InterpolantCertificate::QfUf(Box::new(cert))),
+            },
+            _ => DispatchedInterpolant::uncertified(interpolant),
+        }
+    }
+
+    /// Attaches the combined `QF_UFLRA` Alethe certificate when
+    /// [`crate::uflra_interpolant_certified`] covers this partition.
+    fn certify_uflra(
+        arena: &mut TermArena,
+        a: &[TermId],
+        b: &[TermId],
+        interpolant: TermId,
+    ) -> DispatchedInterpolant {
+        match crate::uflra_interpolant_certified(arena, a, b) {
+            Ok(Some(cert)) if cert.interpolant == interpolant => DispatchedInterpolant {
+                interpolant,
+                certificate: Some(InterpolantCertificate::Uflra(Box::new(cert))),
+            },
+            _ => DispatchedInterpolant::uncertified(interpolant),
+        }
+    }
+
+    /// Attaches the combined `QF_UFLIA` Lean-kernel-checked certificate when
+    /// [`crate::uflia_interpolant_certified`] covers this partition.
+    fn certify_uflia(
+        arena: &mut TermArena,
+        a: &[TermId],
+        b: &[TermId],
+        interpolant: TermId,
+    ) -> DispatchedInterpolant {
+        match crate::uflia_interpolant_certified(arena, a, b) {
+            Ok(Some(cert)) if cert.interpolant == interpolant => DispatchedInterpolant {
+                interpolant,
+                certificate: Some(InterpolantCertificate::Uflia(Box::new(cert))),
+            },
+            _ => DispatchedInterpolant::uncertified(interpolant),
+        }
+    }
+
+    /// Attaches the `QF_BV` bit-blast Alethe certificate when
+    /// [`crate::qf_bv_interpolant_certified`] covers this partition.
+    fn certify_qf_bv(
+        arena: &mut TermArena,
+        a: &[TermId],
+        b: &[TermId],
+        interpolant: TermId,
+    ) -> DispatchedInterpolant {
+        match crate::qf_bv_interpolant_certified(arena, a, b) {
+            Ok(Some(cert)) if cert.interpolant == interpolant => DispatchedInterpolant {
+                interpolant,
+                certificate: Some(InterpolantCertificate::QfBv(Box::new(cert))),
+            },
+            _ => DispatchedInterpolant::uncertified(interpolant),
         }
     }
 
