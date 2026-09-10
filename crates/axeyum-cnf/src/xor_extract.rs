@@ -38,9 +38,57 @@
 //! iff it contains exactly `2^(k-1)` distinct clauses whose forbidden
 //! assignments are *exactly* the `2^(k-1)` assignments of one parity class. The
 //! parity class fixes `p`. Anything short of an exact match recognizes nothing.
+//!
+//! # The gate table (roadmap item 2.2)
+//!
+//! Mining the clauses is what a solver has to do when it *receives* CNF.
+//! CaDiCaL's `congruence.cpp` is 7,925 lines of exactly that, recovering
+//! AND/XOR/ITE structure someone else's Tseitin encoding destroyed. We are on
+//! the other side of that boundary: we build the CNF, and the gate structure is
+//! sitting in the AIG one layer up.
+//!
+//! [`XorGateTable`] carries it across. It is produced from the AIG and the
+//! [`CnfEncoding`] the encoder already returns — no change to `tseitin_encode`,
+//! no change to a single clause — and [`extract_xors_hinted`] consumes it to
+//! decide which clause groups are worth grouping at all. The mining route stays
+//! exactly where it was, as the route for CNF we did not encode.
+//!
+//! The table is a **hint**. Nothing reads a gate out of it; the consumer still
+//! recognizes each group from the clauses. A corrupt entry can therefore only
+//! cost a wasted lookup, and a missing entry only a missed gate — never a wrong
+//! answer, and never a changed verdict, because extraction is an optimization
+//! over a formula the table does not touch.
+//!
+//! ## What a congruence pass would need on top of this
+//!
+//! Deliberately out of scope here (item 2.2 is the interface; a congruence
+//! closure over gates is its own item). What such a pass would need that this
+//! table does not yet carry:
+//!
+//! * **The other gate kinds.** The encoder already plans NOT-ITE, NOT-AND and
+//!   AND-tree gates and counts them in [`crate::CnfEncodingStats`]; only XOR is
+//!   recorded here, because only XOR has a consumer today. The AND/ITE entries
+//!   are the same three checks — the node holds a variable, the helpers do not,
+//!   the operand variables are distinct.
+//! * **A stable gate identity, not just a variable set.** Congruence merges two
+//!   gates when their *inputs* become equivalent, so an entry needs its inputs
+//!   as an ordered, polarity-carrying list keyed by output variable, not the
+//!   unordered set that clause grouping needs. Both views come from the same
+//!   `detect_*` result; the table stores the grouping view because that is what
+//!   [`extract_xors_hinted`] filters on.
+//! * **Survival across renumbering.** `compact` and the inprocessing
+//!   passes renumber variables, and a table whose entries name pre-compaction
+//!   variables silently stops matching. Since a stale table costs only speed
+//!   that is safe, but a congruence pass wants it *rebuilt* or *remapped*
+//!   through [`crate::CompactMap`] rather than dropped.
+//! * **A proof obligation.** Merging two gates rewrites clauses, so unlike
+//!   extraction it is not free: each substitution needs its RUP step, the same
+//!   contract [`crate::ReductionLink`] already imposes on the other passes.
 
-use crate::{CnfFormula, Gf2System};
-use std::collections::BTreeMap;
+use crate::{CnfClause, CnfEncoding, CnfFormula, EncodedLit, Gf2System};
+use axeyum_aig::{Aig, AigLit, AigXorGate, detect_xor_gate};
+use std::collections::{BTreeMap, HashSet};
+use std::hash::{BuildHasherDefault, Hasher};
 
 /// Maximum XOR-gate width attempted, in variables.
 ///
@@ -49,6 +97,49 @@ use std::collections::BTreeMap;
 /// caps the search the same way. Gates wider than this are simply not
 /// recognized (a safe false negative).
 const MAX_XOR_VARS: usize = 8;
+
+/// A clause group's identity: its sorted, repeat-free variable set.
+///
+/// Stored as a fixed array plus a length so grouping allocates nothing per
+/// clause. Unused entries are zero. Array order agrees with `Vec<usize>` order
+/// for the sets this can hold: within a set the variables ascend and are
+/// distinct, so a shorter key's first padding zero is compared against a
+/// strictly positive variable of the longer key, which is exactly what
+/// `Vec` ordering does when one is a prefix of the other. That agreement is
+/// what keeps [`extract_xors`]'s output order unchanged by this
+/// representation.
+type GateKey = ([u32; MAX_XOR_VARS], u8);
+
+/// Deterministic FNV-1a over a [`GateKey`]'s bytes.
+///
+/// `HashSet`'s default `RandomState` would be safe here — the set is only ever
+/// probed, never iterated, so no output could depend on its order — but the
+/// crate promises determinism and a seeded hasher makes that promise
+/// structural rather than a comment.
+struct GateKeyHasher(u64);
+
+impl Default for GateKeyHasher {
+    fn default() -> Self {
+        Self(0xcbf2_9ce4_8422_2325)
+    }
+}
+
+impl Hasher for GateKeyHasher {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        let mut state = self.0;
+        for &byte in bytes {
+            state ^= u64::from(byte);
+            state = state.wrapping_mul(0x0000_0100_0000_01b3);
+        }
+        self.0 = state;
+    }
+}
+
+type GateKeySet = HashSet<GateKey, BuildHasherDefault<GateKeyHasher>>;
 
 /// Result of extracting XOR gates from a CNF formula.
 #[derive(Debug, Clone)]
@@ -74,49 +165,76 @@ pub struct ExtractedXors {
 /// skipped during grouping.
 #[must_use]
 pub fn extract_xors(cnf: &CnfFormula) -> ExtractedXors {
+    extract_grouped(cnf, None)
+}
+
+/// Recognizes complete XOR gates in `cnf`, restricted to the variable sets a
+/// [`XorGateTable`] says the encoder emitted a gate over.
+///
+/// Passing `None` is exactly [`extract_xors`] — the same call, not an
+/// equivalent one — so a caller with no table, or whose CNF came from somewhere
+/// else entirely (a DIMACS file, an inprocessed formula whose variables were
+/// renumbered), keeps the full clause-mining route with no special case.
+///
+/// # What the table can and cannot do
+///
+/// Both routes run the *identical* grouping and the *identical*
+/// [`recognize_gate`]. The table changes one thing: which clauses are grouped
+/// at all. Every clause of a group shares that group's variable set by
+/// definition, so a group is admitted whole or not at all — the table can never
+/// hand [`recognize_gate`] a truncated group. Therefore:
+///
+/// * A **wrong or stale** table can only *add* variable sets to look at. Those
+///   groups are then recognized on their own merits, exactly as mining would
+///   have recognized them, or rejected. A corrupt table cannot invent a gate.
+/// * A **missing** entry can only *drop* a gate from the result. That is a
+///   performance loss, never an unsound one: extraction is an optimization and
+///   the table does not touch the formula.
+///
+/// So the result is always a subset of [`extract_xors`]'s, and every element of
+/// it is a genuine XOR consequence of `cnf`. Equality with mining is a
+/// *completeness* property of the table, and is measured rather than assumed:
+/// mining also finds gates no AIG node ever encoded, because two unrelated
+/// binary clauses can add up to `a ≡ b`.
+#[must_use]
+pub fn extract_xors_hinted(cnf: &CnfFormula, table: Option<&XorGateTable>) -> ExtractedXors {
+    extract_grouped(cnf, table.map(XorGateTable::keys))
+}
+
+/// Groups `cnf`'s clauses by variable set and recognizes each group.
+///
+/// `admit` is the only difference between the mined and table-driven routes:
+/// `None` groups every clause, `Some(keys)` groups only clauses whose variable
+/// set is one of `keys`. Everything after grouping is shared.
+fn extract_grouped(cnf: &CnfFormula, admit: Option<&GateKeySet>) -> ExtractedXors {
     // Group clauses by their variable set. The key is the sorted, repeat-free
-    // list of variable indices; the value collects each clause's "negated-mask"
-    // — bit j set iff the j-th variable (in sorted order) appears negated. A
-    // clause with a repeated variable is dropped (it cannot be a clean gate
-    // clause). We use a BTreeMap so iteration over groups is in sorted variable
-    // order, keeping the output deterministic without a later sort.
-    let mut groups: BTreeMap<Vec<usize>, Vec<u32>> = BTreeMap::new();
+    // variable list; the value collects each clause's "negated-mask" — bit j
+    // set iff the j-th variable (in sorted order) appears negated. A clause
+    // with a repeated variable is dropped (it cannot be a clean gate clause).
+    // We use a BTreeMap so iteration over groups is in sorted variable order,
+    // keeping the output deterministic without a later sort.
+    let mut groups: BTreeMap<GateKey, Vec<u32>> = BTreeMap::new();
 
     for clause in cnf.clauses() {
-        let lits = clause.lits();
-        let k = lits.len();
-        if !(2..=MAX_XOR_VARS).contains(&k) {
+        let Some((key, mask)) = clause_key_and_mask(clause) else {
+            continue;
+        };
+        if let Some(admit) = admit
+            && !admit.contains(&key)
+        {
             continue;
         }
-        // Collect (variable, negated) pairs, sorted by variable, rejecting any
-        // clause whose variables are not all distinct.
-        let mut pairs: Vec<(usize, bool)> = lits
-            .iter()
-            .map(|lit| (lit.var().index(), lit.is_negated()))
-            .collect();
-        pairs.sort_unstable_by_key(|&(var, _)| var);
-        if pairs.windows(2).any(|w| w[0].0 == w[1].0) {
-            // A variable repeats in the clause; not a clean gate clause.
-            continue;
-        }
-
-        let vars: Vec<usize> = pairs.iter().map(|&(var, _)| var).collect();
-        // Negated-mask over the sorted variable order.
-        let mut mask = 0u32;
-        for (bit, &(_, negated)) in pairs.iter().enumerate() {
-            if negated {
-                mask |= 1u32 << bit;
-            }
-        }
-        groups.entry(vars).or_default().push(mask);
+        groups.entry(key).or_default().push(mask);
     }
 
     let mut system = Gf2System::new(cnf.variable_count());
     let mut num_recognized = 0usize;
 
-    for (vars, masks) in &groups {
-        if let Some(rhs) = recognize_gate(vars.len(), masks) {
-            system.add_constraint(vars, rhs);
+    for ((vars, len), masks) in &groups {
+        let k = usize::from(*len);
+        if let Some(rhs) = recognize_gate(k, masks) {
+            let vars: Vec<usize> = vars[..k].iter().map(|&var| var as usize).collect();
+            system.add_constraint(&vars, rhs);
             num_recognized += 1;
         }
     }
@@ -125,6 +243,361 @@ pub fn extract_xors(cnf: &CnfFormula) -> ExtractedXors {
         system,
         num_recognized,
     }
+}
+
+/// Builds a clause's group key and negated-mask, or `None` when the clause
+/// cannot belong to a clean gate (wrong width, or a repeated variable).
+fn clause_key_and_mask(clause: &CnfClause) -> Option<(GateKey, u32)> {
+    let lits = clause.lits();
+    let k = lits.len();
+    if !(2..=MAX_XOR_VARS).contains(&k) {
+        return None;
+    }
+    let mut pairs = [(0u32, false); MAX_XOR_VARS];
+    for (slot, lit) in pairs[..k].iter_mut().zip(lits) {
+        *slot = (u32::try_from(lit.var().index()).ok()?, lit.is_negated());
+    }
+    pairs[..k].sort_unstable_by_key(|&(var, _)| var);
+    if pairs[..k].windows(2).any(|w| w[0].0 == w[1].0) {
+        // A variable repeats in the clause; not a clean gate clause.
+        return None;
+    }
+    let mut vars = [0u32; MAX_XOR_VARS];
+    let mut mask = 0u32;
+    for (bit, &(var, negated)) in pairs[..k].iter().enumerate() {
+        vars[bit] = var;
+        if negated {
+            mask |= 1u32 << bit;
+        }
+    }
+    Some(((vars, u8::try_from(k).ok()?), mask))
+}
+
+/// One XOR gate the Tseitin encoder emitted, in CNF variable space.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct XorGateHint {
+    /// Distinct CNF variable indices, ascending.
+    pub vars: Vec<usize>,
+    /// Right-hand side `p` of `(⊕ vars) = p`.
+    pub rhs: bool,
+}
+
+/// Gate structure carried across the AIG-to-CNF boundary.
+///
+/// CaDiCaL spends thousands of lines *recovering* AND/XOR/ITE structure from
+/// clauses because it receives CNF and never saw the circuit. We build the CNF,
+/// so the structure is one layer up and nearly free: an AIG XOR node is two
+/// `node()` lookups ([`detect_xor_gate`]) and the encoding's own variable
+/// bindings say which of those nodes actually reached the formula as a complete
+/// clause group. This is that table — an *interface*, not a recovery algorithm.
+///
+/// # It is a hint, never a source of truth
+///
+/// Nothing downstream may trust an entry. [`extract_xors_hinted`] uses the
+/// table only to decide which clause groups to look at, and then recognizes
+/// each group from the clauses themselves, exactly as [`extract_xors`] does.
+/// See that function for what a corrupt or incomplete table can and cannot do.
+#[derive(Debug, Clone, Default)]
+pub struct XorGateTable {
+    hints: Vec<XorGateHint>,
+    keys: GateKeySet,
+}
+
+impl XorGateTable {
+    /// Records the XOR gates `encoding` emitted for `aig`.
+    ///
+    /// `aig` must be the graph `encoding` was produced from. A different graph
+    /// yields a table whose entries do not describe the formula, which
+    /// [`extract_xors_hinted`] tolerates — it recognizes every group from the
+    /// clauses — but which carries no benefit.
+    ///
+    /// An AIG XOR node contributes an entry only when the encoder really did
+    /// emit its complete four-clause group:
+    ///
+    /// * The node holds a CNF variable of its own. The encoder allocates none
+    ///   for a node it skipped as a subsumed helper, nor for an assertion-only
+    ///   root it distributed straight into clauses. That one check also settles
+    ///   clause *direction*: a node loses its variable to
+    ///   `plan_direct_root_nodes` exactly when its root polarity is fixed, and
+    ///   a fixed polarity is exactly the condition under which only half the
+    ///   equivalence is emitted. A node that still has a variable therefore
+    ///   carries all four clauses, not two.
+    /// * Both helper AND nodes were subsumed, i.e. hold no variable of their
+    ///   own. The encoder subsumes them only when it planned a compound gate
+    ///   over them, and XOR is the first plan it tries, so a recognized XOR
+    ///   shape with private helpers is not confusable with the ITE, NOT-AND, or
+    ///   AND-tree plans that skip helpers under the same privacy rule.
+    /// * The three CNF variables — output, left input, right input — are
+    ///   distinct, and neither input is the constant node. Otherwise the four
+    ///   clauses collapse under tautology and duplicate filtering into
+    ///   something that is not a width-3 group.
+    ///
+    /// Anything else is left out. A missing entry costs a gate, never a wrong
+    /// one.
+    #[must_use]
+    pub fn from_encoding(aig: &Aig, encoding: &CnfEncoding) -> Self {
+        let mut node_var: Vec<Option<u32>> = vec![None; aig.node_count()];
+        for binding in encoding.variable_bindings() {
+            let index = binding.aig_literal.node().index();
+            if let Some(slot) = node_var.get_mut(index) {
+                *slot = u32::try_from(binding.variable.index()).ok();
+            }
+        }
+
+        // Which nodes the encoder asserted straight into clauses instead of
+        // giving them a variable, and at which polarity. Read off the
+        // encoding's own root list rather than re-derived: `assert_root`
+        // reports a constant-true CNF literal exactly for the roots it
+        // distributed.
+        let mut direct_root: Vec<Option<bool>> = vec![None; aig.node_count()];
+        for root in encoding.roots() {
+            let index = root.aig_literal.node().index();
+            if index == 0 || root.cnf_lit != EncodedLit::Const(true) {
+                continue;
+            }
+            let polarity = !root.aig_literal.is_inverted();
+            match direct_root.get(index).copied().flatten() {
+                Some(existing) if existing != polarity => direct_root[index] = None,
+                _ => direct_root[index] = Some(polarity),
+            }
+        }
+
+        // Every XOR shape whose two helper AND nodes were subsumed. The
+        // encoder subsumes a helper only when it planned a compound gate over
+        // it, and XOR is the first plan it tries, so a recognized shape with
+        // private helpers is an XOR the encoder planned.
+        let mut recognized: Vec<Option<AigXorGate>> = vec![None; aig.node_count()];
+        for (node_id, node) in aig.nodes() {
+            if let Some(gate) = detect_xor_gate(aig, node)
+                && gate
+                    .helper_nodes
+                    .iter()
+                    .all(|helper| node_var[helper.index()].is_none())
+            {
+                recognized[node_id.index()] = Some(gate);
+            }
+        }
+
+        // A variable-less XOR that feeds another variable-less XOR is flattened
+        // INTO its parent: the encoder's AND-tree planner turns a chain of them
+        // into one parity leaf and emits clauses for the chain as a whole. Only
+        // the top of such a chain owns clauses.
+        let mut fused_into_parent = vec![false; aig.node_count()];
+        for (node_id, _) in aig.nodes() {
+            if node_var[node_id.index()].is_some() {
+                continue;
+            }
+            let Some(gate) = recognized[node_id.index()] else {
+                continue;
+            };
+            for input in [gate.lhs, gate.rhs] {
+                let index = input.node().index();
+                if node_var[index].is_none() && recognized[index].is_some() {
+                    fused_into_parent[index] = true;
+                }
+            }
+        }
+
+        let mut hints = Vec::new();
+        for (node_id, _) in aig.nodes() {
+            let index = node_id.index();
+            let Some(gate) = recognized[index] else {
+                continue;
+            };
+            // The recognized node equals `gate.lhs ^ gate.rhs` over AIG
+            // literals, so a variable-level constraint carries the input
+            // inversions on its right-hand side.
+            let inversions = gate.lhs.is_inverted() ^ gate.rhs.is_inverted();
+
+            if let Some(out) = node_var[index] {
+                // The gate has its own variable, so all four clauses are there:
+                // `out ^ v_lhs ^ v_rhs = inversions`.
+                let (Some(lhs), Some(rhs)) = (
+                    input_variable(gate.lhs, &node_var),
+                    input_variable(gate.rhs, &node_var),
+                ) else {
+                    continue;
+                };
+                if let Some(hint) = ascending_hint(&[out, lhs, rhs], inversions) {
+                    hints.push(hint);
+                }
+                continue;
+            }
+
+            if let Some(asserted) = direct_root[index] {
+                // No variable, but the encoder asserted this node as a root and
+                // folded the constant output into the clauses. Half the
+                // equivalence is emitted, which for a constant output is the
+                // whole gate: two clauses over the two inputs, encoding
+                // `v_lhs ^ v_rhs = asserted ^ inversions`. A direct-root XOR is
+                // encoded from its immediate inputs, never flattened, so those
+                // inputs necessarily carry variables.
+                let (Some(lhs), Some(rhs)) = (
+                    input_variable(gate.lhs, &node_var),
+                    input_variable(gate.rhs, &node_var),
+                ) else {
+                    continue;
+                };
+                if let Some(hint) = ascending_hint(&[lhs, rhs], asserted ^ inversions) {
+                    hints.push(hint);
+                }
+                continue;
+            }
+
+            if fused_into_parent[index] {
+                // An inner link of a flattened chain: its clauses belong to the
+                // chain's top, not to it.
+                continue;
+            }
+
+            // The top of a flattened chain. The AND-tree planner accepts a
+            // parity leaf only under a positively asserted root, whose output
+            // is the constant true, so the emitted clauses are the leaf's whole
+            // gate over the flattened literals.
+            let mut leaves = Vec::new();
+            let mut inverted = false;
+            if !flatten_xor_chain(
+                AigLit::positive(node_id),
+                &node_var,
+                &recognized,
+                &mut leaves,
+                &mut inverted,
+            ) {
+                continue;
+            }
+            // The planner caps a parity leaf at three literals; a longer chain
+            // is not planned as one, so there is nothing to record.
+            if !(2..=3).contains(&leaves.len()) {
+                continue;
+            }
+            let mut vars = Vec::with_capacity(leaves.len());
+            let mut leaf_inversions = false;
+            for leaf in &leaves {
+                let Some(var) = input_variable(*leaf, &node_var) else {
+                    vars.clear();
+                    break;
+                };
+                leaf_inversions ^= leaf.is_inverted();
+                vars.push(var);
+            }
+            if vars.len() != leaves.len() {
+                continue;
+            }
+            // The leaf constrains its literals to parity `!inverted`; moving to
+            // variables absorbs each leaf literal's own inversion.
+            if let Some(hint) = ascending_hint(&vars, !inverted ^ leaf_inversions) {
+                hints.push(hint);
+            }
+        }
+
+        Self::from_hints(hints)
+    }
+
+    /// Builds a table from explicit hints, for tests and for producers other
+    /// than the one-shot Tseitin encoder.
+    ///
+    /// Entries are sorted and deduplicated; nothing else is checked, because
+    /// nothing downstream trusts an entry.
+    #[must_use]
+    pub fn from_hints(mut hints: Vec<XorGateHint>) -> Self {
+        hints.sort();
+        hints.dedup();
+        let mut keys = GateKeySet::default();
+        for hint in &hints {
+            if let Some(key) = hint_key(hint) {
+                keys.insert(key);
+            }
+        }
+        Self { hints, keys }
+    }
+
+    /// Recorded gates, ascending by variable set.
+    #[must_use]
+    pub fn hints(&self) -> &[XorGateHint] {
+        &self.hints
+    }
+
+    /// Number of recorded gates.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.hints.len()
+    }
+
+    /// Whether the table recorded no gate at all.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.hints.is_empty()
+    }
+
+    fn keys(&self) -> &GateKeySet {
+        &self.keys
+    }
+}
+
+fn hint_key(hint: &XorGateHint) -> Option<GateKey> {
+    let k = hint.vars.len();
+    if !(2..=MAX_XOR_VARS).contains(&k) {
+        return None;
+    }
+    let mut vars = [0u32; MAX_XOR_VARS];
+    for (slot, &var) in vars[..k].iter_mut().zip(&hint.vars) {
+        *slot = u32::try_from(var).ok()?;
+    }
+    vars[..k].sort_unstable();
+    if vars[..k].windows(2).any(|w| w[0] == w[1]) {
+        return None;
+    }
+    Some((vars, u8::try_from(k).ok()?))
+}
+
+/// Builds a hint over `vars` if they are pairwise distinct, ascending.
+fn ascending_hint(vars: &[u32], rhs: bool) -> Option<XorGateHint> {
+    let mut sorted = vars.to_vec();
+    sorted.sort_unstable();
+    if sorted.windows(2).any(|w| w[0] == w[1]) {
+        return None;
+    }
+    Some(XorGateHint {
+        vars: sorted.iter().map(|&var| var as usize).collect(),
+        rhs,
+    })
+}
+
+/// Expands a chain of variable-less XOR nodes into its literal leaves, the way
+/// the AND-tree planner's parity leaf does.
+///
+/// `inverted` accumulates the inversion of each expanded XOR literal; a leaf
+/// keeps its own inversion in the literal itself. Returns `false` when the
+/// chain grows past what a parity leaf can hold, so the caller records nothing.
+fn flatten_xor_chain(
+    lit: AigLit,
+    node_var: &[Option<u32>],
+    recognized: &[Option<AigXorGate>],
+    leaves: &mut Vec<AigLit>,
+    inverted: &mut bool,
+) -> bool {
+    if leaves.len() > 3 {
+        return false;
+    }
+    let index = lit.node().index();
+    if node_var[index].is_none()
+        && let Some(gate) = recognized[index]
+    {
+        *inverted ^= lit.is_inverted();
+        return flatten_xor_chain(gate.lhs, node_var, recognized, leaves, inverted)
+            && flatten_xor_chain(gate.rhs, node_var, recognized, leaves, inverted);
+    }
+    leaves.push(lit);
+    true
+}
+
+fn input_variable(lit: AigLit, node_var: &[Option<u32>]) -> Option<u32> {
+    if lit.node().index() == 0 {
+        // The constant node: the encoder folds it into the clause instead of
+        // giving it a variable, so the group is not width 3.
+        return None;
+    }
+    node_var.get(lit.node().index()).copied().flatten()
 }
 
 /// Decides whether the negated-masks of a `k`-variable clause group form a
@@ -527,5 +1000,620 @@ mod tests {
         let f = formula(MAX_XOR_VARS + 1, &clauses);
         let extracted = extract_xors(&f);
         assert_eq!(extracted.num_recognized, 0);
+    }
+}
+
+/// The gate table carried across the AIG-to-CNF boundary (roadmap item 2.2).
+///
+/// These tests are the whole reason the table is allowed to exist. They pin
+/// four things:
+///
+/// 1. The table-driven route finds the same XOR set as clause mining on a
+///    curated XOR corpus (the exit criterion), compared constraint by
+///    constraint rather than by count.
+/// 2. Building the table does not change one byte of the CNF.
+/// 3. A **corrupt** table cannot change the answer.
+/// 4. **Dropping** the table leaves mining intact, which is what keeps foreign
+///    CNF working — and, so that (1) is not vacuous, an *incomplete* table
+///    demonstrably makes the equality check fail.
+#[cfg(test)]
+mod gate_table_tests {
+    use super::*;
+    use crate::{CnfEncoding, parse_dimacs, tseitin_encode};
+    use axeyum_aig::{Aig, AigLit};
+    use axeyum_bv::lower_terms;
+    use axeyum_ir::{Sort, TermArena};
+
+    /// One curated instance: a name and the AIG plus roots handed to the
+    /// encoder.
+    struct Instance {
+        name: &'static str,
+        aig: Aig,
+        roots: Vec<AigLit>,
+    }
+
+    /// Lowers one QF_BV term through `axeyum-bv`, the production route into the
+    /// AIG. These are the instances whose gate structure is *not* hand-placed:
+    /// whatever XOR nodes exist are the ones bit-blasting actually produced.
+    fn lowered(
+        name: &'static str,
+        build: impl Fn(&mut TermArena) -> axeyum_ir::TermId,
+    ) -> Instance {
+        let mut arena = TermArena::new();
+        let root = build(&mut arena);
+        let lowering = lower_terms(&arena, &[root]).expect("fixture lowers");
+        let roots = lowering.roots()[0].bits().to_vec();
+        Instance {
+            name,
+            aig: lowering.aig().clone(),
+            roots,
+        }
+    }
+
+    fn bv(arena: &mut TermArena, name: &str, width: u32) -> axeyum_ir::TermId {
+        let sym = arena
+            .declare(name, Sort::BitVec(width))
+            .expect("fresh symbol");
+        arena.var(sym)
+    }
+
+    /// The curated XOR corpus.
+    ///
+    /// Bit-blasted adders and multipliers are the natural home of XOR gates (a
+    /// full adder's sum bit *is* a three-input XOR), so most of these are
+    /// arithmetic. The last few are deliberately XOR-poor or XOR-free, which is
+    /// the other half of the check: a table that recorded gates there would be
+    /// wrong, and a mining route that found none there must be matched by the
+    /// table route finding none either.
+    fn curated_corpus() -> Vec<Instance> {
+        let mut corpus = vec![
+            lowered("bvxor8", |a| {
+                let x = bv(a, "x", 8);
+                let y = bv(a, "y", 8);
+                a.bv_xor(x, y).unwrap()
+            }),
+            lowered("bvxor_chain4x8", |a| {
+                let x = bv(a, "x", 8);
+                let y = bv(a, "y", 8);
+                let z = bv(a, "z", 8);
+                let w = bv(a, "w", 8);
+                let xy = a.bv_xor(x, y).unwrap();
+                let zw = a.bv_xor(z, w).unwrap();
+                a.bv_xor(xy, zw).unwrap()
+            }),
+            lowered("bvadd16", |a| {
+                let x = bv(a, "x", 16);
+                let y = bv(a, "y", 16);
+                a.bv_add(x, y).unwrap()
+            }),
+            lowered("bvadd_three12", |a| {
+                let x = bv(a, "x", 12);
+                let y = bv(a, "y", 12);
+                let z = bv(a, "z", 12);
+                let xy = a.bv_add(x, y).unwrap();
+                a.bv_add(xy, z).unwrap()
+            }),
+            lowered("bvmul8", |a| {
+                let x = bv(a, "x", 8);
+                let y = bv(a, "y", 8);
+                a.bv_mul(x, y).unwrap()
+            }),
+            lowered("bvxor_eq", |a| {
+                let x = bv(a, "x", 8);
+                let y = bv(a, "y", 8);
+                let z = bv(a, "z", 8);
+                let xy = a.bv_xor(x, y).unwrap();
+                a.eq(xy, z).unwrap()
+            }),
+            lowered("bvadd_eq_mul", |a| {
+                let x = bv(a, "x", 8);
+                let y = bv(a, "y", 8);
+                let sum = a.bv_add(x, y).unwrap();
+                let product = a.bv_mul(x, y).unwrap();
+                a.eq(sum, product).unwrap()
+            }),
+            lowered("bvand8_no_xor", |a| {
+                let x = bv(a, "x", 8);
+                let y = bv(a, "y", 8);
+                a.bv_and(x, y).unwrap()
+            }),
+            lowered("bvult16_no_xor", |a| {
+                let x = bv(a, "x", 16);
+                let y = bv(a, "y", 16);
+                a.bv_ult(x, y).unwrap()
+            }),
+        ];
+        corpus.push(parity_chain(24));
+        corpus.push(mixed_xor_and_or());
+        corpus
+    }
+
+    /// A hand-built parity chain: `p0 ^ p1 ^ ... ^ p(n-1)`, the densest XOR
+    /// shape there is.
+    fn parity_chain(inputs: usize) -> Instance {
+        let mut aig = Aig::new();
+        let mut acc = aig.input("p0");
+        for index in 1..inputs {
+            let next = aig.input(format!("p{index}"));
+            acc = aig.xor(acc, next);
+        }
+        Instance {
+            name: "parity_chain24",
+            aig,
+            roots: vec![acc],
+        }
+    }
+
+    /// XOR nodes interleaved with AND/OR, so the recognizer has to reject the
+    /// non-XOR shapes sitting next to the ones it must find.
+    fn mixed_xor_and_or() -> Instance {
+        let mut aig = Aig::new();
+        let a = aig.input("a");
+        let b = aig.input("b");
+        let c = aig.input("c");
+        let d = aig.input("d");
+        let x = aig.xor(a, b);
+        let y = aig.and(c, d);
+        let z = aig.or(x, y);
+        let w = aig.xor(z, c);
+        let m = aig.mux(a, w, y);
+        let root = aig.and(m, x);
+        Instance {
+            name: "mixed_xor_and_or",
+            aig,
+            roots: vec![root, w, x],
+        }
+    }
+
+    fn encode(instance: &Instance) -> CnfEncoding {
+        tseitin_encode(&instance.aig, &instance.roots).expect("fixture encodes")
+    }
+
+    /// THE EXIT CRITERION, correctness half.
+    ///
+    /// For every curated instance: the constraints recovered through the table
+    /// equal, element for element, the constraints recovered by mining the
+    /// clauses. Compared as full `(vars, rhs)` tuples in emission order, not as
+    /// counts — two different gate sets of the same size would pass a count
+    /// check.
+    #[test]
+    fn table_finds_the_same_xor_set_as_clause_mining_on_the_curated_corpus() {
+        let mut instances_with_gates = 0usize;
+        let mut total_gates = 0usize;
+        let mut report = String::new();
+        let mut mismatches = Vec::new();
+        for instance in curated_corpus() {
+            let encoding = encode(&instance);
+            let formula = encoding.formula();
+            let table = XorGateTable::from_encoding(&instance.aig, &encoding);
+
+            let mined = extract_xors(formula);
+            let hinted = extract_xors_hinted(formula, Some(&table));
+            let agree = hinted.system.constraints() == mined.system.constraints();
+
+            report.push_str(&format!(
+                "  {:<20} vars {:>6} clauses {:>7} entries {:>5} mined {:>5}                  hinted {:>5} {}\n",
+                instance.name,
+                formula.variable_count(),
+                formula.clauses().len(),
+                table.len(),
+                mined.num_recognized,
+                hinted.num_recognized,
+                if agree { "SAME" } else { "DIFFERENT" },
+            ));
+            if !agree {
+                let mined_set = mined.system.constraints();
+                let hinted_set = hinted.system.constraints();
+                let missing: Vec<_> = mined_set
+                    .iter()
+                    .filter(|c| !hinted_set.contains(c))
+                    .take(4)
+                    .cloned()
+                    .collect();
+                let extra: Vec<_> = hinted_set
+                    .iter()
+                    .filter(|c| !mined_set.contains(c))
+                    .take(4)
+                    .cloned()
+                    .collect();
+                report.push_str(&format!(
+                    "      missing from the table route: {missing:?}\n                     \x20     found ONLY by the table route: {extra:?}\n"
+                ));
+                mismatches.push(instance.name);
+            }
+            if mined.num_recognized > 0 {
+                instances_with_gates += 1;
+                total_gates += mined.num_recognized;
+            }
+        }
+        println!("gate-table vs clause mining on the curated XOR corpus:\n{report}");
+        assert!(
+            mismatches.is_empty(),
+            "the table route and the mining route must recover the SAME XOR set;              they differ on {mismatches:?}\n{report}"
+        );
+        // A corpus on which nothing is ever recognized would make the equality
+        // above vacuous. Pin that it is not.
+        assert!(
+            instances_with_gates >= 6,
+            "the curated corpus must actually contain XOR gates; only \
+             {instances_with_gates} instances recognized any\n{report}"
+        );
+        assert!(
+            total_gates >= 200,
+            "expected a few hundred gates across the corpus, found \
+             {total_gates}\n{report}"
+        );
+    }
+
+    /// Constraint 2: building the table does not change the CNF.
+    ///
+    /// `from_encoding` takes `&Aig` and `&CnfEncoding`, so it *cannot* mutate
+    /// either — but "cannot mutate" is a claim about this revision, and the
+    /// measurement downstream of item 2.2 is only valid if the clauses are the
+    /// ones that were there before. So: encode, snapshot the DIMACS text, build
+    /// the table, re-encode, and require the text to be byte-identical.
+    #[test]
+    fn building_the_table_leaves_the_cnf_byte_identical() {
+        for instance in curated_corpus() {
+            let before = encode(&instance).formula().to_dimacs();
+            let encoding = encode(&instance);
+            let table = XorGateTable::from_encoding(&instance.aig, &encoding);
+            let during = encoding.formula().to_dimacs();
+            let after = encode(&instance).formula().to_dimacs();
+            assert_eq!(
+                before, during,
+                "{}: table build changed the CNF",
+                instance.name
+            );
+            assert_eq!(before, after, "{}: re-encoding differs", instance.name);
+            // Consume the table so it cannot be optimized away.
+            assert!(table.len() <= before.len());
+        }
+    }
+
+    /// NEGATIVE CONTROL 1: a corrupt table cannot change the answer.
+    ///
+    /// Three corruptions, all of the "claims a gate that is not there" kind:
+    /// a variable set that carries no clause at all, a set that carries clauses
+    /// but is not a complete gate, and every three-variable set of a small
+    /// prefix of the formula. Each is a lie the table tells the consumer; none
+    /// may move the result, because the consumer recognizes each group from the
+    /// clauses rather than believing the entry.
+    #[test]
+    fn a_corrupt_table_cannot_change_the_recovered_xor_set() {
+        for instance in curated_corpus() {
+            let encoding = encode(&instance);
+            let formula = encoding.formula();
+            let honest = XorGateTable::from_encoding(&instance.aig, &encoding);
+            let expected = extract_xors_hinted(formula, Some(&honest))
+                .system
+                .constraints();
+            let vars = formula.variable_count();
+            if vars < 6 {
+                continue;
+            }
+
+            let mut corrupt = honest.hints().to_vec();
+            // (a) A set of variables past the end of the formula.
+            corrupt.push(XorGateHint {
+                vars: vec![vars + 1, vars + 2, vars + 3],
+                rhs: true,
+            });
+            // (b) Every 3-subset of the first six variables, flagged with both
+            //     parities. Almost none of these is a gate; any that is, mining
+            //     found too.
+            for i in 0..6 {
+                for j in (i + 1)..6 {
+                    for k in (j + 1)..6 {
+                        corrupt.push(XorGateHint {
+                            vars: vec![i, j, k],
+                            rhs: false,
+                        });
+                        corrupt.push(XorGateHint {
+                            vars: vec![i, j, k],
+                            rhs: true,
+                        });
+                    }
+                }
+            }
+            // (c) Flip the recorded parity of every honest entry. The parity is
+            //     the part of an entry a naive consumer would copy straight
+            //     into the GF(2) system.
+            for hint in &mut corrupt {
+                hint.rhs = !hint.rhs;
+            }
+
+            let corrupted = XorGateTable::from_hints(corrupt);
+            let got = extract_xors_hinted(formula, Some(&corrupted))
+                .system
+                .constraints();
+            let mined = extract_xors(formula).system.constraints();
+            assert_eq!(
+                got, expected,
+                "{}: a corrupt table moved the result",
+                instance.name
+            );
+            assert_eq!(
+                got, mined,
+                "{}: a corrupt table must still agree with mining",
+                instance.name
+            );
+        }
+    }
+
+    /// NEGATIVE CONTROL 2: dropping the table leaves the mining route intact.
+    ///
+    /// This is the property that keeps foreign CNF working. `None` is not an
+    /// "equivalent" path, it is the same call, and this pins that on both
+    /// encoder-produced CNF and on a DIMACS file that no AIG ever produced.
+    #[test]
+    fn dropping_the_table_falls_back_to_mining() {
+        for instance in curated_corpus() {
+            let encoding = encode(&instance);
+            let formula = encoding.formula();
+            assert_eq!(
+                extract_xors_hinted(formula, None).system.constraints(),
+                extract_xors(formula).system.constraints(),
+                "{}: the no-table route must be the mining route",
+                instance.name
+            );
+        }
+
+        // Foreign CNF: a DIMACS file with two XOR gates and no AIG behind it.
+        // The mining route finds both; an unrelated table finds nothing, and
+        // that is a slower answer, never a wrong one.
+        let foreign = parse_dimacs(
+            "p cnf 5 6\n\
+             1 2 0\n\
+             -1 -2 0\n\
+             3 4 5 0\n\
+             3 -4 -5 0\n\
+             -3 4 -5 0\n\
+             -3 -4 5 0\n",
+        )
+        .expect("valid DIMACS");
+        let mined = extract_xors(&foreign);
+        assert_eq!(mined.num_recognized, 2, "the foreign file has two gates");
+        assert_eq!(
+            extract_xors_hinted(&foreign, None).system.constraints(),
+            mined.system.constraints()
+        );
+        let unrelated = XorGateTable::from_hints(vec![XorGateHint {
+            vars: vec![0, 1, 2],
+            rhs: false,
+        }]);
+        let with_unrelated = extract_xors_hinted(&foreign, Some(&unrelated));
+        assert!(
+            with_unrelated.num_recognized <= mined.num_recognized,
+            "a table can only ever narrow the search"
+        );
+    }
+
+    /// The equality check in
+    /// `table_finds_the_same_xor_set_as_clause_mining_on_the_curated_corpus`
+    /// must be able to FAIL. Drop one honest entry and require the result to
+    /// shrink by exactly that gate.
+    ///
+    /// Without this, "the table agrees with mining" could be true because the
+    /// comparison is blind — for instance if `extract_xors_hinted` quietly fell
+    /// back to mining whenever a table was supplied.
+    #[test]
+    fn an_incomplete_table_visibly_loses_exactly_the_dropped_gate() {
+        let mut checked = 0usize;
+        for instance in curated_corpus() {
+            let encoding = encode(&instance);
+            let formula = encoding.formula();
+            let honest = XorGateTable::from_encoding(&instance.aig, &encoding);
+            let full = extract_xors_hinted(formula, Some(&honest));
+            if full.num_recognized == 0 {
+                continue;
+            }
+
+            // Find an entry whose group mining actually recognizes, drop it,
+            // and require the recovered set to lose exactly that constraint.
+            let recognized = full.system.constraints();
+            let dropped = honest
+                .hints()
+                .iter()
+                .find(|hint| recognized.iter().any(|(vars, _)| *vars == hint.vars))
+                .expect("a recognized gate came from some entry")
+                .clone();
+            let thinned: Vec<XorGateHint> = honest
+                .hints()
+                .iter()
+                .filter(|hint| hint.vars != dropped.vars)
+                .cloned()
+                .collect();
+            let partial = extract_xors_hinted(formula, Some(&XorGateTable::from_hints(thinned)));
+            assert_eq!(
+                partial.num_recognized + 1,
+                full.num_recognized,
+                "{}: dropping one entry must lose exactly one gate",
+                instance.name
+            );
+            assert!(
+                !partial
+                    .system
+                    .constraints()
+                    .iter()
+                    .any(|(vars, _)| *vars == dropped.vars),
+                "{}: the dropped gate must be gone",
+                instance.name
+            );
+            checked += 1;
+        }
+        assert!(
+            checked >= 6,
+            "only {checked} instances exercised this control"
+        );
+    }
+
+    /// Every entry the table records must be a real logical consequence of the
+    /// clauses — checked by brute force over the three variables, not by
+    /// re-running the recognizer that produced it.
+    #[test]
+    fn every_recorded_entry_is_implied_by_the_clauses_it_names() {
+        let mut checked = 0usize;
+        let mut widths = std::collections::BTreeSet::new();
+        for instance in curated_corpus() {
+            let encoding = encode(&instance);
+            let formula = encoding.formula();
+            let table = XorGateTable::from_encoding(&instance.aig, &encoding);
+            for hint in table.hints() {
+                let k = hint.vars.len();
+                assert!(
+                    (2..=3).contains(&k),
+                    "{}: AIG XOR entries are width 2 or 3, got {k}",
+                    instance.name
+                );
+                assert!(
+                    hint.vars.windows(2).all(|w| w[0] < w[1]),
+                    "{}: entry variables must ascend",
+                    instance.name
+                );
+                widths.insert(k);
+                // Brute force over the entry's variables: collect every clause
+                // whose variable set is exactly this one, and require its models
+                // to be exactly the XOR's models. This checks the CLAUSES, not
+                // the recognizer that produced the entry.
+                let key = hint_key(hint).expect("entry has a key");
+                let mut models = Vec::new();
+                for assign in 0u32..(1u32 << k) {
+                    let satisfied =
+                        formula
+                            .clauses()
+                            .iter()
+                            .all(|clause| match clause_key_and_mask(clause) {
+                                Some((clause_key, _)) if clause_key == key => {
+                                    clause.lits().iter().any(|lit| {
+                                        let slot = hint
+                                            .vars
+                                            .iter()
+                                            .position(|&var| var == lit.var().index())
+                                            .expect("clause var is in the key");
+                                        (((assign >> slot) & 1) == 1) != lit.is_negated()
+                                    })
+                                }
+                                _ => true,
+                            });
+                    if satisfied {
+                        models.push(assign);
+                    }
+                }
+                let expected: Vec<u32> = (0u32..(1u32 << k))
+                    .filter(|a| ((a.count_ones() & 1) == 1) == hint.rhs)
+                    .collect();
+                assert_eq!(
+                    models, expected,
+                    "{}: entry {:?} rhs={} does not match the clauses over its variables",
+                    instance.name, hint.vars, hint.rhs
+                );
+                checked += 1;
+            }
+        }
+        assert!(checked >= 200, "only {checked} entries were checked");
+        assert_eq!(
+            widths,
+            std::collections::BTreeSet::from([2, 3]),
+            "the corpus must exercise BOTH shapes the encoder emits: the \
+             width-3 group of a gate with its own variable, and the width-2 \
+             group of a gate the encoder asserted directly as a root"
+        );
+    }
+
+    /// MEASUREMENT, the performance half of the exit criterion.
+    ///
+    /// Not a ratchet — a wall-clock ratio inside a test on a shared box is not
+    /// reproducible, and asserting one would be a gate that fails for reasons
+    /// unrelated to this code. This runs both routes on a large XOR-rich
+    /// instance, asserts they agree, and PRINTS the timings so a measurement
+    /// can be quoted from an actual run (`--release -- --nocapture`) with the
+    /// host and load stated alongside it.
+    #[test]
+    fn measure_table_route_against_mining() {
+        let instance = lowered("bvmul16_measure", |a| {
+            let x = bv(a, "x", 16);
+            let y = bv(a, "y", 16);
+            let z = bv(a, "z", 16);
+            let product = a.bv_mul(x, y).unwrap();
+            let sum = a.bv_add(product, z).unwrap();
+            a.eq(sum, x).unwrap()
+        });
+        let encoding = encode(&instance);
+        let formula = encoding.formula();
+        let table = XorGateTable::from_encoding(&instance.aig, &encoding);
+
+        let rounds = 20;
+        let start = std::time::Instant::now();
+        let mut mined = None;
+        for _ in 0..rounds {
+            mined = Some(extract_xors(formula));
+        }
+        let mining = start.elapsed() / rounds;
+
+        let start = std::time::Instant::now();
+        let mut hinted = None;
+        for _ in 0..rounds {
+            hinted = Some(extract_xors_hinted(formula, Some(&table)));
+        }
+        let table_route = start.elapsed() / rounds;
+
+        let start = std::time::Instant::now();
+        for _ in 0..rounds {
+            let built = XorGateTable::from_encoding(&instance.aig, &encoding);
+            assert!(!built.is_empty());
+        }
+        let build = start.elapsed() / rounds;
+
+        let mined = mined.expect("ran at least once");
+        let hinted = hinted.expect("ran at least once");
+        assert_eq!(hinted.system.constraints(), mined.system.constraints());
+        println!(
+            "gate-table measurement: {} vars / {} clauses / {} gates / {} entries\n\
+             mining        {:?}\n\
+             table route   {:?}\n\
+             table build   {:?}",
+            formula.variable_count(),
+            formula.clauses().len(),
+            mined.num_recognized,
+            table.len(),
+            mining,
+            table_route,
+            build,
+        );
+    }
+
+    /// The table route must examine strictly fewer clause groups than mining on
+    /// XOR-poor formulas — the mechanism behind the performance half of the
+    /// exit criterion. This asserts the MECHANISM (fewer groups), not a
+    /// wall-clock ratio, which is not reproducible inside a test.
+    #[test]
+    fn the_table_narrows_the_clause_scan() {
+        let instance = lowered("bvmul8_scan", |a| {
+            let x = bv(a, "x", 8);
+            let y = bv(a, "y", 8);
+            a.bv_mul(x, y).unwrap()
+        });
+        let encoding = encode(&instance);
+        let formula = encoding.formula();
+        let table = XorGateTable::from_encoding(&instance.aig, &encoding);
+
+        let mut mined_groups = std::collections::BTreeSet::new();
+        let mut hinted_groups = std::collections::BTreeSet::new();
+        for clause in formula.clauses() {
+            if let Some((key, _)) = clause_key_and_mask(clause) {
+                mined_groups.insert(key);
+                if table.keys().contains(&key) {
+                    hinted_groups.insert(key);
+                }
+            }
+        }
+        assert!(!hinted_groups.is_empty(), "the multiplier has XOR gates");
+        assert!(
+            hinted_groups.len() * 2 < mined_groups.len(),
+            "the table must cut the group count well below half: {} of {}",
+            hinted_groups.len(),
+            mined_groups.len()
+        );
     }
 }
