@@ -289,6 +289,10 @@ impl Corner {
     /// Emits the atoms this corner is *defined by*, appending them to `atoms`
     /// and returning a skeleton node that mentions them all (so the corner
     /// cannot be generated and then dropped on the floor).
+    // One arm per corner class, each spelling out the shape it is defined by.
+    // Splitting them into thirteen free functions would scatter the table the
+    // module docs describe without making any arm shorter.
+    #[allow(clippy::too_many_lines, clippy::many_single_char_names)]
     fn emit(self, rng: &mut Lcg, mode: Mode, num_vars: usize, atoms: &mut Vec<Atom>) -> Node {
         let v = |rng: &mut Lcg| rng.below(num_vars as u64);
         let push = |atoms: &mut Vec<Atom>, a: Atom| {
@@ -385,7 +389,7 @@ impl Corner {
                         rhs: Side::Var(x),
                         num: if strict { -k } else { -k - 1 },
                         den: 1,
-                        rel: if strict { Rel::Le } else { Rel::Le },
+                        rel: Rel::Le,
                         neg: false,
                     },
                 );
@@ -630,12 +634,13 @@ impl Instance {
             } else {
                 Side::Var(y)
             };
-            let (num, den) = match mode {
-                Mode::Int => (rng.in_range(-4, 4), 1),
-                Mode::Real if rng.below(3) == 0 => {
-                    (rng.in_range(-5, 5), [2i64, 3, 4][rng.below(3)])
-                }
-                Mode::Real => (rng.in_range(-4, 4), 1),
+            // Short-circuit order matters: in `Int` mode `rng.below(3)` is
+            // never drawn, so the seed schedule is identical to the `match`
+            // form this replaced.
+            let (num, den) = if mode == Mode::Real && rng.below(3) == 0 {
+                (rng.in_range(-5, 5), [2i64, 3, 4][rng.below(3)])
+            } else {
+                (rng.in_range(-4, 4), 1)
             };
             atoms.push(Atom {
                 lhs,
@@ -879,12 +884,12 @@ fn build_node_z3(node: &Node, atoms: &[Bool]) -> Bool {
         Node::Not(x) => build_node_z3(x, atoms).not(),
         Node::And(l, r) => Bool::and(&[build_node_z3(l, atoms), build_node_z3(r, atoms)]),
         Node::Or(l, r) => Bool::or(&[build_node_z3(l, atoms), build_node_z3(r, atoms)]),
-        Node::Implies(l, r) => build_node_z3(l, atoms).implies(&build_node_z3(r, atoms)),
-        Node::Xor(l, r) => build_node_z3(l, atoms).xor(&build_node_z3(r, atoms)),
+        Node::Implies(l, r) => build_node_z3(l, atoms).implies(build_node_z3(r, atoms)),
+        Node::Xor(l, r) => build_node_z3(l, atoms).xor(build_node_z3(r, atoms)),
         Node::Ite(c, t, e) => {
             build_node_z3(c, atoms).ite(&build_node_z3(t, atoms), &build_node_z3(e, atoms))
         }
-        Node::BoolEq(l, r) => build_node_z3(l, atoms).eq(&build_node_z3(r, atoms)),
+        Node::BoolEq(l, r) => build_node_z3(l, atoms).eq(build_node_z3(r, atoms)),
     }
 }
 
@@ -1109,6 +1114,9 @@ fn corner_coverage_is_total() {
     );
 }
 
+/// One hand-written pin: name, mode, variable count, atoms, roots.
+type NamedCase = (&'static str, Mode, usize, Vec<Atom>, Vec<Node>);
+
 /// Hand-written, named degenerate queries whose verdict is fixed by the
 /// mathematics, cross-checked against Z3.
 ///
@@ -1116,9 +1124,10 @@ fn corner_coverage_is_total() {
 /// of one corner, so a failure names the branch directly instead of handing
 /// back a random instance to minimize.
 #[test]
+#[allow(clippy::too_many_lines)]
 fn named_degenerate_cases_match_z3() {
-    // `(lhs, rhs, num, den, rel, neg)` per atom, all roots conjoined.
-    let cases: &[(&str, Mode, usize, Vec<Atom>, Vec<Node>)] = &[
+    // Name, mode, variable count, atoms, and the roots (all conjoined).
+    let cases: &[NamedCase] = &[
         (
             // `x - x < 0` is FALSE for every x: the constant-fold branch.
             "self_difference_strict_false",
@@ -1395,13 +1404,15 @@ fn named_degenerate_cases_match_z3() {
             skipped_z3_unknown += 1;
             continue;
         }
-        if run.verdict == Ax::Sat && z3 == Ax::Unsat || run.verdict == Ax::Unsat && z3 == Ax::Sat {
-            panic!(
-                "DISAGREEMENT on named case `{name}`: axeyum = {:?}, Z3 = {z3:?}\n{}",
-                run.verdict,
-                inst.dump()
-            );
-        }
+        assert!(
+            !matches!(
+                (run.verdict, z3),
+                (Ax::Sat, Ax::Unsat) | (Ax::Unsat, Ax::Sat)
+            ),
+            "DISAGREEMENT on named case `{name}`: axeyum = {:?}, Z3 = {z3:?}\n{}",
+            run.verdict,
+            inst.dump()
+        );
         if run.decided_by_dl {
             dl_decided += 1;
         }

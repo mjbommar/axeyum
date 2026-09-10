@@ -246,6 +246,8 @@ impl Corner {
 
     /// Emits the atoms this corner is defined by and returns a skeleton node
     /// mentioning them, so the corner cannot be generated and then dropped.
+    // One arm per corner class, each spelling out the shape it is defined by.
+    #[allow(clippy::too_many_lines, clippy::many_single_char_names)]
     fn emit(self, rng: &mut Lcg, num_vars: usize, atoms: &mut Vec<LinAtom>) -> Node {
         let push = |atoms: &mut Vec<LinAtom>, a: LinAtom| {
             atoms.push(a);
@@ -703,12 +705,12 @@ fn build_atom_z3(vars: &[Int], atom: &LinAtom) -> Bool {
             // SMT-LIB `abs`. Z3's `Int` has no `abs` builder, and the `ite`
             // form is exactly the SMT-LIB definition.
             Wrap::Abs => lhs
-                .ge(&Int::from_i64(0))
+                .ge(Int::from_i64(0))
                 .ite(&lhs, &Int::sub(&[Int::from_i64(0), lhs.clone()])),
             // `Z3_mk_div` / `Z3_mk_mod` are SMT-LIB `div` / `mod` verbatim,
             // including the underspecified-by-zero case.
-            Wrap::Div(d) => lhs.div(&divisor(d)),
-            Wrap::Mod(d) => lhs.modulo(&divisor(d)),
+            Wrap::Div(d) => lhs.div(divisor(d)),
+            Wrap::Mod(d) => lhs.modulo(divisor(d)),
         };
     }
     let rhs = Int::from_i64(atom.rhs);
@@ -762,8 +764,8 @@ fn build_node_z3(node: &Node, atoms: &[Bool]) -> Bool {
         Node::Not(x) => build_node_z3(x, atoms).not(),
         Node::And(l, r) => Bool::and(&[build_node_z3(l, atoms), build_node_z3(r, atoms)]),
         Node::Or(l, r) => Bool::or(&[build_node_z3(l, atoms), build_node_z3(r, atoms)]),
-        Node::Implies(l, r) => build_node_z3(l, atoms).implies(&build_node_z3(r, atoms)),
-        Node::Xor(l, r) => build_node_z3(l, atoms).xor(&build_node_z3(r, atoms)),
+        Node::Implies(l, r) => build_node_z3(l, atoms).implies(build_node_z3(r, atoms)),
+        Node::Xor(l, r) => build_node_z3(l, atoms).xor(build_node_z3(r, atoms)),
         Node::Ite(c, t, e) => {
             build_node_z3(c, atoms).ite(&build_node_z3(t, atoms), &build_node_z3(e, atoms))
         }
@@ -992,11 +994,15 @@ fn corner_coverage_is_total() {
     );
 }
 
+/// One hand-written pin: name, variable count, atoms, roots.
+type NamedCase = (&'static str, usize, Vec<LinAtom>, Vec<Node>);
+
 /// Hand-written, named degenerate queries whose verdict is fixed by SMT-LIB
 /// semantics, cross-checked against Z3.
 #[test]
+#[allow(clippy::too_many_lines)]
 fn named_degenerate_cases_match_z3() {
-    let cases: &[(&str, usize, Vec<LinAtom>, Vec<Node>)] = &[
+    let cases: &[NamedCase] = &[
         (
             // `div` by a CONSTANT zero is UNDERSPECIFIED, not an error and not
             // a fixed convention: `(div x 0) = 5` is SATISFIABLE. A solver that
