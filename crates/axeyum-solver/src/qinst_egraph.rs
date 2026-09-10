@@ -2169,10 +2169,13 @@ fn prove_quantified_unsat_via_egraph_impl(
                         .count();
                     eprintln!(
                         "QPROBE egraph-fixpoint round={round} ground={} foralls={} \
-                         patterns={} triggerless={triggerless}",
+                         patterns={} triggerless={triggerless} \
+                         shared_assertions={} unattributed={}",
                         ground.len(),
                         matcher.quantifiers.len(),
                         matcher.patterns.len(),
+                        matcher.admission_census.shared_assertion_universals,
+                        matcher.admission_census.unattributed,
                     );
                     let mut admitted_per_universal: Vec<usize> = vec![0; matcher.quantifiers.len()];
                     for derivation in matcher.ground_derivations.values() {
@@ -2188,12 +2191,34 @@ fn prove_quantified_unsat_via_egraph_impl(
                     for (index, quantifier) in matcher.quantifiers.iter().enumerate() {
                         let (emitted, starved) =
                             matcher.join_stats.get(index).copied().unwrap_or((0, 0));
+                        let rejects = matcher
+                            .admission_census
+                            .per_universal
+                            .get(index)
+                            .copied()
+                            .unwrap_or_default();
                         eprintln!(
                             "QPROBE   universal[{index}] vars={} patterns={} joined={emitted} \
-                             starved_joins={starved} admitted={}",
+                             starved_joins={starved} admitted={} \
+                             rej_handoff={} rej_poscap={} rej_nocontext={} \
+                             rej_expired={} rej_subst={} rej_true={} \
+                             rej_unreleased={} rej_flood={} rej_ceiling={} rej_check={} \
+                             rej_seen={} census_admitted={}",
                             quantifier.vars.len(),
                             quantifier.pattern_indices.len(),
                             admitted_per_universal[index],
+                            rejects.inactive_handed_off,
+                            rejects.inactive_positive_capped,
+                            rejects.inactive_dropped,
+                            rejects.expired,
+                            rejects.subst_failed,
+                            rejects.redundant_true,
+                            rejects.pool_unreleased,
+                            rejects.flood_truncated,
+                            rejects.ground_ceiling,
+                            rejects.check_failed,
+                            rejects.already_seen,
+                            rejects.admitted,
                         );
                     }
                 }
@@ -2388,16 +2413,20 @@ fn scoped_candidate_fixpoint_step(
                 derivations,
                 ..
             } = candidate.batch;
-            Ok(CandidateFixpointStep::Added(admit_generated_ground(
+            let mut census = std::mem::take(&mut matcher.admission_census);
+            let added = admit_generated_ground(
                 arena,
                 assertions,
-                urgent,
+                &urgent,
                 seen,
                 ground,
                 ground_derivations,
                 &derivations,
                 generations,
-            )))
+                &mut census,
+            );
+            matcher.admission_census = census;
+            Ok(CandidateFixpointStep::Added(added))
         }
     }
 }
@@ -2772,15 +2801,19 @@ fn admit_next_source_batch(
     urgent.extend(units);
     urgent.sort_by_key(|term| term.index());
     urgent.dedup();
+    // The census is taken out for the round: the pools below need `&mut` on it
+    // while `budget_flood_slice` reads the matcher.
+    let mut census = std::mem::take(&mut matcher.admission_census);
     let mut admitted = admit_generated_ground(
         arena,
         assertions,
-        urgent,
+        &urgent,
         seen,
         ground,
         retained,
         &derivations,
         generations,
+        &mut census,
     );
     let mut pool = "urgent";
     // Once urgent traffic is exhausted, release unresolved clauses so mutually
@@ -2798,20 +2831,32 @@ fn admit_next_source_batch(
                 generations,
                 policy,
                 funnel,
+                &mut census,
             );
         }
         admitted = admit_generated_ground(
             arena,
             assertions,
-            deferred,
+            &deferred,
             seen,
             ground,
             retained,
             &derivations,
             generations,
+            &mut census,
         );
         pool = "deferred";
+    } else {
+        // The deferred pool was NEVER OFFERED this round: urgent/unit traffic
+        // admitted first and the gate above is `admitted.is_empty()`. These
+        // candidates are re-materialized next round, so this counts round-tuples,
+        // not distinct lost instances -- but a universal whose entire output is
+        // deferred and whose file always has urgent traffic never gets a turn.
+        census.charge(&deferred, &derivations, |rejects| {
+            &mut rejects.pool_unreleased
+        });
     }
+    matcher.admission_census = census;
     if floodprobe_enabled() {
         eprintln!(
             "FLOODPROBE round-admit urgent_cand={urgent_candidates} unit_cand={unit_candidates} \
@@ -2857,6 +2902,7 @@ fn budget_flood_slice(
     generations: &TermGenerations,
     policy: RelevancePolicy,
     funnel: &mut RelevanceFunnel,
+    census: &mut AdmissionCensus,
 ) -> Vec<TermId> {
     if pool.len() <= policy.round_admission_cap {
         return pool;
@@ -2878,6 +2924,15 @@ fn budget_flood_slice(
     // selection experiment that also changed that is not measuring selection.
     if !policy.rank_by_residual && policy.max_residual_width == usize::MAX {
         deep.sort_by_key(|&(generation, term)| (generation, term.index()));
+        if census.enabled && deep.len() > policy.round_admission_cap {
+            let dropped: Vec<TermId> = deep[policy.round_admission_cap..]
+                .iter()
+                .map(|&(_, term)| term)
+                .collect();
+            census.charge(&dropped, derivations, |rejects| {
+                &mut rejects.flood_truncated
+            });
+        }
         deep.truncate(policy.round_admission_cap);
         eager.extend(deep.into_iter().map(|(_, term)| term));
         return eager;
@@ -2917,6 +2972,15 @@ fn budget_flood_slice(
     } else {
         scored.sort_by_key(|&(_, generation, term)| (generation, term.index()));
     }
+    if census.enabled && scored.len() > policy.round_admission_cap {
+        let dropped: Vec<TermId> = scored[policy.round_admission_cap..]
+            .iter()
+            .map(|&(_, _, term)| term)
+            .collect();
+        census.charge(&dropped, derivations, |rejects| {
+            &mut rejects.flood_truncated
+        });
+    }
     scored.truncate(policy.round_admission_cap);
     let chosen: Vec<TermId> = scored.into_iter().map(|(_, _, term)| term).collect();
     if chosen
@@ -2940,6 +3004,19 @@ fn floodprobe_enabled() -> bool {
 /// probes are clock-free, so this is checked at the exits rather than cached.
 fn qprobe_enabled() -> bool {
     std::env::var_os("AXEYUM_QPROBE").is_some()
+}
+
+/// Whether the per-universal admission attribution
+/// ([`AdmissionCensus`]) is on, on top of `AXEYUM_QPROBE`.
+///
+/// A SECOND variable rather than a field of the first, because the census is
+/// not free: it does a `HashMap` lookup per pool term per round, and this loop
+/// is perturbation-sensitive by its own comments. Running `AXEYUM_QPROBE=1`
+/// alone reproduces the historical probe EXACTLY, so the census arm can be
+/// differenced against it and the perturbation reported as a number instead of
+/// assumed away.
+fn census_enabled() -> bool {
+    std::env::var_os("AXEYUM_QPROBE_CENSUS").is_some()
 }
 
 /// Z3-style instantiation generations (T2.6.4; `qi_queue.cpp` cost
@@ -3093,22 +3170,30 @@ fn floodprobe_cap_census(
 fn admit_generated_ground(
     arena: &mut TermArena,
     assertions: &[TermId],
-    terms: Vec<TermId>,
+    terms: &[TermId],
     seen: &mut HashSet<TermId>,
     ground: &mut Vec<TermId>,
     retained: &mut HashMap<TermId, QuantifierGroundDerivation>,
     candidates: &HashMap<TermId, QuantifierGroundDerivation>,
     generations: &mut TermGenerations,
+    census: &mut AdmissionCensus,
 ) -> Vec<TermId> {
     let mut added = Vec::new();
-    for term in terms {
+    for (position, term) in terms.iter().copied().enumerate() {
         if ground.len() >= ground_budget().ceiling {
+            census.charge(&terms[position..], candidates, |rejects| {
+                &mut rejects.ground_ceiling
+            });
             break;
         }
         let Some(derivation) = candidates.get(&term) else {
+            census.unattributed += usize::from(census.enabled);
             continue;
         };
         if !check_quantifier_ground_derivation(arena, assertions, derivation) {
+            if let Some(slot) = census.for_derivation(derivation) {
+                slot.check_failed += 1;
+            }
             continue;
         }
         if seen.insert(term) {
@@ -3117,6 +3202,11 @@ fn admit_generated_ground(
             retained.insert(term, derivation.clone());
             ground.push(term);
             added.push(term);
+            if let Some(slot) = census.for_derivation(derivation) {
+                slot.admitted += 1;
+            }
+        } else if let Some(slot) = census.for_derivation(derivation) {
+            slot.already_seen += 1;
         }
     }
     added
@@ -3586,6 +3676,162 @@ struct LazyClauseBatch {
     deferred: Vec<TermId>,
     instance_certificates: BTreeMap<TermId, QuantifierInstanceCertificate>,
     redundant: usize,
+    /// `AXEYUM_QPROBE` attribution for this round's tuples of this universal.
+    /// Folded into [`IncrementalEmatchSession::admission_census`] by
+    /// `lazy_clause_batches` before the batch leaves the matcher.
+    rejects: AdmissionRejects,
+}
+
+/// What happened to each joined witness tuple of one universal on its way to
+/// admission, as **tuple counts summed over every round** (not rounds).
+///
+/// `AXEYUM_QPROBE` only — every increment is behind
+/// [`AdmissionCensus::enabled`], so with the probe off this costs one
+/// already-resolved bool per rejection site. The buckets partition the path
+/// from a tuple that `match_witness_tuples` joined to a term in `ground`:
+/// matcher-side (`inactive` … `redundant_true`) are decided in
+/// [`IncrementalEmatchSession::lazy_clause_batches`], the rest in
+/// [`admit_next_source_batch`] and below.
+#[derive(Debug, Default, Clone, Copy)]
+struct AdmissionRejects {
+    /// The universal is a non-asserted registration (`!active`) WITH a
+    /// positive-replacement context: its tuples are handed to the Slice-3
+    /// discovery driver, which admits the owner formula with the universal
+    /// replaced. Not a loss — the instance simply lands under another
+    /// universal's name.
+    inactive_handed_off: usize,
+    /// A registration's tuples past `MAX_POSITIVE_TUPLES_PER_ROUND`: joined,
+    /// contextful, and dropped by the per-round discovery cap.
+    inactive_positive_capped: usize,
+    /// The universal is a non-asserted registration with NO context. Its tuples
+    /// are joined and then discarded outright — nothing downstream sees them.
+    inactive_dropped: usize,
+    /// The round's deadline expired before this universal's tuples were
+    /// materialized (`match_witness_tuples` had already joined them).
+    expired: usize,
+    /// `replace_subterms` refused the substitution into the body.
+    subst_failed: usize,
+    /// The round's congruence already makes the instance clause
+    /// `ClauseValue::True` — the shipped entailment filter.
+    redundant_true: usize,
+    /// Classified into the deferred pool, but the pool was never released this
+    /// round because urgent/unit traffic admitted first
+    /// (`admit_next_source_batch`'s `if admitted.is_empty()` gate).
+    pool_unreleased: usize,
+    /// Dropped by [`budget_flood_slice`]: deep-generation remainder past
+    /// `policy.round_admission_cap`.
+    flood_truncated: usize,
+    /// The admission walk hit `ground_budget().ceiling` and stopped.
+    ground_ceiling: usize,
+    /// `check_quantifier_ground_derivation` refused the certificate.
+    check_failed: usize,
+    /// The identical instance term is already in `seen` — admitted on an
+    /// earlier round, or produced first by another universal (the derivation
+    /// map is first-writer-wins, so the admission is credited there).
+    already_seen: usize,
+    /// Reached `ground`.
+    admitted: usize,
+}
+
+impl AdmissionRejects {
+    fn merge(&mut self, other: &Self) {
+        self.inactive_handed_off += other.inactive_handed_off;
+        self.inactive_positive_capped += other.inactive_positive_capped;
+        self.inactive_dropped += other.inactive_dropped;
+        self.expired += other.expired;
+        self.subst_failed += other.subst_failed;
+        self.redundant_true += other.redundant_true;
+        self.pool_unreleased += other.pool_unreleased;
+        self.flood_truncated += other.flood_truncated;
+        self.ground_ceiling += other.ground_ceiling;
+        self.check_failed += other.check_failed;
+        self.already_seen += other.already_seen;
+        self.admitted += other.admitted;
+    }
+}
+
+/// Per-universal [`AdmissionRejects`], plus the attribution map the downstream
+/// pools need (they carry terms, not universal indices).
+#[derive(Debug, Default)]
+struct AdmissionCensus {
+    enabled: bool,
+    per_universal: Vec<AdmissionRejects>,
+    /// First universal index for each distinct assertion term. This is the
+    /// same first-wins attribution the fixpoint report itself uses, so the
+    /// table and the `admitted=` column agree by construction.
+    index_by_assertion: HashMap<TermId, usize>,
+    /// Universals whose assertion term is shared with an earlier universal.
+    /// Their downstream counts land on the earlier one, so a nonzero value
+    /// here is a caveat on the whole table and is printed with it.
+    shared_assertion_universals: usize,
+    /// Pool terms with no derivation to attribute them to.
+    unattributed: usize,
+}
+
+impl AdmissionCensus {
+    /// Sizes the table to the current universal population (nested discovery
+    /// adds universals mid-run) and resolves the probe flag once.
+    fn ensure(&mut self, quantifiers: &[CompiledUniversal]) {
+        if self.per_universal.is_empty() && !quantifiers.is_empty() {
+            self.enabled = qprobe_enabled() && census_enabled();
+        }
+        while self.per_universal.len() < quantifiers.len() {
+            let index = self.per_universal.len();
+            self.per_universal.push(AdmissionRejects::default());
+            // First-wins, matching the fixpoint report's `position(...)`.
+            match self.index_by_assertion.entry(quantifiers[index].assertion) {
+                std::collections::hash_map::Entry::Occupied(_) => {
+                    self.shared_assertion_universals += 1;
+                }
+                std::collections::hash_map::Entry::Vacant(slot) => {
+                    slot.insert(index);
+                }
+            }
+        }
+    }
+
+    fn for_assertion(&mut self, assertion: TermId) -> Option<&mut AdmissionRejects> {
+        if !self.enabled {
+            return None;
+        }
+        let index = *self.index_by_assertion.get(&assertion)?;
+        self.per_universal.get_mut(index)
+    }
+
+    fn for_derivation(
+        &mut self,
+        derivation: &QuantifierGroundDerivation,
+    ) -> Option<&mut AdmissionRejects> {
+        let assertion = match derivation {
+            QuantifierGroundDerivation::Instance(certificate) => certificate.assertion,
+            QuantifierGroundDerivation::Propagation(propagation) => propagation.assertion,
+        };
+        self.for_assertion(assertion)
+    }
+
+    /// Attributes every term in `terms` to one bucket, selected by `pick`.
+    fn charge(
+        &mut self,
+        terms: &[TermId],
+        candidates: &HashMap<TermId, QuantifierGroundDerivation>,
+        pick: fn(&mut AdmissionRejects) -> &mut usize,
+    ) {
+        if !self.enabled {
+            return;
+        }
+        for term in terms {
+            match candidates.get(term) {
+                Some(derivation) => {
+                    if let Some(slot) = self.for_derivation(derivation) {
+                        *pick(slot) += 1;
+                    } else {
+                        self.unattributed += 1;
+                    }
+                }
+                None => self.unattributed += 1,
+            }
+        }
+    }
 }
 
 struct CompiledUniversal {
@@ -4283,6 +4529,10 @@ struct IncrementalEmatchSession {
     /// Per-universal `(emitted joined tuples, starved joins)` — diagnostics
     /// for the `AXEYUM_QPROBE` fixpoint report only.
     join_stats: Vec<(usize, usize)>,
+    /// Per-universal admission attribution for the `AXEYUM_QPROBE` fixpoint
+    /// report only. Taken out by [`admit_next_source_batch`] for the duration
+    /// of a round (the pools below it need `&mut` while the matcher is read).
+    admission_census: AdmissionCensus,
     /// Slice 3: `(quantifier index, witness tuple)` for every registration whose
     /// triggers fired this round. The driver drains these and turns each into the
     /// entailed positive replacement of the owner formula; the matcher itself
@@ -4482,6 +4732,7 @@ impl IncrementalEmatchSession {
             merge_affected_patterns: 0,
             extensions: 0,
             join_stats: Vec::new(),
+            admission_census: AdmissionCensus::default(),
             pending_positive: Vec::new(),
         }
     }
@@ -4904,12 +5155,24 @@ impl IncrementalEmatchSession {
         }
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one tuple-materialization loop; the added lines are the \
+                  AXEYUM_QPROBE admission census's rejection arms, which have \
+                  to sit exactly where the rejection happens"
+    )]
     fn lazy_clause_batches(
         &mut self,
         arena: &mut TermArena,
         deadline: Option<Instant>,
     ) -> Vec<LazyClauseBatch> {
         let tuple_batches = self.match_witness_tuples(deadline);
+        {
+            let quantifiers = &self.quantifiers;
+            let census = &mut self.admission_census;
+            census.ensure(quantifiers);
+        }
+        let census_on = self.admission_census.enabled;
         // Deadline discipline: instance materialization below is O(tuples ×
         // body size), so consult the clock at coarse tuple granularity. An
         // expired clock truncates to the batches built so far — instances are
@@ -4921,8 +5184,15 @@ impl IncrementalEmatchSession {
         let mut pending_positive: Vec<(usize, Vec<TermId>)> = Vec::new();
         for (index, (quantifier, tuples)) in self.quantifiers.iter().zip(tuple_batches).enumerate()
         {
+            let joined_count = tuples.as_ref().map_or(0, Vec::len);
             let (Some(tuples), false) = (tuples, expired) else {
-                batches.push(LazyClauseBatch::default());
+                let mut batch = LazyClauseBatch::default();
+                if census_on && expired {
+                    // `match_witness_tuples` joined these; the clock, not a
+                    // filter, is why they were never materialized.
+                    batch.rejects.expired += joined_count;
+                }
+                batches.push(batch);
                 continue;
             };
             // Registrations are matched, never asserted (see `active`). The
@@ -4932,25 +5202,38 @@ impl IncrementalEmatchSession {
             // driver, which admits the *owner with the universal replaced* —
             // entailed — rather than the bare instance, which is not.
             if !quantifier.active {
+                let mut batch = LazyClauseBatch::default();
                 if quantifier.context.is_some() {
+                    let joined = tuples.len();
+                    let mut handed_off = 0usize;
                     for tuple in tuples {
                         if pending_positive.len() >= MAX_POSITIVE_TUPLES_PER_ROUND {
                             break;
                         }
                         pending_positive.push((index, tuple));
+                        handed_off += 1;
                     }
+                    if census_on {
+                        batch.rejects.inactive_handed_off += handed_off;
+                        batch.rejects.inactive_positive_capped += joined - handed_off;
+                    }
+                } else if census_on {
+                    batch.rejects.inactive_dropped += tuples.len();
                 }
-                batches.push(LazyClauseBatch::default());
+                batches.push(batch);
                 continue;
             }
             {
                 let mut batch = LazyClauseBatch::default();
-                for tuple in &tuples {
+                for (position, tuple) in tuples.iter().enumerate() {
                     tuples_since_clock_check += 1;
                     if tuples_since_clock_check >= 64 {
                         tuples_since_clock_check = 0;
                         if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
                             expired = true;
+                            if census_on {
+                                batch.rejects.expired += tuples.len() - position;
+                            }
                             break;
                         }
                     }
@@ -4964,6 +5247,9 @@ impl IncrementalEmatchSession {
                     let Ok(instance) =
                         replace_subterms(arena, quantifier.body, &replacements, &mut memo)
                     else {
+                        if census_on {
+                            batch.rejects.subst_failed += 1;
+                        }
                         continue;
                     };
                     batch
@@ -4977,7 +5263,12 @@ impl IncrementalEmatchSession {
                     match evaluate_equality_clause_with(arena, instance, &mut |lhs, rhs| {
                         self.equality(lhs, rhs)
                     }) {
-                        Some(ClauseValue::True) => batch.redundant += 1,
+                        Some(ClauseValue::True) => {
+                            batch.redundant += 1;
+                            if census_on {
+                                batch.rejects.redundant_true += 1;
+                            }
+                        }
                         Some(ClauseValue::False) => batch.urgent.push(instance),
                         Some(ClauseValue::Unit) => {
                             match self.detached_propagation(arena, quantifier, tuple, instance) {
@@ -5007,6 +5298,13 @@ impl IncrementalEmatchSession {
             }
         }
         self.pending_positive.extend(pending_positive);
+        if census_on {
+            for (index, batch) in batches.iter().enumerate() {
+                if let Some(slot) = self.admission_census.per_universal.get_mut(index) {
+                    slot.merge(&batch.rejects);
+                }
+            }
+        }
         batches
     }
 
@@ -5609,16 +5907,20 @@ impl IncrementalEmatchSession {
                 }
             }
         }
-        admit_generated_ground(
+        let mut census = std::mem::take(&mut self.admission_census);
+        let added = admit_generated_ground(
             arena,
             assertions,
-            order,
+            &order,
             seen,
             ground,
             retained,
             &candidates,
             generations,
-        )
+            &mut census,
+        );
+        self.admission_census = census;
+        added
     }
 
     /// Adds one invented ground term to the matcher's e-graph (nodes only —
@@ -10149,12 +10451,13 @@ mod tests {
             admit_generated_ground(
                 &mut arena,
                 &assertions,
-                vec![instance_one, instance_two, instance_three],
+                &[instance_one, instance_two, instance_three],
                 &mut seen,
                 &mut ground,
                 &mut retained,
                 &candidates,
                 &mut generations,
+                &mut AdmissionCensus::default(),
             ),
             vec![instance_one]
         );
