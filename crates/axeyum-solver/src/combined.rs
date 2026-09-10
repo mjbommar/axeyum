@@ -132,7 +132,18 @@ pub fn check_with_all_theories<B: SolverBackend>(
 
     let backend_config = config_with_remaining_deadline(config, deadline);
     let result = backend.check(arena, int_blast.assertions(), &backend_config)?;
-    if past_deadline(deadline) {
+    // A DEFINITE verdict is kept regardless of the wall clock: the deadline is a
+    // resource budget, not a correctness gate (ADR-1906). Only an UNDECIDED
+    // result degrades to the timeout reason.
+    //
+    // This gate used to be unconditional, and it did not even look at `result`
+    // before discarding it -- which made it the SECOND late-result discard in
+    // series on every QF_BV front-door route, since this function is the funnel
+    // `auto.rs`'s `qf-bv` arms go through. Fixing only the backend's own gate
+    // (`sat_bv_backend.rs`) would have been inert here while a green suite said
+    // otherwise. See
+    // `docs/research/03-measurements/late-result-keep-safety-2026-09-10.md`.
+    if matches!(result, CheckResult::Unknown(_)) && past_deadline(deadline) {
         return Ok(timeout("combined-theory timeout after scalar backend"));
     }
     let model = match result {
@@ -163,12 +174,22 @@ pub fn check_with_all_theories<B: SolverBackend>(
     // model) returns `Err` → a sound `Unknown`, NOT a backend error ("`unknown` is
     // first-class, never an error"). A wrong projection can only make the replay fail
     // (→ decline), never accept a wrong `sat`.
+    //
+    // FROM HERE THE VERDICT IS DECIDED AND THE DEADLINE IS NOT CONSULTED AGAIN.
+    // Four `past_deadline` gates used to sit in the projection chain and the
+    // replay loop below (ADR-1906 removed them). Each discarded a `Sat` that had
+    // already been decided, so leaving any one of them would have neutered the
+    // gate fix above: a kept `sat` would reach the replay loop, fail its very
+    // first clock read, and return `timeout` anyway. They are DELETED rather
+    // than made unreachable, because a guard that cannot fire is not a safety
+    // mechanism, it is unexecuted code claiming to be one.
+    //
+    // What remains below is bounded, size-proportional work with no search in
+    // it: three model projections and one evaluation pass over the original
+    // assertions -- the soundness anchor itself. Discarding its input does not
+    // refund the time already spent; it only converts an answer into a
+    // non-answer.
     let with_integers = int_blast.integer_model(&model.to_assignment());
-    if past_deadline(deadline) {
-        return Ok(timeout(
-            "combined-theory timeout after integer model projection",
-        ));
-    }
     let with_functions = match func_elim.project_model(arena, &with_integers) {
         Ok(projected) => projected,
         Err(error) => {
@@ -177,11 +198,6 @@ pub fn check_with_all_theories<B: SolverBackend>(
             )));
         }
     };
-    if past_deadline(deadline) {
-        return Ok(timeout(
-            "combined-theory timeout after function model projection",
-        ));
-    }
     let projected = match array_elim.project_model(arena, &with_functions) {
         Ok(projected) => projected,
         Err(error) => {
@@ -190,11 +206,6 @@ pub fn check_with_all_theories<B: SolverBackend>(
             )));
         }
     };
-    if past_deadline(deadline) {
-        return Ok(timeout(
-            "combined-theory timeout after array model projection",
-        ));
-    }
 
     // REPLAY CHECK (the soundness anchor): every original assertion must evaluate to
     // `Bool(true)` under the projected model through the ground evaluator (which
@@ -204,9 +215,6 @@ pub fn check_with_all_theories<B: SolverBackend>(
     // wraparound. Either way the *sound* outcome is a decline to `Unknown` — never an
     // emitted (possibly wrong) `Sat`, and matching euf's strictness.
     for &assertion in assertions {
-        if past_deadline(deadline) {
-            return Ok(timeout("combined-theory timeout during model replay"));
-        }
         match eval(arena, assertion, &projected) {
             Ok(Value::Bool(true)) => {}
             Ok(Value::Bool(false)) => {

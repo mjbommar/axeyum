@@ -477,10 +477,15 @@ pub fn solve_with_drat_proof(formula: &CnfFormula) -> ProofSolveOutcome {
 /// Solves `formula` with the proof-producing CDCL core, stopping early if the
 /// optional wall-clock `deadline` passes.
 ///
-/// `deadline` is checked on a deterministic conflict cadence (every
-/// `DEADLINE_CHECK_INTERVAL` conflicts), so the search trajectory up to the
-/// stopping point is identical to the unbounded run — only *whether* it stops is
-/// time-dependent. On expiry the core returns [`ProofSolveOutcome::Interrupted`],
+/// `deadline` is checked on a deterministic **event** cadence — every
+/// `DEADLINE_CHECK_INTERVAL` conflicts *and* every `DEADLINE_CHECK_INTERVAL`
+/// search-loop iterations — so the search trajectory up to the stopping point is
+/// identical to the unbounded run; only *whether* it stops is time-dependent.
+/// The iteration cadence is what bounds a **propagation-bound** search, which
+/// conflicts too rarely to ever reach the conflict cadence: item 3.9 measured a
+/// whole `QF_BV` family whose searches finish under 256 conflicts and which
+/// therefore overran a 10 s budget by up to 8.01x while the conflict cadence was
+/// the only one. On expiry the core returns [`ProofSolveOutcome::Interrupted`],
 /// an undecided verdict; it never returns `sat`/`unsat` by timeout.
 ///
 /// [`solve_with_drat_proof`] is the `deadline = None` (proof-revalidator) entry.
@@ -2176,6 +2181,23 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     /// Search-loop iterations taken while a theory is attached, counted against
     /// [`THEORY_STEP_BUDGET`]. Never incremented for [`NullTheory`].
     theory_steps: usize,
+    /// Search-loop iterations, counted on EVERY search (theory or not), solely
+    /// so the wall-clock deadline has a cadence it can actually reach.
+    ///
+    /// The conflict cadence alone cannot bound a **propagation-bound** search:
+    /// measured on the `pspace/ndist.b` shape, the whole search is fewer than
+    /// 256 conflicts at 12-51 conflicts/second, so the every-1,024-conflicts
+    /// check at `handle_conflict` never fires once and a 10 s budget overran by
+    /// 1.15x-8.01x (`docs/research/03-measurements/`
+    /// `why-43-satisfiable-qfbv-miss-2026-09-10.md`). A loop iteration is one
+    /// propagate-to-fixpoint, so this counter advances whether or not the
+    /// search is conflicting.
+    ///
+    /// It is a COUNT of search events, never a clock read, so it preserves the
+    /// property the conflict cadence exists to protect: the trajectory up to the
+    /// stopping point is identical to the unbounded run, and only *whether* the
+    /// search stops is time-dependent.
+    loop_iterations: usize,
     /// Whether this search accumulates [`NativeLayerStats`] (plan slice S7b
     /// step 1). `false` on every entry point but
     /// [`solve_with_theory_and_drat_proof_traced`]: when it is clear, no stage
@@ -2353,6 +2375,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             theory_lemmas: Vec::new(),
             theory_queue: PropagationQueue::new(),
             theory_steps: 0,
+            loop_iterations: 0,
             collect_layer_stats: false,
             layer_stats_mirror: None,
             time_boolean_propagate: Duration::ZERO,
@@ -2527,6 +2550,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         self.qhead = 0;
         self.conflicts = 0;
         self.theory_steps = 0;
+        self.loop_iterations = 0;
         self.conflicts_since_restart = 0;
         self.restart_count = 1;
         self.best_trail_len = 0;
@@ -3156,25 +3180,39 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         max_conflicts: usize,
     ) -> Result<SearchOutcome, ProofSinkError> {
         loop {
-            // Theory-only termination guard (see `THEORY_STEP_BUDGET`) and the
-            // theory-only clock. Both are behind `HAS_THEORY`, so for
-            // `NullTheory` the whole block is dropped at monomorphization and
-            // the shipping SAT trajectory -- including which conflict the clock
-            // is read on -- is byte-identical to before.
+            // The wall-clock deadline, on an ITERATION cadence, for EVERY search.
+            //
+            // This used to live inside the `HAS_THEORY` block below, with the
+            // rationale that "the Boolean core reads the clock on a conflict
+            // cadence, which a theory that propagates without ever conflicting
+            // never reaches". That reasoning was right and its scope was wrong:
+            // a **Boolean** search that propagates without ever conflicting
+            // never reaches it either, and that is not a corner case -- it is
+            // the whole `pspace/ndist.b` QF_BV family, whose searches finish in
+            // under 256 conflicts and so never reach the first every-1,024-
+            // conflicts check. Measured overrun of a 10 s budget: 1.15x to
+            // 8.01x, i.e. the budget was not being enforced, it was being
+            // ignored and then applied retroactively to discard the answer.
+            // See `why-43-satisfiable-qfbv-miss-2026-09-10.md` (item 3.9).
+            //
+            // Determinism is unchanged in kind: this is a COUNT of search
+            // events, not a clock poll rate, so the trajectory up to the
+            // stopping point is still identical to the unbounded run and only
+            // *whether* the search stops is time-dependent -- exactly the
+            // property `DEADLINE_CHECK_INTERVAL` was chosen to protect.
+            self.loop_iterations += 1;
+            if self.loop_iterations.is_multiple_of(DEADLINE_CHECK_INTERVAL)
+                && crate::interrupt::past_deadline(deadline)
+            {
+                self.report_progress();
+                return Ok(SearchOutcome::Interrupted);
+            }
+            // Theory-only termination guard (see `THEORY_STEP_BUDGET`). Behind
+            // `HAS_THEORY`, so for `NullTheory` the whole block is dropped at
+            // monomorphization.
             if T::HAS_THEORY {
                 self.theory_steps += 1;
                 if self.theory_steps > THEORY_STEP_BUDGET {
-                    self.report_progress();
-                    return Ok(SearchOutcome::Interrupted);
-                }
-                // The Boolean core reads the clock on a conflict cadence, which
-                // a theory that propagates without ever conflicting never
-                // reaches. Read it on an iteration cadence too, at the same
-                // interval, so a CDCL(T) search is deadline-bounded on every
-                // path and not only on the conflicting one.
-                if self.theory_steps.is_multiple_of(DEADLINE_CHECK_INTERVAL)
-                    && crate::interrupt::past_deadline(deadline)
-                {
                     self.report_progress();
                     return Ok(SearchOutcome::Interrupted);
                 }
