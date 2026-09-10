@@ -1460,7 +1460,7 @@ macro_rules! full_exports {
         pub use smtlib::{SmtLibResponse, solve_smtlib_session};
         #[doc(hidden)]
         pub use solver::InterpolantOutcome;
-        pub use solver::Solver;
+        pub use solver::{Solver, WarmFacadeStats};
         pub use span_log::{
             EdgeType, Outcome, Reading, SpanKind, SpanLog, SpanLogInputs, Termination,
             division_from_path,

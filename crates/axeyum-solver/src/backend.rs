@@ -688,4 +688,15 @@ pub trait SolverBackend {
     fn last_stats(&self) -> Option<&SolveStats> {
         None
     }
+
+    /// Whether this backend decides exactly what the warm `IncrementalBvSolver`
+    /// decides, by the same procedure — so a `Solver` façade may retain that
+    /// engine across checks instead of re-submitting here (roadmap item 1.1b).
+    ///
+    /// `false` for every backend but the pure-Rust SAT-BV path. Returning `true`
+    /// wrongly would silently swap the decision procedure the consumer chose,
+    /// which is why this is opt-in rather than inferred.
+    fn warm_bv_engine_equivalent(&self) -> bool {
+        false
+    }
 }

@@ -582,6 +582,13 @@ fn record_split_progress(stats: &mut SolveStats, branches: usize, completed: usi
 }
 
 impl SolverBackend for SatBvBackend {
+    /// The pure-Rust SAT-BV path IS what `IncrementalBvSolver` runs warmly:
+    /// the same lowering, the same CNF encoder, the same CDCL core. This is the
+    /// only `true` in the workspace (roadmap item 1.1b).
+    fn warm_bv_engine_equivalent(&self) -> bool {
+        true
+    }
+
     fn capabilities(&self) -> Capabilities {
         Capabilities {
             name: "axeyum-sat-bv native-cdcl".to_owned(),

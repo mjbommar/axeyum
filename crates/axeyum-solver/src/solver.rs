@@ -855,9 +855,7 @@ impl<B: SolverBackend> Solver<B> {
         if matches!(self.warm, Warm::Idle) {
             // Decided once: neither the backend's identity nor `self.config` can
             // change without going through `set_config`, which resets this.
-            if self.backend.capabilities().name != WARM_BV_BACKEND_NAME
-                || !warm_config_is_honored(&self.config)
-            {
+            if !self.backend.warm_bv_engine_equivalent() || !warm_config_is_honored(&self.config) {
                 self.warm = Warm::Off;
                 return None;
             }
@@ -904,19 +902,6 @@ impl<B: SolverBackend> Solver<B> {
         Some(result)
     }
 }
-
-/// The [`Capabilities::name`] the pure-Rust SAT-backed BV backend reports.
-///
-/// This is the *interim* way [`Solver`] asks "is my backend the pure-Rust BV
-/// path, so that [`IncrementalBvSolver`] decides exactly the same queries by
-/// exactly the same procedure?". The durable answer is a defaulted
-/// `SolverBackend::warm_bv_engine_equivalent()` that returns `false` everywhere
-/// except `SatBvBackend`; until that trait method exists, the backend's own
-/// reported name is the only thing a generic `Solver<B>` can observe.
-///
-/// Getting this wrong can only *lose* the warm route, never change a verdict:
-/// every warm outcome that is not a verdict falls back to the backend.
-const WARM_BV_BACKEND_NAME: &str = "axeyum-sat-bv native-cdcl";
 
 /// How [`Solver::check`] and [`Solver::check_assuming`] were decided.
 ///
