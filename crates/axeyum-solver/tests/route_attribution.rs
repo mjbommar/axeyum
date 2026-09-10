@@ -399,30 +399,42 @@ fn nested_dispatch_does_not_flood_the_attribution() {
     // probe count is the number of TOP-LEVEL dispatches this front-door call
     // made.
     //
-    // More than one is legitimate and was measured: this very query records
-    // four. The quantifier loop that sits *above* `check_auto` re-dispatches
-    // the whole query once per instantiation round (three rounds where
-    // `uf-arithmetic` decided the candidate `sat`, then a final round where
-    // `lia-dpll` decided `unsat`). Those are separate top-level decisions, not
-    // recursion inside one — recording them is the point, since the LAST of
-    // them is the one whose verdict is returned.
+    // CORRECTED 2026-09-09 (roadmap item 1.8). This assertion used to require
+    // `1..=32` probes here, on the reasoning that the quantifier loop above
+    // `check_auto` re-dispatches the whole query once per instantiation round
+    // and "the LAST of them is the one whose verdict is returned". That claim
+    // was measured false: on the twelve `uflia_induction` corpus files the last
+    // such dispatch recorded `sat` on SIX files whose verdict is `unknown`, and
+    // named `lia-dpll` on four files ℕ-induction decided. The quantified
+    // ladder's sub-solves are speculative probes, not top-level decisions, and
+    // they are now suppressed (`route_trace::NestedDispatchGuard`) and replaced
+    // by the ladder's own `q:` rung entries.
     //
-    // What must not happen is the guard failing open, which turns every nested
-    // sub-solve made *inside* a dispatch into a top-level entry and produces
-    // probe counts in the hundreds. The ceiling is set to catch that, not to
-    // pin the round count, which is a property of the quantifier loop and would
-    // make this test fail for an unrelated reason.
+    // So for a QUANTIFIED fixture the honest expectation is ZERO dispatch
+    // probes — the ladder owns the attribution — and the liveness half of the
+    // old assertion moves onto the rung entries, which is what must now be
+    // nonzero. The flood guard the test exists for is the `< 200` ceiling
+    // above, which is unchanged and still catches the depth guard failing open.
     let probes = trace
         .attempts()
         .iter()
         .filter(|a| matches!(a.outcome, RouteOutcome::Probe(_)) && a.route == "probe")
         .count();
+    assert_eq!(
+        probes, 0,
+        "a quantified query recorded {probes} quantifier-free dispatch probe(s); the \
+         quantified ladder's sub-solves are speculative and must not be promoted to \
+         top-level entries (roadmap item 1.8)"
+    );
+    let rungs = trace
+        .attempts()
+        .iter()
+        .filter(|a| axeyum_solver::route_trace::quant_rung::ALL.contains(&a.route))
+        .count();
     assert!(
-        (1..=32).contains(&probes),
-        "{probes} dispatch probes recorded for one front-door call; expected a \
-         handful (one per instantiation round). Zero means nothing was \
-         recorded; a large number means the outermost-dispatch guard is failing \
-         open and nested sub-solves are being promoted to top-level entries."
+        rungs > 0,
+        "no quantified-ladder rung was recorded for a quantified query — zero here means \
+         the recorder stopped writing, which would satisfy the probe assertion above for free"
     );
     // The trail's last DECIDED entry must be the one whose verdict came back,
     // which is exactly what makes `decided_by` usable on a re-dispatching query
