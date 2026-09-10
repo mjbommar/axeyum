@@ -1,5 +1,21 @@
 # Where the UF clock goes, and why the probe divisor is not the lever
 
+> **UPDATE 2026-09-10 — the instrument this note audits is now fixed
+> (ADR-1906, commit `72a5adf6f`).** Instrument A no longer conflates MBQI with
+> the full finite-model finder, so the `23.2% q:uf-fmf-full` / `0.0% q:mbqi` /
+> `63.3%` figures below are historical readings of the defective instrument,
+> which is exactly how this note already presents them. **Nothing here is
+> withdrawn.** The 52.4% and 42.4% are instrument-B (`AXEYUM_QTRACE`) numbers
+> and were never contaminated by this defect.
+>
+> One caution for anyone quoting across the two: a re-derivation on the repaired
+> instrument A reads **38.4%** for `probe + full`, against this note's
+> instrument-B **52.4%**. The gap is almost entirely the **probe** term — a rung
+> the fix does not touch — so it is between-run and between-denominator
+> variation, not a further correction. 56.2 / 52.4 / 38.4 are three measurements
+> of three slightly different quantities, not a chain of corrections of one.
+> [`route-trail-mbqi-attribution-fixed-2026-09-10.md`](route-trail-mbqi-attribution-fixed-2026-09-10.md).
+
 Measured 2026-09-10 on `s4` at `8c8671d7f` (+ a measurement-only patch, §Reproducing),
 `taskset -c 0-7`, 4-wide. Load 19.5 → 12.5 for the attribution sweep and 4.7 →
 10.3 across the six A/B arms — a shared box, not an idle one, so the wall-clock
