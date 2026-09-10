@@ -277,18 +277,31 @@ fn run_egraph_quantified_fallback(
     match prove_quantified_unsat_via_egraph(arena, assertions, &egraph_config) {
         Ok(CheckResult::Unsat) => {
             qtrace("egraph", started, "unsat");
+            route_trace::record_quant_rung_result(
+                route_trace::quant_rung::EGRAPH,
+                &CheckResult::Unsat,
+            );
             Ok(Some(CheckResult::Unsat))
         }
         Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) => {
             qtrace("egraph", started, "declined");
+            route_trace::record_quant_rung_declined(
+                route_trace::quant_rung::EGRAPH,
+                DeclineReason::NotApplicable,
+            );
             Ok(None)
         }
         Err(error @ SolverError::Unsupported(_)) => {
             if mbqi_source_shape_supported(arena, assertions) {
                 qtrace("egraph", started, "unsupported->mbqi");
+                route_trace::record_quant_rung_declined(
+                    route_trace::quant_rung::EGRAPH,
+                    DeclineReason::Unsupported,
+                );
                 Ok(None)
             } else if let Some(result) = finite_unknown {
                 qtrace("egraph", started, "unsupported->finite-unknown");
+                route_trace::record_quant_rung_result(route_trace::quant_rung::EGRAPH, &result);
                 Ok(Some(result))
             } else {
                 Err(error)
@@ -315,9 +328,17 @@ fn finish_quantified_solve(
         &witness_config,
     )? {
         qtrace("forall-exists-witness", t0, "decided");
+        route_trace::record_quant_rung_result(
+            route_trace::quant_rung::FORALL_EXISTS_WITNESS,
+            &result,
+        );
         return Ok(result);
     }
     qtrace("forall-exists-witness", t0, "declined");
+    route_trace::record_quant_rung_declined(
+        route_trace::quant_rung::FORALL_EXISTS_WITNESS,
+        DeclineReason::NotApplicable,
+    );
 
     let Some(finite_config) = config_with_remaining_timeout(config, deadline) else {
         return Ok(quantified_timeout("forall-exists witness search"));
@@ -326,6 +347,10 @@ fn finish_quantified_solve(
         finite_result @ (Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_))) => {
             let finite_unknown = retained_finite_unknown(finite_result);
             qtrace("finite-expansion", t0, "declined");
+            route_trace::record_quant_rung_declined(
+                route_trace::quant_rung::FINITE_EXPANSION,
+                DeclineReason::NotApplicable,
+            );
             // Pure-UF finite model finding, probed BEFORE the refutation
             // family on half the remaining budget (the `probe_budget`
             // pattern): the refutation loops below reliably consume their
@@ -361,9 +386,18 @@ fn finish_quantified_solve(
                 && crate::check_model(arena, original_assertions, &model)?
             {
                 qtrace("uf-fmf-probe", t0, "sat");
-                return Ok(CheckResult::Sat(model));
+                let result = CheckResult::Sat(model);
+                route_trace::record_quant_rung_result(
+                    route_trace::quant_rung::UF_FMF_PROBE,
+                    &result,
+                );
+                return Ok(result);
             }
             qtrace("uf-fmf-probe", t0, "declined");
+            route_trace::record_quant_rung_declined(
+                route_trace::quant_rung::UF_FMF_PROBE,
+                DeclineReason::NotApplicable,
+            );
             // Effort ladder (budget-monotone dispatch, after cvc5's
             // QuantifiersEngine effort passes): the model-based refuter is a
             // few *milliseconds* when its first ground candidate already
@@ -407,14 +441,26 @@ fn finish_quantified_solve(
                 CheckResult::Sat(model)
                     if crate::check_model(arena, original_assertions, &model)? =>
                 {
-                    Ok(CheckResult::Sat(model))
+                    let result = CheckResult::Sat(model);
+                    route_trace::record_quant_rung_result(route_trace::quant_rung::MBQI, &result);
+                    Ok(result)
                 }
-                CheckResult::Sat(_) => Ok(CheckResult::Unknown(UnknownReason {
-                    kind: UnknownKind::Incomplete,
-                    detail:
-                        "MBQI candidate lacks a checked model for the original assertion sequence"
-                            .to_owned(),
-                })),
+                CheckResult::Sat(_) => {
+                    route_trace::record_quant_rung_declined(
+                        route_trace::quant_rung::MBQI,
+                        DeclineReason::VerifierRejected(
+                            "MBQI candidate lacks a checked model for the original assertion \
+                             sequence"
+                                .to_owned(),
+                        ),
+                    );
+                    Ok(CheckResult::Unknown(UnknownReason {
+                        kind: UnknownKind::Incomplete,
+                        detail:
+                            "MBQI candidate lacks a checked model for the original assertion sequence"
+                                .to_owned(),
+                    }))
+                }
                 other => {
                     // Pure-UF finite model finding, the SAT-side complement of
                     // the refutation family above. Every route so far —
@@ -443,15 +489,34 @@ fn finish_quantified_solve(
                         && crate::check_model(arena, original_assertions, &model)?
                     {
                         qtrace("uf-fmf-full", t0, "sat");
-                        return Ok(CheckResult::Sat(model));
+                        let result = CheckResult::Sat(model);
+                        route_trace::record_quant_rung_result(
+                            route_trace::quant_rung::UF_FMF_FULL,
+                            &result,
+                        );
+                        return Ok(result);
                     }
                     qtrace("uf-fmf-full", t0, "declined");
+                    route_trace::record_quant_rung_declined(
+                        route_trace::quant_rung::UF_FMF_FULL,
+                        DeclineReason::NotApplicable,
+                    );
+                    // The ladder is out of rungs above ℕ-induction; record the
+                    // MBQI family's own `unknown` against MBQI rather than
+                    // leaving the trail's last word to a declined probe.
+                    route_trace::record_quant_rung_result(route_trace::quant_rung::MBQI, &other);
                     Ok(other)
                 }
             }
         }
         other => {
             qtrace("finite-expansion", t0, "decided");
+            if let Ok(result) = &other {
+                route_trace::record_quant_rung_result(
+                    route_trace::quant_rung::FINITE_EXPANSION,
+                    result,
+                );
+            }
             other
         }
     }
@@ -588,12 +653,8 @@ pub fn solve(
         }
         quant_ladder.disarm();
         let result = check_auto(arena, assertions, &remaining)?;
-        let certified = certify_skolemized_negated_universals(
-            arena,
-            &original_assertions,
-            result,
-            &remaining,
-        );
+        let certified =
+            certify_skolemized_negated_universals(arena, &original_assertions, result, &remaining);
         if is_quantified {
             route_trace::record_quant_rung_result(route_trace::quant_rung::SKOLEM_QF, &certified);
         }
@@ -631,10 +692,7 @@ pub fn solve(
         );
         quant_ladder.disarm();
         let result = check_auto(arena, assertions, &remaining)?;
-        route_trace::record_quant_rung_result(
-            route_trace::quant_rung::VALID_UNIVERSAL_QF,
-            &result,
-        );
+        route_trace::record_quant_rung_result(route_trace::quant_rung::VALID_UNIVERSAL_QF, &result);
         return Ok(result);
     }
 
@@ -858,9 +916,17 @@ fn finish_quantified_solve_or_induct(
         check_auto,
     ) {
         qtrace("nat-induction", t0, "unsat");
+        route_trace::record_quant_rung_result(
+            route_trace::quant_rung::NAT_INDUCTION,
+            &CheckResult::Unsat,
+        );
         return Ok(CheckResult::Unsat);
     }
     qtrace("nat-induction", t0, "declined");
+    route_trace::record_quant_rung_declined(
+        route_trace::quant_rung::NAT_INDUCTION,
+        DeclineReason::NotApplicable,
+    );
     Ok(result)
 }
 
@@ -4121,10 +4187,16 @@ fn mbqi_first_refusal(
     match prove_unsat_by_mbqi(&mut arena.clone(), assertions, &quick_config) {
         Ok(CheckResult::Sat(model)) if crate::check_model(arena, original_assertions, &model)? => {
             qtrace("mbqi-quick", t0, "sat");
-            Ok(Some(CheckResult::Sat(model)))
+            let result = CheckResult::Sat(model);
+            route_trace::record_quant_rung_result(route_trace::quant_rung::MBQI_QUICK, &result);
+            Ok(Some(result))
         }
         Ok(CheckResult::Unsat) => {
             qtrace("mbqi-quick", t0, "unsat");
+            route_trace::record_quant_rung_result(
+                route_trace::quant_rung::MBQI_QUICK,
+                &CheckResult::Unsat,
+            );
             Ok(Some(CheckResult::Unsat))
         }
         // A first-refusal pass must not fail the whole solve: an unsupported
@@ -4132,6 +4204,10 @@ fn mbqi_first_refusal(
         // rungs.
         Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
             qtrace("mbqi-quick", t0, "declined");
+            route_trace::record_quant_rung_declined(
+                route_trace::quant_rung::MBQI_QUICK,
+                DeclineReason::NotApplicable,
+            );
             Ok(None)
         }
         Err(error) => Err(error),
