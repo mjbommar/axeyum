@@ -1178,6 +1178,20 @@ step solver-reconstruct-sweep cargo test -p axeyum-solver --lib --features full 
 # suite, measured idle. Skipped in `hooks/pre-push` for that reason, so this
 # is where it runs.
 step evidence-lean-module-wrapper cargo test -p axeyum-solver --features full --test evidence qf_nra_sos_certificate_wrapper_carries_lean_module
+# The QF_BV capability ratchets (roadmap 3.9), ~34s. Registered HERE because no
+# aggregate gate and no push-hook step runs a solver integration suite by name
+# except the line above -- `cargo test --workspace --lib` skips every `tests/*.rs`
+# outright. Without this line the ratchet would only ever run when a lane thought
+# to type its name, which is how a gate rots.
+#
+# It pins the DECIDE-FRONTIER (largest satisfiable bit width decided) for two
+# graduated families, one search-bound and one encoding-bound, plus the soundness
+# assertion that no instance in the slice is ever answered `unsat`.
+# `corpus/regression/` cannot do this job: it SKIPS `unknown`, so a file
+# regressing from `sat` to `unknown` reads there as a coverage gap and the suite
+# stays green.
+# docs/research/03-measurements/why-43-satisfiable-qfbv-miss-2026-09-10.md
+step qfbv-width-frontier cargo test -p axeyum-solver --features full --test qfbv_width_frontier -- --test-threads=1
 # The axiom-freedom measurements. `axreal: axiom=30` is the whole remaining
 # trusted surface and the claim that the shipped route no longer reaches it
 # rested, until 2026-08-18, on three examples that NO gate ran -- zero

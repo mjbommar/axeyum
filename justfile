@@ -923,6 +923,15 @@ gate-controls:
     # The one evidence test that builds Lean preludes: 292.973s of a 293.08s
     # suite. Skipped in hooks/pre-push; this is where it runs.
     cargo test -p axeyum-solver --features full --test evidence qf_nra_sos_certificate_wrapper_carries_lean_module
+    # The QF_BV capability ratchets (roadmap 3.9), ~34s. Mirrors the
+    # `qfbv-width-frontier` step in scripts/check.sh; both sides on purpose,
+    # because check-aggregate-scope.sh reds on a step that runs on only one.
+    # No push-hook step and no other aggregate step runs a solver integration
+    # suite by name, and `cargo test --workspace --lib` skips tests/*.rs
+    # entirely -- so without this the ratchet only runs when a lane types it.
+    # Expect a NONZERO count (3).
+    # docs/research/03-measurements/why-43-satisfiable-qfbv-miss-2026-09-10.md
+    cargo test -p axeyum-solver --features full --test qfbv_width_frontier -- --test-threads=1
 
 # Is there a FRESH, PASSING, fully-measured `local-ci --record` for (an
 # ancestor of) HEAD? A green record proves nothing on its own -- see
