@@ -123,7 +123,11 @@ because two of these are larger than we have been claiming.
 
 - **Exact arithmetic is a tie, not a differentiator.** Z3's `lp::mpq` is its
   bignum `rational` and its simplex values are rational+δ pairs, the same as
-  ours. We should stop listing this as an advantage.
+  ours. **Done** — the row was removed from `02-z3.md`'s "We have, they do not"
+  table under
+  [ADR-1905](../research/09-decisions/adr-1905-exact-arithmetic-is-parity-not-a-differentiator.md),
+  which also records the sweep establishing that this was the only place in the
+  tree the claim survived.
 - **Our own strings doc understates our surface.**
   `docs/solver-inventory-2026-09/07-strings-and-regex.md` omits `str.update` and
   the whole `seq.*` family, which we do lower (`parse.rs:2643` and following).

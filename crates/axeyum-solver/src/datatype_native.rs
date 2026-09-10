@@ -671,6 +671,11 @@ fn project_and_replay(
             out.set(symbol, value);
         }
     }
+    // Roadmap 2.11: this carried symbol entries only, while the replay above ran
+    // against `assignment` -- which starts life as `model.to_assignment()` and so
+    // carries whatever function interpretations and division-at-zero witnesses
+    // the inner model held.
+    out.carry_assignment_components(&assignment);
     Ok(CheckResult::Sat(out))
 }
 

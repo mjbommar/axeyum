@@ -127,6 +127,20 @@ green through a regression).
 3. **Category D — the admission filter.** 3,110 rounds where joins existed and
    nothing was admitted. Unlike C, this is a decision we make per candidate,
    which means it can be made better rather than merely bigger.
+
+   **Done — see
+   [`what-the-admission-filter-rejects-2026-09-10.md`](what-the-admission-filter-rejects-2026-09-10.md).**
+   It is four causes, not one. A quarter of D is bookkeeping (the same instance
+   admitted under another universal's name), the entailment filter is 94.5%
+   provably free, and the real cause is a per-round PRIORITY: the deferred pool
+   is gated on urgent traffic running dry, which on the large files here happens
+   once in the whole run. Releasing it alongside urgent traffic takes the slice
+   from 1 of 32 to **3 of 32** with no measured loss.
+
+   That document also **refutes the A–E split in the table above.** It was
+   measured before `318930806`, the fix this same document announces; on the
+   current tree the shares are A 4.5% / B 69.0% / C 8.3% / D 4.0% / E 14.2%.
+   The 86.6% headline survives (85.8% now); the four-way split does not.
 4. **Not category C by raising the ceiling.** Flooding harder is the lever
    Phase 3 already measured at zero from two directions (3.5's 8x ground-ceiling
    arm, and the 120 s budget arm where 24 of 32 files return `unknown` *before*

@@ -804,6 +804,140 @@ const MAX_DIRECT_INSTANCES_TOTAL: usize = 1024;
 const MAX_DIRECT_INSTANCES_PER_UNIVERSAL_STEP: usize = 8;
 const MAX_DIRECT_TUPLE_VISITS_PER_UNIVERSAL_STEP: usize = 512;
 
+/// The name prefix `quant_skolemize::fresh_skolem` gives a Skolem **function**
+/// (arity > 0). Its constant sibling is `!qsk_`; only the function matters
+/// here, because a Skolem constant is already a ground term the e-graph holds.
+const SKOLEM_FUNCTION_PREFIX: &str = "!qskf_";
+
+/// Skolem-application **priming**: one bounded pass, run ONCE before the
+/// instantiation loop's first round, that instantiates every active universal
+/// whose body applies a Skolem function to its own bound variables.
+///
+/// # Why this exists, and why it is not the invention route
+///
+/// `does-the-required-instance-enter-our-egraph-2026-09-10.md` measured, on the
+/// 32-file `UF` parity-loss slice, that on **10 of 16 attributable files the
+/// term z3 instantiates on is never built by us** — while **66 of the 71
+/// arguments (93%) of those absent terms are already in our ground set**. Two
+/// facts held with zero exceptions across all 16 files: every required term
+/// containing no Skolem symbol is PRESENT, and **every absent term contains a
+/// Skolem symbol** (22 of 25 a Skolem *function* applied to a compound or
+/// ground argument). So the gap is one function application wide, and it is at
+/// exactly one syntactic place.
+///
+/// The existing term-invention route ([`MAX_INVENTED_TERMS_TOTAL`],
+/// [`MAX_DIRECT_INSTANCES_TOTAL`]) is the machinery for building rather than
+/// finding terms, and it does not run on this class: it sits inside the loop's
+/// `if admitted.is_empty()` starvation arm, and — measured 2026-09-10 — every
+/// flooded file reaches that arm only at a CAP-INDUCED fixpoint with
+/// `ground=8192`, where [`GroundBudget::invention_ceiling`] (4096) then blocks
+/// it. Priming is therefore placed **before** the loop: at that point ground is
+/// the source assertions, no flood has happened, and eligibility is a syntactic
+/// property of the universals rather than of the round.
+///
+/// # Trust
+///
+/// Every primed instance goes through the unchanged
+/// [`QuantifierInstanceCertificate`] gate in [`admit_generated_ground`], the
+/// same check a matched instance passes. This route can only add facts the
+/// universals already entail; it adds no trust surface.
+///
+/// # THE SHIPPED ARM IS OFF, AND THIS IS THE MEASUREMENT THAT PUT IT THERE
+///
+/// [`building-the-skolem-application-2026-09-10.md`] ran the A/B at
+/// [`SKOLEM_PRIME_MEASURED_ARM`] on both `UF` populations, one binary, both
+/// arms, `taskset -c 0-7`, 24 s:
+///
+/// - **The construction gap closes.** On `Hoare/uf.966336` — Q2's sharpest
+///   reproducer — the pass builds `(f18 f29 (!qskf_35 !sk_1 !sk_0))`, the exact
+///   chain link Q2 measured as absent, and Q2's stated observable "zero
+///   applications of any `!qskf_` symbol to `(f19 (f20 f29) f28)`" moves from
+///   **0 to 1**. The OFF arm on the same binary still has zero.
+/// - **The verdict does not move.** The 32-file loss slice decides **1 of 32**
+///   in both arms: gained `[]`, lost `[]`.
+/// - **It costs a win.** `Arrow_Order/uf.558544`, run isolated on one binary at
+///   one moment: OFF `unsat` in 3.6 s, ON `unknown` at the 24 s budget.
+///
+/// So construction was **not** the binding constraint, and paying for it is
+/// strictly negative. The pass is retained at `0` so the question can be
+/// re-asked in one environment variable rather than in a patch — the same
+/// reason [`GroundBudget`] is an object — and so the answer sits next to the
+/// number instead of only in a note.
+const SKOLEM_PRIME_SHIPPED: usize = 0;
+/// The budget the 2026-09-10 A/B ran at. Referenced by the arm's own tests and
+/// by anyone re-running it; the loop reads [`skolem_prime_budget`].
+///
+/// Unused outside `cfg(test)` **by design**: the shipped arm is
+/// [`SKOLEM_PRIME_SHIPPED`], and this constant exists so the measured arm has a
+/// name in the source rather than only in a note. Deleting it would delete the
+/// only in-tree record of which value the A/B ran.
+#[allow(dead_code, reason = "names the measured arm; the shipped arm is 0")]
+const SKOLEM_PRIME_MEASURED_ARM: usize = 512;
+/// Primed instances one universal may contribute in the single pass. Small on
+/// purpose: the point is the all-Skolem-first tuple and its near neighbours,
+/// not a cartesian product.
+const SKOLEM_PRIME_INSTANCES_PER_UNIVERSAL: usize = 4;
+/// Tuple visits one universal may spend before the pass moves on.
+const SKOLEM_PRIME_TUPLE_VISITS_PER_UNIVERSAL: usize = 256;
+
+std::thread_local! {
+    /// Per-thread override of the process-wide priming budget, set by
+    /// [`SkolemPrimeGuard`]. The process value is resolved once from the
+    /// environment, so without this no test could exercise more than one arm.
+    static SKOLEM_PRIME_OVERRIDE: std::cell::Cell<Option<usize>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Forces a Skolem-priming budget on this thread for the guard's lifetime.
+pub struct SkolemPrimeGuard(Option<usize>);
+
+impl SkolemPrimeGuard {
+    /// Overrides the process budget on this thread. `0` disables priming.
+    #[must_use]
+    pub fn set(budget: usize) -> Self {
+        SkolemPrimeGuard(SKOLEM_PRIME_OVERRIDE.with(|cell| cell.replace(Some(budget))))
+    }
+}
+
+impl Drop for SkolemPrimeGuard {
+    fn drop(&mut self) {
+        SKOLEM_PRIME_OVERRIDE.with(|cell| cell.set(self.0));
+    }
+}
+
+/// Total primed instances in force on this thread: a live [`SkolemPrimeGuard`]'s
+/// choice, else the process value resolved once from
+/// `AXEYUM_QINST_SKOLEM_PRIME`.
+///
+/// The variable holds a decimal total; `AXEYUM_QINST_SKOLEM_PRIME=512` is the
+/// arm the 2026-09-10 A/B ran. An unset or unparseable value is
+/// [`SKOLEM_PRIME_SHIPPED`] (`0`, the pass off), so a typo degrades to the
+/// shipped behaviour rather than to a budget nobody chose — and in particular a
+/// typo cannot silently turn on a route measured to cost a win.
+#[must_use]
+pub fn skolem_prime_budget() -> usize {
+    static RESOLVED: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+    if let Some(budget) = SKOLEM_PRIME_OVERRIDE.with(std::cell::Cell::get) {
+        return budget;
+    }
+    *RESOLVED.get_or_init(|| {
+        parse_skolem_prime_budget(std::env::var("AXEYUM_QINST_SKOLEM_PRIME").ok().as_deref())
+    })
+}
+
+/// The budget `AXEYUM_QINST_SKOLEM_PRIME`'s raw value selects.
+///
+/// Split out of [`skolem_prime_budget`] for the same reason
+/// [`parse_ground_budget`] is: the resolver caches in a `OnceLock` over a
+/// process-wide variable, so a test going through it could only ever exercise
+/// the arm the process started with.
+fn parse_skolem_prime_budget(raw: Option<&str>) -> usize {
+    match raw.map(str::trim) {
+        Some(text) => text.parse::<usize>().unwrap_or(SKOLEM_PRIME_SHIPPED),
+        None => SKOLEM_PRIME_SHIPPED,
+    }
+}
+
 /// Tries to refute a (possibly quantified) conjunction by **e-matching
 /// instantiation on the e-graph** (Track 2, P2.6): it separates the ground
 /// assertions from the universals, and repeatedly instantiates each universal over
@@ -1929,9 +2063,35 @@ fn prove_quantified_unsat_via_egraph_impl(
     // that changed mid-loop would make a funnel reading unattributable.
     let policy = relevance_policy();
     let mut funnel = RelevanceFunnel::for_policy(policy);
+    // SKOLEM-APPLICATION PRIMING, once, before any matching round. The terms
+    // this class of refutation needs are Skolem-function applications that do
+    // not exist until the universal carrying them is instantiated, so nothing
+    // downstream can match or rank them into existence. Placed here and not in
+    // the loop's starvation arm because that arm is behind
+    // `if admitted.is_empty()` — on the flood class matching admits thousands
+    // of instances every round, so the arm is never evaluated at all.
+    {
+        let (eligible, primed) = matcher.prime_skolem_application_instances(
+            arena,
+            &assertions,
+            &mut invention,
+            &mut seen,
+            &mut ground,
+            &mut ground_derivations,
+            &mut generations,
+        );
+        if qprobe_enabled() && (eligible > 0 || !primed.is_empty()) {
+            eprintln!(
+                "QPROBE skolem-prime eligible={eligible} admitted={} ground={}",
+                primed.len(),
+                ground.len(),
+            );
+        }
+    }
     for round in 0..MAX_EXTENDED_INSTANTIATION_ROUNDS {
         let round_started = Instant::now();
         if deadline.is_some_and(|d| round_started >= d) {
+            qgrounddump(arena, &ground, &generations, "timeout-round-head");
             return Ok(egraph_timeout());
         }
         // One matching/admission round is the loop's largest deadline-blind
@@ -1981,6 +2141,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                     collect_ground_derivations(arena, anchor, &ground, &ground_derivations);
                 return Ok(CheckResult::Unsat);
             }
+            qgrounddump(arena, &ground, &generations, "ground-ceiling");
             return Ok(egraph_ground_limit());
         }
         // The first round and accelerator fallbacks use the full QF route. The
@@ -2018,6 +2179,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                 }
             }
             if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+                qgrounddump(arena, &ground, &generations, "timeout-mid-round");
                 return Ok(egraph_timeout());
             }
             if !online_attempted {
@@ -2173,10 +2335,20 @@ fn prove_quantified_unsat_via_egraph_impl(
                         .count();
                     eprintln!(
                         "QPROBE egraph-fixpoint round={round} ground={} foralls={} \
-                         patterns={} triggerless={triggerless}",
+                         patterns={} triggerless={triggerless} \
+                         shared_assertions={} unattributed={} \
+                         releases={} releases_at_throttle={} flood_slices={} \
+                         flood_eager_kept={} flood_deep_seen={}",
                         ground.len(),
                         matcher.quantifiers.len(),
                         matcher.patterns.len(),
+                        matcher.admission_census.shared_assertion_universals,
+                        matcher.admission_census.unattributed,
+                        matcher.admission_census.releases,
+                        matcher.admission_census.releases_at_throttle,
+                        matcher.admission_census.flood_slices,
+                        matcher.admission_census.flood_eager_kept,
+                        matcher.admission_census.flood_deep_seen,
                     );
                     let mut admitted_per_universal: Vec<usize> = vec![0; matcher.quantifiers.len()];
                     for derivation in matcher.ground_derivations.values() {
@@ -2192,12 +2364,37 @@ fn prove_quantified_unsat_via_egraph_impl(
                     for (index, quantifier) in matcher.quantifiers.iter().enumerate() {
                         let (emitted, starved) =
                             matcher.join_stats.get(index).copied().unwrap_or((0, 0));
+                        let rejects = matcher
+                            .admission_census
+                            .per_universal
+                            .get(index)
+                            .copied()
+                            .unwrap_or_default();
                         eprintln!(
                             "QPROBE   universal[{index}] vars={} patterns={} joined={emitted} \
-                             starved_joins={starved} admitted={}",
+                             starved_joins={starved} admitted={} \
+                             rej_handoff={} rej_poscap={} rej_nocontext={} \
+                             rej_expired={} rej_subst={} rej_true={} \
+                             rej_unreleased={} rej_flood={} rej_ceiling={} rej_check={} \
+                             rej_seen={} rej_dupother={} rej_true_newterm={} \
+                             census_admitted={}",
                             quantifier.vars.len(),
                             quantifier.pattern_indices.len(),
                             admitted_per_universal[index],
+                            rejects.inactive_handed_off,
+                            rejects.inactive_positive_capped,
+                            rejects.inactive_dropped,
+                            rejects.expired,
+                            rejects.subst_failed,
+                            rejects.redundant_true,
+                            rejects.pool_unreleased,
+                            rejects.flood_truncated,
+                            rejects.ground_ceiling,
+                            rejects.check_failed,
+                            rejects.already_seen,
+                            rejects.duplicate_of_other_universal,
+                            rejects.redundant_true_term_introducing,
+                            rejects.admitted,
                         );
                     }
                 }
@@ -2293,6 +2490,7 @@ fn prove_quantified_unsat_via_egraph_impl(
             &format!("nested-activity | {}", detail.join(" | ")),
         );
     }
+    qgrounddump(arena, &ground, &generations, "fixpoint-or-break");
     let finished = finish_quantified_ground_check(
         arena,
         &ground,
@@ -2392,16 +2590,20 @@ fn scoped_candidate_fixpoint_step(
                 derivations,
                 ..
             } = candidate.batch;
-            Ok(CandidateFixpointStep::Added(admit_generated_ground(
+            let mut census = std::mem::take(&mut matcher.admission_census);
+            let added = admit_generated_ground(
                 arena,
                 assertions,
-                urgent,
+                &urgent,
                 seen,
                 ground,
                 ground_derivations,
                 &derivations,
                 generations,
-            )))
+                &mut census,
+            );
+            matcher.admission_census = census;
+            Ok(CandidateFixpointStep::Added(added))
         }
     }
 }
@@ -2776,20 +2978,24 @@ fn admit_next_source_batch(
     urgent.extend(units);
     urgent.sort_by_key(|term| term.index());
     urgent.dedup();
+    // The census is taken out for the round: the pools below need `&mut` on it
+    // while `budget_flood_slice` reads the matcher.
+    let mut census = std::mem::take(&mut matcher.admission_census);
     let mut admitted = admit_generated_ground(
         arena,
         assertions,
-        urgent,
+        &urgent,
         seen,
         ground,
         retained,
         &derivations,
         generations,
+        &mut census,
     );
     let mut pool = "urgent";
     // Once urgent traffic is exhausted, release unresolved clauses so mutually
     // constraining instances preserve the legacy loop's reach.
-    if admitted.is_empty() {
+    if admitted.is_empty() || release_deferred_with_urgent() {
         if ground.len() >= policy.throttle_min_ground {
             let bools = BooleanUnitValuation::new(policy.criterion, arena, matcher, ground);
             deferred = budget_flood_slice(
@@ -2802,20 +3008,48 @@ fn admit_next_source_batch(
                 generations,
                 policy,
                 funnel,
+                &mut census,
             );
         }
-        admitted = admit_generated_ground(
+        let released = admit_generated_ground(
             arena,
             assertions,
-            deferred,
+            &deferred,
             seen,
             ground,
             retained,
             &derivations,
             generations,
+            &mut census,
         );
-        pool = "deferred";
+        if admitted.is_empty() {
+            // Shipped path, byte-identical: `admitted` was empty, so this is
+            // the historical assignment and the historical ORDER. The loop is
+            // perturbation-sensitive; the merge below is the experiment arm's
+            // and must not reach the shipped one.
+            admitted = released;
+            pool = "deferred";
+        } else {
+            admitted.extend(released);
+            admitted.sort_by_key(|term| term.index());
+            admitted.dedup();
+            pool = "urgent+deferred";
+        }
+        census.releases += usize::from(census.enabled);
+        if ground.len() >= policy.throttle_min_ground {
+            census.releases_at_throttle += usize::from(census.enabled);
+        }
+    } else {
+        // The deferred pool was NEVER OFFERED this round: urgent/unit traffic
+        // admitted first and the gate above is `admitted.is_empty()`. These
+        // candidates are re-materialized next round, so this counts round-tuples,
+        // not distinct lost instances -- but a universal whose entire output is
+        // deferred and whose file always has urgent traffic never gets a turn.
+        census.charge(&deferred, &derivations, |rejects| {
+            &mut rejects.pool_unreleased
+        });
     }
+    matcher.admission_census = census;
     if floodprobe_enabled() {
         eprintln!(
             "FLOODPROBE round-admit urgent_cand={urgent_candidates} unit_cand={unit_candidates} \
@@ -2861,10 +3095,12 @@ fn budget_flood_slice(
     generations: &TermGenerations,
     policy: RelevancePolicy,
     funnel: &mut RelevanceFunnel,
+    census: &mut AdmissionCensus,
 ) -> Vec<TermId> {
     if pool.len() <= policy.round_admission_cap {
         return pool;
     }
+    census.flood_slices += usize::from(census.enabled);
     let mut eager = Vec::new();
     let mut deep: Vec<(u32, TermId)> = Vec::new();
     for term in pool {
@@ -2877,11 +3113,24 @@ fn budget_flood_slice(
             deep.push((generation, term));
         }
     }
+    if census.enabled {
+        census.flood_eager_kept += eager.len();
+        census.flood_deep_seen += deep.len();
+    }
     // The eager prefix is never rescored. Delaying shallow-generation
     // candidates was measured net-negative (see the constant's own docs), and a
     // selection experiment that also changed that is not measuring selection.
     if !policy.rank_by_residual && policy.max_residual_width == usize::MAX {
         deep.sort_by_key(|&(generation, term)| (generation, term.index()));
+        if census.enabled && deep.len() > policy.round_admission_cap {
+            let dropped: Vec<TermId> = deep[policy.round_admission_cap..]
+                .iter()
+                .map(|&(_, term)| term)
+                .collect();
+            census.charge(&dropped, derivations, |rejects| {
+                &mut rejects.flood_truncated
+            });
+        }
         deep.truncate(policy.round_admission_cap);
         eager.extend(deep.into_iter().map(|(_, term)| term));
         return eager;
@@ -2921,6 +3170,15 @@ fn budget_flood_slice(
     } else {
         scored.sort_by_key(|&(_, generation, term)| (generation, term.index()));
     }
+    if census.enabled && scored.len() > policy.round_admission_cap {
+        let dropped: Vec<TermId> = scored[policy.round_admission_cap..]
+            .iter()
+            .map(|&(_, _, term)| term)
+            .collect();
+        census.charge(&dropped, derivations, |rejects| {
+            &mut rejects.flood_truncated
+        });
+    }
     scored.truncate(policy.round_admission_cap);
     let chosen: Vec<TermId> = scored.into_iter().map(|(_, _, term)| term).collect();
     if chosen
@@ -2944,6 +3202,80 @@ fn floodprobe_enabled() -> bool {
 /// probes are clock-free, so this is checked at the exits rather than cached.
 fn qprobe_enabled() -> bool {
     std::env::var_os("AXEYUM_QPROBE").is_some()
+}
+
+/// Opt-in structural dump of the accumulated ground set at every point the
+/// e-matching fixpoint gives up, written to the path in `AXEYUM_QGROUNDDUMP`.
+///
+/// This exists to answer one question that no aggregate count can:
+/// **does the ground term z3's refutation instantiates on ever enter our
+/// e-graph at all?** "We never build it" and "we build it and rank it 1000th"
+/// need completely different fixes and are otherwise indistinguishable — see
+/// `docs/research/03-measurements/does-the-required-instance-enter-our-egraph-2026-09-10.md`.
+///
+/// Rows are emitted in `ground` insertion order, which is deterministic, and
+/// carry the term's generation so a reader can tell a source subterm
+/// (generation 0) from one an admitted instance introduced. Off by default and
+/// costing one environment lookup when off.
+fn qgrounddump(arena: &TermArena, ground: &[TermId], generations: &TermGenerations, reason: &str) {
+    use std::io::Write as _;
+
+    let Some(path) = std::env::var_os("AXEYUM_QGROUNDDUMP") else {
+        return;
+    };
+    let Ok(file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+    else {
+        return;
+    };
+    let mut out = std::io::BufWriter::new(file);
+    let _ = writeln!(
+        out,
+        "GROUNDDUMP begin reason={reason} count={}",
+        ground.len()
+    );
+    for (index, term) in ground.iter().enumerate() {
+        let _ = writeln!(
+            out,
+            "GROUND {index} gen={} {}",
+            generations.generation(*term),
+            axeyum_ir::render(arena, *term)
+        );
+    }
+    let _ = writeln!(out, "GROUNDDUMP end reason={reason}");
+    let _ = out.flush();
+}
+
+/// Whether the per-universal admission attribution
+/// ([`AdmissionCensus`]) is on, on top of `AXEYUM_QPROBE`.
+///
+/// A SECOND variable rather than a field of the first, because the census is
+/// not free: it does a `HashMap` lookup per pool term per round, and this loop
+/// is perturbation-sensitive by its own comments. Running `AXEYUM_QPROBE=1`
+/// alone reproduces the historical probe EXACTLY, so the census arm can be
+/// differenced against it and the perturbation reported as a number instead of
+/// assumed away.
+fn census_enabled() -> bool {
+    std::env::var_os("AXEYUM_QPROBE_CENSUS").is_some()
+}
+
+/// EXPERIMENT ARM, off by default: release the deferred admission pool in the
+/// SAME round as urgent/unit traffic instead of only once urgent traffic runs
+/// dry.
+///
+/// The shipped gate in [`admit_next_source_batch`] is `if admitted.is_empty()`,
+/// a strict priority: conflicts and units first, unresolved clauses only when
+/// there are none. On a file whose urgent traffic never runs dry inside the
+/// budget, that priority is not a delay, it is a permanent exclusion — measured
+/// as the single largest cause of `joined>0 admitted=0` on the UF parity-loss
+/// slice. This flag exists so the alternative can be MEASURED on the whole
+/// slice rather than argued about; it is not a shipped route.
+///
+/// See `docs/research/03-measurements/what-the-admission-filter-rejects-2026-09-10.md`.
+fn release_deferred_with_urgent() -> bool {
+    std::env::var_os("AXEYUM_QINST_RELEASE_DEFERRED").is_some()
 }
 
 /// Z3-style instantiation generations (T2.6.4; `qi_queue.cpp` cost
@@ -3097,22 +3429,30 @@ fn floodprobe_cap_census(
 fn admit_generated_ground(
     arena: &mut TermArena,
     assertions: &[TermId],
-    terms: Vec<TermId>,
+    terms: &[TermId],
     seen: &mut HashSet<TermId>,
     ground: &mut Vec<TermId>,
     retained: &mut HashMap<TermId, QuantifierGroundDerivation>,
     candidates: &HashMap<TermId, QuantifierGroundDerivation>,
     generations: &mut TermGenerations,
+    census: &mut AdmissionCensus,
 ) -> Vec<TermId> {
     let mut added = Vec::new();
-    for term in terms {
+    for (position, term) in terms.iter().copied().enumerate() {
         if ground.len() >= ground_budget().ceiling {
+            census.charge(&terms[position..], candidates, |rejects| {
+                &mut rejects.ground_ceiling
+            });
             break;
         }
         let Some(derivation) = candidates.get(&term) else {
+            census.unattributed += usize::from(census.enabled);
             continue;
         };
         if !check_quantifier_ground_derivation(arena, assertions, derivation) {
+            if let Some(slot) = census.for_derivation(derivation) {
+                slot.check_failed += 1;
+            }
             continue;
         }
         if seen.insert(term) {
@@ -3121,6 +3461,11 @@ fn admit_generated_ground(
             retained.insert(term, derivation.clone());
             ground.push(term);
             added.push(term);
+            if let Some(slot) = census.for_derivation(derivation) {
+                slot.admitted += 1;
+            }
+        } else if let Some(slot) = census.for_derivation(derivation) {
+            slot.already_seen += 1;
         }
     }
     added
@@ -3436,6 +3781,7 @@ fn collect_generated_ground(
     let mut propagations = Vec::new();
     let mut derivations = HashMap::new();
     let mut redundant = 0usize;
+    let census_on = matcher.admission_census.enabled;
     for batch in matcher.lazy_clause_batches(arena, deadline) {
         redundant += batch.redundant;
         urgent.extend(batch.urgent);
@@ -3443,9 +3789,27 @@ fn collect_generated_ground(
         propagations.extend(batch.propagations);
         deferred.extend(batch.deferred);
         for (instance, certificate) in batch.instance_certificates {
-            derivations
-                .entry(instance)
-                .or_insert(QuantifierGroundDerivation::Instance(certificate));
+            let owner = certificate.assertion;
+            match derivations.entry(instance) {
+                std::collections::hash_map::Entry::Vacant(slot) => {
+                    slot.insert(QuantifierGroundDerivation::Instance(certificate));
+                }
+                std::collections::hash_map::Entry::Occupied(existing) => {
+                    // First-writer-wins is the shipped behaviour; the census
+                    // just stops the loser reading as an unexplained drop.
+                    if census_on {
+                        let held = match existing.get() {
+                            QuantifierGroundDerivation::Instance(other) => other.assertion,
+                            QuantifierGroundDerivation::Propagation(other) => other.assertion,
+                        };
+                        if held != owner
+                            && let Some(slot) = matcher.admission_census.for_assertion(owner)
+                        {
+                            slot.duplicate_of_other_universal += 1;
+                        }
+                    }
+                }
+            }
         }
     }
     for (term, derivation) in checked_propagation_additions(arena, assertions, &propagations) {
@@ -3590,6 +3954,201 @@ struct LazyClauseBatch {
     deferred: Vec<TermId>,
     instance_certificates: BTreeMap<TermId, QuantifierInstanceCertificate>,
     redundant: usize,
+    /// `AXEYUM_QPROBE` attribution for this round's tuples of this universal.
+    /// Folded into [`IncrementalEmatchSession::admission_census`] by
+    /// `lazy_clause_batches` before the batch leaves the matcher.
+    rejects: AdmissionRejects,
+}
+
+/// What happened to each joined witness tuple of one universal on its way to
+/// admission, as **tuple counts summed over every round** (not rounds).
+///
+/// `AXEYUM_QPROBE` only — every increment is behind
+/// [`AdmissionCensus::enabled`], so with the probe off this costs one
+/// already-resolved bool per rejection site. The buckets partition the path
+/// from a tuple that `match_witness_tuples` joined to a term in `ground`:
+/// matcher-side (`inactive` … `redundant_true`) are decided in
+/// [`IncrementalEmatchSession::lazy_clause_batches`], the rest in
+/// [`admit_next_source_batch`] and below.
+#[derive(Debug, Default, Clone, Copy)]
+struct AdmissionRejects {
+    /// The universal is a non-asserted registration (`!active`) WITH a
+    /// positive-replacement context: its tuples are handed to the Slice-3
+    /// discovery driver, which admits the owner formula with the universal
+    /// replaced. Not a loss — the instance simply lands under another
+    /// universal's name.
+    inactive_handed_off: usize,
+    /// A registration's tuples past `MAX_POSITIVE_TUPLES_PER_ROUND`: joined,
+    /// contextful, and dropped by the per-round discovery cap.
+    inactive_positive_capped: usize,
+    /// The universal is a non-asserted registration with NO context. Its tuples
+    /// are joined and then discarded outright — nothing downstream sees them.
+    inactive_dropped: usize,
+    /// The round's deadline expired before this universal's tuples were
+    /// materialized (`match_witness_tuples` had already joined them).
+    expired: usize,
+    /// `replace_subterms` refused the substitution into the body.
+    subst_failed: usize,
+    /// The round's congruence already makes the instance clause
+    /// `ClauseValue::True` — the shipped entailment filter.
+    redundant_true: usize,
+    /// The `redundant_true` subset whose instance contains at least one term
+    /// the e-graph has NEVER SEEN.
+    ///
+    /// This is the distinction that decides whether the entailment filter is
+    /// correct. `IncrementalEmatchSession::equality` returns `Undetermined` for
+    /// any term it has not registered, so a clause can only be `True` on
+    /// registered terms — EXCEPT through its two term-blind routes: a
+    /// syntactic `t = t`, and a disjunction one of whose other literals is
+    /// already true, which says nothing about the remaining literals' terms.
+    /// A drop in this subset is entailed (so it cannot help the final
+    /// refutation check) but still costs the loop a term it could have matched
+    /// a trigger against on a later round. A drop outside it costs nothing at
+    /// all.
+    redundant_true_term_introducing: usize,
+    /// Classified into the deferred pool, but the pool was never released this
+    /// round because urgent/unit traffic admitted first
+    /// (`admit_next_source_batch`'s `if admitted.is_empty()` gate).
+    pool_unreleased: usize,
+    /// Dropped by [`budget_flood_slice`]: deep-generation remainder past
+    /// `policy.round_admission_cap`.
+    flood_truncated: usize,
+    /// The admission walk hit `ground_budget().ceiling` and stopped.
+    ground_ceiling: usize,
+    /// `check_quantifier_ground_derivation` refused the certificate.
+    check_failed: usize,
+    /// The identical instance term is already in `seen` — admitted on an
+    /// earlier round, or produced first by another universal (the derivation
+    /// map is first-writer-wins, so the admission is credited there).
+    already_seen: usize,
+    /// Another universal produced this exact instance term first THIS round, so
+    /// `collect_generated_ground`'s `derivations` map kept its certificate and
+    /// every downstream count for the term lands on that universal.
+    ///
+    /// NOT a lost instance — it is the same term, admitted under another name.
+    /// This bucket exists because without it such a universal reads
+    /// `joined>0 admitted=0` with every rejection counter at zero, which looks
+    /// like an unexplained drop and is not one.
+    duplicate_of_other_universal: usize,
+    /// Reached `ground`.
+    admitted: usize,
+}
+
+impl AdmissionRejects {
+    fn merge(&mut self, other: &Self) {
+        self.inactive_handed_off += other.inactive_handed_off;
+        self.inactive_positive_capped += other.inactive_positive_capped;
+        self.inactive_dropped += other.inactive_dropped;
+        self.expired += other.expired;
+        self.subst_failed += other.subst_failed;
+        self.redundant_true += other.redundant_true;
+        self.redundant_true_term_introducing += other.redundant_true_term_introducing;
+        self.pool_unreleased += other.pool_unreleased;
+        self.flood_truncated += other.flood_truncated;
+        self.ground_ceiling += other.ground_ceiling;
+        self.check_failed += other.check_failed;
+        self.already_seen += other.already_seen;
+        self.duplicate_of_other_universal += other.duplicate_of_other_universal;
+        self.admitted += other.admitted;
+    }
+}
+
+/// Per-universal [`AdmissionRejects`], plus the attribution map the downstream
+/// pools need (they carry terms, not universal indices).
+#[derive(Debug, Default)]
+struct AdmissionCensus {
+    enabled: bool,
+    per_universal: Vec<AdmissionRejects>,
+    /// First universal index for each distinct assertion term. This is the
+    /// same first-wins attribution the fixpoint report itself uses, so the
+    /// table and the `admitted=` column agree by construction.
+    index_by_assertion: HashMap<TermId, usize>,
+    /// Universals whose assertion term is shared with an earlier universal.
+    /// Their downstream counts land on the earlier one, so a nonzero value
+    /// here is a caveat on the whole table and is printed with it.
+    shared_assertion_universals: usize,
+    /// Pool terms with no derivation to attribute them to.
+    unattributed: usize,
+    /// Rounds in which the deferred pool was released at all.
+    releases: usize,
+    /// Releases in which `ground.len() >= FLOOD_THROTTLE_MIN_GROUND`, so
+    /// [`budget_flood_slice`] was consulted. The difference from `releases` is
+    /// how much of this population the throttle never sees.
+    releases_at_throttle: usize,
+    /// Consultations in which the pool also exceeded
+    /// `FLOOD_ROUND_ADMISSION_CAP`, so the slice did something.
+    flood_slices: usize,
+    /// Candidates the slice kept unconditionally because their generation is
+    /// at or under `FLOOD_EAGER_GENERATION_MAX`.
+    flood_eager_kept: usize,
+    /// Deeper-generation candidates the slice ranked.
+    flood_deep_seen: usize,
+}
+
+impl AdmissionCensus {
+    /// Sizes the table to the current universal population (nested discovery
+    /// adds universals mid-run) and resolves the probe flag once.
+    fn ensure(&mut self, quantifiers: &[CompiledUniversal]) {
+        if self.per_universal.is_empty() && !quantifiers.is_empty() {
+            self.enabled = qprobe_enabled() && census_enabled();
+        }
+        while self.per_universal.len() < quantifiers.len() {
+            let index = self.per_universal.len();
+            self.per_universal.push(AdmissionRejects::default());
+            // First-wins, matching the fixpoint report's `position(...)`.
+            match self.index_by_assertion.entry(quantifiers[index].assertion) {
+                std::collections::hash_map::Entry::Occupied(_) => {
+                    self.shared_assertion_universals += 1;
+                }
+                std::collections::hash_map::Entry::Vacant(slot) => {
+                    slot.insert(index);
+                }
+            }
+        }
+    }
+
+    fn for_assertion(&mut self, assertion: TermId) -> Option<&mut AdmissionRejects> {
+        if !self.enabled {
+            return None;
+        }
+        let index = *self.index_by_assertion.get(&assertion)?;
+        self.per_universal.get_mut(index)
+    }
+
+    fn for_derivation(
+        &mut self,
+        derivation: &QuantifierGroundDerivation,
+    ) -> Option<&mut AdmissionRejects> {
+        let assertion = match derivation {
+            QuantifierGroundDerivation::Instance(certificate) => certificate.assertion,
+            QuantifierGroundDerivation::Propagation(propagation) => propagation.assertion,
+        };
+        self.for_assertion(assertion)
+    }
+
+    /// Attributes every term in `terms` to one bucket, selected by `pick`.
+    fn charge(
+        &mut self,
+        terms: &[TermId],
+        candidates: &HashMap<TermId, QuantifierGroundDerivation>,
+        pick: fn(&mut AdmissionRejects) -> &mut usize,
+    ) {
+        if !self.enabled {
+            return;
+        }
+        for term in terms {
+            match candidates.get(term) {
+                Some(derivation) => {
+                    if let Some(slot) = self.for_derivation(derivation) {
+                        *pick(slot) += 1;
+                    } else {
+                        self.unattributed += 1;
+                    }
+                }
+                None => self.unattributed += 1,
+            }
+        }
+    }
 }
 
 struct CompiledUniversal {
@@ -4287,6 +4846,10 @@ struct IncrementalEmatchSession {
     /// Per-universal `(emitted joined tuples, starved joins)` — diagnostics
     /// for the `AXEYUM_QPROBE` fixpoint report only.
     join_stats: Vec<(usize, usize)>,
+    /// Per-universal admission attribution for the `AXEYUM_QPROBE` fixpoint
+    /// report only. Taken out by [`admit_next_source_batch`] for the duration
+    /// of a round (the pools below it need `&mut` while the matcher is read).
+    admission_census: AdmissionCensus,
     /// Slice 3: `(quantifier index, witness tuple)` for every registration whose
     /// triggers fired this round. The driver drains these and turns each into the
     /// entailed positive replacement of the owner formula; the matcher itself
@@ -4510,6 +5073,7 @@ impl IncrementalEmatchSession {
             merge_affected_patterns: 0,
             extensions: 0,
             join_stats: Vec::new(),
+            admission_census: AdmissionCensus::default(),
             pending_positive: Vec::new(),
         }
     }
@@ -4932,12 +5496,24 @@ impl IncrementalEmatchSession {
         }
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one tuple-materialization loop; the added lines are the \
+                  AXEYUM_QPROBE admission census's rejection arms, which have \
+                  to sit exactly where the rejection happens"
+    )]
     fn lazy_clause_batches(
         &mut self,
         arena: &mut TermArena,
         deadline: Option<Instant>,
     ) -> Vec<LazyClauseBatch> {
         let tuple_batches = self.match_witness_tuples(deadline);
+        {
+            let quantifiers = &self.quantifiers;
+            let census = &mut self.admission_census;
+            census.ensure(quantifiers);
+        }
+        let census_on = self.admission_census.enabled;
         // Deadline discipline: instance materialization below is O(tuples ×
         // body size), so consult the clock at coarse tuple granularity. An
         // expired clock truncates to the batches built so far — instances are
@@ -4949,8 +5525,15 @@ impl IncrementalEmatchSession {
         let mut pending_positive: Vec<(usize, Vec<TermId>)> = Vec::new();
         for (index, (quantifier, tuples)) in self.quantifiers.iter().zip(tuple_batches).enumerate()
         {
+            let joined_count = tuples.as_ref().map_or(0, Vec::len);
             let (Some(tuples), false) = (tuples, expired) else {
-                batches.push(LazyClauseBatch::default());
+                let mut batch = LazyClauseBatch::default();
+                if census_on && expired {
+                    // `match_witness_tuples` joined these; the clock, not a
+                    // filter, is why they were never materialized.
+                    batch.rejects.expired += joined_count;
+                }
+                batches.push(batch);
                 continue;
             };
             // Registrations are matched, never asserted (see `active`). The
@@ -4960,25 +5543,38 @@ impl IncrementalEmatchSession {
             // driver, which admits the *owner with the universal replaced* —
             // entailed — rather than the bare instance, which is not.
             if !quantifier.active {
+                let mut batch = LazyClauseBatch::default();
                 if quantifier.context.is_some() {
+                    let joined = tuples.len();
+                    let mut handed_off = 0usize;
                     for tuple in tuples {
                         if pending_positive.len() >= MAX_POSITIVE_TUPLES_PER_ROUND {
                             break;
                         }
                         pending_positive.push((index, tuple));
+                        handed_off += 1;
                     }
+                    if census_on {
+                        batch.rejects.inactive_handed_off += handed_off;
+                        batch.rejects.inactive_positive_capped += joined - handed_off;
+                    }
+                } else if census_on {
+                    batch.rejects.inactive_dropped += tuples.len();
                 }
-                batches.push(LazyClauseBatch::default());
+                batches.push(batch);
                 continue;
             }
             {
                 let mut batch = LazyClauseBatch::default();
-                for tuple in &tuples {
+                for (position, tuple) in tuples.iter().enumerate() {
                     tuples_since_clock_check += 1;
                     if tuples_since_clock_check >= 64 {
                         tuples_since_clock_check = 0;
                         if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
                             expired = true;
+                            if census_on {
+                                batch.rejects.expired += tuples.len() - position;
+                            }
                             break;
                         }
                     }
@@ -4992,6 +5588,9 @@ impl IncrementalEmatchSession {
                     let Ok(instance) =
                         replace_subterms(arena, quantifier.body, &replacements, &mut memo)
                     else {
+                        if census_on {
+                            batch.rejects.subst_failed += 1;
+                        }
                         continue;
                     };
                     batch
@@ -5005,7 +5604,15 @@ impl IncrementalEmatchSession {
                     match evaluate_equality_clause_with(arena, instance, &mut |lhs, rhs| {
                         self.equality(lhs, rhs)
                     }) {
-                        Some(ClauseValue::True) => batch.redundant += 1,
+                        Some(ClauseValue::True) => {
+                            batch.redundant += 1;
+                            if census_on {
+                                batch.rejects.redundant_true += 1;
+                                if !self.all_terms_registered(arena, instance) {
+                                    batch.rejects.redundant_true_term_introducing += 1;
+                                }
+                            }
+                        }
                         Some(ClauseValue::False) => batch.urgent.push(instance),
                         Some(ClauseValue::Unit) => {
                             match self.detached_propagation(arena, quantifier, tuple, instance) {
@@ -5035,6 +5642,13 @@ impl IncrementalEmatchSession {
             }
         }
         self.pending_positive.extend(pending_positive);
+        if census_on {
+            for (index, batch) in batches.iter().enumerate() {
+                if let Some(slot) = self.admission_census.per_universal.get_mut(index) {
+                    slot.merge(&batch.rejects);
+                }
+            }
+        }
         batches
     }
 
@@ -5637,16 +6251,170 @@ impl IncrementalEmatchSession {
                 }
             }
         }
-        admit_generated_ground(
+        let mut census = std::mem::take(&mut self.admission_census);
+        let added = admit_generated_ground(
             arena,
             assertions,
-            order,
+            &order,
             seen,
             ground,
             retained,
             &candidates,
             generations,
-        )
+            &mut census,
+        );
+        self.admission_census = census;
+        added
+    }
+
+    /// One bounded **Skolem-application priming** pass, run once before the
+    /// instantiation loop's first round (see
+    /// [`SKOLEM_PRIME_SHIPPED`] for why it is placed there, why the shipped
+    /// budget is `0`, and what the A/B measured).
+    ///
+    /// Eligible universals are the active ones whose body applies a Skolem
+    /// function to their own bound variables — the applications that cannot
+    /// exist as ground terms until the universal is instantiated. Each gets up
+    /// to [`SKOLEM_PRIME_INSTANCES_PER_UNIVERSAL`] instances over the invention
+    /// seed lists, staged by digit sum so the all-Skolem-first tuple comes
+    /// first, and every instance passes the unchanged certificate gate.
+    ///
+    /// Returns `(eligible universals, admitted instances)`.
+    #[allow(clippy::too_many_arguments)]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one staged enumeration with its eligibility gate"
+    )]
+    fn prime_skolem_application_instances(
+        &mut self,
+        arena: &mut TermArena,
+        assertions: &[TermId],
+        state: &mut TermInventionState,
+        seen: &mut HashSet<TermId>,
+        ground: &mut Vec<TermId>,
+        retained: &mut HashMap<TermId, QuantifierGroundDerivation>,
+        generations: &mut TermGenerations,
+    ) -> (usize, Vec<TermId>) {
+        let budget = skolem_prime_budget();
+        if budget == 0 {
+            return (0, Vec::new());
+        }
+        if !state.prepared {
+            state.prepare(arena, assertions, &self.pattern_triggers);
+        }
+        // Registrations (`active == false`) are excluded for the same reason
+        // the direct route excludes them: `A ∨ (∀y. B(y))` does not entail
+        // `B(t)`, so an instance of one is not a consequence of the assertions.
+        let eligible: Vec<(TermId, Vec<TermId>, TermId)> = self
+            .quantifiers
+            .iter()
+            .filter(|quantifier| quantifier.active && !quantifier.vars.is_empty())
+            .map(|quantifier| {
+                (
+                    quantifier.assertion,
+                    quantifier.var_terms.clone(),
+                    quantifier.body,
+                )
+            })
+            .filter(|(_, var_terms, body)| {
+                body_applies_skolem_function_to_own_vars(arena, *body, var_terms)
+            })
+            .collect();
+        if eligible.is_empty() {
+            return (0, Vec::new());
+        }
+        let mut needed: HashSet<Sort> = HashSet::new();
+        for (_, var_terms, _) in &eligible {
+            for &var in var_terms {
+                needed.insert(arena.sort_of(var));
+            }
+        }
+        let seed_lists = self.build_invention_seed_lists(arena, state, &needed);
+
+        let mut order: Vec<TermId> = Vec::new();
+        let mut candidates: HashMap<TermId, QuantifierGroundDerivation> = HashMap::new();
+        let mut total = 0usize;
+        for (assertion, var_terms, body) in &eligible {
+            if total >= budget {
+                break;
+            }
+            let lists: Vec<Vec<TermId>> = var_terms
+                .iter()
+                .map(|&var| {
+                    seed_lists
+                        .get(&arena.sort_of(var))
+                        .cloned()
+                        .unwrap_or_default()
+                })
+                .collect();
+            if lists.iter().any(Vec::is_empty) {
+                continue;
+            }
+            let lens: Vec<usize> = lists.iter().map(Vec::len).collect();
+            let max_sum: usize = lens.iter().map(|&len| len - 1).sum();
+            let mut visits = 0usize;
+            let mut created = 0usize;
+            'stages: for stage in 0..=max_sum {
+                let mut done = false;
+                for_each_tuple_with_sum(&lens, stage, &mut Vec::new(), &mut |digits| {
+                    visits += 1;
+                    let bindings: Vec<TermId> = digits
+                        .iter()
+                        .enumerate()
+                        .map(|(slot, &digit)| lists[slot][digit])
+                        .collect();
+                    let replacements: HashMap<TermId, TermId> = var_terms
+                        .iter()
+                        .copied()
+                        .zip(bindings.iter().copied())
+                        .collect();
+                    let mut memo = HashMap::new();
+                    if let Ok(instance) = replace_subterms(arena, *body, &replacements, &mut memo)
+                        && !seen.contains(&instance)
+                        && !candidates.contains_key(&instance)
+                    {
+                        candidates.insert(
+                            instance,
+                            QuantifierGroundDerivation::Instance(QuantifierInstanceCertificate {
+                                assertion: *assertion,
+                                bindings,
+                                instance,
+                            }),
+                        );
+                        order.push(instance);
+                        created += 1;
+                        total += 1;
+                    }
+                    let stop = visits >= SKOLEM_PRIME_TUPLE_VISITS_PER_UNIVERSAL
+                        || created >= SKOLEM_PRIME_INSTANCES_PER_UNIVERSAL
+                        || total >= budget;
+                    done = stop;
+                    !stop
+                });
+                if done {
+                    break 'stages;
+                }
+            }
+        }
+        // The priming pass gets its OWN census, discarded. `AdmissionCensus`
+        // attributes the per-round rejections of the instantiation LOOP, and
+        // its "zero unexplained" result is a statement about that population;
+        // folding a one-shot pre-loop pass into the same counters would
+        // silently change what the census is a census OF. Priming is inert at
+        // `SKOLEM_PRIME_SHIPPED = 0` in any case.
+        let mut priming_census = AdmissionCensus::default();
+        let admitted = admit_generated_ground(
+            arena,
+            assertions,
+            &order,
+            seen,
+            ground,
+            retained,
+            &candidates,
+            generations,
+            &mut priming_census,
+        );
+        (eligible.len(), admitted)
     }
 
     /// Adds one invented ground term to the matcher's e-graph (nodes only —
@@ -5782,6 +6550,26 @@ impl IncrementalEmatchSession {
             }
         }
         invented_this_step
+    }
+
+    /// Whether every subterm of `term` is already registered in the matching
+    /// e-graph. `AXEYUM_QPROBE` census only — it decides whether an entailed
+    /// instance the loop declined would ALSO have introduced a term.
+    fn all_terms_registered(&self, arena: &TermArena, term: TermId) -> bool {
+        let mut stack = vec![term];
+        let mut visited = HashSet::new();
+        while let Some(term) = stack.pop() {
+            if !visited.insert(term) {
+                continue;
+            }
+            if !self.bridge.term_to_node.contains_key(&term) {
+                return false;
+            }
+            if let TermNode::App { args, .. } = arena.node(term) {
+                stack.extend(args.iter().copied());
+            }
+        }
+        true
     }
 
     /// Conservative equality lookup over terms already registered from the
@@ -7671,6 +8459,83 @@ impl TermInventionState {
         self.ground_cache.insert(term, free);
         free
     }
+}
+
+/// Whether `term`'s subterm closure contains any member of `targets`.
+///
+/// `memo` is keyed on the term and is only valid for one `targets` set; callers
+/// build a fresh map per universal.
+fn term_mentions_any(
+    arena: &TermArena,
+    term: TermId,
+    targets: &HashSet<TermId>,
+    memo: &mut HashMap<TermId, bool>,
+) -> bool {
+    if targets.contains(&term) {
+        return true;
+    }
+    if let Some(&known) = memo.get(&term) {
+        return known;
+    }
+    let args: Vec<TermId> = match arena.node(term) {
+        TermNode::App { args, .. } => args.to_vec(),
+        _ => Vec::new(),
+    };
+    let hit = args
+        .iter()
+        .any(|&arg| term_mentions_any(arena, arg, targets, memo));
+    memo.insert(term, hit);
+    hit
+}
+
+/// Whether `body` applies a **Skolem function** ([`SKOLEM_FUNCTION_PREFIX`]) to
+/// an argument mentioning one of `var_terms` — the universal's own bound
+/// variables.
+///
+/// This is the eligibility test for [`SkolemPrimeGuard`]'s pass, and it is
+/// exactly the shape the 2026-09-10 ground-set measurement isolated: an
+/// application that **cannot** exist as a ground term until this universal is
+/// instantiated, so no trigger can match it and no selection policy can rank
+/// it. A Skolem function applied only to *other* universals' variables or to
+/// terms already ground is not eligible: instantiating this universal would not
+/// create it.
+fn body_applies_skolem_function_to_own_vars(
+    arena: &TermArena,
+    body: TermId,
+    var_terms: &[TermId],
+) -> bool {
+    if var_terms.is_empty() {
+        return false;
+    }
+    let targets: HashSet<TermId> = var_terms.iter().copied().collect();
+    let mut mentions: HashMap<TermId, bool> = HashMap::new();
+    let mut seen: HashSet<TermId> = HashSet::new();
+    let mut stack = vec![body];
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        let (head, args) = match arena.node(term) {
+            TermNode::App { op, args } => {
+                let head = match op {
+                    Op::Apply(func) => Some(*func),
+                    _ => None,
+                };
+                (head, args.to_vec())
+            }
+            _ => continue,
+        };
+        if let Some(func) = head
+            && arena.function(func).0.starts_with(SKOLEM_FUNCTION_PREFIX)
+            && args
+                .iter()
+                .any(|&arg| term_mentions_any(arena, arg, &targets, &mut mentions))
+        {
+            return true;
+        }
+        stack.extend(args);
+    }
+    false
 }
 
 /// Enumerates every index tuple over `lens` whose digit sum equals
@@ -10338,12 +11203,13 @@ mod tests {
             admit_generated_ground(
                 &mut arena,
                 &assertions,
-                vec![instance_one, instance_two, instance_three],
+                &[instance_one, instance_two, instance_three],
                 &mut seen,
                 &mut ground,
                 &mut retained,
                 &candidates,
                 &mut generations,
+                &mut AdmissionCensus::default(),
             ),
             vec![instance_one]
         );
@@ -13243,5 +14109,215 @@ mod tests {
         let xt = arena.var(x);
         let fx = arena.apply(f, &[xt]).expect("f x");
         arena.set_quantifier_patterns(fx, vec![vec![fx]]);
+    }
+
+    /// Every way of writing the priming override badly resolves to the shipped
+    /// budget, which is `0` — so a typo cannot silently turn on a route
+    /// measured to cost `Arrow_Order/uf.558544`.
+    #[test]
+    fn a_bad_skolem_prime_override_degrades_to_the_shipped_budget() {
+        assert_eq!(
+            SKOLEM_PRIME_SHIPPED, 0,
+            "the shipped arm is OFF; see the constant's own measurement"
+        );
+        for raw in [None, Some(""), Some("  "), Some("nope"), Some("-1")] {
+            assert_eq!(
+                parse_skolem_prime_budget(raw),
+                SKOLEM_PRIME_SHIPPED,
+                "AXEYUM_QINST_SKOLEM_PRIME={raw:?} must resolve to the shipped budget"
+            );
+        }
+        // The measured arm must still be reachable by name, or the constant
+        // recording it would be decoration.
+        assert_eq!(
+            parse_skolem_prime_budget(Some(" 512 ")),
+            SKOLEM_PRIME_MEASURED_ARM,
+            "the 2026-09-10 arm must be selectable in one environment variable"
+        );
+        assert_eq!(parse_skolem_prime_budget(Some("64")), 64);
+    }
+
+    /// The guard is scoped, so an A/B inside one process cannot leak.
+    #[test]
+    fn skolem_prime_override_is_scoped_to_the_guard() {
+        let outside = skolem_prime_budget();
+        let arm = outside.wrapping_add(7);
+        {
+            let _guard = SkolemPrimeGuard::set(arm);
+            assert_eq!(
+                skolem_prime_budget(),
+                arm,
+                "the guard's arm must be in force"
+            );
+        }
+        assert_eq!(
+            skolem_prime_budget(),
+            outside,
+            "the guard must restore on drop"
+        );
+    }
+
+    /// Fixture for the priming tests: an uninterpreted carrier with a constant,
+    /// a Skolem FUNCTION (`!qskf_`-prefixed, exactly as `quant_skolemize`
+    /// names one), an ordinary function of the same shape, and a predicate.
+    fn skolem_prime_fixture() -> (TermArena, Sort, TermId, FuncId, FuncId, FuncId) {
+        let mut arena = TermArena::new();
+        let carrier = arena.declare_uninterpreted_sort("SkpS");
+        let sort = Sort::Uninterpreted(carrier);
+        let c_symbol = arena.declare("skp_c", sort).unwrap();
+        let c = arena.var(c_symbol);
+        let skolem = arena.declare_fun("!qskf_0", &[sort], sort).unwrap();
+        let ordinary = arena.declare_fun("skp_f", &[sort], sort).unwrap();
+        let predicate = arena.declare_fun("skp_p", &[sort], Sort::Bool).unwrap();
+        (arena, sort, c, skolem, ordinary, predicate)
+    }
+
+    /// The eligibility predicate, with the negatives that make it a predicate
+    /// rather than a rubber stamp.
+    ///
+    /// Each negative is a distinct way the pass could waste its budget on a
+    /// universal whose instantiation creates no new Skolem application, which
+    /// is the only thing the 2026-09-10 measurement says is missing.
+    #[test]
+    fn skolem_priming_selects_only_applications_of_a_universal_s_own_vars() {
+        let (mut arena, sort, c, skolem, ordinary, predicate) = skolem_prime_fixture();
+        let x_symbol = arena.declare("skp_x", sort).unwrap();
+        let x = arena.var(x_symbol);
+        let y_symbol = arena.declare("skp_y", sort).unwrap();
+        let y = arena.var(y_symbol);
+
+        let sk_x = arena.apply(skolem, &[x]).unwrap();
+        let body_direct = arena.apply(predicate, &[sk_x]).unwrap();
+        assert!(
+            body_applies_skolem_function_to_own_vars(&arena, body_direct, &[x]),
+            "a Skolem function applied to this universal's own variable is the subject"
+        );
+
+        // Deeper than one level: the application the refutation needs is a
+        // subterm of a subterm on most of the measured files.
+        let nested = arena.apply(ordinary, &[sk_x]).unwrap();
+        let body_nested = arena.apply(predicate, &[nested]).unwrap();
+        assert!(
+            body_applies_skolem_function_to_own_vars(&arena, body_nested, &[x]),
+            "the application may sit anywhere in the body"
+        );
+
+        // NEGATIVE 1 — the argument is already ground, so instantiating this
+        // universal creates no application that did not exist.
+        let sk_c = arena.apply(skolem, &[c]).unwrap();
+        let body_ground = arena.apply(predicate, &[sk_c]).unwrap();
+        assert!(
+            !body_applies_skolem_function_to_own_vars(&arena, body_ground, &[x]),
+            "a Skolem function at a ground argument is already buildable by matching"
+        );
+
+        // NEGATIVE 2 — an ordinary function symbol. Every absent required term
+        // in the measurement contained a Skolem symbol; an ordinary head is a
+        // shape e-matching already reaches.
+        let f_x = arena.apply(ordinary, &[x]).unwrap();
+        let body_ordinary = arena.apply(predicate, &[f_x]).unwrap();
+        assert!(
+            !body_applies_skolem_function_to_own_vars(&arena, body_ordinary, &[x]),
+            "an ordinary application is not this pass's subject"
+        );
+
+        // NEGATIVE 3 — another universal's variable. Instantiating THIS
+        // universal leaves the application open, so priming it builds nothing.
+        let sk_y = arena.apply(skolem, &[y]).unwrap();
+        let body_foreign = arena.apply(predicate, &[sk_y]).unwrap();
+        assert!(
+            !body_applies_skolem_function_to_own_vars(&arena, body_foreign, &[x]),
+            "a foreign bound variable leaves the application open after substitution"
+        );
+
+        // NEGATIVE 4 — no variables at all.
+        assert!(
+            !body_applies_skolem_function_to_own_vars(&arena, body_direct, &[]),
+            "a universal with no binders has nothing to substitute"
+        );
+    }
+
+    /// The pass builds the application, at the arguments it claims, and does
+    /// nothing at all when its budget is `0`.
+    ///
+    /// This is a test of the PASS, not of a verdict, and deliberately so: a
+    /// query small enough to write here is decided by the loop's other rungs
+    /// with priming OFF — an earlier end-to-end form of this test failed on its
+    /// own vacuity guard, which is the measurement that put this form here — so
+    /// no toy can discriminate the two arms on a verdict. What discriminates
+    /// them is the corpus A/B in
+    /// `docs/research/03-measurements/building-the-skolem-application-2026-09-10.md`.
+    /// What this pins is that the pass produces the term that measurement went
+    /// looking for, and that the shipped `0` budget produces nothing.
+    ///
+    /// Delete the eligibility filter, the substitution, or the budget check and
+    /// one of these assertions dies.
+    #[test]
+    fn skolem_priming_builds_the_application_at_the_arguments_it_claims() {
+        let (mut arena, sort, c, skolem, _ordinary, predicate) = skolem_prime_fixture();
+        let x_symbol = arena.declare("skp_x", sort).unwrap();
+        let x = arena.var(x_symbol);
+        let sk_x = arena.apply(skolem, &[x]).unwrap();
+        let body = arena.apply(predicate, &[sk_x]).unwrap();
+        let universal = arena.forall(x_symbol, body).unwrap();
+        // A ground fact naming `c`, so `c` is a source-vocabulary constant the
+        // pass can substitute.
+        let p_c = arena.apply(predicate, &[c]).unwrap();
+        let assertions = vec![p_c, universal];
+
+        // What the pass must produce: `skp_p(!qskf_0(skp_c))`.
+        let sk_c = arena.apply(skolem, &[c]).unwrap();
+        let wanted = arena.apply(predicate, &[sk_c]).unwrap();
+
+        let run = |arena: &mut TermArena, budget: usize| -> Vec<TermId> {
+            let foralls = vec![universal];
+            let mut matcher = IncrementalEmatchSession::new_with_nested(arena, &foralls, &[]);
+            let mut state = TermInventionState::default();
+            let mut seen: HashSet<TermId> = HashSet::new();
+            let mut ground: Vec<TermId> = vec![p_c];
+            let mut retained: HashMap<TermId, QuantifierGroundDerivation> = HashMap::new();
+            let mut generations = TermGenerations::seed_sources(arena, &assertions);
+            let _guard = SkolemPrimeGuard::set(budget);
+            let (_eligible, admitted) = matcher.prime_skolem_application_instances(
+                arena,
+                &assertions,
+                &mut state,
+                &mut seen,
+                &mut ground,
+                &mut retained,
+                &mut generations,
+            );
+            admitted
+        };
+
+        let off = run(&mut arena, 0);
+        assert!(
+            off.is_empty(),
+            "a `0` budget is the SHIPPED arm and must admit nothing, got {off:?}"
+        );
+
+        let on = run(&mut arena, SKOLEM_PRIME_MEASURED_ARM);
+        assert!(
+            on.contains(&wanted),
+            "the pass must build `skp_p(!qskf_0(skp_c))` — the Skolem application at \
+             a constant already in the assertions — got {on:?}"
+        );
+
+        // The instance is a CONSEQUENCE, not a guess: it must pass the same
+        // certificate gate a matched instance passes. Without this the pass
+        // could admit anything of the right shape.
+        let certificate = QuantifierInstanceCertificate {
+            assertion: universal,
+            bindings: vec![c],
+            instance: wanted,
+        };
+        assert!(
+            check_quantifier_ground_derivation(
+                &mut arena,
+                &assertions,
+                &QuantifierGroundDerivation::Instance(certificate),
+            ),
+            "the primed instance must be checkable against its universal"
+        );
     }
 }

@@ -320,19 +320,18 @@ fn replay_holds(
 }
 
 /// Copies `model` without the internal `!lazy_op_*` abstraction variables.
+///
+/// Roadmap 2.11. `replay_holds` above checks the ORIGINAL assertions against
+/// `model.to_assignment()` — the full inner model — and this then emitted a
+/// narrower one: the rebuild carried entries and functions and dropped
+/// `real_div_zero`, `uninterpreted_cardinalities` and the quantified sat
+/// certificates. The last two are invisible to a re-replay through
+/// `to_assignment`, so this narrows through `Model::retain_symbols`, which
+/// cannot drop a component, rather than adding a guard that could not fail on
+/// them.
 fn restrict_model(arena: &TermArena, model: &Model) -> Model {
-    let mut out = Model::new();
-    for (symbol, name, _sort) in arena.symbols() {
-        if name.starts_with(FRESH_PREFIX) {
-            continue;
-        }
-        if let Some(value) = model.get(symbol) {
-            out.set(symbol, value);
-        }
-    }
-    for (func, value) in model.functions() {
-        out.set_function(func, value.clone());
-    }
+    let mut out = model.clone();
+    out.retain_symbols(|symbol| !arena.symbol(symbol).0.starts_with(FRESH_PREFIX));
     out
 }
 
@@ -426,4 +425,88 @@ fn usize_to_f64(value: usize) -> f64 {
 #[allow(clippy::cast_possible_truncation)]
 fn usize_to_u64(value: usize) -> u64 {
     value as u64
+}
+
+/// Roadmap 2.11 — this file's narrowing site, `restrict_model`.
+///
+/// Item 2.11 names `lazy_bv.rs:323` as one of two sites where SOUND-1's guard 2
+/// (re-replay against `Model::to_assignment`) **cannot** be the fix.
+/// `replay_holds` above checks the caller's assertions against
+/// `model.to_assignment()` — the full inner model — and `restrict_model` then
+/// emitted a narrower one. Two of the things it dropped,
+/// `uninterpreted_cardinalities` and the quantified sat certificates, are not
+/// components an `Assignment` can hold, so a re-replay through `to_assignment`
+/// is structurally incapable of noticing they are gone. That is a check that
+/// cannot fail on the defect the site has, which this repository rates as worse
+/// than no check.
+///
+/// So the fix here is a *carry*, not a *guard*: narrowing goes through
+/// `Model::retain_symbols`, which starts from the whole model. The test below
+/// is what makes that claim falsifiable at this site rather than only at the
+/// helper.
+#[cfg(test)]
+mod sound2_narrowing_site_tests {
+    use super::{FRESH_PREFIX, restrict_model};
+    use crate::model::Model;
+    use crate::quant_sat_certificates::{AffineSkolemWitness, QuantifiedSkolemSatCertificate};
+    use axeyum_ir::{Rational, Sort, TermArena, Value};
+
+    /// DIES ON: rebuilding the emitted model in `restrict_model` instead of
+    /// narrowing the one that was replayed.
+    #[test]
+    fn restrict_model_keeps_every_component_the_replay_saw() {
+        let mut arena = TermArena::new();
+        let user = arena.declare("x", Sort::BitVec(8)).expect("declare x");
+        let fresh = arena
+            .declare_internal(&format!("{FRESH_PREFIX}0"), Sort::BitVec(8))
+            .expect("declare fresh");
+        let opaque = arena.declare_uninterpreted_sort("U");
+        let assertion = arena.var(user);
+
+        let mut inner = Model::new();
+        inner.set(user, Value::Bv { width: 8, value: 3 });
+        inner.set(fresh, Value::Bv { width: 8, value: 9 });
+        inner.set_real_div_zero(Rational::integer(5), Rational::integer(100));
+        inner.set_uninterpreted_cardinality(opaque, 3);
+        inner.set_quantified_sat_certificate(QuantifiedSkolemSatCertificate {
+            assertion,
+            universals: vec![user],
+            existential: fresh,
+            witness: AffineSkolemWitness {
+                terms: Vec::new(),
+                constant: Rational::integer(1),
+            },
+        });
+
+        let restricted = restrict_model(&arena, &inner);
+
+        // The abstraction variable is the only thing that may be gone.
+        assert_eq!(restricted.get(fresh), None, "the `!lazy_op_` variable");
+        assert_eq!(
+            restricted.get(user),
+            Some(Value::Bv { width: 8, value: 3 }),
+            "x"
+        );
+
+        // The two components `Model::to_assignment` cannot express, and which a
+        // guard-2 re-replay is therefore blind to. These are the assertions that
+        // make this site's fix a carry rather than a check.
+        assert_eq!(
+            restricted.uninterpreted_cardinality(opaque),
+            Some(3),
+            "the declared carrier size did not survive narrowing — and no replay \
+             through `to_assignment` would have told you"
+        );
+        assert_eq!(
+            restricted.quantified_sat_certificates().count(),
+            1,
+            "the checked quantified certificate did not survive narrowing — and no \
+             replay through `to_assignment` would have told you"
+        );
+        assert_eq!(
+            restricted.real_div_zero(Rational::integer(5)),
+            Some(Rational::integer(100)),
+            "the division-at-zero witness did not survive narrowing"
+        );
+    }
 }

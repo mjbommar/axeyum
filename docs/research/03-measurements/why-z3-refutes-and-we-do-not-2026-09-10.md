@@ -20,6 +20,19 @@ instantiated. We build those Skolem functions. We do not find the instance.**
 **DO NOT BUILD** more clock or a higher ground ceiling — both are measured at
 zero here, on top of item 3.5's 8x-ceiling arm.
 
+
+> **Correction, 2026-09-10 (lane Q5).** The `+ MBQI` in that sentence is
+> now bounded: `z3 smt.mbqi=false` decides the **identical 19 of 32**, file
+> for file, and exactly ONE file in the whole slice is decided by z3's MBQI
+> and by neither other arm (reproduced 3x). So MBQI is not how the reference
+> solver beats us here — the gap is instance selection in E-matching, and
+> nothing else. See
+> `does-mbqi-reach-the-candidateless-universals-2026-09-10.md`.
+>
+> Also: this note's "2-10 instantiations" and z3's `:quant-instantiations`
+> (4 to 12,055 here) are **different counters**; do not quote them
+> interchangeably.
+
 ## The question, as a number
 
 For each of the 18 files z3 refutes and we do not: what ground instance does the
