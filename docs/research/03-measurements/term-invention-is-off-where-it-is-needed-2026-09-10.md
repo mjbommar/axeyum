@@ -64,13 +64,29 @@ were testing capacity against a problem that is a gate.
 
 ## What this does NOT explain
 
-**f29 is the counterexample, and it is load-bearing.** It saturates at 273 ground
-terms — far under the ceiling — runs 125 invention rounds, and its required term
-is *still* absent. So "invention is disabled" is not the whole of category (i).
-Q2 localised f29's missing link to one Skolem-function application whose only
-existing instance, `(f18 f29 !q.?v2.7)`, carries an unreplaced bound variable in
-its second argument. On f29 invention ran and did not form the right application;
-that is a separate defect from not running at all.
+**~~f29 is the counterexample, and it is load-bearing.~~ CORRECTED 2026-09-10 by
+lane Q6 — see below.** It saturates at 273 ground terms — far under the ceiling —
+runs 125 invention rounds, and its required term is *still* absent. I read that
+as "on f29 invention ran and formed the wrong application", and treated it as a
+second defect distinct from not running at all.
+
+**That is not what happened.** f29 prints its one `egraph-fixpoint` line at
+`ground=273`, and Q2's census identifies that block as the **un-Skolemized**
+one — which carries no `!qskf_` symbol at all. So all 125 invention rounds ran
+where the required term could not possibly be formed, because none of its
+ingredients are in scope there. The Skolemized blocks are deadline-bounded and
+never enter the invention branch at all.
+
+The error was mine and it is worth naming: I had a per-file aggregate
+(`125 rounds`, `ground=273`) and inferred from it that invention had been given a
+fair attempt at the target. The probe counts rounds; it does not say **which
+assertion set** those rounds ran over, and this file runs several. An aggregate
+that does not carry its own scope cannot answer a question about scope.
+
+So f29 is NOT a counterexample to the ceiling story — it is a third case, and
+Q6's priming pass moved it into the built column alongside f14, f15, f22 and
+f26. The ceiling attribution in the table above stands unchanged; what does not
+stand is the claim that category (i) had a second mechanism hiding in f29.
 
 Any fix claiming this item must say which of the two it addresses.
 
@@ -90,3 +106,21 @@ The observation that would show a real fix worked:
 - the 32-file slice decides **more than 1**.
 
 The first two without the third is a mechanism that did not pay. Report all three.
+
+## Outcome, 2026-09-10 (lane Q6): all three were reported, and the third was zero
+
+`building-the-skolem-application-2026-09-10.md` ran exactly this. A bounded
+priming pass, placed before the loop where the flood ceiling cannot gate it,
+**built the term**: f29's dump gains `(f18 f29 (!qskf_35 !sk_1 !sk_0))`, Q2's
+exact missing link, and fully-ground `!qskf_` applications rise on eight of the
+ten never-built files (0→229, 0→210, 6→215, …).
+
+The slice still decides **1 of 32**, and the 24-file win list drops to 22, one of
+those losses confirmed real on an isolated binary. The pass ships inert at `0`.
+
+So the prediction this section made — that a mechanism firing without moving the
+decided count is a failure — was correct, and it fired without moving it. The
+construction gap was real, it is closed, and it was not what cost us the
+verdicts. The remaining question is downstream of instantiation entirely: why an
+e-graph holding the refuting instance's terms, with the instance admitted and
+certificate-checked, produces no conflict.
