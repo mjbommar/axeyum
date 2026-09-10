@@ -14,7 +14,7 @@
 //! [`SolverBackend`], whose `check` takes an immutable arena. It mirrors
 //! [`crate::check_with_array_elimination`].
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use axeyum_ir::{Assignment, TermArena, TermId, Value, eval};
 use axeyum_rewrite::{
@@ -69,71 +69,22 @@ fn check_with_preprocessing_impl<B: SolverBackend>(
     config: &SolverConfig,
     local_search_timeout: Option<Duration>,
 ) -> Result<CheckResult, SolverError> {
-    // Iterate the model-sound reductions to a FIXPOINT (Track 1 perf lever — deeper
-    // reduction removes more variables before bit-blasting, which is what relieves
-    // the encode budget on real corpora). One pass is not enough: `elim_unconstrained`
-    // can expose a fresh constant that `propagate_values`/`solve_eqs` then eliminate,
-    // and the re-canonicalization AC-normalizes substituted product trees that reveal
-    // further folds. Each pass is model-sound and contributes a reconstruction trail;
-    // they compose in pass/round order (reconstructed in reverse). The final replay
-    // against the ORIGINAL assertions (below) is the trust anchor — any trail/round
-    // composition bug surfaces there as an `Err`, never a wrong `sat`.
+    // The reduction itself lives in `reduce_to_fixpoint` (ADR-1811: one home for
+    // word-level preprocessing). This entry point runs it to the module's own cap.
     //
-    // Canonicalize first: a denotation- and symbol-preserving normalization (e.g.
-    // commutative-operand ordering, so `(= (bvmul a b) (bvmul b a))` folds to `true`
-    // with no bit-blasting). It eliminates no variables, so it needs no trail.
-    let mut reduced = canonicalize_terms(arena, assertions)
-        .map_err(|error| SolverError::Backend(format!("canonicalize failed: {error}")))?
-        .terms;
-    let mut trail = ModelReconstructionTrail::new();
-    for _round in 0..MAX_PREPROCESS_ROUNDS {
-        // `propagate_values` (pin `x = c`).
-        let values = propagate_values(arena, &reduced)
-            .map_err(|error| SolverError::Backend(format!("propagate_values failed: {error}")))?;
-        let eliminated_values = values.eliminated();
-        let (after_values, values_trail) = values.into_parts();
-        trail.append(values_trail);
-
-        // `solve_eqs_bounded` (substitute `x = t`): the substitution loop is
-        // `O(eliminations × nodes)` and runs effectively unbounded on the large public
-        // ite-DAGs; the deterministic node-fuel bail keeps it usable at that scale,
-        // returning a sound *partial* reduction (un-eliminated equalities stay as
-        // ordinary assertions; the trail still reconstructs).
-        let eqs = solve_eqs_bounded(arena, &after_values, DEFAULT_SOLVE_EQS_FUEL)
-            .map_err(|error| SolverError::Backend(format!("solve_eqs failed: {error}")))?;
-        let eliminated_eqs = eqs.eliminated();
-        let (after_eqs, eq_trail) = eqs.into_parts();
-        trail.append(eq_trail);
-
-        // `elim_unconstrained` (T1.2.4): a variable occurring once under
-        // `bvadd`/`bvsub`/`bvxor`/`bvnot`/`bvneg` makes that subterm unconstrained, so
-        // it is replaced by a fresh variable and the operator dropped (recovered on
-        // `sat` via the appended trail). Runs after `solve_eqs` so it sees the reduced
-        // form; its inverses reference only surviving + freshly-minted symbols, so
-        // appending its trail last (reconstructed first on reverse replay) resolves.
-        let unconstrained = elim_unconstrained(arena, &after_eqs)
-            .map_err(|error| SolverError::Backend(format!("elim_unconstrained failed: {error}")))?;
-        let eliminated_unconstrained = unconstrained.eliminated();
-        let (after_unconstrained, unconstrained_trail) = unconstrained.into_parts();
-        trail.append(unconstrained_trail);
-
-        // Re-canonicalize after substitution. `solve_eqs` inlines `x := t` by raw
-        // structural rebuild (`replace_subterms`), so a definition like `s1 = a*(b*c)`
-        // substituted into `(not (= s1 s2))` reintroduces un-normalized operator trees
-        // that AC-normalize here so the equality folds. Denotation- and
-        // symbol-preserving ⇒ no trail.
-        reduced = canonicalize_terms(arena, &after_unconstrained)
-            .map_err(|error| {
-                SolverError::Backend(format!("post-solve canonicalize failed: {error}"))
-            })?
-            .terms;
-
-        // Fixpoint: a round that eliminates no variable means no further reduction is
-        // available (the next round would reproduce this one) — stop.
-        if eliminated_values + eliminated_eqs + eliminated_unconstrained == 0 {
-            break;
-        }
-    }
+    // `deadline: None` is deliberate and preserves this path's behaviour exactly:
+    // `check_with_preprocessing` has never polled a clock inside the reduction, and
+    // ADR-1811 step 3 lands the merge as a pure refactor plus ONE added witness
+    // kind. The front door supplies a real deadline (`auto.rs`); wiring
+    // `config.timeout` in here would turn some of today's `sat` into `unknown` and
+    // is a separate, measured change.
+    let (reduced, trail) = match reduce_to_fixpoint(arena, assertions, None, MAX_PREPROCESS_ROUNDS)?
+    {
+        Some(reduced) => reduced,
+        // Unreachable with `deadline: None`; degrade to the unreduced query rather
+        // than inventing a verdict, since preprocessing is only ever an optimization.
+        None => (assertions.to_vec(), ModelReconstructionTrail::new()),
+    };
 
     let mut local_search_detail = None;
     if let Some(timeout) = local_search_timeout {
@@ -174,7 +125,122 @@ fn check_with_preprocessing_impl<B: SolverBackend>(
     replay_preprocessed_model(arena, assertions, &trail, &model.to_assignment())
 }
 
-fn replay_preprocessed_model(
+/// Runs the model-sound word-level reduction pipeline to a fixpoint, at most
+/// `max_rounds` rounds: `canonicalize` → (`propagate_values` → fuel-bounded
+/// `solve_eqs` → `elim_unconstrained` → re-`canonicalize`)*.
+///
+/// This is the ONE home for the reduction (ADR-1811). Both callers share it: this
+/// module's [`check_with_preprocessing`], which passes [`MAX_PREPROCESS_ROUNDS`],
+/// and the front door (`auto::check_auto_preprocessed`), which passes `1` — the
+/// cap the front door's `reduction_shrinks_encoding` guard was calibrated against.
+///
+/// Returns `Ok(None)` when `deadline` expires mid-reduction; the poll sits before
+/// each pass **and inside the round loop**, so a multi-round run cannot outrun the
+/// caller's budget between rounds. A partial reduction is discarded rather than
+/// returned, because the trail composition is only meaningful as a whole.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Backend`] if any reduction pass fails.
+pub(crate) fn reduce_to_fixpoint(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+    max_rounds: usize,
+) -> Result<Option<(Vec<TermId>, ModelReconstructionTrail)>, SolverError> {
+    // Iterate the model-sound reductions to a FIXPOINT (Track 1 perf lever — deeper
+    // reduction removes more variables before bit-blasting, which is what relieves
+    // the encode budget on real corpora). One pass is not enough: `elim_unconstrained`
+    // can expose a fresh constant that `propagate_values`/`solve_eqs` then eliminate,
+    // and the re-canonicalization AC-normalizes substituted product trees that reveal
+    // further folds. Each pass is model-sound and contributes a reconstruction trail;
+    // they compose in pass/round order (reconstructed in reverse). The final replay
+    // against the ORIGINAL assertions (in `replay_preprocessed_model`) is the trust
+    // anchor — any trail/round composition bug surfaces there as an `Err`, never a
+    // wrong `sat`.
+    //
+    // Canonicalize first: a denotation- and symbol-preserving normalization (e.g.
+    // commutative-operand ordering, so `(= (bvmul a b) (bvmul b a))` folds to `true`
+    // with no bit-blasting). It eliminates no variables, so it needs no trail.
+    if past_deadline(deadline) {
+        return Ok(None);
+    }
+    let mut reduced = canonicalize_terms(arena, assertions)
+        .map_err(|error| SolverError::Backend(format!("canonicalize failed: {error}")))?
+        .terms;
+    let mut trail = ModelReconstructionTrail::new();
+    for _round in 0..max_rounds {
+        if past_deadline(deadline) {
+            return Ok(None);
+        }
+        // `propagate_values` (pin `x = c`).
+        let values = propagate_values(arena, &reduced)
+            .map_err(|error| SolverError::Backend(format!("propagate_values failed: {error}")))?;
+        let eliminated_values = values.eliminated();
+        let (after_values, values_trail) = values.into_parts();
+        trail.append(values_trail);
+        if past_deadline(deadline) {
+            return Ok(None);
+        }
+
+        // `solve_eqs_bounded` (substitute `x = t`): the substitution loop is
+        // `O(eliminations × nodes)` and runs effectively unbounded on the large public
+        // ite-DAGs; the deterministic node-fuel bail keeps it usable at that scale,
+        // returning a sound *partial* reduction (un-eliminated equalities stay as
+        // ordinary assertions; the trail still reconstructs).
+        let eqs = solve_eqs_bounded(arena, &after_values, DEFAULT_SOLVE_EQS_FUEL)
+            .map_err(|error| SolverError::Backend(format!("solve_eqs failed: {error}")))?;
+        let eliminated_eqs = eqs.eliminated();
+        let (after_eqs, eq_trail) = eqs.into_parts();
+        trail.append(eq_trail);
+        if past_deadline(deadline) {
+            return Ok(None);
+        }
+
+        // `elim_unconstrained` (T1.2.4): a variable occurring once under
+        // `bvadd`/`bvsub`/`bvxor`/`bvnot`/`bvneg` makes that subterm unconstrained, so
+        // it is replaced by a fresh variable and the operator dropped (recovered on
+        // `sat` via the appended trail). Runs after `solve_eqs` so it sees the reduced
+        // form; its inverses reference only surviving + freshly-minted symbols, so
+        // appending its trail last (reconstructed first on reverse replay) resolves.
+        let unconstrained = elim_unconstrained(arena, &after_eqs)
+            .map_err(|error| SolverError::Backend(format!("elim_unconstrained failed: {error}")))?;
+        let eliminated_unconstrained = unconstrained.eliminated();
+        let (after_unconstrained, unconstrained_trail) = unconstrained.into_parts();
+        trail.append(unconstrained_trail);
+        if past_deadline(deadline) {
+            return Ok(None);
+        }
+
+        // Re-canonicalize after substitution. `solve_eqs` inlines `x := t` by raw
+        // structural rebuild (`replace_subterms`), so a definition like `s1 = a*(b*c)`
+        // substituted into `(not (= s1 s2))` reintroduces un-normalized operator trees
+        // that AC-normalize here so the equality folds. Denotation- and
+        // symbol-preserving ⇒ no trail.
+        reduced = canonicalize_terms(arena, &after_unconstrained)
+            .map_err(|error| {
+                SolverError::Backend(format!("post-solve canonicalize failed: {error}"))
+            })?
+            .terms;
+        if past_deadline(deadline) {
+            return Ok(None);
+        }
+
+        // Fixpoint: a round that eliminates no variable means no further reduction is
+        // available (the next round would reproduce this one) — stop.
+        if eliminated_values + eliminated_eqs + eliminated_unconstrained == 0 {
+            break;
+        }
+    }
+    Ok(Some((reduced, trail)))
+}
+
+/// Whether `deadline` (if set) has passed.
+fn past_deadline(deadline: Option<Instant>) -> bool {
+    crate::portfolio::stop_or_past_deadline(deadline)
+}
+
+pub(crate) fn replay_preprocessed_model(
     arena: &TermArena,
     assertions: &[TermId],
     trail: &ModelReconstructionTrail,
@@ -216,6 +282,18 @@ fn replay_preprocessed_model(
     for (symbol, _name, _sort) in arena.symbols() {
         if let Some(value) = reconstructed.get(symbol) {
             out.set(symbol, value);
+        }
+    }
+    // Carry uninterpreted-function interpretations through too: an inner
+    // QF_UFLIA/QF_UFLRA `sat` reconstructs an `Op::Apply` interpretation, and
+    // dropping it would leave the returned model unable to replay a UF query
+    // (the original assertions reference `f` — `eval` would raise
+    // `UnboundFunction`). This loop is the merge ADR-1811 is about: it existed
+    // only in `auto::dispatch_reduced` until 2026-09-09, so a model handed back
+    // through THIS module silently lost every function interpretation.
+    for (func, _name, _params, _result) in arena.functions() {
+        if let Some(interp) = reconstructed.function(func) {
+            out.set_function(func, interp.clone());
         }
     }
     // Carry the free-division `/0` witness (P2.5): the replay above succeeded
