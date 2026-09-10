@@ -2170,12 +2170,19 @@ fn prove_quantified_unsat_via_egraph_impl(
                     eprintln!(
                         "QPROBE egraph-fixpoint round={round} ground={} foralls={} \
                          patterns={} triggerless={triggerless} \
-                         shared_assertions={} unattributed={}",
+                         shared_assertions={} unattributed={} \
+                         releases={} releases_at_throttle={} flood_slices={} \
+                         flood_eager_kept={} flood_deep_seen={}",
                         ground.len(),
                         matcher.quantifiers.len(),
                         matcher.patterns.len(),
                         matcher.admission_census.shared_assertion_universals,
                         matcher.admission_census.unattributed,
+                        matcher.admission_census.releases,
+                        matcher.admission_census.releases_at_throttle,
+                        matcher.admission_census.flood_slices,
+                        matcher.admission_census.flood_eager_kept,
+                        matcher.admission_census.flood_deep_seen,
                     );
                     let mut admitted_per_universal: Vec<usize> = vec![0; matcher.quantifiers.len()];
                     for derivation in matcher.ground_derivations.values() {
@@ -2203,7 +2210,8 @@ fn prove_quantified_unsat_via_egraph_impl(
                              rej_handoff={} rej_poscap={} rej_nocontext={} \
                              rej_expired={} rej_subst={} rej_true={} \
                              rej_unreleased={} rej_flood={} rej_ceiling={} rej_check={} \
-                             rej_seen={} census_admitted={}",
+                             rej_seen={} rej_dupother={} rej_true_newterm={} \
+                             census_admitted={}",
                             quantifier.vars.len(),
                             quantifier.pattern_indices.len(),
                             admitted_per_universal[index],
@@ -2218,6 +2226,8 @@ fn prove_quantified_unsat_via_egraph_impl(
                             rejects.ground_ceiling,
                             rejects.check_failed,
                             rejects.already_seen,
+                            rejects.duplicate_of_other_universal,
+                            rejects.redundant_true_term_introducing,
                             rejects.admitted,
                         );
                     }
@@ -2818,7 +2828,7 @@ fn admit_next_source_batch(
     let mut pool = "urgent";
     // Once urgent traffic is exhausted, release unresolved clauses so mutually
     // constraining instances preserve the legacy loop's reach.
-    if admitted.is_empty() {
+    if admitted.is_empty() || release_deferred_with_urgent() {
         if ground.len() >= policy.throttle_min_ground {
             let bools = BooleanUnitValuation::new(policy.criterion, arena, matcher, ground);
             deferred = budget_flood_slice(
@@ -2834,7 +2844,7 @@ fn admit_next_source_batch(
                 &mut census,
             );
         }
-        admitted = admit_generated_ground(
+        let released = admit_generated_ground(
             arena,
             assertions,
             &deferred,
@@ -2845,7 +2855,23 @@ fn admit_next_source_batch(
             generations,
             &mut census,
         );
-        pool = "deferred";
+        if admitted.is_empty() {
+            // Shipped path, byte-identical: `admitted` was empty, so this is
+            // the historical assignment and the historical ORDER. The loop is
+            // perturbation-sensitive; the merge below is the experiment arm's
+            // and must not reach the shipped one.
+            admitted = released;
+            pool = "deferred";
+        } else {
+            admitted.extend(released);
+            admitted.sort_by_key(|term| term.index());
+            admitted.dedup();
+            pool = "urgent+deferred";
+        }
+        census.releases += usize::from(census.enabled);
+        if ground.len() >= policy.throttle_min_ground {
+            census.releases_at_throttle += usize::from(census.enabled);
+        }
     } else {
         // The deferred pool was NEVER OFFERED this round: urgent/unit traffic
         // admitted first and the gate above is `admitted.is_empty()`. These
@@ -2907,6 +2933,7 @@ fn budget_flood_slice(
     if pool.len() <= policy.round_admission_cap {
         return pool;
     }
+    census.flood_slices += usize::from(census.enabled);
     let mut eager = Vec::new();
     let mut deep: Vec<(u32, TermId)> = Vec::new();
     for term in pool {
@@ -2918,6 +2945,10 @@ fn budget_flood_slice(
         } else if !seen.contains(&term) {
             deep.push((generation, term));
         }
+    }
+    if census.enabled {
+        census.flood_eager_kept += eager.len();
+        census.flood_deep_seen += deep.len();
     }
     // The eager prefix is never rescored. Delaying shallow-generation
     // candidates was measured net-negative (see the constant's own docs), and a
@@ -3017,6 +3048,23 @@ fn qprobe_enabled() -> bool {
 /// assumed away.
 fn census_enabled() -> bool {
     std::env::var_os("AXEYUM_QPROBE_CENSUS").is_some()
+}
+
+/// EXPERIMENT ARM, off by default: release the deferred admission pool in the
+/// SAME round as urgent/unit traffic instead of only once urgent traffic runs
+/// dry.
+///
+/// The shipped gate in [`admit_next_source_batch`] is `if admitted.is_empty()`,
+/// a strict priority: conflicts and units first, unresolved clauses only when
+/// there are none. On a file whose urgent traffic never runs dry inside the
+/// budget, that priority is not a delay, it is a permanent exclusion — measured
+/// as the single largest cause of `joined>0 admitted=0` on the UF parity-loss
+/// slice. This flag exists so the alternative can be MEASURED on the whole
+/// slice rather than argued about; it is not a shipped route.
+///
+/// See `docs/research/03-measurements/what-the-admission-filter-rejects-2026-09-10.md`.
+fn release_deferred_with_urgent() -> bool {
+    std::env::var_os("AXEYUM_QINST_RELEASE_DEFERRED").is_some()
 }
 
 /// Z3-style instantiation generations (T2.6.4; `qi_queue.cpp` cost
@@ -3522,6 +3570,7 @@ fn collect_generated_ground(
     let mut propagations = Vec::new();
     let mut derivations = HashMap::new();
     let mut redundant = 0usize;
+    let census_on = matcher.admission_census.enabled;
     for batch in matcher.lazy_clause_batches(arena, deadline) {
         redundant += batch.redundant;
         urgent.extend(batch.urgent);
@@ -3529,9 +3578,27 @@ fn collect_generated_ground(
         propagations.extend(batch.propagations);
         deferred.extend(batch.deferred);
         for (instance, certificate) in batch.instance_certificates {
-            derivations
-                .entry(instance)
-                .or_insert(QuantifierGroundDerivation::Instance(certificate));
+            let owner = certificate.assertion;
+            match derivations.entry(instance) {
+                std::collections::hash_map::Entry::Vacant(slot) => {
+                    slot.insert(QuantifierGroundDerivation::Instance(certificate));
+                }
+                std::collections::hash_map::Entry::Occupied(existing) => {
+                    // First-writer-wins is the shipped behaviour; the census
+                    // just stops the loser reading as an unexplained drop.
+                    if census_on {
+                        let held = match existing.get() {
+                            QuantifierGroundDerivation::Instance(other) => other.assertion,
+                            QuantifierGroundDerivation::Propagation(other) => other.assertion,
+                        };
+                        if held != owner
+                            && let Some(slot) = matcher.admission_census.for_assertion(owner)
+                        {
+                            slot.duplicate_of_other_universal += 1;
+                        }
+                    }
+                }
+            }
         }
     }
     for (term, derivation) in checked_propagation_additions(arena, assertions, &propagations) {
@@ -3714,6 +3781,20 @@ struct AdmissionRejects {
     /// The round's congruence already makes the instance clause
     /// `ClauseValue::True` — the shipped entailment filter.
     redundant_true: usize,
+    /// The `redundant_true` subset whose instance contains at least one term
+    /// the e-graph has NEVER SEEN.
+    ///
+    /// This is the distinction that decides whether the entailment filter is
+    /// correct. `IncrementalEmatchSession::equality` returns `Undetermined` for
+    /// any term it has not registered, so a clause can only be `True` on
+    /// registered terms — EXCEPT through its two term-blind routes: a
+    /// syntactic `t = t`, and a disjunction one of whose other literals is
+    /// already true, which says nothing about the remaining literals' terms.
+    /// A drop in this subset is entailed (so it cannot help the final
+    /// refutation check) but still costs the loop a term it could have matched
+    /// a trigger against on a later round. A drop outside it costs nothing at
+    /// all.
+    redundant_true_term_introducing: usize,
     /// Classified into the deferred pool, but the pool was never released this
     /// round because urgent/unit traffic admitted first
     /// (`admit_next_source_batch`'s `if admitted.is_empty()` gate).
@@ -3729,6 +3810,15 @@ struct AdmissionRejects {
     /// earlier round, or produced first by another universal (the derivation
     /// map is first-writer-wins, so the admission is credited there).
     already_seen: usize,
+    /// Another universal produced this exact instance term first THIS round, so
+    /// `collect_generated_ground`'s `derivations` map kept its certificate and
+    /// every downstream count for the term lands on that universal.
+    ///
+    /// NOT a lost instance — it is the same term, admitted under another name.
+    /// This bucket exists because without it such a universal reads
+    /// `joined>0 admitted=0` with every rejection counter at zero, which looks
+    /// like an unexplained drop and is not one.
+    duplicate_of_other_universal: usize,
     /// Reached `ground`.
     admitted: usize,
 }
@@ -3741,11 +3831,13 @@ impl AdmissionRejects {
         self.expired += other.expired;
         self.subst_failed += other.subst_failed;
         self.redundant_true += other.redundant_true;
+        self.redundant_true_term_introducing += other.redundant_true_term_introducing;
         self.pool_unreleased += other.pool_unreleased;
         self.flood_truncated += other.flood_truncated;
         self.ground_ceiling += other.ground_ceiling;
         self.check_failed += other.check_failed;
         self.already_seen += other.already_seen;
+        self.duplicate_of_other_universal += other.duplicate_of_other_universal;
         self.admitted += other.admitted;
     }
 }
@@ -3766,6 +3858,20 @@ struct AdmissionCensus {
     shared_assertion_universals: usize,
     /// Pool terms with no derivation to attribute them to.
     unattributed: usize,
+    /// Rounds in which the deferred pool was released at all.
+    releases: usize,
+    /// Releases in which `ground.len() >= FLOOD_THROTTLE_MIN_GROUND`, so
+    /// [`budget_flood_slice`] was consulted. The difference from `releases` is
+    /// how much of this population the throttle never sees.
+    releases_at_throttle: usize,
+    /// Consultations in which the pool also exceeded
+    /// `FLOOD_ROUND_ADMISSION_CAP`, so the slice did something.
+    flood_slices: usize,
+    /// Candidates the slice kept unconditionally because their generation is
+    /// at or under `FLOOD_EAGER_GENERATION_MAX`.
+    flood_eager_kept: usize,
+    /// Deeper-generation candidates the slice ranked.
+    flood_deep_seen: usize,
 }
 
 impl AdmissionCensus {
@@ -5267,6 +5373,9 @@ impl IncrementalEmatchSession {
                             batch.redundant += 1;
                             if census_on {
                                 batch.rejects.redundant_true += 1;
+                                if !self.all_terms_registered(arena, instance) {
+                                    batch.rejects.redundant_true_term_introducing += 1;
+                                }
                             }
                         }
                         Some(ClauseValue::False) => batch.urgent.push(instance),
@@ -6056,6 +6165,26 @@ impl IncrementalEmatchSession {
             }
         }
         invented_this_step
+    }
+
+    /// Whether every subterm of `term` is already registered in the matching
+    /// e-graph. `AXEYUM_QPROBE` census only — it decides whether an entailed
+    /// instance the loop declined would ALSO have introduced a term.
+    fn all_terms_registered(&self, arena: &TermArena, term: TermId) -> bool {
+        let mut stack = vec![term];
+        let mut visited = HashSet::new();
+        while let Some(term) = stack.pop() {
+            if !visited.insert(term) {
+                continue;
+            }
+            if !self.bridge.term_to_node.contains_key(&term) {
+                return false;
+            }
+            if let TermNode::App { args, .. } = arena.node(term) {
+                stack.extend(args.iter().copied());
+            }
+        }
+        true
     }
 
     /// Conservative equality lookup over terms already registered from the
