@@ -8427,6 +8427,10 @@ fn mbqi_assertion_census(arena: &TermArena, assertions: &[TermId]) {
     }
     let (mut qf, mut prenex1, mut prenex_n, mut nested, mut other) = (0, 0, 0, 0, 0);
     let mut widths: Vec<usize> = Vec::new();
+    // Of the `prenex1` universals -- the only shape the refutation loop takes --
+    // how many bind a sort `value_to_const` can write a constant for.
+    let mut prenex1_representable = 0usize;
+    let mut prenex1_uninterpreted = 0usize;
     for &a in assertions {
         if matches!(
             arena.node(a),
@@ -8437,12 +8441,16 @@ fn mbqi_assertion_census(arena: &TermArena, assertions: &[TermId]) {
         ) {
             let mut width = 0usize;
             let mut matrix = a;
+            let mut first_binder = None;
             while let TermNode::App {
-                op: Op::Forall(_),
+                op: Op::Forall(sym),
                 args,
             } = arena.node(matrix)
             {
                 let [body] = &**args else { break };
+                if first_binder.is_none() {
+                    first_binder = Some(*sym);
+                }
                 width += 1;
                 matrix = *body;
             }
@@ -8451,6 +8459,15 @@ fn mbqi_assertion_census(arena: &TermArena, assertions: &[TermId]) {
             } else if width == 1 {
                 prenex1 += 1;
                 widths.push(width);
+                if let Some(sym) = first_binder {
+                    match arena.symbol(sym).1 {
+                        Sort::Uninterpreted(_) => prenex1_uninterpreted += 1,
+                        Sort::Bool | Sort::Int | Sort::Real | Sort::BitVec(_) => {
+                            prenex1_representable += 1;
+                        }
+                        _ => {}
+                    }
+                }
             } else {
                 prenex_n += 1;
                 widths.push(width);
@@ -8464,7 +8481,9 @@ fn mbqi_assertion_census(arena: &TermArena, assertions: &[TermId]) {
     let max_width = widths.iter().copied().max().unwrap_or(0);
     eprintln!(
         "[mbqi-census] assertions={} qf={qf} prenex1={prenex1} prenexN={prenex_n} \
-nested={nested} other={other} max_prenex_width={max_width}",
+nested={nested} other={other} max_prenex_width={max_width} \
+prenex1_representable={prenex1_representable} \
+prenex1_uninterpreted={prenex1_uninterpreted}",
         assertions.len()
     );
 }
