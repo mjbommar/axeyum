@@ -1705,6 +1705,43 @@ mod tests {
         assert_ne!(dflt.policy().entering, bland.policy().entering);
     }
 
+
+    /// PROBE (temporary): does a doubling chain force `narrow` to decline?
+    #[test]
+    fn probe_wide_witness() {
+        const N: usize = 131; // x0 .. x130
+        let mut rows: Vec<Constraint> = Vec::new();
+        for i in 0..(N - 1) {
+            let mut coeffs = vec![Rational::zero(); N];
+            coeffs[i] = r(1);
+            coeffs[i + 1] = r(-2);
+            rows.push(Constraint {
+                coeffs,
+                rel: Rel::Eq,
+                rhs: r(0),
+            });
+        }
+        let mut coeffs = vec![Rational::zero(); N];
+        coeffs[N - 1] = r(1);
+        rows.push(Constraint {
+            coeffs,
+            rel: Rel::Ge,
+            rhs: r(1),
+        });
+
+        // What does the tableau itself say, before `narrow`?
+        let mut tab = Tableau::new(N, &rows);
+        let run = tab.run(None, MAX_PIVOTS);
+        eprintln!("run feasible = {:?}", matches!(run, Ok(RunOutcome::Feasible)));
+        let Ok(point) = tab.materialize() else { panic!("materialize overflowed") };
+        let bigs = point.iter().filter(|v| v.is_big()).count();
+        eprintln!("point len = {}, big values = {}", point.len(), bigs);
+        eprintln!("x0 = {}", point[0]);
+        eprintln!("x130 = {}", point[N - 1]);
+        eprintln!("narrow -> {:?}", narrow(point.clone()).is_some());
+        eprintln!("feasible() -> {:?}", matches!(feasible(N, &rows), SimplexOutcome::Unknown));
+    }
+
     fn r(n: i128) -> Rational {
         Rational::integer(n)
     }
