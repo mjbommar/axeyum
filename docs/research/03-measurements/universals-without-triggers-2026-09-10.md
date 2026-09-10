@@ -14,8 +14,8 @@ whose category A is 919 of 19,975 universal-**rounds** (4.6%) with `patterns=0`.
 **Method:** `AXEYUM_QPROBE=1 target/release/examples/axeyum_cli <file> --timeout-ms 24000`,
 four at a time, plus a new compile-time probe (`diagnose_triggerless`) that
 classifies each triggerless universal as it is compiled.
-**Reproduce:** the fallback implementation measured here is commit `«FALLBACK»`,
-reverted in `«REVERT»`; the probe it was measured with is on `main`.
+**Reproduce:** the fallback implementation measured here is commit `d399651f0`,
+reverted in the commit immediately after it; the probe it was measured with stays.
 
 ## 1. How many distinct universals, on how many files
 
@@ -207,7 +207,7 @@ follows the precedent the source note records for this same loop: rotation of th
 join walk was also measured-neutral and also reverted, because
 `qinst_egraph.rs`'s admission schedule is perturbation-sensitive (a per-pattern
 match split once cost a scored refutation), so a measured-neutral perturbation
-here is a bad trade. The implementation is recoverable at `«FALLBACK»` if a
+here is a bad trade. The implementation is recoverable at `d399651f0` if a
 later measurement gives it a reason to exist.
 
 ## 6. Verdict, and what would refute it
@@ -221,7 +221,7 @@ which would have to be wrong:
 2. 40% (290 of 728, 267 actable) has no candidate term to trigger on at all.
    *Refuted by:* a `candidates=0` universal for which some trigger exists.
 3. The applicable fallback was built and moved 0 of 32 verdicts. *Refuted by:*
-   re-running the slice at `«FALLBACK»` and counting more than one `unsat`.
+   re-running the slice at `d399651f0` and counting more than one `unsat`.
 4. The reproducer that motivated the item, `f31`, has both of its triggerless
    universals in the inert half. *Refuted by:* either of them reporting
    `active=true` or `context=true`.
