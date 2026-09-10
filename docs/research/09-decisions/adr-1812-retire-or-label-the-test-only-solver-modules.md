@@ -58,8 +58,10 @@ and an inventory module that loses its disposition fails.
 `StateClass::Unsupported`, and `dispatch` / `dispatch_self` declined it with
 "only Real, BitVec, and Bool are dispatched; Int/Array/etc. decline". That single
 decline is why `pdr_lia.rs` and `imc_lia.rs` — 1,771 lines of native-ℤ IC3/PDR
-and interpolation-based model checking — had no production caller: their only
-references anywhere in the tree were four `pub use` lines in `lib.rs`.
+and interpolation-based model checking — had no production caller. Outside their
+own files the whole tree held four `pub use` lines in `lib.rs` and two
+integration suites (`tests/pdr_lia.rs`, `tests/imc_lia.rs`) that call them
+directly; no other module did.
 
 `StateClass::Int` now routes to `prove_safety_pdr_lia` with a
 `prove_safety_imc_lia` fallback, mirroring the `Real` branch exactly, in both
@@ -165,11 +167,12 @@ corrections — each of which changed an answer for a module in this set:
 With both corrections, at base commit `6dd85fc78` the measurement reports **20**
 modules with no in-crate caller (19 reachable from tests or another crate, plus
 `hypothesis_min`, which has no reference anywhere at all — even its tests are
-inline). That is the inventory's 15 plus `abduct`, `cardinality`, `distinct`,
-`enums` and `pb`, which the looser method had credited to comment or collision
-matches. All eleven modules of the inventory's finding are confirmed test-only at
-base. The extras are outside item 2.7's scope and are recorded here so the next
-inventory starts from the corrected number rather than 15.
+inline). That is the inventory's 15 plus five: `capabilities`, `cardinality`,
+`distinct`, `strings` and `support_matrix`. Part of that gap is the stricter
+method and part is drift — the inventory measured 176 declared modules and this
+run sees 184 — and this ADR does not try to apportion it. What matters for item
+2.7 is the other direction: **all eleven modules of the inventory's finding are
+confirmed test-only at base**, so none of them was a measurement artifact.
 
 After this ADR the same measurement reports **18**: `pdr_lia` and `imc_lia` are
 gone from the list, which is the whole observable effect of the wiring. The other
@@ -220,6 +223,19 @@ arena. The regex reconstruction already established the side-channel pattern.
   two corrections above before reporting any module dead.
 - `lex_reconstruct` stays unwired until a lane that owns `smtlib.rs` applies the
   recorded edit. That is the one piece of item 2.7 this ADR does not finish.
+- Two findings fell out of this work that belong to other items, recorded here so
+  they are not lost:
+  - **`(set-logic HORN)` is accepted and routes nothing.** `smtlib.rs:3378`
+    lists `HORN` as a known logic, so a CHC benchmark is not rejected — it goes
+    through the ordinary quantified dispatch and is decided by something other
+    than the CHC front-end. "Not wired" understates it; an accepted logic name
+    that reaches no front-end is worse than a rejection, because it looks like
+    support.
+  - **`RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-solver --features full`
+    fails at base commit `6dd85fc78`**, with four errors in `cdclt.rs:157` and
+    `trust.rs:546-547` (`CdclT::solve` private, and `BitBlast`/`Tseitin`/
+    `SatRefutation` unresolved). CI runs the workspace form of this with
+    `-D warnings`. Unrelated to item 2.7 and not fixed here.
 - Roadmap item 3.7 (interpolation strength and shape) named IMC/PDR as "themselves
   unwired" and gated itself on this item. The `LIA` half is now wired, so that
   gate is partly lifted: an interpolation-strength consumer exists.
