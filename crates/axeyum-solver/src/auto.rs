@@ -2862,6 +2862,122 @@ fn guard_zero_divisor_sat(
     }
 }
 
+/// What the int-linear routes need in order to decide whether a `sat` of the
+/// div/mod-**eliminated** form is a certificate for the **original** query.
+///
+/// The three routes below (`lia-simplex`, `lia-dpll`, and the fused group) all
+/// solve `lin` — the output of [`axeyum_rewrite::eliminate_int_divmod`] — and
+/// return the verdict *and the model* as the answer for the caller's original
+/// assertions. That is sound for the verdict and **not** sound for the model:
+/// see [`replay_int_linear_sat`].
+struct IntLinearSatGuard<'a> {
+    /// The caller's assertions, before elimination.
+    original: &'a [TermId],
+    /// The fresh symbols standing for the eliminated `div`/`mod`/`abs` terms.
+    /// Taken from the producer's own record — used only for *which symbol is
+    /// internal*, never for what its value should be.
+    internal: BTreeSet<SymbolId>,
+    congruence: axeyum_rewrite::ZeroDivisorCongruence,
+}
+
+impl<'a> IntLinearSatGuard<'a> {
+    /// Captures what the routes will need before `into_assertions` consumes the
+    /// elimination.
+    fn from_elimination(
+        original: &'a [TermId],
+        elimination: &axeyum_rewrite::IntDivModElimination,
+    ) -> Self {
+        Self {
+            original,
+            internal: elimination.replacements().iter().map(|&(_, s)| s).collect(),
+            congruence: elimination.congruence(),
+        }
+    }
+}
+
+/// Declines an int-linear `sat` whose model is not a model of the **original**
+/// assertions, and strips the elimination's internal symbols from the one that
+/// is (roadmap 2.10).
+///
+/// `eliminate_int_divmod` replaces each `div a 0` / `mod a 0` with a fresh
+/// unconstrained `!divmod_k`, because SMT-LIB leaves those values
+/// underspecified. The ground evaluator does **not**: `eval` pins `div a 0 = 0`
+/// and `mod a 0 = a` (`axeyum-ir/src/eval.rs`). `Model` has no component for an
+/// integer division-at-zero interpretation — the way it has `real_div_zero` for
+/// the real case — so when a route picks `!divmod_0 = 5` for `(div x 0)`, that
+/// choice is **structurally unrepresentable** in the certificate the caller
+/// receives. The caller's replay then falls back to the evaluator's convention
+/// and the assertion evaluates `false`.
+///
+/// Measured, not hypothesised. Before this guard,
+/// `(= x 3) ∧ (= (div x 0) 5)` returned `Sat` from both `check_auto` and the
+/// public `solve_smtlib` front door with the model `x = 3, !divmod_0 = 5`:
+/// a model that leaks an internal symbol the caller never declared, omits any
+/// representation of the choice that made the query satisfiable, and replays
+/// `false` at assertion #1. `sat` was the correct **verdict** (SMT-LIB leaves
+/// `div`-by-zero free) and the **certificate** was wrong, which is exactly the
+/// SOUND-1 shape (`c41dd4264`) one theory over.
+///
+/// So this is a certificate guard, not a verdict guard, and it degrades to a
+/// first-class `unknown` rather than emitting a `sat` that cannot be checked —
+/// the repository's standing rule that every `sat` must be checkable by
+/// evaluating the *original* term against the lifted model.
+fn replay_int_linear_sat(
+    arena: &TermArena,
+    guard: &IntLinearSatGuard<'_>,
+    result: CheckResult,
+) -> CheckResult {
+    // ADR-1730's congruence guard first: it rejects a strictly different class
+    // (a `sat` that gives provably-equal dividends different free values) and
+    // keeps its own tests.
+    let result = guard_zero_divisor_sat(result, guard.congruence);
+    let CheckResult::Sat(model) = result else {
+        return result;
+    };
+    if guard.internal.is_empty() {
+        // Nothing was eliminated, so `lin` IS the original and the model the
+        // routes already replay is already the caller's. Returning here keeps
+        // the overwhelmingly common integer query on exactly the path it has
+        // always taken.
+        return CheckResult::Sat(model);
+    }
+    // The fresh symbols are the elimination's scratch state, not part of the
+    // caller's vocabulary. Emitting them is a leak in its own right: the caller
+    // gets a binding for a symbol it never declared.
+    let mut emitted = Model::new();
+    for (symbol, value) in model.iter() {
+        if !guard.internal.contains(&symbol) {
+            emitted.set(symbol, value);
+        }
+    }
+    for (func, value) in model.functions() {
+        emitted.set_function(func, value.clone());
+    }
+    for (numerator, quotient) in model.real_div_zeros() {
+        emitted.set_real_div_zero(numerator, quotient);
+    }
+
+    // The replay that decides it, against the ORIGINAL assertions and against
+    // the exact artifact the caller receives — not against `lin`, and not
+    // against the richer internal state the routes solved over.
+    let assignment = emitted.to_assignment();
+    for &assertion in guard.original {
+        if !matches!(eval(arena, assertion, &assignment), Ok(Value::Bool(true))) {
+            return CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: format!(
+                    "int div/mod elimination produced a `sat` of the eliminated form whose \
+                     model is not a model of the original query (assertion #{} does not \
+                     replay); the chosen value of a div/mod-at-zero term is not \
+                     representable in `Model`, so the certificate cannot carry it",
+                    assertion.index()
+                ),
+            });
+        }
+    }
+    CheckResult::Sat(emitted)
+}
+
 /// The exact integer linear-refuter chain (bv2nat-range → Diophantine →
 /// LIA-simplex → LIA-DPLL), split from [`check_auto_dispatch`] for length. Each
 /// is a sound refuter / complete decider over the linear integer fragment;
@@ -2896,7 +3012,13 @@ fn dispatch_int_linear_refuters(
     // congruence-closed need not be a model of the original. `guard_zero_divisor_sat`
     // turns exactly that case into a first-class `unknown` naming the group count.
     // A decline is a legal discharge (ADR-1721); a silent `sat` is not.
-    let congruence = elim.congruence();
+    // Captured before `into_assertions` consumes the elimination: the three
+    // routes below solve `lin` and hand the caller the result *for the original
+    // query*, so each needs the original assertions and the internal-symbol set
+    // to check that the model it is about to emit is a model of what was asked
+    // (roadmap 2.10). The symbol set is empty for the overwhelming majority of
+    // integer queries, where `replay_int_linear_sat` short-circuits.
+    let sat_guard = IntLinearSatGuard::from_elimination(assertions, &elim);
     let lin = elim.into_assertions();
     // Diophantine system refutation: integer (fraction-free) row reduction of the
     // *system* of top-level integer equalities — a sound refutation that decides
@@ -2914,7 +3036,7 @@ fn dispatch_int_linear_refuters(
         config.timeout.and_then(|t| Instant::now().checked_add(t)),
     ) {
         Ok(result) => {
-            let result = guard_zero_divisor_sat(result, congruence);
+            let result = replay_int_linear_sat(arena, &sat_guard, result);
             with_recorder(rec, |t| t.record_result("lia-simplex", &result));
             return Ok(Some(result));
         }
@@ -2970,7 +3092,7 @@ fn dispatch_int_linear_refuters(
             arena,
             &lin,
             &group_config,
-            congruence,
+            &sat_guard,
             rec,
         )?);
         if let Some(group) = &mut group
@@ -2991,7 +3113,7 @@ fn dispatch_int_linear_refuters(
     };
     match lia_result {
         Ok(mut result) => {
-            result = guard_zero_divisor_sat(result, congruence);
+            result = replay_int_linear_sat(arena, &sat_guard, result);
             if let CheckResult::Unknown(reason) = &result
                 && features.has_function
                 && is_budget_unknown_kind(reason.kind)
@@ -3146,7 +3268,7 @@ fn run_int_linear_group(
     arena: &TermArena,
     lin: &[TermId],
     config: &SolverConfig,
-    congruence: axeyum_rewrite::ZeroDivisorCongruence,
+    sat_guard: &IntLinearSatGuard<'_>,
     rec: &mut Recorder<'_>,
 ) -> Result<IntLinearGroup, SolverError> {
     let group = crate::portfolio::FusedGroup::new(
@@ -3168,7 +3290,7 @@ fn run_int_linear_group(
         // is the opposite of what happened.
         match arm.labelled() {
             Ok(result) => {
-                let result = guard_zero_divisor_sat(result, congruence);
+                let result = replay_int_linear_sat(arena, sat_guard, result);
                 with_recorder(rec, |t| t.record_result(route, &result));
                 if index == 0 {
                     first_arm = Ok(result);
