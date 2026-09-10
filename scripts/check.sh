@@ -1192,6 +1192,16 @@ step evidence-lean-module-wrapper cargo test -p axeyum-solver --features full --
 # stays green.
 # docs/research/03-measurements/why-43-satisfiable-qfbv-miss-2026-09-10.md
 step qfbv-width-frontier cargo test -p axeyum-solver --features full --test qfbv_width_frontier -- --test-threads=1
+# The quantifier ROUTING capability pin (roadmap 3.10). Same reasoning as the
+# step above, and it was found by lane B1 the same way: this suite had ZERO
+# invocations across scripts/, justfile and .github/ on the day it was added,
+# so the fix it protects (318930806, `unknown` -> `unsat` on
+# UF/sledgehammer/Hoare/smtlib.1116374) was guarded by a test nothing ran.
+# corpus/regression/ cannot substitute: it SKIPS `unknown`, so a regression
+# back to `unknown` reads there as a coverage gap and the suite stays green.
+# Expect a NONZERO count (1).
+# docs/research/03-measurements/why-z3-refutes-and-we-do-not-2026-09-10.md
+step quant-skolem-routing cargo test -p axeyum-solver --features full --test quant_skolem_egraph_routing -- --test-threads=1
 # The axiom-freedom measurements. `axreal: axiom=30` is the whole remaining
 # trusted surface and the claim that the shipped route no longer reaches it
 # rested, until 2026-08-18, on three examples that NO gate ran -- zero

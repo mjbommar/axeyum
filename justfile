@@ -932,6 +932,13 @@ gate-controls:
     # Expect a NONZERO count (3).
     # docs/research/03-measurements/why-43-satisfiable-qfbv-miss-2026-09-10.md
     cargo test -p axeyum-solver --features full --test qfbv_width_frontier -- --test-threads=1
+    # The quantifier ROUTING capability pin (roadmap 3.10), ~31s. Mirrors the
+    # `quant-skolem-routing` step in scripts/check.sh; both sides on purpose,
+    # because check-aggregate-scope.sh reds on a step that runs on only one.
+    # Added because lane B1 found this suite had ZERO invocations anywhere on
+    # the day it was written -- the fix it guards was protected by nothing.
+    # Expect a NONZERO count (1).
+    cargo test -p axeyum-solver --features full --test quant_skolem_egraph_routing -- --test-threads=1
 
 # Is there a FRESH, PASSING, fully-measured `local-ci --record` for (an
 # ancestor of) HEAD? A green record proves nothing on its own -- see
