@@ -608,11 +608,8 @@ fn a_candidate_missing_the_div_zero_witness_is_never_sat() {
         &originals,
         &SolverConfig::default(),
     );
-    match result {
-        Ok(CheckResult::Sat(model)) => {
-            panic!("a candidate with no /0 witness must not come back as sat; got {model:?}")
-        }
-        Ok(_) | Err(_) => {}
+    if let Ok(CheckResult::Sat(model)) = result {
+        panic!("a candidate with no /0 witness must not come back as sat; got {model:?}");
     }
 }
 
