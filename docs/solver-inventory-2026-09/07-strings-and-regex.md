@@ -94,9 +94,11 @@ no `parse_script`/`solve_smtlib` to even read `(set-logic QF_S)`.
   accepts the token, nothing decides it" row in the operator table.
 - The `:status` corpus sweep CLAUDE.md names as the pre-merge gate
   (`corpus_regression.rs`) is general-purpose (walks all of
-  `corpus/regression/<logic>/`), not string-specific; its only string
-  coverage is `corpus/regression/cvc5/qf_s/` (20 `.smt2` files, all
-  `QF_S`). There is no `qf_slia` subdirectory in the committed corpus.
+  `corpus/regression/<logic>/`), not string-specific; its string coverage is
+  `corpus/regression/cvc5/qf_s/` (20 `.smt2` files, all `QF_S`),
+  `corpus/regression/cvc5/qf_slia/` (36 files, all `QF_SLIA` — added 2026-09-09,
+  P2.5), and `corpus/regression/cvc5/seq/` (30 files, `Seq` theory — added
+  2026-09-09, P2.5).
 
 ## Inventory
 
@@ -230,7 +232,7 @@ function takes the current `CheckResult` and only overwrites an `Unknown`).
 | `word_first_fallback.rs` | `crates/axeyum-solver/tests/word_first_fallback.rs` | `#![cfg(feature = "full")]` line 28 | Scripts the bounded encoder rejects at parse (literal/concat-width cap overflow) falling back to the unbounded word-only path; reproduces cvc5-regress `issue6520`/`issue6681` shapes inline |
 | `qf_slia_fixed_splice.rs` | `crates/axeyum-solver/tests/qf_slia_fixed_splice.rs` | `#![cfg(feature = "full")]` line 2 | Correlated-bound handling for generated fixed-position splice patterns (`PyExZ3`-style overwrite via two substrings around a literal) |
 | `stoi_len_abstraction.rs` | `crates/axeyum-solver/tests/stoi_len_abstraction.rs` | `#![cfg(feature = "full")]` line 25 | `str.to_int`-aware length/value abstraction (P2.7 A.2), ground-int constant folding, semantic-suffix and `str.at`-over-`substr` parse-level normalizations, targeting the `2019-full_str_int` `QF_SLIA` family |
-| `corpus_regression.rs` | `crates/axeyum-solver/tests/corpus_regression.rs` | `#![cfg(feature = "full")]` line 16 | The general oracle-free `:status` corpus sweep, **not string-specific** — walks every `*.smt2` under `corpus/regression/<logic>/` through `check_auto` and fails only on a verdict contradicting `:status`. Its only string coverage is `corpus/regression/cvc5/qf_s/` (**20 files**, all `QF_S`; no `qf_slia` subdirectory exists in the committed corpus). Without `--features full` this compiles to zero tests (matches the CLAUDE.md warning). |
+| `corpus_regression.rs` | `crates/axeyum-solver/tests/corpus_regression.rs` | `#![cfg(feature = "full")]` line 16 | The general oracle-free `:status` corpus sweep, **not string-specific** — walks every `*.smt2` under `corpus/regression/<logic>/` through `check_auto` and fails only on a verdict contradicting `:status`. Its string coverage is `corpus/regression/cvc5/qf_s/` (**20 files**, all `QF_S`), `corpus/regression/cvc5/qf_slia/` (**36 files**, all `QF_SLIA`), and `corpus/regression/cvc5/seq/` (**30 files**, `Seq` theory) — the latter two added 2026-09-09 (P2.5). Without `--features full` this compiles to zero tests (matches the CLAUDE.md warning). |
 | `string_differential_fuzz.rs` | `crates/axeyum-solver/tests/string_differential_fuzz.rs` | needs `--features z3` (differential vs. the system Z3 binary) for the oracle arms; the module also carries self-checking arms | The bounded route's `str.++`/`str.at`/`str.substr`/`str.replace[_all]`/`str.from_code`/`str.to_code`/`str.to_int`/`str.from_int`/`str.indexof`/`str.<`; explicitly includes the `a946f925`-class degenerate-constant seed shapes (§5) |
 | `regex_membership_differential_fuzz.rs` | `crates/axeyum-solver/tests/regex_membership_differential_fuzz.rs` | `--features z3` | Regex-membership route including `\u{...}`-escaped and astral-plane (`>0xFFFF`) literals against Z3 |
 | `qf_slia_length_lia_differential_fuzz.rs`, `qf_slia_lex_order_differential_fuzz.rs` | `crates/axeyum-solver/tests/` | `--features z3` | Length↔LIA route and lex-order route, respectively, against Z3 |
@@ -477,13 +479,23 @@ walks every `*.smt2` under `corpus/regression/<logic>/`
 an `Unknown` or a parse failure is a skip, not a failure
 (`corpus_regression.rs:6-13`). For this lane's scope, its coverage is
 `corpus/regression/cvc5/qf_s/` — **20 `.smt2` files**, all bearing `(set-logic
-QF_S)` (`find corpus/regression -iname "*.smt2" -path "*qf_s*" | wc -l` = 20;
-`-path "*slia*"` = 0). There is no committed `QF_SLIA`-labeled regression
-subdirectory, so this gate's string coverage is QF_S only; QF_SLIA soundness
-is exercised instead by the named differential-fuzz suites
-(`qf_slia_length_lia_differential_fuzz.rs`,
-`qf_slia_lex_order_differential_fuzz.rs`), which need `--features z3` to
-compile any tests.
+QF_S)` — plus, as of 2026-09-09 (P2.5), `corpus/regression/cvc5/qf_slia/`
+(**36 files**, all `(set-logic QF_SLIA)`) and `corpus/regression/cvc5/seq/`
+(**30 files**, `Seq`-theory instances, mostly `(set-logic ALL)` upstream but
+quantifier-free) — vendored from cvc5's own `test/regress/cli/*/strings` and
+`*/seq` suites at clone commit `1689f13331f7543801f82d9dcbcaac2f70a26781`
+(`find corpus/regression/cvc5/qf_s -iname "*.smt2" | wc -l` = 20;
+`find corpus/regression/cvc5/qf_slia -iname "*.smt2" | wc -l` = 36;
+`find corpus/regression/cvc5/seq -iname "*.smt2" | wc -l` = 30). Distinct
+`str.*`/`seq.*`/`re.*` operators exercised rose from 16 (`qf_s/` alone) to 47
+across all three directories; of the 66 newly vendored files, 57 decide
+correctly against `:status` and 9 return `unknown` (never a wrong verdict) —
+see `corpus/regression/cvc5/qf_slia/README.md` and
+`corpus/regression/cvc5/seq/README.md` for the per-file/per-operator split.
+QF_SLIA soundness is now exercised by both this vendored slice and the named
+differential-fuzz suites (`qf_slia_length_lia_differential_fuzz.rs`,
+`qf_slia_lex_order_differential_fuzz.rs`), the latter still needing
+`--features z3` to compile any tests.
 
 ## Gaps and open questions
 
