@@ -3,13 +3,25 @@
 **Roadmap item:** 3.1 of
 [`docs/solver-comparison-2026-09/11-roadmap-and-plan.md`](../../solver-comparison-2026-09/11-roadmap-and-plan.md).
 **Lane:** M3-1. **Date:** 2026-09-10. **Base:** `474423c8d`.
-**Recommendation: DO NOT BUILD — and the blocking prerequisite is a corpus, not code.**
+**Recommendation: DO NOT BUILD.**
 
 The roadmap's own gate for this item reads: *"Count QF_BV sat instances where
 `pbls` fails and bit-blasting is slow; if small, defer."* This note runs that
-count. It is **zero**, and it is zero for a reason that no amount of local-search
-engineering would change: the committed QF_BV corpus contains no instance that
-bit-blasting finds hard.
+count. On the committed corpus it is **zero**, and trivially so: the largest
+satisfiable QF_BV benchmark we have committed is 1,368 bytes.
+
+That alone would only support "we cannot measure this here." So I also ran the
+comparison on **166 satisfiable QF_BV instances sampled from SMT-LIB 2024** —
+files of exactly the industrial shape item 3.1 exists for. The count is **zero
+there too**: of the 43 instances our bit-blasting path fails to decide in 10 s,
+local search decides **none**, and on **30 of the 43 it performs zero flips** —
+it never reaches its own search loop. Meanwhile bit-blasting decides 96
+instances that local search does not, and local search decides none that
+bit-blasting misses.
+
+The gap to a Bitwuzla-class engine is real, but it is **~2 orders of magnitude in
+flip rate**, not 68 missing invertibility functions — and the cheap half of
+closing it was already built and already measured at 1.5× (§6).
 
 ---
 
@@ -31,8 +43,21 @@ Decomposed into countable parts:
 | Instances where local search **loses** one bit-blasting gets in 0 ms | **3** | §3 |
 | Times the local-search engine is reached through the front door, over 60 files | **0** | §4 |
 
+And because "our corpus is too small to see the gap" is the obvious objection, I
+went off-tree and sampled the real thing (§5):
+
+| Question | Answer | Where |
+|---|---|---|
+| SMT-LIB 2024 QF_BV `:status sat` instances sampled from the NAS | **166** | §5 |
+| …the front door does not decide in 10 s | **43** | §5 |
+| …**of those 43, the ones local search decides** | **0** | §5 |
+| …of those 43, the ones on which local search performs **zero flips** | **30** | §5 |
+| Instances where local search wins and bit-blasting loses, anywhere in the sample | **0** | §5 |
+| Instances where bit-blasting wins and local search loses | **96** | §5 |
+
 The candidate work is roughly 6,000 lines of operator-specific mathematics
-(§6). The measured return on everything committed is zero verdicts.
+(§6). The measured return is zero verdicts on everything committed, and zero
+verdicts on 166 real SMT-LIB satisfiable instances too.
 
 ---
 
@@ -258,7 +283,85 @@ never reached its subject.
 
 ## 5. What the NAS corpus says (the off-tree check)
 
-PLACEHOLDER_NAS
+§3 answers the roadmap's literal question and finds nothing to build for. The
+obvious objection is the one the brief anticipated: *of course* the count is
+zero, our corpus is toys — the gap is real and we simply cannot see it. So I
+went and looked at instances of the right shape.
+
+The SMT-LIB 2024 QF_BV division is on the NAS (§2). I drew a **stratified random
+sample**: from each of five size bands (`<10 KB`, `10–100 KB`, `100 KB–1 MB`,
+`1–10 MB`, `>10 MB`) up to 120 files, seed `20260910`, then kept the ones
+annotated `:status sat` — **168**, of which the two over 200 MB were dropped to
+keep the box safe, leaving **166**. Same probe, same 10 s cap, same box.
+
+```
+$ target/release/examples/m31_probe 10000 < <166 NAS paths>
+rows: 166
+front door:   {'sat': 123, 'unknown': 41, 'hardcap': 2}
+local search: {'sat':  27, 'unknown': 121, 'hardcap': 18}
+
+front door did NOT return sat on 43 instances (all :status sat)
+  of those, local search returned sat on: 0
+
+both sat: 27
+front door sat, local search not: 96
+local search sat, front door not: 0
+total pbls_reaches through the front door over the NAS sample: 0
+```
+
+**Zero wins, on 166 real satisfiable QF_BV instances, 43 of which we currently
+miss.** The direction of the asymmetry is the opposite of the item's premise:
+there are 96 instances the bit-blasting path decides and the local search does
+not, and none the other way.
+
+The 43 misses split by *why* the local search failed, which matters more than
+the count:
+
+```
+undecided by front door: 43
+  of those, local search performed ZERO flips: 30
+  of those, local search hit the 40 s HARD cap (never returned at all): 18
+  of those, local search actually searched: 13
+
+     bench_3051.smt2                    21907 flips in 10000 ms =  2190/s
+     bench_5512.smt2                    20614 flips in 10000 ms =  2061/s
+     bench_16728.smt2                   25773 flips in 10000 ms =  2577/s
+     bench_15255.smt2                    5639 flips in 10292 ms =   547/s
+     bench_11389.smt2                    5300 flips in 10048 ms =   527/s
+     bench_3980.smt2                      944 flips in 10027 ms =    94/s
+     33.smt2                              758 flips in 10003 ms =    75/s
+     bench_1008.smt2                      267 flips in 10070 ms =    26/s
+     bench_4020.smt2                      207 flips in 10031 ms =    20/s
+     bench_6821.smt2                      180 flips in 10154 ms =    17/s
+     bench_12216.smt2                     123 flips in 14464 ms =     8/s
+     bench_9501.smt2                       56 flips in 10480 ms =     5/s
+     rand_150_600_1159731678_14.lp.smt2     4 flips in 16750 ms =     0/s
+```
+
+**On 30 of the 43, the local search performed zero flips** — it never reached the
+search loop inside the whole budget. Eighteen of those never returned at all
+within 10 s + a 30 s grace: setup (`collect_vars`, the one probe evaluation, the
+initial `recompute`) does not finish. The `edge-matching`, `laby`, `sudoku`,
+`AND-NESTED`/`SLL-NESTED` and `disjunctiveScheduling` families are all in this
+group. **On the instances that would justify item 3.1, our local search does not
+lose the search — it never starts one.**
+
+On the 13 where it did search, the measured flip rate is 0–2,577/s (median over
+all 105 runs longer than 500 ms: **1,175 flips/s**). Competitive SLS runs
+10⁵–10⁶ flips/s. That is the gap, and it is not a gap in move *quality*.
+
+Two caveats I owe this table:
+
+- **The budgets are not matched.** `pbls.rs` hard-codes `max_tries = 25` and
+  `max_flips = 200 + 40 × span` (`pbls.rs:1229-1231`), so some rows in §3 gave up
+  in 122 ms rather than spending the 10 s. Those rows understate what a
+  budget-matched search would do. The 43 rows here do **not** have that problem:
+  every one of them either burned the full budget (`local search: timeout`) or
+  never got out of setup — none exhausted a flip budget early.
+- **`unknown` here is our front door at a 10 s cap on a shared box, not a claim
+  that these instances are hard.** Several would likely decide with more time.
+  That does not change the finding: on the subset where we *are* weak today, the
+  local search is weaker.
 
 ---
 
@@ -337,44 +440,53 @@ Three facts about the reference implementation that bear on the decision:
 
 ## 7. Recommendation
 
-**DO NOT BUILD.** Not "not yet, for scheduling reasons" — the measurement that
-would justify it cannot be taken with the corpus we have.
+**DO NOT BUILD.** Not "not yet, for scheduling reasons," and — after §5 — not
+"we cannot tell." We can tell.
 
-- The literal gate ("count QF_BV `sat` instances where `pbls` fails and
-  bit-blasting is slow") counts **0** committed instances.
-- The largest committed satisfiable QF_BV file is 1,368 bytes; 79% of SMT-LIB's
-  QF_BV division is larger.
-- The engine is currently unreachable from the QF_BV front door, so there is not
-  even a shipping route for an improved version to improve.
+Four independent readings, none of which points at invertibility conditions:
 
-**The prerequisite is a corpus, not 6,000 lines of code.** Concretely, and in
-this order:
+1. **The literal gate counts 0.** No committed QF_BV instance is known-satisfiable
+   and undecided by us. The one `unknown` is a file SMT-LIB itself calls
+   `unknown` (§3).
+2. **On 166 real SMT-LIB satisfiable QF_BV instances the answer is also 0** —
+   including 0 of the 43 we currently miss, while bit-blasting wins 96 the local
+   search loses (§5). The asymmetry runs the wrong way for this item.
+3. **On 30 of those 43 the local search performs zero flips.** It does not lose
+   the search; it never enters it. Better move selection cannot help a search
+   that does not start (§5).
+4. **The gap that does exist is ~2 orders of magnitude in flip rate**, and the
+   cheap structural half of closing it — incremental, cone-invalidating term
+   evaluation — is **already built** and was already measured at 1.5×
+   (§6 fact 2). Item 3.1 as written sizes the *other* half.
 
-1. **Vendor or reference a hard satisfiable QF_BV slice** — the SMT-LIB families
-   whose satisfiable instances are search-bound rather than encode-bound. The
-   files exist on the NAS today; nothing needs to be generated. This is the same
-   shape of prerequisite as item 2.9 (the incremental-script corpus) and 2.5 (the
-   string corpus), and it should be filed alongside them.
-2. **Re-run this note's probe on that slice.** If the count of
-   "front door `unknown`, `:status sat`" is still small, item 3.1 stays closed
-   and the finding is durable rather than a scheduling accident.
-3. **Only if that count is material:** the first increment is **not**
-   invertibility conditions and it is **not** incremental term evaluation — that
-   one is already built and already measured at 1.5× (§6 fact 2). It is a
-   flip-rate measurement on the target slice with a stated target: our engine
-   runs at roughly 10²–10³ flips/s where competitive SLS runs at 10⁵–10⁶. Until a
-   design exists that closes that, 68 inverse-value functions would make a
-   two-orders-of-magnitude-too-slow search pick better moves.
-4. **Independently of 3.1:** decide whether the local-search probe at
+Add that the engine is unreachable from the QF_BV front door today (§4), so
+there is not even a shipping route for an improved version to improve.
+
+**What to do instead, in this order:**
+
+1. **Vendor a hard satisfiable QF_BV slice anyway.** Not for item 3.1 — for the
+   bit-blasting path, which §5 shows fails 43 of 166 real satisfiable instances
+   at 10 s. That is a measured weakness in the engine we *do* ship, found by this
+   probe, and it is a bigger number than anything item 3.1 was competing for. The
+   files are on the NAS; nothing needs generating. Same shape of prerequisite as
+   items 2.9 and 2.5, and it should be filed alongside them.
+2. **Do not spend the 6,000 lines.** If local search is revisited, the first
+   increment is a flip-rate design (a per-node assignment cache propagated
+   bottom-up, Bitwuzla's `d_assignment` shape) with a stated target — not
+   invertibility conditions. 68 inverse-value functions bolted onto a
+   1,175-flips/s scorer would make a two-orders-of-magnitude-too-slow search pick
+   better moves.
+3. **Independently of 3.1:** decide whether the local-search probe at
    `preprocess.rs:111` should stay. It is reached zero times through the front
-   door on 60 committed files and costs a 100 ms budget on the cold rounds where
-   it is reached. That is a wiring question for item 2.7's ledger, not an
-   algorithms question — and this note is not proposing to answer it.
+   door on 60 committed and 166 NAS files, and costs a 100 ms budget on the cold
+   rounds where it *is* reached. That is a wiring question for item 2.7's ledger,
+   not an algorithms question — this note does not propose an answer, only that
+   somebody own it.
 
-**What would change this answer:** a satisfiable QF_BV instance, in a committed
-corpus, that the shipping bit-blasting path does not decide within a normal
-budget and that a local search does. One such instance would reopen the item.
-Zero of the twenty we have is not a close call.
+**What would change this answer:** a satisfiable QF_BV instance that the shipping
+bit-blasting path does not decide in a normal budget and that a local search
+does. Not one exists in 20 committed files or 166 sampled SMT-LIB files. That is
+not a close call, and it is no longer a "cannot determine" either.
 
 ---
 
@@ -406,7 +518,25 @@ Explicitly, so nobody inherits a claim this note did not earn:
   than the noise.
 - **The NAS sample in §5 is a stratified random sample, not the division.** Its
   seed and construction are stated there; a different seed would draw different
-  files.
+  files. 166 of 46,191, deliberately over-weighted toward the large bands.
+- **§5's `:status sat` labels are the benchmarks' own, not verified.** I did not
+  cross-check them against an oracle. This does not weaken the finding: a
+  mislabelled instance would only remove a row from a population where the local
+  search won nothing.
+- **I did not re-run §5 at a larger budget.** Every "front door `unknown`" there
+  is *at 10 s on a loaded box*, not a claim the instance is hard in general. The
+  finding is comparative — same budget, same box, same file, two engines — and
+  that is all it is used for.
+- **I did not give local search a matched budget on the §3 rows** where it quit
+  early on `max_tries`/`max_flips` (§5's second caveat). Raising those constants
+  requires editing `pbls.rs`, which is out of scope for a measurement lane. On
+  the 43 §5 misses the caveat does not apply — none of them ended on a flip
+  budget.
+- **I did not measure `preprop`-style sequencing** (local search for a bounded
+  propagation count, then bit-blasting), which is what Bitwuzla actually ships as
+  an option. §3/§5 run the two engines *independently*, so they bound what a
+  portfolio could win — a portfolio can only win the union — but they do not
+  measure the sequenced configuration itself.
 
 ### Reproduction
 
@@ -414,9 +544,14 @@ The two probe binaries are deleted. To re-derive:
 
 - The population and size tables: pure Python over `corpus/` and a
   `find … -printf '%s\t%p\n'` over the NAS path, both shown inline above.
-- The verdict table: an example that reads paths on stdin and, per path, runs
-  `check_auto` then `solve_local_search` on a 512 MB-stack worker under a
-  `recv_timeout` cap, printing the TSV in §3.
+- The verdict tables (§3, §5): an example that reads paths on stdin and, per
+  path, runs `check_auto` then `solve_local_search` on a 512 MB-stack worker
+  under a `recv_timeout` cap (budget + 30 s grace; overrun prints `HARDCAP`),
+  emitting `path / auto_verdict / auto_ms / pbls_verdict / pbls_ms / flips /
+  restarts / pbls_reaches`.
+- The §5 sample: `find <NAS QF_BV> -printf '%s\t%p\n'`, five size bands, up to
+  120 files each at `random.seed(20260910)`, keep `:status sat` from the first
+  8 KB, drop anything over 200 MB.
 - The reachability control: a `static AtomicUsize` incremented at
   `preprocess.rs:111` inside the `if let Some(timeout)` arm, plus a second example
   calling `theories::arrays::check_qf_abv_lazy_row` (the **cold** entry) so the
