@@ -102,7 +102,7 @@ const NONE: u32 = u32::MAX;
 /// a single forward scan.
 #[inline]
 fn code_of(lit: CnfLit) -> usize {
-    lit.var().index() * 2 + if lit.is_negated() { 1 } else { 0 }
+    lit.var().index() * 2 + usize::from(lit.is_negated())
 }
 
 /// Inverse of [`code_of`]. Infallible for any code produced from a literal of a
@@ -260,6 +260,13 @@ impl EquivalenceMap {
     /// matter to the caller. The walk is bounded by the map's own length, which
     /// it cannot exceed: each hop moves to a variable substituted in a strictly
     /// later round, and the rounds are finite.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a chain does not terminate within the map's own length. That is
+    /// a corrupted map, not bad input: a well-formed one has a representative
+    /// that is never itself substituted at the end of every chain, and looping
+    /// silently would return a model the caller would go on to replay.
     #[must_use]
     pub fn extend(&self, reduced_model: &[bool]) -> Vec<bool> {
         let mut full = reduced_model.to_vec();
@@ -601,6 +608,13 @@ fn strongly_connected(graph: &ImplicationGraph, work: &mut PassWork) -> Option<(
 
 /// One substitution round: build the graph, find the components, emit the
 /// derivation, rewrite the clauses.
+// The four stages share the work meter and the component array, and every one of
+// them reads a decision the previous stage made -- the `x`/`¬x` scan is what
+// makes the representative rule well defined, and the representative table is
+// what the rewrite reads. Splitting them would move the sharing into a struct
+// and put each stage's precondition in a different function from the stage that
+// establishes it.
+#[allow(clippy::too_many_lines)]
 fn decompose_round(
     formula: &CnfFormula,
     budget: Option<u64>,
@@ -667,8 +681,8 @@ fn decompose_round(
     // has already ruled out a component holding both.
     let nodes = formula.variable_count() * 2;
     let mut repr_of_comp = vec![NONE; comp_count as usize];
-    for code in 0..nodes {
-        let c = comp[code] as usize;
+    for (code, &component) in comp.iter().enumerate().take(nodes) {
+        let c = component as usize;
         if repr_of_comp[c] == NONE {
             repr_of_comp[c] = u32::try_from(code).expect("code fits u32");
         }
@@ -733,11 +747,11 @@ fn decompose_round(
             if image != lit {
                 changed = true;
             }
-            if mapped.iter().any(|&seen| seen == image.negated()) {
+            if mapped.contains(&image.negated()) {
                 tautology = true;
                 break;
             }
-            if mapped.iter().any(|&seen| seen == image) {
+            if mapped.contains(&image) {
                 // A duplicate literal is a change even when the image is not:
                 // the checker propagates literals verbatim, so `(b ∨ b)` and
                 // `(b)` are different clauses to it.

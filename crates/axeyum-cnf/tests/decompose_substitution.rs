@@ -66,11 +66,26 @@ impl DecomposeOnly {
     /// Every value recorded under `name`, in order — the right reading for a
     /// valve held across several rounds, where the whole question is what
     /// changed between them.
-    fn all(&self, name: &str) -> Vec<f64> {
+    ///
+    /// Returned as `i64`. Every counter this test file reads is a whole number
+    /// (a count or a 0/1 flag), and comparing those as floats is both a lint and
+    /// a real hazard: `== 1.0` is the wrong shape of assertion for a quantity
+    /// that is never fractional.
+    fn all(&self, name: &str) -> Vec<i64> {
         self.counts
             .iter()
             .filter(|(key, _)| key == name)
-            .map(|(_, value)| *value)
+            .map(|(_, value)| {
+                let rounded = value.round();
+                assert!(
+                    (rounded - value).abs() < 1e-9,
+                    "counter {name} = {value} is not a whole number"
+                );
+                #[allow(clippy::cast_possible_truncation)]
+                {
+                    rounded as i64
+                }
+            })
             .collect()
     }
 }
@@ -548,7 +563,7 @@ fn a_pass_that_keeps_finding_nothing_is_offered_exponentially_less_often() {
     let admitted = valve.inner().all("decompose_tick_admitted");
     assert_eq!(admitted.len(), 8);
     assert_eq!(
-        admitted.iter().filter(|v| **v == 1.0).count(),
+        admitted.iter().filter(|v| **v == 1).count(),
         usize::try_from(granted).expect("fits")
     );
 }
@@ -565,12 +580,12 @@ fn the_valve_admits_the_curated_instance_and_the_pass_reports_through_it() {
 
     assert_eq!(valve.inner().get("decompose_tick_admitted"), Some(1.0));
     assert_eq!(
-        valve.inner().get("decompose_variables_substituted"),
-        Some(EXPECTED_SUBSTITUTED as f64)
+        valve.inner().all("decompose_variables_substituted"),
+        vec![i64::try_from(EXPECTED_SUBSTITUTED).expect("fits")]
     );
     assert_eq!(
-        valve.inner().get("decompose_classes"),
-        Some(EXPECTED_CLASSES as f64)
+        valve.inner().all("decompose_classes"),
+        vec![i64::try_from(EXPECTED_CLASSES).expect("fits")]
     );
     // A productive round clears the back-off rather than arming it.
     assert_eq!(valve.decompose_account().backoff().rounds_left(), 0);

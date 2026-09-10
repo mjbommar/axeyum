@@ -1832,8 +1832,17 @@ mod tests {
     }
 
     /// The schedule preserves satisfiability, and a `sat` model of the searched
-    /// formula lifts back through `compaction.expand` and then
-    /// `reconstruction.extend` — in that order — to a model of the caller's.
+    /// formula lifts back to a model of the caller's.
+    ///
+    /// **This test failed the moment equivalent-literal substitution joined the
+    /// schedule, and that failure is why [`ScheduledInprocess::lift_model`]
+    /// exists.** It composed `compaction.expand` then `reconstruction.extend` by
+    /// hand, which was the whole lift while BVE was the only equisatisfiable
+    /// pass. Substitution is a second one, and a by-hand composition that
+    /// predates it silently returns a model whose substituted slots are
+    /// placeholders. Lifting through the outcome's own method makes adding a
+    /// third lift a change in one place rather than a search for every call
+    /// site.
     #[test]
     fn a_scheduled_sat_model_replays_against_the_original() {
         let f = formula(
@@ -1854,12 +1863,29 @@ mod tests {
         else {
             panic!("the reduced formula must stay satisfiable");
         };
-        let reduced = out.compaction.expand(model.values());
-        let lifted = out.reconstruction.extend(&reduced);
+        let lifted = out.lift_model(model.values());
         assert_eq!(
             f.evaluate(&lifted),
             Ok(true),
             "the lifted model must satisfy the ORIGINAL formula"
+        );
+
+        // The anti-vacuity half: this fixture must actually exercise the lift
+        // that was missing, or the assertion above would pass with `lift_model`
+        // reduced back to the two-step composition.
+        assert!(
+            !out.equivalences.is_identity(),
+            "the fixture must substitute something, or the third lift is untested"
+        );
+        let partial = out
+            .reconstruction
+            .extend(&out.compaction.expand(model.values()));
+        assert_eq!(
+            f.evaluate(&partial),
+            Ok(false),
+            "the OLD two-step composition must be visibly wrong on this fixture: \
+             if it still satisfied the original, this test could not tell the \
+             two lifts apart"
         );
     }
 
