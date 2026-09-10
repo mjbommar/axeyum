@@ -581,11 +581,26 @@ pub struct TickValve<O> {
     steps_per_tick: u64,
     subsume: TickValveAccount,
     bve: TickValveAccount,
-    subsume_ran: bool,
-    bve_ran: bool,
-    subsume_found: bool,
-    bve_found: bool,
+    subsume_round: PassRound,
+    bve_round: PassRound,
     log: Vec<TickDecision>,
+}
+
+/// What one pass did in the round now in progress: whether it ran at all, and
+/// whether it achieved anything. Only the pair matters — a pass that did not
+/// run must not be charged as unproductive — so they travel together rather
+/// than as four loose booleans on the valve.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct PassRound {
+    ran: bool,
+    found: bool,
+}
+
+impl PassRound {
+    const CLEAR: Self = Self {
+        ran: false,
+        found: false,
+    };
 }
 
 impl<O> TickValve<O> {
@@ -597,10 +612,8 @@ impl<O> TickValve<O> {
             steps_per_tick: 1,
             subsume: TickValveAccount::new(subsume),
             bve: TickValveAccount::new(bve),
-            subsume_ran: false,
-            bve_ran: false,
-            subsume_found: false,
-            bve_found: false,
+            subsume_round: PassRound::CLEAR,
+            bve_round: PassRound::CLEAR,
             log: Vec::new(),
         }
     }
@@ -698,16 +711,14 @@ impl<O> TickValve<O> {
     /// the refusal already delayed the round, and the backoff would then delay
     /// it again for a failure that never happened.
     pub const fn finish_round(&mut self) {
-        if self.subsume_ran {
-            self.subsume.record_outcome(self.subsume_found);
+        if self.subsume_round.ran {
+            self.subsume.record_outcome(self.subsume_round.found);
         }
-        if self.bve_ran {
-            self.bve.record_outcome(self.bve_found);
+        if self.bve_round.ran {
+            self.bve.record_outcome(self.bve_round.found);
         }
-        self.subsume_ran = false;
-        self.bve_ran = false;
-        self.subsume_found = false;
-        self.bve_found = false;
+        self.subsume_round = PassRound::CLEAR;
+        self.bve_round = PassRound::CLEAR;
     }
 
     /// Runs one round with the valve as its observer and closes it afterwards.
@@ -746,8 +757,8 @@ impl<O: InprocessObserver> InprocessObserver for TickValve<O> {
         let budget = match decision {
             TickGrant::Granted { allowance, .. } => {
                 match pass {
-                    OccurrencePass::Subsume => self.subsume_ran = true,
-                    OccurrencePass::Bve => self.bve_ran = true,
+                    OccurrencePass::Subsume => self.subsume_round.ran = true,
+                    OccurrencePass::Bve => self.bve_round.ran = true,
                 }
                 let inner = self.inner.grant(pass, formula);
                 match (inner, self.steps_per_tick) {
@@ -758,8 +769,8 @@ impl<O: InprocessObserver> InprocessObserver for TickValve<O> {
                         // The round did not run, so it must not be charged to
                         // the backoff either.
                         match pass {
-                            OccurrencePass::Subsume => self.subsume_ran = false,
-                            OccurrencePass::Bve => self.bve_ran = false,
+                            OccurrencePass::Subsume => self.subsume_round.ran = false,
+                            OccurrencePass::Bve => self.bve_round.ran = false,
                         }
                         None
                     }
@@ -805,9 +816,9 @@ impl<O: InprocessObserver> InprocessObserver for TickValve<O> {
     fn count(&mut self, name: &str, value: f64) {
         if value > 0.0 {
             if SUBSUME_PROGRESS_KEYS.contains(&name) {
-                self.subsume_found = true;
+                self.subsume_round.found = true;
             } else if BVE_PROGRESS_KEYS.contains(&name) {
-                self.bve_found = true;
+                self.bve_round.found = true;
             }
         }
         self.inner.count(name, value);

@@ -249,14 +249,14 @@ impl SearchCounters {
 }
 
 // ---------------------------------------------------------------------------
-// The tick valve: CaDiCaL's accumulate-and-delay gate, denominated in ticks
+// The tick valve: `CaDiCaL`'s accumulate-and-delay gate, denominated in ticks
 // ---------------------------------------------------------------------------
 //
 // Everything above turns counters into a number. Nothing above SPENDS it, and a
 // cost model with no consumer is a decoration: it can be wrong in any direction
 // for as long as it likes and no gate goes red. What follows is the consumer.
 //
-// The design is CaDiCaL's `SET_EFFORT_LIMIT` (`src/limit.hpp:136-164`) plus its
+// The design is `CaDiCaL`'s `SET_EFFORT_LIMIT` (`src/limit.hpp:136-164`) plus its
 // `Delay` (`src/delay.hpp:9-34`), transcribed in
 // `docs/research/02-ecosystems/inprocessing-scheduling-2026-09/cadical-kissat-budget-model.md`
 // (2A.2 and 2.4). Three rules, and the third is the one the reference solvers'
@@ -311,16 +311,16 @@ fn mul_div(value: u64, numerator: u64, denominator: u64) -> u64 {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TickEffort {
     /// Per-mille slice of the accrued search ticks the pass may spend.
-    /// CaDiCaL's `<pass>effort`.
+    /// `CaDiCaL`'s `<pass>effort`.
     pub per_mille: u64,
     /// Refusal threshold as a multiple of the formula's clause count.
-    /// CaDiCaL's `<pass>thresh`. **Zero makes the gate vacuous** — which is
-    /// what `probethresh = 0` does in CaDiCaL, and what [`TickEffort::UNGATED`]
+    /// `CaDiCaL`'s `<pass>thresh`. **Zero makes the gate vacuous** — which is
+    /// what `probethresh = 0` does in `CaDiCaL`, and what [`TickEffort::UNGATED`]
     /// is for.
     pub threshold_per_clause: u64,
     /// Reference window to use when no search ticks have accrued at all — the
     /// pre-search (preprocessing) call, where the numeraire reads zero.
-    /// CaDiCaL's `preprocessinit`.
+    /// `CaDiCaL`'s `preprocessinit`.
     pub bootstrap_reference: u64,
     /// Ceiling on [`TickBackoff`]'s skip run. Zero disables the backoff.
     pub max_backoff_rounds: u32,
@@ -328,7 +328,7 @@ pub struct TickEffort {
 
 impl TickEffort {
     /// The major-pass setting: 10 % of accrued search ticks, refused below 5x
-    /// the clause count. CaDiCaL's `sweep` (`options.hpp:230,236`); the same
+    /// the clause count. `CaDiCaL`'s `sweep` (`options.hpp:230,236`); the same
     /// 10 % an independent empirical study landed on
     /// (Wotzlaw et al., arXiv:1310.4756).
     pub const MAJOR_PASS: Self = Self {
@@ -339,7 +339,7 @@ impl TickEffort {
     };
 
     /// The setting for a pass whose setup dominates a small round: 5 % of
-    /// accrued ticks, refused below 20x the clause count. CaDiCaL's `vivify`
+    /// accrued ticks, refused below 20x the clause count. `CaDiCaL`'s `vivify`
     /// (`options.hpp:259,267`) — note which way round it runs, because it is
     /// counter-intuitive and worth not re-deriving: the pass measured most
     /// expensive gets the SMALLER slice and the LARGER threshold, i.e. it runs
@@ -384,7 +384,7 @@ impl Default for TickEffort {
 
 /// The exponential skip counter for a pass that keeps finding nothing.
 ///
-/// Two numbers, like CaDiCaL's `Delay`: `skips_left` counts down to the next
+/// Two numbers, like `CaDiCaL`'s `Delay`: `skips_left` counts down to the next
 /// offer, `run` is the length the next failure will restart it at.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct TickBackoff {
