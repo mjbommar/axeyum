@@ -31,10 +31,12 @@ Four findings, in the order they change the task:
    vacuous too, on 191 of 195 files. §3.
 4. **Routing it and moving it were then measured end to end, and neither is
    worth doing.** The constant at the most extreme value in its domain produces
-   **0** differences on the shipping path, against a positive control on the
-   same fixtures that fires **255** times. Routed, at 2,000,000 vs 10,000,000,
-   the decided count moves by one file — and the *same binary* moves by one file
-   between two runs, so nothing is resolvable at that scale. §5.
+   **0** differences on the shipping path, against a positive control on the same
+   fixtures that fires **255** times. Routed, it decides 186 at 2,000,000 and
+   **185** at the 10,000,000 the 3.2 note recommends. Across six arms nothing
+   beats the shipping configuration's 186, which reproduces exactly across two
+   independent runs. §5 — including a contaminated first attempt, withdrawn and
+   re-run, whose trap is recorded in §5b.
 
 So the finding this lane was sent to act on is **correct about the constant and
 wrong about the lever**, and the lever it names does not move an outcome even
@@ -270,28 +272,30 @@ argument this lane started with and the fourth is what measuring them returned:
    n = 1 on the positive side" — is a fit of one constant to one file, and the
    quantity it is fitting is the one the shipping design already made
    size-relative on purpose.
-3. **The window is not the binding constraint anyway.** The 3.2 note's window
-   is derived to make BVE *refuse* on the 12 ruinous files. The shipping gate
-   already has a knob that bounds those files without refusing them —
-   `BVE_BUDGET_SETUP_MULTIPLE`, which is granting 1.06–18.1 G steps to passes
-   the clock stops at under 12 s (§3). Bounding is strictly better than
-   refusing here: a bounded BVE still delivers the reductions it finds early,
-   and a refused BVE delivers none.
-4. **Measured with the valve routed, moving the constant moves nothing that can
-   be distinguished from noise, and routing it approximates a flag that is
-   already off** (§5c). At 2,000,000 the routed valve decides 186 of 200; at
-   10,000,000 it decides 185. The shipped binary decides 185 in one run and 186
-   in another. Everything on offer is one boundary file wide. And routing cuts
-   BVE from 108.3 s to 0.4 s — which is not "BVE, budgeted" but "BVE, off", and
+3. **The window is not the binding constraint anyway** — this lane's own third
+   argument, which it then measured and **refuted**. The reasoning was: the 3.2
+   window exists to make BVE *refuse* on the 12 ruinous files, whereas
+   `BVE_BUDGET_SETUP_MULTIPLE` could *bound* them without refusing, and bounding
+   is strictly better because a bounded BVE still delivers what it finds early.
+   Swept at 500 and at 100 through the existing `AXEYUM_BVE_BUDGET_MULTIPLE`
+   lever, both arms fall from the shipping arm's 186 decided files to `off`'s
+   184, losing exactly the two files `off` loses (§5b). Arming the vacuous gate
+   costs verdicts and gains none. The argument was wrong and the measurement is
+   why it is not in the recommendation.
+4. **Measured with the valve routed, moving the constant is neutral at best and
+   one file worse at the recommended value, and routing it approximates a flag
+   that is already off** (§5c). At 2,000,000 the routed valve decides 186 of 200
+   — matching the shipping arm by trading one boundary file for another; at
+   10,000,000, the value the 3.2 note recommends, it decides 185. Routing cuts
+   BVE from 108.3 s to 0.4 s, which is not "BVE, budgeted" but "BVE, off", and
    `cnf_inprocessing: false` is already the shipping default
    (`backend.rs:390`, item 1.2).
 
-**What to do instead — and the honest answer is "nothing here".** This lane
-also swept `BVE_BUDGET_SETUP_MULTIPLE` at 500 and 100 through its existing
-`AXEYUM_BVE_BUDGET_MULTIPLE` lever, expecting the shipping gate's vacuous budget
-(§3) to be the real target. It is not: all three arms and the `off` baseline
-decide the identical 185 files (§5b). The gate is vacuous, and arming it changes
-no verdict either.
+**What to do instead — and the honest answer is "nothing here".** Across six
+arms (`off`, shipping, two tightened budgets, two routed-valve builds), **no
+configuration decides more than the shipping one**, and the shipping arm
+reproduces its 186 exactly across two independent runs. Every change on the
+table is neutral or worse.
 
 The one change to `ticks.rs` that would be *defensible* is documentation rather
 than a value — a line saying the constant is read on no shipping path. This lane
@@ -356,49 +360,82 @@ Same fixtures, same counters, same comparison, a smaller change to the same
 integer: **255 differences when routed, 0 when not.** The harness sees a live
 constant. It does not see this one.
 
-### 5b. The corpus, four arms, one binary
+### 5b. The corpus, four arms, one binary — and a harness trap worth naming first
 
-Full pinned 200-file QF_BV parity list, 24,000 ms budget, each arm pinned to a
-**distinct physical P-core** (0/2/4/6) and run concurrently, `measured=200
-rows=200` on every arm. `off` is the no-inprocessing baseline; `base` is today's
-shipping configuration; `bve500`/`bve100` lower
-`BVE_BUDGET_SETUP_MULTIPLE` from 2,000 through the existing
-`AXEYUM_BVE_BUDGET_MULTIPLE` lever — the same binary, so no build difference has
-to be argued away.
+**The first attempt at this table was contaminated and its numbers are
+withdrawn.** `scripts/inprocess-cost-sweep.sh` re-invokes the fixed path
+`target/release/examples/inprocess_ab` once per file (`:57`), and this lane
+rebuilt that path — twice — while the sweep was still walking the list. From
+roughly file 60 onward, three of the four arms were running a *different
+binary* than the one they were labelled with. It is visible in the data once you
+look for it, by list position, against a later clean run of the same
+configuration:
 
-Host `s4`; 1-minute load `15.52` at start, `19.14`–`24.59` at the arms' ends.
-**The box was busy** and two release builds overlapped the run; see the caveat
-below.
+```
+files   0- 60: contaminated bve_ms=25008 vars=  399,703 | clean bve_ms=26774 vars=  399,703
+files  60-120: contaminated bve_ms=19730 vars=  218,859 | clean bve_ms=37150 vars=  611,505
+files 120-160: contaminated bve_ms=   10 vars=    1,138 | clean bve_ms=  466 vars=   32,818
+files 160-200: contaminated bve_ms=  298 vars=   10,852 | clean bve_ms=43934 vars=1,181,810
+```
 
-| arm | decided | sat | unsat | unknown | wall (s) | inprocess (s) | bve (s) | subsume (s) | `bve_deadline_expired` |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `off` | **185** | 56 | 129 | 15 | 574.6 | 0.0 | 0.0 | 0.0 | 0 |
-| `base` (shipping) | **185** | 56 | 129 | 15 | 624.1 | 63.0 | 45.0 | 9.4 | 0 |
-| `bve500` | **185** | 56 | 129 | 15 | 588.9 | 67.7 | 37.8 | 20.4 | 1 |
-| `bve100` | **185** | 56 | 129 | 15 | 603.0 | 35.8 | 15.5 | 11.9 | 0 |
+The first segment agrees to the variable; the tail does not, because the tail was
+the routed-valve build. The `off` arm is unaffected in substance — the binaries
+differ only inside `inprocess()`, which `arm=off` never calls — but every
+inprocessing arm was. **The sweep printed `measured=200 rows=200` throughout**,
+which is exactly the shape this repository warns about: the coverage assertion
+was true and the measurement was still wrong. It is recorded here rather than
+quietly re-run, because "a fixed binary path plus a concurrent rebuild" is a trap
+any lane using that script can walk into, and nothing in the script can catch it.
 
-* **Decided count is 185 on every arm, and the decided *sets* are identical** —
-  0 gained, 0 lost, pairwise, in every direction. Not one file's verdict moves.
-* **0 sat/unsat disagreements** across all four arms. Nothing became wrong.
-* Inprocessing spend moves by 1.9x between arms (35.8 s to 67.7 s) and buys no
-  verdict either way.
+The table below is the re-run, with **each arm given its own copy of the binary
+before it starts**, from a `sha256`-verified pre-patch build. Full pinned 200-file
+list, 24,000 ms, distinct physical P-cores (0/2/4/6), concurrent,
+`attempted=200 rows=200` on all four. Host `s4`, 1-minute load `9.07` at start,
+`9.54` at end.
 
-**Wall clock does not resolve at this load, and the honest reading is that it
-says nothing.** The ordering is not monotone in the lever: `bve100` grants BVE
-the *smallest* budget, does the *least* inprocessing (35.8 s), and finishes
-*slower* (603.0 s) than `bve500` (67.7 s of inprocessing, 588.9 s). A lever whose
-tightest setting is slower than its looser one is being read through contention,
-not through the solver. Nothing about wall clock is claimed from this run.
+| arm | decided | sat | unsat | unknown | wall (s) | inprocess (s) | bve (s) | subsume (s) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `r-off` | 184 | 55 | 129 | 16 | 611.2 | 0.0 | 0.0 | 0.0 |
+| `r-base` (shipping) | **186** | 57 | 129 | 14 | 703.2 | 155.0 | 108.4 | 36.2 |
+| `r-bve500` | 184 | 55 | 129 | 16 | 644.0 | 90.5 | 56.2 | 25.8 |
+| `r-bve100` | 184 | 55 | 129 | 16 | 644.3 | 68.1 | 32.8 | 26.8 |
 
-**Two caveats on comparability, stated because they bound what this table
-supports.** Each arm was pinned to ONE logical CPU (the committed 2026-09-08
-sweep used six), and the box carried other lanes plus two of this lane's own
-release builds. Absolute figures therefore do not match the committed run —
-`off` decides 185 here against 186 there, and `base` records 45.0 s of BVE and
-**0** `bve_deadline_expired` against 209.7 s and 12. The arms are internally
-comparable to each other because they shared conditions; they are **not**
-comparable to the 2026-09-08 rows, and §1's window is derived from those rows,
-not from these.
+```
+r-off    vs r-base: LOST bench_8967 unknown@24,406 ms (r-base sat@21,155 ms)
+                    LOST div3.c.50  unknown@24,333 ms (r-base sat@20,072 ms)
+r-bve500 vs r-base: the same two files, and only those two
+r-bve100 vs r-base: the same two files, and only those two
+0 sat/unsat flips among commonly decided files, in every pair.
+```
+
+**The control that makes this table readable:** `r-base` here and `base2` in §5c
+are the same shipped binary on the same corpus at the same budget, run at
+different times under different load, and they decide the **identical 186 files
+— 0 gained, 0 lost.** The shipping arm reproduces exactly. So the differences
+below are not run-to-run drift.
+
+Three readings:
+
+* **Inprocessing as shipped gains 2 files over `off`,** and one of them is not a
+  boundary artefact: `base2` decides `bench_8967` at **13,116 ms** of a 24,000 ms
+  budget. (`div3.c.50` is a boundary file — 20.1–22.7 s across runs — and `off`
+  measured 184 here and 185 in the withdrawn run, so ±1 of the gap is soft.)
+* **Tightening the BVE budget removes the gain entirely.** `bve500` and `bve100`
+  both land on `off`'s 184 and lose exactly the two files `off` loses. So §4's
+  third argument — that `BVE_BUDGET_SETUP_MULTIPLE` was the real lever the
+  vacuous gate left un-pulled — is **wrong**, and this measurement is what
+  refutes it. Arming that gate costs verdicts and gains none.
+* Inprocessing costs **92 s of wall** (611.2 → 703.2) for those 2 files. Whether
+  that is a good trade is item 1.2's question, not this lane's; note only that
+  1.2 measured a different corpus (`corpus_regression`) at a different budget
+  (2,000 ms) and found losses there, and nothing here overturns it.
+
+**Comparability caveat.** Each arm was pinned to ONE logical CPU (the committed
+2026-09-08 sweep used six) and the box carried other lanes. Absolute figures do
+not match the committed run — `r-base` records 108.4 s of BVE and 1
+`bve_deadline_expired` against 209.7 s and 12 there. The arms are comparable to
+each other and to §5c (same protocol); they are **not** comparable to the
+2026-09-08 rows, and §1's window is derived from those rows, not from these.
 
 ### 5c. Routing the valve, measured rather than argued
 
@@ -431,45 +468,45 @@ Per file, against `base2`:
 valve2M  vs base2:  GAINED ext_con_008_001_0064  unsat@21,434 ms (base2 unknown@24,112 ms)
                     LOST   div3.c.50            unknown@25,000 ms (base2 sat@22,671 ms)
 valve10M vs base2:  LOST   div3.c.50            unknown@25,000 ms (base2 sat@22,671 ms)
-off      vs base2:  LOST   div3.c.50            unknown@24,413 ms (base2 sat@22,671 ms)
 0 sat/unsat flips among commonly decided files, in every pair.
 ```
 
-**Read the control before reading the table.** `base` in §5b and `base2` here are
-**the same binary on the same corpus at the same budget**, and they report **185
-and 186**. The whole difference is `div3.c.50`, which `base2` decides at
-**22,671 ms of a 24,000 ms budget** — a boundary file, and every arm that "loses"
-it loses it by running out of clock. The gained file is the same shape:
-`ext_con_008_001_0064` at 21,434 ms.
+**Neither routed arm beats the shipping one.** `valve2M` matches its count at 186
+by trading one boundary file for another; `valve10M` — the 3.2 note's own
+recommended value — is at 185, one behind. So moving the constant, in the only
+configuration where the constant acts at all, is **neutral at best and one file
+worse at the recommended value.** Both differences are boundary files (21.4 s and
+22.7 s of a 24 s budget), so the right statement is "no gain, possibly a small
+loss", not "a measured regression".
 
-So the shipping arm disagrees with **itself** by one file, and every difference
-observed between arms is exactly one boundary file. **No decided-count claim is
-supportable here in either direction** — not "routing gains", not "moving the
-constant loses". The measurement's resolution on this corpus at this budget is
-±1, and every effect on offer is ±1.
+The reproducibility control is in §5b and it is what licenses reading these
+differences at all: `base2` and `r-base` are the same binary run at different
+times under different load and decide the **identical 186 files**. The shipping
+arm does not drift.
 
-What *does* reproduce, in two independent runs with opposite pairings, is the
-wall-clock direction:
-
-| comparison | inprocessing spend | wall |
-|---|---|---|
-| §5b `off` vs `base` | 0.0 s vs 63.0 s | 574.6 s vs 624.1 s (−49.5 s without) |
-| §5c `valve2M` vs `base2` | 9.3 s vs 145.7 s | 582.0 s vs 669.3 s (−87.3 s with the valve) |
-
-Both say the same thing and it is item 1.2's finding, not a new one: **BVE as
-currently budgeted costs wall time on this corpus and buys no verdict.** Note
-also that routing the valve does not make BVE cheaper so much as make it *not
-happen* — 108.3 s of BVE becomes 0.4 s. That is the 3.2 note's own §3b
-prediction, confirmed: the routed valve is an approximation of
-`cnf_inprocessing: false`.
+And routing does not make BVE cheaper so much as make it **not happen** — 108.3 s
+of BVE becomes 0.4 s, and inprocessing overall 145.7 s becomes 9.3 s. That is the
+3.2 note's own §3b prediction, confirmed to the shape it predicted: the routed
+valve is an approximation of `cnf_inprocessing: false`. The 87 s of wall it saves
+is the wall that §5b shows buys 2 files.
 
 **And `cnf_inprocessing: false` is already the shipping default**
 (`backend.rs:390`; item 1.2 measured the flip and decided against it). Every arm
-in §5b and §5c is a configuration that is **off by default**. So routing the
-valve buys, at best, a cheaper version of something the default already does not
-do — while replacing a formula-relative reference with a fixed integer, and
-costing the four-line patch and a second admission implementation on the
-shipping path.
+in §5b and §5c is a configuration that is **off by default**. So the whole
+question is: given someone has turned inprocessing on, is any of this better than
+leaving it alone? Measured over six arms — `off`, shipping, two tightened
+budgets, and two routed-valve builds — the answer is **no arm decides more than
+the shipping configuration**, and the routed valve reaches its saving by
+approximating the default that is already in force.
+
+| configuration | decided | inprocessing (s) |
+|---|---:|---:|
+| `cnf_inprocessing: false` (the shipping default) | 184 | 0.0 |
+| **inprocessing as shipped** | **186** | 145.7–155.0 |
+| shipped + `BVE_BUDGET_SETUP_MULTIPLE` 500 | 184 | 90.5 |
+| shipped + `BVE_BUDGET_SETUP_MULTIPLE` 100 | 184 | 68.1 |
+| valve routed, `bootstrap_reference` 2,000,000 | 186 | 9.3 |
+| valve routed, `bootstrap_reference` 10,000,000 | 185 | 9.5 |
 
 ---
 
@@ -557,4 +594,33 @@ grep -rn 'TickValve\|TickEffort\|bootstrap_reference' --include='*.rs' crates/ax
 #   -> no output. Positive control on the same pattern:
 grep -rln 'TickValve' --include='*.rs' crates/
 #   -> crates/axeyum-cnf/{src/inprocess.rs,tests/*.rs} only.
+
+# Sections 5a-5c: one release binary per arm, each COPIED ASIDE BEFORE ITS SWEEP
+# STARTS. This is not fastidiousness -- see 5b. `inprocess-cost-sweep.sh:57`
+# re-invokes `target/release/examples/inprocess_ab` per file, so a rebuild during
+# a sweep silently changes the arm mid-list while `measured=N rows=N` still holds.
+scripts/cargo-serialized.sh build --release -p axeyum-bench --example inprocess_ab
+cp target/release/examples/inprocess_ab /some/scratch/inprocess_ab.<arm>
+sha256sum /some/scratch/inprocess_ab.<arm>      # and check it before each sweep
+
+# per arm, pinned to a DISTINCT PHYSICAL P-core (0/2/4/6 on this box):
+while IFS= read -r f; do
+  MEM_LIMIT_GB=8 timeout 39 taskset -c <cpu> ./scripts/mem-run.sh \
+    /some/scratch/inprocess_ab.<arm> "$f" 24000 <off|inproc-vivify>
+done < bench-results/parity-lists/QF_BV.txt
+
+# arms:
+#   off / inproc-vivify              -- the two shipping configurations
+#   AXEYUM_BVE_BUDGET_MULTIPLE=500   -- tighten the routed gate's budget
+#   AXEYUM_BVE_BUDGET_MULTIPLE=100
+#   + two builds patched to route the valve, at bootstrap_reference 2e6 and 1e7:
+#       let mut observer = axeyum_cnf::inprocess::TickValve::shipping(
+#           BackendInprocessObserver { deadline, stats });
+#
+# 5a's fixtures: the parity-list files with bve_variables_eliminated > 0, NO
+# *_deadline_expired, and wall_ms < 2000 in the committed vivify arm -- so every
+# compared counter is deterministic. Compare bve/subsume/vivify/compaction
+# counters exactly; assert 0 deadline expiries in BOTH arms before believing a
+# null, and require the positive control (two ROUTED builds, same fixtures) to
+# produce differences before believing the harness can see any.
 ```
