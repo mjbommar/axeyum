@@ -26,9 +26,7 @@ use axeyum_solver::{CheckResult, SatBvBackend, Solver, SolverConfig, SolverError
 /// lever `warm_config_is_honored` rejects. It is a SAT inprocessing switch, so
 /// the cold route it forces decides the same queries the same way.
 fn cold_only_config() -> SolverConfig {
-    let mut config = SolverConfig::default();
-    config.cnf_vivify = false;
-    config
+    SolverConfig::default().with_cnf_vivify(false)
 }
 
 fn bv(arena: &mut TermArena, name: &str, width: u32) -> (SymbolId, TermId) {
@@ -526,21 +524,9 @@ fn warm_route_declines_a_config_it_cannot_honor() {
     let b = arena.eq(x, two).unwrap();
 
     for config in [
-        {
-            let mut c = SolverConfig::default();
-            c.prove_unsat = true;
-            c
-        },
-        {
-            let mut c = SolverConfig::default();
-            c.node_budget = Some(1_000_000);
-            c
-        },
-        {
-            let mut c = SolverConfig::default();
-            c.lazy_bv = true;
-            c
-        },
+        SolverConfig::default().with_prove_unsat(true),
+        SolverConfig::default().with_node_budget(1_000_000),
+        SolverConfig::default().with_lazy_bv(true),
         cold_only_config(),
     ] {
         let mut solver = Solver::with_config(SatBvBackend::new(), config);

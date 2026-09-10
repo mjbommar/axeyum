@@ -891,21 +891,17 @@ impl<B: SolverBackend> Solver<B> {
                 assumptions,
             )
         };
-        match outcome {
-            Some(result @ (CheckResult::Sat(_) | CheckResult::Unsat)) => {
-                self.warm_stats.warm_checks += 1;
-                Some(result)
-            }
-            // An `Unknown` or an error is never *used*: the backend re-decides
-            // from `self.assertions`, which is still the single source of truth.
-            // The engine is retired rather than retried, because an error may
-            // have left a frame half-encoded and a repeated `Unknown` would pay
-            // the same budget again on every later check.
-            _ => {
-                self.warm = Warm::Off;
-                None
-            }
-        }
+        // An `Unknown` or an error is never *used*: the backend re-decides from
+        // `self.assertions`, which is still the single source of truth. The
+        // engine is then retired rather than retried, because an error may have
+        // left a frame half-encoded and a repeated `Unknown` would pay the same
+        // budget again on every later check.
+        let Some(result @ (CheckResult::Sat(_) | CheckResult::Unsat)) = outcome else {
+            self.warm = Warm::Off;
+            return None;
+        };
+        self.warm_stats.warm_checks += 1;
+        Some(result)
     }
 }
 
@@ -992,7 +988,7 @@ struct WarmState {
 /// state is left behind.
 fn warm_sync_and_check(
     state: &mut WarmState,
-    stats: &mut WarmFacadeStats,
+    counters: &mut WarmFacadeStats,
     arena: &TermArena,
     assertions: &[TermId],
     bounds: &[usize],
@@ -1034,7 +1030,7 @@ fn warm_sync_and_check(
         if j >= state.synced.len() {
             state.engine.push().ok()?;
             state.synced.push(0);
-            stats.scope_pushes += 1;
+            counters.scope_pushes += 1;
         }
         let lo = bounds[j];
         let hi = bounds[j + 1];
@@ -1042,7 +1038,7 @@ fn warm_sync_and_check(
             let term = assertions[lo + state.synced[j]];
             state.engine.assert(arena, term).ok()?;
             state.synced[j] += 1;
-            stats.assertions_encoded += 1;
+            counters.assertions_encoded += 1;
         }
     }
 
