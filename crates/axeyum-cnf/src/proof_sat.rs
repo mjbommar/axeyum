@@ -1161,6 +1161,46 @@ impl NativeLayerStatsMirror {
 // every caller, never positional arguments, so the confusion this lint guards
 // against cannot arise; grouping them further would only add a level.
 #[allow(clippy::struct_excessive_bools)]
+/// Which named [`SearchPolicies`] arrangement a CDCL(T) search runs.
+///
+/// See [`TheorySolveOptions::search_profile`] for why this is a selector rather
+/// than the policies themselves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SearchProfile {
+    /// [`SearchPolicies::default`] -- pinned phases, Luby restarts. What every
+    /// CDCL(T) search ran before this selector existed.
+    #[default]
+    Shipped,
+    /// [`SearchPolicies::mode_switching`] -- the reference solvers' stable /
+    /// focused alternation.
+    ModeSwitching,
+    /// [`SearchPolicies::scheduled_phase`] -- the full rephase schedule.
+    ScheduledPhase,
+    /// Both: stable/focused alternation with the rephase schedule.
+    ModeSwitchingScheduledPhase,
+}
+
+impl SearchProfile {
+    /// The policies to install, or `None` for the shipped default (which the
+    /// constructor already installed, so installing it again is a no-op the
+    /// caller should not pay for).
+    #[must_use]
+    pub fn policies(self) -> Option<SearchPolicies> {
+        match self {
+            Self::Shipped => None,
+            Self::ModeSwitching => Some(SearchPolicies {
+                restart: RestartPolicy::mode_switching(),
+                ..SearchPolicies::default()
+            }),
+            Self::ScheduledPhase => Some(SearchPolicies::scheduled_phase()),
+            Self::ModeSwitchingScheduledPhase => Some(SearchPolicies {
+                restart: RestartPolicy::mode_switching(),
+                ..SearchPolicies::scheduled_phase()
+            }),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TheorySolveOptions {
     /// The polarity a variable is decided at before phase saving has an
@@ -1173,6 +1213,23 @@ pub struct TheorySolveOptions {
     pub target_rephase: bool,
     /// Whether to accumulate [`NativeLayerStats`].
     pub collect_layer_stats: bool,
+    /// Which search heuristics this CDCL(T) run uses.
+    ///
+    /// **This exists because the theory path could not reach them at all.**
+    /// `Cdcl::set_policies` had exactly two callers -- the one-shot SAT entry
+    /// and a unit test -- so every CDCL(T) search (QF_UF, QF_UFLIA, the
+    /// quantified ladder's ground checks) ran `SearchPolicies::default()`:
+    /// pinned phases and Luby restarts. `RestartPolicy::mode_switching` and
+    /// `PhasePolicy::scheduled` were implemented and tested with zero
+    /// production callers.
+    ///
+    /// A `Copy` selector rather than a `SearchPolicies` field because
+    /// `SearchPolicies` is only `Clone` (its `ClauseDbPolicy` owns tier state),
+    /// and this struct is `Copy + PartialEq + Eq` for its callers.
+    ///
+    /// [`SearchProfile::Shipped`] is exactly what
+    /// `Cdcl::new_with_theory` already installs, so this is additive.
+    pub search_profile: SearchProfile,
     /// Whether to record the Boolean DRAT stream, i.e. whether an `unsat`
     /// comes back with the ADR-1704 artifact at all.
     ///
@@ -1209,6 +1266,7 @@ impl Default for TheorySolveOptions {
             initial_phase: false,
             target_rephase: true,
             collect_layer_stats: false,
+            search_profile: SearchProfile::Shipped,
             record_proof: true,
             proof_literal_budget: usize::MAX,
         }
@@ -1487,6 +1545,9 @@ fn solve_with_theory_and_drat_proof_impl<T: NativeTheory>(
     cdcl.collect_layer_stats = options.collect_layer_stats;
     cdcl.layer_stats_mirror = mirror;
     cdcl.use_target_rephase = options.target_rephase;
+    if let Some(policies) = options.search_profile.policies() {
+        cdcl.set_policies(&policies);
+    }
     if options.initial_phase {
         cdcl.initial_phase = true;
         cdcl.phase.fill(true);

@@ -43,8 +43,9 @@ use axeyum_cnf::theory::{
     PropagationQueue as NativeQueue, TheoryExplanation as NativeExplanation,
 };
 use axeyum_cnf::{
-    CnfAssignment, CnfClause, CnfFormula, CnfLit, CnfVar, NativeLayerStatsMirror, TheoryRefutation,
-    TheorySolveOptions, TheorySolveOutcome, solve_with_theory_and_drat_proof_mirrored,
+    CnfAssignment, CnfClause, CnfFormula, CnfLit, CnfVar, NativeLayerStatsMirror, SearchProfile,
+    TheoryRefutation, TheorySolveOptions, TheorySolveOutcome,
+    solve_with_theory_and_drat_proof_mirrored,
 };
 
 use crate::cdclt::Lit;
@@ -620,6 +621,15 @@ pub(crate) fn solve_native<T: TheorySolver>(
         initial_phase: true,
         target_rephase: false,
         collect_layer_stats,
+        // EXPERIMENT ARM, `Shipped` unless asked. `Cdcl::set_policies` had two
+        // callers -- the one-shot SAT entry and a unit test -- so every CDCL(T)
+        // search ran pinned phases and Luby restarts, and
+        // `RestartPolicy::mode_switching` / `PhasePolicy::scheduled` had zero
+        // production callers despite being implemented and tested. Roadmap 1.6
+        // asks for the mode schedule and says the default flips only when a
+        // measurement says it should; this makes the measurement possible at
+        // all, which it previously was not from any theory route.
+        search_profile: configured_search_profile(),
         record_proof: recording_artifacts(),
         proof_literal_budget: PROOF_LITERAL_BUDGET,
     };
@@ -669,6 +679,22 @@ pub(crate) fn solve_native<T: TheorySolver>(
 /// from the theory's own `engine_counters`, which is where `CdclT` gets them
 /// too. `None` there means "this theory keeps no feasibility engine", never
 /// "zero".
+
+/// The CDCL(T) search profile for this process, from `AXEYUM_SEARCH_PROFILE`.
+///
+/// `Shipped` (the default, and any unrecognised value) is exactly what the
+/// constructor already installs, so an unset variable is behaviour-identical to
+/// before this knob existed. Read per call rather than cached: the reads are
+/// one `var_os` against a search that runs for seconds.
+fn configured_search_profile() -> SearchProfile {
+    match std::env::var("AXEYUM_SEARCH_PROFILE").as_deref() {
+        Ok("mode-switching") => SearchProfile::ModeSwitching,
+        Ok("scheduled-phase") => SearchProfile::ScheduledPhase,
+        Ok("mode-switching+scheduled-phase") => SearchProfile::ModeSwitchingScheduledPhase,
+        _ => SearchProfile::Shipped,
+    }
+}
+
 fn theory_layer_stats(
     native: &axeyum_cnf::NativeLayerStats,
     engine: Option<crate::euf_egraph::TheoryEngineCounters>,
