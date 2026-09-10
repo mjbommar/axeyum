@@ -41,6 +41,21 @@ The candidate work is roughly 6,000 lines of operator-specific mathematics
 Every `.smt2` under `corpus/` was classified by its `(set-logic …)` and
 `(set-info :status …)`.
 
+**Coverage control first.** The walk saw **1,179** `.smt2` files, and
+
+```
+$ git ls-files corpus | grep -c '\.smt2$'
+1179
+```
+
+— the same number, so the walk covered exactly the tracked set and nothing else.
+That equality is not automatic: `corpus/public` on this host is a **symlink to
+`/nas3/data/axeyum/corpus/public`** (gitignored, per `corpus/README.md`), and a
+walk that followed it would have silently mixed several hundred off-tree files
+into a table labelled "committed". `os.walk` does not follow symlinked
+directories; `find corpus/public/` (trailing slash) does, which is how the two
+counts diverge if you are not watching.
+
 ```
 $ python3 - <<'PY'   # full script in §8
 ... walks corpus/, groups by (corpus, logic, status)
@@ -111,10 +126,16 @@ corpus does not contain one.
 
 ## 3. The measurement: front door vs. local search, side by side
 
-A throwaway probe (`crates/axeyum-bench/examples/m31_probe.rs`, §7 — deleted, not
+A throwaway probe (`crates/axeyum-bench/examples/m31_probe.rs`, §8 — deleted, not
 merged) runs each file twice on a 512 MB-stack worker under a 10 s wall-clock
-cap: first `check_auto` (the shipping front door), then `solve_local_search`
-(the word-level local search) on the same assertions.
+cap: first `check_auto`, then `solve_local_search` (the word-level local search)
+on the same assertions.
+
+`check_auto` is the dispatcher a quantifier-free query reaches through the
+shipped text front door — `solve_smtlib` → `solve` (`smtlib.rs:2266`) → the
+quantified ladder, which a QF_BV script falls straight through → `check_auto`.
+It is also exactly what `corpus_regression.rs` gates on. The string gates
+`solve_smtlib` wraps around it do not apply to QF_BV.
 
 ```
 $ cargo build --release -p axeyum-bench --example m31_probe   # via scripts/cargo-serialized.sh
@@ -203,7 +224,7 @@ So the shipping path to the word-level local search is: *QF_BV inside QF_ABV*,
 *100 ms*. **It is not on the QF_BV path at all.**
 
 Measured rather than read off the call graph. A throwaway `AtomicUsize` at
-`preprocess.rs:111` (§7), reset per file and read after the solve:
+`preprocess.rs:111` (§8), reset per file and read after the solve:
 
 - Over the **20 committed QF_BV** files in §3: `pbls_reaches` = **0** on every row.
 - Over **40 committed QF_ABV / QF_AUFBV** files through the same front door:
@@ -274,14 +295,39 @@ Three facts about the reference implementation that bear on the decision:
    (`option.cpp:983`) before bit-blasting takes over. It is a portfolio member
    for a band, not a replacement.
 2. **Its speed comes from an incremental assignment cache, not only from
-   invertibility.** Every `ls::Node` carries `d_assignment`
-   (`ls/node/node.h:267`) and updates it from its children. Our `pbls.rs` scores
-   a candidate by re-evaluating the assertion term from scratch through the
-   ground evaluator; a prior lane measured this at **~135 flips/s** on the
-   search-bound band (`de1dc4ddc`, `docs/research/05-algorithms/lazy-bitblasting-p21-findings.md`).
-   Perfect move selection on a 135-flips/s engine is still a 135-flips/s engine.
-   **If this item is ever unblocked, incremental term evaluation is the
-   prerequisite half, and it is the cheaper half.**
+   invertibility** — and *we already built our version of that half, and it did
+   not convert the band.* Every Bitwuzla `ls::Node` carries `d_assignment`
+   (`ls/node/node.h:267`) and updates it from its children.
+
+   **Correction to the obvious next step.** The natural recommendation from row 2
+   is "add incremental term evaluation first, it is the cheaper half." That
+   recommendation is stale, and I checked before writing it. `pbls.rs` **already
+   has** a persistent memo with per-variable cone invalidation
+   (`pbls.rs:383-396` `memo` / `var_cone`, `pbls.rs:487` `fn cone`, over
+   `axeyum_ir::eval_with_memo`). It was implemented *because* of the
+   135-flips/s finding, and it was measured:
+   [`docs/research/05-algorithms/lazy-bitblasting-p21-findings.md:361-384`](../05-algorithms/lazy-bitblasting-p21-findings.md)
+   records **2,700 → 3,985 flips per 20 s, ~1.5×, not the hoped orders of
+   magnitude** — "because in this `ite`-dense structure each variable's cone is
+   *large* (a var feeds much of the assertion), so 'incremental' recomputes most
+   of it anyway," and concludes "**WalkSAT is confirmed not the lever for this
+   corpus**."
+
+   That prior measurement is the closest thing in the tree to a fair test of the
+   3.1 hypothesis: `string1x8.4` is a 150 k-clause *satisfiable* QF_BV instance
+   that kissat cracks in 8.3 s — exactly the "bit-blasting is slow, the instance
+   is merely hard to find" shape item 3.1 exists for. Our local search timed out
+   on it **with** the incremental evaluator. It lives on the NAS
+   (`corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/`),
+   not in the committed corpus.
+
+   The honest reading: that result does **not** prove invertibility conditions
+   would not help — it was our move selection, not Bitwuzla's. What it does show
+   is that the gap to a Bitwuzla-class engine is **~2 orders of magnitude in flip
+   rate**, that the cheap structural fix has already been spent for 1.5×, and
+   that closing it means replacing the evaluation core (a per-node assignment
+   cache propagated bottom-up), not bolting 68 inverse-value functions onto a
+   term-re-evaluating scorer. Item 3.1 as written sizes only the second half.
 3. Our `pbls.rs` is 1,456 lines with a 193-line test file, and its budget is
    hard-capped at `max_tries = 25`, `max_flips = 200 + 40 * span`
    (`pbls.rs:1229-1231`) — which is what "flip/restart budget exhausted" means in
@@ -312,10 +358,13 @@ this order:
 2. **Re-run this note's probe on that slice.** If the count of
    "front door `unknown`, `:status sat`" is still small, item 3.1 stays closed
    and the finding is durable rather than a scheduling accident.
-3. **Only if that count is material:** the first increment is *incremental term
-   evaluation* in `pbls.rs` (fact 2 in §6), measured against the same slice.
-   Invertibility conditions are the second increment, and they should be gated on
-   the first one showing a flips/s improvement that changes verdicts.
+3. **Only if that count is material:** the first increment is **not**
+   invertibility conditions and it is **not** incremental term evaluation — that
+   one is already built and already measured at 1.5× (§6 fact 2). It is a
+   flip-rate measurement on the target slice with a stated target: our engine
+   runs at roughly 10²–10³ flips/s where competitive SLS runs at 10⁵–10⁶. Until a
+   design exists that closes that, 68 inverse-value functions would make a
+   two-orders-of-magnitude-too-slow search pick better moves.
 4. **Independently of 3.1:** decide whether the local-search probe at
    `preprocess.rs:111` should stay. It is reached zero times through the front
    door on 60 committed files and costs a 100 ms budget on the cold rounds where
