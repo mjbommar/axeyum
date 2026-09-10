@@ -27,8 +27,16 @@
 //! It is the cheapest of the inprocessing passes we lack — one linear pass over
 //! the binary clauses — and it is the one every other pass *feeds*: subsumption,
 //! vivification and BVE all shorten clauses, and a clause shortened to two
-//! literals is a new edge in this graph. `CaDiCaL` re-runs `decompose()` five
-//! times per `inprobe` round for exactly that reason.
+//! literals is a new edge in this graph.
+//!
+//! Every claim about `CaDiCaL` in this module is taken from
+//! `docs/solver-comparison-2026-09/01-cadical-kissat.md` (rows 202 and 501),
+//! **not** read off the source: `references/cadical` is a gitignored clone and
+//! is not present on this host. What that lane recorded: `decompose_round` is
+//! Tarjan at `decompose.cpp:130`, driven by `decompose()` at `:736-740` for
+//! `decomposerounds = 2`, and `inprobe` re-runs it five times per phase
+//! (`probe.cpp:939, :941, :943, :946, :950`) — after every step that can produce
+//! a binary. It rated this "the highest value/effort ratio on the list".
 //!
 //! # The proof obligation, which is the hard part
 //!
@@ -123,15 +131,21 @@ pub struct DecomposeOptions {
     pub work_budget: Option<u64>,
     /// Rounds of substitute-then-rebuild. A rewrite can shorten a clause to two
     /// literals, which is a new edge, so a second round can find components the
-    /// first could not. One round is the common case; the cap bounds the rest.
+    /// first could not.
+    ///
+    /// A round that finds nothing is what *establishes* the fixpoint, so the
+    /// common case costs two: one that substitutes and one that confirms. The
+    /// default matches `CaDiCaL`'s `decomposerounds = 2`; the re-run discipline
+    /// that lane calls "the real structure" is a *scheduling* decision, made by
+    /// offering the pass again, not by raising this.
     pub max_rounds: usize,
 }
 
 impl DecomposeOptions {
-    /// Unbudgeted, four rounds.
+    /// Unbudgeted, two rounds — `CaDiCaL`'s `decomposerounds`.
     pub const DEFAULT: Self = Self {
         work_budget: None,
-        max_rounds: 4,
+        max_rounds: 2,
     };
 }
 
@@ -340,9 +354,12 @@ pub fn decompose(formula: &CnfFormula) -> DecomposeOutcome {
 ///
 /// A [`DecomposeStats::unsat`] outcome means a component held both polarities of
 /// one variable. The proof then holds a complete refutation — `Add([¬x])`,
-/// `Add([x])`, `Add([])` — and the returned formula is the input unchanged, so a
-/// caller that ignores the flag loses the refutation but cannot act on a wrong
-/// formula.
+/// `Add([x])`, `Add([])` — and [`DecomposeOutcome::formula`] is the formula the
+/// **refuting round** started from, together with the [`EquivalenceMap`] built
+/// by the rounds before it. (On the common single-round case that is the
+/// caller's own formula.) So a caller that ignores the flag searches a formula
+/// that is genuinely unsatisfiable and decides it independently: ignoring the
+/// flag costs the refutation, never correctness.
 #[must_use]
 pub fn decompose_within_recorded(
     formula: &CnfFormula,
@@ -666,7 +683,13 @@ fn decompose_round(
     let mut proof_steps = 0usize;
     let mut classes = 0usize;
     let mut substituted: Vec<(CnfVar, CnfLit)> = Vec::new();
-    let mut counted_comp = vec![false; comp_count as usize];
+    // Classes are counted by their REPRESENTATIVE VARIABLE, not by component id.
+    // A component and its dual are two components holding one equivalence class,
+    // and a class with mixed polarities puts some of its variables' positive
+    // literals in each — `x0 ≡ ¬x1 ≡ x2` has `x0` and `x2` in one component and
+    // `x1` in the other. Counting components would report that one class as two.
+    // Every class has exactly one representative variable, so that is the key.
+    let mut counted_repr = vec![false; formula.variable_count()];
     for var in 0..formula.variable_count() {
         work.charge(1);
         let positive_code = var * 2;
@@ -674,9 +697,9 @@ fn decompose_round(
         if target == positive_code {
             continue;
         }
-        let component = comp[positive_code] as usize;
-        if !counted_comp[component] {
-            counted_comp[component] = true;
+        let repr_var = target / 2;
+        if !counted_repr[repr_var] {
+            counted_repr[repr_var] = true;
             classes += 1;
         }
         let v = CnfLit::positive(CnfVar::new(var).expect("var is in range"));
@@ -994,6 +1017,39 @@ mod tests {
         assert_eq!(out.stats.variables_substituted, 0);
         assert!(proof.is_empty());
         assert_eq!(out.formula, f);
+    }
+
+    #[test]
+    fn a_mixed_polarity_class_of_three_variables_counts_as_one_class() {
+        // `x0 → ¬x1 → x2 → x0`: one equivalence class, but its members' positive
+        // literals are split across a component and its dual. Counting
+        // components would report 2.
+        let f = formula(
+            4,
+            &[
+                &[n(0), n(1)],
+                &[p(1), p(2)],
+                &[n(2), p(0)],
+                &[p(0), p(3)],
+                &[n(1), n(3)],
+            ],
+        );
+        let mut proof = Vec::new();
+        let out = decompose_within_recorded(&f, DecomposeOptions::DEFAULT, Some(&mut proof));
+        assert_eq!(out.stats.classes, 1);
+        assert_eq!(out.stats.variables_substituted, 2);
+        assert_eq!(out.equivalences.representative(v(1)), Some(n(0)));
+        assert_eq!(out.equivalences.representative(v(2)), Some(p(0)));
+        assert!(check_drat(&f, &proof).is_ok());
+        let width = f.variable_count();
+        for mask in 0u32..(1 << width) {
+            let assignment: Vec<bool> = (0..width).map(|i| mask >> i & 1 == 1).collect();
+            if !out.formula.evaluate(&assignment).expect("width") {
+                continue;
+            }
+            let full = out.equivalences.extend(&assignment);
+            assert!(f.evaluate(&full).expect("width"), "mixed lift {full:?}");
+        }
     }
 
     #[test]
