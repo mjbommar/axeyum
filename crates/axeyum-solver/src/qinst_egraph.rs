@@ -1928,6 +1928,7 @@ fn prove_quantified_unsat_via_egraph_impl(
     for round in 0..MAX_EXTENDED_INSTANTIATION_ROUNDS {
         let round_started = Instant::now();
         if deadline.is_some_and(|d| round_started >= d) {
+            qgrounddump(arena, &ground, &generations, "timeout-round-head");
             return Ok(egraph_timeout());
         }
         // One matching/admission round is the loop's largest deadline-blind
@@ -1977,6 +1978,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                     collect_ground_derivations(arena, anchor, &ground, &ground_derivations);
                 return Ok(CheckResult::Unsat);
             }
+            qgrounddump(arena, &ground, &generations, "ground-ceiling");
             return Ok(egraph_ground_limit());
         }
         // The first round and accelerator fallbacks use the full QF route. The
@@ -2014,6 +2016,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                 }
             }
             if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+                qgrounddump(arena, &ground, &generations, "timeout-mid-round");
                 return Ok(egraph_timeout());
             }
             if !online_attempted {
@@ -2289,6 +2292,7 @@ fn prove_quantified_unsat_via_egraph_impl(
             &format!("nested-activity | {}", detail.join(" | ")),
         );
     }
+    qgrounddump(arena, &ground, &generations, "fixpoint-or-break");
     let finished = finish_quantified_ground_check(
         arena,
         &ground,
@@ -2940,6 +2944,49 @@ fn floodprobe_enabled() -> bool {
 /// probes are clock-free, so this is checked at the exits rather than cached.
 fn qprobe_enabled() -> bool {
     std::env::var_os("AXEYUM_QPROBE").is_some()
+}
+
+/// Opt-in structural dump of the accumulated ground set at every point the
+/// e-matching fixpoint gives up, written to the path in `AXEYUM_QGROUNDDUMP`.
+///
+/// This exists to answer one question that no aggregate count can:
+/// **does the ground term z3's refutation instantiates on ever enter our
+/// e-graph at all?** "We never build it" and "we build it and rank it 1000th"
+/// need completely different fixes and are otherwise indistinguishable — see
+/// `docs/research/03-measurements/does-the-required-instance-enter-our-egraph-2026-09-10.md`.
+///
+/// Rows are emitted in `ground` insertion order, which is deterministic, and
+/// carry the term's generation so a reader can tell a source subterm
+/// (generation 0) from one an admitted instance introduced. Off by default and
+/// costing one environment lookup when off.
+fn qgrounddump(arena: &TermArena, ground: &[TermId], generations: &TermGenerations, reason: &str) {
+    let Some(path) = std::env::var_os("AXEYUM_QGROUNDDUMP") else {
+        return;
+    };
+    use std::io::Write as _;
+    let Ok(file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+    else {
+        return;
+    };
+    let mut out = std::io::BufWriter::new(file);
+    let _ = writeln!(
+        out,
+        "GROUNDDUMP begin reason={reason} count={}",
+        ground.len()
+    );
+    for (index, term) in ground.iter().enumerate() {
+        let _ = writeln!(
+            out,
+            "GROUND {index} gen={} {}",
+            generations.generation(*term),
+            axeyum_ir::render(arena, *term)
+        );
+    }
+    let _ = writeln!(out, "GROUNDDUMP end reason={reason}");
+    let _ = out.flush();
 }
 
 /// Z3-style instantiation generations (T2.6.4; `qi_queue.cpp` cost
