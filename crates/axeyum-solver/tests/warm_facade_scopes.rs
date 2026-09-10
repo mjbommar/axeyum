@@ -206,22 +206,29 @@ fn warm_scope_leak_is_caught() {
     assert_eq!(solver.warm_facade_stats().cold_checks, 0);
 }
 
-/// The leak the *depth comparison* alone cannot see: `pop` then `push` returns
-/// to the same depth, so an engine whose frames are only reconciled at check
-/// time keeps the discarded scope's assertion and decides the new scope against
-/// it.
+/// The leak the *depth comparison* alone cannot see, and it produces a wrong
+/// `unsat`.
 ///
-/// Both scopes are individually satisfiable and mutually contradictory, so a
-/// stale frame turns `sat` into `unsat`. This is the case that requires
-/// `Solver::pop` to close the engine frame eagerly.
+/// `pop` then `push` returns to the same depth with the same frame index, so an
+/// engine whose frames are only reconciled at check time keeps the discarded
+/// scope's assertion and treats the new scope's first assertion as already
+/// encoded. The second scope holds two assertions, so the stale frame ends up
+/// carrying the *discarded* `x = 1` alongside the new `x = 2` — a conjunction
+/// that is unsatisfiable, while the query actually posed (`x <u 8` and `x = 2`)
+/// is plainly satisfiable.
+///
+/// This is the shape that forces `Solver::pop` to close the engine frame
+/// eagerly, and the reason a depth check alone is not enough.
 #[test]
 fn warm_pop_then_push_does_not_reuse_the_discarded_scope() {
     let mut arena = TermArena::new();
     let (_, x) = bv(&mut arena, "x", 8);
     let one = arena.bv_const(8, 1).unwrap();
     let two = arena.bv_const(8, 2).unwrap();
+    let eight = arena.bv_const(8, 8).unwrap();
     let x_is_one = arena.eq(x, one).unwrap();
     let x_is_two = arena.eq(x, two).unwrap();
+    let x_lt_eight = arena.bv_ult(x, eight).unwrap();
 
     let mut solver = Solver::new(SatBvBackend::new());
 
@@ -231,15 +238,19 @@ fn warm_pop_then_push_does_not_reuse_the_discarded_scope() {
     solver.pop();
 
     solver.push();
+    solver.assert(x_lt_eight);
     solver.assert(x_is_two);
     let result = solver.check(&arena).unwrap();
     assert_eq!(
         label(&result),
         "sat",
-        "x = 2 alone is satisfiable; an `unsat` here means the popped `x = 1` \
-         frame was reused at the same depth"
+        "x <u 8 and x = 2 is satisfiable; an `unsat` here is the discarded \
+         `x = 1` frame being reused at the same depth — a WRONG UNSAT"
     );
-    assert!(model_satisfies(&arena, &result, &[x_is_two]));
+    assert!(
+        model_satisfies(&arena, &result, &[x_lt_eight, x_is_two]),
+        "and the model must satisfy the assertions actually posed"
+    );
     assert!(solver.warm_engine_live());
     assert_eq!(solver.warm_facade_stats().cold_checks, 0);
 }
