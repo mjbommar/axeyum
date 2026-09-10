@@ -262,9 +262,10 @@ this whole item turns on:
 
 Both are lower bounds. `lia_branch_and_bound` recurses depth-first, pushing a
 bound constraint per level, so node *k* solves a simplex over roughly *k* rows —
-the rate falls as the search deepens. Two independent runs of the same file with
-no config timeout were killed at 300 s and 600 s without returning, which is
-consistent: the cap had not fired.
+the rate falls as the search deepens. Independent runs of the same file with no config
+timeout were killed at 300 s and 600 s without returning, and a fourth was still
+searching without having tripped the cap at **4,250 s** (§6) — so the ~24 minutes
+above is confirmed to be a floor, not an estimate of the real cost.
 
 ## 4. The cap's `unknown` is not distinguishable at the API — and twice it is erased
 
@@ -363,13 +364,21 @@ those pages can make it.
   one, and no realistic budget reaches it.
 - **A confirmed observation of `bnb_budget_exhausted >= 1` through the front
   door.** The exhaustion *branch* is confirmed reachable by the committed unit
-  test (§3.5), but I never saw the counter itself non-zero, because reaching it
-  costs the ~24 minutes §3.5 prices. A cap-forcing run was left going and was at
-  889 s of grinding (worker thread confirmed at 87% CPU, so it is searching, not
-  stuck) when this note was finalized — consistent with the predicted ~1,460 s
-  and not yet past it. **Nothing in the recommendation depends on it**: it would
-  confirm the counter can report a cap that takes 24 minutes to fire, which is
-  the note's point either way.
+  test (§3.5), but I never saw the counter itself non-zero. The cap-forcing
+  instance was left grinding (worker thread confirmed at 87% CPU, so searching
+  rather than stuck) and **had not tripped the 50,000-node cap after 4,250 s** —
+  71 minutes of continuous branch-and-bound on the cheapest system that can
+  grind, against the ~1,460 s the §3.5 rate predicts.
+
+  That overshoot is not a failed prediction; it is the depth effect §3.5 names,
+  measured. `lia_branch_and_bound` pushes a bound constraint per level, so node
+  *k* solves a simplex over roughly *k* rows and the rate decays as the search
+  deepens — which is exactly why every figure in §3.5 is labelled a **lower
+  bound**. The honest reading is therefore stronger than the one I could make
+  before: on a two-variable instance built specifically to reach the cap, the
+  tight cap did not fire in **over an hour**. **Nothing in the recommendation
+  depends on ever seeing it fire** — a stop that takes more than an hour on the
+  easiest possible input cannot be what costs us a verdict at a 24 s budget.
 - **A long-bound re-run of the §3.3 timeouts.** 24 of the 283 (every 12th) were
   re-launched at a 600 s bound to close the previous bullet's gap directly; two
   had returned at finalization, neither with `bnb_exhausted > 0`. Whoever picks
