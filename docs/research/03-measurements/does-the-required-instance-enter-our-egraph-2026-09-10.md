@@ -97,6 +97,30 @@ admitted instances. So the terms a proof instantiates on live in its
 formula, unioned over every give-up point in the run. "Ever enters" is the
 question, so the union is the right population.
 
+**Stability control, and the caveat it exposes.** `f29` was re-run on a
+different machine load. The per-term verdicts are **identical** — the same 5
+present, the same 3 absent, the same renaming — but the dump is **19% smaller**
+(3,223 rows against 2,623). The blocks say why:
+
+| | run 1 | run 2 |
+|---|---:|---:|
+| block 0 (Skolemized) | 1,172 | 710 |
+| block 1 (un-Skolemized) | **273** | **273** |
+| block 2 (Skolemized) | 1,778 | 1,640 |
+
+Block 1 is bit-stable because it reaches a real fixpoint; blocks 0 and 2 are
+**deadline-bounded and therefore load-sensitive**. That is also why the earlier
+note's `f29`/`f31`/`f17` counts reproduce exactly above — those are fixpoint
+numbers, not clock numbers.
+
+So an ABSENT here means **absent from what the loop accumulated within the 24 s
+budget on a shared box**, not absent in principle. The direction of the error is
+knowable: a *smaller* ground set can only make more terms absent, and the
+smaller run found exactly the same ones, so the reported absences are not an
+artefact of a short run. What this note cannot exclude is a much longer run
+eventually building them — though the earlier note measured 120 s deciding 0 of
+32, and 13 of these 18 files fill the 8,192 cap rather than run out of clock.
+
 ### How the symbol correspondence was established
 
 Both solvers read the same SMT-LIB file and render uninterpreted applications
@@ -352,6 +376,10 @@ warning that having the term is not sufficient.
 
 - **Whether building the missing term flips any verdict.** Not attempted. The
   falsifiable statement above is the test; it has not been run.
+- **Whether a much longer run eventually builds the absent terms.** Only the
+  24 s budget was swept. The Skolemized blocks are deadline-bounded (see the
+  stability control), so this is a real open edge, bounded by the earlier
+  note's 120 s arm deciding 0 of 32.
 - **The 14 files z3 also times out on.** Untouched. Everything here is the
   18-file refutable subset.
 - **`f23`.** z3 cannot produce a proof for it in 120 s, so nothing here says

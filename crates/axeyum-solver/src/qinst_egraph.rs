@@ -2960,10 +2960,11 @@ fn qprobe_enabled() -> bool {
 /// (generation 0) from one an admitted instance introduced. Off by default and
 /// costing one environment lookup when off.
 fn qgrounddump(arena: &TermArena, ground: &[TermId], generations: &TermGenerations, reason: &str) {
+    use std::io::Write as _;
+
     let Some(path) = std::env::var_os("AXEYUM_QGROUNDDUMP") else {
         return;
     };
-    use std::io::Write as _;
     let Ok(file) = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
