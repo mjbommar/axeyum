@@ -1,5 +1,31 @@
 # cvc5 Seq-theory regression slice
 
+> **CORRECTED 2026-09-10.** The per-file table below marks parse-skipped files
+> as "decided (agrees)". It is wrong, and the sweep it cites disagrees with it:
+> `corpus_regression` buckets a parse failure as `Eval::Skip`
+> (`crates/axeyum-solver/tests/corpus_regression.rs:158`), which is a DIFFERENT
+> bucket from `Eval::Agree` (`:219`).
+>
+> Measured by removing both vendored directories and diffing the sweep:
+>
+> | | files | agree | unknown | parse-skipped |
+> |---|---|---|---|---|
+> | with `qf_slia/` + `seq/` | 218 | 135 | 33 | 50 |
+> | without | 152 | 115 | 24 | 13 |
+> | **these 66 files** | **66** | **20** | **9** | **37** |
+>
+> So **20 of the 66 are decided, not 57**. Thirty-seven the parser cannot read
+> at all — they are declined at ingest, before any strings solver sees them.
+>
+> **Nothing became wrong: 0 DISAGREE in both arms.** The item's actual exit
+> criterion (never a wrong verdict) holds. This is an overstatement of coverage.
+> The operator-count claim ("16 → 47 distinct") counts operators PRESENT in the
+> vendored files, which is a property of the corpus, not of what we can decide —
+> read it that way.
+>
+> See `docs/research/03-measurements/strings-inference-gap-2026-09-10.md`.
+
+
 30 files vendored from cvc5's own strings/seq regression suite (`test/regress/cli/*/strings`, `*/seq`), 2026-09-09, roadmap item P2.5 (`docs/solver-comparison-2026-09/11-roadmap-and-plan.md`).
 
 New family: zero `Seq`-theory files existed in this corpus before P2.5. Files here declare a mix of upstream logics (`QF_SLIA`, `ALL`, ...) but share `Seq` sort content; bucketed by family (the `axeyum-smtlib` `Sort::Seq` path) rather than by declared logic string, since the declared logic is not diagnostic for this family upstream.
