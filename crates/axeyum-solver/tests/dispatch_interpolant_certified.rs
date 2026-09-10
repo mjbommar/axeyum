@@ -19,6 +19,9 @@
 //!   the surviving checks to REJECT them, so "the check passed" is not a
 //!   statement the checks can make unconditionally.
 #![cfg(feature = "full")]
+// `x_le_0` / `x_ge_1` / `x_le_3` name the same variable's bounds; the shapes are
+// the point of the fixtures and renaming them apart makes them harder to read.
+#![allow(clippy::similar_names)]
 
 use std::collections::BTreeSet;
 
@@ -448,5 +451,200 @@ fn negative_control_symbol_containment_rejects_what_conditions_1_and_2_allow() {
         if let Some(cert) = &dispatched.certificate {
             assert_eq!(cert.interpolant(), dispatched.interpolant);
         }
+    }
+}
+
+// ===========================================================================
+// Coverage: which rungs actually certify through the shipping dispatch.
+// ===========================================================================
+
+/// The six `certify_*` helpers are only assurance if the dispatch reaches more
+/// than one of them. This walks one fixture per theory rung and records the
+/// certificate tag the SHIPPING dispatch produced.
+///
+/// The assertion is on the observed tags, so removing any single rung's wiring
+/// changes this list and the test fails naming the rung that went silent. If a
+/// fixture stops landing on its intended rung the same failure message shows it,
+/// rather than the test quietly measuring a rung it did not mean to.
+#[test]
+#[allow(clippy::too_many_lines)] // one fixture block per theory rung; splitting them hides the ladder
+fn the_dispatch_reaches_several_certified_rungs() {
+    let mut observed: Vec<(&'static str, String)> = Vec::new();
+
+    // --- QF_LRA: A: x ≤ 0 ; B: x ≥ 1 -------------------------------------
+    {
+        let mut arena = TermArena::new();
+        let x = real_var(&mut arena, "x");
+        let zero = rconst(&mut arena, 0);
+        let one = rconst(&mut arena, 1);
+        let a = [arena.real_le(x, zero).unwrap()];
+        let b = [arena.real_ge(x, one).unwrap()];
+        observed.push(("lra", dispatched_theory(&mut arena, &a, &b)));
+    }
+
+    // --- QF_LIA: A: 2x ≥ 1 ; B: 2x ≤ 0 (Int) ------------------------------
+    {
+        let mut arena = TermArena::new();
+        let sym = arena.declare("ix", Sort::Int).unwrap();
+        let x = arena.var(sym);
+        let two = arena.int_const(2);
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let two_x = arena.int_mul(two, x).unwrap();
+        let a = [arena.int_ge(two_x, one).unwrap()];
+        let b = [arena.int_le(two_x, zero).unwrap()];
+        observed.push(("lia", dispatched_theory(&mut arena, &a, &b)));
+    }
+
+    // --- QF_UF: A: a = b, b = c ; B: a ≠ c --------------------------------
+    // Bit-vector-sorted constants, so the four arithmetic rungs above EUF all
+    // decline and this fixture actually lands on the EUF rung. (With `Int`
+    // constants the integer CNF rung catches it first and reports uncertified.)
+    {
+        let mut arena = TermArena::new();
+        let ua = arena.declare("ua", Sort::BitVec(8)).unwrap();
+        let ub = arena.declare("ub", Sort::BitVec(8)).unwrap();
+        let uc = arena.declare("uc", Sort::BitVec(8)).unwrap();
+        let (ta, tb, tc) = (arena.var(ua), arena.var(ub), arena.var(uc));
+        let ab = arena.eq(ta, tb).unwrap();
+        let bc = arena.eq(tb, tc).unwrap();
+        let ac = arena.eq(ta, tc).unwrap();
+        let nac = arena.not(ac).unwrap();
+        let a = [ab, bc];
+        let b = [nac];
+        observed.push(("euf", dispatched_theory(&mut arena, &a, &b)));
+    }
+
+    // --- QF_UFLIA: A: g(k) ≥ 5 ; B: g(k) ≤ 3 (Int) ------------------------
+    {
+        let mut arena = TermArena::new();
+        let g = arena.declare_fun("ug", &[Sort::Int], Sort::Int).unwrap();
+        let k_sym = arena.declare("uk_int", Sort::Int).unwrap();
+        let k = arena.var(k_sym);
+        let gk = arena.apply(g, &[k]).unwrap();
+        let five = arena.int_const(5);
+        let three = arena.int_const(3);
+        let a = [arena.int_ge(gk, five).unwrap()];
+        let b = [arena.int_le(gk, three).unwrap()];
+        observed.push(("uflia", dispatched_theory(&mut arena, &a, &b)));
+    }
+
+    // --- QF_UFLRA: A: f(c) ≥ 5 ; B: f(c) ≤ 3 ------------------------------
+    {
+        let mut arena = TermArena::new();
+        let f = arena.declare_fun("uf", &[Sort::Real], Sort::Real).unwrap();
+        let c_sym = arena.declare("uc_real", Sort::Real).unwrap();
+        let c = arena.var(c_sym);
+        let fc = arena.apply(f, &[c]).unwrap();
+        let five = rconst(&mut arena, 5);
+        let three = rconst(&mut arena, 3);
+        let a = [arena.real_ge(fc, five).unwrap()];
+        let b = [arena.real_le(fc, three).unwrap()];
+        observed.push(("uflra", dispatched_theory(&mut arena, &a, &b)));
+    }
+
+    // --- QF_BV (equality shape): A: x = y ; B: x ≠ y -----------------------
+    // The canonical fixture of `qf_bv_interpolant_certified` — but through the
+    // SHIPPING dispatch the ground-EUF rung sits above QF_BV and handles pure
+    // equality/disequality over bit-vector terms, so this lands on `qf_uf`.
+    // Recorded because it is the dispatch's real behaviour, not the unit test's.
+    {
+        let mut arena = TermArena::new();
+        let xs = arena.declare("bx", Sort::BitVec(8)).unwrap();
+        let ys = arena.declare("by", Sort::BitVec(8)).unwrap();
+        let (x, y) = (arena.var(xs), arena.var(ys));
+        let x_eq_y = arena.eq(x, y).unwrap();
+        let x_ne_y = arena.not(x_eq_y).unwrap();
+        let a = [x_eq_y];
+        let b = [x_ne_y];
+        observed.push(("bv-eq", dispatched_theory(&mut arena, &a, &b)));
+    }
+
+    // --- QF_BV (inequality shape): A: x <u 5 ; B: x >=u 5 ------------------
+    // No equalities, so EUF declines and the bit-blast rung decides it.
+    {
+        let mut arena = TermArena::new();
+        let xs = arena.declare("cx", Sort::BitVec(8)).unwrap();
+        let x = arena.var(xs);
+        let five = arena.bv_const(8, 5).unwrap();
+        let a = [arena.bv_ult(x, five).unwrap()];
+        let b = [arena.bv_uge(x, five).unwrap()];
+        observed.push(("bv-ineq", dispatched_theory(&mut arena, &a, &b)));
+    }
+
+    // Pinned outcome per fixture, MEASURED not intended. Unwiring any rung
+    // named here flips its row to `uncertified` and this fails naming it.
+    //
+    // Two rows record dispatch behaviour that the per-module unit tests do not
+    // show, and they are the reason this is a pinned list rather than a count:
+    //   - `bv-eq` is the canonical fixture of `qf_bv_interpolant_certified`, but
+    //     through the dispatch the ground-EUF rung sits ABOVE QF_BV and decides
+    //     it, so the BV certificate is never the one that ships for that shape;
+    //   - `uflia` interpolates on a rung with no certified route before the
+    //     QF_UFLIA rung is reached.
+    // So `certify_qf_bv` and `certify_uflia` are wired but NOT demonstrated live
+    // here. Say so rather than claiming six of six.
+    let expected: Vec<(&str, &str)> = vec![
+        ("lra", "qf_lra"),
+        ("lia", "qf_lia"),
+        ("euf", "qf_uf"),
+        ("uflia", UNCERTIFIED),
+        ("uflra", "qf_uflra"),
+        ("bv-eq", "qf_uf"),
+        ("bv-ineq", NO_INTERPOLANT),
+    ];
+    let actual: Vec<(&str, &str)> = observed
+        .iter()
+        .map(|(fixture, tag)| (*fixture, tag.as_str()))
+        .collect();
+    assert_eq!(
+        actual, expected,
+        "the dispatch's per-rung certification changed; \
+         left = observed, right = pinned"
+    );
+
+    let certified: BTreeSet<&str> = actual
+        .iter()
+        .map(|(_, tag)| *tag)
+        .filter(|tag| *tag != NO_INTERPOLANT && *tag != UNCERTIFIED)
+        .collect();
+    assert_eq!(
+        certified.len(),
+        4,
+        "four distinct certify_* helpers must be reachable through the shipping \
+         dispatch: {certified:?}"
+    );
+}
+
+/// The fixture produced no interpolant at all — a broken fixture, not a
+/// statement about certification.
+const NO_INTERPOLANT: &str = "no-interpolant";
+/// The fixture interpolated on a rung with no certified route, or fell outside
+/// a certified route's fragment.
+const UNCERTIFIED: &str = "uncertified";
+
+/// Runs the shipping dispatch over `(a, b)` and reports the outcome as a tag:
+/// the certificate's theory name, [`UNCERTIFIED`], or [`NO_INTERPOLANT`].
+///
+/// Reporting a tag rather than panicking keeps the failure message informative —
+/// it names every fixture's outcome instead of dying on the first one.
+fn dispatched_theory(arena: &mut TermArena, a: &[TermId], b: &[TermId]) -> String {
+    let (solver, a_indices) = solver_over(a, b);
+    let Some(dispatched) = solver
+        .interpolant_certified(arena, &a_indices)
+        .expect("decides")
+    else {
+        return NO_INTERPOLANT.to_string();
+    };
+    match &dispatched.certificate {
+        Some(cert) => {
+            assert_eq!(
+                cert.interpolant(),
+                dispatched.interpolant,
+                "the certificate must certify the interpolant that shipped"
+            );
+            cert.theory().to_string()
+        }
+        None => UNCERTIFIED.to_string(),
     }
 }

@@ -393,6 +393,16 @@ fn collect_symbols(arena: &TermArena, term: TermId, out: &mut BTreeSet<SymbolId>
 // types below let `Solver::dispatch_interpolant` carry whichever certificate
 // the winning theory rung was able to produce, so the shipping route consumes
 // them instead of leaving them reachable only from tests.
+//
+// SCOPE. Six of the seven `*_certified` entry points are theory-level and are
+// consumed here. The seventh, `axeyum_cnf::propositional_interpolant_certified`,
+// is deliberately NOT: its two DRAT refutations live in the CNF *encoding's*
+// variable space, so attaching them to a term-level interpolant would certify
+// the propositional step while saying nothing about the lift back to terms that
+// `bv_interpolant` / `lra_interpolant_cnf` perform afterwards. Wiring it needs a
+// lift-covering argument that does not exist yet; a certificate that does not
+// cover the step between what it proves and what it is attached to is exactly
+// the kind of assurance-shaped artifact this item was opened to remove.
 // ---------------------------------------------------------------------------
 
 /// An externally-checkable certificate for a dispatched Craig interpolant,
