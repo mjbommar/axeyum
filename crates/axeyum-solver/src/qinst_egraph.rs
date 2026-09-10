@@ -827,18 +827,13 @@ const SKOLEM_FUNCTION_PREFIX: &str = "!qskf_";
 ///
 /// The existing term-invention route ([`MAX_INVENTED_TERMS_TOTAL`],
 /// [`MAX_DIRECT_INSTANCES_TOTAL`]) is the machinery for building rather than
-/// finding terms, but it cannot reach this class, and the reason is **not** the
-/// [`GroundBudget::invention_ceiling`] the earlier note named. That ceiling is
-/// the SECOND gate. The first is the enclosing `if admitted.is_empty()`:
-/// invention runs only in a round where every ordinary matching schedule
-/// admitted nothing. On the flood class matching admits thousands of instances
-/// every round, so the loop reaches the 8192 ground cap without the invention
-/// branch ever being evaluated — the ceiling is never even tested.
-///
-/// Priming is therefore placed **before** the loop rather than inside its
-/// starvation arm: at that point ground is the source assertions, no flood has
-/// happened, and the eligible set is a syntactic property of the universals
-/// rather than of the round.
+/// finding terms, and it does not run on this class: it sits inside the loop's
+/// `if admitted.is_empty()` starvation arm, and — measured 2026-09-10 — every
+/// flooded file reaches that arm only at a CAP-INDUCED fixpoint with
+/// `ground=8192`, where [`GroundBudget::invention_ceiling`] (4096) then blocks
+/// it. Priming is therefore placed **before** the loop: at that point ground is
+/// the source assertions, no flood has happened, and eligibility is a syntactic
+/// property of the universals rather than of the round.
 ///
 /// # Trust
 ///
@@ -846,7 +841,38 @@ const SKOLEM_FUNCTION_PREFIX: &str = "!qskf_";
 /// [`QuantifierInstanceCertificate`] gate in [`admit_generated_ground`], the
 /// same check a matched instance passes. This route can only add facts the
 /// universals already entail; it adds no trust surface.
-const SKOLEM_PRIME_INSTANCES_DEFAULT: usize = 512;
+///
+/// # THE SHIPPED ARM IS OFF, AND THIS IS THE MEASUREMENT THAT PUT IT THERE
+///
+/// [`building-the-skolem-application-2026-09-10.md`] ran the A/B at
+/// [`SKOLEM_PRIME_MEASURED_ARM`] on both `UF` populations, one binary, both
+/// arms, `taskset -c 0-7`, 24 s:
+///
+/// - **The construction gap closes.** On `Hoare/uf.966336` — Q2's sharpest
+///   reproducer — the pass builds `(f18 f29 (!qskf_35 !sk_1 !sk_0))`, the exact
+///   chain link Q2 measured as absent, and Q2's stated observable "zero
+///   applications of any `!qskf_` symbol to `(f19 (f20 f29) f28)`" moves from
+///   **0 to 1**. The OFF arm on the same binary still has zero.
+/// - **The verdict does not move.** The 32-file loss slice decides **1 of 32**
+///   in both arms: gained `[]`, lost `[]`.
+/// - **It costs a win.** `Arrow_Order/uf.558544`, run isolated on one binary at
+///   one moment: OFF `unsat` in 3.6 s, ON `unknown` at the 24 s budget.
+///
+/// So construction was **not** the binding constraint, and paying for it is
+/// strictly negative. The pass is retained at `0` so the question can be
+/// re-asked in one environment variable rather than in a patch — the same
+/// reason [`GroundBudget`] is an object — and so the answer sits next to the
+/// number instead of only in a note.
+const SKOLEM_PRIME_SHIPPED: usize = 0;
+/// The budget the 2026-09-10 A/B ran at. Referenced by the arm's own tests and
+/// by anyone re-running it; the loop reads [`skolem_prime_budget`].
+///
+/// Unused outside `cfg(test)` **by design**: the shipped arm is
+/// [`SKOLEM_PRIME_SHIPPED`], and this constant exists so the measured arm has a
+/// name in the source rather than only in a note. Deleting it would delete the
+/// only in-tree record of which value the A/B ran.
+#[allow(dead_code, reason = "names the measured arm; the shipped arm is 0")]
+const SKOLEM_PRIME_MEASURED_ARM: usize = 512;
 /// Primed instances one universal may contribute in the single pass. Small on
 /// purpose: the point is the all-Skolem-first tuple and its near neighbours,
 /// not a cartesian product.
@@ -883,10 +909,11 @@ impl Drop for SkolemPrimeGuard {
 /// choice, else the process value resolved once from
 /// `AXEYUM_QINST_SKOLEM_PRIME`.
 ///
-/// The variable holds a decimal total (`AXEYUM_QINST_SKOLEM_PRIME=0` turns the
-/// pass off, which is the A/B's control arm). An unset or unparseable value is
-/// [`SKOLEM_PRIME_INSTANCES_DEFAULT`], so a typo degrades to the shipped
-/// behaviour rather than to a budget nobody chose.
+/// The variable holds a decimal total; `AXEYUM_QINST_SKOLEM_PRIME=512` is the
+/// arm the 2026-09-10 A/B ran. An unset or unparseable value is
+/// [`SKOLEM_PRIME_SHIPPED`] (`0`, the pass off), so a typo degrades to the
+/// shipped behaviour rather than to a budget nobody chose — and in particular a
+/// typo cannot silently turn on a route measured to cost a win.
 #[must_use]
 pub fn skolem_prime_budget() -> usize {
     static RESOLVED: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
@@ -906,12 +933,8 @@ pub fn skolem_prime_budget() -> usize {
 /// the arm the process started with.
 fn parse_skolem_prime_budget(raw: Option<&str>) -> usize {
     match raw.map(str::trim) {
-        // An explicit 0 is the OFF arm and must survive: unlike the ground
-        // ceiling, nothing about this pass is a "never hang" property.
-        Some(text) => text
-            .parse::<usize>()
-            .unwrap_or(SKOLEM_PRIME_INSTANCES_DEFAULT),
-        None => SKOLEM_PRIME_INSTANCES_DEFAULT,
+        Some(text) => text.parse::<usize>().unwrap_or(SKOLEM_PRIME_SHIPPED),
+        None => SKOLEM_PRIME_SHIPPED,
     }
 }
 
@@ -5835,8 +5858,8 @@ impl IncrementalEmatchSession {
 
     /// One bounded **Skolem-application priming** pass, run once before the
     /// instantiation loop's first round (see
-    /// [`SKOLEM_PRIME_INSTANCES_DEFAULT`] for why it is here and not in the
-    /// starvation arm).
+    /// [`SKOLEM_PRIME_SHIPPED`] for why it is placed there, why the shipped
+    /// budget is `0`, and what the A/B measured).
     ///
     /// Eligible universals are the active ones whose body applies a Skolem
     /// function to their own bound variables — the applications that cannot
@@ -5847,6 +5870,10 @@ impl IncrementalEmatchSession {
     ///
     /// Returns `(eligible universals, admitted instances)`.
     #[allow(clippy::too_many_arguments)]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one staged enumeration with its eligibility gate"
+    )]
     fn prime_skolem_application_instances(
         &mut self,
         arena: &mut TermArena,
@@ -13645,23 +13672,29 @@ mod tests {
     }
 
     /// Every way of writing the priming override badly resolves to the shipped
-    /// budget — but an explicit `0` must survive, because `0` is the OFF arm
-    /// every A/B on this pass is measured against.
+    /// budget, which is `0` — so a typo cannot silently turn on a route
+    /// measured to cost `Arrow_Order/uf.558544`.
     #[test]
     fn a_bad_skolem_prime_override_degrades_to_the_shipped_budget() {
+        assert_eq!(
+            SKOLEM_PRIME_SHIPPED, 0,
+            "the shipped arm is OFF; see the constant's own measurement"
+        );
         for raw in [None, Some(""), Some("  "), Some("nope"), Some("-1")] {
             assert_eq!(
                 parse_skolem_prime_budget(raw),
-                SKOLEM_PRIME_INSTANCES_DEFAULT,
+                SKOLEM_PRIME_SHIPPED,
                 "AXEYUM_QINST_SKOLEM_PRIME={raw:?} must resolve to the shipped budget"
             );
         }
+        // The measured arm must still be reachable by name, or the constant
+        // recording it would be decoration.
         assert_eq!(
-            parse_skolem_prime_budget(Some("0")),
-            0,
-            "an explicit 0 is the OFF arm and must not degrade to the default"
+            parse_skolem_prime_budget(Some(" 512 ")),
+            SKOLEM_PRIME_MEASURED_ARM,
+            "the 2026-09-10 arm must be selectable in one environment variable"
         );
-        assert_eq!(parse_skolem_prime_budget(Some(" 64 ")), 64);
+        assert_eq!(parse_skolem_prime_budget(Some("64")), 64);
     }
 
     /// The guard is scoped, so an A/B inside one process cannot leak.
@@ -13764,73 +13797,87 @@ mod tests {
         );
     }
 
-    /// The end-to-end guard, and the reason the pass is placed before the loop
-    /// rather than in its starvation arm.
+    /// The pass builds the application, at the arguments it claims, and does
+    /// nothing at all when its budget is `0`.
     ///
-    /// The query holds a refutation one Skolem application wide — two
-    /// universals that contradict each other at any argument, neither of which
-    /// any trigger can match because no ground `!qskf_0(_)` term exists — plus
-    /// a NOISE universal that admits a fresh instance every round. The noise is
-    /// the whole point: the loop's existing term-invention route sits behind
-    /// `if admitted.is_empty()`, so while the noise keeps producing, invention
-    /// is never even considered and the ground ceiling it is gated on is never
-    /// tested. That is the measured shape of the flood class, in miniature.
+    /// This is a test of the PASS, not of a verdict, and deliberately so: a
+    /// query small enough to write here is decided by the loop's other rungs
+    /// with priming OFF — an earlier end-to-end form of this test failed on its
+    /// own vacuity guard, which is the measurement that put this form here — so
+    /// no toy can discriminate the two arms on a verdict. What discriminates
+    /// them is the corpus A/B in
+    /// `docs/research/03-measurements/building-the-skolem-application-2026-09-10.md`.
+    /// What this pins is that the pass produces the term that measurement went
+    /// looking for, and that the shipped `0` budget produces nothing.
     ///
-    /// OFF must be `unknown` and ON must be `unsat`. If the OFF arm ever
-    /// decides this, the test is vacuous and says so by failing.
+    /// Delete the eligibility filter, the substitution, or the budget check and
+    /// one of these assertions dies.
     #[test]
-    fn skolem_priming_decides_a_refutation_the_flood_class_cannot_reach() {
-        let (mut arena, sort, c, skolem, ordinary, predicate) = skolem_prime_fixture();
-
-        // The noise: `forall u. q(f(f(u)))` over a ground `q(f(c))` grows the
-        // ground set by one instance per round forever, so no round is ever
-        // starved.
-        let noise_predicate = arena.declare_fun("skp_q", &[sort], Sort::Bool).unwrap();
-        let u_symbol = arena.declare("skp_u", sort).unwrap();
-        let u = arena.var(u_symbol);
-        let f_u = arena.apply(ordinary, &[u]).unwrap();
-        let f_f_u = arena.apply(ordinary, &[f_u]).unwrap();
-        let noise_body = arena.apply(noise_predicate, &[f_f_u]).unwrap();
-        let noise = arena.forall(u_symbol, noise_body).unwrap();
-        let f_c = arena.apply(ordinary, &[c]).unwrap();
-        let noise_seed = arena.apply(noise_predicate, &[f_c]).unwrap();
-
-        // The refutation: `forall x. p(!qskf_0(x))` and
-        // `forall x. not p(!qskf_0(x))`.
+    fn skolem_priming_builds_the_application_at_the_arguments_it_claims() {
+        let (mut arena, sort, c, skolem, _ordinary, predicate) = skolem_prime_fixture();
         let x_symbol = arena.declare("skp_x", sort).unwrap();
         let x = arena.var(x_symbol);
         let sk_x = arena.apply(skolem, &[x]).unwrap();
-        let p_sk_x = arena.apply(predicate, &[sk_x]).unwrap();
-        let not_p_sk_x = arena.not(p_sk_x).unwrap();
-        let positive = arena.forall(x_symbol, p_sk_x).unwrap();
-        let negative = arena.forall(x_symbol, not_p_sk_x).unwrap();
+        let body = arena.apply(predicate, &[sk_x]).unwrap();
+        let universal = arena.forall(x_symbol, body).unwrap();
+        // A ground fact naming `c`, so `c` is a source-vocabulary constant the
+        // pass can substitute.
+        let p_c = arena.apply(predicate, &[c]).unwrap();
+        let assertions = vec![p_c, universal];
 
-        let assertions = vec![noise_seed, noise, positive, negative];
+        // What the pass must produce: `skp_p(!qskf_0(skp_c))`.
+        let sk_c = arena.apply(skolem, &[c]).unwrap();
+        let wanted = arena.apply(predicate, &[sk_c]).unwrap();
 
-        // A small ceiling so the OFF arm terminates on the noise rather than on
-        // the clock: this test is about which route builds the term, not about
-        // how long a flood takes.
-        let _ground = GroundBudgetGuard::set(GroundBudget::from_ceiling("skp-test", 64));
-
-        let off = {
-            let _guard = SkolemPrimeGuard::set(0);
-            prove_quantified_unsat_via_egraph(&mut arena, &assertions, &SolverConfig::default())
-                .unwrap()
+        let run = |arena: &mut TermArena, budget: usize| -> Vec<TermId> {
+            let foralls = vec![universal];
+            let mut matcher = IncrementalEmatchSession::new_with_nested(arena, &foralls, &[]);
+            let mut state = TermInventionState::default();
+            let mut seen: HashSet<TermId> = HashSet::new();
+            let mut ground: Vec<TermId> = vec![p_c];
+            let mut retained: HashMap<TermId, QuantifierGroundDerivation> = HashMap::new();
+            let mut generations = TermGenerations::seed_sources(arena, &assertions);
+            let _guard = SkolemPrimeGuard::set(budget);
+            let (_eligible, admitted) = matcher.prime_skolem_application_instances(
+                arena,
+                &assertions,
+                &mut state,
+                &mut seen,
+                &mut ground,
+                &mut retained,
+                &mut generations,
+            );
+            admitted
         };
+
+        let off = run(&mut arena, 0);
         assert!(
-            !matches!(off, CheckResult::Unsat),
-            "with priming off nothing may build `!qskf_0(skp_c)`, so this query \
-             must stay undecided — a decided OFF arm makes the ON arm vacuous"
+            off.is_empty(),
+            "a `0` budget is the SHIPPED arm and must admit nothing, got {off:?}"
         );
 
-        let on = {
-            let _guard = SkolemPrimeGuard::set(SKOLEM_PRIME_INSTANCES_DEFAULT);
-            prove_quantified_unsat_via_egraph(&mut arena, &assertions, &SolverConfig::default())
-                .unwrap()
+        let on = run(&mut arena, SKOLEM_PRIME_MEASURED_ARM);
+        assert!(
+            on.contains(&wanted),
+            "the pass must build `skp_p(!qskf_0(skp_c))` — the Skolem application at \
+             a constant already in the assertions — got {on:?}"
+        );
+
+        // The instance is a CONSEQUENCE, not a guess: it must pass the same
+        // certificate gate a matched instance passes. Without this the pass
+        // could admit anything of the right shape.
+        let certificate = QuantifierInstanceCertificate {
+            assertion: universal,
+            bindings: vec![c],
+            instance: wanted,
         };
         assert!(
-            matches!(on, CheckResult::Unsat),
-            "priming must build the Skolem application and close the refutation, got {on:?}"
+            check_quantifier_ground_derivation(
+                &mut arena,
+                &assertions,
+                &QuantifierGroundDerivation::Instance(certificate),
+            ),
+            "the primed instance must be checkable against its universal"
         );
     }
 }
