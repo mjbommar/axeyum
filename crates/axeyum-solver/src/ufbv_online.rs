@@ -3178,11 +3178,9 @@ fn project_replay_composed(
             model.set(symbol, value);
         }
     }
-    for (func, _name, _params, _result) in arena.functions() {
-        if let Some(value) = projected.function(func) {
-            model.set_function(func, value.clone());
-        }
-    }
+    // Roadmap 2.11: carry every non-symbol component of the assignment the
+    // replay above checked, not just the function interpretations.
+    model.carry_assignment_components(&projected);
     CheckResult::Sat(model)
 }
 

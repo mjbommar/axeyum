@@ -151,5 +151,10 @@ pub fn check_with_int_blasting<B: SolverBackend>(
             out.set(symbol, value);
         }
     }
+    // Roadmap 2.11: this carried symbol entries only. The integer replay above
+    // runs against `integer_model`, which may also hold function interpretations
+    // -- dropping those is the `9b259f7c2` defect, whose caller-visible symptom
+    // was `Err(UnboundFunction(..))` on replay.
+    out.carry_assignment_components(&integer_model);
     Ok(CheckResult::Sat(out))
 }

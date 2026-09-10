@@ -132,10 +132,10 @@ pub fn check_with_arrays_and_functions<B: SolverBackend>(
             out.set(symbol, value);
         }
     }
-    for (func, _name, _params, _result) in arena.functions() {
-        if let Some(interp) = projected.function(func) {
-            out.set_function(func, interp.clone());
-        }
-    }
+    // Roadmap 2.11: the replay above ran against `projected`, which also holds
+    // the chosen real division-at-zero interpretation; emitting a model without
+    // it is the `c41dd4264` defect. Carry every non-symbol component of the
+    // assignment rather than the ones this loop remembered.
+    out.carry_assignment_components(&projected);
     Ok(CheckResult::Sat(out))
 }

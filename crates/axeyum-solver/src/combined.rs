@@ -246,11 +246,9 @@ pub fn check_with_all_theories<B: SolverBackend>(
             out.set(symbol, value);
         }
     }
-    for (func, _name, _params, _result) in arena.functions() {
-        if let Some(interp) = projected.function(func) {
-            out.set_function(func, interp.clone());
-        }
-    }
+    // Roadmap 2.11: carry every non-symbol component of the assertion the replay
+    // above actually checked, not just the function interpretations.
+    out.carry_assignment_components(&projected);
     Ok(CheckResult::Sat(out))
 }
 

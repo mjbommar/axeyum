@@ -7613,19 +7613,17 @@ fn collect_warm_one_shot_terms(assumptions: &[OneShotAssumption]) -> WarmOneShot
     }
 }
 
+/// Narrows `model` to the caller's vocabulary, keeping everything else.
+///
+/// Roadmap 2.11. The rebuild-and-copy this replaces carried entries, functions
+/// and `real_div_zero` — and silently dropped `uninterpreted_cardinalities` and
+/// the quantified sat certificates, which are the two components a re-replay
+/// through `Model::to_assignment` structurally cannot see. A guard there would
+/// have been a check that cannot fail on this site's actual defect, so the fix
+/// is a narrowing that cannot lose a component instead.
 fn filter_internal_model(model: &Model, hidden_symbols: &HashSet<SymbolId>) -> Model {
-    let mut filtered = Model::new();
-    for (symbol, value) in model.iter() {
-        if !hidden_symbols.contains(&symbol) {
-            filtered.set(symbol, value);
-        }
-    }
-    for (func, value) in model.functions() {
-        filtered.set_function(func, value.clone());
-    }
-    for (numerator, quotient) in model.real_div_zeros() {
-        filtered.set_real_div_zero(numerator, quotient);
-    }
+    let mut filtered = model.clone();
+    filtered.retain_symbols(|symbol| !hidden_symbols.contains(&symbol));
     filtered
 }
 
@@ -7648,6 +7646,11 @@ fn complete_model_filtered(
             model.set(symbol, value);
         }
     }
+    // Roadmap 2.11 (the `complete_model_filtered` twin of
+    // `filter_internal_model`; not in the item's list, found by deriving the
+    // site set from the source). Symbol entries only, from an `Assignment` that
+    // may hold both other components.
+    model.carry_assignment_components(assignment);
     model
 }
 
@@ -7884,5 +7887,120 @@ mod tests {
             &[],
             &[equality]
         ));
+    }
+}
+
+/// Roadmap 2.11 — this file's narrowing sites, `filter_internal_model` and
+/// `complete_model_filtered`.
+///
+/// `incremental.rs:7616` is the second of the two sites item 2.11 flags as ones
+/// SOUND-1's guard 2 cannot fix. Re-verified before changing anything, and the
+/// item's description of it is half right: `filter_internal_model` already
+/// carried `real_div_zero`. What it dropped was `uninterpreted_cardinalities`
+/// and the quantified sat certificates — and those are exactly the two
+/// components an `Assignment` cannot hold, so a re-replay through
+/// `Model::to_assignment` could never have caught either. Guard 2 here would
+/// have been a check that cannot fail.
+///
+/// The fix is a carry through `Model::retain_symbols`, and the test below is
+/// what makes it falsifiable at this site.
+#[cfg(test)]
+mod sound2_narrowing_site_tests {
+    use super::{complete_model_filtered, filter_internal_model};
+    use crate::model::Model;
+    use crate::quant_sat_certificates::{AffineSkolemWitness, QuantifiedSkolemSatCertificate};
+    use axeyum_ir::{Assignment, Rational, Sort, TermArena, Value};
+    use std::collections::HashSet;
+
+    /// DIES ON: rebuilding the emitted model in `filter_internal_model` instead
+    /// of narrowing the one that came in.
+    #[test]
+    fn filter_internal_model_keeps_every_component_including_the_invisible_two() {
+        let mut arena = TermArena::new();
+        let user = arena.declare("x", Sort::BitVec(8)).expect("declare x");
+        let hidden = arena
+            .declare_internal("!warm_internal", Sort::BitVec(8))
+            .expect("declare hidden");
+        let opaque = arena.declare_uninterpreted_sort("U");
+        let assertion = arena.var(user);
+
+        let mut inner = Model::new();
+        inner.set(user, Value::Bv { width: 8, value: 3 });
+        inner.set(hidden, Value::Bv { width: 8, value: 9 });
+        inner.set_real_div_zero(Rational::integer(5), Rational::integer(100));
+        inner.set_uninterpreted_cardinality(opaque, 3);
+        inner.set_quantified_sat_certificate(QuantifiedSkolemSatCertificate {
+            assertion,
+            universals: vec![user],
+            existential: hidden,
+            witness: AffineSkolemWitness {
+                terms: Vec::new(),
+                constant: Rational::integer(1),
+            },
+        });
+
+        let filtered = filter_internal_model(&inner, &HashSet::from([hidden]));
+
+        assert_eq!(filtered.get(hidden), None, "the internal symbol");
+        assert_eq!(
+            filtered.get(user),
+            Some(Value::Bv { width: 8, value: 3 }),
+            "x"
+        );
+        assert_eq!(
+            filtered.uninterpreted_cardinality(opaque),
+            Some(3),
+            "the declared carrier size did not survive narrowing — and no replay \
+             through `to_assignment` would have told you"
+        );
+        assert_eq!(
+            filtered.quantified_sat_certificates().count(),
+            1,
+            "the checked quantified certificate did not survive narrowing — and no \
+             replay through `to_assignment` would have told you"
+        );
+        assert_eq!(
+            filtered.real_div_zero(Rational::integer(5)),
+            Some(Rational::integer(100)),
+            "the division-at-zero witness did not survive narrowing"
+        );
+    }
+
+    /// The sibling site in the same file, which item 2.11 does not name — found
+    /// by deriving the site set from the source rather than from the row. It
+    /// builds from an `Assignment`, so its exposure is the three components an
+    /// `Assignment` holds, and it carried only symbol entries.
+    ///
+    /// DIES ON: removing the `carry_assignment_components` call in
+    /// `complete_model_filtered`.
+    #[test]
+    fn complete_model_filtered_carries_the_assignments_other_components() {
+        let mut arena = TermArena::new();
+        let user = arena.declare("x", Sort::BitVec(8)).expect("declare x");
+        let func = arena
+            .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+            .expect("declare f");
+
+        let mut assignment = Assignment::new();
+        assignment.set(user, Value::Bv { width: 8, value: 3 });
+        assignment.set_function(
+            func,
+            axeyum_ir::FuncValue::constant(vec![Sort::BitVec(8)], Sort::BitVec(8), 4)
+                .define(&[1], 2),
+        );
+        assignment.set_real_div_zero(Rational::integer(5), Rational::integer(100));
+
+        let model = complete_model_filtered(&arena, &assignment, &HashSet::new());
+
+        assert!(
+            model.function(func).is_some(),
+            "the UF interpretation the caller will replay against was dropped — the \
+             caller's replay then fails with UnboundFunction (9b259f7c2)"
+        );
+        assert_eq!(
+            model.real_div_zero(Rational::integer(5)),
+            Some(Rational::integer(100)),
+            "the division-at-zero witness was dropped (c41dd4264)"
+        );
     }
 }

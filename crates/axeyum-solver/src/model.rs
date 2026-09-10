@@ -387,6 +387,55 @@ impl Model {
         self.entries.is_empty()
     }
 
+    /// Drops every symbol entry `keep` rejects, leaving **every other component
+    /// of the model untouched**.
+    ///
+    /// This is how a solver route narrows a model to the caller's vocabulary
+    /// (roadmap 2.11). It exists because the obvious alternative — build a fresh
+    /// [`Model`] and copy the fields you remember — is a defect generator: it
+    /// silently drops whatever the author did not list, and the SOUND-1 family
+    /// is three separate instances of exactly that
+    /// (`c41dd4264` dropped `real_div_zero`, `9b259f7c2` dropped `functions`,
+    /// and an audit of eleven more sites found five dropping `functions` and
+    /// most dropping `real_div_zero`).
+    ///
+    /// The distinction that makes this a *fix* rather than a *check*: a re-replay
+    /// against [`Self::to_assignment`] — SOUND-1's guard 2 — can only ever see
+    /// the three components an [`Assignment`] can hold. It is structurally blind
+    /// to [`Self::uninterpreted_cardinalities`] and to the quantified
+    /// certificates, so at a site whose only loss is one of those, guard 2 is a
+    /// check that cannot fail on the defect the site has. Narrowing through this
+    /// method instead means no component *can* be lost, including components
+    /// added to `Model` after this was written — a rebuild-and-copy would have
+    /// to be edited to keep carrying them, and this does not.
+    pub fn retain_symbols(&mut self, mut keep: impl FnMut(SymbolId) -> bool) {
+        self.entries.retain(|&(symbol, _)| keep(symbol));
+    }
+
+    /// Copies into this model every component of `assignment` that is **not** a
+    /// symbol binding: uninterpreted-function interpretations and the chosen
+    /// real division-at-zero interpretation.
+    ///
+    /// The companion to [`Self::retain_symbols`] for the routes that build a
+    /// model out of an [`Assignment`] rather than out of another `Model`, and
+    /// which therefore choose their symbol set with their own loop. Those are
+    /// precisely the two components such a route replays against and then
+    /// forgets to emit: `functions` is the `9b259f7c2` defect (the caller's
+    /// replay returned `Err(UnboundFunction(..))`) and `real_div_zero` is the
+    /// `c41dd4264` one.
+    ///
+    /// `Assignment` holds exactly three things — bindings, functions, and the
+    /// division-at-zero map — so together with the caller's own symbol loop this
+    /// carries all of it.
+    pub fn carry_assignment_components(&mut self, assignment: &Assignment) {
+        for (func, interpretation) in assignment.functions() {
+            self.set_function(func, interpretation.clone());
+        }
+        for (numerator, quotient) in assignment.real_div_zeros() {
+            self.set_real_div_zero(numerator, quotient);
+        }
+    }
+
     /// Converts to an evaluator [`Assignment`] for check-by-evaluation —
     /// the level-1 evidence check (evidence-and-checking note).
     pub fn to_assignment(&self) -> Assignment {
@@ -425,5 +474,156 @@ mod tests {
             std::mem::size_of::<Model>() <= 128,
             "Model grew beyond the result-size lint boundary"
         );
+    }
+}
+
+/// Roadmap 2.11 — the two narrowing helpers, and the property that makes them a
+/// fix rather than a check.
+///
+/// The audit behind item 2.11 found eleven sites emitting a `Model` narrower
+/// than the state their replay ran against, in three different ways (five
+/// dropped `functions`, most dropped `real_div_zero`, two dropped
+/// `uninterpreted_cardinalities` and the quantified certificates). Every one was
+/// a hand-written "build a fresh `Model` and copy the fields you remember".
+///
+/// The tests below pin the property that removes that whole class:
+/// [`Model::retain_symbols`] changes the symbol entries and **provably nothing
+/// else**, checked by `PartialEq` on the whole `Model` rather than by a list of
+/// accessors this file would have to remember to extend.
+#[cfg(test)]
+mod sound2_narrowing_tests {
+    use super::Model;
+    use crate::quant_sat_certificates::{AffineSkolemWitness, QuantifiedSkolemSatCertificate};
+    use axeyum_ir::{Assignment, FuncValue, Rational, Sort, SymbolId, TermArena, Value};
+
+    /// A model with **every** component populated, over a real arena.
+    /// `retain_symbols` is only interesting as a test subject against one of
+    /// these: a component that is empty in the fixture cannot be observed to
+    /// survive.
+    fn fully_populated() -> (Model, SymbolId) {
+        let mut arena = TermArena::new();
+        let kept = arena.declare("kept", Sort::Int).expect("declare kept");
+        let hidden = arena.declare("hidden", Sort::Int).expect("declare hidden");
+        let func = arena
+            .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+            .expect("declare f");
+        let opaque = arena.declare_uninterpreted_sort("U");
+        let assertion = arena.var(kept);
+
+        let mut model = Model::new();
+        model.set(kept, Value::Int(7));
+        model.set(hidden, Value::Int(9));
+        model.set_function(
+            func,
+            FuncValue::constant(vec![Sort::BitVec(8)], Sort::BitVec(8), 4).define(&[1], 2),
+        );
+        model.set_real_div_zero(Rational::integer(5), Rational::integer(100));
+        model.set_uninterpreted_cardinality(opaque, 3);
+        model.set_quantified_sat_certificate(QuantifiedSkolemSatCertificate {
+            assertion,
+            universals: vec![kept],
+            existential: hidden,
+            witness: AffineSkolemWitness {
+                terms: Vec::new(),
+                constant: Rational::integer(1),
+            },
+        });
+        (model, hidden)
+    }
+
+    /// The fixture's own control. Without it, a component silently arriving
+    /// empty would make the test below pass for the wrong reason — the audit
+    /// this fixes is precisely a family of components nobody noticed were
+    /// missing.
+    #[test]
+    fn the_fixture_populates_every_component_of_model() {
+        let (model, _) = fully_populated();
+        assert_eq!(model.len(), 2, "symbol entries");
+        assert_eq!(model.functions().count(), 1, "function interpretations");
+        assert_eq!(model.real_div_zeros().count(), 1, "real division-at-zero");
+        assert_eq!(
+            model.uninterpreted_cardinalities().count(),
+            1,
+            "uninterpreted carrier cardinalities"
+        );
+        assert_eq!(
+            model.quantified_sat_certificates().count(),
+            1,
+            "quantified sat certificates"
+        );
+    }
+
+    /// The whole point of the helper. Narrowing drops the symbol entry it was
+    /// told to drop, and putting that one entry back reproduces the original
+    /// model **exactly** — so nothing else moved.
+    ///
+    /// This assertion is `PartialEq` on `Model`, not a list of accessors: a
+    /// component added to `Model` after today is covered the moment the fixture
+    /// populates it, and a reimplementation of `retain_symbols` as
+    /// rebuild-and-copy fails here rather than shipping a narrower certificate.
+    ///
+    /// DIES ON: reimplementing `retain_symbols` as anything that does not start
+    /// from the whole model (a field-by-field rebuild that forgets one).
+    #[test]
+    fn retain_symbols_changes_the_symbol_entries_and_nothing_else() {
+        let (original, hidden) = fully_populated();
+        let mut narrowed = original.clone();
+        narrowed.retain_symbols(|symbol| symbol != hidden);
+        assert_eq!(narrowed.get(hidden), None, "the hidden symbol must be gone");
+        assert_eq!(narrowed.len(), 1, "the other symbol must survive");
+
+        narrowed.set(hidden, Value::Int(9));
+        assert_eq!(
+            narrowed, original,
+            "retain_symbols altered a component other than the symbol entries"
+        );
+    }
+
+    /// DIES ON: deleting the `functions` loop in `carry_assignment_components`.
+    #[test]
+    fn carry_assignment_components_carries_function_interpretations() {
+        let mut arena = TermArena::new();
+        let func = arena
+            .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+            .expect("declare f");
+        let interpretation =
+            FuncValue::constant(vec![Sort::BitVec(8)], Sort::BitVec(8), 4).define(&[1], 2);
+        let mut assignment = Assignment::new();
+        assignment.set_function(func, interpretation.clone());
+
+        let mut model = Model::new();
+        model.carry_assignment_components(&assignment);
+        assert_eq!(
+            model.function(func),
+            Some(&interpretation),
+            "a replay that consulted this interpretation emitted a model without it \
+             — the caller's replay then fails with UnboundFunction (9b259f7c2)"
+        );
+    }
+
+    /// DIES ON: deleting the `real_div_zeros` loop in
+    /// `carry_assignment_components`.
+    #[test]
+    fn carry_assignment_components_carries_the_real_div_zero_witness() {
+        let mut assignment = Assignment::new();
+        assignment.set_real_div_zero(Rational::integer(5), Rational::integer(100));
+
+        let mut model = Model::new();
+        model.carry_assignment_components(&assignment);
+        assert_eq!(
+            model.real_div_zero(Rational::integer(5)),
+            Some(Rational::integer(100)),
+            "a replay that chose (/ 5 0) = 100 emitted a model without it, so the \
+             caller's replay falls back to the total x/0 = 0 convention (c41dd4264)"
+        );
+    }
+
+    /// The negative control: the helper must not invent components. Without
+    /// this, "set every function to a default" would pass the two tests above.
+    #[test]
+    fn carry_assignment_components_of_an_empty_assignment_adds_nothing() {
+        let mut model = Model::new();
+        model.carry_assignment_components(&Assignment::new());
+        assert_eq!(model, Model::new());
     }
 }
