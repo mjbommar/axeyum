@@ -169,9 +169,23 @@ if self.symbols.len() > MAX_PROPAGATION_VERTICES || past_deadline(self.deadline)
 }
 ```
 
-**Nine of the nineteen QF_IDL parity losses declare more than 256 symbols**, so
-difference-logic propagation never runs on them at all. Measured, not inferred —
-`theory_propagations` is exactly `0` on all nine and nonzero on all ten others:
+**Nine of the nineteen QF_IDL parity losses declare more than 256 symbols**, and
+on exactly those nine difference-logic propagation never runs at all.
+
+The declared-symbol count is a *proxy* — the cap reads `scan_dl`'s vertex count,
+which is derived from the query's numeric leaves, not from `declare-fun` lines.
+It agrees with the cap on all nineteen files here, but the claim does not rest on
+it. What does: `theory_propagations` is exactly `0` on all nine and nonzero on
+all ten others, and lifting the cap (§4.3) takes those same nine from `0` to
+68 k–469 k propagations. That is the cap firing, established by intervention
+rather than by correlation.
+
+(The other ten move too, by up to 19% — `j8_per20_0` 289,982 -> 344,994,
+`super_queen29-1` 1,178,013 -> 999,718. That is not noise to wave at: the best
+variant also changes the scan order below the cap, and these runs are all
+budget-limited on a shared box, so their counts measure how much fitted in 20 s.
+Neither effect can produce a 0, which is why the nine are the finding and the ten
+are the control.)
 
 | file | symbols | decisions | theory conflicts | theory propagations | z3 conflicts |
 |---|---:|---:|---:|---:|---:|
