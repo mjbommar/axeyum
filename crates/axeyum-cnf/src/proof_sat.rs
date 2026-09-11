@@ -2233,6 +2233,27 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     /// about assignments — the theory's own `qhead`, moved by
     /// [`Cdcl::theory_round`] and reset by [`Cdcl::backtrack_to`].
     theory_qhead: usize,
+    /// Whether a **per-solve theory epoch** is currently open: one extra
+    /// [`NativeTheory::push`] taken *below* decision level zero, which
+    /// [`Cdcl::reset_search_state`] closes with one extra `pop`.
+    ///
+    /// This is what makes a *warm* CDCL(T) possible, and it is the answer to
+    /// the open design question `reset_search_state` used to pose. A theory
+    /// carries two kinds of state: **registration** (its var-to-atom map, its
+    /// term database) which must survive a solve boundary or the warm object
+    /// is pointless, and **assertions**, which must not. `push`/`pop` already
+    /// separate exactly those two — `pop` undoes assertions back to the
+    /// matching `push` and unregisters nothing — so opening one scope around
+    /// the whole solve returns the theory to its pre-solve state without a new
+    /// trait method and without a fresh theory instance per solve. In
+    /// particular it undoes the *level-zero* assertions a solve makes, which
+    /// the per-decision-level pops cannot reach.
+    ///
+    /// `false` on every one-shot entry point, which takes no epoch and is
+    /// therefore byte-for-byte the search it was before this field existed.
+    /// Only [`incremental::NativeIncrementalCdcl`] sets it, through
+    /// [`Cdcl::open_theory_epoch`].
+    theory_epoch: bool,
     /// The theory lemmas installed into the clause database so far, in
     /// installation order -- ADR-1704's `lemmas` stream.
     ///
@@ -2334,6 +2355,20 @@ impl<S: DratSink> Cdcl<'_, S, NullTheory> {
     /// between solves.
     fn new_empty(sink: S) -> Self {
         Self::new(&CnfFormula::new(0), sink)
+    }
+}
+
+impl<S: DratSink, T: NativeTheory> Cdcl<'_, S, T> {
+    /// An empty solver with `theory` attached: the seed for a **warm**
+    /// CDCL(T).
+    ///
+    /// The theory-carrying counterpart of [`Cdcl::new_empty`], which is bound
+    /// to [`NullTheory`] and is the reason no warm CDCL(T) existed: the core's
+    /// only persistent constructor could not name a theory. This one can, and
+    /// the resulting solver grows through the same [`Cdcl::ensure_vars`] and
+    /// [`Cdcl::add_input_clause`] the `NullTheory` warm path uses.
+    fn new_empty_with_theory(sink: S, theory: T) -> Self {
+        Self::new_with_theory(&CnfFormula::new(0), sink, theory)
     }
 }
 
@@ -2447,6 +2482,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             search_start: Instant::now(),
             theory,
             theory_qhead: 0,
+            theory_epoch: false,
             theory_lemmas: Vec::new(),
             theory_queue: PropagationQueue::new(),
             theory_steps: 0,
@@ -2607,16 +2643,34 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             self.reason[var] = Reason::DECISION;
         }
         // Unwind the theory in lockstep with the trail: one `pop` per level
-        // this search pushed, and rewind its cursor. Level-zero assertions made
-        // before the first `push` are NOT undone — the theory has no backtrack
-        // point below level zero, exactly as `TheorySolver` defines it. That is
-        // the right shape for a one-shot solve; a *warm* CDCL(T) across solves
-        // needs a theory-side reset the trait does not have yet, and slice 2
-        // proper has to decide whether that is a new trait method or a
-        // fresh theory instance per solve (see the design memo).
+        // this search pushed, and rewind its cursor. This runs BEFORE the trail
+        // is cleared, because a theory that walks the driver's trail during
+        // `pop` must still see the assignments it is undoing.
+        //
+        // Level-zero assertions made before the first `push` are not reached by
+        // those pops -- the theory has no backtrack point below level zero,
+        // exactly as `TheorySolver` defines it. For a one-shot solve that is
+        // the right shape and the solver is dropped immediately after. For a
+        // *warm* CDCL(T) it is not: the next solve re-propagates
+        // `initial_units` and would re-assert those same literals into a theory
+        // that never forgot them.
+        //
+        // The warm path therefore opens a **theory epoch** (see
+        // `Cdcl::theory_epoch`): one `push` below decision level zero, closed
+        // here by one extra `pop`. That is what returns the theory to its
+        // pre-solve state. It needs no new trait method -- `push`/`pop` already
+        // mean "save a backtrack point" / "undo every assertion back to it",
+        // which is precisely the assertion-vs-registration split a solve
+        // boundary needs -- and no fresh theory instance, so the theory's atom
+        // registration survives the boundary, which is the whole point of
+        // keeping it warm.
         if T::HAS_THEORY {
             for _ in 0..self.trail_lim.len() {
                 self.theory.pop();
+            }
+            if self.theory_epoch {
+                self.theory.pop();
+                self.theory_epoch = false;
             }
             self.theory_qhead = 0;
         }
@@ -4851,6 +4905,25 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         if T::HAS_THEORY {
             self.theory_qhead = self.theory_qhead.min(self.trail.len());
         }
+    }
+
+    /// Opens the **per-solve theory epoch**: one [`NativeTheory::push`] taken
+    /// below decision level zero, closed by [`Cdcl::reset_search_state`].
+    ///
+    /// Called by the warm entry point immediately before [`Cdcl::run`] and by
+    /// nobody else, so the one-shot path's theory push/pop counts are
+    /// unchanged. Idempotent: a second call with the epoch already open is a
+    /// no-op rather than a second unbalanced `push`, because an epoch is a
+    /// property of the solve and there is only ever one solve in flight.
+    ///
+    /// A no-op for a theory-free search ([`NullTheory`]), where the whole body
+    /// is dropped at monomorphization.
+    fn open_theory_epoch(&mut self) {
+        if !T::HAS_THEORY || self.theory_epoch {
+            return;
+        }
+        self.theory.push();
+        self.theory_epoch = true;
     }
 
     /// Opens a new decision level: one `trail_lim` entry and one theory
