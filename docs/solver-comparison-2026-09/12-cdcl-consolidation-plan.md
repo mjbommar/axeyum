@@ -211,10 +211,30 @@ and the core already names the gap.
 **B3. `qinst_egraph`** after B2: it calls `backtrack_to_root` first thing, which
 is already the native between-solves discipline, so it is a swap once B2 exists.
 
-**B4. The warm BV client is a redesign, not a swap, and must be re-argued on
-measured benefit.** It never backtracks; its `add_permanent_clause` runs with a
-full trail that native `add_input_clause` debug-asserts against; and it needs
-dormant variables, which do not exist in `axeyum-cnf` in any form.
+**B4. `ufbv_online.rs` — a swap plus one loop restructure, gated on a probe.
+DECIDED 2026-09-10, ADR-1913.**
+
+**Name the file, not "the warm BV client".** That phrase sent a lane to
+`incremental.rs`, which has **zero** `CdclT` occurrences (control:
+`ufbv_online.rs`, 18) and is already on the native stack. ADR-1908's decision
+text was right; this summary line was the ambiguous one, and it propagated into
+a brief.
+
+Of the three obstacles the inventory named, one is **refuted**: dormant variables
+do exist in `axeyum-cnf`, under the name **`branchable`** (20 occurrences in
+`proof_sat.rs`). The inventory had grepped `inactive|dormant|activate_variables`
+— a name-blind search, the failure `CLAUDE.md` documents as "do not search for a
+thing by the name you have in mind". Its zero reproduces; its conclusion does
+not follow. One is confirmed but **mispriced** — the route rebuilds a fresh
+`CdclT` every outer refinement round, so the warmth mid-search insertion
+protects is one round deep. One is confirmed. A fourth, folded into the third by
+the inventory, is separated out.
+
+Gated on a **decoupling probe** that prices the migration without doing it: keep
+`CdclT`, replace the three mid-search insertions with backtrack-then-insert, and
+compare verdicts, refinement rounds and PAR-2. Five pre-registered falsifiers;
+the cheapest is runnable today. "One driver" is refused as a reason, since
+ADR-1908 keeps `CdclT` as an oracle regardless.
 
 **B5. Demote `CdclT`, do not delete it.** It is the differential oracle for the
 native core — its own docstring says it "decides whether a shipping route may be
