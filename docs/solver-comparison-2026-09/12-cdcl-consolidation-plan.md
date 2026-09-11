@@ -288,46 +288,43 @@ prediction of value* — and the second half is what Phase D must not assume.
 
 `docs/research/03-measurements/theory-interface-completeness-2026-09-10.md`.
 
-### Phase D — core tuning — **CLOSED UNENTERED 2026-09-11, ADR-1914**
+### Phase D — core tuning — **CLOSED UNENTERED 2026-09-10, ADR-1914**
 
-*Entry condition, not a date:* Phase C has closed and a conflict-count comparison
-still shows a material gap on a family we care about. Phase C closed; **the
-second conjunct does not hold**, so the phase closes without being entered and
-**no technique is scheduled or ranked** —
-[ADR-1914](../research/09-decisions/adr-1914-phase-ds-entry-condition-is-not-met-and-the-core-gap-is-mid-budget-not-structural.md),
-measurement in
-[the gate (b) re-run](../research/03-measurements/gate-b-rerun-and-phase-d-entry-2026-09-10.md).
+Its entry condition was "Phase C closed **and** a conflict-count comparison still
+shows a material gap". Phase C closed; the comparison was run; the gap is **not
+material**, so the phase closes without being entered.
 
-Gate (b) re-run on a **quiet** box (load 1.01–1.16, against 12–33 with a spike
-to 111 in 2026-09-05), three engines, byte-identical DIMACS, 20 s, pinned:
+Gate (b) re-run on a quiet box (load 1.01–1.16, against 12–33 with a spike to 111
+on 2026-09-05), pinned, one engine at a time:
 
-| Engine | p4dfa / 113 | 2026-09-05 | Noetzli / 100 | 2026-09-05 |
+| engine | p4dfa /113 | was | Noetzli /100 | was |
 |---|---:|---:|---:|---:|
 | native | **9** | 6 | **87** | 86 |
-| CaDiCaL 3.0.1 | **12** | 10 | **89** | 88 |
-| Kissat 4.0.4 | **14** | 11 | **90** | 89 |
+| CaDiCaL 3.0.1 | 12 | 10 | 89 | 88 |
+| Kissat 4.0.4 | 14 | 11 | 90 | 89 |
 
-**Every engine gained**, so the old deficit was partly contention on all
-columns. Three findings decide it, and none is the count:
+Zero disagreements over 639 (engine, file) pairs. **Every engine gained**, so the
+September deficit was partly contention on all columns — the caveat that note
+gave about itself.
 
-- **The extra wins are mid-budget.** Across 213 files exactly **two** are
-  decided by a reference with ≥ 4x headroom and missed by us — and on one of
-  them Kissat takes 0.60 s where **CaDiCaL takes 11.05 s**, an 18x spread
-  between the two *references*.
-- **Most of what we miss we reach at 5x the budget.** Four of the six p4dfa
-  files decide at 100 s (4.2–8.5x the reference); two do not decide at 300 s.
-  PAR-2 separates the engines by 2.3–3.7% of the two-timeout ceiling.
-- **One "timeout" is not one.** Two Noetzli rows read `unknown` at 300 s with
-  `timed_out = false` at 194.7 s / 243.6 s — they hit
-  `DEFAULT_PROOF_SAT_CONFLICT_LIMIT = 2_000_000`. That cap is reached on
-  **zero** of the 117 undecided files at 20 s, so it does not explain the gap.
+What closes the phase is not the count:
 
-Three pre-registered re-entry conditions are in the ADR, all written in files
-**decided** rather than conflicts reduced — Phase C's correction that a ratio
-diagnoses cause but does not predict value. `AXEYUM_SEARCH_PROFILE` remains the
-selector; note it is read only where a CDCL(T) route builds `TheorySolveOptions`
-and is **inert on the pure-CNF path** gate (b) measures, whose harness arms now
-exist in `clause_db_policy_ab`.
+- **The extra wins are mid-budget.** Of 213 files, exactly **two** are decided by
+  a reference with ≥4× headroom and missed by us — and on one, Kissat takes
+  0.60 s where **CaDiCaL takes 11.05 s**, an 18× spread *between the two
+  references*. That is where a search fell, not a technique we lack.
+- **Most of what we miss we reach at 5× the budget** (four of six p4dfa files at
+  100 s). PAR-2 separation is 2.3–3.7% of the two-timeout ceiling.
+- One "timeout" was a **conflict limit**, not the clock — reached on zero of the
+  117 files undecided at 20 s, so it binds only above ~195 s and does not explain
+  the gap.
+
+**No technique is recommended**, deliberately. The three pre-registered re-entry
+conditions are written in **files decided**, never conflicts reduced, and one
+requires both references to agree within 4× so a single lucky trajectory cannot
+trigger it — Phase C's correction applied rather than quoted.
+
+`docs/research/03-measurements/gate-b-rerun-and-phase-d-entry-2026-09-10.md`.
 
 ## 4. What this plan does not do
 

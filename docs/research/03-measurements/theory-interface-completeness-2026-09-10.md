@@ -288,8 +288,18 @@ conflict-count ratio, or a recorded reason it is not applicable."
 
 Three cells are open and are named as open rather than inferred. The two that
 would close cheapest are `string_theory` (add the string route to `route_solo`'s
-table — it is a one-entry change now that `--stats` exists) and
+table — ~~it is a one-entry change now that `--stats` exists~~) and
 `combined_theory` on QF_UFLRA.
+
+> **CORRECTED 2026-09-11 by lane E8 (ADR-1914): the string route is NOT a
+> one-entry change.** `Route.run` receives the script's *assertions*, while the
+> online string route consumes `Script::word_skeleton` — a **separate view**
+> that is empty whenever an atom uses `str.len`, `substr`, a regex or an
+> extended function. A naive entry would measure the raw-assertion decline, and
+> an empty result there is indistinguishable from a strong negative: exactly the
+> vacuous-measurement shape this repository keeps paying for. The cheap census
+> that would settle how many QF_SLIA files survive the skeleton view **did not
+> run**.
 
 ## 6. What the next lane should not re-derive
 
