@@ -204,6 +204,32 @@ else
   fail=1
 fi
 
+# --- 3c. External SAT referee binaries (ADR-1910) -------------------------
+# CaDiCaL and Kissat adjudicate the native CDCL core's verdicts on the DIMACS
+# TEXT we wrote (`scripts/check-external-sat-referee.sh`, in `just check`,
+# `scripts/check.sh` and the push hook). They are NOT Cargo dependencies and
+# never become any -- ADR-0002's no-C/C++-in-the-default-graph rule is about the
+# dependency GRAPH, and an external binary is outside it.
+#
+# Provisioned HERE because of the failure this whole change exists to fix: the
+# referee it replaces was present in the tree and wired into nothing, so it
+# adjudicated nothing for its entire life. A referee that is wired into three
+# gates but whose binary no fleet host has is the same defect one level down --
+# the gate prints its loud SKIP forever and nobody reads it.
+#
+# Absence is NOT a provisioning failure (`|| true`): the sources are the
+# gitignored `references/` clones, which a network-isolated or freshly cloned
+# host may not have. The verification block below reports what is actually
+# present, which is the claim.
+if [ -d "$REPO/references/cadical" ] || [ -d "$REPO/references/kissat" ]; then
+  ( cd "$REPO" && ./scripts/provision-external-sat-referee.sh ) \
+    && say "external SAT referee provisioned" \
+    || say "external SAT referee build FAILED -- the gate will print its SKIP banner"
+else
+  say "no references/cadical or references/kissat -- run scripts/fetch-references.sh," \
+      "then scripts/provision-external-sat-referee.sh"
+fi
+
 # --- 4. Commit hooks in the checkout -------------------------------------
 if [ -d "$REPO/.git" ]; then
   git -C "$REPO" config core.hooksPath hooks \
@@ -237,6 +263,10 @@ v msrv-1.88  "\"$CARGO_BIN/rustup\" run 1.88.0 rustc --version"
 v stable     "\"$CARGO_BIN/rustup\" run stable rustc --version"
 v nextest    "\"$CARGO_BIN/cargo-nextest\" --version"
 v z3         "z3 --version"
+# The external SAT referee. Reported per binary: the gate runs with EITHER, and
+# adjudicates against both when both are there.
+v cadical    "cadical --version || \"\$HOME/.local/bin/cadical\" --version"
+v kissat     "kissat --version || \"\$HOME/.local/bin/kissat\" --version"
 # ...and then the claim that actually matters: does the authoritative gate agree
 # it can run here? Its preflight is the authority, not this list.
 v local-ci-preflight "scripts/local-ci.sh --preflight-only 2>&1 | head -1"

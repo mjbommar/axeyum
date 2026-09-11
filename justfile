@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate carcara-gate abc-crosscheck prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness parity-ancestry episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential kernel-conformance lean-divergences declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter lean-tactic declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls lean-creal-library-slice lean-read-round-trip
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate carcara-gate abc-crosscheck external-sat-referee prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness parity-ancestry episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential kernel-conformance lean-divergences declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter lean-tactic declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls lean-creal-library-slice lean-read-round-trip
 
 fmt:
     cargo fmt --all --check
@@ -1415,6 +1415,28 @@ carcara-gate:
 abc-crosscheck:
     ./scripts/check-abc-crosscheck.sh --self-check
     ./scripts/check-abc-crosscheck.sh
+
+# ADR-1910: the EXTERNAL SAT referee. The native CDCL core's verdicts are
+# adjudicated by CaDiCaL and/or Kissat reading the DIMACS TEXT we wrote --
+# 524 comparisons on this host, measured 2026-09-10 with both present.
+#
+# This replaces the `rustsat-batsat` differential, which was retired with the
+# dependency (ADR-1703 slice 2) and which -- measured, with positive controls --
+# was wired into no gate, no CI job, no recipe and no hook, so it had provided
+# zero automatic assurance since the day it landed. It was also strictly weaker
+# than this: it handed batsat the same `CnfFormula` OUR parser built, so a
+# defect in `parse_dimacs` or `to_dimacs` was invisible to it. Both mutations
+# were run: the batsat differential passed 3/3 on each, this suite failed 3/4.
+#
+# Like `abc-crosscheck` above, the default polarity is SKIP, not fail -- the
+# binaries are external C/C++ applications this gate never builds. Provision
+# them with `scripts/provision-external-sat-referee.sh` (they are NOT Cargo
+# dependencies and never become any; ADR-0002 is untouched), and set
+# `AXEYUM_REQUIRE_EXTERNAL_SAT=1` on a host that is supposed to have them.
+# The wrapper reads the suite's own `compared=N` reports rather than trusting
+# `cargo`'s exit status, and fails on a count below its floor.
+external-sat-referee:
+    ./scripts/check-external-sat-referee.sh
 
 # ADR-0717 S5: the kernel differential (Axeyum vs. pinned Lean) across all
 # eight named subsystems -- conversion, universes, inductives, recursors,
