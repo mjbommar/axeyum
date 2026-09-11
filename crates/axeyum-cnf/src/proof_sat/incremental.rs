@@ -499,6 +499,31 @@ impl<T: NativeTheory> NativeIncrementalCdcl<T> {
         self.added_clauses += 1;
     }
 
+    /// Returns the solver to the **between-solves** state now, rather than
+    /// lazily at the next `add_clause` or `solve`: nothing assigned, no
+    /// decision levels, and — for a CDCL(T) object — the previous solve's
+    /// theory epoch closed, so the theory holds no assertions.
+    ///
+    /// Idempotent, and free when already unwound.
+    ///
+    /// # Why a warm CDCL(T) route needs this as public API
+    ///
+    /// The theory is readable after a solve *with that solve's assertions still
+    /// in place*, which is what a model builder needs, and the epoch is
+    /// therefore closed lazily. A route that reaches past the driver to the
+    /// theory — `axeyum_solver::qinst_egraph` registers EUF atoms through
+    /// `EufTheory::add_atom_at_root`, which refuses unless the theory trail is
+    /// empty — has to be able to say "I am done reading the model" before it
+    /// starts building the next batch's clauses. Without it the first
+    /// registration of every batch would be refused, because the first
+    /// `add_clause` that would have closed the epoch has not happened yet.
+    ///
+    /// This is the native counterpart of `CdclT::backtrack_to_root`, which the
+    /// route calls first thing in exactly that position.
+    pub fn unwind_to_root(&mut self) {
+        self.between_solves();
+    }
+
     /// Unwinds the previous solve's trail, at most once per solve.
     fn between_solves(&mut self) {
         if self.needs_reset {
@@ -1558,6 +1583,9 @@ mod warm_theory {
         registered: bool,
         seen_vars: Vec<usize>,
         depth: isize,
+        /// The `next_var` the driver reported when it asked for atoms — the
+        /// index a theory with its own atom index space has to map onto.
+        appended_at: Option<usize>,
     }
 
     impl NativeTheory for RegisteringTheory {
@@ -1578,11 +1606,12 @@ mod warm_theory {
 
         fn propagate_into(&mut self, _queue: &mut PropagationQueue) {}
 
-        fn take_new_atoms(&mut self) -> usize {
+        fn take_new_atoms(&mut self, next_var: usize) -> usize {
             if self.registered {
                 return 0;
             }
             self.registered = true;
+            self.appended_at = Some(next_var);
             self.batch
         }
     }
@@ -1610,6 +1639,7 @@ mod warm_theory {
             registered: false,
             seen_vars: Vec::new(),
             depth: 0,
+            appended_at: None,
         });
         solver.add_clause(&lits(&[1, 2]));
         let before = solver.variable_count();
@@ -1658,6 +1688,14 @@ mod warm_theory {
 
         let theory = solver.into_theory();
         assert_eq!(theory.depth, 0, "balanced");
+        // The driver REPORTED where it would append rather than leaving the
+        // theory to mirror the count, and what it reported is where the
+        // variables actually landed (ADR-1911).
+        assert_eq!(
+            theory.appended_at,
+            Some(before),
+            "take_new_atoms must be told the driver's current variable count"
+        );
         assert!(
             theory.seen_vars.len() >= 3,
             "the theory must have been told about the registered atoms and the \

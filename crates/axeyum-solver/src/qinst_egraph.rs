@@ -44,8 +44,9 @@ use web_time::Instant;
 
 use crate::auto::{check_auto, config_with_remaining_timeout};
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
-use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome as CdcltOutcome};
+use crate::cdclt::{Lit as CdcltLit, Outcome as CdcltOutcome};
 use crate::euf_egraph::{Encoder as EufEncoder, EufTheory, collect_euf_atoms};
+use crate::native_cdclt::{NativeSolveOutcome, WarmNativeCdclT};
 
 /// Historical e-matching round budget. It is now the *cadence anchor* for the
 /// interleaved refutation checks: the first mid-loop ground refutation check
@@ -3523,8 +3524,11 @@ struct ScopedCandidateBatch {
 /// Retained equality-abstraction CDCL(T) state for checked generated clauses
 /// (ADR-0119). It can prove refutations early but never produces product SAT.
 struct OnlineQuantifierClauseSession {
-    solver: CdclT,
-    theory: EufTheory,
+    /// The **warm native** CDCL(T) session (Phase B3, ADR-1908). It owns the
+    /// `EufTheory`, which is why there is no sibling `theory` field any more:
+    /// `axeyum_cnf::NativeIncrementalCdcl` owns its theory, and a session
+    /// holding both as siblings would be a self-referential struct.
+    solver: WarmNativeCdclT<EufTheory>,
     atom_terms: Vec<TermId>,
     atom_variables: HashMap<TermId, usize>,
     inserted_clauses: usize,
@@ -3612,7 +3616,7 @@ impl OnlineQuantifierClauseSession {
             );
             return None;
         }
-        let clauses = clauses
+        let clauses: Vec<Vec<CdcltLit>> = clauses
             .into_iter()
             .map(|clause| {
                 clause
@@ -3625,10 +3629,15 @@ impl OnlineQuantifierClauseSession {
             })
             .collect();
         let theory = EufTheory::new(arena, &atom_terms).with_deadline(deadline);
-        let solver = CdclT::new(encoder.var_count, atom_terms.len(), clauses, deadline);
+        let solver = WarmNativeCdclT::new(
+            encoder.var_count,
+            atom_terms.len(),
+            &clauses,
+            theory,
+            deadline,
+        );
         Some(Self {
             solver,
-            theory,
             atom_terms,
             atom_variables,
             inserted_clauses: 0,
@@ -3649,7 +3658,11 @@ impl OnlineQuantifierClauseSession {
         terms: &[TermId],
         derivations: &HashMap<TermId, QuantifierGroundDerivation>,
     ) -> Option<CdcltOutcome> {
-        self.solver.backtrack_to_root(&mut self.theory);
+        // The native counterpart of `CdclT::backtrack_to_root`, and it has a
+        // second job here: it closes the previous solve's theory epoch, which
+        // `EufTheory::add_atom_at_root` (reached from `ensure_atom` below)
+        // refuses to run inside.
+        self.solver.unwind_to_root();
         for &term in terms {
             // Deadline-bound the per-term derivation re-checks: a multi-
             // thousand-instance batch is otherwise a deadline-blind unit that
@@ -3672,7 +3685,11 @@ impl OnlineQuantifierClauseSession {
 
     fn solve_current(&mut self) -> CdcltOutcome {
         self.solve_calls += 1;
-        let outcome = self.solver.solve(&mut self.theory);
+        let outcome = match self.solver.solve() {
+            NativeSolveOutcome::Sat(_) => CdcltOutcome::Sat,
+            NativeSolveOutcome::Unsat => CdcltOutcome::Unsat,
+            NativeSolveOutcome::Unknown => CdcltOutcome::Unknown,
+        };
         self.last_outcome = Some(outcome);
         outcome
     }
@@ -3729,7 +3746,7 @@ impl OnlineQuantifierClauseSession {
         clause.dedup();
         self.inserted_literals += clause.len();
         self.inserted_clauses += 1;
-        self.solver.add_permanent_clause(clause);
+        self.solver.add_permanent_clause(&clause);
         Some(())
     }
 
@@ -3741,7 +3758,11 @@ impl OnlineQuantifierClauseSession {
             return None;
         }
         let (variable, solver_atom) = self.solver.add_theory_variable();
-        let theory_atom = self.theory.add_atom_at_root(arena, atom_term).ok()?;
+        let theory_atom = self
+            .solver
+            .theory_mut()
+            .add_atom_at_root(arena, atom_term)
+            .ok()?;
         if solver_atom != theory_atom {
             return None;
         }

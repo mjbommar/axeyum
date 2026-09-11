@@ -847,3 +847,195 @@ fn forwarding_table(
         ),
     ]
 }
+
+// ------------------------------------------------- the warm adapter's atom map
+
+/// A theory with two atoms up front and a third registered **on demand**, whose
+/// only rule is that the late atom may not hold.
+///
+/// The conflict names the literal `assert` was just handed, so the core always
+/// contains a current-decision-level literal — the same requirement
+/// [`CubeTheory`] documents and for the same reason.
+struct LateAtomTheory {
+    /// Set by the test between solves; the next `take_new_atoms` registers.
+    arm: std::rc::Rc<std::cell::Cell<bool>>,
+    /// Atoms registered so far; the next atom takes this index.
+    atoms: usize,
+    /// The late atom's index, once registered.
+    late: Option<usize>,
+    values: Vec<Option<bool>>,
+    trail: Vec<usize>,
+    marks: Vec<usize>,
+}
+
+impl LateAtomTheory {
+    fn new(atoms: usize, arm: std::rc::Rc<std::cell::Cell<bool>>) -> Self {
+        Self {
+            arm,
+            atoms,
+            late: None,
+            values: vec![None; atoms],
+            trail: Vec::new(),
+            marks: Vec::new(),
+        }
+    }
+}
+
+impl TheorySolver for LateAtomTheory {
+    fn assert(&mut self, atom: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
+        if atom >= self.values.len() {
+            self.values.resize(atom + 1, None);
+        }
+        self.values[atom] = Some(value);
+        self.trail.push(atom);
+        if self.late == Some(atom) && value {
+            return Err(vec![TheoryLit { atom, value: true }]);
+        }
+        Ok(())
+    }
+
+    fn push(&mut self) {
+        self.marks.push(self.trail.len());
+    }
+
+    fn pop(&mut self) {
+        let bound = self.marks.pop().unwrap_or(0);
+        while self.trail.len() > bound {
+            let atom = self.trail.pop().expect("trail above its own mark");
+            self.values[atom] = None;
+        }
+    }
+
+    fn propagate(&self) -> Vec<TheoryProp> {
+        Vec::new()
+    }
+
+    fn take_new_atoms(&mut self) -> usize {
+        if self.late.is_some() || !self.arm.get() {
+            return 0;
+        }
+        self.late = Some(self.atoms);
+        self.atoms += 1;
+        1
+    }
+}
+
+/// A warm adapter must map a late-registered atom onto the variable the CORE
+/// appended it at — and on a warm object that is **not** where a mirrored
+/// counter says.
+///
+/// The adapter used to keep its own `next_var`, seeded from the
+/// construction-time variable count and bumped once per registered atom. That
+/// is exact only while registration is the one thing that moves the core's
+/// count: true for a one-shot solve, false here, because
+/// `NativeIncrementalCdcl::add_clause` grows the namespace between solves with
+/// nothing telling the adapter. ADR-1911 replaced the counter with the count
+/// the core reports into `NativeTheory::take_new_atoms`.
+///
+/// # Why this guard is a VERDICT and not an assertion
+///
+/// The adapter carries
+/// `debug_assert_eq!(self.atom_for_var.len(), var, "variable indices are
+/// dense")`, and the note that found this bug expected that to be what fires.
+/// **It does not fire on this fixture, in debug or in release.** It compares
+/// two counters the adapter owns, and a stale `next_var` keeps them consistent
+/// with each other while both run behind the core — so the misalignment is
+/// invisible to it by construction. Measured, not reasoned: with the fix
+/// reverted this test reports `Unsat` for a satisfiable query under
+/// `--release` **and** under the default debug profile, with no assertion
+/// raised.
+///
+/// The shape: two variables and two atoms are decided in a first solve; then
+/// clauses over two FRESH variables are added, which is the growth a mirroring
+/// adapter cannot see; then the theory registers one atom. The core appends it
+/// at variable 4. A mirrored counter says variable 2 — which the added clauses
+/// force TRUE — so the theory's "this atom may not hold" is enforced against
+/// somebody else's clause variable and refutes a satisfiable database.
+#[test]
+fn a_warm_adapter_maps_a_late_atom_onto_the_variable_the_core_appended_it_at() {
+    use axeyum_cnf::{CnfLit, CnfVar, IncrementalSolveOutcome, NativeIncrementalCdcl};
+
+    /// `lit(3)` is variable index 2, positive; `lit(-3)` its negation.
+    fn lit(signed: i64) -> CnfLit {
+        let var = CnfVar::new(usize::try_from(signed.abs()).expect("positive") - 1)
+            .expect("variable index in range");
+        let positive = CnfLit::positive(var);
+        if signed < 0 {
+            positive.negated()
+        } else {
+            positive
+        }
+    }
+
+    let arm = std::rc::Rc::new(std::cell::Cell::new(false));
+    let mut theory = LateAtomTheory::new(2, std::rc::Rc::clone(&arm));
+    let adapter = super::NativeTheoryAdapter::new(&mut theory, 2, 2, None);
+    let mut solver = NativeIncrementalCdcl::warm_theory(adapter);
+
+    // Two variables, both atoms, both free of any theory rule.
+    solver.add_clause(&[lit(1), lit(2)]);
+    assert_eq!(solver.variable_count(), 2, "two variables so far");
+    let first = solver.solve(&[], None, 10_000);
+    assert!(
+        matches!(first, IncrementalSolveOutcome::Sat(_)),
+        "first solve must be satisfiable: {first:?}"
+    );
+
+    // The growth a mirroring adapter never hears about: two fresh variables
+    // (indices 2 and 3) that belong to clauses, not to atoms. Together the two
+    // clauses entail x3 without either being a level-zero unit, so x3 is forced
+    // only once the search decides — i.e. AFTER registration, which is what
+    // makes the misalignment observable rather than merely deaf.
+    solver.add_clause(&[lit(3), lit(4)]);
+    solver.add_clause(&[lit(3), lit(-4)]);
+    assert_eq!(
+        solver.variable_count(),
+        4,
+        "add_clause grows the namespace with no theory involvement"
+    );
+
+    arm.set(true);
+    let second = solver.solve(&[], None, 10_000);
+
+    // The VERDICT first: this is the half a release build can observe, and the
+    // half that makes the defect a wrong answer rather than a bookkeeping slip.
+    let IncrementalSolveOutcome::Sat(model) = second else {
+        panic!(
+            "a satisfiable database was refuted -- the late atom was mapped \
+             onto a clause variable: {second:?}"
+        );
+    };
+
+    // Model validity, replayed against BOTH the clauses and the theory rule.
+    // Not model EQUALITY with a one-shot solve: a warm solver enters its second
+    // solve holding the previous solve's saved phases, so its model differs and
+    // is meant to.
+    let values = model.values();
+    assert!(
+        values[0] || values[1],
+        "clause [x1, x2] unsatisfied by {values:?}"
+    );
+    assert!(values[2], "x3 is entailed by the two clauses: {values:?}");
+    assert!(
+        !values[4],
+        "the late atom's variable must be false -- the theory forbids it: {values:?}"
+    );
+
+    assert_eq!(
+        solver.variable_count(),
+        5,
+        "the core appends the registered atom at its current count"
+    );
+    // The map, read directly: atom 2 is the late one and it must name variable
+    // 4, not the 2 a mirrored counter would still be holding.
+    assert_eq!(
+        solver.theory().var_for_atom,
+        vec![0, 1, 4],
+        "the late atom must map onto the variable the core appended"
+    );
+    assert_eq!(
+        solver.theory().atom_for_var,
+        vec![Some(0), Some(1), None, None, Some(2)],
+        "the clause variables between the atoms are not atoms"
+    );
+}

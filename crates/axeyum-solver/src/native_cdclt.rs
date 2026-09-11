@@ -51,9 +51,9 @@ use axeyum_cnf::theory::{
     PropagationQueue as NativeQueue, TheoryExplanation as NativeExplanation,
 };
 use axeyum_cnf::{
-    CnfAssignment, CnfClause, CnfFormula, CnfLit, CnfVar, NativeLayerStatsMirror, SearchProfile,
-    TheoryRefutation, TheorySolveOptions, TheorySolveOutcome,
-    solve_with_theory_and_drat_proof_mirrored,
+    CnfAssignment, CnfClause, CnfFormula, CnfLit, CnfVar, IncrementalSolveOutcome,
+    NativeIncrementalCdcl, NativeLayerStatsMirror, SearchProfile, TheoryRefutation,
+    TheorySolveOptions, TheorySolveOutcome, solve_with_theory_and_drat_proof_mirrored,
 };
 
 use crate::cdclt::Lit;
@@ -237,9 +237,25 @@ impl NativeModel {
 /// Owns the atom↔variable map the native core does not keep: there, atoms *are*
 /// variable indices; here atom `a` is variable `var_for_atom[a]`, seeded as the
 /// identity over the first `theory_atom_count` variables (exactly what
-/// `CdclT::new` builds) and extended on each dynamic registration.
-struct NativeTheoryAdapter<'a, T: TheorySolver> {
-    theory: &'a mut T,
+/// `CdclT::new` builds) and extended on each registration.
+///
+/// # Owning or borrowing, decided by the caller
+///
+/// `T` is the theory **by value**, and `TheorySolver` is implemented for
+/// `&mut T`, so a caller picks:
+///
+/// * the ONE-SHOT route instantiates `NativeTheoryAdapter<&mut Theory>` — it
+///   keeps the theory on its own stack and reads it back after the solve to
+///   assemble a model;
+/// * a WARM route instantiates `NativeTheoryAdapter<Theory>`, because
+///   `axeyum_cnf::NativeIncrementalCdcl` owns its theory and a session holding
+///   the solver and the theory as sibling fields would be a self-referential
+///   struct.
+///
+/// One adapter, no lifetime parameter, and the warm route reaches the theory
+/// through [`NativeTheoryAdapter::inner_mut`].
+struct NativeTheoryAdapter<T: TheorySolver> {
+    theory: T,
     /// Where this adapter copies `TheorySolver::engine_counters` while the
     /// search runs, so a watchdog on another thread reads real simplex numbers
     /// instead of `na`.
@@ -257,18 +273,14 @@ struct NativeTheoryAdapter<'a, T: TheorySolver> {
     atom_for_var: Vec<Option<usize>>,
     /// The SAT variable an atom stands for.
     var_for_atom: Vec<usize>,
-    /// The index the native core will give the next variable it appends for a
-    /// registered atom. The core appends at `assign.len()` and grows by one per
-    /// atom, so mirroring that counter keeps the map aligned with no callback.
-    next_var: usize,
     /// The solver-side queue, kept for its allocation across rounds exactly as
     /// the native core keeps its own.
     queue: PropagationQueue,
 }
 
-impl<'a, T: TheorySolver> NativeTheoryAdapter<'a, T> {
+impl<T: TheorySolver> NativeTheoryAdapter<T> {
     fn new(
-        theory: &'a mut T,
+        theory: T,
         var_count: usize,
         theory_atom_count: usize,
         engine_mirror: Option<Arc<EngineCountersMirror>>,
@@ -296,9 +308,69 @@ impl<'a, T: TheorySolver> NativeTheoryAdapter<'a, T> {
             engine_pushes: 0,
             atom_for_var,
             var_for_atom: (0..theory_atom_count).collect(),
-            next_var: var_count,
             queue: PropagationQueue::new(),
         }
+    }
+
+    /// The wrapped theory, mutably — the warm route's only way to reach a
+    /// theory the solver owns.
+    ///
+    /// Unused on the one-shot route, which keeps its own `&mut` and never asks.
+    #[cfg_attr(
+        not(feature = "full"),
+        expect(dead_code, reason = "warm-route accessor")
+    )]
+    fn inner_mut(&mut self) -> &mut T {
+        &mut self.theory
+    }
+
+    /// The SAT variable `atom` stands for, or `None` when no such atom is
+    /// registered. The counterpart of `CdclT::theory_variable`.
+    #[cfg_attr(
+        not(feature = "full"),
+        expect(dead_code, reason = "warm-route accessor")
+    )]
+    fn theory_variable(&self, atom: usize) -> Option<usize> {
+        self.var_for_atom.get(atom).copied()
+    }
+
+    /// Records that the driver has appended SAT variable `var` **for a theory
+    /// atom it registered itself**, and returns that atom's index.
+    ///
+    /// This is the DRIVER-side registration channel, and it exists because the
+    /// theory-side one cannot serve a warm route that inserts clauses at root:
+    /// [`NativeTheory::take_new_atoms`] is polled by the core at a propagation
+    /// fixpoint *inside* a solve, so it cannot hand an index back to a caller
+    /// that is still building the clause the variable belongs to. It is the
+    /// counterpart of `CdclT::add_theory_variable`, split in two because on the
+    /// native core the variable itself comes from
+    /// `NativeIncrementalCdcl::reserve`.
+    ///
+    /// The gap below `var` is filled with `None`: those are the non-atom
+    /// variables (Tseitin variables, and variables a clause added between
+    /// solves introduced) that [`NativeTheory::assert`] must keep skipping.
+    ///
+    /// # Panics
+    ///
+    /// If `var` is already claimed by an atom. Variables are appended, never
+    /// reused, so a repeat is a driver bug and silently re-pointing the map
+    /// would be a wrong-answer defect of exactly the kind ADR-1911 removed.
+    #[cfg_attr(
+        not(feature = "full"),
+        expect(dead_code, reason = "warm-route accessor")
+    )]
+    fn register_atom_variable(&mut self, var: usize) -> usize {
+        if self.atom_for_var.len() <= var {
+            self.atom_for_var.resize(var + 1, None);
+        }
+        assert!(
+            self.atom_for_var[var].is_none(),
+            "SAT variable {var} is already an atom"
+        );
+        let atom = self.var_for_atom.len();
+        self.atom_for_var[var] = Some(atom);
+        self.var_for_atom.push(var);
+        atom
     }
 
     /// Copies the theory's engine counters to the mirror, if one is installed.
@@ -338,7 +410,7 @@ impl<'a, T: TheorySolver> NativeTheoryAdapter<'a, T> {
     }
 }
 
-impl<T: TheorySolver> NativeTheory for NativeTheoryAdapter<'_, T> {
+impl<T: TheorySolver> NativeTheory for NativeTheoryAdapter<T> {
     fn assert(&mut self, var: usize, value: bool) -> Result<(), Vec<CnfLit>> {
         // A pure Tseitin variable is not an atom and the theory is never told
         // about it — the same test `CdclT::assign` makes.
@@ -432,21 +504,259 @@ impl<T: TheorySolver> NativeTheory for NativeTheoryAdapter<'_, T> {
         })
     }
 
-    fn take_new_atoms(&mut self) -> usize {
+    fn take_new_atoms(&mut self, next_var: usize) -> usize {
         let fresh = self.theory.take_new_atoms();
-        // The core appends `fresh` variables starting at its current variable
-        // count, in order, immediately after this call. Mirroring the counter
-        // here keeps the map aligned without the core having to report back —
-        // and it must happen BEFORE the core asserts any of them.
-        for _ in 0..fresh {
-            let var = self.next_var;
-            self.next_var += 1;
+        // `next_var` is the CORE's current variable count, reported by the core
+        // rather than mirrored here, and the core appends `fresh` variables
+        // starting there, in order, immediately after this call. The map has to
+        // be extended BEFORE the core asserts any of them.
+        //
+        // This used to be a private `next_var` counter seeded from the
+        // construction-time variable count and bumped once per atom. That is
+        // exact only while registration is the ONLY thing that moves the core's
+        // count — true on the one-shot path, FALSE on a warm one, where
+        // `NativeIncrementalCdcl::add_clause` grows the namespace between
+        // solves with no callback here. The counter then ran behind and atoms
+        // mapped to variables that belong to somebody else's clauses: a wrong
+        // answer, not a panic, since the `debug_assert` below is compiled out
+        // in release. ADR-1911.
+        //
+        // The gap is filled with `None` because the variables in it are exactly
+        // the non-atom ones (Tseitin variables, or variables a clause added
+        // between solves introduced), which `assert` must keep skipping.
+        if self.atom_for_var.len() < next_var {
+            self.atom_for_var.resize(next_var, None);
+        }
+        for var in next_var..next_var + fresh {
             debug_assert_eq!(self.atom_for_var.len(), var, "variable indices are dense");
             self.atom_for_var.push(Some(self.var_for_atom.len()));
             self.var_for_atom.push(var);
         }
         fresh
     }
+}
+
+/// A **warm** native CDCL(T) session: the `CdclT` surface an incremental,
+/// root-only route uses, over `axeyum_cnf::NativeIncrementalCdcl`.
+///
+/// This is Phase B3 of the CDCL consolidation plan (ADR-1908). The one client
+/// is `crate::qinst_egraph`'s `OnlineQuantifierClauseSession`, which inserts
+/// checked clauses at **level zero** between solves and resumes a retained
+/// search — the discipline `NativeIncrementalCdcl` already has, which is why
+/// this route moves and the mid-search BV client (B4) does not.
+///
+/// # Why a type and not a direct instantiation in the route
+///
+/// Three things differ from `CdclT` and every one of them is a place a route
+/// could get a wrong answer, so they live here, beside the one-shot
+/// translation, rather than being re-derived at each call site:
+///
+/// 1. **Atom registration is two steps, not one.** `CdclT::add_theory_variable`
+///    appends a variable *and* claims it for the next atom. On the native core
+///    the variable comes from `NativeIncrementalCdcl::reserve` and the claim
+///    from [`NativeTheoryAdapter::register_atom_variable`], and doing them out
+///    of order, or forgetting the second, maps atoms onto clause variables.
+///    See ADR-1911 — that failure is a wrong verdict and it is silent.
+/// 2. **A variable in no clause is not branchable.** `CdclT::new` marks every
+///    initial variable `active`; `axeyum_cnf`'s core marks only variables a
+///    literal mentions, so [`Self::value`] reports `None` for the rest — the
+///    same `occurring` filter [`NativeModel`] applies on the one-shot path, and
+///    the same answer `CdclT::value` gives for a variable it never decided.
+/// 3. **The theory epoch closes lazily.** The theory keeps the last solve's
+///    assertions so a model can be read; a route that registers atoms (which
+///    `EufTheory` allows only at an empty trail) has to close it first, which
+///    is [`Self::unwind_to_root`].
+pub(crate) struct WarmNativeCdclT<T: TheorySolver> {
+    solver: NativeIncrementalCdcl<NativeTheoryAdapter<T>>,
+    /// Variables that occur in some clause, so [`Self::value`] can report
+    /// `None` for the rest — see point 2 in the type doc.
+    occurring: Vec<bool>,
+    /// Clauses the session holds: the seed clauses plus every accepted
+    /// insertion. `CdclT::clause_count`'s counterpart, since the warm object's
+    /// own `added_clause_count` counts insertions only.
+    clauses: usize,
+    /// The assignment of the most recent `Sat`, for [`Self::value`].
+    model: Option<CnfAssignment>,
+    deadline: Option<Instant>,
+}
+
+impl<T: TheorySolver> WarmNativeCdclT<T> {
+    /// Seeds a warm session with `clauses` over `var_count` variables, the
+    /// first `theory_atom_count` of which are theory atoms aligned by index —
+    /// the same contract as `CdclT::new`.
+    ///
+    /// The heuristics are `solve_native`'s, not the one-shot SAT path's, for
+    /// the reason recorded there: moving a route onto this core must be a swap
+    /// of ENGINES and not also a swap of decision heuristics. Proof recording
+    /// is **off**: a warm object accumulates every learned clause of every
+    /// solve into one sink (ADR-1703 point 1), and this route's refutations are
+    /// re-established against `ground` by a separate replay rather than read
+    /// out of the session.
+    ///
+    /// # Panics
+    ///
+    /// If `theory_atom_count > var_count` — a caller bug, and the same panic
+    /// `CdclT::new` makes.
+    pub(crate) fn new(
+        var_count: usize,
+        theory_atom_count: usize,
+        clauses: &[Vec<Lit>],
+        theory: T,
+        deadline: Option<Instant>,
+    ) -> Self {
+        let adapter = NativeTheoryAdapter::new(theory, var_count, theory_atom_count, None);
+        let options = TheorySolveOptions {
+            initial_phase: true,
+            target_rephase: false,
+            collect_layer_stats: false,
+            search_profile: configured_search_profile(),
+            record_proof: false,
+            proof_literal_budget: PROOF_LITERAL_BUDGET,
+        };
+        let mut solver = NativeIncrementalCdcl::with_theory(adapter, options);
+        // Make every seeded variable legal before any clause arrives, so the
+        // atom-aligned prefix exists even if some atom occurs in no clause.
+        // `reserve` leaves them non-branchable, which is the core's own rule
+        // for a variable no literal mentions.
+        solver.reserve(var_count);
+        let mut occurring = vec![false; var_count];
+        for clause in clauses {
+            let lits = clause
+                .iter()
+                .map(|l| {
+                    occurring[l.var] = true;
+                    cnf_lit_of(l.var, l.positive)
+                })
+                .collect::<Vec<_>>();
+            solver.add_clause(&lits);
+        }
+        Self {
+            solver,
+            occurring,
+            clauses: clauses.len(),
+            model: None,
+            deadline,
+        }
+    }
+
+    /// Returns the session to the between-solves state, closing the theory
+    /// epoch. The counterpart of `CdclT::backtrack_to_root`.
+    pub(crate) fn unwind_to_root(&mut self) {
+        self.solver.unwind_to_root();
+    }
+
+    /// Resumes the retained search over everything accumulated so far.
+    ///
+    /// `Unknown` covers every undecided outcome the warm object can give —
+    /// deadline, conflict budget, an unsat under assumptions (there are none),
+    /// and a sink failure (recording is off) — because `unknown` is a
+    /// first-class result and never an error.
+    pub(crate) fn solve(&mut self) -> NativeSolveOutcome {
+        // `CdclT::solve_inner` tests its deadline at the TOP of the main loop,
+        // so an exhausted budget returns `Unknown` having propagated nothing;
+        // `solve_native` restores that eager check for the same reason, and a
+        // warm route needs it for the same reason. Without it the first solve
+        // of an expired session can return `Sat` on a partial trail and the
+        // route reads a model it should never have been handed.
+        if self.deadline.is_some_and(|at| Instant::now() >= at) {
+            self.model = None;
+            return NativeSolveOutcome::Unknown;
+        }
+        let outcome = self.solver.solve(&[], self.deadline, usize::MAX);
+        match outcome {
+            IncrementalSolveOutcome::Sat(assignment) => {
+                let model = NativeModel {
+                    assignment: assignment.clone(),
+                    occurring: self.occurring.clone(),
+                };
+                self.model = Some(assignment);
+                NativeSolveOutcome::Sat(model)
+            }
+            IncrementalSolveOutcome::Unsat => {
+                self.model = None;
+                NativeSolveOutcome::Unsat
+            }
+            IncrementalSolveOutcome::UnsatUnderAssumptions(_)
+            | IncrementalSolveOutcome::ResourceOut
+            | IncrementalSolveOutcome::Interrupted
+            | IncrementalSolveOutcome::SinkFailed(_) => {
+                self.model = None;
+                NativeSolveOutcome::Unknown
+            }
+        }
+    }
+
+    /// Inserts one clause permanently, at root. The counterpart of
+    /// `CdclT::add_permanent_clause`.
+    pub(crate) fn add_permanent_clause(&mut self, clause: &[Lit]) {
+        let lits = clause
+            .iter()
+            .map(|l| {
+                if l.var < self.occurring.len() {
+                    self.occurring[l.var] = true;
+                }
+                cnf_lit_of(l.var, l.positive)
+            })
+            .collect::<Vec<_>>();
+        self.solver.add_clause(&lits);
+        self.clauses += 1;
+    }
+
+    /// Appends one SAT variable and claims it for the next theory atom,
+    /// returning `(variable, atom)` — the counterpart of
+    /// `CdclT::add_theory_variable`.
+    ///
+    /// The variable is appended **non-branchable**, exactly as `CdclT` appends
+    /// it dormant; the `add_permanent_clause` that names it is what makes it
+    /// decidable, on both engines.
+    pub(crate) fn add_theory_variable(&mut self) -> (usize, usize) {
+        let variable = self.solver.variable_count();
+        self.solver.reserve(variable + 1);
+        self.occurring.push(false);
+        let atom = self.solver.theory_mut().register_atom_variable(variable);
+        (variable, atom)
+    }
+
+    /// The SAT variable aligned with `atom`, when registered.
+    pub(crate) fn theory_variable(&self, atom: usize) -> Option<usize> {
+        self.solver.theory().theory_variable(atom)
+    }
+
+    /// The value of `variable` in the most recent `Sat`, or `None` when the
+    /// search never assigned it — the same contract as `CdclT::value`.
+    pub(crate) fn value(&self, variable: usize) -> Option<bool> {
+        let model = self.model.as_ref()?;
+        if variable < self.occurring.len() && !self.occurring[variable] {
+            return None;
+        }
+        model.values().get(variable).copied()
+    }
+
+    /// Variables the session has room for.
+    pub(crate) fn variable_count(&self) -> usize {
+        self.solver.variable_count()
+    }
+
+    /// Clauses the session holds, seed clauses included.
+    pub(crate) fn clause_count(&self) -> usize {
+        self.clauses
+    }
+
+    /// The wrapped theory, mutably.
+    pub(crate) fn theory_mut(&mut self) -> &mut T {
+        self.solver.theory_mut().inner_mut()
+    }
+}
+
+/// A `(var, positive)` pair as a [`CnfLit`].
+///
+/// # Panics
+///
+/// If `var` is out of `CnfVar`'s range, which a caller building clauses over
+/// its own variable count cannot reach.
+fn cnf_lit_of(var: usize, positive: bool) -> CnfLit {
+    let lit = CnfLit::positive(CnfVar::new(var).expect("clause variable index in range"));
+    if positive { lit } else { lit.negated() }
 }
 
 /// `NativeTheoryAdapter::push` calls between two engine-counter mirrors.

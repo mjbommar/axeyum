@@ -902,6 +902,16 @@ impl CdclT {
     /// Backtracks every decision while retaining level-zero assignments, input and
     /// permanent clauses, learned clauses, activities, and saved phases. Dynamic
     /// theories may append root-scope terms/atoms after this returns.
+    ///
+    /// Unused since `qinst_egraph` moved to the native core (Phase B3,
+    /// ADR-1908). Retained rather than deleted because ADR-1908 demotes `CdclT`
+    /// to the **differential oracle** for that core, and an oracle missing the
+    /// incremental half of its protocol cannot adjudicate the route that uses
+    /// it. Deleting it is B5's call, not this lane's.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "ADR-1908 B5: CdclT is retained as the oracle")
+    )]
     pub(crate) fn backtrack_to_root<T: TheorySolver>(&mut self, theory: &mut T) {
         self.backjump_to(theory, 0);
     }
@@ -993,6 +1003,14 @@ impl CdclT {
     }
 
     /// The current value of `var` (for the caller's model-assembly injection path).
+    ///
+    /// Unused since `qinst_egraph` moved to the native core (Phase B3,
+    /// ADR-1908); retained for the same reason as
+    /// [`CdclT::backtrack_to_root`].
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "ADR-1908 B5: CdclT is retained as the oracle")
+    )]
     pub(crate) fn value(&self, var: usize) -> Option<bool> {
         self.value[var]
     }
