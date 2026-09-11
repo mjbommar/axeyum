@@ -2662,3 +2662,22 @@ All twenty: **zero disagreements, SOUND**.
 | load average (start / end) | 0.16 0.03 0.01 / 0.87 0.52 0.22 — 16 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_S.tsv` |
 
+## QF_DT — 2026-09-11T18:21:07Z
+
+| field | value |
+|---|---|
+| axeyum solved | 114/200 |
+| reference solved | 192/200 |
+| **ratio (axeyum / reference)** | **59.4%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 111 / 3 / 81 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_DT.txt` (sha256 a66f05f5259f, 200 files) |
+| solver commit | `c1d6db6fe` |
+| load average (start / end) | 0.00 0.00 0.07 / 0.98 0.65 0.33 — 16 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_DT.tsv` |
+
