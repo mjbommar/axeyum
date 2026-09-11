@@ -117,6 +117,14 @@ never worse than BatSat. The gap to CaDiCaL/Kissat is real, modest, and
 family-dependent — and the note's own caveat is that the host was loaded, so
 *ordering* is more reliable than seconds.
 
+**Superseded as evidence by the quiet re-run (2026-09-11,
+[ADR-1914](../research/09-decisions/adr-1914-phase-ds-entry-condition-is-not-met-and-the-core-gap-is-mid-budget-not-structural.md)),
+which is what Phase D is now decided on.** That caveat is exactly why: on a box
+with nothing else running, p4dfa reads native **9** / CaDiCaL **12** / Kissat
+**14** and Noetzli 87 / 89 / 90 — *every* engine gained, so the table above
+under-reports all four columns and not only ours. The 2026-09-05 artifact keeps
+its numbers as the record of that day; do not quote them as the current gap.
+
 ## 2. The gap, decomposed
 
 Four distinct problems that get conflated as "our SAT is slow":
@@ -126,7 +134,7 @@ Four distinct problems that get conflated as "our SAT is slow":
 | G1 | Two CDCL(T) drivers, half-migrated | §1.2 | Phase B |
 | G2 | BatSat cleanup deferred by its own ADR | §1.1 | Phase A |
 | G3 | Theory interfaces under-implemented | §1.4 — 151x on one file | Phase C |
-| G4 | Core is behind CaDiCaL/Kissat | §1.5 — modest, measured | Phase D, **last** |
+| G4 | Core is behind CaDiCaL/Kissat | §1.5 — modest, measured; re-measured quiet 2026-09-11 | Phase D, **CLOSED UNENTERED** (ADR-1914) |
 
 **The ordering is deliberate and is the plan's main claim.** G4 is the one that
 looks like the problem and is the least valuable to attack first: gate (b) puts
@@ -280,13 +288,46 @@ prediction of value* — and the second half is what Phase D must not assume.
 
 `docs/research/03-measurements/theory-interface-completeness-2026-09-10.md`.
 
-### Phase D — core tuning, only after A–C
+### Phase D — core tuning — **CLOSED UNENTERED 2026-09-11, ADR-1914**
 
 *Entry condition, not a date:* Phase C has closed and a conflict-count comparison
-still shows a material gap on a family we care about. Then the CaDiCaL/Kissat
-delta is worth attacking, with vivification, chronological backtracking and
-mode-switching defaults as the candidate list. `AXEYUM_SEARCH_PROFILE` (landed
-today) is what makes those measurable at all from a theory route.
+still shows a material gap on a family we care about. Phase C closed; **the
+second conjunct does not hold**, so the phase closes without being entered and
+**no technique is scheduled or ranked** —
+[ADR-1914](../research/09-decisions/adr-1914-phase-ds-entry-condition-is-not-met-and-the-core-gap-is-mid-budget-not-structural.md),
+measurement in
+[the gate (b) re-run](../research/03-measurements/gate-b-rerun-and-phase-d-entry-2026-09-10.md).
+
+Gate (b) re-run on a **quiet** box (load 1.01–1.16, against 12–33 with a spike
+to 111 in 2026-09-05), three engines, byte-identical DIMACS, 20 s, pinned:
+
+| Engine | p4dfa / 113 | 2026-09-05 | Noetzli / 100 | 2026-09-05 |
+|---|---:|---:|---:|---:|
+| native | **9** | 6 | **87** | 86 |
+| CaDiCaL 3.0.1 | **12** | 10 | **89** | 88 |
+| Kissat 4.0.4 | **14** | 11 | **90** | 89 |
+
+**Every engine gained**, so the old deficit was partly contention on all
+columns. Three findings decide it, and none is the count:
+
+- **The extra wins are mid-budget.** Across 213 files exactly **two** are
+  decided by a reference with ≥ 4x headroom and missed by us — and on one of
+  them Kissat takes 0.60 s where **CaDiCaL takes 11.05 s**, an 18x spread
+  between the two *references*.
+- **Most of what we miss we reach at 5x the budget.** Four of the six p4dfa
+  files decide at 100 s (4.2–8.5x the reference); two do not decide at 300 s.
+  PAR-2 separates the engines by 2.3–3.7% of the two-timeout ceiling.
+- **One "timeout" is not one.** Two Noetzli rows read `unknown` at 300 s with
+  `timed_out = false` at 194.7 s / 243.6 s — they hit
+  `DEFAULT_PROOF_SAT_CONFLICT_LIMIT = 2_000_000`. That cap is reached on
+  **zero** of the 117 undecided files at 20 s, so it does not explain the gap.
+
+Three pre-registered re-entry conditions are in the ADR, all written in files
+**decided** rather than conflicts reduced — Phase C's correction that a ratio
+diagnoses cause but does not predict value. `AXEYUM_SEARCH_PROFILE` remains the
+selector; note it is read only where a CDCL(T) route builds `TheorySolveOptions`
+and is **inert on the pure-CNF path** gate (b) measures, whose harness arms now
+exist in `clause_db_policy_ab`.
 
 ## 4. What this plan does not do
 

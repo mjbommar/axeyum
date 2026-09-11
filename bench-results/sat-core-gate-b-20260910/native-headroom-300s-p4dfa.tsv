@@ -1,0 +1,7 @@
+file	variables	clauses	native_verdict	native_ms	native_timed_out	native_model_valid
+string1x8.1._bit8_na6_nr3_paired.cnf	78870	290741	sat	80669.912824	false	true
+string1x8.3._bit8_na6_nr3_paired.cnf	58826	218751	sat	23293.323171	false	true
+string1x8.4._bit8_na6_nr3_paired.cnf	40548	150293	unknown	300230.645226	true	
+string1x8.6._bit8_na6_nr3_paired.cnf	58826	218751	sat	49987.34075	false	true
+tcp_open_bit8_na6_nr4_paired.cnf	111567	408523	unknown	300218.15352700005	true	
+videoconf_simple_bit8_na6_nr3_paired.cnf	94401	346684	sat	44433.286367	false	true

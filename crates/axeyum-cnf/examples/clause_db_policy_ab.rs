@@ -225,6 +225,25 @@ fn arm(name: &str) -> Option<SearchPolicies> {
         "released-phase" => Some(SearchPolicies::releasing_phase()),
         // Tier database plus the full (B I B O) rephase schedule.
         "scheduled-phase" => Some(SearchPolicies::scheduled_phase()),
+        // The reference solvers' stable/focused alternation. This is the arm
+        // gate (b)'s Phase D question needs and the only one of the four
+        // `SearchProfile` spellings this harness could not previously reach:
+        // `AXEYUM_SEARCH_PROFILE` selects it, but that variable is read only
+        // where a CDCL(T) route builds `TheorySolveOptions`, so on pure CNF it
+        // had no harness at all.
+        //
+        // Note it turns `SearchCounters` collection on for the search, because
+        // the mode switch is denominated in ticks derived from the counters --
+        // the one policy here for which the counters are not pure output.
+        "mode-switching" => Some(SearchPolicies::mode_switching()),
+        // Both halves, which is what the reference actually runs: the rephase
+        // schedule confined to stable mode by `rephase_in_stable_only`. The
+        // rephase schedule was measured high-variance on its own BEFORE mode
+        // switching existed to confine it, so this arm and `scheduled-phase`
+        // are different claims and both are kept.
+        "mode-switching+scheduled-phase" => {
+            axeyum_cnf::SearchProfile::ModeSwitchingScheduledPhase.policies()
+        }
         _ => None,
     }
 }
