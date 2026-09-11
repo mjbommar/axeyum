@@ -1,10 +1,16 @@
 //! Pure Rust SAT-backed bit-vector backend.
 //!
 //! This backend is the first Phase 5 composition slice: Axeyum query terms are
-//! lowered to AIG, encoded to CNF, solved through the pure-Rust `BatSat` adapter,
-//! lifted back into an Axeyum model, and replayed against the original terms
-//! before a `sat` result is accepted. Z3 is not used and unsupported lowering
-//! remains explicit rather than falling through to an oracle.
+//! lowered to AIG, encoded to CNF, solved through the native proof-producing
+//! CDCL core, lifted back into an Axeyum model, and replayed against the
+//! original terms before a `sat` result is accepted. Z3 is not used and
+//! unsupported lowering remains explicit rather than falling through to an
+//! oracle.
+//!
+//! This paragraph said "the pure-Rust `BatSat` adapter" until ADR-1910. That was
+//! false from 2026-09-05 (ADR-1703), when `primary_sat_search` became an
+//! unconditional `solve_with_native_cdcl` call — a module doc describing a route
+//! the module had stopped taking.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;

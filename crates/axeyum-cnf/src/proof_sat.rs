@@ -9,9 +9,11 @@
 //! checking" identity, realized for `unsat`.
 //!
 //! A conflict budget bounds the search so it can never hang. Since ADR-1703
-//! this core is THE SAT engine under every shipping path; the former
-//! `rustsat-batsat` adapter survives only behind the `batsat-reference`
-//! feature as a measurement yardstick, never as a route.
+//! this core is THE SAT engine under every shipping path, and since ADR-1910
+//! the `rustsat-batsat` adapter is gone entirely — its referee role is now
+//! `crates/axeyum-cnf/tests/external_sat_referee.rs`, an external `CaDiCaL` /
+//! `Kissat` binary reading DIMACS text, which runs on a default build and can
+//! see DIMACS writer and parser defects the in-process adapter could not.
 
 // Monotonic clock: on wasm32 the browser has no `std` clock, so use `web-time`'s
 // drop-in `Instant` (ADR-0017). Native targets use the std clock.
@@ -2135,7 +2137,7 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     /// Maintained under every policy, but consulted by `reduce_db` only when
     /// [`ClauseDbPolicy::rank_key`] is `Activity`. The default tier policy
     /// ranks by `(glue desc, size desc)` and never reads this — as neither
-    /// `CaDiCaL` nor Kissat does.
+    /// `CaDiCaL` nor `Kissat` does.
     cla_activity: Vec<f64>,
     /// Saturating lifetime counter per clause: set to
     /// [`crate::clause_db_policy::MAX_USED`] on learning and on every
@@ -2178,7 +2180,7 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     next_reduce_conflicts: u64,
     /// Number of live (non-deleted) learned clauses. Drives the reduce trigger.
     learned_live: usize,
-    /// Lowest clause id a reduce round still has to look at — Kissat's
+    /// Lowest clause id a reduce round still has to look at — `Kissat`'s
     /// `first_reducible` (`reduce.c:37-61`).
     ///
     /// Everything below it is permanently uninteresting: a clause id's
@@ -4498,7 +4500,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// dropped since it was recorded.
     ///
     /// This is the lifetime signal the tier scheme runs on. It fires once per
-    /// antecedent in `analyze` — exactly Kissat's `deduce.c` hook — plus once
+    /// antecedent in `analyze` — exactly `Kissat`'s `deduce.c` hook — plus once
     /// when the clause is learned.
     ///
     /// Promotion recomputes the glue and only ever *lowers* it. There is no
@@ -4595,7 +4597,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     ///
     /// Note what does *not* appear: clause activity. A decayed activity score
     /// never expires, so a clause resolved heavily long ago outranks one
-    /// resolved last round; neither `CaDiCaL` nor Kissat consults it in `reduce`
+    /// resolved last round; neither `CaDiCaL` nor `Kissat` consults it in `reduce`
     /// for that reason. It is still maintained, and
     /// [`ClauseDbPolicy::legacy`] still ranks by it, so the two are A/B
     /// comparable.
@@ -4757,7 +4759,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// It keeps the same watched literals: the two-watched-literal invariant is
     /// maintained by `propagate` itself, so nothing needs re-deriving.
     ///
-    /// This is the sweep half of Kissat's `reduce.c:161,183`
+    /// This is the sweep half of `Kissat`'s `reduce.c:161,183`
     /// (`first_reducible` plus `kissat_sparse_collect`); the scan half is
     /// [`Cdcl::reduce_scan_start`]. We do not compact the arena: our `CRef`s
     /// are stable indices with no relocation map, and tombstoned literals are
@@ -5080,12 +5082,14 @@ pub mod incremental;
 
 #[cfg(test)]
 mod tests {
-    // ADR-1703: BatSat is no longer an engine, only a differential referee. The
-    // tests below that name it compile ONLY with `--features batsat-reference`
-    // and vanish silently without it (a suite that compiles to zero tests still
-    // exits 0) -- confirm a NONZERO count when you run them.
-    #[cfg(feature = "batsat-reference")]
-    use crate::{SatResult, solve_with_rustsat_batsat};
+    // ADR-1910 removed the `batsat-reference` adapter and with it the gated
+    // `use` that stood here. The five differentials below used to be gated on
+    // that feature, which NOTHING set: they were compiled by no gate, no CI job
+    // and no hook, so they ran never. Ungated, each keeps the two decisive
+    // halves of what it asserted -- every `sat` model must satisfy and every
+    // `unsat` proof must DRAT-check -- and the cross-engine half moved to
+    // `tests/external_sat_referee.rs`, which adjudicates a larger population
+    // against an external binary on every default `cargo test`.
 
     use super::{
         CRef, Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, Duration, Instant, ProofSearchProgress,
@@ -5401,7 +5405,7 @@ mod tests {
     }
 
     /// The rephase schedule is confined to stable mode when the mode schedule is
-    /// running (Kissat `rephase.c:34-36`), and unconfined when it is not.
+    /// running (`Kissat` `rephase.c:34-36`), and unconfined when it is not.
     ///
     /// Asserted on `rephase_deferrals`, not on the rephase count.
     /// [`PhasePolicy::should_rephase`] is a threshold that stays true until it
@@ -5764,12 +5768,17 @@ mod tests {
         assert_eq!(plain_sat, with_sink_sat);
     }
 
-    /// Strong validation of the watched-literal core: on many random CNFs, the
-    /// CDCL core must agree with the `BatSat` adapter on sat/unsat, every `sat`
-    /// model must satisfy, and every `unsat` proof must pass the DRAT checker.
+    /// Strong validation of the watched-literal core: on many random CNFs every
+    /// `sat` model must satisfy the formula and every `unsat` proof must pass
+    /// the DRAT checker.
+    ///
+    /// This used to also compare verdicts against the `BatSat` adapter, behind
+    /// `--features batsat-reference` -- which nothing set, so it ran never
+    /// (ADR-1910). Ungated, it runs on every default build; the cross-engine
+    /// arm now lives in `tests/external_sat_referee.rs`, against an external
+    /// binary reading DIMACS text.
     #[test]
-    #[cfg(feature = "batsat-reference")]
-    fn random_cnfs_agree_with_batsat_and_self_check() {
+    fn random_cnfs_self_check() {
         let mut state = 0x1234_5678_9abc_def0u64;
         let mut next = || {
             state ^= state << 13;
@@ -5794,17 +5803,17 @@ mod tests {
                 f.add_clause(CnfClause::new(lits)).unwrap();
             }
 
-            let batsat = solve_with_rustsat_batsat(&f).unwrap();
-            match (solve_with_drat_proof(&f), batsat) {
-                (ProofSolveOutcome::Sat(model), SatResult::Sat(_)) => {
+            match solve_with_drat_proof(&f) {
+                ProofSolveOutcome::Sat(model) => {
                     assert!(model.satisfies(&f).unwrap(), "cdcl model must satisfy");
                 }
-                (ProofSolveOutcome::Unsat(proof), SatResult::Unsat(_)) => {
+                ProofSolveOutcome::Unsat(proof) => {
                     assert_eq!(check_drat(&f, &proof), Ok(true), "cdcl proof must verify");
                 }
-                (cdcl, other) => {
-                    panic!("cdcl/batsat disagreement: cdcl={cdcl:?} batsat={other:?}");
-                }
+                undecided => panic!(
+                    "a {vars}-variable random CNF must be decided, not budgeted out: \
+                     {undecided:?}"
+                ),
             }
         }
     }
@@ -6011,12 +6020,12 @@ mod tests {
         assert!(unsat_seen > 0, "battery must include unsat instances");
     }
 
-    /// Soundness stress: ≥100 small random 3-CNFs, fixed seed. The native core
-    /// and `BatSat` must never disagree (`DISAGREE = 0`), every native `sat` model
-    /// must satisfy, every native `unsat` must DRAT-check.
+    /// Soundness stress: ≥100 small random 3-CNFs, fixed seed. Every `sat` model
+    /// must satisfy and every `unsat` must DRAT-check -- both DECISIVE checks,
+    /// not corroboration. The `BatSat` verdict-agreement arm this carried until
+    /// ADR-1910 was gated on a feature nothing set and therefore never ran.
     #[test]
-    #[cfg(feature = "batsat-reference")]
-    fn random_3cnf_agreement_stress_disagree_zero() {
+    fn random_3cnf_stress_self_check() {
         let mut state = 0x0bad_c0de_dead_beefu64;
         let mut next = || {
             state ^= state << 13;
@@ -6039,24 +6048,24 @@ mod tests {
                 }
                 f.add_clause(CnfClause::new(lits)).unwrap();
             }
-            let batsat = solve_with_rustsat_batsat(&f).unwrap();
-            match (solve_with_drat_proof(&f), batsat) {
-                (ProofSolveOutcome::Sat(model), SatResult::Sat(_)) => {
+            match solve_with_drat_proof(&f) {
+                ProofSolveOutcome::Sat(model) => {
                     assert!(
                         model.satisfies(&f).unwrap(),
                         "native sat model must satisfy"
                     );
                 }
-                (ProofSolveOutcome::Unsat(proof), SatResult::Unsat(_)) => {
+                ProofSolveOutcome::Unsat(proof) => {
                     assert_eq!(
                         check_drat(&f, &proof),
                         Ok(true),
                         "native unsat must DRAT-check"
                     );
                 }
-                (native, other) => {
-                    panic!("DISAGREE: native={native:?} batsat={other:?}");
-                }
+                undecided => panic!(
+                    "a {vars}-variable random 3-CNF must be decided, not budgeted out: \
+                     {undecided:?}"
+                ),
             }
         }
     }
@@ -6065,9 +6074,11 @@ mod tests {
     /// is a pure search-order change: it must preserve every verdict. Over harder
     /// random CNFs near the 3-SAT phase transition (~4.2 clauses/var — enough
     /// conflicts to pass the EMA warmup and actually fire glue restarts, unlike the
-    /// tiny instances above), the EMA-driven core agrees with `BatSat` on every
-    /// instance (`DISAGREE = 0`), every `sat` model satisfies, and every `unsat`
-    /// proof DRAT-checks — the same soundness net as the default Luby schedule. This
+    /// tiny instances above), the EMA-driven core must reach the SAME verdict as
+    /// the default Luby schedule on every instance, every `sat` model must
+    /// satisfy, and every `unsat` proof must DRAT-check. The referee was `BatSat`
+    /// until ADR-1910; the default-policy core is a sharper one for a
+    /// verdict-preservation claim, because it varies only the policy. This
     /// keeps the (default-off) EMA path covered.
     ///
     /// It now drives the core through the **production** policy rather than by
@@ -6075,8 +6086,7 @@ mod tests {
     /// used to do and was, until 2026-09-09, the only assignment of `true` to
     /// that field anywhere in the crate.
     #[test]
-    #[cfg(feature = "batsat-reference")]
-    fn ema_restart_schedule_agrees_with_batsat_disagree_zero() {
+    fn ema_restart_schedule_preserves_every_verdict() {
         let mut state = 0xe1a5_7a27_c0ff_ee42u64;
         let mut next = || {
             state ^= state << 13;
@@ -6099,7 +6109,12 @@ mod tests {
                 }
                 f.add_clause(CnfClause::new(lits)).unwrap();
             }
-            let batsat = solve_with_rustsat_batsat(&f).unwrap();
+            // The referee is the SAME core under the DEFAULT policy. For a
+            // change that is defined as verdict-preserving, that is a sharper
+            // referee than an unrelated engine ever was: it isolates the one
+            // variable under test instead of comparing two solvers that differ
+            // in everything.
+            let default_policy = solve_with_drat_proof(&f);
             // Drive the solver with the EMA restart schedule enabled, through
             // the production policy surface.
             let mut sink = VecProofSink::new();
@@ -6110,34 +6125,38 @@ mod tests {
                 "`SearchPolicies::ema_restart` must actually select the EMA rule"
             );
             let outcome = cdcl.solve(None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT);
-            match (outcome, batsat) {
-                (StreamingProofOutcome::Sat(model), SatResult::Sat(_)) => {
+            match (outcome, default_policy) {
+                (StreamingProofOutcome::Sat(model), ProofSolveOutcome::Sat(_)) => {
                     assert!(model.satisfies(&f).unwrap(), "EMA sat model must satisfy");
                 }
-                (StreamingProofOutcome::Unsat, SatResult::Unsat(_)) => {
+                (StreamingProofOutcome::Unsat, ProofSolveOutcome::Unsat(_)) => {
                     assert_eq!(
                         check_drat(&f, &sink.into_steps()),
                         Ok(true),
                         "EMA unsat must DRAT-check"
                     );
                 }
-                (native, other) => {
-                    panic!("DISAGREE (EMA restarts): native={native:?} batsat={other:?}");
+                (ema, luby) => {
+                    panic!(
+                        "DISAGREE (EMA restarts): a restart schedule is a pure search-order \
+                         change and must preserve every verdict -- ema={ema:?} default={luby:?}"
+                    );
                 }
             }
         }
     }
 
     /// Blocking-literal BCP is a pure propagation optimization: it must NOT
-    /// change any verdict. This battery re-affirms that — over a fresh seed of
-    /// many random CNFs the blocking-literal core agrees with `BatSat` on every
-    /// instance (`DISAGREE = 0`), every `sat` model satisfies, and every `unsat`
-    /// proof (derived via the new `Watch`/blocker propagate) DRAT-checks. A
+    /// change any verdict. Over a fresh seed of many random CNFs every `sat`
+    /// model must satisfy and every `unsat` proof (derived via the
+    /// `Watch`/blocker propagate) must DRAT-check. The verdict-agreement arm
+    /// against `BatSat` went with ADR-1910; it was gated on a feature nothing
+    /// set, so it had never run, and `tests/external_sat_referee.rs` now
+    /// adjudicates this core against an external binary on a default build. A
     /// blocker is a performance hint only; the implications and conflicts derived
     /// are identical to the plain two-watched scheme.
     #[test]
-    #[cfg(feature = "batsat-reference")]
-    fn blocking_literal_bcp_preserves_verdicts_disagree_zero() {
+    fn blocking_literal_bcp_preserves_verdicts() {
         let mut state = 0xb10c_11ad_5a7b_eef0u64;
         let mut next = || {
             state ^= state << 13;
@@ -6161,24 +6180,23 @@ mod tests {
                 }
                 f.add_clause(CnfClause::new(lits)).unwrap();
             }
-            let batsat = solve_with_rustsat_batsat(&f).unwrap();
-            match (solve_with_drat_proof(&f), batsat) {
-                (ProofSolveOutcome::Sat(model), SatResult::Sat(_)) => {
+            match solve_with_drat_proof(&f) {
+                ProofSolveOutcome::Sat(model) => {
                     assert!(
                         model.satisfies(&f).unwrap(),
                         "native sat model must satisfy"
                     );
                 }
-                (ProofSolveOutcome::Unsat(proof), SatResult::Unsat(_)) => {
+                ProofSolveOutcome::Unsat(proof) => {
                     assert_eq!(
                         check_drat(&f, &proof),
                         Ok(true),
                         "native unsat must DRAT-check"
                     );
                 }
-                (native, other) => {
-                    panic!("DISAGREE (blocking-literal BCP): native={native:?} batsat={other:?}");
-                }
+                undecided => panic!(
+                    "blocking-literal BCP left a {vars}-variable CNF undecided: {undecided:?}"
+                ),
             }
         }
     }
@@ -7022,30 +7040,33 @@ mod tests {
         );
     }
 
-    /// Reduction stress: many random CNFs solved with reduction active. The
-    /// native core and `BatSat` must never disagree, every native `sat` model
-    /// must satisfy, and every native `unsat` proof — including its deletion
-    /// lines — must DRAT-check. This is the completeness+soundness gate: no UNSAT
-    /// is ever reported SAT or vice-versa even as the clause DB churns.
+    /// Reduction stress: many random CNFs solved with reduction active. Every
+    /// `sat` model must satisfy and every `unsat` proof — including its deletion
+    /// lines — must DRAT-check, and the pigeonhole arm's verdict is known
+    /// independently of any solver. This is the completeness+soundness gate: no
+    /// UNSAT is ever reported SAT or vice-versa even as the clause DB churns.
     #[test]
-    #[cfg(feature = "batsat-reference")]
-    fn reduce_db_stress_agrees_with_batsat_and_proof_checks() {
+    fn reduce_db_stress_proof_checks() {
         // A spread of resolution-hard pigeonhole instances guarantees several
         // reductions; the random suite guarantees breadth.
         for pigeons in [6, 7, 8] {
             let f = pigeonhole(pigeons);
-            let batsat = solve_with_rustsat_batsat(&f).unwrap();
-            match (solve_with_drat_proof(&f), batsat) {
-                (ProofSolveOutcome::Unsat(proof), SatResult::Unsat(_)) => {
+            // PHP(n, n-1) is unsatisfiable by the pigeonhole principle, so the
+            // expected verdict is known here independently of any solver. That
+            // is a stronger assertion than agreement with a second engine: two
+            // engines can agree and both be wrong.
+            match solve_with_drat_proof(&f) {
+                ProofSolveOutcome::Unsat(proof) => {
                     assert_eq!(
                         check_drat(&f, &proof),
                         Ok(true),
                         "PHP({pigeons}) proof with deletions must DRAT-check"
                     );
                 }
-                (native, other) => {
-                    panic!("DISAGREE on PHP({pigeons}): native={native:?} batsat={other:?}");
-                }
+                other => panic!(
+                    "PHP({pigeons}) is UNSAT by the pigeonhole principle; the core said \
+                     {other:?}"
+                ),
             }
         }
 
@@ -7071,24 +7092,24 @@ mod tests {
                 }
                 f.add_clause(CnfClause::new(lits)).unwrap();
             }
-            let batsat = solve_with_rustsat_batsat(&f).unwrap();
-            match (solve_with_drat_proof(&f), batsat) {
-                (ProofSolveOutcome::Sat(model), SatResult::Sat(_)) => {
+            match solve_with_drat_proof(&f) {
+                ProofSolveOutcome::Sat(model) => {
                     assert!(
                         model.satisfies(&f).unwrap(),
                         "native sat model must satisfy"
                     );
                 }
-                (ProofSolveOutcome::Unsat(proof), SatResult::Unsat(_)) => {
+                ProofSolveOutcome::Unsat(proof) => {
                     assert_eq!(
                         check_drat(&f, &proof),
                         Ok(true),
                         "native unsat (with any deletions) must DRAT-check"
                     );
                 }
-                (native, other) => {
-                    panic!("DISAGREE: native={native:?} batsat={other:?}");
-                }
+                undecided => panic!(
+                    "a {vars}-variable CNF under clause-DB reduction must be decided, not \
+                     budgeted out: {undecided:?}"
+                ),
             }
         }
     }

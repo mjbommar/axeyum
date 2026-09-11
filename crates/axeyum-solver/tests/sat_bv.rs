@@ -1,8 +1,10 @@
 //! Conformance tests for the pure Rust SAT-backed BV backend.
 //!
 //! These tests exercise the Phase 5 composition path: query terms lower to
-//! AIG/CNF, solve through the pure Rust `BatSat` adapter, lift a model, and
-//! replay the original formula before returning `sat`.
+//! AIG/CNF, solve through the native proof-producing CDCL core, lift a model,
+//! and replay the original formula before returning `sat`. (The `BatSat`
+//! adapter this doc named until ADR-1910 was taken off the path by ADR-1703 and
+//! then removed outright; nothing here has routed through it since 2026-09-05.)
 #![cfg(feature = "full")]
 
 use std::time::Duration;
@@ -1263,8 +1265,9 @@ mod native_cdcl {
     /// `rustsat-batsat` adapter; it now selects the native core, which is what
     /// makes `the_retired_native_cdcl_flag_changes_no_verdict` a test of the
     /// no-op claim rather than a cross-engine differential. The cross-engine
-    /// differential moved to
-    /// `crates/axeyum-cnf/tests/native_vs_batsat_differential.rs`.
+    /// differential is `crates/axeyum-cnf/tests/external_sat_referee.rs`
+    /// (ADR-1910) — an external `CaDiCaL`/`Kissat` binary over DIMACS text, which
+    /// runs on a default build.
     fn check_default_config(arena: &TermArena, assertions: &[TermId]) -> CheckResult {
         SatBvBackend::new()
             .check(arena, assertions, &SolverConfig::default())
@@ -1328,7 +1331,8 @@ mod native_cdcl {
     /// `SolverConfig::native_cdcl` is a retired no-op (ADR-1703): setting it must
     /// change no verdict on a spread of small BV queries, because the native core
     /// runs either way. This is a *no-op* check, deliberately not a cross-engine
-    /// differential — that one lives in `axeyum-cnf` behind `batsat-reference`.
+    /// differential — that one is `axeyum-cnf`'s `external_sat_referee`, which
+    /// needs no feature flag (ADR-1910).
     #[test]
     fn the_retired_native_cdcl_flag_changes_no_verdict() {
         // (a) sat: x = 3 over 4 bits.

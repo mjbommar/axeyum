@@ -72,10 +72,12 @@ PY
 # an 8 GiB abort. `IncrementalBatSat` now occurs nowhere in `crates/`.
 #
 # The identifier matters: a mutant naming the bare string `batsat` would NOT
-# fire, because `crates/axeyum-cnf/src/lib.rs` still says "batsat" in prose and
-# in a `#[cfg(feature = "batsat-reference")]` re-export. A basis has to name the
-# thing whose disappearance IS the claim becoming false, not a word that happens
-# to appear near it — and this control is what demonstrates the difference.
+# fire, because `crates/axeyum-cnf/src/lib.rs` still said "batsat" in prose even
+# after the engine was gone. (The `#[cfg(feature = "batsat-reference")]`
+# re-export that made this vivid was removed by ADR-1910; the prose mentions
+# remain, which is exactly the point.) A basis has to name the thing whose
+# disappearance IS the claim becoming false, not a word that happens to appear
+# near it — and this control is what demonstrates the difference.
 build_mutant "$WORK/live.rs" \
   'adr("ADR-1730")' \
   'live("IncrementalBatSat", "crates/axeyum-cnf/src/lib.rs")' \

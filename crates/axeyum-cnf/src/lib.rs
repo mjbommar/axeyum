@@ -1,10 +1,13 @@
 //! CNF layer for Axeyum.
 //!
 //! This crate owns Tseitin encoding from AIG, DIMACS parsing/writing, CNF
-//! evaluation, lift maps, pure-Rust SAT adapters, bounded inprocessing, and the
-//! DRAT/LRAT/selected-Alethe proof core. The `BatSat` adapter's proofless UNSAT is
-//! explicitly lower assurance; proof-producing routes return artifacts that can
-//! be checked independently.
+//! evaluation, lift maps, the native proof-producing CDCL core, bounded
+//! inprocessing, and the DRAT/LRAT/selected-Alethe proof core. Every UNSAT the
+//! core reports is backed by a DRAT proof it can emit and this crate's own
+//! checkers can verify against the original formula. The proofless
+//! lower-assurance boundary that used to be documented here belonged to the
+//! `rustsat-batsat` adapter, which ADR-1703 retired as an engine and ADR-1910
+//! removed entirely; it did not move, it disappeared.
 //!
 //! # Checked UNSAT example
 //!
@@ -39,10 +42,6 @@ use std::time::Instant;
 use web_time::Instant;
 
 mod alethe;
-/// The retired `rustsat-batsat` adapter, kept as a differential oracle only
-/// (ADR-1703). Non-default: the default dependency graph has no batsat.
-#[cfg(feature = "batsat-reference")]
-pub mod batsat_reference;
 mod bve;
 pub mod clause_db_policy;
 pub mod colouring;
@@ -84,11 +83,6 @@ pub use alethe::{
     AletheClause, AletheCommand, AletheError, AletheLit, AletheTerm, CARCARA_CHECKED_RULES,
     check_alethe, check_alethe_with, is_carcara_checked_rule, lrat_to_alethe,
     non_carcara_checked_rules, parse_alethe, write_alethe,
-};
-#[cfg(feature = "batsat-reference")]
-pub use batsat_reference::{
-    BatSatDeterminism, RustSatBatsatSolver, rustsat_batsat_determinism, solve_with_rustsat_batsat,
-    solve_with_rustsat_batsat_limits, solve_with_rustsat_batsat_timeout,
 };
 pub use bve::{
     BveOptions, BveOutcome, BveStats, Reconstruction, eliminate_variables,
@@ -571,8 +565,8 @@ impl core::error::Error for SatError {}
 /// available by construction — use [`solve_with_drat_proof`] when you want it.
 /// `solve` itself does not spend the proof-checking time and therefore reports
 /// [`SatProofStatus::Unchecked`]; that is a per-call choice, not a property of
-/// the engine (contrast the retired `rustsat-batsat` adapter, which could not
-/// produce a proof at all).
+/// the engine (contrast the `rustsat-batsat` adapter removed in ADR-1910,
+/// which could not produce a proof at all).
 #[derive(Debug, Default, Clone, Copy)]
 pub struct NativeCdclSolver;
 
@@ -4944,10 +4938,6 @@ mod tests {
         solve_with_native_core, solve_with_native_core_limits, tseitin_encode,
         tseitin_encode_profiled, tseitin_encode_profiled_with_origins,
     };
-    #[cfg(feature = "batsat-reference")]
-    use super::{
-        rustsat_batsat_determinism, solve_with_rustsat_batsat, solve_with_rustsat_batsat_limits,
-    };
 
     /// A tiny formula that is satisfiable but only *after* a conflict: with the
     /// default `false` phase the first decision is falsified, so the search must
@@ -6087,81 +6077,6 @@ p cnf 2 3
                 expected: 1,
                 found: 0
             })
-        ));
-    }
-
-    #[test]
-    #[cfg(feature = "batsat-reference")]
-    fn rustsat_batsat_solves_raw_cnf_and_replays_assignment() {
-        let formula = parse_dimacs(
-            "\
-p cnf 2 2
-1 2 0
--1 2 0
-",
-        )
-        .unwrap();
-
-        let result = solve_with_rustsat_batsat(&formula).unwrap();
-        let SatResult::Sat(assignment) = result else {
-            panic!("expected SAT result");
-        };
-
-        assert!(assignment.satisfies(&formula).unwrap());
-        assert_eq!(assignment.values().len(), 2);
-        assert!(assignment.values()[1], "second variable is forced true");
-    }
-
-    #[test]
-    #[cfg(feature = "batsat-reference")]
-    fn rustsat_batsat_determinism_matches_the_reviewed_pinned_defaults() {
-        let profile = rustsat_batsat_determinism();
-        assert_eq!(profile.random_seed.to_bits(), 91_648_253.0_f64.to_bits());
-        assert_eq!(profile.random_var_freq.to_bits(), 0.0_f64.to_bits());
-        assert!(!profile.random_polarity);
-        assert!(!profile.random_initial_activity);
-    }
-
-    #[test]
-    #[cfg(feature = "batsat-reference")]
-    fn rustsat_batsat_deterministic_resource_limit_is_an_unknown_not_a_verdict() {
-        let formula = parse_dimacs(
-            "\
-p cnf 2 1
-1 2 0
-",
-        )
-        .unwrap();
-
-        for _ in 0..2 {
-            assert!(matches!(
-                solve_with_rustsat_batsat_limits(&formula, None, Some(0)).unwrap(),
-                SatResult::Unknown(reason)
-                    if reason.detail
-                        == "rustsat-batsat deterministic progress-check budget 0 exhausted"
-            ));
-        }
-        assert!(matches!(
-            solve_with_rustsat_batsat_limits(&formula, None, Some(100)).unwrap(),
-            SatResult::Sat(assignment) if assignment.satisfies(&formula).unwrap()
-        ));
-    }
-
-    #[test]
-    #[cfg(feature = "batsat-reference")]
-    fn rustsat_batsat_marks_unsat_lower_assurance_without_proof() {
-        let formula = parse_dimacs(
-            "\
-p cnf 1 2
-1 0
--1 0
-",
-        )
-        .unwrap();
-
-        assert!(matches!(
-            solve_with_rustsat_batsat(&formula).unwrap(),
-            SatResult::Unsat(evidence) if evidence.proof == SatProofStatus::Unchecked
         ));
     }
 

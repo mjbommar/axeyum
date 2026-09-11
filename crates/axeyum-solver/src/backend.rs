@@ -567,8 +567,11 @@ impl SolverConfig {
         self
     }
 
-    /// Enables the CDCL(XOR) search fallback on `unknown` batsat results over
-    /// XOR-structured formulas (ADR-0035). See [`SolverConfig::xor_cdcl_fallback`].
+    /// Enables the CDCL(XOR) search fallback on `unknown` results from the
+    /// native CDCL core over XOR-structured formulas (ADR-0035). The trigger was
+    /// a batsat `unknown` when ADR-0035 landed; ADR-1703 re-based it on the
+    /// native core and ADR-1910 removed batsat entirely. See
+    /// [`SolverConfig::xor_cdcl_fallback`].
     #[must_use]
     pub fn with_xor_cdcl_fallback(mut self, xor_cdcl_fallback: bool) -> Self {
         self.xor_cdcl_fallback = xor_cdcl_fallback;
