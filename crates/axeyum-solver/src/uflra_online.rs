@@ -83,7 +83,62 @@ const MAX_BOOLEAN_MODELS: usize = 100_000;
 /// Hard ceiling on the number of distinct theory atoms in the Boolean skeleton.
 /// Above it the layer declines (the propositional search space is too large to
 /// enumerate soundly within budget).
+///
+/// **The word "enumerate" is the whole justification, and it stopped describing
+/// one of the two consumers.** This ceiling gates both
+/// `check_qf_uflra_boolean_enumerative`, which really does enumerate up to
+/// [`MAX_BOOLEAN_MODELS`] propositional models, and
+/// `check_qf_uflra_boolean_cdclt`, which since ADR-1908 runs the native CDCL(T)
+/// core and enumerates nothing. A CDCL search does not pay `2^atoms`.
+///
+/// The sibling constant on the `QF_UFLIA` route was in exactly this position at
+/// `512`, was measured against its division on 2026-09-08, and is now `8192` --
+/// gaining ten files and losing none. This one has never been measured against
+/// `QF_UFLRA`: that note mentions `uflra` four times against `uflia`'s
+/// twenty-two.
 const MAX_BOOLEAN_ATOMS: usize = 48;
+
+/// The atom ceiling the **CDCL(T)** route uses. `8192`, matching the `QF_UFLIA`
+/// sibling, and deliberately not [`MAX_BOOLEAN_ATOMS`].
+///
+/// The enumerative route keeps `48` because its bound describes what it does:
+/// it enumerates up to [`MAX_BOOLEAN_MODELS`] propositional models, and `2^48`
+/// is the thing that ceiling is protecting against. Since ADR-1908 the CDCL(T)
+/// route runs the native core and **enumerates nothing**, so it was paying an
+/// enumerative bound it does not owe.
+///
+/// Measured 2026-09-10 on a 184-file deterministic stride sample of the
+/// SMT-LIB 2024 `QF_UFLRA` division (1,284 files), 20 s budget, both arms on one
+/// binary:
+///
+/// | | cap 48 | cap 8192 |
+/// |---|---:|---:|
+/// | decided | 69 | **71** |
+/// | losses | — | **0** |
+/// | verdict flips | — | 0 |
+/// | wrong vs declared `:status` | 0 / 183 graded | 0 / 183 graded |
+///
+/// **+2, and the honest number is not the sweep's +3.** The parallel sweep
+/// showed three gains; re-run in isolation, one of them decided `sat` in BOTH
+/// arms and was load noise. Both survivors reproduce across two isolated
+/// repetitions.
+///
+/// The `QF_UFLIA` sibling sat at `512` in exactly this position, was measured
+/// against its division on 2026-09-08, and moved to `8192` for +10 files and
+/// zero losses. This one had never been measured against `QF_UFLRA`: that note
+/// mentions `uflra` four times against `uflia`'s twenty-two.
+///
+/// `AXEYUM_UFLRA_ATOM_CAP` overrides it, so the A/B stays runnable in both
+/// directions.
+fn cdclt_atom_cap() -> usize {
+    /// The measured value. Not `MAX_BOOLEAN_ATOMS`: that one bounds enumeration.
+    const CDCLT_ATOM_CAP: usize = 8192;
+
+    std::env::var("AXEYUM_UFLRA_ATOM_CAP")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(CDCLT_ATOM_CAP)
+}
 
 /// Hard ceiling on Tseitin clauses produced for the Boolean skeleton; above it the
 /// layer declines rather than build an unbounded encoding.
@@ -1262,7 +1317,7 @@ fn check_qf_uflra_boolean_cdclt(
     if atom_terms.is_empty() {
         return decline("no UFLRA atoms for the online combination boolean layer");
     }
-    if atom_terms.len() > MAX_BOOLEAN_ATOMS {
+    if atom_terms.len() > cdclt_atom_cap() {
         return decline("too many theory atoms for the online combination boolean layer");
     }
 
