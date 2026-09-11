@@ -2681,3 +2681,22 @@ All twenty: **zero disagreements, SOUND**.
 | load average (start / end) | 0.00 0.00 0.07 / 0.98 0.65 0.33 — 16 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_DT.tsv` |
 
+## QF_UFLRA — 2026-09-11T18:31:27Z
+
+| field | value |
+|---|---|
+| axeyum solved | 142/200 |
+| reference solved | 198/200 |
+| **ratio (axeyum / reference)** | **71.7%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 142 / 0 / 56 |
+| reference | `Z3 version 4.13.3 - 64 bit` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_UFLRA.txt` (sha256 157c23ea3852, 200 files) |
+| solver commit | `14712b1f4` |
+| load average (start / end) | 0.44 1.15 2.89 / 1.00 1.07 1.40 — 16 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_UFLRA.tsv` |
+
