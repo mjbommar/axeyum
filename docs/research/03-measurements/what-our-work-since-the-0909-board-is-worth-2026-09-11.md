@@ -306,3 +306,75 @@ Probing the addressable-gap files of the other divisions for the same shape
 (`attempts=1 last=fd:parse`): QF_ABV, QF_BV, QF_IDL and QF_LIA return **zero**.
 Those gaps are real solver work. The front-door refusal was specific to
 QF_UFLRA.
+
+## Final attribution, all runs complete
+
+Five divisions measured head to head against a BUILT BINARY of `e99d08848f`
+(the 2026-09-09 board commit), interleaved per file on one host:
+
+| division | 09-09 | HEAD | delta | gains | losses | flips |
+|---|---|---|---|---|---|---|
+| QF_UFLIA | 122 | 158 | **+36** | 36 | **0** | **0** |
+| QF_LRA | 97 | 107 | **+10** | 10 | **0** | **0** |
+| UF | 85 | 90 | **+5** | 5 | **0** | **0** |
+| QF_ABV | 186 | 186 | 0 | 0 | 0 | 0 |
+| QF_BV | 185 | 185 | **0** | 0 | **0** | 0 |
+| QF_IDL | 50 | 50 | 0 (90 files) | 0 | 0 | 0 |
+
+**QF_BV's board `-2` is not a regression.** 200 files, zero gains and zero
+losses: no code since 09-09 touches this division at all. Consistent with the
++-1.5 spread measured at fixed code.
+
+**QF_IDL needs its baselines named.** arm A reads +0, but QF_IDL's last prior
+board row is **2026-09-06** (105) while arm A's baseline is **09-09**. The
+board's +8 landed in the 09-06 -> 09-09 window, which no arm here covers. The
+two numbers are not in conflict; they measure different intervals.
+
+### This session's three fixes, isolated
+
+`f09652489` (their parent) vs HEAD, both divisions run to 200 files:
+
+| division | base | HEAD | delta | losses |
+|---|---|---|---|---|
+| QF_UFLIA | 156 | 161 | **+5** | 0 |
+| UF | 84 | 89 | **+5** | 0 |
+
+QF_UFLIA's five are `hash_sat_09_17` .. `hash_sat_10_20` — the TOP rungs of a
+ladder the 320-commit window had carried to 09_14 — each landing at 18.6-19.1 s
+against a 24 s budget. UF's five include `smtlib.1116374.smt2`, the file
+roadmap item 3.10 named BY PREDICTION when `318930806` landed.
+
+Both of these were reported as **+0** earlier in the day from 60- and 12-file
+prefixes. The pinned lists are path-sorted, so hard families cluster at the
+head and a prefix structurally cannot show the effect. Two nulls, same cause.
+
+## The front-door refusal did NOT generalise
+
+All 177 addressable-gap files across nine divisions, probed for the
+`last=fd:parse` signature that found the QF_UFLRA bug:
+
+| division | probed | at `fd:parse` |
+|---|---|---|
+| QF_LRA | 40 | 0 |
+| QF_NIA | 37 | 0 |
+| UF | 28 | 0 |
+| QF_LIA | 18 | 0 |
+| QF_IDL | 14 | 0 |
+| QF_UFLIA | 13 | 0 |
+| QF_ABV | 12 | 0 |
+| QF_BV | 8 | 0 |
+| QF_SLIA | 7 | **2** |
+| **total** | **177** | **2** |
+
+Both QF_SLIA hits are benign: one is `str.replace_all over a non-constant
+operand is outside the wired sound subset` — a deliberate, documented boundary
+— and the other declines elsewhere. **The QF_UFLRA bug was local**, and the
+campaign it suggested does not exist.
+
+### The `distinct` fix costs nothing
+
+All 67 `RandomCoupled` files, pre-fix vs post-fix binaries interleaved:
+**67/67 identical, 0 gains, 0 losses.** The coercion only fires when an operand
+is already `Real`, so it unlocks the family that could not parse and touches
+nothing else. An apparent `-8` seen while comparing a LOADED s4 run against the
+board's quiet-host row was entirely that confound.
