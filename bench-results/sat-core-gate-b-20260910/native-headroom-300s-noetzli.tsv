@@ -1,0 +1,4 @@
+file	variables	clauses	native_verdict	native_ms	native_timed_out	native_model_valid
+bv-term-small-rw_1074.cnf	7668	31801	unsat	118901.396232	false	
+bv-term-small-rw_524.cnf	4261	17468	unknown	194668.087614	false	
+bv-term-small-rw_848.cnf	3999	16689	unknown	243619.32107499999	false	
