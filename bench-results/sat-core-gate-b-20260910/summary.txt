@@ -1,0 +1,57 @@
+
+## p4dfa -- 113 files, 20 s budget
+
+| Engine | Decided / 113 | sat | unsat | PAR-2 mean (s) |
+|---|---:|---:|---:|---:|
+| native | 9 | 9 | 0 | 37.248 |
+| cadical | 12 | 12 | 0 | 36.339 |
+| kissat | 14 | 14 | 0 | 35.873 |
+
+cross-engine verdict disagreements: 0
+sat verdicts not confirmed by CnfFormula::evaluate: 0
+
+### cadical decides and native does not: 3 (native decides and cadical does not: 0)
+  far from the boundary (<= 5 s, >= 4x headroom): 0
+  mid (5-15 s): 3
+  near the boundary (> 15 s): 0
+        5.77s  string1x8.3._bit8_na6_nr3_paired.cnf
+       11.67s  string1x8.6._bit8_na6_nr3_paired.cnf
+       11.81s  videoconf_simple_bit8_na6_nr3_paired.cnf
+
+### kissat decides and native does not: 6 (native decides and kissat does not: 1)
+  native-only: compose.p3._bit8_na6_nr3_paired.cnf
+  far from the boundary (<= 5 s, >= 4x headroom): 0
+  mid (5-15 s): 4
+  near the boundary (> 15 s): 2
+        5.24s  videoconf_simple_bit8_na6_nr3_paired.cnf
+        5.56s  string1x8.3._bit8_na6_nr3_paired.cnf
+        7.42s  string1x8.6._bit8_na6_nr3_paired.cnf
+        8.25s  string1x8.4._bit8_na6_nr3_paired.cnf
+       17.59s  string1x8.1._bit8_na6_nr3_paired.cnf
+       18.23s  tcp_open_bit8_na6_nr4_paired.cnf
+
+## noetzli -- 100 files, 20 s budget
+
+| Engine | Decided / 100 | sat | unsat | PAR-2 mean (s) |
+|---|---:|---:|---:|---:|
+| native | 87 | 3 | 84 | 5.203 |
+| cadical | 89 | 3 | 86 | 4.646 |
+| kissat | 90 | 3 | 87 | 4.116 |
+
+cross-engine verdict disagreements: 0
+sat verdicts not confirmed by CnfFormula::evaluate: 0
+
+### cadical decides and native does not: 2 (native decides and cadical does not: 0)
+  far from the boundary (<= 5 s, >= 4x headroom): 0
+  mid (5-15 s): 2
+  near the boundary (> 15 s): 0
+       11.05s  bv-term-small-rw_524.cnf
+       13.10s  bv-term-small-rw_1074.cnf
+
+### kissat decides and native does not: 3 (native decides and kissat does not: 0)
+  far from the boundary (<= 5 s, >= 4x headroom): 2
+  mid (5-15 s): 1
+  near the boundary (> 15 s): 0
+        0.60s  bv-term-small-rw_524.cnf
+        0.78s  bv-term-small-rw_848.cnf
+        9.27s  bv-term-small-rw_1074.cnf

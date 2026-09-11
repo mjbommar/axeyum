@@ -1,0 +1,114 @@
+file	verdict	wall_ms	timed_out	model_check
+compose.p2._bit8_na6_nr3_paired.cnf	sat	2870.4886399791576	false	ok
+compose.p3._bit8_na6_nr3_paired.cnf	unknown	20055.331379000563	true	
+compose.s2._bit8_na6_nr3_paired.cnf	sat	3056.8483470124193	false	ok
+compose.s2._bit8_na6_nr4_paired.cnf	sat	7241.203990008216	false	ok
+compose.s3._bit8_na6_nr3_paired.cnf	unknown	20036.69307596283	true	
+compose.s3._bit8_na6_nr4_paired.cnf	unknown	20034.695173962973	true	
+compose.s4._bit8_na6_nr3_paired.cnf	unknown	20071.735523000825	true	
+compose.s4._bit8_na6_nr4_paired.cnf	unknown	20075.916081957985	true	
+mobiledevice_bit8_na1_nr1_twocond.cnf	sat	489.20835298486054	false	ok
+mobiledevice_bit8_na6_nr3_paired.cnf	sat	2024.5639589847997	false	ok
+mobiledevice_bit8_na6_nr3_twocond.cnf	sat	1210.324774030596	false	ok
+simple_bit8_na1_nr1_twocond.cnf	sat	2.444064011797309	false	ok
+string1x16.1._bit8_na6_nr3_paired.cnf	unknown	20028.193238016684	true	
+string1x16.10._bit8_na6_nr3_paired.cnf	unknown	20028.427081007976	true	
+string1x16.2._bit8_na6_nr3_paired.cnf	unknown	20028.73617899604	true	
+string1x16.3._bit8_na6_nr3_paired.cnf	unknown	20027.960016974248	true	
+string1x16.4._bit8_na6_nr3_paired.cnf	unknown	20011.052371002734	true	
+string1x16.5._bit8_na6_nr3_paired.cnf	unknown	20027.310795965604	true	
+string1x16.6._bit8_na6_nr3_paired.cnf	unknown	20028.59573799651	true	
+string1x16.7._bit8_na6_nr3_paired.cnf	unknown	20026.396268978715	true	
+string1x16.8._bit8_na6_nr3_paired.cnf	unknown	20027.157221978996	true	
+string1x16.9._bit8_na6_nr3_paired.cnf	unknown	20027.90524601005	true	
+string1x8.1._bit8_na6_nr3_paired.cnf	sat	17589.396415976807	false	ok
+string1x8.10._bit8_na6_nr3_paired.cnf	unknown	20024.834668962285	true	
+string1x8.2._bit8_na6_nr3_paired.cnf	unknown	20026.56389697222	true	
+string1x8.3._bit8_na6_nr3_paired.cnf	sat	5556.499423983041	false	ok
+string1x8.4._bit8_na6_nr3_paired.cnf	sat	8253.571397042833	false	ok
+string1x8.5._bit8_na6_nr3_paired.cnf	unknown	20025.048390962183	true	
+string1x8.6._bit8_na6_nr3_paired.cnf	sat	7415.204652003013	false	ok
+string1x8.7._bit8_na6_nr3_paired.cnf	sat	14417.012727994006	false	ok
+string1x8.8._bit8_na6_nr3_paired.cnf	unknown	20008.87196196709	true	
+string1x8.9._bit8_na6_nr3_paired.cnf	unknown	20024.99424800044	true	
+string2x16.1._bit8_na6_nr3_paired.cnf	unknown	20039.530707988888	true	
+string2x16.10._bit8_na6_nr3_paired.cnf	unknown	20035.387502983212	true	
+string2x16.2._bit8_na6_nr3_paired.cnf	unknown	20037.54318499705	true	
+string2x16.3._bit8_na6_nr3_paired.cnf	unknown	20036.717293027323	true	
+string2x16.4._bit8_na6_nr3_paired.cnf	unknown	20028.903926024213	true	
+string2x16.5._bit8_na6_nr3_paired.cnf	unknown	20037.359988957178	true	
+string2x16.6._bit8_na6_nr3_paired.cnf	unknown	20033.18626701366	true	
+string2x16.7._bit8_na6_nr3_paired.cnf	unknown	20029.238750983495	true	
+string2x16.8._bit8_na6_nr3_paired.cnf	unknown	20037.27276896825	true	
+string2x16.9._bit8_na6_nr3_paired.cnf	unknown	20037.4174110475	true	
+string2x8.1._bit8_na6_nr3_paired.cnf	unknown	20028.80967000965	true	
+string2x8.10._bit8_na6_nr3_paired.cnf	unknown	20020.480906008743	true	
+string2x8.2._bit8_na6_nr3_paired.cnf	unknown	20029.566870012786	true	
+string2x8.3._bit8_na6_nr3_paired.cnf	unknown	20029.709163994994	true	
+string2x8.4._bit8_na6_nr3_paired.cnf	unknown	20027.789251995273	true	
+string2x8.5._bit8_na6_nr3_paired.cnf	unknown	20029.36922799563	true	
+string2x8.6._bit8_na6_nr3_paired.cnf	unknown	20028.178330976516	true	
+string2x8.7._bit8_na6_nr3_paired.cnf	unknown	20027.058081992436	true	
+string2x8.8._bit8_na6_nr3_paired.cnf	unknown	20029.51798698632	true	
+string2x8.9._bit8_na6_nr3_paired.cnf	unknown	20030.805555987172	true	
+string4x16.1._bit16_na6_nr3_paired.cnf	unknown	20035.618196998257	true	
+string4x16.1._bit16_na6_nr4_paired.cnf	unknown	20101.101251028012	true	
+string4x16.1._bit8_na6_nr4_pairedtwobranch.cnf	unknown	20056.798578996677	true	
+string4x16.10._bit16_na6_nr3_paired.cnf	unknown	20046.460714016575	true	
+string4x16.10._bit16_na6_nr4_paired.cnf	unknown	20096.902730991133	true	
+string4x16.10._bit8_na6_nr4_pairedtwobranch.cnf	unknown	20070.504182949662	true	
+string4x16.2._bit16_na6_nr3_paired.cnf	unknown	20033.524889033288	true	
+string4x16.2._bit16_na6_nr4_paired.cnf	unknown	20090.31552495435	true	
+string4x16.2._bit8_na6_nr4_pairedtwobranch.cnf	unknown	20060.098698013462	true	
+string4x16.3._bit16_na6_nr3_paired.cnf	unknown	20031.250621017534	true	
+string4x16.3._bit16_na6_nr4_paired.cnf	unknown	20068.724095996004	true	
+string4x16.3._bit8_na6_nr4_pairedtwobranch.cnf	unknown	20057.03350499971	true	
+string4x16.4._bit16_na6_nr3_paired.cnf	unknown	20038.08954899432	true	
+string4x16.4._bit16_na6_nr4_paired.cnf	unknown	20089.55925697228	true	
+string4x16.4._bit8_na6_nr4_pairedtwobranch.cnf	unknown	20068.444272037596	true	
+string4x16.5._bit16_na6_nr3_paired.cnf	unknown	20039.916642010212	true	
+string4x16.5._bit16_na6_nr4_paired.cnf	unknown	20102.338886004873	true	
+string4x16.5._bit8_na6_nr4_pairedtwobranch.cnf	unknown	20064.675434026867	true	
+string4x16.6._bit16_na6_nr3_paired.cnf	unknown	20030.91992298141	true	
+string4x16.6._bit16_na6_nr4_paired.cnf	unknown	20068.294679978862	true	
+string4x16.6._bit8_na6_nr4_pairedtwobranch.cnf	unknown	20066.786576993763	true	
+string4x16.7._bit16_na6_nr3_paired.cnf	unknown	20037.630489037838	true	
+string4x16.7._bit16_na6_nr4_paired.cnf	unknown	20076.762554002926	true	
+string4x16.7._bit8_na6_nr4_pairedtwobranch.cnf	unknown	20071.483643027022	true	
+string4x16.8._bit16_na6_nr3_paired.cnf	unknown	20029.281408991665	true	
+string4x16.8._bit16_na6_nr4_paired.cnf	unknown	20073.55709798867	true	
+string4x16.8._bit8_na6_nr4_pairedtwobranch.cnf	unknown	20046.927730028983	true	
+string4x16.9._bit16_na6_nr3_paired.cnf	unknown	20036.018198006786	true	
+string4x16.9._bit16_na6_nr4_paired.cnf	unknown	20073.707127012312	true	
+string4x16.9._bit8_na6_nr4_pairedtwobranch.cnf	unknown	20053.678035968915	true	
+string4x8.1._bit16_na6_nr4_paired.cnf	unknown	20047.24871000508	true	
+string4x8.1._bit8_na6_nr3_paired.cnf	unknown	20023.057026031893	true	
+string4x8.10._bit16_na6_nr4_paired.cnf	unknown	20066.075924958568	true	
+string4x8.10._bit8_na6_nr3_paired.cnf	unknown	20045.919050986413	true	
+string4x8.2._bit16_na6_nr4_paired.cnf	unknown	20033.809894986916	true	
+string4x8.2._bit8_na6_nr3_paired.cnf	unknown	20034.934235038236	true	
+string4x8.3._bit16_na6_nr4_paired.cnf	unknown	20047.088203020394	true	
+string4x8.3._bit8_na6_nr3_paired.cnf	unknown	20030.4678149987	true	
+string4x8.4._bit16_na6_nr4_paired.cnf	unknown	20056.78236798849	true	
+string4x8.4._bit8_na6_nr3_paired.cnf	unknown	20036.246275994927	true	
+string4x8.5._bit16_na6_nr4_paired.cnf	unknown	20059.446573024616	true	
+string4x8.5._bit8_na6_nr3_paired.cnf	unknown	20039.5609359839	true	
+string4x8.6._bit16_na6_nr4_paired.cnf	unknown	20031.428090995178	true	
+string4x8.6._bit8_na6_nr3_paired.cnf	unknown	20020.232372975443	true	
+string4x8.7._bit16_na6_nr4_paired.cnf	unknown	20059.86939399736	true	
+string4x8.7._bit8_na6_nr3_paired.cnf	unknown	20036.04360698955	true	
+string4x8.8._bit16_na6_nr4_paired.cnf	unknown	20038.256518018898	true	
+string4x8.8._bit8_na6_nr3_paired.cnf	unknown	20031.335234001745	true	
+string4x8.9._bit16_na6_nr4_paired.cnf	unknown	20062.04191298457	true	
+string4x8.9._bit8_na6_nr3_paired.cnf	unknown	20034.370755951386	true	
+tcp_full_bit16_na13_nr4_paired.cnf	unknown	20042.04504599329	true	
+tcp_full_bit8_na6_nr3_paired.cnf	unknown	20029.58724903874	true	
+tcp_full_bit8_na6_nr4_paired.cnf	unknown	20030.268744973	true	
+tcp_full_split4_bit8_na6_nr4_paired.cnf	unknown	20031.657763000112	true	
+tcp_open_bit8_na6_nr3_paired.cnf	unknown	20022.960037982557	true	
+tcp_open_bit8_na6_nr4_paired.cnf	sat	18230.085125018377	false	ok
+videoconf_full_bit16_na13_nr4_paired.cnf	unknown	20030.047220003325	true	
+videoconf_full_bit8_na6_nr3_paired.cnf	unknown	20025.841419992503	true	
+videoconf_full_bit8_na6_nr4_paired.cnf	unknown	20020.82256000722	true	
+videoconf_simple_bit8_na6_nr3_paired.cnf	sat	5242.546340043191	false	ok
+videoconf_split4_full_bit16_na13_nr4_paired.cnf	unknown	20030.631133995485	true	
