@@ -19566,6 +19566,33 @@ fn apply_op(
             // reports it as unprotected and that is the correct result, not a
             // missing test. Keeping the narrow form means the error is raised
             // where the sorts are actually compared.
+            // SMT-LIB numeral coercion, BEFORE the sort pre-check below.
+            //
+            // `=` (this match's `"="` arm) and `ite` both run `numeric_args`
+            // first, so `(= x 3)` and `(ite p x 3)` accept a bare `Int` numeral
+            // against a `Real` operand -- the `Reals_Ints` rule that an `Int`
+            // subterm in a `Real` context embeds via `to_real`. `distinct`
+            // type-checked FIRST and coerced never, so `(distinct x 3)` with
+            // `x : Real` was rejected as `SortsDiffer(Real, Int)` -- a term `=`
+            // accepts, and one cvc5 and z3 both decide.
+            //
+            // This is the same failure the packed-seq exemption below was added
+            // for on 2026-08-20 ("`=` has no such pre-check and has always
+            // accepted them"), reached from the numeric side instead.
+            //
+            // MEASURED 2026-09-11, QF_UFLRA parity list: the `RandomDecoupled`
+            // family spells random real constraints with bare integer numerals
+            // under `distinct`. 68 of its 69 files died here at `fd:parse` in
+            // ~35 ms with `attempts=1` -- no solver route was ever entered --
+            // while cvc5 decided 198/200 of the division.
+            let coerced_real;
+            let args: &[TermId] = if args.iter().any(|&a| arena.sort_of(a) == Sort::Real) {
+                coerced_real = numeric_args(arena, args)?.1;
+                &coerced_real
+            } else {
+                args
+            };
+
             let expected_sort = arena.sort_of(args[0]);
             for &arg in &args[1..] {
                 let actual_sort = arena.sort_of(arg);
