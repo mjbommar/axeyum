@@ -426,6 +426,25 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   # count, not merely for a zero exit status.
   gated_test "corpus :status sweep" \
     cargo test -p axeyum-solver --features full --test corpus_regression --quiet
+  # The EXTERNAL SAT referee (ADR-1910, ~2s warm): the native CDCL core's
+  # verdicts adjudicated by CaDiCaL/Kissat reading the DIMACS TEXT we wrote.
+  #
+  # It is in this hook because the referee it replaces was in NO hook, no gate,
+  # no CI job and no recipe -- measured 2026-09-10 with positive controls -- so
+  # the `rustsat-batsat` differential had adjudicated nothing automatically in
+  # the whole of its life. Shipping its replacement into the same three blind
+  # spots would have reproduced the defect rather than fixed it.
+  #
+  # `step_seconds`, not `gated_test`: the wrapper already asserts a nonzero TEST
+  # count AND re-derives the adjudicated comparison count from the suite's own
+  # `compared=N` reports, failing below a floor. `gated_test`'s `^running [1-9]`
+  # probe would not match the wrapper's output anyway.
+  #
+  # Absent binary => a loud SKIP and exit 0, like `abc-crosscheck`: these are
+  # external C/C++ applications and NOT Cargo dependencies, so a push must not
+  # depend on a host having built them. `AXEYUM_REQUIRE_EXTERNAL_SAT=1` turns
+  # absence into a failure on a host that is supposed to have them.
+  step_seconds "external SAT referee (ADR-1910)" ./scripts/check-external-sat-referee.sh
   # The WORKSPACE unit sweep (~40s warm): a wrong-unsat unit test
   # (int_mod_by_zero_underspecification, 52f3b1d1) shipped to main because a
   # lane ran targeted `--test <file>` + fuzzes but not `--lib` — the corpus

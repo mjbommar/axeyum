@@ -4,10 +4,11 @@
 //!
 //! This is the ADR-1701 slice-2 spike's gate-(b)-style arm. It exists because
 //! `crates/axeyum-bench/examples/gate_b_sweep.rs` — the tool that produced
-//! `bench-results/sat-core-gate-b-20260905/` — carries
-//! `required-features = ["batsat-reference"]` and runs `BatSat` alongside the
+//! `bench-results/sat-core-gate-b-20260905/` — used to carry
+//! `required-features = ["batsat-reference"]` and run `BatSat` alongside the
 //! native core, doubling the wall time of a before/after sweep on a corpus that
-//! mostly exhausts its budget. This one drives the native core alone, out of
+//! mostly exhausts its budget. ADR-1910 removed that arm and the gate with it,
+//! so the two now differ mainly in crate: this one drives the native core out of
 //! `axeyum-cnf` itself, so both arms of a before/after comparison build in
 //! seconds and the measured difference is the CNF layer and nothing else.
 //!

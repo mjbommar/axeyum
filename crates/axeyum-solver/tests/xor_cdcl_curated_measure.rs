@@ -1,39 +1,46 @@
 //! MEASUREMENT harness (not production wiring): does CDCL(XOR) decide the
-//! curated `QF_BV` multiplier-equivalence instances that plain batsat times out
-//! on?
+//! curated `QF_BV` multiplier-equivalence instances that the plain native CDCL
+//! core times out on?
 //!
 //! This is an `#[ignore]`-by-default integration test. It changes no library
 //! code, no dispatch, no trust ledger. It reproduces `sat_bv_backend`'s
 //! lowering→encoding path (parse SMT-LIB → `lower_terms` → `tseitin_encode` →
 //! `CnfFormula`) for a small SELECTED SUBSET of curated files and runs BOTH
-//! `solve_with_xor_cdcl` (the new search-only CDCL(XOR) core; CONFLICT-budgeted,
-//! not time-budgeted) and `solve_with_rustsat_batsat_timeout` (the production
-//! adapter) on the same `CnfFormula`, recording verdict, wall-clock time, and
+//! `solve_with_xor_cdcl` (the search-only CDCL(XOR) core; CONFLICT-budgeted,
+//! not time-budgeted) and `solve_with_native_core_timeout` (the shipping
+//! engine) on the same `CnfFormula`, recording verdict, wall-clock time, and
 //! CNF size. Where both reach a definite verdict it asserts they agree (a
 //! disagreement is a soundness bug to surface loudly).
+//!
+//! The comparator was the `rustsat-batsat` adapter until ADR-1910 removed it.
+//! Re-pointing at the native core is not a downgrade for THIS question: the
+//! question is whether CDCL(XOR) decides instances the SHIPPING engine cannot,
+//! and since ADR-1703 the shipping engine is the native core, not batsat. The
+//! old form was already asking about a solver no route used.
 //!
 //! Run it explicitly:
 //! ```sh
 //! cargo test -p axeyum-solver --test xor_cdcl_curated_measure -- --ignored --nocapture
 //! ```
-// ADR-1703: this harness times the CDCL(XOR) core against the RETIRED
-// `rustsat-batsat` adapter, so it needs `batsat-reference` as well as
-// `full`. Without both it compiles to ZERO tests and exits 0 -- confirm a
-// nonzero count before believing a pass.
-#![cfg(all(feature = "full", feature = "batsat-reference"))]
+// This file is `#![cfg(feature = "full")]`: without it the suite compiles to
+// ZERO tests and exits 0. Confirm a nonzero count before believing a pass.
+// (It also required `batsat-reference` until ADR-1910 -- a feature NOTHING set,
+// so this harness was uncompilable by every gate in the tree.)
+#![cfg(feature = "full")]
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use axeyum_bv::lower_terms;
 use axeyum_cnf::{
-    CnfFormula, SatResult, XorCdclResult, solve_with_rustsat_batsat_timeout, solve_with_xor_cdcl,
+    CnfFormula, SatResult, XorCdclResult, solve_with_native_core_timeout, solve_with_xor_cdcl,
     tseitin_encode,
 };
 
-/// Per-instance batsat wall-clock cap. The `xor_cdcl` core has no time budget
-/// (its `2M`-conflict budget bounds it), so only batsat gets a clock cap here.
-const BATSAT_TIMEOUT: Duration = Duration::from_secs(2);
+/// Per-instance wall-clock cap for the native core. The `xor_cdcl` core has no
+/// time budget (its `2M`-conflict budget bounds it), so only the native core
+/// gets a clock cap here.
+const NATIVE_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// A curated file plus the role it plays in the measurement.
 struct Pick {
@@ -47,7 +54,7 @@ struct Pick {
 /// easy-UNSAT controls. (Multiplier unknowns are the question; controls confirm
 /// both solvers agree on instances they both decide.)
 const PICKS: &[Pick] = &[
-    // --- multiplier-equivalence unknowns (batsat times out at 2 s) ----------
+    // --- multiplier-equivalence unknowns (the native core times out at 2 s) --
     Pick {
         stem: "brummayerbiere3__mulhs08",
         role: "mul-unknown (exp unsat)",
@@ -148,7 +155,7 @@ fn xor_verdict(r: &XorCdclResult) -> Verdict {
     }
 }
 
-fn batsat_verdict(r: &SatResult) -> Verdict {
+fn native_verdict(r: &SatResult) -> Verdict {
     match r {
         SatResult::Sat(_) => Verdict::Sat,
         SatResult::Unsat(_) => Verdict::Unsat,
@@ -158,23 +165,23 @@ fn batsat_verdict(r: &SatResult) -> Verdict {
 
 #[test]
 #[ignore = "measurement harness; run explicitly with --ignored --nocapture"]
-fn xor_cdcl_vs_batsat_on_curated_multipliers() {
+fn xor_cdcl_vs_native_core_on_curated_multipliers() {
     let dir = curated_dir();
 
     println!();
     println!(
-        "CDCL(XOR) vs batsat on curated QF_BV (xor_cdcl: 2M-CONFLICT budget, NOT time; \
-         batsat: {BATSAT_TIMEOUT:?} wall cap)"
+        "CDCL(XOR) vs the native core on curated QF_BV (xor_cdcl: 2M-CONFLICT budget, \
+         NOT time; native: {NATIVE_TIMEOUT:?} wall cap)"
     );
     println!("Tseitin CNF reproduced from sat_bv_backend's lowering path; no inprocessing.");
     println!();
     println!(
         "{:<34} {:<24} {:>7} {:>8}  {:>9} {:>9}  {:>9} {:>9}  new?",
-        "file", "role", "vars", "clauses", "batsat", "bat_ms", "xorcdcl", "xor_ms"
+        "file", "role", "vars", "clauses", "native", "nat_ms", "xorcdcl", "xor_ms"
     );
     println!("{}", "-".repeat(140));
 
-    let mut decided_by_xor_not_batsat: Vec<&str> = Vec::new();
+    let mut decided_by_xor_not_native: Vec<&str> = Vec::new();
     let mut disagreements: Vec<String> = Vec::new();
 
     for pick in PICKS {
@@ -188,12 +195,12 @@ fn xor_cdcl_vs_batsat_on_curated_multipliers() {
         let vars = formula.variable_count();
         let clauses = formula.clauses().len();
 
-        // batsat (time-budgeted)
+        // the native core (time-budgeted)
         let t0 = Instant::now();
-        let bat = solve_with_rustsat_batsat_timeout(&formula, Some(BATSAT_TIMEOUT))
-            .expect("batsat adapter should not error");
-        let bat_ms = t0.elapsed().as_secs_f64() * 1000.0;
-        let bat_v = batsat_verdict(&bat);
+        let nat = solve_with_native_core_timeout(&formula, Some(NATIVE_TIMEOUT))
+            .expect("the native core should not error");
+        let nat_ms = t0.elapsed().as_secs_f64() * 1000.0;
+        let nat_v = native_verdict(&nat);
 
         // xor_cdcl (conflict-budgeted; its "time" is whatever 2M conflicts or a
         // decision takes — reported honestly, it is NOT a wall-clock budget)
@@ -203,19 +210,19 @@ fn xor_cdcl_vs_batsat_on_curated_multipliers() {
         let xor_v = xor_verdict(&xor);
 
         // Soundness cross-check: where both are definite, they MUST agree.
-        if bat_v != Verdict::Unknown && xor_v != Verdict::Unknown && bat_v != xor_v {
+        if nat_v != Verdict::Unknown && xor_v != Verdict::Unknown && nat_v != xor_v {
             disagreements.push(format!(
-                "{}: batsat={} xor_cdcl={}",
+                "{}: native={} xor_cdcl={}",
                 pick.stem,
-                bat_v.label(),
+                nat_v.label(),
                 xor_v.label()
             ));
         }
 
-        // Did xor_cdcl decide something batsat did not (within these budgets)?
-        let new = xor_v != Verdict::Unknown && bat_v == Verdict::Unknown;
+        // Did xor_cdcl decide something the native core did not (within budget)?
+        let new = xor_v != Verdict::Unknown && nat_v == Verdict::Unknown;
         if new {
-            decided_by_xor_not_batsat.push(pick.stem);
+            decided_by_xor_not_native.push(pick.stem);
         }
 
         println!(
@@ -224,8 +231,8 @@ fn xor_cdcl_vs_batsat_on_curated_multipliers() {
             pick.role,
             vars,
             clauses,
-            bat_v.label(),
-            bat_ms,
+            nat_v.label(),
+            nat_ms,
             xor_v.label(),
             xor_ms,
             if new { "YES <-- xor only" } else { "" }
@@ -235,16 +242,16 @@ fn xor_cdcl_vs_batsat_on_curated_multipliers() {
     println!("{}", "-".repeat(140));
     println!();
     println!("ANSWER:");
-    if decided_by_xor_not_batsat.is_empty() {
+    if decided_by_xor_not_native.is_empty() {
         println!(
-            "  CDCL(XOR) decided NO curated multiplier unknown that batsat could not \
-             (within these budgets)."
+            "  CDCL(XOR) decided NO curated multiplier unknown that the native core could \
+             not (within these budgets)."
         );
     } else {
         println!(
-            "  CDCL(XOR) decided {} instance(s) batsat did not: {}",
-            decided_by_xor_not_batsat.len(),
-            decided_by_xor_not_batsat.join(", ")
+            "  CDCL(XOR) decided {} instance(s) the native core did not: {}",
+            decided_by_xor_not_native.len(),
+            decided_by_xor_not_native.join(", ")
         );
     }
     println!();

@@ -11,8 +11,11 @@ failure that motivated this script:
     its cooperative deadline poll" (d599b682f, 2026-08-08). ADR-1703
     (317be80fe, 2026-09-05) took BatSat off every shipping path: IncrementalSat
     -- the exact object BoolSkeletonSolver holds -- is now NativeIncrementalCdcl,
-    and BatSat survives only behind the non-default `batsat-reference` feature
-    as a measurement oracle.
+    and BatSat survived only behind the non-default `batsat-reference` feature
+    as a measurement oracle. ADR-1910 (2026-09-10) removed that feature and the
+    three crates too, so BatSat is now nowhere in the tree at all -- which makes
+    the founding case STRONGER, not stale: a `Basis::LiveSymbol` naming batsat
+    would now resolve to nothing, and this checker would say so.
 
 Not one line of `dpll_lia.rs` changed, so no `rests_on` dependency could fire.
 The justification simply stopped describing anything, and nothing noticed for

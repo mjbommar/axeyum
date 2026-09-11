@@ -1484,6 +1484,22 @@ step claims-dashboard python3 scripts/gen-claims-dashboard.py --check
 # cross-checking anything. The end-to-end half against the real binary skips
 # when the gitignored clone is absent.
 step drat-trim-exit-contract python3 -m unittest scripts.tests.test_drat_trim_exit_contract
+# ADR-1910: the EXTERNAL SAT referee -- the native CDCL core adjudicated by
+# CaDiCaL/Kissat reading the DIMACS TEXT we wrote. It replaces the
+# `rustsat-batsat` differential removed with the dependency in ADR-1703 slice 2,
+# and is strictly stronger: the old one handed batsat the same `CnfFormula` our
+# own parser built, so a `parse_dimacs`/`to_dimacs` defect was invisible to it.
+# Measured with two mutations (writer, parser): batsat differential 3/3 PASS,
+# this suite 3/4 FAIL on each.
+#
+# It is HERE, and in the `justfile` and `hooks/pre-push`, because the referee it
+# replaces was in none of the three -- measured with positive controls -- and so
+# had never adjudicated anything automatically. The wrapper prints a loud SKIP
+# (exit 0) when no binary is present rather than a green line, and re-derives
+# the adjudicated count from the suite's own reports instead of trusting the
+# exit status. `scripts/provision-external-sat-referee.sh` builds the binaries;
+# they are NOT Cargo dependencies.
+step external-sat-referee scripts/check-external-sat-referee.sh
 step rules-as-code-generate python3 scripts/gen-rules-as-code-dashboard.py
 step rules-as-code-validate python3 scripts/validate-rules-as-code.py
 step rules-as-code-query-summary python3 scripts/query-rules-as-code.py summary

@@ -12,22 +12,18 @@ categories.workspace = true
 publish = false
 
 [features]
+# ADR-1910 removed `batsat-reference` and the `batsat` / `rustsat` /
+# `rustsat-batsat` dependencies it gated -- ADR-1703's deferred slice 2. This
+# crate now declares NO optional solver dependency at all. The differential
+# referee role moved to `tests/external_sat_referee.rs`, which drives an
+# external CaDiCaL / Kissat BINARY over DIMACS text: no Cargo dependency, and
+# strictly stronger, because an in-process referee handed our own `CnfFormula`
+# could not see a defect in `to_dimacs` or `parse_dimacs` and an external binary
+# reading the text can.
 default = []
-# ADR-1703: the `rustsat-batsat` adapter is retired as a shipping engine and
-# kept ONLY as a differential oracle, the role ADR-0002 gives Z3. It is not in
-# `default`, so the default dependency graph contains none of the three crates
-# below -- check with `cargo tree -e normal -p axeyum-cnf`. Slice 2 of ADR-1703
-# removes the feature and `src/batsat_reference.rs` together.
-#
-# A suite behind this feature compiles to ZERO tests without it and exits 0, the
-# same trap as `--features z3`. Always confirm a NONZERO test count.
-batsat-reference = ["dep:batsat", "dep:rustsat", "dep:rustsat-batsat"]
 
 [dependencies]
 axeyum-aig.workspace = true
-batsat = { workspace = true, optional = true }
-rustsat = { workspace = true, optional = true }
-rustsat-batsat = { workspace = true, optional = true }
 
 # Browser-compatible monotonic clock for timeouts/telemetry (ADR-0017); only on
 # wasm32, where `std::time::Instant` has no clock in the browser.

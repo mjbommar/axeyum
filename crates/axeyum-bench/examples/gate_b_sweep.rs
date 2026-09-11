@@ -1,43 +1,51 @@
-//! Gate (b) measurement: does the best pure-Rust SAT adapter (BatSat) or the
-//! native proof-producing CDCL core (`solve_with_drat_proof`) show a
-//! consistent material gap to CaDiCaL/Kissat on Axeyum-generated CNF?
+//! Gate (b) measurement: does the native proof-producing CDCL core
+//! (`solve_with_drat_proof`) show a consistent material gap to `CaDiCaL`/`Kissat`
+//! on Axeyum-generated CNF?
+//!
+//! # The BatSat column is gone (ADR-1910)
+//!
+//! This harness produced `bench-results/sat-core-gate-b-20260905/`, the
+//! four-engine artifact ADR-1703 rests on. That artifact is a recorded
+//! measurement and is NOT edited or regenerated -- it keeps its BatSat column
+//! forever, because that is what was measured on that day.
+//!
+//! What changed is this tool going forward. ADR-1910 removed the
+//! `rustsat-batsat` dependency, so the in-process BatSat arm went with it. The
+//! `CaDiCaL` and `Kissat` arms were NEVER in-process: they are external binaries
+//! whose stdout is captured separately and checked through the `verify`
+//! subcommand below. So the harness keeps every arm it had except one, the
+//! `required-features` gate is gone, and it now builds on a default
+//! `cargo check --all-targets` instead of being skipped by it.
 //!
 //! Two subcommands, deliberately narrow:
 //!
-//! - `sweep <cnf_dir> <out.tsv> <budget_secs> [max_files]` runs BatSat
-//!   ([`solve_with_rustsat_batsat_timeout`]) and the native core
+//! - `sweep <cnf_dir> <out.tsv> <budget_secs> [max_files]` runs the native core
 //!   ([`solve_with_drat_proof_within`]) over `*.cnf` files in `cnf_dir`, each
 //!   under the same per-file wall-clock budget, and **appends** one row per
 //!   file to `out.tsv`. A file whose name already appears in `out.tsv` is
 //!   skipped, so the same command can be re-run in bounded batches
 //!   (`max_files` caps how many new files this invocation processes) until
-//!   the directory is fully covered — a long sweep becomes a sequence of
+//!   the directory is fully covered -- a long sweep becomes a sequence of
 //!   short, resumable, foreground tool calls instead of one process that
 //!   outruns any single call's timeout. A `sat` verdict is checked against
-//!   the formula with [`CnfFormula::evaluate`] before being recorded — an
-//!   invalid model is a hard error, not a silent `sat`. The two engines'
-//!   verdicts are cross-checked against each other; a disagreement (one says
-//!   `sat`, the other `unsat`) is printed to stderr and turns the process
-//!   exit into a failure, since that is a P0 soundness finding, not a
-//!   performance number.
+//!   the formula with [`CnfFormula::evaluate`] before being recorded -- an
+//!   invalid model is a hard error, not a silent `sat`.
+//!
+//!   Resuming REFUSES to append to a TSV whose header is not this tool's
+//!   current header. The old four-engine files have a different column set, and
+//!   appending single-engine rows to one would produce a file where the same
+//!   column means two things in different rows -- a corrupted measurement that
+//!   still parses.
 //! - `verify <cnf_file> <assignment_file>` evaluates a DIMACS solution line
 //!   (`v <lit> <lit> ... 0`, possibly spread across multiple `v` lines, as
-//!   CaDiCaL/Kissat emit it) captured from an external solver's stdout
+//!   `CaDiCaL`/`Kissat` emit it) captured from an external solver's stdout
 //!   against the same formula, through the same evaluator, so external `sat`
 //!   answers are checked by the identical trusted code path as the internal
-//!   engines. Prints `OK` (exit 0) or `FAIL: <reason>` (exit 1).
+//!   engine. Prints `OK` (exit 0) or `FAIL: <reason>` (exit 1).
 //!
-//! Not part of the solve path — a one-shot measurement tool for the SAT-core
+//! Not part of the solve path -- a one-shot measurement tool for the SAT-core
 //! priority gate (b) in
 //! `docs/research/08-planning/benchmarking-and-performance-methodology.md`.
-//!
-//! # Requires `--features batsat-reference`
-//!
-//! ADR-1703 retired the `rustsat-batsat` adapter as an engine and put it behind
-//! a non-default feature, so this example carries
-//! `required-features = ["batsat-reference"]` in `Cargo.toml`. Without the
-//! feature `cargo check --all-targets` **skips** this target rather than
-//! failing on an unresolved import; with it, the example builds unchanged.
 #![allow(clippy::doc_markdown)]
 
 use std::fs;
@@ -46,8 +54,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use axeyum_cnf::{
-    CnfAssignment, CnfFormula, ProofSolveOutcome, SatResult, parse_dimacs,
-    solve_with_drat_proof_within, solve_with_rustsat_batsat_timeout,
+    CnfAssignment, CnfFormula, ProofSolveOutcome, parse_dimacs, solve_with_drat_proof_within,
 };
 
 fn read_cnf(path: &Path) -> Result<CnfFormula, String> {
@@ -63,41 +70,6 @@ struct EngineRow {
     wall_ms: f64,
     timed_out: bool,
     model_valid: Option<bool>,
-}
-
-fn run_batsat(formula: &CnfFormula, budget: Duration) -> EngineRow {
-    let started = Instant::now();
-    let result = solve_with_rustsat_batsat_timeout(formula, Some(budget));
-    let wall_ms = started.elapsed().as_secs_f64() * 1000.0;
-    match result {
-        Ok(SatResult::Sat(model)) => EngineRow {
-            verdict: "sat",
-            wall_ms,
-            timed_out: false,
-            model_valid: Some(model.satisfies(formula).unwrap_or(false)),
-        },
-        Ok(SatResult::Unsat(_)) => EngineRow {
-            verdict: "unsat",
-            wall_ms,
-            timed_out: false,
-            model_valid: None,
-        },
-        Ok(SatResult::Unknown(_)) => EngineRow {
-            verdict: "unknown",
-            wall_ms,
-            timed_out: true,
-            model_valid: None,
-        },
-        Err(error) => {
-            eprintln!("batsat error: {error}");
-            EngineRow {
-                verdict: "error",
-                wall_ms,
-                timed_out: false,
-                model_valid: None,
-            }
-        }
-    }
 }
 
 fn run_native(formula: &CnfFormula, budget: Duration) -> EngineRow {
@@ -186,8 +158,13 @@ fn parse_sweep_args(
     ))
 }
 
-/// Runs both engines on one CNF file, appends its row to `file`, and returns
-/// any disagreement/invalid-model messages found for this file.
+/// The TSV header this tool writes and will resume. Changing it is a schema
+/// change: `cmd_sweep` refuses to append to a file whose first line differs.
+const SWEEP_HEADER: &str =
+    "file\tvariables\tclauses\tnative_verdict\tnative_ms\tnative_timed_out\tnative_model_valid";
+
+/// Runs the native core on one CNF file, appends its row to `file`, and returns
+/// any invalid-model messages found for this file.
 fn process_one_file(
     path: &Path,
     name: &str,
@@ -202,40 +179,23 @@ fn process_one_file(
             return Ok(findings);
         }
     };
-    let batsat = run_batsat(&formula, budget);
     let native = run_native(&formula, budget);
 
-    if matches!(
-        (batsat.verdict, native.verdict),
-        ("sat", "unsat") | ("unsat", "sat")
-    ) {
-        let msg = format!(
-            "DISAGREEMENT on {name}: batsat={} native={}",
-            batsat.verdict, native.verdict
-        );
+    // A `sat` whose model does not satisfy is a P0 finding, not a timing row.
+    // This is the check that survives the loss of the cross-engine arm, and it
+    // is decisive rather than corroborative: it evaluates the model against the
+    // formula instead of asking a second engine for its opinion.
+    if native.verdict == "sat" && native.model_valid != Some(true) {
+        let msg = format!("native sat with invalid model on {name}");
         eprintln!("  !!! {msg}");
         findings.push(msg);
-    }
-    for (engine, row) in [("batsat", &batsat), ("native", &native)] {
-        if row.verdict == "sat" && row.model_valid != Some(true) {
-            let msg = format!("{engine} sat with invalid model on {name}");
-            eprintln!("  !!! {msg}");
-            findings.push(msg);
-        }
     }
 
     writeln!(
         file,
-        "{name}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+        "{name}\t{}\t{}\t{}\t{}\t{}\t{}",
         formula.variable_count(),
         formula.clauses().len(),
-        batsat.verdict,
-        batsat.wall_ms,
-        batsat.timed_out,
-        batsat
-            .model_valid
-            .map(|v| v.to_string())
-            .unwrap_or_default(),
         native.verdict,
         native.wall_ms,
         native.timed_out,
@@ -264,6 +224,24 @@ fn cmd_sweep(args: &[String]) -> Result<(), String> {
     }
 
     let header_needed = !out_path.exists();
+    if !header_needed {
+        // Refuse to append this tool's columns to a file written by a different
+        // column set -- in particular the four-engine files this harness wrote
+        // before ADR-1910 removed the BatSat arm. Those are recorded artifacts;
+        // appending to one silently produces a file where column 4 means
+        // `batsat_verdict` in some rows and `native_verdict` in others, and it
+        // still parses. Write a new file instead.
+        let existing =
+            fs::read_to_string(&out_path).map_err(|error| format!("read {out}: {error}"))?;
+        let first = existing.lines().next().unwrap_or_default();
+        if !first.is_empty() && first != SWEEP_HEADER {
+            return Err(format!(
+                "{out} has a different header and was written by another column set \
+                 (probably the pre-ADR-1910 four-engine sweep). Refusing to append.\n    \
+                 found:    {first}\n    expected: {SWEEP_HEADER}"
+            ));
+        }
+    }
     let done = read_done_set(&out_path);
     let mut remaining: Vec<PathBuf> = paths
         .into_iter()
@@ -289,11 +267,7 @@ fn cmd_sweep(args: &[String]) -> Result<(), String> {
         .open(&out_path)
         .map_err(|error| format!("open {out}: {error}"))?;
     if header_needed {
-        writeln!(
-            file,
-            "file\tvariables\tclauses\tbatsat_verdict\tbatsat_ms\tbatsat_timed_out\tbatsat_model_valid\tnative_verdict\tnative_ms\tnative_timed_out\tnative_model_valid"
-        )
-        .map_err(|error| format!("write header {out}: {error}"))?;
+        writeln!(file, "{SWEEP_HEADER}").map_err(|error| format!("write header {out}: {error}"))?;
         file.flush().map_err(|error| error.to_string())?;
     }
 
@@ -310,11 +284,11 @@ fn cmd_sweep(args: &[String]) -> Result<(), String> {
 
     if !disagreements.is_empty() {
         eprintln!(
-            "\n*** {} DISAGREEMENT(S)/INVALID MODEL(S) in this batch — see stderr above ***",
+            "\n*** {} INVALID MODEL(S) in this batch — see stderr above ***",
             disagreements.len()
         );
         return Err(format!(
-            "{} disagreement(s)/invalid model(s), see stderr",
+            "{} invalid model(s), see stderr",
             disagreements.len()
         ));
     }
