@@ -980,6 +980,14 @@ impl CdclT {
     }
 
     /// Number of literals assigned by theory propagation during the last solve.
+    ///
+    /// `#[cfg(test)]` since ADR-1908. Its last shipping consumers were
+    /// `uflra_online` / `uflia_online`, which read it into the `&mut usize`
+    /// behind `check_qf_uf{lra,lia}_boolean_prop_metrics`; both moved to
+    /// `native_cdclt::solve_native_counted`, which returns the same number.
+    /// Every remaining caller is a unit test of this driver in its demoted role
+    /// as the native core's differential oracle.
+    #[cfg(test)]
     pub(crate) fn theory_propagations(&self) -> usize {
         self.theory_propagations
     }

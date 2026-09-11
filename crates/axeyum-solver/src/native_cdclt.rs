@@ -10,16 +10,24 @@
 //! with no trusted step: the theory reasoning is trusted and uncounted.
 //!
 //! This module is the bridge. It is deliberately only the *one-shot* half of
-//! the protocol, because that is all but one route needs:
+//! the protocol:
 //!
-//! | route | protocol |
-//! |---|---|
-//! | `dl_online`, `lra_theory`, `lia_theory`, `euf_egraph`, `string_theory`, `uflra_online`, `uflia_online` | `CdclT::new` then **one** `solve` |
-//! | `ufbv_online` | `with_inactive_variables`, `add_theory_variable`, `add_permanent_clause`, resumed `solve` |
+//! | route | protocol | engine |
+//! |---|---|---|
+//! | `dl_online`, `lra_theory`, `lia_theory`, `euf_egraph`, `string_theory`, `uflra_online`, `uflia_online` | `CdclT::new` then **one** `solve` | **migrated** |
+//! | `qinst_egraph` | incremental, but **root-only**: `backtrack_to_root` → insert → resume | still `CdclT` |
+//! | `ufbv_online` | incremental, **mid-search**: `with_inactive_variables`, `add_theory_variable`, `add_permanent_clause` with a full trail, resumed `solve` | still `CdclT` |
 //!
-//! So the incremental refinement protocol — dormant variables, permanent
-//! clauses, a resumed search retaining the learned database — has exactly one
-//! client, and porting it is a separate slice. Everything else can move now.
+//! **This table was wrong when it was written and is corrected here.** It (and
+//! the scoping commit `24cb85901`) named `ufbv_online` as the *sole* client of
+//! the incremental protocol; `qinst_egraph` was a second one from the same
+//! commit and appeared in neither. The two are not one migration: `qinst_egraph`
+//! inserts at level zero, which is already `NativeIncrementalCdcl`'s
+//! between-solves discipline, while `ufbv_online` inserts with a full trail,
+//! which `add_input_clause`'s `debug_assert!(self.trail.is_empty())` forbids.
+//! Both are blocked on the same missing feature — a public constructor pairing
+//! a `NativeTheory` with a persistent `Cdcl` — and `ufbv_online` additionally
+//! on two the core has no counterpart for. ADR-1908 decides the order.
 //!
 //! # The two literal conventions, negated once here
 //!
@@ -540,6 +548,34 @@ pub(crate) fn solve_native<T: TheorySolver>(
     deadline: Option<Instant>,
     theory: &mut T,
 ) -> NativeSolveOutcome {
+    solve_native_counted(var_count, theory_atom_count, clauses, deadline, theory).0
+}
+
+/// [`solve_native`] plus the theory-propagation count — the one driver
+/// statistic a route hands back to its own callers rather than only printing
+/// under `--trace`.
+///
+/// `uflra_online` / `uflia_online` publish it through the public
+/// `check_qf_uf{lra,lia}_boolean_prop_metrics`, which is why it is a return
+/// value here and not just a `TheoryLayerStats` field: those routes are called
+/// on a DEFAULT run with no collection enabled, and
+/// `CdclT::theory_propagations` — the accessor they migrated off — counts
+/// unconditionally. The native core therefore counts this one field
+/// unconditionally too (see `NativeLayerStats::theory_propagations` and
+/// ADR-1908); every other counter in that struct still reports zero unless
+/// collection is on, and a caller that wants those still asks for `--trace`.
+///
+/// The count is returned on **every** outcome, `Unknown` included, because
+/// `CdclT`'s callers read it before matching on the verdict
+/// (`*count = solver.theory_propagations()` runs first): a search that timed
+/// out still propagated whatever it propagated.
+pub(crate) fn solve_native_counted<T: TheorySolver>(
+    var_count: usize,
+    theory_atom_count: usize,
+    clauses: &[Vec<Lit>],
+    deadline: Option<Instant>,
+    theory: &mut T,
+) -> (NativeSolveOutcome, usize) {
     // `CdclT::solve_inner` tests its deadline at the TOP of the main loop, so an
     // already-exhausted budget returns `Outcome::Unknown` having propagated
     // nothing. The native core checks less eagerly, and the difference is
@@ -552,7 +588,8 @@ pub(crate) fn solve_native<T: TheorySolver>(
     // here keeps the engine swap a swap: the whole point is that no verdict and
     // no give-up reason moves.
     if deadline.is_some_and(|at| Instant::now() >= at) {
-        return NativeSolveOutcome::Unknown;
+        // Nothing ran, so nothing propagated: `0` here is a measured zero.
+        return (NativeSolveOutcome::Unknown, 0);
     }
     let mut formula = CnfFormula::new(var_count);
     let mut occurring = vec![false; var_count];
@@ -650,7 +687,13 @@ pub(crate) fn solve_native<T: TheorySolver>(
             adapter.theory.engine_counters(),
         ));
     }
-    match outcome {
+    // Read before the match so every arm reports the same number, exactly as
+    // `CdclT`'s callers do. `usize` at this boundary because that is what
+    // `CdclT::theory_propagations` returns and what the routes' `&mut usize`
+    // out-parameters expect.
+    let theory_propagations =
+        usize::try_from(native_stats.theory_propagations).unwrap_or(usize::MAX);
+    let verdict = match outcome {
         TheorySolveOutcome::Sat(assignment) => NativeSolveOutcome::Sat(NativeModel {
             assignment,
             occurring,
@@ -667,7 +710,8 @@ pub(crate) fn solve_native<T: TheorySolver>(
         TheorySolveOutcome::ResourceOut | TheorySolveOutcome::Interrupted => {
             NativeSolveOutcome::Unknown
         }
-    }
+    };
+    (verdict, theory_propagations)
 }
 
 /// The CDCL(T) search profile for this process, from `AXEYUM_SEARCH_PROFILE`.

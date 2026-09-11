@@ -1007,6 +1007,11 @@ pub fn solve_with_drat_proof_streaming_with_progress(
 /// extra clock, so the shipping `NullTheory` trajectory and its DRAT stream are
 /// untouched.
 ///
+/// **`theory_propagations` is the one exception and is always counted** — it is
+/// a route-visible return value, not only a trace field (see its own doc and
+/// ADR-1908). It is a `u64` increment, not a clock read, so the "no extra
+/// clock" property above is unaffected.
+///
 /// The theory-side engine counters (`simplex_pivots`, …) are deliberately
 /// absent: they belong to the `TheorySolver` implementation, not to the driver,
 /// and the solver-side adapter fills them from `TheorySolver::engine_counters`
@@ -1035,6 +1040,14 @@ pub struct NativeLayerStats {
     /// `final_check` conflict) rather than from an input or learned clause.
     pub theory_conflicts: u64,
     /// Literals the driver assigned on the theory's say-so.
+    ///
+    /// **The one field here that is counted whether or not
+    /// `Cdcl::collect_layer_stats` is set.** `uflra_online` / `uflia_online`
+    /// return it to callers through
+    /// `check_qf_uf{lra,lia}_boolean_prop_metrics` on a default run, and
+    /// `CdclT` — the driver they migrated off — counts it unconditionally, so
+    /// gating it would have turned a live number into a measured zero at the
+    /// moment of the engine swap. ADR-1908.
     pub theory_propagations: u64,
     /// Search decisions taken (heap picks, not implied assignments).
     pub decisions: u64,
@@ -1369,7 +1382,8 @@ pub fn solve_with_theory_and_drat_proof<T: NativeTheory>(
 ///
 /// Returns the outcome and the [`NativeLayerStats`] the run accumulated (all
 /// zero unless `options.collect_layer_stats` is set -- an unmeasured run is
-/// never a measured zero).
+/// never a measured zero -- with the documented exception of
+/// `theory_propagations`, which is always counted).
 pub fn solve_with_theory_and_drat_proof_with_options<T: NativeTheory>(
     formula: &CnfFormula,
     theory: &mut T,
@@ -3103,6 +3117,15 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// honest reading: nothing was measured. `restarts` is derived from
     /// `restart_count`, which starts at 1 and advances once per completed
     /// restart — the same `restart_index - 1` `CdclT::restarts` computes.
+    ///
+    /// **One documented exception: `theory_propagations` is always counted.**
+    /// It is the one field here that is also a route-visible return value —
+    /// `uflra_online` / `uflia_online` publish it through
+    /// `check_qf_uf{lra,lia}_boolean_prop_metrics` on a default run — and
+    /// `CdclT` counts it unconditionally, so gating it would have made those
+    /// routes report a measured zero on migrating. See the increment site and
+    /// ADR-1908. Every other counter and every `Duration` here still obeys
+    /// `collect_layer_stats`.
     fn native_layer_stats(&self) -> NativeLayerStats {
         NativeLayerStats {
             boolean_propagate: self.time_boolean_propagate,
@@ -4989,9 +5012,22 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                         }
                     };
                     self.enqueue(lit, reason);
-                    if self.collect_layer_stats {
-                        self.stat_theory_propagations += 1;
-                    }
+                    // UNGATED, unlike every other counter in this struct, and
+                    // deliberately: `theory_propagations` is not only a
+                    // `--trace` field here, it is a route-visible RETURN VALUE.
+                    // `CdclT::theory_propagations` counts unconditionally
+                    // (`cdclt.rs:1442`), and `uflra_online` / `uflia_online`
+                    // hand that number back through the public
+                    // `check_qf_uf{lra,lia}_boolean_prop_metrics` on a DEFAULT
+                    // run, with no collection enabled. Leaving the increment
+                    // behind `collect_layer_stats` would make those routes
+                    // report a measured `0` the moment they moved onto this
+                    // core -- the `cb5cd9090` shape, where an absent number
+                    // reads as a settled one. The cost is one `u64` increment
+                    // per theory propagation, not a clock read: every other
+                    // guard in this file exists to skip an `Instant::now()`,
+                    // and this one has nothing to skip. ADR-1908.
+                    self.stat_theory_propagations += 1;
                     propagated = true;
                 }
             }
@@ -8571,17 +8607,32 @@ mod layer_stats_tests {
         );
     }
 
-    /// An **unmeasured** run reports all zeros, so a caller can never mistake
-    /// "collection was off" for "the stage cost nothing". The untraced entry
-    /// point is the one every shipping route uses; if it accumulated counters
-    /// silently, the zero-vs-absent distinction would be gone and so would the
-    /// claim that a default run reads no clock.
+    /// An **unmeasured** run reports all zeros *except* `theory_propagations`,
+    /// so a caller can never mistake "collection was off" for "the stage cost
+    /// nothing". The untraced entry point is the one every shipping route uses;
+    /// if it accumulated the timed counters silently, the zero-vs-absent
+    /// distinction would be gone and so would the claim that a default run
+    /// reads no clock.
+    ///
+    /// **The single exception is checked here, in both directions.**
+    /// `theory_propagations` is a route-visible return value —
+    /// `uflra_online` / `uflia_online` publish it through
+    /// `check_qf_uf{lra,lia}_boolean_prop_metrics` on a default run, and the
+    /// `CdclT` driver they migrated off counted it unconditionally (ADR-1908).
+    /// So this test asserts it is NONZERO here while every other field is
+    /// `Default`. That makes it discriminating twice over: re-gating the
+    /// increment fails the nonzero assertion, and ungating any *other* counter
+    /// or `Duration` fails the field-by-field comparison below.
     #[test]
-    fn an_untraced_solve_reports_the_all_zero_snapshot() {
+    fn an_untraced_solve_is_all_zero_except_the_route_visible_propagation_count() {
         // The traced arm proves these same counters are nonzero on this exact
         // fixture, so the control below is live and not vacuous.
         let (_, traced_stats) = traced();
         assert!(traced_stats.decisions > 0, "{traced_stats:?}");
+        assert!(
+            traced_stats.theory_propagations > 0,
+            "the fixture must propagate for the exception below to be tested: {traced_stats:?}"
+        );
         let mut untraced_theory = Refuter::new(4);
         let (outcome, untraced_stats) = solve_with_theory_and_drat_proof_impl(
             &fixture(),
@@ -8595,10 +8646,24 @@ mod layer_stats_tests {
             matches!(outcome, super::TheorySolveOutcome::Unsat(Some(_))),
             "{outcome:?}"
         );
+        assert!(
+            untraced_stats.theory_propagations > 0,
+            "`theory_propagations` is a route-visible return value and is counted \
+             whether or not collection is on -- gating it turns a live number into a \
+             measured zero the moment a route swaps engines: {untraced_stats:?}"
+        );
+        // Everything else, field by field against `Default`. Written as one
+        // comparison over a copy with the exception zeroed, so a field ADDED to
+        // `NativeLayerStats` later is covered without this test being edited.
+        let others = NativeLayerStats {
+            theory_propagations: 0,
+            ..untraced_stats
+        };
         assert_eq!(
-            untraced_stats,
+            others,
             NativeLayerStats::default(),
-            "an unmeasured run must be all-zero, not a partial measurement"
+            "an unmeasured run must be all-zero apart from `theory_propagations`, \
+             not a partial measurement"
         );
     }
 
