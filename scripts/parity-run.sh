@@ -372,6 +372,10 @@ declared_status() {
 # discarded on return. The first version of this used a global and silently scored
 # 0/5 certified on a smoke list whose files each printed `certified=1`.
 evidence_sink="$(mktemp)"
+# Every non-verdict, with WHY -- see run_one. Survives the run so the reason a
+# file scored `unsolved` is recoverable afterwards instead of being inferred.
+nonverdict_sink="${PARITY_NONVERDICT_LOG:-bench-results/parity-nonverdicts.tsv}"
+mkdir -p "$(dirname "$nonverdict_sink")"
 trap 'rm -f "$evidence_sink"' EXIT
 #
 # `$3` selects the EVIDENCE run: an EXTRA axeyum invocation, at its own budget,
@@ -405,10 +409,40 @@ run_one() {
   esac
   # SCORED PATH — byte-identical to what every recorded baseline measured, and
   # it is what BOTH solvers take even when evidence mode is on.
+  #
+  # WHY THE EXIT STATUS IS READ HERE. Until 2026-09-11 this ran the solver in a
+  # pipeline, sent stderr to /dev/null, and printed `unsolved` for anything that
+  # was not `sat`/`unsat`. Four different outcomes collapsed into that one word:
+  # a reasoned `unknown`, a `timeout` kill, an OOM **abort**, and a crash. On
+  # `QF_ABV/wchains140se.smt2` the solver dies with "memory allocation of
+  # 127632960 bytes failed" under the 8 GiB `ulimit -v` -- it never reaches its
+  # own reporting path, so no `; give-up` line exists to find, and the board
+  # recorded it identically to a file we thought about and declined. 7 of 14
+  # traced non-verdicts were this. Instrumentation cannot log through SIGABRT;
+  # the RUNNER has to notice. The scored STRING is unchanged (`sat`/`unsat`/
+  # `unsolved`), so every recorded baseline stays comparable -- only the sidecar
+  # is new.
   if [[ "$mode" != "evidence" ]]; then
-    verdict=$(MEM_LIMIT_GB="$mem_gb" timeout "$((b + 5))" \
-              "${pre[@]}" ./scripts/mem-run.sh "${cmd[@]}" 2>/dev/null \
-              | grep -oE '^(sat|unsat)$' | tail -1)
+    local out rc errf
+    errf="$(mktemp)"
+    out=$(MEM_LIMIT_GB="$mem_gb" timeout "$((b + 5))" \
+          "${pre[@]}" ./scripts/mem-run.sh "${cmd[@]}" 2>"$errf")
+    rc=$?
+    verdict=$(printf '%s\n' "$out" | grep -oE '^(sat|unsat)$' | tail -1)
+    if [[ -z "$verdict" ]]; then
+      local why
+      case "$rc" in
+        0)   why=unknown ;;
+        124) why=timeout ;;
+        134) why=abort-SIGABRT ;;
+        137) why=killed-SIGKILL ;;
+        139) why=crash-SIGSEGV ;;
+        *)   if (( rc > 128 )); then why="signal-$((rc - 128))"; else why="exit-$rc"; fi ;;
+      esac
+      printf '%s\t%s\t%s\t%s\n' "$(basename "$bin")" "$file" "$why" \
+             "$(head -c 200 "$errf" | tr '\n' ' ')" >> "$nonverdict_sink"
+    fi
+    rm -f "$errf"
     echo "${verdict:-unsolved}"
     return
   fi
