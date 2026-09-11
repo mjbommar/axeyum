@@ -335,6 +335,17 @@ impl<T: NativeTheory> NativeIncrementalCdcl<T> {
     /// Only meaningful after a solve returned
     /// [`IncrementalSolveOutcome::Unsat`] -- an `unsat` *under assumptions*
     /// derives no empty clause and is not a refutation at all.
+    ///
+    /// # Panics
+    ///
+    /// Cannot panic in practice, and the `expect` is deliberate rather than a
+    /// silent fallback: a retained clause is retained by
+    /// [`NativeIncrementalCdcl::add_clause`], which grows the variable
+    /// namespace to cover its own literals first, so every retained clause is
+    /// within [`NativeIncrementalCdcl::variable_count`] by construction. If
+    /// that ever stopped holding, the artifact would be naming a formula it
+    /// does not have, which must fail loudly rather than produce a refutation
+    /// of the wrong CNF.
     #[must_use]
     pub fn theory_refutation(&self) -> Option<TheoryRefutation> {
         let clauses = self.retained_cnf.as_ref()?;
@@ -1533,6 +1544,126 @@ mod warm_theory {
             theory.asserts
         );
         assert_eq!(theory.depth, 0, "balanced after three solves");
+    }
+
+    /// A theory that registers `batch` fresh atoms the first time it is asked
+    /// and none afterwards, recording every variable it is asserted about.
+    ///
+    /// Dynamic atom registration is the one piece of theory state that must
+    /// NOT be undone at a solve boundary, so it is the direct test of the
+    /// registration-versus-assertions split the per-solve epoch rests on.
+    #[derive(Debug)]
+    struct RegisteringTheory {
+        batch: usize,
+        registered: bool,
+        seen_vars: Vec<usize>,
+        depth: isize,
+    }
+
+    impl NativeTheory for RegisteringTheory {
+        fn assert(&mut self, var: usize, _value: bool) -> Result<(), Vec<CnfLit>> {
+            if !self.seen_vars.contains(&var) {
+                self.seen_vars.push(var);
+            }
+            Ok(())
+        }
+
+        fn push(&mut self) {
+            self.depth += 1;
+        }
+
+        fn pop(&mut self) {
+            self.depth -= 1;
+        }
+
+        fn propagate_into(&mut self, _queue: &mut PropagationQueue) {}
+
+        fn take_new_atoms(&mut self) -> usize {
+            if self.registered {
+                return 0;
+            }
+            self.registered = true;
+            self.batch
+        }
+    }
+
+    /// Atom registration survives a solve boundary — it is the half of the
+    /// theory's state the epoch must NOT undo — and the core appends the new
+    /// variables at its **current** variable count.
+    ///
+    /// That second half is a contract, not a detail, and it is the one a warm
+    /// CDCL(T) client has to meet. `axeyum_solver::native_cdclt`'s
+    /// `NativeTheoryAdapter` keeps its own `next_var` counter and mirrors the
+    /// core's growth with no callback, which is exact on a one-shot path —
+    /// where the variable count is fixed at construction and only
+    /// `register_theory_atoms` moves it — and **stale on a warm one**, where
+    /// `add_clause` moves it between solves with the adapter never told. Its
+    /// own `debug_assert_eq!(self.atom_for_var.len(), var, "variable indices
+    /// are dense")` is the assertion that would fire.
+    ///
+    /// So this test pins the observable a warm client must read —
+    /// `variable_count()` — rather than the one the adapter currently assumes.
+    #[test]
+    fn atom_registration_survives_a_solve_boundary_and_appends_at_the_current_count() {
+        let mut solver = NativeIncrementalCdcl::warm_theory(RegisteringTheory {
+            batch: 2,
+            registered: false,
+            seen_vars: Vec::new(),
+            depth: 0,
+        });
+        solver.add_clause(&lits(&[1, 2]));
+        let before = solver.variable_count();
+        assert_eq!(before, 2, "two variables so far");
+
+        let first = solver.solve(&[], None, budget());
+        assert!(
+            matches!(first, IncrementalSolveOutcome::Sat(_)),
+            "first solve: {first:?}"
+        );
+        let after_first = solver.variable_count();
+        assert_eq!(
+            after_first,
+            before + 2,
+            "the core must append the two registered atoms at its current count"
+        );
+        assert!(
+            solver.theory().registered,
+            "the theory must have been asked for atoms"
+        );
+
+        // A clause added between solves introduces variable 9 (index 8), so the
+        // namespace grows by something that is NOT an atom registration. This
+        // is the growth a mirroring adapter does not see.
+        solver.add_clause(&lits(&[9]));
+        let after_clause = solver.variable_count();
+        assert_eq!(
+            after_clause, 9,
+            "add_clause grows the namespace with no theory involvement"
+        );
+
+        let second = solver.solve(&[], None, budget());
+        assert!(
+            matches!(second, IncrementalSolveOutcome::Sat(_)),
+            "second solve: {second:?}"
+        );
+
+        // Registration was NOT repeated: the theory is the same instance and
+        // still believes it has registered, so the boundary undid assertions
+        // and left registration alone — which is the whole design.
+        assert_eq!(
+            solver.variable_count(),
+            after_clause,
+            "no second round of atom registration"
+        );
+
+        let theory = solver.into_theory();
+        assert_eq!(theory.depth, 0, "balanced");
+        assert!(
+            theory.seen_vars.len() >= 3,
+            "the theory must have been told about the registered atoms and the \
+             clause variables, got {:?}",
+            theory.seen_vars
+        );
     }
 
     /// The `NullTheory` warm object takes no epoch at all, so nothing above
