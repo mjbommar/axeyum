@@ -161,6 +161,57 @@ pub trait TheorySolver {
     }
 }
 
+/// A theory reached through a mutable borrow is the same theory.
+///
+/// This is what lets one adapter type serve both protocols. The one-shot route
+/// builds its theory on the stack and hands the adapter a `&mut` to it, because
+/// it reads the theory back after the solve to assemble a model; a **warm**
+/// route cannot, because `axeyum_cnf::NativeIncrementalCdcl` OWNS its theory and
+/// a session holding both the solver and the theory as sibling fields would be
+/// a self-referential struct. With this impl the warm route instantiates the
+/// adapter over an owned `T` and the one-shot route over `&mut T`, with one
+/// adapter and no lifetime parameter.
+///
+/// It mirrors `axeyum_cnf::theory::NativeTheory for &mut T` exactly, for the
+/// same reason and at the same place in the stack.
+impl<T: TheorySolver + ?Sized> TheorySolver for &mut T {
+    fn assert(&mut self, atom: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
+        (**self).assert(atom, value)
+    }
+
+    fn push(&mut self) {
+        (**self).push();
+    }
+
+    fn pop(&mut self) {
+        (**self).pop();
+    }
+
+    fn propagate(&self) -> Vec<TheoryProp> {
+        (**self).propagate()
+    }
+
+    fn final_check(&mut self) -> FinalCheckOutcome {
+        (**self).final_check()
+    }
+
+    fn propagate_into(&mut self, queue: &mut PropagationQueue) {
+        (**self).propagate_into(queue);
+    }
+
+    fn explain(&mut self, handle: ExplanationId) -> Option<Vec<TheoryLit>> {
+        (**self).explain(handle)
+    }
+
+    fn take_new_atoms(&mut self) -> usize {
+        (**self).take_new_atoms()
+    }
+
+    fn engine_counters(&self) -> Option<TheoryEngineCounters> {
+        (**self).engine_counters()
+    }
+}
+
 /// Diagnostic counters a theory with a feasibility engine can expose to the
 /// driver (S4). Every field is a monotone lifetime total, so a per-call figure
 /// is a difference, and `0` means "this happened zero times" — never "not

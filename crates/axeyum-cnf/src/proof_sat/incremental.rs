@@ -499,6 +499,31 @@ impl<T: NativeTheory> NativeIncrementalCdcl<T> {
         self.added_clauses += 1;
     }
 
+    /// Returns the solver to the **between-solves** state now, rather than
+    /// lazily at the next `add_clause` or `solve`: nothing assigned, no
+    /// decision levels, and — for a CDCL(T) object — the previous solve's
+    /// theory epoch closed, so the theory holds no assertions.
+    ///
+    /// Idempotent, and free when already unwound.
+    ///
+    /// # Why a warm CDCL(T) route needs this as public API
+    ///
+    /// The theory is readable after a solve *with that solve's assertions still
+    /// in place*, which is what a model builder needs, and the epoch is
+    /// therefore closed lazily. A route that reaches past the driver to the
+    /// theory — `axeyum_solver::qinst_egraph` registers EUF atoms through
+    /// `EufTheory::add_atom_at_root`, which refuses unless the theory trail is
+    /// empty — has to be able to say "I am done reading the model" before it
+    /// starts building the next batch's clauses. Without it the first
+    /// registration of every batch would be refused, because the first
+    /// `add_clause` that would have closed the epoch has not happened yet.
+    ///
+    /// This is the native counterpart of `CdclT::backtrack_to_root`, which the
+    /// route calls first thing in exactly that position.
+    pub fn unwind_to_root(&mut self) {
+        self.between_solves();
+    }
+
     /// Unwinds the previous solve's trail, at most once per solve.
     fn between_solves(&mut self) {
         if self.needs_reset {
