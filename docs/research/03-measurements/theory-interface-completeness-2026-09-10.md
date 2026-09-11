@@ -133,5 +133,161 @@ worker closure; a read after the join would report zero for every route.
 sharpest file per division is chosen the way `iso_icl_repgen004` was chosen for
 QF_UF: smallest z3 time against our 24 s over-budget.
 
-*(Measurement in progress at the time of this commit; results follow in the same
-document.)*
+**Reference side.** `z3 -st -T:30` over all 120, once per file. Three `QF_IDL`
+files did not measure: their names contain `=`, which z3 reads as a parameter
+and refuses. They are excluded from the z3 columns and marked; they are *not*
+excluded from our own sweeps.
+
+### 4.1 Per division: what the losses actually are
+
+Our side is `route_solo --route <route> --timeout-ms 20000 --stats`, one process
+at a time. `route_solo` is not the front door (it decides the flat view with no
+preprocessing, and disagrees with the shipped front door on 134 of 397
+benchmarks), so every decline below is a lower bound on the route, never a
+statement about the dispatcher.
+
+| division | route | what the losses are | conflict ratio vs z3 |
+|---|---|---|---|
+| QF_LRA | `lra-online-cdclt` | **not a conflict-count loss.** 49 of 49 declined or timed out; **21** answer `online CDCL(T) LRA model did not replay (arithmetic outside the incremental engine)`, **20** hit the atom-count admission screen (`… exceeds the 1024 a 640 MiB budget admits`), **7** decline at **0 ms** with `boolean skeleton outside the online CDCL(T) LRA encoder`, and **1** times out. Seventeen of the 21 replay declines land in under 110 ms. | n/a — the search barely runs |
+| QF_LIA | `lia-online-cdclt` | **not a conflict-count loss.** Same two shapes. On `v30_problem_2__023.smt2.slack.smt2` the whole 20 s went into **one** `theory_assert` (`decisions=0`, `theory_conflicts=0`, `t_assert_ms=20174`) — the integer feasibility solve, not the search. | n/a |
+| QF_UFLIA | `uflia-online` | **the route is fine and the ratio is close.** `mathsat/EufLaArithmetic/medium9.smt2`: we return **unsat in 18 ms** with 215 theory conflicts against z3's 122 (**1.8x**); `medium16.smt2` unsat in 82 ms, 482 against 321 (**1.5x**). These are on the loss list, so the loss is upstream of the route. The other shape is `combined CDCL(T) leaf did not rebuild a replaying model: interface distinct branch inconclusive` — model reconstruction, not propagation. | **1.5x – 1.8x** |
+| QF_IDL | `dl-online` | **this is the one.** See §4.2. | **2.3x – 39.7x** |
+| QF_SLIA | — | **did not run.** The string route (`check_qf_s_online_cdclt`) has no entry in `route_solo`'s table, so there is no per-route measurement here. z3 needs 1–211 conflicts on six of the seven and times out on the seventh. | did not run |
+
+So four of the five divisions answer Phase C's third question with *no*: their
+parity losses are encoder-admission, model-replay and theory-combination gaps,
+and the conflict counts are either close to the reference or never reached.
+**QF_IDL answers yes.**
+
+### 4.2 QF_IDL: the theory is silent on nine of nineteen, and it is a cap
+
+`dl_online::propagate`/`propagate_into` both open with
+
+```rust
+if self.symbols.len() > MAX_PROPAGATION_VERTICES || past_deadline(self.deadline) {
+    return;                       // MAX_PROPAGATION_VERTICES = 256
+}
+```
+
+**Nine of the nineteen QF_IDL parity losses declare more than 256 symbols**, so
+difference-logic propagation never runs on them at all. Measured, not inferred —
+`theory_propagations` is exactly `0` on all nine and nonzero on all ten others:
+
+| file | symbols | decisions | theory conflicts | theory propagations | z3 conflicts |
+|---|---:|---:|---:|---:|---:|
+| `graph-colouring-nodes=130-…` | 8,695 | 195,807 | 545 | **0** | not measured |
+| `15.3.schur.lp` | 15,290 | 664,821 | 1,314 | **0** | 126,761 |
+| `solitaire-center-time=26` | 21,419 | 5,433,202 | 17,768 | **0** | not measured |
+| `solitaire-edge-time=29` | 23,194 | 6,277,598 | 20,190 | **0** | not measured |
+| `wire.10.x.10.b.5.a.20` | 24,978 | 5,453,367 | 7,085 | **0** | 20,291 |
+| `qlock-4-10-21` | 1,202 | **2,550,272** | **10,202** | **0** | **257** |
+| `qlock-4-10-27` | 1,532 | 5,089,704 | 21,103 | **0** | 1,827 |
+| `qlock-4-10-33` | 1,862 | 5,489,293 | 20,862 | **0** | 1,403 |
+| `qlock-4-10-39` | 2,192 | 6,948,844 | 20,285 | **0** | 6,654 |
+
+`qlock-4-10-21` is the sharpest and is the EUF shape exactly: **39.7x** the
+reference's conflicts, 2.55 M decisions, and a theory that says nothing.
+
+**The stated reason for the cap does not apply to `propagate_into`.** Its doc
+said "the per-probe search would dominate the search loop", and the cost it
+names is real but belongs to the **other** scan: `would_conflict` runs behind
+`&self`, cannot borrow the theory's `Scratch` mutably, and so calls
+`Scratch::new(|V|)` — three `O(|V|)` vectors — once per probe. `propagate_into`
+probes through `cycle_for`, which reuses the theory's one persistent `Scratch`
+and pays none of that. On the reading alone, lifting the cap there is free.
+
+### 4.3 It is not free, and the A/B is why the cap stays
+
+Lifting it does exactly what the diagnosis predicts to the conflict counts, and
+then loses anyway. Three variants were built and measured, in this order:
+
+1. **Cap removed outright.** Conflicts fell 2.4x–11.9x on all nine; propagations
+   went from 0 to 68 k–469 k. `theory_propagate` became **42.1 s of a 43.1 s
+   wall** on `qlock-4-10-21`.
+2. **Plus a work budget** — a shared allowance of edge relaxations per call,
+   charged inside the Dijkstra. At 32,768 `theory_propagate` was 16.7 s of 20.0 s;
+   at **128** it was still 16.4 s. The budget never bound: the cost is not the
+   reduced-cost search, it is the scan's fixed per-call overhead on a driver that
+   propagates to a fixpoint after every assignment.
+3. **Probe count scaled by graph size, plus a resuming scan cursor** — pay for
+   *less* propagation rather than none, and stop re-walking the assigned prefix
+   from index 0 on every call. This was the best variant and is the one A/B'd.
+
+A/B, same host, one process at a time, **120 s** budget so the marginal verdicts
+are not budget artifacts, nine over-cap files:
+
+| file | capped (shipping) | lifted (best variant) | conflicts |
+|---|---|---|---|
+| `graph-colouring-nodes=130-…` | unknown | unknown | 789 → 324 |
+| `15.3.schur.lp` | **sat 6.6 s** | **unknown at 120 s** | 1,314 → 707 |
+| `solitaire-center-time=26` | sat 13.4 s | sat 14.1 s | 17,768 → 5,801 |
+| `solitaire-edge-time=29` | **sat 47.4 s** | **unknown at 120 s** | 29,431 → 19,091 |
+| `wire.10.x.10.b.5.a.20` | unsat 16.6 s | unsat 53.4 s | 7,128 → 4,249 |
+| `qlock-4-10-21` | sat 5.9 s | sat 13.7 s | 10,202 → 1,312 |
+| `qlock-4-10-27` | sat 17.5 s | sat 28.6 s | 21,615 → 3,099 |
+| `qlock-4-10-33` | sat 27.3 s | sat 22.6 s | 25,294 → 2,650 |
+| `qlock-4-10-39` | sat 44.0 s | sat 52.3 s | 32,027 → 3,961 |
+| **decided** | **8 of 9** | **6 of 9** | — |
+
+Conflicts fall 1.5x–8.1x on every one of the nine. We decide **two fewer** and
+run 1.5x–3.2x slower on five of the six we still decide. **So the change is not
+shipped**, and the cap keeps its place with the measurement attached to it.
+
+Eight of the nine are satisfiable, which is the explanation: a `sat` is reached
+by finding a model, and pruning a search that is going to succeed anyway is a
+cost with no return. On EUF (`e4e6378b8`) conflicts and wall clock fell together
+because the file was `unsat` and the propagation was an e-graph lookup; here they
+trade.
+
+### 4.4 What this changes about the instrument
+
+Phase C calls the conflict-count ratio against `z3 -st` "the instrument", and it
+earned that on EUF. This division sharpens the claim:
+
+> **The conflict ratio is the instrument that finds a silent theory. It is not
+> on its own the instrument that says making it speak will pay.**
+
+It separated "our search is weak" from "our theory is silent" here exactly as
+advertised — `theory_propagations = 0` beside 2.55 M decisions is not a
+heuristics problem and no restart policy reaches it. What it did not predict is
+the sign of the wall-clock change, and on a satisfiable family the sign was
+negative. A conflict-count win is a **hypothesis about wall clock**, and an A/B
+at a budget where the verdicts are robust is what decides it. The 20 s sweep
+would have reported this change as costing one file; the 120 s A/B says two, and
+the 120 s number is the one to quote because at 20 s five of the nine baseline
+verdicts had not landed yet.
+
+## 5. Phase C exit, per theory
+
+Phase C's exit is "per theory, either both-polarity propagation with a measured
+conflict-count ratio, or a recorded reason it is not applicable."
+
+| theory | both polarities | measured ratio | status |
+|---|---|---|---|
+| `lra_online` | yes | not applicable — the route declines or fails model replay before the search does work (§4.1) | **recorded reason** |
+| `lia_online` | yes | not applicable — same, plus a single 20 s `theory_assert` (§4.1) | **recorded reason** |
+| `dl_online` | yes | **2.3x – 39.7x**, cause identified, fix measured and rejected (§4.2, §4.3) | **measured** |
+| `string_theory` | yes | **did not run** — no `route_solo` entry for the string route | **open** |
+| `ufbv_online` | yes | not measured on QF_UFBV; its EUF half is the `e4e6378b8` route | **open** |
+| `combined_theory` | yes (inherited) | not measured on QF_UFLRA | **open** |
+| `combined_theory_lia` | yes (inherited) | **1.5x – 1.8x** on QF_UFLIA `mathsat/EufLaArithmetic` (§4.1) | **measured, close to z3** |
+
+Three cells are open and are named as open rather than inferred. The two that
+would close cheapest are `string_theory` (add the string route to `route_solo`'s
+table — it is a one-entry change now that `--stats` exists) and
+`combined_theory` on QF_UFLRA.
+
+## 6. What the next lane should not re-derive
+
+- **`capabilities.rs:489`/`:613` are still misleading and still not a defect.**
+  Re-checked from the code this session, not inherited from the plan: `lra_online`
+  skips equality atoms (principled), `lia_online` skips nothing. Neither is EUF's
+  gap.
+- **Lifting `MAX_PROPAGATION_VERTICES` off `propagate_into` is measured and
+  rejected** (§4.3). The A/B is pinned in the constant's own doc comment and
+  guarded by `both_propagation_scans_stop_above_the_vertex_cap`, which is the
+  single test that dies if the cap is removed from that scan (verified by
+  mutation: 1695 passed, 1 failed, and it was that one).
+- **QF_LRA and QF_LIA parity losses are not theory-propagation work.** They are
+  encoder admission and model replay. A lane aimed at "LRA conflicts" will find
+  the search never ran.

@@ -1275,3 +1275,102 @@ fn a_satisfiable_difference_logic_query_carries_no_trust_step() {
         report.trusted_steps
     );
 }
+
+/// `x - y <= -5` (atom 0) and `x - y <= -1` (atom 1), padded with `fillers`
+/// extra variables so the scan's symbol count lands on either side of
+/// [`MAX_PROPAGATION_VERTICES`]. Asserting atom 0 entails atom 1.
+fn dl_entailment_fixture(fillers: usize) -> DlScan {
+    let mut arena = TermArena::new();
+    let x = int(&mut arena, "x");
+    let y = int(&mut arena, "y");
+    let m5 = arena.int_const(-5);
+    let m1 = arena.int_const(-1);
+    let zero = arena.int_const(0);
+    let xy = arena.int_sub(x, y).expect("x-y");
+    let mut atoms = vec![
+        arena.int_le(xy, m5).expect("x-y<=-5"),
+        arena.int_le(xy, m1).expect("x-y<=-1"),
+    ];
+    let pad: Vec<TermId> = (0..fillers)
+        .map(|i| int(&mut arena, &format!("f{i}")))
+        .collect();
+    for pair in pad.windows(2) {
+        let diff = arena.int_sub(pair[0], pair[1]).expect("fi-fj");
+        atoms.push(arena.int_le(diff, zero).expect("fi-fj<=0"));
+    }
+    scan_dl(&mut arena, &atoms, None).expect("pure difference logic")
+}
+
+/// **Both propagation scans stop above `MAX_PROPAGATION_VERTICES`, and the
+/// ADR-1701 one stops for a reason that is measured rather than inherited.**
+///
+/// The two scans pay different costs. [`DlTheory::propagate`] allocates a
+/// `Scratch` per probe inside `DlTheory::would_conflict`;
+/// [`DlTheory::propagate_into`] reuses the persistent one and pays the scan's
+/// own per-call overhead instead. Reading only the first of those makes lifting
+/// the cap off `propagate_into` look free, and this test exists so the next
+/// reader finds the A/B before spending the day on it.
+///
+/// Above the cap, difference-logic propagation is silent on **nine of the
+/// nineteen** `QF_IDL` parity losses of 2026-09-08 — every file declaring more
+/// than 256 symbols reports `theory_propagations = 0`. Lifting the cap cuts
+/// theory conflicts 1.5x to 8.1x on all nine and **decides two fewer of them**,
+/// running 1.5x to 3.2x slower on the rest (lane E6, 2026-09-10, 120 s budget;
+/// the table is on `MAX_PROPAGATION_VERTICES`). Eight of the nine are
+/// satisfiable, and a model is found by searching, not by pruning.
+///
+/// The assertion is two-sided on purpose: the same entailment is checked
+/// **below** the cap, where both scans must emit it. A one-sided "emits nothing
+/// above the cap" guard passes just as well against a theory that propagates
+/// nothing anywhere.
+#[test]
+fn both_propagation_scans_stop_above_the_vertex_cap() {
+    const ENTAILED: usize = 1; // `x - y <= -1`, entailed by atom 0
+
+    // Below the cap: both scans emit the entailment.
+    let small = dl_entailment_fixture(0);
+    assert!(
+        small.symbols.len() <= MAX_PROPAGATION_VERTICES,
+        "the below-cap fixture must be below the cap: {} symbols",
+        small.symbols.len()
+    );
+    let mut theory = DlTheory::new(&small, None);
+    theory.assert(0, true).expect("feasible");
+    assert!(
+        theory
+            .propagate()
+            .iter()
+            .any(|p| p.lit.atom == ENTAILED && p.lit.value),
+        "the `&self` scan must entail x-y<=-1 below the cap"
+    );
+    let mut queue = PropagationQueue::new();
+    theory.propagate_into(&mut queue);
+    assert!(
+        queue
+            .entries()
+            .iter()
+            .any(|(lit, _)| lit.atom == ENTAILED && lit.value),
+        "the ADR-1701 scan must entail x-y<=-1 below the cap"
+    );
+
+    // The same entailment above the cap: both scans decline.
+    let big = dl_entailment_fixture(MAX_PROPAGATION_VERTICES + 8);
+    assert!(
+        big.symbols.len() > MAX_PROPAGATION_VERTICES,
+        "the above-cap fixture must clear the cap: {} symbols",
+        big.symbols.len()
+    );
+    let mut theory = DlTheory::new(&big, None);
+    theory.assert(0, true).expect("feasible");
+    assert!(
+        theory.propagate().is_empty(),
+        "the `&self` scan stops above the cap (per-probe Scratch allocation)"
+    );
+    let mut queue = PropagationQueue::new();
+    theory.propagate_into(&mut queue);
+    assert!(
+        queue.is_empty(),
+        "the ADR-1701 scan stops above the cap too — see MAX_PROPAGATION_VERTICES \
+         for the A/B saying that lifting it decides two fewer QF_IDL files"
+    );
+}
