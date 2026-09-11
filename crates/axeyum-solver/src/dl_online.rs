@@ -111,8 +111,55 @@ const MAX_DL_ATOMS: usize = 1 << 20;
 /// scan is a sound under-approximation.
 const MAX_PROPAGATION_PROBES: usize = 64;
 
-/// Ceiling on the vertex count for which propagation probing runs at all.
-/// Beyond it the per-probe search would dominate the search loop.
+/// Ceiling on the vertex count for which propagation probing runs at all, on
+/// **both** scans. Beyond it the per-probe search would dominate the search
+/// loop.
+///
+/// # The two scans pay two different costs, and both are real
+///
+/// For [`DlTheory::propagate`] the cost is per-probe allocation:
+/// [`DlTheory::would_conflict`] runs behind `&self` and cannot borrow the
+/// theory's [`Scratch`] mutably, so it calls `Scratch::new(|V|)` — three
+/// `O(|V|)` vectors — once per probe.
+///
+/// [`DlTheory::propagate_into`] (ADR-1701) probes through
+/// [`DlTheory::cycle_for`], which reuses the persistent `Scratch` and so pays
+/// none of that. **It is capped anyway, and the reason is measured, not
+/// inherited**: the cost there is the scan's own per-call overhead — up to
+/// [`MAX_PROPAGATION_PROBES`] atoms at two polarities each, on a driver that
+/// runs propagation to a fixpoint after every assignment.
+///
+/// # Do not lift this off `propagate_into` without re-running the A/B
+///
+/// It looks like an obvious win and it is not. Lane E6 measured it on
+/// 2026-09-10: the cap silences difference-logic propagation on **nine of the
+/// nineteen** `QF_IDL` parity losses of 2026-09-08 — every file declaring more
+/// than 256 symbols reports `theory_propagations = 0` — and lifting it does cut
+/// theory conflicts 1.5x to 8.1x on all nine, e.g. `qlock-4-10-39` 32,027 ->
+/// 3,961 and `solitaire-center-time=26` 17,768 -> 5,801.
+///
+/// It also **decides two fewer of the nine and runs 1.5x to 3.2x slower on the
+/// rest.** A/B on the same host at a 120 s budget, one process at a time,
+/// against the best variant found (probe count scaled by graph size, plus a
+/// resuming scan cursor, both of which beat lifting the cap outright):
+///
+/// | | capped (shipping) | lifted |
+/// |---|---|---|
+/// | decided | **8 of 9** | 6 of 9 |
+/// | `15.3.schur.lp` | sat 6.6 s | unknown at 120 s |
+/// | `solitaire-edge-time=29` | sat 47.4 s | unknown at 120 s |
+/// | `wire.10.x.10.b.5.a.20` | unsat 16.6 s | unsat 53.4 s |
+/// | `qlock-4-10-21` | sat 5.9 s | sat 13.7 s |
+///
+/// Eight of the nine are satisfiable, and a `sat` is reached by finding a
+/// model, not by refuting regions — so a cheaper decision beats a better-pruned
+/// one there. **The conflict-count ratio against `z3 -st` is the instrument
+/// that finds a silent theory, and it is not on its own the instrument that
+/// says making it speak will pay.** On EUF (`e4e6378b8`) conflicts and wall
+/// clock fell together; here they trade.
+///
+/// Full measurement, both arms, all nineteen files:
+/// `docs/research/03-measurements/theory-interface-completeness-2026-09-10.md`.
 const MAX_PROPAGATION_VERTICES: usize = 256;
 
 /// Defense-in-depth ceiling on parent-pointer walks when extracting a cycle.

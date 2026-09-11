@@ -752,11 +752,24 @@ impl TheorySolver for CombinedIncremental {
     /// The interface `eq` atoms are themselves registered in the live `EufTheory`, so an
     /// `Entailed` interface equality is emitted *by* [`EufTheory::propagate`] (its two
     /// sides congruent) with no extra interface pass — the slice-2 interface source is
-    /// thus subsumed for the entailed direction. The `Refuted` direction (an interface
-    /// eq forced *false*) is not emitted: `EufTheory` defers disequality-entailment, and
-    /// **omitting** a propagation is always sound — it only forgoes pruning, never a
-    /// verdict. (Slice 3c's structural clauses still let the `Dpll` branch the refuted
-    /// pair, so completeness is unaffected.)
+    /// thus subsumed for the entailed direction.
+    ///
+    /// **The `Refuted` direction is emitted too, and this file did not change to get
+    /// it.** Until `e4e6378b8` this comment said it was not: `EufTheory::propagate`
+    /// entailed equalities only at `true`, so an interface equality that an asserted
+    /// disequality already refutes had to be guessed by the search and learned back
+    /// from a conflict. That commit added the `false` direction to `EufTheory`, and
+    /// because the body below *is* `self.euf.propagate()`, this surface started
+    /// emitting refuted interface equalities the moment it landed. The measured value
+    /// of the same fix on the EUF route was 94,100 theory conflicts down to 623, with
+    /// z3 4.13.3 needing 559.
+    ///
+    /// What is still **not** emitted here is the interface pass itself: the per-call
+    /// [`CombinedTheory::propagate`] runs `interface_propagations`, which classifies
+    /// every shared-real pair whether or not the e-graph tracks it as an atom; this
+    /// incremental surface does not. Omitting a propagation is always sound — it only
+    /// forgoes pruning, never a verdict — and slice 3c's structural clauses still let
+    /// the driver branch the pair, so completeness is unaffected.
     fn propagate(&self) -> Vec<TheoryProp> {
         let mut out: Vec<TheoryProp> = self.euf.propagate();
         out.extend(self.lra.propagate());

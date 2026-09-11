@@ -882,12 +882,20 @@ impl TheorySolver for CombinedIncrementalLia {
     ///
     /// The interface `eq` atoms are themselves registered in the live `EufTheory`, so an
     /// `Entailed` interface equality is emitted *by* [`EufTheory::propagate`] (its two
-    /// sides congruent) with no extra interface pass. The `Refuted` direction (an interface
-    /// eq forced *false*) is not emitted: `EufTheory` defers disequality-entailment, and
-    /// **omitting** a propagation is always sound — it only forgoes pruning, never a
-    /// verdict. (Slice 3c-lia's structural clauses still let the
-    /// [`crate::cdclt::CdclT`] branch the refuted pair, so completeness is
-    /// unaffected.)
+    /// sides congruent) with no extra interface pass.
+    ///
+    /// **The `Refuted` direction is emitted too, and this file did not change to get
+    /// it.** Until `e4e6378b8` this comment said it was not; that commit gave
+    /// `EufTheory::propagate` its `false` direction, and because the body below *is*
+    /// `self.euf.propagate()`, this surface started emitting refuted interface
+    /// equalities the moment it landed. The integer mirror of the same correction in
+    /// [`crate::combined_theory`].
+    ///
+    /// What is still **not** emitted here is the interface pass itself: the per-call
+    /// [`CombinedTheoryLia::propagate`] runs `interface_propagations`; this incremental
+    /// surface does not. Omitting a propagation is always sound — it only forgoes
+    /// pruning, never a verdict — and slice 3c-lia's structural clauses still let the
+    /// [`crate::cdclt::CdclT`] branch the pair, so completeness is unaffected.
     fn propagate(&self) -> Vec<TheoryProp> {
         let mut out: Vec<TheoryProp> = self.euf.propagate();
         out.extend(self.lia.propagate());

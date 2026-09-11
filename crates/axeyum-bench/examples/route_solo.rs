@@ -51,10 +51,27 @@
 //!
 //! ```text
 //! route_solo --list
-//! route_solo <benchmark.smt2> --route <name> [--timeout-ms N]
+//! route_solo <benchmark.smt2> --route <name> [--timeout-ms N] [--stats]
 //! ```
 //!
 //! Prints one TSV line: `route`, `verdict`, `wall_ms`, `detail`.
+//!
+//! # `--stats`: the conflict-count instrument
+//!
+//! With `--stats` a second line is printed, `# stats <key>=<value> ...`, from
+//! `TheoryLayerStats` — the CDCL(T) driver's own counters. The one that matters
+//! is `theory_conflicts`, because **the ratio of our conflict count to `z3 -st`'s
+//! `:conflicts` on the same file separates "our search is weak" from "our theory
+//! is silent"**, and those have different fixes. That is the instrument that
+//! found the EUF disequality-propagation gap (`e4e6378b8`): three search-heuristic
+//! arms moved the wall clock +-25% and left conflicts pinned at ~94k, against
+//! z3's 559.
+//!
+//! The counters are **thread-local to the worker thread**, so they are read
+//! inside the worker closure, not after the join. A route that is not a CDCL(T)
+//! route (`qf-bv`, `array-elim`, ...) drives no `CdclT` and reports no line;
+//! absence of a stats line therefore means "this route has no theory layer",
+//! never "it had zero conflicts".
 
 use std::fs;
 use std::process::ExitCode;
@@ -62,6 +79,9 @@ use std::time::{Duration, Instant};
 
 use axeyum_ir::{TermArena, TermId};
 use axeyum_smtlib::parse_script;
+use axeyum_solver::theories::cdclt_diagnostics::{
+    TheoryLayerStats, TheoryLayerStatsGuard, last_theory_layer_stats,
+};
 use axeyum_solver::{CheckResult, DEFAULT_INT_WIDTH, SatBvBackend, SolverConfig, SolverError};
 
 /// Worker stack, sized like `smtcomp_cli`'s: a deeply nested input must not turn
@@ -242,6 +262,35 @@ fn verdict_of(result: &CheckResult) -> (&'static str, String) {
     }
 }
 
+/// The `--stats` line: the CDCL(T) driver's own counters, one `key=value` per
+/// field that a comparison against `z3 -st` uses.
+///
+/// `theory_conflicts` against z3's `:conflicts` is the ratio this flag exists
+/// for; `decisions` against `:decisions` and `theory_propagations` against
+/// `:propagations` are the two that say whether a high conflict count came from
+/// guessing or from a theory that stayed quiet.
+fn stats_line(stats: &TheoryLayerStats) -> String {
+    format!(
+        "# stats decisions={} theory_conflicts={} theory_propagations={} \
+         final_checks={} restarts={} learned_clauses={} learned_literals={} \
+         t_assert_ms={} t_propagate_ms={} t_final_check_ms={} bool_propagate_ms={} \
+         conflict_analysis_ms={} propagations_offered={:?}",
+        stats.decisions,
+        stats.theory_conflicts,
+        stats.theory_propagations,
+        stats.final_checks,
+        stats.restarts,
+        stats.learned_clauses,
+        stats.learned_literals,
+        stats.theory_assert.as_millis(),
+        stats.theory_propagate.as_millis(),
+        stats.theory_final_check.as_millis(),
+        stats.boolean_propagate.as_millis(),
+        stats.conflict_analysis.as_millis(),
+        stats.theory_propagations_offered,
+    )
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.iter().any(|a| a == "--list") {
@@ -254,10 +303,12 @@ fn main() -> ExitCode {
     let mut path = None;
     let mut want = None;
     let mut timeout_ms: u64 = 24_000;
+    let mut stats = false;
     let mut it = args.iter();
     while let Some(arg) = it.next() {
         match arg.as_str() {
             "--route" => want = it.next().cloned(),
+            "--stats" => stats = true,
             "--timeout-ms" => {
                 timeout_ms = it.next().and_then(|v| v.parse().ok()).unwrap_or(timeout_ms);
             }
@@ -270,7 +321,7 @@ fn main() -> ExitCode {
     }
 
     let (Some(path), Some(want)) = (path, want) else {
-        eprintln!("usage: route_solo <benchmark.smt2> --route <name> [--timeout-ms N]");
+        eprintln!("usage: route_solo <benchmark.smt2> --route <name> [--timeout-ms N] [--stats]");
         eprintln!("       route_solo --list");
         return ExitCode::FAILURE;
     };
@@ -303,24 +354,32 @@ fn main() -> ExitCode {
         .spawn(move || {
             let mut script = match parse_script(&text) {
                 Ok(script) => script,
-                Err(error) => return (String::from("parse-error"), 0u128, format!("{error}")),
+                Err(error) => {
+                    return (String::from("parse-error"), 0u128, format!("{error}"), None);
+                }
             };
             let Some(assertions) = script.solvable_flat_view() else {
                 // A word-first-fallback parse has an EMPTY flat view whose
                 // content lives in the parser side channels; solving it would be
                 // a vacuous `sat`, which is worse than reporting no coverage.
-                return (String::from("no-flat-view"), 0, String::new());
+                return (String::from("no-flat-view"), 0, String::new(), None);
             };
             let assertions = assertions.to_vec();
+            // Thread-local to THIS thread, which is why both the guard and the
+            // read live inside the closure: a `last_theory_layer_stats()` after
+            // the join reads the main thread's (empty) slot and would report
+            // every route as having taken zero conflicts.
+            let guard = stats.then(TheoryLayerStatsGuard::enable);
             let started = Instant::now();
             let outcome = run(&mut script.arena, &assertions, &config);
             let wall = started.elapsed().as_millis();
+            let layers = guard.as_ref().and(last_theory_layer_stats());
             match outcome {
                 Ok(result) => {
                     let (verdict, detail) = verdict_of(&result);
-                    (verdict.to_string(), wall, detail)
+                    (verdict.to_string(), wall, detail, layers)
                 }
-                Err(error) => (String::from("error"), wall, format!("{error}")),
+                Err(error) => (String::from("error"), wall, format!("{error}"), layers),
             }
         });
 
@@ -331,8 +390,11 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    if let Ok((verdict, wall_ms, detail)) = worker.join() {
+    if let Ok((verdict, wall_ms, detail, layers)) = worker.join() {
         println!("{name}\t{verdict}\t{wall_ms}\t{detail}");
+        if let Some(layers) = layers {
+            println!("{}", stats_line(&layers));
+        }
         ExitCode::SUCCESS
     } else {
         // A panic is a real answer about this route on this file, and one a
