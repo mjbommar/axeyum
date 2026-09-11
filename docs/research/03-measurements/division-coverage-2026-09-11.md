@@ -83,3 +83,39 @@ board because those files parse.
 **Next measurement, not next build:** pin a 200-file `QF_S` list and run it.
 If the `attempts=1 last=fd:parse` rate resembles the vendored 56%, the finding
 is a parser gap of the same shape and size as the one fixed today.
+
+## CORRECTION, same day: the `QF_S` prediction was wrong, and QF_FP refutes the pattern
+
+The recommendation above — *"`QF_S` is the next QF_UFLRA"* — extrapolated a
+**56% parse-failure rate from 66 VENDORED cvc5 regression files** to an 18,940
+file division. It does not hold, and the extrapolation was exactly the error
+this repository keeps paying for.
+
+Measured 2026-09-11, a 200-file `QF_S` list pinned by the standard recipe
+(population 18,940, stride 94, sha256 `a7b3bb24f33f`, committed as
+`bench-results/parity-lists/QF_S.txt`):
+
+| probe | result |
+|---|---|
+| files stopping at `fd:parse attempts=1` | **4 of 40 (10%)**, not 56% |
+| dominant stop instead | `fd:source-string attempts=2` (24 of 40) |
+| decided at an 8 s budget, 60 files | **axeyum 47, cvc5 60 — a 78% ratio** |
+
+78% at a THIRD of the board budget is comparable to our mid-table divisions,
+not a catastrophe. The vendored 66 were cvc5's own regression corpus, selected
+for exotic operators; they do not describe the division.
+
+**And `QF_FP` refutes the wider pattern on the same day.** Also never
+benchmarked before today, also added to the board: **199/200 against cvc5's
+200**, zero disagreements, on a 40,407-file logic.
+
+So two divisions were added to the board on 2026-09-11. One (`QF_UFLRA`)
+exposed a front-door bug worth +66. The other (`QF_FP`) landed at near-parity
+and exposed nothing. **Widening coverage is a reasonable bet with a wide
+variance, not a reliable source of wins**, and the claim above overstated it
+from a single draw.
+
+What survives unchanged: 70 of 84 logics have still never been run, a new
+division still costs one pinned list plus one run, and a front-door refusal is
+still invisible from every division already on the board. What does not survive
+is the expectation that the next one pays like `QF_UFLRA` did.
