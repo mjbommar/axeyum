@@ -248,23 +248,37 @@ verdict-invariant on the committed corpus and the parity slices — this repo ha
 already measured that moving a route changes give-up reasons and models, not just
 speed.
 
-### Phase C — finish the theory interfaces
+### Phase C — finish the theory interfaces — **CLOSED 2026-09-10**
 
-The EUF fix is the template and the evidence. For each online theory: does
-`propagate` emit both polarities, does it implement ADR-1701's `final_check`,
-and is there a benchmark family where the conflict count is far above the
-reference's? **The conflict-count ratio against z3 `-st` is the instrument** —
-it separates "our search is weak" from "our theory is silent", and those have
-different fixes. That comparison cost one command today and is what made the
-diagnosis possible.
+**All seven online theories already emit both polarities.** Three of them —
+`ufbv_online`, `combined_theory`, `combined_theory_lia` — do so *because of*
+`e4e6378b8` and not by their own code: they delegate to `EufTheory::propagate`,
+so the EUF fix reached them the moment it landed. I had scoped that fix to
+QF_UF; it was wider.
 
-Candidates already named: `xor_matrix.rs`, a 1,595-line complete Gaussian
-propagator with zero `src/` callers, which `xor_cdcl.rs:51` names as the
-enhancement its incomplete scheme defers to; and `xor_propagate.rs:94`, which
-computes implied equalities and keeps only `.len()`.
+`final_check` is implemented by one of seven, and that is **not** a defect —
+ADR-1701 explicitly allows a theory to decide at `assert` instead.
 
-*Exit:* per theory, either both-polarity propagation with a measured
-conflict-count ratio, or a recorded reason it is not applicable.
+Per-division conflict ratios, and most divisions are not this shape at all:
+QF_LRA and QF_LIA losses are **not** conflict-count losses (21 model-replay
+declines, 20 admission-screen, 7 encoder declines at 0 ms); QF_UFLIA is 1.5–1.8×
+z3; QF_SLIA did not run.
+
+**QF_IDL was the one real family, and the fix is measured and rejected.**
+`MAX_PROPAGATION_VERTICES = 256` silences difference-logic propagation on 9 of
+19 parity losses with `theory_propagations` exactly 0, one file running 10,202
+conflicts against z3's 257. Lifting it cuts conflicts 1.5–8.1× — and takes the
+division from **8 of 9 decided to 6 of 9**, 1.5–3.2× slower. Eight of the nine
+are satisfiable, and a model is found by *searching*, not by pruning. Not
+shipped; the A/B is pinned to the constant.
+
+**The instrument claim is now sharper, and this is the correction to carry.**
+The conflict-count ratio against `z3 -st` reliably finds a **silent theory**. It
+does **not** say that making it speak will pay. On EUF, conflicts and wall clock
+fell together. On QF_IDL they trade. *A ratio is a diagnosis of cause, not a
+prediction of value* — and the second half is what Phase D must not assume.
+
+`docs/research/03-measurements/theory-interface-completeness-2026-09-10.md`.
 
 ### Phase D — core tuning, only after A–C
 
