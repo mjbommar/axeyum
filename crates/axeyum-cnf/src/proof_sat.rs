@@ -5116,7 +5116,13 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 None => TheoryRound::Stop(SearchOutcome::Interrupted),
             };
         }
-        let new_atoms = self.theory.take_new_atoms();
+        // The driver reports where it will append rather than leaving the
+        // theory to mirror the counter: `register_theory_atoms` appends at
+        // exactly this index, and a warm driver's count also moves for reasons
+        // the theory never sees (`NativeIncrementalCdcl::add_clause`). See
+        // `NativeTheory::take_new_atoms`.
+        let next_var = self.assign.len();
+        let new_atoms = self.theory.take_new_atoms(next_var);
         if new_atoms != 0 {
             self.register_theory_atoms(new_atoms);
             // Report progress so the caller re-enters propagation before
@@ -7630,7 +7636,7 @@ mod tests {
                 self.0.borrow_mut().final_checks += 1;
                 FinalCheckOutcome::Sat
             }
-            fn take_new_atoms(&mut self) -> usize {
+            fn take_new_atoms(&mut self, _next_var: usize) -> usize {
                 self.0.borrow_mut().new_atom_polls += 1;
                 0
             }
@@ -7887,7 +7893,7 @@ mod tests {
                 }
             }
             fn propagate_into(&mut self, _queue: &mut PropagationQueue) {}
-            fn take_new_atoms(&mut self) -> usize {
+            fn take_new_atoms(&mut self, _next_var: usize) -> usize {
                 if self.registered {
                     0
                 } else {

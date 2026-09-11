@@ -193,7 +193,29 @@ pub trait NativeTheory {
     }
 
     /// Number of theory atoms registered since the previous call.
-    fn take_new_atoms(&mut self) -> usize {
+    ///
+    /// `next_var` is the driver's **current** variable count — the index it
+    /// will give the first variable it appends for the atoms this call
+    /// reports, with the rest following consecutively. It is the driver
+    /// reporting where it is, not the theory predicting it.
+    ///
+    /// # Why the driver has to say
+    ///
+    /// A theory that keeps its own atom index space (every adapter does; see
+    /// `axeyum_solver::native_cdclt::NativeTheoryAdapter`) needs the SAT
+    /// variable each atom lands on, and the only alternative to being told is
+    /// to mirror the driver's counter. Mirroring is exact only while nothing
+    /// *but* registration moves that counter, which holds on a one-shot solve
+    /// and is **false on a warm one**: `NativeIncrementalCdcl::add_clause`
+    /// grows the namespace between solves. A mirrored counter then maps atoms
+    /// to the wrong variables — silently, since the misalignment is a wrong
+    /// answer and not a panic. The theory cannot pull the count (the driver
+    /// holds it mutably borrowed at this call), so the driver pushes it.
+    ///
+    /// A theory whose atoms already *are* variable indices ignores the
+    /// argument, which is why the default does.
+    fn take_new_atoms(&mut self, next_var: usize) -> usize {
+        let _ = next_var;
         0
     }
 }
@@ -233,7 +255,7 @@ impl NativeTheory for NullTheory {
     }
 
     #[inline]
-    fn take_new_atoms(&mut self) -> usize {
+    fn take_new_atoms(&mut self, _next_var: usize) -> usize {
         0
     }
 }
@@ -278,7 +300,7 @@ impl<T: NativeTheory + ?Sized> NativeTheory for &mut T {
     }
 
     #[inline]
-    fn take_new_atoms(&mut self) -> usize {
-        (**self).take_new_atoms()
+    fn take_new_atoms(&mut self, next_var: usize) -> usize {
+        (**self).take_new_atoms(next_var)
     }
 }

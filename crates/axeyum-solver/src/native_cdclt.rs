@@ -257,10 +257,6 @@ struct NativeTheoryAdapter<'a, T: TheorySolver> {
     atom_for_var: Vec<Option<usize>>,
     /// The SAT variable an atom stands for.
     var_for_atom: Vec<usize>,
-    /// The index the native core will give the next variable it appends for a
-    /// registered atom. The core appends at `assign.len()` and grows by one per
-    /// atom, so mirroring that counter keeps the map aligned with no callback.
-    next_var: usize,
     /// The solver-side queue, kept for its allocation across rounds exactly as
     /// the native core keeps its own.
     queue: PropagationQueue,
@@ -296,7 +292,6 @@ impl<'a, T: TheorySolver> NativeTheoryAdapter<'a, T> {
             engine_pushes: 0,
             atom_for_var,
             var_for_atom: (0..theory_atom_count).collect(),
-            next_var: var_count,
             queue: PropagationQueue::new(),
         }
     }
@@ -432,15 +427,30 @@ impl<T: TheorySolver> NativeTheory for NativeTheoryAdapter<'_, T> {
         })
     }
 
-    fn take_new_atoms(&mut self) -> usize {
+    fn take_new_atoms(&mut self, next_var: usize) -> usize {
         let fresh = self.theory.take_new_atoms();
-        // The core appends `fresh` variables starting at its current variable
-        // count, in order, immediately after this call. Mirroring the counter
-        // here keeps the map aligned without the core having to report back —
-        // and it must happen BEFORE the core asserts any of them.
-        for _ in 0..fresh {
-            let var = self.next_var;
-            self.next_var += 1;
+        // `next_var` is the CORE's current variable count, reported by the core
+        // rather than mirrored here, and the core appends `fresh` variables
+        // starting there, in order, immediately after this call. The map has to
+        // be extended BEFORE the core asserts any of them.
+        //
+        // This used to be a private `next_var` counter seeded from the
+        // construction-time variable count and bumped once per atom. That is
+        // exact only while registration is the ONLY thing that moves the core's
+        // count — true on the one-shot path, FALSE on a warm one, where
+        // `NativeIncrementalCdcl::add_clause` grows the namespace between
+        // solves with no callback here. The counter then ran behind and atoms
+        // mapped to variables that belong to somebody else's clauses: a wrong
+        // answer, not a panic, since the `debug_assert` below is compiled out
+        // in release. ADR-1911.
+        //
+        // The gap is filled with `None` because the variables in it are exactly
+        // the non-atom ones (Tseitin variables, or variables a clause added
+        // between solves introduced), which `assert` must keep skipping.
+        if self.atom_for_var.len() < next_var {
+            self.atom_for_var.resize(next_var, None);
+        }
+        for var in next_var..next_var + fresh {
             debug_assert_eq!(self.atom_for_var.len(), var, "variable indices are dense");
             self.atom_for_var.push(Some(self.var_for_atom.len()));
             self.var_for_atom.push(var);
