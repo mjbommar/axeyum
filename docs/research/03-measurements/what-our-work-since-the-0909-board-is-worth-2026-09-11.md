@@ -54,8 +54,14 @@ The +36 belongs to the 320-commit window BELOW the three fixes.
 **But two of the three cannot act on those divisions at all.** `auto.rs`'s fix is
 the e-matching loop and `qinst_egraph.rs` is quantifier instantiation; QF_LRA and
 QF_UFLIA are quantifier-free. Measuring them there is close to tautological. On
-**UF**, the division they target, `f09652489` vs HEAD is **+1 at 70 files** and
-still running — consistent with `c35941f9b`'s own claim of +6 on 358 UF files.
+**UF**, the division they target, `f09652489` vs HEAD is **+4 at 166 files, 0
+losses** -- consistent with `c35941f9b`'s own claim of +6 on 358 UF files. And
+the QF_UFLIA null above was ALSO a sampling artifact: the complete 200-file run
+gives **+5, 0 losses** (`hash_sat_09_17` through `hash_sat_10_20` -- the TOP
+rungs of the ladder the 320-commit window had taken to 09_14, each landing at
+18.6-19.1 s against a 24 s budget, which is what cutting conflicts 94,100 -> 623
+buys on the largest instances). Both nulls came from reading a PREFIX of a run
+whose list is path-sorted, so the hard families cluster at the head.
 
 ## 3. The QF_UFLIA gap decomposes, and half of it is already closed
 
@@ -94,10 +100,14 @@ Per division the two biggest gaps need OPPOSITE work:
 | division | gap | decided at 5x | early give-up |
 |---|---|---|---|
 | QF_LRA | 40 | **0** | 9 |
-| QF_NIA | 37 | 3 of 28 | **13 (46%)** |
+| QF_NIA | 37 | 4 | **14** |
+| UF | 28 | **0** | **23 (82%)** |
+| QF_LIA | 18 | 2 | 3 |
 | QF_IDL | 14 | 4 | 0 |
+| QF_UFLIA | 13 | **8 (62%)** | 0 |
 | QF_ABV | 12 | 0 | 3 |
 | QF_BV | 8 | 3 | 0 |
+| QF_SLIA | 7 | 0 | 5 |
 
 QF_LRA is the largest gap on the board and 5x the clock decides **none** of it.
 
@@ -209,3 +219,90 @@ opposite work: QF_LRA is a capability wall (0 of 40 at 5x), QF_NIA is dominated
 by early refusals (46%). And the single highest-leverage *mechanical* change
 found is not an algorithm: it is that 74 completeness-guarding caps cannot be
 A/B-ed without a rebuild.
+## Addendum, same day: the front door was refusing a whole family
+
+Sections 1-8 measured how much solver work moved the board. This section is a
+different kind of finding, reached by the instrument section 5 installed.
+
+### QF_UFLRA had never been benchmarked, and it hid both
+
+Its first row, 2026-09-11: **76/200 against cvc5's 198/200** -- a 122-file gap,
+the worst on the board. The family breakdown was the tell:
+
+| family | we decided | cvc5 |
+|---|---|---|
+| `RandomDecoupled` | **1 of 69** | 69 |
+| `RandomCoupled` | 49 of 67 | 67 |
+| `cpachecker-induction` | 25 of 58 | 58 |
+
+73% on one family from a generator and **1.4%** on its sibling is a mechanism,
+not weakness.
+
+### The failures were 35 ms, not 24 s
+
+`--trace` on any `RandomDecoupled` file:
+
+    ; route decided_by=none bound_by=fd:parse last=fd:parse bound_ms=24
+      total_ms=24 attempts=1
+
+`attempts=1`. An 18 KB file with one assert, refused in 24 ms, **no solver route
+ever entered**. `route_solo` forced each of `auto`, `uflra-online`,
+`uf-arithmetic`, `uf-arith-lazy`, `lra-online-cdclt`, `lra-dpll`: all six
+returned the identical `term error: operands must share a sort: Real vs Int`.
+
+### `distinct` never coerced numerals
+
+Minimal case, and the controls that locate it:
+
+| term (x : Real) | before | cvc5 |
+|---|---|---|
+| `(distinct x 3)` | **unknown** | sat |
+| `(distinct x 3.0)` | sat | sat |
+| `(= x 3)` | sat | sat |
+| `(<= x 3)` | sat | sat |
+
+`=` and `ite` run `numeric_args` FIRST -- the SMT-LIB `Reals_Ints` rule that an
+`Int` subterm in a `Real` context embeds via `to_real`. `distinct` type-checked
+for identical sorts first and coerced never.
+
+An empirical audit of every operator that can pair a `Real` with a bare numeral
+(`=`, `distinct`, `<`, `<=`, `>`, `>=`, `+`, `-`, `*`, `/`, `ite`, unary `-`)
+found **`distinct` was the only one missing the rule**. `abs` on a `Real` also
+diverges from cvc5, but `(abs ` appears **0 times in 15,446 corpus files** across
+QF_UFLRA / QF_LRA / QF_NRA / QF_RDL, so it is not worth building.
+
+### The near-miss
+
+`distinct`'s own comment records this defect being found from the STRING side on
+2026-08-20 -- *"`=` has no such pre-check and has always accepted them"* -- and
+fixed with a **narrow packed-sequence exemption** instead of the general
+coercion. Correct diagnosis, patched one case wide.
+
+### Measured
+
+`RandomDecoupled`, all 69 files, after the fix: **46 sat, 21 unsat, 2 unknown =
+67 decided**, against 1 on the board. The two stragglers are the largest
+parameters in the family.
+
+For scale against everything else measured today:
+
+| source | files |
+|---|---|
+| the `distinct` coercion, one division | **+66** |
+| 320 commits (09-09 to 09-10), QF_UFLIA | +34 |
+| this session's three solver fixes, all divisions | +7 |
+
+### Why it survived
+
+These files were recorded `unsolved`. Until `1d391d900` that was the same word
+the harness printed for a reasoned `unknown`, a harness timeout kill, an OOM
+abort and a crash. **A file refused at the door in 35 ms and a file that thought
+for 24 s were indistinguishable in every row of PARITY.md.** The fix in section 5
+is what made step two of this chain possible.
+
+### The generalisation does NOT hold
+
+Probing the addressable-gap files of the other divisions for the same shape
+(`attempts=1 last=fd:parse`): QF_ABV, QF_BV, QF_IDL and QF_LIA return **zero**.
+Those gaps are real solver work. The front-door refusal was specific to
+QF_UFLRA.
