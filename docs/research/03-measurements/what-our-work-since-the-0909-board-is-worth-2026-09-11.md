@@ -378,3 +378,32 @@ All 67 `RandomCoupled` files, pre-fix vs post-fix binaries interleaved:
 is already `Real`, so it unlocks the family that could not parse and touches
 nothing else. An apparent `-8` seen while comparing a LOADED s4 run against the
 board's quiet-host row was entirely that confound.
+
+## CORRECTION: the board uses THREE references, and I reported them all as cvc5
+
+`scripts/parity-run.sh` selects the reference binary PER DIVISION by logic
+family. Today's sixteen rows use three different solvers:
+
+| reference | divisions |
+|---|---|
+| cvc5 1.3.4 | QF_DT, QF_IDL, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_RDL, QF_S, QF_SLIA, QF_UF, QF_UFLIA, UF |
+| **bitwuzla 0.9.1** | **QF_ABV, QF_BV, QF_FP** |
+| **Z3 4.13.3** | **QF_UFLRA** |
+
+Throughout this session I wrote "vs cvc5" for every row. That is wrong for
+**four of sixteen divisions**, including two results I highlighted:
+
+- `QF_FP` **199/200** is near-parity with **bitwuzla**, a specialist FP solver
+  — arguably a HARDER bar than cvc5, so the result reads stronger, not weaker.
+- `QF_UFLRA` 76 -> 142 is measured against **Z3 4.13.3** on BOTH rows.
+
+The repository already carries this rule
+(`reference-solvers-are-not-the-frontier`: *always name the reference when
+quoting a gap*). I broke it by assuming one referee and never reading the
+field, in nearly every summary today.
+
+**The QF_UFLRA before/after is therefore CLEANER than `a6d4709b5` claims.**
+That commit message says the 16:44Z row used cvc5 and warns the pair is not a
+clean reference-side A/B. Both rows use Z3 4.13.3 and both score it at 198/200.
+Same list, same protocol, same reference, one commit apart: **76 -> 142, +66,
+zero files lost**. The warning in that message is withdrawn.
