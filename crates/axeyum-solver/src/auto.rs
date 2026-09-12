@@ -58,6 +58,7 @@ fn checked_quantified_fast_path(
     if !is_quantified {
         return Ok(None);
     }
+
     if canonicalization_discharges_quantifiers(arena, assertions, config)? {
         return Ok(Some(CheckResult::Unsat));
     }
@@ -343,7 +344,19 @@ fn run_egraph_quantified_fallback(
                 route_trace::record_quant_rung_result(route_trace::quant_rung::EGRAPH, &result);
                 Ok(Some(result))
             } else {
-                Err(SolverError::Unsupported(message))
+                // GUARD. This used to be `Err(SolverError::Unsupported(message))`
+                // — the refuter's fragment refusal becoming the QUERY's answer,
+                // which ends the ladder before MBQI, the full finite-model
+                // finder and ℕ-induction have run. The refuter is refutation-
+                // ONLY: it declining says nothing about whether a later rung
+                // can decide the query. Declining is sound (a skipped route can
+                // only lose completeness) and the message is kept on the trail.
+                qtrace("egraph", started, "unsupported->decline");
+                route_trace::record_quant_rung_declined(
+                    route_trace::quant_rung::EGRAPH,
+                    unsupported_decline(&message),
+                );
+                Ok(None)
             }
         }
         Err(error) => Err(error),
@@ -490,7 +503,19 @@ fn finish_quantified_solve(
             let Some(mbqi_config) = config_with_remaining_timeout(config, deadline) else {
                 return Ok(quantified_timeout("e-matching"));
             };
-            let mbqi_result = prove_unsat_by_mbqi(arena, assertions, &mbqi_config)?;
+            let mbqi_result = match prove_unsat_by_mbqi(arena, assertions, &mbqi_config) {
+                Ok(result) => result,
+                // GUARD, the same rule as the e-graph rung above: MBQI refusing
+                // this query's FRAGMENT is not a verdict on the query. Carry the
+                // message as a first-class `unknown` so the full finite-model
+                // rung below still runs and the trail still names the refusal,
+                // instead of ending the ladder with an error.
+                Err(SolverError::Unsupported(message)) => CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail: format!("mbqi declined an unsupported fragment: {message}"),
+                }),
+                Err(other) => return Err(other),
+            };
             qtrace("mbqi", t0, "returned");
             // ADR-1907. MBQI's route record is deliberately deferred to the end
             // of this arm so the trail's LAST WORD is MBQI rather than a
@@ -785,8 +810,24 @@ pub fn solve(
     let Some(valid_config) = config_with_remaining_timeout(config, deadline) else {
         return Ok(quantified_timeout("existential skolemization"));
     };
-    let eliminated =
-        crate::quant_valid_universal::eliminate_valid_universals(arena, assertions, &valid_config)?;
+    let eliminated = match crate::quant_valid_universal::eliminate_valid_universals(
+        arena,
+        assertions,
+        &valid_config,
+    ) {
+        Ok(eliminated) => eliminated,
+        // GUARD. This rung proves a universal valid by a SUB-SOLVE of
+        // `not body[x := c]`, so its error is about that sub-query's fragment,
+        // not about this one. Propagating it ended the whole ladder.
+        Err(SolverError::Unsupported(what)) => {
+            route_trace::record_quant_rung_declined(
+                route_trace::quant_rung::VALID_UNIVERSAL_QF,
+                unsupported_decline(&what),
+            );
+            (assertions.clone(), false)
+        }
+        Err(other) => return Err(other),
+    };
     if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
         return Ok(quantified_timeout("valid-universal elimination"));
     }
