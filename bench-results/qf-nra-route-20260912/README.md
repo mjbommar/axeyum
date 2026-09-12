@@ -82,3 +82,111 @@ throughout, 16 cores). The board itself was measured on s6, idle and pinned.
 So the *reasons* here are comparable to the board; the *times* are not, and no
 timing claim is made from this census. A structural, pre-budget decline (the
 majority here) is load-independent; a watchdog kill is not.
+
+## Result — all 77, 100% reason coverage
+
+Raw per-file rows: `census-77.tsv`. Every one of the 77 ran to completion
+(`rc=0` on all 77, **no process hit the wall**), every one returned `unknown`,
+and **every one produced a stated reason** — 77 of 77, 0 reasonless rows.
+
+| cause, from the solver's own `give-up detail` | files | share |
+|---|---:|---:|
+| **`ERROR: unsupported by backend: QF_LRA: nonlinear real multiplication`** | **20** | **26%** |
+| `preprocessed dispatch timeout after reduced solve` | 18 | 23% |
+| `nonlinear abstraction: refinement reached a fixpoint without deciding` | 16 | 21% |
+| `nra lazy SMT: wall-clock timeout reached` | 7 | 9% |
+| watchdog fired before the worker thread returned | 5 | 6% |
+| `nonlinear abstraction: … past the consuming engine's capacity … (needs nlsat/CAD)` | 4 | 5% |
+| `lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget` | 3 | 4% |
+| `nonlinear abstraction: refinement round bound reached` | 2 | 3% |
+| online CDCL(T) LRA model did not replay | 1 | 1% |
+| integer literal outside the `iN` reference range (ADR-1702) | 1 | 1% |
+
+By `give-up kind`: `Error` 20, `Timeout` 18, `Incomplete` 18, `ResourceLimit` 16,
+`Watchdog` 5.
+
+### `bound_by` and `last` disagree, exactly as the CLI warns
+
+| `bound_by` (consumed the budget) | files |   | `last` (spoke last) | files |
+|---|---:|---|---|---:|
+| `nra` | 47 |   | `fd:bounded-completeness-unsat` | **52** |
+| `preprocess` | 10 |   | `dispatch-error` | 20 |
+| `dispatch-error` | 10 |   | (none — watchdog kill) | 5 |
+| (none — watchdog kill) | 5 |   | | |
+| `nra-real-root` | 3 |   | | |
+| `cas-ideal-refuter` | 1 |   | | |
+| `fd:parse` | 1 |   | | |
+
+`fd:bounded-completeness-unsat` is a **string** front-door wrapper. It has
+nothing to do with QF_NRA; it is simply the last route in the chain, and it
+re-reports the nonlinear decline it was handed. A census classifying by `last`
+would have named a string route as the cause of 52 of 77 QF_NRA losses. This is
+the third recorded instance of that failure mode in this repository.
+
+## The largest cause is a defect, not a capability wall
+
+**20 of 77 — the single biggest class — are not a decline at all. They are an
+`Err` escaping the dispatcher.**
+
+`solve_relaxation`'s incremental-linearization loop builds a point lemma
+`(a = a₀ ∧ b = b₀) → r = a₀·b₀` from the **original** operand terms of an
+abstracted product, and pushes it into the linear relaxation **without
+rewriting it through the product→fresh-variable map** that every other lemma
+builder there goes through. Its guard, `products.contains(&pa)`, skips an
+operand that *is* a collected product but not one that merely *contains* one —
+and `(+ c (* x (* x k)))`, the MetiTarski/Horner shape, is exactly the second
+kind. The raw lemma then carries a live `(* x …)` into an engine that can only
+linearize a product with a constant factor, which returns
+`SolverError::Unsupported`, which `check_with_nra_impl` propagates with `?`.
+
+Two things follow from that, and both were measured rather than argued:
+
+- Localised with the admission lever on `MulliganEconomicsModel0051a.smt2`:
+  `AXEYUM_NRA_ADMISSION=0` (relaxation never entered) → a clean
+  `ResourceLimit` decline, 15 route attempts. `AXEYUM_NRA_ADMISSION=1000`
+  (relaxation entered) → the error, 10 attempts. Default → the error.
+- The error also **doubles the work**. `check_auto` catches an errored
+  preprocessed dispatch and re-runs the whole thing on the original query, so
+  `nra-real-root` and `cas-ideal-refuter` each run twice (156 ms + 150 ms, and
+  101 µs + 77 µs, on that file) before the second pass errors again and the
+  error finally escapes.
+
+It also mis-*names* itself. The text says `QF_LRA`, so a reader is pointed at the
+linear backend; the boundary that actually refused is the nonlinear abstraction
+above it. And `unknown` is a first-class result in this project and never an
+error — this path was a standing violation of that rule.
+
+## The second-largest cause is an opaque relabel
+
+**18 of 77** say only `preprocessed dispatch timeout after reduced solve`.
+That sentence is not a cause; it is `dispatch_reduced` **replacing** the reduced
+solve's own `UnknownReason` with a fixed string when the budget has expired. The
+specific reason — which route gave up, and on what bound — existed at that line
+and was dropped.
+
+This is not local to QF_NRA. The same sentence is the top named `Timeout` detail
+in two other censuses: 41 of 110 files in
+`docs/research/03-measurements/qf-nia-is-not-a-width-problem-2026-09-12.md` and
+30 of the 260 `unknown`s in
+`docs/research/03-measurements/why-unknown-says-nothing-2026-09-11.md`. All of
+those rows are classified by a string that carries no cause.
+
+## What is a genuine capability wall
+
+**22 of 77** (16 refinement fixpoint + 4 atom capacity + 2 refinement round
+bound) are the linear-abstraction relaxation's documented sound-incomplete
+boundary, and the capacity decline says so in its own words: *"this needs a
+nlsat/CAD engine"*. That is ADR-0058 Phase C/D, and this lane does not attempt
+it. `mbo_E1` projects **771 cross-products to 36,945 linear-real atoms** against
+a capacity of 1,024; no tuning of a bound reaches that.
+
+The remaining 16 are clock: 7 `nra lazy SMT` wall-clock, 5 watchdog, 3
+Fourier–Motzkin budget, 1 replay failure — plus one wide-integer literal
+(ADR-1702, already tracked elsewhere).
+
+### The census times track the board
+
+The board (s6, idle, pinned) and this census (s4, load 13–23) agree closely per
+file where it matters: the seven rows the board timed at 24.1–25.1 s are the
+same rows this census timed at 24.0–24.7 s. So the budget-expiry rows are real
+and not an artifact of this box's load.
