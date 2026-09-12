@@ -76,6 +76,30 @@ is the fix;
 [the measurement note](../../docs/research/03-measurements/the-dt-blocker-census-was-measuring-the-ladder-2026-09-12.md)
 is the full write-up.
 
+### The board re-run after ADR-1927 (`guarded/`)
+
+The same protocol, the same pinned lists, the same 24 s — the only change is the
+solver. `guarded/` is therefore comparable to the baseline rows above **file by
+file**, not as a difference of aggregates.
+
+| division | axeyum before | axeyum after | gained | lost | flips | z3 | cvc5 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| AUFDTLIRA | 0 / 200 | **41 / 200** | 41 | **0** | **0** | 176 | 176 |
+| UFDTLIRA | 66 / 200 | **72 / 200** | 6 | **0** | **0** | 181 | 158 |
+| UFDT | 22 / 200 | *(running)* | | | | 66 | 78 |
+| UFDTNIRA | 5 / 200 | *(running)* | | | | 173 | 183 |
+
+Every one of `AUFDTLIRA`'s 41 is `unsat`, and all 41 are **comparable on all
+three checks** — declared `:status`, z3, cvc5 — with **0 disagreements**. The
+same for `UFDTLIRA`'s 72. The `AUFDTLIRA` zero-disagreement figure is no longer
+vacuous: it was, when the division decided nothing.
+
+**The board's 41 and the A/B's 62 are different samples, not a budget effect.**
+The board uses the pinned parity list (stride 55 through 11,043 files); the A/B
+uses a denser stride-27 list, and the two overlap only partially. Quote 41/200
+for the board and 62/200 for the A/B, and do not average them. The **per-file**
+number is the one that carries in both: 0 lost, 0 flips, in both.
+
 ### The A/B (`ab/`)
 
 Per-file, against the same binary without the guards, arms alternating per file,
