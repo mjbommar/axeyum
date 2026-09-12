@@ -63,7 +63,10 @@ pub use functions::{
     FunctionAbstractionDisagreement, FunctionAbstractionWitness, FunctionElimination,
     abstract_functions, eliminate_functions, witness_function_abstraction,
 };
-pub use int_blast::{IntBlastError, IntBlasting, MAX_INT_BLAST_WIDTH, blast_integers};
+pub use int_blast::{
+    IntBlastError, IntBlasting, MAX_INT_BLAST_WIDTH, additive_no_overflow_armed, blast_integers,
+    blast_integers_with_additive_no_overflow,
+};
 pub use int_divmod::{
     INT_DIVMOD_WITNESS_SAMPLES, IntDivModElimination, IntDivModFinding, IntDivModWitness,
     MAX_CONGRUENCE_GROUPS, ZeroDivisorCongruence, eliminate_int_divmod, witness_int_divmod,

@@ -29,6 +29,76 @@ use crate::canonical::build_app;
 /// within the `i128` reference range used for model read-back.
 pub const MAX_INT_BLAST_WIDTH: u32 = 64;
 
+/// Whether the blaster also constrains the **additive** operators
+/// (`int_add`/`int_sub`/`int_neg`) against wraparound, the way it already
+/// constrains `int_mul`. `0` is off; any non-zero value is on, and **`1` is
+/// what ships** (ADR-1937).
+///
+/// # What this was, and what measured it
+///
+/// [`Blaster::mul_no_overflow_constraint`] pinned every `int_mul` to its
+/// non-wrapping value and **nothing else in this file was pinned at all**.
+/// ADR-1921 measured that widening the ladder to 64 decides **0 of 110**
+/// winnable `QF_NIA` files, and that 14 of the 20 that stayed `unknown` report
+/// `overflowed at width 64` — they climbed the whole tail and the replay still
+/// failed at the top rung. The hypothesis it left standing, explicitly as a
+/// hypothesis, was that the surviving replay failures are **additive**
+/// wraparound: a sum or difference that left the signed range, which widening
+/// cannot fix because it enlarges the range the search may wander into exactly
+/// as fast as it enlarges the range a genuine witness may live in.
+///
+/// That hypothesis is now measured and it is right. Interleaved per-file A/B
+/// over the whole 200-file `QF_NIA` division, one binary, arms alternating:
+/// **39 decided → 78**, 40 gains, 0 real losses, 0 verdict flips, wall
+/// **−10.2 %** — it is FASTER, because a constrained search stops wandering
+/// through wrapping models the replay would reject anyway. Cost on 298
+/// already-decided files across nine integer-bearing divisions: 0 real losses,
+/// 0 flips, **+1.9 %** wall. 78 verdicts cross-checked against the benchmark's
+/// own `:status`, z3 and cvc5: **0 disagreements**.
+/// See `bench-results/qf-nia-dispatch-20260912/`.
+///
+/// # Soundness
+///
+/// Same argument as the multiplicative one, and it is a *restriction* at width
+/// `B`: it can only shrink the bit-vector model set. `Sat` stays anchored by
+/// the exact-integer replay in `lia.rs` / `combined.rs`, which re-checks every
+/// original assertion regardless; a bit-vector `Unsat` with integers present is
+/// already reported as `unknown` ("no model within the bounded integer width"),
+/// never as an integer `unsat`. So a mis-encoded constraint can only make the
+/// search MISS a model (a wider rung, or a sound `Unknown`), never accept a
+/// wrong `Sat`.
+///
+/// **The one place a bit-vector `Unsat` IS trusted** is
+/// `auto::solve_exact_bounded_box`, which re-blasts a box-clamped query and
+/// transfers the raw refutation. That is safe here for a reason worth writing
+/// down rather than leaving to be inferred: its `BoundedBox::width` is proven
+/// to cover **every Int subterm's** interval, not merely every variable's, so
+/// at that width no operation wraps and these constraints are *implied* — they
+/// cannot remove a model the box route could otherwise have found. The
+/// 499-pair A/B produced **0 verdict flips**, which is the empirical half of
+/// the same statement. If this is ever revisited, that function is where to
+/// look.
+///
+/// Turning it back off for an A/B is `AXEYUM_INT_BLAST_ADDITIVE_NO_OVERFLOW=0`.
+const ADDITIVE_NO_OVERFLOW: usize = 1;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`ADDITIVE_NO_OVERFLOW`]: the compiled default, or
+    /// `AXEYUM_INT_BLAST_ADDITIVE_NO_OVERFLOW` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `ADDITIVE_NO_OVERFLOW` (`1`, on since ADR-1937); set it to `0` to
+    /// re-run the A/B against the pre-ADR-1937 encoding. A malformed value is
+    /// refused rather than silently defaulted. See [`axeyum_ir::config_lever`].
+    fn additive_no_overflow() -> usize = "AXEYUM_INT_BLAST_ADDITIVE_NO_OVERFLOW" or ADDITIVE_NO_OVERFLOW;
+}
+
+/// Whether the additive no-overflow side-constraints are armed for this process.
+#[must_use]
+pub fn additive_no_overflow_armed() -> bool {
+    additive_no_overflow() != 0
+}
+
 /// Error from integer bit-blasting.
 #[derive(Debug, Clone)]
 pub enum IntBlastError {
@@ -180,6 +250,27 @@ pub fn blast_integers(
     assertions: &[TermId],
     width: u32,
 ) -> Result<IntBlasting, IntBlastError> {
+    blast_integers_with_additive_no_overflow(arena, assertions, width, additive_no_overflow_armed())
+}
+
+/// [`blast_integers`] with the additive no-overflow side-constraints selected
+/// EXPLICITLY rather than read from the process environment.
+///
+/// The lever ([`ADDITIVE_NO_OVERFLOW`]) resolves once per process through a
+/// `OnceLock`, so a test that sets the variable is a test of whichever test
+/// happened to read it first. Taking the flag as an argument is what makes the
+/// armed behaviour testable at all, and what lets a measurement harness arm it
+/// per call instead of per process.
+///
+/// # Errors
+///
+/// As [`blast_integers`].
+pub fn blast_integers_with_additive_no_overflow(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    width: u32,
+    additive: bool,
+) -> Result<IntBlasting, IntBlastError> {
     if width == 0 || width > MAX_INT_BLAST_WIDTH {
         return Err(IntBlastError::InvalidWidth(width));
     }
@@ -196,6 +287,7 @@ pub fn blast_integers(
 
     let mut ctx = Blaster {
         width,
+        additive,
         ..Blaster::default()
     };
     let mut rewritten = Vec::with_capacity(assertions.len());
@@ -204,15 +296,18 @@ pub fn blast_integers(
     }
 
     // No-overflow side-constraints for every integer product bit-blasted at width
-    // `B`. Each is a *restriction* that forces the SAT search onto a NON-WRAPPING
-    // (faithful) model of `a * b`, so the bounded blast finds the genuine small
-    // witness instead of a spurious mod-2^B wrapping one (which replay rejects).
-    // Conjoining them with the rewritten assertions keeps the result a pure
-    // conjunction; see `mul_no_overflow_constraint` for the encoding and the
-    // soundness note (replay remains the anchor; UNSAT-with-constraint only widens
-    // via the ladder, never an `unsat`).
-    let restricting_constraints = ctx.mul_constraints.len();
-    rewritten.extend(ctx.mul_constraints);
+    // `B` -- and, when `AXEYUM_INT_BLAST_ADDITIVE_NO_OVERFLOW` is armed, for every
+    // `int_add`/`int_sub`/`int_neg` as well (see `ADDITIVE_NO_OVERFLOW`; off by
+    // default, so the shipped assertions are unchanged). Each is a *restriction*
+    // that forces the SAT search onto a NON-WRAPPING (faithful) model, so the
+    // bounded blast finds the genuine small witness instead of a spurious mod-2^B
+    // wrapping one (which replay rejects). Conjoining them with the rewritten
+    // assertions keeps the result a pure conjunction; see
+    // `mul_no_overflow_constraint` / `additive_no_overflow_constraint` for the
+    // encodings and the soundness note (replay remains the anchor;
+    // UNSAT-with-constraint only widens via the ladder, never an `unsat`).
+    let restricting_constraints = ctx.no_overflow_constraints.len();
+    rewritten.extend(ctx.no_overflow_constraints);
 
     Ok(IntBlasting {
         assertions: rewritten,
@@ -230,9 +325,15 @@ struct Blaster {
     symbol_memo: HashMap<SymbolId, SymbolId>,
     vars: Vec<(SymbolId, SymbolId)>,
     fresh_counter: usize,
-    /// No-overflow side-constraints accumulated for each integer product (one
-    /// `bool` term per `int_mul`); conjoined with the rewritten assertions.
-    mul_constraints: Vec<TermId>,
+    /// No-overflow side-constraints accumulated while rewriting: one `bool` term
+    /// per `int_mul`, plus one per `int_add`/`int_sub`/`int_neg` when
+    /// [`additive_no_overflow_armed`] is true. Conjoined with the rewritten
+    /// assertions.
+    no_overflow_constraints: Vec<TermId>,
+    /// Whether `int_add`/`int_sub`/`int_neg` also get a no-overflow constraint.
+    /// Passed in, never read from the environment here: see
+    /// [`blast_integers_with_additive_no_overflow`].
+    additive: bool,
 }
 
 impl Blaster {
@@ -322,8 +423,30 @@ impl Blaster {
                 let b = self.rewrite(arena, args[1])?;
                 let product = arena.bv_mul(a, b)?;
                 let constraint = self.mul_no_overflow_constraint(arena, a, b, product)?;
-                self.mul_constraints.push(constraint);
+                self.no_overflow_constraints.push(constraint);
                 product
+            }
+            // The ADDITIVE analogue, armed only by
+            // `AXEYUM_INT_BLAST_ADDITIVE_NO_OVERFLOW` (see [`ADDITIVE_NO_OVERFLOW`]).
+            // With the lever off this arm's guard is false and the operators fall
+            // through to the generic `App` arm below — the pre-lever behaviour,
+            // unchanged. `IntAbs`, and the `bv_add`/`bv_sub` inside the Euclidean
+            // `IntDiv`/`IntMod` construction in `build_int_app`, are NOT covered:
+            // they are built there, not here, and saying so is cheaper than
+            // letting a reader infer coverage this arm does not have.
+            TermNode::App {
+                op: op @ (Op::IntAdd | Op::IntSub | Op::IntNeg),
+                ref args,
+            } if self.additive => {
+                let mut lowered = Vec::with_capacity(args.len());
+                for &arg in args {
+                    lowered.push(self.rewrite(arena, arg)?);
+                }
+                let result = Self::build_int_app(arena, op, &lowered)?;
+                let constraint =
+                    Self::additive_no_overflow_constraint(arena, op, &lowered, result)?;
+                self.no_overflow_constraints.push(constraint);
+                result
             }
             TermNode::App { op, args } => {
                 let mut lowered = Vec::with_capacity(args.len());
@@ -385,6 +508,38 @@ impl Blaster {
         // product is exactly "the product fits in signed `B` bits".
         let product_wide = arena.sign_ext(width, product)?;
         Ok(arena.eq(product_wide, true_product)?)
+    }
+
+    /// The **additive** no-overflow side-constraint for `int_add`, `int_sub` and
+    /// `int_neg`, whose width-`B` two's-complement value is `result`.
+    ///
+    /// One extra bit is enough and 2·`B` would be waste: the signed sum,
+    /// difference or negation of `B`-bit values always fits in `B+1` bits. So
+    /// recompute the operation exactly at `B+1` and demand that it equal the
+    /// sign-extension of the width-`B` `result`; that holds iff the width-`B`
+    /// operation did NOT wrap. (`int_neg` is included because `-MIN` is exactly
+    /// the value that wraps to itself, which no `add`/`sub` constraint catches.)
+    ///
+    /// Soundness: see [`ADDITIVE_NO_OVERFLOW`]. This is a restriction at width
+    /// `B`; `Sat` remains anchored by the exact-integer replay and an in-range
+    /// `unsat` is already reported as `unknown`.
+    ///
+    /// An associated function, not a method: unlike
+    /// [`Self::mul_no_overflow_constraint`] it needs no `self.width` — one extra
+    /// bit is enough at every width, so the width never enters the encoding.
+    fn additive_no_overflow_constraint(
+        arena: &mut TermArena,
+        op: Op,
+        lowered: &[TermId],
+        result: TermId,
+    ) -> Result<TermId, IntBlastError> {
+        let wide: Vec<TermId> = lowered
+            .iter()
+            .map(|&t| arena.sign_ext(1, t))
+            .collect::<Result<_, _>>()?;
+        let true_value = Self::build_int_app(arena, op, &wide)?;
+        let result_wide = arena.sign_ext(1, result)?;
+        Ok(arena.eq(result_wide, true_value)?)
     }
 
     fn build_int_app(
@@ -517,8 +672,8 @@ fn mask(width: u32) -> u128 {
 
 #[cfg(test)]
 mod tests {
-    use super::{blast_integers, contains_integer};
-    use axeyum_ir::{Assignment, Sort, TermArena, Value, eval};
+    use super::{blast_integers, blast_integers_with_additive_no_overflow, contains_integer};
+    use axeyum_ir::{Assignment, Op, Sort, TermArena, TermId, TermNode, Value, eval};
 
     #[test]
     fn no_integers_passes_through() {
@@ -630,5 +785,205 @@ mod tests {
         let big = arena.int_const(1000);
         let eq = arena.eq(x, big).unwrap();
         assert!(blast_integers(&mut arena, &[eq], 8).is_err());
+    }
+
+    // ----------------------------------------------------------------------
+    // The ADDITIVE no-overflow side-constraint (`ADDITIVE_NO_OVERFLOW`).
+    //
+    // Every test below drives `blast_integers_with_additive_no_overflow`
+    // EXPLICITLY rather than through the environment lever: the lever resolves
+    // once per process through a `OnceLock`, so an env-var test is a test of
+    // whichever test read it first -- a gate on one shell, and one that passes
+    // or fails by scheduling order.
+    // ----------------------------------------------------------------------
+
+    /// Counts the integer operators of each kind reachable from `roots`, so the
+    /// expectations below are derived from the TERM, not from a literal a
+    /// maintainer typed. A test named "only products are constrained" that
+    /// hard-codes `1` measures the maintainer's memory of the fixture.
+    fn int_op_counts(arena: &TermArena, roots: &[TermId]) -> (usize, usize) {
+        use std::collections::BTreeSet;
+        let (mut muls, mut adds) = (0, 0);
+        let mut seen: BTreeSet<TermId> = BTreeSet::new();
+        let mut stack: Vec<TermId> = roots.to_vec();
+        while let Some(t) = stack.pop() {
+            if !seen.insert(t) {
+                continue;
+            }
+            if let TermNode::App { op, args } = arena.node(t) {
+                match op {
+                    Op::IntMul => muls += 1,
+                    Op::IntAdd | Op::IntSub | Op::IntNeg => adds += 1,
+                    _ => {}
+                }
+                stack.extend(args.iter().copied());
+            }
+        }
+        (muls, adds)
+    }
+
+    /// `(+ (* x y) z) = 1` -- one product and one sum, so the two arms are
+    /// distinguishable by COUNT and a fixture that accidentally had no sum
+    /// could not pass.
+    fn one_product_one_sum(arena: &mut TermArena) -> Vec<TermId> {
+        let xs = arena.declare("x", Sort::Int).unwrap();
+        let ys = arena.declare("y", Sort::Int).unwrap();
+        let zs = arena.declare("z", Sort::Int).unwrap();
+        let (x, y, z) = (arena.var(xs), arena.var(ys), arena.var(zs));
+        let prod = arena.int_mul(x, y).unwrap();
+        let sum = arena.int_add(prod, z).unwrap();
+        let one = arena.int_const(1);
+        vec![arena.eq(sum, one).unwrap()]
+    }
+
+    #[test]
+    fn the_shipped_blaster_constrains_products_and_nothing_else() {
+        let mut arena = TermArena::new();
+        let assertions = one_product_one_sum(&mut arena);
+        let (muls, adds) = int_op_counts(&arena, &assertions);
+        assert!(muls > 0 && adds > 0, "fixture must contain both kinds");
+
+        let off =
+            blast_integers_with_additive_no_overflow(&mut arena, &assertions, 8, false).unwrap();
+        assert_eq!(
+            off.restricting_constraints(),
+            muls,
+            "with the lever off, exactly one constraint per product and none per sum",
+        );
+    }
+
+    #[test]
+    fn arming_the_lever_adds_one_constraint_per_additive_operator() {
+        let mut arena = TermArena::new();
+        let assertions = one_product_one_sum(&mut arena);
+        let (muls, adds) = int_op_counts(&arena, &assertions);
+
+        let on =
+            blast_integers_with_additive_no_overflow(&mut arena, &assertions, 8, true).unwrap();
+        assert_eq!(
+            on.restricting_constraints(),
+            muls + adds,
+            "armed: one per product AND one per add/sub/neg",
+        );
+    }
+
+    #[test]
+    fn the_shipped_default_is_on() {
+        // The constant, not the resolved lever: `additive_no_overflow_armed()`
+        // reads the environment, and asserting on it would make this test pass
+        // or fail by ambient variable. What ships is the constant.
+        assert_ne!(
+            super::ADDITIVE_NO_OVERFLOW,
+            0,
+            "the additive constraint ships ON (ADR-1937: +40 decided on QF_NIA, 0 real \
+             losses over 499 paired solves, 0 disagreements against :status/z3/cvc5). \
+             Turning it OFF is an A/B (AXEYUM_INT_BLAST_ADDITIVE_NO_OVERFLOW=0), not a default.",
+        );
+    }
+
+    /// The encoding test that can actually fail: enumerate EVERY width-4 model
+    /// and require the emitted constraint to be true exactly when the integer
+    /// result is in signed range.
+    ///
+    /// This is what distinguishes the shipped encoding from every plausible
+    /// wrong one: a zero-extension instead of a sign-extension disagrees on
+    /// negative operands, extending by 0 bits makes it a tautology, and
+    /// comparing the wrong side makes it unsatisfiable. Each of those is a
+    /// distinct wrong answer on some pair in this table.
+    #[test]
+    fn the_additive_constraint_is_exactly_in_signed_range_at_every_width_4_model() {
+        const W: u32 = 4;
+        const LO: i32 = -8;
+        const HI: i32 = 7;
+        let mut checked = 0usize;
+        let mut excluded = 0usize;
+        for a in LO..=HI {
+            for b in LO..=HI {
+                let mut arena = TermArena::new();
+                let xs = arena.declare("x", Sort::Int).unwrap();
+                let ys = arena.declare("y", Sort::Int).unwrap();
+                let (x, y) = (arena.var(xs), arena.var(ys));
+                let sum = arena.int_add(x, y).unwrap();
+                let zero = arena.int_const(0);
+                // A trivially true carrier so `sum` is reachable from an assertion.
+                let ge = arena.int_ge(sum, zero).unwrap();
+                let lt = arena.int_lt(sum, zero).unwrap();
+                let root = arena.or(ge, lt).unwrap();
+
+                let blast =
+                    blast_integers_with_additive_no_overflow(&mut arena, &[root], W, true).unwrap();
+                assert_eq!(blast.restricting_constraints(), 1);
+                // The constraint is the LAST assertion (appended after the
+                // rewritten roots) -- asserted, not assumed.
+                let constraint = *blast.assertions().last().unwrap();
+
+                let bx = arena.find_internal_symbol("!int_bv_0").unwrap();
+                let by = arena.find_internal_symbol("!int_bv_1").unwrap();
+                let mut m = Assignment::new();
+                m.set(bx, encode_signed(a, W));
+                m.set(by, encode_signed(b, W));
+
+                let got = eval(&arena, constraint, &m).unwrap();
+                let want = (LO..=HI).contains(&(a + b));
+                assert_eq!(
+                    got,
+                    Value::Bool(want),
+                    "a={a} b={b}: a+b={} in range? {want}",
+                    a + b
+                );
+                checked += 1;
+                if !want {
+                    excluded += 1;
+                }
+            }
+        }
+        assert_eq!(checked, 256, "every width-4 pair must be exercised");
+        // A constraint that excludes NOTHING is a constraint that does nothing;
+        // the population must contain both outcomes or this test is vacuous.
+        assert!(
+            excluded > 0 && excluded < checked,
+            "{excluded} of {checked} excluded -- the table must contain both outcomes",
+        );
+    }
+
+    /// `int_neg` is in the arm for exactly one value: `-MIN` wraps to itself,
+    /// and no `add`/`sub` constraint catches it. If the arm ever loses `IntNeg`
+    /// this is the test that notices.
+    #[test]
+    fn the_additive_constraint_catches_negating_the_minimum() {
+        const W: u32 = 4;
+        let mut arena = TermArena::new();
+        let xs = arena.declare("x", Sort::Int).unwrap();
+        let x = arena.var(xs);
+        let neg = arena.int_neg(x).unwrap();
+        let zero = arena.int_const(0);
+        let ge = arena.int_ge(neg, zero).unwrap();
+        let lt = arena.int_lt(neg, zero).unwrap();
+        let root = arena.or(ge, lt).unwrap();
+
+        let blast = blast_integers_with_additive_no_overflow(&mut arena, &[root], W, true).unwrap();
+        assert_eq!(blast.restricting_constraints(), 1);
+        let constraint = *blast.assertions().last().unwrap();
+        let bx = arena.find_internal_symbol("!int_bv_0").unwrap();
+
+        for (v, want) in [(-8_i32, false), (-7, true), (0, true), (7, true)] {
+            let mut m = Assignment::new();
+            m.set(bx, encode_signed(v, W));
+            assert_eq!(
+                eval(&arena, constraint, &m).unwrap(),
+                Value::Bool(want),
+                "neg({v}) in signed range? {want}",
+            );
+        }
+    }
+
+    /// Two's-complement encoding of a signed `i32` into a width-`w` bit-vector
+    /// value, for the enumeration tests above.
+    fn encode_signed(v: i32, w: u32) -> Value {
+        let mask = (1u128 << w) - 1;
+        Value::Bv {
+            width: w,
+            value: i128::from(v).cast_unsigned() & mask,
+        }
     }
 }

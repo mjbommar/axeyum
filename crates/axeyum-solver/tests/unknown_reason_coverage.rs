@@ -53,17 +53,31 @@ use axeyum_solver::{
 /// the fixture has stopped covering the path and must be replaced, not
 /// deleted" — so it is replaced, and it is a capability gain that forced it.
 ///
+/// **Replaced a SECOND time, later the same day, for the same reason.** The
+/// first replacement was `p(c)`, `not p(d)`, `c = d` over a scalar datatype —
+/// a UF applied to a datatype *argument*. ADR-1935 (`dt-capability`) built
+/// exactly that capability hours later, and the script began deciding `unsat`,
+/// so both tests below went red on `main` again. Twice in one day this fixture
+/// has been overtaken by the solver getting better, which is the *good* way for
+/// it to fail and is why the message says replace rather than delete.
+///
+/// The current script is the same path one rung further out: a UF applied to a
+/// **constructor term** rather than a free variable, which ADR-1935's own
+/// residual census names as the next frontier (173 of the sampled files). When
+/// that capability lands this fixture will decide too — replace it again, and
+/// add a line here rather than reaching for a shape the solver will never
+/// support, because a fixture that can never be overtaken is testing nothing
+/// anybody is trying to fix.
+///
 /// Kept inline rather than pointed at the corpus, so the gate does not depend
 /// on a `/nas3` mount that most hosts do not have.
 const DISPATCH_ERROR_SCRIPT: &str = r"
 (set-logic QF_UFDT)
-(declare-datatypes ((Color 0)) (((red) (green))))
-(declare-fun p (Color) Bool)
-(declare-const c Color)
-(declare-const d Color)
-(assert (= c d))
-(assert (p c))
-(assert (not (p d)))
+(declare-datatypes ((Pair 0)) (((mk (fst Int) (snd Int)))))
+(declare-fun p (Pair) Bool)
+(declare-const a Int)
+(assert (p (mk a 0)))
+(assert (not (p (mk 0 a))))
 (check-sat)
 ";
 

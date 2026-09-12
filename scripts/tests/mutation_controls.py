@@ -9501,6 +9501,57 @@ SUITES["dt-capability-1935"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `int-blast-additive-no-overflow` — the ADDITIVE no-overflow side-constraint
+# (ADR-1937).  It ships OFF, so nothing in the shipped binary exercises it; the
+# only thing standing between "this encoding is right" and "nobody checked" is
+# the width-4 enumeration test.  Each mutation below removes exactly one part
+# of the encoding and must kill exactly one test.
+# --------------------------------------------------------------------------
+
+SUITES["int-blast-additive-no-overflow"] = (
+    "crates/axeyum-rewrite/src/int_blast.rs",
+    Cargo(
+        ("-p", "axeyum-rewrite", "--lib", "int_blast"),
+        "int-blast-additive-no-overflow",
+    ),
+    [
+        (
+            # The constraint compares the widened result against ITSELF, so it
+            # is a tautology that excludes nothing while still being COUNTED.
+            # This is the mutation the count tests structurally cannot catch,
+            # and it is why the width-4 enumeration exists.
+            "the additive constraint compares against the recomputed value",
+            "Ok(arena.eq(result_wide, true_value)?)",
+            "Ok(arena.eq(result_wide, result_wide)?)",
+        ),
+        (
+            # Zero-extension instead of sign-extension: agrees on non-negative
+            # operands and disagrees on negative ones, which the width-4 table
+            # covers exhaustively.
+            "the additive constraint extends by SIGN, not by zero",
+            "            .map(|&t| arena.sign_ext(1, t))",
+            "            .map(|&t| arena.zero_ext(1, t))",
+        ),
+        (
+            # `int_neg` leaves the arm: `-MIN` wraps to itself and no add/sub
+            # constraint catches it, so exactly the neg test dies.
+            "`int_neg` is in the constrained arm",
+            "op: op @ (Op::IntAdd | Op::IntSub | Op::IntNeg),",
+            "op: op @ (Op::IntAdd | Op::IntSub),",
+        ),
+        (
+            # The lever ships off instead of armed, which is the pre-ADR-1937
+            # encoding. Kills the test that pins the shipped default, and
+            # nothing else.
+            "the additive constraint ships ON",
+            "const ADDITIVE_NO_OVERFLOW: usize = 1;",
+            "const ADDITIVE_NO_OVERFLOW: usize = 0;",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
