@@ -3510,17 +3510,32 @@ fn define_sort_alias_chain_is_resolved_in_quantifier_binder() {
 
 /// `(as const S)` is the other term-conversion sort position that was parsed
 /// against an empty alias map.
+///
+/// THE SHAPE MATTERS. The obvious script — `(select ((as const A) v) i)` — never
+/// reaches term conversion: `reduce_const_array_sexpr` rewrites `select` and
+/// const-array `=` at the S-EXPRESSION level, before any sort is parsed, so it
+/// parses with or without the fix and pins nothing. (It is doubly insensitive
+/// with an alias: `is_bv_array_sort` reads the sort s-expr structurally, so the
+/// atom `A` is never recognised as a BV array and the non-BV reduction always
+/// applies.) `distinct` is not one of the reduced heads, so this shape does
+/// reach `apply_parameterized` — verified by running the pre-fix binary on it.
 #[test]
 fn define_sort_alias_is_resolved_in_as_const() {
     let text = r"
-        (set-logic QF_ALIA)
-        (define-sort IntArray () (Array Int Int))
-        (declare-const i Int)
-        (assert (= (select ((as const IntArray) 7) i) 7))
+        (set-logic QF_ABV)
+        (define-sort BA () (Array (_ BitVec 4) (_ BitVec 8)))
+        (declare-const a BA)
+        (assert (distinct a ((as const BA) #x00)))
     ";
     let script = parse_script(text).expect("aliased `as const` sort parses");
-    let i = script.arena.find_symbol("i").expect("i is declared");
-    assert_eq!(script.arena.symbol(i).1, Sort::Int);
+    let a = script.arena.find_symbol("a").expect("a is declared");
+    assert_eq!(
+        script.arena.symbol(a).1,
+        Sort::Array {
+            index: ArraySortKey::BitVec(4),
+            element: ArraySortKey::BitVec(8),
+        }
+    );
     assert_eq!(script.assertions.len(), 1);
 }
 

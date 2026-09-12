@@ -113,20 +113,27 @@ fn forall_over_bitvec_alias_is_unsat() {
 }
 
 #[test]
-fn as_const_over_array_alias_is_unsat() {
+fn as_const_over_array_alias_is_sat() {
     // `(as const S)` is the other term-conversion sort position that was parsed
-    // against an empty alias map. `(select ((as const IntArray) 7) i) = 8` is
-    // false at every `i`.
+    // against an empty alias map.
+    //
+    // THE SHAPE MATTERS, and the obvious one is VACUOUS. `(select ((as const A) v) i)`
+    // is rewritten by `reduce_const_array_sexpr` at the S-EXPRESSION level, before
+    // any sort is parsed, so it parses either way and pins nothing — confirmed by
+    // running the pre-fix binary on it. `distinct` is not one of the reduced heads,
+    // so this shape does reach `apply_parameterized`, where the sort is parsed.
+    //
+    // `a` is a free array, so it can differ from the all-zero constant array: sat.
     assert_alias_agrees(
-        "(set-logic ALIA)\n\
-         (define-sort IntArray () (Array Int Int))\n\
-         (declare-const i Int)\n\
-         (assert (= (select ((as const IntArray) 7) i) 8))\n\
+        "(set-logic QF_ABV)\n\
+         (define-sort BA () (Array (_ BitVec 4) (_ BitVec 8)))\n\
+         (declare-const a BA)\n\
+         (assert (distinct a ((as const BA) #x00)))\n\
          (check-sat)\n",
-        "(set-logic ALIA)\n\
-         (declare-const i Int)\n\
-         (assert (= (select ((as const (Array Int Int)) 7) i) 8))\n\
+        "(set-logic QF_ABV)\n\
+         (declare-const a (Array (_ BitVec 4) (_ BitVec 8)))\n\
+         (assert (distinct a ((as const (Array (_ BitVec 4) (_ BitVec 8))) #x00)))\n\
          (check-sat)\n",
-        "unsat",
+        "sat",
     );
 }
