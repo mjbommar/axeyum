@@ -105,6 +105,14 @@ case "$division" in
     reference_bin="/nas3/data/axeyum/harness/bin/bitwuzla" ;;
   UF|UFLIA|UFNIA|QF_UF|QF_SLIA|QF_S|QF_SEQ|QF_DT|QF_AUFLIA)
     reference_bin="/nas3/data/axeyum/harness/bin/cvc5" ;;
+  # The quantified datatype divisions (ADR-1920). cvc5 is the datatype solver of
+  # record -- it is where the DT decision procedure was published and it leads
+  # every DT division in SMT-COMP. WITHOUT this arm they fall through to
+  # `/usr/bin/z3` 4.13.3, which did not compete in SMT-COMP 2025 at all; that is
+  # exactly the "a weaker reference" knob this script's header lists, and it
+  # would flatter us on the division we have the least right to be flattered on.
+  UFDT|UFDTLIRA|AUFDTLIRA|AUFDTNIRA|AUFDTLIA|AUFBVDTLIA|UFDTNIRA)
+    reference_bin="/nas3/data/axeyum/harness/bin/cvc5" ;;
   # QF_LIA's SMT-COMP 2025 winner is OpenSMT (4,579/4,825 = 94.9 %), which is
   # NOT on this machine. cvc5 is the strongest reference we actually have: it
   # placed *2nd in this very division* (4,443/4,825 = 92.1 %), 136 benchmarks

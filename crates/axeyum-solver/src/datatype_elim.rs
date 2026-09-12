@@ -45,8 +45,39 @@ pub fn check_with_datatype_elimination(
     solve(arena, &simplified, config)
 }
 
-/// The first subterm that still carries datatype content (a datatype sort or a
-/// construct/select/test op), if any.
+/// Whether `sort` mentions a datatype anywhere, including inside an array.
+///
+/// TERMINATION (ADR-1920). This has to be the SAME predicate the dispatcher
+/// diverts on, and the two had drifted: `Features::note_sort` recurses into an
+/// array's index and element sorts, so `(Array Int Color)` sets
+/// `has_datatype` — while this scan tested only `Sort::Datatype(_)` on the term
+/// itself, and an array-of-datatypes TERM has sort `Array`, not `Datatype`. So
+/// a query with an array of datatypes and no datatype-sorted term reached the
+/// fall-through `solve` below, the dispatcher diverted right back here on the
+/// unchanged input, and the process died of a stack overflow.
+///
+/// Measured 2026-09-12 on
+/// `AUFDTLIRA/20200306-Kanig/spark2014bench/P518-021__frame_for_max__…`: a
+/// 22 KB file that still overflowed a **1 GiB** stack, so an unbounded cycle
+/// rather than a deep term. It parses on `main` without ADR-1920, so this is a
+/// live defect that predates the gate lift.
+///
+/// Widening this predicate is what makes the fall-through provably terminating:
+/// when it says `false` for every reachable term and no `Dt*` op is present,
+/// `Features::scan` over the same terms cannot set `has_datatype`, so `solve`
+/// cannot route back here.
+pub(crate) fn sort_mentions_datatype(sort: Sort) -> bool {
+    match sort {
+        Sort::Datatype(_) => true,
+        Sort::Array { index, element } => {
+            sort_mentions_datatype(index.to_sort()) || sort_mentions_datatype(element.to_sort())
+        }
+        _ => false,
+    }
+}
+
+/// The first subterm that still carries datatype content (a sort mentioning a
+/// datatype, or a construct/select/test op), if any.
 fn first_datatype_term(arena: &TermArena, roots: &[TermId]) -> Option<TermId> {
     let mut seen = BTreeSet::new();
     let mut stack: Vec<TermId> = roots.to_vec();
@@ -54,7 +85,7 @@ fn first_datatype_term(arena: &TermArena, roots: &[TermId]) -> Option<TermId> {
         if !seen.insert(term) {
             continue;
         }
-        if matches!(arena.sort_of(term), Sort::Datatype(_)) {
+        if sort_mentions_datatype(arena.sort_of(term)) {
             return Some(term);
         }
         if let TermNode::App { op, args } = arena.node(term) {

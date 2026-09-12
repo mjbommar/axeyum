@@ -1627,8 +1627,9 @@ impl TermArena {
     ///
     /// # Errors
     ///
-    /// Returns [`IrError::SortMismatch`] for a datatype or sequence result,
-    /// [`IrError::InvalidWidth`] for a bad bit-vector/array-component width, or
+    /// Returns [`IrError::SortMismatch`] for a sequence parameter or result
+    /// (datatypes are admitted — ADR-1920), [`IrError::InvalidWidth`] for a bad
+    /// bit-vector/array-component width, or
     /// [`IrError::FunctionSignatureConflict`] if `name` exists with a different
     /// signature.
     ///
@@ -2248,34 +2249,48 @@ fn check_scalar_width(sort: Sort) -> Result<(), IrError> {
 
 /// Sort admissibility for an uninterpreted-function parameter. Wider than
 /// [`check_scalar_width`]: in addition to the finite scalars (`Bool`/`BitVec`/
-/// `Float`) it admits arithmetic sorts, declared carrier sorts, and first-class
-/// array sorts. Mixed AUFLIA uses array-valued arguments; canonical AUFBV also
-/// supports finite-scalar array-valued results (ADR-0084).
+/// `Float`) it admits arithmetic sorts, declared carrier sorts, first-class
+/// array sorts, and datatype sorts. Mixed AUFLIA uses array-valued arguments;
+/// canonical AUFBV also supports finite-scalar array-valued results (ADR-0084).
+///
+/// Datatype parameters are admitted as of ADR-1920. The IR is a *typing* gate,
+/// not a capability gate: rejecting the declaration made four SMT-LIB divisions
+/// (UFDT, UFDTLIRA, AUFDTLIRA, UFDTNIRA — 27,785 files) unparseable, including
+/// files whose datatype content never reaches an operator we cannot handle. The
+/// capability gate lives where it can be precise, in
+/// `axeyum_solver::datatype_native`, which fails closed with
+/// `SolverError::Unsupported` for every datatype shape outside its fragment.
+/// Sequence sorts stay rejected here: no lane has measured them.
 fn check_uf_param_sort(sort: Sort) -> Result<(), IrError> {
     match sort {
-        Sort::Int | Sort::Real | Sort::Uninterpreted(_) | Sort::Array { .. } => Ok(()),
+        Sort::Int
+        | Sort::Real
+        | Sort::Uninterpreted(_)
+        | Sort::Array { .. }
+        | Sort::Datatype(_) => Ok(()),
         Sort::Bool | Sort::BitVec(_) | Sort::RoundingMode | Sort::Float { .. } => {
             check_scalar_width(sort)
         }
-        found @ (Sort::Datatype(_) | Sort::Seq(_)) => Err(IrError::SortMismatch {
-            expected: "Bool, BitVec, Float, Int, Real, array, or uninterpreted sort",
+        found @ Sort::Seq(_) => Err(IrError::SortMismatch {
+            expected: "Bool, BitVec, Float, Int, Real, array, datatype, or uninterpreted sort",
             found,
         }),
     }
 }
 
 /// Sort admissibility for an uninterpreted-function result. First-class arrays
-/// use the same flat component validation as array symbols; datatype and
-/// sequence results remain under their separate theory gates.
+/// use the same flat component validation as array symbols; datatype results
+/// are admitted as of ADR-1920 (see [`check_uf_param_sort`] for why the
+/// capability gate belongs downstream). Sequence results remain gated.
 fn check_uf_result_sort(sort: Sort) -> Result<(), IrError> {
     match sort {
-        Sort::Int | Sort::Real | Sort::Uninterpreted(_) => Ok(()),
+        Sort::Int | Sort::Real | Sort::Uninterpreted(_) | Sort::Datatype(_) => Ok(()),
         Sort::Bool | Sort::BitVec(_) | Sort::RoundingMode | Sort::Float { .. } => {
             check_scalar_width(sort)
         }
         Sort::Array { .. } => check_sort(sort),
-        found @ (Sort::Datatype(_) | Sort::Seq(_)) => Err(IrError::SortMismatch {
-            expected: "Bool, BitVec, Float, Int, Real, array, or uninterpreted sort",
+        found @ Sort::Seq(_) => Err(IrError::SortMismatch {
+            expected: "Bool, BitVec, Float, Int, Real, array, datatype, or uninterpreted sort",
             found,
         }),
     }
