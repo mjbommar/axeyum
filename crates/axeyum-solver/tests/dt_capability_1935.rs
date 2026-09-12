@@ -26,6 +26,7 @@
 use std::time::Duration;
 
 use axeyum_ir::{ArraySortKey, ConstructorId, DatatypeId, Sort, TermArena, TermId};
+use axeyum_solver::theories::datatypes::check_with_datatype_native;
 use axeyum_solver::{CheckResult, SolverConfig, SolverError, solve};
 
 fn cfg() -> SolverConfig {
@@ -517,4 +518,142 @@ fn sound_tree_helpers_are_reachable() {
     let (dt, node, leaf) = tree(&mut arena);
     assert_ne!(node, leaf, "two distinct constructors");
     assert_eq!(arena.datatype_constructors(dt).len(), 2);
+}
+
+// ---------------------------------------------- the refusals, by their message
+//
+// MUTATION-CONTROL NOTE, and it is a finding rather than a formality.
+//
+// Four of this change's six guards SURVIVED their first mutation run
+// (`scripts/tests/mutation_controls.py dt-capability-1935`, 2026-09-12): with
+// each deleted, all 16 tests above still passed. That is not because the guards
+// do nothing — it is because each is an EARLY and PRECISE refusal of a shape
+// that a LATER and vaguer one also refuses:
+//
+// * the exactness precondition — ADR-1930's structural-equality encoding is a
+//   free Boolean carrying only necessary conditions, so an inexact congruence
+//   antecedent is never FORCED true and the clause degenerates to vacuous
+//   rather than to a wrong `unsat`. The soundness is ADR-1930's and the
+//   replay's; this guard is what keeps the emitted clauses to shapes whose
+//   antecedent is provably real equality, which is what makes the argument in
+//   ADR-1935 reviewable at all. **It is not this guard that stands between the
+//   solver and a wrong `unsat` today, and saying otherwise would be the
+//   un-failable checker this repository keeps deleting.**
+// * the array-of-datatype field exclusion — `refuse_if_datatype_survives`
+//   catches the same residual one layer down, with a message about the
+//   dispatcher rather than about the field.
+// * the datatype-valued result refusal and the free-variable requirement —
+//   `scan_fragment`'s constructor and stray-operand arms catch the same shapes.
+//
+// So what each guard uniquely produces is its MESSAGE, and that is not
+// cosmetic: ADR-1920's second decision is that the capability gate's message
+// "names the actual missing capability rather than a sort list", because these
+// divisions' blocker census is read off exactly these strings. A census cannot
+// distinguish a capability that is missing from one that is merely reached
+// later. These four tests pin that, and each dies when its guard is deleted.
+
+fn refusal_detail(got: Result<CheckResult, SolverError>) -> String {
+    match got {
+        Err(SolverError::Unsupported(detail)) => detail,
+        other => panic!("expected an Unsupported refusal, got {other:?}"),
+    }
+}
+
+#[test]
+fn refusal_names_the_inexact_expansion() {
+    let mut arena = TermArena::new();
+    let dt = arena.declare_datatype("Tree1935m");
+    let _leaf = arena.add_constructor(dt, "leaf", &[]);
+    let node = arena.add_constructor(dt, "node", &[("kid".to_owned(), Sort::Datatype(dt))]);
+    let pred = arena
+        .declare_fun("tm1935", &[Sort::Datatype(dt)], Sort::Bool)
+        .expect("declare p");
+    let a = var_of(&mut arena, "a", Sort::Datatype(dt));
+    let is_a = arena.dt_test(node, a).expect("test");
+    let pa = arena.apply(pred, &[a]).expect("apply");
+
+    let detail = refusal_detail(solve(&mut arena, &[is_a, pa], &cfg()));
+    assert!(
+        detail.contains("expansion is not exact"),
+        "the refusal must name the exactness precondition, got: {detail}"
+    );
+}
+
+#[test]
+fn refusal_names_the_field_with_no_expansion_variable() {
+    let mut arena = TermArena::new();
+    let (color_dt, _, _) = color(&mut arena);
+    let arr = Sort::Array {
+        index: ArraySortKey::Int,
+        element: ArraySortKey::Datatype(color_dt),
+    };
+    let dt = arena.declare_datatype("ColorArrRec1935m");
+    let mk = arena.add_constructor(dt, "mk", &[("c".to_owned(), arr)]);
+    let r = var_of(&mut arena, "r", Sort::Datatype(dt));
+    let is_mk = arena.dt_test(mk, r).expect("test");
+
+    let detail = refusal_detail(solve(&mut arena, &[is_mk], &cfg()));
+    assert!(
+        detail.contains("field sort with no expansion variable"),
+        "the refusal must name the FIELD, not the dispatcher, got: {detail}"
+    );
+}
+
+#[test]
+fn refusal_names_the_datatype_valued_result() {
+    // THIS ONE GOES THROUGH `check_with_datatype_native` RATHER THAN `solve`,
+    // and the reason is a finding. Every query I could build that reaches this
+    // guard through the front door is decided by an EARLIER rung: a datatype
+    // selector applied to a UF result is, to the EUF route, just another
+    // uninterpreted term, so `v(f(x)) = 5 /\ v(f(x)) = 6` comes back `unsat`
+    // from congruence before the datatype route is consulted at all. That is
+    // the right verdict and not a problem — but it means the guard's front-door
+    // trigger is narrow, and a test that reached it by accident would have been
+    // measuring the ladder rather than the guard (the mistake ADR-1927 names).
+    //
+    // So the route is called directly. What is pinned is that the datatype
+    // route REFUSES this shape and says why, which is what a blocker census
+    // reads.
+    let mut arena = TermArena::new();
+    let (dt, _, _) = color(&mut arena);
+    let boxed = arena.declare_datatype("Box1935m");
+    let mk = arena.add_constructor(boxed, "mk", &[("v".to_owned(), Sort::Int)]);
+    let func = arena
+        .declare_fun("fr1935", &[Sort::Datatype(dt)], Sort::Datatype(boxed))
+        .expect("declare f");
+    let x = var_of(&mut arena, "x", Sort::Datatype(dt));
+    let fx = arena.apply(func, &[x]).expect("apply");
+    let field = arena.dt_select(mk, 0, fx).expect("select");
+    let five = arena.int_const(5);
+    let is_five = arena.eq(field, five).expect("eq");
+
+    let got = check_with_datatype_native(&mut arena, &[is_five], &cfg());
+    let detail = refusal_detail(got);
+    assert!(
+        detail.contains("RESULT sort mentions a datatype"),
+        "the refusal must name the result sort, got: {detail}"
+    );
+}
+
+#[test]
+fn refusal_names_the_non_variable_datatype_argument() {
+    // `p(red) /\ not p(green)` applies `p` to CONSTRUCTOR terms, which the
+    // Ackermann pre-pass has no argument equality to build from.
+    let mut arena = TermArena::new();
+    let (dt, red, green) = color(&mut arena);
+    let pred = arena
+        .declare_fun("pv1935", &[Sort::Datatype(dt)], Sort::Bool)
+        .expect("declare p");
+    let red_t = arena.construct(red, &[]).expect("red");
+    let green_t = arena.construct(green, &[]).expect("green");
+    let p_red = arena.apply(pred, &[red_t]).expect("apply");
+    let p_green = arena.apply(pred, &[green_t]).expect("apply");
+    let not_green = arena.not(p_green).expect("not");
+
+    let detail = refusal_detail(solve(&mut arena, &[p_red, not_green], &cfg()));
+    assert!(
+        detail.contains("not a \\n                         free variable")
+            || detail.contains("not a free variable"),
+        "the refusal must name the non-variable argument, got: {detail}"
+    );
 }

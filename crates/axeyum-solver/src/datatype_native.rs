@@ -249,6 +249,20 @@ fn decide_with_eq_mode(
     // a mismatch is `unknown`) if it traverses datatype fields or compares
     // datatypes that have datatype fields.
     let mut relaxed = !links.is_empty() || scan.relaxed_eq || !witnesses.is_empty();
+    // AN ACKERMANN-EXPANDED QUERY IS A RELAXED ONE, and this is a measured
+    // correction rather than caution. `register_ack_interpretations` rebuilds
+    // `f` from its witness values, and a site whose ARGUMENTS do not all
+    // evaluate under the projected assignment -- an argument the inner model
+    // never constrained -- contributes no entry, so the reconstruction is
+    // partial by construction and the replay can reject a candidate that is not
+    // actually wrong. Without this flag that rejection is a
+    // `SolverError::Backend`, which ENDS the dispatch: measured 2026-09-12 on
+    // UFDT/20170428-Barrett/.../x2015_09_10_17_05_36_652_2082452, a file `main`
+    // answers `unsat` became `backend failure: datatype sat model replay failed
+    // at assertion #6488` and the ladder never reached the route that decides
+    // it. As a decline the replay still throws the candidate away -- it is doing
+    // its job, which is why the `sat` is not returned -- and the next rung runs.
+    relaxed |= !ack_sites.is_empty();
     if scan.dt_symbols.is_empty() {
         // No datatype variables remain (read-over-construct sufficed) — hand the
         // residual back to the dispatcher.
@@ -1032,9 +1046,39 @@ fn register_ack_interpretations(
     ack_sites: &[AckSite],
     assignment: &mut axeyum_ir::Assignment,
 ) {
+    // Bind every expanded function FIRST, with the total convention's default.
+    // An `f` with no entry at all is `IrError::UnboundFunction` at replay, which
+    // presents as "the model does not satisfy the query" and is indistinguishable
+    // from a real projection bug. A constant interpretation is a claim the replay
+    // can then check; an absent one is not.
     for site in ack_sites {
-        let Some(result) = assignment.get(site.witness) else {
+        if assignment.function(site.func).is_some() {
             continue;
+        }
+        let (_, params, result_sort) = arena.function(site.func);
+        let Some(default) = well_founded_default(arena, result_sort) else {
+            continue;
+        };
+        assignment.set_function(
+            site.func,
+            axeyum_ir::FuncValue::constant_value(params.to_vec(), result_sort, default),
+        );
+    }
+
+    for site in ack_sites {
+        // A witness nothing constrained takes the total convention's value: any
+        // value satisfies the congruence clauses, and leaving the site out
+        // instead would make the replay read the function's default at a key the
+        // search never chose.
+        let result = match assignment.get(site.witness) {
+            Some(value) => value,
+            None => {
+                let (_, _, result_sort) = arena.function(site.func);
+                match well_founded_default(arena, result_sort) {
+                    Some(value) => value,
+                    None => continue,
+                }
+            }
         };
         let mut vals = Vec::with_capacity(site.args.len());
         let mut ok = true;
@@ -1050,15 +1094,8 @@ fn register_ack_interpretations(
         if !ok {
             continue;
         }
-        let (_, params, result_sort) = arena.function(site.func);
-        let current = match assignment.function(site.func) {
-            Some(existing) => existing.clone(),
-            None => {
-                let Some(default) = well_founded_default(arena, result_sort) else {
-                    continue;
-                };
-                axeyum_ir::FuncValue::constant_value(params.to_vec(), result_sort, default)
-            }
+        let Some(current) = assignment.function(site.func).cloned() else {
+            continue;
         };
         assignment.set_function(site.func, current.define_value(&vals, result));
     }
