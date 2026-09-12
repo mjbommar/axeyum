@@ -39,7 +39,14 @@ exactly those interpretations. Three more probes, same protocol:
 | `((_ is none) o) AND (v o)` | **`unsat`** | `sat` | `sat` | `sat` |
 | `((_ is none) o) AND (= (v o) #x05)` (logic `ALL`) | **`unsat`** | `sat` | `sat` | `sat` |
 | `((_ is succ) (pred zero))` — verbatim from `v1l20044.cvc.smt2` | `unknown` | `sat` | `sat` | `sat` |
-| `((_ is zero) x) AND ((_ is succ) (pred x))` | `unknown` | `unknown` | `sat` | `sat` |
+| `((_ is zero) x) AND ((_ is succ) (pred x))` | `unknown` | `sat` | `sat` | `sat` |
+| `((_ is zero) x) AND ((_ is zero) y) AND (pred x) != (pred y)` | `unknown` | `unknown` | `unsat` | `unsat` |
+
+The last row is the congruence case and it is the honest one: `x` and `y` are
+both `zero`, so `pred x` and `pred y` are the SAME unspecified value and the
+query is `unsat`. The relaxation gives the two reads independent variables, the
+replay refuses the candidate, and the verdict is `unknown` — incomplete, never
+wrong.
 
 ## Why nothing caught it
 
