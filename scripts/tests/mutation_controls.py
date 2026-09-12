@@ -9398,8 +9398,10 @@ SUITES["nra-point-lemma-abstraction"] = (
             # answers `Unsupported` -- propagated out of the dispatcher as an
             # Err. It was the largest single cause in the QF_NRA census
             # (20 of 77), and this one rewrite is the whole fix.
-            "a point lemma must be rewritten through the product abstraction",
-            "            let lemma = replace_subterms(arena, lemma, abstraction, &mut memo)\n"
+            "a point lemma refines over the ABSTRACTED operands",
+            "            let pa = replace_subterms(arena, pa, abstraction, &mut memo)\n"
+            "                .map_err(|e| SolverError::Backend(e.to_string()))?;\n"
+            "            let pb = replace_subterms(arena, pb, abstraction, &mut memo)\n"
             "                .map_err(|e| SolverError::Backend(e.to_string()))?;",
             "            let _ = (abstraction, &mut memo);",
         ),

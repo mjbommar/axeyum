@@ -800,6 +800,40 @@ fn solve_relaxation(
             if products.contains(&pa) || products.contains(&pb) {
                 continue;
             }
+            // **Refine over the ABSTRACTED operands, not the original terms.**
+            //
+            // `pa`/`pb` are the original operands. The guard above only skips an
+            // operand that *is* a collected product; one that merely *contains*
+            // one (`(+ c (* x (* x k)))` — the MetiTarski/Horner shape) passes
+            // it, and a lemma built from the raw term carries a live nonlinear
+            // product into `reduced`. The linear engine cannot linearize that,
+            // returns `Unsupported`, and `check_with_nra_impl` propagates it
+            // with `?` — one un-rewritten lemma aborting the WHOLE dispatch.
+            // That was the largest single cause in the 2026-09-12 QF_NRA census
+            // (20 of 77 winnable files).
+            //
+            // The operands are rewritten HERE, before their values are read,
+            // and NOT after the lemma is built. Rewriting only the finished
+            // lemma is the version that looks right and is not: the premise
+            // would be `â = a0` while `a0` was read off the RAW `pa`, whose
+            // value under this model is the true product of the model's
+            // variables — not the relaxed value the fresh variable holds. The
+            // premise then fails to match the candidate, the lemma cuts
+            // nothing, refinement stalls at a fixpoint, and a `sat` the search
+            // used to find is lost (measured: `sin-problem-7-chunk-0353.smt2`,
+            // `sat` in 1.7 s, became `unknown`). Reading `a0` off the
+            // abstracted operand makes the premise true of the current
+            // candidate, which is the whole point of a point lemma.
+            //
+            // Sound by the same argument as `product_lemmas`: in any model
+            // where each fresh variable equals its product, `â` is `a`, so the
+            // rewritten lemma IS the original lemma. The system stays a
+            // relaxation, only its `unsat` transfers, and every `sat` is still
+            // replayed against the original assertions.
+            let pa = replace_subterms(arena, pa, abstraction, &mut memo)
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
+            let pb = replace_subterms(arena, pb, abstraction, &mut memo)
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
             let (Some(a0), Some(b0), Some(r0)) = (
                 real_value(arena, pa, &assignment),
                 real_value(arena, pb, &assignment),
@@ -827,23 +861,9 @@ fn solve_relaxation(
             if too_large_to_refine(a0) || too_large_to_refine(b0) || too_large_to_refine(prod) {
                 continue;
             }
+            // `pa`/`pb` are the abstracted operands (rewritten above), so this
+            // lemma is already free of nonlinear products.
             let lemma = point_lemma(arena, pa, a0, pb, b0, r, prod)?;
-            // **Rewrite through the abstraction before pushing.** `pa`/`pb` are
-            // the ORIGINAL operand terms. The guard above only skips an operand
-            // that *is* a collected product; an operand that merely *contains*
-            // one (`(+ c (* x (* x k)))` — the MetiTarski/Horner shape) passes
-            // it, and the raw lemma then carries a live nonlinear product into
-            // `reduced`. The linear engine cannot linearize that and returns
-            // `Unsupported`, which `check_with_nra_impl` propagates with `?` —
-            // so one un-rewritten refinement lemma aborted the WHOLE dispatch
-            // with `unsupported by backend: QF_LRA: nonlinear real
-            // multiplication` instead of declining. Rewriting it here is the
-            // same step `product_lemmas` already takes, and is sound by the
-            // same argument: in any model where each fresh variable equals its
-            // product the rewritten lemma is the original lemma, so the system
-            // stays a relaxation and only its `unsat` is ever acted on.
-            let lemma = replace_subterms(arena, lemma, abstraction, &mut memo)
-                .map_err(|e| SolverError::Backend(e.to_string()))?;
             reduced.push(lemma);
             added = true;
         }

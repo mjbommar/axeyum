@@ -21,6 +21,17 @@
 //! multiplication`, whose text names the linear backend rather than the
 //! nonlinear boundary that actually refused.
 //!
+//! # The rewrite goes on the OPERANDS, before their values are read
+//!
+//! Rewriting the finished lemma instead is the version that looks right and is
+//! not. The premise would be `abstracted-a = a0` while `a0` was read off the RAW
+//! operand, whose value under the candidate model is the true product of the
+//! model's variables rather than the relaxed value the fresh variable holds. The
+//! premise then does not match the candidate, the lemma cuts nothing, and
+//! refinement stalls at a fixpoint. Measured on the 200-file division A/B:
+//! `sin-problem-7-chunk-0353.smt2`, `sat` in 1.7 s on the baseline, became
+//! `unknown`. Rewriting the operands first restores it, unchanged at 1.7 s.
+//!
 //! # Why this calls `check_with_nra` and not the front door
 //!
 //! The dispatcher now also converts a pure-real `Unsupported` into an `unknown`
