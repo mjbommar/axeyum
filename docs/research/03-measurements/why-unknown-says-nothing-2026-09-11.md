@@ -231,3 +231,13 @@ subject is not a finding.
   would be the board's only at the board's budget.
 - 100% is coverage of the `; give-up` **line**, not of the route trail. A
   watchdog kill still publishes no trail (168 of 260 carry a reasoned decline).
+
+## Re-confirmed after the `DT-UF` merge
+
+Lane `DT-UF` landed on main between the measurement and this note's commit
+(`5c1f57e80`, ADR-1920: datatype-sorted UF signatures admitted, plus a
+stack-overflow fix in the dispatcher's datatype divert). Its work is in the same
+neighbourhood, so the `QF_DT` arm was re-run on the merged tree rather than
+assumed still valid: **81 of 81 unknowns carry a reason, and all 70 give the
+same `expect_dt_symbol` sentence**, unchanged. The diagnosis above is current,
+not inherited.
