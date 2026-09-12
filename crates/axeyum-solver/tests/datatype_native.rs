@@ -579,6 +579,74 @@ fn nested_scalar_field_through_traversal_is_sat() {
 }
 
 #[test]
+fn a_negated_equality_over_datatype_fields_is_not_unsat() {
+    // is-cons(a) AND is-cons(b) AND a != b, on a list whose EVERY field is a
+    // datatype. Two distinct `cons` values exist, so this is `sat`; cvc5 1.3.4
+    // and z3 both say so.
+    //
+    // SOUNDNESS-NEGATIVE, and it caught a SECOND shipped wrong `unsat`
+    // (ADR-1930). `build_dt_eq` skips datatype-typed fields, which makes the
+    // encoded equality WEAKER than real equality -- and "weaker is a
+    // relaxation, so unsat is sound" holds only for a POSITIVE occurrence.
+    // Under this negation it became STRONGER: the reduced query demanded
+    // `tag_a != tag_b` while both testers forced `cons`, and answered `unsat`.
+    //
+    // We answer `unknown` here, not `sat`: the projection gives both variables
+    // the same well-founded default for their untraversed datatype fields, so
+    // the replay cannot confirm a difference. Incomplete, never wrong.
+    //
+    // DIES ON: encoding the equality as a formula over the tag and the
+    // comparable fields instead of a free Boolean carrying only the conditions
+    // the expansion can decide.
+    let (mut arena, list, _nil, cons) = tree_list_arena();
+    let a = arena.declare("a", Sort::Datatype(list)).unwrap();
+    let b = arena.declare("b", Sort::Datatype(list)).unwrap();
+    let av = arena.var(a);
+    let bv = arena.var(b);
+    let is_cons_a = arena.dt_test(cons, av).unwrap();
+    let is_cons_b = arena.dt_test(cons, bv).unwrap();
+    let same = arena.eq(av, bv).unwrap();
+    let differ = arena.not(same).unwrap();
+
+    let result = check_with_datatype_native(
+        &mut arena,
+        &[is_cons_a, is_cons_b, differ],
+        &SolverConfig::default(),
+    )
+    .unwrap();
+    assert!(
+        !matches!(result, CheckResult::Unsat),
+        "two distinct `cons` values exist; `unsat` is a wrong answer, got {result:?}"
+    );
+}
+
+/// `tree = leaf | node(kids: list)`, `list = cons(car: tree, cdr: list) | nil`:
+/// a list whose EVERY constructor field is datatype-typed, so no field of it
+/// gets an expansion variable.
+fn tree_list_arena() -> (
+    TermArena,
+    axeyum_ir::DatatypeId,
+    axeyum_ir::ConstructorId,
+    axeyum_ir::ConstructorId,
+) {
+    let mut arena = TermArena::new();
+    let tree = arena.declare_datatype("tree");
+    let list = arena.declare_datatype("list");
+    let _leaf = arena.add_constructor(tree, "leaf", &[]);
+    let _node = arena.add_constructor(tree, "node", &[("kids".into(), Sort::Datatype(list))]);
+    let cons = arena.add_constructor(
+        list,
+        "cons",
+        &[
+            ("car".into(), Sort::Datatype(tree)),
+            ("cdr".into(), Sort::Datatype(list)),
+        ],
+    );
+    let nil = arena.add_constructor(list, "nil", &[]);
+    (arena, list, nil, cons)
+}
+
+#[test]
 fn recursive_equality_with_conflicting_testers_is_unsat() {
     // l == m AND is-cons(l) AND is-nil(m): equality forces the tags equal, but
     // the testers force them different -> sound unsat (equality over a datatype
