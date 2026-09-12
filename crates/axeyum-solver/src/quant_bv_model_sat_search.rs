@@ -17,7 +17,30 @@ use crate::quant_bv_model_sat_cert::{
 use crate::{CheckResult, Model, SolverConfig, SolverError};
 
 const FREE_BV_CANDIDATE_BITS: usize = 8;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`FREE_BV_CANDIDATE_BITS`]: the compiled default, or
+    /// `AXEYUM_FREE_BV_CANDIDATE_BITS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `FREE_BV_CANDIDATE_BITS`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn free_bv_candidate_bits() -> usize = "AXEYUM_FREE_BV_CANDIDATE_BITS" or FREE_BV_CANDIDATE_BITS;
+}
+
 const TOTAL_FREE_BV_BITS_CAP: u32 = 4_096;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`TOTAL_FREE_BV_BITS_CAP`]: the compiled default, or
+    /// `AXEYUM_TOTAL_FREE_BV_BITS_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `TOTAL_FREE_BV_BITS_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn total_free_bv_bits_cap() -> u32 = "AXEYUM_TOTAL_FREE_BV_BITS_CAP" or TOTAL_FREE_BV_BITS_CAP;
+}
 
 /// Searches low-bit-complete free-BV candidates and checks every source assertion.
 pub(crate) fn decide_quantified_bv_model_sat(
@@ -50,7 +73,7 @@ pub(crate) fn decide_quantified_bv_model_sat(
             };
             total.checked_add(width)
         })
-        .is_none_or(|bits| bits > TOTAL_FREE_BV_BITS_CAP)
+        .is_none_or(|bits| bits > total_free_bv_bits_cap())
     {
         return Ok(None);
     }
@@ -80,7 +103,7 @@ pub(crate) fn decide_quantified_bv_model_sat(
             return Ok(Some(CheckResult::Sat(model)));
         }
     }
-    if free.len() > FREE_BV_CANDIDATE_BITS {
+    if free.len() > free_bv_candidate_bits() {
         return Ok(None);
     }
 

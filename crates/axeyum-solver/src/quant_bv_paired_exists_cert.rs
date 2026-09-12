@@ -10,8 +10,31 @@ use crate::proof::UnsatProof;
 
 /// Maximum total binders across both existential prefixes.
 pub const BV_PAIRED_EXISTS_BINDER_CAP: usize = 128;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`BV_PAIRED_EXISTS_BINDER_CAP`]: the compiled default, or
+    /// `AXEYUM_BV_PAIRED_EXISTS_BINDER_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `BV_PAIRED_EXISTS_BINDER_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn bv_paired_exists_binder_cap() -> usize = "AXEYUM_BV_PAIRED_EXISTS_BINDER_CAP" or BV_PAIRED_EXISTS_BINDER_CAP;
+}
+
 /// Maximum distinct nodes across both complete source assertions.
 pub const BV_PAIRED_EXISTS_NODE_CAP: usize = 4_096;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`BV_PAIRED_EXISTS_NODE_CAP`]: the compiled default, or
+    /// `AXEYUM_BV_PAIRED_EXISTS_NODE_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `BV_PAIRED_EXISTS_NODE_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn bv_paired_exists_node_cap() -> usize = "AXEYUM_BV_PAIRED_EXISTS_NODE_CAP" or BV_PAIRED_EXISTS_NODE_CAP;
+}
 
 /// One independently replayed reason for a transferred body conjunct.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -302,7 +325,7 @@ pub(crate) fn admitted_paired_existentials(
     let (positive_binders, positive_body) = peel_exists(arena, positive_existential)?;
     let (negative_binders, negative_body) = peel_exists(arena, negative_existential)?;
     if positive_binders.len() != negative_binders.len()
-        || positive_binders.len() + negative_binders.len() > BV_PAIRED_EXISTS_BINDER_CAP
+        || positive_binders.len() + negative_binders.len() > bv_paired_exists_binder_cap()
         || !term_is_qf_bv(arena, positive_body)
         || !term_is_qf_bv(arena, negative_body)
     {
@@ -508,7 +531,7 @@ fn sources_within_cap(arena: &TermArena, positive: TermId, negative: TermId) -> 
         if !seen.insert(term) {
             continue;
         }
-        if seen.len() > BV_PAIRED_EXISTS_NODE_CAP || !is_bool_bv(arena.sort_of(term)) {
+        if seen.len() > bv_paired_exists_node_cap() || !is_bool_bv(arena.sort_of(term)) {
             return false;
         }
         if let TermNode::App { args, .. } = arena.node(term) {

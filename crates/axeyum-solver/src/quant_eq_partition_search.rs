@@ -6,8 +6,7 @@ use axeyum_ir::{Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Val
 use axeyum_rewrite::{build_app, replace_subterms};
 
 use crate::quant_eq_partition_cert::{
-    EQ_PARTITION_CASE_CAP, EqualityPartitionRefutationCertificate,
-    check_equality_partition_refutation,
+    EqualityPartitionRefutationCertificate, check_equality_partition_refutation,
 };
 
 pub(crate) fn equality_partition_refutation(
@@ -58,7 +57,7 @@ fn expand(arena: &mut TermArena, term: TermId) -> Option<(TermId, u64)> {
             let cases = u64::try_from(values.len())
                 .ok()?
                 .checked_mul(body_cases.checked_add(1)?)?;
-            if cases > EQ_PARTITION_CASE_CAP {
+            if cases > crate::quant_eq_partition_cert::eq_partition_case_cap() {
                 return None;
             }
             let mut instances = Vec::with_capacity(values.len());

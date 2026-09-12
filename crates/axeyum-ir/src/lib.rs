@@ -42,6 +42,14 @@ mod bits;
 /// reading a clock. Adding a crate for it would need an ADR (ADR-0001 keeps the
 /// crate split minimal until a boundary is proven by use).
 pub mod budget;
+/// Environment levers over compiled caps: an A/B without a rebuild.
+///
+/// Here for the same reason [`budget`] is: `axeyum-rewrite` and
+/// `axeyum-solver` both hold completeness caps that need one lever mechanism,
+/// and this is the lowest crate both already depend on. It is not about terms;
+/// it is about how a cap that nobody has measured becomes measurable without a
+/// workspace rebuild.
+pub mod config_lever;
 mod error;
 mod eval;
 pub mod fast_map;

@@ -14,10 +14,45 @@ use axeyum_ir::{
 
 /// Maximum total quantifier binders admitted by one certificate.
 pub const QUANT_BV_MODEL_BINDER_CAP: usize = 128;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`QUANT_BV_MODEL_BINDER_CAP`]: the compiled default, or
+    /// `AXEYUM_QUANT_BV_MODEL_BINDER_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `QUANT_BV_MODEL_BINDER_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn quant_bv_model_binder_cap() -> usize = "AXEYUM_QUANT_BV_MODEL_BINDER_CAP" or QUANT_BV_MODEL_BINDER_CAP;
+}
+
 /// Maximum complete source DAG nodes admitted by one certificate.
 pub const QUANT_BV_MODEL_NODE_CAP: usize = 4_096;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`QUANT_BV_MODEL_NODE_CAP`]: the compiled default, or
+    /// `AXEYUM_QUANT_BV_MODEL_NODE_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `QUANT_BV_MODEL_NODE_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn quant_bv_model_node_cap() -> usize = "AXEYUM_QUANT_BV_MODEL_NODE_CAP" or QUANT_BV_MODEL_NODE_CAP;
+}
+
 /// Maximum source depth admitted by the recursive proof evaluator.
 pub const QUANT_BV_MODEL_DEPTH_CAP: usize = 256;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`QUANT_BV_MODEL_DEPTH_CAP`]: the compiled default, or
+    /// `AXEYUM_QUANT_BV_MODEL_DEPTH_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `QUANT_BV_MODEL_DEPTH_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn quant_bv_model_depth_cap() -> usize = "AXEYUM_QUANT_BV_MODEL_DEPTH_CAP" or QUANT_BV_MODEL_DEPTH_CAP;
+}
 
 // The certificate DATA lives in `crate::quant_sat_certificates`, so `Model`
 // can carry it without depending on this checker. Re-exported here, so
@@ -83,7 +118,7 @@ fn source_shape(arena: &TermArena, root: TermId) -> Option<SourceShape> {
     let mut binders = BTreeSet::new();
     let mut symbols = BTreeSet::new();
     while let Some((term, depth)) = stack.pop() {
-        if depth > QUANT_BV_MODEL_DEPTH_CAP
+        if depth > quant_bv_model_depth_cap()
             || !matches!(arena.sort_of(term), Sort::Bool | Sort::BitVec(_))
         {
             return None;
@@ -91,7 +126,7 @@ fn source_shape(arena: &TermArena, root: TermId) -> Option<SourceShape> {
         if !seen.insert(term) {
             continue;
         }
-        if seen.len() > QUANT_BV_MODEL_NODE_CAP {
+        if seen.len() > quant_bv_model_node_cap() {
             return None;
         }
         match arena.node(term) {
@@ -107,7 +142,7 @@ fn source_shape(arena: &TermArena, root: TermId) -> Option<SourceShape> {
                 }
                 if let Op::Forall(binder) | Op::Exists(binder) = op
                     && (!binders.insert(*binder)
-                        || binders.len() > QUANT_BV_MODEL_BINDER_CAP
+                        || binders.len() > quant_bv_model_binder_cap()
                         || !matches!(arena.symbol(*binder).1, Sort::Bool | Sort::BitVec(_))
                         || args.len() != 1)
                 {

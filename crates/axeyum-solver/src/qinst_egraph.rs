@@ -2720,6 +2720,17 @@ fn try_targeted_quantifier_refutations(
 
 const MAX_PREDECESSOR_RECURRENCE_INDEX: i128 = 64;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_PREDECESSOR_RECURRENCE_INDEX`]: the compiled default, or
+    /// `AXEYUM_MAX_PREDECESSOR_RECURRENCE_INDEX` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_PREDECESSOR_RECURRENCE_INDEX`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_predecessor_recurrence_index() -> i128 = "AXEYUM_MAX_PREDECESSOR_RECURRENCE_INDEX" or MAX_PREDECESSOR_RECURRENCE_INDEX;
+}
+
 /// Proves a bounded sign contradiction for
 /// `f(0)=b ∧ ∀x>0. f(x)=c*f(x-1)`. Integer induction gives
 /// `sign(f(n)) = sign(b) * sign(c)^n` (with zero absorbing), so a contrary
@@ -2907,7 +2918,7 @@ fn match_recurrence_sign_target(
     };
     let (found, argument) = as_unary_apply(arena, application)?;
     let index = search_int_constant(arena, argument)?;
-    (found == function && (1..=MAX_PREDECESSOR_RECURRENCE_INDEX).contains(&index))
+    (found == function && (1..=max_predecessor_recurrence_index()).contains(&index))
         .then_some((index, requires_positive))
 }
 
@@ -4327,7 +4338,7 @@ pub fn check_quantifier_clause_propagations(
     }
     let mut checker = QuantifierProvenanceChecker {
         assertions: assertions.iter().copied().collect(),
-        remaining_nodes: MAX_QUANTIFIER_PROVENANCE_NODES,
+        remaining_nodes: max_quantifier_provenance_nodes(),
     };
     certificates
         .iter()
@@ -4344,7 +4355,7 @@ pub fn check_quantifier_ground_derivation(
 ) -> bool {
     let mut checker = QuantifierProvenanceChecker {
         assertions: assertions.iter().copied().collect(),
-        remaining_nodes: MAX_QUANTIFIER_PROVENANCE_NODES,
+        remaining_nodes: max_quantifier_provenance_nodes(),
     };
     checker.check_derivation(arena, derivation, 0)
 }
@@ -4402,7 +4413,30 @@ pub fn collect_ground_derivations(
 }
 
 const MAX_QUANTIFIER_PROVENANCE_DEPTH: usize = 16;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_QUANTIFIER_PROVENANCE_DEPTH`]: the compiled default, or
+    /// `AXEYUM_MAX_QUANTIFIER_PROVENANCE_DEPTH` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_QUANTIFIER_PROVENANCE_DEPTH`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_quantifier_provenance_depth() -> usize = "AXEYUM_MAX_QUANTIFIER_PROVENANCE_DEPTH" or MAX_QUANTIFIER_PROVENANCE_DEPTH;
+}
+
 const MAX_QUANTIFIER_PROVENANCE_NODES: usize = 4096;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_QUANTIFIER_PROVENANCE_NODES`]: the compiled default, or
+    /// `AXEYUM_MAX_QUANTIFIER_PROVENANCE_NODES` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_QUANTIFIER_PROVENANCE_NODES`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_quantifier_provenance_nodes() -> usize = "AXEYUM_MAX_QUANTIFIER_PROVENANCE_NODES" or MAX_QUANTIFIER_PROVENANCE_NODES;
+}
 
 struct QuantifierProvenanceChecker {
     assertions: HashSet<TermId>,
@@ -4416,7 +4450,7 @@ impl QuantifierProvenanceChecker {
         certificate: &QuantifierClausePropagationCertificate,
         depth: usize,
     ) -> bool {
-        if depth > MAX_QUANTIFIER_PROVENANCE_DEPTH || !self.take_node() {
+        if depth > max_quantifier_provenance_depth() || !self.take_node() {
             return false;
         }
         let instance = QuantifierInstanceCertificate {
@@ -4512,7 +4546,7 @@ impl QuantifierProvenanceChecker {
         derivation: &QuantifierGroundDerivation,
         depth: usize,
     ) -> bool {
-        if depth > MAX_QUANTIFIER_PROVENANCE_DEPTH {
+        if depth > max_quantifier_provenance_depth() {
             return false;
         }
         match derivation {

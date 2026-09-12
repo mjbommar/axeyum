@@ -10,8 +10,31 @@ use crate::proof::UnsatProof;
 
 /// Maximum universal binders admitted by the source checker.
 pub const BV_CONJUNCTIVE_UNIVERSAL_BINDER_CAP: usize = 128;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`BV_CONJUNCTIVE_UNIVERSAL_BINDER_CAP`]: the compiled default, or
+    /// `AXEYUM_BV_CONJUNCTIVE_UNIVERSAL_BINDER_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `BV_CONJUNCTIVE_UNIVERSAL_BINDER_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn bv_conjunctive_universal_binder_cap() -> usize = "AXEYUM_BV_CONJUNCTIVE_UNIVERSAL_BINDER_CAP" or BV_CONJUNCTIVE_UNIVERSAL_BINDER_CAP;
+}
+
 /// Maximum distinct nodes admitted in the complete source assertion.
 pub const BV_CONJUNCTIVE_UNIVERSAL_NODE_CAP: usize = 4_096;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`BV_CONJUNCTIVE_UNIVERSAL_NODE_CAP`]: the compiled default, or
+    /// `AXEYUM_BV_CONJUNCTIVE_UNIVERSAL_NODE_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `BV_CONJUNCTIVE_UNIVERSAL_NODE_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn bv_conjunctive_universal_node_cap() -> usize = "AXEYUM_BV_CONJUNCTIVE_UNIVERSAL_NODE_CAP" or BV_CONJUNCTIVE_UNIVERSAL_NODE_CAP;
+}
 
 /// One source universal instance whose conjunctive context is QF_BV-UNSAT.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -120,7 +143,7 @@ pub(crate) fn admitted_conjunctive_universal(
     } = arena.node(term)
     {
         if args.len() != 1
-            || binders.len() == BV_CONJUNCTIVE_UNIVERSAL_BINDER_CAP
+            || binders.len() == bv_conjunctive_universal_binder_cap()
             || !is_bool_bv(arena.symbol(*binder).1)
         {
             return None;
@@ -212,7 +235,7 @@ fn total_occurrences(arena: &TermArena, assertion: TermId, selected: TermId) -> 
     let mut stack = vec![assertion];
     while let Some(term) = stack.pop() {
         visited += 1;
-        if visited > BV_CONJUNCTIVE_UNIVERSAL_NODE_CAP * 2 {
+        if visited > bv_conjunctive_universal_node_cap() * 2 {
             return 2;
         }
         if term == selected {
@@ -236,7 +259,7 @@ fn assertion_within_cap(arena: &TermArena, assertion: TermId) -> bool {
         if !seen.insert(term) {
             continue;
         }
-        if seen.len() > BV_CONJUNCTIVE_UNIVERSAL_NODE_CAP || !is_bool_bv(arena.sort_of(term)) {
+        if seen.len() > bv_conjunctive_universal_node_cap() || !is_bool_bv(arena.sort_of(term)) {
             return false;
         }
         if let TermNode::App { args, .. } = arena.node(term) {

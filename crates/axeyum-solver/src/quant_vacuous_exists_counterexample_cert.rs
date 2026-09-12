@@ -6,8 +6,31 @@ use axeyum_ir::{Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Val
 
 /// Maximum total binders admitted by the source checker.
 pub const VACUOUS_EXISTS_COUNTEREXAMPLE_BINDER_CAP: usize = 128;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`VACUOUS_EXISTS_COUNTEREXAMPLE_BINDER_CAP`]: the compiled default, or
+    /// `AXEYUM_VACUOUS_EXISTS_COUNTEREXAMPLE_BINDER_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `VACUOUS_EXISTS_COUNTEREXAMPLE_BINDER_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn vacuous_exists_counterexample_binder_cap() -> usize = "AXEYUM_VACUOUS_EXISTS_COUNTEREXAMPLE_BINDER_CAP" or VACUOUS_EXISTS_COUNTEREXAMPLE_BINDER_CAP;
+}
+
 /// Maximum distinct nodes admitted in the complete source assertion.
 pub const VACUOUS_EXISTS_COUNTEREXAMPLE_NODE_CAP: usize = 4_096;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`VACUOUS_EXISTS_COUNTEREXAMPLE_NODE_CAP`]: the compiled default, or
+    /// `AXEYUM_VACUOUS_EXISTS_COUNTEREXAMPLE_NODE_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `VACUOUS_EXISTS_COUNTEREXAMPLE_NODE_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn vacuous_exists_counterexample_node_cap() -> usize = "AXEYUM_VACUOUS_EXISTS_COUNTEREXAMPLE_NODE_CAP" or VACUOUS_EXISTS_COUNTEREXAMPLE_NODE_CAP;
+}
 
 /// A concrete assignment that falsifies the universal body below one or more
 /// syntactically vacuous leading existential binders.
@@ -83,7 +106,7 @@ pub(crate) fn admitted_vacuous_exists_universal(
     } = arena.node(term)
     {
         if args.len() != 1
-            || existential_binders.len() == VACUOUS_EXISTS_COUNTEREXAMPLE_BINDER_CAP
+            || existential_binders.len() == vacuous_exists_counterexample_binder_cap()
             || !is_bool_bv(arena.symbol(*binder).1)
         {
             return None;
@@ -103,7 +126,7 @@ pub(crate) fn admitted_vacuous_exists_universal(
     {
         if args.len() != 1
             || existential_binders.len() + universal_binders.len()
-                == VACUOUS_EXISTS_COUNTEREXAMPLE_BINDER_CAP
+                == vacuous_exists_counterexample_binder_cap()
             || !is_bool_bv(arena.symbol(*binder).1)
         {
             return None;
@@ -140,7 +163,8 @@ fn assertion_within_cap(arena: &TermArena, assertion: TermId) -> bool {
         if !seen.insert(term) {
             continue;
         }
-        if seen.len() > VACUOUS_EXISTS_COUNTEREXAMPLE_NODE_CAP || !is_bool_bv(arena.sort_of(term)) {
+        if seen.len() > vacuous_exists_counterexample_node_cap() || !is_bool_bv(arena.sort_of(term))
+        {
             return false;
         }
         if let TermNode::App { args, .. } = arena.node(term) {

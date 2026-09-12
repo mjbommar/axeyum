@@ -14,6 +14,17 @@ use crate::quant_bool_model_sat::{
 /// Maximum source instances carried by one query-scoped certificate.
 pub const BV_POSITIVE_INSTANCE_SET_CAP: usize = 256;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`BV_POSITIVE_INSTANCE_SET_CAP`]: the compiled default, or
+    /// `AXEYUM_BV_POSITIVE_INSTANCE_SET_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `BV_POSITIVE_INSTANCE_SET_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn bv_positive_instance_set_cap() -> usize = "AXEYUM_BV_POSITIVE_INSTANCE_SET_CAP" or BV_POSITIVE_INSTANCE_SET_CAP;
+}
+
 /// One complete concrete assignment to every positive universal binder in an
 /// original assertion.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -64,7 +75,7 @@ pub(crate) fn rebuild_bv_positive_universal_instance_set(
     if assertions.is_empty()
         || certificate.assertions != assertions
         || certificate.instances.is_empty()
-        || certificate.instances.len() > BV_POSITIVE_INSTANCE_SET_CAP
+        || certificate.instances.len() > bv_positive_instance_set_cap()
         || assertions
             .iter()
             .any(|assertion| assertion.index() >= arena.len())

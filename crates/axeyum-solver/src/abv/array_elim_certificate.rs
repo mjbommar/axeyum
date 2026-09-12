@@ -83,6 +83,17 @@ use super::{
 /// and re-derive the `O(k²)` pairing.
 const MAX_ARRAY_ELIM_CONGRUENCE_PAIRS: usize = 256;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_ARRAY_ELIM_CONGRUENCE_PAIRS`]: the compiled default, or
+    /// `AXEYUM_MAX_ARRAY_ELIM_CONGRUENCE_PAIRS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_ARRAY_ELIM_CONGRUENCE_PAIRS`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_array_elim_congruence_pairs() -> usize = "AXEYUM_MAX_ARRAY_ELIM_CONGRUENCE_PAIRS" or MAX_ARRAY_ELIM_CONGRUENCE_PAIRS;
+}
+
 /// A re-checkable certificate that a `QF_ABV` query is `Unsat` via **eager array
 /// elimination** (read-over-write + Ackermann select-congruence, ADR-0010): the
 /// bit-blasted-CNF DRAT refutation of the (deterministically) array-eliminated
@@ -344,7 +355,7 @@ pub fn certify_array_elim_unsat(
     // Deterministic admission bound: refuse the O(k²) eager congruence expansion
     // above the cap rather than build and re-derive it.
     match array_elim_congruence_pairs(arena, assertions) {
-        Some(pairs) if pairs <= MAX_ARRAY_ELIM_CONGRUENCE_PAIRS => {}
+        Some(pairs) if pairs <= max_array_elim_congruence_pairs() => {}
         // Over the bound, or elimination refused (out-of-fragment): no certificate.
         _ => return Ok(None),
     }

@@ -73,6 +73,17 @@ use crate::backend::{CheckResult, SolverConfig, SolverError};
 /// for this first slice.
 pub const MAX_CANDIDATES: usize = 4096;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_CANDIDATES`]: the compiled default, or
+    /// `AXEYUM_ABDUCT_MAX_CANDIDATES` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_CANDIDATES`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_candidates() -> usize = "AXEYUM_ABDUCT_MAX_CANDIDATES" or MAX_CANDIDATES;
+}
+
 /// Upper bound on the number of *synthesized* atoms generated before synthesis
 /// stops. Caps the size of the candidate literal pool (and hence memory and the
 /// `O(n²)` conjunction phase) so the larger `SyGuS`-lite grammar still respects a
@@ -185,7 +196,7 @@ pub fn abduct(
 
     // Pass 1: single shared literals (smallest / most general first).
     for &lit in &literals {
-        if tried >= MAX_CANDIDATES {
+        if tried >= max_candidates() {
             return Ok(None);
         }
         tried += 1;
@@ -197,7 +208,7 @@ pub fn abduct(
     // Pass 2: conjunctions of two distinct shared literals.
     for i in 0..literals.len() {
         for j in (i + 1)..literals.len() {
-            if tried >= MAX_CANDIDATES {
+            if tried >= max_candidates() {
                 return Ok(None);
             }
             tried += 1;

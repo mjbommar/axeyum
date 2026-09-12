@@ -17,6 +17,17 @@ use crate::backend::CheckResult;
 
 const MAX_ATOMS: usize = 16;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_ATOMS`]: the compiled default, or
+    /// `AXEYUM_BOOL_EUF_MAX_ATOMS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_ATOMS`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_atoms() -> usize = "AXEYUM_BOOL_EUF_MAX_ATOMS" or MAX_ATOMS;
+}
+
 /// A self-checking refutation of a Boolean-structured pure-EUF formula.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BoolEufExhaustiveCertificate {
@@ -55,7 +66,7 @@ pub fn bool_euf_exhaustive_refutation(
     for &assertion in assertions {
         collect_bool_euf_atoms(arena, assertion, &mut atoms)?;
     }
-    if atoms.is_empty() || atoms.len() > MAX_ATOMS {
+    if atoms.is_empty() || atoms.len() > max_atoms() {
         return None;
     }
     let atoms: Vec<_> = atoms.into_iter().collect();

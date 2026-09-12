@@ -56,9 +56,33 @@ use crate::cas_poly::{
 
 /// Ceiling on distinct opaque atoms in one expansion.
 pub(crate) const MAX_ATOMS: usize = 512;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_ATOMS`]: the compiled default, or
+    /// `AXEYUM_CAS_MAX_ATOMS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_ATOMS`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    pub(crate) fn max_atoms() -> usize = "AXEYUM_CAS_MAX_ATOMS" or MAX_ATOMS;
+}
+
 /// Ceiling on monomials in an intermediate or final expansion. A product of two
 /// dense polynomials multiplies term counts, so this bounds the whole expansion.
 pub(crate) const MAX_MONOMIALS: usize = 4096;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_MONOMIALS`]: the compiled default, or
+    /// `AXEYUM_CAS_MAX_MONOMIALS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_MONOMIALS`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    pub(crate) fn max_monomials() -> usize = "AXEYUM_CAS_MAX_MONOMIALS" or MAX_MONOMIALS;
+}
+
 /// Ceiling on visited term nodes, so the walk is bounded by a deterministic step
 /// count rather than a wall clock (determinism is a public API promise).
 pub(crate) const MAX_STEPS: u32 = 200_000;
@@ -181,7 +205,7 @@ fn atom(arena: &TermArena, term: TermId, atoms: &mut BTreeSet<TermId>) -> Option
         return None;
     }
     if !atoms.contains(&term) {
-        if atoms.len() >= MAX_ATOMS {
+        if atoms.len() >= max_atoms() {
             return None;
         }
         atoms.insert(term);
@@ -198,12 +222,12 @@ fn constant(value: Rational) -> AtomPoly {
 }
 
 fn add(mut left: AtomPoly, right: AtomPoly) -> Option<AtomPoly> {
-    if left.len().checked_add(right.len())? > MAX_MONOMIALS.saturating_mul(2) {
+    if left.len().checked_add(right.len())? > max_monomials().saturating_mul(2) {
         return None;
     }
     left.extend(right);
     let merged = canonicalize(left)?;
-    (merged.len() <= MAX_MONOMIALS).then_some(merged)
+    (merged.len() <= max_monomials()).then_some(merged)
 }
 
 fn negate(poly: AtomPoly) -> Option<AtomPoly> {
@@ -213,7 +237,7 @@ fn negate(poly: AtomPoly) -> Option<AtomPoly> {
 }
 
 fn multiply(left: &AtomPoly, right: &AtomPoly) -> Option<AtomPoly> {
-    if left.len().checked_mul(right.len())? > MAX_MONOMIALS.saturating_mul(2) {
+    if left.len().checked_mul(right.len())? > max_monomials().saturating_mul(2) {
         return None;
     }
     let mut out: AtomPoly = Vec::with_capacity(left.len().saturating_mul(right.len()));
@@ -227,7 +251,7 @@ fn multiply(left: &AtomPoly, right: &AtomPoly) -> Option<AtomPoly> {
         }
     }
     let merged = canonicalize(out)?;
-    (merged.len() <= MAX_MONOMIALS).then_some(merged)
+    (merged.len() <= max_monomials()).then_some(merged)
 }
 
 fn mono_mul(left: &AtomMonomial, right: &AtomMonomial) -> Option<AtomMonomial> {

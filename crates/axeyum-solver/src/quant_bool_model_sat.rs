@@ -38,15 +38,62 @@ use std::time::{Duration, Instant};
 use web_time::{Duration, Instant};
 
 const MAX_FREE_BOOLEANS: usize = 64;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_FREE_BOOLEANS`]: the compiled default, or
+    /// `AXEYUM_MAX_FREE_BOOLEANS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_FREE_BOOLEANS`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_free_booleans() -> usize = "AXEYUM_MAX_FREE_BOOLEANS" or MAX_FREE_BOOLEANS;
+}
+
 const MAX_CANDIDATES: usize = 256;
 const MAX_BOUND_BOOL_BRANCHES: u64 = 131_072;
 const MAX_CHECK_NODES: u64 = 100_000;
 /// Maximum binders admitted by a residual-QF_BV model proof.
 pub const QUANT_BOOL_BV_MODEL_BINDER_CAP: usize = 128;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`QUANT_BOOL_BV_MODEL_BINDER_CAP`]: the compiled default, or
+    /// `AXEYUM_QUANT_BOOL_BV_MODEL_BINDER_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `QUANT_BOOL_BV_MODEL_BINDER_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn quant_bool_bv_model_binder_cap() -> usize = "AXEYUM_QUANT_BOOL_BV_MODEL_BINDER_CAP" or QUANT_BOOL_BV_MODEL_BINDER_CAP;
+}
+
 /// Maximum distinct source nodes admitted by a residual-QF_BV model proof.
 pub const QUANT_BOOL_BV_MODEL_NODE_CAP: usize = 4_096;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`QUANT_BOOL_BV_MODEL_NODE_CAP`]: the compiled default, or
+    /// `AXEYUM_QUANT_BOOL_BV_MODEL_NODE_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `QUANT_BOOL_BV_MODEL_NODE_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn quant_bool_bv_model_node_cap() -> usize = "AXEYUM_QUANT_BOOL_BV_MODEL_NODE_CAP" or QUANT_BOOL_BV_MODEL_NODE_CAP;
+}
+
 /// Maximum source depth admitted before recursive residual reconstruction.
 pub const QUANT_BOOL_BV_MODEL_DEPTH_CAP: usize = 256;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`QUANT_BOOL_BV_MODEL_DEPTH_CAP`]: the compiled default, or
+    /// `AXEYUM_QUANT_BOOL_BV_MODEL_DEPTH_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `QUANT_BOOL_BV_MODEL_DEPTH_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn quant_bool_bv_model_depth_cap() -> usize = "AXEYUM_QUANT_BOOL_BV_MODEL_DEPTH_CAP" or QUANT_BOOL_BV_MODEL_DEPTH_CAP;
+}
 
 // The certificate DATA lives in `crate::quant_sat_certificates`, so `Model` can
 // carry a replayable quantified-`sat` witness without depending on this
@@ -210,7 +257,7 @@ fn search_quantified_bool_model(
     let Some(free) = admitted_free_booleans(arena, assertions) else {
         return Ok(QuantifiedBoolSearch::Declined);
     };
-    if free.is_empty() || free.len() > MAX_FREE_BOOLEANS {
+    if free.is_empty() || free.len() > max_free_booleans() {
         return Ok(QuantifiedBoolSearch::Declined);
     }
 
@@ -663,20 +710,20 @@ pub(crate) fn admitted_positive_universal_bv(
     let mut free = BTreeSet::new();
     let mut stack = vec![(assertion, true, 1usize, BTreeSet::new())];
     while let Some((term, positive, depth, bound)) = stack.pop() {
-        if depth > QUANT_BOOL_BV_MODEL_DEPTH_CAP
+        if depth > quant_bool_bv_model_depth_cap()
             || !matches!(arena.sort_of(term), Sort::Bool | Sort::BitVec(_))
         {
             return None;
         }
         source_nodes.insert(term);
-        if source_nodes.len() > QUANT_BOOL_BV_MODEL_NODE_CAP {
+        if source_nodes.len() > quant_bool_bv_model_node_cap() {
             return None;
         }
         let context = bound.iter().copied().collect::<Vec<_>>();
         if !visited.insert((term, positive, context)) {
             continue;
         }
-        if visited.len() > QUANT_BOOL_BV_MODEL_NODE_CAP {
+        if visited.len() > quant_bool_bv_model_node_cap() {
             return None;
         }
         match arena.node(term) {
@@ -704,7 +751,7 @@ pub(crate) fn admitted_positive_universal_bv(
                     || !matches!(arena.symbol(*binder).1, Sort::Bool | Sort::BitVec(_))
                     || free.contains(binder)
                     || !binders.insert(*binder)
-                    || binders.len() > QUANT_BOOL_BV_MODEL_BINDER_CAP
+                    || binders.len() > quant_bool_bv_model_binder_cap()
                 {
                     return None;
                 }
@@ -744,7 +791,7 @@ pub(crate) fn admitted_positive_universal_bv(
             TermNode::BoolConst(_) | TermNode::BvConst { .. } | TermNode::WideBvConst(_) => {}
         }
     }
-    if binder_order.is_empty() || free.is_empty() || free.len() > MAX_FREE_BOOLEANS {
+    if binder_order.is_empty() || free.is_empty() || free.len() > max_free_booleans() {
         return None;
     }
     Some(AdmittedPositiveUniversalBv {
