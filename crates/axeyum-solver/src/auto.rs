@@ -7650,6 +7650,86 @@ const INT_BLAST_DENSE_MAX_WIDTH: u32 = 16;
 /// an ever-wider (and ever-heavier) multiplier mountain.
 const INT_BLAST_MAX_WIDTH: u32 = DEFAULT_INT_WIDTH;
 
+/// Top of the **escalation tail**: the widths tried ONLY after every rung up to
+/// [`INT_BLAST_MAX_WIDTH`] has failed to produce a replaying model.
+///
+/// **Shipped equal to [`INT_BLAST_MAX_WIDTH`], so the tail is empty and the
+/// ladder is byte-for-byte the ladder that shipped before ADR-1921.** This
+/// constant exists to make the escalation *measurable*, not to perform it.
+///
+/// Why it is a lever and not a raise. The most common single reason `QF_NIA`
+/// declines a file another solver decides is `bounded integer model overflowed
+/// at width 32`: the ladder found a model, replayed it at exact precision,
+/// found it false, and correctly refused. The textbook remedy is a wider rung.
+/// Measured 2026-09-12 by lane QF-NIA-WIDTH, that remedy **does not pay on this
+/// population** — the widened rungs mostly overflow again at 64, and the ones
+/// that do not cost more budget than the division has. ADR-1921 records the
+/// numbers; the lever is what lets the next lane re-run the experiment on a
+/// different population without editing this file.
+///
+/// The tail can never slow a query the ladder already decides: the loop returns
+/// on its FIRST replay-checked `Sat`, which by construction happens at a width
+/// at or below [`INT_BLAST_MAX_WIDTH`], before any tail rung is built.
+///
+/// It is clamped by [`int_blast_ladder_widths`] to
+/// [`axeyum_rewrite::MAX_INT_BLAST_WIDTH`] (64) because the blaster reads models
+/// back through `i128` and returns a hard `InvalidWidth` **error** — not an
+/// `unknown` — above that. 128-bit escalation is therefore not reachable at all
+/// without a bigint model read-back; see ADR-1921.
+const INT_BLAST_ESCALATION_MAX_WIDTH: u32 = INT_BLAST_MAX_WIDTH;
+
+axeyum_ir::cap_lever! {
+    /// The effective escalation-tail top: [`INT_BLAST_ESCALATION_MAX_WIDTH`],
+    /// or `AXEYUM_INT_BLAST_ESCALATION_MAX_WIDTH`.
+    ///
+    /// Unset is the shipped ladder. Set it to `64` to arm the escalation tail
+    /// (`AXEYUM_INT_BLAST_ESCALATION_MAX_WIDTH=64`) for an A/B without a
+    /// rebuild. Values above [`axeyum_rewrite::MAX_INT_BLAST_WIDTH`] are
+    /// clamped by [`int_blast_ladder_widths`] rather than passed to the
+    /// blaster, which would be a hard error.
+    fn int_blast_escalation_max_width() -> u32 =
+        "AXEYUM_INT_BLAST_ESCALATION_MAX_WIDTH" or INT_BLAST_ESCALATION_MAX_WIDTH;
+}
+
+/// The ladder's width sequence, in the order it is tried.
+///
+/// Deterministic, finite: a dense narrow range (small witnesses, cheap blasts),
+/// a sparse coarse tail up to `INT_BLAST_MAX_WIDTH = DEFAULT_INT_WIDTH` (always
+/// reached, so the previous single-width-32 behaviour is preserved), then the
+/// ADR-1921 **escalation tail** up to `escalation_top`. The middle is
+/// intentionally thinned and the old `36`/`40` tail dropped — the wide
+/// multiplier solves dominate the cost.
+///
+/// `escalation_top` is clamped to [`axeyum_rewrite::MAX_INT_BLAST_WIDTH`]:
+/// above it `blast_integers` returns `IntBlastError::InvalidWidth`, which every
+/// caller maps to a hard [`SolverError`] rather than to `unknown`. Separated
+/// from the solve loop so the sequence itself is testable without a solve.
+fn int_blast_ladder_widths(escalation_top: u32) -> Vec<u32> {
+    let mut widths: Vec<u32> = (INT_BLAST_MIN_WIDTH..=INT_BLAST_DENSE_MAX_WIDTH).collect();
+    let mut w = INT_BLAST_DENSE_MAX_WIDTH + 8;
+    while w <= INT_BLAST_MAX_WIDTH {
+        widths.push(w);
+        w += 8;
+    }
+    // `DEFAULT_INT_WIDTH` must always be in the ladder (it is the historical single
+    // width); add it if the coarse stride skipped it.
+    if !widths.contains(&DEFAULT_INT_WIDTH) {
+        widths.push(DEFAULT_INT_WIDTH);
+    }
+    // ESCALATION TAIL (ADR-1921), entered only after every rung above failed to
+    // produce a replaying model — so a query the ladder already decides never
+    // reaches it and cannot be slowed by it.
+    let top = escalation_top.min(axeyum_rewrite::MAX_INT_BLAST_WIDTH);
+    let mut w = INT_BLAST_MAX_WIDTH + 8;
+    while w <= top {
+        if !widths.contains(&w) {
+            widths.push(w);
+        }
+        w += 8;
+    }
+    widths
+}
+
 /// Decides a pure-integer-arithmetic fallback query (the LIA engines above could
 /// not settle it) by **iterating the bounded bit-blast width** over a deterministic,
 /// trimmed ladder, returning the first replay-checked `Sat`.
@@ -7657,10 +7737,17 @@ const INT_BLAST_MAX_WIDTH: u32 = DEFAULT_INT_WIDTH;
 /// The ladder is the dense range `[INT_BLAST_MIN_WIDTH, INT_BLAST_DENSE_MAX_WIDTH]`
 /// (where small witnesses live and the narrow-width blast is cheap) followed by a
 /// short coarse tail up to [`INT_BLAST_MAX_WIDTH`] (`= DEFAULT_INT_WIDTH`, always
-/// reached, preserving the previous single-width default). The wide-width
-/// multiplier solves are the expensive ones, so the tail is intentionally sparse —
-/// this is the difference between a few-second bound and the old `~31`-width
+/// reached, preserving the previous single-width default), then the **escalation
+/// tail** up to [`INT_BLAST_ESCALATION_MAX_WIDTH`] (ADR-1921). The wide-width
+/// multiplier solves are the expensive ones, so both tails are intentionally
+/// sparse — this is the difference between a few-second bound and the old `~31`-width
 /// multiplier-mountain hang.
+///
+/// The escalation tail is what a query reaches when every rung at or below the
+/// historical single width produced a model that **failed exact-integer replay**
+/// — the correct refusal whose only remedy is a wider bound. It cannot slow a
+/// query the ladder already decides: the loop returns on the FIRST replay-checked
+/// `Sat`, so a decided query never builds a tail rung at all.
 ///
 /// When `config.timeout` is set, a wall-clock **deadline** is checked *before* each
 /// width's solve; an exceeded deadline returns a graceful `Unknown(ResourceLimit)`
@@ -7681,22 +7768,7 @@ fn dispatch_int_blast_width_ladder(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
-    // Deterministic, finite ladder: a dense narrow range (small witnesses, cheap
-    // blasts) plus a sparse coarse tail up to `MAX = DEFAULT_INT_WIDTH` (always
-    // reached, so the previous single-width-32 behaviour is preserved). The middle
-    // is intentionally thinned and the old `36`/`40` tail dropped — the wide
-    // multiplier solves dominate the cost.
-    let mut widths: Vec<u32> = (INT_BLAST_MIN_WIDTH..=INT_BLAST_DENSE_MAX_WIDTH).collect();
-    let mut w = INT_BLAST_DENSE_MAX_WIDTH + 8;
-    while w <= INT_BLAST_MAX_WIDTH {
-        widths.push(w);
-        w += 8;
-    }
-    // `DEFAULT_INT_WIDTH` must always be in the ladder (it is the historical single
-    // width); add it if the coarse stride skipped it.
-    if !widths.contains(&DEFAULT_INT_WIDTH) {
-        widths.push(DEFAULT_INT_WIDTH);
-    }
+    let widths = int_blast_ladder_widths(int_blast_escalation_max_width());
 
     // Wall-clock deadline (only when a timeout is configured): each per-width
     // multiplier blast can otherwise run far past the configured budget. Checked
@@ -12520,5 +12592,61 @@ mod tests {
             before,
             "counters moved after the guard was dropped"
         );
+    }
+    /// The shipped ladder, pinned. This is the sequence that shipped before
+    /// ADR-1921, and the escalation tail's shipped `escalation_top` must leave
+    /// it untouched — a lever that changes behaviour when unset is not a lever.
+    #[test]
+    fn the_shipped_ladder_has_no_escalation_rung() {
+        assert_eq!(
+            super::int_blast_ladder_widths(super::INT_BLAST_ESCALATION_MAX_WIDTH),
+            vec![4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 24, 32],
+        );
+    }
+
+    /// Armed, the tail appends rungs ABOVE the historical single width and
+    /// changes nothing at or below it — the property that makes the tail unable
+    /// to slow a query the ladder already decides.
+    #[test]
+    fn the_armed_tail_only_appends_above_the_historical_width() {
+        let shipped = super::int_blast_ladder_widths(super::INT_BLAST_ESCALATION_MAX_WIDTH);
+        let armed = super::int_blast_ladder_widths(64);
+        assert_eq!(armed[..shipped.len()], shipped[..]);
+        assert_eq!(armed[shipped.len()..], [40, 48, 56, 64]);
+    }
+
+    /// The clamp is load-bearing, not decorative: `blast_integers` answers a
+    /// width above `MAX_INT_BLAST_WIDTH` with `InvalidWidth`, which every caller
+    /// turns into a hard `SolverError` — so an unclamped lever would convert a
+    /// sound `unknown` into a failed query.
+    #[test]
+    fn the_tail_is_clamped_to_what_the_blaster_accepts() {
+        let widths = super::int_blast_ladder_widths(1024);
+        let top = *widths.iter().max().expect("ladder is non-empty");
+        assert_eq!(top, axeyum_rewrite::MAX_INT_BLAST_WIDTH);
+        let mut arena = axeyum_ir::TermArena::new();
+        let x = arena.declare("x", axeyum_ir::Sort::Int).expect("declare x");
+        let xt = arena.var(x);
+        let one = arena.int_const(1);
+        let goal = arena.int_le(one, xt).expect("goal");
+        for &w in &widths {
+            assert!(
+                axeyum_rewrite::blast_integers(&mut arena.clone(), &[goal], w).is_ok(),
+                "ladder rung {w} is rejected by the blaster"
+            );
+        }
+    }
+
+    /// Every rung is strictly wider than the last: a repeated width would blast
+    /// and solve the identical query twice, spending budget for nothing.
+    #[test]
+    fn the_ladder_is_strictly_increasing_armed_or_not() {
+        for top in [super::INT_BLAST_ESCALATION_MAX_WIDTH, 40, 56, 64, 1024] {
+            let widths = super::int_blast_ladder_widths(top);
+            assert!(
+                widths.windows(2).all(|w| w[0] < w[1]),
+                "ladder for top={top} is not strictly increasing: {widths:?}"
+            );
+        }
     }
 }
