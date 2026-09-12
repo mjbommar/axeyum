@@ -6,7 +6,7 @@ Date: 2026-09-12
 
 ## Context
 
-[ADR-1920](adr-1920-a-datatype-sorted-uf-signature-is-admitted.md) lifted the IR's
+[ADR-1920](adr-1920-datatype-sorted-uf-signatures-are-admitted-the-capability-gate-moves-downstream.md) lifted the IR's
 refusal of datatype-sorted UF signatures, moved the capability gate into
 `datatype_native`, and closed with a precise next step:
 
