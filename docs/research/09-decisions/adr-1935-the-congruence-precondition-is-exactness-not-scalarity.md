@@ -155,6 +155,64 @@ no-ops on an empty scan — the same code rather than a second copy of it. The
 gate test asserts the verdict **and** the model, so the next lane cannot
 re-break it quietly.
 
+## The measured result
+
+1,000 files, both arms back to back on the same pinned core pair, arm order
+alternating per file, 10 s / 8 GiB, on three idle homogeneous boxes. Protocol
+and rows: [`bench-results/dt-capability-20260912/`](../../../bench-results/dt-capability-20260912/README.md).
+
+| division | n | base | new | delta | gain | loss | flip | base wall | new wall |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| AUFDTLIRA | 200 | 41 | **69** | **+28** | 28 | 0 | 0 | 135 s | 224 s |
+| UFDTLIRA | 200 | 72 | **82** | **+10** | 10 | 0 | 0 | 83 s | 122 s |
+| UFDT | 200 | 26 | **27** | **+1** | 1 | 0 | 0 | 388 s | 480 s |
+| QF_DT *(control)* | 200 | 169 | 169 | 0 | 0 | 0 | 0 | 52 s | 52 s |
+| UF *(control)* | 200 | 88 | 88 | 0 | 0 | 0 | 0 | 1,374 s | 1,377 s |
+
+**+39 net, 0 decided→undecided, 0 flips.** All 39 newly decided files were
+re-run at 24 s against both oracles and their declared status: axeyum `unsat`,
+z3 `unsat`, cvc5 `unsat`, declared `unsat`, **39 of 39, 0 disagreements on three
+independent checks**. Neither arm disagrees with a declared `:status` anywhere in
+the 1,000 rows. The base arm reproduces the committed board rows exactly
+(41 / 72 / 26), which is what says the two arms measure what the board measured.
+
+**The cost is wall clock and it is not small**: +66 %, +46 % and +24 % on the
+three target divisions. A query the field refusal used to end in 44 ms now runs
+the whole twenty-rung ladder. Both controls moved within noise, so the cost is
+confined to the divisions this change touches — and `UFDT` pays +24 % for one
+file. This is the same trade ADR-1927 recorded and it is to be quoted with the
+gains, not separately.
+
+**The A/B found a defect no reasoning in this ADR predicted.** Run 1 was
++28 / +10 / **−1**: a `UFDT` file `main` answers `unsat` returned `backend
+failure: datatype sat model replay failed`. The replay was right to reject the
+candidate; the bug was that a replay failure on the EXACT path raises
+`SolverError::Backend`, which ends the dispatch, so the ladder never reached the
+route that decides the file. An Ackermann-expanded query's model reconstruction
+is partial by construction — a site whose arguments do not all evaluate
+contributes no entry — so **an Ackermann-expanded query is a RELAXED one and a
+replay failure is a decline**. Two reconstruction holes were closed with it: an
+unbound function reads as "the model does not satisfy the query", and a witness
+nothing constrained made the replay read a default at a key the search never
+chose. Fixed, the binary rebuilt, and the whole 1,000-file run repeated from
+scratch rather than patched.
+
+### The residual census, on the new arm
+
+| refusal | files |
+|---|---:|
+| UF applied to a datatype term that is **not a free variable** | **173** |
+| congruence over a datatype argument whose expansion is not exact | 50 |
+| a UF whose RESULT sort mentions a datatype | 47 |
+| e-matching instantiation did not refute within the round budget | 39 |
+| `is`/`select` over a non-variable datatype term | 22 |
+
+The top row is new — the refusal it names did not exist before this change — and
+it is a **constructor term as a UF argument** (`p(mk(a,b))`), whose argument
+equality is structurally exact and cheap. That is the next slice, and it is
+larger than either half of this one. Read the table the way ADR-1927 says: it
+names which refusal fires first, not how many files a fix would win.
+
 ## Consequences
 
 ### What is now possible
@@ -191,11 +249,42 @@ re-break it quietly.
 
 ## Evidence
 
-- `crates/axeyum-solver/tests/dt_capability_1935.rs` — 16 tests. The `sound_*`
+- `crates/axeyum-solver/tests/dt_capability_1935.rs` — 20 tests. The `sound_*`
   ones assert the absence of the wrong answer, because the fragment is entitled
   to refuse; `congruence_*` and `field_*` are the positive controls that decide,
   so the file cannot be satisfied by a route that refuses everything.
 - `scripts/tests/mutation_controls.py`, suite `dt-capability-1935` — six
-  mutations, one per guard.
+  mutations, one per guard, all six killed.
+
+  **Four of them SURVIVED the first run**, and that is recorded here rather than
+  quietly fixed. With each deleted, all 16 tests then in the file still passed,
+  because each guard is an EARLY and PRECISE refusal of a shape a LATER and
+  vaguer one also refuses: the array-of-datatype field exclusion is caught again
+  by `refuse_if_datatype_survives`, the result-sort and free-variable arms again
+  by `scan_fragment`, and — the one worth stating plainly — **the exactness
+  precondition is not what stands between the solver and a wrong `unsat` today**.
+  ADR-1930's structural-equality encoding is a free Boolean carrying only
+  necessary conditions, so an inexact congruence antecedent is never *forced*
+  true and the clause degenerates to vacuous rather than to a wrong answer. The
+  soundness is ADR-1930's and the replay's. What this precondition buys is that
+  every congruence clause we emit has an antecedent that provably IS real
+  equality, which is what makes the argument above reviewable, and insurance
+  against a future change to that encoding.
+
+  So what each of the four uniquely produces is its MESSAGE — and by decision 2
+  of ADR-1920 that is the product, because these divisions' blocker census is
+  read off exactly these strings and a census cannot distinguish a capability
+  that is missing from one that is merely reached later. Four tests now pin the
+  messages, and each kills exactly one mutation.
+
+  One of the four calls `check_with_datatype_native` directly rather than
+  `solve`. That is also a finding: every query that reaches the
+  datatype-valued-result guard through the front door is decided by an earlier
+  rung, because a selector over a UF result is just another uninterpreted term
+  to EUF. A test that reached it through `solve` by accident would have been
+  measuring the ladder.
+- [`bench-results/dt-capability-20260912/`](../../../bench-results/dt-capability-20260912/README.md)
+  — the A/B protocol, all 1,000 per-file rows for both runs, the oracle
+  re-validation of every gain, and the runner and analysis scripts.
 - `docs/research/03-measurements/the-adr-1920-slice-is-6-of-600-files-2026-09-12.md`
   — the sizing, and `scripts/measure/dt-field-sort-census.py` that produced it.
