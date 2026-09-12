@@ -11,8 +11,13 @@ use crate::error::IrError;
 use crate::fast_map::FastMap;
 use crate::rational::Rational;
 use crate::sort::{ArraySortKey, Sort, mask};
-use crate::term::{DatatypeId, FuncId, Op, SymbolId, TermId, TermNode};
+use crate::term::{ConstructorId, DatatypeId, FuncId, Op, SymbolId, TermId, TermNode};
 use crate::value::{ArrayValue, FuncValue, GenericArrayValue, Value, canonicalize_for_sort};
+
+/// One recorded wrong-constructor selector interpretation:
+/// `(the selector's constructor, the field index, the operand's value, the
+/// value the model chose)`. See [`Assignment::set_dt_select_witness`].
+pub type DtSelectWitness = (ConstructorId, u32, Value, Value);
 
 /// A binding of symbols to concrete values (and uninterpreted functions to
 /// interpretations), used as evaluator input.
@@ -36,6 +41,34 @@ pub struct Assignment {
                   types) at one extra word instead of a full inline HashMap"
     )]
     real_div_zero: Option<Box<FastMap<Rational, Rational>>>,
+    /// Model-chosen interpretation of a **wrong-constructor selector**, keyed by
+    /// `(the selector's constructor, field index, the operand's value)`.
+    ///
+    /// SMT-LIB leaves `sel_{c,i}(t)` UNSPECIFIED when `t` was not built by `c`:
+    /// it is *some* function of the operand's value, and each solver picks its
+    /// own. This evaluator's *total* convention is [`well_founded_default`] of
+    /// the field's sort; a model may instead carry the value its search chose.
+    /// `Op::DtSelect`'s wrong-constructor arm consults this map first and falls
+    /// back to the default on a miss, so an absent/empty map is exactly the
+    /// previous behaviour.
+    ///
+    /// Keyed by the operand's **value**, not by the operand *term*, on purpose:
+    /// that is what makes the recorded interpretation a genuine (congruent)
+    /// function, so two syntactically different terms that denote the same
+    /// value cannot be given two different selector results. Recording a
+    /// conflicting value for one key is a model bug the caller must reject; the
+    /// setter reports it rather than overwriting.
+    ///
+    /// A `Vec` rather than a map: one entry per distinct wrong-constructor
+    /// selector *result* a query actually forces (single digits to low hundreds
+    /// in the measured `QF_DT` corpus), lookup is a linear scan, and insertion
+    /// order is deterministic — which a `FastMap` iteration would not be.
+    #[allow(
+        clippy::box_collection,
+        reason = "deliberate: keeps `Assignment` (embedded in downstream error \
+                  types) at one extra word instead of a full inline Vec"
+    )]
+    dt_select_wrong_ctor: Option<Box<Vec<DtSelectWitness>>>,
 }
 
 impl Assignment {
@@ -118,6 +151,61 @@ impl Assignment {
             .collect();
         entries.sort();
         entries.into_iter()
+    }
+
+    /// Records the model-chosen value of `sel_{constructor,index}(operand)`
+    /// where `operand` was built by a **different** constructor (see the field
+    /// docs).
+    ///
+    /// Returns `false` — and changes nothing — when a *different* value is
+    /// already recorded for the same key. That is a congruence violation: the
+    /// same selector applied to the same value would have to answer twice, so
+    /// the candidate model does not describe any interpretation and the caller
+    /// must reject it (`unknown`), never silently keep one of the two.
+    pub fn set_dt_select_witness(
+        &mut self,
+        constructor: ConstructorId,
+        index: u32,
+        operand: Value,
+        value: Value,
+    ) -> bool {
+        let entries = self.dt_select_wrong_ctor.get_or_insert_with(Box::default);
+        for (c, i, key, recorded) in entries.iter() {
+            if *c == constructor && *i == index && *key == operand {
+                return *recorded == value;
+            }
+        }
+        entries.push((constructor, index, operand, value));
+        true
+    }
+
+    /// The model-chosen value of `sel_{constructor,index}(operand)` for an
+    /// operand built by a different constructor, if the model fixes one;
+    /// `None` falls back to the total [`well_founded_default`] convention.
+    #[must_use]
+    pub fn dt_select_witness(
+        &self,
+        constructor: ConstructorId,
+        index: u32,
+        operand: &Value,
+    ) -> Option<Value> {
+        self.dt_select_wrong_ctor.as_ref().and_then(|entries| {
+            entries
+                .iter()
+                .find(|(c, i, key, _)| *c == constructor && *i == index && key == operand)
+                .map(|(_, _, _, value)| value.clone())
+        })
+    }
+
+    /// Iterates the recorded wrong-constructor selector interpretations in
+    /// insertion order (deterministic by construction — see the field docs).
+    pub fn dt_select_witnesses(
+        &self,
+    ) -> impl Iterator<Item = (ConstructorId, u32, &Value, &Value)> + '_ {
+        self.dt_select_wrong_ctor
+            .iter()
+            .flat_map(|entries| entries.iter())
+            .map(|(c, i, key, value)| (*c, *i, key, value))
     }
 
     /// Number of bound symbols.
@@ -367,17 +455,27 @@ pub fn eval_with_memo<S: std::hash::BuildHasher>(
                                 } if built == constructor => fields[*index as usize].clone(),
                                 Value::Datatype { .. } => {
                                     // Selecting a field of `constructor` from a value built
-                                    // with a *different* constructor is the chosen-total
-                                    // convention (ADR-0022 step-B gate): return the
-                                    // well-founded default of the field's sort, so `select`
-                                    // is total and projected datatype models replay soundly.
-                                    let field_sort =
-                                        arena.constructor_fields(*constructor)[*index as usize].1;
-                                    match well_founded_default(arena, field_sort) {
-                                        Some(v) => v,
-                                        // Only an *uninhabited* field sort has no value.
-                                        None => {
-                                            return Err(IrError::DatatypeConstructorMismatch);
+                                    // with a *different* constructor is UNSPECIFIED in
+                                    // SMT-LIB (ADR-1930). A model may carry the value its
+                                    // search chose, keyed by the operand's value so the
+                                    // recorded interpretation is a congruent function; a
+                                    // miss keeps the chosen-total convention (ADR-0022
+                                    // step-B gate) and returns the well-founded default of
+                                    // the field's sort, so `select` stays total.
+                                    if let Some(chosen) =
+                                        assignment.dt_select_witness(*constructor, *index, &vals[0])
+                                    {
+                                        chosen
+                                    } else {
+                                        let field_sort = arena.constructor_fields(*constructor)
+                                            [*index as usize]
+                                            .1;
+                                        match well_founded_default(arena, field_sort) {
+                                            Some(v) => v,
+                                            // Only an *uninhabited* field sort has no value.
+                                            None => {
+                                                return Err(IrError::DatatypeConstructorMismatch);
+                                            }
                                         }
                                     }
                                 }

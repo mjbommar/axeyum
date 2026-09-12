@@ -77,7 +77,7 @@ pub use bits::{
     value_to_lsb_bits,
 };
 pub use error::IrError;
-pub use eval::{Assignment, eval, eval_with_memo, well_founded_default};
+pub use eval::{Assignment, DtSelectWitness, eval, eval_with_memo, well_founded_default};
 pub use fast_map::{FastMap, FastSet};
 pub use fmt::render;
 pub use int_wide::WideInt;

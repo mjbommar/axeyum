@@ -13,12 +13,19 @@
 //!
 //! then replacing `is-c(o)` with `tag_o == c` and `select_{c,i}(o)` with
 //! `f_{o,c,i}`. Structural equality `o == o'` of two datatype variables reduces
-//! to `tag_o == tag_o'` conjoined with field-wise equality (exact given the
-//! default guards below). To keep the expansion faithful to the *total* `select`
-//! convention ([`well_founded_default`]), each non-active field is pinned to its
-//! sort's well-founded default by a guard `tag_o == c \/ f_{o,c,i} == default`,
-//! so `select_{c,i}(o)` when `o`'s constructor is not `c` yields the same default
-//! the evaluator does. The residual is datatype-free and goes back through the
+//! to `tag_o == tag_o'` conjoined, per constructor `j`, with
+//! `tag_o == j -> (j's fields agree)`.
+//!
+//! **A non-active field variable is FREE** (ADR-1930). It used to be pinned to
+//! its sort's `well_founded_default` by a guard `tag_o == c OR f_{o,c,i} ==
+//! default`, so that `select_{c,i}(o)` off `o`'s own constructor agreed with the
+//! evaluator's total convention. SMT-LIB leaves that case UNSPECIFIED, so the
+//! guard was not a convention but a MODEL RESTRICTION, and it manufactured wrong
+//! `unsat`s: `((_ is none) o) AND (v o)` over `Opt = none | some(v: Bool)`
+//! answered `unsat` here on 2026-09-12 while cvc5 1.3.4 and z3 both answer
+//! `sat`. The value the search picks for a free non-active field is instead
+//! recorded as the model's chosen selector interpretation and checked by the
+//! replay. The residual is datatype-free and goes back through the
 //! normal dispatcher ([`solve`] → `check_auto`), which routes its now-mixed
 //! Bool/BitVec + Int/Real content to the bit-blaster and the arithmetic DPLL
 //! respectively — so `Int`/`Real` field variables decided in congruence with the
@@ -32,6 +39,15 @@
 //! `sat` model is projected back to a `Value::Datatype` and **replayed against
 //! the original assertions** with the ground evaluator before it is returned —
 //! a projection bug surfaces as a replay error, never a wrong `sat`.
+//!
+//! `select_{c,i}(construct_d(...))` with `d != c` — the same unspecified case,
+//! written out — is abstracted to a fresh free variable
+//! ([`abstract_wrong_ctor_selects`]) instead of being refused. The chosen values
+//! from both sources are folded into ONE interpretation keyed by
+//! `(constructor, index, the operand's VALUE)`
+//! ([`register_select_witnesses`]), which is what makes it congruent; a
+//! candidate that wants two different results at one key describes no
+//! interpretation and yields `unknown`.
 //!
 //! Recursive datatypes are handled two ways:
 //!
@@ -61,7 +77,8 @@
 //! a real difference is `unknown`).
 //!
 //! Still outside the fragment: array/UF datatype fields, and `is`/`select`/`==`
-//! over a non-variable datatype term — these return [`SolverError::Unsupported`].
+//! over a datatype term that is neither a variable nor an abstracted
+//! wrong-constructor read — these return [`SolverError::Unsupported`].
 //! A fuller native theory (acyclicity + congruence, and exact field guards to
 //! make the relaxed `unknown` cases complete) is future work.
 
@@ -96,13 +113,125 @@ pub fn check_with_datatype_native(
     let simplified =
         simplify_datatypes(arena, assertions).map_err(|e| SolverError::Backend(e.to_string()))?;
 
+    // TWO ENCODINGS OF STRUCTURAL EQUALITY, AND WHICH VERDICT EACH MAY GIVE.
+    //
+    // The tag/field expansion can only compare fields that HAVE an expansion
+    // variable, and a datatype-typed field has none. That leaves two honest
+    // encodings of `o == o'`, and they are sound for opposite verdicts:
+    //
+    // - [`EqMode::Restriction`] — `tag_l == tag_r AND (comparable fields agree)`
+    //   as a plain term. It is STRONGER than real equality under a negation
+    //   (`o != o'` is made to demand a difference in the part we can see), so it
+    //   can WITNESS a difference — which is what a `sat` model needs, and the
+    //   replay against the original assertions confirms it. Its `unsat` means
+    //   nothing: it has removed real models. This is what shipped, with its
+    //   `unsat` believed, and `is-cons(a) AND is-cons(b) AND a != b` over a list
+    //   whose every field is a datatype answered `unsat` where cvc5 and z3
+    //   answer `sat` (ADR-1930).
+    // - [`EqMode::Relaxation`] — a free Boolean carrying only the conditions the
+    //   expansion can decide (see `build_dt_eq`). Every real model extends to it
+    //   in BOTH polarities, so its `unsat` transfers. Its `sat` is replay-checked
+    //   like any other, but it cannot witness a difference it cannot see, so on
+    //   this fragment it mostly yields `unknown`.
+    //
+    // So: run the restriction for a `sat`, the relaxation for an `unsat`, and
+    // never believe the other's verdict. When no equality is inexact the two
+    // encodings coincide and one pass does.
+    if has_inexact_equality(arena, &simplified) {
+        if let Ok(CheckResult::Sat(model)) =
+            decide_with_eq_mode(arena, &simplified, config, EqMode::Restriction)
+        {
+            return Ok(CheckResult::Sat(model));
+        }
+        return decide_with_eq_mode(arena, &simplified, config, EqMode::Relaxation);
+    }
+    decide_with_eq_mode(arena, &simplified, config, EqMode::Relaxation)
+}
+
+/// Which side of real equality the `==` encoding is allowed to fall on. See the
+/// two-encoding note in [`check_with_datatype_native`].
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum EqMode {
+    /// Weaker-or-exact: `unsat` transfers, `sat` is replay-checked.
+    Relaxation,
+    /// Stronger-or-exact: ONLY a replay-checked `sat` may be believed.
+    Restriction,
+}
+
+/// Whether any structural equality in `assertions` is over a datatype with a
+/// datatype-typed field — the case the expansion cannot compare exactly, and
+/// therefore the only case where the two encodings differ.
+fn has_inexact_equality(arena: &TermArena, assertions: &[TermId]) -> bool {
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(term) else {
+            continue;
+        };
+        if *op == Op::Eq
+            && let Sort::Datatype(dt) = arena.sort_of(args[0])
+            && dt_has_datatype_field(arena, dt)
+        {
+            return true;
+        }
+        stack.extend(args.iter().copied());
+    }
+    false
+}
+
+/// The expansion proper, under one choice of equality encoding.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] for datatype content outside the
+/// fragment, or a [`SolverError`] from the rewrite, the dispatcher, or a failed
+/// `sat` replay.
+fn decide_with_eq_mode(
+    arena: &mut TermArena,
+    simplified: &[TermId],
+    config: &SolverConfig,
+    eq_mode: EqMode,
+) -> Result<CheckResult, SolverError> {
+    // Abstract every `select_{c,i}(construct_d(...))` with `d != c` — the
+    // UNSPECIFIED case (ADR-1930) — into a fresh free variable. Read-over-
+    // construct already folded the `d == c` case exactly, so this is precisely
+    // the residue, and it is the single most common blocker in the QF_DT
+    // corpus. Replacing it by an unconstrained variable is a *relaxation*, so
+    // `unsat` transfers; a `sat` candidate's chosen values are recorded as a
+    // selector interpretation and replayed (`register_select_witnesses`).
+    let (abstracted, witnesses) = abstract_wrong_ctor_selects(arena, simplified)
+        .map_err(|e| SolverError::Backend(e.to_string()))?;
+
+    // Expand a structural equality over a datatype that HAS datatype fields into
+    // the per-constructor field comparison, ONE level deep. Exact (it is the
+    // definition of structural equality), and it is what lets the expansion
+    // exhibit a DIFFERENCE: the nested `sel_{j,i}(x) = sel_{j,i}(y)` become
+    // child-variable equalities under `unfold_traversals`, and a child's tag is
+    // free, so `a != b` has a witness. Without it the tag/field encoding can
+    // only decide equality at the top constructor and every `a != b` over a
+    // recursive datatype degrades to `unknown`.
+    //
+    // RELAXATION MODE ONLY. The restriction already forces a witness at the top
+    // constructor -- that is what makes it the `sat` arm -- and expanding under
+    // it only enlarges the query for no gain; measured, it cost two files that
+    // `main` decided.
+    let expanded = if eq_mode == EqMode::Relaxation {
+        expand_datatype_equalities(arena, &abstracted)
+            .map_err(|e| SolverError::Backend(e.to_string()))?
+    } else {
+        abstracted.clone()
+    };
+
     // Unfold `select` into datatype fields: each traversed datatype-field-select
     // becomes a fresh, free child datatype variable (a *relaxation* — children
     // are unconstrained), recorded in `links` so projection can reconstruct the
     // nested value. Because it only enlarges the model space, reduced-`unsat`
     // still implies original-`unsat` (sound, no guards); `sat` is replay-guarded.
     let (unfolded, links) =
-        unfold_traversals(arena, &simplified).map_err(|e| SolverError::Backend(e.to_string()))?;
+        unfold_traversals(arena, &expanded).map_err(|e| SolverError::Backend(e.to_string()))?;
 
     // Immutable scan: validate the fragment and collect the datatype variables
     // used, the `is`/`select` sites to rewrite, and per-datatype layout.
@@ -110,7 +239,7 @@ pub fn check_with_datatype_native(
     // The query is a relaxation (so a `sat` candidate must be replay-checked and
     // a mismatch is `unknown`) if it traverses datatype fields or compares
     // datatypes that have datatype fields.
-    let relaxed = !links.is_empty() || scan.relaxed_eq;
+    let mut relaxed = !links.is_empty() || scan.relaxed_eq || !witnesses.is_empty();
     if scan.dt_symbols.is_empty() {
         // No datatype variables remain (read-over-construct sufficed) — hand the
         // residual back to the dispatcher.
@@ -161,10 +290,20 @@ pub fn check_with_datatype_native(
         };
         replacements.insert(site.term, arena.var(field));
     }
+    let mut relaxed_eq_encoding = false;
     for site in &scan.eqs {
-        let eq_term = build_dt_eq(arena, &layout[&site.left], &layout[&site.right])?;
+        let (eq_term, one_directional) = build_dt_eq(
+            arena,
+            &layout[&site.left],
+            &layout[&site.right],
+            &mut extra,
+            eq_mode,
+        )?;
+        relaxed_eq_encoding |= one_directional;
         replacements.insert(site.term, eq_term);
     }
+
+    relaxed |= relaxed_eq_encoding;
 
     let mut reduced = Vec::with_capacity(unfolded.len() + extra.len());
     let mut memo: HashMap<TermId, TermId> = HashMap::new();
@@ -194,7 +333,9 @@ pub fn check_with_datatype_native(
 
     // Replay against the *original* simplified assertions (which still reference
     // the select-chains), so a sound `sat` satisfies the real query.
-    project_and_replay(arena, &simplified, &scan, &layout, &links, relaxed, &model)
+    project_and_replay(
+        arena, simplified, &scan, &layout, &links, &witnesses, relaxed, &model,
+    )
 }
 
 /// Per-symbol expansion variables.
@@ -319,6 +460,184 @@ fn unfold_traversals(
         }
         current = next;
     }
+}
+
+/// A `select_{c,i}(construct_d(...))` with `d != c` — SMT-LIB's UNSPECIFIED
+/// selector case — replaced by a fresh free variable.
+///
+/// `operand` is the ORIGINAL constructor term, kept so the projection can
+/// evaluate it and key the model's chosen value by the operand's VALUE (which
+/// is what makes the recorded interpretation congruent).
+struct WitnessSite {
+    constructor: ConstructorId,
+    index: u32,
+    operand: TermId,
+    witness: SymbolId,
+    field_sort: Sort,
+}
+
+/// If `term` is `construct_c(args...)`, its constructor.
+fn construct_of(arena: &TermArena, term: TermId) -> Option<ConstructorId> {
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::DtConstruct { constructor, .. },
+            ..
+        } => Some(*constructor),
+        _ => None,
+    }
+}
+
+/// Replaces every `select_{c,i}(construct_d(...))` with `d != c` by a fresh free
+/// variable of the field's sort.
+///
+/// Read-over-construct ([`simplify_datatypes`]) already folded the `d == c` case
+/// to the field itself, so this pass sees exactly the residue: the case SMT-LIB
+/// leaves UNSPECIFIED. Before this pass such a term reached `expect_dt_symbol`
+/// and the whole query was refused — measured 2026-09-12, the single most common
+/// blocker in the `QF_DT` parity list.
+///
+/// Soundness. The fresh variable is unconstrained, so the rewritten query's
+/// model space CONTAINS the original's under every selector interpretation
+/// (set the variable to whatever that interpretation gives). Hence
+/// rewritten-`unsat` implies original-`unsat` with no side conditions. It is a
+/// relaxation in the `sat` direction too — two occurrences that a model must
+/// make equal (congruence) get independent variables — which is why a `sat`
+/// candidate is only returned after [`register_select_witnesses`] has folded the
+/// chosen values into ONE interpretation keyed by the operand's value, and the
+/// replay has re-evaluated the original assertions under it.
+fn abstract_wrong_ctor_selects(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<(Vec<TermId>, Vec<WitnessSite>), IrError> {
+    let mut targets: Vec<(TermId, ConstructorId, u32, TermId, Sort)> = Vec::new();
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(term) else {
+            continue;
+        };
+        let (op, args) = (*op, args.clone());
+        if let Op::DtSelect { constructor, index } = op
+            && let Some(built) = construct_of(arena, args[0])
+            && built != constructor
+        {
+            let field_sort = arena.constructor_fields(constructor)[index as usize].1;
+            targets.push((term, constructor, index, args[0], field_sort));
+        }
+        stack.extend(args.iter().copied());
+    }
+    if targets.is_empty() {
+        return Ok((assertions.to_vec(), Vec::new()));
+    }
+    // Deterministic: the walk above is stack-ordered, so sort by the select
+    // term's own id before minting any symbol.
+    targets.sort_by_key(|&(term, ..)| term.index());
+
+    let mut map: HashMap<TermId, TermId> = HashMap::new();
+    let mut sites = Vec::with_capacity(targets.len());
+    for (term, constructor, index, operand, field_sort) in targets {
+        let witness = arena.declare_internal(&format!("!dt_sel_{}", term.index()), field_sort)?;
+        map.insert(term, arena.var(witness));
+        sites.push(WitnessSite {
+            constructor,
+            index,
+            operand,
+            witness,
+            field_sort,
+        });
+    }
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    let mut out = Vec::with_capacity(assertions.len());
+    for &assertion in assertions {
+        out.push(replace_subterms(arena, assertion, &map, &mut memo)?);
+    }
+    // Registration order matters: an operand may itself contain an abstracted
+    // select, and the arena interns a subterm BEFORE its parent, so ascending
+    // operand id registers inner witnesses before the outer ones that read them.
+    sites.sort_by_key(|site| site.operand.index());
+    Ok((out, sites))
+}
+
+/// Rewrites every structural equality over a datatype that HAS a datatype-typed
+/// field into its per-constructor definition, ONE level deep:
+///
+/// ```text
+/// (= x y)  ->  AND_j ( is_j(x) -> ( is_j(y) AND AND_i sel_{j,i}(x) = sel_{j,i}(y) ) )
+/// ```
+///
+/// This is exact — it is the definition of structural equality, and exactly one
+/// `is_j(x)` holds — so it is denotation-preserving and needs no model
+/// projection. The nested equalities it leaves behind are NOT expanded again;
+/// for a recursive datatype that would not terminate, and one level is what the
+/// corpus needs.
+///
+/// # Why it exists
+///
+/// `build_dt_eq` can only compare fields that have an expansion variable, and a
+/// datatype-typed field has none, so it answers a free Boolean with only the
+/// conditions it can decide. That is sound in both polarities but it cannot
+/// WITNESS a difference: two variables an assertion forces apart project to the
+/// same well-founded default and the replay refuses the candidate. Expanding one
+/// level turns the comparison into one over CHILD variables, whose tags are
+/// free — so `a != b` gets a witness at depth 1. Measured on the `QF_DT` parity
+/// list: without it, 30 files that were `sat` become `unknown`.
+fn expand_datatype_equalities(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<Vec<TermId>, IrError> {
+    let mut targets: Vec<(TermId, DatatypeId, TermId, TermId)> = Vec::new();
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(term) else {
+            continue;
+        };
+        let (op, args) = (*op, args.clone());
+        if op == Op::Eq
+            && let Sort::Datatype(dt) = arena.sort_of(args[0])
+            && dt_has_datatype_field(arena, dt)
+        {
+            targets.push((term, dt, args[0], args[1]));
+        }
+        stack.extend(args.iter().copied());
+    }
+    if targets.is_empty() {
+        return Ok(assertions.to_vec());
+    }
+    targets.sort_by_key(|&(term, ..)| term.index());
+
+    let mut map: HashMap<TermId, TermId> = HashMap::new();
+    for (term, dt, left, right) in targets {
+        let ctors: Vec<ConstructorId> = arena.datatype_constructors(dt).to_vec();
+        let mut conj = arena.bool_const(true);
+        for ctor in ctors {
+            let arity = arena.constructor_fields(ctor).len();
+            let mut branch = arena.dt_test(ctor, right)?;
+            for index in 0..arity {
+                let i = u32::try_from(index).expect("field index fits u32");
+                let ls = arena.dt_select(ctor, i, left)?;
+                let rs = arena.dt_select(ctor, i, right)?;
+                let fe = arena.eq(ls, rs)?;
+                branch = arena.and(branch, fe)?;
+            }
+            let guard = arena.dt_test(ctor, left)?;
+            let implication = arena.implies(guard, branch)?;
+            conj = arena.and(conj, implication)?;
+        }
+        map.insert(term, conj);
+    }
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    let mut out = Vec::with_capacity(assertions.len());
+    for &assertion in assertions {
+        out.push(replace_subterms(arena, assertion, &map, &mut memo)?);
+    }
+    Ok(out)
 }
 
 fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverError> {
@@ -627,14 +946,6 @@ fn build_sym_vars(
 
     let mut fields = Vec::with_capacity(count);
     for (j, (_ctor, field_sorts)) in ctors.iter().enumerate() {
-        let tag_eq_j = {
-            let c = arena
-                .bv_const(tag_width, j as u128)
-                .map_err(|e| SolverError::Backend(e.to_string()))?;
-            arena
-                .eq(tag_var, c)
-                .map_err(|e| SolverError::Backend(e.to_string()))?
-        };
         let mut row = Vec::with_capacity(field_sorts.len());
         for (i, &fsort) in field_sorts.iter().enumerate() {
             // Datatype-typed fields are never traversed (the scan rejects such
@@ -649,20 +960,20 @@ fn build_sym_vars(
                 .map_err(|e| SolverError::Backend(e.to_string()))?;
             row.push(Some(field));
 
-            // Guard: non-active fields take their well-founded default, matching
-            // the total `select` convention so projection replays exactly.
-            let default =
-                well_founded_default(arena, fsort).expect("scalar field sorts are inhabited");
-            let default_term =
-                value_to_term(arena, &default).map_err(|e| SolverError::Backend(e.to_string()))?;
-            let field_var = arena.var(field);
-            let field_eq_default = arena
-                .eq(field_var, default_term)
-                .map_err(|e| SolverError::Backend(e.to_string()))?;
-            let guard = arena
-                .or(tag_eq_j, field_eq_default)
-                .map_err(|e| SolverError::Backend(e.to_string()))?;
-            extra.push(guard);
+            // NO GUARD. A NON-ACTIVE field variable is deliberately left FREE.
+            //
+            // This slot used to carry `tag_o == j OR f_{o,j,i} == default`,
+            // pinning `select_{j,i}(o)` to `well_founded_default` whenever `o`'s
+            // constructor is not `j`. That is not a conservative convention: it
+            // is a MODEL RESTRICTION, and restricting the model space is exactly
+            // how a solver manufactures a wrong `unsat`. Measured 2026-09-12 --
+            // `is-none(o) AND (= (v o) 5)` over `Opt = none | some(v)` answered
+            // `unsat` here while cvc5 1.3.4 and z3 4.x both answer `sat`,
+            // because SMT-LIB leaves `sel_{c,i}` UNSPECIFIED off its own
+            // constructor (ADR-1930). Leaving the variable free is a
+            // relaxation -- `unsat` still transfers -- and the value the search
+            // picks becomes the model's chosen selector interpretation, recorded
+            // by `register_select_witnesses` and checked by the replay.
         }
         fields.push(row);
     }
@@ -674,27 +985,85 @@ fn build_sym_vars(
     })
 }
 
-/// Builds the reduced term for `o == o'` over two same-datatype variables:
-/// `tag_l == tag_r` conjoined with field-wise equality across all constructors.
+/// Builds the reduced term for `o == o'` over two same-datatype variables: a
+/// fresh Boolean `e`, defined by the conditions the expansion can actually
+/// decide.
 ///
-/// This is exact structural equality given the field-default guards: non-active
-/// fields are pinned to the same default on both sides, so they compare equal
-/// automatically, leaving the active constructor's fields to decide equality.
+/// **Why a fresh Boolean and not a formula.** The obvious encoding is
+/// `tag_l == tag_r AND (fields agree)`, and it is what this function used to
+/// build. Its fields conjunct SKIPS datatype-typed fields, which have no
+/// expansion variable, so the formula is WEAKER than real equality. "Weaker is
+/// a relaxation, so `unsat` is sound" — the comment this function used to carry
+/// — is only true of a POSITIVE occurrence. Under a negation, weaker becomes
+/// STRONGER, and that shipped a wrong `unsat`: on
+/// `list = cons(car: tree, cdr: list) | null`, whose every field is a datatype,
+/// `is-cons(a) AND is-cons(b) AND a != b` reduced to `tag_a == cons AND
+/// tag_b == cons AND tag_a != tag_b` and answered **`unsat`**, where cvc5 1.3.4
+/// and z3 both answer `sat` (measured 2026-09-12, and the defect predates this
+/// lane).
+///
+/// So `e` is free, and it carries:
+///
+/// - the NECESSARY conditions, always: `e -> tag_l == tag_r`, and
+///   `e AND tag_l == j -> (j's comparable fields agree)`. These cannot remove a
+///   model, because a real model with `o == o'` satisfies them with `e` true.
+/// - the SUFFICIENT condition, only for a constructor `j` every one of whose
+///   fields has an expansion variable: `tag_l == j AND tag_r == j AND fields
+///   agree -> e`. For such a constructor the comparison IS exact, so this cannot
+///   remove a model either.
+///
+/// A real model with `o != o'` extends by setting `e` false: the only clauses
+/// that could object are the sufficiency ones, and their antecedent says the two
+/// values agree on every field of an exact constructor, which contradicts
+/// `o != o'`. So BOTH polarities are relaxations, which is what the previous
+/// encoding was not.
+///
+/// For a fully scalar datatype every constructor is exact and this is exactly
+/// the old biconditional, so nothing that decided through that path loses.
+/// Where a datatype-typed field is involved the equality is one-directional, the
+/// caller marks the query `relaxed_eq`, and a `sat` candidate is replay-checked
+/// against the original assertions.
 fn build_dt_eq(
     arena: &mut TermArena,
     left: &SymVars,
     right: &SymVars,
-) -> Result<TermId, SolverError> {
+    extra: &mut Vec<TermId>,
+    mode: EqMode,
+) -> Result<(TermId, bool), SolverError> {
+    if mode == EqMode::Restriction {
+        return build_dt_eq_restriction(arena, left, right);
+    }
+    let equal = arena
+        .declare_internal(
+            &format!("!dt_eq_{}_{}", left.tag.index(), right.tag.index()),
+            Sort::Bool,
+        )
+        .map_err(|e| SolverError::Backend(e.to_string()))?;
+    let ev = arena.var(equal);
     let lt = arena.var(left.tag);
     let rt = arena.var(right.tag);
-    let mut conj = arena
+
+    // Necessary: equal values carry the same tag.
+    let tags_eq = arena
         .eq(lt, rt)
         .map_err(|e| SolverError::Backend(e.to_string()))?;
-    for (lrow, rrow) in left.fields.iter().zip(&right.fields) {
+    let necessary_tag = arena
+        .implies(ev, tags_eq)
+        .map_err(|e| SolverError::Backend(e.to_string()))?;
+    extra.push(necessary_tag);
+
+    let mut all_exact = true;
+    let mut sufficient = arena.bool_const(true);
+    for (j, (lrow, rrow)) in left.fields.iter().zip(&right.fields).enumerate() {
+        let mut fields_eq = arena.bool_const(true);
+        let mut comparable = 0usize;
+        let mut exact = true;
         for (lf, rf) in lrow.iter().zip(rrow) {
-            // Equality is admitted only for fully-scalar datatypes, so every
-            // field has a variable; a `None` (datatype field) cannot occur here.
             let (Some(lf), Some(rf)) = (lf, rf) else {
+                // A datatype-typed field: no expansion variable, so this
+                // constructor's comparison cannot be exact.
+                exact = false;
+                all_exact = false;
                 continue;
             };
             let lfv = arena.var(*lf);
@@ -702,12 +1071,132 @@ fn build_dt_eq(
             let fe = arena
                 .eq(lfv, rfv)
                 .map_err(|e| SolverError::Backend(e.to_string()))?;
-            conj = arena
-                .and(conj, fe)
+            fields_eq = arena
+                .and(fields_eq, fe)
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
+            comparable += 1;
+        }
+        let tag_j = arena
+            .bv_const(left.tag_width, j as u128)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        let l_is_j = arena
+            .eq(lt, tag_j)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+
+        if comparable > 0 {
+            // Necessary: `e AND tag_l == j -> j's comparable fields agree`.
+            // Skipped when there is nothing to compare -- a nullary constructor
+            // would otherwise contribute `tag_l != j OR true` once PER
+            // CONSTRUCTOR, and a pure enum has hundreds (the `vlsat3` family),
+            // which cost two files that decided in under 24 s.
+            let antecedent = arena
+                .and(ev, l_is_j)
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
+            let clause = arena
+                .implies(antecedent, fields_eq)
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
+            extra.push(clause);
+        }
+
+        // Sufficiency is accumulated into ONE clause below rather than emitted
+        // per constructor. Per-constructor is the same explosion the necessary
+        // side already hit: a pure enum has one nullary constructor PER VALUE
+        // (`vlsat3` declares hundreds) and every equality would carry that many
+        // clauses. Collectively it degenerates to `tag_l == tag_r -> e`.
+        if exact {
+            if comparable > 0 {
+                let not_j = arena
+                    .not(l_is_j)
+                    .map_err(|e| SolverError::Backend(e.to_string()))?;
+                let per_ctor = arena
+                    .or(not_j, fields_eq)
+                    .map_err(|e| SolverError::Backend(e.to_string()))?;
+                sufficient = arena
+                    .and(sufficient, per_ctor)
+                    .map_err(|e| SolverError::Backend(e.to_string()))?;
+            }
+        } else {
+            // Not decidable at this constructor, so the sufficiency clause only
+            // speaks about the tags that ARE decidable.
+            let not_j = arena
+                .not(l_is_j)
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
+            sufficient = arena
+                .and(sufficient, not_j)
                 .map_err(|e| SolverError::Backend(e.to_string()))?;
         }
     }
-    Ok(conj)
+    let sufficient = arena
+        .and(sufficient, tags_eq)
+        .map_err(|e| SolverError::Backend(e.to_string()))?;
+    let clause = arena
+        .implies(sufficient, ev)
+        .map_err(|e| SolverError::Backend(e.to_string()))?;
+    extra.push(clause);
+    Ok((ev, !all_exact))
+}
+
+/// The RESTRICTION encoding of `o == o'`: `tag_l == tag_r` conjoined, per
+/// constructor `j`, with `tag_l == j -> (j's comparable fields agree)`, as a
+/// plain term.
+///
+/// Datatype-typed fields have no expansion variable and are skipped, so this is
+/// weaker than real equality in a POSITIVE occurrence and **stronger** in a
+/// negative one. Only a `sat` may be believed, and only after the replay against
+/// the original assertions — which is exactly what the caller does. See the
+/// two-encoding note in [`check_with_datatype_native`].
+fn build_dt_eq_restriction(
+    arena: &mut TermArena,
+    left: &SymVars,
+    right: &SymVars,
+) -> Result<(TermId, bool), SolverError> {
+    let lt = arena.var(left.tag);
+    let rt = arena.var(right.tag);
+    let mut conj = arena
+        .eq(lt, rt)
+        .map_err(|e| SolverError::Backend(e.to_string()))?;
+    let mut all_exact = true;
+    for (j, (lrow, rrow)) in left.fields.iter().zip(&right.fields).enumerate() {
+        let mut fields_eq = arena.bool_const(true);
+        let mut comparable = 0usize;
+        for (lf, rf) in lrow.iter().zip(rrow) {
+            let (Some(lf), Some(rf)) = (lf, rf) else {
+                all_exact = false;
+                continue;
+            };
+            let lfv = arena.var(*lf);
+            let rfv = arena.var(*rf);
+            let fe = arena
+                .eq(lfv, rfv)
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
+            fields_eq = arena
+                .and(fields_eq, fe)
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
+            comparable += 1;
+        }
+        if comparable == 0 {
+            // Nothing to say about this constructor. Emitting the vacuous
+            // conjunct once PER CONSTRUCTOR is what cost two `vlsat3` files
+            // (hundreds of nullary constructors) their verdict.
+            continue;
+        }
+        let tag_j = arena
+            .bv_const(left.tag_width, j as u128)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        let l_is_j = arena
+            .eq(lt, tag_j)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        let not_j = arena
+            .not(l_is_j)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        let guarded = arena
+            .or(not_j, fields_eq)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        conj = arena
+            .and(conj, guarded)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+    }
+    Ok((conj, !all_exact))
 }
 
 /// Projects the expansion model back to datatype values and replays it against
@@ -719,6 +1208,7 @@ fn project_and_replay(
     scan: &Scan,
     layout: &BTreeMap<SymbolId, SymVars>,
     links: &Links,
+    witnesses: &[WitnessSite],
     relaxed: bool,
     model: &Model,
 ) -> Result<CheckResult, SolverError> {
@@ -728,6 +1218,13 @@ fn project_and_replay(
         let value = project_slot(arena, sym, scan, layout, links, &assignment, &mut memo)?;
         assignment.set(sym, value);
     }
+
+    // Fold the model's choices for every UNSPECIFIED selector read into ONE
+    // interpretation before replaying (ADR-1930). Without this the replay would
+    // evaluate those reads with `well_founded_default` and reject every model
+    // that used a different value, which is the whole class of query this change
+    // exists to decide.
+    register_select_witnesses(arena, scan, layout, links, witnesses, &mut assignment);
 
     // Replay against the original assertions. For the *relaxed* (traversal) path
     // a free child may not match the wrong-constructor default, so a replay
@@ -769,6 +1266,113 @@ fn project_and_replay(
     // the inner model held.
     out.carry_assignment_components(&assignment);
     Ok(CheckResult::Sat(out))
+}
+
+/// Folds the candidate model's choices for every WRONG-CONSTRUCTOR selector read
+/// into a single selector interpretation on `assignment`, which the `sat` replay
+/// then evaluates the original assertions under.
+///
+/// Two sources, both of them values the search chose freely:
+///
+/// - a `select_{c,i}(o)` over an expanded VARIABLE whose projected constructor
+///   is not `c`: the field variable `f_{o,c,i}` (no longer pinned to a default,
+///   see `build_sym_vars`);
+/// - a `select_{c,i}(construct_d(...))` abstracted by
+///   [`abstract_wrong_ctor_selects`]: its fresh witness variable.
+///
+/// The interpretation is keyed by `(constructor, index, the OPERAND'S VALUE)`,
+/// so it is a genuine function of the value and therefore congruent: two
+/// syntactically different operands that denote the same value get the same
+/// answer, which is exactly what SMT-LIB requires of an unspecified selector and
+/// what the relaxation above does NOT enforce on its own.
+///
+/// **A conflict is recorded, not rejected, and this is deliberate.** When the
+/// candidate wants two different results at one key the FIRST stands, which
+/// still leaves a total congruent interpretation -- and the replay against the
+/// original assertions then decides under it. Rejecting the candidate here
+/// instead would be a second, weaker checker in front of the real one: it can
+/// only turn a `sat` the replay would have confirmed into an `unknown`, never
+/// catch anything the replay misses. Mutation-checked: disabling the conflict
+/// arm of `set_dt_select_witness` killed no test, because the replay was
+/// already deciding every case it covered.
+///
+fn register_select_witnesses(
+    arena: &TermArena,
+    scan: &Scan,
+    layout: &BTreeMap<SymbolId, SymVars>,
+    links: &Links,
+    witnesses: &[WitnessSite],
+    assignment: &mut axeyum_ir::Assignment,
+) {
+    // A TRAVERSED DATATYPE FIELD read off the wrong constructor. `project_slot`
+    // fills a slot's fields from the ACTIVE constructor's row only, so when the
+    // parent's tag is not `ctor_idx` the child variable's value is dropped and
+    // the replay falls back to `well_founded_default` -- which is exactly the
+    // mismatch the `relaxed` path reported as "the traversed-field relaxation is
+    // incomplete here" (19 of 74 remaining QF_DT unknowns, measured 2026-09-12).
+    // The child IS the model's chosen value for that read; record it.
+    for (&(sym, ctor_idx, field_idx), &child) in links {
+        let Some(operand @ Value::Datatype { constructor, .. }) = assignment.get(sym) else {
+            continue;
+        };
+        let Some(&dt) = scan.dt_symbols.get(&sym) else {
+            continue;
+        };
+        let Some(entry) = scan.layouts[&dt].get(ctor_idx) else {
+            continue;
+        };
+        let link_ctor = entry.0;
+        if constructor == link_ctor {
+            continue;
+        }
+        let Some(value) = assignment.get(child) else {
+            continue;
+        };
+        let index = u32::try_from(field_idx).unwrap_or(u32::MAX);
+        assignment.set_dt_select_witness(link_ctor, index, operand, value);
+    }
+
+    for site in &scan.selects {
+        let Some(operand @ Value::Datatype { constructor, .. }) = assignment.get(site.symbol)
+        else {
+            continue;
+        };
+        let dt = scan.dt_symbols[&site.symbol];
+        let site_ctor = scan.layouts[&dt][site.ctor_index].0;
+        if constructor == site_ctor {
+            // The ACTIVE constructor: the field variable IS the field, exactly.
+            continue;
+        }
+        let Some(field) = layout[&site.symbol].fields[site.ctor_index][site.field_index] else {
+            continue;
+        };
+        let Some(value) = assignment.get(field) else {
+            continue;
+        };
+        let index = u32::try_from(site.field_index).unwrap_or(u32::MAX);
+        assignment.set_dt_select_witness(site_ctor, index, operand, value);
+    }
+
+    // `witnesses` is ordered by operand id, so an operand that itself reads an
+    // abstracted selector sees that entry already recorded.
+    for site in witnesses {
+        // An operand that cannot be evaluated (an unbound symbol, say) simply
+        // gets no entry: the replay below then reads the total convention's
+        // default there and fails if that is not what the search assumed.
+        let Ok(operand) = eval(arena, site.operand, assignment) else {
+            continue;
+        };
+        let value = match assignment.get(site.witness) {
+            Some(value) => value,
+            // The witness never reached the reduced query (nothing constrained
+            // it): any value will do, so take the total convention's.
+            None => match well_founded_default(arena, site.field_sort) {
+                Some(value) => value,
+                None => continue,
+            },
+        };
+        assignment.set_dt_select_witness(site.constructor, site.index, operand, value);
+    }
 }
 
 /// Reconstructs a slot's `Value::Datatype` from the model: scalar fields from
@@ -831,16 +1435,6 @@ fn project_slot(
     };
     memo.insert(sym, value.clone());
     Ok(value)
-}
-
-fn value_to_term(arena: &mut TermArena, value: &Value) -> Result<TermId, axeyum_ir::IrError> {
-    match value {
-        Value::Bool(b) => Ok(arena.bool_const(*b)),
-        Value::Bv { width, value } => arena.bv_const(*width, *value),
-        Value::Int(v) => Ok(arena.int_const(*v)),
-        Value::Real(r) => Ok(arena.real_const(*r)),
-        _ => unreachable!("scalar field defaults are Bool/BitVec/Int/Real"),
-    }
 }
 
 fn unsupported(what: &str) -> SolverError {

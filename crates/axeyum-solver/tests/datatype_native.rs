@@ -115,8 +115,19 @@ fn select_on_wrong_constructor_uses_default_sat() {
 }
 
 #[test]
-fn select_on_wrong_constructor_nonzero_is_unsat() {
-    // is-none(o) AND select v(o) == 5: the default is 0, not 5 -> unsat.
+fn select_on_wrong_constructor_nonzero_is_sat_with_a_recorded_witness() {
+    // is-none(o) AND select v(o) == 5.
+    //
+    // SOUNDNESS-NEGATIVE, and it caught a SHIPPED wrong `unsat` (ADR-1930).
+    // Until 2026-09-12 this test ASSERTED `unsat`, because the expansion pinned
+    // every non-active field to `well_founded_default` (here 0). SMT-LIB leaves
+    // `v(o)` UNSPECIFIED when `o` is `none`, so `sat` is the right answer; the
+    // same query as SMT-LIB text gets `sat` from cvc5 1.3.4 and from z3.
+    //
+    // DIES ON: restoring the `tag_o == j OR f == default` guard in
+    // `build_sym_vars`, or dropping the `dt_select_wrong_ctor` arm of
+    // `Assignment`/`Model` (the replay then rejects the candidate and the
+    // verdict degrades from `sat`).
     let (mut arena, opt, none, some) = option_arena();
     let o = arena.declare("o", Sort::Datatype(opt)).unwrap();
     let ov = arena.var(o);
@@ -127,9 +138,116 @@ fn select_on_wrong_constructor_nonzero_is_unsat() {
 
     let result =
         check_with_datatype_native(&mut arena, &[is_none, eq], &SolverConfig::default()).unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("an unspecified selector read must not be forced to a default: got {result:?}");
+    };
+    // The model must SAY what it chose, not leave the reader to infer it: the
+    // verdict is justified only by an interpretation in which `v(none) = 5`.
+    let witnesses: Vec<_> = model
+        .dt_select_witnesses()
+        .map(|(c, i, operand, value)| (c, i, operand.clone(), value.clone()))
+        .collect();
+    assert_eq!(
+        witnesses,
+        vec![(
+            some,
+            0,
+            Value::Datatype {
+                datatype: opt,
+                constructor: none,
+                fields: Vec::new(),
+            },
+            Value::Bv { width: 8, value: 5 },
+        )],
+        "the sat model must carry the chosen interpretation of `v(none)`"
+    );
+}
+
+#[test]
+fn select_over_a_wrong_constructor_application_is_sat() {
+    // `is-succ(pred(zero))`: the unspecified selector read written as a
+    // CONSTRUCTOR APPLICATION rather than over a variable. Read-over-construct
+    // cannot fold it (the constructors differ); before ADR-1930 it reached
+    // `expect_dt_symbol` and the whole query was refused as unsupported. This
+    // exact shape appears verbatim in the QF_DT corpus (`v1l20044.cvc.smt2`),
+    // where cvc5 and z3 both answer `sat`.
+    //
+    // DIES ON: deleting the `abstract_wrong_ctor_selects` call from
+    // `check_with_datatype_native`.
+    let mut arena = TermArena::new();
+    let nat = arena.declare_datatype("nat");
+    let succ = arena.add_constructor(nat, "succ", &[("pred".into(), Sort::Datatype(nat))]);
+    let zero = arena.add_constructor(nat, "zero", &[]);
+    let zero_term = arena.construct(zero, &[]).unwrap();
+    let pred_zero = arena.dt_select(succ, 0, zero_term).unwrap();
+    let goal = arena.dt_test(succ, pred_zero).unwrap();
+
+    let result = check_with_datatype_native(&mut arena, &[goal], &SolverConfig::default()).unwrap();
     assert!(
-        matches!(result, CheckResult::Unsat),
-        "wrong-ctor select == non-default must be unsat, got {result:?}"
+        matches!(result, CheckResult::Sat(_)),
+        "`is-succ(pred(zero))` is sat (the selector read is unspecified), got {result:?}"
+    );
+}
+
+#[test]
+fn two_unspecified_reads_at_different_operands_are_independent() {
+    // `D = a(f: Bool) | b | c`. `f(b)` and `f(c)` are two unspecified reads at
+    // two DIFFERENT operand values, so nothing relates them and `f(b) AND
+    // NOT f(c)` is sat. Under the old fixed-default convention both folded to
+    // `false` and this was `unsat` -- the wrong-`unsat` class, in its
+    // constructor-application form.
+    //
+    // DIES ON: folding `sel_i(c_j(...))` with `i != j` to any fixed value, and
+    // on keying the witness table by `(constructor, index)` without the operand.
+    let mut arena = TermArena::new();
+    let d = arena.declare_datatype("D");
+    let ctor_a = arena.add_constructor(d, "a", &[("f".into(), Sort::Bool)]);
+    let ctor_b = arena.add_constructor(d, "b", &[]);
+    let ctor_c = arena.add_constructor(d, "c", &[]);
+    let b_term = arena.construct(ctor_b, &[]).unwrap();
+    let c_term = arena.construct(ctor_c, &[]).unwrap();
+    let f_b = arena.dt_select(ctor_a, 0, b_term).unwrap();
+    let f_c = arena.dt_select(ctor_a, 0, c_term).unwrap();
+    let not_f_c = arena.not(f_c).unwrap();
+
+    let result =
+        check_with_datatype_native(&mut arena, &[f_b, not_f_c], &SolverConfig::default()).unwrap();
+    assert!(
+        matches!(result, CheckResult::Sat(_)),
+        "`f(b)` and `f(c)` are unrelated unspecified reads, got {result:?}"
+    );
+}
+
+#[test]
+fn congruent_unspecified_reads_never_produce_a_sat() {
+    // `x = zero` forces `pred x` and `pred zero` to be the SAME unspecified
+    // value (congruence), so demanding they differ is unsatisfiable. The
+    // reduction gives the two reads independent variables -- a relaxation -- so
+    // the REDUCED query is satisfiable; only the value-keyed interpretation
+    // built in `register_select_witnesses` catches it. The verdict must
+    // therefore never be `sat`.
+    //
+    // DIES ON: keying the witness table by the operand TERM instead of by its
+    // VALUE, or dropping the conflict check in `set_dt_select_witness`.
+    let mut arena = TermArena::new();
+    let nat = arena.declare_datatype("nat");
+    let succ = arena.add_constructor(nat, "succ", &[("pred".into(), Sort::Datatype(nat))]);
+    let zero = arena.add_constructor(nat, "zero", &[]);
+    let x = arena.declare("x", Sort::Datatype(nat)).unwrap();
+    let xv = arena.var(x);
+    let zero_term = arena.construct(zero, &[]).unwrap();
+    let is_zero_x = arena.dt_test(zero, xv).unwrap();
+    let pred_x = arena.dt_select(succ, 0, xv).unwrap();
+    let pred_zero = arena.dt_select(succ, 0, zero_term).unwrap();
+    let same = arena.eq(pred_x, pred_zero).unwrap();
+    let differ = arena.not(same).unwrap();
+
+    let result =
+        check_with_datatype_native(&mut arena, &[is_zero_x, differ], &SolverConfig::default())
+            .unwrap();
+    assert!(
+        !matches!(result, CheckResult::Sat(_)),
+        "two congruent unspecified reads cannot differ; got {result:?}"
     );
 }
 
@@ -458,6 +576,74 @@ fn nested_scalar_field_through_traversal_is_sat() {
         },
         other => panic!("expected a cons value, got {other:?}"),
     }
+}
+
+#[test]
+fn a_negated_equality_over_datatype_fields_is_not_unsat() {
+    // is-cons(a) AND is-cons(b) AND a != b, on a list whose EVERY field is a
+    // datatype. Two distinct `cons` values exist, so this is `sat`; cvc5 1.3.4
+    // and z3 both say so.
+    //
+    // SOUNDNESS-NEGATIVE, and it caught a SECOND shipped wrong `unsat`
+    // (ADR-1930). `build_dt_eq` skips datatype-typed fields, which makes the
+    // encoded equality WEAKER than real equality -- and "weaker is a
+    // relaxation, so unsat is sound" holds only for a POSITIVE occurrence.
+    // Under this negation it became STRONGER: the reduced query demanded
+    // `tag_a != tag_b` while both testers forced `cons`, and answered `unsat`.
+    //
+    // We answer `unknown` here, not `sat`: the projection gives both variables
+    // the same well-founded default for their untraversed datatype fields, so
+    // the replay cannot confirm a difference. Incomplete, never wrong.
+    //
+    // DIES ON: encoding the equality as a formula over the tag and the
+    // comparable fields instead of a free Boolean carrying only the conditions
+    // the expansion can decide.
+    let (mut arena, list, _nil, cons) = tree_list_arena();
+    let a = arena.declare("a", Sort::Datatype(list)).unwrap();
+    let b = arena.declare("b", Sort::Datatype(list)).unwrap();
+    let av = arena.var(a);
+    let bv = arena.var(b);
+    let is_cons_a = arena.dt_test(cons, av).unwrap();
+    let is_cons_b = arena.dt_test(cons, bv).unwrap();
+    let same = arena.eq(av, bv).unwrap();
+    let differ = arena.not(same).unwrap();
+
+    let result = check_with_datatype_native(
+        &mut arena,
+        &[is_cons_a, is_cons_b, differ],
+        &SolverConfig::default(),
+    )
+    .unwrap();
+    assert!(
+        !matches!(result, CheckResult::Unsat),
+        "two distinct `cons` values exist; `unsat` is a wrong answer, got {result:?}"
+    );
+}
+
+/// `tree = leaf | node(kids: list)`, `list = cons(car: tree, cdr: list) | nil`:
+/// a list whose EVERY constructor field is datatype-typed, so no field of it
+/// gets an expansion variable.
+fn tree_list_arena() -> (
+    TermArena,
+    axeyum_ir::DatatypeId,
+    axeyum_ir::ConstructorId,
+    axeyum_ir::ConstructorId,
+) {
+    let mut arena = TermArena::new();
+    let tree = arena.declare_datatype("tree");
+    let list = arena.declare_datatype("list");
+    let _leaf = arena.add_constructor(tree, "leaf", &[]);
+    let _node = arena.add_constructor(tree, "node", &[("kids".into(), Sort::Datatype(list))]);
+    let cons = arena.add_constructor(
+        list,
+        "cons",
+        &[
+            ("car".into(), Sort::Datatype(tree)),
+            ("cdr".into(), Sort::Datatype(list)),
+        ],
+    );
+    let nil = arena.add_constructor(list, "nil", &[]);
+    (arena, list, nil, cons)
 }
 
 #[test]
