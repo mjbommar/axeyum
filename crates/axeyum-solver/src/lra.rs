@@ -1888,6 +1888,72 @@ pub fn check_with_lia_simplex_within(
     lia_simplex_with_options(arena, assertions, deadline, false)
 }
 
+/// Whether one atom is inside the conjunctive `QF_LRA` fragment, **without
+/// deciding it**.
+///
+/// # Why this is not `check_with_lra(arena, &[atom])`
+///
+/// A membership question was being answered by running a whole conjunctive
+/// decision — collection, then Fourier–Motzkin or the exact-rational simplex —
+/// and then discarding the verdict. The caller
+/// ([`crate::dpll_lia::ArithAbstractor::ensure_supported_atom`]) reads exactly
+/// one bit of that answer: did it come back `Unsupported`?
+///
+/// Every `Unsupported` this route can produce is raised inside
+/// [`Collector::collect`] / [`Collector::linearize`] — the four sites are the
+/// real disequality, the non-conjunctive fall-through, the nonlinear
+/// multiplication and the non-linear-term fall-through, and all four are in the
+/// collector. Nothing after collection can return `Unsupported`: every arm of
+/// [`decide_within`] past that point returns `Ok(Decision::…)`, and its only
+/// `Err` is a [`SolverError::Backend`] replay alarm. So collection alone answers
+/// the question the caller asks, and the search after it is pure waste.
+///
+/// Measured 2026-09-12 on `QF_UFLRA`'s `cpachecker-induction.minepump_spec1_
+/// product56…` at a 12 s budget: **540** such whole decisions inside ONE
+/// abstraction build, 539 of them reaching Fourier–Motzkin, and the build had
+/// not finished when the watchdog fired.
+///
+/// A `SolverError::Backend` alarm that the discarded search could have raised on
+/// a ONE-ATOM system is not lost work: the same system is solved for real
+/// moments later with every other atom beside it, and that solve raises it
+/// there.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] exactly when `atom` is outside the
+/// conjunctive linear-real fragment.
+pub(crate) fn atom_in_lra_fragment(arena: &TermArena, atom: TermId) -> Result<(), SolverError> {
+    // `Ok(None)` is a memory-budget or deadline decline inside collection, not a
+    // fragment refusal — and `decide_within` turns it into `Ok(Decision::…)`,
+    // i.e. "supported" as far as this caller is concerned. Preserved exactly.
+    collect_constraints(arena, &[atom], None).map(|_| ())
+}
+
+/// [`atom_in_lra_fragment`] for the integer side: whether one atom is inside the
+/// conjunctive linear-integer fragment, **without deciding it**.
+///
+/// Same argument, same shape. All four `unsupported_lia` sites are inside
+/// [`IntCollector::collect_within`] / [`IntCollector::linearize`]; every arm of
+/// [`lia_simplex_capped`] past collection returns `Ok(CheckResult::…)`.
+/// `allow_opaque_apps` is `true` to match
+/// [`check_with_lia_opaque_apps`], which is what the caller used.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] exactly when `atom` is outside the
+/// conjunctive linear-integer fragment.
+pub(crate) fn atom_in_lia_opaque_fragment(
+    arena: &TermArena,
+    atom: TermId,
+) -> Result<(), SolverError> {
+    let mut ctx = IntCollector::new(true);
+    ctx.current_origin = 0;
+    // `Ok(false)` is collection's deadline decline; with no deadline it cannot
+    // fire, and it is "supported" either way — `lia_simplex_capped` maps it to
+    // `Ok(lia_collection_timeout())`.
+    ctx.collect_within(arena, atom, false, None).map(|_| ())
+}
+
 /// Conjunctive LIA oracle that treats integer-valued uninterpreted-function
 /// applications as opaque integer variables. This is sound for UNSAT transfer:
 /// the abstraction is a relaxation of the original UFLIA constraints. A
@@ -4341,5 +4407,104 @@ mod memory_limit_tests {
             ),
             "with no deadline the same system must still be decided sat"
         );
+    }
+}
+
+#[cfg(test)]
+mod fragment_probe_tests {
+    use super::*;
+
+    /// The probe agrees with the decision it replaced, on exactly the bit the
+    /// caller reads.
+    ///
+    /// This is the whole justification for [`atom_in_lra_fragment`]: it is
+    /// allowed to skip the search only because the search could never change
+    /// the `Unsupported`/not-`Unsupported` answer. A literal list of expected
+    /// classifications would measure the author's memory, so the expectation is
+    /// DERIVED — the full decision runs beside the probe on every case and the
+    /// two are compared. If an `Unsupported` is ever raised past collection,
+    /// this fails here rather than as a silently admitted atom in production.
+    #[test]
+    fn the_real_probe_agrees_with_the_decision_it_replaced() {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("probe_x").expect("real var");
+        let y = arena.real_var("probe_y").expect("real var");
+        let zero = arena.real_const(Rational::integer(0));
+        let two = arena.real_const(Rational::integer(2));
+        let scaled = arena.real_mul(two, x).expect("linear scaling");
+        let product = arena.real_mul(x, y).expect("nonlinear product");
+        let equality = arena.eq(x, y).expect("eq");
+
+        let cases = vec![
+            ("linear le", arena.real_le(x, zero).expect("atom")),
+            ("linear lt", arena.real_lt(scaled, y).expect("atom")),
+            ("equality", equality),
+            ("disequality", arena.not(equality).expect("atom")),
+            ("nonlinear", arena.real_le(product, zero).expect("atom")),
+        ];
+
+        let mut supported = 0;
+        let mut refused = 0;
+        for (label, atom) in cases {
+            let decided = check_with_lra(&arena, &[atom]);
+            let probed = atom_in_lra_fragment(&arena, atom);
+            let decided_unsupported = matches!(decided, Err(SolverError::Unsupported(_)));
+            let probed_unsupported = matches!(probed, Err(SolverError::Unsupported(_)));
+            assert_eq!(
+                decided_unsupported, probed_unsupported,
+                "{label}: the probe and the full decision must classify the \
+                 fragment identically (decided={decided:?}, probed={probed:?})"
+            );
+            if probed_unsupported {
+                refused += 1;
+            } else {
+                supported += 1;
+            }
+        }
+        // Both sides of the distinction are exercised: an all-supported or
+        // all-refused case list would let a probe that always says one thing
+        // pass.
+        assert!(supported > 0, "no atom was admitted; the test is vacuous");
+        assert!(refused > 0, "no atom was refused; the test is vacuous");
+    }
+
+    /// Same derivation on the integer side.
+    #[test]
+    fn the_int_probe_agrees_with_the_decision_it_replaced() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("probe_i").expect("int var");
+        let y = arena.int_var("probe_j").expect("int var");
+        let zero = arena.int_const(0);
+        let product = arena.int_mul(x, y).expect("nonlinear product");
+        let equality = arena.eq(x, y).expect("eq");
+
+        let cases = vec![
+            ("linear le", arena.int_le(x, zero).expect("atom")),
+            ("linear lt", arena.int_lt(x, y).expect("atom")),
+            ("equality", equality),
+            ("disequality", arena.not(equality).expect("atom")),
+            ("nonlinear", arena.int_le(product, zero).expect("atom")),
+        ];
+
+        let mut supported = 0;
+        let mut refused = 0;
+        for (label, atom) in cases {
+            let decided = check_with_lia_opaque_apps(&arena, &[atom]);
+            let probed = atom_in_lia_opaque_fragment(&arena, atom);
+            let decided_unsupported = matches!(decided, Err(SolverError::Unsupported(_)));
+            let probed_unsupported = matches!(probed, Err(SolverError::Unsupported(_)));
+            assert_eq!(
+                decided_unsupported, probed_unsupported,
+                "{label}: the probe and the full decision must classify the \
+                 fragment identically (decided={decided:?}, probed={probed:?})"
+            );
+            if probed_unsupported {
+                refused += 1;
+            } else {
+                supported += 1;
+            }
+        }
+        assert!(supported > 0, "no atom was admitted; the test is vacuous");
+        assert!(refused > 0, "no atom was refused; the test is vacuous");
     }
 }

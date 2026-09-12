@@ -212,6 +212,7 @@ pub fn check_qf_uflra_online(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    let _phase = crate::phase_breadcrumb::enter("uflra-online:check");
     // 1. The conjunctive fast-path: if every assertion flattens to a conjunction of
     //    literals, decide it directly by the model-based combination — the behaviour
     //    this module shipped with, kept verbatim.

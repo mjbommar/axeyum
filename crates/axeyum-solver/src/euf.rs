@@ -757,6 +757,7 @@ pub fn check_with_uf_arithmetic(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    let _phase = crate::phase_breadcrumb::enter("euf:uf-arith-eager");
     // Deterministic admission bound (graceful `unknown`, never an unbounded
     // hang/OOM): the O(k²) eager Ackermann construction and its downstream
     // arithmetic solve both run unbounded past `config.timeout`, so when the bound
@@ -849,26 +850,37 @@ pub fn check_with_uf_arithmetic_lazy(
             // Give this round only the remaining budget, so the aggregate loop stays
             // within `config.timeout`.
             let round_config = config.clone().with_timeout(d - now);
-            match check_with_incremental_arith(
-                a,
-                asserts,
-                &round_config,
-                &mut incremental_arith,
-                &mut incremental_assertions,
-            ) {
-                Ok(result) => Ok(result),
-                Err(SolverError::Unsupported(_)) => match check_with_arith_dpll_reusing_lemmas(
+            let incremental = {
+                let _phase = crate::phase_breadcrumb::enter("euf:round-incremental-arith");
+                check_with_incremental_arith(
                     a,
                     asserts,
                     &round_config,
-                    &mut reusable_arith_lemmas,
-                ) {
-                    Ok(result) => Ok(result),
-                    Err(SolverError::Unsupported(_)) => {
-                        crate::check_auto(a, asserts, &round_config)
+                    &mut incremental_arith,
+                    &mut incremental_assertions,
+                )
+            };
+            match incremental {
+                Ok(result) => Ok(result),
+                Err(SolverError::Unsupported(_)) => {
+                    let reusing = {
+                        let _phase = crate::phase_breadcrumb::enter("euf:round-arith-dpll");
+                        check_with_arith_dpll_reusing_lemmas(
+                            a,
+                            asserts,
+                            &round_config,
+                            &mut reusable_arith_lemmas,
+                        )
+                    };
+                    match reusing {
+                        Ok(result) => Ok(result),
+                        Err(SolverError::Unsupported(_)) => {
+                            let _phase = crate::phase_breadcrumb::enter("euf:round-check-auto");
+                            crate::check_auto(a, asserts, &round_config)
+                        }
+                        Err(error) => Err(error),
                     }
-                    Err(error) => Err(error),
-                },
+                }
                 Err(error) => Err(error),
             }
         } else {
@@ -904,7 +916,24 @@ fn check_with_incremental_arith(
     asserted: &mut usize,
 ) -> Result<CheckResult, SolverError> {
     if solver.is_none() || assertions.len() < *asserted {
-        *solver = Some(IncrementalArithDpll::new(arena, assertions)?);
+        // ADR-1906's shape once more, and this one is the argument rather than
+        // the counter: `IncrementalArithDpll::new` hands the abstraction
+        // `None`, so the whole Boolean-skeleton build ran with no clock while
+        // its caller had a real deadline three frames up. The build is the
+        // phase this route is killed inside (measured 2026-09-12, `QF_UFLRA`
+        // `cpachecker-induction.minepump_spec1_product56…`), so "the round
+        // checks its budget before it starts" bounded nothing.
+        //
+        // `config.timeout` here is the round's REMAINING budget, computed by
+        // `check_with_uf_arithmetic_lazy` against the loop-wide deadline, so
+        // this is the same clock the rest of the round honours. `None` in,
+        // `None` out — a `resource_limit`-only run reads no clock, and
+        // `portfolio::stop_or_past_deadline(None)` is what the walk already
+        // called.
+        let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+        *solver = Some(IncrementalArithDpll::new_within(
+            arena, assertions, deadline,
+        )?);
         *asserted = assertions.len();
     } else if let Some(solver) = solver.as_mut() {
         for &assertion in &assertions[*asserted..] {
@@ -936,7 +965,11 @@ fn check_with_function_consistency<F>(
 where
     F: FnMut(&mut TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
 {
-    let elim = abstract_functions(arena, assertions).map_err(map_elim_error)?;
+    let _phase = crate::phase_breadcrumb::enter("euf:fc-loop");
+    let elim = {
+        let _phase = crate::phase_breadcrumb::enter("euf:fc-abstract");
+        abstract_functions(arena, assertions).map_err(map_elim_error)?
+    };
     if !elim.had_functions() {
         // No uninterpreted functions: nothing to abstract, solve directly.
         return solve(arena, assertions);
@@ -965,20 +998,27 @@ where
     // Index pairs whose congruence lemma has already been asserted; bounds the
     // loop and prevents re-adding the same lemma.
     let mut added: HashSet<(usize, usize)> = HashSet::new();
-    let preseeded = preseed_function_consistency_lemmas(
-        arena,
-        assertions,
-        &applications,
-        &groups,
-        &mut working,
-        &mut added,
-    )?;
+    let preseeded = {
+        let _phase = crate::phase_breadcrumb::enter("euf:fc-preseed");
+        preseed_function_consistency_lemmas(
+            arena,
+            assertions,
+            &applications,
+            &groups,
+            &mut working,
+            &mut added,
+        )?
+    };
     stats.preseeded_lemmas = preseeded;
     stats.lemmas_added += preseeded;
 
     loop {
         stats.solve_rounds += 1;
-        let assignment = match solve(arena, &working)? {
+        let round = {
+            let _phase = crate::phase_breadcrumb::enter("euf:fc-round-solve");
+            solve(arena, &working)?
+        };
+        let assignment = match round {
             // The abstraction is a relaxation; its UNSAT implies the original's.
             CheckResult::Unsat => return Ok(CheckResult::Unsat),
             CheckResult::Unknown(reason) => {
@@ -994,6 +1034,7 @@ where
         // `assignment` borrow does not collide with the IR builders.
         let mut equal_arg_lemmas: Vec<(usize, usize)> = Vec::new();
         let mut violated_lemmas: Vec<(usize, usize)> = Vec::new();
+        let _pair_scan = crate::phase_breadcrumb::enter("euf:fc-pair-scan");
         for (_func, members) in &groups {
             for a in 0..members.len() {
                 for b in (a + 1)..members.len() {
@@ -1020,18 +1061,23 @@ where
             }
         }
 
-        let new_lemmas = candidate_function_consistency_lemmas(
-            arena,
-            &applications,
-            &groups,
-            &added,
-            equal_arg_lemmas,
-            &violated_lemmas,
-            &mut stats,
-        );
+        drop(_pair_scan);
+        let new_lemmas = {
+            let _phase = crate::phase_breadcrumb::enter("euf:fc-candidates");
+            candidate_function_consistency_lemmas(
+                arena,
+                &applications,
+                &groups,
+                &added,
+                equal_arg_lemmas,
+                &violated_lemmas,
+                &mut stats,
+            )
+        };
 
         if new_lemmas.is_empty() {
             // Model is functionally consistent: project, replay, and return.
+            let _phase = crate::phase_breadcrumb::enter("euf:fc-replay");
             let result = project_replay_build(arena, &elim, assertions, &assignment);
             return Ok(match result {
                 CheckResult::Unknown(reason) => CheckResult::Unknown(stats.wrap_unknown(&reason)),
@@ -1042,6 +1088,7 @@ where
         let new_count = new_lemmas.len();
         stats.last_new_lemmas = new_count;
         stats.lemmas_added += new_count;
+        let _lemma_build = crate::phase_breadcrumb::enter("euf:fc-lemma-build");
         for (i, j) in new_lemmas {
             let lemma = congruence_lemma(
                 arena,
