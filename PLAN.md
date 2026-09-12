@@ -139,6 +139,7 @@ now. Nothing was deleted.
 |---|---|---|
 | 2026-09-12 | `26d75f328` | ADR-1920 + the UFDT measurement note; `parity-run.sh` routes the DT divisions to cvc5 rather than a non-competing z3 |
 | 2026-09-12 | `21e258c57` | datatype-sorted UF params/results admitted; capability gate moved into `datatype_native` with a termination guard that also fixes a pre-existing array-of-datatypes stack overflow; `tests/dt_uf_gate.rs` (9) |
+| 2026-09-12 | `57f1363e0` | QF_NIA width escalation made measurable: `int_blast_ladder_widths` extracted, `INT_BLAST_ESCALATION_MAX_WIDTH` shipped equal to the existing ladder top, `AXEYUM_INT_BLAST_ESCALATION_MAX_WIDTH` lever, clamp to `MAX_INT_BLAST_WIDTH`, four tests. Zero behaviour change. |
 | 2026-09-12 | `849df360d` | Five more placeholder sites: `q:finite-expansion`, `q:uf-fmf-full`, `q:mbqi-quick` (three cases in one arm, one of them a `VerifierRejected`), `preprocess` (which then exposed the `QF_DT` canonicalizer sort mismatch on 74 of 81 files), and the watchdog's own `; give-up kind=Watchdog`. Measured 93/260 → 260/260 reason coverage over the 313-file addressable gap, 0 verdict changes over 546 files. Six mutation controls, one of which first reported zero kills because the killing test was in a target I had trimmed from the command. |
 | 2026-09-11 | `7777570d0` | `fix(smtlib)`: thread `sort_aliases` into term conversion — quantifier binder sorts and `(as const S)` could not be `define-sort` aliases; the SMT-LIB `FP` division went 15/200 → 193/200 parsed |
 | 2026-09-11 | `35a912c01` | `bench(parity)`: pin `bench-results/parity-lists/FP.txt`, the 200-file `FP` sample, before measuring it |
@@ -10930,6 +10931,36 @@ re-deriving.
 **Your lane's block (`WIP`, supon-r6b, 2026-08-28).** What landed, what did not,
 and what the next lane needs to know. State a negative as precisely as a
 positive — a sized negative is a complete deliverable here.
+
+**DO NOT BUILD the width escalation, sized (`DONE`, qf-nia-width, 2026-09-12).**
+[ADR-1921](docs/research/09-decisions/adr-1921-the-int-blast-width-escalation-is-measured-and-not-shipped.md)
+· [measurement](docs/research/03-measurements/qf-nia-is-not-a-width-problem-2026-09-12.md)
+· data `bench-results/qf-nia-width-20260912/`.
+
+The gap log's QF_NIA row said half of a 14-file sample was one cap. Over **all
+110** winnable files the width family is **26 (24%)**, behind the preprocessed
+dispatch timeout (41) and the CNF clause budget (30). An interleaved one-binary
+A/B (arms alternating per file, 220 solves) gives the escalation **0 gains, 0
+losses, 0 disagreements, +4.6% wall** — and it turns 23 precise `overflowed at
+width 32` diagnoses into uninformative `Timeout`/`Watchdog`. Not a clock problem
+either: at **150 s** the escalation decides 3 of the 23 and the **baseline at the
+same 150 s decides the same three files with the same three verdicts**, so the
+escalation contributed zero; **14 of the other 20 overflow at width 64**, the
+blaster's hard ceiling. 128 is unreachable without replacing the `i128` model
+read-back.
+
+Landed anyway: the *ability* to re-run this on another population without a
+rebuild (`AXEYUM_INT_BLAST_ESCALATION_MAX_WIDTH`), shipped equal to the existing
+ladder top so behaviour is byte-identical, clamped to what the blaster accepts,
+with four tests pinning the shipped sequence and the append-only property.
+
+**Where a QF_NIA lane should go next**: the *preprocessed dispatch timeout* (41
+of 110). The CNF clause budget (30) already has a measured negative — lifting it
+by the estimator's own 9.4x slack decides 0 of 49
+([notes](docs/plan/notes/118-nia-diagnosis.md)). One unmeasured hypothesis this lane
+leaves standing: `blast_integers` emits a no-overflow constraint for `int_mul`
+and for **nothing else**, so the replay failures that survive are additive
+wraparound, and the analogous additive constraint is sound by the same argument.
 
 **Your lane's block (`needs-decision`, nat-numeral-accel, 2026-08-28).** The
 diagnosis held and is now measured rather than read; the fix works and is sound;
