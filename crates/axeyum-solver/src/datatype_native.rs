@@ -112,7 +112,27 @@ pub fn check_with_datatype_native(
     // datatypes that have datatype fields.
     let relaxed = !links.is_empty() || scan.relaxed_eq;
     if scan.dt_symbols.is_empty() {
-        // No datatype variables remain (read-over-construct sufficed).
+        // No datatype variables remain (read-over-construct sufficed) — hand the
+        // residual back to the dispatcher.
+        //
+        // TERMINATION GUARD (ADR-1920). `check_auto_dispatch` diverts on the
+        // *sort* `Sort::Datatype(_)`, not on a datatype operator, and every
+        // branch of that diversion returns. So if the residual still carries a
+        // datatype-sorted term, `solve` routes it right back into this function
+        // with the same input, forever — and the dispatcher recomputes its
+        // deadline on each entry, so `config.timeout` cannot break the cycle
+        // either. Measured on `(declare-fun p (D) Bool) (assert (p o))`: stack
+        // overflow, SIGABRT, which a harness reads as a crash rather than the
+        // first-class `unknown` it is entitled to. Refusing here is the fence
+        // that makes the ADR-1920 gate lift safe for shapes the arm above does
+        // not name individually.
+        if let Some(term) = first_datatype_sorted(arena, &unfolded) {
+            let _ = term;
+            return Err(unsupported(
+                "a datatype-sorted term survives tag/field expansion with no datatype \
+                 variable to expand (the dispatcher would route it straight back here)",
+            ));
+        }
         return solve(arena, &unfolded, config);
     }
 
@@ -383,6 +403,19 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
                 dt_symbols.insert(right, dt);
                 eqs.push(EqSite { term, left, right });
             }
+            // An uninterpreted function applied to a datatype argument
+            // (ADR-1920). The tag/field expansion rewrites `is`/`select`/`==`
+            // sites; it has no rewrite for `p(o)`, so the datatype-sorted `o`
+            // would survive into the residual and the dispatcher would route
+            // the residual straight back here — an unbounded recursion, not an
+            // answer (measured: `(assert (p o))` aborted the process with a
+            // stack overflow). Refuse precisely instead.
+            Op::Apply(_) if args.iter().any(|&a| is_datatype_sorted(arena, a)) => {
+                return Err(unsupported(
+                    "an uninterpreted function applied to a datatype argument \
+                     (congruence over expanded datatype arguments is not in this fragment)",
+                ));
+            }
             _ => {
                 reject_stray_datatype_operands(arena, &args)?;
                 stack.extend(args.iter().copied());
@@ -398,6 +431,32 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
         eqs,
         relaxed_eq,
     })
+}
+
+/// Whether `term` has a datatype sort.
+fn is_datatype_sorted(arena: &TermArena, term: TermId) -> bool {
+    matches!(arena.sort_of(term), Sort::Datatype(_))
+}
+
+/// The first datatype-sorted subterm reachable from `roots`, if any.
+///
+/// Used only by the termination guard: a residual carrying one of these cannot
+/// be handed back to the dispatcher (see the call site).
+fn first_datatype_sorted(arena: &TermArena, roots: &[TermId]) -> Option<TermId> {
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = roots.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if is_datatype_sorted(arena, term) {
+            return Some(term);
+        }
+        if let TermNode::App { args, .. } = arena.node(term) {
+            stack.extend(args.iter().copied());
+        }
+    }
+    None
 }
 
 /// Rejects a datatype-sorted operand of a non-datatype op (e.g. `ite` of a
