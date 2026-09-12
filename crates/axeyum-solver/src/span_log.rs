@@ -1183,6 +1183,17 @@ fn classify(
                 None,
                 None,
             ),
+            // Same span `reason` as the payload-free form on purpose — the two
+            // are the same *kind* of decline, and a consumer grouping by reason
+            // must keep seeing one bucket. What was missing was the message,
+            // which now reaches the span's detail field.
+            DeclineReason::UnsupportedDetail(detail) => (
+                Outcome::Declined,
+                None,
+                Some("unsupported".to_owned()),
+                Some(detail.clone()),
+                None,
+            ),
             DeclineReason::NotApplicable => (
                 Outcome::Declined,
                 None,

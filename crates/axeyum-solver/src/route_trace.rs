@@ -61,7 +61,24 @@ pub enum Verdict {
 pub enum DeclineReason {
     /// The route does not handle this theory/fragment at all (it reported an
     /// `Unsupported` decline, or its feature gate did not match).
+    ///
+    /// This is the **payload-free** form, for a site that genuinely had nothing
+    /// to add. When the refusing call handed back a message, record
+    /// [`DeclineReason::UnsupportedDetail`] instead — an `Unsupported` decline
+    /// whose message was in hand and discarded is the "records a placeholder"
+    /// shape this taxonomy exists to avoid.
     Unsupported,
+    /// The route does not handle this query, **and said why**: the payload is
+    /// the refusing call's own message (a `SolverError::Unsupported` string, or
+    /// an ingest refusal).
+    ///
+    /// Distinct from [`DeclineReason::Unsupported`] so the two are countable
+    /// apart: "declined and told us nothing" and "declined and told us what"
+    /// are different diagnostic situations, and collapsing them is what made
+    /// eleven `auto.rs` sites indistinguishable from a feature-gate miss.
+    /// Renders as the same `"unsupported"` JSON reason with an added `detail`
+    /// field, so a consumer matching on the reason string is unaffected.
+    UnsupportedDetail(String),
     /// The probe determined this route does not match the query's shape, so it
     /// was skipped without running.
     NotApplicable,
@@ -99,6 +116,7 @@ impl core::fmt::Display for DeclineReason {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             DeclineReason::Unsupported => write!(f, "unsupported"),
+            DeclineReason::UnsupportedDetail(detail) => write!(f, "unsupported: {detail}"),
             DeclineReason::NotApplicable => write!(f, "not-applicable"),
             DeclineReason::Budget(detail) => write!(f, "budget: {detail}"),
             DeclineReason::Incomplete(reason) => {
@@ -656,6 +674,11 @@ impl RouteTrace {
                     match reason {
                         DeclineReason::Unsupported => {
                             push_json_string(&mut out, "unsupported");
+                        }
+                        DeclineReason::UnsupportedDetail(detail) => {
+                            push_json_string(&mut out, "unsupported");
+                            out.push_str(",\"detail\":");
+                            push_json_string(&mut out, detail);
                         }
                         DeclineReason::NotApplicable => {
                             push_json_string(&mut out, "not-applicable");
@@ -1279,6 +1302,36 @@ mod json_tests {
 \"detail\":\"replay\"},\
 {\"route\":\"f\",\"outcome\":\"decided\",\"verdict\":\"unsat\"}]}"
         );
+    }
+
+    /// The reason a route gave for refusing must survive to the wire.
+    ///
+    /// `UnsupportedDetail` shares the `"unsupported"` reason token with the
+    /// payload-free form on purpose — a consumer that groups by reason must
+    /// keep seeing one bucket — so the ONLY observable difference is the
+    /// `detail` field. If that field is dropped, the two render identically
+    /// and the distinction this variant exists for is gone; this test is what
+    /// makes that dropping visible.
+    #[test]
+    fn an_unsupported_decline_with_a_message_renders_the_message() {
+        let mut trace = RouteTrace::new();
+        trace.record_declined("payload-free", DeclineReason::Unsupported);
+        trace.record_declined(
+            "with-message",
+            DeclineReason::UnsupportedDetail("free datatype variable under is-c".into()),
+        );
+        assert_eq!(
+            trace.to_json(),
+            "{\"schema_version\":1,\"attempts\":[\
+{\"route\":\"payload-free\",\"outcome\":\"declined\",\"reason\":\"unsupported\"},\
+{\"route\":\"with-message\",\"outcome\":\"declined\",\"reason\":\"unsupported\",\
+\"detail\":\"free datatype variable under is-c\"}]}"
+        );
+        assert_eq!(
+            DeclineReason::UnsupportedDetail("m".into()).to_string(),
+            "unsupported: m"
+        );
+        assert_eq!(DeclineReason::Unsupported.to_string(), "unsupported");
     }
 
     #[test]

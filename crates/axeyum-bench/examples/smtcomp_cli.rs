@@ -343,11 +343,11 @@ use axeyum_solver::{
     ConfigTraceGuard, DlOnlineStatsGuard, EufOnlineAtomStats, EufOnlineAtomStatsGuard, Evidence,
     EvidenceCheck, EvidenceReport, FrontDoorStats, FrontDoorStatsGuard, LazySmtCountersGuard,
     LiaCountersGuard, LiveInstruments, ProofProgress, RouteAttributionGuard, RouteTrace, Sampled,
-    SolverConfig, SpanLog, SpanLogInputs, Termination, UfArithOverboundStats,
-    UfArithOverboundStatsGuard, UfliaInterfaceCounters, UfliaInterfaceCountersGuard,
-    config_trace_line, division_from_path, install_live_instruments, instrument, last_abv_stats,
-    last_bv_layer_stats, last_dl_online_stats, last_euf_online_atom_stats, last_front_door_stats,
-    last_lazy_smt_counters, last_lia_counters, last_route_attribution,
+    SolverConfig, SolverError, SpanLog, SpanLogInputs, Termination, UfArithOverboundStats,
+    UfArithOverboundStatsGuard, UfliaInterfaceCounters, UfliaInterfaceCountersGuard, UnknownKind,
+    UnknownReason, config_trace_line, division_from_path, install_live_instruments, instrument,
+    last_abv_stats, last_bv_layer_stats, last_dl_online_stats, last_euf_online_atom_stats,
+    last_front_door_stats, last_lazy_smt_counters, last_lia_counters, last_route_attribution,
     last_uf_arith_overbound_stats, last_uflia_interface_counters, live_bv_layer_stats,
     live_config_trace_line, live_lazy_smt_counters, live_lia_counters, live_theory_layer_stats,
     produce_evidence_smtlib, solve_smtlib,
@@ -356,6 +356,41 @@ use axeyum_solver::{
 // and this file already uses a local `reading` helper, so the import is
 // disambiguated at the boundary rather than at each of its eight use sites.
 use axeyum_solver::Reading as SpanReading;
+
+/// The `; give-up` line for a first-class `unknown`.
+///
+/// An `unknown` carries a first-class reason and this binary once threw it
+/// away, so a resource refusal was indistinguishable from a search timeout in
+/// every recorded run. ADR-1752's budget refusal states its numbers in exactly
+/// this field.
+///
+/// `None` off `--trace`: a competition run's stdout must stay byte-identical.
+fn give_up_unknown_line(trace_mode: bool, reason: &UnknownReason) -> Option<String> {
+    trace_mode.then(|| format!("; give-up kind={:?} detail={}", reason.kind, reason.detail))
+}
+
+/// The `; give-up` line for a front-door **error**.
+///
+/// A `SolverError` is reported as `unknown` — correct, per the hard rule that
+/// `unknown` is a first-class result and a parse failure is never a crash — but
+/// until 2026-09-11 the error itself went nowhere, which made this the single
+/// largest source of a REASONLESS `unknown` in the whole harness. Measured on
+/// the 81-file `QF_DT` addressable gap (the files `bench-results/parity-details/
+/// QF_DT.tsv` records as unsolved by us and decided by the reference): **70 of
+/// 81 arrive here**, each carrying an ingest refusal that names the construct
+/// we could not read, and the printed run said only `unknown`.
+///
+/// `kind=Error` is deliberately **not** an `axeyum_solver::UnknownKind`. That
+/// vocabulary classifies a *solver* give-up and an ingest failure is not one of
+/// its members; picking the nearest member (`Other`, `Incomplete`) would make
+/// an error indistinguishable from a route that ran and declined. A token
+/// outside the enum says what happened without claiming a classification we do
+/// not have.
+///
+/// `None` off `--trace`, for the same reason as [`give_up_unknown_line`].
+fn give_up_error_line(trace_mode: bool, error: &SolverError) -> Option<String> {
+    trace_mode.then(|| format!("; give-up kind=Error detail={error}"))
+}
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
 /// progress line documented in the module header. `;` is the SMT-LIB comment
@@ -1767,20 +1802,14 @@ fn main() -> ExitCode {
                 CheckResult::Sat(_) => "sat",
                 CheckResult::Unsat => "unsat",
                 CheckResult::Unknown(reason) => {
-                    // An `unknown` carries a first-class reason and this binary
-                    // threw it away, so a resource refusal was indistinguishable
-                    // from a search timeout in every recorded run. ADR-1752's
-                    // budget refusal states its numbers in exactly this field.
-                    if trace_mode {
-                        give_up = Some(format!(
-                            "; give-up kind={:?} detail={}",
-                            reason.kind, reason.detail
-                        ));
-                    }
+                    give_up = give_up_unknown_line(trace_mode, &reason);
                     "unknown"
                 }
             },
-            Err(_) => "unknown",
+            Err(error) => {
+                give_up = give_up_error_line(trace_mode, &error);
+                "unknown"
+            }
         };
         let mut trace_lines = Vec::new();
         if trace_mode {
@@ -2051,6 +2080,84 @@ fn main() -> ExitCode {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ---------------------------------------------------------------------
+    // `; give-up`: an `unknown` that says why
+    // ---------------------------------------------------------------------
+
+    #[test]
+    fn a_front_door_error_yields_a_give_up_line_carrying_the_error_text() {
+        // The measured defect: `Err(_) => "unknown"` discarded the error, and
+        // 70 of the 81 `QF_DT` addressable-gap files take exactly this arm.
+        let error = SolverError::Parse("unsupported command: declare-datatypes".to_owned());
+        let line = give_up_error_line(true, &error)
+            .expect("an error under --trace must produce a give-up line");
+        assert!(
+            line.starts_with("; give-up "),
+            "the line must stay a `;` comment so a verdict grep is unaffected: {line}"
+        );
+        assert!(
+            line.contains("unsupported command: declare-datatypes"),
+            "the reason must be the error's OWN text, not a manufactured one: {line}"
+        );
+        assert!(
+            line.contains("kind=Error"),
+            "an ingest failure must be distinguishable from a solver give-up kind: {line}"
+        );
+    }
+
+    #[test]
+    fn a_give_up_kind_is_never_confused_between_an_error_and_an_unknown() {
+        // A wrong reason is worse than none: whatever token an error carries,
+        // it must not collide with any `UnknownKind` this binary can print,
+        // or a reader cannot tell an unreadable file from a route that ran.
+        let error_line = give_up_error_line(true, &SolverError::Backend("boom".to_owned()))
+            .expect("trace mode must yield a line");
+        for kind in [
+            UnknownKind::Timeout,
+            UnknownKind::ResourceLimit,
+            UnknownKind::MemoryLimit,
+            UnknownKind::NodeBudget,
+            UnknownKind::EncodingBudget,
+            UnknownKind::Incomplete,
+            UnknownKind::Other,
+        ] {
+            let unknown_line = give_up_unknown_line(true, &UnknownReason::new(kind, "boom"))
+                .expect("trace mode must yield a line");
+            assert_ne!(
+                error_line, unknown_line,
+                "an error line must differ from every UnknownKind line; kind={kind:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_unknown_give_up_line_carries_both_the_kind_and_the_detail() {
+        let line = give_up_unknown_line(
+            true,
+            &UnknownReason::new(UnknownKind::NodeBudget, "cnf-nodes=2000000"),
+        )
+        .expect("trace mode must yield a line");
+        assert_eq!(
+            line, "; give-up kind=NodeBudget detail=cnf-nodes=2000000",
+            "the pre-existing line's bytes are load-bearing for every recorded sweep"
+        );
+    }
+
+    #[test]
+    fn neither_give_up_line_exists_off_trace() {
+        // The competition contract: a default run prints the verdict and
+        // nothing else. Both formatters must agree on that, or adding the
+        // error arm would have changed non-trace output.
+        assert_eq!(
+            give_up_error_line(false, &SolverError::Parse("x".to_owned())),
+            None
+        );
+        assert_eq!(
+            give_up_unknown_line(false, &UnknownReason::new(UnknownKind::Other, "x")),
+            None
+        );
+    }
 
     #[test]
     fn watchdog_unavailable_line_is_empty_off_trace_and_names_both_instruments_on_trace() {

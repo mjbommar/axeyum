@@ -38,6 +38,22 @@ pub struct UnknownReason {
     pub detail: String,
 }
 
+impl UnknownReason {
+    /// Builds a reason from its two parts.
+    ///
+    /// `#[non_exhaustive]` blocks the struct expression outside this crate, so
+    /// without this a consumer could read an `UnknownReason` but never make
+    /// one — which is what stopped the competition CLI's own tests from
+    /// covering its `; give-up` formatting.
+    #[must_use]
+    pub fn new(kind: UnknownKind, detail: impl Into<String>) -> Self {
+        Self {
+            kind,
+            detail: detail.into(),
+        }
+    }
+}
+
 /// Classified causes of an `Unknown` result.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]

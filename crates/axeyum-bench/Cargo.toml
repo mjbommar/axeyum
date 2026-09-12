@@ -48,6 +48,18 @@ name = "cvc5_smt_stream_bench"
 [[example]]
 name = "cvc5_qfbv_timeout_sweep"
 
+# `test = true` because cargo's default for an example is `test = false`, and
+# this example carries a `#[cfg(test)] mod tests`. Measured 2026-09-11:
+# `cargo test -p axeyum-bench` ran ZERO of its tests while
+# `cargo test -p axeyum-bench --example smtcomp_cli` ran six — and no gate in
+# `scripts/` or the `justfile` used the second form, so all six guards on the
+# competition CLI's trace output were inert in every gate this repository runs.
+# With this flag they run under `cargo test -p axeyum-bench` and therefore
+# under `cargo test --workspace`.
+[[example]]
+name = "smtcomp_cli"
+test = true
+
 # Promote the accepted ADR-0541 general SMT-LIB driver to a named binary while
 # retaining its historical example target and source path for compatibility.
 [[bin]]
