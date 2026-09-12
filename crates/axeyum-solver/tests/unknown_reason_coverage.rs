@@ -38,22 +38,32 @@ use axeyum_solver::{
     solve_smtlib,
 };
 
-/// A `QF_DT` script in the shape of the Barrett/Reynolds family that is 70 of
-/// the 81 addressable-gap files: mutually recursive datatypes with an `is-c`
-/// tester applied to a **selector application** rather than a variable.
+/// A quantifier-free script the dispatch still **errors** on: an uninterpreted
+/// function applied to a datatype argument, which `datatype_native` refuses by
+/// name (ADR-1920) and no later route picks up.
 ///
-/// Trimmed from
-/// `smtlib-2024/.../QF_DT/20172804-Barrett/barrett-jsat/tests/v1/v1l20044.cvc.smt2`
-/// and kept inline rather than pointed at the corpus, so the gate does not
-/// depend on a `/nas3` mount that most hosts do not have.
+/// **This fixture was replaced on 2026-09-12, and the replacement is the
+/// point.** The original was a `QF_DT` tester-over-a-selector script trimmed
+/// from the Barrett/Reynolds family, chosen because it was 70 of the 81
+/// addressable-gap files. ADR-1930 — the chosen selector interpretation for a
+/// wrong-constructor `select` — landed on `main` in the same window as this
+/// suite and made that script **decide `sat`**, so both tests below started
+/// failing on `main` with nobody's change to blame: two lanes green apart,
+/// composing red. This file's own message said what to do — "if it now decides,
+/// the fixture has stopped covering the path and must be replaced, not
+/// deleted" — so it is replaced, and it is a capability gain that forced it.
+///
+/// Kept inline rather than pointed at the corpus, so the gate does not depend
+/// on a `/nas3` mount that most hosts do not have.
 const DISPATCH_ERROR_SCRIPT: &str = r"
-(set-logic QF_DT)
-(declare-datatypes ((nat 0)(list 0)(tree 0)) (((succ (pred nat)) (zero))
-((cons (car tree) (cdr list)) (null))
-((node (children list)) (leaf (data nat)))
-))
-(declare-fun x1 () nat)
-(assert (and ((_ is succ) (pred zero)) (not (= zero (pred x1)))))
+(set-logic QF_UFDT)
+(declare-datatypes ((Color 0)) (((red) (green))))
+(declare-fun p (Color) Bool)
+(declare-const c Color)
+(declare-const d Color)
+(assert (= c d))
+(assert (p c))
+(assert (not (p d)))
 (check-sat)
 ";
 

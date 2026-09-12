@@ -1,5 +1,25 @@
 # The four datatype divisions — what actually blocks them
 
+> **SUPERSEDED 2026-09-12 — the blocker table below is an artifact of a dispatch
+> bug, not a map of missing capability.** Three quantified-ladder rungs
+> propagated a speculative sub-solve's `Unsupported` out of `solve`, so every
+> file reported whichever rung happened to refuse FIRST and the seventeen rungs
+> below never ran ([ADR-1927](../../docs/research/09-decisions/adr-1927-a-ladder-rungs-fragment-refusal-is-a-decline-not-the-querys-verdict.md)).
+> With that fixed, this table's number-one row — *eager Ackermann, array-valued
+> function results*, 21 % here — is **3 of 200** in `AUFDTLIRA`, and its
+> number-two row — *uninterpreted sort at the pure-Rust BV backend*, 18 % — is
+> **1 of 200** in `UFDTLIRA`. The corrected census, at n=200 per division with
+> the ladder running to the end, is in
+> [`bench-results/dt-divisions-headtohead-20260912/`](../dt-divisions-headtohead-20260912/README.md).
+>
+> **What stays true:** the `blockmap.txt` correction in the next section (that
+> file's row for all four divisions is wrong), the decide counts, and the fact
+> that `UFDTLIRA` was unmeasured rather than blocked.
+>
+> **Removal rule:** delete this banner only if the blocker table below is
+> re-measured on a binary whose route trail reaches the end of the ladder —
+> `attempts=` in `--trace` is the check.
+
 **2026-09-12.** 160 files: 40 from each of `UFDT`, `UFDTLIRA`, `AUFDTLIRA`,
 `UFDTNIRA`, sampled at a fixed stride **through** each division rather than as a
 path-sorted prefix. Budget 3 s, `--trace`, one core, competition CLI at
