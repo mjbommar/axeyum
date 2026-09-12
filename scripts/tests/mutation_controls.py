@@ -9436,6 +9436,71 @@ SUITES["preprocessed-timeout-reason"] = (
 )
 
 
+SUITES["dt-capability-1935"] = (
+    "crates/axeyum-solver/src/datatype_native.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--test",
+            "dt_capability_1935",
+        ),
+        "dt-capability-1935",
+    ),
+    [
+        (
+            # ADR-1920's soundness condition, restated by ADR-1935 as
+            # exactness. Without it the congruence antecedent may be weaker
+            # than real equality, which makes the congruence constraint
+            # STRONGER than the true axiom.
+            "congruence needs an EXACT expansion of its datatype argument",
+            "                if !datatype_expansion_is_exact(arena, dt) {",
+            "                if false {",
+        ),
+        (
+            # An array whose element sort mentions a datatype would carry
+            # datatype content into the residual on an expansion variable --
+            # ADR-1920's divert-vs-content non-termination cycle.
+            "an array field whose element sort mentions a datatype gets no variable",
+            "        Sort::Array { .. } => !crate::datatype_elim::sort_mentions_datatype(sort),",
+            "        Sort::Array { .. } => true,",
+        ),
+        (
+            # The witness would itself be datatype-sorted and survive into the
+            # residual, so this half of the capability is deliberately absent.
+            "a datatype-valued UF result is refused rather than Ackermannized",
+            "        if crate::datatype_elim::sort_mentions_datatype(result) {",
+            "        if false {",
+        ),
+        (
+            # Ackermann over a non-variable datatype argument has nothing to
+            # build an argument equality from.
+            "an Ackermannized datatype argument must be a free variable",
+            "                if !matches!(arena.node(arg), TermNode::Symbol(_)) {",
+            "                if false {",
+        ),
+        (
+            # The capability half: without the uninterpreted-sort admission the
+            # SPARK/Ada records (`integer`, `us_private`, …) go back to being
+            # refused at `register_datatype`.
+            "an uninterpreted-sorted datatype field gets an expansion variable",
+            "        Sort::Bool | Sort::BitVec(_) | Sort::Int | Sort::Real | Sort::Uninterpreted(_) => true,",
+            "        Sort::Bool | Sort::BitVec(_) | Sort::Int | Sort::Real => true,",
+        ),
+        (
+            # The congruence clause itself. Without it the pre-pass still
+            # replaces applications by witnesses but constrains nothing, so
+            # every congruence-unsat degrades to `sat`.
+            "the congruence clause is actually emitted",
+            "                congruence.push(clause);",
+            "                let _ = clause;",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
