@@ -60,6 +60,13 @@ wrong cripples a reference silently, so `z3 -T:24` (SECONDS) and
 Neither arm disagrees with a declared `:status` anywhere in the 1,000 rows
 either.
 
+`verify-gains.tsv` is that check against the binary the A/B ran
+(`ce97d2680`). `verify-gains-final.tsv` repeats it against the final source
+(`816c32e25`, a pedantic-clippy refactor that split one function and swapped two
+`match`es for `if let`): **39 of 39 still `unsat`, 0 disagreements**. The
+refactor is behaviour-neutral because it was measured to be, not because it
+looks it.
+
 ### Reading them
 
 * **The base arm reproduces the committed board rows exactly** — 41 / 72 / 26,
