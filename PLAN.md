@@ -139,8 +139,9 @@ now. Nothing was deleted.
 |---|---|---|
 | 2026-09-12 | `26d75f328` | ADR-1920 + the UFDT measurement note; `parity-run.sh` routes the DT divisions to cvc5 rather than a non-competing z3 |
 | 2026-09-12 | `21e258c57` | datatype-sorted UF params/results admitted; capability gate moved into `datatype_native` with a termination guard that also fixes a pre-existing array-of-datatypes stack overflow; `tests/dt_uf_gate.rs` (9) |
-| 2026-09-12 | `f6e616c0e` | `QF_DT` wrong `unsat` fixed: an unspecified selector read is model-chosen, not defaulted (ADR-1930) |
+| 2026-09-12 | `f6e616c0e` | `QF_DT` wrong `unsat` #1: an unspecified selector read is model-chosen, not defaulted (ADR-1930) |
 | 2026-09-12 | `09aeb970c` | datatype `ite` lifting, nested constructor equalities, linked-child witnesses, and the selector differential fuzz |
+| 2026-09-12 | `e75dc4a43` | ADR-1930 and the QF_DT measurement note |
 | 2026-09-12 | `849df360d` | Five more placeholder sites: `q:finite-expansion`, `q:uf-fmf-full`, `q:mbqi-quick` (three cases in one arm, one of them a `VerifierRejected`), `preprocess` (which then exposed the `QF_DT` canonicalizer sort mismatch on 74 of 81 files), and the watchdog's own `; give-up kind=Watchdog`. Measured 93/260 → 260/260 reason coverage over the 313-file addressable gap, 0 verdict changes over 546 files. Six mutation controls, one of which first reported zero kills because the killing test was in a target I had trimmed from the command. |
 | 2026-09-11 | `7777570d0` | `fix(smtlib)`: thread `sort_aliases` into term conversion — quantifier binder sorts and `(as const S)` could not be `define-sort` aliases; the SMT-LIB `FP` division went 15/200 → 193/200 parsed |
 | 2026-09-11 | `35a912c01` | `bench(parity)`: pin `bench-results/parity-lists/FP.txt`, the 200-file `FP` sample, before measuring it |
@@ -10091,51 +10092,59 @@ of this family — note it wants the `Cauchy` one, which already exists as
   — clean.
 - NOT run: the full `--lib creal::` sweep, and any workspace gate.
 
-**Lane qf-dt-fold (`DONE`, qf-dt-fold, 2026-09-12).** `QF_DT` **114 → 168 of
-200** against cvc5's and z3's 192; the gap closes from **+78 to +24**. On the
-pinned 200 with the arms interleaved per file: **+55 decided, 0
+**Lane qf-dt-fold (`DONE`, qf-dt-fold, 2026-09-12).** `QF_DT` **114 → 171 of
+200** against cvc5's and z3's 192; the gap closes from **+78 to +21**. On the
+pinned 200 with the arms interleaved per file: **+57 decided, 0
 decided→undecided, 0 `sat`↔`unsat` flips, 0 disagreements** — every one of the
-168 decided files re-checked live against its declared `:status` and against
-cvc5 1.3.4 and z3 at the same budget. Two separately built binaries reproduced
-the identical row.
+171 decided files re-checked LIVE against its declared `:status` (171 of 171)
+and against cvc5 1.3.4 and z3 at the same budget (168 of 171; three `vlsat3`
+files exceed the reference budget).
 
 **The lane was sent to fold `is`/`select` over constructors. The fold was the
-second question; the first was what it would fold TO, and the answer was a
-SHIPPED WRONG `unsat`.** Five lines of pure `QF_DT` —
-`((_ is none) o) AND (v o)` over `Opt = none | some(v: Bool)` — answered `unsat`
-on `main` while cvc5 and z3 both answer `sat`. SMT-LIB leaves `sel_{c,i}(t)`
-UNSPECIFIED when `t` was not built by `c`; ADR-0022's step-B convention
-(`well_founded_default`) was not merely *read* by the evaluator, it was
-**asserted** into the reduction as `tag_o == j OR f_{o,j,i} == default`, and
-asserting a choice over an unspecified operator deletes models. The unit suite
-asserted the wrong answer by name, and the `QF_DT` differential fuzz generates
-ENUM datatypes only — every constructor nullary — so the degenerate argument was
-**outside its grammar**, not merely rare in it.
+second question; the first was what it would fold TO, and asking it turned up
+TWO SHIPPED WRONG `unsat`s.**
+
+1. `((_ is none) o) AND (v o)` over a two-constructor `Opt` — five lines of pure
+   `QF_DT` — answered `unsat` on `main`; cvc5 and z3 answer `sat`. SMT-LIB
+   leaves `sel_{c,i}(t)` UNSPECIFIED when `t` was not built by `c`, and
+   ADR-0022's step-B totality convention was not merely *read* by the evaluator,
+   it was **asserted** into the reduction as `tag_o == j OR f_{o,j,i} ==
+   default`. The unit suite asserted the wrong answer by name.
+2. `is-cons(a) AND is-cons(b) AND a != b` over a list whose every field is a
+   datatype also answered `unsat`. `build_dt_eq` skips fields it cannot compare,
+   making the encoded equality WEAKER than real equality — and weaker in a
+   POSITIVE occurrence is **stronger** under a negation, so its "it is a
+   relaxation, so `unsat` is sound" comment was only half true.
+
+Neither could be caught by the `QF_DT` differential fuzz: it builds ENUM
+datatypes, so no selector exists to apply and no field exists to compare. Both
+shapes were **outside its grammar**, not merely rare in its distribution.
 
 Decided by
 [ADR-1930](docs/research/09-decisions/adr-1930-a-wrong-constructor-selector-is-unspecified-not-defaulted.md);
 measurement in
 [qf-dt-unspecified-selectors-2026-09-12.md](docs/research/03-measurements/qf-dt-unspecified-selectors-2026-09-12.md).
-The new oracle gate is `tests/qf_dt_selector_differential_fuzz.rs`: with the
-default guard restored it fails at **seed 2**, the second instance it generates,
-while the enum fuzz stays green at 1,500 / 1,500.
 
-**What remains is one class, and it is sized.** All 32 undecided files give the
-same reason: `unfold_traversals` replaces a `select` into a *datatype-typed*
-field by a fresh free child variable, and `build_dt_eq` does not compare
-datatype-typed fields, so two symbols an equality forces together can be given
-children that differ; the replay catches it and the verdict is `unknown`. The
-repair is to compare linked children in `build_dt_eq` — exact where both sides
-are traversed, still a relaxation where only one is.
+**Two rules worth carrying out of this lane.**
 
-**The general rule, which is not about datatypes: a chosen-total convention for
-an underspecified operator is sound to READ and unsound to ASSERT.** The
-evaluator may return a default so replay stays total; the reduction may not
-constrain the solver to it. `bvudiv x 0` is safe because SMT-LIB *fixes* it;
-`(/ x 0)` was already handled the right way, with a model-carried witness keyed
-by the numerator VALUE. Selectors are now handled the same way, keyed by
-`(constructor, index, operand value)` — the value, not the term, because that is
-what makes the recorded interpretation congruent.
+- **A chosen-total convention for an underspecified operator is sound to READ
+  and unsound to ASSERT.** The evaluator may return a default so replay stays
+  total; the reduction may not constrain the solver to it. `bvudiv x 0` is safe
+  because SMT-LIB *fixes* it; `(/ x 0)` was already handled the right way, with
+  a model-carried witness keyed by the numerator VALUE. Selectors are now
+  handled the same way, keyed by `(constructor, index, operand value)` — the
+  value, not the term, because that is what makes the interpretation congruent.
+- **A grammar that CAN produce a shape is not a generator that DOES.** The new
+  equality fuzz could express its degenerate case from the start and still
+  survived all 1,500 seeds against the restored defect; it catches it at seed 40
+  only once that case is emitted as ONE atom. Three conjuncts have to line up at
+  once, and a disjunction is satisfiable as soon as one disjunct is.
+
+**What remains is one class, and it is sized.** All 29 undecided files give the
+same `; give-up` line: a candidate whose projected values agree where the
+assertions need them to differ, on a datatype field neither equality encoding
+can see past. One level of expansion already buys most of it; the rest needs a
+bounded unfolding to depth `k` with the comparison left free at the cut.
 
 **Your lane's block (`DONE`, inline-hunt, 2026-08-28).** Censused ~426
 `declare_*` functions and ranked ~333 private-fn candidates (body_len>=25)

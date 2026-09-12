@@ -1,7 +1,7 @@
-# ADR-1930: A wrong-constructor selector read is UNSPECIFIED, not defaulted — the totality convention was a model restriction and it shipped a wrong `unsat`
+# ADR-1930: Two wrong `unsat`s in QF_DT, one shape — a convention the evaluator READS was ASSERTED into the reduction
 
 Status: accepted
-Index-summary: `((_ is none) o) AND (v o)` over the two-constructor `Opt` (`none`, or `some` carrying a `Bool`) — five lines of pure QF_DT — answered **`unsat`** on main while cvc5 1.3.4 and z3 both answer `sat`. SMT-LIB leaves `sel_{c,i}(t)` UNSPECIFIED when `t` was not built by `c`, so a formula is `unsat` only if it is false under EVERY choice of selector interpretation; ADR-0022's step-B gate instead fixed ONE choice (`well_founded_default`) and pinned it into the reduction with a guard `tag_o == j OR f_{o,j,i} == default`. A convention that is only ever *read* is harmless; one that is *asserted* removes models, and removing models is how a solver manufactures a wrong `unsat`. The suite asserted the wrong answer by name (`select_on_wrong_constructor_nonzero_is_unsat`), and the QF_DT differential fuzz could not have caught it: it generates ENUM datatypes only, so every constructor is nullary and it has no selector to apply — the exact blindness CLAUDE.md's "underspecified operators carry a fuzz seed-class that generates the degenerate argument" rule names. Decision: **the non-active field variable is FREE**, `build_dt_eq` guards field equality per constructor instead of leaning on the pins, `select_{c,i}(construct_d(...))` with `d != c` is abstracted to a fresh variable instead of refused, and the values the search picks are folded into ONE interpretation keyed by `(constructor, index, the operand's VALUE)` — carried on `Assignment`/`Model` beside the existing real-division-by-zero witnesses, and checked by the `sat` replay against the original assertions. Keying by the operand's VALUE is what makes the recorded interpretation congruent; a candidate that wants two results at one key describes no interpretation and yields `unknown`, never a verdict.
+Index-summary: Two wrong `unsat`s, found by asking what a fold over `is`/`select` would fold TO. (1) `((_ is none) o) AND (v o)` over the two-constructor `Opt` — five lines of pure QF_DT — answered **`unsat`** while cvc5 1.3.4 and z3 both answer `sat`: SMT-LIB leaves `sel_{c,i}(t)` UNSPECIFIED when `t` was not built by `c`, and ADR-0022's step-B totality convention was not merely READ by the evaluator, it was ASSERTED into the reduction as `tag_o == j OR f_{o,j,i} == default`. (2) `is-cons(a) AND is-cons(b) AND a != b` over a list whose every field is a datatype also answered **`unsat`**: `build_dt_eq` skips fields it cannot compare, which makes the encoded equality WEAKER than real equality — and weaker in a POSITIVE occurrence is STRONGER under a negation, so "it is a relaxation, so `unsat` is sound" was only half true. The suite asserted the first answer by name and the differential fuzz could not generate either shape: it builds ENUM datatypes, so no selector and no field exists to compare. Decision: the non-active field variable is FREE and the model CARRIES the selector interpretation it chose, keyed by `(constructor, index, the operand's VALUE)` so it is congruent; and structural equality gets TWO encodings, a restriction that may only yield `sat` (replay-checked, and it is the only one that can witness a difference) and a relaxation that may yield `unsat`. QF_DT 114/200 -> **171/200** on the pinned parity list, +57, **0 decided->undecided, 0 flips, 0 disagreements** against the declared `:status` and against cvc5 1.3.4 and z3 re-run live. The general rule: **a chosen-total convention for an underspecified operator is sound to READ and unsound to ASSERT.**
 Date: 2026-09-12
 
 ## Context
@@ -61,10 +61,52 @@ recording:
   grammar**. This is the failure mode CLAUDE.md's hard rule was written for,
   reproduced exactly.
 
+## The second wrong `unsat`, found by the first
+
+`build_dt_eq` reduces `o == o'` to `tag_l == tag_r` conjoined with equality of
+the fields that HAVE an expansion variable. A datatype-typed field has none, so
+it is skipped, and the function's own comment said that was "a weaker
+(relaxation) constraint: sound for `unsat`".
+
+Weaker is a relaxation in a **positive** occurrence. Under a negation it is a
+**strengthening**, and `unsat` is exactly the verdict a strengthening may not
+give. On `list = cons(car: tree, cdr: list) | null`, whose every field is a
+datatype:
+
+```smt2
+(assert ((_ is cons) a))
+(assert ((_ is cons) b))
+(assert (not (= a b)))
+```
+
+reduces to `tag_a == cons AND tag_b == cons AND tag_a != tag_b` and answers
+**`unsat`**. cvc5 1.3.4 and z3 both answer `sat`; two `cons` values with
+different heads plainly exist. Measured 2026-09-12, on `main` and on this
+lane's first two commits.
+
+The repair is not to pick a better single encoding — there is no single formula
+over the tags and the comparable fields that is equivalent to real equality when
+a field cannot be compared. **There are two encodings, sound for opposite
+verdicts:**
+
+| encoding | relation to real equality | verdict it may give |
+|---|---|---|
+| restriction — the plain conjunction above | weaker positively, **stronger** negatively | only `sat`, and only replay-checked |
+| relaxation — a free Boolean carrying just the conditions the expansion can decide | every real model extends to it in **both** polarities | `unsat` transfers; `sat` replay-checked |
+
+So the route runs the restriction first (it is the only one that can WITNESS a
+difference, which is what a `sat` model needs) and falls back to the relaxation
+for everything else. When no equality is inexact the two coincide and one pass
+does. The relaxation additionally expands a structural equality one level into
+its per-constructor field comparison — exact, and it is what gives `a != b` a
+witness at depth 1 through the child variables `unfold_traversals` already
+mints.
+
 ## Decision
 
 **A wrong-constructor selector read is unspecified, and the model says what it
-chose.** Concretely:
+chose. Structural equality that cannot be compared exactly gets two encodings,
+and neither one's unfavourable verdict is believed.** Concretely:
 
 1. **No default guard.** A non-active field variable `f_{o,j,i}` is free. This
    is a relaxation of the reduced query, so `unsat` still transfers — and it
@@ -132,15 +174,26 @@ standing in for:
 
 ## Consequences
 
-- `QF_DT` on the pinned 200, A/B interleaved per file: see
-  `docs/research/03-measurements/qf-dt-unspecified-selectors-2026-09-12.md`.
-- `tests/qf_dt_selector_differential_fuzz.rs` is new: the same z3 cross-check as
-  the enum fuzz, over a datatype with `Bool`-carrying constructors, and its
-  generator emits the degenerate argument deliberately — a selector read over a
-  variable the formula forces to another constructor, and over an explicit
-  constructor application with both a matching and a non-matching constructor.
-  Its agreement floor is part of the assertion: a run in which axeyum declines
-  everything would report "0 DISAGREE" while checking nothing.
+- `QF_DT` on the pinned 200, A/B interleaved per file: **114 -> 171**, +57,
+  0 decided->undecided, 0 flips, 0 disagreements. See
+  [the measurement](../03-measurements/qf-dt-unspecified-selectors-2026-09-12.md).
+- Two new z3 cross-checks, one per wrong `unsat`, each with a generator that
+  emits its degenerate argument **deliberately** and an agreement floor in the
+  assertion (a run that declines everything would otherwise report "0 DISAGREE"
+  while checking nothing):
+  `tests/qf_dt_selector_differential_fuzz.rs` (a datatype with `Bool`-carrying
+  constructors; a selector read over a variable the formula forces to another
+  constructor, and over an explicit constructor application with both a matching
+  and a non-matching constructor) and
+  `tests/qf_dt_equality_differential_fuzz.rs` (a datatype whose middle
+  constructor carries another datatype, so it cannot be compared exactly).
+  Restoring each defect kills its own suite: the selector fuzz at **seed 2**,
+  the equality fuzz at **seed 40**, both with the offending instance printed.
+- **The equality fuzz needed its degenerate case emitted as ONE atom.** Left to
+  the random connective it survived all 1,500 seeds against the restored
+  mutant, because the shape needs three conjuncts to line up at once and a
+  disjunction is satisfiable as soon as one disjunct is. A grammar that CAN
+  produce a shape is not a generator that DOES.
 - The evaluator's total convention is unchanged and still the fallback. What
   changed is that nothing **asserts** it any more.
 - The general rule, which is not about datatypes: **a chosen-total convention
