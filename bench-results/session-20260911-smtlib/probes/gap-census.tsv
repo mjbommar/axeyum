@@ -1,0 +1,192 @@
+QF_NIA	bounded integer model overflowed at width 32 (assertion #586 is false ov
+QF_NIA	preprocessed dispatch timeout after reduced solve
+QF_NIA	preprocessed dispatch timeout after reduced solve
+QF_NIA	preprocessed dispatch timeout after reduced solve
+QF_NIA	bounded integer model overflowed at width 32 (assertion #236 is false ov
+QF_NIA	bounded integer model overflowed at width 32 (assertion #779 is false ov
+QF_NIA	bounded integer model overflowed at width 32 (assertion #376 is false ov
+QF_NIA	preprocessed dispatch timeout after reduced solve
+QF_NIA	bounded integer model overflowed at width 32 (assertion #650 is false ov
+QF_NIA	bounded integer model overflowed at width 32 (assertion #408 is false ov
+QF_NIA	watchdog fired before the worker thread returned
+QF_NIA	bounded integer model overflowed at width 32 (assertion #784 is false ov
+QF_NIA	estimated 150732237 CNF clauses before lowering exceeds budget 64000000 
+QF_NIA	preprocessed dispatch timeout after reduced solve
+QF_NIA	preprocessed dispatch timeout after reduced solve
+QF_NIA	bounded integer model overflowed at width 32 (assertion #288 is false ov
+QF_NIA	preprocessed dispatch timeout after reduced solve
+QF_NIA	bounded integer model overflowed at width 32 (assertion #542 is false ov
+QF_NIA	preprocessed dispatch timeout after reduced solve
+QF_NIA	estimated 145454991 CNF clauses before lowering exceeds budget 64000000 
+QF_NIA	estimated 109820226 CNF clauses before lowering exceeds budget 64000000 
+QF_NIA	estimated 114749562 CNF clauses before lowering exceeds budget 64000000 
+QF_NIA	estimated 171206739 CNF clauses before lowering exceeds budget 64000000 
+QF_NIA	estimated 105646605 CNF clauses before lowering exceeds budget 64000000 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_DT	datatype unfolding produced a candidate that does not satisfy assertion 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_DT	datatype unfolding produced a candidate that does not satisfy assertion 
+QF_DT	datatype unfolding produced a candidate that does not satisfy assertion 
+QF_DT	datatype unfolding produced a candidate that does not satisfy assertion 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_DT	datatype unfolding produced a candidate that does not satisfy assertion 
+QF_DT	datatype unfolding produced a candidate that does not satisfy assertion 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_DT	datatype unfolding produced a candidate that does not satisfy assertion 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_DT	unsupported by backend: `is`/`select` over a non-variable datatype term 
+QF_NRA	nonlinear abstraction: 771 cross-products project to 36945 linear-real a
+QF_NRA	watchdog fired before the worker thread returned
+QF_NRA	nonlinear abstraction: 396 cross-products project to 16976 linear-real a
+QF_NRA	watchdog fired before the worker thread returned
+QF_NRA	preprocessed dispatch timeout after reduced solve
+QF_NRA	unsupported by backend: QF_LRA: nonlinear real multiplication
+QF_NRA	lazy SMT: wall-clock timeout reached
+QF_NRA	watchdog fired before the worker thread returned
+QF_NRA	nonlinear abstraction: refinement reached a fixpoint without deciding
+QF_NRA	online CDCL(T) LRA model did not replay (arithmetic outside the incremen
+QF_NRA	nonlinear abstraction: refinement reached a fixpoint without deciding
+QF_NRA	preprocessed dispatch timeout after reduced solve
+QF_NRA	lazy SMT: wall-clock timeout reached
+QF_NRA	nonlinear abstraction: 55 cross-products project to 1107 linear-real ato
+QF_NRA	nonlinear abstraction: refinement reached a fixpoint without deciding
+QF_NRA	unsupported by backend: QF_LRA: nonlinear real multiplication
+QF_NRA	watchdog fired before the worker thread returned
+QF_NRA	preprocessed dispatch timeout after reduced solve
+QF_NRA	preprocessed dispatch timeout after reduced solve
+QF_NRA	preprocessed dispatch timeout after reduced solve
+QF_NRA	preprocessed dispatch timeout after reduced solve
+QF_NRA	preprocessed dispatch timeout after reduced solve
+QF_NRA	watchdog fired before the worker thread returned
+QF_NRA	preprocessed dispatch timeout after reduced solve
+QF_LRA	preprocessed dispatch timeout after reduced solve
+QF_LRA	preprocessed dispatch timeout after reduced solve
+QF_LRA	preprocessed dispatch timeout after reduced solve
+QF_LRA	preprocessed dispatch timeout after reduced solve
+QF_LRA	watchdog fired before the worker thread returned
+QF_LRA	watchdog fired before the worker thread returned
+QF_LRA	preprocessed dispatch timeout after reduced solve
+QF_LRA	NO-REASON
+QF_LRA	preprocessed dispatch timeout after reduced solve
+QF_LRA	NO-REASON
+QF_LRA	NO-REASON
+QF_LRA	NO-REASON
+QF_LRA	NO-REASON
+QF_LRA	NO-REASON
+QF_LRA	NO-REASON
+QF_LRA	preprocessed dispatch timeout after reduced solve
+QF_LRA	NO-REASON
+QF_LRA	NO-REASON
+QF_LRA	NO-REASON
+QF_LRA	NO-REASON
+QF_LRA	NO-REASON
+QF_LRA	NO-REASON
+QF_LRA	NO-REASON
+QF_LRA	NO-REASON
+QF_UFLRA	unsupported by backend: term #0 has sort (Uninterpreted 0) that the pure
+QF_UFLRA	unsupported by backend: term #0 has sort (Uninterpreted 0) that the pure
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	lazy function-consistency CEGAR inconclusive (applications=510, function
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	preprocessed dispatch timeout after reduced solve
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_UFLRA	watchdog fired before the worker thread returned
+QF_LIA	preprocessed dispatch timeout after reduced solve
+QF_LIA	preprocessed dispatch timeout after reduced solve
+QF_LIA	preprocessed dispatch timeout after reduced solve
+QF_LIA	preprocessed dispatch timeout after reduced solve
+QF_LIA	watchdog fired before the worker thread returned
+QF_LIA	watchdog fired before the worker thread returned
+QF_LIA	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bound
+QF_LIA	NO-REASON
+QF_LIA	watchdog fired before the worker thread returned
+QF_LIA	watchdog fired before the worker thread returned
+QF_LIA	QF_LIA branch-and-bound undecided: exact-rational simplex declined (i128
+QF_LIA	preprocessed dispatch timeout after reduced solve
+QF_LIA	NO-REASON
+QF_LIA	preprocessed dispatch timeout after reduced solve
+QF_LIA	preprocessed dispatch timeout after reduced solve
+QF_LIA	preprocessed dispatch timeout after reduced solve
+QF_LIA	preprocessed dispatch timeout after reduced solve
+QF_LIA	preprocessed dispatch timeout after reduced solve
+QF_LIA	preprocessed dispatch timeout after reduced solve
+QF_LIA	linear-arithmetic sat-model reconstruction declined in the integer theor
+QF_LIA	linear-arithmetic sat-model reconstruction declined in the integer theor
+QF_LIA	preprocessed dispatch timeout after reduced solve
+QF_LIA	watchdog fired before the worker thread returned
+QF_LIA	watchdog fired before the worker thread returned
+QF_IDL	watchdog fired before the worker thread returned
+QF_IDL	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bound
+QF_IDL	watchdog fired before the worker thread returned
+QF_IDL	watchdog fired before the worker thread returned
+QF_IDL	watchdog fired before the worker thread returned
+QF_IDL	watchdog fired before the worker thread returned
+QF_IDL	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bound
+QF_IDL	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bound
+QF_IDL	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bound
+QF_IDL	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bound
+QF_IDL	watchdog fired before the worker thread returned
+QF_IDL	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bound
+QF_IDL	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bound
+QF_IDL	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bound
+QF_IDL	watchdog fired before the worker thread returned
+QF_IDL	watchdog fired before the worker thread returned
+QF_IDL	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bound
+QF_IDL	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bound
+QF_IDL	watchdog fired before the worker thread returned
+QF_IDL	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bound
+QF_IDL	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bound
+QF_IDL	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bound
+QF_IDL	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bound
+QF_IDL	lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bound
+QF_UFLIA	query contains an integer literal outside the i128 reference range; no r
+QF_UFLIA	query contains an integer literal outside the i128 reference range; no r
+QF_UFLIA	watchdog fired before the worker thread returned
+QF_UFLIA	query contains an integer literal outside the i128 reference range; no r
+QF_UFLIA	query contains an integer literal outside the i128 reference range; no r
+QF_UFLIA	query contains an integer literal outside the i128 reference range; no r
+QF_UFLIA	query contains an integer literal outside the i128 reference range; no r
+QF_UFLIA	query contains an integer literal outside the i128 reference range; no r
+QF_UFLIA	query contains an integer literal outside the i128 reference range; no r
+QF_UFLIA	query contains an integer literal outside the i128 reference range; no r
+QF_UFLIA	watchdog fired before the worker thread returned
+QF_UFLIA	query contains an integer literal outside the i128 reference range; no r
+QF_UFLIA	watchdog fired before the worker thread returned
+QF_UFLIA	watchdog fired before the worker thread returned
+QF_UFLIA	watchdog fired before the worker thread returned
+QF_UFLIA	watchdog fired before the worker thread returned
+QF_UFLIA	watchdog fired before the worker thread returned
+QF_UFLIA	watchdog fired before the worker thread returned
+QF_UFLIA	watchdog fired before the worker thread returned
+QF_UFLIA	watchdog fired before the worker thread returned
+QF_UFLIA	watchdog fired before the worker thread returned
+QF_UFLIA	watchdog fired before the worker thread returned
+QF_UFLIA	watchdog fired before the worker thread returned
+QF_UFLIA	watchdog fired before the worker thread returned
