@@ -1,3 +1,12 @@
+# PARTLY REFUTED 2026-09-12 -- READ THIS BEFORE QUOTING ANY ROW BELOW.
+# Every row is a 3-FILE sample of a division averaging thousands of files.
+# The four DT rows (AUFDTLIRA, UFDTLIRA, UFDT, UFDTNIRA), which claim
+# `sort mismatch: expected Bool, BitVec`, are WRONG: that error appears in
+# 0 of 160 files sampled at a stride through those same divisions. See
+# bench-results/dt-divisions-20260912/README.md for the measured blockers.
+# UFDTLIRA in particular is NOT blocked -- it decides 19 of 40 today.
+# The untested rows are not thereby correct; they are 3-file samples too.
+# REMOVE THIS LABEL only when every row has been re-measured at n >= 40.
 AUFLIRA         20011  2 unsupported: nested array element sort is unsu
 QF_ABVFP        18129  2 REACHED-SOLVER
 QF_BVFP         17249  3 REACHED-SOLVER

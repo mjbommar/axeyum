@@ -513,18 +513,44 @@ fn simplex_admission(n: usize, nvars: usize) -> Option<Decision> {
 fn collect_constraints(
     arena: &TermArena,
     assertions: &[TermId],
+    deadline: Option<Instant>,
 ) -> Result<Option<Collector>, SolverError> {
-    let mut ctx = Collector::default();
+    let mut ctx = Collector {
+        deadline,
+        ..Collector::default()
+    };
     for (index, &assertion) in assertions.iter().enumerate() {
         if crate::memory_budget::watchdog_tripped() {
             return Ok(None);
         }
+        // The wall clock beside the memory watchdog. Linearizing a cube builds
+        // a `BTreeMap` per atom, and the refinement loop hands this a cube that
+        // GROWS every round, so the per-call cost rises with the round number —
+        // the same shape the lazy-SMT loop documents for its own rounds. Until
+        // this poll existed the stretch was invisible to the budget.
+        //
+        // Polled EVERY iteration, not every 64th. A cube can hold fewer than 64
+        // assertions and still spend seconds here, so a stride would be a
+        // deadline test the workload never reaches — ADR-1906's defect exactly.
+        // One `Instant::now()` against a `collect` that linearizes a whole
+        // assertion is not a cost worth rationing.
+        if past_deadline(deadline) {
+            return Ok(None);
+        }
         ctx.current_origin = index;
         ctx.collect(arena, assertion, false)?;
+        if ctx.timed_out {
+            return Ok(None);
+        }
     }
     Ok(Some(ctx))
 }
 
+// Linear driver: entry poll, collection, two admission gates, the multiplier
+// matrix, the elimination and its four outcome arms. Splitting it would move the
+// deadline boundaries away from the stretches they bound, which is the defect
+// this function was just repaired for.
+#[allow(clippy::too_many_lines)]
 fn decide_within(
     arena: &TermArena,
     assertions: &[TermId],
@@ -535,9 +561,24 @@ fn decide_within(
     // Farkas fix, and one number for a decider with three stages cannot say
     // which of them to attack. Off, this is one thread-local `bool` read per
     // decision — a decision that collects and eliminates over the whole cube.
+    //
+    // Polled on ENTRY. The lazy-SMT refinement loops above call this once per
+    // theory-conflict scan, so "the caller checks its deadline once per round"
+    // leaves a whole round's worth of decisions running past it. Measured
+    // 2026-09-12: `dpll_lia::theory_conflicts_for_indices` was on the stack for
+    // 1,065 of 1,082 samples of a `QF_UFLRA` run that the harness watchdog then
+    // had to kill.
+    if past_deadline(deadline) {
+        return Ok(Decision::TimedOut);
+    }
     let counting = crate::lazy_smt_counters::enabled();
     let collect_started = counting.then(Instant::now);
-    let Some(mut ctx) = collect_constraints(arena, assertions)? else {
+    let Some(mut ctx) = collect_constraints(arena, assertions, deadline)? else {
+        // Collection declined. It has two reasons and they demand opposite
+        // fixes, so the clock is re-read rather than the memory reason borrowed.
+        if past_deadline(deadline) {
+            return Ok(Decision::TimedOut);
+        }
         return Ok(Decision::OutOfMemory(
             crate::memory_budget::watchdog_decline("lra constraint collection").map_or_else(
                 || "lra: memory budget exceeded while collecting constraints".to_owned(),
@@ -593,7 +634,8 @@ fn decide_within(
     // reports its own refusal.
     if crate::lra_route::configured().simplex_first(n)
         && simplex_admission(n, nvars).is_none()
-        && let Some(decision) = simplex_first(arena, assertions, &ctx, counting, &mut stages)?
+        && let Some(decision) =
+            simplex_first(arena, assertions, &ctx, counting, &mut stages, deadline)?
     {
         return Ok(decision);
     }
@@ -613,7 +655,7 @@ fn decide_within(
         // same day.
         if stages.simplex.is_none()
             && simplex_admission(n, nvars).is_none()
-            && let Some(decision) = simplex_fallback(arena, assertions, &ctx)?
+            && let Some(decision) = simplex_fallback(arena, assertions, &ctx, deadline)?
         {
             return Ok(decision);
         }
@@ -635,6 +677,17 @@ fn decide_within(
     // contradiction it derives. This is the `32*n^2`-byte allocation
     // `fm_admission` exists to price; see [`BYTES_PER_FARKAS_MULTIPLIER`].
     for (i, constraint) in ctx.constraints.iter_mut().enumerate() {
+        // `n` allocations of an `n`-wide exact-rational vector: this loop alone
+        // is the `32*n^2` bytes `fm_admission` prices, and `memmove` was 36% of
+        // a killed run's profile. It is a place a query spends seconds with the
+        // budget unable to see it, so the clock is polled here — every
+        // iteration, because `n` itself can be small while each `unit_vec` is
+        // large, and a stride would be a check the workload never reaches.
+        // `None` reads no clock.
+        if past_deadline(deadline) {
+            stages.record(counting);
+            return Ok(Decision::TimedOut);
+        }
         constraint.mult = unit_vec(n, i);
     }
     stages.matrix_built = true;
@@ -663,9 +716,16 @@ fn decide_within(
                     ),
             ))
         }
-        Feasibility::TimedOut => {
-            simplex_after_elimination(arena, assertions, &ctx, n, nvars, counting, &mut stages)
-        }
+        Feasibility::TimedOut => simplex_after_elimination(
+            arena,
+            assertions,
+            &ctx,
+            n,
+            nvars,
+            counting,
+            &mut stages,
+            deadline,
+        ),
         Feasibility::Unsat(multipliers) => {
             let certificate = FarkasCertificate {
                 atoms,
@@ -752,6 +812,10 @@ fn replayed_sat(
 ///
 /// Propagates [`simplex_fallback`]'s error, after recording the stages so a
 /// failed decision is still counted.
+// The eighth argument is the deadline, and it is the point of the function's
+// existence here: without it this arm reached the exact-rational simplex with no
+// wall-clock bound at all.
+#[allow(clippy::too_many_arguments)]
 fn simplex_after_elimination(
     arena: &TermArena,
     assertions: &[TermId],
@@ -760,6 +824,7 @@ fn simplex_after_elimination(
     nvars: usize,
     counting: bool,
     stages: &mut CubeStages,
+    deadline: Option<Instant>,
 ) -> Result<Decision, SolverError> {
     if stages.simplex.is_some() {
         stages.record(counting);
@@ -770,7 +835,7 @@ fn simplex_after_elimination(
         return Ok(refusal);
     }
     let started = counting.then(Instant::now);
-    let fallback = simplex_fallback(arena, assertions, ctx);
+    let fallback = simplex_fallback(arena, assertions, ctx, deadline);
     stages.simplex = Some(started.map_or(Duration::ZERO, |s| s.elapsed()));
     stages.record(counting);
     if let Some(decision) = fallback? {
@@ -808,9 +873,10 @@ fn simplex_first(
     ctx: &Collector,
     counting: bool,
     stages: &mut CubeStages,
+    deadline: Option<Instant>,
 ) -> Result<Option<Decision>, SolverError> {
     let started = counting.then(Instant::now);
-    let fallback = simplex_fallback(arena, assertions, ctx);
+    let fallback = simplex_fallback(arena, assertions, ctx, deadline);
     stages.simplex = Some(started.map_or(Duration::ZERO, |s| s.elapsed()));
     match fallback {
         Ok(Some(decision)) => {
@@ -845,6 +911,7 @@ fn simplex_fallback(
     arena: &TermArena,
     assertions: &[TermId],
     ctx: &Collector,
+    deadline: Option<Instant>,
 ) -> Result<Option<Decision>, SolverError> {
     let nvars = ctx.vars.len();
     let mut rows = Vec::with_capacity(ctx.constraints.len());
@@ -854,6 +921,14 @@ fn simplex_fallback(
         // filling a tableau the process cannot hold. One relaxed atomic load.
         if let Some(reason) = crate::memory_budget::watchdog_decline("lra simplex tableau build") {
             return Ok(Some(Decision::OutOfMemory(reason.detail)));
+        }
+        // The wall clock at the same boundary and for the same reason. `n *
+        // nvars` exact rationals is seconds of `memmove` on the shapes this
+        // route meets (42% of a killed `cpachecker-induction` run's profile),
+        // and until the deadline reached this function the whole stretch was
+        // invisible to the budget. `None` reads no clock.
+        if past_deadline(deadline) {
+            return Ok(None);
         }
         let mut coeffs = vec![Rational::zero(); nvars];
         for (&index, &value) in &constraint.expr.coeffs {
@@ -871,7 +946,7 @@ fn simplex_fallback(
         rows.push(crate::simplex::Constraint { coeffs, rel, rhs });
     }
 
-    match crate::simplex::feasible(nvars, &rows) {
+    match crate::simplex::feasible_within(nvars, &rows, deadline) {
         crate::simplex::SimplexOutcome::Feasible(point) => {
             // Build a model over the original symbols and replay-check it (the trust
             // anchor for `sat`); decline to `unknown` if it does not verify.
@@ -1176,6 +1251,21 @@ struct Collector {
     current_origin: usize,
     /// The assertion index of a literally-`false` assertion, if one was seen.
     trivial_origin: Option<usize>,
+    /// The wall-clock bound for the collection, or `None` for "no bound".
+    ///
+    /// It lives on the collector rather than being threaded as an argument
+    /// because the recursion below descends through `and`/`not` structure, and
+    /// a caller's per-ASSERTION poll is worthless here: a refinement loop hands
+    /// this ONE assertion that is a conjunction of thousands of atoms, so a
+    /// loop over `assertions` fires its check exactly once. Measured
+    /// 2026-09-12 on the `QF_UFLRA` `cpachecker-induction.32_1_cilled…` family:
+    /// polling every iteration of `collect_constraints` changed the wall time
+    /// by 0.006 s, because the whole cost is inside a single `collect` call.
+    deadline: Option<Instant>,
+    /// Set once the deadline is observed to have passed; the recursion then
+    /// unwinds without doing further work and `decide_within` reports
+    /// [`Decision::TimedOut`].
+    timed_out: bool,
 }
 
 impl Collector {
@@ -1210,6 +1300,16 @@ impl Collector {
         term: TermId,
         negated: bool,
     ) -> Result<(), SolverError> {
+        if self.timed_out {
+            return Ok(());
+        }
+        // Polled per NODE of the Boolean structure, which is the only boundary
+        // that sees this cost: see the `deadline` field for why the caller's
+        // per-assertion poll does not. `None` reads no clock.
+        if self.deadline.is_some() && past_deadline(self.deadline) {
+            self.timed_out = true;
+            return Ok(());
+        }
         match arena.node(term) {
             TermNode::BoolConst(value) => {
                 if *value == negated {
@@ -4181,5 +4281,52 @@ mod memory_limit_tests {
         assert!(fm_admission(MAX_FM_CONSTRAINTS + 1, 10).is_some());
         assert!(simplex_admission(MAX_FM_CONSTRAINTS + 1, 10).is_some());
         clear_watchdog_for_test();
+    }
+
+    /// An expired deadline ends the conjunctive decider without a verdict.
+    ///
+    /// The lazy-SMT and CEGAR loops above call `decide_within` once per
+    /// theory-conflict scan, so "the caller polls once per round" leaves a
+    /// whole round of decisions running past the budget. Measured 2026-09-12 on
+    /// a `QF_UFLRA` run the harness watchdog had to kill,
+    /// `dpll_lia::theory_conflicts_for_indices` was on the stack for 1,065 of
+    /// 1,082 samples.
+    ///
+    /// The system below is decided instantly with no deadline (the positive
+    /// control), so `TimedOut` here is about the clock and not about the query.
+    ///
+    /// **What this does NOT pin, measured rather than assumed.** `decide_within`
+    /// now polls at four boundaries — its entry, `collect_constraints`, the
+    /// Farkas multiplier-matrix loop, and `simplex_fallback`'s row build — and
+    /// each bounds a DIFFERENT stretch of one decision. This test cannot
+    /// separate them: deleting the entry poll alone leaves all 1,705 unit tests
+    /// green, because collection's own poll then produces the same
+    /// `TimedOut`. Treat it as a guard on the phase, not on any one line; the
+    /// individually mutation-killed deadline guards in this change are
+    /// `simplex::feasible_within`'s and the three in `dpll_t`.
+    #[test]
+    fn an_expired_deadline_ends_the_conjunctive_decider_without_a_verdict() {
+        let _lock = WATCHDOG_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        clear_watchdog_for_test();
+        let (arena, assertions) = wide_satisfiable_system(8);
+        let expired = Instant::now()
+            .checked_sub(Duration::from_secs(1))
+            .expect("an instant one second ago");
+        assert!(
+            matches!(
+                decide_within(&arena, &assertions, Some(expired)).expect("a decision"),
+                Decision::TimedOut
+            ),
+            "an expired deadline must end the decision before collection"
+        );
+        assert!(
+            matches!(
+                decide_within(&arena, &assertions, None).expect("a decision"),
+                Decision::Sat(_)
+            ),
+            "with no deadline the same system must still be decided sat"
+        );
     }
 }
