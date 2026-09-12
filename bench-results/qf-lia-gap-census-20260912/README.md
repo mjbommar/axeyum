@@ -99,6 +99,83 @@ The `prp-*` family is 27 of the 55 winnable files (23 in this bucket, 4 further
 down the table); they carry 25–372 integer variables and **519–11,162 `ite`
 terms** over one deeply `let`-shared assertion.
 
+## The corrected census (`census-fixed.tsv`)
+
+Same 55 files, same protocol, same binary except for the memo in
+`term_identity::identity_normal_form`. This is the census to plan from; the base
+one is a picture of the dispatcher.
+
+| cause | base | corrected |
+|---|---:|---:|
+| watchdog: un-instrumented phase right after `probe` | **23** | **0** |
+| admission: `lia-dpll` pre-SAT skeleton boundary | 4 | **23** |
+| search: lazy LIA CDCL(T) rounds hit the wall clock | 7 | 9 |
+| search: LIA branch-and-bound hit the wall clock | 6 | 6 |
+| search: LIA `sat`-model reconstruction hit the wall clock | 5 | 5 |
+| boundary: `i128` overflow in the exact-rational simplex | 3 | 3 |
+| watchdog: un-instrumented phase after `cas-int-units` | 2 | 2 |
+| watchdog: un-instrumented phase after `fd:bounded-completeness-unsat` | 0 | 2 |
+| watchdog: INGEST (parse is outside `--timeout-ms`) | 1 | 2 |
+| watchdog: un-instrumented phase after `lia-simplex` | 0 | 1 |
+| watchdog: un-instrumented phase after `dl-online` | 1 | 1 |
+| watchdog: inside `dl-online:check` | 1 | 0 |
+| watchdog: inside `dpll-lia:justified-support` | 1 | 0 |
+| other: LIA SAT skeleton declined after round 317 | 1 | 0 |
+| **decided** | 0 | **1** (`prp-0-47.smt2`, `sat`, 0.61 s, `dl-online`) |
+
+`attempts=` moves with it: 26 files reached 13–16 before, **48** after.
+
+Twenty of the 23 `prp-*` files land on the `lia-dpll` pre-SAT admission
+boundary, two are killed by the watchdog in the stretch *after* the last ladder
+rung, and one decides.
+
+Three rows move for reasons that are **load, not code**, and each was re-run
+in isolation on a free core pair to say which reading is the file's:
+
+| file | base census | corrected census | isolated re-run |
+|---|---|---|---|
+| `apache-get-tag-O0` | inside `dl-online:check` | INGEST | **INGEST** (2 of 2, on BOTH binaries) |
+| `FISCHER10-13-fair` | inside `dpll-lia:justified-support` | model reconstruction | **`dpll-lia:justified-support`** |
+| `RC-07` | `lia-dpll` admission | post-`lia-simplex` watchdog | **`lia-dpll` admission** (`attempts=14`) |
+
+So the base reading is the file's on two of the three and the corrected reading
+on one. Neither census changes a *verdict* on any of them, and none is one of
+the 23 that moved. The corrected census ran alongside two other sweeps on this
+box, which is why its borderline rows drift; the 23 that moved are not
+borderline — every one of them was a 24.9–25.2 s watchdog kill before, and
+after the fix **21 of the 23 return a first-class reason instead of being
+killed** (walls 0.61–25.04 s, median 24.23 s — most still spend the budget,
+they just now spend it inside a route that reports why it gave up).
+
+## What the corrected census says the division needs
+
+- **The `prp-*` family (27 of 55) is a CAPABILITY gap, not a clock or an
+  admission-constant gap.** Three measurements on `prp-17-34.smt2`, none of
+  which required shipping anything:
+
+  | lever | result |
+  |---|---|
+  | `MAX_MODERATE_PRE_SAT_ARITH_ATOMS`/`..._CNF_VARS` raised to a million (probe binary only, reverted), 24 s | `unknown` — a different `ResourceLimit`, now inside the lazy LIA loop |
+  | same, **60 s** | `unknown`, same shape |
+  | `check_qf_lia_online_cdclt` called directly with the whole budget — i.e. as if admission had let it through | **declines in 6 ms**: *"online CDCL(T) LIA model did not replay (arithmetic outside the …)"* |
+
+  The third row settles it: the route admission is holding back cannot decide
+  these queries at any budget, because their atoms carry `Int`-sorted `ite`
+  terms and its model does not replay.
+- **18 of 55 are genuine search timeouts** inside branch-and-bound (6), the
+  `sat`-model reconstruction (5), or the lazy CDCL(T) round loop (7).
+- **3 are the `i128` boundary** in the exact-rational simplex (roadmap item 2.3
+  / S9's wide path).
+- **2 are INGEST**: the worker never finished parsing a 5.4 MB / 7.7 MB file,
+  and `--timeout-ms` does not bound ingest.
+- **4 are a second deadline-blind phase, in `prove_int_box`.** `RC-09` and
+  `RC-11` spend the budget with `stack=none` right after `cas-int-units`, and a
+  `perf` leaf profile puts **81.66 %** of `RC-09` in `auto::affine_in` (reached
+  from `auto::prove_int_box`) — the same no-memo-over-a-DAG shape as the top
+  row. Not fixed here: `affine_in` carries a depth cap (256), so memoising it
+  widens which queries get a proven box, which is a behaviour change needing
+  its own A/B rather than a free win.
+
 ## Columns
 
 `census-base.tsv` / `census-fixed.tsv`: `file, outcome, verdict, secs, attempts,
