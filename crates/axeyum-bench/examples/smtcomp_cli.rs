@@ -922,6 +922,12 @@ fn partial_bv_lines(reading: &axeyum_solver::LiveBvReading) -> Vec<String> {
 /// `unavailable` lines — so a run that never got far enough to instrument
 /// anything is still distinguishable from a run with collection switched off
 /// (no lines at all).
+// One straight-line read of every instrument on the board, in the order the
+// report prints them. Each block is three lines and its own comment explaining
+// why that instrument survives a kill; splitting them into helpers would put a
+// function boundary between a reading and the reason it is trustworthy, which
+// is the half a reader actually needs.
+#[allow(clippy::too_many_lines)]
 fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str) -> Vec<String> {
     if !trace_mode {
         return Vec::new();

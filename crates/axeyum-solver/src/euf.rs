@@ -957,6 +957,12 @@ fn check_with_incremental_arith(
 /// lemma added once). `solve` decides the abstracted, function-free query — a
 /// bit-vector backend ([`check_qf_ufbv_lazy`]) or the arithmetic dispatcher
 /// ([`check_with_uf_arithmetic`]).
+// The CEGAR loop: abstract, solve, scan every application pair against the
+// candidate model, add the violated congruence lemmas, repeat. Splitting it
+// would put the `working` assertion vector and the `added` pair set behind an
+// interface for no reader's benefit -- the same reason `check_with_nra_impl`
+// carries this allow.
+#[allow(clippy::too_many_lines)]
 fn check_with_function_consistency<F>(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -1034,7 +1040,7 @@ where
         // `assignment` borrow does not collide with the IR builders.
         let mut equal_arg_lemmas: Vec<(usize, usize)> = Vec::new();
         let mut violated_lemmas: Vec<(usize, usize)> = Vec::new();
-        let _pair_scan = crate::phase_breadcrumb::enter("euf:fc-pair-scan");
+        let pair_scan = crate::phase_breadcrumb::enter("euf:fc-pair-scan");
         for (_func, members) in &groups {
             for a in 0..members.len() {
                 for b in (a + 1)..members.len() {
@@ -1061,7 +1067,7 @@ where
             }
         }
 
-        drop(_pair_scan);
+        drop(pair_scan);
         let new_lemmas = {
             let _phase = crate::phase_breadcrumb::enter("euf:fc-candidates");
             candidate_function_consistency_lemmas(
