@@ -391,11 +391,20 @@ fn finish_quantified_solve(
     };
     match check_with_quantifiers(arena, assertions, &finite_config) {
         finite_result @ (Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_))) => {
+            // Derived before the move: `retained_finite_unknown` consumes the
+            // result and drops the `Unsupported` message, and `NotApplicable`
+            // (what this recorded) claims the probe never ran — which is the
+            // opposite of what happened.
+            let declined = match &finite_result {
+                Ok(CheckResult::Unknown(reason)) => DeclineReason::from_unknown(reason),
+                Err(SolverError::Unsupported(message)) => unsupported_decline(message),
+                _ => DeclineReason::NotApplicable,
+            };
             let finite_unknown = retained_finite_unknown(finite_result);
             qtrace("finite-expansion", t0, "declined");
             route_trace::record_quant_rung_declined(
                 route_trace::quant_rung::FINITE_EXPANSION,
-                DeclineReason::NotApplicable,
+                declined,
             );
             // Pure-UF finite model finding, probed BEFORE the refutation
             // family on half the remaining budget (the `uf_fmf_probe_budget`
@@ -585,11 +594,15 @@ fn finish_quantified_solve(
                     // executed, and (before the take above) charged it MBQI's
                     // whole wall clock. Both halves of that entry were false
                     // (ADR-1907).
-                    if matches!(other, CheckResult::Unknown(_)) {
+                    if let CheckResult::Unknown(reason) = &other {
                         qtrace("uf-fmf-full", t0, "declined");
+                        // The finder RAN (that is what this guard means), so
+                        // `NotApplicable` — "the probe said this route does not
+                        // match" — was the wrong word for it. The reason the
+                        // rung itself produced is the right one.
                         route_trace::record_quant_rung_declined(
                             route_trace::quant_rung::UF_FMF_FULL,
-                            DeclineReason::NotApplicable,
+                            DeclineReason::from_unknown(reason),
                         );
                     }
                     // The ladder is out of rungs above ℕ-induction; record the
@@ -2103,13 +2116,21 @@ fn check_auto_with_recorder(
                 }
                 Err(error) => Err(error),
             };
-        if let Ok(result) = preprocessed {
-            Ok(result)
-        } else {
-            with_recorder(rec, |t| {
-                t.record_declined("preprocess", DeclineReason::Incomplete(reduced_fallback()));
-            });
-            check_auto_inner(arena, assertions, config, rec)
+        match preprocessed {
+            Ok(result) => Ok(result),
+            // The error said WHICH construct the preprocessed path could not
+            // handle and was discarded here, leaving a note that a path
+            // "errored" and nothing about what it hit. Measured 2026-09-11:
+            // this entry appears on 58 of the 81 `QF_DT` addressable-gap files.
+            Err(error) => {
+                with_recorder(rec, |t| {
+                    t.record_declined(
+                        "preprocess",
+                        DeclineReason::Incomplete(reduced_fallback(&error)),
+                    );
+                });
+                check_auto_inner(arena, assertions, config, rec)
+            }
         }
     } else {
         check_auto_inner(arena, assertions, config, rec)
@@ -2118,10 +2139,10 @@ fn check_auto_with_recorder(
 
 /// The [`UnknownReason`] recorded when the preprocessed path errors and dispatch
 /// degrades to the original unreduced query (a route note, not a verdict).
-fn reduced_fallback() -> UnknownReason {
+fn reduced_fallback(error: &SolverError) -> UnknownReason {
     UnknownReason {
         kind: UnknownKind::Incomplete,
-        detail: "preprocessed path errored; degraded to the original query".to_owned(),
+        detail: format!("preprocessed path errored; degraded to the original query: {error}"),
     }
 }
 
@@ -4540,11 +4561,37 @@ fn mbqi_first_refusal(
         // A first-refusal pass must not fail the whole solve: an unsupported
         // shape or an unchecked candidate falls through to the established
         // rungs.
-        Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
+        //
+        // These were ONE arm recording `DeclineReason::NotApplicable`, and
+        // three different things reach it — none of them "the probe said this
+        // route does not match". An `Unknown` carries the pass's own reason, an
+        // `Unsupported` carries the refusing call's message, and a `Sat` here is
+        // a candidate the guarded arm above rejected when it re-checked the
+        // model against the ORIGINAL arena: a verifier rejection.
+        Ok(CheckResult::Unknown(reason)) => {
             qtrace("mbqi-quick", t0, "declined");
             route_trace::record_quant_rung_declined(
                 route_trace::quant_rung::MBQI_QUICK,
-                DeclineReason::NotApplicable,
+                DeclineReason::from_unknown(&reason),
+            );
+            Ok(None)
+        }
+        Err(SolverError::Unsupported(message)) => {
+            qtrace("mbqi-quick", t0, "declined");
+            route_trace::record_quant_rung_declined(
+                route_trace::quant_rung::MBQI_QUICK,
+                unsupported_decline(&message),
+            );
+            Ok(None)
+        }
+        Ok(CheckResult::Sat(_)) => {
+            qtrace("mbqi-quick", t0, "declined");
+            route_trace::record_quant_rung_declined(
+                route_trace::quant_rung::MBQI_QUICK,
+                DeclineReason::VerifierRejected(
+                    "MBQI-quick candidate model did not replay against the original assertions"
+                        .to_owned(),
+                ),
             );
             Ok(None)
         }

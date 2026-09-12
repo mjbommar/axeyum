@@ -185,6 +185,57 @@ fn an_unsupported_decline_carries_the_refusing_calls_message() {
     );
 }
 
+/// A script the parser cannot read is refused at ingest, and the trail's only
+/// `fd:parse` entry was the unconditional *probe* — which records that the
+/// stage RAN and never that it refused. A reader could not tell an ingest
+/// refusal from a parse that succeeded and handed a route the work.
+#[test]
+fn an_ingest_refusal_is_recorded_against_fd_parse() {
+    let _guard = RouteAttributionGuard::enable();
+    let outcome = solve_smtlib("(assert (", &config());
+    assert!(
+        outcome.is_err(),
+        "this fixture exists because ingest REFUSES it: {outcome:?}"
+    );
+    let parse: Vec<_> = last_route_attribution()
+        .attempts()
+        .iter()
+        .filter(|a| a.route == "fd:parse")
+        .map(|a| format!("{}", a.outcome))
+        .collect();
+    assert!(
+        parse.iter().any(|o| o.starts_with("declined")),
+        "`fd:parse` must record a DECLINE, not only its probe: {parse:?}"
+    );
+    assert!(
+        parse
+            .iter()
+            .any(|o| o.starts_with("declined (unsupported: ") && o.len() > 30),
+        "the decline must carry the parser's own message: {parse:?}"
+    );
+}
+
+/// The control for the test above: a script that parses records the probe and
+/// **no** `fd:parse` decline. Without this, recording a decline on every file
+/// would pass.
+#[test]
+fn a_parseable_script_records_no_fd_parse_decline() {
+    let _guard = RouteAttributionGuard::enable();
+    let outcome = solve_smtlib(DECIDED_SCRIPT, &config());
+    assert!(outcome.is_ok(), "control fixture must parse: {outcome:?}");
+    let trace = last_route_attribution();
+    let declined: Vec<_> = trace
+        .attempts()
+        .iter()
+        .filter(|a| a.route == "fd:parse" && matches!(a.outcome, RouteOutcome::Declined(_)))
+        .map(|a| a.route)
+        .collect();
+    assert!(
+        declined.is_empty(),
+        "a script that parsed must not carry an ingest refusal: {declined:?}"
+    );
+}
+
 /// The shape [`DeclineReason::UnsupportedDetail`] exists to make countable:
 /// two declines that are the same *kind* but not the same *information*.
 #[test]

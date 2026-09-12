@@ -344,10 +344,10 @@ use axeyum_solver::{
     EvidenceCheck, EvidenceReport, FrontDoorStats, FrontDoorStatsGuard, LazySmtCountersGuard,
     LiaCountersGuard, LiveInstruments, ProofProgress, RouteAttributionGuard, RouteTrace, Sampled,
     SolverConfig, SolverError, SpanLog, SpanLogInputs, Termination, UfArithOverboundStats,
-    UfArithOverboundStatsGuard, UfliaInterfaceCounters, UfliaInterfaceCountersGuard, UnknownKind,
-    UnknownReason, config_trace_line, division_from_path, install_live_instruments, instrument,
-    last_abv_stats, last_bv_layer_stats, last_dl_online_stats, last_euf_online_atom_stats,
-    last_front_door_stats, last_lazy_smt_counters, last_lia_counters, last_route_attribution,
+    UfArithOverboundStatsGuard, UfliaInterfaceCounters, UfliaInterfaceCountersGuard, UnknownReason,
+    config_trace_line, division_from_path, install_live_instruments, instrument, last_abv_stats,
+    last_bv_layer_stats, last_dl_online_stats, last_euf_online_atom_stats, last_front_door_stats,
+    last_lazy_smt_counters, last_lia_counters, last_route_attribution,
     last_uf_arith_overbound_stats, last_uflia_interface_counters, live_bv_layer_stats,
     live_config_trace_line, live_lazy_smt_counters, live_lia_counters, live_theory_layer_stats,
     produce_evidence_smtlib, solve_smtlib,
@@ -390,6 +390,31 @@ fn give_up_unknown_line(trace_mode: bool, reason: &UnknownReason) -> Option<Stri
 /// `None` off `--trace`, for the same reason as [`give_up_unknown_line`].
 fn give_up_error_line(trace_mode: bool, error: &SolverError) -> Option<String> {
     trace_mode.then(|| format!("; give-up kind=Error detail={error}"))
+}
+
+/// The `; give-up` line for a **watchdog kill**.
+///
+/// The third way this binary produces `unknown`, and the last one that said
+/// nothing on the line every aggregation reads. The worker thread did not
+/// return, so there is no [`CheckResult`] and therefore no
+/// `axeyum_solver::UnknownReason` to print — but the watchdog's own sentence
+/// ("watchdog fired before the worker thread returned", "failed to spawn the
+/// solver worker thread") is a derived reason and already reaches the
+/// `; partial …` header. It just never reached `; give-up`.
+///
+/// Measured 2026-09-11 over the 313 addressable-gap files across all eleven
+/// divisions in `bench-results/parity-details/`: **93 of the 264 `unknown`s
+/// take this path**, and every one printed a trace with no `; give-up` line —
+/// the whole remaining silent population after the dispatch-error and
+/// `Unsupported` repairs.
+///
+/// `kind=Watchdog` is a third token outside `axeyum_solver::UnknownKind`, for
+/// the reason [`give_up_error_line`] gives: a kill is not a classified solver
+/// give-up, and labelling it `Timeout` would make it indistinguishable from a
+/// route that noticed its own deadline and declined in good order. Those have
+/// different remedies.
+fn give_up_watchdog_line(reason: &str) -> String {
+    format!("; give-up kind=Watchdog detail={reason}")
 }
 
 /// Formats one `axeyum_cnf::ProofSearchProgress` snapshot as the `;`-prefixed
@@ -1047,6 +1072,25 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
             provenance.join(",")
         ),
     );
+    lines
+}
+
+/// [`watchdog_trace_lines`] with the `; give-up` line in front — what `main`
+/// actually prints on a kill.
+///
+/// Kept as a wrapper rather than an insert inside `watchdog_trace_lines`
+/// because that function's first line is its own `; partial …` header and three
+/// existing tests pin it there; the give-up line belongs in front of the whole
+/// block, exactly where the decided path puts it.
+fn watchdog_trace_lines_with_give_up(
+    trace_mode: bool,
+    board: &LiveInstruments,
+    reason: &str,
+) -> Vec<String> {
+    let mut lines = watchdog_trace_lines(trace_mode, board, reason);
+    if trace_mode {
+        lines.insert(0, give_up_watchdog_line(reason));
+    }
     lines
 }
 
@@ -2002,7 +2046,7 @@ fn main() -> ExitCode {
             Err(_) => (
                 "unknown",
                 None,
-                watchdog_trace_lines(
+                watchdog_trace_lines_with_give_up(
                     trace_mode,
                     &board,
                     "watchdog fired before the worker thread returned",
@@ -2027,7 +2071,7 @@ fn main() -> ExitCode {
         Err(_) => (
             "unknown",
             None,
-            watchdog_trace_lines(
+            watchdog_trace_lines_with_give_up(
                 trace_mode,
                 &board,
                 "failed to spawn the solver worker thread",
@@ -2079,6 +2123,8 @@ fn main() -> ExitCode {
 
 #[cfg(test)]
 mod tests {
+    use axeyum_solver::UnknownKind;
+
     use super::*;
 
     // ---------------------------------------------------------------------
@@ -2286,9 +2332,52 @@ mod tests {
             Vec::<String>::new(),
             "a default (non-trace) run's output must stay byte-identical"
         );
+        // The fallback lines are unchanged and still follow, but the run is an
+        // `unknown` and now says so on the line an aggregation reads.
         assert_eq!(
             watchdog_trace_lines(true, &board, "watchdog fired"),
             watchdog_unavailable_line(true, "watchdog fired"),
+        );
+        // The wrapper `main` uses adds the give-up line in front and leaves the
+        // fallback block byte-identical behind it.
+        let printed = watchdog_trace_lines_with_give_up(true, &board, "watchdog fired");
+        assert_eq!(printed[0], "; give-up kind=Watchdog detail=watchdog fired");
+        assert_eq!(
+            printed[1..],
+            watchdog_unavailable_line(true, "watchdog fired")[..],
+        );
+    }
+
+    /// A watchdog kill is the third way this binary answers `unknown`, and it
+    /// was the last one that printed no `; give-up` line: there is no
+    /// `CheckResult` on this path, so there is no `UnknownReason` to format.
+    /// Measured on 93 of the 264 `unknown`s across the eleven parity divisions.
+    #[test]
+    fn a_watchdog_kill_says_why_on_the_give_up_line() {
+        let board = LiveInstruments::new();
+        for reason in [
+            "watchdog fired before the worker thread returned",
+            "failed to spawn the solver worker thread",
+        ] {
+            let lines = watchdog_trace_lines_with_give_up(true, &board, reason);
+            let give_up = lines
+                .iter()
+                .find(|l| l.starts_with("; give-up "))
+                .unwrap_or_else(|| panic!("no give-up line for {reason:?}: {lines:?}"));
+            assert!(
+                give_up.contains(reason),
+                "the line must carry the watchdog's OWN sentence: {give_up}"
+            );
+            assert!(
+                give_up.contains("kind=Watchdog"),
+                "a kill must not be reported under a kind that means a route \
+                 declined in good order: {give_up}"
+            );
+        }
+        // The control: off `--trace` this path stays byte-identical.
+        assert_eq!(
+            watchdog_trace_lines_with_give_up(false, &board, "watchdog fired"),
+            Vec::<String>::new()
         );
     }
 
