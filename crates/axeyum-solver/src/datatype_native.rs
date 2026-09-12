@@ -389,7 +389,7 @@ fn construct_of(arena: &TermArena, term: TermId) -> Option<ConstructorId> {
 /// to the field itself, so this pass sees exactly the residue: the case SMT-LIB
 /// leaves UNSPECIFIED. Before this pass such a term reached `expect_dt_symbol`
 /// and the whole query was refused — measured 2026-09-12, the single most common
-/// blocker in the QF_DT parity list.
+/// blocker in the `QF_DT` parity list.
 ///
 /// Soundness. The fresh variable is unconstrained, so the rewritten query's
 /// model space CONTAINS the original's under every selector interpretation
@@ -830,6 +830,7 @@ fn build_dt_eq(
         .map_err(|e| SolverError::Backend(e.to_string()))?;
     for (j, (lrow, rrow)) in left.fields.iter().zip(&right.fields).enumerate() {
         let mut fields_eq = arena.bool_const(true);
+        let mut any_field = false;
         for (lf, rf) in lrow.iter().zip(rrow) {
             let (Some(lf), Some(rf)) = (lf, rf) else {
                 continue;
@@ -842,6 +843,17 @@ fn build_dt_eq(
             fields_eq = arena
                 .and(fields_eq, fe)
                 .map_err(|e| SolverError::Backend(e.to_string()))?;
+            any_field = true;
+        }
+        if !any_field {
+            // A constructor with no EXPANDED field (a nullary one, or one whose
+            // fields are all datatype-typed) contributes `tag_l != j OR true`.
+            // Emitting it is not merely redundant: a pure enum has one such
+            // constructor PER VALUE -- the `vlsat3` family declares hundreds --
+            // so every equality grew by that many conjuncts and two files that
+            // decided in under 24 s stopped deciding at all. Measured on the
+            // QF_DT parity list, 2026-09-12.
+            continue;
         }
         let tag_j = arena
             .bv_const(left.tag_width, j as u128)
@@ -887,11 +899,7 @@ fn project_and_replay(
     // evaluate those reads with `well_founded_default` and reject every model
     // that used a different value, which is the whole class of query this change
     // exists to decide.
-    if let Some(reason) =
-        register_select_witnesses(arena, scan, layout, witnesses, &mut assignment)?
-    {
-        return Ok(CheckResult::Unknown(reason));
-    }
+    register_select_witnesses(arena, scan, layout, links, witnesses, &mut assignment);
 
     // Replay against the original assertions. For the *relaxed* (traversal) path
     // a free child may not match the wrong-constructor default, so a replay
@@ -936,8 +944,8 @@ fn project_and_replay(
 }
 
 /// Folds the candidate model's choices for every WRONG-CONSTRUCTOR selector read
-/// into a single selector interpretation on `assignment`, or reports the
-/// congruence conflict that makes the candidate unusable.
+/// into a single selector interpretation on `assignment`, which the `sat` replay
+/// then evaluates the original assertions under.
 ///
 /// Two sources, both of them values the search chose freely:
 ///
@@ -951,20 +959,54 @@ fn project_and_replay(
 /// so it is a genuine function of the value and therefore congruent: two
 /// syntactically different operands that denote the same value get the same
 /// answer, which is exactly what SMT-LIB requires of an unspecified selector and
-/// what the relaxation above does NOT enforce on its own. When the candidate
-/// asks for two different answers at one key it does not describe any
-/// interpretation, so the result is `unknown` — never a verdict.
+/// what the relaxation above does NOT enforce on its own.
 ///
-/// # Errors
+/// **A conflict is recorded, not rejected, and this is deliberate.** When the
+/// candidate wants two different results at one key the FIRST stands, which
+/// still leaves a total congruent interpretation -- and the replay against the
+/// original assertions then decides under it. Rejecting the candidate here
+/// instead would be a second, weaker checker in front of the real one: it can
+/// only turn a `sat` the replay would have confirmed into an `unknown`, never
+/// catch anything the replay misses. Mutation-checked: disabling the conflict
+/// arm of `set_dt_select_witness` killed no test, because the replay was
+/// already deciding every case it covered.
 ///
-/// [`SolverError::Backend`] if evaluating an abstracted site's operand fails.
 fn register_select_witnesses(
     arena: &TermArena,
     scan: &Scan,
     layout: &BTreeMap<SymbolId, SymVars>,
+    links: &Links,
     witnesses: &[WitnessSite],
     assignment: &mut axeyum_ir::Assignment,
-) -> Result<Option<UnknownReason>, SolverError> {
+) {
+    // A TRAVERSED DATATYPE FIELD read off the wrong constructor. `project_slot`
+    // fills a slot's fields from the ACTIVE constructor's row only, so when the
+    // parent's tag is not `ctor_idx` the child variable's value is dropped and
+    // the replay falls back to `well_founded_default` -- which is exactly the
+    // mismatch the `relaxed` path reported as "the traversed-field relaxation is
+    // incomplete here" (19 of 74 remaining QF_DT unknowns, measured 2026-09-12).
+    // The child IS the model's chosen value for that read; record it.
+    for (&(sym, ctor_idx, field_idx), &child) in links {
+        let Some(operand @ Value::Datatype { constructor, .. }) = assignment.get(sym) else {
+            continue;
+        };
+        let Some(&dt) = scan.dt_symbols.get(&sym) else {
+            continue;
+        };
+        let Some(entry) = scan.layouts[&dt].get(ctor_idx) else {
+            continue;
+        };
+        let link_ctor = entry.0;
+        if constructor == link_ctor {
+            continue;
+        }
+        let Some(value) = assignment.get(child) else {
+            continue;
+        };
+        let index = u32::try_from(field_idx).unwrap_or(u32::MAX);
+        assignment.set_dt_select_witness(link_ctor, index, operand, value);
+    }
+
     for site in &scan.selects {
         let Some(operand @ Value::Datatype { constructor, .. }) = assignment.get(site.symbol)
         else {
@@ -983,25 +1025,17 @@ fn register_select_witnesses(
             continue;
         };
         let index = u32::try_from(site.field_index).unwrap_or(u32::MAX);
-        if !assignment.set_dt_select_witness(site_ctor, index, operand, value) {
-            return Ok(Some(witness_conflict()));
-        }
+        assignment.set_dt_select_witness(site_ctor, index, operand, value);
     }
 
     // `witnesses` is ordered by operand id, so an operand that itself reads an
     // abstracted selector sees that entry already recorded.
     for site in witnesses {
-        let operand = match eval(arena, site.operand, assignment) {
-            Ok(value) => value,
-            Err(error) => {
-                return Ok(Some(UnknownReason {
-                    kind: UnknownKind::Incomplete,
-                    detail: format!(
-                        "could not evaluate the operand of an unspecified selector read \
-                         while checking the candidate model: {error}"
-                    ),
-                }));
-            }
+        // An operand that cannot be evaluated (an unbound symbol, say) simply
+        // gets no entry: the replay below then reads the total convention's
+        // default there and fails if that is not what the search assumed.
+        let Ok(operand) = eval(arena, site.operand, assignment) else {
+            continue;
         };
         let value = match assignment.get(site.witness) {
             Some(value) => value,
@@ -1012,22 +1046,7 @@ fn register_select_witnesses(
                 None => continue,
             },
         };
-        if !assignment.set_dt_select_witness(site.constructor, site.index, operand, value) {
-            return Ok(Some(witness_conflict()));
-        }
-    }
-    Ok(None)
-}
-
-/// The `unknown` a congruence conflict produces (see
-/// [`register_select_witnesses`]).
-fn witness_conflict() -> UnknownReason {
-    UnknownReason {
-        kind: UnknownKind::Incomplete,
-        detail: "the candidate model reads one unspecified selector at one operand value \
-                 with two different results, so it describes no selector interpretation \
-                 (ADR-1930)"
-            .to_owned(),
+        assignment.set_dt_select_witness(site.constructor, site.index, operand, value);
     }
 }
 

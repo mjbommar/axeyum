@@ -14,6 +14,11 @@ use crate::sort::{ArraySortKey, Sort, mask};
 use crate::term::{ConstructorId, DatatypeId, FuncId, Op, SymbolId, TermId, TermNode};
 use crate::value::{ArrayValue, FuncValue, GenericArrayValue, Value, canonicalize_for_sort};
 
+/// One recorded wrong-constructor selector interpretation:
+/// `(the selector's constructor, the field index, the operand's value, the
+/// value the model chose)`. See [`Assignment::set_dt_select_witness`].
+pub type DtSelectWitness = (ConstructorId, u32, Value, Value);
+
 /// A binding of symbols to concrete values (and uninterpreted functions to
 /// interpretations), used as evaluator input.
 #[derive(Debug, Clone, Default)]
@@ -56,14 +61,14 @@ pub struct Assignment {
     ///
     /// A `Vec` rather than a map: one entry per distinct wrong-constructor
     /// selector *result* a query actually forces (single digits to low hundreds
-    /// in the measured QF_DT corpus), lookup is a linear scan, and insertion
+    /// in the measured `QF_DT` corpus), lookup is a linear scan, and insertion
     /// order is deterministic — which a `FastMap` iteration would not be.
     #[allow(
         clippy::box_collection,
         reason = "deliberate: keeps `Assignment` (embedded in downstream error \
                   types) at one extra word instead of a full inline Vec"
     )]
-    dt_select_wrong_ctor: Option<Box<Vec<(ConstructorId, u32, Value, Value)>>>,
+    dt_select_wrong_ctor: Option<Box<Vec<DtSelectWitness>>>,
 }
 
 impl Assignment {

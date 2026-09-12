@@ -1,6 +1,9 @@
 //! Models: satisfying assignments keyed by Axeyum symbols.
 
-use axeyum_ir::{Assignment, ConstructorId, FuncId, FuncValue, Rational, SortId, SymbolId, Value};
+use axeyum_ir::{
+    Assignment, ConstructorId, DtSelectWitness, FuncId, FuncValue, Rational, SortId, SymbolId,
+    Value,
+};
 
 // Certificate DATA only, and from ONE module. Importing these through the
 // crate-root facade resolved them to their five CHECKER modules; two of those
@@ -58,7 +61,13 @@ pub struct Model {
     /// ascending `TermId`. An empty list is exactly the total
     /// `well_founded_default` evaluator convention. Mirrors
     /// [`Assignment::set_dt_select_witness`].
-    dt_select_wrong_ctor: Vec<(ConstructorId, u32, Value, Value)>,
+    #[allow(
+        clippy::box_collection,
+        reason = "deliberate: `Model` is carried inside `CheckResult`, which is an \
+                  Err payload in several signatures, so an inline Vec here costs \
+                  every one of them three words and trips `clippy::result_large_err`"
+    )]
+    dt_select_wrong_ctor: Option<Box<Vec<DtSelectWitness>>>,
     /// Declared finite carrier size per uninterpreted sort (finite model
     /// finding, pure UF). An entry `(s, k)` asserts this model is a structure
     /// whose carrier for `s` is exactly the canonical token domain `0..k`;
@@ -165,13 +174,13 @@ impl Model {
         operand: Value,
         value: Value,
     ) -> bool {
-        for (c, i, key, recorded) in &self.dt_select_wrong_ctor {
+        let entries = self.dt_select_wrong_ctor.get_or_insert_with(Box::default);
+        for (c, i, key, recorded) in entries.iter() {
             if *c == constructor && *i == index && *key == operand {
                 return *recorded == value;
             }
         }
-        self.dt_select_wrong_ctor
-            .push((constructor, index, operand, value));
+        entries.push((constructor, index, operand, value));
         true
     }
 
@@ -182,6 +191,7 @@ impl Model {
     ) -> impl Iterator<Item = (ConstructorId, u32, &Value, &Value)> + '_ {
         self.dt_select_wrong_ctor
             .iter()
+            .flat_map(|entries| entries.iter())
             .map(|(c, i, key, value)| (*c, *i, key, value))
     }
 
@@ -496,8 +506,8 @@ impl Model {
         for &(n, q) in &self.real_div_zero {
             asg.set_real_div_zero(n, q);
         }
-        for (constructor, index, operand, value) in &self.dt_select_wrong_ctor {
-            asg.set_dt_select_witness(*constructor, *index, operand.clone(), value.clone());
+        for (constructor, index, operand, value) in self.dt_select_witnesses() {
+            asg.set_dt_select_witness(constructor, index, operand.clone(), value.clone());
         }
         asg
     }
