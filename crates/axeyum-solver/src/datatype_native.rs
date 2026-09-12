@@ -126,13 +126,7 @@ pub fn check_with_datatype_native(
         // first-class `unknown` it is entitled to. Refusing here is the fence
         // that makes the ADR-1920 gate lift safe for shapes the arm above does
         // not name individually.
-        if let Some(term) = first_datatype_sorted(arena, &unfolded) {
-            let _ = term;
-            return Err(unsupported(
-                "a datatype-sorted term survives tag/field expansion with no datatype \
-                 variable to expand (the dispatcher would route it straight back here)",
-            ));
-        }
+        refuse_if_datatype_survives(arena, &unfolded)?;
         return solve(arena, &unfolded, config);
     }
 
@@ -181,6 +175,15 @@ pub fn check_with_datatype_native(
     }
     reduced.extend(extra);
 
+    // The SAME termination guard as the `dt_symbols.is_empty()` branch above,
+    // and it is NOT redundant: `replacements` only covers the `is`/`select`/`==`
+    // sites the scan collected, so a datatype-sorted symbol reached only through
+    // some other op (an array `store`, say) is never rewritten and survives into
+    // `reduced` even when `dt_symbols` is NON-empty. Measured 2026-09-12 on
+    // AUFDTLIRA/20200306-Kanig/spark2014bench/P518-021__frame_for_max__…: a
+    // 22 KB file that still overflowed the stack with a 1 GiB stack, i.e. an
+    // unbounded cycle, not a deep term.
+    refuse_if_datatype_survives(arena, &reduced)?;
     let result = solve(arena, &reduced, config)?;
     let CheckResult::Sat(model) = result else {
         // `unsat`/`unknown` transfer: the reduction (exact scalar fields,
@@ -438,10 +441,40 @@ fn is_datatype_sorted(arena: &TermArena, term: TermId) -> bool {
     matches!(arena.sort_of(term), Sort::Datatype(_))
 }
 
-/// The first datatype-sorted subterm reachable from `roots`, if any.
+/// TERMINATION GUARD (ADR-1920): refuse rather than hand a still-datatype-carrying
+/// assertion set back to the dispatcher.
 ///
-/// Used only by the termination guard: a residual carrying one of these cannot
-/// be handed back to the dispatcher (see the call site).
+/// `check_auto_dispatch` diverts on the *sort* `Sort::Datatype(_)`, not on a
+/// datatype operator, and every branch of that diversion returns — so a residual
+/// that still carries a datatype-sorted term comes straight back into this
+/// function with the same input, forever. The dispatcher also recomputes its
+/// deadline on each entry, so `config.timeout` cannot break the cycle; the
+/// observed failure is a stack overflow and a SIGABRT, which a harness reads as
+/// a crash rather than the first-class `unknown` the query is entitled to.
+///
+/// # Errors
+///
+/// [`SolverError::Unsupported`] if any term reachable from `roots` has a
+/// datatype sort.
+fn refuse_if_datatype_survives(arena: &TermArena, roots: &[TermId]) -> Result<(), SolverError> {
+    if first_datatype_sorted(arena, roots).is_some() {
+        return Err(unsupported(
+            "a datatype-sorted term survives tag/field expansion with nothing left to \
+             expand it (the dispatcher would route it straight back here)",
+        ));
+    }
+    Ok(())
+}
+
+/// The first subterm reachable from `roots` whose sort MENTIONS a datatype.
+///
+/// Deliberately wider than [`is_datatype_sorted`]: the dispatcher diverts on
+/// `Features::note_sort`, which recurses into an array's component sorts, so an
+/// `(Array Int Color)` term sets `has_datatype` while having sort `Array`. A
+/// guard that tested only `Sort::Datatype(_)` let exactly that residual through
+/// and the cycle came back — measured, after the first two guards were already
+/// in place (ADR-1920). The guards and the divert condition must be the same
+/// predicate, so both call [`sort_mentions_datatype`].
 fn first_datatype_sorted(arena: &TermArena, roots: &[TermId]) -> Option<TermId> {
     let mut seen = BTreeSet::new();
     let mut stack: Vec<TermId> = roots.to_vec();
@@ -449,7 +482,7 @@ fn first_datatype_sorted(arena: &TermArena, roots: &[TermId]) -> Option<TermId> 
         if !seen.insert(term) {
             continue;
         }
-        if is_datatype_sorted(arena, term) {
+        if crate::datatype_elim::sort_mentions_datatype(arena.sort_of(term)) {
             return Some(term);
         }
         if let TermNode::App { args, .. } = arena.node(term) {

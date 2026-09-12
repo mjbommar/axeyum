@@ -149,6 +149,49 @@ fn terminates_on_an_array_of_datatypes() {
     );
 }
 
+#[test]
+fn terminates_on_an_array_of_datatypes_with_no_datatype_sorted_term() {
+    // A THIRD instance of the same cycle, and the one that survived the first
+    // two guards. `(not (= a b))` over two `(Array Int Color)` constants has
+    // **no term of sort `Sort::Datatype(_)` anywhere** — the arrays have sort
+    // `Array`. But `Features::note_sort` recurses into an array's component
+    // sorts, so the dispatcher still diverts on `has_datatype`, while both the
+    // route's "is there datatype content" scan and the first version of the
+    // termination guard tested only `Sort::Datatype(_)` on the term itself and
+    // said no. Divert-yes plus content-no is exactly the cycle.
+    //
+    // Measured 2026-09-12 on a real 22 KB AUFDTLIRA benchmark
+    // (`spark2014bench/P518-021__frame_for_max__…`): it still overflowed a
+    // **1 GiB** stack, so an unbounded cycle rather than a deep term. The fix
+    // is that the guards and the divert condition now share ONE predicate,
+    // `sort_mentions_datatype`.
+    //
+    // This test is distinct from `terminates_on_an_array_of_datatypes`: that
+    // one carries a datatype-sorted `o` inside a `store`, which the narrower
+    // predicate already caught. Revert the widening and only THIS one dies.
+    let mut arena = TermArena::new();
+    let (dt, _, _) = color(&mut arena);
+    let arr = Sort::Array {
+        index: ArraySortKey::Int,
+        element: ArraySortKey::Datatype(dt),
+    };
+    let left = var_of(&mut arena, "a", arr);
+    let right = var_of(&mut arena, "b", arr);
+    assert!(
+        !matches!(arena.sort_of(left), Sort::Datatype(_))
+            && !matches!(arena.sort_of(right), Sort::Datatype(_)),
+        "the point of this fixture is that NO term has sort Datatype"
+    );
+    let same = arena.eq(left, right).expect("eq");
+    let differ = arena.not(same).expect("not");
+
+    let got = solve(&mut arena, &[differ], &cfg());
+    assert!(
+        !matches!(got, Ok(CheckResult::Unsat)),
+        "WRONG UNSAT: two unconstrained arrays can differ: {got:?}"
+    );
+}
+
 // ------------------------------------------------------------- soundness
 //
 // These are the tests that would catch the failure the ADR is not allowed to
