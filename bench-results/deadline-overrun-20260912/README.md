@@ -12,7 +12,7 @@ That mattered: the box ran at load 14–16 throughout.
 | QF_UFLIA | **+5** | 0 | 0 |
 | QF_UFLRA | **+2** | 0 | 0 |
 | QF_LRA | 0 | 0 | 0 |
-| regression control (arith, already-decided) | n/a | 0 real | 0 |
+| regression control (arith, already-decided, **677 files, complete**) | n/a | **0 real** (1 flake, proven) | **0** |
 
 Both converted QF_UFLRA files agree with z3, cvc5 **and** their declared
 `:status` (`Problem01_00` and `Problem02_10`, both `unsat`).
@@ -71,7 +71,7 @@ last entry names a route that had already returned. Lane `WATCHDOG-RESIDUAL`
 | `uflra-ab-serial.tsv` | 41 | the serial board-order arm, includes both converts |
 | `uflia-ab.tsv` | 199 | QF_UFLIA, the +5 |
 | `lra-ab.tsv` | 199 | QF_LRA, the +0 |
-| `regression-control.tsv` | 193 | already-decided arithmetic files, slowest-first |
+| `regression-control.tsv` | **677** | already-decided arithmetic files, slowest-first — COMPLETE: 395 `sat>sat`, 251 `unsat>unsat`, 29 `unknown>unknown`, 1 flake, 0 flips |
 
 Columns are `file, before, before_s, after, after_s` (the board-order arm carries
 a header row; the sharded arms do not).
