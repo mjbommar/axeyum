@@ -27,40 +27,42 @@ fn cfg() -> SolverConfig {
 }
 
 /// `Color = red | green` — a finite enum, no fields.
-fn color(a: &mut TermArena) -> (DatatypeId, ConstructorId, ConstructorId) {
-    let d = a.declare_datatype("Color");
-    let red = a.add_constructor(d, "red", &[]);
-    let green = a.add_constructor(d, "green", &[]);
-    (d, red, green)
+fn color(arena: &mut TermArena) -> (DatatypeId, ConstructorId, ConstructorId) {
+    let dt = arena.declare_datatype("Color");
+    let red = arena.add_constructor(dt, "red", &[]);
+    let green = arena.add_constructor(dt, "green", &[]);
+    (dt, red, green)
 }
 
 /// `Box = mk(v : Int)`.
-fn boxed(a: &mut TermArena) -> (DatatypeId, ConstructorId) {
-    let d = a.declare_datatype("Box");
-    let mk = a.add_constructor(d, "mk", &[("v".to_owned(), Sort::Int)]);
-    (d, mk)
+fn boxed(arena: &mut TermArena) -> (DatatypeId, ConstructorId) {
+    let dt = arena.declare_datatype("Box");
+    let mk = arena.add_constructor(dt, "mk", &[("v".to_owned(), Sort::Int)]);
+    (dt, mk)
 }
 
-fn var_of(a: &mut TermArena, name: &str, sort: Sort) -> TermId {
-    let s = a.declare(name, sort).expect("declare");
-    a.var(s)
+fn var_of(arena: &mut TermArena, name: &str, sort: Sort) -> TermId {
+    let sym = arena.declare(name, sort).expect("declare");
+    arena.var(sym)
 }
 
 // ---------------------------------------------------------------- the gate
 
 #[test]
 fn gate_admits_a_datatype_parameter() {
-    let mut a = TermArena::new();
-    let (d, _, _) = color(&mut a);
-    a.declare_fun("p", &[Sort::Datatype(d)], Sort::Bool)
+    let mut arena = TermArena::new();
+    let (dt, _, _) = color(&mut arena);
+    arena
+        .declare_fun("p", &[Sort::Datatype(dt)], Sort::Bool)
         .expect("a datatype parameter is admitted (ADR-1920)");
 }
 
 #[test]
 fn gate_admits_a_datatype_result() {
-    let mut a = TermArena::new();
-    let (d, _) = boxed(&mut a);
-    a.declare_fun("f", &[Sort::Int], Sort::Datatype(d))
+    let mut arena = TermArena::new();
+    let (dt, _) = boxed(&mut arena);
+    arena
+        .declare_fun("f", &[Sort::Int], Sort::Datatype(dt))
         .expect("a datatype result is admitted (ADR-1920)");
 }
 
@@ -69,8 +71,8 @@ fn gate_still_rejects_a_sequence_parameter() {
     // What ADR-1920 deliberately did NOT open. No lane has measured sequences
     // end to end, so they keep the declaration-time refusal. If this test ever
     // fails, someone widened the gate without the measurement.
-    let mut a = TermArena::new();
-    let err = a
+    let mut arena = TermArena::new();
+    let err = arena
         .declare_fun("q", &[Sort::Seq(ArraySortKey::BitVec(8))], Sort::Bool)
         .expect_err("a sequence parameter is still rejected");
     assert!(
@@ -81,8 +83,8 @@ fn gate_still_rejects_a_sequence_parameter() {
 
 #[test]
 fn gate_still_rejects_a_sequence_result() {
-    let mut a = TermArena::new();
-    let err = a
+    let mut arena = TermArena::new();
+    let err = arena
         .declare_fun("q", &[Sort::Int], Sort::Seq(ArraySortKey::BitVec(8)))
         .expect_err("a sequence result is still rejected");
     assert!(
@@ -102,15 +104,15 @@ fn terminates_on_a_uf_applied_to_a_datatype_variable() {
     // survives into the residual, and the residual routes straight back. The
     // dispatcher also recomputes its deadline on every entry, so the timeout
     // cannot break the cycle.
-    let mut a = TermArena::new();
-    let (d, _, _) = color(&mut a);
-    let p = a
-        .declare_fun("p", &[Sort::Datatype(d)], Sort::Bool)
+    let mut arena = TermArena::new();
+    let (dt, _, _) = color(&mut arena);
+    let pred = arena
+        .declare_fun("p", &[Sort::Datatype(dt)], Sort::Bool)
         .expect("declare p");
-    let o = var_of(&mut a, "o", Sort::Datatype(d));
-    let t = a.apply(p, &[o]).expect("apply");
+    let obj = var_of(&mut arena, "o", Sort::Datatype(dt));
+    let app = arena.apply(pred, &[obj]).expect("apply");
 
-    let got = solve(&mut a, &[t], &cfg());
+    let got = solve(&mut arena, &[app], &cfg());
     assert!(
         matches!(got, Err(SolverError::Unsupported(_))),
         "expected a clean Unsupported, got {got:?}"
@@ -125,22 +127,22 @@ fn terminates_on_an_array_of_datatypes() {
     // the pre-change binary with a stack overflow. This is what makes the
     // termination guard in `datatype_native` a live check and not a fence
     // around a case the `Op::Apply` arm already catches.
-    let mut a = TermArena::new();
-    let (d, _, _) = color(&mut a);
+    let mut arena = TermArena::new();
+    let (dt, _, _) = color(&mut arena);
     let arr = Sort::Array {
         index: ArraySortKey::Int,
-        element: ArraySortKey::Datatype(d),
+        element: ArraySortKey::Datatype(dt),
     };
-    let x = var_of(&mut a, "a", arr);
-    let y = var_of(&mut a, "b", arr);
-    let o = var_of(&mut a, "o", Sort::Datatype(d));
-    let one = a.int_const(1);
-    let st = a.store(y, one, o).expect("store");
-    let e1 = a.eq(x, st).expect("eq");
-    let e2 = a.eq(x, y).expect("eq");
-    let ne = a.not(e2).expect("not");
+    let left = var_of(&mut arena, "a", arr);
+    let right = var_of(&mut arena, "b", arr);
+    let obj = var_of(&mut arena, "o", Sort::Datatype(dt));
+    let one = arena.int_const(1);
+    let stored = arena.store(right, one, obj).expect("store");
+    let same_store = arena.eq(left, stored).expect("eq");
+    let same_array = arena.eq(left, right).expect("eq");
+    let differ = arena.not(same_array).expect("not");
 
-    let got = solve(&mut a, &[e1, ne], &cfg());
+    let got = solve(&mut arena, &[same_store, differ], &cfg());
     assert!(
         matches!(got, Err(SolverError::Unsupported(_))),
         "expected a clean Unsupported, got {got:?}"
@@ -158,19 +160,19 @@ fn terminates_on_an_array_of_datatypes() {
 fn sound_congruence_over_a_datatype_argument_is_never_sat() {
     // `x = y /\ p(x) /\ not p(y)` is UNSAT by congruence. A `sat` would mean we
     // built a model where a function disagrees with itself.
-    let mut a = TermArena::new();
-    let (d, _, _) = color(&mut a);
-    let p = a
-        .declare_fun("p", &[Sort::Datatype(d)], Sort::Bool)
+    let mut arena = TermArena::new();
+    let (dt, _, _) = color(&mut arena);
+    let pred = arena
+        .declare_fun("p", &[Sort::Datatype(dt)], Sort::Bool)
         .expect("declare p");
-    let x = var_of(&mut a, "x", Sort::Datatype(d));
-    let y = var_of(&mut a, "y", Sort::Datatype(d));
-    let eq = a.eq(x, y).expect("eq");
-    let px = a.apply(p, &[x]).expect("apply");
-    let py = a.apply(p, &[y]).expect("apply");
-    let npy = a.not(py).expect("not");
+    let lhs = var_of(&mut arena, "x", Sort::Datatype(dt));
+    let rhs = var_of(&mut arena, "y", Sort::Datatype(dt));
+    let same = arena.eq(lhs, rhs).expect("eq");
+    let p_lhs = arena.apply(pred, &[lhs]).expect("apply");
+    let p_rhs = arena.apply(pred, &[rhs]).expect("apply");
+    let not_p_rhs = arena.not(p_rhs).expect("not");
 
-    let got = solve(&mut a, &[eq, px, npy], &cfg());
+    let got = solve(&mut arena, &[same, p_lhs, not_p_rhs], &cfg());
     assert!(
         !matches!(got, Ok(CheckResult::Sat(_))),
         "WRONG SAT on a congruence-unsat query: {got:?}"
@@ -182,18 +184,18 @@ fn sound_distinct_constructors_are_never_merged() {
     // `p(red) /\ not p(green)` is SAT: red and green are distinct, so there is
     // no congruence conflict. An `unsat` would mean two distinct constructors
     // were merged — the classic datatype soundness bug.
-    let mut a = TermArena::new();
-    let (d, red, green) = color(&mut a);
-    let p = a
-        .declare_fun("p", &[Sort::Datatype(d)], Sort::Bool)
+    let mut arena = TermArena::new();
+    let (dt, red, green) = color(&mut arena);
+    let pred = arena
+        .declare_fun("p", &[Sort::Datatype(dt)], Sort::Bool)
         .expect("declare p");
-    let r = a.construct(red, &[]).expect("red");
-    let g = a.construct(green, &[]).expect("green");
-    let pr = a.apply(p, &[r]).expect("apply");
-    let pg = a.apply(p, &[g]).expect("apply");
-    let npg = a.not(pg).expect("not");
+    let red_t = arena.construct(red, &[]).expect("red");
+    let green_t = arena.construct(green, &[]).expect("green");
+    let holds_of_red = arena.apply(pred, &[red_t]).expect("apply");
+    let holds_of_green = arena.apply(pred, &[green_t]).expect("apply");
+    let fails_of_green = arena.not(holds_of_green).expect("not");
 
-    let got = solve(&mut a, &[pr, npg], &cfg());
+    let got = solve(&mut arena, &[holds_of_red, fails_of_green], &cfg());
     assert!(
         !matches!(got, Ok(CheckResult::Unsat)),
         "WRONG UNSAT: two distinct constructors were merged: {got:?}"
@@ -207,20 +209,20 @@ fn sound_congruence_through_a_datatype_result_is_unsat() {
     // fragment actually DECIDES, so it is the positive control for the
     // result-sort half of the lift: without it every assertion in this file
     // would be satisfied by a route that refuses everything.
-    let mut a = TermArena::new();
-    let (d, mk) = boxed(&mut a);
-    let f = a
-        .declare_fun("f", &[Sort::Int], Sort::Datatype(d))
+    let mut arena = TermArena::new();
+    let (dt, mk) = boxed(&mut arena);
+    let func = arena
+        .declare_fun("f", &[Sort::Int], Sort::Datatype(dt))
         .expect("declare f");
-    let one = a.int_const(1);
-    let fa = a.apply(f, &[one]).expect("apply");
-    let sel = a.dt_select(mk, 0, fa).expect("select");
-    let five = a.int_const(5);
-    let six = a.int_const(6);
-    let e5 = a.eq(sel, five).expect("eq");
-    let e6 = a.eq(sel, six).expect("eq");
+    let one = arena.int_const(1);
+    let applied = arena.apply(func, &[one]).expect("apply");
+    let field = arena.dt_select(mk, 0, applied).expect("select");
+    let five = arena.int_const(5);
+    let six = arena.int_const(6);
+    let is_five = arena.eq(field, five).expect("eq");
+    let is_six = arena.eq(field, six).expect("eq");
 
-    let got = solve(&mut a, &[e5, e6], &cfg());
+    let got = solve(&mut arena, &[is_five, is_six], &cfg());
     assert!(
         matches!(got, Ok(CheckResult::Unsat)),
         "expected unsat, got {got:?}"
