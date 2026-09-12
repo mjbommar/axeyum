@@ -190,3 +190,74 @@ The board (s6, idle, pinned) and this census (s4, load 13–23) agree closely pe
 file where it matters: the seven rows the board timed at 24.1–25.1 s are the
 same rows this census timed at 24.0–24.7 s. So the budget-expiry rows are real
 and not an artifact of this box's load.
+
+## The A/B — 200 files, interleaved, both arms on the same core set
+
+`ab-200.tsv`. Both arms run **back to back on the same file and the same cores**
+(`taskset -c 0-7`, the P-core threads on this hybrid CPU), with the **arm order
+alternating** per file — 100 base-first, 100 treat-first — so a monotone drift in
+machine load cannot land systematically on one arm. 24 s budget both arms, one
+process each, inside a 180 s wall; `rc` is `timeout`'s own status, read from the
+command substitution and not from `$?` after a pipeline. Box idle (load 0.8–3)
+for this run. Binaries differ by sha256 (`34dc447d…` base, `a52d8756…` treat).
+
+| | base | treat |
+|---|---:|---:|
+| decided | **117 / 200** | **117 / 200** |
+| gains (`unknown` → decided) | — | **0** |
+| losses (decided → `unknown`) | — | **0** |
+| flips (`sat` ↔ `unsat`) | — | **0** |
+| runs killed by the wall | 0 of 200 | 0 of 200 |
+| total wall | 1,092.0 s | 1,210.9 s (**+10.9%**) |
+
+The base arm reproduces the board's QF_NRA row **exactly** (117/200), which is
+what makes the comparison mean anything.
+
+**Disagreements: 0.** Every decided verdict on both arms was checked against the
+file's declared `:status` (116 of the 117 declare one) and against both
+reference columns (233 reference checks). No verdict contradicts a declared
+status or either reference.
+
+### So the fix decides nothing, and that is the finding
+
+The largest named cause of this division's gap — 26% of it — was a defect, and
+repairing it moves **zero** files. An error and an `unknown` are both "not
+decided" to a scorer, and the routes that ran after the error was removed do not
+decide these queries either. What the repair buys is a correct reason on 20
+files, one dispatch instead of two on those files, and a `Timeout` class that
+can be read at all.
+
+The cost is **+10.9% wall**, concentrated exactly where predicted: the files
+that used to abort early now run the relaxation to its fixpoint or its budget.
+The eight largest slowdowns are all MetiTarski files that were in the 20, led by
+`exp-problem-10-3-weak-chunk-0081.smt2` at +23.1 s. None of them changes verdict.
+
+### A variant that scored +1 and −1, and why it is not what shipped
+
+The first version of the fix rewrote the point lemma **after** building it from
+the raw operands. Measured over the same 200 files: **+1 gain
+(`exp-problem-10-3-weak-chunk-0081.smt2` → `unsat`, 7.0 s), −1 loss
+(`sin-problem-7-chunk-0353.smt2`, `sat` in 1.7 s → `unknown`)**, net 0. Both
+files were freshly re-verified against both references at a 120 s budget: 0081
+is `declared unsat / z3 unsat / cvc5 unsat`, 0353 is `declared sat / z3 sat /
+cvc5 sat`. So that variant's gain was correct and its loss was a real loss.
+
+It is sound — validity does not depend on which constants the lemma pins — but
+it is not what incremental linearization prescribes. The premise `â = a0` was
+built with `a0` read off the **raw** operand, whose value under the candidate is
+the true product of the model's variables rather than the relaxed value the
+fresh variable holds, so the lemma does not exclude the current spurious point.
+Rewriting the operands *before* reading their values restores `sin-problem-7-chunk-0353`
+(1.7 s, unchanged) and gives up `exp-problem-10-3-weak-chunk-0081`.
+
+Recorded here because it is a real, measured degree of freedom for whoever
+builds the CAD route: **which point the refinement lemma pins changes which
+files the relaxation closes**, by one in each direction on this division.
+
+## What this leaves for the next lane
+
+After the repair, the QF_NRA gap is the relaxation's own boundary and the clock.
+The census's 22 genuine-incompleteness rows say so in their own words — *"this
+needs a nlsat/CAD engine"* — and that is ADR-0058 Phase C/D. The 20 rows that
+used to read as an error and the 18 that read as a bare timeout now carry real
+reasons, which is the input that work needs and did not have.
