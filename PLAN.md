@@ -49531,6 +49531,21 @@ checks** — the declared `:status`, z3 4.13.3 and cvc5 1.3.4 — with all 70
 that says the change costs an already-working quantified division nothing;
 `UFDTNIRA` is the honest null (it is more than half clock-bound at 10 s).
 
+**The board re-run on the same pinned lists at the same 24 s**, which is the
+number to quote rather than the 10 s A/B:
+
+| division | before | after | gained | lost | flips |
+|---|---:|---:|---:|---:|---:|
+| AUFDTLIRA | 0 | **41** | 41 | 0 | 0 |
+| UFDTLIRA | 66 | **72** | 6 | 0 | 0 |
+| UFDT | 22 | **26** | 4 | 0 | 0 |
+| UFDTNIRA | 5 | 5 | 0 | 0 | 0 |
+| **total** | **93 / 800** | **144 / 800** | **51** | **0** | **0** |
+
+0 disagreements in every division against `:status`, z3 and cvc5. The board's
+`AUFDTLIRA` 41 and the A/B's 62 are **different samples** (stride 55 vs stride
+27 through 11,043 files), not a budget effect; quote each to its own list.
+
 **Mutation control:** delete the valid-universal guard and 2 of the 3 tests die;
 delete the e-graph guard or the MBQI guard and 1 dies. Each is individually
 load-bearing. The e-graph and MBQI guards are **not** separable by a

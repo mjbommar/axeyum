@@ -86,13 +86,21 @@ file**, not as a difference of aggregates.
 |---|---:|---:|---:|---:|---:|---:|---:|
 | AUFDTLIRA | 0 / 200 | **41 / 200** | 41 | **0** | **0** | 176 | 176 |
 | UFDTLIRA | 66 / 200 | **72 / 200** | 6 | **0** | **0** | 181 | 158 |
-| UFDT | 22 / 200 | *(running)* | | | | 66 | 78 |
-| UFDTNIRA | 5 / 200 | *(running)* | | | | 173 | 183 |
+| UFDT | 22 / 200 | **26 / 200** | 4 | **0** | **0** | 66 | 78 |
+| UFDTNIRA | 5 / 200 | 5 / 200 | 0 | **0** | **0** | 173 | 183 |
+| **total** | **93 / 800** | **144 / 800** | **51** | **0** | **0** | | |
 
-Every one of `AUFDTLIRA`'s 41 is `unsat`, and all 41 are **comparable on all
-three checks** — declared `:status`, z3, cvc5 — with **0 disagreements**. The
-same for `UFDTLIRA`'s 72. The `AUFDTLIRA` zero-disagreement figure is no longer
-vacuous: it was, when the division decided nothing.
+**0 disagreements in every division**, against the declared `:status`, z3 and
+cvc5. Every one of `AUFDTLIRA`'s 41 is `unsat` and all 41 are *comparable* on
+all three checks, so that division's zero-disagreement figure stops being
+vacuous — it was vacuous while the division decided nothing. `UFDTLIRA` 72 of
+72 comparable on all three; `UFDT` 23/23/24 of 26 (the rest carry
+`:status unknown` or are undecided by that reference); `UFDTNIRA` 5 of 5.
+
+`UFDTNIRA` is the honest null: the ladder change buys it **nothing**. After the
+guards, 108 of its 200 report `quantified solve time budget exhausted` — it is
+more than half clock-bound, the only one of the four that is, and letting more
+rungs run spends clock.
 
 **The board's 41 and the A/B's 62 are different samples, not a budget effect.**
 The board uses the pinned parity list (stride 55 through 11,043 files); the A/B
