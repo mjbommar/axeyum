@@ -9377,6 +9377,63 @@ SUITES["nra-fbbt-route"] = (
 
 
 
+SUITES["nra-point-lemma-abstraction"] = (
+    "crates/axeyum-solver/src/nra.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--test",
+            "nra_point_lemma_abstraction",
+        ),
+        "nra-point-lemma-abstraction",
+    ),
+    [
+        (
+            # THE 2026-09-12 DEFECT. Without the rewrite, a refinement point
+            # lemma built from an operand that CONTAINS a product carries that
+            # product into the linear relaxation, which cannot linearize it and
+            # answers `Unsupported` -- propagated out of the dispatcher as an
+            # Err. It was the largest single cause in the QF_NRA census
+            # (20 of 77), and this one rewrite is the whole fix.
+            "a point lemma must be rewritten through the product abstraction",
+            "            let lemma = replace_subterms(arena, lemma, abstraction, &mut memo)\n"
+            "                .map_err(|e| SolverError::Backend(e.to_string()))?;",
+            "            let _ = (abstraction, &mut memo);",
+        ),
+    ],
+)
+
+
+SUITES["preprocessed-timeout-reason"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--test",
+            "preprocessed_timeout_carries_the_reason",
+        ),
+        "preprocessed-timeout-reason",
+    ),
+    [
+        (
+            # Drops the carrier phrase, restoring the pre-2026-09-12 situation
+            # where the relabel says only that the clock ran out. That fixed
+            # sentence was the top named `Timeout` detail in three separate
+            # censuses (QF_NIA 41/110, all-divisions 30/260, QF_NRA 18/77).
+            "the relabel carries the reduced solve's own reason",
+            "solve's own reason was [{:?}] {}\",",
+            "solve reason redacted [{:?}] {}\",",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 

@@ -631,7 +631,7 @@ fn check_with_nra_impl(
         // accepted only if it satisfies the real `x/y` semantics — never the
         // div-eliminated form (which a `y=0`/free-`r` spurious model would satisfy).
         // `div_terms` lets a `sat` replay consult the free-division `/0` witness.
-        arena, &base, &triples, &div_terms, &products, &original, config, &bounds, 0, deadline,
+        arena, &base, &triples, &div_terms, &products, &map, &original, config, &bounds, 0, deadline,
     )
 }
 
@@ -649,6 +649,7 @@ fn branch_and_bound(
     triples: &[(TermId, TermId, TermId)],
     div_terms: &[DivTerm],
     products: &BTreeSet<TermId>,
+    abstraction: &HashMap<TermId, TermId>,
     original: &[TermId],
     config: &SolverConfig,
     bounds: &Bounds,
@@ -669,7 +670,16 @@ fn branch_and_bound(
     };
 
     match solve_relaxation(
-        arena, base, triples, div_terms, products, original, bounds, config, deadline,
+        arena,
+        base,
+        triples,
+        div_terms,
+        products,
+        abstraction,
+        original,
+        bounds,
+        config,
+        deadline,
     )? {
         CheckResult::Sat(model) => Ok(CheckResult::Sat(model)),
         CheckResult::Unsat => Ok(CheckResult::Unsat),
@@ -694,6 +704,7 @@ fn branch_and_bound(
                     triples,
                     div_terms,
                     products,
+                    abstraction,
                     original,
                     config,
                     &child,
@@ -718,6 +729,11 @@ fn branch_and_bound(
 /// constraints and `McCormick` envelopes for `bounds`, run through the
 /// point-lemma refinement loop. Returns a genuine (replayed) `sat`, a relaxation
 /// `unsat`, or `unknown` for this subdomain.
+///
+/// `abstraction` is the product→fresh-variable map `base` was built with. Every
+/// constraint pushed into `reduced` MUST be rewritten through it before it is
+/// handed to the linear engine — see the point-lemma call below for the defect
+/// that taught this.
 #[allow(clippy::too_many_arguments)]
 fn solve_relaxation(
     arena: &mut TermArena,
@@ -725,6 +741,7 @@ fn solve_relaxation(
     triples: &[(TermId, TermId, TermId)],
     div_terms: &[DivTerm],
     products: &BTreeSet<TermId>,
+    abstraction: &HashMap<TermId, TermId>,
     original: &[TermId],
     bounds: &Bounds,
     config: &SolverConfig,
@@ -749,6 +766,10 @@ fn solve_relaxation(
             reduced.push(lemma);
         }
     }
+
+    // Rewrite memo for the point lemmas below, shared across refinement rounds
+    // (the abstraction map is constant for the whole solve).
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
 
     // Incremental-linearization refinement: solve, replay, add exact point
     // lemmas for inconsistent leaf products, re-solve. Bounded rounds → unknown.
@@ -807,6 +828,22 @@ fn solve_relaxation(
                 continue;
             }
             let lemma = point_lemma(arena, pa, a0, pb, b0, r, prod)?;
+            // **Rewrite through the abstraction before pushing.** `pa`/`pb` are
+            // the ORIGINAL operand terms. The guard above only skips an operand
+            // that *is* a collected product; an operand that merely *contains*
+            // one (`(+ c (* x (* x k)))` — the MetiTarski/Horner shape) passes
+            // it, and the raw lemma then carries a live nonlinear product into
+            // `reduced`. The linear engine cannot linearize that and returns
+            // `Unsupported`, which `check_with_nra_impl` propagates with `?` —
+            // so one un-rewritten refinement lemma aborted the WHOLE dispatch
+            // with `unsupported by backend: QF_LRA: nonlinear real
+            // multiplication` instead of declining. Rewriting it here is the
+            // same step `product_lemmas` already takes, and is sound by the
+            // same argument: in any model where each fresh variable equals its
+            // product the rewritten lemma is the original lemma, so the system
+            // stays a relaxation and only its `unsat` is ever acted on.
+            let lemma = replace_subterms(arena, lemma, abstraction, &mut memo)
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
             reduced.push(lemma);
             added = true;
         }
