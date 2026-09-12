@@ -1,0 +1,22 @@
+QF_ABV	wchains140se.smt2	NO-GIVEUP-LINE	
+QF_ABV	try5_small_difret_functions_dwp_cat.next_line_num.il.dwp.smt2	Incomplete	Incomplete detail=array shape left undecided by the lazy ROW/extensionality path and refused by bounded array eliminatio
+QF_ABV	try5_small_difret_functions_dwp_vdir.strcmp_size.il.dwp.smt2	Incomplete	Incomplete detail=array shape left undecided by the lazy ROW/extensionality path and refused by bounded array eliminatio
+QF_LIA	RC-07.smt2	ResourceLimit	ResourceLimit detail=lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=25667, cnf_vars=
+QF_LIA	problem__006.smt2	Incomplete	Incomplete detail=QF_LIA branch-and-bound undecided: exact-rational simplex declined (i128 overflow or iteration backsto
+QF_LIA	apache-get-tag-O0.smt2	ResourceLimit	ResourceLimit detail=lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=34855, cnf_vars=
+QF_LRA	afagp-fail.t2.c_Iteration1_Lasso_7-phaseTemplate.smt2	NO-GIVEUP-LINE	
+QF_LRA	p-43.t2.c_Iteration4_Loop_4-pieceTemplate.smt2	NO-GIVEUP-LINE	
+QF_LRA	queens.t2.c_Iteration19_Loop_7-phaseTemplate.smt2	NO-GIVEUP-LINE	
+QF_LRA	Canberra.bpl_Iteration1_Lasso_6-phaseTemplate.smt2	NO-GIVEUP-LINE	
+QF_LRA	ludcmp.c.i.ludcmp.pl.t2.fixed.t2.c_Iteration8_Loop_7-phaseTemplate.smt2	NO-GIVEUP-LINE	
+QF_LRA	sas2.t2.c_Iteration3_Lasso_5-phaseTemplate.smt2	NO-GIVEUP-LINE	
+QF_LRA	Carpark2-ausgabe-8.smt2	Incomplete	Incomplete detail=int↔real coercion relaxation: candidate fails the original coupling
+QF_LRA	tgc_io-safe-20.smt2	Incomplete	Incomplete detail=int↔real coercion relaxation: candidate fails the original coupling
+QF_LRA	tgc_io-safe-13.smt2	Incomplete	Incomplete detail=int↔real coercion relaxation: candidate fails the original coupling
+QF_NIA	From_AProVE_2014__SortCount.jar-obl-10__terminationS_2_0.smt2	EncodingBudget	EncodingBudget detail=estimated 150732237 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refuse
+QF_NIA	From_AProVE_2014__juHashMapCreate.jar-obl-10__p4943_safety_0.smt2	EncodingBudget	EncodingBudget detail=estimated 109820226 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refuse
+QF_NIA	From_AProVE_2014__juHashMapCreateContainsValue.jar-obl-11__p32598_safety_0.smt2	EncodingBudget	EncodingBudget detail=estimated 286797975 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refuse
+QF_NIA	From_AProVE_2014__juHashMapCreateSize.jar-obl-10__p7265_safety_0.smt2	EncodingBudget	EncodingBudget detail=estimated 107475720 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refuse
+QF_NIA	From_AProVE_2014__FlattenTreeListRec.jar-obl-10__p29567_safety_0.smt2	Incomplete	Incomplete detail=bounded integer model overflowed at width 32 (assertion #2761 is false over exact semantics); widen th
+QF_NIA	From_AProVE_2014__juHashMapCreateClear.jar-obl-11__p30726_safety_0.smt2	EncodingBudget	EncodingBudget detail=estimated 114749562 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refuse
+QF_NIA	From_T2__broydn.c.i.broydn.pl.t2.fixed.t2__term_unfeasibility_3_0.smt2	NO-GIVEUP-LINE	

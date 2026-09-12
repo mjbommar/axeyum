@@ -1,0 +1,21 @@
+AUFLIRA         20011  2 unsupported: nested array element sort is unsu
+QF_ABVFP        18129  2 REACHED-SOLVER
+QF_BVFP         17249  3 REACHED-SOLVER
+UFNIA           13464  1 auto	error	7	unsupported by backend: term #976
+AUFDTLIRA       11043  3 term error: sort mismatch: expected Bool, BitV
+UFLIA           10128  1 auto	unknown	3	UnknownReason { kind: Incomplet
+UFDTLIRA         7749  1 term error: sort mismatch: expected Bool, BitV
+BV               6185  1 auto	error	0	unsupported by backend: term #92 
+ABV              4975  3 unsupported: nested array element sort is unsu
+UFDT             4569  2 term error: sort mismatch: expected Bool, BitV
+UFDTNIRA         4424  2 term error: sort mismatch: expected Bool, BitV
+NRA              3819  1 auto	error	6	unsupported by backend: lazy SMT:
+AUFLIA           3327  1 auto	unknown	5	UnknownReason { kind: Incomplet
+ALIA             3098  3 unsupported: nested array element sort is unsu
+FP               2669  2 unsupported: sort `FP`
+LRA              2439  3 auto	error	3	unsupported by backend: lazy SMT:
+AUFBV            1523  1 auto	unknown	1702	UnknownReason { kind: Resour
+QF_UFBV          1510  2 REACHED-SOLVER
+AUFNIRA          1480  2 unsupported: nested array element sort is unsu
+QF_AUFLIA        1303  1 auto	unknown	6114	UnknownReason { kind: Timeou
+BLOCKMAP-DONE
