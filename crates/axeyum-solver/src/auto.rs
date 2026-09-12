@@ -2608,10 +2608,25 @@ fn dispatch_reduced(
     // `past_deadline` gate below turned that decided `sat` into `unknown`. Only an
     // UNDECIDED (`Unknown`) result degrades to the timeout reason.
     let CheckResult::Sat(model) = result else {
-        if matches!(result, CheckResult::Unknown(_)) && past_deadline(deadline) {
-            return Ok(CheckResult::Unknown(timeout_reason(
-                "preprocessed dispatch timeout after reduced solve",
-            )));
+        // **Carry the reduced solve's own reason.** This relabel used to
+        // REPLACE it, and the generic sentence it substituted is the single
+        // largest named `Timeout` detail on the board — 41 of 110 censused
+        // `QF_NIA` files, 30 of the 260 `unknown`s across eleven divisions, and
+        // the leading class in this lane's `QF_NRA` census. Every one of those
+        // rows had a specific reason in hand at this line (which route gave up,
+        // and on what bound) and dropped it, so the census that consumed them
+        // could only say "it ran out of time" for a third of a division. The
+        // budget verdict is unchanged — the kind stays `Timeout`, the prefix
+        // stays byte-identical so existing consumers still match — and the
+        // discarded half is appended instead of thrown away.
+        if let CheckResult::Unknown(inner) = &result
+            && past_deadline(deadline)
+        {
+            return Ok(CheckResult::Unknown(timeout_reason(format!(
+                "preprocessed dispatch timeout after reduced solve; the reduced \
+                 solve's own reason was [{:?}] {}",
+                inner.kind, inner.detail
+            ))));
         }
         return Ok(result);
     };
@@ -5233,6 +5248,26 @@ fn check_auto_dispatch(
                 with_recorder(rec, |t| {
                     t.record_declined("nra", unsupported_decline(&message));
                 });
+            }
+            // **A pure-real `Unsupported` is a DECLINE, not an error.**
+            // `unknown` is a first-class solver result and never an error, but
+            // until this arm existed the `has_function` guard above was the only
+            // conversion: a query with no uninterpreted function that reached an
+            // `Unsupported` inside the NRA engine propagated it out of
+            // `solve`, so the front door printed
+            // `give-up kind=Error detail=unsupported by backend: QF_LRA:
+            // nonlinear real multiplication` — an *error* whose text names the
+            // linear backend rather than the nonlinear boundary that actually
+            // refused, and which skipped every route after this one. Record the
+            // decline with the engine's own message and hand back `unknown`.
+            Err(SolverError::Unsupported(message)) => {
+                with_recorder(rec, |t| {
+                    t.record_declined("nra", unsupported_decline(&message));
+                });
+                return Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail: format!("nonlinear real route declined: {message}"),
+                }));
             }
             Err(e) => return Err(e),
         }

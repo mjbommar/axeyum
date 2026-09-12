@@ -632,7 +632,7 @@ fn check_with_nra_impl(
         // accepted only if it satisfies the real `x/y` semantics — never the
         // div-eliminated form (which a `y=0`/free-`r` spurious model would satisfy).
         // `div_terms` lets a `sat` replay consult the free-division `/0` witness.
-        arena, &base, &triples, &div_terms, &products, &original, config, &bounds, 0, deadline,
+        arena, &base, &triples, &div_terms, &products, &map, &original, config, &bounds, 0, deadline,
     )
 }
 
@@ -650,6 +650,7 @@ fn branch_and_bound(
     triples: &[(TermId, TermId, TermId)],
     div_terms: &[DivTerm],
     products: &BTreeSet<TermId>,
+    abstraction: &HashMap<TermId, TermId>,
     original: &[TermId],
     config: &SolverConfig,
     bounds: &Bounds,
@@ -670,7 +671,16 @@ fn branch_and_bound(
     };
 
     match solve_relaxation(
-        arena, base, triples, div_terms, products, original, bounds, config, deadline,
+        arena,
+        base,
+        triples,
+        div_terms,
+        products,
+        abstraction,
+        original,
+        bounds,
+        config,
+        deadline,
     )? {
         CheckResult::Sat(model) => Ok(CheckResult::Sat(model)),
         CheckResult::Unsat => Ok(CheckResult::Unsat),
@@ -695,6 +705,7 @@ fn branch_and_bound(
                     triples,
                     div_terms,
                     products,
+                    abstraction,
                     original,
                     config,
                     &child,
@@ -719,6 +730,11 @@ fn branch_and_bound(
 /// constraints and `McCormick` envelopes for `bounds`, run through the
 /// point-lemma refinement loop. Returns a genuine (replayed) `sat`, a relaxation
 /// `unsat`, or `unknown` for this subdomain.
+///
+/// `abstraction` is the product→fresh-variable map `base` was built with. Every
+/// constraint pushed into `reduced` MUST be rewritten through it before it is
+/// handed to the linear engine — see the point-lemma call below for the defect
+/// that taught this.
 #[allow(clippy::too_many_arguments)]
 fn solve_relaxation(
     arena: &mut TermArena,
@@ -726,6 +742,7 @@ fn solve_relaxation(
     triples: &[(TermId, TermId, TermId)],
     div_terms: &[DivTerm],
     products: &BTreeSet<TermId>,
+    abstraction: &HashMap<TermId, TermId>,
     original: &[TermId],
     bounds: &Bounds,
     config: &SolverConfig,
@@ -750,6 +767,10 @@ fn solve_relaxation(
             reduced.push(lemma);
         }
     }
+
+    // Rewrite memo for the point lemmas below, shared across refinement rounds
+    // (the abstraction map is constant for the whole solve).
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
 
     // Incremental-linearization refinement: solve, replay, add exact point
     // lemmas for inconsistent leaf products, re-solve. Bounded rounds → unknown.
@@ -780,6 +801,40 @@ fn solve_relaxation(
             if products.contains(&pa) || products.contains(&pb) {
                 continue;
             }
+            // **Refine over the ABSTRACTED operands, not the original terms.**
+            //
+            // `pa`/`pb` are the original operands. The guard above only skips an
+            // operand that *is* a collected product; one that merely *contains*
+            // one (`(+ c (* x (* x k)))` — the MetiTarski/Horner shape) passes
+            // it, and a lemma built from the raw term carries a live nonlinear
+            // product into `reduced`. The linear engine cannot linearize that,
+            // returns `Unsupported`, and `check_with_nra_impl` propagates it
+            // with `?` — one un-rewritten lemma aborting the WHOLE dispatch.
+            // That was the largest single cause in the 2026-09-12 QF_NRA census
+            // (20 of 77 winnable files).
+            //
+            // The operands are rewritten HERE, before their values are read,
+            // and NOT after the lemma is built. Rewriting only the finished
+            // lemma is the version that looks right and is not: the premise
+            // would be `â = a0` while `a0` was read off the RAW `pa`, whose
+            // value under this model is the true product of the model's
+            // variables — not the relaxed value the fresh variable holds. The
+            // premise then fails to match the candidate, the lemma cuts
+            // nothing, refinement stalls at a fixpoint, and a `sat` the search
+            // used to find is lost (measured: `sin-problem-7-chunk-0353.smt2`,
+            // `sat` in 1.7 s, became `unknown`). Reading `a0` off the
+            // abstracted operand makes the premise true of the current
+            // candidate, which is the whole point of a point lemma.
+            //
+            // Sound by the same argument as `product_lemmas`: in any model
+            // where each fresh variable equals its product, `â` is `a`, so the
+            // rewritten lemma IS the original lemma. The system stays a
+            // relaxation, only its `unsat` transfers, and every `sat` is still
+            // replayed against the original assertions.
+            let pa = replace_subterms(arena, pa, abstraction, &mut memo)
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
+            let pb = replace_subterms(arena, pb, abstraction, &mut memo)
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
             let (Some(a0), Some(b0), Some(r0)) = (
                 real_value(arena, pa, &assignment),
                 real_value(arena, pb, &assignment),
@@ -807,6 +862,8 @@ fn solve_relaxation(
             if too_large_to_refine(a0) || too_large_to_refine(b0) || too_large_to_refine(prod) {
                 continue;
             }
+            // `pa`/`pb` are the abstracted operands (rewritten above), so this
+            // lemma is already free of nonlinear products.
             let lemma = point_lemma(arena, pa, a0, pb, b0, r, prod)?;
             reduced.push(lemma);
             added = true;
