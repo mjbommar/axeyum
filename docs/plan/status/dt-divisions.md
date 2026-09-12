@@ -84,7 +84,7 @@ composing red. The fixture is replaced (per the file's own instruction) with a
 UF-over-datatype-argument script that still errors.
 
 **The finding worth more than the 70 files: the census this lane was dispatched
-on was measuring the ladder.** Before the guards, 147 of 158 undecided
+on was measuring the ladder.** Before the guards, 174 of 200 undecided
 `AUFDTLIRA` files reported "eager Ackermann … array-valued function results".
 After, that message is **3 of 200**, and the real top blocker is
 `datatype_native` refusing array/UF-sorted datatype FIELDS (70), then UF applied

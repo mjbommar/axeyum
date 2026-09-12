@@ -113,12 +113,14 @@ The census these divisions were previously mapped by
 
 | refusal | before | after |
 |---|---:|---:|
-| eager Ackermann, array-valued function results | **147** | **3** |
+| eager Ackermann, array-valued function results | **174** | **3** |
 | `datatype_native`: array/UF-sorted datatype FIELDS (ADR-0022) | 0 | **70** |
-| UF applied to a datatype argument (ADR-1920) | 7 | **32** |
+| UF applied to a datatype argument (ADR-1920) | 14 | **32** |
 | `is`/`select` over a non-variable datatype term | 0 | **13** |
 | quantified / e-matching budget | 0 | **12** |
-| parse: nested array element sort | 4 | **5** |
+| a datatype-sorted term survives tag/field expansion | 7 | 1 |
+| parse: nested array element sort | 5 | **5** |
+| **decided** | **0** | **62** |
 
 The `*_giveup` columns of the `ab/` TSVs carry both arms for every file, so the
 table is re-derivable rather than quoted.

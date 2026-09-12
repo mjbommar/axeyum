@@ -1,7 +1,7 @@
 # ADR-1927: A quantified-ladder rung's fragment refusal is a decline, not the query's verdict
 
 Status: accepted
-Index-summary: `solve`'s quantified ladder has twenty rungs, and three of them propagated a *speculative sub-solve's* `SolverError::Unsupported` with a bare `?`. A rung that rewrites the query — a validity check's `not body[x := c]`, the e-graph refuter, an MBQI ground round — and hands the rewrite to a backend that refuses ITS fragment was therefore ending the whole dispatch: `solve` returned `Err(Unsupported)` and every rung below never ran. Measured 2026-09-12: the `AUFDTLIRA` division (11,043 files) stopped at `attempts=2` after **1 ms** on `eager Ackermann elimination does not admit array-valued function results` — a sentence about a quantifier-ERASED SKELETON — and scored **0 of 200** on its first parity board while z3 and cvc5 each scored 176. Decision: **a rung's fragment refusal is recorded on the route trail and the ladder continues.** Three guards, at valid-universal elimination, the e-graph refuter and the MBQI pass; declining is sound by construction (a skipped route can only lose completeness) and every remaining route still surfaces its own `Unsupported` if nothing decides. Result on a 200-file stride sample at 10 s, per file against the same binary without the guards: **AUFDTLIRA 0 → 62 decided, UFDTLIRA 70 → 75, UFDT 23 → 26, UFDTNIRA unchanged, 0 decided→undecided, 0 `sat`↔`unsat` flips, and 0 movement in either direction on a `UF` control**; all 70 new verdicts are `unsat` with **0 disagreements** against the declared `:status`, z3 4.13.3 and cvc5 1.3.4 — 70 of 70 comparable on all three. The second result is the one to carry forward: **the division's published blocker census was an artifact of this bug.** Before, 147 of 158 undecided `AUFDTLIRA` files named "eager Ackermann … array-valued function results"; after, that message is **3 of 200** and the real top blocker is `datatype_native` refusing array/UF-sorted datatype FIELDS (70) followed by UF applied to a datatype argument (32) — which is exactly the capability ADR-1920 already named as BUILD NEXT. A census taken through a ladder that stops at its first refusal measures the ORDER OF THE LADDER, not the missing capability.
+Index-summary: `solve`'s quantified ladder has twenty rungs, and three of them propagated a *speculative sub-solve's* `SolverError::Unsupported` with a bare `?`. A rung that rewrites the query — a validity check's `not body[x := c]`, the e-graph refuter, an MBQI ground round — and hands the rewrite to a backend that refuses ITS fragment was therefore ending the whole dispatch: `solve` returned `Err(Unsupported)` and every rung below never ran. Measured 2026-09-12: the `AUFDTLIRA` division (11,043 files) stopped at `attempts=2` after **1 ms** on `eager Ackermann elimination does not admit array-valued function results` — a sentence about a quantifier-ERASED SKELETON — and scored **0 of 200** on its first parity board while z3 and cvc5 each scored 176. Decision: **a rung's fragment refusal is recorded on the route trail and the ladder continues.** Three guards, at valid-universal elimination, the e-graph refuter and the MBQI pass; declining is sound by construction (a skipped route can only lose completeness) and every remaining route still surfaces its own `Unsupported` if nothing decides. Result on a 200-file stride sample at 10 s, per file against the same binary without the guards: **AUFDTLIRA 0 → 62 decided, UFDTLIRA 70 → 75, UFDT 23 → 26, UFDTNIRA unchanged, 0 decided→undecided, 0 `sat`↔`unsat` flips, and 0 movement in either direction on a `UF` control**; all 70 new verdicts are `unsat` with **0 disagreements** against the declared `:status`, z3 4.13.3 and cvc5 1.3.4 — 70 of 70 comparable on all three. The second result is the one to carry forward: **the division's published blocker census was an artifact of this bug.** Before, 174 of 200 undecided `AUFDTLIRA` files named "eager Ackermann … array-valued function results"; after, that message is **3 of 200** and the real top blocker is `datatype_native` refusing array/UF-sorted datatype FIELDS (70) followed by UF applied to a datatype argument (32) — which is exactly the capability ADR-1920 already named as BUILD NEXT. A census taken through a ladder that stops at its first refusal measures the ORDER OF THE LADDER, not the missing capability.
 Index-status: accepted
 Date: 2026-09-12
 
@@ -178,15 +178,18 @@ act on — **was measuring the ladder, not the solver.**
 
 | refusal | before | after |
 |---|---:|---:|
-| eager Ackermann, array-valued function results | **147** | **3** |
+| eager Ackermann, array-valued function results | **174** | **3** |
 | `datatype_native`: array/UF-sorted datatype FIELDS (ADR-0022) | 0 | **70** |
-| UF applied to a datatype argument (ADR-1920) | 7 | **32** |
+| UF applied to a datatype argument (ADR-1920) | 14 | **32** |
 | `is`/`select` over a non-variable datatype term | 0 | **13** |
 | quantified / e-matching budget | 0 | **12** |
-| parse: nested array element sort | 4 | **5** |
+| a datatype-sorted term survives tag/field expansion | 7 | 1 |
+| parse: nested array element sort | 5 | **5** |
+| **decided** | **0** | **62** |
 
 The number one blocker of the largest unmeasured division was reported as a
-`QF_UFBV` Ackermann restriction. It is **1.5 %** of the division. The real
+`QF_UFBV` Ackermann restriction — **87 %** of the sample before the guards, and
+**1.5 %** after. The real
 number one is a datatype-theory restriction that ADR-0022 names and ADR-1920
 already flagged as the next thing to build, and it is 35 %.
 

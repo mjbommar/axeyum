@@ -123,13 +123,15 @@ All 70 new verdicts are `unsat`. Cross-checked three ways, and every check was
 
 | refusal | before | after |
 |---|---:|---:|
-| eager Ackermann, array-valued function results | **147** | **3** |
+| eager Ackermann, array-valued function results | **174** | **3** |
 | `datatype_native`: array/UF-sorted datatype FIELDS (ADR-0022) | 0 | **70** |
-| UF applied to a datatype argument (ADR-1920) | 7 | **32** |
+| UF applied to a datatype argument (ADR-1920) | 14 | **32** |
 | `is`/`select` over a non-variable datatype term | 0 | **13** |
 | quantified / e-matching budget | 0 | **12** |
-| parse: nested array element sort | 4 | **5** |
-| other | 0 | **3** |
+| a datatype-sorted term survives tag/field expansion | 7 | 1 |
+| parse: nested array element sort | 5 | **5** |
+| watchdog | 0 | 2 |
+| **decided** | **0** | **62** |
 
 `UFDTLIRA`, after:
 
@@ -145,7 +147,8 @@ All 70 new verdicts are `unsat`. Cross-checked three ways, and every check was
 Compare with the census this lane was dispatched on (40 files per division, 3 s,
 `bench-results/dt-divisions-20260912/`), whose top two rows were *eager Ackermann
 array-valued* (21 %) and *uninterpreted sort at the BV backend* (18 %). The first
-is now 1.5 % of `AUFDTLIRA`; the second is **1 of 200** in `UFDTLIRA`. Neither
+was **87 %** of `AUFDTLIRA` before the guards and is **1.5 %** after; the second
+is **1 of 200** in `UFDTLIRA`. Neither
 was ever a capability boundary of these divisions. They were the rungs that
 happened to refuse first.
 
