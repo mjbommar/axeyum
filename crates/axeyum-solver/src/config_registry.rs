@@ -97,6 +97,36 @@
 //! anything an entry's justification **rests on** changed after the date that
 //! justification was measured. See [`Justification::rests_on`].
 //!
+//! # Levers: what it costs to ASK about a value
+//!
+//! A registered value nobody can move is a value nobody measures. Measured
+//! 2026-09-11, **74** entries protect [`Protects::Completeness`], refuse or
+//! decline when crossed ([`OnExceed::RefuseUnknown`] / [`OnExceed::DeclineRoute`]
+//! — these are the ones that can turn a decidable file into `unknown`), AND
+//! carry an undated justification. Nearly every one had `env_override: None`,
+//! so asking "does this bound decide the division?" cost a workspace rebuild.
+//! That price is why none of them had been asked.
+//!
+//! 64 of those now carry a lever, wired through `axeyum_ir::config_lever`: the
+//! compiled `const` is untouched and remains the value with nothing set, and
+//! the decision sites read a cached accessor. The contract — unset is the
+//! shipped value byte for byte, a malformed value is a hard error rather than a
+//! silent fallback, and the read happens once per process — lives in that
+//! module's docs.
+//!
+//! Two things this deliberately does NOT mean. It is **not** a licence to raise
+//! a cap: of the three of these investigated on 2026-09-11, all three were
+//! correct as shipped (`ABSOLUTE_CLAUSE_CEILING` rebuilt at 31x decided 4 of 4
+//! refused files still `unknown`, burning 90 s instead of refusing in 30 s).
+//! And a lever is **not** a date: an entry with an `env_override` and no
+//! `measured_on` is still an unmeasured value, and [`undated_count`] still
+//! counts it. The lever only makes the measurement cheap enough to take.
+//!
+//! `every_env_override_is_read_by_the_code` is what stops the field from
+//! becoming decoration: an entry naming a variable no source reads is worse
+//! than `None`, because an operator who sets it measures the shipped default
+//! and reports it as the other arm.
+//!
 //! # Recording (off by default)
 //!
 //! [`ConfigTraceGuard`] follows the four opt-in, off-by-default guards this tree
@@ -1480,7 +1510,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_ARRAY_EQ_INDEX_BITS"),
         justification: undated("doc comment"),
         note: "Bounds eager array-equality expansion over 2^iw indices and the O(n^2) Ackermann pairing behind it. Refuses as `ArrayElimError::Unsupported`.",
     },
@@ -1606,7 +1636,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "`invert_bv_cmp` returns `Ok(None)` above the cap, which only means this specific inversion rule does not fire for that term; the general rewrite/solve dispatch falls through to whatever else applies, which stays sound independently of whether this shortcut fired",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_NARROW_BV_WIDTH"),
         justification: undated("doc comment"),
         note: "The doc names an alternative that exists but these boundary rules don't build it (\"constants above 128 bits need the wide representation, which several of the boundary rules below do not construct\"), so this is a real coverage gap, not a hard structural wall - unlike `MAX_SET_WIDTH`/`SEQ_TOTAL_BITS_CAP` (out of scope, see report) it is not literally forced by `u128`, since a wide representation is documented to exist elsewhere in the tree.",
     },
@@ -1673,7 +1703,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_QUANT_EXPAND_BIT_LIMIT"),
         justification: undated("doc comment"),
         note: "Largest single-variable BV domain (2^10) the expander will enumerate.",
     },
@@ -2063,7 +2093,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_ABDUCT_MAX_CANDIDATES"),
         justification: undated("doc comment"),
         note: "The enumerative `get-abduct` search's own honest give-up: past this many re-checked candidates, `abduct` returns `Ok(None)` directly (module doc: \"declining with None\"), which is this feature's analogue of `unknown`. Every candidate that IS tried is independently re-verified by `crate::auto::check_auto` before acceptance, so this bound can only cost completeness, never soundness. Same name, different module and value (256), as `quant_bool_model_sat.rs::MAX_CANDIDATES` — unrelated searches, not a divergent twin.",
     },
@@ -2232,7 +2262,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_DIFF_SKOLEMS"),
         justification: undated("doc comment"),
         note: "The doc comment says crossing this means 'declining to unknown', but the code disagrees at its only external call site: `prepare_online_array_equalities` (`atoms.len() > MAX_DIFF_SKOLEMS` -> `Ok(None)`) is consumed by `ufbv_online.rs`'s `abstract_rows_for_online` caller, which turns that `None` into `Err(SolverError::Unsupported(...))` -- a hard Err, not `CheckResult::Unknown` -- even though a sibling `BuildFailure::Unknown` variant exists and is not used here. Separately, inside `abv/lazy_ext.rs::refine_extensionality`, the same constant throttles a per-round diff-witness counter (`*diff_skolems >= MAX_DIFF_SKOLEMS` -> `continue`, skipping one atom's witness for that round); that crossing only stalls CEGAR convergence, which surfaces as `unknown` via MAX_ROW_ROUNDS, never a wrong sat.",
     },
@@ -2469,7 +2499,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_STRUCTURAL_ARRAY_REALIZATION_STEPS"),
         justification: undated("doc comment"),
         note: "`realize_structural_array_term`'s `for _step in 0..MAX_STRUCTURAL_ARRAY_REALIZATION_STEPS` loop returns `StructuralRealization::Incompatible` when exhausted. Unlike most bounds in this file, the CALLER treats a persistent `Incompatible` as a hard failure: `realize_structural_array_equalities` ends with `Err(SolverError::Backend(\"online ROW projection could not realize a bounded structural array equality\"))` -- an Err that ends the route, not a graceful `CheckResult::Unknown`.",
     },
@@ -2508,7 +2538,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_ARRAY_ELIM_CONGRUENCE_PAIRS"),
         justification: undated("doc comment"),
         note: "Gates evidence production only, not the verdict: `certify_array_elim_unsat` returns `Ok(None)` (no certificate) above this O(k^2) pairing bound; the underlying `Unsat` result (from the separate DRAT-checked QF_BV refutation) is unaffected either way. `Signal::ToCaller` because the crossing is literally the `Option::None` in the return type. Doc comment says this mirrors an 'eager bound in crate::euf' but gives no measurement for 256 itself.",
     },
@@ -3298,7 +3328,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the formula stays available to the other pure-EUF/general deciders; only this exhaustive Boolean-skeleton-enumeration checker declines",
-        env_override: None,
+        env_override: Some("AXEYUM_BOOL_EUF_MAX_ATOMS"),
         justification: undated("doc comment"),
         note: "Bounds 2^atoms exhaustive Boolean-skeleton enumeration for a checked Boolean-structured EUF refutation (`bool_euf_exhaustive_refutation`).",
     },
@@ -3376,7 +3406,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "wider BV symbols are simply excluded from this local-certificate's candidate set (bv_uf_local.rs:171); equalities derived over the included symbols are still exhaustively evaluator-checked, so excluding a symbol can only miss a derivation, never validate a wrong one",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_LOCAL_BV_WIDTH"),
         justification: undated("no written justification"),
         note: "No doc comment at the definition site. Filters candidate symbols at collection; paired with MAX_LOCAL_ENUM_BITS, which bounds the resulting pairwise enumeration.",
     },
@@ -3402,7 +3432,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "`check_cas_identity_certificate`/`check_cas_int_units_certificate`/`check_cas_ideal_certificate` independently re-derive the refutation from the original assertions before any `CasOutcome::Refuted` is accepted; `expand` returning `None` past this bound can only decline the cas-* route (`CasOutcome::VerifierRejected`/`NotRefuted`), never accept an unverified one.",
-        env_override: None,
+        env_override: Some("AXEYUM_CAS_MAX_ATOMS"),
         justification: undated("doc comment"),
         note: "Shared by both halves of the CAS bridge: `cas_poly.rs`'s discovery routes (`cas_identity_refutation`, `cas_ideal_refutation`, ...) and this file's independent re-derivation checker both call `expand`/`to_poly` under this same cap (imported via `crate::cas_certificate::{MAX_ATOMS, ...}`), so crossing it declines the cas-* route on both the producer and checker side identically.",
     },
@@ -3428,7 +3458,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "same as `MAX_ATOMS` in this file: the checker independently re-derives before accepting, so declining past this bound can only forgo a decision.",
-        env_override: None,
+        env_override: Some("AXEYUM_CAS_MAX_MONOMIALS"),
         justification: undated("doc comment"),
         note: "\"A product of two dense polynomials multiplies term counts, so this bounds the whole expansion\" — doc comment. Same name, different module and value (16), as `nra_handelman_cert.rs::MAX_MONOMIALS` — unrelated engines (exact rational-polynomial expansion vs. Fourier-Motzkin monomial abstraction), not a divergent twin.",
     },
@@ -3454,7 +3484,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "`cas_ideal_refutation`'s candidate is independently re-checked by `check_cas_ideal_certificate` before any `CasOutcome::Refuted` is returned; exceeding this returns `CasOutcome::NotRefuted`, never an unverified accept.",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_IDEAL_ATOMS"),
         justification: undated("doc comment"),
         note: "\"Buchberger under lex is doubly exponential in the variable count in the worst case, so this is the ceiling that actually bounds the search; the step budget [`ideal_limits`] is the backstop\" — doc comment. `ideal_limits()` in this file also sets bare-literal step ceilings (`reduction_steps: 6_000`, `pair_iterations: 1_500`, `basis_size: 32`, `poly_terms: 256`) with a comment noting they are \"unchanged from before the order became a knob\" — these are struct-literal fields, not named constants, so `config_registry_scan.py` does not surface them; flagged here as bare-literal search guards at cas_poly.rs:552-557 (`fn ideal_limits`).",
     },
@@ -3467,7 +3497,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "same as `MAX_IDEAL_ATOMS` in this file: `check_cas_ideal_certificate` re-derives before acceptance.",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_IDEAL_GENERATORS"),
         justification: undated("doc comment"),
         note: "Ceiling on asserted equations used as Groebner-basis ideal generators for the multivariate CAS route (`cas_ideal_refutation`); exceeding it returns `CasOutcome::NotRefuted(\"nonlinear system exceeds the deterministic generator/atom/inequality ceilings\")`.",
     },
@@ -3480,7 +3510,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "same as `MAX_IDEAL_ATOMS` in this file: `check_cas_ideal_certificate` re-derives before acceptance.",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_IDEAL_INEQUALITIES"),
         justification: undated("doc comment"),
         note: "Ceiling on asserted inequalities considered as combination terms in `cas_ideal_refutation`; also used to `inequalities.truncate(MAX_IDEAL_INEQUALITIES)` after the admission check, so a query at exactly the cap keeps all its inequalities and one over it declines outright rather than being silently truncated.",
     },
@@ -3740,7 +3770,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "no negative-cycle core is produced; the search continues without that lemma",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_BELLMAN_FORD_DIFF_EDGES"),
         justification: undated("doc comment"),
         note: "FINDING (ordering). This is TIGHTER than `MAX_TWO_EDGE_DIFF_EDGES` (512), the cheap pre-check that feeds it — so the cheap check admits inputs twice as large as the thorough fallback behind it. Neither number is measured and the relationship is undocumented. Recorded, not changed.",
     },
@@ -3977,7 +4007,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the search continues without a difference core; the full LIA oracle has already said the conjunction is unsat, and any core that IS returned is still checked by the normal arithmetic lemma verifier",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_TWO_EDGE_DIFF_EDGES"),
         justification: undated("doc comment"),
         note: "See `MAX_BELLMAN_FORD_DIFF_EDGES` for the ordering finding.",
     },
@@ -4344,7 +4374,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_PRE_SOLVE_ALETHE_MAX_NODES"),
         justification: undated("doc comment"),
         note: "Used at TWO sites with opposite direction on the same constant. Definition-site use (`zero_trust_alethe_certificate`, ~line 3000): admits the pre-solve Alethe attempt only when the DAG is WITHIN this cap; standard DeclineRoute. Second use in `dl_decided_report` (~line 2602): the difference-logic fallback route is skipped for queries WITHIN the cap and ACTIVATES for queries above it, because (measured, doc comment) on a 200-file QF_RDL parity list \"the evidence front door decided 2 files while the solver front door decided 105\" when this fallback was absent — crossing the cap there converts what the doc calls an otherwise-`unknown` result into an honest bare `unsat`, hence `Signal::ToCaller`. No fallback exists below either direction of this gate other than the other route, so treat this as one admission threshold partitioning work between two complementary evidence strategies, not two independent bounds.",
     },
@@ -4357,7 +4387,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "`produce_evidence`'s other routes (array elimination, the backend solve) still decide and attach evidence for the same query; this constant only skips a fast pre-solve array-axiom certificate attempt (`small_pre_solve_array_axiom_refutation` returns `None`).",
-        env_override: None,
+        env_override: Some("AXEYUM_PRE_SOLVE_ARRAY_AXIOM_DAG_LIMIT"),
         justification: undated("no written justification"),
         note: "A function-local `const` with no doc comment justifying the number, unlike its `PRE_SOLVE_ALETHE_MAX_NODES` neighbor in the same file.",
     },
@@ -4422,7 +4452,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_DEFAULT_MAX_SUBSET_SIZE"),
         justification: undated("doc comment"),
         note: "Default for `MinimizeConfig::max_subset_size`, overridable per call. Caps the cardinality the ascending-size search enumerates; a sufficient subset larger than this is never found and the search reports `MinimizeOutcome::NotFound` rather than an unsound smaller result — soundness of any subset it DOES report comes from re-checking with `¬goal` present (module doc), unaffected by this bound.",
     },
@@ -5149,7 +5179,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "a repaired model receives SAT credit only once `crate::quant_uf_model_sat_cert` independently checks every original universal (module doc); declining repair here can only miss a model, never certify a wrong one",
-        env_override: None,
+        env_override: Some("AXEYUM_DEFAULT_REPAIR_CANDIDATE_CAP"),
         justification: undated("doc comment"),
         note: "Running product of per-function default-value pool sizes, checked incrementally while assembling repairs.",
     },
@@ -5162,7 +5192,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "a repaired model receives SAT credit only once `crate::quant_uf_model_sat_cert` independently checks every original universal (module doc); declining repair here can only miss a model, never certify a wrong one",
-        env_override: None,
+        env_override: Some("AXEYUM_DEFAULT_REPAIR_FUNCTION_CAP"),
         justification: undated("doc comment"),
         note: "Admission gate on how many functions the repair search will attempt to fix at once.",
     },
@@ -5175,7 +5205,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "a repaired model receives SAT credit only once `crate::quant_uf_model_sat_cert` independently checks every original universal (module doc); declining repair here can only miss a model, never certify a wrong one",
-        env_override: None,
+        env_override: Some("AXEYUM_DEFAULT_REPAIR_VALUE_CAP"),
         justification: undated("doc comment"),
         note: "Per-function candidate-value pool size; exercised directly by the `oversized_value_pool_declines` test.",
     },
@@ -5714,7 +5744,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "`check_handelman_refutation` independently re-derives every accepted certificate from the original assertions (module doc: \"the checker never runs an LP\"); declining the search here can only forgo finding a Handelman/Positivstellensatz certificate, never accept a wrong one.",
-        env_override: None,
+        env_override: Some("AXEYUM_HANDELMAN_MAX_GENERATORS"),
         justification: undated("doc comment"),
         note: "`generators()` returns `None` past this bound; `produce_handelman_evidence` (evidence.rs) then falls through to other `QF_NRA` routes, per its own doc: \"Declines (None) ... for any nonlinear query whose combination the bounded search does not find.\"",
     },
@@ -5727,7 +5757,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "same as `MAX_GENERATORS` in this file: `check_handelman_refutation` re-derives before accepting.",
-        env_override: None,
+        env_override: Some("AXEYUM_HANDELMAN_MAX_MONOMIALS"),
         justification: undated("doc comment"),
         note: "\"Fourier-Motzkin is doubly exponential in the variable count, so this is a budget, not a semantic limit\" — doc comment. Same name, different module and value (4096), as `cas_certificate.rs::MAX_MONOMIALS` — unrelated engines, not a divergent twin.",
     },
@@ -5935,7 +5965,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_SOS_MAX_SQUARE_WEIGHT"),
         justification: undated("doc comment"),
         note: "Doc: 'A rational (non-integer) weight needs denominator-clearing - a later slice - so it declines... bounded to keep the (linear-in-d) proof size small' (nra_real_root.rs:6649-6652, `return None`). Declining here forgoes this particular SOS certificate construction, not the underlying verdict.",
     },
@@ -6553,7 +6583,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "declining only forgoes this closed-form sign-contradiction shortcut; the query proceeds through the ordinary e-matching instantiation loop, which is independently sound",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_PREDECESSOR_RECURRENCE_INDEX"),
         justification: undated("doc comment"),
         note: "Caps the matched `f(x-index)` recurrence index in `predecessor_recurrence_sign_refutation`'s pattern match; above it the shortcut simply does not fire.",
     },
@@ -6579,7 +6609,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "`check_propagation` returns `false` past this depth, which makes `collect_ground_derivations` decline (return `None`) rather than emit an unreplayable certificate (qinst_egraph.rs:3014-3016, 3040)",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_QUANTIFIER_PROVENANCE_DEPTH"),
         justification: undated("doc comment"),
         note: "Admission cap on the `QuantifierProvenanceChecker` that validates a retained-CDCL(T) checked-clause derivation is replayable from anchor/ground assertions before it is trusted.",
     },
@@ -6592,7 +6622,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the checker's `take_node` budget exhausting makes `check_propagation` return `false`, so `collect_ground_derivations` declines (returns `None`) rather than emit an unreplayable certificate (qinst_egraph.rs:3014-3016)",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_QUANTIFIER_PROVENANCE_NODES"),
         justification: undated("doc comment"),
         note: "Sibling cap to MAX_QUANTIFIER_PROVENANCE_DEPTH on the same provenance-checker walk.",
     },
@@ -6767,7 +6797,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the search returns `Declined`; `decide_quantified_by_bool_model` maps that to `Ok(None)` and the front-door dispatcher falls through to other quantifier routes, reporting `unknown` only if none succeed",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_FREE_BOOLEANS"),
         justification: undated("doc comment"),
         note: "Admission gate before erasure/enumeration: bounds the free-Boolean set whose full 2^n candidate space this route is willing to search.",
     },
@@ -6780,7 +6810,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "`admitted_positive_universal_bv` returns `None`, which bubbles through `positive_universal_bv_residual` to decline only the residual-QF_BV model-proof route",
-        env_override: None,
+        env_override: Some("AXEYUM_QUANT_BOOL_BV_MODEL_BINDER_CAP"),
         justification: undated("doc comment"),
         note: "Admission cap for a residual-QF_BV model proof over an admitted positive Bool/BV universal.",
     },
@@ -6793,7 +6823,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "`admitted_positive_universal_bv` returns `None`, which bubbles through `positive_universal_bv_residual` to decline only the residual-QF_BV model-proof route",
-        env_override: None,
+        env_override: Some("AXEYUM_QUANT_BOOL_BV_MODEL_DEPTH_CAP"),
         justification: undated("doc comment"),
         note: "Recursion-depth cap for the same residual-QF_BV model-proof admission walk as the binder/node caps.",
     },
@@ -6806,7 +6836,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "`admitted_positive_universal_bv` returns `None`, which bubbles through `positive_universal_bv_residual` to decline only the residual-QF_BV model-proof route",
-        env_override: None,
+        env_override: Some("AXEYUM_QUANT_BOOL_BV_MODEL_NODE_CAP"),
         justification: undated("doc comment"),
         note: "Sibling cap to QUANT_BOOL_BV_MODEL_BINDER_CAP; checked twice in the traversal (against both `source_nodes` and `visited`).",
     },
@@ -6819,7 +6849,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "`admitted_alternation` returns `None`, declining both the search (`quant_bv_alternation_search.rs:32`) and the certificate recheck (`quant_bv_alternation_cert.rs:52`) for this route only",
-        env_override: None,
+        env_override: Some("AXEYUM_BV_ALTERNATION_BINDER_CAP"),
         justification: undated("doc comment"),
         note: "Shared admission gate (ADR-0125): the same constant admits the search and re-validates the certificate it produces.",
     },
@@ -6832,7 +6862,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "`closed_qf_bool_bv` returns `false` past this cap, which makes `admitted_alternation` decline; the search and cert-recheck both fall through to other routes",
-        env_override: None,
+        env_override: Some("AXEYUM_BV_ALTERNATION_NODE_CAP"),
         justification: undated("doc comment"),
         note: "Node-count sibling to BV_ALTERNATION_BINDER_CAP on the quantifier-free matrix.",
     },
@@ -6845,7 +6875,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the admission walk declines (returns `None`), which forgoes only this conjunctive-universal-instance certificate route",
-        env_override: None,
+        env_override: Some("AXEYUM_BV_CONJUNCTIVE_UNIVERSAL_BINDER_CAP"),
         justification: undated("doc comment"),
         note: "Admission cap on the source checker for ADR-0127 conjunctive universal instances.",
     },
@@ -6858,7 +6888,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the admission walk declines (returns `None`), which forgoes only this conjunctive-universal-instance certificate route",
-        env_override: None,
+        env_override: Some("AXEYUM_BV_CONJUNCTIVE_UNIVERSAL_NODE_CAP"),
         justification: undated("doc comment"),
         note: "Node-count sibling to BV_CONJUNCTIVE_UNIVERSAL_BINDER_CAP; also checked against `2 * cap` at one intermediate visited-count site (quant_bv_conjunctive_cert.rs:215).",
     },
@@ -6884,7 +6914,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the checker rejects a certificate whose instance count exceeds this cap; the caller falls through to other quantifier routes",
-        env_override: None,
+        env_override: Some("AXEYUM_BV_POSITIVE_INSTANCE_SET_CAP"),
         justification: undated("doc comment"),
         note: "Admission cap on one query-scoped ADR-0134 positive-universal instance-set certificate.",
     },
@@ -6897,7 +6927,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the checker's admission walk declines, rejecting only this certificate; candidate search (in `quant_bv_model_sat_search.rs`) is a separate, untrusted module by design (module doc)",
-        env_override: None,
+        env_override: Some("AXEYUM_QUANT_BV_MODEL_BINDER_CAP"),
         justification: undated("doc comment"),
         note: "Admission cap on one source-bound quantified-BV model certificate (ADR-0130/0131).",
     },
@@ -6910,7 +6940,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the checker's admission walk declines, rejecting only this certificate; candidate search is a separate, untrusted module by design (module doc)",
-        env_override: None,
+        env_override: Some("AXEYUM_QUANT_BV_MODEL_DEPTH_CAP"),
         justification: undated("doc comment"),
         note: "Recursion-depth cap for the same certificate-checker walk as QUANT_BV_MODEL_BINDER_CAP/QUANT_BV_MODEL_NODE_CAP.",
     },
@@ -6923,7 +6953,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the checker's admission walk declines, rejecting only this certificate; candidate search is a separate, untrusted module by design (module doc)",
-        env_override: None,
+        env_override: Some("AXEYUM_QUANT_BV_MODEL_NODE_CAP"),
         justification: undated("doc comment"),
         note: "Sibling cap to QUANT_BV_MODEL_BINDER_CAP.",
     },
@@ -6936,7 +6966,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "`decide_quantified_bv_model_sat` returns `Ok(None)` before the `1usize << free.len()` exhaustive mask loop; the caller tries other quantifier routes",
-        env_override: None,
+        env_override: Some("AXEYUM_FREE_BV_CANDIDATE_BITS"),
         justification: undated("doc comment"),
         note: "Guards the exhaustive 2^n low-bit mask enumeration against combinatorial blow-up. Every candidate found here is re-checked by the independent `quant_bv_model_sat_cert` checker before being accepted (module doc).",
     },
@@ -6949,7 +6979,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "`decide_quantified_bv_model_sat` returns `Ok(None)` before starting the search; the caller tries other quantifier routes",
-        env_override: None,
+        env_override: Some("AXEYUM_TOTAL_FREE_BV_BITS_CAP"),
         justification: undated("doc comment"),
         note: "Pre-search admission gate, checked before FREE_BV_CANDIDATE_BITS; also declines on `u32` overflow of the summed widths.",
     },
@@ -6962,7 +6992,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "`admitted_paired_existentials` declines (returns `None`), which forgoes only this ADR-0129 paired-existential witness-transfer route",
-        env_override: None,
+        env_override: Some("AXEYUM_BV_PAIRED_EXISTS_BINDER_CAP"),
         justification: undated("doc comment"),
         note: "Shared admission gate reused by both the search (quant_bv_paired_exists_search.rs) and the certificate checker.",
     },
@@ -6975,7 +7005,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the admission walk declines (returns `None`), which forgoes only this ADR-0129 paired-existential witness-transfer route",
-        env_override: None,
+        env_override: Some("AXEYUM_BV_PAIRED_EXISTS_NODE_CAP"),
         justification: undated("doc comment"),
         note: "Node-count sibling to BV_PAIRED_EXISTS_BINDER_CAP.",
     },
@@ -7014,7 +7044,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the source-instance regeneration step declines past this cap, rejecting the case rather than certifying an unregenerated one",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_COVER_BINDERS"),
         justification: undated("doc comment"),
         note: "Admission cap while regenerating one carried universal instance from original IR.",
     },
@@ -7027,7 +7057,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the source-instance regeneration step declines past this cap, rejecting the case rather than certifying an unregenerated one",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_COVER_SOURCE_NODES"),
         justification: undated("doc comment"),
         note: "Node-count sibling to MAX_COVER_BINDERS on the same regeneration walk.",
     },
@@ -7040,7 +7070,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the checker rejects a certificate whose case count exceeds this cap; search may still find a smaller cover through other means",
-        env_override: None,
+        env_override: Some("AXEYUM_QUANT_COUNTEREXAMPLE_COVER_CASE_CAP"),
         justification: undated("doc comment"),
         note: "Admission cap on one checked ADR-0108 finite counterexample cover.",
     },
@@ -7053,7 +7083,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "`check_equality_partition_refutation` returns `false`, rejecting the certificate; the caller tries other quantifier routes",
-        env_override: None,
+        env_override: Some("AXEYUM_EQ_PARTITION_CASE_CAP"),
         justification: undated("doc comment"),
         note: "Admission cap on how many representative branches the ADR-0101 equality-partition checker will visit.",
     },
@@ -7066,7 +7096,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the range-detection helper returns `None` past this width, so `prove_finite_int_quant_unsat_alethe` declines and `evidence.rs`'s `guarded_quant_alethe_certificate` (which is self-validating and tried alongside every other arithmetic route) simply does not fire",
-        env_override: None,
+        env_override: Some("AXEYUM_RANGE_SIZE_CAP"),
         justification: undated("doc comment"),
         note: "Same name and value as `crate::quant_guarded_int::RANGE_SIZE_CAP`, and the doc comment at quant_finite_cert.rs:63 says they must match so a certificate is producible whenever the decision engine expands the range. Unlike quant_alethe.rs's WITNESS_CANDIDATE_CAP, this module is one of the tried decision routes in evidence.rs, not post-decision-only proof rendering.",
     },
@@ -7079,7 +7109,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "a wider clause simply declines this pass (doc comment); the assertion passes through byte-identical for the general dispatcher to decide",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_CLAUSE_LITERALS"),
         justification: undated("doc comment"),
         note: "Sibling cap to MAX_DNF_CLAUSES on the same DNF-of-the-negation construction.",
     },
@@ -7092,7 +7122,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "a wider DNF simply declines this pass (doc comment: \"conservative -- avoids blow-up and keeps the exactness argument tractable\"); the assertion passes through byte-identical for the general dispatcher to decide",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_DNF_CLAUSES"),
         justification: undated("doc comment"),
         note: "Bounds the exact real Fourier-Motzkin elimination pass, which is strictly additive: it can only turn an `unknown` into a provably-correct `unsat`/rewrite, or pass an assertion through unchanged (module doc).",
     },
@@ -7105,7 +7135,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "past this width the universal passes through unmodified; the general dispatcher decides it by other means (module doc: \"strictly additive\")",
-        env_override: None,
+        env_override: Some("AXEYUM_RANGE_SIZE_CAP"),
         justification: undated("doc comment"),
         note: "Same name and value as `crate::quant_finite_cert::RANGE_SIZE_CAP` -- deliberately matched (quant_finite_cert.rs:63) so a proof is producible whenever this pass decides to expand. This one is the actual rewrite/decision engine: it decides both `sat` and `unsat` by exact finite conjunction over `[lo, hi]`.",
     },
@@ -7118,7 +7148,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the source checker's admission walk declines (returns `None`), rejecting only this ADR-0126 negated-existential witness route",
-        env_override: None,
+        env_override: Some("AXEYUM_NEGATED_EXISTENTIAL_BINDER_CAP"),
         justification: undated("doc comment"),
         note: "Admission cap on one evaluator-replayed witness for a negated existential.",
     },
@@ -7131,7 +7161,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the source checker's admission walk declines (returns `None`), rejecting only this ADR-0126 negated-existential witness route",
-        env_override: None,
+        env_override: Some("AXEYUM_NEGATED_EXISTENTIAL_NODE_CAP"),
         justification: undated("doc comment"),
         note: "Node-count sibling to NEGATED_EXISTENTIAL_BINDER_CAP.",
     },
@@ -7144,7 +7174,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the checker declines past this cap; module doc: \"Unsupported shapes decline rather than sampling an infinite domain\" -- MBQI search is untrusted, only this checker's acceptance counts",
-        env_override: None,
+        env_override: Some("AXEYUM_QUANTIFIED_UF_BINDER_CAP"),
         justification: undated("doc comment"),
         note: "Admission cap on the checked finite-profile model checker for the almost-uninterpreted quantified fragment.",
     },
@@ -7170,7 +7200,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the source checker's admission walk declines, rejecting only this ADR-0128 vacuous-existential counterexample route",
-        env_override: None,
+        env_override: Some("AXEYUM_VACUOUS_EXISTS_COUNTEREXAMPLE_BINDER_CAP"),
         justification: undated("doc comment"),
         note: "Admission cap on one checked counterexample below syntactically vacuous leading existential binders.",
     },
@@ -7183,7 +7213,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the source checker's admission walk declines, rejecting only this ADR-0128 vacuous-existential counterexample route",
-        env_override: None,
+        env_override: Some("AXEYUM_VACUOUS_EXISTS_COUNTEREXAMPLE_NODE_CAP"),
         justification: undated("doc comment"),
         note: "Node-count sibling to VACUOUS_EXISTS_COUNTEREXAMPLE_BINDER_CAP.",
     },
@@ -7196,7 +7226,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_RECON_ALPHABET_CAP"),
         justification: undated("doc comment"),
         note: "Caps the Lean kernel-module reconstruction of a regex-emptiness refutation, NOT the underlying verdict - the doc states plainly \"the certificate itself is unaffected\": this only decides whether a checkable proof artifact is produced.",
     },
@@ -7209,7 +7239,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_RECON_MAX_STATES"),
         justification: undated("doc comment"),
         note: "The re-established emptiness-closure cap; `pub` because it is also referenced from the module's own top doc. Same verdict-is-unaffected-only-the-proof-artifact caveat as `RECON_STATE_CAP`/`RECON_ALPHABET_CAP`.",
     },
@@ -7222,7 +7252,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_RECON_STATE_CAP"),
         justification: undated("doc comment"),
         note: "Further caps the (already `RECON_MAX_STATES`-bounded) closure before rendering it into a kernel module, since the emitted n x m transition table would otherwise be unwieldy.",
     },
@@ -7719,7 +7749,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_LENGTH_SAT_MAX_LEN"),
         justification: undated("doc comment"),
         note: "`CheckResult::Unknown` when a solved length-to-LIA model's length falls outside `0..=LENGTH_SAT_MAX_LEN`. \"Exceeding the cap declines to `Unknown` - never a wrong verdict, since the cap only misses a witness\" per the doc.",
     },
@@ -7758,7 +7788,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the deepening loop `for step in 1..=MAX_DOMAIN_SIZE` simply stops; module doc: \"a query whose models are all infinite simply never certifies here and keeps the caller's `unknown`\" -- soundness rests on the independent checker, not on this search",
-        env_override: None,
+        env_override: Some("AXEYUM_MAX_DOMAIN_SIZE"),
         justification: undated("doc comment"),
         note: "Doc comment: \"The cvc5 finite-model-find probe over the public UF parity slice tops out at per-sort cardinality 5; 8 leaves margin without inviting blowup\" -- a real comparison, but no date is given.",
     },
@@ -7836,7 +7866,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::None,
         guarded_by: "the pigeonhole check declines past this bit width; the query remains available to the pure-EUF fast path and the BV backend (module doc)",
-        env_override: None,
+        env_override: Some("AXEYUM_BOOL_UF_EXHAUSTIVE_MAX_BITS"),
         justification: undated("doc comment"),
         note: "Bounds a finite-domain pigeonhole refutation over a Bool/BV argument domain (2^bits exhaustive risk).",
     },
@@ -8116,7 +8146,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_UFLRA_MAX_BOOLEAN_ATOMS"),
         justification: undated("doc comment"),
         note: "FINDING: no env-override mechanism here, unlike `uflia_online.rs::MAX_BOOLEAN_ATOMS` (raised via `AXEYUM_UFLIA_MAX_BOOLEAN_ATOMS`) — same constant name, both files' doc comments describe the same role ('Hard ceiling on the number of distinct theory atoms in the Boolean skeleton'), but this UFLRA copy is 48 (not 512) and fixed at compile time with no override. Checked at 3 sites (uflra_online.rs:1259, 1448, 1580).",
     },
@@ -9714,5 +9744,106 @@ mod tests {
                 "{module}::{name} is both registered and exempt"
             );
         }
+    }
+
+    /// Every environment variable this registry NAMES must be read somewhere in
+    /// the workspace's own sources.
+    ///
+    /// # Why this test and not a list
+    ///
+    /// `env_override` is the field a reader consults before running an A/B. An
+    /// entry naming a variable that nothing reads is strictly worse than
+    /// `None`: the operator sets it, the run proceeds on the shipped default,
+    /// and the result is reported as the raised arm. So the failure this must
+    /// catch is not "a lever is missing" but "a lever is *claimed*".
+    ///
+    /// The population is derived from [`REGISTRY`], never from a literal, so it
+    /// fails equally on a variable added to the table without a read and on a
+    /// read deleted from the code. `config_registry.rs` itself is excluded: it
+    /// names every variable by construction, and counting it would make the
+    /// check unable to fail.
+    ///
+    /// # Why the scope is the WORKSPACE and not the entry's own crate
+    ///
+    /// The narrower version was written first and failed on its first honest
+    /// run, at the five `AXEYUM_MEMORY_LIMIT_MB` entries: the variable is real
+    /// but is read in `crates/axeyum-bench/examples/smtcomp_cli.rs`, which
+    /// turns it into a `SolverConfig` field. A lever legitimately lives at
+    /// whatever layer owns the knob, so "read by its own crate" is the wrong
+    /// question and would have been silenced by relaxing the claim.
+    #[test]
+    fn every_env_override_is_read_by_the_code() {
+        let declared: BTreeSet<&'static str> =
+            REGISTRY.iter().filter_map(|e| e.env_override).collect();
+        assert!(
+            !declared.is_empty(),
+            "no entry declares an env_override, so this test measured nothing"
+        );
+        let read = env_vars_read_by_the_workspace(&repo_root().join("crates"), &declared);
+        let missing: Vec<String> = REGISTRY
+            .iter()
+            .filter_map(|e| e.env_override.map(|v| (e, v)))
+            .filter(|(_, var)| !read.contains(var))
+            .map(|(e, var)| format!("{}: {var}", e.key()))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "registry entries name an environment variable that no workspace source reads: \
+             {missing:#?}\nEither wire the lever (see `axeyum_ir::config_lever`) or set \
+             `env_override: None`. A claimed lever that does nothing turns an A/B into a \
+             measurement of the shipped default reported as the other arm."
+        );
+    }
+
+    /// Which of `wanted` occur in a `.rs` file under `dir`.
+    ///
+    /// Skips this module's own source: it names every variable by construction,
+    /// so including it would make the caller unable to fail. The `AXEYUM_`
+    /// pre-filter keeps this one pass over ~72 MB of sources rather than one
+    /// pass per variable.
+    fn env_vars_read_by_the_workspace(
+        dir: &Path,
+        wanted: &BTreeSet<&'static str>,
+    ) -> BTreeSet<&'static str> {
+        let mut found = BTreeSet::new();
+        let mut stack = vec![dir.to_path_buf()];
+        while let Some(dir) = stack.pop() {
+            let Ok(read) = std::fs::read_dir(&dir) else {
+                continue;
+            };
+            for entry in read {
+                let path = entry.expect("dir entry").path();
+                if path.is_dir() {
+                    if path.file_name().is_some_and(|f| f == "target") {
+                        continue;
+                    }
+                    stack.push(path);
+                    continue;
+                }
+                if path.extension().is_none_or(|e| e != "rs") {
+                    continue;
+                }
+                if path.file_name().is_some_and(|f| f == "config_registry.rs") {
+                    continue;
+                }
+                let text = std::fs::read_to_string(&path).expect("read source");
+                if !text.contains("AXEYUM_") {
+                    continue;
+                }
+                for var in wanted {
+                    // The QUOTED literal, not the bare name. Written as a bare
+                    // substring this check passed its own mutation: renaming
+                    // `AXEYUM_BOOL_EUF_MAX_ATOMS` to `…_TYPO` at the only site
+                    // that reads it left the registry's name a substring of the
+                    // code's, and all 18 tests stayed green. Every read in this
+                    // tree is a string literal; a doc comment naming the
+                    // variable in backticks is not a read and must not count.
+                    if text.contains(&format!("\"{var}\"")) {
+                        found.insert(*var);
+                    }
+                }
+            }
+        }
+        found
     }
 }

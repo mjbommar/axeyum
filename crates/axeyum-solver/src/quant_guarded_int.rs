@@ -43,6 +43,17 @@ use crate::backend::SolverError;
 /// unbounded/huge guard never blows up the formula or memory.
 pub const RANGE_SIZE_CAP: i128 = 4096;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`RANGE_SIZE_CAP`]: the compiled default, or
+    /// `AXEYUM_RANGE_SIZE_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `RANGE_SIZE_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn range_size_cap() -> i128 = "AXEYUM_RANGE_SIZE_CAP" or RANGE_SIZE_CAP;
+}
+
 /// Rewrites every top-level guarded-finite-`Int` universal in `assertions` to its
 /// equivalent finite conjunction, leaving all other assertions unchanged.
 ///
@@ -247,7 +258,7 @@ fn try_expand_assertion(
     let Some(width) = hi.checked_sub(lo).and_then(|d| d.checked_add(1)) else {
         return Ok(None);
     };
-    if width > RANGE_SIZE_CAP {
+    if width > range_size_cap() {
         return Ok(None);
     }
 

@@ -64,6 +64,17 @@ use crate::lra::check_with_lia_simplex;
 /// attempted exactly when the guarded-`Int` decision pass fires.
 const RANGE_SIZE_CAP: i128 = 4096;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`RANGE_SIZE_CAP`]: the compiled default, or
+    /// `AXEYUM_RANGE_SIZE_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `RANGE_SIZE_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn range_size_cap() -> i128 = "AXEYUM_RANGE_SIZE_CAP" or RANGE_SIZE_CAP;
+}
+
 /// A detected guarded-finite-`Int` universal `∀x:Int. (lo<=x<=hi) => inner`.
 struct GuardedUniversal {
     /// The bound integer variable `x`.
@@ -1157,7 +1168,7 @@ fn detect_guarded_universal(arena: &TermArena, assertion: TermId) -> Option<Guar
         return None;
     }
     let width = hi.checked_sub(lo).and_then(|d| d.checked_add(1))?;
-    if width > RANGE_SIZE_CAP {
+    if width > range_size_cap() {
         return None;
     }
     Some(GuardedUniversal {

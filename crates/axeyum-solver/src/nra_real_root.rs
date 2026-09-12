@@ -6479,6 +6479,17 @@ fn sos_refute_multivariate(atoms: &[MultiAtom]) -> Option<CheckResult> {
 /// large weight is declined as a later — denominator/scaling — slice).
 const SOS_MAX_SQUARE_WEIGHT: i128 = 16;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`SOS_MAX_SQUARE_WEIGHT`]: the compiled default, or
+    /// `AXEYUM_SOS_MAX_SQUARE_WEIGHT` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `SOS_MAX_SQUARE_WEIGHT`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn sos_max_square_weight() -> i128 = "AXEYUM_SOS_MAX_SQUARE_WEIGHT" or SOS_MAX_SQUARE_WEIGHT;
+}
+
 /// A self-contained, independently re-checkable sum-of-squares refutation of a
 /// STRICT quadratic inequality atom. [`SosCertificate::verify`] needs no arena or
 /// solver state.
@@ -6662,7 +6673,7 @@ impl SosCertificate {
                 1
             } else if dk.denominator() == 1
                 && dk.numerator() >= 1
-                && dk.numerator() <= SOS_MAX_SQUARE_WEIGHT
+                && dk.numerator() <= sos_max_square_weight()
             {
                 dk.numerator()
             } else {

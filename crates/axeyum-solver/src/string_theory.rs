@@ -1605,6 +1605,17 @@ fn seq_code_points(elems: &[Value]) -> Vec<u32> {
 /// `Unknown` — never a wrong verdict, since the cap only *misses* a witness.
 const LENGTH_SAT_MAX_LEN: i128 = 20_000;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`LENGTH_SAT_MAX_LEN`]: the compiled default, or
+    /// `AXEYUM_LENGTH_SAT_MAX_LEN` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `LENGTH_SAT_MAX_LEN`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn length_sat_max_len() -> i128 = "AXEYUM_LENGTH_SAT_MAX_LEN" or LENGTH_SAT_MAX_LEN;
+}
+
 /// The `'a'`-fill code point (U+0061) — the canonical single-character filler whose
 /// concatenation is length-homomorphic (`'a'^m ++ 'a'^n = 'a'^(m+n)`), so a length
 /// assignment satisfying the concat length homomorphism yields string bindings that
@@ -1853,7 +1864,7 @@ pub fn check_qf_slia_length(
                 return CheckResult::Unknown(unknown("length model bound a non-integer length"));
             }
         };
-        if !(0..=LENGTH_SAT_MAX_LEN).contains(&len) {
+        if !(0..=length_sat_max_len()).contains(&len) {
             return CheckResult::Unknown(unknown(
                 "solved string length is negative or exceeds the witness cap",
             ));

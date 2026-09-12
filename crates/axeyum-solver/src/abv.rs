@@ -520,6 +520,18 @@ const MAX_ROW_ROUNDS: usize = 64;
 const MAX_ROW_SITES: usize = 4096;
 /// Maximum structural store/ITE layers followed while realizing one array term.
 const MAX_STRUCTURAL_ARRAY_REALIZATION_STEPS: usize = 4_096;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_STRUCTURAL_ARRAY_REALIZATION_STEPS`]: the compiled default, or
+    /// `AXEYUM_MAX_STRUCTURAL_ARRAY_REALIZATION_STEPS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_STRUCTURAL_ARRAY_REALIZATION_STEPS`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_structural_array_realization_steps() -> usize = "AXEYUM_MAX_STRUCTURAL_ARRAY_REALIZATION_STEPS" or MAX_STRUCTURAL_ARRAY_REALIZATION_STEPS;
+}
+
 const SCALAR_LOCAL_SEARCH_PROBE_MS: u64 = 100;
 
 /// [`eliminate_arrays`] with the array instruments recorded around it.
@@ -2893,7 +2905,7 @@ fn prepare_online_array_equalities(
         .iter()
         .map(|atom| (atom.flag, atom.lhs, atom.rhs))
         .collect();
-    if atoms.len() > MAX_DIFF_SKOLEMS {
+    if atoms.len() > max_diff_skolems() {
         return Ok(None);
     }
     let mut observed_indices: Vec<Vec<TermId>> = atoms
@@ -3134,7 +3146,7 @@ fn realize_structural_array_term(
     deadline: Option<Instant>,
 ) -> Result<StructuralRealization, SolverError> {
     let mut current = term;
-    for _step in 0..MAX_STRUCTURAL_ARRAY_REALIZATION_STEPS {
+    for _step in 0..max_structural_array_realization_steps() {
         check_structural_projection_deadline(deadline)?;
         if eval_structural_array_term(arena, current, projected)? == *target {
             return Ok(StructuralRealization::Realized { changed: false });
@@ -6654,6 +6666,17 @@ fn project_replay_row(
 /// asserted array disequality needs at most one, so this caps the total number of
 /// distinct array (dis)equality atoms whose witness is materialised.
 const MAX_DIFF_SKOLEMS: usize = 256;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_DIFF_SKOLEMS`]: the compiled default, or
+    /// `AXEYUM_MAX_DIFF_SKOLEMS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_DIFF_SKOLEMS`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_diff_skolems() -> usize = "AXEYUM_MAX_DIFF_SKOLEMS" or MAX_DIFF_SKOLEMS;
+}
 
 /// Builds the `unknown` result with the lazy-extensionality classification.
 fn ext_unknown(detail: String) -> CheckResult {
