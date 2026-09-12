@@ -13,7 +13,7 @@
 //! non-constants and returns `SolverError::Unsupported`, which
 //! `check_with_nra_impl` propagates with `?`.
 //!
-//! Measured on the 2026-09-12 QF_NRA census
+//! Measured on the 2026-09-12 `QF_NRA` census
 //! (`bench-results/qf-nra-route-20260912/`), that escaping error was the
 //! **largest single cause** of the division's addressable gap — 20 of the 77
 //! winnable files — surfacing at the front door as
@@ -86,10 +86,10 @@ fn horner_coupling() -> (TermArena, Vec<TermId>) {
 
     // L = y*(y*((x*k6) + y*(y*(x*k120))))
     let x_k120 = a.real_mul(x, k120).unwrap();
-    let y_x_k120 = a.real_mul(y, x_k120).unwrap();
-    let yy_x_k120 = a.real_mul(y, y_x_k120).unwrap();
+    let y_times_x_k120 = a.real_mul(y, x_k120).unwrap();
+    let y_sq_x_k120 = a.real_mul(y, y_times_x_k120).unwrap();
     let x_k6 = a.real_mul(x, k6).unwrap();
-    let inner = a.real_add(x_k6, yy_x_k120).unwrap();
+    let inner = a.real_add(x_k6, y_sq_x_k120).unwrap();
     let y_inner = a.real_mul(y, inner).unwrap();
     let lhs = a.real_mul(y, y_inner).unwrap();
 
