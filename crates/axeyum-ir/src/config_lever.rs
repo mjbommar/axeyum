@@ -9,7 +9,7 @@
 //! bound decide the division?" meant editing a source file and rebuilding the
 //! workspace. That is why none of them had been asked.
 //!
-//! This module is the one-line answer: a cap wired through [`cap_lever!`] keeps
+//! This module is the one-line answer: a cap wired through [`cap_lever!`](crate::cap_lever) keeps
 //! its compiled value exactly, and becomes a one-command arm
 //! (`AXEYUM_MAX_ATOMS=64 cargo run …`) when someone wants to measure it.
 //!
@@ -24,7 +24,7 @@
 //!
 //! # The contract
 //!
-//! - **Unset is the shipped value, byte for byte.** [`cap`] reads the
+//! - **Unset is the shipped value, byte for byte.** [`cap`](crate::config_lever::cap) reads the
 //!   environment only when the variable is present, so a process with no
 //!   `AXEYUM_*` set computes the same verdicts it computed before the lever
 //!   existed.
@@ -33,7 +33,7 @@
 //!   believes. `AXEYUM_MAX_ATOMS=sixtenn` panics naming the variable; it does
 //!   not run the default and call it the raised arm. The empty string is
 //!   malformed too — `AXEYUM_MAX_ATOMS=` is a mistake, not an unset.
-//! - **Read once per process.** [`cap_lever!`] caches in a `OnceLock`, so a
+//! - **Read once per process.** [`cap_lever!`](crate::cap_lever) caches in a `OnceLock`, so a
 //!   lever at a hot comparison site costs an atomic load, not a scan of the
 //!   environment. Levers are process-level arms; setting a variable from inside
 //!   a running process does not move an accessor that has already resolved.
@@ -41,21 +41,32 @@
 //!   written in the source (`4_096`): `AXEYUM_X=4_096` and `AXEYUM_X=4096` are
 //!   the same arm.
 //!
-//! # The one failure this cannot catch
+//! # When the refusal happens, and the one failure this cannot catch
 //!
-//! A misspelled **variable name** sets something nothing reads, and the run
-//! looks exactly like the default arm. Nothing here can see that; the check is
-//! to run with `--trace` and confirm your variable appears in the `; config`
-//! line's `env:` fields (`axeyum_solver::config_registry::active_env_overrides`
-//! derives those from the registry, so a variable that is not a registered
-//! `env_override` will be absent).
+//! The read is **lazy**: the `OnceLock` resolves at the accessor's first call,
+//! so a malformed value panics at the first CONSULTATION of that cap, not at
+//! startup. Measured 2026-09-11 on `target/release/examples/smtcomp_cli`:
+//! `AXEYUM_QUANT_EXPAND_BIT_LIMIT=ten` on a quantified-BV file exits 101 naming
+//! the variable, while the same variable on a file that never reaches that cap
+//! runs clean and prints its verdict. That is the right trade for a lever a
+//! query may never touch, but it means "the run finished" is not evidence your
+//! value parsed — only that the cap was not consulted, or that it was and the
+//! value was good.
+//!
+//! A misspelled **variable NAME** is the failure nothing here can see: it sets
+//! something no accessor reads, and the run looks exactly like the default arm.
+//! The check is to run with `--trace` and confirm your variable appears in the
+//! `; config` line's `env:` fields
+//! (`axeyum_solver::config_registry::active_env_overrides` derives those from
+//! the registry, so a variable that is not a registered `env_override` is
+//! absent).
 
 use std::fmt::Display;
 use std::str::FromStr;
 
 /// Resolves one cap: the value of `var` if it is set, else `shipped`.
 ///
-/// Prefer [`cap_lever!`], which wraps this in a cached accessor. Call this
+/// Prefer [`cap_lever!`](crate::cap_lever), which wraps this in a cached accessor. Call this
 /// directly only where a `OnceLock` accessor does not fit.
 ///
 /// # Panics
@@ -104,12 +115,11 @@ where
     // `4_096` is how the shipped caps are written at their definition sites, so
     // it must be how a lever can be written too; `FromStr` does not accept it.
     let literal: String = trimmed.chars().filter(|c| *c != '_').collect();
-    if literal.is_empty() {
-        panic!(
-            "{var} is set but empty. A config lever must name a value; to use the shipped \
-             default, UNSET the variable (`env -u {var} …`) rather than clearing it."
-        );
-    }
+    assert!(
+        !literal.is_empty(),
+        "{var} is set but empty. A config lever must name a value; to use the shipped \
+         default, UNSET the variable (`env -u {var} …`) rather than clearing it."
+    );
     literal.parse::<T>().unwrap_or_else(|error| {
         panic!(
             "{var}={text:?} is not a valid {ty}: {error}. A config lever is an experiment; \
