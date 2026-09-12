@@ -1,6 +1,6 @@
 //! Models: satisfying assignments keyed by Axeyum symbols.
 
-use axeyum_ir::{Assignment, FuncId, FuncValue, Rational, SortId, SymbolId, Value};
+use axeyum_ir::{Assignment, ConstructorId, FuncId, FuncValue, Rational, SortId, SymbolId, Value};
 
 // Certificate DATA only, and from ONE module. Importing these through the
 // crate-root facade resolved them to their five CHECKER modules; two of those
@@ -48,6 +48,17 @@ pub struct Model {
     /// deterministic iteration; an empty map is exactly the total `x/0 = 0`
     /// evaluator convention. Mirrors [`Assignment::set_real_div_zero`].
     real_div_zero: Vec<(Rational, Rational)>,
+    /// Model-chosen interpretation of a **wrong-constructor selector**, keyed by
+    /// `(the selector's constructor, field index, the operand's value)`
+    /// (ADR-1930). SMT-LIB leaves `sel_{c,i}(t)` unspecified when `t` was not
+    /// built by `c`; the value the search chose is carried here so the `sat`
+    /// replay (which re-evaluates the original selector term) accepts the
+    /// witness. Kept in insertion order, which is deterministic: entries are
+    /// appended by a single traversal of the query's selector sites in
+    /// ascending `TermId`. An empty list is exactly the total
+    /// `well_founded_default` evaluator convention. Mirrors
+    /// [`Assignment::set_dt_select_witness`].
+    dt_select_wrong_ctor: Vec<(ConstructorId, u32, Value, Value)>,
     /// Declared finite carrier size per uninterpreted sort (finite model
     /// finding, pure UF). An entry `(s, k)` asserts this model is a structure
     /// whose carrier for `s` is exactly the canonical token domain `0..k`;
@@ -139,6 +150,39 @@ impl Model {
     /// (`numerator -> quotient`) in the deterministic key order.
     pub fn real_div_zeros(&self) -> impl Iterator<Item = (Rational, Rational)> + '_ {
         self.real_div_zero.iter().copied()
+    }
+
+    /// Records the model-chosen value of `sel_{constructor,index}(operand)` for
+    /// an operand built by a **different** constructor (ADR-1930).
+    ///
+    /// Returns `false` — and changes nothing — when a *different* value is
+    /// already recorded for the same key, which is a congruence violation the
+    /// caller must reject. Mirrors [`Assignment::set_dt_select_witness`].
+    pub fn set_dt_select_witness(
+        &mut self,
+        constructor: ConstructorId,
+        index: u32,
+        operand: Value,
+        value: Value,
+    ) -> bool {
+        for (c, i, key, recorded) in &self.dt_select_wrong_ctor {
+            if *c == constructor && *i == index && *key == operand {
+                return *recorded == value;
+            }
+        }
+        self.dt_select_wrong_ctor
+            .push((constructor, index, operand, value));
+        true
+    }
+
+    /// Iterates the recorded wrong-constructor selector interpretations in
+    /// insertion order (deterministic — see the field docs).
+    pub fn dt_select_witnesses(
+        &self,
+    ) -> impl Iterator<Item = (ConstructorId, u32, &Value, &Value)> + '_ {
+        self.dt_select_wrong_ctor
+            .iter()
+            .map(|(c, i, key, value)| (*c, *i, key, value))
     }
 
     /// Declares the finite carrier size of uninterpreted sort `sort` as the
@@ -434,6 +478,9 @@ impl Model {
         for (numerator, quotient) in assignment.real_div_zeros() {
             self.set_real_div_zero(numerator, quotient);
         }
+        for (constructor, index, operand, value) in assignment.dt_select_witnesses() {
+            self.set_dt_select_witness(constructor, index, operand.clone(), value.clone());
+        }
     }
 
     /// Converts to an evaluator [`Assignment`] for check-by-evaluation —
@@ -448,6 +495,9 @@ impl Model {
         }
         for &(n, q) in &self.real_div_zero {
             asg.set_real_div_zero(n, q);
+        }
+        for (constructor, index, operand, value) in &self.dt_select_wrong_ctor {
+            asg.set_dt_select_witness(*constructor, *index, operand.clone(), value.clone());
         }
         asg
     }

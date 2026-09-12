@@ -1345,33 +1345,48 @@ fn rewrite_app(
     if all_constant(arena, args) {
         let rebuilt = build_app(arena, op, args)?;
         let result_sort = arena.sort_of(rebuilt);
-        let folded = value_to_term(arena, eval(arena, rebuilt, &Assignment::new())?)?;
-        // `Value` deliberately represents Float and RoundingMode values by their
-        // bit patterns. Restore the original finite-domain sort after folding;
-        // otherwise `FpFromBits(const)`/`RoundingModeFromBits(const)` silently
-        // become plain bit-vectors and an enclosing well-sorted equality or ITE
-        // fails to rebuild.
-        let folded = match result_sort {
-            Sort::Float { exp, sig } => arena.fp_from_bits(folded, exp, sig)?,
-            Sort::RoundingMode => arena.rounding_mode_from_bits(folded)?,
-            _ => folded,
-        };
-        let rule_id = match arena.sort_of(folded) {
-            Sort::Bool => BOOL_CONST_FOLD,
-            // `all_constant` matches only Bool/BV constants, so a folded term is
-            // only ever Bool/BV here; the array and integer arms are unreachable.
-            Sort::BitVec(_)
-            | Sort::Array { .. }
-            | Sort::Int
-            | Sort::Real
-            | Sort::RoundingMode
-            | Sort::Datatype(_)
-            | Sort::Uninterpreted(_)
-            | Sort::Float { .. }
-            | Sort::Seq(_) => BV_CONST_FOLD,
-        };
-        if enabled.contains(rule_id) {
-            return Ok(applied(folded, rule_id));
+        // DECLINE, do not fail, when the value has no constant-term encoding.
+        //
+        // `all_constant` is VACUOUSLY true for a NULLARY application, so every
+        // nullary datatype constructor (`nil`, `zero`, an enum member) reached
+        // `value_to_term`, which answers `SortMismatch { expected: "Bool or
+        // BitVec", found: Datatype(n) }` for a `Value::Datatype`. That error
+        // propagated out of `canonicalize_terms`, which has no partial-failure
+        // mode, so ONE such subterm cost the whole query its entire
+        // preprocessing pass — measured on the QF_DT parity list, 73 of the 81
+        // gap files reported exactly `canonicalize failed: IR error during
+        // rewrite: sort mismatch: expected Bool or BitVec, found (Datatype n)`.
+        // Not folding is the identity rewrite, so declining is
+        // denotation-preserving; the datatype route folds these itself
+        // (`simplify_datatypes`, ADR-0022).
+        if let Ok(folded) = value_to_term(arena, eval(arena, rebuilt, &Assignment::new())?) {
+            // `Value` deliberately represents Float and RoundingMode values by their
+            // bit patterns. Restore the original finite-domain sort after folding;
+            // otherwise `FpFromBits(const)`/`RoundingModeFromBits(const)` silently
+            // become plain bit-vectors and an enclosing well-sorted equality or ITE
+            // fails to rebuild.
+            let folded = match result_sort {
+                Sort::Float { exp, sig } => arena.fp_from_bits(folded, exp, sig)?,
+                Sort::RoundingMode => arena.rounding_mode_from_bits(folded)?,
+                _ => folded,
+            };
+            let rule_id = match arena.sort_of(folded) {
+                Sort::Bool => BOOL_CONST_FOLD,
+                // `all_constant` matches only Bool/BV constants, so a folded term is
+                // only ever Bool/BV here; the array and integer arms are unreachable.
+                Sort::BitVec(_)
+                | Sort::Array { .. }
+                | Sort::Int
+                | Sort::Real
+                | Sort::RoundingMode
+                | Sort::Datatype(_)
+                | Sort::Uninterpreted(_)
+                | Sort::Float { .. }
+                | Sort::Seq(_) => BV_CONST_FOLD,
+            };
+            if enabled.contains(rule_id) {
+                return Ok(applied(folded, rule_id));
+            }
         }
     }
 

@@ -13,12 +13,19 @@
 //!
 //! then replacing `is-c(o)` with `tag_o == c` and `select_{c,i}(o)` with
 //! `f_{o,c,i}`. Structural equality `o == o'` of two datatype variables reduces
-//! to `tag_o == tag_o'` conjoined with field-wise equality (exact given the
-//! default guards below). To keep the expansion faithful to the *total* `select`
-//! convention ([`well_founded_default`]), each non-active field is pinned to its
-//! sort's well-founded default by a guard `tag_o == c \/ f_{o,c,i} == default`,
-//! so `select_{c,i}(o)` when `o`'s constructor is not `c` yields the same default
-//! the evaluator does. The residual is datatype-free and goes back through the
+//! to `tag_o == tag_o'` conjoined, per constructor `j`, with
+//! `tag_o == j -> (j's fields agree)`.
+//!
+//! **A non-active field variable is FREE** (ADR-1930). It used to be pinned to
+//! its sort's `well_founded_default` by a guard `tag_o == c OR f_{o,c,i} ==
+//! default`, so that `select_{c,i}(o)` off `o`'s own constructor agreed with the
+//! evaluator's total convention. SMT-LIB leaves that case UNSPECIFIED, so the
+//! guard was not a convention but a MODEL RESTRICTION, and it manufactured wrong
+//! `unsat`s: `((_ is none) o) AND (v o)` over `Opt = none | some(v: Bool)`
+//! answered `unsat` here on 2026-09-12 while cvc5 1.3.4 and z3 both answer
+//! `sat`. The value the search picks for a free non-active field is instead
+//! recorded as the model's chosen selector interpretation and checked by the
+//! replay. The residual is datatype-free and goes back through the
 //! normal dispatcher ([`solve`] → `check_auto`), which routes its now-mixed
 //! Bool/BitVec + Int/Real content to the bit-blaster and the arithmetic DPLL
 //! respectively — so `Int`/`Real` field variables decided in congruence with the
@@ -32,6 +39,15 @@
 //! `sat` model is projected back to a `Value::Datatype` and **replayed against
 //! the original assertions** with the ground evaluator before it is returned —
 //! a projection bug surfaces as a replay error, never a wrong `sat`.
+//!
+//! `select_{c,i}(construct_d(...))` with `d != c` — the same unspecified case,
+//! written out — is abstracted to a fresh free variable
+//! ([`abstract_wrong_ctor_selects`]) instead of being refused. The chosen values
+//! from both sources are folded into ONE interpretation keyed by
+//! `(constructor, index, the operand's VALUE)`
+//! ([`register_select_witnesses`]), which is what makes it congruent; a
+//! candidate that wants two different results at one key describes no
+//! interpretation and yields `unknown`.
 //!
 //! Recursive datatypes are handled two ways:
 //!
@@ -61,7 +77,8 @@
 //! a real difference is `unknown`).
 //!
 //! Still outside the fragment: array/UF datatype fields, and `is`/`select`/`==`
-//! over a non-variable datatype term — these return [`SolverError::Unsupported`].
+//! over a datatype term that is neither a variable nor an abstracted
+//! wrong-constructor read — these return [`SolverError::Unsupported`].
 //! A fuller native theory (acyclicity + congruence, and exact field guards to
 //! make the relaxed `unknown` cases complete) is future work.
 
@@ -96,13 +113,23 @@ pub fn check_with_datatype_native(
     let simplified =
         simplify_datatypes(arena, assertions).map_err(|e| SolverError::Backend(e.to_string()))?;
 
+    // Abstract every `select_{c,i}(construct_d(...))` with `d != c` — the
+    // UNSPECIFIED case (ADR-1930) — into a fresh free variable. Read-over-
+    // construct already folded the `d == c` case exactly, so this is precisely
+    // the residue, and it is the single most common blocker in the QF_DT
+    // corpus. Replacing it by an unconstrained variable is a *relaxation*, so
+    // `unsat` transfers; a `sat` candidate's chosen values are recorded as a
+    // selector interpretation and replayed (`register_select_witnesses`).
+    let (abstracted, witnesses) = abstract_wrong_ctor_selects(arena, &simplified)
+        .map_err(|e| SolverError::Backend(e.to_string()))?;
+
     // Unfold `select` into datatype fields: each traversed datatype-field-select
     // becomes a fresh, free child datatype variable (a *relaxation* — children
     // are unconstrained), recorded in `links` so projection can reconstruct the
     // nested value. Because it only enlarges the model space, reduced-`unsat`
     // still implies original-`unsat` (sound, no guards); `sat` is replay-guarded.
     let (unfolded, links) =
-        unfold_traversals(arena, &simplified).map_err(|e| SolverError::Backend(e.to_string()))?;
+        unfold_traversals(arena, &abstracted).map_err(|e| SolverError::Backend(e.to_string()))?;
 
     // Immutable scan: validate the fragment and collect the datatype variables
     // used, the `is`/`select` sites to rewrite, and per-datatype layout.
@@ -110,7 +137,7 @@ pub fn check_with_datatype_native(
     // The query is a relaxation (so a `sat` candidate must be replay-checked and
     // a mismatch is `unknown`) if it traverses datatype fields or compares
     // datatypes that have datatype fields.
-    let relaxed = !links.is_empty() || scan.relaxed_eq;
+    let relaxed = !links.is_empty() || scan.relaxed_eq || !witnesses.is_empty();
     if scan.dt_symbols.is_empty() {
         // No datatype variables remain (read-over-construct sufficed) — hand the
         // residual back to the dispatcher.
@@ -194,7 +221,16 @@ pub fn check_with_datatype_native(
 
     // Replay against the *original* simplified assertions (which still reference
     // the select-chains), so a sound `sat` satisfies the real query.
-    project_and_replay(arena, &simplified, &scan, &layout, &links, relaxed, &model)
+    project_and_replay(
+        arena,
+        &simplified,
+        &scan,
+        &layout,
+        &links,
+        &witnesses,
+        relaxed,
+        &model,
+    )
 }
 
 /// Per-symbol expansion variables.
@@ -319,6 +355,105 @@ fn unfold_traversals(
         }
         current = next;
     }
+}
+
+/// A `select_{c,i}(construct_d(...))` with `d != c` — SMT-LIB's UNSPECIFIED
+/// selector case — replaced by a fresh free variable.
+///
+/// `operand` is the ORIGINAL constructor term, kept so the projection can
+/// evaluate it and key the model's chosen value by the operand's VALUE (which
+/// is what makes the recorded interpretation congruent).
+struct WitnessSite {
+    constructor: ConstructorId,
+    index: u32,
+    operand: TermId,
+    witness: SymbolId,
+    field_sort: Sort,
+}
+
+/// If `term` is `construct_c(args...)`, its constructor.
+fn construct_of(arena: &TermArena, term: TermId) -> Option<ConstructorId> {
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::DtConstruct { constructor, .. },
+            ..
+        } => Some(*constructor),
+        _ => None,
+    }
+}
+
+/// Replaces every `select_{c,i}(construct_d(...))` with `d != c` by a fresh free
+/// variable of the field's sort.
+///
+/// Read-over-construct ([`simplify_datatypes`]) already folded the `d == c` case
+/// to the field itself, so this pass sees exactly the residue: the case SMT-LIB
+/// leaves UNSPECIFIED. Before this pass such a term reached `expect_dt_symbol`
+/// and the whole query was refused — measured 2026-09-12, the single most common
+/// blocker in the QF_DT parity list.
+///
+/// Soundness. The fresh variable is unconstrained, so the rewritten query's
+/// model space CONTAINS the original's under every selector interpretation
+/// (set the variable to whatever that interpretation gives). Hence
+/// rewritten-`unsat` implies original-`unsat` with no side conditions. It is a
+/// relaxation in the `sat` direction too — two occurrences that a model must
+/// make equal (congruence) get independent variables — which is why a `sat`
+/// candidate is only returned after [`register_select_witnesses`] has folded the
+/// chosen values into ONE interpretation keyed by the operand's value, and the
+/// replay has re-evaluated the original assertions under it.
+fn abstract_wrong_ctor_selects(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<(Vec<TermId>, Vec<WitnessSite>), IrError> {
+    let mut targets: Vec<(TermId, ConstructorId, u32, TermId, Sort)> = Vec::new();
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(term) else {
+            continue;
+        };
+        let (op, args) = (*op, args.clone());
+        if let Op::DtSelect { constructor, index } = op
+            && let Some(built) = construct_of(arena, args[0])
+            && built != constructor
+        {
+            let field_sort = arena.constructor_fields(constructor)[index as usize].1;
+            targets.push((term, constructor, index, args[0], field_sort));
+        }
+        stack.extend(args.iter().copied());
+    }
+    if targets.is_empty() {
+        return Ok((assertions.to_vec(), Vec::new()));
+    }
+    // Deterministic: the walk above is stack-ordered, so sort by the select
+    // term's own id before minting any symbol.
+    targets.sort_by_key(|&(term, ..)| term.index());
+
+    let mut map: HashMap<TermId, TermId> = HashMap::new();
+    let mut sites = Vec::with_capacity(targets.len());
+    for (term, constructor, index, operand, field_sort) in targets {
+        let witness = arena.declare_internal(&format!("!dt_sel_{}", term.index()), field_sort)?;
+        map.insert(term, arena.var(witness));
+        sites.push(WitnessSite {
+            constructor,
+            index,
+            operand,
+            witness,
+            field_sort,
+        });
+    }
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    let mut out = Vec::with_capacity(assertions.len());
+    for &assertion in assertions {
+        out.push(replace_subterms(arena, assertion, &map, &mut memo)?);
+    }
+    // Registration order matters: an operand may itself contain an abstracted
+    // select, and the arena interns a subterm BEFORE its parent, so ascending
+    // operand id registers inner witnesses before the outer ones that read them.
+    sites.sort_by_key(|site| site.operand.index());
+    Ok((out, sites))
 }
 
 fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverError> {
@@ -627,14 +762,6 @@ fn build_sym_vars(
 
     let mut fields = Vec::with_capacity(count);
     for (j, (_ctor, field_sorts)) in ctors.iter().enumerate() {
-        let tag_eq_j = {
-            let c = arena
-                .bv_const(tag_width, j as u128)
-                .map_err(|e| SolverError::Backend(e.to_string()))?;
-            arena
-                .eq(tag_var, c)
-                .map_err(|e| SolverError::Backend(e.to_string()))?
-        };
         let mut row = Vec::with_capacity(field_sorts.len());
         for (i, &fsort) in field_sorts.iter().enumerate() {
             // Datatype-typed fields are never traversed (the scan rejects such
@@ -649,20 +776,20 @@ fn build_sym_vars(
                 .map_err(|e| SolverError::Backend(e.to_string()))?;
             row.push(Some(field));
 
-            // Guard: non-active fields take their well-founded default, matching
-            // the total `select` convention so projection replays exactly.
-            let default =
-                well_founded_default(arena, fsort).expect("scalar field sorts are inhabited");
-            let default_term =
-                value_to_term(arena, &default).map_err(|e| SolverError::Backend(e.to_string()))?;
-            let field_var = arena.var(field);
-            let field_eq_default = arena
-                .eq(field_var, default_term)
-                .map_err(|e| SolverError::Backend(e.to_string()))?;
-            let guard = arena
-                .or(tag_eq_j, field_eq_default)
-                .map_err(|e| SolverError::Backend(e.to_string()))?;
-            extra.push(guard);
+            // NO GUARD. A NON-ACTIVE field variable is deliberately left FREE.
+            //
+            // This slot used to carry `tag_o == j OR f_{o,j,i} == default`,
+            // pinning `select_{j,i}(o)` to `well_founded_default` whenever `o`'s
+            // constructor is not `j`. That is not a conservative convention: it
+            // is a MODEL RESTRICTION, and restricting the model space is exactly
+            // how a solver manufactures a wrong `unsat`. Measured 2026-09-12 --
+            // `is-none(o) AND (= (v o) 5)` over `Opt = none | some(v)` answered
+            // `unsat` here while cvc5 1.3.4 and z3 4.x both answer `sat`,
+            // because SMT-LIB leaves `sel_{c,i}` UNSPECIFIED off its own
+            // constructor (ADR-1930). Leaving the variable free is a
+            // relaxation -- `unsat` still transfers -- and the value the search
+            // picks becomes the model's chosen selector interpretation, recorded
+            // by `register_select_witnesses` and checked by the replay.
         }
         fields.push(row);
     }
@@ -675,11 +802,22 @@ fn build_sym_vars(
 }
 
 /// Builds the reduced term for `o == o'` over two same-datatype variables:
-/// `tag_l == tag_r` conjoined with field-wise equality across all constructors.
+/// `tag_l == tag_r` conjoined, FOR EACH CONSTRUCTOR `j`, with
+/// `tag_l == j -> (fields of j agree)`.
 ///
-/// This is exact structural equality given the field-default guards: non-active
-/// fields are pinned to the same default on both sides, so they compare equal
-/// automatically, leaving the active constructor's fields to decide equality.
+/// The per-constructor GUARD is load-bearing and this function used to omit it,
+/// conjoining field equality across *every* constructor unconditionally. That
+/// was exact only because `build_sym_vars` pinned each non-active field to its
+/// well-founded default on both sides, so the extra conjuncts were trivially
+/// true. Those pins are gone (they manufactured a wrong `unsat` — see
+/// `build_sym_vars`), so an unguarded conjunction would now demand that two
+/// values agree on slots neither of them uses, which removes real models: an
+/// over-constraint, i.e. the same wrong-`unsat` failure by another route. The
+/// implication form is exact without any pinning.
+///
+/// Datatype-typed fields carry no variable and are skipped, which makes the
+/// result WEAKER than real equality for such datatypes; the caller marks the
+/// query `relaxed_eq` so a `sat` candidate is replay-checked.
 fn build_dt_eq(
     arena: &mut TermArena,
     left: &SymVars,
@@ -690,10 +828,9 @@ fn build_dt_eq(
     let mut conj = arena
         .eq(lt, rt)
         .map_err(|e| SolverError::Backend(e.to_string()))?;
-    for (lrow, rrow) in left.fields.iter().zip(&right.fields) {
+    for (j, (lrow, rrow)) in left.fields.iter().zip(&right.fields).enumerate() {
+        let mut fields_eq = arena.bool_const(true);
         for (lf, rf) in lrow.iter().zip(rrow) {
-            // Equality is admitted only for fully-scalar datatypes, so every
-            // field has a variable; a `None` (datatype field) cannot occur here.
             let (Some(lf), Some(rf)) = (lf, rf) else {
                 continue;
             };
@@ -702,10 +839,25 @@ fn build_dt_eq(
             let fe = arena
                 .eq(lfv, rfv)
                 .map_err(|e| SolverError::Backend(e.to_string()))?;
-            conj = arena
-                .and(conj, fe)
+            fields_eq = arena
+                .and(fields_eq, fe)
                 .map_err(|e| SolverError::Backend(e.to_string()))?;
         }
+        let tag_j = arena
+            .bv_const(left.tag_width, j as u128)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        let tag_is_j = arena
+            .eq(lt, tag_j)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        let not_j = arena
+            .not(tag_is_j)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        let guarded = arena
+            .or(not_j, fields_eq)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        conj = arena
+            .and(conj, guarded)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
     }
     Ok(conj)
 }
@@ -719,6 +871,7 @@ fn project_and_replay(
     scan: &Scan,
     layout: &BTreeMap<SymbolId, SymVars>,
     links: &Links,
+    witnesses: &[WitnessSite],
     relaxed: bool,
     model: &Model,
 ) -> Result<CheckResult, SolverError> {
@@ -727,6 +880,17 @@ fn project_and_replay(
     for &sym in scan.dt_symbols.keys() {
         let value = project_slot(arena, sym, scan, layout, links, &assignment, &mut memo)?;
         assignment.set(sym, value);
+    }
+
+    // Fold the model's choices for every UNSPECIFIED selector read into ONE
+    // interpretation before replaying (ADR-1930). Without this the replay would
+    // evaluate those reads with `well_founded_default` and reject every model
+    // that used a different value, which is the whole class of query this change
+    // exists to decide.
+    if let Some(reason) =
+        register_select_witnesses(arena, scan, layout, witnesses, &mut assignment)?
+    {
+        return Ok(CheckResult::Unknown(reason));
     }
 
     // Replay against the original assertions. For the *relaxed* (traversal) path
@@ -769,6 +933,102 @@ fn project_and_replay(
     // the inner model held.
     out.carry_assignment_components(&assignment);
     Ok(CheckResult::Sat(out))
+}
+
+/// Folds the candidate model's choices for every WRONG-CONSTRUCTOR selector read
+/// into a single selector interpretation on `assignment`, or reports the
+/// congruence conflict that makes the candidate unusable.
+///
+/// Two sources, both of them values the search chose freely:
+///
+/// - a `select_{c,i}(o)` over an expanded VARIABLE whose projected constructor
+///   is not `c`: the field variable `f_{o,c,i}` (no longer pinned to a default,
+///   see `build_sym_vars`);
+/// - a `select_{c,i}(construct_d(...))` abstracted by
+///   [`abstract_wrong_ctor_selects`]: its fresh witness variable.
+///
+/// The interpretation is keyed by `(constructor, index, the OPERAND'S VALUE)`,
+/// so it is a genuine function of the value and therefore congruent: two
+/// syntactically different operands that denote the same value get the same
+/// answer, which is exactly what SMT-LIB requires of an unspecified selector and
+/// what the relaxation above does NOT enforce on its own. When the candidate
+/// asks for two different answers at one key it does not describe any
+/// interpretation, so the result is `unknown` — never a verdict.
+///
+/// # Errors
+///
+/// [`SolverError::Backend`] if evaluating an abstracted site's operand fails.
+fn register_select_witnesses(
+    arena: &TermArena,
+    scan: &Scan,
+    layout: &BTreeMap<SymbolId, SymVars>,
+    witnesses: &[WitnessSite],
+    assignment: &mut axeyum_ir::Assignment,
+) -> Result<Option<UnknownReason>, SolverError> {
+    for site in &scan.selects {
+        let Some(operand @ Value::Datatype { constructor, .. }) = assignment.get(site.symbol)
+        else {
+            continue;
+        };
+        let dt = scan.dt_symbols[&site.symbol];
+        let site_ctor = scan.layouts[&dt][site.ctor_index].0;
+        if constructor == site_ctor {
+            // The ACTIVE constructor: the field variable IS the field, exactly.
+            continue;
+        }
+        let Some(field) = layout[&site.symbol].fields[site.ctor_index][site.field_index] else {
+            continue;
+        };
+        let Some(value) = assignment.get(field) else {
+            continue;
+        };
+        let index = u32::try_from(site.field_index).unwrap_or(u32::MAX);
+        if !assignment.set_dt_select_witness(site_ctor, index, operand, value) {
+            return Ok(Some(witness_conflict()));
+        }
+    }
+
+    // `witnesses` is ordered by operand id, so an operand that itself reads an
+    // abstracted selector sees that entry already recorded.
+    for site in witnesses {
+        let operand = match eval(arena, site.operand, assignment) {
+            Ok(value) => value,
+            Err(error) => {
+                return Ok(Some(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail: format!(
+                        "could not evaluate the operand of an unspecified selector read \
+                         while checking the candidate model: {error}"
+                    ),
+                }));
+            }
+        };
+        let value = match assignment.get(site.witness) {
+            Some(value) => value,
+            // The witness never reached the reduced query (nothing constrained
+            // it): any value will do, so take the total convention's.
+            None => match well_founded_default(arena, site.field_sort) {
+                Some(value) => value,
+                None => continue,
+            },
+        };
+        if !assignment.set_dt_select_witness(site.constructor, site.index, operand, value) {
+            return Ok(Some(witness_conflict()));
+        }
+    }
+    Ok(None)
+}
+
+/// The `unknown` a congruence conflict produces (see
+/// [`register_select_witnesses`]).
+fn witness_conflict() -> UnknownReason {
+    UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: "the candidate model reads one unspecified selector at one operand value \
+                 with two different results, so it describes no selector interpretation \
+                 (ADR-1930)"
+            .to_owned(),
+    }
 }
 
 /// Reconstructs a slot's `Value::Datatype` from the model: scalar fields from
@@ -831,16 +1091,6 @@ fn project_slot(
     };
     memo.insert(sym, value.clone());
     Ok(value)
-}
-
-fn value_to_term(arena: &mut TermArena, value: &Value) -> Result<TermId, axeyum_ir::IrError> {
-    match value {
-        Value::Bool(b) => Ok(arena.bool_const(*b)),
-        Value::Bv { width, value } => arena.bv_const(*width, *value),
-        Value::Int(v) => Ok(arena.int_const(*v)),
-        Value::Real(r) => Ok(arena.real_const(*r)),
-        _ => unreachable!("scalar field defaults are Bool/BitVec/Int/Real"),
-    }
 }
 
 fn unsupported(what: &str) -> SolverError {
