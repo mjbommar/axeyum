@@ -261,3 +261,52 @@ The census's 22 genuine-incompleteness rows say so in their own words — *"this
 needs a nlsat/CAD engine"* — and that is ADR-0058 Phase C/D. The 20 rows that
 used to read as an error and the 18 that read as a bare timeout now carry real
 reasons, which is the input that work needs and did not have.
+
+## The re-census — what those 38 rows actually were
+
+`census-77-after.tsv`. Same 77 files, same protocol, the shipped binary
+(sha256 `a52d8756…`). 77 of 77 ran, 77 of 77 stated a reason, 0 killed.
+
+| cause | before | after |
+|---|---:|---:|
+| `ERROR: unsupported by backend: QF_LRA: nonlinear real multiplication` | **20** | **0** |
+| `preprocessed dispatch timeout after reduced solve` (no cause) | **18** | **0** |
+| `nonlinear abstraction: refinement reached a fixpoint without deciding` | 16 | **27** |
+| *carried*: `nonlinear abstraction: … past the consuming engine's capacity …` | — | **13** |
+| `nonlinear abstraction: … past the consuming engine's capacity …` (direct) | 4 | 4 |
+| `nra lazy SMT: wall-clock timeout reached` | 7 | 12 |
+| *carried*: `lazy SMT: wall-clock timeout reached` | — | 4 |
+| watchdog fired before the worker thread returned | 5 | 5 |
+| `lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget` | 3 | 3 |
+| `nonlinear abstraction: refinement round bound reached` | 2 | 2 |
+| *carried*: `auto-dispatch timeout after exact real-polynomial route` | — | 2 |
+| integer literal outside the `iN` reference range (ADR-1702) | 1 | 3 |
+| online CDCL(T) LRA model did not replay | 1 | 2 |
+
+`give-up kind`: `Error` **20 → 0**. `Incomplete` 18 → 32, `ResourceLimit`
+16 → 21, `Timeout` 18 → 19, `Watchdog` 5 → 5.
+
+Rows marked *carried* are the ones the repaired relabel now reads out. **Thirteen
+of the eighteen opaque timeouts were the CAD wall** — a query whose
+cross-products project past the consuming engine's atom capacity, which the old
+sentence reported as "the clock ran out". Four were a genuine lazy-SMT
+wall-clock, two an exact-real-polynomial-route budget.
+
+### The gap, restated on the repaired diagnosis
+
+| | files | share |
+|---|---:|---:|
+| **the linear abstraction's own boundary** (refinement fixpoint 27, capacity 13 + 4, round bound 2) | **46** | **60%** |
+| clock (lazy SMT 12 + 4, watchdog 5, Fourier–Motzkin 3, dispatch budget 2) | 26 | 34% |
+| other (wide integer literal 3, model replay 2) | 5 | 6% |
+
+Before the repair the same population read as *26% error, 23% "it ran out of
+time", 21% relaxation boundary*. After, **60% is one thing and it names itself**:
+the linear-abstraction relaxation cannot decide these, and the capacity rows say
+in their own decline text that it *"needs a nlsat/CAD engine"*. That is
+ADR-0058 Phase C/D, and it is now the measured majority of this division's gap
+rather than an inference from a fifth of it.
+
+`last` is still useless and `bound_by` still is not: 72 of 77 name the string
+front-door wrapper `fd:bounded-completeness-unsat` as the last route, while
+`bound_by` names `nra` on 66.
