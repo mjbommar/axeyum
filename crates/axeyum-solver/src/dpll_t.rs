@@ -2002,7 +2002,9 @@ mod tests {
             let v = arena.real_var(&format!("d{i}")).unwrap();
             assertions.push(arena.real_lt(v, zero).unwrap());
         }
-        let expired = std::time::Instant::now() - std::time::Duration::from_secs(1);
+        let expired = std::time::Instant::now()
+            .checked_sub(std::time::Duration::from_secs(1))
+            .expect("an instant one second ago");
         let mut ctx = super::Abstractor::with_deadline(Some(expired));
         let bailed = ctx.abstract_assertions(&mut arena, &assertions).unwrap();
         assert!(
