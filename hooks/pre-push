@@ -192,7 +192,8 @@ for l0_gate in \
   "scripts/check-development-partition.py" \
   "scripts/check-autogenesis-holdout-isolation.py" \
   "scripts/check-holdout-adjacency.py" \
-  "scripts/check-draw7-frozen-families.py --before ${L0_BEFORE:-HEAD~1}"
+  "scripts/check-draw7-frozen-families.py --before ${L0_BEFORE:-HEAD~1}" \
+  "scripts/check-suite-gating.py"
 do
   l0_step_start=$(date +%s)
   # Word-splitting is intended: the entries above carry their own flags.
@@ -601,6 +602,46 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   for suite in capabilities deep_nesting_no_abort \
                evidence_lia_cert evidence_bv2nat_cert; do
     gated_test "integration: $suite" \
+      cargo test -p axeyum-solver --features full --quiet --test "$suite"
+  done
+
+  # DISPATCH AND GIVE-UP-REASON gates. Added 2026-09-12 after `main` sat RED for
+  # ~2 hours on `unknown_reason_coverage` across three lane merges and a GREEN
+  # PUSH WENT OUT OVER IT, because this hook named none of these suites.
+  #
+  # They are not here because they are new; they are here because each one
+  # failing is invisible to everything else this hook runs. The whole set costs
+  # under a tenth of a second — measured 2026-09-12: 0.00/0.00/0.01/0.03/0.00/
+  # 0.01 s — so cost is not the reason they were missing. Nobody added them.
+  #
+  #   unknown_reason_coverage  — every give-up carries a reason a reader can
+  #                              act on. The division censuses this project
+  #                              plans from are read off exactly those strings,
+  #                              so a silent `unsupported` corrupts the roadmap,
+  #                              not just a log line.
+  #   route_attribution        — DELIBERATELY NOT HERE: same family, but 113 s,
+  #                              a 20% addition to this battery. It needs a
+  #                              decision about budget, not a quiet include.
+  #   dt_uf_gate               — ADR-1920's capability gate.
+  #   dt_capability_1935       — ADR-1935's exactness precondition and the
+  #                              messages the blocker census is read from.
+  #   datatype_solve_path      — the native datatype route stays reachable.
+  #   quant_ladder_rung_refusal_declines
+  #                            — ADR-1927: a rung's fragment refusal is a
+  #                              DECLINE, not the query's verdict. Regressing
+  #                              this silently costs whole divisions (it was
+  #                              worth +51 files when fixed).
+  #   additive_no_overflow_never_becomes_unsat
+  #                            — ADR-1937 soundness-negative: the additive
+  #                              constraint must never turn a `sat` into an
+  #                              `unsat`.
+  #
+  # `--features full` is load-bearing here too; `gated_test` fails on a zero
+  # count, so the empty-binary trap is mechanised rather than remembered.
+  for suite in unknown_reason_coverage dt_uf_gate dt_capability_1935 \
+               datatype_solve_path quant_ladder_rung_refusal_declines \
+               additive_no_overflow_never_becomes_unsat; do
+    gated_test "dispatch/reason: $suite" \
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
   done
 
