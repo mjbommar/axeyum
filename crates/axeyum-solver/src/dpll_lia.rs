@@ -4028,7 +4028,19 @@ impl ArithAbstractor {
             Op::RealGt => (arena.real_le(args[0], args[1])?, false),
             _ => unreachable!("order_atom called only for arithmetic order atoms"),
         };
-        Self::ensure_supported_atom(arena, canonical, theory)?;
+        // Only for an atom this abstractor has not already admitted. The check
+        // is a WHOLE conjunctive decision (`check_with_lra` / `check_with_lia_
+        // opaque_apps` — collection, Fourier–Motzkin, simplex) run to find out
+        // whether one atom is in the fragment, and it carries no deadline of
+        // its own. Unguarded it re-ran for every occurrence of every atom:
+        // measured 2026-09-12 on the `QF_UFLRA`
+        // `cpachecker-induction.32_1_cilled…` family, **11,236** deadline-free
+        // `lra::decide_within` calls on one-assertion systems in a 6 s run.
+        // `atom_of` already keys the proposition by this same canonical term,
+        // so a hit is an atom that passed this check when it was first seen.
+        if !self.atom_of.contains_key(&canonical) {
+            Self::ensure_supported_atom(arena, canonical, theory)?;
+        }
         let prop = self.atom(arena, canonical, theory);
         let prop_term = arena.var(prop);
         if polarity {

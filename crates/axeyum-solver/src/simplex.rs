@@ -522,21 +522,29 @@ impl Delta {
     }
 }
 
-/// Decide feasibility of the conjunction of `constraints` over `nvars` variables.
+/// [`feasible`] under an absolute wall-clock `deadline`; `None` is "no bound".
 ///
-/// See the module docs for the outcome contract. `nvars` must equal every
-/// `constraint.coeffs.len()`.
-///
-/// # Panics
-///
-/// Panics if a constraint's `coeffs` length differs from `nvars` (a caller bug).
+/// **Why this exists.** [`Tableau::run`] has always taken a deadline and polls
+/// it every 64 pivots — the [`Incremental`] engine passes a real one. The
+/// one-shot entry point above passed the literal `None`, so the whole
+/// `lra::simplex_fallback` route ran with the pivot loop's budget check wired
+/// to a constant. Measured 2026-09-12 on the `QF_UFLRA`
+/// `cpachecker-induction.32_1_cilled…` family: `--timeout-ms 2000` returned at
+/// 3.009 s, i.e. budget + the harness watchdog's 1 s grace, because the worker
+/// thread never came back on its own. That is the ADR-1906 shape one more time
+/// — a deadline test the workload cannot reach — except here the counter was
+/// fine and the *argument* was the constant.
 #[must_use]
-pub fn feasible(nvars: usize, constraints: &[Constraint]) -> SimplexOutcome {
+pub fn feasible_within(
+    nvars: usize,
+    constraints: &[Constraint],
+    deadline: Option<Instant>,
+) -> SimplexOutcome {
     for c in constraints {
         assert_eq!(c.coeffs.len(), nvars, "constraint arity mismatch");
     }
     let mut tableau = Tableau::new(nvars, constraints);
-    match tableau.run(None, MAX_PIVOTS) {
+    match tableau.run(deadline, MAX_PIVOTS) {
         Ok(RunOutcome::Feasible) => match tableau.materialize() {
             Ok(point) => narrow(point).map_or(SimplexOutcome::Unknown, SimplexOutcome::Feasible),
             Err(Overflow) => SimplexOutcome::Unknown,
@@ -1728,6 +1736,15 @@ fn farkas_holds(
 mod tests {
     use super::*;
 
+    /// The unbounded one-shot call, for the cases below that are about the
+    /// arithmetic rather than the clock. Deliberately a TEST helper: there is
+    /// no production caller that owns no deadline, and when `feasible` was a
+    /// module-level function the whole `lra` route reached the pivot loop with
+    /// its budget wired to a literal `None`.
+    fn feasible(nvars: usize, constraints: &[Constraint]) -> SimplexOutcome {
+        feasible_within(nvars, constraints, None)
+    }
+
     /// `Incremental::policy` reports the policy the engine is actually
     /// running, and `with_policy` is honoured rather than silently replaced by
     /// the configured default.
@@ -1893,6 +1910,36 @@ mod tests {
             SimplexOutcome::Feasible(x) => assert!(satisfies(&cs, &x)),
             o => panic!("expected feasible, got {o:?}"),
         }
+    }
+
+    /// The one-shot entry point must hand its caller's deadline to the pivot
+    /// loop, not the literal `None` it passed for the whole of this engine's
+    /// life.
+    ///
+    /// `Tableau::run` has always polled correctly; the defect was the argument.
+    /// So the discriminating input is a system the engine decides instantly
+    /// (any bound would be met) under a deadline that has ALREADY passed: the
+    /// loop's entry poll must convert that into `Unknown`.
+    #[test]
+    fn the_one_shot_entry_point_hands_the_pivot_loop_its_deadline() {
+        let cs = [con(&[1], Rel::Ge, 1), con(&[1], Rel::Le, 3)];
+        let expired = Instant::now()
+            .checked_sub(core::time::Duration::from_secs(1))
+            .expect("an instant one second ago");
+        assert!(
+            matches!(
+                feasible_within(1, &cs, Some(expired)),
+                SimplexOutcome::Unknown
+            ),
+            "an expired deadline must stop the pivot loop before it decides"
+        );
+        // Positive control, same system: unbounded, it decides. Without this the
+        // assertion above would also pass on an engine that answered `Unknown`
+        // to everything.
+        assert!(
+            matches!(feasible_within(1, &cs, None), SimplexOutcome::Feasible(_)),
+            "with no deadline the same system must still be decided feasible"
+        );
     }
 
     #[test]
