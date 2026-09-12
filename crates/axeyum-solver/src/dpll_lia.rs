@@ -1060,6 +1060,7 @@ impl IncrementalArithDpll {
         // every round. A decided verdict is only ever reached *inside* a round,
         // never by timeout.
         let deadline = config.timeout.map(|t| Instant::now() + t);
+        let _phase = crate::phase_breadcrumb::enter("dpll-lia:solve");
         self.solve_calls += 1;
         let enable_affine_bound_cores = self.solve_calls > 1;
 
@@ -1663,6 +1664,7 @@ fn theory_conflicts_for_indices(
     probe: TheoryProbe,
     budget: &mut MinimizationBudget,
 ) -> Result<Vec<ArithConflictCore>, SolverError> {
+    let _phase = crate::phase_breadcrumb::enter("dpll-lia:theory-conflicts");
     let TheoryProbe {
         theory,
         oracle,

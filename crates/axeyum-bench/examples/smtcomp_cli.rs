@@ -345,12 +345,12 @@ use axeyum_solver::{
     LiaCountersGuard, LiveInstruments, ProofProgress, RouteAttributionGuard, RouteTrace, Sampled,
     SolverConfig, SolverError, SpanLog, SpanLogInputs, Termination, UfArithOverboundStats,
     UfArithOverboundStatsGuard, UfliaInterfaceCounters, UfliaInterfaceCountersGuard, UnknownReason,
-    config_trace_line, division_from_path, install_live_instruments, instrument, last_abv_stats,
-    last_bv_layer_stats, last_dl_online_stats, last_euf_online_atom_stats, last_front_door_stats,
-    last_lazy_smt_counters, last_lia_counters, last_route_attribution,
-    last_uf_arith_overbound_stats, last_uflia_interface_counters, live_bv_layer_stats,
-    live_config_trace_line, live_lazy_smt_counters, live_lia_counters, live_theory_layer_stats,
-    produce_evidence_smtlib, solve_smtlib,
+    arm_phase_breadcrumb, config_trace_line, division_from_path, install_live_instruments,
+    instrument, last_abv_stats, last_bv_layer_stats, last_dl_online_stats,
+    last_euf_online_atom_stats, last_front_door_stats, last_lazy_smt_counters, last_lia_counters,
+    last_route_attribution, last_uf_arith_overbound_stats, last_uflia_interface_counters,
+    live_bv_layer_stats, live_config_trace_line, live_lazy_smt_counters, live_lia_counters,
+    live_phase, live_theory_layer_stats, produce_evidence_smtlib, solve_smtlib,
 };
 // `Reading` under its own name: `axeyum_solver` also exports a `GroupReading`
 // and this file already uses a local `reading` helper, so the import is
@@ -1057,6 +1057,17 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
         }
         _ => lines.push(format!("; route unavailable: {reason}")),
     }
+    // The answer to the question the line above can only ASK. `route-open`
+    // says how much of the budget no recorded attempt accounts for; the
+    // breadcrumb says what was inside it, because its frames are written on
+    // ENTRY. Printed unconditionally once a breadcrumb was installed, INCLUDING
+    // when the stack is empty: `stack=none` means the worker was outside every
+    // instrumented phase, which is a finding about where to put the next frame
+    // and must not render as silence.
+    if let Some(phase) = live_phase(board) {
+        lines.push(partial_line(&phase.value.trace_line()));
+        note("phase", phase.sampled);
+    }
 
     if provenance.is_empty() {
         // Nothing was mirrored before the kill. Report exactly what this path
@@ -1753,6 +1764,12 @@ fn main() -> ExitCode {
         // `--trace`, so a default run installs nothing and every publish site
         // returns on one `bool` read.
         let _live_board = instruments_on.then(|| install_live_instruments(&worker_board));
+        // The phase breadcrumb, armed AFTER the board because it publishes its
+        // handle onto it. Every other instrument on this board answers "what
+        // has this run finished"; this one answers "what is it inside right
+        // now", which is the only question a watchdog kill leaves open. Returns
+        // `None` without a board, so this is one `bool` read off `--trace`.
+        let _phase_breadcrumb = arm_phase_breadcrumb();
         if evidence_mode {
             let started = Instant::now();
             // A parse or solver error is `unknown` here too — and an evidence run
@@ -2465,6 +2482,115 @@ mod tests {
             );
         }
         let _ = release_tx.send(());
+    }
+
+    /// A watchdog kill must name the phase the worker was INSIDE, not the last
+    /// one it left.
+    ///
+    /// The worker below enters two frames and then blocks forever, having
+    /// already entered and LEFT a third. Every boundary instrument in this tree
+    /// would report the third — the one that returned — so the assertion that
+    /// earns its place is `in=`: it must be the frame still open, and the
+    /// closed one must appear only as an `enters=` count. A reader that reports
+    /// the wrong one sends the next lane to the wrong function, which is
+    /// exactly the failure this instrument exists to end.
+    #[test]
+    fn an_abandoned_worker_names_the_phase_it_is_inside_not_the_one_it_left() {
+        let board = LiveInstruments::new();
+        let worker_board = Arc::clone(&board);
+        let (tx, rx) = std::sync::mpsc::channel::<&'static str>();
+        let (entered_tx, entered_rx) = std::sync::mpsc::channel::<()>();
+        let (release_tx, release_rx) = std::sync::mpsc::channel::<()>();
+        let _worker = std::thread::spawn(move || {
+            let _live = install_live_instruments(&worker_board);
+            let _breadcrumb = arm_phase_breadcrumb();
+            {
+                // Entered and left before the kill: a phase a boundary
+                // instrument would have published and this one must not name.
+                let _done = axeyum_solver::enter_phase("already-returned");
+            }
+            let _outer = axeyum_solver::enter_phase("euf:uf-arith-lazy");
+            let _inner = axeyum_solver::enter_phase("lra:fm-solve");
+            entered_tx.send(()).expect("receiver alive");
+            let _ = release_rx.recv();
+            let _ = tx.send("unknown");
+        });
+        entered_rx.recv().expect("the worker entered its phases");
+
+        let trace_lines = match rx.recv_timeout(Duration::from_millis(10)) {
+            Ok(_) => panic!("the worker must still be blocked"),
+            Err(_) => watchdog_trace_lines(true, &board, "watchdog fired"),
+        };
+        let phase = trace_lines
+            .iter()
+            .find(|l| l.starts_with("; partial phase "))
+            .unwrap_or_else(|| panic!("no phase line in {trace_lines:?}"));
+        assert!(
+            phase.contains(" in=lra:fm-solve "),
+            "the OPEN innermost frame is the running phase: {phase}"
+        );
+        assert!(
+            phase.contains("stack=euf:uf-arith-lazy(") && phase.contains(">lra:fm-solve("),
+            "the whole open chain renders outermost-first: {phase}"
+        );
+        assert!(
+            phase.contains(" depth=2 "),
+            "the closed frame is not on the stack: {phase}"
+        );
+        assert!(
+            phase.contains("already-returned:1"),
+            "but it is still countable in enters=: {phase}"
+        );
+        assert!(
+            !phase.contains(" in=already-returned "),
+            "a frame that returned must never be named as the running one: {phase}"
+        );
+        assert!(
+            trace_lines[0].contains("phase:in-flight"),
+            "a stack read from a running worker is a state, never a total: {}",
+            trace_lines[0]
+        );
+        let _ = release_tx.send(());
+    }
+
+    /// A run that installed a breadcrumb and was killed OUTSIDE every
+    /// instrumented phase says so, rather than printing nothing.
+    ///
+    /// `stack=none` is the finding "put the next frame here". Printing no line
+    /// at all would be indistinguishable from "the instrument was off", which
+    /// is the exact confusion the `; theory-layer unavailable:` line exists to
+    /// prevent for its own instrument.
+    #[test]
+    fn a_breadcrumb_with_no_open_frame_reports_none_rather_than_silence() {
+        let board = LiveInstruments::new();
+        let breadcrumb = axeyum_solver::PhaseBreadcrumb::new();
+        board.publish(instrument::PHASE, breadcrumb, Sampled::InFlight);
+        let lines = watchdog_trace_lines(true, &board, "watchdog fired");
+        let phase = lines
+            .iter()
+            .find(|l| l.starts_with("; partial phase "))
+            .unwrap_or_else(|| panic!("no phase line in {lines:?}"));
+        assert!(phase.contains("stack=none"), "{phase}");
+        assert!(phase.contains("in=none in_ms=na"), "{phase}");
+        assert!(phase.contains("depth=0"), "{phase}");
+    }
+
+    /// A run with no breadcrumb at all prints no phase line — the distinction
+    /// the test above depends on. Without this the `stack=none` assertion could
+    /// pass on a reader that emitted the line unconditionally.
+    #[test]
+    fn a_board_with_no_breadcrumb_prints_no_phase_line() {
+        let board = LiveInstruments::new();
+        board.publish(
+            instrument::DL_ONLINE,
+            (Duration::from_millis(1), 1_u64),
+            Sampled::Complete,
+        );
+        let lines = watchdog_trace_lines(true, &board, "watchdog fired");
+        assert!(
+            !lines.iter().any(|l| l.starts_with("; partial phase ")),
+            "{lines:?}"
+        );
     }
 
     /// A stage that finished is still reported under the partial token: the

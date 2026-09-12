@@ -263,6 +263,7 @@ pub fn check_with_nra(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    let _phase = crate::phase_breadcrumb::enter("nra:check");
     let result = check_with_nra_impl(arena, assertions, config)?;
     if let CheckResult::Sat(model) = &result {
         let assignment = model.to_assignment();

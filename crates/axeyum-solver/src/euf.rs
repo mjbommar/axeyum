@@ -304,6 +304,7 @@ pub(crate) fn try_lazy_arith_for_overbound(
     config: &SolverConfig,
     context: &str,
 ) -> Result<Option<CheckResult>, SolverError> {
+    let _phase = crate::phase_breadcrumb::enter("euf:lazy-arith-overbound");
     // Only engage when the EAGER bound would have refused; otherwise signal the
     // caller to keep its byte-identical in-bound behaviour.
     if refuse_oversized_ackermann(arena, assertions, context).is_none() {
@@ -824,6 +825,7 @@ pub fn check_with_uf_arithmetic_lazy(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    let _phase = crate::phase_breadcrumb::enter("euf:uf-arith-lazy");
     // A single shared deadline for the WHOLE CEGAR loop: without it, each round's
     // `check_auto` would honor the full `config.timeout` independently, so N rounds
     // could run N×budget (unbounded in aggregate). With it, every per-round solve

@@ -148,6 +148,7 @@ pub(crate) fn check_with_lra_within_certified(
     assertions: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<(CheckResult, Option<FarkasCertificate>), SolverError> {
+    let _phase = crate::phase_breadcrumb::enter("lra:certified");
     Ok(match decide_within(arena, assertions, deadline)? {
         Decision::Sat(model) => (CheckResult::Sat(model), None),
         Decision::UnsatFarkas { certificate, .. } => (CheckResult::Unsat, Some(certificate)),
@@ -515,6 +516,7 @@ fn collect_constraints(
     assertions: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<Option<Collector>, SolverError> {
+    let _phase = crate::phase_breadcrumb::enter("lra:collect");
     let mut ctx = Collector {
         deadline,
         ..Collector::default()
@@ -571,6 +573,12 @@ fn decide_within(
     if past_deadline(deadline) {
         return Ok(Decision::TimedOut);
     }
+    // A breadcrumb frame, not a counter: on a watchdog kill this is the phase
+    // the worker is inside, and every other instrument in this tree records
+    // only phases that already returned. One entry per conjunctive decision —
+    // coarse enough to be free, fine enough that `enters=` separates "one
+    // 24 s decision" from "a refinement loop that made 11,236 of them".
+    let _phase = crate::phase_breadcrumb::enter("lra:decide");
     let counting = crate::lazy_smt_counters::enabled();
     let collect_started = counting.then(Instant::now);
     let Some(mut ctx) = collect_constraints(arena, assertions, deadline)? else {
@@ -826,6 +834,7 @@ fn simplex_after_elimination(
     stages: &mut CubeStages,
     deadline: Option<Instant>,
 ) -> Result<Decision, SolverError> {
+    let _phase = crate::phase_breadcrumb::enter("lra:simplex-after-elim");
     if stages.simplex.is_some() {
         stages.record(counting);
         return Ok(Decision::TimedOut);
@@ -875,6 +884,7 @@ fn simplex_first(
     stages: &mut CubeStages,
     deadline: Option<Instant>,
 ) -> Result<Option<Decision>, SolverError> {
+    let _phase = crate::phase_breadcrumb::enter("lra:simplex-first");
     let started = counting.then(Instant::now);
     let fallback = simplex_fallback(arena, assertions, ctx, deadline);
     stages.simplex = Some(started.map_or(Duration::ZERO, |s| s.elapsed()));
@@ -913,6 +923,7 @@ fn simplex_fallback(
     ctx: &Collector,
     deadline: Option<Instant>,
 ) -> Result<Option<Decision>, SolverError> {
+    let _phase = crate::phase_breadcrumb::enter("lra:simplex-fallback");
     let nvars = ctx.vars.len();
     let mut rows = Vec::with_capacity(ctx.constraints.len());
     for constraint in &ctx.constraints {
@@ -1489,6 +1500,7 @@ const MAX_FM_CONSTRAINTS: usize = 20_000;
 /// accumulates these so an infeasible residual constant constraint reports the
 /// Farkas multipliers that produced it.
 fn solve(constraints: &[Constraint], nvars: usize, deadline: Option<Instant>) -> Feasibility {
+    let _phase = crate::phase_breadcrumb::enter("lra:fm-solve");
     // Eliminate variables n-1, n-2, ..., 0, saving the system before each
     // elimination so the model can be reconstructed by forward substitution.
     let mut saved: Vec<(usize, Vec<Constraint>)> = Vec::with_capacity(nvars);
@@ -2095,6 +2107,7 @@ fn lia_simplex_capped(
     allow_opaque_apps: bool,
     node_cap: u64,
 ) -> Result<CheckResult, SolverError> {
+    let _phase = crate::phase_breadcrumb::enter("lia:simplex-capped");
     let mut ctx = IntCollector::new(allow_opaque_apps);
     for (index, &assertion) in assertions.iter().enumerate() {
         ctx.current_origin = index;
