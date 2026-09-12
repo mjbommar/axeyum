@@ -239,6 +239,29 @@ pub(crate) fn qtrace(stage: &str, since: Instant, note: &str) {
     }
 }
 
+/// The message a [`SolverError::Unsupported`] carried, as a route-trail
+/// decline reason.
+///
+/// # Why this exists
+///
+/// Measured 2026-09-11: eleven sites in this file matched
+/// `Err(SolverError::Unsupported(_))` — binding the message to `_` — and then
+/// recorded the payload-free [`DeclineReason::Unsupported`]. The refusing
+/// call's own sentence was in hand at every one of them and reached nothing, so
+/// a route trail could not distinguish "this route does not do datatypes" from
+/// "this route does not do *this* datatype", which is the difference between a
+/// route that is irrelevant to a division and one that is one feature short of
+/// deciding it.
+///
+/// Takes the payload rather than the whole error on purpose: `SolverError`'s
+/// `Display` prefixes `"unsupported by backend: "`, and the decline reason
+/// prints its own `"unsupported: "`, so passing the error would say it twice.
+///
+/// Telemetry only: the returned reason is recorded, never branched on.
+fn unsupported_decline(message: &str) -> DeclineReason {
+    DeclineReason::UnsupportedDetail(message.to_owned())
+}
+
 fn quantified_timeout(stage: &str) -> CheckResult {
     let result = CheckResult::Unknown(UnknownReason {
         kind: UnknownKind::ResourceLimit,
@@ -283,7 +306,23 @@ fn run_egraph_quantified_fallback(
             );
             Ok(Some(CheckResult::Unsat))
         }
-        Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) => {
+        // Roadmap item 1.8's one deliberately-out-of-scope line, closed here:
+        // this arm recorded `NotApplicable` — a placeholder meaning "the probe
+        // said this route does not match" — for a route that RAN a full
+        // instantiation loop and returned its own classified `UnknownReason`.
+        // The loop's reason is the answer to "why did the refuter not refute",
+        // and it was being discarded one line before the only place that asks.
+        // `Sat` stays `NotApplicable`: the e-graph refuter is refutation-only,
+        // so a `Sat` from it is not a verdict and carries no reason to lift.
+        Ok(CheckResult::Unknown(reason)) => {
+            qtrace("egraph", started, "declined");
+            route_trace::record_quant_rung_declined(
+                route_trace::quant_rung::EGRAPH,
+                DeclineReason::from_unknown(&reason),
+            );
+            Ok(None)
+        }
+        Ok(CheckResult::Sat(_)) => {
             qtrace("egraph", started, "declined");
             route_trace::record_quant_rung_declined(
                 route_trace::quant_rung::EGRAPH,
@@ -291,12 +330,12 @@ fn run_egraph_quantified_fallback(
             );
             Ok(None)
         }
-        Err(error @ SolverError::Unsupported(_)) => {
+        Err(SolverError::Unsupported(message)) => {
             if mbqi_source_shape_supported(arena, assertions) {
                 qtrace("egraph", started, "unsupported->mbqi");
                 route_trace::record_quant_rung_declined(
                     route_trace::quant_rung::EGRAPH,
-                    DeclineReason::Unsupported,
+                    unsupported_decline(&message),
                 );
                 Ok(None)
             } else if let Some(result) = finite_unknown {
@@ -304,7 +343,7 @@ fn run_egraph_quantified_fallback(
                 route_trace::record_quant_rung_result(route_trace::quant_rung::EGRAPH, &result);
                 Ok(Some(result))
             } else {
-                Err(error)
+                Err(SolverError::Unsupported(message))
             }
         }
         Err(error) => Err(error),
@@ -352,11 +391,20 @@ fn finish_quantified_solve(
     };
     match check_with_quantifiers(arena, assertions, &finite_config) {
         finite_result @ (Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_))) => {
+            // Derived before the move: `retained_finite_unknown` consumes the
+            // result and drops the `Unsupported` message, and `NotApplicable`
+            // (what this recorded) claims the probe never ran — which is the
+            // opposite of what happened.
+            let declined = match &finite_result {
+                Ok(CheckResult::Unknown(reason)) => DeclineReason::from_unknown(reason),
+                Err(SolverError::Unsupported(message)) => unsupported_decline(message),
+                _ => DeclineReason::NotApplicable,
+            };
             let finite_unknown = retained_finite_unknown(finite_result);
             qtrace("finite-expansion", t0, "declined");
             route_trace::record_quant_rung_declined(
                 route_trace::quant_rung::FINITE_EXPANSION,
-                DeclineReason::NotApplicable,
+                declined,
             );
             // Pure-UF finite model finding, probed BEFORE the refutation
             // family on half the remaining budget (the `uf_fmf_probe_budget`
@@ -546,11 +594,15 @@ fn finish_quantified_solve(
                     // executed, and (before the take above) charged it MBQI's
                     // whole wall clock. Both halves of that entry were false
                     // (ADR-1907).
-                    if matches!(other, CheckResult::Unknown(_)) {
+                    if let CheckResult::Unknown(reason) = &other {
                         qtrace("uf-fmf-full", t0, "declined");
+                        // The finder RAN (that is what this guard means), so
+                        // `NotApplicable` — "the probe said this route does not
+                        // match" — was the wrong word for it. The reason the
+                        // rung itself produced is the right one.
                         route_trace::record_quant_rung_declined(
                             route_trace::quant_rung::UF_FMF_FULL,
-                            DeclineReason::NotApplicable,
+                            DeclineReason::from_unknown(reason),
                         );
                     }
                     // The ladder is out of rungs above ℕ-induction; record the
@@ -1365,13 +1417,16 @@ pub fn check_auto(
         if !outermost {
             return None;
         }
-        Some(
-            check_auto_explained(arena, assertions, config).inspect(|(_, trace)| {
-                route_trace::absorb_dispatch_trace(trace);
-            }),
-        )
+        // Absorbed on BOTH paths. `Result::inspect` was used here, which does
+        // not run on `Err`, so a dispatch that errored published nothing at
+        // all — measured 2026-09-11 as the reason 70 of the 81 `QF_DT`
+        // addressable-gap files printed a route trail holding one `fd:parse`
+        // probe and no route. See `check_auto_explained_parts`.
+        let (result, trace) = check_auto_explained_parts(arena, assertions, config);
+        route_trace::absorb_dispatch_trace(&trace);
+        Some(result)
     }) {
-        return attributed.map(|(result, _)| result);
+        return attributed;
     }
     // Thin wrapper: the *same* dispatch as `check_auto_explained`, with no trace
     // recorder. The recorder is a pure side effect at the existing decide/decline
@@ -1760,10 +1815,59 @@ pub fn check_auto_explained(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<(CheckResult, RouteTrace), SolverError> {
+    let (result, trace) = check_auto_explained_parts(arena, assertions, config);
+    result.map(|result| (result, trace))
+}
+
+/// [`check_auto_explained`]'s body, handing back the trace **even when the
+/// dispatch returns an error**.
+///
+/// # Why this split exists
+///
+/// `check_auto_explained` used to build its `RouteTrace` and then reach the
+/// dispatch through `?`. On an error that `?` dropped the trace on the floor,
+/// so every decline recorded on the way to the error was destroyed at the one
+/// moment a reader most needs it — and `check_auto`'s absorption is
+/// `Result::inspect`, which does not run on `Err` either, so nothing reached
+/// the thread-local attribution.
+///
+/// Measured 2026-09-11 on the 81-file `QF_DT` addressable gap: **70 files end
+/// in a dispatch error**, and the route trail for every one of them contained a
+/// single `fd:parse` probe — no route, no decline, no reason — while
+/// `datatype-elim` had in fact recorded a decline naming the exact construct.
+/// Handing the trace back on the error path is what makes those records
+/// survive.
+///
+/// Telemetry only: `result` is returned exactly as the dispatch produced it.
+fn check_auto_explained_parts(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> (Result<CheckResult, SolverError>, RouteTrace) {
     let mut trace = RouteTrace::new();
+    let outcome = check_auto_explained_into(arena, assertions, config, &mut trace);
+    if let Err(error) = &outcome {
+        // A terminal entry so the trail ends in something, rather than
+        // stopping wherever the last route happened to record. The detail is
+        // the error's own `Display` — derived, never a classification we
+        // invented for it.
+        trace.record_declined(
+            "dispatch-error",
+            DeclineReason::UnsupportedDetail(error.to_string()),
+        );
+    }
+    (outcome, trace)
+}
+
+fn check_auto_explained_into(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    trace: &mut RouteTrace,
+) -> Result<CheckResult, SolverError> {
     // One deadline for the whole call, taken at entry — see `fallback_deadline`.
     let deadline = fallback_deadline(config);
-    let result = check_auto_with_recorder(arena, assertions, config, &mut Some(&mut trace))?;
+    let result = check_auto_with_recorder(arena, assertions, config, &mut Some(trace))?;
     // Conjunct-split refutation fallback (mirrors `check_auto` for verdict
     // invariance), recorded as a `Decided` route so the trace's terminal entry
     // matches the upgraded `unsat`. Run BEFORE the invariant block so it sees the
@@ -1816,7 +1920,7 @@ pub fn check_auto_explained(
     {
         trace.record_declined("dispatch-early-exit", DeclineReason::from_unknown(reason));
     }
-    Ok((result, trace))
+    Ok(result)
 }
 
 /// The shared dispatch for [`check_auto`] / [`check_auto_explained`]. `rec` is an
@@ -2012,13 +2116,21 @@ fn check_auto_with_recorder(
                 }
                 Err(error) => Err(error),
             };
-        if let Ok(result) = preprocessed {
-            Ok(result)
-        } else {
-            with_recorder(rec, |t| {
-                t.record_declined("preprocess", DeclineReason::Incomplete(reduced_fallback()));
-            });
-            check_auto_inner(arena, assertions, config, rec)
+        match preprocessed {
+            Ok(result) => Ok(result),
+            // The error said WHICH construct the preprocessed path could not
+            // handle and was discarded here, leaving a note that a path
+            // "errored" and nothing about what it hit. Measured 2026-09-11:
+            // this entry appears on 58 of the 81 `QF_DT` addressable-gap files.
+            Err(error) => {
+                with_recorder(rec, |t| {
+                    t.record_declined(
+                        "preprocess",
+                        DeclineReason::Incomplete(reduced_fallback(&error)),
+                    );
+                });
+                check_auto_inner(arena, assertions, config, rec)
+            }
         }
     } else {
         check_auto_inner(arena, assertions, config, rec)
@@ -2027,10 +2139,10 @@ fn check_auto_with_recorder(
 
 /// The [`UnknownReason`] recorded when the preprocessed path errors and dispatch
 /// degrades to the original unreduced query (a route note, not a verdict).
-fn reduced_fallback() -> UnknownReason {
+fn reduced_fallback(error: &SolverError) -> UnknownReason {
     UnknownReason {
         kind: UnknownKind::Incomplete,
-        detail: "preprocessed path errored; degraded to the original query".to_owned(),
+        detail: format!("preprocessed path errored; degraded to the original query: {error}"),
     }
 }
 
@@ -2561,9 +2673,12 @@ fn check_auto_inner(
                 t.record_declined("milp", DeclineReason::from_unknown(&reason));
             });
         }
-        Err(_) => {
+        // Any error, not only `Unsupported` — so the reason carries the error's
+        // own `Display` (which names its variant) rather than asserting a
+        // fragment mismatch that a `Backend` failure would not be.
+        Err(error) => {
             with_recorder(rec, |t| {
-                t.record_declined("milp", DeclineReason::Unsupported);
+                t.record_declined("milp", DeclineReason::UnsupportedDetail(error.to_string()));
             });
         }
     }
@@ -3092,9 +3207,9 @@ fn dispatch_int_linear_refuters(
             with_recorder(rec, |t| t.record_result("lia-simplex", &result));
             return Ok(Some(result));
         }
-        Err(SolverError::Unsupported(_)) => {
+        Err(SolverError::Unsupported(message)) => {
             with_recorder(rec, |t| {
-                t.record_declined("lia-simplex", DeclineReason::Unsupported);
+                t.record_declined("lia-simplex", unsupported_decline(&message));
             });
         }
         Err(other) => return Err(other),
@@ -3185,10 +3300,10 @@ fn dispatch_int_linear_refuters(
                 _ => Ok(Some(result)),
             }
         }
-        Err(SolverError::Unsupported(_)) => {
+        Err(SolverError::Unsupported(message)) => {
             if !already_recorded {
                 with_recorder(rec, |t| {
-                    t.record_declined("lia-dpll", DeclineReason::Unsupported);
+                    t.record_declined("lia-dpll", unsupported_decline(&message));
                 });
             }
             Ok(None)
@@ -3352,7 +3467,7 @@ fn run_int_linear_group(
             }
             Err(SolverError::Unsupported(message)) => {
                 with_recorder(rec, |t| {
-                    t.record_declined(route, DeclineReason::Unsupported);
+                    t.record_declined(route, unsupported_decline(&message));
                 });
                 if index == 0 {
                     first_arm = Err(SolverError::Unsupported(message));
@@ -3451,11 +3566,11 @@ fn dispatch_arith_uf_overbound_probe_before_lia(
     );
     let Some(result) = (match probe {
         Ok(result) => result,
-        Err(SolverError::Unsupported(_)) => {
+        Err(SolverError::Unsupported(message)) => {
             with_recorder(rec, |t| {
                 t.record_declined(
                     "uf-arith-lazy-overbound-pre-lia",
-                    DeclineReason::Unsupported,
+                    unsupported_decline(&message),
                 );
             });
             return Ok(None);
@@ -4220,9 +4335,9 @@ fn dispatch_ufbv_online(
                 Ok(None)
             }
         }
-        Err(SolverError::Unsupported(_)) => {
+        Err(SolverError::Unsupported(message)) => {
             with_recorder(rec, |t| {
-                t.record_declined(route, DeclineReason::Unsupported);
+                t.record_declined(route, unsupported_decline(&message));
             });
             Ok(None)
         }
@@ -4279,7 +4394,7 @@ fn dispatch_declared_sort_ufbv_lazy(
         }
         Err(SolverError::Unsupported(message)) => {
             with_recorder(rec, |t| {
-                t.record_declined("ufbv-declared-sort-lazy", DeclineReason::Unsupported);
+                t.record_declined("ufbv-declared-sort-lazy", unsupported_decline(&message));
             });
             Ok(Some(CheckResult::Unknown(UnknownReason {
                 kind: UnknownKind::Incomplete,
@@ -4446,11 +4561,37 @@ fn mbqi_first_refusal(
         // A first-refusal pass must not fail the whole solve: an unsupported
         // shape or an unchecked candidate falls through to the established
         // rungs.
-        Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
+        //
+        // These were ONE arm recording `DeclineReason::NotApplicable`, and
+        // three different things reach it — none of them "the probe said this
+        // route does not match". An `Unknown` carries the pass's own reason, an
+        // `Unsupported` carries the refusing call's message, and a `Sat` here is
+        // a candidate the guarded arm above rejected when it re-checked the
+        // model against the ORIGINAL arena: a verifier rejection.
+        Ok(CheckResult::Unknown(reason)) => {
             qtrace("mbqi-quick", t0, "declined");
             route_trace::record_quant_rung_declined(
                 route_trace::quant_rung::MBQI_QUICK,
-                DeclineReason::NotApplicable,
+                DeclineReason::from_unknown(&reason),
+            );
+            Ok(None)
+        }
+        Err(SolverError::Unsupported(message)) => {
+            qtrace("mbqi-quick", t0, "declined");
+            route_trace::record_quant_rung_declined(
+                route_trace::quant_rung::MBQI_QUICK,
+                unsupported_decline(&message),
+            );
+            Ok(None)
+        }
+        Ok(CheckResult::Sat(_)) => {
+            qtrace("mbqi-quick", t0, "declined");
+            route_trace::record_quant_rung_declined(
+                route_trace::quant_rung::MBQI_QUICK,
+                DeclineReason::VerifierRejected(
+                    "MBQI-quick candidate model did not replay against the original assertions"
+                        .to_owned(),
+                ),
             );
             Ok(None)
         }
@@ -4907,9 +5048,9 @@ fn check_auto_dispatch(
                 with_recorder(rec, |t| t.record_result("datatype-elim", &result));
                 return Ok(result);
             }
-            Err(SolverError::Unsupported(_)) => {
+            Err(SolverError::Unsupported(message)) => {
                 with_recorder(rec, |t| {
-                    t.record_declined("datatype-elim", DeclineReason::Unsupported);
+                    t.record_declined("datatype-elim", unsupported_decline(&message));
                 });
                 let result =
                     crate::datatype_native::check_with_datatype_native(arena, assertions, config)?;
@@ -4932,9 +5073,9 @@ fn check_auto_dispatch(
                 with_recorder(rec, |t| t.record_result("lira-dpll", &result));
                 return Ok(result);
             }
-            Err(SolverError::Unsupported(_)) => {
+            Err(SolverError::Unsupported(message)) => {
                 with_recorder(rec, |t| {
-                    t.record_declined("lira-dpll", DeclineReason::Unsupported);
+                    t.record_declined("lira-dpll", unsupported_decline(&message));
                 });
             }
             Err(other) => return Err(other),
@@ -5028,9 +5169,9 @@ fn check_auto_dispatch(
                 with_recorder(rec, |t| t.record_result("nra", &result));
                 return Ok(result);
             }
-            Err(SolverError::Unsupported(_)) if features.has_function => {
+            Err(SolverError::Unsupported(message)) if features.has_function => {
                 with_recorder(rec, |t| {
-                    t.record_declined("nra", DeclineReason::Unsupported);
+                    t.record_declined("nra", unsupported_decline(&message));
                 });
             }
             Err(e) => return Err(e),
@@ -5393,9 +5534,9 @@ fn dispatch_abv_online(
             });
             Ok(None)
         }
-        Err(SolverError::Unsupported(_)) => {
+        Err(SolverError::Unsupported(message)) => {
             with_recorder(rec, |t| {
-                t.record_declined("abv-online-cdclt", DeclineReason::Unsupported);
+                t.record_declined("abv-online-cdclt", unsupported_decline(&message));
             });
             Ok(None)
         }

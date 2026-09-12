@@ -2231,7 +2231,27 @@ fn solve_smtlib_at_string_bound(
                 }),
             ));
         }
-        Err(error) => return Err(SolverError::Parse(error.to_string())),
+        // An ingest refusal is where the whole `QF_DT` addressable gap actually
+        // sits: measured 2026-09-11 over the 81 files `QF_DT.tsv` shows as
+        // unsolved-by-us and decided-by-the-reference, **70 end here**, in 0-2 ms,
+        // and the trail's only `fd:parse` entry was the unconditional `Probe`
+        // above -- an entry that says the stage RAN, never that it refused. The
+        // parser's own sentence is the reason, and it was reaching the caller as
+        // a `SolverError` that both the trail and the harness discarded.
+        // Recorded before the `return` so the segment exists on the error path
+        // too; telemetry only, and the `return` is unchanged.
+        Err(error) => {
+            let detail = error.to_string();
+            if crate::route_trace::attribution_collecting() {
+                crate::route_trace::record_front_door(
+                    crate::route_trace::front_door_stage::PARSE,
+                    crate::route_trace::RouteOutcome::Declined(
+                        crate::route_trace::DeclineReason::UnsupportedDetail(detail.clone()),
+                    ),
+                );
+            }
+            return Err(SolverError::Parse(detail));
+        }
     };
     // Source-first parse fallback (T-B.4d): the bounded encoder declined this
     // script at parse, so use only the checked source-level ladder — never solve

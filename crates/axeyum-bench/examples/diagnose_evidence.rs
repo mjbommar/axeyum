@@ -147,7 +147,9 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
 
 fn decline_detail(reason: &DeclineReason) -> Option<&str> {
     match reason {
-        DeclineReason::Budget(detail) | DeclineReason::VerifierRejected(detail) => Some(detail),
+        DeclineReason::Budget(detail)
+        | DeclineReason::VerifierRejected(detail)
+        | DeclineReason::UnsupportedDetail(detail) => Some(detail),
         DeclineReason::Incomplete(reason) => Some(&reason.detail),
         DeclineReason::Unsupported | DeclineReason::NotApplicable => None,
     }
