@@ -646,11 +646,11 @@ fn refusal_names_the_non_variable_datatype_argument() {
         .expect("declare p");
     let red_t = arena.construct(red, &[]).expect("red");
     let green_t = arena.construct(green, &[]).expect("green");
-    let p_red = arena.apply(pred, &[red_t]).expect("apply");
-    let p_green = arena.apply(pred, &[green_t]).expect("apply");
-    let not_green = arena.not(p_green).expect("not");
+    let holds_of_red = arena.apply(pred, &[red_t]).expect("apply");
+    let holds_of_green = arena.apply(pred, &[green_t]).expect("apply");
+    let fails_of_green = arena.not(holds_of_green).expect("not");
 
-    let detail = refusal_detail(solve(&mut arena, &[p_red, not_green], &cfg()));
+    let detail = refusal_detail(solve(&mut arena, &[holds_of_red, fails_of_green], &cfg()));
     assert!(
         detail.contains("not a \\n                         free variable")
             || detail.contains("not a free variable"),

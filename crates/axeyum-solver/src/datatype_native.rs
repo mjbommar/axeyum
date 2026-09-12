@@ -811,6 +811,98 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
     })
 }
 
+/// Collects every uninterpreted-function application with a datatype-sorted
+/// argument, grouped by function, and validates the ADR-1935 preconditions
+/// BEFORE anything is declared — so a refusal leaves the arena clean.
+///
+/// # Errors
+///
+/// See [`ackermannize_datatype_applications`].
+fn collect_ackermann_groups(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Result<BTreeMap<axeyum_ir::FuncId, Vec<TermId>>, SolverError> {
+    // Collect the applications, grouped by function, in TermId order. TermId
+    // order is a deterministic bottom-up order in a hash-consed arena (a child
+    // is interned before its parent), which both keeps the output stable and
+    // lets `register_ack_interpretations` process a nested site before the site
+    // that reads it.
+    let mut groups: BTreeMap<axeyum_ir::FuncId, Vec<TermId>> = BTreeMap::new();
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(term) else {
+            continue;
+        };
+        let op = *op;
+        let args = args.clone();
+        if let Op::Apply(func) = op
+            && args.iter().any(|&a| is_datatype_sorted(arena, a))
+        {
+            groups.entry(func).or_default().push(term);
+        }
+        stack.extend(args);
+    }
+
+    let mut pairs = 0usize;
+    for sites in groups.values_mut() {
+        sites.sort_unstable();
+        pairs = pairs.saturating_add(sites.len().saturating_mul(sites.len() - 1) / 2);
+    }
+    if pairs > MAX_ACK_PAIRS {
+        return Err(unsupported(&format!(
+            "Ackermann congruence over datatype arguments needs {pairs} congruence pairs, \
+             over the {MAX_ACK_PAIRS} bound"
+        )));
+    }
+
+    // Validate BEFORE declaring anything, so a refusal leaves the arena clean.
+    for (&func, sites) in &groups {
+        let (_, _, result) = arena.function(func);
+        if crate::datatype_elim::sort_mentions_datatype(result) {
+            return Err(unsupported(
+                "an uninterpreted function whose RESULT sort mentions a datatype \
+                 (its Ackermann witness would itself be a datatype-sorted term)",
+            ));
+        }
+        for &site in sites {
+            let TermNode::App { args, .. } = arena.node(site) else {
+                unreachable!("collected an application");
+            };
+            for &arg in &args.clone() {
+                if !is_datatype_sorted(arena, arg) {
+                    continue;
+                }
+                if !matches!(arena.node(arg), TermNode::Symbol(_)) {
+                    return Err(unsupported(
+                        "an uninterpreted function applied to a datatype term that is not a \
+                         free variable (constructors should fold first)",
+                    ));
+                }
+                let Sort::Datatype(dt) = arena.sort_of(arg) else {
+                    unreachable!("datatype-sorted");
+                };
+                if !datatype_expansion_is_exact(arena, dt) {
+                    // ADR-1920's soundness condition, restated as exactness
+                    // (ADR-1935). This is the arm that must never be relaxed
+                    // into a comment.
+                    return Err(unsupported(
+                        "congruence over a datatype argument whose expansion is not exact \
+                         (a field with no expansion variable makes the encoded equality \
+                         WEAKER than real equality, and a weaker congruence antecedent is \
+                         STRONGER than the true axiom -- a wrong `unsat`)",
+                    ));
+                }
+            }
+        }
+    }
+
+    Ok(groups)
+}
+
 /// One Ackermann-expanded application: `func(args)`, replaced by `witness`.
 struct AckSite {
     func: axeyum_ir::FuncId,
@@ -878,85 +970,9 @@ fn ackermannize_datatype_applications(
     arena: &mut TermArena,
     assertions: &[TermId],
 ) -> Result<(Vec<TermId>, Vec<AckSite>), SolverError> {
-    // Collect the applications, grouped by function, in TermId order. TermId
-    // order is a deterministic bottom-up order in a hash-consed arena (a child
-    // is interned before its parent), which both keeps the output stable and
-    // lets `register_ack_interpretations` process a nested site before the site
-    // that reads it.
-    let mut groups: BTreeMap<axeyum_ir::FuncId, Vec<TermId>> = BTreeMap::new();
-    let mut seen = BTreeSet::new();
-    let mut stack: Vec<TermId> = assertions.to_vec();
-    while let Some(term) = stack.pop() {
-        if !seen.insert(term) {
-            continue;
-        }
-        let TermNode::App { op, args } = arena.node(term) else {
-            continue;
-        };
-        let op = *op;
-        let args = args.clone();
-        if let Op::Apply(func) = op
-            && args.iter().any(|&a| is_datatype_sorted(arena, a))
-        {
-            groups.entry(func).or_default().push(term);
-        }
-        stack.extend(args);
-    }
+    let groups = collect_ackermann_groups(arena, assertions)?;
     if groups.is_empty() {
         return Ok((assertions.to_vec(), Vec::new()));
-    }
-
-    let mut pairs = 0usize;
-    for sites in groups.values_mut() {
-        sites.sort_unstable();
-        pairs = pairs.saturating_add(sites.len().saturating_mul(sites.len() - 1) / 2);
-    }
-    if pairs > MAX_ACK_PAIRS {
-        return Err(unsupported(&format!(
-            "Ackermann congruence over datatype arguments needs {pairs} congruence pairs, \
-             over the {MAX_ACK_PAIRS} bound"
-        )));
-    }
-
-    // Validate BEFORE declaring anything, so a refusal leaves the arena clean.
-    for (&func, sites) in &groups {
-        let (_, _, result) = arena.function(func);
-        if crate::datatype_elim::sort_mentions_datatype(result) {
-            return Err(unsupported(
-                "an uninterpreted function whose RESULT sort mentions a datatype \
-                 (its Ackermann witness would itself be a datatype-sorted term)",
-            ));
-        }
-        for &site in sites {
-            let TermNode::App { args, .. } = arena.node(site) else {
-                unreachable!("collected an application");
-            };
-            for &arg in &args.clone() {
-                if !is_datatype_sorted(arena, arg) {
-                    continue;
-                }
-                if !matches!(arena.node(arg), TermNode::Symbol(_)) {
-                    return Err(unsupported(
-                        "an uninterpreted function applied to a datatype term that is not a \
-                         free variable (constructors should fold first)",
-                    ));
-                }
-                let Sort::Datatype(dt) = arena.sort_of(arg) else {
-                    unreachable!("datatype-sorted");
-                };
-                if !datatype_expansion_is_exact(arena, dt) {
-                    // ADR-1920's soundness condition, restated as exactness
-                    // (ADR-1935). This is the arm that must never be relaxed
-                    // into a comment.
-                    return Err(unsupported(
-                        "congruence over a datatype argument whose expansion is not exact \
-                         (a field with no expansion variable makes the encoded equality \
-                         WEAKER than real equality, and a weaker congruence antecedent is \
-                         STRONGER than the true axiom -- a wrong `unsat`)",
-                    ));
-                }
-            }
-        }
     }
 
     let mut replacements: HashMap<TermId, TermId> = HashMap::new();
@@ -1034,7 +1050,7 @@ fn ackermannize_datatype_applications(
 /// values, so the `sat` replay can evaluate the original `f(...)` applications.
 ///
 /// Sites are visited in the order [`ackermannize_datatype_applications`]
-/// produced them (TermId order within a function, functions in `FuncId` order),
+/// produced them (`TermId` order within a function, functions in `FuncId` order),
 /// and each argument is evaluated under the assignment as it stands — which by
 /// this point already carries the projected datatype values. An argument that
 /// does not evaluate (an unconstrained symbol the inner model never mentioned)
@@ -1070,26 +1086,23 @@ fn register_ack_interpretations(
         // value satisfies the congruence clauses, and leaving the site out
         // instead would make the replay read the function's default at a key the
         // search never chose.
-        let result = match assignment.get(site.witness) {
-            Some(value) => value,
-            None => {
-                let (_, _, result_sort) = arena.function(site.func);
-                match well_founded_default(arena, result_sort) {
-                    Some(value) => value,
-                    None => continue,
-                }
-            }
+        let result = if let Some(value) = assignment.get(site.witness) {
+            value
+        } else {
+            let (_, _, result_sort) = arena.function(site.func);
+            let Some(value) = well_founded_default(arena, result_sort) else {
+                continue;
+            };
+            value
         };
         let mut vals = Vec::with_capacity(site.args.len());
         let mut ok = true;
         for &arg in &site.args {
-            match eval(arena, arg, assignment) {
-                Ok(value) => vals.push(value),
-                Err(_) => {
-                    ok = false;
-                    break;
-                }
-            }
+            let Ok(value) = eval(arena, arg, assignment) else {
+                ok = false;
+                break;
+            };
+            vals.push(value);
         }
         if !ok {
             continue;
