@@ -1,7 +1,7 @@
 # ADR-1920: A datatype-sorted UF signature is admitted; the capability gate moves downstream, and lifting it alone would have shipped a crash
 
 Status: accepted
-Index-summary: `check_uf_param_sort` / `check_uf_result_sort` rejected `Sort::Datatype(_)` at declaration time, which made four SMT-LIB divisions — UFDT (4,569), UFDTLIRA (7,749), AUFDTLIRA (11,043), AUFDTNIRA (4,424), **27,785 files** — refuse to parse. Measured on a stride-pinned UFDT 200 at 24 s / 8 GiB: **155 of 200 (77.5 %) died at that gate**, so the division's real capability was never observable. Lifting the arm ALONE is unsafe and the experiment says so rather than the reading: `(declare-fun p (Color) Bool) (assert (p o))` — the simplest query the divisions can produce — **aborted the process with a stack overflow**, because `check_auto_dispatch` diverts on the datatype SORT, `datatype_native` has no rewrite for `p(o)`, and the residual is handed back to the dispatcher, which routes it straight back in; the dispatcher also recomputes its deadline on every entry, so `config.timeout` cannot break the cycle. Decision: **admit datatype parameters and results**, and move the capability gate to `datatype_native`, which fails closed — one arm naming `Op::Apply`-with-a-datatype-argument, plus a general no-progress guard. The guard is **not** a fence around that arm: it fires on an array whose ELEMENT sort is a datatype, a shape with no uninterpreted function anywhere that parses on main today and aborted the pre-change binary — so this ADR also fixes a live crash that predates it. Result on the pinned 200: parse 45/200 → **200/200**, decided 20/200 → **22/200**, **0 lost, 0 flips, 0 disagreements** against 19 declared `:status` values or against cvc5 1.3.4. The decide rate barely moves, and that is the honest headline — what the lift actually buys is that **70.5 % of the division now names its blocker instead of failing to parse**: 80 files (40.0 %) on congruence over datatype UF arguments, 61 (30.5 %) on `is`/`select` over a datatype UF result. Sequences stay gated; no lane has measured them.
+Index-summary: `check_uf_param_sort` / `check_uf_result_sort` rejected `Sort::Datatype(_)` at declaration time, which made four SMT-LIB divisions — UFDT (4,569), UFDTLIRA (7,749), AUFDTLIRA (11,043), UFDTNIRA (4,424), **27,785 files** — refuse to parse. Measured on a stride-pinned UFDT 200 at 24 s / 8 GiB: **155 of 200 (77.5 %) died at that gate**, so the division's real capability was never observable. Lifting the arm ALONE is unsafe and the experiment says so rather than the reading: `(declare-fun p (Color) Bool) (assert (p o))` — the simplest query the divisions can produce — **aborted the process with a stack overflow**, because `check_auto_dispatch` diverts on the datatype SORT, `datatype_native` has no rewrite for `p(o)`, and the residual is handed back to the dispatcher, which routes it straight back in; the dispatcher also recomputes its deadline on every entry, so `config.timeout` cannot break the cycle. Decision: **admit datatype parameters and results**, and move the capability gate to `datatype_native`, which fails closed — one arm naming `Op::Apply`-with-a-datatype-argument, plus a general no-progress guard. The guard is **not** a fence around that arm: it fires on an array whose ELEMENT sort is a datatype, a shape with no uninterpreted function anywhere that parses on main today and aborted the pre-change binary — so this ADR also fixes a live crash that predates it. A stability check over the OTHER three divisions then found a THIRD instance of the same cycle that both guards missed, and its root cause is the general rule this ADR is really about: `Features::note_sort` recurses into an array's component sorts, so `(Array Int Color)` diverts the dispatcher, while the route's "is there datatype content" scan tested only `Sort::Datatype(_)` on the term — **when a dispatcher diverts on predicate A and the route decides "nothing to do" on predicate B, A and B are one predicate whether or not they are one function**, and `A ∧ ¬B` plus a call back into the dispatcher is a non-terminating loop by construction, invisible to a timeout that re-arms and to every soundness test because it presents as a crash. There is now one `sort_mentions_datatype`, at three call sites; mutation-verified (delete the array recursion and exactly one test dies, by name). Result on the pinned 200: parse 45/200 → **200/200**, decided 20/200 → **22/200**, **0 lost, 0 flips, 0 disagreements** against 19 declared `:status` values or against cvc5 1.3.4, and 0 aborts across 100 files spanning all four divisions. The decide rate barely moves, and that is the honest headline — what the lift actually buys is that **70.5 % of the division now names its blocker instead of failing to parse**: 80 files (40.0 %) on congruence over datatype UF arguments, 61 (30.5 %) on `is`/`select` over a datatype UF result. Sequences stay gated; no lane has measured them.
 Date: 2026-09-12
 
 ## Context
@@ -14,7 +14,7 @@ carried a row for any of them:
 | AUFDTLIRA | 11,043 | no |
 | UFDTLIRA | 7,749 | no |
 | UFDT | 4,569 | no |
-| AUFDTNIRA | 4,424 | no |
+| UFDTNIRA | 4,424 | no |
 | **total** | **27,785** | |
 
 Every one of them failed the same way, at parse:
@@ -159,6 +159,42 @@ guess:
 congruence over datatype-sorted uninterpreted-function terms. Before this change
 that number could not be computed at all.
 
+### 6. The predicate that had to be widened — found by checking the OTHER divisions
+
+Measuring one division and shipping would have missed this. A stability
+spot-check over the other three (25 stride-sampled files each, 10 s, asking only
+*does anything abort*) found one that did: a 22 KB `AUFDTLIRA` benchmark that
+still overflowed a **1 GiB** stack — an unbounded cycle, not a deep term — and
+whose ring did not pass through either guard above.
+
+The cause is one layer up:
+
+> `Features::note_sort` **recurses into an array's component sorts**, so
+> `(Array Int Color)` sets `has_datatype` and the dispatcher diverts. But
+> `datatype_elim::first_datatype_term` and the §2 guard both asked
+> `matches!(arena.sort_of(term), Sort::Datatype(_))` — and an array-of-datatypes
+> TERM has sort `Array`. Divert says yes, content says no, the route hands the
+> unchanged input back, and it comes straight back.
+
+**Two predicates that must agree, written twice, in different words, with
+nothing making them agree.** There is now one, `sort_mentions_datatype`; three
+call sites needed it, and fixing only the first two left the crash exactly where
+it was. Mutation-verified: delete the array recursion and **exactly one** test
+dies, by name, with a SIGABRT — while the older array fixture survives, because
+the narrow predicate already caught it. That is the difference between a second
+copy and a test.
+
+After the fix, 100 files across all four divisions: **0 aborts**.
+
+**Generalisable rule, and the reason this is in the ADR rather than only in the
+commit:** when a dispatcher diverts to a route on predicate *A* and the route
+decides "nothing to do here" on predicate *B*, *A* and *B* are one predicate
+whether or not they are one function. If `A ∧ ¬B` is reachable and the route's
+no-op path calls back into the dispatcher, that is a non-terminating loop by
+construction. It will not be caught by a timeout if the dispatcher re-arms its
+deadline, and it presents as a crash rather than a wrong answer — which is why
+no soundness test finds it.
+
 ## Decision
 
 1. **`check_uf_param_sort` and `check_uf_result_sort` admit `Sort::Datatype(_)`.**
@@ -227,6 +263,22 @@ than a comment.
   `check_qf_uf_with_config_is_bounded_by_timeout` FAILED. Re-run alone it passes
   in 527 s against its own 600 s budget — it is a contention artifact of a
   timing assertion, and it touches neither datatypes nor UF signatures.
+- **No `PARITY.md` row was produced.** `scripts/parity-run.sh UFDT` aborts with
+  "the reference decided 0 of 5 probe benchmarks". The invocation is not wrong —
+  it passes the same `--tlimit=24000` under which cvc5 decided 20 of our 22 —
+  cvc5 simply decides none of the *first five* files of this list at 24 s, so
+  the guard's premise does not hold in UFDT. `PARITY_ALLOW_WEAK_REFERENCE=1`
+  does not apply: its own text says "only if the reference really is beaten by
+  all 5", and it is not. Overriding a safety guard to manufacture a ledger row
+  is the failure the ledger exists to prevent, so there is no row and the
+  measurement note carries the numbers.
+- The brief that opened this lane named the fourth division `AUFDTNIRA`; the
+  4,424-file division is `UFDTNIRA` (`AUFDTNIRA` is a different, smaller one at
+  1,567). The **total is right** — 11,043 + 7,749 + 4,569 + 4,424 = 27,785 — and
+  that is what identifies which was meant. These four are also not all of it:
+  every `*DT*` non-incremental division sums to 44,690 files, and the UF-bearing
+  ones beyond these four hit the same gate. The four are the claim because they
+  are the four that were measured.
 
 ## Evidence
 

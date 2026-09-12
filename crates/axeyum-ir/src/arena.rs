@@ -2255,7 +2255,7 @@ fn check_scalar_width(sort: Sort) -> Result<(), IrError> {
 ///
 /// Datatype parameters are admitted as of ADR-1920. The IR is a *typing* gate,
 /// not a capability gate: rejecting the declaration made four SMT-LIB divisions
-/// (UFDT, UFDTLIRA, AUFDTLIRA, AUFDTNIRA — 27,785 files) unparseable, including
+/// (UFDT, UFDTLIRA, AUFDTLIRA, UFDTNIRA — 27,785 files) unparseable, including
 /// files whose datatype content never reaches an operator we cannot handle. The
 /// capability gate lives where it can be precise, in
 /// `axeyum_solver::datatype_native`, which fails closed with

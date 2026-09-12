@@ -25,7 +25,7 @@ LC_ALL=C find <div> -name '*.smt2' | LC_ALL=C sort | awk 'NR%22==1' | head -200
 population 4,569 · stride 22 · 200 files · sha256 `113a9c93b6dfd9bd…`
 
 UFDT is the smallest of the four divisions the gate blocked (UFDT 4,569,
-UFDTLIRA 7,749, AUFDTLIRA 11,043, AUFDTNIRA 4,424 — **27,785 files**), which is
+UFDTLIRA 7,749, AUFDTLIRA 11,043, UFDTNIRA 4,424 — **27,785 files**), which is
 why it was measured first.
 
 Verdicts were read with `target/release/examples/uf_unknown_probe`, which
@@ -152,6 +152,130 @@ file now reaches a route and says why it stopped.
 
 **70.5 % of UFDT is one missing capability in two spellings**: congruence over
 datatype-sorted uninterpreted-function terms.
+
+## 7. A THIRD instance of the same cycle, found by checking the other divisions
+
+Measuring one division and shipping would have missed this. A stability
+spot-check — 25 stride-sampled files from each of the other three divisions, at
+10 s, asking only *does anything abort* — found one that did:
+
+`AUFDTLIRA/20200306-Kanig/spark2014bench/P518-021__frame_for_max__…`, 22 KB,
+still overflowing a **1 GiB** stack. An unbounded cycle, not a deep term.
+
+`gdb` gave the ring, and it did not pass through the two guards already in
+place. The root cause is one layer up from §2:
+
+> `Features::note_sort` **recurses into an array's index and element sorts**, so
+> `(Array Int Color)` sets `has_datatype` and the dispatcher diverts. But
+> `datatype_elim::first_datatype_term` and the §2 guard both asked
+> `matches!(arena.sort_of(term), Sort::Datatype(_))`, and an array-of-datatypes
+> TERM has sort `Array`. Divert says yes, content says no, the route hands the
+> unchanged input back to `solve`, and `solve` sends it back.
+
+**Two predicates that have to agree, written twice, in different words.** There
+is now one, `sort_mentions_datatype`, and three call sites needed it — found one
+at a time by rebuilding and re-running the file, not by reading:
+
+1. `datatype_elim`'s fall-through `solve`;
+2. `datatype_native`'s post-expansion `solve` — *not* redundant with the
+   `dt_symbols.is_empty()` guard, because `replacements` only covers the
+   `is`/`select`/`==` sites the scan collected, so a datatype symbol reached only
+   through an array `store` survives into `reduced` even when `dt_symbols` is
+   **non**-empty;
+3. the guard's own predicate, which was still the narrow one — fixing 1 and 2
+   with the narrow predicate left the crash exactly where it was.
+
+**Mutation-verified.** Delete the array recursion from `sort_mentions_datatype`
+and **exactly one** test dies, by name and loudly:
+
+```
+test terminates_on_an_array_of_datatypes_with_no_datatype_sorted_term
+thread '…' has overflowed its stack / SIGABRT
+```
+
+The older `terminates_on_an_array_of_datatypes` **survives** that mutation — it
+carries a datatype-sorted `o` inside a `store`, which the narrow predicate
+already caught. That is what makes the new fixture a test rather than a second
+copy of the old one; it asserts inside the test body that no term has sort
+`Datatype`.
+
+Re-run after the fix, all four divisions, 100 files:
+
+| division | sampled | aborts |
+|---|---:|---:|
+| UFDTLIRA | 25 | 0 |
+| AUFDTLIRA | 25 | **0** (was 1) |
+| AUFDTNIRA | 25 | 0 |
+| UFDTNIRA | 25 | 0 |
+
+## 8. Two things this lane got wrong on the way in
+
+**The fourth division was misnamed in the brief.** Counted here:
+
+| division | files |
+|---|---:|
+| AUFDTLIRA | 11,043 |
+| UFDTLIRA | 7,749 |
+| UFDT | 4,569 |
+| **UFDTNIRA** | **4,424** |
+| total | **27,785** |
+
+`AUFDTNIRA` is a different, smaller division (1,567). The **total is right** —
+11,043 + 7,749 + 4,569 + 4,424 = 27,785 — which is what identifies `UFDTNIRA` as
+the one meant. These four are not the whole of it either: every `*DT*`
+non-incremental division sums to **44,690** files, and the UF-bearing ones beyond
+these four (AUFBVDTLIA 1,683, AUFBVDTNIRA 2,125, UFFPDTNIRA 795, AUFDTLIA 795,
+UFDTLIA 328, …) hit the same gate. The four are the claim because they are the
+four that were measured.
+
+**No `PARITY.md` row was produced, and the reason is a real finding.**
+`scripts/parity-run.sh UFDT` aborts before scoring:
+
+```
+FAIL: the reference decided 0 of 5 probe benchmarks.
+      A crippled reference reads as a win for us, so this ABORTS.
+```
+
+The invocation is not wrong — the script passes `--tlimit=24000`, identical to
+the hand run in §5 where cvc5 decided 20 of 22 — cvc5 simply does not decide any
+of the **first five** files of the stride-pinned list at 24 s. The guard's
+premise (a division's leading reference decides at least one of any five files)
+does not hold in UFDT. `PARITY_ALLOW_WEAK_REFERENCE=1` exists, but its own
+documentation says to set it "only if the reference really is beaten by all 5",
+and it is not — we do not decide those five either. **Overriding a safety guard
+to manufacture a ledger row is the failure mode the ledger exists to prevent**,
+so the row was not produced and this note carries the numbers instead. The
+`parity-run.sh` change that routes the DT divisions to cvc5 rather than to a
+`z3` build that did not compete in SMT-COMP 2025 is kept: the fall-through it
+replaces is strictly worse, whether or not this division can be scored today.
+
+## 9. Re-measured after the §7 fix, and a QF_DT control
+
+The §4–§6 numbers were taken before §7's predicate widening, so the whole
+200-file sweep was re-run on the final binary. **Identical**: 22 decided (20
+`unsat` + 2 `sat`), the same 2 newly decided, 0 lost, 0 flips, and the same
+refusal census (80 / 61 / 12). The decided SET is byte-identical to the one
+cross-checked against cvc5 in §5, so that differential still applies verbatim.
+
+The one difference is a resource artifact, not a verdict: the list's heaviest
+file (`abstract_completeness/x2015_09_10_16_59_33_621_1039748`) hit the
+protocol's 8 GiB cap — `memory allocation of 411181056 bytes failed` — where it
+had returned `unknown` in both earlier sweeps at the same ~25 s. It is on the
+edge of the memory ceiling and the loaded box pushed it over; it counts as not
+solved either way.
+
+**QF_DT control.** Widening a predicate makes MORE queries route into the
+datatype theory, so the thing to rule out is that it costs capability where
+datatypes already worked. 60 files from the committed `QF_DT` parity list, the
+**pre-change binary and the final binary alternating per file** so a load drift
+hits both arms equally:
+
+| | unsat | sat | unknown | refused |
+|---|---:|---:|---:|---:|
+| pre-change | 28 | 10 | 5 | 17 |
+| final | 28 | 10 | 5 | 17 |
+
+**0 of 60 files differ.**
 
 ## Recommendation
 

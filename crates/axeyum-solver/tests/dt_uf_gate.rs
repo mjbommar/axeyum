@@ -2,7 +2,7 @@
 //!
 //! The IR used to reject `declare-fun` whose parameter or result sort was
 //! `Sort::Datatype(_)`, which made four whole SMT-LIB divisions (UFDT,
-//! UFDTLIRA, AUFDTLIRA, AUFDTNIRA — 27,785 files) unparseable. The gate is
+//! UFDTLIRA, AUFDTLIRA, UFDTNIRA — 27,785 files) unparseable. The gate is
 //! lifted; the capability gate now lives in `datatype_native`, which fails
 //! closed.
 //!
