@@ -12,7 +12,7 @@ Numbers here are raw per-file data; the interpretations live in
 | Was that the quiet machine? | **No** — 6 divisions re-measured interleaved against a BUILT BINARY of the 09-09 commit, zero losses, zero flips | `attribution/` |
 | How do we compare on ONE consistent basis? | axeyum **2,309** / z3 **2,790** / cvc5 **2,652**, of 3,200 | `head-to-head/` |
 | Is the addressable gap a budget problem? | **No** — 5x the clock wins 11.9%; 32% abandon the budget instead | `probes/headroom.tsv` |
-| What blocks the divisions we never ran? | 36,888 files already reach the solver; 29,564 need recursive sorts; ~30,000 sat behind two bugs | `coverage/blockmap.txt` |
+| What blocks the divisions we never ran? | 36,888 files already reach the solver; 29,564 need recursive sorts. The "~30,000 behind two bugs" claim is **refuted** — see `../dt-divisions-20260912/` | `coverage/blockmap.txt` (labelled) |
 
 ## Layout
 
