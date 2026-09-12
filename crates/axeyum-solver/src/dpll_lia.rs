@@ -55,7 +55,31 @@ const MAX_INITIAL_BOUND_IMPLICATION_ATOMS: usize = 512;
 /// opposite directions -- see [`MINIMIZATION_ORACLE_CALL_BUDGET`].
 const WIDE_THEORY_CORE_ATOMS: usize = 128;
 const MAX_TWO_EDGE_DIFF_EDGES: usize = 512;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_TWO_EDGE_DIFF_EDGES`]: the compiled default, or
+    /// `AXEYUM_MAX_TWO_EDGE_DIFF_EDGES` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_TWO_EDGE_DIFF_EDGES`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_two_edge_diff_edges() -> usize = "AXEYUM_MAX_TWO_EDGE_DIFF_EDGES" or MAX_TWO_EDGE_DIFF_EDGES;
+}
+
 const MAX_BELLMAN_FORD_DIFF_EDGES: usize = 256;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_BELLMAN_FORD_DIFF_EDGES`]: the compiled default, or
+    /// `AXEYUM_MAX_BELLMAN_FORD_DIFF_EDGES` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_BELLMAN_FORD_DIFF_EDGES`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_bellman_ford_diff_edges() -> usize = "AXEYUM_MAX_BELLMAN_FORD_DIFF_EDGES" or MAX_BELLMAN_FORD_DIFF_EDGES;
+}
+
 const MAX_DYNAMIC_BOUND_CONFLICT_BATCH: usize = 32;
 const MAX_DYNAMIC_AFFINE_BOUND_CONFLICT_BATCH: usize = 1;
 /// Joint pre-SAT admission boundary for very large arithmetic skeletons.
@@ -2226,7 +2250,7 @@ fn negative_cycle_core(edges: &[DifferenceEdge]) -> Option<Vec<usize>> {
     if edges.is_empty() {
         return None;
     }
-    if edges.len() > MAX_TWO_EDGE_DIFF_EDGES {
+    if edges.len() > max_two_edge_diff_edges() {
         // Both of this function's size refusals return the same bare `None` as
         // "there is no negative cycle", so the search continues without the
         // core and nothing downstream can tell a refusal from an absence.
@@ -2234,18 +2258,18 @@ fn negative_cycle_core(edges: &[DifferenceEdge]) -> Option<Vec<usize>> {
         crate::config_registry::note_crossed(
             "crates/axeyum-solver/src/dpll_lia.rs::MAX_TWO_EDGE_DIFF_EDGES",
             edges.len() as u64,
-            MAX_TWO_EDGE_DIFF_EDGES as u64,
+            max_two_edge_diff_edges() as u64,
         );
         return None;
     }
     if let Some(core) = two_edge_negative_cycle_core(edges) {
         return Some(core);
     }
-    if edges.len() > MAX_BELLMAN_FORD_DIFF_EDGES {
+    if edges.len() > max_bellman_ford_diff_edges() {
         crate::config_registry::note_crossed(
             "crates/axeyum-solver/src/dpll_lia.rs::MAX_BELLMAN_FORD_DIFF_EDGES",
             edges.len() as u64,
-            MAX_BELLMAN_FORD_DIFF_EDGES as u64,
+            max_bellman_ford_diff_edges() as u64,
         );
         return None;
     }

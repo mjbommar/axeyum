@@ -6,8 +6,31 @@ use axeyum_ir::{Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Val
 
 /// Maximum existential binders admitted by the source checker.
 pub const NEGATED_EXISTENTIAL_BINDER_CAP: usize = 128;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`NEGATED_EXISTENTIAL_BINDER_CAP`]: the compiled default, or
+    /// `AXEYUM_NEGATED_EXISTENTIAL_BINDER_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `NEGATED_EXISTENTIAL_BINDER_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn negated_existential_binder_cap() -> usize = "AXEYUM_NEGATED_EXISTENTIAL_BINDER_CAP" or NEGATED_EXISTENTIAL_BINDER_CAP;
+}
+
 /// Maximum distinct nodes admitted in the existential body.
 pub const NEGATED_EXISTENTIAL_NODE_CAP: usize = 4_096;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`NEGATED_EXISTENTIAL_NODE_CAP`]: the compiled default, or
+    /// `AXEYUM_NEGATED_EXISTENTIAL_NODE_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `NEGATED_EXISTENTIAL_NODE_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn negated_existential_node_cap() -> usize = "AXEYUM_NEGATED_EXISTENTIAL_NODE_CAP" or NEGATED_EXISTENTIAL_NODE_CAP;
+}
 
 /// A concrete witness satisfying the body of one top-level negated existential.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -38,7 +61,7 @@ pub fn check_negated_existential_witness(
         return false;
     };
     let bound: BTreeSet<SymbolId> = binders.iter().copied().collect();
-    if binders.len() > NEGATED_EXISTENTIAL_BINDER_CAP
+    if binders.len() > negated_existential_binder_cap()
         || bound.len() != binders.len()
         || certificate.bindings.len() != binders.len()
         || !body_is_closed_qf_bv(arena, body, &bound)
@@ -81,7 +104,7 @@ pub(crate) fn admitted_negated_existential(
     } = arena.node(term)
     {
         if args.len() != 1
-            || binders.len() == NEGATED_EXISTENTIAL_BINDER_CAP
+            || binders.len() == negated_existential_binder_cap()
             || !is_admitted_sort(arena.symbol(*binder).1)
         {
             return None;
@@ -115,7 +138,7 @@ fn body_is_closed_qf_bv(arena: &TermArena, body: TermId, bound: &BTreeSet<Symbol
         if !seen.insert(term) {
             continue;
         }
-        if seen.len() > NEGATED_EXISTENTIAL_NODE_CAP || !is_admitted_sort(arena.sort_of(term)) {
+        if seen.len() > negated_existential_node_cap() || !is_admitted_sort(arena.sort_of(term)) {
             return false;
         }
         match arena.node(term) {

@@ -864,6 +864,17 @@ pub struct BvInverter;
 /// applied at those widths.
 const MAX_NARROW_BV_WIDTH: u32 = 128;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_NARROW_BV_WIDTH`]: the compiled default, or
+    /// `AXEYUM_MAX_NARROW_BV_WIDTH` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_NARROW_BV_WIDTH`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_narrow_bv_width() -> u32 = "AXEYUM_MAX_NARROW_BV_WIDTH" or MAX_NARROW_BV_WIDTH;
+}
+
 impl Inverter for BvInverter {
     fn theory(&self) -> Theory {
         Theory::Bv
@@ -1210,7 +1221,7 @@ fn invert_bv_cmp(
     let Sort::BitVec(width) = ctx.arena_ref().sort_of(args[idx]) else {
         return Ok(None);
     };
-    if width > MAX_NARROW_BV_WIDTH {
+    if width > max_narrow_bv_width() {
         return Ok(None);
     }
     let signed = matches!(op, Op::BvSlt | Op::BvSle | Op::BvSgt | Op::BvSge);

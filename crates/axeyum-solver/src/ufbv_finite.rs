@@ -13,6 +13,17 @@ use crate::term_walk::collect_top_binary_conjuncts as collect_top_conjuncts;
 
 const BOOL_UF_EXHAUSTIVE_MAX_BITS: usize = 12;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`BOOL_UF_EXHAUSTIVE_MAX_BITS`]: the compiled default, or
+    /// `AXEYUM_BOOL_UF_EXHAUSTIVE_MAX_BITS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `BOOL_UF_EXHAUSTIVE_MAX_BITS`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn bool_uf_exhaustive_max_bits() -> usize = "AXEYUM_BOOL_UF_EXHAUSTIVE_MAX_BITS" or BOOL_UF_EXHAUSTIVE_MAX_BITS;
+}
+
 /// A self-checking finite-domain pigeonhole refutation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FiniteDomainPigeonholeCertificate {
@@ -199,7 +210,7 @@ pub fn bool_uf_exhaustive_refutation(
         bits = bits.checked_add(entries)?;
         table_bits.insert(func, entries);
     }
-    if bits > BOOL_UF_EXHAUSTIVE_MAX_BITS {
+    if bits > bool_uf_exhaustive_max_bits() {
         return None;
     }
 

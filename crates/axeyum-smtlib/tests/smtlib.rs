@@ -3,7 +3,8 @@
 use std::fmt::Write as _;
 
 use axeyum_ir::{
-    ArraySortKey, Assignment, GenericArrayValue, Sort, SymbolId, TermNode, TermStats, Value, eval,
+    ArraySortKey, Assignment, GenericArrayValue, Op, Sort, SymbolId, TermNode, TermStats, Value,
+    eval,
 };
 use axeyum_smtlib::{ScriptCommand, SmtError, parse_script, write_script};
 
@@ -3442,6 +3443,133 @@ fn define_sort_rejects_parametric() {
     let err = parse_script("(set-logic QF_BV)\n(define-sort P (X) X)\n")
         .expect_err("parametric define-sort is unsupported");
     assert!(matches!(err, SmtError::Unsupported(_)));
+}
+
+// --- sort aliases in term-conversion sort positions --------------------------
+//
+// A binder sort (`(exists ((y MyInt)) …)`) and an `(as const S)` ascription are
+// ordinary sort positions, but both used to be parsed against an EMPTY alias
+// map because the script's `sort_aliases` were never threaded into term
+// conversion. Any script that combined `define-sort` with a quantifier died at
+// PARSE with `unsupported: sort ...` — which is what the whole SMT-LIB `FP`
+// division does. These pin the alias lookup at each of those positions, and the
+// negative controls pin that an UNDECLARED binder sort is still rejected (the
+// fix threads a table, it does not make `parse_sort` permissive).
+
+/// The sort of the single binder of the script's only assertion.
+fn sole_binder_sort(script: &axeyum_smtlib::Script) -> Sort {
+    let root = *script.assertions.first().expect("one assertion");
+    let sym = match script.arena.node(root) {
+        TermNode::App { op, .. } => match op {
+            Op::Forall(s) | Op::Exists(s) => *s,
+            other => panic!("assertion is not a quantifier: {other:?}"),
+        },
+        other => panic!("assertion is not an application: {other:?}"),
+    };
+    script.arena.symbol(sym).1
+}
+
+/// `(exists ((y MyInt)) …)` resolves `MyInt` through the script's alias table.
+#[test]
+fn define_sort_alias_is_resolved_in_quantifier_binder() {
+    let text = r"
+        (set-logic LIA)
+        (define-sort MyInt () Int)
+        (assert (exists ((y MyInt)) (= y 3)))
+        (check-sat)
+    ";
+    let script = parse_script(text).expect("aliased binder sort parses");
+    assert_eq!(sole_binder_sort(&script), Sort::Int);
+}
+
+/// The `FP`-division shape: an alias for a float sort, bound by a quantifier.
+#[test]
+fn define_sort_alias_is_resolved_in_float_quantifier_binder() {
+    let text = r"
+        (set-logic FP)
+        (define-sort FPN () (_ FloatingPoint 11 53))
+        (assert (forall ((y FPN)) (not (fp.isNaN y))))
+        (check-sat)
+    ";
+    let script = parse_script(text).expect("aliased float binder sort parses");
+    assert_eq!(sole_binder_sort(&script), Sort::Float { exp: 11, sig: 53 });
+}
+
+/// An alias chain (`Word -> Byte -> (_ BitVec 8)`) resolves in a binder too.
+#[test]
+fn define_sort_alias_chain_is_resolved_in_quantifier_binder() {
+    let text = r"
+        (set-logic QF_BV)
+        (define-sort Byte () (_ BitVec 8))
+        (define-sort Word () Byte)
+        (assert (exists ((y Word)) (= y #x05)))
+    ";
+    let script = parse_script(text).expect("aliased binder sort chain parses");
+    assert_eq!(sole_binder_sort(&script), Sort::BitVec(8));
+}
+
+/// `(as const S)` is the other term-conversion sort position that was parsed
+/// against an empty alias map.
+///
+/// THE SHAPE MATTERS. The obvious script — `(select ((as const A) v) i)` — never
+/// reaches term conversion: `reduce_const_array_sexpr` rewrites `select` and
+/// const-array `=` at the S-EXPRESSION level, before any sort is parsed, so it
+/// parses with or without the fix and pins nothing. (It is doubly insensitive
+/// with an alias: `is_bv_array_sort` reads the sort s-expr structurally, so the
+/// atom `A` is never recognised as a BV array and the non-BV reduction always
+/// applies.) `distinct` is not one of the reduced heads, so this shape does
+/// reach `apply_parameterized` — verified by running the pre-fix binary on it.
+#[test]
+fn define_sort_alias_is_resolved_in_as_const() {
+    let text = r"
+        (set-logic QF_ABV)
+        (define-sort BA () (Array (_ BitVec 4) (_ BitVec 8)))
+        (declare-const a BA)
+        (assert (distinct a ((as const BA) #x00)))
+    ";
+    let script = parse_script(text).expect("aliased `as const` sort parses");
+    let a = script.arena.find_symbol("a").expect("a is declared");
+    assert_eq!(
+        script.arena.symbol(a).1,
+        Sort::Array {
+            index: ArraySortKey::BitVec(4),
+            element: ArraySortKey::BitVec(8),
+        }
+    );
+    assert_eq!(script.assertions.len(), 1);
+}
+
+/// NEGATIVE CONTROL: threading the alias table must not make an *undeclared*
+/// binder sort acceptable. Without this, the tests above would still pass if
+/// `parse_sort` had been made to invent a sort for any unknown name.
+#[test]
+fn undeclared_binder_sort_is_still_rejected() {
+    let text = r"
+        (set-logic LIA)
+        (assert (exists ((y NoSuchSort)) (= y 3)))
+    ";
+    let err = parse_script(text).expect_err("an undeclared binder sort must not parse");
+    assert!(
+        matches!(err, SmtError::Unsupported(_)),
+        "expected Unsupported, got {err:?}"
+    );
+}
+
+/// NEGATIVE CONTROL: an alias declared AFTER the quantifier that uses it is not
+/// in scope there, so the script still fails. This pins that what is threaded in
+/// is the table built SO FAR, not a whole-script pre-pass.
+#[test]
+fn binder_sort_alias_declared_later_is_not_in_scope() {
+    let text = r"
+        (set-logic LIA)
+        (assert (exists ((y MyInt)) (= y 3)))
+        (define-sort MyInt () Int)
+    ";
+    let err = parse_script(text).expect_err("a later alias is not in scope");
+    assert!(
+        matches!(err, SmtError::Unsupported(_)),
+        "expected Unsupported, got {err:?}"
+    );
 }
 
 // --- datatype `match` desugaring (SMT-LIB 2.6) -------------------------------

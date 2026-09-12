@@ -87,8 +87,30 @@ use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode};
 /// argument tractable).
 const MAX_DNF_CLAUSES: usize = 64;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_DNF_CLAUSES`]: the compiled default, or
+    /// `AXEYUM_MAX_DNF_CLAUSES` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_DNF_CLAUSES`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_dnf_clauses() -> usize = "AXEYUM_MAX_DNF_CLAUSES" or MAX_DNF_CLAUSES;
+}
+
 /// Maximum number of literals in any one DNF clause. A wider clause declines.
 const MAX_CLAUSE_LITERALS: usize = 64;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_CLAUSE_LITERALS`]: the compiled default, or
+    /// `AXEYUM_MAX_CLAUSE_LITERALS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_CLAUSE_LITERALS`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_clause_literals() -> usize = "AXEYUM_MAX_CLAUSE_LITERALS" or MAX_CLAUSE_LITERALS;
+}
 
 /// The outcome of attempting real Fourier-Motzkin elimination on one assertion.
 #[derive(Debug, Clone, Copy)]
@@ -285,7 +307,7 @@ pub fn eliminate_int_universal_closed(
         let t = arena.bool_const(true);
         return Some(FmOutcome::Rewrite(t));
     }
-    if dnf.len() > MAX_DNF_CLAUSES {
+    if dnf.len() > max_dnf_clauses() {
         return None;
     }
 
@@ -295,7 +317,7 @@ pub fn eliminate_int_universal_closed(
     // *open* — decline the whole assertion (no partial verdict).
     let mut any_clause_has_integer = false;
     for clause in &dnf {
-        if clause.len() > MAX_CLAUSE_LITERALS {
+        if clause.len() > max_clause_literals() {
             return None;
         }
         // `None` ⇒ non-constant residual (open universal) ⇒ decline exactly.
@@ -407,7 +429,7 @@ pub fn eliminate_int_universal_open_gap(
         let t = arena.bool_const(true);
         return Some(FmOutcome::Rewrite(t));
     }
-    if dnf.len() > MAX_DNF_CLAUSES {
+    if dnf.len() > max_dnf_clauses() {
         return None;
     }
 
@@ -419,7 +441,7 @@ pub fn eliminate_int_universal_open_gap(
     // - else (some indeterminate clause, no always-contains) ⇒ decline.
     let mut all_never = true;
     for clause in &dnf {
-        if clause.len() > MAX_CLAUSE_LITERALS {
+        if clause.len() > max_clause_literals() {
             return None;
         }
         match clause_gap_content(var, clause) {
@@ -768,7 +790,7 @@ fn eliminate_core(
         // `¬φ` is identically false ⇒ `∃x. ¬φ` is false ⇒ `∀x. φ` is valid.
         return Some(Verdict::Valid);
     }
-    if dnf.len() > MAX_DNF_CLAUSES {
+    if dnf.len() > max_dnf_clauses() {
         return None;
     }
 
@@ -777,7 +799,7 @@ fn eliminate_core(
     // a definite `true`/`false` (tracked structurally) or to a residual term.
     let mut disjuncts: Vec<ClauseElim> = Vec::with_capacity(dnf.len());
     for clause in &dnf {
-        if clause.len() > MAX_CLAUSE_LITERALS {
+        if clause.len() > max_clause_literals() {
             return None;
         }
         disjuncts.push(eliminate_clause(arena, var, clause)?);
@@ -1107,7 +1129,7 @@ fn dnf_disjunction(
     for &arg in args {
         let d = dnf(arena, arg, negate, relax_int)?;
         acc = union_clauses(acc, d);
-        if acc.len() > MAX_DNF_CLAUSES {
+        if acc.len() > max_dnf_clauses() {
             return None;
         }
     }
@@ -1120,7 +1142,7 @@ fn cross_and(left: &[Clause], right: &[Clause]) -> Option<Vec<Clause>> {
         // Either side is `false` ⇒ the conjunction is `false`.
         return Some(Vec::new());
     }
-    if left.len().saturating_mul(right.len()) > MAX_DNF_CLAUSES {
+    if left.len().saturating_mul(right.len()) > max_dnf_clauses() {
         return None;
     }
     let mut out = Vec::with_capacity(left.len() * right.len());

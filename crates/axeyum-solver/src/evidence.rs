@@ -2515,6 +2515,17 @@ fn contains_arithmetic_content(arena: &TermArena, assertions: &[TermId]) -> bool
 /// structural certificate fires.
 const PRE_SOLVE_ALETHE_MAX_NODES: usize = 2_000;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`PRE_SOLVE_ALETHE_MAX_NODES`]: the compiled default, or
+    /// `AXEYUM_PRE_SOLVE_ALETHE_MAX_NODES` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `PRE_SOLVE_ALETHE_MAX_NODES`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn pre_solve_alethe_max_nodes() -> usize = "AXEYUM_PRE_SOLVE_ALETHE_MAX_NODES" or PRE_SOLVE_ALETHE_MAX_NODES;
+}
+
 /// Whether the assertions' term DAG has at most `cap` distinct nodes (early
 /// exit past the cap; O(min(dag, cap))).
 fn assertion_dag_within(arena: &TermArena, assertions: &[TermId], cap: usize) -> bool {
@@ -2599,7 +2610,7 @@ fn dl_decided_report(
     config: &SolverConfig,
     provenance: &Provenance,
 ) -> Option<EvidenceReport> {
-    if assertion_dag_within(arena, assertions, PRE_SOLVE_ALETHE_MAX_NODES) {
+    if assertion_dag_within(arena, assertions, pre_solve_alethe_max_nodes()) {
         return None;
     }
     // Recording ON for this call and this call only: the artifact is EVIDENCE,
@@ -2997,7 +3008,7 @@ fn direct_pre_solve_structural_report(
     // the query), so this pre-solve upgrade is size-gated: big instances (e.g.
     // the FIFO BC04 BMC rows) keep their fast structural certificates here,
     // and still get an Alethe upgrade attempt on the post-solve `Unsat` path.
-    if assertion_dag_within(arena, assertions, PRE_SOLVE_ALETHE_MAX_NODES) {
+    if assertion_dag_within(arena, assertions, pre_solve_alethe_max_nodes()) {
         if let Some(proof) = zero_trust_alethe_certificate(arena, assertions) {
             return Some(EvidenceReport {
                 evidence: Evidence::UnsatAletheProof(proof),
@@ -3677,7 +3688,7 @@ pub fn produce_evidence(
     // this, downgrading plain QF_LIA evidence. Size-gated like the other
     // pre-solve proof attempts; larger instances keep the cheaper DPLL cert and
     // still get the Alethe attempt on the post-solve `Unsat` path.
-    if assertion_dag_within(arena, assertions, PRE_SOLVE_ALETHE_MAX_NODES)
+    if assertion_dag_within(arena, assertions, pre_solve_alethe_max_nodes())
         && let Some(proof) = arith_alethe_certificate(arena, assertions)
     {
         return Ok(EvidenceReport {
@@ -4235,8 +4246,21 @@ fn small_pre_solve_array_axiom_refutation(
 ) -> Option<ArrayAxiomRefutationCertificate> {
     const PRE_SOLVE_ARRAY_AXIOM_DAG_LIMIT: u64 = 256;
 
+    axeyum_ir::cap_lever! {
+        /// The effective value of [`PRE_SOLVE_ARRAY_AXIOM_DAG_LIMIT`]: the
+        /// compiled default, or `AXEYUM_PRE_SOLVE_ARRAY_AXIOM_DAG_LIMIT` when
+        /// that variable is set.
+        ///
+        /// A measurement lever, not a tuning knob. With the variable unset this
+        /// is exactly `PRE_SOLVE_ARRAY_AXIOM_DAG_LIMIT`, so the shipped binary
+        /// is unchanged; a malformed value is refused rather than silently
+        /// defaulted. See [`axeyum_ir::config_lever`] for the contract.
+        fn dag_limit() -> u64 = "AXEYUM_PRE_SOLVE_ARRAY_AXIOM_DAG_LIMIT"
+            or PRE_SOLVE_ARRAY_AXIOM_DAG_LIMIT;
+    }
+
     let stats = TermStats::compute(arena, assertions);
-    if stats.dag_nodes > PRE_SOLVE_ARRAY_AXIOM_DAG_LIMIT {
+    if stats.dag_nodes > dag_limit() {
         return None;
     }
     crate::array_axiom::array_axiom_refutation(arena, assertions)

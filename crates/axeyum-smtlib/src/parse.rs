@@ -6094,6 +6094,7 @@ fn parse_command<'a>(
                 &mut script.arena,
                 sexpr_at(items, 1)?,
                 aliases,
+                sort_aliases,
                 macros,
                 named,
                 seq,
@@ -6149,6 +6150,7 @@ fn parse_command<'a>(
                     &mut script.arena,
                     t,
                     aliases,
+                    sort_aliases,
                     macros,
                     named,
                     seq,
@@ -6174,6 +6176,7 @@ fn parse_command<'a>(
                     &mut script.arena,
                     lit,
                     aliases,
+                    sort_aliases,
                     macros,
                     named,
                     seq,
@@ -6254,6 +6257,7 @@ fn parse_command<'a>(
                 &mut script.arena,
                 body,
                 aliases,
+                sort_aliases,
                 macros,
                 named,
                 seq,
@@ -6748,6 +6752,7 @@ fn parse_define_fun<'a>(
         parse_define_fun_alias(
             script,
             aliases,
+            sort_aliases,
             macros,
             named,
             seq,
@@ -6795,6 +6800,7 @@ fn parse_define_const<'a>(
     parse_define_fun_alias(
         script,
         aliases,
+        sort_aliases,
         macros,
         named,
         seq,
@@ -6810,6 +6816,7 @@ fn parse_define_const<'a>(
 fn parse_define_fun_alias(
     script: &mut Script,
     aliases: &mut HashMap<String, TermId>,
+    sort_aliases: &HashMap<String, Sort>,
     macros: &HashMap<String, MacroDef<'_>>,
     named: &mut HashMap<String, TermId>,
     seq: &SeqInfo,
@@ -6824,6 +6831,7 @@ fn parse_define_fun_alias(
         &mut script.arena,
         body_expr,
         aliases,
+        sort_aliases,
         macros,
         named,
         seq,
@@ -7230,6 +7238,7 @@ fn parse_term<'a>(
     arena: &mut TermArena,
     root: &'a SExpr,
     aliases: &HashMap<String, TermId>,
+    sort_aliases: &HashMap<String, Sort>,
     macros: &HashMap<String, MacroDef<'a>>,
     named: &mut HashMap<String, TermId>,
     seq: &SeqInfo,
@@ -7246,6 +7255,7 @@ fn parse_term<'a>(
                 arena,
                 e,
                 aliases,
+                sort_aliases,
                 macros,
                 named,
                 ff,
@@ -7265,7 +7275,15 @@ fn parse_term<'a>(
             }
             Frame::Apply { items, argc } => {
                 let args = results.split_off(results.len() - argc);
-                results.push(apply_op(arena, seq, ff, lenabs, items, &args)?);
+                results.push(apply_op(
+                    arena,
+                    sort_aliases,
+                    seq,
+                    ff,
+                    lenabs,
+                    items,
+                    &args,
+                )?);
             }
             Frame::ApplyInRe { re_expr } => {
                 let s = results
@@ -7449,6 +7467,7 @@ fn queue_eval<'a>(
     arena: &mut TermArena,
     expr: &'a SExpr,
     aliases: &HashMap<String, TermId>,
+    sort_aliases: &HashMap<String, Sort>,
     macros: &HashMap<String, MacroDef<'a>>,
     named: &HashMap<String, TermId>,
     ff: &FfInfo,
@@ -7460,7 +7479,17 @@ fn queue_eval<'a>(
     match expr {
         SExpr::Atom(a) => results.push(parse_atom(arena, a, aliases, named, scopes)?),
         SExpr::List(items) => {
-            queue_list_eval(arena, items, macros, ff, lenabs, scopes, frames, results)?;
+            queue_list_eval(
+                arena,
+                items,
+                sort_aliases,
+                macros,
+                ff,
+                lenabs,
+                scopes,
+                frames,
+                results,
+            )?;
         }
     }
     Ok(())
@@ -7471,6 +7500,7 @@ fn queue_eval<'a>(
 fn queue_list_eval<'a>(
     arena: &mut TermArena,
     items: &'a [SExpr],
+    sort_aliases: &HashMap<String, Sort>,
     macros: &HashMap<String, MacroDef<'a>>,
     ff: &FfInfo,
     lenabs: &LenAbs,
@@ -7509,7 +7539,7 @@ fn queue_list_eval<'a>(
         queue_match_scrutinee(items, frames)?;
     } else if head.atom() == Some("forall") || head.atom() == Some("exists") {
         let is_forall = head.atom() == Some("forall");
-        queue_quantifier(arena, items, is_forall, scopes, frames)?;
+        queue_quantifier(arena, sort_aliases, items, is_forall, scopes, frames)?;
     } else if head.atom() == Some("as") && items.len() == 3 && items[1].atom() == Some("seq.empty")
     {
         // `(as seq.empty (Seq E))` — the empty sequence (length 0, zero content)
@@ -7681,6 +7711,7 @@ fn queue_children<'a>(items: &'a [SExpr], frames: &mut Vec<Frame<'a>>, apply: Fr
 /// and the body is wrapped in `forall`/`exists` over those symbols (ADR-0016).
 fn queue_quantifier<'a>(
     arena: &mut TermArena,
+    sort_aliases: &HashMap<String, Sort>,
     items: &'a [SExpr],
     is_forall: bool,
     scopes: &[HashMap<&'a str, TermId>],
@@ -7709,10 +7740,12 @@ fn queue_quantifier<'a>(
         let name = pair[0]
             .atom()
             .ok_or_else(|| SmtError::Syntax(format!("{keyword} binding name")))?;
-        // Quantifier binder sorts are parsed in term-conversion context; sort
-        // aliases are resolved at declaration sites, not threaded here.
-        let no_aliases: HashMap<String, Sort> = HashMap::new();
-        let sort = parse_sort(arena, &no_aliases, &pair[1])?;
+        // A binder sort is an ordinary sort position, so a `define-sort` alias
+        // is legal here exactly as it is on a `declare-fun`. The script's alias
+        // table is threaded in for that reason: passing an empty map instead
+        // failed `(exists ((y MyInt)) …)` at PARSE for every alias-using
+        // script, which killed the whole SMT-LIB `FP` division.
+        let sort = parse_sort(arena, sort_aliases, &pair[1])?;
         let sym = fresh_quantifier_symbol(arena, name, sort)?;
         bindings.push((name, arena.var(sym)));
         syms.push(sym);
@@ -19052,6 +19085,7 @@ fn balanced_and(arena: &mut TermArena, mut layer: Vec<TermId>) -> Result<TermId,
 #[allow(clippy::too_many_lines)]
 fn apply_op(
     arena: &mut TermArena,
+    sort_aliases: &HashMap<String, Sort>,
     seq: &SeqInfo,
     ff: &FfInfo,
     lenabs: &LenAbs,
@@ -19060,7 +19094,7 @@ fn apply_op(
 ) -> Result<TermId, SmtError> {
     // Parameterized head: ((_ extract h l) x) etc.
     if let Some(head_items) = items[0].list() {
-        return apply_parameterized(arena, head_items, args);
+        return apply_parameterized(arena, sort_aliases, head_items, args);
     }
     let op = items[0].atom().expect("list head checked");
     // Bounded finite-sequence operators (`seq.*`, ADR-0029): dispatched only when
@@ -20432,6 +20466,7 @@ fn apply_iand(arena: &mut TermArena, head: &[SExpr], args: &[TermId]) -> Result<
 #[allow(clippy::too_many_lines)]
 fn apply_parameterized(
     arena: &mut TermArena,
+    sort_aliases: &HashMap<String, Sort>,
     head: &[SExpr],
     args: &[TermId],
 ) -> Result<TermId, SmtError> {
@@ -20439,11 +20474,10 @@ fn apply_parameterized(
     if head.first().and_then(SExpr::atom) == Some("as") {
         if head.get(1).and_then(SExpr::atom) == Some("const") && head.len() == 3 && args.len() == 1
         {
-            // The `as const` sort is the explicit array form; sort aliases are
-            // resolved at declaration sites, not threaded into term conversion,
-            // so an empty alias map is correct here.
-            let no_aliases: HashMap<String, Sort> = HashMap::new();
-            let Sort::Array { index, element } = parse_sort(arena, &no_aliases, &head[2])? else {
+            // The `as const` sort is an ordinary sort position, so it admits a
+            // `define-sort` alias like any other. Same threading as the binder
+            // path in `queue_quantifier`.
+            let Sort::Array { index, element } = parse_sort(arena, sort_aliases, &head[2])? else {
                 return Err(SmtError::Unsupported(format!(
                     "`as const` non-array sort {head:?}"
                 )));
