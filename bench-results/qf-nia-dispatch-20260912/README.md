@@ -151,12 +151,131 @@ string route as the cause of 103 of 110 losses. That is the fourth recorded
 instance of that failure mode in this repository, and it is why `bound_by` and
 `last` are both printed.
 
+## Result 3 — the largest honest class is not a clock problem
+
+The 41 `ladder-clock` files re-run at **150 s** (6.25x the competition budget,
+`timeout -k 5 260`, three workers): **1 of 41 decided** (`sat`, 58.5 s, on
+`From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8434_safety_0.smt2`).
+Raw rows: `deep-ladder-clock-150s.tsv`.
+
+At six times the budget the class also decomposes further, which is itself the
+answer to "was 24 s simply too short":
+
+| at 150 s, the 41 ladder-clock files become | files |
+|---|---:|
+| `estimated N CNF clauses … exceeds budget` | 13 |
+| watchdog fired before the worker thread returned | 10 |
+| `integer bit-blast width ladder: wall-clock timeout reached` (still) | 10 |
+| `bounded integer model overflowed at width 32` | 4 |
+| `combined-theory timeout after scalar backend` | 3 |
+| no reason (killed) | 1 |
+
+So "give the ladder more of the budget" is a measured negative. The watchdog row
+grew from 6 to 10 because this probe ran concurrently with the A/B below; that
+inflation can only move files out of the structural classes, never into them.
+
+## Result 4 — the wraparound is ADDITIVE, and one side-constraint decides 40 files
+
+[ADR-1921](../../docs/research/09-decisions/adr-1921-the-int-blast-width-escalation-is-measured-and-not-shipped.md)
+closed the width lead and left one hypothesis standing, marked unmeasured:
+`blast_integers` emits a no-overflow constraint for `int_mul` and for **nothing
+else**, so the replay failures that survive must be **additive** wraparound.
+
+Measured, it is right.
+[ADR-1937](../../docs/research/09-decisions/adr-1937-the-blaster-pins-products-and-nothing-else-and-the-wraparound-is-additive.md)
+adds the analogous constraint on `int_add`/`int_sub`/`int_neg`.
+
+### The A/B
+
+One release binary (sha256 `c4ee2cf01be611ff6fcbb0a2a11fede1702c794988e637b1497f864533d75880`),
+two environments, arms alternating per file, both arms of a file run back to back
+inside one worker so the pair shares ambient load. Three workers on s4 pinned to
+cores 8–15, `--timeout-ms 24000`, wall `timeout -k 5 180`.
+
+**The whole division** (200 board rows, 201 paths — `106.smt2` is an ambiguous
+basename and BOTH candidate copies are included rather than guessed; its board
+row is `unknown` for all three solvers so neither copy can produce a gain or a
+loss). Rows: `ab-division-200.tsv`.
+
+| | baseline | armed |
+|---|---:|---:|
+| decided | **39** | **78** |
+| gains | — | **40** |
+| losses | — | 1 raw, **0 after re-check** |
+| verdict flips between arms | — | **0** |
+| wall total | 3,607 s | 3,239 s (**−10.2 %**) |
+| both-decided wall ratio | — | 0.995 |
+
+It is **faster**, which is the shape the mechanism predicts: the constraint
+removes the wrapping models the exact-integer replay was going to reject anyway.
+
+**Cost on what already works** (`ab-crossdiv-cost-298.tsv`): 298 already-decided
+files, every fourth, from QF_LIA, QF_UFLIA, QF_IDL, QF_RDL, QF_NRA, QF_ABV,
+QF_SLIA, QF_DT and UF — `crossdiv-cost-298.txt`. Baseline 290 decided, armed
+289; **0 real losses, 0 flips, +1.9 % wall** (both-decided ratio 1.027).
+
+That sample **resolves before it samples**. Sampling first and dropping what
+would not resolve gave QF_LIA 7 files instead of 27, because 92 of its 119
+decided rows share a basename with another corpus directory and the board cannot
+say which one it ran. QF_LIA is the division this constraint taxes most, so a
+sample size decided by basename collisions would have measured the wrong thing.
+
+### Every single-pairing surprise was re-run serially, and every one was a flake
+
+Pinned to cores 0–7, arms back to back, nothing else of this lane's running:
+
+| file | parallel A/B | serial re-check, both arms |
+|---|---|---|
+| `From_T2__n-7.t2_fixed__p4922…` (QF_NIA) | A `unsat` 6.7 s / B `unknown` 24.3 s | `unsat` 6.3 s / `unsat` 6.3 s, 4 of 4 |
+| `xy.12.x.12.r.3…gph` (QF_IDL) | A `sat` 19.2 s / B `unknown` | `sat` ≈9.8 s both, 3 of 3 |
+| `ex8280_2400_100` (QF_LIA) | A `sat` 18.8 s / B `unknown` | `sat` 16.9 s both, 3 of 3 |
+| `hash_uns_04_20` (QF_UFLIA) | A `unsat` 15.8 s / B `unknown` | `unsat` 8.6 s both, 3 of 3 |
+
+Three gains re-checked the same way all reproduce: `LessLeaves…p10018`
+(`unknown` 24.1 s vs `sat` 15.1 s, 3 of 3), `fun1.t2_fixed…p697` (`unknown`
+24.6 s vs `sat` 15.4 s, 2 of 2), `SAT14/571` (`unknown` 24.9 s vs `sat` 7.6 s,
+2 of 2).
+
+Both the raw and the re-checked numbers are given, because a 16 s baseline
+against a 24 s budget flips under ambient load and this repository has already
+published one false convert from exactly that.
+
+### Against the board, not only against the arm
+
+The board's baseline for this division is 41; this host's baseline arm
+reproduced **39** under three-way load. The two it missed are host effects, not
+treatment effects — `From_T2__n-21.t2__p3959…` was missed by **both** arms and
+decides `unsat` in 8.3 s in both arms serially. On equal footing:
+
+> **41 → 80 of 200** (78 measured armed, plus `n-21` and `n-7`, each verified
+> serially in both arms), closing **39 of the 103-file gap** to z3's 144.
+
+### Soundness
+
+All **78** verdicts the armed arm produced — not only the 40 gains — checked
+against three authorities keyed by full path: the benchmark's own
+`(set-info :status …)`, `z3 -T:60`, and `cvc5 --tlimit 60000`. Rows:
+`refcheck-78.tsv`.
+
+> **78 verdicts, 0 disagreements, 0 verdicts with no authority.**
+
+The checker was verified able to fail: inverting every verdict yields **78**
+disagreements. A checker that cannot fail is worse than no checker, so the zero
+is only worth reading next to that 78.
+
 ## Files
 
 | file | what it is |
 |---|---|
-| `winnable-110.txt` | the pinned population (absolute paths) |
-| `census-110.tsv` | per-file rows: verdict, rc, wall, kind, detail, decided_by, bound_by, last, bound_ms, total_ms, attempts, phase |
+| `winnable-110.txt` | the pinned winnable population (absolute paths) |
+| `census-110.tsv` | per-file census rows: verdict, rc, wall, kind, detail, decided_by, bound_by, last, bound_ms, total_ms, attempts, phase |
+| `classes/class-*.txt` | the census population split by honest cause |
+| `deep-ladder-clock-150s.tsv` | the 41 ladder-clock files at 150 s |
+| `division-201-paths.txt` | the whole division, resolved (201 paths for 200 board rows) |
+| `ab-division-200.tsv` | the interleaved A/B over the whole division |
+| `crossdiv-cost-298.txt` | the cross-division cost population |
+| `ab-crossdiv-cost-298.tsv` | the interleaved A/B over already-decided files in nine divisions |
+| `refcheck-78.tsv` | every armed verdict against `:status`, z3 and cvc5 |
 
 Scripts: `scripts/qf-nia-dispatch-{population,census,classify,crosstab,ab,refcheck,deeptrace,groundtruth}.py`.
 
