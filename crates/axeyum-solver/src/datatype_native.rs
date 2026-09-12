@@ -205,6 +205,15 @@ fn decide_with_eq_mode(
     let (abstracted, witnesses) = abstract_wrong_ctor_selects(arena, simplified)
         .map_err(|e| SolverError::Backend(e.to_string()))?;
 
+    // Ackermann-expand every uninterpreted function applied to a datatype
+    // argument (ADR-1935): each application becomes a fresh witness symbol and
+    // each pair of applications of one function gains
+    // `(arguments equal) -> (witnesses equal)`. The antecedent's datatype
+    // conjuncts are plain `Op::Eq` terms, so the tag/field expansion below
+    // encodes them through `build_dt_eq` like any other structural equality --
+    // which is exactly why the precondition is that the encoding be EXACT.
+    let (abstracted, ack_sites) = ackermannize_datatype_applications(arena, &abstracted)?;
+
     // Expand a structural equality over a datatype that HAS datatype fields into
     // the per-constructor field comparison, ONE level deep. Exact (it is the
     // definition of structural equality), and it is what lets the expansion
@@ -256,7 +265,33 @@ fn decide_with_eq_mode(
         // that makes the ADR-1920 gate lift safe for shapes the arm above does
         // not name individually.
         refuse_if_datatype_survives(arena, &unfolded)?;
-        return solve(arena, &unfolded, config);
+        let result = solve(arena, &unfolded, config)?;
+        let CheckResult::Sat(model) = result else {
+            return Ok(result);
+        };
+        if ack_sites.is_empty() {
+            return Ok(CheckResult::Sat(model));
+        }
+        // An Ackermann-expanded query can empty `dt_symbols` -- `(assert (p o))`
+        // reduces to the witness variable alone -- and returning the inner model
+        // straight out would be WRONG TWICE: it leaks the `!dt_ack_*` internal
+        // symbols, and it omits `p`'s interpretation, so the model cannot be
+        // checked by evaluating the original term. Both are what
+        // `project_and_replay` exists to fix, and with an empty scan its
+        // datatype loops are no-ops, so it is the same code rather than a second
+        // copy of it.
+        let empty_layout: BTreeMap<SymbolId, SymVars> = BTreeMap::new();
+        return project_and_replay(
+            arena,
+            simplified,
+            &scan,
+            &empty_layout,
+            &links,
+            &witnesses,
+            &ack_sites,
+            relaxed,
+            &model,
+        );
     }
 
     // Mutable phase: declare tag/field symbols, build the replacement map and the
@@ -334,7 +369,7 @@ fn decide_with_eq_mode(
     // Replay against the *original* simplified assertions (which still reference
     // the select-chains), so a sound `sat` satisfies the real query.
     project_and_replay(
-        arena, simplified, &scan, &layout, &links, &witnesses, relaxed, &model,
+        arena, simplified, &scan, &layout, &links, &witnesses, &ack_sites, relaxed, &model,
     )
 }
 
@@ -726,16 +761,23 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
                 eqs.push(EqSite { term, left, right });
             }
             // An uninterpreted function applied to a datatype argument
-            // (ADR-1920). The tag/field expansion rewrites `is`/`select`/`==`
-            // sites; it has no rewrite for `p(o)`, so the datatype-sorted `o`
-            // would survive into the residual and the dispatcher would route
-            // the residual straight back here — an unbounded recursion, not an
-            // answer (measured: `(assert (p o))` aborted the process with a
-            // stack overflow). Refuse precisely instead.
+            // (ADR-1920). [`ackermannize_datatype_applications`] runs BEFORE
+            // this scan and replaces every such application with a fresh witness
+            // symbol plus pairwise congruence (ADR-1935), so reaching one here
+            // means it was not eliminable — the pre-pass refuses with its own,
+            // more specific message in every case it recognises, and this arm is
+            // the fence for anything it does not.
+            //
+            // It has to stay a REFUSAL rather than a fall-through: the tag/field
+            // expansion has no rewrite for `p(o)`, so the datatype-sorted `o`
+            // would survive into the residual and the dispatcher would route the
+            // residual straight back here — an unbounded recursion, not an answer
+            // (measured: `(assert (p o))` aborted the process with a stack
+            // overflow).
             Op::Apply(_) if args.iter().any(|&a| is_datatype_sorted(arena, a)) => {
                 return Err(unsupported(
-                    "an uninterpreted function applied to a datatype argument \
-                     (congruence over expanded datatype arguments is not in this fragment)",
+                    "an uninterpreted function applied to a datatype argument that \
+                     Ackermann expansion did not eliminate",
                 ));
             }
             _ => {
@@ -753,6 +795,273 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
         eqs,
         relaxed_eq,
     })
+}
+
+/// One Ackermann-expanded application: `func(args)`, replaced by `witness`.
+struct AckSite {
+    func: axeyum_ir::FuncId,
+    /// The application's argument terms, as they stood BEFORE the replacement
+    /// map was applied. `project_and_replay` rewrites them itself when it
+    /// rebuilds the interpretation, so a nested expanded application is read
+    /// through its own witness.
+    args: Vec<TermId>,
+    witness: SymbolId,
+}
+
+/// The most congruence pairs one call will emit before refusing.
+///
+/// Ackermann is quadratic in the number of applications of one function, and the
+/// SPARK/Ada divisions apply one accessor to hundreds of records. Refusing at a
+/// bound is an `Unsupported` the harness reads as a decline; not refusing is a
+/// term explosion that spends the whole budget and yields nothing. The bound is
+/// on PAIRS rather than applications because that is what costs.
+const MAX_ACK_PAIRS: usize = 20_000;
+
+/// Replaces every uninterpreted-function application that has a datatype-sorted
+/// argument with a fresh witness symbol, and asserts pairwise congruence
+/// (ADR-1935).
+///
+/// For applications `p = f(a₁…aₙ)` and `q = f(b₁…bₙ)` this emits
+/// `(⋀ᵢ aᵢ = bᵢ) → (wₚ = w_q)`, leaving the argument equalities as plain
+/// `Op::Eq` terms for the tag/field expansion to encode.
+///
+/// # The checked precondition, and why it is this one
+///
+/// Every datatype-sorted argument must be a free variable of a datatype whose
+/// expansion is EXACT ([`datatype_expansion_is_exact`]). ADR-1920 states the
+/// reason and it is the whole soundness argument:
+///
+/// > For a datatype that *does* have datatype-typed fields, `build_dt_eq` is a
+/// > **relaxation** — weaker than real equality — and a weaker antecedent makes
+/// > the congruence constraint *stronger* than the true axiom, which can produce
+/// > a wrong `unsat`.
+///
+/// A relaxed antecedent can be true of two values that really differ, and the
+/// clause then forces `f` to agree on them — a constraint the true congruence
+/// axiom does not impose. That is a MODEL RESTRICTION, the same shape as the
+/// non-active field guard ADR-1930 removed after it manufactured a wrong
+/// `unsat`, and it is why this is a checked call rather than a comment.
+///
+/// With exactness the transformation is equisatisfiable in both directions:
+///
+/// - *original ⇒ reduced.* Map `wₚ` to `f(a₁…aₙ)`'s value. Each antecedent is
+///   real equality of the arguments (that is what exactness buys), so every
+///   congruence clause holds by `f` being a function.
+/// - *reduced ⇒ original.* Define `f` at each expanded tuple as that site's
+///   witness value; the congruence clauses make the definition consistent
+///   wherever two tuples are equal, so it is a function. [`AckSite`] carries
+///   exactly what `register_ack_interpretations` needs to build it, and the
+///   `sat` replay evaluates the original applications under it.
+///
+/// # Errors
+///
+/// [`SolverError::Unsupported`] if a datatype-sorted argument is not a free
+/// variable, if its datatype's expansion is not exact, if the result sort
+/// mentions a datatype (a datatype-valued UF result is a separate capability and
+/// its witness would survive into the residual), or if the pair count exceeds
+/// [`MAX_ACK_PAIRS`].
+fn ackermannize_datatype_applications(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<(Vec<TermId>, Vec<AckSite>), SolverError> {
+    // Collect the applications, grouped by function, in TermId order. TermId
+    // order is a deterministic bottom-up order in a hash-consed arena (a child
+    // is interned before its parent), which both keeps the output stable and
+    // lets `register_ack_interpretations` process a nested site before the site
+    // that reads it.
+    let mut groups: BTreeMap<axeyum_ir::FuncId, Vec<TermId>> = BTreeMap::new();
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(term) else {
+            continue;
+        };
+        let op = *op;
+        let args = args.clone();
+        if let Op::Apply(func) = op
+            && args.iter().any(|&a| is_datatype_sorted(arena, a))
+        {
+            groups.entry(func).or_default().push(term);
+        }
+        stack.extend(args);
+    }
+    if groups.is_empty() {
+        return Ok((assertions.to_vec(), Vec::new()));
+    }
+
+    let mut pairs = 0usize;
+    for sites in groups.values_mut() {
+        sites.sort_unstable();
+        pairs = pairs.saturating_add(sites.len().saturating_mul(sites.len() - 1) / 2);
+    }
+    if pairs > MAX_ACK_PAIRS {
+        return Err(unsupported(&format!(
+            "Ackermann congruence over datatype arguments needs {pairs} congruence pairs, \
+             over the {MAX_ACK_PAIRS} bound"
+        )));
+    }
+
+    // Validate BEFORE declaring anything, so a refusal leaves the arena clean.
+    for (&func, sites) in &groups {
+        let (_, _, result) = arena.function(func);
+        if crate::datatype_elim::sort_mentions_datatype(result) {
+            return Err(unsupported(
+                "an uninterpreted function whose RESULT sort mentions a datatype \
+                 (its Ackermann witness would itself be a datatype-sorted term)",
+            ));
+        }
+        for &site in sites {
+            let TermNode::App { args, .. } = arena.node(site) else {
+                unreachable!("collected an application");
+            };
+            for &arg in &args.clone() {
+                if !is_datatype_sorted(arena, arg) {
+                    continue;
+                }
+                if !matches!(arena.node(arg), TermNode::Symbol(_)) {
+                    return Err(unsupported(
+                        "an uninterpreted function applied to a datatype term that is not a \
+                         free variable (constructors should fold first)",
+                    ));
+                }
+                let Sort::Datatype(dt) = arena.sort_of(arg) else {
+                    unreachable!("datatype-sorted");
+                };
+                if !datatype_expansion_is_exact(arena, dt) {
+                    // ADR-1920's soundness condition, restated as exactness
+                    // (ADR-1935). This is the arm that must never be relaxed
+                    // into a comment.
+                    return Err(unsupported(
+                        "congruence over a datatype argument whose expansion is not exact \
+                         (a field with no expansion variable makes the encoded equality \
+                         WEAKER than real equality, and a weaker congruence antecedent is \
+                         STRONGER than the true axiom -- a wrong `unsat`)",
+                    ));
+                }
+            }
+        }
+    }
+
+    let mut replacements: HashMap<TermId, TermId> = HashMap::new();
+    let mut ack_sites = Vec::new();
+    let mut congruence = Vec::new();
+    for (&func, sites) in &groups {
+        let (_, _, result) = arena.function(func);
+        let mut witnesses = Vec::with_capacity(sites.len());
+        for &site in sites {
+            let witness = arena
+                .declare_internal(&format!("!dt_ack_{}", site.index()), result)
+                .map_err(|e| SolverError::Backend(e.to_string()))?;
+            let TermNode::App { args, .. } = arena.node(site) else {
+                unreachable!("collected an application");
+            };
+            let args = args.clone();
+            replacements.insert(site, arena.var(witness));
+            ack_sites.push(AckSite {
+                func,
+                args: args.to_vec(),
+                witness,
+            });
+            witnesses.push(witness);
+        }
+        for (pi, &p) in sites.iter().enumerate() {
+            for (qi, &q) in sites.iter().enumerate().skip(pi + 1) {
+                let (TermNode::App { args: pa, .. }, TermNode::App { args: qa, .. }) =
+                    (arena.node(p), arena.node(q))
+                else {
+                    unreachable!("collected applications");
+                };
+                let (pa, qa) = (pa.clone(), qa.clone());
+                let mut antecedent = arena.bool_const(true);
+                for (&a, &b) in pa.iter().zip(&qa) {
+                    if a == b {
+                        // Hash-consed: identical argument terms are one TermId,
+                        // so this conjunct is `true` and emitting it only grows
+                        // the formula.
+                        continue;
+                    }
+                    let eq = arena
+                        .eq(a, b)
+                        .map_err(|e| SolverError::Backend(e.to_string()))?;
+                    antecedent = arena
+                        .and(antecedent, eq)
+                        .map_err(|e| SolverError::Backend(e.to_string()))?;
+                }
+                let pv = arena.var(witnesses[pi]);
+                let qv = arena.var(witnesses[qi]);
+                let consequent = arena
+                    .eq(pv, qv)
+                    .map_err(|e| SolverError::Backend(e.to_string()))?;
+                let clause = arena
+                    .implies(antecedent, consequent)
+                    .map_err(|e| SolverError::Backend(e.to_string()))?;
+                congruence.push(clause);
+            }
+        }
+    }
+
+    // Rewrite the assertions AND the congruence clauses through the same map, so
+    // a nested expanded application inside an antecedent is read through its own
+    // witness rather than surviving as an `Op::Apply` the scan would refuse.
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    let mut out = Vec::with_capacity(assertions.len() + congruence.len());
+    for &assertion in assertions.iter().chain(&congruence) {
+        let rewritten = replace_subterms(arena, assertion, &replacements, &mut memo)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        out.push(rewritten);
+    }
+    Ok((out, ack_sites))
+}
+
+/// Rebuilds each Ackermann-expanded function's interpretation from its witness
+/// values, so the `sat` replay can evaluate the original `f(...)` applications.
+///
+/// Sites are visited in the order [`ackermannize_datatype_applications`]
+/// produced them (TermId order within a function, functions in `FuncId` order),
+/// and each argument is evaluated under the assignment as it stands — which by
+/// this point already carries the projected datatype values. An argument that
+/// does not evaluate (an unconstrained symbol the inner model never mentioned)
+/// leaves that site out of the interpretation; the replay then reads the
+/// function's default there and fails if that is not what the search assumed,
+/// which is the correct outcome rather than a guessed one.
+fn register_ack_interpretations(
+    arena: &TermArena,
+    ack_sites: &[AckSite],
+    assignment: &mut axeyum_ir::Assignment,
+) {
+    for site in ack_sites {
+        let Some(result) = assignment.get(site.witness) else {
+            continue;
+        };
+        let mut vals = Vec::with_capacity(site.args.len());
+        let mut ok = true;
+        for &arg in &site.args {
+            match eval(arena, arg, assignment) {
+                Ok(value) => vals.push(value),
+                Err(_) => {
+                    ok = false;
+                    break;
+                }
+            }
+        }
+        if !ok {
+            continue;
+        }
+        let (_, params, result_sort) = arena.function(site.func);
+        let current = match assignment.function(site.func) {
+            Some(existing) => existing.clone(),
+            None => {
+                let Some(default) = well_founded_default(arena, result_sort) else {
+                    continue;
+                };
+                axeyum_ir::FuncValue::constant_value(params.to_vec(), result_sort, default)
+            }
+        };
+        assignment.set_function(site.func, current.define_value(&vals, result));
+    }
 }
 
 /// Whether `term` has a datatype sort.
@@ -847,11 +1156,14 @@ fn expect_dt_symbol(arena: &TermArena, term: TermId) -> Result<SymbolId, SolverE
 
 /// Records `dt`'s constructor/field layout.
 ///
-/// Scalar (`Bool`/`BitVec`/`Int`/`Real`) fields are expanded to field variables; datatype and
-/// array fields are recorded too (kept in `field_sorts`) but get no expansion
-/// variable — they are sound only as long as they are never traversed by a
-/// `select` or compared by `==`, which the scan enforces, so they are projected
-/// to a well-founded default. Other non-scalar fields (e.g. arrays) are rejected.
+/// Every field sort that [`field_sort_expands`] accepts gets an expansion
+/// variable of that sort: `Bool`/`BitVec`/`Int`/`Real`, and — since ADR-1935 —
+/// `(declare-sort …)` uninterpreted sorts and arrays whose component sorts
+/// mention no datatype. Datatype-typed fields are recorded in `field_sorts` but
+/// get no expansion variable; they are sound only as long as they are never
+/// traversed by a `select` or compared exactly, which the scan and
+/// [`datatype_expansion_is_exact`] enforce, so they are projected to a
+/// well-founded default. Everything else is rejected.
 fn register_datatype(
     arena: &TermArena,
     dt: DatatypeId,
@@ -868,15 +1180,16 @@ fn register_datatype(
         let mut field_sorts = Vec::new();
         for (_, sort) in arena.constructor_fields(ctor) {
             match sort {
-                Sort::Bool | Sort::BitVec(_) | Sort::Int | Sort::Real => field_sorts.push(*sort),
                 Sort::Datatype(inner) => {
                     register_datatype(arena, *inner, layouts)?;
                     field_sorts.push(*sort);
                 }
+                _ if field_sort_expands(*sort) => field_sorts.push(*sort),
                 _ => {
                     return Err(unsupported(
-                        "native datatype solving supports scalar (Bool/BitVec/Int/Real) and \
-                         datatype fields; array/UF datatype fields are not yet supported",
+                        "a datatype field sort with no expansion variable (native datatype \
+                         solving expands Bool/BitVec/Int/Real, uninterpreted sorts, and arrays \
+                         whose component sorts mention no datatype)",
                     ));
                 }
             }
@@ -885,6 +1198,64 @@ fn register_datatype(
     }
     layouts.insert(dt, ctors);
     Ok(())
+}
+
+/// Whether a datatype FIELD of this sort gets an expansion variable.
+///
+/// **This is the ADR-1935 precondition, and it has exactly one definition on
+/// purpose.** Three things must agree about a field sort — whether
+/// [`register_datatype`] admits the datatype, whether [`build_sym_vars`]
+/// declares a variable for the field, and whether
+/// [`datatype_expansion_is_exact`] may call the datatype's equality encoding
+/// exact — and ADR-1920's measured lesson is that two predicates written twice
+/// in different words do not stay the same predicate. `build_sym_vars` skips
+/// exactly `Sort::Datatype(_)` and declares a variable for everything else, so
+/// "admitted by `register_datatype` and not a datatype" IS "has a variable",
+/// and this function is the only place that decides it.
+///
+/// Uninterpreted sorts and arrays are admitted (ADR-1935); an array whose
+/// component sorts mention a datatype is NOT, because its expansion variable
+/// would carry datatype content into the residual, which
+/// [`refuse_if_datatype_survives`] must then refuse — the same divert-vs-content
+/// predicate mismatch ADR-1920 measured as a non-terminating cycle.
+///
+/// `Float`/`RoundingMode`/`Seq` fields stay rejected: no lane has measured a
+/// datatype over them end to end, and ADR-1920's rule is that a gate is lifted
+/// on a measurement, not on a symmetry.
+fn field_sort_expands(sort: Sort) -> bool {
+    match sort {
+        Sort::Bool | Sort::BitVec(_) | Sort::Int | Sort::Real | Sort::Uninterpreted(_) => true,
+        Sort::Array { .. } => !crate::datatype_elim::sort_mentions_datatype(sort),
+        _ => false,
+    }
+}
+
+/// Whether the tag/field expansion of `dt` is EXACT: every field of every
+/// constructor gets an expansion variable, so `tag_l == tag_r` conjoined with
+/// the per-constructor field agreement is real equality in BOTH directions.
+///
+/// **This is the checked precondition for emitting congruence over a datatype
+/// argument** (ADR-1935), and it is a function rather than a comment because
+/// ADR-1920 named exactly that requirement:
+///
+/// > For a datatype that *does* have datatype-typed fields, `build_dt_eq` is a
+/// > **relaxation** — weaker than real equality — and a weaker antecedent makes
+/// > the congruence constraint *stronger* than the true axiom, which can produce
+/// > a wrong `unsat`.
+///
+/// ADR-1920 stated the precondition as "all fields scalar". That is *sufficient*
+/// for exactness but not necessary, and measured over the three DT divisions it
+/// holds for 6 of 600 sampled files, against 136 for exactness
+/// (`docs/research/03-measurements/the-adr-1920-slice-is-6-of-600-files-2026-09-12.md`).
+/// The property the soundness argument needs is exactness, so that is what is
+/// checked.
+fn datatype_expansion_is_exact(arena: &TermArena, dt: DatatypeId) -> bool {
+    arena.datatype_constructors(dt).iter().all(|&ctor| {
+        arena
+            .constructor_fields(ctor)
+            .iter()
+            .all(|(_, sort)| field_sort_expands(*sort))
+    })
 }
 
 /// Whether any constructor of `dt` has a datatype-typed field.
@@ -1209,6 +1580,7 @@ fn project_and_replay(
     layout: &BTreeMap<SymbolId, SymVars>,
     links: &Links,
     witnesses: &[WitnessSite],
+    ack_sites: &[AckSite],
     relaxed: bool,
     model: &Model,
 ) -> Result<CheckResult, SolverError> {
@@ -1218,6 +1590,12 @@ fn project_and_replay(
         let value = project_slot(arena, sym, scan, layout, links, &assignment, &mut memo)?;
         assignment.set(sym, value);
     }
+
+    // Rebuild the interpretation of every Ackermann-expanded function from its
+    // witnesses, so the replay below can evaluate the `f(...)` applications the
+    // ORIGINAL assertions still contain. Without this every such replay fails at
+    // `IrError::UnboundFunction` and a correct `sat` is thrown away.
+    register_ack_interpretations(arena, ack_sites, &mut assignment);
 
     // Fold the model's choices for every UNSPECIFIED selector read into ONE
     // interpretation before replaying (ADR-1930). Without this the replay would

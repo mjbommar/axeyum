@@ -10,6 +10,9 @@
 //!
 //! * `gate_*` — a `SortMismatch` instead of a `FuncId`, i.e. the lift reverted.
 //! * `terminates_*` — **nothing**: the process aborts with a stack overflow.
+//!   (Since ADR-1935 the UF-over-a-datatype-argument one also asserts the
+//!   verdict and the model, because the query now decides rather than being
+//!   refused; the termination property is unchanged.)
 //!   These are the regression guards for the two measured non-termination
 //!   cycles. They are written so a revert kills the whole test binary loudly
 //!   rather than producing a wrong answer quietly.
@@ -112,10 +115,32 @@ fn terminates_on_a_uf_applied_to_a_datatype_variable() {
     let obj = var_of(&mut arena, "o", Sort::Datatype(dt));
     let app = arena.apply(pred, &[obj]).expect("apply");
 
+    // ADR-1935 CHANGED THIS ASSERTION, and the reason is the whole point of the
+    // test. It used to demand `Unsupported`, because refusing was the only thing
+    // that broke the cycle. The Ackermann pre-pass now ELIMINATES the
+    // application instead, so the query reduces to a Boolean witness variable
+    // and decides. The termination property this test exists for is unchanged
+    // and is still what a revert would violate -- the failure mode is a stack
+    // overflow that kills the whole test binary before any assertion runs.
+    //
+    // The verdict is asserted rather than merely bounded, and so is the model,
+    // because a route that eliminated the application without recording `p`'s
+    // interpretation would return a `sat` that cannot be checked by evaluating
+    // the original term -- which the empty-scan path did on the first cut.
     let got = solve(&mut arena, &[app], &cfg());
+    let Ok(CheckResult::Sat(model)) = got else {
+        panic!("`(assert (p o))` is satisfiable and must decide, got {got:?}");
+    };
+    assert_eq!(
+        model.functions().count(),
+        1,
+        "the sat model must carry p's interpretation: {model:?}"
+    );
     assert!(
-        matches!(got, Err(SolverError::Unsupported(_))),
-        "expected a clean Unsupported, got {got:?}"
+        !model
+            .iter()
+            .any(|(s, _)| arena.symbol(s).0.starts_with("!dt_")),
+        "the expansion's internal symbols must not leak into the model: {model:?}"
     );
 }
 
