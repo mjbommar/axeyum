@@ -415,11 +415,13 @@ pub fn check_with_lra_dpll_within(
     let fallback_config = config_with_remaining_deadline(config, deadline);
 
     // 1. Boolean abstraction: skeleton terms + the atom map.
-    let mut ctx = Abstractor::default();
-    let mut skeleton = Vec::with_capacity(assertions.len());
-    for &assertion in assertions {
-        skeleton.push(ctx.abstract_term(arena, assertion)?);
-    }
+    let mut ctx = Abstractor::with_deadline(deadline);
+    let Some(skeleton) = ctx.abstract_assertions(arena, assertions)? else {
+        return Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::ResourceLimit,
+            detail: "lazy SMT: wall-clock timeout during Boolean abstraction".to_owned(),
+        }));
+    };
 
     let mut solver =
         SkeletonSolver::new(skeleton_solve_policy(), arena, &skeleton, &fallback_config);
@@ -556,11 +558,13 @@ pub fn check_with_nra_dpll_within(
     config: &SolverConfig,
     deadline: Option<Instant>,
 ) -> Result<CheckResult, SolverError> {
-    let mut ctx = Abstractor::default();
-    let mut skeleton = Vec::with_capacity(assertions.len());
-    for &assertion in assertions {
-        skeleton.push(ctx.abstract_term(arena, assertion)?);
-    }
+    let mut ctx = Abstractor::with_deadline(deadline);
+    let Some(skeleton) = ctx.abstract_assertions(arena, assertions)? else {
+        return Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::ResourceLimit,
+            detail: "nra lazy SMT: wall-clock timeout during Boolean abstraction".to_owned(),
+        }));
+    };
     let mut solver = SkeletonSolver::new(skeleton_solve_policy(), arena, &skeleton, config);
     let mut blocking: Vec<TermId> = Vec::new();
     crate::lazy_smt_counters::record_entry(LazySmtLoop::Nra, ctx.atoms.len() as u64);
@@ -745,11 +749,19 @@ pub fn certify_lra_dpll_unsat(
         }
     }
 
-    let mut ctx = Abstractor::default();
-    let mut skeleton = Vec::with_capacity(assertions.len());
-    for &assertion in assertions {
-        skeleton.push(ctx.abstract_term(arena, assertion)?);
-    }
+    // The certificate route's own budget for the abstraction. It is derived
+    // here rather than taken as a parameter because this entry point has no
+    // caller-owned clock; `config.timeout == None` leaves the walk unbounded,
+    // exactly as before.
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    let mut ctx = Abstractor::with_deadline(deadline);
+    let Some(skeleton) = ctx.abstract_assertions(arena, assertions)? else {
+        return Ok(LraDpllOutcome::Unknown(UnknownReason {
+            kind: UnknownKind::ResourceLimit,
+            detail: "lra-dpll certificate: wall-clock timeout during Boolean abstraction"
+                .to_owned(),
+        }));
+    };
 
     let mut backend = SatBvBackend::new();
     let mut blocking: Vec<TermId> = Vec::new();
@@ -1278,30 +1290,26 @@ fn conflict_core(
     Ok(assignment.to_vec())
 }
 
-/// Whether `term` contains any real-sorted subterm.
-fn contains_real(arena: &TermArena, term: TermId) -> bool {
-    let mut seen = std::collections::HashSet::new();
-    let mut stack = vec![term];
-    while let Some(t) = stack.pop() {
-        if !seen.insert(t) {
-            continue;
-        }
-        if arena.sort_of(t) == Sort::Real {
-            return true;
-        }
-        if let TermNode::App { args, .. } = arena.node(t) {
-            stack.extend(args.iter().copied());
-        }
-    }
-    false
-}
-
 /// One abstracted real atom: its fresh Boolean proposition and the original
 /// comparison term.
 struct AtomBinding {
     prop: SymbolId,
     term: TermId,
 }
+
+/// How many freshly-visited term nodes the Boolean abstraction walks between
+/// deadline reads.
+///
+/// **Why a node count is a safe counter here, where ADR-1906's conflict count
+/// was not.** That defect was a CDCL core testing its deadline every 1,024
+/// *conflicts*: a search can burn its whole budget under 256 conflicts, so the
+/// counter was unrelated to the elapsed time and could never fire. The
+/// abstraction below is memoised — every term node is expanded at most once,
+/// and [`Abstractor::contains_real`] shares one cache across the whole walk —
+/// so its total work is proportional to the number of distinct nodes visited,
+/// which is exactly what this counts. A walk that takes long *must* visit many
+/// nodes; there is no shape that spends seconds under 256 of them.
+const ABSTRACTION_DEADLINE_CHECK_NODES: u32 = 256;
 
 #[derive(Default)]
 struct Abstractor {
@@ -1311,52 +1319,223 @@ struct Abstractor {
     props: std::collections::HashSet<SymbolId>,
     atoms: Vec<AtomBinding>,
     fresh_counter: usize,
+    /// Memo for [`Abstractor::abstract_term`]: the skeleton already built for a
+    /// term, so a subterm reachable by many paths through the assertion **DAG**
+    /// is rebuilt once rather than once per path.
+    ///
+    /// Without it the recursion is a *tree* walk over a DAG, i.e. exponential
+    /// in the sharing. Measured 2026-09-12 on the `QF_UFLRA`
+    /// `cpachecker-induction`/`cpachecker-bmc` families: the walk did not
+    /// finish inside a 24 s budget and the harness watchdog had to kill the
+    /// worker; 51 of the division's 54 addressable-gap files ended that way.
+    ///
+    /// Memoising is denotation-identical: the result of abstracting a term
+    /// depends only on that term and on [`Abstractor::atom_of`], which is
+    /// itself keyed by term, so a repeat call already had to return the same
+    /// skeleton. Visit *order* is unchanged too (a memo hit only skips work
+    /// that would have been repeated), so the `!lra_atom_N` numbering is
+    /// byte-identical to the pre-memo abstraction.
+    memo: HashMap<TermId, TermId>,
+    /// Memo for [`Abstractor::contains_real`], shared across every node of the
+    /// walk. The predicate is a pure function of the (append-only) arena, so an
+    /// answer recorded once stays correct.
+    real_memo: HashMap<TermId, bool>,
+    /// How many nodes [`Abstractor::contains_real`] has popped, in total, over
+    /// the whole abstraction.
+    ///
+    /// The cache above is a *performance* claim, and a performance claim that
+    /// nothing counts is a comment. This is the falsifiable form: the walk is
+    /// linear in the DAG, so this stays within a small multiple of the number
+    /// of distinct nodes. Re-traversing per call (what shipped) makes it
+    /// quadratic, and
+    /// `the_real_sort_scan_does_not_re_traverse_the_subtree_per_node` fails on
+    /// the count rather than on a wall time.
+    real_scan_nodes: u64,
+    /// The wall-clock bound for the abstraction, or `None` for "no bound".
+    ///
+    /// `None` reads no clock at all, which is what keeps a `resource_limit`-only
+    /// run (the reproducible-across-machines configuration) free of any new
+    /// wall-clock dependence.
+    deadline: Option<Instant>,
+    /// Nodes expanded since the last deadline read.
+    nodes_since_deadline_check: u32,
 }
 
 impl Abstractor {
+    fn with_deadline(deadline: Option<Instant>) -> Self {
+        Self {
+            deadline,
+            ..Self::default()
+        }
+    }
+
     fn is_atom_prop(&self, symbol: SymbolId) -> bool {
         self.props.contains(&symbol)
+    }
+
+    /// Abstracts every assertion, or reports that the budget ran out first.
+    ///
+    /// `Ok(None)` means the wall-clock deadline passed **during** the Boolean
+    /// abstraction. That phase used to consult no clock whatsoever: it ran to
+    /// completion or the caller's process watchdog killed the worker thread,
+    /// which loses the verdict, the model and any evidence the run might still
+    /// have produced. Returning here lets the caller emit a first-class
+    /// `unknown` at its own budget instead.
+    fn abstract_assertions(
+        &mut self,
+        arena: &mut TermArena,
+        assertions: &[TermId],
+    ) -> Result<Option<Vec<TermId>>, SolverError> {
+        let mut skeleton = Vec::with_capacity(assertions.len());
+        for &assertion in assertions {
+            let Some(abstracted) = self.abstract_term(arena, assertion)? else {
+                return Ok(None);
+            };
+            skeleton.push(abstracted);
+        }
+        Ok(Some(skeleton))
+    }
+
+    /// Whether the abstraction has run out of wall clock. Never reads the clock
+    /// when no deadline is set, and at most once per
+    /// [`ABSTRACTION_DEADLINE_CHECK_NODES`] expanded nodes otherwise.
+    fn out_of_budget(&mut self) -> bool {
+        if self.deadline.is_none() {
+            return false;
+        }
+        self.nodes_since_deadline_check += 1;
+        if self.nodes_since_deadline_check < ABSTRACTION_DEADLINE_CHECK_NODES {
+            return false;
+        }
+        self.nodes_since_deadline_check = 0;
+        past_deadline(self.deadline)
+    }
+
+    /// Whether `term` contains any real-sorted subterm, memoised.
+    ///
+    /// Iterative and cache-backed for the same reason the abstraction is
+    /// memoised: this is called once per node of the abstraction walk, and the
+    /// original allocated a fresh `HashSet` and re-traversed the whole subtree
+    /// on every one of those calls — quadratic on top of an already exponential
+    /// walk. Every node on the path records its own answer, so the cache is
+    /// warm for the abstraction's next step as well.
+    fn contains_real(&mut self, arena: &TermArena, term: TermId) -> bool {
+        if let Some(&known) = self.real_memo.get(&term) {
+            return known;
+        }
+        // `(node, expanded)`: `false` is "push my children first", `true` is
+        // "my children are resolved, fold their answers".
+        let mut stack: Vec<(TermId, bool)> = vec![(term, false)];
+        while let Some((t, expanded)) = stack.pop() {
+            self.real_scan_nodes += 1;
+            if self.real_memo.contains_key(&t) {
+                continue;
+            }
+            if arena.sort_of(t) == Sort::Real {
+                self.real_memo.insert(t, true);
+                continue;
+            }
+            let TermNode::App { args, .. } = arena.node(t) else {
+                self.real_memo.insert(t, false);
+                continue;
+            };
+            if expanded {
+                let any = args
+                    .iter()
+                    .any(|a| self.real_memo.get(a).copied().unwrap_or(false));
+                self.real_memo.insert(t, any);
+            } else {
+                stack.push((t, true));
+                for &arg in args {
+                    if !self.real_memo.contains_key(&arg) {
+                        stack.push((arg, false));
+                    }
+                }
+            }
+        }
+        self.real_memo.get(&term).copied().unwrap_or(false)
     }
 
     /// Rewrites an assertion into a skeleton: real atoms become fresh Boolean
     /// propositions, while every subterm that contains no real (bit-vectors,
     /// arrays, functions, integers, and the Boolean structure over them) is left
     /// intact for the bit-blasting backend to decide natively.
+    ///
+    /// `Ok(None)` is "the wall clock ran out mid-walk", not a refusal: see
+    /// [`Abstractor::abstract_assertions`].
     fn abstract_term(
         &mut self,
         arena: &mut TermArena,
         term: TermId,
-    ) -> Result<TermId, SolverError> {
+    ) -> Result<Option<TermId>, SolverError> {
+        if let Some(&cached) = self.memo.get(&term) {
+            return Ok(Some(cached));
+        }
+        if self.out_of_budget() {
+            return Ok(None);
+        }
         // No real subterm: leave it for the bit-blasting composition.
-        if !contains_real(arena, term) {
-            return Ok(term);
+        if !self.contains_real(arena, term) {
+            self.memo.insert(term, term);
+            return Ok(Some(term));
         }
         let node = arena.node(term).clone();
-        match node {
-            TermNode::BoolConst(_) | TermNode::Symbol(_) => Ok(term),
+        let rebuilt = match node {
+            TermNode::BoolConst(_) | TermNode::Symbol(_) => term,
             TermNode::App { op, args } => match op {
                 Op::BoolNot => {
-                    let a = self.abstract_term(arena, args[0])?;
-                    Ok(arena.not(a)?)
+                    let Some(a) = self.abstract_term(arena, args[0])? else {
+                        return Ok(None);
+                    };
+                    arena.not(a)?
                 }
-                Op::BoolAnd => self.rebuild_binary(arena, &args, TermArena::and),
-                Op::BoolOr => self.rebuild_binary(arena, &args, TermArena::or),
-                Op::BoolXor => self.rebuild_binary(arena, &args, TermArena::xor),
-                Op::BoolImplies => self.rebuild_binary(arena, &args, TermArena::implies),
+                Op::BoolAnd => {
+                    let Some(t) = self.rebuild_binary(arena, &args, TermArena::and)? else {
+                        return Ok(None);
+                    };
+                    t
+                }
+                Op::BoolOr => {
+                    let Some(t) = self.rebuild_binary(arena, &args, TermArena::or)? else {
+                        return Ok(None);
+                    };
+                    t
+                }
+                Op::BoolXor => {
+                    let Some(t) = self.rebuild_binary(arena, &args, TermArena::xor)? else {
+                        return Ok(None);
+                    };
+                    t
+                }
+                Op::BoolImplies => {
+                    let Some(t) = self.rebuild_binary(arena, &args, TermArena::implies)? else {
+                        return Ok(None);
+                    };
+                    t
+                }
                 // Boolean `=` (iff) and `ite` keep their structure when their
                 // operands are Boolean; otherwise they are not a skeleton.
                 Op::Eq if arena.sort_of(args[0]) == Sort::Bool => {
-                    self.rebuild_binary(arena, &args, TermArena::eq)
+                    let Some(t) = self.rebuild_binary(arena, &args, TermArena::eq)? else {
+                        return Ok(None);
+                    };
+                    t
                 }
                 Op::Ite if arena.sort_of(term) == Sort::Bool => {
-                    let c = self.abstract_term(arena, args[0])?;
-                    let t = self.abstract_term(arena, args[1])?;
-                    let e = self.abstract_term(arena, args[2])?;
-                    Ok(arena.ite(c, t, e)?)
+                    let Some(c) = self.abstract_term(arena, args[0])? else {
+                        return Ok(None);
+                    };
+                    let Some(t) = self.abstract_term(arena, args[1])? else {
+                        return Ok(None);
+                    };
+                    let Some(e) = self.abstract_term(arena, args[2])? else {
+                        return Ok(None);
+                    };
+                    arena.ite(c, t, e)?
                 }
                 Op::RealLt | Op::RealLe | Op::RealGt | Op::RealGe => {
                     let prop = self.atom(arena, term);
-                    Ok(arena.var(prop))
+                    arena.var(prop)
                 }
                 Op::Eq if arena.sort_of(args[0]) == Sort::Real => {
                     // Real equality `a = b` abstracts to `(a <= b) and (a >= b)`,
@@ -1366,22 +1545,33 @@ impl Abstractor {
                     // solver.
                     let le = arena.real_le(args[0], args[1])?;
                     let ge = arena.real_ge(args[0], args[1])?;
-                    let le_prop = self.abstract_term(arena, le)?;
-                    let ge_prop = self.abstract_term(arena, ge)?;
-                    Ok(arena.and(le_prop, ge_prop)?)
+                    let Some(le_prop) = self.abstract_term(arena, le)? else {
+                        return Ok(None);
+                    };
+                    let Some(ge_prop) = self.abstract_term(arena, ge)? else {
+                        return Ok(None);
+                    };
+                    arena.and(le_prop, ge_prop)?
                 }
-                _ => Err(SolverError::Unsupported(
-                    "lazy SMT: assertion is not Boolean structure over real order atoms".to_owned(),
-                )),
+                _ => {
+                    return Err(SolverError::Unsupported(
+                        "lazy SMT: assertion is not Boolean structure over real order atoms"
+                            .to_owned(),
+                    ));
+                }
             },
             TermNode::BvConst { .. }
             | TermNode::WideBvConst(_)
             | TermNode::IntConst(_)
             | TermNode::WideIntConst(_)
-            | TermNode::RealConst(_) => Err(SolverError::Unsupported(
-                "lazy SMT: non-Boolean constant at a Boolean position".to_owned(),
-            )),
-        }
+            | TermNode::RealConst(_) => {
+                return Err(SolverError::Unsupported(
+                    "lazy SMT: non-Boolean constant at a Boolean position".to_owned(),
+                ));
+            }
+        };
+        self.memo.insert(term, rebuilt);
+        Ok(Some(rebuilt))
     }
 
     fn rebuild_binary(
@@ -1389,10 +1579,14 @@ impl Abstractor {
         arena: &mut TermArena,
         args: &[TermId],
         build: fn(&mut TermArena, TermId, TermId) -> Result<TermId, axeyum_ir::IrError>,
-    ) -> Result<TermId, SolverError> {
-        let a = self.abstract_term(arena, args[0])?;
-        let b = self.abstract_term(arena, args[1])?;
-        Ok(build(arena, a, b)?)
+    ) -> Result<Option<TermId>, SolverError> {
+        let Some(a) = self.abstract_term(arena, args[0])? else {
+            return Ok(None);
+        };
+        let Some(b) = self.abstract_term(arena, args[1])? else {
+            return Ok(None);
+        };
+        Ok(Some(build(arena, a, b)?))
     }
 
     /// Returns the fresh proposition for an atom term, creating it once.
@@ -1768,5 +1962,144 @@ mod tests {
         let config = crate::SolverConfig::new();
         let solver = SkeletonSolver::new(SkeletonSolvePolicy::WARM, &arena, &[atom], &config);
         assert!(matches!(solver, SkeletonSolver::Cold(_)));
+    }
+
+    /// `x_0 < 0`, then `depth` doublings `t ← t ∧ t`.
+    ///
+    /// The result is a **DAG** of `depth + 2` distinct nodes whose expansion as
+    /// a *tree* has `2^depth` leaves. Abstracting it is the whole difference
+    /// between a memoised walk (linear in the DAG) and the tree recursion that
+    /// shipped: at `depth = 40` the tree has ~10^12 leaves, so a walk that does
+    /// not share cannot finish at any budget a test could wait for.
+    fn shared_conjunction(arena: &mut TermArena, depth: usize) -> TermId {
+        let x = arena.real_var("x_share").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let mut term = arena.real_lt(x, zero).unwrap();
+        for _ in 0..depth {
+            term = arena.and(term, term).unwrap();
+        }
+        term
+    }
+
+    /// The Boolean abstraction must consult the wall clock.
+    ///
+    /// Before this guard it consulted no clock at all: it ran to completion or
+    /// the caller's process watchdog killed the worker thread, losing the
+    /// verdict and any evidence with it. Measured 2026-09-12, this was 51 of
+    /// the 54 addressable `QF_UFLRA` gap files.
+    ///
+    /// An already-passed deadline is the discriminating input: the walk has
+    /// real work left, so an abstraction that ignores its budget returns a
+    /// skeleton and this fails.
+    #[test]
+    fn the_boolean_abstraction_bails_at_an_expired_deadline() {
+        let mut arena = TermArena::new();
+        // Comfortably past ABSTRACTION_DEADLINE_CHECK_NODES distinct nodes, so
+        // the counter is reached and the clock is actually read.
+        let mut assertions = Vec::new();
+        let zero = arena.real_const(Rational::integer(0));
+        for i in 0..600 {
+            let v = arena.real_var(&format!("d{i}")).unwrap();
+            assertions.push(arena.real_lt(v, zero).unwrap());
+        }
+        let expired = std::time::Instant::now() - std::time::Duration::from_secs(1);
+        let mut ctx = super::Abstractor::with_deadline(Some(expired));
+        let bailed = ctx.abstract_assertions(&mut arena, &assertions).unwrap();
+        assert!(
+            bailed.is_none(),
+            "an expired deadline must stop the abstraction, got a skeleton instead"
+        );
+
+        // Positive control, same input: with no deadline the identical walk
+        // completes, so the assertion above is about the clock and not about
+        // the formula being unabstractable.
+        let mut unbounded = super::Abstractor::with_deadline(None);
+        let skeleton = unbounded
+            .abstract_assertions(&mut arena, &assertions)
+            .unwrap();
+        assert_eq!(
+            skeleton.map(|s| s.len()),
+            Some(assertions.len()),
+            "with no deadline the same assertions must abstract to a full skeleton"
+        );
+    }
+
+    /// A subterm reachable by many paths is abstracted once, not once per path.
+    ///
+    /// The observable is the budget: a generous five-second deadline is far
+    /// more than a linear walk over 42 nodes needs and far less than the tree
+    /// walk over 2^40 leaves needs, so `Some` here is a statement about
+    /// sharing. Choosing the deadline as the observable (rather than a wall
+    /// time this test asserts on) keeps it from being a timing test — it fails
+    /// by returning `None`, not by being slow.
+    #[test]
+    fn a_shared_subterm_is_abstracted_once_not_once_per_path() {
+        let mut arena = TermArena::new();
+        let deep = shared_conjunction(&mut arena, 40);
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        let mut ctx = super::Abstractor::with_deadline(Some(deadline));
+        let skeleton = ctx.abstract_assertions(&mut arena, &[deep]).unwrap();
+        assert!(
+            skeleton.is_some(),
+            "a 42-node DAG with 2^40 tree paths must abstract within 5 s; \
+             it did not, so the walk is not sharing"
+        );
+        assert_eq!(
+            ctx.atoms.len(),
+            1,
+            "the one real atom in the DAG must yield exactly one proposition"
+        );
+    }
+
+    /// The real-sort scan must not re-walk a subtree once per node above it.
+    ///
+    /// Counted rather than timed, so the guard is deterministic and instant.
+    /// On the `depth`-node chain the memoised scan pops each node about once
+    /// (measured: 6,004 at `depth = 2000` — three pops per level, since a
+    /// node is pushed unexpanded, re-pushed expanded, and pushed a second time
+    /// by its duplicated argument); restoring the per-call fresh
+    /// traversal that shipped pops **6,011,004**. The bound below sits three
+    /// orders of magnitude between them, so it cannot be met by an
+    /// accidentally-slower-but-still-linear walk and cannot be missed by a
+    /// correct one.
+    #[test]
+    fn the_real_sort_scan_does_not_re_traverse_the_subtree_per_node() {
+        const DEPTH: usize = 2_000;
+        let mut arena = TermArena::new();
+        let deep = shared_conjunction(&mut arena, DEPTH);
+        let mut ctx = super::Abstractor::with_deadline(None);
+        let skeleton = ctx.abstract_assertions(&mut arena, &[deep]).unwrap();
+        assert!(
+            skeleton.is_some(),
+            "the unbounded walk must produce a skeleton"
+        );
+        let scanned = ctx.real_scan_nodes;
+        assert!(
+            scanned <= 4 * DEPTH as u64,
+            "the real-sort scan popped {scanned} nodes for a {DEPTH}-node chain; \
+             a memoised scan popped 6,004, and the per-call re-traversal \
+             this guard exists to catch popped 6,011,004"
+        );
+    }
+
+    /// Sharing is not allowed to change the answer: the same query decides the
+    /// same way, and the `unsat` is a real refutation rather than a decline.
+    #[test]
+    fn the_memoised_abstraction_keeps_the_verdict() {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x_v").unwrap();
+        let zero = arena.real_const(Rational::integer(0));
+        let lt = arena.real_lt(x, zero).unwrap();
+        let gt = arena.real_gt(x, zero).unwrap();
+        // `(x < 0 ∧ x < 0) ∧ (x > 0 ∧ x > 0)` — every conjunct shared twice.
+        let left = arena.and(lt, lt).unwrap();
+        let right = arena.and(gt, gt).unwrap();
+        let both = arena.and(left, right).unwrap();
+        let config = crate::SolverConfig::new();
+        let result = super::check_with_lra_dpll(&mut arena, &[both], &config).unwrap();
+        assert!(
+            matches!(result, CheckResult::Unsat),
+            "a shared contradictory conjunction is unsat, got {result:?}"
+        );
     }
 }
