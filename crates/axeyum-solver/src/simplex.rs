@@ -898,6 +898,8 @@ impl Tableau {
     /// `budget` bounds the pivot count and `deadline` the wall clock; exhausting
     /// either yields [`SimplexOutcome::Unknown`] (sound, never a verdict).
     fn run(&mut self, deadline: Option<Instant>, budget: u64) -> R<RunOutcome> {
+        // One frame for the whole pivot loop, never one per pivot.
+        let _phase = crate::phase_breadcrumb::enter("simplex:run");
         let mut pivots: u64 = 0;
         // Per-call termination state, reset here and nowhere else. Both
         // references reset at the top of a feasibility call for the same reason:

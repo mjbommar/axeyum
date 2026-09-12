@@ -54,6 +54,7 @@ mod lazy_smt_counters;
 pub mod live_instruments;
 mod memory_budget;
 mod model;
+pub mod phase_breadcrumb;
 
 /// The process's peak resident set (`VmHWM` on Linux), or `None` where the
 /// target has no mechanism.
@@ -942,6 +943,10 @@ pub use live_instruments::{
     install as install_live_instruments, instrument, publish_live,
 };
 pub use model::Model;
+pub use phase_breadcrumb::{
+    PhaseBreadcrumb, PhaseSnapshot, arm as arm_phase_breadcrumb, enter as enter_phase,
+    install as install_phase_breadcrumb, live_phase,
+};
 #[doc(hidden)]
 pub use proof::{
     CheckBudget, CheckingProgress, UnsatProof, UnsatProofOutcome, export_datatype_unsat_proof,

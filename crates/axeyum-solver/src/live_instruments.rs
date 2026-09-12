@@ -153,6 +153,22 @@ pub mod instrument {
     /// killed and never reach an exit at all, so the only reading that exists
     /// for them is the one a running round left behind.
     pub const QINST_RELEVANCE: &str = "qinst-relevance";
+    /// An `Arc<crate::PhaseBreadcrumb>`: the phase stack the worker is inside
+    /// **right now**, written on ENTRY rather than on return.
+    ///
+    /// Unlike every other name here this slot holds a live handle, not a
+    /// snapshot — it is published once, when the breadcrumb is installed, and
+    /// the reader takes its own reading through
+    /// `crate::PhaseBreadcrumb::snapshot` at the instant it needs one. That is
+    /// the only shape that answers "where is it now": a snapshot mirrored at a
+    /// cadence would be as stale as the boundary instruments are, and the
+    /// question this exists for is asked precisely when nothing has reached a
+    /// boundary for 25 seconds.
+    ///
+    /// Always sampled [`super::Sampled::InFlight`] on the watchdog path, for
+    /// the same reason: a stack read while the worker runs is a state, never a
+    /// total.
+    pub const PHASE: &str = "phase";
 }
 
 /// Whether a reading is an instrument's finished answer or a state the run

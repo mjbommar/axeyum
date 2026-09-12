@@ -952,21 +952,41 @@ pub(crate) struct IncrementalArithDpll {
 }
 
 impl IncrementalArithDpll {
+    /// [`IncrementalArithDpll::new_within`] with no deadline.
+    ///
+    /// Only for callers that genuinely have no budget to pass — which, since
+    /// 2026-09-12, does not include `euf::check_with_incremental_arith`: that
+    /// one had a deadline all along and this constructor threw it away. Keep it
+    /// for tests and for calibration paths; reach for `new_within` anywhere a
+    /// `SolverConfig` is in scope.
+    #[cfg(test)]
     pub(crate) fn new(arena: &mut TermArena, assertions: &[TermId]) -> Result<Self, SolverError> {
-        Self::new_with_deadline(arena, assertions, None)
+        Self::new_within(arena, assertions, None)
     }
 
-    fn new_with_deadline(
+    /// Builds the incremental solver: the Boolean-skeleton abstraction plus
+    /// the initial bound lemmas, under an optional wall-clock deadline.
+    ///
+    /// That build is the phase the `QF_UFLRA` lazy-UF route is killed inside,
+    /// and until 2026-09-12 the only outside caller went through a `new()` that
+    /// hardcoded `None`. The parameter is not optional decoration: it is the
+    /// difference between a budget the caller can enforce and one only a
+    /// process watchdog could. `None` reads no clock.
+    pub(crate) fn new_within(
         arena: &mut TermArena,
         assertions: &[TermId],
         deadline: Option<Instant>,
     ) -> Result<Self, SolverError> {
-        if contains_smtlib_unspecified_arith(arena, assertions) {
-            return Err(SolverError::Unsupported(
-                "lazy arithmetic: integer/real division or modulo with a divisor \
-                 that may be zero needs an explicit SMT-LIB underspecification encoding"
-                    .to_owned(),
-            ));
+        let _phase = crate::phase_breadcrumb::enter("dpll-lia:new");
+        {
+            let _phase = crate::phase_breadcrumb::enter("dpll-lia:unspecified-scan");
+            if contains_smtlib_unspecified_arith(arena, assertions) {
+                return Err(SolverError::Unsupported(
+                    "lazy arithmetic: integer/real division or modulo with a divisor \
+                     that may be zero needs an explicit SMT-LIB underspecification encoding"
+                        .to_owned(),
+                ));
+            }
         }
 
         let mut solver = Self {
@@ -986,8 +1006,12 @@ impl IncrementalArithDpll {
             total_rounds: 0,
             solve_calls: 0,
         };
-        solver.assert_all(arena, assertions)?;
+        {
+            let _phase = crate::phase_breadcrumb::enter("dpll-lia:assert-all");
+            solver.assert_all(arena, assertions)?;
+        }
         if !solver.ctx.timed_out {
+            let _phase = crate::phase_breadcrumb::enter("dpll-lia:initial-lemmas");
             solver.refresh_initial_lemmas(arena)?;
             solver.initial_lemma_count = solver.lemmas.len();
         }
@@ -1025,10 +1049,14 @@ impl IncrementalArithDpll {
     }
 
     fn assert_one(&mut self, arena: &mut TermArena, assertion: TermId) -> Result<(), SolverError> {
-        let skeleton = self.ctx.abstract_term(arena, assertion)?;
+        let skeleton = {
+            let _phase = crate::phase_breadcrumb::enter("dpll-lia:abstract");
+            self.ctx.abstract_term(arena, assertion)?
+        };
         if self.ctx.timed_out {
             return Ok(());
         }
+        let _phase = crate::phase_breadcrumb::enter("dpll-lia:prop-assert");
         self.prop_solver.assert(arena, skeleton)?;
         self.skeleton.push(skeleton);
         Ok(())
@@ -1060,6 +1088,7 @@ impl IncrementalArithDpll {
         // every round. A decided verdict is only ever reached *inside* a round,
         // never by timeout.
         let deadline = config.timeout.map(|t| Instant::now() + t);
+        let _phase = crate::phase_breadcrumb::enter("dpll-lia:solve");
         self.solve_calls += 1;
         let enable_affine_bound_cores = self.solve_calls > 1;
 
@@ -1115,7 +1144,11 @@ impl IncrementalArithDpll {
             }
             self.total_rounds += 1;
             let round_config = config_with_deadline(config, deadline);
-            let propositional = match self.prop_solver.solve(&round_config)? {
+            let round_solve = {
+                let _phase = crate::phase_breadcrumb::enter("dpll-lia:prop-solve");
+                self.prop_solver.solve(&round_config)?
+            };
+            let propositional = match round_solve {
                 CheckResult::Sat(model) => model,
                 CheckResult::Unsat => return Ok(CheckResult::Unsat),
                 CheckResult::Unknown(reason) => {
@@ -1153,9 +1186,11 @@ impl IncrementalArithDpll {
                 });
             }
 
-            if let Some(support) =
+            let justified = {
+                let _phase = crate::phase_breadcrumb::enter("dpll-lia:justified-support");
                 justified_theory_indices(arena, &self.ctx, &self.skeleton, &propositional)
-            {
+            };
+            if let Some(support) = justified {
                 self.support_stats.attempts += 1;
                 let int_conflicts = theory_conflicts_for_indices(
                     arena,
@@ -1211,6 +1246,7 @@ impl IncrementalArithDpll {
                 }
                 if !self.ctx.has_opaque_int_apps(arena) {
                     self.support_stats.model_attempts += 1;
+                    let _phase = crate::phase_breadcrumb::enter("dpll-lia:finish-sat");
                     match try_finish_sat(
                         arena,
                         assertions,
@@ -1405,7 +1441,7 @@ fn arith_dpll_admission_preflight(
     config: &SolverConfig,
 ) -> Result<Option<UnknownReason>, SolverError> {
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
-    let solver = IncrementalArithDpll::new_with_deadline(arena, assertions, deadline)?;
+    let solver = IncrementalArithDpll::new_within(arena, assertions, deadline)?;
     if solver.ctx.timed_out {
         return Ok(None);
     }
@@ -1486,7 +1522,7 @@ fn run_arith_dpll(
     config: &SolverConfig,
 ) -> Result<ArithRun, SolverError> {
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
-    let mut solver = IncrementalArithDpll::new_with_deadline(arena, assertions, deadline)?;
+    let mut solver = IncrementalArithDpll::new_within(arena, assertions, deadline)?;
     if solver.ctx.timed_out {
         let reason = UnknownReason {
             kind: UnknownKind::Timeout,
@@ -1663,6 +1699,7 @@ fn theory_conflicts_for_indices(
     probe: TheoryProbe,
     budget: &mut MinimizationBudget,
 ) -> Result<Vec<ArithConflictCore>, SolverError> {
+    let _phase = crate::phase_breadcrumb::enter("dpll-lia:theory-conflicts");
     let TheoryProbe {
         theory,
         oracle,
@@ -3781,6 +3818,43 @@ struct ArithAbstractor {
     fresh_counter: usize,
     deadline: Option<Instant>,
     timed_out: bool,
+    /// Memo for [`ArithAbstractor::abstract_term`]: the skeleton already built
+    /// for a term, so a subterm reachable by many paths through the assertion
+    /// **DAG** is rebuilt once rather than once per path.
+    ///
+    /// Without it the recursion is a *tree* walk over a DAG, i.e. exponential
+    /// in the sharing. `atom_of` above memoises the LEAVES and was mistaken for
+    /// this: it stops an atom being re-admitted, and does nothing at all about
+    /// the Boolean structure above it, which is where the sharing lives.
+    ///
+    /// `dpll_t::Abstractor` was given the same memo on 2026-09-12 (`c4046c2d6`)
+    /// and that fixed the `cpachecker-induction` family reached through the
+    /// `nra` route. It did not touch this abstractor, which is the one the
+    /// `euf` lazy-UF+arithmetic route reaches — 49 of `QF_UFLRA`'s 51 watchdog
+    /// files. Measured here on `cpachecker-induction.minepump_spec1_product56…`
+    /// at a 12 s budget: the SECOND `abstract_term` call held the whole budget
+    /// and the worker was killed inside it.
+    ///
+    /// Denotation-identical, for the same reason it is there: the abstraction
+    /// of a term depends only on that term and on `atom_of`, itself keyed by
+    /// term, so a repeat call already had to return the same skeleton.
+    ///
+    /// A timed-out walk is NEVER memoised: it returns a `false` constant that
+    /// stands for "we stopped", not for the term's abstraction, and caching it
+    /// would make that placeholder permanent for the rest of the build.
+    memo: HashMap<TermId, TermId>,
+    /// How many times the walk has EXPANDED a node (a memo miss), over the
+    /// whole abstraction.
+    ///
+    /// The memo above is a *performance* claim, and a performance claim that
+    /// nothing counts is a comment. This is the falsifiable form: with the memo
+    /// the walk is linear in the DAG, so this stays within a small multiple of
+    /// the number of distinct nodes. Without it the same walk is exponential in
+    /// the sharing, and
+    /// `the_abstraction_expands_a_shared_dag_once_per_node` fails on the COUNT
+    /// rather than on a wall time — a timing assertion on a box at load 20 is
+    /// not a guard, it is a coin flip.
+    abstract_expansions: u64,
 }
 
 impl ArithAbstractor {
@@ -3788,11 +3862,33 @@ impl ArithAbstractor {
         self.props.contains(&symbol)
     }
 
+    /// Memoising wrapper over [`ArithAbstractor::abstract_term_uncached`].
+    ///
+    /// See [`ArithAbstractor::memo`] for why this exists and why it cannot
+    /// change an answer.
     fn abstract_term(
         &mut self,
         arena: &mut TermArena,
         term: TermId,
     ) -> Result<TermId, SolverError> {
+        if let Some(&cached) = self.memo.get(&term) {
+            return Ok(cached);
+        }
+        let rebuilt = self.abstract_term_uncached(arena, term)?;
+        // Never cache a stopped walk: the `false` constant it returns stands
+        // for "we ran out of budget", not for this term's abstraction.
+        if !self.timed_out {
+            self.memo.insert(term, rebuilt);
+        }
+        Ok(rebuilt)
+    }
+
+    fn abstract_term_uncached(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+    ) -> Result<TermId, SolverError> {
+        self.abstract_expansions += 1;
         if crate::portfolio::stop_or_past_deadline(self.deadline) {
             self.timed_out = true;
             return Ok(arena.bool_const(false));
@@ -4055,12 +4151,34 @@ impl ArithAbstractor {
         atom: TermId,
         theory: Theory,
     ) -> Result<(), SolverError> {
+        // A membership question, answered by the collector alone.
+        //
+        // This used to be `check_with_lra(arena, &[atom])` /
+        // `check_with_lia_opaque_apps(arena, &[atom])` — a WHOLE conjunctive
+        // decision (collection, then Fourier–Motzkin or the exact-rational
+        // simplex) run to find out whether one atom is in the fragment, with
+        // the verdict then thrown away. It carried no deadline of its own, so
+        // the abstraction build it sits in could not be stopped by any budget:
+        // measured 2026-09-12 on `QF_UFLRA`'s `cpachecker-induction.minepump_
+        // spec1_product56…`, **540** such decisions inside one build, 539
+        // reaching Fourier–Motzkin, and the build still running when the
+        // harness watchdog fired at 12 s.
+        //
+        // Every `Unsupported` either route can raise comes from its collector —
+        // see `lra::atom_in_lra_fragment` for the four sites and why nothing
+        // past collection can produce one. So the search after collection could
+        // never change this answer.
+        //
+        // Memoising the call (the same day, one commit earlier) cut it from
+        // 11,236 decisions to one per DISTINCT atom. That is the right guard
+        // and it is not enough: 540 distinct atoms is still 540 whole
+        // decisions. Not running the search is what makes the phase cheap.
         let result = match theory {
-            Theory::Int => check_with_lia_opaque_apps(arena, &[atom]),
-            Theory::Real => check_with_lra(arena, &[atom]),
+            Theory::Int => crate::lra::atom_in_lia_opaque_fragment(arena, atom),
+            Theory::Real => crate::lra::atom_in_lra_fragment(arena, atom),
         };
         match result {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(SolverError::Unsupported(detail)) => Err(SolverError::Unsupported(format!(
                 "lazy arithmetic: unsupported arithmetic atom: {detail}"
             ))),
@@ -4412,6 +4530,52 @@ mod tests {
         assert_eq!(flattened, terms);
         assert!(!ctx.timed_out);
         assert!(ctx.atoms.is_empty());
+    }
+
+    /// A **shared** DAG is expanded once per distinct node, not once per path.
+    ///
+    /// Every existing scaling test above builds a TREE — a deep chain, a wide
+    /// disjunction — and a tree walk is linear on a tree. The shape that killed
+    /// the `QF_UFLRA` `cpachecker-induction` family is sharing: each level
+    /// mentions the level below it TWICE, so `k` levels are `k` distinct nodes
+    /// and `2^k` paths. `k = 40` is 26 nodes of structure and about a trillion
+    /// paths; without the memo this test does not finish, which is precisely
+    /// why it asserts a COUNT and not a duration. A wall-clock assertion on a
+    /// shared box is a coin flip, and a `#[test]` that hangs is a worse gate
+    /// than none.
+    #[test]
+    fn the_abstraction_expands_a_shared_dag_once_per_node() {
+        const LEVELS: usize = 40;
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Real).expect("real symbol");
+        let xv = arena.var(x);
+        let zero = arena.real_const(axeyum_ir::Rational::integer(0));
+        // One arithmetic atom at the bottom, so the walk really does reach
+        // `order_atom` rather than short-circuiting on Boolean constants.
+        let mut level = arena.real_le(xv, zero).expect("atom");
+        for _ in 0..LEVELS {
+            // `or(level, level)` would be folded by interning into `level`
+            // itself, so each level pairs the shared child with a NEGATION of
+            // it — two distinct parents of one shared node, which is the DAG
+            // shape, without introducing a second atom.
+            let negated = arena.not(level).expect("negation");
+            level = arena.or(level, negated).expect("disjunction");
+        }
+
+        let mut ctx = ArithAbstractor::default();
+        let _abstracted = ctx
+            .abstract_term(&mut arena, level)
+            .expect("shared DAG abstraction");
+        assert!(!ctx.timed_out);
+        // Distinct nodes are O(LEVELS); the walk visits a small constant number
+        // of them per level. The bound is deliberately generous — the finding
+        // it has to separate is "linear" from "2^40", not 3x from 4x.
+        assert!(
+            ctx.abstract_expansions <= 16 * (LEVELS as u64 + 1),
+            "the shared DAG was walked as a tree: {} expansions over {LEVELS} levels",
+            ctx.abstract_expansions
+        );
+        assert_eq!(ctx.atoms.len(), 1, "one distinct arithmetic atom");
     }
 
     #[test]

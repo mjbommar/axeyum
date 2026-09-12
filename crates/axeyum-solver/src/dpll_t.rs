@@ -374,6 +374,7 @@ pub fn check_with_lra_dpll_within(
     config: &SolverConfig,
     deadline: Option<Instant>,
 ) -> Result<CheckResult, SolverError> {
+    let _phase = crate::phase_breadcrumb::enter("dpll-t:lra-dpll");
     // Prefer the shared generic CDCL(T) spine for pure Boolean-structured LRA.
     // Mixed real+BV/array/UF shapes decline its skeleton encoder quickly and retain
     // the established abstraction/refinement loop below. A pure-LRA timeout owns
@@ -1386,6 +1387,11 @@ impl Abstractor {
         arena: &mut TermArena,
         assertions: &[TermId],
     ) -> Result<Option<Vec<TermId>>, SolverError> {
+        // The whole Boolean abstraction is one frame. NOT one per
+        // `abstract_term` node: that walk is the hot recursion this phase is
+        // made of, and a mutex per node would change the very timing the
+        // instrument is being read for.
+        let _phase = crate::phase_breadcrumb::enter("dpll-t:abstract");
         let mut skeleton = Vec::with_capacity(assertions.len());
         for &assertion in assertions {
             let Some(abstracted) = self.abstract_term(arena, assertion)? else {

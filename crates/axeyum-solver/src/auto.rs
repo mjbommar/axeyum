@@ -4272,7 +4272,26 @@ fn dispatch_uf_fast_paths(
         {
             return Ok(Some(result));
         }
-        match crate::check_with_uf_arithmetic(arena, assertions, config)? {
+        // The REMAINING budget, not the original one. Every other rung of this
+        // ladder derives its config from `ladder_deadline`
+        // (`euf_online_config`, `euf_offline_config`, `dispatch_uf_arith_online`
+        // at its two call sites); this one took the caller's `config`
+        // unchanged, so a query that had already spent 18 s of a 24 s budget in
+        // `uf-arith-lazy-overbound` above handed the eager route a fresh 24 s.
+        // With ~6 s of wall clock left and a 24 s deadline in hand, that route
+        // cannot stop in time and the harness watchdog kills the worker —
+        // measured 2026-09-12 on `QF_UFLRA`'s
+        // `cpachecker-induction.minepump_spec1_product56…`, whose trail ended
+        // `uf-arith-lazy-overbound declined (budget, 17998 ms)`, `euf-online
+        // declined (6 ms)`, and then 6 s of nothing.
+        //
+        // `None` means the budget is already gone, which is the same answer the
+        // `euf-offline` rung gives it: fall through rather than start a route
+        // with nothing to spend.
+        let Some(eager_config) = config_with_remaining_timeout(config, ladder_deadline) else {
+            return Ok(None);
+        };
+        match crate::check_with_uf_arithmetic(arena, assertions, &eager_config)? {
             CheckResult::Sat(model) => {
                 with_recorder(rec, |t| t.record_decided("uf-arithmetic", Verdict::Sat));
                 return Ok(Some(CheckResult::Sat(model)));

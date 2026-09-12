@@ -2239,6 +2239,7 @@ pub fn try_check_qf_dl(
     config: &SolverConfig,
     extended_timeout: Option<Duration>,
 ) -> Option<CheckResult> {
+    let _phase = crate::phase_breadcrumb::enter("dl-online:check");
     record_dl_online_entry();
     let probe_started = Instant::now();
     // The probe budget covers the entire route, including the conservative

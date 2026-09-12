@@ -1465,6 +1465,7 @@ pub fn check_qf_uf_with_config(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> CheckResult {
+    let _phase = crate::phase_breadcrumb::enter("euf:offline");
     let mut atom_terms: Vec<TermId> = Vec::new();
     let mut seen = HashSet::new();
     for &a in assertions {
