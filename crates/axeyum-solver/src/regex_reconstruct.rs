@@ -82,15 +82,48 @@ const REGEX_LEAN_THEOREM: &str = "axeyum_refutation";
 /// [`RECON_STATE_CAP`].
 pub const RECON_MAX_STATES: usize = 4_096;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`RECON_MAX_STATES`]: the compiled default, or
+    /// `AXEYUM_RECON_MAX_STATES` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `RECON_MAX_STATES`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn recon_max_states() -> usize = "AXEYUM_RECON_MAX_STATES" or RECON_MAX_STATES;
+}
+
 /// The hard cap on the number of automaton states (`Q` constructors) the
 /// reconstruction will materialize into a kernel module. A closure larger than
 /// this declines to `unknown` (the emitted enum + `n×m` transition table would be
 /// unwieldy); the certificate itself is unaffected.
 const RECON_STATE_CAP: usize = 96;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`RECON_STATE_CAP`]: the compiled default, or
+    /// `AXEYUM_RECON_STATE_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `RECON_STATE_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn recon_state_cap() -> usize = "AXEYUM_RECON_STATE_CAP" or RECON_STATE_CAP;
+}
+
 /// The hard cap on the representative-alphabet size (`Char` constructors / the
 /// transition table's column count). A wider alphabet declines to `unknown`.
 const RECON_ALPHABET_CAP: usize = 96;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`RECON_ALPHABET_CAP`]: the compiled default, or
+    /// `AXEYUM_RECON_ALPHABET_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `RECON_ALPHABET_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn recon_alphabet_cap() -> usize = "AXEYUM_RECON_ALPHABET_CAP" or RECON_ALPHABET_CAP;
+}
 
 /// Reconstruct a regex-membership derivative-emptiness refutation of `problem` to
 /// a self-contained, kernel-checked Lean module, or a [`ReconstructError`] if this
@@ -118,7 +151,7 @@ pub fn reconstruct_regex_emptiness_to_lean_module(
 
     // (1) The sole `unsat` gate: an independently re-established, re-checked
     // emptiness certificate (a complete, nullable-free derivative closure).
-    let Closure::Complete(mut states) = derivative_closure(&combined, RECON_MAX_STATES) else {
+    let Closure::Complete(mut states) = derivative_closure(&combined, recon_max_states()) else {
         return Err(ReconstructError::UnsupportedTerm {
             term: "regex derivative closure is not complete within the reconstruction cap"
                 .to_owned(),
@@ -133,7 +166,7 @@ pub fn reconstruct_regex_emptiness_to_lean_module(
         });
     }
     let n = states.len();
-    if n > RECON_STATE_CAP {
+    if n > recon_state_cap() {
         return Err(ReconstructError::UnsupportedTerm {
             term: "regex emptiness closure exceeds the reconstruction state cap".to_owned(),
         });
@@ -154,7 +187,7 @@ pub fn reconstruct_regex_emptiness_to_lean_module(
     }
     let letters: Vec<u32> = letters.into_iter().collect();
     let m = letters.len();
-    if m == 0 || m > RECON_ALPHABET_CAP {
+    if m == 0 || m > recon_alphabet_cap() {
         return Err(ReconstructError::UnsupportedTerm {
             term: "regex emptiness alphabet is empty or exceeds the reconstruction cap".to_owned(),
         });

@@ -15,8 +15,43 @@ use axeyum_ir::{FuncId, FuncValue, Rational, Sort, TermArena, TermId, TermNode, 
 use crate::{Model, QuantifiedUfModelSatCertificate};
 
 const DEFAULT_REPAIR_FUNCTION_CAP: usize = 8;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`DEFAULT_REPAIR_FUNCTION_CAP`]: the compiled default, or
+    /// `AXEYUM_DEFAULT_REPAIR_FUNCTION_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `DEFAULT_REPAIR_FUNCTION_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn default_repair_function_cap() -> usize = "AXEYUM_DEFAULT_REPAIR_FUNCTION_CAP" or DEFAULT_REPAIR_FUNCTION_CAP;
+}
+
 const DEFAULT_REPAIR_VALUE_CAP: usize = 32;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`DEFAULT_REPAIR_VALUE_CAP`]: the compiled default, or
+    /// `AXEYUM_DEFAULT_REPAIR_VALUE_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `DEFAULT_REPAIR_VALUE_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn default_repair_value_cap() -> usize = "AXEYUM_DEFAULT_REPAIR_VALUE_CAP" or DEFAULT_REPAIR_VALUE_CAP;
+}
+
 const DEFAULT_REPAIR_CANDIDATE_CAP: usize = 256;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`DEFAULT_REPAIR_CANDIDATE_CAP`]: the compiled default, or
+    /// `AXEYUM_DEFAULT_REPAIR_CANDIDATE_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `DEFAULT_REPAIR_CANDIDATE_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn default_repair_candidate_cap() -> usize = "AXEYUM_DEFAULT_REPAIR_CANDIDATE_CAP" or DEFAULT_REPAIR_CANDIDATE_CAP;
+}
 
 /// Returns source-bound certificates when `model` is independently proved to
 /// satisfy every universal in `assertions`; otherwise declines.
@@ -57,7 +92,7 @@ pub(crate) fn repair_and_certify_all_universals(
             crate::quant_uf_model_sat_cert::quantified_uf_model_functions(arena, assertion)?,
         );
     }
-    if functions.is_empty() || functions.len() > DEFAULT_REPAIR_FUNCTION_CAP {
+    if functions.is_empty() || functions.len() > default_repair_function_cap() {
         return None;
     }
 
@@ -82,7 +117,7 @@ pub(crate) fn repair_and_certify_all_universals(
         }
         let defaults = candidate_defaults(model, result)?;
         candidate_count = candidate_count.checked_mul(defaults.len())?;
-        if candidate_count > DEFAULT_REPAIR_CANDIDATE_CAP {
+        if candidate_count > default_repair_candidate_cap() {
             return None;
         }
         repairs.push((function, defaults));
@@ -111,7 +146,7 @@ pub(crate) fn repair_and_certify_all_universals_with_source_int_values(
             crate::quant_uf_model_sat_cert::quantified_uf_model_functions(arena, assertion)?,
         );
     }
-    if functions.is_empty() || functions.len() > DEFAULT_REPAIR_FUNCTION_CAP {
+    if functions.is_empty() || functions.len() > default_repair_function_cap() {
         return None;
     }
 
@@ -136,7 +171,7 @@ pub(crate) fn repair_and_certify_all_universals_with_source_int_values(
             return None;
         }
         candidate_count = candidate_count.checked_mul(values.len())?;
-        if candidate_count > DEFAULT_REPAIR_CANDIDATE_CAP {
+        if candidate_count > default_repair_candidate_cap() {
             return None;
         }
         repairs.push((function, values.clone()));
@@ -374,7 +409,7 @@ fn source_guided_int_defaults(
             values.insert(successor);
         }
     }
-    if values.len() > DEFAULT_REPAIR_VALUE_CAP {
+    if values.len() > default_repair_value_cap() {
         return None;
     }
     Some(values.into_iter().map(Value::Int).collect())
@@ -465,7 +500,7 @@ fn push_candidate(values: &mut Vec<Value>, value: Value) -> Option<()> {
     if values.contains(&value) {
         return Some(());
     }
-    if values.len() >= DEFAULT_REPAIR_VALUE_CAP {
+    if values.len() >= default_repair_value_cap() {
         return None;
     }
     values.push(value);
@@ -615,7 +650,7 @@ mod tests {
         let mut arena = TermArena::new();
         let universal = many_function_universal(&mut arena, 1);
         let mut model = Model::new();
-        for index in 0..DEFAULT_REPAIR_VALUE_CAP {
+        for index in 0..default_repair_value_cap() {
             let symbol = arena.declare(&format!("y{index}"), Sort::Int).unwrap();
             model.set(symbol, Value::Int(i128::try_from(index + 10).unwrap()));
         }

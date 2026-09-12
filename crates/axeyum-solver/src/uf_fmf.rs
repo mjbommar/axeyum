@@ -52,6 +52,17 @@ use crate::model::Model;
 /// per-sort cardinality 5; 8 leaves margin without inviting blowup.
 const MAX_DOMAIN_SIZE: u32 = 8;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_DOMAIN_SIZE`]: the compiled default, or
+    /// `AXEYUM_MAX_DOMAIN_SIZE` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_DOMAIN_SIZE`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_domain_size() -> u32 = "AXEYUM_MAX_DOMAIN_SIZE" or MAX_DOMAIN_SIZE;
+}
+
 /// Ground-instance work budget for one expansion build (quantifier
 /// instantiations, closure axioms, table entries, functionality lemmas, and
 /// selector-leaf visits). Exceeding it triggers the per-sort backoff
@@ -134,7 +145,7 @@ pub(crate) fn find_uf_finite_model(
         })
         .collect();
     let mut solved_bounds: BTreeSet<Vec<u32>> = BTreeSet::new();
-    'deepening: for step in 1..=MAX_DOMAIN_SIZE {
+    'deepening: for step in 1..=max_domain_size() {
         // Per-sort non-uniform deepening by measured backoff: start from the
         // uniform `step` vector and, while the cheap cost estimator (or the
         // real build) says the expansion exceeds the instance budget, lower
@@ -149,7 +160,7 @@ pub(crate) fn find_uf_finite_model(
         // nothing and only a certified model escapes.
         let mut bounds: Vec<u32> = floors
             .iter()
-            .map(|&floor| step.max(floor).min(MAX_DOMAIN_SIZE))
+            .map(|&floor| step.max(floor).min(max_domain_size()))
             .collect();
         let mut expansion = None;
         for _attempt in 0..=MAX_EXPANSION_BACKOFFS {

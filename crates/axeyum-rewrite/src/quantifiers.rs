@@ -19,6 +19,17 @@ use crate::canonical::build_app;
 /// instances); wider domains would blow up the formula and are rejected.
 pub const QUANT_EXPAND_BIT_LIMIT: u32 = 10;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`QUANT_EXPAND_BIT_LIMIT`]: the compiled default, or
+    /// `AXEYUM_QUANT_EXPAND_BIT_LIMIT` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `QUANT_EXPAND_BIT_LIMIT`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn quant_expand_bit_limit() -> u32 = "AXEYUM_QUANT_EXPAND_BIT_LIMIT" or QUANT_EXPAND_BIT_LIMIT;
+}
+
 /// The cap on the **cumulative** number of ground instances the recursive
 /// finite-domain expansion may materialize across an entire nested-quantifier
 /// formula. Each variable's domain passes [`QUANT_EXPAND_BIT_LIMIT`], but a
@@ -203,7 +214,7 @@ fn instantiate_fold(
 fn domain_values(arena: &mut TermArena, var: SymbolId) -> Result<Vec<TermId>, QuantExpandError> {
     match arena.symbol(var).1 {
         Sort::Bool => Ok(vec![arena.bool_const(false), arena.bool_const(true)]),
-        Sort::BitVec(width) if width <= QUANT_EXPAND_BIT_LIMIT => {
+        Sort::BitVec(width) if width <= quant_expand_bit_limit() => {
             let mut values = Vec::with_capacity(1usize << width);
             for value in 0..(1u128 << width) {
                 values.push(arena.bv_const(width, value)?);
@@ -213,7 +224,7 @@ fn domain_values(arena: &mut TermArena, var: SymbolId) -> Result<Vec<TermId>, Qu
         // A floating-point domain is finite (`exp + sig` bits); enumerate every
         // bit pattern as a `Float`-sorted constant (ADR-0026), so small FP formats
         // (FP8/FP4) quantify by exhaustive expansion just like bit-vectors.
-        Sort::Float { exp, sig } if exp + sig <= QUANT_EXPAND_BIT_LIMIT => {
+        Sort::Float { exp, sig } if exp + sig <= quant_expand_bit_limit() => {
             let width = exp + sig;
             let mut values = Vec::with_capacity(1usize << width);
             for value in 0..(1u128 << width) {

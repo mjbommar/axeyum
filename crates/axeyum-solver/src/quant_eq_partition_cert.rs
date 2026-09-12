@@ -7,6 +7,17 @@ use axeyum_ir::{Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Val
 /// Maximum representative branches the checker will visit.
 pub const EQ_PARTITION_CASE_CAP: u64 = 1 << 20;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`EQ_PARTITION_CASE_CAP`]: the compiled default, or
+    /// `AXEYUM_EQ_PARTITION_CASE_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `EQ_PARTITION_CASE_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    pub(crate) fn eq_partition_case_cap() -> u64 = "AXEYUM_EQ_PARTITION_CASE_CAP" or EQ_PARTITION_CASE_CAP;
+}
+
 /// A reduction-free refutation of one closed equality-partitioned assertion.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EqualityPartitionRefutationCertificate {
@@ -124,7 +135,7 @@ fn truth(
             let mut outcomes = Vec::with_capacity(values.len());
             for value in values {
                 *cases = cases.checked_add(1)?;
-                if *cases > EQ_PARTITION_CASE_CAP {
+                if *cases > eq_partition_case_cap() {
                     return None;
                 }
                 let mut branch = assignment.clone();

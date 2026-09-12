@@ -23,8 +23,42 @@ use web_time::{Duration, Instant};
 /// Maximum number of source-bound cubes in one checked cover.
 pub const QUANT_COUNTEREXAMPLE_COVER_CASE_CAP: usize = 256;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`QUANT_COUNTEREXAMPLE_COVER_CASE_CAP`]: the compiled default, or
+    /// `AXEYUM_QUANT_COUNTEREXAMPLE_COVER_CASE_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `QUANT_COUNTEREXAMPLE_COVER_CASE_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn quant_counterexample_cover_case_cap() -> usize = "AXEYUM_QUANT_COUNTEREXAMPLE_COVER_CASE_CAP" or QUANT_COUNTEREXAMPLE_COVER_CASE_CAP;
+}
+
 const MAX_COVER_BINDERS: usize = 128;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_COVER_BINDERS`]: the compiled default, or
+    /// `AXEYUM_MAX_COVER_BINDERS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_COVER_BINDERS`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_cover_binders() -> usize = "AXEYUM_MAX_COVER_BINDERS" or MAX_COVER_BINDERS;
+}
+
 const MAX_COVER_SOURCE_NODES: usize = 100_000;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_COVER_SOURCE_NODES`]: the compiled default, or
+    /// `AXEYUM_MAX_COVER_SOURCE_NODES` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_COVER_SOURCE_NODES`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_cover_source_nodes() -> usize = "AXEYUM_MAX_COVER_SOURCE_NODES" or MAX_COVER_SOURCE_NODES;
+}
 
 /// One source-derived universal counterexample that excludes a free-Boolean cube.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -78,7 +112,8 @@ pub(crate) fn check_quantified_counterexample_cover_with_config(
     certificate: &QuantifiedCounterexampleCoverCertificate,
     config: &SolverConfig,
 ) -> bool {
-    if certificate.cases.is_empty() || certificate.cases.len() > QUANT_COUNTEREXAMPLE_COVER_CASE_CAP
+    if certificate.cases.is_empty()
+        || certificate.cases.len() > quant_counterexample_cover_case_cap()
     {
         return false;
     }
@@ -150,7 +185,7 @@ fn case_shape_is_valid(
         return false;
     };
     if binders.is_empty()
-        || binders.len() > MAX_COVER_BINDERS
+        || binders.len() > max_cover_binders()
         || case.bindings.len() != binders.len()
         || case.cube.is_empty()
         || case
@@ -186,7 +221,7 @@ fn source_shape_is_bounded(arena: &TermArena, assertions: &[TermId]) -> bool {
         if !seen.insert(term) {
             continue;
         }
-        if seen.len() > MAX_COVER_SOURCE_NODES {
+        if seen.len() > max_cover_source_nodes() {
             return false;
         }
         if let TermNode::App { args, .. } = arena.node(term) {

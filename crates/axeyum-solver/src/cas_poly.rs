@@ -39,9 +39,9 @@ use axeyum_cas::{
 use axeyum_ir::{Op, Rational, Sort, TermArena, TermId, TermNode};
 
 use crate::cas_certificate::{
-    AtomMonomial, AtomPoly, MAX_ATOMS, MAX_DEPTH, MAX_MONOMIALS, MAX_STEPS,
-    check_cas_ideal_certificate, check_cas_identity_certificate, check_cas_int_units_certificate,
-    derive_bound, match_disequality, match_equality, top_conjuncts,
+    AtomMonomial, AtomPoly, MAX_DEPTH, MAX_STEPS, check_cas_ideal_certificate,
+    check_cas_identity_certificate, check_cas_int_units_certificate, derive_bound,
+    match_disequality, match_equality, top_conjuncts,
 };
 
 /// A self-checking refutation of an asserted arithmetic disequality whose two
@@ -234,7 +234,7 @@ impl AtomTable {
         if let Some(&existing) = self.index.get(&term) {
             return Some(existing);
         }
-        if self.order.len() >= MAX_ATOMS {
+        if self.order.len() >= crate::cas_certificate::max_atoms() {
             return None;
         }
         let next = self.order.len();
@@ -357,7 +357,7 @@ fn to_poly(
 }
 
 fn capped(poly: &MvPoly) -> Option<()> {
-    (poly.term_count() <= MAX_MONOMIALS).then_some(())
+    (poly.term_count() <= crate::cas_certificate::max_monomials()).then_some(())
 }
 
 fn divisors_are_nonzero_literals(arena: &TermArena, args: &[TermId]) -> bool {
@@ -539,13 +539,48 @@ pub fn cas_int_units_refutation(
 
 /// Ceiling on asserted equations used as ideal generators.
 const MAX_IDEAL_GENERATORS: usize = 8;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_IDEAL_GENERATORS`]: the compiled default, or
+    /// `AXEYUM_MAX_IDEAL_GENERATORS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_IDEAL_GENERATORS`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_ideal_generators() -> usize = "AXEYUM_MAX_IDEAL_GENERATORS" or MAX_IDEAL_GENERATORS;
+}
+
 /// Ceiling on asserted inequalities considered as combination terms.
 const MAX_IDEAL_INEQUALITIES: usize = 8;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_IDEAL_INEQUALITIES`]: the compiled default, or
+    /// `AXEYUM_MAX_IDEAL_INEQUALITIES` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_IDEAL_INEQUALITIES`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_ideal_inequalities() -> usize = "AXEYUM_MAX_IDEAL_INEQUALITIES" or MAX_IDEAL_INEQUALITIES;
+}
+
 /// Ceiling on distinct opaque atoms across the whole system. `Buchberger` under
 /// `lex` is doubly exponential in the variable count in the worst case, so this
 /// is the ceiling that actually bounds the search; the step budget below is the
 /// backstop.
 const MAX_IDEAL_ATOMS: usize = 8;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_IDEAL_ATOMS`]: the compiled default, or
+    /// `AXEYUM_MAX_IDEAL_ATOMS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_IDEAL_ATOMS`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_ideal_atoms() -> usize = "AXEYUM_MAX_IDEAL_ATOMS" or MAX_IDEAL_ATOMS;
+}
 
 /// Step ceilings for the cofactor-tracked Gröbner search. Step *counts*, never a
 /// clock — determinism is a public API promise.
@@ -655,15 +690,15 @@ pub fn cas_ideal_refutation(
     if !nonlinear || equalities.len() + inequalities.len() < 2 {
         return CasOutcome::NoCandidate;
     }
-    if equalities.len() > MAX_IDEAL_GENERATORS
-        || table.len() > MAX_IDEAL_ATOMS
-        || inequalities.len() > MAX_IDEAL_INEQUALITIES
+    if equalities.len() > max_ideal_generators()
+        || table.len() > max_ideal_atoms()
+        || inequalities.len() > max_ideal_inequalities()
     {
         return CasOutcome::NotRefuted(
             "nonlinear system exceeds the deterministic generator/atom/inequality ceilings",
         );
     }
-    inequalities.truncate(MAX_IDEAL_INEQUALITIES);
+    inequalities.truncate(max_ideal_inequalities());
 
     let generators: Vec<MvPoly> = equalities.iter().map(|eq| eq.poly.clone()).collect();
     let limits = ideal_limits();

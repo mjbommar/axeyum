@@ -105,6 +105,17 @@ pub const DEFAULT_PROBE_BUDGET: Duration = Duration::from_millis(250);
 /// completed `k = 2` proof has at most three hypotheses.
 pub const DEFAULT_MAX_SUBSET_SIZE: usize = 4;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`DEFAULT_MAX_SUBSET_SIZE`]: the compiled default, or
+    /// `AXEYUM_DEFAULT_MAX_SUBSET_SIZE` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `DEFAULT_MAX_SUBSET_SIZE`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn default_max_subset_size() -> usize = "AXEYUM_DEFAULT_MAX_SUBSET_SIZE" or DEFAULT_MAX_SUBSET_SIZE;
+}
+
 /// The default cap on solver probes across the whole search.
 pub const DEFAULT_MAX_PROBES: usize = 4000;
 
@@ -128,7 +139,7 @@ impl Default for MinimizeConfig {
     fn default() -> Self {
         Self {
             probe_budget: DEFAULT_PROBE_BUDGET,
-            max_subset_size: DEFAULT_MAX_SUBSET_SIZE,
+            max_subset_size: default_max_subset_size(),
             max_probes: DEFAULT_MAX_PROBES,
             verify_budget: None,
         }

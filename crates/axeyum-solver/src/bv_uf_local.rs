@@ -14,6 +14,18 @@ use axeyum_ir::{Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Val
 use crate::term_walk::collect_top_binary_conjuncts as collect_top_conjuncts;
 
 const MAX_LOCAL_BV_WIDTH: u32 = 8;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_LOCAL_BV_WIDTH`]: the compiled default, or
+    /// `AXEYUM_MAX_LOCAL_BV_WIDTH` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_LOCAL_BV_WIDTH`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_local_bv_width() -> u32 = "AXEYUM_MAX_LOCAL_BV_WIDTH" or MAX_LOCAL_BV_WIDTH;
+}
+
 const MAX_LOCAL_ENUM_BITS: u32 = 12;
 
 /// The final checked contradiction shape.
@@ -168,7 +180,7 @@ fn collect_bv_symbol_terms(arena: &TermArena, assertions: &[TermId]) -> Vec<(Sym
             continue;
         }
         match arena.node(term) {
-            TermNode::Symbol(symbol) if matches!(arena.sort_of(term), Sort::BitVec(w) if w <= MAX_LOCAL_BV_WIDTH) =>
+            TermNode::Symbol(symbol) if matches!(arena.sort_of(term), Sort::BitVec(w) if w <= max_local_bv_width()) =>
             {
                 out.insert(*symbol, term);
             }

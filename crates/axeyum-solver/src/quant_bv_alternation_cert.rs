@@ -11,8 +11,31 @@ use crate::proof::UnsatProof;
 
 /// Maximum admitted binders across both quantifier blocks (ADR-0125).
 pub const BV_ALTERNATION_BINDER_CAP: usize = 1024;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`BV_ALTERNATION_BINDER_CAP`]: the compiled default, or
+    /// `AXEYUM_BV_ALTERNATION_BINDER_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `BV_ALTERNATION_BINDER_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn bv_alternation_binder_cap() -> usize = "AXEYUM_BV_ALTERNATION_BINDER_CAP" or BV_ALTERNATION_BINDER_CAP;
+}
+
 /// Maximum reachable nodes in the quantifier-free matrix.
 pub const BV_ALTERNATION_NODE_CAP: usize = 4096;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`BV_ALTERNATION_NODE_CAP`]: the compiled default, or
+    /// `AXEYUM_BV_ALTERNATION_NODE_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `BV_ALTERNATION_NODE_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn bv_alternation_node_cap() -> usize = "AXEYUM_BV_ALTERNATION_NODE_CAP" or BV_ALTERNATION_NODE_CAP;
+}
 
 /// One universal assignment whose residual existential matrix is QF_BV-UNSAT.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -98,7 +121,9 @@ pub(crate) fn admitted_alternation(
         inner.push(*binder);
         term = args[0];
     }
-    if outer.is_empty() || inner.is_empty() || outer.len() + inner.len() > BV_ALTERNATION_BINDER_CAP
+    if outer.is_empty()
+        || inner.is_empty()
+        || outer.len() + inner.len() > bv_alternation_binder_cap()
     {
         return None;
     }
@@ -196,7 +221,7 @@ fn closed_qf_bool_bv(arena: &TermArena, body: TermId, bound: &BTreeSet<SymbolId>
     let mut seen = BTreeSet::new();
     let mut stack = vec![body];
     while let Some(term) = stack.pop() {
-        if !seen.insert(term) || seen.len() > BV_ALTERNATION_NODE_CAP {
+        if !seen.insert(term) || seen.len() > bv_alternation_node_cap() {
             continue;
         }
         if !is_bool_bv(arena.sort_of(term)) {
@@ -213,7 +238,7 @@ fn closed_qf_bool_bv(arena: &TermArena, body: TermId, bound: &BTreeSet<SymbolId>
             _ => {}
         }
     }
-    seen.len() <= BV_ALTERNATION_NODE_CAP
+    seen.len() <= bv_alternation_node_cap()
 }
 
 fn uses_only_symbols(arena: &TermArena, term: TermId, admitted: &BTreeSet<SymbolId>) -> bool {

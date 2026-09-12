@@ -1,11 +1,10 @@
 use super::{
-    ArrayDefs, Assignment, CheckResult, HashSet, Instant, LastExtReplay, MAX_DIFF_SKOLEMS,
-    MAX_ROW_ROUNDS, ReplayTargets, RowCtx, RowEngine, RowKind, RowWarmth, SolverBackend,
-    SolverConfig, SolverError, SymbolId, TermArena, TermId, UnknownReason, Value, check_row_cegar,
-    complete_assignment, config_with_remaining_deadline, ext_unknown, past_deadline,
-    project_replay_ext, read_indices_for, read_terms_differ, replay_last_ext_candidate,
-    row_axiom_lemma, row_violated, select_congruence_lemma, var_congruence_sites,
-    violated_congruence_pairs,
+    ArrayDefs, Assignment, CheckResult, HashSet, Instant, LastExtReplay, MAX_ROW_ROUNDS,
+    ReplayTargets, RowCtx, RowEngine, RowKind, RowWarmth, SolverBackend, SolverConfig, SolverError,
+    SymbolId, TermArena, TermId, UnknownReason, Value, check_row_cegar, complete_assignment,
+    config_with_remaining_deadline, ext_unknown, past_deadline, project_replay_ext,
+    read_indices_for, read_terms_differ, replay_last_ext_candidate, row_axiom_lemma, row_violated,
+    select_congruence_lemma, var_congruence_sites, violated_congruence_pairs,
 };
 
 #[derive(Clone, Copy)]
@@ -349,7 +348,7 @@ fn refine_extensionality(
         if flag_true {
             progressed |= refine_eq_congruence(arena, ctx, atom_idx, assignment, working)?;
         } else if !ctx.eq_atoms[atom_idx].diff_materialised {
-            if *diff_skolems >= MAX_DIFF_SKOLEMS {
+            if *diff_skolems >= super::max_diff_skolems() {
                 continue;
             }
             refine_diff_skolem(arena, ctx, atom_idx, working)?;

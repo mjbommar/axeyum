@@ -19,6 +19,17 @@ pub const QUANTIFIED_UF_PROFILE_CAP: usize = 4096;
 /// Maximum number of binders in one checked universal prefix.
 pub const QUANTIFIED_UF_BINDER_CAP: usize = 16;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`QUANTIFIED_UF_BINDER_CAP`]: the compiled default, or
+    /// `AXEYUM_QUANTIFIED_UF_BINDER_CAP` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `QUANTIFIED_UF_BINDER_CAP`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn quantified_uf_binder_cap() -> usize = "AXEYUM_QUANTIFIED_UF_BINDER_CAP" or QUANTIFIED_UF_BINDER_CAP;
+}
+
 // The certificate DATA lives in `crate::quant_sat_certificates`, so `Model`
 // can carry it without depending on this checker -- which depends on
 // `Model`. Re-exported here, so `crate::quant_uf_model_sat_cert::...` and
@@ -132,7 +143,7 @@ fn universal_prefix(arena: &TermArena, assertion: TermId) -> Option<(Vec<SymbolI
         let [body] = &**args else {
             return None;
         };
-        if binders.contains(binder) || binders.len() >= QUANTIFIED_UF_BINDER_CAP {
+        if binders.contains(binder) || binders.len() >= quantified_uf_binder_cap() {
             return None;
         }
         binders.push(*binder);
@@ -192,7 +203,7 @@ fn check_finite_uninterpreted_domains(
     // source-binding check: the certificate must name the first binder of the
     // assertion (its outer binder when the assertion is a quantifier, the
     // deterministic first-visited binder otherwise).
-    if binders[0] != outer_binder || binders.len() > QUANTIFIED_UF_BINDER_CAP {
+    if binders[0] != outer_binder || binders.len() > quantified_uf_binder_cap() {
         return Some(false);
     }
     let mut cardinalities: BTreeMap<SortId, u32> = BTreeMap::new();

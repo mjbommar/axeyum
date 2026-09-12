@@ -93,9 +93,31 @@ type WirePoly = Vec<(Mono, i128, i128)>;
 /// budget, not a semantic limit.
 const MAX_MONOMIALS: usize = 16;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_MONOMIALS`]: the compiled default, or
+    /// `AXEYUM_HANDELMAN_MAX_MONOMIALS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_MONOMIALS`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_monomials() -> usize = "AXEYUM_HANDELMAN_MAX_MONOMIALS" or MAX_MONOMIALS;
+}
+
 /// Largest number of generators (atoms, products, equality multiples) handed to
 /// the LP.
 const MAX_GENERATORS: usize = 48;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_GENERATORS`]: the compiled default, or
+    /// `AXEYUM_HANDELMAN_MAX_GENERATORS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_GENERATORS`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_generators() -> usize = "AXEYUM_HANDELMAN_MAX_GENERATORS" or MAX_GENERATORS;
+}
 
 /// A constant-term denominator above this makes an atom a relaxation candidate.
 const RELAXATION_DENOMINATOR_THRESHOLD: i128 = 1_000_000_000_000;
@@ -629,7 +651,7 @@ fn generators(
             });
         }
     }
-    if out.len() > MAX_GENERATORS {
+    if out.len() > max_generators() {
         return None;
     }
     Some(out)
@@ -645,7 +667,7 @@ fn monomial_basis(generators: &[Generator]) -> Option<Vec<Mono>> {
         .collect();
     basis.sort();
     basis.dedup();
-    if basis.len() > MAX_MONOMIALS {
+    if basis.len() > max_monomials() {
         return None;
     }
     Some(basis)

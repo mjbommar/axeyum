@@ -30,6 +30,17 @@ use crate::canonical::build_app;
 /// wider-index equalities are reported `Unsupported` rather than blowing up.
 const MAX_ARRAY_EQ_INDEX_BITS: u32 = 8;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_ARRAY_EQ_INDEX_BITS`]: the compiled
+    /// default, or `AXEYUM_MAX_ARRAY_EQ_INDEX_BITS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_ARRAY_EQ_INDEX_BITS`, so the shipped binary is unchanged; a
+    /// malformed value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_array_eq_index_bits() -> u32 = "AXEYUM_MAX_ARRAY_EQ_INDEX_BITS" or MAX_ARRAY_EQ_INDEX_BITS;
+}
+
 /// Error from array elimination.
 #[derive(Debug, Clone)]
 pub enum ArrayElimError {
@@ -458,10 +469,13 @@ impl Eliminator {
             }
             return Ok(acc.unwrap_or_else(|| arena.bool_const(true)));
         }
-        if iw > MAX_ARRAY_EQ_INDEX_BITS {
+        // Read once: the message must name the bound that actually decided,
+        // not the compiled default, or a lever run reports the wrong number.
+        let index_bit_cap = max_array_eq_index_bits();
+        if iw > index_bit_cap {
             return Err(ArrayElimError::Unsupported(format!(
                 "array equality over a {iw}-bit index (bounded extensionality supports \
-                 indices up to {MAX_ARRAY_EQ_INDEX_BITS} bits)"
+                 indices up to {index_bit_cap} bits)"
             )));
         }
         let count = 1u128 << iw;

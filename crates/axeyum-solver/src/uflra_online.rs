@@ -98,6 +98,17 @@ const MAX_BOOLEAN_MODELS: usize = 100_000;
 /// twenty-two.
 const MAX_BOOLEAN_ATOMS: usize = 48;
 
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_BOOLEAN_ATOMS`]: the compiled default, or
+    /// `AXEYUM_UFLRA_MAX_BOOLEAN_ATOMS` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_BOOLEAN_ATOMS`, so the shipped binary is unchanged; a malformed
+    /// value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    fn max_boolean_atoms() -> usize = "AXEYUM_UFLRA_MAX_BOOLEAN_ATOMS" or MAX_BOOLEAN_ATOMS;
+}
+
 /// The atom ceiling the **CDCL(T)** route uses. `8192`, matching the `QF_UFLIA`
 /// sibling, and deliberately not [`MAX_BOOLEAN_ATOMS`].
 ///
@@ -1532,7 +1543,7 @@ pub(crate) fn combined_cdclt_diag(
     for &a in assertions {
         collect_uflra_atoms(arena, a, &mut atom_terms, &mut seen);
     }
-    if atom_terms.is_empty() || atom_terms.len() > MAX_BOOLEAN_ATOMS {
+    if atom_terms.is_empty() || atom_terms.len() > max_boolean_atoms() {
         return None;
     }
     let combined = crate::combined_theory::CombinedIncremental::new(arena, &atom_terms)?;
@@ -1664,7 +1675,7 @@ fn check_qf_uflra_boolean_enumerative(
     if atom_terms.is_empty() {
         return decline("no UFLRA atoms for the online combination boolean layer");
     }
-    if atom_terms.len() > MAX_BOOLEAN_ATOMS {
+    if atom_terms.len() > max_boolean_atoms() {
         return decline("too many theory atoms for the online combination boolean layer");
     }
 
