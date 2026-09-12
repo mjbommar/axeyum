@@ -1,0 +1,12 @@
+bin        /tmp/claude-1000/-home-mjbommar-projects-personal-axeyum/b5abceb2-1e55-4606-b944-34c43c75096d/scratchpad/binder-alias.smtcomp_cli.fixed
+list       bench-results/parity-lists/FP.txt
+list-sha   991452febd42927d68076b98c1e0c82ced7075594a09c48ee024145de09cde31
+budget-s   24
+mem-gb     8
+total      200
+sat        0
+unsat      46
+decided    46
+unknown    154
+timeout    0
+other      0
