@@ -193,13 +193,42 @@ MUTANTS = [
         [('DECIDED = {"sat", "unsat"}', 'DECIDED = {"sat", "unsat", "unknown"}')],
         # A cascade naming FOUR different defects: the winnable set empties,
         # `unknown` becomes comparable against `sat` so the disagreement check
-        # no longer reaches its row, and both probe verdicts move (every row
-        # now counts, so the rate is 100 % and 100 %).
+        # no longer reaches its row, the probe rate becomes 100 % everywhere,
+        # and the vacuous fixture acquires comparable verdicts so its zero stops
+        # being labelled.  Four guards, four different messages -- which is the
+        # evidence that they do not reject through one shared check.
         [
             "the winnable set was miscounted",
             "the disagreement check did not fire",
             "a board AT the probe rate was not CONFIRMED",
+            "a zero over ZERO comparable verdicts was printed as a result",
         ],
+    ),
+    (
+        "board: a zero over zero comparable verdicts is printed as a result",
+        "summarize.py",
+        [
+            (
+                '        vac = "  <-- VACUOUS: nothing checked any verdict we produced" if (\n'
+                "            not ncomp and not dis) else \"\"",
+                '        vac = ""',
+            )
+        ],
+        ["a zero over ZERO comparable verdicts was printed as a result"],
+    ),
+    (
+        "board: EVERY board is labelled vacuous",
+        "summarize.py",
+        [
+            (
+                "        vac = \"  <-- VACUOUS: nothing checked any verdict we produced\" if (\n"
+                "            not ncomp and not dis) else \"\"",
+                '        vac = "  <-- VACUOUS: nothing checked any verdict we produced"',
+            )
+        ],
+        # The inverted half.  A label applied to everything is worth as little
+        # as one applied to nothing, and only this mutant distinguishes them.
+        ["a board with comparable verdicts was labelled VACUOUS"],
     ),
     (
         "board: the probe verdict is hardcoded to CONFIRMED",

@@ -35,8 +35,9 @@ fail=0
 
 # ---------------------------------------------------------------- board
 cp ../summarize.py "$T"/
-for d in AUFLIRA ABV ALIA AUFNIRA AUFBV FP; do cp board-fixture.tsv "$T/$d.tsv"; done
+for d in AUFLIRA ABV ALIA AUFNIRA FP; do cp board-fixture.tsv "$T/$d.tsv"; done
 cp board-fixture-lowrate.tsv "$T/UFNIA.tsv"
+cp board-fixture-vacuous.tsv "$T/AUFBV.tsv"
 b=$(cd "$T" && python3 summarize.py)
 
 grep -q "DISAGREEMENTS: 3" <<<"$b" \
@@ -63,6 +64,18 @@ grep -qE "ALIA .*CI +0\.0% *- *1[0-9]\.[0-9]%" <<<"$b" \
   || { echo "FAIL: the k=0 interval is degenerate; every board would 'refute' it"; fail=1; }
 grep -q "== FP: board DID NOT RUN" <<<"$b" \
   && { echo "FAIL: FP fixture was not picked up (test is not testing FP)"; fail=1; }
+
+# A zero over verdicts nothing checked must SAY SO.  `board-fixture-vacuous.tsv`
+# is the ABV/ALIA shape: we decide 2 rows, `:status` is `unknown` on every row,
+# and both references are `unknown` on the 2 we decide -- so the comparable
+# count is 0 and the zero is empty.
+grep -q "DISAGREEMENTS: 0  <-- VACUOUS" <<<"$b" \
+  || { echo "FAIL: a zero over ZERO comparable verdicts was printed as a result"; fail=1; }
+# ...and the inverted half: AUFLIRA's fixture has 3 real disagreements over
+# comparable verdicts, so it must NOT be labelled vacuous.  A label applied to
+# everything says as little as one applied to nothing.
+sed -n '/== AUFLIRA/,/^   probe/p' <<<"$b" | grep -q "VACUOUS" \
+  && { echo "FAIL: a board with comparable verdicts was labelled VACUOUS"; fail=1; }
 
 # ---------------------------------------------------------------- census
 mkdir -p "$T/census" "$T/winnable"

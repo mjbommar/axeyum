@@ -135,7 +135,17 @@ def main():
         print(
             f"   comparable: status {comp['status']}  z3 {comp['z3']}  cvc5 {comp['cvc5']}"
         )
-        print(f"   DISAGREEMENTS: {len(dis)}")
+        # A zero-disagreement figure over verdicts nothing else checked is
+        # worth nothing, and on THIS board that is not hypothetical: ALIA
+        # produces no verdicts at all, and ABV declares `:status unknown` on
+        # 199 of 200 files while both references return `unknown` on all four
+        # rows we decide.  Both print "DISAGREEMENTS: 0" and neither zero means
+        # what a reader will take it to mean, so the line says so itself rather
+        # than leaving it to a footnote in a README nobody reads beside the TSV.
+        ncomp = comp["status"] + comp["z3"] + comp["cvc5"]
+        vac = "  <-- VACUOUS: nothing checked any verdict we produced" if (
+            not ncomp and not dis) else ""
+        print(f"   DISAGREEMENTS: {len(dis)}{vac}")
         for d in dis:
             print(f"     !! {d}")
         print(f"   reference-vs-reference conflicts: {len(ref_conflict)}")
