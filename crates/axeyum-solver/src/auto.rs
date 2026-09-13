@@ -4320,6 +4320,16 @@ fn dispatch_uf_fast_paths(
             // is the best available result — return it rather than fall through to a
             // Real-incompatible path. An *integer*-only arithmetic UF can still fall
             // through to the int-blast + Ackermann fallback.
+            // NOTE (ADR-1960): this is the same defect shape as the pure-real
+            // branch's `Err(Unsupported)` arm — an arithmetic route returning
+            // its own refusal as the query's verdict, above a ladder that owns
+            // the construct it refused. It is left ALONE because no query could
+            // be built that reaches it: `bench-results/array-real-gate-20260913/`
+            // `probes/r1`, `r6` and `r7` are three UF + Real + array shapes
+            // aimed at exactly this rung, and `uf-arithmetic` or `lia-dpll`
+            // DECIDES all three. Relaxing it would be an unmeasured route-order
+            // change, and the mutation control for this file records the
+            // corresponding guard as SURVIVED rather than pretending otherwise.
             CheckResult::Unknown(reason) if features.has_real => {
                 with_recorder(rec, |t| {
                     t.record_declined("uf-arithmetic", DeclineReason::from_unknown(&reason));
@@ -5264,10 +5274,34 @@ fn check_auto_dispatch(
                 with_recorder(rec, |t| {
                     t.record_declined("nra", unsupported_decline(&message));
                 });
-                return Ok(CheckResult::Unknown(UnknownReason {
-                    kind: UnknownKind::Incomplete,
-                    detail: format!("nonlinear real route declined: {message}"),
-                }));
+                // ...**unless a non-bit-vector array is present**, in which case
+                // the array ladder further down is a genuinely different
+                // procedure and this return was hiding it from the whole
+                // population (ADR-1960, gate 1 of 3).
+                //
+                // `(Array Int Real)` is AUFLIRA's and AUFNIRA's leaf sort, and a
+                // flat read-over-write over it never reached `array-fast-path` at
+                // all: `check_with_nra` refuses the `select` subterm with
+                // `QF_LRA: non-linear or non-real subterm in a constraint` and
+                // this arm turned that refusal into the query's verdict. The
+                // route trail for `probes/p5-row-real.smt2` at `57bd22d37` ends
+                // `nra declined (unsupported)` and never records
+                // `array-fast-path` — which is why
+                // [ADR-1955](../../../docs/research/09-decisions/adr-1955-the-nested-array-sort-is-the-first-of-three-gates-and-the-only-one-the-ir-owns.md)
+                // attributed the refusal to `scalar_alia_auflia_arrays_supported`
+                // when that predicate was never consulted.
+                //
+                // The fall-through is bounded: `has_non_bv_array` is exactly the
+                // population the array branch below terminates itself, at its own
+                // `non-bit-vector array sorts are represented in IR` `Unknown`.
+                // So a Real query can never fall past it into
+                // `check_with_all_theories`, which hard-errors on `Sort::Real`.
+                if !features.has_non_bv_array {
+                    return Ok(CheckResult::Unknown(UnknownReason {
+                        kind: UnknownKind::Incomplete,
+                        detail: format!("nonlinear real route declined: {message}"),
+                    }));
+                }
             }
             Err(e) => return Err(e),
         }
@@ -6060,10 +6094,12 @@ fn dispatch_array_fast_paths(
     config: &SolverConfig,
     features: &Features,
 ) -> Result<Option<CheckResult>, SolverError> {
-    // Scalar Int-array routes: non-BV arrays whose scalar abstraction is
-    // Bool/linear-Int (QF_ALIA) or Bool/linear-Int+UF (QF_AUFLIA) reuse the lazy
-    // ROW/extensionality CEGAR with the matching scalar backend. Other non-BV
-    // mixes still decline explicitly below.
+    // Scalar arithmetic-array routes: non-BV arrays whose scalar abstraction is
+    // Bool/linear-arithmetic (QF_ALIA, and since ADR-1960 the Real and mixed
+    // `QF_ALIRA` element sorts the LIRA backend already decided) or
+    // Bool/linear-Int+UF (QF_AUFLIA) reuse the lazy ROW/extensionality CEGAR
+    // with the matching scalar backend. Other non-BV mixes still decline
+    // explicitly below.
     if features.has_non_bv_array && scalar_alia_auflia_arrays_supported(features) {
         let result = if features.has_function {
             crate::abv::check_qf_auflia_lazy_row(arena, assertions, config)
@@ -6095,11 +6131,36 @@ fn dispatch_array_fast_paths(
     Ok(None)
 }
 
+/// Whether the scalar-array lazy ROW/extensionality route admits this query.
+///
+/// **`!features.has_real` used to be the first clause, and it was stale
+/// conservatism rather than a soundness fence** (ADR-1960, gate 3 of 3). It was
+/// introduced by `c093fa911` together with the route itself, in a checkpoint
+/// commit whose whole message is `feat(solver): checkpoint dominance audit and
+/// ABV array certs`; no ADR, commit message, or comment anywhere in the tree
+/// ever argued for it, and `git blame` shows it was never edited afterwards.
+///
+/// Three things make it stale rather than load-bearing:
+///
+/// * The scalar backend behind it is not integer-only. `check_qf_alia_lazy_row`
+///   runs [`crate::dpll_lia::check_with_arith_dpll`], whose own documentation is
+///   "integer, real, or combined `QF_LIRA`" — it has had exact-rational simplex
+///   since long before this clause was written.
+/// * The CEGAR engine is element-sort-agnostic: `RowCtx::resolve_select` reads
+///   `element_sort` out of `Sort::array_sorts()` and declares a fresh symbol at
+///   that sort. Nothing in it branches on `Int`.
+/// * The soundness argument does not mention element sorts at all, because it
+///   does not depend on one. The abstraction is a *relaxation*, so its `unsat`
+///   transfers to the original; every `sat` is projected back to array values
+///   and **replayed against the original assertions** with the ground evaluator,
+///   which has a `Sort::Real` case. A replay failure is a decline, never a
+///   verdict.
+///
+/// The clauses that remain are capability statements about routes that do not
+/// exist: bit-vector/float elements belong to the `QF_ABV` arm above,
+/// uninterpreted carriers to the `QF_AX` arm, and datatypes to neither.
 fn scalar_alia_auflia_arrays_supported(features: &Features) -> bool {
-    !features.has_real
-        && !features.has_bv_or_float
-        && !features.has_uninterpreted_sort
-        && !features.has_datatype
+    !features.has_bv_or_float && !features.has_uninterpreted_sort && !features.has_datatype
 }
 
 fn scalar_qf_ax_declared_arrays_supported(features: &Features) -> bool {

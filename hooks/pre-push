@@ -661,10 +661,22 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #                              assertions, and a frontier that moves quietly
   #                              leaves that arithmetic stale in a roadmap.
   #                              0.11 s.
+  #   real_element_array_row   — ADR-1960 soundness-negative: the `(Array _ Real)`
+  #                              element sort through the lazy ROW CEGAR. Three
+  #                              gates were lifted to reach it, so five of its
+  #                              nine tests are adversarial fixtures over
+  #                              SATISFIABLE queries whose plausible wrong answer
+  #                              is `unsat` — including `0 < m[i] < 1`, which is
+  #                              sat over Real and unsat over Int and is
+  #                              therefore the one test that dies if anything on
+  #                              the route integralizes the element. Its `Sat`
+  #                              rows replay the model against the ORIGINAL
+  #                              assertions inside the test, because the route's
+  #                              own replay is part of the subject. 0.11 s.
   for suite in unknown_reason_coverage dt_uf_gate dt_capability_1935 \
                dt_constructor_arg_1942 dt_valued_result_1946 \
                datatype_solve_path quant_ladder_rung_refusal_declines \
-               nested_array_gate_map \
+               nested_array_gate_map real_element_array_row \
                additive_no_overflow_never_becomes_unsat; do
     gated_test "dispatch/reason: $suite" \
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
