@@ -1016,6 +1016,7 @@ macro_rules! full_exports {
         pub use auto::{AbvOnlineReservePolicy, AbvOnlineReservePolicyGuard};
         #[doc(hidden)]
         pub use auto::{BoundedIntBlastCertificate, certify_bounded_int_blast};
+        pub use auto::{DatatypeNativeRefusalPolicy, DatatypeNativeRefusalPolicyGuard};
         pub use auto::{
             IntLinearPortfolioWorkersGuard, check_auto, check_auto_explained, solve, unsat_core,
         };
@@ -1024,6 +1025,7 @@ macro_rules! full_exports {
             reset_last_qinst_egraph_retry_budget,
         };
         pub use auto::{QuantEgraphReservePolicy, QuantEgraphReservePolicyGuard};
+        pub use auto::{QuantValidUniversalReservePolicy, QuantValidUniversalReservePolicyGuard};
         pub use auto::{
             UfArithOverboundPolicy, UfArithOverboundPolicyGuard, UfArithOverboundStats,
             UfArithOverboundStatsGuard, last_uf_arith_overbound_stats,

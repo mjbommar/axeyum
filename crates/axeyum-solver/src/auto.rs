@@ -851,6 +851,11 @@ pub fn solve(
     let Some(valid_config) = config_with_remaining_timeout(config, deadline) else {
         return Ok(quantified_timeout("existential skolemization"));
     };
+    // The pass runs one quantifier-free SUB-SOLVE per top-level universal, each
+    // handed whatever is left, so a single hard sub-query spends the ladder's
+    // entire clock and every rung below it never runs. `quant_valid_universal_budget`
+    // is the lever that bounds it; under the shipped default it is the identity.
+    let valid_config = quant_valid_universal_budget(&valid_config);
     let eliminated = match crate::quant_valid_universal::eliminate_valid_universals(
         arena,
         assertions,
@@ -4904,6 +4909,157 @@ fn quant_egraph_budget(config: &SolverConfig) -> SolverConfig {
     }
 }
 
+/// Whether valid-universal elimination receives the quantified ladder's whole
+/// remaining budget, or keeps a reserve for the rungs below it.
+///
+/// The same shape as [`QuantEgraphReservePolicy`], for the same reason and with
+/// the same discipline. The rung is measured (ADR-1975) to hold the ENTIRE 24 s
+/// clock and then decline on **69 of `UFDTNIRA`'s 200** pinned files — the
+/// single largest blocker family on any datatype division — so it is the
+/// textbook case for a reserve. A reserve is nonetheless worth nothing unless a
+/// rung below would decide the file, and that is a measurement, not a guess:
+/// `share = 1` hands the pass [`MIN_LADDER_SLICE`] and the ladder essentially
+/// everything, which is the one-way CEILING arm. A file the ceiling arm does not
+/// decide is out of reach of every smaller reserve.
+///
+/// Bounding the pass is sound at any budget because the pass is **strictly
+/// additive**: [`crate::quant_valid_universal::eliminate_valid_universals`]
+/// leaves untouched every universal it did not prove valid, and its own
+/// per-assertion loop already stops on a spent deadline and copies the
+/// remaining assertions through unchanged. A smaller budget therefore
+/// eliminates FEWER universals; it can never eliminate one that is not valid,
+/// so no budget setting can change a verdict from `unsat` to `sat` or back.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QuantValidUniversalReservePolicy {
+    /// The HISTORICAL behaviour, and no longer the default: the pass receives
+    /// the whole remaining budget. Kept as a named arm, and reachable by
+    /// `AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE=off`, so the shipped reserve can
+    /// still be measured against the code it replaced rather than only
+    /// remembered.
+    WholeBudget,
+    /// The pass receives the remaining budget less `1/share` of it, and the
+    /// rungs below run on that reserve, out of the same clock. **This is the
+    /// shipped default at `share = QUANT_VALID_UNIVERSAL_LADDER_RESERVE_SHARE`**
+    /// (ADR-1975).
+    LadderReserve {
+        /// Divisor of the remaining budget held back for the rungs below.
+        share: u32,
+    },
+}
+
+thread_local! {
+    /// Test-scoped override of [`QuantValidUniversalReservePolicy`]; see
+    /// [`QuantValidUniversalReservePolicyGuard`].
+    static QUANT_VALID_UNIVERSAL_RESERVE_OVERRIDE:
+        std::cell::Cell<Option<QuantValidUniversalReservePolicy>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Sets the [`QuantValidUniversalReservePolicy`] for the current thread,
+/// restoring the previous setting on drop.
+///
+/// Exists so a test can drive both arms without setting a process-wide
+/// environment variable — a test that passes only under an ambient env var is a
+/// gate on one shell.
+pub struct QuantValidUniversalReservePolicyGuard(Option<QuantValidUniversalReservePolicy>);
+
+impl QuantValidUniversalReservePolicyGuard {
+    /// Overrides the process policy on this thread.
+    #[must_use]
+    pub fn set(policy: QuantValidUniversalReservePolicy) -> Self {
+        QuantValidUniversalReservePolicyGuard(
+            QUANT_VALID_UNIVERSAL_RESERVE_OVERRIDE.with(|c| c.replace(Some(policy))),
+        )
+    }
+}
+
+impl Drop for QuantValidUniversalReservePolicyGuard {
+    fn drop(&mut self) {
+        QUANT_VALID_UNIVERSAL_RESERVE_OVERRIDE.with(|c| c.set(self.0));
+    }
+}
+
+/// Divisor of the quantified ladder's remaining budget held back for the rungs
+/// below valid-universal elimination. **SHIPPED, not inert.**
+///
+/// `4` is the value [`UF_ARITH_LADDER_RESERVE_SHARE`] and
+/// [`ABV_ONLINE_LADDER_RESERVE_SHARE`] settled on for the same shape, and here
+/// it is MEASURED rather than inherited (ADR-1975). It ships ON because the
+/// one-way CEILING arm (`share = 1`, the pass gets [`MIN_LADDER_SLICE`]) and
+/// this value gain the **identical 19 files** on `UFDTNIRA` — so the gain is
+/// not an artefact of an extreme setting — while the `UF` control separates
+/// them: the ceiling arm loses **2** files there, reproducibly at three runs
+/// per arm, and `share = 4` loses **0**. The ceiling was the right sizing
+/// instrument and the wrong thing to ship.
+const QUANT_VALID_UNIVERSAL_LADDER_RESERVE_SHARE: u32 = 4;
+
+/// Parses `AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE`.
+///
+/// An absent variable, an empty value, `on` and an unparseable value all
+/// resolve to the SHIPPED default — [`QuantValidUniversalReservePolicy::LadderReserve`]
+/// at [`QUANT_VALID_UNIVERSAL_LADDER_RESERVE_SHARE`] — so a typo degrades to
+/// the shipped behaviour rather than to an arm nobody chose. `off` and `0`
+/// select the historical [`QuantValidUniversalReservePolicy::WholeBudget`],
+/// which is what an A/B against the pre-ADR-1975 code runs; any integer
+/// `n >= 1` reserves `1/n` instead, which is how the `share = 1` ceiling arm is
+/// reached.
+///
+/// Note the direction. While the lever shipped OFF, an unrecognised value
+/// resolved to `WholeBudget`; it now resolves to the reserve. The rule is
+/// **"unknown input means what we ship"**, not "unknown input means no
+/// reserve", and the two stopped coinciding the moment the measurement came in.
+fn parse_quant_valid_universal_reserve(value: Option<&str>) -> QuantValidUniversalReservePolicy {
+    let shipped = QuantValidUniversalReservePolicy::LadderReserve {
+        share: QUANT_VALID_UNIVERSAL_LADDER_RESERVE_SHARE,
+    };
+    match value {
+        None | Some("" | "on") => shipped,
+        Some("off") => QuantValidUniversalReservePolicy::WholeBudget,
+        Some(text) => match text.parse::<u32>() {
+            Ok(0) => QuantValidUniversalReservePolicy::WholeBudget,
+            Err(_) => shipped,
+            Ok(share) => QuantValidUniversalReservePolicy::LadderReserve { share },
+        },
+    }
+}
+
+/// The [`QuantValidUniversalReservePolicy`] in force on this thread: a live
+/// [`QuantValidUniversalReservePolicyGuard`]'s choice, else the process policy
+/// resolved once from `AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE`.
+fn quant_valid_universal_reserve_policy() -> QuantValidUniversalReservePolicy {
+    static RESOLVED: std::sync::OnceLock<QuantValidUniversalReservePolicy> =
+        std::sync::OnceLock::new();
+    if let Some(policy) = QUANT_VALID_UNIVERSAL_RESERVE_OVERRIDE.with(std::cell::Cell::get) {
+        return policy;
+    }
+    *RESOLVED.get_or_init(|| {
+        parse_quant_valid_universal_reserve(
+            std::env::var("AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE")
+                .ok()
+                .as_deref(),
+        )
+    })
+}
+
+/// The budget handed to valid-universal elimination: under the shipped policy
+/// the caller's remaining budget less the ladder's quarter of it; under
+/// `AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE=off`, the whole of it, unchanged,
+/// which is the pre-ADR-1975 code.
+///
+/// `config` is ALREADY the remaining-budget config computed at the rung's entry
+/// deadline, so the slice and the reserve come out of one clock rather than
+/// two -- the property that makes a route which spends its share unable to also
+/// spend the ladder's.
+fn quant_valid_universal_budget(config: &SolverConfig) -> SolverConfig {
+    match quant_valid_universal_reserve_policy() {
+        QuantValidUniversalReservePolicy::WholeBudget => config.clone(),
+        QuantValidUniversalReservePolicy::LadderReserve { share } => {
+            LadderSlice::all_but_reserve(route_trace::quant_rung::VALID_UNIVERSAL_QF, share)
+                .apply(config, config.timeout)
+        }
+    }
+}
+
 /// Runs the bounded first-refusal MBQI rung. `Ok(Some(_))` carries only a
 /// fully anchored verdict (a replay-checked `sat` or the refuter's `unsat`);
 /// every other outcome — including an unsupported shape — declines with
@@ -5416,15 +5572,180 @@ const DL_EXTENDED_PROBE_SLICE: LadderSlice = LadderSlice::all_but_capped_reserve
     DL_EXTENDED_FALLBACK_RESERVE,
 );
 
+/// What [`check_auto_dispatch`] does with `check_with_datatype_native`'s
+/// `Unsupported` refusal (ADR-1980).
+///
+/// # Why this is a named arm rather than a rewrite
+///
+/// [ADR-1966] enumerated 72 rung-to-sub-solve refusal-propagation sites and
+/// identified this one as the largest — thirteen rungs sit below it — measured
+/// the conversion at **+22 / −2 files on `AUFDTLIRA`**, and then reverted it
+/// because it turned seven assertions in four other ADRs' pre-push suites red.
+/// Both arms therefore have to stay runnable **from one binary**: an A/B that
+/// compares two builds can compare two different trees by accident, and the
+/// four suites that own the old behaviour need to keep asserting it rather than
+/// having it deleted out from under them.
+///
+/// Neither arm changes what `datatype_native` itself will encode. The exactness
+/// preconditions ([ADR-1920] / [ADR-1935] / [ADR-1942] / [ADR-1946]) fire on
+/// exactly the same queries under both, so the wrong `unsat` [ADR-1930] shipped
+/// stays impossible by construction. The only thing that differs is whether the
+/// dispatcher treats one route's refusal as the whole query's verdict.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DatatypeNativeRefusalPolicy {
+    /// The HISTORICAL behaviour, and no longer the default: the datatype rung's
+    /// `Unsupported` leaves `solve` as an ERROR, so the front door prints
+    /// `give-up kind=Error` and the rungs below the datatype branch never run.
+    /// Kept as a named arm, and reachable by
+    /// `AXEYUM_DATATYPE_NATIVE_REFUSAL=propagate`, so the shipped conversion can
+    /// be measured against the code it replaced rather than only remembered.
+    Propagate,
+    /// [ADR-1966]'s rule: a route refusing a construct is a DECLINE, not the
+    /// query's verdict, so the rungs below get their turn. The refusal's own
+    /// sentence is carried out to whatever the ladder ends on by
+    /// [`relabel_with_datatype_refusal`], so the DT blocker census still reads
+    /// it. **This is the shipped default** (ADR-1980).
+    Decline,
+}
+
+thread_local! {
+    /// Test-scoped override of [`DatatypeNativeRefusalPolicy`]; see
+    /// [`DatatypeNativeRefusalPolicyGuard`].
+    static DATATYPE_NATIVE_REFUSAL_OVERRIDE:
+        std::cell::Cell<Option<DatatypeNativeRefusalPolicy>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Sets the [`DatatypeNativeRefusalPolicy`] for the current thread, restoring
+/// the previous setting on drop.
+///
+/// Exists so a test can drive both arms without setting a process-wide
+/// environment variable — a test that passes only under an ambient env var is a
+/// gate on one shell.
+pub struct DatatypeNativeRefusalPolicyGuard(Option<DatatypeNativeRefusalPolicy>);
+
+impl DatatypeNativeRefusalPolicyGuard {
+    /// Overrides the process policy on this thread.
+    #[must_use]
+    pub fn set(policy: DatatypeNativeRefusalPolicy) -> Self {
+        DatatypeNativeRefusalPolicyGuard(
+            DATATYPE_NATIVE_REFUSAL_OVERRIDE.with(|c| c.replace(Some(policy))),
+        )
+    }
+}
+
+impl Drop for DatatypeNativeRefusalPolicyGuard {
+    fn drop(&mut self) {
+        DATATYPE_NATIVE_REFUSAL_OVERRIDE.with(|c| c.set(self.0));
+    }
+}
+
+/// Parses `AXEYUM_DATATYPE_NATIVE_REFUSAL`.
+///
+/// An absent variable, an empty value, `decline` and an unparseable value all
+/// resolve to the SHIPPED default — [`DatatypeNativeRefusalPolicy::Decline`] —
+/// so a typo degrades to the shipped behaviour rather than to an arm nobody
+/// chose. `propagate`, `off` and `0` select the historical
+/// [`DatatypeNativeRefusalPolicy::Propagate`], which is what an A/B against the
+/// pre-ADR-1980 code runs.
+fn parse_datatype_native_refusal(value: Option<&str>) -> DatatypeNativeRefusalPolicy {
+    match value {
+        Some("propagate" | "off" | "0") => DatatypeNativeRefusalPolicy::Propagate,
+        _ => DatatypeNativeRefusalPolicy::Decline,
+    }
+}
+
+/// The [`DatatypeNativeRefusalPolicy`] in force on this thread: a live
+/// [`DatatypeNativeRefusalPolicyGuard`]'s choice, else the process policy
+/// resolved once from `AXEYUM_DATATYPE_NATIVE_REFUSAL`.
+fn datatype_native_refusal_policy() -> DatatypeNativeRefusalPolicy {
+    static RESOLVED: std::sync::OnceLock<DatatypeNativeRefusalPolicy> = std::sync::OnceLock::new();
+    if let Some(policy) = DATATYPE_NATIVE_REFUSAL_OVERRIDE.with(std::cell::Cell::get) {
+        return policy;
+    }
+    *RESOLVED.get_or_init(|| {
+        parse_datatype_native_refusal(
+            std::env::var("AXEYUM_DATATYPE_NATIVE_REFUSAL")
+                .ok()
+                .as_deref(),
+        )
+    })
+}
+
 /// The theory dispatcher (coercions already relaxed away by [`check_auto`]).
 /// `rec` records each route attempt + outcome at the existing decide/decline
 /// sites; it is a side effect only, never a branch condition (verdict invariance).
-#[allow(clippy::too_many_lines)]
 fn check_auto_dispatch(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
     rec: &mut Recorder<'_>,
+) -> Result<CheckResult, SolverError> {
+    let mut datatype_refusal: Option<String> = None;
+    let out = check_auto_dispatch_inner(arena, assertions, config, rec, &mut datatype_refusal);
+    relabel_with_datatype_refusal(out, datatype_refusal)
+}
+
+/// Puts the datatype rung's own sentence back in front of a terminal refusal
+/// (ADR-1980).
+///
+/// # Why this exists
+///
+/// [ADR-1966] identified `check_auto_dispatch` → `check_with_datatype_native`
+/// as the largest instance of its defect shape — a rung propagating a sub-solve
+/// refusal as the query's verdict, so the thirteen rungs below never run — and
+/// measured the conversion at **+22 files on `AUFDTLIRA`**. It reverted it, and
+/// named ONE prerequisite:
+///
+/// > Moving the terminal refusal to the bit-blast tail replaces
+/// > "array/UF datatype fields are not yet supported (ADR-0022)" with
+/// > "unsupported pure-Rust BV operator `DtTest(…)`", which names the wrong
+/// > thing. **Converting this site requires carrying the datatype rung's own
+/// > sentence into the final `unknown` first.**
+///
+/// That is what this does. When the datatype rung declined and no rung below
+/// decided either, the refusal the caller sees LEADS with the datatype rung's
+/// message, so the DT blocker census — which reads exactly these strings, and
+/// which is the reason ADR-1920 required the message to "name the actual
+/// missing capability rather than a sort list" — reads the same sentence it read
+/// before the conversion. The tail's own message is appended rather than
+/// dropped, because a census that cannot see where the query actually ended is
+/// the un-failable checker this repository keeps deleting.
+///
+/// A DECIDED result is returned untouched: the whole point of the conversion is
+/// that a rung below may now answer, and a verdict is never relabelled by a
+/// route that declined.
+fn relabel_with_datatype_refusal(
+    out: Result<CheckResult, SolverError>,
+    datatype_refusal: Option<String>,
+) -> Result<CheckResult, SolverError> {
+    let Some(datatype_message) = datatype_refusal else {
+        return out;
+    };
+    match out {
+        Err(SolverError::Unsupported(tail)) => Err(SolverError::Unsupported(format!(
+            "{datatype_message}; and no rung below the datatype route decided it either: {tail}"
+        ))),
+        Ok(CheckResult::Unknown(reason)) => Ok(CheckResult::Unknown(UnknownReason {
+            kind: reason.kind,
+            detail: format!(
+                "{datatype_message}; and no rung below the datatype route decided it either: {}",
+                reason.detail
+            ),
+        })),
+        other => other,
+    }
+}
+
+/// The dispatcher body. See [`check_auto_dispatch`], which wraps it so the
+/// datatype rung's refusal message survives a fall-through (ADR-1980).
+#[allow(clippy::too_many_lines)]
+fn check_auto_dispatch_inner(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    rec: &mut Recorder<'_>,
+    datatype_refusal: &mut Option<String>,
 ) -> Result<CheckResult, SolverError> {
     // Lift Int/Real `ite` to the Boolean level (`ite(c,a,b)` → fresh `t` with
     // `c→t=a ∧ ¬c→t=b`) so the arithmetic linearizers, which only accept linear
@@ -5475,7 +5796,8 @@ fn check_auto_dispatch(
                 with_recorder(rec, |t| {
                     t.record_declined("datatype-elim", unsupported_decline(&message));
                 });
-                // **THE ONE SITE THIS LANE DID NOT TAKE, AND WHY** (ADR-1966).
+                // **THE SITE ADR-1966 SIZED AND DID NOT TAKE. TAKEN HERE
+                // (ADR-1980).**
                 //
                 // `check_with_datatype_native` is the last datatype rung, and
                 // its ADR-0022 refusals — array/UF-sorted datatype FIELDS, UF
@@ -5483,33 +5805,63 @@ fn check_auto_dispatch(
                 // a non-variable datatype term, a datatype-sorted term that
                 // survives tag/field expansion — are exactly the four ADR-1927's
                 // own after-census measured as the top blockers of `AUFDTLIRA`
-                // (70 + 32 + 13 + 1 of 200). This bare `?` sends every one of
-                // them out of `solve` as an ERROR, so the front door prints
-                // `give-up kind=Error` and the thirteen rungs below this branch
-                // never run. It is a textbook instance of the shape.
+                // (70 + 32 + 13 + 1 of 200). Until ADR-1980 this was a bare `?`,
+                // which sent every one of them out of `solve` as an ERROR, so
+                // the front door printed `give-up kind=Error` and the thirteen
+                // rungs below this branch never ran.
                 //
-                // Converting it to a decline was written, built and MEASURED:
-                // per-file A/B against the same binary without it, `AUFDTLIRA`
-                // goes **90 → 110 decided of 200**, +22 / −2 after re-running
-                // every moved row three times per arm at 24 s, with 0
-                // `sat`↔`unsat` flips and all 23 new verdicts confirmed `unsat`
-                // by both z3 4.13.3 and cvc5 1.3.4.
+                // **WHAT THIS CHANGE IS NOT.** The exactness guards inside
+                // `datatype_native` (ADR-1920/1935/1942/1946) are untouched and
+                // still fire on exactly the same queries. An inexact tag/field
+                // expansion is still never emitted, so the wrong `unsat`
+                // ADR-1930 shipped is still impossible by construction. What
+                // changes is only what the DISPATCHER does with that refusal:
+                // a route declining is not the query's verdict (ADR-1966's
+                // rule), so the rungs below now get their turn. Every `sat`
+                // they return is replay-checked against the ORIGINAL assertions
+                // at the front door, and no rung below can reach the encoding
+                // this branch just refused.
                 //
-                // It was reverted anyway, because it turns **7 assertions in 4
-                // registered pre-push suites red** — `dt_uf_gate`,
-                // `dt_capability_1935`, `dt_constructor_arg_1942`,
-                // `dt_valued_result_1946` — owned by ADR-1920/1935/1942/1946.
-                // Three of them read the REFUSAL MESSAGE out of this `Err` and
-                // exist because that message is what the blocker census reads;
-                // one pins `Err` itself; four then get `Ok(Sat(model))` from a
-                // rung below, which is a capability gain but not one this lane
-                // can grant on another ADR's behalf. The measurement is in
-                // `bench-results/dispatch-decline-audit-20260913/` so the next
-                // lane starts from a sized target rather than a rediscovery.
-                let result =
-                    crate::datatype_native::check_with_datatype_native(arena, assertions, config)?;
-                with_recorder(rec, |t| t.record_result("datatype-native", &result));
-                return Ok(result);
+                // The refusal MESSAGE is not lost either, which was ADR-1966's
+                // one named prerequisite: it is carried out to whatever terminal
+                // refusal or `unknown` the ladder ends on, by
+                // `relabel_with_datatype_refusal`, so the DT blocker census
+                // reads the same sentence it read before.
+                match crate::datatype_native::check_with_datatype_native(arena, assertions, config)
+                {
+                    Ok(result) => {
+                        with_recorder(rec, |t| t.record_result("datatype-native", &result));
+                        return Ok(result);
+                    }
+                    Err(SolverError::Unsupported(native_message)) => {
+                        match datatype_native_refusal_policy() {
+                            // The pre-ADR-1980 arm, kept runnable from the same
+                            // binary so the four suites that own this behaviour
+                            // keep asserting it and the A/B cannot compare two
+                            // builds by accident. Byte-equivalent to the bare
+                            // `?` it replaced, RECORDER INCLUDED: the `?` never
+                            // reached `record_result`, so neither does this.
+                            DatatypeNativeRefusalPolicy::Propagate => {
+                                return Err(SolverError::Unsupported(native_message));
+                            }
+                            DatatypeNativeRefusalPolicy::Decline => {
+                                with_recorder(rec, |t| {
+                                    t.record_declined(
+                                        "datatype-native",
+                                        unsupported_decline(&native_message),
+                                    );
+                                });
+                                // Fall through to the rungs below. The datatype
+                                // rung's message is the specific capability
+                                // sentence the DT blocker census reads, so it —
+                                // not `datatype-elim`'s outer one — is what is
+                                // carried out.
+                                *datatype_refusal = Some(native_message);
+                            }
+                        }
+                    }
+                    Err(other) => return Err(other),
+                }
             }
             Err(other) => return Err(other),
         }
@@ -13287,6 +13639,119 @@ mod tests {
             Duration::from_secs(12),
             "the guard must restore the process share on drop"
         );
+    }
+
+    /// `AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE`'s parse, including the direction
+    /// that matters: anything unrecognised is the SHIPPED default — which since
+    /// ADR-1975 is the RESERVE, not `WholeBudget`. Turning the historical arm
+    /// off requires spelling it, which is what makes an A/B against the
+    /// pre-ADR-1975 code a deliberate act rather than a typo.
+    #[test]
+    fn quant_valid_universal_reserve_parses_to_the_shipped_default_unless_told_otherwise() {
+        let shipped = QuantValidUniversalReservePolicy::LadderReserve {
+            share: QUANT_VALID_UNIVERSAL_LADDER_RESERVE_SHARE,
+        };
+        for unrecognised in [None, Some(""), Some("on"), Some("nonsense"), Some("-2")] {
+            assert_eq!(
+                parse_quant_valid_universal_reserve(unrecognised),
+                shipped,
+                "{unrecognised:?} must resolve to the SHIPPED default, which is the reserve"
+            );
+        }
+        // The historical arm is reachable, and ONLY by spelling it. This is the
+        // arm the ADR's A/B calls `base`.
+        for off in [Some("off"), Some("0")] {
+            assert_eq!(
+                parse_quant_valid_universal_reserve(off),
+                QuantValidUniversalReservePolicy::WholeBudget,
+                "{off:?} must select the pre-ADR-1975 whole-budget arm"
+            );
+        }
+        assert_eq!(
+            parse_quant_valid_universal_reserve(Some("4")),
+            QuantValidUniversalReservePolicy::LadderReserve { share: 4 }
+        );
+        assert_eq!(
+            parse_quant_valid_universal_reserve(Some("1")),
+            QuantValidUniversalReservePolicy::LadderReserve { share: 1 }
+        );
+    }
+
+    /// The budget valid-universal elimination is handed, per arm.
+    ///
+    /// The `share = 4` assertion is the load-bearing one: it is the SHIPPED
+    /// policy, and the 19 files ADR-1975 measures rest on the pass receiving
+    /// 18 s of a 24 s budget rather than all of it. The `WholeBudget` assertion
+    /// beside it pins the historical arm, which is what that A/B's `base` runs;
+    /// a mutant that collapses the two is killed here.
+    #[test]
+    fn quant_valid_universal_budget_is_unchanged_by_default_and_reserved_under_a_policy() {
+        let config = SolverConfig {
+            timeout: Some(Duration::from_secs(24)),
+            ..SolverConfig::default()
+        };
+
+        {
+            let _guard = QuantValidUniversalReservePolicyGuard::set(
+                QuantValidUniversalReservePolicy::WholeBudget,
+            );
+            assert_eq!(
+                quant_valid_universal_budget(&config).timeout,
+                Some(Duration::from_secs(24)),
+                "the `off` arm must hand the pass the whole remaining budget -- it is the \
+                 pre-ADR-1975 code and the baseline every number in that ADR is measured \
+                 against"
+            );
+        }
+        {
+            let _guard = QuantValidUniversalReservePolicyGuard::set(
+                QuantValidUniversalReservePolicy::LadderReserve {
+                    share: QUANT_VALID_UNIVERSAL_LADDER_RESERVE_SHARE,
+                },
+            );
+            assert_eq!(
+                quant_valid_universal_budget(&config).timeout,
+                Some(Duration::from_secs(18)),
+                "the SHIPPED arm holds a quarter back for the rungs below"
+            );
+        }
+        {
+            // The CEILING arm the ADR-1975 sizing runs: the pass gets
+            // `MIN_LADDER_SLICE` and the ladder below gets the rest. This is
+            // what makes the sizing ONE-WAY -- no real reserve can give the
+            // lower rungs more clock than this.
+            let _guard = QuantValidUniversalReservePolicyGuard::set(
+                QuantValidUniversalReservePolicy::LadderReserve { share: 1 },
+            );
+            assert_eq!(
+                quant_valid_universal_budget(&config).timeout,
+                Some(MIN_LADDER_SLICE),
+                "share = 1 must leave the pass the floor, not the whole budget"
+            );
+        }
+    }
+
+    /// An unbounded caller budget stays unbounded under every arm: there is no
+    /// clock to share, so there is no starvation to prevent, and inventing a
+    /// timeout here would bound a search the caller deliberately did not.
+    #[test]
+    fn quant_valid_universal_budget_leaves_an_unbounded_config_unbounded() {
+        let config = SolverConfig {
+            timeout: None,
+            ..SolverConfig::default()
+        };
+        for policy in [
+            QuantValidUniversalReservePolicy::WholeBudget,
+            QuantValidUniversalReservePolicy::LadderReserve { share: 4 },
+            QuantValidUniversalReservePolicy::LadderReserve { share: 1 },
+        ] {
+            let _guard = QuantValidUniversalReservePolicyGuard::set(policy);
+            assert_eq!(
+                quant_valid_universal_budget(&config).timeout,
+                None,
+                "{policy:?} must not invent a timeout"
+            );
+        }
     }
 
     #[test]

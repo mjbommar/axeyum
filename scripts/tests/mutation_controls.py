@@ -10172,6 +10172,131 @@ SUITES["quant-egraph-reserve"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `quant-valid-universal-reserve` -- ADR-1975.  Valid-universal elimination runs
+# one quantifier-free SUB-SOLVE per top-level assertion, each handed the
+# quantified ladder's whole remaining wall clock.  Measured over `UFDTNIRA`'s
+# pinned 200: 69 files spend the ENTIRE 24 s budget inside it and give up PAST
+# the deadline (median 46 ms over), and the rungs below never run.
+# `QuantValidUniversalReservePolicy` is the lever that holds a share back.
+#
+# It SHIPS ON at share 4, so the three mutations are the ones that matter for a
+# shipped default whose numbers are quoted in an ADR: a silent revert of the
+# default to the pre-ADR `WholeBudget` (the change that would put `UFDTNIRA`
+# back to spending its whole clock in one rung while every arm-naming test
+# stayed green), an unparseable value resolving to something other than the
+# SHIPPED arm, and the slice SHAPE being a fraction rather than a reserve (same
+# divisor, opposite division -- at share 4 the pass would get 6 s instead of
+# 18 s of a 24 s budget, which silently turns the shipped arm into something
+# close to the CEILING arm the `UF` control measured a 2-file loss on).
+# --------------------------------------------------------------------------
+
+SUITES["quant-valid-universal-reserve"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "quant_valid_universal"),
+        "quant-valid-universal-reserve",
+    ),
+    [
+        (
+            # The silent revert. `parse_…(None)` is the process default.
+            "the process default with no env is the ladder reserve",
+            "        None | Some(\"\" | \"on\") => shipped,",
+            "        None | Some(\"\" | \"on\") => "
+            "QuantValidUniversalReservePolicy::WholeBudget,",
+        ),
+        (
+            # A typo must degrade to the SHIPPED arm, never to one nobody
+            # chose -- the failure mode that turns an A/B into a measurement of
+            # the wrong arm reported as the right one.
+            "an unparseable env value falls back to the shipped default",
+            "            Err(_) => shipped,",
+            "            Err(_) => QuantValidUniversalReservePolicy::WholeBudget,",
+        ),
+        (
+            # `all_but_reserve(n)` keeps 1 - 1/n; `fraction(n)` keeps 1/n.
+            "the slice SHAPE is a reserve, not a fraction",
+            "            LadderSlice::all_but_reserve(route_trace::quant_rung::"
+            "VALID_UNIVERSAL_QF, share)",
+            "            LadderSlice::fraction(route_trace::quant_rung::"
+            "VALID_UNIVERSAL_QF, share)",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `dt-native-refusal-decline` -- ADR-1980's conversion of the datatype rung's
+# refusal into a DECLINE, and the message relabel ADR-1966 named as its
+# prerequisite.
+#
+# **What this table is NOT claiming.** Three of the four mutations kill more
+# than one test, and that is reported rather than engineered away. The rule this
+# repository pays for is that no guard is removable with everything green; a
+# guard whose removal kills three tests is fine, a guard whose removal kills
+# ZERO is the finding. What the four entries buy is ATTRIBUTION: each names a
+# different guard and each kills a different SET, so no two of them are
+# rejecting through one shared check -- which is the shape that made six of
+# seven guards removable in the audit CLAUDE.md cites.
+#
+# The fourth is the one worth reading. It deletes the PROPAGATE arm rather than
+# the decline, which should kill the two-arm CONTROL assertions. If it survives,
+# the controls are not reaching the historical arm and every fixture in that
+# suite is being compared against itself -- the vacuity this very suite has
+# already shipped once.
+# --------------------------------------------------------------------------
+
+SUITES["dt-native-refusal-decline"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--test",
+         "dispatch_rung_refusal_declines"),
+        "dt-native-refusal-decline",
+    ),
+    [
+        (
+            # THE CONVERSION ITSELF. With the shipped default flipped back, the
+            # datatype rung's refusal is the query's verdict again.
+            "the decline conversion is the shipped default",
+            "        _ => DatatypeNativeRefusalPolicy::Decline,",
+            "        _ => DatatypeNativeRefusalPolicy::Propagate,",
+        ),
+        (
+            # ADR-1966's NAMED PREREQUISITE, error half. Without it the terminal
+            # refusal names the bit-blast tail and the DT blocker census stops
+            # being able to see this capability.
+            "the datatype sentence survives into a terminal Err",
+            "        Err(SolverError::Unsupported(tail)) => Err(SolverError::Unsupported(format!(\n"
+            "            \"{datatype_message}; and no rung below the datatype route decided it "
+            "either: {tail}\"\n        ))),",
+            "        Err(SolverError::Unsupported(tail)) => Err(SolverError::Unsupported(tail)),",
+        ),
+        (
+            # The same prerequisite, `unknown` half. ADR-1966 wrote it as
+            # "carry the sentence into the final `unknown`", and the two halves
+            # are separate code with separate tests.
+            "the datatype sentence survives into a terminal unknown",
+            "            detail: format!(\n"
+            "                \"{datatype_message}; and no rung below the datatype route decided "
+            "it either: {}\",\n                reason.detail\n            ),",
+            "            detail: reason.detail,",
+        ),
+        (
+            # THE CONTROL'S CONTROL. Deleting the PROPAGATE arm must kill the
+            # two-arm fixtures' control assertions. A survivor here means they
+            # are comparing the shipped arm against itself.
+            "the historical `propagate` arm is really reached",
+            "                            DatatypeNativeRefusalPolicy::Propagate => {\n"
+            "                                return Err(SolverError::Unsupported(native_message));\n"
+            "                            }",
+            "                            DatatypeNativeRefusalPolicy::Propagate => {\n"
+            "                                *datatype_refusal = Some(native_message);\n"
+            "                            }",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 

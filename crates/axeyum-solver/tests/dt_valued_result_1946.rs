@@ -64,9 +64,12 @@
 
 use std::time::Duration;
 
-use axeyum_ir::{ArraySortKey, ConstructorId, DatatypeId, Sort, TermArena, TermId};
+use axeyum_ir::{ArraySortKey, ConstructorId, DatatypeId, Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::theories::datatypes::check_with_datatype_native;
-use axeyum_solver::{CheckResult, SolverConfig, SolverError, solve};
+use axeyum_solver::{
+    CheckResult, DatatypeNativeRefusalPolicy, DatatypeNativeRefusalPolicyGuard, SolverConfig,
+    SolverError, solve,
+};
 
 fn cfg() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(10))
@@ -528,6 +531,12 @@ fn refusal_still_names_a_datatype_argument_that_is_none_of_the_three_shapes() {
     // variable / constructor / collected application. Still refused, and the
     // message now names all THREE admitted shapes because that is what the
     // census reads.
+    //
+    // The sentence is read off the DATATYPE RUNG, not off `solve`'s error,
+    // because [ADR-1980] made the dispatcher treat this rung's refusal as a
+    // DECLINE. The guard is unchanged and fires on exactly this query; what
+    // changed is that a rung below now gets a turn, which the second half of
+    // this test pins.
     let mut arena = TermArena::new();
     let (dt, _nil, cons) = lst(&mut arena);
     let p = pred(&mut arena, "p1946k", dt);
@@ -535,11 +544,35 @@ fn refusal_still_names_a_datatype_argument_that_is_none_of_the_three_shapes() {
     let tl_x = arena.dt_select(cons, 1, x).expect("select");
     let p_tl = arena.apply(p, &[tl_x]).expect("apply");
 
-    let detail = refusal_detail(solve(&mut arena, &[p_tl], &cfg()));
+    let detail = refusal_detail(check_with_datatype_native(&mut arena, &[p_tl], &cfg()));
     assert!(
         detail.contains("neither")
             && detail.contains("constructor application")
             && detail.contains("another uninterpreted"),
         "the refusal must name all three admitted shapes, got: {detail}"
+    );
+
+    // Under the SHIPPED dispatch arm the front door answers instead of erroring:
+    // `(assert (p (tl x)))` is SATISFIABLE, because `p` is uninterpreted and
+    // `tl x` is a single term. The model is replayed against the ORIGINAL
+    // assertion here rather than trusting the route's own replay.
+    let got = solve(&mut arena, &[p_tl], &cfg());
+    let Ok(CheckResult::Sat(model)) = got else {
+        panic!("`(assert (p (tl x)))` is satisfiable and must now decide, got {got:?}");
+    };
+    let assignment = model.to_assignment();
+    let value = eval(&arena, p_tl, &assignment);
+    assert!(
+        matches!(value, Ok(Value::Bool(true))),
+        "WRONG SAT: the original assertion evaluates to {value:?} under the returned model"
+    );
+
+    // And the historical arm is still reachable from this binary, so the
+    // pre-ADR-1980 behaviour can be measured rather than only remembered.
+    let _arm = DatatypeNativeRefusalPolicyGuard::set(DatatypeNativeRefusalPolicy::Propagate);
+    let propagated = solve(&mut arena, &[p_tl], &cfg());
+    assert!(
+        matches!(propagated, Err(SolverError::Unsupported(_))),
+        "the `propagate` arm must still hand the refusal out of `solve`, got {propagated:?}"
     );
 }

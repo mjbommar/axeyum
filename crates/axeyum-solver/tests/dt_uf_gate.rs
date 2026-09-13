@@ -23,7 +23,10 @@
 use std::time::Duration;
 
 use axeyum_ir::{ArraySortKey, ConstructorId, DatatypeId, IrError, Sort, TermArena, TermId};
-use axeyum_solver::{CheckResult, SolverConfig, SolverError, solve};
+use axeyum_solver::{
+    CheckResult, DatatypeNativeRefusalPolicy, DatatypeNativeRefusalPolicyGuard, SolverConfig,
+    SolverError, solve,
+};
 
 fn cfg() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(5))
@@ -167,10 +170,41 @@ fn terminates_on_an_array_of_datatypes() {
     let same_array = arena.eq(left, right).expect("eq");
     let differ = arena.not(same_array).expect("not");
 
+    // **ADR-1980 CHANGED THIS ASSERTION, and the reason is worth reading.** The
+    // property this test exists for is TERMINATION — the pre-ADR-1920 binary
+    // aborted here with `fatal runtime error: stack overflow`, which kills the
+    // whole test binary before any assertion runs. That property is unchanged
+    // and is still what a revert violates.
+    //
+    // What changed is how the termination is SPELLED. ADR-1980 made
+    // `check_auto_dispatch` treat the datatype rung's refusal as a DECLINE
+    // rather than the query's verdict, so the rungs below now get their turn
+    // and the query ends at the array route's own limit instead of at the
+    // datatype rung's `Err`. That is strictly better by this repository's own
+    // hard rule — *`unknown` is a first-class solver result, never an error* —
+    // and the datatype rung's sentence is still the FIRST thing in the reason,
+    // which is what the DT blocker census reads.
     let got = solve(&mut arena, &[same_store, differ], &cfg());
+    let Ok(CheckResult::Unknown(reason)) = &got else {
+        panic!("expected a clean first-class `unknown` rather than an error, got {got:?}");
+    };
     assert!(
-        matches!(got, Err(SolverError::Unsupported(_))),
-        "expected a clean Unsupported, got {got:?}"
+        reason
+            .detail
+            .starts_with("a datatype-sorted term survives tag/field expansion"),
+        "the reason must still LEAD with the datatype rung's own sentence, or the DT \
+         blocker census stops being able to read it: {}",
+        reason.detail
+    );
+
+    // The historical arm is still reachable from this binary, so the
+    // pre-ADR-1980 behaviour is measurable rather than only remembered — and
+    // its termination is asserted too, because that is the property at stake.
+    let _arm = DatatypeNativeRefusalPolicyGuard::set(DatatypeNativeRefusalPolicy::Propagate);
+    let propagated = solve(&mut arena, &[same_store, differ], &cfg());
+    assert!(
+        matches!(propagated, Err(SolverError::Unsupported(_))),
+        "expected a clean Unsupported under the `propagate` arm, got {propagated:?}"
     );
 }
 
