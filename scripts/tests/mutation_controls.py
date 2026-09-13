@@ -2126,17 +2126,32 @@ SUITES["cnf-bve-compaction"] = (
 
 
 # --------------------------------------------------------------------------
-# `solver-occurrence-pass-admission` — the shared admission DECISION: how much
-# budget a pass is granted, and whether it is granted one at all.
+# `solver-occurrence-pass-admission` — the shared admission decision and the
+# wiring of its grant into each pass.
 #
-# The WIRING of that grant into each pass used to live here too.  It does not
-# any more: `a083163f1` moved `run_bve`/`run_subsume` down into
-# `axeyum-cnf::inprocess` and `sat_bv_backend` became a call site of the one
-# inprocessing pipeline, so the two wiring mutations now live in
-# `cnf-occurrence-pass-wiring` below, next to the code and the tests.  They were
-# stale from `30785cf33` (2026-09-08) until ADR-1990 repaired them: the anchor
-# gate reported `stale=1` the whole time because it could not count, so the
-# suite quietly measured three mutations of five for five days.
+# The wiring mutation is not hypothetical: with the decision inline at the call
+# site, computing a budget correctly and then handing the pass its DEFAULT
+# options compiled, ran, produced identical verdicts, and survived the whole
+# `--lib --features full` sweep next door.  `run_bve` and `run_subsume` exist as
+# named functions so a test can reach the wiring at all.
+#
+# THE SUITE SPANS TWO CRATES, which is why the first two mutations carry an
+# explicit target.  `a083163f1` moved `run_bve`/`run_subsume` down into
+# `axeyum-cnf::inprocess` and left `sat_bv_backend` a call site of the one
+# inprocessing pipeline; the DECISION (the admission policy, the slice cap, the
+# lever) stayed behind.  The two tests that kill the wiring mutations did not
+# move either — `the_granted_budget_reaches_the_pass` and
+# `the_granted_subsume_budget_reaches_the_pass` are still in
+# `sat_bv_backend`'s test module — so the runner below is still the right one
+# and only the FILE each mutation edits has changed.
+#
+# ADR-1990 tried the obvious tidier alternative first, a separate
+# `cnf-occurrence-pass-wiring` suite running `-p axeyum-cnf --lib inprocess`,
+# and MEASURED both mutations SURVIVING there: every grant in `inprocess.rs`'s
+# own tests is `u64::MAX`, so "budgeted with infinity" and "unbudgeted" are the
+# same run and no test in that crate can tell them apart. Do not move these two
+# mutations to the crate their code lives in without moving a test that grants a
+# FINITE budget along with them.
 # --------------------------------------------------------------------------
 
 SUITES["solver-occurrence-pass-admission"] = (
@@ -2156,6 +2171,18 @@ SUITES["solver-occurrence-pass-admission"] = (
     ),
     [
         (
+            "the granted budget reaches subsumption",
+            "            SubsumeOptions {\n                work_budget: Some(work_budget),\n            },",
+            "            SubsumeOptions::DEFAULT,",
+            "crates/axeyum-cnf/src/inprocess.rs",
+        ),
+        (
+            "the granted budget reaches BVE",
+            "            BveOptions {\n                work_budget: Some(work_budget),",
+            "            BveOptions {\n                work_budget: None,",
+            "crates/axeyum-cnf/src/inprocess.rs",
+        ),
+        (
             # The accumulate-and-delay gate, which is the only thing that can
             # refuse a pass outright. Without the init cost it never fires.
             "the accumulate-and-delay gate is armed",
@@ -2173,44 +2200,6 @@ SUITES["solver-occurrence-pass-admission"] = (
             "an unparseable lever keeps the shipped constant",
             "        Some(v) => v.parse::<u64>().map_or(default, |n| n.max(1)),",
             "        Some(v) => v.parse::<u64>().unwrap_or(1),",
-        ),
-    ],
-)
-
-
-# --------------------------------------------------------------------------
-# `cnf-occurrence-pass-wiring` — the grant actually reaching the pass it was
-# computed for.
-#
-# This is not a hypothetical defect.  With the decision inline at the call site,
-# computing a budget correctly and then handing the pass its DEFAULT options
-# compiled, ran, produced identical verdicts, and survived a whole
-# `--lib --features full` sweep next door.  `run_subsume` and `run_bve` exist as
-# named functions so that a test can reach the wiring at all, and these two
-# mutations are the reason they are named.
-#
-# `SubsumeOptions::DEFAULT` and `BveOptions`' `work_budget: None` are both
-# *unbudgeted* — the mutation does not starve the pass, it UNCAPS it — so what
-# kills these is a test that reads the accounting back, not one that reads a
-# verdict.  Two verdicts are equal either way; that is the whole trap.
-# --------------------------------------------------------------------------
-
-SUITES["cnf-occurrence-pass-wiring"] = (
-    "crates/axeyum-cnf/src/inprocess.rs",
-    Cargo(
-        ("-p", "axeyum-cnf", "--lib", "inprocess"),
-        "cnf-occurrence-pass-wiring",
-    ),
-    [
-        (
-            "the granted budget reaches subsumption",
-            "            SubsumeOptions {\n                work_budget: Some(work_budget),\n            },",
-            "            SubsumeOptions::DEFAULT,",
-        ),
-        (
-            "the granted budget reaches BVE",
-            "            BveOptions {\n                work_budget: Some(work_budget),",
-            "            BveOptions {\n                work_budget: None,",
         ),
     ],
 )

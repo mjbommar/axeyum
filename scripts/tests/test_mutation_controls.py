@@ -353,6 +353,42 @@ class AnchorFreshnessTests(unittest.TestCase):
         finally:
             del MC.SUITES["ambiguous-probe"]
 
+    def test_two_stale_anchors_are_counted_as_two(self) -> None:
+        """The `stale=` count must ACCUMULATE, not latch.
+
+        Until ADR-1990 `check_anchors` did `failed = 1` per problem instead of
+        adding, so a tree with SEVEN stale anchors reported `stale=1`. That is
+        not cosmetic: somebody repairing six of the seven would have watched the
+        number not move and concluded they had fixed nothing, and two lane
+        status docs in-tree do quote `stale=1` beside the phrase "the same 4
+        pre-existing complaints".
+
+        Neither control above could see it, by construction: both inject exactly
+        ONE problem, and `= 1` and `+= 1` agree at one. A guard that can only
+        ever observe a count of one cannot check that counting happens. This one
+        injects two.
+
+        The exit STATUS stays a boolean on purpose -- `SystemExit` takes its
+        status mod 256, so returning the raw count would be a gate that cannot
+        fail at exactly 256 stale anchors.
+        """
+        suite = MC.SUITES["fp-width-guard"]
+        for probe in ("drift-probe-a", "drift-probe-b"):
+            MC.SUITES[probe] = (
+                suite[0],
+                suite[1],
+                [(probe, f"text that no subject contains ({probe})", "x")],
+            )
+        try:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                status = MC.check_anchors()
+            self.assertEqual(status, 1, "the exit status is a boolean, not the count")
+            self.assertIn("|stale=2", buf.getvalue())
+        finally:
+            for probe in ("drift-probe-a", "drift-probe-b"):
+                del MC.SUITES[probe]
+
 
 # -------------------------------------------------------- end-to-end guards
 
