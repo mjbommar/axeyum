@@ -17,7 +17,7 @@ Three instances came before: `dpll_t::Abstractor` (`c4046c2d6`),
 `dpll_lia::ArithAbstractor` (`8860e2a60`) and
 `term_identity::identity_normal_form`
 ([ADR-1936](adr-1936-a-gap-census-reports-attempts-and-marks-an-unfinished-dispatch-unclassified.md)).
-**Eleven more were memoised for this ADR**, across seven modules, and two more
+**Seventeen more were memoised for this ADR**, across ten modules, and two more
 are named below that no memo can fix.
 
 What makes it worth an ADR is not the count. It is that **three standard,
@@ -29,6 +29,10 @@ a defence against this**:
 | `depth > 256` / `depth > 1024` | path LENGTH | `lin_form`, `interval_of`, `affine_in`, `accumulate_max_abs` |
 | explicit worklist (recursion removed) | STACK | `lra::IntCollector::linearize`, `dl_online::ScanState::linear`, `lia_online::IntRowBuilder::linearize` |
 | step counter + deadline | WALL CLOCK, after the fact | `dl_online::ScanState::linear` |
+| a `HashMap` cache on the LEAVES | leaf re-materialisation | `abv::RowCtx::memo`, `qinst_egraph::collect_vars`'s `seen` |
+
+The last row is the one that reads most like protection, and it is covered
+separately below.
 
 ### The measurement
 
@@ -88,12 +92,20 @@ that looks like a plateau and is a budget.
    wall-time assertion on a shared box is a coin flip. With the memo the walk is
    linear in distinct nodes, so the counter stays within a small multiple of the
    arena's node count; without it the same input makes `2^d` calls.
-   `lin_form_expands_a_shared_dag_once_per_node` asserts `expansions <= 64` for a
-   33-node DAG with `2^31` paths, and dies immediately when the memo lookup is
-   deleted — not after an hour.
+
+   **And the count guard's DEPTH is chosen so the mutation fails FAST.** This is
+   not a detail; the first version of
+   `lin_form_expands_a_shared_dag_once_per_node` was written at depth 30, and
+   when the mutation was actually run — deleting the `memo.map.get` early return
+   — the test did not fail. It ran, for ten minutes, until it was killed.
+   Asserting a count bought nothing while the depth still made the failure slow.
+   At depth 22 the same mutation fails it in **7.54 s** with `expanded 16777215
+   nodes for a 25-node DAG`, against a bound of 64. A guard that can only fire
+   after an hour is a timeout, not a guard — so pair a fast COUNT guard with a
+   slow VERDICT guard, and give them opposite depths on purpose.
 
 3. **A memo's scope is part of its correctness and is written down.** Several of
-   the eleven here are narrower than the arena: `IntervalMemo` and `MaxAbsWalk`
+   the seventeen here are narrower than the arena: `IntervalMemo` and `MaxAbsWalk`
    are valid only while `bounds` is unchanged and are created after its fixpoint;
    `AffineMemo` entries name one variable `v` and live inside one
    `derive_var_bound` call; `IntCollector`'s memo dies with the call because
@@ -174,16 +186,46 @@ So this is robustness, not board points: it removes a cliff that a competition
 generator or an adversarial input reaches trivially and that today's public
 corpora do not. Say that, rather than claiming the fix converts files.
 
-### Two of the remaining instances are not memo bugs
+### "No memo can fix this" is a claim, and one of mine was false
 
-`term_walk::collect_top_binary_conjuncts` (61.8% of the `bool_and` family) and
-`abv::RowCtx::abstract_with_array_eq` (7.2% plus 46% allocator on `array_sel`)
-produce output that is itself exponential in the sharing. The conjunct
-collector's contract says it *"deliberately preserves duplicates"*, so `(and v
-v)` over a depth-29 shared DAG genuinely has `2^30` leaves and no cache changes
-that. The remedy there is a size cap or a dedup contract — a decision about the
-contract and about the call sites with "extra leaf semantics", not a memo. This
-decision does not cover them; they need their own.
+Two instances were first reported as output-exponential and therefore not memo
+bugs. One of those reports was **wrong, and written without reading the
+function**. `abv::RowCtx::abstract_with_array_eq` is a plain structural rebuild,
+`TermId -> Option<TermId>`, over an arena that interns — the output is a DAG of
+the same size and the exponential is the walk. Memoised, its family went from
+4.60 s at depth 30 and doubling to **0.13 s flat to depth 32**.
+
+That is worth recording next to the decision, because "this one is structurally
+different" is the most comfortable way to leave an instance in place, and it
+reads exactly like the depth cap and the worklist do. The discriminator is
+cheap: does the function RETURN a rebuilt term over an interning arena
+(memoisable), or does it PUSH one entry per leaf reached into a flat list
+(not)?
+
+Two genuinely are not memo bugs:
+
+- `term_walk::collect_top_binary_conjuncts` (61.8% of the `bool_and` family).
+  Its contract says it *"deliberately preserves duplicates"*, so `(and v v)`
+  over a depth-29 shared DAG genuinely has `2^30` leaves.
+- `qinst_egraph::collect_app_candidates` (18.9% plus 68% allocator on
+  `quant_lia`, after the `collect_vars` beneath it was memoised). It pushes one
+  `(term, indices)` entry per PATH, so the same trigger candidate appears many
+  times in `out`.
+
+A visited set would dedupe both outputs, which is a change to what the consumer
+sees — a decision about the contract and its call sites, on a Boolean-structure
+route and a quantifier-trigger route respectively. This ADR does not cover them;
+they need their own evidence.
+
+### A third instance of one specific confusion
+
+A LEAF cache is not a walk memo, and it has now been mistaken for one three
+times: `dpll_lia::ArithAbstractor::atom_of` (cached atoms, `8860e2a60`),
+`abv::RowCtx::memo` (cached select sites, keyed `(base, index)`), and
+`qinst_egraph::collect_vars`'s `seen` (a set of SYMBOLS). Each stops a leaf
+being re-materialised and does nothing about the structure above it, which is
+where the sharing lives — and each made the enclosing function LOOK cached. When
+a walk has a `HashMap` in it, check what the key is.
 
 ### Related
 
