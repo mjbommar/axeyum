@@ -48284,6 +48284,15 @@ that band is not evidence.
 
 Zero `sat`↔`unsat` flips anywhere, raw or re-checked.
 
+A second A/B pass over **QF_IDL, QF_NIA, QF_NRA and QF_SLIA** against the final
+17-memo binary — the divisions the later fixes touch — was started and **had not
+completed** when this was written. Reported as not run, not as clean. What those
+four divisions DO have: the `idl`, `nia_add`, `nra_add` and `str_len` families
+all flat to depth 32; `difference_logic_differential_fuzz` and
+`qf_lia_differential_fuzz` against z3; and the four QF_IDL `Averest` files with
+the highest and/or path counts in the corpus deciding `unsat` identically in both
+arms at 3.6 s / 0.44 s / 1.5 s / 0.46 s.
+
 **Gates**, every one with its result line and count read, not its exit status:
 
 - Five z3 differential fuzzes, `--features z3`, nonzero counts confirmed:
