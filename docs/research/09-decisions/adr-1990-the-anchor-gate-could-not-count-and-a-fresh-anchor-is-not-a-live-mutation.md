@@ -58,8 +58,12 @@ code stopped making, which is the failure mode this whole harness exists to
 prevent. It is deleted, with the reasoning in place of the tuple. Both
 successors are controlled in `dt-valued-result-1946` — the admission itself, and
 the surviving array-over-a-datatype half of the old refusal — so coverage moved
-suites rather than being lost. [ADR-1935]'s own mutation table is stale on this
-row and is left as the historical record it is.
+suites rather than being lost.
+
+[ADR-1935] records *"six mutations, one per guard, all six killed"*. It is five
+now. That ADR is left exactly as written: it is an accurate record of what was
+true when it was accepted, and editing an accepted ADR to match today's code
+would destroy the only thing it is for. This ADR is where the count changes.
 
 ## The budget question, answered
 
