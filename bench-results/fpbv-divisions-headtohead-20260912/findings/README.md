@@ -93,10 +93,21 @@ repro path.
 
 ---
 
-## 3. `MAX_THEORY_ATOMS = 1_024` — the QF_UFBV cap. See `../README.md`.
+## 3. Two QF_UFBV caps — not defects, but 97 % of that division's gap
 
-`crates/axeyum-solver/src/ufbv_online.rs:93`. Named here for cross-reference;
-the counts and the sizing are in the division's own section of the board README,
-because unlike the two above it is a deliberate, documented limit rather than a
-defect — the question it raises is what the right number is, not whether the
-code is wrong.
+`crates/axeyum-solver/src/ufbv_online.rs`:
+
+```rust
+const MAX_INPUT_DAG_NODES: u64 = 16_384;   // line 89 — 31 of 87 winnable files
+const MAX_THEORY_ATOMS: usize = 1_024;     // line 93 — 53 of 87 winnable files
+```
+
+Together **84 of the 87 winnable files**. Only 2 of 87 are actual budget
+exhaustion. Counts, over-cap magnitudes and the sizing are in the division's
+section of `../README.md`.
+
+These are listed separately from the two defects above because they are
+deliberate, documented limits rather than bugs: the question is what the right
+number is, and whether raising it converts a fast `unknown` into a decision or
+just into a slow `unknown`. That is an A/B over `../winnable/QF_UFBV.txt`, not a
+fix — and this lane did not run it.

@@ -21,22 +21,58 @@ LANE = HERE.parent
 # (name, file, [(old, new), ...], guards expected to die)
 MUTANTS = [
     (
-        "census: rank every row, ignoring the ADR-1936 partition",
+        "census: rank every row, ignoring the ADR-1936/1941 partition",
         "census-summarize.py",
         [
             (
-                "            elif int(a) < ladder:\n                unclassified.append(r)",
-                "            elif False:\n                unclassified.append(r)",
+                '            if r.get("open_after", "na") != "na":\n'
+                "                unclassified.append(r)",
+                "            if False:\n                unclassified.append(r)",
             )
         ],
         # Three guards: dropping the partition changes the counts, lets the
-        # Watchdog row be ranked, AND lets the internal-error row be ranked as
-        # a capability blocker.  Three different defects, three messages.
+        # row whose budget vanished into an open segment be ranked by its
+        # give-up reason (the one thing ADR-1936 exists to forbid), and
+        # collapses the two ADR-1941 readings into one.
         [
-            "the ADR-1936 partition is wrong",
+            "the ADR-1936/1941 partition is wrong",
             "an UNCLASSIFIED row was ranked",
-            "an internal-error row was RANKED",
+            "the two ADR-1941 readings were not both published",
         ],
+    ),
+    (
+        "census: ADR-1941 reverted -- classify by attempts= alone",
+        "census-summarize.py",
+        [
+            (
+                '            if r.get("open_after", "na") != "na":\n'
+                "                unclassified.append(r)",
+                "            if int(a) < ladder:\n                unclassified.append(r)",
+            )
+        ],
+        # This is the PRE-ADR-1941 behaviour, and it must not pass silently.
+        # It wrongly buries the short-ladder row, which on the real QF_UFBV
+        # census is 77 of 87 rows and a 53-file single-constant finding.
+        # Three guards: the counts move, the short-ladder row stops being
+        # ranked, and the two readings collapse into one (with the attempts=
+        # rule restored, strict_unclassified == len(unclassified)), which is
+        # exactly the state ADR-1941 step 6 exists to make visible.
+        [
+            "the ADR-1936/1941 partition is wrong",
+            "a row with a SHORT ladder and no open segment was not ranked",
+            "the two ADR-1941 readings were not both published",
+        ],
+    ),
+    (
+        "census: publish only ONE of the two ADR-1941 readings",
+        "census-summarize.py",
+        [
+            (
+                '            f" {strict_unclassified} rows UNCLASSIFIED;"',
+                '            f" {len(unclassified)} rows UNCLASSIFIED;"',
+            )
+        ],
+        ["the two ADR-1941 readings were not both published"],
     ),
     (
         "board: the disagreement check compares nothing",
@@ -83,6 +119,18 @@ MUTANTS = [
             )
         ],
         ["reported without a repro path"],
+    ),
+    (
+        "census: an internal error is RANKED as a capability blocker",
+        "census-summarize.py",
+        [
+            (
+                '        errors = [r for r in classified'
+                ' if r["giveup"].startswith("give-up kind=Error")]',
+                "        errors = []",
+            )
+        ],
+        ["the ADR-1936/1941 partition is wrong"],
     ),
     (
         "census: a missing census renders as an empty one",

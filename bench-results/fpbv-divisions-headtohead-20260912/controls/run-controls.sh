@@ -15,9 +15,11 @@
 #   b  attempts=3  < ladder           -> UNCLASSIFIED, must not be ranked
 #   c  no route trail at all          -> its own row, not an absence
 #   d  attempts=9, decided            -> excluded, not a blocker
-#   e  attempts=6, kind=Error         -> UNCLASSIFIED for ranking, but the
-#                                        internal error message is REPORTED
-#                                        anyway, with its repro path
+#   e  attempts=6, kind=Error         -> never RANKED as a capability blocker,
+#                                        but REPORTED with its repro path
+#   f  attempts=6, no open segment     -> ADR-1941: ran to the end of its OWN
+#                                        (shorter) ladder, so it IS ranked, even
+#                                        though attempts=6 < the max of 9
 set -u
 cd "$(dirname "$0")"
 T=$(mktemp -d)
@@ -42,8 +44,17 @@ cp ../census-summarize.py "$T"/
 cp census-fixture.tsv "$T/census/QF_ABVFP.tsv"
 c=$(cd "$T" && python3 census-summarize.py)
 
-grep -q "CLASSIFIED 1   UNCLASSIFIED 2   no-route 1   decided-on-recheck 1" <<<"$c" \
-  || { echo "FAIL: the ADR-1936 partition is wrong"; fail=1; }
+grep -q "CLASSIFIED 2   UNCLASSIFIED 1   no-route 1   decided-on-recheck 1   internal-error 1" <<<"$c" \
+  || { echo "FAIL: the ADR-1936/1941 partition is wrong"; fail=1; }
+# ADR-1941: row `a` has attempts=9 and NO open segment, row `f` has attempts=6
+# and no open segment either.  Both ran to the end of THEIR OWN ladder, so the
+# attempts=-only reading would wrongly call `f` UNCLASSIFIED.  The suite
+# requires the script to say so out loud rather than silently picking one.
+grep -q "would call 3 rows UNCLASSIFIED; 1 of them actually carry an open segment" <<<"$c" \
+  || { echo "FAIL: the two ADR-1941 readings were not both published"; fail=1; }
+ranked_f() { sed -n '/classified give-up reasons/,/^   -- /p' <<<"$c" | grep '^      '; }
+ranked_f | grep -q "ran to the end of a shorter ladder" \
+  || { echo "FAIL: a row with a SHORT ladder and no open segment was not ranked"; fail=1; }
 grep -q "TERMINAL INTERNAL ERROR: 1" <<<"$c" \
   || { echo "FAIL: the internal-error row was not reported"; fail=1; }
 grep -A3 "TERMINAL INTERNAL ERROR" <<<"$c" | grep -q "repro: e.smt2" \
