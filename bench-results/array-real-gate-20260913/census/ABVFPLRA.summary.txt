@@ -1,0 +1,4 @@
+files: 77
+parse_err	-	nq	77
+real_gate_only, quantifier-free (reaches the gate today): 0
+real_gate_only, all (needs a quantifier route too): 0

@@ -1,0 +1,5 @@
+files: 1480
+no_array	-	q	504
+parse_err	-	nq	976
+real_gate_only, quantifier-free (reaches the gate today): 0
+real_gate_only, all (needs a quantifier route too): 0
