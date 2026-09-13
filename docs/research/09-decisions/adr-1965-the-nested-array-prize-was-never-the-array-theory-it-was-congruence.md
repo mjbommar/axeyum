@@ -1,7 +1,7 @@
 # ADR-1965: the nested-array prize was never the array theory — it was congruence
 
 Status: accepted
-Index-summary: ADR-1955's `ArraySortKey::Array(ArraySortId)` is BUILT. `Sort` stays `Copy`, `Sort::Array { index, element }` keeps its shape, and `ArraySortKey::to_sort` now returns `Option<Sort>` — the `None` for a nested component propagates through `Sort::array_sorts` and `Sort::array_widths` to their 19 call sites in 8 modules, so every array route declines by construction rather than by audit, and its mutation kills six tests, four of them adversarial fixtures over satisfiable queries. **AUFLIRA moves from 9 to 159 of 200 and AUFNIRA from 3 to 122** interleaved against `main` on the pinned full-span lists, 0 regressions, 0 disagreements with `:status`, and z3 AND cvc5 each agreeing with all 269 moved verdicts at `no opinion 0` — so the zero is not the empty kind ADR-1957 warns about; two control divisions are unmoved. The reach was re-sized BEFORE the build with an array-free surrogate that is sound for `unsat` — projected 16,245, and the mechanism it identified is the one that delivered: **a nested AUFLIRA query needs no array theory at all, only congruence through the nested `select`.** ALIA and ABV do not move: their winnable files WRITE the outer array, and outer read-over-write is still undecided.
+Index-summary: ADR-1955's `ArraySortKey::Array(ArraySortId)` is BUILT. `Sort` stays `Copy`, `Sort::Array { index, element }` keeps its shape, and `ArraySortKey::to_sort` now returns `Option<Sort>` — the `None` for a nested component propagates through `Sort::array_sorts` and `Sort::array_widths` to their 19 call sites in 8 modules, so every array route declines by construction rather than by audit, and its mutation kills six tests, four of them adversarial fixtures over satisfiable queries. **AUFLIRA moves from 10 to 164 of 200 and AUFNIRA from 3 to 122**, interleaved per file against `main` at `9c24786d0` on the pinned full-span lists: 0 regressions anywhere, 0 disagreements with `:status`, both control divisions unmoved, and z3 AND cvc5 each agreeing with all 273 moved verdicts at `no opinion 0` — so the zero is not the empty kind ADR-1957 warns about. The reach was re-sized BEFORE the build with an array-free surrogate that is sound for `unsat` — projected 16,245, and the mechanism it identified is the one that delivered: **a nested AUFLIRA query needs no array theory at all, only congruence through the nested `select`.** ALIA and ABV do not move: their winnable files WRITE the outer array, and outer read-over-write is still undecided.
 Index-status: accepted
 Date: 2026-09-13
 
@@ -217,18 +217,47 @@ where we already do well, so a regression in that machinery would show there and
 nowhere else in this table — the four target divisions decide too little to
 reveal one.
 
+### Re-measured after `main` moved under the lane
+
+`main` gained ADR-1960 (the Real-element array gate) and ADR-1966 (the ground
+ladder's decline rule) while this lane was running, so the A/B above describes
+a merge that no longer exists. It was run again, end to end, with the **merged
+branch** as the lane arm and **`main` at `9c24786d0`** as the baseline arm:
+
+| division | files | `main` `9c24786d0` | merged | moved | regressed |
+|---|---:|---:|---:|---:|---:|
+| **AUFLIRA** | 200 | 10 | **164** | **+154** | 0 |
+| **AUFNIRA** | 200 | 3 | **122** | **+119** | 0 |
+| ALIA | 200 | 0 | 0 | 0 | 0 |
+| ABV | 200 | 4 | 4 | 0 | 0 |
+| QF_ABV (control) | 200 | 188 | 188 | 0 | **0** |
+| QF_BV (control) | 200 | 186 | 186 | 0 | **0** |
+
+```
+273 moved files, all `unsat`
+z3    agrees 273 / 273, no opinion 0, CONTRADICTS 0
+cvc5  agrees 273 / 273, no opinion 0, CONTRADICTS 0
+```
+
+**Zero regressions anywhere**, including the QF_ABV boundary file, which the
+pre-merge pass had flagged and the re-check had already shown was ambient.
+AUFLIRA gains five more than the pre-merge pass (164 against 159) and the
+baseline gains one (10 against 9); AUFNIRA is identical in both passes. Both
+passes are committed, because a number that moves between two honest runs is
+information about the measurement, not noise to be hidden.
+
 ### The re-size against the build
 
 | | AUFLIRA | AUFNIRA | ALIA | ABV |
 |---|---:|---:|---:|---:|
-| surrogate reach (winnable) | 80.6% | 95.0% | no fragment | no fragment |
-| measured moved (of 200) | **75.0%** | **59.5%** | 0 | 0 |
+| surrogate reach, winnable denominator | 80.6% | 95.0% | no fragment | no fragment |
+| measured moved, winnable denominator | **82.4%** | **85.6%** | 0 | 0 |
+| measured moved, of 200 | 77.0% | 59.5% | 0 | 0 |
 
-The surrogate over-predicted on both divisions it could speak about, and the
-two denominators are not the same population — the surrogate ran on the 187 and
-139 **winnable** files, the A/B on all 200. On the winnable denominator the
-measured moves are 150/187 = 80.2% and 119/139 = 85.6%, against 80.6% and 95.0%
-predicted. AUFLIRA lands within half a point; AUFNIRA is 9 points short.
+The two denominators are not the same population — the surrogate ran on the 187
+and 139 **winnable** files, the A/B on all 200 — so the winnable row is the
+comparable one. AUFLIRA came in **above** its prediction (154/187 = 82.4%
+against 80.6%), AUFNIRA 9 points below it (119/139 = 85.6% against 95.0%).
 
 For ALIA and ABV the surrogate declined to predict, and the build moved
 nothing — which is the agreement that matters most, because a surrogate that

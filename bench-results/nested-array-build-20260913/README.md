@@ -167,15 +167,44 @@ differed at one call site, so it was discarded and re-run). Both passes moved
 the same population: 149 and 150 files, a one-file difference that is the
 documented ~1 % ambient flip rate at a 24 s budget.
 
+### Re-measured after `main` moved under the lane
+
+`main` gained ADR-1960 (the Real-element array gate) and ADR-1966 (the ground
+ladder's decline rule) while this lane was running, so the A/B above describes
+a merge that no longer exists. It was run again, end to end, with the **merged
+branch** as the lane arm and **`main` at `9c24786d0`** as the baseline arm:
+
+| division | files | `main` `9c24786d0` | merged | moved | regressed |
+|---|---:|---:|---:|---:|---:|
+| **AUFLIRA** | 200 | 10 | **164** | **+154** | 0 |
+| **AUFNIRA** | 200 | 3 | **122** | **+119** | 0 |
+| ALIA | 200 | 0 | 0 | 0 | 0 |
+| ABV | 200 | 4 | 4 | 0 | 0 |
+| QF_ABV (control) | 200 | 188 | 188 | 0 | **0** |
+| QF_BV (control) | 200 | 186 | 186 | 0 | **0** |
+
+```
+273 moved files, all `unsat`
+z3    agrees 273 / 273, no opinion 0, CONTRADICTS 0
+cvc5  agrees 273 / 273, no opinion 0, CONTRADICTS 0
+```
+
+**Zero regressions anywhere**, including the QF_ABV boundary file, which the
+pre-merge pass had flagged and the re-check had already shown was ambient.
+AUFLIRA gains five more than the pre-merge pass (164 against 159) and the
+baseline gains one (10 against 9); AUFNIRA is identical in both passes. Both
+passes are committed, because a number that moves between two honest runs is
+information about the measurement, not noise to be hidden.
+
 ### The surrogate against the build
 
 | | AUFLIRA | AUFNIRA | ALIA | ABV |
 |---|---:|---:|---:|---:|
 | surrogate reach, winnable denominator | 80.6% | 95.0% | no fragment | no fragment |
-| measured moved, winnable denominator | **80.2%** | **85.6%** | 0 | 0 |
-| measured moved, of 200 | 75.0% | 59.5% | 0 | 0 |
+| measured moved, winnable denominator | **82.4%** | **85.6%** | 0 | 0 |
+| measured moved, of 200 | 77.0% | 59.5% | 0 | 0 |
 
-AUFLIRA lands within half a point of the prediction; AUFNIRA is 9 points short.
+AUFLIRA came in **above** its prediction; AUFNIRA 9 points below it.
 For ALIA and ABV the surrogate refused to produce a number at all — 33 of 36 and
 12 of 17 of their winnable files write the outer array — and the build moved
 nothing there. **That is the agreement that matters most:** an instrument that
@@ -194,4 +223,5 @@ been the more dangerous one.
 | [`ab-run.sh`](ab-run.sh) | one division, both arms interleaved per file |
 | [`ab-launch.sh`](ab-launch.sh) | four target divisions plus two controls, pinned |
 | [`ab-summarize.py`](ab-summarize.py) | the A/B table, the regression list, and `--refs` for the z3/cvc5 cross-check |
-| `ab/` | the per-division A/B TSVs and `reference-crosscheck.txt` |
+| `ab/` | the per-division A/B TSVs against `main` at `f9075838e` (the branch point) |
+| `ab-postmerge/` | the same A/B re-run against `main` at `9c24786d0` after the merge, plus its `reference-crosscheck.txt` |
