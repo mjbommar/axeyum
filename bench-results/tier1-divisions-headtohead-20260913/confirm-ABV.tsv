@@ -1,0 +1,5 @@
+division	file	ours	z3_600	z3_s	z3_k	cvc5_600	cvc5_s	cvc5_k	status	verdict
+ABV	ABV/20230321-UltimateAutomizerSvcomp2023/memleaks_test17_3.i_6.smt2	sat	unknown	0.1	ok	unknown	0.1	ok	unknown	UNCONFIRMED
+ABV	ABV/20230321-UltimateAutomizerSvcomp2023/memleaks_test20-2.i_4.smt2	sat	unknown	0.1	ok	unknown	0.1	ok	unknown	UNCONFIRMED
+ABV	ABV/20230321-UltimateAutomizerSvcomp2023/memleaks_test7-2.i_4.smt2	sat	unknown	0.1	ok	unknown	0.1	ok	unknown	UNCONFIRMED
+ABV	ABV/20230321-UltimateAutomizerSvcomp2023/tree_cnstr.i_1.smt2	sat	unknown	0.1	ok	unknown	0.1	ok	unknown	UNCONFIRMED

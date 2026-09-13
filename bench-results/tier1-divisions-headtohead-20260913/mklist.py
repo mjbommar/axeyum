@@ -22,6 +22,7 @@ makes the board rows non-cherry-picked.
 
 import pathlib
 import subprocess
+import sys
 
 ROOT = "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental"
 OUT = pathlib.Path(__file__).resolve().parent.parent / "parity-lists"
@@ -38,7 +39,14 @@ DIVISIONS = [
 ]
 
 
-def main():
+def main(dry=False):
+    """dry=True prints the family-coverage table and writes nothing.
+
+    The lists are pinned once and this script then REFUSES to re-pin, which is
+    what protects them -- but it also made the family-coverage table in
+    `findings/README.md` a transcription with no way to re-derive it.  `--dry-run`
+    is that way.
+    """
     for div, stem in DIVISIONS:
         r = subprocess.run(
             ["find", f"{ROOT}/{div}", "-name", "*.smt2"],
@@ -54,7 +62,21 @@ def main():
 
         # Guard the FP special case rather than trusting the comment above.
         stride = [files[i * (n // K)] for i in range(K)]
-        if stem != div:
+        if dry:
+            # Re-derive the committed list and say whether it still matches.
+            # This is what makes "these rows are not cherry-picked" checkable
+            # AFTER the fact: the lists were committed at 3320c7136 before
+            # anything was measured, and this says they are still exactly what
+            # the construction above produces.
+            q = OUT / f"{stem}.txt"
+            if q.exists():
+                have = q.read_text().rstrip("\n").split("\n")
+                verdict = ("MATCHES the full-span construction"
+                           if have == sel else "!! DIFFERS")
+                print(f"{stem:12s} committed list: {verdict}")
+            else:
+                print(f"{stem:12s} committed list: ABSENT")
+        elif stem != div:
             assert (OUT / f"{div}.txt").exists(), f"{div}: renamed but no clash"
             prior = (OUT / f"{div}.txt").read_text().rstrip("\n").split("\n")
             assert prior == stride, f"{div}.txt is not the stride list after all"
@@ -62,7 +84,8 @@ def main():
         else:
             assert not (OUT / f"{stem}.txt").exists(), f"{stem}.txt already exists"
 
-        (OUT / f"{stem}.txt").write_text("\n".join(sel) + "\n")
+        if not dry:
+            (OUT / f"{stem}.txt").write_text("\n".join(sel) + "\n")
 
         # Family coverage of the sample against the division, reported so the
         # span claim is checkable rather than asserted.  Also report what the
@@ -88,4 +111,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(dry="--dry-run" in sys.argv)
