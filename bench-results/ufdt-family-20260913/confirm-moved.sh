@@ -26,11 +26,11 @@ CVC5=${CVC5:-/nas3/data/axeyum/harness/bin/cvc5}
 ax_run() {  # $1 = env value or "-" for the base arm
   local raw
   if [ "$1" = "-" ]; then
-    raw=$(env -u AXEYUM_QUANT_EGRAPH_RESERVE timeout $((BUDGET + 16)) taskset -c "$PIN" \
+    raw=$(env -u AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE timeout $((BUDGET + 16)) taskset -c "$PIN" \
             bash -c "ulimit -v $VLIM; exec \"\$0\" \"\$1\" --timeout-ms $((BUDGET * 1000))" \
             "$AX" "$2" 2>/dev/null)
   else
-    raw=$(AXEYUM_QUANT_EGRAPH_RESERVE="$1" timeout $((BUDGET + 16)) taskset -c "$PIN" \
+    raw=$(AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE="$1" timeout $((BUDGET + 16)) taskset -c "$PIN" \
             bash -c "ulimit -v $VLIM; exec \"\$0\" \"\$1\" --timeout-ms $((BUDGET * 1000))" \
             "$AX" "$2" 2>/dev/null)
   fi
