@@ -10225,6 +10225,78 @@ SUITES["quant-valid-universal-reserve"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `dt-native-refusal-decline` -- ADR-1980's conversion of the datatype rung's
+# refusal into a DECLINE, and the message relabel ADR-1966 named as its
+# prerequisite.
+#
+# **What this table is NOT claiming.** Three of the four mutations kill more
+# than one test, and that is reported rather than engineered away. The rule this
+# repository pays for is that no guard is removable with everything green; a
+# guard whose removal kills three tests is fine, a guard whose removal kills
+# ZERO is the finding. What the four entries buy is ATTRIBUTION: each names a
+# different guard and each kills a different SET, so no two of them are
+# rejecting through one shared check -- which is the shape that made six of
+# seven guards removable in the audit CLAUDE.md cites.
+#
+# The fourth is the one worth reading. It deletes the PROPAGATE arm rather than
+# the decline, which should kill the two-arm CONTROL assertions. If it survives,
+# the controls are not reaching the historical arm and every fixture in that
+# suite is being compared against itself -- the vacuity this very suite has
+# already shipped once.
+# --------------------------------------------------------------------------
+
+SUITES["dt-native-refusal-decline"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--test",
+         "dispatch_rung_refusal_declines"),
+        "dt-native-refusal-decline",
+    ),
+    [
+        (
+            # THE CONVERSION ITSELF. With the shipped default flipped back, the
+            # datatype rung's refusal is the query's verdict again.
+            "the decline conversion is the shipped default",
+            "        _ => DatatypeNativeRefusalPolicy::Decline,",
+            "        _ => DatatypeNativeRefusalPolicy::Propagate,",
+        ),
+        (
+            # ADR-1966's NAMED PREREQUISITE, error half. Without it the terminal
+            # refusal names the bit-blast tail and the DT blocker census stops
+            # being able to see this capability.
+            "the datatype sentence survives into a terminal Err",
+            "        Err(SolverError::Unsupported(tail)) => Err(SolverError::Unsupported(format!(\n"
+            "            \"{datatype_message}; and no rung below the datatype route decided it "
+            "either: {tail}\"\n        ))),",
+            "        Err(SolverError::Unsupported(tail)) => Err(SolverError::Unsupported(tail)),",
+        ),
+        (
+            # The same prerequisite, `unknown` half. ADR-1966 wrote it as
+            # "carry the sentence into the final `unknown`", and the two halves
+            # are separate code with separate tests.
+            "the datatype sentence survives into a terminal unknown",
+            "            detail: format!(\n"
+            "                \"{datatype_message}; and no rung below the datatype route decided "
+            "it either: {}\",\n                reason.detail\n            ),",
+            "            detail: reason.detail,",
+        ),
+        (
+            # THE CONTROL'S CONTROL. Deleting the PROPAGATE arm must kill the
+            # two-arm fixtures' control assertions. A survivor here means they
+            # are comparing the shipped arm against itself.
+            "the historical `propagate` arm is really reached",
+            "                            DatatypeNativeRefusalPolicy::Propagate => {\n"
+            "                                return Err(SolverError::Unsupported(native_message));\n"
+            "                            }",
+            "                            DatatypeNativeRefusalPolicy::Propagate => {\n"
+            "                                *datatype_refusal = Some(native_message);\n"
+            "                            }",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
