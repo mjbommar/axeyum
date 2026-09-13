@@ -2134,6 +2134,24 @@ SUITES["cnf-bve-compaction"] = (
 # options compiled, ran, produced identical verdicts, and survived the whole
 # `--lib --features full` sweep next door.  `run_bve` and `run_subsume` exist as
 # named functions so a test can reach the wiring at all.
+#
+# THE SUITE SPANS TWO CRATES, which is why the first two mutations carry an
+# explicit target.  `a083163f1` moved `run_bve`/`run_subsume` down into
+# `axeyum-cnf::inprocess` and left `sat_bv_backend` a call site of the one
+# inprocessing pipeline; the DECISION (the admission policy, the slice cap, the
+# lever) stayed behind.  The two tests that kill the wiring mutations did not
+# move either — `the_granted_budget_reaches_the_pass` and
+# `the_granted_subsume_budget_reaches_the_pass` are still in
+# `sat_bv_backend`'s test module — so the runner below is still the right one
+# and only the FILE each mutation edits has changed.
+#
+# ADR-1990 tried the obvious tidier alternative first, a separate
+# `cnf-occurrence-pass-wiring` suite running `-p axeyum-cnf --lib inprocess`,
+# and MEASURED both mutations SURVIVING there: every grant in `inprocess.rs`'s
+# own tests is `u64::MAX`, so "budgeted with infinity" and "unbudgeted" are the
+# same run and no test in that crate can tell them apart. Do not move these two
+# mutations to the crate their code lives in without moving a test that grants a
+# FINITE budget along with them.
 # --------------------------------------------------------------------------
 
 SUITES["solver-occurrence-pass-admission"] = (
@@ -2156,11 +2174,13 @@ SUITES["solver-occurrence-pass-admission"] = (
             "the granted budget reaches subsumption",
             "            SubsumeOptions {\n                work_budget: Some(work_budget),\n            },",
             "            SubsumeOptions::DEFAULT,",
+            "crates/axeyum-cnf/src/inprocess.rs",
         ),
         (
             "the granted budget reaches BVE",
             "            BveOptions {\n                work_budget: Some(work_budget),",
             "            BveOptions {\n                work_budget: None,",
+            "crates/axeyum-cnf/src/inprocess.rs",
         ),
         (
             # The accumulate-and-delay gate, which is the only thing that can
@@ -2802,17 +2822,22 @@ def check_anchors() -> int:
             path = ROOT / target
             if not path.exists():
                 print(f"MISSING SUBJECT {name}: {target}")
-                failed = 1
+                failed += 1
                 continue
             text = path.read_text(encoding="utf-8")
             occurrences = text.count(mutation.find)
             if occurrences != 1:
                 verdict = "NOT APPLIED" if occurrences == 0 else "AMBIGUOUS ANCHOR"
                 print(f"{verdict} {name}: {mutation.label!r} matches {occurrences} places in {target}")
-                failed = 1
+                failed += 1
     total = sum(len(normalize(n).mutations) for n in sorted(set(SUITES) - DEMOS))
     print(f"MUTATION_ANCHORS|suites={len(set(SUITES) - DEMOS)}|anchors={total}|stale={failed}")
-    return failed
+    # `stale=` carries the COUNT; the exit status is deliberately clamped to a
+    # boolean. Returning `failed` itself would be a gate that cannot fail at
+    # exactly 256 stale anchors, because `SystemExit` takes the status mod 256
+    # -- the "checker that cannot fail" shape this whole harness exists to
+    # prevent (ADR-1990).
+    return 1 if failed else 0
 
 
 # S1 of the trusted-library safety roadmap (ADR-0763). Until S1 this gate could
@@ -3367,116 +3392,6 @@ SUITES["mobility-census"] = (
 )
 
 
-DEMO_SUBJECT = "scripts/tests/fixtures/mutation_demo/subject.py"
-DEMO_CONTROL = "scripts/tests/fixtures/mutation_demo/suite_tests.py"
-
-SUITES["self-demo"] = (
-    DEMO_SUBJECT,
-    "scripts.tests.fixtures.mutation_demo.suite_tests",
-    [
-        ("a guard a control drives", "    if n < 0:", "    if False:"),
-        ("a guard NO control drives", "    if n > 100:", "    if False:"),
-        ("a mutation that breaks the parse", "def classify(n: int) -> str:", "def classify(n: int) -> str"),
-        (
-            # Renaming the CLASS does not work -- `unittest` collects by base
-            # class, not by name -- and finding that out is why this demo exists.
-            # Dropping the base is the `#![cfg(feature = "full")]` shape: the
-            # module still imports, and collects nothing.
-            "a mutation that empties collection",
-            "class DemoControls(unittest.TestCase):",
-            "class DemoControls:",
-            DEMO_CONTROL,
-        ),
-    ],
-)
-
-DEMO_EXPECTED = {
-    "a guard a control drives": KILLED,
-    "a guard NO control drives": SURVIVED,
-    "a mutation that breaks the parse": NO_BUILD,
-    "a mutation that empties collection": NO_RUN,
-}
-
-#: Suites whose point is to produce non-results; excluded from a bare run.
-DEMOS = {"self-demo"}
-
-
-def run_demo() -> int:
-    _status, reports = baseline_and_mutants("self-demo")
-    observed = {label: report.outcome for label, report in reports}
-    wrong = [
-        f"{label}: expected {want}, harness said {observed.get(label, '<no report>')}"
-        for label, want in DEMO_EXPECTED.items()
-        if observed.get(label) != want
-    ]
-    if wrong:
-        print("self-demo: the harness MISCLASSIFIED " + f"{len(wrong)} of {len(DEMO_EXPECTED)}:")
-        for line in wrong:
-            print(f"    {line}")
-        return 1
-    print(f"self-demo: all {len(DEMO_EXPECTED)} outcomes named correctly")
-    return 0
-
-
-def check_anchors() -> int:
-    """Every registered anchor still matches its subject exactly once.
-
-    Builds nothing and runs no test, so this is cheap enough to be a gate — and
-    it catches the rot that actually happens. No gate runs any real mutation
-    suite: `scripts/check.sh` and the `justfile` run the harness's OWN controls
-    and `self-demo`, so the harness is verified continuously and every SUBJECT
-    is verified once, by hand, at commit time. When the source then drifts, the
-    anchor stops matching, the mutation reports `NOT APPLIED` — and nobody is
-    looking, so a suite can decay to measuring nothing while its commit message
-    still claims "each guard killed exactly one test".
-
-    `NOT APPLIED` and `AMBIGUOUS ANCHOR` are both failures here for the reason
-    `_apply` gives: an anchor matching twice would be resolved by
-    `str.replace(..., 1)` picking whichever came first, and the report could not
-    say which guard was deleted.
-
-    This does NOT say the guards still kill anything. That needs the builds.
-    It says the suites are still POINTED at real code, which is the difference
-    between a stale suite and a green one.
-    """
-    failed = 0
-    for name in sorted(set(SUITES) - DEMOS):
-        suite = normalize(name)
-        for mutation in suite.mutations:
-            target = mutation.target or suite.subject
-            path = ROOT / target
-            if not path.exists():
-                print(f"MISSING SUBJECT {name}: {target}")
-                failed = 1
-                continue
-            text = path.read_text(encoding="utf-8")
-            occurrences = text.count(mutation.find)
-            if occurrences != 1:
-                verdict = "NOT APPLIED" if occurrences == 0 else "AMBIGUOUS ANCHOR"
-                print(f"{verdict} {name}: {mutation.label!r} matches {occurrences} places in {target}")
-                failed = 1
-    total = sum(len(normalize(n).mutations) for n in sorted(set(SUITES) - DEMOS))
-    print(f"MUTATION_ANCHORS|suites={len(set(SUITES) - DEMOS)}|anchors={total}|stale={failed}")
-    return failed
-
-
-def main(argv: list[str]) -> int:
-    if argv[1:2] == ["--check-anchors"]:
-        return check_anchors()
-    names = argv[1:] or sorted(set(SUITES) - DEMOS)
-    failed = 0
-    for name in names:
-        if name not in SUITES:
-            print(f"unknown suite {name!r}; known: {', '.join(sorted(SUITES))}")
-            return 2
-        if name in DEMOS:
-            failed |= run_demo()
-            continue
-        status, _reports = baseline_and_mutants(name)
-        failed |= status
-    return failed
-
-
 SUITES["obstruction-graph"] = (
     "scripts/validate-obstruction-graph.py",
     "scripts.tests.test_obstruction_graph",
@@ -3629,99 +3544,6 @@ SUITES["obstruction-graph"] = (
         ),
     ],
 )
-
-
-DEMO_SUBJECT = "scripts/tests/fixtures/mutation_demo/subject.py"
-DEMO_CONTROL = "scripts/tests/fixtures/mutation_demo/suite_tests.py"
-
-SUITES["self-demo"] = (
-    DEMO_SUBJECT,
-    "scripts.tests.fixtures.mutation_demo.suite_tests",
-    [
-        ("a guard a control drives", "    if n < 0:", "    if False:"),
-        ("a guard NO control drives", "    if n > 100:", "    if False:"),
-        ("a mutation that breaks the parse", "def classify(n: int) -> str:", "def classify(n: int) -> str"),
-        (
-            # Renaming the CLASS does not work -- `unittest` collects by base
-            # class, not by name -- and finding that out is why this demo exists.
-            # Dropping the base is the `#![cfg(feature = "full")]` shape: the
-            # module still imports, and collects nothing.
-            "a mutation that empties collection",
-            "class DemoControls(unittest.TestCase):",
-            "class DemoControls:",
-            DEMO_CONTROL,
-        ),
-    ],
-)
-
-DEMO_EXPECTED = {
-    "a guard a control drives": KILLED,
-    "a guard NO control drives": SURVIVED,
-    "a mutation that breaks the parse": NO_BUILD,
-    "a mutation that empties collection": NO_RUN,
-}
-
-#: Suites whose point is to produce non-results; excluded from a bare run.
-DEMOS = {"self-demo"}
-
-
-def run_demo() -> int:
-    _status, reports = baseline_and_mutants("self-demo")
-    observed = {label: report.outcome for label, report in reports}
-    wrong = [
-        f"{label}: expected {want}, harness said {observed.get(label, '<no report>')}"
-        for label, want in DEMO_EXPECTED.items()
-        if observed.get(label) != want
-    ]
-    if wrong:
-        print("self-demo: the harness MISCLASSIFIED " + f"{len(wrong)} of {len(DEMO_EXPECTED)}:")
-        for line in wrong:
-            print(f"    {line}")
-        return 1
-    print(f"self-demo: all {len(DEMO_EXPECTED)} outcomes named correctly")
-    return 0
-
-
-def check_anchors() -> int:
-    """Every registered anchor still matches its subject exactly once.
-
-    Builds nothing and runs no test, so this is cheap enough to be a gate — and
-    it catches the rot that actually happens. No gate runs any real mutation
-    suite: `scripts/check.sh` and the `justfile` run the harness's OWN controls
-    and `self-demo`, so the harness is verified continuously and every SUBJECT
-    is verified once, by hand, at commit time. When the source then drifts, the
-    anchor stops matching, the mutation reports `NOT APPLIED` — and nobody is
-    looking, so a suite can decay to measuring nothing while its commit message
-    still claims "each guard killed exactly one test".
-
-    `NOT APPLIED` and `AMBIGUOUS ANCHOR` are both failures here for the reason
-    `_apply` gives: an anchor matching twice would be resolved by
-    `str.replace(..., 1)` picking whichever came first, and the report could not
-    say which guard was deleted.
-
-    This does NOT say the guards still kill anything. That needs the builds.
-    It says the suites are still POINTED at real code, which is the difference
-    between a stale suite and a green one.
-    """
-    failed = 0
-    for name in sorted(set(SUITES) - DEMOS):
-        suite = normalize(name)
-        for mutation in suite.mutations:
-            target = mutation.target or suite.subject
-            path = ROOT / target
-            if not path.exists():
-                print(f"MISSING SUBJECT {name}: {target}")
-                failed = 1
-                continue
-            text = path.read_text(encoding="utf-8")
-            occurrences = text.count(mutation.find)
-            if occurrences != 1:
-                verdict = "NOT APPLIED" if occurrences == 0 else "AMBIGUOUS ANCHOR"
-                print(f"{verdict} {name}: {mutation.label!r} matches {occurrences} places in {target}")
-                failed = 1
-    total = sum(len(normalize(n).mutations) for n in sorted(set(SUITES) - DEMOS))
-    print(f"MUTATION_ANCHORS|suites={len(set(SUITES) - DEMOS)}|anchors={total}|stale={failed}")
-    return failed
 
 
 SUITES["correspondences"] = (
@@ -5984,22 +5806,6 @@ SUITES["aggregate-scope-failure"] = (
         ),
     ],
 )
-
-def main(argv: list[str]) -> int:
-    if argv[1:2] == ["--check-anchors"]:
-        return check_anchors()
-    names = argv[1:] or sorted(set(SUITES) - DEMOS)
-    failed = 0
-    for name in names:
-        if name not in SUITES:
-            print(f"unknown suite {name!r}; known: {', '.join(sorted(SUITES))}")
-            return 2
-        if name in DEMOS:
-            failed |= run_demo()
-            continue
-        status, _reports = baseline_and_mutants(name)
-        failed |= status
-    return failed
 
 
 # --------------------------------------------------------------------------
@@ -9455,8 +9261,25 @@ SUITES["dt-capability-1935"] = (
             # exactness. Without it the congruence antecedent may be weaker
             # than real equality, which makes the congruence constraint
             # STRONGER than the true axiom.
+            #
+            # The bare one-line anchor was unique until ADR-1946 (`47f3d61d8`)
+            # added a SECOND exactness check -- on the RESULT datatype, at the
+            # same indentation -- after which it matched twice and the harness
+            # reported `AMBIGUOUS ANCHOR`, which is not a result. The preceding
+            # `let Sort::Datatype(dt) = arena.sort_of(arg)` lines pin the
+            # ARGUMENT-side check, which is the one this mutation was written to
+            # break; the RESULT-side one is mutated by `dt-valued-result-1946`.
+            # `dt-constructor-arg-1942` pins this same source line with the same
+            # anchor under a different test binary -- one guard, two independent
+            # measurements, which is deliberate and not duplication to collapse.
             "congruence needs an EXACT expansion of its datatype argument",
+            '                let Sort::Datatype(dt) = arena.sort_of(arg) else {\n'
+            '                    unreachable!("datatype-sorted");\n'
+            "                };\n"
             "                if !datatype_expansion_is_exact(arena, dt) {",
+            '                let Sort::Datatype(dt) = arena.sort_of(arg) else {\n'
+            '                    unreachable!("datatype-sorted");\n'
+            "                };\n"
             "                if false {",
         ),
         (
@@ -9464,24 +9287,38 @@ SUITES["dt-capability-1935"] = (
             # datatype content into the residual on an expansion variable --
             # ADR-1920's divert-vs-content non-termination cycle.
             "an array field whose element sort mentions a datatype gets no variable",
-            "        Sort::Array { .. } => !crate::datatype_elim::sort_mentions_datatype(sort),",
+            "        Sort::Array { .. } => !crate::datatype_elim::sort_mentions_datatype(arena, sort),",
             "        Sort::Array { .. } => true,",
         ),
+        # REMOVED, not re-anchored: "a datatype-valued UF result is refused
+        # rather than Ackermannized". ADR-1935 refused that rung by name and this
+        # mutation pinned the refusal. ADR-1946 (`47f3d61d8`) ADMITTED it -- that
+        # was the whole point of the ADR -- replacing the blanket
+        # `if sort_mentions_datatype(result) { refuse }` with a `match` that takes
+        # `Sort::Datatype(dt)` subject to exactness. The guard this mutation was
+        # written to break no longer exists, so there is nothing here to anchor
+        # to and inventing one would make this suite green over a distinction the
+        # code stopped making. Its two successors are both controlled, in
+        # `dt-valued-result-1946`: the admission itself by "a datatype-VALUED
+        # result makes an application a site", and the surviving half of the old
+        # refusal -- an array over a datatype -- by "an array-over-a-datatype
+        # result is refused rather than fallen through". Coverage moved suites; it
+        # was not lost. ADR-1935's own mutation table is stale on this row.
         (
-            # The witness would itself be datatype-sorted and survive into the
-            # residual, so this half of the capability is deliberately absent.
-            "a datatype-valued UF result is refused rather than Ackermannized",
-            "        if crate::datatype_elim::sort_mentions_datatype(result) {",
-            "        if false {",
-        ),
-        (
-            # Ackermann over a datatype argument that is neither a free variable
-            # nor a constructor has nothing to build an argument equality from.
-            # ADR-1942 widened this arm to admit constructors, so the anchor
-            # carries both halves; the arm being pinned is the same one.
-            "an Ackermannized datatype argument must be a variable or a constructor",
+            # Ackermann over a datatype argument that is none of the admitted
+            # shapes has nothing to build an argument equality from. ADR-1942
+            # widened this arm to admit constructors and ADR-1946 (`47f3d61d8`)
+            # widened it again to admit another COLLECTED application, so the
+            # anchor carries all three conjuncts; the arm being pinned is the
+            # same one, and `if false {` still deletes the shape refusal whole.
+            # The third conjunct has its own mutation in `dt-valued-result-1946`
+            # ("a datatype argument is admitted only when this pass will replace
+            # it"), which removes just that conjunct rather than the whole arm.
+            "an Ackermannized datatype argument must be a variable, a constructor, "
+            "or another collected application",
             "                if !matches!(arena.node(arg), TermNode::Symbol(_))\n"
             "                    && construct_of(arena, arg).is_none()\n"
+            "                    && !collected.contains(&arg)\n"
             "                {",
             "                if false {",
         ),
@@ -9661,8 +9498,8 @@ SUITES["dt-valued-result-1946"] = (
             # files have the shape, which is a separate fact the ADR states
             # separately rather than quoting this kill as corpus coverage.
             "an array-over-a-datatype result is refused rather than fallen through",
-            "            s if crate::datatype_elim::sort_mentions_datatype(s) => {",
-            "            s if false && crate::datatype_elim::sort_mentions_datatype(s) => {",
+            "            s if crate::datatype_elim::sort_mentions_datatype(arena, s) => {",
+            "            s if false && crate::datatype_elim::sort_mentions_datatype(arena, s) => {",
         ),
         (
             # An `Op::Apply` datatype argument is admitted because it IS

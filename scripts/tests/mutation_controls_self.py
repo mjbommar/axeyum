@@ -134,4 +134,22 @@ MUTATIONS: list[tuple[str, ...]] = [
         "    if survivors:\n        status = 1",
         "    if survivors:\n        pass",
     ),
+    # ---- the anchor gate's own arithmetic
+    #
+    # `check_anchors` is the only gate that watches the other 1029 anchors, and
+    # until ADR-1990 it was the one function here with no mutation of its own.
+    # It latched `failed = 1` instead of accumulating, so it under-reported
+    # every multi-problem tree it ever saw. Restoring the latch must kill
+    # `test_two_stale_anchors_are_counted_as_two` -- and nothing else, because
+    # the two older freshness controls inject a single problem each and cannot
+    # tell the two spellings apart.
+    (
+        "the stale-anchor count accumulates",
+        '                print(f"{verdict} {name}: {mutation.label!r} matches '
+        '{occurrences} places in {target}")\n'
+        "                failed += 1",
+        '                print(f"{verdict} {name}: {mutation.label!r} matches '
+        '{occurrences} places in {target}")\n'
+        "                failed = 1",
+    ),
 ]
