@@ -1,5 +1,24 @@
 # The remaining gap is two populations, not one
 
+> **STALE IN ONE DIRECTION — read this first (added within the hour, by the
+> author).** Every number below is computed from the committed board TSVs, and a
+> board is a SNAPSHOT. Six divisions moved *after* their board was taken, all on
+> 2026-09-13: AUFLIRA 10→164, AUFNIRA 3→122, AUFDTLIRA 90→110, QF_DT 114→171,
+> QF_NIA 41→80, UFLIA 71→76. So this table **overstates the remaining gap by
+> ~453 files**: its 2,166 winnable is really ~1,713.
+>
+> The correction is not uniform, and that is the point. Today's gains were
+> almost entirely `unsat` (ADR-1965 moved 273 verdicts, every one `unsat`), so
+> the correction lands almost entirely on the **unsat** column:
+> AUFLIRA 186→~32, AUFNIRA 139→~20, AUFDTLIRA 135→~66.
+>
+> **The bimodal SHAPE is unaffected and is what this file is for** — the sat
+> shares are ratios within a division, and no division changed which half it
+> sits in. The absolute unsat counts for those six divisions are stale; re-derive
+> them from a fresh board before quoting a size.
+>
+> Removal rule: delete this banner when the six boards above are re-measured.
+
 **2026-09-13.** For every division with a board, every file where **we return
 `unknown` and a reference decides**, split by *what the answer is*. Derived
 mechanically from the committed board TSVs — `polarity.tsv` is the output, and
