@@ -11248,6 +11248,14 @@ rates puts the whole three-gate chain at **~1,135 files of 27,150 (4.2%)**,
 essentially all of it one family of ABV — and that is still an over-estimate,
 since the nested files are the harder half of every family.
 
+All 126 files ABV and ALIA decided were re-run against z3 4.13.3 and cvc5 1.3.4
+at the same budget on the same pinned core. **No disagreement — and on ABV that
+means nothing**, because neither reference decides one of the 119 (they return
+`unknown` in ~0.1 s, reproduced outside the harness). The ALIA column is the
+real one: 7 files, three solvers, unanimous. The other side of that coin is an
+incidental capability finding — on this SV-COMP quantified-array shape **we
+decide 119 files neither reference decides**.
+
 **The design is settled even though it is not built.**
 `ArraySortKey::Array(ArraySortId)` — intern the component key, not the sort —
 leaves `Sort::Array { index, element }` and all ~170 field-binding sites

@@ -133,6 +133,33 @@ Two divisions do have a family-matched control, and they disagree with each
 other: ABV decides **119 of 473 (25.2%)** of the same generator that produced
 its 4,502 blocked files; ALIA decides **0 of 28**.
 
+### 5. The reference cross-check on those decisions, and where it is vacuous
+
+Every one of the 126 files ABV and ALIA decided was re-run against **z3 4.13.3**
+and **cvc5 1.3.4** at the same budget on the same pinned core
+(`z3 -T:24`, `cvc5 --tlimit=24000` — the units differ and mixing them corrupts a
+board). No verdict contradicts a declared `:status` or another arm, in that run
+or in the sweep behind it.
+
+That is a weaker statement than it looks, and the weakness is worth publishing:
+
+| | axeyum | z3 | cvc5 |
+|---|---:|---:|---:|
+| ALIA (7 decided) | 7 | **7** | **7** |
+| ABV (119 decided) | 119 | **0** | **0** |
+
+**On ABV the cross-check had zero opportunities to fire.** Neither reference
+decides a single one of the 119 — they return `unknown` in about 0.1 s, and that
+is the binaries' own behaviour, not the harness's (reproduced outside it). An
+empty check is not a strong negative. The ALIA column is the part that is real:
+three independent solvers, seven files, unanimous.
+
+The incidental finding is on the same line: on the quantified-array shape these
+SV-COMP files use, **we decide 119 files that neither reference decides**. One
+was hand-checked and `sat` is correct for it: it asserts that no single store at
+`~b~0.base` reaches `#valid`, which any `#valid` differing at a third index
+satisfies.
+
 For AUFLIRA and AUFNIRA there is no family-matched control at all, and the
 mismatch is not incidental: 100% of the `why`/`FFT` control declares
 uninterpreted sorts and is refused for *that*

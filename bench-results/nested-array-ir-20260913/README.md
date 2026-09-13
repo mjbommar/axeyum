@@ -41,8 +41,12 @@ In four numbers:
 3. **Currying reaches 64.1% of ALIA, 50.6% of ABV, 0.0% of AUFLIRA**
    (`outer-use-census.py`) — the no-IR-change alternative, sized rather than
    assumed away.
-4. **The family-matched control rate is 24.7% for ABV and 0 of 28 for ALIA**,
-   which puts the whole three-gate chain at **~1,100 reachable files of 27,150**.
+4. **The family-matched control rate is 25.2% for ABV and 0 of 28 for ALIA**,
+   which puts the whole three-gate chain at **~1,135 reachable files of 27,150**.
+   All 126 decided files were re-run against z3 4.13.3 and cvc5 1.3.4
+   (`parseok/ref-abv-alia.tsv`). No disagreement — but on ABV **neither
+   reference decides one of the 119**, so that half of the check had no
+   opportunity to fire and is reported as vacuous rather than as a pass.
 
 ## Files
 
