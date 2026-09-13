@@ -66,12 +66,20 @@ pub fn check_with_datatype_elimination(
 /// when it says `false` for every reachable term and no `Dt*` op is present,
 /// `Features::scan` over the same terms cannot set `has_datatype`, so `solve`
 /// cannot route back here.
-pub(crate) fn sort_mentions_datatype(sort: Sort) -> bool {
+///
+/// Takes the arena because the array recursion must go THROUGH an interned
+/// nested component (ADR-1965): a datatype hiding under `(Array I (Array J D))`
+/// is invisible to the arena-free helper, and this predicate UNDER-reporting is
+/// exactly the divert-vs-content mismatch ADR-1920 measured as a
+/// non-terminating cycle.
+pub(crate) fn sort_mentions_datatype(arena: &TermArena, sort: Sort) -> bool {
     match sort {
         Sort::Datatype(_) => true,
         Sort::Array { index, element } => {
-            sort_mentions_datatype(index.to_sort()) || sort_mentions_datatype(element.to_sort())
+            sort_mentions_datatype(arena, arena.array_key_sort(index))
+                || sort_mentions_datatype(arena, arena.array_key_sort(element))
         }
+        Sort::Seq(element) => sort_mentions_datatype(arena, arena.array_key_sort(element)),
         _ => false,
     }
 }
@@ -85,7 +93,7 @@ fn first_datatype_term(arena: &TermArena, roots: &[TermId]) -> Option<TermId> {
         if !seen.insert(term) {
             continue;
         }
-        if sort_mentions_datatype(arena.sort_of(term)) {
+        if sort_mentions_datatype(arena, arena.sort_of(term)) {
             return Some(term);
         }
         if let TermNode::App { op, args } = arena.node(term) {

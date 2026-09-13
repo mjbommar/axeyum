@@ -39,7 +39,7 @@ fn array_var(arena: &mut TermArena, name: &str, sort: Sort) -> TermId {
         panic!("expected array sort");
     };
     arena
-        .array_var_with_sorts(name, index.to_sort(), element.to_sort())
+        .array_var_with_sorts(name, index.to_sort().unwrap(), element.to_sort().unwrap())
         .unwrap()
 }
 

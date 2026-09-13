@@ -10675,6 +10675,14 @@ struct Features {
     has_non_bv_array: bool,
     /// Any array whose index or element sort is outside exact Bool/BitVec theory.
     has_non_bool_bv_array: bool,
+    /// Any array with a **nested** array component (ADR-1955/ADR-1965).
+    ///
+    /// `Sort::array_sorts` and `Sort::array_widths` return `None` for such a
+    /// sort, so every array route that predates nesting already refuses one.
+    /// This flag exists so the refusal is a NAMED decline rather than an
+    /// accident of a helper returning `None`, and so a route that gains nested
+    /// support has one predicate to gate on.
+    has_nested_array: bool,
     /// Any integer constant outside the `i128` reference range
     /// (`TermNode::WideIntConst`, ADR-1702 slice 2).
     ///
@@ -10704,6 +10712,7 @@ impl Features {
             has_array: false,
             has_non_bv_array: false,
             has_non_bool_bv_array: false,
+            has_nested_array: false,
             has_wide_int: false,
         };
         let mut seen = BTreeSet::new();
@@ -10715,7 +10724,7 @@ impl Features {
             if !seen.insert(term) {
                 continue;
             }
-            features.note_sort(arena.sort_of(term));
+            features.note_sort(arena, arena.sort_of(term));
             if matches!(arena.node(term), TermNode::WideIntConst(_)) {
                 features.has_wide_int = true;
             }
@@ -10741,7 +10750,16 @@ impl Features {
         Some(features)
     }
 
-    fn note_sort(&mut self, sort: Sort) {
+    /// Records the theory flags a sort contributes.
+    ///
+    /// Takes the arena because a nested array component is an interned id: the
+    /// recursion at the bottom of the `Array` arm has to go THROUGH
+    /// `TermArena::array_key_sort`, or a `Real` leaf under a nesting level is
+    /// never seen and `has_real`/`has_non_bv_array` under-report. ADR-1955
+    /// named this site as the one place where the conservative `None` default
+    /// is NOT the right answer, because under-reporting mis-ROUTES a query
+    /// rather than declining it.
+    fn note_sort(&mut self, arena: &TermArena, sort: Sort) {
         match sort {
             Sort::Real => self.has_real = true,
             Sort::Int => {
@@ -10763,8 +10781,11 @@ impl Features {
                 {
                     self.has_non_bool_bv_array = true;
                 }
-                self.note_sort(index.to_sort());
-                self.note_sort(element.to_sort());
+                if index.is_nested_array() || element.is_nested_array() {
+                    self.has_nested_array = true;
+                }
+                self.note_sort(arena, arena.array_key_sort(index));
+                self.note_sort(arena, arena.array_key_sort(element));
             }
             Sort::Datatype(_) => self.has_datatype = true,
             Sort::Uninterpreted(_) => self.has_uninterpreted_sort = true,
@@ -11494,6 +11515,88 @@ mod tests {
         assert_eq!(
             eval(&arena, different, &model.to_assignment()),
             Ok(Value::Bool(true))
+        );
+    }
+
+    /// ADR-1955's named hazard, stated where it can fail.
+    ///
+    /// `Features::note_sort` recurses into an array's components. A nested
+    /// component is an arena-interned id, so the arena-free
+    /// `ArraySortKey::to_sort` returns `None` for it, and a recursion that took
+    /// that `None` as "nothing below" would stop one level short. Everywhere
+    /// else in this change that `None` is the CONSERVATIVE answer and makes a
+    /// route decline; here it is the WRONG answer, because a feature scan that
+    /// under-reports does not decline — it routes the query as something it is
+    /// not, which is a wrong-verdict path rather than a decline.
+    ///
+    /// The query is chosen so the leaf sorts appear NOWHERE except under the
+    /// nesting: the only assertion is an equality between two nested arrays, so
+    /// no term in the arena has sort `Real`. Reading the leaf would set
+    /// `has_real` through the `select` term's own sort and the test would pass
+    /// with the recursion deleted.
+    #[test]
+    fn note_sort_sees_a_leaf_that_only_exists_under_a_nesting_level() {
+        let mut arena = TermArena::new();
+        let inner = arena.intern_array_sort(ArraySortKey::Int, ArraySortKey::Real);
+        let nested = Sort::Array {
+            index: ArraySortKey::Int,
+            element: ArraySortKey::Array(inner),
+        };
+        let left_symbol = arena.declare("nested_left", nested).unwrap();
+        let right_symbol = arena.declare("nested_right", nested).unwrap();
+        let left = arena.var(left_symbol);
+        let right = arena.var(right_symbol);
+        let equal = arena.eq(left, right).unwrap();
+        let assertions = [equal];
+
+        // The premise: no term here is Real-sorted. If one were, `has_real`
+        // would be set by that term and this test could not see the recursion.
+        for index in 0..arena.len() {
+            let term = arena.term_by_index(index).expect("dense index");
+            assert_ne!(
+                arena.sort_of(term),
+                Sort::Real,
+                "the fixture leaked a Real-sorted TERM, so it no longer tests \
+                 the recursion through the interned component"
+            );
+        }
+
+        let features = Features::scan_within(&arena, &assertions, None).unwrap();
+        assert!(
+            features.has_real,
+            "`Features::note_sort` did not see the `Real` leaf of \
+             `(Array Int (Array Int Real))`. ADR-1955 named this exact site: a \
+             feature scan that stops at an interned component under-reports \
+             `has_real`/`has_non_bv_array` and the query is MIS-ROUTED rather \
+             than declined."
+        );
+        assert!(
+            features.has_nested_array,
+            "a nested array must be reported as nested, or no route can gate \
+             on it by name"
+        );
+        // The control on the control: a FLAT `(Array Int Int)` must NOT set
+        // `has_real`, so the assertion above is not passing on a scan that sets
+        // every flag for every query.
+        let mut flat_arena = TermArena::new();
+        let flat = Sort::Array {
+            index: ArraySortKey::Int,
+            element: ArraySortKey::Int,
+        };
+        let a_symbol = flat_arena.declare("flat_left", flat).unwrap();
+        let b_symbol = flat_arena.declare("flat_right", flat).unwrap();
+        let a = flat_arena.var(a_symbol);
+        let b = flat_arena.var(b_symbol);
+        let flat_eq = flat_arena.eq(a, b).unwrap();
+        let flat_features = Features::scan_within(&flat_arena, &[flat_eq], None).unwrap();
+        assert!(
+            !flat_features.has_real,
+            "the flat control set `has_real` with no Real anywhere; the scan \
+             reports flags it did not measure"
+        );
+        assert!(
+            !flat_features.has_nested_array,
+            "the flat control was reported as nested"
         );
     }
 

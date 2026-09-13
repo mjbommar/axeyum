@@ -33,7 +33,7 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
         match arena.node(t) {
             TermNode::Symbol(s) => {
                 let (name, sort) = arena.symbol(*s);
-                collect_uninterpreted_sort(sort, &mut uninterpreted_sorts);
+                collect_uninterpreted_sort(arena, sort, &mut uninterpreted_sorts);
                 symbols.push((name.to_owned(), sort));
             }
             TermNode::App { op, args } => {
@@ -42,9 +42,9 @@ pub fn write_script(arena: &TermArena, assertions: &[TermId]) -> String {
                 {
                     let (_, params, result) = arena.function(*func);
                     for &sort in params {
-                        collect_uninterpreted_sort(sort, &mut uninterpreted_sorts);
+                        collect_uninterpreted_sort(arena, sort, &mut uninterpreted_sorts);
                     }
-                    collect_uninterpreted_sort(result, &mut uninterpreted_sorts);
+                    collect_uninterpreted_sort(arena, result, &mut uninterpreted_sorts);
                     functions.push(*func);
                 }
                 for &a in &**args {
@@ -271,18 +271,24 @@ fn is_simple_symbol(name: &str) -> bool {
         && !RESERVED.contains(&name)
 }
 
-fn collect_uninterpreted_sort(sort: Sort, out: &mut HashSet<SortId>) {
+fn collect_uninterpreted_sort(arena: &TermArena, sort: Sort, out: &mut HashSet<SortId>) {
     match sort {
         Sort::Uninterpreted(id) => {
             out.insert(id);
         }
+        // The recursion goes THROUGH an interned nested component
+        // (`arena.array_key_sort`). Stopping at the top level would drop the
+        // `(declare-sort …)` line for a carrier that only appears inside a
+        // nested array, and the written script would not re-parse.
         Sort::Array { index, element } => {
-            collect_uninterpreted_sort(index.to_sort(), out);
-            collect_uninterpreted_sort(element.to_sort(), out);
+            collect_uninterpreted_sort(arena, arena.array_key_sort(index), out);
+            collect_uninterpreted_sort(arena, arena.array_key_sort(element), out);
         }
         // Mirror the array recursion: a sequence element may itself be an
         // uninterpreted carrier sort.
-        Sort::Seq(element) => collect_uninterpreted_sort(element.to_sort(), out),
+        Sort::Seq(element) => {
+            collect_uninterpreted_sort(arena, arena.array_key_sort(element), out);
+        }
         Sort::Bool
         | Sort::BitVec(_)
         | Sort::Int
@@ -337,6 +343,9 @@ fn array_sort_key_str(arena: &TermArena, sort: ArraySortKey) -> String {
         ArraySortKey::Datatype(id) => format!("(Datatype {})", id.index()),
         ArraySortKey::Uninterpreted(id) => symbol_syntax(arena.uninterpreted_sort_name(id)),
         ArraySortKey::Float { exp, sig } => format!("(_ FloatingPoint {exp} {sig})"),
+        // A nested component renders as the array sort it interns, so a script
+        // written out of the arena round-trips through `parse_script`.
+        ArraySortKey::Array(_) => sort_str(arena, arena.array_key_sort(sort)),
     }
 }
 

@@ -6388,7 +6388,7 @@ fn parse_declare_fun(
         declare_seq_symbol(script, name, ew)?;
         return Ok(());
     }
-    let result = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 3)?)?;
+    let result = parse_sort(&mut script.arena, sort_aliases, sexpr_at(items, 3)?)?;
     if args.is_empty() {
         // 0-ary: a plain constant symbol.
         let symbol = script.arena.declare(name, result)?;
@@ -6397,7 +6397,7 @@ fn parse_declare_fun(
         // n-ary: an uninterpreted function (ADR-0013).
         let params = args
             .iter()
-            .map(|s| parse_sort(&script.arena, sort_aliases, s))
+            .map(|s| parse_sort(&mut script.arena, sort_aliases, s))
             .collect::<Result<Vec<Sort>, SmtError>>()?;
         let func = script.arena.declare_fun(name, &params, result)?;
         record_model_function(script, func);
@@ -6434,7 +6434,7 @@ fn add_datatype_constructors(
                 .atom()
                 .ok_or_else(|| SmtError::Syntax("selector name".to_owned()))?
                 .to_owned();
-            let fsort = parse_sort(&script.arena, sort_aliases, &fp[1])?;
+            let fsort = parse_sort(&mut script.arena, sort_aliases, &fp[1])?;
             fields.push((sname, fsort));
         }
         script.arena.add_constructor(dt, &cname, &fields);
@@ -6547,7 +6547,7 @@ fn parse_declare_const(
     if let Some(ew) = seq_decl_elem_width(sexpr_at(items, 2)?) {
         return declare_seq_symbol(script, name, ew);
     }
-    let sort = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 2)?)?;
+    let sort = parse_sort(&mut script.arena, sort_aliases, sexpr_at(items, 2)?)?;
     let symbol = script.arena.declare(name, sort)?;
     record_model_symbol(script, symbol);
     Ok(())
@@ -6746,7 +6746,7 @@ fn parse_define_fun<'a>(
         .get(2)
         .and_then(SExpr::list)
         .ok_or_else(|| SmtError::Syntax("define-fun args".to_owned()))?;
-    let declared_sort = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 3)?)?;
+    let declared_sort = parse_sort(&mut script.arena, sort_aliases, sexpr_at(items, 3)?)?;
     let body_expr = sexpr_at(items, 4)?;
     if args.is_empty() {
         parse_define_fun_alias(
@@ -6766,7 +6766,7 @@ fn parse_define_fun<'a>(
         macros.insert(
             name.to_owned(),
             MacroDef {
-                params: parse_params(&script.arena, sort_aliases, args)?,
+                params: parse_params(&mut script.arena, sort_aliases, args)?,
                 result_sort: declared_sort,
                 body: body_expr,
             },
@@ -6795,7 +6795,7 @@ fn parse_define_const<'a>(
 ) -> Result<(), SmtError> {
     exact_len(items, 4, "define-const")?;
     let name = atom_at(items, 1)?;
-    let declared_sort = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 2)?)?;
+    let declared_sort = parse_sort(&mut script.arena, sort_aliases, sexpr_at(items, 2)?)?;
     let body_expr = sexpr_at(items, 3)?;
     parse_define_fun_alias(
         script,
@@ -6877,7 +6877,7 @@ struct MacroDef<'a> {
 }
 
 fn parse_params<'a>(
-    arena: &TermArena,
+    arena: &mut TermArena,
     sort_aliases: &HashMap<String, Sort>,
     args: &'a [SExpr],
 ) -> Result<Vec<Param<'a>>, SmtError> {
@@ -6928,8 +6928,13 @@ fn sexpr_at(items: &[SExpr], i: usize) -> Result<&SExpr, SmtError> {
         .ok_or_else(|| SmtError::Syntax(format!("expected argument at position {i}")))
 }
 
+/// Resolves a sort s-expression.
+///
+/// Takes the arena **mutably** because a nested array component is interned
+/// (`TermArena::array_sort_key`); resolving a sort is therefore an arena
+/// mutation now, exactly as declaring a datatype is.
 fn parse_sort(
-    arena: &TermArena,
+    arena: &mut TermArena,
     sort_aliases: &HashMap<String, Sort>,
     e: &SExpr,
 ) -> Result<Sort, SmtError> {
@@ -7015,13 +7020,15 @@ fn parse_sort(
             if items.len() == 3 && items[0].atom() == Some("Array") {
                 let index = parse_sort(arena, sort_aliases, &items[1])?;
                 let element = parse_sort(arena, sort_aliases, &items[2])?;
-                let index = ArraySortKey::from_sort(index).ok_or_else(|| {
-                    SmtError::Unsupported(format!("nested array index sort is unsupported: {e:?}"))
+                // A nested array component is INTERNED in the arena
+                // (ADR-1955 option B / ADR-1965), so `Sort` stays `Copy` and
+                // `(Array I (Array J E))` is admitted. A sequence component is
+                // still flat-only and is refused here.
+                let index = arena.array_sort_key(index).ok_or_else(|| {
+                    SmtError::Unsupported(format!("array index sort is unsupported: {e:?}"))
                 })?;
-                let element = ArraySortKey::from_sort(element).ok_or_else(|| {
-                    SmtError::Unsupported(format!(
-                        "nested array element sort is unsupported: {e:?}"
-                    ))
+                let element = arena.array_sort_key(element).ok_or_else(|| {
+                    SmtError::Unsupported(format!("array element sort is unsupported: {e:?}"))
                 })?;
                 return Ok(Sort::Array { index, element });
             }
@@ -7073,7 +7080,7 @@ fn parse_define_sort(
             "define-sort: duplicate sort alias `{name}`"
         )));
     }
-    let body = parse_sort(&script.arena, sort_aliases, sexpr_at(items, 3)?)?;
+    let body = parse_sort(&mut script.arena, sort_aliases, sexpr_at(items, 3)?)?;
     sort_aliases.insert(name.to_owned(), body);
     Ok(())
 }
@@ -19000,7 +19007,7 @@ fn array_eqrange(
         let idx = arena.int_const(point);
         let lhs = arena.select(array_a, idx)?;
         let rhs = arena.select(array_b, idx)?;
-        debug_assert_eq!(arena.sort_of(lhs), element.to_sort());
+        debug_assert_eq!(arena.sort_of(lhs), arena.array_key_sort(element));
         let eq = arena.eq(lhs, rhs)?;
         acc = arena.and(acc, eq)?;
     }
@@ -20483,13 +20490,14 @@ fn apply_parameterized(
                 )));
             };
             let actual = arena.sort_of(args[0]);
-            let expected = element.to_sort();
+            let expected = arena.array_key_sort(element);
             if actual != expected {
                 return Err(SmtError::Ir(axeyum_ir::IrError::SortsDiffer(
                     actual, expected,
                 )));
             }
-            return Ok(arena.const_array_with_index_sort(index.to_sort(), args[0])?);
+            let index_sort = arena.array_key_sort(index);
+            return Ok(arena.const_array_with_index_sort(index_sort, args[0])?);
         }
         return Err(SmtError::Unsupported(format!("`as` form {head:?}")));
     }

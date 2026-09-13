@@ -74,7 +74,13 @@ struct GateFeatures {
 }
 
 impl GateFeatures {
-    fn note_sort(&mut self, sort: Sort) {
+    /// Mirrors `auto::Features::note_sort`, which takes the arena because a
+    /// nested array component is an interned id (ADR-1965): the recursion in
+    /// the `Array` arm has to go THROUGH `TermArena::array_key_sort` or a
+    /// `Real` leaf one nesting level down is never seen. The mirror follows
+    /// the original here for the same reason the original does it -- a census
+    /// that under-reports `has_real` reports the wrong GATE.
+    fn note_sort(&mut self, arena: &TermArena, sort: Sort) {
         match sort {
             Sort::Real => self.has_real = true,
             Sort::BitVec(_) | Sort::RoundingMode | Sort::Float { .. } => {
@@ -85,8 +91,8 @@ impl GateFeatures {
                 if sort.array_widths().is_none() {
                     self.has_non_bv_array = true;
                 }
-                self.note_sort(index.to_sort());
-                self.note_sort(element.to_sort());
+                self.note_sort(arena, arena.array_key_sort(index));
+                self.note_sort(arena, arena.array_key_sort(element));
             }
             Sort::Datatype(_) => self.has_datatype = true,
             Sort::Uninterpreted(_) => self.has_uninterpreted_sort = true,
@@ -102,7 +108,7 @@ impl GateFeatures {
             if !seen.insert(term) {
                 continue;
             }
-            features.note_sort(arena.sort_of(term));
+            features.note_sort(arena, arena.sort_of(term));
             if let TermNode::App { op, args } = arena.node(term) {
                 if matches!(op, Op::Apply(_)) {
                     features.has_function = true;

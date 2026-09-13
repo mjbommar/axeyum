@@ -346,9 +346,9 @@ impl PySort {
     /// The element sort of a sequence sort, else `None`.
     fn seq_element(&self) -> Option<Self> {
         match self.sort {
-            Sort::Seq(element) => Some(Self {
+            Sort::Seq(element) => element.to_sort().map(|sort| Self {
                 epoch: self.epoch,
-                sort: element.to_sort(),
+                sort,
             }),
             _ => None,
         }
@@ -507,7 +507,12 @@ fn op_params(py: Python<'_>, epoch: u64, op: Op) -> PyResult<Bound<'_, PyDict>> 
         | Op::RotateLeft { by }
         | Op::RotateRight { by } => params.set_item("by", by)?,
         Op::ConstArray { index } => {
-            params.set_item("index", PySort::bound(epoch, index.to_sort()))?;
+            let sort = index.to_sort().ok_or_else(|| {
+                pyo3::exceptions::PyValueError::new_err(
+                    "nested array component sorts are not exposed to the Python binding yet (ADR-1965: the component is an arena-interned id and this surface has no arena to expand it with)",
+                )
+            })?;
+            params.set_item("index", PySort::bound(epoch, sort))?;
         }
         Op::Int2Bv { width } => params.set_item("width", width)?,
         Op::Apply(func) => params.set_item("func", Func::new(epoch, func))?,
@@ -533,7 +538,12 @@ fn op_params(py: Python<'_>, epoch: u64, op: Op) -> PyResult<Bound<'_, PyDict>> 
             params.set_item("sig", sig)?;
         }
         Op::SeqEmpty(element) => {
-            params.set_item("element", PySort::bound(epoch, element.to_sort()))?;
+            let sort = element.to_sort().ok_or_else(|| {
+                pyo3::exceptions::PyValueError::new_err(
+                    "nested array component sorts are not exposed to the Python binding yet (ADR-1965: the component is an arena-interned id and this surface has no arena to expand it with)",
+                )
+            })?;
+            params.set_item("element", PySort::bound(epoch, sort))?;
         }
         _ => {}
     }

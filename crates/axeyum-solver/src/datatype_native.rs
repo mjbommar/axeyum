@@ -911,7 +911,7 @@ fn collect_ackermann_groups(
             // An array over a datatype, or any other sort that mentions one
             // without being one. The witness would be array-sorted and the
             // tag/field expansion cannot reach into its elements.
-            s if crate::datatype_elim::sort_mentions_datatype(s) => {
+            s if crate::datatype_elim::sort_mentions_datatype(arena, s) => {
                 return Err(unsupported(
                     "an uninterpreted function whose RESULT sort MENTIONS a datatype without \
                      being one (an array over a datatype), so its Ackermann witness would be \
@@ -1434,7 +1434,7 @@ fn first_datatype_sorted(arena: &TermArena, roots: &[TermId]) -> Option<TermId> 
         if !seen.insert(term) {
             continue;
         }
-        if crate::datatype_elim::sort_mentions_datatype(arena.sort_of(term)) {
+        if crate::datatype_elim::sort_mentions_datatype(arena, arena.sort_of(term)) {
             return Some(term);
         }
         if let TermNode::App { args, .. } = arena.node(term) {
@@ -1508,7 +1508,7 @@ fn register_datatype(
                     register_datatype(arena, *inner, layouts)?;
                     field_sorts.push(*sort);
                 }
-                _ if field_sort_expands(*sort) => field_sorts.push(*sort),
+                _ if field_sort_expands(arena, *sort) => field_sorts.push(*sort),
                 _ => {
                     return Err(unsupported(
                         "a datatype field sort with no expansion variable (native datatype \
@@ -1546,10 +1546,10 @@ fn register_datatype(
 /// `Float`/`RoundingMode`/`Seq` fields stay rejected: no lane has measured a
 /// datatype over them end to end, and ADR-1920's rule is that a gate is lifted
 /// on a measurement, not on a symmetry.
-fn field_sort_expands(sort: Sort) -> bool {
+fn field_sort_expands(arena: &TermArena, sort: Sort) -> bool {
     match sort {
         Sort::Bool | Sort::BitVec(_) | Sort::Int | Sort::Real | Sort::Uninterpreted(_) => true,
-        Sort::Array { .. } => !crate::datatype_elim::sort_mentions_datatype(sort),
+        Sort::Array { .. } => !crate::datatype_elim::sort_mentions_datatype(arena, sort),
         _ => false,
     }
 }
@@ -1578,7 +1578,7 @@ fn datatype_expansion_is_exact(arena: &TermArena, dt: DatatypeId) -> bool {
         arena
             .constructor_fields(ctor)
             .iter()
-            .all(|(_, sort)| field_sort_expands(*sort))
+            .all(|(_, sort)| field_sort_expands(arena, *sort))
     })
 }
 
