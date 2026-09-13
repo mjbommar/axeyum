@@ -1,0 +1,8 @@
+== AUFLIRA: 20011 files, 1367 parse ok (6.8%)
+     18644   93.2%  unsupported:Unsupported("nested array element sort is unsupported
+== ABV: 4975 files, 473 parse ok (9.5%)
+      4502   90.5%  unsupported:Unsupported("nested array element sort is unsupported
+== ALIA: 3098 files, 70 parse ok (2.3%)
+      3028   97.7%  unsupported:Unsupported("nested array element sort is unsupported
+== AUFNIRA: 1480 files, 504 parse ok (34.1%)
+       976   65.9%  unsupported:Unsupported("nested array element sort is unsupported
