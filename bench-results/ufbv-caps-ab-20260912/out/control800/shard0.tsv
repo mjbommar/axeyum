@@ -1,0 +1,805 @@
+file	arm	verdict	rc	wall_ms	attempts	decided_by	bound_by	bound_ms	total_ms	giveup	lever_refused
+QF_BV/2017-BuchwaldFried/counterexample.dump.ia32_Mul_base_disp--Add32.load32.Mul32.Mulh_u32.0005.smt2	base	unknown	0	24129	13	none	qf-bv	24052	24062	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/2017-BuchwaldFried/counterexample.dump.ia32_Mul_base_disp--Add32.load32.Mul32.Mulh_u32.0005.smt2	a4096	unknown	0	24131	13	none	qf-bv	24063	24073	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/2017-BuchwaldFried/counterexample.dump.ia32_Mul_base_disp--Add32.load32.Mul32.Mulh_u32.0005.smt2	n65536	unknown	0	24131	13	none	qf-bv	24052	24062	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/2017-BuchwaldFried/counterexample.dump.ia32_Mul_base_disp--Add32.load32.Mul32.Mulh_u32.0005.smt2	n262144	unknown	0	24227	13	none	qf-bv	24083	24093	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/2017-BuchwaldFried/counterexample.dump.ia32_Mul_base_disp--Add32.load32.Mul32.Mulh_u32.0005.smt2	bothmid	unknown	0	24131	13	none	qf-bv	24069	24078	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/2017-BuchwaldFried/counterexample.dump.ia32_Mul_base_disp--Add32.load32.Mul32.Mulh_u32.0005.smt2	bothmax	unknown	0	24131	13	none	qf-bv	24054	24064	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/20190311-bv-term-small-rw-Noetzli/bv-term-small-rw_746.smt2	base	unsat	0	109	4	qf-bv	qf-bv	5	6	none	no
+QF_BV/20190311-bv-term-small-rw-Noetzli/bv-term-small-rw_746.smt2	a4096	unsat	0	109	4	qf-bv	qf-bv	5	6	none	no
+QF_BV/20190311-bv-term-small-rw-Noetzli/bv-term-small-rw_746.smt2	n65536	unsat	0	109	4	qf-bv	qf-bv	5	6	none	no
+QF_BV/20190311-bv-term-small-rw-Noetzli/bv-term-small-rw_746.smt2	n262144	unsat	0	109	4	qf-bv	qf-bv	5	6	none	no
+QF_BV/20190311-bv-term-small-rw-Noetzli/bv-term-small-rw_746.smt2	bothmid	unsat	0	108	4	qf-bv	qf-bv	5	6	none	no
+QF_BV/20190311-bv-term-small-rw-Noetzli/bv-term-small-rw_746.smt2	bothmax	unsat	0	108	4	qf-bv	qf-bv	5	6	none	no
+QF_BV/20221012-MCMPC/dualexecution_affine/dualexecution.t1.i16.e7c172b6.smt2	base	sat	0	209	4	qf-bv	dl-online	120	133	none	no
+QF_BV/20221012-MCMPC/dualexecution_affine/dualexecution.t1.i16.e7c172b6.smt2	a4096	sat	0	209	4	qf-bv	dl-online	120	133	none	no
+QF_BV/20221012-MCMPC/dualexecution_affine/dualexecution.t1.i16.e7c172b6.smt2	n65536	sat	0	208	4	qf-bv	dl-online	121	133	none	no
+QF_BV/20221012-MCMPC/dualexecution_affine/dualexecution.t1.i16.e7c172b6.smt2	n262144	sat	0	209	4	qf-bv	dl-online	121	134	none	no
+QF_BV/20221012-MCMPC/dualexecution_affine/dualexecution.t1.i16.e7c172b6.smt2	bothmid	sat	0	209	4	qf-bv	dl-online	124	137	none	no
+QF_BV/20221012-MCMPC/dualexecution_affine/dualexecution.t1.i16.e7c172b6.smt2	bothmax	sat	0	209	4	qf-bv	dl-online	120	134	none	no
+QF_BV/20221012-MCMPC/millionaires/millionaires.t1.i25.63566545.smt2	base	sat	0	109	4	qf-bv	dl-online	20	30	none	no
+QF_BV/20221012-MCMPC/millionaires/millionaires.t1.i25.63566545.smt2	a4096	sat	0	109	4	qf-bv	dl-online	20	30	none	no
+QF_BV/20221012-MCMPC/millionaires/millionaires.t1.i25.63566545.smt2	n65536	sat	0	108	4	qf-bv	dl-online	20	30	none	no
+QF_BV/20221012-MCMPC/millionaires/millionaires.t1.i25.63566545.smt2	n262144	sat	0	109	4	qf-bv	dl-online	20	30	none	no
+QF_BV/20221012-MCMPC/millionaires/millionaires.t1.i25.63566545.smt2	bothmid	sat	0	109	4	qf-bv	dl-online	20	30	none	no
+QF_BV/20221012-MCMPC/millionaires/millionaires.t1.i25.63566545.smt2	bothmax	sat	0	109	4	qf-bv	dl-online	20	30	none	no
+QF_BV/20221012-MCMPC/wage/wage.t1.i19.a912c9b3.smt2	base	sat	0	109	4	qf-bv	qf-bv	11	22	none	no
+QF_BV/20221012-MCMPC/wage/wage.t1.i19.a912c9b3.smt2	a4096	sat	0	109	4	qf-bv	qf-bv	11	21	none	no
+QF_BV/20221012-MCMPC/wage/wage.t1.i19.a912c9b3.smt2	n65536	sat	0	109	4	qf-bv	qf-bv	12	21	none	no
+QF_BV/20221012-MCMPC/wage/wage.t1.i19.a912c9b3.smt2	n262144	sat	0	109	4	qf-bv	qf-bv	12	21	none	no
+QF_BV/20221012-MCMPC/wage/wage.t1.i19.a912c9b3.smt2	bothmid	sat	0	109	4	qf-bv	qf-bv	11	21	none	no
+QF_BV/20221012-MCMPC/wage/wage.t1.i19.a912c9b3.smt2	bothmax	sat	0	109	4	qf-bv	qf-bv	11	21	none	no
+QF_BV/Sage2/bench_114.smt2	base	unsat	0	109	4	qf-bv	dl-online	9	21	none	no
+QF_BV/Sage2/bench_114.smt2	a4096	unsat	0	108	4	qf-bv	dl-online	9	20	none	no
+QF_BV/Sage2/bench_114.smt2	n65536	unsat	0	108	4	qf-bv	dl-online	9	20	none	no
+QF_BV/Sage2/bench_114.smt2	n262144	unsat	0	109	4	qf-bv	dl-online	9	20	none	no
+QF_BV/Sage2/bench_114.smt2	bothmid	unsat	0	109	4	qf-bv	dl-online	9	20	none	no
+QF_BV/Sage2/bench_114.smt2	bothmax	unsat	0	109	4	qf-bv	dl-online	9	20	none	no
+QF_BV/Sage2/bench_1424.smt2	base	unsat	0	308	4	qf-bv	fd:parse	164	239	none	no
+QF_BV/Sage2/bench_1424.smt2	a4096	unsat	0	309	4	qf-bv	fd:parse	164	243	none	no
+QF_BV/Sage2/bench_1424.smt2	n65536	unsat	0	309	4	qf-bv	fd:parse	164	240	none	no
+QF_BV/Sage2/bench_1424.smt2	n262144	unsat	0	309	4	qf-bv	fd:parse	162	237	none	no
+QF_BV/Sage2/bench_1424.smt2	bothmid	unsat	0	309	4	qf-bv	fd:parse	164	238	none	no
+QF_BV/Sage2/bench_1424.smt2	bothmax	unsat	0	309	4	qf-bv	fd:parse	164	239	none	no
+QF_BV/Sage2/bench_17078.smt2	base	unsat	0	709	4	qf-bv	qf-bv	612	620	none	no
+QF_BV/Sage2/bench_17078.smt2	a4096	unsat	0	709	4	qf-bv	qf-bv	616	623	none	no
+QF_BV/Sage2/bench_17078.smt2	n65536	unsat	0	709	4	qf-bv	qf-bv	605	612	none	no
+QF_BV/Sage2/bench_17078.smt2	n262144	unsat	0	709	4	qf-bv	qf-bv	616	624	none	no
+QF_BV/Sage2/bench_17078.smt2	bothmid	unsat	0	710	4	qf-bv	qf-bv	636	644	none	no
+QF_BV/Sage2/bench_17078.smt2	bothmax	unsat	0	710	4	qf-bv	qf-bv	630	637	none	no
+QF_BV/Sage2/bench_3822.smt2	base	unsat	0	309	4	qf-bv	qf-bv	135	171	none	no
+QF_BV/Sage2/bench_3822.smt2	a4096	unsat	0	209	4	qf-bv	qf-bv	131	167	none	no
+QF_BV/Sage2/bench_3822.smt2	n65536	unsat	0	209	4	qf-bv	qf-bv	132	168	none	no
+QF_BV/Sage2/bench_3822.smt2	n262144	unsat	0	209	4	qf-bv	qf-bv	133	170	none	no
+QF_BV/Sage2/bench_3822.smt2	bothmid	unsat	0	209	4	qf-bv	qf-bv	123	159	none	no
+QF_BV/Sage2/bench_3822.smt2	bothmax	unsat	0	209	4	qf-bv	qf-bv	134	170	none	no
+QF_BV/Sage2/bench_6930.smt2	base	unsat	0	209	4	qf-bv	qf-bv	86	129	none	no
+QF_BV/Sage2/bench_6930.smt2	a4096	unsat	0	210	4	qf-bv	qf-bv	86	130	none	no
+QF_BV/Sage2/bench_6930.smt2	n65536	unsat	0	209	4	qf-bv	qf-bv	84	125	none	no
+QF_BV/Sage2/bench_6930.smt2	n262144	unsat	0	209	4	qf-bv	qf-bv	83	125	none	no
+QF_BV/Sage2/bench_6930.smt2	bothmid	unsat	0	209	4	qf-bv	qf-bv	85	127	none	no
+QF_BV/Sage2/bench_6930.smt2	bothmax	unsat	0	210	4	qf-bv	qf-bv	85	129	none	no
+QF_BV/Sage2/bench_9955.smt2	base	unsat	0	109	4	qf-bv	qf-bv	2	5	none	no
+QF_BV/Sage2/bench_9955.smt2	a4096	unsat	0	110	4	qf-bv	qf-bv	2	5	none	no
+QF_BV/Sage2/bench_9955.smt2	n65536	unsat	0	109	4	qf-bv	qf-bv	2	5	none	no
+QF_BV/Sage2/bench_9955.smt2	n262144	unsat	0	110	4	qf-bv	qf-bv	2	5	none	no
+QF_BV/Sage2/bench_9955.smt2	bothmid	unsat	0	109	4	qf-bv	qf-bv	2	5	none	no
+QF_BV/Sage2/bench_9955.smt2	bothmax	unsat	0	109	4	qf-bv	qf-bv	2	5	none	no
+QF_BV/bruttomesso/core/ext_con_028_008_0064.smt2	base	unknown	0	24130	13	none	qf-bv	24029	24046	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/bruttomesso/core/ext_con_028_008_0064.smt2	a4096	unknown	0	24129	13	none	qf-bv	24029	24045	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/bruttomesso/core/ext_con_028_008_0064.smt2	n65536	unknown	0	24129	13	none	qf-bv	24030	24046	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/bruttomesso/core/ext_con_028_008_0064.smt2	n262144	unknown	0	24128	13	none	qf-bv	24031	24048	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/bruttomesso/core/ext_con_028_008_0064.smt2	bothmid	unknown	0	24127	13	none	qf-bv	24029	24045	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/bruttomesso/core/ext_con_028_008_0064.smt2	bothmax	unknown	0	24127	13	none	qf-bv	24032	24049	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/log-slicing/bvashr_0687.smt2	base	unknown	0	24128	13	none	qf-bv	23763	24012	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/log-slicing/bvashr_0687.smt2	a4096	unknown	0	24128	13	none	qf-bv	23765	24011	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/log-slicing/bvashr_0687.smt2	n65536	unknown	0	24128	13	none	qf-bv	23761	24011	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/log-slicing/bvashr_0687.smt2	n262144	unknown	0	24129	13	none	qf-bv	23765	24014	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/log-slicing/bvashr_0687.smt2	bothmid	unknown	0	24128	13	none	qf-bv	23765	24011	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/log-slicing/bvashr_0687.smt2	bothmax	unknown	0	24129	13	none	qf-bv	23766	24012	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] combined-theory timeout after scalar backend	no
+QF_BV/sage/app1/bench_1838.smt2	base	unsat	0	108	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app1/bench_1838.smt2	a4096	unsat	0	108	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app1/bench_1838.smt2	n65536	unsat	0	108	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app1/bench_1838.smt2	n262144	unsat	0	109	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app1/bench_1838.smt2	bothmid	unsat	0	108	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app1/bench_1838.smt2	bothmax	unsat	0	108	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app1/bench_671.smt2	base	unsat	0	108	4	qf-bv	dl-online	3	5	none	no
+QF_BV/sage/app1/bench_671.smt2	a4096	unsat	0	109	4	qf-bv	dl-online	3	5	none	no
+QF_BV/sage/app1/bench_671.smt2	n65536	unsat	0	109	4	qf-bv	dl-online	2	5	none	no
+QF_BV/sage/app1/bench_671.smt2	n262144	unsat	0	108	4	qf-bv	dl-online	2	5	none	no
+QF_BV/sage/app1/bench_671.smt2	bothmid	unsat	0	109	4	qf-bv	dl-online	2	4	none	no
+QF_BV/sage/app1/bench_671.smt2	bothmax	unsat	0	108	4	qf-bv	dl-online	2	5	none	no
+QF_BV/sage/app12/bench_1317.smt2	base	unsat	0	108	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app12/bench_1317.smt2	a4096	unsat	0	108	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app12/bench_1317.smt2	n65536	unsat	0	108	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app12/bench_1317.smt2	n262144	unsat	0	108	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app12/bench_1317.smt2	bothmid	unsat	0	108	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app12/bench_1317.smt2	bothmax	unsat	0	109	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app12/bench_256.smt2	base	unsat	0	109	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app12/bench_256.smt2	a4096	unsat	0	108	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app12/bench_256.smt2	n65536	unsat	0	109	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app12/bench_256.smt2	n262144	unsat	0	109	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app12/bench_256.smt2	bothmid	unsat	0	109	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app12/bench_256.smt2	bothmax	unsat	0	109	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app12/bench_3801.smt2	base	unsat	0	209	4	qf-bv	qf-bv	76	85	none	no
+QF_BV/sage/app12/bench_3801.smt2	a4096	unsat	0	109	4	qf-bv	qf-bv	76	84	none	no
+QF_BV/sage/app12/bench_3801.smt2	n65536	unsat	0	108	4	qf-bv	qf-bv	77	85	none	no
+QF_BV/sage/app12/bench_3801.smt2	n262144	unsat	0	108	4	qf-bv	qf-bv	77	85	none	no
+QF_BV/sage/app12/bench_3801.smt2	bothmid	unsat	0	108	4	qf-bv	qf-bv	77	85	none	no
+QF_BV/sage/app12/bench_3801.smt2	bothmax	unsat	0	108	4	qf-bv	qf-bv	77	85	none	no
+QF_BV/sage/app12/bench_5043.smt2	base	sat	0	109	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app12/bench_5043.smt2	a4096	sat	0	108	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app12/bench_5043.smt2	n65536	sat	0	109	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app12/bench_5043.smt2	n262144	sat	0	109	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app12/bench_5043.smt2	bothmid	sat	0	108	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app12/bench_5043.smt2	bothmax	sat	0	108	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app2/bench_108.smt2	base	unsat	0	109	4	qf-bv	dl-online	14	23	none	no
+QF_BV/sage/app2/bench_108.smt2	a4096	unsat	0	108	4	qf-bv	dl-online	13	22	none	no
+QF_BV/sage/app2/bench_108.smt2	n65536	unsat	0	108	4	qf-bv	dl-online	14	23	none	no
+QF_BV/sage/app2/bench_108.smt2	n262144	unsat	0	108	4	qf-bv	dl-online	13	22	none	no
+QF_BV/sage/app2/bench_108.smt2	bothmid	unsat	0	108	4	qf-bv	dl-online	13	22	none	no
+QF_BV/sage/app2/bench_108.smt2	bothmax	unsat	0	109	4	qf-bv	dl-online	13	22	none	no
+QF_BV/sage/app5/bench_1046.smt2	base	unsat	0	108	4	qf-bv	dl-online	2	4	none	no
+QF_BV/sage/app5/bench_1046.smt2	a4096	unsat	0	109	4	qf-bv	dl-online	2	4	none	no
+QF_BV/sage/app5/bench_1046.smt2	n65536	unsat	0	108	4	qf-bv	dl-online	2	4	none	no
+QF_BV/sage/app5/bench_1046.smt2	n262144	unsat	0	108	4	qf-bv	dl-online	2	4	none	no
+QF_BV/sage/app5/bench_1046.smt2	bothmid	unsat	0	108	4	qf-bv	dl-online	2	4	none	no
+QF_BV/sage/app5/bench_1046.smt2	bothmax	unsat	0	108	4	qf-bv	dl-online	2	4	none	no
+QF_BV/sage/app7/bench_1075.smt2	base	unsat	0	108	4	qf-bv	qf-bv	2	5	none	no
+QF_BV/sage/app7/bench_1075.smt2	a4096	unsat	0	108	4	qf-bv	qf-bv	2	5	none	no
+QF_BV/sage/app7/bench_1075.smt2	n65536	unsat	0	108	4	qf-bv	qf-bv	2	5	none	no
+QF_BV/sage/app7/bench_1075.smt2	n262144	unsat	0	109	4	qf-bv	qf-bv	2	5	none	no
+QF_BV/sage/app7/bench_1075.smt2	bothmid	unsat	0	108	4	qf-bv	qf-bv	2	5	none	no
+QF_BV/sage/app7/bench_1075.smt2	bothmax	unsat	0	108	4	qf-bv	qf-bv	2	5	none	no
+QF_BV/sage/app7/bench_2317.smt2	base	unsat	0	108	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app7/bench_2317.smt2	a4096	unsat	0	108	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app7/bench_2317.smt2	n65536	unsat	0	108	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app7/bench_2317.smt2	n262144	unsat	0	108	4	qf-bv	fd:parse	0	0	none	no
+QF_BV/sage/app7/bench_2317.smt2	bothmid	unsat	0	109	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app7/bench_2317.smt2	bothmax	unsat	0	108	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app7/bench_356.smt2	base	unsat	0	6213	4	qf-bv	fd:parse	3526	5948	none	no
+QF_BV/sage/app7/bench_356.smt2	a4096	unsat	0	6114	4	qf-bv	fd:parse	3501	5900	none	no
+QF_BV/sage/app7/bench_356.smt2	n65536	unsat	0	6113	4	qf-bv	fd:parse	3496	5923	none	no
+QF_BV/sage/app7/bench_356.smt2	n262144	unsat	0	6013	4	qf-bv	fd:parse	3500	5890	none	no
+QF_BV/sage/app7/bench_356.smt2	bothmid	unsat	0	6114	4	qf-bv	fd:parse	3509	5931	none	no
+QF_BV/sage/app7/bench_356.smt2	bothmax	unsat	0	6114	4	qf-bv	fd:parse	3521	5952	none	no
+QF_BV/sage/app7/bench_4801.smt2	base	unsat	0	509	4	qf-bv	dl-online	223	390	none	no
+QF_BV/sage/app7/bench_4801.smt2	a4096	unsat	0	509	4	qf-bv	dl-online	219	387	none	no
+QF_BV/sage/app7/bench_4801.smt2	n65536	unsat	0	509	4	qf-bv	dl-online	224	391	none	no
+QF_BV/sage/app7/bench_4801.smt2	n262144	unsat	0	509	4	qf-bv	dl-online	220	388	none	no
+QF_BV/sage/app7/bench_4801.smt2	bothmid	unsat	0	509	4	qf-bv	dl-online	228	395	none	no
+QF_BV/sage/app7/bench_4801.smt2	bothmax	unsat	0	509	4	qf-bv	dl-online	220	387	none	no
+QF_BV/sage/app7/bench_6043.smt2	base	unsat	0	109	4	qf-bv	dl-online	20	32	none	no
+QF_BV/sage/app7/bench_6043.smt2	a4096	unsat	0	109	4	qf-bv	dl-online	20	31	none	no
+QF_BV/sage/app7/bench_6043.smt2	n65536	unsat	0	108	4	qf-bv	dl-online	21	32	none	no
+QF_BV/sage/app7/bench_6043.smt2	n262144	unsat	0	108	4	qf-bv	dl-online	21	33	none	no
+QF_BV/sage/app7/bench_6043.smt2	bothmid	unsat	0	109	4	qf-bv	dl-online	20	32	none	no
+QF_BV/sage/app7/bench_6043.smt2	bothmax	unsat	0	108	4	qf-bv	dl-online	21	33	none	no
+QF_BV/sage/app7/bench_7286.smt2	base	unsat	0	109	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app7/bench_7286.smt2	a4096	unsat	0	107	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app7/bench_7286.smt2	n65536	unsat	0	109	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app7/bench_7286.smt2	n262144	unsat	0	108	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app7/bench_7286.smt2	bothmid	unsat	0	108	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app7/bench_7286.smt2	bothmax	unsat	0	108	4	qf-bv	dl-online	0	0	none	no
+QF_BV/sage/app7/bench_8529.smt2	base	unsat	0	7314	4	qf-bv	fd:parse	4513	7080	none	no
+QF_BV/sage/app7/bench_8529.smt2	a4096	unsat	0	7213	4	qf-bv	fd:parse	4504	7040	none	no
+QF_BV/sage/app7/bench_8529.smt2	n65536	unsat	0	7214	4	qf-bv	fd:parse	4506	7025	none	no
+QF_BV/sage/app7/bench_8529.smt2	n262144	unsat	0	7315	4	qf-bv	fd:parse	4527	7096	none	no
+QF_BV/sage/app7/bench_8529.smt2	bothmid	unsat	0	7214	4	qf-bv	fd:parse	4517	7056	none	no
+QF_BV/sage/app7/bench_8529.smt2	bothmax	unsat	0	7215	4	qf-bv	fd:parse	4525	7074	none	no
+QF_BV/sage/app8/bench_2778.smt2	base	unsat	0	108	4	qf-bv	qf-bv	13	25	none	no
+QF_BV/sage/app8/bench_2778.smt2	a4096	unsat	0	108	4	qf-bv	qf-bv	13	26	none	no
+QF_BV/sage/app8/bench_2778.smt2	n65536	unsat	0	108	4	qf-bv	qf-bv	13	25	none	no
+QF_BV/sage/app8/bench_2778.smt2	n262144	unsat	0	108	4	qf-bv	qf-bv	13	25	none	no
+QF_BV/sage/app8/bench_2778.smt2	bothmid	unsat	0	109	4	qf-bv	qf-bv	13	25	none	no
+QF_BV/sage/app8/bench_2778.smt2	bothmax	unsat	0	109	4	qf-bv	qf-bv	13	25	none	no
+QF_BV/sage/app8/bench_7.smt2	base	unsat	0	108	4	qf-bv	qf-bv	1	3	none	no
+QF_BV/sage/app8/bench_7.smt2	a4096	unsat	0	109	4	qf-bv	qf-bv	1	3	none	no
+QF_BV/sage/app8/bench_7.smt2	n65536	unsat	0	109	4	qf-bv	qf-bv	1	3	none	no
+QF_BV/sage/app8/bench_7.smt2	n262144	unsat	0	108	4	qf-bv	qf-bv	1	3	none	no
+QF_BV/sage/app8/bench_7.smt2	bothmid	unsat	0	108	4	qf-bv	qf-bv	1	3	none	no
+QF_BV/sage/app8/bench_7.smt2	bothmax	unsat	0	108	4	qf-bv	qf-bv	1	3	none	no
+QF_BV/sage/app9/bench_1977.smt2	base	unsat	0	108	4	qf-bv	dl-online	1	1	none	no
+QF_BV/sage/app9/bench_1977.smt2	a4096	unsat	0	108	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app9/bench_1977.smt2	n65536	unsat	0	108	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app9/bench_1977.smt2	n262144	unsat	0	108	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app9/bench_1977.smt2	bothmid	unsat	0	109	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app9/bench_1977.smt2	bothmax	unsat	0	108	4	qf-bv	dl-online	0	1	none	no
+QF_BV/sage/app9/bench_3218.smt2	base	sat	0	208	4	qf-bv	qf-bv	72	100	none	no
+QF_BV/sage/app9/bench_3218.smt2	a4096	sat	0	208	4	qf-bv	qf-bv	72	100	none	no
+QF_BV/sage/app9/bench_3218.smt2	n65536	sat	0	209	4	qf-bv	qf-bv	72	100	none	no
+QF_BV/sage/app9/bench_3218.smt2	n262144	sat	0	209	4	qf-bv	qf-bv	72	100	none	no
+QF_BV/sage/app9/bench_3218.smt2	bothmid	sat	0	209	4	qf-bv	qf-bv	72	99	none	no
+QF_BV/sage/app9/bench_3218.smt2	bothmax	sat	0	208	4	qf-bv	qf-bv	72	99	none	no
+QF_BV/spear/samba_v3.0.24/bin_eventlogadm_vc352379.smt2	base	sat	0	5213	4	qf-bv	qf-bv	3914	5087	none	no
+QF_BV/spear/samba_v3.0.24/bin_eventlogadm_vc352379.smt2	a4096	sat	0	5213	4	qf-bv	qf-bv	3897	5067	none	no
+QF_BV/spear/samba_v3.0.24/bin_eventlogadm_vc352379.smt2	n65536	sat	0	5112	4	qf-bv	qf-bv	3878	5040	none	no
+QF_BV/spear/samba_v3.0.24/bin_eventlogadm_vc352379.smt2	n262144	sat	0	5213	4	qf-bv	qf-bv	3912	5082	none	no
+QF_BV/spear/samba_v3.0.24/bin_eventlogadm_vc352379.smt2	bothmid	sat	0	5213	4	qf-bv	qf-bv	3876	5070	none	no
+QF_BV/spear/samba_v3.0.24/bin_eventlogadm_vc352379.smt2	bothmax	sat	0	5213	4	qf-bv	qf-bv	3905	5065	none	no
+QF_BV/stp_samples/run_03230.trace.cond_026599_0x41821d_00.smt2	base	unsat	0	108	4	qf-bv	dl-online	11	18	none	no
+QF_BV/stp_samples/run_03230.trace.cond_026599_0x41821d_00.smt2	a4096	unsat	0	109	4	qf-bv	dl-online	11	17	none	no
+QF_BV/stp_samples/run_03230.trace.cond_026599_0x41821d_00.smt2	n65536	unsat	0	109	4	qf-bv	dl-online	11	17	none	no
+QF_BV/stp_samples/run_03230.trace.cond_026599_0x41821d_00.smt2	n262144	unsat	0	109	4	qf-bv	dl-online	11	17	none	no
+QF_BV/stp_samples/run_03230.trace.cond_026599_0x41821d_00.smt2	bothmid	unsat	0	108	4	qf-bv	dl-online	11	17	none	no
+QF_BV/stp_samples/run_03230.trace.cond_026599_0x41821d_00.smt2	bothmax	unsat	0	108	4	qf-bv	dl-online	11	17	none	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/3106_1c933134166dbad31f79_38_QF_UFLIA.smt2	base	unknown	0	25130	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/3106_1c933134166dbad31f79_38_QF_UFLIA.smt2	a4096	unknown	0	25030	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/3106_1c933134166dbad31f79_38_QF_UFLIA.smt2	n65536	unknown	0	25029	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/3106_1c933134166dbad31f79_38_QF_UFLIA.smt2	n262144	unknown	0	25029	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/3106_1c933134166dbad31f79_38_QF_UFLIA.smt2	bothmid	unknown	0	25028	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/3106_1c933134166dbad31f79_38_QF_UFLIA.smt2	bothmax	unknown	0	25028	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/41958_45c688a4814eb926c254_59_QF_UFLIA.smt2	base	unknown	0	108	12	none	fd:parse	21	26	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/41958_45c688a4814eb926c254_59_QF_UFLIA.smt2	a4096	unknown	0	109	12	none	fd:parse	20	26	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/41958_45c688a4814eb926c254_59_QF_UFLIA.smt2	n65536	unknown	0	109	12	none	fd:parse	22	27	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/41958_45c688a4814eb926c254_59_QF_UFLIA.smt2	n262144	unknown	0	109	12	none	fd:parse	20	26	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/41958_45c688a4814eb926c254_59_QF_UFLIA.smt2	bothmid	unknown	0	108	12	none	fd:parse	20	26	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/41958_45c688a4814eb926c254_59_QF_UFLIA.smt2	bothmax	unknown	0	108	12	none	fd:parse	20	26	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/63058_aa742630eef64f949de269382c1f9035_25_UFLIA.smt2	base	unknown	0	108	12	none	fd:parse	4	6	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/63058_aa742630eef64f949de269382c1f9035_25_UFLIA.smt2	a4096	unknown	0	109	12	none	fd:parse	4	5	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/63058_aa742630eef64f949de269382c1f9035_25_UFLIA.smt2	n65536	unknown	0	109	12	none	fd:parse	4	5	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/63058_aa742630eef64f949de269382c1f9035_25_UFLIA.smt2	n262144	unknown	0	108	12	none	fd:parse	4	5	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/63058_aa742630eef64f949de269382c1f9035_25_UFLIA.smt2	bothmid	unknown	0	108	12	none	fd:parse	4	5	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/63058_aa742630eef64f949de269382c1f9035_25_UFLIA.smt2	bothmax	unknown	0	109	12	none	fd:parse	4	5	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/93493_1fdb6cc8eb9c4363b5838af9eb8c7f1f_53_QF_UFLIA.smt2	base	unknown	0	308	12	none	fd:parse	191	203	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/93493_1fdb6cc8eb9c4363b5838af9eb8c7f1f_53_QF_UFLIA.smt2	a4096	unknown	0	309	12	none	fd:parse	189	200	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/93493_1fdb6cc8eb9c4363b5838af9eb8c7f1f_53_QF_UFLIA.smt2	n65536	unknown	0	309	12	none	fd:parse	189	200	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/93493_1fdb6cc8eb9c4363b5838af9eb8c7f1f_53_QF_UFLIA.smt2	n262144	unknown	0	309	12	none	fd:parse	185	197	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/93493_1fdb6cc8eb9c4363b5838af9eb8c7f1f_53_QF_UFLIA.smt2	bothmid	unknown	0	309	12	none	fd:parse	191	202	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/20230314-Jaroslav-Bendik-Certora/93493_1fdb6cc8eb9c4363b5838af9eb8c7f1f_53_QF_UFLIA.smt2	bothmax	unknown	0	309	12	none	fd:parse	187	199	give-up kind=Incomplete detail=query contains an integer literal outside the i128 reference range; no route has opted into wide integer constants (ADR-1702 slice 2)	no
+QF_UFLIA/TwoSquares/smtlib.621344.smt2	base	sat	0	108	9	uf-arithmetic	uf-arith-online	1	2	none	no
+QF_UFLIA/TwoSquares/smtlib.621344.smt2	a4096	sat	0	109	9	uf-arithmetic	uf-arith-online	1	1	none	no
+QF_UFLIA/TwoSquares/smtlib.621344.smt2	n65536	sat	0	109	9	uf-arithmetic	uf-arith-online	1	1	none	no
+QF_UFLIA/TwoSquares/smtlib.621344.smt2	n262144	sat	0	109	9	uf-arithmetic	uf-arith-online	1	1	none	no
+QF_UFLIA/TwoSquares/smtlib.621344.smt2	bothmid	sat	0	108	9	uf-arithmetic	uf-arith-online	1	1	none	no
+QF_UFLIA/TwoSquares/smtlib.621344.smt2	bothmax	sat	0	109	9	uf-arithmetic	uf-arith-online	1	1	none	no
+QF_UFLIA/mathsat/EufLaArithmetic/hard/hard15.smt2	base	unknown	0	24328	22	none	uf-arith-lazy-overbound	18002	24267	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy function-consistency CEGAR inconclusive (applications=295, function_groups=3, potential_pairs=33717, solve_rounds=6, elapsed_ms=5884, sat_candidates=5, first_candidate_ms=111, last_candidate_ms=972, pair_checks=168527, equal_arg_pairs=21, violated_pairs=16, preseeded_lemmas=0, sibling_lemmas=3, lemmas_added=24, last_new_lemmas=4): lazy linear arithmetic exhausted the configured timeout after 7 rounds this solve (solve_calls=6, total_rounds=42, atoms=755, bound_lemmas=245, blocking_lemmas=40, core_len_last=464, core_len_min=2, core_len_max=464, core_len_avg=15.5, core_src_bound=6, core_src_diff=0, core_src_affine=3, core_src_lp=29, core_src_minimized=2, core_src_large=0, core_large_literals=464, support_attempts=42, support_unavailable=0, support_conflict_batches=37, support_model_attempts=5, support_replay_failures=0, full_fallbacks=0, min_oracle_calls=785, min_oracle_budget_left=31983, min_declined_cores=0)	no
+QF_UFLIA/mathsat/EufLaArithmetic/hard/hard15.smt2	a4096	unknown	0	24325	22	none	uf-arith-lazy-overbound	18002	24272	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy function-consistency CEGAR inconclusive (applications=295, function_groups=3, potential_pairs=33717, solve_rounds=6, elapsed_ms=5888, sat_candidates=5, first_candidate_ms=109, last_candidate_ms=957, pair_checks=168527, equal_arg_pairs=21, violated_pairs=16, preseeded_lemmas=0, sibling_lemmas=3, lemmas_added=24, last_new_lemmas=4): lazy linear arithmetic exhausted the configured timeout after 7 rounds this solve (solve_calls=6, total_rounds=42, atoms=755, bound_lemmas=245, blocking_lemmas=40, core_len_last=449, core_len_min=2, core_len_max=449, core_len_avg=15.1, core_src_bound=6, core_src_diff=0, core_src_affine=3, core_src_lp=29, core_src_minimized=2, core_src_large=0, core_large_literals=449, support_attempts=42, support_unavailable=0, support_conflict_batches=37, support_model_attempts=5, support_replay_failures=0, full_fallbacks=0, min_oracle_calls=800, min_oracle_budget_left=31968, min_declined_cores=0)	no
+QF_UFLIA/mathsat/EufLaArithmetic/hard/hard15.smt2	n65536	unknown	0	24328	22	none	uf-arith-lazy-overbound	18001	24268	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy function-consistency CEGAR inconclusive (applications=295, function_groups=3, potential_pairs=33717, solve_rounds=6, elapsed_ms=5888, sat_candidates=5, first_candidate_ms=110, last_candidate_ms=959, pair_checks=168527, equal_arg_pairs=21, violated_pairs=16, preseeded_lemmas=0, sibling_lemmas=3, lemmas_added=24, last_new_lemmas=4): lazy linear arithmetic exhausted the configured timeout after 7 rounds this solve (solve_calls=6, total_rounds=42, atoms=755, bound_lemmas=245, blocking_lemmas=40, core_len_last=452, core_len_min=2, core_len_max=452, core_len_avg=15.2, core_src_bound=6, core_src_diff=0, core_src_affine=3, core_src_lp=29, core_src_minimized=2, core_src_large=0, core_large_literals=452, support_attempts=42, support_unavailable=0, support_conflict_batches=37, support_model_attempts=5, support_replay_failures=0, full_fallbacks=0, min_oracle_calls=797, min_oracle_budget_left=31971, min_declined_cores=0)	no
+QF_UFLIA/mathsat/EufLaArithmetic/hard/hard15.smt2	n262144	unknown	0	24328	22	none	uf-arith-lazy-overbound	18009	24265	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy function-consistency CEGAR inconclusive (applications=295, function_groups=3, potential_pairs=33717, solve_rounds=6, elapsed_ms=5878, sat_candidates=5, first_candidate_ms=109, last_candidate_ms=963, pair_checks=168527, equal_arg_pairs=21, violated_pairs=16, preseeded_lemmas=0, sibling_lemmas=3, lemmas_added=24, last_new_lemmas=4): lazy linear arithmetic exhausted the configured timeout after 7 rounds this solve (solve_calls=6, total_rounds=42, atoms=755, bound_lemmas=245, blocking_lemmas=40, core_len_last=452, core_len_min=2, core_len_max=452, core_len_avg=15.2, core_src_bound=6, core_src_diff=0, core_src_affine=3, core_src_lp=29, core_src_minimized=2, core_src_large=0, core_large_literals=452, support_attempts=42, support_unavailable=0, support_conflict_batches=37, support_model_attempts=5, support_replay_failures=0, full_fallbacks=0, min_oracle_calls=797, min_oracle_budget_left=31971, min_declined_cores=0)	no
+QF_UFLIA/mathsat/EufLaArithmetic/hard/hard15.smt2	bothmid	unknown	0	24324	22	none	uf-arith-lazy-overbound	18007	24266	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy function-consistency CEGAR inconclusive (applications=295, function_groups=3, potential_pairs=33717, solve_rounds=6, elapsed_ms=5878, sat_candidates=5, first_candidate_ms=108, last_candidate_ms=963, pair_checks=168527, equal_arg_pairs=21, violated_pairs=16, preseeded_lemmas=0, sibling_lemmas=3, lemmas_added=24, last_new_lemmas=4): lazy linear arithmetic exhausted the configured timeout after 7 rounds this solve (solve_calls=6, total_rounds=42, atoms=755, bound_lemmas=245, blocking_lemmas=40, core_len_last=459, core_len_min=2, core_len_max=459, core_len_avg=15.4, core_src_bound=6, core_src_diff=0, core_src_affine=3, core_src_lp=29, core_src_minimized=2, core_src_large=0, core_large_literals=459, support_attempts=42, support_unavailable=0, support_conflict_batches=37, support_model_attempts=5, support_replay_failures=0, full_fallbacks=0, min_oracle_calls=790, min_oracle_budget_left=31978, min_declined_cores=0)	no
+QF_UFLIA/mathsat/EufLaArithmetic/hard/hard15.smt2	bothmax	unknown	0	24327	22	none	uf-arith-lazy-overbound	18004	24269	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy function-consistency CEGAR inconclusive (applications=295, function_groups=3, potential_pairs=33717, solve_rounds=6, elapsed_ms=5885, sat_candidates=5, first_candidate_ms=112, last_candidate_ms=979, pair_checks=168527, equal_arg_pairs=21, violated_pairs=16, preseeded_lemmas=0, sibling_lemmas=3, lemmas_added=24, last_new_lemmas=4): lazy linear arithmetic exhausted the configured timeout after 7 rounds this solve (solve_calls=6, total_rounds=42, atoms=755, bound_lemmas=245, blocking_lemmas=40, core_len_last=463, core_len_min=2, core_len_max=463, core_len_avg=15.5, core_src_bound=6, core_src_diff=0, core_src_affine=3, core_src_lp=29, core_src_minimized=2, core_src_large=0, core_large_literals=463, support_attempts=42, support_unavailable=0, support_conflict_batches=37, support_model_attempts=5, support_replay_failures=0, full_fallbacks=0, min_oracle_calls=786, min_oracle_budget_left=31982, min_declined_cores=0)	no
+QF_UFLIA/mathsat/EufLaArithmetic/medium/medium16.smt2	base	unsat	0	18322	10	euf-online	uf-arith-lazy-overbound	18008	18290	none	no
+QF_UFLIA/mathsat/EufLaArithmetic/medium/medium16.smt2	a4096	unsat	0	18323	10	euf-online	uf-arith-lazy-overbound	18013	18293	none	no
+QF_UFLIA/mathsat/EufLaArithmetic/medium/medium16.smt2	n65536	unsat	0	18322	10	euf-online	uf-arith-lazy-overbound	18006	18289	none	no
+QF_UFLIA/mathsat/EufLaArithmetic/medium/medium16.smt2	n262144	unsat	0	18323	10	euf-online	uf-arith-lazy-overbound	18007	18287	none	no
+QF_UFLIA/mathsat/EufLaArithmetic/medium/medium16.smt2	bothmid	unsat	0	18323	10	euf-online	uf-arith-lazy-overbound	18008	18290	none	no
+QF_UFLIA/mathsat/EufLaArithmetic/medium/medium16.smt2	bothmax	unsat	0	18323	10	euf-online	uf-arith-lazy-overbound	18010	18292	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_03_11.smt2	base	sat	0	1610	10	uf-arith-online	lia-dpll	1518	1529	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_03_11.smt2	a4096	sat	0	1609	10	uf-arith-online	lia-dpll	1510	1520	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_03_11.smt2	n65536	sat	0	1610	10	uf-arith-online	lia-dpll	1515	1526	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_03_11.smt2	n262144	sat	0	1710	10	uf-arith-online	lia-dpll	1587	1597	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_03_11.smt2	bothmid	sat	0	1610	10	uf-arith-online	lia-dpll	1517	1527	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_03_11.smt2	bothmax	sat	0	1610	10	uf-arith-online	lia-dpll	1516	1526	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_04_11.smt2	base	sat	0	18324	12	uf-arith-online	uf-arith-lazy-overbound	18003	18274	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_04_11.smt2	a4096	sat	0	18324	12	uf-arith-online	uf-arith-lazy-overbound	18002	18273	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_04_11.smt2	n65536	sat	0	18323	12	uf-arith-online	uf-arith-lazy-overbound	18003	18274	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_04_11.smt2	n262144	sat	0	18323	12	uf-arith-online	uf-arith-lazy-overbound	18001	18274	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_04_11.smt2	bothmid	sat	0	18323	12	uf-arith-online	uf-arith-lazy-overbound	18002	18273	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_04_11.smt2	bothmax	sat	0	18320	12	uf-arith-online	uf-arith-lazy-overbound	18005	18277	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_05_11.smt2	base	sat	0	18324	12	uf-arith-online	uf-arith-lazy-overbound	18001	18288	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_05_11.smt2	a4096	sat	0	18323	12	uf-arith-online	uf-arith-lazy-overbound	18005	18289	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_05_11.smt2	n65536	sat	0	18323	12	uf-arith-online	uf-arith-lazy-overbound	18004	18289	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_05_11.smt2	n262144	sat	0	18323	12	uf-arith-online	uf-arith-lazy-overbound	18004	18288	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_05_11.smt2	bothmid	sat	0	18323	12	uf-arith-online	uf-arith-lazy-overbound	18001	18286	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_05_11.smt2	bothmax	sat	0	18323	12	uf-arith-online	uf-arith-lazy-overbound	18004	18289	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_06_11.smt2	base	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18002	18320	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_06_11.smt2	a4096	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18002	18317	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_06_11.smt2	n65536	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18007	18324	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_06_11.smt2	n262144	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18005	18322	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_06_11.smt2	bothmid	sat	0	18424	12	uf-arith-online	uf-arith-lazy-overbound	18003	18318	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_06_11.smt2	bothmax	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18001	18318	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_07_11.smt2	base	sat	0	18424	12	uf-arith-online	uf-arith-lazy-overbound	18005	18353	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_07_11.smt2	a4096	sat	0	18424	12	uf-arith-online	uf-arith-lazy-overbound	18004	18347	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_07_11.smt2	n65536	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18002	18347	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_07_11.smt2	n262144	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18002	18348	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_07_11.smt2	bothmid	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18002	18346	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_07_11.smt2	bothmax	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18006	18351	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_08_11.smt2	base	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18010	18340	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_08_11.smt2	a4096	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18007	18336	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_08_11.smt2	n65536	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18006	18335	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_08_11.smt2	n262144	sat	0	18424	12	uf-arith-online	uf-arith-lazy-overbound	18002	18329	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_08_11.smt2	bothmid	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18000	18331	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_08_11.smt2	bothmax	sat	0	18422	12	uf-arith-online	uf-arith-lazy-overbound	18000	18329	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_09_11.smt2	base	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18006	18380	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_09_11.smt2	a4096	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18005	18387	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_09_11.smt2	n65536	sat	0	18420	12	uf-arith-online	uf-arith-lazy-overbound	18003	18372	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_09_11.smt2	n262144	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18005	18376	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_09_11.smt2	bothmid	sat	0	18424	12	uf-arith-online	uf-arith-lazy-overbound	18000	18378	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_09_11.smt2	bothmax	sat	0	18423	12	uf-arith-online	uf-arith-lazy-overbound	18002	18382	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_10_11.smt2	base	sat	0	18523	12	uf-arith-online	uf-arith-lazy-overbound	17999	18410	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_10_11.smt2	a4096	sat	0	18523	12	uf-arith-online	uf-arith-lazy-overbound	18009	18435	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_10_11.smt2	n65536	sat	0	18523	12	uf-arith-online	uf-arith-lazy-overbound	18003	18413	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_10_11.smt2	n262144	sat	0	18524	12	uf-arith-online	uf-arith-lazy-overbound	18008	18418	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_10_11.smt2	bothmid	sat	0	18524	12	uf-arith-online	uf-arith-lazy-overbound	18002	18410	none	no
+QF_UFLIA/mathsat/Hash/hash_sat_10_11.smt2	bothmax	sat	0	18523	12	uf-arith-online	uf-arith-lazy-overbound	18001	18414	none	no
+QF_UFLIA/mathsat/Hash/hash_uns_03_11.smt2	base	unsat	0	1209	6	lia-dpll	lia-dpll	1121	1123	none	no
+QF_UFLIA/mathsat/Hash/hash_uns_03_11.smt2	a4096	unsat	0	1209	6	lia-dpll	lia-dpll	1133	1134	none	no
+QF_UFLIA/mathsat/Hash/hash_uns_03_11.smt2	n65536	unsat	0	1209	6	lia-dpll	lia-dpll	1166	1168	none	no
+QF_UFLIA/mathsat/Hash/hash_uns_03_11.smt2	n262144	unsat	0	1209	6	lia-dpll	lia-dpll	1121	1123	none	no
+QF_UFLIA/mathsat/Hash/hash_uns_03_11.smt2	bothmid	unsat	0	1210	6	lia-dpll	lia-dpll	1162	1165	none	no
+QF_UFLIA/mathsat/Hash/hash_uns_03_11.smt2	bothmax	unsat	0	1209	6	lia-dpll	lia-dpll	1169	1171	none	no
+QF_UFLIA/mathsat/Hash/hash_uns_04_11.smt2	base	unknown	0	24328	21	none	uf-arith-lazy-overbound	18003	24257	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy function-consistency CEGAR inconclusive (applications=44, function_groups=11, potential_pairs=66, solve_rounds=1, elapsed_ms=5774, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=none, pair_checks=0, equal_arg_pairs=0, violated_pairs=0, preseeded_lemmas=0, sibling_lemmas=0, lemmas_added=0, last_new_lemmas=0): linear-arithmetic sat-model reconstruction declined in the integer theory: lia simplex: wall-clock deadline passed while collecting integer constraints	no
+QF_UFLIA/mathsat/Hash/hash_uns_04_11.smt2	a4096	unknown	0	24328	21	none	uf-arith-lazy-overbound	18005	24256	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy function-consistency CEGAR inconclusive (applications=44, function_groups=11, potential_pairs=66, solve_rounds=1, elapsed_ms=5770, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=none, pair_checks=0, equal_arg_pairs=0, violated_pairs=0, preseeded_lemmas=0, sibling_lemmas=0, lemmas_added=0, last_new_lemmas=0): lazy linear arithmetic exhausted the configured timeout after 1664 rounds this solve (solve_calls=1, total_rounds=1664, atoms=516, bound_lemmas=0, blocking_lemmas=1664, core_len_last=13, core_len_min=3, core_len_max=14, core_len_avg=5.6, core_src_bound=0, core_src_diff=1664, core_src_affine=0, core_src_lp=0, core_src_minimized=0, core_src_large=0, core_large_literals=0, support_attempts=1664, support_unavailable=0, support_conflict_batches=1664, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0, min_oracle_calls=0, min_oracle_budget_left=32768, min_declined_cores=0)	no
+QF_UFLIA/mathsat/Hash/hash_uns_04_11.smt2	n65536	unknown	0	24328	21	none	uf-arith-lazy-overbound	18002	24256	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy function-consistency CEGAR inconclusive (applications=44, function_groups=11, potential_pairs=66, solve_rounds=1, elapsed_ms=5775, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=none, pair_checks=0, equal_arg_pairs=0, violated_pairs=0, preseeded_lemmas=0, sibling_lemmas=0, lemmas_added=0, last_new_lemmas=0): linear-arithmetic sat-model reconstruction declined in the integer theory: lia simplex: wall-clock deadline passed while collecting integer constraints	no
+QF_UFLIA/mathsat/Hash/hash_uns_04_11.smt2	n262144	unknown	0	24329	21	none	uf-arith-lazy-overbound	18004	24256	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy function-consistency CEGAR inconclusive (applications=44, function_groups=11, potential_pairs=66, solve_rounds=1, elapsed_ms=5770, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=none, pair_checks=0, equal_arg_pairs=0, violated_pairs=0, preseeded_lemmas=0, sibling_lemmas=0, lemmas_added=0, last_new_lemmas=0): lazy linear arithmetic exhausted the configured timeout after 1671 rounds this solve (solve_calls=1, total_rounds=1671, atoms=516, bound_lemmas=0, blocking_lemmas=1671, core_len_last=4, core_len_min=3, core_len_max=14, core_len_avg=5.6, core_src_bound=0, core_src_diff=1671, core_src_affine=0, core_src_lp=0, core_src_minimized=0, core_src_large=0, core_large_literals=0, support_attempts=1671, support_unavailable=0, support_conflict_batches=1671, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0, min_oracle_calls=0, min_oracle_budget_left=32768, min_declined_cores=0)	no
+QF_UFLIA/mathsat/Hash/hash_uns_04_11.smt2	bothmid	unknown	0	24328	21	none	uf-arith-lazy-overbound	18003	24255	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy function-consistency CEGAR inconclusive (applications=44, function_groups=11, potential_pairs=66, solve_rounds=1, elapsed_ms=5770, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=none, pair_checks=0, equal_arg_pairs=0, violated_pairs=0, preseeded_lemmas=0, sibling_lemmas=0, lemmas_added=0, last_new_lemmas=0): linear-arithmetic sat-model reconstruction declined in the integer theory: lia simplex: wall-clock deadline passed while collecting integer constraints	no
+QF_UFLIA/mathsat/Hash/hash_uns_04_11.smt2	bothmax	unknown	0	24327	21	none	uf-arith-lazy-overbound	18005	24257	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy function-consistency CEGAR inconclusive (applications=44, function_groups=11, potential_pairs=66, solve_rounds=1, elapsed_ms=5767, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=none, pair_checks=0, equal_arg_pairs=0, violated_pairs=0, preseeded_lemmas=0, sibling_lemmas=0, lemmas_added=0, last_new_lemmas=0): linear-arithmetic sat-model reconstruction declined in the integer theory: lia simplex: wall-clock deadline passed while collecting integer constraints	no
+QF_UFLIA/mathsat/Hash/hash_uns_05_11.smt2	base	unknown	0	24328	21	none	uf-arith-lazy-overbound	18002	24256	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy function-consistency CEGAR inconclusive (applications=55, function_groups=11, potential_pairs=110, solve_rounds=1, elapsed_ms=3790, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=none, pair_checks=0, equal_arg_pairs=0, violated_pairs=0, preseeded_lemmas=0, sibling_lemmas=0, lemmas_added=0, last_new_lemmas=0): lazy linear arithmetic exhausted the configured timeout after 612 rounds this solve (solve_calls=1, total_rounds=612, atoms=812, bound_lemmas=0, blocking_lemmas=612, core_len_last=5, core_len_min=3, core_len_max=18, core_len_avg=6.5, core_src_bound=0, core_src_diff=612, core_src_affine=0, core_src_lp=0, core_src_minimized=0, core_src_large=0, core_large_literals=0, support_attempts=612, support_unavailable=0, support_conflict_batches=612, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0, min_oracle_calls=0, min_oracle_budget_left=32768, min_declined_cores=0)	no
+QF_UFLIA/mathsat/Hash/hash_uns_05_11.smt2	a4096	unknown	0	24327	21	none	uf-arith-lazy-overbound	18000	24258	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy function-consistency CEGAR inconclusive (applications=55, function_groups=11, potential_pairs=110, solve_rounds=1, elapsed_ms=3793, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=none, pair_checks=0, equal_arg_pairs=0, violated_pairs=0, preseeded_lemmas=0, sibling_lemmas=0, lemmas_added=0, last_new_lemmas=0): linear-arithmetic sat-model reconstruction declined in the integer theory: lia simplex: wall-clock deadline passed while collecting integer constraints	no
+QF_UFLIA/mathsat/Hash/hash_uns_05_11.smt2	n65536	unknown	0	24327	21	none	uf-arith-lazy-overbound	18005	24257	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy function-consistency CEGAR inconclusive (applications=55, function_groups=11, potential_pairs=110, solve_rounds=1, elapsed_ms=3778, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=none, pair_checks=0, equal_arg_pairs=0, violated_pairs=0, preseeded_lemmas=0, sibling_lemmas=0, lemmas_added=0, last_new_lemmas=0): lazy linear arithmetic exhausted the configured timeout after 607 rounds this solve (solve_calls=1, total_rounds=607, atoms=812, bound_lemmas=0, blocking_lemmas=607, core_len_last=3, core_len_min=3, core_len_max=18, core_len_avg=6.5, core_src_bound=0, core_src_diff=607, core_src_affine=0, core_src_lp=0, core_src_minimized=0, core_src_large=0, core_large_literals=0, support_attempts=607, support_unavailable=0, support_conflict_batches=607, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0, min_oracle_calls=0, min_oracle_budget_left=32768, min_declined_cores=0)	no
+QF_UFLIA/mathsat/Hash/hash_uns_05_11.smt2	n262144	unknown	0	24327	21	none	uf-arith-lazy-overbound	18001	24259	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy function-consistency CEGAR inconclusive (applications=55, function_groups=11, potential_pairs=110, solve_rounds=1, elapsed_ms=3785, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=none, pair_checks=0, equal_arg_pairs=0, violated_pairs=0, preseeded_lemmas=0, sibling_lemmas=0, lemmas_added=0, last_new_lemmas=0): linear-arithmetic sat-model reconstruction declined in the integer theory: lia simplex: wall-clock deadline passed while collecting integer constraints	no
+QF_UFLIA/mathsat/Hash/hash_uns_05_11.smt2	bothmid	unknown	0	24328	21	none	uf-arith-lazy-overbound	18002	24258	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy function-consistency CEGAR inconclusive (applications=55, function_groups=11, potential_pairs=110, solve_rounds=1, elapsed_ms=3794, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=none, pair_checks=0, equal_arg_pairs=0, violated_pairs=0, preseeded_lemmas=0, sibling_lemmas=0, lemmas_added=0, last_new_lemmas=0): linear-arithmetic sat-model reconstruction declined in the integer theory: lia simplex: wall-clock deadline passed while collecting integer constraints	no
+QF_UFLIA/mathsat/Hash/hash_uns_05_11.smt2	bothmax	unknown	0	24327	21	none	uf-arith-lazy-overbound	18004	24263	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy function-consistency CEGAR inconclusive (applications=55, function_groups=11, potential_pairs=110, solve_rounds=1, elapsed_ms=3782, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=none, pair_checks=0, equal_arg_pairs=0, violated_pairs=0, preseeded_lemmas=0, sibling_lemmas=0, lemmas_added=0, last_new_lemmas=0): lazy linear arithmetic exhausted the configured timeout after 611 rounds this solve (solve_calls=1, total_rounds=611, atoms=812, bound_lemmas=0, blocking_lemmas=611, core_len_last=4, core_len_min=3, core_len_max=18, core_len_avg=6.5, core_src_bound=0, core_src_diff=611, core_src_affine=0, core_src_lp=0, core_src_minimized=0, core_src_large=0, core_large_literals=0, support_attempts=611, support_unavailable=0, support_conflict_batches=611, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0, min_oracle_calls=0, min_oracle_budget_left=32768, min_declined_cores=0)	no
+QF_UFLIA/mathsat/Wisa/xs-05-16-1-5-4-3.smt2	base	unsat	0	108	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	40	42	none	no
+QF_UFLIA/mathsat/Wisa/xs-05-16-1-5-4-3.smt2	a4096	unsat	0	108	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	40	42	none	no
+QF_UFLIA/mathsat/Wisa/xs-05-16-1-5-4-3.smt2	n65536	unsat	0	108	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	40	42	none	no
+QF_UFLIA/mathsat/Wisa/xs-05-16-1-5-4-3.smt2	n262144	unsat	0	109	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	40	42	none	no
+QF_UFLIA/mathsat/Wisa/xs-05-16-1-5-4-3.smt2	bothmid	unsat	0	108	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	40	42	none	no
+QF_UFLIA/mathsat/Wisa/xs-05-16-1-5-4-3.smt2	bothmax	unsat	0	108	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	40	42	none	no
+QF_UFLIA/mathsat/Wisa/xs-07-05-5-2-3-5.smt2	base	unsat	0	109	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	18	20	none	no
+QF_UFLIA/mathsat/Wisa/xs-07-05-5-2-3-5.smt2	a4096	unsat	0	108	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	18	20	none	no
+QF_UFLIA/mathsat/Wisa/xs-07-05-5-2-3-5.smt2	n65536	unsat	0	108	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	18	20	none	no
+QF_UFLIA/mathsat/Wisa/xs-07-05-5-2-3-5.smt2	n262144	unsat	0	108	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	18	20	none	no
+QF_UFLIA/mathsat/Wisa/xs-07-05-5-2-3-5.smt2	bothmid	unsat	0	109	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	18	20	none	no
+QF_UFLIA/mathsat/Wisa/xs-07-05-5-2-3-5.smt2	bothmax	unsat	0	108	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	18	20	none	no
+QF_UFLIA/mathsat/Wisa/xs-08-11-4-3-2-2.smt2	base	sat	0	609	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	273	528	none	no
+QF_UFLIA/mathsat/Wisa/xs-08-11-4-3-2-2.smt2	a4096	sat	0	609	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	275	528	none	no
+QF_UFLIA/mathsat/Wisa/xs-08-11-4-3-2-2.smt2	n65536	sat	0	609	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	273	527	none	no
+QF_UFLIA/mathsat/Wisa/xs-08-11-4-3-2-2.smt2	n262144	sat	0	609	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	274	527	none	no
+QF_UFLIA/mathsat/Wisa/xs-08-11-4-3-2-2.smt2	bothmid	sat	0	609	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	273	527	none	no
+QF_UFLIA/mathsat/Wisa/xs-08-11-4-3-2-2.smt2	bothmax	sat	0	609	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	274	528	none	no
+QF_UFLIA/mathsat/Wisa/xs-09-17-2-1-4-1.smt2	base	unsat	0	1109	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	800	1053	none	no
+QF_UFLIA/mathsat/Wisa/xs-09-17-2-1-4-1.smt2	a4096	unsat	0	1109	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	801	1055	none	no
+QF_UFLIA/mathsat/Wisa/xs-09-17-2-1-4-1.smt2	n65536	unsat	0	1110	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	801	1054	none	no
+QF_UFLIA/mathsat/Wisa/xs-09-17-2-1-4-1.smt2	n262144	unsat	0	1109	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	803	1057	none	no
+QF_UFLIA/mathsat/Wisa/xs-09-17-2-1-4-1.smt2	bothmid	unsat	0	1109	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	801	1055	none	no
+QF_UFLIA/mathsat/Wisa/xs-09-17-2-1-4-1.smt2	bothmax	unsat	0	1109	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	797	1051	none	no
+QF_UFLIA/mathsat/Wisa/xs-11-07-3-4-2-3.smt2	base	sat	0	309	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	250	253	none	no
+QF_UFLIA/mathsat/Wisa/xs-11-07-3-4-2-3.smt2	a4096	sat	0	308	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	249	251	none	no
+QF_UFLIA/mathsat/Wisa/xs-11-07-3-4-2-3.smt2	n65536	sat	0	309	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	249	251	none	no
+QF_UFLIA/mathsat/Wisa/xs-11-07-3-4-2-3.smt2	n262144	sat	0	309	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	252	254	none	no
+QF_UFLIA/mathsat/Wisa/xs-11-07-3-4-2-3.smt2	bothmid	sat	0	308	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	249	252	none	no
+QF_UFLIA/mathsat/Wisa/xs-11-07-3-4-2-3.smt2	bothmax	sat	0	309	5	uf-arith-lazy-overbound-pre-lia	uf-arith-lazy-overbound-pre-lia	249	251	none	no
+QF_UFLIA/mathsat/Wisa/xs-12-11-1-4-4-3.smt2	base	sat	0	709	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	366	621	none	no
+QF_UFLIA/mathsat/Wisa/xs-12-11-1-4-4-3.smt2	a4096	sat	0	709	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	365	619	none	no
+QF_UFLIA/mathsat/Wisa/xs-12-11-1-4-4-3.smt2	n65536	sat	0	709	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	363	617	none	no
+QF_UFLIA/mathsat/Wisa/xs-12-11-1-4-4-3.smt2	n262144	sat	0	709	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	364	618	none	no
+QF_UFLIA/mathsat/Wisa/xs-12-11-1-4-4-3.smt2	bothmid	sat	0	709	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	364	618	none	no
+QF_UFLIA/mathsat/Wisa/xs-12-11-1-4-4-3.smt2	bothmax	sat	0	709	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	367	621	none	no
+QF_UFLIA/mathsat/Wisa/xs-13-16-3-1-4-1.smt2	base	sat	0	709	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	420	674	none	no
+QF_UFLIA/mathsat/Wisa/xs-13-16-3-1-4-1.smt2	a4096	sat	0	709	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	419	673	none	no
+QF_UFLIA/mathsat/Wisa/xs-13-16-3-1-4-1.smt2	n65536	sat	0	708	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	422	676	none	no
+QF_UFLIA/mathsat/Wisa/xs-13-16-3-1-4-1.smt2	n262144	sat	0	709	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	421	675	none	no
+QF_UFLIA/mathsat/Wisa/xs-13-16-3-1-4-1.smt2	bothmid	sat	0	709	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	418	673	none	no
+QF_UFLIA/mathsat/Wisa/xs-13-16-3-1-4-1.smt2	bothmax	sat	0	708	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	418	672	none	no
+QF_UFLIA/mathsat/Wisa/xs-15-05-2-1-2-3.smt2	base	sat	0	909	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	540	796	none	no
+QF_UFLIA/mathsat/Wisa/xs-15-05-2-1-2-3.smt2	a4096	sat	0	909	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	541	797	none	no
+QF_UFLIA/mathsat/Wisa/xs-15-05-2-1-2-3.smt2	n65536	sat	0	909	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	542	796	none	no
+QF_UFLIA/mathsat/Wisa/xs-15-05-2-1-2-3.smt2	n262144	sat	0	909	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	542	798	none	no
+QF_UFLIA/mathsat/Wisa/xs-15-05-2-1-2-3.smt2	bothmid	sat	0	909	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	542	796	none	no
+QF_UFLIA/mathsat/Wisa/xs-15-05-2-1-2-3.smt2	bothmax	sat	0	909	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	544	798	none	no
+QF_UFLIA/mathsat/Wisa/xs-16-09-4-2-1-5.smt2	base	sat	0	809	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	521	776	none	no
+QF_UFLIA/mathsat/Wisa/xs-16-09-4-2-1-5.smt2	a4096	sat	0	809	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	522	776	none	no
+QF_UFLIA/mathsat/Wisa/xs-16-09-4-2-1-5.smt2	n65536	sat	0	809	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	519	774	none	no
+QF_UFLIA/mathsat/Wisa/xs-16-09-4-2-1-5.smt2	n262144	sat	0	809	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	522	777	none	no
+QF_UFLIA/mathsat/Wisa/xs-16-09-4-2-1-5.smt2	bothmid	sat	0	809	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	516	771	none	no
+QF_UFLIA/mathsat/Wisa/xs-16-09-4-2-1-5.smt2	bothmax	sat	0	809	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	521	776	none	no
+QF_UFLIA/mathsat/Wisa/xs-17-12-3-4-4-1.smt2	base	sat	0	1009	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	641	897	none	no
+QF_UFLIA/mathsat/Wisa/xs-17-12-3-4-4-1.smt2	a4096	sat	0	1009	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	640	895	none	no
+QF_UFLIA/mathsat/Wisa/xs-17-12-3-4-4-1.smt2	n65536	sat	0	1009	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	639	896	none	no
+QF_UFLIA/mathsat/Wisa/xs-17-12-3-4-4-1.smt2	n262144	sat	0	909	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	635	891	none	no
+QF_UFLIA/mathsat/Wisa/xs-17-12-3-4-4-1.smt2	bothmid	sat	0	1009	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	643	899	none	no
+QF_UFLIA/mathsat/Wisa/xs-17-12-3-4-4-1.smt2	bothmax	sat	0	1010	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	640	896	none	no
+QF_UFLIA/mathsat/Wisa/xs-18-15-4-1-3-1.smt2	base	sat	0	1110	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	751	1006	none	no
+QF_UFLIA/mathsat/Wisa/xs-18-15-4-1-3-1.smt2	a4096	sat	0	1109	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	749	1005	none	no
+QF_UFLIA/mathsat/Wisa/xs-18-15-4-1-3-1.smt2	n65536	sat	0	1109	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	746	1004	none	no
+QF_UFLIA/mathsat/Wisa/xs-18-15-4-1-3-1.smt2	n262144	sat	0	1110	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	746	1002	none	no
+QF_UFLIA/mathsat/Wisa/xs-18-15-4-1-3-1.smt2	bothmid	sat	0	1110	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	748	1005	none	no
+QF_UFLIA/mathsat/Wisa/xs-18-15-4-1-3-1.smt2	bothmax	sat	0	1109	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	752	1008	none	no
+QF_UFLIA/mathsat/Wisa/xs-19-18-2-2-2-5.smt2	base	sat	0	1209	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	838	1094	none	no
+QF_UFLIA/mathsat/Wisa/xs-19-18-2-2-2-5.smt2	a4096	sat	0	1109	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	833	1088	none	no
+QF_UFLIA/mathsat/Wisa/xs-19-18-2-2-2-5.smt2	n65536	sat	0	1109	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	834	1090	none	no
+QF_UFLIA/mathsat/Wisa/xs-19-18-2-2-2-5.smt2	n262144	sat	0	1109	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	837	1093	none	no
+QF_UFLIA/mathsat/Wisa/xs-19-18-2-2-2-5.smt2	bothmid	sat	0	1109	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	837	1092	none	no
+QF_UFLIA/mathsat/Wisa/xs-19-18-2-2-2-5.smt2	bothmax	sat	0	1109	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	836	1091	none	no
+QF_UFLIA/wisas/xs_10_15.smt2	base	sat	0	1410	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	1110	1366	none	no
+QF_UFLIA/wisas/xs_10_15.smt2	a4096	sat	0	1409	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	1108	1363	none	no
+QF_UFLIA/wisas/xs_10_15.smt2	n65536	sat	0	1409	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	1106	1360	none	no
+QF_UFLIA/wisas/xs_10_15.smt2	n262144	sat	0	1410	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	1104	1358	none	no
+QF_UFLIA/wisas/xs_10_15.smt2	bothmid	sat	0	1410	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	1104	1358	none	no
+QF_UFLIA/wisas/xs_10_15.smt2	bothmax	sat	0	1410	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	1105	1359	none	no
+QF_UFLIA/wisas/xs_16_26.smt2	base	unknown	0	24328	21	none	uf-arith-lazy-overbound	18006	24259	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy function-consistency CEGAR inconclusive (applications=57, function_groups=3, potential_pairs=525, solve_rounds=11, elapsed_ms=5629, sat_candidates=10, first_candidate_ms=186, last_candidate_ms=774, pair_checks=4944, equal_arg_pairs=49, violated_pairs=23, preseeded_lemmas=0, sibling_lemmas=10, lemmas_added=59, last_new_lemmas=4): lazy linear arithmetic exhausted the configured timeout after 678 rounds this solve (solve_calls=11, total_rounds=806, atoms=695, bound_lemmas=557, blocking_lemmas=804, core_len_last=204, core_len_min=2, core_len_max=204, core_len_avg=10.9, core_src_bound=23, core_src_diff=469, core_src_affine=46, core_src_lp=264, core_src_minimized=1, core_src_large=1, core_large_literals=204, support_attempts=806, support_unavailable=0, support_conflict_batches=796, support_model_attempts=10, support_replay_failures=0, full_fallbacks=0, min_oracle_calls=146, min_oracle_budget_left=32622, min_declined_cores=0)	no
+QF_UFLIA/wisas/xs_16_26.smt2	a4096	unknown	0	24328	21	none	uf-arith-lazy-overbound	18004	24260	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy function-consistency CEGAR inconclusive (applications=57, function_groups=3, potential_pairs=525, solve_rounds=11, elapsed_ms=5636, sat_candidates=10, first_candidate_ms=187, last_candidate_ms=773, pair_checks=4944, equal_arg_pairs=49, violated_pairs=23, preseeded_lemmas=0, sibling_lemmas=10, lemmas_added=59, last_new_lemmas=4): lazy linear arithmetic exhausted the configured timeout after 677 rounds this solve (solve_calls=11, total_rounds=805, atoms=695, bound_lemmas=557, blocking_lemmas=803, core_len_last=204, core_len_min=2, core_len_max=204, core_len_avg=10.9, core_src_bound=23, core_src_diff=469, core_src_affine=46, core_src_lp=263, core_src_minimized=1, core_src_large=1, core_large_literals=204, support_attempts=805, support_unavailable=0, support_conflict_batches=795, support_model_attempts=10, support_replay_failures=0, full_fallbacks=0, min_oracle_calls=146, min_oracle_budget_left=32622, min_declined_cores=0)	no
+QF_UFLIA/wisas/xs_16_26.smt2	n65536	unknown	0	24328	21	none	uf-arith-lazy-overbound	18007	24260	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy function-consistency CEGAR inconclusive (applications=57, function_groups=3, potential_pairs=525, solve_rounds=11, elapsed_ms=5630, sat_candidates=10, first_candidate_ms=187, last_candidate_ms=777, pair_checks=4944, equal_arg_pairs=49, violated_pairs=23, preseeded_lemmas=0, sibling_lemmas=10, lemmas_added=59, last_new_lemmas=4): lazy linear arithmetic exhausted the configured timeout after 676 rounds this solve (solve_calls=11, total_rounds=804, atoms=695, bound_lemmas=557, blocking_lemmas=802, core_len_last=204, core_len_min=2, core_len_max=204, core_len_avg=10.9, core_src_bound=23, core_src_diff=469, core_src_affine=46, core_src_lp=262, core_src_minimized=1, core_src_large=1, core_large_literals=204, support_attempts=804, support_unavailable=0, support_conflict_batches=794, support_model_attempts=10, support_replay_failures=0, full_fallbacks=0, min_oracle_calls=146, min_oracle_budget_left=32622, min_declined_cores=0)	no
+QF_UFLIA/wisas/xs_16_26.smt2	n262144	unknown	0	24327	21	none	uf-arith-lazy-overbound	18001	24254	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy function-consistency CEGAR inconclusive (applications=57, function_groups=3, potential_pairs=525, solve_rounds=11, elapsed_ms=5633, sat_candidates=10, first_candidate_ms=186, last_candidate_ms=773, pair_checks=4944, equal_arg_pairs=49, violated_pairs=23, preseeded_lemmas=0, sibling_lemmas=10, lemmas_added=59, last_new_lemmas=4): linear-arithmetic sat-model reconstruction declined in the integer theory: lia simplex: wall-clock deadline passed while collecting integer constraints	no
+QF_UFLIA/wisas/xs_16_26.smt2	bothmid	unknown	0	24328	21	none	uf-arith-lazy-overbound	18002	24255	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy function-consistency CEGAR inconclusive (applications=57, function_groups=3, potential_pairs=525, solve_rounds=11, elapsed_ms=5631, sat_candidates=10, first_candidate_ms=187, last_candidate_ms=776, pair_checks=4944, equal_arg_pairs=49, violated_pairs=23, preseeded_lemmas=0, sibling_lemmas=10, lemmas_added=59, last_new_lemmas=4): lazy linear arithmetic exhausted the configured timeout after 678 rounds this solve (solve_calls=11, total_rounds=806, atoms=695, bound_lemmas=557, blocking_lemmas=804, core_len_last=30, core_len_min=2, core_len_max=32, core_len_avg=10.7, core_src_bound=23, core_src_diff=469, core_src_affine=46, core_src_lp=265, core_src_minimized=1, core_src_large=0, core_large_literals=0, support_attempts=806, support_unavailable=0, support_conflict_batches=796, support_model_attempts=10, support_replay_failures=0, full_fallbacks=0, min_oracle_calls=146, min_oracle_budget_left=32622, min_declined_cores=0)	no
+QF_UFLIA/wisas/xs_16_26.smt2	bothmax	unknown	0	24327	21	none	uf-arith-lazy-overbound	18006	24254	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy function-consistency CEGAR inconclusive (applications=57, function_groups=3, potential_pairs=525, solve_rounds=11, elapsed_ms=5629, sat_candidates=10, first_candidate_ms=187, last_candidate_ms=774, pair_checks=4944, equal_arg_pairs=49, violated_pairs=23, preseeded_lemmas=0, sibling_lemmas=10, lemmas_added=59, last_new_lemmas=4): lazy linear arithmetic exhausted the configured timeout after 681 rounds this solve (solve_calls=11, total_rounds=809, atoms=695, bound_lemmas=557, blocking_lemmas=807, core_len_last=30, core_len_min=2, core_len_max=32, core_len_avg=10.7, core_src_bound=23, core_src_diff=470, core_src_affine=46, core_src_lp=267, core_src_minimized=1, core_src_large=0, core_large_literals=0, support_attempts=809, support_unavailable=0, support_conflict_batches=799, support_model_attempts=10, support_replay_failures=0, full_fallbacks=0, min_oracle_calls=146, min_oracle_budget_left=32622, min_declined_cores=0)	no
+QF_UFLIA/wisas/xs_22_32.smt2	base	sat	0	9416	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	9050	9308	none	no
+QF_UFLIA/wisas/xs_22_32.smt2	a4096	sat	0	9416	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	9101	9359	none	no
+QF_UFLIA/wisas/xs_22_32.smt2	n65536	sat	0	9415	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	9142	9400	none	no
+QF_UFLIA/wisas/xs_22_32.smt2	n262144	sat	0	9416	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	9057	9315	none	no
+QF_UFLIA/wisas/xs_22_32.smt2	bothmid	sat	0	9416	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	9117	9376	none	no
+QF_UFLIA/wisas/xs_22_32.smt2	bothmax	sat	0	9416	8	uf-arith-lazy-overbound	uf-arith-lazy-overbound	9072	9330	none	no
+QF_ABVFP/20170428-Liew-KLEE/aachen_real_gmp_gmp_klee_mpqload.x86_64/query.112.smt2	base	unsat	0	109	5	array-fast-path	array-fast-path	44	53	none	no
+QF_ABVFP/20170428-Liew-KLEE/aachen_real_gmp_gmp_klee_mpqload.x86_64/query.112.smt2	a4096	unsat	0	109	5	array-fast-path	array-fast-path	42	51	none	no
+QF_ABVFP/20170428-Liew-KLEE/aachen_real_gmp_gmp_klee_mpqload.x86_64/query.112.smt2	n65536	unsat	0	108	5	array-fast-path	array-fast-path	42	52	none	no
+QF_ABVFP/20170428-Liew-KLEE/aachen_real_gmp_gmp_klee_mpqload.x86_64/query.112.smt2	n262144	unsat	0	109	5	array-fast-path	array-fast-path	42	51	none	no
+QF_ABVFP/20170428-Liew-KLEE/aachen_real_gmp_gmp_klee_mpqload.x86_64/query.112.smt2	bothmid	unsat	0	109	5	array-fast-path	array-fast-path	43	52	none	no
+QF_ABVFP/20170428-Liew-KLEE/aachen_real_gmp_gmp_klee_mpqload.x86_64/query.112.smt2	bothmax	unsat	0	108	5	array-fast-path	array-fast-path	42	51	none	no
+QF_ABVFP/20170428-Liew-KLEE/aachen_real_sorting_full_sym_doubles.x86_64/query.05.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	0	none	no
+QF_ABVFP/20170428-Liew-KLEE/aachen_real_sorting_full_sym_doubles.x86_64/query.05.smt2	a4096	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	0	none	no
+QF_ABVFP/20170428-Liew-KLEE/aachen_real_sorting_full_sym_doubles.x86_64/query.05.smt2	n65536	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	0	none	no
+QF_ABVFP/20170428-Liew-KLEE/aachen_real_sorting_full_sym_doubles.x86_64/query.05.smt2	n262144	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	0	none	no
+QF_ABVFP/20170428-Liew-KLEE/aachen_real_sorting_full_sym_doubles.x86_64/query.05.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	0	none	no
+QF_ABVFP/20170428-Liew-KLEE/aachen_real_sorting_full_sym_doubles.x86_64/query.05.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	0	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_histogram2d_klee_bug.x86_64/query.008.smt2	base	unknown	0	25032	5	none	dl-online	122	133	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_histogram2d_klee_bug.x86_64/query.008.smt2	a4096	unknown	0	25030	5	none	dl-online	123	135	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_histogram2d_klee_bug.x86_64/query.008.smt2	n65536	unknown	0	25030	5	none	dl-online	122	134	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_histogram2d_klee_bug.x86_64/query.008.smt2	n262144	unknown	0	25030	5	none	dl-online	122	134	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_histogram2d_klee_bug.x86_64/query.008.smt2	bothmid	unknown	0	25031	5	none	dl-online	122	133	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_histogram2d_klee_bug.x86_64/query.008.smt2	bothmax	unknown	0	25030	5	none	dl-online	122	134	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.0431.smt2	base	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	66	67	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.0431.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	66	67	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.0431.smt2	n65536	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	65	66	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.0431.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	65	66	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.0431.smt2	bothmid	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	66	67	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.0431.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	65	66	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.0977.smt2	base	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	5	6	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.0977.smt2	a4096	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	5	6	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.0977.smt2	n65536	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	5	6	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.0977.smt2	n262144	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	5	6	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.0977.smt2	bothmid	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	5	6	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.0977.smt2	bothmax	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	5	6	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.1524.smt2	base	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	3	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.1524.smt2	a4096	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	3	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.1524.smt2	n65536	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	3	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.1524.smt2	n262144	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	3	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.1524.smt2	bothmid	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	3	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.1524.smt2	bothmax	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	3	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.2071.smt2	base	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	3	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.2071.smt2	a4096	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	3	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.2071.smt2	n65536	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	3	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.2071.smt2	n262144	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	3	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.2071.smt2	bothmid	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	3	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee.x86_64/query.2071.smt2	bothmax	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	3	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.0023.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	10	11	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.0023.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	9	10	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.0023.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	9	10	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.0023.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	9	11	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.0023.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	9	10	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.0023.smt2	bothmax	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	10	11	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.1106.smt2	base	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	67	68	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.1106.smt2	a4096	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	67	69	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.1106.smt2	n65536	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	66	67	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.1106.smt2	n262144	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	66	68	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.1106.smt2	bothmid	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	66	67	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.1106.smt2	bothmax	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	66	68	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.1784.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	81	83	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.1784.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	81	83	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.1784.smt2	n65536	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	82	83	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.1784.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	81	83	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.1784.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	82	83	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_gsl_benchmarks_sort_smallest_klee_bug.x86_64/query.1784.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	80	82	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_exp_loop.c.x86_64/query.040.smt2	base	unknown	0	25030	3	none	dl-online	4	5	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_exp_loop.c.x86_64/query.040.smt2	a4096	unknown	0	25031	3	none	dl-online	4	5	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_exp_loop.c.x86_64/query.040.smt2	n65536	unknown	0	25031	3	none	dl-online	4	5	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_exp_loop.c.x86_64/query.040.smt2	n262144	unknown	0	25030	3	none	dl-online	4	5	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_exp_loop.c.x86_64/query.040.smt2	bothmid	unknown	0	25031	3	none	dl-online	4	5	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_exp_loop.c.x86_64/query.040.smt2	bothmax	unknown	0	25031	3	none	dl-online	4	5	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.00394.smt2	base	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.00394.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.00394.smt2	n65536	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.00394.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.00394.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.00394.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.00941.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.00941.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.00941.smt2	n65536	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.00941.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.00941.smt2	bothmid	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.00941.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.01488.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.01488.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.01488.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.01488.smt2	n262144	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.01488.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.01488.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.02034.smt2	base	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.02034.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.02034.smt2	n65536	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.02034.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.02034.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.02034.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.02581.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.02581.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.02581.smt2	n65536	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.02581.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.02581.smt2	bothmid	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.02581.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.03127.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.03127.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.03127.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.03127.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.03127.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.03127.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.03674.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.03674.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.03674.smt2	n65536	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.03674.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.03674.smt2	bothmid	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.03674.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.04221.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.04221.smt2	a4096	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.04221.smt2	n65536	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.04221.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.04221.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.04221.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.04767.smt2	base	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.04767.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.04767.smt2	n65536	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.04767.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.04767.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.04767.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.05314.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.05314.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.05314.smt2	n65536	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.05314.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.05314.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.05314.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.05860.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.05860.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.05860.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.05860.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.05860.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.05860.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.06407.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.06407.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.06407.smt2	n65536	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.06407.smt2	n262144	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.06407.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.06407.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.06953.smt2	base	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.06953.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.06953.smt2	n65536	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.06953.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.06953.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.06953.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.07500.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.07500.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.07500.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.07500.smt2	n262144	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.07500.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.07500.smt2	bothmax	sat	0	107	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.08047.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.08047.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.08047.smt2	n65536	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.08047.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.08047.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.08047.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.08593.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.08593.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.08593.smt2	n65536	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.08593.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.08593.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.08593.smt2	bothmax	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.09140.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.09140.smt2	a4096	sat	0	110	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.09140.smt2	n65536	sat	0	110	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.09140.smt2	n262144	sat	0	110	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.09140.smt2	bothmid	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.09140.smt2	bothmax	sat	0	110	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.09686.smt2	base	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.09686.smt2	a4096	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.09686.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.09686.smt2	n262144	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.09686.smt2	bothmid	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.09686.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.10233.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.10233.smt2	a4096	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.10233.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.10233.smt2	n262144	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.10233.smt2	bothmid	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.10233.smt2	bothmax	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.10779.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.10779.smt2	a4096	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.10779.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.10779.smt2	n262144	sat	0	110	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.10779.smt2	bothmid	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_mea8000.x86_64/query.10779.smt2	bothmax	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_rlim_invariant.x86_64/query.526.smt2	base	unknown	0	25030	3	none	dl-online	82	88	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_rlim_invariant.x86_64/query.526.smt2	a4096	unknown	0	25032	3	none	dl-online	83	89	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_rlim_invariant.x86_64/query.526.smt2	n65536	unknown	0	25030	3	none	dl-online	73	80	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_rlim_invariant.x86_64/query.526.smt2	n262144	unknown	0	25027	3	none	dl-online	82	89	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_rlim_invariant.x86_64/query.526.smt2	bothmid	unknown	0	25028	3	none	dl-online	79	86	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_rlim_invariant.x86_64/query.526.smt2	bothmax	unknown	0	25028	3	none	dl-online	81	87	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_synthetic_non_terminating_klee_no_bug.x86_64/query.27.smt2	base	unknown	0	25132	4	none	dl-online	133	155	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_synthetic_non_terminating_klee_no_bug.x86_64/query.27.smt2	a4096	unknown	0	25132	4	none	dl-online	128	152	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_synthetic_non_terminating_klee_no_bug.x86_64/query.27.smt2	n65536	unknown	0	25131	4	none	dl-online	133	155	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_synthetic_non_terminating_klee_no_bug.x86_64/query.27.smt2	n262144	unknown	0	24330	14	none	array-fast-path	24086	24239	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] pure-Rust BV backend timeout after SAT search	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_synthetic_non_terminating_klee_no_bug.x86_64/query.27.smt2	bothmid	unknown	0	25129	4	none	dl-online	134	157	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABVFP/20170428-Liew-KLEE/imperial_synthetic_non_terminating_klee_no_bug.x86_64/query.27.smt2	bothmax	unknown	0	25131	4	none	dl-online	129	151	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABV/2018-Mann/arbiter_array_cex_w32d32q16n4b34.smt2	base	unknown	0	24530	14	none	array-fast-path	23970	24399	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] pure-Rust BV backend timeout after SAT search	no
+QF_ABV/2018-Mann/arbiter_array_cex_w32d32q16n4b34.smt2	a4096	unknown	0	24326	14	none	array-fast-path	23798	24207	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] pure-Rust BV backend timeout after SAT search	no
+QF_ABV/2018-Mann/arbiter_array_cex_w32d32q16n4b34.smt2	n65536	unknown	0	24429	14	none	array-fast-path	23777	24267	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] pure-Rust BV backend timeout after SAT search	no
+QF_ABV/2018-Mann/arbiter_array_cex_w32d32q16n4b34.smt2	n262144	unknown	0	24331	14	none	array-fast-path	23698	24175	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] pure-Rust BV backend timeout after SAT search	no
+QF_ABV/2018-Mann/arbiter_array_cex_w32d32q16n4b34.smt2	bothmid	unknown	0	24632	14	none	array-fast-path	24002	24518	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] pure-Rust BV backend timeout after SAT search	no
+QF_ABV/2018-Mann/arbiter_array_cex_w32d32q16n4b34.smt2	bothmax	unknown	0	24432	14	none	array-fast-path	23524	24279	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] pure-Rust BV backend timeout before SAT solve	no
+QF_ABV/brummayerbiere/wchains010se.smt2	base	sat	0	410	5	array-fast-path	array-fast-path	288	303	none	no
+QF_ABV/brummayerbiere/wchains010se.smt2	a4096	sat	0	410	5	array-fast-path	array-fast-path	287	301	none	no
+QF_ABV/brummayerbiere/wchains010se.smt2	n65536	sat	0	409	5	array-fast-path	array-fast-path	282	297	none	no
+QF_ABV/brummayerbiere/wchains010se.smt2	n262144	sat	0	410	5	array-fast-path	array-fast-path	281	296	none	no
+QF_ABV/brummayerbiere/wchains010se.smt2	bothmid	sat	0	409	5	array-fast-path	array-fast-path	290	305	none	no
+QF_ABV/brummayerbiere/wchains010se.smt2	bothmax	sat	0	410	5	array-fast-path	array-fast-path	282	298	none	no
+QF_ABV/dwp_formulas/try3_noof_functions_dwp_sum.set_char_quoting.il.dwp.smt2	base	sat	0	18326	5	array-fast-path	abv-online-cdclt	18011	18272	none	no
+QF_ABV/dwp_formulas/try3_noof_functions_dwp_sum.set_char_quoting.il.dwp.smt2	a4096	sat	0	18327	5	array-fast-path	abv-online-cdclt	18016	18273	none	no
+QF_ABV/dwp_formulas/try3_noof_functions_dwp_sum.set_char_quoting.il.dwp.smt2	n65536	sat	0	18326	5	array-fast-path	abv-online-cdclt	18017	18291	none	no
+QF_ABV/dwp_formulas/try3_noof_functions_dwp_sum.set_char_quoting.il.dwp.smt2	n262144	sat	0	18326	5	array-fast-path	abv-online-cdclt	18010	18274	none	no
+QF_ABV/dwp_formulas/try3_noof_functions_dwp_sum.set_char_quoting.il.dwp.smt2	bothmid	sat	0	18325	5	array-fast-path	abv-online-cdclt	18010	18288	none	no
+QF_ABV/dwp_formulas/try3_noof_functions_dwp_sum.set_char_quoting.il.dwp.smt2	bothmax	sat	0	18325	5	array-fast-path	abv-online-cdclt	18000	18262	none	no
+QF_ABV/dwp_formulas/try3_sameret_functions_dwp_pr.hold_file.il.dwp.smt2	base	sat	0	6715	5	array-fast-path	array-fast-path	6669	6678	none	no
+QF_ABV/dwp_formulas/try3_sameret_functions_dwp_pr.hold_file.il.dwp.smt2	a4096	unknown	0	24132	14	none	abv-online-cdclt	18003	24016	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy-extensionality scalar backend declined (round=40, sites=1446, array_eq_atoms=10, row_lemmas=288, cong_lemmas=31, diff_skolems=3, working_assertions=406, last_candidate_replay=false(assertion_ordinal=0, term=2128, failed_conjunct_ordinal=0, failed_conjunct_term=2128, select_repair_candidates=0, select_repair_array_changes=0, select_repair_symbol_changes=0, branch_repair_candidates=0, branch_repair_symbol_changes=0, scalar_repair_candidates=0, scalar_support_candidates=0, scalar_stabilized_trials=0, scalar_rejected_worse_trials=0, scalar_equal_support_repairs=0, scalar_repair_symbol_changes=0, projection_repair_changes=0), failed_eq_lhs_term=3, failed_eq_rhs_term=2127, failed_eq_lhs_value=#x1, failed_eq_rhs_value=#x0): native CDCL core timeout	no
+QF_ABV/dwp_formulas/try3_sameret_functions_dwp_pr.hold_file.il.dwp.smt2	n65536	sat	0	6715	5	array-fast-path	array-fast-path	6602	6612	none	no
+QF_ABV/dwp_formulas/try3_sameret_functions_dwp_pr.hold_file.il.dwp.smt2	n262144	sat	0	6815	5	array-fast-path	array-fast-path	6690	6700	none	no
+QF_ABV/dwp_formulas/try3_sameret_functions_dwp_pr.hold_file.il.dwp.smt2	bothmid	unknown	0	24131	15	none	abv-online-cdclt	18002	24049	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Incomplete] array shape left undecided by the lazy ROW/extensionality path and refused by bounded array elimination: unsupported by backend: array equality over a 32-bit index (bounded extensionality supports indices up to 8 bits)	no
+QF_ABV/dwp_formulas/try3_sameret_functions_dwp_pr.hold_file.il.dwp.smt2	bothmax	sat	0	23929	5	array-fast-path	abv-online-cdclt	18005	23819	none	no
+QF_ABV/dwp_formulas/try3_sameret_functions_fse-bfs_shuf.close_stdout_set_file_name.il.fse-bfs.smt2	base	sat	0	110	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/dwp_formulas/try3_sameret_functions_fse-bfs_shuf.close_stdout_set_file_name.il.fse-bfs.smt2	a4096	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/dwp_formulas/try3_sameret_functions_fse-bfs_shuf.close_stdout_set_file_name.il.fse-bfs.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/dwp_formulas/try3_sameret_functions_fse-bfs_shuf.close_stdout_set_file_name.il.fse-bfs.smt2	n262144	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/dwp_formulas/try3_sameret_functions_fse-bfs_shuf.close_stdout_set_file_name.il.fse-bfs.smt2	bothmid	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/dwp_formulas/try3_sameret_functions_fse-bfs_shuf.close_stdout_set_file_name.il.fse-bfs.smt2	bothmax	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/dwp_formulas/try3_true_functions_dwp_uptime.get_quoting_style.il.dwp.smt2	base	sat	0	209	4	abv-online-cdclt	abv-online-cdclt	101	102	none	no
+QF_ABV/dwp_formulas/try3_true_functions_dwp_uptime.get_quoting_style.il.dwp.smt2	a4096	sat	0	209	4	abv-online-cdclt	abv-online-cdclt	103	104	none	no
+QF_ABV/dwp_formulas/try3_true_functions_dwp_uptime.get_quoting_style.il.dwp.smt2	n65536	sat	0	209	4	abv-online-cdclt	abv-online-cdclt	102	104	none	no
+QF_ABV/dwp_formulas/try3_true_functions_dwp_uptime.get_quoting_style.il.dwp.smt2	n262144	sat	0	209	4	abv-online-cdclt	abv-online-cdclt	101	103	none	no
+QF_ABV/dwp_formulas/try3_true_functions_dwp_uptime.get_quoting_style.il.dwp.smt2	bothmid	sat	0	209	4	abv-online-cdclt	abv-online-cdclt	103	105	none	no
+QF_ABV/dwp_formulas/try3_true_functions_dwp_uptime.get_quoting_style.il.dwp.smt2	bothmax	sat	0	209	4	abv-online-cdclt	abv-online-cdclt	103	104	none	no
+QF_ABV/dwp_formulas/try4_difret_functions_disjunctions_vdir.is_directory.il.disjunctions_0.smt2	base	unsat	0	309	4	abv-online-cdclt	abv-online-cdclt	193	194	none	no
+QF_ABV/dwp_formulas/try4_difret_functions_disjunctions_vdir.is_directory.il.disjunctions_0.smt2	a4096	unsat	0	309	4	abv-online-cdclt	abv-online-cdclt	196	197	none	no
+QF_ABV/dwp_formulas/try4_difret_functions_disjunctions_vdir.is_directory.il.disjunctions_0.smt2	n65536	unsat	0	309	4	abv-online-cdclt	abv-online-cdclt	195	196	none	no
+QF_ABV/dwp_formulas/try4_difret_functions_disjunctions_vdir.is_directory.il.disjunctions_0.smt2	n262144	unsat	0	310	4	abv-online-cdclt	abv-online-cdclt	194	195	none	no
+QF_ABV/dwp_formulas/try4_difret_functions_disjunctions_vdir.is_directory.il.disjunctions_0.smt2	bothmid	unsat	0	309	4	abv-online-cdclt	abv-online-cdclt	194	195	none	no
+QF_ABV/dwp_formulas/try4_difret_functions_disjunctions_vdir.is_directory.il.disjunctions_0.smt2	bothmax	unsat	0	309	4	abv-online-cdclt	abv-online-cdclt	194	195	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_cat.next_line_num.il.dwp.smt2	base	unknown	0	5915	15	none	array-fast-path	5806	5817	give-up kind=Incomplete detail=array shape left undecided by the lazy ROW/extensionality path and refused by bounded array elimination: unsupported by backend: array equality over a 32-bit index (bounded extensionality supports indices up to 8 bits)	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_cat.next_line_num.il.dwp.smt2	a4096	unknown	0	23130	15	none	abv-online-cdclt	17999	23029	give-up kind=Incomplete detail=array shape left undecided by the lazy ROW/extensionality path and refused by bounded array elimination: unsupported by backend: array equality over a 32-bit index (bounded extensionality supports indices up to 8 bits)	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_cat.next_line_num.il.dwp.smt2	n65536	unknown	0	5115	15	none	array-fast-path	5083	5094	give-up kind=Incomplete detail=array shape left undecided by the lazy ROW/extensionality path and refused by bounded array elimination: unsupported by backend: array equality over a 32-bit index (bounded extensionality supports indices up to 8 bits)	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_cat.next_line_num.il.dwp.smt2	n262144	unknown	0	5115	15	none	array-fast-path	5060	5070	give-up kind=Incomplete detail=array shape left undecided by the lazy ROW/extensionality path and refused by bounded array elimination: unsupported by backend: array equality over a 32-bit index (bounded extensionality supports indices up to 8 bits)	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_cat.next_line_num.il.dwp.smt2	bothmid	unknown	0	23232	15	none	abv-online-cdclt	18004	23185	give-up kind=Incomplete detail=array shape left undecided by the lazy ROW/extensionality path and refused by bounded array elimination: unsupported by backend: array equality over a 32-bit index (bounded extensionality supports indices up to 8 bits)	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_cat.next_line_num.il.dwp.smt2	bothmax	unknown	0	23030	15	none	abv-online-cdclt	18001	22924	give-up kind=Incomplete detail=array shape left undecided by the lazy ROW/extensionality path and refused by bounded array elimination: unsupported by backend: array equality over a 32-bit index (bounded extensionality supports indices up to 8 bits)	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_stty.visible.il.dwp.smt2	base	unknown	0	24232	14	none	array-fast-path	22893	24099	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy-extensionality scalar backend declined (round=48, sites=1292, array_eq_atoms=22, row_lemmas=534, cong_lemmas=705, diff_skolems=21, working_assertions=1837, last_candidate_replay=false(assertion_ordinal=0, term=2179, failed_conjunct_ordinal=0, failed_conjunct_term=2179, select_repair_candidates=0, select_repair_array_changes=0, select_repair_symbol_changes=0, branch_repair_candidates=0, branch_repair_symbol_changes=0, scalar_repair_candidates=0, scalar_support_candidates=0, scalar_stabilized_trials=0, scalar_rejected_worse_trials=0, scalar_equal_support_repairs=0, scalar_repair_symbol_changes=0, projection_repair_changes=0), failed_eq_lhs_term=0, failed_eq_rhs_term=2178, failed_eq_lhs_value=#x1, failed_eq_rhs_value=#x0): native CDCL core timeout	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_stty.visible.il.dwp.smt2	a4096	unknown	0	24232	14	none	array-fast-path	22856	24114	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy-extensionality scalar backend declined (round=47, sites=1292, array_eq_atoms=22, row_lemmas=534, cong_lemmas=705, diff_skolems=21, working_assertions=1833, last_candidate_replay=false(assertion_ordinal=0, term=2179, failed_conjunct_ordinal=0, failed_conjunct_term=2179, select_repair_candidates=0, select_repair_array_changes=0, select_repair_symbol_changes=0, branch_repair_candidates=0, branch_repair_symbol_changes=0, scalar_repair_candidates=0, scalar_support_candidates=0, scalar_stabilized_trials=0, scalar_rejected_worse_trials=0, scalar_equal_support_repairs=0, scalar_repair_symbol_changes=0, projection_repair_changes=0), failed_eq_lhs_term=0, failed_eq_rhs_term=2178, failed_eq_lhs_value=#x1, failed_eq_rhs_value=#x0): native CDCL core timeout	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_stty.visible.il.dwp.smt2	n65536	unknown	0	24232	14	none	array-fast-path	22912	24148	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy-extensionality scalar backend declined (round=47, sites=1292, array_eq_atoms=22, row_lemmas=534, cong_lemmas=705, diff_skolems=21, working_assertions=1833, last_candidate_replay=false(assertion_ordinal=0, term=2179, failed_conjunct_ordinal=0, failed_conjunct_term=2179, select_repair_candidates=0, select_repair_array_changes=0, select_repair_symbol_changes=0, branch_repair_candidates=0, branch_repair_symbol_changes=0, scalar_repair_candidates=0, scalar_support_candidates=0, scalar_stabilized_trials=0, scalar_rejected_worse_trials=0, scalar_equal_support_repairs=0, scalar_repair_symbol_changes=0, projection_repair_changes=0), failed_eq_lhs_term=0, failed_eq_rhs_term=2178, failed_eq_lhs_value=#x1, failed_eq_rhs_value=#x0): native CDCL core timeout	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_stty.visible.il.dwp.smt2	n262144	unknown	0	24232	15	none	array-fast-path	22907	24145	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Incomplete] array shape left undecided by the lazy ROW/extensionality path and refused by bounded array elimination: unsupported by backend: array equality over a 32-bit index (bounded extensionality supports indices up to 8 bits)	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_stty.visible.il.dwp.smt2	bothmid	unknown	0	24131	14	none	array-fast-path	22818	24052	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy-extensionality scalar backend declined (round=48, sites=1292, array_eq_atoms=22, row_lemmas=534, cong_lemmas=705, diff_skolems=21, working_assertions=1837, last_candidate_replay=false(assertion_ordinal=0, term=2179, failed_conjunct_ordinal=0, failed_conjunct_term=2179, select_repair_candidates=0, select_repair_array_changes=0, select_repair_symbol_changes=0, branch_repair_candidates=0, branch_repair_symbol_changes=0, scalar_repair_candidates=0, scalar_support_candidates=0, scalar_stabilized_trials=0, scalar_rejected_worse_trials=0, scalar_equal_support_repairs=0, scalar_repair_symbol_changes=0, projection_repair_changes=0), failed_eq_lhs_term=0, failed_eq_rhs_term=2178, failed_eq_lhs_value=#x1, failed_eq_rhs_value=#x0): native CDCL core timeout	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_stty.visible.il.dwp.smt2	bothmax	unknown	0	24130	14	none	array-fast-path	23239	24089	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy-extensionality scalar backend declined (round=47, sites=1292, array_eq_atoms=22, row_lemmas=534, cong_lemmas=705, diff_skolems=21, working_assertions=1833, last_candidate_replay=false(assertion_ordinal=0, term=2179, failed_conjunct_ordinal=0, failed_conjunct_term=2179, select_repair_candidates=0, select_repair_array_changes=0, select_repair_symbol_changes=0, branch_repair_candidates=0, branch_repair_symbol_changes=0, scalar_repair_candidates=0, scalar_support_candidates=0, scalar_stabilized_trials=0, scalar_rejected_worse_trials=0, scalar_equal_support_repairs=0, scalar_repair_symbol_changes=0, projection_repair_changes=0), failed_eq_lhs_term=0, failed_eq_rhs_term=2178, failed_eq_lhs_value=#x1, failed_eq_rhs_value=#x0): native CDCL core timeout	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_flanagansaxe_mv.set_author.il.flanagansaxe.smt2	base	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	8	9	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_flanagansaxe_mv.set_author.il.flanagansaxe.smt2	a4096	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	9	11	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_flanagansaxe_mv.set_author.il.flanagansaxe.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	9	11	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_flanagansaxe_mv.set_author.il.flanagansaxe.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	9	10	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_flanagansaxe_mv.set_author.il.flanagansaxe.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	9	10	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_flanagansaxe_mv.set_author.il.flanagansaxe.smt2	bothmax	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	9	10	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_fse-bfs_mkdir.close_stdout_set_file_name.il.fse-bfs.smt2	base	sat	0	4413	4	abv-online-cdclt	abv-online-cdclt	4294	4295	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_fse-bfs_mkdir.close_stdout_set_file_name.il.fse-bfs.smt2	a4096	sat	0	4413	4	abv-online-cdclt	abv-online-cdclt	4301	4302	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_fse-bfs_mkdir.close_stdout_set_file_name.il.fse-bfs.smt2	n65536	sat	0	4313	4	abv-online-cdclt	abv-online-cdclt	4198	4199	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_fse-bfs_mkdir.close_stdout_set_file_name.il.fse-bfs.smt2	n262144	sat	0	4012	4	abv-online-cdclt	abv-online-cdclt	3985	3986	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_fse-bfs_mkdir.close_stdout_set_file_name.il.fse-bfs.smt2	bothmid	sat	0	4112	4	abv-online-cdclt	abv-online-cdclt	4071	4072	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_fse-bfs_mkdir.close_stdout_set_file_name.il.fse-bfs.smt2	bothmax	sat	0	4012	4	abv-online-cdclt	abv-online-cdclt	3907	3909	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_wp_test.close_stdout_set_file_name.il.wp.smt2	base	sat	0	4212	4	abv-online-cdclt	abv-online-cdclt	4167	4168	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_wp_test.close_stdout_set_file_name.il.wp.smt2	a4096	sat	0	4212	4	abv-online-cdclt	abv-online-cdclt	4171	4172	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_wp_test.close_stdout_set_file_name.il.wp.smt2	n65536	sat	0	4112	4	abv-online-cdclt	abv-online-cdclt	4082	4083	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_wp_test.close_stdout_set_file_name.il.wp.smt2	n262144	sat	0	4212	4	abv-online-cdclt	abv-online-cdclt	4125	4126	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_wp_test.close_stdout_set_file_name.il.wp.smt2	bothmid	sat	0	4313	4	abv-online-cdclt	abv-online-cdclt	4279	4281	none	no
+QF_ABV/dwp_formulas/try5_small_difret_functions_wp_test.close_stdout_set_file_name.il.wp.smt2	bothmax	sat	0	4313	4	abv-online-cdclt	abv-online-cdclt	4271	4273	none	no
+QF_ABV/dwp_formulas/try5_small_noof_functions_dwp_vdir.rev_xstrcoll_mtime.il.dwp.smt2	base	sat	0	810	5	array-fast-path	array-fast-path	754	761	none	no
+QF_ABV/dwp_formulas/try5_small_noof_functions_dwp_vdir.rev_xstrcoll_mtime.il.dwp.smt2	a4096	sat	0	18826	5	array-fast-path	abv-online-cdclt	18002	18749	none	no
+QF_ABV/dwp_formulas/try5_small_noof_functions_dwp_vdir.rev_xstrcoll_mtime.il.dwp.smt2	n65536	sat	0	810	5	array-fast-path	array-fast-path	727	735	none	no
+QF_ABV/dwp_formulas/try5_small_noof_functions_dwp_vdir.rev_xstrcoll_mtime.il.dwp.smt2	n262144	sat	0	609	5	array-fast-path	array-fast-path	491	497	none	no
+QF_ABV/dwp_formulas/try5_small_noof_functions_dwp_vdir.rev_xstrcoll_mtime.il.dwp.smt2	bothmid	sat	0	18525	5	array-fast-path	abv-online-cdclt	18001	18492	none	no
+QF_ABV/dwp_formulas/try5_small_noof_functions_dwp_vdir.rev_xstrcoll_mtime.il.dwp.smt2	bothmax	sat	0	18625	5	array-fast-path	abv-online-cdclt	18007	18513	none	no
+QF_ABV/dwp_formulas/try5_small_noof_functions_fse-bfs_expr.optimize_subexps.il.fse-bfs.smt2	base	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	35	41	none	no
+QF_ABV/dwp_formulas/try5_small_noof_functions_fse-bfs_expr.optimize_subexps.il.fse-bfs.smt2	a4096	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	36	42	none	no
+QF_ABV/dwp_formulas/try5_small_noof_functions_fse-bfs_expr.optimize_subexps.il.fse-bfs.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	35	41	none	no
+QF_ABV/dwp_formulas/try5_small_noof_functions_fse-bfs_expr.optimize_subexps.il.fse-bfs.smt2	n262144	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	35	41	none	no
+QF_ABV/dwp_formulas/try5_small_noof_functions_fse-bfs_expr.optimize_subexps.il.fse-bfs.smt2	bothmid	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	35	41	none	no
+QF_ABV/dwp_formulas/try5_small_noof_functions_fse-bfs_expr.optimize_subexps.il.fse-bfs.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	36	43	none	no
+QF_ABV/dwp_formulas/try5_small_true_functions_wp_md5sum.md5_process_block.il.wp.smt2	base	sat	0	3111	5	array-fast-path	array-fast-path	2668	2960	none	no
+QF_ABV/dwp_formulas/try5_small_true_functions_wp_md5sum.md5_process_block.il.wp.smt2	a4096	sat	0	3111	5	array-fast-path	array-fast-path	2709	3004	none	no
+QF_ABV/dwp_formulas/try5_small_true_functions_wp_md5sum.md5_process_block.il.wp.smt2	n65536	sat	0	3112	5	array-fast-path	array-fast-path	2711	3008	none	no
+QF_ABV/dwp_formulas/try5_small_true_functions_wp_md5sum.md5_process_block.il.wp.smt2	n262144	sat	0	3112	5	array-fast-path	array-fast-path	2709	3002	none	no
+QF_ABV/dwp_formulas/try5_small_true_functions_wp_md5sum.md5_process_block.il.wp.smt2	bothmid	sat	0	3112	5	array-fast-path	array-fast-path	2706	3001	none	no
+QF_ABV/dwp_formulas/try5_small_true_functions_wp_md5sum.md5_process_block.il.wp.smt2	bothmax	sat	0	3112	5	array-fast-path	array-fast-path	2691	2986	none	no
+QF_ABV/egt/egt-0334.smt2	base	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	2	3	none	no
+QF_ABV/egt/egt-0334.smt2	a4096	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	2	3	none	no
+QF_ABV/egt/egt-0334.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	2	3	none	no
+QF_ABV/egt/egt-0334.smt2	n262144	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	2	3	none	no
+QF_ABV/egt/egt-0334.smt2	bothmid	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	2	3	none	no
+QF_ABV/egt/egt-0334.smt2	bothmax	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	2	3	none	no
+QF_ABV/egt/egt-0796.smt2	base	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-0796.smt2	a4096	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-0796.smt2	n65536	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-0796.smt2	n262144	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-0796.smt2	bothmid	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-0796.smt2	bothmax	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-1251.smt2	base	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-1251.smt2	a4096	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-1251.smt2	n65536	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-1251.smt2	n262144	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-1251.smt2	bothmid	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-1251.smt2	bothmax	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-1723.smt2	base	unsat	0	109	4	abv-online-cdclt	dl-online	1	2	none	no
+QF_ABV/egt/egt-1723.smt2	a4096	unsat	0	109	4	abv-online-cdclt	dl-online	1	2	none	no
+QF_ABV/egt/egt-1723.smt2	n65536	unsat	0	109	4	abv-online-cdclt	dl-online	1	2	none	no
+QF_ABV/egt/egt-1723.smt2	n262144	unsat	0	108	4	abv-online-cdclt	dl-online	1	2	none	no
+QF_ABV/egt/egt-1723.smt2	bothmid	unsat	0	109	4	abv-online-cdclt	dl-online	1	2	none	no
+QF_ABV/egt/egt-1723.smt2	bothmax	unsat	0	109	4	abv-online-cdclt	dl-online	1	2	none	no
+QF_ABV/egt/egt-2179.smt2	base	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-2179.smt2	a4096	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-2179.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-2179.smt2	n262144	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-2179.smt2	bothmid	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-2179.smt2	bothmax	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-2643.smt2	base	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	2	3	none	no
+QF_ABV/egt/egt-2643.smt2	a4096	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-2643.smt2	n65536	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-2643.smt2	n262144	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	2	2	none	no
+QF_ABV/egt/egt-2643.smt2	bothmid	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-2643.smt2	bothmax	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-3108.smt2	base	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-3108.smt2	a4096	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-3108.smt2	n65536	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-3108.smt2	n262144	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-3108.smt2	bothmid	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-3108.smt2	bothmax	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-3569.smt2	base	unsat	0	108	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-3569.smt2	a4096	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-3569.smt2	n65536	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-3569.smt2	n262144	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-3569.smt2	bothmid	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-3569.smt2	bothmax	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-4025.smt2	base	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-4025.smt2	a4096	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-4025.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-4025.smt2	n262144	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-4025.smt2	bothmid	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-4025.smt2	bothmax	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-4487.smt2	base	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-4487.smt2	a4096	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-4487.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-4487.smt2	n262144	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-4487.smt2	bothmid	sat	0	110	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-4487.smt2	bothmax	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-4947.smt2	base	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-4947.smt2	a4096	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-4947.smt2	n65536	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-4947.smt2	n262144	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-4947.smt2	bothmid	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-4947.smt2	bothmax	unsat	0	109	3	array-unsat-refuter	fd:parse	0	0	none	no
+QF_ABV/egt/egt-5407.smt2	base	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-5407.smt2	a4096	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-5407.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-5407.smt2	n262144	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-5407.smt2	bothmid	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-5407.smt2	bothmax	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-5870.smt2	base	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-5870.smt2	a4096	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-5870.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-5870.smt2	n262144	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-5870.smt2	bothmid	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-5870.smt2	bothmax	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-6328.smt2	base	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-6328.smt2	a4096	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-6328.smt2	n65536	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-6328.smt2	n262144	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-6328.smt2	bothmid	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-6328.smt2	bothmax	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-6804.smt2	base	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-6804.smt2	a4096	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-6804.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-6804.smt2	n262144	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-6804.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-6804.smt2	bothmax	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-7264.smt2	base	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-7264.smt2	a4096	unsat	0	108	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-7264.smt2	n65536	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-7264.smt2	n262144	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-7264.smt2	bothmid	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-7264.smt2	bothmax	unsat	0	109	4	abv-online-cdclt	abv-online-cdclt	0	1	none	no
+QF_ABV/egt/egt-7721.smt2	base	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-7721.smt2	a4096	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-7721.smt2	n65536	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-7721.smt2	n262144	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-7721.smt2	bothmid	sat	0	108	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/egt/egt-7721.smt2	bothmax	sat	0	109	4	abv-online-cdclt	abv-online-cdclt	1	2	none	no
+QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000188.smt2	base	unknown	0	24131	14	none	array-fast-path	23984	24013	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] pure-Rust BV backend timeout after SAT search	no
+QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000188.smt2	a4096	unknown	0	24130	14	none	abv-online-cdclt	17992	24021	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] pure-Rust BV backend timeout before SAT solve	no
+QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000188.smt2	n65536	unknown	0	24130	14	none	array-fast-path	23975	24025	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] pure-Rust BV backend timeout after SAT search	no
+QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000188.smt2	n262144	unknown	0	24032	14	none	array-fast-path	23981	24010	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] pure-Rust BV backend exhausted its deadline during bit-vector lowering	no
+QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000188.smt2	bothmid	unknown	0	24031	14	none	abv-online-cdclt	17998	24012	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] pure-Rust BV backend exhausted its deadline during bit-vector lowering	no
+QF_ABV/klee-selected-smt2/cu-no-caches/_csplit-query-000188.smt2	bothmax	unknown	0	24130	14	none	abv-online-cdclt	17994	24012	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] pure-Rust BV backend exhausted its deadline during bit-vector lowering	no
+QF_ABV/platania/no_init_multi_delete/no_init_multi_delete135.smt2	base	unknown	0	25233	4	none	dl-online	2786	2918	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABV/platania/no_init_multi_delete/no_init_multi_delete135.smt2	a4096	unknown	0	25235	4	none	dl-online	2142	2244	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABV/platania/no_init_multi_delete/no_init_multi_delete135.smt2	n65536	unknown	0	25234	4	none	dl-online	1706	1797	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABV/platania/no_init_multi_delete/no_init_multi_delete135.smt2	n262144	unknown	0	25235	4	none	dl-online	1683	1774	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABV/platania/no_init_multi_delete/no_init_multi_delete135.smt2	bothmid	unknown	0	25229	4	none	dl-online	1701	1792	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_ABV/platania/no_init_multi_delete/no_init_multi_delete135.smt2	bothmax	unknown	0	25235	4	none	dl-online	1688	1779	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
