@@ -10047,6 +10047,78 @@ SUITES["nested-array-gate-map"] = (
     ],
 )
 
+# --------------------------------------------------------------------------
+# `outer-row-surrogate` - ADR-1971's sizing instrument.
+#
+# The instrument concluded "outer read-over-write is worth zero", and a
+# measurement that concludes zero is exactly the one whose instrument nobody
+# re-checks.  Two guard families carry that number: the read-over-write
+# EXPANSION must keep its index guard (without it a satisfiable file becomes a
+# surrogate `unsat` and the reach counts refutations of true statements), and
+# the REFUSALS must be exhaustive (the currying silently drops outer
+# extensionality, so a file needing it must never be rewritten).
+# --------------------------------------------------------------------------
+
+SUITES["outer-row-surrogate"] = (
+    "scripts/nested_array_outer_row_surrogate.py",
+    "scripts.tests.test_outer_row_surrogate",
+    [
+        (
+            "the read-over-write expansion keeps its index guard",
+            '        return ["ite", ["=", self.term(i), idx], self.term(r), self.read(a, idx)]',
+            "        return self.term(r)",
+        ),
+        (
+            "the expansion's else branch reads the curried row",
+            "            return [self.row_name[base], idx]",
+            '            return ["__opaque__", idx]',
+        ),
+        (
+            "an outer array in a non-read position is refused",
+            "            if self.is_outer_term(arg):",
+            "            if False:",
+        ),
+        (
+            "an outer array as a function argument is refused",
+            "                if mentions_outer_array(a):",
+            "                if False:",
+        ),
+        (
+            "a quantifier binding an outer array is refused",
+            "                if isinstance(b, list) and len(b) == 2 and is_array_sort(b[1]) \\\n"
+            "                        and array_depth(b[1]) >= 2:",
+            "                if False:",
+        ),
+        (
+            "nesting deeper than one level is refused",
+            "                if array_depth(res) != 2:",
+            "                if False:",
+        ),
+        (
+            "a file with no outer array is refused",
+            '        raise Refused("no outer array declaration -- nothing to measure here")',
+            "        pass",
+        ),
+        (
+            "a quantifier binder shadows an inlined let alias",
+            "                if isinstance(b, list) and b and b[0] in self.alias:",
+            "                if False:",
+        ),
+        (
+            "the let-inlining growth cap fires",
+            "    if len(result) > Surrogate.MAX_BYTES or \\\n"
+            "            len(result) > Surrogate.MAX_GROWTH * max(len(text), 1):",
+            "    if False:",
+        ),
+        (
+            "`--distribute` is not applied by default",
+            "            if distribute:",
+            "            if True:",
+        ),
+    ],
+)
+
+
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
