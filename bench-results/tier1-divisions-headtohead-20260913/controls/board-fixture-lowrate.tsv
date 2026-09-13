@@ -1,0 +1,11 @@
+file	axeyum	ax_s	ax_k	z3	z3_s	z3_k	cvc5	cvc5_s	cvc5_k	status
+lo/d0.smt2	sat	0.1	ok	sat	0.1	ok	sat	0.1	ok	sat
+lo/d1.smt2	sat	0.1	ok	sat	0.1	ok	sat	0.1	ok	sat
+lo/u0.smt2	unknown	24.0	ok	unknown	24.0	ok	unknown	24.0	ok	none
+lo/u1.smt2	unknown	24.0	ok	unknown	24.0	ok	unknown	24.0	ok	none
+lo/u2.smt2	unknown	24.0	ok	unknown	24.0	ok	unknown	24.0	ok	none
+lo/u3.smt2	unknown	24.0	ok	unknown	24.0	ok	unknown	24.0	ok	none
+lo/u4.smt2	unknown	24.0	ok	unknown	24.0	ok	unknown	24.0	ok	none
+lo/u5.smt2	unknown	24.0	ok	unknown	24.0	ok	unknown	24.0	ok	none
+lo/u6.smt2	unknown	24.0	ok	unknown	24.0	ok	unknown	24.0	ok	none
+lo/u7.smt2	unknown	24.0	ok	unknown	24.0	ok	unknown	24.0	ok	none

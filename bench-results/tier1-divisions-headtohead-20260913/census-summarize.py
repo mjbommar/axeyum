@@ -34,6 +34,19 @@ def rows(div):
     return [dict(zip(head, ln.split("\t"))) for ln in lines[1:]]
 
 
+def is_internal_error(g):
+    """A `kind=Error` row that is NOT a front-door parse refusal.
+
+    Split deliberately.  `give-up kind=Error detail=parse error: unsupported:
+    nested array element sort is unsupported: ...` is the front door declining
+    legal SMT-LIB -- a capability gap, rankable, and the subject of this lane's
+    headline question.  `give-up kind=Error detail=backend failure: ...` is a
+    defect in the code that raised it and must never appear in a ranked list of
+    fragments to build.
+    """
+    return g.startswith("give-up kind=Error") and "parse error" not in g
+
+
 def bucket(g):
     """Collapse a give-up detail to a reason, keeping enough to act on."""
     if g in ("none", ""):
@@ -110,9 +123,24 @@ def main():
         decided = [r for r in classified if r["verdict"] in ("sat", "unsat")]
         classified = [r for r in classified if r["verdict"] not in ("sat", "unsat")]
 
+        # A TERMINAL INTERNAL ERROR is never RANKED as a capability blocker: it
+        # names a defect in the code that raised it, not a fragment we cannot
+        # decide, and ranking it beside real capability gaps would put a bug in
+        # a build-this list.  It is LISTED, with a repro path.
+        #
+        # A FRONT-DOOR PARSE REFUSAL arrives as `kind=Error` too, and it is NOT
+        # an internal error.  Refusing legal SMT-LIB is a capability statement
+        # about the IR -- it is this lane's headline question and the thing the
+        # NESTED-ARRAY-IR lane is sizing -- so parse refusals stay in the
+        # rankable bucket.  board-six had no parse refusals in its six
+        # divisions and so never had to split these.
+        errors = [r for r in classified if is_internal_error(r["giveup"])]
+        classified = [r for r in classified if not is_internal_error(r["giveup"])]
+
         print(
             f"   CLASSIFIED {len(classified)}   UNCLASSIFIED {len(unclassified)}"
             f"   no-route {len(noroute)}   decided-on-recheck {len(decided)}"
+            f"   internal-error {len(errors)}"
         )
         print(
             f"   [ADR-1941] ranked by the OPEN SEGMENT. The attempts=-only"
@@ -161,6 +189,18 @@ def main():
             print(f"   -- no route trail at all: {len(noroute)} (own row, not an absence)")
             for k, c in collections.Counter(r["rc"] for r in noroute).most_common():
                 print(f"      {c:4d}  rc={k}")
+
+        err = [r for r in rs if is_internal_error(r["giveup"])]
+        if err:
+            print(f"   -- TERMINAL INTERNAL ERROR: {len(err)} (reported at any attempts=)")
+            for k, c in collections.Counter(
+                r["giveup"][len("give-up kind=Error detail="):][:150] for r in err
+            ).most_common():
+                print(f"      {c:4d}  {k}")
+                for r in err:
+                    if r["giveup"][len("give-up kind=Error detail="):][:150] == k:
+                        print(f"            repro: {r['file']}")
+                        break
         print()
     return 0 if any_seen else 1
 

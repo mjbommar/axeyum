@@ -37,6 +37,11 @@ FAMILIES = [
      lambda g: "nested array element sort is unsupported" in g),
     ("other front-door parse refusal", "PARSE",
      lambda g: "parse error" in g),
+    # A `kind=Error` that is NOT a parse refusal names a defect in the code
+    # that raised it, not a fragment we cannot decide.  It gets its own kind so
+    # it can never be read as a capability gap to go and build.
+    ("terminal internal error (NOT a capability gap)", "INTERNAL",
+     lambda g: g.startswith("give-up kind=Error")),
     ("e-matching ROUND budget", "ROUND",
      lambda g: "e-matching instantiation did not refute within the round budget" in g),
     ("e-matching CLOCK budget", "CLOCK",
