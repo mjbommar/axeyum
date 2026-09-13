@@ -40,6 +40,19 @@
 //! is why `nested_select_congruence_decides` below is `..._decides` while every
 //! nested query that needs read-over-write or extensionality is still
 //! `..._is_undecided`.
+//!
+//! **ADR-1971 sized the gate this file named as next, and it is worth zero.**
+//! `outer_read_over_write_on_a_nested_array_is_undecided` was ADR-1965's
+//! nominated frontier, holding ALIA's 511 files and ABV's 423. A surrogate that
+//! curries the outer array and performs read-over-write syntactically hands the
+//! solver that capability with the nested sort removed entirely, and axeyum
+//! still answers `unknown` on 18 of 18 accepted ALIA files. The reason is not
+//! the array theory: **39 of the 53 winnable ALIA + ABV files are SATISFIABLE**,
+//! and read-over-write is a refutation mechanism, so the gate's ceiling is 220
+//! files rather than 934 before reach is measured at all. The two rows those
+//! numbers came from are at the bottom of this file, and they are the in-repo
+//! form of the sizing's own non-vacuity controls
+//! (`bench-results/nested-array-outer-row-20260913/controls/`).
 
 #![cfg(feature = "full")]
 
@@ -242,6 +255,21 @@ fn nested_select_congruence_decides() {
 /// Read-over-write at the OUTER level of a nested array. This is unsat by
 /// construction (it is the negation of the array axiom), so `Unknown` and `Sat`
 /// are different findings and `Unknown` is what gets pinned.
+///
+/// **[ADR-1971](../../../docs/research/09-decisions/adr-1971-outer-read-over-write-is-worth-zero-alia-and-abv-are-held-by-satisfiability.md)
+/// measured what moving this is worth, and the answer is zero.** A surrogate
+/// that curries the outer array and performs this axiom syntactically — so the
+/// solver gets the capability for free, with the nested sort removed entirely —
+/// still leaves axeyum at `unknown` on 18 of 18 accepted ALIA files and 8 of 9
+/// accepted ABV files. Sharper: 5 ALIA files are refutable AND inside the
+/// fragment AND had read-over-write performed for them, and axeyum decided 0 of
+/// 5. And the ceiling is 220 rather than 934 before reach is even measured,
+/// because **39 of the 53 winnable ALIA+ABV files are satisfiable** and this is
+/// a refutation mechanism.
+///
+/// So the test stays, and stays `..._is_undecided`, but its GOOD NEWS message
+/// no longer points at ADR-1965's 511 + 423: moving this row is a capability
+/// gain with no measured benchmark gain behind it.
 #[test]
 fn outer_read_over_write_on_a_nested_array_is_undecided() {
     let text = "(set-logic ALL)
@@ -253,12 +281,14 @@ fn outer_read_over_write_on_a_nested_array_is_undecided() {
     match decide(text) {
         CheckResult::Unknown(_) => {}
         CheckResult::Unsat => panic!(
-            "GOOD NEWS, STALE ARITHMETIC: outer read-over-write on a nested \
-             array now decides. ADR-1965 rules ALIA's 511 and ABV's 423 out of \
-             the measured reach BECAUSE this was undecided (their winnable \
-             files write the outer array). Re-measure \
-             `bench-results/nested-array-build-20260913/` with the surrogate's \
-             `outer-level store` refusal lifted, and update ADR-1965."
+            "GOOD NEWS: outer read-over-write on a nested array now decides. \
+             Re-run `bench-results/nested-array-outer-row-20260913/sweep.sh` on \
+             the ALIA and ABV winnable lists and update ADR-1971 with the \
+             number. Expect a SMALL one: ADR-1971 handed this capability to the \
+             solver for free through a currying surrogate and measured 0 of 5 \
+             refutable-and-accepted ALIA files, with the whole gate's ceiling at \
+             220 because 39 of 53 winnable ALIA+ABV files are SATISFIABLE and \
+             read-over-write cannot produce a `sat`."
         ),
         CheckResult::Sat(_) => panic!(
             "WRONG VERDICT: this query is the negation of the read-over-write \
@@ -283,11 +313,12 @@ fn inner_read_over_write_under_an_outer_select_is_undecided() {
     match decide(text) {
         CheckResult::Unknown(_) => {}
         CheckResult::Unsat => panic!(
-            "GOOD NEWS, STALE ARITHMETIC: read-over-write on an INNER array \
-             whose base is an outer select now decides. This is the shape \
-             ADR-1955 attributed to `RowCtx::resolve_select` having no arm for \
-             an array-valued base that is itself a `Select`; re-measure and \
-             update ADR-1965."
+            "GOOD NEWS: read-over-write on an INNER array whose base is an outer \
+             select now decides. This is the shape ADR-1955 attributed to \
+             `RowCtx::resolve_select` having no arm for an array-valued base \
+             that is itself a `Select`; re-measure with \
+             `bench-results/nested-array-outer-row-20260913/` and update \
+             ADR-1971, whose reach table is what a new number replaces."
         ),
         CheckResult::Sat(_) => panic!(
             "WRONG VERDICT: unsat by construction (read-over-write), so a `sat` \
@@ -359,4 +390,94 @@ fn store_into_array_valued_uf_result_decides() {
         CheckResult::Unsat,
         "without this, currying could express only the outer reads"
     );
+}
+
+// ---------------------------------------------------------------------------
+// ADR-1971: what the outer-read-over-write sizing actually found. These two
+// rows are the in-repo form of the surrogate's `controls/c1` and `controls/c2`,
+// and together they say WHERE the capability stops: not at read-over-write
+// itself, which we have, but at reaching it through the nested sort — and then
+// at one rewrite that `eliminate_arrays` owns and these queries do not enter.
+// ---------------------------------------------------------------------------
+
+/// The **curried** form of `outer_read_over_write_on_a_nested_array_is_undecided`:
+/// the same obligation with the outer array replaced by a function
+/// `row : Int -> (Array Int Int)` and the outer `store` expanded by hand into
+/// the `ite` the read-over-write axiom produces.
+///
+/// This is `controls/c1-outer-row-refutation.smt2` of
+/// `bench-results/nested-array-outer-row-20260913/`, and it is what makes
+/// ADR-1971's zeroes readable rather than vacuous: the sizing instrument
+/// refuses AUFLIRA 187/187 and AUFNIRA 139/139, so without a fixture the
+/// solver DOES decide, "reach 0 on ALIA" would be indistinguishable from an
+/// instrument that cannot reach anything.
+///
+/// A failure here is a regression that silently invalidates ADR-1971's reach
+/// table, because the table is read as "the solver had the capability and the
+/// files still did not decide".
+#[test]
+fn outer_read_over_write_decides_once_the_outer_array_is_curried() {
+    assert_eq!(
+        decide(
+            "(set-logic ALL)
+             (declare-fun row (Int) (Array Int Int))
+             (declare-fun r () (Array Int Int))
+             (declare-fun i () Int) (declare-fun j () Int) (declare-fun o () Int)
+             (assert (= i j))
+             (assert (not (= (select (ite (= i j) r (row j)) o) (select r o))))
+             (check-sat)"
+        ),
+        CheckResult::Unsat,
+        "ADR-1971's reach measurement reads its zeroes as a statement about the \
+         ALIA and ABV populations. That reading requires the solver to decide \
+         the curried read-over-write obligation the surrogate hands it; if this \
+         regresses, the zeroes become a statement about the solver instead and \
+         the ADR's table must be re-derived."
+    );
+}
+
+/// The DISJOINT-index half of the same obligation, curried the same way — and
+/// we answer `unknown` on it.
+///
+/// This is `controls/c2-outer-row-disjoint-index.smt2`, and the reason it is
+/// pinned separately from the row above is that the pair localizes the gap to
+/// one rewrite. The query is unsat because `i != j` makes the `ite` take its
+/// else branch, leaving both sides identical. Writing the same query with
+/// `select` pushed through the array-sorted `ite` by hand — that is,
+/// `(ite (= i j) (select r o) (select (row j) o))` — gives `Unsat`. So what is
+/// missing is select-over-`ite` on an array-sorted `ite` whose branch is a
+/// UF-returned row, a rewrite `crates/axeyum-rewrite/src/arrays.rs` already
+/// has and this query does not reach.
+///
+/// ADR-1971 sized closing it, by running the whole sweep with the `select`
+/// pushed through for every file: **+0 on ALIA and +0 on ABV**. So this row is
+/// pinned as a capability gap with a measured price of zero benchmark files,
+/// not as a task.
+#[test]
+fn select_through_an_array_ite_on_a_uf_returned_row_is_undecided() {
+    let text = "(set-logic ALL)
+         (declare-fun row (Int) (Array Int Int))
+         (declare-fun r () (Array Int Int))
+         (declare-fun i () Int) (declare-fun j () Int) (declare-fun o () Int)
+         (assert (not (= i j)))
+         (assert (not (= (select (ite (= i j) r (row j)) o) (select (row j) o))))
+         (check-sat)";
+    match decide(text) {
+        CheckResult::Unknown(_) => {}
+        CheckResult::Unsat => panic!(
+            "GOOD NEWS: `select` now distributes through an array-sorted `ite` \
+             whose branch is a UF-returned row. ADR-1971 measured that closing \
+             this is worth +0 on ALIA and +0 on ABV (the `--distribute` arm of \
+             `bench-results/nested-array-outer-row-20260913/`), so this is a \
+             capability gain rather than a frontier move — but re-run that arm \
+             before quoting the old number, and flip this row to \
+             `..._decides`."
+        ),
+        CheckResult::Sat(_) => panic!(
+            "WRONG VERDICT: `i != j` forces the `ite` to its else branch, so \
+             both sides of the disequality are the same term and this query is \
+             unsat. A `sat` is a soundness defect on the array-`ite` path, not \
+             a frontier move."
+        ),
+    }
 }

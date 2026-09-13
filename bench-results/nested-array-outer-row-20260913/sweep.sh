@@ -40,7 +40,7 @@ while read -r f; do
   base="$(basename -- "$f")"
   tgt="$OUTDIR/rewritten/$DIV/$n-$base"
   st=$(grep -m1 -oE ':status +(sat|unsat|unknown)' -- "$f" 2>/dev/null | awk '{print $2}')
-  if ! python3 "$HERE/outer_row_surrogate.py" $EXTRA "$f" "$tgt" 2> "$tgt.why"; then
+  if ! python3 "$HERE/../../scripts/nested_array_outer_row_surrogate.py" $EXTRA "$f" "$tgt" 2> "$tgt.why"; then
     printf '%s\tREFUSED\t-\t-\t-\t-\t-\t-\t%s\n' "$f" "${st:-none}" >> "$OUT"
     continue
   fi

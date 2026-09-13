@@ -35,7 +35,7 @@ measured:
 
 ## The instrument
 
-`outer_row_surrogate.py`. ADR-1965's surrogate turned the outer array into an
+`scripts/nested_array_outer_row_surrogate.py`. ADR-1965's surrogate turned the outer array into an
 uninterpreted sort, which *deletes* outer read-over-write and is why it refused
 33 of 36 ALIA and 12 of 17 ABV winnable files. This one does the opposite: it
 **curries** the outer level and keeps read-over-write.
@@ -135,6 +135,24 @@ make up for it, because each carries a verdict both references confirm.
 
 Read from the board's own pinned TSVs (z3, then cvc5), not re-measured.
 
+Crossing that split against acceptance and reach gives the sharpest form of the
+finding — the cell that matters is the bottom-right of each block:
+
+| division | reference | surrogate | axeyum | n |
+|---|---|---|---|---:|
+| ALIA | `sat` | REFUSED | — | 11 |
+| ALIA | `sat` | ok | `unknown` | 13 |
+| ALIA | `unsat` | REFUSED | — | 7 |
+| **ALIA** | **`unsat`** | **ok** | **`unknown`** | **5** |
+| ABV | `sat` | REFUSED | — | 7 |
+| ABV | `sat` | ok | `unknown` | 8 |
+| ABV | `unsat` | REFUSED | — | 1 |
+| **ABV** | **`unsat`** | **ok** | **`unsat`** | **1**† |
+
+**Five ALIA files are refutable AND inside the fragment AND got outer
+read-over-write performed for them. axeyum decided none of the five.** That is
+the whole of the gate's opportunity on ALIA, and it is 0 for 5.
+
 **This is the structural finding.** AUFLIRA and AUFNIRA are 99%+ refutable,
 which is why a refutation-only capability — congruence through the nested read —
 took 273 of them. ALIA is 67% satisfiable and ABV 88%. A gate that can only
@@ -188,13 +206,13 @@ c6-shared-outer-store-under-let        REACH   unsat    unsat    unsat    unsat 
 * Every fixture's own claimed verdict is checked against z3 **and** cvc5 on the
   ORIGINAL, so a fixture cannot be wrong about its own subject.
 
-`outer_row_surrogate.py --self-test` carries 16 further checks on the rewrite
+`python3 scripts/nested_array_outer_row_surrogate.py --self-test` carries 16 further checks on the rewrite
 itself, including the shape of the expansion and the four refusal classes.
 
 ## Reproducing
 
 ```sh
-python3 outer_row_surrogate.py --self-test
+python3 ../../scripts/nested_array_outer_row_surrogate.py --self-test
 ./controls/run-controls.sh 24
 ./sweep.sh ALIA ../tier1-divisions-headtohead-20260913/winnable/ALIA.txt  <outdir> 24
 ./sweep.sh ABV  ../tier1-divisions-headtohead-20260913/winnable/ABV.txt   <outdir> 24

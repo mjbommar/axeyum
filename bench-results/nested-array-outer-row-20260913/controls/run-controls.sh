@@ -41,7 +41,7 @@ for f in "$HERE"/*.smt2; do
   name="$(basename -- "$f" .smt2)"
   kind="$(grep -m1 -oE '; *EXPECT: *[A-Z]+' -- "$f" | awk '{print $3}')"
   tgt="$WORK/$name.smt2"
-  if ! python3 "$HERE/../outer_row_surrogate.py" "$f" "$tgt" 2> "$tgt.why"; then
+  if ! python3 "$HERE/../../../scripts/nested_array_outer_row_surrogate.py" "$f" "$tgt" 2> "$tgt.why"; then
     a="-"; zs="-"
     if [ "$kind" = "REFUSE" ]; then r=PASS; else r=FAIL; fi
   else
