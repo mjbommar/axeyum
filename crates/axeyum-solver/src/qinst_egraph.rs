@@ -8388,6 +8388,34 @@ fn collect_vars(
     vars: &HashMap<SymbolId, u32>,
     seen: &mut std::collections::HashSet<SymbolId>,
 ) {
+    // `seen` is a set of SYMBOLS, and a symbol set is not a visited set: it
+    // stops a variable being recorded twice and does nothing about the term
+    // structure above it, which is where the sharing lives. So this walk enters
+    // every node once per PATH -- `2^depth` on a `let`-shared DAG (ADR-1940).
+    // The same confusion has now appeared three times: `dpll_lia`'s `atom_of`
+    // (`8860e2a60`) and `abv::RowCtx::memo` are the other two.
+    //
+    // The visited set is per CALL, not shared with the caller's `seen`: several
+    // call sites accumulate many terms into one `seen`, but others pass a fresh
+    // one, and a visited set that outlived the call would be a claim about
+    // which `seen` it was filling.
+    //
+    // Denotation-free: `seen` is a union, so a second visit to a node can only
+    // re-insert symbols already inserted.
+    let mut visited = std::collections::HashSet::new();
+    collect_vars_rec(arena, term, vars, seen, &mut visited);
+}
+
+fn collect_vars_rec(
+    arena: &TermArena,
+    term: TermId,
+    vars: &HashMap<SymbolId, u32>,
+    seen: &mut std::collections::HashSet<SymbolId>,
+    visited: &mut std::collections::HashSet<TermId>,
+) {
+    if !visited.insert(term) {
+        return;
+    }
     match arena.node(term) {
         TermNode::Symbol(s) if vars.contains_key(s) => {
             seen.insert(*s);
@@ -8395,7 +8423,7 @@ fn collect_vars(
         TermNode::App { args, .. } => {
             let args = args.clone();
             for a in args {
-                collect_vars(arena, a, vars, seen);
+                collect_vars_rec(arena, a, vars, seen, visited);
             }
         }
         _ => {}

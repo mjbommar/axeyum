@@ -9585,9 +9585,105 @@ SUITES["dt-constructor-arg-1942"] = (
             # becomes an unconstrained child, and a nested child equality is a
             # free Boolean, so the antecedent can hold of two values that differ
             # at depth two.
+            #
+            # THE ANCHOR GREW ON 2026-09-12 AND THE MUTATION DID NOT. It was
+            # `"                if !datatype_expansion_is_exact(arena, dt) {"`,
+            # which ADR-1946 made AMBIGUOUS by adding a second exactness check —
+            # on the RESULT datatype — with the same indentation. The harness
+            # would have reported `AMBIGUOUS ANCHOR`, which is not a result, so
+            # the preceding `let Sort::Datatype(dt) = arena.sort_of(arg)` lines
+            # are included to pin the ARGUMENT-side check. The result-side one is
+            # mutated by the `dt-valued-result-1946` suite below.
             "congruence needs an EXACT expansion, on the constructor path too",
+            '                let Sort::Datatype(dt) = arena.sort_of(arg) else {\n'
+            '                    unreachable!("datatype-sorted");\n'
+            "                };\n"
             "                if !datatype_expansion_is_exact(arena, dt) {",
+            '                let Sort::Datatype(dt) = arena.sort_of(arg) else {\n'
+            '                    unreachable!("datatype-sorted");\n'
+            "                };\n"
             "                if false {",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `dt-valued-result-1946` — the datatype-VALUED uninterpreted-function result,
+# and the `Op::Apply` datatype argument it makes admissible (ADR-1946).
+#
+# Each mutation removes exactly one decision of `collect_ackermann_groups` (or
+# the replay ordering that the nesting it introduces depends on) and must kill a
+# test.  What each one is expected to kill is in its own comment, and ADR-1946
+# records what they ACTUALLY killed, which is not the same list.
+# --------------------------------------------------------------------------
+
+SUITES["dt-valued-result-1946"] = (
+    "crates/axeyum-solver/src/datatype_native.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--test",
+            "dt_valued_result_1946",
+        ),
+        "dt-valued-result-1946",
+    ),
+    [
+        (
+            # THE CAPABILITY ITSELF. Without the result half of the collection
+            # rule, `g(a)` is never a site, so it survives as an `Op::Apply` that
+            # the shape check refuses and the scan would refuse after it. Every
+            # positive control goes back to being refused.
+            "a datatype-VALUED result makes an application a site",
+            "                || matches!(result, Sort::Datatype(_))",
+            "                || (false && matches!(result, Sort::Datatype(_)))",
+        ),
+        (
+            # The RESULT-side exactness precondition. ADR-1946 records that this
+            # kills only its refusal-message test and NOT the soundness test it
+            # is named for — the third time an exactness precondition in this
+            # family has measured as not-today's-soundness-boundary. The reason
+            # is structural (an `unsat` only ever comes from the relaxation arm)
+            # and is written down in the ADR rather than left as a surprise.
+            "the RESULT datatype's expansion must be exact",
+            "            Sort::Datatype(dt) => {\n"
+            "                if !datatype_expansion_is_exact(arena, dt) {",
+            "            Sort::Datatype(dt) => {\n"
+            "                if false && !datatype_expansion_is_exact(arena, dt) {",
+        ),
+        (
+            # An array over a datatype as the RESULT sort. The witness would be
+            # array-sorted and the tag/field expansion cannot reach into its
+            # elements. Reachable and therefore mutated; 0 of the 600 measured
+            # files have the shape, which is a separate fact the ADR states
+            # separately rather than quoting this kill as corpus coverage.
+            "an array-over-a-datatype result is refused rather than fallen through",
+            "            s if crate::datatype_elim::sort_mentions_datatype(s) => {",
+            "            s if false && crate::datatype_elim::sort_mentions_datatype(s) => {",
+        ),
+        (
+            # An `Op::Apply` datatype argument is admitted because it IS
+            # replaced, not because of its operator. Drop the membership test and
+            # every shape is admitted -- a datatype-sorted `select`, an `ite` --
+            # and the census-readable refusal that names the three admitted
+            # shapes stops firing.
+            "a datatype argument is admitted only when this pass will replace it",
+            "                    && !collected.contains(&arg)",
+            "                    && false",
+        ),
+        (
+            # The replay ordering. Sorting by `FuncId` reproduces the push order
+            # exactly (the sort is stable and `groups` is keyed by `FuncId`), so
+            # this is the pre-ADR-1946 behaviour rather than an arbitrary
+            # scramble: a nested site is rebuilt AFTER the site that reads it,
+            # `p` is defined at the key `g`'s constant default gives, and the
+            # `sat` candidate fails its replay. Costs a `sat`, never soundness.
+            "the nested site is rebuilt before the site that reads it",
+            "    ack_sites.sort_by_key(|s| s.site);",
+            "    ack_sites.sort_by_key(|s| s.func);",
         ),
     ],
 )

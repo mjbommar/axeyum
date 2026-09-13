@@ -568,3 +568,46 @@ failure; the job's own status passes through otherwise (verified 0, 101, 75).
 `AXEYUM_CARGO_MEM` / `AXEYUM_CARGO_SWAP` / `AXEYUM_CARGO_WAIT` /
 `AXEYUM_CARGO_CPUS` tune it. Snapshot builds should set `AXEYUM_CARGO_LOCK` to
 a per-tree path so a long cold build does not starve the shared worktree.
+
+## `lane-push.sh` failed twice where a raw `git push` succeeded (2026-09-13)
+
+**Observed, cause NOT established.** Three pushes of the same 28 commits, same
+`hooks/pre-push`, same tree:
+
+| invocation | result |
+|---|---|
+| `scripts/lane-push.sh` | `error: failed to push some refs`, rc=1 |
+| `scripts/lane-push.sh` (retry) | identical — same 78 lines, same stopping point |
+| `git push origin main` | **rc=0**, `a25e98639..9418eb776` |
+
+The two failures were byte-identical once numbers are normalised, so this is
+deterministic rather than load-related. Everything the hook prints had already
+passed both times: all 8 L0 gates, clippy 876/876 with 0 diagnostics, and the
+external SAT referee's 524 adjudicated comparisons.
+
+**What it is NOT**, each checked rather than assumed:
+
+- not a non-fast-forward (28 ahead, 0 behind, and the raw push fast-forwarded)
+- not the solver unit sweep that follows the referee: it passes standalone
+  (rc=0, 1402 tests) AND wrapped exactly as `gated_test` wraps it
+  (`MEM_LIMIT_GB=64 scripts/mem-run.sh …`, rc=0, 1402 tests)
+- not memory: 0 `oom-kill` entries in 3 h of kernel log, 117 GB available
+- not the hook's moved-HEAD/index/status guard, which prints its own message
+- not a lane's `lane-commit.sh` index resync: the nearest lane commits were
+  62 minutes before and 13 minutes after the first failure
+
+**A trap that wasted time here, worth knowing before you debug this.** The log
+appears to stop after the SAT referee. It has not: `gated_test` captures its
+step's output into a variable and prints it ONLY on failure, so a passing
+400-second solver sweep emits nothing at all. Silence after the referee is the
+normal appearance of a healthy run. Do not read the last printed line as the
+failing step — I did, twice, and diagnosed the wrong thing both times.
+
+`lane-push.sh` differs from a raw push in two ways worth looking at first: it
+pushes `HEAD:refs/heads/<target>` with the output captured into `$out`, and it
+has a pre-flight that counts other processes whose `comm` is `git` and whose
+cmdline contains `push`. If you reproduce this, start there.
+
+**Until it is understood**: if `lane-push.sh` fails with no hook FAILED line and
+no rejection reason, the gates have already passed — re-run rather than assuming
+a real gate failure, and check `origin/main` before spending another battery.

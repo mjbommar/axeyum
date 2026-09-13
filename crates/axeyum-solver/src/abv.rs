@@ -2532,11 +2532,49 @@ struct RowCtx {
     /// canonical AUFBV enables this; generic lazy ROW has no function-projection
     /// owner and therefore keeps declining the shape.
     allow_array_apply: bool,
+    /// `term -> its abstraction`, for [`RowCtx::abstract_term`] and
+    /// [`RowCtx::abstract_with_array_eq`] respectively.
+    ///
+    /// `memo` above is NOT this, and the confusion is the defect: it caches
+    /// SELECT SITES, keyed `(base, index)`, so it stops a site being
+    /// re-materialised and does nothing about the structure above it, which is
+    /// where the sharing lives. That is the same mistake `dpll_lia`'s
+    /// `atom_of` made (`8860e2a60`). Both walks below rebuild BOTH operands of
+    /// every application, so on a `let`-shared DAG they cost the number of
+    /// root-to-leaf PATHS (ADR-1940) — and every rebuilt node allocates, which
+    /// is why the allocator was 46% of the profile on a shared `select` spine.
+    ///
+    /// Two maps because the two walks give different answers on the same term:
+    /// only `abstract_with_array_eq` rewrites an array equality to its flag.
+    ///
+    /// Struct-scoped on purpose: the abstraction of a term depends only on that
+    /// term, on `memo`/`eq_memo` (both keyed by the thing they index, so a
+    /// repeat already had to agree), and on `allow_array_apply`, which is fixed
+    /// for the context's life. `sites` and `eq_atoms` only ever grow, and
+    /// growth cannot change an entry already computed. So sharing BETWEEN
+    /// assertions is exploited too, which is where most of it is.
+    abstract_memo: HashMap<TermId, Option<TermId>>,
+    array_eq_memo: HashMap<TermId, Option<TermId>>,
 }
 
 impl RowCtx {
     /// Abstracts `term`, replacing each `select(…)` by its site's fresh variable.
+    ///
+    /// Memoised on `TermId`; see [`RowCtx::abstract_memo`].
     fn abstract_term(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+    ) -> Result<Option<TermId>, SolverError> {
+        if let Some(&hit) = self.abstract_memo.get(&term) {
+            return Ok(hit);
+        }
+        let computed = self.abstract_term_uncached(arena, term)?;
+        self.abstract_memo.insert(term, computed);
+        Ok(computed)
+    }
+
+    fn abstract_term_uncached(
         &mut self,
         arena: &mut TermArena,
         term: TermId,
@@ -2756,7 +2794,22 @@ impl RowCtx {
     /// array-sorted) by a fresh `Bool` flag variable, recording the operands for
     /// the lazy-extensionality CEGAR. This is strictly a superset of
     /// [`Self::abstract_term`]: a query with no array-eq atom abstracts identically.
+    ///
+    /// Memoised on `TermId`; see [`RowCtx::array_eq_memo`].
     fn abstract_with_array_eq(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+    ) -> Result<Option<TermId>, SolverError> {
+        if let Some(&hit) = self.array_eq_memo.get(&term) {
+            return Ok(hit);
+        }
+        let computed = self.abstract_with_array_eq_uncached(arena, term)?;
+        self.array_eq_memo.insert(term, computed);
+        Ok(computed)
+    }
+
+    fn abstract_with_array_eq_uncached(
         &mut self,
         arena: &mut TermArena,
         term: TermId,

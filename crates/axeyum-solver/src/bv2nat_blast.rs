@@ -53,6 +53,7 @@ const MAX_BLAST_WIDTH: u32 = 128;
 /// A linear form `Σ coeffs[b]·bv2nat(b) + constant` over bit-vector terms `b`.
 /// `BTreeMap` keys the (deterministic, insertion-ordered) `TermId`s so the
 /// rebuilt term order is stable across runs.
+#[derive(Clone)]
 struct LinForm {
     coeffs: BTreeMap<TermId, i128>,
     constant: i128,
@@ -133,6 +134,9 @@ pub fn blast_bv2nat_linear(
     // out-of-fragment shape or checked-arithmetic overflow.
     let mut extracted: Vec<(TermId, Rel, LinForm)> = Vec::new();
     let mut saw_bv2nat = false;
+    // ONE memo across every atom: the atoms of one script share most of their
+    // term DAG, and `linear_form` is a pure function of the term.
+    let mut memo = LinFormMemo::default();
     for &atom in &atoms {
         let TermNode::App { op, args } = arena.node(atom) else {
             return Ok(None);
@@ -147,10 +151,10 @@ pub fn blast_bv2nat_linear(
             Op::IntGe => (Rel::Le, rhs, lhs),
             _ => return Ok(None),
         };
-        let Some(lf) = linear_form(arena, l) else {
+        let Some(lf) = linear_form(arena, l, &mut memo) else {
             return Ok(None);
         };
-        let Some(rf) = linear_form(arena, r) else {
+        let Some(rf) = linear_form(arena, r, &mut memo) else {
             return Ok(None);
         };
         // difference = l − r ⋈ 0
@@ -306,7 +310,33 @@ fn subtree_is_int_free(
 /// term is outside the linear fragment (free `Int` symbol, `div`/`mod`/`abs`,
 /// non-constant product, `Int`-sorted `ite`, an `Int` inside a `bv2nat`
 /// argument, …) or a coefficient computation overflows.
-fn linear_form(arena: &TermArena, term: TermId) -> Option<LinForm> {
+/// Per-walk memo for [`linear_form`], keyed on `TermId`.
+///
+/// `IntAdd`/`IntSub` recurse into BOTH operands, so without this the walk costs
+/// the number of root-to-leaf PATHS through the assertion DAG rather than the
+/// number of nodes — `2^depth` on a `let`-shared chain (ADR-1940). Measured on
+/// a `QF_SLIA` `(+ v v)` spine over `(str.len s)`, `linear_form` plus
+/// `LinForm::add_scaled` plus the `subtree_is_int_free` it calls per `bv2nat`
+/// leaf were 30% of the profile, doubling per level.
+///
+/// Denotation-identical: `linear_form` is a pure function of `(arena, term)`,
+/// so a repeat call always had to return the same form.
+type LinFormMemo = HashMap<TermId, Option<LinForm>>;
+
+fn linear_form(arena: &TermArena, term: TermId, memo: &mut LinFormMemo) -> Option<LinForm> {
+    if let Some(hit) = memo.get(&term) {
+        return hit.clone();
+    }
+    let computed = linear_form_uncached(arena, term, memo);
+    memo.insert(term, computed.clone());
+    computed
+}
+
+fn linear_form_uncached(
+    arena: &TermArena,
+    term: TermId,
+    memo: &mut LinFormMemo,
+) -> Option<LinForm> {
     match arena.node(term) {
         TermNode::IntConst(k) => Some(LinForm::constant(*k)),
         TermNode::App { op, args } => match op {
@@ -324,15 +354,15 @@ fn linear_form(arena: &TermArena, term: TermId) -> Option<LinForm> {
                     constant: 0,
                 })
             }
-            Op::IntNeg => linear_form(arena, args[0])?.scale(-1),
+            Op::IntNeg => linear_form(arena, args[0], memo)?.scale(-1),
             Op::IntAdd => {
-                let l = linear_form(arena, args[0])?;
-                let r = linear_form(arena, args[1])?;
+                let l = linear_form(arena, args[0], memo)?;
+                let r = linear_form(arena, args[1], memo)?;
                 l.add_scaled(&r, 1)
             }
             Op::IntSub => {
-                let l = linear_form(arena, args[0])?;
-                let r = linear_form(arena, args[1])?;
+                let l = linear_form(arena, args[0], memo)?;
+                let r = linear_form(arena, args[1], memo)?;
                 l.add_scaled(&r, -1)
             }
             Op::IntMul => {
@@ -340,10 +370,10 @@ fn linear_form(arena: &TermArena, term: TermId) -> Option<LinForm> {
                 let (a, b) = (args[0], args[1]);
                 if let TermNode::IntConst(k) = arena.node(a) {
                     let k = *k;
-                    linear_form(arena, b)?.scale(k)
+                    linear_form(arena, b, memo)?.scale(k)
                 } else if let TermNode::IntConst(k) = arena.node(b) {
                     let k = *k;
-                    linear_form(arena, a)?.scale(k)
+                    linear_form(arena, a, memo)?.scale(k)
                 } else {
                     None
                 }

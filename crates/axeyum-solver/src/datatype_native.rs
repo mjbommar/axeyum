@@ -839,10 +839,27 @@ fn collect_ackermann_groups(
         };
         let op = *op;
         let args = args.clone();
-        if let Op::Apply(func) = op
-            && args.iter().any(|&a| is_datatype_sorted(arena, a))
-        {
-            groups.entry(func).or_default().push(term);
+        if let Op::Apply(func) = op {
+            // AN APPLICATION IS A SITE IF ITS ARGUMENT *OR* ITS RESULT IS
+            // DATATYPE-SORTED (ADR-1946). The argument half is ADR-1935/1942.
+            // The result half is what lets `f(x)` stand where a datatype value
+            // is expected: its witness is a fresh FREE VARIABLE of that
+            // datatype, and because this pass runs BEFORE `scan_fragment` the
+            // witness is scanned and tag/field-expanded like any other datatype
+            // variable. That is the objection ADR-1935 refused this rung on, and
+            // it does not survive the current pipeline order.
+            //
+            // A result sort that merely MENTIONS a datatype without being one
+            // (an array over a datatype) is deliberately NOT collected here: its
+            // witness would be array-sorted, the expansion cannot reach into it,
+            // and the validation below refuses it by name if such a function is
+            // collected for its arguments instead.
+            let (_, _, result) = arena.function(func);
+            if args.iter().any(|&a| is_datatype_sorted(arena, a))
+                || matches!(result, Sort::Datatype(_))
+            {
+                groups.entry(func).or_default().push(term);
+            }
         }
         stack.extend(args);
     }
@@ -859,14 +876,49 @@ fn collect_ackermann_groups(
         )));
     }
 
+    // Every application this call will replace by a witness. The argument shape
+    // check below admits an `Op::Apply` datatype argument exactly when it is
+    // ITSELF one of these — membership is looked up rather than inferred from
+    // the operator, so the collection rule above and the shape check cannot
+    // drift apart (ADR-1946).
+    let collected: BTreeSet<TermId> = groups.values().flatten().copied().collect();
+
     // Validate BEFORE declaring anything, so a refusal leaves the arena clean.
     for (&func, sites) in &groups {
         let (_, _, result) = arena.function(func);
-        if crate::datatype_elim::sort_mentions_datatype(result) {
-            return Err(unsupported(
-                "an uninterpreted function whose RESULT sort mentions a datatype \
-                 (its Ackermann witness would itself be a datatype-sorted term)",
-            ));
+        match result {
+            // A DATATYPE-VALUED RESULT (ADR-1946). The witness is a fresh free
+            // variable of this datatype, so the tag/field expansion has to be
+            // able to compare two of them EXACTLY: the congruence consequent
+            // `w_p = w_q` is a datatype equality, and under `EqMode::Restriction`
+            // — the arm whose encoding is STRONGER than real equality — a
+            // consequent the expansion cannot compare exactly makes the clause
+            // stronger than the true congruence axiom. Requiring exactness is
+            // the same precondition, for the same reason, as on the argument
+            // side, and it keeps the whole pass's invariant in one sentence:
+            // every datatype this pass introduces or compares is exactly
+            // encoded.
+            Sort::Datatype(dt) => {
+                if !datatype_expansion_is_exact(arena, dt) {
+                    return Err(unsupported(
+                        "an uninterpreted function whose RESULT datatype's expansion is not \
+                         exact (its Ackermann witness is a fresh datatype variable, and two \
+                         such witnesses cannot be compared exactly, so the congruence \
+                         consequent would not be the one the axiom states)",
+                    ));
+                }
+            }
+            // An array over a datatype, or any other sort that mentions one
+            // without being one. The witness would be array-sorted and the
+            // tag/field expansion cannot reach into its elements.
+            s if crate::datatype_elim::sort_mentions_datatype(s) => {
+                return Err(unsupported(
+                    "an uninterpreted function whose RESULT sort MENTIONS a datatype without \
+                     being one (an array over a datatype), so its Ackermann witness would be \
+                     an array-sorted term the tag/field expansion cannot reach into",
+                ));
+            }
+            _ => {}
         }
         for &site in sites {
             let TermNode::App { args, .. } = arena.node(site) else {
@@ -876,19 +928,28 @@ fn collect_ackermann_groups(
                 if !is_datatype_sorted(arena, arg) {
                     continue;
                 }
-                // A free VARIABLE or a CONSTRUCTOR APPLICATION (ADR-1942).
+                // A free VARIABLE, a CONSTRUCTOR APPLICATION (ADR-1942), or
+                // ANOTHER COLLECTED APPLICATION (ADR-1946). The third is
+                // admitted because it does not survive: `replace_subterms`
+                // rewrites it to its OWN witness variable before the tag/field
+                // expansion sees it, in the assertions and in the congruence
+                // antecedents alike, so it reaches that expansion as the first
+                // shape.
+                //
                 // Everything else -- a datatype-sorted `select`, an `ite` over
                 // datatypes, anything the earlier passes left behind -- has no
                 // exact argument equality this pass can build, so it is refused
-                // by name. `structural_dt_eq` is the other half of this
-                // precondition and the two must stay in step: it is total on
+                // by name. `congruence_arg_eq` is the other half of this
+                // precondition and the two must stay in step: it is exact on
                 // exactly the shapes admitted here.
                 if !matches!(arena.node(arg), TermNode::Symbol(_))
                     && construct_of(arena, arg).is_none()
+                    && !collected.contains(&arg)
                 {
                     return Err(unsupported(
                         "an uninterpreted function applied to a datatype term that is neither \
-                         a free variable nor a constructor application",
+                         a free variable, a constructor application, nor another uninterpreted \
+                         function's result",
                     ));
                 }
                 let Sort::Datatype(dt) = arena.sort_of(arg) else {
@@ -914,6 +975,13 @@ fn collect_ackermann_groups(
 
 /// One Ackermann-expanded application: `func(args)`, replaced by `witness`.
 struct AckSite {
+    /// The application term itself. Carried only so the sites can be put in
+    /// `TermId` order before [`register_ack_interpretations`] walks them, which
+    /// in a hash-consed arena is a bottom-up order: a NESTED expanded
+    /// application (`p(g(a))`, the shape ADR-1946 admits) is then rebuilt after
+    /// the site it reads, so evaluating `g(a)` finds `g`'s real interpretation
+    /// rather than the constant default that stands in until then.
+    site: TermId,
     func: axeyum_ir::FuncId,
     /// The application's argument terms, as they stood BEFORE the replacement
     /// map was applied. `project_and_replay` rewrites them itself when it
@@ -942,9 +1010,13 @@ const MAX_ACK_PAIRS: usize = 20_000;
 ///
 /// # The checked precondition, and why it is this one
 ///
-/// Every datatype-sorted argument must be a free variable of a datatype whose
-/// expansion is EXACT ([`datatype_expansion_is_exact`]). ADR-1920 states the
-/// reason and it is the whole soundness argument:
+/// Every datatype-sorted argument must be a free variable, a constructor
+/// application (ADR-1942) or another collected application (ADR-1946), over a
+/// datatype whose expansion is EXACT ([`datatype_expansion_is_exact`]); and a
+/// function whose RESULT is datatype-sorted is admitted only when THAT
+/// datatype's expansion is exact too (ADR-1946), because the congruence
+/// consequent `wₚ = w_q` is then a datatype equality. ADR-1920 states the reason
+/// for the argument half and it is the whole soundness argument:
 ///
 /// > For a datatype that *does* have datatype-typed fields, `build_dt_eq` is a
 /// > **relaxation** — weaker than real equality — and a weaker antecedent makes
@@ -970,11 +1042,23 @@ const MAX_ACK_PAIRS: usize = 20_000;
 ///
 /// # Errors
 ///
-/// [`SolverError::Unsupported`] if a datatype-sorted argument is not a free
-/// variable, if its datatype's expansion is not exact, if the result sort
-/// mentions a datatype (a datatype-valued UF result is a separate capability and
-/// its witness would survive into the residual), or if the pair count exceeds
+/// [`SolverError::Unsupported`] if a datatype-sorted argument is none of the
+/// three admitted shapes, if its datatype's expansion is not exact, if the
+/// result sort is a datatype whose expansion is not exact, if the result sort
+/// mentions a datatype WITHOUT being one (an array over a datatype, whose
+/// witness the expansion cannot reach into), or if the pair count exceeds
 /// [`MAX_ACK_PAIRS`].
+///
+/// # A datatype-VALUED result, and why it is not the extra obligation ADR-1935 expected
+///
+/// ADR-1935 refused this case on the grounds that the witness "would itself be a
+/// datatype-sorted term, which the tag/field expansion would have to pick up in
+/// a scan that has already run". It does not have to: this function runs BEFORE
+/// [`scan_fragment`], so a witness declared here is an ordinary free datatype
+/// variable by the time the scan walks the rewritten assertions, and
+/// [`build_sym_vars`] gives it tag and field variables like any other. The
+/// witness is also the reason the shape check can admit an `Op::Apply` argument
+/// — `p(g(a))` becomes `p(w_g)` before anything downstream looks at it.
 fn ackermannize_datatype_applications(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -1000,6 +1084,7 @@ fn ackermannize_datatype_applications(
             let args = args.clone();
             replacements.insert(site, arena.var(witness));
             ack_sites.push(AckSite {
+                site,
                 func,
                 args: args.to_vec(),
                 witness,
@@ -1056,6 +1141,17 @@ fn ackermannize_datatype_applications(
         }
     }
 
+    // Put the sites in `TermId` order ACROSS functions, not just within one.
+    // `groups` is keyed by `FuncId`, so the push order above interleaves a
+    // nested site with its parent arbitrarily -- and with a datatype-VALUED
+    // result (ADR-1946) nesting is the COMMON shape rather than an edge case:
+    // `p(g(a))` collects both `g(a)` and `p(g(a))`, and
+    // `register_ack_interpretations` must rebuild `g` before it evaluates
+    // `p`'s argument list. `TermId` order is bottom-up in a hash-consed arena,
+    // so this is exactly that order. Getting it wrong costs a `sat` (the replay
+    // rejects a candidate that is not actually wrong), never soundness.
+    ack_sites.sort_by_key(|s| s.site);
+
     // Rewrite the assertions AND the congruence clauses through the same map, so
     // a nested expanded application inside an antecedent is read through its own
     // witness rather than surviving as an `Op::Apply` the scan would refuse.
@@ -1084,8 +1180,12 @@ fn ackermannize_datatype_applications(
 /// # The three shapes, and why each is exact
 ///
 /// `collect_ackermann_groups` admits a datatype-sorted argument only as a free
-/// variable or a constructor application, over a datatype whose expansion is
-/// exact. That leaves exactly these cases, and SMT-LIB datatypes are freely
+/// variable, a constructor application, or another collected application
+/// (ADR-1946) — over a datatype whose expansion is exact. The third is not a
+/// fourth case here: `replace_subterms` rewrites it to its own witness VARIABLE
+/// in the antecedents this function builds, exactly as it does in the
+/// assertions, so by the time the tag/field expansion reads them it is the first
+/// shape. That leaves exactly these cases, and SMT-LIB datatypes are freely
 /// generated, which is what makes the first two equivalences hold:
 ///
 /// * `c(x₁…xₙ)` vs `d(y₁…y_m)` with `c ≠ d` — **distinctness**. No value is
@@ -1161,8 +1261,10 @@ fn congruence_arg_eq(
 /// `c(x₁…xₙ) = t` as `is_c(t) ∧ ⋀ᵢ xᵢ = sel_{c,i}(t)`, for a `t` that is not a
 /// constructor application (ADR-1942).
 ///
-/// `t` is a free variable — the only other shape `collect_ackermann_groups`
-/// admits — so the `is`/`select` sites this builds are exactly the ones
+/// `t` is a free variable, or another collected application (ADR-1946) that
+/// `replace_subterms` rewrites INTO a free variable before anything downstream
+/// reads this term — the only other shapes `collect_ackermann_groups` admits.
+/// So the `is`/`select` sites this builds are exactly the ones
 /// [`scan_fragment`] already handles, and the fields are non-datatype because
 /// the datatype's expansion is exact.
 ///
