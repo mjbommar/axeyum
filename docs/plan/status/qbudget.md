@@ -51,7 +51,7 @@ refutes in 111–508 ms** (three of them cvc5 too, all four `:status unsat`). Th
 encoding is quadratic; we never reach a solver. Designed and handed off, not
 implemented — see the artifact.
 
-ADR: [ADR-1995](../../research/09-decisions/adr-1995-the-egraph-retry-is-cut-off-by-its-own-half-slice-and-the-reserve-is-spent-by-nobody.md)
+ADR: [ADR-1995](../../research/09-decisions/adr-1995-the-instantiation-loops-verdict-is-not-monotone-in-its-budget.md)
 · artifact: [`bench-results/qbudget-20260913/`](../../../bench-results/qbudget-20260913/README.md)
 
 ## Compute
