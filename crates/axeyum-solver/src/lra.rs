@@ -31,7 +31,7 @@
 //! `sat` (ADR-0015). This is the exact-arithmetic dual of DRAT for `QF_BV`:
 //! untrusted search, trusted small checking.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 /// The warm front end for the offline conjunctive `QF_LIA` decider: a per-literal
 /// collection cache plus a trail-delta-updated constraint system, driving the
@@ -1414,7 +1414,41 @@ impl Collector {
     }
 
     /// Converts a real-sorted term into a linear expression.
+    ///
+    /// Memoised on `TermId` for the duration of ONE call (ADR-1940): the
+    /// `RealAdd`/`RealSub`/`RealMul` arms each recurse into BOTH operands, so on
+    /// a `let`-shared DAG the unmemoised call count is the number of
+    /// root-to-leaf PATHS -- `2^depth`, with every call at depth <= depth.
+    ///
+    /// Denotation-identical: the linear expression of a term depends only on
+    /// that term and on `self.var_index`, which `index_of` keys by symbol, so a
+    /// repeat call already had to return the same expression. `guard` sets a
+    /// STICKY `self.overflow`, so a skipped repeat cannot unset it.
     fn linearize(&mut self, arena: &TermArena, term: TermId) -> Result<LinExpr, SolverError> {
+        let mut memo: HashMap<TermId, LinExpr> = HashMap::new();
+        self.linearize_memo(arena, term, &mut memo)
+    }
+
+    fn linearize_memo(
+        &mut self,
+        arena: &TermArena,
+        term: TermId,
+        memo: &mut HashMap<TermId, LinExpr>,
+    ) -> Result<LinExpr, SolverError> {
+        if let Some(hit) = memo.get(&term) {
+            return Ok(hit.clone());
+        }
+        let computed = self.linearize_uncached(arena, term, memo)?;
+        memo.insert(term, computed.clone());
+        Ok(computed)
+    }
+
+    fn linearize_uncached(
+        &mut self,
+        arena: &TermArena,
+        term: TermId,
+        memo: &mut HashMap<TermId, LinExpr>,
+    ) -> Result<LinExpr, SolverError> {
         match arena.node(term) {
             TermNode::RealConst(value) => Ok(LinExpr::constant(*value)),
             TermNode::Symbol(symbol) if is_real(arena, term) => {
@@ -1424,31 +1458,31 @@ impl Collector {
                 op: Op::RealNeg,
                 args,
             } => {
-                let a = self.linearize(arena, args[0])?;
+                let a = self.linearize_memo(arena, args[0], memo)?;
                 Ok(self.guard(a.neg()))
             }
             TermNode::App {
                 op: Op::RealAdd,
                 args,
             } => {
-                let a = self.linearize(arena, args[0])?;
-                let b = self.linearize(arena, args[1])?;
+                let a = self.linearize_memo(arena, args[0], memo)?;
+                let b = self.linearize_memo(arena, args[1], memo)?;
                 Ok(self.guard(a.add(&b)))
             }
             TermNode::App {
                 op: Op::RealSub,
                 args,
             } => {
-                let a = self.linearize(arena, args[0])?;
-                let b = self.linearize(arena, args[1])?;
+                let a = self.linearize_memo(arena, args[0], memo)?;
+                let b = self.linearize_memo(arena, args[1], memo)?;
                 Ok(self.guard(a.sub(&b)))
             }
             TermNode::App {
                 op: Op::RealMul,
                 args,
             } => {
-                let a = self.linearize(arena, args[0])?;
-                let b = self.linearize(arena, args[1])?;
+                let a = self.linearize_memo(arena, args[0], memo)?;
+                let b = self.linearize_memo(arena, args[1], memo)?;
                 // Linear: at least one factor must be a constant.
                 if a.is_constant() {
                     Ok(self.guard(b.scale(a.constant)))
@@ -3266,8 +3300,26 @@ impl IntCollector {
         let mut work = vec![Step::Enter(term)];
         // Operand results, in completion order; a `Build` pops exactly its own.
         let mut values: Vec<LinExpr> = Vec::new();
+        // Application nodes already linearized on THIS call (ADR-1940). The
+        // worklist below removed the stack overflow, not the exponential: an
+        // `Enter` pushes BOTH operands, so on a `let`-shared DAG the number of
+        // work items is the number of root-to-leaf PATHS. An explicit worklist
+        // bounds STACK, a depth cap bounds path LENGTH, and neither bounds path
+        // COUNT.
+        //
+        // Scoped to one call, never to the collector: `index_of` appends to
+        // `touch_log` when recording is on, and a shared entry skips the repeat
+        // touches. Within one literal that is invisible -- the cold numbering is
+        // `dedup(concat(...))`, the FIRST touch of every column still happens on
+        // the walk that fills the memo, and dedup drops exactly the repeats a
+        // memo hit skips. Across literals it would not be, so the memo dies with
+        // the call.
+        let mut memo: HashMap<TermId, LinExpr> = HashMap::new();
         while let Some(step) = work.pop() {
             match step {
+                Step::Enter(t) if memo.contains_key(&t) => {
+                    values.push(memo[&t].clone());
+                }
                 Step::Enter(t) => match arena.node(t) {
                     TermNode::IntConst(value) => {
                         values.push(LinExpr::constant(Rational::integer(*value)));
@@ -3341,6 +3393,7 @@ impl IntCollector {
                             unreachable!("Build is only pushed for the arithmetic operators above")
                         }
                     };
+                    memo.insert(t, built.clone());
                     values.push(built);
                 }
             }

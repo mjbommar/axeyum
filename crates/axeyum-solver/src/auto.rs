@@ -12184,6 +12184,43 @@ mod tests {
         );
     }
 
+    /// The same shared chain through the SMT-LIB front door, asserting the
+    /// VERDICT — the end-to-end guard for the whole ADR-1940 family.
+    ///
+    /// It cannot finish on the unmemoised tree, by construction: the cost
+    /// doubles per level, and the shipped `smtcomp_cli` measured 10.41 s at
+    /// depth 26 and `unknown` at 27 against a 10 s budget, so depth 40 is
+    /// roughly 2^14 x that. With the memos it is 0.01 s in release — faster
+    /// than z3 (0.04 s) and cvc5 (0.03 s) on the same file.
+    ///
+    /// Five separate walkers had to be memoised before this passed:
+    /// `lin_form`, `interval_of`, `affine_in` and `accumulate_max_abs` in this
+    /// module, `lra::Collector::linearize` + `lra::IntCollector::linearize`,
+    /// and `dl_online::ScanState::linear`. Fixing only the first four moved the
+    /// cliff by ONE level, which is what a per-level doubling does when four of
+    /// five instances are removed.
+    #[test]
+    fn shared_let_chain_of_depth_40_is_decided() {
+        const DEPTH: usize = 40;
+        let mut script = String::from("(set-logic QF_LIA)\n(declare-const x Int)\n(assert ");
+        script.push_str("(let ((v0 (+ x 1))) ");
+        for i in 0..DEPTH {
+            script.push_str(&format!("(let ((v{} (+ v{} v{}))) ", i + 1, i, i));
+        }
+        script.push_str(&format!("(<= v{DEPTH} 100)"));
+        for _ in 0..=DEPTH {
+            script.push(')');
+        }
+        script.push_str(")\n(check-sat)\n");
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(60));
+        let outcome = crate::solve_smtlib(&script, &config).expect("front door");
+        assert!(
+            matches!(outcome.result, CheckResult::Sat(_)),
+            "depth-{DEPTH} shared chain must decide sat, got {:?}",
+            outcome.result
+        );
+    }
+
     #[test]
     fn propagate_linear_bounds_negative_coeff_sign_is_correct() {
         // `2y − x ≤ 4 ∧ 0 ≤ y ≤ 10`. Isolate x (coeff −1 < 0 ⇒ LOWER bound on x):
