@@ -28,12 +28,18 @@ def main(div):
         ln[len(CORPUS):]
         for ln in (LISTS / f"{STEM.get(div, div)}.txt").read_text().rstrip("\n").split("\n")
     ]
+    # ANY number of shards, discovered rather than assumed.  Seven divisions
+    # over three boxes does not divide and the divisions are not equally fast
+    # (UFNIA ran ~1.7 min/file where AUFLIRA ran 0.1 s on most rows), so slow
+    # ones get re-split across whatever cores are free.  Hardcoding s0/s1 here
+    # would have silently merged 2 of 6 shards and produced a 33-row "200-file"
+    # board -- the coverage assertion below is what makes the discovery safe.
+    parts = sorted(OUT.glob(f"{div}.s*.tsv"))
+    if not parts:
+        print(f"ABORT {div}: no shard files ({OUT}/{div}.s*.tsv) -- board DID NOT RUN")
+        return 2
     head, seen = None, {}
-    for s in ("s0", "s1"):
-        p = OUT / f"{div}.{s}.tsv"
-        if not p.exists():
-            print(f"ABORT {div}: shard {s} DID NOT RUN ({p} missing)")
-            return 2
+    for p in parts:
         lines = p.read_text().rstrip("\n").split("\n")
         head = lines[0]
         for ln in lines[1:]:
@@ -68,7 +74,8 @@ def main(div):
     wd = LANE / "winnable"
     wd.mkdir(exist_ok=True)
     (wd / f"{div}.txt").write_text("".join(f"{CORPUS}{f}\n" for f in win))
-    print(f"MERGED {div}: {len(pinned)} rows -> {div}.tsv; winnable {len(win)}")
+    print(f"MERGED {div}: {len(pinned)} rows from {len(parts)} shard(s)"
+          f" -> {div}.tsv; winnable {len(win)}")
     return 0
 
 
