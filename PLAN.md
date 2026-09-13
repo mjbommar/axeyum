@@ -145,6 +145,7 @@ now. Nothing was deleted.
 | 2026-09-13 | board-six | First parity rows for NRA / QF_AUFLIA / BV / AUFLIA / UFLIA / LRA (27,201 files): 193 / 140 / 148 / 84 / 71 / 56 of 200 vs z3 199 / 200 / 179 / 161 / 139 / 170, **0 disagreements, 0 wrapper kills**; all six blockmap rows refuted; ADR-1950; 177 of 390 winnable files stop at a ROUND cap with 23,994 ms of 24,000 unspent |
 | 2026-09-13 | board-tier1 | First parity rows for AUFLIRA / UFNIA / ABV / ALIA / AUFNIRA / AUFBV / FP (47,220 files): 10 / 53 / 4 / 0 / 3 / 10 / 46 of 200 vs z3 197 / 96 / 14 / 32 / 138 / 30 / 137, **0 disagreements, 0 wrapper kills**; six of seven probe rates CONFIRMED at n=200, ABV REFUTED; the nested-array refusal is 364 of 379 winnable array rows (96 %) but **91 % of its reach is AUFLIRA alone**; ADR-1957; ADR-1941's attempts-only rule would discard 454 of 603 census rows |
 | 2026-09-13 | nested-array-build | ADR-1955's nested array sort BUILT (`ArraySortKey::Array(ArraySortId)`): **AUFLIRA 10 → 164 and AUFNIRA 3 → 122 of 200** interleaved against `main` at `9c24786d0`, 0 regressions anywhere, and z3 AND cvc5 agreeing with all **273** moved verdicts at `no opinion 0`; re-sized BEFORE the build with an `unsat`-sound array-free surrogate (86.5%, projected 16,245) and the mechanism it found is the one that delivered — a nested AUFLIRA query needs **no array theory**, only congruence through the nested `select`; ALIA/ABV unmoved because their files WRITE the outer array, pinned as a failing-on-progress test; ADR-1965 |
+| 2026-09-13 | nested-array-row | ADR-1965's named next gate — **outer read-over-write on a nested array** — SIZED and DECLINED, no solver code written; the instrument is the mirror of ADR-1965's (it CURRIES the outer level and performs read-over-write syntactically instead of deleting it), committed at `675282be2` before any change under `crates/`; **the gate is worth 0**, for two independent reasons: **39 of the 53 winnable ALIA+ABV files are SATISFIABLE** so a refutation mechanism has a ceiling of 220 rather than 934, and of the refutable remainder it reaches none — **5 ALIA files are refutable AND accepted AND had read-over-write performed for them and axeyum decided 0 of 5**, while the one ABV refutation is the file ADR-1965's surrogate already reached and has ZERO outer stores; soundness control z3-original vs z3-surrogate agrees **14/14, no opinion 13, CONTRADICTS 0**, non-vacuity carried by two REACH fixtures because AUFLIRA and AUFNIRA refuse **187/187** and **139/139** here; ten instrument mutations all `killed N` with eight killing exactly one; what the refusals name instead is outer array EQUALITY for ALIA/ABV and, where the files actually are, **quantified model construction** — 24 ALIA and 15 ABV winnable files are reference-`sat` and no array capability produces a `sat`; ADR-1971 |
 | 2026-09-13 | qf-ufbv-caps | ADR-1945: QF_UFBV **89 → 129 of 200** (gap to z3 85 → 45) from a path-specific `MAX_SCALAR_THEORY_ATOMS = 4_096`; node cap held (worth **+0** alone at 2x/4x/16x) and array atom cap held (a 25 s `Watchdog` regression, 0 of 9); 0 of 400 array files change verdict; 9,793 runs, 0 disagreements |
 | 2026-09-13 | quant-rounds | ADR-1950's top blocker re-measured: **0 of 177** rows are bound by the round ceiling (167 fixpoint, 5 clock), a 2x/4x/8x sweep gains **0** and loses **0**, and 88 % of the LRA family fixpoints with an EMPTY e-graph on quantifier-elimination benchmarks; `InstantiationLoopExit` splits the three exits that shared one give-up string, three `cap_lever!` levers with byte-identical defaults, ADR-1956 |
 | 2026-09-12 | `26d75f328` | ADR-1920 + the UFDT measurement note; `parity-run.sh` routes the DT divisions to cvc5 rather than a non-competing z3 |
@@ -60058,6 +60059,92 @@ array, and outer read-over-write on a nested array is still undecided —
 | `b1f92e16f` | the one array route that followed the nesting reached nothing, so it refuses too |
 | `381d7f441` | ADR-1965 and the A/B against the branch point |
 | `6eca32ec8` | merge of local `main`: three append-point conflicts resolved as a union, and one mirror that did not compose |
+
+**Lane nested-array-row (`DONE`, nested-array-row, 2026-09-13).** ADR-1965 named
+**outer read-over-write on a nested array** as the gate holding ALIA's 511 files
+and ABV's 423, and said re-sizing it needed a different instrument. That
+instrument is built and run. **The gate is worth 0, and no solver code was
+written.**
+
+ADR: [ADR-1971](docs/research/09-decisions/adr-1971-outer-read-over-write-is-worth-zero-alia-and-abv-are-held-by-satisfiability.md)
+· artifact: [`bench-results/nested-array-outer-row-20260913/`](bench-results/nested-array-outer-row-20260913/README.md)
+· instrument: [`scripts/nested_array_outer_row_surrogate.py`](scripts/nested_array_outer_row_surrogate.py)
+
+## The sizing came first, and it said do not build
+
+Committed at `675282be2` **before any change under `crates/`**.
+
+The instrument is the **mirror** of ADR-1965's. ADR-1965 turned the outer array
+into an uninterpreted sort, which DELETES outer read-over-write — which is why
+it refused 33 of 36 ALIA and 12 of 17 ABV winnable files and could say nothing
+about them. This one **curries** the outer level (`M : (Array I (Array J E))`
+becomes `M_row : I -> (Array J E)`) and performs read-over-write syntactically,
+leaving the inner array theory and the quantified inner-array variables the
+SV-COMP memory model actually uses. Model-preserving on the accepted fragment;
+the reach counts only `unsat`, the direction that holds regardless.
+
+**Two findings, and the first settles it before reach is measured.**
+
+1. **39 of the 53 winnable ALIA + ABV files are SATISFIABLE.** Outer
+   read-over-write is a refutation mechanism. The ceiling on the whole gate is
+   **220 files, not 934** — and that is if every refutable file fell to it.
+
+       AUFLIRA 186 unsat / 1 sat     AUFNIRA 139 / 0
+       ALIA     12 unsat / 24 sat    ABV       2 / 15
+
+2. **Of the refutable remainder it reaches none.** Handed outer read-over-write
+   for free, axeyum answers `unknown` on **18 of 18** accepted ALIA files and
+   **8 of 9** accepted ABV files. The one ABV refutation is the same file
+   ADR-1965's surrogate already reached, and it has **zero outer stores** — so
+   the marginal contribution of this gate is **0 on every division**.
+
+   Sharpest form: **5 ALIA files are refutable AND inside the fragment AND had
+   read-over-write performed for them. axeyum decided 0 of 5.**
+
+## Why the zero is readable
+
+AUFLIRA and AUFNIRA refuse **187/187** and **139/139** under this surrogate
+(their files pass outer arrays to functions), so unlike ADR-1965's instrument
+this one has no natural population where it is known to reach anything. Six
+fixtures in `controls/` supply the missing opportunity — `c1` and `c6` are
+outer-read-over-write refutations it returns `unsat` on, and `c3`/`c4` are
+adversarial over **satisfiable** queries so a relaxed `ite` guard or a captured
+quantified row would be caught rather than counted. Every fixture's own verdict
+is confirmed on the ORIGINAL by z3 **and** cvc5.
+
+Soundness control, z3-on-original against z3-on-surrogate, an opportunity on
+every accepted file: **agrees 14 / 14, no opinion 13, CONTRADICTS 0.**
+
+Ten mutations of the instrument, all `killed N`, exit 0; eight kill exactly one
+test. The informative row is the index guard of the expansion — deleting it
+kills six, because without it every outer write is visible at every outer index
+and satisfiable files become surrogate `unsat`.
+
+## What the refusals name instead
+
+The refusal reason is the gate *behind* this one, and it differs by family:
+
+| refusal | ALIA | ABV | AUFLIRA | AUFNIRA |
+|---|---:|---:|---:|---:|
+| outer array **equality** (extensionality) | 15 | 8 | 0 | 0 |
+| outer array passed to a **function** | 0 | 0 | 185 | 129 |
+| no nested array at all | 3 | 0 | 2 | 10 |
+
+**Where ALIA's and ABV's files actually are: quantified model construction.**
+24 ALIA and 15 ABV winnable files are reference-`sat` — the majority of both
+lists. They are `forall`-quantified SV-COMP verification conditions whose answer
+is `sat`, and no array capability produces a `sat`. That is a different kind of
+work from every nested-array lane so far: ADR-1965 moved 273 verdicts and all
+273 were `unsat`.
+
+## One real gap found on the way, sized at zero
+
+`select` through an array-sorted `ite` whose branch is a UF-returned row is
+`unknown`; the same query with the `select` pushed through by hand is `unsat`.
+`crates/axeyum-rewrite/src/arrays.rs` already has that rewrite and these queries
+do not reach it. The sweep's `--distribute` arm sizes closing it at **+0 on
+ALIA and +0 on ABV**. Pinned as
+`select_through_an_array_ite_on_a_uf_returned_row_is_undecided`.
 
 **Your lane's block (`DONE`, nra-admission-bound, 2026-09-07).**
 

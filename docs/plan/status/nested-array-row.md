@@ -90,9 +90,4 @@ ALIA and +0 on ABV**. Pinned as
 
 <!-- plan-section: landed-changes -->
 
-| date | change | evidence |
-|---|---|---|
-| 2026-09-13 | `675282be2` — the sizing instrument and its sweep, committed before any solver code | `bench-results/nested-array-outer-row-20260913/`, 17 files |
-| 2026-09-13 | ADR-1971 — outer read-over-write is worth 0; ALIA and ABV are held by satisfiability | reach 0/18 ALIA, 0 marginal ABV; ceiling 220 not 934 |
-| 2026-09-13 | two gate-map rows pinning what the sizing measured | `nested_array_gate_map` 12 tests (was 10) |
-| 2026-09-13 | `outer-row-surrogate` mutation suite, 10 guards | all `killed N`, exit 0, 8 kill exactly one |
+| 2026-09-13 | nested-array-row | ADR-1965's named next gate — **outer read-over-write on a nested array** — SIZED and DECLINED, no solver code written; the instrument is the mirror of ADR-1965's (it CURRIES the outer level and performs read-over-write syntactically instead of deleting it), committed at `675282be2` before any change under `crates/`; **the gate is worth 0**, for two independent reasons: **39 of the 53 winnable ALIA+ABV files are SATISFIABLE** so a refutation mechanism has a ceiling of 220 rather than 934, and of the refutable remainder it reaches none — **5 ALIA files are refutable AND accepted AND had read-over-write performed for them and axeyum decided 0 of 5**, while the one ABV refutation is the file ADR-1965's surrogate already reached and has ZERO outer stores; soundness control z3-original vs z3-surrogate agrees **14/14, no opinion 13, CONTRADICTS 0**, non-vacuity carried by two REACH fixtures because AUFLIRA and AUFNIRA refuse **187/187** and **139/139** here; ten instrument mutations all `killed N` with eight killing exactly one; what the refusals name instead is outer array EQUALITY for ALIA/ABV and, where the files actually are, **quantified model construction** — 24 ALIA and 15 ABV winnable files are reference-`sat` and no array capability produces a `sat`; ADR-1971 |
