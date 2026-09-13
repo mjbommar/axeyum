@@ -70,9 +70,52 @@ which is what makes the numbers comparable to ADR-1935's and ADR-1942's:
 * 10 s wall, 8 GiB, 16 s wrapper headroom, every run recording its own outcome;
 * twelve modulo-interleaved shards per division, four per box on `s5`/`s6`/`s7`.
 
-Runner `ab/ab-shard.sh`, `ab/run-host.sh`; analysis `ab/analyze.py`; rows
-`ab/out/<division>.tsv`, one per file carrying both arms' verdict, wall time and
-give-up reason. Oracle re-validation of every newly decided file:
-`ab/verify-gains.sh`, rows in `ab/verify-gains.tsv`.
+Runner `ab/ab-shard.sh`, `ab/run-host.sh`, `ab/merge.py`; analysis
+`ab/analyze.py` (the same script ADR-1935's and ADR-1942's A/Bs used) and
+`ab/wall-cost.py`; rows `ab/out/<division>.tsv`, one per file carrying both arms'
+verdict, wall time and give-up reason. Oracle re-validation of every newly
+decided file: `ab/verify-gains.sh`, rows in `ab/verify-gains.tsv`.
 
-*(The A/B section's result table is filled in by the ADR once the run lands.)*
+| division | n | base | new | delta | gain | loss | flip | base wall | new wall |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| AUFDTLIRA | 200 | 71 | **90** | **+19** | 19 | 0 | 0 | 257 s | 497 s |
+| UFDTLIRA | 200 | 88 | **102** | **+14** | 14 | 0 | 0 | 123 s | 153 s |
+| UFDT | 200 | 29 | **31** | **+2** | 2 | 0 | 0 | 553 s | 702 s |
+| QF_DT *(control)* | 200 | 169 | 169 | 0 | 0 | 0 | 0 | 52.3 s | 52.1 s |
+| UF *(control)* | 200 | 87 | 87 | 0 | 0 | 0 | 0 | 1,389 s | 1,386 s |
+
+**+35 net, 0 losses, 0 flips, 0 declared-`:status` disagreements in the 1,000
+rows.** 34 of the 35 gains are axeyum / z3 / cvc5 / declared all `unsat`; the
+35th is `unsat` for us and for cvc5 on a file z3 times out on (re-checked at
+40 s) and SMT-LIB declares `unknown`. `UF`'s base is 87 against ADR-1942's 88
+because one file aborts on BOTH arms in this run.
+
+**The cost, split per file by `ab/wall-cost.py`.** The 35 gains cost 20 s in
+total; the rest of the increase is 43 files that used to stop at a refusal in
+milliseconds and now run the ladder to the end of the 10 s budget without
+gaining — AUFDTLIRA 24 files / +226 s, UFDT 16 / +146 s, UFDTLIRA 3 / +27 s.
+Both controls moved within noise.
+
+## Scoring the sizing against the A/B
+
+`score-prediction.py` reads the committed census rows and the A/B rows together.
+The sizing was committed first (`0c96ac73e`) and the implementation second
+(`47f3d61d8`), so this is a prediction being scored rather than a fit:
+
+| | |
+|---|---:|
+| gains | 35 |
+| inside the ANY-entry predicate (the bracket's upper end) | **35 of 35** |
+| inside the EVERY-entry predicate | 34 of 35 |
+| newly ANY-eligible (the "52") | 29 of 35 |
+| predicted point estimate | "low teens" |
+
+The bracket held; the point estimate did not. **28 of the 35 gains came from the
+`is`/`select`-over-a-non-variable bucket** the note flagged as an unquantified
+addition that "may be the larger half", and only 5 from the result-sort refusal
+this rung is named after.
+
+*Caveat on the wall figures:* another lane's benchmark was running on all three
+boxes for part of the window. The per-file interleave with alternating arm order
+cancels it in the DIFFERENCE (0 losses, 0 flips, controls flat), but the absolute
+seconds are not a clean machine-to-machine comparison.
