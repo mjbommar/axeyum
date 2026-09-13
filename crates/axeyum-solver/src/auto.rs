@@ -12164,24 +12164,33 @@ mod tests {
     /// The memo's falsifiable form: a COUNT, not a wall time.
     ///
     /// `lin_form` recurses into BOTH children of `IntAdd`, so on this DAG the
-    /// unmemoised walk makes `2^31` calls while the arena holds 33 nodes. A
+    /// unmemoised walk makes 16,777,215 calls while the arena holds 25 nodes. A
     /// timing assertion would be a coin flip on a loaded box; the expansion
-    /// counter is not. Delete the `memo.map.get` early return in
-    /// [`lin_form_memo`] and this test is the one that dies.
+    /// counter is not.
+    ///
+    /// Depth 22 and not 40 ON PURPOSE. The end-to-end guard below wants a depth
+    /// the unmemoised walk CANNOT finish; this one wants the opposite — a depth
+    /// where it finishes quickly and is then caught on the COUNT. Mutation-
+    /// verified: deleting the `memo.map.get` early return in [`lin_form_memo`]
+    /// fails this test in 7.5 s with `expanded 16777215 nodes for a 25-node
+    /// DAG`. At depth 40 the same mutation runs for hours instead — that was
+    /// measured too, on the first attempt at this test. A guard that can only
+    /// fire after an hour is a timeout, not a guard.
     #[test]
     fn lin_form_expands_a_shared_dag_once_per_node() {
+        const DEPTH: u32 = 22;
         let mut arena = TermArena::new();
-        let (x, root) = shared_doubling_chain(&mut arena, 30);
+        let (x, root) = shared_doubling_chain(&mut arena, DEPTH);
         let mut memo = LinFormMemo::default();
         let form = lin_form_memo(&arena, root, 0, &mut memo).expect("affine");
-        // Denotation: v30 = 2^30·(x + 1).
-        assert_eq!(form.coeffs.get(&x).copied(), Some(1i128 << 30));
-        assert_eq!(form.constant, 1i128 << 30);
-        // 32 distinct arithmetic nodes (`x+1` then 30 doublings) plus the two
-        // leaves `x` and `1`. Anything near `2^31` means the memo is gone.
+        // Denotation: v22 = 2^22·(x + 1).
+        assert_eq!(form.coeffs.get(&x).copied(), Some(1i128 << DEPTH));
+        assert_eq!(form.constant, 1i128 << DEPTH);
+        // 23 distinct arithmetic nodes (`x+1` then 22 doublings) plus the two
+        // leaves `x` and `1`. Anything in the millions means the memo is gone.
         assert!(
             memo.expansions <= 64,
-            "expanded {} nodes for a 33-node DAG; the memo is not being hit",
+            "expanded {} nodes for a 25-node DAG; the memo is not being hit",
             memo.expansions
         );
     }
