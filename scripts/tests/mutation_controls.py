@@ -10172,6 +10172,60 @@ SUITES["quant-egraph-reserve"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `quant-valid-universal-reserve` -- ADR-1975.  Valid-universal elimination runs
+# one quantifier-free SUB-SOLVE per top-level assertion, each handed the
+# quantified ladder's whole remaining wall clock.  Measured over `UFDTNIRA`'s
+# pinned 200: 69 files spend the ENTIRE 24 s budget inside it and give up PAST
+# the deadline (median 46 ms over), and the rungs below never run.
+# `QuantValidUniversalReservePolicy` is the lever that holds a share back.
+#
+# The three mutations are the ones that matter for a lever whose numbers are
+# quoted in an ADR: the default arm must be byte-identical to the pre-lever
+# code, an unparseable value must degrade to that default rather than to an arm
+# nobody chose, and the slice SHAPE must be a reserve rather than a fraction
+# (same divisor, opposite division -- at share 4 the pass would get 6 s instead
+# of 18 s of a 24 s budget, which silently turns the shipped arm into something
+# close to the CEILING arm and would make every number in the ADR describe a
+# different configuration).
+# --------------------------------------------------------------------------
+
+SUITES["quant-valid-universal-reserve"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "quant_valid_universal"),
+        "quant-valid-universal-reserve",
+    ),
+    [
+        (
+            # The lever's OFF position must be the historical behaviour.
+            "the default arm hands the pass the whole remaining budget",
+            "        QuantValidUniversalReservePolicy::WholeBudget => config.clone(),",
+            "        QuantValidUniversalReservePolicy::WholeBudget => "
+            "LadderSlice::all_but_reserve(route_trace::quant_rung::VALID_UNIVERSAL_QF, 4)"
+            ".apply(config, config.timeout),",
+        ),
+        (
+            # A typo must degrade to the shipped default, never to an arm
+            # nobody chose -- the failure mode that turns an A/B into a
+            # measurement of the wrong arm reported as the right one.
+            "an unparseable env value falls back to the shipped default",
+            "            Ok(0) | Err(_) => QuantValidUniversalReservePolicy::WholeBudget,",
+            "            Ok(0) | Err(_) => QuantValidUniversalReservePolicy::LadderReserve "
+            "{ share: 2 },",
+        ),
+        (
+            # `all_but_reserve(n)` keeps 1 - 1/n; `fraction(n)` keeps 1/n.
+            "the slice SHAPE is a reserve, not a fraction",
+            "            LadderSlice::all_but_reserve(route_trace::quant_rung::"
+            "VALID_UNIVERSAL_QF, share)",
+            "            LadderSlice::fraction(route_trace::quant_rung::"
+            "VALID_UNIVERSAL_QF, share)",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
