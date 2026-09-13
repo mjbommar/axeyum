@@ -78,7 +78,7 @@
 //! verdict into a *provably-correct* `unsat` or an equivalent rewrite; every
 //! universal that fails any check passes through byte-identical.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode};
 
@@ -1199,8 +1199,11 @@ fn atom_literal(arena: &TermArena, atom: TermId, negate: bool, relax_int: bool) 
     if !is_real_cmp && !is_real_eq && !is_int_cmp && !is_int_eq {
         return None;
     }
-    let left = affine(arena, lhs)?;
-    let right = affine(arena, rhs)?;
+    // ONE memo for both sides: the operands of a comparison routinely share
+    // their term DAG.
+    let mut memo = AffineMemo::default();
+    let left = affine(arena, lhs, &mut memo)?;
+    let right = affine(arena, rhs, &mut memo)?;
 
     // Build `expr` and base relation so the atom is `expr ⋈ 0` (pre-negation).
     // The Int and Real order/equality ops share the same affine normalization
@@ -1365,29 +1368,50 @@ fn build_affine_term(arena: &mut TermArena, expr: &Affine) -> Option<TermId> {
 /// linear shape). An opaque subterm cannot be represented faithfully for term
 /// rebuilding either, so it likewise returns `None` whether or not the bound
 /// variable occurs inside it.
-fn affine(arena: &TermArena, term: TermId) -> Option<Affine> {
+/// Per-walk memo for [`affine`], keyed on `TermId`.
+///
+/// `affine` recurses into BOTH operands of `+`/`-`/`*`, so without this the
+/// walk costs the number of root-to-leaf PATHS through the assertion DAG rather
+/// than the number of nodes — `2^depth` on a `let`-shared chain (ADR-1940).
+/// Measured on a depth-24 shared `+` spine inside a universal body, `affine`
+/// plus `Affine::add` were 20% of the profile, doubling per level.
+///
+/// Denotation-identical: `affine` is a pure function of `(arena, term)`, so a
+/// repeat call always had to return the same form.
+type AffineMemo = HashMap<TermId, Option<Affine>>;
+
+fn affine(arena: &TermArena, term: TermId, memo: &mut AffineMemo) -> Option<Affine> {
+    if let Some(hit) = memo.get(&term) {
+        return hit.clone();
+    }
+    let computed = affine_uncached(arena, term, memo);
+    memo.insert(term, computed.clone());
+    computed
+}
+
+fn affine_uncached(arena: &TermArena, term: TermId, memo: &mut AffineMemo) -> Option<Affine> {
     match arena.node(term) {
         TermNode::IntConst(value) => Some(Affine::constant(Rational::integer(*value))),
         TermNode::RealConst(value) => Some(Affine::constant(*value)),
         TermNode::Symbol(sym) => Some(Affine::symbol(*sym)),
         TermNode::App { op, args } => match op {
             Op::IntAdd | Op::RealAdd => {
-                let a = affine(arena, args[0])?;
-                let b = affine(arena, args[1])?;
+                let a = affine(arena, args[0], memo)?;
+                let b = affine(arena, args[1], memo)?;
                 a.add(&b)
             }
             Op::IntSub | Op::RealSub => {
-                let a = affine(arena, args[0])?;
-                let b = affine(arena, args[1])?;
+                let a = affine(arena, args[0], memo)?;
+                let b = affine(arena, args[1], memo)?;
                 a.sub(&b)
             }
             Op::IntNeg | Op::RealNeg => {
-                let a = affine(arena, args[0])?;
+                let a = affine(arena, args[0], memo)?;
                 a.neg()
             }
             Op::IntMul | Op::RealMul => {
-                let a = affine(arena, args[0])?;
-                let b = affine(arena, args[1])?;
+                let a = affine(arena, args[0], memo)?;
+                let b = affine(arena, args[1], memo)?;
                 // Linear only when one factor is a (var-free) constant.
                 if a.coeffs.is_empty() {
                     b.scale(a.constant)
@@ -1397,7 +1421,7 @@ fn affine(arena: &TermArena, term: TermId) -> Option<Affine> {
                     None
                 }
             }
-            Op::IntToReal => affine(arena, args[0]),
+            Op::IntToReal => affine(arena, args[0], memo),
             // Any other operator is opaque. Because the residual builder must
             // reconstruct a faithful term, we cannot represent an opaque
             // subterm as a sum of symbols — decline. (A `div`/`abs`/UF carrying

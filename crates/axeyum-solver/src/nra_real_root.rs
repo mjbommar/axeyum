@@ -62,7 +62,7 @@
 
 use core::cmp::Ordering;
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::time::Instant;
 
 use axeyum_ir::{
@@ -1829,16 +1829,47 @@ fn match_real_poly_constraint(
     Some((var, cmp, poly))
 }
 
+/// Per-walk memo for [`collect`] / [`collect_int`], keyed on `TermId`.
+///
+/// `collect` recurses into BOTH operands of `RealAdd`/`RealSub`/`RealMul`, so
+/// without this the walk costs the number of root-to-leaf PATHS through the
+/// assertion DAG rather than the number of nodes — `2^depth` on a `let`-shared
+/// chain (ADR-1940). Measured on a depth-26 shared `+` spine with a nonlinear
+/// side condition, `collect` plus `RatPoly::add` were 54% of the profile in
+/// `QF_NIA` and 19% in `QF_NRA`, doubling per level.
+///
+/// Denotation-identical without qualification: `collect` and `collect_int` are
+/// pure functions of `(arena, t)` — no depth cap, no side effect, no ambient
+/// state — so a repeat call always had to return the same polynomial.
+///
+/// One map serves both: a `TermId` has exactly one sort, so a `Real` node and
+/// an `Int` node can never collide.
+type PolyMemo = HashMap<TermId, Option<RatPoly>>;
+
 /// Collect `lhs − rhs` as a single-variable real polynomial, or `None`.
 fn collect_diff(arena: &TermArena, lhs: TermId, rhs: TermId) -> Option<RatPoly> {
-    let l = collect(arena, lhs)?;
-    let r = collect(arena, rhs)?;
+    // ONE memo for both sides: the two operands of a comparison routinely share
+    // their term DAG.
+    let mut memo = PolyMemo::default();
+    let l = collect(arena, lhs, &mut memo)?;
+    let r = collect(arena, rhs, &mut memo)?;
     l.sub(r)
 }
 
 /// Recursively collect a `Real`-sorted term into a single-variable rational
 /// polynomial over `{+, −, ·, neg, RealConst, symbol}`. Anything else declines.
-fn collect(arena: &TermArena, t: TermId) -> Option<RatPoly> {
+///
+/// Memoised on `TermId`; see [`PolyMemo`].
+fn collect(arena: &TermArena, t: TermId, memo: &mut PolyMemo) -> Option<RatPoly> {
+    if let Some(hit) = memo.get(&t) {
+        return hit.clone();
+    }
+    let computed = collect_uncached(arena, t, memo);
+    memo.insert(t, computed.clone());
+    computed
+}
+
+fn collect_uncached(arena: &TermArena, t: TermId, memo: &mut PolyMemo) -> Option<RatPoly> {
     if arena.sort_of(t) != Sort::Real {
         return None;
     }
@@ -1846,15 +1877,21 @@ fn collect(arena: &TermArena, t: TermId) -> Option<RatPoly> {
         TermNode::RealConst(r) => Some(RatPoly::constant(*r)),
         TermNode::Symbol(s) => Some(RatPoly::var_of(*s)),
         TermNode::App { op, args } => match op {
-            Op::RealNeg if args.len() == 1 => collect(arena, args[0])?.neg(),
+            Op::RealNeg if args.len() == 1 => collect(arena, args[0], memo)?.neg(),
             Op::RealAdd if args.len() == 2 => {
-                collect(arena, args[0])?.add(&collect(arena, args[1])?)
+                let a = collect(arena, args[0], memo)?;
+                let b = collect(arena, args[1], memo)?;
+                a.add(&b)
             }
             Op::RealSub if args.len() == 2 => {
-                collect(arena, args[0])?.sub(collect(arena, args[1])?)
+                let a = collect(arena, args[0], memo)?;
+                let b = collect(arena, args[1], memo)?;
+                a.sub(b)
             }
             Op::RealMul if args.len() == 2 => {
-                collect(arena, args[0])?.mul(&collect(arena, args[1])?)
+                let a = collect(arena, args[0], memo)?;
+                let b = collect(arena, args[1], memo)?;
+                a.mul(&b)
             }
             // `to_real` is the exact ring embedding ℤ ↪ ℝ, so an integer
             // sub-term denotes the same real value as its collected rational
@@ -1862,7 +1899,7 @@ fn collect(arena: &TermArena, t: TermId) -> Option<RatPoly> {
             // in a real context — e.g. `(- 2)` in `(= (* a a) (- 2))`, which the
             // SMT-LIB front end parses as `(to_real (- 2))` — reach the exact
             // real decider instead of the coercion-relaxation fall-through.
-            Op::IntToReal if args.len() == 1 => collect_int(arena, args[0]),
+            Op::IntToReal if args.len() == 1 => collect_int(arena, args[0], memo),
             _ => None,
         },
         _ => None,
@@ -1878,7 +1915,16 @@ fn collect(arena: &TermArena, t: TermId) -> Option<RatPoly> {
 /// `to_real(-a)=-to_real a`, `to_real k = k`), so the collected polynomial
 /// denotes the same real value as `(to_real t)` — the coercion is
 /// value-preserving and the resulting constraint is semantically identical.
-fn collect_int(arena: &TermArena, t: TermId) -> Option<RatPoly> {
+fn collect_int(arena: &TermArena, t: TermId, memo: &mut PolyMemo) -> Option<RatPoly> {
+    if let Some(hit) = memo.get(&t) {
+        return hit.clone();
+    }
+    let computed = collect_int_uncached(arena, t, memo);
+    memo.insert(t, computed.clone());
+    computed
+}
+
+fn collect_int_uncached(arena: &TermArena, t: TermId, memo: &mut PolyMemo) -> Option<RatPoly> {
     if arena.sort_of(t) != Sort::Int {
         return None;
     }
@@ -1886,15 +1932,21 @@ fn collect_int(arena: &TermArena, t: TermId) -> Option<RatPoly> {
         TermNode::IntConst(k) => Some(RatPoly::constant(Rational::integer(*k))),
         TermNode::Symbol(s) => Some(RatPoly::var_of(*s)),
         TermNode::App { op, args } => match op {
-            Op::IntNeg if args.len() == 1 => collect_int(arena, args[0])?.neg(),
+            Op::IntNeg if args.len() == 1 => collect_int(arena, args[0], memo)?.neg(),
             Op::IntAdd if args.len() == 2 => {
-                collect_int(arena, args[0])?.add(&collect_int(arena, args[1])?)
+                let a = collect_int(arena, args[0], memo)?;
+                let b = collect_int(arena, args[1], memo)?;
+                a.add(&b)
             }
             Op::IntSub if args.len() == 2 => {
-                collect_int(arena, args[0])?.sub(collect_int(arena, args[1])?)
+                let a = collect_int(arena, args[0], memo)?;
+                let b = collect_int(arena, args[1], memo)?;
+                a.sub(b)
             }
             Op::IntMul if args.len() == 2 => {
-                collect_int(arena, args[0])?.mul(&collect_int(arena, args[1])?)
+                let a = collect_int(arena, args[0], memo)?;
+                let b = collect_int(arena, args[1], memo)?;
+                a.mul(&b)
             }
             _ => None,
         },
@@ -6107,14 +6159,32 @@ fn match_multi_constraint(arena: &TermArena, assertion: TermId) -> Option<(Cmp, 
 }
 
 fn collect_multi_diff(arena: &TermArena, lhs: TermId, rhs: TermId) -> Option<MultiPoly> {
-    let l = collect_multi(arena, lhs)?;
-    let r = collect_multi(arena, rhs)?;
+    // ONE memo for both sides; see [`PolyMemo`] for why this exists.
+    let mut memo = MultiPolyMemo::default();
+    let l = collect_multi(arena, lhs, &mut memo)?;
+    let r = collect_multi(arena, rhs, &mut memo)?;
     l.sub(&r)
 }
 
+/// Per-walk memo for [`collect_multi`], the multivariate twin of [`PolyMemo`].
+type MultiPolyMemo = HashMap<TermId, Option<MultiPoly>>;
+
 /// Recursively collect a `Real`-sorted term into a multivariate rational
 /// polynomial over `{+, −, ·, neg, RealConst, symbol}`. Anything else declines.
-fn collect_multi(arena: &TermArena, t: TermId) -> Option<MultiPoly> {
+fn collect_multi(arena: &TermArena, t: TermId, memo: &mut MultiPolyMemo) -> Option<MultiPoly> {
+    if let Some(hit) = memo.get(&t) {
+        return hit.clone();
+    }
+    let computed = collect_multi_uncached(arena, t, memo);
+    memo.insert(t, computed.clone());
+    computed
+}
+
+fn collect_multi_uncached(
+    arena: &TermArena,
+    t: TermId,
+    memo: &mut MultiPolyMemo,
+) -> Option<MultiPoly> {
     if arena.sort_of(t) != Sort::Real {
         return None;
     }
@@ -6122,15 +6192,21 @@ fn collect_multi(arena: &TermArena, t: TermId) -> Option<MultiPoly> {
         TermNode::RealConst(r) => Some(MultiPoly::constant(*r)),
         TermNode::Symbol(s) => Some(MultiPoly::var(*s)),
         TermNode::App { op, args } => match op {
-            Op::RealNeg if args.len() == 1 => collect_multi(arena, args[0])?.neg(),
+            Op::RealNeg if args.len() == 1 => collect_multi(arena, args[0], memo)?.neg(),
             Op::RealAdd if args.len() == 2 => {
-                collect_multi(arena, args[0])?.add(&collect_multi(arena, args[1])?)
+                let a = collect_multi(arena, args[0], memo)?;
+                let b = collect_multi(arena, args[1], memo)?;
+                a.add(&b)
             }
             Op::RealSub if args.len() == 2 => {
-                collect_multi(arena, args[0])?.sub(&collect_multi(arena, args[1])?)
+                let a = collect_multi(arena, args[0], memo)?;
+                let b = collect_multi(arena, args[1], memo)?;
+                a.sub(&b)
             }
             Op::RealMul if args.len() == 2 => {
-                collect_multi(arena, args[0])?.mul(&collect_multi(arena, args[1])?)
+                let a = collect_multi(arena, args[0], memo)?;
+                let b = collect_multi(arena, args[1], memo)?;
+                a.mul(&b)
             }
             _ => None,
         },

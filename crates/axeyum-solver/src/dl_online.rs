@@ -423,64 +423,148 @@ impl ScanState {
     /// operator outside `+ - neg` and plain leaves. Deliberately narrow: a term
     /// this cannot parse makes the whole query fall through to another route.
     ///
-    /// # Why this is an explicit worklist and not native recursion
+    /// # Why this is an explicit worklist, and why that was not enough
     ///
     /// The `+`/`-`/`neg` spine's depth is copied verbatim from the SMT-LIB
     /// source — `(+ (+ (+ … ) 1) 2)` nests once per summand, which
     /// symbolic-execution and BMC front ends emit by the thousand. A recursive
     /// descent therefore aborted the process with a stack overflow instead of
     /// returning the first-class `unknown` the caller is owed (the same failure
-    /// class as `crates/axeyum-solver/src/term_walk.rs` documents). The sign is
-    /// carried on the worklist and accumulated in place, so the whole spine
-    /// costs one `LinForm`.
+    /// class as `crates/axeyum-solver/src/term_walk.rs` documents).
+    ///
+    /// The worklist fixed the STACK and not the WORK. Its predecessor carried a
+    /// sign on each item and accumulated into one flat `LinForm`, so an operand
+    /// reachable by many paths through the assertion **DAG** was entered once
+    /// per PATH: on a `let`-shared chain of depth `d`, `2^d` work items, none of
+    /// them deep. That is the same category error as a depth cap — an explicit
+    /// worklist bounds STACK, a depth cap bounds path LENGTH, and the cost is
+    /// path COUNT (ADR-1940). Measured with every other walker on this route
+    /// already memoised, this function alone was 61.5% of the profile and burned
+    /// the DL probe's entire 18 s slice on a depth-36 shared chain that z3 and
+    /// cvc5 answer in 0.04 s.
+    ///
+    /// So the walk now builds ONE `LinForm` per distinct node, memoised on
+    /// `TermId`, rather than one signed accumulation per path. Denotation is
+    /// unchanged: a node's form is the signed sum of its operands' forms either
+    /// way, `checked_*` still declines every overflow, and operands are ENTERED
+    /// in the same order as before (source order pushed, so last-to-first
+    /// popped), which is what `vertex` column numbering depends on.
     fn linear(
         &mut self,
         arena: &TermArena,
         term: TermId,
         deadline: Option<Instant>,
     ) -> Option<LinForm> {
-        let mut acc = LinForm::default();
-        // `(term, negated)`; order of accumulation is irrelevant because the
-        // result is a sum, so a plain stack is enough.
-        let mut work = vec![(term, false)];
+        enum Step {
+            Enter(TermId),
+            Build(TermId),
+        }
+        // Forms already built on THIS call. Scoped to the call: `vertex` mutates
+        // `self`, so a memo outliving the call would be a claim about state this
+        // function does not own.
+        let mut memo: HashMap<TermId, LinForm> = HashMap::new();
+        let mut work = vec![Step::Enter(term)];
+        // Operand results in completion order; a `Build` takes exactly its own.
+        let mut values: Vec<LinForm> = Vec::new();
         let mut steps = 0_usize;
-        while let Some((current, negated)) = work.pop() {
+        while let Some(step) = work.pop() {
             steps += 1;
             if steps.is_multiple_of(1024) && past_deadline(deadline) {
                 return None;
             }
-            match arena.node(current) {
-                TermNode::IntConst(value) => {
-                    acc.add_constant(Rational::integer(*value), negated)?;
-                }
-                TermNode::RealConst(value) if self.mode == Mode::Real => {
-                    acc.add_constant(*value, negated)?;
-                }
-                TermNode::Symbol(_) => {
-                    let index = self.vertex(arena, current)?;
-                    acc.add_vertex(index, negated)?;
-                }
-                TermNode::App { op, args } => match op {
-                    Op::IntAdd | Op::RealAdd => {
-                        for &arg in &**args {
-                            work.push((arg, negated));
+            match step {
+                Step::Enter(current) => {
+                    if let Some(hit) = memo.get(&current) {
+                        values.push(hit.clone());
+                        continue;
+                    }
+                    let leaf: Option<LinForm> = match arena.node(current) {
+                        TermNode::IntConst(value) => {
+                            let mut f = LinForm::default();
+                            f.add_constant(Rational::integer(*value), false)?;
+                            Some(f)
                         }
-                    }
-                    Op::IntSub | Op::RealSub if !args.is_empty() => {
-                        work.push((args[0], negated));
-                        for &arg in &args[1..] {
-                            work.push((arg, !negated));
+                        TermNode::RealConst(value) if self.mode == Mode::Real => {
+                            let mut f = LinForm::default();
+                            f.add_constant(*value, false)?;
+                            Some(f)
                         }
+                        TermNode::Symbol(_) => {
+                            let index = self.vertex(arena, current)?;
+                            let mut f = LinForm::default();
+                            f.add_vertex(index, false)?;
+                            Some(f)
+                        }
+                        TermNode::App { op, args } => match op {
+                            Op::IntAdd | Op::RealAdd => {
+                                work.push(Step::Build(current));
+                                for &arg in &**args {
+                                    work.push(Step::Enter(arg));
+                                }
+                                None
+                            }
+                            Op::IntSub | Op::RealSub if !args.is_empty() => {
+                                work.push(Step::Build(current));
+                                for &arg in &**args {
+                                    work.push(Step::Enter(arg));
+                                }
+                                None
+                            }
+                            Op::IntNeg | Op::RealNeg if args.len() == 1 => {
+                                work.push(Step::Build(current));
+                                work.push(Step::Enter(args[0]));
+                                None
+                            }
+                            _ => return None,
+                        },
+                        _ => return None,
+                    };
+                    if let Some(f) = leaf {
+                        memo.insert(current, f.clone());
+                        values.push(f);
                     }
-                    Op::IntNeg | Op::RealNeg if args.len() == 1 => {
-                        work.push((args[0], !negated));
+                }
+                Step::Build(current) => {
+                    let TermNode::App { op, args } = arena.node(current) else {
+                        unreachable!("Build is only pushed for an application")
+                    };
+                    let arity = args.len();
+                    // Every `Enter` contributes exactly one value, so the last
+                    // `arity` entries are this node's operands. Checked rather
+                    // than asserted: a panic here would be an abort, and an
+                    // abort is strictly worse than the `unknown` this route is
+                    // allowed to return.
+                    if values.len() < arity {
+                        return None;
                     }
-                    _ => return None,
-                },
-                _ => return None,
+                    // Operands landed in ENTRY order, i.e. source order
+                    // reversed; put them back left to right.
+                    let mut operands = values.split_off(values.len() - arity);
+                    operands.reverse();
+                    let built = match op {
+                        Op::IntAdd | Op::RealAdd => {
+                            let mut acc = LinForm::default();
+                            for o in &operands {
+                                acc = acc.checked_add(o)?;
+                            }
+                            acc
+                        }
+                        Op::IntSub | Op::RealSub => {
+                            let mut acc = operands.first()?.clone();
+                            for o in &operands[1..] {
+                                acc = acc.checked_sub(o)?;
+                            }
+                            acc
+                        }
+                        Op::IntNeg | Op::RealNeg => operands.first()?.clone().checked_neg()?,
+                        _ => return None,
+                    };
+                    memo.insert(current, built.clone());
+                    values.push(built);
+                }
             }
         }
-        Some(acc)
+        values.pop()
     }
 
     /// Normalizes a form `Σ coeff·x + constant ⋈ 0` into
