@@ -1,0 +1,9 @@
+division	file	ours	z3_600	z3_s	z3_k	cvc5_600	cvc5_s	cvc5_k	status	verdict
+AUFBV	AUFBV/20210301-Alive2-partial-undef/bzip2/038_bzip2.smt2	unsat	unknown	13.4	ok	unknown	0.1	ok	unknown	UNCONFIRMED
+AUFBV	AUFBV/20210301-Alive2-partial-undef/gzip/320_gzip.smt2	unsat	unknown	600.2	ok	unknown	0.1	ok	unknown	UNCONFIRMED
+AUFBV	AUFBV/20210301-Alive2-partial-undef/ph7/437_ph7.smt2	unsat	unknown	12.4	ok	unknown	0.1	ok	unknown	UNCONFIRMED
+AUFBV	AUFBV/20210301-Alive2-partial-undef/ph7/584_ph7.smt2	unsat	unknown	600.1	ok	unknown	0.1	ok	unknown	UNCONFIRMED
+AUFBV	AUFBV/20210301-Alive2-partial-undef/sqlite3/760_sqlite3.smt2	unsat	unsat	201.5	ok	unknown	0.1	ok	unknown	CONFIRMED
+AUFBV	AUFBV/20210301-Alive2-partial-undef/sqlite3/854_sqlite3.smt2	unsat	unknown	13.2	ok	unknown	0.4	ok	unknown	UNCONFIRMED
+AUFBV	AUFBV/20210301-Alive2-partial-undef/sqlite3/872_sqlite3.smt2	unsat	unsat	134.0	ok	unknown	0.2	ok	unknown	CONFIRMED
+AUFBV	AUFBV/20210301-Alive2-partial-undef/sqlite3/930_sqlite3.smt2	unsat	unknown	15.3	ok	unknown	0.1	ok	unknown	UNCONFIRMED

@@ -86,6 +86,30 @@ ALIA produces no verdicts at all. ABV produces four, but the division declares
 difference, confirmed by re-running both at **600 s**. See
 [`findings/README.md`](findings/README.md) §1 and `confirm-ABV.tsv`.
 
+### The 600 s re-check found no wrong answer — and two real wins
+
+ADR-1957 requires that a verdict nothing checked is re-run against both
+references at a much larger budget. Twelve verdicts on this board qualified
+(ABV 4, AUFBV 8). `confirm-unchecked.sh` ran both references over them at
+**600 s**, 25x the board budget, with its exit status depending on the finding:
+
+    ABV     CONFIRMED 0   UNCONFIRMED 4   DISAGREE 0
+    AUFBV   CONFIRMED 2   UNCONFIRMED 6   DISAGREE 0
+
+**Zero contradictions.** And the two AUFBV confirmations are the most
+interesting rows on the board, because of what they cost each solver:
+
+| file | ours | z3 @ 600 s |
+|---|---|---|
+| `AUFBV/…/sqlite3/760_sqlite3.smt2` | **unsat in 1.61 s** | unsat in **201.5 s** |
+| `AUFBV/…/sqlite3/872_sqlite3.smt2` | **unsat in 4.61 s** | unsat in **134.0 s** |
+
+z3 agrees with both, having needed 125x and 29x our time to get there — which
+is why neither appeared on the 24 s board as anything but a row we won. The
+other six remain unreachable for z3 even at 600 s and for cvc5 at any budget
+(it declines all eight in under half a second), so they stay **unconfirmed** and
+the board says so rather than counting them in a zero.
+
 **No row hit the measurement wall.** `wrapper-killed` is **zero for every solver
 in every division**, across all 4,200 runs — the thing a previous census got
 wrong by putting `timeout 32` around a 24 s budget and manufacturing 17 false

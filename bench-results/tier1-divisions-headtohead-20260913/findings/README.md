@@ -1,12 +1,55 @@
 # Findings
 
-Three things this board found that are not board rows. None is fixed here —
+Four things this board found that are not board rows. None is fixed here —
 this is a measurement lane, and a board row and a behaviour change in one
 branch cannot be told apart afterwards.
 
 ---
 
-## 1. Four ABV verdicts that nothing confirms
+## 0. A terminal internal error in AUFNIRA, 3 rows
+
+    give-up kind=Error detail=backend failure: symbol `!int_bv_0` already
+    declared with sort (_ BitVec 32), requested (_ BitVec 4)
+
+Repro: `AUFNIRA/FFT/smtlib.701996.smt2` (also `smtlib.629057.smt2` and
+`smtlib.637239.smt2` are in the same census bucket by give-up text).
+
+This is a **defect in the code that raised it**, not a fragment we cannot
+decide, so `census-summarize.py` lists it with a repro path and refuses to rank
+it beside capability gaps — putting a bug in a build-this list is how a lane
+gets pointed at the wrong work. It is the only INTERNAL row in 603, and it
+returns in ~55 ms (`ms_left` 23,945 of 24,000), so it is cheap to reproduce.
+
+A symbol being re-declared at a different bit-width points at name generation
+in the int-to-BV path rather than at anything in AUFNIRA specifically; the same
+generator is presumably reachable from other logics.
+
+---
+
+## 1. Twelve verdicts nothing confirmed at 24 s — two of them now confirmed at 600 s
+
+**Summary first.** Twelve verdicts on this board had no check at all: ABV 4 and
+AUFBV 8. Re-running both references at **600 s** — 25x the board budget — gave
+
+    ABV     CONFIRMED 0   UNCONFIRMED 4   DISAGREE 0
+    AUFBV   CONFIRMED 2   UNCONFIRMED 6   DISAGREE 0
+
+**No contradiction anywhere**, and two AUFBV rows turned into the best evidence
+on the board that the unchecked ones are real:
+
+| file | ours | z3 @ 600 s | ratio |
+|---|---|---|---:|
+| `AUFBV/20210301-Alive2-partial-undef/sqlite3/760_sqlite3.smt2` | unsat in **1.61 s** | unsat in **201.5 s** | 125x |
+| `AUFBV/20210301-Alive2-partial-undef/sqlite3/872_sqlite3.smt2` | unsat in **4.61 s** | unsat in **134.0 s** | 29x |
+
+Those two are not close calls at the board budget — z3 needed two to three
+minutes where we needed seconds, which is exactly why they read as "unchecked"
+at 24 s. The remaining six AUFBV rows (ours: 0.41 s to 8.42 s) are still beyond
+z3 at 600 s, and cvc5 declines all eight in under half a second.
+
+Raw data: `../confirm-AUFBV.tsv`, `../confirm-ABV.tsv`.
+
+## 1b. The four ABV verdicts that nothing confirms
 
 **What.** We return `sat` on four ABV files. Nothing else does, and nothing
 else contradicts us either:
