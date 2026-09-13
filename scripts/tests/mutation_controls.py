@@ -10048,6 +10048,58 @@ SUITES["nested-array-gate-map"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `quant-egraph-reserve` -- ADR-1970.  The quantified ladder's `q:egraph` rung
+# received the WHOLE remaining wall clock and, measured over the entire winnable
+# set of `UFNIA` and `UFLIA`, spent a median 88-94 % of a 24 s budget on 44 of
+# the 46 rows in the census's largest family and then declined, leaving the
+# rungs below it nothing.  `QuantEgraphReservePolicy` is the lever that can hold
+# a share back.
+#
+# It ships OFF, and the load-bearing claim is that "off" is byte-identical to
+# the code before the lever existed.  That claim is a guard like any other, so
+# it gets a mutation: the first one below makes the default arm reserve, which
+# is the silent behaviour change a lever must never make.  The other two move
+# the parse's fall-back and swap the slice SHAPE (a reserve for a fraction --
+# same divisor, opposite division), which is the arithmetic error this file's
+# `ladder_slice_arithmetic_matches_the_policy_each_route_declares` was written
+# for on the other routes.
+# --------------------------------------------------------------------------
+
+SUITES["quant-egraph-reserve"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "quant_egraph"),
+        "quant-egraph-reserve",
+    ),
+    [
+        (
+            # The lever's OFF position must be the historical behaviour.
+            "the default arm hands `q:egraph` the whole remaining budget",
+            "        QuantEgraphReservePolicy::WholeBudget => config.clone(),",
+            "        QuantEgraphReservePolicy::WholeBudget => "
+            'LadderSlice::all_but_reserve("q:egraph", 4).apply(config, config.timeout),',
+        ),
+        (
+            # A typo must degrade to the shipped default, never to an arm
+            # nobody chose -- the failure mode that turns an A/B into a
+            # measurement of the wrong arm reported as the right one.
+            "an unparseable env value falls back to the shipped default",
+            "            Ok(0) | Err(_) => QuantEgraphReservePolicy::WholeBudget,",
+            "            Ok(0) | Err(_) => QuantEgraphReservePolicy::LadderReserve { share: 2 },",
+        ),
+        (
+            # `all_but_reserve(n)` keeps 1 - 1/n; `fraction(n)` keeps 1/n.
+            # Same divisor, opposite division: at share 4 the rung would get
+            # 6 s instead of 18 s of a 24 s budget.
+            "the slice SHAPE is a reserve, not a fraction",
+            'LadderSlice::all_but_reserve("q:egraph", share).apply(config, config.timeout)',
+            'LadderSlice::fraction("q:egraph", share).apply(config, config.timeout)',
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 

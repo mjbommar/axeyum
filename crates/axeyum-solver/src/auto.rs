@@ -335,9 +335,10 @@ fn run_egraph_quantified_fallback(
     finite_unknown: Option<CheckResult>,
     started: Instant,
 ) -> Result<Option<CheckResult>, SolverError> {
-    let Some(egraph_config) = config_with_remaining_timeout(config, deadline) else {
+    let Some(remaining_config) = config_with_remaining_timeout(config, deadline) else {
         return Ok(Some(quantified_timeout("finite quantifier expansion")));
     };
+    let egraph_config = quant_egraph_budget(&remaining_config);
     match prove_quantified_unsat_via_egraph(arena, assertions, &egraph_config) {
         Ok(CheckResult::Unsat) => {
             qtrace("egraph", started, "unsat");
@@ -4653,6 +4654,145 @@ const QINST_EGRAPH_RETRY_SHARE: u32 = 2;
 /// The incremental e-graph quantifier retry's slice: half of what is left.
 const QINST_EGRAPH_RETRY_SLICE: LadderSlice =
     LadderSlice::fraction("qinst-egraph-retry", QINST_EGRAPH_RETRY_SHARE);
+
+/// How much of the quantified ladder's remaining wall clock the e-graph
+/// instantiation rung (`q:egraph`) may spend before the rungs below it run.
+///
+/// # Why this exists
+///
+/// [`finish_quantified_solve`]'s own comment already records the measured
+/// behaviour of this rung: *"the e-graph instantiation loop reliably consumes
+/// every second it is given"*. The fix applied there was a bounded
+/// first-refusal MBQI rung ABOVE it ([`MBQI_FIRST_REFUSAL_SLICE`]); the rungs
+/// BELOW it -- full MBQI, the full pure-UF finite-model finder -- were left
+/// with whatever the loop returns, which on a clock-bound file is nothing. A
+/// file in that state ends the ladder at `quantified_timeout("e-matching")`,
+/// and that give-up string is the largest classified family in the `UFNIA`
+/// census (ADR-1970).
+///
+/// This is the same shape as [`ABV_ONLINE_LADDER_RESERVE_SHARE`] and
+/// [`UF_ARITH_LADDER_RESERVE_SHARE`], and it is selected the same way: by an
+/// env var, so both arms come out of ONE binary and an A/B cannot accidentally
+/// compare two builds.
+///
+/// **The default is [`WholeBudget`](QuantEgraphReservePolicy::WholeBudget) --
+/// byte-identical to the behaviour before this type existed.** It ships off
+/// because a reserve is worth nothing unless a rung below the e-graph would
+/// decide the file, and that is a measurement, not a guess. `share = 1` hands
+/// the loop [`MIN_LADDER_SLICE`] and the ladder essentially everything, which
+/// is the one-way CEILING arm: strictly more clock to the lower rungs than any
+/// real reserve can give, so a file it does not decide is out of reach of every
+/// reserve.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QuantEgraphReservePolicy {
+    /// The historical behaviour: `q:egraph` receives the whole remaining
+    /// budget. Kept as a named arm so the change can be measured against it
+    /// rather than only remembered.
+    WholeBudget,
+    /// `q:egraph` receives the remaining budget less `1/share` of it, and the
+    /// rungs below run on that reserve, out of the same clock.
+    LadderReserve {
+        /// Divisor of the remaining budget held back for the rungs below.
+        share: u32,
+    },
+}
+
+thread_local! {
+    /// Test-scoped override of [`QuantEgraphReservePolicy`]; see
+    /// [`QuantEgraphReservePolicyGuard`].
+    static QUANT_EGRAPH_RESERVE_OVERRIDE: std::cell::Cell<Option<QuantEgraphReservePolicy>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Sets the [`QuantEgraphReservePolicy`] for the current thread, restoring the
+/// previous setting on drop.
+///
+/// Exists so a test can drive both arms without setting a process-wide
+/// environment variable -- a test that passes only under an ambient env var is
+/// a gate on one shell.
+pub struct QuantEgraphReservePolicyGuard(Option<QuantEgraphReservePolicy>);
+
+impl QuantEgraphReservePolicyGuard {
+    /// Overrides the process policy on this thread.
+    #[must_use]
+    pub fn set(policy: QuantEgraphReservePolicy) -> Self {
+        QuantEgraphReservePolicyGuard(
+            QUANT_EGRAPH_RESERVE_OVERRIDE.with(|c| c.replace(Some(policy))),
+        )
+    }
+}
+
+impl Drop for QuantEgraphReservePolicyGuard {
+    fn drop(&mut self) {
+        QUANT_EGRAPH_RESERVE_OVERRIDE.with(|c| c.set(self.0));
+    }
+}
+
+/// Divisor of the quantified ladder's remaining budget that would be held back
+/// for the rungs below `q:egraph` **if the reserve were turned on**.
+///
+/// MEASURED AND NOT WARRANTED (ADR-1970). `4` is the value
+/// [`ABV_ONLINE_LADDER_RESERVE_SHARE`] and [`UF_ARITH_LADDER_RESERVE_SHARE`]
+/// settled on for the same shape, and it is what `AXEYUM_QUANT_EGRAPH_RESERVE=on`
+/// selects. It ships unused: the CEILING arm (`= 1`, the rung gets
+/// [`MIN_LADDER_SLICE`] and the ladder below essentially the whole clock,
+/// strictly more than any real reserve can give) is worth **+4 / −2 over 400
+/// files** across `UFNIA` and `UFLIA`, with `UFLIA` net zero and a quantified
+/// `AUFLIA` control flat at 0/0 — inside the 3-file ambient band the same run
+/// measures on itself. No smaller reserve can beat its own ceiling, so this
+/// constant exists to make the arm runnable, not to be turned on.
+const QUANT_EGRAPH_LADDER_RESERVE_SHARE: u32 = 4;
+
+/// Parses `AXEYUM_QUANT_EGRAPH_RESERVE`.
+///
+/// `off`, `0`, an empty value, a non-integer and an absent variable all resolve
+/// to [`QuantEgraphReservePolicy::WholeBudget`], so a typo degrades to the
+/// shipped behaviour rather than to an arm nobody chose. `on` selects
+/// [`QUANT_EGRAPH_LADDER_RESERVE_SHARE`], matching `AXEYUM_ABV_ONLINE_RESERVE`'s
+/// `off`/`on` vocabulary; any integer `n >= 1` reserves `1/n` instead, which is
+/// how the `share = 1` ceiling arm is reached.
+fn parse_quant_egraph_reserve(value: Option<&str>) -> QuantEgraphReservePolicy {
+    match value {
+        None | Some("" | "off") => QuantEgraphReservePolicy::WholeBudget,
+        Some("on") => QuantEgraphReservePolicy::LadderReserve {
+            share: QUANT_EGRAPH_LADDER_RESERVE_SHARE,
+        },
+        Some(text) => match text.parse::<u32>() {
+            Ok(0) | Err(_) => QuantEgraphReservePolicy::WholeBudget,
+            Ok(share) => QuantEgraphReservePolicy::LadderReserve { share },
+        },
+    }
+}
+
+/// The [`QuantEgraphReservePolicy`] in force on this thread: a live
+/// [`QuantEgraphReservePolicyGuard`]'s choice, else the process policy resolved
+/// once from `AXEYUM_QUANT_EGRAPH_RESERVE`.
+fn quant_egraph_reserve_policy() -> QuantEgraphReservePolicy {
+    static RESOLVED: std::sync::OnceLock<QuantEgraphReservePolicy> = std::sync::OnceLock::new();
+    if let Some(policy) = QUANT_EGRAPH_RESERVE_OVERRIDE.with(std::cell::Cell::get) {
+        return policy;
+    }
+    *RESOLVED.get_or_init(|| {
+        parse_quant_egraph_reserve(std::env::var("AXEYUM_QUANT_EGRAPH_RESERVE").ok().as_deref())
+    })
+}
+
+/// The budget handed to `q:egraph`: under the default policy the caller's whole
+/// remaining budget, unchanged; under a reserve policy, that budget less the
+/// ladder's share of it.
+///
+/// `config` is ALREADY the remaining-budget config computed at the rung's entry
+/// deadline, so the slice and the reserve come out of one clock rather than
+/// two -- the property that makes a route which spends its share unable to also
+/// spend the ladder's.
+fn quant_egraph_budget(config: &SolverConfig) -> SolverConfig {
+    match quant_egraph_reserve_policy() {
+        QuantEgraphReservePolicy::WholeBudget => config.clone(),
+        QuantEgraphReservePolicy::LadderReserve { share } => {
+            LadderSlice::all_but_reserve("q:egraph", share).apply(config, config.timeout)
+        }
+    }
+}
 
 /// Runs the bounded first-refusal MBQI rung. `Ok(Some(_))` carries only a
 /// fully anchored verdict (a replay-checked `sat` or the refuter's `unsat`);
@@ -12821,6 +12961,115 @@ mod tests {
             );
         }
         assert_eq!(uf_arith_overbound_policy(), outer);
+    }
+
+    /// `AXEYUM_QUANT_EGRAPH_RESERVE`'s parse, including the direction that
+    /// matters: anything unrecognised is the SHIPPED default, never a reserve
+    /// nobody asked for.
+    #[test]
+    fn quant_egraph_reserve_parses_to_the_shipped_default_unless_told_otherwise() {
+        for absent in [
+            None,
+            Some(""),
+            Some("off"),
+            Some("0"),
+            Some("nonsense"),
+            Some("-2"),
+        ] {
+            assert_eq!(
+                parse_quant_egraph_reserve(absent),
+                QuantEgraphReservePolicy::WholeBudget,
+                "{absent:?} must resolve to the shipped default"
+            );
+        }
+        assert_eq!(
+            parse_quant_egraph_reserve(Some("on")),
+            QuantEgraphReservePolicy::LadderReserve {
+                share: QUANT_EGRAPH_LADDER_RESERVE_SHARE
+            },
+            "`on` selects the named share, as `AXEYUM_ABV_ONLINE_RESERVE` does"
+        );
+        assert_eq!(
+            parse_quant_egraph_reserve(Some("4")),
+            QuantEgraphReservePolicy::LadderReserve { share: 4 }
+        );
+        assert_eq!(
+            parse_quant_egraph_reserve(Some("1")),
+            QuantEgraphReservePolicy::LadderReserve { share: 1 }
+        );
+    }
+
+    /// The budget `q:egraph` is handed, per arm.
+    ///
+    /// The first assertion is the load-bearing one: under the shipped default
+    /// the rung's budget is the caller's remaining budget UNCHANGED, so the
+    /// lever's "off" position is the code that existed before it. A mutant that
+    /// drops that arm — making the reserve unconditional — is killed here and
+    /// only here among the unit tests.
+    #[test]
+    fn quant_egraph_budget_is_unchanged_by_default_and_reserved_under_a_policy() {
+        let config = SolverConfig {
+            timeout: Some(Duration::from_secs(24)),
+            ..SolverConfig::default()
+        };
+
+        {
+            let _guard = QuantEgraphReservePolicyGuard::set(QuantEgraphReservePolicy::WholeBudget);
+            assert_eq!(
+                quant_egraph_budget(&config).timeout,
+                Some(Duration::from_secs(24)),
+                "the shipped default must hand the rung the whole remaining budget"
+            );
+        }
+        {
+            let _guard =
+                QuantEgraphReservePolicyGuard::set(QuantEgraphReservePolicy::LadderReserve {
+                    share: 4,
+                });
+            assert_eq!(
+                quant_egraph_budget(&config).timeout,
+                Some(Duration::from_secs(18)),
+                "a quarter is held back for the rungs below"
+            );
+        }
+        {
+            // The CEILING arm the census sizing runs: the rung gets
+            // `MIN_LADDER_SLICE` and the ladder below gets the rest. This is
+            // what makes the sizing ONE-WAY — no real reserve can give the
+            // lower rungs more clock than this.
+            let _guard =
+                QuantEgraphReservePolicyGuard::set(QuantEgraphReservePolicy::LadderReserve {
+                    share: 1,
+                });
+            assert_eq!(
+                quant_egraph_budget(&config).timeout,
+                Some(MIN_LADDER_SLICE),
+                "share = 1 must leave the rung the floor, not the whole budget"
+            );
+        }
+    }
+
+    /// An unbounded caller budget stays unbounded under every arm: there is no
+    /// clock to share, so there is no starvation to prevent, and inventing a
+    /// timeout here would bound a search the caller deliberately did not.
+    #[test]
+    fn quant_egraph_budget_leaves_an_unbounded_config_unbounded() {
+        let config = SolverConfig {
+            timeout: None,
+            ..SolverConfig::default()
+        };
+        for policy in [
+            QuantEgraphReservePolicy::WholeBudget,
+            QuantEgraphReservePolicy::LadderReserve { share: 4 },
+            QuantEgraphReservePolicy::LadderReserve { share: 1 },
+        ] {
+            let _guard = QuantEgraphReservePolicyGuard::set(policy);
+            assert_eq!(
+                quant_egraph_budget(&config).timeout,
+                None,
+                "{policy:?} must not invent a timeout"
+            );
+        }
     }
 
     #[test]

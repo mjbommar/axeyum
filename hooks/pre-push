@@ -691,11 +691,26 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #                              refusal. The population behind it is
   #                              enumerated by
   #                              `scripts/enumerate-dispatch-refusal-propagation.py`.
+  #   quant_egraph_reserve_row — ADR-1970 soundness-negative: the quantified
+  #                              ladder's `q:egraph` budget reserve
+  #                              (`AXEYUM_QUANT_EGRAPH_RESERVE`). Re-ordering a
+  #                              ladder's CLOCK changes which rung answers, and
+  #                              a rung that answers by an unsound instantiation
+  #                              yields a wrong `unsat`. So every fixture runs
+  #                              under ALL THREE arms (`WholeBudget`, reserve
+  #                              1/4, and the `share = 1` ceiling arm the census
+  #                              sizing uses), and each adversarial SATISFIABLE
+  #                              query is pinned `Sat` -- not merely `not
+  #                              unsat` -- because an `unknown` would skip the
+  #                              in-test model replay and leave the adversarial
+  #                              half checking nothing. Each has an `unsat` twin
+  #                              in the same file differing in ONE small term.
+  #                              0.02 s.
   for suite in unknown_reason_coverage dt_uf_gate dt_capability_1935 \
                dt_constructor_arg_1942 dt_valued_result_1946 \
                datatype_solve_path quant_ladder_rung_refusal_declines \
                nested_array_gate_map nested_array_row real_element_array_row \
-               dispatch_rung_refusal_declines \
+               dispatch_rung_refusal_declines quant_egraph_reserve_row \
                additive_no_overflow_never_becomes_unsat; do
     gated_test "dispatch/reason: $suite" \
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
