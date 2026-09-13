@@ -263,6 +263,46 @@ fn unsupported_decline(message: &str) -> DeclineReason {
     DeclineReason::UnsupportedDetail(message.to_owned())
 }
 
+/// **A ladder rung's `Unsupported` is a DECLINE, not the query's verdict.**
+///
+/// ADR-1966, generalising ADR-1927 from the quantified ladder to every ladder.
+/// A rung that refuses a FRAGMENT — of the query, or of a query the rung itself
+/// built by rewriting — says nothing about whether a rung BELOW it can decide
+/// the original assertions. Propagating that refusal with a bare `?` makes it
+/// `solve`'s return value, so the front door reports `give-up kind=Error` and
+/// every remaining rung never runs. It also breaks the repository's own hard
+/// rule that "`unknown` is a first-class solver result, never an error": the
+/// error here is the DISPATCHER's, manufactured out of a backend's honest
+/// refusal.
+///
+/// The refusing route's own sentence is kept on the route trail, so nothing is
+/// lost — it moves from being the verdict to being telemetry, which is what it
+/// always was.
+///
+/// Declining is sound by construction: a skipped route can only lose
+/// completeness, the ladder continues with the ORIGINAL assertions, and every
+/// rung it reaches applies its own soundness discipline (a `sat` is still
+/// replay-checked against the original assertions; an `unsat` still comes from
+/// an equisatisfiable reduction).
+///
+/// Written to take the rung's finished `Result` rather than a closure because
+/// `rec` is already mutably borrowed by the rung's own call.
+fn rung_or_decline(
+    route: &'static str,
+    outcome: Result<Option<CheckResult>, SolverError>,
+    rec: &mut Recorder<'_>,
+) -> Result<Option<CheckResult>, SolverError> {
+    match outcome {
+        Err(SolverError::Unsupported(message)) => {
+            with_recorder(rec, |t| {
+                t.record_declined(route, unsupported_decline(&message));
+            });
+            Ok(None)
+        }
+        other => other,
+    }
+}
+
 fn quantified_timeout(stage: &str) -> CheckResult {
     let result = CheckResult::Unknown(UnknownReason {
         kind: UnknownKind::ResourceLimit,
@@ -4306,7 +4346,32 @@ fn dispatch_uf_fast_paths(
         let Some(eager_config) = config_with_remaining_timeout(config, ladder_deadline) else {
             return Ok(None);
         };
-        match crate::check_with_uf_arithmetic(arena, assertions, &eager_config)? {
+        // **The eager route's refusal names the route BELOW it** (ADR-1966).
+        // `check_with_uf_arithmetic` runs `eliminate_functions`, which refuses
+        // an array-VALUED uninterpreted function with the sentence
+        // "eager Ackermann elimination does not admit array-valued function
+        // results; **use canonical AUFBV combination**" — and the canonical
+        // AUFBV combination is `dispatch_abv_online` / `dispatch_array_fast_paths`
+        // / `check_with_all_theories`, every one of which sits AFTER this rung
+        // in `check_auto_dispatch`. A bare `?` here made that sentence the
+        // file's verdict (`give-up kind=Error`, an error that is not a verdict)
+        // and the routes it points at were never reached.
+        //
+        // A refused FRAGMENT is this rung's decline. Turn it into the same
+        // first-class `unknown` the route already produces for a shape it
+        // cannot settle, and let the arms below carry it onward — deliberately
+        // NOT a budget kind, so the budget arm (which is terminal on purpose)
+        // cannot swallow it and the "genuinely logical eager `Unknown` — fall
+        // through" arm is the one that fires.
+        let eager = match crate::check_with_uf_arithmetic(arena, assertions, &eager_config) {
+            Ok(result) => result,
+            Err(SolverError::Unsupported(message)) => CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: format!("eager UF+arithmetic route declined: {message}"),
+            }),
+            Err(other) => return Err(other),
+        };
+        match eager {
             CheckResult::Sat(model) => {
                 with_recorder(rec, |t| t.record_decided("uf-arithmetic", Verdict::Sat));
                 return Ok(Some(CheckResult::Sat(model)));
@@ -4913,8 +4978,31 @@ fn dispatch_uf_nra(
 
     // Feed the function-free nonlinear-real residual to the NRA decider under the
     // remaining deadline.
+    //
+    // **A refusal of the RESIDUAL is this rung's decline, not the query's
+    // verdict** (ADR-1966, generalising ADR-1927). `eliminated` is a query this
+    // rung BUILT — the eager Ackermann reduction of the caller's assertions —
+    // so an `Unsupported` from the NRA decider is a sentence about the
+    // reduction's fragment, not about the assertions the dispatcher was given.
+    // Propagating it with a bare `?` ended `check_auto_dispatch` and skipped
+    // every rung below this one: the exact-real-root decider, the CAS ideal
+    // combination, and `check_with_nra` on the ORIGINAL (un-Ackermannised)
+    // assertions, which has its own `has_function` decline arm for precisely
+    // this case. The guard three statements above already declines when
+    // `eliminate_functions` refuses, with the comment "`unknown` is never an
+    // error and the downstream routes may still decide it"; this is the same
+    // contract one statement later.
     let nra_config = config_with_remaining_deadline(config, deadline);
-    let result = crate::nra::check_with_nra(arena, &eliminated, &nra_config)?;
+    let result = match crate::nra::check_with_nra(arena, &eliminated, &nra_config) {
+        Ok(result) => result,
+        Err(SolverError::Unsupported(message)) => {
+            with_recorder(rec, |t| {
+                t.record_declined("uf-nra", unsupported_decline(&message));
+            });
+            return Ok(None);
+        }
+        Err(other) => return Err(other),
+    };
     match result {
         CheckResult::Unsat => {
             // Reduction validity: eager Ackermann is equisatisfiable.
@@ -5127,10 +5215,39 @@ fn check_auto_dispatch(
                 with_recorder(rec, |t| {
                     t.record_declined("datatype-elim", unsupported_decline(&message));
                 });
-                let result =
-                    crate::datatype_native::check_with_datatype_native(arena, assertions, config)?;
-                with_recorder(rec, |t| t.record_result("datatype-native", &result));
-                return Ok(result);
+                // **The LAST datatype rung's refusal is a decline, not the
+                // query's verdict** (ADR-1966). `check_with_datatype_native`
+                // refuses array/UF-sorted datatype FIELDS (ADR-0022), UF applied
+                // to a datatype argument (ADR-1920), `is`/`select` over a
+                // non-variable datatype term, and a datatype-sorted term that
+                // survives tag/field expansion — and ADR-1927's own after-census
+                // measured exactly those four as the top blockers of
+                // `AUFDTLIRA` (70 + 32 + 13 + 1 of 200). A bare `?` here sent
+                // every one of them out of `solve` as an ERROR, so the front
+                // door printed `give-up kind=Error` and the thirteen rungs
+                // below this branch — difference logic, the LIRA/real/int
+                // ladders, the UF routes, the array ladder and the nonlinear
+                // integer tail — never ran on a single one.
+                //
+                // Declining can only lose completeness: the ladder continues
+                // with the ORIGINAL assertions and every rung it reaches keeps
+                // its own soundness discipline.
+                match crate::datatype_native::check_with_datatype_native(arena, assertions, config)
+                {
+                    Ok(result) => {
+                        with_recorder(rec, |t| t.record_result("datatype-native", &result));
+                        return Ok(result);
+                    }
+                    Err(SolverError::Unsupported(native_message)) => {
+                        with_recorder(rec, |t| {
+                            t.record_declined(
+                                "datatype-native",
+                                unsupported_decline(&native_message),
+                            );
+                        });
+                    }
+                    Err(other) => return Err(other),
+                }
             }
             Err(other) => return Err(other),
         }
@@ -5168,7 +5285,8 @@ fn check_auto_dispatch(
         // for everything else (linear UF, over the eager admission bound, or an
         // out-of-fragment elimination).
         let real_config = config_with_remaining_deadline(config, dispatch_deadline);
-        if let Some(result) = dispatch_uf_nra(arena, assertions, &real_config, &features, rec)? {
+        let uf_nra = dispatch_uf_nra(arena, assertions, &real_config, &features, rec);
+        if let Some(result) = rung_or_decline("uf-nra", uf_nra, rec)? {
             return Ok(result);
         }
         // Conjunction of single-variable nonlinear-real polynomial constraints
@@ -5272,9 +5390,9 @@ fn check_auto_dispatch(
             Err(e) => return Err(e),
         }
     }
-    if let Some(result) =
-        dispatch_arith_uf_overbound_probe_before_lia(arena, assertions, config, &features, rec)?
-    {
+    let overbound =
+        dispatch_arith_uf_overbound_probe_before_lia(arena, assertions, config, &features, rec);
+    if let Some(result) = rung_or_decline("uf-arith-overbound-probe", overbound, rec)? {
         return Ok(result);
     }
     if features.has_int {
@@ -5348,14 +5466,15 @@ fn check_auto_dispatch(
         // non-`unsat` outcome is discarded — the original query (with `bv2nat`
         // intact, which the bit-blaster handles natively) decides sat below. This
         // is strictly additive: it only ever turns a prior `unknown` into `unsat`.
-        if let Some(result) = dispatch_int_linear_refuters(
+        let int_refuters = dispatch_int_linear_refuters(
             arena,
             assertions,
             config,
             &features,
             dispatch_deadline,
             rec,
-        )? {
+        );
+        if let Some(result) = rung_or_decline("int-linear-refuters", int_refuters, rec)? {
             return Ok(result);
         }
     }
@@ -5363,13 +5482,14 @@ fn check_auto_dispatch(
     // decides the equality/UF structure with congruence (no Ackermann blow-up) and
     // returns a replay-checked `sat`, a congruence `unsat`, or `unknown` for
     // base-sort semantics outside congruence, which falls through to bit-blasting.
-    if let Some(result) = dispatch_uf_routes(arena, assertions, config, &features, rec)? {
+    let uf_routes = dispatch_uf_routes(arena, assertions, config, &features, rec);
+    if let Some(result) = rung_or_decline("uf-routes", uf_routes, rec)? {
         return Ok(result);
     }
     if features.has_array {
-        if let Some(result) =
-            dispatch_abv_online(arena, assertions, config, &features, dispatch_deadline, rec)?
-        {
+        let abv_online =
+            dispatch_abv_online(arena, assertions, config, &features, dispatch_deadline, rec);
+        if let Some(result) = rung_or_decline("abv-online-cdclt", abv_online, rec)? {
             return Ok(result);
         }
         // ONE CLOCK for the array ladder. `abv-online-cdclt` above now keeps
@@ -5393,9 +5513,8 @@ fn check_auto_dispatch(
                 config_with_remaining_deadline(config, dispatch_deadline)
             }
         };
-        if let Some(result) =
-            dispatch_array_fast_paths(arena, assertions, &ladder_config, &features)?
-        {
+        let array_fast = dispatch_array_fast_paths(arena, assertions, &ladder_config, &features);
+        if let Some(result) = rung_or_decline("array-fast-path", array_fast, rec)? {
             with_recorder(rec, |t| t.record_result("array-fast-path", &result));
             return Ok(result);
         }
