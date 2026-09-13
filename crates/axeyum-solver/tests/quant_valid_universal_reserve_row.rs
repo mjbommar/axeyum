@@ -250,27 +250,33 @@ fn a_nonvalid_universal_refuted_at_one_ground_term_is_unsat_under_any_arm() {
 // nothing, so it is asserted directly rather than inferred from the fixtures.
 // ---------------------------------------------------------------------------
 
-/// The shipped default must be the historical behaviour. A lever whose "off"
-/// position is not the old code turns every previously recorded baseline into a
-/// measurement of something else.
+/// The process default — no guard, no env — must decide the fixtures, through
+/// the real front door.
+///
+/// ADR-1975 ships the RESERVE on, so this is not the "off is the old code"
+/// assertion it was while the lever shipped off; that one lives in `auto.rs`,
+/// where it can name the policy. This one is the end-to-end half: whatever the
+/// process resolves to must still answer these queries, and must still answer
+/// the satisfiable one `sat` rather than `unsat`.
 #[test]
-fn the_default_policy_is_whole_budget() {
-    // No guard: this reads the PROCESS policy, which is what a run with no
-    // `AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE` in its environment gets. Asserted
-    // through the public verdict rather than the private resolver so it cannot
-    // pass by agreeing with a test-only path.
+fn the_process_default_decides_both_halves_of_the_pair() {
     assert_eq!(
         std::env::var("AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE").ok(),
         None,
         "this suite must run with the lever UNSET; a test that passes only under an \
          ambient env var is a gate on one shell"
     );
-    assert_eq!(
-        decide_under(
-            QuantValidUniversalReservePolicy::WholeBudget,
-            NONVALID_UNIVERSAL_UNSAT
-        ),
-        CheckResult::Unsat
+    // No guard on either call: these go through whatever the PROCESS resolves,
+    // which is what a shipped binary does.
+    let solved = solve_smtlib_with_model(NONVALID_UNIVERSAL_UNSAT, &config())
+        .expect("the front door reports a verdict rather than an error");
+    assert_eq!(solved.outcome.result, CheckResult::Unsat);
+    let sat = solve_smtlib_with_model(NONVALID_UNIVERSAL_SAT, &config())
+        .expect("the front door reports a verdict rather than an error");
+    assert!(
+        !matches!(sat.outcome.result, CheckResult::Unsat),
+        "WRONG UNSAT under the process default: `forall x. f(x) >= 0` with `f(0) = 5` \
+         is satisfiable"
     );
 }
 

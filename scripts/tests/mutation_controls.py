@@ -10180,14 +10180,15 @@ SUITES["quant-egraph-reserve"] = (
 # the deadline (median 46 ms over), and the rungs below never run.
 # `QuantValidUniversalReservePolicy` is the lever that holds a share back.
 #
-# The three mutations are the ones that matter for a lever whose numbers are
-# quoted in an ADR: the default arm must be byte-identical to the pre-lever
-# code, an unparseable value must degrade to that default rather than to an arm
-# nobody chose, and the slice SHAPE must be a reserve rather than a fraction
-# (same divisor, opposite division -- at share 4 the pass would get 6 s instead
-# of 18 s of a 24 s budget, which silently turns the shipped arm into something
-# close to the CEILING arm and would make every number in the ADR describe a
-# different configuration).
+# It SHIPS ON at share 4, so the three mutations are the ones that matter for a
+# shipped default whose numbers are quoted in an ADR: a silent revert of the
+# default to the pre-ADR `WholeBudget` (the change that would put `UFDTNIRA`
+# back to spending its whole clock in one rung while every arm-naming test
+# stayed green), an unparseable value resolving to something other than the
+# SHIPPED arm, and the slice SHAPE being a fraction rather than a reserve (same
+# divisor, opposite division -- at share 4 the pass would get 6 s instead of
+# 18 s of a 24 s budget, which silently turns the shipped arm into something
+# close to the CEILING arm the `UF` control measured a 2-file loss on).
 # --------------------------------------------------------------------------
 
 SUITES["quant-valid-universal-reserve"] = (
@@ -10198,21 +10199,19 @@ SUITES["quant-valid-universal-reserve"] = (
     ),
     [
         (
-            # The lever's OFF position must be the historical behaviour.
-            "the default arm hands the pass the whole remaining budget",
-            "        QuantValidUniversalReservePolicy::WholeBudget => config.clone(),",
-            "        QuantValidUniversalReservePolicy::WholeBudget => "
-            "LadderSlice::all_but_reserve(route_trace::quant_rung::VALID_UNIVERSAL_QF, 4)"
-            ".apply(config, config.timeout),",
+            # The silent revert. `parse_…(None)` is the process default.
+            "the process default with no env is the ladder reserve",
+            "        None | Some(\"\" | \"on\") => shipped,",
+            "        None | Some(\"\" | \"on\") => "
+            "QuantValidUniversalReservePolicy::WholeBudget,",
         ),
         (
-            # A typo must degrade to the shipped default, never to an arm
-            # nobody chose -- the failure mode that turns an A/B into a
-            # measurement of the wrong arm reported as the right one.
+            # A typo must degrade to the SHIPPED arm, never to one nobody
+            # chose -- the failure mode that turns an A/B into a measurement of
+            # the wrong arm reported as the right one.
             "an unparseable env value falls back to the shipped default",
-            "            Ok(0) | Err(_) => QuantValidUniversalReservePolicy::WholeBudget,",
-            "            Ok(0) | Err(_) => QuantValidUniversalReservePolicy::LadderReserve "
-            "{ share: 2 },",
+            "            Err(_) => shipped,",
+            "            Err(_) => QuantValidUniversalReservePolicy::WholeBudget,",
         ),
         (
             # `all_but_reserve(n)` keeps 1 - 1/n; `fraction(n)` keeps 1/n.
