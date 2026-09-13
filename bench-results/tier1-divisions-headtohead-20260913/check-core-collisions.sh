@@ -64,12 +64,31 @@ AWKPROG='
 # <<< collision-awk
 HOSTS="${*:-s5 s6 s7}"
 bad=0
+examined=""
+skipped=""
 for h in $HOSTS; do
   out=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "$h" \
     'ps -eo args | grep -oE "taskset -c [0-9,]+" | sed "s/taskset -c //" | sort | uniq -c' \
     2>/dev/null)
-  [ -n "$out" ] || { echo "$h: no pinned jobs (or unreachable)"; continue; }
+  if [ -z "$out" ]; then
+    # A host with NOTHING PINNED contributes no evidence.  Naming it in the
+    # clean line would let a fleet that is entirely idle -- or entirely
+    # unreachable -- report the same green as a fleet that was checked and
+    # found clean.  It is listed separately instead.
+    echo "$h: no pinned jobs (or unreachable) -- NOT EXAMINED"
+    skipped="$skipped $h"
+    continue
+  fi
+  examined="$examined $h"
   printf '%s\n' "$out" | awk -v host="$h" "$AWKPROG" || bad=1
 done
-[ "$bad" = 0 ] && echo "NO-CORE-COLLISIONS on: $HOSTS"
-exit "$bad"
+if [ "$bad" != 0 ]; then
+  exit 1
+fi
+if [ -z "$examined" ]; then
+  echo "NO HOST HAD ANY PINNED JOB -- this is not a clean result, it is no result"
+  exit 2
+fi
+echo "NO-CORE-COLLISIONS on:$examined"
+[ -n "$skipped" ] && echo "   not examined (nothing pinned):$skipped"
+exit 0

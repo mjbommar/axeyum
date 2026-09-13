@@ -90,5 +90,16 @@ expect "a whole box, one spec per core" \
 out=$(run "      2 1,9")
 [ -z "$out" ] || { echo "FAIL: the stated blind spot is not actually blind"; fail=1; }
 
-[ "$fail" = 0 ] && echo "CORE-COLLISION-OK: fires on 3 collisions, silent on 3 clean layouts, blind spot confirmed"
+# The SUBJECT, end to end, against a fleet with nothing pinned.  A host with no
+# pinned job contributes no evidence, and naming it in the clean line would let
+# an idle -- or unreachable -- fleet report the same green as one that was
+# checked and found clean.  `_nohost_` cannot resolve, so every host is silent.
+out=$(bash "$SUB" _nohost_ 2>&1); rc=$?
+if [ "$rc" != 2 ]; then
+  echo "FAIL: a fleet with NOTHING pinned did not exit 2 (got $rc)"; fail=1
+fi
+grep -q "not a clean result, it is no result" <<<"$out" \
+  || { echo "FAIL: an unexaminable fleet did not say so"; fail=1; }
+
+[ "$fail" = 0 ] && echo "CORE-COLLISION-OK: fires on 3 collisions, silent on 3 clean layouts, blind spot confirmed, empty fleet refused"
 exit "$fail"
