@@ -1,0 +1,501 @@
+file	arm	verdict	rc	wall_ms	attempts	decided_by	bound_by	bound_ms	total_ms	giveup	lever_refused
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_AR_ab_cti_max.smt2	base	sat	0	409	5	ufbv-online-cdclt	ufbv-online-cdclt	294	328	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_AR_ab_cti_max.smt2	a4096	sat	0	308	5	ufbv-online-cdclt	ufbv-online-cdclt	229	267	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_AR_ab_cti_max.smt2	a4096n32768	sat	0	407	5	ufbv-online-cdclt	ufbv-online-cdclt	281	317	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_AR_ab_cti_max.smt2	bothmid	sat	0	407	5	ufbv-online-cdclt	ufbv-online-cdclt	274	307	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_AR_ab_cti_max.smt2	bothmax	sat	0	408	5	ufbv-online-cdclt	ufbv-online-cdclt	280	314	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_adding.5.prop1_ab_reg_max.smt2	a4096n32768	sat	0	1508	9	ufbv-online-cdclt	ufbv-online-cdclt	1292	1412	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_adding.5.prop1_ab_reg_max.smt2	bothmid	sat	0	1309	9	ufbv-online-cdclt	ufbv-online-cdclt	1129	1254	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_adding.5.prop1_ab_reg_max.smt2	bothmax	sat	0	708	9	ufbv-online-cdclt	ufbv-online-cdclt	593	655	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_adding.5.prop1_ab_reg_max.smt2	base	sat	0	708	9	ufbv-online-cdclt	ufbv-online-cdclt	611	672	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_adding.5.prop1_ab_reg_max.smt2	a4096	sat	0	709	9	ufbv-online-cdclt	ufbv-online-cdclt	603	663	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_at.1.prop1_ab_cti_max.smt2	bothmax	sat	0	11120	9	ufbv-online-cdclt	ufbv-online-cdclt	9192	11061	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_at.1.prop1_ab_cti_max.smt2	base	unknown	0	2212	18	ufbv-online-cdclt	dl-online	1123	2166	give-up kind=ResourceLimit detail=online UFBV has 1499 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_at.1.prop1_ab_cti_max.smt2	a4096	sat	0	18534	9	ufbv-online-cdclt	ufbv-online-cdclt	16397	18467	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_at.1.prop1_ab_cti_max.smt2	a4096n32768	sat	0	23936	9	ufbv-online-cdclt	ufbv-online-cdclt	18519	23877	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_at.1.prop1_ab_cti_max.smt2	bothmid	unknown	0	25143	8	ufbv-online-cdclt	dl-online	3777	6498	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_bakery.3.prop1_ab_cti_max.smt2	a4096	sat	0	1315	5	ufbv-online-cdclt	dl-online	1157	1247	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_bakery.3.prop1_ab_cti_max.smt2	a4096n32768	sat	0	1515	5	ufbv-online-cdclt	dl-online	1310	1425	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_bakery.3.prop1_ab_cti_max.smt2	bothmid	sat	0	1717	5	ufbv-online-cdclt	dl-online	1484	1592	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_bakery.3.prop1_ab_cti_max.smt2	bothmax	sat	0	1822	5	ufbv-online-cdclt	dl-online	1607	1712	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_bakery.3.prop1_ab_cti_max.smt2	base	sat	0	1618	5	ufbv-online-cdclt	dl-online	1416	1512	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_bridge.1.prop1_ab_reg_max.smt2	bothmid	unsat	0	4823	5	ufbv-online-cdclt	dl-online	3706	4688	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_bridge.1.prop1_ab_reg_max.smt2	bothmax	unsat	0	4420	5	ufbv-online-cdclt	dl-online	3712	4321	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_bridge.1.prop1_ab_reg_max.smt2	base	unsat	0	3921	5	ufbv-online-cdclt	dl-online	2946	3874	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_bridge.1.prop1_ab_reg_max.smt2	a4096	unsat	0	5319	5	ufbv-online-cdclt	dl-online	4231	5167	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_bridge.1.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	5325	5	ufbv-online-cdclt	dl-online	4221	5178	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_brp.6.prop1_ab_cti_max.smt2	base	unknown	0	9024	18	ufbv-online-cdclt	dl-online	4722	8949	give-up kind=ResourceLimit detail=online UFBV has 1689 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_brp.6.prop1_ab_cti_max.smt2	a4096	unknown	0	25043	8	ufbv-online-cdclt	ufbv-online-cdclt	4690	8480	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_brp.6.prop1_ab_cti_max.smt2	a4096n32768	unknown	0	25040	8	ufbv-online-cdclt	dl-online	4281	8278	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_brp.6.prop1_ab_cti_max.smt2	bothmid	unknown	0	25043	8	ufbv-online-cdclt	ufbv-online-cdclt	4121	7817	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_brp.6.prop1_ab_cti_max.smt2	bothmax	sat	0	24239	9	ufbv-online-cdclt	ufbv-online-cdclt	17537	24134	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_cache_coherence_three_ab_cti_max.smt2	a4096n32768	sat	0	2415	8	ufbv-online-cdclt	ufbv-online-cdclt	1997	2301	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_cache_coherence_three_ab_cti_max.smt2	bothmid	sat	0	2518	8	ufbv-online-cdclt	ufbv-online-cdclt	2171	2477	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_cache_coherence_three_ab_cti_max.smt2	bothmax	sat	0	2318	8	ufbv-online-cdclt	ufbv-online-cdclt	1912	2222	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_cache_coherence_three_ab_cti_max.smt2	base	sat	0	2415	8	ufbv-online-cdclt	ufbv-online-cdclt	2005	2300	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_cache_coherence_three_ab_cti_max.smt2	a4096	sat	0	2314	8	ufbv-online-cdclt	ufbv-online-cdclt	1969	2277	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_cambridge.3.prop2_ab_reg_max.smt2	bothmax	unsat	0	12426	5	ufbv-online-cdclt	ufbv-online-cdclt	9510	12353	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_cambridge.3.prop2_ab_reg_max.smt2	base	unknown	0	3518	14	none	dl-online	3374	3447	give-up kind=ResourceLimit detail=online UFBV has 1207 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_cambridge.3.prop2_ab_reg_max.smt2	a4096	unsat	0	11425	5	ufbv-online-cdclt	ufbv-online-cdclt	8645	11379	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_cambridge.3.prop2_ab_reg_max.smt2	a4096n32768	unsat	0	13831	5	ufbv-online-cdclt	ufbv-online-cdclt	10045	13752	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_cambridge.3.prop2_ab_reg_max.smt2	bothmid	unsat	0	11226	5	ufbv-online-cdclt	ufbv-online-cdclt	8509	11170	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_collision.6.prop1_ab_reg_max.smt2	a4096	unknown	0	24243	14	none	ufbv-online-cdclt	20190	24077	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_collision.6.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	19230	5	ufbv-online-cdclt	ufbv-online-cdclt	16097	19126	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_collision.6.prop1_ab_reg_max.smt2	bothmid	unsat	0	13827	5	ufbv-online-cdclt	ufbv-online-cdclt	12829	13747	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_collision.6.prop1_ab_reg_max.smt2	bothmax	unknown	0	24141	14	none	ufbv-online-cdclt	22623	24066	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_collision.6.prop1_ab_reg_max.smt2	base	unknown	0	4213	14	none	dl-online	3985	4080	give-up kind=ResourceLimit detail=online UFBV has 1466 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_driving_phils.1.prop1_ab_reg_max.smt2	bothmid	sat	0	110	5	ufbv-online-cdclt	dl-online	9	16	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_driving_phils.1.prop1_ab_reg_max.smt2	bothmax	sat	0	113	5	ufbv-online-cdclt	dl-online	10	17	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_driving_phils.1.prop1_ab_reg_max.smt2	base	sat	0	112	5	ufbv-online-cdclt	dl-online	10	17	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_driving_phils.1.prop1_ab_reg_max.smt2	a4096	sat	0	110	5	ufbv-online-cdclt	dl-online	9	16	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_driving_phils.1.prop1_ab_reg_max.smt2	a4096n32768	sat	0	111	5	ufbv-online-cdclt	dl-online	9	16	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_elevator_planning.1.prop1_ab_reg_max.smt2	base	unsat	0	613	5	ufbv-online-cdclt	dl-online	525	556	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_elevator_planning.1.prop1_ab_reg_max.smt2	a4096	unsat	0	611	5	ufbv-online-cdclt	dl-online	520	550	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_elevator_planning.1.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	612	5	ufbv-online-cdclt	dl-online	509	537	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_elevator_planning.1.prop1_ab_reg_max.smt2	bothmid	unsat	0	612	5	ufbv-online-cdclt	dl-online	515	545	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_elevator_planning.1.prop1_ab_reg_max.smt2	bothmax	unsat	0	713	5	ufbv-online-cdclt	dl-online	630	660	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_exit.2.prop1_ab_cti_max.smt2	a4096n32768	sat	0	15627	5	ufbv-online-cdclt	ufbv-online-cdclt	10569	15481	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_exit.2.prop1_ab_cti_max.smt2	bothmid	sat	0	12326	5	ufbv-online-cdclt	ufbv-online-cdclt	7866	12193	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_exit.2.prop1_ab_cti_max.smt2	bothmax	sat	0	4013	5	ufbv-online-cdclt	ufbv-online-cdclt	2710	3935	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_exit.2.prop1_ab_cti_max.smt2	base	unknown	0	1209	14	none	dl-online	1102	1141	give-up kind=ResourceLimit detail=online UFBV has 1602 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_exit.2.prop1_ab_cti_max.smt2	a4096	sat	0	5312	5	ufbv-online-cdclt	ufbv-online-cdclt	3658	5263	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_extinction.4.prop1_ab_reg_max.smt2	bothmax	unknown	0	24236	14	none	ufbv-online-cdclt	22423	24100	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_extinction.4.prop1_ab_reg_max.smt2	base	unknown	0	2113	14	none	dl-online	1881	1988	give-up kind=ResourceLimit detail=online UFBV has 3425 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_extinction.4.prop1_ab_reg_max.smt2	a4096	unknown	0	24144	14	none	ufbv-online-cdclt	22355	24083	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_extinction.4.prop1_ab_reg_max.smt2	a4096n32768	unknown	0	24258	14	none	ufbv-online-cdclt	22117	24154	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_extinction.4.prop1_ab_reg_max.smt2	bothmid	unknown	0	24332	14	none	ufbv-online-cdclt	19935	24179	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_fischer.2.prop1_ab_cti_max.smt2	a4096	sat	0	9919	9	ufbv-online-cdclt	ufbv-online-cdclt	8809	9837	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_fischer.2.prop1_ab_cti_max.smt2	a4096n32768	sat	0	11922	9	ufbv-online-cdclt	ufbv-online-cdclt	10546	11859	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_fischer.2.prop1_ab_cti_max.smt2	bothmid	sat	0	6615	9	ufbv-online-cdclt	ufbv-online-cdclt	5434	6571	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_fischer.2.prop1_ab_cti_max.smt2	bothmax	sat	0	5215	9	ufbv-online-cdclt	ufbv-online-cdclt	4696	5142	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_fischer.2.prop1_ab_cti_max.smt2	base	sat	0	5118	9	ufbv-online-cdclt	ufbv-online-cdclt	4578	5039	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_frogs.3.prop1_ab_reg_max.smt2	bothmid	unsat	0	13531	5	ufbv-online-cdclt	ufbv-online-cdclt	10999	13458	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_frogs.3.prop1_ab_reg_max.smt2	bothmax	unsat	0	18430	5	ufbv-online-cdclt	ufbv-online-cdclt	17391	18322	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_frogs.3.prop1_ab_reg_max.smt2	base	unknown	0	3815	14	none	dl-online	3553	3697	give-up kind=ResourceLimit detail=online UFBV has 1915 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_frogs.3.prop1_ab_reg_max.smt2	a4096	unknown	0	24238	14	none	ufbv-online-cdclt	20471	24148	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_frogs.3.prop1_ab_reg_max.smt2	a4096n32768	unknown	0	24234	14	none	ufbv-online-cdclt	20371	24155	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_gear.2.prop2_ab_cti_max.smt2	base	unknown	0	3413	14	none	dl-online	3208	3309	give-up kind=ResourceLimit detail=online UFBV has 1583 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_gear.2.prop2_ab_cti_max.smt2	a4096	unknown	0	25040	8	ufbv-online-cdclt	ufbv-online-cdclt	10485	14784	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_gear.2.prop2_ab_cti_max.smt2	a4096n32768	unknown	0	25043	8	ufbv-online-cdclt	ufbv-online-cdclt	6786	8279	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_gear.2.prop2_ab_cti_max.smt2	bothmid	unknown	0	25138	8	ufbv-online-cdclt	ufbv-online-cdclt	15151	20774	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_gear.2.prop2_ab_cti_max.smt2	bothmax	unknown	0	25141	8	ufbv-online-cdclt	ufbv-online-cdclt	14995	21076	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_h_TicTacToe_ab_cti_max.smt2	a4096n32768	unsat	0	110	4	qf-bv	dl-online	78	84	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_h_TicTacToe_ab_cti_max.smt2	bothmid	unsat	0	111	4	qf-bv	dl-online	77	85	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_h_TicTacToe_ab_cti_max.smt2	bothmax	unsat	0	111	4	qf-bv	dl-online	78	85	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_h_TicTacToe_ab_cti_max.smt2	base	unsat	0	109	4	qf-bv	dl-online	79	86	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_h_TicTacToe_ab_cti_max.smt2	a4096	unsat	0	211	4	qf-bv	dl-online	83	90	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_h_b07_ab_reg_max.smt2	bothmax	unsat	0	113	4	qf-bv	dl-online	1	2	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_h_b07_ab_reg_max.smt2	base	unsat	0	110	4	qf-bv	dl-online	1	2	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_h_b07_ab_reg_max.smt2	a4096	unsat	0	115	4	qf-bv	dl-online	1	1	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_h_b07_ab_reg_max.smt2	a4096n32768	unsat	0	110	4	qf-bv	dl-online	1	1	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_h_b07_ab_reg_max.smt2	bothmid	unsat	0	110	4	qf-bv	dl-online	1	1	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_iprotocol.2.prop1_ab_cti_max.smt2	a4096	sat	0	4817	5	ufbv-online-cdclt	dl-online	3252	4700	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_iprotocol.2.prop1_ab_cti_max.smt2	a4096n32768	sat	0	5319	5	ufbv-online-cdclt	dl-online	3670	5223	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_iprotocol.2.prop1_ab_cti_max.smt2	bothmid	sat	0	5319	5	ufbv-online-cdclt	dl-online	3659	5157	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_iprotocol.2.prop1_ab_cti_max.smt2	bothmax	sat	0	4817	5	ufbv-online-cdclt	dl-online	3276	4685	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_iprotocol.2.prop1_ab_cti_max.smt2	base	sat	0	5619	5	ufbv-online-cdclt	dl-online	4009	5516	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_krebs.1.prop1_ab_reg_max.smt2	bothmid	unsat	0	414	5	ufbv-online-cdclt	dl-online	318	345	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_krebs.1.prop1_ab_reg_max.smt2	bothmax	unsat	0	410	5	ufbv-online-cdclt	dl-online	345	376	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_krebs.1.prop1_ab_reg_max.smt2	base	unsat	0	512	5	ufbv-online-cdclt	dl-online	356	381	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_krebs.1.prop1_ab_reg_max.smt2	a4096	unsat	0	411	5	ufbv-online-cdclt	dl-online	346	371	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_krebs.1.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	511	5	ufbv-online-cdclt	dl-online	357	386	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lamport.6.prop1_ab_cti_max.smt2	base	unknown	0	5118	14	none	dl-online	4906	5026	give-up kind=ResourceLimit detail=online UFBV has 1375 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lamport.6.prop1_ab_cti_max.smt2	a4096	sat	0	14326	5	ufbv-online-cdclt	ufbv-online-cdclt	8766	14234	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lamport.6.prop1_ab_cti_max.smt2	a4096n32768	sat	0	12526	5	ufbv-online-cdclt	ufbv-online-cdclt	8745	12404	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lamport.6.prop1_ab_cti_max.smt2	bothmid	sat	0	13428	5	ufbv-online-cdclt	ufbv-online-cdclt	8614	13277	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lamport.6.prop1_ab_cti_max.smt2	bothmax	sat	0	13233	5	ufbv-online-cdclt	ufbv-online-cdclt	8341	13062	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lann.1.prop1_ab_reg_max.smt2	a4096n32768	sat	0	2616	5	ufbv-online-cdclt	dl-online	2312	2457	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lann.1.prop1_ab_reg_max.smt2	bothmid	sat	0	2214	5	ufbv-online-cdclt	dl-online	1952	2091	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lann.1.prop1_ab_reg_max.smt2	bothmax	sat	0	1915	5	ufbv-online-cdclt	dl-online	1705	1816	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lann.1.prop1_ab_reg_max.smt2	base	sat	0	1513	5	ufbv-online-cdclt	dl-online	1311	1419	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lann.1.prop1_ab_reg_max.smt2	a4096	sat	0	1614	5	ufbv-online-cdclt	dl-online	1417	1546	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_leader_election.4.prop1_ab_reg_max.smt2	bothmax	unknown	0	24430	14	none	ufbv-online-cdclt	19391	24326	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_leader_election.4.prop1_ab_reg_max.smt2	base	unknown	0	5019	14	none	dl-online	4622	4891	give-up kind=NodeBudget detail=online UFBV input has 23184 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_leader_election.4.prop1_ab_reg_max.smt2	a4096	unknown	0	5918	14	none	dl-online	5436	5733	give-up kind=NodeBudget detail=online UFBV input has 23184 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_leader_election.4.prop1_ab_reg_max.smt2	a4096n32768	unknown	0	5517	14	none	dl-online	5103	5408	give-up kind=ResourceLimit detail=online UFBV has 5801 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_leader_election.4.prop1_ab_reg_max.smt2	bothmid	unknown	0	5518	14	none	dl-online	4945	5297	give-up kind=ResourceLimit detail=online UFBV has 5801 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_leader_filters.6.prop1_ab_cti_max.smt2	a4096	sat	0	14130	5	ufbv-online-cdclt	ufbv-online-cdclt	9475	13992	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_leader_filters.6.prop1_ab_cti_max.smt2	a4096n32768	sat	0	7418	5	ufbv-online-cdclt	ufbv-online-cdclt	5545	7295	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_leader_filters.6.prop1_ab_cti_max.smt2	bothmid	sat	0	10824	5	ufbv-online-cdclt	ufbv-online-cdclt	9034	10694	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_leader_filters.6.prop1_ab_cti_max.smt2	bothmax	sat	0	10119	5	ufbv-online-cdclt	ufbv-online-cdclt	6816	10042	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_leader_filters.6.prop1_ab_cti_max.smt2	base	unknown	0	1909	14	none	dl-online	1787	1838	give-up kind=ResourceLimit detail=online UFBV has 1426 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_loyd.1.prop1_ab_reg_max.smt2	bothmid	unsat	0	207	4	qf-bv	dl-online	158	167	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_loyd.1.prop1_ab_reg_max.smt2	bothmax	unsat	0	208	4	qf-bv	dl-online	138	145	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_loyd.1.prop1_ab_reg_max.smt2	base	unsat	0	207	4	qf-bv	dl-online	148	155	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_loyd.1.prop1_ab_reg_max.smt2	a4096	unsat	0	207	4	qf-bv	dl-online	156	166	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_loyd.1.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	208	4	qf-bv	dl-online	153	160	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_mcs.2.prop1_ab_cti_max.smt2	base	sat	0	2410	5	ufbv-online-cdclt	dl-online	1526	2293	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_mcs.2.prop1_ab_cti_max.smt2	a4096	sat	0	1709	5	ufbv-online-cdclt	dl-online	983	1634	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_mcs.2.prop1_ab_cti_max.smt2	a4096n32768	sat	0	1608	5	ufbv-online-cdclt	dl-online	980	1556	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_mcs.2.prop1_ab_cti_max.smt2	bothmid	sat	0	1107	5	ufbv-online-cdclt	dl-online	648	1040	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_mcs.2.prop1_ab_cti_max.smt2	bothmax	sat	0	1007	5	ufbv-online-cdclt	dl-online	530	911	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_msmie.2.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	907	4	qf-bv	dl-online	710	767	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_msmie.2.prop1_ab_reg_max.smt2	bothmid	unsat	0	1107	4	qf-bv	dl-online	942	1012	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_msmie.2.prop1_ab_reg_max.smt2	bothmax	unsat	0	1609	4	qf-bv	dl-online	1481	1574	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_msmie.2.prop1_ab_reg_max.smt2	base	unsat	0	1910	4	qf-bv	dl-online	1727	1825	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_msmie.2.prop1_ab_reg_max.smt2	a4096	unsat	0	1711	4	qf-bv	dl-online	1532	1632	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_paper_v3_ab_cti_max.smt2	bothmax	sat	0	109	4	qf-bv	dl-online	1	2	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_paper_v3_ab_cti_max.smt2	base	sat	0	110	4	qf-bv	dl-online	1	2	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_paper_v3_ab_cti_max.smt2	a4096	sat	0	112	4	qf-bv	dl-online	1	2	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_paper_v3_ab_cti_max.smt2	a4096n32768	sat	0	108	4	qf-bv	dl-online	1	2	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_paper_v3_ab_cti_max.smt2	bothmid	sat	0	108	4	qf-bv	dl-online	1	2	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_peterson.3.prop1_ab_reg_max.smt2	a4096	unsat	0	407	5	ufbv-online-cdclt	dl-online	321	345	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_peterson.3.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	407	5	ufbv-online-cdclt	dl-online	328	352	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_peterson.3.prop1_ab_reg_max.smt2	bothmid	unsat	0	408	5	ufbv-online-cdclt	dl-online	327	350	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_peterson.3.prop1_ab_reg_max.smt2	bothmax	unsat	0	407	5	ufbv-online-cdclt	dl-online	321	344	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_peterson.3.prop1_ab_reg_max.smt2	base	unsat	0	407	5	ufbv-online-cdclt	dl-online	319	342	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_pipeline_ab_reg_max.smt2	bothmid	unsat	0	107	5	ufbv-online-cdclt	ufbv-online-cdclt	4	6	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_pipeline_ab_reg_max.smt2	bothmax	unsat	0	107	5	ufbv-online-cdclt	ufbv-online-cdclt	2	4	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_pipeline_ab_reg_max.smt2	base	unsat	0	108	5	ufbv-online-cdclt	ufbv-online-cdclt	2	4	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_pipeline_ab_reg_max.smt2	a4096	unsat	0	109	5	ufbv-online-cdclt	ufbv-online-cdclt	2	4	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_pipeline_ab_reg_max.smt2	a4096n32768	unsat	0	111	5	ufbv-online-cdclt	ufbv-online-cdclt	2	4	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_production_cell.1.prop1_ab_reg_max.smt2	base	sat	0	112	4	qf-bv	dl-online	5	6	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_production_cell.1.prop1_ab_reg_max.smt2	a4096	sat	0	111	4	qf-bv	dl-online	5	6	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_production_cell.1.prop1_ab_reg_max.smt2	a4096n32768	sat	0	109	4	qf-bv	dl-online	3	4	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_production_cell.1.prop1_ab_reg_max.smt2	bothmid	sat	0	108	4	qf-bv	dl-online	3	4	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_production_cell.1.prop1_ab_reg_max.smt2	bothmax	sat	0	107	4	qf-bv	dl-online	3	4	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_protocols.5.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	308	5	ufbv-online-cdclt	dl-online	186	198	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_protocols.5.prop1_ab_reg_max.smt2	bothmid	unsat	0	207	5	ufbv-online-cdclt	dl-online	182	193	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_protocols.5.prop1_ab_reg_max.smt2	bothmax	unsat	0	308	5	ufbv-online-cdclt	dl-online	213	228	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_protocols.5.prop1_ab_reg_max.smt2	base	unsat	0	410	5	ufbv-online-cdclt	dl-online	304	322	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_protocols.5.prop1_ab_reg_max.smt2	a4096	unsat	0	408	5	ufbv-online-cdclt	dl-online	301	320	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_resistance.2.prop2_ab_cti_max.smt2	bothmax	unsat	0	1024	5	ufbv-online-cdclt	dl-online	727	887	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_resistance.2.prop2_ab_cti_max.smt2	base	unsat	0	1120	5	ufbv-online-cdclt	dl-online	873	1032	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_resistance.2.prop2_ab_cti_max.smt2	a4096	unsat	0	1115	5	ufbv-online-cdclt	dl-online	831	1079	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_resistance.2.prop2_ab_cti_max.smt2	a4096n32768	unsat	0	1129	5	ufbv-online-cdclt	dl-online	877	1029	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_resistance.2.prop2_ab_cti_max.smt2	bothmid	unsat	0	1035	5	ufbv-online-cdclt	dl-online	752	921	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_rushhour.2.prop1_ab_reg_max.smt2	a4096	unknown	0	2331	14	none	dl-online	2073	2215	give-up kind=NodeBudget detail=online UFBV input has 21367 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_rushhour.2.prop1_ab_reg_max.smt2	a4096n32768	unknown	0	1510	14	none	dl-online	1300	1398	give-up kind=ResourceLimit detail=online UFBV has 5653 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_rushhour.2.prop1_ab_reg_max.smt2	bothmid	unknown	0	1208	14	none	dl-online	1084	1170	give-up kind=ResourceLimit detail=online UFBV has 5653 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_rushhour.2.prop1_ab_reg_max.smt2	bothmax	unknown	0	24132	14	none	ufbv-online-cdclt	22862	24102	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_rushhour.2.prop1_ab_reg_max.smt2	base	unknown	0	1616	14	none	dl-online	1461	1555	give-up kind=NodeBudget detail=online UFBV input has 21367 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_sokoban.2.prop1_ab_cti_max.smt2	bothmid	unknown	0	24189	14	none	ufbv-online-cdclt	23081	24077	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_sokoban.2.prop1_ab_cti_max.smt2	bothmax	unknown	0	24232	14	none	ufbv-online-cdclt	21738	24113	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_sokoban.2.prop1_ab_cti_max.smt2	base	unknown	0	2621	14	none	dl-online	2439	2535	give-up kind=ResourceLimit detail=online UFBV has 2573 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_sokoban.2.prop1_ab_cti_max.smt2	a4096	unknown	0	24258	14	none	ufbv-online-cdclt	21347	24114	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_sokoban.2.prop1_ab_cti_max.smt2	a4096n32768	sat	0	22235	5	ufbv-online-cdclt	ufbv-online-cdclt	20732	22132	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_sw_sym_ex_ab_reg_max.smt2	base	unsat	0	108	4	qf-bv	dl-online	6	7	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_sw_sym_ex_ab_reg_max.smt2	a4096	unsat	0	110	4	qf-bv	dl-online	6	7	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_sw_sym_ex_ab_reg_max.smt2	a4096n32768	unsat	0	111	4	qf-bv	dl-online	6	8	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_sw_sym_ex_ab_reg_max.smt2	bothmid	unsat	0	111	4	qf-bv	dl-online	6	7	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_sw_sym_ex_ab_reg_max.smt2	bothmax	unsat	0	111	4	qf-bv	dl-online	6	8	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_synapse.4.prop1_ab_cti_max.smt2	a4096n32768	unknown	0	2014	14	none	dl-online	1786	1892	give-up kind=ResourceLimit detail=online UFBV has 4795 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_synapse.4.prop1_ab_cti_max.smt2	bothmid	unknown	0	2517	14	none	dl-online	2254	2383	give-up kind=ResourceLimit detail=online UFBV has 4795 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_synapse.4.prop1_ab_cti_max.smt2	bothmax	unknown	0	24236	14	none	ufbv-online-cdclt	21838	24103	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_synapse.4.prop1_ab_cti_max.smt2	base	unknown	0	2519	14	none	dl-online	2335	2437	give-up kind=NodeBudget detail=online UFBV input has 22142 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_synapse.4.prop1_ab_cti_max.smt2	a4096	unknown	0	2419	14	none	dl-online	2230	2334	give-up kind=NodeBudget detail=online UFBV input has 22142 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_telephony.2.prop1_ab_cti_max.smt2	bothmax	unknown	0	25038	8	ufbv-online-cdclt	ufbv-online-cdclt	8434	9896	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_telephony.2.prop1_ab_cti_max.smt2	base	unknown	0	1514	14	none	dl-online	1423	1473	give-up kind=ResourceLimit detail=online UFBV has 1978 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_telephony.2.prop1_ab_cti_max.smt2	a4096	unknown	0	25046	8	ufbv-online-cdclt	ufbv-online-cdclt	9055	10417	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_telephony.2.prop1_ab_cti_max.smt2	a4096n32768	unknown	0	25058	8	ufbv-online-cdclt	ufbv-online-cdclt	14369	15862	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_telephony.2.prop1_ab_cti_max.smt2	bothmid	unknown	0	25067	8	ufbv-online-cdclt	ufbv-online-cdclt	16719	21242	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_train-gate.4.prop1_ab_reg_max.smt2	a4096	unsat	0	1114	4	qf-bv	dl-online	907	987	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_train-gate.4.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	1014	4	qf-bv	dl-online	880	913	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_train-gate.4.prop1_ab_reg_max.smt2	bothmid	unsat	0	913	4	qf-bv	dl-online	831	862	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_train-gate.4.prop1_ab_reg_max.smt2	bothmax	unsat	0	911	4	qf-bv	dl-online	838	872	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_train-gate.4.prop1_ab_reg_max.smt2	base	unsat	0	814	4	qf-bv	dl-online	680	710	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_Huffman_enc_ab_reg_max.smt2	bothmid	unsat	0	113	5	ufbv-online-cdclt	dl-online	2	5	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_Huffman_enc_ab_reg_max.smt2	bothmax	unsat	0	111	5	ufbv-online-cdclt	dl-online	2	4	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_Huffman_enc_ab_reg_max.smt2	base	unsat	0	112	5	ufbv-online-cdclt	dl-online	2	4	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_Huffman_enc_ab_reg_max.smt2	a4096	unsat	0	111	5	ufbv-online-cdclt	dl-online	2	4	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_Huffman_enc_ab_reg_max.smt2	a4096n32768	unsat	0	111	5	ufbv-online-cdclt	dl-online	2	4	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_anderson.1.prop1_ab_reg_max.smt2	base	sat	0	2013	5	ufbv-online-cdclt	ufbv-online-cdclt	1921	1968	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_anderson.1.prop1_ab_reg_max.smt2	a4096	sat	0	1813	5	ufbv-online-cdclt	ufbv-online-cdclt	1705	1752	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_anderson.1.prop1_ab_reg_max.smt2	a4096n32768	sat	0	1813	5	ufbv-online-cdclt	ufbv-online-cdclt	1703	1751	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_anderson.1.prop1_ab_reg_max.smt2	bothmid	sat	0	1810	5	ufbv-online-cdclt	ufbv-online-cdclt	1663	1710	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_anderson.1.prop1_ab_reg_max.smt2	bothmax	sat	0	1813	5	ufbv-online-cdclt	ufbv-online-cdclt	1705	1751	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_at.3.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	2514	5	ufbv-online-cdclt	ufbv-online-cdclt	1881	2442	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_at.3.prop1_ab_reg_max.smt2	bothmid	unsat	0	2414	5	ufbv-online-cdclt	ufbv-online-cdclt	1777	2337	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_at.3.prop1_ab_reg_max.smt2	bothmax	unsat	0	2414	5	ufbv-online-cdclt	ufbv-online-cdclt	1797	2350	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_at.3.prop1_ab_reg_max.smt2	base	unknown	0	612	14	none	dl-online	526	550	give-up kind=ResourceLimit detail=online UFBV has 1398 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_at.3.prop1_ab_reg_max.smt2	a4096	unsat	0	2614	5	ufbv-online-cdclt	ufbv-online-cdclt	1947	2509	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_bakery.5.prop1_ab_cti_max.smt2	bothmax	sat	0	712	5	ufbv-online-cdclt	dl-online	470	589	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_bakery.5.prop1_ab_cti_max.smt2	base	sat	0	711	5	ufbv-online-cdclt	dl-online	470	586	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_bakery.5.prop1_ab_cti_max.smt2	a4096	sat	0	712	5	ufbv-online-cdclt	dl-online	467	584	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_bakery.5.prop1_ab_cti_max.smt2	a4096n32768	sat	0	711	5	ufbv-online-cdclt	dl-online	477	598	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_bakery.5.prop1_ab_cti_max.smt2	bothmid	sat	0	711	5	ufbv-online-cdclt	dl-online	469	587	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_bridge.2.prop1_ab_reg_max.smt2	a4096	unsat	0	4117	5	ufbv-online-cdclt	ufbv-online-cdclt	3414	4006	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_bridge.2.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	9729	5	ufbv-online-cdclt	ufbv-online-cdclt	6191	9600	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_bridge.2.prop1_ab_reg_max.smt2	bothmid	unsat	0	11033	5	ufbv-online-cdclt	dl-online	6916	10953	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_bridge.2.prop1_ab_reg_max.smt2	bothmax	unsat	0	4924	5	ufbv-online-cdclt	ufbv-online-cdclt	2924	4850	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_bridge.2.prop1_ab_reg_max.smt2	base	unknown	0	3538	14	none	dl-online	3304	3372	give-up kind=ResourceLimit detail=online UFBV has 1292 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_brp2.1.prop1_ab_cti_max.smt2	bothmid	sat	0	16550	5	ufbv-online-cdclt	ufbv-online-cdclt	13641	16374	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_brp2.1.prop1_ab_cti_max.smt2	bothmax	unknown	0	24170	14	none	ufbv-online-cdclt	21157	24059	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_brp2.1.prop1_ab_cti_max.smt2	base	sat	0	22374	5	ufbv-online-cdclt	ufbv-online-cdclt	16204	22208	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_brp2.1.prop1_ab_cti_max.smt2	a4096	sat	0	18843	5	ufbv-online-cdclt	ufbv-online-cdclt	14599	18763	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_brp2.1.prop1_ab_cti_max.smt2	a4096n32768	sat	0	20031	5	ufbv-online-cdclt	ufbv-online-cdclt	17769	19953	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_cache_coherence_three_ab_reg_max.smt2	base	unsat	0	510	4	qf-bv	dl-online	391	405	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_cache_coherence_three_ab_reg_max.smt2	a4096	unsat	0	210	4	qf-bv	dl-online	135	141	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_cache_coherence_three_ab_reg_max.smt2	a4096n32768	unsat	0	311	4	qf-bv	dl-online	214	219	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_cache_coherence_three_ab_reg_max.smt2	bothmid	unsat	0	311	4	qf-bv	dl-online	264	272	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_cache_coherence_three_ab_reg_max.smt2	bothmax	unsat	0	211	4	qf-bv	dl-online	136	141	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_cav14_example_ab_reg_max.smt2	a4096n32768	sat	0	111	5	ufbv-online-cdclt	dl-online	1	2	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_cav14_example_ab_reg_max.smt2	bothmid	sat	0	112	5	ufbv-online-cdclt	dl-online	1	2	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_cav14_example_ab_reg_max.smt2	bothmax	sat	0	111	5	ufbv-online-cdclt	euf-online	2	4	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_cav14_example_ab_reg_max.smt2	base	sat	0	111	5	ufbv-online-cdclt	ufbv-online-cdclt	3	7	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_cav14_example_ab_reg_max.smt2	a4096	sat	0	111	5	ufbv-online-cdclt	ufbv-online-cdclt	7	8	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_counter_ab_cti_max.smt2	bothmax	unsat	0	110	5	ufbv-online-cdclt	dl-online	3	5	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_counter_ab_cti_max.smt2	base	unsat	0	111	5	ufbv-online-cdclt	dl-online	7	9	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_counter_ab_cti_max.smt2	a4096	unsat	0	111	5	ufbv-online-cdclt	dl-online	7	8	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_counter_ab_cti_max.smt2	a4096n32768	unsat	0	110	5	ufbv-online-cdclt	dl-online	3	5	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_counter_ab_cti_max.smt2	bothmid	unsat	0	110	5	ufbv-online-cdclt	dl-online	7	9	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_diagonal_v_ab_reg_max.smt2	a4096	sat	0	610	6	ufbv-online-cdclt	ufbv-online-cdclt	321	499	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_diagonal_v_ab_reg_max.smt2	a4096n32768	sat	0	410	6	ufbv-online-cdclt	ufbv-online-cdclt	209	369	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_diagonal_v_ab_reg_max.smt2	bothmid	sat	0	510	6	ufbv-online-cdclt	ufbv-online-cdclt	289	451	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_diagonal_v_ab_reg_max.smt2	bothmax	sat	0	411	6	ufbv-online-cdclt	ufbv-online-cdclt	210	346	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_diagonal_v_ab_reg_max.smt2	base	sat	0	511	6	ufbv-online-cdclt	ufbv-online-cdclt	317	477	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_elevator.5.prop1_ab_reg_max.smt2	bothmid	unsat	0	8219	5	ufbv-online-cdclt	ufbv-online-cdclt	5807	8074	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_elevator.5.prop1_ab_reg_max.smt2	bothmax	unsat	0	9423	5	ufbv-online-cdclt	ufbv-online-cdclt	6633	9371	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_elevator.5.prop1_ab_reg_max.smt2	base	unknown	0	2214	14	none	dl-online	1991	2080	give-up kind=ResourceLimit detail=online UFBV has 1507 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_elevator.5.prop1_ab_reg_max.smt2	a4096	unsat	0	8519	5	ufbv-online-cdclt	ufbv-online-cdclt	6207	8427	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_elevator.5.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	8221	5	ufbv-online-cdclt	ufbv-online-cdclt	6095	8156	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_eq_sdp_v6_ab_cti_max.smt2	base	sat	0	1414	5	ufbv-online-cdclt	ufbv-online-cdclt	1234	1311	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_eq_sdp_v6_ab_cti_max.smt2	a4096	sat	0	1413	5	ufbv-online-cdclt	ufbv-online-cdclt	1228	1312	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_eq_sdp_v6_ab_cti_max.smt2	a4096n32768	sat	0	1411	5	ufbv-online-cdclt	ufbv-online-cdclt	1297	1374	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_eq_sdp_v6_ab_cti_max.smt2	bothmid	sat	0	1412	5	ufbv-online-cdclt	ufbv-online-cdclt	1254	1336	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_eq_sdp_v6_ab_cti_max.smt2	bothmax	sat	0	1411	5	ufbv-online-cdclt	ufbv-online-cdclt	1215	1292	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_extinction.2.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	17130	5	ufbv-online-cdclt	ufbv-online-cdclt	14706	17067	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_extinction.2.prop1_ab_reg_max.smt2	bothmid	unsat	0	21438	5	ufbv-online-cdclt	ufbv-online-cdclt	20614	21309	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_extinction.2.prop1_ab_reg_max.smt2	bothmax	unknown	0	24140	14	none	ufbv-online-cdclt	21769	24083	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_extinction.2.prop1_ab_reg_max.smt2	base	unknown	0	3733	14	none	dl-online	3498	3664	give-up kind=ResourceLimit detail=online UFBV has 2667 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_extinction.2.prop1_ab_reg_max.smt2	a4096	unsat	0	17652	5	ufbv-online-cdclt	ufbv-online-cdclt	15741	17564	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_firewire_tree.2.prop3_ab_reg_max.smt2	bothmax	unknown	0	24240	14	none	ufbv-online-cdclt	22979	24113	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_firewire_tree.2.prop3_ab_reg_max.smt2	base	unknown	0	1211	14	none	dl-online	1003	1095	give-up kind=NodeBudget detail=online UFBV input has 34219 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_firewire_tree.2.prop3_ab_reg_max.smt2	a4096	unknown	0	1212	14	none	dl-online	1013	1106	give-up kind=NodeBudget detail=online UFBV input has 34219 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_firewire_tree.2.prop3_ab_reg_max.smt2	a4096n32768	unknown	0	1211	14	none	dl-online	1056	1146	give-up kind=NodeBudget detail=online UFBV input has 34219 DAG nodes, exceeding the admission cap of 32768	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_firewire_tree.2.prop3_ab_reg_max.smt2	bothmid	unknown	0	1313	14	none	dl-online	1114	1229	give-up kind=ResourceLimit detail=online UFBV has 7431 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_frogs.2.prop1_ab_reg_max.smt2	a4096	sat	0	1111	5	ufbv-online-cdclt	ufbv-online-cdclt	513	1012	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_frogs.2.prop1_ab_reg_max.smt2	a4096n32768	sat	0	1111	5	ufbv-online-cdclt	ufbv-online-cdclt	524	1018	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_frogs.2.prop1_ab_reg_max.smt2	bothmid	sat	0	1112	5	ufbv-online-cdclt	ufbv-online-cdclt	507	1005	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_frogs.2.prop1_ab_reg_max.smt2	bothmax	sat	0	1111	5	ufbv-online-cdclt	ufbv-online-cdclt	512	1012	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_frogs.2.prop1_ab_reg_max.smt2	base	sat	0	1111	5	ufbv-online-cdclt	ufbv-online-cdclt	549	1050	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_gear.2.prop1_ab_cti_max.smt2	bothmid	sat	0	16725	9	ufbv-online-cdclt	ufbv-online-cdclt	14009	16617	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_gear.2.prop1_ab_cti_max.smt2	bothmax	sat	0	16831	9	ufbv-online-cdclt	ufbv-online-cdclt	14158	16746	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_gear.2.prop1_ab_cti_max.smt2	base	unknown	0	711	14	none	dl-online	600	625	give-up kind=ResourceLimit detail=online UFBV has 1476 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_gear.2.prop1_ab_cti_max.smt2	a4096	sat	0	17426	9	ufbv-online-cdclt	ufbv-online-cdclt	14754	17380	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_gear.2.prop1_ab_cti_max.smt2	a4096n32768	sat	0	21434	9	ufbv-online-cdclt	ufbv-online-cdclt	18716	21323	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_h_FourbyFour_ab_reg_max.smt2	base	unsat	0	1812	5	ufbv-online-cdclt	ufbv-online-cdclt	1130	1747	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_h_FourbyFour_ab_reg_max.smt2	a4096	unsat	0	1809	5	ufbv-online-cdclt	ufbv-online-cdclt	1108	1697	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_h_FourbyFour_ab_reg_max.smt2	a4096n32768	unsat	0	1812	5	ufbv-online-cdclt	ufbv-online-cdclt	1121	1761	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_h_FourbyFour_ab_reg_max.smt2	bothmid	unsat	0	1813	5	ufbv-online-cdclt	ufbv-online-cdclt	1145	1739	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_h_FourbyFour_ab_reg_max.smt2	bothmax	unsat	0	1813	5	ufbv-online-cdclt	ufbv-online-cdclt	1124	1724	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_h_b03_ab_cti_max.smt2	a4096n32768	sat	0	110	4	qf-bv	dl-online	16	18	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_h_b03_ab_cti_max.smt2	bothmid	sat	0	110	4	qf-bv	dl-online	16	18	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_h_b03_ab_cti_max.smt2	bothmax	sat	0	110	4	qf-bv	dl-online	16	18	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_h_b03_ab_cti_max.smt2	base	sat	0	110	4	qf-bv	dl-online	16	18	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_h_b03_ab_cti_max.smt2	a4096	sat	0	110	4	qf-bv	dl-online	16	18	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_hanoi.2.prop1_ab_cti_max.smt2	bothmax	sat	0	23638	5	ufbv-online-cdclt	ufbv-online-cdclt	22897	23583	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_hanoi.2.prop1_ab_cti_max.smt2	base	unknown	0	712	14	none	dl-online	624	683	give-up kind=ResourceLimit detail=online UFBV has 1580 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_hanoi.2.prop1_ab_cti_max.smt2	a4096	sat	0	24040	5	ufbv-online-cdclt	ufbv-online-cdclt	23332	24006	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_hanoi.2.prop1_ab_cti_max.smt2	a4096n32768	sat	0	23841	5	ufbv-online-cdclt	ufbv-online-cdclt	23051	23731	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_hanoi.2.prop1_ab_cti_max.smt2	bothmid	unknown	0	24142	14	none	ufbv-online-cdclt	23382	24071	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_iprotocol.6.prop1_ab_cti_max.smt2	a4096	sat	0	1012	5	ufbv-online-cdclt	dl-online	533	885	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_iprotocol.6.prop1_ab_cti_max.smt2	a4096n32768	sat	0	912	5	ufbv-online-cdclt	dl-online	528	878	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_iprotocol.6.prop1_ab_cti_max.smt2	bothmid	sat	0	912	5	ufbv-online-cdclt	dl-online	527	884	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_iprotocol.6.prop1_ab_cti_max.smt2	bothmax	sat	0	911	5	ufbv-online-cdclt	dl-online	524	874	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_iprotocol.6.prop1_ab_cti_max.smt2	base	sat	0	911	5	ufbv-online-cdclt	dl-online	524	874	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport.1.prop1_ab_reg_max.smt2	bothmid	unsat	0	911	5	ufbv-online-cdclt	dl-online	532	819	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport.1.prop1_ab_reg_max.smt2	bothmax	unsat	0	911	5	ufbv-online-cdclt	dl-online	546	841	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport.1.prop1_ab_reg_max.smt2	base	unsat	0	911	5	ufbv-online-cdclt	dl-online	539	826	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport.1.prop1_ab_reg_max.smt2	a4096	unsat	0	912	5	ufbv-online-cdclt	dl-online	533	821	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport.1.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	911	5	ufbv-online-cdclt	dl-online	539	823	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport_nonatomic.3.prop1_ab_cti_max.smt2	base	unknown	0	1112	14	none	dl-online	1006	1054	give-up kind=ResourceLimit detail=online UFBV has 3178 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport_nonatomic.3.prop1_ab_cti_max.smt2	a4096	sat	0	9322	5	ufbv-online-cdclt	ufbv-online-cdclt	8231	9244	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport_nonatomic.3.prop1_ab_cti_max.smt2	a4096n32768	sat	0	9222	5	ufbv-online-cdclt	ufbv-online-cdclt	8260	9117	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport_nonatomic.3.prop1_ab_cti_max.smt2	bothmid	sat	0	9522	5	ufbv-online-cdclt	ufbv-online-cdclt	8611	9472	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport_nonatomic.3.prop1_ab_cti_max.smt2	bothmax	sat	0	9123	5	ufbv-online-cdclt	ufbv-online-cdclt	8041	9058	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lann.5.prop1_ab_reg_max.smt2	a4096n32768	sat	0	2213	5	ufbv-online-cdclt	ufbv-online-cdclt	1570	2107	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lann.5.prop1_ab_reg_max.smt2	bothmid	sat	0	2213	5	ufbv-online-cdclt	ufbv-online-cdclt	1580	2119	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lann.5.prop1_ab_reg_max.smt2	bothmax	sat	0	2213	5	ufbv-online-cdclt	ufbv-online-cdclt	1607	2157	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lann.5.prop1_ab_reg_max.smt2	base	unknown	0	1612	14	none	ufbv-online-cdclt	1039	1588	give-up kind=ResourceLimit detail=online UFBV dynamic theory atoms exceed the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lann.5.prop1_ab_reg_max.smt2	a4096	sat	0	2213	5	ufbv-online-cdclt	ufbv-online-cdclt	1624	2164	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_leader_filters.1.prop1_ab_cti_max.smt2	bothmax	sat	0	812	5	ufbv-online-cdclt	dl-online	544	728	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_leader_filters.1.prop1_ab_cti_max.smt2	base	sat	0	811	5	ufbv-online-cdclt	dl-online	544	732	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_leader_filters.1.prop1_ab_cti_max.smt2	a4096	sat	0	812	5	ufbv-online-cdclt	dl-online	546	728	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_leader_filters.1.prop1_ab_cti_max.smt2	a4096n32768	sat	0	811	5	ufbv-online-cdclt	dl-online	533	715	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_leader_filters.1.prop1_ab_cti_max.smt2	bothmid	sat	0	811	5	ufbv-online-cdclt	dl-online	542	725	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lifts.2.prop1_ab_reg_max.smt2	a4096	unknown	0	1212	14	none	dl-online	1077	1135	give-up kind=NodeBudget detail=online UFBV input has 17509 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lifts.2.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	18932	5	ufbv-online-cdclt	ufbv-online-cdclt	17914	18848	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lifts.2.prop1_ab_reg_max.smt2	bothmid	unsat	0	18431	5	ufbv-online-cdclt	ufbv-online-cdclt	17453	18356	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lifts.2.prop1_ab_reg_max.smt2	bothmax	unsat	0	19436	5	ufbv-online-cdclt	ufbv-online-cdclt	18437	19347	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lifts.2.prop1_ab_reg_max.smt2	base	unknown	0	911	14	none	dl-online	801	844	give-up kind=NodeBudget detail=online UFBV input has 17509 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lup.1.prop1_ab_reg_max.smt2	bothmid	unsat	0	811	5	ufbv-online-cdclt	dl-online	548	740	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lup.1.prop1_ab_reg_max.smt2	bothmax	unsat	0	811	5	ufbv-online-cdclt	dl-online	547	737	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lup.1.prop1_ab_reg_max.smt2	base	unsat	0	811	5	ufbv-online-cdclt	dl-online	551	742	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lup.1.prop1_ab_reg_max.smt2	a4096	unsat	0	810	5	ufbv-online-cdclt	dl-online	550	743	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lup.1.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	811	5	ufbv-online-cdclt	dl-online	551	743	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_mcs.5.prop1_ab_cti_max.smt2	base	unknown	0	711	14	none	dl-online	611	639	give-up kind=ResourceLimit detail=online UFBV has 1698 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_mcs.5.prop1_ab_cti_max.smt2	a4096	sat	0	3514	5	ufbv-online-cdclt	ufbv-online-cdclt	2809	3446	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_mcs.5.prop1_ab_cti_max.smt2	a4096n32768	sat	0	3415	5	ufbv-online-cdclt	ufbv-online-cdclt	2655	3305	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_mcs.5.prop1_ab_cti_max.smt2	bothmid	sat	0	3314	5	ufbv-online-cdclt	ufbv-online-cdclt	2663	3284	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_mcs.5.prop1_ab_cti_max.smt2	bothmax	sat	0	3214	5	ufbv-online-cdclt	ufbv-online-cdclt	2527	3141	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_needham.1.prop1_ab_cti_max.smt2	a4096n32768	unknown	0	20534	14	none	ufbv-online-cdclt	19877	20485	give-up kind=ResourceLimit detail=online UFBV materialized interface equalities exceed the bounded cap of 512	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_needham.1.prop1_ab_cti_max.smt2	bothmid	unknown	0	20631	14	none	ufbv-online-cdclt	19913	20515	give-up kind=ResourceLimit detail=online UFBV materialized interface equalities exceed the bounded cap of 512	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_needham.1.prop1_ab_cti_max.smt2	bothmax	unknown	0	20135	14	none	ufbv-online-cdclt	19488	20079	give-up kind=ResourceLimit detail=online UFBV materialized interface equalities exceed the bounded cap of 512	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_needham.1.prop1_ab_cti_max.smt2	base	unknown	0	611	14	none	dl-online	553	591	give-up kind=ResourceLimit detail=online UFBV has 1550 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_needham.1.prop1_ab_cti_max.smt2	a4096	unknown	0	20334	14	none	ufbv-online-cdclt	19643	20245	give-up kind=ResourceLimit detail=online UFBV materialized interface equalities exceed the bounded cap of 512	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_peg_solitaire.1.prop1_ab_reg_max.smt2	bothmax	sat	0	611	5	ufbv-online-cdclt	dl-online	415	532	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_peg_solitaire.1.prop1_ab_reg_max.smt2	base	sat	0	611	5	ufbv-online-cdclt	dl-online	421	542	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_peg_solitaire.1.prop1_ab_reg_max.smt2	a4096	sat	0	611	5	ufbv-online-cdclt	dl-online	419	539	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_peg_solitaire.1.prop1_ab_reg_max.smt2	a4096n32768	sat	0	611	5	ufbv-online-cdclt	dl-online	423	541	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_peg_solitaire.1.prop1_ab_reg_max.smt2	bothmid	sat	0	713	5	ufbv-online-cdclt	dl-online	538	661	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_peterson.3.prop1_ab_cti_max.smt2	a4096	sat	0	311	5	ufbv-online-cdclt	dl-online	193	243	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_peterson.3.prop1_ab_cti_max.smt2	a4096n32768	sat	0	426	5	ufbv-online-cdclt	dl-online	246	302	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_peterson.3.prop1_ab_cti_max.smt2	bothmid	sat	0	419	5	ufbv-online-cdclt	dl-online	241	321	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_peterson.3.prop1_ab_cti_max.smt2	bothmax	sat	0	511	5	ufbv-online-cdclt	dl-online	340	420	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_peterson.3.prop1_ab_cti_max.smt2	base	sat	0	512	5	ufbv-online-cdclt	dl-online	333	411	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_pgm_protocol.2.prop1_ab_reg_max.smt2	bothmid	unknown	0	1415	14	none	dl-online	1189	1295	give-up kind=ResourceLimit detail=online UFBV has 5430 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_pgm_protocol.2.prop1_ab_reg_max.smt2	bothmax	unknown	0	24160	14	none	ufbv-online-cdclt	22807	24073	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_pgm_protocol.2.prop1_ab_reg_max.smt2	base	unknown	0	1009	14	none	dl-online	891	954	give-up kind=NodeBudget detail=online UFBV input has 22811 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_pgm_protocol.2.prop1_ab_reg_max.smt2	a4096	unknown	0	1009	14	none	dl-online	879	943	give-up kind=NodeBudget detail=online UFBV input has 22811 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_pgm_protocol.2.prop1_ab_reg_max.smt2	a4096n32768	unknown	0	1008	14	none	dl-online	884	961	give-up kind=ResourceLimit detail=online UFBV has 5430 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_pouring.2.prop1_ab_reg_max.smt2	base	unsat	0	3411	4	qf-bv	dl-online	2649	3194	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_pouring.2.prop1_ab_reg_max.smt2	a4096	unsat	0	3212	4	qf-bv	dl-online	2561	3116	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_pouring.2.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	3210	4	qf-bv	dl-online	2491	3041	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_pouring.2.prop1_ab_reg_max.smt2	bothmid	unsat	0	3211	4	qf-bv	dl-online	2605	3123	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_pouring.2.prop1_ab_reg_max.smt2	bothmax	unsat	0	3213	4	qf-bv	dl-online	2515	3032	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_protocols.4.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	310	5	ufbv-online-cdclt	dl-online	191	204	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_protocols.4.prop1_ab_reg_max.smt2	bothmid	unsat	0	208	5	ufbv-online-cdclt	dl-online	181	193	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_protocols.4.prop1_ab_reg_max.smt2	bothmax	unsat	0	208	5	ufbv-online-cdclt	dl-online	181	192	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_protocols.4.prop1_ab_reg_max.smt2	base	unsat	0	209	5	ufbv-online-cdclt	dl-online	182	193	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_protocols.4.prop1_ab_reg_max.smt2	a4096	unsat	0	308	5	ufbv-online-cdclt	dl-online	184	195	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_resistance.2.prop1_ab_cti_max.smt2	bothmax	sat	0	4013	9	ufbv-online-cdclt	ufbv-online-cdclt	3275	3900	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_resistance.2.prop1_ab_cti_max.smt2	base	unknown	0	709	18	ufbv-online-cdclt	dl-online	455	617	give-up kind=ResourceLimit detail=online UFBV has 1065 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_resistance.2.prop1_ab_cti_max.smt2	a4096	sat	0	3912	9	ufbv-online-cdclt	ufbv-online-cdclt	3257	3875	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_resistance.2.prop1_ab_cti_max.smt2	a4096n32768	sat	0	4113	9	ufbv-online-cdclt	ufbv-online-cdclt	3379	4018	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_resistance.2.prop1_ab_cti_max.smt2	bothmid	sat	0	3912	9	ufbv-online-cdclt	ufbv-online-cdclt	3185	3804	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_rushhour.1.prop1_ab_reg_max.smt2	a4096	unknown	0	810	14	none	dl-online	636	691	give-up kind=NodeBudget detail=online UFBV input has 18151 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_rushhour.1.prop1_ab_reg_max.smt2	a4096n32768	unknown	0	811	14	none	dl-online	659	723	give-up kind=ResourceLimit detail=online UFBV has 4903 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_rushhour.1.prop1_ab_reg_max.smt2	bothmid	unknown	0	811	14	none	dl-online	702	770	give-up kind=ResourceLimit detail=online UFBV has 4903 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_rushhour.1.prop1_ab_reg_max.smt2	bothmax	unknown	0	24142	14	none	ufbv-online-cdclt	23302	24074	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_rushhour.1.prop1_ab_reg_max.smt2	base	unknown	0	911	14	none	dl-online	762	819	give-up kind=NodeBudget detail=online UFBV input has 18151 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_seq_ab_reg_max.smt2	bothmid	sat	0	111	4	qf-bv	dl-online	0	1	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_seq_ab_reg_max.smt2	bothmax	sat	0	111	4	qf-bv	dl-online	0	1	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_seq_ab_reg_max.smt2	base	sat	0	111	4	qf-bv	dl-online	0	1	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_seq_ab_reg_max.smt2	a4096	sat	0	110	4	qf-bv	dl-online	0	1	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_seq_ab_reg_max.smt2	a4096n32768	sat	0	111	4	qf-bv	dl-online	0	1	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_sw_loop_v_ab_reg_max.smt2	base	unsat	0	110	5	ufbv-online-cdclt	dl-online	4	5	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_sw_loop_v_ab_reg_max.smt2	a4096	unsat	0	111	5	ufbv-online-cdclt	dl-online	4	5	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_sw_loop_v_ab_reg_max.smt2	a4096n32768	unsat	0	110	5	ufbv-online-cdclt	dl-online	4	5	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_sw_loop_v_ab_reg_max.smt2	bothmid	unsat	0	111	5	ufbv-online-cdclt	dl-online	4	5	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_sw_loop_v_ab_reg_max.smt2	bothmax	unsat	0	111	5	ufbv-online-cdclt	dl-online	4	6	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_synapse.4.prop1_ab_cti_max.smt2	a4096n32768	unknown	0	1313	14	none	dl-online	1155	1230	give-up kind=ResourceLimit detail=online UFBV has 4795 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_synapse.4.prop1_ab_cti_max.smt2	bothmid	unknown	0	1313	14	none	dl-online	1160	1231	give-up kind=ResourceLimit detail=online UFBV has 4795 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_synapse.4.prop1_ab_cti_max.smt2	bothmax	unknown	0	24142	14	none	ufbv-online-cdclt	22860	24067	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_synapse.4.prop1_ab_cti_max.smt2	base	unknown	0	1312	14	none	dl-online	1155	1218	give-up kind=NodeBudget detail=online UFBV input has 22141 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_synapse.4.prop1_ab_cti_max.smt2	a4096	unknown	0	1412	14	none	dl-online	1229	1290	give-up kind=NodeBudget detail=online UFBV input has 22141 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_telephony.2.prop1_ab_cti_max.smt2	bothmax	sat	0	19335	9	ufbv-online-cdclt	ufbv-online-cdclt	14128	19258	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_telephony.2.prop1_ab_cti_max.smt2	base	unknown	0	711	14	none	dl-online	597	628	give-up kind=ResourceLimit detail=online UFBV has 1978 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_telephony.2.prop1_ab_cti_max.smt2	a4096	sat	0	19635	9	ufbv-online-cdclt	ufbv-online-cdclt	14245	19514	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_telephony.2.prop1_ab_cti_max.smt2	a4096n32768	sat	0	18431	9	ufbv-online-cdclt	ufbv-online-cdclt	13615	18405	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_telephony.2.prop1_ab_cti_max.smt2	bothmid	sat	0	18931	9	ufbv-online-cdclt	ufbv-online-cdclt	14073	18873	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_train-gate.4.prop1_ab_reg_max.smt2	a4096	unsat	0	2012	5	ufbv-online-cdclt	ufbv-online-cdclt	1442	1982	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_train-gate.4.prop1_ab_reg_max.smt2	a4096n32768	unsat	0	2012	5	ufbv-online-cdclt	ufbv-online-cdclt	1392	1934	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_train-gate.4.prop1_ab_reg_max.smt2	bothmid	unsat	0	2011	5	ufbv-online-cdclt	ufbv-online-cdclt	1380	1909	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_train-gate.4.prop1_ab_reg_max.smt2	bothmax	unsat	0	2013	5	ufbv-online-cdclt	ufbv-online-cdclt	1451	1980	none	no
+QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_train-gate.4.prop1_ab_reg_max.smt2	base	unknown	0	610	14	none	dl-online	544	567	give-up kind=ResourceLimit detail=online UFBV has 1342 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/2019-Wolf-fmbench/2018E/ponylink-slaveTXlen-sat-compact-nomem.smt2	bothmid	unknown	0	24532	1	none	fd:parse	24425	24425	give-up kind=ResourceLimit detail=ingest exceeded the configured timeout during parse_command_loop	no
+QF_UFBV/2019-Wolf-fmbench/2018E/ponylink-slaveTXlen-sat-compact-nomem.smt2	bothmax	unknown	0	25037	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/2019-Wolf-fmbench/2018E/ponylink-slaveTXlen-sat-compact-nomem.smt2	base	unknown	0	25041	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/2019-Wolf-fmbench/2018E/ponylink-slaveTXlen-sat-compact-nomem.smt2	a4096	unknown	0	25037	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/2019-Wolf-fmbench/2018E/ponylink-slaveTXlen-sat-compact-nomem.smt2	a4096n32768	unknown	0	25038	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/20210312-Bouvier/vlsat3_d10.smt2	base	unknown	0	109	15	none	euf-online	7	15	give-up kind=ResourceLimit detail=online UFBV has 1463 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/20210312-Bouvier/vlsat3_d10.smt2	a4096	unsat	0	8019	6	ufbv-online-cdclt	ufbv-online-cdclt	7958	7973	none	no
+QF_UFBV/20210312-Bouvier/vlsat3_d10.smt2	a4096n32768	unsat	0	8120	6	ufbv-online-cdclt	ufbv-online-cdclt	8021	8035	none	no
+QF_UFBV/20210312-Bouvier/vlsat3_d10.smt2	bothmid	unsat	0	8019	6	ufbv-online-cdclt	ufbv-online-cdclt	7966	7980	none	no
+QF_UFBV/20210312-Bouvier/vlsat3_d10.smt2	bothmax	unsat	0	8019	6	ufbv-online-cdclt	ufbv-online-cdclt	7920	7935	none	no
+QF_UFBV/20210312-Bouvier/vlsat3_d25.smt2	a4096n32768	unknown	0	210	15	none	euf-online	108	139	give-up kind=ResourceLimit detail=online UFBV has 5667 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/20210312-Bouvier/vlsat3_d25.smt2	bothmid	unknown	0	210	15	none	euf-online	108	138	give-up kind=ResourceLimit detail=online UFBV has 5667 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/20210312-Bouvier/vlsat3_d25.smt2	bothmax	unknown	0	24238	15	none	ufbv-online-cdclt	24062	24191	give-up kind=Timeout detail=online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/20210312-Bouvier/vlsat3_d25.smt2	base	unknown	0	210	15	none	euf-online	106	136	give-up kind=ResourceLimit detail=online UFBV has 5667 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/20210312-Bouvier/vlsat3_d25.smt2	a4096	unknown	0	210	15	none	euf-online	105	137	give-up kind=ResourceLimit detail=online UFBV has 5667 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/20210312-Bouvier/vlsat3_d41.smt2	bothmax	unknown	0	24135	15	none	ufbv-online-cdclt	24022	24076	give-up kind=Timeout detail=online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/20210312-Bouvier/vlsat3_d41.smt2	base	unknown	0	110	15	none	euf-online	36	53	give-up kind=ResourceLimit detail=online UFBV has 3125 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/20210312-Bouvier/vlsat3_d41.smt2	a4096	unknown	0	24138	15	none	ufbv-online-cdclt	24030	24079	give-up kind=Timeout detail=online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/20210312-Bouvier/vlsat3_d41.smt2	a4096n32768	unknown	0	24136	15	none	ufbv-online-cdclt	24017	24067	give-up kind=Timeout detail=online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/20210312-Bouvier/vlsat3_d41.smt2	bothmid	unknown	0	24134	15	none	ufbv-online-cdclt	24017	24065	give-up kind=Timeout detail=online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/20210312-Bouvier/vlsat3_d56.smt2	a4096	unknown	0	209	15	none	euf-online	87	121	give-up kind=ResourceLimit detail=online UFBV has 6363 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/20210312-Bouvier/vlsat3_d56.smt2	a4096n32768	unknown	0	209	15	none	euf-online	87	120	give-up kind=ResourceLimit detail=online UFBV has 6363 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/20210312-Bouvier/vlsat3_d56.smt2	bothmid	unknown	0	209	15	none	euf-online	87	121	give-up kind=ResourceLimit detail=online UFBV has 6363 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/20210312-Bouvier/vlsat3_d56.smt2	bothmax	unknown	0	24237	15	none	ufbv-online-cdclt	24058	24174	give-up kind=Timeout detail=online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/20210312-Bouvier/vlsat3_d56.smt2	base	unknown	0	209	15	none	euf-online	87	121	give-up kind=ResourceLimit detail=online UFBV has 6363 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/20210312-Bouvier/vlsat3_d71.smt2	bothmid	unknown	0	810	15	none	euf-online	591	695	give-up kind=ResourceLimit detail=online UFBV has 17079 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/20210312-Bouvier/vlsat3_d71.smt2	bothmax	unknown	0	811	15	none	euf-online	591	699	give-up kind=ResourceLimit detail=online UFBV has 17079 semantic atoms, exceeding the cap of 8192	no
+QF_UFBV/20210312-Bouvier/vlsat3_d71.smt2	base	unknown	0	810	15	none	euf-online	617	699	give-up kind=NodeBudget detail=online UFBV input has 34575 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20210312-Bouvier/vlsat3_d71.smt2	a4096	unknown	0	710	15	none	euf-online	594	677	give-up kind=NodeBudget detail=online UFBV input has 34575 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20210312-Bouvier/vlsat3_d71.smt2	a4096n32768	unknown	0	708	15	none	euf-online	589	674	give-up kind=NodeBudget detail=online UFBV input has 34575 DAG nodes, exceeding the admission cap of 32768	no
+QF_UFBV/20210312-Bouvier/vlsat3_d86.smt2	base	unknown	0	24937	15	none	euf-online	23803	24667	give-up kind=NodeBudget detail=online UFBV input has 322312 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20210312-Bouvier/vlsat3_d86.smt2	a4096	unknown	0	24836	15	none	euf-online	23784	24682	give-up kind=NodeBudget detail=online UFBV input has 322312 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20210312-Bouvier/vlsat3_d86.smt2	a4096n32768	unknown	0	24837	15	none	euf-online	23794	24660	give-up kind=NodeBudget detail=online UFBV input has 322312 DAG nodes, exceeding the admission cap of 32768	no
+QF_UFBV/20210312-Bouvier/vlsat3_d86.smt2	bothmid	unknown	0	24837	15	none	euf-online	23791	24665	give-up kind=NodeBudget detail=online UFBV input has 322312 DAG nodes, exceeding the admission cap of 65536	no
+QF_UFBV/20210312-Bouvier/vlsat3_d86.smt2	bothmax	unknown	0	24832	15	none	euf-online	23790	24669	give-up kind=NodeBudget detail=online UFBV input has 322312 DAG nodes, exceeding the admission cap of 262144	no
+QF_UFBV/20210312-Bouvier/vlsat3_j01.smt2	a4096n32768	sat	0	16628	6	ufbv-online-cdclt	ufbv-online-cdclt	16556	16570	none	no
+QF_UFBV/20210312-Bouvier/vlsat3_j01.smt2	bothmid	sat	0	16529	6	ufbv-online-cdclt	ufbv-online-cdclt	16453	16467	none	no
+QF_UFBV/20210312-Bouvier/vlsat3_j01.smt2	bothmax	sat	0	17933	6	ufbv-online-cdclt	ufbv-online-cdclt	17856	17869	none	no
+QF_UFBV/20210312-Bouvier/vlsat3_j01.smt2	base	unknown	0	108	15	none	euf-online	8	15	give-up kind=ResourceLimit detail=online UFBV has 1250 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/20210312-Bouvier/vlsat3_j01.smt2	a4096	sat	0	16325	6	ufbv-online-cdclt	ufbv-online-cdclt	16214	16227	none	no
+QF_UFBV/20210312-Bouvier/vlsat3_j16.smt2	bothmax	unknown	0	1411	15	none	euf-online	1158	1290	give-up kind=ResourceLimit detail=online UFBV has 19735 semantic atoms, exceeding the cap of 8192	no
+QF_UFBV/20210312-Bouvier/vlsat3_j16.smt2	base	unknown	0	1309	15	none	euf-online	1155	1258	give-up kind=NodeBudget detail=online UFBV input has 40019 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20210312-Bouvier/vlsat3_j16.smt2	a4096	unknown	0	1309	15	none	euf-online	1152	1253	give-up kind=NodeBudget detail=online UFBV input has 40019 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20210312-Bouvier/vlsat3_j16.smt2	a4096n32768	unknown	0	1310	15	none	euf-online	1161	1257	give-up kind=NodeBudget detail=online UFBV input has 40019 DAG nodes, exceeding the admission cap of 32768	no
+QF_UFBV/20210312-Bouvier/vlsat3_j16.smt2	bothmid	unknown	0	1411	15	none	euf-online	1167	1288	give-up kind=ResourceLimit detail=online UFBV has 19735 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/20210312-Bouvier/vlsat3_j32.smt2	a4096	unknown	0	11819	15	none	euf-online	11404	11648	give-up kind=NodeBudget detail=online UFBV input has 87243 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20210312-Bouvier/vlsat3_j32.smt2	a4096n32768	unknown	0	12221	15	none	euf-online	11709	12076	give-up kind=NodeBudget detail=online UFBV input has 87243 DAG nodes, exceeding the admission cap of 32768	no
+QF_UFBV/20210312-Bouvier/vlsat3_j32.smt2	bothmid	unknown	0	11921	15	none	euf-online	11576	11829	give-up kind=NodeBudget detail=online UFBV input has 87243 DAG nodes, exceeding the admission cap of 65536	no
+QF_UFBV/20210312-Bouvier/vlsat3_j32.smt2	bothmax	unknown	0	17027	15	none	euf-online	16579	16888	give-up kind=ResourceLimit detail=online UFBV has 43029 semantic atoms, exceeding the cap of 8192	no
+QF_UFBV/20210312-Bouvier/vlsat3_j32.smt2	base	unknown	0	11820	15	none	euf-online	11511	11760	give-up kind=NodeBudget detail=online UFBV input has 87243 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20210312-Bouvier/vlsat3_j47.smt2	bothmid	unknown	0	12622	15	none	euf-online	12115	12460	give-up kind=NodeBudget detail=online UFBV input has 126875 DAG nodes, exceeding the admission cap of 65536	no
+QF_UFBV/20210312-Bouvier/vlsat3_j47.smt2	bothmax	unknown	0	12523	15	none	euf-online	11978	12427	give-up kind=ResourceLimit detail=online UFBV has 62937 semantic atoms, exceeding the cap of 8192	no
+QF_UFBV/20210312-Bouvier/vlsat3_j47.smt2	base	unknown	0	12623	15	none	euf-online	12086	12468	give-up kind=NodeBudget detail=online UFBV input has 126875 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20210312-Bouvier/vlsat3_j47.smt2	a4096	unknown	0	12424	15	none	euf-online	11905	12268	give-up kind=NodeBudget detail=online UFBV input has 126875 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20210312-Bouvier/vlsat3_j47.smt2	a4096n32768	unknown	0	16832	15	none	euf-online	16292	16669	give-up kind=NodeBudget detail=online UFBV input has 126875 DAG nodes, exceeding the admission cap of 32768	no
+QF_UFBV/20210312-Bouvier/vlsat3_j62.smt2	base	unknown	0	25334	4	none	fd:parse	800	1242	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/20210312-Bouvier/vlsat3_j62.smt2	a4096	unknown	0	24632	15	none	euf-online	23856	24483	give-up kind=NodeBudget detail=online UFBV input has 229961 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20210312-Bouvier/vlsat3_j62.smt2	a4096n32768	unknown	0	24634	15	none	euf-online	23858	24487	give-up kind=NodeBudget detail=online UFBV input has 229961 DAG nodes, exceeding the admission cap of 32768	no
+QF_UFBV/20210312-Bouvier/vlsat3_j62.smt2	bothmid	unknown	0	24637	15	none	euf-online	23855	24479	give-up kind=NodeBudget detail=online UFBV input has 229961 DAG nodes, exceeding the admission cap of 65536	no
+QF_UFBV/20210312-Bouvier/vlsat3_j62.smt2	bothmax	unknown	0	24839	15	none	euf-online	23852	24676	give-up kind=ResourceLimit detail=online UFBV has 114402 semantic atoms, exceeding the cap of 8192	no
+QF_UFBV/20210312-Bouvier/vlsat3_j77.smt2	a4096n32768	unknown	0	14425	15	none	euf-online	13870	14260	give-up kind=NodeBudget detail=online UFBV input has 152045 DAG nodes, exceeding the admission cap of 32768	no
+QF_UFBV/20210312-Bouvier/vlsat3_j77.smt2	bothmid	unknown	0	14427	15	none	euf-online	13931	14343	give-up kind=NodeBudget detail=online UFBV input has 152045 DAG nodes, exceeding the admission cap of 65536	no
+QF_UFBV/20210312-Bouvier/vlsat3_j77.smt2	bothmax	unknown	0	14626	15	none	euf-online	13964	14469	give-up kind=ResourceLimit detail=online UFBV has 75529 semantic atoms, exceeding the cap of 8192	no
+QF_UFBV/20210312-Bouvier/vlsat3_j77.smt2	base	unknown	0	14426	15	none	euf-online	13884	14290	give-up kind=NodeBudget detail=online UFBV input has 152045 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20210312-Bouvier/vlsat3_j77.smt2	a4096	unknown	0	14426	15	none	euf-online	13909	14305	give-up kind=NodeBudget detail=online UFBV input has 152045 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20210312-Bouvier/vlsat3_j92.smt2	bothmax	unknown	0	6517	15	none	euf-online	6196	6413	give-up kind=ResourceLimit detail=online UFBV has 32521 semantic atoms, exceeding the cap of 8192	no
+QF_UFBV/20210312-Bouvier/vlsat3_j92.smt2	base	unknown	0	6416	15	none	euf-online	6145	6318	give-up kind=NodeBudget detail=online UFBV input has 66045 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20210312-Bouvier/vlsat3_j92.smt2	a4096	unknown	0	6418	15	none	euf-online	6174	6344	give-up kind=NodeBudget detail=online UFBV input has 66045 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20210312-Bouvier/vlsat3_j92.smt2	a4096n32768	unknown	0	6417	15	none	euf-online	6144	6315	give-up kind=NodeBudget detail=online UFBV input has 66045 DAG nodes, exceeding the admission cap of 32768	no
+QF_UFBV/20210312-Bouvier/vlsat3_j92.smt2	bothmid	unknown	0	6417	15	none	euf-online	6147	6318	give-up kind=NodeBudget detail=online UFBV input has 66045 DAG nodes, exceeding the admission cap of 65536	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/25959_5dee2e2f6ef44465a2bea4b085818948_67_QF_UFBV.smt2	a4096	unknown	0	2612	14	none	euf-online	2005	2555	give-up kind=ResourceLimit detail=online UFBV Boolean skeleton has 8572 variables, exceeding 8192	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/25959_5dee2e2f6ef44465a2bea4b085818948_67_QF_UFBV.smt2	a4096n32768	unknown	0	2613	14	none	euf-online	2005	2564	give-up kind=ResourceLimit detail=online UFBV Boolean skeleton has 8572 variables, exceeding 8192	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/25959_5dee2e2f6ef44465a2bea4b085818948_67_QF_UFBV.smt2	bothmid	unknown	0	2611	14	none	euf-online	2004	2548	give-up kind=ResourceLimit detail=online UFBV Boolean skeleton has 8572 variables, exceeding 8192	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/25959_5dee2e2f6ef44465a2bea4b085818948_67_QF_UFBV.smt2	bothmax	unknown	0	2610	14	none	euf-online	2004	2556	give-up kind=ResourceLimit detail=online UFBV Boolean skeleton has 8572 variables, exceeding 8192	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/25959_5dee2e2f6ef44465a2bea4b085818948_67_QF_UFBV.smt2	base	unknown	0	2611	14	none	euf-online	2004	2551	give-up kind=ResourceLimit detail=online UFBV has 3788 semantic atoms, exceeding the cap of 1024	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/39657_1c7158801cd59dc13f05_45_QF_UFBV.smt2	bothmid	unknown	0	25038	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/39657_1c7158801cd59dc13f05_45_QF_UFBV.smt2	bothmax	unknown	0	25037	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/39657_1c7158801cd59dc13f05_45_QF_UFBV.smt2	base	unknown	0	25039	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/39657_1c7158801cd59dc13f05_45_QF_UFBV.smt2	a4096	unknown	0	25037	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/39657_1c7158801cd59dc13f05_45_QF_UFBV.smt2	a4096n32768	unknown	0	25034	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/44788_1965f0d6d94d5d8054ba_35_QF_UFBV.smt2	base	unknown	0	2313	14	none	euf-online	2013	2235	give-up kind=NodeBudget detail=online UFBV input has 25242 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/44788_1965f0d6d94d5d8054ba_35_QF_UFBV.smt2	a4096	unknown	0	2209	14	none	euf-online	2012	2185	give-up kind=NodeBudget detail=online UFBV input has 25242 DAG nodes, exceeding the admission cap of 16384	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/44788_1965f0d6d94d5d8054ba_35_QF_UFBV.smt2	a4096n32768	unknown	0	2312	14	none	euf-online	2012	2203	give-up kind=ResourceLimit detail=online UFBV has 9664 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/44788_1965f0d6d94d5d8054ba_35_QF_UFBV.smt2	bothmid	unknown	0	2313	14	none	euf-online	2014	2215	give-up kind=ResourceLimit detail=online UFBV has 9664 semantic atoms, exceeding the cap of 4096	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/44788_1965f0d6d94d5d8054ba_35_QF_UFBV.smt2	bothmax	unknown	0	2313	14	none	euf-online	2013	2232	give-up kind=ResourceLimit detail=online UFBV has 9664 semantic atoms, exceeding the cap of 8192	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/66603_accdadf23a1cf70ae043_72_QF_UFBV.smt2	a4096n32768	unknown	0	25239	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/66603_accdadf23a1cf70ae043_72_QF_UFBV.smt2	bothmid	unknown	0	25033	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/66603_accdadf23a1cf70ae043_72_QF_UFBV.smt2	bothmax	unknown	0	25039	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/66603_accdadf23a1cf70ae043_72_QF_UFBV.smt2	base	unknown	0	25033	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/66603_accdadf23a1cf70ae043_72_QF_UFBV.smt2	a4096	unknown	0	25036	NOROUTE	na	na	na	na	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/93493_4ea6163ed03941199c785278ccc42812_49_QF_UFBV.smt2	bothmax	unknown	0	24238	1	none	fd:parse	24060	24060	give-up kind=ResourceLimit detail=ingest exceeded the configured timeout during parse_command_loop	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/93493_4ea6163ed03941199c785278ccc42812_49_QF_UFBV.smt2	base	unknown	0	24137	1	none	fd:parse	24036	24036	give-up kind=ResourceLimit detail=ingest exceeded the configured timeout during parse_command_loop	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/93493_4ea6163ed03941199c785278ccc42812_49_QF_UFBV.smt2	a4096	unknown	0	24436	1	none	fd:parse	24360	24360	give-up kind=ResourceLimit detail=ingest exceeded the configured timeout during parse_command_loop	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/93493_4ea6163ed03941199c785278ccc42812_49_QF_UFBV.smt2	a4096n32768	unknown	0	24437	1	none	fd:parse	24326	24326	give-up kind=ResourceLimit detail=ingest exceeded the configured timeout during parse_command_loop	no
+QF_UFBV/20230314-Jaroslav-Bendik-Certora/93493_4ea6163ed03941199c785278ccc42812_49_QF_UFBV.smt2	bothmid	unknown	0	24438	1	none	fd:parse	24350	24350	give-up kind=ResourceLimit detail=ingest exceeded the configured timeout during parse_command_loop	no
+QF_UFBV/calc2/calc2_sec2_adder_shifter_bmc15.smt2	a4096	unknown	0	24236	15	none	ufbv-online-cdclt	24015	24107	give-up kind=Timeout detail=online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/calc2/calc2_sec2_adder_shifter_bmc15.smt2	a4096n32768	unknown	0	24236	15	none	ufbv-online-cdclt	24047	24145	give-up kind=Timeout detail=online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/calc2/calc2_sec2_adder_shifter_bmc15.smt2	bothmid	unknown	0	24137	15	none	ufbv-online-cdclt	24008	24106	give-up kind=Timeout detail=online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/calc2/calc2_sec2_adder_shifter_bmc15.smt2	bothmax	unknown	0	24236	15	none	ufbv-online-cdclt	24021	24118	give-up kind=Timeout detail=online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/calc2/calc2_sec2_adder_shifter_bmc15.smt2	base	unknown	0	24237	15	none	ufbv-online-cdclt	24025	24121	give-up kind=Timeout detail=online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/calc2/calc2_sec2_shifter_bmc15.smt2	bothmid	unknown	0	24233	15	none	ufbv-online-cdclt	24064	24161	give-up kind=Timeout detail=online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/calc2/calc2_sec2_shifter_bmc15.smt2	bothmax	unknown	0	24238	15	none	ufbv-online-cdclt	24022	24120	give-up kind=Timeout detail=online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/calc2/calc2_sec2_shifter_bmc15.smt2	base	unknown	0	24238	15	none	ufbv-online-cdclt	24068	24167	give-up kind=Timeout detail=online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/calc2/calc2_sec2_shifter_bmc15.smt2	a4096	unknown	0	24236	15	none	ufbv-online-cdclt	24056	24155	give-up kind=Timeout detail=online UFBV canonical CdclT search exhausted its budget	no
+QF_UFBV/calc2/calc2_sec2_shifter_bmc15.smt2	a4096n32768	unknown	0	24238	15	none	ufbv-online-cdclt	24034	24133	give-up kind=Timeout detail=online UFBV canonical CdclT search exhausted its budget	no

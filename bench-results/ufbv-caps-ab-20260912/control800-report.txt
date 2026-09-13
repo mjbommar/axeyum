@@ -1,0 +1,113 @@
+# QF_UFBV cap A/B -- 800 files x 6 arms = 4800 runs
+# soundness: 0 sat/unsat disagreements across 6 arms on 800 files
+
+baseline decides 711 of 800
+
+arm        decided  gain  loss   net    wall_s   dwall_s
+--------------------------------------------------------
+a4096          709     0     2    -2    3475.7    +245.0
+base           711     0     0    +0    3230.7      +0.0
+bothmax        708     0     3    -3    3521.6    +290.9
+bothmid        707     0     4    -4    3514.2    +283.5
+n262144        709     0     2    -2    3267.2     +36.5
+n65536         709     0     2    -2    3274.9     +44.2
+
+## a4096: 2 LOST
+   - was sat in 6.7s; now unknown in 24.1s  QF_ABV/dwp_formulas/try3_sameret_functions_dwp_pr.hold_file.il.dwp.smt2
+     give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy-extensionality scalar
+   - was sat in 9.0s; now unknown in 24.1s  QF_ABV/dwp_formulas/try5_small_noof_functions_dwp_ptx.re_string_construct_common.il.dwp.smt2
+     give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Incomplete] array shape left undeci
+
+## bothmax: 3 LOST
+   - was sat in 9.0s; now unknown in 24.1s  QF_ABV/dwp_formulas/try5_small_noof_functions_dwp_ptx.re_string_construct_common.il.dwp.smt2
+     give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy-extensionality scalar
+   - was sat in 0.6s; now unknown in 25.1s  QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_rlim_invariant.x86_64/query.435.smt2
+     give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+   - was unsat in 0.4s; now unknown in 25.0s  QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_rlim_invariant.x86_64/query.708.smt2
+     give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+
+## bothmid: 4 LOST
+   - was sat in 6.7s; now unknown in 24.1s  QF_ABV/dwp_formulas/try3_sameret_functions_dwp_pr.hold_file.il.dwp.smt2
+     give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Incomplete] array shape left undeci
+   - was sat in 9.0s; now unknown in 24.1s  QF_ABV/dwp_formulas/try5_small_noof_functions_dwp_ptx.re_string_construct_common.il.dwp.smt2
+     give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] lazy-extensionality scalar
+   - was sat in 0.6s; now unknown in 25.0s  QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_rlim_invariant.x86_64/query.435.smt2
+     give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+   - was unsat in 0.4s; now unknown in 25.0s  QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_rlim_invariant.x86_64/query.708.smt2
+     give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+
+## n262144: 2 LOST
+   - was sat in 0.6s; now unknown in 25.0s  QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_rlim_invariant.x86_64/query.435.smt2
+     give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+   - was unsat in 0.4s; now unknown in 25.0s  QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_rlim_invariant.x86_64/query.708.smt2
+     give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+
+## n65536: 2 LOST
+   - was sat in 0.6s; now unknown in 25.0s  QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_rlim_invariant.x86_64/query.435.smt2
+     give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+   - was unsat in 0.4s; now unknown in 25.1s  QF_ABVFP/20170428-Liew-KLEE/imperial_svcomp_float-benchs_svcomp_rlim_invariant.x86_64/query.708.smt2
+     give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+
+# give-up reason on files the BASELINE leaves undecided
+# denominator 89
+-- a4096
+     34  Watchdog: watchdog fired before the worker thread returned
+     22  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Tim
+     18  Incomplete: query contains an integer literal outside the i128 reference range; no route has opted int
+      9  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Res
+      2  Timeout: combined-theory timeout after scalar backend
+      1  Error: parse error: unsupported: nested array element sort is unsupported: List([Atom("Array"), L
+      1  no give-up line
+      1  Incomplete: array shape left undecided by the lazy ROW/extensionality path and refused by bounded arra
+      1  Error: backend failure: array projection element sort mismatch: read site produced (_ BitVec 32) 
+-- base
+     33  Watchdog: watchdog fired before the worker thread returned
+     22  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Tim
+     18  Incomplete: query contains an integer literal outside the i128 reference range; no route has opted int
+      9  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Res
+      2  Incomplete: array shape left undecided by the lazy ROW/extensionality path and refused by bounded arra
+      2  Timeout: combined-theory timeout after scalar backend
+      1  Error: parse error: unsupported: nested array element sort is unsupported: List([Atom("Array"), L
+      1  no give-up line
+      1  Error: backend failure: array projection element sort mismatch: read site produced (_ BitVec 32) 
+-- bothmax
+     34  Watchdog: watchdog fired before the worker thread returned
+     24  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Tim
+     18  Incomplete: query contains an integer literal outside the i128 reference range; no route has opted int
+      7  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Res
+      2  Timeout: combined-theory timeout after scalar backend
+      1  Error: parse error: unsupported: nested array element sort is unsupported: List([Atom("Array"), L
+      1  no give-up line
+      1  Incomplete: array shape left undecided by the lazy ROW/extensionality path and refused by bounded arra
+      1  Error: backend failure: array projection element sort mismatch: read site produced (_ BitVec 32) 
+-- bothmid
+     34  Watchdog: watchdog fired before the worker thread returned
+     24  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Tim
+     18  Incomplete: query contains an integer literal outside the i128 reference range; no route has opted int
+      7  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Res
+      2  Timeout: combined-theory timeout after scalar backend
+      1  Error: parse error: unsupported: nested array element sort is unsupported: List([Atom("Array"), L
+      1  no give-up line
+      1  Incomplete: array shape left undecided by the lazy ROW/extensionality path and refused by bounded arra
+      1  Error: backend failure: array projection element sort mismatch: read site produced (_ BitVec 32) 
+-- n262144
+     32  Watchdog: watchdog fired before the worker thread returned
+     23  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Tim
+     18  Incomplete: query contains an integer literal outside the i128 reference range; no route has opted int
+      8  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Res
+      2  Incomplete: array shape left undecided by the lazy ROW/extensionality path and refused by bounded arra
+      2  Timeout: combined-theory timeout after scalar backend
+      1  Error: parse error: unsupported: nested array element sort is unsupported: List([Atom("Array"), L
+      1  no give-up line
+      1  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Inc
+      1  Error: backend failure: array projection element sort mismatch: read site produced (_ BitVec 32) 
+-- n65536
+     33  Watchdog: watchdog fired before the worker thread returned
+     23  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Tim
+     18  Incomplete: query contains an integer literal outside the i128 reference range; no route has opted int
+      8  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Res
+      2  Incomplete: array shape left undecided by the lazy ROW/extensionality path and refused by bounded arra
+      2  Timeout: combined-theory timeout after scalar backend
+      1  Error: parse error: unsupported: nested array element sort is unsupported: List([Atom("Array"), L
+      1  no give-up line
+      1  Error: backend failure: array projection element sort mismatch: read site produced (_ BitVec 32) 

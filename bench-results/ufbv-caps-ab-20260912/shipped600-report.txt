@@ -1,0 +1,10 @@
+# 600 files x 2 arms; 0 sat/unsat disagreements
+
+division    files   preadr  shipped  gain  loss  pre wall  ship wall
+QF_ABV        200      186      186     0     0     622.1      615.8
+QF_ABVFP      200      179      179     0     0     551.8      552.5
+QF_UFBV       200       89      129    40     0     570.8     1275.7
+TOTAL         600                      40     0
+
+QF_ABV: 0 of 200 files differ in VERDICT between the arms (expected 0 -- the array path's cap is unchanged)
+QF_ABVFP: 0 of 200 files differ in VERDICT between the arms (expected 0 -- the array path's cap is unchanged)

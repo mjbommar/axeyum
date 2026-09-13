@@ -1,0 +1,326 @@
+# QF_UFBV cap A/B -- 200 files x 9 arms = 1800 runs
+# soundness: 0 sat/unsat disagreements across 9 arms on 200 files
+
+baseline decides 89 of 200
+
+arm        decided  gain  loss   net    wall_s   dwall_s
+--------------------------------------------------------
+a2048          120    31     0   +31     776.3    +303.7
+a4096          133    44     0   +44    1070.3    +597.7
+a8192          134    45     0   +45    1190.5    +717.9
+base            89     0     0    +0     472.6      +0.0
+bothmax        138    49     0   +49    1650.6   +1178.0
+bothmid        137    48     0   +48    1167.4    +694.8
+n262144         89     0     0    +0     519.6     +46.9
+n32768          89     0     0    +0     519.9     +47.2
+n65536          89     0     0    +0     520.6     +47.9
+
+## a2048: 31 gained
+   + sat       6.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_at.1.prop1_ab_cti_max.smt2
+   + unsat     4.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_at.5.prop1_ab_reg_max.smt2
+   + sat       3.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_brp.2.prop1_ab_cti_max.smt2
+   + sat       7.3s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_brp.6.prop1_ab_cti_max.smt2
+   + unsat     3.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_cambridge.3.prop2_ab_reg_max.smt2
+   + sat      23.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_collision.3.prop1_ab_cti_max.smt2
+   + unsat     9.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_collision.6.prop1_ab_reg_max.smt2
+   + sat       2.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_exit.2.prop1_ab_cti_max.smt2
+   + sat      24.3s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_fischer.6.prop1_ab_cti_max.smt2
+   + unsat     6.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_frogs.3.prop1_ab_reg_max.smt2
+   + unsat     2.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_gear.1.prop2_ab_reg_max.smt2
+   + sat       2.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lamport.6.prop1_ab_cti_max.smt2
+   + sat       3.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_leader_filters.6.prop1_ab_cti_max.smt2
+   + sat       2.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_mcs.6.prop1_ab_cti_max.smt2
+   + unsat     2.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_at.3.prop1_ab_reg_max.smt2
+   + unsat     2.0s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_bridge.2.prop1_ab_reg_max.smt2
+   + unsat     2.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_cambridge.2.prop1_ab_reg_max.smt2
+   + unsat     2.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_elevator.5.prop1_ab_reg_max.smt2
+   + sat       2.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_exit.4.prop1_ab_cti_max.smt2
+   + sat      23.1s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_hanoi.2.prop1_ab_cti_max.smt2
+   + sat       2.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport.6.prop1_ab_cti_max.smt2
+   + sat       2.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lann.5.prop1_ab_reg_max.smt2
+   + sat       5.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_leader_filters.5.prop1_ab_cti_max.smt2
+   + sat       3.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_mcs.5.prop1_ab_cti_max.smt2
+   + sat       3.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_resistance.2.prop1_ab_cti_max.smt2
+   + unsat     2.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_szymanski.2.prop1_ab_reg_max.smt2
+   + unsat     2.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_train-gate.4.prop1_ab_reg_max.smt2
+   + unsat     7.7s  QF_UFBV/20210312-Bouvier/vlsat3_d10.smt2
+   + unsat     6.4s  QF_UFBV/20210312-Bouvier/vlsat3_d18.smt2
+   + unsat    12.5s  QF_UFBV/20210312-Bouvier/vlsat3_d79.smt2
+   + sat      16.0s  QF_UFBV/20210312-Bouvier/vlsat3_j01.smt2
+
+## a4096: 44 gained
+   + sat       7.1s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_at.1.prop1_ab_cti_max.smt2
+   + unsat     4.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_at.5.prop1_ab_reg_max.smt2
+   + sat       3.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_brp.2.prop1_ab_cti_max.smt2
+   + sat       7.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_brp.6.prop1_ab_cti_max.smt2
+   + unsat     3.3s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_cambridge.3.prop2_ab_reg_max.smt2
+   + sat      22.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_collision.3.prop1_ab_cti_max.smt2
+   + unsat     9.1s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_collision.6.prop1_ab_reg_max.smt2
+   + sat       2.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_exit.2.prop1_ab_cti_max.smt2
+   + unsat     7.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_exit.5.prop1_ab_reg_max.smt2
+   + sat      23.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_fischer.6.prop1_ab_cti_max.smt2
+   + unsat     6.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_frogs.3.prop1_ab_reg_max.smt2
+   + unsat     3.0s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_gear.1.prop2_ab_reg_max.smt2
+   + sat      20.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_gear.2.prop2_ab_cti_max.smt2
+   + sat       2.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lamport.6.prop1_ab_cti_max.smt2
+   + sat       9.0s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lamport_nonatomic.3.prop1_ab_cti_max.smt2
+   + sat       3.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_leader_filters.6.prop1_ab_cti_max.smt2
+   + unsat     6.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lup.2.prop1_ab_reg_max.smt2
+   + sat       2.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_mcs.6.prop1_ab_cti_max.smt2
+   + sat      14.1s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_sokoban.2.prop1_ab_cti_max.smt2
+   + sat       5.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_szymanski.3.prop1_ab_cti_max.smt2
+   + sat      17.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_telephony.2.prop1_ab_cti_max.smt2
+   + unsat     2.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_at.3.prop1_ab_reg_max.smt2
+   + unsat     2.0s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_bridge.2.prop1_ab_reg_max.smt2
+   + unsat     2.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_cambridge.2.prop1_ab_reg_max.smt2
+   + unsat     2.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_elevator.5.prop1_ab_reg_max.smt2
+   + sat       2.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_exit.4.prop1_ab_cti_max.smt2
+   + unsat    10.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_extinction.2.prop1_ab_reg_max.smt2
+   + sat      15.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_gear.1.prop1_ab_cti_max.smt2
+   + sat      15.1s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_gear.2.prop1_ab_cti_max.smt2
+   + sat       2.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport.6.prop1_ab_cti_max.smt2
+   + sat       8.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport_nonatomic.3.prop1_ab_cti_max.smt2
+   + sat       2.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lann.5.prop1_ab_reg_max.smt2
+   + sat       5.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_leader_filters.5.prop1_ab_cti_max.smt2
+   + sat       3.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_mcs.5.prop1_ab_cti_max.smt2
+   + sat       8.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_msmie.1.prop1_ab_cti_max.smt2
+   + sat      13.3s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_reader_writer.3.prop1_ab_cti_max.smt2
+   + sat       3.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_resistance.2.prop1_ab_cti_max.smt2
+   + unsat     2.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_szymanski.2.prop1_ab_reg_max.smt2
+   + sat      18.3s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_telephony.2.prop1_ab_cti_max.smt2
+   + unsat     2.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_train-gate.4.prop1_ab_reg_max.smt2
+   + unsat     7.9s  QF_UFBV/20210312-Bouvier/vlsat3_d10.smt2
+   + unsat     6.4s  QF_UFBV/20210312-Bouvier/vlsat3_d18.smt2
+   + unsat    12.5s  QF_UFBV/20210312-Bouvier/vlsat3_d79.smt2
+   + sat      15.7s  QF_UFBV/20210312-Bouvier/vlsat3_j01.smt2
+
+## a8192: 45 gained
+   + sat       7.1s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_at.1.prop1_ab_cti_max.smt2
+   + unsat     4.3s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_at.5.prop1_ab_reg_max.smt2
+   + sat       3.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_brp.2.prop1_ab_cti_max.smt2
+   + sat       7.3s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_brp.6.prop1_ab_cti_max.smt2
+   + unsat     3.3s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_cambridge.3.prop2_ab_reg_max.smt2
+   + sat      23.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_collision.3.prop1_ab_cti_max.smt2
+   + unsat     8.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_collision.6.prop1_ab_reg_max.smt2
+   + sat       2.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_exit.2.prop1_ab_cti_max.smt2
+   + unsat     8.1s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_exit.5.prop1_ab_reg_max.smt2
+   + sat      24.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_fischer.6.prop1_ab_cti_max.smt2
+   + unsat     6.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_frogs.3.prop1_ab_reg_max.smt2
+   + unsat     2.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_gear.1.prop2_ab_reg_max.smt2
+   + sat      23.1s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_gear.2.prop2_ab_cti_max.smt2
+   + sat       2.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lamport.6.prop1_ab_cti_max.smt2
+   + sat       9.0s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lamport_nonatomic.3.prop1_ab_cti_max.smt2
+   + sat       3.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_leader_filters.6.prop1_ab_cti_max.smt2
+   + unsat     6.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lup.2.prop1_ab_reg_max.smt2
+   + sat       2.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_mcs.6.prop1_ab_cti_max.smt2
+   + sat      14.3s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_sokoban.2.prop1_ab_cti_max.smt2
+   + sat       5.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_szymanski.3.prop1_ab_cti_max.smt2
+   + sat      17.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_telephony.2.prop1_ab_cti_max.smt2
+   + unsat     2.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_at.3.prop1_ab_reg_max.smt2
+   + unsat     2.0s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_bridge.2.prop1_ab_reg_max.smt2
+   + unsat     2.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_cambridge.2.prop1_ab_reg_max.smt2
+   + unsat     2.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_elevator.5.prop1_ab_reg_max.smt2
+   + sat       2.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_exit.4.prop1_ab_cti_max.smt2
+   + unsat    10.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_extinction.2.prop1_ab_reg_max.smt2
+   + sat      15.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_gear.1.prop1_ab_cti_max.smt2
+   + sat      14.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_gear.2.prop1_ab_cti_max.smt2
+   + sat      20.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_hanoi.2.prop1_ab_cti_max.smt2
+   + sat       2.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport.6.prop1_ab_cti_max.smt2
+   + sat       8.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport_nonatomic.3.prop1_ab_cti_max.smt2
+   + sat       2.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lann.5.prop1_ab_reg_max.smt2
+   + sat       5.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_leader_filters.5.prop1_ab_cti_max.smt2
+   + sat       3.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_mcs.5.prop1_ab_cti_max.smt2
+   + sat       8.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_msmie.1.prop1_ab_cti_max.smt2
+   + sat      13.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_reader_writer.3.prop1_ab_cti_max.smt2
+   + sat       3.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_resistance.2.prop1_ab_cti_max.smt2
+   + unsat     2.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_szymanski.2.prop1_ab_reg_max.smt2
+   + sat      18.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_telephony.2.prop1_ab_cti_max.smt2
+   + unsat     2.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_train-gate.4.prop1_ab_reg_max.smt2
+   + unsat     7.9s  QF_UFBV/20210312-Bouvier/vlsat3_d10.smt2
+   + unsat     6.4s  QF_UFBV/20210312-Bouvier/vlsat3_d18.smt2
+   + unsat    12.6s  QF_UFBV/20210312-Bouvier/vlsat3_d79.smt2
+   + sat      15.7s  QF_UFBV/20210312-Bouvier/vlsat3_j01.smt2
+
+## bothmax: 49 gained
+   + sat       7.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_at.1.prop1_ab_cti_max.smt2
+   + unsat     5.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_at.5.prop1_ab_reg_max.smt2
+   + sat       3.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_brp.2.prop1_ab_cti_max.smt2
+   + sat       7.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_brp.6.prop1_ab_cti_max.smt2
+   + unsat     3.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_cambridge.3.prop2_ab_reg_max.smt2
+   + sat      24.0s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_collision.3.prop1_ab_cti_max.smt2
+   + unsat     9.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_collision.6.prop1_ab_reg_max.smt2
+   + sat       3.0s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_exit.2.prop1_ab_cti_max.smt2
+   + unsat     8.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_exit.5.prop1_ab_reg_max.smt2
+   + sat      23.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_fischer.6.prop1_ab_cti_max.smt2
+   + unsat     6.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_frogs.3.prop1_ab_reg_max.smt2
+   + unsat     2.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_gear.1.prop2_ab_reg_max.smt2
+   + sat      21.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_gear.2.prop2_ab_cti_max.smt2
+   + sat       2.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lamport.6.prop1_ab_cti_max.smt2
+   + sat       9.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lamport_nonatomic.3.prop1_ab_cti_max.smt2
+   + sat       3.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_leader_filters.6.prop1_ab_cti_max.smt2
+   + unsat     6.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lup.2.prop1_ab_reg_max.smt2
+   + sat       2.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_mcs.6.prop1_ab_cti_max.smt2
+   + sat      18.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_rether.4.prop1_ab_cti_max.smt2
+   + sat      14.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_sokoban.2.prop1_ab_cti_max.smt2
+   + sat       5.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_szymanski.3.prop1_ab_cti_max.smt2
+   + sat      17.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_telephony.2.prop1_ab_cti_max.smt2
+   + unsat     2.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_at.3.prop1_ab_reg_max.smt2
+   + unsat     2.0s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_bridge.2.prop1_ab_reg_max.smt2
+   + unsat     2.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_cambridge.2.prop1_ab_reg_max.smt2
+   + unsat     2.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_elevator.5.prop1_ab_reg_max.smt2
+   + sat       3.0s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_exit.4.prop1_ab_cti_max.smt2
+   + unsat    10.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_extinction.2.prop1_ab_reg_max.smt2
+   + sat      15.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_gear.1.prop1_ab_cti_max.smt2
+   + sat      15.0s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_gear.2.prop1_ab_cti_max.smt2
+   + sat      21.0s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_hanoi.2.prop1_ab_cti_max.smt2
+   + sat       2.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport.6.prop1_ab_cti_max.smt2
+   + sat       8.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport_nonatomic.3.prop1_ab_cti_max.smt2
+   + sat       2.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lann.5.prop1_ab_reg_max.smt2
+   + sat       5.3s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_leader_filters.5.prop1_ab_cti_max.smt2
+   + unsat    16.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lifts.2.prop1_ab_reg_max.smt2
+   + sat       3.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_mcs.5.prop1_ab_cti_max.smt2
+   + sat       8.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_msmie.1.prop1_ab_cti_max.smt2
+   + sat      13.3s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_reader_writer.3.prop1_ab_cti_max.smt2
+   + sat       3.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_resistance.2.prop1_ab_cti_max.smt2
+   + sat      12.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_rether.3.prop1_ab_cti_max.smt2
+   + unsat     2.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_szymanski.2.prop1_ab_reg_max.smt2
+   + sat      18.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_telephony.2.prop1_ab_cti_max.smt2
+   + unsat    17.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_telephony.5.prop1_ab_reg_max.smt2
+   + unsat     2.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_train-gate.4.prop1_ab_reg_max.smt2
+   + unsat     7.7s  QF_UFBV/20210312-Bouvier/vlsat3_d10.smt2
+   + unsat     6.7s  QF_UFBV/20210312-Bouvier/vlsat3_d18.smt2
+   + unsat    12.6s  QF_UFBV/20210312-Bouvier/vlsat3_d79.smt2
+   + sat      15.7s  QF_UFBV/20210312-Bouvier/vlsat3_j01.smt2
+
+## bothmid: 48 gained
+   + sat       7.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_at.1.prop1_ab_cti_max.smt2
+   + unsat     5.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_at.5.prop1_ab_reg_max.smt2
+   + sat       3.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_brp.2.prop1_ab_cti_max.smt2
+   + sat       7.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_brp.6.prop1_ab_cti_max.smt2
+   + unsat     3.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_cambridge.3.prop2_ab_reg_max.smt2
+   + sat      24.3s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_collision.3.prop1_ab_cti_max.smt2
+   + unsat     9.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_collision.6.prop1_ab_reg_max.smt2
+   + sat       2.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_exit.2.prop1_ab_cti_max.smt2
+   + unsat     8.1s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_exit.5.prop1_ab_reg_max.smt2
+   + sat      24.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_fischer.6.prop1_ab_cti_max.smt2
+   + unsat     6.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_frogs.3.prop1_ab_reg_max.smt2
+   + unsat     3.0s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_gear.1.prop2_ab_reg_max.smt2
+   + sat      20.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_gear.2.prop2_ab_cti_max.smt2
+   + sat       2.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lamport.6.prop1_ab_cti_max.smt2
+   + sat       9.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lamport_nonatomic.3.prop1_ab_cti_max.smt2
+   + sat       3.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_leader_filters.6.prop1_ab_cti_max.smt2
+   + unsat     6.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_lup.2.prop1_ab_reg_max.smt2
+   + sat       2.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_mcs.6.prop1_ab_cti_max.smt2
+   + sat      13.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_sokoban.2.prop1_ab_cti_max.smt2
+   + sat       5.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_szymanski.3.prop1_ab_cti_max.smt2
+   + sat      17.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv8_bv_telephony.2.prop1_ab_cti_max.smt2
+   + unsat     2.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_at.3.prop1_ab_reg_max.smt2
+   + unsat     2.0s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_bridge.2.prop1_ab_reg_max.smt2
+   + unsat     2.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_cambridge.2.prop1_ab_reg_max.smt2
+   + unsat     2.4s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_elevator.5.prop1_ab_reg_max.smt2
+   + sat       2.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_exit.4.prop1_ab_cti_max.smt2
+   + unsat    10.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_extinction.2.prop1_ab_reg_max.smt2
+   + sat      15.3s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_gear.1.prop1_ab_cti_max.smt2
+   + sat      14.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_gear.2.prop1_ab_cti_max.smt2
+   + sat      21.0s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_hanoi.2.prop1_ab_cti_max.smt2
+   + sat       2.6s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport.6.prop1_ab_cti_max.smt2
+   + sat       8.7s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lamport_nonatomic.3.prop1_ab_cti_max.smt2
+   + sat       2.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lann.5.prop1_ab_reg_max.smt2
+   + sat       5.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_leader_filters.5.prop1_ab_cti_max.smt2
+   + unsat    17.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_lifts.2.prop1_ab_reg_max.smt2
+   + sat       3.3s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_mcs.5.prop1_ab_cti_max.smt2
+   + sat       8.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_msmie.1.prop1_ab_cti_max.smt2
+   + sat      13.3s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_reader_writer.3.prop1_ab_cti_max.smt2
+   + sat       3.8s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_resistance.2.prop1_ab_cti_max.smt2
+   + sat      13.0s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_rether.3.prop1_ab_cti_max.smt2
+   + unsat     2.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_szymanski.2.prop1_ab_reg_max.smt2
+   + sat      18.9s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_telephony.2.prop1_ab_cti_max.smt2
+   + unsat    17.5s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_telephony.5.prop1_ab_reg_max.smt2
+   + unsat     2.2s  QF_UFBV/2018-Goel-hwbench/QF_UFBV_bv_bv_train-gate.4.prop1_ab_reg_max.smt2
+   + unsat     7.8s  QF_UFBV/20210312-Bouvier/vlsat3_d10.smt2
+   + unsat     6.4s  QF_UFBV/20210312-Bouvier/vlsat3_d18.smt2
+   + unsat    12.7s  QF_UFBV/20210312-Bouvier/vlsat3_d79.smt2
+   + sat      15.6s  QF_UFBV/20210312-Bouvier/vlsat3_j01.smt2
+
+# give-up reason on files the BASELINE leaves undecided
+# denominator 111
+-- a2048
+     39  NodeBudget: online UFBV input has DAG nodes, exceeding the admission cap of
+     31  DECIDED
+     29  ResourceLimit: online UFBV has semantic atoms, exceeding the cap of
+      5  Watchdog: watchdog fired before the worker thread returned
+      3  Timeout: online UFBV canonical CdclT search exhausted its budget
+      2  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Tim
+      1  ResourceLimit: online UFBV materialized interface equalities exceed the bounded cap of
+      1  ResourceLimit: ingest exceeded the configured timeout during parse_command_loop
+-- a4096
+     44  DECIDED
+     39  NodeBudget: online UFBV input has DAG nodes, exceeding the admission cap of
+      7  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Tim
+      6  Watchdog: watchdog fired before the worker thread returned
+      6  ResourceLimit: online UFBV has semantic atoms, exceeding the cap of
+      4  Timeout: online UFBV canonical CdclT search exhausted its budget
+      2  ResourceLimit: online UFBV materialized interface equalities exceed the bounded cap of
+      2  ResourceLimit: online UFBV Boolean skeleton has variables, exceeding
+      1  ResourceLimit: ingest exceeded the configured timeout during parse_command_loop
+-- a8192
+     45  DECIDED
+     39  NodeBudget: online UFBV input has DAG nodes, exceeding the admission cap of
+     10  Timeout: online UFBV canonical CdclT search exhausted its budget
+      6  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Tim
+      5  Watchdog: watchdog fired before the worker thread returned
+      3  ResourceLimit: online UFBV Boolean skeleton has variables, exceeding
+      2  ResourceLimit: online UFBV materialized interface equalities exceed the bounded cap of
+      1  ResourceLimit: ingest exceeded the configured timeout during parse_command_loop
+-- base
+     64  ResourceLimit: online UFBV has semantic atoms, exceeding the cap of
+     39  NodeBudget: online UFBV input has DAG nodes, exceeding the admission cap of
+      3  Watchdog: watchdog fired before the worker thread returned
+      2  Timeout: online UFBV canonical CdclT search exhausted its budget
+      1  ResourceLimit: online UFBV dynamic theory atoms exceed the cap of
+      1  ResourceLimit: ingest exceeded the configured timeout during parse_command_loop
+      1  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Tim
+-- bothmax
+     49  DECIDED
+     21  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Tim
+     17  ResourceLimit: online UFBV has semantic atoms, exceeding the cap of
+     12  Timeout: online UFBV canonical CdclT search exhausted its budget
+      5  Watchdog: watchdog fired before the worker thread returned
+      3  ResourceLimit: online UFBV Boolean skeleton has variables, exceeding
+      2  ResourceLimit: online UFBV materialized interface equalities exceed the bounded cap of
+      1  NodeBudget: online UFBV input has DAG nodes, exceeding the admission cap of
+      1  ResourceLimit: ingest exceeded the configured timeout during parse_command_loop
+-- bothmid
+     48  DECIDED
+     31  ResourceLimit: online UFBV has semantic atoms, exceeding the cap of
+      9  NodeBudget: online UFBV input has DAG nodes, exceeding the admission cap of
+      7  Timeout: online UFBV canonical CdclT search exhausted its budget
+      6  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Tim
+      5  Watchdog: watchdog fired before the worker thread returned
+      2  ResourceLimit: online UFBV materialized interface equalities exceed the bounded cap of
+      2  ResourceLimit: online UFBV Boolean skeleton has variables, exceeding
+      1  ResourceLimit: ingest exceeded the configured timeout during parse_command_loop
+-- n262144
+    100  ResourceLimit: online UFBV has semantic atoms, exceeding the cap of
+      4  Timeout: online UFBV canonical CdclT search exhausted its budget
+      3  Watchdog: watchdog fired before the worker thread returned
+      1  ResourceLimit: online UFBV dynamic theory atoms exceed the cap of
+      1  NodeBudget: online UFBV input has DAG nodes, exceeding the admission cap of
+      1  ResourceLimit: ingest exceeded the configured timeout during parse_command_loop
+      1  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Tim
+-- n32768
+     84  ResourceLimit: online UFBV has semantic atoms, exceeding the cap of
+     17  NodeBudget: online UFBV input has DAG nodes, exceeding the admission cap of
+      4  Timeout: online UFBV canonical CdclT search exhausted its budget
+      3  Watchdog: watchdog fired before the worker thread returned
+      1  ResourceLimit: online UFBV dynamic theory atoms exceed the cap of
+      1  ResourceLimit: ingest exceeded the configured timeout during parse_command_loop
+      1  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Tim
+-- n65536
+     92  ResourceLimit: online UFBV has semantic atoms, exceeding the cap of
+      9  NodeBudget: online UFBV input has DAG nodes, exceeding the admission cap of
+      4  Timeout: online UFBV canonical CdclT search exhausted its budget
+      3  Watchdog: watchdog fired before the worker thread returned
+      1  ResourceLimit: online UFBV dynamic theory atoms exceed the cap of
+      1  ResourceLimit: ingest exceeded the configured timeout during parse_command_loop
+      1  Timeout: preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Tim

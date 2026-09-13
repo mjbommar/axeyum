@@ -87,10 +87,77 @@ use crate::sat_bv_backend::{ABSOLUTE_CLAUSE_CEILING, estimate_blast_clauses};
 
 /// Maximum input DAG admitted before the recursive function abstraction.
 const MAX_INPUT_DAG_NODES: u64 = 16_384;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_INPUT_DAG_NODES`]: the compiled default, or
+    /// `AXEYUM_UFBV_MAX_INPUT_DAG_NODES` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_INPUT_DAG_NODES`, so the shipped binary is unchanged; a
+    /// malformed value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    ///
+    /// Wired by lane `qf-ufbv-caps` because the `QF_UFBV` blocker census
+    /// (`bench-results/fpbv-divisions-headtohead-20260912/census/QF_UFBV.tsv`)
+    /// attributed 31 of 87 winnable files to this one constant. It is a lever
+    /// so the A/B can be run; whether the default should move is a separate
+    /// question the A/B answers.
+    fn max_input_dag_nodes() -> u64 = "AXEYUM_UFBV_MAX_INPUT_DAG_NODES" or MAX_INPUT_DAG_NODES;
+}
+
 /// Maximum recursive term depth admitted before function abstraction.
 const MAX_INPUT_DEPTH: u64 = 4_096;
 /// Maximum semantic atoms (formula atoms plus generated interface equalities).
 const MAX_THEORY_ATOMS: usize = 1_024;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_THEORY_ATOMS`]: the compiled default, or
+    /// `AXEYUM_UFBV_MAX_THEORY_ATOMS` when that variable is set.
+    ///
+    /// Same contract and the same reason as [`max_input_dag_nodes`]; this cap
+    /// carried 53 of the 87 winnable `QF_UFBV` files (52 at the static
+    /// pre-check, 1 at the dynamic retained-search check).
+    fn max_theory_atoms() -> usize = "AXEYUM_UFBV_MAX_THEORY_ATOMS" or MAX_THEORY_ATOMS;
+}
+
+/// Maximum semantic atoms on the SCALAR (`admit_arrays == false`) path, which
+/// is `check_qf_ufbv_online_cdclt`'s and nothing else's.
+///
+/// Four times [`MAX_THEORY_ATOMS`], and the split is the point. ADR-1945 A/B'd
+/// this cap over the pinned 200-file `QF_UFBV` division: `1_024` -> `4_096`
+/// decides **44 more files with zero losses there**, and the curve flattens —
+/// `8_192` bought one file more for 11 % more wall.
+///
+/// It is NOT raised for the array path. The same A/B over 800 already-decided
+/// control files found that raising this cap where `admit_arrays` holds costs
+/// `abv-online-cdclt` real time on `QF_ABV`: one file went from a 4.2 s
+/// `array-fast-path` `sat` to 22.2 s on an idle box, and to a 24 s loss on a
+/// shared one. `abv-online-cdclt` has a measured non-progress defect (zero
+/// CEGAR rounds at a 600 s budget), so on that path this constant is a guard in
+/// front of an open bug rather than a tuning knob.
+const MAX_SCALAR_THEORY_ATOMS: usize = 4_096;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_SCALAR_THEORY_ATOMS`], or
+    /// `AXEYUM_UFBV_MAX_SCALAR_THEORY_ATOMS` when that variable is set.
+    fn max_scalar_theory_atoms() -> usize = "AXEYUM_UFBV_MAX_SCALAR_THEORY_ATOMS"
+        or MAX_SCALAR_THEORY_ATOMS;
+}
+
+/// The semantic-atom ceiling for one dispatch, chosen by which path entered.
+///
+/// One function rather than two call sites choosing for themselves: the static
+/// pre-check and the dynamic retained-search check must agree, and a cap that
+/// disagrees with itself mid-search would decline a query it had already
+/// admitted.
+fn theory_atom_cap(admit_arrays: bool) -> usize {
+    if admit_arrays {
+        max_theory_atoms()
+    } else {
+        max_scalar_theory_atoms()
+    }
+}
+
 /// Maximum materialized interface equalities before bounded refinement declines.
 const MAX_INTERFACE_ATOMS: usize = 512;
 /// Maximum retained-search final checks or defensive canonical rebuilds.
@@ -234,6 +301,12 @@ type BuildResult<T> = Result<T, BuildFailure>;
 
 struct PreparedAbstraction {
     had_arrays: bool,
+    /// Which entry point prepared this: `check_qf_ufbv_online_cdclt` passes
+    /// `false`, `check_qf_aufbv_online_cdclt` `true`. Carried here rather than
+    /// passed alongside so that everything reading the abstraction reads the
+    /// same answer — the two atom-cap checks must not disagree. See
+    /// [`theory_atom_cap`].
+    admit_arrays: bool,
     projection_row_sites: Vec<RowSite>,
     semantic_assertions: Vec<TermId>,
     abstracted_assertions: Vec<TermId>,
@@ -260,6 +333,9 @@ struct TheoryAtoms {
     propagation_candidates: Vec<bool>,
     row_atoms: Vec<RowAtomIds>,
     abstract_index: HashMap<TermId, usize>,
+    /// The ceiling the STATIC pre-check used, carried forward so the dynamic
+    /// retained-search check enforces the same number. See [`theory_atom_cap`].
+    theory_atom_cap: usize,
 }
 
 #[derive(Default)]
@@ -309,13 +385,14 @@ impl AtomAccumulator {
         Ok(Some(index))
     }
 
-    fn finish(self) -> TheoryAtoms {
+    fn finish(self, theory_atom_cap: usize) -> TheoryAtoms {
         TheoryAtoms {
             original: self.original,
             abstracted: self.abstracted,
             propagation_candidates: self.propagation_candidates,
             row_atoms: Vec::new(),
             abstract_index: self.abstract_index,
+            theory_atom_cap,
         }
     }
 }
@@ -782,6 +859,9 @@ struct CombinedUfbvTheory {
     bv: BvTheory,
     abstract_index: HashMap<TermId, usize>,
     array_equality_proxies: HashMap<(TermId, TermId), TermId>,
+    /// The ceiling the static pre-check admitted this query under, not a fresh
+    /// read of the lever: see [`TheoryAtoms::theory_atom_cap`].
+    theory_atom_cap: usize,
 }
 
 impl CombinedUfbvTheory {
@@ -844,10 +924,11 @@ impl CombinedUfbvTheory {
         if let Some(existing) = self.atom_ref(solver, abstracted, propagation_candidate)? {
             return Ok(existing);
         }
-        if self.bv.positive.len() >= MAX_THEORY_ATOMS {
+        let cap = self.theory_atom_cap;
+        if self.bv.positive.len() >= cap {
             return Err(build_unknown(
                 UnknownKind::ResourceLimit,
-                format!("online UFBV dynamic theory atoms exceed the cap of {MAX_THEORY_ATOMS}"),
+                format!("online UFBV dynamic theory atoms exceed the cap of {cap}"),
             ));
         }
         if solver.variable_count() >= MAX_BOOLEAN_VARIABLES {
@@ -1380,6 +1461,7 @@ fn solve_cdclt_round(
         bv,
         abstract_index: atoms.abstract_index,
         array_equality_proxies: HashMap::new(),
+        theory_atom_cap: atoms.theory_atom_cap,
     };
     let inactive_variables =
         inactive_reserved_row_variables(&row_atoms, &skeleton.active_variables);
@@ -1599,8 +1681,8 @@ fn admit_input(
     let stats = TermStats::compute(arena, assertions);
     let node_cap = config
         .node_budget
-        .unwrap_or(MAX_INPUT_DAG_NODES)
-        .min(MAX_INPUT_DAG_NODES);
+        .unwrap_or(max_input_dag_nodes())
+        .min(max_input_dag_nodes());
     if stats.dag_nodes > node_cap {
         return Err(build_unknown(
             UnknownKind::NodeBudget,
@@ -2069,6 +2151,7 @@ fn prepare_abstraction(
     let array_equalities = combine_array_equalities(arena, &array_equalities, &replacements)?;
     Ok(PreparedAbstraction {
         had_arrays,
+        admit_arrays,
         projection_row_sites,
         semantic_assertions,
         abstracted_assertions,
@@ -2172,16 +2255,17 @@ fn build_theory_atoms(
             "online UFBV abstraction produced no semantic Boolean atoms".to_owned(),
         )));
     }
-    if atoms.original.len() > MAX_THEORY_ATOMS {
+    let cap = theory_atom_cap(prepared.admit_arrays);
+    if atoms.original.len() > cap {
         return Err(build_unknown(
             UnknownKind::ResourceLimit,
             format!(
-                "online UFBV has {} semantic atoms, exceeding the cap of {MAX_THEORY_ATOMS}",
+                "online UFBV has {} semantic atoms, exceeding the cap of {cap}",
                 atoms.original.len()
             ),
         ));
     }
-    let mut atoms = atoms.finish();
+    let mut atoms = atoms.finish(cap);
     atoms.row_atoms = row_atoms;
     Ok((atoms, round_assertions))
 }
@@ -3258,6 +3342,89 @@ mod tests {
     use crate::cdclt::{CdclT, Outcome};
     use crate::euf_egraph::EufTheory;
     use crate::euf_egraph::{TheoryLit, TheoryProp};
+
+    /// The shipped numbers, pinned as literals.
+    ///
+    /// `qf-ufbv-caps` made both caps levers so the `QF_UFBV` A/B could be run
+    /// without a rebuild. Wiring a lever must not move the default, and the
+    /// only way to say that in a test is to write the number out: comparing
+    /// the accessor against the `const` it reads would pass for any value.
+    #[test]
+    fn the_shipped_ufbv_caps_are_the_numbers_adr_1945_measured() {
+        assert_eq!(
+            super::MAX_INPUT_DAG_NODES,
+            16_384,
+            "MAX_INPUT_DAG_NODES moved; ADR-1945 measured it at +0 files on QF_UFBV \
+             at 2x, 4x and 16x, and -2 on the array control"
+        );
+        assert_eq!(
+            super::MAX_THEORY_ATOMS,
+            1_024,
+            "the ARRAY-path atom cap moved; ADR-1945 holds it at 1_024 because \
+             abv-online-cdclt has a measured non-progress defect"
+        );
+        assert_eq!(
+            super::MAX_SCALAR_THEORY_ATOMS,
+            4_096,
+            "the SCALAR-path atom cap moved; ADR-1945 measured 4_096 at +44 files \
+             on the pinned QF_UFBV 200 with the curve flat above it"
+        );
+    }
+
+    /// The split is the whole decision, so a test asserts it rather than
+    /// trusting that two constants written four apart stay that way.
+    ///
+    /// `theory_atom_cap` is what both comparison sites call, so this is the
+    /// shipped behaviour and not a restatement of the constants.
+    #[test]
+    fn the_array_path_keeps_the_lower_atom_cap() {
+        let scalar = super::theory_atom_cap(false);
+        let array = super::theory_atom_cap(true);
+        assert_eq!(array, super::MAX_THEORY_ATOMS);
+        assert_eq!(scalar, super::MAX_SCALAR_THEORY_ATOMS);
+        assert!(
+            scalar > array,
+            "the scalar path must admit strictly more atoms than the array path: \
+             ADR-1945 raised one and deliberately did not raise the other \
+             (scalar {scalar}, array {array})"
+        );
+    }
+
+    /// With neither variable set, each accessor is exactly its `const`.
+    ///
+    /// Skipped rather than failed when a variable IS set, because an A/B arm
+    /// sets it process-wide and this suite is not the subject of that
+    /// experiment. The skip is reported, so it cannot quietly become the
+    /// normal path.
+    #[test]
+    fn an_unset_ufbv_lever_returns_the_shipped_cap() {
+        let mut checked = 0usize;
+        if std::env::var_os("AXEYUM_UFBV_MAX_INPUT_DAG_NODES").is_none() {
+            assert_eq!(super::max_input_dag_nodes(), super::MAX_INPUT_DAG_NODES);
+            checked += 1;
+        } else {
+            eprintln!("AXEYUM_UFBV_MAX_INPUT_DAG_NODES is set; node-cap arm not checked");
+        }
+        if std::env::var_os("AXEYUM_UFBV_MAX_THEORY_ATOMS").is_none() {
+            assert_eq!(super::max_theory_atoms(), super::MAX_THEORY_ATOMS);
+            checked += 1;
+        } else {
+            eprintln!("AXEYUM_UFBV_MAX_THEORY_ATOMS is set; atom-cap arm not checked");
+        }
+        if std::env::var_os("AXEYUM_UFBV_MAX_SCALAR_THEORY_ATOMS").is_none() {
+            assert_eq!(
+                super::max_scalar_theory_atoms(),
+                super::MAX_SCALAR_THEORY_ATOMS
+            );
+            checked += 1;
+        } else {
+            eprintln!("AXEYUM_UFBV_MAX_SCALAR_THEORY_ATOMS is set; scalar arm not checked");
+        }
+        assert_eq!(
+            checked, 3,
+            "a UFBV cap lever was overridden, so this test checked less than it names"
+        );
+    }
     use crate::{CheckResult, SolverConfig, UnknownKind};
 
     #[derive(Debug)]
@@ -3326,6 +3493,7 @@ mod tests {
             bv,
             abstract_index,
             array_equality_proxies: HashMap::new(),
+            theory_atom_cap: atoms.theory_atom_cap,
         };
         let mut solver = CdclT::new(skeleton.variable_count, atom_count, skeleton.clauses, None);
         let outcome = solver.solve(&mut theory);
