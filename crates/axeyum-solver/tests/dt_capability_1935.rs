@@ -25,9 +25,12 @@
 
 use std::time::Duration;
 
-use axeyum_ir::{ArraySortKey, ConstructorId, DatatypeId, Sort, TermArena, TermId};
+use axeyum_ir::{ArraySortKey, ConstructorId, DatatypeId, Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::theories::datatypes::check_with_datatype_native;
-use axeyum_solver::{CheckResult, SolverConfig, SolverError, solve};
+use axeyum_solver::{
+    CheckResult, DatatypeNativeRefusalPolicy, DatatypeNativeRefusalPolicyGuard, SolverConfig,
+    SolverError, solve,
+};
 
 fn cfg() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(10))
@@ -694,9 +697,39 @@ fn refusal_names_the_non_variable_datatype_argument() {
     let tail = arena.dt_select(cons, 1, x).expect("select");
     let holds_of_tail = arena.apply(pred, &[tail]).expect("apply");
 
-    let detail = refusal_detail(solve(&mut arena, &[holds_of_tail], &cfg()));
+    // Read off the datatype rung rather than off `solve`'s error: [ADR-1980]
+    // made the dispatcher treat this rung's refusal as a DECLINE, so the front
+    // door now answers this query from a rung below. The GUARD is untouched and
+    // fires on exactly this term, which is what this half pins; the second half
+    // pins what the dispatcher does with it.
+    let detail = refusal_detail(check_with_datatype_native(
+        &mut arena,
+        &[holds_of_tail],
+        &cfg(),
+    ));
     assert!(
         detail.contains("applied to a datatype term"),
         "the refusal must name the non-variable argument, got: {detail}"
+    );
+
+    // `(assert (p (tl x)))` is SATISFIABLE — `p` is uninterpreted and `tl x` is
+    // one term — and the model is replayed against the ORIGINAL assertion here
+    // rather than trusting the route's own replay.
+    let got = solve(&mut arena, &[holds_of_tail], &cfg());
+    let Ok(CheckResult::Sat(model)) = got else {
+        panic!("`(assert (p (tl x)))` is satisfiable and must now decide, got {got:?}");
+    };
+    let value = eval(&arena, holds_of_tail, &model.to_assignment());
+    assert!(
+        matches!(value, Ok(Value::Bool(true))),
+        "WRONG SAT: the original assertion evaluates to {value:?} under the returned model"
+    );
+
+    // The historical arm is still reachable from this binary.
+    let _arm = DatatypeNativeRefusalPolicyGuard::set(DatatypeNativeRefusalPolicy::Propagate);
+    let propagated = solve(&mut arena, &[holds_of_tail], &cfg());
+    assert!(
+        matches!(propagated, Err(SolverError::Unsupported(_))),
+        "the `propagate` arm must still hand the refusal out of `solve`, got {propagated:?}"
     );
 }
