@@ -22,7 +22,8 @@ it says the third line is not a prize at all. The decision is
 **Lower bound — files this change decides that we did not decide before: 0.**
 **Upper bound — files it could ever decide once the IR change lands: 0 from
 AUFLIRA/AUFNIRA, because those files' element sort is not the only thing in
-their way.** The reachable population today is the three-file probe set.
+their way.** The reachable population today is the probe set: four queries
+move from `unknown` to a verdict, and z3 and cvc5 agree with every one of them.
 
 The derivation is one census over whole divisions, `census.sh`, which classifies
 every file by what the **dispatcher's own predicate** would do with it:
@@ -70,8 +71,8 @@ a denominator.
 
 ## What the change is worth anyway
 
-The gate was real, it was stale, and it was three gates rather than one — see
-ADR-1960. The capability is demonstrated by the probe pairs below and by
+The gate was real, it was stale, and it was three gates rather than one — two
+of which are lifted here and the third documented in place, see ADR-1960. The capability is demonstrated by the probe pairs below and by
 `crates/axeyum-solver/tests/real_element_array_row.rs`; the corpus value today
 is zero, and saying so is the point of measuring first.
 
@@ -81,9 +82,9 @@ is zero, and saying so is the point of measuring first.
 |---|---|
 | `crates/axeyum-smtlib/examples/array_real_gate_census.rs` | the census instrument. Mirrors `Features::scan_within`/`note_sort`, which are private to the solver crate, over the same public IR surface. A mirror can drift, so its output is a denominator confirmed by the A/B, never the finding. |
 | `census.sh` | whole-division census over the Real-capable array divisions plus the two no-Real controls. |
-| `census-all-array.sh` | the same over all 28 array-carrying divisions. |
+| `census-all-array.sh` | the same over all 28 array-carrying divisions, behind a deliberately over-inclusive textual prefilter (`real`/decimal literal) — parsing every file was measured at ~20 hours for AUFBV alone. |
 | `census/` | the committed per-division summaries. |
-| `probes/` | this lane's gate-isolation probes, `r1`–`r5`. Each is a pair with an ADR-1955 probe or with its own Int twin, differing in one token. |
+| `probes/` | this lane's gate-isolation probes, `r1`–`r7`. Each is a pair with an ADR-1955 probe or with its own Int twin, differing in one token. |
 | `run-probes.sh` | every probe through ONE binary in one invocation — a pair read from two builds is not a pair. |
 | `ref-probes.sh` | the same probes through z3 and cvc5. Prints the reference verdict verbatim: an `unknown` from a reference is an opportunity the check never had, not a pass. |
 | `ab.sh` | the interleaved per-file A/B, one shard per division on its own core, both binaries back to back on one file. |
@@ -106,6 +107,16 @@ units differ and mixing them corrupts a board).
 | `r3-fractional-read-int` | the same over `(Array Int Int)` (the pair) | `unsat` | `unsat` | `unsat` | `unsat` |
 | `r4-unconstrained-index-pair` | store at `i`, read at `j`, nothing asserted about `i`,`j` | `unknown` | **`sat`** | `sat` | `sat` |
 | `r5-rational-store-readback` | store-then-read at the same index, value `1/3` | `unsat` | `unsat` | `unsat` | `unsat` |
+| `r6-ext-real-uf` | array extensionality, Real element, UF present | `unsat` | `unsat` | `unsat` | `unsat` |
+| `r7-row-real-uf-distinct` | ROW with the UF applied to the array's index | `unknown` | **`unsat`** | `unsat` | `unsat` |
+
+`r1`, `r6` and `r7` are also the three probes aimed at the gate that was
+**identified and not changed** — `uf-arithmetic`'s `Unknown` early return for
+`has_real`, gate 2 of ADR-1960's three. Another route decides all three before
+that rung, and the corresponding mutation SURVIVED (nine tests, none depend on
+it), so the gate is documented in place rather than relaxed on speculation.
+Their value here is as negative evidence: they are what "we could not reach it"
+means.
 
 `r2`/`r3` is the pair that carries the soundness claim rather than the
 capability claim: `0 < m[i] < 1` is satisfiable over `Real` and unsatisfiable

@@ -9740,6 +9740,61 @@ SUITES["int-blast-additive-no-overflow"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `array-real-gate` — the gates ADR-1960 lifted so that a `(Array _ Real)`
+# read-over-write reaches the lazy ROW CEGAR at all.
+#
+# Each mutation below puts ONE of the two that were CHANGED back. The third,
+# `uf-arithmetic`'s `Unknown` early return for `has_real`, is the same defect
+# shape and is deliberately NOT changed: its mutation SURVIVED, because no query
+# could be built that reaches that rung with an array still undecided
+# (`probes/r1`, `r6`, `r7` are three attempts, and another route decides all
+# three). It is documented in place instead, which is the honest outcome —
+# a change nobody can demonstrate is decoration. They are here because the
+# thing that hid this frontier for two and a half months was not a bug: it was
+# three guards, none of which any test could distinguish from a route that was
+# simply unable to decide the query. `nested_array_gate_map.rs` pinned the
+# `unknown` and called it a capability boundary.
+#
+# What mutation CANNOT tell you here, and this is the important half: the guards
+# below are capability gates, not soundness guards. Killing a test by restoring
+# one proves the test notices the gate, NOT that the route behind it is sound.
+# The soundness claim rests on the five adversarial fixtures in the same suite —
+# satisfiable queries whose plausible wrong answer is `unsat`, chief among them
+# `0 < m[i] < 1`, which is sat over Real and unsat over Int — and those are
+# exactly the tests no mutation of a gate can kill. See CLAUDE.md: mutation
+# measures the guards you HAVE, never the ones you are missing.
+# --------------------------------------------------------------------------
+
+SUITES["array-real-gate"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--test", "real_element_array_row"),
+        "array-real-gate",
+    ),
+    [
+        (
+            # GATE 3, the one ADR-1955 named: the scalar-array route refuses
+            # any query mentioning a Real, over a CEGAR engine that never
+            # branches on the element sort and a backend documented as LIRA.
+            "the scalar-array route admits a Real element sort",
+            "    !features.has_bv_or_float && !features.has_uninterpreted_sort "
+            "&& !features.has_datatype",
+            "    !features.has_real\n        && !features.has_bv_or_float\n"
+            "        && !features.has_uninterpreted_sort\n"
+            "        && !features.has_datatype",
+        ),
+        (
+            # GATE 1, the one that actually bound: the pure-real branch returns
+            # `check_with_nra`'s fragment refusal AS THE QUERY'S VERDICT, so the
+            # array ladder below it is unreachable for a query with no UF.
+            "an `nra` fragment refusal is a DECLINE when an array is present",
+            "                if !features.has_non_bv_array {",
+            "                if true {",
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
