@@ -7,6 +7,19 @@
 # UFDTLIRA in particular is NOT blocked -- it decides 19 of 40 today.
 # The untested rows are not thereby correct; they are 3-file samples too.
 # REMOVE THIS LABEL only when every row has been re-measured at n >= 40.
+#
+# 2026-09-13, lane board-six: SIX MORE ROWS REFUTED at n = 200 each.
+#   NRA 193/200, BV 148/200, LRA 56/200 -- all three of these rows claim a
+#   HARD `unsupported by backend` ERROR, and none is real: 0 of the 178
+#   census rows over those three divisions names `lazy SMT` or `term #`.
+#   12,443 files were written off on the evidence of 5 sampled files.
+#   QF_AUFLIA 140/200, AUFLIA 84/200, UFLIA 71/200 -- these three rows are
+#   not false, just uninformative: the divisions are WEAK, not blocked.
+#   0 disagreements in 3,600 solves. Board and blocker census:
+#   bench-results/six-divisions-headtohead-20260912/README.md
+# Rows now measured at n >= 40: the four DT rows, QF_ABVFP/QF_BVFP/QF_UFBV
+# (bench-results/fpbv-divisions-headtohead-20260912), and these six --
+# 13 of the 20 rows below. The remaining 7 are still 3-file samples.
 AUFLIRA         20011  2 unsupported: nested array element sort is unsu
 QF_ABVFP        18129  2 REACHED-SOLVER
 QF_BVFP         17249  3 REACHED-SOLVER
