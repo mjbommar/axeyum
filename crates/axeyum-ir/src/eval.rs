@@ -271,7 +271,8 @@ fn well_founded_default_rec(
                     0,
                 )))
             } else {
-                let default = well_founded_default_rec(arena, element.to_sort(), visiting)?;
+                let default =
+                    well_founded_default_rec(arena, arena.array_key_sort(element), visiting)?;
                 Some(Value::GenericArray(GenericArrayValue::constant(
                     index, element, default,
                 )))

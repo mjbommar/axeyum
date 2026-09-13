@@ -1599,7 +1599,7 @@ fn equal_array_readback_equivalent(
         let Sort::Array { element, .. } = arena.sort_of(lhs_array) else {
             continue;
         };
-        if element.to_sort() != target_sort {
+        if arena.array_key_sort(element) != target_sort {
             continue;
         }
         for &rhs_array in &arrays[idx + 1..] {

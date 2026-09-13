@@ -2258,7 +2258,7 @@ impl IncrementalBvSolver {
         if !is_warm_array_element_sort(element) {
             return None;
         }
-        let element_sort = element.to_sort();
+        let element_sort = arena.array_key_sort(element);
         if arena.sort_of(*index) != Sort::BitVec(index_width) || arena.sort_of(term) != element_sort
         {
             return None;
@@ -6416,7 +6416,7 @@ fn supported_warm_array_select_shape(arena: &TermArena, term: TermId) -> bool {
     is_supported_warm_array_parent(arena, *array)
         && is_warm_array_element_sort(element)
         && arena.sort_of(*index) == Sort::BitVec(index_width)
-        && arena.sort_of(term) == element.to_sort()
+        && arena.sort_of(term) == arena.array_key_sort(element)
 }
 
 fn supported_warm_uf_app_shape(arena: &TermArena, term: TermId) -> bool {
@@ -6745,9 +6745,13 @@ fn merge_equal_generic_arrays(
     model: &Model,
     group: &[SymbolId],
 ) -> Result<Value, UnknownReason> {
-    let default = well_founded_default(arena, element.to_sort()).ok_or_else(|| UnknownReason {
-        kind: UnknownKind::Other,
-        detail: format!("warm equal-array projection had no default for element sort {element}"),
+    let default = well_founded_default(arena, arena.array_key_sort(element)).ok_or_else(|| {
+        UnknownReason {
+            kind: UnknownKind::Other,
+            detail: format!(
+                "warm equal-array projection had no default for element sort {element}"
+            ),
+        }
     })?;
     let mut entries: Vec<(Value, Value)> = Vec::new();
     for &symbol in group {
@@ -6959,7 +6963,7 @@ fn warm_array_value_select(array: &Value, index: &Value) -> Result<Value, Unknow
             })
         }
         Value::GenericArray(array) => {
-            if index.sort() != array.index_sort().to_sort() {
+            if !axeyum_ir::value_matches_key(index, array.index_sort()) {
                 return Err(UnknownReason {
                     kind: UnknownKind::Other,
                     detail: "warm structural generic array received an index of wrong sort"
@@ -7464,7 +7468,9 @@ fn generic_array_candidate(
     let mut array =
         GenericArrayValue::constant(ArraySortKey::BitVec(index_width), element, default);
     for (index, value) in constraints {
-        if index.sort() != Sort::BitVec(index_width) || value.sort() != element.to_sort() {
+        if index.sort() != Sort::BitVec(index_width)
+            || !axeyum_ir::value_matches_key(value, element)
+        {
             return Err(UnknownReason {
                 kind: UnknownKind::Other,
                 detail: "warm generic array key constraint had mismatched sort".to_owned(),

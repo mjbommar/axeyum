@@ -2766,7 +2766,10 @@ pub fn build_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermI
         Op::RotateRight { by } => arena.rotate_right(by, args[0]),
         Op::Select => arena.select(args[0], args[1]),
         Op::Store => arena.store(args[0], args[1], args[2]),
-        Op::ConstArray { index } => arena.const_array_with_index_sort(index.to_sort(), args[0]),
+        Op::ConstArray { index } => {
+            let index_sort = arena.array_key_sort(index);
+            arena.const_array_with_index_sort(index_sort, args[0])
+        }
         Op::IntToReal => arena.int_to_real(args[0]),
         Op::RealToInt => arena.real_to_int(args[0]),
         Op::RealIsInt => arena.real_is_int(args[0]),

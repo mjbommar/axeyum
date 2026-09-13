@@ -16,11 +16,30 @@ impl SortId {
     }
 }
 
+/// Handle to an arena-interned array sort, used as the recursive component of
+/// [`ArraySortKey::Array`] (ADR-1955, ADR-1965).
+///
+/// Like [`DatatypeId`] and [`SortId`] this is a compact `Copy` id with no
+/// lifetime parameter, so `Sort` and `ArraySortKey` stay `Copy` and the
+/// hash-consing key [`crate::TermNode`] keeps `Hash + Eq`. Validity is a
+/// contract with the owning [`crate::TermArena`]: expand it with
+/// [`crate::TermArena::array_sort_components`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ArraySortId(pub(crate) u32);
+
+impl ArraySortId {
+    /// The dense index of this interned array sort within its arena.
+    pub fn index(self) -> usize {
+        self.0 as usize
+    }
+}
+
 /// A sort usable as an array index or element component.
 ///
 /// `Sort` itself stays `Copy`; array components therefore carry this compact
-/// non-array sort key rather than boxing recursive `Sort` values. Nested arrays
-/// need an interned array-sort id before they become public surface.
+/// sort key rather than boxing recursive `Sort` values. A **nested** array
+/// component carries [`ArraySortKey::Array`], an arena-interned id, for the
+/// same reason recursive datatypes carry [`DatatypeId`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ArraySortKey {
     /// The Boolean sort.
@@ -44,13 +63,20 @@ pub enum ArraySortKey {
         /// Significand bits, including the implicit leading bit.
         sig: u32,
     },
+    /// A **nested** array component: the id of an array sort interned in the
+    /// owning arena (ADR-1955 option B). Every arena-free helper on this type
+    /// returns `None` for this variant, so a route that cannot handle nesting
+    /// refuses by construction rather than by audit; expand it with
+    /// [`crate::TermArena::array_sort_components`].
+    Array(ArraySortId),
 }
 
 impl ArraySortKey {
     /// Converts a non-array sort into an array-component key.
     ///
-    /// Returns `None` for array sorts; nested arrays are intentionally deferred
-    /// until array sort interning is introduced.
+    /// Returns `None` for array and sequence sorts: an array component cannot
+    /// be built without the arena that interns it. Use
+    /// [`crate::TermArena::array_sort_key`] to intern a nested component.
     pub fn from_sort(sort: Sort) -> Option<Self> {
         match sort {
             Sort::Bool => Some(ArraySortKey::Bool),
@@ -65,18 +91,47 @@ impl ArraySortKey {
         }
     }
 
-    /// Expands this component key back into its ordinary sort.
-    pub fn to_sort(self) -> Sort {
+    /// Expands this component key back into its ordinary sort **without the
+    /// arena**, or `None` when the component is itself an array.
+    ///
+    /// The `None` is the conservative default that carries the soundness of the
+    /// nested-array work: a nested component cannot be expanded without
+    /// [`crate::TermArena::array_sort_components`], so every caller that has no
+    /// arena to hand must refuse, and refusing is what a route with no nested
+    /// support must do anyway. Callers that *can* handle nesting use
+    /// [`crate::TermArena::array_key_sort`].
+    pub fn to_sort(self) -> Option<Sort> {
         match self {
-            ArraySortKey::Bool => Sort::Bool,
-            ArraySortKey::BitVec(w) => Sort::BitVec(w),
-            ArraySortKey::Int => Sort::Int,
-            ArraySortKey::Real => Sort::Real,
-            ArraySortKey::RoundingMode => Sort::RoundingMode,
-            ArraySortKey::Datatype(id) => Sort::Datatype(id),
-            ArraySortKey::Uninterpreted(id) => Sort::Uninterpreted(id),
-            ArraySortKey::Float { exp, sig } => Sort::Float { exp, sig },
+            ArraySortKey::Bool => Some(Sort::Bool),
+            ArraySortKey::BitVec(w) => Some(Sort::BitVec(w)),
+            ArraySortKey::Int => Some(Sort::Int),
+            ArraySortKey::Real => Some(Sort::Real),
+            ArraySortKey::RoundingMode => Some(Sort::RoundingMode),
+            ArraySortKey::Datatype(id) => Some(Sort::Datatype(id)),
+            ArraySortKey::Uninterpreted(id) => Some(Sort::Uninterpreted(id)),
+            ArraySortKey::Float { exp, sig } => Some(Sort::Float { exp, sig }),
+            ArraySortKey::Array(_) => None,
         }
+    }
+
+    /// The interned id when this component is itself an array sort.
+    pub fn nested_array(self) -> Option<ArraySortId> {
+        match self {
+            ArraySortKey::Array(id) => Some(id),
+            ArraySortKey::Bool
+            | ArraySortKey::BitVec(_)
+            | ArraySortKey::Int
+            | ArraySortKey::Real
+            | ArraySortKey::RoundingMode
+            | ArraySortKey::Datatype(_)
+            | ArraySortKey::Uninterpreted(_)
+            | ArraySortKey::Float { .. } => None,
+        }
+    }
+
+    /// Whether this component is itself an array sort.
+    pub fn is_nested_array(self) -> bool {
+        matches!(self, ArraySortKey::Array(_))
     }
 
     /// Returns the bit-vector width when this component is a bit-vector sort.
@@ -89,7 +144,8 @@ impl ArraySortKey {
             | ArraySortKey::RoundingMode
             | ArraySortKey::Datatype(_)
             | ArraySortKey::Uninterpreted(_)
-            | ArraySortKey::Float { .. } => None,
+            | ArraySortKey::Float { .. }
+            | ArraySortKey::Array(_) => None,
         }
     }
 }
@@ -105,6 +161,10 @@ impl core::fmt::Display for ArraySortKey {
             ArraySortKey::Datatype(id) => write!(f, "(Datatype {})", id.index()),
             ArraySortKey::Uninterpreted(id) => write!(f, "(Uninterpreted {})", id.index()),
             ArraySortKey::Float { exp, sig } => write!(f, "(_ FloatingPoint {exp} {sig})"),
+            // An interned component cannot name its own parts without the
+            // arena. This rendering is for diagnostics only; SMT-LIB output
+            // goes through the arena-aware writer in `axeyum-smtlib`.
+            ArraySortKey::Array(id) => write!(f, "(Array #{})", id.index()),
         }
     }
 }
@@ -121,7 +181,10 @@ pub const MAX_BV_WIDTH: u32 = 1 << 16;
 /// `Bool` and `BitVec(1)` are deliberately distinct sorts with no implicit
 /// conversion (see the glossary and ADR-0003). `Sort` remains a `Copy` enum:
 /// arrays and sequences carry compact [`ArraySortKey`] components instead of
-/// boxed recursive sorts. Nested arrays and nested sequences remain deferred.
+/// boxed recursive sorts. **Nested arrays** live behind the interned
+/// [`ArraySortId`] in [`ArraySortKey::Array`] (ADR-1955/ADR-1965), the same way
+/// recursive datatypes live behind [`DatatypeId`]; nested sequences remain
+/// deferred.
 /// Declared uninterpreted sorts live behind an arena-local id so many-sorted EUF
 /// does not need to collapse every carrier to a fixed bit-vector width.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -164,9 +227,9 @@ pub enum Sort {
         sig: u32,
     },
     /// A homogeneous **sequence** over a scalar element sort (ADR-0051, P2.7).
-    /// Like [`Sort::Array`] it carries a flat, `Copy` [`ArraySortKey`] element (so
-    /// `Sort` stays `Copy`); nested sequences (`Seq(Seq …)`) are deferred exactly as
-    /// nested arrays are. `String` is the distinguished instance
+    /// Like [`Sort::Array`] it carries a `Copy` [`ArraySortKey`] element (so
+    /// `Sort` stays `Copy`); nested sequences (`Seq(Seq …)`) are still deferred.
+    /// `String` is the distinguished instance
     /// `Seq(BitVec(18))` — `2^18 > 0x2FFFF`, and the unsigned bit-vector order over
     /// `BitVec(18)` is the Unicode code-point total order.
     Seq(ArraySortKey),
@@ -262,10 +325,16 @@ impl Sort {
         }
     }
 
-    /// Returns the `(index, element)` component sorts for an array sort.
+    /// Returns the `(index, element)` component sorts for an array sort, or
+    /// `None` for a non-array sort **or for an array with a nested component**.
+    ///
+    /// The second `None` is load-bearing: it is what keeps every route that
+    /// predates nested arrays conservative without an audit of each one. A
+    /// route that *can* handle nesting must ask the arena instead
+    /// ([`crate::TermArena::array_component_sorts`]).
     pub fn array_sorts(self) -> Option<(Sort, Sort)> {
         match self {
-            Sort::Array { index, element } => Some((index.to_sort(), element.to_sort())),
+            Sort::Array { index, element } => Some((index.to_sort()?, element.to_sort()?)),
             Sort::Bool
             | Sort::BitVec(_)
             | Sort::Int

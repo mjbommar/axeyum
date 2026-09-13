@@ -190,8 +190,8 @@ impl SymbolicMemory {
         };
         Ok(Self {
             array,
-            index_sort: index.to_sort(),
-            element_sort: element.to_sort(),
+            index_sort: arena.array_key_sort(index),
+            element_sort: arena.array_key_sort(element),
         })
     }
 

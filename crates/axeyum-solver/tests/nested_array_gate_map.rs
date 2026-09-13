@@ -12,6 +12,12 @@
 //! it**, and so that the day one of these gates moves, a test says so instead
 //! of the frontier drifting silently.
 //!
+//! **ADR-1965 moved gate 1.** `(Array I (Array J E))` now parses: the component
+//! is an arena-interned [`axeyum_ir::ArraySortId`] behind
+//! `ArraySortKey::Array`. What that reached, and what it did not, is measured in
+//! that ADR; the tests below are re-pointed at the gate that is now FIRST for a
+//! nested query, which is the array THEORY, not the sort.
+//!
 //! Each test names ONE gate. Two kinds of assertion live here and they read in
 //! opposite directions:
 //!
@@ -24,11 +30,20 @@
 //! The point of the pairs is that the two sides differ in exactly one thing.
 //! `flat_int_element_array_row_decides` and
 //! `flat_real_element_array_row_is_undecided` are the same query with `Int`
-//! swapped for `Real`; that difference alone is why AUFLIRA's 18,644 nested
-//! files are not reachable by removing the parse refusal.
+//! swapped for `Real`.
+//!
+//! ADR-1955 read that pair as ruling AUFLIRA's 18,644 nested files out of the
+//! nested-array population. ADR-1960 refuted the arithmetic (the two counts
+//! were one population counted twice) and ADR-1965 refuted the conclusion by
+//! measurement: **a nested AUFLIRA query does not need the array theory at
+//! all.** Its refutation runs on congruence through the nested `select`, which
+//! is why `nested_select_congruence_decides` below is `..._decides` while every
+//! nested query that needs read-over-write or extensionality is still
+//! `..._is_undecided`.
 
 #![cfg(feature = "full")]
 
+use axeyum_ir::Sort;
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{CheckResult, SolverConfig, check_auto};
 
@@ -115,32 +130,157 @@ fn flat_real_element_array_row_is_undecided() {
 }
 
 // ---------------------------------------------------------------------------
-// Gate 1: the parse refusal itself.
+// Gate 1: the parse refusal itself. LIFTED by ADR-1965.
 // ---------------------------------------------------------------------------
 
-/// The refusal this lane was dispatched at. Both the ALIA leaf shape and the
-/// ABV one, because a fix that reached only one of them would otherwise look
-/// complete.
+/// The refusal this file's first version was dispatched at, now the other way
+/// round. Both the ALIA leaf shape and the ABV one, because a fix reaching only
+/// one of them would otherwise look complete; and the AUFLIRA shape, which is
+/// 91% of ADR-1957's 20,399-file ceiling and was not in the original pair.
+///
+/// This test flipped from `nested_array_sort_is_refused_at_parse`. It is kept
+/// rather than deleted because the *sort round-tripping* is the property that
+/// makes the parse admissible at all: an interned component that cannot be
+/// expanded back is how a nested query would get a wrong sort rather than a
+/// refusal.
 #[test]
-fn nested_array_sort_is_refused_at_parse() {
+fn nested_array_sort_parses_and_round_trips() {
     for sort in [
         "(Array Int (Array Int Int))",
         "(Array (_ BitVec 64) (Array (_ BitVec 64) (_ BitVec 64)))",
+        "(Array Int (Array Int Real))",
     ] {
         let text = format!("(set-logic ALL) (declare-fun m () {sort}) (check-sat)");
-        let err = parse_script(&text).err().unwrap_or_else(|| {
+        let script = parse_script(&text).unwrap_or_else(|e| {
             panic!(
-                "GOOD NEWS: {sort} now parses. ADR-1955's design (an \
-                 interned array-sort id behind `ArraySortKey`) has landed, or \
-                 something else admits it. Re-measure the reachable count and \
-                 update the ADR."
+                "REGRESSION: {sort} no longer parses ({e:?}). ADR-1965 admits a \
+                 nested array component as an arena-interned `ArraySortId`; \
+                 without it AUFLIRA/ALIA/ABV/AUFNIRA go back to 0 at ingest."
             )
         });
-        let message = format!("{err:?}");
+        let symbol = script
+            .arena
+            .find_symbol("m")
+            .expect("the declared symbol is in the arena");
+        let (_, declared) = script.arena.symbol(symbol);
+        let Sort::Array { element, .. } = declared else {
+            panic!("{sort} did not parse to an array sort: {declared}");
+        };
+        // The component is interned, so the arena-free helper MUST refuse it —
+        // that `None` is what keeps every pre-nesting route conservative by
+        // construction rather than by audit (ADR-1965).
         assert!(
-            message.contains("nested array element sort is unsupported"),
-            "{sort} is refused, but by a different gate than ADR-1955 measured: {message}"
+            element.to_sort().is_none(),
+            "{sort}: the nested element expanded WITHOUT the arena. Every route \
+             that predates nesting refuses because `ArraySortKey::to_sort` and \
+             `Sort::array_sorts` return `None`; if this expands, those routes \
+             silently accept a sort they cannot reason about."
         );
+        assert!(
+            script.arena.sort_has_nested_array(declared),
+            "{sort} parsed but is not reported as nested; `Features::note_sort` \
+             reads this and would mis-route the query"
+        );
+        // And the arena-aware expansion round-trips to the written form.
+        let expanded = script.arena.array_key_sort(element);
+        assert!(
+            matches!(expanded, Sort::Array { .. }),
+            "{sort}: the interned component expanded to {expanded}, not an array"
+        );
+    }
+}
+
+/// The gate that is FIRST for a nested query now that the sort parses:
+/// congruence through a nested `select`. `i = j` forces `m[i][k] = m[j][k]`,
+/// with no read-over-write and no extensionality anywhere.
+///
+/// This is the capability ADR-1965 measured as the whole of the AUFLIRA and
+/// AUFNIRA reach: 86.5% of the winnable set of those divisions has a refutation
+/// that needs exactly this and nothing else
+/// (`bench-results/nested-array-build-20260913/`).
+#[test]
+fn nested_select_congruence_decides() {
+    for element in ["Int", "Real"] {
+        let text = format!(
+            "(set-logic ALL)
+             (declare-fun m () (Array Int (Array Int {element})))
+             (declare-fun i () Int) (declare-fun j () Int) (declare-fun k () Int)
+             (assert (= i j))
+             (assert (not (= (select (select m i) k) (select (select m j) k))))
+             (check-sat)"
+        );
+        assert_eq!(
+            decide(&text),
+            CheckResult::Unsat,
+            "congruence through a nested select over {element} is the ONLY array \
+             property AUFLIRA's nested files need; ADR-1965's reach measurement \
+             rests on it"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Gate 2b: the array THEORY at a nested level. This is the gate that is binding
+// for ALIA and ABV now that the sort parses, and it is why ADR-1965's reach
+// measurement says nothing about their 511 + 423: 33 of 36 ALIA and 12 of 17
+// ABV winnable files WRITE to the outer array, so read-over-write at the outer
+// level is load-bearing for them.
+// ---------------------------------------------------------------------------
+
+/// Read-over-write at the OUTER level of a nested array. This is unsat by
+/// construction (it is the negation of the array axiom), so `Unknown` and `Sat`
+/// are different findings and `Unknown` is what gets pinned.
+#[test]
+fn outer_read_over_write_on_a_nested_array_is_undecided() {
+    let text = "(set-logic ALL)
+         (declare-fun m () (Array Int (Array Int Int)))
+         (declare-fun r () (Array Int Int))
+         (declare-fun i () Int) (declare-fun j () Int)
+         (assert (not (= (select (store m i r) j) (ite (= i j) r (select m j)))))
+         (check-sat)";
+    match decide(text) {
+        CheckResult::Unknown(_) => {}
+        CheckResult::Unsat => panic!(
+            "GOOD NEWS, STALE ARITHMETIC: outer read-over-write on a nested \
+             array now decides. ADR-1965 rules ALIA's 511 and ABV's 423 out of \
+             the measured reach BECAUSE this was undecided (their winnable \
+             files write the outer array). Re-measure \
+             `bench-results/nested-array-build-20260913/` with the surrogate's \
+             `outer-level store` refusal lifted, and update ADR-1965."
+        ),
+        CheckResult::Sat(_) => panic!(
+            "WRONG VERDICT: this query is the negation of the read-over-write \
+             tautology and is unsat for every element sort, nested included. A \
+             `sat` here is a soundness defect on the nested-array path."
+        ),
+    }
+}
+
+/// The INNER level's read-over-write, reached through an outer `select`. The
+/// inner array is a perfectly ordinary `(Array Int Int)` — the only thing
+/// nested about this query is that its base came out of an outer read.
+#[test]
+fn inner_read_over_write_under_an_outer_select_is_undecided() {
+    let text = "(set-logic ALL)
+         (declare-fun m () (Array Int (Array Int Int)))
+         (declare-fun i () Int) (declare-fun j () Int)
+         (declare-fun v () Int) (declare-fun p () Int)
+         (assert (not (= (select (store (select m p) i v) j)
+                         (ite (= i j) v (select (select m p) j)))))
+         (check-sat)";
+    match decide(text) {
+        CheckResult::Unknown(_) => {}
+        CheckResult::Unsat => panic!(
+            "GOOD NEWS, STALE ARITHMETIC: read-over-write on an INNER array \
+             whose base is an outer select now decides. This is the shape \
+             ADR-1955 attributed to `RowCtx::resolve_select` having no arm for \
+             an array-valued base that is itself a `Select`; re-measure and \
+             update ADR-1965."
+        ),
+        CheckResult::Sat(_) => panic!(
+            "WRONG VERDICT: unsat by construction (read-over-write), so a `sat` \
+             is a soundness defect, not a frontier move."
+        ),
     }
 }
 

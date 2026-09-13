@@ -292,8 +292,20 @@ impl GenericArrayValue {
             entries.append((value_to_py(py, index)?, value_to_py(py, element)?))?;
         }
         Ok(Self {
-            index_sort: PySort::universal(array.index_sort().to_sort()),
-            element_sort: PySort::universal(array.element_sort().to_sort()),
+            index_sort: PySort::universal(
+                array.index_sort().to_sort().ok_or_else(|| {
+                    pyo3::exceptions::PyValueError::new_err(
+                        "nested array component sorts are not exposed to the Python binding yet (ADR-1965: the component is an arena-interned id and this surface has no arena to expand it with)",
+                    )
+                })?,
+            ),
+            element_sort: PySort::universal(
+                array.element_sort().to_sort().ok_or_else(|| {
+                    pyo3::exceptions::PyValueError::new_err(
+                        "nested array component sorts are not exposed to the Python binding yet (ADR-1965: the component is an arena-interned id and this surface has no arena to expand it with)",
+                    )
+                })?,
+            ),
             default: value_to_py(py, array.default_value())?.unbind(),
             entries: entries.unbind(),
         })

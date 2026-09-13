@@ -730,6 +730,14 @@ fn update_array_sort_key(hash: &mut u64, sort: ArraySortKey) {
             update_u64(hash, u64::from(exp));
             update_u64(hash, u64::from(sig));
         }
+        // A nested array component. The interned id is arena-local, exactly
+        // like the `Datatype` and `Uninterpreted` ids above, and is hashed the
+        // same way: two structurally different nested sorts intern to different
+        // ids within one arena, which is the scope this hash is compared in.
+        ArraySortKey::Array(id) => {
+            update_u64(hash, 9);
+            update_u64(hash, u64::try_from(id.index()).unwrap_or(u64::MAX));
+        }
     }
 }
 

@@ -3832,11 +3832,12 @@ fn array_value_from_entries(
             "array projection requested for a non-array symbol".to_owned(),
         ));
     };
-    let fallback_default = well_founded_default(arena, element.to_sort()).ok_or_else(|| {
-        SolverError::Backend(
-            "array projection could not construct a default element value".to_owned(),
-        )
-    })?;
+    let fallback_default =
+        well_founded_default(arena, arena.array_key_sort(element)).ok_or_else(|| {
+            SolverError::Backend(
+                "array projection could not construct a default element value".to_owned(),
+            )
+        })?;
     let mut normalized: Vec<(Value, Value)> = Vec::new();
     for (entry_index, entry_element) in entries {
         // A read site whose projected value does not carry the array's element
@@ -3845,12 +3846,11 @@ fn array_value_from_entries(
         // mismatch here would abort the process instead of declining. `unknown`
         // is a first-class result, a panic is not, so decline with the sorts
         // named.
-        if entry_element.sort() != element.to_sort() {
+        if !axeyum_ir::value_matches_key(entry_element, element) {
             return Err(SolverError::Backend(format!(
                 "array projection element sort mismatch: read site produced {} \
-                 for an array whose element sort is {}",
+                 for an array whose element sort is {element}",
                 entry_element.sort(),
-                element.to_sort(),
             )));
         }
         if let Some((_, existing)) = normalized
@@ -4021,17 +4021,16 @@ fn store_projected_array_entry(
             "array repair requested for a non-array symbol".to_owned(),
         ));
     };
-    let expected_index_sort = index_key.to_sort();
-    let expected_element_sort = element_key.to_sort();
-    if index.sort() != expected_index_sort {
+    let expected_element_sort = arena.array_key_sort(element_key);
+    if !axeyum_ir::value_matches_key(&index, index_key) {
         return Err(SolverError::Backend(format!(
-            "array repair index sort mismatch: expected {expected_index_sort}, got {}",
+            "array repair index sort mismatch: expected {index_key}, got {}",
             index.sort()
         )));
     }
-    if element.sort() != expected_element_sort {
+    if !axeyum_ir::value_matches_key(&element, element_key) {
         return Err(SolverError::Backend(format!(
-            "array repair element sort mismatch: expected {expected_element_sort}, got {}",
+            "array repair element sort mismatch: expected {element_key}, got {}",
             element.sort()
         )));
     }

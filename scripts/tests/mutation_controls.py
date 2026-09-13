@@ -9834,6 +9834,163 @@ SUITES["qinst-round-exit"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `nested-array-sort` - ADR-1965, admitting `(Array I (Array J E))`.
+#
+# 27,150 of 29,564 files in four divisions were behind the parse refusal this
+# lifts, so it is the widest population this repository has admitted at once.
+# The guards below are the three that carry its soundness, and they are NOT the
+# same kind of guard:
+#
+#   * the conservative `None` is how ~500 call sites that predate nesting refuse
+#     a nested component WITHOUT anyone auditing them.  Mutating it does not
+#     break a route; it makes every route silently accept a sort it cannot
+#     reason about.
+#   * interning BY VALUE is what lets `ArraySortKey` keep `Eq + Hash` over
+#     structural identity, which `TermNode` hash-consing requires.
+#   * `Features::note_sort`'s recursion is ADR-1955's named hazard: it
+#     UNDER-reports rather than declining, which mis-ROUTES a query.
+# --------------------------------------------------------------------------
+
+SUITES["nested-array-sort"] = (
+    "crates/axeyum-ir/src/sort.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--test", "nested_array_row"),
+        "nested-array-sort",
+    ),
+    [
+        (
+            # THE load-bearing one. `Sort::array_sorts` is `index.to_sort()?`,
+            # so this single `None` is what makes every pre-nesting array route
+            # decline a nested sort by construction.
+            "the arena-free expansion REFUSES a nested component",
+            "            ArraySortKey::Array(_) => None,",
+            "            ArraySortKey::Array(_) => Some(Sort::Bool),",
+        ),
+        (
+            # Without the lookup every occurrence of one nested sort mints a
+            # fresh id, so two declarations of the same sort are different
+            # sorts and hash-consing splits structurally identical terms.
+            "array sorts are interned BY VALUE, not per occurrence",
+            "        if let Some(id) = self.array_sort_lookup.get(&(index, element)) {\n"
+            "            return *id;\n"
+            "        }",
+            "        if let Some(id) = self.array_sort_lookup.get(&(index, element)) {\n"
+            "            let _ = id;\n"
+            "        }",
+            "crates/axeyum-ir/src/arena.rs",
+        ),
+        (
+            # The arena-aware expansion is the ONLY way back from an interned
+            # id. Putting the index in the element slot keeps the types and
+            # loses the sort -- which `matches!(.., Sort::Array { .. })` cannot
+            # see, so the assertion that kills this one has to compare the PAIR.
+            "the arena-aware expansion follows the interned id",
+            "                let (index, element) = self.array_sort_components(id);\n"
+            "                Sort::Array { index, element }",
+            "                let (index, _) = self.array_sort_components(id);\n"
+            "                Sort::Array {\n"
+            "                    index,\n"
+            "                    element: index,\n"
+            "                }",
+            "crates/axeyum-ir/src/arena.rs",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `nested-array-feature-scan` - ADR-1955's NAMED hazard.
+#
+# Everywhere else in ADR-1965 the arena-free `None` is the conservative answer
+# and makes a route decline.  `Features::note_sort` is the one site where it is
+# the WRONG answer: a feature scan that under-reports does not decline, it
+# routes the query as something it is not.
+#
+# This is its own suite because the guard is invisible from the front door.
+# Measured 2026-09-13: with the runner `--test nested_array_row` this mutation
+# SURVIVED 12 tests, because every Real leaf a query READS also appears as the
+# sort of the `select` term that reads it, so the flag gets set the other way.
+# The unit test below is the fixture that isolates it -- an equality between two
+# nested arrays, where no term in the arena is Real-sorted at all.
+# --------------------------------------------------------------------------
+
+SUITES["nested-array-feature-scan"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            "auto::tests::note_sort_sees_a_leaf_that_only_exists_under_a_nesting_level",
+        ),
+        "nested-array-feature-scan",
+    ),
+    [
+        (
+            "the feature scan recurses THROUGH an interned component",
+            "                self.note_sort(arena, arena.array_key_sort(index));\n"
+            "                self.note_sort(arena, arena.array_key_sort(element));",
+            "                if let (Some(i), Some(e)) = (index.to_sort(), element.to_sort()) {\n"
+            "                    self.note_sort(arena, i);\n"
+            "                    self.note_sort(arena, e);\n"
+            "                }",
+        ),
+        (
+            # The flag routes gate on by name. Without it `has_nested_array` is
+            # never set and the decline is an accident of a helper returning
+            # `None` rather than a named refusal.
+            "a nested component sets the nested-array feature flag",
+            "                if index.is_nested_array() || element.is_nested_array() {\n"
+            "                    self.has_nested_array = true;\n"
+            "                }",
+            "                if false {\n"
+            "                    self.has_nested_array = true;\n"
+            "                }",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `nested-array-gate-map` - the map of what ADR-1965 did and did not reach.
+#
+# This suite's whole job is to fail when the frontier moves, so its guards are
+# the two predicates the map's claims are read off: that a nested sort is
+# REPORTED as nested, and that an interned component expands back to the pair
+# it was interned from.
+# --------------------------------------------------------------------------
+
+SUITES["nested-array-gate-map"] = (
+    "crates/axeyum-ir/src/arena.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--test",
+            "nested_array_gate_map",
+        ),
+        "nested-array-gate-map",
+    ),
+    [
+        (
+            "a nested sort reports itself as nested",
+            "    pub fn key_has_nested_array(&self, key: ArraySortKey) -> bool {\n"
+            "        key.is_nested_array()\n"
+            "    }",
+            "    pub fn key_has_nested_array(&self, key: ArraySortKey) -> bool {\n"
+            "        let _ = key;\n"
+            "        false\n"
+            "    }",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 

@@ -169,9 +169,9 @@ impl GenericArrayValue {
     ///
     /// Panics if `default` does not have the array element sort.
     pub fn constant(index: ArraySortKey, element: ArraySortKey, default: Value) -> Self {
-        let default = canonicalize_for_sort(element.to_sort(), default);
+        let default = canonicalize_for_key(element, default);
         assert!(
-            value_matches_sort(&default, element.to_sort()),
+            value_matches_key(&default, element),
             "generic array default sort must match element sort"
         );
         Self {
@@ -204,10 +204,10 @@ impl GenericArrayValue {
     /// Panics if `index` does not have the array index sort.
     pub fn select(&self, index: &Value) -> Value {
         assert!(
-            value_matches_sort(index, self.index.to_sort()),
+            value_matches_key(index, self.index),
             "generic array index sort mismatch"
         );
-        let index = canonicalize_for_sort(self.index.to_sort(), index.clone());
+        let index = canonicalize_for_key(self.index, index.clone());
         self.entries
             .iter()
             .find(|(i, _)| *i == index)
@@ -222,15 +222,15 @@ impl GenericArrayValue {
     #[must_use]
     pub fn store(&self, index: Value, element: Value) -> Self {
         assert!(
-            value_matches_sort(&index, self.index.to_sort()),
+            value_matches_key(&index, self.index),
             "generic array index sort mismatch"
         );
         assert!(
-            value_matches_sort(&element, self.element.to_sort()),
+            value_matches_key(&element, self.element),
             "generic array element sort mismatch"
         );
-        let index = canonicalize_for_sort(self.index.to_sort(), index);
-        let element = canonicalize_for_sort(self.element.to_sort(), element);
+        let index = canonicalize_for_key(self.index, index);
+        let element = canonicalize_for_key(self.element, element);
         let mut entries = self.entries.clone();
         if let Some(pos) = entries.iter().position(|(i, _)| *i == index) {
             if element == *self.default {
@@ -926,6 +926,30 @@ impl Value {
             Value::WideInt(value) => Some(value.clone()),
             _ => None,
         }
+    }
+}
+
+/// Whether `value` is a concrete representation accepted for an array
+/// **component key**.
+///
+/// A nested component ([`ArraySortKey::Array`]) cannot be expanded into a
+/// `Sort` without the arena, and model values do not carry one. The check is
+/// therefore weakened to the value's *shape* for that one variant — still a
+/// real check (an `Int` in an array-component slot is caught), just not a
+/// componentwise one. Everything else is the full [`value_matches_sort`].
+pub fn value_matches_key(value: &Value, key: ArraySortKey) -> bool {
+    match key.to_sort() {
+        Some(sort) => value_matches_sort(value, sort),
+        None => matches!(value, Value::Array(_) | Value::GenericArray(_)),
+    }
+}
+
+/// [`canonicalize_for_sort`] for an array component key; a nested component has
+/// no quotient representation to canonicalize, so the value passes through.
+pub(crate) fn canonicalize_for_key(key: ArraySortKey, value: Value) -> Value {
+    match key.to_sort() {
+        Some(sort) => canonicalize_for_sort(sort, value),
+        None => value,
     }
 }
 

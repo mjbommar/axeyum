@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use crate::error::IrError;
 use crate::fast_map::FastMap;
-use crate::sort::{ArraySortKey, MAX_BV_WIDTH, Sort, SortId, mask};
+use crate::sort::{ArraySortId, ArraySortKey, MAX_BV_WIDTH, Sort, SortId, mask};
 use crate::term::{ConstructorId, DatatypeId, FuncId, Op, SymbolId, TermId, TermNode};
 
 /// Append-only arena owning symbols and hash-consed terms.
@@ -62,6 +62,14 @@ pub struct TermArena {
     /// A `BTreeMap` rather than a `HashMap` because consumers iterate it and
     /// output order is a public promise.
     quantifier_patterns: BTreeMap<TermId, Vec<Vec<TermId>>>,
+    /// Interned array sorts, addressed by [`ArraySortId`] (ADR-1955 option B).
+    ///
+    /// Only **nested** components need an entry: `ArraySortKey::Array(id)`
+    /// resolves here to the `(index, element)` pair of the inner array. A
+    /// `Vec` plus a lookup map rather than a set, because the id is a dense
+    /// index and iteration order is a public promise.
+    array_sorts: Vec<(ArraySortKey, ArraySortKey)>,
+    array_sort_lookup: FastMap<(ArraySortKey, ArraySortKey), ArraySortId>,
 }
 
 /// Declaration of an uninterpreted function: a name, parameter sorts, and a
@@ -513,6 +521,117 @@ impl TermArena {
             }
             _ => term,
         }
+    }
+
+    // ----- interned array sorts (ADR-1955 option B, ADR-1965) -----------
+
+    /// Interns the array sort `(Array index element)` and returns its id.
+    ///
+    /// Interning is by value, so the same components always give the same id
+    /// and [`ArraySortKey`] keeps `Eq + Hash` over structural identity — which
+    /// the hash-consing key [`TermNode`] requires.
+    ///
+    /// # Panics
+    ///
+    /// Panics on arena corruption (array-sort count exceeding `u32`).
+    pub fn intern_array_sort(&mut self, index: ArraySortKey, element: ArraySortKey) -> ArraySortId {
+        if let Some(id) = self.array_sort_lookup.get(&(index, element)) {
+            return *id;
+        }
+        let id =
+            ArraySortId(u32::try_from(self.array_sorts.len()).expect("array sort count fits u32"));
+        self.array_sorts.push((index, element));
+        self.array_sort_lookup.insert((index, element), id);
+        id
+    }
+
+    /// Converts a sort into an array component key, interning a **nested**
+    /// array component rather than refusing it.
+    ///
+    /// This is the arena-aware counterpart of [`ArraySortKey::from_sort`], and
+    /// the only way a nested component is ever built. Returns `None` for a
+    /// sequence sort, which is still flat-only.
+    pub fn array_sort_key(&mut self, sort: Sort) -> Option<ArraySortKey> {
+        if let Sort::Array { index, element } = sort {
+            // Validate here, so `check_array_key` may treat every interned id
+            // as already checked (it has no arena to recurse with).
+            check_array_key(index).ok()?;
+            check_array_key(element).ok()?;
+            return Some(ArraySortKey::Array(self.intern_array_sort(index, element)));
+        }
+        ArraySortKey::from_sort(sort)
+    }
+
+    /// The `(index, element)` components of an interned array sort.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `id` does not belong to this arena.
+    pub fn array_sort_components(&self, id: ArraySortId) -> (ArraySortKey, ArraySortKey) {
+        self.array_sorts[id.index()]
+    }
+
+    /// Expands an array component key into its ordinary sort, following a
+    /// nested component through the interning table.
+    ///
+    /// The arena-free [`ArraySortKey::to_sort`] returns `None` for a nested
+    /// component; this is the version for a caller that can handle one.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a nested id does not belong to this arena.
+    pub fn array_key_sort(&self, key: ArraySortKey) -> Sort {
+        match key {
+            ArraySortKey::Array(id) => {
+                let (index, element) = self.array_sort_components(id);
+                Sort::Array { index, element }
+            }
+            other => other
+                .to_sort()
+                .expect("a non-array component key always expands"),
+        }
+    }
+
+    /// The `(index, element)` sorts of an array sort, following nesting.
+    ///
+    /// [`Sort::array_sorts`] returns `None` for an array with a nested
+    /// component so that arena-free routes refuse by construction; this is the
+    /// version a nesting-aware route uses.
+    pub fn array_component_sorts(&self, sort: Sort) -> Option<(Sort, Sort)> {
+        match sort {
+            Sort::Array { index, element } => {
+                Some((self.array_key_sort(index), self.array_key_sort(element)))
+            }
+            _ => None,
+        }
+    }
+
+    /// The number of interned array sorts (their ids are `0..num_array_sorts`).
+    pub fn num_array_sorts(&self) -> usize {
+        self.array_sorts.len()
+    }
+
+    /// Whether this sort mentions a nested array component at any depth.
+    ///
+    /// The recursion is the named hazard of ADR-1955: a feature scan that stops
+    /// at the top level under-reports nesting and mis-routes the query.
+    pub fn sort_has_nested_array(&self, sort: Sort) -> bool {
+        match sort {
+            Sort::Array { index, element } => {
+                self.key_has_nested_array(index) || self.key_has_nested_array(element)
+            }
+            Sort::Seq(element) => self.key_has_nested_array(element),
+            _ => false,
+        }
+    }
+
+    /// Whether this array component is, or contains, a nested array.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a nested id does not belong to this arena.
+    pub fn key_has_nested_array(&self, key: ArraySortKey) -> bool {
+        key.is_nested_array()
     }
 
     // ----- datatypes (ADR-0022) -----------------------------------------
@@ -1603,7 +1722,9 @@ impl TermArena {
 
     fn expect_array(&self, t: TermId) -> Result<(Sort, Sort), IrError> {
         match self.sort_of(t) {
-            Sort::Array { index, element } => Ok((index.to_sort(), element.to_sort())),
+            Sort::Array { index, element } => {
+                Ok((self.array_key_sort(index), self.array_key_sort(element)))
+            }
             found @ (Sort::Bool
             | Sort::BitVec(_)
             | Sort::Int
@@ -2202,7 +2323,14 @@ fn check_array_key(sort: ArraySortKey) -> Result<(), IrError> {
         | ArraySortKey::Real
         | ArraySortKey::RoundingMode
         | ArraySortKey::Datatype(_)
-        | ArraySortKey::Uninterpreted(_) => Ok(()),
+        | ArraySortKey::Uninterpreted(_)
+        // A nested component's own components were validated by
+        // [`TermArena::array_sort_key`], the ONLY producer of an
+        // `ArraySortId`, which refuses to intern an invalid pair. So by
+        // induction every `ArraySortKey::Array` reaching here is already
+        // checked, and re-checking would need the arena this free function does
+        // not have.
+        | ArraySortKey::Array(_) => Ok(()),
     }
 }
 
