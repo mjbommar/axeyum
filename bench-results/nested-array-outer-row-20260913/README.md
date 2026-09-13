@@ -19,7 +19,7 @@ This directory is that instrument and its result.
 worth 0 files on ALIA and 0 marginal files on ABV.** The named gate is not the
 one holding ALIA's 511 and ABV's 423.
 
-Two independent reasons, and the first one settles it before reach is even
+Three independent reasons, and the first settles it before reach is even
 measured:
 
 1. **39 of the 53 winnable ALIA + ABV files are satisfiable.** Outer
@@ -32,11 +32,17 @@ measured:
    files. The one ABV file it does refute is **the same file ADR-1965's
    surrogate already reached**, and that file contains **zero outer stores** —
    so outer read-over-write contributed nothing to it.
+3. **And the solver never searches them.** The five refutable-and-accepted ALIA
+   files, re-run at a **300 s** budget — 12.5x the board's — are still
+   `unknown`, and every one of them declines in **0.11–0.13 seconds**. It is not
+   a clock, it is a route: read-over-write is a rule you add to a route, and no
+   route runs.
 
 ## The instrument
 
-`scripts/nested_array_outer_row_surrogate.py`. ADR-1965's surrogate turned the outer array into an
-uninterpreted sort, which *deletes* outer read-over-write and is why it refused
+`scripts/nested_array_outer_row_surrogate.py`. ADR-1965's surrogate turned the
+outer array into an uninterpreted sort, which *deletes* outer read-over-write
+and is why it refused
 33 of 36 ALIA and 12 of 17 ABV winnable files. This one does the opposite: it
 **curries** the outer level and keeps read-over-write.
 
