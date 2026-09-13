@@ -1,0 +1,5 @@
+(set-logic ALIA)
+(declare-fun m () (Array Int (Array Int Int)))
+(declare-fun n () (Array Int (Array Int Int)))
+(assert (= m n))
+(check-sat)

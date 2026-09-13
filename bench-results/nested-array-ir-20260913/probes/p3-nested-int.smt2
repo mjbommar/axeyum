@@ -1,0 +1,6 @@
+(set-logic ALIA)
+(declare-fun m () (Array Int (Array Int Int)))
+(declare-fun i () Int)
+(declare-fun j () Int)
+(assert (not (= (select (select (store m i (store (select m i) j 1)) i) j) 1)))
+(check-sat)

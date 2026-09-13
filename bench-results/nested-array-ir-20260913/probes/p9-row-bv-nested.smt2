@@ -1,0 +1,7 @@
+(set-logic ABV)
+(declare-fun m () (Array (_ BitVec 8) (Array (_ BitVec 8) (_ BitVec 8))))
+(declare-fun a () (Array (_ BitVec 8) (_ BitVec 8)))
+(declare-fun i () (_ BitVec 8))
+(declare-fun j () (_ BitVec 8))
+(assert (not (= (select (store m i a) j) (ite (= i j) a (select m j)))))
+(check-sat)

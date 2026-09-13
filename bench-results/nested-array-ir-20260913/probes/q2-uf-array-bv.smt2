@@ -1,0 +1,8 @@
+(set-logic ABV)
+(declare-fun row ((_ BitVec 64)) (Array (_ BitVec 64) (_ BitVec 64)))
+(declare-fun i () (_ BitVec 64))
+(declare-fun j () (_ BitVec 64))
+(declare-fun k () (_ BitVec 64))
+(assert (= i k))
+(assert (not (= (select (row i) j) (select (row k) j))))
+(check-sat)
