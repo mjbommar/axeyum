@@ -142,6 +142,16 @@ which **ADR-1965's surrogate already reached**
 **zero outer stores** — read-over-write has no instance in it.
 **The marginal contribution of outer read-over-write is 0 on every division.**
 
+**What the one ABV file actually represents.** It is reachable by an
+outer-level ABSTRACTION — ADR-1965's uninterpreted-sort surrogate and this
+lane's currying surrogate both refute it — and the shipped nested-array build
+does **not** decide it: ADR-1965's own post-merge A/B records both arms
+`unknown` at 0.11 s on it, an immediate decline rather than a timeout. So it is
+an unrealized **+1 for the congruence route**, not evidence about
+read-over-write, whose axiom it contains no instance of. Counting it toward
+this gate would be the error this footnote exists to prevent.
+
+
 Crossing the reference verdict against acceptance and reach gives the sharpest
 form:
 
@@ -159,6 +169,27 @@ form:
 **Five ALIA files are refutable AND inside the fragment AND had outer
 read-over-write performed for them. axeyum decided 0 of 5.** That is the whole
 of the gate's opportunity on ALIA.
+
+### The five, re-run at a 300 s budget — it is a ROUTE, not a clock
+
+The five refutable-and-accepted ALIA files were re-run at **300 s**, 12.5x the
+board's budget (`sweep-300s/ALIA5.tsv`, file list in
+`sweep-300s/refutable-accepted-ALIA.txt`):
+
+| file | axeyum | seconds |
+|---|---|---:|
+| `dll-token-1.i_25` | `unknown` | 0.13 |
+| `dll2c_update_all_reverse.i_120` | `unknown` | 0.12 |
+| `dll2c_update_all_reverse.i_4` | `unknown` | 0.11 |
+| `sll-token-2.i_0` | `unknown` | 0.11 |
+| `sll_to_dll_rev-2.i_102` | `unknown` | 0.11 |
+
+**Every one declines in about a tenth of a second.** The solver is not
+searching these and running out of time; it has no route that will take them,
+and gives up before the budget is relevant. That is the sharpest reason the
+gate is worth zero: **read-over-write is a rule you add to a route, and no
+route runs.** z3 refutes two of the five surrogates within the same 300 s and
+all five originals except one.
 
 ### The soundness control, with its denominator
 
