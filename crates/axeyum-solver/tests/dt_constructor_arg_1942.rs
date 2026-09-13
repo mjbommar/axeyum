@@ -61,8 +61,11 @@
 
 use std::time::Duration;
 
-use axeyum_ir::{ConstructorId, DatatypeId, Sort, TermArena, TermId};
-use axeyum_solver::{CheckResult, SolverConfig, SolverError, solve};
+use axeyum_ir::{ConstructorId, DatatypeId, Sort, TermArena, TermId, Value, eval};
+use axeyum_solver::{
+    CheckResult, DatatypeNativeRefusalPolicy, DatatypeNativeRefusalPolicyGuard, SolverConfig,
+    SolverError, solve,
+};
 
 fn cfg() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(10))
@@ -427,11 +430,47 @@ fn refusal_detail(got: Result<CheckResult, SolverError>) -> String {
     }
 }
 
+/// The refusal sentence the DATATYPE RUNG produces, read under the historical
+/// dispatch arm (ADR-1980).
+///
+/// # Why the arm is named rather than assumed
+///
+/// [ADR-1980] converted `check_auto_dispatch`'s propagation of this rung's
+/// `Unsupported` into a DECLINE, so under the shipped arm a query the rung
+/// refuses does not necessarily come back as an `Err` — a rung BELOW may
+/// answer it. That changes nothing about the guard: the precondition fires on
+/// exactly the same queries and produces exactly the same sentence. This helper
+/// pins the sentence where it is still observable, so ADR-1942's message
+/// assertions keep testing ADR-1942's guard rather than the dispatcher's
+/// routing, and a revert of the guard still kills them.
+fn refusal_detail_from_the_datatype_rung(arena: &mut TermArena, assertions: &[TermId]) -> String {
+    let _arm = DatatypeNativeRefusalPolicyGuard::set(DatatypeNativeRefusalPolicy::Propagate);
+    refusal_detail(solve(arena, assertions, &cfg()))
+}
+
+/// Requires a `Sat` and **replays its model against the original assertions
+/// here**, rather than trusting the route's own replay.
+fn sat_with_replay(arena: &mut TermArena, assertions: &[TermId], why: &str) {
+    let got = solve(arena, assertions, &cfg());
+    let Ok(CheckResult::Sat(model)) = got else {
+        panic!("{why}: expected a replay-checked `sat`, got {got:?}");
+    };
+    let assignment = model.to_assignment();
+    for (n, &assertion) in assertions.iter().enumerate() {
+        let value = eval(arena, assertion, &assignment);
+        assert!(
+            matches!(value, Ok(Value::Bool(true))),
+            "WRONG SAT: assertion {n} evaluates to {value:?} under the returned model, \
+             not `true` ({why})"
+        );
+    }
+}
+
 #[test]
 fn refusal_names_a_datatype_argument_that_is_neither_variable_nor_constructor() {
-    // `p(tl(x))` — a datatype-sorted SELECT as the argument. Still refused, and
-    // the message is what the blocker census reads, so it must name the shape
-    // rather than repeat ADR-1935's "not a free variable".
+    // `p(tl(x))` — a datatype-sorted SELECT as the argument. Still refused by
+    // the datatype rung, and the message is what the blocker census reads, so it
+    // must name the shape rather than repeat ADR-1935's "not a free variable".
     let mut arena = TermArena::new();
     let (dt, _nil, cons) = lst(&mut arena);
     let p = pred(&mut arena, "p1942j", dt);
@@ -439,10 +478,20 @@ fn refusal_names_a_datatype_argument_that_is_neither_variable_nor_constructor() 
     let tl_x = arena.dt_select(cons, 1, x).expect("select");
     let p_tl = arena.apply(p, &[tl_x]).expect("apply");
 
-    let detail = refusal_detail(solve(&mut arena, &[p_tl], &cfg()));
+    let detail = refusal_detail_from_the_datatype_rung(&mut arena, &[p_tl]);
     assert!(
         detail.contains("neither") && detail.contains("constructor application"),
         "the refusal must name the admitted shapes, got: {detail}"
+    );
+
+    // And under the SHIPPED dispatch arm the refusal is a decline, so the rungs
+    // below run and one of them answers. `(assert (p (tl x)))` is SATISFIABLE —
+    // `p` is uninterpreted and `tl x` is one term, so `p := {tl x -> true}` is a
+    // model — and the front door now returns it instead of an error.
+    sat_with_replay(
+        &mut arena,
+        &[p_tl],
+        "`(assert (p (tl x)))` is satisfiable: `p` is uninterpreted",
     );
 }
 
@@ -459,10 +508,19 @@ fn refusal_names_the_inexact_expansion_for_a_constructor_argument() {
     let cons_t = arena.construct(cons, &[zero, nil_t]).expect("cons");
     let p_cons = arena.apply(p, &[cons_t]).expect("apply");
 
-    let detail = refusal_detail(solve(&mut arena, &[p_cons], &cfg()));
+    let detail = refusal_detail_from_the_datatype_rung(&mut arena, &[p_cons]);
     assert!(
         detail.contains("expansion is not exact"),
         "a constructor argument over an inexact datatype must reach the \
          exactness arm, got: {detail}"
+    );
+
+    // Same pair under the shipped arm: `(assert (p (cons 0 nil)))` is
+    // satisfiable at `p := {cons(0,nil) -> true}`, and the model is replayed
+    // against the original assertion here.
+    sat_with_replay(
+        &mut arena,
+        &[p_cons],
+        "`(assert (p (cons 0 nil)))` is satisfiable: `p` is uninterpreted",
     );
 }

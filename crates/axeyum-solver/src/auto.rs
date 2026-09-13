@@ -5462,15 +5462,180 @@ const DL_EXTENDED_PROBE_SLICE: LadderSlice = LadderSlice::all_but_capped_reserve
     DL_EXTENDED_FALLBACK_RESERVE,
 );
 
+/// What [`check_auto_dispatch`] does with `check_with_datatype_native`'s
+/// `Unsupported` refusal (ADR-1980).
+///
+/// # Why this is a named arm rather than a rewrite
+///
+/// [ADR-1966] enumerated 72 rung-to-sub-solve refusal-propagation sites and
+/// identified this one as the largest — thirteen rungs sit below it — measured
+/// the conversion at **+22 / −2 files on `AUFDTLIRA`**, and then reverted it
+/// because it turned seven assertions in four other ADRs' pre-push suites red.
+/// Both arms therefore have to stay runnable **from one binary**: an A/B that
+/// compares two builds can compare two different trees by accident, and the
+/// four suites that own the old behaviour need to keep asserting it rather than
+/// having it deleted out from under them.
+///
+/// Neither arm changes what `datatype_native` itself will encode. The exactness
+/// preconditions ([ADR-1920] / [ADR-1935] / [ADR-1942] / [ADR-1946]) fire on
+/// exactly the same queries under both, so the wrong `unsat` [ADR-1930] shipped
+/// stays impossible by construction. The only thing that differs is whether the
+/// dispatcher treats one route's refusal as the whole query's verdict.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DatatypeNativeRefusalPolicy {
+    /// The HISTORICAL behaviour, and no longer the default: the datatype rung's
+    /// `Unsupported` leaves `solve` as an ERROR, so the front door prints
+    /// `give-up kind=Error` and the rungs below the datatype branch never run.
+    /// Kept as a named arm, and reachable by
+    /// `AXEYUM_DATATYPE_NATIVE_REFUSAL=propagate`, so the shipped conversion can
+    /// be measured against the code it replaced rather than only remembered.
+    Propagate,
+    /// [ADR-1966]'s rule: a route refusing a construct is a DECLINE, not the
+    /// query's verdict, so the rungs below get their turn. The refusal's own
+    /// sentence is carried out to whatever the ladder ends on by
+    /// [`relabel_with_datatype_refusal`], so the DT blocker census still reads
+    /// it. **This is the shipped default** (ADR-1980).
+    Decline,
+}
+
+thread_local! {
+    /// Test-scoped override of [`DatatypeNativeRefusalPolicy`]; see
+    /// [`DatatypeNativeRefusalPolicyGuard`].
+    static DATATYPE_NATIVE_REFUSAL_OVERRIDE:
+        std::cell::Cell<Option<DatatypeNativeRefusalPolicy>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Sets the [`DatatypeNativeRefusalPolicy`] for the current thread, restoring
+/// the previous setting on drop.
+///
+/// Exists so a test can drive both arms without setting a process-wide
+/// environment variable — a test that passes only under an ambient env var is a
+/// gate on one shell.
+pub struct DatatypeNativeRefusalPolicyGuard(Option<DatatypeNativeRefusalPolicy>);
+
+impl DatatypeNativeRefusalPolicyGuard {
+    /// Overrides the process policy on this thread.
+    #[must_use]
+    pub fn set(policy: DatatypeNativeRefusalPolicy) -> Self {
+        DatatypeNativeRefusalPolicyGuard(
+            DATATYPE_NATIVE_REFUSAL_OVERRIDE.with(|c| c.replace(Some(policy))),
+        )
+    }
+}
+
+impl Drop for DatatypeNativeRefusalPolicyGuard {
+    fn drop(&mut self) {
+        DATATYPE_NATIVE_REFUSAL_OVERRIDE.with(|c| c.set(self.0));
+    }
+}
+
+/// Parses `AXEYUM_DATATYPE_NATIVE_REFUSAL`.
+///
+/// An absent variable, an empty value, `decline` and an unparseable value all
+/// resolve to the SHIPPED default — [`DatatypeNativeRefusalPolicy::Decline`] —
+/// so a typo degrades to the shipped behaviour rather than to an arm nobody
+/// chose. `propagate`, `off` and `0` select the historical
+/// [`DatatypeNativeRefusalPolicy::Propagate`], which is what an A/B against the
+/// pre-ADR-1980 code runs.
+fn parse_datatype_native_refusal(value: Option<&str>) -> DatatypeNativeRefusalPolicy {
+    match value {
+        Some("propagate" | "off" | "0") => DatatypeNativeRefusalPolicy::Propagate,
+        _ => DatatypeNativeRefusalPolicy::Decline,
+    }
+}
+
+/// The [`DatatypeNativeRefusalPolicy`] in force on this thread: a live
+/// [`DatatypeNativeRefusalPolicyGuard`]'s choice, else the process policy
+/// resolved once from `AXEYUM_DATATYPE_NATIVE_REFUSAL`.
+fn datatype_native_refusal_policy() -> DatatypeNativeRefusalPolicy {
+    static RESOLVED: std::sync::OnceLock<DatatypeNativeRefusalPolicy> = std::sync::OnceLock::new();
+    if let Some(policy) = DATATYPE_NATIVE_REFUSAL_OVERRIDE.with(std::cell::Cell::get) {
+        return policy;
+    }
+    *RESOLVED.get_or_init(|| {
+        parse_datatype_native_refusal(
+            std::env::var("AXEYUM_DATATYPE_NATIVE_REFUSAL")
+                .ok()
+                .as_deref(),
+        )
+    })
+}
+
 /// The theory dispatcher (coercions already relaxed away by [`check_auto`]).
 /// `rec` records each route attempt + outcome at the existing decide/decline
 /// sites; it is a side effect only, never a branch condition (verdict invariance).
-#[allow(clippy::too_many_lines)]
 fn check_auto_dispatch(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
     rec: &mut Recorder<'_>,
+) -> Result<CheckResult, SolverError> {
+    let mut datatype_refusal: Option<String> = None;
+    let out = check_auto_dispatch_inner(arena, assertions, config, rec, &mut datatype_refusal);
+    relabel_with_datatype_refusal(out, datatype_refusal)
+}
+
+/// Puts the datatype rung's own sentence back in front of a terminal refusal
+/// (ADR-1980).
+///
+/// # Why this exists
+///
+/// [ADR-1966] identified `check_auto_dispatch` → `check_with_datatype_native`
+/// as the largest instance of its defect shape — a rung propagating a sub-solve
+/// refusal as the query's verdict, so the thirteen rungs below never run — and
+/// measured the conversion at **+22 files on `AUFDTLIRA`**. It reverted it, and
+/// named ONE prerequisite:
+///
+/// > Moving the terminal refusal to the bit-blast tail replaces
+/// > "array/UF datatype fields are not yet supported (ADR-0022)" with
+/// > "unsupported pure-Rust BV operator `DtTest(…)`", which names the wrong
+/// > thing. **Converting this site requires carrying the datatype rung's own
+/// > sentence into the final `unknown` first.**
+///
+/// That is what this does. When the datatype rung declined and no rung below
+/// decided either, the refusal the caller sees LEADS with the datatype rung's
+/// message, so the DT blocker census — which reads exactly these strings, and
+/// which is the reason ADR-1920 required the message to "name the actual
+/// missing capability rather than a sort list" — reads the same sentence it read
+/// before the conversion. The tail's own message is appended rather than
+/// dropped, because a census that cannot see where the query actually ended is
+/// the un-failable checker this repository keeps deleting.
+///
+/// A DECIDED result is returned untouched: the whole point of the conversion is
+/// that a rung below may now answer, and a verdict is never relabelled by a
+/// route that declined.
+fn relabel_with_datatype_refusal(
+    out: Result<CheckResult, SolverError>,
+    datatype_refusal: Option<String>,
+) -> Result<CheckResult, SolverError> {
+    let Some(datatype_message) = datatype_refusal else {
+        return out;
+    };
+    match out {
+        Err(SolverError::Unsupported(tail)) => Err(SolverError::Unsupported(format!(
+            "{datatype_message}; and no rung below the datatype route decided it either: {tail}"
+        ))),
+        Ok(CheckResult::Unknown(reason)) => Ok(CheckResult::Unknown(UnknownReason {
+            kind: reason.kind,
+            detail: format!(
+                "{datatype_message}; and no rung below the datatype route decided it either: {}",
+                reason.detail
+            ),
+        })),
+        other => other,
+    }
+}
+
+/// The dispatcher body. See [`check_auto_dispatch`], which wraps it so the
+/// datatype rung's refusal message survives a fall-through (ADR-1980).
+#[allow(clippy::too_many_lines)]
+fn check_auto_dispatch_inner(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    rec: &mut Recorder<'_>,
+    datatype_refusal: &mut Option<String>,
 ) -> Result<CheckResult, SolverError> {
     // Lift Int/Real `ite` to the Boolean level (`ite(c,a,b)` → fresh `t` with
     // `c→t=a ∧ ¬c→t=b`) so the arithmetic linearizers, which only accept linear
@@ -5521,7 +5686,8 @@ fn check_auto_dispatch(
                 with_recorder(rec, |t| {
                     t.record_declined("datatype-elim", unsupported_decline(&message));
                 });
-                // **THE ONE SITE THIS LANE DID NOT TAKE, AND WHY** (ADR-1966).
+                // **THE SITE ADR-1966 SIZED AND DID NOT TAKE. TAKEN HERE
+                // (ADR-1980).**
                 //
                 // `check_with_datatype_native` is the last datatype rung, and
                 // its ADR-0022 refusals — array/UF-sorted datatype FIELDS, UF
@@ -5529,33 +5695,63 @@ fn check_auto_dispatch(
                 // a non-variable datatype term, a datatype-sorted term that
                 // survives tag/field expansion — are exactly the four ADR-1927's
                 // own after-census measured as the top blockers of `AUFDTLIRA`
-                // (70 + 32 + 13 + 1 of 200). This bare `?` sends every one of
-                // them out of `solve` as an ERROR, so the front door prints
-                // `give-up kind=Error` and the thirteen rungs below this branch
-                // never run. It is a textbook instance of the shape.
+                // (70 + 32 + 13 + 1 of 200). Until ADR-1980 this was a bare `?`,
+                // which sent every one of them out of `solve` as an ERROR, so
+                // the front door printed `give-up kind=Error` and the thirteen
+                // rungs below this branch never ran.
                 //
-                // Converting it to a decline was written, built and MEASURED:
-                // per-file A/B against the same binary without it, `AUFDTLIRA`
-                // goes **90 → 110 decided of 200**, +22 / −2 after re-running
-                // every moved row three times per arm at 24 s, with 0
-                // `sat`↔`unsat` flips and all 23 new verdicts confirmed `unsat`
-                // by both z3 4.13.3 and cvc5 1.3.4.
+                // **WHAT THIS CHANGE IS NOT.** The exactness guards inside
+                // `datatype_native` (ADR-1920/1935/1942/1946) are untouched and
+                // still fire on exactly the same queries. An inexact tag/field
+                // expansion is still never emitted, so the wrong `unsat`
+                // ADR-1930 shipped is still impossible by construction. What
+                // changes is only what the DISPATCHER does with that refusal:
+                // a route declining is not the query's verdict (ADR-1966's
+                // rule), so the rungs below now get their turn. Every `sat`
+                // they return is replay-checked against the ORIGINAL assertions
+                // at the front door, and no rung below can reach the encoding
+                // this branch just refused.
                 //
-                // It was reverted anyway, because it turns **7 assertions in 4
-                // registered pre-push suites red** — `dt_uf_gate`,
-                // `dt_capability_1935`, `dt_constructor_arg_1942`,
-                // `dt_valued_result_1946` — owned by ADR-1920/1935/1942/1946.
-                // Three of them read the REFUSAL MESSAGE out of this `Err` and
-                // exist because that message is what the blocker census reads;
-                // one pins `Err` itself; four then get `Ok(Sat(model))` from a
-                // rung below, which is a capability gain but not one this lane
-                // can grant on another ADR's behalf. The measurement is in
-                // `bench-results/dispatch-decline-audit-20260913/` so the next
-                // lane starts from a sized target rather than a rediscovery.
-                let result =
-                    crate::datatype_native::check_with_datatype_native(arena, assertions, config)?;
-                with_recorder(rec, |t| t.record_result("datatype-native", &result));
-                return Ok(result);
+                // The refusal MESSAGE is not lost either, which was ADR-1966's
+                // one named prerequisite: it is carried out to whatever terminal
+                // refusal or `unknown` the ladder ends on, by
+                // `relabel_with_datatype_refusal`, so the DT blocker census
+                // reads the same sentence it read before.
+                match crate::datatype_native::check_with_datatype_native(arena, assertions, config)
+                {
+                    Ok(result) => {
+                        with_recorder(rec, |t| t.record_result("datatype-native", &result));
+                        return Ok(result);
+                    }
+                    Err(SolverError::Unsupported(native_message)) => {
+                        match datatype_native_refusal_policy() {
+                            // The pre-ADR-1980 arm, kept runnable from the same
+                            // binary so the four suites that own this behaviour
+                            // keep asserting it and the A/B cannot compare two
+                            // builds by accident. Byte-equivalent to the bare
+                            // `?` it replaced, RECORDER INCLUDED: the `?` never
+                            // reached `record_result`, so neither does this.
+                            DatatypeNativeRefusalPolicy::Propagate => {
+                                return Err(SolverError::Unsupported(native_message));
+                            }
+                            DatatypeNativeRefusalPolicy::Decline => {
+                                with_recorder(rec, |t| {
+                                    t.record_declined(
+                                        "datatype-native",
+                                        unsupported_decline(&native_message),
+                                    );
+                                });
+                                // Fall through to the rungs below. The datatype
+                                // rung's message is the specific capability
+                                // sentence the DT blocker census reads, so it —
+                                // not `datatype-elim`'s outer one — is what is
+                                // carried out.
+                                *datatype_refusal = Some(native_message);
+                            }
+                        }
+                    }
+                    Err(other) => return Err(other),
+                }
             }
             Err(other) => return Err(other),
         }

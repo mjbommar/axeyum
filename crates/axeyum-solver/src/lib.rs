@@ -1016,6 +1016,7 @@ macro_rules! full_exports {
         pub use auto::{AbvOnlineReservePolicy, AbvOnlineReservePolicyGuard};
         #[doc(hidden)]
         pub use auto::{BoundedIntBlastCertificate, certify_bounded_int_blast};
+        pub use auto::{DatatypeNativeRefusalPolicy, DatatypeNativeRefusalPolicyGuard};
         pub use auto::{
             IntLinearPortfolioWorkersGuard, check_auto, check_auto_explained, solve, unsat_core,
         };
