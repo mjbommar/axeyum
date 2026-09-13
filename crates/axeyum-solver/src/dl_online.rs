@@ -529,6 +529,14 @@ impl ScanState {
                         unreachable!("Build is only pushed for an application")
                     };
                     let arity = args.len();
+                    // Every `Enter` contributes exactly one value, so the last
+                    // `arity` entries are this node's operands. Checked rather
+                    // than asserted: a panic here would be an abort, and an
+                    // abort is strictly worse than the `unknown` this route is
+                    // allowed to return.
+                    if values.len() < arity {
+                        return None;
+                    }
                     // Operands landed in ENTRY order, i.e. source order
                     // reversed; put them back left to right.
                     let mut operands = values.split_off(values.len() - arity);
