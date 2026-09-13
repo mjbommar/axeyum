@@ -626,6 +626,16 @@ impl IntRowBuilder {
     /// and a recursive walk **aborts the process** there instead of declining (the
     /// failure mode fixed in `fcc8760d`, and the reason `crate::lra`'s integer
     /// collector is written the same way).
+    ///
+    /// The worklist bounds STACK and not WORK. An `Enter` pushes BOTH operands,
+    /// so on a `let`-shared DAG the number of work items is the number of
+    /// root-to-leaf PATHS — `2^depth`, every item shallow (ADR-1940). Hence the
+    /// per-call memo below, keyed on `TermId` and holding application nodes only.
+    ///
+    /// Denotation-identical: an `IntLin` depends only on the term and on
+    /// `var_index`/`opaque_index`, both keyed by the thing they index, so a
+    /// repeat walk of a shared node always had to produce the same value and
+    /// the same column numbers.
     fn linearize(&mut self, arena: &TermArena, term: TermId) -> Option<IntLin> {
         enum Step {
             Enter(TermId),
@@ -633,8 +643,12 @@ impl IntRowBuilder {
         }
         let mut work = vec![Step::Enter(term)];
         let mut values: Vec<IntLin> = Vec::new();
+        let mut memo: HashMap<TermId, IntLin> = HashMap::new();
         while let Some(step) = work.pop() {
             match step {
+                Step::Enter(t) if memo.contains_key(&t) => {
+                    values.push(memo[&t].clone());
+                }
                 Step::Enter(t) => match arena.node(t) {
                     TermNode::IntConst(value) => values.push(IntLin::constant(*value)),
                     TermNode::Symbol(symbol) if is_int(arena, t) => {
@@ -674,7 +688,9 @@ impl IntRowBuilder {
                     match op {
                         Op::IntNeg => {
                             let inner = values.pop()?;
-                            values.push(inner.neg()?);
+                            let built = inner.neg()?;
+                            memo.insert(t, built.clone());
+                            values.push(built);
                         }
                         Op::IntAdd | Op::IntSub | Op::IntMul => {
                             let right = values.pop()?;
@@ -687,6 +703,7 @@ impl IntRowBuilder {
                                 _ if right.is_constant() => left.scale(right.constant)?,
                                 _ => return None,
                             };
+                            memo.insert(t, built.clone());
                             values.push(built);
                         }
                         _ => return None,
