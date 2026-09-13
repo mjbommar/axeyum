@@ -77,7 +77,7 @@ fn flat_int_element_array_row_decides() {
 }
 
 /// `(Array (_ BitVec 64) (_ BitVec 64))` — ABV's leaf shape, at the width its
-/// benchmarks actually use (the 2023 UltimateAutomizer memory model).
+/// benchmarks actually use (the 2023 `UltimateAutomizer` memory model).
 #[test]
 fn flat_bv64_element_array_row_decides() {
     assert_eq!(
