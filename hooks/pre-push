@@ -638,7 +638,14 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #
   # `--features full` is load-bearing here too; `gated_test` fails on a zero
   # count, so the empty-binary trap is mechanised rather than remembered.
+  #   dt_constructor_arg_1942  — ADR-1942's constructor-argument congruence and
+  #                              the free-generation axioms it builds the
+  #                              antecedent from (distinctness / injectivity /
+  #                              mixed). Added 2026-09-12 BY THE RATCHET, which
+  #                              refused the push until this suite was named —
+  #                              its first real catch.
   for suite in unknown_reason_coverage dt_uf_gate dt_capability_1935 \
+               dt_constructor_arg_1942 \
                datatype_solve_path quant_ladder_rung_refusal_declines \
                additive_no_overflow_never_becomes_unsat; do
     gated_test "dispatch/reason: $suite" \
