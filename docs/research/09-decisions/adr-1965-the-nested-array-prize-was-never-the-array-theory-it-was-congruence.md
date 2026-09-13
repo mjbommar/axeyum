@@ -1,7 +1,7 @@
 # ADR-1965: the nested-array prize was never the array theory — it was congruence
 
 Status: accepted
-Index-summary: ADR-1955's `ArraySortKey::Array(ArraySortId)` is BUILT. `Sort` stays `Copy`, `Sort::Array { index, element }` keeps its shape, and `ArraySortKey::to_sort` now returns `Option<Sort>` — the `None` for a nested component propagates through `Sort::array_sorts` and `Sort::array_widths` to their 19 call sites in 8 modules, so every array route declines by construction rather than by audit, and its mutation kills six tests, four of them adversarial fixtures over satisfiable queries. **AUFLIRA moves from 9 to 158 of 200** interleaved against `main` on the pinned full-span list, with 0 regressions, 0 disagreements with `:status`, and and z3 AND cvc5 each agreeing with all 149 moved verdicts; two control divisions are unmoved. The reach was re-sized BEFORE the build with an array-free surrogate that is sound for `unsat` — projected 16,245, and the mechanism it identified is the one that delivered: **a nested AUFLIRA query needs no array theory at all, only congruence through the nested `select`.** ALIA and ABV do not move: their winnable files WRITE the outer array, and outer read-over-write is still undecided.
+Index-summary: ADR-1955's `ArraySortKey::Array(ArraySortId)` is BUILT. `Sort` stays `Copy`, `Sort::Array { index, element }` keeps its shape, and `ArraySortKey::to_sort` now returns `Option<Sort>` — the `None` for a nested component propagates through `Sort::array_sorts` and `Sort::array_widths` to their 19 call sites in 8 modules, so every array route declines by construction rather than by audit, and its mutation kills six tests, four of them adversarial fixtures over satisfiable queries. **AUFLIRA moves from 9 to 159 of 200 and AUFNIRA from 3 to 122** interleaved against `main` on the pinned full-span lists, 0 regressions, 0 disagreements with `:status`, and z3 AND cvc5 each agreeing with all 269 moved verdicts at `no opinion 0` — so the zero is not the empty kind ADR-1957 warns about; two control divisions are unmoved. The reach was re-sized BEFORE the build with an array-free surrogate that is sound for `unsat` — projected 16,245, and the mechanism it identified is the one that delivered: **a nested AUFLIRA query needs no array theory at all, only congruence through the nested `select`.** ALIA and ABV do not move: their winnable files WRITE the outer array, and outer read-over-write is still undecided.
 Index-status: accepted
 Date: 2026-09-13
 
@@ -17,11 +17,9 @@ parse refusal            27,150 files    IR   — that ADR's design
   +  Real-element arrays 19,620 files    solver
 ```
 
-**ADR-1960** — *the Real-element array gate was three gates, and none of the
-19,620 were behind it*, landing from a sibling lane and not linked here because
-it is not on `main` as this is written — demolished the third line: the 19,620
-and the 27,150 are one population counted once per gate. It sent the next lane
-back to `sort.rs`.
+[ADR-1960](adr-1960-the-real-element-array-gate-was-three-gates-and-none-of-the-19620-were-behind-it.md)
+demolished the third line: the 19,620 and the 27,150 are one population counted
+once per gate. It sent the next lane back to `sort.rs`.
 [ADR-1957](adr-1957-a-zero-disagreement-claim-must-publish-its-comparable-denominator.md)
 boarded the four divisions at n = 200 and put the census ceiling at 20,399
 files, 18,510 of it AUFLIRA.

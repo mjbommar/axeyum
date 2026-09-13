@@ -103,22 +103,34 @@ fn flat_bv64_element_array_row_decides() {
     );
 }
 
-/// `(Array Int Real)` — AUFLIRA's and AUFNIRA's leaf shape, and the whole
-/// reason their **19,620** nested files are not reachable by lifting the parse
-/// refusal. This query has NO nested array in it: it is refused one gate
-/// further down, at `scalar_alia_auflia_arrays_supported`'s `!has_real`.
+/// `(Array Int Real)` — AUFLIRA's and AUFNIRA's leaf shape.
+///
+/// **This row moved on 2026-09-13 and the panic that predicted it fired.** It
+/// was `flat_real_element_array_row_is_undecided`, pinning `Unknown` with a
+/// "GOOD NEWS, STALE ARITHMETIC" message naming the number to re-measure.
+/// [ADR-1960](../../../docs/research/09-decisions/adr-1960-the-real-element-array-gate-was-three-gates-and-none-of-the-19620-were-behind-it.md)
+/// is that re-measurement: the gate was three sequential gates, only the third
+/// of which ADR-1955 had found, and the 19,620 figure was a BLOCKED count whose
+/// reachable part — measured over all 29,564 files with the census in
+/// `bench-results/array-real-gate-20260913/` — is **zero**, because every one of
+/// those files is still behind the parse refusal this file's Gate 1 pins.
+///
+/// The row is kept rather than deleted because the pair is what carries the
+/// meaning: `flat_int_element_array_row_decides` and this test are the same
+/// query with `Int` swapped for `Real`, and they now agree. If they ever stop
+/// agreeing again, that is the same finding in the other direction.
+/// `crates/axeyum-solver/tests/real_element_array_row.rs` carries the soundness
+/// fixtures for the route this now takes.
 #[test]
-fn flat_real_element_array_row_is_undecided() {
-    // The query is unsat by construction, so `Unknown` and `Sat` are NOT the
-    // same finding: asserting only "not unsat" would pass on a wrong `sat`,
-    // which is the failure this repository cares about most. Pin `Unknown`.
+fn flat_real_element_array_row_decides() {
     match decide(&row_script("AUFLIRA", "Int", "Real")) {
-        CheckResult::Unknown(_) => {}
-        CheckResult::Unsat => panic!(
-            "GOOD NEWS, STALE ARITHMETIC: a Real-element array obligation now \
-             decides. ADR-1955 rules 19,620 AUFLIRA/AUFNIRA files out of the \
-             nested-array-sort population BECAUSE this was undecided. \
-             Re-measure that split and update the ADR, then delete this test."
+        CheckResult::Unsat => {}
+        CheckResult::Unknown(reason) => panic!(
+            "REGRESSION: the Real-element read-over-write obligation has stopped \
+             deciding. ADR-1960 lifted three gates to reach it (the pure-real \
+             `nra` early return, `uf-arithmetic`'s `has_real` early return, and \
+             `scalar_alia_auflia_arrays_supported`'s `!has_real`); one of them is \
+             back, or the route behind them has narrowed: {reason:?}"
         ),
         CheckResult::Sat(_) => panic!(
             "WRONG VERDICT: this query is the negation of the read-over-write \

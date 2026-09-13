@@ -1,0 +1,6 @@
+files: 11043
+blocked_other	uninterp_sort	q	10522
+parse_err	-	nq	488
+pass_today	auflia	q	33
+real_gate_only, quantifier-free (reaches the gate today): 0
+real_gate_only, all (needs a quantifier route too): 0

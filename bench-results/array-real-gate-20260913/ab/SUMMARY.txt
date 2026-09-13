@@ -1,0 +1,10 @@
+division        n  A dec  B dec  delta  B-only  A-only
+AUFLIRA       200      9      9     +0       0       0
+AUFNIRA       200      3      3     +0       0       0
+ALIA          200      0      0     +0       0       0
+ABV           200      4      4     +0       0       0
+QF_ABV        200    187    187     +0       0       0
+QF_BV         200    186    186     +0       0       0
+rows: 1200
+no verdict contradicts a declared :status
+no file where the two arms decide in opposite directions
