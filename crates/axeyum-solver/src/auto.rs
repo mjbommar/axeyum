@@ -854,7 +854,12 @@ pub fn solve(
     // The pass runs one quantifier-free SUB-SOLVE per top-level universal, each
     // handed whatever is left, so a single hard sub-query spends the ladder's
     // entire clock and every rung below it never runs. `quant_valid_universal_budget`
-    // is the lever that bounds it; under the shipped default it is the identity.
+    // is the reserve that bounds it, and it SHIPS ON at `share = 4` (ADR-1975):
+    // a quarter of what is left is held back for the rungs below. This line said
+    // "under the shipped default it is the identity", which was true for the 41
+    // minutes between `727c6dac5` landing the lever OFF and `55b1e5443` flipping
+    // the default after the A/B, and false afterwards. The identity is now
+    // `AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE=off`, which is the pre-ADR-1975 code.
     let valid_config = quant_valid_universal_budget(&valid_config);
     let eliminated = match crate::quant_valid_universal::eliminate_valid_universals(
         arena,
