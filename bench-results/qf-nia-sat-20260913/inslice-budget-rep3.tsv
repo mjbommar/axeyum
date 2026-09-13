@@ -1,0 +1,8 @@
+file	verdict	ladder_ms_transformed	pre_ladder_ms_original	left_ms	fits	wall_s
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateSize.jar-obl-10__p7265_safety_0.smt2	sat	4038.9	10874	13126	yes	8.8
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateSize.jar-obl-10__p7535_safety_0.smt2	sat	8475.9	10815	13185	yes	13.2
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsKey.jar-obl-11__p31541_safety_0.smt2	sat	9977.1	10775	13225	yes	14.7
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateIteratorEntryLoop.jar-obl-12__p3150_safety_0.smt2	sat	10312.6	10800	13200	yes	15.0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreatePut.jar-obl-10__p5428_safety_0.smt2	sat	12356.7	10867	13133	yes	17.2
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__sas2.t2__terminationQ_2_0.smt2	sat	15258.3	10838	13162	NO	20.0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsValue.jar-obl-11__p32332_safety_0.smt2	sat	18077.7	10855	13145	NO	22.9
