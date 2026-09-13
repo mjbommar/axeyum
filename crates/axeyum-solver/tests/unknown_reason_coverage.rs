@@ -61,23 +61,33 @@ use axeyum_solver::{
 /// has been overtaken by the solver getting better, which is the *good* way for
 /// it to fail and is why the message says replace rather than delete.
 ///
-/// The current script is the same path one rung further out: a UF applied to a
-/// **constructor term** rather than a free variable, which ADR-1935's own
-/// residual census names as the next frontier (173 of the sampled files). When
-/// that capability lands this fixture will decide too — replace it again, and
-/// add a line here rather than reaching for a shape the solver will never
-/// support, because a fixture that can never be overtaken is testing nothing
-/// anybody is trying to fix.
+/// **Replaced a THIRD time, and this one was predicted in writing.** The second
+/// replacement was `p(mk(a, 0))`, `not p(mk(0, a))` — a UF applied to a
+/// CONSTRUCTOR TERM — chosen because ADR-1935's residual census named it as the
+/// next frontier (173 of 600 sampled files). ADR-1942 (`dt-constructor-arg`)
+/// built exactly that: the congruence antecedent is now assembled from
+/// distinctness, injectivity and `is_c(o) /\ fields agree`, so that script
+/// decides `sat` (z3 and cvc5 agree) and all three tests below went red.
+///
+/// The current script is the rung after it, and it is the rung the ADR-1942
+/// sizing census MEASURED as next — a UF applied to another function's
+/// datatype-VALUED RESULT, `p(g(a))`, which is 57 of those same 173 files and
+/// the capability ADR-1935 refused by name. When that lands this fixture will
+/// decide too — replace it again and add a line here rather than reaching for a
+/// shape the solver will never support, because a fixture that can never be
+/// overtaken is testing nothing anybody is trying to fix. Three replacements in
+/// two days is the intended failure mode, not a defect in this suite.
 ///
 /// Kept inline rather than pointed at the corpus, so the gate does not depend
 /// on a `/nas3` mount that most hosts do not have.
 const DISPATCH_ERROR_SCRIPT: &str = r"
 (set-logic QF_UFDT)
 (declare-datatypes ((Pair 0)) (((mk (fst Int) (snd Int)))))
+(declare-fun g (Int) Pair)
 (declare-fun p (Pair) Bool)
 (declare-const a Int)
-(assert (p (mk a 0)))
-(assert (not (p (mk 0 a))))
+(assert (p (g a)))
+(assert (not (p (g 0))))
 (check-sat)
 ";
 

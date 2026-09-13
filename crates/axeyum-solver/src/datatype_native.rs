@@ -876,10 +876,19 @@ fn collect_ackermann_groups(
                 if !is_datatype_sorted(arena, arg) {
                     continue;
                 }
-                if !matches!(arena.node(arg), TermNode::Symbol(_)) {
+                // A free VARIABLE or a CONSTRUCTOR APPLICATION (ADR-1942).
+                // Everything else -- a datatype-sorted `select`, an `ite` over
+                // datatypes, anything the earlier passes left behind -- has no
+                // exact argument equality this pass can build, so it is refused
+                // by name. `structural_dt_eq` is the other half of this
+                // precondition and the two must stay in step: it is total on
+                // exactly the shapes admitted here.
+                if !matches!(arena.node(arg), TermNode::Symbol(_))
+                    && construct_of(arena, arg).is_none()
+                {
                     return Err(unsupported(
-                        "an uninterpreted function applied to a datatype term that is not a \
-                         free variable (constructors should fold first)",
+                        "an uninterpreted function applied to a datatype term that is neither \
+                         a free variable nor a constructor application",
                     ));
                 }
                 let Sort::Datatype(dt) = arena.sort_of(arg) else {
@@ -1006,6 +1015,7 @@ fn ackermannize_datatype_applications(
                 };
                 let (pa, qa) = (pa.clone(), qa.clone());
                 let mut antecedent = arena.bool_const(true);
+                let mut vacuous = false;
                 for (&a, &b) in pa.iter().zip(&qa) {
                     if a == b {
                         // Hash-consed: identical argument terms are one TermId,
@@ -1013,12 +1023,25 @@ fn ackermannize_datatype_applications(
                         // the formula.
                         continue;
                     }
-                    let eq = arena
-                        .eq(a, b)
-                        .map_err(|e| SolverError::Backend(e.to_string()))?;
+                    let Some(eq) = congruence_arg_eq(arena, a, b)? else {
+                        // Two DIFFERENT constructors at one argument position:
+                        // datatype values are freely generated, so these terms
+                        // never denote the same value, the antecedent is FALSE
+                        // and the clause constrains nothing. Dropping it is not
+                        // only an optimisation -- these divisions apply one
+                        // function to hundreds of records and the pair count is
+                        // quadratic, so an enum argument would otherwise emit
+                        // thousands of vacuous implications for the CNF encoder
+                        // to chew through (ADR-1942).
+                        vacuous = true;
+                        break;
+                    };
                     antecedent = arena
                         .and(antecedent, eq)
                         .map_err(|e| SolverError::Backend(e.to_string()))?;
+                }
+                if vacuous {
+                    continue;
                 }
                 let pv = arena.var(witnesses[pi]);
                 let qv = arena.var(witnesses[qi]);
@@ -1044,6 +1067,155 @@ fn ackermannize_datatype_applications(
         out.push(rewritten);
     }
     Ok((out, ack_sites))
+}
+
+/// The congruence antecedent's conjunct for ONE argument position: a Boolean
+/// term true exactly when `a` and `b` denote the same value, or `Ok(None)` when
+/// they provably never do (ADR-1942).
+///
+/// # Why this exists and what it must guarantee
+///
+/// The congruence clause is `(⋀ᵢ aᵢ = bᵢ) → (wₚ = w_q)`, and a conjunct that is
+/// WEAKER than real equality makes the clause STRONGER than the true congruence
+/// axiom — a model restriction, and the wrong-`unsat` shape ADR-1920 named and
+/// ADR-1930 measured. So every term this returns must be *exactly* equality, in
+/// both polarities, not merely implied by it.
+///
+/// # The three shapes, and why each is exact
+///
+/// `collect_ackermann_groups` admits a datatype-sorted argument only as a free
+/// variable or a constructor application, over a datatype whose expansion is
+/// exact. That leaves exactly these cases, and SMT-LIB datatypes are freely
+/// generated, which is what makes the first two equivalences hold:
+///
+/// * `c(x₁…xₙ)` vs `d(y₁…y_m)` with `c ≠ d` — **distinctness**. No value is
+///   built by two constructors, so the conjunct is `false` and the whole clause
+///   is vacuous; that is the `Ok(None)`.
+/// * `c(x₁…xₙ)` vs `c(y₁…yₙ)` — **injectivity**: `⋀ᵢ xᵢ = yᵢ`. Exact in both
+///   directions.
+/// * `c(x₁…xₙ)` vs a variable `o` — `is_c(o) ∧ ⋀ᵢ xᵢ = sel_{c,i}(o)`. Exact:
+///   the tag/field expansion maps `is_c(o)` to `tag_o = c` and `sel_{c,i}(o)` to
+///   `o`'s own field variable for that position, so the conjunction holds iff
+///   `o`'s value IS `c(x₁…xₙ)`. Under a negation it becomes
+///   `tag_o ≠ c ∨ ⋁ᵢ xᵢ ≠ sel_{c,i}(o)`, which is exactly "not that value" —
+///   the field variables of the *other* constructors never enter, so their being
+///   unconstrained cannot weaken it.
+/// * two non-constructors — the previous behaviour: a plain `Op::Eq` the
+///   tag/field expansion encodes through `build_dt_eq`, whose exactness is the
+///   precondition `collect_ackermann_groups` already checked.
+///
+/// A non-datatype argument position also lands in the last case, which is a
+/// plain scalar equality.
+///
+/// # Errors
+///
+/// [`SolverError::Unsupported`] if a constructor argument is itself
+/// datatype-sorted. **This arm is redundant today and is documented as such
+/// rather than presented as protection**: exactness of the argument's datatype
+/// (checked in [`collect_ackermann_groups`]) means no field of it is
+/// datatype-sorted, so nothing reaches this. It is here because the alternative
+/// — recursing, or emitting `Op::Eq` — would be the relaxed comparison this
+/// function exists to never emit, and a future widening of the exactness
+/// predicate must trip over a refusal rather than silently produce one.
+fn congruence_arg_eq(
+    arena: &mut TermArena,
+    a: TermId,
+    b: TermId,
+) -> Result<Option<TermId>, SolverError> {
+    if a == b {
+        return Ok(Some(arena.bool_const(true)));
+    }
+    match (construct_of(arena, a), construct_of(arena, b)) {
+        (Some(ca), Some(cb)) if ca != cb => Ok(None),
+        (Some(_), Some(_)) => {
+            let (TermNode::App { args: xs, .. }, TermNode::App { args: ys, .. }) =
+                (arena.node(a), arena.node(b))
+            else {
+                unreachable!("constructor applications");
+            };
+            let (xs, ys) = (xs.clone(), ys.clone());
+            let mut conj = arena.bool_const(true);
+            for (&x, &y) in xs.iter().zip(&ys) {
+                if x == y {
+                    continue;
+                }
+                reject_datatype_constructor_argument(arena, x)?;
+                let eq = arena
+                    .eq(x, y)
+                    .map_err(|e| SolverError::Backend(e.to_string()))?;
+                conj = arena
+                    .and(conj, eq)
+                    .map_err(|e| SolverError::Backend(e.to_string()))?;
+            }
+            Ok(Some(conj))
+        }
+        (Some(ctor), None) => construct_eq_term(arena, ctor, a, b).map(Some),
+        (None, Some(ctor)) => construct_eq_term(arena, ctor, b, a).map(Some),
+        (None, None) => arena
+            .eq(a, b)
+            .map(Some)
+            .map_err(|e| SolverError::Backend(e.to_string())),
+    }
+}
+
+/// `c(x₁…xₙ) = t` as `is_c(t) ∧ ⋀ᵢ xᵢ = sel_{c,i}(t)`, for a `t` that is not a
+/// constructor application (ADR-1942).
+///
+/// `t` is a free variable — the only other shape `collect_ackermann_groups`
+/// admits — so the `is`/`select` sites this builds are exactly the ones
+/// [`scan_fragment`] already handles, and the fields are non-datatype because
+/// the datatype's expansion is exact.
+///
+/// # Errors
+///
+/// See [`congruence_arg_eq`].
+fn construct_eq_term(
+    arena: &mut TermArena,
+    ctor: ConstructorId,
+    construct: TermId,
+    other: TermId,
+) -> Result<TermId, SolverError> {
+    let TermNode::App { args: fields, .. } = arena.node(construct) else {
+        unreachable!("constructor application");
+    };
+    let fields = fields.clone();
+    let mut conj = arena
+        .dt_test(ctor, other)
+        .map_err(|e| SolverError::Backend(e.to_string()))?;
+    for (index, &field) in fields.iter().enumerate() {
+        reject_datatype_constructor_argument(arena, field)?;
+        let i = u32::try_from(index).expect("field index fits u32");
+        let sel = arena
+            .dt_select(ctor, i, other)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        let eq = arena
+            .eq(field, sel)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        conj = arena
+            .and(conj, eq)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+    }
+    Ok(conj)
+}
+
+/// Refuses a datatype-sorted constructor argument. See [`congruence_arg_eq`]'s
+/// error section: unreachable under the exactness precondition, and deliberately
+/// a refusal rather than a fall-through.
+///
+/// # Errors
+///
+/// [`SolverError::Unsupported`] if `term` has a datatype sort.
+fn reject_datatype_constructor_argument(
+    arena: &TermArena,
+    term: TermId,
+) -> Result<(), SolverError> {
+    if is_datatype_sorted(arena, term) {
+        return Err(unsupported(
+            "a constructor argument in a congruence antecedent is itself datatype-sorted, \
+             so comparing it would need the relaxed encoding this pass must never emit",
+        ));
+    }
+    Ok(())
 }
 
 /// Rebuilds each Ackermann-expanded function's interpretation from its witness

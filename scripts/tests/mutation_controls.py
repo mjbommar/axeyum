@@ -9475,10 +9475,14 @@ SUITES["dt-capability-1935"] = (
             "        if false {",
         ),
         (
-            # Ackermann over a non-variable datatype argument has nothing to
-            # build an argument equality from.
-            "an Ackermannized datatype argument must be a free variable",
-            "                if !matches!(arena.node(arg), TermNode::Symbol(_)) {",
+            # Ackermann over a datatype argument that is neither a free variable
+            # nor a constructor has nothing to build an argument equality from.
+            # ADR-1942 widened this arm to admit constructors, so the anchor
+            # carries both halves; the arm being pinned is the same one.
+            "an Ackermannized datatype argument must be a variable or a constructor",
+            "                if !matches!(arena.node(arg), TermNode::Symbol(_))\n"
+            "                    && construct_of(arena, arg).is_none()\n"
+            "                {",
             "                if false {",
         ),
         (
@@ -9496,6 +9500,94 @@ SUITES["dt-capability-1935"] = (
             "the congruence clause is actually emitted",
             "                congruence.push(clause);",
             "                let _ = clause;",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `dt-constructor-arg-1942` — the congruence antecedent built from the datatype
+# axioms (ADR-1942).  Each mutation below deletes exactly one conjunct-producing
+# step of `congruence_arg_eq` / `construct_eq_term` and must turn a SATISFIABLE
+# query into a wrong `unsat`, which is the only failure this code can have.
+#
+# What is NOT listed, and why: `reject_datatype_constructor_argument` is
+# unreachable under the exactness precondition (an exact datatype has no
+# datatype-typed field, so a constructor's arguments are never datatype-sorted),
+# so no mutation of it can be killed and listing it would make this control
+# report a survivor forever.  It is a fence against a future widening of
+# `field_sort_expands`, and the ADR says so rather than this file implying it is
+# tested.
+# --------------------------------------------------------------------------
+
+SUITES["dt-constructor-arg-1942"] = (
+    "crates/axeyum-solver/src/datatype_native.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--test",
+            "dt_constructor_arg_1942",
+        ),
+        "dt-constructor-arg-1942",
+    ),
+    [
+        (
+            # DISTINCTNESS. Without it `c(…) = d(…)` falls through to the
+            # same-constructor arm, whose field loop compares nothing for a
+            # field-free enum, so the antecedent becomes `true` and `p` is
+            # forced to agree on `red` and `green`.
+            "two different constructors are never equal",
+            "        (Some(ca), Some(cb)) if ca != cb => Ok(None),",
+            "        (Some(ca), Some(cb)) if false && ca != cb => Ok(None),",
+        ),
+        (
+            # The other half of distinctness: recognising the provably-false
+            # conjunct and dropping the whole clause. Emitting it anyway with
+            # the conjunct silently missing leaves a `true` antecedent.
+            "a provably-false conjunct drops the whole congruence clause",
+            "                        vacuous = true;",
+            "                        vacuous = false;",
+        ),
+        (
+            # INJECTIVITY. With no field comparison, `c(x) = c(y)` is `true` and
+            # `p(mk(1,0))` and `p(mk(2,0))` are merged.
+            "same-constructor equality compares the constructor arguments",
+            "            for (&x, &y) in xs.iter().zip(&ys) {",
+            "            for (&x, &y) in xs.iter().zip(&ys).take(0) {",
+        ),
+        (
+            # The MIXED case's tester. Without it `c(x) = o` no longer requires
+            # `o` to have been built by `c`, so a field variable of an INACTIVE
+            # constructor can satisfy the antecedent.
+            "the mixed case requires the variable's tag to match",
+            "    let mut conj = arena\n"
+            "        .dt_test(ctor, other)\n"
+            "        .map_err(|e| SolverError::Backend(e.to_string()))?;\n"
+            "    for (index, &field) in fields.iter().enumerate() {",
+            "    let mut conj = arena.bool_const(true);\n"
+            "    for (index, &field) in fields.iter().enumerate() {",
+        ),
+        (
+            # The MIXED case's field comparison, truncated after the first
+            # field: enough to make the antecedent implied by what is asserted
+            # while a later field is still free.
+            "the mixed case compares EVERY field, not the first",
+            "    for (index, &field) in fields.iter().enumerate() {",
+            "    for (index, &field) in fields.iter().take(1).enumerate() {",
+        ),
+        (
+            # ADR-1920's soundness condition. On the CONSTRUCTOR path it is
+            # load-bearing where ADR-1935 measured it as a survivor on the
+            # variable path: the mixed case's `sel` into a datatype-typed field
+            # becomes an unconstrained child, and a nested child equality is a
+            # free Boolean, so the antecedent can hold of two values that differ
+            # at depth two.
+            "congruence needs an EXACT expansion, on the constructor path too",
+            "                if !datatype_expansion_is_exact(arena, dt) {",
+            "                if false {",
         ),
     ],
 )

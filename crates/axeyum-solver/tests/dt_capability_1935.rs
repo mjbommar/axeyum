@@ -637,23 +637,41 @@ fn refusal_names_the_datatype_valued_result() {
 
 #[test]
 fn refusal_names_the_non_variable_datatype_argument() {
-    // `p(red) /\ not p(green)` applies `p` to CONSTRUCTOR terms, which the
-    // Ackermann pre-pass has no argument equality to build from.
+    // **The fixture moved on 2026-09-12 and the guard did not.** It was
+    // `p(red) /\ not p(green)` — `p` applied to CONSTRUCTOR terms, which
+    // ADR-1935's pre-pass had no argument equality to build from. ADR-1942 built
+    // that equality from distinctness and injectivity, so that query now decides
+    // `sat` (z3 and cvc5 agree) and this test would have failed for the good
+    // reason. It is retargeted rather than deleted: the ARM being pinned is the
+    // same one — the shape check on a datatype-sorted argument in
+    // `collect_ackermann_groups` — and it still fires, one shape further out, on
+    // a datatype-sorted SELECT.
+    //
+    // The exact wording ADR-1942 gave it is pinned in
+    // `dt_constructor_arg_1942.rs`; what this asserts is that the message names
+    // the ARGUMENT rather than the dispatcher, which is what the DT blocker
+    // census reads.
     let mut arena = TermArena::new();
-    let (dt, red, green) = color(&mut arena);
+    let dt = arena.declare_datatype("Lst1935m");
+    let _nil = arena.add_constructor(dt, "nil", &[]);
+    let cons = arena.add_constructor(
+        dt,
+        "cons",
+        &[
+            ("hd".to_owned(), Sort::Int),
+            ("tl".to_owned(), Sort::Datatype(dt)),
+        ],
+    );
     let pred = arena
         .declare_fun("pv1935", &[Sort::Datatype(dt)], Sort::Bool)
         .expect("declare p");
-    let red_t = arena.construct(red, &[]).expect("red");
-    let green_t = arena.construct(green, &[]).expect("green");
-    let holds_of_red = arena.apply(pred, &[red_t]).expect("apply");
-    let holds_of_green = arena.apply(pred, &[green_t]).expect("apply");
-    let fails_of_green = arena.not(holds_of_green).expect("not");
+    let x = var_of(&mut arena, "xv1935", Sort::Datatype(dt));
+    let tail = arena.dt_select(cons, 1, x).expect("select");
+    let holds_of_tail = arena.apply(pred, &[tail]).expect("apply");
 
-    let detail = refusal_detail(solve(&mut arena, &[holds_of_red, fails_of_green], &cfg()));
+    let detail = refusal_detail(solve(&mut arena, &[holds_of_tail], &cfg()));
     assert!(
-        detail.contains("not a \\n                         free variable")
-            || detail.contains("not a free variable"),
+        detail.contains("applied to a datatype term"),
         "the refusal must name the non-variable argument, got: {detail}"
     );
 }
