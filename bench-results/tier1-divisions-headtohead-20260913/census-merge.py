@@ -29,6 +29,15 @@ def main():
             for ln in wf.read_text().split("\n")
             if ln
         ]
+        # An EMPTY winnable set is a RESULT -- it means every file a reference
+        # decided, we decided too -- and it must not render as "census DID NOT
+        # RUN", which is the absence of a measurement.  Without this branch the
+        # two are indistinguishable in the output, because both produce zero
+        # census rows.
+        if not want:
+            print(f"{div}: winnable set is EMPTY -- nothing to census"
+                  f" (a result about the division, not a missing step)")
+            continue
         parts = [SRC / f"{div}.{s}.tsv" for s in ("s0", "s1")]
         parts += [SRC / f"{div}.tsv"]
         head, seen = None, {}
