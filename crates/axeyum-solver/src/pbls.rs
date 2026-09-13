@@ -978,7 +978,10 @@ fn add_int_equality_repairs(
     asg: &Assignment,
     out: &mut Vec<Value>,
 ) {
-    if let Some(constant) = unit_affine_const(arena, lhs, sym)
+    // ONE memo for both sides: an equality's operands routinely share their
+    // term DAG, and `sym` is fixed here.
+    let mut memo = UnitAffineMemo::default();
+    if let Some(constant) = unit_affine_const(arena, lhs, sym, &mut memo)
         && let Some(value) = eval_int(arena, rhs, asg)
         && let Some(candidate) = value.checked_sub(constant)
     {
@@ -988,7 +991,7 @@ fn add_int_equality_repairs(
             push_offset_local_int_candidates(out, candidate);
         }
     }
-    if let Some(constant) = unit_affine_const(arena, rhs, sym)
+    if let Some(constant) = unit_affine_const(arena, rhs, sym, &mut memo)
         && let Some(value) = eval_int(arena, lhs, asg)
         && let Some(candidate) = value.checked_sub(constant)
     {
@@ -1030,7 +1033,9 @@ fn add_le_like_repairs(
     out: &mut Vec<Value>,
 ) {
     let [lhs, rhs] = terms;
-    if let Some(constant) = unit_affine_const(arena, lhs, sym)
+    // ONE memo for both sides; `sym` is fixed here.
+    let mut memo = UnitAffineMemo::default();
+    if let Some(constant) = unit_affine_const(arena, lhs, sym, &mut memo)
         && let Some(bound) = eval_int(arena, rhs, asg)
     {
         let target = if desired {
@@ -1048,7 +1053,7 @@ fn add_le_like_repairs(
             push_local_int_candidate(out, target);
         }
     }
-    if let Some(constant) = unit_affine_const(arena, rhs, sym)
+    if let Some(constant) = unit_affine_const(arena, rhs, sym, &mut memo)
         && let Some(bound) = eval_int(arena, lhs, asg)
     {
         let target = if desired {
@@ -1068,20 +1073,56 @@ fn add_le_like_repairs(
     }
 }
 
+/// Per-walk memo for [`unit_affine_const`], keyed on `TermId`.
+///
+/// The `IntAdd` arm tries `args[0]` and, when that does not yield a constant
+/// sibling, tries `args[1]` — so on `(+ v v)` it enters the SAME shared node
+/// twice, and on a `let`-shared chain of depth `d` that is `2^d` calls
+/// (ADR-1940). Measured on a depth-31 shared `+` spine over a `select` leaf,
+/// this one function was **99.6%** of the profile.
+///
+/// **Only valid for one fixed `sym`** — the result is that symbol's offset —
+/// so every construction site is inside one repair-candidate call.
+type UnitAffineMemo = HashMap<TermId, Option<i128>>;
+
 /// Parses `term` as `sym + c` for small unit-affine repair moves.
-fn unit_affine_const(arena: &TermArena, term: TermId, sym: SymbolId) -> Option<i128> {
+///
+/// Memoised on `TermId`; see [`UnitAffineMemo`]. Denotation-identical: the
+/// offset of a term in `sym` depends only on that term and on `sym`, which is
+/// fixed for the memo's life, so a repeat call always had to return the same
+/// value.
+fn unit_affine_const(
+    arena: &TermArena,
+    term: TermId,
+    sym: SymbolId,
+    memo: &mut UnitAffineMemo,
+) -> Option<i128> {
+    if let Some(&hit) = memo.get(&term) {
+        return hit;
+    }
+    let computed = unit_affine_const_uncached(arena, term, sym, memo);
+    memo.insert(term, computed);
+    computed
+}
+
+fn unit_affine_const_uncached(
+    arena: &TermArena,
+    term: TermId,
+    sym: SymbolId,
+    memo: &mut UnitAffineMemo,
+) -> Option<i128> {
     match arena.node(term) {
         TermNode::Symbol(s) if *s == sym => Some(0),
         TermNode::App {
             op: Op::IntAdd,
             args,
         } => {
-            if let Some(offset) = unit_affine_const(arena, args[0], sym)
+            if let Some(offset) = unit_affine_const(arena, args[0], sym, memo)
                 && let Some(constant) = int_const(arena, args[1])
             {
                 return offset.checked_add(constant);
             }
-            if let Some(offset) = unit_affine_const(arena, args[1], sym)
+            if let Some(offset) = unit_affine_const(arena, args[1], sym, memo)
                 && let Some(constant) = int_const(arena, args[0])
             {
                 return offset.checked_add(constant);
@@ -1092,7 +1133,7 @@ fn unit_affine_const(arena: &TermArena, term: TermId, sym: SymbolId) -> Option<i
             op: Op::IntSub,
             args,
         } => {
-            let offset = unit_affine_const(arena, args[0], sym)?;
+            let offset = unit_affine_const(arena, args[0], sym, memo)?;
             let constant = int_const(arena, args[1])?;
             offset.checked_sub(constant)
         }
