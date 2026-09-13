@@ -109,6 +109,24 @@ def main():
             print(f"   -- no route trail at all: {len(noroute)} (own row, not an absence)")
             for k, c in collections.Counter(r["rc"] for r in noroute).most_common():
                 print(f"      {c:4d}  rc={k}")
+
+        # A TERMINAL INTERNAL ERROR is reported whatever `attempts=` says.
+        # ADR-1936's UNCLASSIFIED rule exists because a give-up reason from a
+        # dispatch that stopped early describes the DISPATCHER.  An internal
+        # error message does not: it names a defect in the code that raised it,
+        # and it is a finding at any attempts count.  It is still excluded from
+        # the rankable bucket -- it is listed, not ranked.
+        err = [r for r in rs if r["giveup"].startswith("give-up kind=Error")]
+        if err:
+            print(f"   -- TERMINAL INTERNAL ERROR: {len(err)} (reported at any attempts=)")
+            for k, c in collections.Counter(
+                r["giveup"][len("give-up kind=Error detail="):][:150] for r in err
+            ).most_common():
+                print(f"      {c:4d}  {k}")
+                for r in err:
+                    if r["giveup"][len("give-up kind=Error detail="):][:150] == k:
+                        print(f"            repro: {r['file']}")
+                        break
         print()
     return 0 if any_seen else 1
 

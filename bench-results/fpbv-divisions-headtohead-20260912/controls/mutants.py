@@ -29,7 +29,14 @@ MUTANTS = [
                 "            elif False:\n                unclassified.append(r)",
             )
         ],
-        ["the ADR-1936 partition is wrong", "an UNCLASSIFIED row was ranked"],
+        # Three guards: dropping the partition changes the counts, lets the
+        # Watchdog row be ranked, AND lets the internal-error row be ranked as
+        # a capability blocker.  Three different defects, three messages.
+        [
+            "the ADR-1936 partition is wrong",
+            "an UNCLASSIFIED row was ranked",
+            "an internal-error row was RANKED",
+        ],
     ),
     (
         "board: the disagreement check compares nothing",
@@ -49,6 +56,33 @@ MUTANTS = [
         # has a row it should have flagged and does not reach.  A cascade that
         # names two different defects is the opposite of guards sharing one check.
         ["the winnable set was miscounted", "the disagreement check did not fire"],
+    ),
+    (
+        "census: internal errors are silently dropped",
+        "census-summarize.py",
+        [
+            (
+                '        err = [r for r in rs if r["giveup"].startswith("give-up kind=Error")]',
+                "        err = []",
+            )
+        ],
+        # Two guards: with no error rows there is neither a count line nor a
+        # repro path to find.
+        [
+            "the internal-error row was not reported",
+            "reported without a repro path",
+        ],
+    ),
+    (
+        "census: the internal error is reported WITHOUT a repro path",
+        "census-summarize.py",
+        [
+            (
+                '                        print(f"            repro: {r[\'file\']}")',
+                '                        print("            repro: (elided)")',
+            )
+        ],
+        ["reported without a repro path"],
     ),
     (
         "census: a missing census renders as an empty one",

@@ -15,6 +15,9 @@
 #   b  attempts=3  < ladder           -> UNCLASSIFIED, must not be ranked
 #   c  no route trail at all          -> its own row, not an absence
 #   d  attempts=9, decided            -> excluded, not a blocker
+#   e  attempts=6, kind=Error         -> UNCLASSIFIED for ranking, but the
+#                                        internal error message is REPORTED
+#                                        anyway, with its repro path
 set -u
 cd "$(dirname "$0")"
 T=$(mktemp -d)
@@ -39,11 +42,18 @@ cp ../census-summarize.py "$T"/
 cp census-fixture.tsv "$T/census/QF_ABVFP.tsv"
 c=$(cd "$T" && python3 census-summarize.py)
 
-grep -q "CLASSIFIED 1   UNCLASSIFIED 1   no-route 1   decided-on-recheck 1" <<<"$c" \
+grep -q "CLASSIFIED 1   UNCLASSIFIED 2   no-route 1   decided-on-recheck 1" <<<"$c" \
   || { echo "FAIL: the ADR-1936 partition is wrong"; fail=1; }
+grep -q "TERMINAL INTERNAL ERROR: 1" <<<"$c" \
+  || { echo "FAIL: the internal-error row was not reported"; fail=1; }
+grep -A3 "TERMINAL INTERNAL ERROR" <<<"$c" | grep -q "repro: e.smt2" \
+  || { echo "FAIL: the internal-error row was reported without a repro path"; fail=1; }
+ranked() { sed -n '/classified give-up reasons/,/^   -- /p' <<<"$c" | grep '^      '; }
+ranked | grep -q "array projection" \
+  && { echo "FAIL: an internal-error row was RANKED as a capability blocker"; fail=1; }
 grep -q "1  Incomplete: bit-blast too big" <<<"$c" \
   || { echo "FAIL: the rankable row was not ranked"; fail=1; }
-grep -A99 "classified give-up reasons" <<<"$c" | grep -q "Watchdog" \
+ranked | grep -q "Watchdog" \
   && { echo "FAIL: an UNCLASSIFIED row was ranked by its give-up reason"; fail=1; }
 grep -q "census DID NOT RUN" <<<"$c" \
   || { echo "FAIL: a missing census renders the same as an empty one"; fail=1; }
