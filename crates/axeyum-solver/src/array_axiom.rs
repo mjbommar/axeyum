@@ -1599,7 +1599,18 @@ fn equal_array_readback_equivalent(
         let Sort::Array { element, .. } = arena.sort_of(lhs_array) else {
             continue;
         };
-        if arena.array_key_sort(element) != target_sort {
+        // `ArraySortKey::to_sort` returns `None` for a NESTED component
+        // (ADR-1965), so this read-back declines a nested array rather than
+        // following the interning. The rule it checks -- two arrays known equal
+        // read at one index give equal values -- is sound at any element sort,
+        // nested included, and an earlier draft did follow it here. It was
+        // measured instead of assumed: with this route refusing, 25 of 25
+        // sampled AUFLIRA files this lane moved still decide and all seven
+        // array suites stay green, so following the nesting reached nothing.
+        // A capability nobody can demonstrate is decoration, and leaving it in
+        // would have made "every array route declines a nested sort by
+        // construction" false for one site with nothing to show for it.
+        if element.to_sort() != Some(target_sort) {
             continue;
         }
         for &rhs_array in &arrays[idx + 1..] {

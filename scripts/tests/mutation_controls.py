@@ -9842,10 +9842,11 @@ SUITES["qinst-round-exit"] = (
 # The guards below are the three that carry its soundness, and they are NOT the
 # same kind of guard:
 #
-#   * the conservative `None` is how ~500 call sites that predate nesting refuse
-#     a nested component WITHOUT anyone auditing them.  Mutating it does not
-#     break a route; it makes every route silently accept a sort it cannot
-#     reason about.
+#   * the conservative `None` propagates through `Sort::array_sorts` and
+#     `Sort::array_widths` to their 19 call sites in 8 modules, so every array
+#     route refuses a nested component WITHOUT anyone auditing it.  Mutating
+#     it does not break a route; it makes every route silently accept a sort
+#     it cannot reason about.
 #   * interning BY VALUE is what lets `ArraySortKey` keep `Eq + Hash` over
 #     structural identity, which `TermNode` hash-consing requires.
 #   * `Features::note_sort`'s recursion is ADR-1955's named hazard: it
