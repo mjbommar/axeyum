@@ -157,3 +157,38 @@ of the seven go red precisely because the front door starts returning
 [ADR-1930]: ../../docs/research/09-decisions/adr-1930-a-wrong-constructor-selector-is-unspecified-not-defaulted.md
 [ADR-1966]: ../../docs/research/09-decisions/adr-1966-a-rungs-refusal-of-a-construct-a-later-rung-owns-is-a-decline.md
 [ADR-1975]: ../../docs/research/09-decisions/adr-1975-valid-universal-elimination-spends-24-seconds-to-prevent-a-107-millisecond-refutation.md
+
+## 6. The bracket, resolved — written after the A/B, never edited into it
+
+**Pre-registered above at `7b1e88363`: 8 to 35 files, point estimate 23.**
+
+**Realised: +79 net (81 gains, 2 losses) across the three divisions.** More than
+double the top of the bracket. The bracket text above is unchanged; this section
+is the only place the outcome is recorded, so the prediction and the result
+cannot be confused with one another.
+
+### Why it was too low, specifically
+
+The 19 % rate it extrapolated from — ADR-1966's 22 gains of 116 blocked
+`AUFDTLIRA` rows — is a rate over **four** ADR-0022 refusal families. The three
+exactness refusals are only **39 of those 116**. Applying the blended rate to a
+subset assumes the families convert alike, and they do not: on the two divisions
+where exactness refusals dominate the blocked set (`UFDTLIRA` 49, `UFDT` 36) and
+which had never been measured for this conversion, they converted at 78 % and
+53 %.
+
+**The generalisable correction: a conversion rate measured on a mixed blocker
+population does not transfer to a subset of it.** The bracket's own listed risk
+("ADR-1966's 116 is a superset of this 124") was the right observation pointed
+in the wrong direction — it was written as a reason the number could be LOWER.
+
+### What did hold
+
+- The upper bound of 124 held; 80 of the 124 converted, 65 %.
+- "A blocker count is not a reachable count" held: 44 rows did not move.
+- `AUFDTLIRA` landed at **+24 / −2 from a base of 96**, reproducing ADR-1966's
+  **+22 / −2 from a base of 90**. The one division anybody had measured
+  reproduced to the file.
+
+The measurement, its re-check, its controls and its noise floor are in
+[`AB.md`](AB.md).
