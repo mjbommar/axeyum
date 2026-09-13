@@ -1,0 +1,9 @@
+=== check 1: does --trace name the variable? ===
+shipped:
+; config digest=80c00c44513f7380 entries=484 dated=96 undated=388 consulted=1 crates/axeyum-solver/src/simplex.rs::MAX_TABLEAU_CELLS
+ceiling 2:
+; config digest=bfd5d722b906f34f entries=484 dated=96 undated=388 env:AXEYUM_QINST_ROUNDS=2 consulted=1 crates/axeyum-solver/src/simplex.rs::MAX_TABLEAU_CELLS
+
+=== check 2: does a ceiling of 2 flip anything we decide? ===
+checked 40 decided files; flipped at ceiling 2: 0
+LEVERCHECK DONE

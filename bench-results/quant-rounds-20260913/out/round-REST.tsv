@@ -1,0 +1,13 @@
+file	verdict	round_anywhere	fixpoint_anywhere	headroom_anywhere	giveup_lines
+BV/2017-Preiner-scholl-smt08/RND/RND_6_4.smt2	unknown	0	2	0	1
+BV/2017-Preiner-scholl-smt08/RNDPRE/RNDPRE_4_33.smt2	unknown	0	2	0	1
+BV/20170501-Heizmann-UltimateAutomizer/jain_4_true-unreach-call_true-no-overflow.i_200.smt2	unknown	0	2	0	1
+BV/20170501-Heizmann-UltimateAutomizer/jain_6_true-unreach-call_true-no-overflow.i_236.smt2	unknown	0	2	0	1
+BV/20190429-UltimateAutomizerSvcomp2019/jain_7_true-unreach-call_true-no-overflow_false-termination.i_18.smt2	unknown	0	2	0	1
+BV/20210330-PEak/no-extern-loop_sat_subset/easy1.smt2	unknown	0	0	2	1
+BV/20230321-UltimateAutomizerSvcomp2023/jain_6-1.c_7.smt2	unknown	0	2	0	1
+BV/wintersteiger/fmsd13/fixpoint/small-equiv-fixpoint-1.smt2	unknown	0	2	0	1
+BV/wintersteiger/fmsd13/fixpoint/small-swap1-fixpoint-10.smt2	unknown	0	2	0	1
+BV/wintersteiger/fmsd13/fixpoint/usb-phy-fixpoint-3.smt2	unknown	0	1	0	1
+NRA/keymaera/to_right-node1083.smt2	unknown	0	2	0	1
+UFLIA/grasshopper/uninstantiated/sls_insert_loop_check_heap_access_38_6.smt2	unknown	0	0	0	1

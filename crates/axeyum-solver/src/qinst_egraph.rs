@@ -71,6 +71,160 @@ const MID_LOOP_CHECK_BUDGET_DIVISOR: u32 = 4;
 /// deadline overshoot as large as the round itself.
 const ROUND_GROWTH_HEADROOM: u32 = 8;
 
+axeyum_ir::cap_lever! {
+    /// The cadence anchor in force: [`MAX_INSTANTIATION_ROUNDS`], or
+    /// `AXEYUM_QINST_CADENCE`.
+    ///
+    /// Unset is the shipped `8`, byte for byte. This is **not** the loop's
+    /// stopping condition -- it is where the first interleaved ground check
+    /// fires and where the exponential check cadence starts, so moving it
+    /// changes how often the loop re-decides, not how long it runs.
+    fn instantiation_cadence() -> usize = "AXEYUM_QINST_CADENCE" or MAX_INSTANTIATION_ROUNDS;
+}
+
+axeyum_ir::cap_lever! {
+    /// The instantiation-round ceiling in force:
+    /// [`MAX_EXTENDED_INSTANTIATION_ROUNDS`], or `AXEYUM_QINST_ROUNDS`.
+    ///
+    /// Unset is the shipped `512`, byte for byte.
+    ///
+    /// **Read [`InstantiationLoopExit`] before raising this.** The loop has
+    /// three stopping conditions and only one of them is this ceiling; the
+    /// give-up detail now names which fired, so a run that ends
+    /// `reached fixpoint` or `could not fit another round` is telling you this
+    /// lever is not its binding constraint.
+    fn process_round_ceiling() -> usize =
+        "AXEYUM_QINST_ROUNDS" or MAX_EXTENDED_INSTANTIATION_ROUNDS;
+}
+
+std::thread_local! {
+    /// A per-thread override of the process round ceiling, set by
+    /// [`RoundCeilingGuard`].
+    ///
+    /// `cap_lever!` caches in a `OnceLock` and reads a process-wide variable,
+    /// so without this no test could exercise more than one arm — and a lever
+    /// whose arms cannot be compared inside one process is a lever whose
+    /// promise ("unset is the shipped value") is untested. The same split
+    /// `GROUND_BUDGET_OVERRIDE` already uses, for the same reason.
+    static ROUND_CEILING_OVERRIDE: std::cell::Cell<Option<usize>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Forces a round ceiling on this thread for the lifetime of the guard,
+/// restoring the previous setting on drop.
+pub struct RoundCeilingGuard(Option<usize>);
+
+impl RoundCeilingGuard {
+    /// Overrides the process ceiling on this thread.
+    #[must_use]
+    pub fn set(ceiling: usize) -> Self {
+        RoundCeilingGuard(ROUND_CEILING_OVERRIDE.with(|cell| cell.replace(Some(ceiling))))
+    }
+}
+
+impl Drop for RoundCeilingGuard {
+    fn drop(&mut self) {
+        ROUND_CEILING_OVERRIDE.with(|cell| cell.set(self.0));
+    }
+}
+
+/// The instantiation-round ceiling in force: a live [`RoundCeilingGuard`]'s
+/// choice, else the process arm resolved once from `AXEYUM_QINST_ROUNDS`, else
+/// the shipped [`MAX_EXTENDED_INSTANTIATION_ROUNDS`].
+#[must_use]
+fn instantiation_round_ceiling() -> usize {
+    if let Some(ceiling) = ROUND_CEILING_OVERRIDE.with(std::cell::Cell::get) {
+        return ceiling;
+    }
+    process_round_ceiling()
+}
+
+axeyum_ir::cap_lever! {
+    /// The growth-headroom multiple in force: [`ROUND_GROWTH_HEADROOM`], or
+    /// `AXEYUM_QINST_ROUND_HEADROOM`.
+    ///
+    /// Unset is the shipped `8`, byte for byte. Lowering it lets the loop start
+    /// a round the remaining clock may not fit, which is why it is a lever and
+    /// not a preference: the overshoot it guards against can be as large as the
+    /// round itself.
+    fn round_growth_headroom() -> u32 =
+        "AXEYUM_QINST_ROUND_HEADROOM" or ROUND_GROWTH_HEADROOM;
+}
+
+/// Which of the e-matching instantiation loop's three stopping conditions
+/// actually ended it.
+///
+/// # Why this exists
+///
+/// All three of those exits fell through to one `finish_quantified_ground_check`
+/// call emitting one give-up string -- `"e-matching instantiation did not refute
+/// within the round budget"` -- and only ONE of the three is a round budget.
+/// ADR-1950 ranked that merged string as the largest blocker on the
+/// six-division board (177 of 390 winnable files, 45 %) and classified it
+/// `ROUND` **from the string**, because the string is all a census can read.
+/// The loop's own `qgrounddump` label already admitted the merge: it is spelled
+/// `"fixpoint-or-break"`.
+///
+/// The three have disjoint remedies, so a census that cannot tell them apart
+/// points the next lane at the wrong lever:
+///
+/// - [`Fixpoint`](Self::Fixpoint) -- matching, candidate equalities and term
+///   invention all reached fixpoint: **no further instance exists to admit**.
+///   More rounds, and more clock, are both worth exactly zero. The gap is
+///   instance *selection* or trigger *coverage*.
+/// - [`GrowthHeadroom`](Self::GrowthHeadroom) -- the remaining wall clock could
+///   not fit another round with [`round_growth_headroom`] to spare. This is a
+///   CLOCK exit wearing a round exit's clothes.
+/// - [`RoundCeiling`](Self::RoundCeiling) -- the loop ran
+///   [`instantiation_round_ceiling`] rounds. **This, and only this, is the
+///   round budget the historical string names.**
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InstantiationLoopExit {
+    /// Matching, candidate equalities and term invention all reached fixpoint.
+    Fixpoint,
+    /// The remaining budget could not fit another round with growth headroom.
+    GrowthHeadroom,
+    /// The loop ran its full round ceiling.
+    RoundCeiling,
+}
+
+impl InstantiationLoopExit {
+    /// The `unknown` detail this exit gives up with, after `rounds` rounds were
+    /// entered.
+    ///
+    /// The [`RoundCeiling`](Self::RoundCeiling) wording is the historical string
+    /// unchanged, because the historical string was accurate for exactly that
+    /// exit; the other two are new and say what the reader needs in order NOT
+    /// to reach for the round lever.
+    #[must_use]
+    pub fn detail(self, rounds: usize) -> String {
+        match self {
+            Self::Fixpoint => format!(
+                "e-matching instantiation reached fixpoint without refuting after {rounds} \
+                 rounds (no further instance to admit; more rounds cannot help)"
+            ),
+            Self::GrowthHeadroom => format!(
+                "e-matching instantiation stopped after {rounds} rounds: the remaining budget \
+                 could not fit another round with growth headroom"
+            ),
+            Self::RoundCeiling => {
+                "e-matching instantiation did not refute within the round budget".to_owned()
+            }
+        }
+    }
+
+    /// The one-word kind a census should rank this exit under, in the
+    /// vocabulary ADR-1950 defines (`SHAPE` / `CLOCK` / `ROUND`).
+    #[must_use]
+    pub fn census_kind(self) -> &'static str {
+        match self {
+            Self::Fixpoint => "SHAPE",
+            Self::GrowthHeadroom => "CLOCK",
+            Self::RoundCeiling => "ROUND",
+        }
+    }
+}
+
 /// Deterministic cap on accumulated ground terms: e-matching a universal whose
 /// instances generate ever-deeper terms (e.g. `∀x.(x≤y ∨ x≥y+1)` ⇒ `y, y+1, y+2, …`)
 /// can explode a single round's `check_auto`, so the loop bails to `unknown` past this
@@ -2089,8 +2243,16 @@ fn prove_quantified_unsat_via_egraph_impl(
             );
         }
     }
-    for round in 0..MAX_EXTENDED_INSTANTIATION_ROUNDS {
+    // The loop's stopping condition is recorded, not inferred: three
+    // different exits used to fall through to one give-up string naming only
+    // one of them (`InstantiationLoopExit`). `RoundCeiling` is the initial
+    // value because it is what the `for` running to completion means, and the
+    // two `break`s below each overwrite it.
+    let mut loop_exit = InstantiationLoopExit::RoundCeiling;
+    let mut rounds_entered = 0usize;
+    for round in 0..instantiation_round_ceiling() {
         let round_started = Instant::now();
+        rounds_entered = round + 1;
         if deadline.is_some_and(|d| round_started >= d) {
             qgrounddump(arena, &ground, &generations, "timeout-round-head");
             return Ok(egraph_timeout());
@@ -2104,8 +2266,12 @@ fn prove_quantified_unsat_via_egraph_impl(
         // refutation-completing step inside the budget.
         if let Some(d) = deadline
             && d.checked_duration_since(round_started)
-                .is_none_or(|remaining| remaining < last_round_duration * ROUND_GROWTH_HEADROOM)
+                .is_none_or(|remaining| remaining < last_round_duration * round_growth_headroom())
         {
+            // A CLOCK exit. Recorded as one so the give-up detail does not
+            // report it as a round budget, which is the confusion ADR-1950
+            // measured at 45 % of a six-division winnable set.
+            loop_exit = InstantiationLoopExit::GrowthHeadroom;
             break;
         }
         // Free ceiling slots held by instances the congruence has since
@@ -2153,7 +2319,7 @@ fn prove_quantified_unsat_via_egraph_impl(
             // Historical rounds keep the full shared deadline; the extended
             // cadence runs under a fractional budget so one large mid-loop
             // check cannot starve later rounds and the final ground check.
-            let check_deadline = if round < MAX_INSTANTIATION_ROUNDS {
+            let check_deadline = if round < instantiation_cadence() {
                 deadline
             } else {
                 fractional_deadline(deadline, MID_LOOP_CHECK_BUDGET_DIVISOR)
@@ -2404,6 +2570,9 @@ fn prove_quantified_unsat_via_egraph_impl(
                     floodprobe_cap_census(arena, &matcher, &ground_derivations, &assertions);
                 }
                 funnel.record(ground.len(), crate::live_instruments::Sampled::Complete);
+                // A SHAPE exit: nothing is left to admit, so neither more
+                // rounds nor more clock can change this answer.
+                loop_exit = InstantiationLoopExit::Fixpoint;
                 break; // source, scoped-candidate, and invention fixpoint
             }
         }
@@ -2451,7 +2620,7 @@ fn prove_quantified_unsat_via_egraph_impl(
         // check — which a deadline exit skips. The first check fires exactly
         // where the historical 8-round loop exited, preserving its reach.
         if online_clauses.is_some()
-            && round + 1 >= MAX_INSTANTIATION_ROUNDS
+            && round + 1 >= instantiation_cadence()
             && (round + 1).is_power_of_two()
             && deadline.is_none_or(|d| Instant::now() < d)
             && matches!(
@@ -2491,7 +2660,16 @@ fn prove_quantified_unsat_via_egraph_impl(
             &format!("nested-activity | {}", detail.join(" | ")),
         );
     }
-    qgrounddump(arena, &ground, &generations, "fixpoint-or-break");
+    // The dump label was `"fixpoint-or-break"` -- an accurate name for a merged
+    // bucket. It is now the exit that actually fired.
+    qgrounddump(arena, &ground, &generations, loop_exit.census_kind());
+    if qprobe_enabled() {
+        eprintln!(
+            "QPROBE loop-exit kind={} exit={loop_exit:?} rounds={rounds_entered} ground={}",
+            loop_exit.census_kind(),
+            ground.len(),
+        );
+    }
     let finished = finish_quantified_ground_check(
         arena,
         &ground,
@@ -2500,6 +2678,8 @@ fn prove_quantified_unsat_via_egraph_impl(
         stats,
         &mut quantifier_cache,
         &generations,
+        loop_exit,
+        rounds_entered,
     )?;
     if matches!(finished, CheckResult::Unsat) {
         *certificate = collect_ground_derivations(arena, anchor, &ground, &ground_derivations);
@@ -2512,7 +2692,7 @@ fn prove_quantified_unsat_via_egraph_impl(
 /// 1-based index is a power of two (the same cadence as the retained-session
 /// interleaved checks).
 fn interleaved_check_due(round: usize) -> bool {
-    round < MAX_INSTANTIATION_ROUNDS || (round + 1).is_power_of_two()
+    round < instantiation_cadence() || (round + 1).is_power_of_two()
 }
 
 fn egraph_timeout() -> CheckResult {
@@ -3895,6 +4075,8 @@ fn finish_quantified_ground_check(
     stats: &mut QuantifierLoopStats,
     cache: &mut QuantifierTermCache,
     generations: &TermGenerations,
+    loop_exit: InstantiationLoopExit,
+    rounds_entered: usize,
 ) -> Result<CheckResult, SolverError> {
     // Flood regime: the full-set final check over a near-cap conjunction is
     // itself a wall (measured 26.7s-then-unknown over 8192 conjuncts on
@@ -3928,9 +4110,12 @@ fn finish_quantified_ground_check(
     }
     match quantifier_qf_refutation_check(arena, ground, config, deadline, stats, cache)? {
         CheckResult::Unsat => Ok(CheckResult::Unsat),
+        // The detail names WHICH of the loop's three stopping conditions
+        // fired. Before this it named the round budget whichever one fired,
+        // and a census can only read the string.
         _ => Ok(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::Incomplete,
-            detail: "e-matching instantiation did not refute within the round budget".to_owned(),
+            detail: loop_exit.detail(rounds_entered),
         })),
     }
 }
@@ -8840,6 +9025,85 @@ mod tests {
     use super::*;
     use axeyum_ir::Sort;
 
+    /// The three round levers are byte-identical to the shipped constants when
+    /// nothing is set.
+    ///
+    /// This is the whole claim a lever makes, and it is the one a lever can
+    /// break silently: a wrong `or` operand, or a variable that some other test
+    /// in this process set, moves the default arm and every A/B afterwards
+    /// measures the wrong pair. The numbers are pinned as LITERALS as well as
+    /// against the constants, because asserting `instantiation_cadence() ==
+    /// MAX_INSTANTIATION_ROUNDS` alone still passes if both are edited to 4 —
+    /// which is exactly the edit an A/B is tempted to make permanent.
+    #[test]
+    fn the_round_levers_default_to_the_shipped_constants() {
+        assert_eq!(instantiation_cadence(), MAX_INSTANTIATION_ROUNDS);
+        assert_eq!(instantiation_cadence(), 8, "the shipped cadence anchor");
+        assert_eq!(process_round_ceiling(), MAX_EXTENDED_INSTANTIATION_ROUNDS);
+        assert_eq!(
+            process_round_ceiling(),
+            512,
+            "the shipped instantiation-round ceiling"
+        );
+        // Read through the accessor the loop calls, too: a guard that leaked
+        // from another test on this thread would move the loop without moving
+        // the process arm, and only this line would see it.
+        assert_eq!(instantiation_round_ceiling(), 512);
+        assert_eq!(round_growth_headroom(), ROUND_GROWTH_HEADROOM);
+        assert_eq!(round_growth_headroom(), 8, "the shipped growth headroom");
+    }
+
+    /// The give-up detail must DISTINGUISH the loop's three stopping
+    /// conditions, and only the round-ceiling exit may claim a round budget.
+    ///
+    /// ADR-1950 classified 177 of 390 winnable files as `ROUND` from this
+    /// string, and the string was emitted by all three exits. A census can read
+    /// nothing but the string, so a test that only checked "a detail is
+    /// non-empty" would have passed throughout the period the classification
+    /// was wrong.
+    #[test]
+    fn only_the_round_ceiling_exit_claims_a_round_budget() {
+        let round = InstantiationLoopExit::RoundCeiling.detail(512);
+        assert_eq!(
+            round, "e-matching instantiation did not refute within the round budget",
+            "the historical string belongs to the round-ceiling exit and to nothing else"
+        );
+
+        let fixpoint = InstantiationLoopExit::Fixpoint.detail(1);
+        let headroom = InstantiationLoopExit::GrowthHeadroom.detail(3);
+        for (exit, detail) in [
+            (InstantiationLoopExit::Fixpoint, &fixpoint),
+            (InstantiationLoopExit::GrowthHeadroom, &headroom),
+        ] {
+            assert!(
+                !detail.contains("within the round budget"),
+                "{exit:?} must not report itself as a round budget: {detail}"
+            );
+        }
+        // The rounds actually entered are IN the string, because "gave up at
+        // round 1" and "gave up at round 512" are opposite findings and the
+        // census has no other column that carries it.
+        assert!(fixpoint.contains(" 1 rounds"), "{fixpoint}");
+        assert!(headroom.contains(" 3 rounds"), "{headroom}");
+        // Three exits, three distinct strings.
+        assert_ne!(fixpoint, headroom);
+        assert_ne!(fixpoint, round);
+        assert_ne!(headroom, round);
+    }
+
+    /// The ADR-1950 `kind` vocabulary is assigned from what stopped the loop,
+    /// and the three exits do not share a kind.
+    ///
+    /// `Fixpoint` is `SHAPE` and not `ROUND`: nothing is left to admit, so
+    /// neither budget is the constraint. That single mapping is the finding
+    /// this lane measured, so it is pinned rather than left to the doc comment.
+    #[test]
+    fn the_exit_kinds_follow_adr_1950_and_are_distinct() {
+        assert_eq!(InstantiationLoopExit::Fixpoint.census_kind(), "SHAPE");
+        assert_eq!(InstantiationLoopExit::GrowthHeadroom.census_kind(), "CLOCK");
+        assert_eq!(InstantiationLoopExit::RoundCeiling.census_kind(), "ROUND");
+    }
+
     /// The shipped [`GroundBudget`] arm must reproduce the three constants the
     /// loop used before it became a policy — otherwise "shipped" names a
     /// configuration nobody shipped.
@@ -9769,6 +10033,224 @@ mod tests {
             CheckResult::Unsat,
             "twenty deterministic predecessor instances reach f(0) and refute the sign"
         );
+    }
+
+    /// Builds a `k`-step successor chain over an uninterpreted sort:
+    /// `p(a)`, `∀x. p(x) → p(g(x))`, and a claim about `p(gᵏ(a))`.
+    ///
+    /// Each e-matching round can extend the chain by exactly one link — round 1
+    /// matches `p(a)` and admits `p(a) → p(g(a))`, round 2 matches the `p(g(a))`
+    /// that produced, and so on — so `k` is literally the number of rounds the
+    /// loop needs, and the ROUND ceiling is what decides whether it gets them.
+    ///
+    /// It is uninterpreted on purpose. The predecessor-recurrence fixture in
+    /// this module looks like the same shape and is **not** usable here: it is
+    /// refuted by `predecessor_recurrence_sign_refutation`, a deterministic
+    /// arithmetic fast path that runs BEFORE the loop, so a 2-round ceiling
+    /// still returns `Unsat` on it and a test built on it would have pinned the
+    /// fast path while claiming to pin the ceiling. Measured, not assumed — it
+    /// is how the first version of the test below failed.
+    ///
+    /// `refutable` selects the `unsat` claim (`¬p(gᵏ(a))`, which the chain
+    /// contradicts) or a satisfiable one over a second, unconstrained predicate.
+    fn successor_chain_assertions(
+        arena: &mut TermArena,
+        prefix: &str,
+        k: usize,
+        refutable: bool,
+    ) -> Vec<TermId> {
+        let carrier = arena.declare_uninterpreted_sort(&format!("{prefix}S"));
+        let sort = Sort::Uninterpreted(carrier);
+        let step = arena
+            .declare_fun(&format!("{prefix}_g"), &[sort], sort)
+            .unwrap();
+        let holds = arena
+            .declare_fun(&format!("{prefix}_p"), &[sort], Sort::Bool)
+            .unwrap();
+        let seed = arena.declare(&format!("{prefix}_a"), sort).unwrap();
+        let seed_term = arena.var(seed);
+
+        let base = arena.apply(holds, &[seed_term]).unwrap();
+
+        let binder = arena.declare(&format!("{prefix}_x"), sort).unwrap();
+        let bound = arena.var(binder);
+        let p_x = arena.apply(holds, &[bound]).unwrap();
+        let g_x = arena.apply(step, &[bound]).unwrap();
+        let p_g_x = arena.apply(holds, &[g_x]).unwrap();
+        let body = arena.implies(p_x, p_g_x).unwrap();
+        let universal = arena.forall(binder, body).unwrap();
+
+        let mut tip = seed_term;
+        for _ in 0..k {
+            tip = arena.apply(step, &[tip]).unwrap();
+        }
+        let claim = if refutable {
+            let p_tip = arena.apply(holds, &[tip]).unwrap();
+            arena.not(p_tip).unwrap()
+        } else {
+            // Satisfiable: a SECOND predicate nothing constrains, applied to
+            // the same chain tip. The chain still drives the loop for k rounds,
+            // so the arms below exercise the same work -- a satisfiable fixture
+            // the loop finishes in one round would make the test vacuous.
+            let other = arena
+                .declare_fun(&format!("{prefix}_q"), &[sort], Sort::Bool)
+                .unwrap();
+            let q_tip = arena.apply(other, &[tip]).unwrap();
+            arena.not(q_tip).unwrap()
+        };
+        vec![base, universal, claim]
+    }
+
+    /// SOUNDNESS-NEGATIVE. No round-ceiling arm may refute a SATISFIABLE
+    /// quantified query.
+    ///
+    /// This is the failure mode a round lever owns: an instantiation loop that
+    /// admitted an instance it had not checked would produce a wrong `unsat`,
+    /// and more rounds is exactly the condition under which it would surface.
+    /// The arms bracket the shipped ceiling on BOTH sides — a truncating `1`
+    /// and `2`, the shipped `512`, and an `8192` eight times past it — because
+    /// a soundness test that only raises the bound cannot see a defect that
+    /// needs the loop to stop early, and one that only lowers it cannot see the
+    /// one that needs it to run long.
+    ///
+    /// The ceiling is moved through [`RoundCeilingGuard`] rather than the
+    /// environment: the process arm resolves once in a `OnceLock`, so an
+    /// environment-based version of this test would measure whichever arm the
+    /// suite's process started with and pass for the wrong reason.
+    #[test]
+    fn no_round_ceiling_arm_refutes_a_satisfiable_query() {
+        for ceiling in [1usize, 2, 8, 512, 8_192] {
+            let mut arena = TermArena::new();
+            let assertions = successor_chain_assertions(&mut arena, "rcsat", 6, false);
+            let config = SolverConfig::new().with_timeout(Duration::from_secs(10));
+            let _guard = RoundCeilingGuard::set(ceiling);
+            let result =
+                prove_quantified_unsat_via_egraph(&mut arena, &assertions, &config).unwrap();
+            assert!(
+                !matches!(result, CheckResult::Unsat),
+                "round ceiling {ceiling} refuted a satisfiable query: {result:?}"
+            );
+        }
+    }
+
+    /// The round ceiling is a REAL bound, and the exit it produces is reported
+    /// as a round budget and as nothing else.
+    ///
+    /// Without this the whole lever could be inert — an accessor nothing reads
+    /// would leave the loop on the compiled `512` and every arm would agree,
+    /// which is indistinguishable from "the ceiling does not matter". A
+    /// six-link chain needs six rounds, so a ceiling of 2 must NOT refute it
+    /// and the shipped ceiling must.
+    ///
+    /// It is also the only test that pins the ROUND wording to the exit that
+    /// earns it, from BEHAVIOUR rather than from the enum: a loop truncated by
+    /// the ceiling says `round budget`, and the same query at the shipped
+    /// ceiling does not say it at all — it decides.
+    #[test]
+    fn a_truncating_round_ceiling_declines_and_says_round_budget() {
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(10));
+
+        // The CONTROL runs FIRST, before any guard is constructed: without it
+        // the assertion below passes for a loop that declines everything, and
+        // running it after the guarded block would make a guard whose `Drop`
+        // failed to restore break this test too — two tests dying for one
+        // defect, and neither of them for the scoping one.
+        let mut arena = TermArena::new();
+        let assertions = successor_chain_assertions(&mut arena, "rcfull", 6, true);
+        let full = prove_quantified_unsat_via_egraph(&mut arena, &assertions, &config).unwrap();
+        assert_eq!(
+            full,
+            CheckResult::Unsat,
+            "the shipped ceiling walks the whole chain and refutes it"
+        );
+
+        let mut arena = TermArena::new();
+        let assertions = successor_chain_assertions(&mut arena, "rctrunc", 6, true);
+        let truncated = {
+            let _guard = RoundCeilingGuard::set(2);
+            prove_quantified_unsat_via_egraph(&mut arena, &assertions, &config).unwrap()
+        };
+        let CheckResult::Unknown(reason) = &truncated else {
+            panic!("a 2-round ceiling cannot walk a 6-link chain, got {truncated:?}");
+        };
+        assert_eq!(
+            reason.detail,
+            InstantiationLoopExit::RoundCeiling.detail(2),
+            "a loop the ceiling truncated must report the round budget"
+        );
+    }
+
+    /// END TO END: a query whose e-graph is EMPTY reports a FIXPOINT, not a
+    /// round budget.
+    ///
+    /// This is the shape the whole 177-file family turned out to have. 103 of
+    /// the 117 pinned LRA rows fixpoint at round 0 with `ground=0` — a
+    /// quantifier prefix over Reals with no free constant, so there is not one
+    /// ground term for a trigger to match. Under the merged give-up string
+    /// those rows read as "did not refute within the round budget" while the
+    /// ceiling of 512 was never approached.
+    ///
+    /// It is the only test that reaches the `Fixpoint` arm through the LOOP
+    /// rather than through `InstantiationLoopExit::detail` directly, so it is
+    /// what dies if the break stops recording its exit.
+    #[test]
+    fn an_empty_egraph_reports_fixpoint_not_a_round_budget() {
+        let mut arena = TermArena::new();
+        // `∀x. x < x + 1` over the reals, asserted alone: valid, nothing
+        // ground, nothing to match. The loop must say so rather than blame a
+        // round count.
+        let binder = arena.declare("fpx", Sort::Real).unwrap();
+        let bound = arena.var(binder);
+        let one = arena.real_const(axeyum_ir::Rational::integer(1));
+        let successor = arena.real_add(bound, one).unwrap();
+        let body = arena.real_lt(bound, successor).unwrap();
+        let universal = arena.forall(binder, body).unwrap();
+
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(10));
+        let result = prove_quantified_unsat_via_egraph(&mut arena, &[universal], &config).unwrap();
+        let CheckResult::Unknown(reason) = &result else {
+            panic!("a satisfiable term-starved universal must not be refuted: {result:?}");
+        };
+        // The expectation is DERIVED from the authority, not written as a
+        // literal: this test's job is that the loop RECORDED a fixpoint, and
+        // `only_the_round_ceiling_exit_claims_a_round_budget` is what owns the
+        // wording. Spelling the string here would make both tests die for
+        // either defect and neither of them die for only one — measured, in the
+        // mutation control: with a literal, the wording mutation killed two.
+        //
+        // The round count is not pinned because it is not this test's subject;
+        // the plausible band is small and derived the same way.
+        let expected: Vec<String> = (0..=8)
+            .map(|rounds| InstantiationLoopExit::Fixpoint.detail(rounds))
+            .collect();
+        assert!(
+            expected.contains(&reason.detail),
+            "the loop must record a FIXPOINT exit on an empty e-graph; it said: {}",
+            reason.detail
+        );
+    }
+
+    /// The guard is scoped: an arm set inside a block does not leak past it.
+    ///
+    /// A leak would silently re-arm every later query in the process, which is
+    /// how an A/B measures arm B twice.
+    #[test]
+    fn round_ceiling_guard_is_scoped_and_nests() {
+        let outside = instantiation_round_ceiling();
+        {
+            let _outer = RoundCeilingGuard::set(4);
+            assert_eq!(instantiation_round_ceiling(), 4);
+            {
+                let _inner = RoundCeilingGuard::set(9);
+                assert_eq!(instantiation_round_ceiling(), 9);
+            }
+            assert_eq!(
+                instantiation_round_ceiling(),
+                4,
+                "a nested guard must restore the ENCLOSING arm, not the process default"
+            );
+        }
+        assert_eq!(instantiation_round_ceiling(), outside);
     }
 
     #[test]

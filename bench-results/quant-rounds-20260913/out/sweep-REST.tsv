@@ -1,0 +1,13 @@
+file	first_arm	shipped_verdict	shipped_ms	shipped_kind	1024_verdict	1024_ms	1024_kind	2048_verdict	2048_ms	2048_kind	4096_verdict	4096_ms	4096_kind
+BV/2017-Preiner-scholl-smt08/RND/RND_6_4.smt2	shipped	unknown	810	SHAPE	unknown	809	SHAPE	unknown	910	SHAPE	unknown	910	SHAPE
+BV/2017-Preiner-scholl-smt08/RNDPRE/RNDPRE_4_33.smt2	1024	unknown	4313	SHAPE	unknown	4311	SHAPE	unknown	4312	SHAPE	unknown	4311	SHAPE
+BV/20170501-Heizmann-UltimateAutomizer/jain_4_true-unreach-call_true-no-overflow.i_200.smt2	2048	unknown	1109	SHAPE	unknown	1110	SHAPE	unknown	1109	SHAPE	unknown	1111	SHAPE
+BV/20170501-Heizmann-UltimateAutomizer/jain_6_true-unreach-call_true-no-overflow.i_236.smt2	4096	unknown	2208	SHAPE	unknown	2209	SHAPE	unknown	2310	SHAPE	unknown	2210	SHAPE
+BV/20190429-UltimateAutomizerSvcomp2019/jain_7_true-unreach-call_true-no-overflow_false-termination.i_18.smt2	shipped	unknown	409	SHAPE	unknown	409	SHAPE	unknown	410	SHAPE	unknown	409	SHAPE
+BV/20210330-PEak/no-extern-loop_sat_subset/easy1.smt2	1024	unknown	23529	CLOCK	unknown	22421	CLOCK	unknown	24628	OTHER	unknown	23230	CLOCK
+BV/20230321-UltimateAutomizerSvcomp2023/jain_6-1.c_7.smt2	2048	unknown	2109	SHAPE	unknown	2011	SHAPE	unknown	2210	SHAPE	unknown	2210	SHAPE
+BV/wintersteiger/fmsd13/fixpoint/small-equiv-fixpoint-1.smt2	4096	unknown	607	SHAPE	unknown	608	SHAPE	unknown	609	SHAPE	unknown	609	SHAPE
+BV/wintersteiger/fmsd13/fixpoint/small-swap1-fixpoint-10.smt2	shipped	unknown	209	SHAPE	unknown	209	SHAPE	unknown	209	SHAPE	unknown	108	SHAPE
+BV/wintersteiger/fmsd13/fixpoint/usb-phy-fixpoint-3.smt2	1024	unknown	19821	SHAPE	unknown	25428	OTHER	unknown	19627	SHAPE	unknown	18524	SHAPE
+NRA/keymaera/to_right-node1083.smt2	2048	unknown	509	SHAPE	unknown	509	SHAPE	unknown	509	SHAPE	unknown	508	SHAPE
+UFLIA/grasshopper/uninstantiated/sls_insert_loop_check_heap_access_38_6.smt2	4096	unknown	18624	OTHER	unknown	17023	OTHER	unknown	17123	OTHER	unknown	19221	OTHER

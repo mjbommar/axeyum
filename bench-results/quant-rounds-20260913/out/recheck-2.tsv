@@ -1,0 +1,11 @@
+file	verdict	rc	wall_ms	exit_kind	rounds	total_ms	giveup
+AUFLIA/20170829-Rodin/smt391595983448729660.smt2	unknown	0	19124	CLOCK	4	18979	give-up kind=Incomplete detail=e-matching instantiation stopped after 4 rounds: the remaining budget could not fit another round with growth headroom
+AUFLIA/20170829-Rodin/smt4322886619350589974.smt2	unknown	0	18124	OTHER	na	17964	give-up kind=ResourceLimit detail=e-matching: instantiation time budget exhausted
+AUFLIA/20170829-Rodin/smt4894097258090423484.smt2	unknown	0	18423	OTHER	na	18348	give-up kind=ResourceLimit detail=e-matching: instantiation time budget exhausted
+AUFLIA/20170829-Rodin/smt4969880730391362301.smt2	unknown	0	17619	CLOCK	4	17483	give-up kind=Incomplete detail=e-matching instantiation stopped after 4 rounds: the remaining budget could not fit another round with growth headroom
+AUFLIA/20170829-Rodin/smt6686346698589869511.smt2	unknown	0	22624	OTHER	na	22466	give-up kind=ResourceLimit detail=e-matching: instantiation time budget exhausted
+AUFLIA/20170829-Rodin/smt6759390604070337018.smt2	unknown	0	16919	CLOCK	4	16755	give-up kind=Incomplete detail=e-matching instantiation stopped after 4 rounds: the remaining budget could not fit another round with growth headroom
+AUFLIA/20170829-Rodin/smt8148677656429052494.smt2	unknown	0	18325	CLOCK	4	18192	give-up kind=Incomplete detail=e-matching instantiation stopped after 4 rounds: the remaining budget could not fit another round with growth headroom
+AUFLIA/20170829-Rodin/smt8539609608321091028.smt2	unknown	0	24325	SHAPE	23	24162	give-up kind=Incomplete detail=e-matching instantiation reached fixpoint without refuting after 23 rounds (no further instance to admit; more rounds cannot help)
+BV/20210330-PEak/no-extern-loop_sat_subset/easy1.smt2	unknown	0	23431	CLOCK	5	23219	give-up kind=Incomplete detail=e-matching instantiation stopped after 5 rounds: the remaining budget could not fit another round with growth headroom
+UFLIA/grasshopper/uninstantiated/sls_insert_loop_check_heap_access_38_6.smt2	unknown	0	17722	OTHER	na	17637	give-up kind=ResourceLimit detail=e-matching: instantiation time budget exhausted
