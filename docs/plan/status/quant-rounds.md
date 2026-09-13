@@ -67,6 +67,16 @@ all. **No round count and no ground-term ceiling expresses a fix for a query
 with nothing to instantiate over.** The BV and AUFLIA remainders are a separate
 finding and must not inherit this one.
 
+**The lever is READ, checked three ways** — because "every arm agrees" is also
+what an inert lever looks like. The mutation control kills a test when the loop
+reads the compiled constant instead of the accessor; `--trace`'s `; config`
+line names `env:AXEYUM_QINST_ROUNDS=2` **and the configuration digest changes**
+(the check for a misspelled variable NAME); and 58 decided files sampled every
+12th row of the cost population — a SPREAD, not a prefix — run at a ceiling of
+**2** flip **0** verdicts. That last one is a finding: not even a ceiling of two
+costs us a decided verdict here. It is not a reason to lower the ceiling, which
+would be fitting a bound to the files that do not reach it.
+
 **Shipped: the instrument, not a raised cap.** `InstantiationLoopExit` records
 which of the three conditions stopped the loop and the give-up detail names it
 (`RoundCeiling` keeps the historical string unchanged, because the historical

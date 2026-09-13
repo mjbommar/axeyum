@@ -129,6 +129,26 @@ There is no time cost either, and that is the expected consequence rather than a
 separate result: a loop that stops at round 1 for a reason unrelated to the
 ceiling does the same work whatever the ceiling says.
 
+### 2b. The lever is read, checked three ways
+
+"All four arms agree" is consistent with both "the lever works and the ceiling
+is not binding" and "the lever is never read", and the second reading would make
+every number above worthless. So:
+
+1. The mutation control kills a test when the loop reads the compiled constant
+   instead of the accessor, so the LOOP consults it.
+2. `--trace`'s `; config` line names `env:AXEYUM_QINST_ROUNDS=2` **and the
+   configuration digest changes** (`80c00c44513f7380` -> `bfd5d722b906f34f`), so
+   the ENVIRONMENT reaches the shipped binary — the check for a misspelled
+   variable NAME, which is the one failure a lever cannot see for itself.
+3. 58 decided files, sampled every 12th row of the cost population (a SPREAD,
+   not a prefix — that list is in division order), run at
+   `AXEYUM_QINST_ROUNDS=2`: **0 flipped**.
+
+Check 3 is a finding rather than a failed check: not even a ceiling of TWO costs
+a decided verdict on that sample. It is a reason to believe 512 is not binding,
+and it is NOT a reason to lower the ceiling — see the alternatives.
+
 ### 3. The control is not vacuous, and three quarters of the named one was
 
 This lane's brief named QF_UFLIA, QF_UFLRA, NRA and QF_DT as the control —

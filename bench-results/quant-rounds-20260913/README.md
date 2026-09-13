@@ -125,6 +125,36 @@ The 8 `same-undecided` rows are files the board recorded as decided that come
 back `unknown` on BOTH arms in this run — a board-vs-today difference at the
 1.2 % level, not an arm effect. Regenerate: `python3 summarize.py cost`.
 
+## Is the lever actually READ, or is "every arm agrees" vacuous?
+
+"All four arms agree" is consistent with **both** "the lever works and the
+ceiling is not binding" **and** "the lever is never read". Three independent
+checks, because the second reading is the one that would make this whole page
+worthless:
+
+1. **The mutation control** proves the LOOP consults the accessor:
+   `the loop reads the ceiling ACCESSOR, not the constant` kills
+   `a_truncating_round_ceiling_declines_and_says_round_budget`, which needs a
+   ceiling of 2 to truncate a six-link chain the shipped ceiling walks.
+2. **`--trace`'s `; config` line** proves the ENVIRONMENT reaches the shipped
+   binary — and so catches a misspelled variable NAME, the one failure a lever
+   cannot see for itself (`levercheck.sh`, `out/levercheck.log`):
+
+        shipped:    ; config digest=80c00c44513f7380 entries=484 …
+        ceiling 2:  ; config digest=bfd5d722b906f34f entries=484 … env:AXEYUM_QINST_ROUNDS=2 …
+
+   The variable is named AND **the configuration digest changes**, so this is a
+   different configuration and not a label printed beside an unchanged one.
+3. **A corpus flip at the extreme.** 58 decided files sampled every 12th row of
+   `decided-ALL.txt` — a SPREAD, not a prefix, because that list is in division
+   order and a prefix of it is all LRA — run at `AXEYUM_QINST_ROUNDS=2`:
+   **0 flipped** (`levercheck-spread.sh`).
+
+Check 3 is a finding, not a failed check: **not even a ceiling of TWO costs a
+decided verdict on this sample.** Read it with the alternatives in ADR-1956 —
+it is a reason to believe 512 is not binding, and it is NOT a reason to lower
+the ceiling, which would be fitting a bound to the files that do not reach it.
+
 ## The control the brief named was three-quarters vacuous, and here is the number
 
 This lane's brief named QF_UFLIA, QF_UFLRA, NRA and QF_DT as the control.
@@ -254,6 +284,7 @@ the same number.
 | `roundprobe.sh` | does the ROUND give-up appear anywhere in a run |
 | `mkrecheck.py` `merge-sweep.py` | the re-check population; the shard merge, which aborts on an incomplete set |
 | `route-hit.sh` | does the route under test RUN on a population |
+| `levercheck.sh` `levercheck-spread.sh` | is the ENV lever read by the shipped binary |
 | `fixpoint-shape.sh` | what the e-graph looks like when it fixpoints |
 | `summarize.py` | `exit` / `roundprobe` / `recheck` / `sweep` / `cost` / `control` / `shape` — every number above |
 | `out/` | the rows |
