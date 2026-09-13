@@ -1,0 +1,99 @@
+== ABV (4975 files, 0 could carry a Real, 4975 filtered out textually)
+real_gate_only, quantifier-free (reaches the gate today): 0 (no file can set has_real)
+== ABVFP (60 files, 0 could carry a Real, 60 filtered out textually)
+real_gate_only, quantifier-free (reaches the gate today): 0 (no file can set has_real)
+== ABVFPLRA (77 files, 45 could carry a Real, 32 filtered out textually)
+files: 45
+parse_err	-	nq	45
+real_gate_only, quantifier-free (reaches the gate today): 0
+real_gate_only, all (needs a quantifier route too): 0
+== ALIA (3098 files, 0 could carry a Real, 3098 filtered out textually)
+real_gate_only, quantifier-free (reaches the gate today): 0 (no file can set has_real)
+== ANIA (78 files, 0 could carry a Real, 78 filtered out textually)
+real_gate_only, quantifier-free (reaches the gate today): 0 (no file can set has_real)
+== AUFBV (1523 files, 20 could carry a Real, 1503 filtered out textually)
+files: 20
+bv_array	-	q	20
+real_gate_only, quantifier-free (reaches the gate today): 0
+real_gate_only, all (needs a quantifier route too): 0
+== AUFBVDTLIA (1683 files, 0 could carry a Real, 1683 filtered out textually)
+real_gate_only, quantifier-free (reaches the gate today): 0 (no file can set has_real)
+== AUFBVDTNIA (8 files, 0 could carry a Real, 8 filtered out textually)
+real_gate_only, quantifier-free (reaches the gate today): 0 (no file can set has_real)
+== AUFBVDTNIRA (2125 files, 2125 could carry a Real, 0 filtered out textually)
+files: 2125
+blocked_other	uninterp_sort	q	1527
+no_array	-	q	598
+real_gate_only, quantifier-free (reaches the gate today): 0
+real_gate_only, all (needs a quantifier route too): 0
+== AUFBVFP (57 files, 3 could carry a Real, 54 filtered out textually)
+files: 3
+bv_array	-	q	3
+real_gate_only, quantifier-free (reaches the gate today): 0
+real_gate_only, all (needs a quantifier route too): 0
+== AUFDTLIA (795 files, 0 could carry a Real, 795 filtered out textually)
+real_gate_only, quantifier-free (reaches the gate today): 0 (no file can set has_real)
+== AUFDTLIRA (11043 files, 11043 could carry a Real, 0 filtered out textually)
+files: 11043
+blocked_other	uninterp_sort	q	10522
+parse_err	-	nq	488
+pass_today	auflia	q	33
+real_gate_only, quantifier-free (reaches the gate today): 0
+real_gate_only, all (needs a quantifier route too): 0
+== AUFDTNIRA (1567 files, 1567 could carry a Real, 0 filtered out textually)
+files: 1567
+blocked_other	uninterp_sort	q	1484
+parse_err	-	nq	83
+real_gate_only, quantifier-free (reaches the gate today): 0
+real_gate_only, all (needs a quantifier route too): 0
+== AUFFPDTNIRA (166 files, 166 could carry a Real, 0 filtered out textually)
+files: 166
+blocked_other	uninterp_sort	q	150
+parse_err	-	nq	16
+real_gate_only, quantifier-free (reaches the gate today): 0
+real_gate_only, all (needs a quantifier route too): 0
+== AUFLIA (3327 files, 0 could carry a Real, 3327 filtered out textually)
+real_gate_only, quantifier-free (reaches the gate today): 0 (no file can set has_real)
+== AUFLIRA (20011 files, 20011 could carry a Real, 0 filtered out textually)
+files: 20011
+no_array	-	q	1367
+parse_err	-	nq	18644
+real_gate_only, quantifier-free (reaches the gate today): 0
+real_gate_only, all (needs a quantifier route too): 0
+== AUFNIA (3 files, 0 could carry a Real, 3 filtered out textually)
+real_gate_only, quantifier-free (reaches the gate today): 0 (no file can set has_real)
+== AUFNIRA (1480 files, 1480 could carry a Real, 0 filtered out textually)
+files: 1480
+no_array	-	q	504
+parse_err	-	nq	976
+real_gate_only, quantifier-free (reaches the gate today): 0
+real_gate_only, all (needs a quantifier route too): 0
+== QF_ABV (15148 files, 9 could carry a Real, 15139 filtered out textually)
+files: 9
+parse_err	-	nq	9
+real_gate_only, quantifier-free (reaches the gate today): 0
+real_gate_only, all (needs a quantifier route too): 0
+== QF_ABVFP (18129 files, 0 could carry a Real, 18129 filtered out textually)
+real_gate_only, quantifier-free (reaches the gate today): 0 (no file can set has_real)
+== QF_ABVFPLRA (74 files, 17 could carry a Real, 57 filtered out textually)
+files: 17
+parse_err	-	nq	17
+real_gate_only, quantifier-free (reaches the gate today): 0
+real_gate_only, all (needs a quantifier route too): 0
+== QF_ALIA (176 files, 0 could carry a Real, 176 filtered out textually)
+real_gate_only, quantifier-free (reaches the gate today): 0 (no file can set has_real)
+== QF_ANIA (157 files, 57 could carry a Real, 100 filtered out textually)
+files: 57
+parse_err	-	nq	57
+real_gate_only, quantifier-free (reaches the gate today): 0
+real_gate_only, all (needs a quantifier route too): 0
+== QF_AUFBV (75 files, 0 could carry a Real, 75 filtered out textually)
+real_gate_only, quantifier-free (reaches the gate today): 0 (no file can set has_real)
+== QF_AUFBVFP (1 files, 0 could carry a Real, 1 filtered out textually)
+real_gate_only, quantifier-free (reaches the gate today): 0 (no file can set has_real)
+== QF_AUFLIA (1303 files, 0 could carry a Real, 1303 filtered out textually)
+real_gate_only, quantifier-free (reaches the gate today): 0 (no file can set has_real)
+== QF_AUFNIA (17 files, 0 could carry a Real, 17 filtered out textually)
+real_gate_only, quantifier-free (reaches the gate today): 0 (no file can set has_real)
+== QF_AX (551 files, 0 could carry a Real, 551 filtered out textually)
+real_gate_only, quantifier-free (reaches the gate today): 0 (no file can set has_real)

@@ -123,3 +123,48 @@ capability claim: `0 < m[i] < 1` is satisfiable over `Real` and unsatisfiable
 over `Int`, so an `unsat` on `r2` would mean the element sort had been
 integralized somewhere on the newly reachable route. Every other probe in
 `nested-array-ir-20260913/probes/` is byte-identical between the two arms.
+
+## The A/B: 1,200 files, not one row moved
+
+Interleaved per-file, both binaries back to back on one file on one pinned core,
+24 s wall / 8 GiB, arms rotated per file (`ab.sh`). Arm A is `57bd22d37`
+(baseline), arm B is this lane's `4ef107d35`. Rows in `ab/`, summary in
+`ab/SUMMARY.txt`.
+
+    division        n  A dec  B dec  delta  B-only  A-only
+    AUFLIRA       200      9      9     +0       0       0
+    AUFNIRA       200      3      3     +0       0       0
+    ALIA          200      0      0     +0       0       0
+    ABV           200      4      4     +0       0       0
+    QF_ABV        200    187    187     +0       0       0
+    QF_BV         200    186    186     +0       0       0
+    rows: 1200
+
+**Zero rows differ between the arms at all** — not merely equal decide counts:
+a per-row comparison of the verdict strings finds 0 of 1,200 files where
+`axeyum` and `axeyumb` disagree, so there is no single-pairing surprise to
+re-run. No verdict in either arm contradicts a declared `:status`, and there is
+no file where the two arms decide in opposite directions (`ab-summarize.py`
+exit 0; its five failing exit statuses are demonstrated firing by
+`ab-summarize-controls.sh`).
+
+The last two rows are the live controls: QF_ABV at 187/200 (93.5%) and QF_BV at
+186/200 (93.0%) are divisions we already decide well, so a regression would be
+visible against a high floor rather than lost in noise. `rc134` (the protocol's
+8 GiB address-space cap) appears on exactly one file, **in both arms**, and no
+row on any solver was wrapper-killed.
+
+The +0 is the predicted result, not a disappointment: the census said the
+reachable population was zero before the code was written, and the A/B is what
+turns that prediction into a measurement. What it additionally rules out is the
+other half — that lifting two early returns would cost decisions elsewhere.
+
+## Every array-carrying division
+
+`census-all/all-array-divisions.txt` — all 28 divisions whose logic can hold an
+array, `real_gate_only = 0` in every one. The `filtered out textually` column is
+the two-stage prefilter and it is worth reading rather than skipping: the FIRST
+version of that pattern matched 4,975 of ABV's 4,975 files (it accepted any
+decimal literal, and every SMT-LIB file opens `(set-info :smt-lib-version 2.6)`),
+which would have been reported as a sweep. A prefilter that matches everything is
+not a prefilter, and the column is what made it visible.

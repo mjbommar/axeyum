@@ -14,17 +14,26 @@
 # instrument: measured 2026-09-13, the parse-everything form managed 25 of
 # AUFBV's 1,523 files in 20 minutes (a ~20-hour division, and AUFBV is one of
 # 28). So each division is first filtered TEXTUALLY for anything that could
-# possibly produce a `Real`, and only the survivors are parsed:
+# produce a `Real`, and only the survivors are parsed:
 #
-#     grep -liE 'real|[0-9]\.[0-9]'
+#     grep -lE 'Real|to_real|\(/ '
 #
-# That pattern is deliberately GENEROUS and can only over-include: a Real sort is
-# spelled `Real` (directly or through a `define-sort` alias, whose body still
-# contains the token), `to_real` contains it case-insensitively, and the only
-# other way to introduce a Real is a decimal literal. A file matching none of
-# those cannot set `Features::has_real`, so it cannot land in `real_gate_only`
-# whatever else it contains. The filtered-out count is PRINTED, so the reader can
-# see the size of the population the parser never saw and why it was safe.
+# THE FIRST VERSION OF THIS PATTERN FILTERED NOTHING and the run would have been
+# reported as a sweep. It was `grep -liE 'real|[0-9]\.[0-9]'`, and every SMT-LIB
+# file on earth opens with `(set-info :smt-lib-version 2.6)`, so the decimal
+# alternative matched 4,975 of ABV's 4,975 files. A prefilter that matches
+# everything is not a prefilter; the "N filtered out textually" column exists so
+# that a zero there is VISIBLE rather than silently harmless.
+#
+# What the pattern covers, and its one stated limit. A `Real` sort is spelled
+# `Real` (directly, or through a `define-sort` alias whose body still contains
+# the token). `to_real` is the coercion. `(/ ` is SMT-LIB real division, which
+# yields a Real from integer numerals. The residual gap is a bare decimal
+# literal in a file that never writes `Real`, `to_real` or `/` anywhere — which
+# cannot occur in a logic-conformant benchmark, because a decimal literal is
+# only in the signature of a logic that also admits the `Real` sort name. The
+# divisions where that matters are exactly the ones `census.sh` already parses
+# in full.
 #
 # Usage: census-all-array.sh <census-binary> <out-dir> [taskset-cores]
 set -eu
@@ -53,7 +62,7 @@ for d in $DIVISIONS; do
   # which is a legitimate outcome here and not an error.
   # `xargs`, not `$(cat …)`: QF_BV-scale divisions blow the argv limit, and a
   # truncated argument list would silently shrink the denominator.
-  xargs -a "$OUT/$d.all" -d '\n' grep -liE 'real|[0-9]\.[0-9]' -- \
+  xargs -a "$OUT/$d.all" -d '\n' grep -lE 'Real|to_real|\(/ ' -- \
     > "$OUT/$d.list" 2>/dev/null || true
   m=$(wc -l < "$OUT/$d.list")
   echo "== $d ($n files, $m could carry a Real, $((n - m)) filtered out textually)"

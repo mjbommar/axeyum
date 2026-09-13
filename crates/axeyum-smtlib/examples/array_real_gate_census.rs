@@ -55,7 +55,13 @@ use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode};
 use axeyum_smtlib::parse_script;
 
 /// The subset of `Features` this gate consults, scanned the same way.
+///
+/// `struct_excessive_bools` is allowed because this type MIRRORS
+/// `auto::Features`, which is a bag of theory flags. Collapsing them into an
+/// enum or a bitflag set here would make the mirror harder to diff against the
+/// original, and a mirror that does not read like its subject is how it drifts.
 #[derive(Default, Clone, Copy)]
+#[allow(clippy::struct_excessive_bools)]
 struct GateFeatures {
     has_real: bool,
     has_bv_or_float: bool,
@@ -72,7 +78,7 @@ impl GateFeatures {
         match sort {
             Sort::Real => self.has_real = true,
             Sort::BitVec(_) | Sort::RoundingMode | Sort::Float { .. } => {
-                self.has_bv_or_float = true
+                self.has_bv_or_float = true;
             }
             Sort::Array { index, element } => {
                 self.has_array = true;
