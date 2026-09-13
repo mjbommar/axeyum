@@ -7983,7 +7983,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_UFBV_MAX_INPUT_DAG_NODES"),
         justification: dated(
             "docs/research/12-performance/qf-abv-route-attribution-2026-09-08.md",
             "2026-09-08",
@@ -7996,7 +7996,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "docs/research/12-performance/qf-abv-route-attribution-2026-09-08.md",
             )],
         ),
-        note: "Admits `abv-online-cdclt`, the FIRST route every array query tries. Declined `2018-Mann/arbiter_array_cex_w32d32q16n4b34.smt2` at 32,695 nodes on 2026-09-08. Registered because that route is the entry point for a whole division and had no registry presence at all; `crates/axeyum-solver/src/ufbv_online.rs` is still not in `GOVERNED_FILES`, so its other ~20 bounds remain unclaimed. The VALUE is unchanged and still rests on a doc comment.",
+        note: "Admits `abv-online-cdclt`, the FIRST route every array query tries. Declined `2018-Mann/arbiter_array_cex_w32d32q16n4b34.smt2` at 32,695 nodes on 2026-09-08. Registered because that route is the entry point for a whole division and had no registry presence at all; `crates/axeyum-solver/src/ufbv_online.rs` is still not in `GOVERNED_FILES`, so its other ~20 bounds remain unclaimed. Made a lever by `qf-ufbv-caps` (2026-09-12): the QF_UFBV blocker census attributes 31 of 87 winnable files to this constant, at 1.00x-14.04x over. The VALUE is unchanged.",
     },
     ConfigEntry {
         name: "MAX_INPUT_DEPTH",
@@ -8046,9 +8046,9 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_UFBV_MAX_THEORY_ATOMS"),
         justification: undated("doc comment"),
-        note: "Two sites: a static pre-check (`build_unknown(...\"has {} semantic atoms, exceeding the cap\"...)`, ufbv_online.rs:2167-2174) and a dynamic one during retained search (`\"dynamic theory atoms exceed the cap\"`, ufbv_online.rs:847-851).",
+        note: "Two sites: a static pre-check (`build_unknown(...\"has {} semantic atoms, exceeding the cap\"...)`) and a dynamic one during retained search (`\"dynamic theory atoms exceed the cap\"`). Made a lever by `qf-ufbv-caps` (2026-09-12): the QF_UFBV blocker census attributes 53 of 87 winnable files to this constant (52 static, 1 dynamic), at 1.04x-5.33x over. The VALUE is unchanged.",
     },
     ConfigEntry {
         name: "MAX_INTERFACE_PAIRS",

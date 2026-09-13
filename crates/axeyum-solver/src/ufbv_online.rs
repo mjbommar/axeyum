@@ -87,10 +87,38 @@ use crate::sat_bv_backend::{ABSOLUTE_CLAUSE_CEILING, estimate_blast_clauses};
 
 /// Maximum input DAG admitted before the recursive function abstraction.
 const MAX_INPUT_DAG_NODES: u64 = 16_384;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_INPUT_DAG_NODES`]: the compiled default, or
+    /// `AXEYUM_UFBV_MAX_INPUT_DAG_NODES` when that variable is set.
+    ///
+    /// A measurement lever, not a tuning knob. With the variable unset this is
+    /// exactly `MAX_INPUT_DAG_NODES`, so the shipped binary is unchanged; a
+    /// malformed value is refused rather than silently defaulted. See
+    /// [`axeyum_ir::config_lever`] for the contract.
+    ///
+    /// Wired by lane `qf-ufbv-caps` because the `QF_UFBV` blocker census
+    /// (`bench-results/fpbv-divisions-headtohead-20260912/census/QF_UFBV.tsv`)
+    /// attributed 31 of 87 winnable files to this one constant. It is a lever
+    /// so the A/B can be run; whether the default should move is a separate
+    /// question the A/B answers.
+    fn max_input_dag_nodes() -> u64 = "AXEYUM_UFBV_MAX_INPUT_DAG_NODES" or MAX_INPUT_DAG_NODES;
+}
+
 /// Maximum recursive term depth admitted before function abstraction.
 const MAX_INPUT_DEPTH: u64 = 4_096;
 /// Maximum semantic atoms (formula atoms plus generated interface equalities).
 const MAX_THEORY_ATOMS: usize = 1_024;
+
+axeyum_ir::cap_lever! {
+    /// The effective value of [`MAX_THEORY_ATOMS`]: the compiled default, or
+    /// `AXEYUM_UFBV_MAX_THEORY_ATOMS` when that variable is set.
+    ///
+    /// Same contract and the same reason as [`max_input_dag_nodes`]; this cap
+    /// carried 53 of the 87 winnable `QF_UFBV` files (52 at the static
+    /// pre-check, 1 at the dynamic retained-search check).
+    fn max_theory_atoms() -> usize = "AXEYUM_UFBV_MAX_THEORY_ATOMS" or MAX_THEORY_ATOMS;
+}
 /// Maximum materialized interface equalities before bounded refinement declines.
 const MAX_INTERFACE_ATOMS: usize = 512;
 /// Maximum retained-search final checks or defensive canonical rebuilds.
@@ -844,10 +872,11 @@ impl CombinedUfbvTheory {
         if let Some(existing) = self.atom_ref(solver, abstracted, propagation_candidate)? {
             return Ok(existing);
         }
-        if self.bv.positive.len() >= MAX_THEORY_ATOMS {
+        let theory_atom_cap = max_theory_atoms();
+        if self.bv.positive.len() >= theory_atom_cap {
             return Err(build_unknown(
                 UnknownKind::ResourceLimit,
-                format!("online UFBV dynamic theory atoms exceed the cap of {MAX_THEORY_ATOMS}"),
+                format!("online UFBV dynamic theory atoms exceed the cap of {theory_atom_cap}"),
             ));
         }
         if solver.variable_count() >= MAX_BOOLEAN_VARIABLES {
@@ -1599,8 +1628,8 @@ fn admit_input(
     let stats = TermStats::compute(arena, assertions);
     let node_cap = config
         .node_budget
-        .unwrap_or(MAX_INPUT_DAG_NODES)
-        .min(MAX_INPUT_DAG_NODES);
+        .unwrap_or(max_input_dag_nodes())
+        .min(max_input_dag_nodes());
     if stats.dag_nodes > node_cap {
         return Err(build_unknown(
             UnknownKind::NodeBudget,
@@ -2172,11 +2201,12 @@ fn build_theory_atoms(
             "online UFBV abstraction produced no semantic Boolean atoms".to_owned(),
         )));
     }
-    if atoms.original.len() > MAX_THEORY_ATOMS {
+    let theory_atom_cap = max_theory_atoms();
+    if atoms.original.len() > theory_atom_cap {
         return Err(build_unknown(
             UnknownKind::ResourceLimit,
             format!(
-                "online UFBV has {} semantic atoms, exceeding the cap of {MAX_THEORY_ATOMS}",
+                "online UFBV has {} semantic atoms, exceeding the cap of {theory_atom_cap}",
                 atoms.original.len()
             ),
         ));
@@ -3258,6 +3288,53 @@ mod tests {
     use crate::cdclt::{CdclT, Outcome};
     use crate::euf_egraph::EufTheory;
     use crate::euf_egraph::{TheoryLit, TheoryProp};
+
+    /// The shipped numbers, pinned as literals.
+    ///
+    /// `qf-ufbv-caps` made both caps levers so the `QF_UFBV` A/B could be run
+    /// without a rebuild. Wiring a lever must not move the default, and the
+    /// only way to say that in a test is to write the number out: comparing
+    /// the accessor against the `const` it reads would pass for any value.
+    #[test]
+    fn the_shipped_ufbv_caps_are_unchanged_by_the_levers() {
+        assert_eq!(
+            super::MAX_INPUT_DAG_NODES,
+            16_384,
+            "MAX_INPUT_DAG_NODES moved; a lever commit must ship the old default"
+        );
+        assert_eq!(
+            super::MAX_THEORY_ATOMS,
+            1_024,
+            "MAX_THEORY_ATOMS moved; a lever commit must ship the old default"
+        );
+    }
+
+    /// With neither variable set, each accessor is exactly its `const`.
+    ///
+    /// Skipped rather than failed when a variable IS set, because an A/B arm
+    /// sets it process-wide and this suite is not the subject of that
+    /// experiment. The skip is reported, so it cannot quietly become the
+    /// normal path.
+    #[test]
+    fn an_unset_ufbv_lever_returns_the_shipped_cap() {
+        let mut checked = 0usize;
+        if std::env::var_os("AXEYUM_UFBV_MAX_INPUT_DAG_NODES").is_none() {
+            assert_eq!(super::max_input_dag_nodes(), super::MAX_INPUT_DAG_NODES);
+            checked += 1;
+        } else {
+            eprintln!("AXEYUM_UFBV_MAX_INPUT_DAG_NODES is set; node-cap arm not checked");
+        }
+        if std::env::var_os("AXEYUM_UFBV_MAX_THEORY_ATOMS").is_none() {
+            assert_eq!(super::max_theory_atoms(), super::MAX_THEORY_ATOMS);
+            checked += 1;
+        } else {
+            eprintln!("AXEYUM_UFBV_MAX_THEORY_ATOMS is set; atom-cap arm not checked");
+        }
+        assert_eq!(
+            checked, 2,
+            "both UFBV cap levers were overridden, so this test checked nothing"
+        );
+    }
     use crate::{CheckResult, SolverConfig, UnknownKind};
 
     #[derive(Debug)]
