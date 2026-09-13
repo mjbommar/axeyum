@@ -182,6 +182,17 @@ export L0_BEFORE L0_TIP
 # stop for. `scripts/check-merge-hygiene.sh` reports the same exit 2 without
 # failing, because a coordinator mid-merge can legitimately be looking at a
 # tree where one side has not landed yet. Same code, different question.
+# `mutation_controls.py --check-anchors` is here because of a measured rot, not
+# on principle. It was registered ONLY in `scripts/check.sh`/`justfile` (the
+# ~10-minute aggregate gate), so the lane that breaks an anchor never saw it:
+# seven anchors sat stale from `30785cf33` (2026-09-08) until 2026-09-13, and in
+# that window a status doc copied the gate's own undercount into prose. The gate
+# costs 0.14 s, builds nothing, and needs no toolchain -- there is no cost
+# argument for leaving it where only a full-gate run can find it. ADR-1990.
+#
+# It belongs at L0 specifically: an anchor breaks when RUST moves, but the fix is
+# always Python, so a docs/scripts-only push must be gated too -- and L0 is the
+# only block that runs before the `shas_to_gate` early exit.
 echo "pre-push: L0 trusted-library safety gates (always, incl. docs-only pushes)" >&2
 l0_start=$(date +%s)
 for l0_gate in \
@@ -193,7 +204,8 @@ for l0_gate in \
   "scripts/check-autogenesis-holdout-isolation.py" \
   "scripts/check-holdout-adjacency.py" \
   "scripts/check-draw7-frozen-families.py --before ${L0_BEFORE:-HEAD~1}" \
-  "scripts/check-suite-gating.py"
+  "scripts/check-suite-gating.py" \
+  "scripts/tests/mutation_controls.py --check-anchors"
 do
   l0_step_start=$(date +%s)
   # Word-splitting is intended: the entries above carry their own flags.
