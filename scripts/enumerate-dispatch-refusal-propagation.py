@@ -195,10 +195,19 @@ def call_tail(body: str, open_paren: int, span: int = 48) -> str:
 
 
 def load(root: Path):
+    """Read every `.rs` under `root`, keyed by its path RELATIVE to `root`.
+
+    Relative, not absolute, and that is load-bearing: the pinned baseline is
+    compared against trees at other roots (a scratch copy, another worktree, a
+    CI checkout). With absolute paths every site in such a tree reads as NEW,
+    so `--fail-on-new` fires on a clean tree -- an INVERTED control, which
+    looks exactly like a working one until you check that it also passes when
+    it should fail. It did, once, in this lane.
+    """
     files = {}
     for p in sorted(root.rglob("*.rs")):
         raw = p.read_text(encoding="utf-8", errors="replace")
-        files[p] = (raw, strip_noise(raw))
+        files[p.relative_to(root)] = (raw, strip_noise(raw))
     return files
 
 

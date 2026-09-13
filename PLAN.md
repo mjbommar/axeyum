@@ -140,6 +140,7 @@ now. Nothing was deleted.
 | 2026-09-13 | `825377a57` | `tests/nested_array_gate_map.rs`: the gate CHAIN behind the nested array sort, 7 tests, gated in `hooks/pre-push`. Three assert a capability we do NOT have and fail loudly when it arrives; the Int/Real pair is its own control. |
 | 2026-09-13 | `665f86532` | The parse gate counted over all 29,564 files — 27,150 blocked, not 29,564 — with two independent instruments agreeing exactly, and the 2,414-file parse-ok control population pinned. |
 | 2026-09-13 | `bfbd97dec` | Full-span 200-file parity lists for AUFLIRA / ABV / ALIA / AUFNIRA, committed before the first solve. Four divisions that had no list and no ledger row. |
+| 2026-09-13 | `b47972ab9` | ADR-1966: the mechanical enumeration of dispatch refusal-propagation sites (72 baseline, 40 with a rung below), five converted to declines, `dispatch_rung_refusal_declines` suite gated in `hooks/pre-push`, and the largest site measured at +22/−2 and left in place with its measurement. |
 | 2026-09-13 | board-six | First parity rows for NRA / QF_AUFLIA / BV / AUFLIA / UFLIA / LRA (27,201 files): 193 / 140 / 148 / 84 / 71 / 56 of 200 vs z3 199 / 200 / 179 / 161 / 139 / 170, **0 disagreements, 0 wrapper kills**; all six blockmap rows refuted; ADR-1950; 177 of 390 winnable files stop at a ROUND cap with 23,994 ms of 24,000 unspent |
 | 2026-09-13 | board-tier1 | First parity rows for AUFLIRA / UFNIA / ABV / ALIA / AUFNIRA / AUFBV / FP (47,220 files): 10 / 53 / 4 / 0 / 3 / 10 / 46 of 200 vs z3 197 / 96 / 14 / 32 / 138 / 30 / 137, **0 disagreements, 0 wrapper kills**; six of seven probe rates CONFIRMED at n=200, ABV REFUTED; the nested-array refusal is 364 of 379 winnable array rows (96 %) but **91 % of its reach is AUFLIRA alone**; ADR-1957; ADR-1941's attempts-only rule would discard 454 of 603 census rows |
 | 2026-09-13 | qf-ufbv-caps | ADR-1945: QF_UFBV **89 → 129 of 200** (gap to z3 85 → 45) from a path-specific `MAX_SCALAR_THEORY_ATOMS = 4_096`; node cap held (worth **+0** alone at 2x/4x/16x) and array atom cap held (a 25 s `Watchdog` regression, 0 of 9); 0 of 400 array files change verdict; 9,793 runs, 0 disagreements |
@@ -11338,6 +11339,66 @@ errors (1867 facts checked).
 Did not run: `just check` / `./scripts/check.sh` (out of scope for a
 single-crate change and multi-lane host contention; the coordinator's merge
 gate re-verifies).
+
+**Lane block (`DONE`, dispatch-decline-audit, 2026-09-13).** ADR-1927 fixed
+three quantified-ladder rungs that returned a sub-solve's
+`SolverError::Unsupported` as the query's verdict, and said its audit "was not
+exhaustive"; ADR-1960 then found two more by accident. All four known instances
+were found while chasing something else, so this lane enumerated the population
+**mechanically** — `scripts/enumerate-dispatch-refusal-propagation.py`, whose
+three inputs are all derived from the source. **Baseline: 72 rung-to-sub-solve
+propagation sites, 40 with another sub-solve below in the same body.** **Five
+are closed (ADR-1966); the sixth — the only one worth files — was built,
+measured and REVERTED.** The list is pinned with a `--fail-on-new` ratchet whose
+negative control fires on exactly one re-introduced site and passes clean
+otherwise.
+
+Measured, per-file A/B of the same binary with and without the guards, arms
+interleaved on one pinned core, over 1,606 well-formed rows in eight divisions,
+every moved row re-run 3× per arm at 24 s: **`AUFDTLIRA` 90 → 110 decided of
+200 (+22 / −2 after re-check), 0 `sat`↔`unsat` flips anywhere**, and all 23 new
+verdicts confirmed `unsat` by z3 4.13.3 and cvc5 1.3.4 (23/23 comparable each;
+the declared `:status` is comparable on **0 of 23** — these files carry none).
+
+**Every one of those files comes from the site that was reverted**, and this is
+the handoff: converting `check_auto_dispatch` → `check_with_datatype_native`
+turns **7 assertions red in 4 registered pre-push suites** (`dt_uf_gate`,
+`dt_capability_1935`, `dt_constructor_arg_1942`, `dt_valued_result_1946`) owned
+by ADR-1920/1935/1942/1946. Three read the refusal MESSAGE out of the `Err`
+because it is what the blocker census reads; one pins the `Err` itself; four
+then get `Ok(Sat(model))` from a rung below. **Prerequisite that removes 3 of
+the 7: carry the datatype rung's own sentence into the final `unknown` instead
+of letting the bit-blast tail's `unsupported pure-Rust BV operator DtTest(…)`
+become the message.** The A/B, the verification and the per-file rows are
+committed so the next lane re-measures nothing.
+
+**Three results a later lane should not have to rediscover.**
+
+1. **A structural hit rate is not reachability.** `AUFLIRA` declares the refused
+   shape in 184 of 200 files — the highest of any division — and **186 of 200
+   never get past the PARSER** (nested array element sort, ADR-1955). Aiming an
+   A/B by what files "contain" produces a confident zero for the wrong reason.
+   Aim by the route trail of the fixed binary instead (`guard-firing.sh`).
+2. **Site count is not file count.** The one fixed site whose firing population
+   was identified BY NAME — `abv-online-cdclt`, 6 of 200 `QF_ABV` files, refusing
+   an array shape while the array fast path sits immediately below it — yields
+   **0 verdicts** on that complete population at 24 s.
+3. **The cost is not confined to the queries whose refusal is converted.** The
+   `UFLIA` control cannot trigger any guard (200/200 reach the rung, 0/200 can
+   refuse it) and still loses one file of 200 reproducibly: the ladder reaches
+   `q:egraph`, which eats 19.3 s, so `q:mbqi-quick` — which decided it in 2.0 s
+   — never runs.
+
+**Open, sized, named.** (a) The datatype site above: +22 files, verified, behind
+7 named assertions and one prerequisite. (b) The
+enumerator is exhaustive for `SolverError::Unsupported` only; the
+`Unknown`-that-means-refusal class is a separate population it cannot see, and
+ADR-1960's second site is in it. (c) The `uf-nra` guard fires 0 times on all 58
+`QF_UFNRA` files (route entered 3 times) and no test kills it — kept as correct
+by the rule, claimed as evidence of nothing. (d) ADR-1960 and
+`real_element_array_row.rs` are NOT on `main` as of `f9075838e`; this lane did
+not touch the two sites that ADR names, to avoid colliding with that unmerged
+branch.
 
 **Capability Pareto roadmap (`DONE` research; implementation `TODO`, 2026-09-05).**
 The [source-backed programme](docs/plan/capability-pareto-2026-09-05/README.md)

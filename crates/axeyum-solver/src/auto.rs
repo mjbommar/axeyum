@@ -5215,39 +5215,41 @@ fn check_auto_dispatch(
                 with_recorder(rec, |t| {
                     t.record_declined("datatype-elim", unsupported_decline(&message));
                 });
-                // **The LAST datatype rung's refusal is a decline, not the
-                // query's verdict** (ADR-1966). `check_with_datatype_native`
-                // refuses array/UF-sorted datatype FIELDS (ADR-0022), UF applied
-                // to a datatype argument (ADR-1920), `is`/`select` over a
-                // non-variable datatype term, and a datatype-sorted term that
-                // survives tag/field expansion — and ADR-1927's own after-census
-                // measured exactly those four as the top blockers of
-                // `AUFDTLIRA` (70 + 32 + 13 + 1 of 200). A bare `?` here sent
-                // every one of them out of `solve` as an ERROR, so the front
-                // door printed `give-up kind=Error` and the thirteen rungs
-                // below this branch — difference logic, the LIRA/real/int
-                // ladders, the UF routes, the array ladder and the nonlinear
-                // integer tail — never ran on a single one.
+                // **THE ONE SITE THIS LANE DID NOT TAKE, AND WHY** (ADR-1966).
                 //
-                // Declining can only lose completeness: the ladder continues
-                // with the ORIGINAL assertions and every rung it reaches keeps
-                // its own soundness discipline.
-                match crate::datatype_native::check_with_datatype_native(arena, assertions, config)
-                {
-                    Ok(result) => {
-                        with_recorder(rec, |t| t.record_result("datatype-native", &result));
-                        return Ok(result);
-                    }
-                    Err(SolverError::Unsupported(native_message)) => {
-                        with_recorder(rec, |t| {
-                            t.record_declined(
-                                "datatype-native",
-                                unsupported_decline(&native_message),
-                            );
-                        });
-                    }
-                    Err(other) => return Err(other),
-                }
+                // `check_with_datatype_native` is the last datatype rung, and
+                // its ADR-0022 refusals — array/UF-sorted datatype FIELDS, UF
+                // applied to a datatype argument (ADR-1920), `is`/`select` over
+                // a non-variable datatype term, a datatype-sorted term that
+                // survives tag/field expansion — are exactly the four ADR-1927's
+                // own after-census measured as the top blockers of `AUFDTLIRA`
+                // (70 + 32 + 13 + 1 of 200). This bare `?` sends every one of
+                // them out of `solve` as an ERROR, so the front door prints
+                // `give-up kind=Error` and the thirteen rungs below this branch
+                // never run. It is a textbook instance of the shape.
+                //
+                // Converting it to a decline was written, built and MEASURED:
+                // per-file A/B against the same binary without it, `AUFDTLIRA`
+                // goes **90 → 110 decided of 200**, +22 / −2 after re-running
+                // every moved row three times per arm at 24 s, with 0
+                // `sat`↔`unsat` flips and all 23 new verdicts confirmed `unsat`
+                // by both z3 4.13.3 and cvc5 1.3.4.
+                //
+                // It was reverted anyway, because it turns **7 assertions in 4
+                // registered pre-push suites red** — `dt_uf_gate`,
+                // `dt_capability_1935`, `dt_constructor_arg_1942`,
+                // `dt_valued_result_1946` — owned by ADR-1920/1935/1942/1946.
+                // Three of them read the REFUSAL MESSAGE out of this `Err` and
+                // exist because that message is what the blocker census reads;
+                // one pins `Err` itself; four then get `Ok(Sat(model))` from a
+                // rung below, which is a capability gain but not one this lane
+                // can grant on another ADR's behalf. The measurement is in
+                // `bench-results/dispatch-decline-audit-20260913/` so the next
+                // lane starts from a sized target rather than a rediscovery.
+                let result =
+                    crate::datatype_native::check_with_datatype_native(arena, assertions, config)?;
+                with_recorder(rec, |t| t.record_result("datatype-native", &result));
+                return Ok(result);
             }
             Err(other) => return Err(other),
         }
