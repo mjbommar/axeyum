@@ -1019,6 +1019,10 @@ macro_rules! full_exports {
         pub use auto::{
             IntLinearPortfolioWorkersGuard, check_auto, check_auto_explained, solve, unsat_core,
         };
+        pub use auto::{
+            QinstEgraphRetryShareGuard, last_qinst_egraph_retry_budget,
+            reset_last_qinst_egraph_retry_budget,
+        };
         pub use auto::{QuantEgraphReservePolicy, QuantEgraphReservePolicyGuard};
         pub use auto::{
             UfArithOverboundPolicy, UfArithOverboundPolicyGuard, UfArithOverboundStats,

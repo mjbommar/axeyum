@@ -3212,9 +3212,43 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::Truncate,
         signal: Signal::NotApplicable,
         guarded_by: "",
-        env_override: None,
-        justification: undated("doc comment"),
-        note: "Half the remaining budget for the incremental e-graph quantifier retry, so the callers' later SAT-only stages are not starved. Was a bare `timeout / 2` inside the dispatch body until 2026-09-08; the doc comment beside it already stated the sharing INTENT, which is exactly the kind of policy a name-keyed registry cannot see while it is written as a literal.",
+        env_override: Some("AXEYUM_QINST_EGRAPH_RETRY_SHARE"),
+        justification: dated(
+            "bench-results/qbudget-20260913/PREREGISTRATION.md",
+            "2026-09-13",
+            None,
+            // The measurement is "61 of 400 UFNIA/UFLIA files end with THIS
+            // loop's own give-up string, having left a median 8,681 / 2,574 ms
+            // of the 24,000 ms root deadline unspent, because the half held
+            // back here is reserved for a rung that declines these divisions in
+            // one cheap scan". It rests on the retry still being reached from
+            // `prove_unsat_by_ematching`, on that function still being what
+            // `prove_unsat_by_mbqi_inner`'s shape guards fall through to, and
+            // on the rung still honouring the `timeout` it is handed.
+            &[
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "skolemized_egraph_retry",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "prove_unsat_by_ematching",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "prove_unsat_by_mbqi_inner",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "qinst_egraph_retry_slice",
+                ),
+            ],
+            &[Basis::LiveSymbol {
+                ident: "MIN_LADDER_SLICE",
+                in_path: "crates/axeyum-solver/src/auto.rs",
+            }],
+        ),
+        note: "Half the remaining budget for the incremental e-graph quantifier retry, so the callers' later SAT-only stages are not starved. Was a bare `timeout / 2` inside the dispatch body until 2026-09-08; the doc comment beside it already stated the sharing INTENT, which is exactly the kind of policy a name-keyed registry cannot see while it is written as a literal. WHAT THE RESERVE IS FOR, AND WHEN IT IS SPENT BY NOBODY. This call is the SECOND run of the e-graph instantiation loop on a quantified query that reaches `q:mbqi`: `finish_quantified_solve`'s `q:egraph` rung already ran it on the ORIGINAL assertions, and `prove_unsat_by_mbqi_inner`'s five shape guards fall through to `prove_unsat_by_ematching`, which lands here with the SKOLEMIZED ones. The half held back is for `q:uf-fmf-full`, the pure-UF finite-model finder -- which declines anything that is not pure UF in one cheap scan. Measured on the committed `UFNIA`/`UFLIA` census (129 winnable rows, 24 s / 8 GiB, pinned cores, 2026-09-13): 61 of 400 files end with THIS loop's `egraph_timeout()` string as their final give-up, and their median row stops with 8,681 ms (`UFNIA`) / 2,574 ms (`UFLIA`) of the 24,000 ms root deadline never spent by anything at all. The census's own `bound_by` column carries `q:mbqi` on 27 of the 37 `UFNIA` rows, which is this rung and not `q:egraph`. `AXEYUM_QINST_EGRAPH_RETRY_SHARE` measures whether handing that back decides anything, from ONE binary. Values: `off`/`0`/empty/unparseable -> the shipped `2` (a typo must never select an arm nobody chose); `whole` or `1` -> the whole remaining root clock, which is the one-way CEILING arm (no budget policy on this rung can grant the loop more than the deadline it sits inside); any `n >= 1` -> `1/n`. THIS IS NOT THE SAME LEVER AS `AXEYUM_QUANT_EGRAPH_RESERVE` (ADR-1970): that one moves clock OFF `q:egraph` and ONTO the rungs below, and the rung immediately below hands half of it straight back to the loop through this call -- which is why ADR-1970's ceiling arm is not one-way for the e-graph family as a whole.",
     },
     ConfigEntry {
         name: "QUANT_EGRAPH_LADDER_RESERVE_SHARE",
