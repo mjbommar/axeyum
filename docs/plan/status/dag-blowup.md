@@ -11,8 +11,8 @@ count.
 
 **Outcome.** **Seventeen** walkers memoised across ten modules. The repro that
 took 10.41 s at depth 26 and `unknown` at 27 now decides depth 40 in **0.01 s**
-(z3 0.04 s, cvc5 0.03 s), and 25 of 28 operator-class repro families are flat to
-depth 32. The shape is written up as
+(z3 0.04 s, cvc5 0.03 s), and **26 of 28** operator-class repro families are flat to
+depth 32 — the shipped binary re-swept end to end, not inferred. The shape is written up as
 [ADR-1940](../../research/09-decisions/adr-1940-a-depth-cap-bounds-path-length-a-worklist-bounds-stack-neither-bounds-path-count.md).
 **No division moved.** On the corpora we measure this is **robustness, not board
 points**, and the measurement that says so is below.
@@ -104,6 +104,9 @@ doubled. A family that doubles NAMES a live instance; `perf` names the function.
 | `bool_and` | QF_UF | ×2.0/level from d26 | **still doubles** | `term_walk::collect_top_binary_conjuncts` 61.8% |
 | `quant_lia` | LIA | ×2.0/level from d19 | ×2.0 from d23 (2 levels bought) | `qinst_egraph::collect_app_candidates` 18.9% + 68% allocator |
 | 17 other families | — | flat | flat | — |
+
+Final sweep of all 28 on the shipped binary: **26 flat to depth 32**, `bool_and`
+×1.99 and `quant_lia` ×1.98. Those two are the whole remaining doubling surface.
 
 ### A claim of mine that was false, and the measurement that caught it
 

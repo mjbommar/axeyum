@@ -126,8 +126,9 @@ that looks like a plateau and is a budget.
    `let`-doubling chain per operator class, swept to the depth where it stops
    being flat, with `perf` on every family that doubles. A family that doubles
    NAMES a live instance and the profile names the function. Over 28 families in
-   13 logics this found six instances the scan could not have ranked and two it
-   could not see at all.
+   13 logics this found the instances the scan could not have ranked and the two
+   it could not see at all. Final state on the shipped binary: **26 of 28 flat
+   to depth 32**, and the two that are not are named below.
 
 ## Consequences
 
