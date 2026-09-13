@@ -212,6 +212,28 @@ every array-sorted `ite`:
 `eliminate_arrays`' own — and these queries do not reach it. Closing that is
 worth a control fixture and **zero benchmark files**.
 
+### Re-run on a binary built from this branch
+
+The sweeps above used the board's pinned harness binary
+(`/nas3/data/axeyum/harness/tier1-divisions/bin/smtcomp_cli`), and that binary
+is stamped **07:11** while ADR-1965 merged at **12:34** — so it predates the
+nested array sort by five hours. That does not affect a surrogate, whose whole
+point is that no nested sort survives it, but "does not affect" is a prediction
+and this repository does not accept those.
+
+`smtcomp_cli` was rebuilt `--release` from this branch at `74033a6c7`
+(binary 12:57, newer than every `.rs` under `crates/`), and ALIA and ABV were
+swept again with it. `sweep-fresh-binary/` holds the result:
+
+```
+ALIA  36 files: 18 ok / 18 REFUSED, axeyum 18 unknown, 0 unsat   IDENTICAL
+ABV   17 files:  9 ok /  8 REFUSED, axeyum  8 unknown, 1 unsat   IDENTICAL
+```
+
+Identical per file on `(file, surrogate, ax)` — all 53. The six `controls/`
+fixtures also reproduce unchanged on the fresh binary. So the measurement is a
+property of the surrogate and the solver, not of which binary ran it.
+
 ## The instrument's own controls
 
 `controls/run-controls.sh`. This matters more than usual here, because
