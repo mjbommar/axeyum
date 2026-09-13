@@ -851,6 +851,11 @@ pub fn solve(
     let Some(valid_config) = config_with_remaining_timeout(config, deadline) else {
         return Ok(quantified_timeout("existential skolemization"));
     };
+    // The pass runs one quantifier-free SUB-SOLVE per top-level universal, each
+    // handed whatever is left, so a single hard sub-query spends the ladder's
+    // entire clock and every rung below it never runs. `quant_valid_universal_budget`
+    // is the lever that bounds it; under the shipped default it is the identity.
+    let valid_config = quant_valid_universal_budget(&valid_config);
     let eliminated = match crate::quant_valid_universal::eliminate_valid_universals(
         arena,
         assertions,
@@ -4790,6 +4795,157 @@ fn quant_egraph_budget(config: &SolverConfig) -> SolverConfig {
         QuantEgraphReservePolicy::WholeBudget => config.clone(),
         QuantEgraphReservePolicy::LadderReserve { share } => {
             LadderSlice::all_but_reserve("q:egraph", share).apply(config, config.timeout)
+        }
+    }
+}
+
+/// Whether valid-universal elimination receives the quantified ladder's whole
+/// remaining budget, or keeps a reserve for the rungs below it.
+///
+/// The same shape as [`QuantEgraphReservePolicy`], for the same reason and with
+/// the same discipline. The rung is measured (ADR-1975) to hold the ENTIRE 24 s
+/// clock and then decline on **69 of `UFDTNIRA`'s 200** pinned files — the
+/// single largest blocker family on any datatype division — so it is the
+/// textbook case for a reserve. A reserve is nonetheless worth nothing unless a
+/// rung below would decide the file, and that is a measurement, not a guess:
+/// `share = 1` hands the pass [`MIN_LADDER_SLICE`] and the ladder essentially
+/// everything, which is the one-way CEILING arm. A file the ceiling arm does not
+/// decide is out of reach of every smaller reserve.
+///
+/// Bounding the pass is sound at any budget because the pass is **strictly
+/// additive**: [`crate::quant_valid_universal::eliminate_valid_universals`]
+/// leaves untouched every universal it did not prove valid, and its own
+/// per-assertion loop already stops on a spent deadline and copies the
+/// remaining assertions through unchanged. A smaller budget therefore
+/// eliminates FEWER universals; it can never eliminate one that is not valid,
+/// so no budget setting can change a verdict from `unsat` to `sat` or back.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QuantValidUniversalReservePolicy {
+    /// The HISTORICAL behaviour, and no longer the default: the pass receives
+    /// the whole remaining budget. Kept as a named arm, and reachable by
+    /// `AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE=off`, so the shipped reserve can
+    /// still be measured against the code it replaced rather than only
+    /// remembered.
+    WholeBudget,
+    /// The pass receives the remaining budget less `1/share` of it, and the
+    /// rungs below run on that reserve, out of the same clock. **This is the
+    /// shipped default at `share = QUANT_VALID_UNIVERSAL_LADDER_RESERVE_SHARE`**
+    /// (ADR-1975).
+    LadderReserve {
+        /// Divisor of the remaining budget held back for the rungs below.
+        share: u32,
+    },
+}
+
+thread_local! {
+    /// Test-scoped override of [`QuantValidUniversalReservePolicy`]; see
+    /// [`QuantValidUniversalReservePolicyGuard`].
+    static QUANT_VALID_UNIVERSAL_RESERVE_OVERRIDE:
+        std::cell::Cell<Option<QuantValidUniversalReservePolicy>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Sets the [`QuantValidUniversalReservePolicy`] for the current thread,
+/// restoring the previous setting on drop.
+///
+/// Exists so a test can drive both arms without setting a process-wide
+/// environment variable — a test that passes only under an ambient env var is a
+/// gate on one shell.
+pub struct QuantValidUniversalReservePolicyGuard(Option<QuantValidUniversalReservePolicy>);
+
+impl QuantValidUniversalReservePolicyGuard {
+    /// Overrides the process policy on this thread.
+    #[must_use]
+    pub fn set(policy: QuantValidUniversalReservePolicy) -> Self {
+        QuantValidUniversalReservePolicyGuard(
+            QUANT_VALID_UNIVERSAL_RESERVE_OVERRIDE.with(|c| c.replace(Some(policy))),
+        )
+    }
+}
+
+impl Drop for QuantValidUniversalReservePolicyGuard {
+    fn drop(&mut self) {
+        QUANT_VALID_UNIVERSAL_RESERVE_OVERRIDE.with(|c| c.set(self.0));
+    }
+}
+
+/// Divisor of the quantified ladder's remaining budget held back for the rungs
+/// below valid-universal elimination. **SHIPPED, not inert.**
+///
+/// `4` is the value [`UF_ARITH_LADDER_RESERVE_SHARE`] and
+/// [`ABV_ONLINE_LADDER_RESERVE_SHARE`] settled on for the same shape, and here
+/// it is MEASURED rather than inherited (ADR-1975). It ships ON because the
+/// one-way CEILING arm (`share = 1`, the pass gets [`MIN_LADDER_SLICE`]) and
+/// this value gain the **identical 19 files** on `UFDTNIRA` — so the gain is
+/// not an artefact of an extreme setting — while the `UF` control separates
+/// them: the ceiling arm loses **2** files there, reproducibly at three runs
+/// per arm, and `share = 4` loses **0**. The ceiling was the right sizing
+/// instrument and the wrong thing to ship.
+const QUANT_VALID_UNIVERSAL_LADDER_RESERVE_SHARE: u32 = 4;
+
+/// Parses `AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE`.
+///
+/// An absent variable, an empty value, `on` and an unparseable value all
+/// resolve to the SHIPPED default — [`QuantValidUniversalReservePolicy::LadderReserve`]
+/// at [`QUANT_VALID_UNIVERSAL_LADDER_RESERVE_SHARE`] — so a typo degrades to
+/// the shipped behaviour rather than to an arm nobody chose. `off` and `0`
+/// select the historical [`QuantValidUniversalReservePolicy::WholeBudget`],
+/// which is what an A/B against the pre-ADR-1975 code runs; any integer
+/// `n >= 1` reserves `1/n` instead, which is how the `share = 1` ceiling arm is
+/// reached.
+///
+/// Note the direction. While the lever shipped OFF, an unrecognised value
+/// resolved to `WholeBudget`; it now resolves to the reserve. The rule is
+/// **"unknown input means what we ship"**, not "unknown input means no
+/// reserve", and the two stopped coinciding the moment the measurement came in.
+fn parse_quant_valid_universal_reserve(value: Option<&str>) -> QuantValidUniversalReservePolicy {
+    let shipped = QuantValidUniversalReservePolicy::LadderReserve {
+        share: QUANT_VALID_UNIVERSAL_LADDER_RESERVE_SHARE,
+    };
+    match value {
+        None | Some("" | "on") => shipped,
+        Some("off") => QuantValidUniversalReservePolicy::WholeBudget,
+        Some(text) => match text.parse::<u32>() {
+            Ok(0) => QuantValidUniversalReservePolicy::WholeBudget,
+            Err(_) => shipped,
+            Ok(share) => QuantValidUniversalReservePolicy::LadderReserve { share },
+        },
+    }
+}
+
+/// The [`QuantValidUniversalReservePolicy`] in force on this thread: a live
+/// [`QuantValidUniversalReservePolicyGuard`]'s choice, else the process policy
+/// resolved once from `AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE`.
+fn quant_valid_universal_reserve_policy() -> QuantValidUniversalReservePolicy {
+    static RESOLVED: std::sync::OnceLock<QuantValidUniversalReservePolicy> =
+        std::sync::OnceLock::new();
+    if let Some(policy) = QUANT_VALID_UNIVERSAL_RESERVE_OVERRIDE.with(std::cell::Cell::get) {
+        return policy;
+    }
+    *RESOLVED.get_or_init(|| {
+        parse_quant_valid_universal_reserve(
+            std::env::var("AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE")
+                .ok()
+                .as_deref(),
+        )
+    })
+}
+
+/// The budget handed to valid-universal elimination: under the shipped policy
+/// the caller's remaining budget less the ladder's quarter of it; under
+/// `AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE=off`, the whole of it, unchanged,
+/// which is the pre-ADR-1975 code.
+///
+/// `config` is ALREADY the remaining-budget config computed at the rung's entry
+/// deadline, so the slice and the reserve come out of one clock rather than
+/// two -- the property that makes a route which spends its share unable to also
+/// spend the ladder's.
+fn quant_valid_universal_budget(config: &SolverConfig) -> SolverConfig {
+    match quant_valid_universal_reserve_policy() {
+        QuantValidUniversalReservePolicy::WholeBudget => config.clone(),
+        QuantValidUniversalReservePolicy::LadderReserve { share } => {
+            LadderSlice::all_but_reserve(route_trace::quant_rung::VALID_UNIVERSAL_QF, share)
+                .apply(config, config.timeout)
         }
     }
 }
@@ -13066,6 +13222,119 @@ mod tests {
             let _guard = QuantEgraphReservePolicyGuard::set(policy);
             assert_eq!(
                 quant_egraph_budget(&config).timeout,
+                None,
+                "{policy:?} must not invent a timeout"
+            );
+        }
+    }
+
+    /// `AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE`'s parse, including the direction
+    /// that matters: anything unrecognised is the SHIPPED default — which since
+    /// ADR-1975 is the RESERVE, not `WholeBudget`. Turning the historical arm
+    /// off requires spelling it, which is what makes an A/B against the
+    /// pre-ADR-1975 code a deliberate act rather than a typo.
+    #[test]
+    fn quant_valid_universal_reserve_parses_to_the_shipped_default_unless_told_otherwise() {
+        let shipped = QuantValidUniversalReservePolicy::LadderReserve {
+            share: QUANT_VALID_UNIVERSAL_LADDER_RESERVE_SHARE,
+        };
+        for unrecognised in [None, Some(""), Some("on"), Some("nonsense"), Some("-2")] {
+            assert_eq!(
+                parse_quant_valid_universal_reserve(unrecognised),
+                shipped,
+                "{unrecognised:?} must resolve to the SHIPPED default, which is the reserve"
+            );
+        }
+        // The historical arm is reachable, and ONLY by spelling it. This is the
+        // arm the ADR's A/B calls `base`.
+        for off in [Some("off"), Some("0")] {
+            assert_eq!(
+                parse_quant_valid_universal_reserve(off),
+                QuantValidUniversalReservePolicy::WholeBudget,
+                "{off:?} must select the pre-ADR-1975 whole-budget arm"
+            );
+        }
+        assert_eq!(
+            parse_quant_valid_universal_reserve(Some("4")),
+            QuantValidUniversalReservePolicy::LadderReserve { share: 4 }
+        );
+        assert_eq!(
+            parse_quant_valid_universal_reserve(Some("1")),
+            QuantValidUniversalReservePolicy::LadderReserve { share: 1 }
+        );
+    }
+
+    /// The budget valid-universal elimination is handed, per arm.
+    ///
+    /// The `share = 4` assertion is the load-bearing one: it is the SHIPPED
+    /// policy, and the 19 files ADR-1975 measures rest on the pass receiving
+    /// 18 s of a 24 s budget rather than all of it. The `WholeBudget` assertion
+    /// beside it pins the historical arm, which is what that A/B's `base` runs;
+    /// a mutant that collapses the two is killed here.
+    #[test]
+    fn quant_valid_universal_budget_is_unchanged_by_default_and_reserved_under_a_policy() {
+        let config = SolverConfig {
+            timeout: Some(Duration::from_secs(24)),
+            ..SolverConfig::default()
+        };
+
+        {
+            let _guard = QuantValidUniversalReservePolicyGuard::set(
+                QuantValidUniversalReservePolicy::WholeBudget,
+            );
+            assert_eq!(
+                quant_valid_universal_budget(&config).timeout,
+                Some(Duration::from_secs(24)),
+                "the `off` arm must hand the pass the whole remaining budget -- it is the \
+                 pre-ADR-1975 code and the baseline every number in that ADR is measured \
+                 against"
+            );
+        }
+        {
+            let _guard = QuantValidUniversalReservePolicyGuard::set(
+                QuantValidUniversalReservePolicy::LadderReserve {
+                    share: QUANT_VALID_UNIVERSAL_LADDER_RESERVE_SHARE,
+                },
+            );
+            assert_eq!(
+                quant_valid_universal_budget(&config).timeout,
+                Some(Duration::from_secs(18)),
+                "the SHIPPED arm holds a quarter back for the rungs below"
+            );
+        }
+        {
+            // The CEILING arm the ADR-1975 sizing runs: the pass gets
+            // `MIN_LADDER_SLICE` and the ladder below gets the rest. This is
+            // what makes the sizing ONE-WAY -- no real reserve can give the
+            // lower rungs more clock than this.
+            let _guard = QuantValidUniversalReservePolicyGuard::set(
+                QuantValidUniversalReservePolicy::LadderReserve { share: 1 },
+            );
+            assert_eq!(
+                quant_valid_universal_budget(&config).timeout,
+                Some(MIN_LADDER_SLICE),
+                "share = 1 must leave the pass the floor, not the whole budget"
+            );
+        }
+    }
+
+    /// An unbounded caller budget stays unbounded under every arm: there is no
+    /// clock to share, so there is no starvation to prevent, and inventing a
+    /// timeout here would bound a search the caller deliberately did not.
+    #[test]
+    fn quant_valid_universal_budget_leaves_an_unbounded_config_unbounded() {
+        let config = SolverConfig {
+            timeout: None,
+            ..SolverConfig::default()
+        };
+        for policy in [
+            QuantValidUniversalReservePolicy::WholeBudget,
+            QuantValidUniversalReservePolicy::LadderReserve { share: 4 },
+            QuantValidUniversalReservePolicy::LadderReserve { share: 1 },
+        ] {
+            let _guard = QuantValidUniversalReservePolicyGuard::set(policy);
+            assert_eq!(
+                quant_valid_universal_budget(&config).timeout,
                 None,
                 "{policy:?} must not invent a timeout"
             );

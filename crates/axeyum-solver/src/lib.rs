@@ -1020,6 +1020,7 @@ macro_rules! full_exports {
             IntLinearPortfolioWorkersGuard, check_auto, check_auto_explained, solve, unsat_core,
         };
         pub use auto::{QuantEgraphReservePolicy, QuantEgraphReservePolicyGuard};
+        pub use auto::{QuantValidUniversalReservePolicy, QuantValidUniversalReservePolicyGuard};
         pub use auto::{
             UfArithOverboundPolicy, UfArithOverboundPolicyGuard, UfArithOverboundStats,
             UfArithOverboundStatsGuard, last_uf_arith_overbound_stats,

@@ -3267,6 +3267,59 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "INERT IN THE SHIPPED CONFIGURATION. The value is what `AXEYUM_QUANT_EGRAPH_RESERVE=on` selects; the DEFAULT policy is `QuantEgraphReservePolicy::WholeBudget`, which hands `q:egraph` the whole remaining budget and never reads this constant, so the shipped reserve is ZERO. THE MEASUREMENT IS WHY (ADR-1970). `q:egraph` -- the e-matching instantiation loop rung of `finish_quantified_solve` -- receives the ladder's WHOLE remaining wall clock. Measured over the ENTIRE winnable set of `UFNIA` and `UFLIA` (129 rows, 24 s / 8 GiB, pinned cores): it is ENTERED on 125 of 200 and 119 of 200 files, DECIDES 1 and 8 of them, and on 44 of the 46 rows in the census's largest family it holds a median 94% / 88% of the budget and then declines, leaving full MBQI and the full pure-UF finite-model finder nothing. That is the textbook case for a reserve, and it was built -- and then SIZED BY ITS OWN CEILING ARM before being shipped. `AXEYUM_QUANT_EGRAPH_RESERVE=1` hands the rung `MIN_LADDER_SLICE` (1 ms) and the ladder below essentially the whole clock, which is strictly more than any real reserve can give, so it is a ONE-WAY ceiling. Interleaved per-file A/B, one binary and two env values, arms back to back on one pinned core with the order alternating: `UFNIA` 53 -> 55 (+2 / -0), `UFLIA` 73 -> 73 (+3 / -3), `AUFLIA` (a QUANTIFIED control on which the rung does run) 86 -> 86 (0 / 0), 0 sat<->unsat flips in 1,200 solves. After re-running every moved row three times per arm: GAIN 4, LOSS 2, UNSTABLE 2. The base arm reads 73 in the `UFLIA` A/B and 76 in the single-arm census sweep at the same commit, so the 3-file ambient band is LARGER THAN THE WHOLE EFFECT. Default `off` = `WholeBudget` is byte-identical to the pre-lever code. Values: `off`/`0`/empty/unparseable -> the shipped default (a typo must never select an arm nobody chose); `n >= 1` -> reserve 1/n. DO NOT turn this on without re-measuring: the `UFLIA` arm loses two `grasshopper/uninstantiated` files reproducibly.",
     },
     ConfigEntry {
+        name: "QUANT_VALID_UNIVERSAL_LADDER_RESERVE_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "4",
+        unit: "divisor of the quantified ladder's remaining deadline, held back for the rungs below `q:valid-universal-qf`",
+        protects: Protects::Completeness,
+        on_exceed: OnExceed::DeclineRoute,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: Some("AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE"),
+        justification: dated(
+            "bench-results/ufdt-family-20260913/README.md",
+            "2026-09-13",
+            None,
+            // The measurement is "valid-universal elimination holds the WHOLE
+            // 24 s budget and then declines on 69 of `UFDTNIRA`'s 200 pinned
+            // files". It rests on the pass still being called from
+            // `finish_quantified_solve` BEFORE the vacuous-universal pass and
+            // the whole instantiation/MBQI family, on that call still being
+            // routed through `quant_valid_universal_budget`, and on
+            // `eliminate_valid_universals` still honouring the `timeout` it is
+            // handed by stopping its per-assertion loop -- change any of the
+            // three and the numbers stop describing this tree.
+            &[
+                sym(
+                    "crates/axeyum-solver/src/quant_valid_universal.rs",
+                    "eliminate_valid_universals",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "finish_quantified_solve",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "quant_valid_universal_budget",
+                ),
+            ],
+            // The ceiling arm is the load-bearing part of the sizing: if
+            // `MIN_LADDER_SLICE` moves, `share = 1` stops being the ceiling and
+            // the sizing stops being one-way.
+            &[
+                Basis::LiveSymbol {
+                    ident: "MIN_LADDER_SLICE",
+                    in_path: "crates/axeyum-solver/src/auto.rs",
+                },
+                Basis::LiveSymbol {
+                    ident: "QuantValidUniversalReservePolicy",
+                    in_path: "crates/axeyum-solver/src/auto.rs",
+                },
+            ],
+        ),
+        note: "SHIPPED, NOT INERT (ADR-1975). The DEFAULT policy is `QuantValidUniversalReservePolicy::LadderReserve { share: 4 }`; `AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE=off` selects the historical `WholeBudget`, which is the pre-ADR-1975 code and the baseline every number below is measured against. THE MEASUREMENT. Valid-universal elimination -- the sat-side universal-closure validity check of `finish_quantified_solve` -- runs one quantifier-free SUB-SOLVE per top-level assertion, each handed whatever is left of the ladder's wall clock. Over `UFDTNIRA`'s pinned 200 (24 s / 8 GiB, pinned cores): 69 files spend the ENTIRE budget inside it and give up PAST the 24,000 ms deadline (median 46 ms over, min 30, max 80; no fast declines at all), which is 56 of that division's 109 winnable rows and the largest CLOCK family on any datatype division. Across the four datatype divisions the rung is the bounding route on 167 of 800 files and DECIDES 0 of them. Bounding it is sound at any budget because it is strictly additive: `eliminate_valid_universals` rewrites an assertion only after its sub-solve returns `Unsat`, and copies every remaining assertion through unchanged when the budget is spent, so a smaller slice eliminates FEWER universals and can never change a verdict. SIZED BY ITS OWN ONE-WAY CEILING ARM FIRST: `=1` hands the pass `MIN_LADDER_SLICE` and the ladder below essentially the whole clock, strictly more than any real reserve can give. Interleaved per-file A/B, one binary and two env values, arms back to back on one pinned core with the order alternating, full pinned 200 per division: `UFDTNIRA` 74 -> 93 (+19 / -0), `UFDTLIRA` 105 -> 105, `UFDT` 31 -> 31, `AUFDTLIRA` 96 -> 96, 0 sat<->unsat flips anywhere. Every one of the 19 re-run THREE TIMES PER ARM: 19 of 19 stable GAIN, 0 unstable, and 55 independent comparisons against `:status`, z3 4.13.3 and cvc5 1.3.4 with 0 disagreements and 0 rows that nothing could check. THE SHARE IS WHY THIS VALUE AND NOT THE CEILING: the `UF` control loses 2 files under `=1`, reproducibly at three runs per arm, and 0 under `=4`, while `=4` gains the IDENTICAL 19 files on `UFDTNIRA` -- so the ceiling was the right sizing instrument and the wrong thing to ship. Noise floor measured on this lane's own arms: the A/B base arm and the single-arm census sweep agree EXACTLY on all four divisions (74/105/31/96 twice), and a third independent run under heavy concurrent load differs by 1 file -- a band of 0-1 against a +19 effect. Values: absent/empty/`on`/unparseable -> the SHIPPED reserve (unknown input means what we ship); `off`/`0` -> `WholeBudget`; `n >= 1` -> reserve 1/n.",
+    },
+    ConfigEntry {
         name: "TIMED_ARRAY_REFUTER_SLICE",
         module: "crates/axeyum-solver/src/auto.rs",
         value: "Duration::from_millis(250)",
