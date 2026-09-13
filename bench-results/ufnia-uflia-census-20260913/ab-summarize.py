@@ -33,7 +33,17 @@ def main(argv: list[str]) -> int:
     arm_dir = pathlib.Path(argv[1])
     rc = 0
     for div in argv[2:]:
+        # Two inputs, on purpose. During the run the shards are what exist; in
+        # the COMMITTED artifact only the merged file survives, and the README
+        # claims every number is re-derivable from what is committed. A
+        # summarizer that could only read the run's scratch layout would make
+        # that claim false.
         shards = sorted(arm_dir.glob(f"{div}.shard*.tsv"))
+        if not shards:
+            shards = [p for p in (arm_dir / f"{div}.tsv",
+                                  arm_dir / f"{div}.ceiling.tsv",
+                                  arm_dir / f"{div}.ceiling-control.tsv")
+                      if p.exists()][:1]
         if not shards:
             print(f"== {div}: DID NOT RUN")
             rc = max(rc, 1)
@@ -58,12 +68,14 @@ def main(argv: list[str]) -> int:
             print(f"ABORT {div}: {len(missing)} pinned files have no A/B row,"
                   f" e.g. {missing[:2]}")
             return 3
-        out = arm_dir / f"{div}.tsv"
-        with open(out, "w", newline="") as fh:
-            w = csv.DictWriter(fh, fieldnames=header, delimiter="\t", lineterminator="\n")
-            w.writeheader()
-            for p in pinned:
-                w.writerow(rows[p])
+        if len(shards) > 1 or shards[0].name.endswith(".shard00.tsv"):
+            out = arm_dir / f"{div}.tsv"
+            with open(out, "w", newline="") as fh:
+                w = csv.DictWriter(fh, fieldnames=header, delimiter="\t",
+                                   lineterminator="\n")
+                w.writeheader()
+                for p in pinned:
+                    w.writerow(rows[p])
 
         rs = [rows[p] for p in pinned]
         base = sum(r["base"] in DECIDED for r in rs)
