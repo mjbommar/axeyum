@@ -2802,17 +2802,22 @@ def check_anchors() -> int:
             path = ROOT / target
             if not path.exists():
                 print(f"MISSING SUBJECT {name}: {target}")
-                failed = 1
+                failed += 1
                 continue
             text = path.read_text(encoding="utf-8")
             occurrences = text.count(mutation.find)
             if occurrences != 1:
                 verdict = "NOT APPLIED" if occurrences == 0 else "AMBIGUOUS ANCHOR"
                 print(f"{verdict} {name}: {mutation.label!r} matches {occurrences} places in {target}")
-                failed = 1
+                failed += 1
     total = sum(len(normalize(n).mutations) for n in sorted(set(SUITES) - DEMOS))
     print(f"MUTATION_ANCHORS|suites={len(set(SUITES) - DEMOS)}|anchors={total}|stale={failed}")
-    return failed
+    # `stale=` carries the COUNT; the exit status is deliberately clamped to a
+    # boolean. Returning `failed` itself would be a gate that cannot fail at
+    # exactly 256 stale anchors, because `SystemExit` takes the status mod 256
+    # -- the "checker that cannot fail" shape this whole harness exists to
+    # prevent (ADR-1990).
+    return 1 if failed else 0
 
 
 # S1 of the trusted-library safety roadmap (ADR-0763). Until S1 this gate could
@@ -3367,116 +3372,6 @@ SUITES["mobility-census"] = (
 )
 
 
-DEMO_SUBJECT = "scripts/tests/fixtures/mutation_demo/subject.py"
-DEMO_CONTROL = "scripts/tests/fixtures/mutation_demo/suite_tests.py"
-
-SUITES["self-demo"] = (
-    DEMO_SUBJECT,
-    "scripts.tests.fixtures.mutation_demo.suite_tests",
-    [
-        ("a guard a control drives", "    if n < 0:", "    if False:"),
-        ("a guard NO control drives", "    if n > 100:", "    if False:"),
-        ("a mutation that breaks the parse", "def classify(n: int) -> str:", "def classify(n: int) -> str"),
-        (
-            # Renaming the CLASS does not work -- `unittest` collects by base
-            # class, not by name -- and finding that out is why this demo exists.
-            # Dropping the base is the `#![cfg(feature = "full")]` shape: the
-            # module still imports, and collects nothing.
-            "a mutation that empties collection",
-            "class DemoControls(unittest.TestCase):",
-            "class DemoControls:",
-            DEMO_CONTROL,
-        ),
-    ],
-)
-
-DEMO_EXPECTED = {
-    "a guard a control drives": KILLED,
-    "a guard NO control drives": SURVIVED,
-    "a mutation that breaks the parse": NO_BUILD,
-    "a mutation that empties collection": NO_RUN,
-}
-
-#: Suites whose point is to produce non-results; excluded from a bare run.
-DEMOS = {"self-demo"}
-
-
-def run_demo() -> int:
-    _status, reports = baseline_and_mutants("self-demo")
-    observed = {label: report.outcome for label, report in reports}
-    wrong = [
-        f"{label}: expected {want}, harness said {observed.get(label, '<no report>')}"
-        for label, want in DEMO_EXPECTED.items()
-        if observed.get(label) != want
-    ]
-    if wrong:
-        print("self-demo: the harness MISCLASSIFIED " + f"{len(wrong)} of {len(DEMO_EXPECTED)}:")
-        for line in wrong:
-            print(f"    {line}")
-        return 1
-    print(f"self-demo: all {len(DEMO_EXPECTED)} outcomes named correctly")
-    return 0
-
-
-def check_anchors() -> int:
-    """Every registered anchor still matches its subject exactly once.
-
-    Builds nothing and runs no test, so this is cheap enough to be a gate — and
-    it catches the rot that actually happens. No gate runs any real mutation
-    suite: `scripts/check.sh` and the `justfile` run the harness's OWN controls
-    and `self-demo`, so the harness is verified continuously and every SUBJECT
-    is verified once, by hand, at commit time. When the source then drifts, the
-    anchor stops matching, the mutation reports `NOT APPLIED` — and nobody is
-    looking, so a suite can decay to measuring nothing while its commit message
-    still claims "each guard killed exactly one test".
-
-    `NOT APPLIED` and `AMBIGUOUS ANCHOR` are both failures here for the reason
-    `_apply` gives: an anchor matching twice would be resolved by
-    `str.replace(..., 1)` picking whichever came first, and the report could not
-    say which guard was deleted.
-
-    This does NOT say the guards still kill anything. That needs the builds.
-    It says the suites are still POINTED at real code, which is the difference
-    between a stale suite and a green one.
-    """
-    failed = 0
-    for name in sorted(set(SUITES) - DEMOS):
-        suite = normalize(name)
-        for mutation in suite.mutations:
-            target = mutation.target or suite.subject
-            path = ROOT / target
-            if not path.exists():
-                print(f"MISSING SUBJECT {name}: {target}")
-                failed = 1
-                continue
-            text = path.read_text(encoding="utf-8")
-            occurrences = text.count(mutation.find)
-            if occurrences != 1:
-                verdict = "NOT APPLIED" if occurrences == 0 else "AMBIGUOUS ANCHOR"
-                print(f"{verdict} {name}: {mutation.label!r} matches {occurrences} places in {target}")
-                failed = 1
-    total = sum(len(normalize(n).mutations) for n in sorted(set(SUITES) - DEMOS))
-    print(f"MUTATION_ANCHORS|suites={len(set(SUITES) - DEMOS)}|anchors={total}|stale={failed}")
-    return failed
-
-
-def main(argv: list[str]) -> int:
-    if argv[1:2] == ["--check-anchors"]:
-        return check_anchors()
-    names = argv[1:] or sorted(set(SUITES) - DEMOS)
-    failed = 0
-    for name in names:
-        if name not in SUITES:
-            print(f"unknown suite {name!r}; known: {', '.join(sorted(SUITES))}")
-            return 2
-        if name in DEMOS:
-            failed |= run_demo()
-            continue
-        status, _reports = baseline_and_mutants(name)
-        failed |= status
-    return failed
-
-
 SUITES["obstruction-graph"] = (
     "scripts/validate-obstruction-graph.py",
     "scripts.tests.test_obstruction_graph",
@@ -3629,99 +3524,6 @@ SUITES["obstruction-graph"] = (
         ),
     ],
 )
-
-
-DEMO_SUBJECT = "scripts/tests/fixtures/mutation_demo/subject.py"
-DEMO_CONTROL = "scripts/tests/fixtures/mutation_demo/suite_tests.py"
-
-SUITES["self-demo"] = (
-    DEMO_SUBJECT,
-    "scripts.tests.fixtures.mutation_demo.suite_tests",
-    [
-        ("a guard a control drives", "    if n < 0:", "    if False:"),
-        ("a guard NO control drives", "    if n > 100:", "    if False:"),
-        ("a mutation that breaks the parse", "def classify(n: int) -> str:", "def classify(n: int) -> str"),
-        (
-            # Renaming the CLASS does not work -- `unittest` collects by base
-            # class, not by name -- and finding that out is why this demo exists.
-            # Dropping the base is the `#![cfg(feature = "full")]` shape: the
-            # module still imports, and collects nothing.
-            "a mutation that empties collection",
-            "class DemoControls(unittest.TestCase):",
-            "class DemoControls:",
-            DEMO_CONTROL,
-        ),
-    ],
-)
-
-DEMO_EXPECTED = {
-    "a guard a control drives": KILLED,
-    "a guard NO control drives": SURVIVED,
-    "a mutation that breaks the parse": NO_BUILD,
-    "a mutation that empties collection": NO_RUN,
-}
-
-#: Suites whose point is to produce non-results; excluded from a bare run.
-DEMOS = {"self-demo"}
-
-
-def run_demo() -> int:
-    _status, reports = baseline_and_mutants("self-demo")
-    observed = {label: report.outcome for label, report in reports}
-    wrong = [
-        f"{label}: expected {want}, harness said {observed.get(label, '<no report>')}"
-        for label, want in DEMO_EXPECTED.items()
-        if observed.get(label) != want
-    ]
-    if wrong:
-        print("self-demo: the harness MISCLASSIFIED " + f"{len(wrong)} of {len(DEMO_EXPECTED)}:")
-        for line in wrong:
-            print(f"    {line}")
-        return 1
-    print(f"self-demo: all {len(DEMO_EXPECTED)} outcomes named correctly")
-    return 0
-
-
-def check_anchors() -> int:
-    """Every registered anchor still matches its subject exactly once.
-
-    Builds nothing and runs no test, so this is cheap enough to be a gate — and
-    it catches the rot that actually happens. No gate runs any real mutation
-    suite: `scripts/check.sh` and the `justfile` run the harness's OWN controls
-    and `self-demo`, so the harness is verified continuously and every SUBJECT
-    is verified once, by hand, at commit time. When the source then drifts, the
-    anchor stops matching, the mutation reports `NOT APPLIED` — and nobody is
-    looking, so a suite can decay to measuring nothing while its commit message
-    still claims "each guard killed exactly one test".
-
-    `NOT APPLIED` and `AMBIGUOUS ANCHOR` are both failures here for the reason
-    `_apply` gives: an anchor matching twice would be resolved by
-    `str.replace(..., 1)` picking whichever came first, and the report could not
-    say which guard was deleted.
-
-    This does NOT say the guards still kill anything. That needs the builds.
-    It says the suites are still POINTED at real code, which is the difference
-    between a stale suite and a green one.
-    """
-    failed = 0
-    for name in sorted(set(SUITES) - DEMOS):
-        suite = normalize(name)
-        for mutation in suite.mutations:
-            target = mutation.target or suite.subject
-            path = ROOT / target
-            if not path.exists():
-                print(f"MISSING SUBJECT {name}: {target}")
-                failed = 1
-                continue
-            text = path.read_text(encoding="utf-8")
-            occurrences = text.count(mutation.find)
-            if occurrences != 1:
-                verdict = "NOT APPLIED" if occurrences == 0 else "AMBIGUOUS ANCHOR"
-                print(f"{verdict} {name}: {mutation.label!r} matches {occurrences} places in {target}")
-                failed = 1
-    total = sum(len(normalize(n).mutations) for n in sorted(set(SUITES) - DEMOS))
-    print(f"MUTATION_ANCHORS|suites={len(set(SUITES) - DEMOS)}|anchors={total}|stale={failed}")
-    return failed
 
 
 SUITES["correspondences"] = (
@@ -5984,22 +5786,6 @@ SUITES["aggregate-scope-failure"] = (
         ),
     ],
 )
-
-def main(argv: list[str]) -> int:
-    if argv[1:2] == ["--check-anchors"]:
-        return check_anchors()
-    names = argv[1:] or sorted(set(SUITES) - DEMOS)
-    failed = 0
-    for name in names:
-        if name not in SUITES:
-            print(f"unknown suite {name!r}; known: {', '.join(sorted(SUITES))}")
-            return 2
-        if name in DEMOS:
-            failed |= run_demo()
-            continue
-        status, _reports = baseline_and_mutants(name)
-        failed |= status
-    return failed
 
 
 # --------------------------------------------------------------------------
