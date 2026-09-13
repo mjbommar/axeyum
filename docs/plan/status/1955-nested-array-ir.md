@@ -37,9 +37,10 @@ two come from the same generator:
     ALIA / UltimateAutomizer 2023     0 of  28   0.0%   <- 3,028 blocked files
     ALIA / piVC                       7 of  42  16.7%   <-     0 blocked files
     AUFLIRA, AUFNIRA / nasa, peter    no control exists  <- 19,620 blocked files
+    AUFLIRA / why                   702 of 1071  65.5%   <-     0 blocked files
 
 Quoting either aggregate would have been misleading in **both** directions:
-AUFLIRA's climbs toward its `why` family (~61%, zero blocked files) and ALIA's
+AUFLIRA's aggregate 60.2% is carried by its `why` family at 65.5% (zero blocked files) and ALIA's
 10.0% is entirely piVC (zero blocked files). Applying only the family-matched
 rates puts the whole three-gate chain at **~1,135 files of 27,150 (4.2%)**,
 essentially all of it one family of ABV — and that is still an over-estimate,

@@ -109,17 +109,23 @@ per-family rates, and how each family splits between the two populations:
 | **ABV** / UltimateAutomizer 2023 | 473 | 119 | **25.2%** | **4,502** |
 | **ALIA** / UltimateAutomizer 2023 | 28 | 0 | **0.0%** | **3,028** |
 | ALIA / piVC | 42 | 7 | 16.7% | 0 |
-| AUFLIRA / `why` | 1,271 | (running) | ~61% at n=44 | 0 |
+| AUFLIRA / `why` | 1,271 | 702 of 1,071 run | **65.5%** | 0 |
 | AUFLIRA / `FFT` | 94 | 0 | 0.0% | 0 |
 | AUFLIRA / `nasa` + `peter` | **0** | — | — | **18,644** |
-| AUFNIRA / `FFT` | 470 | 1 | 0.2% | 0 |
+| AUFNIRA / `FFT` | 470 | 10 | 2.1% | 0 |
+| AUFNIRA / `aviation` | 21 | 3 | 14.3% | 0 |
+| AUFNIRA / `why` | 13 | 9 | 69.2% | 0 |
 | AUFNIRA / `nasa` | **0** | — | — | **976** |
+
+2,214 of the 2,414 ran; the 200 not run are all AUFLIRA `why`, a family that
+contributes zero blocked files, so no row above that the decision rests on is
+partial. ABV, ALIA and AUFNIRA are complete.
 
 Read the last column. **AUFLIRA and AUFNIRA have no control at all**: every one
 of their 19,620 blocked files is `nasa`/`peter`, and not one `nasa` file parses.
 Quoting either division's aggregate would have been actively misleading in both
-directions — AUFLIRA's aggregate climbs toward `why`'s ~61%, a family that
-contributes zero blocked files, while ALIA's 10.0% is **entirely** piVC, likewise
+directions — AUFLIRA's aggregate is 60.2% and is carried
+entirely by `why` at 65.5%, a family that contributes zero blocked files, while ALIA's 10.0% is **entirely** piVC, likewise
 zero.
 
 The mismatch is not incidental either. 100% of the `why`/`FFT` control declares
@@ -282,9 +288,9 @@ the earliest gate there is.
 - Four divisions with no measurement of any kind now have pinned 200-file
   full-span lists, a whole-population parse census, and a first decide rate.
 - **A free board row nobody was looking for.** AUFLIRA's `why` family — 1,271
-  files, Why3-generated, no nested arrays, no board entry — decides at roughly
-  61% on the sample run so far. It has nothing to do with this ADR's subject and
-  was visible only because the control sweep was split by family.
+  files, Why3-generated, no nested arrays, no board entry — decides at **65.5%**
+  (702 of the 1,071 run). It has nothing to do with this ADR's subject and was
+  visible only because the control sweep was split by family.
 - The next lane on this file is pointed at `auto.rs:6098`, not `sort.rs`.
 - The gate chain is a test, not a memory:
   `crates/axeyum-solver/tests/nested_array_gate_map.rs`, seven tests, 0.11 s,
