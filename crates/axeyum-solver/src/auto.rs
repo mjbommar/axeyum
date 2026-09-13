@@ -19,7 +19,7 @@
 //! Every `sat` is replayed through the ground evaluator against the original
 //! query, so no routing or combination step can yield an unsound `sat`.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use axeyum_ir::{
     ArraySortKey, Assignment, FuncId, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode,
@@ -6217,6 +6217,25 @@ fn iv_mul(a: IntInterval, b: IntInterval) -> Option<IntInterval> {
     Some(IntInterval { lo, hi })
 }
 
+/// Per-walk memo for [`interval_of_memo`], keyed on `TermId`.
+///
+/// Same shape and same reason as [`LinFormMemo`]: `interval_of` recurses into
+/// BOTH children of `IntAdd`/`IntSub`/`IntMul`, so on a `let`-shared DAG the
+/// call count is the number of root-to-leaf PATHS, and the `depth > 256` guard
+/// bounds path length rather than path count (ADR-1940).
+///
+/// **Only valid while `bounds` is unchanged.** A symbol's interval is read from
+/// `bounds`, so an entry computed under one bound map says nothing under
+/// another; every construction site here creates a fresh memo after `bounds`
+/// has reached its fixpoint.
+#[derive(Default)]
+struct IntervalMemo {
+    map: HashMap<TermId, Option<IntInterval>>,
+    /// Memo misses, i.e. nodes actually expanded. The falsifiable form of the
+    /// performance claim — see [`LinFormMemo::expansions`].
+    expansions: u64,
+}
+
 /// Evaluates the integer interval of `term` given known variable bounds in
 /// `bounds`. Returns `None` (decline) for any construct whose range is not
 /// computable here: an unbounded integer variable, a non-`Int`-arithmetic op
@@ -6224,16 +6243,48 @@ fn iv_mul(a: IntInterval, b: IntInterval) -> Option<IntInterval> {
 /// `bv2nat` is the one bit-vector bridge admitted — its result is structurally in
 /// `[0, 2^w)` (the `iand` desugaring path). Recognizing FEWER shapes is always
 /// sound — it only declines.
-fn interval_of(
+///
+/// Memoising wrapper over [`interval_of_uncached`]. A caller evaluating many
+/// terms under ONE `bounds` map holds a single [`IntervalMemo`] so sharing
+/// across terms is exploited too.
+///
+/// Cannot change an answer on any term the unmemoised walk could answer: the
+/// interval of a term depends only on that term and on `bounds` (fixed for the
+/// memo's lifetime), and the `depth > 256` guard is re-checked here BEFORE the
+/// memo, so a too-deep occurrence still declines. The one behaviour that does
+/// change is on a term of arithmetic height above 256, where the old walk
+/// always declined for stack safety and this one may now answer from a subterm
+/// cached at a shallower occurrence — an exact interval by the same
+/// construction, so the exactness argument step 5 relies on is unchanged.
+fn interval_of_memo(
     arena: &TermArena,
     term: TermId,
     bounds: &BTreeMap<SymbolId, IntInterval>,
     depth: u32,
+    memo: &mut IntervalMemo,
 ) -> Option<IntInterval> {
     // Cap recursion so a pathologically deep term cannot blow the stack.
     if depth > 256 {
         return None;
     }
+    if let Some(&hit) = memo.map.get(&term) {
+        return hit;
+    }
+    memo.expansions += 1;
+    let computed = interval_of_uncached(arena, term, bounds, depth, memo);
+    memo.map.insert(term, computed);
+    computed
+}
+
+/// The structural interval evaluation itself; every recursive call goes back
+/// through [`interval_of_memo`].
+fn interval_of_uncached(
+    arena: &TermArena,
+    term: TermId,
+    bounds: &BTreeMap<SymbolId, IntInterval>,
+    depth: u32,
+    memo: &mut IntervalMemo,
+) -> Option<IntInterval> {
     // A `WideIntConst` falls through to the `None` arm below: `IntInterval` is
     // an `i128` pair, a wider bound has no point in it, and saturating one would
     // be a WRONG bound rather than a coarse one (ADR-1702 slice 2).
@@ -6253,17 +6304,17 @@ fn interval_of(
             let args = args.clone();
             match op {
                 Op::IntAdd => iv_add(
-                    interval_of(arena, args[0], bounds, depth + 1)?,
-                    interval_of(arena, args[1], bounds, depth + 1)?,
+                    interval_of_memo(arena, args[0], bounds, depth + 1, memo)?,
+                    interval_of_memo(arena, args[1], bounds, depth + 1, memo)?,
                 ),
                 Op::IntSub => iv_sub(
-                    interval_of(arena, args[0], bounds, depth + 1)?,
-                    interval_of(arena, args[1], bounds, depth + 1)?,
+                    interval_of_memo(arena, args[0], bounds, depth + 1, memo)?,
+                    interval_of_memo(arena, args[1], bounds, depth + 1, memo)?,
                 ),
-                Op::IntNeg => iv_neg(interval_of(arena, args[0], bounds, depth + 1)?),
+                Op::IntNeg => iv_neg(interval_of_memo(arena, args[0], bounds, depth + 1, memo)?),
                 Op::IntMul => iv_mul(
-                    interval_of(arena, args[0], bounds, depth + 1)?,
-                    interval_of(arena, args[1], bounds, depth + 1)?,
+                    interval_of_memo(arena, args[0], bounds, depth + 1, memo)?,
+                    interval_of_memo(arena, args[1], bounds, depth + 1, memo)?,
                 ),
                 // `(bv2nat x)` of a width-`w` bit-vector is ALWAYS the unsigned
                 // value in `[0, 2^w - 1]`, independent of `x`'s structure. This is
@@ -6296,7 +6347,7 @@ fn interval_of(
                     // Largest exponent whose `2^hi` we admit (keeps the covering
                     // width and enumeration modest; larger declines to other routes).
                     const MAX_EXP: i128 = 62;
-                    let xi = interval_of(arena, args[0], bounds, depth + 1)?;
+                    let xi = interval_of_memo(arena, args[0], bounds, depth + 1, memo)?;
                     if xi.hi > MAX_EXP {
                         return None;
                     }
@@ -6935,8 +6986,11 @@ fn prove_int_box(arena: &TermArena, assertions: &[TermId]) -> IntBoxProof {
     //    unbounded var — impossible here — or an `i128` overflow) means we cannot
     //    PROVE the encoding is exact, so we decline.
     let mut max_abs: u128 = 1;
+    // ONE walk state across every assertion: `bounds` is final by this point,
+    // and the assertions of one script share most of their term DAG.
+    let mut walk = MaxAbsWalk::default();
     for &a in assertions {
-        if !accumulate_max_abs(arena, a, &bounds, &mut max_abs, 0) {
+        if !accumulate_max_abs(arena, a, &bounds, &mut max_abs, 0, &mut walk) {
             return IntBoxProof::Decline;
         }
     }
@@ -7280,8 +7334,11 @@ fn derive_var_bound(
     // Linearize `e1 - e2` as `k·v + rest`, where `rest` is `v`-free. `affine_in`
     // returns `(k, rest_interval)`; it declines (`None`) if `v` occurs
     // non-affinely (e.g. `v·v`, `v·w`) or any `v`-free part is not boundable.
-    let (k1, rest1) = affine_in(arena, e1, v, bounds, 0)?;
-    let (k2, rest2) = affine_in(arena, e2, v, bounds, 0)?;
+    // ONE memo for both sides: `v` and `bounds` are fixed for this call, and
+    // `e1`/`e2` of one equality routinely share their term DAG.
+    let mut memo = AffineMemo::default();
+    let (k1, rest1) = affine_in(arena, e1, v, bounds, 0, &mut memo)?;
+    let (k2, rest2) = affine_in(arena, e2, v, bounds, 0, &mut memo)?;
     let k = k1.checked_sub(k2)?;
     if k == 0 {
         return None;
@@ -7319,10 +7376,46 @@ fn affine_in(
     v: SymbolId,
     bounds: &BTreeMap<SymbolId, IntInterval>,
     depth: u32,
+    memo: &mut AffineMemo,
 ) -> Option<(i128, IntInterval)> {
     if depth > 256 {
         return None;
     }
+    if let Some(&hit) = memo.map.get(&term) {
+        return hit;
+    }
+    memo.expansions += 1;
+    let computed = affine_in_uncached(arena, term, v, bounds, depth, memo);
+    memo.map.insert(term, computed);
+    computed
+}
+
+/// Per-walk memo for [`affine_in`], keyed on `TermId`.
+///
+/// Same shape and same reason as [`LinFormMemo`] (ADR-1940): `affine_in`
+/// recurses into BOTH children of `IntAdd`/`IntSub`/`IntMul`, so the unmemoised
+/// call count is the number of root-to-leaf PATHS.
+///
+/// **Only valid for one fixed `(v, bounds)` pair** — the result names `v`'s
+/// coefficient and reads other symbols' intervals out of `bounds`, so every
+/// construction site is inside one [`derive_var_bound`] call.
+#[derive(Default)]
+struct AffineMemo {
+    map: HashMap<TermId, Option<(i128, IntInterval)>>,
+    /// Memo misses — see [`LinFormMemo::expansions`].
+    expansions: u64,
+}
+
+/// The structural linearization itself; every recursive call goes back through
+/// [`affine_in`].
+fn affine_in_uncached(
+    arena: &TermArena,
+    term: TermId,
+    v: SymbolId,
+    bounds: &BTreeMap<SymbolId, IntInterval>,
+    depth: u32,
+    memo: &mut AffineMemo,
+) -> Option<(i128, IntInterval)> {
     match arena.node(term) {
         TermNode::IntConst(c) => Some((0, IntInterval::point(*c))),
         TermNode::Symbol(sym) => {
@@ -7338,22 +7431,22 @@ fn affine_in(
             let args = args.clone();
             match op {
                 Op::IntAdd => {
-                    let (k1, r1) = affine_in(arena, args[0], v, bounds, depth + 1)?;
-                    let (k2, r2) = affine_in(arena, args[1], v, bounds, depth + 1)?;
+                    let (k1, r1) = affine_in(arena, args[0], v, bounds, depth + 1, memo)?;
+                    let (k2, r2) = affine_in(arena, args[1], v, bounds, depth + 1, memo)?;
                     Some((k1.checked_add(k2)?, iv_add(r1, r2)?))
                 }
                 Op::IntSub => {
-                    let (k1, r1) = affine_in(arena, args[0], v, bounds, depth + 1)?;
-                    let (k2, r2) = affine_in(arena, args[1], v, bounds, depth + 1)?;
+                    let (k1, r1) = affine_in(arena, args[0], v, bounds, depth + 1, memo)?;
+                    let (k2, r2) = affine_in(arena, args[1], v, bounds, depth + 1, memo)?;
                     Some((k1.checked_sub(k2)?, iv_sub(r1, r2)?))
                 }
                 Op::IntNeg => {
-                    let (k, r) = affine_in(arena, args[0], v, bounds, depth + 1)?;
+                    let (k, r) = affine_in(arena, args[0], v, bounds, depth + 1, memo)?;
                     Some((k.checked_neg()?, iv_neg(r)?))
                 }
                 Op::IntMul => {
-                    let (k1, r1) = affine_in(arena, args[0], v, bounds, depth + 1)?;
-                    let (k2, r2) = affine_in(arena, args[1], v, bounds, depth + 1)?;
+                    let (k1, r1) = affine_in(arena, args[0], v, bounds, depth + 1, memo)?;
+                    let (k2, r2) = affine_in(arena, args[1], v, bounds, depth + 1, memo)?;
                     // The product is affine in `v` only if at least one factor is
                     // `v`-free (a constant coefficient). `v·v` (both `k≠0`) is
                     // nonlinear ⇒ decline.
@@ -7492,30 +7585,106 @@ impl LinForm {
     }
 }
 
+/// Per-walk memo for [`lin_form_memo`]: the exact affine form already computed
+/// for a term, so a subterm reachable by many paths through the assertion
+/// **DAG** is linearized once rather than once per path.
+///
+/// Without it the recursion is a *tree* walk over a DAG. `IntAdd`/`IntSub`/
+/// `IntMul` each recurse into BOTH children, so on a `let`-shared chain of
+/// depth `d` the number of root-to-leaf paths — and therefore of calls — is
+/// `2^d`. The `depth > 256` guard below is **not** protection against this:
+/// a depth cap bounds path LENGTH, not path COUNT, and at sharing depth 30
+/// every one of the `2^30` calls sits at depth ≤ 30, so the cap never fires
+/// (ADR-1940). Measured on `(let ((v0 (+ x 1))) (let ((v1 (+ v0 v0))) …))`
+/// before this memo: 0.33 s at depth 21 doubling to 10.41 s at depth 26 and
+/// `unknown` at 27 against a 10 s budget, where z3 and cvc5 answer `sat` in
+/// 0.04 s at depth 40.
+///
+/// This is the fifth instance of the shape: `dpll_t::Abstractor` (`c4046c2d6`),
+/// `dpll_lia::ArithAbstractor` (`8860e2a60`), `term_identity::identity_normal_form`
+/// (ADR-1936), and now this one.
+#[derive(Default)]
+struct LinFormMemo {
+    /// Term → its affine form, or `None` for a structural decline.
+    map: HashMap<TermId, Option<LinForm>>,
+    /// How many times the walk has EXPANDED a node (a memo miss), over the
+    /// whole [`propagate_linear_bounds`] call.
+    ///
+    /// The memo is a *performance* claim, and a performance claim that nothing
+    /// counts is a comment. This is the falsifiable form: with the memo the
+    /// walk is linear in the DAG, so this stays within a small multiple of the
+    /// number of distinct nodes, and
+    /// `lin_form_expands_a_shared_dag_once_per_node` fails on the COUNT rather
+    /// than on a wall time — a timing assertion on a loaded box is a coin flip,
+    /// not a guard.
+    expansions: u64,
+}
+
 /// Linearizes an `Int`-sorted `term` as an exact affine [`LinForm`], or `None`
 /// if any subterm is non-linear (a product of two non-constant factors,
 /// `div`/`mod`/`abs`/`bv2nat`/uninterpreted, …). Declining is always sound: no
 /// bound is then derived from the atom containing it.
-fn lin_form(arena: &TermArena, term: TermId, depth: u32) -> Option<LinForm> {
+///
+/// Memoising wrapper over [`lin_form_uncached`].
+///
+/// See [`LinFormMemo`] for why this exists. It cannot change an answer on any
+/// term the unmemoised walk could answer at all: the affine form of a term
+/// depends only on that term, and the `depth > 256` guard is re-checked here,
+/// BEFORE the memo, so a too-deep occurrence still declines. The one behaviour
+/// that does change is on a term whose arithmetic height exceeds 256 — there
+/// the old walk always declined (the guard is a stack guard, not a semantic
+/// one) and this one may now answer, from a subterm cached at a shallower
+/// occurrence. That answer is exact by the same construction as every other:
+/// only `checked_*` arithmetic over the four total linear operators, so
+/// [`propagate_linear_bounds`]'s soundness argument is unchanged.
+fn lin_form_memo(
+    arena: &TermArena,
+    term: TermId,
+    depth: u32,
+    memo: &mut LinFormMemo,
+) -> Option<LinForm> {
     if depth > 256 {
         return None;
     }
+    if let Some(hit) = memo.map.get(&term) {
+        return hit.clone();
+    }
+    memo.expansions += 1;
+    let computed = lin_form_uncached(arena, term, depth, memo);
+    memo.map.insert(term, computed.clone());
+    computed
+}
+
+/// The structural linearization itself; every recursive call goes back through
+/// [`lin_form_memo`].
+fn lin_form_uncached(
+    arena: &TermArena,
+    term: TermId,
+    depth: u32,
+    memo: &mut LinFormMemo,
+) -> Option<LinForm> {
     match arena.node(term) {
         TermNode::IntConst(c) => Some(LinForm::constant(*c)),
         TermNode::Symbol(sym) if arena.sort_of(term) == Sort::Int => Some(LinForm::symbol(*sym)),
         TermNode::App { op, args } => {
             let args = args.clone();
             match op {
-                Op::IntAdd => {
-                    lin_form(arena, args[0], depth + 1)?.add(&lin_form(arena, args[1], depth + 1)?)
-                }
-                Op::IntSub => {
-                    lin_form(arena, args[0], depth + 1)?.sub(&lin_form(arena, args[1], depth + 1)?)
-                }
-                Op::IntNeg => lin_form(arena, args[0], depth + 1)?.neg(),
+                Op::IntAdd => lin_form_memo(arena, args[0], depth + 1, memo)?.add(&lin_form_memo(
+                    arena,
+                    args[1],
+                    depth + 1,
+                    memo,
+                )?),
+                Op::IntSub => lin_form_memo(arena, args[0], depth + 1, memo)?.sub(&lin_form_memo(
+                    arena,
+                    args[1],
+                    depth + 1,
+                    memo,
+                )?),
+                Op::IntNeg => lin_form_memo(arena, args[0], depth + 1, memo)?.neg(),
                 Op::IntMul => {
-                    let a = lin_form(arena, args[0], depth + 1)?;
-                    let b = lin_form(arena, args[1], depth + 1)?;
+                    let a = lin_form_memo(arena, args[0], depth + 1, memo)?;
+                    let b = lin_form_memo(arena, args[1], depth + 1, memo)?;
                     // Affine only if at least one factor is a pure constant.
                     if a.coeffs.is_empty() {
                         b.scale(a.constant)
@@ -7536,7 +7705,12 @@ fn lin_form(arena: &TermArena, term: TermId, depth: u32) -> Option<LinForm> {
 /// `Int`) into one or two `form ≤ 0` [`LinForm`] constraints, pushed onto `out`.
 /// A non-relational or non-linear conjunct contributes nothing (sound). Integer
 /// strictness is tightened exactly (`l < r ⇔ l − r + 1 ≤ 0`).
-fn collect_le_zero_forms(arena: &TermArena, term: TermId, out: &mut Vec<LinForm>) {
+fn collect_le_zero_forms(
+    arena: &TermArena,
+    term: TermId,
+    out: &mut Vec<LinForm>,
+    memo: &mut LinFormMemo,
+) {
     let TermNode::App { op, args } = arena.node(term) else {
         return;
     };
@@ -7547,7 +7721,10 @@ fn collect_le_zero_forms(arena: &TermArena, term: TermId, out: &mut Vec<LinForm>
     if arena.sort_of(l) != Sort::Int || arena.sort_of(r) != Sort::Int {
         return;
     }
-    let (Some(lf), Some(rf)) = (lin_form(arena, l, 0), lin_form(arena, r, 0)) else {
+    let (Some(lf), Some(rf)) = (
+        lin_form_memo(arena, l, 0, memo),
+        lin_form_memo(arena, r, 0, memo),
+    ) else {
         return;
     };
     // `diff = lin(l) - lin(r)` represents `l - r`.
@@ -7626,8 +7803,12 @@ fn propagate_linear_bounds(
     hi: &mut HashMap<SymbolId, i128>,
 ) {
     let mut constraints: Vec<LinForm> = Vec::new();
+    // ONE memo across every conjunct: `let`-sharing in an SMT-LIB file is
+    // typically shared BETWEEN atoms as well as within one, and a per-atom memo
+    // would re-expand the common spine once per atom.
+    let mut memo = LinFormMemo::default();
     for &c in conjuncts {
-        collect_le_zero_forms(arena, c, &mut constraints);
+        collect_le_zero_forms(arena, c, &mut constraints, &mut memo);
     }
     if constraints.is_empty() {
         return;
@@ -7673,6 +7854,29 @@ fn propagate_linear_bounds(
     }
 }
 
+/// Scratch state for [`accumulate_max_abs`]: the nodes already folded in, and
+/// the interval memo shared across every node of the walk.
+///
+/// The walk recurses into EVERY argument of every `App`, so on a `let`-shared
+/// DAG it is exponential in the sharing twice over — once in its own recursion
+/// and again in the per-node `interval_of`, which is itself a branching walk
+/// (ADR-1940). `visited` makes the outer walk linear in DISTINCT nodes;
+/// `intervals` makes the inner one linear.
+///
+/// Revisiting a node is denotation-free for the outer walk: `max_abs` is a
+/// max-fold, so a second visit to the same node can only re-contribute a
+/// magnitude already folded in. Skipping it therefore yields the same
+/// `max_abs` and the same `true`/`false`.
+///
+/// **Only valid while `bounds` is unchanged** — see [`IntervalMemo`].
+#[derive(Default)]
+struct MaxAbsWalk {
+    visited: HashSet<TermId>,
+    intervals: IntervalMemo,
+    /// Memo misses of the OUTER walk: distinct nodes actually folded.
+    expansions: u64,
+}
+
 /// Folds the maximum absolute value over every `Int`-arithmetic subterm of
 /// `term` into `max_abs`. Returns `false` (caller declines) if any `Int`
 /// subterm's interval is not computable — the exactness guarantee then cannot be
@@ -7684,10 +7888,18 @@ fn accumulate_max_abs(
     bounds: &BTreeMap<SymbolId, IntInterval>,
     max_abs: &mut u128,
     depth: u32,
+    walk: &mut MaxAbsWalk,
 ) -> bool {
     if depth > 1024 {
         return false;
     }
+    // A node already folded in contributes nothing new to a max-fold. Checked
+    // AFTER the depth guard so a too-deep occurrence still declines exactly as
+    // before.
+    if !walk.visited.insert(term) {
+        return true;
+    }
+    walk.expansions += 1;
     if arena.sort_of(term) == Sort::Int {
         // Every Int subterm carries a width-`w` value at blast time, so EACH must
         // have a computable interval that the chosen width covers — a deeply
@@ -7695,7 +7907,7 @@ fn accumulate_max_abs(
         // its parent's interval is tiny. So we record this node's magnitude AND
         // keep recursing into its children (rather than trusting the parent
         // interval to dominate).
-        let Some(iv) = interval_of(arena, term, bounds, 0) else {
+        let Some(iv) = interval_of_memo(arena, term, bounds, 0, &mut walk.intervals) else {
             return false;
         };
         *max_abs = (*max_abs).max(iv.max_abs());
@@ -7704,7 +7916,7 @@ fn accumulate_max_abs(
         TermNode::App { args, .. } => {
             let args = args.clone();
             for arg in args {
-                if !accumulate_max_abs(arena, arg, bounds, max_abs, depth + 1) {
+                if !accumulate_max_abs(arena, arg, bounds, max_abs, depth + 1, walk) {
                     return false;
                 }
             }
@@ -11908,7 +12120,8 @@ mod tests {
         let anded = arena.bv_and(xb, yb).unwrap();
         let n = arena.bv2nat(anded).unwrap();
         let bounds = BTreeMap::new(); // x,y intentionally UNbounded
-        let iv = interval_of(&arena, n, &bounds, 0).expect("bv2nat interval");
+        let iv = interval_of_memo(&arena, n, &bounds, 0, &mut IntervalMemo::default())
+            .expect("bv2nat interval");
         assert_eq!((iv.lo, iv.hi), (0, 15));
     }
 
@@ -11930,6 +12143,45 @@ mod tests {
         propagate_linear_bounds(&arena, &conjuncts, &mut lo, &mut hi);
         assert_eq!(hi.get(&x).copied(), Some(32), "x ≤ 32 from x+y≤32, y≥0");
         assert_eq!(hi.get(&y).copied(), Some(32), "y ≤ 32 symmetric");
+    }
+
+    /// Builds `v0 = x + 1`, `v_{k+1} = v_k + v_k` to `depth`, the shape a
+    /// `let`-shared SMT-LIB chain interns to: `depth + 2` distinct arena nodes,
+    /// `2^(depth+1)` root-to-leaf paths.
+    fn shared_doubling_chain(arena: &mut TermArena, depth: u32) -> (SymbolId, TermId) {
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let one = arena.int_const(1);
+        let xv = arena.var(x);
+        let mut cur = arena.int_add(xv, one).unwrap();
+        for _ in 0..depth {
+            cur = arena.int_add(cur, cur).unwrap();
+        }
+        (x, cur)
+    }
+
+    /// The memo's falsifiable form: a COUNT, not a wall time.
+    ///
+    /// `lin_form` recurses into BOTH children of `IntAdd`, so on this DAG the
+    /// unmemoised walk makes `2^31` calls while the arena holds 33 nodes. A
+    /// timing assertion would be a coin flip on a loaded box; the expansion
+    /// counter is not. Delete the `memo.map.get` early return in
+    /// [`lin_form_memo`] and this test is the one that dies.
+    #[test]
+    fn lin_form_expands_a_shared_dag_once_per_node() {
+        let mut arena = TermArena::new();
+        let (x, root) = shared_doubling_chain(&mut arena, 30);
+        let mut memo = LinFormMemo::default();
+        let form = lin_form_memo(&arena, root, 0, &mut memo).expect("affine");
+        // Denotation: v30 = 2^30·(x + 1).
+        assert_eq!(form.coeffs.get(&x).copied(), Some(1i128 << 30));
+        assert_eq!(form.constant, 1i128 << 30);
+        // 32 distinct arithmetic nodes (`x+1` then 30 doublings) plus the two
+        // leaves `x` and `1`. Anything near `2^31` means the memo is gone.
+        assert!(
+            memo.expansions <= 64,
+            "expanded {} nodes for a 33-node DAG; the memo is not being hit",
+            memo.expansions
+        );
     }
 
     #[test]
