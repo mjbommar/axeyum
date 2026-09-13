@@ -62,9 +62,11 @@ this measurement so the next person finds the reason it was rejected.
 **The gate could not count.** `check_anchors()` assigned `failed = 1` per problem
 instead of accumulating: seven problem lines, `stale=1`. Somebody repairing six
 of seven would have watched the number not move. One status doc
-(`playfair-2026-09-05.md`) records `stale=1` and "the same 4 pre-existing
-complaints" **in the same table cell** — the author counted the printed problem
-lines, got four, and copied the gate's one down beside it. Fixed, and the exit
+(`playfair-2026-09-05.md:127`) records it **in one table row**: the result cell
+quotes `stale=1`, the findings cell beside it says "1 (the same 4 pre-existing
+complaints…)". The author enumerated the problem lines, found four, named the
+two suites they fell in, and still wrote the count as 1 because that is what the
+gate said. Fixed, and the exit
 status is now clamped to a boolean — `SystemExit` takes its status mod 256, so
 returning the raw count was a gate that could not fail at exactly 256 stale
 anchors.

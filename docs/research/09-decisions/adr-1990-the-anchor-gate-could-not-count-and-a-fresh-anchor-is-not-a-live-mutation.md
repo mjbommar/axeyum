@@ -119,13 +119,17 @@ Seven problems, `stale=1`.
 The cost is not cosmetic. Somebody repairing six of the seven would have watched
 the number not move and concluded they had fixed nothing — and the number has
 already been misread in practice. One lane status doc
-(`docs/plan/status/playfair-2026-09-05.md`) records, **in a single table cell**,
-both `MUTATION_ANCHORS|suites=99|anchors=917|stale=1` and *"the same 4
-pre-existing complaints in `cas-summation-and-gaussian` and
-`creal-migrate-consumers`"*. That is the sharpest evidence available: the author
-counted the printed problem lines, got four, wrote four — and copied the gate's
-`stale=1` down beside it without the contradiction registering. A gate whose
-summary disagrees with its own output trains readers to ignore the summary.
+(`docs/plan/status/playfair-2026-09-05.md`, line 127) records it **in one table
+row, across two adjacent cells**: the result cell quotes
+`MUTATION_ANCHORS|suites=99|anchors=917|stale=1`, and the findings cell beside
+it reads *"1 (the same 4 pre-existing complaints in
+`cas-summation-and-gaussian` and `creal-migrate-consumers`…)"*.
+
+That is the sharpest evidence available. The author enumerated the printed
+problem lines, found four, named the two suites they fell in — and still wrote
+the COUNT as `1`, because that is what the gate said. A gate whose summary
+disagrees with its own output does not merely mislead; it overrides a correct
+manual count.
 
 (Two other status docs quote `stale=1` as well — `chebyshev-pi-2026-09-05.md`
 and `lean-import-composition.md` — but each describes a single stale row, so for
