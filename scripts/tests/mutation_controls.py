@@ -2126,14 +2126,17 @@ SUITES["cnf-bve-compaction"] = (
 
 
 # --------------------------------------------------------------------------
-# `solver-occurrence-pass-admission` — the shared admission decision and the
-# wiring of its grant into each pass.
+# `solver-occurrence-pass-admission` — the shared admission DECISION: how much
+# budget a pass is granted, and whether it is granted one at all.
 #
-# The wiring mutation is not hypothetical: with the decision inline at the call
-# site, computing a budget correctly and then handing the pass its DEFAULT
-# options compiled, ran, produced identical verdicts, and survived the whole
-# `--lib --features full` sweep next door.  `run_bve` and `run_subsume` exist as
-# named functions so a test can reach the wiring at all.
+# The WIRING of that grant into each pass used to live here too.  It does not
+# any more: `a083163f1` moved `run_bve`/`run_subsume` down into
+# `axeyum-cnf::inprocess` and `sat_bv_backend` became a call site of the one
+# inprocessing pipeline, so the two wiring mutations now live in
+# `cnf-occurrence-pass-wiring` below, next to the code and the tests.  They were
+# stale from `30785cf33` (2026-09-08) until ADR-1990 repaired them: the anchor
+# gate reported `stale=1` the whole time because it could not count, so the
+# suite quietly measured three mutations of five for five days.
 # --------------------------------------------------------------------------
 
 SUITES["solver-occurrence-pass-admission"] = (
@@ -2153,16 +2156,6 @@ SUITES["solver-occurrence-pass-admission"] = (
     ),
     [
         (
-            "the granted budget reaches subsumption",
-            "            SubsumeOptions {\n                work_budget: Some(work_budget),\n            },",
-            "            SubsumeOptions::DEFAULT,",
-        ),
-        (
-            "the granted budget reaches BVE",
-            "            BveOptions {\n                work_budget: Some(work_budget),",
-            "            BveOptions {\n                work_budget: None,",
-        ),
-        (
             # The accumulate-and-delay gate, which is the only thing that can
             # refuse a pass outright. Without the init cost it never fires.
             "the accumulate-and-delay gate is armed",
@@ -2180,6 +2173,44 @@ SUITES["solver-occurrence-pass-admission"] = (
             "an unparseable lever keeps the shipped constant",
             "        Some(v) => v.parse::<u64>().map_or(default, |n| n.max(1)),",
             "        Some(v) => v.parse::<u64>().unwrap_or(1),",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `cnf-occurrence-pass-wiring` — the grant actually reaching the pass it was
+# computed for.
+#
+# This is not a hypothetical defect.  With the decision inline at the call site,
+# computing a budget correctly and then handing the pass its DEFAULT options
+# compiled, ran, produced identical verdicts, and survived a whole
+# `--lib --features full` sweep next door.  `run_subsume` and `run_bve` exist as
+# named functions so that a test can reach the wiring at all, and these two
+# mutations are the reason they are named.
+#
+# `SubsumeOptions::DEFAULT` and `BveOptions`' `work_budget: None` are both
+# *unbudgeted* — the mutation does not starve the pass, it UNCAPS it — so what
+# kills these is a test that reads the accounting back, not one that reads a
+# verdict.  Two verdicts are equal either way; that is the whole trap.
+# --------------------------------------------------------------------------
+
+SUITES["cnf-occurrence-pass-wiring"] = (
+    "crates/axeyum-cnf/src/inprocess.rs",
+    Cargo(
+        ("-p", "axeyum-cnf", "--lib", "inprocess"),
+        "cnf-occurrence-pass-wiring",
+    ),
+    [
+        (
+            "the granted budget reaches subsumption",
+            "            SubsumeOptions {\n                work_budget: Some(work_budget),\n            },",
+            "            SubsumeOptions::DEFAULT,",
+        ),
+        (
+            "the granted budget reaches BVE",
+            "            BveOptions {\n                work_budget: Some(work_budget),",
+            "            BveOptions {\n                work_budget: None,",
         ),
     ],
 )
@@ -9241,8 +9272,25 @@ SUITES["dt-capability-1935"] = (
             # exactness. Without it the congruence antecedent may be weaker
             # than real equality, which makes the congruence constraint
             # STRONGER than the true axiom.
+            #
+            # The bare one-line anchor was unique until ADR-1946 (`47f3d61d8`)
+            # added a SECOND exactness check -- on the RESULT datatype, at the
+            # same indentation -- after which it matched twice and the harness
+            # reported `AMBIGUOUS ANCHOR`, which is not a result. The preceding
+            # `let Sort::Datatype(dt) = arena.sort_of(arg)` lines pin the
+            # ARGUMENT-side check, which is the one this mutation was written to
+            # break; the RESULT-side one is mutated by `dt-valued-result-1946`.
+            # `dt-constructor-arg-1942` pins this same source line with the same
+            # anchor under a different test binary -- one guard, two independent
+            # measurements, which is deliberate and not duplication to collapse.
             "congruence needs an EXACT expansion of its datatype argument",
+            '                let Sort::Datatype(dt) = arena.sort_of(arg) else {\n'
+            '                    unreachable!("datatype-sorted");\n'
+            "                };\n"
             "                if !datatype_expansion_is_exact(arena, dt) {",
+            '                let Sort::Datatype(dt) = arena.sort_of(arg) else {\n'
+            '                    unreachable!("datatype-sorted");\n'
+            "                };\n"
             "                if false {",
         ),
         (
@@ -9250,24 +9298,38 @@ SUITES["dt-capability-1935"] = (
             # datatype content into the residual on an expansion variable --
             # ADR-1920's divert-vs-content non-termination cycle.
             "an array field whose element sort mentions a datatype gets no variable",
-            "        Sort::Array { .. } => !crate::datatype_elim::sort_mentions_datatype(sort),",
+            "        Sort::Array { .. } => !crate::datatype_elim::sort_mentions_datatype(arena, sort),",
             "        Sort::Array { .. } => true,",
         ),
+        # REMOVED, not re-anchored: "a datatype-valued UF result is refused
+        # rather than Ackermannized". ADR-1935 refused that rung by name and this
+        # mutation pinned the refusal. ADR-1946 (`47f3d61d8`) ADMITTED it -- that
+        # was the whole point of the ADR -- replacing the blanket
+        # `if sort_mentions_datatype(result) { refuse }` with a `match` that takes
+        # `Sort::Datatype(dt)` subject to exactness. The guard this mutation was
+        # written to break no longer exists, so there is nothing here to anchor
+        # to and inventing one would make this suite green over a distinction the
+        # code stopped making. Its two successors are both controlled, in
+        # `dt-valued-result-1946`: the admission itself by "a datatype-VALUED
+        # result makes an application a site", and the surviving half of the old
+        # refusal -- an array over a datatype -- by "an array-over-a-datatype
+        # result is refused rather than fallen through". Coverage moved suites; it
+        # was not lost. ADR-1935's own mutation table is stale on this row.
         (
-            # The witness would itself be datatype-sorted and survive into the
-            # residual, so this half of the capability is deliberately absent.
-            "a datatype-valued UF result is refused rather than Ackermannized",
-            "        if crate::datatype_elim::sort_mentions_datatype(result) {",
-            "        if false {",
-        ),
-        (
-            # Ackermann over a datatype argument that is neither a free variable
-            # nor a constructor has nothing to build an argument equality from.
-            # ADR-1942 widened this arm to admit constructors, so the anchor
-            # carries both halves; the arm being pinned is the same one.
-            "an Ackermannized datatype argument must be a variable or a constructor",
+            # Ackermann over a datatype argument that is none of the admitted
+            # shapes has nothing to build an argument equality from. ADR-1942
+            # widened this arm to admit constructors and ADR-1946 (`47f3d61d8`)
+            # widened it again to admit another COLLECTED application, so the
+            # anchor carries all three conjuncts; the arm being pinned is the
+            # same one, and `if false {` still deletes the shape refusal whole.
+            # The third conjunct has its own mutation in `dt-valued-result-1946`
+            # ("a datatype argument is admitted only when this pass will replace
+            # it"), which removes just that conjunct rather than the whole arm.
+            "an Ackermannized datatype argument must be a variable, a constructor, "
+            "or another collected application",
             "                if !matches!(arena.node(arg), TermNode::Symbol(_))\n"
             "                    && construct_of(arena, arg).is_none()\n"
+            "                    && !collected.contains(&arg)\n"
             "                {",
             "                if false {",
         ),
@@ -9447,8 +9509,8 @@ SUITES["dt-valued-result-1946"] = (
             # files have the shape, which is a separate fact the ADR states
             # separately rather than quoting this kill as corpus coverage.
             "an array-over-a-datatype result is refused rather than fallen through",
-            "            s if crate::datatype_elim::sort_mentions_datatype(s) => {",
-            "            s if false && crate::datatype_elim::sort_mentions_datatype(s) => {",
+            "            s if crate::datatype_elim::sort_mentions_datatype(arena, s) => {",
+            "            s if false && crate::datatype_elim::sort_mentions_datatype(arena, s) => {",
         ),
         (
             # An `Op::Apply` datatype argument is admitted because it IS
