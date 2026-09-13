@@ -1,0 +1,201 @@
+file	base_v	base_kind	base_att	fix_v	fix_kind	fix_att	load	base_detail	fix_detail
+QF_AUFLIA/20170829-Rodin/smt101358492275879472.smt2	unsat		4	unsat		4	12.09		
+QF_AUFLIA/20170829-Rodin/smt1232146482622696854.smt2	unsat		3	unsat		3	12.09		
+QF_AUFLIA/20170829-Rodin/smt1355996306873782731.smt2	unsat		4	unsat		4	12.09		
+QF_AUFLIA/20170829-Rodin/smt1525565934219293349.smt2	unsat		4	unsat		4	12.64		
+QF_AUFLIA/20170829-Rodin/smt166278749308099823.smt2	unsat		3	unsat		3	12.64		
+QF_AUFLIA/20170829-Rodin/smt1823835542615668089.smt2	unsat		4	unsat		4	12.64		
+QF_AUFLIA/20170829-Rodin/smt1989795988797382439.smt2	unsat		3	unsat		3	12.64		
+QF_AUFLIA/20170829-Rodin/smt2180380275580545420.smt2	sat		5	sat		5	12.64		
+QF_AUFLIA/20170829-Rodin/smt2349554521575265533.smt2	unsat		4	unsat		4	12.64		
+QF_AUFLIA/20170829-Rodin/smt2468388263826893998.smt2	sat		4	sat		4	12.64		
+QF_AUFLIA/20170829-Rodin/smt2677767669072326293.smt2	unsat		5	unsat		5	12.64		
+QF_AUFLIA/20170829-Rodin/smt2922685147464036249.smt2	unsat		3	unsat		3	12.64		
+QF_AUFLIA/20170829-Rodin/smt3093696166632615469.smt2	sat		4	sat		4	12.64		
+QF_AUFLIA/20170829-Rodin/smt3275743009640726251.smt2	unsat		7	unsat		7	12.64		
+QF_AUFLIA/20170829-Rodin/smt3440074116434092548.smt2	sat		3	sat		3	12.64		
+QF_AUFLIA/20170829-Rodin/smt3523843011010396885.smt2	unsat		3	unsat		3	12.64		
+QF_AUFLIA/20170829-Rodin/smt3728766622780732153.smt2	unsat		3	unsat		3	12.64		
+QF_AUFLIA/20170829-Rodin/smt3809310795425240370.smt2	unsat		5	unsat		5	12.64		
+QF_AUFLIA/20170829-Rodin/smt407122468318533822.smt2	unsat		5	unsat		5	12.64		
+QF_AUFLIA/20170829-Rodin/smt4238401262965072047.smt2	unsat		3	unsat		3	12.64		
+QF_AUFLIA/20170829-Rodin/smt436905341138176170.smt2	unsat		7	unsat		7	13.87		
+QF_AUFLIA/20170829-Rodin/smt4514744799427321218.smt2	unsat		3	unsat		3	13.87		
+QF_AUFLIA/20170829-Rodin/smt4625083610563501181.smt2	unknown	Error	25	unknown	Error	25	13.87	give-up kind=Error detail=unsupported by backend: term #0 has sort (Uninterpreted 0) that the pure-Rust BV backend cannot bit-blast	give-up kind=Error detail=unsupported by backend: term #0 has sort (Uninterpreted 0) that the pure-Rust BV backend cannot bit-blast
+QF_AUFLIA/20170829-Rodin/smt4909910871814089418.smt2	sat		5	sat		5	13.87		
+QF_AUFLIA/20170829-Rodin/smt5103224205058501184.smt2	unsat		4	unsat		4	13.87		
+QF_AUFLIA/20170829-Rodin/smt5410124224885464815.smt2	unsat		3	unsat		3	13.87		
+QF_AUFLIA/20170829-Rodin/smt5584401144276258491.smt2	unsat		4	unsat		4	13.87		
+QF_AUFLIA/20170829-Rodin/smt5743509124567723052.smt2	unsat		4	unsat		4	13.87		
+QF_AUFLIA/20170829-Rodin/smt593896481169620861.smt2	sat		9	sat		9	13.87		
+QF_AUFLIA/20170829-Rodin/smt615792926171406937.smt2	unsat		5	unsat		5	13.87		
+QF_AUFLIA/20170829-Rodin/smt6395525940490892471.smt2	unsat		6	unsat		6	13.87		
+QF_AUFLIA/20170829-Rodin/smt6534511334474546878.smt2	unsat		4	unsat		4	13.87		
+QF_AUFLIA/20170829-Rodin/smt6683355899000363898.smt2	sat		6	sat		6	13.87		
+QF_AUFLIA/20170829-Rodin/smt6879946163714078134.smt2	unsat		3	unsat		3	13.87		
+QF_AUFLIA/20170829-Rodin/smt7006792903852855302.smt2	unsat		4	unsat		4	13.87		
+QF_AUFLIA/20170829-Rodin/smt7178509395836479705.smt2	unsat		3	unsat		3	13.87		
+QF_AUFLIA/20170829-Rodin/smt7523130558871236757.smt2	unsat		3	unsat		3	13.87		
+QF_AUFLIA/20170829-Rodin/smt7725713132450845498.smt2	unsat		3	unsat		3	13.80		
+QF_AUFLIA/20170829-Rodin/smt7909578851601176589.smt2	unsat		3	unsat		3	13.80		
+QF_AUFLIA/20170829-Rodin/smt8078846980698793773.smt2	unsat		3	unsat		3	13.80		
+QF_AUFLIA/20170829-Rodin/smt8233570541221801360.smt2	unsat		5	unsat		5	13.80		
+QF_AUFLIA/20170829-Rodin/smt8579077759948482627.smt2	sat		4	sat		4	13.80		
+QF_AUFLIA/20170829-Rodin/smt8706308851182253950.smt2	sat		5	sat		5	13.80		
+QF_AUFLIA/20170829-Rodin/smt8855116929086333489.smt2	unsat		3	unsat		3	13.80		
+QF_AUFLIA/20170829-Rodin/smt9065296178149417744.smt2	unsat		6	unsat		6	13.80		
+QF_AUFLIA/array_benchmarks/misc/pipeline-invalid.smt2	sat		13	unknown	Incomplete	21	13.80		give-up kind=Incomplete detail=lazy-extensionality scalar backend declined (round=2, sites=992, array_eq_atoms=19, row_lemmas=103, cong_lemmas=1197, diff_skolems=0, working_assertions=1629, last_candi
+QF_AUFLIA/cvc/dlx-regfile.smt2	unknown	Timeout	21	unknown	Timeout	21	17.99	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/cvc/pp-dmem.smt2	unknown	Watchdog	7	unknown	Watchdog	7	21.42	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+QF_AUFLIA/cvc/read8.smt2	unknown	Timeout	19	unknown	Timeout	19	21.41	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Incomplete] lazy-extensionality deadline exceeded before refinement converged (round=	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Incomplete] lazy-extensionality deadline exceeded before refinement converged (round=
+QF_AUFLIA/storecomm/storecomm_invalid_t1_np_nf_ni_00020_001.cvc.smt2	sat		6	sat		6	20.87		
+QF_AUFLIA/storecomm/storecomm_invalid_t1_np_nf_ni_00030_001.cvc.smt2	sat		6	sat		6	20.87		
+QF_AUFLIA/storecomm/storecomm_invalid_t1_np_nf_ni_00040_003.cvc.smt2	sat		6	sat		6	21.12		
+QF_AUFLIA/storecomm/storecomm_invalid_t1_np_nf_ni_00060_008.cvc.smt2	unknown	Incomplete	15	unknown	Incomplete	15	21.08	give-up kind=Incomplete detail=lazy-extensionality refinement did not converge within 64 rounds (round=64, sites=121, array_eq_atoms=1, row_lemmas=118, cong_lemmas=0, diff_skolems=1, working_assertion	give-up kind=Incomplete detail=lazy-extensionality refinement did not converge within 64 rounds (round=64, sites=121, array_eq_atoms=1, row_lemmas=118, cong_lemmas=0, diff_skolems=1, working_assertion
+QF_AUFLIA/storecomm/storecomm_invalid_t1_np_sf_ni_00020_004.cvc.smt2	sat		6	sat		6	18.68		
+QF_AUFLIA/storecomm/storecomm_invalid_t1_np_sf_ni_00030_003.cvc.smt2	sat		6	sat		6	18.68		
+QF_AUFLIA/storecomm/storecomm_invalid_t1_np_sf_ni_00050_003.cvc.smt2	unknown	Incomplete	15	sat		6	17.83	give-up kind=Incomplete detail=lazy-extensionality refinement did not converge within 64 rounds (round=64, sites=101, array_eq_atoms=1, row_lemmas=96, cong_lemmas=0, diff_skolems=1, working_assertions	
+QF_AUFLIA/storecomm/storecomm_invalid_t1_np_sf_ni_00060_008.cvc.smt2	unknown	Incomplete	15	unknown	Incomplete	15	16.02	give-up kind=Incomplete detail=lazy-extensionality refinement did not converge within 64 rounds (round=64, sites=121, array_eq_atoms=1, row_lemmas=118, cong_lemmas=0, diff_skolems=1, working_assertion	give-up kind=Incomplete detail=lazy-extensionality refinement did not converge within 64 rounds (round=64, sites=121, array_eq_atoms=1, row_lemmas=118, cong_lemmas=0, diff_skolems=1, working_assertion
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_nf_ai_00020_001.cvc.smt2	sat		10	sat		10	14.94		
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_nf_ai_00030_006.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	14.38	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_nf_ai_00050_001.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	12.28	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_nf_ai_00060_005.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	10.75	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_nf_ni_00010_006.cvc.smt2	sat		10	sat		10	9.63		
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_nf_ni_00030_002.cvc.smt2	sat		10	sat		10	9.63		
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_nf_ni_00040_007.cvc.smt2	sat		10	sat		10	9.63		
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_nf_ni_00050_008.cvc.smt2	sat		10	sat		10	9.50		
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_nf_ni_00060_008.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	9.18	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_sf_ai_00020_006.cvc.smt2	sat		11	sat		11	8.37		
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_sf_ai_00040_003.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	8.24	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_sf_ai_00060_003.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	8.07	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_sf_ni_00010_005.cvc.smt2	sat		11	sat		11	9.65		
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_sf_ni_00020_009.cvc.smt2	sat		11	sat		11	9.65		
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_sf_ni_00040_002.cvc.smt2	sat		11	sat		11	9.65		
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_sf_ni_00050_002.cvc.smt2	sat		11	sat		11	9.93		
+QF_AUFLIA/storecomm/storecomm_invalid_t1_pp_sf_ni_00060_005.cvc.smt2	sat		11	sat		11	9.56		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_np_nf_ni_00020_009.cvc.smt2	sat		6	sat		6	9.19		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_np_nf_ni_00040_006.cvc.smt2	sat		6	sat		6	9.19		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_np_nf_ni_00050_003.cvc.smt2	sat		6	sat		6	9.17		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_np_nf_ni_00060_006.cvc.smt2	sat		6	sat		6	8.69		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_np_sf_ni_00010_005.cvc.smt2	sat		6	sat		6	8.91		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_np_sf_ni_00030_009.cvc.smt2	sat		6	sat		6	8.91		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_np_sf_ni_00040_009.cvc.smt2	sat		6	sat		6	8.91		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_np_sf_ni_00060_001.cvc.smt2	sat		6	sat		6	8.76		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_nf_ai_00010_008.cvc.smt2	sat		10	sat		10	9.62		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_nf_ai_00030_001.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	9.62	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_nf_ai_00040_006.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	11.02	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_nf_ai_00060_002.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	10.24	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_nf_ni_00010_009.cvc.smt2	sat		10	sat		10	9.69		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_nf_ni_00030_003.cvc.smt2	sat		10	sat		10	9.69		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_nf_ni_00040_006.cvc.smt2	sat		10	sat		10	9.56		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_nf_ni_00060_006.cvc.smt2	sat		10	sat		10	9.27		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_sf_ai_00010_009.cvc.smt2	sat		11	sat		11	8.91		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_sf_ai_00030_003.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	8.91	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_sf_ai_00040_007.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	8.56	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_sf_ai_00050_006.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	8.61	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_sf_ai_00060_007.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	8.90	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_sf_ni_00020_007.cvc.smt2	sat		11	sat		11	8.67		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_sf_ni_00040_005.cvc.smt2	sat		11	sat		11	8.67		
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_sf_ni_00060_006.cvc.smt2	sat		11	unknown	Timeout	21	8.45		give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_t1_np_nf_ni_00020_009.cvc.smt2	unsat		6	unsat		6	8.36		
+QF_AUFLIA/storecomm/storecomm_t1_np_nf_ni_00050_004.cvc.smt2	unsat		6	unknown	Incomplete	15	8.36		give-up kind=Incomplete detail=lazy-extensionality refinement did not converge within 64 rounds (round=64, sites=101, array_eq_atoms=1, row_lemmas=99, cong_lemmas=0, diff_skolems=1, working_assertions
+QF_AUFLIA/storecomm/storecomm_t1_np_sf_ni_00020_002.cvc.smt2	unsat		6	unsat		6	7.90		
+QF_AUFLIA/storecomm/storecomm_t1_np_sf_ni_00030_006.cvc.smt2	unsat		6	unsat		6	7.90		
+QF_AUFLIA/storecomm/storecomm_t1_np_sf_ni_00060_005.cvc.smt2	unsat		6	unsat		6	7.67		
+QF_AUFLIA/storecomm/storecomm_t1_pp_nf_ai_00020_006.cvc.smt2	unsat		10	unsat		10	8.22		
+QF_AUFLIA/storecomm/storecomm_t1_pp_nf_ai_00030_008.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	7.70	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_t1_pp_nf_ai_00050_009.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	7.81	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_t1_pp_nf_ni_00010_005.cvc.smt2	unsat		10	unsat		10	7.56		
+QF_AUFLIA/storecomm/storecomm_t1_pp_nf_ni_00020_006.cvc.smt2	unsat		10	unsat		10	7.35		
+QF_AUFLIA/storecomm/storecomm_t1_pp_nf_ni_00040_001.cvc.smt2	unsat		10	unsat		10	7.35		
+QF_AUFLIA/storecomm/storecomm_t1_pp_nf_ni_00040_008.cvc.smt2	unsat		10	unsat		10	8.36		
+QF_AUFLIA/storecomm/storecomm_t1_pp_nf_ni_00050_008.cvc.smt2	unsat		10	unsat		10	8.01		
+QF_AUFLIA/storecomm/storecomm_t1_pp_nf_ni_00060_009.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	8.42	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_t1_pp_sf_ai_00020_002.cvc.smt2	unsat		11	unsat		11	8.82		
+QF_AUFLIA/storecomm/storecomm_t1_pp_sf_ai_00030_007.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	8.42	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_t1_pp_sf_ai_00050_006.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	8.28	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_t1_pp_sf_ai_00060_007.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	8.15	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_t1_pp_sf_ni_00020_002.cvc.smt2	unsat		11	unsat		11	7.88		
+QF_AUFLIA/storecomm/storecomm_t1_pp_sf_ni_00030_005.cvc.smt2	unsat		11	unsat		11	7.88		
+QF_AUFLIA/storecomm/storecomm_t1_pp_sf_ni_00050_004.cvc.smt2	unsat		11	unsat		11	7.88		
+QF_AUFLIA/storecomm/storecomm_t1_pp_sf_ni_00060_006.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	7.69	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_t2_np_nf_ni_00010_009.cvc.smt2	unsat		6	unsat		6	10.70		
+QF_AUFLIA/storecomm/storecomm_t2_np_nf_ni_00040_005.cvc.smt2	unsat		6	unsat		6	10.70		
+QF_AUFLIA/storecomm/storecomm_t2_np_nf_ni_00060_005.cvc.smt2	unknown	Incomplete	15	unknown	Incomplete	15	9.74	give-up kind=Incomplete detail=lazy-extensionality refinement did not converge within 64 rounds (round=64, sites=121, array_eq_atoms=1, row_lemmas=112, cong_lemmas=0, diff_skolems=1, working_assertion	give-up kind=Incomplete detail=lazy-extensionality refinement did not converge within 64 rounds (round=64, sites=121, array_eq_atoms=1, row_lemmas=112, cong_lemmas=0, diff_skolems=1, working_assertion
+QF_AUFLIA/storecomm/storecomm_t2_np_sf_ni_00020_008.cvc.smt2	unsat		6	unsat		6	8.77		
+QF_AUFLIA/storecomm/storecomm_t2_np_sf_ni_00040_002.cvc.smt2	unsat		6	unsat		6	8.77		
+QF_AUFLIA/storecomm/storecomm_t2_np_sf_ni_00050_006.cvc.smt2	unsat		6	unsat		6	8.55		
+QF_AUFLIA/storecomm/storecomm_t3_np_nf_ni_00010_005.cvc.smt2	unsat		6	unsat		6	8.28		
+QF_AUFLIA/storecomm/storecomm_t3_np_nf_ni_00030_003.cvc.smt2	unsat		6	unsat		6	8.28		
+QF_AUFLIA/storecomm/storecomm_t3_np_nf_ni_00040_009.cvc.smt2	unsat		6	unsat		6	8.18		
+QF_AUFLIA/storecomm/storecomm_t3_np_nf_ni_00060_008.cvc.smt2	unknown	Incomplete	15	unknown	Incomplete	15	8.07	give-up kind=Incomplete detail=lazy-extensionality refinement did not converge within 64 rounds (round=64, sites=121, array_eq_atoms=1, row_lemmas=112, cong_lemmas=0, diff_skolems=1, working_assertion	give-up kind=Incomplete detail=lazy-extensionality refinement did not converge within 64 rounds (round=64, sites=121, array_eq_atoms=1, row_lemmas=112, cong_lemmas=0, diff_skolems=1, working_assertion
+QF_AUFLIA/storecomm/storecomm_t3_np_sf_ni_00030_009.cvc.smt2	unsat		6	unsat		6	7.90		
+QF_AUFLIA/storecomm/storecomm_t3_np_sf_ni_00060_004.cvc.smt2	unknown	Incomplete	15	unknown	Incomplete	15	7.91	give-up kind=Incomplete detail=lazy-extensionality refinement did not converge within 64 rounds (round=64, sites=121, array_eq_atoms=1, row_lemmas=120, cong_lemmas=0, diff_skolems=1, working_assertion	give-up kind=Incomplete detail=lazy-extensionality refinement did not converge within 64 rounds (round=64, sites=121, array_eq_atoms=1, row_lemmas=118, cong_lemmas=0, diff_skolems=1, working_assertion
+QF_AUFLIA/storecomm/storecomm_t3_pp_nf_ai_00010_008.cvc.smt2	unsat		10	unsat		10	8.00		
+QF_AUFLIA/storecomm/storecomm_t3_pp_nf_ai_00020_009.cvc.smt2	unsat		10	unsat		10	8.00		
+QF_AUFLIA/storecomm/storecomm_t3_pp_nf_ai_00040_009.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	8.08	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_t3_pp_nf_ai_00050_007.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	7.81	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_t3_pp_nf_ni_00010_002.cvc.smt2	unsat		10	unsat		10	7.37		
+QF_AUFLIA/storecomm/storecomm_t3_pp_nf_ni_00020_007.cvc.smt2	unsat		10	unsat		10	7.37		
+QF_AUFLIA/storecomm/storecomm_t3_pp_nf_ni_00040_009.cvc.smt2	unsat		10	unsat		10	7.26		
+QF_AUFLIA/storecomm/storecomm_t3_pp_sf_ai_00010_001.cvc.smt2	unsat		11	unsat		11	7.16		
+QF_AUFLIA/storecomm/storecomm_t3_pp_sf_ai_00020_008.cvc.smt2	unsat		11	unsat		11	7.16		
+QF_AUFLIA/storecomm/storecomm_t3_pp_sf_ai_00040_006.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	6.90	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_t3_pp_sf_ai_00050_003.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	6.65	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storecomm/storecomm_t3_pp_sf_ni_00010_003.cvc.smt2	unsat		11	unsat		11	6.40		
+QF_AUFLIA/storecomm/storecomm_t3_pp_sf_ni_00020_006.cvc.smt2	unsat		11	unsat		11	6.36		
+QF_AUFLIA/storecomm/storecomm_t3_pp_sf_ni_00040_002.cvc.smt2	unsat		11	unsat		11	6.36		
+QF_AUFLIA/storecomm/storecomm_t3_pp_sf_ni_00050_001.cvc.smt2	unsat		11	unsat		11	6.33		
+QF_AUFLIA/storecomm/storecomm_t3_pp_sf_ni_00060_008.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	6.06	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/storeinv/storeinv_invalid_t1_pp_nf_ai_00010_001.cvc.smt2	unknown	Incomplete	20	unknown	Incomplete	20	5.61	give-up kind=Incomplete detail=lazy-extensionality candidate failed replay: assertion #57 evaluated to false (top-level ordinal 1, first false conjunct ordinal 0, term 57, incomplete on this shape)	give-up kind=Incomplete detail=lazy-extensionality candidate failed replay: assertion #57 evaluated to false (top-level ordinal 1, first false conjunct ordinal 0, term 57, incomplete on this shape)
+QF_AUFLIA/storeinv/storeinv_invalid_t3_pp_nf_ai_00003_001.cvc.smt2	unknown	Incomplete	20	unknown	Incomplete	20	5.40	give-up kind=Incomplete detail=lazy-extensionality candidate failed replay: assertion #22 evaluated to false (top-level ordinal 1, first false conjunct ordinal 0, term 22, incomplete on this shape)	give-up kind=Incomplete detail=lazy-extensionality candidate failed replay: assertion #22 evaluated to false (top-level ordinal 1, first false conjunct ordinal 0, term 22, incomplete on this shape)
+QF_AUFLIA/storeinv/storeinv_t1_pp_nf_ai_00001_001.cvc.smt2	unknown	Incomplete	20	unknown	Incomplete	20	5.40	give-up kind=Incomplete detail=lazy-extensionality candidate failed replay: assertion #12 evaluated to false (top-level ordinal 1, first false conjunct ordinal 0, term 12, incomplete on this shape)	give-up kind=Incomplete detail=lazy-extensionality candidate failed replay: assertion #12 evaluated to false (top-level ordinal 1, first false conjunct ordinal 0, term 12, incomplete on this shape)
+QF_AUFLIA/storeinv/storeinv_t1_pp_sf_ai_00001_001.cvc.smt2	unknown	Incomplete	21	unknown	Incomplete	21	5.40	give-up kind=Incomplete detail=lazy-extensionality candidate failed replay: assertion #42 evaluated to false (top-level ordinal 1, first false conjunct ordinal 0, term 42, incomplete on this shape)	give-up kind=Incomplete detail=lazy-extensionality candidate failed replay: assertion #42 evaluated to false (top-level ordinal 1, first false conjunct ordinal 0, term 42, incomplete on this shape)
+QF_AUFLIA/storeinv/storeinv_t3_pp_nf_ai_00008_001.cvc.smt2	unknown	Incomplete	20	unknown	Incomplete	20	5.40	give-up kind=Incomplete detail=lazy-extensionality candidate failed replay: assertion #47 evaluated to false (top-level ordinal 1, first false conjunct ordinal 0, term 47, incomplete on this shape)	give-up kind=Incomplete detail=lazy-extensionality candidate failed replay: assertion #47 evaluated to false (top-level ordinal 1, first false conjunct ordinal 0, term 47, incomplete on this shape)
+QF_AUFLIA/swap/swap_invalid_t1_pp_nf_ai_00002_002.cvc.smt2	sat		10	sat		10	5.40		
+QF_AUFLIA/swap/swap_invalid_t1_pp_nf_ai_00004_002.cvc.smt2	sat		10	sat		10	5.40		
+QF_AUFLIA/swap/swap_invalid_t1_pp_nf_ai_00005_002.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	5.34	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_invalid_t1_pp_nf_ai_00006_005.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	5.26	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_invalid_t1_pp_nf_ai_00007_007.cvc.smt2	sat		10	sat		10	5.28		
+QF_AUFLIA/swap/swap_invalid_t1_pp_nf_ai_00008_008.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	5.28	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_invalid_t1_pp_nf_ai_00009_009.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	5.77	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_invalid_t1_pp_sf_ai_00003_008.cvc.smt2	sat		11	sat		11	6.11		
+QF_AUFLIA/swap/swap_invalid_t1_pp_sf_ai_00005_001.cvc.smt2	sat		11	sat		11	6.11		
+QF_AUFLIA/swap/swap_invalid_t1_pp_sf_ai_00005_008.cvc.smt2	sat		11	sat		11	6.11		
+QF_AUFLIA/swap/swap_invalid_t1_pp_sf_ai_00007_004.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	6.11	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_invalid_t1_pp_sf_ai_00008_004.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	5.98	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_invalid_t1_pp_sf_ai_00009_008.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	5.42	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_invalid_t3_pp_nf_ai_00003_005.cvc.smt2	sat		10	sat		10	5.08		
+QF_AUFLIA/swap/swap_invalid_t3_pp_nf_ai_00005_004.cvc.smt2	sat		10	sat		10	5.08		
+QF_AUFLIA/swap/swap_invalid_t3_pp_nf_ai_00006_009.cvc.smt2	sat		10	sat		10	5.08		
+QF_AUFLIA/swap/swap_invalid_t3_pp_nf_ai_00008_009.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	4.91	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_invalid_t3_pp_nf_ai_00010_003.cvc.smt2	unknown	Timeout	20	unknown	Timeout	20	4.65	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_invalid_t3_pp_sf_ai_00003_002.cvc.smt2	sat		11	sat		11	6.06		
+QF_AUFLIA/swap/swap_invalid_t3_pp_sf_ai_00004_003.cvc.smt2	sat		11	sat		11	6.06		
+QF_AUFLIA/swap/swap_invalid_t3_pp_sf_ai_00006_005.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	6.06	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_invalid_t3_pp_sf_ai_00008_006.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	7.17	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_invalid_t3_pp_sf_ai_00010_003.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	7.13	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_t1_pp_nf_ai_00002_003.cvc.smt2	unsat		4	unsat		4	6.10		
+QF_AUFLIA/swap/swap_t1_pp_nf_ai_00003_008.cvc.smt2	unsat		4	unsat		4	6.10		
+QF_AUFLIA/swap/swap_t1_pp_nf_ai_00006_002.cvc.smt2	unsat		4	unsat		4	6.10		
+QF_AUFLIA/swap/swap_t1_pp_nf_ai_00007_001.cvc.smt2	unsat		4	unsat		4	6.10		
+QF_AUFLIA/swap/swap_t1_pp_nf_ai_00008_001.cvc.smt2	unsat		4	unsat		4	6.10		
+QF_AUFLIA/swap/swap_t1_pp_nf_ai_00009_002.cvc.smt2	unsat		4	unsat		4	6.10		
+QF_AUFLIA/swap/swap_t1_pp_nf_ai_00010_008.cvc.smt2	unsat		4	unsat		4	6.10		
+QF_AUFLIA/swap/swap_t1_pp_sf_ai_00003_002.cvc.smt2	unsat		11	unsat		11	6.10		
+QF_AUFLIA/swap/swap_t1_pp_sf_ai_00004_007.cvc.smt2	unsat		11	unsat		11	6.10		
+QF_AUFLIA/swap/swap_t1_pp_sf_ai_00006_001.cvc.smt2	unsat		11	unsat		11	5.85		
+QF_AUFLIA/swap/swap_t1_pp_sf_ai_00007_004.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	5.85	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_t1_pp_sf_ai_00008_005.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	5.04	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_t1_pp_sf_ai_00009_007.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	4.61	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_t3_pp_nf_ai_00002_005.cvc.smt2	unsat		4	unsat		4	4.46		
+QF_AUFLIA/swap/swap_t3_pp_nf_ai_00004_007.cvc.smt2	unsat		4	unsat		4	4.46		
+QF_AUFLIA/swap/swap_t3_pp_nf_ai_00005_006.cvc.smt2	unsat		4	unsat		4	4.46		
+QF_AUFLIA/swap/swap_t3_pp_nf_ai_00007_003.cvc.smt2	unsat		4	unsat		4	4.46		
+QF_AUFLIA/swap/swap_t3_pp_nf_ai_00009_004.cvc.smt2	unsat		4	unsat		4	4.46		
+QF_AUFLIA/swap/swap_t3_pp_nf_ai_00010_007.cvc.smt2	unsat		4	unsat		4	4.46		
+QF_AUFLIA/swap/swap_t3_pp_sf_ai_00004_002.cvc.smt2	unsat		11	unsat		11	4.46		
+QF_AUFLIA/swap/swap_t3_pp_sf_ai_00005_006.cvc.smt2	unsat		11	unsat		11	4.23		
+QF_AUFLIA/swap/swap_t3_pp_sf_ai_00007_003.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	4.23	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_t3_pp_sf_ai_00008_007.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	3.88	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged
+QF_AUFLIA/swap/swap_t3_pp_sf_ai_00010_007.cvc.smt2	unknown	Timeout	21	unknown	Timeout	21	3.70	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lazy-ROW deadline exceeded before refinement converged

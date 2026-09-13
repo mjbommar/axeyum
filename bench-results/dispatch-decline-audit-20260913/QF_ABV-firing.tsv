@@ -1,0 +1,7 @@
+file	base_v	base_kind	base_att	fix_v	fix_kind	fix_att	load	base_detail	fix_detail
+QF_ABV/bmc-arrays/bubbleSort.smt2	unsat		5	unsat		5	8.54		
+QF_ABV/brummayerbiere/fifo32ia04k08.smt2	unknown	Watchdog	4	unknown	Timeout	14	9.70	give-up kind=Watchdog detail=watchdog fired before the worker thread returned	give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Timeout] pure-Rust BV backend timeout after SAT search
+QF_ABV/brummayerbiere/wchains140se.smt2							9.17		
+QF_ABV/dwp_formulas/try5_small_noof_functions_flanagansaxe_shuf.isaac_mix.il.flanagansaxe.smt2	sat		5	sat		5	8.76		
+QF_ABV/dwp_formulas/try5_small_true_functions_wp_md5sum.md5_process_block.il.wp.smt2	sat		5	sat		5	8.49		
+QF_ABV/platania/no_init_simple_delete/no_init_simple_delete55.smt2	sat		5	sat		5	9.62		

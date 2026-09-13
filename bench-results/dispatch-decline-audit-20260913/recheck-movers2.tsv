@@ -1,0 +1,8 @@
+file	base1	base2	base3	fix1	fix2	fix3
+QF_AUFLIA/array_benchmarks/misc/pipeline-invalid.smt2	sat	sat	sat	sat	sat	sat
+QF_AUFLIA/storecomm/storecomm_invalid_t1_np_sf_ni_00050_003.cvc.smt2	unknown	unknown	unknown	unknown	unknown	unknown
+QF_AUFLIA/storecomm/storecomm_invalid_t3_pp_sf_ni_00060_006.cvc.smt2	unknown	unknown	unknown	unknown	unknown	unknown
+QF_AUFLIA/storecomm/storecomm_t1_np_nf_ni_00050_004.cvc.smt2	unknown	unknown	unknown	unknown	unknown	unknown
+QF_UFLIA/wisas/xs_25_35.smt2	sat	sat	sat	sat	sat	sat
+UFLIA/simplify2/front_end_suite/javafe.tc.OutsideEnv.011.smt2	unsat	unsat	unsat	unsat	unsat	unsat
+UFLIA/sledgehammer/Hoare/smtlib.993567.smt2	unsat	unsat	unsat	unknown	unknown	unknown
