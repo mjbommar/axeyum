@@ -10679,6 +10679,8 @@ mod uf_overbound_live_tests {
 
 #[cfg(test)]
 mod tests {
+    use std::fmt::Write as _;
+
     use super::*;
 
     #[test]
@@ -12205,9 +12207,9 @@ mod tests {
         let mut script = String::from("(set-logic QF_LIA)\n(declare-const x Int)\n(assert ");
         script.push_str("(let ((v0 (+ x 1))) ");
         for i in 0..DEPTH {
-            script.push_str(&format!("(let ((v{} (+ v{} v{}))) ", i + 1, i, i));
+            let _ = write!(script, "(let ((v{} (+ v{} v{}))) ", i + 1, i, i);
         }
-        script.push_str(&format!("(<= v{DEPTH} 100)"));
+        let _ = write!(script, "(<= v{DEPTH} 100)");
         for _ in 0..=DEPTH {
             script.push(')');
         }
