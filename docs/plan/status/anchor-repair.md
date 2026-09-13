@@ -61,8 +61,10 @@ this measurement so the next person finds the reason it was rejected.
 
 **The gate could not count.** `check_anchors()` assigned `failed = 1` per problem
 instead of accumulating: seven problem lines, `stale=1`. Somebody repairing six
-of seven would have watched the number not move. Two status docs in-tree already
-quote `stale=1` beside "the same 4 pre-existing complaints". Fixed, and the exit
+of seven would have watched the number not move. One status doc
+(`playfair-2026-09-05.md`) records `stale=1` and "the same 4 pre-existing
+complaints" **in the same table cell** — the author counted the printed problem
+lines, got four, and copied the gate's one down beside it. Fixed, and the exit
 status is now clamped to a boolean — `SystemExit` takes its status mod 256, so
 returning the raw count was a gate that could not fail at exactly 256 stale
 anchors.
@@ -94,6 +96,40 @@ tightening a shared hook. Deeper and also untouched: `--check-anchors` verifies
 a mutation POINTS at real code, never that it KILLS anything, and no gate runs a
 real mutation suite — so a perfectly fresh suite can measure nothing, which is
 exactly what the `cnf-occurrence-pass-wiring` measurement above caught live.
+
+**Every re-anchored mutation was RUN, not just re-pointed.** A re-anchored
+mutation that kills nothing is worse than the stale anchor it replaced, so each
+suite was measured on a `/data0` scratch copy (never the shared worktree). All
+17 mutations across the four suites killed; **0 survivors, 0 NOT APPLIED, 0
+AMBIGUOUS**, every suite exit 0. Re-anchored rows marked ★:
+
+| suite | baseline | mutation | kill set |
+|---|---|---|---|
+| `dt-capability-1935` | green, 20 tests | ★ congruence needs an EXACT expansion of its datatype argument | `refusal_names_the_inexact_expansion` |
+| | | ★ an array field whose element sort mentions a datatype gets no variable | `refusal_names_the_field_with_no_expansion_variable` |
+| | | ★ an Ackermannized datatype argument must be a variable, a constructor, or another collected application | `refusal_names_the_non_variable_datatype_argument` |
+| | | an uninterpreted-sorted datatype field gets an expansion variable | `field_an_uninterpreted_sorted_field_decides_sat` |
+| | | the congruence clause is actually emitted | `congruence_does_not_merge_distinct_arguments` |
+| `dt-valued-result-1946` | green, 12 tests | a datatype-VALUED result makes an application a site | `refusal_names_the_inexact_result_datatype` |
+| | | the RESULT datatype's expansion must be exact | `refusal_names_the_inexact_result_datatype` |
+| | | ★ an array-over-a-datatype result is refused rather than fallen through | `refusal_names_the_array_over_a_datatype_result` |
+| | | a datatype argument is admitted only when this pass will replace it | `refusal_still_names_a_datatype_argument_that_is_none_of_the_three_shapes` |
+| | | the nested site is rebuilt before the site that reads it | `a_nested_application_replays_its_model` |
+| `solver-occurrence-pass-admission` | green, 35 tests | ★ the granted budget reaches subsumption | `the_granted_subsume_budget_reaches_the_pass` |
+| | | ★ the granted budget reaches BVE | `the_granted_budget_reaches_the_pass` |
+| | | the accumulate-and-delay gate is armed | `a_spent_slice_delays_subsumption_as_well`, `a_spent_slice_delays_bve_instead_of_paying_for_setup_it_cannot_use` |
+| | | the remaining slice caps the reference window | (the same two) |
+| | | an unparseable lever keeps the shipped constant | `the_measurement_levers_default_to_the_shipped_constants` |
+| `mutation-controls` | green, 36 tests | 26 of 26 killed, including ★ the stale-anchor count accumulates | — |
+
+**Kill sets are pairwise distinct except two pre-existing pairs, neither this
+lane's and both already documented.** `dt-valued-result-1946`'s first two both
+kill only `refusal_names_the_inexact_result_datatype` — ADR-1946 records exactly
+this, that the result-side exactness precondition kills its refusal-message test
+and not the soundness test it is named for. And
+`solver-occurrence-pass-admission`'s gate/slice-cap pair share their two tests.
+Neither is a regression introduced here; both are noted so the next reader does
+not mistake them for one.
 
 <!-- plan-section: landed-changes -->
 
