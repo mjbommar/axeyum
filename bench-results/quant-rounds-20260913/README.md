@@ -136,7 +136,7 @@ assumed (`route-hit.sh`) — `q:egraph` is ATTEMPTED on:
 |---|---:|---:|---:|
 | QF_DT | 200 | **0** | 0 |
 | QF_UFLIA | 200 | **0** | 0 |
-| QF_UFLRA | 172 | **0** | 0 |
+| QF_UFLRA | 200 | **0** | 0 |
 | NRA | 200 | 9 | 3 |
 
 That is ADR-1945's own hole reproduced — its lane found `ufbv_online` fires on
@@ -189,11 +189,26 @@ untestable promise.
 ## The guards can fail
 
 `python3 scripts/tests/mutation_controls.py qinst-round-exit` removes one guard
-at a time. Six of the seven mutations must kill **exactly one** test; the
-seventh is the soundness mutation and kills the whole
-"never refutes a satisfiable query" family, which is what makes
-`no_round_ceiling_arm_refutes_a_satisfiable_query` a soundness-negative rather
-than a shape assertion.
+at a time. **Baseline green at 113 tests; 7 mutations, 7 killed:**
+
+    a FIXPOINT exit does not claim a round budget          killed 1
+    the fixpoint break records which exit fired            killed 1
+    the loop reads the ceiling ACCESSOR, not the constant  killed 1
+    the round-ceiling guard restores on drop               killed 1
+    the ceiling lever defaults to the SHIPPED constant     killed 1
+    a fixpoint's census kind is SHAPE, not ROUND           killed 1
+    an unrefuted ground set gives UP, not unsat            killed 11
+
+Six kill **exactly one** test. The seventh is the soundness mutation and kills
+the whole "never refutes a satisfiable query" family,
+`no_round_ceiling_arm_refutes_a_satisfiable_query` included — which is what
+makes that test a soundness-negative rather than a shape assertion.
+
+The first mutation killed **two** in an earlier run, and the fix is worth
+recording: the end-to-end test spelled the expected wording as a literal, so it
+died for the wording defect as well as for its own. It now DERIVES the
+expectation from `InstantiationLoopExit` itself, which the wording mutation
+moves on both sides — so each test dies for one defect.
 
 One fixture choice is itself a measurement. The truncation test first used this
 module's predecessor-recurrence fixture and **failed**: a 2-round ceiling still

@@ -10150,6 +10150,20 @@ mod tests {
     fn a_truncating_round_ceiling_declines_and_says_round_budget() {
         let config = SolverConfig::new().with_timeout(Duration::from_secs(10));
 
+        // The CONTROL runs FIRST, before any guard is constructed: without it
+        // the assertion below passes for a loop that declines everything, and
+        // running it after the guarded block would make a guard whose `Drop`
+        // failed to restore break this test too — two tests dying for one
+        // defect, and neither of them for the scoping one.
+        let mut arena = TermArena::new();
+        let assertions = successor_chain_assertions(&mut arena, "rcfull", 6, true);
+        let full = prove_quantified_unsat_via_egraph(&mut arena, &assertions, &config).unwrap();
+        assert_eq!(
+            full,
+            CheckResult::Unsat,
+            "the shipped ceiling walks the whole chain and refutes it"
+        );
+
         let mut arena = TermArena::new();
         let assertions = successor_chain_assertions(&mut arena, "rctrunc", 6, true);
         let truncated = {
@@ -10164,16 +10178,55 @@ mod tests {
             InstantiationLoopExit::RoundCeiling.detail(2),
             "a loop the ceiling truncated must report the round budget"
         );
+    }
 
-        // The same query at the shipped ceiling. This is the control: without
-        // it the assertion above passes for a loop that declines everything.
+    /// END TO END: a query whose e-graph is EMPTY reports a FIXPOINT, not a
+    /// round budget.
+    ///
+    /// This is the shape the whole 177-file family turned out to have. 103 of
+    /// the 117 pinned LRA rows fixpoint at round 0 with `ground=0` — a
+    /// quantifier prefix over Reals with no free constant, so there is not one
+    /// ground term for a trigger to match. Under the merged give-up string
+    /// those rows read as "did not refute within the round budget" while the
+    /// ceiling of 512 was never approached.
+    ///
+    /// It is the only test that reaches the `Fixpoint` arm through the LOOP
+    /// rather than through `InstantiationLoopExit::detail` directly, so it is
+    /// what dies if the break stops recording its exit.
+    #[test]
+    fn an_empty_egraph_reports_fixpoint_not_a_round_budget() {
         let mut arena = TermArena::new();
-        let assertions = successor_chain_assertions(&mut arena, "rcfull", 6, true);
-        let full = prove_quantified_unsat_via_egraph(&mut arena, &assertions, &config).unwrap();
-        assert_eq!(
-            full,
-            CheckResult::Unsat,
-            "the shipped ceiling walks the whole chain and refutes it"
+        // `∀x. x < x + 1` over the reals, asserted alone: valid, nothing
+        // ground, nothing to match. The loop must say so rather than blame a
+        // round count.
+        let binder = arena.declare("fpx", Sort::Real).unwrap();
+        let bound = arena.var(binder);
+        let one = arena.real_const(axeyum_ir::Rational::integer(1));
+        let successor = arena.real_add(bound, one).unwrap();
+        let body = arena.real_lt(bound, successor).unwrap();
+        let universal = arena.forall(binder, body).unwrap();
+
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(10));
+        let result = prove_quantified_unsat_via_egraph(&mut arena, &[universal], &config).unwrap();
+        let CheckResult::Unknown(reason) = &result else {
+            panic!("a satisfiable term-starved universal must not be refuted: {result:?}");
+        };
+        // The expectation is DERIVED from the authority, not written as a
+        // literal: this test's job is that the loop RECORDED a fixpoint, and
+        // `only_the_round_ceiling_exit_claims_a_round_budget` is what owns the
+        // wording. Spelling the string here would make both tests die for
+        // either defect and neither of them die for only one — measured, in the
+        // mutation control: with a literal, the wording mutation killed two.
+        //
+        // The round count is not pinned because it is not this test's subject;
+        // the plausible band is small and derived the same way.
+        let expected: Vec<String> = (0..=8)
+            .map(|rounds| InstantiationLoopExit::Fixpoint.detail(rounds))
+            .collect();
+        assert!(
+            expected.contains(&reason.detail),
+            "the loop must record a FIXPOINT exit on an empty e-graph; it said: {}",
+            reason.detail
         );
     }
 

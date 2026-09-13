@@ -136,7 +136,7 @@ divisions we decide well. **Three of those four are quantifier-FREE**, so the
 e-matching instantiation loop cannot run on them at all. Measured with the route
 trail rather than assumed (`route-hit.sh`, `summarize.py control`): the
 `q:egraph` rung is ATTEMPTED on **0 of 200 QF_DT files, 0 of 200 QF_UFLIA and 0
-of the 172 QF_UFLRA rows measured**. NRA reaches it on 9 of 200.
+of 200 QF_UFLRA**. NRA reaches it on 9 of 200.
 
 That is the hole ADR-1945's lane found in its own control (`ufbv_online` firing
 on 0 of 400) reproduced almost exactly, and the reason this ADR states the

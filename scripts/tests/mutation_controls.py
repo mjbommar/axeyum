@@ -9740,6 +9740,100 @@ SUITES["int-blast-additive-no-overflow"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `qinst-round-exit` -- three loop exits that shared ONE give-up string.
+#
+# ADR-1950 ranked `e-matching instantiation did not refute within the round
+# budget` as the largest blocker on the six-division board -- 177 of 390
+# winnable files, 45 % -- and classified it `ROUND` from the string, because a
+# census can read nothing else.  All three of the instantiation loop's stopping
+# conditions emitted that string, and ADR-1956 measured that **zero** of the 177
+# are bound by the round ceiling: 167 reach a FIXPOINT and 5 a clock.
+#
+# So the guards here are the ones that keep a reason from claiming a bound it
+# was not stopped by, plus the soundness guard that keeps the loop from
+# reporting a refutation it does not have.  Each of the first six removes one
+# guard and must kill exactly one test; the last is the soundness mutation and
+# kills the whole "never refutes a satisfiable query" family, which is the
+# point of it.
+# --------------------------------------------------------------------------
+
+SUITES["qinst-round-exit"] = (
+    "crates/axeyum-solver/src/qinst_egraph.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "qinst_egraph::tests::"),
+        "qinst-round-exit",
+    ),
+    [
+        (
+            # The merged bucket, restored: a fixpoint blames the round budget.
+            "a FIXPOINT exit does not claim a round budget",
+            '            Self::Fixpoint => format!(\n'
+            '                "e-matching instantiation reached fixpoint without refuting after {rounds} \\\n'
+            '                 rounds (no further instance to admit; more rounds cannot help)"\n'
+            "            ),",
+            '            Self::Fixpoint => format!(\n'
+            '                "e-matching instantiation did not refute within the round budget{}",\n'
+            '                if rounds == usize::MAX { "!" } else { "" }\n'
+            "            ),",
+        ),
+        (
+            # The loop stops RECORDING the fixpoint, so the exit falls back to
+            # the `RoundCeiling` initial value -- exactly the pre-ADR-1956 read.
+            "the fixpoint break records which exit fired",
+            "                loop_exit = InstantiationLoopExit::Fixpoint;",
+            "                let _ = InstantiationLoopExit::Fixpoint;",
+        ),
+        (
+            # The lever is wired to the loop, not merely declared. Without this
+            # every arm of an A/B runs the compiled 512 and agrees, which is
+            # indistinguishable from "the ceiling does not matter".
+            "the loop reads the ceiling ACCESSOR, not the constant",
+            "    for round in 0..instantiation_round_ceiling() {",
+            "    for round in 0..MAX_EXTENDED_INSTANTIATION_ROUNDS {",
+        ),
+        (
+            # A guard that does not restore re-arms every later query in the
+            # process, which is how an A/B measures arm B twice.
+            "the round-ceiling guard restores on drop",
+            "        ROUND_CEILING_OVERRIDE.with(|cell| cell.set(self.0));",
+            "        let _ = &self.0;",
+        ),
+        (
+            # Unset must be the shipped value byte for byte; this is the whole
+            # promise a lever makes.
+            "the ceiling lever defaults to the SHIPPED constant",
+            '        "AXEYUM_QINST_ROUNDS" or MAX_EXTENDED_INSTANTIATION_ROUNDS;',
+            '        "AXEYUM_QINST_ROUNDS" or 64;',
+        ),
+        (
+            # ADR-1950's vocabulary: a fixpoint is SHAPE. Calling it ROUND is
+            # precisely the misclassification ADR-1956 refuted.
+            "a fixpoint's census kind is SHAPE, not ROUND",
+            '            Self::Fixpoint => "SHAPE",',
+            '            Self::Fixpoint => "ROUND",',
+        ),
+        (
+            # SOUNDNESS. The loop must give up rather than claim a refutation
+            # the ground check did not produce. This kills the whole
+            # "never refutes a satisfiable query" family,
+            # `no_round_ceiling_arm_refutes_a_satisfiable_query` included, and
+            # that is what makes that test a soundness-negative rather than a
+            # shape assertion.
+            "an unrefuted ground set gives UP, it does not report unsat",
+            "        _ => Ok(CheckResult::Unknown(UnknownReason {\n"
+            "            kind: UnknownKind::Incomplete,\n"
+            "            detail: loop_exit.detail(rounds_entered),\n"
+            "        })),",
+            "        _ => {\n"
+            "            let _ = loop_exit.detail(rounds_entered);\n"
+            "            Ok(CheckResult::Unsat)\n"
+            "        }",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
