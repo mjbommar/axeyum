@@ -1,0 +1,7 @@
+file	verdict	rc	attempts	decided_by	bound_by	last	bound_ms	total_ms	open_after	open_ms	deepest	giveup
+NRA/keymaera/Ecoli-chemotaxis-node8285.smt2	unknown	0	17	none	q:egraph	fd:bounded-completeness-unsat	23194	24000	na	na	na	give-up kind=ResourceLimit detail=quantified solve time budget exhausted after e-matching
+NRA/keymaera/bouncing-ball-simple-node5587.smt2	unknown	0	17	none	q:egraph	fd:bounded-completeness-unsat	20625	24000	na	na	na	give-up kind=ResourceLimit detail=quantified solve time budget exhausted after e-matching
+NRA/keymaera/dynamic_reaction_to_static_bounds.proof-node829.smt2	unknown	0	19	none	q:egraph	fd:bounded-completeness-unsat	20176	22873	na	na	na	give-up kind=Incomplete detail=MBQI did not converge within 16 rounds
+NRA/keymaera/intersection-example-onelane.proof-node3891.smt2	unknown	0	17	none	q:egraph	fd:bounded-completeness-unsat	20916	24002	na	na	na	give-up kind=ResourceLimit detail=quantified solve time budget exhausted after e-matching
+NRA/keymaera/to_right-node1083.smt2	unknown	0	19	none	q:mbqi-quick	fd:bounded-completeness-unsat	144	289	na	na	na	give-up kind=Incomplete detail=e-matching instantiation did not refute within the round budget
+NRA/keymaera/vsli.proof-node2308.smt2	unknown	0	17	none	q:egraph	fd:bounded-completeness-unsat	20681	24003	na	na	na	give-up kind=ResourceLimit detail=quantified solve time budget exhausted after e-matching
