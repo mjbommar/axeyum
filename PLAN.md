@@ -146,7 +146,7 @@ now. Nothing was deleted.
 | 2026-09-13 | board-tier1 | First parity rows for AUFLIRA / UFNIA / ABV / ALIA / AUFNIRA / AUFBV / FP (47,220 files): 10 / 53 / 4 / 0 / 3 / 10 / 46 of 200 vs z3 197 / 96 / 14 / 32 / 138 / 30 / 137, **0 disagreements, 0 wrapper kills**; six of seven probe rates CONFIRMED at n=200, ABV REFUTED; the nested-array refusal is 364 of 379 winnable array rows (96 %) but **91 % of its reach is AUFLIRA alone**; ADR-1957; ADR-1941's attempts-only rule would discard 454 of 603 census rows |
 | 2026-09-13 | nested-array-build | ADR-1955's nested array sort BUILT (`ArraySortKey::Array(ArraySortId)`): **AUFLIRA 10 → 164 and AUFNIRA 3 → 122 of 200** interleaved against `main` at `9c24786d0`, 0 regressions anywhere, and z3 AND cvc5 agreeing with all **273** moved verdicts at `no opinion 0`; re-sized BEFORE the build with an `unsat`-sound array-free surrogate (86.5%, projected 16,245) and the mechanism it found is the one that delivered — a nested AUFLIRA query needs **no array theory**, only congruence through the nested `select`; ALIA/ABV unmoved because their files WRITE the outer array, pinned as a failing-on-progress test; ADR-1965 |
 | 2026-09-13 | nested-array-row | ADR-1965's named next gate — **outer read-over-write on a nested array** — SIZED and DECLINED, no solver code written; the instrument is the mirror of ADR-1965's (it CURRIES the outer level and performs read-over-write syntactically instead of deleting it), committed at `675282be2` before any change under `crates/`; **the gate is worth 0**, for two independent reasons: **39 of the 53 winnable ALIA+ABV files are SATISFIABLE** so a refutation mechanism has a ceiling of 220 rather than 934, and of the refutable remainder it reaches none — **5 ALIA files are refutable AND accepted AND had read-over-write performed for them and axeyum decided 0 of 5**, while the one ABV refutation is the file ADR-1965's surrogate already reached and has ZERO outer stores; soundness control z3-original vs z3-surrogate agrees **14/14, no opinion 13, CONTRADICTS 0**, non-vacuity carried by two REACH fixtures because AUFLIRA and AUFNIRA refuse **187/187** and **139/139** here; ten instrument mutations all `killed N` with eight killing exactly one; what the refusals name instead is outer array EQUALITY for ALIA/ABV and, where the files actually are, **quantified model construction** — 24 ALIA and 15 ABV winnable files are reference-`sat` and no array capability produces a `sat`; ADR-1971 |
-| 2026-09-13 | qbudget | The quantified ladder's two give-up strings are **one root deadline and a slice inside it**, not two clocks — and the inner one belongs to `q:mbqi`, not `q:egraph`: `prove_unsat_by_mbqi_inner`'s shape guard falls through to `prove_unsat_by_ematching`, which hands the **Skolemized** assertions back to the **same e-graph loop** under a 1/2 slice, so that loop runs **TWICE** per query. `AXEYUM_QPROBE` on the family: the retry is granted **8.83 s** and spends **8.85 s** — cut off by its own slice with **8.7 s of 24 s left**, which **nothing then spends**, because the reserve is held for `q:uf-fmf-full` and that rung declines a non-pure-UF query in one cheap scan. **The ladder runs out of RUNGS, not clock.** The arithmetic also puts `q:egraph` at ~3.3 s here, so ADR-1970 describes a different family — as its own `bound_by=q:mbqi` on 27 of 37 rows said. Lever `AXEYUM_QINST_EGRAPH_RETRY_SHARE` ships OFF with a one-way ceiling arm; sizing pre-registered before the first solver run. Separately: the five `distinct` pair-expansion refusals are **four files z3 refutes in 111–508 ms** and we never reach a solver — designed, sized and handed off. ADR-1995 |
+| 2026-09-13 | qbudget | The quantified ladder's two give-up strings are **one root deadline and a slice inside it**, not two clocks — and the inner one is **`q:mbqi`'s, not `q:egraph`'s**: `prove_unsat_by_mbqi_inner`'s shape guard falls through to `prove_unsat_by_ematching`, which hands the **SKOLEMIZED** assertions back to the **SAME e-graph loop** under a 1/2 slice, so that loop runs **TWICE** per query. `AXEYUM_QPROBE` settles the starvation question by measurement rather than from a `(+N segments dropped)` rendering limit: the retry is **granted 8.83 s and spends 8.85 s**, cut off by its own slice with **8.7 s of 24 s left that nothing then spends** — the ladder runs out of **RUNGS**, not clock. Hand that clock back through a genuine one-way ceiling and the family is **0 of 87 across FOUR divisions** (Wilson 95 % `[0 %, 4.2 %]`), so those files are out of reach of **every** budget policy on this rung. A/B: `UFNIA` +0, `UFLIA` **+2**, `UF` and `AUFLIA` controls **0/0** with the route binding 26 and 65 of their undecided rows; **0 disagreements, 0 sat↔unsat flips in 1,600 solves**; noise band **1 file** (54/53/53) and the one churning file is the same one the A/B called a loss. **Ships OFF** — every gain came from a *different* family and the mechanism is measured **non-monotone** (the ceiling arm admits **391 rounds / 787 ground terms** on `f2_rw120` and refutes nothing). The vein is **instance selection, not clock**. Also: the five `distinct` pair-expansion refusals are **four files z3 refutes in 111–508 ms** that we never hand to a solver — designed, sized, handed off. And `cargo build --target wasm32-unknown-unknown` is **RED on main** in `axeyum-cnf` (a `std::time::Instant` vs `web_time::Instant` mismatch at `interrupt.rs:65`), not from this lane. ADR-1995 |
 | 2026-09-13 | qf-ufbv-caps | ADR-1945: QF_UFBV **89 → 129 of 200** (gap to z3 85 → 45) from a path-specific `MAX_SCALAR_THEORY_ATOMS = 4_096`; node cap held (worth **+0** alone at 2x/4x/16x) and array atom cap held (a 25 s `Watchdog` regression, 0 of 9); 0 of 400 array files change verdict; 9,793 runs, 0 disagreements |
 | 2026-09-13 | quant-rounds | ADR-1950's top blocker re-measured: **0 of 177** rows are bound by the round ceiling (167 fixpoint, 5 clock), a 2x/4x/8x sweep gains **0** and loses **0**, and 88 % of the LRA family fixpoints with an EMPTY e-graph on quantifier-elimination benchmarks; `InstantiationLoopExit` splits the three exits that shared one give-up string, three `cap_lever!` levers with byte-identical defaults, ADR-1956 |
 | 2026-09-13 | ufdt-family | The three `UFDT` siblings censused over their WHOLE winnable sets (316 rows, four divisions) — and the brief's board row was **stale by 69 files**: `UFDTNIRA` is **74 / 200 on the current tree, not 5**. What is left is TWO targets. `UFDTNIRA` is COST-bound: **56 of 109 winnable rows are one rung**, valid-universal elimination, which holds the ENTIRE 24 s budget and gives up PAST the deadline (median 46 ms over, no fast declines), and which across the four divisions is the bounding route on **167 of 800 files and DECIDES 0**. `UFDTLIRA`/`UFDT`/`AUFDTLIRA` are SHAPE-bound by ONE predicate: the three datatype-EXACTNESS preconditions are **124 of 316 rows**, sized and handed off with a static instrument showing **97 of 124 are NESTED but not recursive** (depth ≤ 6) against a control where 86 of 192 are flat. Both findings needed a split the census would not have made — `budget exhausted after <stage>` is FOUR rungs sharing one string and `mbqi declined an unsupported fragment: …` is at least FOUR causes sharing a prefix (ADR-1956's defect, one stage up, twice). The reserve the first implies is built as a one-binary env lever, sized by its one-way CEILING arm and then **shipped at a DIFFERENT value**: ceiling `=1` is +19/−0 on `UFDTNIRA` but loses **2** `UF` control files reproducibly; `=4` gains the **IDENTICAL 19** and loses **0**. Ships **ON at `share = 4`**: 0 sat↔unsat flips in 4,000 solves, 19 of 19 re-checked 3x per arm as stable GAIN, 55 comparisons vs `:status`/z3/cvc5 with 0 disagreements and 0 unopposed rows, noise band 0–1 files over three base-arm runs, 901 comparisons on the census board with 0 disagreements, 3 mutations 3 killed exactly one test each; ADR-1975 |
@@ -62657,10 +62657,9 @@ the mobility summary now names the dominant unevaluable reason, making
 tactic gap. Verified the loop still proves its live frontier (`nat-modeq-symm`,
 `nat-modeq-trans`) via `modeq_family`.
 
-**Lane qbudget (`IN PROGRESS`, qbudget, 2026-09-13).** The follow-up
-[ADR-1970]'s own handoff named: the `UFNIA`/`UFLIA` family that gives up with a
-third of its clock unspent. Three things are established and one is being
-measured.
+**Lane qbudget (`DONE`, qbudget, 2026-09-13).** The follow-up [ADR-1970]'s own
+handoff named: the `UFNIA`/`UFLIA` family that gives up with a third of its clock
+unspent. It is measured, and it is a **negative result with a mechanism**.
 
 **The budget architecture is one root deadline with sibling slices cut out of
 its remainder, not two clocks.** `finish_quantified_solve` threads one
@@ -62694,11 +62693,35 @@ this family, so ADR-1970's "the e-graph rung eats the quantified clock" is a tru
 sentence about a **different** family — the census's own `bound_by=q:mbqi` on 27
 of 37 rows said so.
 
-**`AXEYUM_QINST_EGRAPH_RETRY_SHARE` ships OFF** and its `=1` ceiling arm is the
-one-way sizing instrument: no budget policy on that rung can grant the loop more
-than the root deadline it sits inside. The A/B is running; the sizing and the
-decision rule were pre-registered before any solver ran, and the ADR is
-[ADR-1995].
+**Hand that clock back and the family is 0 of 87.** `AXEYUM_QINST_EGRAPH_RETRY_SHARE=1`
+is a genuine one-way ceiling — the retry takes the whole remaining ROOT deadline,
+and nothing on that rung can grant more. Measured at the rung: 8.83 s → 16.17 s,
+target-family median wall 15.3 s → 24.1 s. Decided: **0 of 87 rows across four
+divisions**, Wilson 95 % `[0 %, 4.2 %]`. Those files are out of reach of every
+budget policy on this rung.
+
+| division | n | base | ceiling | net | gain | loss | flips |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| UFNIA | 200 | 54 | 54 | +0 | 1 | 1 | 0 |
+| UFLIA | 200 | 73 | 75 | **+2** | 2 | 0 | 0 |
+| UF *(control)* | 200 | 90 | 90 | +0 | 0 | 0 | 0 |
+| AUFLIA *(control)* | 200 | 86 | 86 | +0 | 0 | 0 | 0 |
+
+0 disagreements and 0 sat↔unsat flips in 1,600 solves. Neither control is vacuous
+(`q:uf-fmf-full` binds 26 of `UF`'s undecided rows, `q:mbqi` 65 of `AUFLIA`'s).
+Noise floor, three base-arm runs of `UFNIA`: 54/53/53, **band 1 file** — and the
+one churning file is the same one the A/B called a loss and the re-check called
+UNSTABLE. After 3×-per-arm re-checks: **+2 confirmed, +1 unconfirmed (ADR-1957),
+0 stable losses**.
+
+**Ships OFF.** Every gain came from a *different* family, and the mechanism is
+measured **non-monotone**: round admission consults the remaining budget
+(`qinst_egraph.rs:2267`) and breaks to a final ground check, so the ceiling arm
+admits **391 rounds and 787 ground terms** on `f2_rw120` and still refutes
+nothing. **The vein is instance selection, not clock.** Sizing and decision rule
+were pre-registered before any solver ran; the realised +2 falls in a gap the
+rule did not specify, and both readings are recorded rather than one chosen after
+the fact. [ADR-1995].
 
 **Also measured, and the best-sized thing this lane touched:** the five `UFNIA`
 rows that die in 107 ms on the `distinct` pair-expansion cap are **four files z3

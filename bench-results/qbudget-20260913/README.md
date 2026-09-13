@@ -114,8 +114,176 @@ typo degrades to today's behaviour rather than selecting an arm nobody chose.
 remaining root clock. Nothing on that rung can grant the loop more, and unlike
 ADR-1970's it does not route the clock back through the thing it took it from.
 
-PLACEHOLDER — sections 5 onward (the A/B, controls, noise floor, re-checks, the
-non-monotonicity finding and the decision) are filled when the sweeps finish.
+## 5. The A/B
+
+Interleaved per-file, **one binary and two env values**, arms back to back on the
+same file on the same pinned physical core with the order alternating, 24 s wall
+/ 8 GiB `ulimit -v`, 8 shards on s5 and s6.
+
+| division | n | base | ceiling arm | net | gain | loss | sat↔unsat flips |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `UFNIA` | 200 | 54 | 54 | **+0** | 1 | 1 | 0 |
+| `UFLIA` | 200 | 73 | 75 | **+2** | 2 | 0 | 0 |
+| `UF` *(control)* | 200 | 90 | 90 | **+0** | 0 | 0 | 0 |
+| `AUFLIA` *(control)* | 200 | 86 | 86 | **+0** | 0 | 0 | 0 |
+
+**Soundness, with the comparable denominator on the same line ([ADR-1957]):**
+
+    UFNIA  :status 15/15 base 14/14 arm | UFLIA 73/73 and 75/75
+    UF     :status 88/88 base 88/88 arm | AUFLIA 86/86 and 86/86
+    DISAGREEMENTS: 0.   sat<->unsat flips: 0 in 1,600 solves.
+
+### The arm does what it is designed to do
+
+Measured at the rung and on the clock, so "the lever is live" is not assumed:
+
+| | base | ceiling arm |
+|---|---:|---:|
+| retry budget, read at the dispatch site | 8.83 s | **16.17 s** |
+| `UFNIA` target-family median wall | 15,325 ms | **24,135 ms** |
+| `UFLIA` target-family median wall | 21,279 ms | **24,231 ms** |
+
+### And it decides zero of the family it was built for
+
+| division | target-family rows | median ms unspent | decided by the ceiling arm |
+|---|---:|---:|---:|
+| `UFNIA` | 37 | 8,675 | **0** |
+| `UFLIA` | 24 | 2,721 | **0** |
+| `AUFLIA` *(control)* | 21 | 8,975 | **0** |
+| `UF` *(control)* | 5 | 3,071 | **0** |
+| **total** | **87** | | **0** |
+
+Wilson 95 % on 0/87 is **`[0 %, 4.23 %]`** — at most 3.7 files, point estimate
+zero. Because `share = 1` is a genuine one-way ceiling on this rung, **these 87
+files are out of reach of every budget policy on it at this wall budget.**
+
+The controls were not expected to carry this family at all; `AUFLIA` supplying 21
+more rows of it is a finding the lane did not go looking for.
+
+Every row that *did* move came from a **different** family:
+
+| file | direction | base give-up family |
+|---|---|---|
+| `UFNIA t3_rw1159` | gain | quantified solve time budget (ROOT deadline) |
+| `UFNIA z3.885941` | apparent loss | — (base `unsat`) |
+| `UFLIA javafe…TagConstants.001` | gain | quantified solve time budget (ROOT deadline) |
+| `UFLIA smtlib.993567` | gain | query has quantifiers instantiation does not reach |
+
+## 6. Controls, and why neither is vacuous
+
+`UF` is the control that could actually **lose**: it is the pure-UF division where
+`q:uf-fmf-full` — the rung whose reserve this arm spends — is the one that
+decides. `AUFLIA` is [ADR-1970]'s quantified control. The hit rates are published
+beside the nulls:
+
+- **`UF`**: `q:uf-fmf-full` binds **26** of its 110 undecided rows,
+  `q:uf-fmf-probe` another **29**. The reserve protects something live here.
+  Movement: **0 gains, 0 losses.**
+- **`AUFLIA`**: `q:mbqi` — where the retry lives — binds **65** of 114.
+  Movement: **0 gains, 0 losses.**
+
+`UF`'s own largest family is **69 rows** of `e-matching instantiation reached
+fixpoint` with a median 10,476 ms unspent — the exit whose own documentation says
+*"more rounds, and more clock, are both worth exactly zero. The gap is instance
+selection or trigger coverage."*
+
+## 7. Noise floor — measured, one whole division, three times
+
+    UFNIA base-arm totals:  54 / 53 / 53        BAND: 1 file
+    files that disagree with themselves:  1     (z3.885941)
+    sat<->unsat between runs of the SAME arm: 0
+
+The single churning file is `z3.885941` — the same file the A/B recorded as the
+one `UFNIA` loss, and the same file the re-check called UNSTABLE. Three
+instruments that share no mechanism agree it is the machine.
+
+## 8. Every moved row, three runs per arm, against three authorities
+
+    rows re-checked: 4   GAIN 3   LOSS 0   UNSTABLE 1   CONTRADICTED 0
+    NO INDEPENDENT CHECK AT ANY BUDGET (ADR-1957): 1 of 4  <-- VACUOUS for that row
+
+| row | base ×3 | arm ×3 | verdict |
+|---|---|---|---|
+| `UFNIA z3.885941` | unknown, unknown, unsat | unknown, unknown, unsat | **UNSTABLE** |
+| `UFLIA javafe…001` | unknown ×3 | unsat ×3 | **GAIN**, all three authorities `unsat` |
+| `UFLIA smtlib.993567` | unknown ×3 | unsat ×3 | **GAIN**, all three authorities `unsat` |
+| `UFNIA t3_rw1159` | unknown ×3 | unsat ×3 | **GAIN, UNCONFIRMED** — nothing decides it at 24 s or 600 s |
+
+Re-checked effect over the 400 primary files: **+2 confirmed, +1 unconfirmed, 0
+stable losses.**
+
+## 9. The finding that outlives the null: the verdict is not monotone in the budget
+
+Round admission asks whether another round fits **with growth headroom** against
+the *remaining budget* (`qinst_egraph.rs:2267-2269`), then breaks to a **final
+ground check** over everything accumulated — whose own code records the hazard:
+*"the full-set final check over a near-cap conjunction is itself a wall (measured
+26.7 s-then-unknown over 8192 conjuncts)"* (`qinst_egraph.rs:4081`).
+
+So the share changes the **number of rounds admitted**, hence the **size of the
+ground set the final check is handed**. Measured on `f2_rw120`
+(`qprobe/loop-exit.tsv`):
+
+| arm | wall | verdict | `n_exits` | loop exit | rounds | ground |
+|---|---:|---|---:|---|---:|---:|
+| base | 15,217 ms | unknown | 1 | `Fixpoint` | 37 | 14 |
+| ceiling | 24,222 ms | unknown | 2 | `GrowthHeadroom` | **391** | **787** |
+
+**Ten times the rounds, fifty times the ground set, the same verdict.**
+
+`n_exits` is load-bearing, and its absence was a defect in the first version of
+this probe: the loop runs twice, and an invocation killed at a **round head**
+returns before the exit line is printed (`qinst_egraph.rs:2256-2258`). So the
+base row's `Fixpoint / 37 / 14` is the `q:egraph` **rung's** exit, not the
+retry's. Reading it as the retry's was the first error the column was added to
+prevent.
+
+## 10. The decision
+
+**Ship the lever OFF**, registered and gated so the next lane can re-ask with one
+environment variable. The reasoning, the pre-registered rule the realised +2 falls
+between, and the one narrow follow-up question are in
+[ADR-1995](../../docs/research/09-decisions/adr-1995-the-instantiation-loops-verdict-is-not-monotone-in-its-budget.md).
+
+**Do not reach for a clock on this rung.** The ceiling is one-way and worth zero
+on the family that looks clock-bound. The vein is instance *selection*.
+
+## 11. Method
+
+- **Population.** The pinned lists `../parity-lists/{UFNIA,UFLIA,UF,AUFLIA}.txt`,
+  committed before any board was measured. Not re-sampled, never read as a prefix.
+- **Envelope.** 24 s wall, 8 GiB `ulimit -v`, one pinned **physical** core
+  (`c,c+8`), wrapper timeout 24 + 16 s — identical to the pinned boards, so a row
+  here is comparable to the board row it came from.
+- **Binary.** `build.sh` refuses to publish a binary that is not newer than every
+  `crates/**/*.rs`. **One binary for every arm and every run**, built at
+  `7276aaa7a`. The only source change after it is a comment (`eeb39c57f`) plus a
+  hook and documents; no measured behaviour moved.
+- **Branch.** `git merge-base main HEAD` is `main`'s HEAD (`e542fdc3d`), so the
+  base arm measures the tree that ships. `origin/main` is `76f4f22c6`; local
+  `main` is one bench-results commit ahead.
+- **Polarity.** The lever **ships OFF**; base is `env -u`, the measured arm is
+  `=1`. `ab-run.sh`'s header says so in a block of its own.
+- **Placement.** One division at a time per host, because `launch-ab.sh` restarts
+  shard numbering per division. s5 and s6, four core pairs each; s7 only for
+  single-core probes.
+- **Merging.** `merge-division.py` ABORTS unless the shards cover the pinned list
+  exactly. `ab-summarize.py`, `confirm-summarize.py` and `noise-summarize.py` all
+  carry finding-dependent exit statuses.
+
+## 12. Files
+
+| path | what |
+|---|---|
+| `PREREGISTRATION.md` | the sizing, committed before this lane ran the solver once |
+| `PREREGISTRATION-ADDENDUM.md` | what merging `main` (ADR-1975/1980) does to it, still before the first run |
+| `ab/*.tsv` | the interleaved A/B, per file, both arms, with `bound_by` and the give-up string on each |
+| `noise/*.tsv` | three base-arm readings of `UFNIA` |
+| `moved/confirm.raw.tsv` | every moved row, 3 runs per arm plus both references |
+| `qprobe/*.tsv` | the rung budgets, and the round/ground counts per arm |
+| `distinct/references.tsv` | z3 and cvc5 on the five `distinct`-capped files |
+| `DISTINCT-ENCODING.md` | that handoff: the design, the polarity trap, and the measured sizing |
+| `*.sh` `*.py` | the measurement and every derivation |
 
 [ADR-1970]: ../../docs/research/09-decisions/adr-1970-the-egraph-rung-eats-the-quantified-clock-to-decide-one-file-in-two-hundred.md
 [ADR-1975]: ../../docs/research/09-decisions/adr-1975-valid-universal-elimination-spends-24-seconds-to-prevent-a-107-millisecond-refutation.md
