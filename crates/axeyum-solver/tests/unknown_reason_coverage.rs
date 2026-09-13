@@ -69,25 +69,38 @@ use axeyum_solver::{
 /// distinctness, injectivity and `is_c(o) /\ fields agree`, so that script
 /// decides `sat` (z3 and cvc5 agree) and all three tests below went red.
 ///
-/// The current script is the rung after it, and it is the rung the ADR-1942
-/// sizing census MEASURED as next — a UF applied to another function's
-/// datatype-VALUED RESULT, `p(g(a))`, which is 57 of those same 173 files and
-/// the capability ADR-1935 refused by name. When that lands this fixture will
+/// **Replaced a FOURTH time, and the third replacement's own prediction is what
+/// came true.** That replacement was `p(g(a))` with `g : Int -> Pair` — a UF
+/// applied to another function's datatype-VALUED RESULT — chosen because the
+/// ADR-1942 sizing census measured it as the next rung. ADR-1946
+/// (`dt-valued-result`) built exactly that: `ackermannize_datatype_applications`
+/// runs BEFORE `scan_fragment`, so the witness for `g(a)` is an ordinary free
+/// datatype variable by the time the scan sees it, and that script now decides
+/// (z3 and cvc5 agree) with both tests below going red.
+///
+/// The current script is the rung after THAT, and it is again the rung the
+/// sizing measured as next: a UF applied to a term over a datatype with a
+/// DATATYPE-TYPED FIELD, whose tag/field expansion is not exact. It is the
+/// largest remaining blocker in the DT divisions by a wide margin — 152 of the
+/// 412 undecided files in the ADR-1946 census carry a variable argument of such
+/// a datatype and 147 carry a result of one — and it needs a capability neither
+/// of the last three built: exact RECURSIVE equality, by bounded unfolding with
+/// a depth certificate or a native datatype theory with congruence and
+/// acyclicity (ADR-1935's "third capability"). When that lands this fixture will
 /// decide too — replace it again and add a line here rather than reaching for a
 /// shape the solver will never support, because a fixture that can never be
-/// overtaken is testing nothing anybody is trying to fix. Three replacements in
+/// overtaken is testing nothing anybody is trying to fix. Four replacements in
 /// two days is the intended failure mode, not a defect in this suite.
 ///
 /// Kept inline rather than pointed at the corpus, so the gate does not depend
 /// on a `/nas3` mount that most hosts do not have.
 const DISPATCH_ERROR_SCRIPT: &str = r"
 (set-logic QF_UFDT)
-(declare-datatypes ((Pair 0)) (((mk (fst Int) (snd Int)))))
-(declare-fun g (Int) Pair)
-(declare-fun p (Pair) Bool)
-(declare-const a Int)
-(assert (p (g a)))
-(assert (not (p (g 0))))
+(declare-datatypes ((Lst 0)) (((nil) (cons (hd Int) (tl Lst)))))
+(declare-fun p (Lst) Bool)
+(declare-const x Lst)
+(assert (p (cons 0 x)))
+(assert (not (p (cons 0 nil))))
 (check-sat)
 ";
 
