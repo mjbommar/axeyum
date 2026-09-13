@@ -49,6 +49,7 @@ def main():
     print(hdr)
     print("-" * len(hdr))
     tot_proj, tot_pop, missing = 0, 0, []
+    tot_w, tot_nested = 0, 0
     for div, pop in ARRAY_DIVS.items():
         cp = HERE / "census" / f"{div}.tsv"
         wp = HERE / "winnable" / f"{div}.txt"
@@ -66,6 +67,8 @@ def main():
         proj = round(nested / SAMPLE * pop)
         tot_proj += proj
         tot_pop += pop
+        tot_w += win
+        tot_nested += nested
         print(f"{div:9s} {pop:8,d} {SAMPLE:8d} {win:9d} {nested:7d}"
               f" {nested / win:7.0%} {nested / SAMPLE:10.1%} {proj:18,d}")
     print("-" * len(hdr))
@@ -75,6 +78,13 @@ def main():
               f" and is a PARTIAL figure")
     print(f"{'TOTAL':9s} {tot_pop:8,d} {'':>8s} {'':>9s} {'':>7s} {'':>8s}"
           f" {'':>10s} {tot_proj:18,d}")
+    # The share across the four array divisions TOGETHER.  Written out because
+    # the first draft of the README computed this by hand and got the
+    # denominator wrong (375 for 379), which moved the figure from 96 % to
+    # 97 %.  A number worth quoting is a number worth deriving.
+    if tot_w:
+        print(f"\nnested-array share across these four divisions: "
+              f"{tot_nested} of {tot_w} winnable rows = {tot_nested / tot_w:.1%}")
     print(f"\nprojected CEILING {tot_proj:,} of the brief's"
           f" {sum(ARRAY_DIVS.values()):,} "
           f"({tot_proj / sum(ARRAY_DIVS.values()):.0%})")
