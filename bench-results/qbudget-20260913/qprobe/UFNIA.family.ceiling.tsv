@@ -1,0 +1,5 @@
+file	wall_ms	verdict	mbqi_rung	mbqi_shape_exit	retry_budget	retry_elapsed	retry_result
+UFNIA/2019-Preiner/full/f2_rw120.smt2	24222	unknown	state=entered,budget_ms=2999	quantifier-below-top-level	Some(16.187349112s)	16.382320457s	e-matching instantiation stopped after 393 rounds: the remaining budget could not fit another round with growth headroom
+UFNIA/2019-Preiner/full/t3_rw1240.smt2	24124	unknown	state=entered,budget_ms=2999	quantifier-below-top-level	Some(16.193896512s)	16.210170616s	e-matching: instantiation time budget exhausted
+UFNIA/2019-Preiner/full/t3_rw189.smt2	24028	unknown	state=entered,budget_ms=2999	quantifier-below-top-level	Some(16.157432757s)	16.163154455s	e-matching: instantiation time budget exhausted
+UFNIA/2019-Preiner/full/t3_rw25.smt2	24117	unknown	state=entered,budget_ms=2999	quantifier-below-top-level	Some(16.182628369s)	16.188409228s	e-matching: instantiation time budget exhausted
