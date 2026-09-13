@@ -317,6 +317,14 @@ independently observable rather than all rejecting through one shared check.
   answer is `sat`, and producing that needs a model finder over quantifiers.
   That is a different kind of work from every nested-array lane so far: ADR-1965
   moved 273 verdicts and all 273 were `unsat`.
+* **Read the DECLINE TIME before sizing a rule.** The five files this gate's
+  whole opportunity consists of come back `unknown` in **0.11 s at a 300 s
+  budget** — a hundredth of a percent of the budget. A rule is something a route
+  applies; when the dispatch ladder declines before any route runs, the rule
+  cannot be worth anything, and one `stat`-cheap column says so before an
+  instrument is built. Every nested-array lane so far has sized a capability by
+  reach and none by decline time, and decline time would have answered this one
+  in an afternoon.
 * **A refutation-only capability must be sized against the refutable
   denominator, not the winnable list.** This is the generalizable rule. ADR-1957
   established that a zero-disagreement claim must publish its comparable
