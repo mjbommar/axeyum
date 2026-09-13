@@ -81,3 +81,67 @@ cannot reach a 0.1 s front-door refusal. The verdict each file then reaches is
 *not* predicted here — clearing the front door hands the query to the quantified
 ladder, which may well spend its 24 s and return `unknown`. That is the second
 half of the measurement and must be run, not assumed.
+
+## Addendum (same lane, after reading the IR): the pieces all exist
+
+Three things I did not know when the section above was written, each of which
+shortens the work:
+
+1. **The polarity problem has a structural answer already in the parser.**
+   `parse.rs`'s command loop has an `"assert"` arm (`parse.rs:6251`) that holds
+   the assertion's `SExpr` *body* before it is parsed. A `distinct` application
+   that is the whole body of an `(assert …)` is in positive polarity **by
+   construction**, including under `push`/`pop`. So scoping 1 is a test on that
+   `SExpr`, not a polarity analysis — and the five rows above are all exactly
+   this shape, because that is how Boogie emits the axiom.
+
+2. **The fresh symbol has a purpose-built constructor.**
+   `TermArena::declare_internal_fun` (`crates/axeyum-ir/src/arena.rs:1800`)
+   declares an uninterpreted function *in a namespace disjoint from user
+   declarations*, sharing one `FuncId` across repeated identical declarations so
+   congruence is preserved. That is exactly the `f` the encoding needs, and it
+   removes the "what if the user declared `f`" objection entirely. Note that
+   name-sharing means two different `distinct` applications must be given
+   **different** internal names, or they would be forced onto one injection.
+
+3. **Model replay is unaffected, for a reason worth stating.** `check_model`
+   evaluates the assertions the front door produced, which under this rewrite
+   are the rewritten ones — so `f` is in the model and the conjunction evaluates.
+   Nothing has to hide `f` from the replay; it only has to stay out of the user's
+   `get-model` surface, which the internal namespace is what it is for.
+
+**What is still genuinely unfinished:** the soundness-negative test. It must be a
+**negated** large `distinct` over a **satisfiable** query, asserting the VERDICT
+— because `sat` is precisely what the polarity bug produces, and a test that only
+checks "the file parsed" cannot fail on the bug it exists to catch. Alongside it,
+an `unsat` twin differing in one small term, so the pair cannot be passed by a
+solver that answers `unknown` to both.
+
+**This lane did not implement it.** The budget measurement is the lane's primary
+deliverable and it took the compute window. The above is a handoff, and its
+sizing — 4 winnable `UFNIA` rows, deterministic, 0.1 s each — is unchanged.
+
+## The sizing, MEASURED rather than inherited (`distinct/references.tsv`)
+
+The "4 winnable" above came from another lane's winnable set. Re-derived here by
+running both references on all five files at the board envelope:
+
+| file | `:status` | z3 | cvc5 |
+|---|---|---|---|
+| `lahiri…/serial_write_example_cegar_2_2_2` | unknown | **no verdict** at 24 s | **no verdict** at 24 s |
+| `lahiri…/usbsamp_bug_example_2_3_8_1` | unsat | unsat in **508 ms** | unsat in **211 ms** |
+| `lahiri…/usbsamp_example_2_3_4_0` | unsat | unsat in **309 ms** | unsat in **310 ms** |
+| `spec_sharp/test14-CommandLineOptions…` | unsat | unsat in **111 ms** | unsat in **109 ms** |
+| `spec_sharp/test14-Xml.ssc…` | unsat | unsat in **309 ms** | no verdict at 24 s |
+
+**Four of the five are refuted by z3 in 111–508 ms**, three of them by cvc5 as
+well, and all four declare `:status unsat`. These are not hard queries. We refuse
+them at the front door in 107 ms and never reach a solver at all, on a
+deterministic ingest cap whose only cause is that the encoding is quadratic.
+
+That makes this handoff **4 rows that two independent solvers decide in under
+600 ms**, not 4 rows of unknown difficulty — and it is the strongest sizing on
+anything this lane looked at.
+
+The fifth (`serial_write_example_cegar_2_2_2`, `:status unknown`) is out of reach
+of both references at this budget and is **not** counted in the 4.
