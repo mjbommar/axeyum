@@ -644,8 +644,16 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #                              mixed). Added 2026-09-12 BY THE RATCHET, which
   #                              refused the push until this suite was named —
   #                              its first real catch.
+  #   dt_valued_result_1946    — ADR-1946: a datatype-VALUED UF result, and the
+  #                              `Op::Apply` datatype argument its witness makes
+  #                              admissible. Worth +35 files across the three DT
+  #                              divisions, so a silent regression here is a
+  #                              division-scale loss. Named at the same time as
+  #                              the suite was written rather than after the
+  #                              ratchet refused the push — which is what the
+  #                              ratchet is for.
   for suite in unknown_reason_coverage dt_uf_gate dt_capability_1935 \
-               dt_constructor_arg_1942 \
+               dt_constructor_arg_1942 dt_valued_result_1946 \
                datatype_solve_path quant_ladder_rung_refusal_declines \
                additive_no_overflow_never_becomes_unsat; do
     gated_test "dispatch/reason: $suite" \

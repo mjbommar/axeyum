@@ -614,24 +614,49 @@ fn refusal_names_the_datatype_valued_result() {
     // So the route is called directly. What is pinned is that the datatype
     // route REFUSES this shape and says why, which is what a blocker census
     // reads.
+    //
+    // **The fixture moved on 2026-09-12 and the ARM being pinned did not.** It
+    // was `fr1935 : Color -> Box1935m` with `Box1935m = mk(v : Int)` — a
+    // datatype-valued result over an EXACT datatype, which ADR-1935 refused
+    // outright. ADR-1946 (`dt-valued-result`) built exactly that capability: the
+    // witness is a fresh free datatype variable and the pre-pass runs BEFORE
+    // `scan_fragment`, so that query now decides and this test would have failed
+    // for the good reason. It is retargeted rather than deleted, the way
+    // ADR-1942 retargeted `refusal_names_the_non_variable_datatype_argument`
+    // below: the arm is the same one — the RESULT-sort check in
+    // `collect_ackermann_groups` — and it still fires, one shape further out, on
+    // a result datatype whose expansion is NOT exact.
+    //
+    // The exact wording ADR-1946 gave it, and the array-over-a-datatype arm it
+    // split out, are pinned in `tests/dt_valued_result_1946.rs`; what is pinned
+    // HERE is only that a datatype-valued result still has a refusal of its own
+    // to reach.
     let mut arena = TermArena::new();
     let (dt, _, _) = color(&mut arena);
-    let boxed = arena.declare_datatype("Box1935m");
-    let mk = arena.add_constructor(boxed, "mk", &[("v".to_owned(), Sort::Int)]);
+    let lst = arena.declare_datatype("Lst1935m");
+    arena.add_constructor(lst, "nil", &[]);
+    let cons = arena.add_constructor(
+        lst,
+        "cons",
+        &[
+            ("hd".to_owned(), Sort::Int),
+            ("tl".to_owned(), Sort::Datatype(lst)),
+        ],
+    );
     let func = arena
-        .declare_fun("fr1935", &[Sort::Datatype(dt)], Sort::Datatype(boxed))
+        .declare_fun("fr1935", &[Sort::Datatype(dt)], Sort::Datatype(lst))
         .expect("declare f");
     let x = var_of(&mut arena, "x", Sort::Datatype(dt));
     let fx = arena.apply(func, &[x]).expect("apply");
-    let field = arena.dt_select(mk, 0, fx).expect("select");
+    let field = arena.dt_select(cons, 0, fx).expect("select");
     let five = arena.int_const(5);
     let is_five = arena.eq(field, five).expect("eq");
 
     let got = check_with_datatype_native(&mut arena, &[is_five], &cfg());
     let detail = refusal_detail(got);
     assert!(
-        detail.contains("RESULT sort mentions a datatype"),
-        "the refusal must name the result sort, got: {detail}"
+        detail.contains("RESULT datatype"),
+        "the refusal must name the result datatype, got: {detail}"
     );
 }
 
