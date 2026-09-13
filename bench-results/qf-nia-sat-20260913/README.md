@@ -155,7 +155,10 @@ quote a point estimate.
 
 The surrogate's first control re-checked each transformed file against z3 and
 cvc5 and compared to the original's `:status`: **0 disagreements on 29 of 29,
-0 files where neither reference had an opinion.**
+0 files where neither reference had an opinion.** Per reference, which is the
+number that has to be quoted beside a zero: all 29 declare `:status sat`, z3
+answers `sat` on **29 of 29 (no opinion 0)**, cvc5 on **12 of 29 (no opinion 17**
+— it hit the 60 s limit on the rest**)**.
 
 That zero is worthless on its own. Mutating the case-split scaling so `a = k`
 implies `r = (k+1)·b` — a plainly wrong linearization — **also** produced
@@ -239,7 +242,8 @@ The census itself reuses `scripts/qf-nia-dispatch-census.py` unchanged.
   two measured halves. It assumes the split costs nothing to apply, which was
   true offline (transform time ≈ 0.0 s) but is not free inside the blaster.
   It is therefore optimistic, which is the safe direction for a "do not build".
-- cvc5 timed out at 60 s on 5 of the 7 surrogate winners, so for those the
-  transformed-query confirmation rests on z3 and the declared `:status` alone.
+- cvc5 timed out at 60 s on **17 of the 29** transformed queries (5 of the 7
+  winners), so for those the confirmation rests on z3 and the declared `:status`
+  alone. z3 had an opinion on all 29.
   The strong evidence for a `sat` is a replaying model, not a reference verdict,
   and no model is claimed here — nothing in this directory ships a verdict.
