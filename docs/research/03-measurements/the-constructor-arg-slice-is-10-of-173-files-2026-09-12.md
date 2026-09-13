@@ -91,6 +91,16 @@ has, which is the same file-level convention
 [the ADR-1920 sizing note](the-adr-1920-slice-is-6-of-600-files-2026-09-12.md)
 used.
 
+> **The paragraph above is WRONG and §7 corrects it. Read §7 before quoting any
+> number from §3 or §4 as a bound.** These predicates require EVERY entry into
+> the datatype route to be eligible, and on a quantified division the route is
+> entered once per instantiation round while the file needs only ONE of those
+> entries to succeed — so the figure is neither an upper nor a lower bound. The
+> A/B measured +10 against a strict prediction of 11 of which only 3 gained, and
+> all ten gains lie inside the loose (`any`) predicate's 65. The relative finding
+> the build order turned on — that slice A is slice B's prerequisite — holds
+> under either predicate.
+
 ## 3. The result
 
 The base arm reproduces ADR-1935's residual census exactly — 173 / 50 / 47 / 22,
@@ -165,3 +175,58 @@ remaining mass is, and it is not a slice of either of these.
 - The instrumentation binary is the same source as the base arm plus the census
   block, so the bucket column is directly comparable to ADR-1935's residual
   table — and it reproduces it (§3), which is the check that it is.
+
+## 7. AMENDED after the A/B: the per-file predicate is not an upper bound, and §2 said it was
+
+**Added 2026-09-12 after the ADR-1942 A/B, which measured +10 against this note's
+predicted 10 — the same number, on a DIFFERENT set of files.** The headline
+arithmetic (§3, §4) stands unchanged and is what redirected the work. One
+methodological claim in §2 does not, and it is corrected here rather than
+quietly edited, because the corrected version changes how the next lane should
+read a table like this one.
+
+§2 said the predicates "are upper bounds on what the corresponding change can
+decide". **That is false for a quantified division.** The datatype route is
+entered MANY times per file — MBQI and e-matching hand it a fresh residual after
+each round of instantiation — and a file decides when ONE of those entries is
+handled. This note's predicate requires EVERY entry to be eligible, which is
+neither an upper nor a lower bound on the file.
+
+Measured against the A/B's ten gains:
+
+| | AUFDTLIRA | UFDTLIRA | UFDT | total |
+|---|---:|---:|---:|---:|
+| **slice A, EVERY route entry eligible** (this note's §3) | 9 | 2 | 0 | **11** |
+| **slice A, ANY route entry eligible** | 20 | 21 | 24 | **65** |
+| actual gains | 2 | 6 | 2 | **10** |
+| … inside the EVERY predicate | | | | **3** |
+| … inside the ANY predicate | | | | **10** |
+
+So the honest bracket was **[3, 65]** and the answer was **10**. Seven of the
+eleven predicted files did not gain (they clear the pre-pass and stop at a later
+rung, which §2 did allow for), and seven of the ten that gained were outside the
+strict predicate entirely — including both `UFDT` files, a division this note
+predicted would gain **none**.
+
+The same correction applies to §4's slice-B numbers, which should be read as the
+same kind of bracket:
+
+| | AUFDTLIRA | UFDTLIRA | UFDT | total |
+|---|---:|---:|---:|---:|
+| slice B, EVERY route entry eligible | 101 | 44 | 31 | **176** |
+| slice B, ANY route entry eligible | 118 | 64 | 103 | **285** |
+
+and the 57 / 52 of §4 — both computed with the EVERY predicate over the 173 — are
+the conservative end of that bracket. The *relative* finding they were used for
+is unaffected and is what the build order turned on: slice A is a prerequisite of
+slice B under either predicate, because "also carries a constructor argument" is
+a property of the file, not of the predicate.
+
+`analyze-census.py` prints the EVERY figures; the ANY figures come from the same
+rows with `all(...)` replaced by `any(...)`.
+
+**The rule to carry forward.** A pass-level sizing over a QUANTIFIED division has
+to be quoted as a bracket, because the pass runs once per instantiation round and
+the file needs only one of those runs to succeed. Quoting the `all()` figure
+alone is the same class of error as quoting a blocker census as a fix count — it
+is a real number about the wrong population.

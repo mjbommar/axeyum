@@ -48,10 +48,66 @@ classifies EVERY such argument in the query instead.
 The base arm reproduces ADR-1935's residual census exactly (173 / 50 / 47 / 22,
 178 decided), which is the check that the two are measuring the same thing.
 
+### And what it got wrong
+
+The strict per-file predicate here (EVERY entry into the datatype route
+eligible) is neither an upper nor a lower bound on a QUANTIFIED division, because
+the route is entered once per instantiation round and the file needs only one of
+those entries to succeed. It named 11 files and 3 of them gained; all 10 actual
+gains lie inside the loose (`any`-entry) predicate's 65. The honest bracket was
+[3, 65] and the answer was 10. §7 of the note carries the correction and the
+rule; the relative finding the build order turned on is unaffected.
+
 ## The A/B
 
-**Not yet run at this commit.** The sizing above is committed first, on purpose:
-ADR-1935's headline lesson is that a blocker count is not a reachable-fix count,
-and a sizing published after the gain it predicts is not a prediction. The A/B
-protocol, rows, and oracle re-validation land in `ab/` in a later commit on this
-lane, and this README is extended then.
+Protocol inherited unchanged from
+[`../dt-capability-20260912/`](../dt-capability-20260912/README.md), which is
+what makes the numbers comparable to ADR-1935's:
+
+* the committed parity lists, unsampled — `../parity-lists/{AUFDTLIRA,UFDTLIRA,UFDT,QF_DT,UF}.txt`,
+  200 files each, `QF_DT` and `UF` as **controls**;
+* both arms finish file N before either starts N+1, on the same pinned core
+  pair, with the arm that goes first alternating per file;
+* 10 s wall, 8 GiB, 16 s wrapper headroom, every run recording its own outcome;
+* twelve modulo-interleaved shards per division, four per box on `s5`/`s6`/`s7`.
+
+Runner `ab/ab-shard.sh`, `ab/run-host.sh`; analysis `ab/analyze.py` (the same
+script ADR-1935's A/B used); rows `ab/out/<division>.tsv`, one per file carrying
+both arms' verdict, wall time and give-up reason.
+
+| division | n | base | new | delta | gain | loss | flip | base wall | new wall |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| AUFDTLIRA | 200 | 69 | **71** | **+2** | 2 | 0 | 0 | 223 s | 257 s |
+| UFDTLIRA | 200 | 82 | **88** | **+6** | 6 | 0 | 0 | 124 s | 124 s |
+| UFDT | 200 | 27 | **29** | **+2** | 2 | 0 | 0 | 484 s | 557 s |
+| QF_DT *(control)* | 200 | 169 | 169 | 0 | 0 | 0 | 0 | 52 s | 52 s |
+| UF *(control)* | 200 | 88 | 88 | 0 | 0 | 0 | 0 | 1,372 s | 1,371 s |
+
+**+10 net, 0 decided→undecided, 0 flips, 0 declared-`:status` disagreements
+anywhere in the 1,000 rows.** The base arm reproduces ADR-1935's committed
+new-arm rows exactly (69 / 82 / 27), which is the check that the two arms measure
+what that A/B measured.
+
+Every one of the 10 newly decided files was re-run at 24 s against BOTH oracles
+and its declared status (`ab/verify-gains.sh`, rows in `ab/verify-gains.tsv`).
+Units differ and getting one wrong cripples a reference silently, so `z3 -T:24`
+(SECONDS) and `cvc5 --tlimit 24000` (MILLISECONDS):
+
+| | rows |
+|---|---:|
+| axeyum `unsat` / z3 `unsat` / cvc5 `unsat` / declared `unsat` | **10 of 10** |
+| any disagreement, any pair | **0** |
+
+### Reading the wall figures
+
+`UFDTLIRA` is free (124 s → 124 s) and carries most of the gain; `AUFDTLIRA` and
+`UFDT` each pay about +15 % for two files, because a query that used to end at
+the shape refusal now runs further down the ladder. Both controls moved within
+noise.
+
+**One caveat specific to the seconds.** Another lane's benchmark process held
+100 % of one core on `s7` throughout. The per-file interleave with alternating
+arm order cancels that in the DIFFERENCE — which is why the verdict columns (0
+losses, 0 flips) are trustworthy — but it inflates both arms' absolute wall
+numbers on that host's four shards. Do not compare these seconds to another
+run's.
