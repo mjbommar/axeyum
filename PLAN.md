@@ -50035,12 +50035,14 @@ backgrounded attempt was killed mid-run and printed NO result line, which reads
 exactly like success), `dt_valued_result_1946` 12/12, `dt_capability_1935`
 20/20, `dt_constructor_arg_1942` 11/11, `dt_uf_gate` 10/10,
 `datatype_solve_path` 3/3, `quant_ladder_rung_refusal_declines` 3/3,
-`unknown_reason_coverage` 7/7, `clippy -p axeyum-solver --all-targets
---all-features -D warnings` clean, `cargo check --workspace --all-targets` clean,
-`cargo fmt --all --check` clean, `check-links.sh` all ok, `check-suite-gating.py`
-PASS (27 gated), `check-merge-hygiene.sh` PASS. **Not run:** `just check`,
-`progress_frontier`, and the z3 differential fuzzes — this change touches no
-linear-arithmetic route.
+`unknown_reason_coverage` 7/7, `progress_frontier --features full --
+--test-threads=1` under `taskset -c 0-7` 12/12 (the capability ratchet, which
+CLAUDE.md requires for a dispatch change — 309 s at load 7.6), `clippy -p
+axeyum-solver --all-targets --all-features -D warnings` clean, `cargo check
+--workspace --all-targets` clean, `cargo fmt --all --check` clean,
+`check-links.sh` all ok, `check-suite-gating.py` PASS (27 gated),
+`check-merge-hygiene.sh` PASS. **Did not run:** `just check`, and the z3
+differential fuzzes — this change touches no linear-arithmetic route.
 
 Sizing `0c96ac73e`, implementation `47f3d61d8`. Rows, runner, instrumentation,
 the prediction scorer and the wall-cost split:
