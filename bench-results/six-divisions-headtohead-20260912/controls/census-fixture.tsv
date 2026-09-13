@@ -1,0 +1,7 @@
+file	verdict	rc	attempts	decided_by	bound_by	last	bound_ms	total_ms	open_after	open_ms	deepest	giveup
+a.smt2	unknown	0	9	none	qf-bv	qf-bv	100	200	na	na	na	give-up kind=Incomplete detail=bit-blast too big
+b.smt2	unknown	0	3	none	dl-online	dl-online	1	400	dl-online	24596	dl-online:check	give-up kind=Watchdog detail=watchdog fired
+c.smt2	unknown	124	NOROUTE	na	na	na	na	na	na	na	na	none
+d.smt2	unsat	0	9	qf-bv	qf-bv	qf-bv	50	60	na	na	na	none
+e.smt2	unknown	0	6	none	dispatch-error	dispatch-error	1	2	na	na	na	give-up kind=Error detail=backend failure: array projection element sort mismatch
+f.smt2	unknown	0	6	none	qf-bv	qf-bv	40	45	na	na	na	give-up kind=Incomplete detail=ran to the end of a shorter ladder
