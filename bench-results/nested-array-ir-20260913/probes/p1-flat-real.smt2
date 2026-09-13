@@ -1,0 +1,5 @@
+(set-logic AUFLIRA)
+(declare-fun m () (Array Int Real))
+(declare-fun i () Int)
+(assert (not (= (select (store m i 1.0) i) 1.0)))
+(check-sat)

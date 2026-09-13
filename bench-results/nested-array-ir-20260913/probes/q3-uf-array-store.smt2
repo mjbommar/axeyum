@@ -1,0 +1,7 @@
+(set-logic ALIA)
+(declare-fun row (Int) (Array Int Int))
+(declare-fun i () Int)
+(declare-fun j () Int)
+(declare-fun v () Int)
+(assert (not (= (select (store (row i) j v) j) v)))
+(check-sat)
