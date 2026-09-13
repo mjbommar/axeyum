@@ -148,6 +148,7 @@ now. Nothing was deleted.
 | 2026-09-13 | nested-array-row | ADR-1965's named next gate — **outer read-over-write on a nested array** — SIZED and DECLINED, no solver code written; the instrument is the mirror of ADR-1965's (it CURRIES the outer level and performs read-over-write syntactically instead of deleting it), committed at `675282be2` before any change under `crates/`; **the gate is worth 0**, for two independent reasons: **39 of the 53 winnable ALIA+ABV files are SATISFIABLE** so a refutation mechanism has a ceiling of 220 rather than 934, and of the refutable remainder it reaches none — **5 ALIA files are refutable AND accepted AND had read-over-write performed for them and axeyum decided 0 of 5**, while the one ABV refutation is the file ADR-1965's surrogate already reached and has ZERO outer stores; soundness control z3-original vs z3-surrogate agrees **14/14, no opinion 13, CONTRADICTS 0**, non-vacuity carried by two REACH fixtures because AUFLIRA and AUFNIRA refuse **187/187** and **139/139** here; ten instrument mutations all `killed N` with eight killing exactly one; what the refusals name instead is outer array EQUALITY for ALIA/ABV and, where the files actually are, **quantified model construction** — 24 ALIA and 15 ABV winnable files are reference-`sat` and no array capability produces a `sat`; ADR-1971 |
 | 2026-09-13 | qf-ufbv-caps | ADR-1945: QF_UFBV **89 → 129 of 200** (gap to z3 85 → 45) from a path-specific `MAX_SCALAR_THEORY_ATOMS = 4_096`; node cap held (worth **+0** alone at 2x/4x/16x) and array atom cap held (a 25 s `Watchdog` regression, 0 of 9); 0 of 400 array files change verdict; 9,793 runs, 0 disagreements |
 | 2026-09-13 | quant-rounds | ADR-1950's top blocker re-measured: **0 of 177** rows are bound by the round ceiling (167 fixpoint, 5 clock), a 2x/4x/8x sweep gains **0** and loses **0**, and 88 % of the LRA family fixpoints with an EMPTY e-graph on quantifier-elimination benchmarks; `InstantiationLoopExit` splits the three exits that shared one give-up string, three `cap_lever!` levers with byte-identical defaults, ADR-1956 |
+| 2026-09-13 | ufnia-uflia | Tier-1 #2 and #3 censused over their WHOLE winnable sets (129 rows): the largest family in both — 23 rows each — is `q:egraph` holding a median **94 % / 88 %** of the 24 s budget, declining, and starving full MBQI and the finite-model finder, while that rung ENTERS 61 % of files and DECIDES **1 of 200** (`UFNIA`) and **8 of 200** (`UFLIA`). The ladder reserve that implies is built as a one-binary env lever (`AXEYUM_QUANT_EGRAPH_RESERVE`, default OFF) and **sized by its own one-way CEILING arm**: `46 blocked rows → +4 / −2 over 400 files` after re-running every moved row 3x per arm, `UFLIA` net zero, quantified `AUFLIA` control (route hit rate 57 %) flat at 0/0, **0 sat↔unsat flips in 1,200 solves**. A measured DO NOT BUILD. Two labels corrected: ADR-1957's "`UFNIA` is genuinely clock-bound" is half right (18-row second family gives up with a median **8,768 ms of 24,000 unspent**), and **0 of 129** rows reach the instantiation round ceiling, so ADR-1956 holds on two more divisions; ADR-1970 |
 | 2026-09-12 | `26d75f328` | ADR-1920 + the UFDT measurement note; `parity-run.sh` routes the DT divisions to cvc5 rather than a non-competing z3 |
 | 2026-09-12 | `21e258c57` | datatype-sorted UF params/results admitted; capability gate moved into `datatype_native` with a termination guard that also fixes a pre-existing array-of-datatypes stack overflow; `tests/dt_uf_gate.rs` (9) |
 | 2026-09-12 | `f6e616c0e` | `QF_DT` wrong `unsat` #1: an unspecified selector read is model-chosen, not defaulted (ADR-1930) |
@@ -67420,6 +67421,78 @@ Per-file artifacts in `bench-results/parity-losses-20260906/`.
 | `5483ceb12` | All 32 classified; the 50.4% finite-model finding |
 | `a9aa0c557` | The 24 axeyum-only wins A/B; the finder is their sole producer |
 | (this) | The loss A/B, the design-review note, and `uf.md`'s Cause and Lever |
+
+**Lane ufnia-uflia (`DONE`, ufnia-uflia, 2026-09-13).** `UFNIA` and `UFLIA` are
+censused over their **whole** winnable sets (129 rows, not a sample) on the
+current tree. The largest family in both — 23 rows each — is attributed to ONE
+route: **`q:egraph` holds a median 94 % / 88 % of the 24 s budget on 44 of those
+46 rows, declines, and leaves full MBQI and the finite-model finder nothing.**
+The same run measures what that budget buys: the rung is entered on ~61 % of
+files and decides **1 of 200** (`UFNIA`) and **8 of 200** (`UFLIA`).
+
+The ladder reserve that implies was built as a one-binary env lever and **sized
+by its own CEILING arm**: `46 blocked rows → +4 / −2 over 400 files` after
+re-checking, `UFLIA` net zero, and a quantified `AUFLIA` control flat at 0/0.
+**The lever ships OFF.** A measured *do not build this*.
+
+ADR: [ADR-1970](docs/research/09-decisions/adr-1970-the-egraph-rung-eats-the-quantified-clock-to-decide-one-file-in-two-hundred.md)
+· artifact: [`bench-results/ufnia-uflia-census-20260913/`](bench-results/ufnia-uflia-census-20260913/README.md)
+
+## The board rows
+
+| division | files | axeyum (here) | axeyum (pinned) | z3 | cvc5 | best ref | winnable |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| UFNIA | 13,464 | **53** | 53 | 96 | 94 | 114 | 61 |
+| UFLIA | 10,128 | **76** | 71 | 139 | 142 | 144 | 68 |
+
+`UFNIA` reproduces ADR-1957's Tier-1 board exactly — the cross-check that this
+lane's harness measures the same thing. `UFLIA` is +5 on board-six's row, from
+other lanes' work landed since.
+
+## The census, and the two labels it corrects
+
+    by kind:  CLOCK 81   SHAPE 14   PARSE 2   OTHER 2   ROUND 1
+              UNCLASSIFIED (ADR-1941) 29      no route trail 0
+
+- **ADR-1957's "`UFNIA` is genuinely clock-bound" is half right.** Its 23-row
+  first family gives up a median **61 ms past** the deadline; its 18-row second
+  family (`e-matching: instantiation time budget exhausted`) gives up with a
+  median **8,768 ms of 24,000 unspent**. ADR-1950's falsification mechanism
+  firing on a family name again. No larger wall budget reaches those 32 rows.
+- **ADR-1956 holds on two more divisions: 0 of 129 rows reach the instantiation
+  round ceiling.** `AXEYUM_QINST_ROUNDS` buys nothing here.
+- **No nested-array refusal in either division** — 0 of 129 — so ADR-1965's
+  20,399-file ceiling does not reach these rows.
+- ADR-1941 is doing real work: the `attempts=`-only rule would discard 121 of
+  129 rows and leave `UFNIA`'s census with one.
+
+## What landed
+
+| what | where |
+|---|---|
+| `QuantEgraphReservePolicy` + `AXEYUM_QUANT_EGRAPH_RESERVE`, default `WholeBudget` | `crates/axeyum-solver/src/auto.rs` |
+| `QUANT_EGRAPH_LADDER_RESERVE_SHARE` registry entry, dated to the artifact | `crates/axeyum-solver/src/config_registry.rs` |
+| soundness-negative suite, all three arms, `Sat` fixtures pinned `Sat` | `crates/axeyum-solver/tests/quant_egraph_reserve_row.rs` |
+| suite registration | `hooks/pre-push` |
+| `quant-egraph-reserve`: 3 mutations, **3 killed, exactly 1 test each** | `scripts/tests/mutation_controls.py` |
+| census, A/B, control, re-checks and every derivation script | `bench-results/ufnia-uflia-census-20260913/` |
+
+Gates, each with its own `test result:` line: solver `--lib --features full`
+**1736 passed**, `corpus_regression` 2, `quantifiers` 6, `quant_bool_model_sat`
+15, `quant_ladder_rung_refusal_declines` 3, `dispatch_rung_refusal_declines` 2,
+`unknown_reason_coverage` 7, `quant_egraph_reserve_row` 6, `config_registry` 18.
+`check-suite-gating.py` PASS, `check-links.sh` all links ok. No linear-arithmetic
+code was touched, so the five z3 differential fuzzes **did not run**.
+
+## The next lane on these divisions should not build a scheduling fix
+
+The 46-row family is attributed and its ceiling is measured. What is left is the
+32-row family that stops with a third of the clock unspent — whose remedy is a
+rung that does not exist, not a budget — and the 29 UNCLASSIFIED rows. The one
+thing the ceiling arm does **not** rule out is instance *selection*, which
+`uf-quantified-loss-attribution-2026-09-09` named for `UF`; `q:egraph`'s 61 %
+entry rate against its 0.5–4 % decision rate is now the denominator to measure
+that against.
 
 Status: DONE — cycle index 3 is filled. Draw 15 is possible.
 

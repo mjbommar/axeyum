@@ -3217,6 +3217,56 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Half the remaining budget for the incremental e-graph quantifier retry, so the callers' later SAT-only stages are not starved. Was a bare `timeout / 2` inside the dispatch body until 2026-09-08; the doc comment beside it already stated the sharing INTENT, which is exactly the kind of policy a name-keyed registry cannot see while it is written as a literal.",
     },
     ConfigEntry {
+        name: "QUANT_EGRAPH_LADDER_RESERVE_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "4",
+        unit: "divisor of the quantified ladder's remaining deadline, held back for the rungs below `q:egraph`",
+        protects: Protects::Completeness,
+        on_exceed: OnExceed::DeclineRoute,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: Some("AXEYUM_QUANT_EGRAPH_RESERVE"),
+        justification: dated(
+            "bench-results/ufnia-uflia-census-20260913/README.md",
+            "2026-09-13",
+            None,
+            // The measurement is "`q:egraph` holds 88-94% of a 24 s budget on
+            // 44 of 46 census rows, decides 1-8 of 200, and handing the ladder
+            // below essentially the whole clock is worth +4/-2 over 400 files".
+            // It rests on `q:egraph` still being entered from
+            // `finish_quantified_solve` after the first-refusal MBQI rung, on
+            // the rungs below it still being full MBQI and the full finite
+            // model finder, and on the rung still honouring the `timeout` it is
+            // handed -- change any of the three and the numbers stop describing
+            // this tree.
+            &[
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "run_egraph_quantified_fallback",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "finish_quantified_solve",
+                ),
+                sym("crates/axeyum-solver/src/auto.rs", "quant_egraph_budget"),
+            ],
+            // The ceiling arm is the load-bearing part of the measurement: if
+            // `MIN_LADDER_SLICE` moves, `share = 1` stops being the ceiling and
+            // the sizing stops being one-way.
+            &[
+                Basis::LiveSymbol {
+                    ident: "MIN_LADDER_SLICE",
+                    in_path: "crates/axeyum-solver/src/auto.rs",
+                },
+                Basis::LiveSymbol {
+                    ident: "QuantEgraphReservePolicy",
+                    in_path: "crates/axeyum-solver/src/auto.rs",
+                },
+            ],
+        ),
+        note: "INERT IN THE SHIPPED CONFIGURATION. The value is what `AXEYUM_QUANT_EGRAPH_RESERVE=on` selects; the DEFAULT policy is `QuantEgraphReservePolicy::WholeBudget`, which hands `q:egraph` the whole remaining budget and never reads this constant, so the shipped reserve is ZERO. THE MEASUREMENT IS WHY (ADR-1970). `q:egraph` -- the e-matching instantiation loop rung of `finish_quantified_solve` -- receives the ladder's WHOLE remaining wall clock. Measured over the ENTIRE winnable set of `UFNIA` and `UFLIA` (129 rows, 24 s / 8 GiB, pinned cores): it is ENTERED on 125 of 200 and 119 of 200 files, DECIDES 1 and 8 of them, and on 44 of the 46 rows in the census's largest family it holds a median 94% / 88% of the budget and then declines, leaving full MBQI and the full pure-UF finite-model finder nothing. That is the textbook case for a reserve, and it was built -- and then SIZED BY ITS OWN CEILING ARM before being shipped. `AXEYUM_QUANT_EGRAPH_RESERVE=1` hands the rung `MIN_LADDER_SLICE` (1 ms) and the ladder below essentially the whole clock, which is strictly more than any real reserve can give, so it is a ONE-WAY ceiling. Interleaved per-file A/B, one binary and two env values, arms back to back on one pinned core with the order alternating: `UFNIA` 53 -> 55 (+2 / -0), `UFLIA` 73 -> 73 (+3 / -3), `AUFLIA` (a QUANTIFIED control on which the rung does run) 86 -> 86 (0 / 0), 0 sat<->unsat flips in 1,200 solves. After re-running every moved row three times per arm: GAIN 4, LOSS 2, UNSTABLE 2. The base arm reads 73 in the `UFLIA` A/B and 76 in the single-arm census sweep at the same commit, so the 3-file ambient band is LARGER THAN THE WHOLE EFFECT. Default `off` = `WholeBudget` is byte-identical to the pre-lever code. Values: `off`/`0`/empty/unparseable -> the shipped default (a typo must never select an arm nobody chose); `n >= 1` -> reserve 1/n. DO NOT turn this on without re-measuring: the `UFLIA` arm loses two `grasshopper/uninstantiated` files reproducibly.",
+    },
+    ConfigEntry {
         name: "TIMED_ARRAY_REFUTER_SLICE",
         module: "crates/axeyum-solver/src/auto.rs",
         value: "Duration::from_millis(250)",
