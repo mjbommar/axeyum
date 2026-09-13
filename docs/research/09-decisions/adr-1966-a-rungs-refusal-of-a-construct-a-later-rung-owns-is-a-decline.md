@@ -316,7 +316,18 @@ four have no observed firing at all.**
   rather than smoothed over.
 
   (Before the datatype site was reverted, deleting ITS guard killed exactly one
-  test — the separable row in the table. It went with the revert.)
+  test — the only separable row. It went with the revert.)
+
+  **These rows are deliberately NOT registered in
+  `scripts/tests/mutation_controls.py`.** That harness exits 0 only when every
+  registered mutation is `killed N`, and three of the four here kill nothing on
+  their own — structurally, because they are redundant consecutive guards on
+  one path. Appending them would turn a gate every lane runs red, which is a
+  worse outcome than an unregistered control. The runner that produced the
+  table is committed as
+  `bench-results/dispatch-decline-audit-20260913/mutation-control.py`; it works
+  on a `lane-snapshot.sh` copy, never the shared worktree, and it refuses to
+  score anything if the unmutated tree is not green first.
 - `scripts/enumerate-dispatch-refusal-propagation.py --fail-on-new
   bench-results/dispatch-decline-audit-20260913/refusal-propagation-baseline.json`
   — the pinned list, so a NEW site of this shape fails rather than waiting to be

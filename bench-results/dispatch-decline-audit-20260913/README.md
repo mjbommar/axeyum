@@ -38,6 +38,9 @@ ratchet name that site and exit 1, while the restored tree exits 0.
 | `ab-launch.sh` / `ab-launch2.sh` | the division sets, and why each was chosen. |
 | `summarize.py` | scores an A/B run. **Refuses to score a malformed row** — the refusal sentence written into a row can split the record, and reading a parse failure of the results file as "no movement" manufactures a null. |
 | `verify-new-verdicts.sh` | every new verdict against the declared `:status`, z3 (`-T:` SECONDS) and cvc5 (`--tlimit` MILLISECONDS). Exit status depends on the finding. |
+| `mutation-control.py` | deletes one guard at a time in a `lane-snapshot.sh` copy — never the shared worktree — and reports which tests die. Refuses to score anything if the unmutated tree is not green first. |
+| `ratchet-control.sh` | the negative control for `--fail-on-new`: re-introduces one closed site, requires exit 1 naming that site, and requires the restored tree to exit 0. |
+| `ufnra-guard-firing-scan.sh` | the `uf-nra` guard over all 58 `QF_UFNRA` files — the only division whose logic can enter that route. |
 
 Envelope: 10 s / 8 GiB per run for the A/B (24 s for the re-checks and the
 `QF_ABV` firing population), `taskset` to one physical core per division, on a
