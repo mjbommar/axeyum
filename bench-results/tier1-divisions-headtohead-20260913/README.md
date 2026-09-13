@@ -158,8 +158,22 @@ different one. UFNIA and AUFBV are a third.
 
 **The round/clock split is 19 ROUND against 61 CLOCK — the opposite proportion
 to board-six**, where 177 of 390 were round-bound. On these seven divisions the
-round budget is a minor blocker and the clock is real: 37 of the 61 CLOCK rows
-give up *past* the deadline.
+round budget is a minor blocker and the clock is real: **38 of the 61 CLOCK
+rows give up *past* the deadline** (`census-crossdiv.py` derives that count).
+
+The `kind` labels are not taken on trust. Counting rows that gave up **past**
+the 24,000 ms deadline, per kind, is the direct test of them:
+
+    CLOCK       38 of   61
+    ROUND        0 of   19
+    SHAPE        0 of  111
+    PARSE        0 of  376
+    OTHER        6 of   14
+    INTERNAL     0 of    3
+
+**Only CLOCK rows run past the deadline, and every ROUND, SHAPE and PARSE row
+stops short of it.** A CLOCK family whose rows mostly stopped short would be
+mislabelled, and so would a ROUND family whose rows ran over; neither happens.
 
 And ADR-1950's falsification mechanism fired on its own table.
 **`e-matching: instantiation time budget exhausted` is named for a CLOCK and its

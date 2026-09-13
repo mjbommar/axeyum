@@ -159,6 +159,22 @@ def main():
         print(f"{label:44s} {kind:6s} {len(left):4d} {left[0]:7d} {med:7d} "
               f"{left[-1]:7d}   {note}")
 
+    # ADR-1950 asks which budget bound a row.  The `kind` label answers that
+    # per FAMILY; this answers it per ROW, which is the check on the label: a
+    # CLOCK family whose rows mostly stop short of the deadline is mislabelled,
+    # and a ROUND family whose rows run past it is too.  Printed because the
+    # README quoted this count and the first draft computed it by hand as 37.
+    print("\nrows that gave up PAST the 24,000 ms deadline, by kind:")
+    for kind in ("CLOCK", "ROUND", "SHAPE", "PARSE", "ARRAY", "OTHER", "INTERNAL"):
+        rs = [r for (lab, k), v in rows_by_family.items() if k == kind
+              for _d, r in v]
+        if not rs:
+            continue
+        past = sum(1 for r in rs
+                   if r["total_ms"].lstrip("-").isdigit()
+                   and int(r["total_ms"]) > BUDGET_MS)
+        print(f"   {kind:9s} {past:4d} of {len(rs):4d}")
+
     # The lane's headline question, answered with its own denominator.
     print("\n== the nested-array parse refusal, per division ==")
     nested = [
