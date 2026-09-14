@@ -1,0 +1,1004 @@
+##FILE UFLIA/20230314-Jaroslav-Bendik-Certora/52759_b3ecd2335fd16ec2eee2_9_UFLIA.smt2
+##FILE UFLIA/boogie/Arrays_Q3-noinfer.smt2
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=472 violated_pairs=165
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=66 violated_pairs=27
+FCPROBE exit=replay solve_rounds=2 lemmas_added=415 violated_pairs=147
+FCPROBE exit=replay solve_rounds=2 lemmas_added=415 violated_pairs=147
+FCPROBE exit=replay solve_rounds=2 lemmas_added=415 violated_pairs=147
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=607 violated_pairs=230
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=607 violated_pairs=230
+##FILE UFLIA/boogie/BasicMethodology_SubClass..ctor.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFLIA/boogie/Chunker11c_Chunker.SpecSharp.CheckInvariant_System.Boolean.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=69 violated_pairs=2
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14611 cnf_vars=31770 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=5330 violated_pairs=30
+PRESATPROBE site=solve atoms=14611 cnf_vars=31770 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=5330 violated_pairs=30
+PRESATPROBE site=solve atoms=19027 cnf_vars=43222 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=8098 violated_pairs=31
+PRESATPROBE site=solve atoms=19027 cnf_vars=43222 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=8098 violated_pairs=31
+PRESATPROBE site=solve atoms=19163 cnf_vars=45890 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=9238 violated_pairs=31
+PRESATPROBE site=solve atoms=19163 cnf_vars=45890 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=9238 violated_pairs=31
+PRESATPROBE site=solve atoms=19163 cnf_vars=46454 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=9511 violated_pairs=31
+PRESATPROBE site=solve atoms=19163 cnf_vars=46454 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=9511 violated_pairs=31
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFLIA/boogie/ExposeVersion_D..ctor-level_2.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFLIA/boogie/Spouse_Person..ctor.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=34 violated_pairs=14
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=1987 violated_pairs=47
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=1987 violated_pairs=47
+##FILE UFLIA/grasshopper/instantiated/delete_check_heap_access_53_12.smt2
+FCPROBE exit=replay solve_rounds=3 lemmas_added=1481 violated_pairs=94
+FCPROBE exit=replay solve_rounds=3 lemmas_added=1481 violated_pairs=94
+FCPROBE exit=replay solve_rounds=3 lemmas_added=1481 violated_pairs=94
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=3 lemmas_added=1481 violated_pairs=94
+FCPROBE exit=replay solve_rounds=3 lemmas_added=4995 violated_pairs=811
+##FILE UFLIA/grasshopper/uninstantiated/merge_loop_check_heap_access_60_6.smt2
+FCPROBE exit=replay solve_rounds=3 lemmas_added=1047 violated_pairs=94
+FCPROBE exit=replay solve_rounds=3 lemmas_added=1524 violated_pairs=384
+FCPROBE exit=replay solve_rounds=3 lemmas_added=14157 violated_pairs=1814
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=156696 violated_pairs=45424
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=51121 violated_pairs=17315
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=139717 violated_pairs=23099
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=226161 violated_pairs=68525
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=90381 violated_pairs=28850
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=207661 violated_pairs=29867
+##FILE UFLIA/simplify/javafe.ast.LexicalPragmaVec.219.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=131 violated_pairs=23
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=348 violated_pairs=50
+FCPROBE exit=replay solve_rounds=6 lemmas_added=355 violated_pairs=56
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=6 lemmas_added=267 violated_pairs=25
+PRESATPROBE site=solve atoms=2577 cnf_vars=25043 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=2577 cnf_vars=25043 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=2851 cnf_vars=26004 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=2851 cnf_vars=26004 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=1953 cnf_vars=23730 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=2851 cnf_vars=26004 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=2851 cnf_vars=26004 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=131 violated_pairs=23
+FCPROBE exit=replay solve_rounds=2 lemmas_added=131 violated_pairs=23
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+##FILE UFLIA/simplify/javafe.ast.StandardPrettyPrint.322.smt2
+FCPROBE exit=replay solve_rounds=2 lemmas_added=33 violated_pairs=8
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=12444 violated_pairs=8
+PRESATPROBE site=solve atoms=10113 cnf_vars=19443 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=12444 violated_pairs=8
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=12440 violated_pairs=8
+FCPROBE exit=replay solve_rounds=2 lemmas_added=66 violated_pairs=8
+##FILE UFLIA/simplify/javafe.ast.UnaryExpr.424.smt2
+FCPROBE exit=replay solve_rounds=2 lemmas_added=31 violated_pairs=8
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=3140 violated_pairs=14
+PRESATPROBE site=solve atoms=11505 cnf_vars=21309 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=3140 violated_pairs=14
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=3157 violated_pairs=25
+FCPROBE exit=replay solve_rounds=2 lemmas_added=31 violated_pairs=8
+PRESATPROBE site=solve atoms=5665 cnf_vars=19901 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=5665 cnf_vars=19901 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=3157 violated_pairs=25
+##FILE UFLIA/simplify/javafe.tc.FlowInsensitiveChecks.679.smt2
+FCPROBE exit=replay solve_rounds=2 lemmas_added=60 violated_pairs=15
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=14141 violated_pairs=94
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=14141 violated_pairs=94
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=60 violated_pairs=15
+##FILE UFLIA/simplify/tohtml.Java2Html.832.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=363 violated_pairs=103
+FCPROBE exit=replay solve_rounds=2 lemmas_added=363 violated_pairs=103
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14119 cnf_vars=27958 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=3855 violated_pairs=469
+##FILE UFLIA/simplify2/front_end_suite/javafe.ast.AmbiguousVariableAccess.004.smt2
+PRESATPROBE site=solve atoms=14054 cnf_vars=21213 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14054 cnf_vars=21213 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14054 cnf_vars=27998 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFLIA/simplify2/front_end_suite/javafe.ast.ConstructorDecl.007.smt2
+PRESATPROBE site=solve atoms=15500 cnf_vars=23388 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=15500 cnf_vars=23388 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=15777 cnf_vars=32225 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFLIA/simplify2/front_end_suite/javafe.ast.ForStmt.009.smt2
+PRESATPROBE site=solve atoms=14528 cnf_vars=21926 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14528 cnf_vars=21926 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14780 cnf_vars=30196 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFLIA/simplify2/front_end_suite/javafe.ast.LabelStmt.011.smt2
+PRESATPROBE site=solve atoms=14290 cnf_vars=21568 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14290 cnf_vars=21568 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14544 cnf_vars=29722 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14544 cnf_vars=29722 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14290 cnf_vars=21569 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14290 cnf_vars=21569 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14725 cnf_vars=22933 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14725 cnf_vars=22933 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14863 cnf_vars=24038 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14863 cnf_vars=24038 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14922 cnf_vars=24195 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14922 cnf_vars=24195 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+##FILE UFLIA/simplify2/front_end_suite/javafe.ast.ParenExpr.006.smt2
+PRESATPROBE site=solve atoms=14054 cnf_vars=21213 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14054 cnf_vars=21213 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14312 cnf_vars=29243 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14312 cnf_vars=29243 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14072 cnf_vars=21240 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14072 cnf_vars=21240 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14519 cnf_vars=22617 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14519 cnf_vars=22617 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14657 cnf_vars=23722 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14657 cnf_vars=23722 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14726 cnf_vars=24106 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14726 cnf_vars=24106 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+PRESATPROBE site=solve atoms=14726 cnf_vars=24106 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14726 cnf_vars=24106 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFLIA/simplify2/front_end_suite/javafe.ast.SuperObjectDesignator.008.smt2
+PRESATPROBE site=solve atoms=14054 cnf_vars=21213 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14054 cnf_vars=21213 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14295 cnf_vars=29213 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFLIA/simplify2/front_end_suite/javafe.ast.TypeModifierPragmaVec.013.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=37 violated_pairs=5
+FCPROBE exit=replay solve_rounds=2 lemmas_added=103 violated_pairs=12
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=1172 violated_pairs=41
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=330 violated_pairs=9
+FCPROBE exit=replay solve_rounds=14 lemmas_added=984 violated_pairs=137
+FCPROBE exit=replay solve_rounds=27 lemmas_added=1250 violated_pairs=389
+FCPROBE exit=unknown solve_rounds=20 lemmas_added=1221 violated_pairs=360
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=886 violated_pairs=51
+##FILE UFLIA/simplify2/front_end_suite/javafe.filespace.HashTree.001.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=22 violated_pairs=8
+FCPROBE exit=replay solve_rounds=2 lemmas_added=102 violated_pairs=48
+FCPROBE exit=replay solve_rounds=2 lemmas_added=317 violated_pairs=152
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=1144 violated_pairs=283
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=1144 violated_pairs=283
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=8 lemmas_added=69 violated_pairs=10
+FCPROBE exit=replay solve_rounds=2 lemmas_added=154 violated_pairs=2
+FCPROBE exit=replay solve_rounds=22 lemmas_added=480 violated_pairs=150
+FCPROBE exit=replay solve_rounds=22 lemmas_added=633 violated_pairs=181
+FCPROBE exit=replay solve_rounds=2 lemmas_added=1535 violated_pairs=317
+PRESATPROBE site=solve atoms=20861 cnf_vars=60716 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=10799 violated_pairs=2537
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFLIA/simplify2/front_end_suite/javafe.parser.Parse.005.smt2
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=31 violated_pairs=8
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=31 violated_pairs=8
+PRESATPROBE site=solve atoms=19339 cnf_vars=35288 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=3644 violated_pairs=99
+PRESATPROBE site=solve atoms=19339 cnf_vars=35288 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=3644 violated_pairs=99
+##FILE UFLIA/simplify2/front_end_suite/javafe.parser.test.TestLex.030.smt2
+PRESATPROBE site=solve atoms=14052 cnf_vars=21210 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14052 cnf_vars=21210 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=14052 cnf_vars=27995 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFLIA/simplify2/front_end_suite/javafe.tc.ConstantExpr.001.smt2
+PRESATPROBE site=solve atoms=17546 cnf_vars=26465 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=17546 cnf_vars=26465 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=17879 cnf_vars=34979 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFLIA/simplify2/front_end_suite/javafe.tc.FlowInsensitiveChecks.017.smt2
+PRESATPROBE site=solve atoms=20854 cnf_vars=31443 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=20854 cnf_vars=31443 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=21548 cnf_vars=44287 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=21548 cnf_vars=44287 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFLIA/simplify2/front_end_suite/javafe.tc.TypeSigVec.005.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=60 violated_pairs=8
+FCPROBE exit=replay solve_rounds=2 lemmas_added=60 violated_pairs=8
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=60 violated_pairs=7
+FCPROBE exit=replay solve_rounds=2 lemmas_added=60 violated_pairs=7
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=3 lemmas_added=425 violated_pairs=20
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=1548 violated_pairs=129
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=1548 violated_pairs=129
+##FILE UFLIA/simplify2/front_end_suite/javafe.test.SuperlinksTest.004.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=116 violated_pairs=9
+FCPROBE exit=replay solve_rounds=4 lemmas_added=120 violated_pairs=13
+FCPROBE exit=replay solve_rounds=2 lemmas_added=125 violated_pairs=11
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=188 violated_pairs=45
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=4 lemmas_added=178 violated_pairs=20
+FCPROBE exit=replay solve_rounds=12 lemmas_added=942 violated_pairs=156
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=1907 violated_pairs=150
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=1907 violated_pairs=150
+##FILE UFLIA/sledgehammer/Arrow_Order/smtlib.832901.smt2
+FCPROBE exit=replay solve_rounds=2 lemmas_added=97 violated_pairs=24
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=140 violated_pairs=28
+FCPROBE exit=replay solve_rounds=2 lemmas_added=140 violated_pairs=28
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1057395.smt2
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1462528.smt2
+##FILE UFLIA/sledgehammer/Hoare/smtlib.1175889.smt2
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=136797 violated_pairs=30567
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=311407 violated_pairs=98855
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFLIA/sledgehammer/Hoare/smtlib.993567.smt2
+FCPROBE exit=replay solve_rounds=2 lemmas_added=60 violated_pairs=13
+FCPROBE exit=replay solve_rounds=2 lemmas_added=61 violated_pairs=13
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=34 violated_pairs=12
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=259920 violated_pairs=90542
+##FILE UFLIA/sledgehammer/QEpres/smtlib.1120322.smt2
+FCPROBE exit=replay solve_rounds=2 lemmas_added=78 violated_pairs=28
+FCPROBE exit=replay solve_rounds=3 lemmas_added=265 violated_pairs=101
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=78 violated_pairs=28
+FCPROBE exit=replay solve_rounds=3 lemmas_added=265 violated_pairs=101
+FCPROBE exit=replay solve_rounds=3 lemmas_added=684 violated_pairs=205
+FCPROBE exit=replay solve_rounds=3 lemmas_added=1572 violated_pairs=420
+##FILE UFLIA/sledgehammer/TwoSquares/smtlib.711545.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/2019-Preiner/combined/f2_rw160.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=preflight atoms=8495 cnf_vars=26771 rescue=shipped outcome=pending
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=preflight atoms=8495 cnf_vars=26771 rescue=shipped outcome=pending
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=preflight atoms=8495 cnf_vars=26771 rescue=shipped outcome=pending
+##FILE UFNIA/2019-Preiner/combined/t3_rw1401.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=preflight atoms=8495 cnf_vars=26771 rescue=shipped outcome=pending
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=preflight atoms=8495 cnf_vars=26771 rescue=shipped outcome=pending
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=preflight atoms=8495 cnf_vars=26771 rescue=shipped outcome=pending
+##FILE UFNIA/2019-Preiner/combined/t3_rw96.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=preflight atoms=15157 cnf_vars=47375 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=14890 cnf_vars=46849 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=14890 cnf_vars=46850 rescue=shipped outcome=pending
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=preflight atoms=15157 cnf_vars=47375 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=14890 cnf_vars=46849 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=14890 cnf_vars=46850 rescue=shipped outcome=pending
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/2019-Preiner/full/t3_rw1240.smt2
+FCPROBE exit=replay solve_rounds=4 lemmas_added=75 violated_pairs=21
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=172 violated_pairs=36
+FCPROBE exit=replay solve_rounds=4 lemmas_added=173 violated_pairs=37
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=172 violated_pairs=36
+FCPROBE exit=replay solve_rounds=4 lemmas_added=173 violated_pairs=37
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=172 violated_pairs=36
+FCPROBE exit=replay solve_rounds=4 lemmas_added=173 violated_pairs=37
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=172 violated_pairs=36
+FCPROBE exit=replay solve_rounds=4 lemmas_added=173 violated_pairs=37
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=172 violated_pairs=36
+FCPROBE exit=replay solve_rounds=4 lemmas_added=173 violated_pairs=37
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=172 violated_pairs=36
+FCPROBE exit=replay solve_rounds=4 lemmas_added=173 violated_pairs=37
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=172 violated_pairs=36
+FCPROBE exit=replay solve_rounds=4 lemmas_added=173 violated_pairs=37
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=172 violated_pairs=36
+FCPROBE exit=replay solve_rounds=4 lemmas_added=173 violated_pairs=37
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=172 violated_pairs=36
+FCPROBE exit=replay solve_rounds=4 lemmas_added=173 violated_pairs=37
+##FILE UFNIA/2019-Preiner/full/t3_rw25.smt2
+FCPROBE exit=replay solve_rounds=4 lemmas_added=80 violated_pairs=24
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=174 violated_pairs=39
+FCPROBE exit=replay solve_rounds=4 lemmas_added=175 violated_pairs=40
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=174 violated_pairs=39
+FCPROBE exit=replay solve_rounds=4 lemmas_added=175 violated_pairs=40
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=174 violated_pairs=39
+FCPROBE exit=replay solve_rounds=4 lemmas_added=175 violated_pairs=40
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=174 violated_pairs=39
+FCPROBE exit=replay solve_rounds=4 lemmas_added=175 violated_pairs=40
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=174 violated_pairs=39
+FCPROBE exit=replay solve_rounds=4 lemmas_added=175 violated_pairs=40
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=174 violated_pairs=39
+FCPROBE exit=replay solve_rounds=4 lemmas_added=175 violated_pairs=40
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=174 violated_pairs=39
+FCPROBE exit=replay solve_rounds=4 lemmas_added=175 violated_pairs=40
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=174 violated_pairs=39
+FCPROBE exit=replay solve_rounds=4 lemmas_added=175 violated_pairs=40
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=174 violated_pairs=39
+FCPROBE exit=replay solve_rounds=4 lemmas_added=175 violated_pairs=40
+##FILE UFNIA/2019-Preiner/partial/f2_rw58.smt2
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=4 violated_pairs=1
+FCPROBE exit=replay solve_rounds=4 lemmas_added=8 violated_pairs=4
+PRESATPROBE site=preflight atoms=8010 cnf_vars=25224 rescue=shipped outcome=pending
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=preflight atoms=8010 cnf_vars=25224 rescue=shipped outcome=pending
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=preflight atoms=8010 cnf_vars=25224 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=8010 cnf_vars=25224 rescue=shipped outcome=pending
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/2019-Preiner/partial/t3_rw21.smt2
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=6 violated_pairs=2
+FCPROBE exit=replay solve_rounds=3 lemmas_added=9 violated_pairs=4
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/2019-Preiner/partial/t3_rw636.smt2
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=4 violated_pairs=1
+FCPROBE exit=replay solve_rounds=4 lemmas_added=8 violated_pairs=4
+PRESATPROBE site=preflight atoms=11110 cnf_vars=34686 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=11123 cnf_vars=34720 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=11123 cnf_vars=34720 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=10900 cnf_vars=34282 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=10900 cnf_vars=34284 rescue=shipped outcome=pending
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=preflight atoms=11110 cnf_vars=34686 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=11123 cnf_vars=34720 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=11123 cnf_vars=34720 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=10900 cnf_vars=34282 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=10900 cnf_vars=34284 rescue=shipped outcome=pending
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/2019-Preiner/partial/t3_rw940.smt2
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=5 violated_pairs=1
+PRESATPROBE site=preflight atoms=11095 cnf_vars=34642 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=10874 cnf_vars=34208 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=10874 cnf_vars=34209 rescue=shipped outcome=pending
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=preflight atoms=11095 cnf_vars=34642 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=10874 cnf_vars=34208 rescue=shipped outcome=pending
+PRESATPROBE site=preflight atoms=10874 cnf_vars=34209 rescue=shipped outcome=pending
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/2019-Preiner/qf/t3_rw353.smt2
+##FILE UFNIA/2019-Zohar-ic/combined/int_check_bvugt_bvashr0_ltr_inv_g.smt2
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/2019-Zohar-ic/full/int_check_bvslt_bvurem1_ltr_no_inv.smt2
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=4 lemmas_added=3 violated_pairs=3
+FCPROBE exit=replay solve_rounds=16 lemmas_added=15 violated_pairs=15
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=9 lemmas_added=8 violated_pairs=8
+FCPROBE exit=unknown solve_rounds=4 lemmas_added=3 violated_pairs=3
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/2019-Zohar-ic/partial/int_check_bvsgt_bvlshr0_ltr_no_inv.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/2019-Zohar-ic/partial/int_check_bvugt_bvudiv0_ltr_no_inv.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/2019-Zohar-ic/qf/int_check_bvuge_bvor_ltr_no_inv.smt2
+FCPROBE exit=replay solve_rounds=4 lemmas_added=16 violated_pairs=6
+FCPROBE exit=replay solve_rounds=4 lemmas_added=16 violated_pairs=6
+##FILE UFNIA/20190909-CLEARSY/0023/00302.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/lahiri-cav09-storm-queries/mqueue_example_cegar_2_3_10.smt2
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/lahiri-cav09-storm-queries/usbsamp_example_2_3_4_0.smt2
+##FILE UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.1031223.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=272 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=272 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=236 violated_pairs=29
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=277 violated_pairs=31
+FCPROBE exit=replay solve_rounds=2 lemmas_added=1798 violated_pairs=659
+FCPROBE exit=replay solve_rounds=2 lemmas_added=1798 violated_pairs=659
+FCPROBE exit=replay solve_rounds=2 lemmas_added=3728 violated_pairs=1408
+FCPROBE exit=replay solve_rounds=2 lemmas_added=3728 violated_pairs=1408
+FCPROBE exit=replay solve_rounds=2 lemmas_added=4825 violated_pairs=1614
+FCPROBE exit=replay solve_rounds=2 lemmas_added=4825 violated_pairs=1614
+FCPROBE exit=replay solve_rounds=2 lemmas_added=6592 violated_pairs=1940
+FCPROBE exit=replay solve_rounds=2 lemmas_added=6592 violated_pairs=1940
+FCPROBE exit=replay solve_rounds=2 lemmas_added=9598 violated_pairs=1994
+FCPROBE exit=replay solve_rounds=2 lemmas_added=9598 violated_pairs=1994
+FCPROBE exit=replay solve_rounds=2 lemmas_added=7452 violated_pairs=1621
+FCPROBE exit=replay solve_rounds=2 lemmas_added=7452 violated_pairs=1621
+FCPROBE exit=replay solve_rounds=2 lemmas_added=9598 violated_pairs=1994
+FCPROBE exit=replay solve_rounds=2 lemmas_added=9598 violated_pairs=1994
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/sledgehammer/Hoare/z3.850818.smt2
+FCPROBE exit=unknown solve_rounds=3 lemmas_added=89 violated_pairs=45
+FCPROBE exit=replay solve_rounds=3 lemmas_added=89 violated_pairs=45
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=5829 violated_pairs=2770
+FCPROBE exit=replay solve_rounds=2 lemmas_added=72 violated_pairs=38
+FCPROBE exit=replay solve_rounds=2 lemmas_added=88 violated_pairs=50
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/sledgehammer/TwoSquares/z3.647259.smt2
+##FILE UFNIA/sledgehammer/TwoSquares/z3.861593.smt2
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/spec_sharp/test14-CommandLineOptions.ssc.23.Microsoft.Boogie.CommandLineOptions.Boogie.ContractConsistencyCheck.get_ProverNeedsTypes.smt2
+##FILE UFNIA/spec_sharp/test14-DafnyAst.ssc.91.Microsoft.Dafny.VarDecl..ctor_Microsoft.Dafny.Token_notnull_System.String_notnull_Microsoft.Dafny.Ty.smt2
+##FILE UFNIA/spec_sharp/textbook-Factorial.dll.1.Factorial.F_System.Int32.smt2
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=17750 violated_pairs=448
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=45428 cnf_vars=91745 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=17750 violated_pairs=448
+PRESATPROBE site=solve atoms=22634 cnf_vars=44442 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=17750 violated_pairs=448
+##FILE UFNIA/vcc-havoc/baby.1.20.handle_illegal.smt2
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=262 violated_pairs=14
+FCPROBE exit=replay solve_rounds=2 lemmas_added=262 violated_pairs=14
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=359 violated_pairs=59
+FCPROBE exit=replay solve_rounds=2 lemmas_added=359 violated_pairs=59
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=150 violated_pairs=2
+FCPROBE exit=replay solve_rounds=2 lemmas_added=150 violated_pairs=2
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=150 violated_pairs=2
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=705 violated_pairs=6
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=708 violated_pairs=6
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=708 violated_pairs=6
+FCPROBE exit=replay solve_rounds=2 lemmas_added=708 violated_pairs=6
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=2 violated_pairs=0
+##FILE UFNIA/vcc-havoc/baby.59.handle_reset.smt2
+FCPROBE exit=replay solve_rounds=2 lemmas_added=23 violated_pairs=3
+FCPROBE exit=replay solve_rounds=2 lemmas_added=33 violated_pairs=5
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/vcc-havoc/havoc-bench_dlist_insert_head.12.ua_wcscpy.smt2
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=3 lemmas_added=648 violated_pairs=61
+PRESATPROBE site=solve atoms=23584 cnf_vars=47067 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=13698 violated_pairs=3120
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=3 lemmas_added=648 violated_pairs=61
+PRESATPROBE site=solve atoms=52376 cnf_vars=107193 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=13698 violated_pairs=3120
+PRESATPROBE site=solve atoms=42860 cnf_vars=86340 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=13698 violated_pairs=3120
+##FILE UFNIA/vcc-havoc/vccp-union1.c.6.reint2.smt2
+FCPROBE exit=replay solve_rounds=2 lemmas_added=65 violated_pairs=10
+FCPROBE exit=replay solve_rounds=2 lemmas_added=68 violated_pairs=11
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=1 violated_pairs=1
+FCPROBE exit=replay solve_rounds=2 lemmas_added=1 violated_pairs=1
+FCPROBE exit=replay solve_rounds=2 lemmas_added=1 violated_pairs=1
+FCPROBE exit=replay solve_rounds=2 lemmas_added=2 violated_pairs=1
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+PRESATPROBE site=solve atoms=22501 cnf_vars=50644 rescue=lever-off outcome=refused
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=34492 violated_pairs=141
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=2 lemmas_added=1 violated_pairs=1
+FCPROBE exit=replay solve_rounds=2 lemmas_added=1 violated_pairs=1
+FCPROBE exit=replay solve_rounds=2 lemmas_added=1 violated_pairs=1
+FCPROBE exit=replay solve_rounds=2 lemmas_added=2 violated_pairs=1
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=replay solve_rounds=1 lemmas_added=0 violated_pairs=0
+##FILE UFNIA/vcc-havoc/verisoft-baby.c.49.pf_reason_m.smt2
+##FILE UFNIA/vcc-havoc/verisoft-sim.c.2.25.untranslated_write_sim.smt2
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=633 violated_pairs=53
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=633 violated_pairs=53
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=633 violated_pairs=53
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unsat solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=0 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=2 lemmas_added=457 violated_pairs=38
+FCPROBE exit=replay solve_rounds=2 lemmas_added=457 violated_pairs=38
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0
+FCPROBE exit=unknown solve_rounds=1 lemmas_added=1 violated_pairs=0

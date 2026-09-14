@@ -1,0 +1,102 @@
+FCPROBE exit records: 1776
+distinct files:       109
+
+=== deepest CEGAR loop per file, by how that loop exited ===
+exit        rounds  files
+replay           1  12
+replay           2  16
+replay           3  9
+replay           4  11
+replay           5  1
+replay           6  3
+replay           7  1
+replay           8  3
+replay           9  1
+replay          11  1
+replay          12  1
+replay          16  1
+replay          19  2
+replay          22  1
+replay          27  1
+unknown          1  29
+unknown          2  13
+unknown          3  1
+unknown          8  1
+unsat            1  1
+
+=== what a round cap would COST ===
+A cap at N truncates every loop that ran more than N rounds, and the
+loop's only truncation exit is `Unknown`. So a cap at N costs exactly
+the loops that DECIDED after more than N rounds.
+
+deciding loop records: 874
+files with at least one deciding loop: 83
+
+exit        rounds  deciding records
+replay           1  259
+replay           2  210
+replay           3  27
+replay           4  59
+replay           5  2
+replay           6  8
+replay           7  1
+replay           8  4
+replay           9  2
+replay          10  1
+replay          11  2
+replay          12  1
+replay          14  1
+replay          16  1
+replay          19  2
+replay          22  2
+replay          27  1
+unsat            1  291
+
+  cap=1: truncates 324 deciding loop(s) on 61 file(s)
+      deepest deciding loop at rounds=2  UFLIA/boogie/Arrays_Q3-noinfer.smt2
+      deepest deciding loop at rounds=19  UFLIA/boogie/AssignToRepField_AssignToRepField.N.smt2
+      deepest deciding loop at rounds=8  UFLIA/boogie/Cast_Cast.R_System.Object_System.Int32.smt2
+      deepest deciding loop at rounds=2  UFLIA/boogie/Chunker11c_Chunker.SpecSharp.CheckInvariant_System.Boolean.smt2
+      deepest deciding loop at rounds=2  UFLIA/boogie/DefaultLoopInv0_A.M-modifiesOnLoop-noinfer.smt2
+      deepest deciding loop at rounds=3  UFLIA/boogie/Interval_Cell.Shift_System.Int32.smt2
+      deepest deciding loop at rounds=3  UFLIA/grasshopper/instantiated/delete_check_heap_access_53_12.smt2
+      deepest deciding loop at rounds=6  UFLIA/grasshopper/instantiated/insertion_sort_postcondition_of_insertion_sort_63_1.smt2
+      deepest deciding loop at rounds=3  UFLIA/grasshopper/uninstantiated/merge_loop_check_heap_access_60_6.smt2
+      deepest deciding loop at rounds=6  UFLIA/simplify/javafe.ast.CatchClauseVec.66.smt2
+      ... and 51 more
+  cap=2: truncates 114 deciding loop(s) on 38 file(s)
+      deepest deciding loop at rounds=19  UFLIA/boogie/AssignToRepField_AssignToRepField.N.smt2
+      deepest deciding loop at rounds=8  UFLIA/boogie/Cast_Cast.R_System.Object_System.Int32.smt2
+      deepest deciding loop at rounds=3  UFLIA/boogie/Interval_Cell.Shift_System.Int32.smt2
+      deepest deciding loop at rounds=3  UFLIA/grasshopper/instantiated/delete_check_heap_access_53_12.smt2
+      deepest deciding loop at rounds=6  UFLIA/grasshopper/instantiated/insertion_sort_postcondition_of_insertion_sort_63_1.smt2
+      deepest deciding loop at rounds=3  UFLIA/grasshopper/uninstantiated/merge_loop_check_heap_access_60_6.smt2
+      deepest deciding loop at rounds=6  UFLIA/simplify/javafe.ast.CatchClauseVec.66.smt2
+      deepest deciding loop at rounds=6  UFLIA/simplify/javafe.ast.LexicalPragmaVec.219.smt2
+      deepest deciding loop at rounds=8  UFLIA/simplify/javafe.ast.TypeDeclElemPragma.373.smt2
+      deepest deciding loop at rounds=7  UFLIA/simplify/javafe.parser.TokenQueue.576.smt2
+      ... and 28 more
+  cap=3: truncates 87 deciding loop(s) on 27 file(s)
+      deepest deciding loop at rounds=19  UFLIA/boogie/AssignToRepField_AssignToRepField.N.smt2
+      deepest deciding loop at rounds=8  UFLIA/boogie/Cast_Cast.R_System.Object_System.Int32.smt2
+      deepest deciding loop at rounds=6  UFLIA/grasshopper/instantiated/insertion_sort_postcondition_of_insertion_sort_63_1.smt2
+      deepest deciding loop at rounds=6  UFLIA/simplify/javafe.ast.CatchClauseVec.66.smt2
+      deepest deciding loop at rounds=6  UFLIA/simplify/javafe.ast.LexicalPragmaVec.219.smt2
+      deepest deciding loop at rounds=8  UFLIA/simplify/javafe.ast.TypeDeclElemPragma.373.smt2
+      deepest deciding loop at rounds=7  UFLIA/simplify/javafe.parser.TokenQueue.576.smt2
+      deepest deciding loop at rounds=19  UFLIA/simplify2/front_end_suite/javafe.ast.ImportDeclVec.015.smt2
+      deepest deciding loop at rounds=27  UFLIA/simplify2/front_end_suite/javafe.ast.TypeModifierPragmaVec.013.smt2
+      deepest deciding loop at rounds=22  UFLIA/simplify2/front_end_suite/javafe.filespace.HashTree.001.smt2
+      ... and 17 more
+  cap=4: truncates 28 deciding loop(s) on 16 file(s)
+      deepest deciding loop at rounds=19  UFLIA/boogie/AssignToRepField_AssignToRepField.N.smt2
+      deepest deciding loop at rounds=8  UFLIA/boogie/Cast_Cast.R_System.Object_System.Int32.smt2
+      deepest deciding loop at rounds=6  UFLIA/grasshopper/instantiated/insertion_sort_postcondition_of_insertion_sort_63_1.smt2
+      deepest deciding loop at rounds=6  UFLIA/simplify/javafe.ast.CatchClauseVec.66.smt2
+      deepest deciding loop at rounds=6  UFLIA/simplify/javafe.ast.LexicalPragmaVec.219.smt2
+      deepest deciding loop at rounds=8  UFLIA/simplify/javafe.ast.TypeDeclElemPragma.373.smt2
+      deepest deciding loop at rounds=7  UFLIA/simplify/javafe.parser.TokenQueue.576.smt2
+      deepest deciding loop at rounds=19  UFLIA/simplify2/front_end_suite/javafe.ast.ImportDeclVec.015.smt2
+      deepest deciding loop at rounds=27  UFLIA/simplify2/front_end_suite/javafe.ast.TypeModifierPragmaVec.013.smt2
+      deepest deciding loop at rounds=22  UFLIA/simplify2/front_end_suite/javafe.filespace.HashTree.001.smt2
+      ... and 6 more

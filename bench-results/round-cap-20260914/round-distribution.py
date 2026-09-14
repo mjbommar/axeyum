@@ -65,11 +65,27 @@ print()
 print("=== what a round cap would COST ===")
 print("A cap at N truncates every loop that ran more than N rounds, and the")
 print("loop's only truncation exit is `Unknown`. So a cap at N costs exactly")
-print("the files whose DECIDING exit needed more than N rounds.")
-decided = [r for r in deepest.values() if r["exit"] in ("unsat", "replay")]
-print(f"files whose deepest loop DECIDED: {len(decided)}")
+print("the loops that DECIDED after more than N rounds.")
+print()
+# NOT `deepest`: a file's deepest loop may be an `unknown` one while a SHALLOWER
+# loop on the same file decided. Classifying the file by its deepest loop would
+# hide that deciding loop entirely, and the deciding loops are the whole cost.
+# So the cost is computed over DECIDING records, then reduced to files.
+deciding = [r for r in rows if r["exit"] in ("unsat", "replay")]
+print(f"deciding loop records: {len(deciding)}")
+print(f"files with at least one deciding loop: {len(set(r['file'] for r in deciding))}")
+print()
+print(f"{'exit':<10} {'rounds':>7}  deciding records")
+dtally = collections.Counter((r["exit"], r["rounds"]) for r in deciding)
+for (exit_kind, rounds), n in sorted(dtally.items()):
+    print(f"{exit_kind:<10} {rounds:>7}  {n}")
+print()
 for cap in (1, 2, 3, 4):
-    cost = [r for r in decided if r["rounds"] > cap]
-    print(f"  cap={cap}: costs {len(cost)} decided file(s)")
-    for r in sorted(cost, key=lambda x: -x["rounds"])[:10]:
-        print(f"      rounds={r['rounds']} exit={r['exit']}  {r['file']}")
+    cost = [r for r in deciding if r["rounds"] > cap]
+    files = sorted(set(r["file"] for r in cost))
+    print(f"  cap={cap}: truncates {len(cost)} deciding loop(s) on {len(files)} file(s)")
+    for f in files[:10]:
+        deepest_here = max(r["rounds"] for r in cost if r["file"] == f)
+        print(f"      deepest deciding loop at rounds={deepest_here}  {f}")
+    if len(files) > 10:
+        print(f"      ... and {len(files) - 10} more")
