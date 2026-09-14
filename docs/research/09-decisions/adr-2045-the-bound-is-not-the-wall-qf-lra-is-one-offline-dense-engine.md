@@ -76,12 +76,30 @@ cannot agree with a wrong guess): **34 of 34 rows wearing this label have
 `cube_matrices=0` and `cube_simplex_calls>0`. Fourier–Motzkin never ran on any
 of them.**
 
-**Nothing in the workspace pins this string** — no test, no gate, no golden
-file (`grep -rn` over `crates/` and `tests/` returns only the definition). So it
-was free to be wrong, and equally it is free to correct: the fix is a
-one-line rename to an engine-neutral sentence, with `608` split out as its own
-`Decision` variant so an overflow stops being reported as a clock. **It is NOT
-corrected in this lane** — see the Decision section.
+**The misattribution is not in the string. It is in the variant's own doc
+comment**, which the string faithfully renders:
+
+```rust
+/// The Fourier–Motzkin elimination did not finish within the wall-clock /
+/// size budget; the query is left undecided (a timely, sound `unknown`).
+TimedOut,
+```
+
+`Decision::TimedOut` is named and documented as if it were the elimination's
+verdict, and five of its six producers are not.
+
+**Nothing in the workspace pins the rendered string** — no test, no gate, no
+golden file (`grep -rn` over `crates/` and `tests/` returns only the
+definition). So it was free to be wrong, and it is free to correct.
+
+**And `Decision` already contains the pattern for the fix, applied twice.**
+`Incomplete(String)` carries a detail; `OutOfMemory` was split off from
+`TimedOut` with the explicit reason that *"the two demand opposite fixes and a
+consumer must not have to guess."* The overflow at `lra.rs:608` is a third
+instance of that same principle that nobody applied: it is not a clock at all.
+So the fix is idiomatic here rather than novel — give `TimedOut` a detail in
+`Incomplete`'s style, and stop routing `ctx.overflow` through it. **It is NOT
+corrected in this lane** — see the Decision section for why.
 
 The census after both splits:
 
@@ -398,8 +416,20 @@ Ranked by the addressability crosstab, not by bucket size:
    addressable is still not converted by removing the abort, which the reach
    probe shows directly.
 4. **`lra.rs:159`'s give-up string names the wrong engine on every row that
-   carries it here.** Any future census that reads it as written will attribute
-   simplex cost to Fourier–Motzkin, as this one nearly did.
+   carries it here**, because `Decision::TimedOut`'s own doc comment does. Any
+   future census that reads it as written will attribute simplex cost to
+   Fourier–Motzkin, as this one nearly did.
+
+   **Why this lane did not fix it**, stated so the next one does not have to
+   re-derive the judgement: it is a *two-part* change, not a string swap — give
+   `TimedOut` a detail in `Incomplete(String)`'s style, **and** stop routing
+   `ctx.overflow` (`lra.rs:608`) through a timeout variant at all. The second
+   half is a correctness-of-diagnosis fix touching a soundness-adjacent path,
+   and it deserves its own verification rather than being appended to a lane
+   whose entire diff is otherwise **zero Rust files**. Renaming the string
+   alone would leave `608` still reporting an `i128` overflow as a clock — a
+   half-fix that reads as a whole one, which is the failure mode this ADR is
+   about.
 
 ## Measurement caveats, stated rather than discovered
 
