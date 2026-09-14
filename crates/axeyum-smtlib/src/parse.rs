@@ -19880,16 +19880,41 @@ fn balanced_and(arena: &mut TermArena, mut layer: Vec<TermId>) -> Result<TermId,
 /// Whether a user `declare-fun` outranks a theory-operator arm of the same
 /// name (ADR-2040), read once from `AXEYUM_DECLARED_NAME_WINS`.
 ///
-/// **Polarity: this lever ships `Off`.** The unset environment is the
-/// pre-ADR-2040 behaviour, so an A/B's base arm is
-/// `env -u AXEYUM_DECLARED_NAME_WINS` and its treatment arm sets `on`.
-/// Anything but `on`/`1` is `Off`, so a typo cannot silently enable it.
+/// **Polarity: this lever ships `On`, and the polarity was FLIPPED after
+/// ADR-2040 measured it.** The unset environment is now the redirect; `off`/`0`
+/// restores the pre-ADR-2040 behaviour, so an A/B's base arm is
+/// `AXEYUM_DECLARED_NAME_WINS=off` and its treatment arm is `env -u`.
+/// Anything but `off`/`0` is `On`, so a typo degrades to the SHIPPED behaviour
+/// rather than to an arm nobody chose.
+///
+/// # Why this ships on a +2, when ADR-2040's own rule said +5
+///
+/// **It is not a gain lever.** ADR-2040 pre-registered `R9 >= 5 net` and
+/// measured `+2`, and shipped `Off` rather than move its own goalposts — which
+/// was the right call for the rule it wrote. But the defect underneath is a
+/// CORRECTNESS defect, not a missing capability: `apply_op` tried every
+/// theory-operator arm before falling through to `arena.find_function`, so
+/// `(declare-fun fp (Int Int Int) Int)` in a `UFNIA` script — a logic with no
+/// `FloatingPoint` theory, where `fp` is an ordinary identifier — was read as an
+/// IEEE literal constructor and died at INGEST. **180 corpus files, all
+/// `UFNIA`. z3 and cvc5 both accept the script; we returned `unknown` where both
+/// return `unsat`.** Rejecting legal SMT-LIB is wrong whether or not fixing it
+/// converts a verdict, so the decision is taken on that basis and the `+2` is
+/// incidental.
+///
+/// The blast radius is measured, not assumed: the redirect fires only through
+/// [`declared_redirect`], which requires a declaration of that exact name whose
+/// arity AND parameter sorts match the application, and otherwise falls through
+/// to the arm the application would have taken. With the lever armed, the four
+/// FloatingPoint suites (21 + 2 + 1 + 8 tests) and `corpus_regression` pass
+/// unchanged; the only tests that changed behaviour were the two below, which
+/// exist to pin this polarity and are rewritten in this direction on purpose.
 fn declared_name_wins() -> bool {
     static POLICY: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *POLICY.get_or_init(|| {
-        matches!(
+        !matches!(
             std::env::var("AXEYUM_DECLARED_NAME_WINS").as_deref(),
-            Ok("on" | "1")
+            Ok("off" | "0")
         )
     })
 }
@@ -24684,28 +24709,44 @@ mod declared_name_wins_tests {
         );
     }
 
-    /// The lever ships **Off**, so the base arm of any A/B is the unset
-    /// environment. A change back to opt-out would have to edit this test, in
-    /// this direction, on purpose.
+    /// The lever ships **On** (polarity flipped after ADR-2040 measured it), so
+    /// the base arm of any A/B is `AXEYUM_DECLARED_NAME_WINS=off` and the unset
+    /// environment is the SHIPPED arm. ADR-2040 wrote that a change in this
+    /// direction "would have to edit this test, in this direction, on purpose",
+    /// and that is what happened: the defect is a correctness one — 180 legal
+    /// `UFNIA` scripts rejected at ingest — not the `+2` its gain rule scored.
     #[test]
-    fn the_declared_name_lever_is_off_unless_armed_exactly() {
+    fn the_declared_name_lever_is_on_unless_disarmed_exactly() {
         assert!(
-            !declared_name_wins(),
-            "AXEYUM_DECLARED_NAME_WINS must default to OFF"
+            declared_name_wins(),
+            "AXEYUM_DECLARED_NAME_WINS must default to ON"
         );
     }
 
-    /// The bug itself, pinned as a MEASUREMENT rather than as prose: on the
-    /// shipped (off) configuration the script is REJECTED, and the rule that
-    /// would accept it is shown to apply to the very same declaration. If the
-    /// two ever stop disagreeing, this fails rather than passing vacuously.
+    /// The bug itself, pinned as a MEASUREMENT rather than as prose — now in the
+    /// fixed direction: the SHIPPED parser ACCEPTS the script, and the
+    /// application really does bind the user's declaration rather than the
+    /// FloatingPoint arm. Checking that it parses is not enough; a parse that
+    /// silently took the theory arm would also "succeed", so this asserts the
+    /// resolved `FuncId` is the declared one.
+    ///
+    /// Both directions stay pinned. `declared_redirect` is the lever-free rule,
+    /// so the second half fails if the rule stops applying to the very
+    /// declaration the first half just parsed — which is what makes this
+    /// unable to pass vacuously.
     #[test]
-    fn the_shipped_parser_rejects_a_script_the_redirect_rule_accepts() {
-        let err = parse_script(VCC_SHAPE).expect_err("the shipped parser must reject this script");
-        let text = err.to_string();
-        assert!(
-            text.contains("fp exponent field"),
-            "expected the FloatingPoint capture, got: {text}"
+    fn the_shipped_parser_accepts_the_declared_name_and_binds_it() {
+        let script = parse_script(VCC_SHAPE)
+            .expect("the shipped parser must ACCEPT a UFNIA script declaring `fp`");
+        let func = script
+            .arena
+            .find_function("fp")
+            .expect("the declaration must be in the arena");
+        let (_, params, _) = script.arena.function(func);
+        assert_eq!(
+            params,
+            &[Sort::Int, Sort::Int, Sort::Int],
+            "`fp` must be bound to the USER declaration, not the FloatingPoint arm"
         );
 
         let mut arena = TermArena::new();
@@ -24716,7 +24757,7 @@ mod declared_name_wins_tests {
         assert_eq!(
             declared_redirect(&arena, "fp", &[a, a, a]),
             Some(func),
-            "the redirect rule must accept what the shipped parser rejects"
+            "the redirect rule must bind the declared signature"
         );
     }
 }
