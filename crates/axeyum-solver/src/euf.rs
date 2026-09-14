@@ -1054,8 +1054,12 @@ where
         };
         let assignment = match round {
             // The abstraction is a relaxation; its UNSAT implies the original's.
-            CheckResult::Unsat => return Ok(CheckResult::Unsat),
+            CheckResult::Unsat => {
+                note_fc_exit("unsat", &stats);
+                return Ok(CheckResult::Unsat);
+            }
             CheckResult::Unknown(reason) => {
+                note_fc_exit("unknown", &stats);
                 return Ok(CheckResult::Unknown(stats.wrap_unknown(&reason)));
             }
             CheckResult::Sat(model) => {
@@ -1111,6 +1115,7 @@ where
 
         if new_lemmas.is_empty() {
             // Model is functionally consistent: project, replay, and return.
+            note_fc_exit("replay", &stats);
             let _phase = crate::phase_breadcrumb::enter("euf:fc-replay");
             let result = project_replay_build(arena, &elim, assertions, &assignment);
             return Ok(match result {
@@ -1134,6 +1139,25 @@ where
             working.push(lemma);
             added.insert((i, j));
         }
+    }
+}
+
+/// ADR-2035 round-distribution probe (`AXEYUM_PRESATPROBE=1`, off by default,
+/// **printed and never acted on**).
+///
+/// [`FunctionConsistencyStats`] reaches the outside world only through
+/// `wrap_unknown`, so a query the CEGAR **decides** leaves no round count behind
+/// at all. That makes the committed census structurally unable to answer the
+/// question a round cap has to answer — *what does truncating the loop cost on
+/// files that currently decide?* — because its denominator is the unknown half
+/// of the population. This emits one line at each of the loop's three exits, so
+/// the denominator is the whole of it.
+fn note_fc_exit(exit: &str, stats: &FunctionConsistencyStats) {
+    if crate::dpll_lia::pre_sat_probe_enabled() {
+        eprintln!(
+            "FCPROBE exit={exit} solve_rounds={} lemmas_added={} violated_pairs={}",
+            stats.solve_rounds, stats.lemmas_added, stats.violated_pairs
+        );
     }
 }
 

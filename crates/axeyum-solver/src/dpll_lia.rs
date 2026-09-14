@@ -1156,6 +1156,22 @@ impl IncrementalArithDpll {
         let enable_affine_bound_cores = self.solve_calls > 1;
 
         if exceeds_pre_sat_skeleton_boundary(self.ctx.atoms.len(), self.prop_solver.next_var) {
+            // ADR-2035: this is the site that refuses 22 of 22 censused
+            // boundary declines, and it is the one WITHOUT the
+            // [`oversized_admission_probe`] rescue its sibling at
+            // [`arith_dpll_admission_preflight`] has. Off by default the call
+            // below only records the crossing; the rescue runs only under the
+            // lever.
+            if let Some(result) = pre_sat_boundary_rescue(
+                arena,
+                assertions,
+                config,
+                "solve",
+                self.ctx.atoms.len(),
+                self.prop_solver.next_var,
+            )? {
+                return Ok(result);
+            }
             return Ok(CheckResult::Unknown(pre_sat_skeleton_boundary_reason(
                 self.ctx.atoms.len(),
                 self.prop_solver.next_var,
@@ -1516,6 +1532,18 @@ fn arith_dpll_admission_preflight(
         return Ok(None);
     }
     if exceeds_pre_sat_skeleton_boundary(solver.ctx.atoms.len(), solver.prop_solver.next_var) {
+        // ADR-2035 ordered probe. This site's rescue is unconditional and
+        // SHIPPED, so the line is emitted here rather than through
+        // [`pre_sat_boundary_rescue`]: what the probe has to separate is
+        // "this query never reached a rescue" from "it reached one and came out
+        // the other side", and only a line per SITE can do that.
+        if pre_sat_probe_enabled() {
+            eprintln!(
+                "PRESATPROBE site=preflight atoms={} cnf_vars={} rescue=shipped outcome=pending",
+                solver.ctx.atoms.len(),
+                solver.prop_solver.next_var,
+            );
+        }
         return Ok(Some(pre_sat_skeleton_boundary_reason(
             solver.ctx.atoms.len(),
             solver.prop_solver.next_var,
@@ -1584,6 +1612,176 @@ fn oversized_admission_probe(
         result @ (CheckResult::Sat(_) | CheckResult::Unsat) => Ok(Some(result)),
         CheckResult::Unknown(_) => Ok(None),
     }
+}
+
+/// ADR-2035 **ordered probe**: `AXEYUM_PRESATPROBE=1` prints one line per
+/// crossing of the pre-SAT skeleton boundary, naming which of the two call
+/// sites crossed it and what happened next. Off by default, **printed and never
+/// acted on**, the same discipline as [ADR-2030]'s `AXEYUM_ACKPROBE`.
+///
+/// # Why an ordered probe and not a census
+///
+/// The committed census records the give-up string of whichever site refused
+/// **last**. `pre_sat_skeleton_boundary_reason` is called from two places, and
+/// the string is identical but for a `stage` suffix, so a census keyed on the
+/// sentence merges them — and even the `stage`-split census cannot say whether
+/// a query ALSO crossed the other site earlier and was offered the rescue
+/// there. That is precisely the reading [ADR-2020] §8.3 made about
+/// `combined.rs:86` and [ADR-2030] refuted. This probe separates
+/// "never reached the rescue" from "reached it and came out the other side".
+///
+/// Exact `1` only: every other spelling is off, so a typo measures the shipped
+/// arm rather than a half-enabled one.
+pub(crate) fn pre_sat_probe_enabled() -> bool {
+    static PROBE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *PROBE.get_or_init(|| parse_pre_sat_flag(std::env::var("AXEYUM_PRESATPROBE").ok().as_deref()))
+}
+
+/// ADR-2035 **A/B lever** (off by default — the shipped arm is the unset one):
+/// `AXEYUM_PRESAT_RESCUE=1` gives [`IncrementalArithDpll::solve`]'s boundary
+/// refusal the same [`oversized_admission_probe`] rescue that
+/// [`arith_dpll_admission_preflight`] already has.
+///
+/// [ADR-2020] §8.3 recorded this as a second missing wiring beside the one
+/// [ADR-2030] refuted, and nobody has measured it. It is a **different**
+/// hypothesis from [ADR-2020]'s own envelope lever: raising the envelope admits
+/// the oversized skeleton to `IncrementalArithDpll`'s enumerate-and-block loop
+/// (measured, 0 of 129, the refusal becoming a timeout); this hands the same
+/// query to [`crate::lia_theory::check_qf_lia_online_cdclt`], a different engine
+/// with 1-UIP learning and theory propagation, under its own bounded budget.
+///
+/// One binary, two env values. Fails **closed**: unset, empty, or any spelling
+/// but an exact `1` leaves the shipped refusal in place.
+fn pre_sat_rescue_enabled() -> bool {
+    static RESCUE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *RESCUE
+        .get_or_init(|| parse_pre_sat_flag(std::env::var("AXEYUM_PRESAT_RESCUE").ok().as_deref()))
+}
+
+/// The PARSE for both flags above, split from the env lookup so the OFF/ON
+/// polarity is a pure unit test. A `OnceLock`-backed reader resolves once per
+/// process, so a test that sets the variable after any other test has read it
+/// measures the wrong arm and still passes — a guard that cannot fail.
+fn parse_pre_sat_flag(raw: Option<&str>) -> bool {
+    matches!(raw.map(str::trim), Some("1"))
+}
+
+/// How many times the ADR-2035 rescue is offered per process: **once**.
+///
+/// [ADR-2020] asked for "one bounded online-CDCL(T) shot"; this is literally
+/// one. The bound is not decoration. `exceeds_pre_sat_skeleton_boundary` is
+/// consulted once per CEGAR round **and** once per integer-bit-blast width rung,
+/// and [ADR-2030] measured **60 to 1,605** such consultations on a single file.
+/// An unbounded rescue would multiply [`OVERSIZED_ADMISSION_PROBE_BUDGET`] by up
+/// to four digits and turn every target file into a harness timeout — which the
+/// A/B would then read as a LOSS caused by the lever rather than by its shape.
+/// That is the dispatch-overrun class the S2 fix exists to prevent.
+///
+/// **Per PROCESS, not per query.** `smtcomp_cli` runs one query per process,
+/// which is the measurement configuration, so here the two coincide. A library
+/// caller solving many queries in one process gets the shot on the first
+/// oversized query only. Stated because it is a real limitation of this shape,
+/// not hidden behind the word "bounded".
+const MAX_PRE_SAT_RESCUE_ATTEMPTS: usize = 1;
+
+static PRE_SAT_RESCUE_ATTEMPTS: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(0);
+
+/// Claims one of the [`MAX_PRE_SAT_RESCUE_ATTEMPTS`] rescue attempts, returning
+/// whether the caller got one. Split out from [`pre_sat_boundary_rescue`] so the
+/// bound is a pure unit test: the lever itself is read through a `OnceLock`, so
+/// a test cannot turn it on after any other test has read it.
+fn claim_pre_sat_rescue_attempt() -> bool {
+    PRE_SAT_RESCUE_ATTEMPTS.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        < MAX_PRE_SAT_RESCUE_ATTEMPTS
+}
+
+/// Serializes the two tests that touch the process-global attempt counter, and
+/// gives them a reset.
+///
+/// Without this they are **order-dependent in a way that silently disarms one of
+/// them**: the one-shot test consumes the process's only attempt, so if it runs
+/// first the polarity test's rescue is refused by the BUDGET rather than by the
+/// lever, and an inverted lever survives. That is the same shape as the vacuous
+/// fixture this lane already found once — a guard that cannot fail.
+#[cfg(test)]
+fn with_fresh_pre_sat_rescue_budget<T>(body: impl FnOnce() -> T) -> T {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let guard = LOCK
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    PRE_SAT_RESCUE_ATTEMPTS.store(0, std::sync::atomic::Ordering::Relaxed);
+    let out = body();
+    drop(guard);
+    out
+}
+
+/// Records a pre-SAT skeleton boundary crossing and, under the ADR-2035 lever,
+/// offers the crossing query the [`oversized_admission_probe`] rescue.
+///
+/// Returns `Ok(None)` — leaving the caller's refusal exactly as shipped —
+/// whenever the lever is off, the query is nonlinear-integer, or the probe does
+/// not decide.
+///
+/// # The nonlinear guard is not optional
+///
+/// [`check_with_arith_dpll`] rejects a genuinely nonlinear integer query
+/// *before* it ever reaches the preflight, because
+/// `lia_online::is_lia_atom` accepts `(<= (* x y) c)` and then classifies it
+/// `Unsupported`, contributing **no row** — so no theory conflict is ever
+/// produced and the driver enumerates until its deadline (measured 1.7–8.0 s
+/// per file). The site this rescue is wired into has no such guard upstream,
+/// and three of the 22 files it fires on are `UFNIA`, so the guard is
+/// reproduced here rather than inherited.
+fn pre_sat_boundary_rescue(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    site: &str,
+    atoms: usize,
+    cnf_vars: usize,
+) -> Result<Option<CheckResult>, SolverError> {
+    if !pre_sat_rescue_enabled() {
+        if pre_sat_probe_enabled() {
+            eprintln!(
+                "PRESATPROBE site={site} atoms={atoms} cnf_vars={cnf_vars} \
+                 rescue=lever-off outcome=refused"
+            );
+        }
+        return Ok(None);
+    }
+    if crate::nia_linearize::has_nonlinear_int_product(arena, assertions) {
+        if pre_sat_probe_enabled() {
+            eprintln!(
+                "PRESATPROBE site={site} atoms={atoms} cnf_vars={cnf_vars} \
+                 rescue=skipped-nonlinear-int outcome=refused"
+            );
+        }
+        return Ok(None);
+    }
+    if !claim_pre_sat_rescue_attempt() {
+        if pre_sat_probe_enabled() {
+            eprintln!(
+                "PRESATPROBE site={site} atoms={atoms} cnf_vars={cnf_vars} \
+                 rescue=budget-spent outcome=refused"
+            );
+        }
+        return Ok(None);
+    }
+    let rescued = oversized_admission_probe(arena, assertions, config)?;
+    if pre_sat_probe_enabled() {
+        let outcome = match &rescued {
+            Some(CheckResult::Sat(_)) => "sat",
+            Some(CheckResult::Unsat) => "unsat",
+            Some(CheckResult::Unknown(_)) => "unknown",
+            None => "declined",
+        };
+        eprintln!(
+            "PRESATPROBE site={site} atoms={atoms} cnf_vars={cnf_vars} \
+             rescue=ran outcome={outcome}"
+        );
+    }
+    Ok(rescued)
 }
 
 fn run_arith_dpll(
@@ -5310,6 +5508,128 @@ mod tests {
         assert_eq!(reason.kind, UnknownKind::ResourceLimit);
         assert!(reason.detail.contains("before the first SAT round"));
         assert_eq!(solver.total_rounds, 0, "the SAT loop must not start");
+    }
+
+    /// ADR-2035's two flags must **fail closed**. A lever that failed open
+    /// would run the rescue in BOTH arms and report a confident zero; a probe
+    /// that failed open would put a line on stderr in the shipped build.
+    ///
+    /// The OFF cases are asserted first and by name, and the ON case is a
+    /// single exact spelling — `parse_pre_sat_flag` is the whole decision, so
+    /// deleting its `Some("1")` arm or widening it to any truthy string must
+    /// break exactly this test.
+    #[test]
+    fn the_presat_rescue_flags_are_off_unless_spelled_exactly() {
+        // OFF: unset, and every spelling the flag does not understand.
+        assert!(!parse_pre_sat_flag(None), "unset");
+        for raw in [
+            "", " ", "0", "01", "1 1", "true", "TRUE", "yes", "on", "2", "-1", "1x", "x1", "one",
+        ] {
+            assert!(!parse_pre_sat_flag(Some(raw)), "must be OFF: {raw:?}");
+        }
+        // ON: an exact `1`, with surrounding whitespace tolerated.
+        for raw in ["1", " 1", "1 ", "  1  "] {
+            assert!(parse_pre_sat_flag(Some(raw)), "must be ON: {raw:?}");
+        }
+    }
+
+    /// A query on which the rescue, if it ran, would DECIDE — so that a test
+    /// asserting the rescue does **not** run can actually fail.
+    ///
+    /// # This is the second version of this fixture, and the first could not fail
+    ///
+    /// The first used `x <= 0`, which `oversized_admission_probe` refuses at its
+    /// own `is_difference_logic_shape` gate before reaching the online route.
+    /// So it returned `None` in BOTH arms, for a reason that has nothing to do
+    /// with the lever: inverting the lever's polarity to "always rescue" killed
+    /// **0 of 1757** tests. The fixture has to be outside the difference-logic
+    /// fragment for the rescue's `None` to mean what the test says it means.
+    fn non_dl_decidable_query(arena: &mut TermArena) -> TermId {
+        // `2x + 3y <= 5 /\ 2x + 3y >= 6` -- affine coefficients put it outside
+        // the difference-logic fragment, and it is refutable, so a rescue that
+        // ran would return `Unsat` rather than declining.
+        let x = arena.declare("rescue_x", Sort::Int).unwrap();
+        let y = arena.declare("rescue_y", Sort::Int).unwrap();
+        let two = arena.int_const(2);
+        let three = arena.int_const(3);
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        let tx = arena.int_mul(two, xv).unwrap();
+        let ty = arena.int_mul(three, yv).unwrap();
+        let sum = arena.int_add(tx, ty).unwrap();
+        let five = arena.int_const(5);
+        let six = arena.int_const(6);
+        let le = arena.int_le(sum, five).unwrap();
+        let ge = arena.int_le(six, sum).unwrap();
+        arena.and(le, ge).unwrap()
+    }
+
+    /// The fixture above is **non-vacuous**: with the boundary rescue actually
+    /// invoked, `oversized_admission_probe` decides it. Without this control the
+    /// polarity test below would pass on a query the rescue declines anyway,
+    /// which is exactly how its first version failed.
+    #[test]
+    fn the_presat_rescue_fixture_is_one_the_rescue_would_decide() {
+        let mut arena = TermArena::new();
+        let assertion = non_dl_decidable_query(&mut arena);
+        let decided =
+            oversized_admission_probe(&mut arena, &[assertion], &SolverConfig::default()).unwrap();
+        assert!(
+            matches!(decided, Some(CheckResult::Unsat)),
+            "fixture must be one the rescue DECIDES, or the polarity test cannot \
+             fail; got {decided:?}"
+        );
+    }
+
+    /// The rescue is offered ONCE per process. Without this bound the lever
+    /// would run a 10 s probe at every boundary consultation — 60 to 1,605 of
+    /// them on a single file by [ADR-2030]'s count — and the A/B would read the
+    /// resulting harness timeouts as losses caused by the lever's idea rather
+    /// than by its plumbing.
+    ///
+    /// This test is the ONLY consumer of the process-global counter in the
+    /// shipped build (the lever is off, so `pre_sat_boundary_rescue` never
+    /// reaches the claim), which is what makes a global safe to assert on here.
+    #[test]
+    fn the_presat_rescue_is_offered_once_per_process() {
+        with_fresh_pre_sat_rescue_budget(|| {
+            assert!(
+                claim_pre_sat_rescue_attempt(),
+                "the first attempt is granted"
+            );
+            for attempt in 2..=5 {
+                assert!(
+                    !claim_pre_sat_rescue_attempt(),
+                    "attempt {attempt} must be refused: the bound is one per process"
+                );
+            }
+        });
+    }
+
+    /// The shipped default is the REFUSAL, not the rescue. This pins the
+    /// polarity at the site rather than at the parser: with neither flag set,
+    /// `pre_sat_boundary_rescue` must return `None` so the caller's decline
+    /// stands byte for byte — on a query the control above proves the rescue
+    /// would otherwise have decided.
+    #[test]
+    fn the_presat_boundary_rescue_is_off_in_the_shipped_build() {
+        let rescued = with_fresh_pre_sat_rescue_budget(|| {
+            let mut arena = TermArena::new();
+            let assertion = non_dl_decidable_query(&mut arena);
+            pre_sat_boundary_rescue(
+                &mut arena,
+                &[assertion],
+                &SolverConfig::default(),
+                "test",
+                99_999,
+                99_999,
+            )
+            .unwrap()
+        });
+        assert!(
+            rescued.is_none(),
+            "the shipped build must keep the boundary refusal, got {rescued:?}"
+        );
     }
 
     /// ADR-2020's A/B lever must **fail closed**: every spelling it does not
