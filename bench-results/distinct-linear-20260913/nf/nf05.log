@@ -1,0 +1,4 @@
+NOISE-RUN-DONE nf05 run1 -> /nas3/data/axeyum/harness/distinct-linear/out/nf/nf05.run1.tsv
+NOISE-RUN-DONE nf05 run2 -> /nas3/data/axeyum/harness/distinct-linear/out/nf/nf05.run2.tsv
+NOISE-RUN-DONE nf05 run3 -> /nas3/data/axeyum/harness/distinct-linear/out/nf/nf05.run3.tsv
+NOISE-DONE nf05 arm=arm
