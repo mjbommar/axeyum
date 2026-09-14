@@ -2,7 +2,7 @@
 """ZERO-INST -- replace every maximal quantified subformula by a fresh Boolean
 constant, producing the file's QUANTIFIER-FREE BOOLEAN SKELETON.
 
-    abstract-quantifiers.py <file> <out.smt2>
+    abstract-quantifiers.py <file> <out.smt2> [--fresh-per-occurrence]
 
 This is the standard CDCL(T) Boolean abstraction: each distinct quantified
 subformula becomes one opaque propositional atom.  It is a WEAKENING -- the
@@ -16,6 +16,26 @@ claimed and is false in general.
 Why this instrument exists rather than a cvc5 flag: a flag measures cvc5.
 This measures the BENCHMARK, so the answer does not depend on any solver's
 internals, and can be checked by any two independent solvers.
+
+SOUNDNESS OF THE ATOM MAP.  By default two occurrences with IDENTICAL TEXT
+share one atom.  That is the stronger abstraction, and it is NOT
+unconditionally sound: `let` can bind the same name to different values in
+two scopes, so identical text can denote different formulas, and forcing
+them equal STRENGTHENS the skeleton and could manufacture a false `unsat`.
+
+`--fresh-per-occurrence` gives every occurrence its own atom.  That is
+unconditionally a weakening and therefore always sound.  It is the control:
+if both modes return the same verdict, the shared-atom map did not do any
+work that the sound map could not, and the text-dedup hazard is excluded by
+measurement rather than by argument.
+
+KNOWN LIMIT, reported rather than worked around: quantifiers inside
+`define-fun` BODIES are not abstracted, and a file whose quantifiers all
+live there abstracts zero occurrences and exits 3.  Abstracting under a
+`define-fun`'s PARAMETER binder would be unsound in the same way -- a fresh
+constant cannot track the parameter -- so this tool refuses instead of
+guessing.  (The limit is this DIAGNOSTIC's, not the solver's: inside axeyum
+the parser has already expanded such definitions.)
 
 Prints, to stderr, the number of abstracted occurrences and distinct atoms.
 A run that abstracts ZERO occurrences has measured nothing, and the caller
@@ -93,7 +113,7 @@ def head(f):
 QSTART = re.compile(r'\(\s*(forall|exists)\s')
 
 
-def abstract(text, atoms):
+def abstract(text, atoms, fresh_per_occurrence=False):
     """Replace every MAXIMAL (forall ...)/(exists ...) subterm by an atom.
 
     Maximal = outermost.  Scanning left to right and skipping past each
@@ -111,10 +131,14 @@ def abstract(text, atoms):
         s = m.start()
         e = scan(text, s)
         body = text[s:e]
-        name = atoms.get(body)
-        if name is None:
+        if fresh_per_occurrence:
             name = f'QABS_{len(atoms)}'
-            atoms[body] = name
+            atoms[f'{body}#{len(atoms)}'] = name
+        else:
+            name = atoms.get(body)
+            if name is None:
+                name = f'QABS_{len(atoms)}'
+                atoms[body] = name
         out.append(text[i:s])
         out.append(name)
         count += 1
@@ -124,6 +148,7 @@ def abstract(text, atoms):
 
 def main():
     path, out = sys.argv[1], sys.argv[2]
+    fresh = '--fresh-per-occurrence' in sys.argv[3:]
     fs = forms(open(path, encoding='utf-8', errors='replace').read())
     atoms = {}
     total = 0
@@ -134,7 +159,7 @@ def main():
         if h in ('check-sat', 'exit', 'set-info'):
             continue
         if h == 'assert':
-            a, c = abstract(f, atoms)
+            a, c = abstract(f, atoms, fresh)
             total += c
             body.append(a)
         else:
@@ -142,7 +167,9 @@ def main():
     decls = [f'(declare-fun {n} () Bool)' for n in atoms.values()]
     with open(out, 'w') as fh:
         fh.write('\n'.join(prefix + decls + body + ['(check-sat)']) + '\n')
-    print(f'{out}\toccurrences_abstracted={total}\tdistinct_atoms={len(atoms)}',
+    print(f'{out}\toccurrences_abstracted={total}'
+          f'\tdistinct_atoms={len(atoms)}'
+          f"\tatom_map={'fresh-per-occurrence' if fresh else 'shared-by-text'}",
           file=sys.stderr)
     if total == 0:
         sys.exit(3)
