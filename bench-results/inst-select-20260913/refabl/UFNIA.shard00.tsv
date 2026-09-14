@@ -1,0 +1,11 @@
+file	default	default_ms	ematch	ematch_ms	noematch	noematch_ms	neither	neither_ms	status
+UFNIA/2019-Preiner/full/f2_rw120.smt2	unsat	106	unsat	306	unsat	107	unsat	107	unknown
+UFNIA/2019-Preiner/partial/t3_rw114.smt2	unknown	108	unknown	107	unknown	107	unknown	106	unknown
+UFNIA/2019-Preiner/qf/f2_rw163.smt2	unsat	108	unsat	107	unsat	107	unsat	107	unknown
+UFNIA/2019-Zohar-ic/full/int_check_bvugt_bvneg_ltr_inv_g.smt2	unsat	106	unsat	107	unsat	107	unsat	107	unsat
+UFNIA/2019-Zohar-ic/qf/int_check_eq_bvnot_ltr_no_inv.smt2	unsat	107	unsat	107	unsat	107	unsat	107	unsat
+UFNIA/sledgehammer/FFT/z3.885941.smt2	unsat	107	unsat	107	unsat	106	unsat	107	unsat
+UFNIA/sledgehammer/TwoSquares/z3.710000.smt2	unsat	106	unsat	107	unknown	106	unknown	107	unsat
+UFNIA/spec_sharp/test14-Xml.ssc.17.Microsoft.Boogie.XmlSink.WriteFileFragment_System.String_notnull.smt2	NONE	26204	NONE	26205	unknown	707	unknown	707	unsat
+UFNIA/vcc-havoc/havoc-bench_036.1.AddElement.smt2	unsat	6012	unsat	6212	unknown	106	unknown	107	unsat
+UFNIA/vcc-havoc/verisoft-sim.c.1.13.untranslated_write_sim.smt2	NONE	26197	NONE	26199	unknown	206	unknown	206	unsat

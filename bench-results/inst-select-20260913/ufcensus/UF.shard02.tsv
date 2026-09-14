@@ -1,0 +1,35 @@
+file	verdict	rc	wall_ms	attempts	decided_by	bound_by	last	bound_ms	total_ms	open_after	open_ms	dump_rows	giveup
+UF/20170428-Barrett/cdt-cade2015/nada/afp/abstract_completeness/x2015_09_10_17_00_22_297_1090463.smt_in.smt2	unsat	0	5213	6	q:mbqi-quick	q:uf-fmf-probe	q:mbqi-quick	5015	5110			0	
+UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_16_54_53_962_1372467.smt_in.smt2	unknown	0	7515	19	none	q:uf-fmf-full	fd:bounded-completeness-unsat	1937	7364			0	give-up kind=Incomplete detail=e-matching instantiation reached fixpoint without refuting after 5 rounds (no further instance to admit; more rounds cannot help)
+UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_00_37_157_1687977.smt_in.smt2	unknown	0	25030	7	none	q:mbqi-quick	q:egraph	1479	3301	q:egraph	21698	0	give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_05_03_974_2039882.smt_in.smt2	unsat	0	1309	6	q:mbqi-quick	q:uf-fmf-probe	q:mbqi-quick	1129	1261			0	
+UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_09_42_195_2416479.smt_in.smt2	unsat	0	4612	6	q:mbqi-quick	q:uf-fmf-probe	q:mbqi-quick	4350	4562			0	
+UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_18_11_407_2828424.smt_in.smt2	unsat	0	107	2	q:ground-subset	fd:parse	q:ground-subset	6	7			0	
+UF/20170428-Barrett/cdt-cade2015/nada/afp/huffman/x2015_09_10_16_46_58_732_1021788.smt_in.smt2	unknown	0	20326	19	none	q:egraph	fd:bounded-completeness-unsat	12570	20193			0	give-up kind=Incomplete detail=e-matching instantiation reached fixpoint without refuting after 5 rounds (no further instance to admit; more rounds cannot help)
+UF/20170428-Barrett/cdt-cade2015/nada/afp/koenigslemma/x2015_09_10_16_53_46_012_1142719.smt_in.smt2	unsat	0	3911	6	q:mbqi-quick	q:uf-fmf-probe	q:mbqi-quick	3692	3843			0	
+UF/20170428-Barrett/cdt-cade2015/nada/afp/tllist/x2015_09_10_16_57_45_684_1164560.smt_in.smt2	unknown	0	25230	7	none	q:uf-fmf-probe	q:egraph	11945	14526	q:egraph	10474	0	give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+UF/20170428-Barrett/cdt-cade2015/nada/distro/gram_lang/x2015_09_10_16_49_56_787_1224974.smt_in.smt2	unsat	0	4612	6	q:mbqi-quick	q:uf-fmf-probe	q:mbqi-quick	4390	4462			0	
+UF/20170428-Barrett/cdt-cade2015/nada/distro/gram_lang/x2015_09_10_16_55_24_325_1534085.smt_in.smt2	unknown	0	20827	19	none	q:mbqi	fd:bounded-completeness-unsat	8358	20650			0	give-up kind=ResourceLimit detail=e-matching: instantiation time budget exhausted
+UF/20170428-Barrett/cdt-cade2015/nada/distro/rbt_impl/x2015_09_10_16_52_32_920_1212907.smt_in.smt2	unknown	0	24129	17	none	q:egraph	fd:bounded-completeness-unsat	20918	24037			0	give-up kind=ResourceLimit detail=quantified solve time budget exhausted after e-matching
+UF/20170428-Barrett/cdt-cade2015/nada/distro/rbt_impl/x2015_09_10_16_59_12_776_1884727.smt_in.smt2	unknown	0	20026	19	none	q:mbqi	fd:bounded-completeness-unsat	6889	19867			0	give-up kind=Incomplete detail=e-matching instantiation reached fixpoint without refuting after 9 rounds (no further instance to admit; more rounds cannot help)
+UF/20170428-Barrett/cdt-cade2015/nada/gandl/stern_brocot_tree/x2015_09_10_16_51_44_982_1071529.smt_in.smt2	unknown	0	17323	19	none	q:mbqi	fd:bounded-completeness-unsat	7595	17148			0	give-up kind=Incomplete detail=e-matching instantiation reached fixpoint without refuting after 5 rounds (no further instance to admit; more rounds cannot help)
+UF/grasshopper/instantiated/pull_strands_check_heap_access_77_2.smt2	unsat	0	808	6	q:mbqi-quick	q:uf-fmf-probe	q:mbqi-quick	559	707			0	
+UF/grasshopper/uninstantiated/rec_remove_check_heap_access_23_4.smt2	unsat	0	1309	6	q:mbqi-quick	q:uf-fmf-probe	q:mbqi-quick	1244	1256			0	
+UF/sledgehammer/Arrow_Order/uf.704291.smt2	unknown	0	25230	7	none	q:uf-fmf-probe	q:egraph	16251	17878	q:egraph	7121	0	give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+UF/sledgehammer/FFT/uf.628947.smt2	sat	0	1009	5	q:uf-fmf-probe	q:uf-fmf-probe	q:uf-fmf-probe	926	936			0	
+UF/sledgehammer/FFT/uf.783324.smt2	unknown	0	25128	7	none	q:mbqi-quick	q:egraph	6497	12445	q:egraph	12554	0	give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+UF/sledgehammer/Fundamental_Theorem_Algebra/smtlib.723818.smt2	sat	0	208	5	q:uf-fmf-probe	q:uf-fmf-probe	q:uf-fmf-probe	87	98			0	
+UF/sledgehammer/Fundamental_Theorem_Algebra/uf.1226930.smt2	unsat	0	2510	6	q:mbqi-quick	q:uf-fmf-probe	q:mbqi-quick	2248	2430			0	
+UF/sledgehammer/Fundamental_Theorem_Algebra/uf.1421601.smt2	unknown	0	13621	19	none	q:mbqi	fd:bounded-completeness-unsat	4498	13451			0	give-up kind=Incomplete detail=e-matching instantiation reached fixpoint without refuting after 11 rounds (no further instance to admit; more rounds cannot help)
+UF/sledgehammer/Fundamental_Theorem_Algebra/uf.727280.smt2	unknown	0	25129	7	none	q:egraph	q:egraph	5507	9561	q:egraph	15438	0	give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+UF/sledgehammer/Fundamental_Theorem_Algebra/uf.937758.smt2	sat	0	108	5	q:uf-fmf-probe	q:uf-fmf-probe	q:uf-fmf-probe	5	8			0	
+UF/sledgehammer/Hoare/uf.1105286.smt2	unknown	0	25231	7	none	q:uf-fmf-probe	q:egraph	12060	13918	q:egraph	11081	0	give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+UF/sledgehammer/Hoare/uf.780982.smt2	sat	0	108	5	q:uf-fmf-probe	q:uf-fmf-probe	q:uf-fmf-probe	13	21			0	
+UF/sledgehammer/NS_Shared/smtlib.820464.smt2	unknown	0	12819	19	none	q:uf-fmf-full	fd:bounded-completeness-unsat	4807	12741			0	give-up kind=Incomplete detail=e-matching instantiation reached fixpoint without refuting after 12 rounds (no further instance to admit; more rounds cannot help)
+UF/sledgehammer/QEpres/uf.1050663.smt2	unsat	0	10717	8	q:mbqi	q:uf-fmf-probe	q:mbqi	6979	10534			0	
+UF/sledgehammer/QEpres/uf.717452.smt2	sat	0	108	5	q:uf-fmf-probe	q:uf-fmf-probe	q:uf-fmf-probe	4	6			0	
+UF/sledgehammer/QEpres/uf.924249.smt2	NONE	134	12888									0	
+UF/sledgehammer/StrongNorm/uf.745770.smt2	unknown	0	16319	19	none	q:mbqi	fd:bounded-completeness-unsat	9740	16172			0	give-up kind=Incomplete detail=e-matching instantiation reached fixpoint without refuting after 16 rounds (no further instance to admit; more rounds cannot help)
+UF/sledgehammer/TwoSquares/uf.673275.smt2	unsat	0	1009	6	q:mbqi-quick	q:uf-fmf-probe	q:mbqi-quick	881	899			0	
+UF/sledgehammer/TypeSafe/smtlib.1098821.smt2	unknown	0	24130	18	none	q:uf-fmf-probe	fd:bounded-completeness-unsat	12027	24082			0	give-up kind=Incomplete detail=e-matching instantiation stopped after 398 rounds: the remaining budget could not fit another round with growth headroom
+UF/sledgehammer/TypeSafe/uf.1008626.smt2	unknown	0	25331	7	none	q:uf-fmf-probe	q:egraph	11001	13951	q:egraph	11048	0	give-up kind=Watchdog detail=watchdog fired before the worker thread returned

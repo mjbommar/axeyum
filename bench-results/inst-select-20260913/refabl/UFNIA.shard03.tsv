@@ -1,0 +1,11 @@
+file	default	default_ms	ematch	ematch_ms	noematch	noematch_ms	neither	neither_ms	status
+UFNIA/2019-Preiner/combined/t3_rw1401.smt2	unsat	307	unsat	107	unsat	109	unsat	107	unknown
+UFNIA/2019-Preiner/full/t3_rw25.smt2	unsat	109	unsat	109	unsat	106	unsat	107	unknown
+UFNIA/2019-Preiner/partial/t3_rw636.smt2	unsat	108	unsat	108	unsat	107	unsat	108	unknown
+UFNIA/2019-Zohar-ic/combined/int_check_bvugt_bvashr0_ltr_inv_g.smt2	unsat	208	unsat	208	unknown	208	unknown	207	unknown
+UFNIA/2019-Zohar-ic/partial/int_check_bvugt_bvudiv0_ltr_no_inv.smt2	unsat	108	unknown	108	unsat	107	unknown	108	unsat
+UFNIA/lahiri-cav09-storm-queries/mqueue_example_cegar_2_3_10.smt2	NONE	27119	NONE	26204	NONE	26208	NONE	26215	unsat
+UFNIA/sledgehammer/Hoare/z3.850818.smt2	unsat	12623	unsat	17125	unknown	409	unknown	109	unknown
+UFNIA/spec_sharp/test14-CommandLineOptions.ssc.23.Microsoft.Boogie.CommandLineOptions.Boogie.ContractConsistencyCheck.get_ProverNeedsTypes.smt2	unsat	110	unsat	109	unsat	108	unsat	108	unsat
+UFNIA/vcc-havoc/baby.1.20.handle_illegal.smt2	unsat	14426	unsat	14223	unknown	209	unknown	209	unsat
+UFNIA/vcc-havoc/vccp-union1.c.6.reint2.smt2	unsat	210	unsat	210	unknown	109	unknown	111	unsat

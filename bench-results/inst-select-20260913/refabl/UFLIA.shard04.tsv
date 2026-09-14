@@ -1,0 +1,12 @@
+file	default	default_ms	ematch	ematch_ms	noematch	noematch_ms	neither	neither_ms	status
+UFLIA/boogie/AssignToRepField_AssignToRepField.N.smt2	unsat	207	unsat	207	unknown	107	unknown	107	unsat
+UFLIA/boogie/Interval_Cell.Shift_System.Int32.smt2	unsat	207	unsat	207	unknown	108	unknown	108	unsat
+UFLIA/simplify/javafe.ast.CatchClauseVec.66.smt2	unsat	408	unsat	408	unknown	108	unknown	109	unsat
+UFLIA/simplify/javafe.parser.TokenQueue.576.smt2	unsat	108	unsat	108	unknown	107	unknown	107	unsat
+UFLIA/simplify2/front_end_suite/javafe.ast.CompilationUnit.001.smt2	unsat	107	unsat	107	unsat	107	unsat	108	unsat
+UFLIA/simplify2/front_end_suite/javafe.ast.MethodDecl.005.smt2	unsat	1910	unsat	1909	unknown	108	unknown	108	unsat
+UFLIA/simplify2/front_end_suite/javafe.ast.VariableAccess.001.smt2	unsat	108	unsat	107	unsat	109	unsat	108	unsat
+UFLIA/simplify2/front_end_suite/javafe.reader.CachedReader.003.smt2	unsat	108	unsat	107	unknown	107	unknown	108	unsat
+UFLIA/simplify2/front_end_suite/javafe.tc.Types.035.smt2	unsat	108	unsat	106	unsat	109	unsat	110	unsat
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1282463.smt2	unsat	6716	unsat	6513	unknown	110	unknown	109	unsat
+UFLIA/sledgehammer/QEpres/smtlib.1065390.smt2	unsat	110	unsat	109	unknown	109	unknown	109	unsat

@@ -1,0 +1,12 @@
+file	default	default_ms	ematch	ematch_ms	noematch	noematch_ms	neither	neither_ms	status
+UFLIA/boogie/Cast_Cast.R_System.Object_System.Int32.smt2	unsat	106	unsat	106	unsat	106	unsat	106	unsat
+UFLIA/boogie/loopinv1_LoopInv1.Test1a_F_notnull-infer_eh.smt2	unsat	1207	unsat	1307	unknown	106	unknown	106	unsat
+UFLIA/simplify/javafe.ast.NewInstanceExpr.271.smt2	unsat	206	unsat	206	unknown	206	unknown	206	unsat
+UFLIA/simplify/javafe.tc.TypeSig.730.smt2	NONE	26198	NONE	26206	unknown	408	unknown	408	unsat
+UFLIA/simplify2/front_end_suite/javafe.ast.DefaultVisitor.028.smt2	unsat	108	unsat	108	unsat	108	unsat	108	unsat
+UFLIA/simplify2/front_end_suite/javafe.ast.StandardPrettyPrint.008.smt2	unsat	108	unsat	108	unsat	108	unsat	108	unsat
+UFLIA/simplify2/front_end_suite/javafe.filespace.ZipTree.005.smt2	unsat	108	unsat	108	unknown	108	unknown	108	unsat
+UFLIA/simplify2/front_end_suite/javafe.tc.EnvForLocals.007.smt2	unsat	108	unsat	108	unknown	108	unknown	108	unsat
+UFLIA/simplify2/small_suite/getRootInterface.smt2	unsat	1209	unsat	1209	unknown	208	unknown	208	unsat
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.972059.smt2	unsat	107	unsat	107	unknown	108	unknown	107	unsat
+UFLIA/sledgehammer/QEpres/smtlib.1237382.smt2	unsat	108	unsat	108	unknown	108	unknown	108	unsat

@@ -1,0 +1,13 @@
+file	default	default_ms	ematch	ematch_ms	noematch	noematch_ms	neither	neither_ms	status
+UFLIA/boogie/AdvancedTypes_InternalSubClass..ctor-orderStrength_1.smt2	unsat	207	unsat	207	unknown	106	unknown	106	unsat
+UFLIA/boogie/DefaultLoopInv0_A.M-modifiesOnLoop-noinfer.smt2	unsat	407	unsat	407	unknown	106	unknown	106	unsat
+UFLIA/grasshopper/instantiated/insertion_sort_postcondition_of_insertion_sort_63_1.smt2	unsat	206	unsat	207	unknown	107	unknown	107	unsat
+UFLIA/simplify/javafe.ast.TypeDeclElemPragma.373.smt2	unsat	107	unsat	107	unknown	106	unknown	106	unsat
+UFLIA/simplify2/front_end_suite/javafe.PrintSpec.012.smt2	unsat	106	unsat	106	unknown	106	unknown	106	unsat
+UFLIA/simplify2/front_end_suite/javafe.ast.ImportDeclVec.015.smt2	unsat	306	unsat	307	unknown	106	unknown	107	unsat
+UFLIA/simplify2/front_end_suite/javafe.ast.ThrowStmt.004.smt2	unsat	107	unsat	106	unsat	107	unsat	106	unsat
+UFLIA/simplify2/front_end_suite/javafe.parser.TagConstants.001.smt2	unsat	106	unsat	107	unknown	106	unknown	107	unsat
+UFLIA/simplify2/front_end_suite/javafe.tc.TypeSig.001.smt2	unsat	907	unsat	907	unknown	106	unknown	107	unsat
+UFLIA/sledgehammer/FFT/smtlib.898060.smt2	unsat	106	unsat	107	unknown	106	unknown	107	unsat
+UFLIA/sledgehammer/Hoare/smtlib.581330.smt2	unsat	107	unsat	107	unknown	107	unknown	107	unsat
+UFLIA/tokeneer/auditlog/init-31.smt2	unsat	106	unsat	107	unknown	106	unknown	106	unsat
