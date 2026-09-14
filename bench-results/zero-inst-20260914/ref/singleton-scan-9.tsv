@@ -1,0 +1,9 @@
+01	UFLIA/simplify2/front_end_suite/javafe.ast.AmbiguousVariableAccess.004.smt2	javafe.ast.AmbiguousVariableAccess.004.smt2	asserts=589	singletons_unsat=1	singleton_idx=[588]   calls=590 errors=0 
+02	UFLIA/simplify2/front_end_suite/javafe.ast.CompilationUnit.001.smt2	javafe.ast.CompilationUnit.001.smt2	asserts=599	singletons_unsat=1	singleton_idx=[598]   calls=600 errors=0 
+03	UFLIA/simplify2/front_end_suite/javafe.ast.ConstructorDecl.007.smt2	javafe.ast.ConstructorDecl.007.smt2	asserts=601	singletons_unsat=1	singleton_idx=[600]   calls=602 errors=0 
+04	UFLIA/simplify2/front_end_suite/javafe.ast.DefaultVisitor.028.smt2	javafe.ast.DefaultVisitor.028.smt2	asserts=393	singletons_unsat=1	singleton_idx=[392]   calls=394 errors=0 
+05	UFLIA/simplify2/front_end_suite/javafe.ast.ForStmt.009.smt2	javafe.ast.ForStmt.009.smt2	asserts=593	singletons_unsat=1	singleton_idx=[592]   calls=594 errors=0 
+06	UFLIA/simplify2/front_end_suite/javafe.ast.SuperObjectDesignator.008.smt2	javafe.ast.SuperObjectDesignator.008.smt2	asserts=589	singletons_unsat=1	singleton_idx=[588]   calls=590 errors=0 
+07	UFLIA/simplify2/front_end_suite/javafe.ast.ThrowStmt.004.smt2	javafe.ast.ThrowStmt.004.smt2	asserts=589	singletons_unsat=1	singleton_idx=[588]   calls=590 errors=0 
+08	UFLIA/simplify2/front_end_suite/javafe.parser.test.TestLex.030.smt2	javafe.parser.test.TestLex.030.smt2	asserts=588	singletons_unsat=1	singleton_idx=[587]   calls=589 errors=0 
+09	UFNIA/vcc-havoc/havoc-bench_dlist_insert_head.12.ua_wcscpy.smt2	havoc-bench_dlist_insert_head.12.ua_wcscpy.smt2	asserts=3	singletons_unsat=1	singleton_idx=[2]   calls=4 errors=0 
