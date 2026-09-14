@@ -5505,9 +5505,42 @@ fn const_array_value(e: &SExpr) -> Option<&SExpr> {
 // Under (1) and (2) every set term denotes a subset of the modeled domain and
 // every operator is computed exactly on that domain, so a model of the `BitVec`
 // encoding lifts to a set model (map bit `i` to element `i`, and realize the
-// junk bits with that many fresh distinct unnamed elements) and vice-versa: the
-// encoding is **equisatisfiable**, so neither a wrong `sat` nor a wrong `unsat`
-// is possible.
+// junk bits with that many fresh distinct unnamed elements). That is the
+// **forward** direction, and it is what rules out a wrong `sat`.
+//
+//  3. **The universe is wide enough to witness every distinction the formula
+//     demands.** This is the CONVERSE direction — real model ⇒ encoded model —
+//     and it does not follow from (1) and (2). It is a claim about the WIDTH.
+//
+//     **Until 2026-09-14 this section asserted, for both branches below, that
+//     the encoding is "equisatisfiable, so neither a wrong `sat` nor a wrong
+//     `unsat` is possible". That was false for the non-cardinality branch, and
+//     the false claim is the reason the branch shipped with no sizing argument
+//     at all — the comment did the arguing.** The width was `D + MARGIN` with
+//     `MARGIN` a CONSTANT 2, so a set variable had exactly `2^(D+2)` possible
+//     values and `(distinct s1 … sN)` over free set variables was refuted by
+//     pigeonhole for `N > 2^(D+2)`. Measured through the shipped front door:
+//     five free sets with `D = 0` answered `unsat` (cvc5: `sat`), while four
+//     answered `sat` — the threshold sitting exactly at `2^(0+2)`. The comment
+//     at the `MARGIN` constant said what it was really for: letting *two* free
+//     sets differ on unnamed elements. Two. It was never sized for `N`.
+//
+//     The width now carries the witness demand explicitly. Every unnamed
+//     element's behaviour under the accepted (pointwise, complement-free)
+//     operators is determined by its membership vector across the script's set
+//     variables, so two unnamed elements with the same vector are
+//     interchangeable — a model only needs a separate unnamed slot for each
+//     distinction it must *witness*, and each set-relation atom demands at most
+//     one (a violated `=`/`subset` needs one element of the symmetric
+//     difference; a `distinct` of arity `n` needs at most `n(n-1)/2`).
+//     [`set_relation_witness_demand`] over-counts that demand, which is the safe
+//     direction, and the total is **declined** past [`MAX_SET_WIDTH`] rather
+//     than clamped. A clamp would reintroduce this exact bug at a higher
+//     threshold while looking like a fix.
+//
+// So, per branch: the forward direction (no wrong `sat`) holds under (1) and (2)
+// for both. The converse (no wrong `unsat`) holds for the cardinality branch by
+// the slack-universe argument below, and for the non-cardinality branch by (3).
 //
 // # Cardinality over a slack universe
 //
@@ -5614,17 +5647,29 @@ fn desugar_sets(exprs: &mut [SExpr]) -> Result<(), SmtError> {
     // large enough to realize any model the cardinality constants demand (see the
     // module note, "Cardinality over a slack universe"). Otherwise the named-domain
     // width `D + MARGIN` is exact for the pointwise operators.
+    // Slots for the distinctions the formula demands between sets on elements it
+    // never names (module note, condition 3). Without these the universe is
+    // `2^(d+2)` values wide however many set variables the script declares, and
+    // an `N`-way `distinct` over free sets is refuted by pigeonhole.
+    let witnesses = set_relation_witness_demand(exprs);
     let width = if exprs.iter().any(uses_set_card) {
-        set_card_universe_width(exprs, d)?
+        set_card_universe_width(exprs, d, witnesses)?
     } else {
-        d.checked_add(SET_MARGIN_BITS)
-            .filter(|&w| w <= MAX_SET_WIDTH)
-            .ok_or_else(|| {
-                SmtError::Unsupported(format!(
-                    "finite-set modeling needs {d} element bits, over the {MAX_SET_WIDTH}-bit cap"
-                ))
-            })?
-            .max(1)
+        let demand = u64::from(d)
+            .saturating_add(witnesses)
+            .saturating_add(u64::from(SET_MARGIN_BITS))
+            .max(1);
+        // DECLINE, never clamp: a `min(demand, MAX_SET_WIDTH)` here would
+        // silently reintroduce the pigeonhole bug at a higher threshold and
+        // would look like a fix. `set_width_over_the_cap_declines` pins this.
+        if demand > u64::from(MAX_SET_WIDTH) {
+            return Err(SmtError::Unsupported(format!(
+                "finite-set modeling needs a {demand}-slot universe ({d} named \
+                 elements + {witnesses} witness slots + {SET_MARGIN_BITS} margin), \
+                 over the {MAX_SET_WIDTH}-bit cap"
+            )));
+        }
+        u32::try_from(demand).expect("demand <= MAX_SET_WIDTH fits u32")
     };
     let bit_index: HashMap<String, u32> = element_keys
         .into_iter()
@@ -5671,7 +5716,7 @@ fn uses_set_card(e: &SExpr) -> bool {
 ///
 /// [`SmtError::Unsupported`] if the demanded universe exceeds [`MAX_SET_WIDTH`]
 /// (the popcount stays exact but the singleton one-hot constant must fit `u128`).
-fn set_card_universe_width(exprs: &[SExpr], d: u32) -> Result<u32, SmtError> {
+fn set_card_universe_width(exprs: &[SExpr], d: u32, witnesses: u64) -> Result<u32, SmtError> {
     let mut literal_sum: u64 = 0;
     let mut card_count: u64 = 0;
     for e in exprs {
@@ -5680,6 +5725,10 @@ fn set_card_universe_width(exprs: &[SExpr], d: u32) -> Result<u32, SmtError> {
     let demand = u64::from(d)
         .saturating_add(literal_sum)
         .saturating_add(card_count)
+        // The cardinality budget sizes the universe for the *counts* the script
+        // demands; it says nothing about the set-vs-set distinctions that the
+        // non-cardinality branch needs slots for. A script can want both.
+        .saturating_add(witnesses)
         .saturating_add(u64::from(SET_MARGIN_BITS))
         .max(1);
     if demand > u64::from(MAX_SET_WIDTH) {
@@ -5689,6 +5738,88 @@ fn set_card_universe_width(exprs: &[SExpr], d: u32) -> Result<u32, SmtError> {
         )));
     }
     Ok(u32::try_from(demand).expect("demand <= MAX_SET_WIDTH fits u32"))
+}
+
+/// An over-approximation of the number of unnamed element slots a model may need
+/// in order to witness the set-vs-set distinctions the script demands (module
+/// note, condition 3).
+///
+/// Each set-relation atom needs at most one witness: a violated `=` or
+/// `set.subset` needs one element of the symmetric difference, and a `distinct`
+/// of arity `n` is `n(n-1)/2` pairwise disequalities. Positive occurrences need
+/// none, and this does not try to tell the polarities apart — over-counting
+/// widens the universe, which is the safe direction, and pushes a script over
+/// [`MAX_SET_WIDTH`] into a clean decline rather than a wrong answer.
+///
+/// # Why it is restricted to *plausibly set-valued* operands
+///
+/// `=` and `distinct` are the most common atoms in any script, and counting all
+/// of them would widen every set-using benchmark toward the cap for the sake of
+/// `Int` equalities that demand nothing. An operand counts only when it is a
+/// declared `(Set …)` symbol or a `set.*` application, which is the shape every
+/// set-relation atom in the accepted subset actually has.
+fn set_relation_witness_demand(exprs: &[SExpr]) -> u64 {
+    let set_symbols = declared_set_symbols(exprs);
+    let mut demand: u64 = 0;
+    for e in exprs {
+        for node in e.descendants() {
+            let SExpr::List(items) = node else { continue };
+            let Some(head) = items.first().and_then(SExpr::atom) else {
+                continue;
+            };
+            let args = &items[1..];
+            match head {
+                "set.subset" => demand = demand.saturating_add(1),
+                "=" | "distinct" if args.iter().any(|a| is_set_valued(a, &set_symbols)) => {
+                    let n = args.len() as u64;
+                    demand = demand.saturating_add(n.saturating_mul(n.saturating_sub(1)) / 2);
+                }
+                _ => {}
+            }
+        }
+    }
+    demand
+}
+
+/// Names declared with a `(Set …)` result sort, via `declare-const` or a 0-ary
+/// `declare-fun`.
+fn declared_set_symbols(exprs: &[SExpr]) -> HashSet<String> {
+    let mut out = HashSet::new();
+    for e in exprs {
+        let Some(items) = e.list() else { continue };
+        let head = items.first().and_then(SExpr::atom);
+        let (name, sort) = match head {
+            Some("declare-const") if items.len() == 3 => (&items[1], &items[2]),
+            Some("declare-fun") if items.len() == 4 => (&items[1], &items[3]),
+            _ => continue,
+        };
+        if let Some(name) = name.atom()
+            && sort
+                .list()
+                .is_some_and(|s| s.first().and_then(SExpr::atom) == Some("Set"))
+        {
+            out.insert(name.to_owned());
+        }
+    }
+    out
+}
+
+/// Whether `e` is plausibly a set-sorted expression: a declared `(Set …)`
+/// symbol, or an application of a set constructor/operator.
+fn is_set_valued(e: &SExpr, set_symbols: &HashSet<String>) -> bool {
+    match e {
+        SExpr::Atom(a) => a == "set.empty" || set_symbols.contains(a.as_str()),
+        SExpr::List(items) => {
+            let Some(head) = items.first().and_then(SExpr::atom) else {
+                return false;
+            };
+            // `(as set.empty (Set E))`.
+            if head == "as" {
+                return items.get(1).and_then(SExpr::atom) == Some("set.empty");
+            }
+            head.starts_with("set.") && head != "set.member" && head != "set.card"
+        }
+    }
 }
 
 /// Sums every non-negative integer numeric literal in `e` into `literal_sum` and

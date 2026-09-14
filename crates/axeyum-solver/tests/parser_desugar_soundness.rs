@@ -182,6 +182,103 @@ fn singletons_of_distinct_values_differ() {
 }
 
 // ---------------------------------------------------------------------------
+// `desugar_sets`: the universe is wide enough to witness the distinctions the
+// formula demands.
+// ---------------------------------------------------------------------------
+//
+// The width was `d + SET_MARGIN_BITS` with `SET_MARGIN_BITS` a CONSTANT 2, so a
+// set variable had exactly `2^(d+2)` possible values and an `N`-way `distinct`
+// over free sets was refuted by pigeonhole for `N > 2^(d+2)`. The three tests
+// below are the witness and the two controls that pin the THRESHOLD rather than
+// just the symptom — which is what shows the mechanism is the width and not
+// something else in the set encoding.
+
+/// Five free set variables with no named element. Five distinct subsets of an
+/// infinite sort plainly exist, so this is `sat`; at width `0 + 2` it was
+/// refuted by pigeonhole. cvc5 answers `sat`.
+#[test]
+fn five_free_sets_can_be_pairwise_distinct() {
+    assert_sat(
+        "5 free sets, d=0",
+        "(set-logic ALL)\n(declare-sort E 0)\n\
+         (declare-fun s1 () (Set E))\n(declare-fun s2 () (Set E))\n\
+         (declare-fun s3 () (Set E))\n(declare-fun s4 () (Set E))\n\
+         (declare-fun s5 () (Set E))\n\
+         (assert (distinct s1 s2 s3 s4 s5))\n(check-sat)\n",
+    );
+}
+
+/// Threshold control below the old cliff: FOUR free sets fit in `2^(0+2) = 4`
+/// values, so this was `sat` even before the fix. It pins that the five-set
+/// test above is about the WIDTH — a change that broke set distinctness
+/// generally would take this one down too.
+#[test]
+fn four_free_sets_can_be_pairwise_distinct() {
+    assert_sat(
+        "4 free sets, d=0 (was sat before the fix too)",
+        "(set-logic ALL)\n(declare-sort E 0)\n\
+         (declare-fun s1 () (Set E))\n(declare-fun s2 () (Set E))\n\
+         (declare-fun s3 () (Set E))\n(declare-fun s4 () (Set E))\n\
+         (assert (distinct s1 s2 s3 s4))\n(check-sat)\n",
+    );
+}
+
+/// Threshold control above the old cliff, built by raising `d`: the SAME five
+/// sets, plus one named literal element, which took the old width to `1 + 2`
+/// and `2^3 = 8 >= 5`. So this was `sat` before the fix and must stay `sat`
+/// after it.
+///
+/// The construction matters and is stated here because it is easy to get a
+/// different query by accident: the extra element must be a NAMED LITERAL in a
+/// `set.member`, since `d` counts distinct literal element terms. Declaring an
+/// element-sorted *variable* and asserting membership of it does not raise `d`
+/// — `scan_set_ops` declines a non-literal element — and that script answers
+/// `unknown`, not `sat`.
+#[test]
+fn five_free_sets_with_a_named_element_stay_sat() {
+    assert_sat(
+        "5 free sets + one named literal element, d=1",
+        "(set-logic ALL)\n\
+         (declare-fun s1 () (Set Int))\n(declare-fun s2 () (Set Int))\n\
+         (declare-fun s3 () (Set Int))\n(declare-fun s4 () (Set Int))\n\
+         (declare-fun s5 () (Set Int))\n\
+         (assert (distinct s1 s2 s3 s4 s5))\n(assert (set.member 1 s1))\n(check-sat)\n",
+    );
+}
+
+/// A width past `MAX_SET_WIDTH` must DECLINE, never clamp.
+///
+/// This is the test that makes the fix safe rather than merely different: a
+/// `min(demand, MAX_SET_WIDTH)` in place of the decline would silently
+/// reintroduce the pigeonhole bug at a higher threshold and would look like a
+/// fix. Under a clamp this script parses and answers a verdict; the assertion
+/// is that it does not parse at all.
+///
+/// 200 pairwise-distinct free sets demand `200*199/2` witness slots, far past
+/// the 128-bit cap, so the demand cannot be met.
+#[test]
+fn set_width_over_the_cap_declines() {
+    let mut src = String::from("(set-logic ALL)\n(declare-sort E 0)\n");
+    for i in 0..200 {
+        src.push_str(&format!("(declare-fun s{i} () (Set E))\n"));
+    }
+    src.push_str("(assert (distinct");
+    for i in 0..200 {
+        src.push_str(&format!(" s{i}"));
+    }
+    src.push_str("))\n(check-sat)\n");
+
+    let err = parse_script(&src)
+        .err()
+        .expect("a set universe past MAX_SET_WIDTH must be refused, not clamped to the cap");
+    let text = err.to_string();
+    assert!(
+        text.contains("cap"),
+        "expected a capacity decline naming the cap, got: {text}"
+    );
+}
+
+// ---------------------------------------------------------------------------
 // `desugar_const_arrays`: a definition is eliminated only where it is in force.
 // ---------------------------------------------------------------------------
 //
