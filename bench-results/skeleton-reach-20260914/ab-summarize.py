@@ -53,9 +53,17 @@ ta = sum(int(r["arm_ms"] or 0) for r in rows)
 print(f"  attributed wall: base {tb / 1000:.1f}s  arm {ta / 1000:.1f}s  "
       f"ratio {ta / tb if tb else float('nan'):.2f}x")
 
+# WHAT COUNTS AS EXPLAINED.  This lever can only act by removing an INGEST
+# refusal, so a gain is attributable to it only if the base row carried one.
+# The first spelling here was `base_giveup != "none"`, which also matched a
+# base row that simply TIMED OUT -- and the control division promptly produced
+# such a row, `unknown -> sat` at 23,962 ms with the rung ABSENT, labelled
+# EXPLAINED. That is a timing gain wearing the lever's name. A gain the lever
+# cannot have caused must read UNEXPLAINED and be named.
+INGEST_GIVEUP = {"ResourceLimit", "Error"}
 expl = collections.Counter()
 for r in gains:
-    kind = "EXPLAINED" if r["base_giveup"] != "none" and r["arm_giveup"] == "none" else "UNEXPLAINED"
+    kind = "EXPLAINED" if r["base_giveup"] in INGEST_GIVEUP and r["arm_giveup"] == "none" else "UNEXPLAINED"
     expl[kind] += 1
     print(f"  GAIN {kind:<11} {r['base_v']}->{r['arm_v']} rung={r['arm_rung']:<8} "
           f"{r['arm_ms']:>6}ms base_giveup={r['base_giveup']:<14} {r['file'].split('/', 1)[1][:62]}")
@@ -65,10 +73,24 @@ for r in flips:
     print(f"  *** FLIP (P0) *** {r['base_v']}->{r['arm_v']} {r['file']}")
 print("  gains by attribution:", dict(expl))
 
-# LEVER LIVENESS: rows where the base's ingest refusal disappeared in the arm,
-# whether or not the verdict changed. A phase where this is 0 has not exercised
-# the lever at all, and its zero is a WEAK control -- say so rather than
-# reporting it as a measured null.
-live = [r for r in rows if r["base_giveup"] != "none" and r["arm_giveup"] == "none"]
-print(f"  LEVER LIVENESS: {len(live)} rows lost their base give-up in the arm "
-      f"({'non-vacuous' if live else 'VACUOUS -- the lever never fired here'})")
+# LEVER LIVENESS, in TWO columns, because the strict one under-reports.
+#
+# A row whose ingest refusal the arm removes usually does NOT end with no
+# give-up at all: it now reaches the ladder and spends the budget there, so it
+# ends at `Watchdog`. Counting only `arm_giveup == none` therefore misses every
+# row where the lever fired and the file still went undecided -- which on the
+# control division is exactly the population that proves the control is not
+# vacuous. So `FIRED` is the honest liveness column and `RESOLVED` is the
+# subset that also finished.
+#
+# A phase where FIRED is 0 has not exercised the lever at all, and its zero is
+# a WEAK control. Say so rather than reporting it as a measured null.
+INGEST = INGEST_GIVEUP
+fired = [r for r in rows if r["base_giveup"] in INGEST and r["arm_giveup"] != r["base_giveup"]]
+resolved = [r for r in fired if r["arm_giveup"] == "none"]
+print(f"  LEVER LIVENESS: FIRED on {len(fired)} rows (base give-up was an ingest refusal and "
+      f"the arm's is not), of which RESOLVED {len(resolved)} "
+      f"({'non-vacuous' if fired else 'VACUOUS -- the lever never fired here'})")
+for r in fired:
+    print(f"    fired {r['base_giveup']:<14}-> {r['arm_giveup']:<12} {r['base_v']}->{r['arm_v']} "
+          f"{r['file'].split('/', 1)[1][:60]}")
