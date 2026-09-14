@@ -757,7 +757,31 @@ pub fn parse_script_within(
     input: &str,
     deadline: Option<std::time::Instant>,
 ) -> Result<Script, SmtError> {
-    parse_script_bounded_inner(input, STRING_MAX_LEN, deadline)
+    parse_script_bounded_inner(input, STRING_MAX_LEN, deadline, DistinctLinear::from_env())
+}
+
+/// [`parse_script`] with the ADR-2000 `distinct` lever given explicitly rather
+/// than read from `AXEYUM_DISTINCT_LINEAR`.
+///
+/// `lever` takes the same strings as the environment variable: `None` and any
+/// unrecognised value are the shipped behaviour (the pairwise expansion and its
+/// cap); `"on"` / `"on:<min-arity>"` select the linear encoding; and
+/// `"mutant:vacuous[:<n>]"` / `"mutant:shared[:<n>]"` select the **deliberately
+/// wrong** encodings the mutation control needs.
+///
+/// This exists because [`DistinctLinear::from_env`] latches a `OnceLock` — the
+/// determinism promise — so a single process cannot otherwise compare the two
+/// arms, and a soundness-negative suite that cannot run both arms in one
+/// process is a suite that can only test the shipped one.
+///
+/// # Errors
+///
+/// As [`parse_script`].
+pub fn parse_script_with_distinct_lever(
+    input: &str,
+    lever: Option<&str>,
+) -> Result<Script, SmtError> {
+    parse_script_bounded_inner(input, STRING_MAX_LEN, None, DistinctLinear::parse(lever))
 }
 
 /// Returns `Err(DeadlineExceeded)` when `deadline` has passed.
@@ -819,7 +843,7 @@ pub fn parse_script_with_string_bound_within(
     deadline: Option<std::time::Instant>,
 ) -> Result<Script, SmtError> {
     let floor = floor.clamp(STRING_MAX_LEN, STRING_BOUND_CAP);
-    match parse_script_bounded_inner(input, floor, deadline) {
+    match parse_script_bounded_inner(input, floor, deadline, DistinctLinear::from_env()) {
         // A deadline is a resource limit, not a parse failure: do NOT fall through
         // to the word-first retry, which would re-parse the whole script and spend
         // budget the caller has already run out of.
@@ -915,6 +939,7 @@ fn parse_script_bounded_inner(
     input: &str,
     floor: u32,
     deadline: Option<std::time::Instant>,
+    distinct_linear: DistinctLinear,
 ) -> Result<Script, SmtError> {
     let mut exprs = read_all(input)?;
     check_deadline(deadline, "after read_all")?;
@@ -999,6 +1024,7 @@ fn parse_script_bounded_inner(
             &lenabs,
             &string_symbol_bounds,
             command,
+            distinct_linear,
         )?;
     }
     let (len_map, len_facts, len_bounds, len_coarse, ops_used) = lenabs.export();
@@ -5988,6 +6014,7 @@ fn parse_command<'a>(
     lenabs: &LenAbs,
     string_symbol_bounds: &BTreeMap<String, u32>,
     command: &'a SExpr,
+    distinct_linear: DistinctLinear,
 ) -> Result<(), SmtError> {
     let items = command
         .list()
@@ -6253,7 +6280,15 @@ fn parse_command<'a>(
             let body = sexpr_at(items, 1)?;
             let name = named_label(body);
             let guard_checkpoint = lenabs.encoding_guard_checkpoint();
-            let t = parse_term(
+            // ADR-2000: the ONLY site the linear `distinct` encoding may fire.
+            // An `(assert …)` body is in positive polarity by construction —
+            // including under `push`/`pop`, which scope assertions but never
+            // negate them — and the encoding introduces a fresh symbol, so it
+            // is equisatisfiable only there. `parse_term` has no polarity
+            // context, which is why this is not inside the `distinct` operator
+            // case. Every decline falls through to the unchanged pairwise path
+            // below, including its deterministic cap.
+            let linear = distinct_linear_assert(
                 &mut script.arena,
                 body,
                 aliases,
@@ -6263,7 +6298,22 @@ fn parse_command<'a>(
                 seq,
                 ff,
                 lenabs,
+                distinct_linear,
             )?;
+            let t = match linear {
+                Some(t) => t,
+                None => parse_term(
+                    &mut script.arena,
+                    body,
+                    aliases,
+                    sort_aliases,
+                    macros,
+                    named,
+                    seq,
+                    ff,
+                    lenabs,
+                )?,
+            };
             let guards = lenabs.encoding_guards_since(guard_checkpoint);
             let t = attach_encoding_guards(&mut script.arena, t, &guards, head)?;
             // `:named` terms are script-global aliases in this parser. Point a
@@ -19073,6 +19123,281 @@ fn self_store_array_equality_direction(
 
 /// Applies an operator list head to evaluated arguments.
 // Flat dispatch over the operator vocabulary; length is inherent.
+/// Smallest `distinct` arity whose pairwise expansion exceeds
+/// [`MAX_DISTINCT_EXPANSION_PAIRS`], derived from that constant rather than
+/// pinned as a literal: the smallest `n` with `n(n-1)/2 > CAP`.
+pub(crate) const fn min_over_cap_distinct_arity() -> usize {
+    let mut n: usize = 2;
+    while n * (n - 1) / 2 <= MAX_DISTINCT_EXPANSION_PAIRS {
+        n += 1;
+    }
+    n
+}
+
+/// How a top-level `(assert (distinct t1 … tN))` over an **uninterpreted** sort
+/// is encoded (ADR-2000).
+///
+/// The pairwise expansion is `N(N-1)/2` disequalities and is refused above
+/// [`MAX_DISTINCT_EXPANSION_PAIRS`]; the linear encoding introduces one fresh
+/// uninterpreted `f : S -> Int` and asserts `f(t_i) = i`, which is `N`
+/// conjuncts.
+///
+/// **Soundness scope.** The encoding introduces a fresh symbol, so it is
+/// equisatisfiable only in POSITIVE polarity. It is therefore applied at
+/// exactly one syntactic site — the whole body of an `(assert …)` command,
+/// which is positive by construction, including under `push`/`pop` — and never
+/// from the expression path, which has no polarity context.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum DistinctLinear {
+    /// Never rewrite. Every `distinct` takes the pairwise expansion and its cap.
+    Off,
+    /// Rewrite when the arity is at least `min_arity`.
+    On { min_arity: usize },
+    /// A deliberately WRONG encoding, for the mutation control only
+    /// (`bench-results/distinct-linear-20260913/`). Never reachable unless the
+    /// operator sets `AXEYUM_DISTINCT_LINEAR=mutant:…`.
+    Mutant { min_arity: usize, kind: MutantKind },
+}
+
+/// The two ways the injection encoding can be wrong, one per direction.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum MutantKind {
+    /// Every argument is mapped to index `0`, so the conjunction constrains
+    /// nothing. STRICTLY WEAKER than `distinct`: an `unsat` that needed the
+    /// disequalities must stop being `unsat`.
+    Vacuous,
+    /// One injection shared by every rewritten application in the script
+    /// instead of a fresh one each. STRICTLY STRONGER whenever two applications
+    /// share an argument at different indices: a `sat` must become `unsat`.
+    SharedInjection,
+}
+
+impl DistinctLinear {
+    fn min_arity(self) -> Option<usize> {
+        match self {
+            Self::Off => None,
+            Self::On { min_arity } | Self::Mutant { min_arity, .. } => Some(min_arity),
+        }
+    }
+
+    fn mutant(self) -> Option<MutantKind> {
+        match self {
+            Self::Off | Self::On { .. } => None,
+            Self::Mutant { kind, .. } => Some(kind),
+        }
+    }
+
+    /// The process-wide policy, read once from `AXEYUM_DISTINCT_LINEAR`.
+    ///
+    /// Grammar: `off` | `on` | `on:<min-arity>` | `mutant:vacuous[:<n>]` |
+    /// `mutant:shared[:<n>]`. Anything unrecognised is `Off`, so a typo cannot
+    /// silently enable a rewrite.
+    ///
+    /// **Polarity: this lever ships `Off`.** The unset environment is the
+    /// pre-ADR-2000 behaviour, so an A/B's `base` arm is
+    /// `env -u AXEYUM_DISTINCT_LINEAR` and its `arm` arm sets `on`.
+    pub(crate) fn from_env() -> Self {
+        static POLICY: std::sync::OnceLock<DistinctLinear> = std::sync::OnceLock::new();
+        *POLICY.get_or_init(|| Self::parse(std::env::var("AXEYUM_DISTINCT_LINEAR").ok().as_deref()))
+    }
+
+    /// Pure lever parsing, so the unit tests exercise the grammar without
+    /// mutating the environment (which `OnceLock` would latch anyway).
+    pub(crate) fn parse(raw: Option<&str>) -> Self {
+        let default_min = min_over_cap_distinct_arity();
+        let Some(raw) = raw else { return Self::Off };
+        let parts: Vec<&str> = raw.split(':').collect();
+        match parts.as_slice() {
+            ["on"] => Self::On {
+                min_arity: default_min,
+            },
+            ["on", n] => match n.parse::<usize>() {
+                Ok(min_arity) if min_arity >= 2 => Self::On { min_arity },
+                _ => Self::Off,
+            },
+            ["mutant", kind] | ["mutant", kind, _] => {
+                let min_arity = match parts.as_slice() {
+                    ["mutant", _, n] => match n.parse::<usize>() {
+                        Ok(m) if m >= 2 => m,
+                        _ => return Self::Off,
+                    },
+                    _ => default_min,
+                };
+                match *kind {
+                    "vacuous" => Self::Mutant {
+                        min_arity,
+                        kind: MutantKind::Vacuous,
+                    },
+                    "shared" => Self::Mutant {
+                        min_arity,
+                        kind: MutantKind::SharedInjection,
+                    },
+                    _ => Self::Off,
+                }
+            }
+            _ => Self::Off,
+        }
+    }
+}
+
+/// The arguments of a top-level `(distinct t1 … tN)` assertion body, or `None`
+/// when the body is any other shape.
+///
+/// A `define-fun` macro may legally take the name `distinct` in this parser's
+/// term path (the macro table is consulted before the operator table in
+/// `queue_apply`), so a macro of that name suppresses the rewrite entirely
+/// rather than silently re-binding it.
+fn top_level_distinct_args<'a>(
+    body: &'a SExpr,
+    macros: &HashMap<String, MacroDef<'_>>,
+) -> Option<&'a [SExpr]> {
+    if macros.contains_key("distinct") {
+        return None;
+    }
+    let items = body.list()?;
+    if items.first()?.atom()? != "distinct" {
+        return None;
+    }
+    Some(&items[1..])
+}
+
+/// The linear `distinct` encoding, or `None` when this application is out of
+/// the rewrite's scope and must take the pairwise path.
+///
+/// # Scope
+///
+/// Applied only when every argument has the same sort and that sort is
+/// [`Sort::Uninterpreted`]. Every other sort — `Bool`, `BitVec`, `Int`, `Real`,
+/// `Float`, `RoundingMode`, `Array`, `Datatype`, `Seq`/`String` — declines and
+/// takes the pairwise expansion unchanged. The encoding is exact for any sort;
+/// the narrow scope is because the pairwise path also feeds the string/sequence
+/// length abstraction and the FP/numeric equality coercions, and none of those
+/// hooks would run on the rewritten term.
+///
+/// # Exactness
+///
+/// * No wrong `sat`. Any model of `⋀ᵢ f(tᵢ) = i` makes the `tᵢ` pairwise
+///   distinct, because `f` is a function: `tᵢ = tⱼ` forces `i = j`. So every
+///   model of the encoding is a model of `(distinct t1 … tN)`.
+/// * No wrong `unsat`. Any model making the `tᵢ` pairwise distinct extends to a
+///   model of the encoding by interpreting `f` to send `tᵢ` to `i` and anything
+///   else to `0`. That extension exists because `f` occurs nowhere else, which
+///   is what the FRESH internal name buys — see below.
+///
+/// # Freshness
+///
+/// [`TermArena::declare_internal_fun`] keys a namespace **disjoint from user
+/// declarations**, so a benchmark that declares a function of the same spelling
+/// receives a different `FuncId`; and the name is chosen by probing
+/// `TermArena::find_internal_function` until it is unused, so two `distinct`
+/// applications never share one injection (which would be a spurious `unsat`).
+fn linear_distinct_encoding(
+    arena: &mut TermArena,
+    args: &[TermId],
+    policy: DistinctLinear,
+) -> Result<Option<TermId>, SmtError> {
+    let Some(min_arity) = policy.min_arity() else {
+        return Ok(None);
+    };
+    if args.len() < min_arity {
+        return Ok(None);
+    }
+    let sort = arena.sort_of(args[0]);
+    if !matches!(sort, Sort::Uninterpreted(_)) {
+        return Ok(None);
+    }
+    if args.iter().any(|&a| arena.sort_of(a) != sort) {
+        return Ok(None);
+    }
+    // Interned identity makes a repeated argument an exact contradiction, as in
+    // the pairwise path. The encoding would derive `false` anyway (`f(t) = i`
+    // and `f(t) = j` for `i != j`), but saying it here keeps the two paths'
+    // answers identical on this input rather than merely equisatisfiable.
+    let mut seen = HashSet::with_capacity(args.len());
+    if args.iter().any(|arg| !seen.insert(*arg)) {
+        return Ok(Some(arena.bool_const(false)));
+    }
+    let func = if policy.mutant() == Some(MutantKind::SharedInjection) {
+        let name = "!distinct.inj.shared";
+        match arena.find_internal_function(name) {
+            Some(f) => f,
+            None => arena.declare_internal_fun(name, &[sort], Sort::Int)?,
+        }
+    } else {
+        let mut index = 0u32;
+        let name = loop {
+            let candidate = format!("!distinct.inj.{index}");
+            if arena.find_internal_function(&candidate).is_none() {
+                break candidate;
+            }
+            index += 1;
+        };
+        arena.declare_internal_fun(&name, &[sort], Sort::Int)?
+    };
+    let vacuous = policy.mutant() == Some(MutantKind::Vacuous);
+    let mut conjuncts = Vec::with_capacity(args.len());
+    for (i, &arg) in args.iter().enumerate() {
+        let applied = arena.apply(func, &[arg])?;
+        let index = if vacuous {
+            0
+        } else {
+            i128::try_from(i).map_err(|_| {
+                SmtError::ResourceLimit(format!("`distinct` index {i} exceeds i128"))
+            })?
+        };
+        let literal = arena.int_const(index);
+        conjuncts.push(arena.eq(applied, literal)?);
+    }
+    Ok(Some(balanced_and(arena, conjuncts)?))
+}
+
+/// The linear encoding of an `(assert …)` body that is exactly a large
+/// `(distinct …)` over an uninterpreted sort, or `None` when the body is any
+/// other shape, the policy is [`DistinctLinear::Off`], or the encoding declines
+/// its scope — in which case the caller takes the unchanged pairwise path.
+///
+/// The arity is checked on the **S-expression** before any argument is parsed,
+/// so an ordinary small `distinct` costs one `list()`/`atom()` comparison here
+/// and nothing else.
+#[allow(clippy::too_many_arguments)]
+fn distinct_linear_assert<'a>(
+    arena: &mut TermArena,
+    body: &'a SExpr,
+    aliases: &HashMap<String, TermId>,
+    sort_aliases: &HashMap<String, Sort>,
+    macros: &HashMap<String, MacroDef<'a>>,
+    named: &mut HashMap<String, TermId>,
+    seq: &SeqInfo,
+    ff: &FfInfo,
+    lenabs: &LenAbs,
+    policy: DistinctLinear,
+) -> Result<Option<TermId>, SmtError> {
+    let Some(min_arity) = policy.min_arity() else {
+        return Ok(None);
+    };
+    let Some(raw_args) = top_level_distinct_args(body, macros) else {
+        return Ok(None);
+    };
+    if raw_args.len() < min_arity {
+        return Ok(None);
+    }
+    let mut args = Vec::with_capacity(raw_args.len());
+    for raw in raw_args {
+        args.push(parse_term(
+            arena,
+            raw,
+            aliases,
+            sort_aliases,
+            macros,
+            named,
+            seq,
+            ff,
+            lenabs,
+        )?);
+    }
+    linear_distinct_encoding(arena, &args, policy)
+}
+
 fn balanced_and(arena: &mut TermArena, mut layer: Vec<TermId>) -> Result<TermId, SmtError> {
     debug_assert!(!layer.is_empty());
     while layer.len() > 1 {
