@@ -613,6 +613,11 @@ attributions for one slow build were propagated in briefs before anyone measured
   door on 134 of 397 benchmarks.
 - **`cargo-serialized.sh` takes a host-wide flock**, so a timing run measures
   the queue. Wrapper for CORRECTNESS, prebuilt binary for MEASUREMENT.
+- **It also bounds nothing but cargo.** A lane's own analysis script runs with
+  no memory ceiling: a `let`-expander reached 63.4 GB and the kernel OOM-killer
+  took the whole session. Put `ulimit -v` on anything that expands, inlines or
+  flattens, AND skip the pathological inputs by name — a ceiling turns the
+  crash into a `MemoryError`, it does not make the work finish.
 
 → [Measurement Hazards](docs/contributor-guide/measurement-hazards.md)
 

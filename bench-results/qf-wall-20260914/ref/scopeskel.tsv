@@ -1,0 +1,14 @@
+id	occ	atoms	z3	cvc5	admissible
+f01	15	15	unsat	unsat	ADMISSIBLE
+f02	221	218	unsat	unsat	ADMISSIBLE
+f03	14	14	unsat	unsat	ADMISSIBLE
+f04	12	12	unsat	unsat	ADMISSIBLE
+f05	428	324	unsat	unsat	ADMISSIBLE
+f06	192	192	unsat	unsat	ADMISSIBLE
+f07	DID-NOT-RUN	-	-	-	DID-NOT-RUN(let-expansion does not terminate in bounded memory)
+f08	12	12	unsat	unsat	ADMISSIBLE
+f09	898	898	unsat	unsat	ADMISSIBLE
+f10	DID-NOT-RUN	-	-	-	DID-NOT-RUN(let-expansion does not terminate in bounded memory)
+f11	12	12	unsat	unsat	ADMISSIBLE
+f12	12	12	unsat	unsat	ADMISSIBLE
+f13	598	598	unsat	unsat	ADMISSIBLE

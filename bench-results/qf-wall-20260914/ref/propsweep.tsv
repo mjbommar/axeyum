@@ -1,0 +1,14 @@
+id	abs_status	bytes	atoms	z3	cvc5
+f01	OK	2107	46	unsat	unsat
+f02	OK	13110	265	sat	sat
+f03	OK	1836	30	sat	sat
+f04	OK	1005	21	unsat	unsat
+f05	OK	18949	350	unsat	unsat
+f06	OK	69544	1495	sat	sat
+f07	DID-NOT-RUN(rc=1)	-	-	-	-
+f08	OK	1099	23	unsat	unsat
+f09	OK	44391	961	unsat	unsat
+f10	DID-NOT-RUN(rc=1)	-	-	-	-
+f11	OK	1125	24	sat	sat
+f12	OK	1158	24	unsat	unsat
+f13	OK	124007	2566	unsat	unsat
