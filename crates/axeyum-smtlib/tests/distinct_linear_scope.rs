@@ -14,6 +14,8 @@
 //! The verdict half of the obligation is
 //! `axeyum-solver/tests/distinct_linear_soundness.rs`.
 
+use std::fmt::Write as _;
+
 use axeyum_smtlib::parse_script_with_distinct_lever;
 
 /// The name the encoding probes for first. Present in the arena's INTERNAL
@@ -32,7 +34,7 @@ fn fired(src: &str, lever: Option<&str>) -> bool {
 fn preamble(sort: &str, names: &[&str]) -> String {
     let mut s = String::from("(set-logic UFNIA)\n(declare-sort U 0)\n");
     for n in names {
-        s.push_str(&format!("(declare-fun {n} () {sort})\n"));
+        let _ = writeln!(s, "(declare-fun {n} () {sort})");
     }
     s
 }
@@ -150,22 +152,61 @@ fn a_negated_distinct_is_never_rewritten() {
 }
 
 #[test]
-fn a_distinct_under_any_connective_is_never_rewritten() {
+fn every_positive_context_the_walk_admits_fires() {
+    // These are the shapes the corpus actually contains. MEASURED 2026-09-13
+    // over all 356 over-cap files: 257 are `assert > and` and 52 are
+    // `assert > let > not > or > not`. NONE is the assert's whole body, which
+    // is the shape the inherited handoff proposed scoping to.
     let names = ["a", "b", "c"];
     let base = preamble("U", &names);
     let d = distinct_of(&names);
     for body in [
-        format!("(or {d} false)"),
         format!("(and {d} true)"),
-        format!("(=> true {d})"),
+        format!("(and true (and {d} true))"),
+        format!("(or {d} false)"),
+        format!("(not (not {d}))"),
+        format!("(=> false {d})"),
+        format!("(let ((?v true)) (and ?v {d}))"),
+        // The Boogie double-negation form, verbatim in 52 corpus files.
+        format!("(let ((?v true)) (not (or (not {d}) (not ?v))))"),
+    ] {
+        let src = format!("{base}(assert {body})\n(check-sat)\n");
+        assert!(
+            fired(&src, Some("on:3")),
+            "{body} puts the `distinct` in POSITIVE polarity and must be rewritten"
+        );
+    }
+}
+
+#[test]
+fn every_context_the_walk_refuses_stays_pairwise() {
+    let names = ["a", "b", "c"];
+    let base = preamble("U", &names);
+    let d = distinct_of(&names);
+    for body in [
+        // Negative polarity.
+        format!("(not {d})"),
+        format!("(and true (not {d}))"),
+        format!("(=> {d} true)"),
+        // Both polarities at once -- the walk must not guess.
         format!("(ite true {d} false)"),
         format!("(= {d} true)"),
-        format!("(not (not {d}))"),
+        format!("(xor {d} false)"),
+        // A `let` BINDING: the polarity is that of the bound name's USES, which
+        // this walk does not resolve. 47 corpus files are this shape and are
+        // deliberately left on the pairwise path.
+        format!("(let ((?v {d})) ?v)"),
+        // A `:named` annotation binds the term script-globally, so a later
+        // reference could place it under a negation.
+        format!("(! {d} :named nn)"),
+        // A quantifier body preserves polarity, but the encoding is only exact
+        // for GROUND arguments, and this walk does not check groundness.
+        format!("(forall ((?x Int)) (and (= ?x ?x) {d}))"),
     ] {
         let src = format!("{base}(assert {body})\n(check-sat)\n");
         assert!(
             !fired(&src, Some("on:3")),
-            "only the WHOLE body of an `assert` is positive by construction; {body} is not"
+            "{body} is not a context this walk can call positive; it must stay pairwise"
         );
     }
 }
@@ -186,19 +227,49 @@ fn the_positive_site_still_fires_under_push_and_pop() {
     );
 }
 
+#[test]
+fn only_an_assert_body_is_a_rewrite_site() {
+    // `define-fun` bodies, `get-value` terms and `check-sat-assuming`
+    // assumptions have no polarity this parser can name, so they are handed the
+    // empty plan and never rewritten -- even though the same `distinct` in an
+    // `assert` would be.
+    let names = ["a", "b", "c"];
+    let base = preamble("U", &names);
+    let d = distinct_of(&names);
+    let define = format!("{base}(define-fun p () Bool {d})\n(assert p)\n(check-sat)\n");
+    assert!(
+        !fired(&define, Some("on:3")),
+        "a `define-fun` body is not a rewrite site"
+    );
+    let assuming =
+        format!("{base}(declare-fun q () Bool)\n(assert q)\n(check-sat-assuming ({d}))\n");
+    assert!(
+        !fired(&assuming, Some("on:3")),
+        "a `check-sat-assuming` assumption is not a rewrite site"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Sort scope
 // ---------------------------------------------------------------------------
 
 #[test]
-fn only_uninterpreted_sorts_are_rewritten() {
-    // Each of these is a 3-way `distinct` whose arguments do NOT have an
-    // uninterpreted sort. All must decline to the pairwise path.
+fn int_arguments_are_rewritten_because_that_is_what_boogie_emits() {
+    // MEASURED 2026-09-13: the 52 `spec_sharp` and 47 Dartagnan over-cap files
+    // spell their `distinct` over `Int`, not over an uninterpreted sort, because
+    // Boogie's UFNIA encoding uses `Int` as a universal carrier and the files
+    // carry no `declare-sort` at all. Scoping to uninterpreted sorts alone would
+    // have covered the 257 `lahiri` files and missed these 99.
+    let src = "(set-logic UFNIA)\n(declare-fun a () Int)\n(declare-fun b () Int)\n\
+               (declare-fun c () Int)\n(assert (distinct a b c))\n(check-sat)\n";
+    assert!(fired(src, Some("on:3")));
+}
+
+#[test]
+fn every_other_sort_stays_pairwise() {
+    // Each of these is a 3-way `distinct` whose arguments are neither an
+    // uninterpreted sort nor `Int`. All must decline to the pairwise path.
     let cases = [
-        (
-            "(declare-fun a () Int)(declare-fun b () Int)(declare-fun c () Int)",
-            "QF_LIA",
-        ),
         (
             "(declare-fun a () (_ BitVec 8))(declare-fun b () (_ BitVec 8))(declare-fun c () (_ BitVec 8))",
             "QF_BV",

@@ -19,6 +19,8 @@
 //! where the mutant has somewhere to go: the WEAKENING mutant at an `unsat`,
 //! the STRENGTHENING mutant at a `sat`.
 
+use std::fmt::Write as _;
+
 use axeyum_smtlib::parse_script_with_distinct_lever;
 use axeyum_solver::{CheckResult, SolverConfig, check_auto};
 
@@ -253,7 +255,7 @@ fn an_arity_over_the_pairwise_cap_is_refused_without_the_lever_and_cleared_with_
     let names: Vec<String> = (0..400).map(|i| format!("k{i}")).collect();
     let mut decls = String::from("(set-logic UFNIA)\n(declare-sort U 0)\n");
     for n in &names {
-        decls.push_str(&format!("(declare-fun {n} () U)\n"));
+        let _ = writeln!(decls, "(declare-fun {n} () U)");
     }
     let big = format!("(distinct {})", names.join(" "));
     let src = format!("{decls}(assert {big})\n(check-sat)\n");

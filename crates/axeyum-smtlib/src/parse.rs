@@ -6127,6 +6127,7 @@ fn parse_command<'a>(
                 seq,
                 ff,
                 lenabs,
+                &LinearDistinctSites::none(),
             )?;
             reject_new_encoding_guards(lenabs, guard_checkpoint, head)?;
             script.objectives.push((t, head == "maximize"));
@@ -6183,6 +6184,7 @@ fn parse_command<'a>(
                     seq,
                     ff,
                     lenabs,
+                    &LinearDistinctSites::none(),
                 )?;
                 script.get_value_terms.push(term);
                 requested.push((t.to_text(), term));
@@ -6209,6 +6211,7 @@ fn parse_command<'a>(
                     seq,
                     ff,
                     lenabs,
+                    &LinearDistinctSites::none(),
                 )?);
             }
             let guards = lenabs.encoding_guards_since(guard_checkpoint);
@@ -6280,15 +6283,14 @@ fn parse_command<'a>(
             let body = sexpr_at(items, 1)?;
             let name = named_label(body);
             let guard_checkpoint = lenabs.encoding_guard_checkpoint();
-            // ADR-2000: the ONLY site the linear `distinct` encoding may fire.
-            // An `(assert …)` body is in positive polarity by construction —
-            // including under `push`/`pop`, which scope assertions but never
-            // negate them — and the encoding introduces a fresh symbol, so it
-            // is equisatisfiable only there. `parse_term` has no polarity
-            // context, which is why this is not inside the `distinct` operator
-            // case. Every decline falls through to the unchanged pairwise path
-            // below, including its deterministic cap.
-            let linear = distinct_linear_assert(
+            // ADR-2000: an `(assert …)` body is the only command body whose
+            // polarity this parser can name, so it is the only place the
+            // fresh-symbol encoding may be introduced. The walk decides WHICH
+            // applications inside it are admissible; every one it does not
+            // admit falls through to the unchanged pairwise path, including its
+            // deterministic cap.
+            let linear = LinearDistinctSites::for_assert(body, distinct_linear, macros);
+            let t = parse_term(
                 &mut script.arena,
                 body,
                 aliases,
@@ -6298,22 +6300,8 @@ fn parse_command<'a>(
                 seq,
                 ff,
                 lenabs,
-                distinct_linear,
+                &linear,
             )?;
-            let t = match linear {
-                Some(t) => t,
-                None => parse_term(
-                    &mut script.arena,
-                    body,
-                    aliases,
-                    sort_aliases,
-                    macros,
-                    named,
-                    seq,
-                    ff,
-                    lenabs,
-                )?,
-            };
             let guards = lenabs.encoding_guards_since(guard_checkpoint);
             let t = attach_encoding_guards(&mut script.arena, t, &guards, head)?;
             // `:named` terms are script-global aliases in this parser. Point a
@@ -6887,6 +6875,7 @@ fn parse_define_fun_alias(
         seq,
         ff,
         lenabs,
+        &LinearDistinctSites::none(),
     )?;
     reject_new_encoding_guards(lenabs, guard_checkpoint, "define-fun/define-const")?;
     let body_sort = script.arena.sort_of(body);
@@ -7301,6 +7290,7 @@ fn parse_term<'a>(
     seq: &SeqInfo,
     ff: &FfInfo,
     lenabs: &LenAbs,
+    linear: &LinearDistinctSites,
 ) -> Result<TermId, SmtError> {
     let mut frames: Vec<Frame> = vec![Frame::Eval(root)];
     let mut results: Vec<TermId> = Vec::new();
@@ -7340,6 +7330,7 @@ fn parse_term<'a>(
                     lenabs,
                     items,
                     &args,
+                    linear,
                 )?);
             }
             Frame::ApplyInRe { re_expr } => {
@@ -19240,25 +19231,136 @@ impl DistinctLinear {
     }
 }
 
-/// The arguments of a top-level `(distinct t1 … tN)` assertion body, or `None`
-/// when the body is any other shape.
+/// Which over-cap `distinct` applications in one `(assert …)` body the linear
+/// encoding may replace, identified by the ADDRESS of their argument slice.
 ///
-/// A `define-fun` macro may legally take the name `distinct` in this parser's
-/// term path (the macro table is consulted before the operator table in
-/// `queue_apply`), so a macro of that name suppresses the rewrite entirely
-/// rather than silently re-binding it.
-fn top_level_distinct_args<'a>(
-    body: &'a SExpr,
-    macros: &HashMap<String, MacroDef<'_>>,
-) -> Option<&'a [SExpr]> {
-    if macros.contains_key("distinct") {
-        return None;
+/// # Why an address set rather than a syntactic special case
+///
+/// The handoff this lane inherited
+/// (`bench-results/qbudget-20260913/DISTINCT-ENCODING.md`) proposed applying the
+/// rewrite when the `distinct` is the WHOLE body of an `assert`, on the grounds
+/// that "Boogie emits the axiom exactly this way". **Measured 2026-09-13 over
+/// all 356 over-cap files in the corpus, that shape occurs ZERO times.** The
+/// enclosing head chains are:
+///
+/// | chain from `assert` | files |
+/// |---|---:|
+/// | `assert > and` | 257 |
+/// | `assert > let > not > or > not` | 52 |
+/// | `assert > let > … > <let-binding> > and` | 47 |
+///
+/// All 356 are in POSITIVE polarity; none is the assert's whole body. So the
+/// site test has to be a polarity walk, and a scoping that only looked at the
+/// body would have shipped a rewrite that never fires.
+///
+/// # The walk
+///
+/// Descends from the assert body through `and`, `or`, `not` (flipping) and `=>`
+/// (flipping every antecedent), and through a `let`'s BODY. It stops at
+/// everything else — `ite`, `=`, `xor`, quantifiers, `!` annotations, and a
+/// `let`'s BINDINGS — because each of those either puts the subterm in both
+/// polarities at once or makes its polarity depend on where a bound name is
+/// used, which this walk does not resolve. Stopping costs the 47 `let`-binding
+/// files and keeps the other 309.
+///
+/// Iterative, with an explicit stack: the deepest chain measured in the corpus
+/// is 4,310 `let`s, and this parser is iterative for exactly that reason.
+struct LinearDistinctSites {
+    policy: DistinctLinear,
+    /// `items.as_ptr() as usize` for each admissible application. The slice
+    /// address identifies the node: two non-empty `Vec<SExpr>` cannot share an
+    /// allocation, and the s-expression tree is not mutated between this walk
+    /// and the term build that consults it.
+    admissible: HashSet<usize>,
+}
+
+impl LinearDistinctSites {
+    /// The empty plan: no site is admissible, so every `distinct` takes the
+    /// pairwise path. Used for every `parse_term` call that is not an `assert`
+    /// body — a `define-fun` body, a `get-value` term, a `check-sat-assuming`
+    /// assumption — because a fresh symbol is only sound in a context whose
+    /// polarity is known, and those are not.
+    fn none() -> Self {
+        Self {
+            policy: DistinctLinear::Off,
+            admissible: HashSet::new(),
+        }
     }
-    let items = body.list()?;
-    if items.first()?.atom()? != "distinct" {
-        return None;
+
+    /// The admissible sites in one `(assert body)`.
+    fn for_assert(
+        body: &SExpr,
+        policy: DistinctLinear,
+        macros: &HashMap<String, MacroDef<'_>>,
+    ) -> Self {
+        let mut plan = Self {
+            policy,
+            admissible: HashSet::new(),
+        };
+        let Some(min_arity) = policy.min_arity() else {
+            return plan;
+        };
+        // A `define-fun` macro may legally take the name `distinct` in this
+        // parser's term path (the macro table is consulted before the operator
+        // table in `queue_apply`), so a macro of that name suppresses the
+        // rewrite entirely rather than silently re-binding it.
+        if macros.contains_key("distinct") {
+            return plan;
+        }
+        let mut stack: Vec<(&SExpr, bool)> = vec![(body, true)];
+        while let Some((node, positive)) = stack.pop() {
+            let Some(items) = node.list() else { continue };
+            let Some(head) = items.first().and_then(SExpr::atom) else {
+                continue;
+            };
+            match head {
+                "distinct" => {
+                    let args = &items[1..];
+                    if positive && args.len() >= min_arity {
+                        plan.admissible.insert(items.as_ptr() as usize);
+                    }
+                    // Arguments of a `distinct` are terms, not formulas; a
+                    // nested `distinct` inside one is not in a polarity this
+                    // walk can name, so the descent ends here.
+                }
+                "and" | "or" => {
+                    for child in &items[1..] {
+                        stack.push((child, positive));
+                    }
+                }
+                "not" => {
+                    for child in &items[1..] {
+                        stack.push((child, !positive));
+                    }
+                }
+                "=>" => {
+                    // `(=> a b c)` is `a -> (b -> c)`: every argument but the
+                    // last is an antecedent and flips.
+                    if let Some((last, antecedents)) = items[1..].split_last() {
+                        stack.push((last, positive));
+                        for a in antecedents {
+                            stack.push((a, !positive));
+                        }
+                    }
+                }
+                "let" => {
+                    // The BODY only. A `distinct` inside a binding has the
+                    // polarity of the bound name's USES, which this walk does
+                    // not resolve.
+                    if let Some(body) = items.get(2) {
+                        stack.push((body, positive));
+                    }
+                }
+                _ => {}
+            }
+        }
+        plan
     }
-    Some(&items[1..])
+
+    /// Whether this `distinct` application may take the linear encoding.
+    fn admits(&self, items: &[SExpr]) -> bool {
+        !self.admissible.is_empty() && self.admissible.contains(&(items.as_ptr() as usize))
+    }
 }
 
 /// The linear `distinct` encoding, or `None` when this application is out of
@@ -19267,12 +19369,24 @@ fn top_level_distinct_args<'a>(
 /// # Scope
 ///
 /// Applied only when every argument has the same sort and that sort is
-/// [`Sort::Uninterpreted`]. Every other sort — `Bool`, `BitVec`, `Int`, `Real`,
-/// `Float`, `RoundingMode`, `Array`, `Datatype`, `Seq`/`String` — declines and
-/// takes the pairwise expansion unchanged. The encoding is exact for any sort;
-/// the narrow scope is because the pairwise path also feeds the string/sequence
-/// length abstraction and the FP/numeric equality coercions, and none of those
-/// hooks would run on the rewritten term.
+/// [`Sort::Uninterpreted`] or [`Sort::Int`]. `Bool`, `BitVec`, `Real`, `Float`,
+/// `RoundingMode`, `Array`, `Datatype` and `Seq`/`String` all decline and take
+/// the pairwise expansion unchanged.
+///
+/// The encoding is exact for ANY sort; the scope is narrow because the pairwise
+/// path also feeds the string/sequence length abstraction and the FP/numeric
+/// equality coercions, and none of those hooks would run on the rewritten term.
+/// The two sorts admitted are the two whose `=` is plain in that path — and
+/// they are the two the corpus needs. MEASURED 2026-09-13 over the 356 over-cap
+/// files: the 257 `lahiri-cav09-storm-queries` files are an uninterpreted sort
+/// (`boogieT`), and the 52 `spec_sharp` and 47 Dartagnan files are `Int`,
+/// because Boogie's UFNIA encoding uses `Int` as its universal carrier. The
+/// handoff's claim that these are "nullary uninterpreted constants of an
+/// uninterpreted sort" is true of the first family and false of the other two.
+///
+/// A mixed application — `(distinct x y 3)` with `x, y : Real` — is excluded by
+/// the same-sort test, so the numeral coercion the pairwise path performs is
+/// never bypassed.
 ///
 /// # Exactness
 ///
@@ -19303,7 +19417,7 @@ fn linear_distinct_encoding(
         return Ok(None);
     }
     let sort = arena.sort_of(args[0]);
-    if !matches!(sort, Sort::Uninterpreted(_)) {
+    if !matches!(sort, Sort::Uninterpreted(_) | Sort::Int) {
         return Ok(None);
     }
     if args.iter().any(|&a| arena.sort_of(a) != sort) {
@@ -19351,53 +19465,6 @@ fn linear_distinct_encoding(
     Ok(Some(balanced_and(arena, conjuncts)?))
 }
 
-/// The linear encoding of an `(assert …)` body that is exactly a large
-/// `(distinct …)` over an uninterpreted sort, or `None` when the body is any
-/// other shape, the policy is [`DistinctLinear::Off`], or the encoding declines
-/// its scope — in which case the caller takes the unchanged pairwise path.
-///
-/// The arity is checked on the **S-expression** before any argument is parsed,
-/// so an ordinary small `distinct` costs one `list()`/`atom()` comparison here
-/// and nothing else.
-#[allow(clippy::too_many_arguments)]
-fn distinct_linear_assert<'a>(
-    arena: &mut TermArena,
-    body: &'a SExpr,
-    aliases: &HashMap<String, TermId>,
-    sort_aliases: &HashMap<String, Sort>,
-    macros: &HashMap<String, MacroDef<'a>>,
-    named: &mut HashMap<String, TermId>,
-    seq: &SeqInfo,
-    ff: &FfInfo,
-    lenabs: &LenAbs,
-    policy: DistinctLinear,
-) -> Result<Option<TermId>, SmtError> {
-    let Some(min_arity) = policy.min_arity() else {
-        return Ok(None);
-    };
-    let Some(raw_args) = top_level_distinct_args(body, macros) else {
-        return Ok(None);
-    };
-    if raw_args.len() < min_arity {
-        return Ok(None);
-    }
-    let mut args = Vec::with_capacity(raw_args.len());
-    for raw in raw_args {
-        args.push(parse_term(
-            arena,
-            raw,
-            aliases,
-            sort_aliases,
-            macros,
-            named,
-            seq,
-            ff,
-            lenabs,
-        )?);
-    }
-    linear_distinct_encoding(arena, &args, policy)
-}
-
 fn balanced_and(arena: &mut TermArena, mut layer: Vec<TermId>) -> Result<TermId, SmtError> {
     debug_assert!(!layer.is_empty());
     while layer.len() > 1 {
@@ -19415,6 +19482,7 @@ fn balanced_and(arena: &mut TermArena, mut layer: Vec<TermId>) -> Result<TermId,
 }
 
 #[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_arguments)]
 fn apply_op(
     arena: &mut TermArena,
     sort_aliases: &HashMap<String, Sort>,
@@ -19423,6 +19491,7 @@ fn apply_op(
     lenabs: &LenAbs,
     items: &[SExpr],
     args: &[TermId],
+    linear: &LinearDistinctSites,
 ) -> Result<TermId, SmtError> {
     // Parameterized head: ((_ extract h l) x) etc.
     if let Some(head_items) = items[0].list() {
@@ -19992,6 +20061,15 @@ fn apply_op(
                 return Ok(arena.bool_const(false));
             }
 
+            // ADR-2000: an application the polarity walk admitted takes the
+            // linear injection encoding instead of the quadratic expansion. The
+            // encoding declines any sort but an uninterpreted one, and a
+            // decline falls straight through to the cap below.
+            if linear.admits(items)
+                && let Some(t) = linear_distinct_encoding(arena, args, linear.policy)?
+            {
+                return Ok(t);
+            }
             let pair_count = args
                 .len()
                 .checked_mul(args.len() - 1)
