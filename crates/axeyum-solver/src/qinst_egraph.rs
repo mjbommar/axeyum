@@ -6310,8 +6310,7 @@ impl IncrementalEmatchSession {
                     .get(index)
                     .copied()
                     .flatten()
-                    .map(|class| self.bridge.egraph.root(class))
-                    .and_then(|root| self.bridge.repr_term.get(&root).copied())
+                    .and_then(|class| self.bridge.witness(class))
                 {
                     tuple.push(term);
                     true
@@ -7421,7 +7420,7 @@ fn witness_matches_via_egraph(
                 .get(i)
                 .copied()
                 .flatten()
-                .and_then(|class| bridge.repr_term.get(&class).copied())
+                .and_then(|class| bridge.witness(class))
             {
                 tuple.push(repr);
                 true
@@ -8883,7 +8882,94 @@ struct InstBridge {
     op_decls: HashMap<String, u32>,
     /// First ground term seen per class root — the instantiation witness.
     repr_term: HashMap<ENodeId, TermId>,
+    /// Every `(node, ground term)` pair ever inserted, in insertion order.
+    ///
+    /// [`repr_term`](Self::repr_term) is keyed on the class root **as it was at
+    /// insertion time** and filled with `or_insert`, so it is "first term seen"
+    /// and it is not repaired when a later `merge` re-roots the class. Both
+    /// facts cost decisions, and the mechanism is measured rather than argued —
+    /// see [`smallest_witness_enabled`]. This keeps the raw pairs so the
+    /// smallest member of each *current* class can be recovered.
+    ///
+    /// Only populated when the lever is on, so the shipped path pays nothing
+    /// but the `Vec` header.
+    witness_pool: Vec<(ENodeId, TermId, usize)>,
+    /// Resolved ONCE at construction, not per lookup.
+    ///
+    /// `witness` is called per bound variable per joined substitution, and
+    /// `add_term` per ground term, so reading the environment inside either put
+    /// a `getenv` in the hot loop of a perturbation-sensitive routine. Caching
+    /// it also makes the selector testable without an ambient variable -- a test
+    /// that only passes under one is a gate on one shell.
+    smallest_witness: bool,
     next_decl: u32,
+}
+
+/// Whether to substitute the SMALLEST ground term of a matched class rather than
+/// the first one that happened to be inserted. **Ships OFF**; `off`/`0`/empty/
+/// unparseable/absent all resolve to the shipped behaviour.
+///
+/// **This cannot affect soundness, and the reason is structural rather than
+/// empirical.** Every instance this loop admits is `body[x := t]`, and
+/// `∀x. B ⊨ B[x := t]` holds for *every* ground `t` — it does not depend on
+/// where `t` came from. A class member is ground and equal to every other
+/// member, so choosing a different one changes which entailed instance is
+/// admitted, never whether it is entailed. That is the same separation the
+/// trigger machinery already documents: a trigger proposes, it never justifies.
+///
+/// **Why it might matter.** On `UFNIA/2019-Preiner/combined/f2_rw160.smt2` the
+/// base equations `(= (pow2 0) 1)`, `(= (pow2 1) 2)` … merge each numeral with a
+/// `pow2` application. Where the application is the first-inserted member, every
+/// instantiation through that class substitutes `(pow2 0)` where `1` would do,
+/// so the multi-pattern `{(pow2 i), (pow2 j)}` yields `(pow2 (pow2 0))` instead
+/// of `(pow2 1)`. Measured in that file's ground dump: **1,128 rows carrying a
+/// nested `(pow2 (pow2 …))` against 4 instances of the lemma at bare numerals**.
+/// The useful instances are built and then diluted ~280:1 by term growth the
+/// class representative introduced.
+fn smallest_witness_enabled() -> bool {
+    smallest_witness_from(
+        std::env::var("AXEYUM_QINST_SMALLEST_WITNESS")
+            .ok()
+            .as_deref(),
+    )
+}
+
+/// The lever's polarity as a PURE function of the raw value, so the default arm
+/// is testable without touching the environment.
+///
+/// Rust 2024 makes `set_var` `unsafe`, and `unsafe_code` is denied
+/// workspace-wide, so a test that flips the real variable cannot be written
+/// here at all. It should not be: an env-mutating test is order-dependent
+/// inside one process, and "a test passing only under an ambient variable is a
+/// gate on one shell". This is the part worth pinning — `None` (absent) and
+/// every spelling of off must resolve to the SHIPPED arm.
+fn smallest_witness_from(value: Option<&str>) -> bool {
+    match value {
+        Some(v) => {
+            let v = v.trim().to_ascii_lowercase();
+            !(v.is_empty() || v == "0" || v == "off" || v == "false")
+        }
+        None => false,
+    }
+}
+
+/// Structural size of a ground term, used only to order candidate witnesses.
+///
+/// Iterative: these terms are corpus-sized and a recursive walk overflows.
+fn witness_size(arena: &TermArena, term: TermId) -> usize {
+    let mut n = 0usize;
+    let mut stack = vec![term];
+    let mut seen: HashSet<TermId> = HashSet::new();
+    while let Some(current) = stack.pop() {
+        if !seen.insert(current) {
+            continue;
+        }
+        n += 1;
+        if let TermNode::App { args, .. } = arena.node(current) {
+            stack.extend(args.iter().copied());
+        }
+    }
+    n
 }
 
 impl InstBridge {
@@ -8895,8 +8981,34 @@ impl InstBridge {
             symbol_decls: HashMap::new(),
             op_decls: HashMap::new(),
             repr_term: HashMap::new(),
+            witness_pool: Vec::new(),
+            smallest_witness: smallest_witness_enabled(),
             next_decl: 0,
         }
+    }
+
+    /// The witness term for a matched class: the smallest ground member of the
+    /// class **as it stands now** when the lever is on, otherwise exactly the
+    /// shipped `repr_term` lookup.
+    ///
+    /// Ties break on the earlier insertion, so the choice is deterministic and
+    /// independent of hash iteration order — a public API promise here.
+    fn witness(&self, class: ENodeId) -> Option<TermId> {
+        let root = self.egraph.root(class);
+        if !self.smallest_witness {
+            return self.repr_term.get(&root).copied();
+        }
+        let mut best: Option<(usize, TermId)> = None;
+        for &(node, term, size) in &self.witness_pool {
+            if self.egraph.root(node) != root {
+                continue;
+            }
+            if best.is_none_or(|(b, _)| size < b) {
+                best = Some((size, term));
+            }
+        }
+        best.map(|(_, t)| t)
+            .or_else(|| self.repr_term.get(&root).copied())
     }
 
     fn fresh_decl(&mut self) -> u32 {
@@ -8944,6 +9056,10 @@ impl InstBridge {
         };
         let root = self.egraph.root(node);
         self.repr_term.entry(root).or_insert(term);
+        if self.smallest_witness {
+            let size = witness_size(arena, term);
+            self.witness_pool.push((node, term, size));
+        }
         self.term_to_node.insert(term, node);
         node
     }
@@ -14846,6 +14962,84 @@ mod tests {
     ///
     /// Delete the eligibility filter, the substitution, or the budget check and
     /// one of these assertions dies.
+    /// The witness selector picks the SMALLEST member of a matched class when
+    /// the lever is on, and the FIRST-INSERTED one when it is off.
+    ///
+    /// Driven through the cached `smallest_witness` field rather than the
+    /// environment, deliberately: a test that only passes under an ambient
+    /// variable is a gate on one shell, and this one must hold in every process
+    /// that runs the suite.
+    ///
+    /// The fixture is the shape measured on
+    /// `UFNIA/2019-Preiner/combined/f2_rw160.smt2`: a base equation merges an
+    /// application `(pow2 c)` with a much smaller constant, and the application
+    /// is inserted FIRST -- so the shipped arm substitutes the application and
+    /// grows the term, which is the dilution this lever exists to test.
+    #[test]
+    fn the_witness_selector_prefers_the_smallest_member_only_when_enabled() {
+        let mut arena = TermArena::new();
+        let sort = Sort::Int;
+        let pow2 = arena.declare_fun("wsel_pow2", &[sort], sort).unwrap();
+        let c = arena.declare("wsel_c", sort).unwrap();
+        let c_term = arena.var(c);
+        let small = arena.declare("wsel_small", sort).unwrap();
+        let small_term = arena.var(small);
+        // `(pow2 c)` is strictly larger than `small`, and is inserted FIRST.
+        let app = arena.apply(pow2, &[c_term]).unwrap();
+        assert!(
+            witness_size(&arena, app) > witness_size(&arena, small_term),
+            "fixture must have a strictly larger application, else the test is vacuous"
+        );
+
+        let build = |smallest: bool| -> Option<TermId> {
+            let mut bridge = InstBridge::new();
+            bridge.smallest_witness = smallest;
+            let app_node = bridge.add_term(&arena, app);
+            let small_node = bridge.add_term(&arena, small_term);
+            // The base equation: the two are the same value.
+            bridge.egraph.merge(app_node, small_node, u32::MAX);
+            bridge.witness(app_node)
+        };
+
+        assert_eq!(
+            build(false),
+            Some(app),
+            "SHIPPED arm: the first-inserted member is the witness"
+        );
+        assert_eq!(
+            build(true),
+            Some(small_term),
+            "lever on: the smallest member is the witness"
+        );
+    }
+
+    /// The lever is OFF unless deliberately set, and every spelling of "off"
+    /// resolves to the shipped arm.
+    ///
+    /// Pinned on the PURE parser rather than on the real variable: `set_var` is
+    /// `unsafe` in Rust 2024 and `unsafe_code` is denied workspace-wide, and an
+    /// env-mutating test would be order-dependent inside one process anyway.
+    /// `None` is the case that matters -- it is what an A/B's base arm gets.
+    #[test]
+    fn the_smallest_witness_lever_ships_off() {
+        assert!(
+            !smallest_witness_from(None),
+            "ABSENT must resolve to the SHIPPED arm -- this is the base arm of every A/B"
+        );
+        for value in ["", "0", "off", "false", "OFF", "  0  ", " FaLsE "] {
+            assert!(
+                !smallest_witness_from(Some(value)),
+                "{value:?} must resolve to the SHIPPED arm"
+            );
+        }
+        for value in ["1", "on", "yes", "banana"] {
+            assert!(
+                smallest_witness_from(Some(value)),
+                "{value:?} must select the arm under test"
+            );
+        }
+    }
+
     #[test]
     fn skolem_priming_builds_the_application_at_the_arguments_it_claims() {
         let (mut arena, sort, c, skolem, _ordinary, predicate) = skolem_prime_fixture();
