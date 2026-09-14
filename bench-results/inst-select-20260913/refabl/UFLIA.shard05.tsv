@@ -1,0 +1,12 @@
+file	default	default_ms	ematch	ematch_ms	noematch	noematch_ms	neither	neither_ms	status
+UFLIA/boogie/BasicMethodology_SubClass..ctor.smt2	unsat	2311	unsat	2209	unknown	107	unknown	106	unsat
+UFLIA/boogie/Spouse_Person..ctor.smt2	unsat	107	unsat	107	unknown	108	unknown	108	unsat
+UFLIA/simplify/javafe.ast.LexicalPragmaVec.219.smt2	unsat	207	unsat	207	unknown	108	unknown	108	unsat
+UFLIA/simplify/javafe.tc.FlowInsensitiveChecks.679.smt2	unsat	708	unsat	708	unknown	307	unknown	311	unsat
+UFLIA/simplify2/front_end_suite/javafe.ast.ConstructorDecl.007.smt2	unsat	111	unsat	109	unsat	109	unsat	109	unsat
+UFLIA/simplify2/front_end_suite/javafe.ast.ParenExpr.006.smt2	unsat	110	unsat	110	unsat	107	unsat	109	unsat
+UFLIA/simplify2/front_end_suite/javafe.filespace.HashTree.001.smt2	unsat	108	unsat	106	unknown	108	unknown	108	unsat
+UFLIA/simplify2/front_end_suite/javafe.tc.ConstantExpr.001.smt2	unsat	108	unsat	108	unsat	109	unsat	108	unsat
+UFLIA/simplify2/front_end_suite/javafe.test.SuperlinksTest.004.smt2	unsat	107	unsat	108	unknown	107	unknown	109	unsat
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1462528.smt2	unsat	108	unsat	108	unknown	108	unknown	108	unsat
+UFLIA/sledgehammer/QEpres/smtlib.1120322.smt2	unsat	108	unsat	108	unknown	108	unknown	109	unsat

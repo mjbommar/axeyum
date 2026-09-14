@@ -1,0 +1,11 @@
+file	default	default_ms	ematch	ematch_ms	noematch	noematch_ms	neither	neither_ms	status
+UFNIA/2019-Preiner/combined/t3_rw899.smt2	unsat	306	unsat	208	unsat	207	unsat	208	unknown
+UFNIA/2019-Preiner/full/t3_rw493.smt2	unsat	207	unsat	207	unsat	207	unsat	206	unknown
+UFNIA/2019-Preiner/partial/t3_rw759.smt2	unsat	107	unsat	107	unsat	109	unsat	108	unknown
+UFNIA/2019-Zohar-ic/combined/int_check_bvule_bvor_ltr_no_inv.smt2	unknown	108	unknown	108	unknown	108	unknown	108	unsat
+UFNIA/2019-Zohar-ic/qf/int_check_bvsge_bvneg_ltr_no_inv.smt2	unsat	208	unknown	107	unsat	207	unknown	109	unknown
+UFNIA/lahiri-cav09-storm-queries/usbsamp_bug_example_2_3_8_1.smt2	unsat	309	unsat	309	unsat	308	unsat	308	unsat
+UFNIA/sledgehammer/QEpres/z3.737731.smt2	unsat	107	unsat	108	unknown	108	unknown	108	unsat
+UFNIA/spec_sharp/test14-DafnyAst.ssc.30.Microsoft.Dafny.ClassType.Boogie.ContractConsistencyCheck.ToString.smt2	unsat	809	unsat	808	unknown	308	unknown	308	unsat
+UFNIA/vcc-havoc/baby.2.54.handle_illegal.smt2	unsat	208	unsat	207	unsat	208	unsat	208	unsat
+UFNIA/vcc-havoc/verisoft-baby.c.10.privileged.smt2	unsat	109	unsat	108	unsat	108	unsat	108	unsat

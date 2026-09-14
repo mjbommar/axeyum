@@ -1,0 +1,12 @@
+file	default	default_ms	ematch	ematch_ms	noematch	noematch_ms	neither	neither_ms	status
+UFLIA/boogie/Arrays_Q3-noinfer.smt2	unsat	109	unsat	106	unknown	108	unknown	107	unsat
+UFLIA/boogie/ExposeVersion_D..ctor-level_2.smt2	unsat	108	unsat	108	unknown	107	unknown	107	unsat
+UFLIA/grasshopper/uninstantiated/merge_loop_check_heap_access_60_6.smt2	unsat	108	unsat	108	unknown	108	unknown	107	unsat
+UFLIA/simplify/javafe.ast.UnaryExpr.424.smt2	unsat	408	unsat	408	unknown	207	unknown	208	unsat
+UFLIA/simplify2/front_end_suite/javafe.ast.AmbiguousVariableAccess.004.smt2	unsat	107	unsat	108	unsat	108	unsat	106	unsat
+UFLIA/simplify2/front_end_suite/javafe.ast.LabelStmt.011.smt2	unsat	108	unsat	108	unsat	107	unsat	107	unsat
+UFLIA/simplify2/front_end_suite/javafe.ast.TypeModifierPragmaVec.013.smt2	unsat	208	unsat	207	unknown	108	unknown	108	unsat
+UFLIA/simplify2/front_end_suite/javafe.parser.test.TestLex.030.smt2	unsat	108	unsat	108	unsat	108	unsat	108	unsat
+UFLIA/simplify2/front_end_suite/javafe.tc.TypeSigVec.005.smt2	unsat	107	unsat	107	unknown	106	unknown	108	unsat
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1057395.smt2	unsat	108	unsat	107	unknown	106	unknown	108	unsat
+UFLIA/sledgehammer/Hoare/smtlib.993567.smt2	unsat	107	unsat	108	unknown	106	unknown	107	unsat
