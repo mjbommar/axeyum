@@ -9472,9 +9472,11 @@ mod tests {
         );
 
         let fixpoint = InstantiationLoopExit::Fixpoint.detail(1);
+        let saturated = InstantiationLoopExit::GroundSaturated.detail(5);
         let headroom = InstantiationLoopExit::GrowthHeadroom.detail(3);
         for (exit, detail) in [
             (InstantiationLoopExit::Fixpoint, &fixpoint),
+            (InstantiationLoopExit::GroundSaturated, &saturated),
             (InstantiationLoopExit::GrowthHeadroom, &headroom),
         ] {
             assert!(
@@ -9486,11 +9488,32 @@ mod tests {
         // round 1" and "gave up at round 512" are opposite findings and the
         // census has no other column that carries it.
         assert!(fixpoint.contains(" 1 rounds"), "{fixpoint}");
+        assert!(saturated.contains(" 5 rounds"), "{saturated}");
         assert!(headroom.contains(" 3 rounds"), "{headroom}");
-        // Three exits, three distinct strings.
-        assert_ne!(fixpoint, headroom);
-        assert_ne!(fixpoint, round);
-        assert_ne!(headroom, round);
+        // A saturation must not borrow the fixpoint's claim either. `Fixpoint`
+        // says "no further instance to admit", and at the admission ceiling
+        // that is a conclusion the exit cannot support -- which is the whole
+        // reason the variant exists, so it is the property under test.
+        assert!(
+            !saturated.contains("no further instance to admit"),
+            "a saturation must not claim a fixpoint's conclusion: {saturated}"
+        );
+        assert!(
+            saturated.contains("ceiling"),
+            "a saturation must say the ceiling was in force: {saturated}"
+        );
+        // Four exits, four distinct strings -- checked as a PROPERTY over the
+        // set rather than as pairs, so adding a fifth variant that duplicates
+        // an existing wording cannot slip past a pair list nobody extended.
+        let details = [&fixpoint, &saturated, &headroom, &round];
+        let mut seen: Vec<&String> = details.to_vec();
+        seen.sort();
+        seen.dedup();
+        assert_eq!(
+            seen.len(),
+            details.len(),
+            "two loop exits give up with the same string"
+        );
     }
 
     /// The ADR-1950 `kind` vocabulary is assigned from what stopped the loop,
