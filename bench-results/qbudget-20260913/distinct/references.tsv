@@ -1,0 +1,6 @@
+file	status	z3	z3_ms	cvc5	cvc5_ms
+UFNIA/lahiri-cav09-storm-queries/serial_write_example_cegar_2_2_2.smt2	unknown	none	24124	none	26206
+UFNIA/lahiri-cav09-storm-queries/usbsamp_bug_example_2_3_8_1.smt2	unsat	unsat	508	unsat	211
+UFNIA/lahiri-cav09-storm-queries/usbsamp_example_2_3_4_0.smt2	unsat	unsat	309	unsat	310
+UFNIA/spec_sharp/test14-CommandLineOptions.ssc.23.Microsoft.Boogie.CommandLineOptions.Boogie.ContractConsistencyCheck.get_ProverNeedsTypes.smt2	unsat	unsat	111	unsat	109
+UFNIA/spec_sharp/test14-Xml.ssc.17.Microsoft.Boogie.XmlSink.WriteFileFragment_System.String_notnull.smt2	unsat	unsat	309	none	26204

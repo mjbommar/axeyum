@@ -854,7 +854,12 @@ pub fn solve(
     // The pass runs one quantifier-free SUB-SOLVE per top-level universal, each
     // handed whatever is left, so a single hard sub-query spends the ladder's
     // entire clock and every rung below it never runs. `quant_valid_universal_budget`
-    // is the lever that bounds it; under the shipped default it is the identity.
+    // is the reserve that bounds it, and it SHIPS ON at `share = 4` (ADR-1975):
+    // a quarter of what is left is held back for the rungs below. This line said
+    // "under the shipped default it is the identity", which was true for the 41
+    // minutes between `727c6dac5` landing the lever OFF and `55b1e5443` flipping
+    // the default after the A/B, and false afterwards. The identity is now
+    // `AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE=off`, which is the pre-ADR-1975 code.
     let valid_config = quant_valid_universal_budget(&valid_config);
     let eliminated = match crate::quant_valid_universal::eliminate_valid_universals(
         arena,
@@ -4657,8 +4662,118 @@ const MBQI_FIRST_REFUSAL_SLICE: LadderSlice =
 const QINST_EGRAPH_RETRY_SHARE: u32 = 2;
 
 /// The incremental e-graph quantifier retry's slice: half of what is left.
+///
+/// Prefer [`qinst_egraph_retry_slice`] on the dispatch path; this is the
+/// shipped default the lever degrades to.
 const QINST_EGRAPH_RETRY_SLICE: LadderSlice =
     LadderSlice::fraction("qinst-egraph-retry", QINST_EGRAPH_RETRY_SHARE);
+
+thread_local! {
+    /// Test-scoped override of the Skolemized e-graph retry's share; see
+    /// [`QinstEgraphRetryShareGuard`].
+    static QINST_EGRAPH_RETRY_SHARE_OVERRIDE: std::cell::Cell<Option<u32>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Sets the Skolemized e-graph retry's share for the current thread, restoring
+/// the previous setting on drop.
+///
+/// Exists so a test can drive both arms without setting a process-wide
+/// environment variable — a test that passes only under an ambient env var is a
+/// gate on one shell.
+pub struct QinstEgraphRetryShareGuard(Option<u32>);
+
+impl QinstEgraphRetryShareGuard {
+    /// Overrides the process share on this thread.
+    #[must_use]
+    pub fn set(share: u32) -> Self {
+        QinstEgraphRetryShareGuard(
+            QINST_EGRAPH_RETRY_SHARE_OVERRIDE.with(|c| c.replace(Some(share))),
+        )
+    }
+}
+
+impl Drop for QinstEgraphRetryShareGuard {
+    fn drop(&mut self) {
+        QINST_EGRAPH_RETRY_SHARE_OVERRIDE.with(|c| c.set(self.0));
+    }
+}
+
+/// Parses `AXEYUM_QINST_EGRAPH_RETRY_SHARE`.
+///
+/// `off`, `0`, an empty value, a non-integer and an absent variable all resolve
+/// to [`QINST_EGRAPH_RETRY_SHARE`], so a typo degrades to the shipped behaviour
+/// rather than to an arm nobody chose — the same vocabulary as
+/// `AXEYUM_QUANT_EGRAPH_RESERVE`. `whole` and `1` both select the whole
+/// remaining budget, which is the one-way CEILING arm: no budget policy on this
+/// rung can grant the loop more than the root deadline it already sits inside.
+fn parse_qinst_egraph_retry_share(value: Option<&str>) -> u32 {
+    match value {
+        None | Some("" | "off") => QINST_EGRAPH_RETRY_SHARE,
+        Some("whole") => 1,
+        Some(text) => match text.parse::<u32>() {
+            Ok(0) | Err(_) => QINST_EGRAPH_RETRY_SHARE,
+            Ok(share) => share,
+        },
+    }
+}
+
+/// The Skolemized e-graph retry's share in force on this thread: a live
+/// [`QinstEgraphRetryShareGuard`]'s choice, else the process share resolved once
+/// from `AXEYUM_QINST_EGRAPH_RETRY_SHARE`.
+fn qinst_egraph_retry_share() -> u32 {
+    static RESOLVED: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
+    if let Some(share) = QINST_EGRAPH_RETRY_SHARE_OVERRIDE.with(std::cell::Cell::get) {
+        return share;
+    }
+    *RESOLVED.get_or_init(|| {
+        parse_qinst_egraph_retry_share(
+            std::env::var("AXEYUM_QINST_EGRAPH_RETRY_SHARE")
+                .ok()
+                .as_deref(),
+        )
+    })
+}
+
+/// The slice [`skolemized_egraph_retry`] applies: [`QINST_EGRAPH_RETRY_SLICE`]
+/// under the shipped default, a different fraction under the lever.
+fn qinst_egraph_retry_slice() -> LadderSlice {
+    let share = qinst_egraph_retry_share();
+    if share == QINST_EGRAPH_RETRY_SHARE {
+        QINST_EGRAPH_RETRY_SLICE
+    } else {
+        LadderSlice::fraction("qinst-egraph-retry", share)
+    }
+}
+
+thread_local! {
+    /// The budget the most recent [`skolemized_egraph_retry`] on this thread
+    /// actually handed the loop; see [`last_qinst_egraph_retry_budget`].
+    static LAST_QINST_EGRAPH_RETRY_BUDGET: std::cell::Cell<Option<Duration>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// The budget the most recent Skolemized e-graph retry on this thread handed
+/// the instantiation loop, or `None` if the rung has not run on this thread.
+///
+/// Diagnostic only: nothing branches on it and no verdict depends on it. It
+/// exists because a test of `qinst_egraph_retry_slice` alone cannot fail when
+/// the DISPATCH SITE stops consulting it — reverting
+/// [`skolemized_egraph_retry`] to apply the bare [`QINST_EGRAPH_RETRY_SLICE`]
+/// constant leaves every arithmetic test green while making the lever inert,
+/// which is exactly the shape of "a test that does not consume the declaration
+/// it names". Reading the applied budget back closes that.
+#[must_use]
+pub fn last_qinst_egraph_retry_budget() -> Option<Duration> {
+    LAST_QINST_EGRAPH_RETRY_BUDGET.with(std::cell::Cell::get)
+}
+
+/// Clears [`last_qinst_egraph_retry_budget`] on this thread, so a test can tell
+/// "the rung did not run" from "the rung ran in an earlier test on this
+/// thread". Diagnostic only.
+pub fn reset_last_qinst_egraph_retry_budget() {
+    LAST_QINST_EGRAPH_RETRY_BUDGET.with(|c| c.set(None));
+}
 
 /// How much of the quantified ladder's remaining wall clock the e-graph
 /// instantiation rung (`q:egraph`) may spend before the rungs below it run.
@@ -10475,6 +10590,25 @@ pub fn prove_unsat_by_ematching(
 /// junk-instance chains drove ground to its cap by round 10 and LOST a refutation
 /// the Skolemized-only run finds). Half the remaining budget, so the callers'
 /// later SAT-only stages are not starved.
+///
+/// # The half that the reserve protects is not always spent
+///
+/// This call is the SECOND time the e-graph instantiation loop runs on a
+/// quantified query that reached `q:mbqi`: `finish_quantified_solve`'s `q:egraph`
+/// rung already ran it on the ORIGINAL assertions, and
+/// `prove_unsat_by_mbqi_inner`'s shape guards fall through to
+/// `prove_unsat_by_ematching`, which lands here with the Skolemized ones. So the
+/// two passes between them are what spends a quantified query's clock, and the
+/// 1/2 reserve here is held back for `q:uf-fmf-full` — which declines anything
+/// that is not pure UF in one cheap scan.
+///
+/// Measured on the committed `UFNIA`/`UFLIA` census (`bench-results/
+/// ufnia-uflia-census-20260913/census/*.tsv`): 61 of 400 files end with THIS
+/// loop's own `egraph_timeout()` string as their final give-up, and their
+/// median row stops with **8,681 ms** (`UFNIA`) / **2,574 ms** (`UFLIA`) of the
+/// 24,000 ms root deadline never spent by anything. `AXEYUM_QINST_EGRAPH_RETRY_SHARE`
+/// exists to measure whether handing that back to this loop decides anything;
+/// it **ships OFF** and the default is byte-identical to the pre-lever code.
 fn skolemized_egraph_retry(
     arena: &mut TermArena,
     skolemized: &[TermId],
@@ -10485,7 +10619,8 @@ fn skolemized_egraph_retry(
     let Some(remaining_config) = config_with_remaining_timeout(config, deadline) else {
         return Ok(None);
     };
-    let loop_config = QINST_EGRAPH_RETRY_SLICE.apply(&remaining_config, remaining_config.timeout);
+    let loop_config = qinst_egraph_retry_slice().apply(&remaining_config, remaining_config.timeout);
+    LAST_QINST_EGRAPH_RETRY_BUDGET.with(|c| c.set(loop_config.timeout));
     let started = Instant::now();
     let loop_result =
         crate::qinst_egraph::prove_quantified_unsat_via_egraph(arena, skolemized, &loop_config)?;
@@ -13422,6 +13557,93 @@ mod tests {
                 "{policy:?} must not invent a timeout"
             );
         }
+    }
+
+    /// `AXEYUM_QINST_EGRAPH_RETRY_SHARE`'s parse table, including the direction
+    /// that matters: an unparseable or absent value must resolve to the SHIPPED
+    /// share, never to an arm nobody chose.
+    #[test]
+    fn qinst_egraph_retry_share_parses_to_the_shipped_default_on_anything_unrecognised() {
+        for value in [
+            None,
+            Some(""),
+            Some("off"),
+            Some("0"),
+            Some("yes"),
+            Some("-1"),
+            Some("1.5"),
+        ] {
+            assert_eq!(
+                parse_qinst_egraph_retry_share(value),
+                QINST_EGRAPH_RETRY_SHARE,
+                "{value:?} must degrade to the shipped share, not select an arm"
+            );
+        }
+        // The measured arm, reachable by both spellings.
+        assert_eq!(parse_qinst_egraph_retry_share(Some("1")), 1);
+        assert_eq!(parse_qinst_egraph_retry_share(Some("whole")), 1);
+        // An intermediate share is a real value, not a typo, and must survive.
+        assert_eq!(parse_qinst_egraph_retry_share(Some("3")), 3);
+    }
+
+    /// The lever's OFF position must be byte-identical to the pre-lever
+    /// constant. A lever whose "off" is not the old code turns every recorded
+    /// baseline into a measurement of something else.
+    ///
+    /// This test cannot see whether the DISPATCH SITE consults the lever at
+    /// all — reverting `skolemized_egraph_retry` to the bare constant leaves it
+    /// green. `the_retry_rung_applies_the_arms_budget` in
+    /// `tests/qinst_egraph_retry_share_row.rs` is the one that dies there.
+    #[test]
+    fn qinst_egraph_retry_slice_is_the_shipped_half_by_default_and_the_whole_clock_at_one() {
+        let budget = Duration::from_secs(24);
+        {
+            // No guard: the process share, which is what a run with no
+            // `AXEYUM_QINST_EGRAPH_RETRY_SHARE` in its environment gets.
+            assert_eq!(
+                std::env::var("AXEYUM_QINST_EGRAPH_RETRY_SHARE").ok(),
+                None,
+                "this test must run with the lever UNSET; a test that passes only under \
+                 an ambient env var is a gate on one shell"
+            );
+            assert_eq!(
+                qinst_egraph_retry_slice().slice_of(budget),
+                QINST_EGRAPH_RETRY_SLICE.slice_of(budget),
+                "the default arm must be the pre-lever constant"
+            );
+            assert_eq!(
+                qinst_egraph_retry_slice().slice_of(budget),
+                Duration::from_secs(12),
+                "the shipped share is a HALF of what is left"
+            );
+        }
+        {
+            // The CEILING arm: the retry takes the whole remaining root clock.
+            // This is what makes the sizing one-way -- no budget policy on this
+            // rung can grant the loop more than the deadline it sits inside.
+            let _guard = QinstEgraphRetryShareGuard::set(1);
+            assert_eq!(
+                qinst_egraph_retry_slice().slice_of(budget),
+                budget,
+                "share = 1 must hand the retry the WHOLE remaining budget"
+            );
+        }
+        {
+            let _guard = QinstEgraphRetryShareGuard::set(4);
+            assert_eq!(
+                qinst_egraph_retry_slice().slice_of(budget),
+                Duration::from_secs(6),
+                "an intermediate share is a quarter, not a special case"
+            );
+        }
+        // The guard restores on drop, so the default is live again here. A
+        // guard that leaked would make every later test in this binary run
+        // under an arm nobody selected.
+        assert_eq!(
+            qinst_egraph_retry_slice().slice_of(budget),
+            Duration::from_secs(12),
+            "the guard must restore the process share on drop"
+        );
     }
 
     /// `AXEYUM_QUANT_VALID_UNIVERSAL_RESERVE`'s parse, including the direction

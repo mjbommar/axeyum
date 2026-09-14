@@ -1,0 +1,5 @@
+file	wall_ms	verdict	mbqi_rung	mbqi_shape_exit	retry_budget	retry_elapsed	retry_result
+UFNIA/2019-Preiner/full/f2_rw120.smt2	15219	unknown	state=entered,budget_ms=2999	quantifier-below-top-level	Some(8.850473494s)	8.850524284s	e-matching: instantiation time budget exhausted
+UFNIA/2019-Preiner/full/t3_rw1240.smt2	15223	unknown	state=entered,budget_ms=2999	quantifier-below-top-level	Some(8.838681908s)	8.846999935s	e-matching: instantiation time budget exhausted
+UFNIA/2019-Preiner/full/t3_rw189.smt2	15222	unknown	state=entered,budget_ms=2999	quantifier-below-top-level	Some(8.832841s)	8.842126918s	e-matching: instantiation time budget exhausted
+UFNIA/2019-Preiner/full/t3_rw25.smt2	15215	unknown	state=entered,budget_ms=2999	quantifier-below-top-level	Some(8.840464441s)	8.866361111s	e-matching: instantiation time budget exhausted

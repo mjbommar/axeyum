@@ -1,0 +1,5 @@
+file	status	base_x3	arm_x3	z3_24	cvc5_24	z3_600	cvc5_600
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFNIA/sledgehammer/FFT/z3.885941.smt2	unsat	unknown,unknown,unsat	unknown,unknown,unsat	unsat	unsat	skipped	skipped
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.parser.TagConstants.001.smt2	unsat	unknown,unknown,unknown	unsat,unsat,unsat	unsat	unsat	skipped	skipped
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.993567.smt2	unsat	unknown,unknown,unknown	unsat,unsat,unsat	unsat	unsat	skipped	skipped
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFNIA/2019-Preiner/combined/t3_rw1159.smt2	unknown	unknown,unknown,unknown	unsat,unsat,unsat	none	unknown	none	unknown
