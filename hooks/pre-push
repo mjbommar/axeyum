@@ -755,12 +755,28 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #                              the budget back from the dispatch site, so
   #                              reverting that site to the bare constant fails
   #                              it while every arithmetic test stays green.
+  #   distinct_linear_soundness
+  #                            — ADR-2000 soundness-negative: the linear
+  #                              `distinct` encoding (`AXEYUM_DISTINCT_LINEAR`).
+  #                              It is here because the FRONT DOOR'S MODEL REPLAY
+  #                              DOES NOT COVER THIS REWRITE: `check_model` runs
+  #                              against `solved.assertions`, which are the
+  #                              PARSER-PRODUCED assertions, so a model of the
+  #                              encoding is replayed against the encoding and
+  #                              proves nothing about `distinct`. The `sat`
+  #                              direction is safe only because the encoding is
+  #                              strictly STRONGER — an argument, not a check —
+  #                              so these assertions are the only thing standing
+  #                              between a weakened encoding and a wrong `sat`.
+  #                              `check-suite-gating.py` caught it unregistered
+  #                              at the push that would have shipped it.
   for suite in unknown_reason_coverage dt_uf_gate dt_capability_1935 \
                dt_constructor_arg_1942 dt_valued_result_1946 \
                datatype_solve_path quant_ladder_rung_refusal_declines \
                nested_array_gate_map nested_array_row real_element_array_row \
                dispatch_rung_refusal_declines quant_egraph_reserve_row \
                quant_valid_universal_reserve_row qinst_egraph_retry_share_row \
+               distinct_linear_soundness \
                additive_no_overflow_never_becomes_unsat; do
     gated_test "dispatch/reason: $suite" \
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
