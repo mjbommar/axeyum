@@ -1,0 +1,14 @@
+file	verdict	ms	auto_engaged	combined_refuse	auto_notengaged	combined_admit
+UFLIA/grasshopper/instantiated/delete_check_heap_access_53_12.smt2	unknown	23334	21	240	144	34
+UFLIA/grasshopper/instantiated/insertion_sort_postcondition_of_insertion_sort_63_1.smt2	unknown	24235	12	105	58	12
+UFLIA/sledgehammer/Arrow_Order/smtlib.832901.smt2	unknown	16625	23	309	195	114
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1057395.smt2	unknown	18018	17	135	56	25
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1282463.smt2	unknown	20830	22	250	94	43
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1462528.smt2	unknown	2408	20	300	147	53
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.972059.smt2	unknown	16827	145	1605	405	241
+UFLIA/sledgehammer/QEpres/smtlib.1120322.smt2	unknown	16515	49	645	408	91
+UFLIA/sledgehammer/QEpres/smtlib.1237382.smt2	unknown	20626	18	270	311	155
+UFNIA/2019-Zohar-ic/full/int_check_bvslt_bvurem1_ltr_no_inv.smt2	unknown	26336	15	60	17	60
+UFNIA/20190909-CLEARSY/0023/00302.smt2	unknown	24033	37	450	0	3912
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.1031223.smt2	unknown	18029	86	1265	345	186
+UFNIA/sledgehammer/TwoSquares/z3.861593.smt2	unknown	13622	5	68	69	56

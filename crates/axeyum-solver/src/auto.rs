@@ -8875,6 +8875,98 @@ fn int_blast_ladder_widths(escalation_top: u32) -> Vec<u32> {
 /// leaves the result `Unknown` — never a wrong `unsat`. The width set is fixed and
 /// finite, so the work is deterministically bounded (no OOM-risking unbounded
 /// widening).
+///
+/// ADR-2030 hoists the **width-independent** part of the per-rung admission test
+/// out of the loop; see [`ladder_width_independent_admission_refusal`].
+///
+/// ONE BINARY, TWO ENV VALUES. `AXEYUM_BLAST_LADDER_ADMISSION=1` turns the hoist
+/// ON; **unset is the shipped arm**. It fails closed: anything but an exact `1`
+/// leaves the loop byte-identical.
+fn blast_ladder_admission_hoist_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var("AXEYUM_BLAST_LADDER_ADMISSION").is_ok_and(|value| value.trim() == "1")
+    })
+}
+
+/// The part of [`check_with_all_theories`]'s admission test that is decided
+/// **before `width` is ever read** — array elimination, then the eager Ackermann
+/// congruence-pair bound — evaluated ONCE for the whole ladder.
+///
+/// # Why this exists
+///
+/// [ADR-2020] ranked `combined theories: eager Ackermann bound of 64` the
+/// **second** largest binding cause of our `UFLIA`/`UFNIA` ground-check failures
+/// (17 of 78 replays, 21.8 %) and read it as a missing fallback: the same
+/// constant selects a route at `auto.rs:4068` and hard-declines at
+/// `combined.rs:86`, so "the lazy fallback that already exists for the other
+/// caller is simply not offered to them".
+///
+/// The ordered `ACKPROBE` log refutes that reading. On all 13 files behind those
+/// 17 replays the selector at `auto.rs:4068` **does** engage on the same term set
+/// (12–23 engagements per file) and the lazy CEGAR **does** get its shot; it is
+/// only after that route falls through that the query descends here. What the
+/// census was ranking is not a cause at all — it is this ladder consulting a
+/// width-independent admission test once per width rung and reporting the last
+/// rung's refusal as the query's verdict. Measured per file: **105 to 309**
+/// `combined.rs:86` refusals, every one of them identical, and each one preceded
+/// by `let mut scratch = arena.clone();` — a copy of the whole file's term DAG
+/// (14,235 nodes for a held set of 11, [ADR-2020] §5).
+///
+/// So the loop was not merely re-deriving a constant: it was paying an arena
+/// clone and an array elimination per rung for an answer that cannot change with
+/// `width`. This runs the two reductions once, on one clone, and stops.
+///
+/// # Carrying the message out
+///
+/// [ADR-1980]'s named prerequisite: a rung that converts another rung's refusal
+/// must carry **that rung's own sentence** to whatever the ladder ends on, or a
+/// blocker census silently starts reading a different string. The returned
+/// `Unknown` therefore names THIS rung as the one that gave up, states how many
+/// widths were skipped and why they could not have differed, and appends the
+/// refusing bound's verbatim detail.
+///
+/// # Soundness
+///
+/// Width-independence is structural, not empirical: `check_with_all_theories`
+/// binds `width` only at reduction 3, after both steps replicated here. So a
+/// refusal at any rung is a refusal at every rung, and returning it up front can
+/// only replace N identical `Unknown`s with one. The probe runs on a **clone**,
+/// so no symbol or term it declares reaches the caller's arena. An
+/// `eliminate_arrays` error is NOT interpreted here — the loop's own error
+/// mapping is left to produce it — so the only behavioural difference is which
+/// of two `Unknown`s a caller sees: a later rung could previously time out inside
+/// reduction 1 and report `combined-theory timeout after array elimination`
+/// instead. Both are `Unknown`; no verdict moves.
+fn ladder_width_independent_admission_refusal(
+    arena: &TermArena,
+    assertions: &[TermId],
+    widths: &[u32],
+) -> Option<CheckResult> {
+    if !blast_ladder_admission_hoist_enabled() {
+        return None;
+    }
+    let mut probe = arena.clone();
+    let array_elim = axeyum_rewrite::eliminate_arrays(&mut probe, assertions).ok()?;
+    let after_arrays = array_elim.assertions().to_vec();
+    let CheckResult::Unknown(reason) =
+        crate::euf::refuse_oversized_ackermann(&probe, &after_arrays, "combined theories")?
+    else {
+        return None;
+    };
+    Some(CheckResult::Unknown(UnknownReason {
+        kind: reason.kind,
+        detail: format!(
+            "integer bit-blast width ladder: no width is attemptable — the admission test that \
+             guards every rung is decided before `width` is read, so all {} rungs refuse \
+             identically (each would have cloned the whole term DAG first). The refusing rung \
+             said: {}",
+            widths.len(),
+            reason.detail
+        ),
+    }))
+}
+
 fn dispatch_int_blast_width_ladder(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -8894,6 +8986,9 @@ fn dispatch_int_blast_width_ladder(
                  widen the bound"
             .to_owned(),
     });
+    if let Some(refusal) = ladder_width_independent_admission_refusal(arena, assertions, &widths) {
+        return Ok(refusal);
+    }
     for width in widths {
         if past_deadline(deadline) {
             return Ok(CheckResult::Unknown(UnknownReason {

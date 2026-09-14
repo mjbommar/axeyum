@@ -1137,6 +1137,29 @@ where
     }
 }
 
+/// Per-round ceiling on the lazy function-consistency lemma batch, or `None`
+/// (uncapped — the shipped behaviour) when the lever is not set.
+///
+/// ONE BINARY, TWO ENV VALUES. `AXEYUM_FC_LEMMA_BATCH_CAP=<n>`; **unset is the
+/// shipped arm**. Fails CLOSED: unset, empty, non-numeric, or `0` all return
+/// `None` and leave the batch uncapped, so a silently ignored or mistyped value
+/// measures the shipped arm rather than a half-applied one.
+///
+/// [ADR-2020] recorded that no cap exists and that neither
+/// [`MAX_PRESEEDED_FUNCTION_CONSISTENCY_LEMMAS`] nor
+/// [`MAX_POST_CANDIDATE_SIBLING_LEMMAS`] bounds this path. The narrow
+/// "violated-pairs-only" policy is already closed (`42fc03e6e` measured and
+/// rejected it); a CAP is a different lever, and this is it.
+pub(crate) fn function_consistency_lemma_batch_cap() -> Option<usize> {
+    static CAP: std::sync::OnceLock<Option<usize>> = std::sync::OnceLock::new();
+    *CAP.get_or_init(|| {
+        std::env::var("AXEYUM_FC_LEMMA_BATCH_CAP")
+            .ok()
+            .and_then(|raw| raw.trim().parse::<usize>().ok())
+            .filter(|cap| *cap > 0)
+    })
+}
+
 fn candidate_function_consistency_lemmas(
     arena: &TermArena,
     applications: &[(FuncId, Vec<TermId>, SymbolId)],
@@ -1152,7 +1175,35 @@ fn candidate_function_consistency_lemmas(
 
     let mut queued = HashSet::new();
     let mut lemmas = Vec::new();
+    // ADR-2030, defect 2. The batch is EVERY equal-argument pair, emitted the
+    // moment ANY pair is violated, so `lemmas_added == equal_arg_pairs` on every
+    // one of the 31 CEGAR stat lines in the committed census — and the ratio to
+    // the pairs that are actually violated reaches **1,555x** (8 violated ->
+    // 12,440 lemmas on `javafe.ast.StandardPrettyPrint.322`). With the cap set,
+    // the violated pairs are queued FIRST and the remaining equal-argument pairs
+    // fill the batch up to the cap; the rest are simply not emitted this round
+    // and remain available to the next one (they are not marked `added`).
+    //
+    // Correctness: a congruence lemma is a VALID implication of the input under
+    // any interpretation, so emitting fewer of them per round can never make a
+    // refutation unsound — it can only cost rounds. The loop terminates either
+    // way: every round that emits a lemma marks its pair `added`, and the pair
+    // set is finite.
+    let cap = function_consistency_lemma_batch_cap();
+    if let Some(cap) = cap {
+        for &pair in violated_lemmas {
+            if lemmas.len() >= cap {
+                break;
+            }
+            if queued.insert(pair) {
+                lemmas.push(pair);
+            }
+        }
+    }
     for pair in equal_arg_lemmas {
+        if cap.is_some_and(|cap| lemmas.len() >= cap) {
+            break;
+        }
         if queued.insert(pair) {
             lemmas.push(pair);
         }
@@ -1229,7 +1280,8 @@ impl FunctionConsistencyStats {
             "applications={}, function_groups={}, potential_pairs={}, solve_rounds={}, \
              elapsed_ms={}, sat_candidates={}, first_candidate_ms={}, \
              last_candidate_ms={}, pair_checks={}, equal_arg_pairs={}, violated_pairs={}, \
-             preseeded_lemmas={}, sibling_lemmas={}, lemmas_added={}, last_new_lemmas={}",
+             preseeded_lemmas={}, sibling_lemmas={}, lemmas_added={}, last_new_lemmas={}, \
+             lemma_batch_cap={}",
             self.applications,
             self.function_groups,
             self.potential_pairs,
@@ -1244,7 +1296,12 @@ impl FunctionConsistencyStats {
             self.preseeded_lemmas,
             self.sibling_lemmas,
             self.lemmas_added,
-            self.last_new_lemmas
+            self.last_new_lemmas,
+            // The EFFECTIVE cap, so the arm is visible by mechanism: a variable
+            // that was ignored, mistyped, or zero prints `off`, which is the
+            // shipped value, rather than the value the runner believed it set.
+            function_consistency_lemma_batch_cap()
+                .map_or_else(|| "off".to_owned(), |cap| cap.to_string())
         )
     }
 
