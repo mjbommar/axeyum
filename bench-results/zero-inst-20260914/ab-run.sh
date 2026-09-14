@@ -1,7 +1,23 @@
 #!/usr/bin/env bash
 # ZERO-INST -- interleaved per-file A/B of the Boolean-skeleton refutation rung.
 #
-# ============================ POLARITY ============================
+# !!! THE POLARITY BELOW IS THE PRE-ADR-2025 ONE AND IS NOW INVERTED !!!
+#
+# This runner was written while the rung was OPT-IN. ADR-2025 shipped it ON, so
+# on any binary at or after that commit `AXEYUM_ZERO_INST_SKELETON` is a KILL
+# SWITCH (`=0` disables) and *unsetting* it no longer gives the pre-rung
+# ladder. Running this file unchanged against such a binary measures the
+# SHIPPED arm in BOTH halves and reports the resulting zero as a null result.
+#
+# To A/B the rung on a current binary, swap the two branches of `run_arm`:
+# the "off" arm must set `AXEYUM_ZERO_INST_SKELETON=0`. `ab-preflight.sh`
+# catches the mistake -- it fails when both arms report the same rung outcome.
+#
+# The file is kept as it was because it is the runner that produced
+# `ab/main-uflia-ufnia.tsv`, and rewriting it would leave that table citing a
+# script that never ran it.
+#
+# ============================ POLARITY (AS MEASURED) ==============
 #   ARM "off" : AXEYUM_ZERO_INST_SKELETON **unset** = the SHIPPED arm.
 #               The rung early-returns and the ladder is unchanged.
 #   ARM "on"  : AXEYUM_ZERO_INST_SKELETON=1        = the LEVER arm.
