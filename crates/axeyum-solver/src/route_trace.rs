@@ -864,6 +864,12 @@ pub mod front_door_stage {
 pub mod quant_rung {
     /// Ground-subset refutation of the quantified query.
     pub const GROUND_SUBSET: &str = "q:ground-subset";
+    /// Boolean-skeleton refutation: every maximal quantified subformula
+    /// replaced by an opaque atom, and the abstraction refuted on its own.
+    /// Distinct from [`GROUND_SUBSET`], which DROPS whole conjuncts that
+    /// contain a quantifier and so cannot see a refutation living inside one
+    /// (ADR-2025).
+    pub const BOOL_SKELETON: &str = "q:bool-skeleton";
     /// The checked quantified fast paths (`checked_quantified_fast_path`).
     pub const CHECKED_FAST_PATH: &str = "q:checked-fast-path";
     /// Top-level existential skolemization left a quantifier-free residual,
@@ -903,6 +909,7 @@ pub mod quant_rung {
     /// from the authority rather than from a maintainer's memory.
     pub const ALL: &[&str] = &[
         GROUND_SUBSET,
+        BOOL_SKELETON,
         CHECKED_FAST_PATH,
         SKOLEM_QF,
         VALID_UNIVERSAL_QF,
