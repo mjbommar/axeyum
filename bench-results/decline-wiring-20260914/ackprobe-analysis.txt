@@ -1,0 +1,37 @@
+ engaged  w/CEGAR   refuse  shared  file
+      21       20      240       8  UFLIA_grasshopper_instantiated_delete_check_heap_access_53_12.
+      12       12      105       6  UFLIA_grasshopper_instantiated_insertion_sort_postcondition_of
+      23       23      309      15  UFLIA_sledgehammer_Arrow_Order_smtlib.832901.gz
+      17       16      135       7  UFLIA_sledgehammer_Fundamental_Theorem_Algebra_smtlib.1057395.
+      22       22      250      13  UFLIA_sledgehammer_Fundamental_Theorem_Algebra_smtlib.1282463.
+      20       20      300      20  UFLIA_sledgehammer_Fundamental_Theorem_Algebra_smtlib.1462528.
+     145      145     1605      12  UFLIA_sledgehammer_Fundamental_Theorem_Algebra_smtlib.972059.g
+      49       47      645      37  UFLIA_sledgehammer_QEpres_smtlib.1120322.gz
+      18       18      270      14  UFLIA_sledgehammer_QEpres_smtlib.1237382.gz
+      15        0       60       2  UFNIA_2019-Zohar-ic_full_int_check_bvslt_bvurem1_ltr_no_inv.gz
+      37        0      450       9  UFNIA_20190909-CLEARSY_0023_00302.gz
+      86       86     1265      17  UFNIA_sledgehammer_Fundamental_Theorem_Algebra_z3.1031223.gz
+       5        5       68       3  UFNIA_sledgehammer_TwoSquares_z3.861593.gz
+
+files                                          13
+files where the selector NEVER engaged         0
+total selector engagements                     470
+  ...immediately followed by the CEGAR's own
+     abstraction re-entry (DIRECT evidence)    414
+total `combined.rs:86` refusals                5702
+
+The abstraction signature is CORROBORATING evidence, not the argument, and
+it is a proxy: it misses an engagement whose CEGAR declines before its
+recursive solve. The argument itself is structural, and short enough to
+check against `dispatch_uf_arith_overbound` directly. Reaching
+`combined.rs:86` at all requires that function to have returned
+`FallThrough`; under the SHIPPED policy (`CegarProbe` -- `terminal` and
+`skip` are opt-in via AXEYUM_UF_ARITH_OVERBOUND) the only route to
+`FallThrough` is the lazy CEGAR running and returning an inconclusive
+`Unknown`. Its two earlier exits both RETURN: `NotEngaged` (which these
+engagements are not) and `Answer(refusal)` from the pathological bound.
+So on every file here the lazy route was not merely offered -- it ran.
+
+'shared' = distinct pair counts seen at BOTH sites on the same file. The
+pair count is a fingerprint of the term set, so a shared value is the same
+set reaching the selector first and the hard decline afterwards.
