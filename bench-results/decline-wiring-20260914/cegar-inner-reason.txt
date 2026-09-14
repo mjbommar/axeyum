@@ -1,0 +1,33 @@
+observations with a readable inner reason: 31
+
+=== inner reason, by whether the batch flooded ===
+
+lemmas_added >= 100 (FLOODED): 16
+   10  lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary
+    3  lazy linear arithmetic exhausted the configured timeout after N rounds this solve
+    1  linear-arithmetic sat-model reconstruction declined in the integer theory: lia simplex: 
+    1  auto-dispatch timeout after nonlinear integer real relaxation
+    1  lazy linear arithmetic SAT skeleton declined after round N
+
+lemmas_added == 0: 15
+   12  lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary
+    3  integer bit-blast width ladder: wall-clock timeout reached
+
+=== per flooded observation ===
+ lemmas  rounds  inner reason
+  17750       2  lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bou
+  15635       2  lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bou
+  13698       2  lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bou
+  12440       2  lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bou
+   5829       2  auto-dispatch timeout after nonlinear integer real relaxation
+   3805       2  lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bou
+   3288       2  lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bou
+   3246       2  lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bou
+   3157       2  lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bou
+   2020       2  lazy linear arithmetic exhausted the configured timeout after N rounds
+   2019       2  lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bou
+   1531       2  lazy linear arithmetic SAT skeleton declined after round N
+   1300       2  linear-arithmetic sat-model reconstruction declined in the integer the
+   1240       2  lazy linear arithmetic pre-SAT skeleton exceeds the joint resource bou
+    766       2  lazy linear arithmetic exhausted the configured timeout after N rounds
+    192       3  lazy linear arithmetic exhausted the configured timeout after N rounds

@@ -22,7 +22,13 @@ def wilson(k, n, z=1.96):
     d = 1 + z * z / n
     c = p + z * z / (2 * n)
     s = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))
-    return ((c - s) / d * 100, (c + s) / d * 100)
+    # Clamp. At k = 0 the algebra gives exactly 0, but in floating point c and s
+    # are equal-but-not-identical and the lower bound prints as `-0.0%`. A
+    # negative probability in a published table is a defect, not a rounding
+    # nicety, so it is fixed here rather than in the prose that quotes it.
+    lo = max(0.0, (c - s) / d * 100)
+    hi = min(100.0, (c + s) / d * 100)
+    return (lo, hi)
 
 
 label = sys.argv[1]
