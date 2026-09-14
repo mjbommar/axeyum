@@ -209,6 +209,218 @@ fn ground_subset_refutes_quantified_query(
     }
 }
 
+/// Whether the Boolean-skeleton refutation rung is armed.
+///
+/// **Polarity: ON is the shipped arm, and this INVERTED at ADR-2025.** Before
+/// that commit the rung was off unless `AXEYUM_ZERO_INST_SKELETON=1`; it now
+/// runs unless `AXEYUM_ZERO_INST_SKELETON=0`, and the variable is a **kill
+/// switch**. Anyone reusing `bench-results/zero-inst-20260914/ab-run.sh` on a
+/// later binary without noticing would measure the shipped arm in both halves
+/// and report the resulting zero as a null, so the inversion is stated here,
+/// in that runner's header, and in the ADR.
+///
+/// Why ON: measured on the 129-row `UFLIA`/`UFNIA` winnable population,
+/// interleaved per file, one binary and two env values — **+9 rows, 0 losses,
+/// 0 flips**, every gain carrying `q:bool-skeleton` `decided` in its route
+/// trail, all 9 STABLE-GAIN over three passes per arm, all 9 agreeing with
+/// `:status`, z3 and cvc5, against a same-arm noise floor of **0 of 129** and
+/// at **0.93x** the wall clock.
+///
+/// Read through a `OnceLock` so an A/B cannot be perturbed mid-run.
+fn bool_skeleton_probe_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        parse_bool_skeleton_lever(std::env::var("AXEYUM_ZERO_INST_SKELETON").ok().as_deref())
+    })
+}
+
+/// Parses [`bool_skeleton_probe_enabled`]'s spelling. Split out so the ON/OFF
+/// polarity is testable **without touching process environment**.
+///
+/// Exactly `0` disables. Every other spelling — unset, empty, `1`, a typo —
+/// leaves the rung ON, so a malformed kill switch fails **safe** in the sense
+/// that matters after shipping: it keeps the measured behaviour rather than
+/// silently reverting to the pre-ADR-2025 ladder.
+fn parse_bool_skeleton_lever(raw: Option<&str>) -> bool {
+    raw != Some("0")
+}
+
+/// Replaces every **maximal** quantified subterm of `assertions` by an opaque
+/// Boolean atom, yielding the query's Boolean skeleton.
+///
+/// Returns the rewritten assertions and how many **distinct** maximal quantified
+/// subterms were replaced, or `None` if the deadline passed or a helper could
+/// not be minted. The count is of interned nodes, not of textual occurrences:
+/// the arena is hash-consed, so two occurrences of one formula are one node and
+/// are abstracted once.
+///
+/// # Why this is sound
+///
+/// The skeleton is a **weakening**: an atom is unconstrained where the formula
+/// it replaced was not, so every model of the original extends to a model of the
+/// skeleton. Hence `skeleton unsat ⟹ original unsat`, which is the only
+/// direction the caller uses. The converse is false and is never assumed.
+///
+/// Two occurrences of the *same* subterm share one atom. That is sound **here**
+/// and not in general: the arena is hash-consed, so one `TermId` is one formula,
+/// and a *maximal* quantified subterm sits under no quantifier, so it has no
+/// bound variable whose value could differ between occurrences. A text-level
+/// version of this abstraction does **not** have that property — `let` can bind
+/// one name to two values — and ADR-2025's reference measurement had to carry a
+/// `--fresh-per-occurrence` control for exactly that reason. Here the sharing is
+/// semantic.
+///
+/// Atoms are minted with `TermArena::declare_internal`, whose namespace is
+/// disjoint from user symbols, so a benchmark that declares `qskel!7` itself
+/// cannot alias an abstraction atom.
+fn quantifier_boolean_skeleton(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Option<(Vec<TermId>, usize)> {
+    let mut memo: HashMap<TermId, TermId> = HashMap::new();
+    let mut abstracted = 0usize;
+    let mut out = Vec::with_capacity(assertions.len());
+
+    for &root in assertions {
+        let mut stack: Vec<(TermId, bool)> = vec![(root, false)];
+        while let Some((term, children_done)) = stack.pop() {
+            if past_deadline(deadline) {
+                return None;
+            }
+            if memo.contains_key(&term) {
+                continue;
+            }
+            let TermNode::App { op, args } = arena.node(term) else {
+                memo.insert(term, term);
+                continue;
+            };
+            // MAXIMALITY, named so it is one place to read and one place to
+            // break. A quantifier is replaced WHOLE and its body is never
+            // visited. Descending would abstract a quantifier nested under a
+            // binder — replacing a formula that varies with the bound variable
+            // by a constant that cannot — which is not a weakening, and so not
+            // sound. `bool_skeleton_abstracts_only_the_outermost_quantifier`
+            // is the test that fails if this stops being true.
+            let stop_at_this_quantifier = matches!(op, Op::Forall(_) | Op::Exists(_));
+            if stop_at_this_quantifier {
+                let name = format!("qskel!{}", term.index());
+                let symbol = arena.declare_internal(&name, Sort::Bool).ok()?;
+                let atom = arena.var(symbol);
+                memo.insert(term, atom);
+                abstracted += 1;
+                continue;
+            }
+            let args: Vec<TermId> = args.to_vec();
+            if children_done {
+                let mut rebuilt_args = Vec::with_capacity(args.len());
+                for arg in &args {
+                    rebuilt_args.push(*memo.get(arg)?);
+                }
+                let rebuilt = arena.rebuild_with_args(term, &rebuilt_args);
+                memo.insert(term, rebuilt);
+                continue;
+            }
+            stack.push((term, true));
+            for arg in args {
+                stack.push((arg, false));
+            }
+        }
+        out.push(*memo.get(&root)?);
+    }
+    Some((out, abstracted))
+}
+
+/// Tries to refute the query's **Boolean skeleton** — every maximal quantified
+/// subformula replaced by an opaque atom — before any instantiation runs.
+///
+/// # Why this is not [`ground_subset_refutes_quantified_query`]
+///
+/// That sibling **drops** every top-level conjunct that *contains* a quantifier.
+/// This one **keeps** such a conjunct and abstracts only the quantified
+/// subformulas *inside* it. The difference is the whole point: measured for
+/// ADR-2025 on the nine `UFLIA`/`UFNIA` files cvc5 refutes with zero
+/// instantiation tuples, the refutation lives inside **one** assertion — the
+/// last, the negated verification condition — and that assertion contains
+/// quantifiers. Dropping it throws the refutation away, which is why the ground
+/// assertions alone are `sat` on 8 of those 9 (cvc5 and z3 agreeing) and the
+/// sibling correctly declines.
+///
+/// On the 129-row winnable population, 15 files have a skeleton two independent
+/// solvers refute — 11.6 %, Wilson `[7.2 %, 18.3 %]`.
+///
+/// Only `Unsat` is propagated; every other outcome leaves the ordinary
+/// quantified ladder in charge, and the probe takes a tenth of the budget so it
+/// cannot starve the routes it precedes.
+// dispatch-family fn: keeps `Result` for uniformity with sibling routes.
+#[allow(clippy::unnecessary_wraps)]
+fn skeleton_refutes_quantified_query(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<bool, SolverError> {
+    if !bool_skeleton_probe_enabled() {
+        return Ok(false);
+    }
+    skeleton_refutes_quantified_query_armed(arena, assertions, config)
+}
+
+/// [`skeleton_refutes_quantified_query`] with the env gate already passed.
+///
+/// Split out for the same reason as [`parse_bool_skeleton_lever`]: the rung's
+/// own guards -- the liveness floor and the quantifier-free postcondition --
+/// are unreachable from a test while the OFF lever short-circuits the whole
+/// function, and a guard no test can reach is decoration.
+/// `mutation_controls.py` reported the liveness floor as SURVIVED before this
+/// split.
+// dispatch-family fn: keeps `Result` for uniformity with sibling routes.
+#[allow(clippy::unnecessary_wraps)]
+fn skeleton_refutes_quantified_query_armed(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<bool, SolverError> {
+    let Some(total) = config.timeout else {
+        return Ok(false);
+    };
+    let probe_budget = total / 10;
+    if probe_budget.is_zero() {
+        return Ok(false);
+    }
+    let probe_deadline = Instant::now().checked_add(probe_budget);
+
+    let Some((skeleton, abstracted)) =
+        quantifier_boolean_skeleton(arena, assertions, probe_deadline)
+    else {
+        return Ok(false);
+    };
+    // Liveness, not an assumption: abstracting zero subterms hands back the
+    // original query, and refuting THAT here would be the ordinary QF route
+    // wearing this rung's name. Such a run has measured nothing.
+    if abstracted == 0 {
+        return Ok(false);
+    }
+    // The skeleton is quantifier-free by construction. If it is not, the rewrite
+    // missed something and the result is not the abstraction this rung's
+    // soundness argument is about, so decline rather than solve it.
+    if contains_quantifier_within(arena, &skeleton, probe_deadline) != Some(false) {
+        return Ok(false);
+    }
+
+    let Some(probe) = config_with_remaining_timeout(config, probe_deadline) else {
+        return Ok(false);
+    };
+    match check_auto(arena, &skeleton, &probe) {
+        Ok(CheckResult::Unsat) => Ok(true),
+        Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
+            Ok(false)
+        }
+        // An optional accelerator must never turn a query the established
+        // portfolio can handle into an operational error.
+        Err(_) => Ok(false),
+    }
+}
+
 /// Clones a query configuration with only the wall-clock time remaining before
 /// `deadline`. `None` means the shared query budget has already expired.
 pub(crate) fn config_with_remaining_timeout(
@@ -773,6 +985,17 @@ pub fn solve(
         }
         route_trace::record_quant_rung_declined(
             route_trace::quant_rung::GROUND_SUBSET,
+            DeclineReason::NotApplicable,
+        );
+        if skeleton_refutes_quantified_query(arena, assertions, config)? {
+            route_trace::record_quant_rung_result(
+                route_trace::quant_rung::BOOL_SKELETON,
+                &CheckResult::Unsat,
+            );
+            return Ok(CheckResult::Unsat);
+        }
+        route_trace::record_quant_rung_declined(
+            route_trace::quant_rung::BOOL_SKELETON,
             DeclineReason::NotApplicable,
         );
     }
@@ -12089,6 +12312,233 @@ mod tests {
         assert!(
             !ground_subset_refutes_quantified_query(&mut arena, &satisfiable, &config).unwrap(),
             "a satisfiable ground subset says nothing about the quantified query"
+        );
+    }
+
+    /// The lever's polarity, checked without touching process environment.
+    ///
+    /// **This assertion is inverted from its first version, deliberately.**
+    /// The rung shipped ON at ADR-2025, so `0` is the kill switch and every
+    /// other spelling leaves it enabled. The test is written this way round so
+    /// that a future change back to opt-in cannot land silently: it would have
+    /// to edit this test, in this direction, on purpose.
+    #[test]
+    fn the_bool_skeleton_lever_is_on_unless_killed_exactly() {
+        assert!(
+            !parse_bool_skeleton_lever(Some("0")),
+            "exactly `0` is the kill switch"
+        );
+        for on in [
+            None,
+            Some(""),
+            Some("1"),
+            Some(" 0"),
+            Some("0 "),
+            Some("false"),
+            Some("FALSE"),
+            Some("no"),
+            Some("off"),
+            Some("00"),
+        ] {
+            assert!(
+                parse_bool_skeleton_lever(on),
+                "{on:?} is not the kill switch, so the rung stays ON"
+            );
+        }
+    }
+
+    /// The whole reason this rung exists, as a query rather than as prose.
+    ///
+    /// One assertion, whose top-level conjuncts are `(=> Q R)`, `Q` and
+    /// `(not R)` with `Q` quantified. Two of the three conjuncts contain a
+    /// quantifier, so [`ground_subset_refutes_quantified_query`] DROPS them and
+    /// is left with the satisfiable `(not R)`. The Boolean skeleton keeps the
+    /// propositional structure and replaces only `Q`, giving
+    /// `(A => R) and A and (not R)` — unsat.
+    ///
+    /// This is the adversarial fixture for the distinction the producer makes:
+    /// if the two rungs could not be told apart on some query, the second one
+    /// would be dead weight and this test would be measuring nothing.
+    #[test]
+    fn bool_skeleton_refutes_where_dropping_quantified_conjuncts_cannot() {
+        let mut arena = TermArena::new();
+        let r = arena.declare("skel_r", Sort::Bool).unwrap();
+        let r_var = arena.var(r);
+        let binder = arena.declare("skel_binder", Sort::Int).unwrap();
+        let binder_variable = arena.var(binder);
+        let zero = arena.int_const(0);
+        let body = arena.int_ge(binder_variable, zero).unwrap();
+        let quantified = arena.forall(binder, body).unwrap();
+
+        let implication = arena.implies(quantified, r_var).unwrap();
+        let not_r = arena.not(r_var).unwrap();
+        let first_pair = arena.and(implication, quantified).unwrap();
+        let conjunction = arena.and(first_pair, not_r).unwrap();
+        let assertions = vec![conjunction];
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(5));
+
+        let (skeleton, abstracted) =
+            quantifier_boolean_skeleton(&mut arena, &assertions, None).expect("skeleton builds");
+        // ONE, not two: the arena is hash-consed, so the two occurrences of
+        // this universal are one node and share one atom. That sharing is
+        // exactly what makes the skeleton refutable -- with a fresh atom per
+        // occurrence, `(A => R) and B and (not R)` has a model.
+        assert_eq!(
+            abstracted, 1,
+            "one interned universal, abstracted once and shared"
+        );
+        assert_eq!(
+            contains_quantifier_within(&arena, &skeleton, None),
+            Some(false),
+            "the skeleton must be quantifier-free"
+        );
+        assert!(
+            matches!(
+                check_auto(&mut arena, &skeleton, &config).unwrap(),
+                CheckResult::Unsat
+            ),
+            "the Boolean skeleton of this query is unsatisfiable"
+        );
+
+        // And the sibling, on the very same query, cannot see it.
+        assert!(
+            !ground_subset_refutes_quantified_query(&mut arena, &assertions, &config).unwrap(),
+            "dropping every conjunct that CONTAINS a quantifier discards the refutation"
+        );
+    }
+
+    /// Soundness-negative. The abstraction is a weakening, so its only possible
+    /// error is a wrong `unsat`, and the query that would expose one is a
+    /// SATISFIABLE skeleton. The two occurrences here are distinct universals,
+    /// so nothing forces them equal and the skeleton has a model.
+    #[test]
+    fn bool_skeleton_does_not_refute_a_satisfiable_skeleton() {
+        let mut arena = TermArena::new();
+        let first_binder = arena.declare("skel_sat_a", Sort::Int).unwrap();
+        let second_binder = arena.declare("skel_sat_b", Sort::Int).unwrap();
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let first_variable = arena.var(first_binder);
+        let second_variable = arena.var(second_binder);
+        let first_body = arena.int_ge(first_variable, zero).unwrap();
+        let second_body = arena.int_ge(second_variable, one).unwrap();
+        let first = arena.forall(first_binder, first_body).unwrap();
+        let second = arena.forall(second_binder, second_body).unwrap();
+        let not_second = arena.not(second).unwrap();
+        let assertions = vec![first, not_second];
+
+        let (skeleton, abstracted) =
+            quantifier_boolean_skeleton(&mut arena, &assertions, None).expect("skeleton builds");
+        assert_eq!(abstracted, 2, "two distinct universals, two atoms");
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(5));
+        assert!(
+            !matches!(
+                check_auto(&mut arena, &skeleton, &config).unwrap(),
+                CheckResult::Unsat
+            ),
+            "two unrelated opaque atoms are satisfiable; refuting them would be a wrong unsat"
+        );
+    }
+
+    /// Liveness of the abstraction itself, and of the sharing rule it relies
+    /// on. A quantifier-free query must abstract ZERO occurrences — if it
+    /// abstracted something, the rung's `unsat` would be the ordinary
+    /// quantifier-free route wearing this rung's name. And two occurrences of
+    /// the SAME subterm must share one atom, because that sharing is what makes
+    /// the fixture above refutable at all.
+    #[test]
+    fn bool_skeleton_abstracts_nothing_without_quantifiers_and_shares_by_identity() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("skel_live_x").unwrap();
+        let zero = arena.int_const(0);
+        let ground = arena.eq(x, zero).unwrap();
+        let (unchanged, abstracted) =
+            quantifier_boolean_skeleton(&mut arena, &[ground], None).expect("skeleton builds");
+        assert_eq!(abstracted, 0, "nothing to abstract in a ground query");
+        assert_eq!(unchanged, vec![ground], "a ground query is returned as-is");
+
+        let binder = arena.declare("skel_live_binder", Sort::Int).unwrap();
+        let binder_variable = arena.var(binder);
+        let body = arena.int_ge(binder_variable, zero).unwrap();
+        let quantified = arena.forall(binder, body).unwrap();
+        let (shared, count) =
+            quantifier_boolean_skeleton(&mut arena, &[quantified, quantified], None)
+                .expect("skeleton builds");
+        assert_eq!(count, 1, "one interned subterm is abstracted once");
+        assert_eq!(
+            shared[0], shared[1],
+            "identical subterms must map to the SAME atom"
+        );
+    }
+
+    /// The liveness floor, reached through the ARMED body so the OFF lever
+    /// cannot make the test vacuous.
+    ///
+    /// A query with no quantifiers abstracts nothing, so this rung must decline
+    /// it even though it is unsatisfiable. Without the floor the rung would
+    /// report `unsat` on a query the ordinary quantifier-free dispatch decided,
+    /// and every row it "won" would be a route-attribution error rather than a
+    /// new verdict.
+    #[test]
+    fn bool_skeleton_declines_a_query_it_abstracted_nothing_in() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("skel_floor_x").unwrap();
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let x_is_zero = arena.eq(x, zero).unwrap();
+        let x_is_one = arena.eq(x, one).unwrap();
+        let assertions = vec![x_is_zero, x_is_one];
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(5));
+
+        // The query really is refutable, so declining it is a decision and not
+        // an accident of the query being satisfiable.
+        assert!(
+            matches!(
+                check_auto(&mut arena, &assertions, &config).unwrap(),
+                CheckResult::Unsat
+            ),
+            "control: this ground query IS unsat"
+        );
+        assert!(
+            !skeleton_refutes_quantified_query_armed(&mut arena, &assertions, &config).unwrap(),
+            "a query with no quantifier to abstract is not this rung's to claim"
+        );
+        // And through the shipped entry point, which since ADR-2025 is ARMED by
+        // default -- so this also pins that the default really is on.
+        assert!(
+            !skeleton_refutes_quantified_query(&mut arena, &assertions, &config).unwrap(),
+            "the shipped entry point declines it too"
+        );
+    }
+
+    /// Maximality — the property the abstraction's soundness rests on.
+    ///
+    /// `forall x. exists y. y >= x` contains two quantifiers, one nested inside
+    /// the other. Exactly ONE subterm may be abstracted: the outermost. The
+    /// inner `exists y. y >= x` varies with the bound `x`, so replacing it with
+    /// a constant is not a weakening and could manufacture a wrong `unsat`.
+    #[test]
+    fn bool_skeleton_abstracts_only_the_outermost_quantifier() {
+        let mut arena = TermArena::new();
+        let outer = arena.declare("skel_max_outer", Sort::Int).unwrap();
+        let inner = arena.declare("skel_max_inner", Sort::Int).unwrap();
+        let outer_variable = arena.var(outer);
+        let inner_variable = arena.var(inner);
+        let body = arena.int_ge(inner_variable, outer_variable).unwrap();
+        let existential = arena.exists(inner, body).unwrap();
+        let universal = arena.forall(outer, existential).unwrap();
+
+        let (skeleton, abstracted) =
+            quantifier_boolean_skeleton(&mut arena, &[universal], None).expect("skeleton builds");
+        assert_eq!(
+            abstracted, 1,
+            "only the OUTERMOST quantifier may be abstracted; the nested one \
+             varies with the bound variable and a constant cannot track it"
+        );
+        assert_eq!(
+            contains_quantifier_within(&arena, &skeleton, None),
+            Some(false),
+            "replacing the outermost quantifier removes the nested one with it"
         );
     }
 

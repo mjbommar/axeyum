@@ -87,11 +87,21 @@ divisions the reconstruction is off by 10 of 1,521 files (0.7 %).**
 
 ## Caveats
 
-- **The `−1` on `QF_NRA` is not called a regression.** A single file is inside
-  the noise band measured today: three passes of identical code on `UFLIA` gave
-  **+1 / −2 / +0** with every moved row UNSTABLE, and a separate lane measured a
-  band of 2 files on a 200-file division. It needs a 3x re-check per arm before
-  anyone uses the word.
+- **The `−1` on `QF_NRA` is RESOLVED: it is UNSTABLE, not a regression.**
+  Re-checked 3x per arm on an idle host, one pinned core, arms alternating, on
+  `QF_NRA/hycomp/etcs_braking_2.01.seq_lazy_linear_enc_lemmas_global_11.smt2`:
+
+      board arm  unsat / unsat / unsat   (3 of 3)
+      main       unsat / unknown / unsat (2 of 3)
+
+  So the board's single loss captured a noise pass. It is **not** a stable loss
+  and the net is `+108` or `+109` depending on which pass is sampled.
+
+  Stated precisely rather than rounded in our favour: main is *less reliable*
+  here than the board commit (2 of 3 against 3 of 3), and at n=3 that is weak
+  evidence in either direction — a Wilson interval on 2/3 spans most of the
+  unit line. What it rules out is a deterministic loss, which is what "−1 on
+  the board" would otherwise imply.
 - **`QF_DT`, `QF_NIA` and `QF_UFLRA` were not re-checked 3x either.** They are
   far outside any measured noise band, so the direction is not in doubt, but the
   exact values are single-pass.

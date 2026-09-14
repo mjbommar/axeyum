@@ -10219,6 +10219,50 @@ SUITES["decline-wiring-ladder-admission-hoist"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `solver-bool-skeleton-rung` — the pre-instantiation Boolean-abstraction
+# refutation rung (ADR-2025).
+#
+# Three guards, and they fail in three different directions.  The polarity
+# guard failing OPEN would make an A/B measure the armed arm against itself and
+# report the zero as a null.  The liveness floor failing would let a query with
+# no quantifiers at all be refuted under this rung's name, which is the
+# ordinary quantifier-free route wearing a costume.  And the maximality rule is
+# the SOUNDNESS guard: abstracting a quantifier nested under a binder replaces a
+# formula that varies with the bound variable by a constant that cannot, which
+# is not a weakening and can forge a wrong `unsat`.
+# --------------------------------------------------------------------------
+
+SUITES["solver-bool-skeleton-rung"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "bool_skeleton"),
+        "solver-bool-skeleton-rung",
+    ),
+    [
+        (
+            # The lever fails OPEN: every spelling arms the rung.
+            "the lever's kill-switch polarity guard",
+            '    raw != Some("0")',
+            "    raw == Some(\"\\0never\")",
+        ),
+        (
+            # A query that abstracted nothing is no longer declined.
+            "the abstraction-liveness floor",
+            "    if abstracted == 0 {\n        return Ok(false);\n    }",
+            "    if false {\n        return Ok(false);\n    }",
+        ),
+        (
+            # Maximality removed: a quantifier is now visited on the way
+            # DOWN, so its body is rewritten first and a nested quantifier is
+            # abstracted to a constant that cannot track the enclosing binder.
+            "the maximality rule that keeps the abstraction a weakening",
+            "            let stop_at_this_quantifier = matches!(op, Op::Forall(_) | Op::Exists(_));",
+            "            let stop_at_this_quantifier =\n                matches!(op, Op::Forall(_) | Op::Exists(_)) && children_done;",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
-
