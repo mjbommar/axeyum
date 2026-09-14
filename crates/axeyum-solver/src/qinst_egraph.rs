@@ -2254,8 +2254,17 @@ fn prove_quantified_unsat_via_egraph_impl(
         let round_started = Instant::now();
         rounds_entered = round + 1;
         if deadline.is_some_and(|d| round_started >= d) {
-            qgrounddump(arena, &ground, &generations, "timeout-round-head");
-            return Ok(egraph_timeout());
+            let site = InstantiationTimeoutSite::RoundHead;
+            qgrounddump(arena, &ground, &generations, site.census_kind());
+            held_set_replay_probe(
+                arena,
+                &ground,
+                config,
+                &mut quantifier_cache,
+                rounds_entered,
+                site,
+            )?;
+            return Ok(egraph_timeout(site));
         }
         // One matching/admission round is the loop's largest deadline-blind
         // unit: the e-matcher has no internal deadline, and per-round work has
@@ -2346,8 +2355,17 @@ fn prove_quantified_unsat_via_egraph_impl(
                 }
             }
             if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
-                qgrounddump(arena, &ground, &generations, "timeout-mid-round");
-                return Ok(egraph_timeout());
+                let site = InstantiationTimeoutSite::MidRound;
+                qgrounddump(arena, &ground, &generations, site.census_kind());
+                held_set_replay_probe(
+                    arena,
+                    &ground,
+                    config,
+                    &mut quantifier_cache,
+                    rounds_entered,
+                    site,
+                )?;
+                return Ok(egraph_timeout(site));
             }
             if !online_attempted {
                 // The retained CDCL(T) accelerator abstracts equality clauses;
@@ -2695,10 +2713,149 @@ fn interleaved_check_due(round: usize) -> bool {
     round < instantiation_cadence() || (round + 1).is_power_of_two()
 }
 
-fn egraph_timeout() -> CheckResult {
+/// Which of the three deadline exits that shared one give-up string fired.
+///
+/// # Why this exists
+///
+/// [`InstantiationLoopExit`] split the loop's *break* exits because one string
+/// covered three of them and only one was a round budget. It did not go far
+/// enough: the loop has more exits than that enum has variants, and the ones it
+/// does not cover **return early instead of breaking**, so they never reach
+/// `finish_quantified_ground_check` and never appear as an
+/// `InstantiationLoopExit` at all. All three emitted the identical string
+/// `"e-matching: instantiation time budget exhausted"`, which is precisely the
+/// merged-label shape ADR-1956 was written about — ADR-1956's own "other"
+/// bucket reported four rows under this string without splitting it.
+///
+/// The three have different readings, and two of them have a remedy the third
+/// does not:
+///
+/// - [`RoundHead`](Self::RoundHead) — the deadline had already passed when a
+///   round was about to start. The accumulated ground set is **discarded
+///   unexamined**: the final check, including its strictly-additive
+///   shallow-generation subset pass, never runs.
+/// - [`MidRound`](Self::MidRound) — the same, detected after an interleaved
+///   check inside a round. Also discards the set unexamined.
+/// - [`GroundCheck`](Self::GroundCheck) — a quantifier-free check was reached
+///   with no remaining budget to give it. Nothing was discarded; there was
+///   simply no clock. This one is a genuine clock exit and has no round in it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum InstantiationTimeoutSite {
+    /// Deadline already passed at the top of a round; ground set discarded.
+    RoundHead,
+    /// Deadline passed inside a round, at an interleaved check; set discarded.
+    MidRound,
+    /// A quantifier-free check was invoked with no remaining budget.
+    GroundCheck,
+}
+
+impl InstantiationTimeoutSite {
+    /// The `unknown` detail this site gives up with.
+    ///
+    /// Every one of the three is a suffix on the historical string rather than
+    /// a replacement, so a census keyed on the old text still matches and a
+    /// census keyed on the new text can tell them apart.
+    #[must_use]
+    fn detail(self) -> &'static str {
+        match self {
+            Self::RoundHead => {
+                "e-matching: instantiation time budget exhausted at a round head \
+                 (ground set discarded unchecked)"
+            }
+            Self::MidRound => {
+                "e-matching: instantiation time budget exhausted mid-round \
+                 (ground set discarded unchecked)"
+            }
+            Self::GroundCheck => {
+                "e-matching: instantiation time budget exhausted before a ground check"
+            }
+        }
+    }
+
+    /// The short label used by the `qgrounddump` reason and the census.
+    #[must_use]
+    fn census_kind(self) -> &'static str {
+        match self {
+            Self::RoundHead => "timeout-round-head",
+            Self::MidRound => "timeout-mid-round",
+            Self::GroundCheck => "timeout-ground-check",
+        }
+    }
+}
+
+/// The fresh budget, in milliseconds, for the held-set replay probe, or `None`
+/// when the probe is off.
+///
+/// Off by default and costing one environment lookup when off. An unparseable
+/// or zero value resolves to off, so a typo cannot silently turn a measurement
+/// arm into a no-op that still prints nothing and looks the same.
+#[must_use]
+fn held_set_replay_budget_ms() -> Option<u64> {
+    let raw = std::env::var("AXEYUM_QPROBE_HELD_SET_REPLAY").ok()?;
+    let parsed: u64 = raw.trim().parse().ok()?;
+    (parsed > 0).then_some(parsed)
+}
+
+/// Diagnostic: at a deadline exit that **discards** the accumulated ground set,
+/// ask whether that set was already unsatisfiable — then throw the answer away.
+///
+/// # Why this exists
+///
+/// [`InstantiationTimeoutSite::RoundHead`] and
+/// [`InstantiationTimeoutSite::MidRound`] return before
+/// `finish_quantified_ground_check`, so the set they are holding has never been
+/// checked. "We hold an unsat set and never looked" and "we hold an
+/// insufficient set" produce the **identical** `unknown`, and no aggregate
+/// count can separate them. This probe separates them, on a budget unrelated to
+/// the rung deadline (which has by definition already passed).
+///
+/// Its verdict is **printed, never acted on** — the same discipline as the
+/// clause-shape probe further down this file. The caller returns the original
+/// `egraph_timeout` regardless, so an arm with this variable set measures the
+/// shipped verdict plus some extra wall time, and never a different verdict.
+fn held_set_replay_probe(
+    arena: &mut TermArena,
+    ground: &[TermId],
+    config: &SolverConfig,
+    cache: &mut QuantifierTermCache,
+    rounds_entered: usize,
+    site: InstantiationTimeoutSite,
+) -> Result<(), SolverError> {
+    let Some(budget_ms) = held_set_replay_budget_ms() else {
+        return Ok(());
+    };
+    let started = Instant::now();
+    let replay_deadline = started.checked_add(std::time::Duration::from_millis(budget_ms));
+    // A separate stats sink: the probe must not move the shipped counters, or
+    // an arm with it on would differ from the shipped arm in the artifacts as
+    // well as the wall clock.
+    let mut probe_stats = QuantifierLoopStats::default();
+    let verdict = match quantifier_qf_refutation_check(
+        arena,
+        ground,
+        config,
+        replay_deadline,
+        &mut probe_stats,
+        cache,
+    ) {
+        Ok(CheckResult::Unsat) => "unsat",
+        Ok(CheckResult::Sat(_)) => "sat",
+        Ok(CheckResult::Unknown(_)) => "unknown",
+        Err(_) => "error",
+    };
+    eprintln!(
+        "QPROBE held-set-replay exit={} ground={} rounds={rounds_entered} verdict={verdict} ms={} budget_ms={budget_ms}",
+        site.census_kind(),
+        ground.len(),
+        started.elapsed().as_millis(),
+    );
+    Ok(())
+}
+
+fn egraph_timeout(site: InstantiationTimeoutSite) -> CheckResult {
     CheckResult::Unknown(UnknownReason {
         kind: UnknownKind::ResourceLimit,
-        detail: "e-matching: instantiation time budget exhausted".to_owned(),
+        detail: site.detail().to_owned(),
     })
 }
 
@@ -3125,7 +3282,7 @@ fn quantifier_qf_check(
 ) -> Result<CheckResult, SolverError> {
     stats.qf_checks += 1;
     let Some(remaining) = config_with_remaining_timeout(config, deadline) else {
-        return Ok(egraph_timeout());
+        return Ok(egraph_timeout(InstantiationTimeoutSite::GroundCheck));
     };
     check_auto(arena, ground, &remaining)
 }
