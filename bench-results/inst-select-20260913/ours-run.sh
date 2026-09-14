@@ -30,15 +30,35 @@ CORPUS=/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/
 # LIVENESS GUARD.  A run in which EVERY row is `NONE` is what a hard division
 # looks like and also what a broken invocation looks like; the first version of
 # this script produced 61 of 61 NONE on UFNIA from a shell quoting bug and the
-# TSV was perfectly well-formed.  So prove the invocation works on one file
-# BEFORE the sweep, and refuse to produce a file full of NONE.
-probe=$(head -1 "$LIST")
-if [ -n "$probe" ]; then
+# TSV was perfectly well-formed.  So prove the invocation works BEFORE the sweep,
+# and refuse to produce a file full of NONE.
+#
+# It probes up to PROBE_N files and needs only ONE verdict, because the first
+# version probed exactly one and a SINGLE genuinely hard file killed a whole
+# shard: on `UF` the head of one shard's list OOMs under the 8 GiB cap
+# ("memory allocation of 1090519056 bytes failed", rc=134), which is a true
+# property of that benchmark and not a broken invocation. A guard that cannot
+# tell those apart deletes 34 good rows to avoid one bad one.
+PROBE_N=3
+probe_ok=""
+probe_tried=0
+while read -r probe; do
+  [ -n "$probe" ] || continue
+  probe_tried=$((probe_tried + 1))
   pv=$(env AXEYUM_QTRACE=1 timeout $((BUDGET + HEADROOM)) taskset -c "$PIN" \
         bash -c "ulimit -v $VLIM; exec \"\$0\" \"\$1\" --trace --timeout-ms $((BUDGET * 1000))" \
         "$AX" "$probe" 2>&1 | grep -m1 -oE '^(sat|unsat|unknown)$')
-  [ -n "$pv" ] || { echo "ABORT $TAG: probe produced NO verdict on $probe"; exit 4; }
-  echo "PROBE-OK $TAG verdict=$pv on $probe"
+  if [ -n "$pv" ]; then
+    echo "PROBE-OK $TAG verdict=$pv after $probe_tried file(s) on $probe"
+    probe_ok=1
+    break
+  fi
+  echo "PROBE-NO-VERDICT $TAG $probe"
+  [ "$probe_tried" -ge "$PROBE_N" ] && break
+done < "$LIST"
+if [ "$probe_tried" -gt 0 ] && [ -z "$probe_ok" ]; then
+  echo "ABORT $TAG: no verdict from any of $probe_tried probe file(s)"
+  exit 4
 fi
 
 printf 'file\tverdict\trc\twall_ms\tattempts\tdecided_by\tbound_by\tlast\tbound_ms\ttotal_ms\topen_after\topen_ms\tdump_rows\tgiveup\n' > "$OUT"
