@@ -2263,7 +2263,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                 config,
                 &mut quantifier_cache,
                 rounds_entered,
-                site,
+                site.census_kind(),
             )?;
             return Ok(egraph_timeout(site));
         }
@@ -2371,7 +2371,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                     config,
                     &mut quantifier_cache,
                     rounds_entered,
-                    site,
+                    site.census_kind(),
                 )?;
                 return Ok(egraph_timeout(site));
             }
@@ -2709,6 +2709,22 @@ fn prove_quantified_unsat_via_egraph_impl(
     )?;
     if matches!(finished, CheckResult::Unsat) {
         *certificate = collect_ground_derivations(arena, anchor, &ground, &ground_derivations);
+    } else {
+        // The break exits DO reach the final check -- but they hand it the
+        // shared `deadline`, which by this point can be expired, in which case
+        // the check returns `egraph_timeout` without looking at anything. So
+        // "the finish ran" and "the set was examined" are different claims, and
+        // the give-up string cannot tell them apart. Replay here on a fresh
+        // budget so the instrument covers all of the loop's exits rather than
+        // only the ones that return early.
+        held_set_replay_probe(
+            arena,
+            &ground,
+            config,
+            &mut quantifier_cache,
+            rounds_entered,
+            loop_exit.census_kind(),
+        )?;
     }
     Ok(finished)
 }
@@ -2823,6 +2839,29 @@ fn held_set_replay_budget_ms() -> Option<u64> {
     (parsed > 0).then_some(parsed)
 }
 
+/// The smallest discarded ground set the replay probe will spend its budget on.
+///
+/// # Why this exists
+///
+/// The probe is **not free**: it burns real wall clock inside a solve whose rung
+/// deadline has already passed, so every replay it performs takes the root
+/// budget away from whatever would have run next. Measured on
+/// `UFNIA/2019-Preiner`, a query reaches this exit twice — once early holding
+/// **11** ground terms and once late holding **1,643** — and an ungated probe
+/// spends its whole allowance on the 11-term set and then never reaches the
+/// 1,643-term one at all. An instrument that systematically samples the least
+/// interesting member of a population is worse than none, because its zero
+/// reads like a finding.
+///
+/// Unset is `0` — replay every exit, the ungated behaviour.
+#[must_use]
+fn held_set_replay_min_ground() -> usize {
+    std::env::var("AXEYUM_QPROBE_HELD_SET_REPLAY_MIN_GROUND")
+        .ok()
+        .and_then(|raw| raw.trim().parse().ok())
+        .unwrap_or(0)
+}
+
 /// Diagnostic: at a deadline exit that **discards** the accumulated ground set,
 /// ask whether that set was already unsatisfiable — then throw the answer away.
 ///
@@ -2846,11 +2885,22 @@ fn held_set_replay_probe(
     config: &SolverConfig,
     cache: &mut QuantifierTermCache,
     rounds_entered: usize,
-    site: InstantiationTimeoutSite,
+    exit_label: &str,
 ) -> Result<(), SolverError> {
     let Some(budget_ms) = held_set_replay_budget_ms() else {
         return Ok(());
     };
+    let min_ground = held_set_replay_min_ground();
+    if ground.len() < min_ground {
+        // Reported, not silently skipped: a probe that omits rather than
+        // refuses turns its output into a measurement of the accepted subset
+        // while still reading as a measurement of the set.
+        eprintln!(
+            "QPROBE held-set-replay-skipped exit={exit_label} ground={} rounds={rounds_entered} min_ground={min_ground}",
+            ground.len(),
+        );
+        return Ok(());
+    }
     let started = Instant::now();
     let replay_deadline = started.checked_add(std::time::Duration::from_millis(budget_ms));
     // A separate stats sink: the probe must not move the shipped counters, or
@@ -2871,8 +2921,7 @@ fn held_set_replay_probe(
         Err(_) => "error",
     };
     eprintln!(
-        "QPROBE held-set-replay exit={} ground={} rounds={rounds_entered} verdict={verdict} ms={} budget_ms={budget_ms}",
-        site.census_kind(),
+        "QPROBE held-set-replay exit={exit_label} ground={} rounds={rounds_entered} verdict={verdict} ms={} budget_ms={budget_ms}",
         ground.len(),
         started.elapsed().as_millis(),
     );
