@@ -10164,9 +10164,9 @@ SUITES["solver-bool-skeleton-rung"] = (
     [
         (
             # The lever fails OPEN: every spelling arms the rung.
-            "the lever's exact-spelling polarity guard",
-            '    raw == Some("1")',
-            "    raw != Some(\"\\0never\")",
+            "the lever's kill-switch polarity guard",
+            '    raw != Some("0")',
+            "    raw == Some(\"\\0never\")",
         ),
         (
             # A query that abstracted nothing is no longer declined.
