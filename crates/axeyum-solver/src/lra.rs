@@ -410,24 +410,48 @@ impl GaveUp {
     /// The `unknown` detail a caller reads.
     ///
     /// Every sentence names the gate and, where two engines ran, both of them.
-    /// A sentence says "not the clock" wherever the gate is not a clock, because
-    /// the defect this type exists to prevent was precisely a clock-shaped
-    /// sentence over a size guard and an `i128` overflow.
+    /// A sentence says "not a budget" wherever the gate is not one, because the
+    /// defect this type exists to prevent was precisely a clock-shaped sentence
+    /// over a size guard and an `i128` overflow.
+    ///
+    /// Written with `concat!` and not with `\`-continued string literals.
+    /// `rustfmt` rejoins a continued literal onto one line and keeps the
+    /// continuation's leading indentation INSIDE the string, so the shipped
+    /// detail grows runs of spaces that no assertion about substrings would
+    /// notice — measured on this very change, and now pinned by
+    /// `no_detail_blames_an_engine_that_did_not_run`.
     fn detail(self) -> String {
         match self {
-            Self::DeadlineOnEntry => "lra: the deadline had already passed when the conjunctive                  decider was entered (an expired budget or a portfolio stop); no constraint was                  collected and neither engine ran"
-                .to_owned(),
-            Self::DeadlineCollectingConstraints => "lra: the deadline passed while linearizing                  the assertions; the constraint system was never finished and neither engine ran"
-                .to_owned(),
-            Self::DeadlineBuildingFarkasMatrix => "lra: the deadline passed building the                  Fourier–Motzkin unit-multiplier matrix; the elimination itself never started"
-                .to_owned(),
+            Self::DeadlineOnEntry => concat!(
+                "lra: the deadline had already passed when the conjunctive decider was ",
+                "entered (an expired budget or a portfolio stop); no constraint was ",
+                "collected and neither engine ran",
+            )
+            .to_owned(),
+            Self::DeadlineCollectingConstraints => concat!(
+                "lra: the deadline passed while linearizing the assertions; the ",
+                "constraint system was never finished and neither engine ran",
+            )
+            .to_owned(),
+            Self::DeadlineBuildingFarkasMatrix => concat!(
+                "lra: the deadline passed building the Fourier–Motzkin unit-multiplier ",
+                "matrix; the elimination itself never started",
+            )
+            .to_owned(),
             Self::SimplexThenEliminationDeclined { simplex, fm } => format!(
-                "lra: both engines declined — the exact-rational simplex ran first and {},                  then Fourier–Motzkin {}; the simplex was not re-run on the identical system",
+                concat!(
+                    "lra: both engines declined — the exact-rational simplex ran first ",
+                    "and {}, then Fourier–Motzkin {}; the simplex was not re-run on the ",
+                    "identical system",
+                ),
                 simplex.describe(),
                 fm.describe(),
             ),
             Self::EliminationThenSimplexDeclined { fm, simplex } => format!(
-                "lra: both engines declined — Fourier–Motzkin {}, then the exact-rational                  simplex fallback {}",
+                concat!(
+                    "lra: both engines declined — Fourier–Motzkin {}, then the ",
+                    "exact-rational simplex fallback {}",
+                ),
                 fm.describe(),
                 simplex.describe(),
             ),
@@ -479,9 +503,10 @@ impl FmDecline {
             Self::OverflowEliminating => {
                 "hit an i128 overflow in its exact-rational arithmetic (not a budget at all)"
             }
-            Self::OverflowBackSubstituting => {
-                "found the projection feasible but hit an i128 overflow reconstructing the model                  by back substitution (not a budget at all)"
-            }
+            Self::OverflowBackSubstituting => concat!(
+                "found the projection feasible but hit an i128 overflow reconstructing ",
+                "the model by back substitution (not a budget at all)",
+            ),
         }
     }
 }
@@ -523,21 +548,26 @@ impl SimplexDecline {
     fn describe(self) -> &'static str {
         match self {
             Self::DeadlineBuildingRows => "stopped on the deadline building its dense tableau rows",
-            Self::OverflowBuildingRows => {
-                "hit an i128 overflow negating a constraint constant while building its rows                  (not a budget at all)"
-            }
-            Self::ModelDidNotReplay => {
-                "found a point that did not replay against the original assertions, so sat could                  not be certified (not a budget at all)"
-            }
-            Self::CertificateFailedSelfCheck => {
-                "found the system infeasible but its Farkas certificate failed the self-check, so                  unsat could not be certified (not a budget at all)"
-            }
-            Self::InfeasibleWithoutCertificate => {
-                "found the system infeasible with no rational Farkas certificate, a strict-delta                  refutation nothing could certify (not a budget at all)"
-            }
-            Self::EngineDeclined => {
-                "declined in exact arithmetic (its own deadline, its pivot budget, or a                  zero-divisor decline)"
-            }
+            Self::OverflowBuildingRows => concat!(
+                "hit an i128 overflow negating a constraint constant while building its ",
+                "rows (not a budget at all)",
+            ),
+            Self::ModelDidNotReplay => concat!(
+                "found a point that did not replay against the original assertions, so ",
+                "sat could not be certified (not a budget at all)",
+            ),
+            Self::CertificateFailedSelfCheck => concat!(
+                "found the system infeasible but its Farkas certificate failed the ",
+                "self-check, so unsat could not be certified (not a budget at all)",
+            ),
+            Self::InfeasibleWithoutCertificate => concat!(
+                "found the system infeasible with no rational Farkas certificate, a ",
+                "strict-delta refutation nothing could certify (not a budget at all)",
+            ),
+            Self::EngineDeclined => concat!(
+                "declined in exact arithmetic (its own deadline, its pivot budget, or a ",
+                "zero-divisor decline)",
+            ),
         }
     }
 }
@@ -884,8 +914,12 @@ fn decide_within(
         }
         .record(counting);
         return Ok(Decision::Incomplete(
-            "lra: an i128 overflow while linearizing the assertions left the constraint system              unusable, so neither engine was run (an exact-arithmetic width limit, not a clock              and not a memory budget)"
-                .to_owned(),
+            concat!(
+                "lra: an i128 overflow while linearizing the assertions left the ",
+                "constraint system unusable, so neither engine was run (an ",
+                "exact-arithmetic width limit, not a clock and not a memory budget)",
+            )
+            .to_owned(),
         ));
     }
     if ctx.trivially_unsat {
@@ -5138,6 +5172,16 @@ mod give_up_reason_tests {
                 "{}: every detail keeps the module prefix a census greps on: {detail:?}",
                 gave_up.name()
             );
+            // A `\`-continued string literal that `rustfmt` rejoins keeps the
+            // continuation's INDENTATION inside the literal. It happened on
+            // this very change and no substring assertion noticed, because a
+            // run of spaces breaks nothing a `contains` looks for -- it only
+            // corrupts the sentence a human and a census both read.
+            assert!(
+                !detail.contains("  ") && !detail.contains('\n') && !detail.contains('\t'),
+                "{}: a detail must be one clean line: {detail:?}",
+                gave_up.name()
+            );
             assert!(
                 !seen.contains(&detail),
                 "{}: two gates render the SAME sentence, which is the whole defect: {detail:?}",
@@ -5170,6 +5214,12 @@ mod give_up_reason_tests {
         // produces carries `UnknownKind::ResourceLimit` and a reader who stops
         // at the kind would draw exactly the wrong conclusion.
         for fm in listed_fm_declines() {
+            assert!(
+                !fm.describe().contains("  "),
+                "FmDecline::{}: {:?}",
+                fm.name(),
+                fm.describe()
+            );
             assert_eq!(
                 fm.name().starts_with("Overflow"),
                 fm.describe().contains("not a budget"),
@@ -5179,6 +5229,12 @@ mod give_up_reason_tests {
             );
         }
         for simplex in listed_simplex_declines() {
+            assert!(
+                !simplex.describe().contains("  "),
+                "SimplexDecline::{}: {:?}",
+                simplex.name(),
+                simplex.describe()
+            );
             let is_a_budget = matches!(
                 simplex,
                 SimplexDecline::DeadlineBuildingRows | SimplexDecline::EngineDeclined
