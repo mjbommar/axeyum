@@ -20,6 +20,11 @@
 #         not comparable to arm C and its verdict is never differenced against
 #         one. Its purpose is that a NEGATIVE under more generous conditions
 #         closes the hypothesis harder than a negative at the shipped point.
+#         *** PASS r2_ms=0 TO SKIP THIS ARM. *** It was measured (at 60 s, on
+#         three files) to be unable to reach the late exits it exists for, for
+#         the structural reason in the blindness note below: a longer clock just
+#         moves the watchdog. It costs ~60 % of the sweep's wall time and its
+#         cells are then `SKIPPED`, which is distinct from `none`.
 #
 # POLARITY, stated here because copying the wrong runner measures the shipped
 # arm against itself and reports a confident zero: the replay is OFF when
@@ -126,7 +131,14 @@ while read -r f; do
   st=$(grep -m1 -oE '\(set-info :status +(sat|unsat|unknown)' "$f" 2>/dev/null \
         | grep -oE '(sat|unsat|unknown)$')
   do_r1() { run_r "$f" "$R1MS" 0 "$BUDGET"; R1V=$RV; R1T=$RMS; R1N=$RN; R1U=$RUNSAT; R1L=$RLINES; }
-  do_r2() { run_r "$f" "$R2MS" "$R2MIN" "$R2BUDGET"; R2V=$RV; R2T=$RMS; R2N=$RN; R2U=$RUNSAT; R2L=$RLINES; }
+  # `SKIPPED`, not `none`: an arm that did not run and an arm that ran and found
+  # nothing read the same in a table, and only one of them is a measurement.
+  do_r2() {
+    if [ "$R2MS" -eq 0 ]; then
+      R2V=SKIPPED; R2T=0; R2N=0; R2U=0; R2L=SKIPPED; return
+    fi
+    run_r "$f" "$R2MS" "$R2MIN" "$R2BUDGET"; R2V=$RV; R2T=$RMS; R2N=$RN; R2U=$RUNSAT; R2L=$RLINES
+  }
   case $((i % 3)) in
     0) run_c "$f"; do_r1; do_r2; ord=c-r1-r2 ;;
     1) do_r1; do_r2; run_c "$f"; ord=r1-r2-c ;;

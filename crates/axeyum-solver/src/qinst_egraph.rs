@@ -2756,10 +2756,17 @@ fn interleaved_check_due(round: usize) -> bool {
 ///
 /// - [`RoundHead`](Self::RoundHead) — the deadline had already passed when a
 ///   round was about to start. The accumulated ground set is **discarded
-///   unexamined**: the final check, including its strictly-additive
-///   shallow-generation subset pass, never runs.
-/// - [`MidRound`](Self::MidRound) — the same, detected after an interleaved
-///   check inside a round. Also discards the set unexamined.
+///   without a final check**: `finish_quantified_ground_check`, including its
+///   strictly-additive shallow-generation subset pass, never runs on it.
+/// - [`MidRound`](Self::MidRound) — the deadline passed at an interleaved
+///   check inside a round. **This exit does NOT mean the set went unexamined**,
+///   and the wording here was wrong until it was measured: the exit sits
+///   immediately after `quantifier_qf_refutation_check` over the same `ground`
+///   and fires only when that check has just returned non-`Unsat` -- on the
+///   full shared deadline for rounds inside the cadence window. So the set was
+///   CHECKED and NOT DECIDED, the check having consumed the remainder of the
+///   budget. "Examined but undecided" and "never looked at" have opposite
+///   remedies, which is the whole reason these exits are named separately.
 /// - [`GroundCheck`](Self::GroundCheck) — a quantifier-free check was reached
 ///   with no remaining budget to give it. Nothing was discarded; there was
 ///   simply no clock. This one is a genuine clock exit and has no round in it.
@@ -2784,11 +2791,11 @@ impl InstantiationTimeoutSite {
         match self {
             Self::RoundHead => {
                 "e-matching: instantiation time budget exhausted at a round head \
-                 (ground set discarded unchecked)"
+                 (no final ground check ran on the accumulated set)"
             }
             Self::MidRound => {
                 "e-matching: instantiation time budget exhausted mid-round \
-                 (ground set discarded unchecked)"
+                 (the interleaved ground check did not decide the set inside the deadline)"
             }
             Self::GroundCheck => {
                 "e-matching: instantiation time budget exhausted before a ground check"
@@ -2907,7 +2914,12 @@ fn held_set_replay_probe(
     // an arm with it on would differ from the shipped arm in the artifacts as
     // well as the wall clock.
     let mut probe_stats = QuantifierLoopStats::default();
-    let verdict = match quantifier_qf_refutation_check(
+    // `unknown` is ambiguous exactly where this measurement needs precision: a
+    // ground checker that RAN OUT OF TIME on the set and one that DECLINED the
+    // fragment are different findings with opposite remedies, and both print
+    // `unknown`. The kind and detail are carried through so the census can tell
+    // them apart instead of naming whichever it guesses.
+    let (verdict, why) = match quantifier_qf_refutation_check(
         arena,
         ground,
         config,
@@ -2915,13 +2927,16 @@ fn held_set_replay_probe(
         &mut probe_stats,
         cache,
     ) {
-        Ok(CheckResult::Unsat) => "unsat",
-        Ok(CheckResult::Sat(_)) => "sat",
-        Ok(CheckResult::Unknown(_)) => "unknown",
-        Err(_) => "error",
+        Ok(CheckResult::Unsat) => ("unsat", String::new()),
+        Ok(CheckResult::Sat(_)) => ("sat", String::new()),
+        Ok(CheckResult::Unknown(reason)) => (
+            "unknown",
+            format!(" why={:?}|{}", reason.kind, reason.detail.replace(' ', "_")),
+        ),
+        Err(error) => ("error", format!(" why=Error|{error}").replace(' ', "_")),
     };
     eprintln!(
-        "QPROBE held-set-replay exit={exit_label} ground={} rounds={rounds_entered} verdict={verdict} ms={} budget_ms={budget_ms}",
+        "QPROBE held-set-replay exit={exit_label} ground={} rounds={rounds_entered} verdict={verdict} ms={} budget_ms={budget_ms}{why}",
         ground.len(),
         started.elapsed().as_millis(),
     );
