@@ -1859,9 +1859,9 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_DISTINCT_LINEAR"),
         justification: undated("doc comment"),
-        note: "Caps the `n(n-1)/2` pairwise expansion of SMT-LIB `distinct`; `Err(SmtError::ResourceLimit)` ends the route before the first pair is built. \"Generous enough ... including 256-way applications.\"",
+        note: "Caps the `n(n-1)/2` pairwise expansion of SMT-LIB `distinct`; `Err(SmtError::ResourceLimit)` ends the route before the first pair is built. \"Generous enough ... including 256-way applications.\" MEASURED 2026-09-13 (ADR-2000): 356 files of the 438,631-file SMT-LIB 2024 corpus carry a `distinct` application above this cap and die at the front door in ~0.1 s with no solver run -- UFNIA 309, QF_NIA 35, QF_LIA 12, largest arity 65,677. `AXEYUM_DISTINCT_LINEAR` does not move this number; it selects the LINEAR injection encoding for a top-level `(assert (distinct ...))` over an uninterpreted sort, which never reaches the cap at all. Grammar and polarity: `parse::DistinctLinear`.",
     },
     ConfigEntry {
         name: "MAX_EQRANGE_POINTS",

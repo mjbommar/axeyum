@@ -1,0 +1,3 @@
+file	base1	base2	base3	arm1	arm2	arm3	class
+UFNIA/spec_sharp/test14-CommandLineOptions.ssc.23.Microsoft.Boogie.CommandLineOptions.Boogie.ContractConsistencyCheck.get_ProverNeedsTypes.smt2	unknown	unknown	unknown	unsat	unknown	unknown	UNSTABLE
+UFLIA/simplify2/front_end_suite/javafe.ast.DelegatingPrettyPrint.010.smt2	unsat	unsat	unsat	unsat	unsat	unsat	STABLE-SAME

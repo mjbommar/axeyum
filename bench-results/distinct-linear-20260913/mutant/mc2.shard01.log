@@ -1,0 +1,4 @@
+MUTANT-CONTROL rows=100 base_unsat=91 base_sat=0
+MUTANT-CONTROL hard_disagreements=0 lost=0 gained=0
+MUTANT-CONTROL vacuous_decided_flips=2 shared_decided_flips=0
+FAIL: no row was decided sat by the shipped arm -- the strengthening mutant is blind

@@ -44,8 +44,8 @@ pub use ingest_stats::{IngestStats, IngestStatsGuard, last_ingest_stats};
 pub use parse::{
     FpUsage, IntBound, IntBoundKind, Script, ScriptCommand, SourceStringSatProblem,
     SourceStringWitness, WordObligation, WordProblem, decode_packed_string, packed_string_max_len,
-    parse_script, parse_script_with_string_bound, parse_script_with_string_bound_within,
-    parse_script_within,
+    parse_script, parse_script_with_distinct_lever, parse_script_with_string_bound,
+    parse_script_with_string_bound_within, parse_script_within,
 };
 pub use regex_membership::{MemberConcatDefinition, MemberVar, MembershipProblem};
 pub use sexpr::{SExpr, read_all};

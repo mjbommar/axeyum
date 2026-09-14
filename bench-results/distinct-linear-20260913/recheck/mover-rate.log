@@ -1,0 +1,2 @@
+MOVER-RATE runs=15 arm_decided=12/15 base_decided=0/15 budget=24s
+MOVER-RATE arm mean_ms=14727
