@@ -92,7 +92,7 @@ measurement.
 
 | exit | what it means | occurrences | last exit on |
 |---|---|---:|---:|
-| `SHAPE` | `Fixpoint` | 45 | 23 rows |
+| `SHAPE` | `Fixpoint` — **but see below** | 45 | 23 rows |
 | `CLOCK` | `GrowthHeadroom` | 11 | 3 rows |
 | `ROUND` | `RoundCeiling` | 2 | 1 row |
 | `timeout-round-head` | discards, **no** final check | **1** | 1 row |
@@ -106,6 +106,39 @@ round head* — is right that the loop dies at a deadline exit and wrong about
 which one, and the difference decides the remedy. 81 of 127 rows
 (63.8 % `[55.1 %, 71.6 %]`) hit a `timeout-*` exit; 54 of 127
 (42.5 % `[34.3 %, 51.2 %]`) do so holding ≥ 400 ground terms.
+
+### `SHAPE` was a merged label too — 28 of those 45 are saturations
+
+The census turned this lane's instrument on the instrument that motivated it.
+Of the 45 `SHAPE` exits, **28 sit at exactly `ground=8192`** — which is
+`MAX_GROUND_TERMS`, and `GroundBudget::join_ceiling` equals it. They are
+**admission-cap saturations reported as fixpoints**: 28 of 45 = **62.2 %,
+Wilson 95 % `[47.6 %, 74.9 %]`**.
+
+This file already knew the shape and named it in a comment at one site — *"every
+flooded file reaches that arm only at a CAP-INDUCED fixpoint with
+`ground=8192`"* — but the exit the census reads did not distinguish it, and
+`Fixpoint`'s give-up detail asserts *"no further instance to admit; **more
+rounds cannot help**"*. With the join capped, that second clause is a conclusion
+the break is not entitled to: *nothing more was admitted* already has a
+sufficient explanation. [ADR-1956] created this enum to stop exactly this, and
+it stayed merged one layer down for the same reason it was merged the first
+time — the label was believed rather than measured.
+
+`InstantiationLoopExit::GroundSaturated` (census kind `SATURATED`) now names that
+break. It is a statement about **the cap being in force**, not a proof the cap is
+what stopped admission — the loop cannot know that at the break. The point is the
+reverse: neither could `Fixpoint`, and it said so anyway. Both arms fire on this
+population: **28 saturations, 17 true fixpoints**. The guard is on the *property*
+(all four census kinds distinct) rather than on four literals, because this label
+has now been merged twice; mutation-verified, returning `"SHAPE"` from
+`GroundSaturated::census_kind` kills `the_exit_kinds_follow_adr_1950_and_are_distinct`
+and **exactly** that test (116 passed, 1 failed).
+
+**The 28 is 28 and not 29 for a denominator reason worth writing down.** A raw
+`grep` over the committed census finds 29 `SHAPE` exits at `ground=8192`; one of
+them belongs to a row `main` now decides, which is outside the 127-row
+denominator. The table above and this paragraph both use 127.
 
 ### And `timeout-mid-round` does not mean the set went unexamined
 
@@ -274,6 +307,9 @@ Diagnostics only. No verdict changes, no control flow changes:
   empty, zero or unparseable) and `AXEYUM_QPROBE_HELD_SET_REPLAY_MIN_GROUND`.
   A separate `QuantifierLoopStats` sink, so an arm with the probe on cannot move
   the shipped counters; the verdict is printed and **never acted on**.
+- `InstantiationLoopExit::GroundSaturated` — the one behaviour change beyond
+  diagnostics, and it changes only which give-up string a saturated fixpoint
+  reports. No verdict depends on it.
 
 ### The rules that were pre-registered, against what happened
 

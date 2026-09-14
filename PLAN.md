@@ -64811,7 +64811,7 @@ Denominator **127**. Every exit listed **even at zero**.
 
 | exit | | occurrences | last exit on |
 |---|---|---:|---:|
-| `SHAPE` | `Fixpoint` | 45 | 23 rows |
+| `SHAPE` | `Fixpoint` — **28 of these are saturations** | 45 | 23 rows |
 | `CLOCK` | `GrowthHeadroom` | 11 | 3 rows |
 | `ROUND` | `RoundCeiling` | 2 | 1 row |
 | `timeout-round-head` | discards, **no** final check | **1** | 1 row |
@@ -64828,6 +64828,21 @@ deadline** for every round inside the cadence window (the median such exit is at
 round 2). The set was **CHECKED and NOT DECIDED**. This lane shipped the wording
 `(ground set discarded unchecked)` and had to correct it two commits later, in
 the direction that would have justified its own lever.
+
+## `SHAPE` was a merged label too
+
+The census turned the instrument on the instrument. **28 of the 45 `SHAPE`
+exits sit at exactly `ground=8192`** — `MAX_GROUND_TERMS`, which
+`GroundBudget::join_ceiling` equals. They are admission-cap **saturations
+reported as fixpoints**: 62.2 %, Wilson `[47.6 %, 74.9 %]`. `Fixpoint`'s detail
+asserts *"no further instance to admit; **more rounds cannot help**"*, and with
+the join capped that is a conclusion the break is not entitled to.
+`InstantiationLoopExit::GroundSaturated` (`SATURATED`) now names it; both arms
+fire here (28 saturations, 17 fixpoints); the guard is on the property *all four
+census kinds are distinct*, mutation-verified to kill **exactly one** test.
+
+**28 and not 29**: a raw `grep` finds 29, one of which belongs to a row `main`
+now decides and so sits outside the 127-row denominator.
 
 ## The measurement that decides it
 
@@ -64920,6 +64935,10 @@ built: it is what says the exit table is a measurement and not a sample.
 
 ## Things found that were not asked for
 
+- **`SHAPE` was a second merged label, and the file already knew it.** 28 of 45
+  fixpoint exits are at the admission ceiling; a comment at one site calls that
+  a *"CAP-INDUCED fixpoint"* while the exit's own detail says *"more rounds
+  cannot help"*. Split as `GroundSaturated`, with the guard on the property.
 - **`InstantiationLoopExit` is not the loop's exit enum, it is the loop's
   *`break`* enum.** Four of seven exits bypass it, and the ADR that created it
   to stop a merged label could not see them. A census keyed on its

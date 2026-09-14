@@ -122,6 +122,7 @@ def cmd_exits(paths: list[str]) -> int:
     # a zero that was the maintainer's memory, not a measurement.
     all_kinds = [
         ("SHAPE", "Fixpoint"),
+        ("SATURATED", "GroundSaturated (at the admission ceiling)"),
         ("CLOCK", "GrowthHeadroom"),
         ("ROUND", "RoundCeiling"),
         ("timeout-round-head", "RoundHead (discards, NO final check)"),
@@ -150,6 +151,16 @@ def cmd_exits(paths: list[str]) -> int:
             print(f"  {kind:20s} {'':38s} occurrences={count:4d}   *** UNLISTED EXIT ***")
     print(f"  {'<no loop exit reached>':22s} rows={per_row_last.get('<no loop exit reached>', 0)}")
     print()
+    # The `SHAPE`/`SATURATED` split, re-derived from the ground SIZE rather than
+    # from the label, so it is readable off a census taken with the pre-split
+    # binary too. MAX_GROUND_TERMS is 8192 and `join_ceiling` equals it.
+    ceiling = 8192
+    shape_g = ground_by_kind.get("SHAPE", []) + ground_by_kind.get("SATURATED", [])
+    at_cap = sum(1 for g in shape_g if g >= ceiling)
+    print(
+        f"  fixpoint-family exits AT the {ceiling}-term admission ceiling "
+        f"(saturations, not fixpoints): {pct(at_cap, len(shape_g))}"
+    )
     print(f"  rows entering the loop at all: {pct(rows_with_any, len(failing))}")
     discard = sum(
         1
