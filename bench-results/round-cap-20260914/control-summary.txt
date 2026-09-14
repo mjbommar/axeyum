@@ -1,0 +1,9 @@
+=== CONTROL -- QF_LIA 200, same lever, must not move ===
+rows                 200
+OFF decided          120
+ON  decided          120
+GAIN (off undec -> on dec)  0   Wilson 95% [0.0%, 1.9%]
+LOSS (off dec -> on undec)  0   Wilson 95% [0.0%, 1.9%]
+FLIP (sat<->unsat)          0   <- SOUNDNESS if nonzero
+unchanged                   200
+wall OFF 1926s   ON 1926s   ratio 1.000x

@@ -1,0 +1,40 @@
+boundary observations: 22
+distinct files:        22
+
+=== which of the TWO code sites emitted the boundary reason ===
+(one census label, two sites, DIFFERENT rescue wiring -- see the ADR)
+   22  declining before the first SAT round
+
+=== population split (mechanical, no threshold) ===
+   12 obs /  12 files   BORN-OVER
+   10 obs /  10 files   GROWN
+
+=== ADR-2030's threshold split, for comparison, on the SAME rows ===
+   10  lemmas_added >= 100 (its FLOODED)  -> {'GROWN': 10}
+   12  lemmas_added == 0                  -> {'BORN-OVER': 12}
+    0  0 < lemmas_added < 100             -> {}
+
+=== per observation ===
+pop          atoms    cnfv rnds satc  lemmas   eqarg  viol  file
+BORN-OVER    15832   24064    1    0       0       0     0  UFLIA/simplify2/front_end_suite/javafe.ast.MethodDecl.005.smt2
+BORN-OVER    15808   24035    1    0       0       0     0  UFLIA/simplify2/front_end_suite/javafe.ast.ConstructorDecl.007.smt2
+BORN-OVER    15744   24195    1    0       0       0     0  UFLIA/simplify2/front_end_suite/javafe.ast.CompilationUnit.001.smt2
+BORN-OVER    15658   24430    1    0       0       0     0  UFLIA/simplify2/front_end_suite/javafe.ast.DefaultVisitor.028.smt2
+BORN-OVER    15106   24167    1    0       0       0     0  UFLIA/simplify2/front_end_suite/javafe.ast.ForStmt.009.smt2
+BORN-OVER    14926   24200    1    0       0       0     0  UFLIA/simplify2/front_end_suite/javafe.ast.VariableAccess.001.smt2
+BORN-OVER    14922   24195    1    0       0       0     0  UFLIA/simplify2/front_end_suite/javafe.ast.LabelStmt.011.smt2
+BORN-OVER    14726   24106    1    0       0       0     0  UFLIA/simplify2/front_end_suite/javafe.ast.ParenExpr.006.smt2
+BORN-OVER    14703   24107    1    0       0       0     0  UFLIA/simplify2/front_end_suite/javafe.ast.SuperObjectDesignator.008.smt2
+BORN-OVER    14686   24076    1    0       0       0     0  UFLIA/simplify2/front_end_suite/javafe.ast.AmbiguousVariableAccess.004.smt2
+BORN-OVER    14686   24075    1    0       0       0     0  UFLIA/simplify2/front_end_suite/javafe.parser.test.TestLex.030.smt2
+BORN-OVER    14686   24076    1    0       0       0     0  UFLIA/simplify2/front_end_suite/javafe.ast.ThrowStmt.004.smt2
+GROWN        52376  107193    2    1   13698   13698  3120  UFNIA/vcc-havoc/havoc-bench_dlist_insert_head.12.ua_wcscpy.smt2
+GROWN        34096   81567    2    1   15635   15635    22  UFLIA/boogie/DefaultLoopInv0_A.M-modifiesOnLoop-noinfer.smt2
+GROWN        27810   54843    2    1   17750   17750   448  UFNIA/spec_sharp/textbook-Factorial.dll.1.Factorial.F_System.Int32.smt2
+GROWN        15203   26308    2    1   12440   12440     8  UFLIA/simplify/javafe.ast.StandardPrettyPrint.322.smt2
+GROWN        13895   24119    2    1    3246    3246    20  UFLIA/simplify/javafe.ast.NewInstanceExpr.271.smt2
+GROWN        13531   23608    2    1    3157    3157    25  UFLIA/simplify/javafe.ast.UnaryExpr.424.smt2
+GROWN        11625   18882    2    1    1240    1240     8  UFLIA/simplify2/front_end_suite/javafe.parser.Parse.005.smt2
+GROWN        10725   25959    2    1    3805    3805    91  UFLIA/simplify2/front_end_suite/javafe.ast.ImportDeclVec.015.smt2
+GROWN         9364   21075    2    1    3288    3288    23  UFLIA/boogie/AssignToRepField_AssignToRepField.N.smt2
+GROWN         8627   17066    2    1    2019    2019   229  UFNIA/spec_sharp/textbook-Sum.dll.6.C.TransformQuant_System.Int32.array_notnull.smt2

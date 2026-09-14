@@ -1,0 +1,65 @@
+file	verdict	ms	preflight	solve	rescue_ran	out_sat	out_unsat	out_declined	out_unknown	first_lines
+UFLIA/boogie/AdvancedTypes_InternalSubClass..ctor-orderStrength_1.smt2	unknown	24122	0	2	1	0	0	1	0	PRESATPROBE site=solve atoms=8068 cnf_vars=16400 rescue=ran outcome=declined|PRESATPROBE site=solve atoms=8068 cnf_vars=16400 rescue=budget-spent outcome=refused|
+UFLIA/boogie/AssignToRepField_AssignToRepField.N.smt2	unknown	24131	0	0	0	0	0	0	0	
+UFLIA/boogie/Cast_Cast.R_System.Object_System.Int32.smt2	unknown	24125	0	0	0	0	0	0	0	
+UFLIA/boogie/DefaultLoopInv0_A.M-modifiesOnLoop-noinfer.smt2	unknown	24130	0	16	1	0	0	1	0	PRESATPROBE site=solve atoms=8360 cnf_vars=17749 rescue=ran outcome=declined|PRESATPROBE site=solve atoms=8360 cnf_vars=17749 rescue=budget-spent outcome=refused|
+UFLIA/boogie/Interval_Cell.Shift_System.Int32.smt2	unknown	24130	0	0	0	0	0	0	0	
+UFLIA/boogie/loopinv1_LoopInv1.Test1a_F_notnull-infer_eh.smt2	unknown	24725	0	2	1	0	0	1	0	PRESATPROBE site=solve atoms=22032 cnf_vars=51661 rescue=ran outcome=declined|PRESATPROBE site=solve atoms=22032 cnf_vars=51661 rescue=budget-spent outcome=refused|
+UFLIA/grasshopper/instantiated/insertion_sort_postcondition_of_insertion_sort_63_1.smt2	unknown	25228	0	0	0	0	0	0	0	
+UFLIA/simplify/javafe.ast.CatchClauseVec.66.smt2	unknown	25030	0	0	0	0	0	0	0	
+UFLIA/simplify/javafe.ast.NewInstanceExpr.271.smt2	unknown	23130	0	4	1	0	0	1	0	PRESATPROBE site=solve atoms=10045 cnf_vars=18709 rescue=ran outcome=declined|PRESATPROBE site=solve atoms=5657 cnf_vars=19586 rescue=budget-spent outcome=refused|
+UFLIA/simplify/javafe.ast.TypeDeclElemPragma.373.smt2	unknown	25031	0	6	1	0	0	1	0	PRESATPROBE site=solve atoms=5277 cnf_vars=20121 rescue=ran outcome=declined|PRESATPROBE site=solve atoms=5277 cnf_vars=20121 rescue=budget-spent outcome=refused|
+UFLIA/simplify/javafe.parser.TokenQueue.576.smt2	unknown	21526	0	4	1	0	0	1	0	PRESATPROBE site=solve atoms=4511 cnf_vars=24352 rescue=ran outcome=declined|PRESATPROBE site=solve atoms=4511 cnf_vars=24352 rescue=budget-spent outcome=refused|
+UFLIA/simplify/javafe.tc.TypeSig.730.smt2	unknown	19922	0	0	0	0	0	0	0	
+UFLIA/simplify2/front_end_suite/javafe.PrintSpec.012.smt2	unknown	24326	0	0	0	0	0	0	0	
+UFLIA/simplify2/front_end_suite/javafe.ast.CompilationUnit.001.smt2	unsat	1211	0	3	1	0	0	1	0	PRESATPROBE site=solve atoms=15254 cnf_vars=23018 rescue=ran outcome=declined|PRESATPROBE site=solve atoms=15254 cnf_vars=23018 rescue=budget-spent outcome=refused|
+UFLIA/simplify2/front_end_suite/javafe.ast.DefaultVisitor.028.smt2	unsat	811	0	3	1	0	0	1	0	PRESATPROBE site=solve atoms=15294 cnf_vars=23079 rescue=ran outcome=declined|PRESATPROBE site=solve atoms=15294 cnf_vars=23079 rescue=budget-spent outcome=refused|
+UFLIA/simplify2/front_end_suite/javafe.ast.ImportDeclVec.015.smt2	unknown	24131	0	0	0	0	0	0	0	
+UFLIA/simplify2/front_end_suite/javafe.ast.MethodDecl.005.smt2	unknown	24230	0	8	1	0	0	1	0	PRESATPROBE site=solve atoms=15500 cnf_vars=23388 rescue=ran outcome=declined|PRESATPROBE site=solve atoms=15500 cnf_vars=23388 rescue=budget-spent outcome=refused|
+UFLIA/simplify2/front_end_suite/javafe.ast.StandardPrettyPrint.008.smt2	unknown	25132	0	4	1	0	0	1	0	PRESATPROBE site=solve atoms=18610 cnf_vars=28068 rescue=ran outcome=declined|PRESATPROBE site=solve atoms=18610 cnf_vars=28068 rescue=budget-spent outcome=refused|
+UFLIA/simplify2/front_end_suite/javafe.ast.ThrowStmt.004.smt2	unsat	911	0	3	1	0	0	1	0	PRESATPROBE site=solve atoms=14054 cnf_vars=21213 rescue=ran outcome=declined|PRESATPROBE site=solve atoms=14054 cnf_vars=21213 rescue=budget-spent outcome=refused|
+UFLIA/simplify2/front_end_suite/javafe.ast.VariableAccess.001.smt2	unknown	24131	0	11	1	0	0	1	0	PRESATPROBE site=solve atoms=14290 cnf_vars=21568 rescue=ran outcome=declined|PRESATPROBE site=solve atoms=14290 cnf_vars=21568 rescue=budget-spent outcome=refused|
+UFLIA/simplify2/front_end_suite/javafe.filespace.ZipTree.005.smt2	unknown	24232	0	0	0	0	0	0	0	
+UFLIA/simplify2/front_end_suite/javafe.parser.TagConstants.001.smt2	unknown	24532	0	0	0	0	0	0	0	
+UFLIA/simplify2/front_end_suite/javafe.reader.CachedReader.003.smt2	unknown	24128	0	0	0	0	0	0	0	
+UFLIA/simplify2/front_end_suite/javafe.tc.EnvForLocals.007.smt2	unknown	24225	0	0	0	0	0	0	0	
+UFLIA/simplify2/front_end_suite/javafe.tc.TypeSig.001.smt2	unknown	25131	0	4	1	0	0	1	0	PRESATPROBE site=solve atoms=22320 cnf_vars=33645 rescue=ran outcome=declined|PRESATPROBE site=solve atoms=22320 cnf_vars=33645 rescue=budget-spent outcome=refused|
+UFLIA/simplify2/front_end_suite/javafe.tc.Types.035.smt2	unknown	24730	0	4	1	0	0	1	0	PRESATPROBE site=solve atoms=17018 cnf_vars=25672 rescue=ran outcome=declined|PRESATPROBE site=solve atoms=17018 cnf_vars=25672 rescue=budget-spent outcome=refused|
+UFLIA/simplify2/small_suite/getRootInterface.smt2	unknown	25032	0	4	1	0	0	1	0	PRESATPROBE site=solve atoms=17046 cnf_vars=25714 rescue=ran outcome=declined|PRESATPROBE site=solve atoms=17046 cnf_vars=25714 rescue=budget-spent outcome=refused|
+UFLIA/sledgehammer/FFT/smtlib.898060.smt2	unknown	11219	0	0	0	0	0	0	0	
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1282463.smt2	unknown	21324	0	0	0	0	0	0	0	
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.972059.smt2	unknown	18128	0	0	0	0	0	0	0	
+UFLIA/sledgehammer/Hoare/smtlib.581330.smt2	unknown	2211	0	0	0	0	0	0	0	
+UFLIA/sledgehammer/QEpres/smtlib.1065390.smt2	unknown	23133	0	0	0	0	0	0	0	
+UFLIA/sledgehammer/QEpres/smtlib.1237382.smt2	unknown	20730	0	0	0	0	0	0	0	
+UFLIA/tokeneer/auditlog/init-31.smt2	unknown	25030	0	0	0	0	0	0	0	
+UFNIA/2019-Preiner/combined/f2_rw343.smt2	unknown	24329	2	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=14853 cnf_vars=46770 rescue=shipped outcome=pending|PRESATPROBE site=preflight atoms=14853 cnf_vars=46770 rescue=shipped outcome=pending|
+UFNIA/2019-Preiner/combined/t3_rw899.smt2	unknown	24230	3	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=8495 cnf_vars=26771 rescue=shipped outcome=pending|PRESATPROBE site=preflight atoms=8495 cnf_vars=26771 rescue=shipped outcome=pending|
+UFNIA/2019-Preiner/full/f2_rw120.smt2	unknown	15418	0	0	0	0	0	0	0	
+UFNIA/2019-Preiner/full/t3_rw189.smt2	unknown	15421	0	0	0	0	0	0	0	
+UFNIA/2019-Preiner/full/t3_rw493.smt2	unknown	20828	0	0	0	0	0	0	0	
+UFNIA/2019-Preiner/partial/t3_rw114.smt2	unknown	24230	10	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=11325 cnf_vars=35108 rescue=shipped outcome=pending|PRESATPROBE site=preflight atoms=11108 cnf_vars=34682 rescue=shipped outcome=pending|
+UFNIA/2019-Preiner/partial/t3_rw514.smt2	unknown	24332	6	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=14613 cnf_vars=45630 rescue=shipped outcome=pending|PRESATPROBE site=preflight atoms=14346 cnf_vars=45104 rescue=shipped outcome=pending|
+UFNIA/2019-Preiner/partial/t3_rw759.smt2	unknown	24232	10	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=11200 cnf_vars=35012 rescue=shipped outcome=pending|PRESATPROBE site=preflight atoms=11213 cnf_vars=35046 rescue=shipped outcome=pending|
+UFNIA/2019-Preiner/qf/f2_rw163.smt2	unknown	9716	0	0	0	0	0	0	0	
+UFNIA/2019-Zohar-ic/combined/int_check_bvsle_bvashr0_rtl.smt2	unknown	24329	0	0	0	0	0	0	0	
+UFNIA/2019-Zohar-ic/combined/int_check_bvule_bvor_ltr_no_inv.smt2	unknown	24129	1	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=6659 cnf_vars=20509 rescue=shipped outcome=pending|
+UFNIA/2019-Zohar-ic/full/int_check_bvugt_bvneg_ltr_inv_g.smt2	unknown	24028	0	0	0	0	0	0	0	
+UFNIA/2019-Zohar-ic/partial/int_check_bvsle_bvudiv1_ltr_no_inv.smt2	unknown	24128	0	0	0	0	0	0	0	
+UFNIA/2019-Zohar-ic/qf/int_check_bvsge_bvneg_ltr_no_inv.smt2	unknown	25032	0	0	0	0	0	0	0	
+UFNIA/2019-Zohar-ic/qf/int_check_eq_bvnot_ltr_no_inv.smt2	unknown	5915	0	0	0	0	0	0	0	
+UFNIA/lahiri-cav09-storm-queries/mqueue_example_2_2_2_4.smt2	unknown	25130	0	0	0	0	0	0	0	
+UFNIA/lahiri-cav09-storm-queries/usbsamp_bug_example_2_3_8_1.smt2	unknown	110	0	0	0	0	0	0	0	
+UFNIA/sledgehammer/FFT/z3.885941.smt2	unknown	24129	0	0	0	0	0	0	0	
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.844134.smt2	unknown	15621	0	0	0	0	0	0	0	
+UFNIA/sledgehammer/QEpres/z3.737731.smt2	unknown	210	0	0	0	0	0	0	0	
+UFNIA/sledgehammer/TwoSquares/z3.710000.smt2	unknown	24125	0	0	0	0	0	0	0	
+UFNIA/spec_sharp/specsharp-BoundedStack.3.BoundedStack..ctor_System.Int32.smt2	unknown	15119	0	0	0	0	0	0	0	
+UFNIA/spec_sharp/test14-DafnyAst.ssc.30.Microsoft.Dafny.ClassType.Boogie.ContractConsistencyCheck.ToString.smt2	unknown	25128	0	0	0	0	0	0	0	
+UFNIA/spec_sharp/test14-Xml.ssc.17.Microsoft.Boogie.XmlSink.WriteFileFragment_System.String_notnull.smt2	unknown	111	0	0	0	0	0	0	0	
+UFNIA/spec_sharp/textbook-Sum.dll.6.C.TransformQuant_System.Int32.array_notnull.smt2	unknown	13621	0	3	1	0	0	1	0	PRESATPROBE site=solve atoms=8773 cnf_vars=17400 rescue=ran outcome=declined|PRESATPROBE site=solve atoms=8773 cnf_vars=17400 rescue=budget-spent outcome=refused|
+UFNIA/vcc-havoc/baby.2.54.handle_illegal.smt2	unknown	15021	0	0	0	0	0	0	0	
+UFNIA/vcc-havoc/havoc-bench_036.1.AddElement.smt2	unknown	25030	0	0	0	0	0	0	0	
+UFNIA/vcc-havoc/havoc-bench_sum.1.bar.smt2	unknown	25124	0	0	0	0	0	0	0	
+UFNIA/vcc-havoc/verisoft-baby.c.10.privileged.smt2	unknown	108	0	0	0	0	0	0	0	
+UFNIA/vcc-havoc/verisoft-sim.c.1.13.untranslated_write_sim.smt2	unknown	18020	0	0	0	0	0	0	0	

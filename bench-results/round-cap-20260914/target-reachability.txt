@@ -1,0 +1,39 @@
+censused target files                       22
+  ...present in this probe sweep            22
+  ...that CROSS on the shipped path         20
+  ...present but NEVER cross                2
+files crossing that are NOT in the target   27
+total files crossing                        47
+
+censused targets that DO NOT cross the boundary on the shipped path:
+  verdict=unknown  ms= 24129  UFLIA/boogie/AssignToRepField_AssignToRepField.N.smt2
+  verdict=unknown  ms= 24128  UFLIA/simplify2/front_end_suite/javafe.ast.ImportDeclVec.015.smt2
+
+files crossing that the census never named:
+  solve=   2 preflight=  0 verdict=unknown   UFLIA/boogie/AdvancedTypes_InternalSubClass..ctor-orderStrength_1.smt2
+  solve=   8 preflight=  0 verdict=unknown   UFLIA/boogie/Chunker11c_Chunker.SpecSharp.CheckInvariant_System.Boolean.smt2
+  solve=   3 preflight=  0 verdict=unknown   UFLIA/boogie/loopinv1_LoopInv1.Test1a_F_notnull-infer_eh.smt2
+  solve=   7 preflight=  0 verdict=unknown   UFLIA/simplify/javafe.ast.LexicalPragmaVec.219.smt2
+  solve=   6 preflight=  0 verdict=unknown   UFLIA/simplify/javafe.ast.TypeDeclElemPragma.373.smt2
+  solve=   4 preflight=  0 verdict=unsat     UFLIA/simplify/javafe.parser.TokenQueue.576.smt2
+  solve=   1 preflight=  0 verdict=unknown   UFLIA/simplify/tohtml.Java2Html.832.smt2
+  solve=   4 preflight=  0 verdict=unknown   UFLIA/simplify2/front_end_suite/javafe.ast.StandardPrettyPrint.008.smt2
+  solve=   1 preflight=  0 verdict=unknown   UFLIA/simplify2/front_end_suite/javafe.filespace.HashTree.001.smt2
+  solve=   3 preflight=  0 verdict=unsat     UFLIA/simplify2/front_end_suite/javafe.tc.ConstantExpr.001.smt2
+  solve=   4 preflight=  0 verdict=unknown   UFLIA/simplify2/front_end_suite/javafe.tc.FlowInsensitiveChecks.017.smt2
+  solve=   4 preflight=  0 verdict=unknown   UFLIA/simplify2/front_end_suite/javafe.tc.TypeSig.001.smt2
+  solve=   4 preflight=  0 verdict=unknown   UFLIA/simplify2/front_end_suite/javafe.tc.Types.035.smt2
+  solve=   4 preflight=  0 verdict=unknown   UFLIA/simplify2/small_suite/getRootInterface.smt2
+  solve=   0 preflight=  3 verdict=unknown   UFNIA/2019-Preiner/combined/f2_rw160.smt2
+  solve=   0 preflight=  2 verdict=unknown   UFNIA/2019-Preiner/combined/f2_rw343.smt2
+  solve=   0 preflight=  3 verdict=unknown   UFNIA/2019-Preiner/combined/t3_rw1401.smt2
+  solve=   0 preflight=  3 verdict=unknown   UFNIA/2019-Preiner/combined/t3_rw899.smt2
+  solve=   0 preflight=  6 verdict=unknown   UFNIA/2019-Preiner/combined/t3_rw96.smt2
+  solve=   0 preflight=  4 verdict=unknown   UFNIA/2019-Preiner/partial/f2_rw58.smt2
+  solve=   0 preflight= 10 verdict=unknown   UFNIA/2019-Preiner/partial/t3_rw114.smt2
+  solve=   0 preflight=  6 verdict=unknown   UFNIA/2019-Preiner/partial/t3_rw514.smt2
+  solve=   0 preflight= 10 verdict=unknown   UFNIA/2019-Preiner/partial/t3_rw636.smt2
+  solve=   0 preflight= 11 verdict=unknown   UFNIA/2019-Preiner/partial/t3_rw759.smt2
+  solve=   0 preflight=  6 verdict=unknown   UFNIA/2019-Preiner/partial/t3_rw940.smt2
+  solve=   0 preflight=  1 verdict=unknown   UFNIA/2019-Zohar-ic/combined/int_check_bvule_bvor_ltr_no_inv.smt2
+  solve=   1 preflight=  0 verdict=unknown   UFNIA/vcc-havoc/vccp-union1.c.6.reint2.smt2

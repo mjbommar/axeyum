@@ -1,0 +1,144 @@
+=== GATE 0 -- ON arm (AXEYUM_PRESAT_RESCUE=1) ===
+files                                129
+crossed the boundary at all          48
+  ...only at site=solve  (NO rescue) 36
+  ...only at site=preflight (rescue) 12
+  ...at BOTH sites                   0
+total site=solve crossings           157
+total site=preflight crossings       65
+files where the rescue RAN           36
+files where the rescue DECIDED       0
+  rescue outcomes: sat=0 unsat=0 declined=36 unknown=0
+verdicts                             {'unknown': 120, 'unsat': 9}
+
+per file (crossings | rescue):
+preflight   solve   ran  verdict      ms  file
+        0      16     1  unknown   24130  UFLIA/boogie/DefaultLoopInv0_A.M-modifiesOnLoop-noinfer.smt2
+        0      12     1  unknown   24230  UFLIA/simplify2/front_end_suite/javafe.ast.ParenExpr.006.smt2
+        0      11     1  unknown   24131  UFLIA/simplify2/front_end_suite/javafe.ast.VariableAccess.001.smt2
+        0      10     1  unknown   24129  UFLIA/simplify2/front_end_suite/javafe.ast.LabelStmt.011.smt2
+       10       0     0  unknown   24228  UFNIA/2019-Preiner/partial/t3_rw636.smt2
+       10       0     0  unknown   24230  UFNIA/2019-Preiner/partial/t3_rw114.smt2
+       10       0     0  unknown   24232  UFNIA/2019-Preiner/partial/t3_rw759.smt2
+        0       8     1  unknown   24231  UFLIA/boogie/Chunker11c_Chunker.SpecSharp.CheckInvariant_System.Boolean.smt2
+        0       8     1  unknown   24230  UFLIA/simplify2/front_end_suite/javafe.ast.MethodDecl.005.smt2
+        0       7     1  unknown   23928  UFLIA/simplify/javafe.ast.LexicalPragmaVec.219.smt2
+        6       0     0  unknown   24229  UFNIA/2019-Preiner/combined/t3_rw96.smt2
+        6       0     0  unknown   24531  UFNIA/2019-Preiner/partial/t3_rw940.smt2
+        0       6     1  unknown   25031  UFLIA/simplify/javafe.ast.TypeDeclElemPragma.373.smt2
+        6       0     0  unknown   24332  UFNIA/2019-Preiner/partial/t3_rw514.smt2
+        5       0     0  unknown   24230  UFNIA/2019-Preiner/partial/f2_rw58.smt2
+        0       4     1  unknown   25129  UFLIA/simplify2/front_end_suite/javafe.tc.FlowInsensitiveChecks.017.smt2
+        0       4     1  unknown   23130  UFLIA/simplify/javafe.ast.NewInstanceExpr.271.smt2
+        0       4     1  unknown   21526  UFLIA/simplify/javafe.parser.TokenQueue.576.smt2
+        0       4     1  unknown   25132  UFLIA/simplify2/front_end_suite/javafe.ast.StandardPrettyPrint.008.smt2
+        0       4     1  unknown   25131  UFLIA/simplify2/front_end_suite/javafe.tc.TypeSig.001.smt2
+        0       4     1  unknown   24730  UFLIA/simplify2/front_end_suite/javafe.tc.Types.035.smt2
+        0       4     1  unknown   25032  UFLIA/simplify2/small_suite/getRootInterface.smt2
+        0       3     1  unknown   23529  UFLIA/simplify/javafe.ast.UnaryExpr.424.smt2
+        0       3     1    unsat     810  UFLIA/simplify2/front_end_suite/javafe.ast.AmbiguousVariableAccess.004.smt2
+        0       3     1    unsat     809  UFLIA/simplify2/front_end_suite/javafe.ast.ConstructorDecl.007.smt2
+        0       3     1    unsat     809  UFLIA/simplify2/front_end_suite/javafe.ast.ForStmt.009.smt2
+        0       3     1    unsat     910  UFLIA/simplify2/front_end_suite/javafe.ast.SuperObjectDesignator.008.smt2
+        0       3     1    unsat     811  UFLIA/simplify2/front_end_suite/javafe.parser.test.TestLex.030.smt2
+        0       3     1    unsat    1009  UFLIA/simplify2/front_end_suite/javafe.tc.ConstantExpr.001.smt2
+        3       0     0  unknown   24132  UFNIA/2019-Preiner/combined/f2_rw160.smt2
+        3       0     0  unknown   24130  UFNIA/2019-Preiner/combined/t3_rw1401.smt2
+        0       3     1  unknown   17320  UFNIA/spec_sharp/textbook-Factorial.dll.1.Factorial.F_System.Int32.smt2
+        0       3     1  unknown   15820  UFNIA/vcc-havoc/havoc-bench_dlist_insert_head.12.ua_wcscpy.smt2
+        0       3     1    unsat    1211  UFLIA/simplify2/front_end_suite/javafe.ast.CompilationUnit.001.smt2
+        0       3     1    unsat     811  UFLIA/simplify2/front_end_suite/javafe.ast.DefaultVisitor.028.smt2
+        0       3     1    unsat     911  UFLIA/simplify2/front_end_suite/javafe.ast.ThrowStmt.004.smt2
+        3       0     0  unknown   24230  UFNIA/2019-Preiner/combined/t3_rw899.smt2
+        0       3     1  unknown   13621  UFNIA/spec_sharp/textbook-Sum.dll.6.C.TransformQuant_System.Int32.array_notnull.smt2
+        0       2     1  unknown   24132  UFLIA/simplify2/front_end_suite/javafe.parser.Parse.005.smt2
+        0       2     1  unknown   25033  UFNIA/vcc-havoc/vccp-union1.c.6.reint2.smt2
+        0       2     1  unknown   24122  UFLIA/boogie/AdvancedTypes_InternalSubClass..ctor-orderStrength_1.smt2
+        0       2     1  unknown   24725  UFLIA/boogie/loopinv1_LoopInv1.Test1a_F_notnull-infer_eh.smt2
+        2       0     0  unknown   24329  UFNIA/2019-Preiner/combined/f2_rw343.smt2
+        0       1     1  unknown   24130  UFLIA/boogie/BasicMethodology_SubClass..ctor.smt2
+        0       1     1  unknown   25127  UFLIA/simplify/javafe.ast.StandardPrettyPrint.322.smt2
+        0       1     1  unknown   25031  UFLIA/simplify/tohtml.Java2Html.832.smt2
+        0       1     1  unknown   24126  UFLIA/simplify2/front_end_suite/javafe.filespace.HashTree.001.smt2
+        1       0     0  unknown   24129  UFNIA/2019-Zohar-ic/combined/int_check_bvule_bvor_ltr_no_inv.smt2
+        0       0     0  unknown    4611  UFLIA/20230314-Jaroslav-Bendik-Certora/52759_b3ecd2335fd16ec2eee2_9_UFLIA.smt2
+        0       0     0  unknown   24128  UFLIA/boogie/Arrays_Q3-noinfer.smt2
+        0       0     0  unknown   24126  UFLIA/boogie/ExposeVersion_D..ctor-level_2.smt2
+        0       0     0  unknown   24230  UFLIA/boogie/Spouse_Person..ctor.smt2
+        0       0     0  unknown   23931  UFLIA/grasshopper/instantiated/delete_check_heap_access_53_12.smt2
+        0       0     0  unknown   24332  UFLIA/grasshopper/uninstantiated/merge_loop_check_heap_access_60_6.smt2
+        0       0     0  unknown   25130  UFLIA/simplify/javafe.tc.FlowInsensitiveChecks.679.smt2
+        0       0     0  unknown   24131  UFLIA/simplify2/front_end_suite/javafe.ast.TypeModifierPragmaVec.013.smt2
+        0       0     0  unknown   24231  UFLIA/simplify2/front_end_suite/javafe.tc.TypeSigVec.005.smt2
+        0       0     0  unknown   24226  UFLIA/simplify2/front_end_suite/javafe.test.SuperlinksTest.004.smt2
+        0       0     0  unknown   18125  UFLIA/sledgehammer/Arrow_Order/smtlib.832901.smt2
+        0       0     0  unknown   19124  UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1057395.smt2
+        0       0     0  unknown    3311  UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1462528.smt2
+        0       0     0  unknown   24230  UFLIA/sledgehammer/Hoare/smtlib.1175889.smt2
+        0       0     0  unknown   22631  UFLIA/sledgehammer/Hoare/smtlib.993567.smt2
+        0       0     0  unknown   17625  UFLIA/sledgehammer/QEpres/smtlib.1120322.smt2
+        0       0     0  unknown   25031  UFLIA/sledgehammer/TwoSquares/smtlib.711545.smt2
+        0       0     0  unknown   15424  UFNIA/2019-Preiner/full/t3_rw1240.smt2
+        0       0     0  unknown   15421  UFNIA/2019-Preiner/full/t3_rw25.smt2
+        0       0     0  unknown   24130  UFNIA/2019-Preiner/partial/t3_rw21.smt2
+        0       0     0  unknown   24131  UFNIA/2019-Preiner/qf/t3_rw353.smt2
+        0       0     0  unknown   24326  UFNIA/2019-Zohar-ic/combined/int_check_bvugt_bvashr0_ltr_inv_g.smt2
+        0       0     0  unknown   25032  UFNIA/2019-Zohar-ic/full/int_check_bvslt_bvurem1_ltr_no_inv.smt2
+        0       0     0  unknown   24130  UFNIA/2019-Zohar-ic/partial/int_check_bvsgt_bvlshr0_ltr_no_inv.smt2
+        0       0     0  unknown   24125  UFNIA/2019-Zohar-ic/partial/int_check_bvugt_bvudiv0_ltr_no_inv.smt2
+        0       0     0  unknown    2711  UFNIA/2019-Zohar-ic/qf/int_check_bvuge_bvor_ltr_no_inv.smt2
+        0       0     0  unknown   24130  UFNIA/20190909-CLEARSY/0023/00302.smt2
+        0       0     0  unknown   25131  UFNIA/lahiri-cav09-storm-queries/mqueue_example_cegar_2_3_10.smt2
+        0       0     0  unknown     110  UFNIA/lahiri-cav09-storm-queries/usbsamp_example_2_3_4_0.smt2
+        0       0     0  unknown   19526  UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.1031223.smt2
+        0       0     0  unknown   25129  UFNIA/sledgehammer/Hoare/z3.850818.smt2
+        0       0     0  unknown   22629  UFNIA/sledgehammer/TwoSquares/z3.647259.smt2
+        0       0     0  unknown   14023  UFNIA/sledgehammer/TwoSquares/z3.861593.smt2
+        0       0     0  unknown     111  UFNIA/spec_sharp/test14-CommandLineOptions.ssc.23.Microsoft.Boogie.CommandLineOptions.Boogie.ContractConsistencyCheck.get_ProverNeedsTypes.smt2
+        0       0     0  unknown   25130  UFNIA/spec_sharp/test14-DafnyAst.ssc.91.Microsoft.Dafny.VarDecl..ctor_Microsoft.Dafny.Token_notnull_System.String_notnull_Microsoft.Dafny.Ty.smt2
+        0       0     0  unknown   15021  UFNIA/vcc-havoc/baby.1.20.handle_illegal.smt2
+        0       0     0  unknown   13918  UFNIA/vcc-havoc/baby.59.handle_reset.smt2
+        0       0     0  unknown     109  UFNIA/vcc-havoc/verisoft-baby.c.49.pf_reason_m.smt2
+        0       0     0  unknown   17221  UFNIA/vcc-havoc/verisoft-sim.c.2.25.untranslated_write_sim.smt2
+        0       0     0  unknown   24131  UFLIA/boogie/AssignToRepField_AssignToRepField.N.smt2
+        0       0     0  unknown   24125  UFLIA/boogie/Cast_Cast.R_System.Object_System.Int32.smt2
+        0       0     0  unknown   24130  UFLIA/boogie/Interval_Cell.Shift_System.Int32.smt2
+        0       0     0  unknown   25228  UFLIA/grasshopper/instantiated/insertion_sort_postcondition_of_insertion_sort_63_1.smt2
+        0       0     0  unknown   25030  UFLIA/simplify/javafe.ast.CatchClauseVec.66.smt2
+        0       0     0  unknown   19922  UFLIA/simplify/javafe.tc.TypeSig.730.smt2
+        0       0     0  unknown   24326  UFLIA/simplify2/front_end_suite/javafe.PrintSpec.012.smt2
+        0       0     0  unknown   24131  UFLIA/simplify2/front_end_suite/javafe.ast.ImportDeclVec.015.smt2
+        0       0     0  unknown   24232  UFLIA/simplify2/front_end_suite/javafe.filespace.ZipTree.005.smt2
+        0       0     0  unknown   24532  UFLIA/simplify2/front_end_suite/javafe.parser.TagConstants.001.smt2
+        0       0     0  unknown   24128  UFLIA/simplify2/front_end_suite/javafe.reader.CachedReader.003.smt2
+        0       0     0  unknown   24225  UFLIA/simplify2/front_end_suite/javafe.tc.EnvForLocals.007.smt2
+        0       0     0  unknown   11219  UFLIA/sledgehammer/FFT/smtlib.898060.smt2
+        0       0     0  unknown   21324  UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1282463.smt2
+        0       0     0  unknown   18128  UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.972059.smt2
+        0       0     0  unknown    2211  UFLIA/sledgehammer/Hoare/smtlib.581330.smt2
+        0       0     0  unknown   23133  UFLIA/sledgehammer/QEpres/smtlib.1065390.smt2
+        0       0     0  unknown   20730  UFLIA/sledgehammer/QEpres/smtlib.1237382.smt2
+        0       0     0  unknown   25030  UFLIA/tokeneer/auditlog/init-31.smt2
+        0       0     0  unknown   15418  UFNIA/2019-Preiner/full/f2_rw120.smt2
+        0       0     0  unknown   15421  UFNIA/2019-Preiner/full/t3_rw189.smt2
+        0       0     0  unknown   20828  UFNIA/2019-Preiner/full/t3_rw493.smt2
+        0       0     0  unknown    9716  UFNIA/2019-Preiner/qf/f2_rw163.smt2
+        0       0     0  unknown   24329  UFNIA/2019-Zohar-ic/combined/int_check_bvsle_bvashr0_rtl.smt2
+        0       0     0  unknown   24028  UFNIA/2019-Zohar-ic/full/int_check_bvugt_bvneg_ltr_inv_g.smt2
+        0       0     0  unknown   24128  UFNIA/2019-Zohar-ic/partial/int_check_bvsle_bvudiv1_ltr_no_inv.smt2
+        0       0     0  unknown   25032  UFNIA/2019-Zohar-ic/qf/int_check_bvsge_bvneg_ltr_no_inv.smt2
+        0       0     0  unknown    5915  UFNIA/2019-Zohar-ic/qf/int_check_eq_bvnot_ltr_no_inv.smt2
+        0       0     0  unknown   25130  UFNIA/lahiri-cav09-storm-queries/mqueue_example_2_2_2_4.smt2
+        0       0     0  unknown     110  UFNIA/lahiri-cav09-storm-queries/usbsamp_bug_example_2_3_8_1.smt2
+        0       0     0  unknown   24129  UFNIA/sledgehammer/FFT/z3.885941.smt2
+        0       0     0  unknown   15621  UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.844134.smt2
+        0       0     0  unknown     210  UFNIA/sledgehammer/QEpres/z3.737731.smt2
+        0       0     0  unknown   24125  UFNIA/sledgehammer/TwoSquares/z3.710000.smt2
+        0       0     0  unknown   15119  UFNIA/spec_sharp/specsharp-BoundedStack.3.BoundedStack..ctor_System.Int32.smt2
+        0       0     0  unknown   25128  UFNIA/spec_sharp/test14-DafnyAst.ssc.30.Microsoft.Dafny.ClassType.Boogie.ContractConsistencyCheck.ToString.smt2
+        0       0     0  unknown     111  UFNIA/spec_sharp/test14-Xml.ssc.17.Microsoft.Boogie.XmlSink.WriteFileFragment_System.String_notnull.smt2
+        0       0     0  unknown   15021  UFNIA/vcc-havoc/baby.2.54.handle_illegal.smt2
+        0       0     0  unknown   25030  UFNIA/vcc-havoc/havoc-bench_036.1.AddElement.smt2
+        0       0     0  unknown   25124  UFNIA/vcc-havoc/havoc-bench_sum.1.bar.smt2
+        0       0     0  unknown     108  UFNIA/vcc-havoc/verisoft-baby.c.10.privileged.smt2
+        0       0     0  unknown   18020  UFNIA/vcc-havoc/verisoft-sim.c.1.13.untranslated_write_sim.smt2

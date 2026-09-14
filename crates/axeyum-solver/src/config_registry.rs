@@ -4162,6 +4162,31 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Joint partner to the pre-SAT atom bound; a floor, not the decision.",
     },
     ConfigEntry {
+        name: "MAX_PRE_SAT_RESCUE_ATTEMPTS",
+        module: "crates/axeyum-solver/src/dpll_lia.rs",
+        value: "1",
+        unit: "rescue attempts per process",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: None,
+        justification: dated(
+            "doc comment",
+            "2026-09-14",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/dpll_lia.rs",
+                "MAX_PRE_SAT_RESCUE_ATTEMPTS",
+            )],
+            &[live(
+                "OVERSIZED_ADMISSION_PROBE_BUDGET",
+                "crates/axeyum-solver/src/dpll_lia.rs",
+            )],
+        ),
+        note: "ADR-2035. Bounds how often the pre-SAT boundary rescue (itself off by default behind AXEYUM_PRESAT_RESCUE) is offered. The boundary is consulted once per CEGAR round AND once per width-ladder rung -- ADR-2030 measured 60 to 1,605 consultations on one file -- so an unbounded rescue would multiply OVERSIZED_ADMISSION_PROBE_BUDGET by up to four digits. Per PROCESS, not per query; smtcomp_cli runs one query per process, a library caller does not.",
+    },
+    ConfigEntry {
         name: "MAX_TWO_EDGE_DIFF_EDGES",
         module: "crates/axeyum-solver/src/dpll_lia.rs",
         value: "512",

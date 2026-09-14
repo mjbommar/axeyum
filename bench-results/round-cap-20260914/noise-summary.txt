@@ -1,0 +1,9 @@
+=== NOISE FLOOR -- same shipped arm twice (AXEYUM_NOT_A_LEVER=1) ===
+rows                 129
+OFF decided          9
+ON  decided          9
+GAIN (off undec -> on dec)  0   Wilson 95% [0.0%, 2.9%]
+LOSS (off dec -> on undec)  0   Wilson 95% [0.0%, 2.9%]
+FLIP (sat<->unsat)          0   <- SOUNDNESS if nonzero
+unchanged                   129
+wall OFF 2450s   ON 2446s   ratio 0.998x

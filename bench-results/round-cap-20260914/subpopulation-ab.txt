@@ -1,0 +1,13 @@
+=== ALL (the pre-registered denominator) ===
+  rows 129   OFF decided 10   ON decided 9
+  GAIN 0  Wilson 95% [0.0%, 2.9%]   LOSS 1   FLIP 0
+    unsat(2410ms) -> unknown(24131ms)  order=on-off  UFNIA/sledgehammer/FFT/z3.885941.smt2
+=== the 22 CENSUSED target files ===
+  rows 22   OFF decided 8   ON decided 8
+  GAIN 0  Wilson 95% [0.0%, 14.9%]   LOSS 0   FLIP 0
+=== files crossing at site=solve -- where the lever can fire ===
+  rows 35   OFF decided 9   ON decided 9
+  GAIN 0  Wilson 95% [0.0%, 9.9%]   LOSS 0   FLIP 0
+=== files crossing the boundary at EITHER site ===
+  rows 47   OFF decided 9   ON decided 9
+  GAIN 0  Wilson 95% [0.0%, 7.6%]   LOSS 0   FLIP 0
