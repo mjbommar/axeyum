@@ -1,0 +1,6 @@
+pass A (census, plain arm): 200 rows, decided=107
+pass B (A/B, base arm):     200 rows, decided=107
+common rows: 200
+
+NOISE FLOOR (decided-status differs between two identical passes): 0 of 200
+verdict IDENTITY flips between identical passes: 0

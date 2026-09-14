@@ -1,0 +1,16 @@
+rows=24  (the census's `online_probe=admission-screen` rows)
+
+probe transition base -> arm:
+   19  admission-screen       -> model-did-not-replay
+    3  admission-screen       -> NONE
+    2  admission-screen       -> took
+
+  STILL REFUSED by the screen (bound is the wall):  0
+  REACHED the engine (engine is the wall):          21
+  died with no report at all:                       3
+
+  verdicts that changed at all: 3
+  NEWLY DECIDED:                0
+    unknown -> none  QF_LRA/LassoRanker/Ultimate/Gcd.bpl_Iteration1_Lasso_7-phaseTemplate.smt2
+    unknown -> none  QF_LRA/LassoRanker/CooperatingT2/collatz.t2.c_Iteration3_Loop_7-phaseTemplate.smt2
+    unknown -> none  QF_LRA/LassoRanker/CooperatingT2/matrixsqrt.t2.c_Iteration12_Loop_7-phaseTemplate.smt2

@@ -1,0 +1,38 @@
+rows=200
+
+== population, PLAIN arm (competition-identical) ==
+decided=107  undecided=93
+  Counter({'sat': 66, 'unknown': 53, 'unsat': 41, 'none': 40})
+
+== --trace perturbation ==
+trace-arm decided=107  plain-arm decided=107  rows differing=0
+
+== R1 census of the 93 undecided rows, causes split before counting ==
+   n  med_ms >=90%budget  bucket / cause
+  40    7143           1  [ABORT/oom] process aborted: memory allocation of N bytes failed
+  34   24140          34  [Timeout/ResourceLimit] DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG
+   7   24038           7  [Timeout/Incomplete] online CDCL(T) LRA model did not replay (arithmetic outside the incremental engine)
+   6   25136           6  [Watchdog/-] watchdog fired before the worker thread returned
+   3    4918           0  [Incomplete/-] int↔real coercion relaxation: candidate fails the original coupling
+   1   25437           1  [SILENT] verdict `unknown` with NO give-up line
+   1   24031           1  [Timeout/Timeout] timeout in the online CDCL(T) LRA driver
+   1   24136           1  [Timeout/ResourceLimit] lazy SMT: wall-clock timeout reached
+
+== R2 refusals vs exhausted clocks, over the 93 undecided ==
+  REFUSAL (< 90% of budget): n=42 (45.2%) min=216 p25=6391 med=7044 p75=9501 max=19611
+  CLOCK (>= 90% of budget): n=51 (54.8%) min=23000 p25=24042 med=24139 p75=24734 max=25437
+
+== ladder reach over the undecided (attempts=, from the route trail) ==
+  Counter({'NONE': 47, '14': 42, '16': 3, '15': 1})
+  bound_by: [('NONE', 47), ('nra', 45), ('dl-online', 1)]
+
+== online-LRA admission, over the undecided ==
+  online_probe (the screen's own report): [('NONE', 47), ('admission-screen', 24), ('model-did-not-replay', 18), ('took', 4)]
+  atoms (DESCRIPTIVE -- the gate is coefficient work, not this): n=46 min=0 med=1788 max=13365
+  rows with NO lazy-smt line at all (never reached the theory): 47
+
+per-row artifact: /nas3/data/axeyum/harness/qflra-gap/out/census-rows.tsv
+
+== peak RSS (KB) over the undecided ==
+  n=93 med=5315256 p90=7796460 max=7824744
+  rows over 4 GiB: 51

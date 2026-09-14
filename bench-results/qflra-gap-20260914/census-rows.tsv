@@ -1,0 +1,201 @@
+file	verdict	rc	ms	rss_kb	status	bucket	cause	attempts	bound_by	atoms	online_probe	cube_matrices	cube_simplex_calls
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_array1.i_3_2_2.bpl_11.smt2	unknown	0	24032	44388	unsat	Timeout/Incomplete	online CDCL(T) LRA model did not replay (arithmetic outside the incremental engine)	14	nra	0	model-did-not-replay	0	0
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_count_by_k.i_3_3_2.bpl_7.smt2	unknown	0	24031	39424	unsat	Timeout/Timeout	timeout in the online CDCL(T) LRA driver	14	nra	0	took	0	0
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_half_2.i_3_6_2.bpl_7.smt2	unknown	0	24038	46088	unsat	Timeout/Incomplete	online CDCL(T) LRA model did not replay (arithmetic outside the incremental engine)	14	nra	0	model-did-not-replay	0	0
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2	none	134	5887	7824744	unknown	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_copy3_ground.i_3_2_2.bpl_7.smt2	unknown	0	24126	64208	unsat	Timeout/Incomplete	online CDCL(T) LRA model did not replay (arithmetic outside the incremental engine)	14	nra	0	model-did-not-replay	0	0
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_init5_ground.i_3_2_2.bpl_7.smt2	unknown	0	24127	147492	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	1839	admission-screen	0	908
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_strcmp_ground.i_4_2_2.bpl_11.smt2	unknown	0	24833	2830084	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	7546	admission-screen	0	43
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_two_index_06.i_3_2_2.bpl_7.smt2	unknown	0	24034	38024	unsat	Timeout/Incomplete	online CDCL(T) LRA model did not replay (arithmetic outside the incremental engine)	14	nra	0	model-did-not-replay	0	0
+QF_LRA/2019-ezsmt/Labyrinth/SCC_Strong/0051-labyrinth-12-0.smt2	unknown	0	25340	7410832	unknown	Watchdog/-	watchdog fired before the worker thread returned	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/2019-ezsmt/Labyrinth/SCC_Strong/0132-labyrinth-12-0.smt2	unknown	0	25139	7434036	unknown	Watchdog/-	watchdog fired before the worker thread returned	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/2019-ezsmt/blending/1.smt2	unsat	0	4218	37848	unknown	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/2019-ezsmt/blending/17.smt2	sat	0	111	19100	unknown	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/2019-ezsmt/blending/24.smt2	sat	0	2612	28768	unknown	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/2019-ezsmt/blending/5.smt2	unsat	0	4014	38628	unknown	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/2019-ezsmt/robotics/1_4.smt2	unsat	0	113	11424	unknown	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/2019-ezsmt/robotics/4_3.smt2	unsat	0	113	11484	unknown	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/2019-ezsmt/routingMin/SCC_strong/d50.9.smt2	sat	0	213	20916	unknown	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/2019-ezsmt/travellingSalesperson/rand_70_300_1155482584_12.lp.smt2	sat	0	2113	77480	unknown	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/2019-ezsmt/travellingSalesperson/rand_80_340_1159656267_0.lp.smt2	unknown	0	24236	835700	unknown	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	dl-online	4314	admission-screen	0	19
+QF_LRA/2019-ezsmt/travellingSalesperson/rand_80_340_1159656267_4.lp.smt2	sat	0	4615	89600	unknown	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/2019-ezsmt/travellingSalesperson/tsp_rand_70_300_1155482584_7.lp.smt2	sat	0	3819	84460	unknown	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/DTP-Scheduling/constraints-cooking06.smt2	sat	0	114	12072	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/DTP-Scheduling/constraints-cooking14.smt2	sat	0	112	12800	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/DTP-Scheduling/constraints-cooking22.smt2	sat	0	112	13160	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/DTP-Scheduling/constraints-tempo-depth-30.smt2	sat	0	110	14776	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/DTP-Scheduling/constraints-tempo-depth-9.smt2	sat	0	111	12384	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/DTP-Scheduling/constraints-tempo-matrix8x8.pddl.smt2	sat	0	1214	42528	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/DTP-Scheduling/constraints-tempo-width-40.smt2	sat	0	1115	69328	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/DTP-Scheduling/constraints-tempo-width-9.smt2	sat	0	112	14880	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/DTP-Scheduling/constraints-temporal-machine-shop-2-3-A10.smt2	sat	0	112	13008	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/DTP-Scheduling/constraints-tms-2-3-light-04.smt2	sat	0	110	11656	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/DTP-Scheduling/constraints-tms-2-3-light-30.smt2	sat	0	112	15360	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/LassoRanker/CooperatingT2/afagp-fail.t2.c_Iteration1_Lasso_7-phaseTemplate.smt2	none	134	6401	7756124	unsat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/brp_withassume.t2.c_Iteration1_Loop_6-phaseTemplate.smt2	none	134	10896	7785004	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/brp_withassume.t2.c_Iteration8_Loop_6-phaseTemplate.smt2	none	134	13705	7735432	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/collatz.t2.c_Iteration3_Loop_7-phaseTemplate.smt2	unknown	0	25335	5346528	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	12594	admission-screen	0	17
+QF_LRA/LassoRanker/CooperatingT2/disj_nightmare.t2.c_Iteration2_Loop_7-phaseTemplate.smt2	none	134	10791	7762636	unsat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/elmhes.c.i.elmhes.pl.t2.fixed.t2.c_Iteration5_Loop_6-phaseTemplate.smt2	none	134	6107	7818400	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/eric.t2.c_Iteration1_Lasso_4-pieceTemplate.smt2	none	134	6796	7808292	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/ex11.t2.c_Iteration1_Lasso_7-phaseTemplate.smt2	none	134	7494	7797748	unsat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/firewire.t2.c_Iteration1_Lasso_4-lexTemplate.smt2	none	134	7194	7795812	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/firewire.t2.c_Iteration3_Loop_4-pieceTemplate.smt2	none	134	6731	7817212	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/hongyi1.t2.c_Iteration1_Loop_4-lexTemplate.smt2	none	134	7486	7785520	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/hongyi1.t2.c_Iteration9_Loop_4-lexTemplate.smt2	none	134	7792	7782176	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/janne_complex.t2.c_Iteration3_Lasso_4-pieceTemplate.smt2	none	134	7696	7787748	unsat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/ludcmp.c.i.ludcmp.pl.t2.fixed.t2.c_Iteration8_Loop_7-phaseTemplate.smt2	none	134	5687	7789540	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/ludcmp.t2.c_Iteration8_Loop_7-phaseTemplate.smt2	none	134	9501	7736368	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/matrixsqrt.t2.c_Iteration12_Loop_7-phaseTemplate.smt2	unknown	0	24430	4476280	sat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	11398	admission-screen	0	13
+QF_LRA/LassoRanker/CooperatingT2/p-43.t2.c_Iteration4_Loop_4-pieceTemplate.smt2	none	134	5585	7790216	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/p-46.t2.c_Iteration2_Loop_7-phaseTemplate.smt2	none	134	6993	7747600	unsat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/queens.t2.c_Iteration19_Loop_7-phaseTemplate.smt2	none	134	6799	7789668	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/sas2.t2.c_Iteration3_Lasso_5-phaseTemplate.smt2	none	134	6534	7802612	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/sas2.t2.c_Iteration5_Lasso_6-phaseTemplate.smt2	none	134	7092	7709108	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/sas2.t2.c_Iteration6_Lasso_6-phaseTemplate.smt2	none	134	7088	7751964	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/sas2.t2.c_Iteration7_Loop_7-phaseTemplate.smt2	none	134	12502	7780500	unsat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/sumit.t2.c_Iteration1_Lasso_7-phaseTemplate.smt2	none	134	7391	7779588	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/CooperatingT2/toeplz.c.i.toeplz.pl.t2.fixed.t2.c_Iteration2_Loop_7-phaseTemplate.smt2	none	134	10205	7707684	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/SV-COMP/Ben-Amram-2010LMCS-Ex2.3_true-termination.c_Iteration1_Lasso_3-pieceTemplate.smt2	none	134	6665	7778264	unsat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/SV-COMP/BradleyMannaSipma-2005CAV-Fig1_true-termination.c_Iteration1_Lasso_7-phaseTemplate.smt2	none	134	6893	7815296	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/SV-COMP/CookSeeZuleger-2013TACAS-Fig3_true-termination.c_Iteration1_Loop_4-pieceTemplate.smt2	none	134	8188	7744188	unsat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/SV-COMP/GulwaniJainKoskinen-2009PLDI-Fig1_true-termination.c_Iteration1_Lasso_4-pieceTemplate.smt2	unknown	0	25437	6550200	unknown	SILENT	verdict `unknown` with NO give-up line	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/SV-COMP/KroeningSharyginaTsitovichWintersteiger-2010CAV-Fig1_true-termination.c_Iteration1_Lasso_3-pieceTemplate.smt2	none	134	19611	7796460	unsat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/SV-COMP/LeeJonesBen-Amram-2001POPL-Ex5_true-termination.c_Iteration2_Lasso_3-pieceTemplate.smt2	none	134	5699	7806692	unsat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/SV-COMP/LeeJonesBen-Amram-2001POPL-Ex5_true-termination.c_Iteration2_Loop_7-phaseTemplate.smt2	none	134	6496	7782264	unsat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/SV-COMP/Masse_true-termination.c_Iteration1_Loop_4-pieceTemplate.smt2	none	134	5891	7787952	unsat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/SV-COMP/NoriSharma-2013FSE-Fig8_true-termination.c_Iteration1_Loop_5-phaseTemplate.smt2	unknown	0	24832	7235272	unsat	Watchdog/-	watchdog fired before the worker thread returned	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/SV-COMP/TelAviv-Amir-Minimum_true-termination.c_Iteration1_Loop_4-pieceTemplate.smt2	none	134	23000	7428784	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/SV-COMP/aviad_true-termination.c_Iteration1_Loop_4-nestedTemplate.smt2	none	134	10407	7741740	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/SV-COMP/joey_false-termination.c_Iteration1_Loop_7-phaseTemplate.smt2	unknown	0	25339	4877588	sat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	10514	admission-screen	0	24
+QF_LRA/LassoRanker/Ultimate/2013POPL-BenAmGen-Ex4.2.bpl_Iteration1_Lasso_4-pieceTemplate.smt2	unknown	0	24040	141408	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	1680	admission-screen	0	765
+QF_LRA/LassoRanker/Ultimate/Braverman-2006CAV-Ex1-int.bpl_Iteration1_Lasso_6-phaseTemplate.smt2	unknown	0	24030	86856	unsat	Timeout/Incomplete	online CDCL(T) LRA model did not replay (arithmetic outside the incremental engine)	14	nra	0	model-did-not-replay	0	0
+QF_LRA/LassoRanker/Ultimate/Canberra.bpl_Iteration1_Lasso_6-phaseTemplate.smt2	none	134	5890	7779564	unsat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/Ultimate/Collatz.bpl_Iteration1_Loop_6-phaseTemplate.smt2	none	134	14194	7740708	unsat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/Ultimate/Gcd.bpl_Iteration1_Lasso_7-phaseTemplate.smt2	unknown	0	25434	6552696	sat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	13365	admission-screen	0	30
+QF_LRA/LassoRanker/Ultimate/Gcd_havoc.bpl_Iteration1_Lasso_6-phaseTemplate.smt2	unknown	0	24840	1920056	sat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	6974	admission-screen	0	121
+QF_LRA/LassoRanker/Ultimate/Lobnya-Boolean-Reordered.bpl_Iteration1_Lasso_7-phaseTemplate.smt2	unknown	0	24642	5315256	unsat	Watchdog/-	watchdog fired before the worker thread returned	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/Ultimate/OpposedDisjuncts.bpl_Iteration1_Lasso_2-pieceTemplate.smt2	unknown	0	24734	5279840	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	10775	admission-screen	0	11
+QF_LRA/LassoRanker/Ultimate/SyntaxSupportBooleans5.bpl_Iteration1_Loop_4-pieceTemplate.smt2	unknown	0	25128	4902180	sat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	10436	admission-screen	0	32
+QF_LRA/LassoRanker/Ultimate/TelAviv-AmirMinimum.bpl_Iteration1_Loop_4-pieceTemplate.smt2	none	134	6999	7791684	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/Ultimate/bound-scaled600.bpl_Iteration1_Loop_7-phaseTemplate.smt2	unknown	0	25233	532836	sat	Watchdog/-	watchdog fired before the worker thread returned	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/Ultimate/simple-scaled200.bpl_Iteration1_Lasso_3-pieceTemplate.smt2	none	134	16804	7788664	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/Ultimate/simple-scaled200.bpl_Iteration1_Lasso_7-nestedTemplate.smt2	none	134	8234	7772108	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/Ultimate/simple-scaled250.bpl_Iteration1_Lasso_6-phaseTemplate.smt2	unknown	0	25132	873712	sat	Watchdog/-	watchdog fired before the worker thread returned	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/Ultimate/yPositive-SIscaled50.bpl_Iteration1_Loop_4-pieceTemplate.smt2	none	134	6391	7815284	unsat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/LassoRanker/Ultimate/yPositive-SIscaled75.bpl_Iteration1_Loop_7-phaseTemplate.smt2	none	134	11102	7768368	sat	ABORT/oom	process aborted: memory allocation of N bytes failed	NONE	NONE	NONE	NONE	NONE	NONE
+QF_LRA/TM/p-driverlogNumeric_s7.smt2	sat	0	110	27688	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/TM/p5-driverlogNumeric_s9.smt2	unsat	0	314	47104	unsat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/TM/p7-driverlogNumeric_s8.smt2	unknown	0	24140	239408	sat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	2097	admission-screen	0	165
+QF_LRA/clock_synchro/clocksynchro_2clocks.main_invar.base.smt2	unsat	0	2713	70876	unsat	DECIDED	-	5	nra	209	model-did-not-replay	127	127
+QF_LRA/clock_synchro/clocksynchro_4clocks.main_invar.base.smt2	unsat	0	1216	22444	unsat	DECIDED	-	5	nra	417	model-did-not-replay	0	283
+QF_LRA/clock_synchro/clocksynchro_6clocks.main_invar.base.smt2	unsat	0	3917	35088	unsat	DECIDED	-	5	nra	665	model-did-not-replay	0	475
+QF_LRA/clock_synchro/clocksynchro_8clocks.main_invar.base.smt2	unsat	0	7618	56592	unsat	DECIDED	-	5	nra	953	model-did-not-replay	0	706
+QF_LRA/keymaera/bouncing-ball-inv-node1886.smt2	unsat	0	112	10860	unsat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/keymaera/intersection-example-simple.proof-node634.smt2	unsat	0	112	11188	unsat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/keymaera/water_tank-node23593.smt2	unsat	0	112	11812	unsat	DECIDED	-	5	dl-online	0	took	0	0
+QF_LRA/latendresse/ecoliFBAyicesTest-3875-4.smt2	unknown	0	24237	1563436	sat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	5411	admission-screen	0	1
+QF_LRA/latendresse/ecoliMILPglycerolYices3-50000.smt2	sat	0	13024	1742332	sat	DECIDED	-	5	nra	5749	admission-screen	0	28
+QF_LRA/meti-tarski/Arthan/1A/Arthan1A-chunk-0016.smt2	sat	0	116	12252	sat	DECIDED	-	5	fd:parse	0	took	0	0
+QF_LRA/meti-tarski/CMOS/CMOS-opamp-chunk-0016.smt2	sat	0	111	11796	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/Chua/1/IL/L/Chua-1-IL-L-chunk-0013.smt2	sat	0	112	10876	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/meti-tarski/Chua/1/IL/L/Chua-1-IL-L-chunk-0142.smt2	sat	0	113	11020	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/meti-tarski/Chua/1/VC1/L/Chua-1-VC1-L-chunk-0005.smt2	sat	0	113	11188	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/meti-tarski/Chua/1/VC1/L/Chua-1-VC1-L-chunk-0028.smt2	sat	0	111	10712	sat	DECIDED	-	4	fd:parse	0	not-probed	0	0
+QF_LRA/meti-tarski/Chua/1/VC1/L/Chua-1-VC1-L-chunk-0156.smt2	unsat	0	111	10912	unsat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/meti-tarski/Chua/1/VC2/L/Chua-1-VC2-L-chunk-0008.smt2	sat	0	115	11000	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/meti-tarski/Chua/1/VC2/L/Chua-1-VC2-L-chunk-0056.smt2	sat	0	112	10936	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/meti-tarski/Chua/1/VC2/U/Chua-1-VC2-U-chunk-0128.smt2	sat	0	111	10616	sat	DECIDED	-	4	fd:parse	0	not-probed	0	0
+QF_LRA/meti-tarski/Chua/2/IL/L/Chua-2-IL-L-chunk-0071.smt2	sat	0	111	11100	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/meti-tarski/Chua/2/VC2/L/Chua-2-VC2-L-chunk-0048.smt2	sat	0	110	11104	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/meti-tarski/atan/problem/1/atan-problem-1-chunk-0031.smt2	sat	0	116	10132	sat	DECIDED	-	5	fd:parse	0	not-probed	0	0
+QF_LRA/meti-tarski/atan/problem/2/weak2/atan-problem-2-weak2-chunk-0014.smt2	sat	0	113	10416	sat	DECIDED	-	5	nra	0	not-probed	0	0
+QF_LRA/meti-tarski/atan/problem/2/weak2/atan-problem-2-weak2-chunk-0034.smt2	sat	0	113	10528	sat	DECIDED	-	5	nra	0	not-probed	0	0
+QF_LRA/meti-tarski/atan/problem/2/weak2/atan-problem-2-weak2-chunk-0054.smt2	sat	0	113	10192	sat	DECIDED	-	5	nra	0	not-probed	0	0
+QF_LRA/meti-tarski/atan/problem/2/weak2/atan-problem-2-weak2-chunk-0106.smt2	unsat	0	111	11264	unsat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/atan/problem/2/weak2/atan-problem-2-weak2-chunk-0127.smt2	sat	0	112	10264	sat	DECIDED	-	5	nra	0	not-probed	0	0
+QF_LRA/meti-tarski/bottom-plate-mixer/bottom-plate-mixer-chunk-0011.smt2	sat	0	117	11064	sat	DECIDED	-	3	dl-online	0	not-probed	0	0
+QF_LRA/meti-tarski/bottom-plate-mixer/bottom-plate-mixer-chunk-0019.smt2	sat	0	114	10536	sat	DECIDED	-	4	fd:parse	0	not-probed	0	0
+QF_LRA/meti-tarski/bottom-plate-mixer/bottom-plate-mixer-chunk-0051.smt2	sat	0	112	10792	sat	DECIDED	-	4	fd:parse	0	not-probed	0	0
+QF_LRA/meti-tarski/cbrt/3/cbrt-problem-3-chunk-0040.smt2	unsat	0	112	11792	unsat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/cbrt/3/cbrt-problem-3-chunk-0048.smt2	unsat	0	111	11796	unsat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/cbrt/3/cbrt-problem-3-chunk-0074.smt2	unsat	0	110	11936	unsat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/cbrt/3/weak/cbrt-problem-3-weak-chunk-0049.smt2	unsat	0	114	11428	unsat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/cbrt/3/weak/cbrt-problem-3-weak-chunk-0065.smt2	sat	0	115	10616	sat	DECIDED	-	5	dl-online	0	not-probed	0	0
+QF_LRA/meti-tarski/cbrt/3/weak/cbrt-problem-3-weak-chunk-0097.smt2	sat	0	112	10296	sat	DECIDED	-	5	dl-online	0	not-probed	0	0
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0019.smt2	unsat	0	112	11608	unsat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0033.smt2	unsat	0	112	11660	unsat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0041.smt2	sat	0	111	10560	sat	DECIDED	-	5	dl-online	0	not-probed	0	0
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0050.smt2	sat	0	113	10212	sat	DECIDED	-	5	dl-online	0	not-probed	0	0
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0060.smt2	sat	0	112	10744	sat	DECIDED	-	4	fd:parse	0	not-probed	0	0
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0097.smt2	unsat	0	113	11608	unsat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0144.smt2	sat	0	113	10708	sat	DECIDED	-	5	dl-online	0	not-probed	0	0
+QF_LRA/meti-tarski/sin/344/3/sin-344-3-weak-chunk-0016.smt2	unsat	0	113	11804	unsat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/7/sin-problem-7-chunk-0004.smt2	sat	0	112	10564	sat	DECIDED	-	4	fd:parse	0	not-probed	0	0
+QF_LRA/meti-tarski/sin/problem/7/sin-problem-7-chunk-0014.smt2	sat	0	117	12020	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/7/sin-problem-7-chunk-0037.smt2	sat	0	113	12140	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/7/sin-problem-7-chunk-0063.smt2	sat	0	112	12036	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0007.smt2	sat	0	111	11736	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0016.smt2	sat	0	112	12020	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0026.smt2	sat	0	110	11988	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0037.smt2	sat	0	112	12436	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0046.smt2	sat	0	113	12020	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0055.smt2	sat	0	111	12368	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0065.smt2	sat	0	111	12228	sat	DECIDED	-	6	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0089.smt2	unsat	0	113	11820	unsat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/7/weak2/sin-problem-7-weak2-chunk-0006.smt2	sat	0	111	10444	sat	DECIDED	-	5	nra	0	not-probed	0	0
+QF_LRA/meti-tarski/sin/problem/7/weak2/sin-problem-7-weak2-chunk-0014.smt2	unsat	0	111	11564	unsat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/7/weak2/sin-problem-7-weak2-chunk-0028.smt2	sat	0	112	11856	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/7/weak2/sin-problem-7-weak2-chunk-0037.smt2	sat	0	111	11900	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/7/weak2/sin-problem-7-weak2-chunk-0048.smt2	unsat	0	113	11400	unsat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/8/sin-problem-8-chunk-0011.smt2	sat	0	112	11956	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/8/weak/sin-problem-8-weak-chunk-0009.smt2	sat	0	110	12156	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sin/problem/8/weak/sin-problem-8-weak-chunk-0023.smt2	unsat	0	110	11292	unsat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sqrt/1mcosq/7/sqrt-1mcosq-7-chunk-0008.smt2	sat	0	115	10268	sat	DECIDED	-	5	nra	0	not-probed	0	0
+QF_LRA/meti-tarski/sqrt/1mcosq/7/sqrt-1mcosq-7-chunk-0059.smt2	sat	0	111	12056	sat	DECIDED	-	6	nra	0	took	0	0
+QF_LRA/meti-tarski/sqrt/1mcosq/7/sqrt-1mcosq-7-chunk-0069.smt2	sat	0	113	12104	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sqrt/1mcosq/7/sqrt-1mcosq-7-chunk-0103.smt2	sat	0	112	12364	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sqrt/1mcosq/8/sqrt-1mcosq-8-chunk-0010.smt2	sat	0	112	12028	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/meti-tarski/sqrt/1mcosq/8/sqrt-1mcosq-8-chunk-0417.smt2	sat	0	111	11676	sat	DECIDED	-	5	nra	0	took	0	0
+QF_LRA/miplib/danoint-266.smt2	unknown	0	24139	665224	sat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	3596	admission-screen	0	58
+QF_LRA/miplib/fixnet-5000.smt2	unknown	0	24140	871636	sat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	4225	admission-screen	0	221
+QF_LRA/miplib/opt1217--57.smt2	unknown	0	24227	1026164	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	4917	admission-screen	0	189
+QF_LRA/miplib/pp08a-1000.smt2	unknown	0	24131	382388	unsat	Timeout/Incomplete	online CDCL(T) LRA model did not replay (arithmetic outside the incremental engine)	14	nra	0	model-did-not-replay	0	0
+QF_LRA/miplib/pp08a-7349.smt2	unknown	0	24134	152968	unsat	Timeout/Incomplete	online CDCL(T) LRA model did not replay (arithmetic outside the incremental engine)	14	nra	0	model-did-not-replay	0	0
+QF_LRA/miplib/vpm2-5.smt2	unknown	0	24134	287596	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	2401	admission-screen	0	542
+QF_LRA/sal/carpark/Carpark2-ausgabe-8.smt2	unknown	0	216	47236	sat	Incomplete/-	int↔real coercion relaxation: candidate fails the original coupling	16	nra	0	took	0	0
+QF_LRA/sal/gasburner/gasburner-prop3-12.smt2	unsat	0	6817	52044	unsat	DECIDED	-	6	nra	0	took	0	0
+QF_LRA/sal/gasburner/gasburner-prop3-2.smt2	unsat	0	112	12952	unsat	DECIDED	-	6	nra	0	took	0	0
+QF_LRA/sal/gasburner/gasburner-prop3-9.smt2	unsat	0	513	20796	unsat	DECIDED	-	6	nra	0	took	0	0
+QF_LRA/sal/pursuit/pursuit-safety-16.smt2	unknown	0	24036	107904	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	15	nra	1444	model-did-not-replay	0	770
+QF_LRA/sal/pursuit/pursuit-safety-5.smt2	unsat	0	211	21928	unsat	DECIDED	-	6	nra	0	took	0	0
+QF_LRA/sal/tgc/tgc_io-nosafe-4.smt2	unsat	0	112	17276	unsat	DECIDED	-	6	nra	0	took	0	0
+QF_LRA/sal/tgc/tgc_io-safe-13.smt2	unknown	0	4918	56248	unsat	Incomplete/-	int↔real coercion relaxation: candidate fails the original coupling	16	nra	0	took	0	0
+QF_LRA/sal/tgc/tgc_io-safe-20.smt2	unknown	0	5214	101312	sat	Incomplete/-	int↔real coercion relaxation: candidate fails the original coupling	16	nra	0	took	0	0
+QF_LRA/sal/windowreal/windowreal-no_t_deadlock-1.smt2	unsat	0	113	11984	unsat	DECIDED	-	4	milp	0	not-probed	0	0
+QF_LRA/sal/windowreal/windowreal-no_t_deadlock-17.smt2	unsat	0	211	81376	unsat	DECIDED	-	6	nra	0	took	0	0
+QF_LRA/sal/windowreal/windowreal-no_t_deadlock-6.smt2	unsat	0	111	23388	unsat	DECIDED	-	6	nra	0	took	0	0
+QF_LRA/sal/windowreal/windowreal-safe2-1.smt2	unsat	0	111	12112	unsat	DECIDED	-	4	milp	0	not-probed	0	0
+QF_LRA/sc/sc-11.base.cvc.smt2	unknown	0	24141	46480	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	770	model-did-not-replay	0	1111
+QF_LRA/sc/sc-13.base.cvc.smt2	unknown	0	24028	56860	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	908	model-did-not-replay	0	1159
+QF_LRA/sc/sc-15.base.cvc.smt2	unknown	0	24025	68928	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	1046	model-did-not-replay	0	1025
+QF_LRA/sc/sc-17.base.cvc.smt2	unknown	0	24139	83008	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	1184	model-did-not-replay	0	936
+QF_LRA/sc/sc-19.base.cvc.smt2	unknown	0	24134	98336	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	1322	model-did-not-replay	0	842
+QF_LRA/sc/sc-21.base.cvc.smt2	unknown	0	24040	115820	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	1460	model-did-not-replay	0	882
+QF_LRA/sc/sc-23.base.cvc.smt2	unknown	0	24141	134716	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	1598	model-did-not-replay	0	721
+QF_LRA/sc/sc-25.base.cvc.smt2	unknown	0	24129	155072	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	1736	model-did-not-replay	0	524
+QF_LRA/sc/sc-27.base.cvc.smt2	unknown	0	24134	176800	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	1874	admission-screen	0	630
+QF_LRA/sc/sc-29.base.cvc.smt2	unknown	0	24037	200724	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	2012	admission-screen	0	686
+QF_LRA/sc/sc-31.base.cvc.smt2	unknown	0	24136	226592	unsat	Timeout/ResourceLimit	lazy SMT: wall-clock timeout reached	14	nra	2150	admission-screen	0	586
+QF_LRA/sc/sc-33.base.cvc.smt2	unknown	0	24140	253784	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	2288	admission-screen	0	546
+QF_LRA/sc/sc-35.base.cvc.smt2	unknown	0	24140	282476	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	2426	admission-screen	0	545
+QF_LRA/sc/sc-37.base.cvc.smt2	unknown	0	24131	312824	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	2564	admission-screen	0	473
+QF_LRA/sc/sc-39.base.cvc.smt2	unknown	0	24134	345512	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	2702	admission-screen	0	515
+QF_LRA/sc/sc-5.base.cvc.smt2	unsat	0	11425	22552	unsat	DECIDED	-	5	nra	356	model-did-not-replay	0	1283
+QF_LRA/sc/sc-7.base.cvc.smt2	unknown	0	24134	29912	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	494	model-did-not-replay	0	1514
+QF_LRA/sc/sc-9.base.cvc.smt2	unknown	0	24042	38276	unsat	Timeout/ResourceLimit	DENSE SIMPLEX spent the budget (cube_simplex_calls>0, cube_matrices=0) -- the `Fourier-Motzkin` label is WRONG	14	nra	632	model-did-not-replay	0	1229
+QF_LRA/spider_benchmarks/frame_prop.base.smt2	unsat	0	1117	17624	unsat	DECIDED	-	6	nra	0	took	0	0
+QF_LRA/spider_benchmarks/fs_not_sc_seen.base.smt2	unsat	0	1315	17280	unsat	DECIDED	-	6	nra	0	took	0	0
+QF_LRA/spider_benchmarks/no_op_accs.base.smt2	unsat	0	1314	17512	unsat	DECIDED	-	6	nra	0	took	0	0
+QF_LRA/spider_benchmarks/pd_init_op_accs.base.smt2	unsat	0	1319	17304	unsat	DECIDED	-	6	nra	0	took	0	0
+QF_LRA/spider_benchmarks/reint_to_least.base.smt2	unsat	0	210	26748	unsat	DECIDED	-	6	nra	0	took	0	0

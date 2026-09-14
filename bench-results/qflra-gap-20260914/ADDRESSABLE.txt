@@ -1,0 +1,20 @@
+census rows=200 reference rows=200 common=200
+
+over the 200 common rows: ours=107 z3=155 cvc5=126 best-of-two=155
+gap to best-of-two = 48
+
+of OUR 93 undecided rows:
+  ADDRESSABLE (a reference decides it):        50
+  nobody decides it (not a prize, ever):       43
+
+== census cause x addressability (the number that sizes the work) ==
+addressable  nobody  bucket
+         29       6  Timeout/ResourceLimit
+         11      29  ABORT/oom
+          3       4  Timeout/Incomplete
+          3       3  Watchdog/-
+          3       0  Incomplete/-
+          1       0  Timeout/Timeout
+          0       1  SILENT
+
+reference vs declared :status -- comparable=260 disagreements=0

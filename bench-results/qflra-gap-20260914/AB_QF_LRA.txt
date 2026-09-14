@@ -1,0 +1,12 @@
+rows=200
+base (limit UNSET) = 107
+arm  (limit SET)   = 107
+net = +0   gains=0 losses=0 flips=0
+
+soundness vs declared :status -- comparable=194 disagreements=0
+
+exit status, base: [('0', 159), ('134', 41)]
+exit status, arm : [('0', 191), ('134', 9)]
+process ABORTS (rc=134): base=41 arm=9  delta=-32
+
+movers written: 0
