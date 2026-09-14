@@ -137,6 +137,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-09-14 | decline-wiring | [ADR-2020] handed over two sized defects. **The first does not exist as described**: it read a census that records the context name of whichever site refused LAST and concluded the lazy fallback "is simply not offered" to the queries `combined.rs:86` declines. An ordered probe (`AXEYUM_ACKPROBE`, off by default, printed and never acted on) says the selector at `auto.rs:4068` engages on **13 of 13** files, **470** times, **414** of them immediately followed by the CEGAR's own abstraction re-entry -- and inside the held-set replay probe where the 17 censused replays actually live, **23 of 23** `combined theories:` replays are preceded by an engaged selector. The argument is structural: reaching `combined.rs:86` requires `FallThrough`, and under the shipped `CegarProbe` policy the only route there is the lazy CEGAR RUNNING and returning inconclusive. **The size is also wrong** -- 17 replays are **13 FILES**, so at ROW level the bucket is **10.2 % `[6.1 %, 16.7 %]`**, not 21.8 %. What it IS: the integer bit-blast width ladder consulting a **width-independent** admission test once per rung (15 rungs; 60-1,605 refusals per file = 4-107 invocations) and reporting the last rung's refusal as the query's verdict, **with 14 of every 15 `arena.clone()`s discarded** -- a cost [ADR-2020] read as intrinsic to the ladder. Defect 2, measured BEFORE building: `lemmas_added == equal_arg_pairs` on **all 31** census observations (the batch is the ENTIRE equal-argument set the moment one pair is violated; amplification to **1,555x**), and `solve_rounds<=3` is not convergence -- there is no round cap, so it is the SECOND solve choking, and **10 of the 16 flooded observations die at the pre-SAT skeleton boundary that is [ADR-2020]'s LARGEST bucket**. The flood and that bucket are one mechanism and [ADR-2020] built its lever at the wrong end of it (0 of 129); bound on the claim, 12 of the 15 unflooded observations reach the same boundary, so a cap cannot help 12 of its 22 files. Two levers, both failing closed, parse split out of the `OnceLock` so the guard is testable at all; five guards, **four mutation-verified at exactly one test killed each**. A/B interleaved per file, one binary, shards fixed: **ladder 0 of 129 `[0.0 %, 2.9 %]`, cap 1 of 129 `[0.1 %, 4.3 %]`, ZERO FLIPs**; control `QF_BV` 97 rows over 52 families with **57 decided on both arms** (non-vacuous by construction -- [ADR-2020]'s 6-row all-unknown control was structurally blind to a LOSS) moves **0**; noise floor **0 of 129** -- **but the one row it decides is the same volatile row that produced EVERY loss in both arms and then INVERTED under 3x re-runs**, so the band is not zero and this lane's own data says so. The cap's single gain is STABLE-GAIN (0/3 vs 3/3, reproduced on a second binary) and verified `unsat` against `:status`, z3 and cvc5, comparable denominator **1/1 each**, 0 disagreements. Against a pre-registered go/no-go of **>= 6**, **BOTH SHIP OFF**, as predicted in writing beforehand. R2 was the wrong instrument for a verdict-preserving lever and that is said rather than worked around: the hoist is worth a correct give-up string and **0.978x wall on the 13 files it fires on**. Also found: [ADR-2020]'s A/B table reports its secondary `QF_LIA` run at 27 rows and its committed artifact has **12**; and `oversized_admission_probe`'s decider is pure-LIA, which LOOKS like a fragment mismatch for a UF+arith population and is not -- `abstract_functions` has already removed every application by then, so the gap is a missing call, not a missing capability. | ADR-2030 |
 | 2026-09-14 | ground-decide | [ADR-2015] left 78 held-set replays in which **our own ground checker declines our own instantiated conjunction** and asked for them to be split before anyone sized the work. **Censusing them needed a string split first, and this lane walked into the trap before catching it**: the record separator in the committed census is `;QPROBE`, not a bare `;`, because the `why=` detail contains `;` — and a `why=` may WRAP another reason or APPEND one after a stats parenthetical. Peeled: the outer census has **5** buckets, the binding census **10**, **46 of the 78** had their cause behind a wrapper, the 25-row largest outer bucket is **four** causes, and **the leader changes** — the lazy LIA pre-SAT skeleton boundary at **22 of 78** (28.2 %, Wilson `[19.4 %, 39.0 %]`), not the eager Ackermann bound (17) the prose led with. One bucket (5) is left **`UNSPLIT`** and reported. The 78/40 is a REPLAY split; at ROW level it is **58 unknown-only / 31 sat-only / 6 MIXED and genuinely not separable** of 127. Structurally **55 of 78 = 70.5 % `[59.6 %, 79.5 %]` are CHEAP REFUSALS by an admission bound** — wall median **1,407 ms of a 10,000 ms budget** — not exhausted clocks, and the two split by division (`UFLIA` refuses 40:5, `UFNIA` exhausts 18:15). The bounds, read rather than assumed: **`64` is not a unit error** but was never calibrated against the expansion — it is a proxy for an unbounded downstream solve, fitted between 40 and 117 pairs in 2026-06 and unchanged since — and **the same constant is a route selector at `auto.rs:4068` (falls through to the lazy CEGAR route) and a HARD DECLINE at `combined.rs:86`, with 17 of 17 of our replays at the hard-decline site that has no fallback**. The skeleton envelope is a MEMORY bound whose own re-derivation measured peak RSS at **71 MiB, 1/115th of the ceiling it cites**, and wrote *"above this, nobody has measured"*; it refuses at **1.4x** that point. `oversized_admission_probe` is **not wired into the UF+arith route at all**. Ten seconds on **11** ground terms is **20,626 LIA calls, 18,678 LP relaxations, 9,035 simplex solves and 11,401,903 cloned arena nodes** (27 % CDCL, ~22 % allocator, 16 % simplex/Gomory by `perf`) because the width ladder clones the **whole file's DAG** per rung. An env-gated A/B raising the envelope 4x moves **0 of 129**, Wilson `[0.0 %, 2.9 %]`, at **1.00x** wall — **null shown NON-VACUOUS** (OFF crosses both pre-SAT bounds on a measured file in the shipped path, ON crosses neither) with the refusal measured converting into a **TIMEOUT**, exactly as pre-registered; control `QF_BV` 0 moved (non-vacuous by route: `qf-bv` search-timeout); **same-arm noise floor moves 1 of 129**, so the lever's effect is smaller than the band built to detect it. **SHIPS OFF.** The redirect: cvc5 refutes **21 of the same 22** files at a median **70 ms**, **nine without instantiating a single quantifier**, and **eight of those nine are files where we flooded to the 8,192 admission cap** — so the conjunction we cannot decide is an artifact of **over-instantiation**. Budget ([ADR-1995]), ceiling ([ADR-1956]), reach ([ADR-2005]) and head ([ADR-2015]) are closed; **SELECTION is not, and nothing has looked at it**. | ADR-2020 |
 | 2026-09-14 | replay-scope | CLAUDE.md's hard rule — *"every `sat` result must be checkable by evaluating the original term against the lifted model"* — audited against the SMT-LIB front door, whose replay is `check_model(&script.arena, &solved.assertions, model)` over the **parser-produced** assertions. **Three reachable wrong verdicts found, all in UNCONDITIONAL s-expression desugars, none behind a lever or feature gate, and the replay could not have caught any of them.** (1) `desugar_sets` keyed each element bit on the literal's **raw text**, so `#b0101`/`#x5`/`(_ bv5 4)` and `1.5`/`1.50` were two elements each: `(set.member #b0101 s)` with `(not (set.member #x5 s))` answered **`sat`** (cvc5 `unsat`) while both same-spelling controls answered `unsat` — **a verdict depending on the SPELLING of a literal**, oracle-free proof of unsoundness; the dual `(set.member #x5 (set.singleton #b0101))` encoded to `0 = 1`, a wrong `unsat`. (2) `desugar_const_arrays` collected definitions across all top-level commands with **no notion of scope OR order**: one inside a popped `push` gave **`unsat`** for a `sat` script, and one placed after a `check-sat` was inlined **backwards past it** — the second needing no `push`/`pop`, and pinnable without a reference solver answering the second query since the first **in isolation** is `sat` on cvc5 and on ours. (3) `desugar_sets`'s universe was `d + MARGIN` with `MARGIN` a **constant 2**, so N free sets could not be pairwise distinct past `2^(d+2)`: **4 sets `sat`, 5 sets `unsat`** (cvc5 `sat`), 5 sets + one named literal `sat` — threshold exactly at `2^(0+2)`. **The headline is why ONE guarantee missed all three, for TWO different structural reasons**: a parse-level desugar has no original to replay against (the source set terms never become IR terms, so "replay against the originally parsed assertions" is a **no-op** — the original parse IS the encoding), and a strengthening rewrite yields wrong `unsat`, invisible to a `sat`-side replay however implemented. **Not all three are strengthening** — defect 1 is *non-homomorphic*, mapping one element onto two bits, and produced a wrong `sat` **and** a wrong `unsat`. **So the general guarantee is NOT achievable as stated and per-rewrite arguments are the right design**: 18 tests in `parser_desugar_soundness.rs`, registered at L0, each aimed at the direction where the defect can fail and each with a non-vacuity control ([ADR-1976]). **Guard-deletion: 10 guards, 0 untested, 10 distinct death-sets, separable**, 6 killing exactly one test; replacing the width decline with a `min()` clamp kills exactly one test and nothing else. **Corpus cost measured, not predicted: 23 files, decided 15 → 15, delta 0, 0 of 23 verdicts differ**, 8 declining in both arms with byte-identical messages — with a **freshness control run first** confirming the base binary reproduces all three wrong answers, since `delta=0` is equally what measuring one binary twice looks like. Two comment defects corrected **as part of the bug**: condition 1's false premise, and an equisatisfiability claim made for both branches whose converse was argued only for `set.card` — *the comment did the arguing*. Withdrawn as soundness issues because they fail **loudly**: `inline_aliases` has no binder awareness and a shadowing `let` dies with `syntax error: let name` (a robustness regression on legal SMT-LIB, handed off), and a self-referential const array declines with `unknown identifier` — right outcome by accident, recorded because it will not survive a refactor. Handed off with a warning: the string-route model pairing (`solve_smtlib_with_model` returns `sat` with a **source-level `Seq`** model beside the **packed** flat vector, so `check_model` returns `Err("no value bound for symbol #0")` while plain QF_BV controls replay `Ok(true)`) — the verdict is **correct** and only the evidence is mispaired, so the damage is a *false alarm* that would make `axeyum-py`'s `Outcome.replay()` call a correct `sat` a soundness violation; the cheap repair (clear `assertions`) **reduces the fraction of `sat` results carrying evidence** and must not be chosen by default. ADR-2010 |
 | 2026-09-14 | round-head | The last standing hypothesis for the `UFLIA`/`UFNIA` gap — *killed at a round head holding a set it never checks* — **does not survive, and it needed splitting before it could be censused**. [ADR-1956] split `InstantiationLoopExit` into three because one give-up string covered three exits; **the loop has SEVEN**, all three of those are `break`s, and the other four `return` early — `e-matching: instantiation time budget exhausted` was ONE string on THREE of them and **four of seven printed no `QPROBE loop-exit` line at all**, so the instrument built to stop a merged label was itself blind to 151 of 209 exits here. Split and re-censused over all 129 winnable rows (127 still failing; 2 now decided by main, both verified `unsat` against `:status`, z3 and cvc5, **0 disagreements, comparable denominator 2/2 each**): **the round head proper is 1 of 209 exits**. The binding exit is `timeout-mid-round` — **147 occurrences, last exit on 74 of 127 rows** — and it does **not** mean the set went unexamined: it sits immediately after `quantifier_qf_refutation_check` over the same `ground` and fires only when that check just returned non-`Unsat` on the full shared deadline. (This lane shipped `(ground set discarded unchecked)` and corrected it two commits later, in the direction that would have justified its own lever.) A new probe — `AXEYUM_QPROBE_HELD_SET_REPLAY`, off by default, verdict **printed and never acted on**, **live by MECHANISM: 0 lines off, 1 on** — re-runs the discarded set on a fresh 10 s clock: **122 replays over 99 of 127 rows, and 2 rows refute — 1.6 %, Wilson 95 % `[0.4 %, 5.6 %]`** against a pre-registered go/no-go of **≥ 10**, so **this lane ships no lever**; that ceiling is also smaller than the 3-file band [ADR-2005] measured for this division at fixed code. **The other 120 replays name the real wall**: **40 are `sat`** (the instantiation is genuinely insufficient) and 78 are `unknown` because *our* ground checker declines *our* set — `integer bit-blast width ladder: wall-clock timeout`, `no model within the bounded integer width 32`, `eager Ackermann elimination would emit 57,219 congruence constraints, exceeding the deterministic admission bound of 64`, `lazy Ackermann abstraction build would still construct 8,633,894 congruence terms, exceeding the secondary bound of 2,000,000`, plus 2 hard `unsupported by backend: sort (Uninterpreted 0)`. Sets of **11 ground terms** burn a whole fresh 10 s budget. The reference settles the order of magnitude without our instrumentation: cvc5 1.3.4 refutes **115 of 129**, `global::totalTime` **median 75 ms**, **60.0 % `[50.9 %, 68.5 %]` under 100 ms**, **median 48 instantiation tuples** (`--dump-instantiations` live by mechanism: non-zero tuples on 96 of 115 refuted, **0 of 7 `NONE`**) — while on the 113 rows it refutes and we fail (**comparable denominator 129, zero one-sided leftovers**) our wall is a **median 262x** its clock and we hold a **median 2,224** ground terms. **Sixty per cent of this population is finished before our loop enters its second round.** So the gap is **downstream of the instantiation loop entirely**: we reach, build and admit the instances and then hand the conjunction to a quantifier-free decision procedure that cannot decide it. **Do not size another lane against the loop on this population** — the best remaining loop-side lever has a measured ceiling of 2 of 127 inside a noise band of 3; **the missing capability is deciding ground NIA and UF+arith conjunctions**, and whoever sizes that must split the 40 `sat` replays from the 78 `unknown` ones first. ADR-2015 |
@@ -49022,6 +49023,124 @@ solver: `unknown` **at** the budget instead of a verdict **after** it.
 
 Full note:
 [`../../research/03-measurements/watchdog-kills-are-a-deadline-blind-phase-2026-09-12.md`](docs/research/03-measurements/watchdog-kills-are-a-deadline-blind-phase-2026-09-12.md).
+
+**Lane decline-wiring (`DONE`, decline-wiring, 2026-09-14).** [ADR-2020]
+handed over two sized defects. **The first does not exist as described**, and
+finding that out changed what the second is for. Full reasoning in [ADR-2030];
+artifacts in
+[`bench-results/decline-wiring-20260914/`](bench-results/decline-wiring-20260914/PREREGISTRATION.md).
+
+## Defect 1 — refuted, on all 13 files
+
+[ADR-2020] concluded that `combined.rs:86` hard-declines where its sibling at
+`auto.rs:4068` treats the same constant as a route selector, that **17 of 17**
+censused replays are at the site with no fallback, and that *"the lazy fallback
+that already exists for the other caller is simply not offered to them"* — 21.8 %
+of the population, *"missing wiring rather than a policy question."*
+
+The census cannot show that. It records the CONTEXT NAME of whichever site
+refused **last** and nothing about the gates upstream of it. A new ordered probe
+(`AXEYUM_ACKPROBE`, off by default, printed and never acted on) can:
+
+| | |
+|---|---:|
+| files where the selector NEVER engaged | **0 of 13** |
+| total selector engagements | **470** |
+| ...with the CEGAR's own abstraction re-entry (direct evidence it ran) | 414 |
+| total `combined.rs:86` refusals | **5,702** |
+
+Every file shows pair counts at **both** sites; the pair count fingerprints the
+term set. And the argument is structural, not statistical: reaching
+`combined.rs:86` requires `dispatch_uf_arith_overbound` to have returned
+`FallThrough`, and under the shipped `CegarProbe` policy the only route there is
+the lazy CEGAR **running** and returning an inconclusive `Unknown`. Its two
+earlier exits both return.
+
+**The 17 replays are 13 FILES**, so at row level this bucket is at most
+**13 of 127 = 10.2 %**, not 21.8 %.
+
+## What the bucket actually is
+
+The integer bit-blast width ladder consults a **width-independent** admission
+test once per rung — 60 to 1,605 identical refusals per file — and the last
+one's sentence becomes the query's verdict. `check_with_all_theories` binds
+`width` only at reduction 3, after array elimination and the eager Ackermann
+bound, so no rung could have answered differently. **Each one paid a full
+`arena.clone()` first** — the whole file's term DAG, which is the cost
+[ADR-2020] §5 attributed to the ladder as unavoidable.
+
+## Defect 2 — the batch is not "uncapped", it is all-of-it-at-once
+
+Distribution published **before** any cap existed, from the committed census,
+31 observations:
+
+| field | min | p25 | med | p75 | p90 | max |
+|---|---:|---:|---:|---:|---:|---:|
+| `violated_pairs` | 0 | 0 | 8 | 47 | 229 | 3,120 |
+| `equal_arg_pairs` = `lemmas_added` | 0 | 0 | 191 | 3,246 | 12,440 | 17,750 |
+
+`lemmas_added == equal_arg_pairs` on **all 31**, and on the 15 that emit
+anything `lemmas_added == last_new_lemmas` — the entire equal-argument pair set
+goes in during **one** round and the loop never gets another. Amplification from
+the pairs actually violated reaches **1,555x** (8 → 12,440).
+
+**And it is the same mechanism as [ADR-2020]'s largest bucket:** 10 of the 16
+flooded files are on its 22-file pre-SAT skeleton list. The lemma flood is what
+builds the ~15 k-atom skeleton the boundary then refuses. [ADR-2020] raised the
+boundary and got 0 of 129; this attacks the size instead, which is the axis its
+own §8 names.
+
+The two defects are **disjoint populations** — `files-eager-ackermann` ∩ flooded
+is **0 of 13** — so they are measured as separate arms.
+
+## `solve_rounds = 2` is the second solve choking, not convergence
+
+There is **no round cap** in the lazy loop, so `solve_rounds=2` means the second
+solve did not finish — and the census carries what it said. All 16 flooded
+observations die there, and **10 of 16 die at the pre-SAT skeleton boundary**,
+which is [ADR-2020]'s largest bucket. [ADR-2020] raised that boundary 4x and
+moved 0 of 129; the flood is the other end of the same chain.
+
+Bound on that: the 15 observations with `lemmas_added == 0` reach the **same**
+boundary, 12 of 15. Of its 22-file skeleton bucket, 10 are flooded; the other 12
+arrive without a flood and a cap cannot help them.
+
+## The A/B — both ship OFF
+
+Interleaved per file, one binary, two env values, shards fixed across arms
+(s5 `{1,3}`, s6 `{1,3}`, both arms inside each shard).
+
+| run | rows | GAIN | LOSS | FLIP | wall |
+|---|---:|---:|---:|---:|---:|
+| ladder hoist `UFLIA`+`UFNIA` | 129 | **0** | 1 | 0 | 1.001x |
+| lemma cap 256 `UFLIA`+`UFNIA` | 129 | **1** | 1 | 0 | 0.956x |
+| targeted: the 13 files the hoist fires on | 13 | 0 | 0 | 0 | **0.978x** |
+| control `QF_BV`, 52 families, **57 decided** | 97 | **0** | **0** | 0 | 1.006x |
+| noise floor (both arms shipped) | 129 | **0** | **0** | 0 | 0.993x |
+
+**Every LOSS in the lane is one row.** `UFNIA/sledgehammer/FFT/z3.885941.smt2`
+lost in *both* arms — two independent levers touching different code — and under
+3x re-runs its direction **inverted** (OFF 0 of 3, ON 2 of 3 and 1 of 3). It is
+also the single row the byte-identical noise floor decides, `unsat` on both arms.
+So the same-arm band is not zero, and this lane's own data says so rather than
+inheriting [ADR-2020]'s 1.
+
+The cap's one gain is **STABLE-GAIN**: `javafe.ast.StandardPrettyPrint.322`,
+0 of 3 versus 3 of 3, reproduced on a second binary, verified `unsat` against
+`:status`, z3 and cvc5 at a comparable denominator of **1/1 on each**, zero
+disagreements. Real — just not six.
+
+Against R2's pre-registered go/no-go of **>= 6 STABLE-GAIN**, **both levers ship
+OFF**, exactly as predicted in writing beforehand. Five guards, four
+mutation-verified at exactly one test killed each.
+
+**R2 was the wrong instrument for the hoist**, which is verdict-preserving by
+construction, and that is said rather than worked around. What it buys is a
+correct give-up string and **0.978x wall on the files it fires on** — two per
+cent, not the order of magnitude the clone counts suggest at first reading.
+
+[ADR-2020]: ../../research/09-decisions/adr-2020-the-ground-checker-mostly-refuses-and-the-set-it-refuses-is-one-we-had-no-need-to-build.md
+[ADR-2030]: ../../research/09-decisions/adr-2030-the-fallback-was-already-offered-and-the-lemma-batch-is-the-whole-set-at-once.md
 
 **Landed.** `Rat.det_alternating` — the ALTERNATING property of the general-n
 determinant (`det A n = 0` whenever two distinct rows of `A` agree pointwise)

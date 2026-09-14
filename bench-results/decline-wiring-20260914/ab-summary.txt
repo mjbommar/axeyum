@@ -1,0 +1,49 @@
+=== LADDER ===
+rows                 129
+OFF decided          1
+ON  decided          0
+GAIN (off undec -> on dec)  0   Wilson 95% [0.0%, 2.9%]
+LOSS (off dec -> on undec)  1   Wilson 95% [0.1%, 4.3%]
+FLIP (sat<->unsat)          0   <- SOUNDNESS if nonzero
+unchanged                   128
+wall OFF 2925s   ON 2927s   ratio 1.001x
+  LOSS	unsat(2310ms) -> unknown(24130ms)	order=on-off	UFNIA/sledgehammer/FFT/z3.885941.smt2
+
+=== CAP256 ===
+rows                 129
+OFF decided          1
+ON  decided          1
+GAIN (off undec -> on dec)  1   Wilson 95% [0.1%, 4.3%]
+LOSS (off dec -> on undec)  1   Wilson 95% [0.1%, 4.3%]
+FLIP (sat<->unsat)          0   <- SOUNDNESS if nonzero
+unchanged                   127
+wall OFF 2942s   ON 2813s   ratio 0.956x
+  GAIN	unknown(21029ms) -> unsat(10419ms)	order=on-off	UFLIA/simplify/javafe.ast.StandardPrettyPrint.322.smt2
+  LOSS	unsat(5415ms) -> unknown(24133ms)	order=on-off	UFNIA/sledgehammer/FFT/z3.885941.smt2
+=== CONTROL ===
+rows                 97
+OFF decided          57
+ON  decided          57
+GAIN (off undec -> on dec)  0   Wilson 95% [0.0%, 3.8%]
+LOSS (off dec -> on undec)  0   Wilson 95% [0.0%, 3.8%]
+FLIP (sat<->unsat)          0   <- SOUNDNESS if nonzero
+unchanged                   97
+wall OFF 1086s   ON 1092s   ratio 1.006x
+=== LADDER13 ===
+rows                 13
+OFF decided          0
+ON  decided          0
+GAIN (off undec -> on dec)  0   Wilson 95% [0.0%, 22.8%]
+LOSS (off dec -> on undec)  0   Wilson 95% [0.0%, 22.8%]
+FLIP (sat<->unsat)          0   <- SOUNDNESS if nonzero
+unchanged                   13
+wall OFF 249s   ON 244s   ratio 0.978x
+=== NOISE FLOOR ===
+rows                 129
+OFF decided          1
+ON  decided          1
+GAIN (off undec -> on dec)  0   Wilson 95% [0.0%, 2.9%]
+LOSS (off dec -> on undec)  0   Wilson 95% [0.0%, 2.9%]
+FLIP (sat<->unsat)          0   <- SOUNDNESS if nonzero
+unchanged                   129
+wall OFF 2872s   ON 2852s   ratio 0.993x

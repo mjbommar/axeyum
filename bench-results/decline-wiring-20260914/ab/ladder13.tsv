@@ -1,0 +1,14 @@
+file	order	off_verdict	off_ms	on_verdict	on_ms
+UFLIA/grasshopper/instantiated/delete_check_heap_access_53_12.smt2	off-on	unknown	23429	unknown	23430
+UFLIA/grasshopper/instantiated/insertion_sort_postcondition_of_insertion_sort_63_1.smt2	on-off	unknown	25624	unknown	25323
+UFLIA/sledgehammer/Arrow_Order/smtlib.832901.smt2	off-on	unknown	17420	unknown	16325
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1057395.smt2	on-off	unknown	18916	unknown	18725
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1282463.smt2	off-on	unknown	21125	unknown	21028
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1462528.smt2	on-off	unknown	2712	unknown	2410
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.972059.smt2	off-on	unknown	17322	unknown	16522
+UFLIA/sledgehammer/QEpres/smtlib.1120322.smt2	on-off	unknown	17023	unknown	15921
+UFLIA/sledgehammer/QEpres/smtlib.1237382.smt2	off-on	unknown	20728	unknown	20627
+UFNIA/2019-Zohar-ic/full/int_check_bvslt_bvurem1_ltr_no_inv.smt2	on-off	unknown	29027	unknown	28424
+UFNIA/20190909-CLEARSY/0023/00302.smt2	off-on	unknown	24126	unknown	24132
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.1031223.smt2	on-off	unknown	18120	unknown	17122
+UFNIA/sledgehammer/TwoSquares/z3.861593.smt2	off-on	unknown	13818	unknown	13919

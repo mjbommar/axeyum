@@ -116,6 +116,34 @@ pub(crate) fn ackermann_congruence_pairs(arena: &TermArena, assertions: &[TermId
 /// over-approximation), and `None` (admit) otherwise. `context` names the calling
 /// route in the [`UnknownReason`] detail. A refusal only ever turns a would-be
 /// unbounded hang/OOM into `Unknown`; it never changes a decided verdict.
+/// Diagnostic (`AXEYUM_ACKPROBE=1`): report every consultation of the eager
+/// Ackermann admission bound, with the pair count, the deciding site, and the
+/// verdict. This exists because [ADR-2020] found the SAME constant acting as a
+/// route selector at one site and a hard decline at the other, and could not say
+/// from the census WHICH site a given file reached or why the other did not fire
+/// — the give-up string carries the context name but nothing about the gates
+/// upstream of it. Printed, never acted on.
+/// Resolved ONCE: this predicate is consulted inside the integer bit-blast width
+/// ladder, which reaches `combined.rs:86` once per width rung — 645 consultations
+/// on one measured 24 s file — so a per-call `env::var` would put an allocating
+/// lookup in the shipped hot path to serve a diagnostic that is off.
+pub(crate) fn ackermann_probe_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var("AXEYUM_ACKPROBE").is_ok_and(|value| value.trim() == "1"))
+}
+
+/// Emits one `ACKPROBE` line. `gates` is the site-specific gate state.
+pub(crate) fn ackermann_probe(site: &str, pairs: usize, admitted: bool, gates: &str) {
+    if !ackermann_probe_enabled() {
+        return;
+    }
+    eprintln!(
+        "ACKPROBE site={site} pairs={pairs} bound={MAX_ACKERMANN_CONGRUENCE_PAIRS} \
+         verdict={} {gates}",
+        if admitted { "admit" } else { "refuse" }
+    );
+}
+
 pub(crate) fn refuse_oversized_ackermann(
     arena: &TermArena,
     assertions: &[TermId],
@@ -1109,6 +1137,89 @@ where
     }
 }
 
+/// Per-round ceiling on the lazy function-consistency lemma batch, or `None`
+/// (uncapped — the shipped behaviour) when the lever is not set.
+///
+/// ONE BINARY, TWO ENV VALUES. `AXEYUM_FC_LEMMA_BATCH_CAP=<n>`; **unset is the
+/// shipped arm**. Fails CLOSED: unset, empty, non-numeric, or `0` all return
+/// `None` and leave the batch uncapped, so a silently ignored or mistyped value
+/// measures the shipped arm rather than a half-applied one.
+///
+/// [ADR-2020] recorded that no cap exists and that neither
+/// [`MAX_PRESEEDED_FUNCTION_CONSISTENCY_LEMMAS`] nor
+/// [`MAX_POST_CANDIDATE_SIBLING_LEMMAS`] bounds this path. The narrow
+/// "violated-pairs-only" policy is already closed (`42fc03e6e` measured and
+/// rejected it); a CAP is a different lever, and this is it.
+pub(crate) fn function_consistency_lemma_batch_cap() -> Option<usize> {
+    static CAP: std::sync::OnceLock<Option<usize>> = std::sync::OnceLock::new();
+    *CAP.get_or_init(|| {
+        parse_function_consistency_lemma_batch_cap(
+            std::env::var("AXEYUM_FC_LEMMA_BATCH_CAP").ok().as_deref(),
+        )
+    })
+}
+
+/// The cap's PARSE, split from the env lookup so the fail-closed guard is a pure
+/// unit test. A `OnceLock`-backed reader resolves once per process, so a test
+/// that sets the variable after any other test has already read it measures the
+/// wrong arm and still passes — which is a guard that cannot fail.
+pub(crate) fn parse_function_consistency_lemma_batch_cap(raw: Option<&str>) -> Option<usize> {
+    raw?.trim().parse::<usize>().ok().filter(|cap| *cap > 0)
+}
+
+/// Chooses this round's congruence-lemma batch from the equal-argument pairs.
+///
+/// # ADR-2030, defect 2
+///
+/// Uncapped (`cap == None`, the shipped behaviour) this emits **every**
+/// equal-argument pair the moment **any** pair is violated — which is why
+/// `lemmas_added == equal_arg_pairs` on all 31 CEGAR stat lines in the committed
+/// census, with the ratio to the pairs actually violated reaching **1,555x**
+/// (8 violated -> 12,440 lemmas on `javafe.ast.StandardPrettyPrint.322`).
+///
+/// With a cap, the **violated** pairs are queued FIRST — they are the ones the
+/// candidate model demonstrably breaks — and the remaining equal-argument pairs
+/// fill the batch up to the cap. The rest are simply not emitted this round;
+/// they are **not** marked `added` by the caller, so they remain available to
+/// the next one.
+///
+/// # Soundness
+///
+/// A congruence lemma is a VALID implication of the input under every
+/// interpretation, so emitting fewer per round can never make a refutation
+/// unsound — only slower. Termination is unaffected: every round that emits a
+/// lemma marks its pair `added`, and the pair set is finite.
+///
+/// `queued` is threaded through so the sibling pass below sees the same
+/// dedup set it always did.
+fn select_function_consistency_batch(
+    equal_arg_lemmas: Vec<(usize, usize)>,
+    violated_lemmas: &[(usize, usize)],
+    cap: Option<usize>,
+    queued: &mut HashSet<(usize, usize)>,
+) -> Vec<(usize, usize)> {
+    let mut lemmas = Vec::new();
+    if cap.is_some() {
+        for &pair in violated_lemmas {
+            if cap.is_some_and(|cap| lemmas.len() >= cap) {
+                break;
+            }
+            if queued.insert(pair) {
+                lemmas.push(pair);
+            }
+        }
+    }
+    for pair in equal_arg_lemmas {
+        if cap.is_some_and(|cap| lemmas.len() >= cap) {
+            break;
+        }
+        if queued.insert(pair) {
+            lemmas.push(pair);
+        }
+    }
+    lemmas
+}
+
 fn candidate_function_consistency_lemmas(
     arena: &TermArena,
     applications: &[(FuncId, Vec<TermId>, SymbolId)],
@@ -1123,12 +1234,12 @@ fn candidate_function_consistency_lemmas(
     }
 
     let mut queued = HashSet::new();
-    let mut lemmas = Vec::new();
-    for pair in equal_arg_lemmas {
-        if queued.insert(pair) {
-            lemmas.push(pair);
-        }
-    }
+    let mut lemmas = select_function_consistency_batch(
+        equal_arg_lemmas,
+        violated_lemmas,
+        function_consistency_lemma_batch_cap(),
+        &mut queued,
+    );
     let sibling_lemmas = post_candidate_unary_int_sibling_lemmas(
         arena,
         applications,
@@ -1201,7 +1312,8 @@ impl FunctionConsistencyStats {
             "applications={}, function_groups={}, potential_pairs={}, solve_rounds={}, \
              elapsed_ms={}, sat_candidates={}, first_candidate_ms={}, \
              last_candidate_ms={}, pair_checks={}, equal_arg_pairs={}, violated_pairs={}, \
-             preseeded_lemmas={}, sibling_lemmas={}, lemmas_added={}, last_new_lemmas={}",
+             preseeded_lemmas={}, sibling_lemmas={}, lemmas_added={}, last_new_lemmas={}, \
+             lemma_batch_cap={}",
             self.applications,
             self.function_groups,
             self.potential_pairs,
@@ -1216,7 +1328,12 @@ impl FunctionConsistencyStats {
             self.preseeded_lemmas,
             self.sibling_lemmas,
             self.lemmas_added,
-            self.last_new_lemmas
+            self.last_new_lemmas,
+            // The EFFECTIVE cap, so the arm is visible by mechanism: a variable
+            // that was ignored, mistyped, or zero prints `off`, which is the
+            // shipped value, rather than the value the runner believed it set.
+            function_consistency_lemma_batch_cap()
+                .map_or_else(|| "off".to_owned(), |cap| cap.to_string())
         )
     }
 
@@ -2242,6 +2359,7 @@ mod tests {
     use super::{
         DECLARED_SORT_CEGAR_PAIRS_TERMINAL_RUNG, MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS,
         ackermann_congruence_pairs, check_qf_ufbv_lazy, check_qf_ufbv_lazy_with_pair_bound,
+        parse_function_consistency_lemma_batch_cap, select_function_consistency_batch,
     };
     use crate::backend::{CheckResult, SolverConfig, UnknownKind, UnknownReason};
     use crate::combined::check_with_all_theories;
@@ -2249,6 +2367,110 @@ mod tests {
     use crate::model::Model;
     use crate::sat_bv_backend::SatBvBackend;
     use axeyum_ir::{Sort, TermArena, Value, eval};
+    use std::collections::HashSet;
+
+    /// ADR-2030's cap must **fail closed**: every spelling it does not
+    /// understand leaves the batch uncapped, which is the shipped arm. A lever
+    /// that failed open would measure the shipped arm against itself and report
+    /// a confident zero. The OFF case is asserted first and by name.
+    #[test]
+    fn the_lemma_batch_cap_is_off_unless_spelled_exactly() {
+        assert_eq!(
+            parse_function_consistency_lemma_batch_cap(None),
+            None,
+            "unset must leave the batch UNCAPPED (the shipped arm)",
+        );
+        for raw in [
+            "", "  ", "0", "00", " 0 ", "abc", "-1", "256,", "2 5 6", "256.0", "0x100", "+", "1e3",
+        ] {
+            assert_eq!(
+                parse_function_consistency_lemma_batch_cap(Some(raw)),
+                None,
+                "malformed spelling {raw:?} must leave the batch UNCAPPED",
+            );
+        }
+        // ON: the spellings it does understand, including surrounding space.
+        assert_eq!(
+            parse_function_consistency_lemma_batch_cap(Some("256")),
+            Some(256),
+        );
+        assert_eq!(
+            parse_function_consistency_lemma_batch_cap(Some("  256  ")),
+            Some(256),
+        );
+        assert_eq!(
+            parse_function_consistency_lemma_batch_cap(Some("1")),
+            Some(1),
+        );
+    }
+
+    /// The cap must actually CAP, and it must spend its budget on the pairs the
+    /// candidate model violates before the merely equal-argument ones.
+    ///
+    /// The exemplar is the measured shape, not an invented one: ADR-2020 quotes
+    /// `violated_pairs=448` against `lemmas_added=17,750`, and the census's most
+    /// extreme row is 8 violated against 12,440 emitted. So the violated set is
+    /// a small minority and sits LATE in the equal-argument order as often as
+    /// early — which is exactly the case a cap without prioritisation would
+    /// truncate away.
+    #[test]
+    fn the_lemma_batch_cap_truncates_and_keeps_the_violated_pairs() {
+        // 100 equal-argument pairs; the three violated ones sit at the END of
+        // the equal-argument order, so an unprioritised cap of 4 would drop all
+        // three and this test would fail.
+        let equal: Vec<(usize, usize)> = (0..100).map(|i| (i, i + 1)).collect();
+        let violated = [(97, 98), (98, 99), (99, 100)];
+
+        // UNCAPPED is the shipped arm: every equal-argument pair, in order.
+        let mut queued = HashSet::new();
+        let uncapped =
+            select_function_consistency_batch(equal.clone(), &violated, None, &mut queued);
+        assert_eq!(
+            uncapped.len(),
+            100,
+            "uncapped must emit the ENTIRE equal-argument set -- that is the defect being measured",
+        );
+        assert_eq!(uncapped[0], (0, 1), "uncapped order must be unchanged");
+
+        // CAPPED at 4: the three violated pairs first, then one filler.
+        let mut queued = HashSet::new();
+        let capped =
+            select_function_consistency_batch(equal.clone(), &violated, Some(4), &mut queued);
+        assert_eq!(capped.len(), 4, "the cap must bind");
+        for pair in violated {
+            assert!(
+                capped.contains(&pair),
+                "the cap must keep the violated pair {pair:?}; it is the one the candidate \
+                 model demonstrably breaks",
+            );
+        }
+        assert_eq!(
+            capped[3],
+            (0, 1),
+            "the filler must come from the equal-arg order"
+        );
+
+        // A cap at or above the batch size is a no-op: same result as uncapped.
+        let mut queued = HashSet::new();
+        let wide =
+            select_function_consistency_batch(equal.clone(), &violated, Some(1000), &mut queued);
+        assert_eq!(
+            wide.len(),
+            100,
+            "a cap above the batch size must not change WHICH lemmas are emitted, only bound them",
+        );
+
+        // And the pairs the cap dropped must NOT have been queued -- the caller
+        // marks only what it emits as `added`, so a dropped pair stays available
+        // to the next round. A cap that also consumed them would starve the loop.
+        let mut queued = HashSet::new();
+        let _ = select_function_consistency_batch(equal.clone(), &violated, Some(4), &mut queued);
+        assert_eq!(
+            queued.len(),
+            4,
+            "only the EMITTED pairs may be queued; a dropped pair must remain available",
+        );
+    }
 
     #[test]
     fn lazy_ufbv_refutes_congruence_violation() {

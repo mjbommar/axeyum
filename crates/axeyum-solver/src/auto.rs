@@ -4285,6 +4285,22 @@ fn dispatch_uf_arith_overbound(
     deadline: Option<Instant>,
     rec: &mut Recorder<'_>,
 ) -> Result<OverboundOutcome, SolverError> {
+    if crate::euf::ackermann_probe_enabled() {
+        let pairs = crate::euf::ackermann_congruence_pairs(arena, assertions);
+        crate::euf::ackermann_probe(
+            "auto.rs:4068",
+            pairs,
+            pairs <= crate::euf::MAX_ACKERMANN_CONGRUENCE_PAIRS,
+            &format!(
+                "has_function={} has_arith_function={} engaged={}",
+                features.has_function,
+                has_arithmetic_function(arena),
+                features.has_function
+                    && has_arithmetic_function(arena)
+                    && pairs > crate::euf::MAX_ACKERMANN_CONGRUENCE_PAIRS,
+            ),
+        );
+    }
     if !(features.has_function && has_arithmetic_function(arena)) {
         return Ok(OverboundOutcome::NotEngaged);
     }
@@ -9082,6 +9098,127 @@ fn int_blast_ladder_widths(escalation_top: u32) -> Vec<u32> {
 /// leaves the result `Unknown` — never a wrong `unsat`. The width set is fixed and
 /// finite, so the work is deterministically bounded (no OOM-risking unbounded
 /// widening).
+///
+/// ADR-2030 hoists the **width-independent** part of the per-rung admission test
+/// out of the loop; see [`ladder_width_independent_admission_refusal`].
+///
+/// ONE BINARY, TWO ENV VALUES. `AXEYUM_BLAST_LADDER_ADMISSION=1` turns the hoist
+/// ON; **unset is the shipped arm**. It fails closed: anything but an exact `1`
+/// leaves the loop byte-identical.
+fn blast_ladder_admission_hoist_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        parse_blast_ladder_admission_hoist(
+            std::env::var("AXEYUM_BLAST_LADDER_ADMISSION")
+                .ok()
+                .as_deref(),
+        )
+    })
+}
+
+/// The hoist lever's PARSE, split from the env lookup so the fail-closed guard
+/// is a pure unit test. A `OnceLock`-backed reader resolves once per process, so
+/// a test that sets the variable after any other test has already read it
+/// measures the wrong arm and still passes — a guard that cannot fail.
+fn parse_blast_ladder_admission_hoist(raw: Option<&str>) -> bool {
+    raw.is_some_and(|value| value.trim() == "1")
+}
+
+/// The part of [`check_with_all_theories`]'s admission test that is decided
+/// **before `width` is ever read** — array elimination, then the eager Ackermann
+/// congruence-pair bound — evaluated ONCE for the whole ladder.
+///
+/// # Why this exists
+///
+/// [ADR-2020] ranked `combined theories: eager Ackermann bound of 64` the
+/// **second** largest binding cause of our `UFLIA`/`UFNIA` ground-check failures
+/// (17 of 78 replays, 21.8 %) and read it as a missing fallback: the same
+/// constant selects a route at `auto.rs:4068` and hard-declines at
+/// `combined.rs:86`, so "the lazy fallback that already exists for the other
+/// caller is simply not offered to them".
+///
+/// The ordered `ACKPROBE` log refutes that reading. On all 13 files behind those
+/// 17 replays the selector at `auto.rs:4068` **does** engage on the same term set
+/// (12–23 engagements per file) and the lazy CEGAR **does** get its shot; it is
+/// only after that route falls through that the query descends here. What the
+/// census was ranking is not a cause at all — it is this ladder consulting a
+/// width-independent admission test once per width rung and reporting the last
+/// rung's refusal as the query's verdict. Measured per file: **105 to 309**
+/// `combined.rs:86` refusals, every one of them identical, and each one preceded
+/// by `let mut scratch = arena.clone();` — a copy of the whole file's term DAG
+/// (14,235 nodes for a held set of 11, [ADR-2020] §5).
+///
+/// So the loop was not merely re-deriving a constant: it was paying an arena
+/// clone and an array elimination per rung for an answer that cannot change with
+/// `width`. This runs the two reductions once, on one clone, and stops.
+///
+/// # Carrying the message out
+///
+/// [ADR-1980]'s named prerequisite: a rung that converts another rung's refusal
+/// must carry **that rung's own sentence** to whatever the ladder ends on, or a
+/// blocker census silently starts reading a different string. The returned
+/// `Unknown` therefore names THIS rung as the one that gave up, states how many
+/// widths were skipped and why they could not have differed, and appends the
+/// refusing bound's verbatim detail.
+///
+/// # Soundness
+///
+/// Width-independence is structural, not empirical: `check_with_all_theories`
+/// binds `width` only at reduction 3, after both steps replicated here. So a
+/// refusal at any rung is a refusal at every rung, and returning it up front can
+/// only replace N identical `Unknown`s with one. The probe runs on a **clone**,
+/// so no symbol or term it declares reaches the caller's arena. An
+/// `eliminate_arrays` error is NOT interpreted here — the loop's own error
+/// mapping is left to produce it — so the only behavioural difference is which
+/// of two `Unknown`s a caller sees: a later rung could previously time out inside
+/// reduction 1 and report `combined-theory timeout after array elimination`
+/// instead. Both are `Unknown`; no verdict moves.
+fn ladder_width_independent_admission_refusal(
+    arena: &TermArena,
+    assertions: &[TermId],
+    widths: &[u32],
+) -> Option<CheckResult> {
+    ladder_width_independent_admission_refusal_with(
+        arena,
+        assertions,
+        widths,
+        blast_ladder_admission_hoist_enabled(),
+    )
+}
+
+/// [`ladder_width_independent_admission_refusal`] with the lever passed in, so
+/// both arms are reachable from one test binary without touching the process
+/// environment (a `OnceLock` would pin whichever arm ran first).
+fn ladder_width_independent_admission_refusal_with(
+    arena: &TermArena,
+    assertions: &[TermId],
+    widths: &[u32],
+    enabled: bool,
+) -> Option<CheckResult> {
+    if !enabled {
+        return None;
+    }
+    let mut probe = arena.clone();
+    let array_elim = axeyum_rewrite::eliminate_arrays(&mut probe, assertions).ok()?;
+    let after_arrays = array_elim.assertions().to_vec();
+    let CheckResult::Unknown(reason) =
+        crate::euf::refuse_oversized_ackermann(&probe, &after_arrays, "combined theories")?
+    else {
+        return None;
+    };
+    Some(CheckResult::Unknown(UnknownReason {
+        kind: reason.kind,
+        detail: format!(
+            "integer bit-blast width ladder: no width is attemptable — the admission test that \
+             guards every rung is decided before `width` is read, so all {} rungs refuse \
+             identically (each would have cloned the whole term DAG first). The refusing rung \
+             said: {}",
+            widths.len(),
+            reason.detail
+        ),
+    }))
+}
+
 fn dispatch_int_blast_width_ladder(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -9101,6 +9238,9 @@ fn dispatch_int_blast_width_ladder(
                  widen the bound"
             .to_owned(),
     });
+    if let Some(refusal) = ladder_width_independent_admission_refusal(arena, assertions, &widths) {
+        return Ok(refusal);
+    }
     for width in widths {
         if past_deadline(deadline) {
             return Ok(CheckResult::Unknown(UnknownReason {
@@ -11735,6 +11875,147 @@ mod tests {
     use std::fmt::Write as _;
 
     use super::*;
+
+    /// ADR-2030's hoist lever must **fail closed**: every spelling it does not
+    /// understand leaves the per-rung loop byte-identical, which is the shipped
+    /// arm. A lever that failed open would measure the shipped arm against
+    /// itself and report a confident zero.
+    #[test]
+    fn the_ladder_hoist_is_off_unless_spelled_exactly() {
+        assert!(
+            !parse_blast_ladder_admission_hoist(None),
+            "unset must leave the per-rung loop in force (the shipped arm)",
+        );
+        for raw in [
+            "", " ", "0", "true", "TRUE", "yes", "on", "11", "1 1", "-1", "1.0", "01",
+        ] {
+            assert!(
+                !parse_blast_ladder_admission_hoist(Some(raw)),
+                "malformed spelling {raw:?} must leave the hoist OFF",
+            );
+        }
+        assert!(parse_blast_ladder_admission_hoist(Some("1")));
+        assert!(parse_blast_ladder_admission_hoist(Some("  1  ")));
+    }
+
+    /// The hoist's premise is STRUCTURAL and this test pins it: the admission
+    /// test it lifts out of the loop must not depend on `width`.
+    ///
+    /// If a future change makes `check_with_all_theories` consult `width` before
+    /// the eager Ackermann bound, the hoist stops being verdict-preserving and
+    /// this assertion is the thing that must break. It is written over the
+    /// ladder's real width set, not a hand-picked pair.
+    #[test]
+    fn the_ladder_hoist_premise_no_width_dependence() {
+        let mut arena = TermArena::new();
+        // 12 applications of one unary Int->Int function: 12*11/2 = 66 pairs,
+        // just past the bound of 64, so the refusal fires.
+        let f = arena
+            .declare_fun("hoist_f", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let mut equalities = Vec::new();
+        for i in 0..12i128 {
+            let k = arena.int_const(i);
+            let app = arena.apply(f, &[k]).unwrap();
+            let zero = arena.int_const(0);
+            equalities.push(arena.int_ge(app, zero).unwrap());
+        }
+        assert!(
+            crate::euf::ackermann_congruence_pairs(&arena, &equalities)
+                > crate::euf::MAX_ACKERMANN_CONGRUENCE_PAIRS,
+            "the exemplar must be OVER the bound or this test is vacuous",
+        );
+
+        let widths = int_blast_ladder_widths(int_blast_escalation_max_width());
+        assert!(widths.len() > 1, "the ladder must have several rungs");
+        // Every rung refuses, and refuses with the SAME sentence: that identity
+        // is what makes lifting the test out of the loop verdict-preserving.
+        let mut details = std::collections::BTreeSet::new();
+        for width in &widths {
+            let mut scratch = arena.clone();
+            let mut backend = SatBvBackend::new();
+            let result = check_with_all_theories(
+                &mut backend,
+                &mut scratch,
+                &equalities,
+                *width,
+                &SolverConfig::default(),
+            )
+            .expect("the admission refusal is an Unknown, never an error");
+            let CheckResult::Unknown(reason) = result else {
+                panic!("width {width} must refuse, got {result:?}");
+            };
+            details.insert(reason.detail);
+        }
+        assert_eq!(
+            details.len(),
+            1,
+            "the admission refusal must be IDENTICAL at every width; it differed: {details:?}",
+        );
+    }
+
+    /// ADR-1980's named prerequisite: a rung that converts another rung's
+    /// refusal must carry THAT rung's own sentence out, or a blocker census
+    /// silently starts reading a different string.
+    ///
+    /// Derived from the authority (the refusal the bound actually emits), not
+    /// from a literal copy of it -- a test that pins its own spelling measures
+    /// the maintainer's memory.
+    #[test]
+    fn the_ladder_hoist_carries_the_refusing_rungs_own_sentence() {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("carry_f", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let mut assertions = Vec::new();
+        for i in 0..12i128 {
+            let k = arena.int_const(i);
+            let app = arena.apply(f, &[k]).unwrap();
+            let zero = arena.int_const(0);
+            assertions.push(arena.int_ge(app, zero).unwrap());
+        }
+        let widths = int_blast_ladder_widths(int_blast_escalation_max_width());
+
+        // OFF: the hoist returns nothing, so the loop runs exactly as shipped.
+        assert!(
+            ladder_width_independent_admission_refusal_with(&arena, &assertions, &widths, false)
+                .is_none(),
+            "with the lever OFF the hoist must never fire",
+        );
+
+        let Some(CheckResult::Unknown(hoisted)) =
+            ladder_width_independent_admission_refusal_with(&arena, &assertions, &widths, true)
+        else {
+            panic!("the hoist must refuse this over-bound set when the lever is ON");
+        };
+        // The AUTHORITY: whatever sentence the bound itself produces.
+        let Some(CheckResult::Unknown(original)) =
+            crate::euf::refuse_oversized_ackermann(&arena, &assertions, "combined theories")
+        else {
+            panic!("the exemplar must be over the bound or this test is vacuous");
+        };
+        assert!(
+            hoisted.detail.contains(&original.detail),
+            "the carried message must contain the refusing rung's sentence VERBATIM.\n  \
+             carried: {}\n  refusing rung said: {}",
+            hoisted.detail,
+            original.detail,
+        );
+        assert!(
+            hoisted.detail.contains("integer bit-blast width ladder"),
+            "the carried message must also name THIS rung as the one that gave up: {}",
+            hoisted.detail,
+        );
+        assert!(
+            hoisted.detail.contains(&widths.len().to_string()),
+            "the carried message must say how many rungs were skipped: {}",
+            hoisted.detail,
+        );
+        assert_eq!(
+            hoisted.kind, original.kind,
+            "carrying the message must not reclassify the refusal",
+        );
+    }
 
     #[test]
     fn difference_logic_probe_preserves_the_fallback_slice() {
