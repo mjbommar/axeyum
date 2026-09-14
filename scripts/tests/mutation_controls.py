@@ -9615,11 +9615,18 @@ SUITES["qinst-round-exit"] = (
             "            ),",
         ),
         (
-            # The loop stops RECORDING the fixpoint, so the exit falls back to
-            # the `RoundCeiling` initial value -- exactly the pre-ADR-1956 read.
+            # The loop stops RECORDING the exit, so it falls back to the
+            # `RoundCeiling` initial value -- exactly the pre-ADR-1956 read.
+            #
+            # Re-anchored for ADR-2015, which split this break's SHAPE exit in
+            # two: at the admission ceiling it is a SATURATION, and `Fixpoint`'s
+            # detail ("more rounds cannot help") is a conclusion a capped break
+            # cannot support. The assignment is now an `if`/`else` over both
+            # variants, so the anchor covers the assignment rather than either
+            # arm -- which is what the mutation was always testing.
             "the fixpoint break records which exit fired",
-            "                loop_exit = InstantiationLoopExit::Fixpoint;",
-            "                let _ = InstantiationLoopExit::Fixpoint;",
+            "                loop_exit = if ground.len() >= ground_budget().join_ceiling {",
+            "                let _ = if ground.len() >= ground_budget().join_ceiling {",
         ),
         (
             # The lever is wired to the loop, not merely declared. Without this
