@@ -1,0 +1,69 @@
+MUTANT-CONTROL rows=100 base_unsat=20 base_sat=80
+MUTANT-CONTROL hard_disagreements=0 lost=60 gained=0
+MUTANT-CONTROL vacuous_decided_flips=1 shared_decided_flips=0
+NOTE: 60 row(s) decided by the shipped arm became `unknown` under the
+      candidate. Not a wrong verdict; a capability cost of the encoding at
+      this threshold, and the reason the SHIPPED threshold is the pairwise
+      cap rather than 2:
+QF_UF/2018-Goel-hwbench/QF_UF_counter_ab_cti_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_counter_v_ab_fp_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_synabs_ab_cti_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_seq_ab_cti_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_paper_v3_ab_cti_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_diagonal_v_ab_reg_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_cav14_example_v_ab_cti_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_AR_ab_cti_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/SEQ/SEQ032_size4.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_anderson.3.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_AR_ab_fp_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_bakery.3.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_anderson.2.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_peterson.3.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_diagonal_ab_cti_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_fischer.2.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_peterson.2.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_bakery.4.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_fischer.3.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_h_b02_ab_br_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_anderson.4.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/SEQ/SEQ015_size4.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_peterson.6.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_lamport.1.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_lamport.2.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_peterson.4.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_peterson.5.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_h_segments_ab_cti_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_bakery.5.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_bakery.6.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_bakery.7.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_at.1.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_at.2.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_anderson.7.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_mcs.3.prop1_ab_reg_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_leader_filters.2.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_anderson.5.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_leader_filters.1.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_szymanski.1.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_szymanski.2.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_fischer.4.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_fischer.5.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_driving_phils.1.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_lamport.5.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_lamport.6.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_peterson.7.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_gear.1.prop1_ab_reg_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_diagonal_v_ab_cti_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_bakery.8.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_gear.2.prop1_ab_reg_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_lamport_nonatomic.1.prop1_ab_reg_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_lamport_nonatomic.2.prop1_ab_reg_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_anderson.6.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_lamport_nonatomic.3.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_mcs.4.prop1_ab_reg_max.smt2	sat	sat	unknown	unknown	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_driving_phils.2.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_at.3.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_fischer.6.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_fischer.7.prop1_ab_reg_max.smt2	sat	sat	unknown	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_sw_loop_v_ab_cti_max.smt2	sat	sat	unknown	sat	unknown
+FAIL: the STRENGTHENING mutant produced no DECIDED contradiction on 80 sat row(s).
+      The freshness guard is untested by this population.

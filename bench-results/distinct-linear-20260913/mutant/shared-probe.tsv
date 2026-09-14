@@ -1,0 +1,13 @@
+file	arm	shared
+QF_UF/2018-Goel-hwbench/QF_UF_synabs2_ab_cti_max.smt2	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_swap_two_ab_br_max.smt2	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_swap_three_ab_cti_max.smt2	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_bit-vector_ab_br_max.smt2	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_v_DAIO_ab_reg_max.smt2	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_bakery.1.prop1_ab_reg_max.smt2	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_bakery.2.prop1_ab_reg_max.smt2	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_swap_three_ab_br_max.smt2	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_bit-vector_ab_cti_max.smt2	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_sdlx_ab_reg_max.smt2	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_swap_two_ab_cti_max.smt2	sat	unknown
+QF_UF/2018-Goel-hwbench/QF_UF_mpeg_ab_reg_max.smt2	sat	unknown

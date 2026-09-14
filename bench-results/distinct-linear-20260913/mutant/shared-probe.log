@@ -1,0 +1,4 @@
+SHARED-PROBE rows=12 arm_sat=12 decided_flips=0 budget=60s
+FINDING: the strengthening mutant produces no DECIDED contradiction even here.
+         Its decided kill is at unit scale only
+         (axeyum-solver/tests/distinct_linear_soundness.rs::the_shared_injection_mutant_breaks_the_sat).
