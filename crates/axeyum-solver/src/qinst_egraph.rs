@@ -180,8 +180,33 @@ axeyum_ir::cap_lever! {
 ///   round budget the historical string names.**
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InstantiationLoopExit {
-    /// Matching, candidate equalities and term invention all reached fixpoint.
+    /// Matching, candidate equalities and term invention all reached fixpoint
+    /// **with the admission ceiling not in force**, so there really is nothing
+    /// left to admit.
     Fixpoint,
+    /// The same `break`, taken with the accumulated ground set **at or above
+    /// [`GroundBudget::join_ceiling`]**.
+    ///
+    /// # Why this is not [`Fixpoint`](Self::Fixpoint)
+    ///
+    /// [`Fixpoint`](Self::Fixpoint)'s give-up detail asserts *"no further
+    /// instance to admit; more rounds cannot help"*. When the join is capped,
+    /// the second clause is a **conclusion the exit is not entitled to**: what
+    /// was observed is that nothing more was admitted, and the cap is a
+    /// sufficient explanation for that on its own. This file already knew the
+    /// shape and named it in a comment — *"every flooded file reaches that arm
+    /// only at a CAP-INDUCED fixpoint with `ground=8192`"* — but the exit the
+    /// census reads did not distinguish it, so a census ranked both as `SHAPE`.
+    ///
+    /// Measured on the 129-row winnable `UFNIA`/`UFLIA` population
+    /// (ADR-2015's census): **29 of 45 `SHAPE` exits sit at exactly
+    /// `ground=8192`**, which is [`MAX_GROUND_TERMS`]. Two thirds of the
+    /// "fixpoints" in that family are saturations.
+    ///
+    /// This is a statement about the CAP BEING IN FORCE, not a proof that the
+    /// cap is what stopped admission — the loop cannot know that at the break.
+    /// The point is the reverse: neither can `Fixpoint`, and it said so anyway.
+    GroundSaturated,
     /// The remaining budget could not fit another round with growth headroom.
     GrowthHeadroom,
     /// The loop ran its full round ceiling.
@@ -203,6 +228,11 @@ impl InstantiationLoopExit {
                 "e-matching instantiation reached fixpoint without refuting after {rounds} \
                  rounds (no further instance to admit; more rounds cannot help)"
             ),
+            Self::GroundSaturated => format!(
+                "e-matching instantiation admitted nothing further after {rounds} rounds with \
+                 the ground set at the admission ceiling (a saturation, not a fixpoint: more \
+                 rounds cannot help at THIS ceiling, and that is a different claim)"
+            ),
             Self::GrowthHeadroom => format!(
                 "e-matching instantiation stopped after {rounds} rounds: the remaining budget \
                  could not fit another round with growth headroom"
@@ -219,6 +249,7 @@ impl InstantiationLoopExit {
     pub fn census_kind(self) -> &'static str {
         match self {
             Self::Fixpoint => "SHAPE",
+            Self::GroundSaturated => "SATURATED",
             Self::GrowthHeadroom => "CLOCK",
             Self::RoundCeiling => "ROUND",
         }
@@ -2254,8 +2285,18 @@ fn prove_quantified_unsat_via_egraph_impl(
         let round_started = Instant::now();
         rounds_entered = round + 1;
         if deadline.is_some_and(|d| round_started >= d) {
-            qgrounddump(arena, &ground, &generations, "timeout-round-head");
-            return Ok(egraph_timeout());
+            let site = InstantiationTimeoutSite::RoundHead;
+            qgrounddump(arena, &ground, &generations, site.census_kind());
+            timeout_exit_probe(site, rounds_entered, ground.len());
+            held_set_replay_probe(
+                arena,
+                &ground,
+                config,
+                &mut quantifier_cache,
+                rounds_entered,
+                site.census_kind(),
+            )?;
+            return Ok(egraph_timeout(site));
         }
         // One matching/admission round is the loop's largest deadline-blind
         // unit: the e-matcher has no internal deadline, and per-round work has
@@ -2309,6 +2350,12 @@ fn prove_quantified_unsat_via_egraph_impl(
                 return Ok(CheckResult::Unsat);
             }
             qgrounddump(arena, &ground, &generations, "ground-ceiling");
+            if qprobe_enabled() {
+                eprintln!(
+                    "QPROBE loop-exit kind=ground-ceiling exit=GroundCeiling rounds={rounds_entered} ground={}",
+                    ground.len(),
+                );
+            }
             return Ok(egraph_ground_limit());
         }
         // The first round and accelerator fallbacks use the full QF route. The
@@ -2346,8 +2393,18 @@ fn prove_quantified_unsat_via_egraph_impl(
                 }
             }
             if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
-                qgrounddump(arena, &ground, &generations, "timeout-mid-round");
-                return Ok(egraph_timeout());
+                let site = InstantiationTimeoutSite::MidRound;
+                qgrounddump(arena, &ground, &generations, site.census_kind());
+                timeout_exit_probe(site, rounds_entered, ground.len());
+                held_set_replay_probe(
+                    arena,
+                    &ground,
+                    config,
+                    &mut quantifier_cache,
+                    rounds_entered,
+                    site.census_kind(),
+                )?;
+                return Ok(egraph_timeout(site));
             }
             if !online_attempted {
                 // The retained CDCL(T) accelerator abstracts equality clauses;
@@ -2570,9 +2627,16 @@ fn prove_quantified_unsat_via_egraph_impl(
                     floodprobe_cap_census(arena, &matcher, &ground_derivations, &assertions);
                 }
                 funnel.record(ground.len(), crate::live_instruments::Sampled::Complete);
-                // A SHAPE exit: nothing is left to admit, so neither more
-                // rounds nor more clock can change this answer.
-                loop_exit = InstantiationLoopExit::Fixpoint;
+                // A SHAPE exit only when the admission ceiling is NOT in
+                // force. With the ground set at the cap, "nothing was admitted"
+                // has a sufficient explanation that is not a fixpoint, and
+                // `Fixpoint`'s detail would assert a conclusion this break
+                // cannot support.
+                loop_exit = if ground.len() >= ground_budget().join_ceiling {
+                    InstantiationLoopExit::GroundSaturated
+                } else {
+                    InstantiationLoopExit::Fixpoint
+                };
                 break; // source, scoped-candidate, and invention fixpoint
             }
         }
@@ -2683,6 +2747,22 @@ fn prove_quantified_unsat_via_egraph_impl(
     )?;
     if matches!(finished, CheckResult::Unsat) {
         *certificate = collect_ground_derivations(arena, anchor, &ground, &ground_derivations);
+    } else {
+        // The break exits DO reach the final check -- but they hand it the
+        // shared `deadline`, which by this point can be expired, in which case
+        // the check returns `egraph_timeout` without looking at anything. So
+        // "the finish ran" and "the set was examined" are different claims, and
+        // the give-up string cannot tell them apart. Replay here on a fresh
+        // budget so the instrument covers all of the loop's exits rather than
+        // only the ones that return early.
+        held_set_replay_probe(
+            arena,
+            &ground,
+            config,
+            &mut quantifier_cache,
+            rounds_entered,
+            loop_exit.census_kind(),
+        )?;
     }
     Ok(finished)
 }
@@ -2695,10 +2775,216 @@ fn interleaved_check_due(round: usize) -> bool {
     round < instantiation_cadence() || (round + 1).is_power_of_two()
 }
 
-fn egraph_timeout() -> CheckResult {
+/// Which of the three deadline exits that shared one give-up string fired.
+///
+/// # Why this exists
+///
+/// [`InstantiationLoopExit`] split the loop's *break* exits because one string
+/// covered three of them and only one was a round budget. It did not go far
+/// enough: the loop has more exits than that enum has variants, and the ones it
+/// does not cover **return early instead of breaking**, so they never reach
+/// `finish_quantified_ground_check` and never appear as an
+/// `InstantiationLoopExit` at all. All three emitted the identical string
+/// `"e-matching: instantiation time budget exhausted"`, which is precisely the
+/// merged-label shape ADR-1956 was written about — ADR-1956's own "other"
+/// bucket reported four rows under this string without splitting it.
+///
+/// The three have different readings, and two of them have a remedy the third
+/// does not:
+///
+/// - [`RoundHead`](Self::RoundHead) — the deadline had already passed when a
+///   round was about to start. The accumulated ground set is **discarded
+///   without a final check**: `finish_quantified_ground_check`, including its
+///   strictly-additive shallow-generation subset pass, never runs on it.
+/// - [`MidRound`](Self::MidRound) — the deadline passed at an interleaved
+///   check inside a round. **This exit does NOT mean the set went unexamined**,
+///   and the wording here was wrong until it was measured: the exit sits
+///   immediately after `quantifier_qf_refutation_check` over the same `ground`
+///   and fires only when that check has just returned non-`Unsat` -- on the
+///   full shared deadline for rounds inside the cadence window. So the set was
+///   CHECKED and NOT DECIDED, the check having consumed the remainder of the
+///   budget. "Examined but undecided" and "never looked at" have opposite
+///   remedies, which is the whole reason these exits are named separately.
+/// - [`GroundCheck`](Self::GroundCheck) — a quantifier-free check was reached
+///   with no remaining budget to give it. Nothing was discarded; there was
+///   simply no clock. This one is a genuine clock exit and has no round in it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum InstantiationTimeoutSite {
+    /// Deadline already passed at the top of a round; ground set discarded.
+    RoundHead,
+    /// Deadline passed inside a round, at an interleaved check; set discarded.
+    MidRound,
+    /// A quantifier-free check was invoked with no remaining budget.
+    GroundCheck,
+}
+
+impl InstantiationTimeoutSite {
+    /// The `unknown` detail this site gives up with.
+    ///
+    /// Every one of the three is a suffix on the historical string rather than
+    /// a replacement, so a census keyed on the old text still matches and a
+    /// census keyed on the new text can tell them apart.
+    #[must_use]
+    fn detail(self) -> &'static str {
+        match self {
+            Self::RoundHead => {
+                "e-matching: instantiation time budget exhausted at a round head \
+                 (no final ground check ran on the accumulated set)"
+            }
+            Self::MidRound => {
+                "e-matching: instantiation time budget exhausted mid-round \
+                 (the interleaved ground check did not decide the set inside the deadline)"
+            }
+            Self::GroundCheck => {
+                "e-matching: instantiation time budget exhausted before a ground check"
+            }
+        }
+    }
+
+    /// The short label used by the `qgrounddump` reason and the census.
+    #[must_use]
+    fn census_kind(self) -> &'static str {
+        match self {
+            Self::RoundHead => "timeout-round-head",
+            Self::MidRound => "timeout-mid-round",
+            Self::GroundCheck => "timeout-ground-check",
+        }
+    }
+}
+
+/// Prints the deadline exits under plain `AXEYUM_QPROBE`, in the same shape as
+/// the `break`-exit line further down.
+///
+/// # Why this exists
+///
+/// The `break` exits already printed a `QPROBE loop-exit` line and the deadline
+/// exits printed nothing, so a census reading that line could only ever see
+/// three of the loop's seven exits and would report the deadline exits as
+/// "did not reach an exit". An instrument blind to four of seven exits names
+/// whichever cause it can see rather than the binding one.
+fn timeout_exit_probe(site: InstantiationTimeoutSite, rounds_entered: usize, ground: usize) {
+    if qprobe_enabled() {
+        eprintln!(
+            "QPROBE loop-exit kind={} exit={site:?} rounds={rounds_entered} ground={ground}",
+            site.census_kind(),
+        );
+    }
+}
+
+/// The fresh budget, in milliseconds, for the held-set replay probe, or `None`
+/// when the probe is off.
+///
+/// Off by default and costing one environment lookup when off. An unparseable
+/// or zero value resolves to off, so a typo cannot silently turn a measurement
+/// arm into a no-op that still prints nothing and looks the same.
+#[must_use]
+fn held_set_replay_budget_ms() -> Option<u64> {
+    let raw = std::env::var("AXEYUM_QPROBE_HELD_SET_REPLAY").ok()?;
+    let parsed: u64 = raw.trim().parse().ok()?;
+    (parsed > 0).then_some(parsed)
+}
+
+/// The smallest discarded ground set the replay probe will spend its budget on.
+///
+/// # Why this exists
+///
+/// The probe is **not free**: it burns real wall clock inside a solve whose rung
+/// deadline has already passed, so every replay it performs takes the root
+/// budget away from whatever would have run next. Measured on
+/// `UFNIA/2019-Preiner`, a query reaches this exit twice — once early holding
+/// **11** ground terms and once late holding **1,643** — and an ungated probe
+/// spends its whole allowance on the 11-term set and then never reaches the
+/// 1,643-term one at all. An instrument that systematically samples the least
+/// interesting member of a population is worse than none, because its zero
+/// reads like a finding.
+///
+/// Unset is `0` — replay every exit, the ungated behaviour.
+#[must_use]
+fn held_set_replay_min_ground() -> usize {
+    std::env::var("AXEYUM_QPROBE_HELD_SET_REPLAY_MIN_GROUND")
+        .ok()
+        .and_then(|raw| raw.trim().parse().ok())
+        .unwrap_or(0)
+}
+
+/// Diagnostic: at a deadline exit that **discards** the accumulated ground set,
+/// ask whether that set was already unsatisfiable — then throw the answer away.
+///
+/// # Why this exists
+///
+/// [`InstantiationTimeoutSite::RoundHead`] and
+/// [`InstantiationTimeoutSite::MidRound`] return before
+/// `finish_quantified_ground_check`, so the set they are holding has never been
+/// checked. "We hold an unsat set and never looked" and "we hold an
+/// insufficient set" produce the **identical** `unknown`, and no aggregate
+/// count can separate them. This probe separates them, on a budget unrelated to
+/// the rung deadline (which has by definition already passed).
+///
+/// Its verdict is **printed, never acted on** — the same discipline as the
+/// clause-shape probe further down this file. The caller returns the original
+/// `egraph_timeout` regardless, so an arm with this variable set measures the
+/// shipped verdict plus some extra wall time, and never a different verdict.
+fn held_set_replay_probe(
+    arena: &mut TermArena,
+    ground: &[TermId],
+    config: &SolverConfig,
+    cache: &mut QuantifierTermCache,
+    rounds_entered: usize,
+    exit_label: &str,
+) -> Result<(), SolverError> {
+    let Some(budget_ms) = held_set_replay_budget_ms() else {
+        return Ok(());
+    };
+    let min_ground = held_set_replay_min_ground();
+    if ground.len() < min_ground {
+        // Reported, not silently skipped: a probe that omits rather than
+        // refuses turns its output into a measurement of the accepted subset
+        // while still reading as a measurement of the set.
+        eprintln!(
+            "QPROBE held-set-replay-skipped exit={exit_label} ground={} rounds={rounds_entered} min_ground={min_ground}",
+            ground.len(),
+        );
+        return Ok(());
+    }
+    let started = Instant::now();
+    let replay_deadline = started.checked_add(std::time::Duration::from_millis(budget_ms));
+    // A separate stats sink: the probe must not move the shipped counters, or
+    // an arm with it on would differ from the shipped arm in the artifacts as
+    // well as the wall clock.
+    let mut probe_stats = QuantifierLoopStats::default();
+    // `unknown` is ambiguous exactly where this measurement needs precision: a
+    // ground checker that RAN OUT OF TIME on the set and one that DECLINED the
+    // fragment are different findings with opposite remedies, and both print
+    // `unknown`. The kind and detail are carried through so the census can tell
+    // them apart instead of naming whichever it guesses.
+    let (verdict, why) = match quantifier_qf_refutation_check(
+        arena,
+        ground,
+        config,
+        replay_deadline,
+        &mut probe_stats,
+        cache,
+    ) {
+        Ok(CheckResult::Unsat) => ("unsat", String::new()),
+        Ok(CheckResult::Sat(_)) => ("sat", String::new()),
+        Ok(CheckResult::Unknown(reason)) => (
+            "unknown",
+            format!(" why={:?}|{}", reason.kind, reason.detail.replace(' ', "_")),
+        ),
+        Err(error) => ("error", format!(" why=Error|{error}").replace(' ', "_")),
+    };
+    eprintln!(
+        "QPROBE held-set-replay exit={exit_label} ground={} rounds={rounds_entered} verdict={verdict} ms={} budget_ms={budget_ms}{why}",
+        ground.len(),
+        started.elapsed().as_millis(),
+    );
+    Ok(())
+}
+
+fn egraph_timeout(site: InstantiationTimeoutSite) -> CheckResult {
     CheckResult::Unknown(UnknownReason {
         kind: UnknownKind::ResourceLimit,
-        detail: "e-matching: instantiation time budget exhausted".to_owned(),
+        detail: site.detail().to_owned(),
     })
 }
 
@@ -3125,7 +3411,7 @@ fn quantifier_qf_check(
 ) -> Result<CheckResult, SolverError> {
     stats.qf_checks += 1;
     let Some(remaining) = config_with_remaining_timeout(config, deadline) else {
-        return Ok(egraph_timeout());
+        return Ok(egraph_timeout(InstantiationTimeoutSite::GroundCheck));
     };
     check_auto(arena, ground, &remaining)
 }
@@ -9186,9 +9472,11 @@ mod tests {
         );
 
         let fixpoint = InstantiationLoopExit::Fixpoint.detail(1);
+        let saturated = InstantiationLoopExit::GroundSaturated.detail(5);
         let headroom = InstantiationLoopExit::GrowthHeadroom.detail(3);
         for (exit, detail) in [
             (InstantiationLoopExit::Fixpoint, &fixpoint),
+            (InstantiationLoopExit::GroundSaturated, &saturated),
             (InstantiationLoopExit::GrowthHeadroom, &headroom),
         ] {
             assert!(
@@ -9200,11 +9488,32 @@ mod tests {
         // round 1" and "gave up at round 512" are opposite findings and the
         // census has no other column that carries it.
         assert!(fixpoint.contains(" 1 rounds"), "{fixpoint}");
+        assert!(saturated.contains(" 5 rounds"), "{saturated}");
         assert!(headroom.contains(" 3 rounds"), "{headroom}");
-        // Three exits, three distinct strings.
-        assert_ne!(fixpoint, headroom);
-        assert_ne!(fixpoint, round);
-        assert_ne!(headroom, round);
+        // A saturation must not borrow the fixpoint's claim either. `Fixpoint`
+        // says "no further instance to admit", and at the admission ceiling
+        // that is a conclusion the exit cannot support -- which is the whole
+        // reason the variant exists, so it is the property under test.
+        assert!(
+            !saturated.contains("no further instance to admit"),
+            "a saturation must not claim a fixpoint's conclusion: {saturated}"
+        );
+        assert!(
+            saturated.contains("ceiling"),
+            "a saturation must say the ceiling was in force: {saturated}"
+        );
+        // Four exits, four distinct strings -- checked as a PROPERTY over the
+        // set rather than as pairs, so adding a fifth variant that duplicates
+        // an existing wording cannot slip past a pair list nobody extended.
+        let details = [&fixpoint, &saturated, &headroom, &round];
+        let mut seen: Vec<&String> = details.to_vec();
+        seen.sort();
+        seen.dedup();
+        assert_eq!(
+            seen.len(),
+            details.len(),
+            "two loop exits give up with the same string"
+        );
     }
 
     /// The ADR-1950 `kind` vocabulary is assigned from what stopped the loop,
@@ -9216,8 +9525,25 @@ mod tests {
     #[test]
     fn the_exit_kinds_follow_adr_1950_and_are_distinct() {
         assert_eq!(InstantiationLoopExit::Fixpoint.census_kind(), "SHAPE");
+        assert_eq!(
+            InstantiationLoopExit::GroundSaturated.census_kind(),
+            "SATURATED"
+        );
         assert_eq!(InstantiationLoopExit::GrowthHeadroom.census_kind(), "CLOCK");
         assert_eq!(InstantiationLoopExit::RoundCeiling.census_kind(), "ROUND");
+        // Every kind is DISTINCT. A merged label is the defect this enum exists
+        // to prevent, and it was merged twice before anyone measured it, so the
+        // guard is on the property rather than on the four strings.
+        let kinds = [
+            InstantiationLoopExit::Fixpoint.census_kind(),
+            InstantiationLoopExit::GroundSaturated.census_kind(),
+            InstantiationLoopExit::GrowthHeadroom.census_kind(),
+            InstantiationLoopExit::RoundCeiling.census_kind(),
+        ];
+        let mut seen: Vec<&str> = kinds.to_vec();
+        seen.sort_unstable();
+        seen.dedup();
+        assert_eq!(seen.len(), kinds.len(), "two exits share one census kind");
     }
 
     /// The shipped [`GroundBudget`] arm must reproduce the three constants the
