@@ -294,12 +294,13 @@ net is **+0**, against a measured row-level noise floor of **0 of 200**.
 R10's second falsifier is the one that fired — *"if the abort rows are ones no
 reference solver decides, converting them to `unknown` buys zero board files and
 R8 fails by construction"* — and **half of it holds**: 20 of the 40 abort rows
-are decided by nobody. The other half is a sharper negative, and the reach probe
-is what establishes it: the remaining 20 abort rows **are** addressable, the
-lever **does** convert them from a core dump into a first-class `unknown`, the
-ladder below then runs, and **not one of them is decided**. Converting the abort
-is necessary and nowhere near sufficient; the engine behind the screen is the
-wall.
+are decided by nobody. The other half is a sharper negative, established by the
+**A/B** (not by the reach probe, which ran on the admission-screen rows and not
+on these): the remaining 20 abort rows **are** addressable, the lever **does**
+convert them from a core dump into a first-class `unknown`, the ladder below
+then runs — and since the A/B's net is +0 over all 200 rows, **not one of them
+is decided**. Converting the abort is necessary and nowhere near sufficient; the
+engine behind the screen is the wall.
 
 R9's correctness claim was pre-registered **separately**, so that a null R8 could
 neither be retro-fitted into a win nor used to dismiss a real defect. It stands
@@ -310,10 +311,11 @@ order. That is a defect whether or not it is worth a board file.
 
 It is reported rather than fixed because **the obvious fix is measured here and
 is wrong**: auto-installing the process's own limit (readable in safe Rust from
-`/proc/self/limits`) removes 32 aborts and **creates 5 new ones**, because the
-same number then becomes one construction's budget. Any future lane doing this
-must give per-construction budgets a **fraction** of the process limit, and must
-re-measure the `LassoRanker` family specifically.
+`/proc/self/limits`) clears **37 of the 41** base aborts, leaves 4 standing, and
+**creates 5 new ones** — 41 → 9 — because the same number then becomes one
+construction's budget. Any future lane doing this must give per-construction
+budgets a **fraction** of the process limit, and must re-measure the
+`LassoRanker` family specifically: all 9 residual aborts are from it.
 
 The pre-registered **control** (`QF_S`) and **exposure** (`QF_BV`) divisions were
 **NOT RUN**. They were conditions on shipping `On`; with the subject division at
