@@ -2256,6 +2256,7 @@ fn prove_quantified_unsat_via_egraph_impl(
         if deadline.is_some_and(|d| round_started >= d) {
             let site = InstantiationTimeoutSite::RoundHead;
             qgrounddump(arena, &ground, &generations, site.census_kind());
+            timeout_exit_probe(site, rounds_entered, ground.len());
             held_set_replay_probe(
                 arena,
                 &ground,
@@ -2318,6 +2319,12 @@ fn prove_quantified_unsat_via_egraph_impl(
                 return Ok(CheckResult::Unsat);
             }
             qgrounddump(arena, &ground, &generations, "ground-ceiling");
+            if qprobe_enabled() {
+                eprintln!(
+                    "QPROBE loop-exit kind=ground-ceiling exit=GroundCeiling rounds={rounds_entered} ground={}",
+                    ground.len(),
+                );
+            }
             return Ok(egraph_ground_limit());
         }
         // The first round and accelerator fallbacks use the full QF route. The
@@ -2357,6 +2364,7 @@ fn prove_quantified_unsat_via_egraph_impl(
             if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
                 let site = InstantiationTimeoutSite::MidRound;
                 qgrounddump(arena, &ground, &generations, site.census_kind());
+                timeout_exit_probe(site, rounds_entered, ground.len());
                 held_set_replay_probe(
                     arena,
                     &ground,
@@ -2780,6 +2788,25 @@ impl InstantiationTimeoutSite {
             Self::MidRound => "timeout-mid-round",
             Self::GroundCheck => "timeout-ground-check",
         }
+    }
+}
+
+/// Prints the deadline exits under plain `AXEYUM_QPROBE`, in the same shape as
+/// the `break`-exit line further down.
+///
+/// # Why this exists
+///
+/// The `break` exits already printed a `QPROBE loop-exit` line and the deadline
+/// exits printed nothing, so a census reading that line could only ever see
+/// three of the loop's seven exits and would report the deadline exits as
+/// "did not reach an exit". An instrument blind to four of seven exits names
+/// whichever cause it can see rather than the binding one.
+fn timeout_exit_probe(site: InstantiationTimeoutSite, rounds_entered: usize, ground: usize) {
+    if qprobe_enabled() {
+        eprintln!(
+            "QPROBE loop-exit kind={} exit={site:?} rounds={rounds_entered} ground={ground}",
+            site.census_kind(),
+        );
     }
 }
 
