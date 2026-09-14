@@ -55,6 +55,7 @@ def read(paths: list[str]) -> list[dict]:
 EXIT_RE = re.compile(r"kind=(\S+) exit=(\S+) rounds=(\d+) ground=(\d+)")
 REPLAY_RE = re.compile(
     r"held-set-replay exit=(\S+) ground=(\d+) rounds=(\d+) verdict=(\S+) ms=(\d+)"
+    r" budget_ms=(\d+)(?: why=(\S+))?"
 )
 SKIP_RE = re.compile(r"held-set-replay-skipped exit=(\S+) ground=(\d+)")
 
@@ -112,16 +113,22 @@ def cmd_exits(paths: list[str]) -> int:
 
     # Every exit the loop HAS, printed even at zero -- an omitted row and a zero
     # row read the same in a table and only one of them is a measurement.
+    # The LEFT column is the loop's own `census_kind()` string, derived from the
+    # source and not from memory: `InstantiationLoopExit::census_kind` spells
+    # Fixpoint as SHAPE, GrowthHeadroom as CLOCK and RoundCeiling as ROUND. A
+    # first draft of this list guessed "FIXPOINT" and reported 14 fixpoint exits
+    # as an UNLISTED EXIT while printing `FIXPOINT occurrences=0` beside it --
+    # a zero that was the maintainer's memory, not a measurement.
     all_kinds = [
-        "FIXPOINT",
-        "CLOCK",
-        "ROUND",
-        "timeout-round-head",
-        "timeout-mid-round",
-        "timeout-ground-check",
-        "ground-ceiling",
+        ("SHAPE", "Fixpoint"),
+        ("CLOCK", "GrowthHeadroom"),
+        ("ROUND", "RoundCeiling"),
+        ("timeout-round-head", "RoundHead (discards, NO final check)"),
+        ("timeout-mid-round", "MidRound (checked, NOT decided)"),
+        ("timeout-ground-check", "GroundCheck (no clock)"),
+        ("ground-ceiling", "GroundCeiling"),
     ]
-    for kind in all_kinds:
+    for kind, what in all_kinds:
         occurrences = per_exit.get(kind, 0)
         last = per_row_last.get(kind, 0)
         g = ground_by_kind.get(kind, [])
@@ -132,10 +139,14 @@ def cmd_exits(paths: list[str]) -> int:
                 f"  ground median={int(statistics.median(g))} max={max(g)}"
                 f"  rounds median={int(statistics.median(rd))} max={max(rd)}"
             )
-        print(f"  {kind:22s} occurrences={occurrences:4d}  last-exit rows={last:4d}{extra}")
+        print(
+            f"  {kind:20s} {what:38s} occurrences={occurrences:4d}  "
+            f"last-exit rows={last:4d}{extra}"
+        )
+    listed = {k for k, _w in all_kinds}
     for kind, count in sorted(per_exit.items()):
-        if kind not in all_kinds:
-            print(f"  {kind:22s} occurrences={count:4d}   *** UNLISTED EXIT ***")
+        if kind not in listed:
+            print(f"  {kind:20s} {'':38s} occurrences={count:4d}   *** UNLISTED EXIT ***")
     print(f"  {'<no loop exit reached>':22s} rows={per_row_last.get('<no loop exit reached>', 0)}")
     print()
     print(f"  rows entering the loop at all: {pct(rows_with_any, len(failing))}")
@@ -179,12 +190,22 @@ def cmd_replay(paths: list[str]) -> int:
     rows = read(paths)
     failing = [r for r in rows if r["c_verdict"] not in ("sat", "unsat")]
     print(f"R3  held-set replay. Denominator = still-failing rows: {len(failing)}")
-    for arm, cell in (("R1 (24 s, min_ground=0)", "r1_lines"), ("R2 (60 s, min_ground>0)", "r2_lines")):
+    for arm, cell in (
+        ("R1 (24 s, min_ground=0)", "r1_lines"),
+        ("R2 (60 s, min_ground>0)", "r2_lines"),
+    ):
+        if all((r.get(cell) or "") == "SKIPPED" for r in failing):
+            print(f"  {arm}: SKIPPED (arm not run) -- distinct from 'ran and found nothing'")
+            print()
+            continue
         verdicts = Counter()
+        why = Counter()
+        by_exit = defaultdict(Counter)
         rows_with = 0
         rows_unsat = 0
         skipped = 0
         ground_seen: list[int] = []
+        exhausted = 0
         for r in failing:
             hits = list(REPLAY_RE.finditer(r.get(cell, "") or ""))
             skipped += len(list(SKIP_RE.finditer(r.get(cell, "") or "")))
@@ -192,21 +213,38 @@ def cmd_replay(paths: list[str]) -> int:
                 rows_with += 1
             got_unsat = False
             for m in hits:
-                verdicts[m.group(4)] += 1
-                ground_seen.append(int(m.group(2)))
-                if m.group(4) == "unsat":
+                verdict, ground, budget = m.group(4), int(m.group(2)), int(m.group(6))
+                verdicts[verdict] += 1
+                by_exit[m.group(1)][verdict] += 1
+                ground_seen.append(ground)
+                if m.group(7):
+                    why[m.group(7)] += 1
+                if int(m.group(5)) >= budget:
+                    exhausted += 1
+                if verdict == "unsat":
                     got_unsat = True
             if got_unsat:
                 rows_unsat += 1
+        total = sum(verdicts.values())
         print(f"  {arm}")
         print(f"    rows where the replay FIRED at all: {pct(rows_with, len(failing))}")
         print(f"    replays skipped by the min_ground gate: {skipped}")
-        print(f"    replay verdicts: {dict(verdicts) or '{}'}")
+        print(f"    replay verdicts ({total} replays): {dict(verdicts) or '{}'}")
+        print(f"    replays that SPENT THEIR WHOLE FRESH BUDGET: {pct(exhausted, total)}")
         if ground_seen:
+            ground_seen.sort()
             print(
                 f"    ground set replayed: median={int(statistics.median(ground_seen))} "
-                f"min={min(ground_seen)} max={max(ground_seen)}"
+                f"min={ground_seen[0]} max={ground_seen[-1]}"
             )
+        print("    verdict by EXIT the set was held at:")
+        for kind in sorted(by_exit):
+            print(f"      {kind:22s} {dict(by_exit[kind])}")
+        print("    why the replay returned `unknown` (its own reason, not a guess):")
+        for reason, count in why.most_common():
+            print(f"      {count:4d}  {reason}")
+        if not why:
+            print("      (none)")
         print(f"    *** ROWS WHOSE HELD SET REPLAYS UNSAT: {pct(rows_unsat, len(failing))}")
         # The blindness, published as a number rather than left as a zero.
         blind = 0
