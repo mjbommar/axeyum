@@ -1,0 +1,13 @@
+id	src	kept	opaqued	ax_before	ax_after	z3_after	cvc5_after
+f01	core	4	27	unknown	unsat	unsat	unsat
+f01	skel	5	27	unknown	unsat	unsat	unsat
+f03	core	41	4	unknown	unsat	unsat	unsat
+f03	skel	42	4	unknown	unsat	unsat	unsat
+f04	core	7	2	unknown	unsat	unsat	unsat
+f04	skel	8	2	unknown	unsat	unsat	unsat
+f08	core	9	2	unknown	unsat	unsat	unsat
+f08	skel	10	2	unknown	unsat	unsat	unsat
+f11	core	9	2	unknown	unsat	unsat	unsat
+f11	skel	10	2	unknown	unsat	unsat	unsat
+f12	core	9	3	unknown	unsat	unsat	unsat
+f12	skel	10	3	unknown	unsat	unsat	unsat

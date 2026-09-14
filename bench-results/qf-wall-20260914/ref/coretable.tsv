@@ -1,0 +1,10 @@
+id	conjuncts	ax_core	ax_corepur	ax_coreprop	z3_corepur	cvc5_corepur	z3_coreprop	cvc5_coreprop	pur_n	prop_n
+f01	1	unknown	unknown	unsat	unsat	unsat	unsat	unsat	27	33
+f02	3	unsat	unsat	sat	unsat	unsat	sat	sat	3	3
+f03	1	unknown	unsat	sat	unsat	unsat	sat	sat	3	17
+f04	1	unknown	unsat	unsat	unsat	unsat	unsat	unsat	3	8
+f05	NO-CORE	-	-	-	-	-	-	-	-	-
+f06	1	unsat	unsat	sat	unsat	unsat	sat	sat	501	994
+f07	1	unknown	DID-NOT-RUN	DID-NOT-RUN	-	-	-	-	DID-NOT-RUN	DID-NOT-RUN
+f08	1	unknown	unsat	unsat	unsat	unsat	unsat	unsat	3	10
+f09	1	unsat	unsat	unsat	unsat	unsat	unsat	unsat	10	22

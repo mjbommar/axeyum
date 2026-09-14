@@ -1,0 +1,3 @@
+stage	z3	cvc5	axeyum	meta
+input	sat	sat	-	-
+abstracted	sat	sat	sat	/tmp/claude-1000/-home-mjbommar-projects-personal-axeyum/b5abceb2-1e55-4606-b944-34c43c75096d/scratchpad/qf-wall/oatom/control-sat.smt2	atoms_kept=0	atoms_opaqued=31	fresh_bools=26

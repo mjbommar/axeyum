@@ -1,0 +1,14 @@
+id	file	v24	rung24	v120	rung120	bound_by24	diagnosis
+f01	AUFLIRA/nasa/fol_simplify_structure_prop/quaternion_ds1_inuse_0013.fof.smt2	unknown	declined	unknown	declined	q:mbqi	CAPABILITY-LIMIT
+f02	UFNIA/sledgehammer/TwoSquares/z3.861593.smt2	unknown	declined	unknown	declined	q:mbqi	CAPABILITY-LIMIT
+f03	AUFLIRA/nasa/fol_simplify/gauss_init_0292.fof.smt2	unknown	declined	unknown	declined	q:egraph	CAPABILITY-LIMIT
+f04	AUFLIRA/nasa/fol_simplify_array_only/gauss_array_0490.fof.smt2	unknown	declined	unknown	declined	q:mbqi	CAPABILITY-LIMIT
+f05	UF/sledgehammer/Fundamental_Theorem_Algebra/uf.1065126.smt2	unknown	declined	unknown	declined	q:uf-fmf-probe	CAPABILITY-LIMIT
+f06	UFLIA/simplify2/front_end_suite/javafe.ast.StandardPrettyPrint.008.smt2	unknown	declined	unknown	declined	q:forall-exists-witness	CAPABILITY-LIMIT
+f07	UFNIA/lahiri-cav09-storm-queries/usbsamp_bug_example_2_3_8_1.smt2	unknown	declined	unknown	declined	q:forall-exists-witness	CAPABILITY-LIMIT
+f08	AUFLIRA/nasa/fol_simplify_array_only/gauss_array_0289.fof.smt2	unknown	declined	unknown	declined	q:mbqi	CAPABILITY-LIMIT
+f09	UFNIA/vcc-havoc/verisoft-baby.c.10.privileged.smt2	unsat	decided	unsat	decided	q:bool-skeleton	DECIDED
+f10	UFNIA/lahiri-cav09-storm-queries/usbsamp_example_2_3_4_0.smt2	unknown	declined	unknown	declined	q:forall-exists-witness	CAPABILITY-LIMIT
+f11	AUFLIRA/nasa/fol_simplify_structure_prop/gauss_array_0013.fof.smt2	unknown	declined	unknown	declined	q:mbqi	CAPABILITY-LIMIT
+f12	AUFLIRA/nasa/fol_simplify_array_only/gauss_array_0390.fof.smt2	unknown	declined	unknown	declined	q:mbqi	CAPABILITY-LIMIT
+f13	UFNIA/spec_sharp/test14-CommandLineOptions.ssc.23.Microsoft.Boogie.CommandLineOptions.Boogie.ContractConsistencyCheck.get_ProverNeedsTypes.smt2	unsat	decided	unsat	decided	q:bool-skeleton	DECIDED

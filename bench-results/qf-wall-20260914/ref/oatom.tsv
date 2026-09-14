@@ -1,0 +1,9 @@
+id	src	kept	opaqued	ax	z3	cvc5
+f01	core	4	27	unsat	unsat	(error "Parse Error: /tmp/claude-1000/-home-mjbommar-projects-personal-axeyum/b5abceb2-1e55-4606-b944-34c43c75096d/scratchpad/qf-wall/oatom/f01.core.smt2:15.14: Symbol `exp' is shadowing a theory function symbol")
+f02	core	0	3	sat	sat	sat
+f03	core	41	4	unsat	unsat	(error "Parse Error: /tmp/claude-1000/-home-mjbommar-projects-personal-axeyum/b5abceb2-1e55-4606-b944-34c43c75096d/scratchpad/qf-wall/oatom/f03.core.smt2:19.14: Symbol `exp' is shadowing a theory function symbol")
+f04	core	7	2	unsat	unsat	(error "Parse Error: /tmp/claude-1000/-home-mjbommar-projects-personal-axeyum/b5abceb2-1e55-4606-b944-34c43c75096d/scratchpad/qf-wall/oatom/f04.core.smt2:13.14: Symbol `exp' is shadowing a theory function symbol")
+f06	core	501	525	sat	sat	sat
+f07	core	DID-NOT-RUN	-	-	-	-
+f08	core	9	2	unsat	unsat	unsat
+f09	core	9	21	unsat	unsat	unsat
