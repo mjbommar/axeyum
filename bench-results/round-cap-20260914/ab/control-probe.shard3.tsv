@@ -1,0 +1,51 @@
+file	verdict	ms	preflight	solve	rescue_ran	out_sat	out_unsat	out_declined	out_unknown	first_lines
+QF_LIA/20180326-Bromberger/more_slacked/CAV_2009_benchmarks/smt/20-vars/v20_problem_2__031.smt2.slack.smt2	unsat	108	0	0	0	0	0	0	0	
+QF_LIA/20180326-Bromberger/more_slacked/CAV_2009_benchmarks/smt/40-vars/v40_problem_2__015.smt2.slack.smt2	sat	6815	0	0	0	0	0	0	0	
+QF_LIA/20180326-Bromberger/unbd-sage/unbd025v30c/unbd-sage5.smt2	unknown	24131	0	0	0	0	0	0	0	
+QF_LIA/2019-ezsmt/incrementalScheduling/182-incremental_scheduling-17280-0.smt2	unknown	24134	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-07.smt2	sat	109	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/CircularTrains-PT-012/RC-01.smt2	sat	109	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/Diffusion2D-PT-D05N100/RF-00.smt2	sat	109	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/Diffusion2D-PT-D10N150/RC-04.smt2	sat	109	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/Diffusion2D-PT-D30N100/RC-12.smt2	sat	1611	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/Diffusion2D-PT-D50N100/RF-04.smt2	sat	8715	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/Eratosthenes-PT-020/RC-08.smt2	unsat	109	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/FMS-PT-00020/RF-03.smt2	sat	109	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/FMS-PT-20000/RC-03.smt2	sat	110	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/HouseConstruction-PT-00100/RF-08.smt2	sat	109	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/HypertorusGrid-PT-d2k1p8b00/RC-06.smt2	unsat	108	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/Kanban-PT-00050/RC-14.smt2	sat	111	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/Kanban-PT-20000/RF-14.smt2	unsat	108	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/MAPK-PT-01280/RC-10.smt2	sat	110	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/NeighborGrid-PT-d5n4m1t35/RF-08.smt2	sat	609	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/RobotManipulation-PT-00001/RC-00.smt2	sat	109	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/RobotManipulation-PT-00500/RF-03.smt2	unsat	109	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/RwMutex-PT-r0010w0500/RC-09.smt2	unknown	25036	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/SharedMemory-PT-000005/RF-01.smt2	sat	109	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/SmallOperatingSystem-PT-MT0032DC0016/RF-13.smt2	unsat	110	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/SmallOperatingSystem-PT-MT1024DC0512/RC-02.smt2	sat	109	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/SwimmingPool-PT-01/RC-04.smt2	sat	109	0	0	0	0	0	0	0	
+QF_LIA/20220307-SMPT/SwimmingPool-PT-10/RC-11.smt2	sat	109	0	0	0	0	0	0	0	
+QF_LIA/CAV_2009_benchmarks/smt/15-vars/problem_2__022.smt2	unsat	109	0	0	0	0	0	0	0	
+QF_LIA/CAV_2009_benchmarks/smt/35-vars/problem_2__026.smt2	unknown	24132	0	0	0	0	0	0	0	
+QF_LIA/arctic-matrix/constraint-1107622.smt2	unknown	509	1	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=13774 cnf_vars=67458 rescue=shipped outcome=pending|
+QF_LIA/bofill-scheduling/SMT_random_LIA/ex27000_2600_100.smt2	unknown	24131	0	0	0	0	0	0	0	
+QF_LIA/bofill-scheduling/SMT_real_LIA/ex5640_2400_100.smt2	unknown	24133	0	0	0	0	0	0	0	
+QF_LIA/convert/convert-jpg2gif-query-1143.smt2	sat	8918	0	0	0	0	0	0	0	
+QF_LIA/convert/convert-jpg2gif-query-1586.smt2	unknown	8820	0	0	0	0	0	0	0	
+QF_LIA/dillig/30-34.smt2	sat	811	0	0	0	0	0	0	0	
+QF_LIA/nec-smt/large/bftpd_login/prp-10-47.smt2	unknown	24739	9	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=79271 cnf_vars=158655 rescue=shipped outcome=pending|PRESATPROBE site=preflight atoms=18869 cnf_vars=43877 rescue=shipped outcome=pending|
+QF_LIA/nec-smt/large/bftpd_login/prp-60-49.smt2	unknown	25139	5	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=96529 cnf_vars=191422 rescue=shipped outcome=pending|PRESATPROBE site=preflight atoms=71210 cnf_vars=143332 rescue=shipped outcome=pending|
+QF_LIA/nec-smt/large/checkpass/prp-40-50.smt2	unknown	25139	7	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=69955 cnf_vars=140918 rescue=shipped outcome=pending|PRESATPROBE site=preflight atoms=42627 cnf_vars=89011 rescue=shipped outcome=pending|
+QF_LIA/nec-smt/large/checkpass_pwd/prp-26-37.smt2	unknown	21632	6	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=24562 cnf_vars=54751 rescue=shipped outcome=pending|PRESATPROBE site=preflight atoms=13443 cnf_vars=33672 rescue=shipped outcome=pending|
+QF_LIA/nec-smt/large/checkpass_pwd/prp-44-39.smt2	unknown	16831	2	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=28232 cnf_vars=61704 rescue=shipped outcome=pending|PRESATPROBE site=preflight atoms=28232 cnf_vars=61704 rescue=shipped outcome=pending|
+QF_LIA/nec-smt/large/getoption_directories/prp-9-46.smt2	unknown	24340	16	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=43621 cnf_vars=91050 rescue=shipped outcome=pending|PRESATPROBE site=preflight atoms=5135 cnf_vars=17929 rescue=shipped outcome=pending|
+QF_LIA/nec-smt/large/getoption_group/prp-56-47.smt2	unknown	20834	4	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=33422 cnf_vars=71614 rescue=shipped outcome=pending|PRESATPROBE site=preflight atoms=26586 cnf_vars=58616 rescue=shipped outcome=pending|
+QF_LIA/nec-smt/large/getoption_user/prp-39-48.smt2	unknown	24533	11	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=64214 cnf_vars=130129 rescue=shipped outcome=pending|PRESATPROBE site=preflight atoms=20045 cnf_vars=46193 rescue=shipped outcome=pending|
+QF_LIA/nec-smt/large/int_from_list/prp-35-43.smt2	unknown	24338	14	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=21773 cnf_vars=49452 rescue=shipped outcome=pending|PRESATPROBE site=preflight atoms=8400 cnf_vars=24123 rescue=shipped outcome=pending|
+QF_LIA/nec-smt/med/checkpass_pwd/prp-0-19.smt2	unknown	24135	0	0	0	0	0	0	0	
+QF_LIA/nec-smt/med/int_from_list/prp-15-38.smt2	unknown	23234	13	0	0	0	0	0	0	PRESATPROBE site=preflight atoms=15955 cnf_vars=38444 rescue=shipped outcome=pending|PRESATPROBE site=preflight atoms=4967 cnf_vars=17621 rescue=shipped outcome=pending|
+QF_LIA/prime-cone/prime_cone_unsat_20.smt2	unsat	109	0	0	0	0	0	0	0	
+QF_LIA/rings/ring_2exp8_4vars_1ite_unsat.smt2	unknown	24134	0	0	0	0	0	0	0	
+QF_LIA/rings_preprocessed/ring_2exp6_6vars_4ite_unsat.smt2	unknown	24130	0	0	0	0	0	0	0	
+QF_LIA/slacks/40-8.slack.smt2	sat	6015	0	0	0	0	0	0	0	
