@@ -32,6 +32,7 @@
 
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{CheckResult, SmtLibResponse, SolverConfig, check_auto, solve_smtlib_session};
+use std::fmt::Write as _;
 
 /// Parse and decide the flat assertion view.
 fn verdict(src: &str) -> CheckResult {
@@ -260,17 +261,17 @@ fn five_free_sets_with_a_named_element_stay_sat() {
 fn set_width_over_the_cap_declines() {
     let mut src = String::from("(set-logic ALL)\n(declare-sort E 0)\n");
     for i in 0..200 {
-        src.push_str(&format!("(declare-fun s{i} () (Set E))\n"));
+        let _ = writeln!(src, "(declare-fun s{i} () (Set E))");
     }
     src.push_str("(assert (distinct");
     for i in 0..200 {
-        src.push_str(&format!(" s{i}"));
+        let _ = write!(src, " s{i}");
     }
     src.push_str("))\n(check-sat)\n");
 
-    let err = parse_script(&src)
-        .err()
-        .expect("a set universe past MAX_SET_WIDTH must be refused, not clamped to the cap");
+    let Err(err) = parse_script(&src) else {
+        panic!("a set universe past MAX_SET_WIDTH must be refused, not clamped to the cap");
+    };
     let text = err.to_string();
     assert!(
         text.contains("cap"),

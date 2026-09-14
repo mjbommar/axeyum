@@ -2295,7 +2295,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                 &mut quantifier_cache,
                 rounds_entered,
                 site.census_kind(),
-            )?;
+            );
             return Ok(egraph_timeout(site));
         }
         // One matching/admission round is the loop's largest deadline-blind
@@ -2403,7 +2403,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                     &mut quantifier_cache,
                     rounds_entered,
                     site.census_kind(),
-                )?;
+                );
                 return Ok(egraph_timeout(site));
             }
             if !online_attempted {
@@ -2762,7 +2762,7 @@ fn prove_quantified_unsat_via_egraph_impl(
             &mut quantifier_cache,
             rounds_entered,
             loop_exit.census_kind(),
-        )?;
+        );
     }
     Ok(finished)
 }
@@ -2931,9 +2931,9 @@ fn held_set_replay_probe(
     cache: &mut QuantifierTermCache,
     rounds_entered: usize,
     exit_label: &str,
-) -> Result<(), SolverError> {
+) {
     let Some(budget_ms) = held_set_replay_budget_ms() else {
-        return Ok(());
+        return;
     };
     let min_ground = held_set_replay_min_ground();
     if ground.len() < min_ground {
@@ -2944,7 +2944,7 @@ fn held_set_replay_probe(
             "QPROBE held-set-replay-skipped exit={exit_label} ground={} rounds={rounds_entered} min_ground={min_ground}",
             ground.len(),
         );
-        return Ok(());
+        return;
     }
     let started = Instant::now();
     let replay_deadline = started.checked_add(std::time::Duration::from_millis(budget_ms));
@@ -2978,7 +2978,6 @@ fn held_set_replay_probe(
         ground.len(),
         started.elapsed().as_millis(),
     );
-    Ok(())
 }
 
 fn egraph_timeout(site: InstantiationTimeoutSite) -> CheckResult {
