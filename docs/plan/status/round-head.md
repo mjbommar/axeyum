@@ -171,8 +171,14 @@ built: it is what says the exit table is a measurement and not a sample.
 
 ## Branch point
 
-`git merge-base main HEAD` is **`94389e480`**, which **is** `main`'s HEAD, so
-every number above measures the shipped tree plus this lane's diagnostics.
+`git merge-base main HEAD` is **`94389e480`**, which **was** `main`'s HEAD when
+this lane branched and throughout every measurement above, so every number
+measures the shipped tree plus this lane's diagnostics. Local `main` advanced to
+`c8f1e4bfa` while the census was running — `94389e480` is an ancestor of it, and
+that commit touches neither `qinst_egraph.rs` nor the quantified ladder, so the
+census was not re-run against it. **Stated rather than glossed**: a base that is
+"main's HEAD" at dispatch and a base that is main's HEAD at report time are
+different claims.
 **Predicted post-merge value: identical.** The diff adds probe output and splits
 three give-up detail strings; nothing branches on them, and the old string is a
 prefix of all three new ones, so a census keyed on it still matches.

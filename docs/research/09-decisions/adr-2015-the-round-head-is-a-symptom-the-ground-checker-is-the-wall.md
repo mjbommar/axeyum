@@ -29,8 +29,12 @@ Sizing, instruments and decision rules were
 in their own commit (`ac34cc0e5`) before the population was touched, **including
 the prediction that the hypothesis would fail** — recorded so it could be wrong.
 
-Branch base: `git merge-base main HEAD` is `94389e480`, which **is** `main`'s
-HEAD, so the measured tree is the shipped tree plus this lane's diagnostics.
+Branch base: `git merge-base main HEAD` is `94389e480`, which **was** `main`'s
+HEAD when this lane branched and throughout every measurement below, so the
+measured tree is the shipped tree plus this lane's diagnostics. Local `main`
+advanced to `c8f1e4bfa` (another lane's board sweep) while the census was
+running; `94389e480` is an ancestor of it, and nothing in that commit touches
+`qinst_egraph.rs` or the quantified ladder.
 
 ## The give-up string needed splitting, and so did the instrument that split it
 
