@@ -4062,6 +4062,22 @@ fn dispatch_uf_arith_overbound(
     deadline: Option<Instant>,
     rec: &mut Recorder<'_>,
 ) -> Result<OverboundOutcome, SolverError> {
+    if crate::euf::ackermann_probe_enabled() {
+        let pairs = crate::euf::ackermann_congruence_pairs(arena, assertions);
+        crate::euf::ackermann_probe(
+            "auto.rs:4068",
+            pairs,
+            pairs <= crate::euf::MAX_ACKERMANN_CONGRUENCE_PAIRS,
+            &format!(
+                "has_function={} has_arith_function={} engaged={}",
+                features.has_function,
+                has_arithmetic_function(arena),
+                features.has_function
+                    && has_arithmetic_function(arena)
+                    && pairs > crate::euf::MAX_ACKERMANN_CONGRUENCE_PAIRS,
+            ),
+        );
+    }
     if !(features.has_function && has_arithmetic_function(arena)) {
         return Ok(OverboundOutcome::NotEngaged);
     }

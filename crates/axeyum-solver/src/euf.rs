@@ -116,6 +116,34 @@ pub(crate) fn ackermann_congruence_pairs(arena: &TermArena, assertions: &[TermId
 /// over-approximation), and `None` (admit) otherwise. `context` names the calling
 /// route in the [`UnknownReason`] detail. A refusal only ever turns a would-be
 /// unbounded hang/OOM into `Unknown`; it never changes a decided verdict.
+/// Diagnostic (`AXEYUM_ACKPROBE=1`): report every consultation of the eager
+/// Ackermann admission bound, with the pair count, the deciding site, and the
+/// verdict. This exists because [ADR-2020] found the SAME constant acting as a
+/// route selector at one site and a hard decline at the other, and could not say
+/// from the census WHICH site a given file reached or why the other did not fire
+/// — the give-up string carries the context name but nothing about the gates
+/// upstream of it. Printed, never acted on.
+/// Resolved ONCE: this predicate is consulted inside the integer bit-blast width
+/// ladder, which reaches `combined.rs:86` once per width rung — 645 consultations
+/// on one measured 24 s file — so a per-call `env::var` would put an allocating
+/// lookup in the shipped hot path to serve a diagnostic that is off.
+pub(crate) fn ackermann_probe_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var("AXEYUM_ACKPROBE").is_ok_and(|value| value.trim() == "1"))
+}
+
+/// Emits one `ACKPROBE` line. `gates` is the site-specific gate state.
+pub(crate) fn ackermann_probe(site: &str, pairs: usize, admitted: bool, gates: &str) {
+    if !ackermann_probe_enabled() {
+        return;
+    }
+    eprintln!(
+        "ACKPROBE site={site} pairs={pairs} bound={MAX_ACKERMANN_CONGRUENCE_PAIRS} \
+         verdict={} {gates}",
+        if admitted { "admit" } else { "refuse" }
+    );
+}
+
 pub(crate) fn refuse_oversized_ackermann(
     arena: &TermArena,
     assertions: &[TermId],

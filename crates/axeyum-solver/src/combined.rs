@@ -82,6 +82,16 @@ pub fn check_with_all_theories<B: SolverBackend>(
     // too many congruence constraints — the O(k²) construction and the bit-blast of
     // the result both run unbounded past `config.timeout`. Mirrors the gate on the
     // direct `check_with_uf_arithmetic` route; a decided verdict never changes.
+    if crate::euf::ackermann_probe_enabled() {
+        let pairs = crate::euf::ackermann_congruence_pairs(arena, &after_arrays);
+        let entry = crate::euf::ackermann_congruence_pairs(arena, assertions);
+        crate::euf::ackermann_probe(
+            "combined.rs:86",
+            pairs,
+            pairs <= crate::euf::MAX_ACKERMANN_CONGRUENCE_PAIRS,
+            &format!("pairs_at_entry={entry} arrays_changed={}", pairs != entry),
+        );
+    }
     if let Some(refusal) =
         crate::euf::refuse_oversized_ackermann(arena, &after_arrays, "combined theories")
     {
