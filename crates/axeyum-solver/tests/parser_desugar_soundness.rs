@@ -1,3 +1,13 @@
+#![cfg(feature = "full")]
+// Guarded because this suite exercises `full`-only surface, so without the
+// feature the crate does not compile `--all-targets` on DEFAULT features --
+// which `cargo check --workspace` hides through Cargo's feature unification,
+// so no gate here could see it.
+//
+// The guard has a cost worth naming: a `#![cfg]`-ed suite compiles to ZERO
+// tests and exits 0 without the feature, which is how one gate here stayed
+// inert for 15 days. Its count under `--features full` is pinned in the commit
+// that added this line, and the pre-push hook runs it WITH the feature.
 //! ADR-2010: the VERDICT half of the parser's unconditional s-expression
 //! desugars (`desugar_sets`, `desugar_const_arrays`).
 //!
