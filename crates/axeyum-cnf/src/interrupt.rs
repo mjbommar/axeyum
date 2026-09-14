@@ -55,20 +55,37 @@ pub(crate) fn stop_requested() -> bool {
     STOP_HOOK.get().is_some_and(|hook| hook())
 }
 
+// Monotonic clock for the deadline poll: on wasm32 the browser has no `std`
+// clock, so use `web-time`'s drop-in `Instant` (ADR-0017). Same convention as
+// `bve.rs`, `vivify.rs`, `cube.rs`, `inprocess.rs`, `lrat.rs` and `simplify.rs`.
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
 /// The combined "should this search stop now?" test used by the CDCL core:
 /// an embedder stop request, or an expired deadline.
 ///
 /// The hook is tested first because when none is installed it is one load and a
 /// branch, while `Instant::now()` is a clock read.
+///
+/// # The clock type is not `std::time::Instant`
+///
+/// It is this crate's `cfg`-selected `Instant` (`web_time`'s on wasm32), which
+/// is what every caller builds — `proof_sat.rs` follows the same convention.
+/// Naming `std::time::Instant` here compiled on native and broke the
+/// **wasm32 build of the whole crate**, because on wasm32 the caller's
+/// `web_time::Instant` is a genuinely different type. WebAssembly is a
+/// supported target (ADR-0017), so that is a build failure and not a lint.
 #[inline]
 #[must_use]
-pub(crate) fn past_deadline(deadline: Option<std::time::Instant>) -> bool {
-    stop_requested() || deadline.is_some_and(|d| std::time::Instant::now() >= d)
+pub(crate) fn past_deadline(deadline: Option<Instant>) -> bool {
+    stop_requested() || deadline.is_some_and(|d| Instant::now() >= d)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{past_deadline, stop_requested};
+    use super::{Instant, past_deadline, stop_requested};
 
     #[test]
     fn with_no_hook_the_check_is_exactly_the_deadline() {
@@ -76,12 +93,12 @@ mod tests {
         // binary), so the predicate must reduce to the deadline test.
         assert!(!stop_requested());
         assert!(!past_deadline(None));
-        let a_second_ago = std::time::Instant::now()
+        let a_second_ago = Instant::now()
             .checked_sub(std::time::Duration::from_secs(1))
             .expect("the monotonic clock is at least a second old");
         assert!(past_deadline(Some(a_second_ago)));
         assert!(!past_deadline(Some(
-            std::time::Instant::now() + std::time::Duration::from_secs(60)
+            Instant::now() + std::time::Duration::from_secs(60)
         )));
     }
 }
