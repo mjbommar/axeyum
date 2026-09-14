@@ -4913,3 +4913,802 @@ mod fragment_probe_tests {
         assert!(refused > 0, "no atom was refused; the test is vacuous");
     }
 }
+
+/// ADR-2060: every give-up reason is tied to the producer that makes it.
+///
+/// # What this module exists to stop happening again
+///
+/// `Decision::TimedOut` was a unit variant rendered as one fixed sentence about
+/// the Fourier–Motzkin elimination, and **nothing in the workspace asserted
+/// anything about that sentence** — a `grep` over `crates/` and `tests/`
+/// returned only the definition, and the compiler found exactly ONE test
+/// referencing the variant at all, which asserted only *that* the decision gave
+/// up. So it was free to be wrong, and ADR-2045 measured that it was: 34 of 34
+/// `QF_LRA` rows wearing it had `cube_matrices=0`.
+///
+/// The checks below are deliberately different in kind, because a suite where
+/// every guard rejects through one shared check is a suite with one guard:
+///
+/// 1. [`every_declared_give_up_variant_is_listed`] derives its population from
+///    **this file's own source text**, not from a literal in the test. Adding a
+///    variant without listing it fails here; and `name()` is an exhaustive
+///    `match`, so adding one without naming it does not compile at all.
+/// 2. [`each_producer_reports_its_own_reason`] drives the producers and asserts
+///    the value each one yields, and checks the set it drove against the set
+///    the source declares minus an explicit, reasoned undrivable list.
+/// 3. [`no_detail_blames_an_engine_that_did_not_run`] is the regression itself:
+///    a gate that is not the elimination must not render as the elimination,
+///    and a cause that is not a budget must say so.
+#[cfg(test)]
+mod give_up_reason_tests {
+    use super::*;
+
+    use crate::memory_budget::{WATCHDOG_LOCK, clear_watchdog_for_test, trip_watchdog_for_test};
+    use std::collections::BTreeSet;
+
+    impl GaveUp {
+        /// A stable, matchable key for one gate. Exhaustive, so a new variant
+        /// does not compile until it is named here.
+        fn name(self) -> &'static str {
+            match self {
+                Self::DeadlineOnEntry => "DeadlineOnEntry",
+                Self::DeadlineCollectingConstraints => "DeadlineCollectingConstraints",
+                Self::DeadlineBuildingFarkasMatrix => "DeadlineBuildingFarkasMatrix",
+                Self::SimplexThenEliminationDeclined { .. } => "SimplexThenEliminationDeclined",
+                Self::EliminationThenSimplexDeclined { .. } => "EliminationThenSimplexDeclined",
+            }
+        }
+    }
+
+    impl FmDecline {
+        fn name(self) -> &'static str {
+            match self {
+                Self::DeadlineBetweenVariables => "DeadlineBetweenVariables",
+                Self::DeadlineInCrossProduct => "DeadlineInCrossProduct",
+                Self::SizeGuard => "SizeGuard",
+                Self::OverflowEliminating => "OverflowEliminating",
+                Self::OverflowBackSubstituting => "OverflowBackSubstituting",
+            }
+        }
+    }
+
+    impl SimplexDecline {
+        fn name(self) -> &'static str {
+            match self {
+                Self::DeadlineBuildingRows => "DeadlineBuildingRows",
+                Self::OverflowBuildingRows => "OverflowBuildingRows",
+                Self::ModelDidNotReplay => "ModelDidNotReplay",
+                Self::CertificateFailedSelfCheck => "CertificateFailedSelfCheck",
+                Self::InfeasibleWithoutCertificate => "InfeasibleWithoutCertificate",
+                Self::EngineDeclined => "EngineDeclined",
+            }
+        }
+    }
+
+    const ANY_FM: FmDecline = FmDecline::SizeGuard;
+    const ANY_SIMPLEX: SimplexDecline = SimplexDecline::EngineDeclined;
+
+    fn listed_give_ups() -> Vec<GaveUp> {
+        vec![
+            GaveUp::DeadlineOnEntry,
+            GaveUp::DeadlineCollectingConstraints,
+            GaveUp::DeadlineBuildingFarkasMatrix,
+            GaveUp::SimplexThenEliminationDeclined {
+                simplex: ANY_SIMPLEX,
+                fm: ANY_FM,
+            },
+            GaveUp::EliminationThenSimplexDeclined {
+                fm: ANY_FM,
+                simplex: ANY_SIMPLEX,
+            },
+        ]
+    }
+
+    fn listed_fm_declines() -> Vec<FmDecline> {
+        vec![
+            FmDecline::DeadlineBetweenVariables,
+            FmDecline::DeadlineInCrossProduct,
+            FmDecline::SizeGuard,
+            FmDecline::OverflowEliminating,
+            FmDecline::OverflowBackSubstituting,
+        ]
+    }
+
+    fn listed_simplex_declines() -> Vec<SimplexDecline> {
+        vec![
+            SimplexDecline::DeadlineBuildingRows,
+            SimplexDecline::OverflowBuildingRows,
+            SimplexDecline::ModelDidNotReplay,
+            SimplexDecline::CertificateFailedSelfCheck,
+            SimplexDecline::InfeasibleWithoutCertificate,
+            SimplexDecline::EngineDeclined,
+        ]
+    }
+
+    /// The variant names an `enum` DECLARES, read out of this file's own source.
+    ///
+    /// The authority for "which reasons exist" is the enum declaration, and the
+    /// only way for a test to consult it rather than the author's memory is to
+    /// read it. Brace-depth tracking is what keeps a struct variant's FIELDS
+    /// (`simplex: SimplexDecline,`) from being counted as variants of their own.
+    fn declared_variants(enum_name: &str) -> Vec<String> {
+        let src = include_str!("lra.rs");
+        let head = format!("\nenum {enum_name} {{\n");
+        let start = src
+            .find(&head)
+            .unwrap_or_else(|| panic!("`enum {enum_name}` is declared in lra.rs"))
+            + head.len();
+        let body = &src[start..];
+        let end = body
+            .find("\n}\n")
+            .expect("the enum declaration has a closing brace at column 0");
+        let mut depth = 0usize;
+        let mut names = Vec::new();
+        for line in body[..end].lines() {
+            let trimmed = line.trim();
+            if depth == 0
+                && !trimmed.is_empty()
+                && !trimmed.starts_with("//")
+                && !trimmed.starts_with('#')
+            {
+                let name: String = trimmed
+                    .chars()
+                    .take_while(|c| c.is_alphanumeric() || *c == '_')
+                    .collect();
+                assert!(!name.is_empty(), "unparsed variant line: {trimmed:?}");
+                names.push(name);
+            }
+            depth = depth + line.matches('{').count() - line.matches('}').count();
+        }
+        names
+    }
+
+    /// The population every reason test runs against comes from the source, and
+    /// the source says the same thing the lists above do.
+    ///
+    /// **Controls.** The positive control is that the parse is non-empty and
+    /// contains a name known to exist; the negative control is that asking for
+    /// an enum that is not declared here panics rather than returning an empty
+    /// list, because an empty list from a parser that never found its subject is
+    /// indistinguishable from a strong negative.
+    #[test]
+    fn every_declared_give_up_variant_is_listed() {
+        let gave_up = declared_variants("GaveUp");
+        assert!(
+            gave_up.contains(&"DeadlineOnEntry".to_owned()),
+            "positive control: the source parse found {gave_up:?}"
+        );
+        let missing = std::panic::catch_unwind(|| declared_variants("NoSuchDeclineEnum"));
+        assert!(
+            missing.is_err(),
+            "negative control: a parse that never found its subject must panic, not return \
+             an empty list"
+        );
+
+        for (enum_name, listed) in [
+            (
+                "GaveUp",
+                listed_give_ups()
+                    .iter()
+                    .map(|g| g.name())
+                    .collect::<Vec<_>>(),
+            ),
+            (
+                "FmDecline",
+                listed_fm_declines()
+                    .iter()
+                    .map(|f| f.name())
+                    .collect::<Vec<_>>(),
+            ),
+            (
+                "SimplexDecline",
+                listed_simplex_declines()
+                    .iter()
+                    .map(|s| s.name())
+                    .collect::<Vec<_>>(),
+            ),
+        ] {
+            let declared = declared_variants(enum_name);
+            assert!(
+                !declared.is_empty(),
+                "{enum_name}: the source parse found no variants at all"
+            );
+            assert_eq!(
+                declared, listed,
+                "{enum_name}: the variants DECLARED in lra.rs and the ones this module \
+                 exercises have drifted apart"
+            );
+        }
+    }
+
+    /// Every reason renders a detail of its own, and no detail blames an engine
+    /// that did not run.
+    ///
+    /// This is the defect, stated as an assertion. The string it replaces said
+    /// "Fourier–Motzkin elimination exceeded the wall-clock / size budget" for
+    /// all six producers, of which four never entered the elimination, one never
+    /// entered either engine, and one was an `i128` overflow.
+    #[test]
+    fn no_detail_blames_an_engine_that_did_not_run() {
+        let mut seen: Vec<String> = Vec::new();
+        for gave_up in listed_give_ups() {
+            let detail = gave_up.detail();
+            assert!(
+                detail.starts_with("lra: "),
+                "{}: every detail keeps the module prefix a census greps on: {detail:?}",
+                gave_up.name()
+            );
+            assert!(
+                !seen.contains(&detail),
+                "{}: two gates render the SAME sentence, which is the whole defect: {detail:?}",
+                gave_up.name()
+            );
+            seen.push(detail);
+        }
+
+        // Neither engine has run at these two gates, so neither may be blamed.
+        for gave_up in [
+            GaveUp::DeadlineOnEntry,
+            GaveUp::DeadlineCollectingConstraints,
+        ] {
+            let detail = gave_up.detail();
+            assert!(
+                !detail.contains("Fourier") && !detail.contains("simplex"),
+                "{}: no engine had run, so the detail must not name one: {detail:?}",
+                gave_up.name()
+            );
+        }
+        // The multiplier matrix IS Fourier–Motzkin's, so naming it is right —
+        // but the elimination had not started, and the old string said it had.
+        let matrix = GaveUp::DeadlineBuildingFarkasMatrix.detail();
+        assert!(
+            matrix.contains("Fourier") && matrix.contains("never started"),
+            "the matrix is the elimination's, but the elimination had not run: {matrix:?}"
+        );
+
+        // A cause that is not a budget must say so, because the `unknown` it
+        // produces carries `UnknownKind::ResourceLimit` and a reader who stops
+        // at the kind would draw exactly the wrong conclusion.
+        for fm in listed_fm_declines() {
+            assert_eq!(
+                fm.name().starts_with("Overflow"),
+                fm.describe().contains("not a budget"),
+                "FmDecline::{}: an overflow must disclaim the budget and a budget must not: {:?}",
+                fm.name(),
+                fm.describe()
+            );
+        }
+        for simplex in listed_simplex_declines() {
+            let is_a_budget = matches!(
+                simplex,
+                SimplexDecline::DeadlineBuildingRows | SimplexDecline::EngineDeclined
+            );
+            assert_ne!(
+                is_a_budget,
+                simplex.describe().contains("not a budget"),
+                "SimplexDecline::{}: {:?}",
+                simplex.name(),
+                simplex.describe()
+            );
+        }
+
+        // Both engines ran, so both are named, with both causes. The old string
+        // named one engine for every case and it was usually the wrong one.
+        let both = GaveUp::EliminationThenSimplexDeclined {
+            fm: FmDecline::SizeGuard,
+            simplex: SimplexDecline::ModelDidNotReplay,
+        }
+        .detail();
+        assert!(
+            both.contains("Fourier") && both.contains("simplex"),
+            "when both engines declined, both must appear: {both:?}"
+        );
+        assert!(
+            both.contains("MAX_FM_CONSTRAINTS") && both.contains("did not replay"),
+            "and so must BOTH causes: {both:?}"
+        );
+    }
+
+    // ---- driving the producers -----------------------------------------
+
+    fn expired() -> Option<Instant> {
+        Some(
+            Instant::now()
+                .checked_sub(Duration::from_secs(1))
+                .expect("an instant one second ago"),
+        )
+    }
+
+    /// One row `coeff·x0 + constant {<,≤} 0`, with no multiplier vector (the
+    /// decline paths below never read one).
+    fn row(coeff: i128, constant: i128) -> Constraint {
+        let mut coeffs = BTreeMap::new();
+        coeffs.insert(0usize, Rational::integer(coeff));
+        Constraint {
+            expr: LinExpr {
+                coeffs,
+                constant: Rational::integer(constant),
+            },
+            strict: false,
+            mult: Vec::new(),
+            origin: 0,
+        }
+    }
+
+    /// `pos` upper bounds and `neg` lower bounds on `x0`; the cross product is
+    /// `pos · neg`, which is what [`MAX_FM_CONSTRAINTS`] bounds.
+    fn crossing_system(pos: usize, neg: usize) -> Vec<Constraint> {
+        let mut system = Vec::with_capacity(pos + neg);
+        for i in 0..pos {
+            system.push(row(1, -(i as i128) - 1));
+        }
+        for i in 0..neg {
+            system.push(row(-1, -(i as i128) - 1));
+        }
+        system
+    }
+
+    /// `x <= 5`, collected, so the tests below hold a real [`Collector`] rather
+    /// than a hand-built one whose invariants nobody checks.
+    fn collected_x_le_5() -> (TermArena, Vec<TermId>, Collector) {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("give_up_x").expect("a real variable");
+        let five = arena.real_const(Rational::integer(5));
+        let assertion = arena.real_le(x, five).expect("x <= 5");
+        let assertions = vec![assertion];
+        let ctx = collect_constraints(&arena, &assertions, None)
+            .expect("collection succeeds")
+            .expect("nothing declines with no deadline and no watchdog");
+        (arena, assertions, ctx)
+    }
+
+    /// The producers no test below drives, each with the reason it cannot be
+    /// driven. **Named rather than omitted**: a coverage set that silently
+    /// covers fewer producers is exactly the shape this whole change exists to
+    /// remove.
+    ///
+    /// - `SimplexDecline::CertificateFailedSelfCheck` — reachable only when the
+    ///   simplex reports `Infeasible` with multipliers that then fail
+    ///   `FarkasCertificate::verify`, i.e. only from a procedure bug in one of
+    ///   the two. Constructing it means constructing the bug.
+    /// - `SimplexDecline::InfeasibleWithoutCertificate` — needs
+    ///   `SimplexOutcome::Infeasible` with an EMPTY multiplier vector, which
+    ///   `narrow` produces only for a strict-delta refutation the engine cannot
+    ///   express in rationals. No input is known to produce one.
+    const UNDRIVABLE_SIMPLEX_DECLINES: &[&str] =
+        &["CertificateFailedSelfCheck", "InfeasibleWithoutCertificate"];
+
+    /// Reasons whose producer needs the clock to expire INSIDE one phase rather
+    /// than before it, so the test calibrates the machine and sets the deadline
+    /// as a ratio of a measured run. They are driven, and asserted — but a
+    /// miss is reported as a miss instead of failing the suite, because a
+    /// scheduler stall is not a defect in the code under test.
+    ///
+    /// Everything NOT listed here is asserted unconditionally.
+    const CALIBRATED_FM_DECLINES: &[&str] = &["DeadlineInCrossProduct"];
+    const CALIBRATED_GIVE_UPS: &[&str] = &[
+        "DeadlineCollectingConstraints",
+        "DeadlineBuildingFarkasMatrix",
+    ];
+
+    /// Each producer, driven, reports its own reason — and the set driven is
+    /// checked against the set the SOURCE declares.
+    ///
+    /// Every case carries a control that must move: the same construction
+    /// without the condition under test decides, so a case cannot pass by the
+    /// engine failing for an unrelated reason.
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn each_producer_reports_its_own_reason() {
+        let _lock = WATCHDOG_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        clear_watchdog_for_test();
+
+        let mut fm_seen: BTreeSet<&'static str> = BTreeSet::new();
+        let mut simplex_seen: BTreeSet<&'static str> = BTreeSet::new();
+        let mut gave_up_seen: BTreeSet<&'static str> = BTreeSet::new();
+
+        // --- `eliminate`: four bails that used to be one bare `None` --------
+        let big = crossing_system(150, 150); // 22 500 > MAX_FM_CONSTRAINTS
+        assert_eq!(
+            eliminate(&big, 0, None).err(),
+            Some(ElimBail::SizeGuard),
+            "the deterministic size guard is not a clock"
+        );
+        let small = crossing_system(3, 3); // the control: 9 rows, well under
+        assert!(
+            eliminate(&small, 0, None).is_ok(),
+            "control: the same shape under the guard must eliminate"
+        );
+
+        let overflowing = vec![row(1, -1), row(i128::MIN, -1)];
+        assert_eq!(
+            eliminate(&overflowing, 0, None).err(),
+            Some(ElimBail::Overflow),
+            "an i128 overflow is not a clock either"
+        );
+        assert!(
+            eliminate(&[row(1, -1), row(-1, -1)], 0, None).is_ok(),
+            "control: the same shape with a representable coefficient eliminates"
+        );
+
+        assert_eq!(
+            eliminate(&small, 0, expired()).err(),
+            Some(ElimBail::Deadline),
+            "and the clock is still the clock"
+        );
+
+        trip_watchdog_for_test(1, 2);
+        assert_eq!(
+            eliminate(&small, 0, None).err(),
+            Some(ElimBail::MemoryWatchdog),
+            "a tripped watchdog reports itself instead of being recovered by the caller"
+        );
+        clear_watchdog_for_test();
+
+        // --- `solve`: the elimination's four reported reasons ---------------
+        for (system, nvars, deadline, expected) in [
+            (
+                crossing_system(3, 3),
+                1,
+                expired(),
+                FmDecline::DeadlineBetweenVariables,
+            ),
+            (crossing_system(150, 150), 1, None, FmDecline::SizeGuard),
+            (
+                vec![row(1, -1), row(i128::MIN, -1)],
+                1,
+                None,
+                FmDecline::OverflowEliminating,
+            ),
+            // The projection is FEASIBLE here and the overflow is in the back
+            // substitution, so the query is satisfiable and we merely cannot
+            // name the point — the case the old label described as an exhausted
+            // budget.
+            (
+                vec![row(1, i128::MIN)],
+                1,
+                None,
+                FmDecline::OverflowBackSubstituting,
+            ),
+        ] {
+            let outcome = solve(&system, nvars, deadline);
+            let Feasibility::Declined(fm) = outcome else {
+                panic!("expected FmDecline::{}", expected.name());
+            };
+            assert_eq!(fm, expected, "solve reported FmDecline::{}", fm.name());
+            fm_seen.insert(fm.name());
+        }
+        // Control: a system with none of those properties is decided.
+        assert!(
+            matches!(solve(&crossing_system(3, 3), 1, None), Feasibility::Sat(_)),
+            "control: an ordinary small system is still decided"
+        );
+
+        // `DeadlineInCrossProduct` is `solve`'s mapping of `ElimBail::Deadline`,
+        // and reaching it needs the clock to expire AFTER `solve`'s own
+        // per-variable poll and INSIDE one variable's cross product. The budget
+        // is calibrated from the machine rather than assumed: the uninterrupted
+        // elimination is timed first and the deadline set to a quarter of it,
+        // so the margin is a ratio on this host and not a constant.
+        let crossing = crossing_system(100, 100);
+        let started = Instant::now();
+        assert!(
+            eliminate(&crossing, 0, None).is_ok(),
+            "control: the calibration run itself must eliminate"
+        );
+        let uninterrupted = started.elapsed();
+        let deadline = Some(Instant::now() + uninterrupted / 4);
+        match solve(&crossing, 1, deadline) {
+            Feasibility::Declined(fm @ FmDecline::DeadlineInCrossProduct) => {
+                fm_seen.insert(fm.name());
+            }
+            other => {
+                // Not a failure: on a machine where the calibration run is
+                // shorter than the scheduler's own granularity the poll at the
+                // top of `solve` wins instead. Report it rather than assert a
+                // timing race.
+                let named = match other {
+                    Feasibility::Declined(fm) => fm.name(),
+                    _ => "a verdict",
+                };
+                println!(
+                    "NOT DRIVEN: FmDecline::DeadlineInCrossProduct (calibration \
+                     {uninterrupted:?} reached {named} instead); the `ElimBail::Deadline` \
+                     half is pinned above"
+                );
+            }
+        }
+
+        // --- `simplex_fallback`: six declines that used to be one `Ok(None)` --
+        let (arena, assertions, ctx) = collected_x_le_5();
+        assert_eq!(
+            simplex_fallback(&arena, &assertions, &ctx, expired())
+                .expect("no backend error")
+                .err(),
+            Some(SimplexDecline::DeadlineBuildingRows)
+        );
+        assert!(
+            matches!(
+                simplex_fallback(&arena, &assertions, &ctx, None).expect("no backend error"),
+                Ok(Decision::Sat(_))
+            ),
+            "control: with no deadline the same system is decided sat"
+        );
+        simplex_seen.insert("DeadlineBuildingRows");
+
+        let mut poisoned = collected_x_le_5().2;
+        poisoned.constraints[0].expr.constant = Rational::integer(i128::MIN);
+        assert_eq!(
+            simplex_fallback(&arena, &assertions, &poisoned, None)
+                .expect("no backend error")
+                .err(),
+            Some(SimplexDecline::OverflowBuildingRows)
+        );
+        simplex_seen.insert("OverflowBuildingRows");
+
+        // A satisfiable system whose model cannot replay, because the assertion
+        // it is replayed against is `false`. This decline is a standing signal
+        // about the trust anchor for every `sat` on this route, and before
+        // ADR-2060 it was rendered as a Fourier–Motzkin timeout.
+        let mut false_arena = TermArena::new();
+        let never = false_arena.bool_const(false);
+        assert_eq!(
+            simplex_fallback(&false_arena, &[never], &ctx, None)
+                .expect("no backend error")
+                .err(),
+            Some(SimplexDecline::ModelDidNotReplay)
+        );
+        simplex_seen.insert("ModelDidNotReplay");
+
+        // Zero rows: the row loop never runs, so the expired deadline reaches
+        // `simplex::feasible_within`, whose pivot loop polls on entry.
+        let empty = Collector::default();
+        assert_eq!(
+            simplex_fallback(&arena, &[], &empty, expired())
+                .expect("no backend error")
+                .err(),
+            Some(SimplexDecline::EngineDeclined)
+        );
+        assert!(
+            matches!(
+                simplex_fallback(&arena, &[], &empty, None).expect("no backend error"),
+                Ok(Decision::Sat(_))
+            ),
+            "control: the empty system with no deadline is decided sat"
+        );
+        simplex_seen.insert("EngineDeclined");
+
+        // --- the two two-engine gates ---------------------------------------
+        let mut stages = CubeStages {
+            simplex: Some(Duration::ZERO),
+            ..CubeStages::default()
+        };
+        let decision = simplex_after_elimination(
+            &arena,
+            &assertions,
+            &ctx,
+            1,
+            1,
+            false,
+            &mut stages,
+            Some(SimplexDecline::ModelDidNotReplay),
+            FmDecline::SizeGuard,
+            None,
+        )
+        .expect("no backend error");
+        assert_eq!(
+            decision_gave_up(&decision),
+            Some(GaveUp::SimplexThenEliminationDeclined {
+                simplex: SimplexDecline::ModelDidNotReplay,
+                fm: FmDecline::SizeGuard,
+            }),
+            "a simplex that already declined is not re-run, and BOTH causes are reported"
+        );
+        gave_up_seen.insert("SimplexThenEliminationDeclined");
+
+        let mut stages = CubeStages::default();
+        let decision = simplex_after_elimination(
+            &arena,
+            &assertions,
+            &ctx,
+            1,
+            1,
+            false,
+            &mut stages,
+            None,
+            FmDecline::OverflowEliminating,
+            expired(),
+        )
+        .expect("no backend error");
+        assert_eq!(
+            decision_gave_up(&decision),
+            Some(GaveUp::EliminationThenSimplexDeclined {
+                fm: FmDecline::OverflowEliminating,
+                simplex: SimplexDecline::DeadlineBuildingRows,
+            }),
+            "the elimination's overflow and the simplex's clock are DIFFERENT facts"
+        );
+        gave_up_seen.insert("EliminationThenSimplexDeclined");
+
+        // --- `decide_within`'s own gates ------------------------------------
+        let (wide_arena, wide) = wide_system(1_500);
+        assert_eq!(
+            decide_within(&wide_arena, &wide, expired())
+                .ok()
+                .as_ref()
+                .and_then(decision_gave_up),
+            Some(GaveUp::DeadlineOnEntry),
+            "an expired deadline stops at the entry poll, before collection"
+        );
+        gave_up_seen.insert("DeadlineOnEntry");
+
+        // Collection is timed on THIS machine and the deadline set inside it,
+        // so the margin is a ratio rather than a constant.
+        let started = Instant::now();
+        assert!(
+            collect_constraints(&wide_arena, &wide, None)
+                .expect("no backend error")
+                .is_ok(),
+            "control: the calibration collection itself succeeds"
+        );
+        let collect_took = started.elapsed();
+        assert_eq!(
+            collect_constraints(&wide_arena, &wide, expired())
+                .expect("no backend error")
+                .err(),
+            Some(CollectDecline::Deadline),
+            "collection reports the clock itself instead of leaving the caller to re-read it"
+        );
+        match decide_within(&wide_arena, &wide, Some(Instant::now() + collect_took / 3))
+            .ok()
+            .as_ref()
+            .and_then(decision_gave_up)
+        {
+            Some(GaveUp::DeadlineCollectingConstraints) => {
+                gave_up_seen.insert("DeadlineCollectingConstraints");
+            }
+            other => println!(
+                "NOT DRIVEN: GaveUp::DeadlineCollectingConstraints (collection took \
+                 {collect_took:?}, got {other:?}); the `CollectDecline::Deadline` half is \
+                 pinned above"
+            ),
+        }
+
+        // The multiplier-matrix gate, with the deadline set PAST collection
+        // instead of inside it. 1 500 rows is at or above
+        // `lra_route::SIMPLEX_FIRST_AT_CONSTRAINTS`, so the simplex runs first,
+        // its `O(n²)` dense row build overruns a deadline that `O(n)` collection
+        // cleared, and the elimination's `O(n²)` multiplier loop is then the
+        // next thing polled. The margin is structural (one phase is quadratic in
+        // what the other is linear in), not a constant.
+        match decide_within(&wide_arena, &wide, Some(Instant::now() + collect_took * 3))
+            .ok()
+            .as_ref()
+            .and_then(decision_gave_up)
+        {
+            Some(GaveUp::DeadlineBuildingFarkasMatrix) => {
+                gave_up_seen.insert("DeadlineBuildingFarkasMatrix");
+            }
+            other => println!(
+                "NOT DRIVEN: GaveUp::DeadlineBuildingFarkasMatrix (collection took \
+                 {collect_took:?}, got {other:?})"
+            ),
+        }
+
+        // Coverage, against the SOURCE and not against a literal. Each
+        // exemption list is itself checked against the source, so a list that
+        // names a variant which no longer exists fails rather than silently
+        // excusing nothing.
+        for (kind, seen, exempt) in [
+            ("FmDecline", &fm_seen, CALIBRATED_FM_DECLINES),
+            ("SimplexDecline", &simplex_seen, UNDRIVABLE_SIMPLEX_DECLINES),
+            ("GaveUp", &gave_up_seen, CALIBRATED_GIVE_UPS),
+        ] {
+            let declared: BTreeSet<String> = declared_variants(kind).into_iter().collect();
+            let exempt_set: BTreeSet<&str> = exempt.iter().copied().collect();
+            assert!(
+                exempt_set.iter().all(|n| declared.contains(*n)),
+                "{kind}: an exemption names a variant the source no longer declares: \
+                 {exempt_set:?} vs {declared:?}"
+            );
+            let required: BTreeSet<&str> = declared
+                .iter()
+                .map(String::as_str)
+                .filter(|n| !exempt_set.contains(n))
+                .collect();
+            let missing: Vec<&&str> = required.iter().filter(|n| !seen.contains(**n)).collect();
+            assert!(
+                missing.is_empty(),
+                "{kind}: the source declares reasons no producer in this test drives: \
+                 {missing:?}. Add a case, or add it to the exemption list WITH A REASON."
+            );
+            for name in &exempt_set {
+                if !seen.contains(name) {
+                    println!("NOT DRIVEN (exempt): {kind}::{name}");
+                }
+            }
+        }
+    }
+
+    /// `GaveUp` if the decision gave up at a resource gate.
+    fn decision_gave_up(decision: &Decision) -> Option<GaveUp> {
+        match decision {
+            Decision::GaveUp(g) => Some(*g),
+            _ => None,
+        }
+    }
+
+    /// `count` real constraints `x_i <= i` over `count` distinct variables.
+    fn wide_system(count: usize) -> (TermArena, Vec<TermId>) {
+        let mut arena = TermArena::new();
+        let mut assertions = Vec::with_capacity(count);
+        for i in 0..count {
+            let x = arena
+                .real_var(&format!("give_up_wide_x{i}"))
+                .expect("a real variable");
+            let bound = arena.real_const(Rational::integer(i as i128));
+            assertions.push(arena.real_le(x, bound).expect("x_i <= i"));
+        }
+        (arena, assertions)
+    }
+
+    /// An `i128` overflow while linearizing is reported as an INCOMPLETENESS,
+    /// not as a clock.
+    ///
+    /// This is the producer ADR-2045 singled out: `lra.rs`'s `ctx.overflow`
+    /// branch returned `Decision::TimedOut` at a line where NEITHER engine has
+    /// run, and it rendered as "Fourier–Motzkin elimination exceeded the
+    /// wall-clock / size budget". The control below is the same query with a
+    /// representable coefficient, which is decided.
+    #[test]
+    fn an_overflow_while_linearizing_is_an_incompleteness_and_not_a_timeout() {
+        let _lock = WATCHDOG_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        clear_watchdog_for_test();
+
+        let build = |scale: i128| {
+            let mut arena = TermArena::new();
+            let x = arena.real_var("overflow_x").expect("a real variable");
+            let doubled = arena.real_add(x, x).expect("x + x");
+            let factor = arena.real_const(Rational::integer(scale));
+            let scaled = arena.real_mul(factor, doubled).expect("scale * (x + x)");
+            let zero = arena.real_const(Rational::zero());
+            let assertion = arena.real_le(scaled, zero).expect("<= 0");
+            (arena, vec![assertion])
+        };
+
+        let (arena, assertions) = build(i128::MAX);
+        let decision = decide_within(&arena, &assertions, None).expect("a decision");
+        let Decision::Incomplete(detail) = &decision else {
+            panic!("an i128 overflow must not be a resource gate");
+        };
+        assert!(
+            detail.contains("i128 overflow") && detail.contains("not a clock"),
+            "the detail must say what it is and what it is not: {detail:?}"
+        );
+        assert!(
+            !detail.contains("Fourier") && !detail.contains("simplex"),
+            "neither engine has run at this line: {detail:?}"
+        );
+
+        // The public surface carries the corrected kind, which is the half a
+        // machine reads.
+        let result = check_with_lra_within(&arena, &assertions, None).expect("a result");
+        let CheckResult::Unknown(reason) = &result else {
+            panic!("an overflowed collection cannot be a verdict: {result:?}");
+        };
+        assert_eq!(reason.kind, UnknownKind::Incomplete);
+
+        let (control_arena, control) = build(2);
+        assert!(
+            matches!(
+                decide_within(&control_arena, &control, None).expect("a decision"),
+                Decision::Sat(_)
+            ),
+            "control: the same query with a representable coefficient is decided"
+        );
+    }
+}
