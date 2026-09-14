@@ -1,0 +1,12 @@
+file	verdict	rc	wall_ms	attempts	decided_by	bound_by	last	bound_ms	total_ms	open_after	open_ms	dump_rows	giveup
+UFLIA/boogie/Arrays_Q3-noinfer.smt2	unknown	0	24134	17	none	q:egraph	fd:bounded-completeness-unsat	22458	24032			2167	give-up kind=ResourceLimit detail=quantified solve time budget exhausted after e-matching
+UFLIA/boogie/ExposeVersion_D..ctor-level_2.smt2	unknown	0	24333	17	none	q:egraph	fd:bounded-completeness-unsat	18577	24203			6175	give-up kind=ResourceLimit detail=quantified solve time budget exhausted after e-matching
+UFLIA/grasshopper/uninstantiated/merge_loop_check_heap_access_60_6.smt2	unknown	0	25136	6	none	q:mbqi-quick	q:mbqi-quick	1683	1703	q:mbqi-quick	23296	38	give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+UFLIA/simplify/javafe.ast.UnaryExpr.424.smt2	unknown	0	22830	19	none	q:egraph	fd:bounded-completeness-unsat	16811	22683			8902	give-up kind=ResourceLimit detail=e-matching: instantiation time budget exhausted
+UFLIA/simplify2/front_end_suite/javafe.ast.AmbiguousVariableAccess.004.smt2	unknown	0	25038	7	none	q:mbqi-quick	q:egraph	8399	22658	q:egraph	2342	8192	give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+UFLIA/simplify2/front_end_suite/javafe.ast.LabelStmt.011.smt2	unknown	0	25036	7	none	q:mbqi-quick	q:egraph	8816	22678	q:egraph	2321	8192	give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+UFLIA/simplify2/front_end_suite/javafe.ast.TypeModifierPragmaVec.013.smt2	unknown	0	24135	17	none	q:egraph	fd:bounded-completeness-unsat	22208	24029			2254	give-up kind=ResourceLimit detail=quantified solve time budget exhausted after e-matching
+UFLIA/simplify2/front_end_suite/javafe.parser.test.TestLex.030.smt2	unknown	0	25035	7	none	q:mbqi-quick	q:egraph	8411	22327	q:egraph	2672	8192	give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+UFLIA/simplify2/front_end_suite/javafe.tc.TypeSigVec.005.smt2	unknown	0	24234	17	none	q:egraph	fd:bounded-completeness-unsat	22013	24162			4224	give-up kind=ResourceLimit detail=quantified solve time budget exhausted after e-matching
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1057395.smt2	unknown	0	18928	20	none	q:egraph	fd:bounded-completeness-unsat	11238	18834			9493	give-up kind=ResourceLimit detail=e-matching: instantiation time budget exhausted
+UFLIA/sledgehammer/Hoare/smtlib.993567.smt2	unknown	0	24037	20	none	q:egraph	fd:bounded-completeness-unsat	21416	23949			8544	give-up kind=ResourceLimit detail=e-matching: instantiation time budget exhausted

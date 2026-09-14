@@ -1,0 +1,11 @@
+file	verdict	rc	wall_ms	attempts	decided_by	bound_by	last	bound_ms	total_ms	open_after	open_ms	dump_rows	giveup
+UFNIA/2019-Preiner/full/f2_rw120.smt2	unknown	0	15423	19	none	q:mbqi	fd:bounded-completeness-unsat	8645	15367			40	give-up kind=ResourceLimit detail=e-matching: instantiation time budget exhausted
+UFNIA/2019-Preiner/partial/t3_rw114.smt2	unknown	0	24132	17	none	q:egraph	fd:bounded-completeness-unsat	22538	24046			1509	give-up kind=ResourceLimit detail=quantified solve time budget exhausted after e-matching
+UFNIA/2019-Preiner/qf/f2_rw163.smt2	unknown	0	8815	108	none	uf-arithmetic	fd:bounded-completeness-unsat	639	5292			0	give-up kind=Incomplete detail=no model within the bounded integer width 32; widen the bound
+UFNIA/2019-Zohar-ic/full/int_check_bvugt_bvneg_ltr_inv_g.smt2	unknown	0	24030	17	none	q:egraph	fd:bounded-completeness-unsat	22498	24008			30	give-up kind=ResourceLimit detail=quantified solve time budget exhausted after e-matching
+UFNIA/2019-Zohar-ic/qf/int_check_eq_bvnot_ltr_no_inv.smt2	unknown	0	5612	19	none	q:mbqi	fd:bounded-completeness-unsat	2332	5545			18	give-up kind=Incomplete detail=instantiation is satisfiable; the universal may still be violated outside the instantiated terms
+UFNIA/sledgehammer/FFT/z3.885941.smt2	unsat	0	2310	8	q:egraph	q:egraph	q:egraph	2018	2257			0	
+UFNIA/sledgehammer/TwoSquares/z3.710000.smt2	unknown	0	24129	18	none	q:egraph	fd:bounded-completeness-unsat	19090	24011			0	give-up kind=ResourceLimit detail=quantified solve time budget exhausted after e-matching
+UFNIA/spec_sharp/test14-Xml.ssc.17.Microsoft.Boogie.XmlSink.WriteFileFragment_System.String_notnull.smt2	unknown	0	107	1	none	fd:parse	fd:parse	7	7			0	give-up kind=ResourceLimit detail=ingest resource limit: `distinct` with 380 arguments requires 72010 pairwise expansions; deterministic limit is 65536
+UFNIA/vcc-havoc/havoc-bench_036.1.AddElement.smt2	unknown	0	25030	5	none	q:forall-exists-witness	q:uf-fmf-probe	7	11	q:uf-fmf-probe	24988	0	give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+UFNIA/vcc-havoc/verisoft-sim.c.1.13.untranslated_write_sim.smt2	unknown	0	15020	19	none	q:mbqi	fd:bounded-completeness-unsat	9250	14942			228	give-up kind=ResourceLimit detail=e-matching: instantiation time budget exhausted
