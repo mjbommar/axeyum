@@ -10264,5 +10264,48 @@ SUITES["solver-bool-skeleton-rung"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `smtlib-declared-name-wins` — a user `declare-fun` outranks the theory
+# operator arm of the same name (ADR-2040).
+#
+# Three guards, failing in three different directions.  The polarity guard
+# failing OPEN would ship an unmeasured front-door change and make an A/B
+# measure the armed arm against itself.  The ARITY and SORT guards are what
+# keep the redirect a no-op wherever the theory reading was the applicable
+# one: drop either and a name match alone captures the application, so
+# `(fp #b0 #b00000000 #b0…)` in a genuine `QF_FP` script that also happens to
+# declare an `fp` would be read as an uninterpreted application instead of an
+# IEEE literal — a wrong term, not a refused one.
+# --------------------------------------------------------------------------
+
+SUITES["smtlib-declared-name-wins"] = (
+    "crates/axeyum-smtlib/src/parse.rs",
+    Cargo(
+        ("-p", "axeyum-smtlib", "--lib", "declared_name_wins"),
+        "smtlib-declared-name-wins",
+    ),
+    [
+        (
+            # The lever fails OPEN: every spelling arms the redirect.
+            "the lever's opt-in polarity guard",
+            '            Ok("on" | "1")',
+            '            Ok(_) | Err(_)',
+        ),
+        (
+            # Arity no longer has to match.
+            "the arity half of the signature test",
+            "    if params.len() == args.len()",
+            "    if params.len() <= args.len()",
+        ),
+        (
+            # Sorts no longer have to match: the NAME alone captures.
+            "the sort half of the signature test",
+            "            .all(|(&p, &a)| arena.sort_of(a) == p)",
+            "            .all(|(&p, &a)| arena.sort_of(a) == p || true)",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
