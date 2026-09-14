@@ -74,6 +74,40 @@ use axeyum_ir::Rational;
 /// keeps whatever engine it had. Purely structural (no clock), so the decline is deterministic.
 pub(crate) const MAX_TABLEAU_CELLS: usize = 4_000_000;
 
+/// Diagnostic (`AXEYUM_LRADENSEPROBE=1`): report resident-set size at each of the
+/// four points on the offline dense LRA route where a large allocation either
+/// lands or is released, so the 5.07 GiB median [ADR-2045] measured over this
+/// division can be **split** between the sites rather than attributed to one by
+/// reading the code.
+///
+/// It exists because [ADR-2045] named two allocations on this path and could
+/// price neither: peak RSS is one number for the whole process and
+/// `/usr/bin/time -v` cannot say which structure holds it. The sites are
+/// entered at most once per offline solve, so a per-call `env::var` would be
+/// harmless here — the [`std::sync::OnceLock`] matches the house idiom
+/// (`euf::ackermann_probe_enabled`) rather than answering a hot-path problem.
+/// Printed, never acted on: nothing in the solver branches on this.
+pub(crate) fn dense_probe_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var("AXEYUM_LRADENSEPROBE").is_ok_and(|value| value.trim() == "1")
+    })
+}
+
+/// Emits one `LRADENSEPROBE` line: the site, the resident set at that moment,
+/// and the site's own shape counters.
+///
+/// `rss_kb=na` when the platform has no `/proc/self/status` — reported rather
+/// than defaulted, so a missing reading can never read as zero growth.
+pub(crate) fn dense_probe(site: &str, shape: &str) {
+    if !dense_probe_enabled() {
+        return;
+    }
+    let rss = crate::memory_budget::resident_bytes()
+        .map_or_else(|| "na".to_string(), |b| (b / 1024).to_string());
+    eprintln!("; LRADENSEPROBE site={site} rss_kb={rss} {shape}");
+}
+
 /// Pivot ceiling for a single [`feasible`] / [`Incremental::check`] call. Bland's
 /// rule already guarantees termination; this is the deterministic belt so a run
 /// with **no** wall-clock deadline still cannot spin unboundedly on a pathological
@@ -543,8 +577,91 @@ pub fn feasible_within(
     for c in constraints {
         assert_eq!(c.coeffs.len(), nvars, "constraint arity mismatch");
     }
-    let mut tableau = Tableau::new(nvars, constraints);
-    match tableau.run(deadline, MAX_PIVOTS) {
+    let rows: Vec<SparseConstraint> = constraints
+        .iter()
+        .map(|c| SparseConstraint {
+            coeffs: densify_to_sparse(&c.coeffs),
+            rel: c.rel,
+            rhs: c.rhs,
+        })
+        .collect();
+    feasible_within_sparse(nvars, &rows, deadline)
+}
+
+/// One linear constraint `Σ aⱼ·x[j] ⋈ rhs` in the **sparse** form the tableau
+/// actually stores: `(column, coefficient)` pairs ascending by column, with no
+/// explicit zeros.
+///
+/// This is [`Constraint`] without the round trip. [ADR-2045] measured that the
+/// offline LRA route builds a dense `m × nvars` matrix of [`Rational`] whose
+/// **only** consumer is [`densify_to_sparse`], called by [`Tableau::new`] as its
+/// first act — so the dense form existed to be thrown away. `lra.rs` builds this
+/// directly; [`Constraint`] and [`feasible_within`] remain as the dense-input
+/// ergonomics the tableau's own tests are written against.
+#[derive(Debug, Clone)]
+pub struct SparseConstraint {
+    /// Nonzero coefficients as `(column, coefficient)`, ascending by column,
+    /// every column `< nvars`.
+    pub coeffs: Vec<(usize, Rational)>,
+    /// The comparator.
+    pub rel: Rel,
+    /// The right-hand side constant.
+    pub rhs: Rational,
+}
+
+/// [`feasible_within`] over rows that are **already** sparse — the one entry to
+/// the pivot loop; the dense form delegates here.
+///
+/// # Panics
+///
+/// If any column index is `>= nvars`. The dense path panics on exactly that
+/// input (`coeffs[index] = value` is out of bounds), and the assertion keeps the
+/// two paths' failure behaviour identical: an out-of-range column would
+/// otherwise land **silently in a slack column**, because the tableau's row
+/// width is `nvars + m` and only the first `nvars` entries are problem
+/// variables. That is a wrong answer rather than a crash, which is why it is
+/// checked and not merely documented.
+#[must_use]
+pub fn feasible_within_sparse(
+    nvars: usize,
+    constraints: &[SparseConstraint],
+    deadline: Option<Instant>,
+) -> SimplexOutcome {
+    for c in constraints {
+        assert!(
+            c.coeffs.iter().all(|&(j, _)| j < nvars),
+            "constraint column out of range"
+        );
+    }
+    let m = constraints.len();
+    let cells = m.saturating_mul(nvars.saturating_add(m));
+    dense_probe(
+        "feasible_within-entry",
+        &format!("nvars={nvars} m={m} tableau_cells={cells}"),
+    );
+    // The structural ceiling, consulted HERE and not only in `Incremental::new`.
+    // See [`tableau_cell_cap_enabled`] for why it is a lever and not simply on.
+    if tableau_cell_cap_enabled() && tableau_cells_exceed_cap(nvars, m) {
+        dense_probe(
+            "cell-cap-declined",
+            &format!("nvars={nvars} m={m} cells={cells}"),
+        );
+        return SimplexOutcome::Unknown;
+    }
+    let mut tableau = Tableau::new_sparse(nvars, constraints);
+    dense_probe(
+        "tableau-built",
+        &format!(
+            "nvars={nvars} m={m} tableau_cells={cells} nnz={}",
+            tableau.total_nnz()
+        ),
+    );
+    let outcome = tableau.run(deadline, MAX_PIVOTS);
+    dense_probe(
+        "run-done",
+        &format!("nvars={nvars} m={m} pivots={}", tableau.total_pivots),
+    );
+    match outcome {
         Ok(RunOutcome::Feasible) => match tableau.materialize() {
             Ok(point) => narrow(point).map_or(SimplexOutcome::Unknown, SimplexOutcome::Feasible),
             Err(Overflow) => SimplexOutcome::Unknown,
@@ -554,6 +671,32 @@ pub fn feasible_within(
         }
         Ok(RunOutcome::Unknown) | Err(Overflow) => SimplexOutcome::Unknown,
     }
+}
+
+/// Lever (`AXEYUM_LRA_CELL_CAP=1`): consult [`MAX_TABLEAU_CELLS`] in
+/// [`feasible_within_sparse`], which [ADR-2045] found it does not.
+///
+/// It is a lever and not simply switched on because **a cap converts an abort
+/// into a decline, which is correct but is not by itself a gain** — ADR-2045
+/// cleared a whole admission screen and decided nothing. Whether it belongs on
+/// by default is a measured question, so it is measurable from one binary.
+/// Would the dense tableau for `m` rows over `nvars` problem variables exceed
+/// [`MAX_TABLEAU_CELLS`]?
+///
+/// The width is `nvars + m`, not `nvars`: every constraint carries a slack
+/// column. Pure and clock-free, so the decline is deterministic and this is
+/// testable without touching the environment — the lever that consults it is
+/// not.
+#[must_use]
+pub(crate) fn tableau_cells_exceed_cap(nvars: usize, m: usize) -> bool {
+    m.checked_mul(nvars.checked_add(m).unwrap_or(usize::MAX))
+        .is_none_or(|cells| cells > MAX_TABLEAU_CELLS)
+}
+
+pub(crate) fn tableau_cell_cap_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED
+        .get_or_init(|| std::env::var("AXEYUM_LRA_CELL_CAP").is_ok_and(|value| value.trim() == "1"))
 }
 
 /// What the pivot loop concluded, without materializing a witness (the warm engine
@@ -777,11 +920,26 @@ impl Tableau {
         }
     }
 
+    /// Test-only since [`feasible_within`] began converting to
+    /// [`SparseConstraint`] and delegating: the tableau's own suites are written
+    /// against dense input, and this is the one remaining reader of it.
+    #[cfg(test)]
     fn new(nvars: usize, constraints: &[Constraint]) -> Tableau {
         let rows_sparse: Vec<Vec<(usize, Rational)>> = constraints
             .iter()
             .map(|c| densify_to_sparse(&c.coeffs))
             .collect();
+        let mut t = Tableau::new_rows(nvars, rows_sparse);
+        for (i, c) in constraints.iter().enumerate() {
+            t.set_row_bound(i, Some((c.rel, c.rhs)));
+        }
+        t
+    }
+
+    /// As [`Tableau::new`] over rows that are already sparse.
+    fn new_sparse(nvars: usize, constraints: &[SparseConstraint]) -> Tableau {
+        let rows_sparse: Vec<Vec<(usize, Rational)>> =
+            constraints.iter().map(|c| c.coeffs.clone()).collect();
         let mut t = Tableau::new_rows(nvars, rows_sparse);
         for (i, c) in constraints.iter().enumerate() {
             t.set_row_bound(i, Some((c.rel, c.rhs)));
@@ -1745,6 +1903,156 @@ mod tests {
     /// its budget wired to a literal `None`.
     fn feasible(nvars: usize, constraints: &[Constraint]) -> SimplexOutcome {
         feasible_within(nvars, constraints, None)
+    }
+
+    /// The identity the round-trip removal rests on, stated as an equation and
+    /// checked rather than asserted in prose.
+    ///
+    /// `lra.rs` used to build a dense `nvars`-wide vector whose ONLY consumer
+    /// was [`densify_to_sparse`]. Removing it is sound exactly when
+    /// `densify_to_sparse(scatter(sparse)) == sparse` for every row shape the
+    /// collector can emit, so that is what is tested — including the shapes that
+    /// make it interesting: an **explicit zero coefficient** (which the dense
+    /// path drops on the way back out, so the sparse builder must drop it too),
+    /// an all-zero row, and a row whose only nonzero is the last column.
+    ///
+    /// Written against a deliberately independent `scatter`: re-using the
+    /// production builder here would make the test agree with whatever it does.
+    #[test]
+    fn sparse_rows_and_the_dense_round_trip_build_the_same_row() {
+        fn scatter(nvars: usize, sparse: &[(usize, Rational)]) -> Vec<Rational> {
+            let mut dense = vec![Rational::zero(); nvars];
+            for &(j, a) in sparse {
+                dense[j] = a;
+            }
+            dense
+        }
+
+        let cases: Vec<(usize, Vec<(usize, Rational)>)> = vec![
+            (4, vec![(0, r(1)), (3, r(-2))]),
+            (4, vec![]),                                // all-zero row
+            (4, vec![(3, r(7))]),                       // only the last column
+            (1, vec![(0, r(-1))]),                      // single variable
+            (5, vec![(1, r(0)), (2, r(3))]),            // an EXPLICIT zero
+            (5, vec![(0, r(0)), (4, r(0))]),            // every entry explicitly zero
+            (3, vec![(0, r(1)), (1, r(1)), (2, r(1))]), // fully dense
+        ];
+
+        for (nvars, sparse) in cases {
+            // What the production sparse builder must produce: the zeros gone.
+            let expected: Vec<(usize, Rational)> = sparse
+                .iter()
+                .copied()
+                .filter(|(_, a)| !a.is_zero())
+                .collect();
+            let via_dense = densify_to_sparse(&scatter(nvars, &sparse));
+            assert_eq!(
+                via_dense, expected,
+                "dense round trip changed the row for nvars={nvars} {sparse:?}"
+            );
+        }
+    }
+
+    /// The two entry points agree on the OUTCOME, over systems that are
+    /// satisfiable, unsatisfiable, and mixed-relation — not only on the rows.
+    ///
+    /// A row-level identity could hold while the two paths still diverged at the
+    /// bound-setting loop or the arity assertion, so the verdict is compared too.
+    /// Deterministic generator (a fixed LCG, no clock), per the determinism
+    /// promise.
+    #[test]
+    fn the_sparse_entry_point_decides_exactly_what_the_dense_one_decides() {
+        let mut state: u64 = 0x5DEE_CE66_D125_1B01;
+        let mut next = |bound: u64| {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            (state >> 33) % bound
+        };
+
+        let mut compared = 0usize;
+        for _ in 0..200 {
+            let nvars = 1 + next(6) as usize;
+            let m = 1 + next(8) as usize;
+            let mut dense_rows: Vec<Constraint> = Vec::with_capacity(m);
+            let mut sparse_rows: Vec<SparseConstraint> = Vec::with_capacity(m);
+            for _ in 0..m {
+                let mut dense = vec![Rational::zero(); nvars];
+                let mut sparse: Vec<(usize, Rational)> = Vec::new();
+                for (j, cell) in dense.iter_mut().enumerate() {
+                    // A third of the cells stay zero, so the rows are genuinely
+                    // sparse and the two builders have something to disagree on.
+                    let a = next(7) as i128 - 3;
+                    if a != 0 {
+                        *cell = r(a);
+                        sparse.push((j, r(a)));
+                    }
+                }
+                let rel = match next(5) {
+                    0 => Rel::Le,
+                    1 => Rel::Lt,
+                    2 => Rel::Ge,
+                    3 => Rel::Gt,
+                    _ => Rel::Eq,
+                };
+                let rhs = r(next(9) as i128 - 4);
+                dense_rows.push(Constraint {
+                    coeffs: dense,
+                    rel,
+                    rhs,
+                });
+                sparse_rows.push(SparseConstraint {
+                    coeffs: sparse,
+                    rel,
+                    rhs,
+                });
+            }
+            let a = feasible_within(nvars, &dense_rows, None);
+            let b = feasible_within_sparse(nvars, &sparse_rows, None);
+            assert_eq!(a, b, "dense and sparse disagreed at nvars={nvars} m={m}");
+            compared += 1;
+        }
+        // A differential test that compared nothing would pass silently.
+        assert_eq!(compared, 200, "the generator stopped producing systems");
+    }
+
+    /// An out-of-range column is a PANIC on the sparse path, as it already is on
+    /// the dense one.
+    ///
+    /// This is the one way the sparse form is more dangerous than the dense one
+    /// and the reason the assertion exists: the tableau's rows are `nvars + m`
+    /// wide, so a column `>= nvars` would land silently in a SLACK column and
+    /// produce a wrong answer instead of a crash.
+    #[test]
+    #[should_panic(expected = "constraint column out of range")]
+    fn a_column_past_nvars_is_refused_rather_than_written_into_a_slack() {
+        let rows = vec![SparseConstraint {
+            coeffs: vec![(2usize, r(1))], // nvars is 2, so column 2 is the slack
+            rel: Rel::Le,
+            rhs: r(1),
+        }];
+        let _ = feasible_within_sparse(2, &rows, None);
+    }
+
+    /// The cell cap's arithmetic, at the boundary and over the overflow it has
+    /// to survive.
+    ///
+    /// The width is `nvars + m` and not `nvars`, which is the whole reason
+    /// `MAX_TABLEAU_CELLS` and the shapes this route meets are further apart
+    /// than they look. Asserted on both sides of the boundary so a cap that
+    /// always fired, or never did, fails here.
+    #[test]
+    fn the_cell_cap_counts_slack_columns_and_survives_overflow() {
+        // 2000 rows x (2000 + 2000) columns = 8M cells, over the 4M cap.
+        assert!(tableau_cells_exceed_cap(2_000, 2_000));
+        // 1000 x (1000 + 1000) = 2M cells, under it.
+        assert!(!tableau_cells_exceed_cap(1_000, 1_000));
+        // Exactly at the cap is NOT over it.
+        assert!(!tableau_cells_exceed_cap(MAX_TABLEAU_CELLS - 1, 1));
+        assert!(tableau_cells_exceed_cap(MAX_TABLEAU_CELLS, 1));
+        // A product that does not fit `usize` is over the cap, not a wrap to 0.
+        assert!(tableau_cells_exceed_cap(usize::MAX, usize::MAX));
+        assert!(tableau_cells_exceed_cap(usize::MAX / 2, 4));
     }
 
     /// `Incremental::policy` reports the policy the engine is actually
