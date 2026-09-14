@@ -1,7 +1,7 @@
 # ADR-2010: the `sat`-side replay guarantee is orthogonal to how the parser actually fails
 
 Status: accepted
-Index-summary: CLAUDE.md's hard rule — "every `sat` result must be checkable by evaluating the original term against the lifted model" — was audited against the SMT-LIB front door, whose replay is `check_model(&script.arena, &solved.assertions, model)` over the **parser-produced** assertions. **The audit found three reachable wrong verdicts, all in the parser's UNCONDITIONAL s-expression desugars, none behind a lever or a feature gate, and the replay could not have caught any of the three.** (1) `desugar_sets` keyed each element bit on the literal's RAW TEXT, so `#b0101`/`#x5`/`(_ bv5 4)` and `1.5`/`1.50` were two elements each: `(set.member #b0101 s)` with `(not (set.member #x5 s))` answered **`sat`** (cvc5 `unsat`) while the same script with one spelling answered `unsat` — a verdict depending on the SPELLING of a literal, and the dual `(set.member #x5 (set.singleton #b0101))` a wrong `unsat`. (2) `desugar_const_arrays` collected `(assert (= s ((as const …) v)))` by scanning all top-level commands with **no notion of scope OR order**, then dropped it and inlined across the whole list: a definition inside a popped `push`, and a definition placed after a `check-sat` and inlined backwards past it, each gave a wrong **`unsat`** — the second needing no `push`/`pop` at all. (3) `desugar_sets`'s universe was `d + MARGIN` with `MARGIN` a **constant 2**, so N free set variables could not be pairwise distinct past `2^(d+2)`: 5 free sets answered **`unsat`** (cvc5 `sat`), 4 answered `sat`, and adding one named literal to raise `d` restored `sat` — the threshold sitting exactly at `2^(0+2)`. **The headline is not the three bugs but why one guarantee missed all of them, for two DIFFERENT structural reasons**: the source terms of a parse-level desugar never become IR terms at all (so replaying "against the originally parsed assertions" is a no-op — the original parse IS the encoding), and a STRENGTHENING rewrite produces wrong `unsat`, which a `sat`-side replay cannot see however it is implemented. **So the general guarantee is NOT achievable in the form the rule states, and per-rewrite arguments plus per-rewrite adversarial tests are the right design** — 18 tests in `parser_desugar_soundness.rs`, registered at L0, each aimed at the direction where the defect has somewhere to go and each paired with a non-vacuity control (ADR-1976). Guard-deletion: **10 guards mutated, 0 untested, 10 distinct death-sets, separable**; replacing the width decline with a `min()` clamp kills exactly one test. Corpus cost measured rather than predicted: **23 affected files, decided 15 → 15, delta 0, 0 of 23 verdicts differ**, with a freshness control confirming the base binary reproduces all three wrong answers. A full transformation inventory of `parse.rs` (615 `fn`, 552 non-test; 5 independent enumeration strategies reconciled) classifies every transformation between text and `Script::assertions` by direction; the eleven `weaker` side channels each have a code gate, not just a comment.
+Index-summary: CLAUDE.md's hard rule — "every `sat` result must be checkable by evaluating the original term against the lifted model" — was audited against the SMT-LIB front door, whose replay is `check_model(&script.arena, &solved.assertions, model)` over the **parser-produced** assertions. **The audit found three reachable wrong verdicts, all in the parser's UNCONDITIONAL s-expression desugars, none behind a lever or a feature gate, and the replay could not have caught any of the three.** (1) `desugar_sets` keyed each element bit on the literal's RAW TEXT, so `#b0101`/`#x5`/`(_ bv5 4)` and `1.5`/`1.50` were two elements each: `(set.member #b0101 s)` with `(not (set.member #x5 s))` answered **`sat`** (cvc5 `unsat`) while the same script with one spelling answered `unsat` — a verdict depending on the SPELLING of a literal, and the dual `(set.member #x5 (set.singleton #b0101))` a wrong `unsat`. (2) `desugar_const_arrays` collected `(assert (= s ((as const …) v)))` by scanning all top-level commands with **no notion of scope OR order**, then dropped it and inlined across the whole list: a definition inside a popped `push`, and a definition placed after a `check-sat` and inlined backwards past it, each gave a wrong **`unsat`** — the second needing no `push`/`pop` at all. (3) `desugar_sets`'s universe was `d + MARGIN` with `MARGIN` a **constant 2**, so N free set variables could not be pairwise distinct past `2^(d+2)`: 5 free sets answered **`unsat`** (cvc5 `sat`), 4 answered `sat`, and adding one named literal to raise `d` restored `sat` — the threshold sitting exactly at `2^(0+2)`. **The headline is not the three bugs but why one guarantee missed all of them, for two DIFFERENT structural reasons**: the source terms of a parse-level desugar never become IR terms at all (so replaying "against the originally parsed assertions" is a no-op — the original parse IS the encoding), and a STRENGTHENING rewrite produces wrong `unsat`, which a `sat`-side replay cannot see however it is implemented. **So the general guarantee is NOT achievable in the form the rule states, and per-rewrite arguments plus per-rewrite adversarial tests are the right design** — 18 tests in `parser_desugar_soundness.rs`, registered at L0, each aimed at the direction where the defect has somewhere to go and each paired with a non-vacuity control (ADR-1976). Guard-deletion: **10 guards mutated, 0 untested, 10 distinct death-sets, separable**; replacing the width decline with a `min()` clamp kills exactly one test. Handed off with a measurement rather than a preference: **5 of 109 `sat` results across the string divisions (217 files) carry a source-level model beside the packed assertion vector**, so the replay cannot evaluate them at all. Corpus cost measured rather than predicted: **23 affected files, decided 15 → 15, delta 0, 0 of 23 verdicts differ**, with a freshness control confirming the base binary reproduces all three wrong answers. A full transformation inventory of `parse.rs` (615 `fn`, 552 non-test; 5 independent enumeration strategies reconciled) classifies every transformation between text and `Script::assertions` by direction; the eleven `weaker` side channels each have a code gate, not just a comment.
 Index-status: accepted
 Date: 2026-09-14
 
@@ -401,10 +401,35 @@ covering the parser, where it never could.
      against round-tripped models; (b) wiring it into the four post-`solve`
      routes one at a time, each with its own replay assertion.
 
-  **Start from a measurement, not a preference.** The number that decides
-  whether this is a live false alarm or a latent one is *how many `sat` results
-  across the string boards actually take this route*, and the next lane will
-  otherwise guess it. That census is described in §9.
+  **Start from a measurement, not a preference — here it is.** Census over the
+  three string divisions (`QF_S`, `QF_SLIA`, `QF_SEQ`), 3 s per file, through
+  `solve_smtlib_with_model` + `check_model`:
+
+  | | |
+  |---|---:|
+  | files examined (denominator) | 217 |
+  | undecided at 3 s | 33 |
+  | **`sat`** | **109** |
+  |   `sat` withholding replay state (`without_replay`, honest) | 33 |
+  |   `sat` carrying a model | 76 |
+  |     replay `Ok(true)` | 71 |
+  |     replay `Ok(false)` | **0** |
+  |     replay `Err(..)` — symbol-set mismatch | **5** |
+
+  So the mispairing is **live, not latent: 5 of 109 `sat` results (4.6 %), or 5
+  of the 76 that carry a model at all (6.6 %)**. The five are named —
+  `r0_QF_SLIA_issue4376`, `r1_QF_SLIA_issue4379`,
+  `r1_QF_SLIA_re-inter-stack-ovf`, `r1_QF_SLIA_type002`,
+  `cli__regress1__strings__type002` — all failing identically at
+  `assertion #76 … no value bound for symbol #0`/`#1`.
+
+  One precision that matters for the handoff: at the `check_model` level the
+  failure is `Err`, and `Ok(false)` is **0**. The escalation to a *false
+  soundness signal* needs `axeyum-py`'s `complete_with_defaults` to bind the
+  unbound packed symbol first, turning the `Err` into an `Ok(false)` that its
+  own docs call "a soundness signal". **That escalation is a static trace; this
+  lane did not run the Python path.** The 5 is measured; the consequence
+  downstream of it is not.
 - **`inline_aliases` has no binder awareness** (`parse.rs:5215`) — a blind atom
   substitution. A `let` that shadows a const-array alias name corrupts the
   binder and the script dies with `syntax error: let name`. **Not a wrong
