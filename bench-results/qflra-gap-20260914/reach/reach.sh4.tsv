@@ -1,0 +1,5 @@
+file	arm	probe_base	probe_arm	verdict_base	verdict_arm	atoms_arm
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/CooperatingT2/matrixsqrt.t2.c_Iteration12_Loop_7-phaseTemplate.smt2	8192	admission-screen	NONE	unknown	none	NONE
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/Ultimate/SyntaxSupportBooleans5.bpl_Iteration1_Loop_4-pieceTemplate.smt2	8192	admission-screen	model-did-not-replay	unknown	unknown	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/miplib/vpm2-5.smt2	8192	admission-screen	model-did-not-replay	unknown	unknown	2401
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sc/sc-37.base.cvc.smt2	8192	admission-screen	model-did-not-replay	unknown	unknown	2564
