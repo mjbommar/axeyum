@@ -1,0 +1,16 @@
+rows=200   ours=107   z3=166   cvc5=126   best-of-two=166
+gap to best-of-two = 59
+
+of OUR 93 undecided rows: ADDRESSABLE=61  decided by nobody=32
+
+== census cause x addressability (THE sizing number) ==
+addressable  nobody  bucket
+         30       5  Timeout/ResourceLimit
+         20      20  ABORT/oom
+          4       2  Watchdog/-
+          3       4  Timeout/Incomplete
+          3       0  Incomplete/-
+          1       0  Timeout/Timeout
+          0       1  SILENT
+
+reference vs declared :status -- comparable=271 disagreements=0

@@ -1,0 +1,20 @@
+re-checked on idle hosts: 43 rows (the 'decided by nobody' set from the loaded pass)
+
+NOW DECIDED by a reference: 11 of 43
+  z3=  unsat cvc5=   none status=  unsat  QF_LRA/LassoRanker/Ultimate/Collatz.bpl_Iteration1_Loop_6-phaseTemplate.smt2
+  z3=  unsat cvc5=   none status=  unsat  QF_LRA/LassoRanker/SV-COMP/KroeningSharyginaTsitovichWintersteiger-2010CAV-Fig1_true-termination.c_Iteration1_Lasso_3-pieceTemplate.smt2
+  z3=    sat cvc5=   none status=    sat  QF_LRA/LassoRanker/CooperatingT2/toeplz.c.i.toeplz.pl.t2.fixed.t2.c_Iteration2_Loop_7-phaseTemplate.smt2
+  z3=    sat cvc5=   none status=    sat  QF_LRA/LassoRanker/CooperatingT2/hongyi1.t2.c_Iteration1_Loop_4-lexTemplate.smt2
+  z3=    sat cvc5=   none status=    sat  QF_LRA/LassoRanker/Ultimate/yPositive-SIscaled75.bpl_Iteration1_Loop_7-phaseTemplate.smt2
+  z3=    sat cvc5=   none status=    sat  QF_LRA/LassoRanker/SV-COMP/aviad_true-termination.c_Iteration1_Loop_4-nestedTemplate.smt2
+  z3=    sat cvc5=   none status=    sat  QF_LRA/LassoRanker/Ultimate/Gcd.bpl_Iteration1_Lasso_7-phaseTemplate.smt2
+  z3=  unsat cvc5=   none status=  unsat  QF_LRA/LassoRanker/Ultimate/Lobnya-Boolean-Reordered.bpl_Iteration1_Lasso_7-phaseTemplate.smt2
+  z3=    sat cvc5=   none status=    sat  QF_LRA/LassoRanker/CooperatingT2/hongyi1.t2.c_Iteration9_Loop_4-lexTemplate.smt2
+  z3=    sat cvc5=   none status=    sat  QF_LRA/LassoRanker/Ultimate/simple-scaled200.bpl_Iteration1_Lasso_7-nestedTemplate.smt2
+  z3=  unsat cvc5=   none status=  unsat  QF_LRA/LassoRanker/SV-COMP/CookSeeZuleger-2013TACAS-Fig3_true-termination.c_Iteration1_Loop_4-pieceTemplate.smt2
+
+still decided by nobody: 32
+z3:   [('none', 32), ('sat', 7), ('unsat', 4)]
+cvc5: [('none', 43)]
+
+reference vs declared :status -- comparable=11 disagreements=0

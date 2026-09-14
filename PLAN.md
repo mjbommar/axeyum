@@ -137,6 +137,9 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-09-14 | `9467f0780` | qflra-gap: pre-registered rules + four-channel census harness, before any measurement aggregated |
+| 2026-09-14 | `d248502a1` | qflra-gap: the census — 74 of 93 undecided `QF_LRA` rows are one offline dense engine; two give-up labels split and both wrong |
+| 2026-09-14 | `49ea1d50d` | qflra-gap: A/B is a clean +0 at a 0-of-200 noise floor, and the arm itself causes five new aborts |
 | 2026-09-14 | decline-wiring | [ADR-2020] handed over two sized defects. **The first does not exist as described**: it read a census that records the context name of whichever site refused LAST and concluded the lazy fallback "is simply not offered" to the queries `combined.rs:86` declines. An ordered probe (`AXEYUM_ACKPROBE`, off by default, printed and never acted on) says the selector at `auto.rs:4068` engages on **13 of 13** files, **470** times, **414** of them immediately followed by the CEGAR's own abstraction re-entry -- and inside the held-set replay probe where the 17 censused replays actually live, **23 of 23** `combined theories:` replays are preceded by an engaged selector. The argument is structural: reaching `combined.rs:86` requires `FallThrough`, and under the shipped `CegarProbe` policy the only route there is the lazy CEGAR RUNNING and returning inconclusive. **The size is also wrong** -- 17 replays are **13 FILES**, so at ROW level the bucket is **10.2 % `[6.1 %, 16.7 %]`**, not 21.8 %. What it IS: the integer bit-blast width ladder consulting a **width-independent** admission test once per rung (15 rungs; 60-1,605 refusals per file = 4-107 invocations) and reporting the last rung's refusal as the query's verdict, **with 14 of every 15 `arena.clone()`s discarded** -- a cost [ADR-2020] read as intrinsic to the ladder. Defect 2, measured BEFORE building: `lemmas_added == equal_arg_pairs` on **all 31** census observations (the batch is the ENTIRE equal-argument set the moment one pair is violated; amplification to **1,555x**), and `solve_rounds<=3` is not convergence -- there is no round cap, so it is the SECOND solve choking, and **10 of the 16 flooded observations die at the pre-SAT skeleton boundary that is [ADR-2020]'s LARGEST bucket**. The flood and that bucket are one mechanism and [ADR-2020] built its lever at the wrong end of it (0 of 129); bound on the claim, 12 of the 15 unflooded observations reach the same boundary, so a cap cannot help 12 of its 22 files. Two levers, both failing closed, parse split out of the `OnceLock` so the guard is testable at all; five guards, **four mutation-verified at exactly one test killed each**. A/B interleaved per file, one binary, shards fixed: **ladder 0 of 129 `[0.0 %, 2.9 %]`, cap 1 of 129 `[0.1 %, 4.3 %]`, ZERO FLIPs**; control `QF_BV` 97 rows over 52 families with **57 decided on both arms** (non-vacuous by construction -- [ADR-2020]'s 6-row all-unknown control was structurally blind to a LOSS) moves **0**; noise floor **0 of 129** -- **but the one row it decides is the same volatile row that produced EVERY loss in both arms and then INVERTED under 3x re-runs**, so the band is not zero and this lane's own data says so. The cap's single gain is STABLE-GAIN (0/3 vs 3/3, reproduced on a second binary) and verified `unsat` against `:status`, z3 and cvc5, comparable denominator **1/1 each**, 0 disagreements. Against a pre-registered go/no-go of **>= 6**, **BOTH SHIP OFF**, as predicted in writing beforehand. R2 was the wrong instrument for a verdict-preserving lever and that is said rather than worked around: the hoist is worth a correct give-up string and **0.978x wall on the 13 files it fires on**. Also found: [ADR-2020]'s A/B table reports its secondary `QF_LIA` run at 27 rows and its committed artifact has **12**; and `oversized_admission_probe`'s decider is pure-LIA, which LOOKS like a fragment mismatch for a UF+arith population and is not -- `abstract_functions` has already removed every application by then, so the gap is a missing call, not a missing capability. | ADR-2030 |
 | 2026-09-14 | ground-decide | [ADR-2015] left 78 held-set replays in which **our own ground checker declines our own instantiated conjunction** and asked for them to be split before anyone sized the work. **Censusing them needed a string split first, and this lane walked into the trap before catching it**: the record separator in the committed census is `;QPROBE`, not a bare `;`, because the `why=` detail contains `;` — and a `why=` may WRAP another reason or APPEND one after a stats parenthetical. Peeled: the outer census has **5** buckets, the binding census **10**, **46 of the 78** had their cause behind a wrapper, the 25-row largest outer bucket is **four** causes, and **the leader changes** — the lazy LIA pre-SAT skeleton boundary at **22 of 78** (28.2 %, Wilson `[19.4 %, 39.0 %]`), not the eager Ackermann bound (17) the prose led with. One bucket (5) is left **`UNSPLIT`** and reported. The 78/40 is a REPLAY split; at ROW level it is **58 unknown-only / 31 sat-only / 6 MIXED and genuinely not separable** of 127. Structurally **55 of 78 = 70.5 % `[59.6 %, 79.5 %]` are CHEAP REFUSALS by an admission bound** — wall median **1,407 ms of a 10,000 ms budget** — not exhausted clocks, and the two split by division (`UFLIA` refuses 40:5, `UFNIA` exhausts 18:15). The bounds, read rather than assumed: **`64` is not a unit error** but was never calibrated against the expansion — it is a proxy for an unbounded downstream solve, fitted between 40 and 117 pairs in 2026-06 and unchanged since — and **the same constant is a route selector at `auto.rs:4068` (falls through to the lazy CEGAR route) and a HARD DECLINE at `combined.rs:86`, with 17 of 17 of our replays at the hard-decline site that has no fallback**. The skeleton envelope is a MEMORY bound whose own re-derivation measured peak RSS at **71 MiB, 1/115th of the ceiling it cites**, and wrote *"above this, nobody has measured"*; it refuses at **1.4x** that point. `oversized_admission_probe` is **not wired into the UF+arith route at all**. Ten seconds on **11** ground terms is **20,626 LIA calls, 18,678 LP relaxations, 9,035 simplex solves and 11,401,903 cloned arena nodes** (27 % CDCL, ~22 % allocator, 16 % simplex/Gomory by `perf`) because the width ladder clones the **whole file's DAG** per rung. An env-gated A/B raising the envelope 4x moves **0 of 129**, Wilson `[0.0 %, 2.9 %]`, at **1.00x** wall — **null shown NON-VACUOUS** (OFF crosses both pre-SAT bounds on a measured file in the shipped path, ON crosses neither) with the refusal measured converting into a **TIMEOUT**, exactly as pre-registered; control `QF_BV` 0 moved (non-vacuous by route: `qf-bv` search-timeout); **same-arm noise floor moves 1 of 129**, so the lever's effect is smaller than the band built to detect it. **SHIPS OFF.** The redirect: cvc5 refutes **21 of the same 22** files at a median **70 ms**, **nine without instantiating a single quantifier**, and **eight of those nine are files where we flooded to the 8,192 admission cap** — so the conjunction we cannot decide is an artifact of **over-instantiation**. Budget ([ADR-1995]), ceiling ([ADR-1956]), reach ([ADR-2005]) and head ([ADR-2015]) are closed; **SELECTION is not, and nothing has looked at it**. | ADR-2020 |
 | 2026-09-14 | `2af00d4b2` | `bench-results/qf-wall-20260914/`: the instruments and the preregistration. The preregistration states plainly that the diagnostic phase preceded it and that its rules govern the BUILD decision only. |
@@ -12133,6 +12136,42 @@ reconciling them is the autogenesis pipeline's job, not this lane's).
 four new facts' `checker_command`s run directly and confirmed passing
 (`nat_theorem_inventory` finds each new name, `nat_axiom_inventory
 --require-axiom-free nat` exits 0).
+
+**Lane block (`DONE`, qflra-gap, 2026-09-14).** [ADR-2045] closes the `QF_LRA`
+bound hypothesis with a **clean, sized negative** and relocates the division's
+gap onto one engine.
+
+Census, re-derived on the current tree (200 files, 107/93, reproducing the
+board's 107 exactly; `--trace` perturbs 0 rows): **74 of 93 undecided rows are
+one route** — the offline dense-matrix LRA engine, **40 aborting** on its
+allocation and **34 exhausting the clock** inside it. Two give-up labels had to
+be split before counting and **both were wrong as written**: `kind=Timeout` is a
+relabel whose detail contains `;`, and `lra.rs:159`'s
+`"Fourier–Motzkin … exceeded the … budget"` is one string for every
+`Decision::TimedOut` — **34 of 34 rows carrying it have `cube_matrices=0`;
+Fourier–Motzkin never ran.** The 40 aborts emit no give-up line at all.
+
+The A/B (one binary, two env values, 6 pinned pairs) is **net +0, 0 gains, 0
+losses, 0 flips**, against a **row-level noise floor of 0 of 200**; aborts fall
+41 → 9. Pre-registered R8 was ≥ +5, so **the lever ships `Off`**. The ordered
+probe says why: on the 24 rows the admission screen had refused, **0 remain
+refused, 21 reach the engine, 0 are newly decided** — the bound is not the wall.
+
+**Next lane on this division starts here:** **50 of the 61 addressable rows
+(82 %) are the offline dense engine**, and two unpriced allocations sit on that
+path with no config change needed — `simplex::MAX_TABLEAU_CELLS` is not
+consulted by `feasible_within`, and `lra.rs:944` builds an `n × nvars` dense
+matrix that `Tableau::new` immediately re-sparsifies. The named capability wall
+is `"online CDCL(T) LRA model did not replay (arithmetic outside the incremental
+engine)"`.
+
+**Method warning worth more than the result:** the reference pass first read
+z3 = 155 against the board's 166 because it ran six concurrent shards on one
+host. Re-taking only the rows it called "decided by nobody", on idle hosts,
+decided **11 of 43** and restored z3 = 166 and gap = 59 exactly. **A "decided by
+nobody" claim measured under load is not evidence** — it would have published a
+50/43 split and an abort bucket "worth at most 11" instead of the true 61/32
+and 20.
 
 **Your lane's block (`landed`, producer-widen, 2026-08-28).** Task: widen
 `producers::conclusion_directed_application` (lane 198, which closed ten open
