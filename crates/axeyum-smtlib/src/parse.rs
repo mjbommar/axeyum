@@ -19906,7 +19906,7 @@ fn balanced_and(arena: &mut TermArena, mut layer: Vec<TermId>) -> Result<TermId,
 /// [`declared_redirect`], which requires a declaration of that exact name whose
 /// arity AND parameter sorts match the application, and otherwise falls through
 /// to the arm the application would have taken. With the lever armed, the four
-/// FloatingPoint suites (21 + 2 + 1 + 8 tests) and `corpus_regression` pass
+/// `FloatingPoint` suites (21 + 2 + 1 + 8 tests) and `corpus_regression` pass
 /// unchanged; the only tests that changed behaviour were the two below, which
 /// exist to pin this polarity and are rewritten in this direction on purpose.
 fn declared_name_wins() -> bool {
@@ -24726,7 +24726,7 @@ mod declared_name_wins_tests {
     /// The bug itself, pinned as a MEASUREMENT rather than as prose — now in the
     /// fixed direction: the SHIPPED parser ACCEPTS the script, and the
     /// application really does bind the user's declaration rather than the
-    /// FloatingPoint arm. Checking that it parses is not enough; a parse that
+    /// `FloatingPoint` arm. Checking that it parses is not enough; a parse that
     /// silently took the theory arm would also "succeed", so this asserts the
     /// resolved `FuncId` is the declared one.
     ///

@@ -10286,10 +10286,14 @@ SUITES["smtlib-declared-name-wins"] = (
     ),
     [
         (
-            # The lever fails OPEN: every spelling arms the redirect.
-            "the lever's opt-in polarity guard",
-            '            Ok("on" | "1")',
-            '            Ok(_) | Err(_)',
+            # The lever fails CLOSED: every spelling DISARMS the redirect, so
+            # the shipped-on behaviour silently reverts to the pre-ADR-2040
+            # parser. Re-anchored when the polarity was flipped to ship ON --
+            # the guard is now a negated match, and the mutation inverts the
+            # sense of the default rather than the set of arming spellings.
+            "the lever's opt-out polarity guard",
+            '        !matches!(\n            std::env::var("AXEYUM_DECLARED_NAME_WINS").as_deref(),',
+            '        matches!(\n            std::env::var("AXEYUM_DECLARED_NAME_WINS").as_deref(),',
         ),
         (
             # Arity no longer has to match.
