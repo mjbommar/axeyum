@@ -19877,6 +19877,55 @@ fn balanced_and(arena: &mut TermArena, mut layer: Vec<TermId>) -> Result<TermId,
     Ok(layer[0])
 }
 
+/// Whether a user `declare-fun` outranks a theory-operator arm of the same
+/// name (ADR-2040), read once from `AXEYUM_DECLARED_NAME_WINS`.
+///
+/// **Polarity: this lever ships `Off`.** The unset environment is the
+/// pre-ADR-2040 behaviour, so an A/B's base arm is
+/// `env -u AXEYUM_DECLARED_NAME_WINS` and its treatment arm sets `on`.
+/// Anything but `on`/`1` is `Off`, so a typo cannot silently enable it.
+fn declared_name_wins() -> bool {
+    static POLICY: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *POLICY.get_or_init(|| {
+        matches!(
+            std::env::var("AXEYUM_DECLARED_NAME_WINS").as_deref(),
+            Ok("on" | "1")
+        )
+    })
+}
+
+/// The ADR-2040 redirect rule itself, with the lever factored OUT.
+///
+/// `Some(f)` when the script declared a function named `op` whose parameter
+/// sorts match this application's argument sorts exactly, and which therefore
+/// outranks the theory-operator arm of the same name.
+///
+/// # Why this is a separate function
+///
+/// The armed branch in [`apply_op`] is behind a `OnceLock` read of the process
+/// environment, and a test cannot set process environment (the lock latches on
+/// the first read, and cargo runs a suite in one process). ADR-2025 shipped a
+/// liveness guard that **survived mutation** for exactly that reason: no test
+/// could reach the guarded body at all. Splitting the rule out makes it
+/// reachable, so there is one place to read the rule and one place to break it.
+fn declared_redirect(arena: &TermArena, op: &str, args: &[TermId]) -> Option<FuncId> {
+    let func = arena.find_function(op)?;
+    let (_, params, _) = arena.function(func);
+    // ARITY AND SORTS, not the name alone. A mismatch falls through to the arm
+    // the application would have taken, so the redirect is a no-op wherever
+    // the theory reading was the applicable one.
+    if params.len() == args.len()
+        && params
+            .iter()
+            .zip(args.iter())
+            .all(|(&p, &a)| arena.sort_of(a) == p)
+    {
+        Some(func)
+    } else {
+        None
+    }
+}
+
 #[allow(clippy::too_many_lines)]
 #[allow(clippy::too_many_arguments)]
 fn apply_op(
@@ -19894,6 +19943,44 @@ fn apply_op(
         return apply_parameterized(arena, sort_aliases, head_items, args);
     }
     let op = items[0].atom().expect("list head checked");
+    // ADR-2040: a name the SCRIPT DECLARED is the script's, not the theory's.
+    //
+    // This `match` tries every theory-operator arm before the `_ =>`
+    // fall-through that consults `arena.find_function(other)`, so a benchmark
+    // declaring a function whose name equals a theory operator has its
+    // applications captured by the operator arm and never reaches its own
+    // declaration. `UFNIA/vcc-havoc/verisoft-baby.c.10.privileged.smt2` carries
+    //
+    //     (declare-fun fp (Int Int Int) Int)
+    //
+    // and dies at ingest with `fp exponent field must be a bit-vector` in 23 ms
+    // of a 24 s budget. `fp` is a FloatingPoint theory symbol; that script's
+    // logic is `UFNIA`, which has no FloatingPoint theory, so the name is a
+    // legal user symbol there and both z3 and cvc5 accept it. Measured
+    // 2026-09-14 over the seven Tier 1 division directories: **180 files**, all
+    // `UFNIA`, zero elsewhere (`bench-results/skeleton-reach-20260914/`).
+    //
+    // WHY THE SIGNATURE TEST AND NOT JUST THE NAME. SMT-LIB forbids declaring a
+    // symbol already in the current signature, so a *successful* `declare-fun`
+    // of this name is itself the evidence that the name is not a theory symbol
+    // in this script. Requiring the declared parameter sorts to match the
+    // application's argument sorts EXACTLY makes the redirect a no-op wherever
+    // the theory reading was the applicable one: an arity or sort mismatch
+    // falls straight through to the arm it would have taken. So this can only
+    // fire where the theory arm was applied to operands its own signature does
+    // not admit — which is the failure being fixed.
+    //
+    // Reserved words (`and`, `or`, `=`, `distinct`, `ite`, …) cannot be
+    // declared, so `find_function` returns `None` for them and this branch is
+    // unreachable on the shapes the rest of the dispatch depends on.
+    //
+    // POLARITY: ships **Off**. `AXEYUM_DECLARED_NAME_WINS=on` ARMS it, so an
+    // A/B's base arm is `env -u AXEYUM_DECLARED_NAME_WINS`.
+    if declared_name_wins()
+        && let Some(func) = declared_redirect(arena, op, args)
+    {
+        return Ok(arena.apply(func, args)?);
+    }
     // Bounded finite-sequence operators (`seq.*`, ADR-0029): dispatched only when
     // the script declares a sequence sort (else `seq` is empty and this returns
     // `None`, leaving the normal dispatch untouched).
@@ -24533,4 +24620,103 @@ pub fn decode_packed_string(width: u32, value: u128) -> Option<Vec<u8>> {
 #[must_use]
 pub fn packed_string_max_len(width: u32) -> Option<u32> {
     (0..=STRING_BOUND_CAP).find(|&m| string_total(m) == width)
+}
+
+#[cfg(test)]
+mod declared_name_wins_tests {
+    use super::{declared_name_wins, declared_redirect, parse_script};
+    use axeyum_ir::{Sort, TermArena};
+
+    /// The exact shape that dies at ingest on 180 `UFNIA` files: a script
+    /// declaring a function named after a `FloatingPoint` theory operator, in
+    /// a logic that has no `FloatingPoint` theory.
+    const VCC_SHAPE: &str = "(set-logic UFNIA)\n\
+        (declare-fun fp (Int Int Int) Int)\n\
+        (declare-fun a () Int)\n\
+        (assert (= (fp a a a) a))\n\
+        (check-sat)";
+
+    /// **The negative half of the fixture.** Without it, a redirect that fired
+    /// on the NAME alone would pass — and this rule's whole safety argument is
+    /// that it fires only where the theory arm was inapplicable.
+    #[test]
+    fn the_redirect_needs_the_declared_signature_not_just_the_name() {
+        let mut arena = TermArena::new();
+        let func = arena
+            .declare_fun("fp", &[Sort::Int, Sort::Int, Sort::Int], Sort::Int)
+            .expect("declare fp");
+        let i = arena.int_const(1);
+        let b = arena.bv_const(8, 0).expect("bv const");
+
+        // Matching arity AND sorts: the script's `fp` wins.
+        assert_eq!(
+            declared_redirect(&arena, "fp", &[i, i, i]),
+            Some(func),
+            "a declared `fp : (Int Int Int) Int` applied to three Ints must redirect"
+        );
+        // Right arity, WRONG sorts — the FloatingPoint reading is the
+        // applicable one and must be left alone.
+        assert_eq!(
+            declared_redirect(&arena, "fp", &[b, b, b]),
+            None,
+            "a sort mismatch must fall through to the theory arm"
+        );
+        // Wrong arity, BOTH DIRECTIONS. Only the second is load-bearing:
+        // `zip` stops at the shorter side, so relaxing `==` to `<=` leaves
+        // TOO FEW arguments still rejected while TOO MANY silently redirect
+        // on a prefix match. The `[i, i]` case alone survived that mutation
+        // (`scripts/tests/mutation_controls.py smtlib-declared-name-wins`).
+        assert_eq!(
+            declared_redirect(&arena, "fp", &[i, i]),
+            None,
+            "too few arguments must fall through to the theory arm"
+        );
+        assert_eq!(
+            declared_redirect(&arena, "fp", &[i, i, i, i]),
+            None,
+            "too many arguments must fall through: `zip` would match on a prefix"
+        );
+        // A name the script never declared.
+        assert_eq!(
+            declared_redirect(&arena, "bvadd", &[i, i]),
+            None,
+            "an undeclared name must never redirect"
+        );
+    }
+
+    /// The lever ships **Off**, so the base arm of any A/B is the unset
+    /// environment. A change back to opt-out would have to edit this test, in
+    /// this direction, on purpose.
+    #[test]
+    fn the_declared_name_lever_is_off_unless_armed_exactly() {
+        assert!(
+            !declared_name_wins(),
+            "AXEYUM_DECLARED_NAME_WINS must default to OFF"
+        );
+    }
+
+    /// The bug itself, pinned as a MEASUREMENT rather than as prose: on the
+    /// shipped (off) configuration the script is REJECTED, and the rule that
+    /// would accept it is shown to apply to the very same declaration. If the
+    /// two ever stop disagreeing, this fails rather than passing vacuously.
+    #[test]
+    fn the_shipped_parser_rejects_a_script_the_redirect_rule_accepts() {
+        let err = parse_script(VCC_SHAPE).expect_err("the shipped parser must reject this script");
+        let text = err.to_string();
+        assert!(
+            text.contains("fp exponent field"),
+            "expected the FloatingPoint capture, got: {text}"
+        );
+
+        let mut arena = TermArena::new();
+        let func = arena
+            .declare_fun("fp", &[Sort::Int, Sort::Int, Sort::Int], Sort::Int)
+            .expect("declare fp");
+        let a = arena.int_const(7);
+        assert_eq!(
+            declared_redirect(&arena, "fp", &[a, a, a]),
+            Some(func),
+            "the redirect rule must accept what the shipped parser rejects"
+        );
+    }
 }

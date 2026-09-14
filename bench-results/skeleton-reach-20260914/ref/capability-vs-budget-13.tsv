@@ -1,0 +1,14 @@
+file	v24	rung24	v120	rung120	diagnosis
+AUFLIRA/nasa/fol_simplify_structure_prop/quaternion_ds1_inuse_0013.fof.smt2	unknown	declined	unknown	declined	CAPABILITY-LIMIT
+UFNIA/sledgehammer/TwoSquares/z3.861593.smt2	unknown	declined	unknown	declined	CAPABILITY-LIMIT
+AUFLIRA/nasa/fol_simplify/gauss_init_0292.fof.smt2	unknown	declined	unknown	declined	CAPABILITY-LIMIT
+AUFLIRA/nasa/fol_simplify_array_only/gauss_array_0490.fof.smt2	unknown	declined	unknown	declined	CAPABILITY-LIMIT
+UF/sledgehammer/Fundamental_Theorem_Algebra/uf.1065126.smt2	unknown	declined	unknown	declined	CAPABILITY-LIMIT
+UFLIA/simplify2/front_end_suite/javafe.ast.StandardPrettyPrint.008.smt2	unknown	declined	unknown	declined	CAPABILITY-LIMIT
+UFNIA/lahiri-cav09-storm-queries/usbsamp_bug_example_2_3_8_1.smt2	unknown	declined	unknown	declined	CAPABILITY-LIMIT
+AUFLIRA/nasa/fol_simplify_array_only/gauss_array_0289.fof.smt2	unknown	declined	unknown	declined	CAPABILITY-LIMIT
+UFNIA/vcc-havoc/verisoft-baby.c.10.privileged.smt2	unsat	decided	unsat	decided	CONVERTED
+UFNIA/lahiri-cav09-storm-queries/usbsamp_example_2_3_4_0.smt2	unknown	declined	unknown	declined	CAPABILITY-LIMIT
+AUFLIRA/nasa/fol_simplify_structure_prop/gauss_array_0013.fof.smt2	unknown	declined	unknown	declined	CAPABILITY-LIMIT
+AUFLIRA/nasa/fol_simplify_array_only/gauss_array_0390.fof.smt2	unknown	declined	unknown	declined	CAPABILITY-LIMIT
+UFNIA/spec_sharp/test14-CommandLineOptions.ssc.23.Microsoft.Boogie.CommandLineOptions.Boogie.ContractConsistencyCheck.get_ProverNeedsTypes.smt2	unsat	decided	unsat	decided	CONVERTED
