@@ -5056,20 +5056,7 @@ fn desugar_const_arrays(exprs: &mut Vec<SExpr>) {
     // const-array expression. A symbol bound more than once, or also used as a
     // store target in a way we cannot inline, is left un-aliased (so its uses
     // decline through the normal path rather than risk an unsound substitution).
-    let mut alias_value: HashMap<String, SExpr> = HashMap::new();
-    let mut alias_disqualified: HashSet<String> = HashSet::new();
-    for e in exprs.iter() {
-        if let Some((sym, ca)) = const_array_definition(e) {
-            if alias_value.contains_key(sym) || alias_disqualified.contains(sym) {
-                // Seen twice: a single concrete const-array binding is required for
-                // a sound inline, so disqualify the symbol entirely.
-                alias_value.remove(sym);
-                alias_disqualified.insert(sym.to_owned());
-            } else {
-                alias_value.insert(sym.to_owned(), ca.clone());
-            }
-        }
-    }
+    let alias_value = eligible_const_array_aliases(exprs);
     if alias_value.is_empty() {
         // No safely-inlinable const-array alias; only literal const-array forms (if
         // any) remain, which `reduce_const_array_sexpr` handles directly below.
@@ -5093,6 +5080,175 @@ fn desugar_const_arrays(exprs: &mut Vec<SExpr>) {
         rewritten.push(e);
     }
     *exprs = rewritten;
+}
+
+/// The const-array aliases [`desugar_const_arrays`] may safely eliminate:
+/// symbols defined **exactly once**, by a defining assert that is in force at
+/// **every** `check-sat` in the script.
+///
+/// # Why "in force everywhere" is the condition
+///
+/// Phase B of [`desugar_const_arrays`] drops the defining assert and inlines the
+/// symbol into the WHOLE command list, with no regard for where the definition
+/// sat. That is exact definition elimination only if the equation holds at every
+/// point a verdict is produced. Where it does not, the rewrite applies a
+/// constraint that is not in force — it STRENGTHENS the query, and a
+/// strengthening rewrite manufactures wrong `unsat`.
+///
+/// **Both of these shipped through the default front door until 2026-09-14
+/// (ADR-2010)**, because this collection had no notion of scope OR of order:
+///
+/// ```text
+/// ; (1) inlined across a `pop`: the binding is gone by the check-sat, so the
+/// ;     script is SAT -- we said unsat.
+/// (declare-const a (Array Int Int))
+/// (push 1) (assert (= a ((as const (Array Int Int)) 0))) (pop 1)
+/// (assert (not (= (select a 5) 0)))
+/// (check-sat)
+///
+/// ; (2) inlined BACKWARDS past a check-sat: the first query is SAT -- we said
+/// ;     unsat. No push/pop needed.
+/// (declare-const a (Array Int Int))
+/// (assert (= (select a 5) 1))
+/// (check-sat)
+/// (assert (= a ((as const (Array Int Int)) 0)))
+/// (check-sat)
+/// ```
+///
+/// # The rule
+///
+/// A symbol is eligible when all four hold:
+///
+///  1. **Exactly one** const-array definition anywhere in the script (at any
+///     depth). A second one disqualifies it outright — the pre-existing rule.
+///  2. The defining assert is at **scope depth 0**, so no `pop` can retract it.
+///     This is condition (1) above.
+///  3. No `reset-assertions` appears **after** it, since that retracts even a
+///     depth-0 assert.
+///  4. Either no `check-sat` precedes the defining assert, **or** the symbol
+///     occurs nowhere before it (outside its own declaration) — so no earlier
+///     verdict can depend on the symbol being free. This is condition (2) above,
+///     and the disjunction is what keeps it from being a blunt "single
+///     `check-sat` only" cliff: a multi-query script still gets the rewrite as
+///     long as the symbol is introduced and defined before it is used.
+fn eligible_const_array_aliases(exprs: &[SExpr]) -> HashMap<String, SExpr> {
+    let mut value: HashMap<String, SExpr> = HashMap::new();
+    let mut defined_at: HashMap<String, usize> = HashMap::new();
+    let mut disqualified: HashSet<String> = HashSet::new();
+    let mut depth: u32 = 0;
+    let mut reset_indices: Vec<usize> = Vec::new();
+    let mut first_check_sat: Option<usize> = None;
+
+    for (index, e) in exprs.iter().enumerate() {
+        match command_scope_effect(e) {
+            ScopeEffect::Push(n) => depth = depth.saturating_add(n),
+            ScopeEffect::Pop(n) => depth = depth.saturating_sub(n),
+            ScopeEffect::CheckSat => {
+                first_check_sat.get_or_insert(index);
+            }
+            ScopeEffect::ResetAssertions => {
+                reset_indices.push(index);
+                // `reset-assertions` also closes every open scope (SMT-LIB 2.6).
+                depth = 0;
+            }
+            ScopeEffect::Other => {}
+        }
+        let Some((symbol, const_array)) = const_array_definition(e) else {
+            continue;
+        };
+        // Rule 1: a second definition disqualifies, wherever it sits.
+        if value.contains_key(symbol) || disqualified.contains(symbol) {
+            value.remove(symbol);
+            defined_at.remove(symbol);
+            disqualified.insert(symbol.to_owned());
+            continue;
+        }
+        // Rule 2: only a definition that no `pop` can retract.
+        if depth != 0 {
+            disqualified.insert(symbol.to_owned());
+            continue;
+        }
+        value.insert(symbol.to_owned(), const_array.clone());
+        defined_at.insert(symbol.to_owned(), index);
+    }
+
+    // Rules 3 and 4 need the whole command list, so they are applied after the
+    // pass that located each definition.
+    value.retain(|symbol, _| {
+        let Some(&index) = defined_at.get(symbol) else {
+            return false;
+        };
+        if reset_indices.iter().any(|&reset| reset > index) {
+            return false;
+        }
+        match first_check_sat {
+            // A verdict is produced before the definition, so the rewrite may
+            // only proceed if that verdict cannot depend on the symbol at all.
+            Some(check_sat) if check_sat < index => !exprs[..index]
+                .iter()
+                .any(|e| !is_declaration_of(e, symbol) && mentions_symbol(e, symbol)),
+            _ => true,
+        }
+    });
+    value
+}
+
+/// What a top-level command does to the assertion-stack scope, for
+/// [`eligible_const_array_aliases`].
+enum ScopeEffect {
+    /// `(push n)` — `n` defaults to 1 when absent or unparseable.
+    Push(u32),
+    /// `(pop n)` — same defaulting.
+    Pop(u32),
+    /// `(check-sat)` or `(check-sat-assuming …)`: a verdict is produced here.
+    CheckSat,
+    /// `(reset-assertions)` — drops every assertion and closes every scope.
+    ResetAssertions,
+    /// Anything else.
+    Other,
+}
+
+/// Classifies one top-level command for [`eligible_const_array_aliases`].
+fn command_scope_effect(e: &SExpr) -> ScopeEffect {
+    let Some(items) = e.list() else {
+        return ScopeEffect::Other;
+    };
+    let Some(head) = items.first().and_then(SExpr::atom) else {
+        return ScopeEffect::Other;
+    };
+    // An absent or unparseable count is SMT-LIB's default of 1. Defaulting to 1
+    // rather than 0 keeps a malformed `(push)` from looking like a no-op and
+    // letting a nested definition pass for a top-level one.
+    let count = || {
+        items
+            .get(1)
+            .and_then(SExpr::atom)
+            .map_or(1, |n| n.parse::<u32>().unwrap_or(1))
+    };
+    match head {
+        "push" => ScopeEffect::Push(count()),
+        "pop" => ScopeEffect::Pop(count()),
+        "check-sat" | "check-sat-assuming" => ScopeEffect::CheckSat,
+        "reset-assertions" => ScopeEffect::ResetAssertions,
+        _ => ScopeEffect::Other,
+    }
+}
+
+/// Whether `e` is the `declare-const`/`declare-fun` command for `symbol`.
+fn is_declaration_of(e: &SExpr, symbol: &str) -> bool {
+    let Some(items) = e.list() else { return false };
+    let head = items.first().and_then(SExpr::atom);
+    if head != Some("declare-const") && head != Some("declare-fun") {
+        return false;
+    }
+    items.get(1).and_then(SExpr::atom) == Some(symbol)
+}
+
+/// Whether `symbol` occurs as an atom anywhere in `e`.
+fn mentions_symbol(e: &SExpr, symbol: &str) -> bool {
+    // Iterative scan: see [`SExpr::descendants`] — a recursive one aborts the
+    // process on a deeply nested source instead of returning an answer.
+    e.descendants().any(|n| n.atom() == Some(symbol))
 }
 
 /// Whether `e` mentions an `(as const …)` constant-array head anywhere.
@@ -5316,14 +5472,21 @@ fn const_array_value(e: &SExpr) -> Option<&SExpr> {
 // conditions hold, which [`scan_set_ops`] enforces by **declining** (leaving the
 // whole script [`SmtError::Unsupported`]) otherwise:
 //
-//  1. **Distinct element terms denote distinct elements.** We only accept element
+//  1. **Distinct element KEYS denote distinct elements.** We only accept element
 //     terms that are *constant literals* (numerals, decimals, `#b`/`#x`/`(_ bvN
-//     W)` bit-vectors, `true`/`false`). Two syntactically-distinct literals are
-//     two distinct values, so giving them distinct bits introduces no spurious
-//     (dis)equality. (Arithmetic element terms such as `(* v0 7)` can *alias*
-//     another element term — `(* 7 v0)` — so a per-term bit would be unsound
-//     without congruence constraints; those files are declined for a later
-//     slice.)
+//     W)` bit-vectors, `true`/`false`), and we give each bit to a literal's
+//     **VALUE**, via [`set_element_key`]. (Arithmetic element terms such as
+//     `(* v0 7)` can *alias* another element term — `(* 7 v0)` — so a per-term
+//     bit would be unsound without congruence constraints; those files are
+//     declined for a later slice.)
+//
+//     **This condition used to read "two syntactically-distinct literals are two
+//     distinct values", and that premise is false** — `#b0101`, `#x5` and
+//     `(_ bv5 4)` are three spellings of one value, as are `1.5` and `1.50`.
+//     Keying on spelling made the encoding assert that two equal elements
+//     differ, which shipped a wrong `sat` through the default front door until
+//     2026-09-14 (ADR-2010). A literal whose value [`set_element_key`] cannot
+//     canonicalize is DECLINED, never given a bit on the strength of its text.
 //
 //  2. **Only finite-domain-safe operators.** `set.empty`, `set.singleton`,
 //     `set.member`, `set.union`, `set.inter`, `set.minus`, `set.subset`, and set
@@ -5590,57 +5753,159 @@ fn scan_set_ops(exprs: &[SExpr], element_keys: &mut Vec<String>) -> Result<(), S
     Ok(())
 }
 
-/// The canonical bit-position key for a set element term, or `None` if the term is
-/// not a constant literal (so giving it its own bit could be unsound; see the
-/// module note, condition 1).
+/// The canonical bit-position key for a set element term, or `None` if the term
+/// is not a constant literal whose VALUE this function can canonicalize (the
+/// caller turns `None` into [`SmtError::Unsupported`]; see the module note,
+/// condition 1).
 ///
 /// Accepts numerals (`7`), decimals (`1.5`), `#b`/`#x` bit-vector literals,
-/// indexed bit-vector constants `(_ bvN W)`, and the booleans `true`/`false`. The
-/// key is the literal's normalized text, so two syntactically-equal literals share
-/// a bit and two distinct literals get distinct bits.
+/// indexed bit-vector constants `(_ bvN W)`, and the booleans `true`/`false`.
+///
+/// # The key is the literal's VALUE, never its spelling
+///
+/// **This is soundness-critical and it was wrong until 2026-09-14 (ADR-2010).**
+/// The key used to be the literal's raw text, so two spellings of the SAME value
+/// got DIFFERENT bit positions, and the encoding then asserted that two equal
+/// elements are different. Measured through the shipped front door at
+/// `94389e480`, with no lever and no feature gate:
+///
+/// ```text
+/// (declare-fun s () (Set (_ BitVec 4)))
+/// (assert (set.member #b0101 s))
+/// (assert (not (set.member #x5 s)))     ; #x5 IS #b0101
+/// ```
+///
+/// answered `sat` (cvc5: `unsat`) while the same script with one spelling used
+/// twice answered `unsat`. `#b0101`/`#x5`/`(_ bv5 4)` and `1.5`/`1.50` were each
+/// such a pair. The replay could not catch it: `desugar_sets` runs on the
+/// s-expression tree *before any term is built*, so the source set terms never
+/// become IR terms and `check_model` only ever sees the encoding.
+///
+/// So: `#b0101`, `#x5` and `(_ bv5 4)` all key as `bv:4:0101`; `2`, `2.0`, `02`
+/// and `2.` all key as `q:2`; `1.5` and `1.50` both as `q:1.5`. The three key
+/// spaces (`bv:`, `q:`, `b:`) are disjoint by prefix, so a bit-vector element and
+/// a numeric one can never collide.
+///
+/// # Why collapsing `2` and `2.0` is safe under either reading
+///
+/// `desugar_sets` erases element sorts (every `(Set E)` becomes one `BitVec`), so
+/// this function cannot see whether it is keying for a `(Set Int)` or a
+/// `(Set Real)`. Under SMT-LIB's `Reals_Ints` embedding, `2` in a `Real` context
+/// denotes `2.0` and sharing a bit is REQUIRED. Under the stricter reading cvc5
+/// takes — it rejects `(set.member 2 s)` with `s : (Set Real)` as a type error,
+/// "child type Int, not type Real" — the script is ill-sorted and we should have
+/// declined it, in which case sharing a bit merely gives a well-defined answer to
+/// a script that should never have been accepted. Sharing is therefore correct
+/// under the first reading and harmless under the second; keeping them apart is
+/// WRONG under the first. See ADR-2010 for the open sort-strictness question.
 fn set_element_key(e: &SExpr) -> Option<String> {
     match e {
-        SExpr::Atom(a) => is_set_element_literal_atom(a).then(|| a.clone()),
+        SExpr::Atom(a) => set_element_atom_key(a),
         SExpr::List(items) => {
             // `(_ bvN W)` indexed bit-vector constant.
-            if items.len() == 3
-                && items[0].atom() == Some("_")
-                && items[1].atom().is_some_and(|n| n.starts_with("bv"))
-                && items[2].atom().is_some_and(|w| w.parse::<u32>().is_ok())
-            {
-                let n = items[1].atom().expect("checked");
-                let w = items[2].atom().expect("checked");
-                Some(format!("(_ {n} {w})"))
-            } else {
-                None
+            if items.len() == 3 && items[0].atom() == Some("_") {
+                let value = items[1].atom()?.strip_prefix("bv")?;
+                let width = items[2].atom()?.parse::<u32>().ok()?;
+                return bv_element_key_from_decimal(value, width);
             }
+            None
         }
     }
 }
 
-/// Whether an atom is a constant literal usable as a finite-set element bit key:
-/// a numeral, a decimal, a `#b`/`#x` bit-vector literal, or `true`/`false`.
-fn is_set_element_literal_atom(a: &str) -> bool {
+/// [`set_element_key`] for an atom: `true`/`false`, a `#b`/`#x` bit-vector
+/// literal, or a numeral/decimal.
+fn set_element_atom_key(a: &str) -> Option<String> {
     if a == "true" || a == "false" {
-        return true;
+        return Some(format!("b:{a}"));
     }
-    if let Some(rest) = a.strip_prefix("#b") {
-        return !rest.is_empty() && rest.bytes().all(|c| c == b'0' || c == b'1');
-    }
-    if let Some(rest) = a.strip_prefix("#x") {
-        return !rest.is_empty() && rest.bytes().all(|c| c.is_ascii_hexdigit());
-    }
-    // Numeral or decimal: digits with at most one `.`.
-    let mut seen_dot = false;
-    let mut seen_digit = false;
-    for c in a.bytes() {
-        match c {
-            b'0'..=b'9' => seen_digit = true,
-            b'.' if !seen_dot => seen_dot = true,
-            _ => return false,
+    if let Some(bits) = a.strip_prefix("#b") {
+        if bits.is_empty() || !bits.bytes().all(|c| c == b'0' || c == b'1') {
+            return None;
         }
+        // Already binary at its own width: `#b0101` is four bits, value 5.
+        return Some(format!("bv:{}:{bits}", bits.len()));
     }
-    seen_digit
+    if let Some(hex) = a.strip_prefix("#x") {
+        if hex.is_empty() {
+            return None;
+        }
+        // Four bits per hex digit, so `#x5` is `bv:4:0101` — the same key
+        // `#b0101` produces.
+        let mut bits = String::with_capacity(hex.len() * 4);
+        for c in hex.chars() {
+            let nibble = c.to_digit(16)?;
+            for shift in (0..4).rev() {
+                bits.push(if (nibble >> shift) & 1 == 1 { '1' } else { '0' });
+            }
+        }
+        return Some(format!("bv:{}:{bits}", bits.len()));
+    }
+    numeric_element_key(a)
+}
+
+/// A numeral or decimal keyed by its exact value: leading zeros of the integer
+/// part and trailing zeros of the fractional part are not part of the number.
+///
+/// Exact at any magnitude — this is a digit-string normalization, not a parse, so
+/// there is no overflow to decline on. `7`, `007`, `7.0` and `7.` all give `q:7`;
+/// `1.5` and `1.50` both give `q:1.5`; `.5` and `0.5` both give `q:0.5`.
+fn numeric_element_key(a: &str) -> Option<String> {
+    let (int_part, frac_part) = a.split_once('.').unwrap_or((a, ""));
+    let all_digits = |s: &str| s.bytes().all(|b| b.is_ascii_digit());
+    // A second `.` leaves a non-digit in `frac_part`, so `1.2.3` declines here.
+    if !all_digits(int_part) || !all_digits(frac_part) {
+        return None;
+    }
+    if int_part.is_empty() && frac_part.is_empty() {
+        return None;
+    }
+    let whole = int_part.trim_start_matches('0');
+    let whole = if whole.is_empty() { "0" } else { whole };
+    let frac = frac_part.trim_end_matches('0');
+    if frac.is_empty() {
+        Some(format!("q:{whole}"))
+    } else {
+        Some(format!("q:{whole}.{frac}"))
+    }
+}
+
+/// `(_ bvN W)` keyed as its `W` binary digits, so it shares a bit with the `#b`
+/// and `#x` spellings of the same value.
+///
+/// Converts by repeatedly halving the decimal digit string, which is exact at any
+/// width and needs no big-integer arithmetic. Returns `None` — a decline, never a
+/// guess — when `N` is not a numeral, when `W` is zero or implausibly wide, or
+/// when `N` does not fit in `W` bits (which SMT-LIB forbids).
+fn bv_element_key_from_decimal(value: &str, width: u32) -> Option<String> {
+    /// Widest element literal we will canonicalize. Far beyond any real
+    /// benchmark; the cap only stops an adversarial `(_ bv1 4294967295)` from
+    /// spending the parse budget in the halving loop below.
+    const MAX_ELEMENT_BITS: u32 = 4096;
+    if value.is_empty() || !value.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    if width == 0 || width > MAX_ELEMENT_BITS {
+        return None;
+    }
+    let mut digits: Vec<u8> = value.bytes().map(|b| b - b'0').collect();
+    let mut bits = vec![b'0'; width as usize];
+    for slot in (0..width as usize).rev() {
+        let mut carry = 0u8;
+        for digit in &mut digits {
+            // `carry` is 0 or 1 and `*digit` at most 9, so this is at most 19.
+            let current = carry * 10 + *digit;
+            *digit = current / 2;
+            carry = current % 2;
+        }
+        bits[slot] = b'0' + carry;
+    }
+    // Anything left after `width` halvings is a value too large for the width.
+    if digits.iter().any(|&d| d != 0) {
+        return None;
+    }
+    let bits = String::from_utf8(bits).ok()?;
+    Some(format!("bv:{width}:{bits}"))
 }
 
 /// Recursively rewrites every finite-set sort/operator in `e` (in place) to its

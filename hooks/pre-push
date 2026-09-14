@@ -770,13 +770,34 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #                              between a weakened encoding and a wrong `sat`.
   #                              `check-suite-gating.py` caught it unregistered
   #                              at the push that would have shipped it.
+  #   parser_desugar_soundness
+  #                            — ADR-2010 soundness-negative: the parser's two
+  #                              UNCONDITIONAL s-expression desugars,
+  #                              `desugar_sets` and `desugar_const_arrays`.
+  #                              Both shipped wrong verdicts through the default
+  #                              front door — no lever, no feature gate — and
+  #                              BOTH ARE INVISIBLE TO THE MODEL REPLAY, for two
+  #                              different structural reasons. `desugar_sets`
+  #                              rewrites `(Set E)` to `BitVec` on the
+  #                              s-expression tree BEFORE any term is built, so
+  #                              the source set terms never become IR terms and
+  #                              there is nothing for `check_model` to evaluate
+  #                              them against (replaying against "the originally
+  #                              parsed assertions" would not help: the original
+  #                              parse IS the encoding). `desugar_const_arrays`
+  #                              is a STRENGTHENING rewrite and the replay only
+  #                              ever inspects `sat`, so it cannot fire on a
+  #                              manufactured `unsat` however it is implemented.
+  #                              Unlike distinct_linear_soundness below, neither
+  #                              rewrite has a lever to turn off — these
+  #                              assertions are the whole gate.
   for suite in unknown_reason_coverage dt_uf_gate dt_capability_1935 \
                dt_constructor_arg_1942 dt_valued_result_1946 \
                datatype_solve_path quant_ladder_rung_refusal_declines \
                nested_array_gate_map nested_array_row real_element_array_row \
                dispatch_rung_refusal_declines quant_egraph_reserve_row \
                quant_valid_universal_reserve_row qinst_egraph_retry_share_row \
-               distinct_linear_soundness \
+               distinct_linear_soundness parser_desugar_soundness \
                additive_no_overflow_never_becomes_unsat; do
     gated_test "dispatch/reason: $suite" \
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
