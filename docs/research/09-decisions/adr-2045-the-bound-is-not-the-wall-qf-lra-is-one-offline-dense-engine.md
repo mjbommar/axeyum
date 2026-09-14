@@ -1,7 +1,7 @@
 # ADR-2045: the bound is not the wall — `QF_LRA` is one offline dense engine, and the knob that reaches it hands one construction the whole process
 
 Status: accepted
-Index-summary: `QF_LRA` is fully decidable and we ship a simplex, so a 59-file board gap was a signal, not a research problem. Population **re-derived** (200 files, 107/93, reproducing the board's 107 exactly; `--trace` perturbs **0 rows**). **Two give-up labels had to be split and BOTH were wrong as written**: `kind=Timeout` is a relabel whose detail *contains* `;` ([ADR-2020]'s trap), and `lra.rs:159`'s `"Fourier–Motzkin … exceeded the … budget"` is ONE string for every `Decision::TimedOut` out of `decide_within` (overflow, deadline, simplex, elimination) — **34 of 34 rows carrying it have `cube_matrices=0` and `cube_simplex_calls>0`; Fourier–Motzkin never ran**. The 40 remaining rows **abort with no give-up line at all** (stderr only), so a census on the give-up string alone loses the largest bucket; the runner captures four channels. Result: **74 of 93 undecided rows are ONE route**, the offline dense-matrix LRA engine — 40 aborting on its allocation, 34 exhausting the clock — at a **5.3 GB median peak RSS, 51 of 93 over 4 GiB**. Cause: the harness bounds memory with `ulimit -v 8G` and the solver cannot see it, so `fm_admission`/`simplex_admission` open with `current_limit_bytes()?` and **do not screen at all**; a which-matrix probe (`cube_simplex_ms=46356`, `cube_matrices=0`, 12.0 GB) shows the **dense simplex tableau** is the allocator, **correcting `lra_online.rs`'s own doc**, which still attributes that exact file's bytes to FM's Farkas matrix from a stack sample taken the day `simplex_first` shipped. z3 decides one such file (25,273 asserts) at `:arith-max-rows 334`, `:max-memory 52.92` MB, re-solving incrementally 77,779 times: **it never materialises the system**. The lever — telling the solver the limit the harness already enforces, ONE BINARY under TWO ENV VALUES, proved live **by mechanism** (the refusal is formatted from the value: `memory_limit_mb 8192` vs `2048`) — is **net +0, 0 gains, 0 losses, 0 flips** at a **row-level noise floor of 0 of 200** over two identical passes, with soundness 0 disagreements at a **194** denominator; **0 movers, so the mover recheck and authority check have a comparable denominator of 0**, printed. An ordered probe ([ADR-2030]'s distinction) on the 24 admission-screen rows: **0 still refused, 21 REACH the engine, 0 newly decided** — **the bound is not the wall**; 19 die at `"model did not replay (arithmetic outside the incremental engine)"`. **The arm CAUSES five new aborts**: one knob drives two screens wanting opposite settings, so the online construction's budget jumps 640 MiB → 8 GiB and it peaks at **8.40 GB against an 8 GiB ceiling** — 640 MiB was a *fraction* of a process budget and 8 GiB is the *whole* one. Pre-registered R8 was ≥ +5, so **the lever ships `Off`**, and R10's second falsifier is what fired — half of it: the 20 abort rows that ARE addressable get converted from core dump to first-class `unknown`, the ladder below runs, and **not one is decided**. Re-sizing: **the first reference pass was wrong in exactly the direction its own caveat predicted** — six concurrent shards on s4 read z3 = 155 against the board's 166, and re-taking the 43 "decided by nobody" rows on IDLE hosts decides **11**, giving **z3 = 166 and gap = 59 to the file**, so the published figures are **61 addressable / 32 nobody** and not the 50/43 the loaded pass would have printed (a **"decided by nobody" claim measured under load is not evidence**). **50 of the 61 addressable rows — 82 % — are that one offline dense engine.** Control and exposure divisions **NOT RUN** and reported as such: they gated shipping `On`. Two unpriced allocations are left named for the next lane, neither needing a config change: `simplex::MAX_TABLEAU_CELLS` is not consulted by `feasible_within`, and `lra.rs:944` builds an `n × nvars` dense matrix that `Tableau::new` immediately re-sparsifies.
+Index-summary: `QF_LRA` is fully decidable and we ship a simplex, so a 59-file board gap was a signal, not a research problem. Population **re-derived** (200 files, 107/93, reproducing the board's 107 exactly; `--trace` perturbs **0 rows**). **Two give-up labels had to be split and BOTH were wrong as written**: `kind=Timeout` is a relabel whose detail *contains* `;` ([ADR-2020]'s trap), and `lra.rs:159`'s `"Fourier–Motzkin … exceeded the … budget"` is ONE string for every `Decision::TimedOut` out of `decide_within` (overflow, deadline, simplex, elimination) — **34 of 34 rows carrying it have `cube_matrices=0` and `cube_simplex_calls>0`; Fourier–Motzkin never ran**. The 40 remaining rows **abort with no give-up line at all** (stderr only), so a census on the give-up string alone loses the largest bucket; the runner captures four channels. Result: **74 of 93 undecided rows are ONE route**, the offline dense-matrix LRA engine — 40 aborting on its allocation, 34 exhausting the clock — at a **5.07 GiB median peak RSS, 51 of 93 over 4 GiB**. Cause: the harness bounds memory with `ulimit -v 8G` and the solver cannot see it, so `fm_admission`/`simplex_admission` open with `current_limit_bytes()?` and **do not screen at all**; a which-matrix probe (`cube_simplex_ms=46356`, `cube_matrices=0`, 11.50 GiB) shows the **dense simplex tableau** is the allocator, **correcting `lra_online.rs`'s own doc**, which still attributes that exact file's bytes to FM's Farkas matrix from a stack sample taken the day `simplex_first` shipped. z3 decides one such file (25,273 asserts) at `:arith-max-rows 334`, `:max-memory 52.92` MB, re-solving incrementally 77,779 times: **it never materialises the system**. The lever — telling the solver the limit the harness already enforces, ONE BINARY under TWO ENV VALUES, proved live **by mechanism** (the refusal is formatted from the value: `memory_limit_mb 8192` vs `2048`) — is **net +0, 0 gains, 0 losses, 0 flips** at a **row-level noise floor of 0 of 200** over two identical passes, with soundness 0 disagreements at a **194** denominator; **0 movers, so the mover recheck and authority check have a comparable denominator of 0**, printed. An ordered probe ([ADR-2030]'s distinction) on the 24 admission-screen rows: **0 still refused, 21 REACH the engine, 0 newly decided** — **the bound is not the wall**; 19 die at `"model did not replay (arithmetic outside the incremental engine)"`. **The arm CAUSES five new aborts**: one knob drives two screens wanting opposite settings, so the online construction's budget jumps 640 MiB → 8 GiB and it peaks at **8.02-8.05 GiB against an 8.00 GiB ceiling** — 640 MiB was a *fraction* of a process budget and 8 GiB is the *whole* one. Pre-registered R8 was ≥ +5, so **the lever ships `Off`**, and R10's second falsifier is what fired — half of it: the 20 abort rows that ARE addressable get converted from core dump to first-class `unknown`, the ladder below runs, and **not one is decided**. Re-sizing: **the first reference pass was wrong in exactly the direction its own caveat predicted** — six concurrent shards on s4 read z3 = 155 against the board's 166, and re-taking the 43 "decided by nobody" rows on IDLE hosts decides **11**, giving **z3 = 166 and gap = 59 to the file**, so the published figures are **61 addressable / 32 nobody** and not the 50/43 the loaded pass would have printed (a **"decided by nobody" claim measured under load is not evidence**). **50 of the 61 addressable rows — 82 % — are that one offline dense engine.** Control and exposure divisions **NOT RUN** and reported as such: they gated shipping `On`. Two unpriced allocations are left named for the next lane, neither needing a config change: `simplex::MAX_TABLEAU_CELLS` is not consulted by `feasible_within`, and `lra.rs:944` builds an `n × nvars` dense matrix that `Tableau::new` immediately re-sparsifies.
 Index-status: accepted
 Date: 2026-09-14
 
@@ -53,13 +53,35 @@ of time". Split on the bracketed inner reason, the clock is almost never the
 binding cause.
 
 **`"lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget"` is
-one string at `lra.rs:159` standing for every `Decision::TimedOut` out of
-`decide_within`** — which returns `TimedOut` for an `i128` overflow, for the
-deadline inside the multiplier loop, for the **simplex**, and for the
-elimination. Split on the engines' own counters (they are incremented by the
-engines, so they cannot agree with a wrong guess): **34 of 34 rows wearing this
-label have `cube_matrices=0` and `cube_simplex_calls>0`. Fourier–Motzkin never
-ran on any of them.**
+one string at `lra.rs:159` standing for every `Decision::TimedOut` reaching it
+out of `decide_within`.** There are **six** such producers, and only one of them
+is the elimination:
+
+| site | what actually happened |
+|---|---|
+| `lra.rs:574` | deadline on **entry**, before collection — nothing ran at all |
+| `lra.rs:588` | collection declined **and** the clock had expired |
+| `lra.rs:608` | **`ctx.overflow` — an `i128` overflow, not a timeout of any kind** |
+| `lra.rs:697` | deadline inside the `unit_vec` multiplier loop — **the only genuine Fourier–Motzkin site** |
+| `lra.rs:840` | `simplex_after_elim` re-entered with `stages.simplex` already set |
+| `lra.rs:853` | the **simplex** fallback declined |
+
+So the sentence a reader gets names the wrong engine for four of the six, and
+for `608` it names the wrong *kind of event* — the same shape as this
+repository's own recorded gotcha, *"an error naming a node cap when the cause
+was an `i128` overflow."*
+
+Split on the engines' own counters (they are incremented by the engines, so they
+cannot agree with a wrong guess): **34 of 34 rows wearing this label have
+`cube_matrices=0` and `cube_simplex_calls>0`. Fourier–Motzkin never ran on any
+of them.**
+
+**Nothing in the workspace pins this string** — no test, no gate, no golden
+file (`grep -rn` over `crates/` and `tests/` returns only the definition). So it
+was free to be wrong, and equally it is free to correct: the fix is a
+one-line rename to an engine-neutral sentence, with `608` split out as its own
+`Decision` variant so an overflow stops being reported as a clock. **It is NOT
+corrected in this lane** — see the Decision section.
 
 The census after both splits:
 
@@ -79,7 +101,7 @@ aborting on its allocation and 34 exhausting the clock inside it.
 
 Refusals against exhausted clocks (R2): **42 refusals (45.2 %, median 7.0 s of a
 24 s budget) and 51 clocks (54.8 %)**. Peak resident set over the undecided:
-**median 5.3 GB, 51 of 93 rows over 4 GiB, max 7.82 GB.**
+**median 5.07 GiB, 51 of 93 rows over 4 GiB, max 7.46 GiB.**
 
 ## 2. Why it aborts: the harness bounds memory and the solver cannot see it
 
@@ -111,8 +133,8 @@ very file it was written about.
 Given 24 GiB of room so it can report rather than die, on that file:
 
 ```text
-shipped route   cube_simplex_calls=10  cube_simplex_ms=46356  cube_matrices=0   peak 12.0 GB
-fm-first        (pre-2026-09-08 order)                                          peak 24.4 GB
+shipped route   cube_simplex_calls=10  cube_simplex_ms=46356  cube_matrices=0   peak 11.50 GiB
+fm-first        (pre-2026-09-08 order)                                          peak 23.28 GiB
 ```
 
 **The dense simplex tableau is the allocator. Fourier–Motzkin builds zero
@@ -148,7 +170,7 @@ sat
 
 **z3 never materialises the system.** Its tableau holds only the atoms currently
 on the CDCL trail — 334 rows — and it re-solves incrementally 77 779 times at
-53 MB. We hand the whole constraint set to one dense matrix and reach a 5.3 GB
+53 MB. We hand the whole constraint set to one dense matrix and reach a 5.07 GiB
 median.
 
 That is the structural difference, and it says the remedy is not a bigger budget
@@ -222,18 +244,18 @@ Nine rows still abort in the arm, all `LassoRanker`, and **five of them exited
 cleanly in the base**. Mechanism, with 24 GiB of room so both arms can report:
 
 ```text
-base(UNSET)   online_probe=admission-screen     peak 5.3 - 7.2 GB   unknown
-arm(8192)     online_probe=model-did-not-replay peak 8.40 - 8.44 GB unknown
+base(UNSET)   online_probe=admission-screen     peak 5.10 - 6.90 GiB   unknown
+arm(8192)     online_probe=model-did-not-replay peak 8.02 - 8.05 GiB   unknown
 ```
 
-8.40 GB is **above the 8 GiB the harness allows**, which is exactly why these
-die. The cause is that **one knob drives two screens that want opposite
-settings**: `memory_limit_mb` makes the offline screens bind (the intent), but
-`NormalizationLimits::for_budget` reads the same number, so the *online*
-construction's budget jumps from 640 MiB to 8 GiB — and 640 MiB was a
-**fraction** of a process budget, while 8 GiB is the **whole** process ceiling,
-with no allowance for the arena, the skeleton and the CNF the process is already
-holding.
+(Three of the five probed; `/usr/bin/time`'s figure is KiB, so these are **GiB**
+and directly comparable to the ceiling — an earlier draft of this ADR rendered
+them as "GB" beside a "GiB" limit, which is the one comparison in the document
+that has to be exact.)
+
+The harness ceiling is **8.00 GiB**, so the arm lands 0.02–0.05 GiB *over* it.
+See the Decision section for the mechanism and for why this is recorded as a
+**loss** rather than as part of the `+0`.
 
 ## 6. Re-sizing the prize: the dramatic bucket is not the valuable one
 
@@ -290,6 +312,40 @@ both halves lead to the same engine.
 
 Pre-registered R8 required net **≥ +5** with 0 losses and 0 flips. The measured
 net is **+0**, against a measured row-level noise floor of **0 of 200**.
+
+### The lever is not neutral. It is a LOSS.
+
+Stated on its own rather than folded into the `+0`, because a lever that costs
+nothing in verdicts and destabilises five files is **worse than doing nothing**,
+and the verdict column is exactly where that does not show:
+
+> **Five files that terminate cleanly in the base ABORT under the arm.**
+> `Gcd.bpl_Iteration1_Lasso_7`, `collatz.t2.c_Iteration3_Loop_7`,
+> `matrixsqrt.t2.c_Iteration12_Loop_7`,
+> `NoriSharma-2013FSE-Fig8…_Iteration1_Loop_5`,
+> `Lobnya-Boolean-Reordered.bpl_Iteration1_Lasso_7` — all `LassoRanker`.
+
+**Mechanism**, measured with 24 GiB of room so both arms can report rather than
+die:
+
+| arm | the screen's own report | peak RSS |
+|---|---|---:|
+| base (UNSET) | `online_probe=admission-screen` | 5.10 – 6.90 GiB |
+| arm (8192) | `online_probe=model-did-not-replay` | **8.02 – 8.05 GiB** |
+
+The harness ceiling is **8.00 GiB**. The arm ends up 0.02–0.05 GiB *over* it, so
+these die on allocation. The cause is that **one knob drives two screens that
+want opposite settings**: `memory_limit_mb` is what makes the offline screens
+bind, which is the intent — but `NormalizationLimits::for_budget` reads the
+*same* number, so the online construction's budget jumps 640 MiB → 8 GiB. 640 MiB
+was a **fraction** of a process budget; 8 GiB is the **entire** process ceiling,
+leaving nothing for the arena, the Boolean skeleton and the CNF the process is
+already holding. The construction then grows into the space its own budget told
+it was free.
+
+These five are `unknown` in both arms, so R8's `losses=0` is correct as a
+verdict count **and** misses this entirely. That is the reason the exit-status
+channel is carried through the whole census rather than just the verdict.
 
 R10's second falsifier is the one that fired — *"if the abort rows are ones no
 reference solver decides, converting them to `unknown` buys zero board files and
