@@ -1,0 +1,11 @@
+UFNIA/2019-Preiner/combined/f2_rw343.smt2
+UFNIA/2019-Preiner/combined/t3_rw1401.smt2
+UFNIA/2019-Preiner/combined/t3_rw899.smt2
+UFNIA/2019-Preiner/full/t3_rw1240.smt2
+UFNIA/2019-Preiner/full/t3_rw189.smt2
+UFNIA/2019-Preiner/full/t3_rw493.smt2
+UFNIA/2019-Preiner/partial/f2_rw58.smt2
+UFNIA/2019-Preiner/partial/t3_rw636.smt2
+UFNIA/2019-Preiner/partial/t3_rw759.smt2
+UFNIA/2019-Zohar-ic/combined/int_check_bvsle_bvashr0_rtl.smt2
+UFNIA/2019-Zohar-ic/combined/int_check_bvugt_bvashr0_ltr_inv_g.smt2

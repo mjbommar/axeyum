@@ -1,0 +1,4 @@
+UFNIA/2019-Preiner/combined/f2_rw160.smt2
+UFNIA/2019-Preiner/full/f2_rw120.smt2
+UFNIA/2019-Preiner/partial/t3_rw21.smt2
+UFNIA/2019-Zohar-ic/full/int_check_bvugt_bvneg_ltr_inv_g.smt2
