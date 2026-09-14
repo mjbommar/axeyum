@@ -180,8 +180,33 @@ axeyum_ir::cap_lever! {
 ///   round budget the historical string names.**
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InstantiationLoopExit {
-    /// Matching, candidate equalities and term invention all reached fixpoint.
+    /// Matching, candidate equalities and term invention all reached fixpoint
+    /// **with the admission ceiling not in force**, so there really is nothing
+    /// left to admit.
     Fixpoint,
+    /// The same `break`, taken with the accumulated ground set **at or above
+    /// [`GroundBudget::join_ceiling`]**.
+    ///
+    /// # Why this is not [`Fixpoint`](Self::Fixpoint)
+    ///
+    /// [`Fixpoint`](Self::Fixpoint)'s give-up detail asserts *"no further
+    /// instance to admit; more rounds cannot help"*. When the join is capped,
+    /// the second clause is a **conclusion the exit is not entitled to**: what
+    /// was observed is that nothing more was admitted, and the cap is a
+    /// sufficient explanation for that on its own. This file already knew the
+    /// shape and named it in a comment — *"every flooded file reaches that arm
+    /// only at a CAP-INDUCED fixpoint with `ground=8192`"* — but the exit the
+    /// census reads did not distinguish it, so a census ranked both as `SHAPE`.
+    ///
+    /// Measured on the 129-row winnable `UFNIA`/`UFLIA` population
+    /// (ADR-2015's census): **29 of 45 `SHAPE` exits sit at exactly
+    /// `ground=8192`**, which is [`MAX_GROUND_TERMS`]. Two thirds of the
+    /// "fixpoints" in that family are saturations.
+    ///
+    /// This is a statement about the CAP BEING IN FORCE, not a proof that the
+    /// cap is what stopped admission — the loop cannot know that at the break.
+    /// The point is the reverse: neither can `Fixpoint`, and it said so anyway.
+    GroundSaturated,
     /// The remaining budget could not fit another round with growth headroom.
     GrowthHeadroom,
     /// The loop ran its full round ceiling.
@@ -203,6 +228,11 @@ impl InstantiationLoopExit {
                 "e-matching instantiation reached fixpoint without refuting after {rounds} \
                  rounds (no further instance to admit; more rounds cannot help)"
             ),
+            Self::GroundSaturated => format!(
+                "e-matching instantiation admitted nothing further after {rounds} rounds with \
+                 the ground set at the admission ceiling (a saturation, not a fixpoint: more \
+                 rounds cannot help at THIS ceiling, and that is a different claim)"
+            ),
             Self::GrowthHeadroom => format!(
                 "e-matching instantiation stopped after {rounds} rounds: the remaining budget \
                  could not fit another round with growth headroom"
@@ -219,6 +249,7 @@ impl InstantiationLoopExit {
     pub fn census_kind(self) -> &'static str {
         match self {
             Self::Fixpoint => "SHAPE",
+            Self::GroundSaturated => "SATURATED",
             Self::GrowthHeadroom => "CLOCK",
             Self::RoundCeiling => "ROUND",
         }
@@ -2596,9 +2627,16 @@ fn prove_quantified_unsat_via_egraph_impl(
                     floodprobe_cap_census(arena, &matcher, &ground_derivations, &assertions);
                 }
                 funnel.record(ground.len(), crate::live_instruments::Sampled::Complete);
-                // A SHAPE exit: nothing is left to admit, so neither more
-                // rounds nor more clock can change this answer.
-                loop_exit = InstantiationLoopExit::Fixpoint;
+                // A SHAPE exit only when the admission ceiling is NOT in
+                // force. With the ground set at the cap, "nothing was admitted"
+                // has a sufficient explanation that is not a fixpoint, and
+                // `Fixpoint`'s detail would assert a conclusion this break
+                // cannot support.
+                loop_exit = if ground.len() >= ground_budget().join_ceiling {
+                    InstantiationLoopExit::GroundSaturated
+                } else {
+                    InstantiationLoopExit::Fixpoint
+                };
                 break; // source, scoped-candidate, and invention fixpoint
             }
         }
@@ -9464,8 +9502,25 @@ mod tests {
     #[test]
     fn the_exit_kinds_follow_adr_1950_and_are_distinct() {
         assert_eq!(InstantiationLoopExit::Fixpoint.census_kind(), "SHAPE");
+        assert_eq!(
+            InstantiationLoopExit::GroundSaturated.census_kind(),
+            "SATURATED"
+        );
         assert_eq!(InstantiationLoopExit::GrowthHeadroom.census_kind(), "CLOCK");
         assert_eq!(InstantiationLoopExit::RoundCeiling.census_kind(), "ROUND");
+        // Every kind is DISTINCT. A merged label is the defect this enum exists
+        // to prevent, and it was merged twice before anyone measured it, so the
+        // guard is on the property rather than on the four strings.
+        let kinds = [
+            InstantiationLoopExit::Fixpoint.census_kind(),
+            InstantiationLoopExit::GroundSaturated.census_kind(),
+            InstantiationLoopExit::GrowthHeadroom.census_kind(),
+            InstantiationLoopExit::RoundCeiling.census_kind(),
+        ];
+        let mut seen: Vec<&str> = kinds.to_vec();
+        seen.sort_unstable();
+        seen.dedup();
+        assert_eq!(seen.len(), kinds.len(), "two exits share one census kind");
     }
 
     /// The shipped [`GroundBudget`] arm must reproduce the three constants the
