@@ -7910,7 +7910,9 @@ mod tests {
 ///
 /// The fix is a carry through `Model::retain_symbols`, and the test below is
 /// what makes it falsifiable at this site.
-#[cfg(test)]
+// `full`-gated for the same reason as `model.rs`'s twin: it constructs the
+// quantified-sat certificate, which only exists under `full`.
+#[cfg(all(test, feature = "full"))]
 mod sound2_narrowing_site_tests {
     use super::{complete_model_filtered, filter_internal_model};
     use crate::model::Model;

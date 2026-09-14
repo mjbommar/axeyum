@@ -79,6 +79,38 @@ required-features = ["full"]
 name = "first_smtlib_query"
 required-features = ["full"]
 
+# These examples import `axeyum_lean_kernel` or the `full`-gated reconstruction
+# surface, so they cannot build on default features.
+
+[[example]]
+name = "lean_hypothesis_binding_dump"
+required-features = ["full"]
+
+[[example]]
+name = "front_door_carrier"
+required-features = ["full"]
+
+[[example]]
+name = "ordered_ring_refutation"
+required-features = ["full"]
+
+[[example]]
+name = "proof_keyword_cost"
+required-features = ["full"]
+
+[[example]]
+name = "shared_prelude_module"
+required-features = ["full"]
+
+# `ring_interface_pin` imports `axeyum_lean_kernel` and the `full`-gated ring
+# interface surface, so it cannot build on default features. Without this
+# stanza `cargo check -p axeyum-solver --all-targets` is RED on default
+# features while `--workspace` stays green through feature unification — so
+# no gate in this repository could see it (found by lane ROUND-HEAD).
+[[example]]
+name = "ring_interface_pin"
+required-features = ["full"]
+
 [[example]]
 name = "infeasibility_iis"
 required-features = ["full"]

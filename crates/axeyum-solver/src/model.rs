@@ -550,7 +550,9 @@ mod tests {
 /// [`Model::retain_symbols`] changes the symbol entries and **provably nothing
 /// else**, checked by `PartialEq` on the whole `Model` rather than by a list of
 /// accessors this file would have to remember to extend.
-#[cfg(test)]
+// `full`-gated: the module builds a `Model` with EVERY component populated,
+// which includes the quantified-sat certificate carried only under `full`.
+#[cfg(all(test, feature = "full"))]
 mod sound2_narrowing_tests {
     use super::Model;
     use crate::quant_sat_certificates::{AffineSkolemWitness, QuantifiedSkolemSatCertificate};
