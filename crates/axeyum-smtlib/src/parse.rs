@@ -19877,8 +19877,6 @@ fn balanced_and(arena: &mut TermArena, mut layer: Vec<TermId>) -> Result<TermId,
     Ok(layer[0])
 }
 
-#[allow(clippy::too_many_lines)]
-#[allow(clippy::too_many_arguments)]
 /// Whether a user `declare-fun` outranks a theory-operator arm of the same
 /// name (ADR-2040), read once from `AXEYUM_DECLARED_NAME_WINS`.
 ///
@@ -19928,6 +19926,8 @@ fn declared_redirect(arena: &TermArena, op: &str, args: &[TermId]) -> Option<Fun
     }
 }
 
+#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_arguments)]
 fn apply_op(
     arena: &mut TermArena,
     sort_aliases: &HashMap<String, Sort>,
@@ -24628,8 +24628,8 @@ mod declared_name_wins_tests {
     use axeyum_ir::{Sort, TermArena};
 
     /// The exact shape that dies at ingest on 180 `UFNIA` files: a script
-    /// declaring a function named after a FloatingPoint theory operator, in a
-    /// logic that has no FloatingPoint theory.
+    /// declaring a function named after a `FloatingPoint` theory operator, in
+    /// a logic that has no `FloatingPoint` theory.
     const VCC_SHAPE: &str = "(set-logic UFNIA)\n\
         (declare-fun fp (Int Int Int) Int)\n\
         (declare-fun a () Int)\n\
