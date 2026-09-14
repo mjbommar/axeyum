@@ -1,0 +1,7 @@
+UFLIA/simplify/javafe.tc.TypeSig.730.smt2
+UFNIA/2019-Preiner/combined/t3_rw96.smt2
+UFNIA/2019-Preiner/partial/t3_rw114.smt2
+UFNIA/2019-Preiner/partial/t3_rw940.smt2
+UFNIA/sledgehammer/Hoare/z3.850818.smt2
+UFNIA/spec_sharp/specsharp-BoundedStack.3.BoundedStack..ctor_System.Int32.smt2
+UFNIA/vcc-havoc/vccp-union1.c.6.reint2.smt2

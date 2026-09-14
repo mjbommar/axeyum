@@ -170,6 +170,69 @@ const MAX_PRE_SAT_CNF_VARS: usize = 4_096;
 /// runs, not a redesign.
 const MAX_MODERATE_PRE_SAT_ARITH_ATOMS: usize = 10_240;
 const MAX_MODERATE_PRE_SAT_CNF_VARS: usize = 16_384;
+
+/// A/B lever (ADR-2020, **off by default — the shipped arm is the unset one**):
+/// override the moderate envelope above from the environment, so one binary can
+/// measure both arms.
+///
+/// # Why this exists
+///
+/// The envelope's own re-derivation (`832c2afd0`, 2026-09-08, the doc comment
+/// above) is a **memory** justification, and it measured peak RSS at **71 MiB**
+/// on the largest admitted point — `1/115th` of the 8 GiB ceiling the bound
+/// cites — with peak RSS moving by at most **0.5 %** in either arm on every
+/// file. It then set the envelope to the largest point *measured* and said so
+/// plainly: *"above this, nobody has measured, and unmeasured is not the same
+/// as safe."*
+///
+/// [ADR-2015]'s held-set replay census shows this boundary is now the **single
+/// largest binding cause** of our ground checker declining our own instantiated
+/// conjunction — 22 of the 78 declining replays — at `atoms ≈ 14.7 k` /
+/// `cnf_vars ≈ 24 k`, i.e. **1.4x** the measured-safe point on a bound whose
+/// measured memory headroom was two orders of magnitude. So "nobody has
+/// measured" is the actual state of the region that is refusing these queries,
+/// and measuring it is the point of this knob.
+///
+/// This is a **measurement lever, not a policy change**: unset (or empty, or
+/// unparseable) it returns the shipped constants byte for byte, so the default
+/// build is unaffected. It is read once per process.
+///
+/// Format: `AXEYUM_GROUND_DECIDE_PRESAT_ENVELOPE=<atoms>,<cnf_vars>`.
+fn moderate_pre_sat_envelope() -> (usize, usize) {
+    static ENVELOPE: std::sync::OnceLock<(usize, usize)> = std::sync::OnceLock::new();
+    *ENVELOPE.get_or_init(|| {
+        parse_moderate_pre_sat_envelope(
+            std::env::var("AXEYUM_GROUND_DECIDE_PRESAT_ENVELOPE")
+                .ok()
+                .as_deref(),
+        )
+    })
+}
+
+/// Parses [`moderate_pre_sat_envelope`]'s spelling. Split out so the OFF/ON
+/// polarity is testable without touching process environment: **every**
+/// rejected spelling must return the shipped pair, because a lever that fails
+/// open would silently measure the shipped arm against itself.
+fn parse_moderate_pre_sat_envelope(raw: Option<&str>) -> (usize, usize) {
+    let shipped = (
+        MAX_MODERATE_PRE_SAT_ARITH_ATOMS,
+        MAX_MODERATE_PRE_SAT_CNF_VARS,
+    );
+    let Some(raw) = raw else { return shipped };
+    let Some((atoms, vars)) = raw.trim().split_once(',') else {
+        return shipped;
+    };
+    let (Ok(atoms), Ok(vars)) = (atoms.trim().parse::<usize>(), vars.trim().parse::<usize>())
+    else {
+        return shipped;
+    };
+    // A zero in either dimension would refuse everything rather than admit it:
+    // that is the opposite of this lever's direction, so it is not a spelling.
+    if atoms == 0 || vars == 0 {
+        return shipped;
+    }
+    (atoms, vars)
+}
 /// Explicit, absolute wall-clock cap on the bounded online-probe fallback
 /// [`arith_dpll_admission_preflight`] tries for a non-difference-logic query
 /// that would otherwise decline outright on the boundary above (S2-followup,
@@ -1352,8 +1415,8 @@ impl IncrementalArithDpll {
 
 fn exceeds_pre_sat_skeleton_boundary(atoms: usize, cnf_vars: usize) -> bool {
     let crosses_base_trigger = atoms > MAX_PRE_SAT_ARITH_ATOMS && cnf_vars > MAX_PRE_SAT_CNF_VARS;
-    let outside_moderate_envelope =
-        atoms > MAX_MODERATE_PRE_SAT_ARITH_ATOMS || cnf_vars > MAX_MODERATE_PRE_SAT_CNF_VARS;
+    let (envelope_atoms, envelope_cnf_vars) = moderate_pre_sat_envelope();
+    let outside_moderate_envelope = atoms > envelope_atoms || cnf_vars > envelope_cnf_vars;
     let exceeds = crosses_base_trigger && outside_moderate_envelope;
     // Attribution, not decoration: the `UnknownReason` this feeds already names
     // the boundary, but only on the path that RETURNS it. A `--trace` run needs
@@ -1384,6 +1447,12 @@ fn exceeds_pre_sat_skeleton_boundary(atoms: usize, cnf_vars: usize) -> bool {
 /// preflight already passed but the skeleton grew past the boundary during a
 /// later incremental `assert`). `stage` names which of the two call sites
 /// declined, so a trace line still says which admission gate fired.
+///
+/// The `moderate_envelope` it prints is the **effective** envelope
+/// ([`moderate_pre_sat_envelope`]), not the shipped constants. That is what
+/// makes ADR-2020's A/B arm visible **by mechanism**: a silently ignored
+/// `AXEYUM_GROUND_DECIDE_PRESAT_ENVELOPE` would print the shipped pair, so the
+/// two arms are distinguishable in the trace without trusting verdict counts.
 fn pre_sat_skeleton_boundary_reason(
     atoms: usize,
     cnf_vars: usize,
@@ -1391,13 +1460,14 @@ fn pre_sat_skeleton_boundary_reason(
     blocking_lemmas: usize,
     stage: &str,
 ) -> UnknownReason {
+    let (envelope_atoms, envelope_cnf_vars) = moderate_pre_sat_envelope();
     UnknownReason {
         kind: UnknownKind::ResourceLimit,
         detail: format!(
             "lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary \
              (atoms={atoms}, cnf_vars={cnf_vars}, base_trigger=>{MAX_PRE_SAT_ARITH_ATOMS}/\
-             >{MAX_PRE_SAT_CNF_VARS}, moderate_envelope<={MAX_MODERATE_PRE_SAT_ARITH_ATOMS}/\
-             <={MAX_MODERATE_PRE_SAT_CNF_VARS}, initial_clauses={initial_clauses}, \
+             >{MAX_PRE_SAT_CNF_VARS}, moderate_envelope<={envelope_atoms}/\
+             <={envelope_cnf_vars}, initial_clauses={initial_clauses}, \
              blocking_lemmas={blocking_lemmas}); {stage}"
         ),
     }
@@ -5240,6 +5310,62 @@ mod tests {
         assert_eq!(reason.kind, UnknownKind::ResourceLimit);
         assert!(reason.detail.contains("before the first SAT round"));
         assert_eq!(solver.total_rounds, 0, "the SAT loop must not start");
+    }
+
+    /// ADR-2020's A/B lever must **fail closed**: every spelling it does not
+    /// understand returns the shipped envelope, because a lever that failed
+    /// open would measure the shipped arm against itself and report a
+    /// confident zero. The OFF case is asserted first and by name.
+    #[test]
+    fn the_presat_envelope_lever_is_off_unless_spelled_exactly() {
+        let shipped = (
+            MAX_MODERATE_PRE_SAT_ARITH_ATOMS,
+            MAX_MODERATE_PRE_SAT_CNF_VARS,
+        );
+        // OFF: unset, and every malformed spelling.
+        assert_eq!(parse_moderate_pre_sat_envelope(None), shipped, "unset");
+        for raw in [
+            "",
+            "  ",
+            "40960",
+            "40960;65536",
+            "abc,65536",
+            "40960,abc",
+            ",",
+            "40960,",
+            ",65536",
+            "0,65536",
+            "40960,0",
+            "0,0",
+            "-1,-1",
+        ] {
+            assert_eq!(
+                parse_moderate_pre_sat_envelope(Some(raw)),
+                shipped,
+                "malformed spelling {raw:?} must leave the shipped envelope in force",
+            );
+        }
+        // ON: the one spelling it does understand, including surrounding space.
+        assert_eq!(
+            parse_moderate_pre_sat_envelope(Some("40960,65536")),
+            (40_960, 65_536),
+        );
+        assert_eq!(
+            parse_moderate_pre_sat_envelope(Some("  40960 , 65536  ")),
+            (40_960, 65_536),
+        );
+        // And the ON value must actually be capable of ADMITTING a point the
+        // shipped envelope refuses -- otherwise the lever has no polarity.
+        let (atoms, cnf_vars) = (14_686, 24_076); // ADR-2015's censused decline
+        assert!(
+            atoms > MAX_MODERATE_PRE_SAT_ARITH_ATOMS && cnf_vars > MAX_MODERATE_PRE_SAT_CNF_VARS,
+            "the exemplar must be outside the shipped envelope or this test is vacuous",
+        );
+        let (on_atoms, on_cnf_vars) = parse_moderate_pre_sat_envelope(Some("40960,65536"));
+        assert!(
+            atoms <= on_atoms && cnf_vars <= on_cnf_vars,
+            "the ON arm must admit the exemplar the OFF arm refuses",
+        );
     }
 
     #[test]

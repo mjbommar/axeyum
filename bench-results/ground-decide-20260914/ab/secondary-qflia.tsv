@@ -1,0 +1,13 @@
+file	order	off_verdict	off_ms	on_verdict	on_ms
+QF_LIA/20180326-Bromberger/more_slacked/CAV_2009_benchmarks/smt/30-vars/v30_problem_2__023.smt2.slack.smt2	off-on	unknown	24525	unknown	24623
+QF_LIA/2019-cmodelsdiff/stillLive/0006-still_live-11-1.smt2	on-off	sat	1510	sat	1508
+QF_LIA/2019-ezsmt/incrementalScheduling/182-incremental_scheduling-17280-0.smt2	off-on	unknown	24124	unknown	24123
+QF_LIA/20210219-Dartagnan/ReachSafety-Loops/apache-get-tag-O0.smt2	on-off	unknown	25129	unknown	25127
+QF_LIA/20210219-Dartagnan/ReachSafety-Loops/jm2006_variant-O0.smt2	off-on	unknown	25125	unknown	25121
+QF_LIA/20220307-SMPT/BART-PT-020/RF-13.smt2	on-off	sat	8915	sat	8912
+QF_LIA/20220307-SMPT/FamilyReunion-PT-L00400M0040C020P020G001/RC-07.smt2	off-on	unknown	25629	unknown	25230
+QF_LIA/20220307-SMPT/RwMutex-PT-r0010w0500/RC-09.smt2	on-off	unknown	25024	unknown	25124
+QF_LIA/20220307-SMPT/RwMutex-PT-r0010w2000/RC-11.smt2	off-on	unknown	25124	unknown	25025
+QF_LIA/20220307-SMPT/RwMutex-PT-r1000w0010/RC-15.smt2	on-off	unknown	25225	unknown	25219
+QF_LIA/CAV_2009_benchmarks/coef-size/smt/size-100/problem__006.smt2	off-on	unknown	113	unknown	109
+QF_LIA/CAV_2009_benchmarks/smt/25-vars/problem_2__034.smt2	on-off	unknown	24227	unknown	24122

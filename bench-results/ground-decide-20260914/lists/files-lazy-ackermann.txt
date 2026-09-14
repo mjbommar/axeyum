@@ -1,0 +1,8 @@
+UFLIA/simplify/javafe.ast.NewInstanceExpr.271.smt2
+UFLIA/simplify/javafe.ast.StandardPrettyPrint.322.smt2
+UFLIA/simplify/javafe.ast.UnaryExpr.424.smt2
+UFLIA/simplify/javafe.tc.TypeSig.730.smt2
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1057395.smt2
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1282463.smt2
+UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.972059.smt2
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.844134.smt2
