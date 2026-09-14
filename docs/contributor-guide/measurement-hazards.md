@@ -613,3 +613,50 @@ its fixture did not exercise, and a reviewer's confident absence claim resting
 on an instrument with a coverage gap. Six surfaces, one mistake: for any signal
 you are about to act on, name the observation that would distinguish intention
 from outcome, and go get it.
+
+## A per-process memory cap is not a host budget
+
+**2026-09-14: a host OOM killed a live agent session and the repository's own
+cap would not have prevented it.** The kernel record:
+
+    16:12:41 rustc invoked oom-killer: constraint=CONSTRAINT_NONE ... global_oom
+    16:12:41 Out of memory: Killed process 2497523 (python3)
+             total-vm:64688732kB anon-rss:63445704kB
+    16:12:44 tmux-spawn-...scope: Failed with result 'oom-kill'
+
+That is **61.7 GiB virtual / 60.5 GiB resident in one `python3`** — 53 % of a
+123 GB box — and `rustc` was merely the process unlucky enough to ask for the
+next page. `constraint=CONSTRAINT_NONE` means it was a **global** OOM, not a
+cgroup limit: nothing was bounding that process at all.
+
+**The arithmetic that matters, and the reason the existing guard is not enough:**
+
+- `scripts/mem-run.sh` defaults to `MEM_LIMIT_GB=64`. The killed process peaked
+  at **61.7 GiB**, so **even wrapped, the cap would not have fired.**
+- `scripts/cargo-serialized.sh` grants each cargo job a **24 GiB** scope.
+- One `mem-run` job at its default plus one cargo scope is **88 GiB of the
+  ~115 GiB usable** — and the repository's tooling permits both at once.
+
+So the two guards are each defensible alone and jointly oversubscribe the host.
+**A cap that bounds one process does not bound the machine**; with N concurrent
+slots the host budget is N x cap, and that product is what has to fit in RAM.
+
+Three practical consequences:
+
+- **`cargo-serialized.sh` bounds cargo. NOTHING bounds a lane's own Python.**
+  Census and analysis scripts routinely hold whole corpora, tokenized
+  s-expressions, or per-file dictionaries, and they run outside every wrapper in
+  this repository. Run them under `scripts/mem-run.sh` with a cap sized for
+  CONCURRENCY (`MEM_LIMIT_GB=16` or so), not the 64 GiB default, which exists
+  for a single foreground gate with nothing else running.
+- **`sys.setrecursionlimit(100000)` removes Python's stack guard.** Several
+  analysis scripts raise it to parse deeply nested SMT-LIB. That converts a
+  clean `RecursionError` into unbounded frame allocation.
+- **A `ulimit -v` cap aborts the JOB; it does not protect the HOST from N jobs.**
+  If you are launching more than one, divide.
+
+The generalisable form, and it is the same shape as this file's other entries:
+the guard was real, it was tested, and it was answering a different question
+than the one that mattered. `mem-run.sh` answers "can one process exhaust the
+box?" The question that killed the session was "can the processes we allow
+CONCURRENTLY exhaust the box?", and nothing was asking it.
