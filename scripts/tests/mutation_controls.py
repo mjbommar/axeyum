@@ -10141,6 +10141,84 @@ SUITES["dt-native-refusal-decline"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `decline-wiring-levers` (ADR-2030) -- the two off-by-default levers this lane
+# measured, and the message one of them has to carry out.
+#
+# Both levers FAIL CLOSED, and that is the guard that matters: a lever which
+# failed OPEN would make the "on" arm a second copy of the shipped arm, and the
+# A/B would report a confident zero it never measured. The parse is split from
+# the `OnceLock` env read precisely so these deletions are reachable -- a
+# `OnceLock` resolves once per process, so a test that sets the variable after
+# any other test has read it measures the wrong arm AND STILL PASSES.
+#
+# The third and fourth entries are the pair ADR-1980 named: the batch cap must
+# spend its budget on the VIOLATED pairs first, and the hoisted refusal must
+# carry the refusing rung's own sentence to what the ladder ends on.
+# --------------------------------------------------------------------------
+
+SUITES["decline-wiring-lemma-batch-cap"] = (
+    "crates/axeyum-solver/src/euf.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "the_lemma_batch_cap"),
+        "decline-wiring-lemma-batch-cap",
+    ),
+    [
+        (
+            # Fail-closed half 1: a zero must not become a cap of zero, which
+            # would emit NO lemmas at all and stall the CEGAR loop.
+            "the cap rejects zero",
+            "    raw?.trim().parse::<usize>().ok().filter(|cap| *cap > 0)",
+            "    raw?.trim().parse::<usize>().ok()",
+        ),
+        (
+            # The prioritisation. Without it a cap truncates the equal-argument
+            # order and can drop every pair the candidate model actually
+            # violates -- the batch would then be bounded and useless.
+            "violated pairs are queued BEFORE the merely equal-argument ones",
+            "    if cap.is_some() {\n        for &pair in violated_lemmas {",
+            "    if false {\n        for &pair in violated_lemmas {",
+        ),
+    ],
+)
+
+SUITES["decline-wiring-ladder-admission-hoist"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--lib",
+            # ONE filter, not two. `cargo test --lib 'a b'` runs ZERO tests and
+            # exits 0, so a space-separated pair here would register a suite
+            # that measures nothing and reports every mutation as unmeasured.
+            # The three tests share this prefix for exactly that reason.
+            "auto::tests::the_ladder_hoist",
+        ),
+        "decline-wiring-ladder-admission-hoist",
+    ),
+    [
+        (
+            # Fail-closed: any spelling but an exact `1` must leave the shipped
+            # per-rung loop in force.
+            "the hoist is off for every spelling but an exact `1`",
+            '    raw.is_some_and(|value| value.trim() == "1")',
+            "    raw.is_some()",
+        ),
+        (
+            # ADR-1980's named prerequisite. Deleting the carry leaves a rung
+            # that gives up with a sentence naming a DIFFERENT rung -- exactly
+            # the failure that made ADR-2020 rank this site as a cause.
+            "the refusing rung's own sentence is carried out",
+            "            widths.len(),\n            reason.detail\n        ),",
+            "            widths.len(),\n            String::new()\n        ),",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
