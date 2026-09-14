@@ -1,0 +1,10 @@
+id	occ	atoms	cvc5_skeleton	z3_skeleton	cvc5_skel_ms	file
+01	106	106	unsat	unsat	114	UFLIA/simplify2/front_end_suite/javafe.ast.AmbiguousVariableAccess.004.smt2
+02	115	115	unsat	unsat	112	UFLIA/simplify2/front_end_suite/javafe.ast.CompilationUnit.001.smt2
+03	111	111	unsat	unsat	115	UFLIA/simplify2/front_end_suite/javafe.ast.ConstructorDecl.007.smt2
+04	166	166	unsat	unsat	115	UFLIA/simplify2/front_end_suite/javafe.ast.DefaultVisitor.028.smt2
+05	110	110	unsat	unsat	116	UFLIA/simplify2/front_end_suite/javafe.ast.ForStmt.009.smt2
+06	105	105	unsat	unsat	114	UFLIA/simplify2/front_end_suite/javafe.ast.SuperObjectDesignator.008.smt2
+07	106	106	unsat	unsat	115	UFLIA/simplify2/front_end_suite/javafe.ast.ThrowStmt.004.smt2
+08	106	106	unsat	unsat	116	UFLIA/simplify2/front_end_suite/javafe.parser.test.TestLex.030.smt2
+09	167	167	sat	sat	119	UFNIA/vcc-havoc/havoc-bench_dlist_insert_head.12.ua_wcscpy.smt2

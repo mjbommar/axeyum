@@ -1,0 +1,10 @@
+id	cvc5_ground	cvc5_ground_ms	z3_ground	z3_ground_ms	cvc5_quantonly
+01	sat	117	sat	117	unsat
+02	sat	122	sat	123	unsat
+03	sat	116	sat	116	unsat
+04	sat	120	sat	123	unsat
+05	sat	120	sat	124	unsat
+06	sat	122	sat	117	unsat
+07	sat	117	sat	119	unsat
+08	sat	117	sat	117	unsat
+09	sat	118	sat	113	unsat
