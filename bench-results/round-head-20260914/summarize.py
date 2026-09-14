@@ -10,6 +10,7 @@ Usage:
     summarize.py exits   <census/*.tsv> ...     # R2: the seven-way exit census
     summarize.py replay  <census/*.tsv> ...     # R3: the held-set replay
     summarize.py ref     <ref/*.tsv> ...        # the reference cost
+    summarize.py noise   <noise/*.tsv> ...      # the same-arm noise floor
     summarize.py compare <census-glob> -- <ref-glob>   # ours vs the reference
 """
 
@@ -265,6 +266,57 @@ def cmd_replay(paths: list[str]) -> int:
     return 0
 
 
+def cmd_noise(paths: list[str]) -> int:
+    """The noise floor, from a SAME-ARM repeat.
+
+    With `r1_ms=0` the replay is off in both arms, so arm C and arm R1 are the
+    identical shipped configuration run back to back on the same file on the
+    same pinned core with the order rotating. Any difference between the two
+    columns is ambient noise at fixed code -- which is what has to be bigger
+    than a lever's effect before the lever means anything.
+    """
+    rows = read(paths)
+    n = len(rows)
+    print(f"noise floor: SAME arm twice per file, {n} rows")
+    print("  (arm C and arm R1 are byte-identical configurations here; r1_ms=0)")
+    same = sum(1 for r in rows if r["c_verdict"] == r["r1_verdict"])
+    print(f"  verdict identical across the repeat: {pct(same, n)}")
+    moved = [r for r in rows if r["c_verdict"] != r["r1_verdict"]]
+    for r in moved:
+        print(f"    {r['c_verdict']:7s} -> {r['r1_verdict']:7s}  {r['file']}")
+    decided_c = sum(1 for r in rows if r["c_verdict"] in ("sat", "unsat"))
+    decided_r = sum(1 for r in rows if r["r1_verdict"] in ("sat", "unsat"))
+    print(f"  DIVISION TOTAL decided: pass A {decided_c}, pass B {decided_r}  "
+          f"(band = |{decided_c - decided_r}| at FIXED CODE)")
+    flips = sum(
+        1
+        for r in rows
+        if {r["c_verdict"], r["r1_verdict"]} == {"sat", "unsat"}
+    )
+    print(f"  sat<->unsat flips across the repeat: {flips}")
+
+    # Exit CLASS stability. A deadline exit and a break exit are different
+    # buckets in the census table, so if the class itself is unstable the table
+    # has a noise floor too and it must be published beside the table.
+    def last_kind(cell: str) -> str:
+        exits = parse_exits(cell)
+        return exits[-1][0] if exits else "<none>"
+
+    stable = 0
+    comparable = 0
+    for r in rows:
+        a = last_kind(r["c_exits"])
+        # Arm R1 logs loop-exit lines into r1_lines when the replay is off.
+        b = last_kind(r.get("r1_lines", "") or "")
+        if b == "<none>" and a == "<none>":
+            continue
+        comparable += 1
+        if a == b:
+            stable += 1
+    print(f"  LAST-EXIT CLASS identical across the repeat: {pct(stable, comparable)}")
+    return 0
+
+
 def cmd_ref(paths: list[str]) -> int:
     rows = read(paths)
     n = len(rows)
@@ -342,6 +394,8 @@ def main(argv: list[str]) -> int:
         return cmd_replay(rest)
     if mode == "ref":
         return cmd_ref(rest)
+    if mode == "noise":
+        return cmd_noise(rest)
     if mode == "compare":
         return cmd_compare(rest)
     print(__doc__)
