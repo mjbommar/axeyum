@@ -11,3 +11,10 @@ f11	core	9	2	unknown	unsat	unsat	unsat
 f11	skel	10	2	unknown	unsat	unsat	unsat
 f12	core	9	3	unknown	unsat	unsat	unsat
 f12	skel	10	3	unknown	unsat	unsat	unsat
+f02	skel	10	44	unknown	sat	sat	sat
+f05	skel	0	31	unsat	unsat	unsat	unsat
+f06	skel	634	933	unknown	sat	sat	sat
+f07	skel	DID-NOT-RUN	-	-	-	-	-
+f09	skel	25	47	unsat	unsat	unsat	unsat
+f10	skel	DID-NOT-RUN	-	-	-	-	-
+f13	skel	86	1952	unsat	unsat	unsat	unsat
