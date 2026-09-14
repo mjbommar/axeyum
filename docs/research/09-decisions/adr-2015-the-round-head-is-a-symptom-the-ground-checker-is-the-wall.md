@@ -271,6 +271,43 @@ leftovers** (both sweeps ran every row):
 second round**, and where cvc5 needs a median of 48 instantiations we are
 holding a median of 2,224 ground terms and cannot decide them.
 
+## The noise floor, and why it closes the question
+
+A null result needs its own noise floor even when no A/B was built: it is what
+says the exit table is a measurement rather than a sample. The whole family was
+run again with **both arms the byte-identical shipped configuration** (the
+replay off in both), back to back on the same file on the same pinned core with
+the order rotating, same 4 shards.
+
+    verdict identical across the repeat:   127/129 = 98.4 % [94.5 %, 99.6 %]
+    DIVISION TOTAL decided:  pass A 0,  pass B 2   -> band = 2 files AT FIXED CODE
+    sat<->unsat flips:                     0
+    LAST-EXIT CLASS identical:             104/107 = 97.2 % [92.1 %, 99.0 %]
+
+Two things follow, and together they close the question.
+
+**1. The lever's entire measured ceiling is exactly the noise floor.** The
+held-set replay found **2 rows** whose set refutes on a fresh clock. This
+same-arm repeat moves **2 rows** at fixed code. A lever whose best case equals
+the run-to-run band of the measurement that would have to detect it cannot be
+shown to work, and [ADR-2005] independently measured the same band on this
+division (**+1 / −2 / +0** over three passes, every moved row UNSTABLE).
+
+**2. The two rows this census reports as "`main` now decides" are the same two
+rows, and they are UNSTABLE.** They are `z3.885941.smt2` and
+`javafe.parser.TokenQueue.576.smt2`: `unknown` in pass A, `unsat` in pass B, and
+`unsat` in the census. Dropping them from the denominator remains right — we
+cannot count a row we sometimes fail as a row we fail — but *"main now decides
+them"* is the wrong reading, and the honest one is *"they decide about half the
+time"*. Their verdicts were still checked against three authorities and agree.
+
+**The exit table is stable enough to be read as a table.** The last-exit class
+is identical on 104 of 107 comparable rows; 3 flip, which is what the smoke test
+showed anecdotally before the population was touched (a `timeout-mid-round` exit
+and a `GrowthHeadroom` exit on the same file in different runs — the deadline
+lands on either side of the headroom guard). No conclusion here rests on a
+difference smaller than that.
+
 ## Decision
 
 **Record the finding; build nothing.** The round head is a symptom, and every

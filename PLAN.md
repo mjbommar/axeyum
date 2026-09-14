@@ -64926,12 +64926,31 @@ The pre-registered **prediction** was that the hypothesis fails with fewer than
 10 rows, *"most likely zero"*. It failed with **2** — direction right, count
 wrong, both recorded.
 
-## Noise floor
+## Noise floor — it closes the question
 
-A same-arm repeat over the whole family (both passes byte-identical shipped
-configuration, back to back on the same pinned core, order rotating) is in
-`noise/`, because a null result needs its own noise floor even when no A/B was
-built: it is what says the exit table is a measurement and not a sample.
+The whole family run again with **both arms the byte-identical shipped
+configuration**, back to back on the same file on the same pinned core, order
+rotating, same 4 shards.
+
+    verdict identical across the repeat:   127/129 = 98.4 % [94.5 %, 99.6 %]
+    DIVISION TOTAL decided:  pass A 0,  pass B 2   -> band = 2 files AT FIXED CODE
+    sat<->unsat flips:                     0
+    LAST-EXIT CLASS identical:             104/107 = 97.2 % [92.1 %, 99.0 %]
+
+**The lever's entire measured ceiling is exactly the noise floor.** The replay
+found 2 rows whose set refutes; this same-arm repeat moves 2 rows at fixed code,
+and [ADR-2005] measured the same band on this division independently.
+
+**And the two rows the census reports as "`main` now decides" are those same two
+rows, unstable**: `unknown` in pass A, `unsat` in pass B, `unsat` in the census.
+Dropping them from the denominator stays right — we cannot count a row we
+sometimes fail as one we fail — but *"main now decides them"* is the wrong
+reading; *"they decide about half the time"* is the right one. Their verdicts
+still agree with all three authorities.
+
+**The exit table is stable enough to read as a table**: the last-exit class is
+identical on 104 of 107 comparable rows. No conclusion above rests on a
+difference smaller than the 3 that flip.
 
 ## Things found that were not asked for
 
