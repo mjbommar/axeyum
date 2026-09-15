@@ -1742,9 +1742,14 @@ fn ownership_continuation_config(
         return None;
     }
     let remaining = deadline?.checked_duration_since(Instant::now())?;
-    let mut narrowed = config.clone();
-    narrowed.timeout = Some(remaining / share);
-    Some(narrowed)
+    // Through `LadderSlice`, not a bare division: `auto`'s own
+    // `every_route_budget_in_this_file_goes_through_the_slice_policy` refuses a
+    // `.timeout = Some(remaining / n)` written by hand, and it is right to --
+    // the clamp inside `slice_of` is the half of this policy that is easy to
+    // get wrong, and one mutation of it made NO test fail until that clamp was
+    // written to cap the floor at HALF the remaining budget rather than all of
+    // it.
+    Some(LadderSlice::fraction("ownership-continuation", share).apply(config, Some(remaining)))
 }
 
 /// The config a ladder rung runs under, given whether the ownership rule has
@@ -1974,8 +1979,14 @@ fn settle_quant_rung(route: QuantRoute, query: ConstructSet, result: CheckResult
     };
     let why = match (route.kind(), route.ownership_of(query)) {
         (RouteKind::Decider, Ownership::Complete) => return QuantSettled::Terminal(result),
+        // Deliberately NOT byte-identical to `settle_rung`'s sentence one
+        // ladder over. Two copies of one string in one file make a mutation
+        // anchor AMBIGUOUS, and `mutation_controls.py --check-anchors` said so
+        // the moment this arm was written as a copy: an anchor that matches two
+        // places mutates whichever the scan reaches first, so the kill it
+        // reports is not the kill it names.
         (RouteKind::Decider, Ownership::NotOwned(missing)) => {
-            format!("does not own {missing}, which this query carries")
+            format!("does not own {missing}, which this quantified query carries")
         }
         (RouteKind::FastPath, _) => {
             "is one-directional — it can decide but never conclude that the query is \
@@ -1992,7 +2003,9 @@ fn settle_quant_rung(route: QuantRoute, query: ConstructSet, result: CheckResult
     );
     route_trace::record_quant_rung_declined(
         route.label(),
-        DeclineReason::UnsupportedDetail(detail),
+        DeclineReason::UnsupportedDetail(
+            crate::route_trace::UnsupportedDetail::QuantOwnershipDecline(detail),
+        ),
     );
     QuantSettled::Declined(result)
 }
@@ -2091,14 +2104,16 @@ fn record_quant_route_refusal(route: QuantRoute, query: ConstructSet, message: &
         (RouteKind::FastPath, _) | (RouteKind::Decider, Ownership::NotOwned(_)) => {
             unsupported_decline(message)
         }
-        (RouteKind::Decider, Ownership::Complete) => DeclineReason::UnsupportedDetail(format!(
-            "{QUANT_OWNERSHIP_INCONSISTENCY_MARKER}: `{}` declares it owns {}, which covers \
-             this query's {}, and then refused the fragment anyway. Either the declaration or \
-             the rung is wrong. Refusal: {message}",
-            route.label(),
-            route.owns(),
-            query,
-        )),
+        (RouteKind::Decider, Ownership::Complete) => DeclineReason::UnsupportedDetail(
+            crate::route_trace::UnsupportedDetail::QuantOwnershipInconsistency(format!(
+                "{QUANT_OWNERSHIP_INCONSISTENCY_MARKER}: `{}` declares it owns {}, which \
+                 covers this query's {}, and then refused the fragment anyway. Either the \
+                 declaration or the rung is wrong. Refusal: {message}",
+                route.label(),
+                route.owns(),
+                query,
+            )),
+        ),
     };
     route_trace::record_quant_rung_declined(route.label(), reason);
 }
