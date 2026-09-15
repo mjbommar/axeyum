@@ -10311,5 +10311,120 @@ SUITES["smtlib-declared-name-wins"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `replay-pairing-packing` — ADR-2070, the `Seq` -> packed-bit-vector lift.
+#
+# Every guard here DECLINES rather than truncating or masking, and each decline
+# is the difference between replaying the witness the solver found and replaying
+# a DIFFERENT string that happens to fit.  A shorter string is a different
+# string; a masked code point is a different character.  Both would replay as a
+# model of a query that demanded the original.
+# --------------------------------------------------------------------------
+
+SUITES["replay-pairing-packing"] = (
+    "crates/axeyum-solver/src/smtlib.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "pack_source_string_tests"),
+        "replay-pairing-packing",
+    ),
+    [
+        (
+            # A witness longer than the packed cap is packed anyway. At 13 bytes
+            # the round-trip guard still catches it (the decoder rejects a
+            # length field above `max_len`), which is exactly why the suite also
+            # carries a 40-byte case: far past the cap this check is the only
+            # thing between here and a shift of 8*39 bits on a `u128`.
+            "the packed-length cap",
+            "    if elements.len() > max_len as usize {",
+            "    if false {",
+        ),
+        (
+            # A code point above `0xff` is MASKED into a byte instead of
+            # declining. The witness then replays as a different character.
+            "the byte-width decline on a code point",
+            "        bytes.push(u8::try_from(*value).ok()?);",
+            "        bytes.push((*value & 0xff) as u8);",
+        ),
+        (
+            # The packing is returned without being checked against the PUBLIC
+            # decoder. An encoder that disagreed with the decoder would replay
+            # the wrong string.
+            "the round-trip through the public decoder",
+            "    (decode_packed_string(width, bits).as_deref() == Some(bytes.as_slice()))"
+            ".then_some(bits)",
+            "    Some(bits)",
+        ),
+        (
+            # The length field's width drifts from the layout the parser uses.
+            # Nothing in this function recomputes the layout, so only the
+            # round-trip guard stands in front of this.
+            "the length-field width mirrors the parser's layout",
+            "    32 - max_len.leading_zeros()",
+            "    max_len.leading_zeros()",
+        ),
+        (
+            # The width is no longer required to BE a packed-string layout, so
+            # an ordinary `(_ BitVec 8)` gets a length field invented for it.
+            "the width must be a packed-string layout",
+            "    let max_len = packed_string_max_len(width)?;",
+            "    let max_len = packed_string_max_len(width).unwrap_or(1);",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `replay-pairing-state` — ADR-2070, the pairing itself.
+#
+# `pair_replay_state` either ships `assertions` and `model` as a genuine pair or
+# withholds BOTH. The guards below are what decide which, and the suite's tests
+# straddle the packed cap by one numeral so that a build which withheld
+# everything and a build which paired everything each fail exactly one half.
+# --------------------------------------------------------------------------
+
+SUITES["replay-pairing-state"] = (
+    "crates/axeyum-solver/src/smtlib.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--test", "replay_pairing_soundness"),
+        "replay-pairing-state",
+    ),
+    [
+        (
+            # The completeness guard is gone: a model that leaves a free symbol
+            # of the assertions unbound is shipped anyway. This is the shipped
+            # defect, restored.
+            "the completeness guard on the assertions' free symbols",
+            "    if free.iter().any(|&symbol| model.get(symbol).is_none()) {",
+            "    if false {",
+        ),
+        (
+            # The lift never runs, so a source-route witness is never packed and
+            # every string row falls to the completeness guard. Distinguishes
+            # "withholds honestly" from "actually repaired": a build that only
+            # cleared `assertions` is exactly this mutant.
+            "the source-string lift runs at all",
+            "    lift_source_strings_onto_packed(script, &mut model);",
+            "    let _ = &mut model;",
+        ),
+        (
+            # The witness is looked up under the DECLARED name instead of the
+            # parser's `!weq!` mirror. Nothing binds a `Seq` there, so the lift
+            # silently finds nothing.
+            "the `!weq!` naming the witness actually lives under",
+            '        let Some(word) = script.arena.find_internal_symbol(&format!("!weq!{name}"))',
+            "        let Some(word) = script.arena.find_internal_symbol(name)",
+        ),
+        (
+            # An existing binding is OVERWRITTEN by the source witness. The flat
+            # path's own assignment for a symbol is not a source route's to
+            # replace.
+            "an already-bound symbol is left alone",
+            "        if model.get(symbol).is_some() {",
+            "        if false {",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))

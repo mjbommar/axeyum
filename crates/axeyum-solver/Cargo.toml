@@ -131,6 +131,14 @@ required-features = ["full"]
 name = "reconstruct_lean_certificate"
 required-features = ["full"]
 
+# The `sat`-evidence pairing census (ADR-2070). Needs `full` for the string
+# second chances it exists to attribute: on default features every one of them
+# is compiled out, so the census would report a confident zero from a corpus it
+# never reached.
+[[example]]
+name = "replay_pairing_census"
+required-features = ["full"]
+
 # Micro-benchmarks (2026-09-05, design review §4 item 3). Both require
 # `bench-internals` (implies `full`) since they drive `CdclT`/`Incremental`
 # directly through `bench_internals`; `harness = false` hands control to
