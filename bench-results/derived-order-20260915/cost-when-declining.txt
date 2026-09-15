@@ -1,0 +1,19 @@
+=== qf_nia_int -- QF_NIA / Int ===
+  rung                  wins  losses   win med  LOSS med  LOSS p90  LOSS max  LOSS total
+  nia-square               0     199         0         0         0         0           0
+  int-real-relax           0     198         0      4020      4195      9573      753694
+  nia-linearize           19     179       788      6680      6959      8004     1078885
+  nia-bounded-blast        0     179         0         0         8       984        1866
+  cas-ideal-refuter        0     115         0         0         1        13          68
+  int-blast-ladder        65     112       339     12566     14297     23189      863439
+  derived HEAD is int-blast-ladder: loses 112 times, median loss 12566 ms, total 863439 ms
+  -> EXPENSIVE WHEN LOSING. Promoting it to the head starves every rung below it on exactly the rows that still need one.
+
+=== ufnia_int_function -- UFNIA / Int|Function ===
+  rung                  wins  losses   win med  LOSS med  LOSS p90  LOSS max  LOSS total
+  q:ground-subset          0      30         0         0         0         0           0
+  q:bool-skeleton          0      30         0         0         0         1           1
+  q:skolem-qf             24       6         0         0         0         0           0
+  derived HEAD is q:skolem-qf: loses 6 times, median loss 0 ms, total 0 ms
+  -> cheap when losing.
+

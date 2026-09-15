@@ -2884,6 +2884,50 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "FINDING. Intended to hand the real-relaxation refuter one sixth of the budget. When the shrunk share underflows to zero the code returns the caller's config UNCHANGED — the full, unshrunk timeout — rather than skipping the refuter or clamping to a floor. The sharing policy is bypassed silently at exactly the small-budget end where starvation matters most. Recorded, not changed: this lane does not retune.",
     },
     ConfigEntry {
+        name: "LADDER_ORDER_ENV",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "\"AXEYUM_LADDER_ORDER\"",
+        unit: "selector: `derived` | `hand`",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: Some("AXEYUM_LADDER_ORDER"),
+        justification: dated(
+            "docs/research/09-decisions/adr-2106-derived-ladder-order.md",
+            "2026-09-15",
+            None,
+            // The ORDER of the nonlinear-integer tail's six rungs, derived from
+            // ADR-2102's ledger rather than from the sequence someone wrote the
+            // `if let` blocks in. What the date rests on is the ladder body it
+            // orders and the rung whose position moves furthest.
+            &[
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "dispatch_nonlinear_int_tail",
+                ),
+                sym("crates/axeyum-solver/src/auto.rs", "run_int_tail_rung"),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "dispatch_int_blast_width_ladder",
+                ),
+            ],
+            &[
+                adr("ADR-2106"),
+                adr("ADR-2102"),
+                // The two order tables the lever selects between. A rung added
+                // to one and not the other is a compile error; a rung whose
+                // POSITION moves without the ledger moving is what re-dates
+                // this entry.
+                live(
+                    "INT_REAL_RELAX_BUDGET_SHARE",
+                    "crates/axeyum-solver/src/auto.rs",
+                ),
+            ],
+        ),
+        note: "SELECTS A RUNG ORDER, not a bound -- the one entry in this registry whose value is a permutation. `dispatch_nonlinear_int_tail`'s six rungs are a table (`int_tail_order::HAND` / `int_tail_order::DERIVED`) rather than a statement sequence, so an interleaved A/B gets both arms out of ONE binary; two binaries cannot be interleaved per file against the same ambient load, and the same binary has scored 77/79/85 on one division in one day from load alone. Unset, and any value nobody recognises, is `int_tail_order::SHIPPED` byte for byte -- a typo must never select an arm nobody chose. DERIVED FROM, measured on 199 pinned `QF_NIA` Tier 1 rows (`bench-results/ledger/t1-QF_NIA-db31113fa.tsv`, ADR-2102): decision rate then median elapsed then name, a total order so the derivation is deterministic. `int-blast-ladder` decides 65 of 177 attempts (rate .367, median 339 ms) and was LAST; `nia-linearize` 19 of 198 (.096, 788 ms) and was THIRD; `int-real-relax` decided 0 of 198, costs a median of 4,020 ms, and was SECOND. Over the 65 files `int-blast-ladder` decided, the rungs above it inside the window spent 628,792 ms -- 9,674 ms per file of a 24,000 ms budget. WHAT IT IS WORTH, said before the change and not after: a TIME SAVING, not a gain. That 628,792 ms is spent on files that already decide. The ceiling in FILES -- undecided rows where the decider was never reached or got less than its median winning clock, minus the rows whose refusal is not a clock -- is 3 of 115 undecided. 42 of the 47 rows the raw test flags declined with `estimated 130191180 CNF clauses before lowering exceeds budget 64000000`, a CNF-SIZE refusal that renders through the same `DeclineReason::Budget` word as a clock expiry (ADR-2060's defect in miniature), and 2 more are a bounded-width refusal; neither is bought with seconds. SHIPPED VALUE IS `hand`, AND THE MEASUREMENT THAT DECIDED THAT: the plan's key does not say WHOSE elapsed, and the two readings are not close. `int-blast-ladder` wins in a 339 ms median but LOSES in a 12,566 ms median (p90 14,297, max 23,189) on 112 of its 177 attempts; at the ladder's HEAD that is paid out of every rung below it, on exactly the rows that still need one. Five committed `hypothesis_min::tests` capability fixtures go red under `derived` at their own 2 s budget and all pass under `hand`. A fixture is not weakened to let a lever ship, so `SHIPPED` points at `HAND` and `DERIVED` is retained exactly as derived, as the A/B's treatment arm. THIS IS NOT A BUDGET LEVER: `INT_REAL_RELAX_BUDGET_SHARE` is untouched at one sixth, now of whatever remains where its rung sits, and no ownership declaration moved. The second class the ledger nominated for this treatment, `UFNIA`/`Int|Function`, ships NOTHING: `q:skolem-qf` decides 24 of 24 but records a PROBE, hands off to the whole quantifier-free ladder, and records its decision when that returns, so its 126,764 ms of apparent prefix cost is its OWN work -- 0 ms sits above its first trail entry on all 24 files. Per-row evidence: `bench-results/derived-order-20260915/`.",
+    },
+    ConfigEntry {
         name: "MAX_BOUND_PROP_ROUNDS",
         module: "crates/axeyum-solver/src/auto.rs",
         value: "256",

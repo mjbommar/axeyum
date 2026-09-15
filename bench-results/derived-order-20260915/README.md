@@ -110,6 +110,46 @@ skolemization step that **mutates the assertion list** the rungs above read, so
 it is a restructure of `solve_inner`'s head rather than a reorder. Phase 4's own
 non-goals say it is "not a rewrite of `auto.rs`".
 
+## The key is under-specified, and the existing suite says so
+
+Phase 4's ordering key is **"(decision rate, then median elapsed)"**. It does
+not say *whose* elapsed, and on this class the two readings are not close.
+`cost-when-declining.py` measures both over the same 199 rows:
+
+| rung | wins | losses | median WIN | median LOSS | p90 LOSS | max LOSS | total LOSS |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `nia-square` | 0 | 199 | — | 0 ms | 0 ms | 0 ms | 0 ms |
+| `int-real-relax` | 0 | 198 | — | 4,020 ms | 4,195 ms | 9,573 ms | 753,694 ms |
+| `nia-linearize` | 19 | 179 | 788 ms | 6,680 ms | 6,959 ms | 8,004 ms | 1,078,885 ms |
+| `nia-bounded-blast` | 0 | 179 | — | 0 ms | 8 ms | 984 ms | 1,866 ms |
+| `cas-ideal-refuter` | 0 | 115 | — | 0 ms | 1 ms | 13 ms | 68 ms |
+| `int-blast-ladder` | 65 | 112 | **339 ms** | **12,566 ms** | 14,297 ms | 23,189 ms | 863,439 ms |
+
+The derived order promotes `int-blast-ladder` from the ladder's **tail** to its
+**head** on a 339 ms median winning clock. On the 112 attempts of 177 where it
+does not decide it costs **12,566 ms median and 23,189 ms at worst, against a
+24,000 ms budget** — and at the head that is paid out of every rung below it, on
+exactly the population that still needs one. Its position at the tail is not an
+oversight; it is what makes it the rung that soaks up the remainder.
+
+**This is not a prediction. Five committed capability fixtures refute it.**
+Under `AXEYUM_LADDER_ORDER=derived`, at their own 2 s budget, these go red:
+
+```
+hypothesis_min::tests::closes_the_route_b_l3_lemma_from_the_full_hypothesis_set
+hypothesis_min::tests::finds_the_minimal_sufficient_subset
+hypothesis_min::tests::minimisation_is_deterministic
+hypothesis_min::tests::reported_indices_are_ascending_unique_and_in_range
+hypothesis_min::tests::reported_subset_independently_refutes_the_goal
+```
+
+The minimiser's small nonlinear-integer subsets stop being refuted, because
+`nia-linearize` and `int-real-relax` no longer get the clock. All ten
+`hypothesis_min` tests pass under `hand`. A fixture is not weakened to let a
+lever ship, so **`int_tail_order::SHIPPED` points at `HAND`** and `DERIVED` is
+retained exactly as derived, as the A/B's treatment arm and as the record of
+what the key yields.
+
 ## Files
 
 | file | what it is |
@@ -118,14 +158,16 @@ non-goals say it is "not a rewrite of `auto.rs`".
 | `size-why.py` | splits the candidates by the decider's own decline reason |
 | `prefix-decompose.py` | splits "prefix cost" into reorderable vs the decider's own work |
 | `derive.py` | the derived order, from `outcome_ledger.load()` only |
+| `cost-when-declining.py` | what each rung costs on the rows it does NOT decide |
 | `sizing.txt`, `sizing.tsv` | `size.py`'s output |
 | `sizing-why.txt` | `size-why.py`'s output |
 | `prefix-decompose.txt` | `prefix-decompose.py`'s output |
 | `derived-order.tsv` | `derive.py`'s table |
+| `cost-when-declining.txt` | `cost-when-declining.py`'s output |
 
 Every script's exit status depends on its finding: `size.py` exits 3 when no
-class clears five files, `size-why.py` exits 3 when no refined ceiling does, and
-`prefix-decompose.py` exits 3 when no class has reorderable clock at all.
+class clears five files, `size-why.py` exits 3 when no refined ceiling does, `prefix-decompose.py` exits 3 when no class has reorderable clock at all, and
+`cost-when-declining.py` exits 3 when a derived head is expensive on its losses.
 
 ## Reproduction
 

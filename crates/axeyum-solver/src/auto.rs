@@ -8941,17 +8941,273 @@ fn int_real_relax_budget(config: &SolverConfig) -> SolverConfig {
     INT_REAL_RELAX_SLICE.apply(config, config.timeout)
 }
 
-/// The pure-integer nonlinear tail of [`check_auto_dispatch`] (`features.has_int`
-/// after the EUF/array fast paths). Split out for length; the verdict logic is
-/// verbatim the inlined original, `rec` only annotates the existing sites.
-fn dispatch_nonlinear_int_tail(
+/// **The nonlinear-integer tail's rung ORDER** (ADR-2106), stated as a table
+/// rather than as the sequence of statements in one function body.
+///
+/// # Why this module exists
+///
+/// Phase 4 of the dispatch-and-instrumentation plan asks for one thing: for a
+/// feature class where the ledger shows one route deciding a large majority of
+/// what gets decided while a different route is tried first, the ladder's order
+/// for that class should come from the table rather than from the order someone
+/// wrote the `if let` blocks in.
+///
+/// `QF_NIA` / `Int` is that class, measured on 199 pinned Tier 1 rows
+/// (`bench-results/ledger/t1-QF_NIA-db31113fa.tsv`, ADR-2102's ledger):
+///
+/// | rung | decides | of attempts | rate | median winning clock |
+/// |---|---:|---:|---:|---:|
+/// | `int-blast-ladder` | 65 | 177 | 0.367 | 339 ms |
+/// | `nia-linearize` | 19 | 198 | 0.096 | 788 ms |
+/// | `cas-ideal-refuter` | 0 | 115 | 0.000 | 0 ms |
+/// | `nia-bounded-blast` | 0 | 179 | 0.000 | 0 ms |
+/// | `nia-square` | 0 | 199 | 0.000 | 0 ms |
+/// | `int-real-relax` | 0 | 198 | 0.000 | 4,020 ms |
+///
+/// The two rungs that decide anything on this class are LAST and THIRD in the
+/// hand order, and the rung that decided nothing in 198 attempts
+/// (`int-real-relax`) is SECOND and costs a median of four seconds. Summed over
+/// the 65 files `int-blast-ladder` decided, the rungs above it inside this
+/// window spent **628,792 ms — 9,674 ms per file** of a 24,000 ms budget.
+///
+/// # What this is worth, stated before the change rather than after
+///
+/// **A time saving, not a gain.** The 628,792 ms is spent on files that already
+/// decide; reordering makes them decide sooner, it cannot make them decide. The
+/// ceiling in FILES — undecided rows where `int-blast-ladder` was never reached
+/// or got less than its median winning clock, minus the rows whose refusal is
+/// not a clock at all — is **3 of 115 undecided rows**. 42 of the 47 rows the
+/// raw test flags declined with `estimated 130191180 CNF clauses before
+/// lowering exceeds budget 64000000`, a CNF-SIZE refusal that renders through
+/// the same `DeclineReason::Budget` word as a clock expiry (ADR-2060's defect in
+/// miniature), and two more are a bounded-width refusal. Neither is bought with
+/// seconds. `bench-results/derived-order-20260915/` carries the per-row list.
+///
+/// # Why a table and not a reordered function body
+///
+/// Because the A/B needs both arms out of ONE binary. Two binaries cannot be
+/// interleaved per file against the same ambient load, and this repository has
+/// measured the same binary scoring 77, 79 and 85 on one division in one day
+/// from load alone. So the hand order stays as [`HAND`], the derived order is
+/// [`DERIVED`], and `AXEYUM_LADDER_ORDER` selects between them.
+///
+/// # The one behavioural subtlety
+///
+/// In the hand order `int-blast-ladder` is the TAIL: its result is returned
+/// whatever it is, so its `Unknown` is the tail's answer. A reorder that moves
+/// it off the bottom must not silently promote its `Unknown` to the query's
+/// verdict. [`super::dispatch_nonlinear_int_tail`] therefore treats a rung's
+/// `Unknown` as a decline and RETAINS `int-blast-ladder`'s as the fallback,
+/// returning it only when every rung has run. Under [`HAND`] that is
+/// byte-identical to the old control flow — same verdict, same reason string —
+/// which is what makes the A/B's control arm a real control.
+pub(crate) mod int_tail_order {
+    /// One reorderable rung of the nonlinear-integer tail.
+    ///
+    /// An enum and not a `&'static str` for the same reason
+    /// [`super::route_ownership::DispatchRoute`] is one: [`Self::label`] is the
+    /// only place the trail vocabulary is spelled, and [`Self::ALL`] plus the
+    /// exhaustive `match`es mean a rung added to the tail without a position in
+    /// both orders does not compile.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+    pub(crate) enum IntTailRoute {
+        /// Single-variable integer square constraint (`x*x ⋈ c`), exact.
+        NiaSquare,
+        /// Real-relaxation refutation: integer solutions ⊆ real solutions.
+        IntRealRelax,
+        /// Product/sign-lemma abstraction plus Euclidean `div`/`mod`
+        /// linearization over the integer DPLL(T).
+        NiaLinearize,
+        /// Exact blast at a box-covering width, gated on an all-bounded proof.
+        NiaBoundedBlast,
+        /// The CAS ideal-membership refuter.
+        CasIdeal,
+        /// The bounded integer bit-blast WIDTH ladder — the hand order's tail.
+        IntBlastLadder,
+    }
+
+    impl IntTailRoute {
+        /// Every rung, for tests that derive their population from the
+        /// authority rather than carrying a list of their own.
+        ///
+        /// Test-only, like [`super::route_ownership::DispatchRoute::ALL`]: at
+        /// run time the order tables ARE the population, and a second list with
+        /// no consumer is the un-failable-checker shape one level down.
+        #[cfg(test)]
+        pub(crate) const ALL: &'static [Self] = &[
+            Self::NiaSquare,
+            Self::IntRealRelax,
+            Self::NiaLinearize,
+            Self::NiaBoundedBlast,
+            Self::CasIdeal,
+            Self::IntBlastLadder,
+        ];
+
+        /// The route-trail label. **Byte-identical to the string literals these
+        /// rungs recorded before ADR-2106**, because every committed census,
+        /// board, ledger sweep and suite reads them.
+        pub(crate) const fn label(self) -> &'static str {
+            match self {
+                Self::NiaSquare => "nia-square",
+                Self::IntRealRelax => "int-real-relax",
+                Self::NiaLinearize => "nia-linearize",
+                Self::NiaBoundedBlast => "nia-bounded-blast",
+                Self::CasIdeal => "cas-ideal-refuter",
+                Self::IntBlastLadder => "int-blast-ladder",
+            }
+        }
+
+        /// The deadline message the hand order checked immediately AFTER this
+        /// rung, or `None` where it checked nothing there.
+        ///
+        /// Attaching the check to the rung it FOLLOWED, rather than to a fixed
+        /// position, is what keeps [`HAND`] byte-identical: run the rungs in
+        /// hand order and the three checks land at exactly the three points
+        /// they landed at before, carrying exactly the three strings they
+        /// carried. Under a reorder the message travels with its rung, so it
+        /// keeps naming the work that actually just happened — a fixed-position
+        /// message would start lying about which route ate the clock, which is
+        /// the ADR-2060 failure shape.
+        ///
+        /// One inherited oddity, kept rather than quietly fixed: the message
+        /// after [`Self::CasIdeal`] names the *bounded integer blast*, which is
+        /// the rung before it. That mismatch predates this module. Correcting
+        /// the string here would move bytes in a control arm that exists to be
+        /// byte-identical, so it is recorded and left.
+        pub(crate) const fn deadline_note(self) -> Option<&'static str> {
+            match self {
+                Self::NiaSquare | Self::NiaBoundedBlast | Self::IntBlastLadder => None,
+                Self::IntRealRelax => {
+                    Some("auto-dispatch timeout after nonlinear integer real relaxation")
+                }
+                Self::NiaLinearize => {
+                    Some("auto-dispatch timeout after nonlinear integer linearization")
+                }
+                Self::CasIdeal => Some("auto-dispatch timeout after exact bounded integer blast"),
+            }
+        }
+    }
+
+    /// The order the source shipped before ADR-2106, retained as the A/B's
+    /// control arm and as the record of what the derived order is derived
+    /// AGAINST.
+    pub(crate) const HAND: [IntTailRoute; 6] = [
+        IntTailRoute::NiaSquare,
+        IntTailRoute::IntRealRelax,
+        IntTailRoute::NiaLinearize,
+        IntTailRoute::NiaBoundedBlast,
+        IntTailRoute::CasIdeal,
+        IntTailRoute::IntBlastLadder,
+    ];
+
+    /// The order `bench-results/derived-order-20260915/derive.py` computed from
+    /// the ledger: (decision rate descending, median elapsed ascending, name
+    /// ascending — a total order, so the computation is deterministic).
+    ///
+    /// `derived_order_matches_the_committed_ledger_derivation` re-reads the
+    /// committed `derived-order.tsv` and checks this array against it, so this
+    /// literal cannot drift from the data it claims to come from.
+    pub(crate) const DERIVED: [IntTailRoute; 6] = [
+        IntTailRoute::IntBlastLadder,
+        IntTailRoute::NiaLinearize,
+        IntTailRoute::CasIdeal,
+        IntTailRoute::NiaBoundedBlast,
+        IntTailRoute::NiaSquare,
+        IntTailRoute::IntRealRelax,
+    ];
+
+    /// **The shipped order**, with nothing set in the environment.
+    ///
+    /// One named constant, so the ship decision is one edit: ADR-2106's rule is
+    /// that a derived order ships only with 0 stable losses, and lands pointing
+    /// at [`HAND`] otherwise with the measurement published.
+    ///
+    /// # It points at [`HAND`], and the measurement that decided that
+    ///
+    /// The plan's ordering key is "(decision rate, then median elapsed)". It
+    /// does not say WHOSE elapsed, and the two readings are not close on this
+    /// class. Measured over the same 199 ledger rows the order was derived
+    /// from (`bench-results/derived-order-20260915/cost-when-declining.py`):
+    ///
+    /// | rung | wins | losses | median WIN | median LOSS | p90 LOSS |
+    /// |---|---:|---:|---:|---:|---:|
+    /// | `nia-square` | 0 | 199 | — | 0 ms | 0 ms |
+    /// | `int-real-relax` | 0 | 198 | — | 4,020 ms | 4,195 ms |
+    /// | `nia-linearize` | 19 | 179 | 788 ms | 6,680 ms | 6,959 ms |
+    /// | `nia-bounded-blast` | 0 | 179 | — | 0 ms | 8 ms |
+    /// | `cas-ideal-refuter` | 0 | 115 | — | 0 ms | 1 ms |
+    /// | `int-blast-ladder` | 65 | 112 | **339 ms** | **12,566 ms** | 14,297 ms |
+    ///
+    /// [`DERIVED`] promotes `int-blast-ladder` from the ladder's TAIL to its
+    /// HEAD on a 339 ms median winning clock. On the 112 attempts of 177 where
+    /// it does not decide it costs **12,566 ms median, 23,189 ms at worst** —
+    /// and at the head that is paid out of every rung below it, on exactly the
+    /// population that still needs one. Its position at the tail is not an
+    /// oversight; it is what makes it the rung that soaks up the remainder.
+    ///
+    /// This is not a prediction. Five committed capability fixtures in
+    /// `hypothesis_min::tests` go red under [`DERIVED`] at their own 2 s budget
+    /// — the minimiser's small nonlinear-integer subsets stop being refuted
+    /// because `nia-linearize` and `int-real-relax` no longer get the clock —
+    /// and every one of them passes under [`HAND`]. A fixture is not weakened
+    /// to let a lever ship.
+    ///
+    /// So the key as the plan states it is **under-specified**, and applied
+    /// literally to this class it produces an order the existing suite refutes
+    /// before any A/B runs. [`DERIVED`] is retained, exactly as derived, as the
+    /// A/B's treatment arm and as the record of what the key yields.
+    pub(crate) const SHIPPED: &[IntTailRoute; 6] = &HAND;
+}
+
+use int_tail_order::IntTailRoute;
+
+/// The environment variable that selects the nonlinear-integer tail's rung
+/// order (ADR-2106). `derived` / `hand`; anything else, including unset, is
+/// [`int_tail_order::SHIPPED`].
+const LADDER_ORDER_ENV: &str = "AXEYUM_LADDER_ORDER";
+
+/// [`LADDER_ORDER_ENV`]'s value, read once per process.
+fn int_tail_order() -> &'static [IntTailRoute; 6] {
+    static ORDER: std::sync::OnceLock<&'static [IntTailRoute; 6]> = std::sync::OnceLock::new();
+    ORDER.get_or_init(|| parse_ladder_order(std::env::var(LADDER_ORDER_ENV).ok().as_deref()))
+}
+
+/// Parses [`LADDER_ORDER_ENV`]'s spelling, split out so the policy is testable
+/// **without touching process environment** — a test that only passes under an
+/// ambient variable is a gate on one shell.
+///
+/// Unset keeps the shipped order byte for byte, which is `config_lever`'s
+/// standing contract. A value nobody recognises ALSO keeps it, deliberately: a
+/// typo must never select an arm nobody chose, which is the
+/// `AXEYUM_ZERO_INST_SKELETON` trap ADR-2103 names.
+fn parse_ladder_order(raw: Option<&str>) -> &'static [IntTailRoute; 6] {
+    match raw.map(str::trim) {
+        Some("hand") => &int_tail_order::HAND,
+        Some("derived") => &int_tail_order::DERIVED,
+        _ => int_tail_order::SHIPPED,
+    }
+}
+
+/// Runs one rung of the nonlinear-integer tail.
+///
+/// `Ok(Some(verdict))` decides the query. `Ok(None)` is a decline and the tail
+/// continues. A rung's `Unknown` is a decline here — see `fallback`.
+///
+/// `fallback` retains [`IntTailRoute::IntBlastLadder`]'s `Unknown`, which in the
+/// hand order WAS the tail's answer. Without this the reorder would either drop
+/// that reason (returning a manufactured `unknown` that says strictly less) or
+/// promote it to a verdict from the middle of the ladder. Neither is what the
+/// hand order did, and the control arm has to be what the hand order did.
+fn run_int_tail_rung(
+    route: IntTailRoute,
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
     deadline: Option<Instant>,
     rec: &mut Recorder<'_>,
-) -> Result<CheckResult, SolverError> {
-    {
+    fallback: &mut Option<CheckResult>,
+) -> Result<Option<CheckResult>, SolverError> {
+    match route {
         // Single-variable integer SQUARE constraint (`x*x ⋈ c`, constant `c`): an
         // exact, bounded NIA decision. The bounded bit-blast width ladder and the
         // real relaxation both only ever report `Unknown` for a non-perfect-square
@@ -8963,26 +9219,17 @@ fn dispatch_nonlinear_int_tail(
         // is replay-checked against the original assertion, and its `Unsat` is exact
         // by the perfect-square / sign analysis, so it can never produce a wrong
         // verdict; strictly additive (`Unknown` → decision).
-        let mut why = None;
-        if let Some(result) =
-            crate::nia_square::decide_int_square_constraint_explained(arena, assertions, &mut why)?
-        {
-            with_recorder(rec, |t| t.record_result("nia-square", &result));
-            return Ok(result);
+        IntTailRoute::NiaSquare => {
+            let mut why = None;
+            if let Some(result) = crate::nia_square::decide_int_square_constraint_explained(
+                arena, assertions, &mut why,
+            )? {
+                with_recorder(rec, |t| t.record_result(route.label(), &result));
+                return Ok(Some(result));
+            }
+            record_nia_decline(rec, route.label(), why);
+            Ok(None)
         }
-        record_nia_decline(rec, "nia-square", why);
-        // Bounded integer bit-blasting at a single width is fragile for *nonlinear*
-        // integer goals: a modular witness (e.g. `x` with `x*x ≡ 4 (mod 2^32)` but
-        // `x*x ≠ 4` over the integers) satisfies the blasted query yet fails the
-        // exact-integer replay, so the single fixed width reports `Unknown` even when
-        // a small genuine witness exists (x = 2). Try a **width ladder** small→large:
-        // at a narrow width there is no room for a wrapping witness, so the SAT
-        // solver is forced onto the genuine small solution. The first width whose
-        // model **replays against the originals** (the only way
-        // `check_with_all_theories` ever returns `Sat`) is a sound `Sat`. This is
-        // strictly additive — `DEFAULT_INT_WIDTH` is in the ladder, so any width-32
-        // answer is still reachable — and a definite `Unsat`/`Unknown` from the
-        // exact LIA engines above already short-circuited before here.
         // Real-relaxation refutation (G3): the integers are a subset of the reals,
         // so an integer query has *no model* whenever its faithful real relaxation
         // has none. Integer-nonlinear goals that are unsat for sign reasons (`x*x <
@@ -8995,104 +9242,154 @@ fn dispatch_nonlinear_int_tail(
         // var/const/op faithfully onto the reals; `unsat` of it transfers soundly to
         // the integer query (integer solutions ⊆ real solutions), and it *only* ever
         // returns `Unsat` (a real model need not be integral) — returning `false`
-        // for sat/unknown, which then fall to the ladder. So running it *before* the
+        // for sat/unknown, which then fall to the ladder. So running it before the
         // ladder is sound and changes nothing for the sat cases (`x*x = 4`, …) the
         // ladder still decides; it only fast-paths (and avoids hanging on) the
         // real-refutable cases. The relaxation runs on a clone of the arena and
         // never leaks a symbol or term back.
         //
         // BUDGET SHARE. This refuter is a *fast path*, not the decider of record —
-        // when it declines, `check_with_nia` below is the route that can actually
-        // decide the query, and it needs wall clock to do it. Handing the refuter
-        // the caller's whole `config.timeout` means a declining file spends 100% of
-        // its budget here and `check_with_nia` is never entered at all; that is what
-        // it did on 9 of the 12 `QF_NIA` parity files measured at the standard 24 s
+        // when it declines, `check_with_nia` is the route that can actually decide
+        // the query, and it needs wall clock to do it. Handing the refuter the
+        // caller's whole `config.timeout` means a declining file spends 100% of its
+        // budget here and `check_with_nia` is never entered at all; that is what it
+        // did on 9 of the 12 `QF_NIA` parity files measured at the standard 24 s
         // budget. One sixth is what the probe lane measured as the point where the
         // refuter still lands its `unsat`s and the tail gets a usable remainder.
         //
         // ADR-0377 makes this a share of the caller's REMAINING absolute deadline,
         // not a fresh allowance. The NRA/CAD inner loops poll the same deadline;
         // after a decline the boundary check below prevents a subsequent route from
-        // resetting the clock.
-        let remaining_config = config_with_remaining_deadline(config, deadline);
-        let relax_config = int_real_relax_budget(&remaining_config);
-        let mut relax_why = None;
-        if crate::int_real_relax::refute_int_via_real_relaxation(
-            arena,
-            assertions,
-            &relax_config,
-            &mut relax_why,
-        )? {
-            with_recorder(rec, |t| t.record_decided("int-real-relax", Verdict::Unsat));
-            return Ok(CheckResult::Unsat);
-        }
-        // Recorded on the DECLINE too. A trace attempt's `elapsed` runs from the
-        // previous recorded attempt, so without this row every second this route
-        // spends is charged to `nia-linearize` below — measured at 4.04 s of the
-        // 10.73 s that route was credited with on `QF_NIA` file 34, 2026-09-08.
-        record_nia_decline(rec, "int-real-relax", relax_why);
-        if past_deadline(deadline) {
-            return Ok(CheckResult::Unknown(timeout_reason(
-                "auto-dispatch timeout after nonlinear integer real relaxation",
-            )));
+        // resetting the clock. ADR-2106 changes this rung's POSITION and not its
+        // share: `INT_REAL_RELAX_BUDGET_SHARE` is still one sixth, now of whatever
+        // remains where the rung sits.
+        IntTailRoute::IntRealRelax => {
+            let remaining_config = config_with_remaining_deadline(config, deadline);
+            let relax_config = int_real_relax_budget(&remaining_config);
+            let mut relax_why = None;
+            if crate::int_real_relax::refute_int_via_real_relaxation(
+                arena,
+                assertions,
+                &relax_config,
+                &mut relax_why,
+            )? {
+                with_recorder(rec, |t| t.record_decided(route.label(), Verdict::Unsat));
+                return Ok(Some(CheckResult::Unsat));
+            }
+            // Recorded on the DECLINE too. A trace attempt's `elapsed` runs from the
+            // previous recorded attempt, so without this row every second this route
+            // spends is charged to the rung after it — measured at 4.04 s of the
+            // 10.73 s `nia-linearize` was credited with on `QF_NIA` file 34,
+            // 2026-09-08.
+            record_nia_decline(rec, route.label(), relax_why);
+            Ok(None)
         }
         // **Integer nonlinear decider** (Phase E first slice): linearize
         // variable-divisor `div`/`mod` into their `≠0`-guarded Euclidean form,
-        // abstract each integer product with valid sign/zero lemmas, and
-        // solve over the integer DPLL(T). Run *before* the width ladder so a case
-        // like `div.03` (`n>0 ∧ x≥n ∧ (div x n)<1`, unsat over ℤ but sat over ℝ)
-        // decides by linearization rather than blowing up the bounded blast.
-        // Strictly additive: `unsat` transfers soundly from the relaxation, `sat`
-        // is accepted only after replay against the original, and it declines
-        // (`None`) on everything else.
-        let mut why = None;
-        let nia_config = config_with_remaining_deadline(config, deadline);
-        if let Some(result) =
-            crate::nia_linearize::check_with_nia(arena, assertions, &nia_config, &mut why)?
-        {
-            with_recorder(rec, |t| t.record_result("nia-linearize", &result));
-            return Ok(result);
-        }
-        record_nia_decline(rec, "nia-linearize", why);
-        if past_deadline(deadline) {
-            return Ok(CheckResult::Unknown(timeout_reason(
-                "auto-dispatch timeout after nonlinear integer linearization",
-            )));
+        // abstract each integer product with valid sign/zero lemmas, and solve over
+        // the integer DPLL(T). In the hand order this runs *before* the width ladder
+        // so a case like `div.03` (`n>0 ∧ x≥n ∧ (div x n)<1`, unsat over ℤ but sat
+        // over ℝ) decides by linearization rather than blowing up the bounded blast.
+        // Strictly additive: `unsat` transfers soundly from the relaxation, `sat` is
+        // accepted only after replay against the original, and it declines (`None`)
+        // on everything else — so it is order-independent for SOUNDNESS, and the
+        // ordering question is which of the two gets the clock first.
+        IntTailRoute::NiaLinearize => {
+            let mut why = None;
+            let nia_config = config_with_remaining_deadline(config, deadline);
+            if let Some(result) =
+                crate::nia_linearize::check_with_nia(arena, assertions, &nia_config, &mut why)?
+            {
+                with_recorder(rec, |t| t.record_result(route.label(), &result));
+                return Ok(Some(result));
+            }
+            record_nia_decline(rec, route.label(), why);
+            Ok(None)
         }
         // **Bound-aware EXACT int-blast** (closes the QF_NIA UNSAT blind spot):
         // when every free `Int` variable is provably confined to a finite box,
         // blasting at a box-covering width is EXACT, so a bit-vector `Unsat` is a
         // genuine integer `Unsat` — the one thing the width ladder never trusts.
         // Gated on the all-bounded proof; see `decide_bounded_int_blast`.
-        let mut why = None;
-        let bounded_config = config_with_remaining_deadline(config, deadline);
-        if let Some(result) =
-            decide_bounded_int_blast_explained(arena, assertions, &bounded_config, &mut why)?
-        {
-            with_recorder(rec, |t| t.record_result("nia-bounded-blast", &result));
-            return Ok(result);
+        IntTailRoute::NiaBoundedBlast => {
+            let mut why = None;
+            let bounded_config = config_with_remaining_deadline(config, deadline);
+            if let Some(result) =
+                decide_bounded_int_blast_explained(arena, assertions, &bounded_config, &mut why)?
+            {
+                with_recorder(rec, |t| t.record_result(route.label(), &result));
+                return Ok(Some(result));
+            }
+            record_nia_decline(rec, route.label(), why);
+            Ok(None)
         }
-        record_nia_decline(rec, "nia-bounded-blast", why);
-        // Last exact route before the width ladder, whose answer on an unbounded
-        // nonlinear system is "no model within the bounded integer width 32",
-        // i.e. `unknown`. The ideal combination needs no box at all.
-        if let Some(result) = dispatch_cas_ideal(arena, assertions, rec) {
-            return Ok(result);
+        // The last EXACT route in the hand order before the width ladder, whose
+        // answer on an unbounded nonlinear system is "no model within the bounded
+        // integer width 32", i.e. `unknown`. The ideal combination needs no box at
+        // all. It records its own trail entries (`dispatch_cas_ideal`), including
+        // the two decline shapes, so nothing is recorded for it here.
+        IntTailRoute::CasIdeal => Ok(dispatch_cas_ideal(arena, assertions, rec)),
+        // The bounded integer bit-blast WIDTH ladder. In the hand order this is the
+        // tail and its result is the tail's answer whatever it is; here its
+        // `Unknown` is RETAINED as the fallback and the tail continues, so the two
+        // orders agree on the verdict AND on its reason string.
+        IntTailRoute::IntBlastLadder => {
+            let ladder_config = config_with_remaining_deadline(config, deadline);
+            let result = dispatch_int_blast_width_ladder(arena, assertions, &ladder_config)?;
+            with_recorder(rec, |t| t.record_result(route.label(), &result));
+            if matches!(result, CheckResult::Unknown(_)) {
+                *fallback = Some(result);
+                return Ok(None);
+            }
+            Ok(Some(result))
         }
-        if past_deadline(deadline) {
-            return Ok(CheckResult::Unknown(timeout_reason(
-                "auto-dispatch timeout after exact bounded integer blast",
-            )));
-        }
-        let ladder_config = config_with_remaining_deadline(config, deadline);
-        let result = dispatch_int_blast_width_ladder(arena, assertions, &ladder_config)?;
-        with_recorder(rec, |t| t.record_result("int-blast-ladder", &result));
-        // The integer nonlinear decider (`check_with_nia`) already ran *before* the
-        // width ladder above — its product/sign-lemma relaxation and variable-
-        // divisor Euclidean linearization refute the `unsat` cases (`div.03`,
-        // `mod.02`) the ladder structurally cannot, and replay-check any `sat`.
-        Ok(result)
     }
+}
+
+/// The pure-integer nonlinear tail of [`check_auto_dispatch`] (`features.has_int`
+/// after the EUF/array fast paths).
+///
+/// The rung bodies are verbatim the inlined originals; ADR-2106 moved them
+/// behind [`IntTailRoute`] so the ORDER is a table
+/// ([`int_tail_order::HAND`] / [`int_tail_order::DERIVED`]) rather than the
+/// sequence of statements, and both arms of an interleaved A/B come out of one
+/// binary. `rec` only annotates the existing sites.
+fn dispatch_nonlinear_int_tail(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+    rec: &mut Recorder<'_>,
+) -> Result<CheckResult, SolverError> {
+    // `IntBlastLadder`'s `Unknown`, retained so the tail's answer is the same
+    // sentence in both orders. `every_order_runs_every_rung_exactly_once` is
+    // what makes this `Some` by the time the loop ends.
+    let mut fallback: Option<CheckResult> = None;
+    for &route in int_tail_order() {
+        if let Some(result) = run_int_tail_rung(
+            route,
+            arena,
+            assertions,
+            config,
+            deadline,
+            rec,
+            &mut fallback,
+        )? {
+            return Ok(result);
+        }
+        if let Some(note) = route.deadline_note()
+            && past_deadline(deadline)
+        {
+            return Ok(CheckResult::Unknown(timeout_reason(note)));
+        }
+    }
+    // Reached only if `IntBlastLadder` never ran, which no order permits — the
+    // invariant is pinned by a test rather than left to this branch to notice.
+    Ok(fallback.unwrap_or_else(|| {
+        CheckResult::Unknown(timeout_reason(
+            "nonlinear integer tail exhausted every rung without a verdict",
+        ))
+    }))
 }
 
 /// Array fast paths, tried before the eager read-over-write + Ackermann
@@ -17938,6 +18235,237 @@ mod tests {
             !inside_quantified_ladder(),
             "`disarm` left the counter armed; every later dispatch on this thread \
              would then be budget-capped as a sub-solve"
+        );
+    }
+
+    // ---- ADR-2106: the derived nonlinear-integer tail order ----------------
+
+    /// The committed derivation this module's [`int_tail_order::DERIVED`] claims
+    /// to come from.
+    ///
+    /// Included at compile time rather than retyped, because a test whose
+    /// expectation is a literal measures the maintainer's memory. The authority
+    /// is `bench-results/derived-order-20260915/derive.py`'s own output over
+    /// ADR-2102's ledger rows; this file IS that output.
+    const DERIVED_ORDER_TSV: &str =
+        include_str!("../../../bench-results/derived-order-20260915/derived-order.tsv");
+
+    /// The `qf_nia_int` window's routes, in the position order the committed
+    /// derivation put them in.
+    fn committed_derived_labels() -> Vec<String> {
+        let mut rows: Vec<(usize, String)> = Vec::new();
+        let mut lines = DERIVED_ORDER_TSV.lines();
+        let header = lines.next().expect("derived-order.tsv is empty");
+        let columns: Vec<&str> = header.split('\t').collect();
+        let window_at = columns
+            .iter()
+            .position(|c| *c == "window")
+            .expect("derived-order.tsv has no `window` column");
+        let position_at = columns
+            .iter()
+            .position(|c| *c == "position")
+            .expect("derived-order.tsv has no `position` column");
+        let route_at = columns
+            .iter()
+            .position(|c| *c == "route")
+            .expect("derived-order.tsv has no `route` column");
+        for line in lines {
+            if line.trim().is_empty() {
+                continue;
+            }
+            let fields: Vec<&str> = line.split('\t').collect();
+            if fields[window_at] != "qf_nia_int" {
+                continue;
+            }
+            rows.push((
+                fields[position_at]
+                    .parse()
+                    .expect("position is not a number"),
+                fields[route_at].to_owned(),
+            ));
+        }
+        rows.sort_by_key(|(position, _)| *position);
+        rows.into_iter().map(|(_, route)| route).collect()
+    }
+
+    /// **The order this ADR ships is the order the ledger derived** — checked
+    /// against the committed derivation, not against a literal in this file.
+    ///
+    /// This is ADR-2106's mutation fixture: swap any two entries of
+    /// [`int_tail_order::DERIVED`] and exactly this test dies. The permutation
+    /// and lever tests below are deliberately blind to order for that reason —
+    /// a guard population where every member rejects through one shared check
+    /// is the shape six of seven guards in one suite here turned out to have.
+    #[test]
+    fn derived_order_matches_the_committed_ledger_derivation() {
+        let committed = committed_derived_labels();
+        assert!(
+            !committed.is_empty(),
+            "fixture check: the committed derivation carries no `qf_nia_int` \
+             rows, so the comparison below would be vacuous. An empty result \
+             from a reader never pointed at its subject is indistinguishable \
+             from a strong negative"
+        );
+        let shipped: Vec<&str> = int_tail_order::DERIVED
+            .iter()
+            .map(|route| route.label())
+            .collect();
+        assert_eq!(
+            shipped, committed,
+            "`int_tail_order::DERIVED` and \
+             bench-results/derived-order-20260915/derived-order.tsv disagree. \
+             The array is a transcription of that derivation; re-run \
+             `derive.py` and transcribe again rather than editing the array"
+        );
+    }
+
+    /// Both orders are PERMUTATIONS of the rung set — every rung runs, exactly
+    /// once, in either arm.
+    ///
+    /// This is what makes `dispatch_nonlinear_int_tail`'s `fallback` `Some` by
+    /// the time the loop ends: [`IntTailRoute::IntBlastLadder`] is in both
+    /// arrays, so the `unwrap_or_else` branch that would manufacture a weaker
+    /// `unknown` is unreachable. The invariant is pinned here rather than left
+    /// to a branch nobody exercises to notice.
+    ///
+    /// Deliberately order-BLIND: sorting both sides means a swap inside
+    /// [`int_tail_order::DERIVED`] cannot be caught here, so the mutation above
+    /// kills exactly one fixture.
+    #[test]
+    fn every_order_runs_every_rung_exactly_once() {
+        for (name, order) in [
+            ("HAND", &int_tail_order::HAND),
+            ("DERIVED", &int_tail_order::DERIVED),
+        ] {
+            let mut got: Vec<IntTailRoute> = order.to_vec();
+            got.sort_unstable();
+            let mut want: Vec<IntTailRoute> = IntTailRoute::ALL.to_vec();
+            want.sort_unstable();
+            assert_eq!(
+                got, want,
+                "`int_tail_order::{name}` is not a permutation of the rung set: \
+                 a rung missing from an arm silently disables it, and a rung \
+                 twice runs it twice"
+            );
+        }
+    }
+
+    /// `AXEYUM_LADDER_ORDER`'s spelling, tested WITHOUT touching process
+    /// environment — a test that only passes under an ambient variable is a
+    /// gate on one shell.
+    ///
+    /// Unset keeps the shipped order byte for byte, and so does a value nobody
+    /// recognises: a typo must never select an arm nobody chose.
+    #[test]
+    fn ladder_order_lever_spelling() {
+        assert_eq!(
+            parse_ladder_order(None),
+            int_tail_order::SHIPPED,
+            "unset must keep the shipped order"
+        );
+        assert_eq!(
+            parse_ladder_order(Some("")),
+            int_tail_order::SHIPPED,
+            "empty must keep the shipped order"
+        );
+        assert_eq!(
+            parse_ladder_order(Some("dervied")),
+            int_tail_order::SHIPPED,
+            "a typo must keep the shipped order rather than select an arm \
+             nobody chose"
+        );
+        assert_eq!(parse_ladder_order(Some("hand")), &int_tail_order::HAND);
+        assert_eq!(parse_ladder_order(Some(" hand ")), &int_tail_order::HAND);
+        assert_eq!(
+            parse_ladder_order(Some("derived")),
+            &int_tail_order::DERIVED
+        );
+        // The positive control this lever needs: the two arms must actually be
+        // DIFFERENT orders, or every A/B run through it compares a binary with
+        // itself and reports a wash.
+        assert_ne!(
+            int_tail_order::HAND,
+            int_tail_order::DERIVED,
+            "fixture check: the two arms are the same sequence, so an A/B \
+             between them cannot show anything"
+        );
+    }
+
+    /// The deadline checks the hand order ran, and where.
+    ///
+    /// Attaching each check to the rung it FOLLOWED is what keeps the `hand`
+    /// arm byte-identical to the pre-ADR-2106 control flow. Three rungs carried
+    /// a check after them and three did not; a fourth appearing (or one of the
+    /// three losing its string) changes the control arm, which is the one thing
+    /// a control arm must not do.
+    #[test]
+    fn hand_order_deadline_checks_are_where_they_were() {
+        let notes: Vec<(&str, Option<&str>)> = int_tail_order::HAND
+            .iter()
+            .map(|route| (route.label(), route.deadline_note()))
+            .collect();
+        assert_eq!(
+            notes,
+            vec![
+                ("nia-square", None),
+                (
+                    "int-real-relax",
+                    Some("auto-dispatch timeout after nonlinear integer real relaxation")
+                ),
+                (
+                    "nia-linearize",
+                    Some("auto-dispatch timeout after nonlinear integer linearization")
+                ),
+                ("nia-bounded-blast", None),
+                (
+                    "cas-ideal-refuter",
+                    Some("auto-dispatch timeout after exact bounded integer blast")
+                ),
+                ("int-blast-ladder", None),
+            ],
+            "the hand arm's deadline checks moved or changed wording. Every one \
+             of these strings reaches a user as an `unknown` reason and several \
+             reach a committed census as a bucket key"
+        );
+    }
+
+    /// Every rung label is one the trail vocabulary already carried, and none
+    /// of them collides with the two typed route enums.
+    ///
+    /// The labels are byte-identical to the string literals these rungs
+    /// recorded before ADR-2106 precisely so every committed ledger sweep,
+    /// board and census keeps reading them. A rename here is invisible to the
+    /// compiler and silently empties whatever bucket used to hold the rung.
+    #[test]
+    fn int_tail_labels_are_the_committed_trail_vocabulary() {
+        use crate::route_trace::Route;
+        let labels: Vec<&str> = IntTailRoute::ALL.iter().map(|r| r.label()).collect();
+        assert_eq!(
+            labels,
+            vec![
+                "nia-square",
+                "int-real-relax",
+                "nia-linearize",
+                "nia-bounded-blast",
+                "cas-ideal-refuter",
+                "int-blast-ladder",
+            ],
+        );
+        for route in IntTailRoute::ALL {
+            assert!(
+                Route::from_wire(route.label()).is_none(),
+                "`{}` is claimed by both `IntTailRoute` and \
+                 `route_trace::Route`; the vocabularies partition",
+                route.label(),
+            );
+        }
+        // The positive control, for the same reason
+        // `every_dispatch_label_is_outside_the_declared_route_enum` carries
+        // one: without it this passes on a `from_wire` returning `None` to
+        // everything.
+        assert_eq!(
+            Route::from_wire(crate::route_trace::front_door_stage::PARSE),
+            Some(Route::FdParse),
         );
     }
 }
