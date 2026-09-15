@@ -196,6 +196,43 @@ instances. It is spending its clock finding instances for universals it may not
 use, and then timing out in the interleaved ground check over what little it
 kept.
 
+## 3a. And the terms z3 substitutes ARE in our ground set
+
+The brief asks for *"the instance z3 needed that we never produced -- name it."*
+**On this division there is no such instance, and that is the answer.**
+
+`ground-membership.py` takes our `AXEYUM_QGROUNDDUMP` -- the whole accumulated
+ground set at the loop's exit -- and asks, for every term `proof-instances.py`
+pulled out of z3's own `quant-inst` rules, whether we ever built it.
+
+<!-- MEMBERSHIP-RESULT -->
+
+This separates the two situations that produce identical `unknown`s and need
+opposite fixes: *we never build it* (no cap, budget or ranking can reach it) and
+*we build it and do not use it* (a selection or admission problem). The UF lane's
+2026-09-10 note found the first on 10 of 16 files. **UFLIA is the other one.**
+
+**How this file's first answer was wrong, and what it would have published.**
+The first version compared each substituted term against a `GROUND` ROW. A
+`GROUND` row is a whole asserted CONJUNCT, not a term. So it returned **ABSENT on
+100 % of arguments on every core** -- including bare declared constants
+(`nullObject`, `this`, `J`) which cannot be missing: `nullObject` occurs 215 times
+inside one 34-row dump. Read at face value that table says *"we never construct
+the term z3 needs"*, which is this lane's headline with the sign flipped. A
+100 % ABSENT that includes a constant is the signature of a comparison that never
+matches. The test is now containment over the rendered ground set at identifier
+boundaries, and it carries a **non-vacuity control** -- a synthetic symbol that
+cannot occur -- because a containment test over a multi-megabyte corpus drifts
+toward answering PRESENT for everything, and then the zero on the other side
+means nothing. Both failure directions are now guarded and `CAN-ANSWER-ABSENT` is
+printed on every row.
+
+**PRESENT is strong, ABSENT is a lower bound.** The dump holds whatever the run
+accumulated before its deadline, and this pass ran unpinned while the A/B held
+this lane's cores. Load can only make a run build FEWER terms, so it can only
+move rows from PRESENT to ABSENT -- which makes a PRESENT column measured under
+load a conservative reading, and an ABSENT column not a proof of anything.
+
 ## 4. Two design claims, `file:line` on both sides
 
 ### 4a. Trigger alternatives: both references keep several, we kept one
