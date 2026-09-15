@@ -116,3 +116,8 @@ QF_LIA/20220307-SMPT/2PhLockVParam/RC-11.smt2	sat	107	0	sat	107	0	B	sat
 QF_LIA/CAV_2009_benchmarks/smt/10-vars/problem_2__026.smt2	unsat	108	0	unsat	107	0	A	unsat
 QF_LIA/bofill-scheduling/SMT_random_LIA/ex27000_2600_100.smt2	unknown	24129	0	unknown	24128	0	B	sat
 QF_LIA/convert/convert-jpg2gif-query-1143.smt2	sat	8815	0	sat	8816	0	A	sat
+QF_LIA/dillig/30-34.smt2	sat	807	0	sat	808	0	B	sat
+QF_LIA/nec-smt/large/bftpd_login/prp-60-49.smt2	unknown	25131	0	unknown	25132	0	A	unsat
+QF_LIA/nec-smt/large/checkpass_pwd/prp-26-37.smt2	unknown	21529	0	unknown	21529	0	B	sat
+QF_LIA/nec-smt/large/bftpd_login/prp-9-46.smt2	unknown	24732	0	unknown	24531	0	A	unsat
+QF_LIA/nec-smt/large/checkpass/prp-39-48.smt2	unknown	23331	0	unknown	23131	0	B	unsat

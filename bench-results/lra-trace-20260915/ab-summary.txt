@@ -1,7 +1,7 @@
 division      rows    A    B   net  gain  LOSS  FLIP  rc!=   cmp  DIS
-QF_LIA          34   29   29    +0     0     0     0     0    29    0
+QF_LIA          44   30   30    +0     0     0     0     0    30    0
 QF_LRA         200  107  107    +0     0     0     0    40    97    0
-TOTAL          234  136  136    +0     0     0     0    40   126    0
+TOTAL          244  137  137    +0     0     0     0    40   127    0
 
 malformed rows (excluded, not scored as unchanged): 0
 

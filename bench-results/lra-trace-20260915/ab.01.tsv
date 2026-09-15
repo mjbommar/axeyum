@@ -116,3 +116,8 @@ QF_LIA/CAV_2009_benchmarks/smt/10-vars/problem_2__022.smt2	sat	107	0	sat	107	0	B
 QF_LIA/arctic-matrix/constraint-1107622.smt2	unknown	507	0	unknown	507	0	A	sat
 QF_LIA/bofill-scheduling/SMT_real_LIA/ex5640_2400_100.smt2	unknown	24129	0	unknown	24129	0	B	sat
 QF_LIA/convert/convert-jpg2gif-query-1586.smt2	unknown	8815	0	unknown	8814	0	A	sat
+QF_LIA/nec-smt/large/bftpd_login/prp-10-47.smt2	unknown	25131	0	unknown	25126	0	B	unsat
+QF_LIA/nec-smt/large/checkpass/prp-40-50.smt2	unknown	25132	0	unknown	25133	0	A	unsat
+QF_LIA/nec-smt/large/checkpass_pwd/prp-44-39.smt2	unknown	16825	0	unknown	16825	0	B	unsat
+QF_LIA/nec-smt/large/bftpd_login/prp-56-47.smt2	unknown	23231	0	unknown	23030	0	A	unsat
+QF_LIA/nec-smt/large/checkpass_pwd/prp-35-43.smt2	unknown	22430	0	unknown	22329	0	B	sat
