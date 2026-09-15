@@ -383,6 +383,40 @@ different ones** —
 
 `--check-anchors` reports `suites=141 anchors=1069 stale=0`.
 
+**Verdict invariance, measured rather than argued.** "Nothing branches on
+`detail`, so it cannot move a verdict" is an argument, and this repository's
+rule is to measure it. The same 134 files were re-run on a freshly built
+post-change binary (`BUILD-OK note 3d8435c2f`, `find -newer` clean), same 24 s,
+same four pinned physical-core pairs on s7, and compared **row by row** —
+equal totals do not imply equal rows:
+
+    VERDICT CHANGES:    0 of 134
+    sat<->unsat FLIPS:  0
+    base  unknown 128  unsat 6
+    arm   unknown 128  unsat 6
+
+The comparison also requires NON-VACUITY, because an arm where the change did
+nothing at all would report a perfect zero-diff and read as a pass:
+
+    17 rows carry a datatype wording; 16 of them came through the mbqi wrapper
+    carry the correction, ARM        15 of 16
+    carry the correction, BASE        0        (the base binary predates it)
+    correction on the WRONG side      0
+    rows where the loop DID run       1        (must carry no note — it does not)
+
+**Both directions are exercised**: 15 rows where the loop did not run and carry
+the note, and **1 where it did run and correctly does not**. A population all
+one way would have been passed by a constant.
+
+**The checker was wrong before the code was.** Its first version demanded the
+correction on every row carrying a datatype sentence and reported one on the
+"wrong side". That row —
+`PA14-032__dic__bounded_strings` — has `mbqi_exit=NONE` and its message carries
+no `mbqi declined` prefix at all: its datatype sentence reached the give-up
+channel from a rung that never entered the quantified arm. There is nothing
+there for the correction to correct, and the population is now the rows that
+came through the wrapper.
+
 The fourth guard exists because the first three all make the flag falser or the
 note louder; only it makes the flag unconditionally TRUE, which is the failure
 mode that would clear the correction off all 132 rows that need it. And what
