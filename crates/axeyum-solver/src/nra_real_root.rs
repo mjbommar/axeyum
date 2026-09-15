@@ -8068,12 +8068,16 @@ mod tests {
         assert!(total >= 12, "the taxonomy lost causes: only {total} left");
     }
 
-    /// `note` is the identity on `Some` and records on `None`.
+    /// `note` is the identity on `Some`, and a `Some` records nothing.
     ///
-    /// This is the whole soundness argument for sprinkling it across a
-    /// decision procedure, so it is asserted rather than asserted-in-a-comment.
+    /// This is the whole soundness argument for sprinkling `note` across a
+    /// decision procedure, so it is asserted rather than
+    /// asserted-in-a-comment. Kept SEPARATE from the first-wins test below so
+    /// the two guards inside the attribution have separate killers: one test
+    /// covering both passes when either is deleted only if the other happens
+    /// to fail first, which leaves the second guard unmeasured.
     #[test]
-    fn note_is_the_identity_on_some_and_records_on_none() {
+    fn note_is_the_identity_on_some() {
         reset_cad_decline();
         assert_eq!(note(CadDecline::Projection, Some(7u32)), Some(7));
         assert_eq!(
@@ -8083,12 +8087,27 @@ mod tests {
         );
         assert_eq!(note(CadDecline::Projection, None::<u32>), None);
         assert_eq!(cad_decline(), CadDecline::Projection);
-        // First wins: the recursion unwinds through outer sites on its way out
-        // and the outermost of them is the least informative.
-        assert_eq!(note(CadDecline::CellBudget, None::<u32>), None);
-        assert_eq!(cad_decline(), CadDecline::Projection);
         reset_cad_decline();
         assert_eq!(cad_decline(), CadDecline::NotAttempted);
+    }
+
+    /// The INNERMOST cause is the one kept.
+    ///
+    /// The recursion unwinds through several `?` sites on its way out and the
+    /// outermost of them is the least informative. Without first-wins every
+    /// attributed decline degrades to the outermost site and the taxonomy
+    /// reports one cause for all of them.
+    #[test]
+    fn the_innermost_cad_decline_cause_wins() {
+        reset_cad_decline();
+        assert_eq!(note(CadDecline::Projection, None::<u32>), None);
+        assert_eq!(note(CadDecline::CellBudget, None::<u32>), None);
+        assert_eq!(
+            cad_decline(),
+            CadDecline::Projection,
+            "a later, outer decline must not overwrite the inner cause"
+        );
+        reset_cad_decline();
     }
 
     #[test]

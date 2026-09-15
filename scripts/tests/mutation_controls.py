@@ -10907,5 +10907,55 @@ SUITES["derived-ladder-order"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `nra-cad-attribution` -- the instrument that says WHY the exact real-polynomial
+# decider declined, and the lever that lets its cell cap be A/B-ed (ADR-2110).
+#
+# Nothing here can change a verdict, which is exactly why it needs controls: an
+# instrument that cannot be wrong is also one nobody notices going wrong. The
+# `nra-real-root` rung reported ONE decline reason for every shape it refuses
+# and that reason was in the trail of 78 of 83 QF_NRA files -- a field that
+# distinguishes nothing reads the same as a field that is right.
+#
+# Each guard below has its own killer test, and the `note` pair is split across
+# two tests for that reason: one test asserting both "a `Some` records nothing"
+# and "first cause wins" would pass on either deletion whenever the other
+# assertion fires first, leaving one of the two guards unmeasured.
+# --------------------------------------------------------------------------
+
+SUITES["nra-cad-attribution"] = (
+    "crates/axeyum-solver/src/nra_real_root.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "nra_real_root::tests"),
+        "nra-cad-attribution",
+    ),
+    [
+        (
+            # Without the `is_none()` test `note` records on EVERY call, so the
+            # first successful projection stamps a decline cause onto a decision
+            # that went on to succeed -- and every attributed file reports
+            # whatever the first `note` site happened to be.
+            "a successful step records no decline cause",
+            "    if value.is_none() {",
+            "    if true {",
+        ),
+        (
+            # Without first-wins the OUTERMOST `?` on the unwind path overwrites
+            # the innermost cause, so `projection` degrades to whatever the
+            # shallowest site names and the taxonomy collapses to one bucket.
+            "the innermost decline cause survives the unwind",
+            "        if slot.get() == CadDecline::NotAttempted {",
+            "        if true {",
+        ),
+        (
+            # An A/B whose two arms carry the same value measures nothing and
+            # reports 0 movement, which is indistinguishable from a real null.
+            "the `wide` arm actually raises the cap",
+            "        cell_cap: MAX_CAD_CELLS * 16,",
+            "        cell_cap: MAX_CAD_CELLS,",
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
