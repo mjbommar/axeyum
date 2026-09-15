@@ -243,9 +243,9 @@ by mechanism before any measuring starts.
 | **verdict** | **gain 14, loss 0, flip 0** |
 | **exit status** | 200/200 identical; **0 regressions** (base `ok` → lever not `ok`) |
 | denominators | undecided in base **36/200**; `ok` in base **200/200** |
-| stability | **14/14 STABLE-GAIN**, three passes per arm, on the final binary |
+| stability | **14/14 STABLE-GAIN**, three passes per arm, on the pre-merge binary — and **14/14 again, three more passes per arm, on the MERGED binary** (`bec2cf65b`, `ab/m-stab-p{1,2,3}.tsv`) |
 | authorities | `:status` **14/14 unsat**, z3 **14/14 unsat**, cvc5 **14/14 unsat**; **0 disagreements at a comparable denominator of 14/14 on each** — fourteen agreements, not fourteen no-opinions |
-| noise floor | same arm twice, **whole division, both halves**: **0 of 200** moved, 22 undecided in base, 1.00x |
+| noise floor | same arm twice, **whole division, both halves**: **0 of 200** moved, 22 undecided in base, 1.00x — and **0 of 200 again on the MERGED binary**, 0.99x |
 | control `QF_LRA` | **0 of 200** moved, 0 exit regressions, 1.00x |
 | secondary `QF_UFLRA` | **0 of 200** moved, 51 undecided in base, 1.00x — see below |
 
@@ -291,6 +291,27 @@ The overall 1.13x is not the interesting number. Admitting an atom stops the
 ladder refusing early, so on a query it still cannot decide the ladder now
 spends more of its budget before giving up. That is the real trade and it is 33 %
 on this division.
+
+### Was the A/B re-run after the [ADR-2060] merge? Partly, and here is the rule
+
+`lra.rs` now carries two lanes' changes, so the `+14` was measured against a
+base that no longer exists. Against that: ADR-2060 measured itself
+verdict-neutral on four channels, so the base should be unmoved.
+
+**Neither argument settles it, so the cheap discriminating measurement was run
+instead of the expensive complete one** — the 14 movers, three passes per arm,
+plus the whole noise-floor division, all on the merged binary `bec2cf65b`:
+
+| | pre-merge | merged tree |
+|---|---|---|
+| the 14 movers | 14/14 STABLE-GAIN | **14/14 STABLE-GAIN**, three fresh passes per arm |
+| noise floor, `AUFLIRA` 200, same arm twice | 0 of 200 | **0 of 200**, 22 undecided in base |
+
+If a mover had failed to convert, that would have been a finding and the full
+sweep would have been owed. None did, and the band is still zero, so re-running
+600 rows would buy a number already implied by both halves of it. The 200-row
+division sweeps in the table above are therefore reported with the binary that
+produced them (§7), not silently attributed to `bec2cf65b`.
 
 ### `QF_UFLRA` moved nothing, and P4 said it would
 
@@ -419,4 +440,5 @@ so the instrument that caught it is the one R4 exists for.
 [ADR-1966]: adr-1966-a-rungs-refusal-of-a-construct-a-later-rung-owns-is-a-decline.md
 [ADR-2010]: adr-2010-the-sat-side-replay-cannot-see-the-parser.md
 [ADR-2025]: adr-2025-the-refutation-was-available-before-instantiating-and-we-dropped-the-assertion-carrying-it.md
+[ADR-2060]: adr-2060-the-give-up-variant-could-not-tell-six-gates-apart-and-nothing-asked-it-to.md
 [ADR-2050]: adr-2050-the-eleven-are-four-causes-and-the-largest-is-one-refused-atom.md

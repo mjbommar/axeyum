@@ -6384,6 +6384,50 @@ mod opaque_real_guard_tests {
         }
     }
 
+    /// The opaque short-circuit records its stages EXACTLY ONCE (ADR-2060).
+    ///
+    /// `simplex_first` deliberately does not record when it declines — the
+    /// reason travels on and "recording is left to the elimination's own exit".
+    /// ADR-2065 added an exit that does NOT travel on, so that exit has to
+    /// record, and an exit that records twice is as wrong as one that forgets.
+    ///
+    /// This matters because of what `CubeStages` is for: ADR-2060's own comment
+    /// says an exit that forgets to record is INVISIBLE — the counters still
+    /// add up against each other and simply describe fewer decisions than
+    /// happened. A miscount here would not fail anything else in the workspace.
+    #[test]
+    fn the_opaque_short_circuit_records_one_cube_decision() {
+        let (arena, assertions) = wide_satisfiable_with_opaque();
+
+        let guard = crate::lazy_smt_counters::LazySmtCountersGuard::enable();
+        let decided = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Abstract)
+            .expect("the abstraction admits it");
+        let counters =
+            crate::lazy_smt_counters::last_lazy_smt_counters().expect("counting was enabled");
+        drop(guard);
+
+        assert!(
+            matches!(decided, Decision::Incomplete(_)),
+            "fixture check: this must be the opaque decline, or the counter assertion \
+             below is about some other exit"
+        );
+        assert_eq!(
+            counters.cube_decisions, 1,
+            "the short-circuit is an EXIT, so it records once -- not zero (invisible) \
+             and not twice (double-counted against every other decision)"
+        );
+        assert!(
+            counters.cube_simplex_calls >= 1,
+            "the simplex must actually have run; a decline recorded without the engine \
+             running would mean this test is pinning the wrong path"
+        );
+        assert_eq!(
+            counters.cube_matrices, 0,
+            "the whole point of short-circuiting is that Fourier-Motzkin's multiplier \
+             matrix is never built on a system whose answer is already known"
+        );
+    }
+
     /// The direction that DOES transfer, through the same entry point: an
     /// abstracted system that is genuinely infeasible is `Unsat`.
     ///

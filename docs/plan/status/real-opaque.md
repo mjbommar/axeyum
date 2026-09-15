@@ -58,11 +58,20 @@ direction.
   OUT OF FIVE — the guards are NESTED and all produce a non-`sat`, so
   `!matches!(.., Sat)` passes with any one deleted. The fix was to make each
   guard NAME itself and assert the name.
+- **`QF_UFLRA` moves 0 of 200**, with 51 undecided in the base arm. The lane's
+  own P4 said it would move. It does not, because it is quantifier-free: the two
+  rungs that took all 14 gains are not on its ladder, and `uflra-online` already
+  admits real UF applications without passing the refusing site. The capability
+  is reachable only where the refusal was.
+- **A source-text pin must be excluded from a mutation matrix.** The suite's
+  `Sat`-site pin reads the source the mutants edit, so it died on every row and
+  made the one acknowledged survivor look load-bearing. A check that rejects
+  everything is the same disease as one that rejects nothing.
 - **Causes (B) SELECTION, (C) SILENT HANG and (D) of [ADR-2050] are untouched.**
-  `QF_UFLRA` is reported as far as it got and is a secondary, not a control.
 
 [ADR-2025]: ../../research/09-decisions/adr-2025-the-refutation-was-available-before-instantiating-and-we-dropped-the-assertion-carrying-it.md
 [ADR-2050]: ../../research/09-decisions/adr-2050-the-eleven-are-four-causes-and-the-largest-is-one-refused-atom.md
+[ADR-2060]: ../../research/09-decisions/adr-2060-the-give-up-variant-could-not-tell-six-gates-apart-and-nothing-asked-it-to.md
 [ADR-2065]: ../../research/09-decisions/adr-2065-the-real-collector-can-hold-a-term-and-the-sat-exits-close-by-type.md
 
 <!-- plan-section: landed-changes -->
@@ -73,3 +82,6 @@ direction.
 | 2026-09-14 | `6ca42ce09` | The simplex guard returns a NAMED decline instead of `Ok(None)`, so deleting it is observable — and it is strictly cheaper, since the elimination would have decided the same abstracted system feasible and declined again. |
 | 2026-09-14 | `edb12ee75` | The collector's fourth `bool` becomes `OpaqueReals::{Refuse, Abstract}`, mirroring `IntCollector::record_touches`. Clippy 888/888, 0 diagnostics. |
 | 2026-09-14 | `2de0df23b` | The A/B: `AUFLIRA` +14/0/0, the 3-pass stability table, the three-authority verification at 14/14 each, the same-arm noise floor and the `QF_LRA` control with its measured non-vacuity. |
+| 2026-09-14 | `52ded4a55` | The sat-side invariant, observed rather than argued: across the measured corpus the `sat` count is identical in both arms file by file. Non-vacuous -- one doctored row makes it exit 1. |
+| 2026-09-14 | `bec2cf65b` | Merge of [ADR-2060]. Four conflicts in `lra.rs`, none of them "keep both sides": two signatures COMPOSED (`Collected` + the opaque mode), two appended test modules RECONSTRUCTED from their own parent blobs, and one semantic addition -- this lane's guard is a SEVENTH `SimplexDecline`, named, described as "not a budget", and DRIVEN in ADR-2060's own coverage test rather than exempted. The decider short-circuits it instead of handing the same abstracted system to the elimination. |
+| 2026-09-14 | `f10e0c815` | `QF_UFLRA` finished at 0 of 200 (P4 wrong), control non-vacuity on 100 rows instead of 20, the sat-side invariant over 600 files, and the mutation matrix corrected to exclude source-text pins. |
