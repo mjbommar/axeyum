@@ -529,13 +529,23 @@ def index_path(*, ledger_dir: str | Path = LEDGER_DIR) -> Path:
     return Path(ledger_dir) / INDEX_NAME
 
 
-def _register(sweep_id: str, path: Path, *, ledger_dir: str | Path, note: str) -> None:
+def register(
+    sweep_id: str, *, ledger_dir: str | Path = LEDGER_DIR, note: str = ""
+) -> None:
     """Append this sweep to the index, once.
 
     The index is append-only and carries no counts: a count would have to be
     rewritten on every append, and a file that gets rewritten is a file two
     lanes can clobber.  `load` counts rows itself.
+
+    Public because a SHARDED sweep writes its rows on several hosts into
+    several per-shard ledger directories (concurrent appends to one index over
+    NFS are a read-then-append race, and a row here can exceed the 4 KiB that
+    makes an `O_APPEND` write atomic), and the consolidation step then needs to
+    register each finished file into the repository's index SEQUENTIALLY.
+    Idempotent, so running it twice is not an error.
     """
+    path = ledger_path(sweep_id, ledger_dir=ledger_dir)
     idx = index_path(ledger_dir=ledger_dir)
     existing: set[str] = set()
     if idx.exists():
@@ -596,7 +606,7 @@ def append_row(
         prelude = "\t".join(COLUMNS) + "\n"
     with path.open("a", encoding="utf-8") as handle:
         handle.write(prelude + row.to_line() + "\n")
-    _register(sweep_id, path, ledger_dir=ledger_dir, note=note)
+    register(sweep_id, ledger_dir=ledger_dir, note=note)
     return path
 
 
@@ -615,24 +625,56 @@ def _git(args: Sequence[str], *, repo: str | Path | None = None) -> tuple[int, s
     return proc.returncode, proc.stdout.strip()
 
 
-def is_main_ancestor(sha: str, *, repo: str | Path | None = None, main: str = "main") -> bool:
-    """Whether `sha` is an ancestor of the LOCAL `main`.
+#: What a row's `binary_sha` turned out to be, checked against local `main`.
+#:
+#: THREE values and not two, for the same reason `partial` has three: a commit
+#: this repository has never seen is a different finding from one on a live
+#: branch, and reporting both as "stale" tells a reader to go and look at a
+#: branch that may not exist.  A row from a deleted lane, a truncated sha, or a
+#: binary built somewhere else all land in `unknown-commit`.
+SHA_ON_MAIN = "main"
+SHA_ON_BRANCH = "branch"
+SHA_UNKNOWN = "unknown-commit"
 
-    Local, deliberately: `origin/main` lags during a push window, and a row
-    written from a commit that is on local main but not yet pushed is not a
+
+def sha_status(sha: str, *, repo: str | Path | None = None, main: str = "main") -> str:
+    """Classify one `binary_sha`: on `main`, on a branch, or unknown.
+
+    Local `main`, deliberately: `origin/main` lags during a push window, and a
+    row written from a commit that is on local main but not yet pushed is not a
     branch measurement.
 
-    A sha that does not resolve at all answers `False` -- "I cannot check
-    this" is reported as stale rather than waved through, because the
-    alternative is a row from a deleted branch reading as a main one.
+    The existence check is separate from the ancestor check ON PURPOSE, and
+    this module's own mutation control is why the comment says so.
+    `git merge-base --is-ancestor <garbage> main` also exits non-zero, so
+    folding the two together still answers "not an ancestor" and every test
+    stays green -- while a row whose commit this repository has never seen gets
+    reported as though a reader could go and look at it.  Deleting the check
+    was measured as SURVIVED before this distinction existed.
     """
     if not sha:
-        return False
+        return SHA_UNKNOWN
     code, _ = _git(["cat-file", "-e", f"{sha}^{{commit}}"], repo=repo)
     if code != 0:
-        return False
+        return SHA_UNKNOWN
     code, _ = _git(["merge-base", "--is-ancestor", sha, main], repo=repo)
-    return code == 0
+    return SHA_ON_MAIN if code == 0 else SHA_ON_BRANCH
+
+
+def is_main_ancestor(sha: str, *, repo: str | Path | None = None, main: str = "main") -> bool:
+    """Whether `sha` is an ancestor of the LOCAL `main`."""
+    return sha_status(sha, repo=repo, main=main) == SHA_ON_MAIN
+
+
+def sha_statuses(
+    rows: Sequence[LedgerRow], *, repo: str | Path | None = None, main: str = "main"
+) -> dict[str, str]:
+    """Each DISTINCT `binary_sha` in `rows`, classified.  One `git` call each."""
+    out: dict[str, str] = {}
+    for row in rows:
+        if row.binary_sha not in out:
+            out[row.binary_sha] = sha_status(row.binary_sha, repo=repo, main=main)
+    return out
 
 
 def flag_stale(
@@ -642,14 +684,8 @@ def flag_stale(
 
     One `git` call per DISTINCT sha, not per row.
     """
-    verdicts: dict[str, bool] = {}
-    flagged: list[LedgerRow] = []
-    for row in rows:
-        if row.binary_sha not in verdicts:
-            verdicts[row.binary_sha] = is_main_ancestor(row.binary_sha, repo=repo, main=main)
-        if not verdicts[row.binary_sha]:
-            flagged.append(row)
-    return flagged
+    statuses = sha_statuses(rows, repo=repo, main=main)
+    return [row for row in rows if statuses[row.binary_sha] != SHA_ON_MAIN]
 
 
 # ---------------------------------------------------------------------------
@@ -780,6 +816,18 @@ def _cmd_append(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_register(args: argparse.Namespace) -> int:
+    path = ledger_path(args.sweep_id, ledger_dir=args.ledger_dir)
+    if not path.exists():
+        print(f"REFUSED: {path} does not exist", file=sys.stderr)
+        return 2
+    # Reading it validates the header before the index claims it is a ledger.
+    rows = read_ledger(path)
+    register(args.sweep_id, ledger_dir=args.ledger_dir, note=args.note)
+    print(f"registered\t{args.sweep_id}\t{len(rows)} rows")
+    return 0
+
+
 def _cmd_show(args: argparse.Namespace) -> int:
     try:
         rows, flagged = load(
@@ -799,8 +847,9 @@ def _cmd_show(args: argparse.Namespace) -> int:
             f"NOT an ancestor of local `main`",
             file=sys.stderr,
         )
-        for sha in sorted({r.binary_sha for r in flagged}):
-            print(f"  branch-or-unknown binary_sha: {sha}", file=sys.stderr)
+        statuses = sha_statuses(flagged)
+        for sha in sorted(statuses):
+            print(f"  binary_sha {sha}: {statuses[sha]}", file=sys.stderr)
         if not args.allow_branch:
             return 1
     return 0
@@ -858,6 +907,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--note", default="")
     ap.add_argument("--quiet", action="store_true")
     ap.set_defaults(func=_cmd_append)
+
+    rp = sub.add_parser(
+        "register", help="add an already-written ledger file to the index (idempotent)"
+    )
+    rp.add_argument("--sweep-id", required=True)
+    rp.add_argument("--note", default="")
+    rp.set_defaults(func=_cmd_register)
 
     sp = sub.add_parser("show", help="print rows, flagging branch measurements")
     sp.add_argument("--sweep-id", action="append", required=True)

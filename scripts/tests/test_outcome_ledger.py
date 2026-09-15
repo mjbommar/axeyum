@@ -234,7 +234,7 @@ class SchemaDrift(unittest.TestCase):
         through `scripts/outcome_ledger.py` (directly or through the runner) and
         must not write into a ledger directory by hand.
         """
-        sweep_dir = ROOT / "bench-results" / "ledger-20260915"
+        sweep_dir = SCRIPTS / "ledger-sweeps"
         runner = SCRIPTS / "ledger-run-one.sh"
         writers = sorted(sweep_dir.glob("*.sh")) if sweep_dir.is_dir() else []
         self.assertGreaterEqual(
@@ -487,6 +487,21 @@ class Staleness(unittest.TestCase):
         flagged = ol.flag_stale(self._rows("0" * 40), repo=self.repo)
         self.assertEqual(len(flagged), 1)
 
+    def test_an_unknown_commit_is_not_reported_as_a_branch(self):
+        """The three-valued classification, and the reason it has three values.
+
+        `git merge-base --is-ancestor <garbage> main` exits non-zero all by
+        itself, so a two-valued rule flags this row correctly and says
+        "branch" -- sending a reader to look for a branch that does not exist.
+        Measured: with the existence check deleted every OTHER test in this
+        file stays green, which is why this one has to exist separately.
+        """
+        self.assertEqual(
+            ol.sha_status("0" * 40, repo=self.repo), ol.SHA_UNKNOWN
+        )
+        self.assertEqual(ol.sha_status(self.on_branch, repo=self.repo), ol.SHA_ON_BRANCH)
+        self.assertEqual(ol.sha_status(self.on_main, repo=self.repo), ol.SHA_ON_MAIN)
+
     def test_load_raises_unless_allow_branch(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -566,6 +581,27 @@ class AppendOnly(unittest.TestCase):
             lines = (ledger / ol.INDEX_NAME).read_text(encoding="utf-8").splitlines()
             self.assertEqual(lines[0], "\t".join(ol.INDEX_COLUMNS))
             self.assertEqual([line.split("\t")[0] for line in lines[1:]], ["fixture", "second"])
+
+    def test_register_is_idempotent_so_a_consolidation_can_be_re_run(self):
+        """A sharded sweep registers its files after the fact, sequentially.
+
+        Concurrent appends to one index over NFS are a read-then-append race,
+        and a ledger row can exceed the 4 KiB that makes an `O_APPEND` write
+        atomic -- the dry-run row in ADR-2102 is 3.8 KiB of decline details on
+        ONE file. So shards write per-shard directories and the consolidation
+        registers each one; running that twice must not double the index.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            ledger = tmp / "ledger"
+            capture = _capture(
+                tmp, "c.out", ["unsat", _trail_line(partial=False, attempts=COMPLETE_ATTEMPTS)]
+            )
+            ol.append_row("fixture", _row(tmp, capture), ledger_dir=ledger)
+            ol.register("fixture", ledger_dir=ledger, note="again")
+            ol.register("fixture", ledger_dir=ledger, note="and again")
+            lines = (ledger / ol.INDEX_NAME).read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(lines), 2, lines)
 
     def test_a_sweep_id_cannot_escape_the_ledger_directory(self):
         with self.assertRaises(ol.LedgerError):

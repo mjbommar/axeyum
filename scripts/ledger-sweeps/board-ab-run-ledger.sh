@@ -23,12 +23,15 @@
 # board, not a replacement for it.
 #
 # Usage: board-ab-run-ledger.sh <sweep-id> <division> <list> <out.tsv> <cores> \
-#                               <binA> <shaA> <binB> <shaB> <capture-dir> [budget_s]
+#                               <binA> <shaA> <binB> <shaB> <capture-dir> [budget_s] [--invariance]
 set -u
 
 SWEEP="$1"; DIV="$2"; LIST="$3"; OUT="$4"; PIN="$5"
 AX_A="$6"; SHA_A="$7"; AX_B="$8"; SHA_B="$9"; CAPDIR="${10}"
 BUDGET="${11:-24}"
+INVARIANCE="${12:-}"
+INV_FLAG=()
+[ "$INVARIANCE" = "--invariance" ] && INV_FLAG=(--no-trace-control)
 
 REPO_ROOT="$(cd -- "$(dirname -- "$0")/../.." && pwd)"
 RUNNER="$REPO_ROOT/scripts/ledger-run-one.sh"
@@ -52,7 +55,7 @@ run_arm() {  # $1 = arm label, $2 = binary, $3 = commit sha
     --binary "$2" --binary-sha "$3" \
     --file "$f" --corpus-root "$CORPUS" \
     --outdir "$CAPDIR" --core "$PIN" --budget-s "$BUDGET" \
-    --note "board-ab:$DIV" 2>>"$CAPDIR/$SWEEP.stderr.log")
+    --note "board-ab:$DIV" "${INV_FLAG[@]}" 2>>"$CAPDIR/$SWEEP.invariance.log")
   printf '%s\t%s' "$(printf '%s' "$line" | cut -f5)" "$(printf '%s' "$line" | cut -f6)"
 }
 

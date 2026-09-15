@@ -87,7 +87,12 @@ done
 
 REPO_ROOT="$(cd -- "$(dirname -- "$0")/.." && pwd)"
 [ -n "$HOST" ] || HOST="$(uname -n)"
-[ -n "$LEDGER_DIR" ] || LEDGER_DIR="$REPO_ROOT/bench-results/ledger"
+# A sharded sweep gives every shard its OWN ledger directory: two concurrent
+# appends to one INDEX.tsv over NFS are a read-then-append race, and a row
+# here can exceed the 4 KiB that makes an `O_APPEND` write atomic. The
+# consolidation step registers the finished files sequentially
+# (`outcome_ledger.py register`).
+[ -n "$LEDGER_DIR" ] || LEDGER_DIR="${AXEYUM_LEDGER_DIR:-$REPO_ROOT/bench-results/ledger}"
 
 # The corpus-RELATIVE path, never the basename. The 16-division board records
 # basenames and 370 of its 3,200 resolve to more than one corpus file, so its

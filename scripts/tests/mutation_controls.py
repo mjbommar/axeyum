@@ -2865,8 +2865,13 @@ SUITES["outcome-ledger"] = (
     "scripts.tests.test_outcome_ledger",
     [
         (
-            # Kills `test_a_detail_containing_the_separators_survives_the_whole_row`
-            # and nothing else.  Stop escaping the intra-field separator and a
+            # Kills TWO tests -- `test_an_escaped_field_carries_no_separator`
+            # and `test_a_detail_containing_the_separators_survives_the_whole_row`
+            # -- and that is REPORTED rather than tuned down to one: the first
+            # pins the escape's output and the second the round trip through a
+            # real row, and narrowing either to make the count one would weaken
+            # a guard to flatter a number.
+            # Stop escaping the intra-field separator and a
             # decline detail carrying `|` -- which the ADR-2060 give-up strings
             # routinely do -- splits into two declines that never happened.
             # This is ADR-2020's bug reproduced in a different separator: the
@@ -2888,17 +2893,21 @@ SUITES["outcome-ledger"] = (
             "        r.corpus_path for r in rows if r.is_partial",
         ),
         (
-            # Kills
-            # `test_a_sha_that_does_not_resolve_is_flagged_rather_than_waved_through`
-            # and nothing else.  Both real branches of the staleness rule still
-            # work; only "I cannot check this" flips from STALE to fine.  A row
-            # from a deleted branch, or from a binary whose commit was never
-            # pushed, then reads as a `main` measurement -- which is the entire
-            # thing exit criterion 3 exists to prevent.
-            "an unresolvable binary_sha is waved through as main",
+            # Kills `test_an_unknown_commit_is_not_reported_as_a_branch` and
+            # NOTHING else -- the exactly-one case.
+            #
+            # The first version of this mutation SURVIVED, and that was the
+            # finding rather than a harness problem: `git merge-base
+            # --is-ancestor <garbage> main` exits non-zero on its own, so the
+            # row was still FLAGGED and all 31 tests stayed green. The guard
+            # was real and unfalsifiable at the same time. It became
+            # falsifiable when the classification went three-valued: a reader
+            # is now told `unknown-commit` instead of being sent to look for a
+            # branch that does not exist.
+            "an unknown commit is reported as a branch",
             '    code, _ = _git(["cat-file", "-e", f"{sha}^{{commit}}"], repo=repo)\n'
             "    if code != 0:\n"
-            "        return False\n",
+            "        return SHA_UNKNOWN\n",
             "",
         ),
     ],
