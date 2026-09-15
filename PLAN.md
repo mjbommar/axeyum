@@ -59492,6 +59492,20 @@ Nothing else in this repository changed status: no fact's `epistemic_status`
 flipped, no held-out nursery row was touched, `scripts/check-trust-closure.py`
 (S2's own file) was not edited.
 
+**Lane ledger-structure (`WIP`, ledger-structure, 2026-09-15).** Phase 3
+sizing for Phase 4 of
+[dispatch-and-instrumentation-2026-09-15.md](docs/plan/dispatch-and-instrumentation-2026-09-15.md#5-phase-4--derived-ladder-policy-conditional).
+Fills the outcome ledger (ADR-2102, ADR-2105) over all seven Tier 1 pinned
+200-file lists on `db31113fa`, 24 s / 8 GiB, `--trace` on, sharded 3 hosts x 4
+core pairs (12 shards, `bench-results/ledger-structure-20260915/
+launch-t1-ledger-sweep.sh`). In flight; next step is consolidation into
+`bench-results/ledger/` through `outcome_ledger.py`, then the per-class,
+per-division structure tables in
+`bench-results/ledger-structure-20260915/README.md`.
+
+No Rust, no ADR — this lane answers one measurement question from the ledger
+the Phase 3 lane already built.
+
 **The handoff named the right function and the wrong loop** (`DONE`,
 lemma-input, 2026-09-15, [ADR-2080]). [ADR-2075] §7(B) handed over
 `refresh_initial_lemmas` at 95.98 % of a row z3 refutes in 107 ms, with the
