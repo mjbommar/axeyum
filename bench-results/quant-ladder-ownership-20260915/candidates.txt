@@ -1,0 +1,11 @@
+candidate paths parsed : 53
+matched in the capture : 53
+
+harness wall ms  min=24130 median=24732 max=25337
+trail total_ms   min=24015 median=24402 max=24950  (n=53)
+
+rows whose trail total_ms is under 90% of the 24000 ms budget: 0
+
+EVERY candidate row is at the budget. The clock ended all of them, through
+the one budget exit that records nothing. The ceiling is 0, and the finding
+is the missing record rather than a reachable row.
