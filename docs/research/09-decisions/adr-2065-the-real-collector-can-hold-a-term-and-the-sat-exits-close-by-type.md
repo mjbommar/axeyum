@@ -240,6 +240,29 @@ ladder refusing early, so on a query it still cannot decide the ladder now
 spends more of its budget before giving up. That is the real trade and it is 33 %
 on this division.
 
+### The sat side, observed at corpus scale
+
+The guards, the type and the model replay are an argument plus twenty fixtures.
+This is the same property as an OBSERVATION over the 400 measured files
+(`ref/sat-side-invariant.txt`):
+
+| | base arm | lever arm |
+|---|---:|---:|
+| `sat` | **66** | **66** |
+| `unsat` | 205 | **219** |
+| `unknown` | 89 | 75 |
+| no verdict (`NONE`, the 40 wrapper timeouts) | 40 | 40 |
+
+**New `sat`: 0. Lost `sat`: 0. Files that changed side: 0.** Every verdict this
+lever adds is on the `unsat` side, and the `sat` count is not merely unchanged in
+total but unchanged file by file.
+
+The checker's exit status depends on the finding, and it is **non-vacuous**: a
+single row doctored from `on=unknown` to `on=sat` makes it print the file and
+exit 1. It cannot see a `sat` that is wrong in BOTH arms — that is the model
+replay's job, not this one's — but it sees exactly the class this change could
+have introduced.
+
 ### The control's non-vacuity is OBSERVED, not inferred
 
 `QF_LRA` was chosen because the edited functions run there while the abstraction
