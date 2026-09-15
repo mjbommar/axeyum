@@ -1,0 +1,4 @@
+INSTANCE 0	(typeof XRES_95_86_95_86)	T_java_io_FileNotFoundException	T_java_io_IOException
+INSTANCE 1	(stringCat destination_42_25 separator_16_143_31)	RES_100_12_0_102_77_102_77
+INSTANCE 2	RES_100_12_0_101_39_101_39	T_tohtml_Package
+INSTANCE 3	RES_100_12_0_101_39_101_39	T_tohtml_Package

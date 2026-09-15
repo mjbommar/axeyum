@@ -1,0 +1,54 @@
+file	verdict	bound_by	last	attempts	total_ms	giveup_kind	universals	triggerless	rounds	joined	starved	admitted	silent	giveup_raw
+AdvancedTypes_InternalSubClass..ctor-orderStrength_1.smt2	unknown	q:eq-partition	fd:bounded-completeness-unsat	21	24036	ResourceLimit	0	0	2	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+Arrays_Q3-noinfer.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24015	ResourceLimit	0	0	82	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+AssignToRepField_AssignToRepField.N.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24062	ResourceLimit	0	0	3	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+BasicMethodology_SubClass..ctor.smt2	unknown	q:eq-partition	fd:bounded-completeness-unsat	21	24046	ResourceLimit	0	0	2	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+Cast_Cast.R_System.Object_System.Int32.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24074	ResourceLimit	0	0	5	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+Chunker11c_Chunker.SpecSharp.CheckInvariant_System.Boolean.smt2	unknown	q:eq-partition	fd:bounded-completeness-unsat	21	24045	ResourceLimit	0	0	2	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+DefaultLoopInv0_A.M-modifiesOnLoop-noinfer.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24036	ResourceLimit	0	0	7	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+ExposeVersion_D..ctor-level_2.smt2	unknown	q:eq-partition	fd:bounded-completeness-unsat	21	24042	ResourceLimit	0	0	1	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+Interval_Cell.Shift_System.Int32.smt2	unknown	q:eq-partition	fd:bounded-completeness-unsat	21	24029	ResourceLimit	0	0	2	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+Spouse_Person..ctor.smt2	unknown	q:eq-partition	fd:bounded-completeness-unsat	21	24040	ResourceLimit	0	0	2	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+delete_check_heap_access_53_12.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24104	ResourceLimit	0	0	8	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+getRootInterface.smt2	unknown	NONE	NONE	0	0	Watchdog	0	0	0	NA	NA	NA	NA	watchdog fired before the worker thread returned
+init-31.smt2	unknown	NONE	NONE	0	0	Watchdog	35	0	186	191053	0	1623	2	watchdog fired before the worker thread returned
+insertion_sort_postcondition_of_insertion_sort_63_1.smt2	unknown	NONE	NONE	0	0	Watchdog	0	0	5	NA	NA	NA	NA	watchdog fired before the worker thread returned
+javafe.PrintSpec.012.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24404	ResourceLimit	0	0	2	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+javafe.ast.CatchClauseVec.66.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24031	ResourceLimit	0	0	3	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+javafe.ast.ImportDeclVec.015.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24054	ResourceLimit	0	0	3	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+javafe.ast.LabelStmt.011.smt2	unknown	NONE	NONE	0	0	Watchdog	0	0	0	NA	NA	NA	NA	watchdog fired before the worker thread returned
+javafe.ast.LexicalPragmaVec.219.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24004	ResourceLimit	96	1	4	11926	17	8076	84	quantified solve time budget exhausted after MBQI and the finite-model finder
+javafe.ast.MethodDecl.005.smt2	unknown	NONE	NONE	0	0	Watchdog	0	0	0	NA	NA	NA	NA	watchdog fired before the worker thread returned
+javafe.ast.NewInstanceExpr.271.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24226	ResourceLimit	118	1	6	24348	5	5944	91	quantified solve time budget exhausted after MBQI and the finite-model finder
+javafe.ast.ParenExpr.006.smt2	unknown	NONE	NONE	0	0	Watchdog	0	0	0	NA	NA	NA	NA	watchdog fired before the worker thread returned
+javafe.ast.StandardPrettyPrint.008.smt2	unknown	NONE	NONE	0	0	Watchdog	0	0	0	NA	NA	NA	NA	watchdog fired before the worker thread returned
+javafe.ast.StandardPrettyPrint.322.smt2	unknown	NONE	NONE	0	0	Watchdog	185	1	3	16398	2	7500	157	watchdog fired before the worker thread returned
+javafe.ast.TypeDeclElemPragma.373.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24676	ResourceLimit	0	0	7	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+javafe.ast.TypeModifierPragmaVec.013.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24037	ResourceLimit	0	0	4	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+javafe.ast.UnaryExpr.424.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24633	ResourceLimit	108	1	6	24351	5	6037	83	quantified solve time budget exhausted after MBQI and the finite-model finder
+javafe.ast.VariableAccess.001.smt2	unknown	NONE	NONE	0	0	Watchdog	0	0	0	NA	NA	NA	NA	watchdog fired before the worker thread returned
+javafe.filespace.HashTree.001.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24088	ResourceLimit	0	0	7	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+javafe.filespace.ZipTree.005.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24066	ResourceLimit	0	0	4	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+javafe.parser.Parse.005.smt2	unknown	q:eq-partition	fd:bounded-completeness-unsat	21	24583	ResourceLimit	0	0	1	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+javafe.parser.TagConstants.001.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24039	ResourceLimit	0	0	8	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+javafe.parser.TokenQueue.576.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	22	22446	ResourceLimit	90	1	4	12433	2	8009	66	e-matching: instantiation time budget exhausted mid-round (the interleaved ground check did not decide the set inside the deadline)
+javafe.reader.CachedReader.003.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24095	ResourceLimit	0	0	7	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+javafe.tc.EnvForLocals.007.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24162	ResourceLimit	0	0	4	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+javafe.tc.FlowInsensitiveChecks.017.smt2	unknown	NONE	NONE	0	0	Watchdog	0	0	0	NA	NA	NA	NA	watchdog fired before the worker thread returned
+javafe.tc.TypeSig.001.smt2	unknown	NONE	NONE	0	0	Watchdog	0	0	0	NA	NA	NA	NA	watchdog fired before the worker thread returned
+javafe.tc.TypeSigVec.005.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24206	ResourceLimit	0	0	3	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+javafe.tc.Types.035.smt2	unknown	NONE	NONE	0	0	Watchdog	0	0	0	NA	NA	NA	NA	watchdog fired before the worker thread returned
+javafe.test.SuperlinksTest.004.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24108	ResourceLimit	0	0	4	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+loopinv1_LoopInv1.Test1a_F_notnull-infer_eh.smt2	unknown	q:eq-partition	fd:bounded-completeness-unsat	21	24103	ResourceLimit	0	0	2	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+merge_loop_check_heap_access_60_6.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	21	24166	ResourceLimit	0	0	4	NA	NA	NA	NA	quantified solve time budget exhausted after MBQI and the finite-model finder
+smtlib.1057395.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	23	19859	ResourceLimit	446	38	4	18277	457	8156	251	e-matching: instantiation time budget exhausted mid-round (the interleaved ground check did not decide the set inside the deadline)
+smtlib.1065390.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	22	24062	ResourceLimit	559	31	7	38526	346	7823	460	quantified solve time budget exhausted after MBQI and the finite-model finder
+smtlib.1120322.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	22	21373	Incomplete	0	0	512	NA	NA	NA	NA	e-matching instantiation stopped after 6 rounds: the remaining budget could not fit another round with growth headroom
+smtlib.1175889.smt2	unknown	NONE	NONE	0	0	Watchdog	0	0	2	NA	NA	NA	NA	watchdog fired before the worker thread returned
+smtlib.1237382.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	22	20954	Incomplete	6	0	94	42403	0	713	3	mbqi declined an unsupported fragment: term #0 has sort (Uninterpreted 0) that the pure-Rust BV backend cannot bit-blast
+smtlib.1462528.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	22	4801	Incomplete	46	0	94	471490	110	1802	7	mbqi declined an unsupported fragment: term #0 has sort (Uninterpreted 0) that the pure-Rust BV backend cannot bit-blast
+smtlib.581330.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	22	2691	Incomplete	0	0	0	NA	NA	NA	NA	mbqi declined an unsupported fragment: term #0 has sort (Uninterpreted 0) that the pure-Rust BV backend cannot bit-blast
+smtlib.898060.smt2	unknown	q:mbqi	fd:bounded-completeness-unsat	23	11728	Incomplete	0	0	0	NA	NA	NA	NA	mbqi declined an unsupported fragment: term #0 has sort (Uninterpreted 0) that the pure-Rust BV backend cannot bit-blast
+smtlib.972059.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	23	20075	ResourceLimit	298	15	5	25057	398	8118	130	e-matching: instantiation time budget exhausted mid-round (the interleaved ground check did not decide the set inside the deadline)
+smtlib.993567.smt2	unknown	q:egraph	fd:bounded-completeness-unsat	23	23708	ResourceLimit	532	52	4	17117	622	8174	378	e-matching: instantiation time budget exhausted mid-round (the interleaved ground check did not decide the set inside the deadline)
+tohtml.Java2Html.832.smt2	unknown	NONE	NONE	0	0	Watchdog	0	0	2	NA	NA	NA	NA	watchdog fired before the worker thread returned

@@ -1,0 +1,30 @@
+rows measured 909
+
+division         n     A     B  delta
+AUFDTLIRA      114    77    79     +2
+AUFLIRA        191   171   170     -1
+UF             113    51    55     +4
+UFDTLIRA       190   133   133     +0
+UFLIA          112    43    44     +1
+UFNIA          189    49    48     -1
+TOTAL          909   524   529     +5
+
+VERDICT DISAGREEMENTS (sat vs unsat): 0 of 909
+raw gains 10  raw losses 5  -- RAW, not re-checked; a single 24 s pairing carries a measured 1-1.5 % ambient flip rate on these boxes, so these go through recheck-movers before they are an effect
+  GAIN UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_00_37_157_1687977.smt_in.smt2 A=unknown B=unsat
+  GAIN AUFDTLIRA/20200306-Kanig/spark2014bench/N624-020__perm_occ__sort.adb_36_39_index_check___00.smt2 A=unknown B=unsat
+  GAIN UFLIA/simplify/javafe.ast.TypeDeclElemPragma.373.smt2 A=unknown B=unsat
+  GAIN UF/sledgehammer/Arrow_Order/uf.704291.smt2 A=unknown B=unsat
+  GAIN AUFDTLIRA/20200306-Kanig/spark2014bench/O512-022__stacks__stacks.ads_84_58_index_check___00.smt2 A=unknown B=unsat
+  GAIN UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_04_05_259_1960786.smt_in.smt2 A=unknown B=unsat
+  GAIN UF/20170428-Barrett/cdt-cade2015/nada/distro/rbt_impl/x2015_09_10_16_49_54_437_992499.smt_in.smt2 A=unknown B=unsat
+  GAIN UF/grasshopper/uninstantiated/dl_copy_invariant_19_2.smt2 A=unknown B=unsat
+  GAIN UF/sledgehammer/Arrow_Order/smtlib.663965.smt2 A=none B=unsat
+  GAIN UF/sledgehammer/Arrow_Order/uf.850780.smt2 A=unknown B=unsat
+  LOSS UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_09_42_195_2416479.smt_in.smt2 A=unsat B=unknown
+  LOSS UF/sledgehammer/Arrow_Order/uf.558544.smt2 A=unsat B=unknown
+  LOSS UFNIA/sledgehammer/QEpres/z3.1146572.smt2 A=unsat B=unknown
+  LOSS UF/sledgehammer/Arrow_Order/uf.774042.smt2 A=unsat B=unknown
+  LOSS AUFLIRA/why/smtlib0e43fc.smt2 A=unsat B=unknown
+
+nonzero exit status: A 1 of 909, B 0 of 909

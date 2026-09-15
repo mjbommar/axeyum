@@ -2742,6 +2742,79 @@ SUITES["external-coupling"] = (
     ],
 )
 
+# --------------------------------------------------------------------------
+# `simplex-sparse-tableau` — ADR-2111 made `Tableau` sparse, and the one way a
+# sparse tableau can be wrong that a dense one cannot is by LOSING A CELL.
+#
+# `set_cell` is the single mutation point for a row cell and it now maintains
+# FOUR structures at once: `row_nz` (the sorted column index), `row_val` (the
+# values, positionally aligned with it), `col_nnz` and `col_rows` (the sorted
+# transpose).  Four structures behind one function is exactly the shape where a
+# guard stops being load-bearing without anyone noticing, so each of the three
+# mutations below removes one of them and the run says which test dies.
+#
+# The three are deliberately different KINDS of damage:
+#
+#   * losing a fill-in write is a SOUNDNESS defect — the row becomes weaker than
+#     the constraint it represents, and a weaker row is satisfiable where the
+#     real one is not, i.e. a wrong `sat`;
+#   * leaving a stale entry in the transpose is a CONSISTENCY defect the value
+#     arithmetic absorbs (a stale row scales by zero), so only the recount sees
+#     it;
+#   * appending to the transpose instead of inserting in order is a DETERMINISM
+#     defect: every verdict is unchanged and only the ORDER of the exact-rational
+#     adds moves, which is precisely the kind of change a verdict-only gate
+#     cannot see and which determinism is a public API promise about.
+#
+# Filtered to `simplex::tests` rather than to one test, so "exactly one died" is
+# a claim about a 36-test population and not about a suite of one.
+# --------------------------------------------------------------------------
+
+SUITES["simplex-sparse-tableau"] = (
+    "crates/axeyum-solver/src/simplex.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "simplex::tests"),
+        "simplex-sparse-tableau",
+    ),
+    [
+        (
+            # SOUNDNESS: a cell that becomes nonzero is never stored, so every
+            # fill-in the pivot writes is silently dropped.
+            "the fill-in write that enters a newly-nonzero cell",
+            "                self.row_nz[i].insert(at, v);\n"
+            "                self.row_val[i].insert(at, value);",
+            "                if false {\n"
+            "                    self.row_nz[i].insert(at, v);\n"
+            "                    self.row_val[i].insert(at, value);\n"
+            "                }",
+        ),
+        (
+            # CONSISTENCY: the transpose keeps a row whose cell just went to
+            # zero. The values still come out right (a stale row scales by a
+            # zero coefficient), so nothing but the recount can see it.
+            "the transpose entry removed when a cell goes to zero",
+            "                if let Ok(at) = self.col_rows[v].binary_search(&i) {\n"
+            "                    self.col_rows[v].remove(at);\n"
+            "                }",
+            "                if false\n"
+            "                    && let Ok(at) = self.col_rows[v].binary_search(&i)\n"
+            "                {\n"
+            "                    self.col_rows[v].remove(at);\n"
+            "                }",
+        ),
+        (
+            # DETERMINISM: the transpose is appended to rather than kept sorted.
+            # Every verdict is identical; only the order in which
+            # `update_nonbasic` and the pivot walk a column changes.
+            "the sorted position the transpose keeps its rows in",
+            "                let cat = self.col_rows[v].partition_point(|&r| r < i);\n"
+            "                self.col_rows[v].insert(cat, i);",
+            "                self.col_rows[v].push(i);",
+        ),
+    ],
+)
+
+
 DEMO_SUBJECT = "scripts/tests/fixtures/mutation_demo/subject.py"
 DEMO_CONTROL = "scripts/tests/fixtures/mutation_demo/suite_tests.py"
 
@@ -10290,6 +10363,88 @@ SUITES["quant-valid-universal-reserve"] = (
 # already shipped once.
 # --------------------------------------------------------------------------
 
+# --------------------------------------------------------------------------
+# `mbqi-loop-entry-note` -- ADR-2114's correction to the `mbqi declined an
+# unsupported fragment: …` sentence.
+#
+# The sentence names the engine that refused, and measured over 134 AUFDTLIRA
+# files it names the wrong one on 16 of the 17 rows that print it:
+# `prove_unsat_by_mbqi_inner` diverts to e-matching at five shape guards before
+# its loop, and e-matching's ground `check_auto` refusal comes back wearing
+# MBQI's name.  Population-wide the loop runs on 2 of 134.
+#
+# THREE GUARDS, DELIBERATELY SEPARATE, because they fail in different ways and
+# the third is the one that matters most:
+#
+#   * the flag is SET where the loop is entered -- without it the note fires
+#     on every refusal, including the two rows where MBQI genuinely ran;
+#   * the note is NON-EMPTY -- an empty constant makes the correction
+#     invisible while every wiring assertion still passes;
+#   * the selection reads the flag the RIGHT WAY ROUND.  A swapped correction
+#     is worse than no correction: it would clear exactly the rows that need
+#     the note and add it to the two that do not.  Pinning only the constant
+#     leaves those two arms swappable with everything green, which is why
+#     `mbqi_loop_note` is a named function and not an `if` at the call site.
+#
+# What this table does NOT claim: these mutations do not reach the dispatcher's
+# end-to-end wiring, because reliably driving the ladder into MBQI's
+# `Err(Unsupported)` arm from a unit test means pinning a route the ladder is
+# free to change.  The wiring is one `format!` over `mbqi_loop_note(...)`; the
+# SELECTION it calls is what is pinned here, and that gap is stated rather than
+# left for someone to discover.
+# --------------------------------------------------------------------------
+
+SUITES["mbqi-loop-entry-note"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "mbqi_loop"),
+        "mbqi-loop-entry-note",
+    ),
+    [
+        (
+            # THE FLAG. Never set means "the loop never ran" on every query,
+            # so the note is appended unconditionally.
+            "the loop-entry flag is set where the loop is entered",
+            "    *entered_loop = true;",
+            "    *entered_loop = false;",
+        ),
+        (
+            # THE CONSTANT. An empty note is a correction nobody can read.
+            "the correction sentence is non-empty",
+            "pub(crate) const MBQI_LOOP_NOT_ENTERED_NOTE: &str = \" [ADR-2114:",
+            "pub(crate) const MBQI_LOOP_NOT_ENTERED_NOTE: &str = \"\"; const _UNUSED_2114: &str = \" [ADR-2114:",
+        ),
+        (
+            # THE OTHER DIRECTION OF THE FLAG, and the reason the false-side
+            # test is not decoration. The three mutations around it all make
+            # the flag falser or the note louder; this one makes it TRUE
+            # unconditionally, which is the failure mode that would clear the
+            # note off all 132 rows that need it while every other assertion
+            # here still passed.
+            "the flag is not set before the shape guards run",
+            "    prove_unsat_by_mbqi_inner(arena, assertions, config, true, entered_loop)",
+            "    *entered_loop = true;\n"
+            "    prove_unsat_by_mbqi_inner(arena, assertions, config, true, entered_loop)",
+        ),
+        (
+            # THE SELECTION, and the reason `mbqi_loop_note` exists at all.
+            "the note fires on the queries where the loop did NOT run",
+            "pub(crate) fn mbqi_loop_note(entered_loop: bool) -> &'static str {\n"
+            "    if entered_loop {\n"
+            "        \"\"\n"
+            "    } else {\n"
+            "        MBQI_LOOP_NOT_ENTERED_NOTE\n"
+            "    }\n}",
+            "pub(crate) fn mbqi_loop_note(entered_loop: bool) -> &'static str {\n"
+            "    if entered_loop {\n"
+            "        MBQI_LOOP_NOT_ENTERED_NOTE\n"
+            "    } else {\n"
+            "        \"\"\n"
+            "    }\n}",
+        ),
+    ],
+)
+
 SUITES["dt-native-refusal-decline"] = (
     "crates/axeyum-solver/src/auto.rs",
     Cargo(
@@ -10956,6 +11111,69 @@ SUITES["nra-cad-attribution"] = (
         ),
     ],
 )
+
+
+# `qinst-trigger-alternatives` -- ADR-2113's auto trigger-alternative selection.
+#
+# This lane's own first implementation had the containment filter INVERTED --
+# it kept the CONTAINER and dropped the contained candidate, the opposite of
+# z3's `filter_bigger_patterns` and of what its own comment claimed.  Nothing
+# that looks at a VERDICT could have caught it: a worse trigger loses decisions,
+# not soundness, and on a small fixture both patterns reach the refutation.  The
+# test that fired asserts the surviving `TermId`.  These mutations are that
+# episode turned into a standing control.
+# --------------------------------------------------------------------------
+
+SUITES["qinst-trigger-alternatives"] = (
+    "crates/axeyum-solver/src/qinst_egraph.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            # ONE filter: `cargo test` takes a single TESTNAME, and a second one
+            # is `error: unexpected argument`, which the harness reports as
+            # BASELINE DID NOT BUILD -- a whole suite unmeasurable for a reason
+            # that has nothing to do with any mutation. The five tests share the
+            # `trigger_alt_` prefix so one filter names exactly them.
+            "qinst_egraph::tests::trigger_alt_",
+        ),
+        "qinst-trigger-alternatives",
+    ),
+    [
+        (
+            # The exact inversion this lane shipped and its own test caught.
+            "the containment filter drops the CONTAINER, not the contained",
+            ".any(|&other| other != candidate && is_proper_subterm(arena, candidate, other))",
+            ".any(|&other| other != candidate && is_proper_subterm(arena, other, candidate))",
+        ),
+        (
+            # Without the cap check the OFF arm stops being byte-for-byte the
+            # shipped expression, which is the whole promise of the lever.
+            "the shipped cap short-circuits to the single-group path",
+            "    if cap <= 1 {",
+            "    if cap <= 0 {",
+        ),
+        (
+            # Order by arena insertion instead of by size: still deterministic,
+            # still total, and no longer the references' smallest-first
+            # preference -- so a test asserting only determinism survives it.
+            "alternatives are ordered SMALLEST first, not by arena order",
+            "    ranked.sort_by_key(|&term| (witness_size(arena, term), term));",
+            "    ranked.sort_by_key(|&term| (0_usize, term));",
+        ),
+        (
+            # `is_proper_subterm` must be PROPER: reflexive containment makes
+            # every candidate contain itself and the filter deletes all of them.
+            "`is_proper_subterm` is proper",
+            "    if haystack == needle {\n        return false;\n    }",
+            "    if haystack == needle {\n        return true;\n    }",
+        ),
+    ],
+)
+
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))

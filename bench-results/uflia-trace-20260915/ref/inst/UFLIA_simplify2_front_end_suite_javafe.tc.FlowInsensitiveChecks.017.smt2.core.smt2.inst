@@ -1,0 +1,8 @@
+INSTANCE 0	(typeof e_1807.41)	(asChild T_javafe.ast.VarInit T_javafe.ast.ASTNode)	T_javafe.ast.ASTNode
+INSTANCE 1	(typeof e_1807.41)	(asChild T_javafe.ast.Type T_javafe.ast.ASTNode)	T_javafe.ast.ASTNode
+INSTANCE 2	e_1807.41	(asChild T_javafe.ast.Type T_javafe.ast.ASTNode)
+INSTANCE 3	(asChild T_javafe.ast.Type T_javafe.ast.ASTNode)	T_javafe.ast.ASTNode	T_java.lang.Object
+INSTANCE 4	(typeof e_1807.41)	T_javafe.ast.Expr	(asChild T_javafe.ast.VarInit T_javafe.ast.ASTNode)
+INSTANCE 5	e_1807.41	T_javafe.ast.Expr
+INSTANCE 6	T_javafe.ast.Expr	T_javafe.ast.ASTNode	T_java.lang.Object
+INSTANCE 7	T_javafe.ast.Expr	(asChild T_javafe.ast.VarInit T_javafe.ast.ASTNode)	T_javafe.ast.ASTNode

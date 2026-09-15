@@ -1,0 +1,10 @@
+INSTANCE 0	RES_426.17_426.17	T_javafe.tc.TypeSig
+INSTANCE 1	y_420.24	T_javafe.ast.TypeName
+INSTANCE 2	x_419.59	T_javafe.tc.TypeSig
+INSTANCE 3	x_419.59
+INSTANCE 4	x_419.59	T_javafe.ast.ArrayType
+INSTANCE 5	y_420.24
+INSTANCE 6	y_420.24	T_javafe.ast.ArrayType
+INSTANCE 7	(is y_420.24 T_javafe.ast.ArrayType)	(refNE y_420.24 null)
+INSTANCE 8	x_419.59	T_javafe.ast.TypeName
+INSTANCE 9	(is y_420.24_1_ T_javafe.tc.TypeSig)	(refNE y_420.24 null)

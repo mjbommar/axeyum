@@ -137,6 +137,28 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-09-15 | `894b960a2` | lra-trace: `screen-ab.sh`, with its two named control files wired in rather than remembered |
+| 2026-09-15 | `ee8f64513` | lra-trace: the atom screen becomes `AXEYUM_LRA_ATOM_SCREEN` (default 1); three falsified cost models say why raising it is a trap |
+| 2026-09-15 | `9e691e0fd` | lra-trace: A/B resume helper, and the duplicate-writer near-miss that shaped its warning |
+| 2026-09-15 | `2e234c144` | lra-trace: three measurements converge on the online engine rather than the route |
+| 2026-09-15 | `be6b10a65` | lra-trace: `TableauReserve::Sparse` is INERT on its target population; its A/B deliberately NOT run |
+| 2026-09-15 | `0f9c8b788` | lra-trace: reference trace — z3's two simplexes differ by FOUR files of 93, 33 decided by nobody at 24 s |
+| 2026-09-15 | `d4c3d9c63` | lra-trace: registry entries for the sparse rate; the mechanism on the median abort row |
+| 2026-09-15 | `e85b52917` | lra-trace: ADR-2111, the mutation registration, and the reference/A-B instruments |
+| 2026-09-15 | `81ed00d56` | lra-trace: the simplex tableau is sparse (nobody else stores a dense one); `TableauReserve` lever ships `Dense` |
+| 2026-09-15 | `2b66f2d50` | lra-trace: all 93 undecided rows bucketed over four channels — 40 aborts, 34 die in `lra.rs` before the simplex, 23 reach the online engine |
+| 2026-09-15 | `28280dbfb` | lra-trace: `QF_LRA` shape census — undecided are 1,351x the decided in ATOMS and identical in COEFFICIENT SIZE, with the 107 decided as a control |
+| 2026-09-15 | uflia-trace | ADR-2113: UFLIA's blocker is `rej_nocontext` at 100.0 % of 2,139,815 rejections — NEVER-MATCHED is 0 of 478, so trigger selection cannot reach it |
+| 2026-09-15 | uflia-trace | `AXEYUM_QINST_TRIGGER_ALTERNATIVES` (OFF): auto selection may propose several trigger alternatives, as z3 and cvc5 both do; 5 unit + 7 integration tests, soundness-negative over satisfiable queries at six caps |
+| 2026-09-15 | uflia-trace | `silent-split.py`: the NEVER-MATCHED / ALL-REJECTED split, reusable on any division, with a guard that says `REASONS-UNMEASURED` rather than printing an OFF census's zeros |
+| 2026-09-15 | uflia-trace | reference arm: all 53 UFLIA cores are E-matching-only (`smt.mbqi=false` refutes 53/53); `proof-instances.py` names the substituted terms out of z3's own proof |
+| 2026-09-15 | `175ed2e8b` | `dtshape.py`: the datatype construct that refuses is decided by SORTS, so the classifier parses rather than greps; `let` resolved, not expanded. 55 cores + 79 originals classified, joined against ADR-2090's own traced give-ups 55 of 55. |
+| 2026-09-15 | `db7132eff` | The 134-file traced census with `AXEYUM_QPROBE`, the z3 four-configuration attribution runner (the fourth arm is the both-engines-off CONTROL, without which every ground-refutable row reports "decided by either engine"), and the nesting-depth sizing: 0 recursive datatypes, max depth 5, W1's refused sort `(Array Int <datatype>)` 86 of 86. |
+| 2026-09-15 | `8793f1387` | z3's engine attribution on the 55 cores, and the measured answer to "what does the model finder build for the datatype sorts": nothing — 0 universe/model-finder lines under `-v:10` with e-matching off, control 27 to 47,758 lines. |
+| 2026-09-15 | `75b716b95` | `mbqi declined an unsupported fragment: …` names the engine that refused and names the wrong one on 16 of the 17 rows that print it. A loop-entry flag through `prove_unsat_by_mbqi_reporting` appends a correction; the sentence up to the original message is byte-identical so the four committed censuses keep working; nothing branches on `UnknownReason::detail`. 4 tests, 4 mutation guards, each killing exactly one distinct test. |
+| 2026-09-15 | `e75f85413` | [ADR-2114]: no datatype lever is built — of the 4 undecided ORIGINALS we refuse on a datatype construct, 1 is ground-convertible. §4 names and sizes the representation anyway so the next lane need not re-derive it. |
+| 2026-09-15 | `3d8435c2f` | The same four z3 configurations on the 79 undecided ORIGINALS, which is the measurement the cores could not give: 39 GROUND (49.4 %), 16 EMATCHING, 0 MBQI, 24 z3 cannot refute either. Half the gap is ground — but only 1 of the 4 datatype-refused originals is, so the bucket converts at most 1 of 79. |
+| 2026-09-15 | `d53c89e8e` | Verdict invariance measured rather than argued: 0 verdict changes of 134, 0 flips, non-vacuity in both directions. The checker was wrong before the code was — it demanded the correction on a row that never entered the quantified arm. |
 | 2026-09-15 | `4a9638930` | Census of the 83 undecided QF_NRA files: 83 of 83 outcome-ledger rows, buckets keyed on the route that held the budget, shape features from a parser rather than a grep. Records the two wrong readings the instruments gave first. |
 | 2026-09-15 | `4def0b025` | `nra_real_root::CadDecline` — twelve causes behind what was one `not-applicable` for 78 of 83 files — plus the `AXEYUM_NRA_CAD` lever registered dated, and the three-arm z3 + cvc5 reference trace that sizes the gap. |
 | 2026-09-15 | `40b99ced8` | ADR-2110: the CAD-versus-linearization split, two design-difference claims with `file:line` on both sides, the QF_NRA A/B (+2, 0 losses, 0 flips), and the `nra-cad-attribution` mutation suite (three guards, each deletion killing exactly one named test). |
@@ -12690,6 +12712,95 @@ both green; full `nat_prelude` sweep 108 passed / 0 failed.
 and `Nat.multichoose` defined (with their equation lemmas) before they are
 reachable at all — that is real new-definition work, not a re-derivation of
 something already in the tree.
+
+**Lane LRA-TRACE (`WIP`, lra-trace, 2026-09-15).** `QF_LRA` reads ours 107 of
+200 against z3 166 — 59 behind — and every reference decides those files with
+the same Dutertre–de Moura simplex we ship, so the lane's question was what ours
+does differently with a trace on both sides, not which algorithm is missing.
+ADR-2111 is **`proposed`**, not accepted: no lever ships `On`.
+
+**Census of all 93 undecided rows, four cause channels, 0 without a capture**
+(the give-up string alone loses the largest bucket, [ADR-2045]): **40 `rc=134`
+allocation aborts, 36 `budget/other`, 7 `incomplete`, 5 `bound-no-decline`, 5
+`not-applicable`**. **34 of 93 are bound inside `lra.rs` before the simplex gets
+a system**; **only 23 of 93 ever reach the online CDCL(T) engine**. The typed
+decline name types nothing here — all 36 budget rows carry `Budget::Other`.
+
+**Shape census with the 107 decided as a control.** Atoms separate the halves
+**1,351×**; **coefficient size does not** (max 10 digits on both halves against
+`i128`'s 38), which kills the "big coefficients" reading before a trace is read.
+
+**Reference trace, same envelope and cores.** z3 `smt.arith.solver=6` 57 of 93,
+`=2` 56, agreeing on 53 — **`lar_solver` accounts for four files**, so "their
+newer simplex is better" is not the explanation. **33 of 93 are decided by
+nobody at 24 s: the prize is 60, not 93.** And the largest bucket by COUNT is
+not the largest by ADDRESSABILITY — the 40 aborts are 50 % reachable, the 32
+`lra.rs` rows are **86–91 %**.
+
+**Shipped:** `Tableau` is sparse (`row_val` aligned with the `row_nz` index that
+already existed, plus a `col_rows` transpose), as the only path, with a
+soundness-negative fill-in fixture. On the median abort row that is **1.62
+billion cells holding 147,440 nonzeros — 48.4 GiB against an 8 GiB ceiling —
+becoming a clean `unknown` at 203 MB**. Two levers, **both `Off`/default**:
+`AXEYUM_LRA_TABLEAU_RESERVE` and `AXEYUM_LRA_ATOM_SCREEN`.
+
+**Two negatives worth more than the positive.** `TableauReserve::Sparse` is
+**inert** on the population it was aimed at — the screen that refuses those rows
+is an atom count at `lra_theory.rs:305`, not the tableau reserve — so its A/B
+was deliberately **not run**, because `net +0` from an inert arm cannot be told
+from `net +0` from a working one. And `git log -S` on the atom screen found
+**three cost models built to replace it and all three falsified by the corpus**;
+the third bounded Fourier–Motzkin correctly and still let
+`miplib/danoint-266.smt2` reach 7.8 GB **with `simplex_rows=n/a`** — the simplex
+did not exist, so those bytes were never the tableau and the sparse storage
+cannot have removed them.
+
+**Next:** the six-division A/B is running (QF_LRA at 160 of 200 reads **net +0,
+0 gains, 0 losses, 0 flips, 0 disagreements at a comparable denominator of 75,
+32 exit statuses moving `134 → 0`** — so **0 abort rows decide at 24 s**, and
+with 0 movers the 3× recheck has a comparable denominator of 0). Then the atom
+screen's own A/B on the 34 `lra.rs` rows plus its two named controls. The
+largest unpulled lever remains the touched-driven bound scan and the bound
+axioms: a median **19** theory propagations against **836,531** decisions.
+
+**Lane UFLIA-TRACE (`WIP`, uflia-trace, 2026-09-15).** The division's blocker is
+**located and sized, and it is not what anybody was looking for.** On
+ADR-2090's 53 reference-minimal UFLIA cores: z3 refutes 53 of 53 with
+`smt.mbqi=false` (median 108 ms) and its proofs name a **median of 6**
+instantiations; cvc5 agrees 53 of 53. We decide 15. On the 19 cores whose
+per-universal probe runs, **444 of 500 universals admit nothing all run**, the
+loop makes **4.3 M joins** and admits **37,414** instances. The split that
+matters — `silent-split.py`, built here because no aggregate count can make it —
+is **NEVER-MATCHED 0 of 478** and **ALL-REJECTED 429 of 478**, with **100.0 % of
+2,139,815 rejections a single reason, `rej_nocontext`**. And the terms z3
+substitutes are already ours: of the 741 GROUND arguments in z3's own proofs
+across those cores, **728 (98.2 %) are in our accumulated ground set**. We build
+them, we match them, and we throw the instances away — a universal nested under
+a disjunction, compiled and matched, every tuple discarded because
+`A ∨ (∀y. B(y))` does not entail `B(t)` and no positive-replacement context
+exists for it. **UFLIA has ZERO e-matching fixpoint give-ups** — the brief's "12
+fixpoints" is a cross-division count.
+
+**Next lane: `rej_nocontext`, not triggers.** Two routes, sized in ADR-2113 §6 —
+(a) preprocess so the nested universal is no longer nested, which is what the
+references do and is the larger change; (b) widen where `PositiveContext` is
+computed, which uses machinery that already exists and should be sized first.
+**Do not re-run the trigger-alternative lever on this population**: its bucket is
+measured at zero here. It may still matter on UF, whose category A is 728
+triggerless universals — a different shape.
+
+`AXEYUM_QINST_TRIGGER_ALTERNATIVES` is built, sound, deterministic, tested and
+**shipped OFF**. Its A/B reached **909 of 1,200 rows** before this lane closed:
+**+5 total, 0 verdict disagreements, 0 nonzero exit statuses**, 10 raw gains and
+5 raw losses NOT re-checked (an earlier snapshot of the SAME run at 832 rows read
++6, with `AUFLIRA` at +0 where it now reads −1 — which is what an un-re-checked
+mover column is worth). **Six of the nine gains are in `UF`** — the division
+whose silence really is unmatched triggers — and `UFLIA`, whose NEVER-MATCHED
+class is 0 of 478, moves +1 on 99 rows. That is the census predicting the A/B,
+which is a check on the diagnosis and not a reason to ship. **Open for the next
+lane: the remaining 368 rows and `recheck-movers.sh` over the 12 raw movers.**
+The ship criterion (0 stable losses on the full six divisions) is NOT met, so
+the lever stays OFF and ADR-2113 stays `proposed`.
 
 **Your lane's block (`DONE`, nat-factorial-variants, 2026-08-28).** Task named
 three absent definitions blocking five open `F:ml430-nat-*` facts:
@@ -51212,6 +51323,98 @@ decline-time figure.
 | `e5f6764ba` | mutation controls (4) and the A/B runner whose polarity is inverted |
 | `78fcd2b26` | the reference verifier could not read `:status` at all |
 | `d11e75f35` | movers / 3×-re-check / noise-floor instruments |
+
+**MBQI's refutation loop runs on 2 of 134 AUFDTLIRA files** (`WIP`,
+dt-quant-trace, 2026-09-15, [ADR-2114]). [ADR-2090]'s give-up census recorded
+*"17 mbqi declined an unsupported DATATYPE fragment (three distinct wordings)"*
+and this lane was dispatched to find which construct triggers the decline.
+**The premise does not survive the control.**
+
+Traced 134 files on an idle s7 — the 55 [ADR-2090] `AUFDTLIRA` cores and the 79
+undecided originals — at 24 s on four pinned physical-core pairs, `AXEYUM_QPROBE`
+on throughout, shards round-robin so no shard is a prefix of a path-sorted list.
+MBQI's refutation loop **did not run on 132 of 134**, and on **127** the reason
+is a purely syntactic quantifier shape guard (`nested-binder-in-matrix`,
+`quantifier-below-top-level`) that mentions no datatype: these are SPARK VCs of
+the form `(not (forall … (=> … (forall …))))` and the rung takes only a
+single-binder prenex universal.
+
+17 rows do print a datatype wording, and on **16 of 17** MBQI's loop had already
+been bypassed — the sentence was produced by a ground sub-solve inside
+e-matching (`decide_instantiation`, `auto.rs:13482`, `check_auto` on a
+quantifier-free query) and picked up its "mbqi declined" prefix on the way out
+at `auto.rs:2488`. **But the control refuses the datatype reading**: on the 117
+rows with no datatype wording the loop also did not run, 116 of 117. So "MBQI
+did not get to build a model" is a fact about the ladder, not about datatypes.
+The narrow claim that survives is that the message names an engine that did not
+produce it, 16 times of 17.
+
+The construct is classified by SORTS, not names (`dtshape.py`), because the
+three refusals are decided by `field_sort_expands`
+(`datatype_native.rs:1549`) and `datatype_expansion_is_exact` (`:1576`) and
+neither is visible in the text of a `declare-datatypes` form. 134 of 134 joined
+against the binary, 0 unmatched, 38 disagreements **all** in the direction
+"predicted a refusal, observed none" (the ladder ended before the Ackermann pass
+ran) and **0** the other way.
+
+Two buckets. `W1` (9 observed, 20 predicted) refuses a field sort, and that sort
+is `(Array Int <datatype>)` on **86 of 86** occurrences — SPARK's array of
+records, the one shape z3 also declines to encode. `INEXACT` (W2/W3 folded, 8
+observed, 35 predicted) is a datatype-typed field reaching a UF boundary.
+Sizing: over all 134 files **0 declare a recursive datatype** and the deepest
+nest is **5**, so a recursive field expansion would terminate and be exact.
+
+Reference reading, with a positive control on every negative: z3's model finder
+has **zero** occurrences of `datatype`/`constructor` (`smt_model_finder.cpp`,
+control `sort`=68) and no depth bound — it handles a nested datatype field by
+recursion in the e-graph (`theory_datatype.cpp:372-378`) and never weakens
+datatype equality, which is why it never has to refuse congruence. A finite
+universe of constructor terms exists only in cvc5, only for FMF, by iterative
+deepening on term size (`rep_set.cpp:131-165`, `type_enumerator.h:58`). That it
+builds no universe here is measured, not only read: `-v:10` under
+`smt.ematching=false` emits **0** universe/model-finder lines across all 13
+datatype-refused cores, against a non-vacuous control of 27 to 47,758 lines.
+
+**The number that decides the lane is on the ORIGINALS, not the cores.** Four
+z3 configurations per file — the fourth being the both-engines-off control,
+without which every ground-refutable row reports "decided by either engine":
+z3 refutes **44 of 55 cores** and **39 of the 79 undecided originals (49.4 %)
+GROUND**, and **MBQI decides 0 of 134**. So `AUFDTLIRA`'s gap is substantially
+a ground capability gap — but of the **4** original rows we refuse on a
+datatype construct only **1** is `GROUND`, so a perfect ground datatype theory
+converts **at most 1 of 79**. **No datatype lever is built** ([ADR-2090]'s own
+rule). What ships is the mislabelled give-up sentence, corrected as a suffix on
+a byte-identical prefix, with 4 tests and a 4-guard mutation suite where each
+guard kills exactly one of four distinct tests.
+
+Verdict invariance is measured, not argued: the 134 files re-run on a freshly
+built post-change binary give **0 verdict changes of 134 and 0 flips**, with
+non-vacuity in **both** directions — 15 of the 16 wrapper rows carry the
+correction, 0 in the base arm, and the **1** row whose refutation loop genuinely
+ran correctly carries none. The checker was wrong before the code was: its first
+version demanded the correction on a row that never entered the quantified arm
+at all, and the population is now the rows that came through the wrapper.
+
+Gates: clippy `-D warnings` exit 0; the four DT suites **24 / 6 / 3 / 5** and the
+`dt_*` gate suites **20 / 11 / 12 / 10**, 0 failed; `dispatch_rung_refusal_declines`
+6/6; `route_trace` 13/13; `route_attribution` 8/8; `config_registry::tests` 18/18; `progress_frontier`
+12/12 rc 0, no REGRESSION; fmt 0; hygiene PASS; links ok. The `--lib` sweep is
+**1827 passed, 3 failed**, and all four failures across the run are wall-clock
+budget tests on a box at load 86-90 — **all four re-checked and all four re-pass** rather than assumed, and
+`quantified_route_trace::decider_agrees_with_the_verdict` settled by running
+**both binaries interleaved at load ~8: base 1/1 pass, this branch 1/1 pass**.
+Its failing assertion is the test's own `decided >= 4` non-vacuity guard; the
+misattribution assertion above it passed in every run.
+
+Not committed, deliberately: `progress_frontier` rewrote the five
+`bench-results/frontier/*.json` baselines with a saturated box's reference frame,
+including `lia_cuts` recording **35 → 26** while declaring itself
+`"comparable": false` at `load_start 37.27`. The five files were restored.
+
+Detail in [ADR-2114]; artifacts under `bench-results/dt-quant-trace-20260915/`.
+
+[ADR-2090]: ../../research/09-decisions/adr-2090-the-cores-are-small-and-findable-and-we-do-not-decide-them.md
+[ADR-2114]: ../../research/09-decisions/adr-2114-aufdtlira-what-the-model-finder-cannot-represent.md
 
 **Lane dt-valued-result (`DONE`, dt-valued-result, 2026-09-12).**
 [ADR-1935](docs/research/09-decisions/adr-1935-the-congruence-precondition-is-exactness-not-scalarity.md)

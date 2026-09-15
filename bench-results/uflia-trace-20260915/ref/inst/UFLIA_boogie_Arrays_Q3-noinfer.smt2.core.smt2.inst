@@ -1,0 +1,2 @@
+INSTANCE 0	(store2 B o F (+ (select2 B o F) y))	q	G	o	F	(select2 B q G)
+INSTANCE 1	B	o	F	(+ (select2 B o F) y)

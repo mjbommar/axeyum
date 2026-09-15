@@ -1,0 +1,11 @@
+n	channel	bucket	prose	file
+40	abort	alloc-failure	memory allocation of <n> bytes failed	QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2
+2	trail	bound-no-decline	fd:parse	QF_LRA/LassoRanker/Ultimate/bound-scaled600.bpl_Iteration1_Loop_7-phaseTemplate.smt2
+3	trail	bound-no-decline	nra	QF_LRA/sal/carpark/Carpark2-ausgabe-8.smt2
+1	trail	budget/other	budget exhausted in the online difference-logic driver	QF_LRA/2019-ezsmt/travellingSalesperson/rand_80_340_1159656267_0.lp.smt2
+11	trail	budget/other	lra: the deadline had already passed when the conjunctive de	QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_init5_ground.i_3_2_2.bpl_7.smt2
+21	trail	budget/other	lra: the deadline passed building the Fourier–Motzkin unit-m	QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_strcmp_ground.i_4_2_2.bpl_11.smt2
+2	trail	budget/other	lra: the deadline passed while linearizing the assertions	QF_LRA/LassoRanker/Ultimate/2013POPL-BenAmGen-Ex4.2.bpl_Iteration1_Lasso_4-pieceTemplate.smt2
+1	trail	budget/other	timeout in the online CDCL	QF_LRA/LassoRanker/Ultimate/Braverman-2006CAV-Ex1-int.bpl_Iteration1_Lasso_6-phaseTemplate.smt2
+7	trail	incomplete/incomplete	online CDCL	QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_array1.i_3_2_2.bpl_11.smt2
+5	trail	not-applicable/unnamed		QF_LRA/2019-ezsmt/Labyrinth/SCC_Strong/0051-labyrinth-12-0.smt2

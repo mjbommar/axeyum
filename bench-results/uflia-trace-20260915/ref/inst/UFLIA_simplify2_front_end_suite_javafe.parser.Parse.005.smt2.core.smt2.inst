@@ -1,0 +1,23 @@
+INSTANCE 0	T_javafe.ast.TypeDeclElem
+INSTANCE 1	(select1 seqTypeDeclElem_5.1161.46 this)
+INSTANCE 2	this
+INSTANCE 3	this
+INSTANCE 4	(typeof (select1 auxVal_12.127.18 l_195.36))	T_javafe.ast.TypeDeclElemPragma	T_javafe.ast.TypeDeclElem
+INSTANCE 5	(select1 auxVal_12.127.18 l_195.36)	T_javafe.ast.TypeDeclElemPragma
+INSTANCE 6	T_javafe.ast.TypeDeclElemPragma	T_javafe.ast.ASTNode	T_java.lang.Object
+INSTANCE 7	this
+INSTANCE 8	(typeof this)	T_javafe.parser.Parse	T_javafe.parser.ParseExpr
+INSTANCE 9	this	T_javafe.parser.Parse
+INSTANCE 10	T_javafe.parser.Parse	T_javafe.parser.ParseExpr	T_java.lang.Object
+INSTANCE 11	T_javafe.parser.Parse	T_javafe.parser.ParseStmt	T_javafe.parser.ParseExpr
+INSTANCE 12	this	T_javafe.parser.ParseExpr
+INSTANCE 13	T_javafe.parser.ParseExpr	T_javafe.parser.ParseType	T_java.lang.Object
+INSTANCE 14	T_javafe.parser.ParseType	T_javafe.parser.ParseUtil	T_java.lang.Object
+INSTANCE 15	(select1 auxVal_12.127.18 l_195.36)	T_javafe.ast.TypeDeclElemPragma
+INSTANCE 16	l_195.36
+INSTANCE 17	l_195.36
+INSTANCE 18	(typeof l_195.36)	T_javafe.parser.Lex	T_javafe.parser.Token
+INSTANCE 19	l_195.36	T_javafe.parser.Lex
+INSTANCE 20	T_javafe.parser.Lex	T_javafe.parser.Token	T_java.lang.Object
+INSTANCE 21	l_195.36	T_javafe.parser.Token
+INSTANCE 22	RES_210.1_210.1

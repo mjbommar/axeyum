@@ -1,0 +1,13 @@
+INSTANCE 0	System.Object	Person
+INSTANCE 1	this	Person.spouse
+INSTANCE 2	?p_!5
+INSTANCE 3	?p_!5
+INSTANCE 4	?p_!5
+INSTANCE 5	Heap_0_	this	inv_	this	localinv_	Person
+INSTANCE 6	Heap_0_	this	inv_	Person
+INSTANCE 7	this
+INSTANCE 8	Heap_0_	this	inv_	?o_!6	ownerFrame_	Person
+INSTANCE 9	?o_!6
+INSTANCE 10	Heap_0_	this	inv_	?o_!6	ownerRef_	Person
+INSTANCE 11	Heap_0_	this	inv_	this	sharingMode_	Person
+INSTANCE 12	this	Person
