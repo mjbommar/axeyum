@@ -1,0 +1,29 @@
+rows=15  (the 15 that die inside the round-trip build)
+arm: AXEYUM_LRA_SPARSE_ROWS=1, board-identical 8 GiB / 24 s
+
+  reached feasible_within under the sparse arm: 15 of 15
+  STILL ABORT under the sparse arm: 14
+  terminate cleanly under the sparse arm: 1
+  DECIDED under the sparse arm: 0   <- the only thing that is a board gain
+
+  rc  verdict  peakGiB    nvars        m       nnz  roundtripGiB  tableauGiB  fits8  file
+ 134     none     6.80   77,833  244,460   680,701        567.05     2348.06     no  TelAviv-Amir-Minimum_true-termination.c_Iteration1
+   0  unknown     6.59   49,607  176,156   488,341        260.43     1185.22     no  KroeningSharyginaTsitovichWintersteiger-2010CAV-Fi
+ 134     none     5.97   49,886  131,389   530,350        195.34      709.82     no  Collatz.bpl_Iteration1_Loop_6-phaseTemplate.smt2
+ 134     none     7.40   25,820  123,079   388,935         94.71      546.17     no  simple-scaled200.bpl_Iteration1_Lasso_3-pieceTempl
+ 134     none     6.21   47,641  112,448   362,677        159.66      536.49     no  aviad_true-termination.c_Iteration1_Loop_4-nestedT
+ 134     none     7.11   22,826  110,177   444,792         74.95      436.72     no  brp_withassume.t2.c_Iteration8_Loop_6-phaseTemplat
+ 134     none     7.38   17,696   81,657   334,104         43.06      241.78     no  brp_withassume.t2.c_Iteration1_Loop_6-phaseTemplat
+ 134     none     7.17    8,282   83,582   383,701         20.63      228.83     no  sas2.t2.c_Iteration7_Loop_7-phaseTemplate.smt2
+ 134     none     7.18   18,731   65,392   188,989         36.50      163.94     no  CookSeeZuleger-2013TACAS-Fig3_true-termination.c_I
+ 134     none     7.39   20,700   62,651   193,574         38.65      155.63     no  hongyi1.t2.c_Iteration9_Loop_4-lexTemplate.smt2
+ 134     none     7.40   20,096   60,067   187,098         35.97      143.50     no  hongyi1.t2.c_Iteration1_Loop_4-lexTemplate.smt2
+ 134     none     7.27    3,658   64,882   329,039          7.07      132.53     no  disj_nightmare.t2.c_Iteration2_Loop_7-phaseTemplat
+ 134     none     7.32   17,216   53,699   137,281         27.55      113.49     no  simple-scaled200.bpl_Iteration1_Lasso_7-nestedTemp
+ 134     none     7.43    9,240   42,930   120,378         11.82       66.75     no  firewire.t2.c_Iteration1_Lasso_4-lexTemplate.smt2
+ 134     none     7.43   10,294   38,292   134,653         11.75       55.45     no  TelAviv-AmirMinimum.bpl_Iteration1_Loop_4-pieceTem
+
+  the tableau these rows need, with the round trip gone: median 228.83 GiB   min 55.45   max 2348.06
+  of these, over MAX_TABLEAU_CELLS: 15 of 15 that reported
+
+  tableau alone fits the 8 GiB ceiling on 0 of 15 rows

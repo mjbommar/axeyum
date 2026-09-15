@@ -689,7 +689,7 @@ pub fn feasible_within_sparse(
 /// not.
 #[must_use]
 pub(crate) fn tableau_cells_exceed_cap(nvars: usize, m: usize) -> bool {
-    m.checked_mul(nvars.checked_add(m).unwrap_or(usize::MAX))
+    m.checked_mul(nvars.saturating_add(m))
         .is_none_or(|cells| cells > MAX_TABLEAU_CELLS)
 }
 
@@ -1972,8 +1972,8 @@ mod tests {
 
         let mut compared = 0usize;
         for _ in 0..200 {
-            let nvars = 1 + next(6) as usize;
-            let m = 1 + next(8) as usize;
+            let nvars = 1 + usize::try_from(next(6)).expect("bound is 6");
+            let m = 1 + usize::try_from(next(8)).expect("bound is 8");
             let mut dense_rows: Vec<Constraint> = Vec::with_capacity(m);
             let mut sparse_rows: Vec<SparseConstraint> = Vec::with_capacity(m);
             for _ in 0..m {
@@ -1982,7 +1982,7 @@ mod tests {
                 for (j, cell) in dense.iter_mut().enumerate() {
                     // A third of the cells stay zero, so the rows are genuinely
                     // sparse and the two builders have something to disagree on.
-                    let a = next(7) as i128 - 3;
+                    let a = i128::from(next(7)) - 3;
                     if a != 0 {
                         *cell = r(a);
                         sparse.push((j, r(a)));
@@ -1995,7 +1995,7 @@ mod tests {
                     3 => Rel::Gt,
                     _ => Rel::Eq,
                 };
-                let rhs = r(next(9) as i128 - 4);
+                let rhs = r(i128::from(next(9)) - 4);
                 dense_rows.push(Constraint {
                     coeffs: dense,
                     rel,
