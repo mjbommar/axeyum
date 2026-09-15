@@ -5145,46 +5145,35 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Two `i128`s. Subtracted from the budget before coefficients get their share -- but only on the DENSE arm of `TableauReserve` since ADR-2111 (2026-09-15), which is the shipped default, so the number this entry states is still what a default build spends. The rate the storage itself charges is `BYTES_PER_TABLEAU_NONZERO` (40) over nonzeros, not this over cells.",
     },
     ConfigEntry {
-        name: "SPARSE_TABLEAU_RESERVE_NONZEROS",
+        name: "BYTES_PER_TABLEAU_NONZERO",
         module: "crates/axeyum-solver/src/lra_online.rs",
-        value: "simplex::MAX_TABLEAU_CELLS / 10 (400_000)",
-        unit: "tableau nonzeros held back from the online LRA budget",
+        value: "40",
+        unit: "bytes per STORED tableau cell",
         protects: Protects::Memory,
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
-        guarded_by: "`LraTheoryBuildStop::MemoryBudget` becomes `Unknown(ResourceLimit)` with the projection and the budget both printed; a refused build is never a verdict",
+        guarded_by: "",
         env_override: Some("AXEYUM_LRA_TABLEAU_RESERVE"),
         justification: dated(
             "docs/research/09-decisions/adr-2111-qf-lra-what-the-same-simplex-does-differently.md",
             "2026-09-15",
             None,
+            &[sym(
+                "crates/axeyum-solver/src/lra_online.rs",
+                "BYTES_PER_TABLEAU_NONZERO",
+            )],
+            // STRUCTURAL, like its dense sibling: what must still hold is the
+            // shape it counts -- a `Rational` payload plus one `usize` column
+            // index, which is what `row_val` aligned with `row_nz` IS.
             &[
-                sym(
-                    "crates/axeyum-solver/src/lra_online.rs",
-                    "SPARSE_TABLEAU_RESERVE_NONZEROS",
-                ),
-                sym("crates/axeyum-solver/src/lra_online.rs", "TableauReserve"),
-                sym("crates/axeyum-solver/src/simplex.rs", "MAX_TABLEAU_CELLS"),
-            ],
-            // What has to still be true for the number to mean anything: the
-            // storage it prices must still BE sparse (`row_val` is the field
-            // ADR-2111 introduced), the two consumers must still spend it, and
-            // the census the two medians come from must still be on disk.
-            &[
+                live("pub struct Rational", "crates/axeyum-ir/src/rational.rs"),
                 live(
                     "row_val: Vec<Vec<Rational>>",
                     "crates/axeyum-solver/src/simplex.rs",
                 ),
-                live("fn for_budget", "crates/axeyum-solver/src/lra_online.rs"),
-                live(
-                    "fn estimated_bytes",
-                    "crates/axeyum-solver/src/lra_online.rs",
-                ),
-                doc("bench-results/lra-trace-20260915/bucket-summary.txt"),
-                adr("ADR-2055"),
             ],
         ),
-        note: "The SPARSE arm of `TableauReserve`: 400 000 nonzeros x 40 B = 16 MiB, against the dense arm's `MAX_TABLEAU_CELLS x 32 B` = 128 MiB. The dense arm holds 20% of a 640 MiB budget for a structure ADR-2111 made cost about 1.4 MB at the profiled median, and `NormalizationLimits::estimated_bytes` adds that reserve into EVERY projection, so it is not accounting -- it decides which queries the online CDCL(T) engine admits at all. ADR-2111's census found only 23 of 93 undecided QF_LRA rows reaching that engine. 400 000 is `MAX_TABLEAU_CELLS / 10`, named as the round number it is: it is 49x the median 8 086 nonzeros measured over those 23 rows and 11.6x the median 34 555 ADR-2055 measured over the 74 offline rows, and nobody has taken the tail, so it is a generous FLOOR and not an estimate. It is a LEVER and ships `Dense` because the direction of the routing consequence does not follow from the direction of the memory correction, and this repository has measured that surprise twice: ADR-2045 raised the same budget 640 MiB -> 8 GiB and got 21 rows reaching the engine, 0 newly decided, and FIVE NEW ABORTS; ADR-2055 capped the tableau and turned 18 clean exits into `rc=134`, because the unpriced allocation was accidentally load-bearing.",
+        note: "The rate the tableau has charged since ADR-2111 (2026-09-15) made `Tableau` sparse: a `Rational` payload (32 B, two `i128`s) plus its column index in `Tableau::row_nz` (8 B). It is an UNDERSTATEMENT and deliberately so -- `col_rows` adds another 8 B per nonzero and the per-row `Vec` headers are `24 B x m` -- because this number's only job is to be a FLOOR big enough that a small budget does not derive a zero coefficient ceiling and then refuse with \"projected 0 MiB > budget 1 MiB\", which is true of nothing. A floor that understates by 20% is still a floor; a cost model would need the true 48 and is not what this is. Its dense sibling `BYTES_PER_TABLEAU_CELL` (32 over CELLS) is still what the shipped `TableauReserve::Dense` arm spends.",
     },
     ConfigEntry {
         name: "DEFAULT_ONLINE_LRA_BUDGET_BYTES",
@@ -5378,6 +5367,48 @@ pub static REGISTRY: &[ConfigEntry] = &[
         env_override: None,
         justification: undated("doc comment"),
         note: "Reduction schedule increment. `axeyum-cnf` spells the same constant `REDUCE_INCREMENT`; same value, different name, no link.",
+    },
+    ConfigEntry {
+        name: "SPARSE_TABLEAU_RESERVE_NONZEROS",
+        module: "crates/axeyum-solver/src/lra_online.rs",
+        value: "simplex::MAX_TABLEAU_CELLS / 10",
+        unit: "tableau nonzeros held back from the online LRA budget",
+        protects: Protects::Memory,
+        on_exceed: OnExceed::RefuseUnknown,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: Some("AXEYUM_LRA_TABLEAU_RESERVE"),
+        justification: dated(
+            "docs/research/09-decisions/adr-2111-qf-lra-what-the-same-simplex-does-differently.md",
+            "2026-09-15",
+            None,
+            &[
+                sym(
+                    "crates/axeyum-solver/src/lra_online.rs",
+                    "SPARSE_TABLEAU_RESERVE_NONZEROS",
+                ),
+                sym("crates/axeyum-solver/src/lra_online.rs", "TableauReserve"),
+                sym("crates/axeyum-solver/src/simplex.rs", "MAX_TABLEAU_CELLS"),
+            ],
+            // What has to still be true for the number to mean anything: the
+            // storage it prices must still BE sparse (`row_val` is the field
+            // ADR-2111 introduced), the two consumers must still spend it, and
+            // the census the two medians come from must still be on disk.
+            &[
+                live(
+                    "row_val: Vec<Vec<Rational>>",
+                    "crates/axeyum-solver/src/simplex.rs",
+                ),
+                live("fn for_budget", "crates/axeyum-solver/src/lra_online.rs"),
+                live(
+                    "fn estimated_bytes",
+                    "crates/axeyum-solver/src/lra_online.rs",
+                ),
+                doc("bench-results/lra-trace-20260915/bucket-summary.txt"),
+                adr("ADR-2055"),
+            ],
+        ),
+        note: "The SPARSE arm of `TableauReserve`: 400 000 nonzeros x 40 B = 16 MiB, against the dense arm's `MAX_TABLEAU_CELLS x 32 B` = 128 MiB. The dense arm holds 20% of a 640 MiB budget for a structure ADR-2111 made cost about 1.4 MB at the profiled median, and `NormalizationLimits::estimated_bytes` adds that reserve into EVERY projection, so it is not accounting -- it decides which queries the online CDCL(T) engine admits at all. ADR-2111's census found only 23 of 93 undecided QF_LRA rows reaching that engine. 400 000 is `MAX_TABLEAU_CELLS / 10`, named as the round number it is: it is 49x the median 8 086 nonzeros measured over those 23 rows and 11.6x the median 34 555 ADR-2055 measured over the 74 offline rows, and nobody has taken the tail, so it is a generous FLOOR and not an estimate. It is a LEVER and ships `Dense` because the direction of the routing consequence does not follow from the direction of the memory correction, and this repository has measured that surprise twice: ADR-2045 raised the same budget 640 MiB -> 8 GiB and got 21 rows reaching the engine, 0 newly decided, and FIVE NEW ABORTS; ADR-2055 capped the tableau and turned 18 clean exits into `rc=134`, because the unpriced allocation was accidentally load-bearing.",
     },
     ConfigEntry {
         name: "VSIDS_DECAY",

@@ -1,7 +1,7 @@
 # ADR-2111: `QF_LRA` — the same simplex, and the three things ours does differently
 
 Status: accepted
-Index-summary: Every reference solves the 93 `QF_LRA` files we lose with the same Dutertre–de Moura simplex we ship, so the gap is not the algorithm's name. Census of **all 93** over four cause channels (the give-up string is one of them and loses the largest bucket alone, [ADR-2045]): **40 `rc=134` allocation aborts, 36 `budget/other`, 7 `incomplete`, 5 `bound-no-decline`, 5 `not-applicable`** — and the typed decline name **types nothing here**, all 36 budget rows carrying `Budget::Other`, which is [ADR-2102]'s empty `decline_names` seen from the producer side. Shape census over the 93 against the **107 decided as a control**: atoms separate the halves **1,351×** (median 9,462 vs 7) while **coefficient size does not** — max numeral 5 digits median, 10 max, **0 of 200 rows over 18 digits on either half** — so `i128` is nowhere near its 38 digits and every arithmetic decline on this population is pivot GROWTH, never the file's own numbers; that kills the "big coefficients" reading before a trace is read. Three design-difference claims with `file:line` on both sides. **(1) The tableau.** Ours was `Vec<Vec<Rational>>`, a dense `m × (nvars+m)`; **none of z3, cvc5, `OpenSMT` or `SMTInterpol` stores a dense tableau** (`static_matrix.h:88-89`, `matrix.h:56-196`, `Tableau.h:62,118-119`, `TableauxRow.java:22-34`) and all four thread the COLUMNS too. FIXED: `row_val` sparse aligned with the `row_nz` index that already existed, plus a `col_rows` transpose — without which two `0..m` column scans become `O(m log nnz)`, a regression dressed as a fix. **(2) Theory propagation is not weak, it is absent**: over the 23 of 93 rows that reach the online engine, a median **19** propagations against **836,531** decisions — **24,509 decisions and 3,352,038 atom visits per propagation** — because `lra_online.rs:836` rescans every propagatable atom on every call, while z3 analyses only `touched_rows` (`lar_solver.h:284-302`), skips rows over `max_row_length_for_bound_propagation = 300` (`lp_settings.h:238`), and **pre-axiomatises the bound ORDERING as SAT clauses** (`theory_lra.cpp:2841,2963`) so the unate half never calls the theory. We have no bound-axiom generation at all. NOT FIXED, sized and named. **(3) The equality hypothesis is REFUTED on the reference side**: 66 of 93 rows are ≥50 % equalities and we do no Gaussian elimination — but neither does z3 (no `solve_eqs` in `asserted_formulas::reduce`), and cvc5's is capped at `ppAssertMaxSubSize = 2`. The failing allocation is **median 1.33 MB** (max 10.3), i.e. the STRAW at an 8 GiB ceiling and not the load, which stops the next lane sizing a fix from the panic message. The shipped lever is the CONSEQUENCE, not the storage: `for_budget` reserves `MAX_TABLEAU_CELLS × 32 B` = **128 MiB, 20 % of the 640 MiB online budget**, for a structure now costing ~1.4 MB, and that reserve decides which queries the engine ADMITS; `TableauReserve` ships **`Dense`** because ADR-2045's budget raise got **0 newly decided and five NEW aborts** and ADR-2055's cap turned **18 clean exits into `rc=134`**.
+Index-summary: Every reference solves the 93 `QF_LRA` files we lose with the same Dutertre–de Moura simplex we ship, so the gap is not the algorithm's name. Census of **all 93** over four cause channels (the give-up string is one of them and loses the largest bucket alone, [ADR-2045]): **40 `rc=134` allocation aborts, 36 `budget/other`, 7 `incomplete`, 5 `bound-no-decline`, 5 `not-applicable`** — and the typed decline name **types nothing here**, all 36 budget rows carrying `Budget::Other`, which is [ADR-2102]'s empty `decline_names` seen from the producer side. Shape census over the 93 against the **107 decided as a control**: atoms separate the halves **1,351×** (median 9,462 vs 7) while **coefficient size does not** — max numeral 5 digits median, 10 max, **0 of 200 rows over 18 digits on either half** — so `i128` is nowhere near its 38 digits and every arithmetic decline on this population is pivot GROWTH, never the file's own numbers; that kills the "big coefficients" reading before a trace is read. Three design-difference claims with `file:line` on both sides. **(1) The tableau.** Ours was `Vec<Vec<Rational>>`, a dense `m × (nvars+m)`; **none of z3, cvc5, `OpenSMT` or `SMTInterpol` stores a dense tableau** (`static_matrix.h:88-89`, `matrix.h:56-196`, `Tableau.h:62,118-119`, `TableauxRow.java:22-34`) and all four thread the COLUMNS too. FIXED: `row_val` sparse aligned with the `row_nz` index that already existed, plus a `col_rows` transpose — without which two `0..m` column scans become `O(m log nnz)`, a regression dressed as a fix. **(2) Theory propagation is not weak, it is absent**: over the 23 of 93 rows that reach the online engine, a median **19** propagations against **836,531** decisions — **24,509 decisions and 3,352,038 atom visits per propagation** — because `lra_online.rs:842` (inside `propagate_bounds`, `:835`) rescans every propagatable atom on every call, while z3 analyses only `touched_rows` (`lar_solver.h:284-302`), skips rows over `max_row_length_for_bound_propagation = 300` (`lp_settings.h:238`), and **pre-axiomatises the bound ORDERING as SAT clauses** (`theory_lra.cpp:2841,2963`) so the unate half never calls the theory. We have no bound-axiom generation at all. NOT FIXED, sized and named. **(3) The equality hypothesis is REFUTED on the reference side**: 66 of 93 rows are ≥50 % equalities and we do no Gaussian elimination — but neither does z3 (no `solve_eqs` in `asserted_formulas::reduce`), and cvc5's is capped at `ppAssertMaxSubSize = 2`. The failing allocation is **median 1.33 MB** (max 10.3), i.e. the STRAW at an 8 GiB ceiling and not the load, which stops the next lane sizing a fix from the panic message. The shipped lever is the CONSEQUENCE, not the storage: `for_budget` reserves `MAX_TABLEAU_CELLS × 32 B` = **128 MiB, 20 % of the 640 MiB online budget**, for a structure now costing ~1.4 MB, and that reserve decides which queries the engine ADMITS; `TableauReserve` ships **`Dense`** because ADR-2045's budget raise got **0 newly decided and five NEW aborts** and ADR-2055's cap turned **18 clean exits into `rc=134`**.
 Index-status: accepted
 Date: 2026-09-15
 
@@ -200,7 +200,7 @@ contribute nothing, not a zero):
 | pivots per conflict | 4.3 |
 | tableau nonzeros (mean per check) | 8,086 → **0.82 % dense** |
 
-**Ours.** `LraTheory::propagate_bounds` (`crates/axeyum-solver/src/lra_online.rs:836`)
+**Ours.** `LraTheory::propagate_bounds` (`crates/axeyum-solver/src/lra_online.rs:835`)
 opens `for index in 0..self.propagatable.len()` on **every call**, with no
 "which bounds changed since last time" filter, and the driver calls it once per
 decision. The emission cap (`MAX_BOUND_PROPAGATIONS_PER_CALL = 256`) bounds the
@@ -298,6 +298,36 @@ allocation was accidentally load-bearing".
 it is measured against is real: 49× the median 8,086 nonzeros over the 23 rows
 that reach this engine and 11.6× the median 34,555 [ADR-2055] measured on the
 offline route. Nobody has taken the tail.
+
+### The mechanism, on one file, before any A/B
+
+`AXEYUM_LRADENSEPROBE=1` on `LassoRanker/CooperatingT2/sas2.t2.c_Iteration6_Lasso_6-phaseTemplate.smt2`
+— the row at the **median** failing allocation of the 40, chosen from the
+committed table and not by eye:
+
+```text
+; LRADENSEPROBE site=simplex-fallback-entry rss_kb=205588 nvars=2546 constraints=39048
+; LRADENSEPROBE site=dense-rows-built     rss_kb=207672 nvars=2546 m=39048 nnz=147440
+; LRADENSEPROBE site=feasible_within-entry rss_kb=207676 nvars=2546 m=39048
+                                          tableau_cells=1624162512
+```
+
+**1,624,162,512 cells holding 147,440 nonzeros.** At 32 B a cell that tableau is
+**48.4 GiB** against an 8 GiB ceiling, which is why the base binary dies; at
+40 B a nonzero the same system is **5.9 MB**. Measured side by side on one
+pinned core:
+
+| | base (`815489e3…`) | arm (`af93b938…`) |
+|---|---|---|
+| exit status | **`134`, core dumped** | **`0`** |
+| verdict | none | `unknown` |
+| peak RSS at `feasible_within-entry` | never reached | **203 MB** |
+
+This is the mechanism and **it is not a verdict claim**: the arm answers
+`unknown`, which is what [ADR-2045] predicted when it converted 20 such rows and
+found "not one is decided". What changed is that a `rc=134` core dump became a
+first-class `unknown` and the ladder below it now runs. Whether that buys any
+verdict across the population is what the A/B answers, and one file cannot.
 
 ### The soundness-negative fixture
 
