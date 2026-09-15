@@ -8,6 +8,25 @@
 //! and **nothing** in the other direction. Every test here is built around that
 //! asymmetry.
 //!
+//! # The one-way rule, and the regression that bought it
+//!
+//! A weakening may turn an `Unsupported` into an `Unsat` and may do nothing
+//! else. `auto.rs` dispatches this route by returning on `Ok(_)` and falling
+//! through only on `Err(SolverError::Unsupported(_))`, so a route that REFUSES a
+//! query lets the ladder continue and one that DECLINES it does not. ADR-2065
+//! shipped without that rule, `lira-dpll` began consuming queries whose
+//! relaxation it could not refute, and
+//! `nested_array_gate_map::flat_real_element_array_row_decides` went red on a
+//! `main` push: `array-fast-path` used to decide that read-over-write tautology
+//! in 2 ms and was no longer reached at all.
+//!
+//! **A corpus A/B could not see it and did not.** ADR-2065's measurement was 14
+//! gains, 0 losses, 0 flips, identical exit status over 200 files, a zero noise
+//! floor and two controls — all over corpus rows, none of which exercise that
+//! obligation. It lives in a synthetic fixture. **An A/B over corpus rows is not
+//! a superset of the fixture suites**, and a lever that changes which ROUTE a
+//! query takes needs both.
+//!
 //! **Which guards this suite can and cannot observe is measured, not assumed.**
 //! The matrix is in `bench-results/real-opaque-20260914/ref/guard-deletion.md`.
 //! `replayed_sat`'s guard and `simplex_fallback`'s each kill exactly one test
@@ -43,28 +62,71 @@
 //! `!= Sat`, not `== Unsat`, because deciding them is not this rung's job —
 //! refusing to guess is.
 //!
-//! # Every test here fails with the kill switch set
+//! # What the kill switch separates, measured rather than claimed
 //!
-//! Measured: `AXEYUM_LRA_OPAQUE_APPS=0` turns all 16 of the solve-path tests
-//! red. The suite is about this change and not about the ambient solver, and
-//! that is checked rather than asserted.
+//! `AXEYUM_LRA_OPAQUE_APPS=0` turns **12 of these 20 tests red**. The 8 that
+//! stay green are the 6 non-vacuity controls and the 2 source-text scans, and
+//! neither group is about the lever: a control's job is to show the witness
+//! beside it is not manufactured, and "did not refute" is true in both arms.
+//!
+//! **This number was 16 before the ADR-2065 hand-back repair and it is written
+//! down because it MOVED.** With the abstraction consuming queries, a control
+//! hit a hard error and failed for that reason; now the route hands the query
+//! back in both arms and the control passes in both. The controls did not get
+//! weaker — they were never the thing that proved the suite measures the lever.
+//! Every test that asserts something about the abstraction's BEHAVIOUR is in
+//! the 12.
 
 #![cfg(feature = "full")]
 
 use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_solver::{CheckResult, SolverConfig, check_with_arith_dpll};
 
+/// What the lazy-arithmetic route did with a query.
+///
+/// The two arms are the distinction the ADR-2065 regression was about, so the
+/// suite names them rather than collapsing them into one `CheckResult`.
+/// `auto.rs` dispatches this route by returning on `Ok(_)` and falling through
+/// only on `Err(SolverError::Unsupported(_))` — so `Decided` is TERMINAL for the
+/// whole ladder and `HandedBack` is not, and a test that cannot tell them apart
+/// cannot see a capability being taken away from a later route.
+#[derive(Debug)]
+enum RouteOutcome {
+    /// The route answered. Whatever this is, no later route will run.
+    Decided(CheckResult),
+    /// The route refused and the ladder continues. This is what the route
+    /// returned for these queries BEFORE the abstraction existed, and what the
+    /// one-way rule restores whenever the abstraction does not refute.
+    HandedBack(String),
+}
+
+impl RouteOutcome {
+    /// The hand-back's message, or a panic naming what came instead.
+    fn handed_back(&self) -> &str {
+        match self {
+            Self::HandedBack(detail) => detail,
+            Self::Decided(result) => panic!(
+                "expected the route to hand this query back so the ladder could \
+                 continue; it CONSUMED it with {result:?}"
+            ),
+        }
+    }
+
+    fn is_unsat(&self) -> bool {
+        matches!(self, Self::Decided(CheckResult::Unsat))
+    }
+}
+
 /// Runs the query through the same front door a benchmark takes, with the
 /// abstraction in its SHIPPED state (the kill switch is not touched, so this is
 /// what a user gets).
-fn check(arena: &mut TermArena, assertions: &[TermId]) -> CheckResult {
+fn check(arena: &mut TermArena, assertions: &[TermId]) -> RouteOutcome {
     let config = SolverConfig::default();
-    check_with_arith_dpll(arena, assertions, &config).expect(
-        "with the abstraction armed, every query here is inside the fragment. \
-         An `Unsupported` means the abstraction did not fire -- which is what \
-         running this suite under `AXEYUM_LRA_OPAQUE_APPS=0` looks like, and is \
-         the intended failure there",
-    )
+    match check_with_arith_dpll(arena, assertions, &config) {
+        Ok(result) => RouteOutcome::Decided(result),
+        Err(axeyum_solver::SolverError::Unsupported(detail)) => RouteOutcome::HandedBack(detail),
+        Err(other) => panic!("the route errored rather than deciding or refusing: {other:?}"),
+    }
 }
 
 /// A declared real function of one real argument — in `AUFLIRA` this is exactly
@@ -109,17 +171,18 @@ fn r(arena: &mut TermArena, value: i128) -> TermId {
 /// back FIVE SURVIVORS out of five. Naming the reason is what makes the
 /// full-path gate observable: delete it and the decline still happens, but it
 /// comes from sat-model reconstruction and says something else.
-fn assert_declined_by_the_opaque_real_gate(result: &CheckResult) {
-    let CheckResult::Unknown(reason) = result else {
-        panic!("expected a decline, got {result:?}");
-    };
+fn assert_declined_by_the_opaque_real_gate(outcome: &RouteOutcome) {
+    let detail = outcome.handed_back();
     assert!(
-        reason
-            .detail
-            .contains("opaque real UF applications or array reads"),
-        "the decline must name the guard that fired, or a deleted guard is \
-         indistinguishable from an intact one: {}",
-        reason.detail
+        detail.contains("opaque real UF applications or array reads"),
+        "the hand-back must still name the guard that fired -- it embeds the \
+         underlying outcome for exactly this reason, so a deleted guard stays \
+         distinguishable from an intact one: {detail}"
+    );
+    assert!(
+        detail.contains("handed back"),
+        "and it must say it is a hand-back, because a terminal decline with the \
+         same gate name is the regression, not the fix: {detail}"
     );
 }
 
@@ -140,9 +203,8 @@ fn w1_propositional_contradiction_through_an_opaque_application() {
     let p = arena.real_le(logx, zero).unwrap();
     let np = arena.not(p).unwrap();
     let both = arena.and(p, np).unwrap();
-    assert_eq!(
-        check(&mut arena, &[both]),
-        CheckResult::Unsat,
+    assert!(
+        check(&mut arena, &[both]).is_unsat(),
         "p AND NOT p is unsat whatever p is; the opaque atom must not refuse the query"
     );
 }
@@ -156,9 +218,8 @@ fn w1_control_without_the_contradiction_is_not_unsat() {
     let logx = real_fn1(&mut arena, "log", x);
     let zero = r(&mut arena, 0);
     let p = arena.real_le(logx, zero).unwrap();
-    assert_ne!(
-        check(&mut arena, &[p]),
-        CheckResult::Unsat,
+    assert!(
+        !check(&mut arena, &[p]).is_unsat(),
         "a single satisfiable atom must not be refuted -- if it is, W1 measures a \
          dropped assertion, not the abstraction"
     );
@@ -179,9 +240,8 @@ fn w2_shared_opaque_term_carries_the_contradiction() {
     let lo = arena.real_ge(d, two).unwrap(); // divide(x,y) >= 2
     let hi = arena.real_le(d, one).unwrap(); // divide(x,y) <= 1
     let both = arena.and(lo, hi).unwrap();
-    assert_eq!(
-        check(&mut arena, &[both]),
-        CheckResult::Unsat,
+    assert!(
+        check(&mut arena, &[both]).is_unsat(),
         "2 <= d <= 1 is unsat; it is only visible if BOTH occurrences of divide(x,y) \
          take the same column"
     );
@@ -199,9 +259,8 @@ fn w2_control_consistent_window_is_not_unsat() {
     let lo = arena.real_ge(d, one).unwrap();
     let hi = arena.real_le(d, two).unwrap();
     let both = arena.and(lo, hi).unwrap();
-    assert_ne!(
-        check(&mut arena, &[both]),
-        CheckResult::Unsat,
+    assert!(
+        !check(&mut arena, &[both]).is_unsat(),
         "1 <= d <= 2 is satisfiable"
     );
 }
@@ -217,9 +276,8 @@ fn w3_array_read_of_real_sort_carries_the_contradiction() {
     let lo = arena.real_ge(s, one).unwrap();
     let hi = arena.real_lt(s, zero).unwrap();
     let both = arena.and(lo, hi).unwrap();
-    assert_eq!(
-        check(&mut arena, &[both]),
-        CheckResult::Unsat,
+    assert!(
+        check(&mut arena, &[both]).is_unsat(),
         "s >= 1 AND s < 0 is unsat; `select` of real sort must be a legal leaf"
     );
 }
@@ -234,9 +292,8 @@ fn w3_control_consistent_array_read_is_not_unsat() {
     let lo = arena.real_ge(s, zero).unwrap();
     let hi = arena.real_le(s, one).unwrap();
     let both = arena.and(lo, hi).unwrap();
-    assert_ne!(
-        check(&mut arena, &[both]),
-        CheckResult::Unsat,
+    assert!(
+        !check(&mut arena, &[both]).is_unsat(),
         "0 <= s <= 1 is satisfiable"
     );
 }
@@ -255,9 +312,8 @@ fn w4_opaque_reads_as_leaves_of_a_linear_combination() {
     let ge1 = arena.real_ge(sum, one).unwrap(); // s0 + s1 >= 1
     let le0 = arena.real_le(sum, zero).unwrap(); // s0 + s1 <= 0
     let both = arena.and(ge1, le0).unwrap();
-    assert_eq!(
-        check(&mut arena, &[both]),
-        CheckResult::Unsat,
+    assert!(
+        check(&mut arena, &[both]).is_unsat(),
         "s0+s1 >= 1 AND s0+s1 <= 0 is unsat; the two reads must be independent \
          COLUMNS, not a refusal"
     );
@@ -275,9 +331,8 @@ fn w4_control_consistent_sum_is_not_unsat() {
     let ge0 = arena.real_ge(sum, zero).unwrap();
     let le1 = arena.real_le(sum, one).unwrap();
     let both = arena.and(ge0, le1).unwrap();
-    assert_ne!(
-        check(&mut arena, &[both]),
-        CheckResult::Unsat,
+    assert!(
+        !check(&mut arena, &[both]).is_unsat(),
         "0 <= s0+s1 <= 1 is satisfiable"
     );
 }
@@ -299,9 +354,8 @@ fn w5_opaque_and_ordinary_columns_in_one_system() {
     let c = arena.real_le(logx, zero).unwrap();
     let ab = arena.and(a, b).unwrap();
     let all = arena.and(ab, c).unwrap();
-    assert_eq!(
-        check(&mut arena, &[all]),
-        CheckResult::Unsat,
+    assert!(
+        check(&mut arena, &[all]).is_unsat(),
         "x >= 2, log(x) >= x, log(x) <= 0 refutes with the opaque term as ONE \
          column beside the symbol column for x"
     );
@@ -318,9 +372,8 @@ fn w5_control_without_the_upper_bound_is_not_unsat() {
     let a = arena.real_ge(x, two).unwrap();
     let b = arena.real_ge(logx, x).unwrap();
     let ab = arena.and(a, b).unwrap();
-    assert_ne!(
-        check(&mut arena, &[ab]),
-        CheckResult::Unsat,
+    assert!(
+        !check(&mut arena, &[ab]).is_unsat(),
         "x >= 2 with log(x) >= x is satisfiable"
     );
 }
@@ -339,9 +392,8 @@ fn w6_nested_opaque_term_is_abstracted_at_the_outermost_node() {
     let lo = arena.real_ge(nested, five).unwrap();
     let hi = arena.real_le(nested, four).unwrap();
     let both = arena.and(lo, hi).unwrap();
-    assert_eq!(
-        check(&mut arena, &[both]),
-        CheckResult::Unsat,
+    assert!(
+        check(&mut arena, &[both]).is_unsat(),
         "5 <= log(select(a,3)) <= 4 is unsat"
     );
 }
@@ -357,9 +409,8 @@ fn w6_control_consistent_nested_term_is_not_unsat() {
     let lo = arena.real_ge(nested, four).unwrap();
     let hi = arena.real_le(nested, five).unwrap();
     let both = arena.and(lo, hi).unwrap();
-    assert_ne!(
-        check(&mut arena, &[both]),
-        CheckResult::Unsat,
+    assert!(
+        !check(&mut arena, &[both]).is_unsat(),
         "4 <= log(select(a,3)) <= 5 is satisfiable"
     );
 }
@@ -388,13 +439,13 @@ fn congruence_violating_abstraction_must_never_become_sat() {
     let xy = arena.eq(x, y).unwrap();
     let gt = arena.real_gt(fx, fy).unwrap();
     let both = arena.and(xy, gt).unwrap();
-    let result = check(&mut arena, &[both]);
+    let outcome = check(&mut arena, &[both]);
     assert!(
-        !matches!(result, CheckResult::Sat(_)),
+        !matches!(outcome, RouteOutcome::Decided(CheckResult::Sat(_))),
         "x = y AND f(x) > f(y) is UNSAT by congruence; the abstraction is satisfiable \
-         and a `sat` here is a wrong verdict: {result:?}"
+         and a `sat` here is a wrong verdict: {outcome:?}"
     );
-    assert_declined_by_the_opaque_real_gate(&result);
+    assert_declined_by_the_opaque_real_gate(&outcome);
 }
 
 /// The same defect through the **array axioms**: `select(store(a,i,v), i) = v`,
@@ -411,13 +462,13 @@ fn array_axiom_violating_abstraction_must_never_become_sat() {
     let stored = arena.store(a, i, v).unwrap();
     let read = arena.select(stored, i).unwrap();
     let gt = arena.real_gt(read, v).unwrap();
-    let result = check(&mut arena, &[gt]);
+    let outcome = check(&mut arena, &[gt]);
     assert!(
-        !matches!(result, CheckResult::Sat(_)),
+        !matches!(outcome, RouteOutcome::Decided(CheckResult::Sat(_))),
         "select(store(a,i,v),i) > v is UNSAT by read-over-write; a `sat` is a wrong \
-         verdict: {result:?}"
+         verdict: {outcome:?}"
     );
-    assert_declined_by_the_opaque_real_gate(&result);
+    assert_declined_by_the_opaque_real_gate(&outcome);
 }
 
 /// The plainest form: an abstraction that is satisfiable and carries an opaque
@@ -427,6 +478,11 @@ fn array_axiom_violating_abstraction_must_never_become_sat() {
 ///
 /// This is the test that dies when the `has_opaque_real_apps` gate before
 /// `finish_sat` is deleted.
+///
+/// It asserts a HAND-BACK, not merely a non-`sat`. A terminal `Unknown` is also
+/// not a `sat`, and a terminal `Unknown` is precisely the ADR-2065 regression —
+/// so the weaker assertion would have passed straight through the defect that
+/// turned `flat_real_element_array_row_decides` red.
 #[test]
 fn a_satisfiable_abstraction_with_an_opaque_column_yields_no_model() {
     let mut arena = TermArena::new();
@@ -437,16 +493,24 @@ fn a_satisfiable_abstraction_with_an_opaque_column_yields_no_model() {
     let gx = arena.apply(g, &[x]).unwrap();
     let zero = r(&mut arena, 0);
     let ge = arena.real_ge(gx, zero).unwrap();
-    let result = check(&mut arena, &[ge]);
-    match result {
-        CheckResult::Sat(model) => panic!(
+    let outcome = check(&mut arena, &[ge]);
+    match &outcome {
+        RouteOutcome::Decided(CheckResult::Sat(model)) => panic!(
             "the abstraction of `g(x) >= 0` is satisfiable, but its solution binds no \
              value for `g` and so is not a model of this query; got {model:?}"
         ),
-        CheckResult::Unsat => panic!("`g(x) >= 0` is satisfiable; `unsat` is a wrong verdict"),
-        CheckResult::Unknown(_) => {}
+        RouteOutcome::Decided(CheckResult::Unsat) => {
+            panic!("`g(x) >= 0` is satisfiable; `unsat` is a wrong verdict")
+        }
+        RouteOutcome::Decided(CheckResult::Unknown(reason)) => panic!(
+            "REGRESSION: a TERMINAL decline. `auto.rs` returns on `Ok(_)`, so this \
+             takes the query away from every later route -- which is exactly what \
+             turned `nested_array_gate_map::flat_real_element_array_row_decides` red: \
+             {reason:?}"
+        ),
+        RouteOutcome::HandedBack(_) => {}
     }
-    assert_declined_by_the_opaque_real_gate(&result);
+    assert_declined_by_the_opaque_real_gate(&outcome);
 }
 
 // ---------------------------------------------------------------------------
@@ -471,7 +535,7 @@ fn an_unsat_over_the_relaxation_agrees_with_the_unabstracted_query() {
     let a = arena.real_ge(hx, one).unwrap();
     let b = arena.real_le(hx, zero).unwrap();
     let both = arena.and(a, b).unwrap();
-    assert_eq!(check(&mut arena, &[both]), CheckResult::Unsat);
+    assert!(check(&mut arena, &[both]).is_unsat());
 
     // The identical shape with a plain symbol in place of `h(x)`: same verdict,
     // reached without the abstraction at all.
@@ -482,11 +546,100 @@ fn an_unsat_over_the_relaxation_agrees_with_the_unabstracted_query() {
     let a = plain.real_ge(t, one).unwrap();
     let b = plain.real_le(t, zero).unwrap();
     let both = plain.and(a, b).unwrap();
-    assert_eq!(
-        check(&mut plain, &[both]),
-        CheckResult::Unsat,
+    assert!(
+        check(&mut plain, &[both]).is_unsat(),
         "the unabstracted shape must be unsat too, or the witness above is about \
          the abstraction rather than about the query"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// The one-way rule: the abstraction may help, and may not harm.
+// ---------------------------------------------------------------------------
+
+/// A weakening that does not refute must hand the query BACK, not consume it.
+///
+/// # The regression this pins
+///
+/// `auto.rs` dispatches this route by returning on `Ok(_)` and falling through
+/// only on `Err(SolverError::Unsupported(_))`. So a route that REFUSES a query
+/// lets the ladder continue and a route that DECLINES it does not. Before
+/// ADR-2065 a real-sorted `(select a i)` made `ensure_supported_atom` refuse,
+/// the ladder fell through, and `array-fast-path` decided the read-over-write
+/// tautology in 2 ms. With the abstraction armed the route admitted that atom,
+/// correctly found the relaxation satisfiable, and returned a terminal
+/// `Ok(Unknown)` — so `array-fast-path` was never reached. Measured: 10 route
+/// attempts and a verdict became 14 attempts and `unknown`, and
+/// `tests/nested_array_gate_map.rs::flat_real_element_array_row_decides` went
+/// red on a `main` push.
+///
+/// **A corpus A/B could not see it and did not.** ADR-2065's measurement was
+/// 14 gains, 0 losses, 0 flips, identical exit status on 200 files, a zero
+/// noise floor and two controls — over corpus rows, none of which exercise this
+/// obligation. The capability lives in a synthetic fixture. An A/B over corpus
+/// rows is not a superset of the fixture suites.
+///
+/// This test is the property rather than the instance: *an abstracted query the
+/// abstraction does not refute comes back as `Unsupported`*, which is what the
+/// route returned before the abstraction existed and therefore leaves the
+/// ladder byte-for-byte unchanged.
+#[test]
+fn an_unrefuted_abstraction_is_handed_back_and_not_consumed() {
+    let mut arena = TermArena::new();
+    let a = arena
+        .array_var_with_sorts("handback_a", Sort::Int, Sort::Real)
+        .unwrap();
+    let i = arena.int_const(3);
+    let v = arena.real_var("handback_v").unwrap();
+    let stored = arena.store(a, i, v).unwrap();
+    let read = arena.select(stored, i).unwrap();
+    // `select(store(a,i,v), i) > v` — UNSAT by read-over-write, and the
+    // abstraction cannot see that, because it gives the read its own column.
+    let gt = arena.real_gt(read, v).unwrap();
+
+    let config = SolverConfig::default();
+    let outcome = check_with_arith_dpll(&mut arena, &[gt], &config);
+
+    match outcome {
+        Err(axeyum_solver::SolverError::Unsupported(detail)) => {
+            assert!(
+                detail.contains("handed back"),
+                "the hand-back must say what it is, so the next reader does not                  mistake it for a fragment refusal: {detail}"
+            );
+        }
+        Ok(CheckResult::Unsat) => panic!(
+            "fixture check: this query is unsat, but NOT by anything the              linear-real abstraction can see -- if this route starts refuting              it, this test is pinning the wrong thing and must be rebuilt"
+        ),
+        Ok(other) => panic!(
+            "REGRESSION: the abstraction consumed a query it could not refute.              `auto.rs` returns on `Ok(_)`, so this verdict is TERMINAL and every              later route -- `array-fast-path` among them -- is never reached:              {other:?}"
+        ),
+        Err(other) => panic!("expected a hand-back, got {other:?}"),
+    }
+}
+
+/// The other half, and the reason the rule is one-way rather than symmetric:
+/// when the abstraction DOES refute, the `unsat` still comes out.
+///
+/// Without this, `hand_back_unless_refuted` could return `Unsupported`
+/// unconditionally and the test above would still pass — which would silently
+/// delete the whole capability ADR-2065 is about.
+#[test]
+fn a_refuting_abstraction_still_returns_unsat() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("oneway_x").unwrap();
+    let hx = real_fn1(&mut arena, "oneway_h", x);
+    let one = r(&mut arena, 1);
+    let zero = r(&mut arena, 0);
+    let lo = arena.real_ge(hx, one).unwrap();
+    let hi = arena.real_le(hx, zero).unwrap();
+    let both = arena.and(lo, hi).unwrap();
+
+    let config = SolverConfig::default();
+    assert_eq!(
+        check_with_arith_dpll(&mut arena, &[both], &config)
+            .expect("a refuting abstraction is not handed back"),
+        CheckResult::Unsat,
+        "the abstraction exists to convert a refusal into a refutation; if this          stops, the hand-back rule has swallowed the capability instead of          bounding it"
     );
 }
 
@@ -538,10 +691,34 @@ fn the_sat_exit_enumeration_still_describes_the_source() {
          INTEGER collector's own (pre-existing, unrelated) downgrade binds the same \
          predicate with `let`, and counting the bare call name gives 4"
     );
+    // THREE uses, in TWO roles, and the pin distinguishes them because they are
+    // load-bearing for different things. Two are the refinement loop's `sat`
+    // gates. The third is `into_run`'s `abstracted_opaque_reals`, the ADR-2065
+    // one-way rule's predicate: it decides whether a non-`unsat` outcome is
+    // handed back to the ladder or consumed. Counting the bare name would let
+    // one role be deleted while the total stayed right.
     assert_eq!(
-        dpll.matches("self.ctx.has_opaque_real_apps(arena)").count(),
+        dpll.matches("&& !self.ctx.has_opaque_real_apps(arena)")
+            .count()
+            + dpll
+                .matches("if self.ctx.has_opaque_real_apps(arena) {")
+                .count(),
         2,
-        "both refinement-loop sat exits are gated on `has_opaque_real_apps`"
+        "both refinement-loop sat exits stay gated: the support fast path on the \
+         int-and-real conjunction, and the full path on its own `if`"
+    );
+    assert_eq!(
+        dpll.matches("abstracted_opaque_reals: self.ctx.has_opaque_real_apps(arena)")
+            .count(),
+        1,
+        "the one-way rule's predicate is read from the ABSTRACTOR -- a syntactic \
+         scan of the assertions over-approximates what it actually admitted and \
+         would hand back queries this route used to decide"
+    );
+    assert!(
+        dpll.contains("fn hand_back_unless_refuted"),
+        "the one-way rule itself: a weakening may turn `Unsupported` into `Unsat` \
+         and may do nothing else"
     );
     assert!(
         dpll.contains("theory_model(arena, &real_lits, real_model_oracle, deadline)"),
