@@ -137,6 +137,8 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-09-15 | `d92cf4277` | The regression repair: `hand_back_unless_refuted`, the one-way rule. Plus `RouteOutcome::{Decided, HandedBack}` in the suite, because a test that cannot tell a terminal decline from a hand-back cannot see a capability being taken from a later route; two new property tests; and the whole `dispatch/reason:` block as a runnable artifact that reads its suite list out of the hook. |
+| 2026-09-15 | `8d85758e6` | My helper's doc block had stolen the public function's. Clippy found `missing_docs`; rustdoc under `-D warnings` then found the intra-doc link to a private item that the clippy fix introduced. Two gates, two different findings. |
 | 2026-09-14 | `9467f0780` | qflra-gap: pre-registered rules + four-channel census harness, before any measurement aggregated |
 | 2026-09-14 | `d248502a1` | qflra-gap: the census — 74 of 93 undecided `QF_LRA` rows are one offline dense engine; two give-up labels split and both wrong |
 | 2026-09-14 | `49ea1d50d` | qflra-gap: A/B is a clean +0 at a 0-of-200 noise floor, and the arm itself causes five new aborts |
