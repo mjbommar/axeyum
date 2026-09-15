@@ -59428,7 +59428,9 @@ solver lib sweep **1789 passed** (1,785 baseline plus this lane's four);
 `corpus_regression` 2 passed; `cargo doc -D warnings` 41 crates;
 `progress_frontier` 12 passed (its five `bench-results/frontier/*.json`
 reverted, not committed); all **19** `dispatch/reason` fixture suites green with
-nonzero counts. `check-config-registry-staleness.py` is **red with 11 stale
+nonzero counts; the **five z3 differential fuzzes** (4/4/5/1/1 passed, run
+because this is a linear-arithmetic change and they compile to zero tests
+without `--features z3`). `check-config-registry-staleness.py` is **red with 11 stale
 entries and was red without this branch** — none is this lane's, both entries it
 adds are `undated`, and it is not in `hooks/pre-push`; reported rather than
 omitted.
