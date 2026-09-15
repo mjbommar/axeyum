@@ -345,16 +345,48 @@ class CaptureToRow(unittest.TestCase):
             self.assertEqual(row.verdict, "unsat")
             self.assertEqual(row.exit_status, "124")
 
-    def test_absent_features_and_empty_features_are_different_answers(self):
+    def test_the_four_features_answers_stay_apart(self):
+        """No two of the four collapse, and `scan_ran` names the reason.
+
+        ADR-2100 measured that **482 of 643** undecided Tier 1 rows never reach
+        the quantifier-free dispatch ladder, so `not-dispatched` is the common
+        case rather than an edge one -- and without its own token it would be
+        byte-identical, in this column, to a row from a binary built before the
+        instrument existed.
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             trail = _trail_line(partial=False, attempts=COMPLETE_ATTEMPTS)
-            old = _row(tmp, _capture(tmp, "old.out", ["unsat", trail]))
-            new = _row(tmp, _capture(tmp, "new.out", ["; features none", "unsat", trail]))
-            self.assertEqual(old.features, ol.FEATURES_ABSENT)
-            self.assertIsNone(old.feature_classes)
-            self.assertEqual(new.features, ol.FEATURES_EMPTY)
-            self.assertEqual(new.feature_classes, [])
+            rows = {
+                "absent": _row(tmp, _capture(tmp, "a.out", ["unsat", trail])),
+                "not_dispatched": _row(
+                    tmp,
+                    _capture(tmp, "n.out", ["; features not-dispatched", "unsat", trail]),
+                ),
+                "empty": _row(
+                    tmp, _capture(tmp, "e.out", ["; features none", "unsat", trail])
+                ),
+                "classes": _row(
+                    tmp, _capture(tmp, "c.out", ["; features Int|Real", "unsat", trail])
+                ),
+            }
+            values = [r.features for r in rows.values()]
+            self.assertEqual(len(set(values)), 4, values)
+
+            self.assertEqual(rows["absent"].features, ol.FEATURES_ABSENT)
+            self.assertIsNone(rows["absent"].feature_classes)
+            self.assertIsNone(rows["absent"].scan_ran)
+
+            self.assertEqual(rows["not_dispatched"].features, ol.FEATURES_NOT_DISPATCHED)
+            self.assertIsNone(rows["not_dispatched"].feature_classes)
+            self.assertIs(rows["not_dispatched"].scan_ran, False)
+
+            self.assertEqual(rows["empty"].features, ol.FEATURES_EMPTY)
+            self.assertEqual(rows["empty"].feature_classes, [])
+            self.assertIs(rows["empty"].scan_ran, True)
+
+            self.assertEqual(rows["classes"].feature_classes, ["Int", "Real"])
+            self.assertIs(rows["classes"].scan_ran, True)
 
     def test_corpus_path_is_stored_whole_and_not_reduced_to_a_basename(self):
         with tempfile.TemporaryDirectory() as tmpdir:

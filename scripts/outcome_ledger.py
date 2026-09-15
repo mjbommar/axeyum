@@ -156,10 +156,32 @@ PARTIAL_YES = "yes"
 PARTIAL_NO = "no"
 PARTIAL_UNKNOWN = "unknown"
 
-#: The marker a `features` column carries when the binary that produced the
-#: capture predates the `; features ` line.  Distinct from `none`, which means
-#: the line was printed and the construct set was EMPTY.
+#: **What `features` names, precisely.**  The construct classes of the FIRST
+#: query the quantifier-free dispatch ladder scanned in the run, which is not
+#: the same as "the file's features" and does not claim to be.  On a
+#: quantifier-free file the two coincide.  On a QUANTIFIED file the ladder is
+#: only ever reached by a sub-solve, so the column names the fragment that
+#: sub-solve was handed -- measured on this lane's own `AUFLIRA` A/B, six of
+#: twenty rows record `none` on files full of arrays and reals.  A top-level
+#: scan does not exist to record instead.
+#:
+#: The four values it can take, and the four different things they mean.  Three
+#: of them are not a construct list:
+#:
+#:   ``""``                the binary that produced this capture predates the
+#:                         `; features ` line (ADR-2102) and cannot be asked;
+#:   ``"not-dispatched"``  the binary printed the line and said the query never
+#:                         reached the quantifier-free dispatch ladder, so the
+#:                         construct scan never ran.  ADR-2100 measured this at
+#:                         **482 of 643** undecided Tier 1 rows -- 75 % -- so it
+#:                         is the common case, not an edge one;
+#:   ``"none"``            the scan RAN and the construct set was empty (a query
+#:                         carrying nothing but Boolean structure).
+#:
+#: Collapsing any two of these is the absence-read-as-a-zero shape that cost
+#: ADR-2075 twelve files.
 FEATURES_ABSENT = ""
+FEATURES_NOT_DISPATCHED = "not-dispatched"
 FEATURES_EMPTY = "none"
 
 #: The CLI line this module reads the construct classes off.  One producer
@@ -366,17 +388,29 @@ class LedgerRow:
 
     @property
     def feature_classes(self) -> list[str] | None:
-        """The construct classes, or `None` when the binary did not say.
+        """The construct classes, or `None` when there is no set to report.
 
-        `None` and `[]` are DIFFERENT answers and this returns both: `None` is
-        "the binary predates the `; features ` line", `[]` is "the line was
-        printed and the set was empty".
+        `None` and `[]` are DIFFERENT answers and this returns both: `[]` means
+        the scan ran and the set was empty; `None` means there is no set, for
+        one of the two reasons :attr:`features` distinguishes -- read that
+        column, or :attr:`scan_ran`, when the reason matters.
         """
-        if self.features == FEATURES_ABSENT:
+        if self.features in (FEATURES_ABSENT, FEATURES_NOT_DISPATCHED):
             return None
         if self.features == FEATURES_EMPTY:
             return []
         return _split(self.features)
+
+    @property
+    def scan_ran(self) -> bool | None:
+        """Whether the construct scan ran: `True`/`False`, or `None` if unasked.
+
+        `None` is the row whose binary predates the instrument -- "I cannot
+        tell", which is not the same as `False`.
+        """
+        if self.features == FEATURES_ABSENT:
+            return None
+        return self.features != FEATURES_NOT_DISPATCHED
 
     # -- wire form ---------------------------------------------------------
 
@@ -419,9 +453,11 @@ def features_from_stdout(text: str) -> str:
     """The `; features ` line's payload, or :data:`FEATURES_ABSENT`.
 
     Read off the machine form the CLI prints under `--trace`
-    (``; features Int|Real`` / ``; features none``), not off any prose.  A
-    binary built before ADR-2102 prints no such line, and the empty string
-    that comes back is a DIFFERENT answer from `none`.
+    (``; features Int|Real`` / ``; features none`` /
+    ``; features not-dispatched``), not off any prose.  A binary built before
+    ADR-2102 prints no such line at all, and the empty string that comes back
+    is a different answer from each of the other three -- see
+    :data:`FEATURES_ABSENT`.
     """
     for line in text.splitlines():
         if line.startswith(FEATURES_PREFIX):

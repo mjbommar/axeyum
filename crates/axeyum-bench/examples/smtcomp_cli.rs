@@ -396,8 +396,23 @@ fn features_trace_line(trace_mode: bool) -> Option<String> {
 /// and a test that set it would be order-dependent against every other test in
 /// this binary.
 fn features_line_from(classes: Option<String>) -> Option<String> {
-    classes.map(|classes| format!("; features {classes}"))
+    Some(format!(
+        "; features {}",
+        classes.as_deref().unwrap_or(FEATURES_NOT_DISPATCHED)
+    ))
 }
+
+/// What the `; features` line says when nothing reached the quantifier-free
+/// dispatch ladder, so the construct scan never ran.
+///
+/// This is a THIRD answer and not a missing line, and the distinction is
+/// measured rather than hypothetical: ADR-2100 found that **482 of 643
+/// undecided Tier 1 rows — 75 %** never reach that ladder at all. Without this
+/// token a row from such a file is byte-identical, in the ledger, to a row from
+/// a binary built before this instrument existed — two completely different
+/// findings in one empty string, which is the absence-read-as-a-zero shape
+/// ADR-2075 cost twelve files.
+const FEATURES_NOT_DISPATCHED: &str = "not-dispatched";
 
 /// `None` off `--trace`: a competition run's stdout must stay byte-identical.
 fn give_up_unknown_line(trace_mode: bool, reason: &UnknownReason) -> Option<String> {
@@ -2242,8 +2257,24 @@ mod tests {
     }
 
     #[test]
-    fn nothing_dispatched_yields_no_features_line_at_all() {
-        assert_eq!(features_line_from(None), None);
+    fn nothing_dispatched_yields_its_own_token_and_not_a_missing_line() {
+        // A missing line means the BINARY predates the instrument. A query that
+        // never reached the quantifier-free ladder is a different finding, and
+        // ADR-2100 measured it at 482 of 643 undecided Tier 1 rows.
+        assert_eq!(
+            features_line_from(None),
+            Some("; features not-dispatched".to_owned())
+        );
+    }
+
+    #[test]
+    fn the_three_features_answers_are_all_distinct() {
+        let dispatched = features_line_from(Some("Int".to_owned()));
+        let empty_set = features_line_from(Some("none".to_owned()));
+        let never_ran = features_line_from(None);
+        assert_ne!(dispatched, empty_set);
+        assert_ne!(empty_set, never_ran);
+        assert_ne!(dispatched, never_ran);
     }
 
     #[test]

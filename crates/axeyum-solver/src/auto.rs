@@ -285,7 +285,8 @@ pub(crate) mod route_ownership {
         }
     }
 
-    /// The outermost dispatched query's construct set, or [`UNSET_CONSTRUCTS`].
+    /// The construct set of the **first query the quantifier-free dispatch
+    /// ladder scanned in this process**, or [`UNSET_CONSTRUCTS`].
     ///
     /// ADR-2102 (the outcome ledger) needs the `features` column, and the scan
     /// that produces it is `Features::scan_within` deep inside the dispatcher —
@@ -295,10 +296,24 @@ pub(crate) mod route_ownership {
     /// dispatcher records what it already computed and the CLI prints it as one
     /// extra `--trace` line.
     ///
-    /// **First writer wins**, deliberately. A sub-solve inside `solve` reaches
-    /// this same site with its OWN construct set, and it reaches it later; the
-    /// column is about the query the file states, so the first recording is the
-    /// right one. The cost is one relaxed compare-exchange per dispatch.
+    /// # What this is NOT, said precisely
+    ///
+    /// It is **not** "the file's features" and the name deliberately does not
+    /// claim to be. On a quantifier-free file the first scan IS the file's
+    /// query and the two coincide. On a QUANTIFIED file, `check_with_quantifiers`
+    /// runs first and the quantifier-free ladder is only ever reached by a
+    /// SUB-SOLVE — so what gets recorded is the fragment that sub-solve was
+    /// handed, which can legitimately be the empty set where the file is full of
+    /// arrays and reals. Measured on this lane's own `AUFLIRA` A/B: six of
+    /// twenty arm-B rows record `none`.
+    ///
+    /// A top-level scan does not exist to record instead, and inventing one
+    /// would mean running `Features::scan_within` on every query for the
+    /// benefit of a telemetry column.
+    ///
+    /// **First writer wins**, deliberately: the first scan is the outermost one,
+    /// and a later sub-solve must not overwrite it. The cost is one relaxed
+    /// compare-exchange per dispatch.
     ///
     /// A process that dispatches many queries — `cargo test`, a library
     /// embedding — therefore keeps the FIRST one until [`reset_query_constructs`]
@@ -313,7 +328,7 @@ pub(crate) mod route_ownership {
     /// Boolean query scans to no construct at all).
     const UNSET_CONSTRUCTS: u32 = u32::MAX;
 
-    /// Records the outermost dispatched query's construct set.
+    /// Records the first quantifier-free dispatch's construct set.
     pub(crate) fn record_query_constructs(set: ConstructSet) {
         let _ = LAST_QUERY_CONSTRUCTS.compare_exchange(
             UNSET_CONSTRUCTS,
@@ -329,9 +344,12 @@ pub(crate) mod route_ownership {
         LAST_QUERY_CONSTRUCTS.store(UNSET_CONSTRUCTS, Ordering::Relaxed);
     }
 
-    /// The outermost dispatched query's construct classes, in the machine form
-    /// the outcome ledger reads: `Int|Real`, or `none` for a query carrying no
-    /// theory construct at all.
+    /// The first quantifier-free dispatch's construct classes, in the machine
+    /// form the outcome ledger reads: `Int|Real`, or `none` for a scanned query
+    /// carrying no theory construct at all.
+    ///
+    /// Read [`LAST_QUERY_CONSTRUCTS`] for what this does and does not name on a
+    /// QUANTIFIED file before quoting it as "the file's features".
     ///
     /// `None` means no query has been dispatched in this process. The ledger
     /// keeps that DISTINCT from `none` — "the binary never said" and "the set
@@ -345,9 +363,14 @@ pub(crate) mod route_ownership {
         if bits == UNSET_CONSTRUCTS {
             return None;
         }
-        Some(render_query_constructs(ConstructSet::from_bits(
-            bits as u16,
-        )))
+        // `try_from` rather than `as`: the only writer is
+        // `record_query_constructs`, which widens a `u16`, so this cannot
+        // truncate -- but a silent `as` here would also swallow a future
+        // sentinel or a wider `ConstructSet`, and the failure mode would be a
+        // WRONG construct list rather than a missing one, which is the harder
+        // kind to notice in a ledger column.
+        let set = u16::try_from(bits).ok().map(ConstructSet::from_bits)?;
+        Some(render_query_constructs(set))
     }
 
     /// The wire form of a construct set: `Int|Real`, or `none` when empty.

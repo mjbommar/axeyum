@@ -1014,10 +1014,13 @@ macro_rules! full_exports {
         #[doc(hidden)]
         pub use aufbv::check_with_arrays_and_functions;
         /// ADR-2102. The outcome ledger's `features` column, read off the
-        /// construct scan the dispatcher already runs. `None` means no query
-        /// has been dispatched in this process, which the ledger keeps
-        /// DISTINCT from `Some("none")` — the empty construct set is a real
-        /// answer and an absence read as a zero is ADR-2075's bug.
+        /// construct scan the dispatcher already runs. `None` means the
+        /// quantifier-free dispatch ladder was never reached in this process,
+        /// which the ledger keeps DISTINCT from `Some("none")` — the empty
+        /// construct set is a real answer and an absence read as a zero is
+        /// ADR-2075's bug. On a QUANTIFIED file this names the first SUB-SOLVE's
+        /// fragment and not the file's; see `route_ownership`'s own docs before
+        /// quoting it.
         pub use auto::route_ownership::{last_query_constructs, reset_query_constructs};
         pub use auto::{AbvOnlineReservePolicy, AbvOnlineReservePolicyGuard};
         #[doc(hidden)]

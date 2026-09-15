@@ -1,0 +1,8 @@
+sweep_id	file	schema_version	created_utc	note
+ab-movers-20260915	ab-movers-20260915.tsv	1	2026-09-15T12:29:59Z	ADR-2102 Phase 3; s5/s6, pinned core pair, 24 s / 8 GiB
+board-qflra-20260915	board-qflra-20260915.tsv	1	2026-09-15T12:30:00Z	ADR-2102 Phase 3; s5/s6, pinned core pair, 24 s / 8 GiB
+t1-uflia-20260915	t1-uflia-20260915.tsv	1	2026-09-15T12:30:00Z	ADR-2102 Phase 3; s5/s6, pinned core pair, 24 s / 8 GiB
+qflra93-20260915	qflra93-20260915.tsv	1	2026-09-15T12:30:00Z	ADR-2102 Phase 3; s5/s6, pinned core pair, 24 s / 8 GiB
+partial9-20260915	partial9-20260915.tsv	1	2026-09-15T12:30:00Z	ADR-2102 Phase 3; s5/s6, pinned core pair, 24 s / 8 GiB
+partial9-p2-20260915	partial9-p2-20260915.tsv	1	2026-09-15T12:30:00Z	ADR-2102 Phase 3; s5/s6, pinned core pair, 24 s / 8 GiB
+partial9-p3-20260915	partial9-p3-20260915.tsv	1	2026-09-15T12:30:00Z	ADR-2102 Phase 3; s5/s6, pinned core pair, 24 s / 8 GiB
