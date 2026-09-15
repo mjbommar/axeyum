@@ -1,0 +1,11 @@
+files            : 600
+base arm         : {'unknown': 140, 'unsat': 265, 'sat': 155, 'NONE': 40}
+lever arm        : {'unknown': 126, 'unsat': 279, 'sat': 155, 'NONE': 40}
+sat in base      : 155
+sat in lever     : 155
+NEW sat          : 0   <- must be 0
+LOST sat         : 0
+FLIPS sat<->unsat: 0     <- must be 0
+
+PASS: over 600 files the sat count is identical in both arms and no file
+      changed side. Every verdict this lever added is on the `unsat` side.

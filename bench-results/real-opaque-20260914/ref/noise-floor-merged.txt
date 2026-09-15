@@ -1,0 +1,8 @@
+== NOISE FLOOR AUFLIRA 200 (A/A, MERGED binary bec2cf65b) ==  rows=200  files=200
+  VERDICT   same=200
+  EXIT      same=200
+  NET (gains - losses - flips) = 0
+  EXIT REGRESSIONS (base ok -> lever not ok) = 0
+  denominators: undecided in base = 22/200, ok in base = 200/200
+
+  wall clock: off=528.7s on=523.5s ratio=0.99x

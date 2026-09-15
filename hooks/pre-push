@@ -828,7 +828,8 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
                quant_valid_universal_reserve_row qinst_egraph_retry_share_row \
                distinct_linear_soundness parser_desugar_soundness \
                replay_pairing_soundness \
-               additive_no_overflow_never_becomes_unsat; do
+               additive_no_overflow_never_becomes_unsat \
+               lra_opaque_real_apps; do
     gated_test "dispatch/reason: $suite" \
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
   done

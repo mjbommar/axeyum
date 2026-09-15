@@ -1,0 +1,52 @@
+== AUFLIRA 200 ==  rows=200  files=200
+  VERDICT   gain=14  same=186
+  EXIT      same=200
+  NET (gains - losses - flips) = 14
+  EXIT REGRESSIONS (base ok -> lever not ok) = 0
+  denominators: undecided in base = 36/200, ok in base = 200/200
+
+  -- GAINS (14) --
+     AUFLIRA/nasa/fol_simplify_array_only/gauss_array_0390.fof.smt2
+        off=unknown/ok/none|q:mbqi|clean 3611ms
+        on =unsat/ok/q:bool-skeleton|q:bool-skeleton|clean 110ms  order=on-off
+     AUFLIRA/nasa/fol_simplify_array_only/quaternion_ds1_inuse_0322.fof.smt2
+        off=unknown/ok/none|q:mbqi|clean 908ms
+        on =unsat/ok/q:mbqi-quick|q:mbqi-quick|clean 210ms  order=off-on
+     AUFLIRA/nasa/fol_simplify_structure_forall/thruster_inuse_0362.fof.smt2
+        off=unknown/ok/none|q:egraph|clean 6613ms
+        on =unsat/ok/q:mbqi-quick|q:mbqi-quick|clean 109ms  order=off-on
+     AUFLIRA/nasa/fol_simplify_structure_prop/gauss_array_0013.fof.smt2
+        off=unknown/ok/none|q:mbqi|clean 907ms
+        on =unsat/ok/q:bool-skeleton|q:bool-skeleton|clean 108ms  order=off-on
+     AUFLIRA/nasa/fol_simplify/gauss_init_0292.fof.smt2
+        off=unknown/ok/none|q:egraph|clean 20227ms
+        on =unsat/ok/q:bool-skeleton|q:bool-skeleton|clean 109ms  order=off-on
+     AUFLIRA/nasa/fol_simplify_array_only/gauss_array_0289.fof.smt2
+        off=unknown/ok/none|q:mbqi|clean 1109ms
+        on =unsat/ok/q:bool-skeleton|q:bool-skeleton|clean 110ms  order=off-on
+     AUFLIRA/nasa/fol_simplify_array_only/gauss_array_0490.fof.smt2
+        off=unknown/ok/none|q:mbqi|clean 1609ms
+        on =unsat/ok/q:bool-skeleton|q:bool-skeleton|clean 110ms  order=on-off
+     AUFLIRA/nasa/fol_simplify_array_only/quaternion_ds1_init_0082.fof.smt2
+        off=unknown/ok/none|q:egraph|clean 18222ms
+        on =unsat/ok/q:mbqi-quick|q:mbqi-quick|clean 307ms  order=off-on
+     AUFLIRA/nasa/fol_simplify_array_only/quaternion_ds1_init_0361.fof.smt2
+        off=unknown/ok/none|q:mbqi|clean 908ms
+        on =unsat/ok/q:mbqi-quick|q:mbqi-quick|clean 207ms  order=on-off
+     AUFLIRA/nasa/fol_simplify_array_only/quaternion_ds1_inuse_0221.fof.smt2
+        off=unknown/ok/none|q:mbqi|clean 807ms
+        on =unsat/ok/q:mbqi-quick|q:mbqi-quick|clean 208ms  order=on-off
+     AUFLIRA/nasa/fol_simplify_array_only/quaternion_ds1_inuse_0423.fof.smt2
+        off=unknown/ok/none|q:egraph|clean 4710ms
+        on =unsat/ok/q:mbqi-quick|q:mbqi-quick|clean 308ms  order=off-on
+     AUFLIRA/nasa/fol_simplify_structure_forall/thruster_inuse_0261.fof.smt2
+        off=unknown/ok/none|q:egraph|clean 6413ms
+        on =unsat/ok/q:mbqi-quick|q:forall-exists-witness|clean 109ms  order=on-off
+     AUFLIRA/nasa/fol_simplify_structure_forall/thruster_inuse_0462.fof.smt2
+        off=unknown/ok/none|q:egraph|clean 6414ms
+        on =unsat/ok/q:mbqi-quick|q:mbqi-quick|clean 109ms  order=off-on
+     AUFLIRA/nasa/fol_simplify_structure_prop/quaternion_ds1_inuse_0013.fof.smt2
+        off=unknown/ok/none|q:mbqi|clean 809ms
+        on =unsat/ok/q:bool-skeleton|q:bool-skeleton|clean 111ms  order=off-on
+
+  wall clock: off=469.6s on=531.1s ratio=1.13x
