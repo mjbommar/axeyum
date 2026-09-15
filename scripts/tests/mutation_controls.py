@@ -2846,6 +2846,65 @@ SUITES["route-trace-completeness"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `outcome-ledger` (ADR-2102) -- the append-only table three sweep runners
+# write and every later lane reads WITHOUT re-deriving.  That is exactly the
+# position CLAUDE.md names: at N lanes the ledger IS the product, so a guard
+# here that cannot fail does not slow the flywheel, it makes it manufacture
+# unfalsifiable claims at full speed.
+#
+# Each mutation deletes ONE guard and must kill exactly one named test.  All
+# three are SILENT failures on the happy path -- the library still writes rows,
+# still reads them back, still aggregates -- which is the only kind worth
+# mutating here: a loud failure would have been noticed by whoever ran the
+# sweep.
+# --------------------------------------------------------------------------
+
+SUITES["outcome-ledger"] = (
+    "scripts/outcome_ledger.py",
+    "scripts.tests.test_outcome_ledger",
+    [
+        (
+            # Kills `test_a_detail_containing_the_separators_survives_the_whole_row`
+            # and nothing else.  Stop escaping the intra-field separator and a
+            # decline detail carrying `|` -- which the ADR-2060 give-up strings
+            # routinely do -- splits into two declines that never happened.
+            # This is ADR-2020's bug reproduced in a different separator: the
+            # census that split on `;` when the field CONTAINED `;` truncated
+            # its own largest bucket and nothing failed.
+            "the intra-field separator stops being escaped",
+            '    LIST_SEP: "\\\\p",\n',
+            "",
+        ),
+        (
+            # Kills `test_an_unknown_completeness_row_is_refused_too` and
+            # nothing else.  The aggregate still refuses a reading MARKED
+            # partial; it stops refusing one that cannot say.  That is the
+            # ADR-2075 collapse from the other side -- a capture with no trail
+            # line silently counted as a total -- and the `is_partial` test
+            # stays green throughout, which is why this needs its own guard.
+            "a reading that cannot state its completeness is summed as a total",
+            "        r.corpus_path for r in rows if r.is_partial or r.partial_is_unknown",
+            "        r.corpus_path for r in rows if r.is_partial",
+        ),
+        (
+            # Kills
+            # `test_a_sha_that_does_not_resolve_is_flagged_rather_than_waved_through`
+            # and nothing else.  Both real branches of the staleness rule still
+            # work; only "I cannot check this" flips from STALE to fine.  A row
+            # from a deleted branch, or from a binary whose commit was never
+            # pushed, then reads as a `main` measurement -- which is the entire
+            # thing exit criterion 3 exists to prevent.
+            "an unresolvable binary_sha is waved through as main",
+            '    code, _ = _git(["cat-file", "-e", f"{sha}^{{commit}}"], repo=repo)\n'
+            "    if code != 0:\n"
+            "        return False\n",
+            "",
+        ),
+    ],
+)
+
+
 def check_anchors() -> int:
     """Every registered anchor still matches its subject exactly once.
 
