@@ -8708,6 +8708,13 @@ pub static EXEMPT: &[(&str, &str, &str)] = &[
         "SAMPLED_INT_BOUND",
         "The magnitude range the witness samples over; audit shape, not a solver bound.",
     ),
+    (
+        "crates/axeyum-solver/src/auto.rs",
+        "UNSET_CONSTRUCTS",
+        "A sentinel, not a bound: the out-of-range bit pattern meaning \"no query has been \
+         dispatched yet\" in the ADR-2102 construct-set recorder, chosen outside the u16 a \
+         ConstructSet can occupy so it cannot collide with the empty set.",
+    ),
 ];
 
 // ---------------------------------------------------------------------------
