@@ -556,23 +556,55 @@ soundness-negative fixture is covered by fifteen other tests, so it is a
 worth having — the fifteen fail with no hint that a fill-in cell was lost — but
 it is not the sole thing standing between the engine and a wrong `sat`.
 
-## 6. What this lane did not do, sized
+## 6. What this lane did not do, sized — and where the three findings converge
 
-- **Bound-axiom clauses / touched-driven propagation** (claim 2). The largest
-  unpulled lever: 19 propagations per 836,531 decisions, 12.2 M atom visits
-  each. The touched-driven form is *provably* output-equivalent at fixpoint — an
-  atom over a form whose bound did not change was not entailed last call and
-  cannot have become entailed — so it is a performance change with an exact
-  control available, and `the_scan_filter_offers_exactly_what_a_full_scan_would`
-  (`lra_online.rs`) is the pattern to copy. The bound axioms are a separate,
-  larger change.
-- **Typing the six `lra.rs` give-up sites** so `decline_names` stops reading
-  `other` for this whole division ([ADR-2102]'s named work, §1.1).
-- **One row per distinct compound term, unit atoms as pure column bounds**
-  (z3 `theory_lra.cpp:807-809`), which attacks `m` rather than the cost per
-  cell.
-- **The `narrow` witness boundary** (roadmap 2.3) stays closed; measured at 0 of
-  23 rows and therefore not this division's problem.
+Three separate measurements in this lane started in three different places and
+ended in the same one, which is the most useful thing it produced:
+
+- the **addressability** table says the reachable bucket is the 32 `lra.rs` rows,
+  not the 40 aborts;
+- the **lever probe** says those rows are not held by the tableau's bytes but by
+  the outer atom screen — and [ADR-2045] already moved that screen and got **0
+  newly decided, 19 dying at "model did not replay"**;
+- **claim 2** says the online engine those rows would land in propagates 19
+  literals per 836,531 decisions.
+
+So the route is not the constraint; **the online CDCL(T) engine's own capability
+is**. Work ordered accordingly:
+
+1. **Bound-axiom clauses, and a touched-driven bound scan** (claim 2). The
+   largest unpulled lever in the division. The touched-driven scan is *provably*
+   output-equivalent at fixpoint — an atom over a form whose bound did not change
+   was not entailed last call and cannot have become entailed without it
+   changing — so it is a performance change with an exact control available, and
+   `the_scan_filter_offers_exactly_what_a_full_scan_would` (`lra_online.rs`) is
+   the pattern to copy verbatim. The bound AXIOMS
+   (z3 `mk_bound_axioms`/`flush_bound_axioms`, `theory_lra.cpp:2841,2963`) are a
+   separate and larger change and are what removes the unate work from the
+   theory entirely.
+2. **"Model did not replay"**, the wall ADR-2045 hit and ADR-2055 split 16/6/0.
+   16 of 23 are a model that WAS built and does not satisfy the original
+   assertions — an encoding or skeleton-leaf gap, not reconstruction — and that
+   is what stops an admitted file from paying off. It must be fixed **before**
+   the outer screen is opened, or opening it repeats ADR-2045's result exactly.
+3. **A warm basis across the offline loop's cubes**, or not needing the loop.
+   `cube_simplex_calls=651` with `cube_matrices=0` is 651 cold solves, one per
+   SAT model, against four references that all keep the basis (§3.2).
+4. **Typing the six `lra.rs` give-up sites** so `decline_names` stops reading
+   `other` for this whole division ([ADR-2102]'s named work, §1.1). Cheap, and
+   it is what makes the next census bucketable without prose.
+5. **One row per distinct compound term, unit atoms as pure column bounds**
+   (z3 `theory_lra.cpp:807-809,856-857`), which attacks `m` rather than the cost
+   per cell — the second-order half of claim 1 that this lane did not take.
+6. **The `narrow` witness boundary** (roadmap 2.3) stays closed: a real
+   difference from every reference, measured at **0 of 23 rows**, so not this
+   division's problem.
+
+Two things are named here so a later reader does not mistake absence for
+absence of evidence: **33 of 93 rows are decided by no reference at 24 s**, so
+items 1–5 are competing for a prize of 60 and not 93; and the outer atom screen
+at `lra_theory.rs:305` is the constant that routes this population, not
+`MAX_TABLEAU_CELLS` and not the reserve this lane fixed.
 
 [ADR-2020]: adr-2020-the-give-up-detail-contains-the-separator.md
 [ADR-2045]: adr-2045-the-bound-is-not-the-wall-qf-lra-is-one-offline-dense-engine.md
