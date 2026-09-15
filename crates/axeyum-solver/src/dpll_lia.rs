@@ -45,6 +45,19 @@ const MAX_DPLL_ROUNDS: usize = 10_000;
 const MAX_INITIAL_BOUND_MUTEX_LEMMAS: usize = 8_192;
 const MAX_INITIAL_BOUND_IMPLICATION_LEMMAS: usize = 4_096;
 const MAX_INITIAL_BOUND_IMPLICATION_ATOMS: usize = 512;
+/// The input bound [`initial_int_bound_mutex_lemmas`] never had, at the value
+/// its sibling [`MAX_INITIAL_BOUND_IMPLICATION_ATOMS`] uses.
+///
+/// **Crossing it is recorded on every run; DECLINING on it happens only under
+/// `AXEYUM_LIA_INITIAL_BOUND_MUTEX_ATOM_CAP=1`.** The two halves are separate
+/// deliberately. The record is the census surface the pass did not have — an
+/// empty lemma vector is also what a pass that ran and found nothing returns,
+/// so without it the two readings are the same bytes. The decline is a
+/// CAPABILITY change, not an optimisation: skipping the pass drops valid
+/// lemmas, and ADR-2055 measured an enforced cap of this shape costing 18 clean
+/// exits and turning one `sat` into an abort. It ships `Off` and the cost of
+/// turning it on is measured rather than assumed.
+const MAX_INITIAL_BOUND_MUTEX_ATOMS: usize = 512;
 /// Width above which a **retained** theory core counts against
 /// [`MAX_DYNAMIC_LARGE_CORE_LITERALS`].
 ///
@@ -3871,6 +3884,44 @@ fn negate_original_arith_literal(
     }
 }
 
+/// Records that the mutex pass read more atoms than its sibling would accept,
+/// and answers whether it should therefore DECLINE.
+///
+/// The record runs unconditionally and the decline only under the lever, so the
+/// shipped behaviour is byte-identical to the behaviour before this bound
+/// existed — with one line of census surface added. It is recorded through
+/// `config_registry::note_crossed`, which reaches `--trace` output as `; config
+/// … crossed=` and, on a query the watchdog kills mid-search, as
+/// `; partial config …`: the leading token changes rather than a field being
+/// appended, so a consumer grepping for COMPLETE lines cannot sweep a
+/// mid-search reading into a total. ADR-2075's whole finding was a census that
+/// implemented only the first half of that contract, so the prefix is named
+/// here rather than left to be rediscovered.
+fn mutex_pass_input_declined(ctx: &ArithAbstractor) -> bool {
+    if ctx.atoms.len() <= MAX_INITIAL_BOUND_MUTEX_ATOMS {
+        return false;
+    }
+    crate::config_registry::note_crossed(
+        "crates/axeyum-solver/src/dpll_lia.rs::MAX_INITIAL_BOUND_MUTEX_ATOMS",
+        ctx.atoms.len() as u64,
+        MAX_INITIAL_BOUND_MUTEX_ATOMS as u64,
+    );
+    mutex_atom_cap_enforced()
+}
+
+/// Whether crossing [`MAX_INITIAL_BOUND_MUTEX_ATOMS`] makes the mutex pass
+/// decline. `AXEYUM_LIA_INITIAL_BOUND_MUTEX_ATOM_CAP=1`; **off by default**.
+///
+/// Fails CLOSED: anything but exactly `1` leaves the cap unenforced, so a
+/// mistyped value cannot silently enable a capability change in both arms of an
+/// A/B and report a confident zero.
+pub(crate) fn mutex_atom_cap_enforced() -> bool {
+    static ENFORCED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENFORCED.get_or_init(|| {
+        std::env::var("AXEYUM_LIA_INITIAL_BOUND_MUTEX_ATOM_CAP").is_ok_and(|v| v.trim() == "1")
+    })
+}
+
 /// Whether the initial bound-lemma refresh takes the incremental, expression-
 /// indexed path. `AXEYUM_LIA_INITIAL_BOUND_INDEX=1`; **off by default**.
 ///
@@ -3907,6 +3958,9 @@ fn initial_int_bound_mutex_lemmas(
     arena: &mut TermArena,
     ctx: &ArithAbstractor,
 ) -> Result<Vec<(TermId, Vec<ArithLemmaLiteral>)>, SolverError> {
+    if mutex_pass_input_declined(ctx) {
+        return Ok(Vec::new());
+    }
     let mut bounds = Vec::new();
     for (idx, atom) in ctx.atoms.iter().enumerate() {
         bounds.extend(simple_int_literal_bounds(arena, idx, atom));
@@ -3924,6 +3978,9 @@ fn initial_int_bound_mutex_lemmas_indexed(
     ctx: &ArithAbstractor,
     bounds: &[SimpleIntBound],
 ) -> Result<Vec<(TermId, Vec<ArithLemmaLiteral>)>, SolverError> {
+    if mutex_pass_input_declined(ctx) {
+        return Ok(Vec::new());
+    }
     let conflicts = scan_bound_conflicts_indexed(bounds);
     emit_bound_mutex_lemmas(arena, ctx, &conflicts)
 }

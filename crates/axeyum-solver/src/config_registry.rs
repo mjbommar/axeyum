@@ -4029,6 +4029,19 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Silent truncation of a pre-seeding pass.",
     },
     ConfigEntry {
+        name: "MAX_INITIAL_BOUND_MUTEX_ATOMS",
+        module: "crates/axeyum-solver/src/dpll_lia.rs",
+        value: "512",
+        unit: "atoms in the abstractor",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Relax,
+        signal: Signal::None,
+        guarded_by: "the pass only ADDS valid lemmas, so skipping it cannot change a verdict",
+        env_override: Some("AXEYUM_LIA_INITIAL_BOUND_MUTEX_ATOM_CAP"),
+        justification: undated("doc comment"),
+        note: "THE INPUT BOUND THE MUTEX PASS NEVER HAD, at its sibling's value. The CROSSING is recorded on every run; the DECLINE happens only under the lever, which ships Off. Measured 2026-09-15 over the 208-row front-door census: 103 of the 153 rows that produced a reading cross it, including 5 of 5 rows where the pass holds over half the budget -- so enforcing it is a capability change over two thirds of this population, not a corner case. The pass's cost is removed instead by the incremental refresh behind `AXEYUM_LIA_INITIAL_BOUND_INDEX`, which drops nothing.",
+    },
+    ConfigEntry {
         name: "MAX_INITIAL_BOUND_MUTEX_LEMMAS",
         module: "crates/axeyum-solver/src/dpll_lia.rs",
         value: "8_192",
@@ -4039,7 +4052,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "the pass only adds valid lemmas",
         env_override: None,
         justification: undated("doc comment"),
-        note: "Silent truncation of a pre-seeding pass.",
+        note: "Silent truncation of a pre-seeding pass -- and measured 2026-09-15 it has never truncated anything here: `cap_hits=0` on 153 of 153 census rows that produced a reading. It caps what the pass PRODUCES, which is why it does not bound the O(atoms) rescan the pass actually spends its time in; see MAX_INITIAL_BOUND_MUTEX_ATOMS.",
     },
     ConfigEntry {
         name: "MAX_MODERATE_PRE_SAT_ARITH_ATOMS",
