@@ -1687,6 +1687,7 @@ step merge-hygiene-controls python3 -m unittest scripts.tests.test_check_merge_h
 # the first question, caught by the second.
 step config-registry-staleness python3 scripts/check-config-registry-staleness.py
 step config-registry-staleness-controls ./scripts/tests/test-config-registry-staleness-control.sh
+step config-registry-ratchet-controls ./scripts/tests/test-config-registry-ratchet.sh
 step admission-limit-basis python3 scripts/check-admission-limit-basis.py
 step admission-limit-basis-controls ./scripts/tests/test-admission-limit-basis-control.sh
 step plan-authority python3 scripts/check-plan-authority.py

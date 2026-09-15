@@ -193,6 +193,20 @@ export L0_BEFORE L0_TIP
 # It belongs at L0 specifically: an anchor breaks when RUST moves, but the fix is
 # always Python, so a docs/scripts-only push must be gated too -- and L0 is the
 # only block that runs before the `shas_to_gate` early exit.
+#
+# `check-config-registry-staleness.py` joins for the SAME measured reason and was
+# the third checker found rotting in that position in one week: registered only
+# in `scripts/check.sh:1688` and the `justfile`, so only the ~10-minute aggregate
+# gate lanes are steered away from could find it, and it had been exiting 1 on
+# main. It belongs at L0 for the mirror-image of the anchors argument: a
+# justification goes stale when RUST moves, but the repair is a Python/TSV edit,
+# so a docs-only push must be gated too. ADR-2085.
+#
+# ITS COST WAS NOT FREE AND IS NOT ASSUMED. The brief that asked for this
+# registration called the gate "0.1-second-class"; measured on the day, it ran
+# 14.6 s against an L0 block whose ten other gates total 4.4 s. That is why
+# `40618c358` made it 3.5 s first -- the cost argument had to be removed before
+# the registration was honest, not after.
 echo "pre-push: L0 trusted-library safety gates (always, incl. docs-only pushes)" >&2
 l0_start=$(date +%s)
 for l0_gate in \
@@ -205,7 +219,8 @@ for l0_gate in \
   "scripts/check-holdout-adjacency.py" \
   "scripts/check-draw7-frozen-families.py --before ${L0_BEFORE:-HEAD~1}" \
   "scripts/check-suite-gating.py" \
-  "scripts/tests/mutation_controls.py --check-anchors"
+  "scripts/tests/mutation_controls.py --check-anchors" \
+  "scripts/check-config-registry-staleness.py"
 do
   l0_step_start=$(date +%s)
   # Word-splitting is intended: the entries above carry their own flags.

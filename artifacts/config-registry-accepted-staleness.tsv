@@ -1,0 +1,54 @@
+# Accepted staleness in the config registry — the BACKLOG, with a reason per row.
+#
+# Read by `scripts/check-config-registry-staleness.py`. Three TAB-separated
+# columns: the registry entry, the `path::symbol` its justification rests on, and
+# why that row is accepted for now. The reason column may not be empty.
+#
+# THIS FILE IS A RATCHET, NOT A SUPPRESSION LIST. The gate fails on a stale row
+# that is NOT here (a measurement newly gone stale) AND on a row here that is no
+# longer stale (a line that has stopped describing anything). It can fail in both
+# directions, which is what stops it becoming a checker that cannot fail.
+#
+# The right edit is to DELETE a line, having re-taken the measurement and moved
+# the entry's `measured_on`. Adding a line is an admission and needs an argument.
+#
+# WHY IT EXISTS (ADR-2085, 2026-09-15). The gate reported 11 stale rows. Two were
+# false positives of its own occurrence filter, one was flagged for its comments
+# rather than its subject, and teaching it to notice a REWRITTEN FUNCTION BODY —
+# which `git log -G<symbol>` structurally cannot see, because a body does not
+# repeat its own name — took the true count to 24 across 14 entries. Clearing 24
+# means fourteen corpus measurements. The two ways to go green without them are
+# both forbidden by the gate's own rule: move the dates (the rubber stamp this
+# check exists to prevent) or delete the `rests_on` entries (the same thing with
+# extra steps). So the backlog is written down instead.
+#
+# Column 3 vocabulary:
+#   TRIAGED  — the diff was read line by line; the finding is stated.
+#   DETECTED — found by the definition-drift signal on the day it was added and
+#              NOT yet triaged. These are honest unknowns, not clean bills.
+#
+# entry	rests_on	reason
+crates/axeyum-rewrite/src/quantifiers.rs::MAX_EXPAND_INSTANCES	crates/axeyum-rewrite/src/quantifiers.rs::expand_counted	DETECTED 2026-09-15 by the definition-drift signal; `expand_counted`'s definition at HEAD is not the one measured. Never triaged, and invisible to the gate before ADR-2085.
+crates/axeyum-solver/src/auto.rs::ABV_ONLINE_LADDER_RESERVE_SHARE	crates/axeyum-solver/src/auto.rs::dispatch_abv_online	TRIAGED 2026-09-15. b47972ab9 changed the CALL SITE (`?` -> `rung_or_decline`), not the body; net-of-everything since 2026-09-08 the definition differs by 4 non-comment lines, all inside the `Err(SolverError::Unsupported(..))` arm, which now passes `unsupported_decline(&message)` to `record_declined` instead of a bare `DeclineReason::Unsupported` — telemetry, same control flow. The basis is a TIMEOUT measurement (24.009 s of a 24 s budget, then array-fast-path decides in 0.007-0.174 s); b47972ab9 touches only the Unsupported ERROR path. Not re-measured: needs the 4 QF_ABV files at 24 s each.
+crates/axeyum-solver/src/auto.rs::ABV_ONLINE_LADDER_RESERVE_SHARE	crates/axeyum-solver/src/auto.rs::dispatch_array_fast_paths	TRIAGED 2026-09-15. Net-of-everything since 2026-09-08 the definition changed by COMMENT REWORDING ONLY — 40 -> 42 lines, 0 non-comment lines. b47972ab9's change is at the call site, and it makes this route MORE reachable, not less: an `Unsupported` from the online route used to `?`-abort the dispatcher before the fast paths ran. The basis's condition "the array fast paths are still what runs after it" is more true than when measured, not less.
+crates/axeyum-solver/src/auto.rs::DEFAULT_INT_LINEAR_PORTFOLIO_WORKERS	crates/axeyum-solver/src/auto.rs::dispatch_int_blast_width_ladder	DETECTED 2026-09-15 by the definition-drift signal. Never triaged.
+crates/axeyum-solver/src/auto.rs::UF_ARITH_LADDER_RESERVE_SHARE	crates/axeyum-solver/src/auto.rs::dispatch_uf_arith_online	DETECTED 2026-09-15 by the definition-drift signal. Never triaged.
+crates/axeyum-solver/src/auto.rs::UF_ARITH_LADDER_RESERVE_SHARE	crates/axeyum-solver/src/auto.rs::dispatch_uf_arith_overbound	DETECTED 2026-09-15 by the definition-drift signal. Never triaged.
+crates/axeyum-solver/src/auto.rs::UF_ARITH_LADDER_RESERVE_SHARE	crates/axeyum-solver/src/euf.rs::try_lazy_arith_for_overbound	DETECTED 2026-09-15 by the definition-drift signal. Never triaged.
+crates/axeyum-solver/src/auto.rs::UF_FMF_PROBE_SHARE	crates/axeyum-solver/src/auto.rs::finish_quantified_solve	DETECTED 2026-09-15 by the definition-drift signal. Never triaged.
+crates/axeyum-solver/src/auto.rs::UF_FMF_PROBE_SHARE	crates/axeyum-solver/src/uf_fmf.rs::find_uf_finite_model	DETECTED 2026-09-15 by the definition-drift signal. Never triaged.
+crates/axeyum-solver/src/dpll_lia.rs::MAX_MODERATE_PRE_SAT_ARITH_ATOMS	crates/axeyum-solver/src/dpll_lia.rs::MAX_MODERATE_PRE_SAT_ARITH_ATOMS	TRIAGED 2026-09-15. a4642ce8d did NOT change the value (10_240 before and after) and did not change the boundary predicate's shape: `atoms > X || cnf_vars > Y` kept its `||`, the base trigger kept its `&&`. It replaced the direct constant reads in `exceeds_pre_sat_skeleton_boundary` with `moderate_pre_sat_envelope()`, which returns the shipped pair unless `AXEYUM_GROUND_DECIDE_PRESAT_ENVELOPE` is a well-formed non-zero pair — fail-closed, pinned by `the_presat_envelope_lever_is_off_unless_spelled_exactly` over unset plus 13 malformed spellings. In the shipped configuration the function is denotationally identical. Not re-measured.
+crates/axeyum-solver/src/dpll_lia.rs::MAX_MODERATE_PRE_SAT_CNF_VARS	crates/axeyum-solver/src/dpll_lia.rs::MAX_MODERATE_PRE_SAT_CNF_VARS	TRIAGED 2026-09-15. Same commit and same argument as MAX_MODERATE_PRE_SAT_ARITH_ATOMS above; value 16_384 unchanged before and after a4642ce8d.
+crates/axeyum-solver/src/dpll_t.rs::SKELETON_SOLVE_DEFAULT	crates/axeyum-solver/src/dpll_t.rs::check_with_nra_dpll_within	DETECTED 2026-09-15 by the definition-drift signal. Never triaged.
+crates/axeyum-solver/src/euf_egraph.rs::EUF_ONLINE_ABSTRACT_CEILING	crates/axeyum-solver/src/auto.rs::dispatch_uf_arith_online	DETECTED 2026-09-15 by the definition-drift signal. Never triaged.
+crates/axeyum-solver/src/euf_egraph.rs::EUF_ONLINE_ABSTRACT_CEILING	crates/axeyum-solver/src/auto.rs::dispatch_uf_fast_paths	DETECTED 2026-09-15 by the definition-drift signal. Never triaged.
+crates/axeyum-solver/src/euf_egraph.rs::EUF_ONLINE_ABSTRACT_CEILING	crates/axeyum-solver/src/euf_egraph.rs::check_qf_uf_online_cdclt	DETECTED 2026-09-15 by the definition-drift signal. Never triaged.
+crates/axeyum-solver/src/euf_egraph.rs::EUF_ONLINE_ABSTRACT_SHARE	crates/axeyum-solver/src/auto.rs::dispatch_uf_fast_paths	DETECTED 2026-09-15 by the definition-drift signal. Never triaged.
+crates/axeyum-solver/src/euf_egraph.rs::EUF_ONLINE_ABSTRACT_SHARE	crates/axeyum-solver/src/euf_egraph.rs::check_qf_uf_online_cdclt	DETECTED 2026-09-15 by the definition-drift signal. Never triaged.
+crates/axeyum-solver/src/lra_online.rs::DEFAULT_ONLINE_LRA_BUDGET_BYTES	crates/axeyum-solver/src/lra_theory.rs::check_qf_lra_online_cdclt	DETECTED 2026-09-15 by the definition-drift signal. Never triaged.
+crates/axeyum-solver/src/lra_route.rs::SIMPLEX_FIRST_AT_CONSTRAINTS	crates/axeyum-solver/src/lra.rs::decide_within	TRIAGED 2026-09-15, and this row is why the definition-drift signal exists. ee36e0421 gave `decide_within` a `deadline` parameter and deadline polls and the function went from 163 lines to a 7-line wrapper over `decide_within_with_options`. Of the FIVE changed lines in that commit mentioning `decide_within`, three are `///` doc comments and two are calls inside `#[cfg(test)]` code — so the pickaxe reported this row for its comments and its tests and would have reported it CLEAN had the commit been tidier. The measurement (Fourier-Motzkin declined on 2,745 of 2,745 cubes after consuming 96-99.9% of theory time reaching MAX_FM_CONSTRAINTS) may no longer describe this function, because FM can now give up on the DEADLINE instead. GENUINELY STALE; needs the 22-file QF_LRA re-run.
+crates/axeyum-solver/src/lra_route.rs::SIMPLEX_FIRST_AT_CONSTRAINTS	crates/axeyum-solver/src/lra.rs::simplex_fallback	TRIAGED 2026-09-15. GENUINELY STALE. ee36e0421 added a deadline parameter and per-iteration polls; f6303ee7a split `Decision::TimedOut` into `Decision::GaveUp(GaveUp)`; 4abc994a0 added the `AXEYUM_LRA_SPARSE_ROWS` lever. Net-of-everything the definition went 71 -> 155 lines, 62 non-comment lines changed. The 2,745-cube timing basis needs re-running. ADR-2060's verdict-neutrality (0 gains, 0 losses, 0 flips of 159) covers VERDICTS and does not cover this entry's basis, which is a route-timing claim.
+crates/axeyum-solver/src/lra_theory.rs::MAX_ONLINE_LRA_ATOMS	crates/axeyum-solver/src/lra_theory.rs::check_qf_lra_online_cdclt	DETECTED 2026-09-15 by the definition-drift signal. Never triaged. Note this is the constant whose thirteen-month-stale justification is the founding example in the gate's own module docstring.
+crates/axeyum-solver/src/simplex.rs::MAX_TABLEAU_CELLS	crates/axeyum-solver/src/lra.rs::simplex_admission	TRIAGED 2026-09-15. `simplex_admission`'s definition is BYTE-IDENTICAL to the measurement tree (16 lines, unchanged). f6303ee7a moved its CALL SITE and folded the pre-existing `lra_route::configured().simplex_first(n)` test onto the same line. The basis's stated dependency — "`simplex_admission` is still the gate that runs first on that route" — holds. Not re-measured.
+crates/axeyum-solver/src/simplex.rs::MAX_TABLEAU_CELLS	crates/axeyum-solver/src/lra.rs::simplex_fallback	TRIAGED 2026-09-15. GENUINELY STALE, same three commits and same 71 -> 155 line rewrite as the SIMPLEX_FIRST_AT_CONSTRAINTS row above. The entry's basis is an explicit measurement OF this function (36 files reach it, 3,129 calls, seven build a tableau over the cap at 4.2-8.8 M cells); 4abc994a0 changed how its rows are built. Needs the 200-file QF_LRA re-run at 24 s and 8 GiB per file.
+crates/axeyum-solver/src/simplex.rs::MAX_TABLEAU_CELLS	crates/axeyum-solver/src/simplex.rs::MAX_TABLEAU_CELLS	TRIAGED 2026-09-15. The constant's own definition line is BYTE-IDENTICAL (4_000_000). 4abc994a0's six mentions are three `///` doc lines, two lines in a `#[cfg(test)]` assertion, and one real new use: `tableau_cells_exceed_cap`, behind the `AXEYUM_LRA_CELL_CAP=1` lever, default OFF. SEPARATE FINDING: the entry's note says this gap was "NOT ADDED"; 4abc994a0 added it as an off-by-default lever, so the note's wording is now stale independently of the date.
