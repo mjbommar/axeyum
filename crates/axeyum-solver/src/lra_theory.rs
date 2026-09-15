@@ -117,6 +117,76 @@ pub(crate) const MAX_ONLINE_LRA_ATOMS: usize = 1_024;
 pub(crate) const DEFAULT_ONLINE_LRA_BUDGET_BYTES: usize =
     crate::lra_online::DEFAULT_ONLINE_LRA_BUDGET_BYTES;
 
+/// Multiplier on the online admission screen's atom allowance (ADR-2111).
+///
+/// `1` is the shipped default and reproduces today's behaviour **exactly**; `n`
+/// admits `n × admitted_atoms`. Read once from `AXEYUM_LRA_ATOM_SCREEN`, because
+/// determinism is a public API promise and the screen must not move between two
+/// solves in one process. An unrecognised value, `0`, or an unset variable is
+/// `1`: this is a measurement lever and a typo in a sweep script must not change
+/// a verdict.
+///
+/// # Why this is a LEVER and emphatically not a constant to raise
+///
+/// ADR-2111's census found the largest ADDRESSABLE bucket in `QF_LRA` is the 32
+/// rows that die inside `lra.rs` before the simplex gets a system — **28 of 32
+/// decided by some reference at the same budget** — and this screen is what
+/// routes them there, at `admitted_atoms = budget / BYTES_PER_ADMITTED_ATOM`,
+/// which is **exactly 1,024** at the default budget. The obvious move is to
+/// raise it. The repository's own history says why that is a trap, and the
+/// history is specific rather than cautionary:
+///
+/// **Three cost models were built to replace this screen and the corpus
+/// falsified all three** (`ad2b40370`, recorded as a sized negative):
+///
+/// 1. *retained coefficients* — `_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2`
+///    went from a 0.82 s decline at 121 MB to a **7.8 GB abort**; those bytes
+///    are not coefficients;
+/// 2. *the dense tableau* — caught that file and **refused a file
+///    Fourier–Motzkin decides** (`TM/p5-driverlogNumeric_s9.smt2`, `unsat` in
+///    0.18 s at 41 MB); net 97 → 97, one gain and one loss;
+/// 3. *Fourier–Motzkin's own allocations, bounded in bytes where they are made*
+///    — correct as far as it goes, and `miplib/danoint-266.smt2` still reached
+///    **7.8 GB in 11 s** where it had declined in 0.04 s at 15 MB, with
+///    `simplex_rows=n/a` and `final_checks=1`.
+///
+/// That third result is the one that matters here. `simplex_rows=n/a` means the
+/// simplex engine **did not exist**, so those 7.8 GB were never the tableau —
+/// and ADR-2111's sparse tableau therefore **cannot have removed them**. What
+/// the sparse storage does remove is cost model 2's quantity: the tableau is no
+/// longer quadratic in the row count, so one of the things above this screen is
+/// gone. At least one other, unidentified, is not.
+///
+/// `memory_budget.rs` says why nobody has named it: there is no
+/// `#[global_allocator]` hook, so nothing at this altitude can attribute an
+/// allocation it did not itself make.
+///
+/// **So the screen is not protecting one named mechanism — it is a conservative
+/// stand-in for an allocation nobody has found**, and a lane that raises it owes
+/// a measurement on the two files that defined the problem, by name:
+/// `QF_LRA/miplib/danoint-266.smt2` and
+/// `QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2`.
+/// Both are in ADR-2111's 93-row population; `danoint-266` is in the largest
+/// addressable sub-bucket and z3 decides it `sat` in 2.3 s, so it is
+/// simultaneously the best reason to raise the screen and the control that says
+/// whether raising it is safe.
+///
+/// The related experiment has already been run and did NOT pay: [ADR-2045]
+/// raised `memory_limit_mb` to 8 GiB, which moves this same screen to 13,107
+/// atoms, and got **21 rows reaching the engine, 0 newly decided, and 19 dying
+/// at "model did not replay"**. Opening the screen without fixing that wall
+/// repeats that result.
+pub(crate) fn atom_screen_multiplier() -> usize {
+    static MULT: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+    *MULT.get_or_init(|| {
+        std::env::var("AXEYUM_LRA_ATOM_SCREEN")
+            .ok()
+            .and_then(|v| v.trim().parse::<usize>().ok())
+            .filter(|&n| n > 0)
+            .unwrap_or(1)
+    })
+}
+
 /// Adapts the validated online [`LraTheory`] to the generic [`CdclT`] driver's
 /// **trigger-literal precondition**.
 ///
@@ -302,7 +372,11 @@ pub fn check_qf_lra_online_cdclt(
     // what changed is that it MOVES with the budget and says its numbers. See
     // `lra_online::BYTES_PER_ADMITTED_ATOM` for the three cost models that were
     // built, measured and falsified before settling for a screen.
-    let admitted_atoms = budget_bytes / crate::lra_online::BYTES_PER_ADMITTED_ATOM;
+    // ADR-2111: the multiplier is 1 on the shipped build, so `admitted_atoms` is
+    // byte-identical to what it was; see `atom_screen_multiplier` for why this is
+    // a lever and what a lane that moves it owes.
+    let admitted_atoms = (budget_bytes / crate::lra_online::BYTES_PER_ADMITTED_ATOM)
+        .saturating_mul(atom_screen_multiplier());
     if atom_terms.len() > admitted_atoms {
         crate::lazy_smt_counters::record_online_probe(OnlineProbe::AdmissionScreen);
         return Ok(CheckResult::Unknown(UnknownReason {
@@ -492,6 +566,55 @@ mod tests {
     ///
     /// The assertion is on the REASON, not on the verdict: what changed is that
     /// the route is allowed to run, not that this particular query is decided.
+    /// The atom-screen lever must default to the SHIPPED behaviour and must
+    /// actually move the allowance when it is set (ADR-2111).
+    ///
+    /// Both halves matter and they fail in opposite directions. A lever whose
+    /// default is not `1` has silently changed every build; a lever whose
+    /// multiplier does not reach `admitted_atoms` is inert, and an inert arm in
+    /// an A/B prints `net +0` — indistinguishable from a working arm that does
+    /// not help. This lane has already been caught by the second shape once
+    /// (`TableauReserve::Sparse` cannot reach the screen that refuses its target
+    /// population), which is why the arithmetic is asserted here rather than
+    /// inferred from the source.
+    ///
+    /// The default is asserted only when the variable is genuinely unset,
+    /// because a test that passes only under an ambient env var is a gate on one
+    /// shell.
+    #[test]
+    fn the_atom_screen_lever_defaults_to_one_and_multiplies_the_allowance() {
+        if std::env::var_os("AXEYUM_LRA_ATOM_SCREEN").is_none() {
+            assert_eq!(
+                atom_screen_multiplier(),
+                1,
+                "with the lever unset the screen must admit exactly what it \
+                 admitted before ADR-2111"
+            );
+        }
+        assert_eq!(
+            atom_screen_multiplier(),
+            atom_screen_multiplier(),
+            "the multiplier is read once and must not move within a process"
+        );
+        // The arithmetic the screen performs, at the default budget, derived
+        // from the constants rather than written as literals -- a test repeating
+        // `1024` would keep passing after someone moved `BYTES_PER_ADMITTED_ATOM`.
+        let base = DEFAULT_ONLINE_LRA_BUDGET_BYTES / crate::lra_online::BYTES_PER_ADMITTED_ATOM;
+        assert_eq!(
+            base, MAX_ONLINE_LRA_ATOMS,
+            "the byte budget must still reproduce the flat atom cap EXACTLY at \
+             the default, or ADR-1752's calibration has drifted and the lever's \
+             base arm is not the shipped one"
+        );
+        for mult in [1usize, 2, 8] {
+            assert_eq!(
+                base.saturating_mul(mult),
+                base * mult,
+                "the multiplier must scale the allowance, not saturate at it"
+            );
+        }
+    }
+
     #[test]
     fn a_wide_shallow_atom_set_is_admitted_where_the_count_cap_refused_it() {
         let mut arena = TermArena::new();
