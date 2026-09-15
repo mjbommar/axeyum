@@ -364,6 +364,41 @@ use axeyum_solver::Reading as SpanReading;
 /// every recorded run. ADR-1752's budget refusal states its numbers in exactly
 /// this field.
 ///
+/// The query's construct classes, as one `--trace` line (ADR-2102).
+///
+/// `; features Int|Real`, or `; features none` for a query carrying no theory
+/// construct at all. `None` — no line — when `--trace` is off, and also when
+/// nothing was dispatched in this process, which is a THIRD answer: the outcome
+/// ledger keeps "the binary never said" apart from "the set was empty", because
+/// an absence read as a zero is how ADR-2075's twelve files became a bucket.
+///
+/// The separator is `|` and never `;`: ADR-2020's census split on `;` when the
+/// field could contain one and truncated its own largest bucket. A class name
+/// is `[A-Za-z]+` by construction (`Construct::name`), so this line needs no
+/// escaping — and the ledger reads the whole payload rather than a capture
+/// group, so it cannot silently keep half of it.
+///
+/// Printed on the watchdog path too, and NOT marked `; partial `: the construct
+/// scan runs once, before any rung, and either completed or did not. There is
+/// no partial reading of it to mark, and marking it would put a prefix on the
+/// one line whose value a killed run still knows exactly.
+fn features_trace_line(trace_mode: bool) -> Option<String> {
+    if !trace_mode {
+        return None;
+    }
+    features_line_from(axeyum_solver::last_query_constructs())
+}
+
+/// [`features_trace_line`]'s rendering, without the global read.
+///
+/// Split out so the BYTES the outcome ledger anchors on are pinned by a test
+/// that does not have to dispatch a query -- the reading is a process-global
+/// and a test that set it would be order-dependent against every other test in
+/// this binary.
+fn features_line_from(classes: Option<String>) -> Option<String> {
+    classes.map(|classes| format!("; features {classes}"))
+}
+
 /// `None` off `--trace`: a competition run's stdout must stay byte-identical.
 fn give_up_unknown_line(trace_mode: bool, reason: &UnknownReason) -> Option<String> {
     trace_mode.then(|| format!("; give-up kind={:?} detail={}", reason.kind, reason.detail))
@@ -1104,6 +1139,14 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
             provenance.join(",")
         ),
     );
+    // ADR-2102, LAST and unprefixed. Unlike every line above it this is not a
+    // mirrored instrument reading, so it is not in `provenance` and carries no
+    // `; partial ` marker: the construct scan runs once, before any rung, and
+    // a kill cannot catch it half-done. A killed file is exactly where the
+    // ledger's `features` column earns its place — "which routes could ever
+    // have owned this query" is the first question about a file nothing
+    // decided.
+    lines.extend(features_trace_line(trace_mode));
     lines
 }
 
@@ -1973,6 +2016,11 @@ fn main() -> ExitCode {
             // decided the file and which route consumed the budget -- the two
             // questions every other line here can only be evidence for.
             trace_lines.extend(route_attribution_report_lines(&last_route_attribution()));
+            // ADR-2102. AFTER the route lines, because it is what they have to
+            // be read against: "`lira-dpll` declined" means something different
+            // on a query carrying `Array` than on one that does not, and until
+            // this line existed nothing in a run's own output said which.
+            trace_lines.extend(features_trace_line(trace_mode));
         }
         // ADR-1752: the budget-relative atom cap can refuse before any stage
         // runs, and that refusal names the count, the budget and the remedy.
@@ -2164,6 +2212,46 @@ mod tests {
     use axeyum_solver::UnknownKind;
 
     use super::*;
+
+    // ---------------------------------------------------------------------
+    // `; features`: the outcome ledger's construct column (ADR-2102)
+    //
+    // These pin the EXTERNAL contract -- the exact bytes
+    // `scripts/outcome_ledger.py`'s `FEATURES_PREFIX` anchors on. A test
+    // deriving the prefix from this file would pass on any rename, which is
+    // the shape ADR-2101's mutations were built to expose.
+    // ---------------------------------------------------------------------
+
+    #[test]
+    fn the_features_line_carries_the_prefix_the_ledger_anchors_on() {
+        assert_eq!(
+            features_line_from(Some("Int|Real".to_owned())),
+            Some("; features Int|Real".to_owned())
+        );
+    }
+
+    #[test]
+    fn an_empty_construct_set_still_prints_a_line() {
+        // `none` and NO LINE are different answers: no line means this binary
+        // predates the instrument. Printing nothing for the empty set would
+        // make a pure-Boolean query indistinguishable from a 2026-09-14 build.
+        assert_eq!(
+            features_line_from(Some("none".to_owned())),
+            Some("; features none".to_owned())
+        );
+    }
+
+    #[test]
+    fn nothing_dispatched_yields_no_features_line_at_all() {
+        assert_eq!(features_line_from(None), None);
+    }
+
+    #[test]
+    fn the_features_line_is_suppressed_without_trace() {
+        // Same off-by-default discipline as every other `;` line here: a
+        // competition run's stdout must stay byte-identical.
+        assert_eq!(features_trace_line(false), None);
+    }
 
     // ---------------------------------------------------------------------
     // `; give-up`: an `unknown` that says why

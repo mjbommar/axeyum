@@ -225,35 +225,62 @@ class SchemaDrift(unittest.TestCase):
                 ol.append_row("another", row, ledger_dir=tmp / "ledger")
 
     def test_every_writer_goes_through_the_library(self):
-        """Derived from the authority, not from a literal list of columns.
+        """Exit criterion 1, derived from the authority rather than from a list.
 
         The schema cannot drift at a writer that never formats a row itself.
-        This walks the shell writers ADR-2102 wires and requires that none of
-        them writes into `bench-results/ledger` by hand -- so "a writer emits a
-        column the library does not know" is unreachable rather than merely
-        tested for.
+        The population is every executable under `bench-results/ledger-20260915/`
+        plus the shared runner -- discovered, not enumerated, so a fourth writer
+        added tomorrow is covered the day it lands.  Each must reach the ledger
+        through `scripts/outcome_ledger.py` (directly or through the runner) and
+        must not write into a ledger directory by hand.
         """
-        writers = sorted(
-            p
-            for p in [
-                ROOT / "scripts" / "ledger-run-one.sh",
-                ROOT / "bench-results" / "route-ownership-20260915" / "ab-run.sh",
-            ]
-            if p.exists()
+        sweep_dir = ROOT / "bench-results" / "ledger-20260915"
+        runner = SCRIPTS / "ledger-run-one.sh"
+        writers = sorted(sweep_dir.glob("*.sh")) if sweep_dir.is_dir() else []
+        self.assertGreaterEqual(
+            len(writers),
+            3,
+            f"ADR-2102 wires THREE sweep writers; {sweep_dir} holds {len(writers)}",
         )
-        self.assertTrue(writers, "no writer scripts found -- this test is scanning nothing")
+        self.assertTrue(runner.exists(), f"{runner} is the shared writer and is missing")
+
+        self.assertIn(
+            "outcome_ledger.py",
+            runner.read_text(encoding="utf-8"),
+            "the shared runner does not call the library at all",
+        )
         for writer in writers:
             text = writer.read_text(encoding="utf-8")
+            self.assertIn(
+                "ledger-run-one.sh",
+                text,
+                f"{writer.name} does not go through the shared runner",
+            )
             for line in text.splitlines():
                 stripped = line.strip()
                 if stripped.startswith("#"):
                     continue
-                if ">>" in stripped and "ledger" in stripped.lower():
+                # A row is appended with `>>` into a path naming the ledger.
+                # Any such line in a sweep script means it is formatting the
+                # schema itself, which is where a column the library does not
+                # know would come from.
+                if ">>" in stripped and "ledger-dir" not in stripped:
                     self.assertNotIn(
-                        "printf",
+                        "bench-results/ledger/",
                         stripped,
-                        f"{writer.name} formats a ledger row itself: {stripped!r}",
+                        f"{writer.name} writes the ledger by hand: {stripped!r}",
                     )
+
+    def test_the_writers_pass_trace(self):
+        """A sweep that forgets `--trace` records a table of empty route columns.
+
+        This is not hypothetical: PLAN-SIZING measured that the Tier 1 harness
+        captured stdout into a shell variable AND never passed `--trace`, so
+        even keeping the capture would have carried no routing lines.  The flag
+        lives in the shared runner, once, and this pins it there.
+        """
+        text = (SCRIPTS / "ledger-run-one.sh").read_text(encoding="utf-8")
+        self.assertIn("--trace", text)
 
 
 class CaptureToRow(unittest.TestCase):
