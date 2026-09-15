@@ -6,9 +6,22 @@
 //! > abstraction unsat  ⟹  original unsat
 //!
 //! and **nothing** in the other direction. Every test here is built around that
-//! asymmetry, and the suite is organised so that each guard has a test that dies
-//! when that guard alone is deleted — the mutation matrix is in
-//! `bench-results/real-opaque-20260914/ref/guard-deletion.md`.
+//! asymmetry.
+//!
+//! **Which guards this suite can and cannot observe is measured, not assumed.**
+//! The matrix is in `bench-results/real-opaque-20260914/ref/guard-deletion.md`.
+//! `replayed_sat`'s guard and `simplex_fallback`'s each kill exactly one test
+//! and a different one; the two `dpll_lia` entry gates kill the same three,
+//! because they are two gates on one route that this population reaches twice;
+//! and `real_model_oracle` **survives** — it is unreachable while those entry
+//! gates stand, and no fixture can separate it from them. That is recorded
+//! rather than papered over with a test that pretends otherwise.
+//!
+//! The first version of this suite had FIVE survivors out of five, because
+//! every closure on this path produces a non-`sat` and so a
+//! `!matches!(result, Sat)` assertion passes with any single one deleted. The
+//! fix was `assert_declined_by_the_opaque_real_gate` — assert WHICH guard
+//! declined, not merely that the verdict was not `sat`.
 //!
 //! # The shape of each pair
 //!
@@ -23,11 +36,18 @@
 //!
 //! # And the direction that would be a wrong verdict
 //!
-//! `abstraction_sat_must_never_become_sat` and its siblings are the real
+//! `congruence_violating_abstraction_must_never_become_sat` and
+//! `array_axiom_violating_abstraction_must_never_become_sat` are the real
 //! subject: queries whose ABSTRACTION is satisfiable and whose ORIGINAL is
-//! `unsat` (congruence, the array axioms). A `sat` on any of those is a wrong
-//! verdict shipped. They assert `!= Sat`, not `== Unsat`, because deciding them
-//! is not this rung's job — refusing to guess is.
+//! `unsat`. A `sat` on either is a wrong verdict shipped. They assert
+//! `!= Sat`, not `== Unsat`, because deciding them is not this rung's job —
+//! refusing to guess is.
+//!
+//! # Every test here fails with the kill switch set
+//!
+//! Measured: `AXEYUM_LRA_OPAQUE_APPS=0` turns all 16 of the solve-path tests
+//! red. The suite is about this change and not about the ambient solver, and
+//! that is checked rather than asserted.
 
 #![cfg(feature = "full")]
 
@@ -39,8 +59,12 @@ use axeyum_solver::{CheckResult, SolverConfig, check_with_arith_dpll};
 /// what a user gets).
 fn check(arena: &mut TermArena, assertions: &[TermId]) -> CheckResult {
     let config = SolverConfig::default();
-    check_with_arith_dpll(arena, assertions, &config)
-        .expect("the lazy linear-arithmetic route decides or declines, never errors")
+    check_with_arith_dpll(arena, assertions, &config).expect(
+        "with the abstraction armed, every query here is inside the fragment. \
+         An `Unsupported` means the abstraction did not fire -- which is what \
+         running this suite under `AXEYUM_LRA_OPAQUE_APPS=0` looks like, and is \
+         the intended failure there",
+    )
 }
 
 /// A declared real function of one real argument — in `AUFLIRA` this is exactly
