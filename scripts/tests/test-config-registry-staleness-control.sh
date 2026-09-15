@@ -112,12 +112,17 @@ if [ $? -ne 0 ]; then
   bad "could not build the dependency-removed mutant"
 else
   python3 "$CHECK" --registry "$WORK/nodep.rs" >"$WORK/nodep.out" 2>&1
-  nodep_rc=$?
-  if [ "$nodep_rc" -eq 0 ]; then
-    ok "exit 0 — the dependency is what makes step 2 fire, not the date alone"
-  else
-    bad "expected exit 0 with no dependencies, got $nodep_rc"
+  # The oracle is "THIS ENTRY is not named", not "the gate exits 0". Those were
+  # the same thing while the in-tree registry had no other stale entry; they
+  # stopped being the same on 2026-09-15, when the definition-drift signal
+  # (ADR-2085) found 16 more rows and made exit 0 unreachable for reasons that
+  # have nothing to do with this mutant. An exit-status oracle here would have
+  # gone red forever while measuring nothing about its own subject.
+  if grep -q 'MAX_ONLINE_LRA_ATOMS' "$WORK/nodep.out"; then
+    bad "MAX_ONLINE_LRA_ATOMS is still named with an EMPTY rests_on list"
     sed 's/^/     /' "$WORK/nodep.out"
+  else
+    ok "not named — the dependency is what makes step 2 fire, not the date alone"
   fi
 fi
 
@@ -133,21 +138,44 @@ fi
 # the real entries is worse than the false positives it removes.
 step "4. a symbol changed only inside a string or comment is not stale"
 
-python3 "$CHECK" >"$WORK/code.out" 2>&1
-if grep -q 'MAX_TABLEAU_CELLS' "$WORK/code.out"; then
-  bad "reported MAX_TABLEAU_CELLS, whose only change was inside two .expect() strings"
+# `--registry "$REGISTRY"` -- the REAL registry, but passed explicitly so the
+# accepted-staleness ratchet does not apply and the per-row listing is printed.
+# Without this both halves below grep an output that says only "0 unexplained",
+# and the first half PASSES VACUOUSLY: absent because nothing was printed reads
+# exactly like absent because the filter worked.
+python3 "$CHECK" --registry "$REGISTRY" >"$WORK/code.out" 2>&1
+
+# BOTH SUBJECTS COME FROM ONE COMMIT, a4642ce8d, so neither half can pass for a
+# reason about some other change. That commit replaced two direct reads of the
+# moderate pre-SAT envelope with a fail-closed env lever:
+#
+#   * MAX_PRE_SAT_CNF_VARS is mentioned ONLY on two continuation lines of a
+#     multi-line `format!` literal. There is no quote character on those lines,
+#     so the per-line filter saw bare code and reported the constant stale --
+#     the false positive ADR-2085 fixed by tracking string state across lines.
+#   * MAX_MODERATE_PRE_SAT_CNF_VARS is mentioned on real code lines in the same
+#     commit, and must still be reported.
+#
+# The previous subjects were retired because both had rotted into vacuity and
+# BOTH halves were failing on main before ADR-2085: `MAX_TABLEAU_CELLS` had
+# acquired three genuine changes since 2026-09-10 and so is now correctly
+# reported, and `FLOOD_ROUND_ADMISSION_CAP` is no longer stale at all, so the
+# half demanding it be named could not pass however well the gate worked.
+if grep -q 'MAX_PRE_SAT_CNF_VARS$' "$WORK/code.out" \
+   || grep -q 'dpll_lia.rs::MAX_PRE_SAT_CNF_VARS[^_]' "$WORK/code.out"; then
+  bad "reported MAX_PRE_SAT_CNF_VARS, whose only change is inside a multi-line format! string"
   sed 's/^/     /' "$WORK/code.out"
 else
   ok "does not report a string-literal-only change"
 fi
 
 # The other direction: the filter must still let a genuine code change through.
-# FLOOD_ROUND_ADMISSION_CAP gained `round_admission_cap: FLOOD_ROUND_ADMISSION_CAP,`
-# in d910fa590 -- real code, and its entry is genuinely stale until re-measured.
-if grep -q 'FLOOD_ROUND_ADMISSION_CAP' "$WORK/code.out"; then
-  ok "still reports a genuine code change"
+# A filter that also silences the real entries is worse than the false positives
+# it removes.
+if grep -q 'MAX_MODERATE_PRE_SAT_CNF_VARS' "$WORK/code.out"; then
+  ok "still reports a genuine code change from the SAME commit"
 else
-  bad "the filter also silenced FLOOD_ROUND_ADMISSION_CAP, a real code change -- it is too aggressive and this gate now under-reports"
+  bad "the filter also silenced MAX_MODERATE_PRE_SAT_CNF_VARS, a real code change in the same commit -- it is too aggressive and this gate now under-reports"
   sed 's/^/     /' "$WORK/code.out"
 fi
 

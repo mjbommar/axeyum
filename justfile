@@ -870,6 +870,7 @@ gate-controls:
     # second.
     python3 scripts/check-config-registry-staleness.py
     scripts/tests/test-config-registry-staleness-control.sh
+    scripts/tests/test-config-registry-ratchet.sh
     python3 scripts/check-admission-limit-basis.py
     scripts/tests/test-admission-limit-basis-control.sh
     # The registration gate's OWN controls -- it had none, which is the joke
