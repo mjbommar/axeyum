@@ -363,7 +363,50 @@ in-process soundness test. **It does not cross a thread boundary**, and
 environment variable, and `the_guard_does_not_cross_a_thread_boundary` is that
 reason written as a failing condition rather than a comment.
 
-<!-- AB-RESULT: filled from `ref/ab-summary.txt` and `ref/recheck-movers.tsv`. -->
+### The A/B, and it lands where the census said it would
+
+One binary, two environment values, interleaved per file on this lane's pinned
+s6 cores at 24 s / 8 GiB. Files are interleaved ACROSS divisions into the shards,
+so a partial sweep is a fair sample of all six rather than a prefix of one.
+`ab-self-check.sh` PASSED against this binary and harness before the run
+(shipped arm max `alternatives=1`, arm B max `4`), so a zero here would have been
+a measurement rather than a variable that never arrived.
+
+**832 of 1,200 rows** (`ref/ab-rows.tsv`, `ref/ab-summary.txt`). The sweep was
+still running when this lane closed and is reported at the denominator it
+reached; it was not stopped early to make a number, and it was not restarted.
+
+| division | n | A (shipped) | B (cap 4) | delta |
+|---|---:|---:|---:|---:|
+| `AUFDTLIRA` | 100 | 69 | 71 | **+2** |
+| `AUFLIRA` | 178 | 164 | 164 | +0 |
+| **`UF`** | 100 | 43 | **47** | **+4** |
+| `UFDTLIRA` | 178 | 126 | 126 | +0 |
+| `UFLIA` | 99 | 39 | 40 | **+1** |
+| `UFNIA` | 177 | 49 | 48 | **−1** |
+| **total** | **832** | **490** | **496** | **+6** |
+
+**Verdict disagreements (`sat` on one arm, `unsat` on the other): 0 of 832.**
+**Nonzero exit status: 0 of 832 on each arm** — counted separately, because a run
+can report `losses=0` by verdict while creating new aborts underneath it.
+
+Raw movers: **9 gains, 3 losses**, NOT re-checked. A single 24 s pairing carries
+a measured 1–1.5 % ambient flip rate on these boxes, and [ADR-1966] lost 11 of
+its 18 out-of-division movers to a re-check, so these are raw counts and not an
+effect. `recheck-movers.sh` is committed and ready for the next lane; it did not
+run here.
+
+**The shape is the interesting part, and it is a prediction the census made
+before the A/B existed.** Six of the nine gains are in `UF` — the division whose
+silence IS unmatched triggers (`universals-without-triggers-2026-09-10.md`: 728
+triggerless universals on 24 of 32 files) — while `UFLIA`, whose NEVER-MATCHED
+class this lane measured at **0 of 478**, moves +1 on 99 rows. The lever works
+where the census says its bucket is nonzero and is flat where the census says it
+is empty. That is a check on the diagnosis, not a reason to ship the lever.
+
+**It ships OFF and this ADR stays `proposed`.** The ship criterion is 0 stable
+losses over the full six divisions; there are 3 raw losses, no re-check, and 368
+rows unmeasured. Nothing here licenses turning it on.
 
 ## 6. What this lane measured about its own instruments
 
@@ -425,5 +468,6 @@ Three of them were wrong first, each in a way that reads as a finding.
   Time spent in `q:mbqi` on this division (8 ResourceLimit + 2 Incomplete of 38)
   is time spent on a rung the reference does not need.
 
+[ADR-1966]: adr-1966-a-rungs-refusal-of-a-construct-a-later-rung-owns-is-a-decline.md
 [ADR-2050]: adr-2050-the-eleven-are-four-causes-and-the-largest-is-one-refused-atom.md
 [ADR-2090]: adr-2090-the-cores-are-small-and-findable-and-we-do-not-decide-them.md

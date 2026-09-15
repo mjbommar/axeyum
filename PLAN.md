@@ -12718,7 +12718,15 @@ measured at zero here. It may still matter on UF, whose category A is 728
 triggerless universals — a different shape.
 
 `AXEYUM_QINST_TRIGGER_ALTERNATIVES` is built, sound, deterministic, tested and
-**shipped OFF**. Its A/B over the six quantified divisions is the one open item.
+**shipped OFF**. Its A/B reached **832 of 1,200 rows** before this lane closed:
+**+6 total, 0 verdict disagreements, 0 nonzero exit statuses**, 9 raw gains and
+3 raw losses NOT re-checked. **Six of the nine gains are in `UF`** — the division
+whose silence really is unmatched triggers — and `UFLIA`, whose NEVER-MATCHED
+class is 0 of 478, moves +1 on 99 rows. That is the census predicting the A/B,
+which is a check on the diagnosis and not a reason to ship. **Open for the next
+lane: the remaining 368 rows and `recheck-movers.sh` over the 12 raw movers.**
+The ship criterion (0 stable losses on the full six divisions) is NOT met, so
+the lever stays OFF and ADR-2113 stays `proposed`.
 
 **Your lane's block (`DONE`, nat-factorial-variants, 2026-08-28).** Task named
 three absent definitions blocking five open `F:ml430-nat-*` facts:
