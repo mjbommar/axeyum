@@ -252,3 +252,33 @@ not deferred to "fresh context".
 exit criterion, both close a bug class rather than an instance, and neither is
 measured in files — so neither can be tempted into shipping a lever to have a
 number. Phase 3 follows the moment Phase 2's typed reasons land.
+
+## 9. Outcome (2026-09-15, end of day)
+
+Every phase ran; each has an ADR with its exit criteria marked MET or NOT MET.
+
+| phase | ADR | verdict |
+|---|---|---|
+| 1 | 2100 | ownership typed on the QF ladder; `hand_back_unless_refuted` deleted; sizing **0 of 645**; A/B net 0 with two stable losses |
+| 1b | 2103 | same rule on the `q:*` ladder; eight bare `?`s closed; bounded continuation; A/B **net +4, 0 stable losses**, the two losses recovered |
+| 2 | 2101 | `partial` a field, `Route` a type, one reader; three live consumer defects found by the migration |
+| 2b | 2104 | 25 decline details typed (not 44 — helper callers); three orphan controls registered |
+| 3 | 2102 | one ledger, three writers; ADR-2065's 14 movers reproduced exactly from rows |
+| 3b | 2105 | typed name and construct set in the trail; the process-global recorder deleted |
+| 4 pre | — | structure on 5 of 12 groups; two with a ceiling in time |
+| 4 | 2106 | order is data; derived order **27–35× faster and 8–11 files worse** on both draws; hand order ships |
+
+**What it bought.** The refuse/decline bug class is closed by construction on
+both ladders; the instruments read a typed trail instead of prose; a question
+that cost a lane costs a query. **What it did not buy.** Files: neither ladder
+had a routing gain hiding in it (0 of 645, 0 of 482), and the one derived order
+that the ledger justified loses files at the budget even while running an order
+of magnitude faster. That is the plan's non-goal confirmed by measurement: the
+lever for the board is capability, and two independent instruments (PLAN-SIZING
+604/645 stopped on `Unknown`; ADR-2090's 193 of 230 failed on z3's own minimal
+core) point at the same four give-up classes in the quantified engine.
+
+**Still open from this plan.** `int-real-relax` decides 0 of 198 QF_NIA/Int
+rows while costing 754 s (ADR-2106); the order table cannot express budget
+dependence; the `AlgS` shape duplicates red the hygiene gate on any host with a
+fresh `shape_search` binary (not this plan's).

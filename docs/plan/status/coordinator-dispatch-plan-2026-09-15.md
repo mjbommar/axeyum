@@ -2,12 +2,12 @@
 
 <!-- plan-section: lane-status -->
 
-Status: **phases 1–3 landed and pushed** (`origin/main` `db31113fa`). Every
-unconditional phase of
+Status: **complete**. Every phase of
 [dispatch-and-instrumentation-2026-09-15.md](../dispatch-and-instrumentation-2026-09-15.md)
-is on `main` with an ADR and a measured exit criterion. Phase 4 is conditional
-on the ledger showing structure; lane LEDGER-STRUCTURE is measuring that
-condition over 1,400 fresh Tier 1 rows.
+ran and is on `main` with an ADR; §9 of the plan records the outcome. Phase 4
+(ADR-2106) measured its derived order at 27–35× faster and 8–11 files worse on
+both the pinned and a held-out draw, so the mechanism ships with the hand
+order. Follow-ups are capability lanes on the four give-up classes.
 
 ## What landed, in order
 
@@ -35,9 +35,8 @@ denominators.
 
 ## Open
 
-- **LEDGER-STRUCTURE** — fills the ledger with 1,400 Tier 1 rows on
-  `db31113fa` and answers the plan's §5 condition per feature class. Phase 4
-  runs only if it reports STRUCTURE, with the ceiling in files.
+- `int-real-relax` decides 0 of 198 QF_NIA/Int rows while costing 754 s
+  (ADR-2106) — a small, unmeasured move.
 - The four give-up classes CORE-SELECT located (e-matching fixpoint, mbqi
   datatype decline, unreached nested quantifier, integer width 32) are the
   capability lanes that follow this plan; none is dispatch.
