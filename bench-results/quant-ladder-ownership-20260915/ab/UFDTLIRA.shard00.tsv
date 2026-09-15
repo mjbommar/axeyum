@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+UFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_cae2e1_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unsat	1608	0	unsat	1608	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/O512-022__vscomp2014_partition_rte__a-cfdlli.ads_1416_14_partition_refinement.ads_15_4_precondition4___00.smt2	unsat	708	0	unsat	1108	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/LC17-035__update_attribute_multidim__update_checks.adb_101_34_range_check___00.smt2	unknown	18621	0	unknown	18624	0	A	unknown
+UFDTLIRA/20200306-Kanig/spark2014bench/S730-045__dic_with_discrs__use_test.adb_4_4_default_initial_condition___00.smt2	unknown	3410	0	unknown	2709	0	B	unknown
+UFDTLIRA/20200306-Kanig/spark2014bench/P820-002__protected_out__pr_a.adb_22_20_range_check___00.smt2	unsat	107	0	unsat	107	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/MB27-015__record_default_init__fsb.adb_24_16_overflow_check___00.smt2	unknown	108	0	unknown	107	0	B	unknown
+UFDTLIRA/20200306-Kanig/spark2014bench/riposte__arithmetic__arithmetic.adb_164_39_overflow_check___00.smt2	unsat	108	0	unsat	107	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_612665_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unsat	1208	0	unsat	1209	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/O414-015__flow_constants_in_contracts__const.adb_3_22_overflow_check___00.smt2	unknown	307	0	unknown	308	0	A	unknown
+UFDTLIRA/20200306-Kanig/spark2014bench/L719-025__hashed_sets_key__a-cofuse.ads_243_22_a-cfhase.ads_90_7_p.ads_12_4_overflow_check___00.smt2	unsat	107	0	unsat	107	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/S415-012__pledge_for_traversal__traversal_funcs.adb_43_17_precondition___00.smt2	unsat	107	0	unsat	107	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/P518-021__frame_for_swap__test_swap_lines.adb_23_67_test_swap_lines.adb_60_4_index_check___00.smt2	unsat	907	0	unsat	907	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/M830-022__missing_theory_import_for_contract_cases__state_machine.adb_39_17_overflow_check___00.smt2	unsat	107	0	unsat	107	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/TU__refined_post_legal__refined_post_legal.ads_8_21_postcondition___00.smt2	unsat	107	0	unsat	107	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_a86be8_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unsat	1108	0	unsat	1107	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/OB09-003__counterexam_out_of_range__p.adb_20_32_range_check___00.smt2	unsat	107	0	unsat	107	0	B	unsat

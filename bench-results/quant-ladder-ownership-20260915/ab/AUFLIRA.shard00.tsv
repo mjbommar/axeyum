@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+AUFLIRA/nasa/fol_simplify_array_only/thruster_symm_1804.fof.smt2	unsat	306	0	unsat	408	0	A	unsat
+AUFLIRA/nasa/fol_simplify_array_only/quaternion_ds1_symm_2872.fof.smt2	unsat	107	0	unsat	107	0	B	unsat
+AUFLIRA/nasa/fol_simplify_array_only/cl5_nebula_init_0417.fof.smt2	unsat	307	0	unsat	307	0	A	unsat
+AUFLIRA/nasa/fol_simplify_structure_forall/thruster_inuse_0462.fof.smt2	unsat	107	0	unsat	107	0	B	unsat
+AUFLIRA/nasa/fol_simplify_array_only/thruster_inuse_0865.fof.smt2	unsat	307	0	unsat	307	0	A	unsat
+AUFLIRA/nasa/fol_simplify_array_only/quaternion_ds1_init_0361.fof.smt2	unsat	308	0	unsat	308	0	B	unsat
+AUFLIRA/why/smtlibaf54f6.smt2	unsat	608	0	unsat	608	0	A	unsat
+AUFLIRA/nasa/fol_simplify_array_only/thruster_symm_1070.fof.smt2	unsat	107	0	unsat	108	0	B	unsat
+AUFLIRA/nasa/fol_simplify_array_only/quaternion_ds1_symm_2169.fof.smt2	unsat	408	0	unsat	408	0	A	unsat
+AUFLIRA/nasa/fol_simplify_arithmetics/thruster_init_0161.fof.smt2	unknown	25029	0	unknown	25033	0	B	unsat
+AUFLIRA/nasa/fol_simplify_structure_forall/thruster_init_0441.fof.smt2	unsat	108	0	unsat	106	0	A	unsat
+AUFLIRA/nasa/fol_simplify_array_only/thruster_inuse_0161.fof.smt2	unsat	308	0	unsat	307	0	B	unsat
+AUFLIRA/nasa/fol_simplify_array_only/gauss_init_1111.fof.smt2	unsat	107	0	unsat	107	0	A	unsat
+AUFLIRA/why/smtlib218dfb.smt2	unsat	408	0	unsat	407	0	B	unsat
+AUFLIRA/nasa/fol_simplify_array_only/thruster_symm_1585.fof.smt2	unsat	207	0	unsat	208	0	A	unsat
+AUFLIRA/nasa/fol_simplify_array_only/thruster_init_0397.fof.smt2	unsat	208	0	unsat	208	0	B	unsat

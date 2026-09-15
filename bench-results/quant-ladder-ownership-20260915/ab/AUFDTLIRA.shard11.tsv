@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+AUFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_496459_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unsat	208	0	unsat	208	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/N917-051__longest_common_prefix__longest_common_prefix.adb_13_35_index_check___00.smt2	unsat	108	0	unsat	107	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/LB28-004__loop_variant__p.adb_10_12_index_check___00.smt2	unsat	109	0	unsat	109	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/S117-008__pointer__formal_vectors.adb_118_8_use_formal_vectors.ads_10_4_predicate_check___00.smt2	unknown	108	0	unknown	108	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/P518-021__frame_for_max__frame_condition.adb_86_39_frame_condition.adb_150_10_loop_invariant_preserv___00.smt2	unsat	110	0	unsat	109	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/N617-013__vscomp2014__p.adb_9_36_loop_invariant_init___00.smt2	unknown	23927	0	unknown	23930	0	B	unknown
+AUFDTLIRA/20200306-Kanig/spark2014bench/patience__patience.adb_16_13_loop_invariant_init___00.smt2	unsat	109	0	unsat	109	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/R419-026__swap_ranges__swap_ranges.adb_58_26_overflow_check___00.smt2	unsat	108	0	unsat	108	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/N624-020__perm_rem__sort.adb_59_48_precondition___00.smt2	unknown	25025	0	unknown	25034	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/K627-010__stable_marriage__stable_marriage.adb_33_26_index_check___00.smt2	unsat	110	0	unsat	109	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/RB05-005__unsound__main.adb_13_74_main.adb_22_4_range_check___00.smt2	unknown	25031	0	unknown	24327	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/O724-003__iterable__with_iterable.ads_24_9_predicate_check___00.smt2	unsat	109	0	unsat	108	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/N513-017__slice__sorters.adb_42_50_overflow_check___00.smt2	unsat	110	0	unsat	110	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/ghc_sort__ghc_sort.adb_159_25_null_pointer_dereference___00.smt2	unsat	209	0	unsat	209	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_30682c_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unsat	1911	0	unsat	1611	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/O512-022__demo_not_fixed_yet__generic_stack.adb_27_25_use_stacks.adb_47_7_index_check___00.smt2	unsat	109	0	unsat	110	0	B	unsat

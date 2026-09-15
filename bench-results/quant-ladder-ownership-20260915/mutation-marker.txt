@@ -1,0 +1,4 @@
+quant-route-ownership-marker: baseline green, 101 tests (scripts/cargo-serialized.sh test -p axeyum-solver --lib --features full auto::tests::)
+  the inconsistency report on an owning quantified decider's refusal killed 1: auto::tests::an_owning_quant_deciders_refusal_is_reported_and_a_one_directional_rungs_is_not
+
+[exited with code 0]

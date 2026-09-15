@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+AUFDTLIRA/20200306-Kanig/spark2014bench/Q424-003__if_expression__string_utilities.adb_17_24_index_check___00.smt2	unsat	308	0	unsat	308	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/N624-020__perm_rem__perm.adb_237_28_precondition___00.smt2	unsat	1109	0	unsat	1109	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/riposte__simple_arrays__simple_arrays.adb_674_22_assert___00.smt2	unknown	10214	0	unknown	10116	0	A	unknown
+AUFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_610ef4_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unsat	108	0	unsat	107	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/NA29-017__prove_all__sorting.adb_103_22_overflow_check4___00.smt2	unsat	109	0	unsat	109	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/M301-012__array_of_iter__iter_array.adb_21_19_assert___00.smt2	unknown	23025	0	unknown	22924	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/S117-008__pointer__formal_vectors.adb_182_35_use_formal_vectors.ads_10_4_null_pointer_dereference___01.smt2	unknown	109	0	unknown	109	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/P607-055__for_loops_on_function_calls__for_loop_iterable.adb_42_11_precondition___01.smt2	unsat	109	0	unsat	109	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/N624-020__perm_occ__sort.adb_36_39_index_check___00.smt2	unknown	25032	0	unknown	25033	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/patience__patience.ads_92_45_index_check___00.smt2	unsat	108	0	unsat	110	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_0ad1c3_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unknown	25023	0	unknown	25127	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/N624-020__perm_rem__sort.adb_75_44_precondition___00.smt2	unknown	25025	0	unknown	25026	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/K930-012__post__p.ads_6_36_index_check___00.smt2	unsat	109	0	unsat	109	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/RM_Examples__stacks_1.ads_14_19_postcondition___00.smt2	unknown	23620	0	unknown	23619	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/Q124-055__no_inlining__array_arith.ads_18_14_postcondition___00.smt2	unknown	8113	0	unknown	8213	0	A	unknown
+AUFDTLIRA/20200306-Kanig/spark2014bench/N624-020__perm_rem__perm.adb_62_19_precondition3___00.smt2	unsat	708	0	unsat	707	0	B	unsat

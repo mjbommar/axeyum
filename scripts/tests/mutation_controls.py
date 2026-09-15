@@ -10736,5 +10736,109 @@ SUITES["route-ownership-marker"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `quant-route-ownership-rule`, `quant-route-ownership-marker` and
+# `quant-continuation-bound` -- the QUANTIFIED ladder's ownership rule and the
+# budget its continuation needs (ADR-2103).
+#
+# Three runners, not one, for the reason `route-ownership-ladder` and
+# `route-ownership-marker` are two: the halves fail in opposite directions and
+# a shared rejection path is how six of seven guards in one suite here were once
+# removable with everything still green.  Separating the runners is what makes
+# each kill attributable.
+#
+# `quant-route-ownership-rule` makes a ONE-DIRECTIONAL rung's `Unknown`
+# terminal again.  That is the live defect this ADR closed at `q:egraph`, whose
+# retained-finite-expansion return ended the ladder before MBQI, the
+# finite-model finder and N-induction had run.
+#
+# `quant-route-ownership-marker` deletes the OTHER half: the report that fires
+# when a `q:` decider refuses a fragment it declared.  That half changes no
+# verdict by design -- it records -- so only a test that reads the trail can
+# see it.
+#
+# `quant-continuation-bound` sets the budget share to UNBOUNDED, which is the
+# pre-ADR-2103 behaviour and the arm that cost ADR-2100 two files.  The mutation
+# is on the SHARE GUARD rather than on the constant: editing
+# `const OWNERSHIP_CONTINUATION_SHARE: u32 = 4;` also kills
+# `the_ownership_continuation_share_lever_fails_closed`, which pins that literal
+# and would die from ANY edit to the line -- a kill set that includes a test
+# fired by the changed line measures the edit, not the guard.  This mutation
+# leaves the constant alone and makes the policy never apply.
+# --------------------------------------------------------------------------
+
+SUITES["quant-route-ownership-rule"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "auto::tests::"),
+        "quant-route-ownership-rule",
+    ),
+    [
+        (
+            # A refuter's failure to refute becomes "the query is undecidable
+            # here" again, so `q:egraph` can end the ladder before MBQI, the
+            # full finite-model finder and N-induction have run -- the exact
+            # shape ADR-1927 found, with `mbqi_source_shape_supported` restored
+            # in spirit.
+            "the ownership check on a one-directional quantified rung",
+            "        (RouteKind::FastPath, _) => {\n"
+            "            \"is one-directional \u2014 it can decide but never conclude that the query is \\\n",
+            "        (RouteKind::FastPath, _) => return QuantSettled::Terminal(result),\n"
+            "        #[allow(unreachable_patterns)]\n"
+            "        (RouteKind::FastPath, _) => {\n"
+            "            \"is one-directional \u2014 it can decide but never conclude that the query is \\\n",
+        ),
+    ],
+)
+
+SUITES["quant-route-ownership-marker"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "auto::tests::"),
+        "quant-route-ownership-marker",
+    ),
+    [
+        (
+            # An owning `q:` decider's refusal stops being reported and becomes
+            # an ordinary decline -- the silent fall-through the marker exists
+            # to make impossible, on the ladder where 75 % of Tier 1's
+            # undecided mass ends.
+            "the inconsistency report on an owning quantified decider's refusal",
+            "        (RouteKind::Decider, Ownership::Complete) => DeclineReason::UnsupportedDetail(\n"
+            "            crate::route_trace::UnsupportedDetail::QuantOwnershipInconsistency(format!(\n",
+            "        (RouteKind::Decider, Ownership::Complete) => unsupported_decline(message),\n"
+            "        #[allow(unreachable_patterns)]\n"
+            "        (RouteKind::Decider, Ownership::Complete) => DeclineReason::UnsupportedDetail(\n"
+            "            crate::route_trace::UnsupportedDetail::QuantOwnershipInconsistency(format!(\n",
+        ),
+    ],
+)
+
+SUITES["quant-continuation-bound"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "auto::tests::"),
+        "quant-continuation-bound",
+    ),
+    [
+        (
+            # The continuation past a converted non-decision takes whatever is
+            # left again -- the pre-ADR-2103 behaviour, and the arm in which
+            # `q:egraph` bought 25 instantiation rounds where it used to buy 35
+            # and 45.
+            "the bound on the ownership rule's continuation",
+            "    let share = ownership_continuation_share();\n"
+            "    if share < 2 || !inside_quantified_ladder() {\n"
+            "        return None;\n"
+            "    }",
+            "    let share = ownership_continuation_share();\n"
+            "    if true {\n"
+            "        return None;\n"
+            "    }",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))

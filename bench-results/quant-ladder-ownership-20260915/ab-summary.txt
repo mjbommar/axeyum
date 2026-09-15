@@ -1,0 +1,24 @@
+division      rows    A    B   net  gain  LOSS  FLIP  rc!=   cmp  DIS
+AUFDTLIRA      200  117  119    +2     2     0     0     0   119    0
+AUFLIRA        200  178  178    +0     0     0     0     0   178    0
+QF_LIA         200  127  127    +0     0     0     0     0   124    0
+QF_LRA         200  107  107    +0     0     0     0     0    97    0
+QF_NIA         200   82   83    +1     1     0     0     0    83    0
+UF             200   90   90    +0     0     0     0     0    88    0
+UFDTLIRA       200  143  144    +1     1     0     0     0   144    0
+UFLIA          200   86   86    +0     1     1     0     0    86    0
+UFNIA          200   54   54    +0     0     0     0     0    15    0
+TOTAL         1800  984  988    +4     5     1     0     0   934    0
+
+malformed rows (excluded, not scored as unchanged): 0
+
+LOSSES: 1
+  ('UFLIA/simplify/javafe.parser.TokenQueue.576.smt2', 'unsat', 'unknown')
+
+FLIPS: 0
+
+EXIT-STATUS DIFFERENCES: 0
+
+STATUS DISAGREEMENTS: 0
+
+CRITERION losses+flips+rc-differences+disagreements+malformed = 1

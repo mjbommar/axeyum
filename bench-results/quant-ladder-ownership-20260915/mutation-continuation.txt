@@ -1,0 +1,4 @@
+quant-continuation-bound: baseline green, 101 tests (scripts/cargo-serialized.sh test -p axeyum-solver --lib --features full auto::tests::)
+  the bound on the ownership rule's continuation killed 1: auto::tests::the_continuation_bound_applies_only_inside_a_quantified_ladder
+
+[exited with code 0]

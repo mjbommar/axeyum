@@ -1,0 +1,131 @@
+undecided rows scanned              : 643
+  joined to PLAN-SIZING               : 643 (must equal the line above)
+  POPULATION (never reached the QF ladder) : 482
+
+-- what ended the quantified ladder --
+    211  ladder exhausted (nothing below the terminal rung)
+    195  clock (q:timeout recorded)
+     53  A RUNG STOPPED THE LADDER (candidate)
+     23  watchdog kill (partial trail)
+
+CEILING (upper bound, before any ownership table): 53
+  A rung below the terminal one is skipped on this many rows for a reason
+  an ownership declaration could change. Every other row is ended by the
+  clock or has nothing below it, and NO ownership table changes either.
+
+division      rows  cand  clock  watchdog  exhausted
+AUFDTLIRA       67     1     12         0         54
+AUFLIRA         20     0     16         1          3
+UF             108    48     19         6         35
+UFDTLIRA        50     1      0         0         49
+UFLIA          107     3     68         7         29
+UFNIA          130     0     80         9         41
+TOTAL          482    53    195        23        211
+
+-- the 53 candidate rows, for per-row ownership checking --
+  AUFDTLIRA/20200306-Kanig/spark2014bench/M301-012__array_of_iter__iter_array.adb_21_19_assert___00.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'budget', 'e-matching: instantiation time budget exhausted mid-round (the interle')
+  UFDTLIRA/20200306-Kanig/spark2014bench/MA29-016__flow_refinement__levels.adb_127_61_overflow_check___00.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'budget', "preprocessed dispatch timeout after reduced solve; the reduced solve's")
+  UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1282463.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'budget', 'e-matching: instantiation time budget exhausted at a round head (no fi')
+  UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1372826.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'query has quantifiers instantiation does not reach (nested, existentia')
+  UFLIA/sledgehammer/Hoare/smtlib.993567.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'budget', 'e-matching: instantiation time budget exhausted mid-round (the interle')
+  UF/sledgehammer/Arrow_Order/uf.704291.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 4 rounds: the remaining budget ')
+  UF/sledgehammer/Fundamental_Theorem_Algebra/uf.1260380.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'query has quantifiers instantiation does not reach (nested, existentia')
+  UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_16_51_06_177_1165813.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'budget', 'e-matching: instantiation time budget exhausted mid-round (the interle')
+  UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_20_02_499_2906170.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 6 rounds: the remaining budget ')
+  UF/sledgehammer/Hoare/uf.966336.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 345 rounds: the remaining budge')
+  UF/20170428-Barrett/cdt-cade2015/nada/distro/rbt_impl/x2015_09_10_16_58_30_303_1827001.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 4 rounds: the remaining budget ')
+  UF/20170428-Barrett/cdt-cade2015/nada/afp/huffman/x2015_09_10_16_50_58_676_1284981.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 4 rounds: the remaining budget ')
+  UF/grasshopper/uninstantiated/insert_postcondition_of_insert_27_4.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 4 rounds: the remaining budget ')
+  UF/20170428-Barrett/cdt-cade2015/nada/afp/llist2/x2015_09_10_16_51_00_862_1095417.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 3 rounds: the remaining budget ')
+  UF/sledgehammer/QEpres/uf.595470.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation admitted nothing further after 5 rounds with ')
+  UF/20170428-Barrett/cdt-cade2015/nada/afp/hamming_stream/x2015_09_10_16_47_53_600_1082171.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 3 rounds: the remaining budget ')
+  UF/grasshopper/instantiated/dl_remove_postcondition_of_dl_remove_50_4.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 4 rounds: the remaining budget ')
+  UF/20170428-Barrett/cdt-cade2015/nada/afp/huffman/x2015_09_10_16_50_10_583_1232628.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'budget', 'e-matching: instantiation time budget exhausted mid-round (the interle')
+  UF/20170428-Barrett/cdt-cade2015/nada/distro/gram_lang/x2015_09_10_16_48_16_393_1116135.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'budget', 'e-matching: instantiation time budget exhausted at a round head (no fi')
+  UF/20170428-Barrett/cdt-cade2015/nada/afp/sorted_list_operations/x2015_09_10_16_47_45_306_1071226.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 3 rounds: the remaining budget ')
+  UF/sledgehammer/Hoare/uf.1105286.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'budget', 'e-matching: instantiation time budget exhausted mid-round (the interle')
+  UF/sledgehammer/NS_Shared/uf.573318.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'budget', 'e-matching: instantiation time budget exhausted at a round head (no fi')
+  UF/grasshopper/uninstantiated/dl_remove_loop_invariant_35_5.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 23 rounds: the remaining budget')
+  UF/sledgehammer/QEpres/uf.883950.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 3 rounds: the remaining budget ')
+  UF/sledgehammer/Fundamental_Theorem_Algebra/uf.1018623.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 4 rounds: the remaining budget ')
+  UF/sledgehammer/StrongNorm/uf.560863.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 4 rounds: the remaining budget ')
+  UF/20170428-Barrett/cdt-cade2015/nada/distro/gram_lang/x2015_09_10_16_53_37_371_1432776.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 2 rounds: the remaining budget ')
+  UF/sledgehammer/NS_Shared/smtlib.820464.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 10 rounds: the remaining budget')
+  UF/sledgehammer/FFT/uf.573210.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 5 rounds: the remaining budget ')
+  UF/sledgehammer/TypeSafe/smtlib.765771.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'query has quantifiers instantiation does not reach (nested, existentia')
+  UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_16_57_47_544_1522663.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 3 rounds: the remaining budget ')
+  UF/20170428-Barrett/cdt-cade2015/nada/distro/rbt_impl/x2015_09_10_16_56_17_304_1652193.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 5 rounds: the remaining budget ')
+  UF/20170428-Barrett/cdt-cade2015/nada/afp/tllist/x2015_09_10_17_00_58_384_1387951.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 4 rounds: the remaining budget ')
+  UF/sledgehammer/FFT/uf.734908.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'instantiation is satisfiable; the universal may still be violated outs')
+  UF/sledgehammer/TypeSafe/smtlib.1098821.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 109 rounds: the remaining budge')
+  UF/sledgehammer/Arrow_Order/uf.850780.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'budget', 'e-matching: instantiation time budget exhausted mid-round (the interle')
+  UF/sledgehammer/Hoare/uf.685581.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 15 rounds: the remaining budget')
+  UF/sledgehammer/FFT/uf.863296.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 5 rounds: the remaining budget ')
+  UF/sledgehammer/TwoSquares/uf.703271.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 4 rounds: the remaining budget ')
+  UF/sledgehammer/Fundamental_Theorem_Algebra/uf.658398.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 2 rounds: the remaining budget ')
+  UF/sledgehammer/Hoare/uf.623138.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 5 rounds: the remaining budget ')
+  UF/sledgehammer/QEpres/uf.850857.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'budget', 'e-matching: instantiation time budget exhausted at a round head (no fi')
+  UF/sledgehammer/NS_Shared/smtlib.599737.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 6 rounds: the remaining budget ')
+  UF/20170428-Barrett/cdt-cade2015/nada/distro/koenig/x2015_09_10_16_45_05_341_1010900.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 4 rounds: the remaining budget ')
+  UF/sledgehammer/QEpres/uf.814223.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation reached fixpoint without refuting after 21 ro')
+  UF/sledgehammer/QEpres/uf.924249.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'budget', 'e-matching: instantiation time budget exhausted mid-round (the interle')
+  UF/sledgehammer/TwoSquares/uf.780730.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 7 rounds: the remaining budget ')
+  UF/20170428-Barrett/cdt-cade2015/nada/distro/stream/x2015_09_10_16_46_52_587_993366.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'budget', 'e-matching: instantiation time budget exhausted at a round head (no fi')
+  UF/sledgehammer/TwoSquares/uf.601168.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'instantiation is satisfiable; the universal may still be violated outs')
+  UF/20170428-Barrett/cdt-cade2015/nada/afp/abstract_completeness/x2015_09_10_16_59_33_621_1039748.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 5 rounds: the remaining budget ')
+  UF/sledgehammer/TypeSafe/smtlib.1468059.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 4 rounds: the remaining budget ')
+  UF/20170428-Barrett/cdt-cade2015/nada/distro/gram_lang/x2015_09_10_16_49_03_424_1170927.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 5 rounds: the remaining budget ')
+  UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_05_53_248_2106236.smt_in.smt2
+      terminal=q:uf-fmf-full skipped=['q:nat-induction'] last-reason=('q:uf-fmf-full', 'incomplete', 'e-matching instantiation stopped after 3 rounds: the remaining budget ')

@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+UFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_11e36a_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unsat	1208	0	unsat	1108	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/O120-034__constrained__constrained_attribute.adb_4_26_discriminant_check___00.smt2	unsat	107	0	unsat	108	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/L112-039__precond__pre.adb_12_22_assert___00.smt2	unsat	107	0	unsat	107	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/S305-038__allocators__alloc_range_check.adb_12_12_range_check___00.smt2	unsat	108	0	unsat	108	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/P301-005__pred_rec_decl__preds.adb_22_7_predicate_check_on_default_value___00.smt2	unknown	608	0	unknown	609	0	A	unknown
+UFDTLIRA/20200306-Kanig/spark2014bench/M503-001__typinv__inside_out.adb_30_15_overflow_check___00.smt2	unsat	109	0	unsat	108	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/SC03-021__linear_search__linear_search.adb_48_13_loop_invariant_init___00.smt2	unknown	4712	0	unknown	3611	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/QA11-057__counterexamples__absolute_values.adb_11_14_overflow_check___00.smt2	unknown	108	0	unknown	108	0	B	unknown
+UFDTLIRA/20200306-Kanig/spark2014bench/N715-017__default_init_cond__default_init.adb_60_25_assert___00.smt2	unsat	109	0	unsat	108	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/K624-029__amortize_queue__amortized_queue.adb_36_16_loop_invariant_init___00.smt2	unknown	6714	0	unknown	6814	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/R903-021__flow_loop_array__dynamic_2d.adb_13_26_length_check___00.smt2	unsat	108	0	unsat	107	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/O901-014__formal_vectors__aida-containers-formal_vectors.adb_144_55_hnco-test2.ads_8_4_range_check___00.smt2	unsat	108	0	unsat	108	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/M218-008__contract_cases__subprograms.ads_32_11_disjoint_contract_cases___00.smt2	unsat	109	0	unsat	108	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/SB05-027__pledge__test_list.adb_30_20_null_pointer_dereference___00.smt2	unsat	108	0	unsat	108	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/R423-012__dead_code__dead_code.adb_9_7_dead_code___00.smt2	unknown	108	0	unknown	108	0	A	unknown
+UFDTLIRA/20200306-Kanig/spark2014bench/O429-055__active_priority__active_prio.adb_27_17_overflow_check___00.smt2	unknown	408	0	unknown	409	0	B	unknown

@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-03.smt2	sat	106	0	sat	106	0	A	sat
+QF_LIA/20220307-SMPT/BART-PT-002/RF-13.smt2	sat	106	0	sat	106	0	B	sat
+QF_LIA/nec-smt/large/bftpd_login/prp-10-47.smt2	unknown	24932	0	unknown	24834	0	A	unsat
+QF_LIA/rings/ring_2exp8_4vars_1ite_unsat.smt2	unknown	24029	0	unknown	24131	0	B	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-14.smt2	sat	106	0	sat	106	0	A	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-11.smt2	unsat	106	0	unsat	106	0	B	unsat
+QF_LIA/convert/convert-jpg2gif-query-1214.smt2	unsat	207	0	unsat	206	0	A	unsat
+QF_LIA/nec-smt/med/checkpass_pwd/prp-18-31.smt2	unknown	20826	0	unknown	20924	0	B	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-14.smt2	unsat	106	0	unsat	106	0	A	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-12.smt2	unsat	106	0	unsat	106	0	B	unsat
+QF_LIA/bofill-scheduling/SMT_real_LIA/ex3000_2400_100.smt2	unsat	8213	0	unsat	8213	0	A	unsat
+QF_LIA/nec-smt/large/bftpd_login/prp-16-46.smt2	unknown	24631	0	unknown	25031	0	B	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-15.smt2	sat	108	0	sat	108	0	A	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-06.smt2	sat	108	0	sat	108	0	B	sat
+QF_LIA/CIRC/multiplier/MULTIPLIER_64.msat.smt2	sat	609	0	sat	609	0	A	sat
+QF_LIA/nec-smt/large/bftpd_login/prp-44-46.smt2	unknown	23429	0	unknown	24029	0	B	unsat

@@ -3178,6 +3178,63 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "A FLOOR, not a ceiling: the ground-core accelerator fires only ABOVE it, so it gates where the accelerator's cost is repaid. The only lower-bound gate in this registry.",
     },
     ConfigEntry {
+        name: "OWNERSHIP_CONTINUATION_SHARE",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "4",
+        unit: "divisor of the remaining deadline granted to the route",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: Some("AXEYUM_OWNERSHIP_CONTINUATION_SHARE"),
+        justification: dated(
+            "docs/research/09-decisions/adr-2103-quantified-ladder-ownership-and-bounded-continuation.md",
+            "2026-09-15",
+            None,
+            // ADR-2100 shipped the ownership rule with TWO stable losses,
+            // reproducible 3/3, and read the mechanism off both arms' trails
+            // rather than assuming it: on both files NOTHING about the routing
+            // changed -- `decided_by` in A and `last` in B are the same route
+            // (`q:egraph`), `bound_by` is `q:mbqi` in both, and it costs the
+            // same TO THE MILLISECOND (10,616 vs 10,599; 10,425 vs 10,428).
+            // What changed is the price of an attempt: the same fifteen seconds
+            // bought 25 instantiation rounds instead of 35 and 45, because each
+            // round's ground check now runs the rest of the quantifier-free
+            // ladder where it used to stop at a rung's terminal `Unknown`.
+            //
+            // The code the measurement was taken against. `settle_rung` is what
+            // CONVERTS a non-decision into a decline -- the moment this share
+            // starts governing anything -- and `check_auto_dispatch_inner` is
+            // the ladder whose continuation it bounds. If either changes, the
+            // 2026-09-15 date on this bound has to be re-earned.
+            &[
+                sym("crates/axeyum-solver/src/auto.rs", "settle_rung"),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "check_auto_dispatch_inner",
+                ),
+            ],
+            &[
+                adr("ADR-2103"),
+                adr("ADR-2100"),
+                // The two halves of the policy, each at the site the reasoning
+                // points at. `inside_quantified_ladder` is the one that decides
+                // this bound applies at all: without it the cap would reach the
+                // OUTERMOST dispatch, where the continuation is the ladder's
+                // answer and ADR-2100's two stable gains came from.
+                live(
+                    "OWNERSHIP_CONTINUATION_SHARE",
+                    "crates/axeyum-solver/src/auto.rs",
+                ),
+                live(
+                    "inside_quantified_ladder",
+                    "crates/axeyum-solver/src/auto.rs",
+                ),
+            ],
+        ),
+        note: "A FRACTION, not a reserve, and the FIFTH copy of this quarter -- `ABV_ONLINE_LADDER_RESERVE_SHARE`, `DL_LADDER_RESERVE_SHARE` and `UF_ARITH_LADDER_RESERVE_SHARE` withhold it, `EUF_ONLINE_ABSTRACT_SHARE` grants it, and so does this. What it governs is NEW work: the rungs BELOW a non-decision the ADR-2100 ownership rule converted into a decline, which the pre-ADR-2100 ladder never ran at all. Bounded ONLY inside a quantified rung's sub-solve (`inside_quantified_ladder`): at the OUTERMOST dispatch the continuation IS the ladder's answer and ADR-2100's two stable GAINS came from it, so capping there would pay for that ADR's two losses with its two gains, which is not a fix. HONEST LIMIT, stated because the three grants above each had to state one: 4 is the conventional divisor and NOT a value this lane searched over -- the A/B measured `4` against `off`, so what is established is that a quarter is enough to bring the two named files back without costing the gains, not that a quarter is the best quarter. The env override selects the whole policy (`off`, `0` and `1` restore the unbounded continuation, which is the pre-ADR-2103 code and the A/B's control arm); an unset or MALFORMED value keeps the shipped divisor, so a typo cannot silently make an A/B measure the shipped arm in both halves.",
+    },
+    ConfigEntry {
         name: "PRE_LIA_UF_PROBE_CEILING",
         module: "crates/axeyum-solver/src/auto.rs",
         value: "Duration::from_millis(250)",

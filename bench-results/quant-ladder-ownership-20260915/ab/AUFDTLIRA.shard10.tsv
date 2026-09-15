@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+AUFDTLIRA/20200306-Kanig/spark2014bench/QA23-042__flow_pointers__spark05.adb_55_16_null_pointer_dereference___00.smt2	unsat	208	0	unsat	209	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/N624-020__perm_rem__perm.ads_43_60_precondition___00.smt2	unsat	106	0	unsat	106	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/K223-023__search__search.ads_8_9_postcondition___00.smt2	unknown	24028	0	unknown	24130	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_ec30e5_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unknown	25026	0	unknown	25027	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/O512-022__stacks__stacks.ads_84_58_index_check___00.smt2	unknown	25130	0	unknown	25135	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/MC06-031__dynamic_discrete__dynamic_ranges.adb_50_17_range_check___00.smt2	unsat	110	0	unsat	110	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/adacore_u__p_max_array.adb_56_25_index_check___00.smt2	unsat	109	0	unsat	109	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/Q713-033__loop_unroll__lcp.ads_17_54_overflow_check___00.smt2	unsat	509	0	unsat	610	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/N624-020__perm_rem__perm.adb_278_25_precondition4___00.smt2	unsat	510	0	unsat	509	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/tagged_stacks__stacks.adb_17_19_index_check___00.smt2	unknown	2410	0	unknown	2511	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_9e1cf4_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unsat	109	0	unsat	109	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/O108-025__attribute_size__size_attr.adb_116_19_assert___00.smt2	unsat	109	0	unsat	108	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/M613-053__wp__sorters_not_global.adb_76_40_index_check___00.smt2	unsat	308	0	unsat	308	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/S531-010__loop_frame_condition__do_loops.adb_131_19_index_check___00.smt2	unknown	13119	0	unknown	13122	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/Q930-002__itp__bounded_dynamic_arrays.ads_103_48_bounded_dynamic_strings.ads_5_1_range_check___00.smt2	unsat	108	0	unsat	109	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/N627-026__defaults__with_default.adb_69_22_assert___00.smt2	unsat	3610	0	unsat	3610	0	B	unsat

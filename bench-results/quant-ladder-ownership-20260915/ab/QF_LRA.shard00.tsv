@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+QF_LRA/LassoRanker/CooperatingT2/matrixsqrt.t2.c_Iteration12_Loop_7-phaseTemplate.smt2	unknown	25329	0	unknown	24931	0	A	sat
+QF_LRA/latendresse/ecoliFBAyicesTest-3875-4.smt2	unknown	24234	0	unknown	24131	0	B	sat
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0089.smt2	unsat	108	0	unsat	108	0	A	unsat
+QF_LRA/sc/sc-39.base.cvc.smt2	unknown	24132	0	unknown	24134	0	B	unsat
+QF_LRA/LassoRanker/CooperatingT2/disj_nightmare.t2.c_Iteration2_Loop_7-phaseTemplate.smt2	none	10802	134	none	10229	134	A	unsat
+QF_LRA/LassoRanker/Ultimate/yPositive-SIscaled75.bpl_Iteration1_Loop_7-phaseTemplate.smt2	none	11005	134	none	11425	134	B	sat
+QF_LRA/meti-tarski/sin/problem/7/sin-problem-7-chunk-0004.smt2	sat	107	0	sat	107	0	A	sat
+QF_LRA/sc/sc-17.base.cvc.smt2	unknown	24030	0	unknown	24033	0	B	unsat
+QF_LRA/DTP-Scheduling/constraints-temporal-machine-shop-2-3-A10.smt2	sat	106	0	sat	106	0	A	sat
+QF_LRA/LassoRanker/Ultimate/SyntaxSupportBooleans5.bpl_Iteration1_Loop_4-pieceTemplate.smt2	unknown	24331	0	unknown	24428	0	B	sat
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0033.smt2	unsat	107	0	unsat	106	0	A	unsat
+QF_LRA/sal/windowreal/windowreal-no_t_deadlock-1.smt2	unsat	106	0	unsat	107	0	B	unsat
+QF_LRA/DTP-Scheduling/constraints-cooking14.smt2	sat	107	0	sat	107	0	A	sat
+QF_LRA/LassoRanker/Ultimate/Braverman-2006CAV-Ex1-int.bpl_Iteration1_Lasso_6-phaseTemplate.smt2	unknown	24029	0	unknown	24028	0	B	unsat
+QF_LRA/meti-tarski/cbrt/3/cbrt-problem-3-chunk-0040.smt2	unsat	107	0	unsat	107	0	A	unsat
+QF_LRA/sal/gasburner/gasburner-prop3-2.smt2	unsat	107	0	unsat	107	0	B	unsat

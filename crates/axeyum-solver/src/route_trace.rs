@@ -248,6 +248,22 @@ pub enum UnsupportedDetail {
     /// this ADR's diff does not reach into the ownership table another lane
     /// owns.
     OwnershipInconsistency(String),
+    /// ADR-2103's QUANTIFIED-ladder ownership decline: a rung whose
+    /// non-decision the rule converted into a decline, with the declaration it
+    /// was measured against and the rung's own reason. Distinct from
+    /// [`Self::OwnershipInconsistency`] because the two say opposite things —
+    /// this one is the rule WORKING, that one is a declaration disagreeing with
+    /// its code — and a census that cannot tell them apart would count every
+    /// healthy decline as a bug report.
+    QuantOwnershipDecline(String),
+    /// ADR-2103's quantified-ladder counterpart of
+    /// [`Self::OwnershipInconsistency`]: a `q:` rung that declared it owns the
+    /// query's fragment and then refused it. Kept separate from the
+    /// quantifier-free one so a census can attribute an inconsistency to the
+    /// ladder it came from without parsing the route name out of the sentence
+    /// — the "split on a string that also appears inside the field" defect
+    /// ADR-2020 measured.
+    QuantOwnershipInconsistency(String),
 }
 
 impl UnsupportedDetail {
@@ -259,6 +275,8 @@ impl UnsupportedDetail {
             UnsupportedDetail::Backend(_) => "backend",
             UnsupportedDetail::IngestRefusal(_) => "ingest-refusal",
             UnsupportedDetail::OwnershipInconsistency(_) => "ownership-inconsistency",
+            UnsupportedDetail::QuantOwnershipDecline(_) => "quant-ownership-decline",
+            UnsupportedDetail::QuantOwnershipInconsistency(_) => "quant-ownership-inconsistency",
         }
     }
 }
@@ -268,7 +286,9 @@ impl core::fmt::Display for UnsupportedDetail {
         match self {
             UnsupportedDetail::Backend(detail)
             | UnsupportedDetail::IngestRefusal(detail)
-            | UnsupportedDetail::OwnershipInconsistency(detail) => f.write_str(detail),
+            | UnsupportedDetail::OwnershipInconsistency(detail)
+            | UnsupportedDetail::QuantOwnershipDecline(detail)
+            | UnsupportedDetail::QuantOwnershipInconsistency(detail) => f.write_str(detail),
         }
     }
 }

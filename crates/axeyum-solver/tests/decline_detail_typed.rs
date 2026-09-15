@@ -220,6 +220,21 @@ fn unsupported_detail_account(detail: &UnsupportedDetail) -> &'static str {
              which is the QUANT-LADDER-OWNERSHIP lane's surface, not a query shape this test \
              owns; see tests/route_ownership.rs for that lane's own coverage of the marker text."
         }
+        UnsupportedDetail::QuantOwnershipDecline(_) => {
+            "undriven here: ADR-2103 wires `settle_quant_rung` at the four quantifier-free \
+             HAND-OFF rungs, which are declared `Decider` over the whole quantifier-free \
+             fragment, so this fires only on a query carrying `NestedArray` or `WideInt` -- \
+             the two classes NOBODY owns. Driven directly, against the declaration rather \
+             than through a query, by \
+             `auto::tests::a_one_directional_quantified_rungs_unknown_never_terminates_the_ladder`."
+        }
+        UnsupportedDetail::QuantOwnershipInconsistency(_) => {
+            "undriven here, and for the same reason as `OwnershipInconsistency` above: it \
+             fires only when a `q:` rung's declaration disagrees with what the rung actually \
+             refused, which is a code/declaration mismatch rather than a query shape. Driven \
+             by `auto::tests::\
+             an_owning_quant_deciders_refusal_is_reported_and_a_one_directional_rungs_is_not`."
+        }
     }
 }
 
@@ -321,6 +336,8 @@ fn every_typed_detail_variant_is_accounted_for() {
         UnsupportedDetail::Backend(String::new()),
         UnsupportedDetail::IngestRefusal(String::new()),
         UnsupportedDetail::OwnershipInconsistency(String::new()),
+        UnsupportedDetail::QuantOwnershipDecline(String::new()),
+        UnsupportedDetail::QuantOwnershipInconsistency(String::new()),
     ] {
         assert!(!unsupported_detail_account(&detail).is_empty());
     }
