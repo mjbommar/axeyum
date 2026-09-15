@@ -606,6 +606,14 @@ step credit-transaction-ledger python3 scripts/check-credit-transaction-ledger.p
 # this wrapper owns, each required to kill EXACTLY its own canary.
 step credit-transaction-ledger-tests python3 scripts/tests/test-credit-transaction-ledger.py
 step credit-transaction-ledger-mutations bash scripts/tests/test-credit-transaction-ledger-mutations.sh
+# `scripts/measure-producer-channel.py`'s own control suite: six guards (an
+# unclassified theorem, an emptied EMIT set, an empty fact directory, a
+# dropped kernel_theorem join, a missing/breached baseline floor), each with
+# its own control asserting on that guard's finding text, plus a clean-run
+# positive control. ADR-2104's `check-control-registration.sh` audit found
+# this suite an orphan (existed, ran clean by hand, invoked by nothing);
+# registered here beside the other production-metric ledger controls.
+step producer-channel-controls ./scripts/tests/test-producer-channel-controls.sh
 # An `ml430` mirror's top-level `statement` is a prose reference BY NAME, so the
 # Mathlib proposition lives only in `formal.statement`. Nineteen had it
 # overwritten with our own `render_lean` output, and the mirror claim -- "we
@@ -680,6 +688,12 @@ step holdout-closed-evaluation python3 scripts/check-holdout-closed-evaluation.p
 step holdout-adjacency-tests python3 -m unittest scripts.tests.test_check_holdout_adjacency
 step holdout-adjacency-self-test python3 scripts/check-holdout-adjacency.py --self-test
 step holdout-adjacency python3 scripts/check-holdout-adjacency.py
+# `scripts/price-holdout-family.py`'s own control suite. ADR-2104's
+# `check-control-registration.sh` audit found it an orphan (existed, ran
+# clean by hand, invoked by nothing): register it beside the other holdout
+# gates it shares a subsystem with. Six checks, one clean-run positive
+# control plus five guard-deletion-style mutant controls.
+step holdout-price-controls ./scripts/tests/test-holdout-price-controls.sh
 # Registered here for the first time 2026-09-02: this script existed and had
 # its own negative control (a moved-family fixture, `control=FIRES` in its
 # output) but was invoked by NOTHING -- not `check.sh`, not `justfile`, not
@@ -1006,6 +1020,13 @@ step local-ci-freshness-controls ./scripts/tests/test-check-local-ci-freshness.s
 # project's history and nothing went red. This is the gate that reds.
 step parity-freshness ./scripts/check-parity-freshness.py
 step parity-freshness-controls ./scripts/tests/test-check-parity-freshness.sh
+# Pins the non-verdict classifier `parity-run.sh`'s own `run_one` uses to turn
+# an exit status into `unknown`/`timeout`/`abort-SIGABRT`/`killed-SIGKILL`/
+# `crash-SIGSEGV`/a bare signal or exit number. ADR-2104's
+# `check-control-registration.sh` audit found it an orphan (existed, ran
+# clean by hand, invoked by nothing); registered here beside the gate for the
+# artifact this classifier feeds.
+step parity-nonverdict-classifier ./scripts/tests/test-parity-nonverdict-classifier.sh
 # Freshness answers "when", never "on what". Both of the gate above's commit
 # comparisons are against HEAD, so once two lanes' branches merge, a row
 # measured BEFORE a fix and a row measured AFTER it both read `ok behind=N` --

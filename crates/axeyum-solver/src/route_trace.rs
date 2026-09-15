@@ -211,6 +211,246 @@ impl core::fmt::Display for Route {
     }
 }
 
+/// The structured payload for [`DeclineReason::UnsupportedDetail`] (ADR-2104).
+///
+/// Three sources hand an `UnsupportedDetail` its message, and they are
+/// genuinely different situations rather than one free-text bucket wearing
+/// three names:
+///
+/// * a decider/backend's own `SolverError::Unsupported` message — free text
+///   this crate does not control the shape of (an operator name, a sort, a
+///   term-shape description — whatever the refusing call said);
+/// * an SMT-LIB ingest (front-door parse) refusal's own message — likewise
+///   free text, from a different producer (the parser, not a decider);
+/// * ADR-2100's route-ownership inconsistency: a route that declares
+///   [`crate::auto`]-internal ownership of a construct set and then refused
+///   the fragment anyway. This one is *not* free text from an external
+///   producer — it is a fixed marker plus the refusal this crate already had
+///   in hand, built once at its single call site.
+///
+/// Following ADR-2060's own rule for keeping `String` where it belongs: the
+/// first two interpolate a message from a producer outside this enum's
+/// control (not a closed set to enumerate further), so they keep one, the
+/// same way [`DeclineReason::Incomplete`]'s payload does.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UnsupportedDetail {
+    /// A refusing producer's own message: most often a decider/backend's
+    /// `SolverError::Unsupported` payload, and also `check_auto_explained`'s
+    /// own terminal `SolverError::Display` on the dispatch-error path, and
+    /// MILP's own error — every one an external `Display`, not a sentence
+    /// this crate composes.
+    Backend(String),
+    /// An SMT-LIB ingest (front-door parse) refusal's own message.
+    IngestRefusal(String),
+    /// ADR-2100's route-ownership inconsistency marker plus the refusal
+    /// message, already fully formatted at its one call site in `auto.rs`
+    /// (`record_route_refusal`) — kept as one field rather than decomposed so
+    /// this ADR's diff does not reach into the ownership table another lane
+    /// owns.
+    OwnershipInconsistency(String),
+}
+
+impl UnsupportedDetail {
+    /// A stable, exhaustive short name for the variant — no wildcard arm, so
+    /// a new variant that is not named here fails to compile.
+    #[must_use]
+    pub fn name(&self) -> &'static str {
+        match self {
+            UnsupportedDetail::Backend(_) => "backend",
+            UnsupportedDetail::IngestRefusal(_) => "ingest-refusal",
+            UnsupportedDetail::OwnershipInconsistency(_) => "ownership-inconsistency",
+        }
+    }
+}
+
+impl core::fmt::Display for UnsupportedDetail {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            UnsupportedDetail::Backend(detail)
+            | UnsupportedDetail::IngestRefusal(detail)
+            | UnsupportedDetail::OwnershipInconsistency(detail) => f.write_str(detail),
+        }
+    }
+}
+
+/// The structured payload for [`DeclineReason::Budget`] (ADR-2104).
+///
+/// Four gates construct this directly, each a distinct, closed situation this
+/// crate detects itself, so each gets its own name and fixed text rather than
+/// an interpolated sentence. [`Budget::Other`] is the one open case: the
+/// pass-through from [`DeclineReason::from_unknown`], which carries whatever
+/// [`UnknownReason::detail`] a route already built — a String upstream of
+/// this enum's control, out of this ADR's scope the same way
+/// [`DeclineReason::Incomplete`]'s `UnknownReason` payload is.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Budget {
+    /// `nia_linearize`'s refinement loop: the relaxation slice's deadline
+    /// expired between refinement rounds.
+    NiaRelaxationSliceExpired,
+    /// `nia_linearize`'s refinement loop: [`MAX_REFINEMENT_ROUNDS`] was
+    /// reached with the relaxation model still spurious.
+    ///
+    /// [`MAX_REFINEMENT_ROUNDS`]: crate::nia_linearize
+    NiaRefinementRoundCapReached,
+    /// `nia_square`'s single-variable polynomial decider: a coefficient's
+    /// magnitude would overflow the `i128` arithmetic the quadratic/Horner
+    /// evaluation needs, so the guard declines before attempting it.
+    SquareCoefficientGuardExceeded,
+    /// The exact-bounded-box decider: the blast declined and the proven
+    /// integer box still exceeds the exhaustive-enumeration case cap.
+    IntBoxEnumerationCapExceeded,
+    /// A pass-through from [`DeclineReason::from_unknown`]: a route returned
+    /// `Unknown` with a budget-style [`UnknownKind`], and the detail is
+    /// whatever that route's own [`UnknownReason::detail`] said. Out of this
+    /// ADR's scope (see the type-level doc).
+    Other(String),
+}
+
+impl Budget {
+    /// A stable, exhaustive short name for the variant — no wildcard arm, so
+    /// a new variant that is not named here fails to compile.
+    #[must_use]
+    pub fn name(&self) -> &'static str {
+        match self {
+            Budget::NiaRelaxationSliceExpired => "nia-relaxation-slice-expired",
+            Budget::NiaRefinementRoundCapReached => "nia-refinement-round-cap-reached",
+            Budget::SquareCoefficientGuardExceeded => "square-coefficient-guard-exceeded",
+            Budget::IntBoxEnumerationCapExceeded => "int-box-enumeration-cap-exceeded",
+            Budget::Other(_) => "other",
+        }
+    }
+}
+
+impl core::fmt::Display for Budget {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Budget::NiaRelaxationSliceExpired => {
+                f.write_str("nia relaxation slice expired during refinement")
+            }
+            Budget::NiaRefinementRoundCapReached => {
+                f.write_str("nia refinement round cap reached with a spurious relaxation model")
+            }
+            Budget::SquareCoefficientGuardExceeded => {
+                f.write_str("single-variable polynomial coefficients exceed the i128 safety guard")
+            }
+            Budget::IntBoxEnumerationCapExceeded => f.write_str(
+                "exact box blast declined and the proven int box exceeds the \
+                 exhaustive-enumeration cap",
+            ),
+            Budget::Other(detail) => f.write_str(detail),
+        }
+    }
+}
+
+/// The structured payload for [`DeclineReason::VerifierRejected`] (ADR-2104).
+///
+/// Every gate that constructs this ran a route to a candidate answer and then
+/// caught its own re-check failing — the route's trust anchor, not a budget.
+/// Ten of the eleven producers are a fixed, closed sentence; the eleventh
+/// ([`VerifierRejected::Backend`]) is `uf-arith-lazy-overbound-pre-lia`'s
+/// `SolverError::Backend(detail)` arm, whose `detail` is a message from that
+/// backend, not a sentence this crate composes — kept a `String` for the same
+/// reason [`Budget::Other`] is.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum VerifierRejected {
+    /// The full MBQI rung produced a `sat` candidate with no checked model for
+    /// the original assertion sequence.
+    MbqiCandidateUnchecked,
+    /// `coercion-relax`'s candidate model failed the original int/real
+    /// coupling check.
+    CoercionRelaxCouplingFailed,
+    /// `uf-arith-lazy-overbound-pre-lia`'s `SolverError::Backend(detail)` arm:
+    /// the backend's own message, not a sentence this crate composes.
+    Backend(String),
+    /// The bounded first-refusal MBQI rung (`q:mbqi-quick`) produced a `sat`
+    /// candidate that did not replay against the original assertions.
+    MbqiQuickReplayFailed,
+    /// `cas-identity-refuter`: the polynomial normal form disagreed with the
+    /// independent expansion.
+    CasNormalFormDisagreement,
+    /// `cas-int-units`: the divisibility certificate failed its independent
+    /// re-check.
+    CasDivisibilityCertificateFailed,
+    /// `cas-ideal-refuter`: the ideal combination failed its independent
+    /// re-check.
+    CasIdealCombinationFailed,
+    /// `nia_linearize`'s refinement loop: the relaxation model failed
+    /// ground-evaluator replay against the original assertions.
+    NiaRelaxationReplayFailed,
+    /// `nia_linearize`'s refinement loop: the relaxation model failed replay
+    /// and no new refinement lemma applies (the loop cannot make progress).
+    NiaRefinementNoNewLemma,
+    /// `nia_square`'s single-variable polynomial decider: the witness failed
+    /// ground-evaluator replay against the original assertion.
+    SquareWitnessReplayFailed,
+    /// `refute_int_via_real_relaxation`: the real relaxation is satisfiable,
+    /// which does not transfer to the integers.
+    RealRelaxationSatDoesNotTransfer,
+}
+
+impl VerifierRejected {
+    /// A stable, exhaustive short name for the variant — no wildcard arm, so
+    /// a new variant that is not named here fails to compile.
+    #[must_use]
+    pub fn name(&self) -> &'static str {
+        match self {
+            VerifierRejected::MbqiCandidateUnchecked => "mbqi-candidate-unchecked",
+            VerifierRejected::CoercionRelaxCouplingFailed => "coercion-relax-coupling-failed",
+            VerifierRejected::Backend(_) => "backend",
+            VerifierRejected::MbqiQuickReplayFailed => "mbqi-quick-replay-failed",
+            VerifierRejected::CasNormalFormDisagreement => "cas-normal-form-disagreement",
+            VerifierRejected::CasDivisibilityCertificateFailed => {
+                "cas-divisibility-certificate-failed"
+            }
+            VerifierRejected::CasIdealCombinationFailed => "cas-ideal-combination-failed",
+            VerifierRejected::NiaRelaxationReplayFailed => "nia-relaxation-replay-failed",
+            VerifierRejected::NiaRefinementNoNewLemma => "nia-refinement-no-new-lemma",
+            VerifierRejected::SquareWitnessReplayFailed => "square-witness-replay-failed",
+            VerifierRejected::RealRelaxationSatDoesNotTransfer => {
+                "real-relaxation-sat-does-not-transfer"
+            }
+        }
+    }
+}
+
+impl core::fmt::Display for VerifierRejected {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            VerifierRejected::MbqiCandidateUnchecked => f.write_str(
+                "MBQI candidate lacks a checked model for the original assertion sequence",
+            ),
+            VerifierRejected::CoercionRelaxCouplingFailed => {
+                f.write_str("candidate fails the original int↔real coupling")
+            }
+            VerifierRejected::Backend(detail) => f.write_str(detail),
+            VerifierRejected::MbqiQuickReplayFailed => f.write_str(
+                "MBQI-quick candidate model did not replay against the original assertions",
+            ),
+            VerifierRejected::CasNormalFormDisagreement => {
+                f.write_str("polynomial normal form disagreed with the independent expansion")
+            }
+            VerifierRejected::CasDivisibilityCertificateFailed => {
+                f.write_str("divisibility certificate failed its independent re-check")
+            }
+            VerifierRejected::CasIdealCombinationFailed => {
+                f.write_str("ideal combination failed its independent re-check")
+            }
+            VerifierRejected::NiaRelaxationReplayFailed => {
+                f.write_str("relaxation model failed ground-evaluator replay against the originals")
+            }
+            VerifierRejected::NiaRefinementNoNewLemma => {
+                f.write_str("relaxation model failed replay and no new refinement lemma applies")
+            }
+            VerifierRejected::SquareWitnessReplayFailed => {
+                f.write_str("square-constraint witness failed ground-evaluator replay")
+            }
+            VerifierRejected::RealRelaxationSatDoesNotTransfer => f.write_str(
+                "the real relaxation is satisfiable, which does not transfer to the integers",
+            ),
+        }
+    }
+}
+
 /// Why a dispatch route declined to decide the query.
 ///
 /// This reuses the existing [`UnknownKind`] / [`UnknownReason`] vocabulary
@@ -230,7 +470,7 @@ pub enum DeclineReason {
     Unsupported,
     /// The route does not handle this query, **and said why**: the payload is
     /// the refusing call's own message (a `SolverError::Unsupported` string, or
-    /// an ingest refusal).
+    /// an ingest refusal), typed by [`UnsupportedDetail`] (ADR-2104).
     ///
     /// Distinct from [`DeclineReason::Unsupported`] so the two are countable
     /// apart: "declined and told us nothing" and "declined and told us what"
@@ -238,19 +478,20 @@ pub enum DeclineReason {
     /// eleven `auto.rs` sites indistinguishable from a feature-gate miss.
     /// Renders as the same `"unsupported"` JSON reason with an added `detail`
     /// field, so a consumer matching on the reason string is unaffected.
-    UnsupportedDetail(String),
+    UnsupportedDetail(UnsupportedDetail),
     /// The probe determined this route does not match the query's shape, so it
     /// was skipped without running.
     NotApplicable,
     /// A deterministic resource budget — a node, CNF, round, or width cap —
-    /// was exhausted. The string carries the [`UnknownReason::detail`].
-    Budget(String),
+    /// was exhausted, typed by [`Budget`] (ADR-2104).
+    Budget(Budget),
     /// The route ran but returned `Unknown` for an incompleteness reason; the
     /// payload preserves the original [`UnknownReason`].
     Incomplete(UnknownReason),
     /// A verify-before-return route ran and produced a candidate, but its own
-    /// re-check rejected it (so the candidate was discarded, not returned).
-    VerifierRejected(String),
+    /// re-check rejected it (so the candidate was discarded, not returned),
+    /// typed by [`VerifierRejected`] (ADR-2104).
+    VerifierRejected(VerifierRejected),
 }
 
 impl DeclineReason {
@@ -264,7 +505,9 @@ impl DeclineReason {
             | UnknownKind::ResourceLimit
             | UnknownKind::MemoryLimit
             | UnknownKind::NodeBudget
-            | UnknownKind::EncodingBudget => DeclineReason::Budget(reason.detail.clone()),
+            | UnknownKind::EncodingBudget => {
+                DeclineReason::Budget(Budget::Other(reason.detail.clone()))
+            }
             UnknownKind::Incomplete | UnknownKind::Other => {
                 DeclineReason::Incomplete(reason.clone())
             }
@@ -955,7 +1198,7 @@ impl RouteTrace {
                         DeclineReason::UnsupportedDetail(detail) => {
                             push_json_string(&mut out, "unsupported");
                             out.push_str(",\"detail\":");
-                            push_json_string(&mut out, detail);
+                            push_json_string(&mut out, &detail.to_string());
                         }
                         DeclineReason::NotApplicable => {
                             push_json_string(&mut out, "not-applicable");
@@ -963,7 +1206,7 @@ impl RouteTrace {
                         DeclineReason::Budget(detail) => {
                             push_json_string(&mut out, "budget");
                             out.push_str(",\"detail\":");
-                            push_json_string(&mut out, detail);
+                            push_json_string(&mut out, &detail.to_string());
                         }
                         DeclineReason::Incomplete(unknown) => {
                             push_json_string(&mut out, "incomplete");
@@ -975,7 +1218,7 @@ impl RouteTrace {
                         DeclineReason::VerifierRejected(detail) => {
                             push_json_string(&mut out, "verifier-rejected");
                             out.push_str(",\"detail\":");
-                            push_json_string(&mut out, detail);
+                            push_json_string(&mut out, &detail.to_string());
                         }
                     }
                 }
@@ -1564,7 +1807,7 @@ mod json_tests {
         trace.record_probe("bv");
         trace.record_declined("a", DeclineReason::Unsupported);
         trace.record_declined("b", DeclineReason::NotApplicable);
-        trace.record_declined("c", DeclineReason::Budget("nodes".into()));
+        trace.record_declined("c", DeclineReason::Budget(Budget::Other("nodes".into())));
         trace.record_declined(
             "d",
             DeclineReason::Incomplete(UnknownReason {
@@ -1572,7 +1815,10 @@ mod json_tests {
                 detail: "nl".into(),
             }),
         );
-        trace.record_declined("e", DeclineReason::VerifierRejected("replay".into()));
+        trace.record_declined(
+            "e",
+            DeclineReason::VerifierRejected(VerifierRejected::Backend("replay".into())),
+        );
         trace.record_decided("f", Verdict::Unsat);
         assert_eq!(
             trace.to_json(),
@@ -1603,7 +1849,9 @@ mod json_tests {
         trace.record_declined("payload-free", DeclineReason::Unsupported);
         trace.record_declined(
             "with-message",
-            DeclineReason::UnsupportedDetail("free datatype variable under is-c".into()),
+            DeclineReason::UnsupportedDetail(UnsupportedDetail::Backend(
+                "free datatype variable under is-c".into(),
+            )),
         );
         assert_eq!(
             trace.to_json(),
@@ -1613,7 +1861,7 @@ mod json_tests {
 \"detail\":\"free datatype variable under is-c\"}]}"
         );
         assert_eq!(
-            DeclineReason::UnsupportedDetail("m".into()).to_string(),
+            DeclineReason::UnsupportedDetail(UnsupportedDetail::Backend("m".into())).to_string(),
             "unsupported: m"
         );
         assert_eq!(DeclineReason::Unsupported.to_string(), "unsupported");
@@ -1640,7 +1888,10 @@ mod json_tests {
     #[test]
     fn detail_strings_are_json_escaped() {
         let mut trace = RouteTrace::new();
-        trace.record_declined("x", DeclineReason::Budget("a\"b\\c\nd\te\u{1}f".into()));
+        trace.record_declined(
+            "x",
+            DeclineReason::Budget(Budget::Other("a\"b\\c\nd\te\u{1}f".into())),
+        );
         assert_eq!(
             trace.to_json(),
             "{\"schema_version\":2,\"partial\":false,\"attempts\":[{\"route\":\"x\",\
@@ -1700,7 +1951,7 @@ mod json_tests {
         trace.record_probe("bv");
         trace.record_declined("a", DeclineReason::Unsupported);
         trace.record_declined("b", DeclineReason::NotApplicable);
-        trace.record_declined("c", DeclineReason::Budget("nodes".into()));
+        trace.record_declined("c", DeclineReason::Budget(Budget::Other("nodes".into())));
         trace.record_declined(
             "d",
             DeclineReason::Incomplete(UnknownReason {
@@ -1708,7 +1959,10 @@ mod json_tests {
                 detail: "nl".into(),
             }),
         );
-        trace.record_declined("e", DeclineReason::VerifierRejected("replay".into()));
+        trace.record_declined(
+            "e",
+            DeclineReason::VerifierRejected(VerifierRejected::Backend("replay".into())),
+        );
         trace.record_decided("f", Verdict::Unsat);
         assert_eq!(
             trace.to_json(),

@@ -49,7 +49,7 @@ use crate::backend::{CheckResult, SolverConfig, SolverError};
 use crate::dpll_lia::check_with_lia_dpll;
 use crate::lazy_smt_counters::{LazySmtLoop, RoundOutcome};
 use crate::model::Model;
-use crate::route_trace::DeclineReason;
+use crate::route_trace::{Budget, DeclineReason, VerifierRejected};
 
 // Takes `IrError` by value so it can be used directly as a `.map_err(err)`
 // adapter over the IR builders (which yield owned errors); the value is only
@@ -1626,9 +1626,7 @@ fn solve_with_refinement(
     loop {
         let remaining = slice_deadline.checked_duration_since(std::time::Instant::now());
         let Some(remaining) = remaining.filter(|d| !d.is_zero()) else {
-            *why = Some(DeclineReason::Budget(
-                "nia relaxation slice expired during refinement".into(),
-            ));
+            *why = Some(DeclineReason::Budget(Budget::NiaRelaxationSliceExpired));
             return Ok(None);
         };
         // `remaining` is the whole slice left; the policy decides how much of it
@@ -1656,15 +1654,12 @@ fn solve_with_refinement(
                 }
                 if !refine {
                     *why = Some(DeclineReason::VerifierRejected(
-                        "relaxation model failed ground-evaluator replay against the originals"
-                            .into(),
+                        VerifierRejected::NiaRelaxationReplayFailed,
                     ));
                     return Ok(None);
                 }
                 if round >= MAX_REFINEMENT_ROUNDS {
-                    *why = Some(DeclineReason::Budget(
-                        "nia refinement round cap reached with a spurious relaxation model".into(),
-                    ));
+                    *why = Some(DeclineReason::Budget(Budget::NiaRefinementRoundCapReached));
                     return Ok(None);
                 }
                 let added = timed_refine(arena, triples, &model, &mut emitted, &mut relaxed)?;
@@ -1674,7 +1669,7 @@ fn solve_with_refinement(
                 if added == 0 {
                     // Nothing new to cut off — the loop cannot make progress.
                     *why = Some(DeclineReason::VerifierRejected(
-                        "relaxation model failed replay and no new refinement lemma applies".into(),
+                        VerifierRejected::NiaRefinementNoNewLemma,
                     ));
                     return Ok(None);
                 }
