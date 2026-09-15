@@ -1,0 +1,28 @@
+undecided rows scanned      : 643
+  joined to PLAN-SIZING       : 643 (must equal the line above)
+  stopped_by_unknown (frame)  : 602
+  no dispatch-ladder attempt: 482
+  UNDETERMINED (conflicting): 0
+  a route below OWNS the constructs           : 5
+  CEILING (that route is also ENTERABLE)      : 0
+
+division      rows  owns  ceiling  no-dispatch  undet
+AUFDTLIRA       78     0        0           67      0
+AUFLIRA         22     0        0           20      0
+QF_NIA         116     0        0            0      0
+UF             110     0        0          108      0
+UFDTLIRA        56     0        0           50      0
+UFLIA          115     0        0          107      0
+UFNIA          146     5        0          130      0
+
+witnesses (path, last dispatch rung, known constructs, first owner below, is it enterable):
+  UFNIA/2019-Preiner/qf/t3_rw353.smt2
+      last=uf-routes constructs=['Int'] owner-below=array-fast-path enterable=False
+  UFNIA/2019-Preiner/qf/t3_rw1466.smt2
+      last=uf-routes constructs=['Int'] owner-below=array-fast-path enterable=False
+  UFNIA/2019-Preiner/qf/t3_rw1283.smt2
+      last=uf-routes constructs=['Int'] owner-below=array-fast-path enterable=False
+  UFNIA/2019-Preiner/qf/t3_rw597.smt2
+      last=uf-routes constructs=['Int'] owner-below=array-fast-path enterable=False
+  UFNIA/2019-Preiner/qf/t3_rw658.smt2
+      last=uf-routes constructs=['Int'] owner-below=array-fast-path enterable=False

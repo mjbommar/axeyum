@@ -1,0 +1,12 @@
+file	A1	A2	A3	B1	B2	B3	verdict
+AUFDTLIRA/20200306-Kanig/spark2014bench/N624-020__perm_rem__perm.adb_130_45_index_check2___00.smt2	unknown/0	unknown/0	unknown/0	unsat/0	unsat/0	unsat/0	STABLE-GAIN
+AUFDTLIRA/20200306-Kanig/spark2014bench/Q525-025__controlling_result__fixed_string.adb_18_11_length_check___00.smt2	unsat/0	unsat/0	unsat/0	unknown/0	unknown/0	unknown/0	STABLE-LOSS
+AUFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_55ff7e_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unsat/0	unsat/0	unsat/0	unsat/0	unsat/0	unsat/0	BOTH-DECIDE
+AUFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_bfafe7_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unsat/0	unsat/0	unsat/0	unknown/0	unknown/0	unknown/0	STABLE-LOSS
+AUFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_cac5cc_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unsat/0	unsat/0	unsat/0	unsat/0	unsat/0	unsat/0	BOTH-DECIDE
+QF_LIA/slacks/35-11.slack.smt2	sat/0	sat/0	sat/0	sat/0	sat/0	sat/0	BOTH-DECIDE
+QF_LRA/LassoRanker/Ultimate/yPositive-SIscaled50.bpl_Iteration1_Loop_4-pieceTemplate.smt2	none/134	none/134	none/134	none/134	none/134	none/134	NEITHER-DECIDES
+QF_NIA/20220315-MathProblems/STC_0205.smt2	sat/0	sat/0	sat/0	sat/0	sat/0	sat/0	BOTH-DECIDE
+UFDTLIRA/20200306-Kanig/spark2014bench/Q327-014__no_pre__dispatch.adb_24_24_overflow_check___00.smt2	unknown/0	unknown/0	unknown/0	unsat/0	unsat/0	unsat/0	STABLE-GAIN
+UFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_e7dc5f_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unsat/0	unsat/0	unsat/0	unsat/0	unsat/0	unsat/0	BOTH-DECIDE
+UFNIA/sledgehammer/FFT/z3.885941.smt2	unsat/0	unknown/0	unsat/0	unsat/0	unsat/0	unsat/0	UNSTABLE
