@@ -551,21 +551,27 @@ fn the_sat_exit_enumeration_still_describes_the_source() {
 
 /// Counts `needle` outside every `#[cfg(test)]` region, skipping each region by
 /// brace balance from the attribute to the column-0 close brace.
+///
+/// **Braces inside string literals and comments are not braces**, and the first
+/// version of this counter did not know that. On the ADR-2060 merge it walked
+/// off the end of the file, because that ADR's own `declared_variants` helper
+/// contains `format!("\nenum {enum_name} {{\n")` — two opening braces in a
+/// string with nothing to match them. It failed loudly rather than miscounting,
+/// which is what the assert is for; `code_only` below is the fix.
 fn production_sat_sites(src: &str, needle: &str) -> usize {
     let lines: Vec<&str> = src.lines().collect();
     let mut in_test = vec![false; lines.len()];
     let mut i = 0;
     while i < lines.len() {
         if lines[i].starts_with("#[cfg(test)]") {
-            // Signed depth without a cast: `isize::try_from` on a brace count
-            // cannot fail for any file this repository holds, and a `saturating`
-            // fallback would silently mis-scope a region rather than fail.
             let mut depth: isize = 0;
             let mut opened = false;
+            let mut in_block = false;
             let mut j = i;
             while j < lines.len() {
-                let opens = isize::try_from(lines[j].matches('{').count()).expect("brace count");
-                let closes = isize::try_from(lines[j].matches('}').count()).expect("brace count");
+                let code = code_only(lines[j], &mut in_block);
+                let opens = isize::try_from(code.matches('{').count()).expect("brace count");
+                let closes = isize::try_from(code.matches('}').count()).expect("brace count");
                 depth += opens - closes;
                 if opens > 0 {
                     opened = true;
@@ -595,4 +601,138 @@ fn production_sat_sites(src: &str, needle: &str) -> usize {
         .enumerate()
         .filter(|(k, line)| !in_test[*k] && line.contains(needle) && !line.contains("::Sat(_)"))
         .count()
+}
+
+/// The code part of one line: string-literal bodies, char literals and comments
+/// removed, so only real braces survive. `in_block` carries block-comment state
+/// across lines.
+///
+/// Raw strings would need more than this and none exist in the two files it is
+/// pointed at, so one is a panic rather than a guess. A lifetime (`'a`) is not a
+/// char literal, which is why the `'` arm requires a nearby closing quote.
+fn code_only(line: &str, in_block: &mut bool) -> String {
+    let bytes: Vec<char> = line.chars().collect();
+    assert!(
+        !raw_string_prefix(&bytes),
+        "raw string literal in {line:?}: this stripper does not handle them and will \
+         not guess. Extend it rather than letting it miscount."
+    );
+    let mut out = String::new();
+    let mut i = 0;
+    while i < bytes.len() {
+        if *in_block {
+            if bytes[i] == '*' && bytes.get(i + 1) == Some(&'/') {
+                *in_block = false;
+                i += 2;
+            } else {
+                i += 1;
+            }
+            continue;
+        }
+        if bytes[i] == '/' && bytes.get(i + 1) == Some(&'/') {
+            break;
+        }
+        if bytes[i] == '/' && bytes.get(i + 1) == Some(&'*') {
+            *in_block = true;
+            i += 2;
+            continue;
+        }
+        if bytes[i] == '"' {
+            i += 1;
+            while i < bytes.len() {
+                if bytes[i] == '\\' {
+                    i += 2;
+                    continue;
+                }
+                if bytes[i] == '"' {
+                    i += 1;
+                    break;
+                }
+                i += 1;
+            }
+            continue;
+        }
+        if bytes[i] == '\'' {
+            if let Some(close) = (i + 1..bytes.len().min(i + 9)).find(|&k| bytes[k] == '\'') {
+                i = close + 1;
+                continue;
+            }
+            i += 1;
+            continue;
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    out
+}
+
+/// Whether an `r` that BEGINS a token is followed by a quote — a raw string.
+/// The plain substring test flags `real_var("x")` and every other identifier
+/// ending in `r`, which is most of this file.
+fn raw_string_prefix(bytes: &[char]) -> bool {
+    bytes.iter().enumerate().any(|(k, &c)| {
+        c == 'r'
+            && (k == 0 || !(bytes[k - 1].is_alphanumeric() || bytes[k - 1] == '_'))
+            && bytes[k + 1..]
+                .iter()
+                .find(|&&n| n != '#')
+                .is_some_and(|&n| n == '"')
+            && bytes.get(k + 1).is_some_and(|&n| n == '"' || n == '#')
+    })
+}
+
+/// A CONTROL for the counter itself.
+///
+/// `production_sat_sites` is a hand-rolled scanner, and a scanner that
+/// miscounts silently is worse than no pin at all — the previous version did
+/// exactly that on a shape it had never met. So the stripper is exercised on
+/// the lines that broke it and on the lines that must survive it.
+#[test]
+fn the_brace_stripper_ignores_braces_that_are_not_braces() {
+    let mut block = false;
+    // The line that broke the first version: two opening braces, both in a string.
+    assert_eq!(
+        code_only(
+            r#"let head = format!("
+enum {name} {{
+");"#,
+            &mut block
+        )
+        .matches('{')
+        .count(),
+        0,
+        "braces inside a string literal are not braces"
+    );
+    // A closing brace in a string.
+    assert_eq!(
+        code_only(
+            r#".find("
+}
+")"#,
+            &mut block
+        )
+        .matches('}')
+        .count(),
+        0
+    );
+    // A brace in a line comment.
+    assert_eq!(
+        code_only("let x = 1; // }", &mut block)
+            .matches('}')
+            .count(),
+        0
+    );
+    // And the control that must MOVE: real braces are still counted, or this
+    // whole test passes by the stripper eating everything.
+    assert_eq!(code_only("mod tests {", &mut block).matches('{').count(), 1);
+    assert_eq!(code_only("}", &mut block).matches('}').count(), 1);
+    assert!(!block, "no block comment was opened");
+    // A lifetime is not a char literal.
+    assert_eq!(
+        code_only("fn f<'a>(x: &'a str) -> &'a str { x }", &mut block)
+            .matches('{')
+            .count(),
+        1,
+        "a lifetime tick must not be read as a char literal that swallows the brace"
+    );
 }

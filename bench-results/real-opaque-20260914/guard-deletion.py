@@ -25,6 +25,21 @@ SOLVER = "crates/axeyum-solver/src"
 # `replayed_sat` / `simplex_fallback` at all -- the entry point above them
 # returns a type with no `Sat` variant -- so the lib-side filter is not a
 # convenience, it is the only place those two guards are visible.
+# Tests that read the SOURCE TEXT rather than run the solver. They die on every
+# mutant here, because the mutants ARE source-text edits -- which makes them a
+# universal killer and destroys the matrix's whole purpose: with this test
+# counted, `G5-model-oracle` reads "killed=1" and looks load-bearing when in
+# fact nothing behavioural observes it. A single check that rejects EVERYTHING
+# is the same disease as a single check that rejects nothing.
+#
+# Excluded here and ONLY here. The pin is a real guard against a new `Sat` site
+# appearing, and it runs in the suite; it is just not evidence about which
+# runtime guard is load-bearing.
+TEXT_PINS = {
+    "the_sat_exit_enumeration_still_describes_the_source",
+    "the_brace_stripper_ignores_braces_that_are_not_braces",
+}
+
 SUITES = [
     ("--test", "lra_opaque_real_apps", []),
     ("--lib", None, ["opaque_real_guard_tests"]),
@@ -42,8 +57,11 @@ GUARDS = [
     (
         "G2-simplex-fallback",
         f"{SOLVER}/lra.rs",
-        "            if ctx.has_opaque_vars() {\n                return Ok(Some(Decision::Incomplete(",
-        "            if false && ctx.has_opaque_vars() {\n                return Ok(Some(Decision::Incomplete(",
+        # Re-anchored for the ADR-2060 merge: `simplex_fallback` now returns a
+        # NAMED `SimplexDecline` instead of a `Decision`, so the guard's body
+        # changed even though the guard did not.
+        "            if ctx.has_opaque_vars() {\n                return Ok(Err(SimplexDecline::OpaqueAbstractionSatisfiable));",
+        "            if false && ctx.has_opaque_vars() {\n                return Ok(Err(SimplexDecline::OpaqueAbstractionSatisfiable));",
         "exact-rational simplex sat exit",
     ),
     (
@@ -132,7 +150,12 @@ def run_suite():
                 passed.add(line[5:-7])
             elif line.startswith("test ") and " ... FAILED" in line:
                 failed.add(line[5 : line.index(" ... FAILED")])
-    return (len(failed) == 0), {"passed": sorted(passed), "failed": sorted(failed)}
+    behavioural = {t for t in failed if t.rsplit("::", 1)[-1] not in TEXT_PINS}
+    return (len(failed) == 0), {
+        "passed": sorted(passed),
+        "failed": sorted(behavioural),
+        "text_pins_also_failed": sorted(failed - behavioural),
+    }
 
 
 def main():

@@ -113,6 +113,49 @@ both wrong with it on: `nvars` came from `ctx.vars.len()` (symbol columns only),
 and `simplex_fallback` keyed its model by POSITION in `vars` rather than through
 `var_index`. The `QF_LRA` control (§4) exists to catch exactly these.
 
+### 2.1 The [ADR-2060] merge: this guard is a SEVENTH cause, and it is named
+
+[ADR-2060] landed on `main` while this lane was measuring. It split
+`simplex_fallback`'s single `Ok(None)` into six named `SimplexDecline` variants,
+because six causes were wearing one answer and the caller could not tell a clock
+from a failed model replay. This guard is the seventh, and merging it as written
+would have reintroduced exactly the defect that ADR removed. So:
+
+- `SimplexDecline::OpaqueAbstractionSatisfiable`, with a `describe()` that says
+  **"not a budget at all"** — enforced, not just written, by that ADR's
+  `no_detail_blames_an_engine_that_did_not_run`.
+- Its `name()` is an exhaustive match, so the variant did not compile until it
+  was named; `declared_variants` reads the enum out of the source, so it did not
+  pass until it was listed; and `each_producer_reports_its_own_reason` checks
+  the driven set against the declared set — so the variant is **driven** there,
+  with a control that must move, rather than added to the undrivable list. An
+  exemption for a reachable variant is the hole that test exists to close.
+- `check_with_lra_opaque_apps_within` had a `Decision::TimedOut` arm rendering
+  one fixed sentence about Fourier–Motzkin. It now forwards `GaveUp::detail()`.
+- **The decider short-circuits this one decline** instead of passing it on.
+  Every other `SimplexDecline` is a budget or precision failure the other engine
+  might still beat, which is why ADR-2060 forwards them as half of a two-engine
+  `GaveUp`. This one is a property of the SYSTEM: the elimination would find the
+  same point feasible and decline at `replayed_sat` for the same reason, after a
+  doubly-exponential run whose answer is already known.
+
+**The enumeration was re-derived on the merged tree, not assumed** — §1's claim
+that one function can set the mode is what the whole `sat`-exit closure rests
+on, and ADR-2060 added construction and return paths through that same function.
+Production `Collector` construction sites **2**, setters **1**, decision
+functions reachable with the mode set **1**, `Sat` construction sites still
+**9**, same closure.
+
+**And the enumerator broke, loudly, which is what it is for.** Its brace-balance
+scanner counted braces inside STRING LITERALS, and ADR-2060's own
+`declared_variants` contains `format!("\nenum {enum_name} {{\n")` — two opening
+braces with nothing to match. It walked off the end of the file and refused
+rather than miscounting. Both copies (the Python enumerator and the Rust pin
+test) now strip comments and literals first, and **the Rust one carries a control
+for the counter itself**: the lines that broke it must strip to zero braces, and
+real braces must still be counted, so a stripper that ate everything would fail
+too.
+
 ## 3. The guard-deletion result, and the round it took to get one
 
 [Full matrix.](../../../bench-results/real-opaque-20260914/ref/guard-deletion.md)
@@ -135,7 +178,15 @@ Three fixes, and they are the transferable part:
 - The two `lra.rs` guards are invisible from outside the crate **by design**, so
   they get lib-side unit tests that call `decide_within_with_options` directly.
 
-**Round 2:**
+**Round 2** (re-run unchanged on the merged tree, `bec2cf65b`):
+
+**One correction the merge forced.** The suite gained a source-text pin
+(`the_sat_exit_enumeration_still_describes_the_source`), and the mutants are
+source-text edits, so it died on **every** row — including `G5`, which it made
+look load-bearing when nothing behavioural observes it. A single check that
+rejects everything is the same disease as one that rejects nothing. Text pins
+are now excluded from the matrix and only from the matrix; they still run in the
+suite.
 
 | mutant | tests killed |
 |---|---|
@@ -196,6 +247,7 @@ by mechanism before any measuring starts.
 | authorities | `:status` **14/14 unsat**, z3 **14/14 unsat**, cvc5 **14/14 unsat**; **0 disagreements at a comparable denominator of 14/14 on each** — fourteen agreements, not fourteen no-opinions |
 | noise floor | same arm twice, **whole division, both halves**: **0 of 200** moved, 22 undecided in base, 1.00x |
 | control `QF_LRA` | **0 of 200** moved, 0 exit regressions, 1.00x |
+| secondary `QF_UFLRA` | **0 of 200** moved, 51 undecided in base, 1.00x — see below |
 
 14 of 36 undecided rows is **38.9 %**, Wilson 95 % **[24.8 %, 55.1 %]** (plain
 Wilson, no continuity correction). 14 of 200 files is 7.0 %, **[4.2 %, 11.4 %]**.
@@ -240,22 +292,37 @@ ladder refusing early, so on a query it still cannot decide the ladder now
 spends more of its budget before giving up. That is the real trade and it is 33 %
 on this division.
 
+### `QF_UFLRA` moved nothing, and P4 said it would
+
+Pre-registered **P4** predicted the `QF_UFLRA` division would move by a nonzero
+amount, because real uninterpreted applications are its defining feature. On the
+full pinned 200 it moved **0**, with **51 undecided in the base arm** — so the
+zero had ample room — and 0 exit regressions at 1.00x.
+
+**Wrong, and the reason is worth more than the prediction.** `QF_UFLRA` is
+quantifier-free, so the two rungs that took all 14 `AUFLIRA` gains —
+`q:mbqi-quick` and `q:bool-skeleton` — are not on its ladder at all, and its own
+`uflra-online` route already admits real UF applications without passing through
+the refusing site. The capability this lane added is reachable only where the
+refusal was, which is a narrower and more defensible claim than the one P4
+assumed.
+
 ### The sat side, observed at corpus scale
 
 The guards, the type and the model replay are an argument plus twenty fixtures.
-This is the same property as an OBSERVATION over the 400 measured files
-(`ref/sat-side-invariant.txt`):
+This is the same property as an OBSERVATION over all **600** measured files —
+`AUFLIRA`, `QF_LRA` and `QF_UFLRA` (`ref/sat-side-invariant.txt`):
 
 | | base arm | lever arm |
 |---|---:|---:|
-| `sat` | **66** | **66** |
-| `unsat` | 205 | **219** |
-| `unknown` | 89 | 75 |
+| `sat` | **155** | **155** |
+| `unsat` | 265 | **279** |
+| `unknown` | 140 | 126 |
 | no verdict (`NONE`, the 40 wrapper timeouts) | 40 | 40 |
 
 **New `sat`: 0. Lost `sat`: 0. Files that changed side: 0.** Every verdict this
 lever adds is on the `unsat` side, and the `sat` count is not merely unchanged in
-total but unchanged file by file.
+total but unchanged file by file — across 155 `sat` verdicts.
 
 The checker's exit status depends on the finding, and it is **non-vacuous**: a
 single row doctored from `on=unknown` to `on=sat` makes it print the file and
@@ -273,9 +340,10 @@ undecided in the base arm, so the zero had room.
 binding routes on those 93 rows are `nra` (45) and `NONE` (41), with only 6 on
 `dl-online` — not an `lra` route. So "the changed code runs here" had to be
 measured: `control-executes.sh` reads `lra_entries` / `cube_decisions` off the
-counter line and finds **`lra::decide_within` executing on 6 of 20 probed rows,
-41 cube decisions**. That is what makes the zero a statement about the
-column-space refactor rather than about a division the code never touches.
+counter line and finds **`lra::decide_within` executing on 31 of 100 probed
+rows** (`ref/control-executes-100.txt`). That is what makes the zero a statement
+about the column-space refactor rather than about a division the code never
+touches.
 
 ## 5. Decision
 
@@ -316,42 +384,36 @@ arm reproducing after the merge; nothing else in the ladder is touched.
 | P1 | `Sat` exits closable, under 10 sites | **right** — 9 |
 | P2 | the integer soundness argument transfers; the difference is in the consumers | **right**, §2 |
 | P3 | fewer than 6 of the 6 witnesses convert | **WRONG** — 6 of 6, plus 8 more |
-| P4 | control 0; `QF_UFLRA` nonzero | control **right**; `QF_UFLRA` **not answered** — 47 of 200 rows, 0 moved, and §7 says why that is not a division result |
+| P4 | control 0; `QF_UFLRA` nonzero | control **right**; `QF_UFLRA` **WRONG** — 0 of 200 on the full division, 51 undecided in base |
 | P5 | at least one LOSS in `AUFLIRA` | **WRONG** — 0 losses and 0 exit regressions |
 
-P3 and P5 are the useful ones to have got wrong, and they are wrong the same
-way: both assumed that admitting an atom would cost something visible. On this
-division it did not. The cost is real and it is in the wall clock (1.33x on the
+P3, P4 and P5 are the useful ones to have got wrong. P3 and P5 assumed that
+admitting an atom would cost something visible; on this division it did not. P4
+assumed the capability would generalise to any division with real UF
+applications; it does not, and the reason (the refusal sat on the quantified
+ladder, not on `QF_UFLRA`'s) is a sharper statement of what was actually fixed. The cost is real and it is in the wall clock (1.33x on the
 rows that did not move), which is exactly where a verdict count cannot see it —
 so the instrument that caught it is the one R4 exists for.
 
 ## 7. Not measured here, and reported as "did not run"
 
-- **`QF_UFLRA` (the secondary) DID NOT FINISH.** 200 pinned files on `s6` cores
-  2–3; **47 of 200 rows** at the time of writing, snapshotted as
-  `ab/qfuflra-PARTIAL-*.tsv`. On those 47: **0 moved, 0 exit regressions, ratio
-  1.00x, 25 of 47 undecided in the base arm.**
-
-  Pre-registered **P4 predicted this division would move by a nonzero amount**,
-  because real UF applications are its defining feature. On the quarter measured
-  it did not, and the likely reason is worth writing down for whoever finishes
-  it: `QF_UFLRA` is **quantifier-free**, so the two rungs that took all 14
-  `AUFLIRA` gains — `q:mbqi-quick` and `q:bool-skeleton` — are not on its
-  ladder at all, and its own `uflra-online` route already handles real UF
-  applications without going through the refusing site. **47 of 200 is not a
-  division result and nothing here is claimed about `QF_UFLRA`**; the snapshot
-  exists so a later reader can re-summarise the finished TSVs rather than
-  inherit this number.
-- **`control-executes.sh` over all 100 rows of `QF_LRA.a` DID NOT FINISH.** The
-  20-row probe is what §4 quotes and it is labelled as 20, not extrapolated.
+- **Both runs this ADR first reported as unfinished have since finished**, and
+  their numbers are in §4 rather than here: `QF_UFLRA` at the full 200 (0
+  moved), and `control-executes.sh` at the full 100 (31 rows enter
+  `lra::decide_within`). The partial snapshots were deleted rather than left
+  beside the complete ones.
 - **No division outside `AUFLIRA`, `QF_LRA` and `QF_UFLRA` was measured.** The
   corpus rate of this capability is unknown and [ADR-2050]'s R1 forbids
   transferring a per-division number.
-- **The `AUFLIRA` sweep ran on `6ca42ce09`, not on final HEAD.** The only later
-  change is one commit, a bool→enum refactor with no behaviour change
-  (`git diff 6ca42ce09..HEAD -- crates/`), and the stability pass — 14/14
-  STABLE-GAIN, three passes per arm — ran on the FINAL binary, which is the
-  re-measurement.
+- **The 200-row division sweeps ran BEFORE the [ADR-2060] merge.** `AUFLIRA` and
+  `QF_LRA` on `6ca42ce09`, `QF_UFLRA` and the control-execution probe on
+  `edb12ee75`. What was re-run on the merged tree (`bec2cf65b`) is the cheap
+  middle path: **the 14 movers, three passes per arm, and the whole noise-floor
+  division**. The argument for not re-running all 600 rows is that ADR-2060
+  measured itself verdict-neutral on four channels; the argument for re-running
+  the movers is that a base that no longer exists cannot support a `+14`, and
+  that is the number this ADR leads with. §4 carries both results and says which
+  binary produced each.
 - **Causes (B), (C) and (D) of [ADR-2050] are untouched.**
 
 [ADR-1966]: adr-1966-a-rungs-refusal-of-a-construct-a-later-rung-owns-is-a-decline.md
