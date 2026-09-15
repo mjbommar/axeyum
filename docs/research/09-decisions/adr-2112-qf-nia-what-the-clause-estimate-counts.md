@@ -448,6 +448,45 @@ is what made ADR-2106's bucket read as a partition. (c) The 67 files where
 `nlsat` conflicted are ADR-2110's population, not this one's; §D1 is the warning
 that goes with them — the counter says 88.2 % and the ablation says 7.3 %.
 
+## Gates, with counts
+
+A count is given for every suite, because a feature-gated suite compiles to
+nothing and exits 0 — the shape that left one gate inert for 15 days here. Two
+of these were caught by that rule during this lane: a re-run that matched no
+test printed `ok. 0 passed; 1830 filtered out`, and the first reference sweep
+wrote 79 rows with every statistic column empty.
+
+| gate | result |
+|---|---|
+| `cargo test -p axeyum-solver --features z3 --test qf_lia_differential_fuzz` | **4 passed, 0 failed** (22.16 s) |
+| `--test nia_differential_fuzz` | **1 passed, 0 failed** (56.04 s) |
+| `--test qf_nia_bounded_product_differential_fuzz` | **1 passed, 0 failed** (125.35 s) |
+| `--test qf_nia_divmod_const_differential_fuzz` | **1 passed, 0 failed** (7.90 s) |
+| `--test qf_nia_divmod_var_differential_fuzz` | **1 passed, 0 failed** (554.26 s) |
+| `progress_frontier --features full -- --test-threads=1` | **12 passed, 0 failed**; `comparable: true, ratchetable: true` on all five families, `nia_unsat` holding `baseline 40 / frontier 40` |
+| `config_registry::tests` | **18 passed, 0 failed** |
+| `auto::tests` for this lever | **6 passed, 0 failed** |
+| mutation `int-blast-width-floor` | 4-test baseline green; **3 mutations, each killing exactly ONE named test, no two the same**; `--check-anchors` `suites=141 anchors=1068 stale=0` |
+| clippy `-p axeyum-solver -p axeyum-bench -p axeyum-bv --all-targets --features full -- -D warnings` | clean |
+| `cargo check --workspace --all-targets` (default features) | clean |
+| `cargo fmt --all --check` | clean |
+| `check-merge-hygiene.sh` / `check-links.sh` / `gen-plan.py --check` | PASS / ok / current |
+| `check-config-registry-staleness.py` | 0 unexplained |
+
+The last two `divmod` rows are the seed classes `CLAUDE.md`'s hard rule asks
+for on an underspecified operator — a fuzz that never emits the degenerate
+divisor is not a soundness gate, and `div`/`mod` by a **constant** zero is the
+exact shape behind the wrong-unsat in `a946f925`.
+
+`cargo test -p axeyum-solver --lib --features full` reported **1828 passed, 2
+failed**, and neither failure is this lane's: both are wall-clock-bounded tests
+(5 s, and a documented ~50 s solve) that flaked with six other lanes building on
+the box, both are recorded as flakes of exactly this shape by four prior lanes
+([ADR-2055] names the first at load average 11.09 with `pathological_refusals`
+reading 0), and re-run alone here with the lever explicitly unset **both pass**,
+1 each. The floor cannot reach either: with the lever off
+`apply_admissible_width_floor` returns the width sequence before doing any work.
+
 ## Consequences
 
 **Easier.** `nia_estimate_census.rs` gives any lane the per-file integer shape,
@@ -477,3 +516,4 @@ touched here was then checked by hand: 3 of 3 in this one, 7 of 7 in
 
 [diag]: ../05-algorithms/nia-deficit-diagnosis-2026-08-21.md
 [ADR-1921]: adr-1921-the-int-blast-width-escalation-is-measured-and-not-shipped.md
+[ADR-2055]: adr-2055-the-tableau-is-the-memory-and-capping-it-costs-eighteen-clean-exits.md
