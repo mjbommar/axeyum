@@ -1,0 +1,9 @@
+baseline            R5(a)=PASS R5(b)=PASS authority-split=0
+M1 minimal:=99       R5(a)=FAIL R5(b)=PASS authority-split=0  KILLED
+M2 minimal:=6        R5(a)=FAIL R5(b)=PASS authority-split=0  KILLED
+M2b minimal:=5       R5(a)=PASS R5(b)=PASS authority-split=0  KILLED
+M3 no REF-UNSAT      R5(a)=None R5(b)=None authority-split=0  KILLED
+M4 one cvc5 sat      R5(a)=PASS R5(b)=PASS authority-split=1  KILLED
+
+scratch=/data0/axeyum/core-select-mutants
+GREEN: 5 of 5 mutants killed. R5 moves when the sizes move, when the bucket empties, and when an authority disagrees.

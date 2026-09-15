@@ -144,14 +144,29 @@ def main():
         # ---- 4. the three sizes (R3)
         print('\n## 4. Three sizes, never conflated (R3)\n')
         ru = buckets['REF-UNSAT']
-        ok = [r for r in ru if r['core_z3'] == 'unsat' and r['core_cvc5'] in ('unsat', 'NO-CVC5')]
-        split = [r for r in ru if r['core_z3'] != 'unsat' or
-                 r['core_cvc5'] not in ('unsat', 'NO-CVC5')]
-        print(f'  REF-UNSAT rows              {len(ru)}')
-        print(f'  both authorities agree      {len(ok)}')
-        print(f'  AUTHORITY-SPLIT (excluded)  {len(split)}')
-        for r in split[:10]:
+        # A DISAGREEMENT and a NON-ANSWER are different findings and must not
+        # share a bucket: folding "cvc5 did not answer" into "the authorities
+        # split" turns 0 disagreements into 42 and drops 34 usable rows.
+        agree, noans, split, recheck = [], [], [], []
+        for r in ru:
+            if r['core_z3'] != 'unsat':
+                recheck.append(r)
+            elif r['core_cvc5'] in ('unsat', 'NO-CVC5'):
+                agree.append(r)
+            elif r['core_cvc5'] == 'sat':
+                split.append(r)
+            else:
+                noans.append(r)
+        print(f'  REF-UNSAT rows                        {len(ru)}')
+        print(f'  z3 AND cvc5 both refute the core      {len(agree)}')
+        print(f'  cvc5 did NOT ANSWER (kept, flagged)   {len(noans)}')
+        print(f'  AUTHORITY-SPLIT, cvc5 says sat        {len(split)}'
+              f'   <- excluded; comparable denominator {len(agree) + len(split)}')
+        print(f'  z3 cannot re-check its OWN core       {len(recheck)}'
+              f'   <- excluded')
+        for r in (split + recheck)[:10]:
             print(f'    {r["file"]}  z3={r["core_z3"]} cvc5={r["core_cvc5"]}')
+        ok = agree + noans
         print(f'\n  haystack `conjuncts`  {quantiles([int(r["conjuncts"]) for r in ok])}')
         print(f'  `z3_core` (NOT minimal) {quantiles([int(r["z3_core"]) for r in ok if r["z3_core"].isdigit()])}')
         mini = [int(r['minimal']) for r in ok
