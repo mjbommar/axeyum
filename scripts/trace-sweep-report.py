@@ -85,10 +85,13 @@ def parse_log(path):
         elif line.startswith("; give-up "):
             rec["give_up"] = line
     # The route attribution comes off the shared reader, never off the prose
-    # (ADR-2101). This block used to `startswith("; route ")` and then
-    # `startswith("; partial route ")`, i.e. it knew the prefix convention --
-    # which is exactly the knowledge ADR-2075 showed every OTHER census in this
-    # repository lacked. Now nothing here knows it.
+    # (ADR-2101). This block used to match the complete route line and then the
+    # partial one, i.e. it knew the prefix convention -- which is exactly the
+    # knowledge ADR-2075 showed every OTHER census in this repository lacked.
+    # Now nothing here knows it, and the prefix literals live in exactly one
+    # place, the reader. Deliberately NOT spelled out above: a comment carrying
+    # the literal would make the 'who still owns the prefix' count answer
+    # itself, which is the class of defect this whole lane is about.
     try:
         trail = rtr.read_file(path)
     except rtr.RouteTraceError:
