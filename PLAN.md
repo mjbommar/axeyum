@@ -64881,11 +64881,24 @@ papered over.
 
 ## Branch point
 
-Branched at `e0efc4a5a`. `git merge-base main HEAD` is `e0efc4a5a`, which **is**
-`main`'s HEAD, so the base arm measures the tree that ships. Predicted
-post-merge value: **0 mispaired of 109**, unless another lane moves the string
-ladder or `STRING_MAX_LEN`; `replay_pairing_census --require-paired` exits
-nonzero on any regression.
+Branched at `e0efc4a5a`, which **was** `main`'s HEAD at branch time, so the base
+arm measures a tree that shipped. `main` then advanced to `5319c9fdf` (lane
+LRA-DENSE, [ADR-2055]) while this lane ran, so local `main` was **merged in**
+(`f7587d4b6`) and the merge base is now `5319c9fdf` = `main`'s HEAD. The only
+overlap was the two GENERATED files, which were regenerated rather than
+hand-resolved; LRA-DENSE touched `lra.rs`/`lra_online.rs`/`lra_theory.rs`/
+`simplex.rs` and this lane touched none of them.
+
+**Re-verified on the MERGED tree**, because two green branches can fail to
+compose: workspace check exit 0, `check-clippy-complete.sh` exit 0 at 889 of 889
+with 0 diagnostics, `cargo fmt --all --check` exit 0, `check-suite-gating.py` 39
+gated PASS, `check-merge-hygiene.sh` PASS, `replay_pairing_soundness` 11 passed,
+and the census still **0 mispaired of 109** with
+`--require-paired --expect-mismatch 0` exiting 0.
+
+Predicted post-merge value: **0 mispaired of 109**, unless a later lane moves
+the string ladder or `STRING_MAX_LEN`; `replay_pairing_census --require-paired`
+exits nonzero on any regression.
 
 ## Compute
 
