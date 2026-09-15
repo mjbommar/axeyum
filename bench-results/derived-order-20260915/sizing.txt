@@ -1,0 +1,123 @@
+loaded 400 rows from 2 sweeps; 0 flagged stale
+
+=== QF_NIA / Int -- top decider int-blast-ladder ===
+  rows                            199
+  decided                         84
+  decided BY int-blast-ladder     65
+  undecided (THE DENOMINATOR)     115
+  int-blast-ladder winning clock: median 339 ms, p75 2278 ms, n=65
+  undecided rows where it was NEVER reached          3
+  undecided rows where it got LESS than the median   44
+  undecided rows where it got the median or MORE     68
+  CEILING IN FILES = 47 of 115 undecided (40.9%)
+  -> five or more. A files gain is possible and must be measured.
+  --- the 47 candidate rows, by clock spent above int-blast-ladder ---
+      12146 ms above | got NEVER REACHED  | QF_NIA/20170427-VeryMax/ITS/From_T2__tqli.c.i.tqli.pl.t2.nor.t2.rlgfixed.t2__p25069_terminationG_0.smt2
+            nia-linearize=7208ms, int-real-relax=4659ms, dl-online=219ms
+      10913 ms above | got 85 ms          | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p1784_safety_0.smt2
+            nia-linearize=6583ms, int-real-relax=4316ms, dl-online=13ms
+      10848 ms above | got 249 ms         | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsValue.jar-obl-11__p32069_safety_0.smt2
+            nia-linearize=6732ms, int-real-relax=4069ms, dl-online=37ms
+      10842 ms above | got 215 ms         | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsValue.jar-obl-11__p32598_safety_0.smt2
+            nia-linearize=6730ms, int-real-relax=4061ms, dl-online=40ms
+      10833 ms above | got 299 ms         | QF_NIA/20170427-VeryMax/ITS/From_T2__firewire.t2__terminationS_13_0.smt2
+            nia-linearize=6721ms, int-real-relax=4044ms, dl-online=47ms
+      10808 ms above | got 248 ms         | QF_NIA/20170427-VeryMax/ITS/From_T2__rlft3.t2__p9106_terminationG_0.smt2
+            nia-linearize=6732ms, int-real-relax=4050ms, dl-online=21ms
+      10790 ms above | got 58 ms          | QF_NIA/20170427-VeryMax/SAT14/1166.smt2
+            nia-linearize=6671ms, int-real-relax=4005ms, dl-online=55ms
+      10782 ms above | got 138 ms         | QF_NIA/20170427-VeryMax/ITS/From_T2__janne_complex.t2__p2263_terminationG_0.smt2
+            nia-linearize=6732ms, int-real-relax=4020ms, dl-online=25ms
+      10775 ms above | got 51 ms          | QF_NIA/20170427-VeryMax/SAT14/687.smt2
+            nia-linearize=6662ms, int-real-relax=4004ms, dl-online=54ms
+      10770 ms above | got 138 ms         | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsKey.jar-obl-11__p30967_safety_0.smt2
+            nia-linearize=6713ms, int-real-relax=4028ms, dl-online=24ms
+      10768 ms above | got 212 ms         | QF_NIA/20170427-VeryMax/ITS/From_T2__n-40.t2__p4304_terminationG_0.smt2
+            nia-linearize=6708ms, int-real-relax=4042ms, dl-online=16ms
+      10767 ms above | got 72 ms          | QF_NIA/20170427-VeryMax/SAT14/1051.smt2
+            nia-linearize=6660ms, int-real-relax=4005ms, dl-online=59ms
+      10761 ms above | got 138 ms         | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsValue.jar-obl-11__p32332_safety_0.smt2
+            nia-linearize=6710ms, int-real-relax=4024ms, dl-online=22ms
+      10757 ms above | got 146 ms         | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsValue.jar-obl-11__p420_safety_0.smt2
+            nia-linearize=6707ms, int-real-relax=4024ms, dl-online=22ms
+      10757 ms above | got 204 ms         | QF_NIA/20170427-VeryMax/ITS/From_T2__afagp-fail.t2__p15482_terminationG_0.smt2
+            nia-linearize=6706ms, int-real-relax=4030ms, dl-online=19ms
+      10757 ms above | got 67 ms          | QF_NIA/20170427-VeryMax/SAT14/1509.smt2
+            nia-linearize=6673ms, int-real-relax=4011ms, dl-online=48ms
+      10756 ms above | got 132 ms         | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreatePut.jar-obl-10__p5428_safety_0.smt2
+            nia-linearize=6707ms, int-real-relax=4025ms, dl-online=19ms
+      10755 ms above | got 46 ms          | QF_NIA/20170427-VeryMax/SAT14/456.smt2
+            nia-linearize=6669ms, int-real-relax=4004ms, dl-online=41ms
+      10751 ms above | got 160 ms         | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreate.jar-obl-10__p4676_safety_0.smt2
+            nia-linearize=6704ms, int-real-relax=4021ms, dl-online=22ms
+      10750 ms above | got 139 ms         | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateClear.jar-obl-11__p30175_safety_0.smt2
+            nia-linearize=6705ms, int-real-relax=4025ms, dl-online=17ms
+      10750 ms above | got 156 ms         | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p2235_terminationG_0.smt2
+            nia-linearize=6679ms, int-real-relax=4024ms, dl-online=40ms
+      10748 ms above | got 151 ms         | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreate.jar-obl-10__p4943_safety_0.smt2
+            nia-linearize=6704ms, int-real-relax=4025ms, dl-online=16ms
+      10747 ms above | got 122 ms         | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreatePut.jar-obl-10__p6315_safety_0.smt2
+            nia-linearize=6701ms, int-real-relax=4021ms, dl-online=21ms
+      10744 ms above | got 104 ms         | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateClear.jar-obl-11__p29879_safety_0.smt2
+            nia-linearize=6702ms, int-real-relax=4023ms, dl-online=17ms
+      10743 ms above | got 134 ms         | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p2587_safety_0.smt2
+            nia-linearize=6697ms, int-real-relax=4023ms, dl-online=19ms
+      10742 ms above | got 104 ms         | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateClear.jar-obl-11__p30726_safety_0.smt2
+            nia-linearize=6701ms, int-real-relax=4024ms, dl-online=15ms
+      10742 ms above | got 117 ms         | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateSize.jar-obl-10__p7265_safety_0.smt2
+            nia-linearize=6701ms, int-real-relax=4024ms, dl-online=15ms
+      10739 ms above | got 101 ms         | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateClear.jar-obl-11__p30440_safety_0.smt2
+            nia-linearize=6697ms, int-real-relax=4025ms, dl-online=15ms
+      10733 ms above | got 135 ms         | QF_NIA/20170427-VeryMax/ITS/From_T2__sas2.t2__terminationQ_2_0.smt2
+            nia-linearize=6692ms, int-real-relax=4020ms, dl-online=18ms
+      10730 ms above | got 78 ms          | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__SortCount.jar-obl-10__terminationS_2_0.smt2
+            nia-linearize=6678ms, int-real-relax=4006ms, dl-online=32ms
+      10730 ms above | got 36 ms          | QF_NIA/20170427-VeryMax/SAT14/803.smt2
+            nia-linearize=6661ms, int-real-relax=4003ms, dl-online=34ms
+      10720 ms above | got NEVER REACHED  | QF_NIA/20170427-VeryMax/ITS/From_T2__rlft3.c.i.rlft3.pl.t2.fixed.t2__p8813_terminationG_0.smt2
+            nia-linearize=6684ms, int-real-relax=4020ms, dl-online=15ms
+      10719 ms above | got 78 ms          | QF_NIA/20170427-VeryMax/ITS/From_T2__ppblock.t2__p7749_edge_closing_0.smt2
+            nia-linearize=6679ms, int-real-relax=4022ms, dl-online=16ms
+      10718 ms above | got 46 ms          | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreatePut.jar-obl-10__p5722_safety_0.smt2
+            nia-linearize=6689ms, int-real-relax=4010ms, dl-online=17ms
+      10717 ms above | got 25 ms          | QF_NIA/20170427-VeryMax/SAT14/106.smt2
+            nia-linearize=6670ms, int-real-relax=4003ms, dl-online=26ms
+      10714 ms above | got 79 ms          | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreate.jar-obl-10__p4414_safety_0.smt2
+            nia-linearize=6683ms, int-real-relax=4013ms, dl-online=16ms
+      10714 ms above | got 78 ms          | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsKey.jar-obl-11__p31541_safety_0.smt2
+            nia-linearize=6679ms, int-real-relax=4021ms, dl-online=12ms
+      10713 ms above | got 42 ms          | QF_NIA/20170427-VeryMax/SAT14/1623.smt2
+            nia-linearize=6669ms, int-real-relax=4004ms, dl-online=27ms
+      10711 ms above | got 89 ms          | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateSize.jar-obl-10__p7535_safety_0.smt2
+            nia-linearize=6680ms, int-real-relax=4014ms, dl-online=15ms
+      10710 ms above | got 81 ms          | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsKey.jar-obl-11__p31818_safety_0.smt2
+            nia-linearize=6675ms, int-real-relax=4021ms, dl-online=13ms
+      10710 ms above | got 83 ms          | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateRemove.jar-obl-11__p6984_safety_0.smt2
+            nia-linearize=6680ms, int-real-relax=4014ms, dl-online=14ms
+      10704 ms above | got 74 ms          | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateIteratorEntryLoop.jar-obl-12__p3150_safety_0.smt2
+            nia-linearize=6675ms, int-real-relax=4016ms, dl-online=12ms
+      10698 ms above | got 43 ms          | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsKey.jar-obl-11__p31253_safety_0.smt2
+            nia-linearize=6673ms, int-real-relax=4009ms, dl-online=14ms
+      10698 ms above | got 35 ms          | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateRemove.jar-obl-11__p6637_safety_0.smt2
+            nia-linearize=6672ms, int-real-relax=4010ms, dl-online=14ms
+       4465 ms above | got 241 ms         | QF_NIA/20210219-Dartagnan/ReachSafety-Loops/geo1-u_valuebound2-O0.smt2
+            int-real-relax=4143ms, dl-online=208ms, nia-linearize=49ms
+       1941 ms above | got NEVER REACHED  | QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p2868_edge_closing_0.smt2
+            dl-online=1576ms, fd:parse=162ms, lia-simplex=99ms
+         24 ms above | got 0 ms           | QF_NIA/20230328-sqrtmodinv-hoenicke/sqrtStep6a.smt2
+            nia-linearize=24ms
+
+=== UFNIA / Int|Function -- top decider q:skolem-qf ===
+  rows                            30
+  decided                         24
+  decided BY q:skolem-qf          24
+  undecided (THE DENOMINATOR)     6
+  q:skolem-qf winning clock: median 0 ms, p75 0 ms, n=24
+  undecided rows where it was NEVER reached          0
+  undecided rows where it got LESS than the median   0
+  undecided rows where it got the median or MORE     6
+  CEILING IN FILES = 0 of 6 undecided (0.0%)
+  -> UNDER FIVE. This class is a TIME SAVING, not a gain.
+  --- the 0 candidate rows, by clock spent above q:skolem-qf ---
+
+wrote bench-results/derived-order-20260915/sizing.tsv

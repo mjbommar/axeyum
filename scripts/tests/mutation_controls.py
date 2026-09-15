@@ -10840,5 +10840,72 @@ SUITES["quant-continuation-bound"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `derived-ladder-order` (ADR-2106) -- the nonlinear-integer tail's rung ORDER.
+#
+# The order is a TABLE (`int_tail_order::HAND` / `::DERIVED`) rather than the
+# sequence of `if let` blocks, so an interleaved A/B gets both arms out of one
+# binary.  Two things that table has to keep true, and neither is checked by
+# the compiler:
+#
+#   1. `DERIVED` is the order `bench-results/derived-order-20260915/derive.py`
+#      computed from ADR-2102's ledger.  Its guard reads the committed
+#      `derived-order.tsv` through `include_str!` rather than carrying a
+#      literal, so it measures the derivation and not the maintainer's memory.
+#   2. `HAND` reproduces the pre-ADR-2106 control flow byte for byte, INCLUDING
+#      the three deadline strings and where they fire.  A control arm that is
+#      not the old behaviour makes every A/B number meaningless.
+#
+# The other three ADR-2106 tests are deliberately blind to both -- the
+# permutation check sorts, the lever check tests spelling, the label check
+# tests the trail vocabulary -- so each mutation below kills exactly one.  Six
+# of seven guards in one suite here were once removable because they all
+# rejected through one shared check.
+# --------------------------------------------------------------------------
+
+SUITES["derived-ladder-order"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            "--",
+            "int_tail",
+            "derived_order",
+            "ladder_order",
+            "hand_order",
+            "every_order",
+        ),
+        "derived-ladder-order",
+    ),
+    [
+        (
+            # Swap the derived order's first two rungs.  Still a permutation,
+            # still different from `HAND`, still the same labels -- so the
+            # three order-blind guards cannot see it, and only the guard that
+            # reads the committed derivation can.
+            "the derived order IS the order the ledger derived",
+            "    pub(crate) const DERIVED: [IntTailRoute; 6] = [\n"
+            "        IntTailRoute::IntBlastLadder,\n"
+            "        IntTailRoute::NiaLinearize,",
+            "    pub(crate) const DERIVED: [IntTailRoute; 6] = [\n"
+            "        IntTailRoute::NiaLinearize,\n"
+            "        IntTailRoute::IntBlastLadder,",
+        ),
+        (
+            # Move one of the control arm's three deadline strings off the rung
+            # it followed.  The A/B's `hand` arm stops being the pre-ADR-2106
+            # behaviour, and the reason a user reads on an `unknown` changes.
+            "the control arm's deadline checks are where they were",
+            'Self::CasIdeal => Some("auto-dispatch timeout after exact bounded integer blast"),',
+            'Self::CasIdeal => Some("auto-dispatch timeout after the CAS ideal refuter"),',
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))

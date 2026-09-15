@@ -1,0 +1,3 @@
+division	features	decider	rows	decided	decided_by_decider	undecided	win_ms_median	win_ms_p75	never_reached	reached_under_median	reached_at_or_over_median	ceiling_files	ceiling_pct_of_undecided
+QF_NIA	Int	int-blast-ladder	199	84	65	115	339	2278	3	44	68	47	40.9
+UFNIA	Int|Function	q:skolem-qf	30	24	24	6	0	0	0	0	6	0	0.0

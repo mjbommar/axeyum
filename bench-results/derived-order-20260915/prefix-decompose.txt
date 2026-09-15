@@ -1,0 +1,32 @@
+=== QF_NIA / Int -- int-blast-ladder, 65 rows it decided ===
+  rows where int-blast-ladder appears MORE THAN ONCE on the trail: 0
+  BEFORE its first trail entry (reorderable): 631307 ms (9712.4 ms/file)
+  BETWEEN its first entry and its decision (its OWN work): 0 ms (0.0 ms/file)
+  the ledger-structure README's prefix_cost_ms = the SUM: 631307 ms
+  of the reorderable half, inside the window: 628792 ms (9673.7 ms/file)
+  top routes BEFORE its first entry:
+    nia-linearize                    373384 ms [in window]
+    int-real-relax                   255071 ms [in window]
+    dl-online                          2099 ms
+    nia-bounded-blast                   329 ms [in window]
+    fd:parse                            223 ms
+    lia-simplex                          89 ms
+
+=== UFNIA / Int|Function -- q:skolem-qf, 24 rows it decided ===
+  rows where q:skolem-qf appears MORE THAN ONCE on the trail: 24
+  BEFORE its first trail entry (reorderable): 0 ms (0.0 ms/file)
+  BETWEEN its first entry and its decision (its OWN work): 126764 ms (5281.8 ms/file)
+  the ledger-structure README's prefix_cost_ms = the SUM: 126764 ms
+  of the reorderable half, inside the window: 0 ms (0.0 ms/file)
+  top routes BEFORE its first entry:
+    fd:parse                              0 ms
+    q:ground-subset                       0 ms [in window]
+    q:bool-skeleton                       0 ms [in window]
+  top routes INSIDE its own hand-off:
+    uf-arith-online                  113777 ms
+    uf-arithmetic                     11244 ms
+    nia-linearize                      1700 ms
+    int-blast-ladder                     43 ms
+    probe                                 0 ms
+    cas-int-units                         0 ms
+

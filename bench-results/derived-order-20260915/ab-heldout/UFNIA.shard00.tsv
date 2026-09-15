@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+UFNIA/2019-Preiner/combined/t3_rw1275.smt2	unknown	25133	0	unknown	24331	0	A	unknown
+UFNIA/2019-Preiner/combined/t3_rw583.smt2	unknown	24432	0	unknown	24831	0	B	unknown
+UFNIA/2019-Preiner/full/t3_rw1311.smt2	unknown	13821	0	unknown	13519	0	A	unknown
+UFNIA/2019-Preiner/full/t3_rw464.smt2	unknown	22828	0	unknown	22128	0	B	unknown
+UFNIA/2019-Preiner/partial/t3_rw1125.smt2	unknown	24431	0	unknown	24733	0	A	unknown
+UFNIA/2019-Preiner/partial/t3_rw1540.smt2	unknown	24227	0	unknown	24427	0	B	unknown
+UFNIA/2019-Preiner/qf/f2_rw268.smt2	unknown	24029	0	unknown	24028	0	A	unknown
+UFNIA/2019-Preiner/qf/t3_rw314.smt2	sat	207	0	sat	207	0	B	unknown
+UFNIA/2019-Preiner/qf/t3_rw951.smt2	sat	8014	0	sat	7413	0	A	unknown
+UFNIA/2019-Zohar-ic/combined/int_check_bvsgt_bvneg_ltr_inv_g.smt2	unknown	24230	0	unknown	24128	0	B	unknown
+UFNIA/2019-Zohar-ic/partial/int_check_bvsgt_bvnot_ltr_inv_g.smt2	unknown	24127	0	unknown	24131	0	A	unknown
+UFNIA/lahiri-cav09-storm-queries/serial_write_example_3_2.smt2	unknown	107	0	unknown	207	0	B	unsat
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.666186.smt2	unknown	13320	0	unknown	24129	0	A	unsat
+UFNIA/sledgehammer/TwoSquares/z3.734302.smt2	unsat	107	0	unsat	108	0	B	unsat
+UFNIA/spec_sharp/test14-Microsoft.Boogie.FlowedValue.Type.28.Microsoft.Boogie.FlowedValue.Type.Boogie.ContractConsistencyCheck.get_IsAddrOf.smt2	unsat	1609	0	unsat	1709	0	A	unsat
+UFNIA/vcc-havoc/havoc-bench_005.1.main.smt2	unknown	12920	0	unknown	12019	0	B	unsat

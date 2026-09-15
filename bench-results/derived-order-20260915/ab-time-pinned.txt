@@ -1,0 +1,25 @@
+division      both  A total s  B total s   saved s  A med ms  B med ms  B faster  B slower
+QF_NIA          75      767.9      129.0    +638.9     10918       407        71         1
+UFNIA           51      137.5      162.6     -25.0       208       209         6        12
+
+largest per-file clock differences on rows BOTH arms decide (positive = B faster):
+    +13313 ms  QF_NIA     A= 13620 B=   307  QF_NIA/AProVE/aproveSMT8300370999791707493.smt2
+    +12508 ms  QF_NIA     A= 23826 B= 11318  QF_NIA/20170427-VeryMax/ITS/From_T2__apchild-live.t2_fixed__p16479_terminationG_0.smt2
+    +11608 ms  QF_NIA     A= 17720 B=  6112  QF_NIA/20170427-VeryMax/ITS/From_T2__polling.t2_fixed__p7335_terminationG_0.smt2
+    +11407 ms  QF_NIA     A= 16419 B=  5012  QF_NIA/20170427-VeryMax/ITS/From_T2__fun1.t2_fixed__p697_terminationG_0.smt2
+    +11211 ms  QF_NIA     A= 17524 B=  6313  QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__LessLeaves.jar-obl-10__p10018_edge_closing_0.smt2
+    +11210 ms  QF_NIA     A= 14421 B=  3211  QF_NIA/20170427-VeryMax/ITS/From_T2__s1.t2_fixed__p15159_terminationG_0.smt2
+    +11111 ms  QF_NIA     A= 14721 B=  3610  QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p7725_safety_0.smt2
+    +11109 ms  QF_NIA     A= 12919 B=  1810  QF_NIA/AProVE/aproveSMT2449356678853584219.smt2
+    +11011 ms  QF_NIA     A= 12521 B=  1510  QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__Et3.jar-obl-9__p28829_terminationG_0.smt2
+    +10912 ms  QF_NIA     A= 14624 B=  3712  QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8261_safety_0.smt2
+    +10813 ms  QF_NIA     A= 11321 B=   508  QF_NIA/20170427-VeryMax/ITS/From_T2__s1-striped.t2__p14253_safety_0.smt2
+    +10812 ms  QF_NIA     A= 14123 B=  3311  QF_NIA/20170427-VeryMax/ITS/From_T2__s1.t2__p20015_safety_0.smt2
+    +10810 ms  QF_NIA     A= 11517 B=   707  QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__GCD.c__p23185_terminationG_0.smt2
+    +10810 ms  QF_NIA     A= 13121 B=  2311  QF_NIA/20170427-VeryMax/ITS/From_T2__mc91test.t2__p3142_terminationG_0.smt2
+    +10810 ms  QF_NIA     A= 11218 B=   408  QF_NIA/20170427-VeryMax/ITS/From_T2__broydn.c.i.broydn.pl.t2.fixed.t2__term_unfeasibility_3_0.smt2
+    +10807 ms  QF_NIA     A= 11116 B=   309  QF_NIA/20170427-VeryMax/ITS/From_T2__zlib-adler32.c.t2__p25902_terminationG_0.smt2
+    +10807 ms  QF_NIA     A= 11616 B=   809  QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__Velroyen08-middle.jar-obl-8__p14206_terminationG_0.smt2
+    +10712 ms  QF_NIA     A= 11121 B=   409  QF_NIA/20170427-VeryMax/ITS/From_T2__s1.t2__p19291_safety_0.smt2
+    +10712 ms  QF_NIA     A= 10921 B=   209  QF_NIA/20170427-VeryMax/ITS/From_T2__consts5nt.t2__p18457_edge_closing_0.smt2
+    +10712 ms  QF_NIA     A= 13122 B=  2410  QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8434_safety_0.smt2

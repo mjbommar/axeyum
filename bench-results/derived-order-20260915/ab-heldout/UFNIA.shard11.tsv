@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+UFNIA/2019-Preiner/combined/t3_rw1214.smt2	unknown	24323	0	unknown	24223	0	A	unknown
+UFNIA/2019-Preiner/combined/t3_rw519.smt2	unknown	24126	0	unknown	24428	0	B	unknown
+UFNIA/2019-Preiner/full/t3_rw1123.smt2	unknown	23127	0	unknown	22329	0	A	unknown
+UFNIA/2019-Preiner/full/t3_rw363.smt2	unknown	25025	0	unknown	24028	0	B	unknown
+UFNIA/2019-Preiner/partial/t3_rw1052.smt2	unknown	24225	0	unknown	24123	0	A	unknown
+UFNIA/2019-Preiner/partial/t3_rw1519.smt2	unknown	24319	0	unknown	24224	0	B	unknown
+UFNIA/2019-Preiner/qf/f2_rw225.smt2	sat	108	0	sat	108	0	A	unknown
+UFNIA/2019-Preiner/qf/t3_rw301.smt2	sat	12814	0	sat	13013	0	B	unknown
+UFNIA/2019-Preiner/qf/t3_rw941.smt2	sat	608	0	sat	609	0	A	unknown
+UFNIA/2019-Zohar-ic/combined/int_check_bvsgt_bvashr1_rtl.smt2	unknown	24121	0	unknown	24126	0	B	unknown
+UFNIA/2019-Zohar-ic/full/int_check_ne_bvashr1_rtl.smt2	unknown	24022	0	unknown	25023	0	A	unknown
+UFNIA/lahiri-cav09-storm-queries/mqueue_example_cegar_2_1_10.smt2	unknown	25124	0	unknown	25125	0	B	unsat
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.595384.smt2	unknown	20124	0	unknown	24122	0	A	unsat
+UFNIA/sledgehammer/TwoSquares/z3.591556.smt2	unknown	711	0	unknown	413	0	B	unsat
+UFNIA/spec_sharp/test14-DafnyAst.ssc.2.Microsoft.Dafny.Attributes.Argument.SpecSharp.CheckInvariant_System.Boolean.smt2	unknown	25124	0	unknown	25126	0	A	unsat
+UFNIA/vcc-havoc/baby.56.reset_guest.smt2	unknown	13620	0	unknown	13721	0	B	unsat

@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+UFNIA/2019-Preiner/combined/t3_rw1079.smt2	unknown	25033	0	unknown	25130	0	A	unknown
+UFNIA/2019-Preiner/combined/t3_rw437.smt2	unknown	24330	0	unknown	24227	0	B	unknown
+UFNIA/2019-Preiner/full/f2_rw73.smt2	unsat	609	0	unknown	15520	0	A	unknown
+UFNIA/2019-Preiner/full/t3_rw306.smt2	unknown	24720	0	unknown	24024	0	B	unknown
+UFNIA/2019-Preiner/partial/f2_rw424.smt2	unsat	109	0	unsat	108	0	A	unknown
+UFNIA/2019-Preiner/partial/t3_rw1414.smt2	unknown	24124	0	unknown	24229	0	B	unknown
+UFNIA/2019-Preiner/qf/f2_rw192.smt2	sat	210	0	sat	210	0	A	unknown
+UFNIA/2019-Preiner/qf/t3_rw1515.smt2	sat	12917	0	sat	18320	0	B	unknown
+UFNIA/2019-Preiner/qf/t3_rw920.smt2	sat	9617	0	sat	9315	0	A	unknown
+UFNIA/2019-Zohar-alive/partial/partial_InstCombineShift497d_values_0.smt2	unknown	24126	0	unknown	24123	0	B	unknown
+UFNIA/2019-Zohar-ic/full/int_check_bvuge_bvurem1_ltr_inv_g.smt2	unknown	24025	0	unknown	24021	0	A	unknown
+UFNIA/20190909-CLEARSY/0016/00771.smt2	unknown	4612	0	unknown	4512	0	B	unsat
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.1388448.smt2	unknown	15720	0	unknown	24121	0	A	unknown
+UFNIA/sledgehammer/QEpres/z3.875411.smt2	unsat	107	0	unsat	108	0	B	unsat
+UFNIA/spec_sharp/test14-CommandLineOptions.ssc.14.Microsoft.Boogie.CommandLineOptions.Boogie.ContractConsistencyCheck.get_ToolName.smt2	unknown	108	0	unknown	109	0	A	unsat
+UFNIA/vcc-havoc/baby.2.48.handle_illegal.smt2	unknown	14816	0	unknown	14818	0	B	unsat
