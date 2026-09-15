@@ -1,0 +1,2 @@
+INSTANCE 0	(typeof XRES_174.11_174.11)	T_java.io.FileNotFoundException	T_java.lang.Exception
+INSTANCE 1	T_java.io.FileNotFoundException	T_java.io.IOException	T_java.lang.Exception

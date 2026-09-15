@@ -1,0 +1,11 @@
+INSTANCE 0	?p_!4
+INSTANCE 1	?p_!4
+INSTANCE 2	?p_!4
+INSTANCE 3	Heap_0_	this	inv_	this	localinv_	InternalSubClass
+INSTANCE 4	Heap_0_	this	inv_	InternalSubClass
+INSTANCE 5	this
+INSTANCE 6	Heap_0_	this	inv_	?o_!5	ownerFrame_	InternalSubClass
+INSTANCE 7	?o_!5
+INSTANCE 8	Heap_0_	this	inv_	?o_!5	ownerRef_	InternalSubClass
+INSTANCE 9	Heap_0_	this	inv_	this	sharingMode_	InternalSubClass
+INSTANCE 10	this	InternalSubClass

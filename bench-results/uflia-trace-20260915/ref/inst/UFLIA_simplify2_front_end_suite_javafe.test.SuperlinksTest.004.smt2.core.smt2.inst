@@ -1,0 +1,6 @@
+INSTANCE 0	RES_86.1_0_87.37_87.37	T_javafe.ast.TypeDecl
+INSTANCE 1	this
+INSTANCE 2	this
+INSTANCE 3	this
+INSTANCE 4	RES_86.1_0_87.37_87.37	T_javafe.ast.TypeDecl
+INSTANCE 5	T_javafe.ast.TypeDecl	T_javafe.ast.ASTNode	T_java.lang.Object
