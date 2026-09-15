@@ -1,0 +1,45 @@
+
+===== cargo fmt --all --check =====
+fmt: exit 0
+
+===== cargo check --workspace --all-targets =====
+    Checking axeyum-wasm v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-wasm)
+    Checking axeyum-py v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-py)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 04s
+
+===== cargo check -p axeyum-solver --all-targets (DEFAULT features) =====
+warning: `axeyum-solver` (test "replay_pairing_soundness") generated 1 warning
+warning: `axeyum-solver` (lib test) generated 14 warnings (14 duplicates)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 16.59s
+
+===== RUSTDOCFLAGS=-D warnings cargo doc --workspace --all-features --no-deps =====
+ Documenting axeyum-wasm v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-wasm)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 12s
+   Generated /data0/axeyum/lemma-input-target-gate/doc/axeyum_aig/index.html and 40 other files
+
+===== cargo test -p axeyum-solver --features full --test corpus_regression =====
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.96s
+
+===== cargo test -p axeyum-solver --lib --features full -- --test-threads=4 =====
+test result: ok. 1789 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 297.52s
+
+===== cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1 =====
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 215.34s
+
+===== scripts/check-merge-hygiene.sh =====
+      --example shape_search
+  kernel-dependency-projection staleness: SKIPPED (no live declaration count on hand)
+  Guard 7 was skipped, unavailable, or printed no coverage line this run --
+  not a finding about the projection either way.
+MERGE_HYGIENE|markers=0|adr_index=ok|generated=current|creal_steps_table=current|py_prelude_fields=current|shape_census=current|pinned_inventories=n/a-empty (no live pin sites; see the note above)|import_backlog=ok|production_provenance=ok|theorem_ledger_consistency=ok|shape_duplicates=skipped(no-binary)|partition_edges=ok|kernel_projection=not-answerable|PASS
+
+===== python3 scripts/check-suite-gating.py =====
+SUITE_GATING|suites=340|gated=40|excused=302|unreviewed_backlog=302|PASS
+
+===== python3 scripts/check-config-registry-staleness.py =====
+      f6303ee7a 2026-09-14 fix(lra): the give-up variant cannot lie any more -- and the overflow was never a timeout
+      ... 1 more (--verbose)
+
+Re-take the measurement, or narrow the entry's `rests_on` if the change cannot affect it. Do NOT simply move the date.
+
+===== gate battery rc=0 =====

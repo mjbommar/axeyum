@@ -1,0 +1,31 @@
+== BASELINE (no mutation) ==
+baseline: test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 1785 filtered out; finished in 0.03s
+  tests executed: 4
+
+== M1: the index skips one eligible partner (off by one) ==
+M1: test result: FAILED. 1 passed; 3 failed; 0 ignored; 0 measured; 1785 filtered out; finished in 0.02s
+  DIED: test dpll_lia::tests::the_cached_bound_vector_equals_a_full_rescan ... FAILED
+  DIED: test dpll_lia::tests::the_indexed_bound_scan_matches_the_quadratic_scan_pair_for_pair ... FAILED
+  DIED: test dpll_lia::tests::the_indexed_refresh_seeds_exactly_the_clauses_a_full_rebuild_does ... FAILED
+  DIED: test result: FAILED. 1 passed; 3 failed; 0 ignored; 0 measured; 1785 filtered out; finished in 0.02s
+  tests executed: 4
+
+== M2: the lookup reads a different group than the insert wrote ==
+M2: test result: FAILED. 2 passed; 2 failed; 0 ignored; 0 measured; 1785 filtered out; finished in 0.03s
+  DIED: test dpll_lia::tests::the_indexed_bound_scan_matches_the_quadratic_scan_pair_for_pair ... FAILED
+  DIED: test dpll_lia::tests::the_indexed_refresh_seeds_exactly_the_clauses_a_full_rebuild_does ... FAILED
+  DIED: test result: FAILED. 2 passed; 2 failed; 0 ignored; 0 measured; 1785 filtered out; finished in 0.03s
+  tests executed: 4
+
+== M3: the cached extraction re-reads from zero instead of the suffix ==
+M3: test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 1785 filtered out; finished in 0.05s
+  DIED: test dpll_lia::tests::the_cached_bound_vector_equals_a_full_rescan ... FAILED
+  DIED: test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 1785 filtered out; finished in 0.05s
+  tests executed: 4
+
+== M4: the unchanged-atom-count early return is deleted ==
+   (expected to kill NOTHING -- see the header)
+M4: test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 1785 filtered out; finished in 0.03s
+  tests executed: 4
+
+restored pristine source

@@ -1,0 +1,69 @@
+config registry: 488 entries, 100 dated, 388 undated (79%).
+
+STALE: 11 dated justification(s) predate a change to the code they protect.
+
+  crates/axeyum-solver/src/auto.rs::ABV_ONLINE_LADDER_RESERVE_SHARE
+    measured 2026-09-08 (docs/research/12-performance/ladder-budget-discipline-2026-09-08.md), rests on crates/axeyum-solver/src/auto.rs::dispatch_abv_online
+    but crates/axeyum-solver/src/auto.rs::dispatch_abv_online changed 1 time(s) since:
+      b47972ab9 2026-09-13 fix(dispatch): a GROUND ladder rung's refusal is a decline too -- ADR-1927 was not exhaustive
+
+  crates/axeyum-solver/src/auto.rs::ABV_ONLINE_LADDER_RESERVE_SHARE
+    measured 2026-09-08 (docs/research/12-performance/ladder-budget-discipline-2026-09-08.md), rests on crates/axeyum-solver/src/auto.rs::dispatch_array_fast_paths
+    but crates/axeyum-solver/src/auto.rs::dispatch_array_fast_paths changed 1 time(s) since:
+      b47972ab9 2026-09-13 fix(dispatch): a GROUND ladder rung's refusal is a decline too -- ADR-1927 was not exhaustive
+
+  crates/axeyum-solver/src/dpll_lia.rs::MAX_MODERATE_PRE_SAT_ARITH_ATOMS
+    measured 2026-09-08 (docs/research/12-performance/admission-limit-basis-2026-09-08.md), rests on crates/axeyum-solver/src/dpll_lia.rs::MAX_MODERATE_PRE_SAT_ARITH_ATOMS
+    but crates/axeyum-solver/src/dpll_lia.rs::MAX_MODERATE_PRE_SAT_ARITH_ATOMS changed 1 time(s) since:
+      a4642ce8d 2026-09-14 feat(lia): make the pre-SAT skeleton envelope measurable from one binary (ADR-2020)
+
+  crates/axeyum-solver/src/dpll_lia.rs::MAX_MODERATE_PRE_SAT_CNF_VARS
+    measured 2026-09-08 (docs/research/12-performance/admission-limit-basis-2026-09-08.md), rests on crates/axeyum-solver/src/dpll_lia.rs::MAX_MODERATE_PRE_SAT_CNF_VARS
+    but crates/axeyum-solver/src/dpll_lia.rs::MAX_MODERATE_PRE_SAT_CNF_VARS changed 1 time(s) since:
+      a4642ce8d 2026-09-14 feat(lia): make the pre-SAT skeleton envelope measurable from one binary (ADR-2020)
+
+  crates/axeyum-solver/src/dpll_lia.rs::MAX_PRE_SAT_CNF_VARS
+    measured 2026-09-08 (docs/research/12-performance/admission-limit-basis-2026-09-08.md), rests on crates/axeyum-solver/src/dpll_lia.rs::MAX_PRE_SAT_CNF_VARS
+    but crates/axeyum-solver/src/dpll_lia.rs::MAX_PRE_SAT_CNF_VARS changed 1 time(s) since:
+      a4642ce8d 2026-09-14 feat(lia): make the pre-SAT skeleton envelope measurable from one binary (ADR-2020)
+
+  crates/axeyum-solver/src/lra_route.rs::SIMPLEX_FIRST_AT_CONSTRAINTS
+    measured 2026-09-08 (docs/research/12-performance/lra-route-and-cube-order-2026-09-08.md), rests on crates/axeyum-solver/src/lra.rs::decide_within
+    but crates/axeyum-solver/src/lra.rs::decide_within changed 3 time(s) since:
+      ac43d6031 2026-09-14 fix(lra): clippy unnecessary_wraps on the test's expired-deadline helper
+      0e7057f4f 2026-09-14 test(lra): pin every give-up reason to the producer that makes it
+      ee36e0421 2026-09-12 fix(lra,simplex): the one-shot simplex entry passed the literal `None` for its deadline
+
+  crates/axeyum-solver/src/lra_route.rs::SIMPLEX_FIRST_AT_CONSTRAINTS
+    measured 2026-09-08 (docs/research/12-performance/lra-route-and-cube-order-2026-09-08.md), rests on crates/axeyum-solver/src/lra.rs::simplex_fallback
+    but crates/axeyum-solver/src/lra.rs::simplex_fallback changed 4 time(s) since:
+      ac43d6031 2026-09-14 fix(lra): clippy unnecessary_wraps on the test's expired-deadline helper
+      0e7057f4f 2026-09-14 test(lra): pin every give-up reason to the producer that makes it
+      f6303ee7a 2026-09-14 fix(lra): the give-up variant cannot lie any more -- and the overflow was never a timeout
+      ... 1 more (--verbose)
+
+  crates/axeyum-solver/src/qinst_egraph.rs::MAX_GROUND_TERMS
+    measured 2026-09-09 (docs/research/12-performance/uf-quantified-loss-attribution-2026-09-09.md), rests on crates/axeyum-solver/src/qinst_egraph.rs::GroundBudget
+    but crates/axeyum-solver/src/qinst_egraph.rs::GroundBudget changed 2 time(s) since:
+      887be7d43 2026-09-10 measure(qinst): DO NOT BUILD the Skolem priming -- the term arrives, the verdict does not, and i
+      08358e18e 2026-09-10 feat(qinst): prime the Skolem application before the loop, where the flood cannot gate it
+
+  crates/axeyum-solver/src/simplex.rs::MAX_TABLEAU_CELLS
+    measured 2026-09-08 (docs/research/12-performance/ladder-budget-discipline-2026-09-08.md), rests on crates/axeyum-solver/src/simplex.rs::MAX_TABLEAU_CELLS
+    but crates/axeyum-solver/src/simplex.rs::MAX_TABLEAU_CELLS changed 1 time(s) since:
+      4abc994a0 2026-09-14 feat(simplex): give the offline LRA route a sparse entry, and a cell cap that can be measured
+
+  crates/axeyum-solver/src/simplex.rs::MAX_TABLEAU_CELLS
+    measured 2026-09-08 (docs/research/12-performance/ladder-budget-discipline-2026-09-08.md), rests on crates/axeyum-solver/src/lra.rs::simplex_admission
+    but crates/axeyum-solver/src/lra.rs::simplex_admission changed 1 time(s) since:
+      f6303ee7a 2026-09-14 fix(lra): the give-up variant cannot lie any more -- and the overflow was never a timeout
+
+  crates/axeyum-solver/src/simplex.rs::MAX_TABLEAU_CELLS
+    measured 2026-09-08 (docs/research/12-performance/ladder-budget-discipline-2026-09-08.md), rests on crates/axeyum-solver/src/lra.rs::simplex_fallback
+    but crates/axeyum-solver/src/lra.rs::simplex_fallback changed 4 time(s) since:
+      ac43d6031 2026-09-14 fix(lra): clippy unnecessary_wraps on the test's expired-deadline helper
+      0e7057f4f 2026-09-14 test(lra): pin every give-up reason to the producer that makes it
+      f6303ee7a 2026-09-14 fix(lra): the give-up variant cannot lie any more -- and the overflow was never a timeout
+      ... 1 more (--verbose)
+
+Re-take the measurement, or narrow the entry's `rests_on` if the change cannot affect it. Do NOT simply move the date.

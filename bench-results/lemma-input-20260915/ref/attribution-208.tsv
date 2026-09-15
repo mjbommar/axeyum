@@ -1,0 +1,208 @@
+AUFLIRA/nasa/fol_simplify_array_only/gauss_array_0490.fof.smt2	unsat	0	12692	NOREAD
+AUFLIRA/nasa/fol_simplify_array_only/gauss_array_0289.fof.smt2	unsat	0	13036	NOREAD
+AUFLIRA/nasa/fol_simplify_structure_prop/gauss_array_0013.fof.smt2	unsat	0	13008	NOREAD
+AUFLIRA/nasa/fol_simplify_structure_prop/quaternion_ds1_inuse_0013.fof.smt2	unsat	0	13396	NOREAD
+AUFLIRA/nasa/fol_simplify_array_only/gauss_array_0390.fof.smt2	unsat	0	13140	NOREAD
+AUFLIRA/nasa/fol_simplify/gauss_init_0292.fof.smt2	unsat	0	12960	NOREAD
+UFNIA/2019-Preiner/combined/f2_rw1.smt2	unsat	0	15892	NOREAD
+UFNIA/2019-Preiner/combined/f2_rw403.smt2	unsat	0	16164	NOREAD
+UFNIA/2019-Preiner/combined/f2_rw220.smt2	unsat	0	21980	NOREAD
+UFNIA/2019-Preiner/combined/f2_rw282.smt2	unsat	0	22812	NOREAD
+UFNIA/20190909-CLEARSY/0023/00302.smt2	unknown	0	219180	calls=52 mutex_ms=1 impl_ms=5 extract_ms=0 pair_iters=366306 pair_expr_ok=584 max_atoms=284 max_bounds=128 cap_hits=0
+UFNIA/2019-Preiner/combined/f2_rw77.smt2	unknown	0	586620	calls=30 mutex_ms=98 impl_ms=2 extract_ms=7 pair_iters=88578224 pair_expr_ok=7488 max_atoms=8495 max_bounds=9378 cap_hits=0
+UFNIA/2019-Preiner/combined/f2_rw343.smt2	unknown	0	1469444	calls=38 mutex_ms=99 impl_ms=0 extract_ms=2 pair_iters=282964162 pair_expr_ok=11608 max_atoms=14853 max_bounds=16802 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw1037.smt2	unknown	0	738944	calls=102 mutex_ms=179 impl_ms=6 extract_ms=6 pair_iters=163023642 pair_expr_ok=14710 max_atoms=11369 max_bounds=12726 cap_hits=0
+UFNIA/2019-Preiner/combined/f2_rw160.smt2	unknown	0	585336	calls=26 mutex_ms=116 impl_ms=0 extract_ms=7 pair_iters=88335868 pair_expr_ok=6370 max_atoms=8495 max_bounds=9378 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw1098.smt2	unknown	0	659156	calls=49 mutex_ms=1044 impl_ms=0 extract_ms=26 pair_iters=941433357 pair_expr_ok=25552 max_atoms=19365 max_bounds=21690 cap_hits=0
+UFLIA/simplify2/front_end_suite/javafe.ast.StandardPrettyPrint.008.smt2	unknown	0	244588	calls=34 mutex_ms=6 impl_ms=0 extract_ms=6 pair_iters=1416 pair_expr_ok=26 max_atoms=19240 max_bounds=30 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw1159.smt2	unknown	0	1401840	calls=63 mutex_ms=148 impl_ms=1 extract_ms=3 pair_iters=283131750 pair_expr_ok=13054 max_atoms=14866 max_bounds=16808 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw1401.smt2	unknown	0	862456	calls=26 mutex_ms=44 impl_ms=0 extract_ms=2 pair_iters=88338248 pair_expr_ok=6378 max_atoms=8495 max_bounds=9378 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw122.smt2	unknown	0	1228756	calls=32 mutex_ms=253 impl_ms=0 extract_ms=6 pair_iters=471145246 pair_expr_ok=13386 max_atoms=18986 max_bounds=21692 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw1280.smt2	unknown	0	661432	calls=82 mutex_ms=463 impl_ms=2 extract_ms=21 pair_iters=849939795 pair_expr_ok=35548 max_atoms=15220 max_bounds=16816 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw29.smt2	unsat	0	17532	NOREAD
+UFNIA/2019-Preiner/combined/t3_rw1463.smt2	unknown	0	713304	calls=90 mutex_ms=752 impl_ms=2 extract_ms=34 pair_iters=1416126420 pair_expr_ok=45566 max_atoms=19538 max_bounds=21716 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw1524.smt2	unknown	0	859480	calls=68 mutex_ms=443 impl_ms=2 extract_ms=18 pair_iters=850059634 pair_expr_ok=31605 max_atoms=15150 max_bounds=16826 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw1341.smt2	unknown	0	896852	calls=54 mutex_ms=892 impl_ms=1 extract_ms=27 pair_iters=1648352969 pair_expr_ok=43281 max_atoms=19380 max_bounds=21700 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw167.smt2	unknown	0	1085116	calls=53 mutex_ms=172 impl_ms=1 extract_ms=5 pair_iters=283079184 pair_expr_ok=12978 max_atoms=14866 max_bounds=16808 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw228.smt2	unknown	0	1075988	calls=36 mutex_ms=94 impl_ms=0 extract_ms=4 pair_iters=162511582 pair_expr_ok=9054 max_atoms=11369 max_bounds=12726 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw777.smt2	unsat	0	20796	NOREAD
+UFNIA/2019-Preiner/combined/t3_rw35.smt2	unknown	0	743548	calls=30 mutex_ms=202 impl_ms=0 extract_ms=9 pair_iters=283234122 pair_expr_ok=10886 max_atoms=14877 max_bounds=16814 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw472.smt2	unknown	0	337808	calls=100 mutex_ms=127 impl_ms=0 extract_ms=7 pair_iters=240620935 pair_expr_ok=23069 max_atoms=19447 max_bounds=21698 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw655.smt2	unknown	0	1440432	calls=51 mutex_ms=147 impl_ms=2 extract_ms=3 pair_iters=283627129 pair_expr_ok=13483 max_atoms=14866 max_bounds=16808 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw410.smt2	unknown	0	997960	calls=56 mutex_ms=1062 impl_ms=2 extract_ms=29 pair_iters=2120323859 pair_expr_ok=55076 max_atoms=19691 max_bounds=21710 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw715.smt2	unknown	0	651764	calls=78 mutex_ms=640 impl_ms=3 extract_ms=19 pair_iters=1177801920 pair_expr_ok=37086 max_atoms=19352 max_bounds=21684 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw594.smt2	unknown	0	1031376	calls=90 mutex_ms=85 impl_ms=1 extract_ms=5 pair_iters=162710354 pair_expr_ok=13190 max_atoms=11369 max_bounds=12726 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw532.smt2	unknown	0	850220	calls=35 mutex_ms=444 impl_ms=0 extract_ms=16 pair_iters=849853306 pair_expr_ok=29137 max_atoms=15159 max_bounds=16828 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw838.smt2	unknown	0	205832	calls=126 mutex_ms=20 impl_ms=4 extract_ms=10 pair_iters=4955028 pair_expr_ok=18979 max_atoms=717 max_bounds=402 cap_hits=0
+UFNIA/2019-Preiner/full/f2_rw425.smt2	unsat	0	15300	NOREAD
+UFNIA/2019-Preiner/full/f2_rw364.smt2	unknown	0	25420	calls=3175 mutex_ms=10 impl_ms=18 extract_ms=6 pair_iters=5128381 pair_expr_ok=51517 max_atoms=673 max_bounds=98 cap_hits=0
+UFNIA/2019-Preiner/full/f2_rw120.smt2	unknown	0	34844	calls=3132 mutex_ms=15 impl_ms=28 extract_ms=9 pair_iters=4550076 pair_expr_ok=47746 max_atoms=691 max_bounds=82 cap_hits=0
+UFNIA/2019-Preiner/full/f2_rw303.smt2	unknown	0	26208	calls=2904 mutex_ms=14 impl_ms=28 extract_ms=9 pair_iters=4395080 pair_expr_ok=45912 max_atoms=673 max_bounds=114 cap_hits=0
+UFNIA/2019-Preiner/full/f2_rw181.smt2	unknown	0	31712	calls=2990 mutex_ms=15 impl_ms=28 extract_ms=9 pair_iters=4829516 pair_expr_ok=48556 max_atoms=691 max_bounds=134 cap_hits=0
+UFNIA/2019-Preiner/full/f2_rw242.smt2	unknown	0	43844	calls=3153 mutex_ms=17 impl_ms=33 extract_ms=10 pair_iters=5742088 pair_expr_ok=51422 max_atoms=703 max_bounds=298 cap_hits=0
+UFNIA/2019-Preiner/full/f2_rw99.smt2	unknown	0	22572	calls=2973 mutex_ms=40 impl_ms=63 extract_ms=28 pair_iters=4589911 pair_expr_ok=47666 max_atoms=691 max_bounds=90 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw899.smt2	unknown	0	684932	calls=48 mutex_ms=70 impl_ms=0 extract_ms=5 pair_iters=88438662 pair_expr_ok=7732 max_atoms=8495 max_bounds=9378 cap_hits=0
+UFNIA/2019-Preiner/combined/t3_rw96.smt2	unknown	0	697044	calls=37 mutex_ms=549 impl_ms=0 extract_ms=15 pair_iters=707644848 pair_expr_ok=23498 max_atoms=15157 max_bounds=16824 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw118.smt2	unknown	0	22824	calls=2989 mutex_ms=16 impl_ms=31 extract_ms=10 pair_iters=4788894 pair_expr_ok=48529 max_atoms=691 max_bounds=124 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw1240.smt2	unknown	0	42180	calls=2939 mutex_ms=16 impl_ms=28 extract_ms=10 pair_iters=4495341 pair_expr_ok=46830 max_atoms=691 max_bounds=82 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw1301.smt2	unknown	0	53400	calls=2984 mutex_ms=15 impl_ms=27 extract_ms=10 pair_iters=4481256 pair_expr_ok=47184 max_atoms=673 max_bounds=92 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw1485.smt2	unknown	0	37020	calls=615 mutex_ms=6 impl_ms=17 extract_ms=3 pair_iters=1806898 pair_expr_ok=7815 max_atoms=459 max_bounds=254 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw1058.smt2	unknown	0	24716	calls=202 mutex_ms=3 impl_ms=2 extract_ms=0 pair_iters=205511 pair_expr_ok=1068 max_atoms=374 max_bounds=206 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw1119.smt2	unknown	0	22596	calls=278 mutex_ms=0 impl_ms=2 extract_ms=0 pair_iters=170893 pair_expr_ok=1120 max_atoms=206 max_bounds=126 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw1423.smt2	unknown	0	26472	calls=2898 mutex_ms=15 impl_ms=29 extract_ms=10 pair_iters=4585484 pair_expr_ok=46840 max_atoms=685 max_bounds=156 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw1362.smt2	unknown	0	32348	calls=1150 mutex_ms=5 impl_ms=15 extract_ms=3 pair_iters=1697774 pair_expr_ok=17690 max_atoms=609 max_bounds=116 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw25.smt2	unknown	0	32056	calls=2951 mutex_ms=21 impl_ms=28 extract_ms=16 pair_iters=4653284 pair_expr_ok=47488 max_atoms=703 max_bounds=86 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw189.smt2	unknown	0	28452	calls=3015 mutex_ms=33 impl_ms=68 extract_ms=24 pair_iters=4559049 pair_expr_ok=47770 max_atoms=691 max_bounds=82 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw1545.smt2	unknown	0	27600	calls=2896 mutex_ms=45 impl_ms=61 extract_ms=28 pair_iters=4518494 pair_expr_ok=46446 max_atoms=673 max_bounds=204 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw371.smt2	unknown	0	28464	calls=3026 mutex_ms=36 impl_ms=54 extract_ms=28 pair_iters=4585599 pair_expr_ok=47083 max_atoms=669 max_bounds=100 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw554.smt2	unknown	0	23092	calls=3003 mutex_ms=23 impl_ms=36 extract_ms=15 pair_iters=4551624 pair_expr_ok=47671 max_atoms=677 max_bounds=138 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw31.smt2	unknown	0	26972	calls=150 mutex_ms=1 impl_ms=1 extract_ms=1 pair_iters=188842 pair_expr_ok=1227 max_atoms=540 max_bounds=118 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw493.smt2	unknown	0	22756	calls=401 mutex_ms=1 impl_ms=6 extract_ms=0 pair_iters=133601 pair_expr_ok=1085 max_atoms=118 max_bounds=80 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw92.smt2	unsat	0	16712	NOREAD
+UFNIA/2019-Preiner/full/t3_rw432.smt2	unknown	0	26768	calls=144 mutex_ms=2 impl_ms=5 extract_ms=1 pair_iters=203182 pair_expr_ok=1192 max_atoms=540 max_bounds=162 cap_hits=0
+UFNIA/2019-Preiner/partial/f2_rw141.smt2	unsat	0	19432	NOREAD
+UFNIA/2019-Preiner/partial/f2_rw264.smt2	unsat	0	19520	NOREAD
+UFNIA/2019-Preiner/partial/f2_rw324.smt2	unsat	0	17672	NOREAD
+UFNIA/2019-Preiner/partial/f2_rw386.smt2	unsat	0	16324	NOREAD
+UFNIA/2019-Preiner/full/t3_rw615.smt2	unknown	0	22628	calls=2904 mutex_ms=21 impl_ms=38 extract_ms=15 pair_iters=4303593 pair_expr_ok=45816 max_atoms=677 max_bounds=108 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw799.smt2	unknown	0	31224	calls=522 mutex_ms=6 impl_ms=15 extract_ms=4 pair_iters=784053 pair_expr_ok=5020 max_atoms=404 max_bounds=224 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw108.smt2	unsat	0	22648	calls=5 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=12980 pair_expr_ok=151 max_atoms=199 max_bounds=156 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw676.smt2	unknown	0	26916	calls=80 mutex_ms=1 impl_ms=3 extract_ms=0 pair_iters=218687 pair_expr_ok=1382 max_atoms=617 max_bounds=122 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw737.smt2	unknown	0	27484	calls=157 mutex_ms=1 impl_ms=1 extract_ms=0 pair_iters=207731 pair_expr_ok=1334 max_atoms=540 max_bounds=126 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw981.smt2	unknown	0	27280	calls=3044 mutex_ms=17 impl_ms=29 extract_ms=11 pair_iters=4986806 pair_expr_ok=49757 max_atoms=691 max_bounds=194 cap_hits=0
+UFNIA/2019-Preiner/full/t3_rw859.smt2	unknown	0	31280	calls=3105 mutex_ms=26 impl_ms=61 extract_ms=20 pair_iters=5091996 pair_expr_ok=50038 max_atoms=673 max_bounds=122 cap_hits=0
+UFNIA/2019-Preiner/partial/f2_rw202.smt2	unknown	0	542556	calls=32 mutex_ms=32 impl_ms=4 extract_ms=2 pair_iters=44380752 pair_expr_ok=5758 max_atoms=5754 max_bounds=6624 cap_hits=0
+UFNIA/2019-Preiner/partial/f2_rw58.smt2	unknown	0	713928	calls=34 mutex_ms=80 impl_ms=2 extract_ms=9 pair_iters=87198594 pair_expr_ok=7406 max_atoms=8010 max_bounds=9308 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw1018.smt2	unknown	0	1016028	calls=144 mutex_ms=575 impl_ms=1 extract_ms=14 pair_iters=1404697816 pair_expr_ok=35548 max_atoms=18770 max_bounds=21638 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw114.smt2	unknown	0	841572	calls=42 mutex_ms=426 impl_ms=1 extract_ms=20 pair_iters=803967068 pair_expr_ok=35542 max_atoms=11325 max_bounds=12686 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw1200.smt2	unknown	0	167088	calls=51 mutex_ms=39 impl_ms=1 extract_ms=6 pair_iters=67499246 pair_expr_ok=10560 max_atoms=5908 max_bounds=6634 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw1262.smt2	unknown	0	765236	calls=66 mutex_ms=148 impl_ms=1 extract_ms=11 pair_iters=261805483 pair_expr_ok=19550 max_atoms=8249 max_bounds=9332 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw1322.smt2	unknown	0	716936	calls=93 mutex_ms=45 impl_ms=5 extract_ms=3 pair_iters=87593753 pair_expr_ok=12034 max_atoms=8010 max_bounds=9308 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw1384.smt2	unknown	0	887728	calls=30 mutex_ms=82 impl_ms=2 extract_ms=6 pair_iters=160656306 pair_expr_ok=8650 max_atoms=10850 max_bounds=12656 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw1445.smt2	unknown	0	978948	calls=44 mutex_ms=88 impl_ms=3 extract_ms=4 pair_iters=160906732 pair_expr_ok=9666 max_atoms=10861 max_bounds=12662 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw1505.smt2	unknown	0	1165472	calls=45 mutex_ms=157 impl_ms=1 extract_ms=7 pair_iters=280671823 pair_expr_ok=12104 max_atoms=14313 max_bounds=16738 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw1567.smt2	unknown	0	916472	calls=65 mutex_ms=101 impl_ms=3 extract_ms=5 pair_iters=160872132 pair_expr_ok=12414 max_atoms=10850 max_bounds=12656 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw21.smt2	unknown	0	353732	calls=142 mutex_ms=48 impl_ms=1 extract_ms=5 pair_iters=82665706 pair_expr_ok=11552 max_atoms=3973 max_bounds=4582 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw331.smt2	unknown	0	669736	calls=96 mutex_ms=317 impl_ms=2 extract_ms=20 pair_iters=566497132 pair_expr_ok=33407 max_atoms=11207 max_bounds=12708 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw270.smt2	unknown	0	901308	calls=37 mutex_ms=95 impl_ms=2 extract_ms=4 pair_iters=161308917 pair_expr_ok=9953 max_atoms=10912 max_bounds=12676 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw393.smt2	unknown	0	915428	calls=140 mutex_ms=84 impl_ms=2 extract_ms=4 pair_iters=161054202 pair_expr_ok=8794 max_atoms=10870 max_bounds=12668 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw453.smt2	unknown	0	865640	calls=62 mutex_ms=598 impl_ms=2 extract_ms=22 pair_iters=1122359570 pair_expr_ok=40957 max_atoms=14869 max_bounds=16748 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw514.smt2	unknown	0	863476	calls=146 mutex_ms=430 impl_ms=2 extract_ms=16 pair_iters=842921092 pair_expr_ok=28492 max_atoms=14613 max_bounds=16760 cap_hits=0
+UFNIA/2019-Preiner/qf/f2_rw101.smt2	sat	0	17000	NOREAD
+UFNIA/2019-Preiner/partial/t3_rw576.smt2	unknown	0	491976	calls=205 mutex_ms=37 impl_ms=3 extract_ms=4 pair_iters=66473122 pair_expr_ok=10420 max_atoms=5720 max_bounds=6616 cap_hits=0
+UFNIA/2019-Preiner/qf/f2_rw223.smt2	sat	0	17288	NOREAD
+UFNIA/2019-Preiner/qf/f2_rw285.smt2	sat	0	15452	NOREAD
+UFNIA/2019-Preiner/qf/f2_rw346.smt2	sat	0	15928	NOREAD
+UFNIA/2019-Preiner/qf/f2_rw406.smt2	unsat	0	14316	NOREAD
+UFNIA/2019-Preiner/qf/f2_rw8.smt2	unsat	0	14148	NOREAD
+UFNIA/2019-Preiner/partial/t3_rw636.smt2	unknown	0	754816	calls=150 mutex_ms=436 impl_ms=2 extract_ms=23 pair_iters=805434476 pair_expr_ok=35194 max_atoms=11123 max_bounds=12696 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw110.smt2	sat	0	16064	NOREAD
+UFNIA/2019-Preiner/qf/t3_rw104.smt2	sat	0	16020	calls=2 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=240 pair_expr_ok=8 max_atoms=8 max_bounds=16 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw1222.smt2	sat	0	21776	NOREAD
+UFNIA/2019-Preiner/partial/t3_rw698.smt2	unknown	0	910368	calls=104 mutex_ms=121 impl_ms=6 extract_ms=8 pair_iters=162012921 pair_expr_ok=20753 max_atoms=10850 max_bounds=12656 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw759.smt2	unknown	0	361636	calls=135 mutex_ms=314 impl_ms=2 extract_ms=20 pair_iters=570601922 pair_expr_ok=40667 max_atoms=11226 max_bounds=12726 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw819.smt2	unknown	0	829132	calls=42 mutex_ms=435 impl_ms=2 extract_ms=20 pair_iters=802899718 pair_expr_ok=35528 max_atoms=11325 max_bounds=12672 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw880.smt2	unknown	0	791840	calls=45 mutex_ms=342 impl_ms=3 extract_ms=11 pair_iters=481701528 pair_expr_ok=23557 max_atoms=11095 max_bounds=12662 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw1161.smt2	sat	0	19500	calls=2 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=240 pair_expr_ok=8 max_atoms=8 max_bounds=16 cap_hits=0
+UFNIA/2019-Preiner/partial/t3_rw940.smt2	unknown	0	982344	calls=38 mutex_ms=181 impl_ms=1 extract_ms=7 pair_iters=482053008 pair_expr_ok=22432 max_atoms=11095 max_bounds=12672 cap_hits=0
+UFNIA/2019-Preiner/qf/f2_rw163.smt2	unknown	0	31148	calls=209 mutex_ms=0 impl_ms=1 extract_ms=0 pair_iters=97402 pair_expr_ok=2883 max_atoms=70 max_bounds=52 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw230.smt2	sat	0	15660	NOREAD
+UFNIA/2019-Preiner/qf/t3_rw1527.smt2	sat	0	19004	calls=2 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=240 pair_expr_ok=8 max_atoms=8 max_bounds=16 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw1344.smt2	sat	0	17320	calls=2 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=240 pair_expr_ok=8 max_atoms=8 max_bounds=16 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw1405.smt2	sat	0	21836	calls=36 mutex_ms=1 impl_ms=1 extract_ms=0 pair_iters=331694 pair_expr_ok=4820 max_atoms=229 max_bounds=162 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw1283.smt2	unknown	0	118856	calls=37 mutex_ms=3 impl_ms=1 extract_ms=0 pair_iters=249425 pair_expr_ok=2893 max_atoms=199 max_bounds=142 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw536.smt2	sat	0	16204	calls=2 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=240 pair_expr_ok=8 max_atoms=8 max_bounds=16 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw292.smt2	sat	0	23700	calls=78 mutex_ms=1 impl_ms=2 extract_ms=0 pair_iters=722784 pair_expr_ok=10636 max_atoms=252 max_bounds=182 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw170.smt2	sat	0	19664	calls=8 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=63434 pair_expr_ok=742 max_atoms=221 max_bounds=162 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw413.smt2	sat	0	17724	calls=2 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=240 pair_expr_ok=8 max_atoms=8 max_bounds=16 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw475.smt2	sat	0	17808	calls=2 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=240 pair_expr_ok=8 max_atoms=8 max_bounds=16 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw1466.smt2	unknown	0	141692	calls=69 mutex_ms=1 impl_ms=5 extract_ms=0 pair_iters=621867 pair_expr_ok=7607 max_atoms=234 max_bounds=164 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw840.smt2	sat	0	19320	calls=23 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=83935 pair_expr_ok=1519 max_atoms=145 max_bounds=106 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw962.smt2	sat	0	17960	NOREAD
+UFNIA/2019-Preiner/qf/t3_rw900.smt2	sat	0	16808	calls=3 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=2010 pair_expr_ok=48 max_atoms=86 max_bounds=60 cap_hits=0
+UFNIA/2019-Zohar-alive/combined/combined_Select:699_values_71.smt2	unsat	0	13440	NOREAD
+UFNIA/2019-Zohar-alive/full/full_AndOrXor:1879_values_0.smt2	unsat	0	12760	NOREAD
+UFNIA/2019-Preiner/qf/t3_rw353.smt2	unknown	0	130872	calls=21 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=63347 pair_expr_ok=875 max_atoms=141 max_bounds=98 cap_hits=0
+UFNIA/2019-Zohar-alive/partial/partial_AddSub:1539-2_values_0.smt2	unsat	0	12940	NOREAD
+UFNIA/2019-Preiner/qf/t3_rw718.smt2	sat	0	22172	calls=42 mutex_ms=0 impl_ms=1 extract_ms=0 pair_iters=312939 pair_expr_ok=4338 max_atoms=216 max_bounds=164 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw78.smt2	unsat	0	17116	calls=3 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=2256 pair_expr_ok=54 max_atoms=88 max_bounds=64 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw597.smt2	unknown	0	77656	calls=4 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=36150 pair_expr_ok=310 max_atoms=305 max_bounds=190 cap_hits=0
+UFNIA/2019-Preiner/qf/t3_rw658.smt2	unknown	0	125556	calls=21 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=101660 pair_expr_ok=1502 max_atoms=164 max_bounds=120 cap_hits=0
+UFNIA/2019-Zohar-alive/combined/combined_AndOrXor:144_values_0.smt2	unknown	0	114040	calls=32 mutex_ms=8 impl_ms=1 extract_ms=3 pair_iters=3058674 pair_expr_ok=8752 max_atoms=1287 max_bounds=672 cap_hits=0
+UFNIA/2019-Zohar-alive/combined/combined_AndOrXor:2627_values_0.smt2	unknown	0	126788	calls=30 mutex_ms=10 impl_ms=0 extract_ms=4 pair_iters=3615840 pair_expr_ok=9128 max_atoms=1441 max_bounds=770 cap_hits=0
+UFNIA/2019-Zohar-alive/full/full_AndOrXor:819_values_0.smt2	unknown	0	28780	calls=54 mutex_ms=0 impl_ms=4 extract_ms=0 pair_iters=408314 pair_expr_ok=2010 max_atoms=293 max_bounds=164 cap_hits=0
+UFNIA/2019-Zohar-ic/combined/int_check_bvult_bvurem1_rtl.smt2	unsat	0	14792	NOREAD
+UFNIA/2019-Zohar-alive/partial/partial_AndOrXor:2284_values_0.smt2	unknown	0	62248	calls=32 mutex_ms=2 impl_ms=0 extract_ms=0 pair_iters=2515594 pair_expr_ok=4313 max_atoms=1987 max_bounds=748 cap_hits=0
+UFNIA/2019-Zohar-ic/combined/int_check_ne_bvnot_ltr_inv_g.smt2	unsat	0	26640	calls=15 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=59031 pair_expr_ok=900 max_atoms=277 max_bounds=190 cap_hits=0
+UFNIA/2019-Zohar-ic/full/int_check_bvsle_bvneg_rtl.smt2	unsat	0	12712	NOREAD
+UFNIA/2019-Zohar-alive/partial/partial_InstCombineShift476_values_0.smt2	unknown	0	69708	calls=239 mutex_ms=15 impl_ms=11 extract_ms=3 pair_iters=7944686 pair_expr_ok=30912 max_atoms=846 max_bounds=484 cap_hits=0
+UFNIA/2019-Zohar-ic/combined/int_check_bvsge_bvshl0_ltr_no_inv.smt2	unknown	0	175392	calls=79 mutex_ms=10 impl_ms=8 extract_ms=2 pair_iters=4843625 pair_expr_ok=17717 max_atoms=1303 max_bounds=616 cap_hits=0
+UFNIA/2019-Zohar-ic/full/int_check_bvule_bvurem0_ltr_inv_g.smt2	unsat	0	14120	NOREAD
+UFNIA/2019-Zohar-ic/combined/int_check_bvsle_bvashr0_rtl.smt2	unknown	0	64464	calls=24 mutex_ms=4 impl_ms=0 extract_ms=0 pair_iters=715968 pair_expr_ok=2646 max_atoms=537 max_bounds=304 cap_hits=0
+UFNIA/2019-Zohar-ic/combined/int_check_bvslt_bvor_rtl.smt2	unknown	0	125388	calls=86 mutex_ms=14 impl_ms=5 extract_ms=8 pair_iters=5670713 pair_expr_ok=18741 max_atoms=1126 max_bounds=592 cap_hits=0
+UFNIA/2019-Zohar-ic/combined/int_check_bvugt_bvashr0_ltr_inv_g.smt2	unknown	0	85804	calls=28 mutex_ms=1 impl_ms=2 extract_ms=0 pair_iters=588120 pair_expr_ok=2994 max_atoms=398 max_bounds=274 cap_hits=0
+UFNIA/2019-Zohar-ic/combined/int_check_bvule_bvor_ltr_no_inv.smt2	unknown	0	117524	calls=46 mutex_ms=9 impl_ms=0 extract_ms=5 pair_iters=3013626 pair_expr_ok=14228 max_atoms=1299 max_bounds=560 cap_hits=0
+UFNIA/2019-Zohar-ic/full/int_check_bvsgt_bvadd_ltr_inv_r.smt2	unknown	0	96776	calls=195 mutex_ms=9 impl_ms=2 extract_ms=1 pair_iters=3819258 pair_expr_ok=1207 max_atoms=1596 max_bounds=1074 cap_hits=0
+UFNIA/2019-Zohar-ic/full/int_check_bvugt_bvneg_ltr_inv_g.smt2	unknown	0	35444	calls=91 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=15672 pair_expr_ok=304 max_atoms=70 max_bounds=40 cap_hits=0
+UFNIA/2019-Zohar-ic/full/int_check_bvslt_bvurem1_ltr_no_inv.smt2	unknown	0	47160	calls=135 mutex_ms=3 impl_ms=5 extract_ms=1 pair_iters=1501746 pair_expr_ok=2045 max_atoms=816 max_bounds=564 cap_hits=0
+UFNIA/2019-Zohar-ic/full/int_check_eq_bvlshr1_rtl.smt2	unknown	0	20968	calls=95 mutex_ms=0 impl_ms=1 extract_ms=0 pair_iters=84170 pair_expr_ok=595 max_atoms=230 max_bounds=122 cap_hits=0
+UFNIA/2019-Zohar-ic/full/int_check_ne_bvudiv1_ltr_no_inv.smt2	unknown	0	91808	calls=132 mutex_ms=3 impl_ms=2 extract_ms=1 pair_iters=2195059 pair_expr_ok=809 max_atoms=1543 max_bounds=1034 cap_hits=0
+UFNIA/2019-Zohar-ic/partial/int_check_bvsgt_bvlshr0_ltr_no_inv.smt2	unknown	0	143212	calls=93 mutex_ms=8 impl_ms=7 extract_ms=2 pair_iters=4974619 pair_expr_ok=15066 max_atoms=2326 max_bounds=944 cap_hits=0
+UFNIA/2019-Zohar-ic/qf/int_check_bvuge_bvor_ltr_no_inv.smt2	unknown	0	17840	calls=54 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=41184 pair_expr_ok=828 max_atoms=101 max_bounds=54 cap_hits=0
+UFNIA/2019-Zohar-ic/partial/int_check_bvsle_bvudiv1_ltr_no_inv.smt2	unknown	0	160712	calls=41 mutex_ms=6 impl_ms=3 extract_ms=3 pair_iters=3460690 pair_expr_ok=6687 max_atoms=1762 max_bounds=596 cap_hits=0
+UFNIA/2019-Zohar-ic/partial/int_check_bvuge_bvlshr0_ltr_inv_g.smt2	unknown	0	52980	calls=207 mutex_ms=11 impl_ms=8 extract_ms=3 pair_iters=4601621 pair_expr_ok=28174 max_atoms=647 max_bounds=376 cap_hits=0
+UFNIA/lahiri-cav09-storm-queries/serial_write_example_cegar_2_2_2.smt2	unknown	0	36768	NOREAD
+UFNIA/lahiri-cav09-storm-queries/usbsamp_bug_example_2_3_8_1.smt2	unknown	0	16620	NOREAD
+UFNIA/lahiri-cav09-storm-queries/usbsamp_example_2_3_4_0.smt2	unknown	0	16452	NOREAD
+UFNIA/2019-Zohar-ic/qf/int_check_eq_bvnot_ltr_no_inv.smt2	unknown	0	17352	calls=44 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=20650 pair_expr_ok=596 max_atoms=79 max_bounds=48 cap_hits=0
+UFNIA/2019-Zohar-ic/partial/int_check_bvugt_bvudiv0_ltr_no_inv.smt2	unknown	0	151032	calls=29 mutex_ms=5 impl_ms=0 extract_ms=2 pair_iters=2606342 pair_expr_ok=6216 max_atoms=1582 max_bounds=626 cap_hits=0
+UFNIA/2019-Zohar-ic/partial/int_check_bvult_bvashr1_ltr_inv_g.smt2	unknown	0	151920	calls=89 mutex_ms=13 impl_ms=1 extract_ms=5 pair_iters=7553642 pair_expr_ok=22600 max_atoms=1301 max_bounds=554 cap_hits=0
+UFNIA/2019-Zohar-ic/partial/int_check_eq_bvshl0_rtl.smt2	unknown	0	48020	calls=96 mutex_ms=4 impl_ms=4 extract_ms=1 pair_iters=1410479 pair_expr_ok=10870 max_atoms=568 max_bounds=342 cap_hits=0
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.1242461.smt2	unsat	0	19572	NOREAD
+UFNIA/2019-Zohar-ic/qf/int_check_bvsge_bvneg_ltr_no_inv.smt2	unknown	0	85352	calls=96 mutex_ms=8 impl_ms=2 extract_ms=7 pair_iters=1812644 pair_expr_ok=7090 max_atoms=1774 max_bounds=356 cap_hits=0
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.1400790.smt2	unsat	0	94524	calls=28 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=56 pair_expr_ok=8 max_atoms=4 max_bounds=4 cap_hits=0
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.1497552.smt2	unsat	0	15008	NOREAD
+UFNIA/sledgehammer/FFT/z3.583803.smt2	unknown	0	200072	calls=47 mutex_ms=3 impl_ms=0 extract_ms=0 pair_iters=800 pair_expr_ok=69 max_atoms=7 max_bounds=12 cap_hits=0
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.1149016.smt2	unknown	0	216944	calls=12 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=1292 pair_expr_ok=34 max_atoms=22 max_bounds=32 cap_hits=0
+UFNIA/lahiri-cav09-storm-queries/mqueue_example_2_2_2_4.smt2	unknown	0	420800	NOREAD
+UFNIA/lahiri-cav09-storm-queries/mqueue_example_cegar_2_3_10.smt2	unknown	0	436056	NOREAD
+UFNIA/sledgehammer/FFT/z3.885941.smt2	unknown	0	61124	calls=6 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=132 pair_expr_ok=6 max_atoms=8 max_bounds=12 cap_hits=0
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.751973.smt2	unknown	0	182832	calls=16 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=96 pair_expr_ok=16 max_atoms=2 max_bounds=4 cap_hits=0
+UFNIA/sledgehammer/QEpres/z3.737731.smt2	unknown	0	19572	NOREAD
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.616670.smt2	unknown	0	196612	calls=106 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=11660 pair_expr_ok=558 max_atoms=26 max_bounds=24 cap_hits=0
+UFNIA/sledgehammer/QEpres/z3.1146572.smt2	unsat	0	207032	calls=6 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=496 pair_expr_ok=18 max_atoms=13 max_bounds=14 cap_hits=0
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.1031223.smt2	unknown	0	207032	calls=6 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=380 pair_expr_ok=10 max_atoms=10 max_bounds=20 cap_hits=0
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.1338055.smt2	unknown	0	239524	calls=44 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=524 pair_expr_ok=50 max_atoms=8 max_bounds=12 cap_hits=0
+UFNIA/sledgehammer/QEpres/z3.606536.smt2	unknown	0	36000	calls=14 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=274 pair_expr_ok=26 max_atoms=21 max_bounds=14 cap_hits=0
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.844134.smt2	unknown	0	185968	calls=99 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=1483 pair_expr_ok=57 max_atoms=17 max_bounds=28 cap_hits=0
+UFNIA/sledgehammer/QEpres/z3.938586.smt2	unknown	0	118452	calls=4 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=0 pair_expr_ok=0 max_atoms=2 max_bounds=0 cap_hits=0
+UFNIA/sledgehammer/QEpres/z3.857438.smt2	unknown	0	263496	NOREAD
+UFNIA/spec_sharp/test14-CommandLineOptions.ssc.23.Microsoft.Boogie.CommandLineOptions.Boogie.ContractConsistencyCheck.get_ProverNeedsTypes.smt2	unknown	0	14208	NOREAD
+UFNIA/sledgehammer/TwoSquares/z3.763790.smt2	unknown	0	175372	calls=38 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=404 pair_expr_ok=12 max_atoms=12 max_bounds=12 cap_hits=0
+UFNIA/sledgehammer/TwoSquares/z3.806908.smt2	unknown	0	236024	calls=29 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=11373 pair_expr_ok=134 max_atoms=24 max_bounds=44 cap_hits=0
+UFNIA/sledgehammer/Hoare/z3.850818.smt2	unknown	0	288312	calls=8 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=1124 pair_expr_ok=22 max_atoms=22 max_bounds=32 cap_hits=0
+UFNIA/spec_sharp/test14-Xml.ssc.17.Microsoft.Boogie.XmlSink.WriteFileFragment_System.String_notnull.smt2	unknown	0	12656	NOREAD
+UFNIA/sledgehammer/TwoSquares/z3.647259.smt2	unknown	0	871168	NOREAD
+UFNIA/sledgehammer/TwoSquares/z3.710000.smt2	unknown	0	338020	NOREAD
+UFNIA/sledgehammer/TwoSquares/z3.861593.smt2	unknown	0	557452	calls=18 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=802 pair_expr_ok=37 max_atoms=8 max_bounds=12 cap_hits=0
+UFNIA/spec_sharp/specsharp-BoundedStack.3.BoundedStack..ctor_System.Int32.smt2	unknown	0	110968	calls=356 mutex_ms=18 impl_ms=0 extract_ms=17 pair_iters=249732 pair_expr_ok=2136 max_atoms=5182 max_bounds=38 cap_hits=0
+UFNIA/vcc-havoc/CWindowsCard.c.41.nondet.smt2	unsat	0	35644	NOREAD
+UFNIA/spec_sharp/textbook-Sum.dll.6.C.TransformQuant_System.Int32.array_notnull.smt2	unknown	0	223124	calls=4274 mutex_ms=340 impl_ms=0 extract_ms=339 pair_iters=65590 pair_expr_ok=30 max_atoms=8773 max_bounds=20 cap_hits=0
+UFNIA/spec_sharp/textbook-Factorial.dll.1.Factorial.F_System.Int32.smt2	unknown	0	154648	calls=17759 mutex_ms=12333 impl_ms=2 extract_ms=12325 pair_iters=108774 pair_expr_ok=44 max_atoms=36054 max_bounds=34 cap_hits=0
+UFNIA/spec_sharp/test14-DafnyAst.ssc.30.Microsoft.Dafny.ClassType.Boogie.ContractConsistencyCheck.ToString.smt2	unknown	0	338920	NOREAD
+UFNIA/vcc-havoc/UsePair.c.3.intshort_first.smt2	unsat	0	22940	NOREAD
+UFNIA/spec_sharp/test14-DafnyAst.ssc.91.Microsoft.Dafny.VarDecl..ctor_Microsoft.Dafny.Token_notnull_System.String_notnull_Microsoft.Dafny.Ty.smt2	unknown	0	362080	NOREAD
+UFNIA/vcc-havoc/verisoft-baby.c.10.privileged.smt2	unsat	0	32892	NOREAD
+UFNIA/vcc-havoc/baby.1.20.handle_illegal.smt2	unknown	0	121888	calls=2088 mutex_ms=92 impl_ms=18 extract_ms=43 pair_iters=19772898 pair_expr_ok=151752 max_atoms=2270 max_bounds=144 cap_hits=0
+UFNIA/vcc-havoc/baby.2.54.handle_illegal.smt2	unknown	0	104608	calls=2303 mutex_ms=72 impl_ms=12 extract_ms=42 pair_iters=28496101 pair_expr_ok=175279 max_atoms=2313 max_bounds=166 cap_hits=0
+UFNIA/vcc-havoc/baby.59.handle_reset.smt2	unknown	0	86872	calls=58 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=238536 pair_expr_ok=1172 max_atoms=1043 max_bounds=116 cap_hits=0
+UFNIA/vcc-havoc/verisoft-sim.c.2.86.translated_write_sim.smt2	unsat	0	33140	NOREAD
+UFNIA/vcc-havoc/verisoft-vamp.c.9.itype.smt2	unsat	0	22808	NOREAD
+UFNIA/vcc-havoc/havoc-bench_036.1.AddElement.smt2	unknown	0	200392	calls=7212 mutex_ms=16594 impl_ms=5 extract_ms=11412 pair_iters=7149619382 pair_expr_ok=2100609 max_atoms=15046 max_bounds=1756 cap_hits=0
+UFNIA/vcc-havoc/havoc-bench_dlist_insert_head.12.ua_wcscpy.smt2	unknown	0	106276	calls=27963 mutex_ms=21091 impl_ms=3 extract_ms=21061 pair_iters=10566990 pair_expr_ok=195685 max_atoms=34954 max_bounds=28 cap_hits=0
+UFNIA/vcc-havoc/verisoft-baby.c.49.pf_reason_m.smt2	unknown	0	100992	calls=9 mutex_ms=0 impl_ms=0 extract_ms=0 pair_iters=620 pair_expr_ok=19 max_atoms=1055 max_bounds=32 cap_hits=0
+UFNIA/vcc-havoc/havoc-bench_sum.1.bar.smt2	unknown	0	365932	calls=293304 mutex_ms=21822 impl_ms=9 extract_ms=21395 pair_iters=519291513 pair_expr_ok=4399385 max_atoms=7272 max_bounds=90 cap_hits=0
+UFNIA/vcc-havoc/verisoft-sim.c.1.13.untranslated_write_sim.smt2	unknown	0	101876	calls=726 mutex_ms=13 impl_ms=0 extract_ms=8 pair_iters=5351436 pair_expr_ok=31929 max_atoms=1448 max_bounds=122 cap_hits=0
+UFNIA/vcc-havoc/verisoft-sim.c.2.25.untranslated_write_sim.smt2	unknown	0	115328	calls=1269 mutex_ms=78 impl_ms=0 extract_ms=38 pair_iters=25742993 pair_expr_ok=97689 max_atoms=2578 max_bounds=202 cap_hits=0
+UFNIA/vcc-havoc/vccp-union1.c.6.reint2.smt2	unknown	0	152056	calls=61008 mutex_ms=20827 impl_ms=3 extract_ms=20610 pair_iters=339448160 pair_expr_ok=1403566 max_atoms=34743 max_bounds=106 cap_hits=0
+UF/sledgehammer/Fundamental_Theorem_Algebra/uf.1065126.smt2	unknown	0	1715576	NOREAD

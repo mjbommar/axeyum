@@ -1,0 +1,5 @@
+check-source-freshness[clippy]: hashed 14312 build inputs; target dir is empty, so nothing can be replayed from cache
+check-clippy-complete: linted 890 of 890 workspace targets across 27 of 27 crates (890 compiled by this run, 0 replayed from cargo's cache and certified by the freshness manifest); 279 dependency targets were built but not linted (cap-lints)
+check-clippy-complete: 0 diagnostics
+check-clippy-complete: not checked here — dependency crates (cap-lints), doc tests (clippy does not lint them), and every --target triple other than the host (wasm32 is supported, ADR-0017: run `cargo clippy --target wasm32-unknown-unknown -p axeyum-solver`)
+check-source-freshness[clippy]: recorded 14312 build inputs as examined

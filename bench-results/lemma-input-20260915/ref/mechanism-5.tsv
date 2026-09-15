@@ -1,0 +1,10 @@
+UFNIA/vcc-havoc/havoc-bench_sum.1.bar.smt2	base	calls=196234 noop_calls=0 refresh_ms=22414 extract_ms=22199 pair_iters=446252651 max_atoms=12886 max_bounds=90
+UFNIA/vcc-havoc/havoc-bench_sum.1.bar.smt2	arm	calls=879346 noop_calls=760561 refresh_ms=6425 extract_ms=5 pair_iters=292264853 max_atoms=358178 max_bounds=2380
+UFNIA/vcc-havoc/havoc-bench_dlist_insert_head.12.ua_wcscpy.smt2	base	calls=282923 noop_calls=0 refresh_ms=14047 extract_ms=13960 pair_iters=106941870 max_atoms=52376 max_bounds=28
+UFNIA/vcc-havoc/havoc-bench_dlist_insert_head.12.ua_wcscpy.smt2	arm	calls=577665 noop_calls=166093 refresh_ms=416 extract_ms=17 pair_iters=17285730 max_atoms=771384 max_bounds=28
+UFNIA/vcc-havoc/vccp-union1.c.6.reint2.smt2	base	calls=57340 noop_calls=0 refresh_ms=22223 extract_ms=22059 pair_iters=319027466 max_atoms=39051 max_bounds=106
+UFNIA/vcc-havoc/vccp-union1.c.6.reint2.smt2	arm	calls=138133 noop_calls=34064 refresh_ms=416 extract_ms=4 pair_iters=15091308 max_atoms=75963 max_bounds=106
+UFNIA/vcc-havoc/havoc-bench_036.1.AddElement.smt2	base	calls=47372 noop_calls=0 refresh_ms=22263 extract_ms=6716 pair_iters=69108254764 max_atoms=12324 max_bounds=1756
+UFNIA/vcc-havoc/havoc-bench_036.1.AddElement.smt2	arm	calls=332437 noop_calls=202139 refresh_ms=6742 extract_ms=5 pair_iters=326723670 max_atoms=391554 max_bounds=1756
+UFNIA/spec_sharp/textbook-Factorial.dll.1.Factorial.F_System.Int32.smt2	base	calls=51157 noop_calls=0 refresh_ms=9922 extract_ms=9907 pair_iters=310266 max_atoms=45438 max_bounds=34
+UFNIA/spec_sharp/textbook-Factorial.dll.1.Factorial.F_System.Int32.smt2	arm	calls=53263 noop_calls=13195 refresh_ms=9 extract_ms=1 pair_iters=80442 max_atoms=45954 max_bounds=34
