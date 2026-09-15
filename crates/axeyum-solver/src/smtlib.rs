@@ -2470,10 +2470,19 @@ fn pair_replay_state(
     assertions: Vec<TermId>,
     model: Option<Model>,
 ) -> (Vec<TermId>, Option<Model>) {
-    let Some(mut model) = model else {
+    let Some(model) = model else {
         return (assertions, None);
     };
-    lift_source_strings_onto_packed(script, &mut model);
+    // The lift has ALREADY run, in `bind_readable_string_values` upstream of
+    // this call. It used to run here too, and the mutation table reported that
+    // second copy as a SURVIVOR -- deleting it killed nothing, because the
+    // rendering helper lifts first on every path that reaches here. A redundant
+    // copy of the same arithmetic is the mirror-drift hazard this whole ADR is
+    // about, so there is exactly one, and the guard that catches a reordering
+    // is `the_word_route_lifts_a_short_witness_into_a_replayable_pair`: if the
+    // lift stopped running before this point, every string `sat` would withhold
+    // and that test would fail. The failure direction is withholding, which is
+    // safe, but it is still a failure and it is still tested.
     let mut free = std::collections::BTreeSet::new();
     for &assertion in &assertions {
         collect_free_symbols(&script.arena, assertion, &mut free);
@@ -2774,8 +2783,8 @@ pub fn solve_smtlib_get_value(
     Ok(Some(values))
 }
 
-/// Adds readable `Seq` bindings for a `sat` model produced by the PACKED route,
-/// so both string routes hand a consumer the same thing.
+/// Makes a `sat` model readable **in both directions**, so every string route
+/// hands a consumer the same thing.
 ///
 /// Measured 2026-08-02: the bounded-source fallback binds the source problem's
 /// own symbols (`SymbolId(8)`/`SymbolId(9)`) with user-facing `Seq` values,
@@ -2795,10 +2804,36 @@ pub fn solve_smtlib_get_value(
 /// Declared and source symbols are paired BY NAME, which is the only thing they
 /// share. A packing the decoder rejects as malformed is skipped rather than
 /// guessed at.
+///
+/// # The other direction, and why it lives here (ADR-2070)
+///
+/// The paragraphs above describe PACKED -> `Seq`: the packed route bound the
+/// declared symbol and the source symbol needed filling in. The reverse case
+/// was unhandled and is the one that produced a **wrong** model rather than an
+/// unreadable one. A source route (`fd:word-route`, `fd:membership`,
+/// `fd:length-lia`) binds only `!weq!<name>`, so `model.get(declared)` is
+/// `None`; every consumer here then falls back to
+/// [`well_founded_default`], which for `(_ BitVec 100)` is zero — and zero
+/// decodes to the EMPTY STRING. So `(get-model)` printed
+/// `(define-fun y () String "")` for a query asserting `(not (= y ""))`.
+///
+/// That is why the lift runs at the top of this function rather than at any of
+/// the three call sites: the front door, `answer_get_model` and
+/// `answer_get_value` all reach a consumer through here, and fixing one of them
+/// would have left the other two printing the wrong model. Measured before the
+/// fix: `axeyum_cli` on `r1_QF_SLIA_type002` printed `x=""  y=""  z=""  i=500`
+/// where the witness is `x="500" y="5" z="0"`, and `the_rendered_get_model_
+/// satisfies_the_original_source_assertions` reproduces exactly that.
 fn bind_readable_string_values(script: &Script, result: CheckResult) -> CheckResult {
     let CheckResult::Sat(mut model) = result else {
         return result;
     };
+    // The OTHER direction, and it must run before the early return below
+    // (ADR-2070). `source_string_sat_problem` is the bounded sat PROBE's table;
+    // the word/membership/length routes do not build one, so everything past
+    // this point is unreachable for them -- which is exactly why the declared
+    // symbol stayed unbound on those rows and every consumer printed `""`.
+    lift_source_strings_onto_packed(script, &mut model);
     let Some(problem) = &script.source_string_sat_problem else {
         return CheckResult::Sat(model);
     };

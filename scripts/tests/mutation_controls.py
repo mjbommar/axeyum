@@ -10398,13 +10398,16 @@ SUITES["replay-pairing-state"] = (
             "    if false {",
         ),
         (
-            # The lift never runs, so a source-route witness is never packed and
-            # every string row falls to the completeness guard. Distinguishes
-            # "withholds honestly" from "actually repaired": a build that only
-            # cleared `assertions` is exactly this mutant.
-            "the source-string lift runs at all",
-            "    lift_source_strings_onto_packed(script, &mut model);",
-            "    let _ = &mut model;",
+            # The lift never runs in the RENDERING path, so every consumer that
+            # reaches a user through `bind_readable_string_values` -- the front
+            # door, `answer_get_model` and `answer_get_value` -- falls back to
+            # `well_founded_default` and prints the EMPTY STRING for a variable
+            # the route bound to a real witness. This is the shape the
+            # coordinator caught with `axeyum_cli` after the first landing.
+            "the source-string lift (one site, in the rendering path)",
+            "    lift_source_strings_onto_packed(script, &mut model);\n"
+            "    let Some(problem) = &script.source_string_sat_problem else {",
+            "    let Some(problem) = &script.source_string_sat_problem else {",
         ),
         (
             # The witness is looked up under the DECLARED name instead of the

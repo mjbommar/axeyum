@@ -53,12 +53,15 @@
 //! every downstream replay a tautology. That test proves the replay retains its
 //! power to reject.
 
+use std::fmt::Write as _;
+
 use axeyum_ir::{Sort, Value};
-use axeyum_smtlib::parse_script;
+use axeyum_smtlib::{decode_packed_string, parse_script};
 use axeyum_solver::{
-    CheckResult, RouteAttributionGuard, RouteOutcome, SolverConfig, Verdict, check_auto,
-    check_model, front_door_stage, last_route_attribution,
+    CheckResult, RouteAttributionGuard, RouteOutcome, SmtLibResponse, SolverConfig, Verdict,
+    check_auto, check_model, front_door_stage, last_route_attribution,
     smtlib::{SmtLibSolved, solve_smtlib_with_model},
+    solve_smtlib_session,
 };
 
 /// The `r1_QF_SLIA_type002` shape, one of the four corpus rows the defect was
@@ -428,4 +431,194 @@ fn an_unsat_keeps_its_assertion_vector() {
         "the repair emptied an `unsat`'s assertion vector"
     );
     assert!(solved.model.is_none(), "an `unsat` must carry no model");
+}
+
+// ---------------------------------------------------------------------------
+// The assertion this suite did not have: does the model SATISFY THE QUERY?
+// ---------------------------------------------------------------------------
+//
+// Eleven tests covered the pairing, the cap boundary and the withholding, and
+// every one of them asked whether a REPLAY returned `Ok`. None asked whether the
+// values a user is handed actually satisfy the assertions the user wrote. The
+// coordinator found the gap by running `axeyum_cli` with `(get-model)` on a row
+// this lane claimed to have fixed and getting `x=""  y=""  z=""  i=500` back —
+// a model that violates `(not (= y ""))` outright.
+//
+// The rule one level up from this suite's own: a test that names a ROUTE must
+// assert the route, and a test that names a MODEL must assert the model
+// satisfies the query — not that some checker returned `Ok`.
+//
+// How "satisfies the source" is decided here without a second evaluator: pin
+// EVERY model symbol to its reported value with an added equality and re-decide
+// the ORIGINAL script. With every free symbol pinned the query is ground, so the
+// verdict is evaluation. `sat` means the model satisfies the source assertions;
+// `unsat` means it does not. Each use is paired with the all-empty model as the
+// control, which MUST come back `unsat` — otherwise the check cannot
+// discriminate and proves nothing.
+
+/// The reported model for `src`, as `(name, smtlib-literal)` pairs, taken from
+/// the front door's own `sat` and decoded through the PUBLIC decoder.
+fn reported_model(solved: &SmtLibSolved) -> Vec<(String, String)> {
+    let CheckResult::Sat(result_model) = &solved.outcome.result else {
+        panic!("not sat");
+    };
+    let arena = &solved.script.arena;
+    let mut out = Vec::new();
+    for &symbol in &solved.script.model_symbols {
+        let (name, sort) = arena.symbol(symbol);
+        let is_string = solved
+            .script
+            .declared_strings
+            .iter()
+            .any(|&(s, _)| s == symbol);
+        // Read the model the front door ships beside its verdict, exactly as a
+        // consumer would, falling back the way the rendering path falls back.
+        let value = solved
+            .model
+            .as_ref()
+            .and_then(|m| m.get(symbol))
+            .or_else(|| result_model.get(symbol))
+            .or_else(|| axeyum_ir::well_founded_default(arena, sort));
+        let Some(value) = value else { continue };
+        let literal = match (&value, is_string) {
+            (Value::Bv { width, value: bits }, true) => {
+                let bytes = decode_packed_string(*width, *bits)
+                    .unwrap_or_else(|| panic!("`{name}` is not a well-formed packing"));
+                format!("\"{}\"", String::from_utf8_lossy(&bytes))
+            }
+            (Value::Int(i), _) => format!("{i}"),
+            (other, _) => panic!("`{name}` has an unrenderable value {other:?}"),
+        };
+        out.push((name.to_owned(), literal));
+    }
+    out
+}
+
+/// `src` with every model symbol pinned to the given literal, so the query is
+/// ground and its verdict is evaluation of the ORIGINAL assertions.
+fn pin(src: &str, bindings: &[(String, String)]) -> String {
+    let mut out = String::new();
+    for line in src.lines() {
+        if line.trim_start().starts_with("(check-sat)") {
+            for (name, literal) in bindings {
+                let _ = writeln!(out, "(assert (= {name} {literal}))");
+            }
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    out
+}
+
+/// Decides a pinned script through the front door.
+#[track_caller]
+fn verdict_of(src: &str) -> CheckResult {
+    solve_smtlib_with_model(src, &SolverConfig::default())
+        .unwrap_or_else(|e| panic!("front door failed: {e:?}\n{src}"))
+        .outcome
+        .result
+}
+
+/// **The test the coordinator found missing.** The model the front door reports
+/// for a lifted word-route row must satisfy the ORIGINAL source assertions, not
+/// merely make some replay return `Ok`.
+#[test]
+fn the_reported_model_satisfies_the_original_source_assertions() {
+    let (solved, route) = solve(WORD_ROUTE_SHORT);
+    assert_sat_via(
+        "source-check",
+        front_door_stage::WORD_ROUTE,
+        &(solved, route),
+    );
+    let (solved, _) = solve(WORD_ROUTE_SHORT);
+    let bindings = reported_model(&solved);
+    assert!(
+        bindings.len() >= 4,
+        "expected the fixture's four model symbols, got {bindings:?}"
+    );
+    let pinned = pin(WORD_ROUTE_SHORT, &bindings);
+    assert!(
+        matches!(verdict_of(&pinned), CheckResult::Sat(_)),
+        "the model the front door reports does NOT satisfy the source assertions.\n\
+         reported: {bindings:?}\n--- pinned ---\n{pinned}"
+    );
+
+    // **The control.** The all-empty model — exactly what the defect produced,
+    // and what `axeyum_cli` printed for this shape — must come back `unsat`.
+    // Without this half the check above would pass on a build where pinning
+    // silently did nothing, and prove nothing at all.
+    let empty: Vec<(String, String)> = bindings
+        .iter()
+        .map(|(name, literal)| {
+            let replacement = if literal.starts_with('"') {
+                "\"\"".to_owned()
+            } else {
+                literal.clone()
+            };
+            (name.clone(), replacement)
+        })
+        .collect();
+    assert_ne!(
+        empty, bindings,
+        "the control is identical to the subject, so it discriminates nothing"
+    );
+    assert!(
+        matches!(
+            verdict_of(&pin(WORD_ROUTE_SHORT, &empty)),
+            CheckResult::Unsat
+        ),
+        "pinning every string to \"\" must be `unsat` for this query — if it is not, this \
+         check cannot tell a good model from a bad one"
+    );
+}
+
+/// The same question asked of the `(get-model)` RENDERING path, which is a
+/// different function from the replay path and was still defaulting the packed
+/// symbol after this lane's first landing.
+///
+/// `answer_get_model` reads `model.get(declared)` and falls back to
+/// `well_founded_default`, so a source route that bound only `!weq!x` printed
+/// `x = ""`. That is a wrong model, not a missing one, and nothing checked it.
+#[test]
+fn the_rendered_get_model_satisfies_the_original_source_assertions() {
+    let with_get_model = format!("{WORD_ROUTE_SHORT}\n(get-model)");
+    let responses = solve_smtlib_session(&with_get_model, &SolverConfig::default())
+        .expect("the session decides");
+    let rendered = responses
+        .iter()
+        .find_map(|r| match r {
+            SmtLibResponse::Model(text) => Some(text.clone()),
+            _ => None,
+        })
+        .expect("the session answered `(get-model)`");
+
+    // Re-parse the rendered `define-fun` lines back into pinning assertions, so
+    // what is checked is the TEXT a consumer is handed, not an internal value.
+    let mut bindings = Vec::new();
+    for line in rendered.lines() {
+        let line = line.trim();
+        let Some(rest) = line.strip_prefix("(define-fun ") else {
+            continue;
+        };
+        let Some((name, rest)) = rest.split_once(" () ") else {
+            continue;
+        };
+        let rest = rest.trim_end_matches(')');
+        let Some((_sort, literal)) = rest.split_once(' ') else {
+            continue;
+        };
+        bindings.push((name.to_owned(), literal.trim().to_owned()));
+    }
+    assert!(
+        bindings.len() >= 4,
+        "parsed {} bindings out of the rendered model, expected the fixture's four:\n{rendered}",
+        bindings.len()
+    );
+
+    let pinned = pin(WORD_ROUTE_SHORT, &bindings);
+    assert!(
+        matches!(verdict_of(&pinned), CheckResult::Sat(_)),
+        "`(get-model)` printed values that do NOT satisfy the source assertions — a WRONG \
+         model, not a missing one.\n--- rendered ---\n{rendered}\n--- pinned ---\n{pinned}"
+    );
 }
