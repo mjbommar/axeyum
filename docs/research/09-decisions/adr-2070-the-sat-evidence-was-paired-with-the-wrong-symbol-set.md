@@ -1,7 +1,7 @@
 # ADR-2070: the `sat` evidence was paired with the wrong symbol set, and the population splits
 
 Status: accepted
-Index-summary: [ADR-2010] handed off a choice — (a) clear `assertions` so the string routes' pairing is honestly "no replay available", or (b) lift the source-level `Seq` model into the packed space — and a measurement, **5 of 109 `sat` results over 217 string-division files**. Both halves were re-derived here and both moved. **The mismatch named concretely: the packed vector's free symbols are the DECLARED names at `BitVec(100)` (`x` `#0`, `y` `#1`, `z` `#2`); the model binds DIFFERENT symbols — `!weq!x` `#13`, `!weq!y` `#14`, `!weq!z` `#15` at `Seq(BitVec(18))`, the parser's word-skeleton mirrors.** Different `SymbolId`s, names and sorts, so `check_model` never had anything to evaluate; shared `Int` symbols ARE bound, so the arenas overlap partially. **Per route the corpus rows are `fd:word-route` (4) and `fd:membership` (1) — NOT `fd:length-lia`, which ADR-2010's handoff named**; its synthetic witness reaches that route and no corpus file does, so a repair validated on the corpus alone would have shipped it unfixed. **The escalation ADR-2010 declined to claim was RUN here through the built `axeyum-py` extension and is worse than the static trace: four rows answer `Outcome.replay() == False` — what its own docs call "a soundness signal" — on five verdicts that are all correct, and the fifth answers `True` over an all-empty SUBSTITUTED model, a vacuous pass. A second face nobody had named: the REPORTED MODEL was wrong, not just unreplayable** — `r1_QF_SLIA_type002` came back `{x: '', y: '', z: '', i: 500}` for a query whose witness is `x="500" y="5" z="0"`. **Neither repair is right wholesale, because the population SPLITS 4/1:** four rows lift and replay `Ok(true)`, and one cannot be lifted by anything — `r1_QF_SLIA_re-inter-stack-ovf` asserts `(<= 15 (str.len var0))` against `STRING_MAX_LEN = 12`, and running `check_auto` on that packed vector **alone returns `unsat`**, so no lift exists and pairing any model with it would replay `false` on a correct `sat`. Shipped: lift where the encoding can express the witness, withhold where it cannot. **Evidence goes UP, not down** — A/B with one instrument, same cores, back to back: `replay Err(..)` **5 → 0**, `replay Ok(true)` **71 → 75**, withheld 33 → 34, every verdict and the 35 parse-`Err` unchanged. The guard is **completeness of the binding, never satisfaction**, so the downstream `check_model` keeps its power to reject. Mutation: **9 guards, 6 killed, 3 survivors reported and labelled in the code rather than counted**; two killed guards share a death-set. The suite's FIRST version reached none of the routes it named — `(= (str.len x) 10)` is decided by the flat path — and deleting the entire lift survived all nine tests; every test now pins its deciding stage through `RouteAttributionGuard`. Also fixed: `collect_free_symbols`, on the shipped hot path, was the obvious recursive DAG walk and did not finish ONE benchmark in 13 minutes.
+Index-summary: [ADR-2010] handed off a choice — (a) clear `assertions` so the string routes' pairing is honestly "no replay available", or (b) lift the source-level `Seq` model into the packed space — and a measurement, **5 of 109 `sat` results over 217 string-division files**. Both halves were re-derived here and both moved. **The mismatch named concretely: the packed vector's free symbols are the DECLARED names at `BitVec(100)` (`x` `#0`, `y` `#1`, `z` `#2`); the model binds DIFFERENT symbols — `!weq!x` `#13`, `!weq!y` `#14`, `!weq!z` `#15` at `Seq(BitVec(18))`, the parser's word-skeleton mirrors.** Different `SymbolId`s, names and sorts, so `check_model` never had anything to evaluate; shared `Int` symbols ARE bound, so the arenas overlap partially. **Per route the corpus rows are `fd:word-route` (4) and `fd:membership` (1) — NOT `fd:length-lia`, which ADR-2010's handoff named**; its synthetic witness reaches that route and no corpus file does, so a repair validated on the corpus alone would have shipped it unfixed. **The escalation ADR-2010 declined to claim was RUN here through the built `axeyum-py` extension and is worse than the static trace: four rows answer `Outcome.replay() == False` — what its own docs call "a soundness signal" — on five verdicts that are all correct, and the fifth answers `True` over an all-empty SUBSTITUTED model, a vacuous pass. A second face nobody had named: the REPORTED MODEL was wrong, not just unreplayable** — `r1_QF_SLIA_type002` came back `{x: '', y: '', z: '', i: 500}` for a query whose witness is `x="500" y="5" z="0"`, values that violate `(not (= y ""))` outright. **That half was NOT fixed by the first landing and this ADR said it was; the correction is §3a.** The coordinator caught it by running `axeyum_cli` on a merged binary and pinned it as PRE-EXISTING (byte-identical at `5319c9fdf` and `a35ede0ed`), so it was never a regression — but the first landing repaired only `solve_smtlib_with_model` while `(get-model)` and `(get-value)` reach a user through a DIFFERENT helper. **The serious reading was ruled out by measurement, not argument**: the lifted model, pinned back into the ORIGINAL source and re-decided, is `sat` with the all-empty model `unsat` as its control, so `check_model` did not start agreeing with a wrong model. The render path is now fixed at the one shared site. **Neither repair is right wholesale, because the population SPLITS 4/1:** four rows lift and replay `Ok(true)`, and one cannot be lifted by anything — `r1_QF_SLIA_re-inter-stack-ovf` asserts `(<= 15 (str.len var0))` against `STRING_MAX_LEN = 12`, and running `check_auto` on that packed vector **alone returns `unsat`**, so no lift exists and pairing any model with it would replay `false` on a correct `sat`. Shipped: lift where the encoding can express the witness, withhold where it cannot. **Evidence goes UP, not down** — A/B with one instrument, same cores, back to back: `replay Err(..)` **5 → 0**, `replay Ok(true)` **71 → 75**, withheld 33 → 34, every verdict and the 35 parse-`Err` unchanged. The guard is **completeness of the binding, never satisfaction**, so the downstream `check_model` keeps its power to reject. Mutation: **9 guards, 6 killed, 3 survivors reported and labelled in the code rather than counted**; two killed guards share a death-set. The suite's FIRST version reached none of the routes it named — `(= (str.len x) 10)` is decided by the flat path — and deleting the entire lift survived all nine tests; every test now pins its deciding stage through `RouteAttributionGuard`. Also fixed: `collect_free_symbols`, on the shipped hot path, was the obvious recursive DAG walk and did not finish ONE benchmark in 13 minutes.
 Index-status: accepted
 Date: 2026-09-14
 
@@ -118,14 +118,78 @@ and that is not a reprieve: its model is all-empty, so it is a **vacuous pass**
 over a model `complete_with_defaults` substituted, not over the witness the
 solver found.
 
-**And a second face nobody had named.** The `model` column above is the
-user-facing `(get-model)`. Before the repair it reported `x: ''`, `y: ''`,
-`z: ''` for a query whose witness is `x="500"`, `y="5"`, `z="0"`. A consumer
-asking for the model got values that **do not satisfy the query** — a wrong
-model, not a missing one, produced by `complete_with_defaults` filling the
-unbound packed symbol with a well-founded zero that decodes to the empty string.
-`replay_available` was `True` and `replay_unavailable_reason` was `None`
-throughout, so the honest channel existed and was never reached.
+**And a second face nobody had named.** The `model` column above is
+`axeyum-py`'s `Outcome.model` — **one** of three ways a consumer reaches a
+model, and naming it precisely matters, because the other two behaved
+differently and §3a is about exactly that. Before the repair it reported
+`x: ''`, `y: ''`, `z: ''` for a query whose witness is `x="500"`, `y="5"`,
+`z="0"`. A consumer asking for the model got values that **do not satisfy the
+query** — a wrong model, not a missing one, produced by `complete_with_defaults`
+filling the unbound packed symbol with a well-founded zero that decodes to the
+empty string. `replay_available` was `True` and `replay_unavailable_reason` was
+`None` throughout, so the honest channel existed and was never reached. The same
+root cause, through `well_founded_default` rather than `complete_with_defaults`,
+made `(get-model)` and `(get-value)` wrong too — and **those two were not fixed
+by the first landing**; see §3a.
+
+## 3a. Correction: "Fixed too" was wrong, and what ruled out the bad reading
+
+The first version of this ADR said the wrong model was fixed. **It was not.**
+The coordinator ran `axeyum_cli` on a binary built from the merge and got back
+the same block this ADR quotes as the defect:
+
+```text
+sat
+( (define-fun x () String "")  (define-fun y () String "")
+  (define-fun z () String "")  (define-fun i () Int 500) )
+```
+
+and then did the thing that separates a regression from a pre-existing defect:
+built `5319c9fdf`, the commit immediately before the merge, and got **the same
+bytes**. So nothing regressed — and the claim in this ADR was simply false.
+
+**Why one path was fixed and two were not.** `solve_smtlib_with_model` is not
+how a user reaches a model. `(get-model)` and `(get-value)` are answered by
+`answer_get_model` / `answer_get_value` inside `solve_smtlib_session`, and both
+read `model.get(declared)` and fall back to `well_founded_default`. For a
+declared `String` that default is a zero `(_ BitVec 100)`, and zero **decodes to
+the empty string** — so an unbound packed symbol does not render as missing, it
+renders as `""`. One repair, three consumers, and the repair was in the one a
+user does not call.
+
+**The reading that had to be ruled out by measurement.** If the lifted model
+itself did not satisfy the source, then turning `Err(…)` into `Ok(true)` would
+have traded a false alarm for a false reassurance — the exact shape §3 already
+identifies on the fifth row. That is not what happened, and the test that says
+so is `the_reported_model_satisfies_the_original_source_assertions`: it takes
+the model the front door reports, pins **every** model symbol back into the
+ORIGINAL script with an added equality so the query is ground, and re-decides.
+It comes back `sat`. Its control pins every string to `""` and must come back
+`unsat`, which it does — without that half the check could not discriminate and
+would prove nothing. So `check_model` is not agreeing with a wrong model; the
+lifted model is right and only the rendering was wrong.
+
+**The fix, and where it belongs.** The lift now runs once, at the top of
+`bind_readable_string_values` — the helper that already exists so "both string
+routes hand a consumer the same thing", and the one place all three consumers
+pass through. It had only ever handled PACKED → `Seq` (the packed route bound
+the declared symbol, the source symbol needed filling in); the reverse case,
+which is the one that produces a **wrong** model rather than an unreadable one,
+was unhandled and sat behind an early return that no source route reaches. After
+the fix, the coordinator's command prints `x="500" y="5" z="0" i=500`.
+
+The redundant second call in `pair_replay_state` was then **removed**, because
+the mutation table reported it as a SURVIVOR: with the rendering helper lifting
+first on every path, deleting it killed nothing. A second copy of the same
+arithmetic is the mirror-drift hazard this ADR is about, so there is exactly one.
+
+**The rule this cost.** This suite already carried the lesson that *a test that
+names a route must assert the route, not just the verdict*. One level up:
+**a test that names a MODEL must assert the model satisfies the query, not that
+a checker returned `Ok`.** Eleven tests covered the pairing, the cap boundary and
+the withholding; none evaluated the reported values against the user's own
+assertions, and that is the single assertion that would have caught this. There
+are now two, one for the replay path and one for the rendered text.
 
 ## 4. The decision: the population splits, so neither repair wholesale
 
