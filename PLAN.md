@@ -146,6 +146,13 @@ now. Nothing was deleted.
 | 2026-09-14 | `12589b48d` | Correction of this lane's own first finding: the census's 13 STANDS. `scopeskel.py` — share atoms only after `let`-expansion, which is sound and still shares — says 11 ADMISSIBLE / 0 NOT-ADMISSIBLE / 2 DID-NOT-RUN. Plus the route trails, the current-tree re-derivation, the minimal-core table, the opaque-atom lever simulation and its non-vacuous negative control. Carries the OOM disclosure. |
 | 2026-09-14 | replay-scope | CLAUDE.md's hard rule — *"every `sat` result must be checkable by evaluating the original term against the lifted model"* — audited against the SMT-LIB front door, whose replay is `check_model(&script.arena, &solved.assertions, model)` over the **parser-produced** assertions. **Three reachable wrong verdicts found, all in UNCONDITIONAL s-expression desugars, none behind a lever or feature gate, and the replay could not have caught any of them.** (1) `desugar_sets` keyed each element bit on the literal's **raw text**, so `#b0101`/`#x5`/`(_ bv5 4)` and `1.5`/`1.50` were two elements each: `(set.member #b0101 s)` with `(not (set.member #x5 s))` answered **`sat`** (cvc5 `unsat`) while both same-spelling controls answered `unsat` — **a verdict depending on the SPELLING of a literal**, oracle-free proof of unsoundness; the dual `(set.member #x5 (set.singleton #b0101))` encoded to `0 = 1`, a wrong `unsat`. (2) `desugar_const_arrays` collected definitions across all top-level commands with **no notion of scope OR order**: one inside a popped `push` gave **`unsat`** for a `sat` script, and one placed after a `check-sat` was inlined **backwards past it** — the second needing no `push`/`pop`, and pinnable without a reference solver answering the second query since the first **in isolation** is `sat` on cvc5 and on ours. (3) `desugar_sets`'s universe was `d + MARGIN` with `MARGIN` a **constant 2**, so N free sets could not be pairwise distinct past `2^(d+2)`: **4 sets `sat`, 5 sets `unsat`** (cvc5 `sat`), 5 sets + one named literal `sat` — threshold exactly at `2^(0+2)`. **The headline is why ONE guarantee missed all three, for TWO different structural reasons**: a parse-level desugar has no original to replay against (the source set terms never become IR terms, so "replay against the originally parsed assertions" is a **no-op** — the original parse IS the encoding), and a strengthening rewrite yields wrong `unsat`, invisible to a `sat`-side replay however implemented. **Not all three are strengthening** — defect 1 is *non-homomorphic*, mapping one element onto two bits, and produced a wrong `sat` **and** a wrong `unsat`. **So the general guarantee is NOT achievable as stated and per-rewrite arguments are the right design**: 18 tests in `parser_desugar_soundness.rs`, registered at L0, each aimed at the direction where the defect can fail and each with a non-vacuity control ([ADR-1976]). **Guard-deletion: 10 guards, 0 untested, 10 distinct death-sets, separable**, 6 killing exactly one test; replacing the width decline with a `min()` clamp kills exactly one test and nothing else. **Corpus cost measured, not predicted: 23 files, decided 15 → 15, delta 0, 0 of 23 verdicts differ**, 8 declining in both arms with byte-identical messages — with a **freshness control run first** confirming the base binary reproduces all three wrong answers, since `delta=0` is equally what measuring one binary twice looks like. Two comment defects corrected **as part of the bug**: condition 1's false premise, and an equisatisfiability claim made for both branches whose converse was argued only for `set.card` — *the comment did the arguing*. Withdrawn as soundness issues because they fail **loudly**: `inline_aliases` has no binder awareness and a shadowing `let` dies with `syntax error: let name` (a robustness regression on legal SMT-LIB, handed off), and a self-referential const array declines with `unknown identifier` — right outcome by accident, recorded because it will not survive a refactor. Handed off with a warning: the string-route model pairing (`solve_smtlib_with_model` returns `sat` with a **source-level `Seq`** model beside the **packed** flat vector, so `check_model` returns `Err("no value bound for symbol #0")` while plain QF_BV controls replay `Ok(true)`) — the verdict is **correct** and only the evidence is mispaired, so the damage is a *false alarm* that would make `axeyum-py`'s `Outcome.replay()` call a correct `sat` a soundness violation; the cheap repair (clear `assertions`) **reduces the fraction of `sat` results carrying evidence** and must not be chosen by default. ADR-2010 |
 | 2026-09-14 | round-head | The last standing hypothesis for the `UFLIA`/`UFNIA` gap — *killed at a round head holding a set it never checks* — **does not survive, and it needed splitting before it could be censused**. [ADR-1956] split `InstantiationLoopExit` into three because one give-up string covered three exits; **the loop has SEVEN**, all three of those are `break`s, and the other four `return` early — `e-matching: instantiation time budget exhausted` was ONE string on THREE of them and **four of seven printed no `QPROBE loop-exit` line at all**, so the instrument built to stop a merged label was itself blind to 151 of 209 exits here. Split and re-censused over all 129 winnable rows (127 still failing; 2 now decided by main, both verified `unsat` against `:status`, z3 and cvc5, **0 disagreements, comparable denominator 2/2 each**): **the round head proper is 1 of 209 exits**. The binding exit is `timeout-mid-round` — **147 occurrences, last exit on 74 of 127 rows** — and it does **not** mean the set went unexamined: it sits immediately after `quantifier_qf_refutation_check` over the same `ground` and fires only when that check just returned non-`Unsat` on the full shared deadline. (This lane shipped `(ground set discarded unchecked)` and corrected it two commits later, in the direction that would have justified its own lever.) A new probe — `AXEYUM_QPROBE_HELD_SET_REPLAY`, off by default, verdict **printed and never acted on**, **live by MECHANISM: 0 lines off, 1 on** — re-runs the discarded set on a fresh 10 s clock: **122 replays over 99 of 127 rows, and 2 rows refute — 1.6 %, Wilson 95 % `[0.4 %, 5.6 %]`** against a pre-registered go/no-go of **≥ 10**, so **this lane ships no lever**; that ceiling is also smaller than the 3-file band [ADR-2005] measured for this division at fixed code. **The other 120 replays name the real wall**: **40 are `sat`** (the instantiation is genuinely insufficient) and 78 are `unknown` because *our* ground checker declines *our* set — `integer bit-blast width ladder: wall-clock timeout`, `no model within the bounded integer width 32`, `eager Ackermann elimination would emit 57,219 congruence constraints, exceeding the deterministic admission bound of 64`, `lazy Ackermann abstraction build would still construct 8,633,894 congruence terms, exceeding the secondary bound of 2,000,000`, plus 2 hard `unsupported by backend: sort (Uninterpreted 0)`. Sets of **11 ground terms** burn a whole fresh 10 s budget. The reference settles the order of magnitude without our instrumentation: cvc5 1.3.4 refutes **115 of 129**, `global::totalTime` **median 75 ms**, **60.0 % `[50.9 %, 68.5 %]` under 100 ms**, **median 48 instantiation tuples** (`--dump-instantiations` live by mechanism: non-zero tuples on 96 of 115 refuted, **0 of 7 `NONE`**) — while on the 113 rows it refutes and we fail (**comparable denominator 129, zero one-sided leftovers**) our wall is a **median 262x** its clock and we hold a **median 2,224** ground terms. **Sixty per cent of this population is finished before our loop enters its second round.** So the gap is **downstream of the instantiation loop entirely**: we reach, build and admit the instances and then hand the conjunction to a quantifier-free decision procedure that cannot decide it. **Do not size another lane against the loop on this population** — the best remaining loop-side lever has a measured ceiling of 2 of 127 inside a noise band of 3; **the missing capability is deciding ground NIA and UF+arith conjunctions**, and whoever sizes that must split the 40 `sat` replays from the 78 `unknown` ones first. ADR-2015 |
+| 2026-09-14 | `f6303ee7a` | timeout-diagnosis: the give-up variant cannot lie any more — and the overflow was never a timeout |
+| 2026-09-14 | `0e7057f4f` | timeout-diagnosis: pin every give-up reason to the producer that makes it |
+| 2026-09-14 | `2d6a78135` | timeout-diagnosis: rustfmt rejoined my continued literals and kept the indentation inside them |
+| 2026-09-14 | `3f587710a` | timeout-diagnosis: pre-registered the A/B rules before the binaries were built |
+| 2026-09-14 | `7c93daf52` | timeout-diagnosis: lane state, the A/B runner, the producer enumerator |
+| 2026-09-14 | `ac43d6031` | timeout-diagnosis: clippy `unnecessary_wraps` on the test's expired-deadline helper |
+| 2026-09-14 | `3d0fa24a3` | timeout-diagnosis: the last stale intra-doc link, on `Collector::timed_out` |
 | 2026-09-14 | zero-inst | [ADR-2020] measured that cvc5 refutes nine of our skeleton-refusal files with **ZERO instantiation tuples** and left the follow-up open. Answered, and the answer **inverts the obvious hypothesis**: the GROUND assertions alone are **`sat`** on 8 of the 9 (cvc5 and z3 agreeing), so "the quantifier-free part is already contradictory" is FALSE. On 9 of 9 exactly **one** assertion — always the LAST, the negated verification condition, **1 of 589** — is unsat **on its own**, and cvc5 still refutes it with every quantifier module disabled AND with `--simplification=none`. Measured on the BENCHMARK rather than on cvc5: replacing every maximal quantified subformula by one opaque atom leaves a **quantifier-free skeleton that is already unsat** on 8 of 9, confirmed by two independent solvers (the 9th is `sat`, which is what makes the probe non-vacuous). **We have this check — twice — and neither can fire**: `ground_subset_refutes_quantified_query` (`auto.rs:162/767`) and the round-0 check (`qinst_egraph.rs:2386`) both **DROP** whole conjuncts that CONTAIN a quantifier, while the refutation lives INSIDE one; this was measured before the code was read. Widened to the 129, the skeleton is unsat on **15**, **11.6 % `[7.2 %, 18.3 %]`** — NOT the 8/9 of the seed, a population selected by its outcome (R3) — with **12 reported NOT MEASURED** (quantifiers inside `define-fun` bodies; R15's liveness exit fired) and all 15 agreeing across `:status`, z3, cvc5, the shared-atom skeleton and a **fresh-per-occurrence** skeleton added because text-level sharing is not unconditionally sound under `let`. A new **`q:bool-skeleton`** rung that ABSTRACTS instead of dropping moves **+9 of 129, 0 losses, 0 flips**, every gain carrying `decided` in its route trail, **9 of 9 STABLE-GAIN** over three passes per arm, **0 disagreements at a full 9/9 comparable denominator** on each of three authorities, against a same-arm noise floor of **0 of 129** and at **0.93x** wall. Controls: `QF_BV` 0 (weak, and said to be — rung ABSENT) and **`AUFLIA` 0 with the rung FIRING on one row and agreeing**. **SHIPS ON**, so the env var inverts to a KILL SWITCH — and the shipped default is **verified** (9/9 decided with no environment variable, 9/9 reverted under the kill switch), not predicted. `mutation_controls.py` reported the liveness floor **SURVIVED** and the maximality anchor **AMBIGUOUS** on its first run; both were fixed and all three guards now kill **exactly one** test each. Of the 15, the 6 that did not convert split **4 RUNG-NEVER-REACHED / 2 CAPABILITY-LIMIT / 0 BUDGET-LIMIT** — the zero says the probe's one-tenth share is not what binds. Three instruments lied in flight and were fixed: **499 of 589 singleton probes counted as `errors` were `sat` verdicts** (the benchmark's own `:status` turns a correct `sat` on a subset into `(error …)`), both mechanism columns of the first strategy isolation read `NONE` because cvc5 **REFUSES** `--opt=false` and wants `--no-opt`, and a 107 ms timing column was fork overhead around an **11 ms** solve. | ADR-2025 |
 | 2026-09-13 | `825377a57` | `tests/nested_array_gate_map.rs`: the gate CHAIN behind the nested array sort, 7 tests, gated in `hooks/pre-push`. Three assert a capability we do NOT have and fail loudly when it arrives; the Int/Real pair is its own control. |
 | 2026-09-13 | `665f86532` | The parse gate counted over all 29,564 files — 27,150 blocked, not 29,564 — with two independent instruments agreeing exactly, and the 2,414-file parse-ok control population pinned. |
@@ -68753,6 +68760,89 @@ from its committed pin and labelled as floors, not as a live measurement.
 Register the number-theory certificate checkers as facts. That is the binding
 item — more verifiers do not help while no fact names the ones that exist.
 The ledger was deliberately out of scope for a verification lane.
+
+**Lane block (`DONE`, timeout-diagnosis, 2026-09-14).** [ADR-2060] fixes the
+defect [ADR-2045] found and deliberately did not fix: `lra.rs`'s
+`Decision::TimedOut` was a unit variant whose **own doc comment** claimed the
+Fourier–Motzkin elimination had exhausted its budget, and the rendered string
+said the same for every producer — on 34 of 34 measured `QF_LRA` rows carrying
+it, `cube_matrices=0`, i.e. the elimination had never built a matrix. ADR-2045
+declined because it is **two** changes: give the variant a detail, *and* stop
+routing an `i128` overflow through a timeout variant. Both are here. This is a
+**correctness-of-diagnosis** fix on a soundness-adjacent path; **no capability
+lever is attached** and the lane is not measured in files decided.
+
+**The enumeration, three ways.** A name scan gives **six** `Decision::TimedOut`
+constructions — ADR-2045's count, and correct at that level. The compiler
+confirms exactly those six, and also that **exactly one test in the entire
+workspace** referenced the variant, which asserted only *that* the decision gave
+up. The transitive closure over the cause-erasing returns **below** them gives
+**28 program points** (27 distinct; one is a funnel) carrying **15 distinct
+causes**, of which **one** is the elimination running out of wall clock:
+`eliminate` returned a bare `None` for **eleven** bail points including **eight
+`?`-on-`Option` `i128` overflows**; `simplex_fallback` one `Ok(None)` for five,
+two of which — **a `sat` model that did not replay** and **an `unsat`
+certificate that failed its self-check** — are this route's own trust anchors
+and had no way to be counted at all; `collect_constraints` one `Ok(None)` the
+caller re-read the clock afterwards to *guess* about. Reproducible with
+`bench-results/timeout-diagnosis-20260914/scripts/enumerate-producers.py`.
+
+**The shape.** `Decision::GaveUp(GaveUp)`, five gates, two carrying a nested
+`(FmDecline, SimplexDecline)` pair because reaching the simplex *means* the
+elimination already declined and the honest answer is two facts. `ctx.overflow`
+leaves the timeout variant entirely for `Decision::Incomplete` /
+`UnknownKind::Incomplete` — the **one** `UnknownKind` this change moves. Every
+routing decision is unchanged by construction, watchdog precedence included.
+
+**Verdict neutrality, measured** (200-file board, two binaries interleaved per
+file, four pinned pairs `s5 0,8` / `s5 1,9` / `s6 0,8` / `s7 0,8`, 24 s,
+`ulimit -v 8G`, all four shards complete at 50 rows each): **0 gains, 0 losses**
+out of 200, **0 flips** out of 159 comparable, **0** exit-status moves out of
+200, **0** soundness disagreements out of 185 annotated rows. `base decided
+107/200, arm decided 107/200` — reproducing ADR-2045's 107 exactly. Wilson 95 %
+upper bounds: gains `[0, 0.0189]`, flips `[0, 0.0236]`, soundness `[0, 0.0203]`.
+
+**The finding inside the non-vacuity check.** A verdict-neutral A/B proves
+nothing unless the binaries differ, so the give-up detail is a channel that
+**must** move, attributed rather than counted: **35 board rows carried the old
+sentence, 0 still do**, and the gate the solver now names on them is the
+multiplier-matrix loop (**18**), the entry poll (**13** — the conjunctive
+decider had not run at all) or collection (**2**). **Not one is the
+elimination.** ADR-2045 inferred exactly this from the engines' own counters;
+the solver now says it in its own words, through a channel sharing nothing with
+those counters.
+
+**Pinning.** Four tests of deliberately different kinds — one derives its
+population from the file's own source text, with a negative control that
+**panics** rather than returning an empty list. Coverage 5/5 `GaveUp`, 5/5
+`FmDecline`, 4/6 `SimplexDecline` (the two undrivable ones named with reasons).
+The requested guard deletion — `decide_within`'s entry deadline poll — goes from
+**0 tests killed to 2**; the old test's own doc said deleting it left all 1,705
+unit tests green. Seven mutations kill five different tests between them, so the
+guards do not share a rejection path.
+
+**Two things found on the way.** `rustfmt` rejoins a backslash-continued string
+literal and leaves the continuation's indentation **inside** it: every detail
+this lane added shipped briefly with runs of 14 spaces, and all four new tests
+passed, because a run of spaces breaks nothing a `contains` looks for. And
+`cargo doc --workspace --all-features` with `-D warnings` is **red on `main`** —
+6 rustdoc errors in `axeyum-ir`/`axeyum-cnf`, measured on the base tree at
+`91c721f8e`, neither caused nor fixed here.
+
+**Next.** `SimplexDecline::ModelDidNotReplay` and
+`SimplexDecline::CertificateFailedSelfCheck` are countable for the first time;
+either above zero on a real board is a finding about a **trust anchor**, not
+about a budget. And `past_deadline` is `stop_requested() || clock_expired`, so
+"deadline" still covers a portfolio cancellation — separating them doubles the
+enum and wants its own measurement first.
+
+**Gates.** `cargo fmt --all --check` clean; `cargo check --workspace
+--all-targets` 0 errors; `check-clippy-complete.sh` **887 of 887** targets, 0
+diagnostics; `-p axeyum-solver --lib --features full` **1763 passed**;
+`corpus_regression` 2 passed; `progress_frontier --features full` 12 passed;
+the three mandatory z3 differential fuzzes **5 / 1 / 1 passed**, all nonzero;
+`check-suite-gating.py` PASS (the pins are unit tests already inside
+`hooks/pre-push:513`, so no new suite needs registering).
 
 **Done (`trust-closure-equivalent`, 2026-08-31).**
 `scripts/check-trust-closure.py` is green again, resolved the way the gate's own
