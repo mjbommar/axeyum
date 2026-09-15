@@ -1,7 +1,7 @@
 # ADR-2113: UFLIA does not fail to FIND the instance — it finds instances for universals it is not allowed to USE, and `rej_nocontext` is 100 % of the rejections
 
 Status: proposed
-Index-summary: UFLIA is **58 behind** cvc5 and the standing story is that our e-matching cannot find what z3's finds. Traced against z3 and cvc5 on [ADR-2090]'s 53 reference-minimal UFLIA cores, that story is **wrong in both halves**. The reference half: **all 53 cores are E-MATCHING-ONLY** — `z3 smt.mbqi=false` refutes 53 of 53, median 108 ms — and z3's own proofs name a **median of 6** instantiations against the 23 it makes; cvc5 agrees on 53 of 53. Our half: on the 19 cores whose per-universal probe runs at all, **444 of 500 universals (88.8 %) admit NO instance for the entire run** while the loop produces **4.3 M trigger joins and admits 37,414 instances (0.87 %)**. The decisive split — which no aggregate count can make and which this lane built `silent-split.py` to make — is that **NEVER-MATCHED is ZERO of 478** and **ALL-REJECTED is 429 of 478 (89.7 %)**, with **100.0 % of 2,139,815 rejections a single reason, `rej_nocontext`**: a universal nested under a disjunction or implication, compiled and matched, whose every tuple is *"joined and then discarded outright"* because `A ∨ (∀y. B(y))` does not entail `B(t)` and we hold no positive-replacement context for it. The fix is NOT prenexing — refuted with code: z3's `pull_nested_quantifiers` defaults to false, its `quantifier_hoister` has no caller under `src/smt`, and cvc5's default is the OPPOSITE (miniscoping). Both instead give the nested universal **its own SAT literal** and instantiate it only once the solver assigns that literal true (`smt_internalizer.cpp:647-666` + `smt_context.cpp:1473-1486`; `cnf_stream.cpp:539-556` + `theory_quantifiers.cpp:173-183`), so the missing mechanism is a **boolean-assignment guard on quantifier activation** — half of which this repository already has in `q:bool-skeleton` and the online CDCL(T) session, connected to nothing. The brief's premise does not survive either: **UFLIA has ZERO e-matching fixpoint give-ups** (the "12 fixpoints" is a cross-division count), its buckets are the interleaved ground check consuming the clock (12), `q:mbqi` ResourceLimit (8) and a watchdog (6). Two design claims are cited `file:line` on both sides. The lever this lane built and measured — trigger ALTERNATIVES, `AXEYUM_QINST_TRIGGER_ALTERNATIVES`, because z3 (`pattern_inference.cpp:458-467`) and cvc5 (`inst_strategy_e_matching.cpp:277-302`) keep several per quantifier and we kept exactly one — is **sound, tested, deterministic, and aimed at the bucket the census measures at ZERO**; it ships **OFF** and its A/B is reported as a measured number rather than an assumed one. The next lane's target is named with its denominator: make the nested universal's instances usable, not make more triggers.
+Index-summary: UFLIA is **58 behind** cvc5 and the standing story is that our e-matching cannot find what z3's finds. Traced against z3 and cvc5 on [ADR-2090]'s 53 reference-minimal UFLIA cores, that story is **wrong in both halves**. The reference half: **all 53 cores are E-MATCHING-ONLY** — `z3 smt.mbqi=false` refutes 53 of 53, median 108 ms — and z3's own proofs name a **median of 6** instantiations against the 23 it makes; cvc5 agrees on 53 of 53. Our half: on the 19 cores whose per-universal probe runs at all, **444 of 500 universals (88.8 %) admit NO instance for the entire run** while the loop produces **4.3 M trigger joins and admits a median of 1,473 instances per core** (0.87 % of joins) against z3's median of 6 used. The decisive split — which no aggregate count can make and which this lane built `silent-split.py` to make — is that **NEVER-MATCHED is ZERO of 478** and **ALL-REJECTED is 429 of 478 (89.7 %)**, with **100.0 % of 2,139,815 rejections a single reason, `rej_nocontext`**: a universal nested under a disjunction or implication, compiled and matched, whose every tuple is *"joined and then discarded outright"* because `A ∨ (∀y. B(y))` does not entail `B(t)` and we hold no positive-replacement context for it. The fix is NOT prenexing — refuted with code: z3's `pull_nested_quantifiers` defaults to false, its `quantifier_hoister` has no caller under `src/smt`, and cvc5's default is the OPPOSITE (miniscoping). Both instead give the nested universal **its own SAT literal** and instantiate it only once the solver assigns that literal true (`smt_internalizer.cpp:647-666` + `smt_context.cpp:1473-1486`; `cnf_stream.cpp:539-556` + `theory_quantifiers.cpp:173-183`), so the missing mechanism is a **boolean-assignment guard on quantifier activation** — half of which this repository already has in `q:bool-skeleton` and the online CDCL(T) session, connected to nothing. The brief's premise does not survive either: **UFLIA has ZERO e-matching fixpoint give-ups** (the "12 fixpoints" is a cross-division count), its buckets are the interleaved ground check consuming the clock (12), `q:mbqi` ResourceLimit (8) and a watchdog (6). Two design claims are cited `file:line` on both sides. The lever this lane built and measured — trigger ALTERNATIVES, `AXEYUM_QINST_TRIGGER_ALTERNATIVES`, because z3 (`pattern_inference.cpp:458-467`) and cvc5 (`inst_strategy_e_matching.cpp:277-302`) keep several per quantifier and we kept exactly one — is **sound, tested, deterministic, and aimed at the bucket the census measures at ZERO**; it ships **OFF** and its A/B is reported as a measured number rather than an assumed one. The next lane's target is named with its denominator: make the nested universal's instances usable, not make more triggers.
 Index-status: proposed
 Date: 2026-09-15
 
@@ -73,10 +73,25 @@ Sizes, from z3's own numbers and its own proof:
 `max-generation` is 1 on 16 cores, 2–3 on 25, and **≥ 4 on 11**: the needed
 instance is typically built from a term an earlier instance introduced, ten
 levels deep on one core. So nested instantiation depth is real — but it is not
-our blocker, because our matcher is already incremental (below).
+our blocker: our matcher is already incremental in the same way z3's MAM is.
+`IncrementalEmatchSession` carries `candidate_patterns: BTreeMap<usize,
+BTreeSet<ENodeId>>` --- *"exact top applications added or reached since each
+pattern's last scan"* (`qinst_egraph.rs:5466`) --- and a `merge_paths:
+PatternPathIndex` that re-queues patterns a congruence merge affected, which is
+what z3 does at `mam.cpp:4005-4024` (`relevant_eh` -> `add_candidate`) and
+`:4032-4047` (`add_eq_eh` -> `process_pc`/`process_pp`). Neither side re-scans
+everything each round. **The census confirms it from the other end: joins are in
+the millions, so matching against newly introduced terms is plainly happening.**
 
 **z3 over-produces about 4× as well** (23 made, 6 used). The gap is not that z3
-is frugal. It is four orders of magnitude: we admit 37,414.
+is frugal.
+
+**Stated at one denominator, because the obvious comparison is a category
+error.** Our 37,414 is a SUM over 19 cores; z3's 6 is a per-core MEDIAN, and
+putting them side by side compares a total with a middle value. Per core, ours
+is a **median of 1,473 instances admitted** (min 105, max 5,663) against z3's
+**median 23 made and 6 used**. Two orders of magnitude at a matched denominator,
+not four.
 
 `proof-instances.py` names the instances rather than counting them: it expands
 z3's `let` chain, because the substituted terms arrive abbreviated (`(+ ?x55 y)`)
@@ -130,8 +145,9 @@ those 19:
 | universals that admitted **nothing all run** | **444 (88.8 %)** |
 | universals with **no trigger at all** | **1 (0.2 %)** |
 | trigger joins | 4,307,703 |
-| instances admitted | 37,414 (**0.87 %** of joins) |
-| instances z3 needs | **6** |
+| instances admitted, summed | 37,414 (**0.87 %** of joins) |
+| instances admitted, **median per core** | **1,473** (min 105, max 5,663) |
+| instances z3 **uses**, median per core | **6** |
 
 On the **original** files rather than the cores, 0 of 53 decided and admitted
 instances pin near `MAX_GROUND_TERMS` (7,500–8,174) within 3–7 rounds: the flood
