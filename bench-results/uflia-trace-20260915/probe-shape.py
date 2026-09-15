@@ -9,13 +9,14 @@ Reads a solver run's combined output on stdin and prints ONE tab-separated row:
 per-universal sums from the `universal[i]` rows of that same build, `rounds`
 from the `loop-exit` line.
 
-`silent` is the count of universals whose `admitted=0` -- the never-instantiated
-bodies. It is `NA`, never 0, when the run printed no per-universal rows: the
-probe block sits behind `if admitted.is_empty()` in `qinst_egraph.rs`, so a run
-that exits on a TIME budget mid-round never reaches it. Printing 0 there would
-report "no universal was silent" for a run that measured no universal at all --
-an empty result from an instrument never pointed at the subject, reported as a
-strong negative.
+`joined`, `starved`, `admitted` and `silent` are all `NA`, never 0, when the run
+printed no per-universal rows. The probe block sits behind `if
+admitted.is_empty()` in `qinst_egraph.rs:2553`, so a run that exits on a TIME
+budget mid-round never reaches it. Printing 0 for those four would report "no
+join was found and no universal was silent" for a run that measured no universal
+at all -- an empty result from an instrument never pointed at the subject,
+reported as a strong negative. They come from one segment set, so they are
+missing together or present together; nothing is ever half-read.
 """
 
 import re
@@ -66,15 +67,14 @@ def main() -> None:
 
     if segments:
         widest = max(segments, key=len)
-        joined = sum(v[0] for v in widest.values())
-        starved = sum(v[1] for v in widest.values())
-        admitted = sum(v[2] for v in widest.values())
+        joined = str(sum(v[0] for v in widest.values()))
+        starved = str(sum(v[1] for v in widest.values()))
+        admitted = str(sum(v[2] for v in widest.values()))
         silent = str(sum(1 for v in widest.values() if v[2] == 0))
         if not foralls:
             foralls = len(widest)
     else:
-        joined = starved = admitted = 0
-        silent = "NA"
+        joined = starved = admitted = silent = "NA"
 
     print(f"{foralls}\t{triggerless}\t{rounds}\t{joined}\t{starved}\t{admitted}\t{silent}")
 
