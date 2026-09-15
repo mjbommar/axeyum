@@ -65,6 +65,14 @@ rule). What ships is the mislabelled give-up sentence, corrected as a suffix on
 a byte-identical prefix, with 4 tests and a 4-guard mutation suite where each
 guard kills exactly one of four distinct tests.
 
+Verdict invariance is measured, not argued: the 134 files re-run on a freshly
+built post-change binary give **0 verdict changes of 134 and 0 flips**, with
+non-vacuity in **both** directions — 15 of the 16 wrapper rows carry the
+correction, 0 in the base arm, and the **1** row whose refutation loop genuinely
+ran correctly carries none. The checker was wrong before the code was: its first
+version demanded the correction on a row that never entered the quantified arm
+at all, and the population is now the rows that came through the wrapper.
+
 Detail in [ADR-2114]; artifacts under `bench-results/dt-quant-trace-20260915/`.
 
 [ADR-2090]: ../../research/09-decisions/adr-2090-the-cores-are-small-and-findable-and-we-do-not-decide-them.md
