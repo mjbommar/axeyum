@@ -1,7 +1,7 @@
-# ADR-2111: `QF_LRA` — the same simplex, and the three things ours does differently
+# ADR-2111: `QF_LRA` — the same simplex, and the four things ours does differently
 
 Status: accepted
-Index-summary: Every reference solves the 93 `QF_LRA` files we lose with the same Dutertre–de Moura simplex we ship, so the gap is not the algorithm's name. Census of **all 93** over four cause channels (the give-up string is one of them and loses the largest bucket alone, [ADR-2045]): **40 `rc=134` allocation aborts, 36 `budget/other`, 7 `incomplete`, 5 `bound-no-decline`, 5 `not-applicable`** — and the typed decline name **types nothing here**, all 36 budget rows carrying `Budget::Other`, which is [ADR-2102]'s empty `decline_names` seen from the producer side. Shape census over the 93 against the **107 decided as a control**: atoms separate the halves **1,351×** (median 9,462 vs 7) while **coefficient size does not** — max numeral 5 digits median, 10 max, **0 of 200 rows over 18 digits on either half** — so `i128` is nowhere near its 38 digits and every arithmetic decline on this population is pivot GROWTH, never the file's own numbers; that kills the "big coefficients" reading before a trace is read. Three design-difference claims with `file:line` on both sides. **(1) The tableau.** Ours was `Vec<Vec<Rational>>`, a dense `m × (nvars+m)`; **none of z3, cvc5, `OpenSMT` or `SMTInterpol` stores a dense tableau** (`static_matrix.h:88-89`, `matrix.h:56-196`, `Tableau.h:62,118-119`, `TableauxRow.java:22-34`) and all four thread the COLUMNS too. FIXED: `row_val` sparse aligned with the `row_nz` index that already existed, plus a `col_rows` transpose — without which two `0..m` column scans become `O(m log nnz)`, a regression dressed as a fix. **(2) Theory propagation is not weak, it is absent**: over the 23 of 93 rows that reach the online engine, a median **19** propagations against **836,531** decisions — **24,509 decisions and 3,352,038 atom visits per propagation** — because `lra_online.rs:842` (inside `propagate_bounds`, `:835`) rescans every propagatable atom on every call, while z3 analyses only `touched_rows` (`lar_solver.h:284-302`), skips rows over `max_row_length_for_bound_propagation = 300` (`lp_settings.h:238`), and **pre-axiomatises the bound ORDERING as SAT clauses** (`theory_lra.cpp:2841,2963`) so the unate half never calls the theory. We have no bound-axiom generation at all. NOT FIXED, sized and named. **(3) The equality hypothesis is REFUTED on the reference side**: 66 of 93 rows are ≥50 % equalities and we do no Gaussian elimination — but neither does z3 (no `solve_eqs` in `asserted_formulas::reduce`), and cvc5's is capped at `ppAssertMaxSubSize = 2`. The failing allocation is **median 1.33 MB** (max 10.3), i.e. the STRAW at an 8 GiB ceiling and not the load, which stops the next lane sizing a fix from the panic message. The shipped lever is the CONSEQUENCE, not the storage: `for_budget` reserves `MAX_TABLEAU_CELLS × 32 B` = **128 MiB, 20 % of the 640 MiB online budget**, for a structure now costing ~1.4 MB, and that reserve decides which queries the engine ADMITS; `TableauReserve` ships **`Dense`** because ADR-2045's budget raise got **0 newly decided and five NEW aborts** and ADR-2055's cap turned **18 clean exits into `rc=134`**.
+Index-summary: Every reference decides the `QF_LRA` files we lose with the same Dutertre–de Moura simplex we ship, so the gap is not the algorithm's name. Census of **all 93** undecided rows over four cause channels (the give-up string is one of them and loses the largest bucket alone, [ADR-2045]): **40 `rc=134` allocation aborts, 36 `budget/other`, 7 `incomplete`, 5 `bound-no-decline`, 5 `not-applicable`**, 0 without a capture — and the typed decline name **types nothing here**, all 36 budget rows carrying `Budget::Other`, which is [ADR-2102]'s empty `decline_names` seen from the producer side. Shape census against the **107 decided as a control**: atoms separate the halves **1,351×** (median 9,462 vs 7) while **coefficient size does not** — max numeral 5 digits median and 10 max on BOTH halves, 0 of 200 rows over 18 against `i128`'s 38 — so every arithmetic decline here is pivot GROWTH, never the file's own numbers, which kills the "big coefficients" reading before a trace is read. **Reference trace, same 24 s / 8 GiB envelope, same pinned cores: z3 `smt.arith.solver=6` decides 57 of 93, `=2` (`theory_mi_arith`, predating every `lp/` refinement) decides 56, they agree on 53, and `lar_solver` accounts for FOUR files** — so "their newer simplex is better" is not the explanation; **and 33 of 93 are decided by NOBODY at 24 s, so the addressable prize is 60, not 93**. **The largest bucket by COUNT is not the largest by ADDRESSABILITY**, which this lane learned after aiming at the first: the 40 aborts are 50 % reachable (20) while the 32 rows dying inside `lra.rs` before the simplex gets a system are **28 reachable at 86–91 %** — and their trail says why, **652 rounds buying one 4.8-literal blocking clause against 1,839 atoms, with `cube_simplex_calls=651` COLD solves, one per SAT model**, where all four references keep the basis across backtracking and undo only bound stacks (z3 `lar_core_solver.h:122-129`, cvc5 `partial_model.h:220-229`, `OpenSMT` `LRAModel.cc:60-74`, `SMTInterpol` `LinArSolve.java:535-583`). Four design differences with `file:line` on both sides. **(1) The tableau**: ours was a dense `m × (nvars+m)` `Vec<Vec<Rational>>` and **none of z3, cvc5, `OpenSMT` or `SMTInterpol` stores a dense one** (`static_matrix.h:88-89`, `matrix.h:56-196`, `Tableau.h:62,118-119`, `TableauxRow.java:22-34`), all four threading the COLUMNS too. FIXED: `row_val` sparse aligned with the `row_nz` index that already existed plus a `col_rows` transpose — without which two `0..m` column scans become `O(m log nnz)`, a regression dressed as a fix. Measured on the median abort row: **1,624,162,512 cells holding 147,440 nonzeros**, 48.4 GiB against an 8 GiB ceiling, and the arm turns a core-dumped `rc=134` into a clean `unknown` at **203 MB** — mechanism, NOT a verdict claim. **(2) Theory propagation is not weak but absent**: over the 23 of 93 rows reaching the online engine, a median **19** propagations against **836,531** decisions — 24,509 decisions and 3,352,038 atom visits each — because `lra_online.rs:842` rescans every propagatable atom on every call, while z3 analyses only `touched_rows` (`lar_solver.h:284-302`), skips rows over 300 (`lp_settings.h:238`), and **pre-axiomatises the bound ORDERING as SAT clauses** (`theory_lra.cpp:2841,2963`); we generate no bound axioms at all. NOT FIXED, sized. **(3) The per-cube RE-SOLVE**, §3.2. **(4) The equality hypothesis is REFUTED on the reference side**: 66 of 93 rows are ≥50 % equalities and we do no Gaussian elimination — but z3 has no `solve_eqs` either and cvc5's is capped at `ppAssertMaxSubSize = 2`. Degeneracy handling and explanation minimisation were measured and do NOT order the field (z3 does not minimise at all and decides most). The failing allocation is **median 1.33 MB**, the STRAW at the ceiling and not the load. The shipped lever is the CONSEQUENCE, not the storage: `for_budget` reserves **128 MiB, 20 % of the 640 MiB online budget**, for a structure now costing ~1.4 MB, and that reserve decides which queries the engine ADMITS instead of dropping to the weak offline loop; `TableauReserve` ships **`Dense`** because ADR-2045's budget raise bought **0 verdicts and five NEW aborts** and ADR-2055's cap turned **18 clean exits into `rc=134`**.
 Index-status: accepted
 Date: 2026-09-15
 
@@ -133,11 +133,115 @@ envelope, because `smt.arith.solver` selects which arithmetic theory is built
 `theory_mi_arith`, the classic simplex; `6 = AS_NEW_ARITH` is `theory_lra` over
 `lp::lar_solver` and is **the default for `QF_LRA`**
 (`src/params/smt_params_helper.pyg:65`; `smt_params::setup_QF_LRA` does not
-touch `m_arith_mode`). cvc5 1.3.4 ran beside them. Results:
-`bench-results/lra-trace-20260915/ref-*.tsv`, one full `-st` / `--stats`
-capture per file kept whole rather than grepped for one token.
+touch `m_arith_mode`). cvc5 1.3.4 ran beside them, all three at **the same 24 s
+/ 8 GiB envelope on the same pinned core pairs as our own census**, one full
+`-st` / `--stats` capture per file kept whole rather than grepped for one token.
 
-## 4. The three design differences, with `file:line` on both sides
+```text
+population: 93 rows we do NOT decide          (malformed: 0)
+
+  z3 solver=6 (theory_lra, the QF_LRA default) decides   57/93
+  z3 solver=2 (theory_mi_arith, classic simplex) decides  56/93
+  cvc5 1.3.4                                    decides  36/93
+
+  decided by BOTH z3 arms                  53
+  decided ONLY by solver=6 (lar_solver)     4
+  decided ONLY by solver=2 (classic)        3
+  decided by SOME reference                60
+  decided by NO reference at 24 s          33
+```
+
+**Two results, and both change what a lane should do next.**
+
+**`lar_solver` accounts for 4 files of 93.** z3's two arithmetic theories agree
+on 53 of the 57 solver-6 decides, and the classic `theory_mi_arith` — which
+predates every data-structure refinement in `lp/` — decides 56 on its own. So
+"their newer simplex is better than ours" does not explain this division: *both*
+of z3's simplexes beat ours by about the same margin, which is what you would
+expect if the difference is structural rather than a refinement.
+
+**33 of 93 are decided by NO reference at 24 s.** The addressable prize on this
+population is **60, not 93**, and a gap number that does not say so promises
+work that is not there. A row nobody decides is not proof that it is unwinnable
+— only that it is not reachable by these three at this budget, which is the
+honest ceiling on what a gap can mean.
+
+### 3.1 The bucket that is largest is not the bucket that is reachable
+
+Crossing our own sub-buckets with "does any reference decide it":
+
+| sub-bucket | n | addressable | share |
+|---|---:|---:|---:|
+| `alloc-failure` | **40** | 20 | 50 % |
+| `lra:` deadline building the Fourier–Motzkin unit-multiplier matrix | 21 | **18** | **86 %** |
+| `lra:` deadline already gone when the conjunctive decider was entered | 11 | **10** | **91 %** |
+| `incomplete` — online model did not replay | 7 | 4 | 57 % |
+| `not-applicable` | 5 | 3 | 60 % |
+| `bound-no-decline` / `nra` | 3 | 3 | 100 % |
+| `lra:` deadline while linearizing | 2 | 1 | 50 % |
+| `budget` — online difference-logic driver | 1 | 1 | 100 % |
+| `bound-no-decline` / `fd:parse` | 2 | 0 | 0 % |
+| `timeout` — online CDCL(T) LRA driver | 1 | 0 | 0 % |
+
+**This lane fixed the largest bucket by COUNT, and the reference trace says that
+was not the largest by ADDRESSABILITY.** The 40 aborts are 50 % reachable (20);
+the 32 rows that die inside `lra.rs` before the simplex ever gets a system are
+**28 reachable, at 86–91 %**. Said plainly so the next lane does not repeat it:
+sizing work from a census alone picks the wrong bucket, because a census counts
+rows and cannot say which of them anyone can win.
+
+### 3.2 What those 32 rows are doing — and it is the re-solve
+
+The trail of `_standard_init5_ground.i_3_2_2.bpl_7.smt2`, the representative of
+the 11-row "deadline already gone" group under the written picking rule:
+
+```text
+; route decided_by=none bound_by=nra bound_ms=23978 total_ms=24018 attempts=15
+; lazy-smt  atoms=1839  lra_rounds=652
+            skeleton_ms=6317  theory_ms=16703
+            cube_collect_ms=3552  cube_simplex_ms=13102  cube_simplex_calls=651
+            cube_matrices=0  cube_fm_ms=0
+            blocking_clauses=651  blocking_literals=3137
+```
+
+Twenty-four seconds buys **652 rounds**, each of which solves the Boolean
+skeleton to a TOTAL assignment, hands every atom to a **cold** conjunctive
+decision, and returns **one blocking clause of 4.8 literals against 1,839
+atoms**. `cube_simplex_calls=651` with `cube_matrices=0`: six hundred and fifty
+one simplex solves **from scratch**, one per SAT model.
+
+That is the repository's own named pattern — *"re-solves from scratch what it
+should update"* — and it is the sharpest contrast with every reference read for
+this lane. **All four keep the basis across SAT backtracking; only bound stacks
+are undone.** z3's `lar_solver::push` snapshots *only* `m_column_types` and the
+strategy (`lar_core_solver.h:122-129`) — the matrix, the basis, the basis
+heading and `m_r_x` are not saved, and `stacked_vector m_r_pushed_basis` is
+declared and referenced nowhere — while `find_feasible_solution` resumes from
+the existing basis after patching only the columns whose bounds changed
+(`update_x_and_inf_costs_for_columns_with_changed_bounds_tableau`,
+`lar_solver.cpp:1280-1283`). cvc5's tableau and assignment are plain members and
+not context-dependent, so a pop restores bounds and nothing else
+(`partial_model.h:220-229`); `OpenSMT` pops only `bound_trace`
+(`LRAModel.cc:60-74`) and demotes a retracted basic variable to *quasi-basic*
+rather than pivoting it out (`Simplex.h:112-116`); `SMTInterpol`'s
+`backtrackComplete` marks everything dirty and calls `fixOobs()` without
+rebuilding anything (`LinArSolve.java:535-583`).
+
+**Why these files are on that route at all** is the admission screen: 1,839
+atoms is past what the online CDCL(T) engine's byte budget admits, so they fall
+through to the offline lazy-SMT loop, whose own module doc already calls it
+"much weaker" and measures it at "a round costs 48–2,000 ms and buys a clause of
+2.0–19.0 literals against 265–1,736 atoms" (`lra_route.rs`). The online engine
+**does** keep its basis warm — `simplex_cold_restarts=0` on every traced row —
+so this is a routing outcome and not a missing capability. That is exactly the
+screen `TableauReserve::Sparse` moves, and it is why the lever is where it is
+rather than on the storage.
+
+## 4. The design differences, with `file:line` on both sides
+
+Three here; the fourth — the offline route's per-cube RE-SOLVE, which every
+reference replaces with a warm basis — is §3.2, because the reference trace is
+what showed it to be the reachable one rather than the largest.
 
 ### Claim 1 — the tableau is dense here and sparse in every reference
 
@@ -363,6 +467,50 @@ is re-verified against the original rows by `check_farkas`.
   `row_val` populated. The verdict comparison alone would not have caught a bad
   recovery — `cell` binary-searches an empty index and answers zero for every
   column, a perfectly consistent and completely wrong row.
+
+### The mutation run, and the prediction it falsified
+
+`scripts/tests/mutation_controls.py simplex-sparse-tableau`, baseline green at
+**36 tests**, filtered to `simplex::tests` rather than to one test so a kill
+count is a claim about a population. All three mutations are `killed N` — the
+harness's only outcome that supports a coverage claim — and the run exits 0.
+`--check-anchors`: 141 suites, 1,068 anchors, **stale=0**.
+
+| guard removed | kind of damage | killed |
+|---|---|---:|
+| the fill-in write that enters a newly-nonzero cell | soundness | **16** |
+| the transpose entry removed when a cell goes to zero | consistency | **10** |
+| the sorted position the transpose keeps its rows in | determinism | **8** |
+
+**None killed exactly one, and that is reported rather than engineered away.**
+The rule this repository keeps — *delete one guard and require that exactly one
+test dies* — exists because six of seven guards in one suite were removable with
+everything still green, since they all rejected through **one shared check**.
+The property it protects is that distinct guards have distinct consumers, and
+these do: the three kill sets are different sets, not nested ones. Only the
+first takes `a_fill_in_cell_…`, `single_var_infeasible_carries_farkas`,
+`equality_system_infeasible`, `two_var_infeasible` and
+`the_cost_counters_are_populated_and_bounded_by_the_work`, and the second and
+third differ from each other by two. A literal one-kill mutation would have had
+to be constructed for the number, which is the opposite of what the rule is for.
+
+**The third mutation falsified this lane's own prediction, and that is the most
+useful line in the table.** Appending to `col_rows` instead of inserting in
+order was registered as a DETERMINISM defect on the expectation that it would be
+visible *only* to the recount, because it changes no verdict — every
+exact-rational sum is the same sum in a different order. It killed **eight**,
+including `the_tie_break_is_seeded_and_reproducible` and
+`the_bland_fallback_is_reachable_and_verdict_preserving`. So the transpose's
+ORDER is load-bearing for reproducibility and not merely for the index check:
+the order of the adds is where an arithmetic decline lands, and the pivot
+sequence follows from it. The comment in `col_rows` claiming the order matters
+was a guess when it was written; it is now measured.
+
+One consequence worth stating against this lane's own work: the
+soundness-negative fixture is covered by fifteen other tests, so it is a
+**named and readable** guard rather than a uniquely necessary one. That is still
+worth having — the fifteen fail with no hint that a fill-in cell was lost — but
+it is not the sole thing standing between the engine and a wrong `sat`.
 
 ## 6. What this lane did not do, sized
 
