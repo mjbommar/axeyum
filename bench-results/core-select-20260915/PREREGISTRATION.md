@@ -197,3 +197,19 @@ is still evaluated on the median `minimal` over all `REF-UNSAT` rows.
 positive.** A strategy cannot beat the ceiling, so sizing one on a row we would
 not decide even with the reference's own core handed to us measures nothing.
 This narrows R7's denominator and the denominator is printed with it.
+
+**A5 — `REF-NONE` gets two checks, and the cheap one is free.** `REF-NONE`
+bounds this census from below: a row the reference cannot refute has a core
+this lane cannot see, and reporting only the rows a reference could reduce
+would size the selection axis on the easy half of its own population.
+
+- *Free:* the benchmark's own declared `:status` is a third authority and is
+  already recorded. The count of `REF-NONE` rows declaring `unsat` is how much
+  of the bucket is known-refutable-but-unreduced, and it is published beside
+  the `REF-UNSAT` numbers rather than left out.
+- *Sampled:* a **60-row** random sample (seeded, drawn from the `REF-NONE`
+  bucket) is re-asked on the **ORIGINAL** file with `ref-run.sh`, to test
+  whether the `and`-split — an equivalence, but not a performance-neutral one —
+  is itself producing `REF-NONE`. Sample rather than census because the whole
+  bucket costs 60 s a row and this is a check on the instrument, not a
+  population number; the result is quoted with a Wilson interval.
