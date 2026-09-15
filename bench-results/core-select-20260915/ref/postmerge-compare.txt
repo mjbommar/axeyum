@@ -1,0 +1,12 @@
+pre-merge rows 232  post-merge rows 232  comparable 232
+
+CEILING pre-merge  39 of 232
+CEILING post-merge 41 of 232
+
+row level: gains 3  losses 1  sat<->unsat flips 0
+  GAIN  AUFDTLIRA_20200306-Kanig_spark2014bench_N624-020__perm_occ__sort.adb_36_39_index_check___00.smt2.core.smt2
+  GAIN  AUFDTLIRA_20200306-Kanig_spark2014bench_N624-020__perm_rem__perm.adb_130_45_index_check2___00.smt2.core.smt2
+  GAIN  UFDTLIRA_20200306-Kanig_spark2014bench_Q327-014__no_pre__dispatch.adb_24_24_overflow_check___00.smt2.core.smt2
+  LOSS  UFDTLIRA_20200306-Kanig_spark2014bench_R509-011__higher_order_proof__why_9c81cc_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2.core.smt2
+
+soundness on the merged tree: a reference core is unsat, so any `sat` is WRONG -- 0 of 232

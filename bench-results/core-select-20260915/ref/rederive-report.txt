@@ -1,0 +1,22 @@
+division       n  unsat   sat  unknown  NOVERDICT  board und  delta
+UFNIA        200     33    21      146          0        147     -1
+QF_NIA       200      6    77      117          0        116     +1
+UFLIA        200     85     0      115          0        115     +0
+UF           200     68    22      110          0        106     +4
+AUFDTLIRA    200    121     0       79          0         79     +0
+UFDTLIRA     200    138     6       56          0         56     +0
+AUFLIRA      200    178     0       22          0         22     +0
+TOTAL       1400    629   126      645          0        641     +4
+
+re-derived undecided 645   board undecided 641
+  board-undecided that are NOW DECIDED  : 2
+  NEWLY undecided (board said decided)  : 6
+  agree                                 : 639
+    newly undecided: QF_NIA/20170427-VeryMax/ITS/From_T2__apchild-live.t2_fixed__p16479_terminationG_0.smt2
+    newly undecided: QF_NIA/mcm/106.smt2
+    newly undecided: UF/20170428-Barrett/cdt-cade2015/nada/afp/abstract_completeness/x2015_09_10_16_59_33_621_1039748.smt_in.smt2
+    newly undecided: UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_20_02_499_2906170.smt_in.smt2
+    newly undecided: UF/sledgehammer/Arrow_Order/smtlib.663965.smt2
+    newly undecided: UF/sledgehammer/QEpres/uf.924249.smt2
+
+soundness: 714 comparisons against the declared :status, 0 disagreements

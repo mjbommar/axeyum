@@ -40,7 +40,10 @@ use crate::model::Model;
 use crate::qinst_egraph::prove_quantified_unsat_via_egraph;
 use crate::quant_guarded_int::{expand_guarded_int_universals, skolemize_positive_existentials};
 use crate::route_trace;
-use crate::route_trace::{DeclineReason, Recorder, RouteTrace, Verdict, with_recorder};
+use crate::route_trace::{
+    Budget, DeclineReason, Recorder, RouteTrace, UnsupportedDetail, Verdict, VerifierRejected,
+    with_recorder,
+};
 use crate::sat_bv_backend::SatBvBackend;
 
 // Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
@@ -1482,7 +1485,7 @@ pub(crate) fn qtrace(stage: &str, since: Instant, note: &str) {
 ///
 /// Telemetry only: the returned reason is recorded, never branched on.
 fn unsupported_decline(message: &str) -> DeclineReason {
-    DeclineReason::UnsupportedDetail(message.to_owned())
+    DeclineReason::UnsupportedDetail(UnsupportedDetail::Backend(message.to_owned()))
 }
 
 /// **A ladder rung's `Unsupported` is a DECLINE, not the query's verdict.**
@@ -1572,7 +1575,10 @@ fn settle_rung(
         reason.detail,
     );
     with_recorder(rec, |t| {
-        t.record_declined(route.label(), DeclineReason::UnsupportedDetail(detail));
+        t.record_declined(
+            route.label(),
+            DeclineReason::UnsupportedDetail(UnsupportedDetail::OwnershipInconsistency(detail)),
+        );
     });
     // ADR-2103. THIS is the conversion the budget bound exists for: a
     // non-decision that ended the ladder before ADR-2100 and now does not. The
@@ -1903,14 +1909,16 @@ fn record_route_refusal(
         (RouteKind::FastPath, _) | (RouteKind::Decider, Ownership::NotOwned(_)) => {
             unsupported_decline(message)
         }
-        (RouteKind::Decider, Ownership::Complete) => DeclineReason::UnsupportedDetail(format!(
-            "{OWNERSHIP_INCONSISTENCY_MARKER}: `{}` declares it owns {}, which covers this \
-             query's {}, and then refused the fragment anyway. Either the declaration or the \
-             route is wrong. Refusal: {message}",
-            route.label(),
-            route.owns(),
-            query,
-        )),
+        (RouteKind::Decider, Ownership::Complete) => {
+            DeclineReason::UnsupportedDetail(UnsupportedDetail::OwnershipInconsistency(format!(
+                "{OWNERSHIP_INCONSISTENCY_MARKER}: `{}` declares it owns {}, which covers this \
+                 query's {}, and then refused the fragment anyway. Either the declaration or \
+                 the route is wrong. Refusal: {message}",
+                route.label(),
+                route.owns(),
+                query,
+            )))
+        }
     };
     with_recorder(rec, |t| t.record_declined(route.label(), reason));
 }
@@ -2437,11 +2445,7 @@ fn finish_quantified_solve(
                     let elapsed = mbqi_elapsed + route_trace::take_attribution_open_segment();
                     route_trace::record_quant_rung_declined_with_elapsed(
                         route_trace::quant_rung::MBQI,
-                        DeclineReason::VerifierRejected(
-                            "MBQI candidate lacks a checked model for the original assertion \
-                             sequence"
-                                .to_owned(),
-                        ),
+                        DeclineReason::VerifierRejected(VerifierRejected::MbqiCandidateUnchecked),
                         elapsed,
                     );
                     Ok(CheckResult::Unknown(UnknownReason {
@@ -4037,7 +4041,7 @@ fn check_auto_explained_parts(
         // invented for it.
         trace.record_declined(
             "dispatch-error",
-            DeclineReason::UnsupportedDetail(error.to_string()),
+            DeclineReason::UnsupportedDetail(UnsupportedDetail::Backend(error.to_string())),
         );
     }
     (outcome, trace)
@@ -4877,7 +4881,10 @@ fn check_auto_inner(
         // fragment mismatch that a `Backend` failure would not be.
         Err(error) => {
             with_recorder(rec, |t| {
-                t.record_declined("milp", DeclineReason::UnsupportedDetail(error.to_string()));
+                t.record_declined(
+                    "milp",
+                    DeclineReason::UnsupportedDetail(UnsupportedDetail::Backend(error.to_string())),
+                );
             });
         }
     }
@@ -4901,7 +4908,7 @@ fn check_auto_inner(
                     t.record_declined(
                         "coercion-relax",
                         DeclineReason::VerifierRejected(
-                            "candidate fails the original int↔real coupling".to_owned(),
+                            VerifierRejected::CoercionRelaxCouplingFailed,
                         ),
                     );
                 });
@@ -5778,7 +5785,7 @@ fn dispatch_arith_uf_overbound_probe_before_lia(
             with_recorder(rec, |t| {
                 t.record_declined(
                     "uf-arith-lazy-overbound-pre-lia",
-                    DeclineReason::VerifierRejected(detail),
+                    DeclineReason::VerifierRejected(VerifierRejected::Backend(detail)),
                 );
             });
             return Ok(None);
@@ -7257,10 +7264,7 @@ fn mbqi_first_refusal(
             qtrace("mbqi-quick", t0, "declined");
             route_trace::record_quant_rung_declined(
                 route_trace::quant_rung::MBQI_QUICK,
-                DeclineReason::VerifierRejected(
-                    "MBQI-quick candidate model did not replay against the original assertions"
-                        .to_owned(),
-                ),
+                DeclineReason::VerifierRejected(VerifierRejected::MbqiQuickReplayFailed),
             );
             Ok(None)
         }
@@ -8732,9 +8736,7 @@ fn dispatch_cas_refuters(
             record_cas_decline(
                 rec,
                 "cas-identity-refuter",
-                DeclineReason::VerifierRejected(
-                    "polynomial normal form disagreed with the independent expansion".to_owned(),
-                ),
+                DeclineReason::VerifierRejected(VerifierRejected::CasNormalFormDisagreement),
             );
         }
     }
@@ -8758,9 +8760,7 @@ fn dispatch_cas_refuters(
             record_cas_decline(
                 rec,
                 "cas-int-units",
-                DeclineReason::VerifierRejected(
-                    "divisibility certificate failed its independent re-check".to_owned(),
-                ),
+                DeclineReason::VerifierRejected(VerifierRejected::CasDivisibilityCertificateFailed),
             );
             None
         }
@@ -8807,9 +8807,7 @@ fn dispatch_cas_ideal(
             record_cas_decline(
                 rec,
                 "cas-ideal-refuter",
-                DeclineReason::VerifierRejected(
-                    "ideal combination failed its independent re-check".to_owned(),
-                ),
+                DeclineReason::VerifierRejected(VerifierRejected::CasIdealCombinationFailed),
             );
             None
         }
@@ -9729,10 +9727,7 @@ fn decide_bounded_int_blast_explained(
     let enumerated =
         decide_int_box_by_evaluation(arena, assertions, &proven, MAX_INT_BOX_ENUM_CASES);
     if enumerated.is_none() {
-        *why = Some(DeclineReason::Budget(
-            "exact box blast declined and the proven int box exceeds the exhaustive-enumeration cap"
-                .into(),
-        ));
+        *why = Some(DeclineReason::Budget(Budget::IntBoxEnumerationCapExceeded));
     }
     Ok(enumerated)
 }

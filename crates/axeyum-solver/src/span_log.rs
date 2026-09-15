@@ -1191,7 +1191,7 @@ fn classify(
                 Outcome::Declined,
                 None,
                 Some("unsupported".to_owned()),
-                Some(detail.clone()),
+                Some(detail.to_string()),
                 None,
             ),
             DeclineReason::NotApplicable => (
@@ -1205,8 +1205,8 @@ fn classify(
                 Outcome::Exhausted,
                 None,
                 Some("budget".to_owned()),
-                Some(detail.clone()),
-                Some(detail.clone()),
+                Some(detail.to_string()),
+                Some(detail.to_string()),
             ),
             DeclineReason::Incomplete(unknown) => (
                 Outcome::Declined,
@@ -1219,7 +1219,7 @@ fn classify(
                 Outcome::Declined,
                 None,
                 Some("verifier-rejected".to_owned()),
-                Some(detail.clone()),
+                Some(detail.to_string()),
                 None,
             ),
         },
@@ -1391,12 +1391,16 @@ mod tests {
     use super::*;
     use crate::backend::{UnknownKind, UnknownReason};
     use crate::lia_counters::LiaCounters;
+    use crate::route_trace::Budget;
 
     fn ladder() -> RouteTrace {
         let mut trace = RouteTrace::new();
         trace.record_probe("fragment=QF_LRA routes=[dl-online,lra]");
         trace.record_declined("dl-online", DeclineReason::NotApplicable);
-        trace.record_declined("nra", DeclineReason::Budget("cnf-nodes=2000000".into()));
+        trace.record_declined(
+            "nra",
+            DeclineReason::Budget(Budget::Other("cnf-nodes=2000000".into())),
+        );
         trace.record_decided("lia-simplex", Verdict::Unsat);
         trace
     }

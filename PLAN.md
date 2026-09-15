@@ -48307,6 +48307,82 @@ Also: an entering rule is a **search-trajectory** change whose effect is
 uncorrelated with per-pivot cost and core width — both refuted by counters. Same
 shape as the clause database's 25% fewer conflicts at 28% more work.
 
+**Lane core-select (`DONE`, core-select, 2026-09-15).** Censused the minimal
+refutable subset across the undecided rows of all seven Tier 1 divisions and
+**closed the assertion-selection axis**: [ADR-2090]. Rules
+[pre-registered](bench-results/core-select-20260915/PREREGISTRATION.md)
+before any measurement, with amendments A1–A5 written before the census counted
+a row.
+
+Branch base: `git merge-base main HEAD` is
+`b78b887b3064b1075783ba6f4528519d07b1bbb6`, which **is** local `main`'s HEAD.
+
+**Three senses of "selection", and this lane measured the third.** [ADR-2005]
+measured *which representative TERM to substitute* (+0 of 129). [ADR-2020] named
+*which INSTANCES to admit* as its open axis. This lane measured *which
+ASSERTIONS to look at*. No number transfers between them.
+
+## The answer, in one line
+
+**The cores ARE small, a two-line rule DOES find them, and we still do not
+decide them.** [ADR-2050]'s median-of-1 generalises — median `minimal` **3**
+against a haystack median of **37**, `REF-UNSAT` **36.9 %**, both halves of R5
+PASS — and it converts nothing: the ceiling on perfect selection is **36 of 645
+undecided rows (5.6 %)** and the best reference-free rule reaches **7 of 645
+(1.1 % `[0.5, 2.2]`)**. **R9 build gate FAILS; no lever built.**
+
+## What the next lane should take from it
+
+- **Do not size a lane against premise selection, relevance filtering or
+  assertion pruning on Tier 1.** `suffix(1)` is two lines and is already near
+  the top of the family.
+- **The divisions are not one population.** Ceiling `UF` 8/12 = 66.7 % against
+  `QF_NIA` **0 of 36 `[0.0, 9.6]`**. A lane briefed on the Tier 1 aggregate aims
+  at neither.
+- **`UFNIA` has a median haystack of TWO conjuncts** (81 of 146 undecided rows
+  at ≤ 2), so the division with the largest undecided mass has nothing to select
+  from before any solver runs.
+- **The successor axes are named with their own denominators** in ADR-2090 §7,
+  from the verbatim give-up details over the 193 rows where the ceiling is
+  negative: 12 rows where e-matching reaches a fixpoint and says *more rounds
+  cannot help*; 17 where `mbqi` declines a datatype fragment in three distinct
+  wordings; 5 where instantiation does not reach nested or existential
+  quantifiers; 4 bounded at integer width 32. **None of these is selection.**
+- **64 of those 193 gave up in under 2 s of a 24 s budget and 73 ran ≥ 20 s** —
+  a refusal and an exhausted clock behind the same `unknown`, roughly a third
+  each.
+
+## Method notes worth carrying
+
+- **The board TSVs are snapshots.** Its `+4` hid **8 rows moving** (2 now
+  decided, 6 newly undecided, 639 agreeing) — a third of the movement and the
+  wrong direction for most of it. Re-derive, and report BOTH directions.
+- **A disagreement and a non-answer are different findings.** This lane's first
+  authority partition put 42 rows in `AUTHORITY-SPLIT`; the real split is 0
+  disagreements at a comparable denominator of 194, 34 cvc5 non-answers kept and
+  flagged, 8 rows z3 cannot re-check.
+- **A minimal core of 1 means there is nothing to select**, not that the needle
+  is easy to find: the single conjunct is the whole verification condition.
+
+## Landed
+
+| SHA | what |
+|---|---|
+| `ee8db8ebe` | preregistration, population, haystack census; two parser defects found by the census's own exit status |
+| `9a49ea274` | the core instrument, validated against [ADR-2050]'s numbers and against constructions with a known answer |
+| `f28bf4d4c` | weighted sharder, join, subset builder, pilot |
+| `2cf3b4828` | `core-shape.py` — what a core IS, not only how many conjuncts |
+| `91eff84e9` | preregistration amendments A1–A4 |
+| `34a3f90ac` | the traced pass |
+| `e9cec319e` | `collect.sh` (refuses a short sweep) and amendment A5 |
+| `43a6b8dad` | the SInE-style relevance rule |
+| `65fc272c3` | R1 — the re-derived population, both directions |
+| `3198871be` | mutation control on the headline test |
+| `2c42d84c0` | the census: 645 undecided, 236 `REF-UNSAT`, median minimal 3, R5 PASS |
+| `e533aa5e7` | R6 — the ceiling, 36 of 645 |
+| `94874b70d` | R7/R9 — best rule 7 of 645, build gate FAILS; 318-subset soundness audit |
+| `f5b684f32` | the give-up contrast |
+
 **`DONE`, creal-pi, 2026-08-31.** **`CReal.pi` is constructed and
 `3 ≤ π ≤ 4` is proved, axiom-free.** Thirteen declarations in
 `crates/axeyum-lean-kernel/src/creal/pi.rs`, admitted through
@@ -64833,6 +64909,83 @@ independently. Corrected in place with a dated note. If you cite Coq's reals
 anywhere, pin the version.
 
 Detail moved to [`../notes/reals-design.md`](docs/plan/notes/reals-design.md).
+
+**Lane reason-detail (`DONE`, reason-detail, 2026-09-15).** Phase 3 dependency
+named by [ADR-2101](docs/research/09-decisions/adr-2101-the-trace-is-the-api.md)
+("this ADR did not typify [the 44 free-string sites]... typifying the detail is
+a compiler-enumerated refactor... which is a lane rather than a slice of one"),
+closed by [ADR-2104](docs/research/09-decisions/adr-2104-typed-decline-detail.md).
+`DeclineReason::{UnsupportedDetail,Budget,VerifierRejected}` now carry closed,
+named enums instead of a free `String`. Also closed the two other Item 2
+targets: registered the three orphan control suites
+`check-control-registration.sh` had flagged.
+
+Branch base: `git merge-base main HEAD` is `7d922fe58` (ROUTE-OWNERSHIP,
+ADR-2100), local `main`'s HEAD when this lane's worktree merged it.
+
+## What changed
+
+Three new enums in `route_trace.rs`: `UnsupportedDetail`
+(`Backend`/`IngestRefusal`/`OwnershipInconsistency`), `Budget`
+(`NiaRelaxationSliceExpired`/`NiaRefinementRoundCapReached`/
+`SquareCoefficientGuardExceeded`/`IntBoxEnumerationCapExceeded`/`Other`),
+`VerifierRejected` (ten named producers plus `Backend`). Each has an exhaustive
+`name()` (no wildcard arm) and a `Display` copied byte-for-byte from the site
+it replaces. The three `String`-accepting `DeclineReason` constructors are
+gone; `cargo check` names every production construction site.
+
+`crates/axeyum-bench/examples/diagnose_evidence.rs`'s `decline_detail` helper
+changed `Option<&str>` → `Option<String>` (the three variants no longer share
+a borrowable `String` field); every caller shadow-binds `.as_str()` so its own
+logic is unchanged.
+
+New `crates/axeyum-solver/tests/decline_detail_typed.rs`: five tests drive a
+real query to a specific typed variant; an exhaustive accounting match names
+the technical reason for each of the other 14 (mostly trust-anchor branches
+where driving the decline means constructing the decider bug it exists to
+report).
+
+New `SUITES["typed-decline-detail"]` in `scripts/tests/mutation_controls.py`;
+fixed one pre-existing anchor (`route-ownership-marker`) this lane's own edit
+to `record_route_refusal` went stale.
+
+`scripts/check.sh` gained three `step` lines: `holdout-price-controls`,
+`parity-nonverdict-classifier`, `producer-channel-controls`.
+
+## Numbers
+
+| | |
+|---|---|
+| ADR-2101's claimed free-string producer sites | 44 (`UnsupportedDetail` 11, `Budget` 16, `VerifierRejected` 17) |
+| rustc-enumerated production construction sites, this lane | **25** (13 `auto.rs`, 4 `nia_linearize.rs`, 2 `nia_square.rs`, 1 `int_real_relax.rs`, 1 `smtlib.rs`, 4 `span_log.rs` consumer) |
+| gap explained by | shared helpers (`unsupported_decline` 16 callers, `DeclineReason::from_unknown` ~30 callers) whose signature did not change, plus an apparent overcount in ADR-2101's `Budget` figure (13 raw occurrences in this tree, not 16) |
+| declared typed-detail variants | 19 (3 `UnsupportedDetail` + 5 `Budget` + 11 `VerifierRejected`) |
+| driven by a constructed query | **5** |
+| undriven, named with a reason | **14** (10 trust-anchor, 2 adversarial-instance, 1 three-stage internal chain, 1 concurrent lane's surface) |
+| `to_json` schema version | unchanged, **2** |
+| byte-stability tests (`route_trace.rs`) | green, unchanged assertions |
+| `route_trace_reader.py` control suite | 12/12, unchanged |
+| `dispatch/reason:` suites (`hooks/pre-push`, read not retyped) | **19/19** green |
+| mutation: `typed-decline-detail` | kills exactly 1 named test |
+| mutation anchors, `--check-anchors` | stale=0 |
+| orphan control suites (`check-control-registration.sh`) | 3 → **0** |
+
+## What this lane did not do
+
+- Did not force the sixteen `unsupported_decline` callers or the ~30
+  `DeclineReason::from_unknown` callers through individually-typed
+  constructors — they share one classification each and forcing per-site
+  distinctions would inflate the compiler count without adding information
+  the trail carries (see ADR-2104 §"Alternatives rejected").
+- Did not attempt to drive the ten trust-anchor `VerifierRejected` branches
+  from a query: doing so means constructing the underlying decider bug each
+  branch exists to report, a differential/fuzzing project of its own.
+- Did not touch `auto.rs`'s ownership table or the `q:*` rung dispatch beyond
+  the `DeclineReason` constructor call sites rustc named (QUANT-LADDER-OWNERSHIP's
+  surface).
+- Did not investigate the pre-existing duplicate ADR numbers `0166`/`0167`
+  surfaced by `gen-adr-index.py`'s `duplicate_numbers=` field — unrelated to
+  this lane's diff, present on the merge base already.
 
 **Three of four gates green, the fourth deliberately left red with the argument
 (`done-for-now`, red-gate-sweep, 2026-09-01).** Base `b558d9b5a`; each gate

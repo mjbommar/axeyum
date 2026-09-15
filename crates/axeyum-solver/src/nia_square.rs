@@ -90,7 +90,7 @@ use axeyum_ir::{Assignment, Op, SymbolId, TermArena, TermId, TermNode, Value, ev
 
 use crate::backend::{CheckResult, SolverError};
 use crate::model::Model;
-use crate::route_trace::DeclineReason;
+use crate::route_trace::{Budget, DeclineReason, VerifierRejected};
 
 /// Above this magnitude for any coefficient the pass declines (returns `None`)
 /// rather than risk `i128` overflow in `b²`, `4·a·c`, `isqrt`, the `f(k)`
@@ -353,7 +353,7 @@ pub(crate) fn decide_int_square_constraint_explained(
     // arithmetic and the Horner evaluations within `i128`. Larger ones decline.
     if !poly.coeffs_in_guard() {
         *why = Some(DeclineReason::Budget(
-            "single-variable polynomial coefficients exceed the i128 safety guard".into(),
+            Budget::SquareCoefficientGuardExceeded,
         ));
         return Ok(None);
     }
@@ -383,7 +383,7 @@ pub(crate) fn decide_int_square_constraint_explained(
                 // happen for the case analysis above, but soundness comes first:
                 // decline rather than emit an unchecked `sat`.
                 *why = Some(DeclineReason::VerifierRejected(
-                    "square-constraint witness failed ground-evaluator replay".into(),
+                    VerifierRejected::SquareWitnessReplayFailed,
                 ));
                 return Ok(None);
             }

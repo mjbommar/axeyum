@@ -2246,7 +2246,9 @@ fn solve_smtlib_at_string_bound(
                 crate::route_trace::record_front_door(
                     crate::route_trace::front_door_stage::PARSE,
                     crate::route_trace::RouteOutcome::Declined(
-                        crate::route_trace::DeclineReason::UnsupportedDetail(detail.clone()),
+                        crate::route_trace::DeclineReason::UnsupportedDetail(
+                            crate::route_trace::UnsupportedDetail::IngestRefusal(detail.clone()),
+                        ),
                     ),
                 );
             }
