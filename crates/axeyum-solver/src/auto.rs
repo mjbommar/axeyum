@@ -236,16 +236,16 @@ pub(crate) mod route_ownership {
             self.0 & class.bit() != 0
         }
 
-        /// **The ownership test.** Every construct in `self` is also in
-        /// `owned` — i.e. the route is complete for this query's fragment and
-        /// is therefore entitled to end the ladder on it.
-        pub(crate) const fn subset_of(self, owned: Self) -> bool {
-            self.0 & !owned.0 == 0
-        }
-
-        /// The constructs in `self` that `owned` does not cover: the witness a
-        /// decline records, so the trail says WHY the route could not stop the
-        /// ladder rather than only that it did not.
+        /// **The ownership test**, in the form the ladder needs it: the
+        /// constructs in `self` that `owned` does not cover.
+        ///
+        /// Empty means the route is complete for this query's fragment and is
+        /// entitled to end the ladder on it. Non-empty is both the answer and
+        /// the witness the decline records, so the trail says WHY the route
+        /// could not stop the ladder rather than only that it did not. A bare
+        /// `subset_of` predicate was written first and deleted: it answers the
+        /// question and throws away the reason, and a decline whose reason is
+        /// "the rule said so" is one a reader cannot check.
         pub(crate) const fn not_covered_by(self, owned: Self) -> Self {
             Self(self.0 & !owned.0)
         }
@@ -586,9 +586,11 @@ pub(crate) mod route_ownership {
         /// whatever it returned is a decline.
         NotOwned(ConstructSet),
     }
+
+    pub(crate) use constructs;
 }
 
-use route_ownership::{Construct, ConstructSet, DispatchRoute, Ownership, RouteKind};
+use route_ownership::{Construct, ConstructSet, DispatchRoute, Ownership, RouteKind, constructs};
 
 fn checked_quantified_fast_path(
     arena: &mut TermArena,
@@ -12612,6 +12614,358 @@ mod tests {
     use std::fmt::Write as _;
 
     use super::*;
+
+    // -----------------------------------------------------------------------
+    // ADR-2100: typed route ownership.
+    //
+    // Every test here derives its population from the AUTHORITY -- the `match`
+    // arms in `route_ownership` and this file's own source text -- rather than
+    // from a literal list, because a test named "every X" that carries its own
+    // X measures the maintainer's memory.
+    // -----------------------------------------------------------------------
+
+    /// The ownership declaration must cover every rung, and the coverage is
+    /// derived from `DispatchRoute::ALL` rather than counted by hand.
+    ///
+    /// `owns` and `kind` are already exhaustive `match`es, so a rung added
+    /// without a declaration does not COMPILE. What this adds is the other
+    /// half: that `ALL` itself did not go stale, which no `match` can enforce.
+    /// It reads the variant names out of this file's source text, so adding a
+    /// variant and forgetting `ALL` fails here.
+    #[test]
+    fn every_declared_route_is_in_all_and_has_a_distinct_label() {
+        let src = include_str!("auto.rs");
+        let start = src
+            .find("pub(crate) enum DispatchRoute {")
+            .expect("the enum moved -- find it rather than guessing");
+        let body = &src[start..src[start..].find("\n    }\n").unwrap() + start];
+        let declared: BTreeSet<&str> = body
+            .lines()
+            .map(str::trim)
+            .filter(|l| {
+                l.ends_with(',')
+                    && !l.starts_with("//")
+                    && l[..l.len() - 1].chars().all(char::is_alphanumeric)
+                    && l.starts_with(char::is_uppercase)
+            })
+            .map(|l| &l[..l.len() - 1])
+            .collect();
+        assert!(
+            declared.len() >= 10,
+            "the variant scan found {} variants, which is not a plausible count \
+             for this enum -- the parse lost its subject and a passing assertion \
+             below would mean nothing: {declared:?}",
+            declared.len()
+        );
+        let in_all: BTreeSet<&str> = DispatchRoute::ALL
+            .iter()
+            .map(|r| {
+                // The variant name as `Debug` renders it.
+                let rendered = format!("{r:?}");
+                Box::leak(rendered.into_boxed_str()) as &str
+            })
+            .collect();
+        assert_eq!(
+            declared, in_all,
+            "`DispatchRoute::ALL` and the enum's variants disagree. `ALL` is what \
+             the sizing script and the tests below enumerate, so a variant missing \
+             from it is a rung nothing checks"
+        );
+
+        let mut labels = BTreeSet::new();
+        for route in DispatchRoute::ALL {
+            assert!(
+                labels.insert(route.label()),
+                "two rungs share the route-trail label {:?}; the trail is how every \
+                 census, board and suite here attributes a decision, so a shared \
+                 label makes two rungs indistinguishable in all of them",
+                route.label()
+            );
+        }
+    }
+
+    /// Every route-trail label a rung records must be the one its declaration
+    /// spells, and it must still be the string the committed censuses read.
+    ///
+    /// The labels are frozen deliberately: `bench-results/` holds boards and
+    /// censuses keyed on these exact bytes, and a sibling lane is turning
+    /// `route_trace`'s own constants into an enum. Renaming one here would move
+    /// numbers in artifacts nobody re-ran.
+    #[test]
+    fn the_route_labels_are_the_committed_trail_vocabulary() {
+        let src = include_str!("auto.rs");
+        for route in DispatchRoute::ALL {
+            let label = route.label();
+            assert!(
+                label
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-'),
+                "route-trail labels are a closed lowercase-and-hyphen vocabulary, \
+                 not free text: {label:?}"
+            );
+            assert!(
+                !label.starts_with("fd:") && !label.starts_with("q:"),
+                "`fd:` is the front door's vocabulary and `q:` the quantified \
+                 ladder's; a dispatch rung carrying one of those prefixes would be \
+                 classified as belonging to a different ladder by every consumer \
+                 that splits on it: {label:?}"
+            );
+            assert!(
+                src.contains(&format!("{label:?}")),
+                "the label {label:?} appears in no string literal in this file, so \
+                 nothing records it -- either the rung stopped recording or the \
+                 declaration names a rung that does not exist"
+            );
+        }
+    }
+
+    /// A route's ownership declaration must be consistent with its own gate:
+    /// **a rung cannot own a construct its gate refuses to run on.**
+    ///
+    /// This is the one direction that is checkable without re-implementing each
+    /// route, and it is the direction that matters. Declaring too LITTLE is
+    /// safe — the rung declines where it used to stop the ladder, so more routes
+    /// run, which can cost budget and can never lose soundness. Declaring a
+    /// construct the gate excludes is the unsafe direction: it would let the
+    /// rung end the search on a fragment it provably never sees.
+    ///
+    /// The excluded sets are read from the gate conjunctions in this file's
+    /// source, not retyped, so a gate that gains a clause and a declaration that
+    /// does not follow it is a failure here.
+    #[test]
+    fn no_route_claims_a_construct_its_own_gate_excludes() {
+        let src = include_str!("auto.rs");
+        // (route, the `fn` whose body carries its gate, the flags that gate
+        // requires to be CLEAR). Only rungs with a single `Features`
+        // conjunction gate are listed; the others carry their reason.
+        let gated: &[(DispatchRoute, &str)] = &[
+            (DispatchRoute::UfNra, "fn dispatch_uf_nra("),
+            (DispatchRoute::AbvOnlineCdclt, "fn dispatch_abv_online("),
+            (
+                DispatchRoute::UfArithOverboundProbe,
+                "fn dispatch_arith_uf_overbound_probe_before_lia(",
+            ),
+        ];
+        assert!(!gated.is_empty(), "an empty population proves nothing");
+        for (route, gate_fn) in gated {
+            let at = src
+                .find(gate_fn)
+                .unwrap_or_else(|| panic!("{gate_fn} moved -- find it rather than guessing"));
+            // The gate is the first `if ... { return Ok(None); }` in the body.
+            let body = &src[at..];
+            let gate_end = body
+                .find("return Ok(None);")
+                .expect("every gated rung opens with an early `return Ok(None)`");
+            let gate = &body[..gate_end];
+            let mut checked = 0;
+            for class in Construct::ALL {
+                // `features.has_x` WITHOUT a leading `!` inside a disjunction of
+                // refusal conditions means "this flag being SET refuses".
+                let excludes = gate.contains(&format!("|| features.{}", class.feature_field()))
+                    || gate.contains(&format!("if features.{}", class.feature_field()));
+                if !excludes {
+                    continue;
+                }
+                checked += 1;
+                assert!(
+                    !route.owns().contains(*class),
+                    "`{}` declares it owns {} and its own gate ({gate_fn}) returns \
+                     `Ok(None)` when `{}` is set, so it provably never runs on such a \
+                     query. Owning a construct a rung cannot see lets it end the \
+                     ladder on a fragment the route below it is the one that handles \
+                     -- the ADR-1927/1966/1980/2030/2065 defect exactly",
+                    route.label(),
+                    class.name(),
+                    class.feature_field(),
+                );
+            }
+            assert!(
+                checked > 0,
+                "the gate parse for {gate_fn} matched no exclusion clause, so the \
+                 assertions above ran zero times. An empty result from a tool never \
+                 pointed at its subject is indistinguishable from a strong negative",
+            );
+        }
+    }
+
+    /// The rule table itself, driven rather than listed.
+    ///
+    /// Four rows, one per cell of the decision table in `route_ownership`'s
+    /// module comment, each exercised through `settle_rung`/`record_route_refusal`
+    /// with a real `ConstructSet` rather than by re-deriving the predicate
+    /// inline. A test that recomputes `query.subset_of(route.owns())` for itself
+    /// passes while the shipped funnel does something else.
+    #[test]
+    fn the_ownership_rule_decides_each_cell_of_its_own_table() {
+        let mut rec: Recorder<'_> = None;
+        let unknown = || {
+            CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: "the route's own sentence".to_owned(),
+            })
+        };
+
+        // A `Decider` that owns the query: its `Unknown` is the ladder's answer.
+        let owned = constructs![Int, Real];
+        assert!(
+            DispatchRoute::LiraDpll.owns().contains(Construct::Int)
+                && DispatchRoute::LiraDpll.owns().contains(Construct::Real),
+            "fixture check: this row is about a query INSIDE the route's fragment"
+        );
+        assert!(
+            matches!(
+                settle_rung(DispatchRoute::LiraDpll, owned, unknown(), &mut rec),
+                Some(CheckResult::Unknown(_))
+            ),
+            "a decider that owns the whole fragment ends the ladder; that is the \
+             distinction this module exists to preserve, not to erase"
+        );
+
+        // The same `Decider`, one construct outside its declaration: a decline.
+        // This is ADR-2065's regression, and the fixture is its shape.
+        let with_array = constructs![Int, Real, Array];
+        assert!(
+            settle_rung(DispatchRoute::LiraDpll, with_array, unknown(), &mut rec).is_none(),
+            "ADR-2065 REGRESSION: `lira-dpll` does not own `Array`, so its \
+             non-decision cannot take the query away from `array-fast-path`, which \
+             decided the same read-over-write tautology in 2 ms"
+        );
+
+        // A `FastPath` never ends the ladder, even inside its own fragment.
+        assert_eq!(
+            DispatchRoute::DatatypeElim.kind(),
+            RouteKind::FastPath,
+            "fixture check: this row is about an accelerator, not a decider"
+        );
+        assert!(
+            settle_rung(
+                DispatchRoute::DatatypeElim,
+                constructs![Datatype],
+                unknown(),
+                &mut rec,
+            )
+            .is_none(),
+            "ADR-0022 step A hands to step B by design; an accelerator that could \
+             end the ladder would take the query from the rung it exists to feed"
+        );
+
+        // And a DECISION passes through both kinds untouched: ownership never
+        // stands between a route and a verdict.
+        for route in [DispatchRoute::LiraDpll, DispatchRoute::DatatypeElim] {
+            assert!(
+                matches!(
+                    settle_rung(
+                        route,
+                        constructs![NestedArray],
+                        CheckResult::Unsat,
+                        &mut rec
+                    ),
+                    Some(CheckResult::Unsat)
+                ),
+                "`{}` returned a VERDICT on a query carrying a construct nobody owns; \
+                 the rule must not discard it",
+                route.label(),
+            );
+        }
+    }
+
+    /// An `Err(Unsupported)` from a decider that declares the fragment is
+    /// reported as an inconsistency, and one from anything else is not.
+    ///
+    /// The marker is a constant both the producer and every consumer read, so
+    /// the checker cannot silently stop matching what the producer emits — the
+    /// failure that lost ADR-2075 twelve files and truncated ADR-2020's own
+    /// largest bucket.
+    #[test]
+    fn an_owning_deciders_refusal_is_reported_and_a_declining_routes_is_not() {
+        let mut trace = RouteTrace::new();
+        let mut rec: Recorder<'_> = Some(&mut trace);
+        record_route_refusal(
+            DispatchRoute::LiraDpll,
+            constructs![Int, Real],
+            "a fragment this route declared as its own",
+            &mut rec,
+        );
+        record_route_refusal(
+            DispatchRoute::LiraDpll,
+            constructs![Int, Real, Array],
+            "a fragment this route never claimed",
+            &mut rec,
+        );
+        record_route_refusal(
+            DispatchRoute::DatatypeElim,
+            constructs![Datatype],
+            "step A hands to step B",
+            &mut rec,
+        );
+
+        let reported: Vec<bool> = trace
+            .attempts()
+            .iter()
+            .map(|a| format!("{:?}", a.outcome).contains(OWNERSHIP_INCONSISTENCY_MARKER))
+            .collect();
+        assert_eq!(
+            reported,
+            vec![true, false, false],
+            "exactly the first refusal is an inconsistency: a decider refusing a \
+             fragment it declares. The second is ADR-1966's ordinary decline and the \
+             third is ADR-0022's designed hand-off, and reporting either of those \
+             would make the marker fire on healthy code -- a checker that cannot \
+             distinguish its subject is worse than no checker"
+        );
+    }
+
+    /// The construct classes are exactly the `Features` flags, minus the two
+    /// that are deliberately not constructs.
+    ///
+    /// Derived from the struct's own source text. Without this the declaration
+    /// silently stops covering a flag the scan gained, and a route would then
+    /// own a construct by omission rather than by decision.
+    #[test]
+    fn every_features_flag_is_a_construct_class_or_is_named_as_an_exception() {
+        let src = include_str!("auto.rs");
+        let at = src
+            .find("struct Features {")
+            .expect("the `Features` struct moved -- find it rather than guessing");
+        let body = &src[at..src[at..].find("\n}\n").unwrap() + at];
+        let flags: BTreeSet<&str> = body
+            .lines()
+            .map(str::trim)
+            .filter_map(|l| l.strip_suffix(": bool,"))
+            .filter(|l| l.starts_with("has_"))
+            .collect();
+        assert!(
+            flags.len() >= 10,
+            "the flag scan found {} fields, which is not a plausible count for this \
+             struct -- the parse lost its subject: {flags:?}",
+            flags.len()
+        );
+
+        // The two exceptions, each with the reason it is one. An exemption list
+        // that is not itself checked against the source is how a flag quietly
+        // joins it.
+        let exempt: BTreeSet<&str> = ["has_bitblast"].into_iter().collect();
+        for flag in &exempt {
+            assert!(
+                flags.contains(flag),
+                "the exemption list names {flag:?}, which is not a field of \
+                 `Features` any more. A stale exemption hides the flag that \
+                 replaced it"
+            );
+        }
+
+        let classes: BTreeSet<&str> = Construct::ALL.iter().map(|c| c.feature_field()).collect();
+        let uncovered: BTreeSet<&&str> = flags.difference(&classes).collect();
+        let expected: BTreeSet<&&str> = exempt.iter().collect();
+        assert_eq!(
+            uncovered, expected,
+            "every `Features` flag is either a `Construct` class or a named \
+             exception. `has_bitblast` is the only exception and it is one because \
+             it is a derived disjunction of four other flags, not an independent \
+             construct: a class for it would let a route claim ownership of `Int` \
+             by claiming `BitBlast`"
+        );
+    }
 
     /// ADR-2030's hoist lever must **fail closed**: every spelling it does not
     /// understand leaves the per-rung loop byte-identical, which is the shipped

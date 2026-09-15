@@ -8,17 +8,36 @@
 //! and **nothing** in the other direction. Every test here is built around that
 //! asymmetry.
 //!
-//! # The one-way rule, and the regression that bought it
+//! # The one-way rule, the regression that bought it, and where the rule lives now
 //!
 //! A weakening may turn an `Unsupported` into an `Unsat` and may do nothing
-//! else. `auto.rs` dispatches this route by returning on `Ok(_)` and falling
-//! through only on `Err(SolverError::Unsupported(_))`, so a route that REFUSES a
-//! query lets the ladder continue and one that DECLINES it does not. ADR-2065
-//! shipped without that rule, `lira-dpll` began consuming queries whose
-//! relaxation it could not refute, and
+//! else. ADR-2065 shipped without that rule, `lira-dpll` began consuming queries
+//! whose relaxation it could not refute, and
 //! `nested_array_gate_map::flat_real_element_array_row_decides` went red on a
 //! `main` push: `array-fast-path` used to decide that read-over-write tautology
 //! in 2 ms and was no longer reached at all.
+//!
+//! **ADR-2100 moved the rule out of this route, and five assertions here moved
+//! with it.** The premise those five rested on was that "`auto.rs` dispatches
+//! this route by returning on `Ok(_)` and falling through only on
+//! `Err(SolverError::Unsupported(_))`", so `hand_back_unless_refuted` had to
+//! spell a non-decision as an `Err` to keep the ladder going. That premise is
+//! gone: the dispatcher now decides whether a rung's non-decision stops the
+//! ladder from the rung's **ownership declaration**
+//! (`auto.rs`'s `route_ownership`), and `lira-dpll` declares `{Int, Real}`, so
+//! on a query that also carries an array its `Unknown` is a decline and
+//! `array-fast-path` runs.
+//!
+//! The assertions were RELOCATED, not weakened — ADR-1980's method, after
+//! ADR-1966 was reverted for turning seven assertions red. Each one now sits
+//! where its guard actually lives:
+//!
+//! | property | asserted before | asserted now |
+//! |---|---|---|
+//! | the abstraction never manufactures a `sat` | here, at the route | **here, at the route** — unchanged, this guard did not move |
+//! | the opaque-real gate is the one that declined | here, via `"handed back"` in an `Err` | **here**, via the gate's own sentence in whichever arm carries it |
+//! | the query is not taken from the route that owns it | here, as `Err` vs `Ok` | `the_ladder_reaches_the_route_that_owns_the_construct`, through `check_auto_explained`'s trail |
+//! | the one-way rule exists in the source | a `contains("fn hand_back_unless_refuted")` scan | a scan for the ownership declaration that replaced it |
 //!
 //! **A corpus A/B could not see it and did not.** ADR-2065's measurement was 14
 //! gains, 0 losses, 0 flips, identical exit status over 200 files, a zero noise
@@ -86,10 +105,15 @@ use axeyum_solver::{CheckResult, SolverConfig, check_with_arith_dpll};
 ///
 /// The two arms are the distinction the ADR-2065 regression was about, so the
 /// suite names them rather than collapsing them into one `CheckResult`.
-/// `auto.rs` dispatches this route by returning on `Ok(_)` and falling through
-/// only on `Err(SolverError::Unsupported(_))` — so `Decided` is TERMINAL for the
-/// whole ladder and `HandedBack` is not, and a test that cannot tell them apart
-/// cannot see a capability being taken away from a later route.
+///
+/// **What they no longer mean is "terminal" vs "not terminal".** Until ADR-2100
+/// `auto.rs` dispatched this route by returning on `Ok(_)` and falling through
+/// only on `Err(SolverError::Unsupported(_))`, so the arm the route chose WAS
+/// the ladder's decision. The dispatcher now takes that decision from the
+/// route's ownership declaration instead, which is why
+/// `the_ladder_reaches_the_route_that_owns_the_construct` asks the LADDER and
+/// the tests here ask the ROUTE. Keeping both arms named is still worth it: the
+/// route's own answer is what the soundness-negative tests are about.
 #[derive(Debug)]
 enum RouteOutcome {
     /// The route answered. Whatever this is, no later route will run.
@@ -101,13 +125,23 @@ enum RouteOutcome {
 }
 
 impl RouteOutcome {
-    /// The hand-back's message, or a panic naming what came instead.
-    fn handed_back(&self) -> &str {
+    /// The reason text of a NON-decision, whichever arm carries it, or a panic
+    /// naming the decision that came instead.
+    ///
+    /// After ADR-2100 the route spells an unrefuted abstraction as
+    /// `Ok(Unknown)` rather than `Err(Unsupported)` — the dispatcher, not the
+    /// route, decides whether that stops the ladder. Both arms carry the
+    /// opaque-real gate's own sentence, which is what
+    /// `assert_declined_by_the_opaque_real_gate` reads, so the guard stays
+    /// observable by NAME and not merely by "the verdict was not `sat`".
+    fn declined_detail(&self) -> &str {
         match self {
             Self::HandedBack(detail) => detail,
+            Self::Decided(CheckResult::Unknown(reason)) => &reason.detail,
             Self::Decided(result) => panic!(
-                "expected the route to hand this query back so the ladder could \
-                 continue; it CONSUMED it with {result:?}"
+                "expected this query to be a NON-decision for the lazy-arithmetic \
+                 route -- the abstraction is a relaxation and cannot decide it -- \
+                 but the route answered {result:?}"
             ),
         }
     }
@@ -172,18 +206,19 @@ fn r(arena: &mut TermArena, value: i128) -> TermId {
 /// full-path gate observable: delete it and the decline still happens, but it
 /// comes from sat-model reconstruction and says something else.
 fn assert_declined_by_the_opaque_real_gate(outcome: &RouteOutcome) {
-    let detail = outcome.handed_back();
+    let detail = outcome.declined_detail();
     assert!(
         detail.contains("opaque real UF applications or array reads"),
-        "the hand-back must still name the guard that fired -- it embeds the \
+        "the non-decision must still name the guard that fired -- it embeds the \
          underlying outcome for exactly this reason, so a deleted guard stays \
          distinguishable from an intact one: {detail}"
     );
-    assert!(
-        detail.contains("handed back"),
-        "and it must say it is a hand-back, because a terminal decline with the \
-         same gate name is the regression, not the fix: {detail}"
-    );
+    // The second half of this assertion used to be `detail.contains("handed
+    // back")`, because the route's `Err` WAS how the ladder was told to
+    // continue. ADR-2100 moved that decision to the dispatcher, so asserting it
+    // here would be asserting a mechanism the guard no longer owns. It is
+    // asserted where it lives, over the LADDER, in
+    // `the_ladder_reaches_the_route_that_owns_the_construct`.
 }
 
 // ---------------------------------------------------------------------------
@@ -502,13 +537,12 @@ fn a_satisfiable_abstraction_with_an_opaque_column_yields_no_model() {
         RouteOutcome::Decided(CheckResult::Unsat) => {
             panic!("`g(x) >= 0` is satisfiable; `unsat` is a wrong verdict")
         }
-        RouteOutcome::Decided(CheckResult::Unknown(reason)) => panic!(
-            "REGRESSION: a TERMINAL decline. `auto.rs` returns on `Ok(_)`, so this \
-             takes the query away from every later route -- which is exactly what \
-             turned `nested_array_gate_map::flat_real_element_array_row_decides` red: \
-             {reason:?}"
-        ),
-        RouteOutcome::HandedBack(_) => {}
+        // Both of these are NON-decisions, and after ADR-2100 which one the
+        // route spells is not this test's subject: the dispatcher decides
+        // whether the ladder stops, from `lira-dpll`'s `{Int, Real}` ownership
+        // declaration. What IS this test's subject -- no `sat` from a
+        // relaxation that binds no value for `g` -- is the two arms above.
+        RouteOutcome::Decided(CheckResult::Unknown(_)) | RouteOutcome::HandedBack(_) => {}
     }
     assert_declined_by_the_opaque_real_gate(&outcome);
 }
@@ -557,19 +591,17 @@ fn an_unsat_over_the_relaxation_agrees_with_the_unabstracted_query() {
 // The one-way rule: the abstraction may help, and may not harm.
 // ---------------------------------------------------------------------------
 
-/// A weakening that does not refute must hand the query BACK, not consume it.
+/// A weakening that does not refute must not take the query away from the route
+/// that OWNS the construct.
 ///
-/// # The regression this pins
+/// # The regression this pins, and where the guard moved
 ///
-/// `auto.rs` dispatches this route by returning on `Ok(_)` and falling through
-/// only on `Err(SolverError::Unsupported(_))`. So a route that REFUSES a query
-/// lets the ladder continue and a route that DECLINES it does not. Before
-/// ADR-2065 a real-sorted `(select a i)` made `ensure_supported_atom` refuse,
-/// the ladder fell through, and `array-fast-path` decided the read-over-write
-/// tautology in 2 ms. With the abstraction armed the route admitted that atom,
-/// correctly found the relaxation satisfiable, and returned a terminal
-/// `Ok(Unknown)` — so `array-fast-path` was never reached. Measured: 10 route
-/// attempts and a verdict became 14 attempts and `unknown`, and
+/// Before ADR-2065 a real-sorted `(select a i)` made `ensure_supported_atom`
+/// refuse, the ladder fell through, and `array-fast-path` decided the
+/// read-over-write tautology in 2 ms. With the abstraction armed the route
+/// admitted that atom, correctly found the relaxation satisfiable, and returned
+/// a terminal `Ok(Unknown)` — so `array-fast-path` was never reached. Measured:
+/// 10 route attempts and a verdict became 14 attempts and `unknown`, and
 /// `tests/nested_array_gate_map.rs::flat_real_element_array_row_decides` went
 /// red on a `main` push.
 ///
@@ -579,12 +611,22 @@ fn an_unsat_over_the_relaxation_agrees_with_the_unabstracted_query() {
 /// obligation. The capability lives in a synthetic fixture. An A/B over corpus
 /// rows is not a superset of the fixture suites.
 ///
-/// This test is the property rather than the instance: *an abstracted query the
-/// abstraction does not refute comes back as `Unsupported`*, which is what the
-/// route returned before the abstraction existed and therefore leaves the
-/// ladder byte-for-byte unchanged.
+/// # Why this asks the LADDER and its predecessor asked the ROUTE
+///
+/// Its predecessor asserted `check_with_arith_dpll` returns
+/// `Err(SolverError::Unsupported(..))`, because that was the only spelling the
+/// dispatcher read as "keep going". That is a mechanism, and ADR-2100 replaced
+/// it: `lira-dpll` declares it owns `{Int, Real}`, this query also carries an
+/// array, so the ladder treats its `Unknown` as a decline whatever the route
+/// returned. Asserting the old `Err` now would pin a mechanism instead of the
+/// property, which is exactly the shape ADR-1980 had to relocate seven times.
+///
+/// So the property is asserted over the ROUTE TRAIL: the arithmetic route
+/// appears and does **not** decide, and the query is decided by a route below
+/// it. A verdict-only assertion would not do — `unsat` is reachable from
+/// several rungs, and the whole subject here is WHICH one gets the turn.
 #[test]
-fn an_unrefuted_abstraction_is_handed_back_and_not_consumed() {
+fn the_ladder_reaches_the_route_that_owns_the_construct() {
     let mut arena = TermArena::new();
     let a = arena
         .array_var_with_sorts("handback_a", Sort::Int, Sort::Real)
@@ -593,36 +635,85 @@ fn an_unrefuted_abstraction_is_handed_back_and_not_consumed() {
     let v = arena.real_var("handback_v").unwrap();
     let stored = arena.store(a, i, v).unwrap();
     let read = arena.select(stored, i).unwrap();
-    // `select(store(a,i,v), i) > v` — UNSAT by read-over-write, and the
-    // abstraction cannot see that, because it gives the read its own column.
-    let gt = arena.real_gt(read, v).unwrap();
+    // `3·select(store(a,i,v), i) − 2·v − w > 0` together with `w = v` — UNSAT by
+    // read-over-write (the read IS `v`, so the left side is exactly 0), and the
+    // abstraction cannot see it, because it gives the read its own free column.
+    //
+    // **The third variable is the fixture, not decoration.** Written the obvious
+    // way, `select(store(a,i,v), i) > v` is DIFFERENCE LOGIC, and `dl-online` is
+    // a COMPLETE decider that runs FIRST in the ladder: that spelling produced a
+    // trail of exactly `["probe", "dl-online:Decided(Unsat)"]` and never reached
+    // the rung whose ordering this test is about. Scaling both sides did not
+    // help either — `3x > 3y` normalises straight back to a difference. Three
+    // distinct symbols in one atom is what puts it outside difference logic.
+    //
+    // This is the same trap ADR-1966's own module note records: its first
+    // fixture was refuted by `int-box-eval` at `attempts=3`, before the rung
+    // under test, so it passed on the UNFIXED tree and tested nothing. The
+    // non-vacuity assertion at the bottom of this test is what caught it here,
+    // twice.
+    let w = arena.real_var("handback_w").unwrap();
+    let three = r(&mut arena, 3);
+    let two = r(&mut arena, 2);
+    let zero = r(&mut arena, 0);
+    let scaled_read = arena.real_mul(three, read).unwrap();
+    let scaled_v = arena.real_mul(two, v).unwrap();
+    let lhs = arena.real_sub(scaled_read, scaled_v).unwrap();
+    let lhs = arena.real_sub(lhs, w).unwrap();
+    let gt = arena.real_gt(lhs, zero).unwrap();
+    let tie = arena.eq(w, v).unwrap();
 
     let config = SolverConfig::default();
-    let outcome = check_with_arith_dpll(&mut arena, &[gt], &config);
+    let (result, trace) = axeyum_solver::check_auto_explained(&mut arena, &[gt, tie], &config)
+        .expect("the dispatcher decides or declines; it does not error");
 
-    match outcome {
-        Err(axeyum_solver::SolverError::Unsupported(detail)) => {
-            assert!(
-                detail.contains("handed back"),
-                "the hand-back must say what it is, so the next reader does not                  mistake it for a fragment refusal: {detail}"
-            );
-        }
-        Ok(CheckResult::Unsat) => panic!(
-            "fixture check: this query is unsat, but NOT by anything the              linear-real abstraction can see -- if this route starts refuting              it, this test is pinning the wrong thing and must be rebuilt"
-        ),
-        Ok(other) => panic!(
-            "REGRESSION: the abstraction consumed a query it could not refute.              `auto.rs` returns on `Ok(_)`, so this verdict is TERMINAL and every              later route -- `array-fast-path` among them -- is never reached:              {other:?}"
-        ),
-        Err(other) => panic!("expected a hand-back, got {other:?}"),
-    }
+    let trail: Vec<String> = trace
+        .attempts()
+        .iter()
+        .map(|a| format!("{}:{:?}", a.route, a.outcome))
+        .collect();
+
+    assert!(
+        matches!(result, CheckResult::Unsat),
+        "REGRESSION: the read-over-write tautology's negation is unsat and a route \
+         below the arithmetic one decides it. Getting anything else means the \
+         arithmetic route consumed the query again -- ADR-2065's defect -- or the \
+         route that owns arrays narrowed. Trail: {trail:?}"
+    );
+
+    let decided_by = trace
+        .decided_by()
+        .map(|(_, attempt, _)| attempt.route)
+        .expect("an unsat has a deciding route");
+    assert_ne!(
+        decided_by, "lira-dpll",
+        "the arithmetic route's relaxation gives the array read its own column, so \
+         it cannot see this refutation. Deciding it here would mean the \
+         abstraction became exact, which it is not. Trail: {trail:?}"
+    );
+
+    // The non-vacuity half: the arithmetic route must actually have RUN and not
+    // decided. Without this the test passes on a tree where the rung was
+    // reordered out of the way entirely, which is not the property -- it is the
+    // property being unreachable.
+    let arith_ran = trace
+        .attempts()
+        .iter()
+        .any(|a| matches!(a.route, "lira-dpll" | "nra" | "array-fast-path"));
+    assert!(
+        arith_ran,
+        "this fixture must still travel through the rungs whose ordering it is \
+         about; if none of them appears the assertion above is vacuous. \
+         Trail: {trail:?}"
+    );
 }
 
 /// The other half, and the reason the rule is one-way rather than symmetric:
 /// when the abstraction DOES refute, the `unsat` still comes out.
 ///
-/// Without this, `hand_back_unless_refuted` could return `Unsupported`
-/// unconditionally and the test above would still pass — which would silently
-/// delete the whole capability ADR-2065 is about.
+/// Without this, the route could decline unconditionally and the test above
+/// would still pass — which would silently delete the whole capability ADR-2065
+/// is about.
 #[test]
 fn a_refuting_abstraction_still_returns_unsat() {
     let mut arena = TermArena::new();
@@ -637,9 +728,11 @@ fn a_refuting_abstraction_still_returns_unsat() {
     let config = SolverConfig::default();
     assert_eq!(
         check_with_arith_dpll(&mut arena, &[both], &config)
-            .expect("a refuting abstraction is not handed back"),
+            .expect("a refuting abstraction is not declined"),
         CheckResult::Unsat,
-        "the abstraction exists to convert a refusal into a refutation; if this          stops, the hand-back rule has swallowed the capability instead of          bounding it"
+        "the abstraction exists to convert a refusal into a refutation; if this \
+         stops, the ownership rule has swallowed the capability instead of \
+         bounding it"
     );
 }
 
@@ -691,12 +784,13 @@ fn the_sat_exit_enumeration_still_describes_the_source() {
          INTEGER collector's own (pre-existing, unrelated) downgrade binds the same \
          predicate with `let`, and counting the bare call name gives 4"
     );
-    // THREE uses, in TWO roles, and the pin distinguishes them because they are
-    // load-bearing for different things. Two are the refinement loop's `sat`
-    // gates. The third is `into_run`'s `abstracted_opaque_reals`, the ADR-2065
-    // one-way rule's predicate: it decides whether a non-`unsat` outcome is
-    // handed back to the ladder or consumed. Counting the bare name would let
-    // one role be deleted while the total stayed right.
+    // TWO uses, in ONE role, and the pin says which. Both are the refinement
+    // loop's `sat` gates. There used to be a third -- `into_run`'s
+    // `abstracted_opaque_reals`, the predicate `hand_back_unless_refuted` read
+    // to decide whether a non-`unsat` outcome was handed back or consumed --
+    // and it went with the helper in ADR-2100: the LADDER now decides that from
+    // `lira-dpll`'s ownership declaration, so a per-route predicate for it
+    // would be a recorded fact with no reader.
     assert_eq!(
         dpll.matches("&& !self.ctx.has_opaque_real_apps(arena)")
             .count()
@@ -707,18 +801,24 @@ fn the_sat_exit_enumeration_still_describes_the_source() {
         "both refinement-loop sat exits stay gated: the support fast path on the \
          int-and-real conjunction, and the full path on its own `if`"
     );
-    assert_eq!(
-        dpll.matches("abstracted_opaque_reals: self.ctx.has_opaque_real_apps(arena)")
-            .count(),
-        1,
-        "the one-way rule's predicate is read from the ABSTRACTOR -- a syntactic \
-         scan of the assertions over-approximates what it actually admitted and \
-         would hand back queries this route used to decide"
+    // The one-way rule itself, relocated. It used to be
+    // `dpll.contains("fn hand_back_unless_refuted")` -- a pin on a helper in
+    // THIS file. ADR-2100 replaced that helper with a declaration the ladder
+    // reads, so the pin follows it to `auto.rs`. Deleting the declaration is
+    // what would restore the ADR-2065 regression, and it is what this catches.
+    let auto = include_str!("../src/auto.rs");
+    assert!(
+        auto.contains("Self::LiraDpll => constructs![Int, Real],"),
+        "ADR-2100: the arithmetic route must keep declaring that it owns only \
+         `{{Int, Real}}`. Widening it to cover arrays would let an unrefuted \
+         opaque-real abstraction end the ladder again, which is the ADR-2065 \
+         regression exactly"
     );
     assert!(
-        dpll.contains("fn hand_back_unless_refuted"),
-        "the one-way rule itself: a weakening may turn `Unsupported` into `Unsat` \
-         and may do nothing else"
+        !dpll.contains("fn hand_back_unless_refuted"),
+        "ADR-2100 deleted the per-route hand-back because the general rule \
+         subsumes it. Re-introducing it would mean two rules for one question, \
+         and the local one would win silently"
     );
     assert!(
         dpll.contains("theory_model(arena, &real_lits, real_model_oracle, deadline)"),
