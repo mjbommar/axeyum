@@ -64,6 +64,13 @@ SYM_RE = re.compile(
 )
 FILE_RE = re.compile(r'file\(\s*"((?:[^"\\]|\\.)*)"\s*,?\s*\)')
 
+# Per-process memoisation of the two git questions. Keyed by exactly the inputs
+# that determine the answer, and cleared by `--repo` because that changes which
+# repository the answers describe.
+_PATCH_CACHE: dict[tuple[str, str], str | None] = {}
+_COMMITS_CACHE: dict[tuple[str, str], list[tuple[str, str, str]]] = {}
+_LINES_CACHE: dict[tuple[str, str], list[str] | None] = {}
+
 
 @dataclass
 class Entry:
@@ -226,33 +233,149 @@ def symbol_occurs_in_code(line: str, symbol: str) -> bool:
     return re.search(rf"\b{re.escape(symbol)}\b", code) is not None
 
 
+def _patch(sha: str, path: str) -> str | None:
+    """`sha`'s zero-context patch for `path`, or `None` if git could not show it.
+
+    Cached: the same commit is asked about once per dependency that names it,
+    and `f6303ee7a -- lra.rs` alone was fetched six times in one run.
+    """
+    key = (sha, path)
+    if key not in _PATCH_CACHE:
+        out = subprocess.run(
+            ["git", "-C", str(REPO), "show", "--format=", "--unified=0", sha, "--", path],
+            capture_output=True, text=True, check=False,
+        )
+        _PATCH_CACHE[key] = out.stdout if out.returncode == 0 else None
+    return _PATCH_CACHE[key]
+
+
+def _changed_line_bodies(sha: str, path: str) -> list[str] | None:
+    """The added/removed line bodies of `sha`'s patch for `path`, `None` if git
+    could not show it.
+
+    Split out and cached because the hunk-header filtering does not depend on the
+    symbol, while `_commit_changes_symbol_in_code` is asked about the SAME commit
+    once per dependency naming it. Re-splitting `f6303ee7a`'s 566-line patch for
+    each of the five symbols that rest on `lra.rs` is four scans of the same text.
+    """
+    key = (sha, path)
+    if key not in _LINES_CACHE:
+        # Not reached for a commit `_commits_touching` enumerated -- that call
+        # fills this cache for every commit in one `git log -p`. This is the
+        # fallback for a commit asked about on its own.
+        patch = _patch(sha, path)
+        if patch is None:
+            _LINES_CACHE[key] = None
+        else:
+            _LINES_CACHE[key] = _bodies(patch)
+    return _LINES_CACHE[key]
+
+
+def _bodies(patch: str) -> list[str]:
+    """The added/removed line bodies of a zero-context patch."""
+    return [
+        line[1:] for line in patch.splitlines()
+        if line and line[0] in "+-" and not line.startswith(("+++", "---"))
+    ]
+
+
+def _commits_touching(date: str, path: str) -> list[tuple[str, str, str]]:
+    """Every commit touching `path` strictly after `date` — NO pickaxe.
+
+    The per-symbol `-G` filter is applied in Python by `commits_after`, over the
+    patch it has to read anyway for `_commit_changes_symbol_in_code`. Measured
+    2026-09-15 on 140 `rests_on` pairs: 140 `git log -G<symbol>` invocations cost
+    7.3 s of a 14.6 s run, because the pickaxe re-walks history once per SYMBOL
+    while the set of candidate COMMITS depends only on (date, path). Enumerating
+    once per (date, path) and testing symbols against the cached patch is the
+    same question asked once instead of 140 times.
+
+    This is a speed change and NOT a semantic one: `-G<re.escape(symbol)>` keeps
+    a commit whose patch has an added or removed line containing `symbol`, which
+    is exactly the `symbol not in body` test in `_commit_changes_symbol_in_code`.
+    The equivalence is not asserted — `--self-test` runs both implementations
+    over every dependency in the registry and requires identical rows, and it is
+    what caught BOTH divergences this rewrite actually had (see
+    `_commit_changes_symbol_in_code` for the first).
+
+    `--no-merges` is the second. `git log -G` generates no patch for a merge, so
+    the pickaxe never matched one; `git show` DOES produce one, so without this
+    flag the merge `bec2cf65b` was attributed four separate staleness rows it had
+    not caused. Excluding merges is also the right answer independently: a merge
+    commit's content belongs to the branch commit that wrote it, and counting
+    merges would restale every entry in the registry each time a lane merges main.
+
+    THE BLIND SPOT THIS INHERITS: a change made only in a conflict resolution (an
+    "evil merge") exists in no non-merge commit, so neither the pickaxe nor this
+    sees it. That was already true before this rewrite; it is written down here
+    rather than fixed because fixing it means diffing every merge against both
+    parents, which is a different and much more expensive question.
+    """
+    key = (date, path)
+    if key not in _COMMITS_CACHE:
+        # ONE `git log -p` carries the commit list AND every patch, so the
+        # per-commit `git show` calls disappear: 51 log + 353 show invocations
+        # became 51. Each commit is introduced by a NUL-prefixed header line,
+        # which cannot occur inside a patch body.
+        out = subprocess.run(
+            ["git", "-C", str(REPO), "log", "--no-merges",
+             "--after", f"{date} 23:59:59",
+             "--format=%x00%h\t%cs\t%s", "-p", "--unified=0", "--", path],
+            capture_output=True, text=True, check=False,
+        )
+        if out.returncode != 0:
+            raise RuntimeError(f"git log failed for {path}: {out.stderr.strip()}")
+        rows: list[tuple[str, str, str]] = []
+        sha = None
+        buf: list[str] = []
+
+        def flush() -> None:
+            if sha is not None:
+                _LINES_CACHE[(sha, path)] = _bodies("\n".join(buf))
+
+        for line in out.stdout.splitlines():
+            if line.startswith("\0"):
+                flush()
+                buf = []
+                parts = line[1:].split("\t", 2)
+                sha = parts[0] if parts else None
+                if len(parts) == 3:
+                    rows.append((parts[0], parts[1], parts[2]))
+                continue
+            buf.append(line)
+        flush()
+        _COMMITS_CACHE[key] = rows
+    return _COMMITS_CACHE[key]
+
+
 def _commit_changes_symbol_in_code(sha: str, path: str, symbol: str) -> bool:
     """Whether `sha` changed a line where `symbol` appears as code, in `path`.
 
     A commit whose every added/removed mention of the symbol sits in a string or
-    a comment did not change the code the measurement rests on. Any failure to
-    look, and any commit where `-G` matched for a reason not visible in the
-    +/- lines (a rename, a mode change), keeps the commit.
+    a comment did not change the code the measurement rests on. A failure to
+    look keeps the commit.
+
+    A commit whose patch does not mention the symbol AT ALL is dropped, and that
+    line is load-bearing. It used to `return not saw_occurrence` -- i.e. KEEP --
+    because the only callers were commits `git log -G<symbol>` had already
+    matched, so "no visible occurrence" meant "matched for a reason the +/- lines
+    do not show" (a rename, a mode change) and keeping was the conservative
+    reading. Once `_commits_touching` enumerates every commit that touched the
+    file, that same `return True` keeps every commit that has nothing to do with
+    the symbol. `--self-test` caught exactly that on this rewrite's first run:
+    64 of 140 dependency pairs disagreed with the pickaxe, every one of them in
+    the direction of MORE staleness, which is the direction that looks like
+    diligence.
     """
-    out = subprocess.run(
-        ["git", "-C", str(REPO), "show", "--format=", "--unified=0", sha, "--", path],
-        capture_output=True, text=True, check=False,
-    )
-    if out.returncode != 0:
+    bodies = _changed_line_bodies(sha, path)
+    if bodies is None:
         return True
-    saw_occurrence = False
-    for line in out.stdout.splitlines():
-        if not line or line[0] not in "+-":
-            continue
-        if line.startswith("+++") or line.startswith("---"):
-            continue
-        body = line[1:]
+    for body in bodies:
         if symbol not in body:
             continue
-        saw_occurrence = True
         if symbol_occurs_in_code(body, symbol):
             return True
-    return not saw_occurrence
+    return False
 
 
 def commits_after(date: str, path: str, symbol: str | None) -> list[tuple[str, str, str]]:
@@ -261,6 +384,27 @@ def commits_after(date: str, path: str, symbol: str | None) -> list[tuple[str, s
     `--after "<date> 23:59:59"` rather than `--since=<date>`: a commit landing on
     the same day as the measurement is not evidence the measurement is stale, and
     `--since` would flag every entry dated today against its own landing commit.
+    """
+    rows = _commits_touching(date, path)
+    if symbol:
+        # Two filters, in cost order over ONE cached patch per commit. The first
+        # is what `-G<symbol>` computed before (`_commits_touching` deliberately
+        # does not pickaxe -- see its docstring for the measurement); the second
+        # keeps only the commits that changed the symbol as CODE. See
+        # `symbol_occurs_in_code` for the false positive that one removes and why
+        # it costs the gate more than it saves.
+        rows = [r for r in rows if _commit_changes_symbol_in_code(r[0], path, symbol)]
+    return rows
+
+
+def pickaxe_commits_after(date: str, path: str, symbol: str | None) -> list[tuple[str, str, str]]:
+    """`commits_after`'s pre-2026-09-15 implementation, kept as the CONTROL.
+
+    Not called by the gate. `the_pickaxe_and_the_python_filter_agree` runs this
+    and `commits_after` over every dependency the registry declares and requires
+    identical rows, so the speed change above is held to being a speed change.
+    A rewritten filter whose only evidence was "the report looks the same" would
+    be a filter nobody compared.
     """
     cmd = [
         "git", "-C", str(REPO), "log",
@@ -279,9 +423,6 @@ def commits_after(date: str, path: str, symbol: str | None) -> list[tuple[str, s
         if len(parts) == 3:
             rows.append((parts[0], parts[1], parts[2]))
     if symbol:
-        # `-G` matched the symbol as TEXT. Keep only the commits that changed it
-        # as CODE -- see `symbol_occurs_in_code` for the false positive this
-        # removes and why it costs the gate more than it saves.
         rows = [r for r in rows if _commit_changes_symbol_in_code(r[0], path, symbol)]
     return rows
 
@@ -291,6 +432,16 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--list", action="store_true", help="print the registry and exit 0")
     ap.add_argument("--verbose", action="store_true", help="name the commits that made an entry stale")
+    ap.add_argument(
+        "--self-test",
+        action="store_true",
+        help="run `commits_after` and the pre-2026-09-15 pickaxe implementation "
+             "over EVERY dependency the registry declares and require identical "
+             "rows, then exit 0/1 on that comparison alone. This is the control "
+             "for the speed change in `_commits_touching`: the two must answer "
+             "the same question, and a report that merely looks unchanged is "
+             "not evidence that they do.",
+    )
     ap.add_argument(
         "--repo",
         type=Path,
@@ -318,6 +469,13 @@ def main() -> int:
         global REPO, REGISTRY_RS
         REPO = args.repo.resolve()
         REGISTRY_RS = REPO / "crates" / "axeyum-solver" / "src" / "config_registry.rs"
+        # The caches hold answers ABOUT A REPOSITORY. Pointing at a different
+        # one without clearing them would serve the previous repository's
+        # history to this one's registry -- and the control that runs a mutated
+        # copy against the real history is exactly the caller that does this.
+        _PATCH_CACHE.clear()
+        _COMMITS_CACHE.clear()
+        _LINES_CACHE.clear()
 
     registry_rs = args.registry if args.registry is not None else REGISTRY_RS
     if not registry_rs.exists():
@@ -343,6 +501,31 @@ def main() -> int:
         return 2
 
     dated = [e for e in entries if e.measured_on]
+
+    if args.self_test:
+        pairs = disagreements = 0
+        for e in dated:
+            for path, symbol in e.rests_on:
+                if not (REPO / path).exists():
+                    continue
+                pairs += 1
+                fast = commits_after(e.measured_on, path, symbol)
+                slow = pickaxe_commits_after(e.measured_on, path, symbol)
+                if fast != slow:
+                    disagreements += 1
+                    print(f"DISAGREE {e.key} rests on {path}::{symbol}\n"
+                          f"    python-filter: {[r[0] for r in fast]}\n"
+                          f"    git pickaxe  : {[r[0] for r in slow]}",
+                          file=sys.stderr)
+        # The denominator is printed beside the zero on purpose: "0 disagreements"
+        # over 0 compared pairs is what a self-test that never ran also prints.
+        print(f"self-test: {disagreements} disagreement(s) over {pairs} compared "
+              f"rests_on pair(s) from {len(dated)} dated entries.")
+        if pairs == 0:
+            print("FAIL (self-test): compared NOTHING — a control that examines "
+                  "an empty population cannot fail.", file=sys.stderr)
+            return 2
+        return 1 if disagreements else 0
     undated = [e for e in entries if not e.measured_on]
 
     if args.list:
@@ -375,7 +558,13 @@ def main() -> int:
             # falsified `MAX_ONLINE_LRA_ATOMS`'s 2026-08-03 measurement.
             # Excluding introductions in general would blind this checker to its
             # own founding example, which the positive control would then catch.
-            if path == e.module and symbol == e.name:
+            #
+            # `rows and` short-circuits a FULL-HISTORY pickaxe that has nothing
+            # to exclude: filtering the introducing commit out of an empty list
+            # yields an empty list either way. Measured 2026-09-15 with
+            # `cProfile`: `introducing_commit` ran 74 times for 7.08 s of an
+            # 11.08 s run, and only 9 of those 74 entries had a row to filter.
+            if rows and path == e.module and symbol == e.name:
                 intro = introducing_commit(path, symbol)
                 if intro:
                     rows = [r for r in rows if r[0] != intro]
