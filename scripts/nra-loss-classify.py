@@ -27,10 +27,12 @@ as a rate.
 """
 
 import collections
-import json
 import os
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import route_trace_reader as rtr  # noqa: E402
 
 # Each entry is (substring of the give-up detail, class). Order matters: the
 # first match wins, so the specific admission texts precede the generic ones.
@@ -92,23 +94,25 @@ def parse_log(path):
         elif line.startswith("; give-up "):
             m = re.search(r"detail=(.*)$", line)
             rec["give_up"] = m.group(1) if m else line
-        elif line.startswith("; route ") or line.startswith("; partial route "):
-            for key in ("bound_by", "bound_ms", "total_ms"):
-                m = re.search(rf"\b{key}=(\S+)", line)
-                if m:
-                    rec[key] = m.group(1)
-        elif "route-trail " in line:
-            try:
-                blob = json.loads(line.split("route-trail ", 1)[1])
-            except ValueError:
-                continue
-            for a in blob.get("attempts", []):
-                ms = a.get("elapsed_ns", 0) / 1e6
-                rec["trail"].append(
-                    (a.get("route"), a.get("outcome"), a.get("reason", ""),
-                     a.get("detail", ""), ms)
-                )
-                rec["route_ms"][a.get("route")] = ms
+    # Route attribution off the shared reader, never off the prose (ADR-2101).
+    try:
+        trail = rtr.read_file(path)
+    except rtr.RouteTraceError:
+        trail = None
+    if trail is not None:
+        rec["bound_by"] = trail.bound_by
+        rec["total_ms"] = (
+            None if trail.total_elapsed_ms is None else str(trail.total_elapsed_ms)
+        )
+        bound_ns = max((a.elapsed_ns or 0 for a in trail.attempts), default=None)
+        rec["bound_ms"] = None if bound_ns is None else str(bound_ns // 1_000_000)
+        rec["route_partial"] = trail.partial
+        for a in trail.attempts:
+            ms = (a.elapsed_ns or 0) / 1e6
+            rec["trail"].append(
+                (a.route, a.outcome, a.reason or "", a.detail or "", ms)
+            )
+            rec["route_ms"][a.route] = ms
     # The reason of record is the last NON-front-door route's detail, not the
     # `; give-up` line. Two things make the give-up line unreliable here:
     #   * every `fd:` attempt after a theory route copies that route's text, and

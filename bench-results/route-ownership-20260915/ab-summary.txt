@@ -1,0 +1,28 @@
+division      rows    A    B   net  gain  LOSS  FLIP  rc!=   cmp  DIS
+AUFDTLIRA      200  117  116    -1     2     3     0     0   116    0
+AUFLIRA        200  172  172    +0     0     0     0     0   172    0
+QF_LIA         200  115  116    +1     1     0     0     0   113    0
+QF_LRA         200   99   99    +0     0     0     0     1    93    0
+QF_NIA         200   61   62    +1     1     0     0     0    62    0
+UF             200   78   78    +0     0     0     0     0    76    0
+UFDTLIRA       200  138  140    +2     2     0     0     0   140    0
+UFLIA          200   78   78    +0     0     0     0     0    78    0
+UFNIA          200   54   53    -1     0     1     0     0    15    0
+TOTAL         1800  912  914    +2     6     4     0     1   865    0
+
+malformed rows (excluded, not scored as unchanged): 0
+
+LOSSES: 4
+  ('AUFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_bfafe7_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2', 'unsat', 'unknown')
+  ('AUFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_cac5cc_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2', 'unsat', 'unknown')
+  ('AUFDTLIRA/20200306-Kanig/spark2014bench/Q525-025__controlling_result__fixed_string.adb_18_11_length_check___00.smt2', 'unsat', 'unknown')
+  ('UFNIA/sledgehammer/FFT/z3.885941.smt2', 'unsat', 'unknown')
+
+FLIPS: 0
+
+EXIT-STATUS DIFFERENCES: 1
+  ('QF_LRA/LassoRanker/Ultimate/yPositive-SIscaled50.bpl_Iteration1_Loop_4-pieceTemplate.smt2', '134', '0')
+
+STATUS DISAGREEMENTS: 0
+
+CRITERION losses+flips+rc-differences+disagreements+malformed = 5

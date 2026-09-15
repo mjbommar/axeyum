@@ -2793,6 +2793,59 @@ def run_demo() -> int:
     return 0
 
 
+# --------------------------------------------------------------------------
+# `route-trace-completeness` (ADR-2101) — the route-label vocabulary and the
+# `partial` field.  Every census in this repository now reads these two
+# through `scripts/route_trace_reader.py`, so a guard here that cannot fail
+# makes the whole instrument unfalsifiable rather than merely untested — which
+# is the exact position ADR-2075 found the prose prefix in.
+#
+# Each mutation makes ONE PRODUCER emit the WRONG VARIANT and must kill exactly
+# one named test.  They are deliberately self-consistent mutations (the wire
+# string is changed at its single definition, so `as_str`/`from_wire`/`ALL`
+# still agree with each other) — the whole point is that a test deriving its
+# population from the authority cannot notice, and only a test pinning the
+# EXTERNAL contract can.
+# --------------------------------------------------------------------------
+
+SUITES["route-trace-completeness"] = (
+    "crates/axeyum-solver/src/route_trace.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "route_trace"),
+        "route-trace-completeness",
+    ),
+    [
+        (
+            # Kills `every_constant_keeps_the_exact_bytes_it_had_before_the_enum`
+            # and nothing else: the round-trip and coverage tests derive from
+            # the enum, so they stay green on a self-consistent rename. That is
+            # precisely why the byte pin has to exist separately.
+            "a front-door label's wire bytes move",
+            '    FdParse => "fd:parse",',
+            '    FdParse => "fd:parse ",',
+        ),
+        (
+            # Kills `a_dispatch_rung_label_is_deliberately_not_a_route`, the
+            # positive control on the negative answer. Without it, `from_wire`
+            # could answer `None` for everything and the suite would not care.
+            "the probe label stops resolving",
+            '    Probe => "probe",',
+            '    Probe => "probe-x",',
+        ),
+        (
+            # Kills `a_partial_reading_renders_its_boundary_and_its_open_segment`.
+            # The producer still marks the reading partial, still reports an
+            # open segment, and still renders valid JSON -- it just forgets
+            # WHERE the open segment started, which is the field ADR-2075 says
+            # a partial reading is worthless without.
+            "a partial reading forgets the boundary it opened at",
+            "            in_flight_after: self.last_recorded_route(),",
+            "            in_flight_after: None,",
+        ),
+    ],
+)
+
+
 def check_anchors() -> int:
     """Every registered anchor still matches its subject exactly once.
 
@@ -10129,13 +10182,25 @@ SUITES["dt-native-refusal-decline"] = (
             # THE CONTROL'S CONTROL. Deleting the PROPAGATE arm must kill the
             # two-arm fixtures' control assertions. A survivor here means they
             # are comparing the shipped arm against itself.
+            #
+            # RE-ANCHORED TWICE for ADR-2100, and rewritten neither time.
+            # First the `datatype-native` rung moved out of the
+            # `datatype-elim` `Err(Unsupported)` arm -- it now runs for BOTH
+            # of that match's non-deciding arms -- so the block lost one
+            # nesting level. Then the ladder gained its own error type and
+            # the arm spells the refusal as `DispatchError::at(..)`. The
+            # guard and its kill are unchanged both times; `--check-anchors`
+            # caught both, which is what it is for.
             "the historical `propagate` arm is really reached",
-            "                            DatatypeNativeRefusalPolicy::Propagate => {\n"
-            "                                return Err(SolverError::Unsupported(native_message));\n"
-            "                            }",
-            "                            DatatypeNativeRefusalPolicy::Propagate => {\n"
-            "                                *datatype_refusal = Some(native_message);\n"
-            "                            }",
+            "                    DatatypeNativeRefusalPolicy::Propagate => {\n"
+            "                        return Err(DispatchError::at(\n"
+            "                            DispatchRoute::DatatypeNative,\n"
+            "                            SolverError::Unsupported(native_message),\n"
+            "                        ));\n"
+            "                    }",
+            "                    DatatypeNativeRefusalPolicy::Propagate => {\n"
+            "                        *datatype_refusal = Some(native_message);\n"
+            "                    }",
         ),
     ],
 )
@@ -10424,6 +10489,91 @@ SUITES["replay-pairing-state"] = (
             "an already-bound symbol is left alone",
             "        if model.get(symbol).is_some() {",
             "        if false {",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `route-ownership-ladder` and `route-ownership-marker` -- typed route
+# ownership (ADR-2100).
+#
+# The rule has two halves and they fail in opposite directions, so they are two
+# suites with two runners rather than one suite with two mutations that share a
+# rejection path.  Six of seven guards in one suite here were once removable
+# with everything still green, because they all rejected through one shared
+# check; separating the runners is what makes each kill attributable.
+#
+# `route-ownership-ladder` deletes the check that decides whether a rung's
+# `Unknown` stops the ladder, and runs the suite that owns ADR-2065's
+# obligation.  The kill is ONE named fixture,
+# `the_ladder_reaches_the_route_that_owns_the_construct`, which is the ADR-2065
+# regression restored: `lira-dpll`'s opaque-real abstraction admits a
+# real-sorted `(select ..)`, fails to refute, and consumes a query
+# `array-fast-path` decided in 2 ms.
+#
+# The mutation deliberately does NOT edit `DispatchRoute::owns`.  Widening
+# `Self::LiraDpll => constructs![Int, Real],` is the more obvious way to say
+# "delete the ownership check on one route", and it kills three tests in two
+# suites -- including the source-text pin in
+# `the_sat_exit_enumeration_still_describes_the_source`, which fires on the
+# CHANGED LINE rather than on the changed behaviour.  A mutation whose kill set
+# includes a test that would die from any edit to that line does not measure the
+# guard; it measures the edit.
+#
+# `route-ownership-marker` deletes the OTHER half: the report that fires when a
+# decider refuses a fragment it declared as its own.  That half changes no
+# verdict by design -- it records -- so no corpus row and no ladder fixture can
+# see it, and only a test that reads the trail can.  Running it under a
+# separate runner is what keeps "the rule stopped applying" and "the report
+# stopped firing" from being one kill.
+# --------------------------------------------------------------------------
+
+SUITES["route-ownership-ladder"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--test", "lra_opaque_real_apps"),
+        "route-ownership-ladder",
+    ),
+    [
+        (
+            # A decider's `Unknown` becomes terminal again even on a query
+            # carrying constructs it does not own -- ADR-2065's regression, and
+            # the defect ADR-1927/1966/1980/2030 each found one instance of.
+            "the ownership check on a decider's non-decision",
+            "        (RouteKind::Decider, Ownership::NotOwned(missing)) => {\n"
+            '            format!("does not own {missing}, which this query carries")\n'
+            "        }",
+            "        (RouteKind::Decider, Ownership::NotOwned(_)) => return Some(result),",
+        ),
+    ],
+)
+
+SUITES["route-ownership-marker"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "auto::tests::"),
+        "route-ownership-marker",
+    ),
+    [
+        (
+            # An owning decider's refusal stops being reported and becomes an
+            # ordinary decline -- the silent fall-through this ADR exists to
+            # make impossible.
+            "the inconsistency report on an owning decider's refusal",
+            "        (RouteKind::Decider, Ownership::Complete) => DeclineReason::UnsupportedDetail(",
+            "        (RouteKind::Decider, Ownership::Complete) => unsupported_decline(message),\n"
+            "        #[allow(unreachable_patterns)]\n"
+            "        (RouteKind::Decider, Ownership::Complete) => DeclineReason::UnsupportedDetail(",
+        ),
+        (
+            # `FastPath` collapses into `Decider`, so `datatype-elim`'s designed
+            # hand-off to `datatype-native` reads as an inconsistency and its
+            # `Unknown` becomes terminal.  This is the distinction ownership
+            # ALONE gets wrong, and nothing else in the tree pins it.
+            "the FastPath/Decider distinction",
+            "                Self::DatatypeElim => RouteKind::FastPath,",
+            "                Self::DatatypeElim => RouteKind::Decider,",
         ),
     ],
 )

@@ -49,6 +49,587 @@ use std::time::{Duration, Instant};
 #[cfg(target_arch = "wasm32")]
 use web_time::{Duration, Instant};
 
+/// **Typed route ownership** (ADR-2100): whether a rung's non-decision stops the
+/// ladder is a declaration on the route, not the error variant a function
+/// happened to return.
+///
+/// # The bug this closes, five times over
+///
+/// A rung of [`check_auto_dispatch_inner`] has two ways to not decide:
+/// `Err(SolverError::Unsupported(_))` means "not mine, keep going" and
+/// `Ok(CheckResult::Unknown(_))` means "mine, tried, failed, stop". The
+/// distinction is right. **It was decided per call site by which variant a
+/// function returned**, with nothing checking the sites against each other, and
+/// the same defect shipped five times: ADR-1927, ADR-1966, ADR-1980, ADR-2030,
+/// ADR-2065.
+///
+/// # The rule, stated once
+///
+/// | the route's answer | it owns every construct in the query | it does not |
+/// |---|---|---|
+/// | `Sat` / `Unsat` | decides | decides |
+/// | `Unknown` | terminal — the ladder stops | **decline** — the ladder continues |
+/// | `Err(Unsupported)` | **reported inconsistency** | **decline** — the ladder continues |
+///
+/// "Owns every construct in the query" is `query ⊆ route.owns()`: only a route
+/// that can in principle handle the whole fragment gets to say "mine, tried,
+/// failed". A route that cannot is not entitled to end the search on behalf of
+/// a route below that can.
+///
+/// This subsumes ADR-2065's `hand_back_unless_refuted`, which was this rule
+/// hand-written for one rung. That helper's own doc comment says why it had to
+/// be narrow:
+///
+/// > The obvious repairs … all require this route to reason about what OTHER
+/// > routes can do, which it cannot do soundly and which would need re-deciding
+/// > every time the ladder changes.
+///
+/// A declaration consulted **by the ladder** needs no route to know anything
+/// about any other route, which is the whole difference.
+///
+/// # Soundness
+///
+/// Structural, not argued — the same argument ADR-1927 and ADR-1966 make.
+/// Declining can only lose completeness: the ladder continues with the ORIGINAL
+/// assertions, the arena is append-only during solving, and every rung it
+/// reaches applies its own discipline (a `sat` is still replay-checked against
+/// the original assertions at the front door; an `unsat` still comes from an
+/// equisatisfiable reduction). The risk in the other direction — that running
+/// more rungs manufactures a wrong `unsat` — is what the interleaved A/B's flip
+/// column and the `:status` cross-check exclude.
+///
+/// The cost is real and is NOT confined to the queries whose refusal it
+/// converts: ADR-1966's `UFLIA` control, chosen because nothing in it could
+/// trigger the guard, still lost one file reproducibly because a route the
+/// ladder now reaches ate the budget the deciding route needed.
+pub(crate) mod route_ownership {
+    use std::fmt;
+
+    /// One class of query construct.
+    ///
+    /// Exactly the [`super::Features`] flags, so the declaration is stated in
+    /// the same vocabulary the rung gates already use and can be checked
+    /// against them.
+    ///
+    /// Two flags are deliberately **not** classes:
+    ///
+    /// - `has_bitblast` is a derived disjunction of four others, not an
+    ///   independent construct. A class for it would let a route claim
+    ///   ownership of `Int` by claiming `BitBlast`.
+    /// - `Bool` is not a construct at all here: every route owns Boolean
+    ///   structure, and a class every route declares distinguishes nothing.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+    pub(crate) enum Construct {
+        /// `Sort::Real` appears (`has_real`).
+        Real,
+        /// `Sort::Int` appears (`has_int`).
+        Int,
+        /// A bit-vector, rounding-mode or float sort appears (`has_bv_or_float`).
+        BvOrFloat,
+        /// A datatype sort or a constructor/selector/tester op appears
+        /// (`has_datatype`, ADR-0022).
+        Datatype,
+        /// An uninterpreted-function application appears (`has_function`).
+        Function,
+        /// A term of a declared uninterpreted carrier sort appears
+        /// (`has_uninterpreted_sort`).
+        UninterpretedSort,
+        /// An array-sorted term appears (`has_array`).
+        Array,
+        /// An array whose index or element sort is not a bit-vector
+        /// (`has_non_bv_array`).
+        NonBvArray,
+        /// An array whose index or element sort is outside exact Bool/BitVec
+        /// theory (`has_non_bool_bv_array`).
+        NonBoolBvArray,
+        /// An array with a NESTED array component (`has_nested_array`,
+        /// ADR-1955/ADR-1965). Owned by nobody: `Sort::array_sorts` returns
+        /// `None` for such a sort, so every array route that predates nesting
+        /// already refuses one, and declaring it unowned is what makes that
+        /// refusal a named decline rather than an accident of a helper
+        /// returning `None`.
+        NestedArray,
+        /// An integer constant outside the `i128` reference range
+        /// (`has_wide_int`, ADR-1702 slice 2). Owned by nobody: the opt-in is
+        /// per-route and nothing has opted in, which is exactly what
+        /// `super::wide_int_admission` already says.
+        WideInt,
+    }
+
+    impl Construct {
+        /// Every class, for a test that derives its population from the
+        /// authority rather than from a maintainer's memory.
+        pub(crate) const ALL: &'static [Self] = &[
+            Self::Real,
+            Self::Int,
+            Self::BvOrFloat,
+            Self::Datatype,
+            Self::Function,
+            Self::UninterpretedSort,
+            Self::Array,
+            Self::NonBvArray,
+            Self::NonBoolBvArray,
+            Self::NestedArray,
+            Self::WideInt,
+        ];
+
+        /// This class's bit in a [`ConstructSet`].
+        const fn bit(self) -> u16 {
+            1u16 << (self as u16)
+        }
+
+        /// A stable, matchable key. **Exhaustive, so a new class does not
+        /// compile until it is named here** (ADR-2060's method).
+        pub(crate) const fn name(self) -> &'static str {
+            match self {
+                Self::Real => "Real",
+                Self::Int => "Int",
+                Self::BvOrFloat => "BvOrFloat",
+                Self::Datatype => "Datatype",
+                Self::Function => "Function",
+                Self::UninterpretedSort => "UninterpretedSort",
+                Self::Array => "Array",
+                Self::NonBvArray => "NonBvArray",
+                Self::NonBoolBvArray => "NonBoolBvArray",
+                Self::NestedArray => "NestedArray",
+                Self::WideInt => "WideInt",
+            }
+        }
+
+        /// The `Features` field this class reads, so a test can check the
+        /// declaration against the scan rather than against a comment.
+        ///
+        /// Test-only: nothing at run time needs the field NAME, only the flag's
+        /// value, which `Features::constructs` already reads directly. Leaving
+        /// it in the shipped build would be a `&'static str` table with no
+        /// consumer -- the un-failable-checker shape one level down.
+        #[cfg(test)]
+        pub(crate) const fn feature_field(self) -> &'static str {
+            match self {
+                Self::Real => "has_real",
+                Self::Int => "has_int",
+                Self::BvOrFloat => "has_bv_or_float",
+                Self::Datatype => "has_datatype",
+                Self::Function => "has_function",
+                Self::UninterpretedSort => "has_uninterpreted_sort",
+                Self::Array => "has_array",
+                Self::NonBvArray => "has_non_bv_array",
+                Self::NonBoolBvArray => "has_non_bool_bv_array",
+                Self::NestedArray => "has_nested_array",
+                Self::WideInt => "has_wide_int",
+            }
+        }
+    }
+
+    /// A set of [`Construct`]s, as a bitset so the subset test the ladder runs
+    /// on every non-decision is one instruction.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+    pub(crate) struct ConstructSet(u16);
+
+    impl ConstructSet {
+        /// The empty set — what a query with no theory construct at all (pure
+        /// Boolean structure) scans to, and what every route trivially owns.
+        pub(crate) const EMPTY: Self = Self(0);
+
+        /// Adds one class. `const` so a route's declaration is a constant
+        /// expression and cannot do work at dispatch time.
+        pub(crate) const fn with(self, class: Construct) -> Self {
+            Self(self.0 | class.bit())
+        }
+
+        /// Whether `class` is in this set.
+        pub(crate) const fn contains(self, class: Construct) -> bool {
+            self.0 & class.bit() != 0
+        }
+
+        /// **The ownership test**, in the form the ladder needs it: the
+        /// constructs in `self` that `owned` does not cover.
+        ///
+        /// Empty means the route is complete for this query's fragment and is
+        /// entitled to end the ladder on it. Non-empty is both the answer and
+        /// the witness the decline records, so the trail says WHY the route
+        /// could not stop the ladder rather than only that it did not. A bare
+        /// `subset_of` predicate was written first and deleted: it answers the
+        /// question and throws away the reason, and a decline whose reason is
+        /// "the rule said so" is one a reader cannot check.
+        pub(crate) const fn not_covered_by(self, owned: Self) -> Self {
+            Self(self.0 & !owned.0)
+        }
+
+        /// Iterates in [`Construct::ALL`] order. Deterministic, because this is
+        /// rendered into a route trail and iteration order is a public API
+        /// promise here.
+        pub(crate) fn iter(self) -> impl Iterator<Item = Construct> {
+            Construct::ALL
+                .iter()
+                .copied()
+                .filter(move |&class| self.contains(class))
+        }
+
+        /// Whether the set is empty.
+        pub(crate) const fn is_empty(self) -> bool {
+            self.0 == 0
+        }
+    }
+
+    impl fmt::Display for ConstructSet {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            if self.is_empty() {
+                return f.write_str("{}");
+            }
+            f.write_str("{")?;
+            for (i, class) in self.iter().enumerate() {
+                if i > 0 {
+                    f.write_str(", ")?;
+                }
+                f.write_str(class.name())?;
+            }
+            f.write_str("}")
+        }
+    }
+
+    /// Builds a [`ConstructSet`] from a list of classes, as a `const`
+    /// expression.
+    macro_rules! constructs {
+        () => { ConstructSet::EMPTY };
+        ($($class:ident),+ $(,)?) => {
+            ConstructSet::EMPTY $(.with(Construct::$class))+
+        };
+    }
+
+    /// A rung of the quantifier-free dispatch ladder
+    /// ([`super::check_auto_dispatch_inner`]).
+    ///
+    /// # Why an enum and not the `&'static str` labels
+    ///
+    /// The labels are the route-trail vocabulary and stay byte-identical —
+    /// [`Self::label`] is the only place they are spelled. What the enum buys
+    /// is the **payload** ADR-2060's method needs: the ladder's funnel takes a
+    /// `DispatchRoute` rather than a `&str`, so every call site is a type error
+    /// until it names a variant, and [`Self::owns`] is an exhaustive `match`,
+    /// so a rung added without an ownership declaration does not compile.
+    ///
+    /// # Its boundary with [`crate::route_trace::Route`] (ADR-2101)
+    ///
+    /// The two enums **partition** the trail's vocabulary; they do not overlap,
+    /// and `every_dispatch_label_is_outside_the_declared_route_enum` checks that
+    /// rather than assuming it. ADR-2101 typed the `fd:` front-door stages and
+    /// the `q:` quantified rungs — the labels that were already declared as
+    /// `pub const` and so had an authority to derive an enum from — and said in
+    /// its own words why it stopped there:
+    ///
+    /// > The dispatch ladder's own rung labels (`"qf-bv"`, `"lia-dpll"`, …) are
+    /// > string literals at their call sites inside `auto.rs`, not declared
+    /// > constants, so there is no authority to derive an enum from; **typing
+    /// > them is the ownership work (Phase 1)**, not this.
+    ///
+    /// This is that half. `Route::from_wire` returns `None` for every label
+    /// here, by design and by test.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+    pub(crate) enum DispatchRoute {
+        /// Read-over-construct folding plus the residual decision (ADR-0022
+        /// step A).
+        DatatypeElim,
+        /// Eager tag/field expansion (ADR-0022 step B).
+        DatatypeNative,
+        /// Combined linear integer + real arithmetic through the lazy-SMT loop.
+        LiraDpll,
+        /// Eager Ackermann reduction of UF applications feeding the NRA decider.
+        UfNra,
+        /// The linear-abstraction nonlinear-real relaxation.
+        Nra,
+        /// The over-bound UF + arithmetic lazy/CEGAR probe run before the LIA
+        /// routes.
+        UfArithOverboundProbe,
+        /// The complete blast of the linear-over-`bv2nat` integer fragment.
+        Bv2NatBlast,
+        /// The exact integer refuters (`bv2nat` range, div/mod elimination,
+        /// simplex, Diophantine).
+        IntLinearRefuters,
+        /// The uninterpreted-function ladder (pigeonhole, e-graph EUF, the
+        /// eager/online UF + arithmetic combination, the UFBV routes).
+        UfRoutes,
+        /// The online CDCL(T) array + bit-vector search.
+        AbvOnlineCdclt,
+        /// The lazy read-over-write / extensionality array ladder.
+        ArrayFastPath,
+        /// The bit-blasting composition, the ladder's tail.
+        QfBv,
+    }
+
+    impl DispatchRoute {
+        /// Every rung this declaration covers, for a test that derives its
+        /// population from the authority.
+        ///
+        /// Test-only. At run time the ladder names each rung at its own call
+        /// site; a list of all of them is what a TEST needs so it does not carry
+        /// a literal of its own. `size-ceiling.py` reads the same population out
+        /// of the source text rather than through this constant, for the same
+        /// reason.
+        #[cfg(test)]
+        pub(crate) const ALL: &'static [Self] = &[
+            Self::DatatypeElim,
+            Self::DatatypeNative,
+            Self::LiraDpll,
+            Self::UfNra,
+            Self::Nra,
+            Self::UfArithOverboundProbe,
+            Self::Bv2NatBlast,
+            Self::IntLinearRefuters,
+            Self::UfRoutes,
+            Self::AbvOnlineCdclt,
+            Self::ArrayFastPath,
+            Self::QfBv,
+        ];
+
+        /// The route-trail label. **Byte-identical to the string literals these
+        /// rungs recorded before ADR-2100**, because every committed census,
+        /// board and suite reads them.
+        pub(crate) const fn label(self) -> &'static str {
+            match self {
+                Self::DatatypeElim => "datatype-elim",
+                Self::DatatypeNative => "datatype-native",
+                Self::LiraDpll => "lira-dpll",
+                Self::UfNra => "uf-nra",
+                Self::Nra => "nra",
+                Self::UfArithOverboundProbe => "uf-arith-overbound-probe",
+                Self::Bv2NatBlast => "bv2nat-blast",
+                Self::IntLinearRefuters => "int-linear-refuters",
+                Self::UfRoutes => "uf-routes",
+                Self::AbvOnlineCdclt => "abv-online-cdclt",
+                Self::ArrayFastPath => "array-fast-path",
+                Self::QfBv => "qf-bv",
+            }
+        }
+
+        /// **The declaration.** The construct classes this route owns.
+        ///
+        /// # Derived, not invented
+        ///
+        /// Almost every rung already opens with a `Features` conjunction that
+        /// returns `Ok(None)`; that conjunction IS the statement of what the
+        /// route refuses, and the owned set is its complement.
+        /// `super::dispatch_uf_nra` is the worked example:
+        ///
+        /// ```text
+        /// if !features.has_real || !features.has_function
+        ///     || features.has_int || features.has_array
+        ///     || features.has_datatype || features.has_uninterpreted_sort
+        /// { return Ok(None); }
+        /// ```
+        ///
+        /// so `UfNra` owns exactly `{Real, Function}`. Deriving rather than
+        /// inventing is what keeps the declaration from becoming a second thing
+        /// that drifts, and
+        /// `super::tests::every_routes_ownership_matches_its_gate` re-derives
+        /// the gate conjunctions from this file's own source text rather than
+        /// carrying a literal list.
+        ///
+        /// # What "owns" means, and what it does not
+        ///
+        /// It is a claim about the route's **fragment**, not about its power: a
+        /// route that owns `{Int}` is saying "an integer query is mine to fail
+        /// at", not "I decide every integer query". A route that owns a
+        /// construct may still return `Unknown`, and that `Unknown` is then the
+        /// ladder's answer — which is the point of the distinction.
+        ///
+        /// Being conservative here is SAFE in exactly one direction. Declaring
+        /// too LITTLE makes a route decline where it used to stop the ladder:
+        /// more routes run, which can cost budget but can never lose soundness.
+        /// Declaring too MUCH lets a route end the search on a fragment it
+        /// cannot handle, which is the defect this module exists to close. When
+        /// a gate is ambiguous, declare less.
+        // Several arms COINCIDE today and are kept apart on purpose: each is a
+        // statement about one rung's own gate, derived independently from that
+        // gate. Merging `UfNra` with `Nra` because both read `{Real, Function}`
+        // would make one rung's declaration move when the other's gate changes,
+        // which is the coupling this table exists to remove.
+        #[allow(clippy::match_same_arms)]
+        pub(crate) const fn owns(self) -> ConstructSet {
+            match self {
+                // `datatype_elim` folds read-over-construct and hands the
+                // residual to the ordinary dispatch, so its fragment is
+                // "datatypes over whatever the residual carries". It does not
+                // reach arrays: `check_with_datatype_elimination` refuses a
+                // datatype-sorted array component, and the array ladder below
+                // owns those.
+                Self::DatatypeElim => {
+                    constructs![Datatype, Int, Real, BvOrFloat, Function, UninterpretedSort,]
+                }
+                // The eager tag/field expansion. Its four ADR-0022 refusals are
+                // exactly the constructs left out here: array- and UF-sorted
+                // datatype FIELDS (ADR-0022), UF applied to a datatype argument
+                // (ADR-1920), and `is`/`select` over a non-variable datatype
+                // term. ADR-1980 already converted this rung's refusal to a
+                // decline by hand; the declaration is now what does it.
+                Self::DatatypeNative => constructs![Datatype, Int, BvOrFloat],
+                // `check_with_arith_dpll`: Boolean structure over linear
+                // integer and real atoms. ADR-2065's opaque-real abstraction
+                // lets it ADMIT an atom over another theory's sort — which is
+                // precisely why it must not own that theory. See
+                // `hand_back_unless_refuted`, which this replaces.
+                Self::LiraDpll => constructs![Int, Real],
+                Self::UfNra => constructs![Real, Function],
+                // `check_with_nra` abstracts nonlinear products and otherwise
+                // delegates to the pure-real LRA loop; the dispatcher's own
+                // `has_function` arm is what lets a real-sorted UF application
+                // fall through to the EUF + arithmetic combination.
+                Self::Nra => constructs![Real, Function],
+                // Gate: `has_int && !has_real && !has_array && has_function`.
+                Self::UfArithOverboundProbe => constructs![Int, Function],
+                // Gate: `has_bv_or_float && !has_function && !has_array
+                // && !has_uninterpreted_sort && !has_datatype`, inside
+                // `has_int`.
+                Self::Bv2NatBlast => constructs![Int, BvOrFloat],
+                // The exact integer refuters linearize integer symbols and a
+                // `bv2nat` abstraction. Everything else is out of fragment.
+                Self::IntLinearRefuters => constructs![Int, BvOrFloat],
+                // The UF ladder is the widest rung: the eager Ackermann
+                // combination reaches arrays and bit-vectors through
+                // `check_with_all_theories`, and the UFBV routes own declared
+                // carrier sorts.
+                Self::UfRoutes => constructs![
+                    Function,
+                    UninterpretedSort,
+                    Int,
+                    Real,
+                    BvOrFloat,
+                    Array,
+                    NonBvArray,
+                ],
+                // Gate: `!has_function && !has_int && !has_real
+                // && !has_non_bool_bv_array && !has_uninterpreted_sort
+                // && !has_datatype`.
+                Self::AbvOnlineCdclt => constructs![Array, BvOrFloat],
+                // Three sub-gates: the scalar ALIA/AUFLIA lazy ROW, the
+                // declared-sort `QF_AX` lazy ROW, and pure `QF_ABV`.
+                Self::ArrayFastPath => constructs![
+                    Array,
+                    NonBvArray,
+                    NonBoolBvArray,
+                    Int,
+                    Real,
+                    Function,
+                    UninterpretedSort,
+                    BvOrFloat,
+                ],
+                // The bit-blasting composition: Bool, bit-vectors, arrays,
+                // uninterpreted functions, bounded integers. It hard-errors on
+                // `Sort::Real`, and the dispatcher converts that error rather
+                // than propagating it.
+                Self::QfBv => constructs![
+                    BvOrFloat,
+                    Int,
+                    Array,
+                    NonBvArray,
+                    NonBoolBvArray,
+                    Function,
+                    UninterpretedSort,
+                ],
+            }
+        }
+
+        /// Whether this route is the ladder's decision procedure for its
+        /// fragment or an accelerator above one. **Exhaustive, so a rung added
+        /// without a kind does not compile.**
+        // Same reason as `owns`: seven arms say `Decider` and five say
+        // `FastPath`, and each is one rung's own contract rather than a group's.
+        #[allow(clippy::match_same_arms)]
+        pub(crate) const fn kind(self) -> RouteKind {
+            match self {
+                // Step A of ADR-0022. Refuses BY DESIGN when free datatype
+                // variables remain under `is-c`/`select`, so step B below gets
+                // them; that refusal is a hand-off, not a fragment refusal.
+                Self::DatatypeElim => RouteKind::FastPath,
+                // Step B: the last datatype rung. Its four ADR-0022 refusals are
+                // what ADR-1927's after-census named as `AUFDTLIRA`'s top
+                // blockers, and ADR-1980 converted them to declines by hand.
+                Self::DatatypeNative => RouteKind::Decider,
+                Self::LiraDpll => RouteKind::Decider,
+                // The eager Ackermann + NRA composition is strictly additive and
+                // falls through for everything outside its tightly-scoped shape.
+                Self::UfNra => RouteKind::FastPath,
+                Self::Nra => RouteKind::Decider,
+                // A bounded lazy/CEGAR PROBE run before the LIA routes, which
+                // then run regardless. ADR-2030 measured it engaging on 13 of 13
+                // files and the ladder continuing past it every time.
+                Self::UfArithOverboundProbe => RouteKind::FastPath,
+                // A complete blast of one fragment, which declines and falls
+                // through unchanged for everything else.
+                Self::Bv2NatBlast => RouteKind::FastPath,
+                Self::IntLinearRefuters => RouteKind::Decider,
+                Self::UfRoutes => RouteKind::Decider,
+                // The online search above the array ladder; it already converts
+                // its own `Unknown` to a decline internally, which is this
+                // contract written by hand at one site.
+                Self::AbvOnlineCdclt => RouteKind::FastPath,
+                Self::ArrayFastPath => RouteKind::Decider,
+                Self::QfBv => RouteKind::Decider,
+            }
+        }
+
+        /// Whether this route is entitled to end the ladder on a query carrying
+        /// `query`, and — when it is not — the constructs that say why.
+        pub(crate) fn ownership_of(self, query: ConstructSet) -> Ownership {
+            let missing = query.not_covered_by(self.owns());
+            if missing.is_empty() {
+                Ownership::Complete
+            } else {
+                Ownership::NotOwned(missing)
+            }
+        }
+    }
+
+    /// What a route's declaration says its non-decisions MEAN.
+    ///
+    /// # Why two kinds and not one
+    ///
+    /// Ownership alone gets the datatype branch wrong, and getting it wrong is
+    /// instructive. `datatype-elim` (ADR-0022 step A) and `datatype-native`
+    /// (step B) are two halves of one decision procedure: step A folds
+    /// read-over-construct and **refuses by design** when free datatype
+    /// variables remain, precisely so step B gets them. Under ownership alone
+    /// that refusal reads as "a route refused a fragment it declared", which is
+    /// the inconsistency report — on every `QF_DT` file, for a hand-off that is
+    /// working exactly as intended.
+    ///
+    /// The distinction that fixes it is not "datatype is special". It is that a
+    /// route is either the ladder's decision procedure for a fragment or an
+    /// accelerator sitting above one, and the two have different contracts for
+    /// a non-decision. ADR-1927 already found this class from the other side: it
+    /// wrote a guard for `checked_quantified_fast_path`, measured it firing
+    /// **0 times in 800 files**, and deleted it rather than ship an un-failable
+    /// check — a fast path's refusal was never terminal there either.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub(crate) enum RouteKind {
+        /// The ladder's decision procedure for the fragment it owns. On a query
+        /// inside that fragment its `Unknown` **is** the answer, and an
+        /// `Err(Unsupported)` from it is a declaration/code mismatch.
+        Decider,
+        /// An accelerator above a `Decider` for the same constructs. It can
+        /// decide; it can never terminate the ladder. Both its `Unknown` and
+        /// its `Unsupported` are hand-offs, so neither is ever an inconsistency.
+        FastPath,
+    }
+
+    /// The ladder's verdict on whether a route may stop it.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub(crate) enum Ownership {
+        /// The route owns every construct the query carries, so its `Unknown`
+        /// is the ladder's answer and its `Err(Unsupported)` is an
+        /// inconsistency.
+        Complete,
+        /// The query carries these constructs the route does not own, so
+        /// whatever it returned is a decline.
+        NotOwned(ConstructSet),
+    }
+
+    #[cfg(test)]
+    pub(crate) use constructs;
+}
+
+use route_ownership::{Construct, ConstructSet, DispatchRoute, Ownership, RouteKind};
+
 fn checked_quantified_fast_path(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -500,19 +1081,177 @@ fn unsupported_decline(message: &str) -> DeclineReason {
 /// Written to take the rung's finished `Result` rather than a closure because
 /// `rec` is already mutably borrowed by the rung's own call.
 fn rung_or_decline(
-    route: &'static str,
+    route: DispatchRoute,
+    query: ConstructSet,
     outcome: Result<Option<CheckResult>, SolverError>,
     rec: &mut Recorder<'_>,
 ) -> Result<Option<CheckResult>, SolverError> {
     match outcome {
+        Ok(None) => Ok(None),
+        Ok(Some(result)) => Ok(settle_rung(route, query, result, rec)),
         Err(SolverError::Unsupported(message)) => {
-            with_recorder(rec, |t| {
-                t.record_declined(route, unsupported_decline(&message));
-            });
+            record_route_refusal(route, query, &message, rec);
             Ok(None)
         }
-        other => other,
+        Err(other) => Err(other),
     }
+}
+
+/// The ownership rule applied to a route's `Ok` outcome.
+///
+/// A decision (`Sat`/`Unsat`) passes through untouched — ownership never stands
+/// between a route and a verdict. An `Unknown` is terminal **only if the route
+/// owns every construct the query carries**; otherwise it is a decline and the
+/// ladder continues, which is ADR-2065's `hand_back_unless_refuted` stated once
+/// for every rung instead of by hand for one.
+///
+/// Nothing is recorded on the pass-through paths, so a query whose routing does
+/// not change has a byte-identical route trail. The one new entry is the
+/// decline this rule manufactures, and it names the missing constructs so the
+/// trail says WHY the route could not stop the ladder rather than only that it
+/// did not.
+fn settle_rung(
+    route: DispatchRoute,
+    query: ConstructSet,
+    result: CheckResult,
+    rec: &mut Recorder<'_>,
+) -> Option<CheckResult> {
+    let CheckResult::Unknown(reason) = &result else {
+        return Some(result);
+    };
+    let why = match (route.kind(), route.ownership_of(query)) {
+        // The ladder's decision procedure for a fragment that covers this
+        // query: its `Unknown` is the answer, which is the whole point of the
+        // distinction this module draws.
+        (RouteKind::Decider, Ownership::Complete) => return Some(result),
+        (RouteKind::Decider, Ownership::NotOwned(missing)) => {
+            format!("does not own {missing}, which this query carries")
+        }
+        (RouteKind::FastPath, _) => {
+            "is an accelerator above the route that owns this fragment, so it never \
+             terminates the ladder"
+                .to_owned()
+        }
+    };
+    let detail = format!(
+        "route ownership (ADR-2100): `{}` owns {} and {why}, so its non-decision is a decline \
+         and the ladder continues. Its own reason was: {}",
+        route.label(),
+        route.owns(),
+        reason.detail,
+    );
+    with_recorder(rec, |t| {
+        t.record_declined(route.label(), DeclineReason::UnsupportedDetail(detail));
+    });
+    None
+}
+
+/// The dispatch ladder's error channel (ADR-2100).
+///
+/// # Why this type exists, and why it has no `From<SolverError>`
+///
+/// Exit criterion 1 of this phase is that every `Err(SolverError::Unsupported)`
+/// site in the ladder is reachable only from a route that does not own the
+/// construct, **enumerated by the compiler**. A grep cannot produce that list.
+/// ADR-1966 measured the gap: counting only `?` gave 37 sites, and adding tail
+/// position and `return f(..)` took the same population to **72** — "any future
+/// scan of this kind that counts only `?` is under-reporting by about half".
+/// ADR-2060 measured it from the other side: a name scan found **6**
+/// constructions where giving the variant a payload found the same six plus,
+/// by transitive closure over the cause-erasing returns feeding them, **28
+/// program points carrying 15 distinct causes**.
+///
+/// So the enumeration is done the way ADR-2060 did it — with a payload. This
+/// type deliberately implements **no** `From<SolverError>`, so inside
+/// [`check_auto_dispatch_inner`] every `?` on a route's
+/// `Result<_, SolverError>` and every `return Err(..)` is a **type error**
+/// until its site names the rung it belongs to. `rustc` prints the file and
+/// line of each one; that list is the enumeration, and it stays produced by the
+/// compiler as the ladder changes rather than being a number in a document.
+///
+/// # What it does NOT change
+///
+/// The value. [`check_auto_dispatch`] converts it back to the same
+/// `SolverError` the site produced, byte for byte, so the ladder's outward
+/// behaviour is identical and the route it carries is telemetry for the
+/// enumeration rather than a new branch condition. A diagnosis change that
+/// quietly moved a route would be a capability change wearing a diagnosis
+/// change's commit message (ADR-2060's own words).
+#[derive(Debug)]
+struct DispatchError {
+    /// The rung this came out of, or `None` for the ladder's own machinery —
+    /// the `ite` lift and the feature scan, which belong to no route.
+    ///
+    /// Recorded rather than discarded because "which frame propagated it" is
+    /// the question ADR-1980 needed three call frames of reading to answer:
+    /// **a refusal message names the rung that PRODUCED the sentence, never the
+    /// rung that decided to propagate it**, and on a ladder those are routinely
+    /// different frames.
+    #[allow(dead_code)]
+    route: Option<DispatchRoute>,
+    error: SolverError,
+}
+
+impl DispatchError {
+    /// An error out of a named rung.
+    fn at(route: DispatchRoute, error: SolverError) -> Self {
+        Self {
+            route: Some(route),
+            error,
+        }
+    }
+
+    /// An error out of the ladder's own machinery, which belongs to no rung.
+    fn ladder(error: SolverError) -> Self {
+        Self { route: None, error }
+    }
+}
+
+/// The greppable marker an ADR-2100 ownership inconsistency carries on the
+/// route trail.
+///
+/// A census, a corpus sweep and `tests/route_ownership.rs` all key on this one
+/// string rather than on a prose shape, so the checker cannot silently stop
+/// matching what the producer emits — which is how ADR-2075 lost twelve files
+/// and ADR-2020 truncated its own largest bucket.
+pub(crate) const OWNERSHIP_INCONSISTENCY_MARKER: &str = "route-ownership inconsistency (ADR-2100)";
+
+/// Records a rung's `Err(SolverError::Unsupported)`.
+///
+/// # The two cases, and why only one of them is a bug
+///
+/// A route that does NOT own the query's constructs is refusing a fragment it
+/// never claimed, which is exactly what `Unsupported` is for: the refusal is
+/// telemetry and the ladder continues. That is ADR-1966's rule and it is
+/// unchanged.
+///
+/// A route that DOES own them has refused a fragment it declared as its own.
+/// That is an inconsistency between [`DispatchRoute::owns`] and the route's
+/// code — one of the two is wrong — and the ladder says so on the trail instead
+/// of falling through silently, because a silent fall-through here is precisely
+/// how the defect shipped five times. The behaviour stays a decline: turning a
+/// declaration mismatch into a verdict would be a worse failure than the one it
+/// reports, and a decline can only lose completeness.
+fn record_route_refusal(
+    route: DispatchRoute,
+    query: ConstructSet,
+    message: &str,
+    rec: &mut Recorder<'_>,
+) {
+    let reason = match (route.kind(), route.ownership_of(query)) {
+        (RouteKind::FastPath, _) | (RouteKind::Decider, Ownership::NotOwned(_)) => {
+            unsupported_decline(message)
+        }
+        (RouteKind::Decider, Ownership::Complete) => DeclineReason::UnsupportedDetail(format!(
+            "{OWNERSHIP_INCONSISTENCY_MARKER}: `{}` declares it owns {}, which covers this \
+             query's {}, and then refused the fragment anyway. Either the declaration or the \
+             route is wrong. Refusal: {message}",
+            route.label(),
+            route.owns(),
+            query,
+        )),
+    };
+    with_recorder(rec, |t| t.record_declined(route.label(), reason));
 }
 
 fn quantified_timeout(stage: &str) -> CheckResult {
@@ -5926,7 +6665,13 @@ fn check_auto_dispatch(
     rec: &mut Recorder<'_>,
 ) -> Result<CheckResult, SolverError> {
     let mut datatype_refusal: Option<String> = None;
-    let out = check_auto_dispatch_inner(arena, assertions, config, rec, &mut datatype_refusal);
+    // ADR-2100: the ladder's typed channel is converted back to the caller's
+    // `SolverError` here, and to the SAME value the site produced. The route it
+    // carries exists so the compiler can enumerate the sites (see
+    // [`DispatchError`]); it is not a branch condition, and folding it into the
+    // message would move the strings the DT blocker census reads.
+    let out = check_auto_dispatch_inner(arena, assertions, config, rec, &mut datatype_refusal)
+        .map_err(|e| e.error);
     relabel_with_datatype_refusal(out, datatype_refusal)
 }
 
@@ -5990,13 +6735,13 @@ fn check_auto_dispatch_inner(
     config: &SolverConfig,
     rec: &mut Recorder<'_>,
     datatype_refusal: &mut Option<String>,
-) -> Result<CheckResult, SolverError> {
+) -> Result<CheckResult, DispatchError> {
     // Lift Int/Real `ite` to the Boolean level (`ite(c,a,b)` → fresh `t` with
     // `c→t=a ∧ ¬c→t=b`) so the arithmetic linearizers, which only accept linear
     // arith terms, see a plain variable. An exact (equisatisfiable) rewrite, so
     // the dispatched result transfers directly. (BV `ite` is left for the
     // bit-blaster, which handles it natively.)
-    let lifted = lift_arith_ite(arena, assertions)?;
+    let lifted = lift_arith_ite(arena, assertions).map_err(DispatchError::ladder)?;
     let assertions = &lifted;
     let dispatch_deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     let Some(features) = Features::scan_within(arena, assertions, dispatch_deadline) else {
@@ -6015,6 +6760,12 @@ fn check_auto_dispatch_inner(
             "auto-dispatch timeout while scanning lifted theory features",
         )));
     };
+    // ADR-2100. The query's construct set, taken ONCE from the scan the
+    // dispatcher already ran, and handed to every rung funnel below. Whether a
+    // rung's non-decision stops the ladder is decided by comparing this against
+    // the rung's own `DispatchRoute::owns` declaration, never by which error
+    // variant the rung happened to return.
+    let query = features.constructs();
     if features.has_datatype {
         // Datatype structural axioms (acyclicity / distinctness / injectivity):
         // a forced containment cycle (`x = cons(h, x)`), two constructors on one
@@ -6031,83 +6782,97 @@ fn check_auto_dispatch_inner(
         // (ADR-0022 step A). If free datatype variables remain (under `is-c`/
         // `select`), that path reports `Unsupported`; decide those natively by
         // eager tag/field expansion (ADR-0022 step B).
-        match crate::datatype_elim::check_with_datatype_elimination(arena, assertions, config) {
+        let elim = crate::datatype_elim::check_with_datatype_elimination(arena, assertions, config);
+        // ADR-2100. `datatype-elim` is a `FastPath` above `datatype-native`, so
+        // its `Unknown` is a decline and its `Unsupported` is a documented
+        // hand-off rather than an ownership inconsistency. The `record_result`
+        // entry below is unchanged, so a query whose routing does not move has
+        // a byte-identical trail.
+        match elim {
             Ok(result) => {
                 with_recorder(rec, |t| t.record_result("datatype-elim", &result));
-                return Ok(result);
-            }
-            Err(SolverError::Unsupported(message)) => {
-                with_recorder(rec, |t| {
-                    t.record_declined("datatype-elim", unsupported_decline(&message));
-                });
-                // **THE SITE ADR-1966 SIZED AND DID NOT TAKE. TAKEN HERE
-                // (ADR-1980).**
-                //
-                // `check_with_datatype_native` is the last datatype rung, and
-                // its ADR-0022 refusals — array/UF-sorted datatype FIELDS, UF
-                // applied to a datatype argument (ADR-1920), `is`/`select` over
-                // a non-variable datatype term, a datatype-sorted term that
-                // survives tag/field expansion — are exactly the four ADR-1927's
-                // own after-census measured as the top blockers of `AUFDTLIRA`
-                // (70 + 32 + 13 + 1 of 200). Until ADR-1980 this was a bare `?`,
-                // which sent every one of them out of `solve` as an ERROR, so
-                // the front door printed `give-up kind=Error` and the thirteen
-                // rungs below this branch never ran.
-                //
-                // **WHAT THIS CHANGE IS NOT.** The exactness guards inside
-                // `datatype_native` (ADR-1920/1935/1942/1946) are untouched and
-                // still fire on exactly the same queries. An inexact tag/field
-                // expansion is still never emitted, so the wrong `unsat`
-                // ADR-1930 shipped is still impossible by construction. What
-                // changes is only what the DISPATCHER does with that refusal:
-                // a route declining is not the query's verdict (ADR-1966's
-                // rule), so the rungs below now get their turn. Every `sat`
-                // they return is replay-checked against the ORIGINAL assertions
-                // at the front door, and no rung below can reach the encoding
-                // this branch just refused.
-                //
-                // The refusal MESSAGE is not lost either, which was ADR-1966's
-                // one named prerequisite: it is carried out to whatever terminal
-                // refusal or `unknown` the ladder ends on, by
-                // `relabel_with_datatype_refusal`, so the DT blocker census
-                // reads the same sentence it read before.
-                match crate::datatype_native::check_with_datatype_native(arena, assertions, config)
-                {
-                    Ok(result) => {
-                        with_recorder(rec, |t| t.record_result("datatype-native", &result));
-                        return Ok(result);
-                    }
-                    Err(SolverError::Unsupported(native_message)) => {
-                        match datatype_native_refusal_policy() {
-                            // The pre-ADR-1980 arm, kept runnable from the same
-                            // binary so the four suites that own this behaviour
-                            // keep asserting it and the A/B cannot compare two
-                            // builds by accident. Byte-equivalent to the bare
-                            // `?` it replaced, RECORDER INCLUDED: the `?` never
-                            // reached `record_result`, so neither does this.
-                            DatatypeNativeRefusalPolicy::Propagate => {
-                                return Err(SolverError::Unsupported(native_message));
-                            }
-                            DatatypeNativeRefusalPolicy::Decline => {
-                                with_recorder(rec, |t| {
-                                    t.record_declined(
-                                        "datatype-native",
-                                        unsupported_decline(&native_message),
-                                    );
-                                });
-                                // Fall through to the rungs below. The datatype
-                                // rung's message is the specific capability
-                                // sentence the DT blocker census reads, so it —
-                                // not `datatype-elim`'s outer one — is what is
-                                // carried out.
-                                *datatype_refusal = Some(native_message);
-                            }
-                        }
-                    }
-                    Err(other) => return Err(other),
+                if let Some(result) = settle_rung(DispatchRoute::DatatypeElim, query, result, rec) {
+                    return Ok(result);
                 }
             }
-            Err(other) => return Err(other),
+            Err(SolverError::Unsupported(message)) => {
+                record_route_refusal(DispatchRoute::DatatypeElim, query, &message, rec);
+                // `datatype-elim` did not decide; the shared
+                // `datatype-native` rung below runs for BOTH of this
+                // match's non-deciding arms.
+            }
+            Err(other) => return Err(DispatchError::at(DispatchRoute::DatatypeElim, other)),
+        }
+        // **THE SITE ADR-1966 SIZED AND DID NOT TAKE. TAKEN HERE
+        // (ADR-1980).**
+        //
+        // `check_with_datatype_native` is the last datatype rung, and
+        // its ADR-0022 refusals — array/UF-sorted datatype FIELDS, UF
+        // applied to a datatype argument (ADR-1920), `is`/`select` over
+        // a non-variable datatype term, a datatype-sorted term that
+        // survives tag/field expansion — are exactly the four ADR-1927's
+        // own after-census measured as the top blockers of `AUFDTLIRA`
+        // (70 + 32 + 13 + 1 of 200). Until ADR-1980 this was a bare `?`,
+        // which sent every one of them out of `solve` as an ERROR, so
+        // the front door printed `give-up kind=Error` and the thirteen
+        // rungs below this branch never ran.
+        //
+        // **WHAT THIS CHANGE IS NOT.** The exactness guards inside
+        // `datatype_native` (ADR-1920/1935/1942/1946) are untouched and
+        // still fire on exactly the same queries. An inexact tag/field
+        // expansion is still never emitted, so the wrong `unsat`
+        // ADR-1930 shipped is still impossible by construction. What
+        // changes is only what the DISPATCHER does with that refusal:
+        // a route declining is not the query's verdict (ADR-1966's
+        // rule), so the rungs below now get their turn. Every `sat`
+        // they return is replay-checked against the ORIGINAL assertions
+        // at the front door, and no rung below can reach the encoding
+        // this branch just refused.
+        //
+        // The refusal MESSAGE is not lost either, which was ADR-1966's
+        // one named prerequisite: it is carried out to whatever terminal
+        // refusal or `unknown` the ladder ends on, by
+        // `relabel_with_datatype_refusal`, so the DT blocker census
+        // reads the same sentence it read before.
+        match crate::datatype_native::check_with_datatype_native(arena, assertions, config) {
+            Ok(result) => {
+                with_recorder(rec, |t| t.record_result("datatype-native", &result));
+                if let Some(result) = settle_rung(DispatchRoute::DatatypeNative, query, result, rec)
+                {
+                    return Ok(result);
+                }
+            }
+            Err(SolverError::Unsupported(native_message)) => {
+                match datatype_native_refusal_policy() {
+                    // The pre-ADR-1980 arm, kept runnable from the same
+                    // binary so the four suites that own this behaviour
+                    // keep asserting it and the A/B cannot compare two
+                    // builds by accident. Byte-equivalent to the bare
+                    // `?` it replaced, RECORDER INCLUDED: the `?` never
+                    // reached `record_result`, so neither does this.
+                    DatatypeNativeRefusalPolicy::Propagate => {
+                        return Err(DispatchError::at(
+                            DispatchRoute::DatatypeNative,
+                            SolverError::Unsupported(native_message),
+                        ));
+                    }
+                    DatatypeNativeRefusalPolicy::Decline => {
+                        record_route_refusal(
+                            DispatchRoute::DatatypeNative,
+                            query,
+                            &native_message,
+                            rec,
+                        );
+                        // Fall through to the rungs below. The datatype
+                        // rung's message is the specific capability
+                        // sentence the DT blocker census reads, so it —
+                        // not `datatype-elim`'s outer one — is what is
+                        // carried out.
+                        *datatype_refusal = Some(native_message);
+                    }
+                }
+            }
+            Err(other) => return Err(DispatchError::at(DispatchRoute::DatatypeNative, other)),
         }
     }
     if let Some(result) = dispatch_difference_logic(arena, assertions, config, rec) {
@@ -6121,14 +6886,20 @@ fn check_auto_dispatch_inner(
         match check_with_arith_dpll(arena, assertions, config) {
             Ok(result) => {
                 with_recorder(rec, |t| t.record_result("lira-dpll", &result));
-                return Ok(result);
+                // ADR-2100, and this is the site that replaces ADR-2065's
+                // `hand_back_unless_refuted`. The opaque-real abstraction lets
+                // this route ADMIT an atom over a sort it does not own, so
+                // without the ownership test its `Unknown` was terminal and
+                // `array-fast-path` — which decided the same query in 2 ms —
+                // was never reached.
+                if let Some(result) = settle_rung(DispatchRoute::LiraDpll, query, result, rec) {
+                    return Ok(result);
+                }
             }
             Err(SolverError::Unsupported(message)) => {
-                with_recorder(rec, |t| {
-                    t.record_declined("lira-dpll", unsupported_decline(&message));
-                });
+                record_route_refusal(DispatchRoute::LiraDpll, query, &message, rec);
             }
-            Err(other) => return Err(other),
+            Err(other) => return Err(DispatchError::at(DispatchRoute::LiraDpll, other)),
         }
     }
     if features.has_real {
@@ -6144,7 +6915,9 @@ fn check_auto_dispatch_inner(
         // out-of-fragment elimination).
         let real_config = config_with_remaining_deadline(config, dispatch_deadline);
         let uf_nra = dispatch_uf_nra(arena, assertions, &real_config, &features, rec);
-        if let Some(result) = rung_or_decline("uf-nra", uf_nra, rec)? {
+        if let Some(result) = rung_or_decline(DispatchRoute::UfNra, query, uf_nra, rec)
+            .map_err(|e| DispatchError::at(DispatchRoute::UfNra, e))?
+        {
             return Ok(result);
         }
         // Conjunction of single-variable nonlinear-real polynomial constraints
@@ -6169,7 +6942,8 @@ fn check_auto_dispatch_inner(
                 arena,
                 assertions,
                 dispatch_deadline,
-            )?
+            )
+            .map_err(|e| DispatchError::at(DispatchRoute::Nra, e))?
         {
             // A `Some(Unknown)` from the exact real-root decider ends this branch
             // — `nra` below is never reached. That is deliberate (the decider has
@@ -6218,7 +6992,9 @@ fn check_auto_dispatch_inner(
         match crate::nra::check_with_nra(arena, assertions, &nra_config) {
             Ok(result) => {
                 with_recorder(rec, |t| t.record_result("nra", &result));
-                return Ok(result);
+                if let Some(result) = settle_rung(DispatchRoute::Nra, query, result, rec) {
+                    return Ok(result);
+                }
             }
             Err(SolverError::Unsupported(message)) if features.has_function => {
                 with_recorder(rec, |t| {
@@ -6269,12 +7045,15 @@ fn check_auto_dispatch_inner(
                     }));
                 }
             }
-            Err(e) => return Err(e),
+            Err(e) => return Err(DispatchError::at(DispatchRoute::Nra, e)),
         }
     }
     let overbound =
         dispatch_arith_uf_overbound_probe_before_lia(arena, assertions, config, &features, rec);
-    if let Some(result) = rung_or_decline("uf-arith-overbound-probe", overbound, rec)? {
+    if let Some(result) =
+        rung_or_decline(DispatchRoute::UfArithOverboundProbe, query, overbound, rec)
+            .map_err(|e| DispatchError::at(DispatchRoute::UfArithOverboundProbe, e))?
+    {
         return Ok(result);
     }
     if features.has_int {
@@ -6296,7 +7075,8 @@ fn check_auto_dispatch_inner(
             && !features.has_array
             && !features.has_uninterpreted_sort
             && !features.has_datatype
-            && let Some(blasted) = crate::bv2nat_blast::blast_bv2nat_linear(arena, assertions)?
+            && let Some(blasted) = crate::bv2nat_blast::blast_bv2nat_linear(arena, assertions)
+                .map_err(|e| DispatchError::at(DispatchRoute::Bv2NatBlast, e))?
         {
             let mut backend = SatBvBackend::new();
             match check_with_all_theories(&mut backend, arena, &blasted, DEFAULT_INT_WIDTH, config)
@@ -6307,14 +7087,16 @@ fn check_auto_dispatch_inner(
                         .iter()
                         .all(|&a| matches!(eval(arena, a, &assignment), Ok(Value::Bool(true))));
                     if all_true {
-                        with_recorder(rec, |t| t.record_decided("bv2nat-blast", Verdict::Sat));
+                        with_recorder(rec, |t| {
+                            t.record_decided(DispatchRoute::Bv2NatBlast.label(), Verdict::Sat);
+                        });
                         return Ok(CheckResult::Sat(model));
                     }
                     // Should be unreachable (the blast is an equivalence); a
                     // replay failure is a loud decline, never a wrong `sat`.
                     with_recorder(rec, |t| {
                         t.record_declined(
-                            "bv2nat-blast",
+                            DispatchRoute::Bv2NatBlast.label(),
                             DeclineReason::from_unknown(&UnknownReason {
                                 kind: UnknownKind::Incomplete,
                                 detail: "bv2nat-blast sat candidate failed replay against the \
@@ -6325,15 +7107,20 @@ fn check_auto_dispatch_inner(
                     });
                 }
                 Ok(CheckResult::Unsat) => {
-                    with_recorder(rec, |t| t.record_decided("bv2nat-blast", Verdict::Unsat));
+                    with_recorder(rec, |t| {
+                        t.record_decided(DispatchRoute::Bv2NatBlast.label(), Verdict::Unsat);
+                    });
                     return Ok(CheckResult::Unsat);
                 }
                 Ok(CheckResult::Unknown(reason)) => {
                     with_recorder(rec, |t| {
-                        t.record_declined("bv2nat-blast", DeclineReason::from_unknown(&reason));
+                        t.record_declined(
+                            DispatchRoute::Bv2NatBlast.label(),
+                            DeclineReason::from_unknown(&reason),
+                        );
                     });
                 }
-                Err(e) => return Err(e),
+                Err(e) => return Err(DispatchError::at(DispatchRoute::Bv2NatBlast, e)),
             }
         }
         // `bv2nat(b)` finite-range refutation (G2): a `bv2nat(b)` of a `W`-bit
@@ -6356,7 +7143,10 @@ fn check_auto_dispatch_inner(
             dispatch_deadline,
             rec,
         );
-        if let Some(result) = rung_or_decline("int-linear-refuters", int_refuters, rec)? {
+        if let Some(result) =
+            rung_or_decline(DispatchRoute::IntLinearRefuters, query, int_refuters, rec)
+                .map_err(|e| DispatchError::at(DispatchRoute::IntLinearRefuters, e))?
+        {
             return Ok(result);
         }
     }
@@ -6365,13 +7155,17 @@ fn check_auto_dispatch_inner(
     // returns a replay-checked `sat`, a congruence `unsat`, or `unknown` for
     // base-sort semantics outside congruence, which falls through to bit-blasting.
     let uf_routes = dispatch_uf_routes(arena, assertions, config, &features, rec);
-    if let Some(result) = rung_or_decline("uf-routes", uf_routes, rec)? {
+    if let Some(result) = rung_or_decline(DispatchRoute::UfRoutes, query, uf_routes, rec)
+        .map_err(|e| DispatchError::at(DispatchRoute::UfRoutes, e))?
+    {
         return Ok(result);
     }
     if features.has_array {
         let abv_online =
             dispatch_abv_online(arena, assertions, config, &features, dispatch_deadline, rec);
-        if let Some(result) = rung_or_decline("abv-online-cdclt", abv_online, rec)? {
+        if let Some(result) = rung_or_decline(DispatchRoute::AbvOnlineCdclt, query, abv_online, rec)
+            .map_err(|e| DispatchError::at(DispatchRoute::AbvOnlineCdclt, e))?
+        {
             return Ok(result);
         }
         // ONE CLOCK for the array ladder. `abv-online-cdclt` above now keeps
@@ -6396,7 +7190,9 @@ fn check_auto_dispatch_inner(
             }
         };
         let array_fast = dispatch_array_fast_paths(arena, assertions, &ladder_config, &features);
-        if let Some(result) = rung_or_decline("array-fast-path", array_fast, rec)? {
+        if let Some(result) = rung_or_decline(DispatchRoute::ArrayFastPath, query, array_fast, rec)
+            .map_err(|e| DispatchError::at(DispatchRoute::ArrayFastPath, e))?
+        {
             with_recorder(rec, |t| t.record_result("array-fast-path", &result));
             return Ok(result);
         }
@@ -6414,13 +7210,25 @@ fn check_auto_dispatch_inner(
     }
 
     if features.has_int {
-        return dispatch_nonlinear_int_tail(arena, assertions, config, dispatch_deadline, rec);
+        return dispatch_nonlinear_int_tail(arena, assertions, config, dispatch_deadline, rec)
+            .map_err(DispatchError::ladder);
     }
 
     let mut backend = SatBvBackend::new();
+    // ADR-2100: the bit-blast tail is **terminal by position**, so its `Unknown`
+    // is not run through `settle_rung`. ADR-1966's own classification of
+    // `dispatch_nonlinear_int_tail` is the same one — "terminal — it is the last
+    // rung" — and the reason is not a preference: declining here would return
+    // `Ok(None)` to a ladder with nothing below it, so the dispatcher would have
+    // to manufacture a second `unknown` that says strictly less than the one it
+    // just discarded. `DispatchRoute::QfBv::owns` is declared anyway, because the
+    // sizing analysis reads it to ask whether a route below a refusing rung would
+    // own the query, and the tail is the bottom of that ladder.
     match check_with_all_theories(&mut backend, arena, assertions, DEFAULT_INT_WIDTH, config) {
         Ok(result) => {
-            with_recorder(rec, |t| t.record_result("qf-bv", &result));
+            with_recorder(rec, |t| {
+                t.record_result(DispatchRoute::QfBv.label(), &result);
+            });
             Ok(result)
         }
         // The pure-BV bit-blaster cannot represent an uninterpreted carrier sort.
@@ -6460,7 +7268,7 @@ fn check_auto_dispatch_inner(
             with_recorder(rec, |t| t.record_result("qf-abv-array-decline", &result));
             Ok(result)
         }
-        Err(e) => Err(e),
+        Err(e) => Err(DispatchError::ladder(e)),
     }
 }
 
@@ -11740,6 +12548,55 @@ impl Features {
         Some(features)
     }
 
+    /// The query's [`ConstructSet`], for the ADR-2100 ownership test.
+    ///
+    /// One class per flag, so a route's declaration and the rung gates are
+    /// stated in the same vocabulary and
+    /// `tests::every_construct_class_reads_the_flag_it_names` can check the two
+    /// against each other rather than against a comment.
+    ///
+    /// `has_bitblast` contributes nothing: it is a derived disjunction of
+    /// `Int`, `BvOrFloat`, `Array` and `Function`, not an independent
+    /// construct, and a class for it would let a route claim ownership of `Int`
+    /// by claiming `BitBlast`.
+    fn constructs(&self) -> ConstructSet {
+        let mut set = ConstructSet::EMPTY;
+        if self.has_real {
+            set = set.with(Construct::Real);
+        }
+        if self.has_int {
+            set = set.with(Construct::Int);
+        }
+        if self.has_bv_or_float {
+            set = set.with(Construct::BvOrFloat);
+        }
+        if self.has_datatype {
+            set = set.with(Construct::Datatype);
+        }
+        if self.has_function {
+            set = set.with(Construct::Function);
+        }
+        if self.has_uninterpreted_sort {
+            set = set.with(Construct::UninterpretedSort);
+        }
+        if self.has_array {
+            set = set.with(Construct::Array);
+        }
+        if self.has_non_bv_array {
+            set = set.with(Construct::NonBvArray);
+        }
+        if self.has_non_bool_bv_array {
+            set = set.with(Construct::NonBoolBvArray);
+        }
+        if self.has_nested_array {
+            set = set.with(Construct::NestedArray);
+        }
+        if self.has_wide_int {
+            set = set.with(Construct::WideInt);
+        }
+        set
+    }
+
     /// Records the theory flags a sort contributes.
     ///
     /// Takes the arena because a nested array component is an interned id: the
@@ -11874,7 +12731,400 @@ mod uf_overbound_live_tests {
 mod tests {
     use std::fmt::Write as _;
 
+    use super::route_ownership::constructs;
     use super::*;
+
+    // -----------------------------------------------------------------------
+    // ADR-2100: typed route ownership.
+    //
+    // Every test here derives its population from the AUTHORITY -- the `match`
+    // arms in `route_ownership` and this file's own source text -- rather than
+    // from a literal list, because a test named "every X" that carries its own
+    // X measures the maintainer's memory.
+    // -----------------------------------------------------------------------
+
+    /// The ownership declaration must cover every rung, and the coverage is
+    /// derived from `DispatchRoute::ALL` rather than counted by hand.
+    ///
+    /// `owns` and `kind` are already exhaustive `match`es, so a rung added
+    /// without a declaration does not COMPILE. What this adds is the other
+    /// half: that `ALL` itself did not go stale, which no `match` can enforce.
+    /// It reads the variant names out of this file's source text, so adding a
+    /// variant and forgetting `ALL` fails here.
+    #[test]
+    fn every_declared_route_is_in_all_and_has_a_distinct_label() {
+        let src = include_str!("auto.rs");
+        let start = src
+            .find("pub(crate) enum DispatchRoute {")
+            .expect("the enum moved -- find it rather than guessing");
+        let body = &src[start..src[start..].find("\n    }\n").unwrap() + start];
+        let declared: BTreeSet<&str> = body
+            .lines()
+            .map(str::trim)
+            .filter(|l| {
+                l.ends_with(',')
+                    && !l.starts_with("//")
+                    && l[..l.len() - 1].chars().all(char::is_alphanumeric)
+                    && l.starts_with(char::is_uppercase)
+            })
+            .map(|l| &l[..l.len() - 1])
+            .collect();
+        assert!(
+            declared.len() >= 10,
+            "the variant scan found {} variants, which is not a plausible count \
+             for this enum -- the parse lost its subject and a passing assertion \
+             below would mean nothing: {declared:?}",
+            declared.len()
+        );
+        let in_all: BTreeSet<&str> = DispatchRoute::ALL
+            .iter()
+            .map(|r| {
+                // The variant name as `Debug` renders it.
+                let rendered = format!("{r:?}");
+                Box::leak(rendered.into_boxed_str()) as &str
+            })
+            .collect();
+        assert_eq!(
+            declared, in_all,
+            "`DispatchRoute::ALL` and the enum's variants disagree. `ALL` is what \
+             the sizing script and the tests below enumerate, so a variant missing \
+             from it is a rung nothing checks"
+        );
+
+        let mut labels = BTreeSet::new();
+        for route in DispatchRoute::ALL {
+            assert!(
+                labels.insert(route.label()),
+                "two rungs share the route-trail label {:?}; the trail is how every \
+                 census, board and suite here attributes a decision, so a shared \
+                 label makes two rungs indistinguishable in all of them",
+                route.label()
+            );
+        }
+    }
+
+    /// Every route-trail label a rung records must be the one its declaration
+    /// spells, and it must still be the string the committed censuses read.
+    ///
+    /// The labels are frozen deliberately: `bench-results/` holds boards and
+    /// censuses keyed on these exact bytes, and a sibling lane is turning
+    /// `route_trace`'s own constants into an enum. Renaming one here would move
+    /// numbers in artifacts nobody re-ran.
+    #[test]
+    fn the_route_labels_are_the_committed_trail_vocabulary() {
+        let src = include_str!("auto.rs");
+        for route in DispatchRoute::ALL {
+            let label = route.label();
+            assert!(
+                label
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-'),
+                "route-trail labels are a closed lowercase-and-hyphen vocabulary, \
+                 not free text: {label:?}"
+            );
+            assert!(
+                !label.starts_with("fd:") && !label.starts_with("q:"),
+                "`fd:` is the front door's vocabulary and `q:` the quantified \
+                 ladder's; a dispatch rung carrying one of those prefixes would be \
+                 classified as belonging to a different ladder by every consumer \
+                 that splits on it: {label:?}"
+            );
+            assert!(
+                src.contains(&format!("{label:?}")),
+                "the label {label:?} appears in no string literal in this file, so \
+                 nothing records it -- either the rung stopped recording or the \
+                 declaration names a rung that does not exist"
+            );
+        }
+    }
+
+    /// The two route enums partition the trail's vocabulary, and neither one
+    /// claims a label belonging to the other.
+    ///
+    /// ADR-2101 types the DECLARED labels — the `fd:` front-door stages and the
+    /// `q:` quantified rungs, which exist as `pub const` and so have an
+    /// authority to derive from. ADR-2100 types the dispatch rungs, which do
+    /// not. A label in both would be a rung classified as belonging to two
+    /// ladders by every consumer that splits on the prefix, and the two enums
+    /// living in different modules is exactly the condition under which that
+    /// goes unnoticed.
+    ///
+    /// Both directions are checked. `from_wire` returning `None` for a dispatch
+    /// label is the property ADR-2101 states; the positive control is that it
+    /// returns `Some` for a label it DOES own, so a `from_wire` that had been
+    /// broken into returning `None` unconditionally could not pass this.
+    #[test]
+    fn every_dispatch_label_is_outside_the_declared_route_enum() {
+        use crate::route_trace::Route;
+        for route in DispatchRoute::ALL {
+            assert!(
+                Route::from_wire(route.label()).is_none(),
+                "`{}` is claimed by BOTH `DispatchRoute` (ADR-2100) and \
+                 `route_trace::Route` (ADR-2101). The two vocabularies partition \
+                 the trail; an overlap makes one rung two things to every consumer \
+                 that classifies by prefix",
+                route.label(),
+            );
+        }
+        // The positive control. Without it this test passes on a `from_wire`
+        // that answers `None` to everything, which is the un-failable checker
+        // this repository keeps deleting.
+        assert_eq!(
+            Route::from_wire(crate::route_trace::front_door_stage::PARSE),
+            Some(Route::FdParse),
+            "fixture check: `from_wire` still resolves a label it DOES own, so \
+             the assertions above are about the partition and not about a \
+             lookup that stopped working"
+        );
+    }
+
+    /// A route's ownership declaration must be consistent with its own gate:
+    /// **a rung cannot own a construct its gate refuses to run on.**
+    ///
+    /// This is the one direction that is checkable without re-implementing each
+    /// route, and it is the direction that matters. Declaring too LITTLE is
+    /// safe — the rung declines where it used to stop the ladder, so more routes
+    /// run, which can cost budget and can never lose soundness. Declaring a
+    /// construct the gate excludes is the unsafe direction: it would let the
+    /// rung end the search on a fragment it provably never sees.
+    ///
+    /// The excluded sets are read from the gate conjunctions in this file's
+    /// source, not retyped, so a gate that gains a clause and a declaration that
+    /// does not follow it is a failure here.
+    #[test]
+    fn no_route_claims_a_construct_its_own_gate_excludes() {
+        let src = include_str!("auto.rs");
+        // (route, the `fn` whose body carries its gate, the flags that gate
+        // requires to be CLEAR). Only rungs with a single `Features`
+        // conjunction gate are listed; the others carry their reason.
+        let gated: &[(DispatchRoute, &str)] = &[
+            (DispatchRoute::UfNra, "fn dispatch_uf_nra("),
+            (DispatchRoute::AbvOnlineCdclt, "fn dispatch_abv_online("),
+            (
+                DispatchRoute::UfArithOverboundProbe,
+                "fn dispatch_arith_uf_overbound_probe_before_lia(",
+            ),
+        ];
+        assert!(!gated.is_empty(), "an empty population proves nothing");
+        for (route, gate_fn) in gated {
+            let at = src
+                .find(gate_fn)
+                .unwrap_or_else(|| panic!("{gate_fn} moved -- find it rather than guessing"));
+            // The gate is the first `if ... { return Ok(None); }` in the body.
+            let body = &src[at..];
+            let gate_end = body
+                .find("return Ok(None);")
+                .expect("every gated rung opens with an early `return Ok(None)`");
+            let gate = &body[..gate_end];
+            let mut checked = 0;
+            for class in Construct::ALL {
+                // `features.has_x` WITHOUT a leading `!` inside a disjunction of
+                // refusal conditions means "this flag being SET refuses".
+                let excludes = gate.contains(&format!("|| features.{}", class.feature_field()))
+                    || gate.contains(&format!("if features.{}", class.feature_field()));
+                if !excludes {
+                    continue;
+                }
+                checked += 1;
+                assert!(
+                    !route.owns().contains(*class),
+                    "`{}` declares it owns {} and its own gate ({gate_fn}) returns \
+                     `Ok(None)` when `{}` is set, so it provably never runs on such a \
+                     query. Owning a construct a rung cannot see lets it end the \
+                     ladder on a fragment the route below it is the one that handles \
+                     -- the ADR-1927/1966/1980/2030/2065 defect exactly",
+                    route.label(),
+                    class.name(),
+                    class.feature_field(),
+                );
+            }
+            assert!(
+                checked > 0,
+                "the gate parse for {gate_fn} matched no exclusion clause, so the \
+                 assertions above ran zero times. An empty result from a tool never \
+                 pointed at its subject is indistinguishable from a strong negative",
+            );
+        }
+    }
+
+    /// The rule table itself, driven rather than listed.
+    ///
+    /// Four rows, one per cell of the decision table in `route_ownership`'s
+    /// module comment, each exercised through `settle_rung`/`record_route_refusal`
+    /// with a real `ConstructSet` rather than by re-deriving the predicate
+    /// inline. A test that recomputes `query.subset_of(route.owns())` for itself
+    /// passes while the shipped funnel does something else.
+    #[test]
+    fn the_ownership_rule_decides_each_cell_of_its_own_table() {
+        let mut rec: Recorder<'_> = None;
+        let unknown = || {
+            CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: "the route's own sentence".to_owned(),
+            })
+        };
+
+        // A `Decider` that owns the query: its `Unknown` is the ladder's answer.
+        let owned = constructs![Int, Real];
+        assert!(
+            DispatchRoute::LiraDpll.owns().contains(Construct::Int)
+                && DispatchRoute::LiraDpll.owns().contains(Construct::Real),
+            "fixture check: this row is about a query INSIDE the route's fragment"
+        );
+        assert!(
+            matches!(
+                settle_rung(DispatchRoute::LiraDpll, owned, unknown(), &mut rec),
+                Some(CheckResult::Unknown(_))
+            ),
+            "a decider that owns the whole fragment ends the ladder; that is the \
+             distinction this module exists to preserve, not to erase"
+        );
+
+        // The same `Decider`, one construct outside its declaration: a decline.
+        // This is ADR-2065's regression, and the fixture is its shape.
+        let with_array = constructs![Int, Real, Array];
+        assert!(
+            settle_rung(DispatchRoute::LiraDpll, with_array, unknown(), &mut rec).is_none(),
+            "ADR-2065 REGRESSION: `lira-dpll` does not own `Array`, so its \
+             non-decision cannot take the query away from `array-fast-path`, which \
+             decided the same read-over-write tautology in 2 ms"
+        );
+
+        // A `FastPath` never ends the ladder, even inside its own fragment.
+        assert_eq!(
+            DispatchRoute::DatatypeElim.kind(),
+            RouteKind::FastPath,
+            "fixture check: this row is about an accelerator, not a decider"
+        );
+        assert!(
+            settle_rung(
+                DispatchRoute::DatatypeElim,
+                constructs![Datatype],
+                unknown(),
+                &mut rec,
+            )
+            .is_none(),
+            "ADR-0022 step A hands to step B by design; an accelerator that could \
+             end the ladder would take the query from the rung it exists to feed"
+        );
+
+        // And a DECISION passes through both kinds untouched: ownership never
+        // stands between a route and a verdict.
+        for route in [DispatchRoute::LiraDpll, DispatchRoute::DatatypeElim] {
+            assert!(
+                matches!(
+                    settle_rung(
+                        route,
+                        constructs![NestedArray],
+                        CheckResult::Unsat,
+                        &mut rec
+                    ),
+                    Some(CheckResult::Unsat)
+                ),
+                "`{}` returned a VERDICT on a query carrying a construct nobody owns; \
+                 the rule must not discard it",
+                route.label(),
+            );
+        }
+    }
+
+    /// An `Err(Unsupported)` from a decider that declares the fragment is
+    /// reported as an inconsistency, and one from anything else is not.
+    ///
+    /// The marker is a constant both the producer and every consumer read, so
+    /// the checker cannot silently stop matching what the producer emits — the
+    /// failure that lost ADR-2075 twelve files and truncated ADR-2020's own
+    /// largest bucket.
+    #[test]
+    fn an_owning_deciders_refusal_is_reported_and_a_declining_routes_is_not() {
+        let mut trace = RouteTrace::new();
+        let mut rec: Recorder<'_> = Some(&mut trace);
+        record_route_refusal(
+            DispatchRoute::LiraDpll,
+            constructs![Int, Real],
+            "a fragment this route declared as its own",
+            &mut rec,
+        );
+        record_route_refusal(
+            DispatchRoute::LiraDpll,
+            constructs![Int, Real, Array],
+            "a fragment this route never claimed",
+            &mut rec,
+        );
+        record_route_refusal(
+            DispatchRoute::DatatypeElim,
+            constructs![Datatype],
+            "step A hands to step B",
+            &mut rec,
+        );
+
+        let reported: Vec<bool> = trace
+            .attempts()
+            .iter()
+            .map(|a| format!("{:?}", a.outcome).contains(OWNERSHIP_INCONSISTENCY_MARKER))
+            .collect();
+        assert_eq!(
+            reported,
+            vec![true, false, false],
+            "exactly the first refusal is an inconsistency: a decider refusing a \
+             fragment it declares. The second is ADR-1966's ordinary decline and the \
+             third is ADR-0022's designed hand-off, and reporting either of those \
+             would make the marker fire on healthy code -- a checker that cannot \
+             distinguish its subject is worse than no checker"
+        );
+    }
+
+    /// The construct classes are exactly the `Features` flags, minus the two
+    /// that are deliberately not constructs.
+    ///
+    /// Derived from the struct's own source text. Without this the declaration
+    /// silently stops covering a flag the scan gained, and a route would then
+    /// own a construct by omission rather than by decision.
+    #[test]
+    fn every_features_flag_is_a_construct_class_or_is_named_as_an_exception() {
+        let src = include_str!("auto.rs");
+        let at = src
+            .find("struct Features {")
+            .expect("the `Features` struct moved -- find it rather than guessing");
+        let body = &src[at..src[at..].find("\n}\n").unwrap() + at];
+        let flags: BTreeSet<&str> = body
+            .lines()
+            .map(str::trim)
+            .filter_map(|l| l.strip_suffix(": bool,"))
+            .filter(|l| l.starts_with("has_"))
+            .collect();
+        assert!(
+            flags.len() >= 10,
+            "the flag scan found {} fields, which is not a plausible count for this \
+             struct -- the parse lost its subject: {flags:?}",
+            flags.len()
+        );
+
+        // The two exceptions, each with the reason it is one. An exemption list
+        // that is not itself checked against the source is how a flag quietly
+        // joins it.
+        let exempt: BTreeSet<&str> = ["has_bitblast"].into_iter().collect();
+        for flag in &exempt {
+            assert!(
+                flags.contains(flag),
+                "the exemption list names {flag:?}, which is not a field of \
+                 `Features` any more. A stale exemption hides the flag that \
+                 replaced it"
+            );
+        }
+
+        let classes: BTreeSet<&str> = Construct::ALL.iter().map(|c| c.feature_field()).collect();
+        let uncovered: BTreeSet<&&str> = flags.difference(&classes).collect();
+        let expected: BTreeSet<&&str> = exempt.iter().collect();
+        assert_eq!(
+            uncovered, expected,
+            "every `Features` flag is either a `Construct` class or a named \
+             exception. `has_bitblast` is the only exception and it is one because \
+             it is a derived disjunction of four other flags, not an independent \
+             construct: a class for it would let a route claim ownership of `Int` \
+             by claiming `BitBlast`"
+        );
+    }
 
     /// ADR-2030's hoist lever must **fail closed**: every spelling it does not
     /// understand leaves the per-rung loop byte-identical, which is the shipped

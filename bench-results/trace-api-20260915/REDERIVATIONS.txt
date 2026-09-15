@@ -1,0 +1,103 @@
+============================================================================
+ADR-2075  the silent hang: there was never an absence
+============================================================================
+
+The defect, verbatim from the consumer that had it
+  bench-results/skeleton-reach-20260914/fd-census.sh:41
+    rl=$(printf '%s\n' "$raw" | grep -m1 '^; route ' || true)
+  The watchdog path prints `; partial route `, so that grep found
+  nothing and the row was censused `bound_by=NONE`.
+
+  receipt          old grep  reader bound_by      partial  ; partial lines
+  fp-dafny         NO        q:bool-skeleton      yes                   15
+  fp-havoc-sum     NO        q:bool-skeleton      yes                   11
+  fp-hoare         yes       q:egraph             no                     0
+  fp-mqueue        NO        q:ground-subset      yes                   14
+  fp-zohar         yes       q:egraph             no                     0
+  havoc-sum        NO        q:bool-skeleton      yes                   10
+
+  [MATCH ] 2075 receipts the OLD `^; route ` grep can attribute: got 2, want 2
+           the four watchdog-killed receipts are invisible to it
+  [MATCH ] 2075 receipts the READER can attribute: got 6, want 6
+           every one, and each names a real bound_by
+  [MATCH ] 2075 of those, PARTIAL readings: got 4, want 4
+  [MATCH ] 2075 `Fourteen lines.` (ADR line 51) on the committed receipt: got 14, want 14
+           receipt is prof/fp-mqueue, not prof/fp-hoare -- see the note in the code
+  [MATCH ] 2075 inherited population (ADR line 36): got 13, want 13
+  [MATCH ] 2075 the awk's own positive control (ADR line 36: 'prints 142'): got 142, want 142
+           a non-empty complement, so the 13 is a filter result and not an empty scan
+  [MATCH ] 2075 OLD bucket size, inherited from ADR-2040 sec.8: got 12, want 12
+           the number the ADR corrected
+  [MATCH ] 2075 re-derived OUT (P5 predicted at most 2): got 4, want 4
+  [MATCH ] 2075 CORRECTED bucket size (ADR line 4: 'the population is 9'): got 9, want 9
+  [MATCH ] 2075 the nine by INNERMOST running phase (ADR lines 105-109): got [('euf:fc-pair-scan', 2), ('euf:offline', 2), ('euf:round-incremental-arith', 2), ('none', 3)], want [('euf:fc-pair-scan', 2), ('euf:offline', 2), ('euf:round-incremental-arith', 2), ('none', 3)]
+
+============================================================================
+ADR-2020  the census split on `;` inside a field and truncated itself
+============================================================================
+
+  [MATCH ] 2020 route-trail columns in the corrected census: got 0, want 0
+           so this artifact is NOT the reader's to own; see the module docstring
+  OLD (outer string, what the naive census saw):
+      25  Timeout|preprocessed dispatch timeout after reduced solve
+      21  ResourceLimit|lazy function-consistency CEGAR inconclusive
+      17  ResourceLimit|combined theories: eager Ackermann elimination wou
+      10  ResourceLimit|UF+arithmetic: lazy Ackermann abstraction build wo
+       5  Incomplete|no model within the bounded integer width N
+  CORRECTED (binding cause, wrappers peeled):
+      22  lazy linear arithmetic pre-SAT skeleton exceeds the joint resour
+      17  ResourceLimit|combined theories: eager Ackermann elimination wou
+      11  integer bit-blast width ladder: wall-clock timeout reached
+      10  ResourceLimit|UF+arithmetic: lazy Ackermann abstraction build wo
+       7  auto-dispatch timeout after nonlinear integer real relaxation
+       5  Incomplete|no model within the bounded integer width N; widen th
+       3  lazy linear arithmetic exhausted the configured timeout after N 
+       1  combined-theory timeout after scalar backend
+       1  linear-arithmetic sat-model reconstruction declined in the integ
+       1  lazy linear arithmetic SAT skeleton declined after round N
+
+  [MATCH ] 2020 OLD distinct buckets (ADR line 76): got 5, want 5
+  [MATCH ] 2020 OLD largest bucket (ADR line 77): got 25, want 25
+  [MATCH ] 2020 CORRECTED distinct buckets (ADR line 76): got 10, want 10
+  [MATCH ] 2020 CORRECTED largest bucket (ADR line 77): got 22, want 22
+  [MATCH ] 2020 CORRECTED leader (ADR line 4/99): got True, want True
+           not the eager Ackermann bound (17) the earlier prose led with -- that is second
+
+============================================================================
+ADR-2060  one give-up string for 28 program points and 15 causes
+============================================================================
+
+  the committed enumerator, re-run on TODAY's tree:
+    tree: /home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-a788dc35ca31d28b8/crates/axeyum-solver/src/lra.rs
+    A. name scan: Decision::TimedOut constructions
+         decide_within            0
+         simplex_after_elimination 0
+         (whole file, any form)   0
+    B. funnel scan: cause-erasing bail points BELOW those constructions
+         collect_constraints    0
+         solve                  0
+         eliminate              8
+         simplex_fallback       0
+         funnel total             8
+      TOTAL program points reaching one sentence: 8
+
+  [MATCH ] 2060 `Decision::TimedOut` constructions on today's tree: got 0, want 0
+           the ADR's 28 counted the PRE-FIX tree; the fix removed every one
+  the typed vocabulary that replaced the one string:
+    GaveUp             5 variants
+    FmDecline          5 variants
+    SimplexDecline     7 variants
+    ElimBail           4 variants
+    CollectDecline     2 variants
+
+  [MATCH ] 2060 OLD: distinct reasons a consumer could tell apart: got 1, want 1
+           one sentence
+  [MATCH ] 2060 OLD: program points behind it (ADR lines 55-57): got 28, want 28
+           27 distinct, 15 causes
+  [MATCH ] 2060 CORRECTED: typed variants across the five enums, on today's tree: got 23, want 23
+           ADR-2060 landed 22; `SimplexDecline` has since grown to 7
+  [MATCH ] 2060 the reader keeps two declines with one reason token apart: got (0, True), want (0, True)
+           driven by the control suite, not asserted here
+
+============================================================================
+21 of 21 re-derivations match the corrected ADR figure

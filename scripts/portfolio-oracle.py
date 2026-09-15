@@ -105,6 +105,9 @@ import subprocess
 import sys
 import time
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import route_trace_reader as rtr  # noqa: E402
+
 # Attempts whose outcome is `probe` are the shared preamble (parse, feature
 # scan): every arm of a portfolio pays them, so they are charged to every arm.
 # Counting them as recoverable is the error that inflated QF_SLIA from 63% to
@@ -124,19 +127,40 @@ def parse_trace(stdout: str) -> dict:
     """
     verdict = None
     attempts = None
+    partial = False
     for raw in stdout.splitlines():
         line = raw.rstrip()
-        if line.startswith("; route-trail "):
+        # Both spellings, through the shared reader (ADR-2101). This used to
+        # anchor on `; route-trail ` alone, so every file the watchdog killed
+        # -- the population a portfolio oracle most needs -- was counted as
+        # having no trail at all.
+        if line.startswith(rtr.TRAIL_PREFIX) or line.startswith(
+            rtr.PARTIAL_TRAIL_PREFIX
+        ):
             try:
-                attempts = json.loads(line[len("; route-trail ") :])["attempts"]
-            except (ValueError, KeyError):
+                trail = rtr.parse_trail_line(line)
+            except rtr.RouteTraceError:
                 attempts = None
+            else:
+                attempts = [
+                    {
+                        "route": a.route,
+                        "outcome": a.outcome,
+                        "verdict": a.verdict,
+                        "reason": a.reason,
+                        "detail": a.detail,
+                        "elapsed_ns": a.elapsed_ns,
+                    }
+                    for a in trail.attempts
+                ]
+                partial = trail.partial
         elif line in ("sat", "unsat", "unknown"):
             verdict = line
     return {
         "verdict": verdict or "none",
         "attempts": attempts,
         "trail_present": attempts is not None,
+        "trail_partial": partial,
     }
 
 
