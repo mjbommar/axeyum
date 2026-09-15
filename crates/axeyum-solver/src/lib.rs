@@ -158,6 +158,7 @@ macro_rules! full_modules {
         mod nra_monomial_bound_cert;
         mod nra_product_cert;
         mod nra_real_root;
+        mod nra_single_cell;
         mod nra_zero_product_cert;
         mod optimize;
         mod pb;
@@ -498,6 +499,10 @@ pub mod certificates {
             IntUnivariateRefutationCertificate, IntUnivariateRefutationReason,
             check_int_univariate_refutation, int_univariate_refutation,
         };
+        pub use crate::nra_cell_cert::{
+            CellCheckFailure, CellCheckStats, CellCovering, CellReason, CellRefutation, CertAtom,
+            CertCmp, CertPoly, check_cell_refutation,
+        };
         pub use crate::nra_even_power::{
             NraEvenPowerRefutationCertificate, nra_even_power_refutation,
         };
@@ -512,10 +517,6 @@ pub mod certificates {
         pub use crate::nra_product_cert::{
             AtomSign, RealProductRefutationCertificate, check_real_product_refutation,
             real_product_refutation,
-        };
-        pub use crate::nra_cell_cert::{
-            CellCheckFailure, CellCheckStats, CellCovering, CellReason, CellRefutation,
-            CertAtom, CertCmp, CertPoly, check_cell_refutation,
         };
         pub use crate::nra_real_root::SosCertificate;
         pub use crate::nra_zero_product_cert::{

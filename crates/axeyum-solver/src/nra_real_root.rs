@@ -134,7 +134,7 @@ fn cad_timeout_unknown() -> CheckResult {
 /// Coefficient magnitude guard (mirrors `nia_square::MAX_ABS_COEFF`): above this
 /// the pass declines to keep the exact-rational arithmetic and root isolation
 /// inside `i128`.
-const MAX_ABS_COEFF: i128 = 1i128 << 40;
+pub(crate) const MAX_ABS_COEFF: i128 = 1i128 << 40;
 
 /// Maximum polynomial degree the pass collects / decides; beyond it we decline.
 const MAX_DEGREE: usize = 64;
@@ -400,6 +400,18 @@ pub fn decide_real_poly_constraint(
     // of single-variable sub-systems). It declines (`None`) on any genuinely
     // coupled / nonlinear-multivariate / non-polynomial / overflow shape, leaving
     // the query to the NRA layer.
+    // ADR-2121: the model-constructing single-cell route, gated on the
+    // `single-cell` arm of `AXEYUM_NRA_CAD`. It declines on everything outside
+    // its declared slice, and its `Unsat` has already passed its own certificate
+    // checker (`nra_cell_cert`), so a verdict from here is never weaker than one
+    // from the enumerative path below. On the shipped arms this is one bool test.
+    if cad_policy().single_cell
+        && let Some(res @ (CheckResult::Unsat | CheckResult::Sat(_))) =
+            crate::nra_single_cell::decide_single_cell(arena, assertions, deadline)
+    {
+        return Ok(Some(res));
+    }
+
     let decomposed = decompose_multivariate(arena, assertions, deadline);
     match decomposed {
         // A definitive verdict from the decomposition wins; nothing below can
@@ -872,7 +884,7 @@ fn replay_rational(
 /// Sort isolated roots into ascending order, returning `None` if any pair cannot
 /// be ordered exactly (an algebraic-vs-algebraic comparison that does not resolve
 /// within the refinement bound) so the caller declines rather than guessing.
-fn sort_roots(roots: &[Root], deadline: Option<Instant>) -> Option<Vec<Root>> {
+pub(crate) fn sort_roots(roots: &[Root], deadline: Option<Instant>) -> Option<Vec<Root>> {
     let mut out: Vec<Root> = roots.to_vec();
     // Insertion sort with a total, exact comparator; on any indeterminate
     // comparison return None. The comparator is exact-algebraic and can be
@@ -933,7 +945,7 @@ fn compare_roots(a: &Root, b: &Root) -> Option<Ordering> {
 /// The isolating lower/upper rational bounds of a root: the true value lies in
 /// `[lo, hi]` (`lo == hi` for a rational root). `None` if an algebraic root cannot
 /// expose its interval.
-fn root_bounds(r: &Root) -> Option<(Rational, Rational)> {
+pub(crate) fn root_bounds(r: &Root) -> Option<(Rational, Rational)> {
     match r {
         Root::Rational(q) => Some((*q, *q)),
         Root::Algebraic(a) => a.interval(),
@@ -963,7 +975,7 @@ const COARSEN_SAMPLE_DEPTH: u32 = 52;
 /// without `i128` overflow (a deep-bisection dyadic from `Root::locate` would
 /// overflow the exact-rational replay — the wrong-`Unsat` bug). `None` on overflow
 /// or if no dyadic is found within the bound.
-fn coarsest_rational_in(a: Rational, b: Rational) -> Option<Rational> {
+pub(crate) fn coarsest_rational_in(a: Rational, b: Rational) -> Option<Rational> {
     let mut den: i128 = 1;
     for _ in 0..=COARSEN_SAMPLE_DEPTH {
         let scaled = a.checked_mul(Rational::integer(den))?;
@@ -989,7 +1001,7 @@ fn coarsest_rational_in(a: Rational, b: Rational) -> Option<Rational> {
 /// witnesses eval-checkable: a `Root::locate` midpoint is a depth-48 dyadic whose
 /// exact-rational evaluation overflows `i128`, which previously made the replay
 /// reject a valid witness and the system wrongly report `Unsat`.
-fn cell_samples(ordered: &[Root]) -> Option<Vec<Rational>> {
+pub(crate) fn cell_samples(ordered: &[Root]) -> Option<Vec<Rational>> {
     if ordered.is_empty() {
         return Some(vec![Rational::zero()]);
     }
@@ -1119,7 +1131,7 @@ fn decide_inequality(poly: &[i128], cmp: Cmp) -> Option<Verdict> {
 /// An isolated real root: an exact rational, or an algebraic number defined by
 /// `poly` and an isolating interval.
 #[derive(Clone)]
-enum Root {
+pub(crate) enum Root {
     Rational(Rational),
     Algebraic(RealAlgebraic),
 }
@@ -1428,7 +1440,7 @@ const ISOLATE_REFINE_DEPTH: u32 = 48;
 /// every polynomial it admits. The returned set is therefore COMPLETE (every real
 /// root represented) whenever Sturm succeeds, and the grid's sound behavior is
 /// preserved otherwise. A whole-isolation `None` makes the caller decline.
-fn isolate_roots(poly: &[i128]) -> Option<Vec<Root>> {
+pub(crate) fn isolate_roots(poly: &[i128]) -> Option<Vec<Root>> {
     if isolate_deadline_reached() {
         return None; // wall-clock timeout (#85) ⇒ decline (caller falls back / declines)
     }
@@ -1997,7 +2009,7 @@ type Monomial = BTreeMap<SymbolId, u32>;
 /// A multivariate polynomial with **rational** coefficients: a canonical map
 /// from monomial to nonzero coefficient. The empty map is the zero polynomial.
 #[derive(Clone, Default)]
-struct MultiPoly {
+pub(crate) struct MultiPoly {
     terms: BTreeMap<MonoKey, Rational>,
 }
 
@@ -2098,7 +2110,7 @@ impl MultiPoly {
     }
 
     /// The set of variables actually appearing (with nonzero exponent).
-    fn vars(&self) -> BTreeSet<SymbolId> {
+    pub(crate) fn vars(&self) -> BTreeSet<SymbolId> {
         let mut s = BTreeSet::new();
         for k in self.terms.keys() {
             for &(v, _) in k {
@@ -2126,7 +2138,7 @@ impl MultiPoly {
         }
     }
 
-    fn is_zero(&self) -> bool {
+    pub(crate) fn is_zero(&self) -> bool {
         self.terms.is_empty()
     }
 
@@ -3776,6 +3788,15 @@ pub(crate) enum CadDecline {
     AlgebraicCoarsening,
     /// An atom's sign at a complete sample point was indeterminate.
     IndeterminateSign,
+    /// The query is outside the single-cell slice's declared bounds: more than
+    /// [`crate::nra_single_cell::MAX_CELL_VARS`] variables, a total degree past
+    /// [`crate::nra_single_cell::MAX_CELL_DEGREE`], or a source coefficient past
+    /// [`MAX_ABS_COEFF`]. A REFUSAL by declaration, not a failure mid-search
+    /// (ADR-2121).
+    SliceBounds,
+    /// The single-cell route built a refutation and its own certificate checker
+    /// REJECTED it. The verdict is dropped and the route declines (ADR-2121).
+    CertificateRejected,
 }
 
 impl CadDecline {
@@ -3795,6 +3816,8 @@ impl CadDecline {
             Self::NullifiedResidual => "nullified-residual",
             Self::AlgebraicCoarsening => "algebraic-coarsening",
             Self::IndeterminateSign => "indeterminate-sign",
+            Self::SliceBounds => "slice-bounds",
+            Self::CertificateRejected => "certificate-rejected",
         }
     }
 
@@ -3814,6 +3837,8 @@ impl CadDecline {
         Self::NullifiedResidual,
         Self::AlgebraicCoarsening,
         Self::IndeterminateSign,
+        Self::SliceBounds,
+        Self::CertificateRejected,
     ];
 }
 
@@ -3864,6 +3889,9 @@ pub(crate) struct CadPolicy {
     pub(crate) arm: &'static str,
     /// Total cells the whole recursion may produce.
     pub(crate) cell_cap: usize,
+    /// Whether the model-constructing single-cell route (ADR-2121) runs ahead of
+    /// the enumerative decomposition. `false` on every shipped arm.
+    pub(crate) single_cell: bool,
 }
 
 impl CadPolicy {
@@ -3871,6 +3899,7 @@ impl CadPolicy {
     pub(crate) const DEFAULT: Self = Self {
         arm: "default",
         cell_cap: MAX_CAD_CELLS,
+        single_cell: false,
     };
 
     /// 16x the cells. Raising the cap can only let the decomposition VISIT more
@@ -3881,6 +3910,17 @@ impl CadPolicy {
     pub(crate) const WIDE: Self = Self {
         arm: "wide",
         cell_cap: MAX_CAD_CELLS * 16,
+        single_cell: false,
+    };
+
+    /// ADR-2121's arm: run [`crate::nra_single_cell`] ahead of the enumerative
+    /// decomposition, with the SAME cell cap as `default` so the two arms differ
+    /// in exactly one thing -- whether the model-constructing route is offered
+    /// the query at all. It ships OFF; the A/B is one binary and one env var.
+    pub(crate) const SINGLE_CELL: Self = Self {
+        arm: "single-cell",
+        cell_cap: MAX_CAD_CELLS,
+        single_cell: true,
     };
 }
 
@@ -3896,6 +3936,7 @@ pub(crate) fn cad_policy() -> CadPolicy {
     static POLICY: std::sync::OnceLock<CadPolicy> = std::sync::OnceLock::new();
     *POLICY.get_or_init(|| match std::env::var("AXEYUM_NRA_CAD") {
         Ok(v) if v.eq_ignore_ascii_case("wide") => CadPolicy::WIDE,
+        Ok(v) if v.eq_ignore_ascii_case("single-cell") => CadPolicy::SINGLE_CELL,
         _ => CAD_DEFAULT,
     })
 }
@@ -4075,7 +4116,7 @@ fn visit_rational_cells(
 /// Sort isolated `roots` ascending and deduplicate EQUAL critical values (a shared
 /// root of two polys) so cell samples land in genuinely distinct open cells. `None`
 /// if any pair cannot be ordered exactly (caller declines).
-fn dedup_sorted_roots(roots: &[Root]) -> Option<Vec<Root>> {
+pub(crate) fn dedup_sorted_roots(roots: &[Root]) -> Option<Vec<Root>> {
     let ordered = sort_roots(roots, None)?;
     let mut crit: Vec<Root> = Vec::new();
     for r in ordered {
@@ -4214,7 +4255,7 @@ fn leading_coeff_in(p: &MultiPoly, elim: SymbolId) -> MultiPoly {
 
 /// The outcome of a multivariate resultant `Res_elim(p, q)` over the remaining
 /// variables.
-enum ResultantOutcome {
+pub(crate) enum ResultantOutcome {
     /// A genuine variable-bearing resultant polynomial in the remaining variables.
     Poly(MultiPoly),
     /// The resultant is identically zero (a shared e-factor for ALL remaining-var
@@ -4238,7 +4279,11 @@ const MAX_MULTI_SYLVESTER_DIM: usize = 6;
 /// `MultiPoly` coefficient in the remaining variables, computed exactly with no
 /// division). Returns the classified [`ResultantOutcome`], or `None` on overflow /
 /// the dimension cap. Both `p` and `q` must have positive degree in `elim`.
-fn multi_resultant(p: &MultiPoly, q: &MultiPoly, elim: SymbolId) -> Option<ResultantOutcome> {
+pub(crate) fn multi_resultant(
+    p: &MultiPoly,
+    q: &MultiPoly,
+    elim: SymbolId,
+) -> Option<ResultantOutcome> {
     let pc = multipoly_in_elim(p, elim)?; // Vec<MultiPoly>, LSB-first in elim
     let qc = multipoly_in_elim(q, elim)?;
     let m = pc.len().checked_sub(1)?; // deg_elim(p)
@@ -4278,7 +4323,7 @@ fn multi_resultant(p: &MultiPoly, q: &MultiPoly, elim: SymbolId) -> Option<Resul
 /// View `p` as a univariate polynomial in `elim` with [`MultiPoly`] coefficients
 /// (in the other variables), LSB-first by the exponent of `elim`. `None` on a
 /// degree overflow.
-fn multipoly_in_elim(p: &MultiPoly, elim: SymbolId) -> Option<Vec<MultiPoly>> {
+pub(crate) fn multipoly_in_elim(p: &MultiPoly, elim: SymbolId) -> Option<Vec<MultiPoly>> {
     let de = usize::try_from(degree_in(p, elim)).ok()?;
     let mut out: Vec<MultiPoly> = vec![MultiPoly::zero(); de + 1];
     for (k, &c) in &p.terms {
@@ -5104,7 +5149,7 @@ fn visit_axis_values(
 /// The partial derivative `∂p/∂v` of a [`MultiPoly`]: each monomial `c·v^e·rest`
 /// maps to `(c·e)·v^(e−1)·rest` (terms with `e = 0` in `v` vanish). `None` on
 /// overflow (coefficient multiply by the exponent).
-fn derivative_in(p: &MultiPoly, v: SymbolId) -> Option<MultiPoly> {
+pub(crate) fn derivative_in(p: &MultiPoly, v: SymbolId) -> Option<MultiPoly> {
     let mut out = MultiPoly::zero();
     for (k, &c) in &p.terms {
         // Find the exponent of `v` in this monomial.
@@ -5794,7 +5839,7 @@ fn value_sign(v: &Value) -> Option<Sign> {
 
 /// The degree of a [`MultiPoly`] in one variable `v` (highest exponent of `v`
 /// across its monomials; 0 if `v` does not appear).
-fn degree_in(p: &MultiPoly, v: SymbolId) -> u32 {
+pub(crate) fn degree_in(p: &MultiPoly, v: SymbolId) -> u32 {
     let mut d = 0u32;
     for k in p.terms.keys() {
         for &(s, e) in k {
@@ -8652,4 +8697,73 @@ fn refute_with_derived_bounds(
         }
     }
     None
+}
+
+// ---------------------------------------------------------------------------
+// Bridge to the single-cell route's certificate representation (ADR-2121)
+// ---------------------------------------------------------------------------
+
+/// Collect a query as [`crate::nra_cell_cert::CertAtom`]s.
+///
+/// The bridge exists so [`crate::nra_single_cell`] works entirely in the
+/// certificate's plain representation — a producer that cannot even *name* a
+/// polynomial the certificate does not carry cannot emit one it did not check.
+/// `None` on any non-conjunctive / non-polynomial shape, recorded as
+/// [`CadDecline::NonConjunctive`].
+pub(crate) fn collect_cert_atoms(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Option<Vec<crate::nra_cell_cert::CertAtom>> {
+    use crate::nra_cell_cert::{CertAtom, CertCmp};
+    let mut atoms: Vec<MultiAtom> = Vec::new();
+    for &a in assertions {
+        if collect_multi_conjuncts(arena, a, &mut atoms).is_none() {
+            record_cad_decline(CadDecline::NonConjunctive);
+            return None;
+        }
+    }
+    let mut out = Vec::with_capacity(atoms.len());
+    for atom in atoms {
+        let cmp = match atom.cmp {
+            Cmp::Eq => CertCmp::Eq,
+            Cmp::Ne => CertCmp::Ne,
+            Cmp::Lt => CertCmp::Lt,
+            Cmp::Le => CertCmp::Le,
+            Cmp::Gt => CertCmp::Gt,
+            Cmp::Ge => CertCmp::Ge,
+        };
+        out.push(CertAtom::new(cmp, atom.poly.terms.into_iter().collect()));
+    }
+    Some(out)
+}
+
+/// A [`MultiPoly`] from the certificate representation. Both are monomial maps,
+/// so this only re-keys.
+pub(crate) fn multipoly_from_cert(p: &crate::nra_cell_cert::CertPoly) -> Option<MultiPoly> {
+    let mut out = MultiPoly::zero();
+    for (mono, coeff) in p {
+        out.add_term(mono.clone(), *coeff)?;
+    }
+    Some(out)
+}
+
+/// The certificate representation of a [`MultiPoly`].
+pub(crate) fn multipoly_to_cert(p: &MultiPoly) -> crate::nra_cell_cert::CertPoly {
+    crate::nra_cell_cert::canonicalize(p.terms.iter().map(|(k, c)| (k.clone(), *c)).collect())
+}
+
+/// The coefficients of `p` viewed as a univariate polynomial in `elim`, as
+/// polynomials in the remaining variables (LSB-first by the exponent of `elim`).
+///
+/// Every one of them goes into the single-cell projection. That is deliberately
+/// more than McCallum's operator asks for (which takes only the leading
+/// coefficient, plus a non-vanishing witness): with **all** coefficients
+/// sign-invariant on a cell, non-nullification at one point of the cell implies
+/// non-nullification on the whole cell, which is the hypothesis McCallum's
+/// delineability theorem needs and the hole the "nullification problem" opens.
+/// z3 reaches for the same escape hatch when its own witness search fails
+/// (`m_add_all_coeffs`, `references/z3/src/nlsat/nlsat_explain.cpp:50`, and
+/// `handle_nullified_poly`, `references/z3/src/nlsat/levelwise.cpp:268`).
+pub(crate) fn coeffs_in_elim(p: &MultiPoly, elim: SymbolId) -> Option<Vec<MultiPoly>> {
+    multipoly_in_elim(p, elim)
 }

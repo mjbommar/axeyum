@@ -736,6 +736,34 @@ fn min_rat(a: Rational, b: Rational) -> Option<Rational> {
     })
 }
 
+/// Refine every bracket until consecutive roots are STRICTLY disjoint.
+///
+/// Without this the merged list keeps whatever bracket each root was first
+/// isolated in -- for a linear polynomial that is the whole Cauchy interval --
+/// and every later step that needs a point between two roots has nowhere to put
+/// one. `None` when [`REFINE_DEPTH`] bisections do not separate them.
+fn separate_roots(roots: &mut [IsoRoot]) -> Option<()> {
+    if roots.len() < 2 {
+        return Some(());
+    }
+    for _ in 0..REFINE_DEPTH {
+        let mut separated = true;
+        for i in 0..roots.len() - 1 {
+            if roots[i].upper().checked_cmp(&roots[i + 1].strict_lower())? != Ordering::Less {
+                separated = false;
+                break;
+            }
+        }
+        if separated {
+            return Some(());
+        }
+        for r in roots.iter_mut() {
+            refine(r)?;
+        }
+    }
+    None
+}
+
 /// Merge per-polynomial isolated roots into the ascending list of DISTINCT roots
 /// of the union. `None` when two roots cannot be ordered within
 /// [`REFINE_DEPTH`].
@@ -763,6 +791,7 @@ fn merge_roots(mut all: Vec<IsoRoot>) -> Option<Vec<IsoRoot>> {
             out.insert(pos, r);
         }
     }
+    separate_roots(&mut out)?;
     Some(out)
 }
 
