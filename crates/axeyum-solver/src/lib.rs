@@ -151,6 +151,7 @@ macro_rules! full_modules {
         mod nia_square;
         mod nia_univariate_cert;
         mod nra;
+        mod nra_cell_cert;
         mod nra_even_power;
         mod nra_fbbt;
         mod nra_handelman_cert;
@@ -511,6 +512,10 @@ pub mod certificates {
         pub use crate::nra_product_cert::{
             AtomSign, RealProductRefutationCertificate, check_real_product_refutation,
             real_product_refutation,
+        };
+        pub use crate::nra_cell_cert::{
+            CellCheckFailure, CellCheckStats, CellCovering, CellReason, CellRefutation,
+            CertAtom, CertCmp, CertPoly, check_cell_refutation,
         };
         pub use crate::nra_real_root::SosCertificate;
         pub use crate::nra_zero_product_cert::{
