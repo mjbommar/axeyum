@@ -7109,10 +7109,49 @@ mod tests {
         );
     }
 
+    /// R12 for the CACHE: after driving the incremental refresh, the retained
+    /// bound vector must equal — element for element, in order — the vector a
+    /// full rescan of `ctx.atoms` builds.
+    ///
+    /// This test exists because a mutation run said it had to. Rewriting the
+    /// suffix bound `from..atoms.len()` as `0..atoms.len()`, which makes the
+    /// cache accumulate a duplicate copy of every bound on every refresh, was
+    /// caught by NOTHING: the duplicates land after the originals, the
+    /// first-occurrence order is unchanged, and `seen` dedups the repeated
+    /// pairs, so the lemma output is byte-identical and every output test
+    /// passes over a cache that doubles on each call. The cache's contents are
+    /// a claim of their own and need an assertion of their own.
+    #[test]
+    fn the_cached_bound_vector_equals_a_full_rescan() {
+        let mut arena = TermArena::new();
+        let assertions = bound_scan_fixture(&mut arena);
+        let seed = arena.bool_const(true);
+        let mut arm = IncrementalArithDpll::new(&mut arena, &[seed]).expect("arm solver");
+        for &assertion in &assertions {
+            arm.assert_one(&mut arena, assertion).expect("arm assertion");
+            arm.refresh_initial_lemmas_indexed(&mut arena)
+                .expect("arm indexed refresh");
+        }
+
+        let rescanned = fixture_bounds(&arena, &arm.ctx);
+        assert!(
+            !rescanned.is_empty(),
+            "the fixture must produce bounds, else this compares two empty \
+             vectors"
+        );
+        assert_eq!(
+            arm.initial_bounds, rescanned,
+            "the retained bound cache must be exactly what a full rescan builds"
+        );
+        assert_eq!(
+            arm.initial_bounds_atoms,
+            Some(arm.ctx.atoms.len()),
+            "the cache must record the atom count it actually covers"
+        );
+    }
+
     /// R12 end to end: driving the incremental refresh one assertion at a time
-    /// leaves the solver holding exactly what a full rebuild leaves. This is
-    /// what covers the two halves the scan test does not — the cached
-    /// extraction and the unchanged-atom-count early return.
+    /// leaves the solver holding exactly what a full rebuild leaves.
     #[test]
     fn the_indexed_refresh_seeds_exactly_the_clauses_a_full_rebuild_does() {
         assert!(
