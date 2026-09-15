@@ -5267,12 +5267,14 @@ mod give_up_reason_tests {
 
     // ---- driving the producers -----------------------------------------
 
-    fn expired() -> Option<Instant> {
-        Some(
-            Instant::now()
-                .checked_sub(Duration::from_secs(1))
-                .expect("an instant one second ago"),
-        )
+    /// An instant one second in the past. Returned bare rather than as
+    /// `Option<Instant>` so the `Some` is visible at the call site: a deadline
+    /// argument of `None` means "no bound at all" and is the CONTROL in most of
+    /// the cases below, so the two must not look alike here.
+    fn expired() -> Instant {
+        Instant::now()
+            .checked_sub(Duration::from_secs(1))
+            .expect("an instant one second ago")
     }
 
     /// One row `coeff·x0 + constant {<,≤} 0`, with no multiplier vector (the
@@ -5390,7 +5392,7 @@ mod give_up_reason_tests {
         );
 
         assert_eq!(
-            eliminate(&small, 0, expired()).err(),
+            eliminate(&small, 0, Some(expired())).err(),
             Some(ElimBail::Deadline),
             "and the clock is still the clock"
         );
@@ -5408,7 +5410,7 @@ mod give_up_reason_tests {
             (
                 crossing_system(3, 3),
                 1,
-                expired(),
+                Some(expired()),
                 FmDecline::DeadlineBetweenVariables,
             ),
             (crossing_system(150, 150), 1, None, FmDecline::SizeGuard),
@@ -5480,7 +5482,7 @@ mod give_up_reason_tests {
         // --- `simplex_fallback`: six declines that used to be one `Ok(None)` --
         let (arena, assertions, ctx) = collected_x_le_5();
         assert_eq!(
-            simplex_fallback(&arena, &assertions, &ctx, expired())
+            simplex_fallback(&arena, &assertions, &ctx, Some(expired()))
                 .expect("no backend error")
                 .err(),
             Some(SimplexDecline::DeadlineBuildingRows)
@@ -5522,7 +5524,7 @@ mod give_up_reason_tests {
         // `simplex::feasible_within`, whose pivot loop polls on entry.
         let empty = Collector::default();
         assert_eq!(
-            simplex_fallback(&arena, &[], &empty, expired())
+            simplex_fallback(&arena, &[], &empty, Some(expired()))
                 .expect("no backend error")
                 .err(),
             Some(SimplexDecline::EngineDeclined)
@@ -5575,7 +5577,7 @@ mod give_up_reason_tests {
             &mut stages,
             None,
             FmDecline::OverflowEliminating,
-            expired(),
+            Some(expired()),
         )
         .expect("no backend error");
         assert_eq!(
@@ -5591,7 +5593,7 @@ mod give_up_reason_tests {
         // --- `decide_within`'s own gates ------------------------------------
         let (wide_arena, wide) = wide_system(1_500);
         assert_eq!(
-            decide_within(&wide_arena, &wide, expired())
+            decide_within(&wide_arena, &wide, Some(expired()))
                 .ok()
                 .as_ref()
                 .and_then(decision_gave_up),
@@ -5611,7 +5613,7 @@ mod give_up_reason_tests {
         );
         let collect_took = started.elapsed();
         assert_eq!(
-            collect_constraints(&wide_arena, &wide, expired())
+            collect_constraints(&wide_arena, &wide, Some(expired()))
                 .expect("no backend error")
                 .err(),
             Some(CollectDecline::Deadline),
