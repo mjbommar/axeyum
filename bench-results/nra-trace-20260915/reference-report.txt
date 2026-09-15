@@ -1,0 +1,35 @@
+census files 83   reference files 83
+
+== per arm, over the files we do NOT decide ==
+  arm            sat  unsat  unknown  none  decided
+  z3-default      39     31        0    13       70
+  z3-nlsat        37     29        0    17       66
+  z3-lin          14     15       38    16       29
+  cvc5            37     33        0    13       70
+
+== BUCKET x REFERENCE ENGINE (files decided by each arm) ==
+  bucket                                                 n   z3  nlsat  lin  cvc5
+  nra/incomplete [nonlinear abstraction: refinement re  26   26     26    5    25
+  nra/budget [nonlinear abstraction: N cross-products   22   14     10   14    14
+  nra/budget [lra: both engines declined — Fourier–Mot  11   11     11    3    11
+  nra/budget [lra: both engines declined — Fourier–Mot   5    5      5    1     5
+  killed mid-search: nra-real-root/not-applicable        3    0      0    0     2
+  q:nat-induction/not-applicable                         3    3      3    2     3
+  killed mid-search: dl-online/not-applicable            2    2      2    1     1
+  nra-real-root/not-applicable                           2    0      0    0     2
+  nra/budget [lra: both engines declined — the exact-r   2    2      2    1     2
+  nra/budget [nonlinear abstraction: refinement round    2    2      2    0     2
+  nra/incomplete [online CDCL(T) LRA model did not rep   2    2      2    0     1
+  cas-ideal-refuter/incomplete [no combination of the    1    1      1    1     1
+  no typed decline recorded                              1    1      1    1     0
+  nra/budget [lra: both engines declined — the exact-r   1    1      1    0     1
+
+== the decisive split ==
+  decided by the CAD engine and NOT by linearization :  45
+  decided by linearization too                        :  29
+  decided by neither z3 arm                           :   9
+
+  how fast the CAD engine was on the files only it decides:
+    median 108 ms, 44 of 45 under 1 s, max 12317 ms
+
+wrote bench-results/nra-trace-20260915/reference-join-83.tsv

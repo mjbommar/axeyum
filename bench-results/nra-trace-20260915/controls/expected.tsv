@@ -1,0 +1,3 @@
+file	status	n_vars	max_degree	n_assert	has_div	has_div_const	max_abs_int_log2	has_to_int	has_ite	has_top_or
+symbolic-denominator-pos.smt2	sat	2	3	2	1	1	2	0	0	0
+symbolic-denominator-neg.smt2	unsat	1	1	1	0	1	2	0	0	0

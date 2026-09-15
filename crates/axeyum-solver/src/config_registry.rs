@@ -6181,6 +6181,37 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Unusual direction: an atom's constant-term denominator ABOVE this threshold is what makes it a relaxation candidate (module doc's `RELAXATION_GRIDS` rounding), i.e. crossing it ENLARGES what the LP search can certify (e.g. the module doc's `2.0000000000000000000000000001` example) rather than declining a route.",
     },
     ConfigEntry {
+        name: "CAD_DEFAULT",
+        module: "crates/axeyum-solver/src/nra_real_root.rs",
+        value: "CadPolicy::DEFAULT",
+        unit: "policy arm for the N-variable cylindrical decomposition's cell cap",
+        protects: Protects::Memory,
+        on_exceed: OnExceed::RefuseUnknown,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: Some("AXEYUM_NRA_CAD"),
+        justification: dated(
+            "docs/research/09-decisions/adr-2110-qf-nra-what-decides-the-seventy.md",
+            "2026-09-15",
+            None,
+            // The measurement is "on the 83 QF_NRA files the 2026-09-15 board
+            // leaves undecided, the `nra-real-root` rung declines with a cause
+            // that is NOT the cell cap". It rests on the attribution existing
+            // (`cad_decline`) and on the budget still being what the recursion
+            // charges against.
+            &[
+                sym("crates/axeyum-solver/src/nra_real_root.rs", "cad_decline"),
+                sym("crates/axeyum-solver/src/nra_real_root.rs", "CellBudget"),
+            ],
+            &[
+                live("cad_policy", "crates/axeyum-solver/src/nra_real_root.rs"),
+                live("note", "crates/axeyum-solver/src/nra_real_root.rs"),
+                doc("bench-results/nra-trace-20260915/README.md"),
+            ],
+        ),
+        note: "Whether the N-variable CAD gets the shipped cell budget or 16x it. DEFAULT is the shipped arm and is byte-identical to the pre-ADR-2110 engine (`CadPolicy::DEFAULT.cell_cap` IS `MAX_CAD_CELLS`), so the A/B is one binary and one env var. Raising the cap can only let the decomposition VISIT more cells before declining, and a definite verdict is returned only after COMPLETE coverage of the arrangement -- so `wide` can turn an `unknown` into a verdict and can never flip one; `the_wide_arm_only_raises_the_cap` holds that the two arms differ in exactly the cap and nothing else. It ships OFF because the cost was unmeasured when it landed, not because the verdict was in doubt. The lever exists because the ADR-2110 census could not otherwise tell a cell-cap decline from a projection decline: measured 2026-09-15, the exact decider's OWN recorded cause on the largest bucket is `non-conjunctive` and `projection`, NOT `cell-budget`, which is what this lever was built to test and is why the A/B is expected to move little. Read the A/B in `bench-results/nra-trace-20260915/README.md` before raising the default.",
+    },
+    ConfigEntry {
         name: "COARSEN_MAX_EXP",
         module: "crates/axeyum-solver/src/nra_real_root.rs",
         value: "40",
@@ -6254,9 +6285,9 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_NRA_CAD"),
         justification: undated("doc comment"),
-        note: "'Hard ceiling on the number of critical x-values... beyond it we decline (bounded - no OOM / hang)' (doc); checked at 5 sites, including a global per-recursion counter (`remaining: Cell::new(MAX_CAD_CELLS)`, nra_real_root.rs:3629) as well as local per-call checks (:3013, :3450, :4751, :4777).",
+        note: "'Hard ceiling on the number of critical x-values... beyond it we decline (bounded - no OOM / hang)' (doc); checked at 5 sites, including a global per-recursion counter (now `Cell::new(cad_policy().cell_cap)`) as well as local per-call checks. ADR-2110 made the GLOBAL counter's initial value a policy value (`CAD_POLICY` below) so the cap is A/B-able from one binary; the per-axis `crit.len() > MAX_CAD_CELLS` checks still read the constant directly.",
     },
     ConfigEntry {
         name: "MAX_COPRIME_SPLIT_ITERS",

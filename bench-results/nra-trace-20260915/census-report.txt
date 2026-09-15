@@ -1,0 +1,79 @@
+population 83   ledger rows 83 (83 distinct files, 0 repeats)
+shape rows 83
+
+== verdicts ==
+  unknown     82
+  abort        1
+
+  partial (watchdog-killed) readings: 5 of 83
+
+== BUCKETS (typed terminal reason; biggest first) ==
+   26    140.7s  nra/incomplete [nonlinear abstraction: refinement reached a fixpoint without deciding]
+   22    428.8s  nra/budget [nonlinear abstraction: N cross-products project to N linear-real atoms, past t]
+   11    170.4s  nra/budget [lra: both engines declined — Fourier–Motzkin stopped on the deadline inside a ]
+    5     88.5s  nra/budget [lra: both engines declined — Fourier–Motzkin hit its deterministic MAX_FM_CONS]
+    3     76.0s  killed mid-search: nra-real-root/not-applicable
+    3      4.3s  q:nat-induction/not-applicable
+    2     50.3s  killed mid-search: dl-online/not-applicable
+    2     48.9s  nra-real-root/not-applicable
+    2      3.7s  nra/budget [lra: both engines declined — the exact-rational simplex ran first and found th]
+    2     23.9s  nra/budget [nonlinear abstraction: refinement round bound reached (raise the budget to att]
+    2     24.8s  nra/incomplete [online CDCL(T) LRA model did not replay (arithmetic outside the incremental en]
+    1     22.1s  cas-ideal-refuter/incomplete [no combination of the asserted equations collapsed to a constant of the refuti]
+    1     12.7s  no typed decline recorded
+    1      3.7s  nra/budget [lra: both engines declined — the exact-rational simplex ran first and declined]
+
+== bucket x declared :status ==
+  bucket                                                      sat  unsat  unk
+  nra/incomplete [nonlinear abstraction: refinement reached    10     14    2
+  nra/budget [nonlinear abstraction: N cross-products projec    5      7   10
+  nra/budget [lra: both engines declined — Fourier–Motzkin s    8      3    0
+  nra/budget [lra: both engines declined — Fourier–Motzkin h    4      1    0
+  killed mid-search: nra-real-root/not-applicable               1      2    0
+  q:nat-induction/not-applicable                                2      1    0
+  killed mid-search: dl-online/not-applicable                   0      1    1
+  nra-real-root/not-applicable                                  1      1    0
+  nra/budget [lra: both engines declined — the exact-rationa    1      1    0
+  nra/budget [nonlinear abstraction: refinement round bound     1      1    0
+  nra/incomplete [online CDCL(T) LRA model did not replay (a    1      0    1
+  cas-ideal-refuter/incomplete [no combination of the assert    1      0    0
+  no typed decline recorded                                     0      0    1
+  nra/budget [lra: both engines declined — the exact-rationa    0      1    0
+
+== bucket x shape (medians over the bucket) ==
+  bucket                                             n   vars   deg  div  atoms
+  nra/incomplete [nonlinear abstraction: refinemen  26      3     8    0      1
+  nra/budget [nonlinear abstraction: N cross-produ  22    450     2    0     30
+  nra/budget [lra: both engines declined — Fourier  11      3     4    0      1
+  nra/budget [lra: both engines declined — Fourier   5      4     4    0      1
+  killed mid-search: nra-real-root/not-applicable    3      7    20    0      1
+  q:nat-induction/not-applicable                     3      3    10    0      1
+  killed mid-search: dl-online/not-applicable        2  16002     8    0   1264
+  nra-real-root/not-applicable                       2     20    11    0     18
+  nra/budget [lra: both engines declined — the exa   2      3    36    0      1
+  nra/budget [nonlinear abstraction: refinement ro   2      4     5    0      1
+  nra/incomplete [online CDCL(T) LRA model did not   2      4    18    0      1
+  cas-ideal-refuter/incomplete [no combination of    1      7     4    0      1
+  no typed decline recorded                          1  30718     1    0 113156
+  nra/budget [lra: both engines declined — the exa   1      3    16    0      1
+
+== which route held the budget (bound_by) ==
+  nra                             71
+  nra-real-root                    5
+  fd:parse                         3
+  dl-online                        2
+  none                             1
+  cas-ideal-refuter                1
+
+== every distinct typed decline (route/reason), any position ==
+  dl-online/not-applicable                        79
+  nra-real-root/not-applicable                    78
+  q:skolem-qf/unsupported                         77
+  q:nat-induction/not-applicable                  55
+  cas-ideal-refuter/incomplete                    52
+  nra/budget                                      44
+  nra/incomplete                                  28
+  cas-identity-refuter/incomplete                  5
+  wide-int-admission/incomplete                    3
+
+wrote bench-results/nra-trace-20260915/census-83.tsv
