@@ -47,8 +47,11 @@ if str(SCRIPTS) not in sys.path:
 import outcome_ledger as ol  # noqa: E402
 
 # ---------------------------------------------------------------------------
-# Fixtures.  Schema 2 is what the CLI writes since ADR-2101; the partial
-# spelling is the one ADR-2075's twelve files printed and nobody read.
+# Fixtures.  Schema 3 (ADR-2105: the `name`/`features` members) is what the
+# CLI writes now, and `_trail_line`'s default; `schema_version=2` is kept
+# available for the one fixture that drives this library's prose-fallback
+# path.  The partial spelling is the one ADR-2075's twelve files printed and
+# nobody read.
 # ---------------------------------------------------------------------------
 
 #: A detail that carries every character a separator bug has ever eaten here.
@@ -60,9 +63,32 @@ HOSTILE_DETAIL = (
 )
 
 
-def _trail_line(*, partial: bool, attempts: list[dict]) -> str:
+def _trail_line(
+    *,
+    partial: bool,
+    attempts: list[dict],
+    schema_version: int = 3,
+    features: str | None = None,
+) -> str:
+    """Builds one `; route-trail …` / `; partial route-trail …` line.
+
+    Schema 3 (ADR-2105) by default -- the current renderer's own schema -- so
+    every test that does not care about the schema exercises the shape this
+    library reads from a REAL capture today. `schema_version=2` is kept
+    available (and used by exactly one test,
+    `CaptureToRow.test_the_four_features_answers_stay_apart`) to prove the
+    prose-fallback path this library still owes every committed schema-1/2
+    sweep.
+
+    `features`, when given, is the `features` JSON member ADR-2105 added --
+    absent below schema 3 even if passed, matching what a real schema-2
+    binary's `to_json` actually emits (nothing).
+    """
     prefix = "; partial route-trail " if partial else "; route-trail "
-    body = {"schema_version": 2, "partial": partial, "attempts": attempts}
+    body = {"schema_version": schema_version, "partial": partial}
+    if schema_version >= 3 and features is not None:
+        body["features"] = features
+    body["attempts"] = attempts
     if partial:
         body["in_flight_after"] = attempts[-1]["route"] if attempts else None
         body["open_segment_ns"] = 19_000_000_000
@@ -171,12 +197,13 @@ class EscapingRoundTrip(unittest.TestCase):
 class TypedDeclineName(unittest.TestCase):
     """ADR-2104's typed detail variant, carried beside the free-text detail.
 
-    The producer does not emit a `name` member yet -- that is
-    `route_trace.rs`'s wire format and the trace lane's surface -- so every
-    committed row has this column empty.  A column that is always empty on real
-    data is exactly the un-failable shape CLAUDE.md warns about, so the reader
-    path is DRIVEN here by a fixture that does carry the member.  The day the
-    producer emits it, these assertions are already the contract.
+    `route_trace.rs`'s `to_json` now emits the `name` member (ADR-2105), so
+    every real schema-3 capture with a typed decline fills this column --
+    it is no longer only a fixture proving the reader path in advance of the
+    producer. The fixture below still constructs its own trail line rather
+    than dispatching a real query, for the same reason every other test in
+    this file does: this suite is about the LIBRARY's column plumbing, not
+    about re-running the solver.
     """
 
     def _row_with_names(self, tmp: Path) -> ol.LedgerRow:
@@ -494,8 +521,17 @@ class CaptureToRow(unittest.TestCase):
                 tmp,
                 "c.out",
                 [
-                    "; features Int|Real",
-                    _trail_line(partial=False, attempts=COMPLETE_ATTEMPTS),
+                    # `features` comes off the schema-3 JSON member now
+                    # (ADR-2105), not this prose line -- kept here only to
+                    # prove it is NOT what the row's `feature_classes` reads
+                    # (it says the wrong thing on purpose; see
+                    # `test_schema_3_features_come_from_the_json_member_not_the_prose_line`).
+                    "; features none",
+                    _trail_line(
+                        partial=False,
+                        attempts=COMPLETE_ATTEMPTS,
+                        features="Int|Real",
+                    ),
                     "unsat",
                 ],
             )
@@ -556,10 +592,22 @@ class CaptureToRow(unittest.TestCase):
         case rather than an edge one -- and without its own token it would be
         byte-identical, in this column, to a row from a binary built before the
         instrument existed.
+
+        SCHEMA 2, DELIBERATELY -- the one retained schema-2 fixture in this
+        suite. `features` has no JSON member at all below schema 3
+        (ADR-2105), so this is the only way left to drive the prose-fallback
+        path (`features_from_stdout`, via `features_from_capture`) a
+        committed schema-1/2 sweep still needs. A schema-3 trail's `features`
+        comes from the JSON member instead -- see
+        `test_schema_3_features_come_from_the_json_member_not_the_prose_line`
+        below, which proves the prose lines here would be IGNORED on a
+        current capture.
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            trail = _trail_line(partial=False, attempts=COMPLETE_ATTEMPTS)
+            trail = _trail_line(
+                partial=False, attempts=COMPLETE_ATTEMPTS, schema_version=2
+            )
             rows = {
                 "absent": _row(tmp, _capture(tmp, "a.out", ["unsat", trail])),
                 "not_dispatched": _row(
@@ -590,6 +638,56 @@ class CaptureToRow(unittest.TestCase):
 
             self.assertEqual(rows["classes"].feature_classes, ["Int", "Real"])
             self.assertIs(rows["classes"].scan_ran, True)
+
+    def test_schema_3_features_come_from_the_json_member_not_the_prose_line(self):
+        """The other half of ADR-2105: on a CURRENT capture the prose is a
+        RENDERING and reading it again would be a second authority.
+
+        Each row below carries a `; features` prose line that says the
+        OPPOSITE of its trail's JSON member. If `features_from_capture` ever
+        regressed to reading the prose first, every assertion here would
+        report the prose's answer instead and this test would not notice the
+        member was ignored -- so the fixtures are adversarial ON PURPOSE.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+
+            not_dispatched_trail = _trail_line(
+                partial=False, attempts=COMPLETE_ATTEMPTS, features=None
+            )
+            row = _row(
+                tmp,
+                _capture(
+                    tmp,
+                    "n.out",
+                    ["; features Int|Real", "unsat", not_dispatched_trail],
+                ),
+            )
+            self.assertEqual(row.features, ol.FEATURES_NOT_DISPATCHED, row.features)
+
+            empty_trail = _trail_line(
+                partial=False, attempts=COMPLETE_ATTEMPTS, features="none"
+            )
+            row = _row(
+                tmp,
+                _capture(
+                    tmp, "e.out", ["; features not-dispatched", "unsat", empty_trail]
+                ),
+            )
+            self.assertEqual(row.features, ol.FEATURES_EMPTY, row.features)
+            self.assertEqual(row.feature_classes, [])
+
+            classes_trail = _trail_line(
+                partial=False, attempts=COMPLETE_ATTEMPTS, features="Function|Array"
+            )
+            row = _row(
+                tmp,
+                _capture(
+                    tmp, "c.out", ["; features none", "unsat", classes_trail]
+                ),
+            )
+            self.assertEqual(row.features, "Function|Array", row.features)
+            self.assertEqual(row.feature_classes, ["Function", "Array"])
 
     def test_corpus_path_is_stored_whole_and_not_reduced_to_a_basename(self):
         with tempfile.TemporaryDirectory() as tmpdir:
