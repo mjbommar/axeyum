@@ -1,0 +1,48 @@
+population: 93 undecided QF_LRA rows
+
+-- 1. bucket, by the channel that answered --
+   40/93  abort     alloc-failure
+   36/93  trail     budget/other
+    7/93  trail     incomplete/incomplete
+    5/93  trail     bound-no-decline
+    5/93  trail     not-applicable/unnamed
+
+-- 1b. the same rows by the producer's PROSE, which is all 36 of
+       `budget/other` carry: the typed name types nothing here --
+   21  budget/other | lra: the deadline passed building the Fourier–Motzkin unit-multiplier matrix; the elimin
+   11  budget/other | lra: the deadline had already passed when the conjunctive decider was entered
+    7  incomplete/incomplete | online CDCL
+    5  not-applicable/unnamed | 
+    3  bound-no-decline | nra
+    2  bound-no-decline | fd:parse
+    2  budget/other | lra: the deadline passed while linearizing the assertions; the constraint system was nev
+    1  budget/other | budget exhausted in the online difference-logic driver
+    1  budget/other | timeout in the online CDCL
+
+-- 2. the FAILING allocation, over 40 abort rows --
+  median 1,331,008 B   min 521,184 B   max 10,313,376 B
+  Read this against the 8 GiB `ulimit -v` the harness enforces: a
+  request this small failing means the process was ALREADY at the
+  ceiling and this was the straw, not the load. The cumulative
+  holder is the tableau ([ADR-2055], median 10.53 GiB on these rows).
+
+-- 3. the online CDCL(T) engine, over the 23/93 rows that reached it --
+     (70 rows contribute NOTHING here, not a zero)
+  decisions                    median          836,531   n=23
+  theory_conflicts             median            3,774   n=23
+  theory_propagations          median               19   n=23
+  bound_scan_calls             median          939,591   n=22
+  bound_scan_atoms             median       12,197,876   n=22
+  simplex_pivots               median           15,079   n=22
+  simplex_rows                 median              907   n=22
+  simplex_columns              median            1,086   n=22
+  final_check_core_literals    median           66,088   n=22
+  boolean_propagate_ms         median              645   n=23
+  theory_propagate_ms          median              191   n=23
+  theory_final_check_ms        median              758   n=23
+
+  atom scans per propagation         median    3,352,038.0   n=20
+  SAT decisions per propagation      median       24,509.1   n=20
+  literals per conflict core         median           17.5   n=22
+  pivots per conflict                median            4.3   n=22
+  tableau nonzeros (mean)            median        8,085.9   n=22
