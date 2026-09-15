@@ -20,7 +20,7 @@ use axeyum_ir::{
 };
 use axeyum_smtlib::{
     IntBound, IntBoundKind, MemberVar, MembershipProblem, Script, ScriptCommand, WordObligation,
-    parse_script,
+    decode_packed_string, packed_string_max_len, parse_script,
 };
 use axeyum_strings::{
     MembershipOutcome, RefuteOutcome, SearchBudget, SearchOutcome, refute_word_equations,
@@ -2397,6 +2397,12 @@ fn solve_smtlib_at_string_bound(
         CheckResult::Sat(model) => Some(model.clone()),
         CheckResult::Unsat | CheckResult::Unknown(_) => None,
     };
+    // ADR-2070: a source-level string route's witness binds the parser's
+    // `!weq!<name>` sequence mirrors, NOT the packed bit-vector the declared
+    // `String` lowered to, so shipping it beside the packed vector pairs two
+    // different symbol sets. Lift what the packed encoding can express and
+    // withhold honestly for what it cannot.
+    let (assertions, model) = pair_replay_state(&script, query.assertions, model);
     Ok(SmtLibSolved {
         outcome: SmtLibOutcome {
             result,
@@ -2404,9 +2410,195 @@ fn solve_smtlib_at_string_bound(
             expected_status: script.status.clone(),
         },
         script,
-        assertions: query.assertions,
+        assertions,
         model,
     })
+}
+
+/// Makes `assertions` and `model` an actual pair, or withholds both (ADR-2070).
+///
+/// # The defect this repairs
+///
+/// The four string second chances (`fd:word-route`, `fd:online-string`,
+/// `fd:membership`, `fd:length-lia`, plus the source-witness probe) decide
+/// against the SOURCE expressions and bind the parser's `!weq!<name>` sequence
+/// mirrors. `assertions` is the PACKED flat vector, whose free symbols are the
+/// declared names at `(_ BitVec string_total(m))`. Those are different
+/// `SymbolId`s with different names and different sorts, so
+/// `check_model(&arena, &assertions, &model)` could not evaluate at all —
+/// measured at **5 of 109 `sat` results over the 217 string-division files**,
+/// every one failing as `no value bound for symbol #0`.
+///
+/// The damage was never a wrong verdict; all five are genuinely `sat`. It is a
+/// **false alarm**: `axeyum-py`'s `Outcome.replay()` binds the unbound packed
+/// symbol with `complete_with_defaults` and then answers `False`, which its own
+/// documentation calls "a soundness signal". Measured through the built
+/// extension on those five rows: **four answer `False`** and the fifth answers
+/// `True` on a substituted all-empty model — a vacuous pass, which is worse. A
+/// checker that cries wolf gets ignored, and then the real one is missed.
+///
+/// # Why this lifts rather than clearing
+///
+/// Clearing `assertions` would match the sibling routes and make the pairing
+/// honest, but it removes the evidence instead of fixing it, and the standing
+/// rule is that every `sat` is checkable against the original term. Measured
+/// before choosing: of the five rows, **four lift and replay `Ok(true)`**, so
+/// clearing would have thrown away four real replays to silence one.
+///
+/// # Why the fifth cannot be lifted, and is not a limitation of this code
+///
+/// `r1_QF_SLIA_re-inter-stack-ovf` asserts `(<= 15 (str.len var0))` while the
+/// packed layout caps a declared `String` at `STRING_MAX_LEN = 12` bytes. Its
+/// witness is 15 bytes. That is not "hard to lift" — running `check_auto` on
+/// that packed vector **alone** returns `unsat`, so **no** lift exists, and
+/// pairing any model with it would replay `false` on a correct `sat`. Deciding
+/// a query whose witness exceeds the bound is precisely what the source routes
+/// are for, so this class is permanent and the honest answer is to withhold.
+///
+/// # What keeps the checker able to fail
+///
+/// The guard is **completeness of the binding**, not satisfaction: this
+/// withholds when a free symbol of `assertions` is still unbound after the
+/// lift, and otherwise ships the pair **without** consulting `check_model`. So
+/// a downstream replay retains its power to answer `Ok(false)` — if a packing
+/// were wrong, or a route's witness did not actually satisfy the query, the
+/// replay would say so rather than being suppressed here. Verifying
+/// satisfaction here instead would make every downstream `check_model` a
+/// tautology, and a checker that cannot fail is worse than no checker.
+fn pair_replay_state(
+    script: &Script,
+    assertions: Vec<TermId>,
+    model: Option<Model>,
+) -> (Vec<TermId>, Option<Model>) {
+    let Some(mut model) = model else {
+        return (assertions, None);
+    };
+    lift_source_strings_onto_packed(script, &mut model);
+    let mut free = std::collections::BTreeSet::new();
+    for &assertion in &assertions {
+        collect_free_symbols(&script.arena, assertion, &mut free);
+    }
+    if free.iter().any(|&symbol| model.get(symbol).is_none()) {
+        // Nothing here is replayable against the flat view. Say so the way the
+        // sibling routes already do rather than shipping a pair that cannot be
+        // evaluated — `SmtLibSolved`'s own contract is that an empty
+        // `assertions` with no model means "no replay available".
+        return (Vec::new(), None);
+    }
+    (assertions, Some(model))
+}
+
+/// Binds each declared `String` the model left unbound to the packing of its
+/// `!weq!<name>` source witness.
+///
+/// Keyed on [`Script::declared_strings`] and on the parser's own `!weq!`
+/// naming, never on sort or width: a `Seq` bound to some other internal symbol
+/// is not this variable's value, and packing it would be a **wrong** model
+/// rather than a missing one. The same keying `axeyum-py`'s `source_route_model`
+/// uses, for the same reason.
+///
+/// Every step declines rather than truncating — a code point wider than a byte,
+/// a witness longer than the packed cap, a width that is not a packed layout,
+/// and a packing the public [`decode_packed_string`] does not return unchanged.
+/// An encoder that disagreed with the decoder would replay the wrong string,
+/// and the declined symbol makes [`pair_replay_state`] withhold instead.
+fn lift_source_strings_onto_packed(script: &Script, model: &mut Model) {
+    for &(symbol, _) in &script.declared_strings {
+        if model.get(symbol).is_some() {
+            continue;
+        }
+        let (name, sort) = script.arena.symbol(symbol);
+        let Sort::BitVec(width) = sort else {
+            continue;
+        };
+        let Some(word) = script.arena.find_internal_symbol(&format!("!weq!{name}")) else {
+            continue;
+        };
+        let Some(Value::Seq(elements)) = model.get(word) else {
+            continue;
+        };
+        let Some(bits) = pack_source_string(width, &elements) else {
+            continue;
+        };
+        model.set(symbol, Value::Bv { width, value: bits });
+    }
+}
+
+/// Packs a source-level `Seq` of code points into the parser's bounded-string
+/// bit-vector layout, or `None` when the packed encoding cannot express it.
+///
+/// The layout is ADR-0029's, LSB-first: a `len_width(m)`-bit length field, then
+/// `m` content bytes. `m` is recovered from `width` through the public
+/// [`packed_string_max_len`] rather than recomputed, so this cannot drift from
+/// the parser's own arithmetic, and the result is round-tripped through
+/// [`decode_packed_string`] before it is returned.
+fn pack_source_string(width: u32, elements: &[Value]) -> Option<u128> {
+    let max_len = packed_string_max_len(width)?;
+    if elements.len() > max_len as usize {
+        // The witness is longer than anything this width can hold. Deliberately
+        // NOT truncated to `max_len`: a shorter string is a different string,
+        // and it would replay as a model of a query that demanded the long one.
+        return None;
+    }
+    let mut bytes = Vec::with_capacity(elements.len());
+    for element in elements {
+        let Value::Bv { value, .. } = element else {
+            return None;
+        };
+        // The packed encoding is BYTES; SMT-LIB code points run to U+2FFFF, so a
+        // witness above `0xff` has no packing. Declining is the whole point —
+        // masking would silently replay a different string.
+        bytes.push(u8::try_from(*value).ok()?);
+    }
+    let lw = len_width(max_len);
+    let mut content: u128 = 0;
+    for (i, &byte) in bytes.iter().enumerate() {
+        content |= u128::from(byte) << (8 * i);
+    }
+    let bits = (content << lw) | u128::try_from(bytes.len()).ok()?;
+    (decode_packed_string(width, bits).as_deref() == Some(bytes.as_slice())).then_some(bits)
+}
+
+/// The width of the packed layout's length field for maximum length `m`.
+///
+/// Mirrors `parse.rs::len_width`, which is `pub(crate)` there. Pinned against
+/// the public decoder by `pack_source_string`'s round-trip, so a divergence
+/// declines the lift rather than producing a wrong string.
+const fn len_width(max_len: u32) -> u32 {
+    32 - max_len.leading_zeros()
+}
+
+/// Collects the free symbols of `term`'s DAG into `out`.
+///
+/// Iterative with a visited set, and both halves are load-bearing. An assertion
+/// vector here is a **DAG**, not a tree — the parser interns aggressively and a
+/// bounded-string query shares subterms heavily — so the obvious recursive walk
+/// re-expands every shared node once per path to it and is exponential in the
+/// sharing depth. That is not a hypothetical: the first version of this
+/// function was the plain recursive one, and it did not finish ONE benchmark in
+/// 13 minutes (killed, 100% CPU, RSS flat) where the iterative walk below does
+/// the whole 217-file census in 52 s.
+/// This runs on **every** front-door `sat`, so it is on the shipped hot path
+/// and not a test helper.
+fn collect_free_symbols(
+    arena: &TermArena,
+    term: TermId,
+    out: &mut std::collections::BTreeSet<SymbolId>,
+) {
+    let mut stack = vec![term];
+    let mut seen = std::collections::HashSet::new();
+    while let Some(current) = stack.pop() {
+        if !seen.insert(current) {
+            continue;
+        }
+        match arena.node(current) {
+            TermNode::Symbol(symbol) => {
+                out.insert(*symbol);
+            }
+            TermNode::App { args, .. } => stack.extend(args.iter().copied()),
+            _ => {}
+        }
+    }
 }
 
 /// Upgrades the bounded string encoder's "no model within the bounded integer
@@ -4434,5 +4626,135 @@ mod solve_smtlib_with_model_tests {
             // the checker, not a failed replay.
             Err(_) => false,
         }
+    }
+}
+
+#[cfg(test)]
+mod pack_source_string_tests {
+    use super::{len_width, pack_source_string};
+    use axeyum_ir::{Sort, Value};
+    use axeyum_smtlib::{decode_packed_string, packed_string_max_len};
+
+    /// The packed width of a declared `String` (`STRING_MAX_LEN = 12`). Its
+    /// identity as a layout is asserted below rather than assumed, so a change
+    /// to the parser's arithmetic fails this module loudly instead of silently
+    /// retargeting every test at a width that no longer exists.
+    const DECLARED_WIDTH: u32 = 100;
+
+    fn seq(code_points: &[u32]) -> Vec<Value> {
+        code_points
+            .iter()
+            .map(|&c| Value::Bv {
+                width: Sort::STRING_ELEM_WIDTH,
+                value: u128::from(c),
+            })
+            .collect()
+    }
+
+    /// **The positive control for every decline below.** Without it, a
+    /// `pack_source_string` that returned `None` unconditionally would pass the
+    /// whole module — the vacuous-negative failure mode.
+    #[test]
+    fn an_ordinary_ascii_witness_packs_and_round_trips() {
+        let bits = pack_source_string(DECLARED_WIDTH, &seq(&[u32::from(b'a'), u32::from(b'b')]))
+            .expect("two ASCII bytes fit a declared String");
+        assert_eq!(
+            decode_packed_string(DECLARED_WIDTH, bits).as_deref(),
+            Some(b"ab".as_slice()),
+            "the packing must decode back to the same bytes through the PUBLIC decoder"
+        );
+    }
+
+    /// The width really is the declared-`String` layout, so the constant above
+    /// is not quietly naming something else.
+    #[test]
+    fn the_declared_width_is_a_packed_string_layout_with_a_cap_of_twelve() {
+        assert_eq!(packed_string_max_len(DECLARED_WIDTH), Some(12));
+    }
+
+    /// A witness longer than the cap DECLINES. Truncating to `max_len` would be
+    /// the tempting bug: a shorter string is a different string, and it would
+    /// replay as a model of a query that demanded the long one.
+    #[test]
+    fn a_witness_past_the_cap_declines_and_is_not_truncated() {
+        let thirteen = seq(&[u32::from(b'x'); 13]);
+        assert_eq!(pack_source_string(DECLARED_WIDTH, &thirteen), None);
+    }
+
+    /// **The boundary control.** Exactly at the cap must still pack, so the
+    /// decline above is the cap and not an off-by-one that rejects everything
+    /// long-ish.
+    #[test]
+    fn a_witness_exactly_at_the_cap_packs() {
+        let twelve = seq(&[u32::from(b'x'); 12]);
+        let bits = pack_source_string(DECLARED_WIDTH, &twelve).expect("twelve bytes is the cap");
+        assert_eq!(
+            decode_packed_string(DECLARED_WIDTH, bits).as_deref(),
+            Some([b'x'; 12].as_slice())
+        );
+    }
+
+    /// A code point wider than a byte has NO packing — the layout stores bytes.
+    /// Masking it to `0xff` would silently replay a different string, which is
+    /// the same class of defect as truncating a long witness.
+    #[test]
+    fn a_code_point_above_a_byte_declines_rather_than_masking() {
+        assert_eq!(pack_source_string(DECLARED_WIDTH, &seq(&[0x100])), None);
+        // A code point inside the SMT-LIB range but far outside a byte.
+        assert_eq!(pack_source_string(DECLARED_WIDTH, &seq(&[0x2_FFFF])), None);
+    }
+
+    /// **The boundary control for the test above**: `0xff` is the largest byte
+    /// and must pack, so the decline is about the byte boundary and not about
+    /// "large-ish values".
+    #[test]
+    fn the_largest_byte_still_packs() {
+        let bits = pack_source_string(DECLARED_WIDTH, &seq(&[0xff])).expect("0xff is a byte");
+        assert_eq!(
+            decode_packed_string(DECLARED_WIDTH, bits).as_deref(),
+            Some([0xffu8].as_slice())
+        );
+    }
+
+    /// A width that is not a packed-string layout declines rather than guessing
+    /// a length field. `(_ BitVec 8)` is an ordinary bit-vector, not a string.
+    #[test]
+    fn a_width_that_is_not_a_packed_layout_declines() {
+        assert_eq!(packed_string_max_len(8), None, "control: 8 is not a layout");
+        assert_eq!(pack_source_string(8, &seq(&[u32::from(b'a')])), None);
+    }
+
+    /// A non-`Bv` element is not a code point and must not be packed.
+    #[test]
+    fn a_non_bitvector_element_declines() {
+        assert_eq!(
+            pack_source_string(DECLARED_WIDTH, &[Value::Bool(true)]),
+            None
+        );
+    }
+
+    /// The empty witness packs to a pure length field of zero — the one case
+    /// where the content half is absent, so an off-by-one in `len_width` would
+    /// not show up in the bytes.
+    #[test]
+    fn the_empty_witness_packs_to_a_zero_length_field() {
+        let bits = pack_source_string(DECLARED_WIDTH, &[]).expect("the empty string packs");
+        assert_eq!(bits, 0);
+        assert_eq!(
+            decode_packed_string(DECLARED_WIDTH, bits).as_deref(),
+            Some(b"".as_slice())
+        );
+    }
+
+    /// `len_width` mirrors a `pub(crate)` helper in the parser, so it is pinned
+    /// here directly as well as through the round-trip: a mirror that drifts
+    /// silently is how two of ADR-2010's three defects shipped.
+    #[test]
+    fn len_width_matches_the_layout_it_mirrors() {
+        assert_eq!(len_width(12), 4, "12 needs four bits");
+        assert_eq!(len_width(8), 4);
+        assert_eq!(len_width(7), 3);
+        assert_eq!(len_width(1), 1);
+        assert_eq!(len_width(0), 0);
     }
 }

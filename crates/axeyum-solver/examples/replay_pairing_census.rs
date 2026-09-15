@@ -118,6 +118,8 @@ fn main() {
         errored: 0,
         withheld: 0,
     };
+    let mut errored_out = 0usize;
+    let mut error_detail: BTreeMap<String, usize> = BTreeMap::new();
     let mut per_route: BTreeMap<String, [usize; 4]> = BTreeMap::new();
     let mut mismatches: Vec<(String, String, String)> = Vec::new();
 
@@ -130,9 +132,20 @@ fn main() {
             let _guard = RouteAttributionGuard::enable();
             solve_smtlib_with_model(&input, &config)
         };
-        let Ok(solved) = solved else {
-            undecided += 1;
-            continue;
+        // ADR-2045's arm reported `losses=0` by verdict while creating five new
+        // aborts, because the harness folded errors into "undecided". They are
+        // counted apart here: an arm that trades a wrong pairing for a crash has
+        // not improved anything, and a single denominator cannot show that.
+        let solved = match solved {
+            Ok(solved) => solved,
+            Err(error) => {
+                errored_out += 1;
+                error_detail
+                    .entry(error.to_string().chars().take(80).collect::<String>())
+                    .and_modify(|n| *n += 1)
+                    .or_insert(1usize);
+                continue;
+            }
         };
         let route = deciding_stage();
         match &solved.outcome.result {
@@ -195,6 +208,10 @@ fn main() {
     println!("budget                                {budget_ms:>6} ms");
     println!("files examined (denominator)          {examined:>6}");
     println!("  undecided                           {undecided:>6}");
+    println!("  front door returned Err             {errored_out:>6}");
+    for (detail, count) in &error_detail {
+        println!("      {count:>4}  {detail}");
+    }
     println!("  unsat                               {unsat:>6}");
     println!("  sat                                 {sat:>6}");
     println!(
