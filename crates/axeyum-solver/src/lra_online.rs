@@ -1762,9 +1762,97 @@ pub(crate) const BYTES_PER_LRA_COEFFICIENT: usize = 224;
 pub(crate) const BYTES_PER_ADMITTED_ATOM: usize = DEFAULT_ONLINE_LRA_BUDGET_BYTES / 1_024;
 
 /// Resident bytes one dense simplex tableau cell costs: a [`Rational`] is two
-/// `i128`s and the tableau is `Vec<Vec<Rational>>`, so the per-cell share of the
-/// row vectors' own headers is negligible beside the 32-byte payload.
+/// `i128`s and the tableau was `Vec<Vec<Rational>>`, so the per-cell share of
+/// the row vectors' own headers is negligible beside the 32-byte payload.
+///
+/// **The tableau has not been dense since ADR-2111 (2026-09-15).** The constant
+/// is still correct about what a cell WOULD cost and is still what
+/// [`TableauReserve::Dense`] spends, which is the shipped default, so it stays;
+/// what changed is that the structure no longer HAS `m × (nvars+m)` cells.
+/// [`BYTES_PER_TABLEAU_NONZERO`] is the rate the storage actually charges.
 pub(crate) const BYTES_PER_TABLEAU_CELL: usize = 32;
+
+/// Resident bytes one *stored* simplex tableau cell costs after ADR-2111: a
+/// [`Rational`] payload (32 B, two `i128`s) plus its column index in
+/// `Tableau::row_nz` (8 B). The column index (`col_rows`) adds another 8 B per
+/// nonzero, and the per-row `Vec` headers are `24 B × m` against `40 B × nnz`,
+/// so 40 is the payload rate and the true figure is nearer 48; the difference is
+/// deliberately not modelled here, because this number's only job is to be a
+/// FLOOR big enough that a small budget does not derive a zero ceiling, and a
+/// floor that understates by 20 % is still a floor.
+pub(crate) const BYTES_PER_TABLEAU_NONZERO: usize = 40;
+
+/// Nonzeros the sparse reserve is sized for; see [`TableauReserve::Sparse`].
+///
+/// `MAX_TABLEAU_CELLS / 10`, which is a round number and is named as one rather
+/// than dressed up as a derivation. What it is measured AGAINST is real: over
+/// the 23 `QF_LRA` rows that reach this engine at all (ADR-2111's census) the
+/// mean tableau holds a median **8,086** nonzeros, and over the 74 rows
+/// [ADR-2055] profiled on the offline route the median is **34,555**. So 400,000
+/// is 49× and 11.6× those two medians respectively. Nobody has taken the
+/// distribution's tail, and until someone does this is a generous floor and not
+/// an estimate.
+pub(crate) const SPARSE_TABLEAU_RESERVE_NONZEROS: usize = simplex::MAX_TABLEAU_CELLS / 10;
+
+/// How much of the online LRA memory budget is reserved for the simplex
+/// tableau, before any is left for coefficients (ADR-2111).
+///
+/// # Why this is a lever and not just a corrected constant
+///
+/// [`NormalizationLimits::for_budget`] spends the tableau's ceiling out of
+/// [`DEFAULT_ONLINE_LRA_BUDGET_BYTES`] *first*, and
+/// [`NormalizationLimits::estimated_bytes`] adds it back into every projection.
+/// Under [`Self::Dense`] that is `MAX_TABLEAU_CELLS × 32 B` = **128 MiB**, i.e.
+/// **20 % of a 640 MiB budget**, held for a structure that ADR-2111 made cost
+/// about 1.4 MB at the profiled median. So this is not a diagnostic: it decides
+/// which queries the online CDCL(T) engine ADMITS, and ADR-2111's census found
+/// only **23 of 93** undecided rows reaching that engine at all.
+///
+/// It is a lever because the direction of the *routing* consequence is not
+/// obvious from the direction of the *memory* correction, and this repository
+/// has measured that exact surprise twice. [ADR-2045] raised the same budget
+/// from 640 MiB to 8 GiB: **21 rows reached the engine, 0 were newly decided,
+/// and the arm CAUSED five new aborts** because one knob drove two screens
+/// wanting opposite settings. [ADR-2055] capped the tableau and **18 rows that
+/// terminated cleanly became `rc=134` aborts** — "the unpriced allocation was
+/// accidentally load-bearing". A correction that is right about bytes can still
+/// be wrong about verdicts, so it ships `Dense` and moves only on a measured
+/// A/B.
+///
+/// Read **once** from `AXEYUM_LRA_TABLEAU_RESERVE`, because determinism is a
+/// public API promise and the reserve must not change between two solves in one
+/// process. An unrecognised value is [`Self::Dense`]: this is a measurement
+/// lever and a typo in a sweep script must not change a verdict.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum TableauReserve {
+    /// `MAX_TABLEAU_CELLS × BYTES_PER_TABLEAU_CELL` — 128 MiB. The shipped
+    /// default and the pre-ADR-2111 behaviour, byte for byte.
+    Dense,
+    /// `SPARSE_TABLEAU_RESERVE_NONZEROS × BYTES_PER_TABLEAU_NONZERO` — 16 MiB,
+    /// the rate the storage has charged since ADR-2111.
+    Sparse,
+}
+
+impl TableauReserve {
+    /// The bytes this reserve holds back.
+    pub(crate) const fn bytes(self) -> usize {
+        match self {
+            Self::Dense => simplex::MAX_TABLEAU_CELLS.saturating_mul(BYTES_PER_TABLEAU_CELL),
+            Self::Sparse => {
+                SPARSE_TABLEAU_RESERVE_NONZEROS.saturating_mul(BYTES_PER_TABLEAU_NONZERO)
+            }
+        }
+    }
+
+    /// The reserve in force, read once from `AXEYUM_LRA_TABLEAU_RESERVE`.
+    pub(crate) fn configured() -> Self {
+        static RESERVE: std::sync::OnceLock<TableauReserve> = std::sync::OnceLock::new();
+        *RESERVE.get_or_init(|| match std::env::var("AXEYUM_LRA_TABLEAU_RESERVE") {
+            Ok(v) if v.trim().eq_ignore_ascii_case("sparse") => Self::Sparse,
+            _ => Self::Dense,
+        })
+    }
+}
 
 /// Default memory budget for **one** online CDCL(T) LRA construction
 /// (ADR-1752), overridden by `SolverConfig::memory_limit_mb` when that is set.
@@ -1823,7 +1911,7 @@ impl NormalizationLimits {
         // anything is left for coefficients. Accounting for it here is what
         // stops the two halves drifting apart until one of them stops binding —
         // the exact failure that let the atom cap outlive its own measurement.
-        let tableau = simplex::MAX_TABLEAU_CELLS.saturating_mul(BYTES_PER_TABLEAU_CELL);
+        let tableau = TableauReserve::configured().bytes();
         let coefficients = budget_bytes.saturating_sub(tableau) / BYTES_PER_LRA_COEFFICIENT;
         Self {
             nodes: MAX_LRA_NORMALIZATION_NODES,
@@ -1935,12 +2023,10 @@ impl AtomBuilder {
     /// zero-coefficient ceiling and then refuses with "projected 0 MiB > budget
     /// 1 MiB", which is true of nothing.
     fn estimated_bytes(&self) -> usize {
-        simplex::MAX_TABLEAU_CELLS
-            .saturating_mul(BYTES_PER_TABLEAU_CELL)
-            .saturating_add(
-                self.resident_coefficients()
-                    .saturating_mul(BYTES_PER_LRA_COEFFICIENT),
-            )
+        TableauReserve::configured().bytes().saturating_add(
+            self.resident_coefficients()
+                .saturating_mul(BYTES_PER_LRA_COEFFICIENT),
+        )
     }
 
     /// The stop a ceiling breach reports. Every one of these ceilings is now
@@ -4714,6 +4800,64 @@ mod tests {
             tableau_bytes / (1024 * 1024),
             DEFAULT_ONLINE_LRA_BUDGET_BYTES / (1024 * 1024),
         );
+        // ADR-2111. The assertion above is the DENSE arm's property and stays
+        // exactly as it was; the sparse arm's property is the OPPOSITE one, and
+        // writing them both down is what stops this test silently becoming a
+        // statement about one arm after the lever exists.
+        assert_eq!(
+            TableauReserve::Dense.bytes(),
+            tableau_bytes,
+            "the dense arm must reserve byte-for-byte what the pre-ADR-2111 \
+             expression reserved, or the A/B's base arm is not the baseline"
+        );
+        let sparse = TableauReserve::Sparse.bytes();
+        assert!(
+            sparse > 0,
+            "the sparse reserve must be a NONZERO floor: its whole job is that a \
+             small budget does not derive a zero coefficient ceiling and then \
+             refuse with \"projected 0 MiB > budget 1 MiB\", which is true of nothing"
+        );
+        assert!(
+            sparse < tableau_bytes,
+            "the sparse reserve ({} MiB) must be strictly smaller than the dense \
+             one ({} MiB); a lever whose two arms reserve the same bytes changes \
+             no admission and cannot be measured",
+            sparse / (1024 * 1024),
+            tableau_bytes / (1024 * 1024),
+        );
+        // And it must be smaller by enough to MOVE the derived ceiling, not just
+        // by a byte. The ceiling is `(budget - reserve) / BYTES_PER_LRA_COEFFICIENT`,
+        // so this compares the two ceilings the two arms actually derive rather
+        // than the reserves they were computed from.
+        let dense_ceiling =
+            (DEFAULT_ONLINE_LRA_BUDGET_BYTES - tableau_bytes) / BYTES_PER_LRA_COEFFICIENT;
+        let sparse_ceiling = (DEFAULT_ONLINE_LRA_BUDGET_BYTES - sparse) / BYTES_PER_LRA_COEFFICIENT;
+        assert!(
+            sparse_ceiling > dense_ceiling + dense_ceiling / 10,
+            "the sparse arm must raise the derived coefficient ceiling by more \
+             than 10% ({dense_ceiling} -> {sparse_ceiling}), or the A/B is \
+             measuring rounding"
+        );
+    }
+
+    /// The reserve must be readable, stable within a process, and must DEFAULT
+    /// to the pre-ADR-2111 behaviour.
+    ///
+    /// Stability is asserted as the identity of two reads rather than against a
+    /// literal, so the test cannot drift from whatever arm the environment
+    /// selected; the DEFAULT is asserted separately and only when the variable
+    /// is genuinely unset, because a test that passes only under an ambient env
+    /// var is a gate on one shell.
+    #[test]
+    fn the_tableau_reserve_is_stable_and_defaults_to_dense() {
+        assert_eq!(TableauReserve::configured(), TableauReserve::configured());
+        if std::env::var_os("AXEYUM_LRA_TABLEAU_RESERVE").is_none() {
+            assert_eq!(
+                TableauReserve::configured(),
+                TableauReserve::Dense,
+                "with the lever unset the reserve must be the shipped default"
+            );
+        }
     }
 
     /// **This is the test the `propagatable` scan filter is mutation-checked

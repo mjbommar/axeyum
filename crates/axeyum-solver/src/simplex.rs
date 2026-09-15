@@ -764,9 +764,43 @@ struct Tableau {
     /// `basic[i]` is the variable id basic in row `i` (row `i` corresponds to slack
     /// `nvars + i` initially, but the basic var changes as we pivot).
     basic: Vec<usize>,
-    /// `row[i][v]` = coefficient of nonbasic variable `v` in the expression for the
-    /// basic variable of row `i`. (Columns for currently-basic variables are 0.)
-    row: Vec<Vec<Rational>>,
+    /// The NONZERO coefficients of row `i`, **positionally aligned** with
+    /// [`Tableau::row_nz`]: `row_val[i][k]` is the coefficient at column
+    /// `row_nz[i][k]`. A column absent from `row_nz[i]` is zero and is not
+    /// stored. Read one cell with [`Tableau::cell`], write one with
+    /// [`Tableau::set_cell`]; nothing else may touch either vector, because the
+    /// two are only meaningful together.
+    ///
+    /// # Why this is not a dense `Vec<Vec<Rational>>` any more (ADR-2111)
+    ///
+    /// It was, until this lane, and that was the single largest structural
+    /// difference between this engine and every reference implementation of the
+    /// same algorithm. [ADR-2055] priced it over the 74 `QF_LRA` rows bound by
+    /// this route: a median `m × (nvars+m)` of **19,198,877 cells** holding a
+    /// median **34,555 nonzeros** — `0.0288 %` dense, a structure about 3,500×
+    /// larger than its own data — at 32 bytes a cell, which is the 5.07 GiB
+    /// median peak RSS and the 40 `rc=134` aborts under an 8 GiB ceiling.
+    ///
+    /// Four independent implementations of the Dutertre–de Moura simplex were
+    /// read for this lane and **none of them stores a dense tableau**:
+    ///
+    /// - z3 `static_matrix<mpq, numeric_pair<mpq>>`, doubly-linked row and
+    ///   column strips, zeros never stored
+    ///   (`src/math/lp/static_matrix.h:88-89`, `static_matrix_def.h:256-257`);
+    /// - cvc5 a linked-entry arena with a free list
+    ///   (`src/theory/arith/linear/matrix.h:56-196`);
+    /// - `OpenSMT` sorted `vector<Term>` rows plus per-column row lists
+    ///   (`src/tsolvers/lasolver/Tableau.h:62,118-119`);
+    /// - `SMTInterpol` a flat `int[]` of `(col, coeff)` pairs with a
+    ///   `BigInteger[]` escape hatch (`TableauxRow.java:22-34`).
+    ///
+    /// The index this pairs with already existed and was already what every
+    /// iteration used; only the STORAGE was dense. So this is the same
+    /// arithmetic in the same order — `row_nz` is sorted, and the sorted order
+    /// is what makes Bland's rule Bland's rule and the overflow decline
+    /// deterministic — over a representation that costs `nnz × 40` bytes
+    /// instead of `m × (nvars+m) × 32`.
+    row_val: Vec<Vec<Rational>>,
     /// Current value of every variable, in `ℚ(δ)`.
     value: Vec<Delta>,
     /// Lower / upper bound of every variable (`None` = unbounded on that side).
@@ -808,6 +842,37 @@ struct Tableau {
     /// `col_nnz_matches_a_recount` checks it against a full recount rather than
     /// trusting the incremental maintenance.
     col_nnz: Vec<u32>,
+    /// `col_rows[v]` = the **sorted** row indices at which column `v` is
+    /// nonzero — the transpose of [`Tableau::row_nz`], and the companion the
+    /// dense storage made unnecessary.
+    ///
+    /// Two loops used to read a whole column by walking `0..m` and testing
+    /// `row[i][v].is_zero()`, which a dense tableau makes `O(m)` and a sparse
+    /// one would make `O(m · log nnz)` — a REGRESSION, and the reason a sparse
+    /// rewrite that ships only the row side is worse than the dense form it
+    /// replaces. With this they are `O(col_nnz[v])`:
+    ///
+    /// - [`Tableau::update_nonbasic`], the Dutertre–de Moura `update`, once per
+    ///   bound assertion. Measured on
+    ///   `QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_array1.i_3_2_2.bpl_11.smt2`
+    ///   at **1,515,952 bound assertions** against `m = 681`, i.e. about a
+    ///   billion cell reads to carry a median handful of nonzeros.
+    /// - [`Tableau::pivot_and_update`]'s capture of the entering column BEFORE
+    ///   the elimination zeroes it.
+    ///
+    /// Every reference implementation threads its columns the same way: z3's
+    /// `column_strip` of `(row, offset)` cells (`src/math/lp/static_matrix.h:89`),
+    /// cvc5's `ColumnVector` over the shared entry arena
+    /// (`src/theory/arith/linear/matrix.h:199-366`), `OpenSMT`'s
+    /// `Column = std::vector<LVRef>` (`src/tsolvers/lasolver/Tableau.h:25-56`)
+    /// and `SMTInterpol`'s `mDependentRows` `BitSet` per column
+    /// (`LinArSolve.java:102-113`).
+    ///
+    /// Maintained through the same single mutation point as `col_nnz` and
+    /// `row_nz` ([`Tableau::set_cell`]), kept sorted for the same determinism
+    /// reason, and checked against a full recount by
+    /// `col_nnz_matches_a_recount_after_every_pivot`.
+    col_rows: Vec<Vec<usize>>,
     /// `row_nz[i]` = the **sorted** column indices at which row `i` is nonzero.
     ///
     /// This is a sparse *index* over dense storage, not a sparse representation:
@@ -861,7 +926,7 @@ impl Tableau {
             nvars,
             m,
             basic: vec![0usize; m],
-            row: vec![Vec::new(); m],
+            row_val: vec![Vec::new(); m],
             value: vec![Delta::zero(); n],
             lower: vec![None; n],
             upper: vec![None; n],
@@ -870,6 +935,7 @@ impl Tableau {
             rel_rhs,
             total_pivots: 0,
             col_nnz: vec![0u32; n],
+            col_rows: vec![Vec::new(); n],
             row_nz: vec![Vec::new(); m],
             policy,
             counters: TableauCounters::default(),
@@ -883,13 +949,11 @@ impl Tableau {
     /// variable nonbasic at `0`, so `slackᵢ = Σ aᵢⱼ·0 = 0`. Bounds ([`Self::rel_rhs`]
     /// and the derived `lower`/`upper`) are **not** touched — this is the recovery
     /// path after an arithmetic overflow left the cached values inconsistent.
+    /// This is the allocation [ADR-2055] priced at a median 10.53 GiB over the
+    /// 40 aborting rows, and it no longer exists: the row is built from
+    /// `rows_sparse` directly, so nothing `n`-wide is ever materialised.
     fn reset_structure(&mut self) {
         for i in 0..self.m {
-            let mut dense = vec![Rational::zero(); self.n];
-            for &(j, a) in &self.rows_sparse[i] {
-                dense[j] = a;
-            }
-            self.row[i] = dense;
             self.basic[i] = self.nvars + i;
         }
         self.is_basic.iter_mut().for_each(|b| *b = false);
@@ -897,26 +961,124 @@ impl Tableau {
             self.is_basic[self.nvars + i] = true;
         }
         self.value.iter_mut().for_each(|v| *v = Delta::zero());
-        // The one place the row contents are rebuilt, so the one place the
-        // incrementally-maintained column counts are recomputed from scratch.
+        // The one place the row contents are rebuilt, so the one place all four
+        // derived structures are recomputed from the pristine input.
+        self.rebuild_from_input();
+    }
+
+    /// Rebuilds `row_nz` / `row_val` / `col_nnz` / `col_rows` from
+    /// [`Tableau::rows_sparse`], the pristine input.
+    ///
+    /// Called only from [`Tableau::reset_structure`] — everywhere else the four
+    /// are maintained per written cell by [`Tableau::set_cell`].
+    ///
+    /// This is deliberately NOT the function the maintenance check calls. The
+    /// dense form had one `recount_columns` that re-derived the index by
+    /// scanning the row values, so it was idempotent on a PIVOTED tableau and a
+    /// test could call it mid-sequence and compare. A sparse row has no value
+    /// outside its index, so "re-derive the index from the values" is not a
+    /// thing that can be written, and a rebuild from `rows_sparse` would reset a
+    /// pivoted tableau to its pristine basis. Silently keeping one name for both
+    /// meanings would have turned that test into a comparison of a value with
+    /// itself — a control that cannot fail. [`Tableau::recount_columns`] is the
+    /// half that is still expressible, and it is what the check calls.
+    ///
+    /// `rows_sparse` is not assumed sorted: it comes from a caller's
+    /// [`SparseConstraint`]. Sorting here is not tidiness — `row_nz` being
+    /// ascending is what makes Bland's rule "smallest usable index" and what
+    /// fixes the order of the exact-rational adds, and determinism is a public
+    /// API promise.
+    ///
+    /// A REPEATED column keeps the **last** entry, which is not this lane's
+    /// opinion of what a repeat should mean — it is exactly what the dense
+    /// build it replaces did (`dense[j] = a` in a loop over the same entries),
+    /// so the two representations cannot disagree on any input. Whether a
+    /// repeat should instead SUM is a real question about the callers' contract
+    /// and it is deliberately not answered by a storage change; the
+    /// `debug_assert` below is what makes it surface if a caller ever produces
+    /// one, rather than being decided silently in either direction.
+    fn rebuild_from_input(&mut self) {
+        self.row_nz.clear();
+        self.row_nz.resize(self.m, Vec::new());
+        self.row_val.clear();
+        self.row_val.resize(self.m, Vec::new());
+        for i in 0..self.m {
+            let mut entries: Vec<(usize, Rational)> = self.rows_sparse[i].clone();
+            // STABLE by construction, so within one column the original order
+            // survives and "last wins" below is the original last.
+            entries.sort_by_key(|&(j, _)| j);
+            debug_assert!(
+                entries.windows(2).all(|w| w[0].0 != w[1].0),
+                "rows_sparse row {i} repeats a column; the dense build this \
+                 replaced silently kept the last entry and so does this one"
+            );
+            let mut k = 0usize;
+            while k < entries.len() {
+                let j = entries[k].0;
+                let mut last = k;
+                while last + 1 < entries.len() && entries[last + 1].0 == j {
+                    last += 1;
+                }
+                let a = entries[last].1;
+                k = last + 1;
+                // A column past `n` is a REFUSAL, not a skip. The dense build
+                // panicked here (`dense[j] = a` out of bounds) and the sparse
+                // form must not be quieter: silently dropping a coefficient
+                // weakens the row, and a weaker row can be feasible where the
+                // real one is not — a wrong `sat`, which is the one outcome
+                // this engine may never produce. `feasible_within_sparse`
+                // already rejects such a row with "constraint column out of
+                // range"; this is the belt for every other constructor.
+                assert!(
+                    j < self.n,
+                    "tableau column {j} is out of range for nvars+m = {}",
+                    self.n
+                );
+                if a.is_zero() {
+                    continue;
+                }
+                self.row_nz[i].push(j);
+                self.row_val[i].push(a);
+            }
+        }
         self.recount_columns();
     }
 
-    /// Recomputes [`Tableau::col_nnz`] by a full scan. Called only from
-    /// [`Tableau::reset_structure`] — everywhere else the counts are maintained
-    /// per written cell — and by the test that checks the two agree.
+    /// Recomputes the COLUMN indices (`col_nnz`, `col_rows`) from the row
+    /// index, which is the authority on which cells are stored.
+    ///
+    /// This is the half of the old dense `recount_columns` that survives a
+    /// sparse representation, and it is the one the maintenance check needs:
+    /// `set_cell` updates four structures per written cell, and this re-derives
+    /// two of them from the other two, so a drift in the incremental
+    /// bookkeeping shows up as a disagreement rather than as a slow, wrong
+    /// pivot sequence nobody can reproduce.
+    ///
+    /// `col_rows[v]` comes out ascending because the outer loop is ascending in
+    /// `i`; `update_nonbasic` and the pivot both depend on that order.
     fn recount_columns(&mut self) {
         self.col_nnz.clear();
         self.col_nnz.resize(self.n, 0);
-        self.row_nz.clear();
-        self.row_nz.resize(self.m, Vec::new());
+        self.col_rows.clear();
+        self.col_rows.resize(self.n, Vec::new());
         for i in 0..self.m {
-            for v in 0..self.n {
-                if !self.row[i][v].is_zero() {
-                    self.col_nnz[v] += 1;
-                    self.row_nz[i].push(v);
-                }
+            for k in 0..self.row_nz[i].len() {
+                let j = self.row_nz[i][k];
+                self.col_nnz[j] += 1;
+                self.col_rows[j].push(i);
             }
+        }
+    }
+
+    /// The coefficient at cell `(i, v)`, zero when the column is not stored.
+    ///
+    /// `O(log nnz(row i))`. This is the ONE reader of the sparse pair; nothing
+    /// else may index `row_val` by a column, because a position in `row_val` is
+    /// meaningless without the same position in `row_nz`.
+    fn cell(&self, i: usize, v: usize) -> Rational {
+        match self.row_nz[i].binary_search(&v) {
+            Ok(k) => self.row_val[i][k],
+            Err(_) => Rational::zero(),
         }
     }
 
@@ -926,28 +1088,40 @@ impl Tableau {
         self.col_nnz.iter().map(|&c| u64::from(c)).sum()
     }
 
-    /// Writes `value` into cell `(i, v)` and keeps [`Tableau::col_nnz`] exact.
+    /// Writes `value` into cell `(i, v)` and keeps `row_nz` / `row_val` /
+    /// `col_nnz` / `col_rows` exact and mutually consistent.
     ///
     /// This is the single mutation point for a row cell inside the pivot, so the
-    /// column counts cannot drift by someone adding an assignment that forgets
-    /// them: the only other writer is `reset_structure`, which recounts.
+    /// four cannot drift by someone adding an assignment that forgets them: the
+    /// only other writer is `reset_structure`, which recounts.
+    ///
+    /// One `binary_search` decides everything — presence, the position to write,
+    /// and the position to insert or remove at — where the dense form took a
+    /// separate `O(1)` read and then searched anyway to maintain the index.
     fn set_cell(&mut self, i: usize, v: usize, value: Rational) {
-        let was_zero = self.row[i][v].is_zero();
         let now_zero = value.is_zero();
-        self.row[i][v] = value;
-        match (was_zero, now_zero) {
-            (true, false) => {
-                self.col_nnz[v] += 1;
-                let at = self.row_nz[i].partition_point(|&c| c < v);
-                self.row_nz[i].insert(at, v);
-            }
-            (false, true) => {
+        match (self.row_nz[i].binary_search(&v), now_zero) {
+            // Present, staying nonzero: the common case, no index churn.
+            (Ok(k), false) => self.row_val[i][k] = value,
+            // Present, becoming zero: leave both vectors and both indices.
+            (Ok(k), true) => {
+                self.row_nz[i].remove(k);
+                self.row_val[i].remove(k);
                 self.col_nnz[v] -= 1;
-                if let Ok(at) = self.row_nz[i].binary_search(&v) {
-                    self.row_nz[i].remove(at);
+                if let Ok(at) = self.col_rows[v].binary_search(&i) {
+                    self.col_rows[v].remove(at);
                 }
             }
-            _ => {}
+            // Absent, becoming nonzero: enter both, each at its sorted position.
+            (Err(at), false) => {
+                self.row_nz[i].insert(at, v);
+                self.row_val[i].insert(at, value);
+                self.col_nnz[v] += 1;
+                let cat = self.col_rows[v].partition_point(|&r| r < i);
+                self.col_rows[v].insert(cat, i);
+            }
+            // Absent, staying zero: writing the zero that is already there.
+            (Err(_), true) => {}
         }
     }
 
@@ -1009,20 +1183,32 @@ impl Tableau {
         }
     }
 
-    /// Dutertre–de Moura `update`: move **nonbasic** `v` to `target` and carry the
-    /// change into every basic variable's value (`basicᵢ += rowᵢ[v]·Δ`). O(m·nnz-free
-    /// column scan) — the reason a bound assertion does not cost a full recompute.
+    /// Dutertre–de Moura `update`: move **nonbasic** `v` to `target` and carry
+    /// the change into every basic variable's value (`basicᵢ += rowᵢ[v]·Δ`) —
+    /// the reason a bound assertion does not cost a full recompute.
+    ///
+    /// `O(col_nnz[v])` since ADR-2111: it walks column `v`'s own row list, so it
+    /// touches exactly the rows that can move and no others. It used to scan
+    /// `0..m` and test each cell for zero, which on the population this engine
+    /// loses is `m = 10,514` reads to find a handful of nonzeros, once per
+    /// bound assertion — and there are over 1.5 million of those on a single
+    /// measured file.
+    ///
+    /// The rows are visited in ascending index order, exactly as the `0..m`
+    /// scan visited them, because `col_rows` is sorted. The exact-rational adds
+    /// therefore happen in the same order and an arithmetic decline lands in the
+    /// same place; determinism is a public API promise and an order change here
+    /// would be an invisible way to break it.
     fn update_nonbasic(&mut self, v: usize, target: Delta) -> R<()> {
         debug_assert!(!self.is_basic[v]);
         let delta = target.sub(self.value[v])?;
         if delta.c.is_zero() && delta.k.is_zero() {
             return Ok(());
         }
-        for i in 0..self.m {
-            let coeff = self.row[i][v];
-            if coeff.is_zero() {
-                continue;
-            }
+        for k in 0..self.col_rows[v].len() {
+            let i = self.col_rows[v][k];
+            let coeff = self.cell(i, v);
+            debug_assert!(!coeff.is_zero(), "col_rows named a zero cell");
             let b = self.basic[i];
             self.value[b] = self.value[b].add(delta.scale(coeff)?)?;
         }
@@ -1210,7 +1396,7 @@ impl Tableau {
         if self.is_basic[v] {
             return false;
         }
-        let a = self.row[r][v];
+        let a = self.cell(r, v);
         if a.is_zero() {
             return false;
         }
@@ -1322,13 +1508,23 @@ impl Tableau {
     #[allow(clippy::needless_range_loop)]
     fn pivot_and_update(&mut self, r: usize, enter: usize, target: Delta) -> R<()> {
         let leave = self.basic[r];
-        let a_re = self.row[r][enter];
+        let a_re = self.cell(r, enter);
         let recip = div(Rational::integer(1), a_re)?;
 
         // The entering variable's column as it stands BEFORE the elimination
         // below zeroes it. Both the row rewrite and the O(rows) value update read
         // it, and the update must see the *old* coefficients.
-        let col: Vec<Rational> = (0..self.m).map(|i| self.row[i][enter]).collect();
+        //
+        // `(row, coeff)` pairs from the column index rather than a dense
+        // `Vec<Rational>` of length `m`: the two loops below already skipped
+        // every zero, so this visits the identical set of rows in the identical
+        // ascending order and allocates `col_nnz[enter]` entries instead of `m`.
+        // On the measured `QF_LRA` population `m` has a median of 10,514 and a
+        // column a median handful of nonzeros.
+        let col: Vec<(usize, Rational)> = self.col_rows[enter]
+            .iter()
+            .map(|&i| (i, self.cell(i, enter)))
+            .collect();
 
         // How far `enter` must move so that `leave` reaches `target`:
         //   leave_old = value[leave]; enter changes by θ; leave changes by a_re·θ,
@@ -1356,27 +1552,26 @@ impl Tableau {
         //  - `−a/a_re` is nonzero exactly when `a` is, so no OTHER cell of this
         //    row changes zero-state. The index therefore changes by removing
         //    `enter` and inserting `leave`, and by nothing else.
-        let old_nz: Vec<usize> = self.row_nz[r].clone();
-        for &v in &old_nz {
+        // The `−a/a_re` rewrite changes no cell's zero-state, so it is a pure
+        // value write at the position already in hand: `row_val[r][k]` sits at
+        // column `row_nz[r][k]` and neither index moves. `set_cell` would give
+        // the identical result through a binary search that provably cannot
+        // miss, which is a search per nonzero per pivot for nothing.
+        for k in 0..self.row_nz[r].len() {
+            let v = self.row_nz[r][k];
             if v == enter {
                 continue;
             }
-            let a = self.row[r][v];
-            self.row[r][v] = sub(Rational::zero(), div(a, a_re)?)?;
+            let a = self.row_val[r][k];
+            self.row_val[r][k] = sub(Rational::zero(), div(a, a_re)?)?;
         }
-        self.row[r][enter] = Rational::zero();
-        self.col_nnz[enter] -= 1;
-        self.row[r][leave] = recip;
-        self.col_nnz[leave] += 1;
-        {
-            let nz = &mut self.row_nz[r];
-            if let Ok(at) = nz.binary_search(&enter) {
-                nz.remove(at);
-            }
-            if let Err(at) = nz.binary_search(&leave) {
-                nz.insert(at, leave);
-            }
-        }
+        // These two DO change zero-state — `enter` leaves the row and `leave`
+        // joins it — so they go through the single mutation point, which keeps
+        // `row_nz`, `row_val`, `col_nnz` and `col_rows` consistent. The dense
+        // form open-coded the `col_nnz` half here and had no column index to
+        // keep; open-coding four structures would be four chances to drift.
+        self.set_cell(r, enter, Rational::zero());
+        self.set_cell(r, leave, recip);
         self.basic[r] = enter;
         self.is_basic[enter] = true;
         self.is_basic[leave] = false;
@@ -1387,15 +1582,13 @@ impl Tableau {
         // values are copied out by index — about 35 rationals — rather than by
         // cloning the whole `n`-wide row, which was the other 13.6 KB per pivot.
         let base_nz: Vec<usize> = self.row_nz[r].clone();
-        let base_vals: Vec<Rational> = base_nz.iter().map(|&v| self.row[r][v]).collect();
-        for i in 0..self.m {
+        let base_vals: Vec<Rational> = self.row_val[r].clone();
+        debug_assert_eq!(base_nz.len(), base_vals.len());
+        for &(i, coeff) in &col {
             if i == r {
                 continue;
             }
-            let coeff = col[i];
-            if coeff.is_zero() {
-                continue;
-            }
+            debug_assert!(!coeff.is_zero(), "col_rows named a zero cell");
             // One integer add per ROW, not per cell: `base_nz.len()` is the exact
             // number of exact-rational multiply-adds this row costs, and it is
             // already in hand.
@@ -1404,7 +1597,7 @@ impl Tableau {
             // row_i := row_i + coeff · new_row (eliminating `enter`'s column).
             for (k, &v) in base_nz.iter().enumerate() {
                 let delta = mul(coeff, base_vals[k])?;
-                let updated = add(self.row[i][v], delta)?;
+                let updated = add(self.cell(i, v), delta)?;
                 self.set_cell(i, v, updated);
             }
             self.set_cell(i, enter, Rational::zero());
@@ -1418,12 +1611,8 @@ impl Tableau {
         // trusting this comment.
         self.value[leave] = target;
         self.value[enter] = enter_new;
-        for i in 0..self.m {
+        for &(i, coeff) in &col {
             if i == r {
-                continue;
-            }
-            let coeff = col[i];
-            if coeff.is_zero() {
                 continue;
             }
             let b = self.basic[i];
@@ -1443,11 +1632,14 @@ impl Tableau {
     fn value_invariant_holds(&self) -> bool {
         for i in 0..self.m {
             let mut acc = Delta::zero();
-            for v in 0..self.n {
-                if self.is_basic[v] || self.row[i][v].is_zero() {
+            // The stored cells ARE the nonzero ones, so the `is_zero` half of
+            // the old dense guard is now structural. The `is_basic` half is not
+            // and stays: a basic column can be nonzero in another row.
+            for (k, &v) in self.row_nz[i].iter().enumerate() {
+                if self.is_basic[v] {
                     continue;
                 }
-                let Ok(term) = self.value[v].scale(self.row[i][v]) else {
+                let Ok(term) = self.value[v].scale(self.row_val[i][k]) else {
                     return true;
                 };
                 let Ok(next) = acc.add(term) else {
@@ -1560,14 +1752,18 @@ impl Tableau {
         };
         let mut y = vec![Rational::zero(); self.m];
         y[b - self.nvars] = sign;
-        for v in 0..self.n {
+        // The row's stored cells, in ascending column order -- the same set and
+        // the same order the `0..n` scan visited after its `is_zero` skip, so
+        // the FIRST nonbasic problem variable it meets (the decline below) is
+        // the same one. `n` has a median of 12,292 on this population and a row
+        // a median handful of nonzeros, and this runs once per refutation.
+        for k in 0..self.row_nz[r].len() {
+            let v = self.row_nz[r][k];
             if self.is_basic[v] {
                 continue;
             }
-            let a = self.row[r][v];
-            if a.is_zero() {
-                continue;
-            }
+            let a = self.row_val[r][k];
+            debug_assert!(!a.is_zero(), "row_nz named a zero cell");
             if v < self.nvars {
                 // A nonbasic problem variable in the row ⇒ not the pure-slack shape
                 // infeasibility guarantees; decline the closed-form cert.
@@ -2977,6 +3173,96 @@ mod tests {
         }
     }
 
+    /// **The soundness-negative fixture for the sparse storage (ADR-2111).**
+    ///
+    /// The one way a sparse tableau can be wrong that a dense one cannot is by
+    /// LOSING A CELL. A cell that should be nonzero and is not stored makes the
+    /// row weaker than the constraint it represents, and a weaker row is
+    /// satisfiable where the real one is not — so the failure mode is a **wrong
+    /// `sat`**, the single outcome this engine may never produce. Nothing about
+    /// a wrong `sat` looks like a crash, so it needs a fixture that can only
+    /// pass if the cell survived.
+    ///
+    /// The cell in question must be one that is NOT in any input row, or the
+    /// fixture would be testing the constructor rather than the pivot. So the
+    /// system is a three-cycle:
+    ///
+    /// ```text
+    ///   x0 − x1 ≤ 0        x1 − x2 ≤ 0        x2 − x0 ≤ c
+    /// ```
+    ///
+    /// Summing the three rows cancels every variable and leaves `0 ≤ c`, so the
+    /// system is INFEASIBLE at `c = −1` and FEASIBLE at `c = +1` — the two
+    /// differ in one constant and in nothing else. No input row mentions all
+    /// three variables; the coefficient that closes the refutation only ever
+    /// exists as FILL-IN, written by `pivot_and_update` into a column the row
+    /// did not have. Drop that write, or insert it at the wrong position in the
+    /// sorted pair, and the `c = −1` arm silently answers `sat`.
+    ///
+    /// Written as a PAIR, per this repository's rule that an adversarial
+    /// fixture goes over a satisfiable query: the `c = +1` arm establishes that
+    /// the system shape is genuinely solvable and that `sat` here is a real
+    /// answer, so the `c = −1` arm's `unsat` is a DISTINCTION the engine draws
+    /// and not a blanket refusal. A mutant that loses the cell passes the first
+    /// arm and fails the second; a mutant that refuses everything fails the
+    /// first.
+    ///
+    /// The refutation is checked, not trusted: `check_farkas` re-verifies the
+    /// returned multipliers against the ORIGINAL rows, so a certificate that
+    /// does not actually combine to a contradiction fails here even if the
+    /// verdict happened to be right.
+    #[test]
+    fn a_fill_in_cell_the_sparse_rows_must_not_lose_decides_a_soundness_pair() {
+        // `cycle(c)`: the three-cycle above, as ≤ rows over three variables.
+        let cycle = |c: i128| -> Vec<Constraint> {
+            vec![
+                con(&[1, -1, 0], Rel::Le, 0),
+                con(&[0, 1, -1], Rel::Le, 0),
+                con(&[-1, 0, 1], Rel::Le, c),
+            ]
+        };
+
+        // The SATISFIABLE arm first, so a fixture that cannot answer `sat` at
+        // all is caught before the `unsat` arm is read as meaningful.
+        let sat_rows = cycle(1);
+        match feasible(3, &sat_rows) {
+            SimplexOutcome::Feasible(point) => {
+                assert!(
+                    satisfies(&sat_rows, &point),
+                    "the c = +1 arm returned a point that does not satisfy its own rows"
+                );
+            }
+            other => panic!(
+                "the c = +1 arm of the three-cycle is satisfiable (x = 0 works) \
+                 and the engine answered {other:?}; the c = -1 arm below cannot \
+                 be read as a distinction until this one passes"
+            ),
+        }
+
+        // The UNSATISFIABLE arm. Its refutation exists only through a fill-in
+        // cell, and the certificate is re-verified against the input rows.
+        let unsat_rows = cycle(-1);
+        match feasible(3, &unsat_rows) {
+            SimplexOutcome::Infeasible(y) => {
+                assert!(
+                    !y.is_empty(),
+                    "the c = -1 arm must carry a Farkas certificate, not an empty vector"
+                );
+                assert!(
+                    check_farkas(3, &unsat_rows, &y),
+                    "the c = -1 arm's Farkas multipliers {y:?} do not refute its own rows"
+                );
+            }
+            other => panic!(
+                "the c = -1 three-cycle sums to 0 <= -1 and is INFEASIBLE; the \
+                 engine answered {other:?}. A `Feasible` here is the wrong-sat \
+                 this fixture exists to catch: the refutation needs a tableau \
+                 cell that no input row contains, so losing a fill-in write \
+                 produces exactly this."
+            ),
+        }
+    }
+
     /// A tableau over more cells than [`MAX_TABLEAU_CELLS`] is declined
     /// structurally, so the caller can keep a cheaper engine rather than pay for a
     /// tableau that will not fit.
@@ -3061,21 +3347,42 @@ mod tests {
                     pivots_seen += 1;
                 }
                 let incremental_cols = tab.col_nnz.clone();
-                let incremental_rows = tab.row_nz.clone();
+                let incremental_col_rows = tab.col_rows.clone();
                 tab.recount_columns();
                 assert_eq!(
                     incremental_cols, tab.col_nnz,
                     "seed {seed}: column counts drifted after pivot {steps}"
                 );
-                // The row index is the one the pivot and the entering scan
-                // ITERATE, so a drifted entry is a cell silently skipped — a
-                // wrong tableau, not a slow one. It must be sorted, because
-                // Bland's rule is "smallest usable index" and the index order
-                // is what makes that true.
                 assert_eq!(
-                    incremental_rows, tab.row_nz,
-                    "seed {seed}: row nonzero index drifted after pivot {steps}"
+                    incremental_col_rows, tab.col_rows,
+                    "seed {seed}: the column row-lists drifted after pivot {steps}"
                 );
+                // The row index is the one the pivot and the entering scan
+                // ITERATE, and since ADR-2111 it is also what says where a
+                // value LIVES, so a drifted entry is not a skipped cell but a
+                // cell read at the wrong column. `recount_columns` derives the
+                // column side FROM this, so comparing it against itself would
+                // be a control that cannot fail; these three are the properties
+                // the rest of the engine actually relies on, checked directly.
+                for i in 0..tab.m {
+                    assert_eq!(
+                        tab.row_nz[i].len(),
+                        tab.row_val[i].len(),
+                        "seed {seed}: row {i} index and values disagree in length \
+                         after pivot {steps}"
+                    );
+                    assert!(
+                        tab.row_nz[i].windows(2).all(|w| w[0] < w[1]),
+                        "seed {seed}: row {i} index is not strictly ascending \
+                         after pivot {steps}; Bland's rule is 'smallest usable \
+                         index' and this order is what makes that true"
+                    );
+                    assert!(
+                        tab.row_val[i].iter().all(|v| !v.is_zero()),
+                        "seed {seed}: row {i} stores a zero after pivot {steps}; \
+                         a stored zero makes `is_zero` and `row_nz` disagree"
+                    );
+                }
                 for (i, nz) in tab.row_nz.iter().enumerate() {
                     assert!(
                         nz.windows(2).all(|w| w[0] < w[1]),
@@ -3347,14 +3654,24 @@ mod tests {
 
         // Tear the tableau the way a mid-pivot overflow would: some cells
         // rewritten, the derived indices no longer describing them.
+        //
+        // The tear is now WORSE than the dense one it replaces, not merely
+        // translated. Dense storage could only be given wrong VALUES; the
+        // sparse pair can also be given a wrong SHAPE, and the shape is what
+        // `cell` binary-searches. So this corrupts values, empties `row_nz`
+        // while leaving `row_val` populated (the two lengths then disagree,
+        // which is the state no accessor can read correctly), and zeroes both
+        // column indices. If `reset_structure` did not rebuild all four from
+        // `rows_sparse`, nothing downstream could recover.
         for i in 0..torn.tab.m {
-            for v in 0..torn.tab.n {
-                if (i + v).is_multiple_of(3) {
-                    torn.tab.row[i][v] = Rational::integer(7);
+            for k in 0..torn.tab.row_val[i].len() {
+                if (i + k).is_multiple_of(3) {
+                    torn.tab.row_val[i][k] = Rational::integer(7);
                 }
             }
         }
         torn.tab.col_nnz.iter_mut().for_each(|c| *c = 0);
+        torn.tab.col_rows.iter_mut().for_each(Vec::clear);
         torn.tab.row_nz.iter_mut().for_each(Vec::clear);
         torn.poisoned = true;
 
@@ -3370,17 +3687,33 @@ mod tests {
             "a poisoned engine did not recover the verdict a clean one reaches"
         );
 
-        // And the derived indices must describe the rebuilt rows exactly.
+        // And the recovered tableau must be a WELL-FORMED sparse one, not just
+        // one that happened to answer. The torn state had `row_val` populated
+        // against an empty `row_nz`; if recovery left any of that, these three
+        // fail, and the verdict comparison above would not have caught it —
+        // `cell` binary-searches an empty index and answers zero for every
+        // column, which is a perfectly consistent (and completely wrong) row.
+        for i in 0..torn.tab.m {
+            assert_eq!(
+                torn.tab.row_nz[i].len(),
+                torn.tab.row_val[i].len(),
+                "recovery left row {i}'s index and values disagreeing in length"
+            );
+            assert!(
+                torn.tab.row_nz[i].windows(2).all(|w| w[0] < w[1]),
+                "recovery left row {i}'s index unsorted"
+            );
+        }
         let after_cols = torn.tab.col_nnz.clone();
-        let after_rows = torn.tab.row_nz.clone();
+        let after_col_rows = torn.tab.col_rows.clone();
         torn.tab.recount_columns();
         assert_eq!(
             after_cols, torn.tab.col_nnz,
             "recovery left the column counts describing the torn rows"
         );
         assert_eq!(
-            after_rows, torn.tab.row_nz,
-            "recovery left the row index describing the torn rows"
+            after_col_rows, torn.tab.col_rows,
+            "recovery left the column row-lists describing the torn rows"
         );
     }
 

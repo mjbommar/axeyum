@@ -4911,7 +4911,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 doc("docs/research/12-performance/span-log-sweep-2026-09-08.md"),
             ],
         ),
-        note: "The constant behind the 2026-09-08 kernel OOM. `decide_within` gave every collected constraint a dense unit multiplier vector of length `n`, so `32*n^2` bytes, allocated BEFORE `MAX_FM_CONSTRAINTS` -- the one bound that could have stopped it -- was consulted inside `eliminate`. At ~29 200 constraints that matrix is the kernel's own `anon-rss:26639452kB`. Unlike a divided peak-RSS figure this is a count of what the program allocates, so it cannot drift with corpus or host; the only thing that invalidates it is changing `Rational`'s representation, which is what the first `Basis` watches. `simplex_admission` charges the exact-rational simplex retry at the same rate deliberately -- two gates metering one resource in different units is the defect this registry exists to surface -- but on its TABLEAU and not on its input rows: `Tableau::reset_structure` builds `m` dense rows of `nvars + m` cells, so it is quadratic in the row count too. Pricing it as `n * nvars` was tried and let 11.8 GB through after the multiplier matrix was already gated; a stack sample found the real allocation inside `reset_structure`, 17x the projection. Related gap, reported and NOT closed here: `simplex::MAX_TABLEAU_CELLS` (4 000 000) is checked only in `Incremental::new`, so `feasible` -- the constructor this route calls -- consults no cell bound at all and reached 360 million cells on the measured file.",
+        note: "The constant behind the 2026-09-08 kernel OOM. `decide_within` gave every collected constraint a dense unit multiplier vector of length `n`, so `32*n^2` bytes, allocated BEFORE `MAX_FM_CONSTRAINTS` -- the one bound that could have stopped it -- was consulted inside `eliminate`. At ~29 200 constraints that matrix is the kernel's own `anon-rss:26639452kB`. Unlike a divided peak-RSS figure this is a count of what the program allocates, so it cannot drift with corpus or host; the only thing that invalidates it is changing `Rational`'s representation, which is what the first `Basis` watches. `simplex_admission` charges the exact-rational simplex retry at the same rate deliberately -- two gates metering one resource in different units is the defect this registry exists to surface -- but on its TABLEAU and not on its input rows. UNTIL ADR-2111 (2026-09-15) that was right for the reason given here -- `Tableau::reset_structure` built `m` dense rows of `nvars + m` cells, quadratic in the row count -- and it is now WRONG IN THAT HALF: `reset_structure` builds no dense row at all, the storage is `nnz * 40` bytes, and `simplex_admission` therefore over-prices the tableau by a median factor of 439 on the profiled population. It still binds only when a caller set `memory_limit_mb`, which the default build does not, so no shipped verdict moves on this; the entry is corrected rather than re-measured because the FM multiplier matrix it is really about is unchanged. Pricing it as `n * nvars` was tried and let 11.8 GB through after the multiplier matrix was already gated; a stack sample found the real allocation inside `reset_structure`, 17x the projection. Related gap, reported and NOT closed here: `simplex::MAX_TABLEAU_CELLS` (4 000 000) is checked only in `Incremental::new`, so `feasible` -- the constructor this route calls -- consults no cell bound at all and reached 360 million cells on the measured file.",
     },
     ConfigEntry {
         name: "GOMORY_MAGNITUDE_LIMIT",
@@ -5142,7 +5142,49 @@ pub static REGISTRY: &[ConfigEntry] = &[
             )],
             &[adr("ADR-1752")],
         ),
-        note: "Two `i128`s. Subtracted from the budget before coefficients get their share.",
+        note: "Two `i128`s. Subtracted from the budget before coefficients get their share -- but only on the DENSE arm of `TableauReserve` since ADR-2111 (2026-09-15), which is the shipped default, so the number this entry states is still what a default build spends. The rate the storage itself charges is `BYTES_PER_TABLEAU_NONZERO` (40) over nonzeros, not this over cells.",
+    },
+    ConfigEntry {
+        name: "SPARSE_TABLEAU_RESERVE_NONZEROS",
+        module: "crates/axeyum-solver/src/lra_online.rs",
+        value: "simplex::MAX_TABLEAU_CELLS / 10 (400_000)",
+        unit: "tableau nonzeros held back from the online LRA budget",
+        protects: Protects::Memory,
+        on_exceed: OnExceed::RefuseUnknown,
+        signal: Signal::ToCaller,
+        guarded_by: "`LraTheoryBuildStop::MemoryBudget` becomes `Unknown(ResourceLimit)` with the projection and the budget both printed; a refused build is never a verdict",
+        env_override: Some("AXEYUM_LRA_TABLEAU_RESERVE"),
+        justification: dated(
+            "docs/research/09-decisions/adr-2111-qf-lra-what-the-same-simplex-does-differently.md",
+            "2026-09-15",
+            None,
+            &[
+                sym(
+                    "crates/axeyum-solver/src/lra_online.rs",
+                    "SPARSE_TABLEAU_RESERVE_NONZEROS",
+                ),
+                sym("crates/axeyum-solver/src/lra_online.rs", "TableauReserve"),
+                sym("crates/axeyum-solver/src/simplex.rs", "MAX_TABLEAU_CELLS"),
+            ],
+            // What has to still be true for the number to mean anything: the
+            // storage it prices must still BE sparse (`row_val` is the field
+            // ADR-2111 introduced), the two consumers must still spend it, and
+            // the census the two medians come from must still be on disk.
+            &[
+                live(
+                    "row_val: Vec<Vec<Rational>>",
+                    "crates/axeyum-solver/src/simplex.rs",
+                ),
+                live("fn for_budget", "crates/axeyum-solver/src/lra_online.rs"),
+                live(
+                    "fn estimated_bytes",
+                    "crates/axeyum-solver/src/lra_online.rs",
+                ),
+                doc("bench-results/lra-trace-20260915/bucket-summary.txt"),
+                adr("ADR-2055"),
+            ],
+        ),
+        note: "The SPARSE arm of `TableauReserve`: 400 000 nonzeros x 40 B = 16 MiB, against the dense arm's `MAX_TABLEAU_CELLS x 32 B` = 128 MiB. The dense arm holds 20% of a 640 MiB budget for a structure ADR-2111 made cost about 1.4 MB at the profiled median, and `NormalizationLimits::estimated_bytes` adds that reserve into EVERY projection, so it is not accounting -- it decides which queries the online CDCL(T) engine admits at all. ADR-2111's census found only 23 of 93 undecided QF_LRA rows reaching that engine. 400 000 is `MAX_TABLEAU_CELLS / 10`, named as the round number it is: it is 49x the median 8 086 nonzeros measured over those 23 rows and 11.6x the median 34 555 ADR-2055 measured over the 74 offline rows, and nobody has taken the tail, so it is a generous FLOOR and not an estimate. It is a LEVER and ships `Dense` because the direction of the routing consequence does not follow from the direction of the memory correction, and this repository has measured that surprise twice: ADR-2045 raised the same budget 640 MiB -> 8 GiB and got 21 rows reaching the engine, 0 newly decided, and FIVE NEW ABORTS; ADR-2055 capped the tableau and turned 18 clean exits into `rc=134`, because the unpriced allocation was accidentally load-bearing.",
     },
     ConfigEntry {
         name: "DEFAULT_ONLINE_LRA_BUDGET_BYTES",
@@ -7833,7 +7875,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         name: "MAX_TABLEAU_CELLS",
         module: "crates/axeyum-solver/src/simplex.rs",
         value: "4_000_000",
-        unit: "tableau cells (rows x columns)",
+        unit: "tableau cells (rows x columns) -- a unit the tableau no longer has",
         protects: Protects::Memory,
         on_exceed: OnExceed::DeclineRoute,
         signal: Signal::ToCaller,
@@ -7858,7 +7900,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 doc("docs/research/12-performance/ladder-budget-discipline-2026-09-08.md"),
             ],
         ),
-        note: "About 128 MB at two `i128`s per cell. `Incremental::new` returns `None`, so the caller falls back to Fourier-Motzkin. Deterministic (no clock, no resident-set probe), which is what lets it be part of a reproducible verdict. THE GAP `lra_online::BYTES_PER_ADMITTED_ATOM`'s note reports -- this bound is checked ONLY in `Incremental::new`, while `feasible` (what `lra::simplex_fallback` calls) consults no cell bound at all -- was MEASURED on 2026-09-08 over the committed 200-file QF_LRA list, 24 s and 8 GiB per file, with the instrumented binary named in the doc. 36 files reach `simplex_fallback` at all (3,129 calls); SEVEN build a tableau over this cap, at 4.2 to 8.8 million cells, and all seven end `unknown`. So adding the check here would refuse a population that decides nothing today -- and would buy nothing either, since nothing runs after `lra` on those files. NOT ADDED, and the reason is the second half of the measurement: the largest tableau observed is 8.8 M cells (282 MB), 30x smaller than the 360 M the earlier reading found, because `lra::simplex_admission` (2026-09-08) now prices that allocation against `memory_limit_mb` BEFORE `feasible` is called. At 8 GiB that gate admits 268 M cells, so the two bounds on one allocation differ by 67x in opposite units -- a fixed cell count and a memory budget. The residual unguarded caller is one that sets NO memory limit; a fixed 4 M cap is the wrong instrument for it, and choosing the right one needs its own ADR rather than a line here.",
+        note: "STALE IN ITS OWN UNIT SINCE ADR-2111 (2026-09-15), AND THAT IS THE FIRST THING TO READ HERE: this bound counts CELLS and the tableau no longer has cells. `Tableau::row_val` is now a sparse vector aligned with `row_nz`, so a tableau costs `nnz * 40` bytes and not `m * (nvars+m) * 32`; over the 74 QF_LRA rows [ADR-2055] profiled, the median was 34,555 nonzeros in 19,198,877 cells, so the same structure that priced at 614 MB in this unit prices at 1.4 MB in the real one -- a factor of 439 at the median, 3,472 at the density extreme. Four reference implementations of this same algorithm were read for ADR-2111 and NONE of them stores a dense tableau (z3 `static_matrix.h:88-89`, cvc5 `matrix.h:56-196`, OpenSMT `Tableau.h:62,118-119`, SMTInterpol `TableauxRow.java:22-34`). A cell count is therefore no longer a memory bound at all: it is an upper bound on a quantity the program does not allocate, so it can only refuse systems that would fit. It is left in place rather than deleted because it still bounds the PIVOT'S WORK -- `select_entering` and the row combination are O(nnz), but the number of cells is what bounds how large nnz can grow under fill-in -- and because ADR-2055 measured that capping it costs EIGHTEEN clean exits, a result that was about routing rather than about bytes and is not invalidated by the representation change. Whether a nonzero-count bound should replace it needs the fill-in measurement ADR-2111 did not take. Everything below this sentence is the 2026-09-08 reading, preserved because the routing half of it still holds. About 128 MB at two `i128`s per cell. `Incremental::new` returns `None`, so the caller falls back to Fourier-Motzkin. Deterministic (no clock, no resident-set probe), which is what lets it be part of a reproducible verdict. THE GAP `lra_online::BYTES_PER_ADMITTED_ATOM`'s note reports -- this bound is checked ONLY in `Incremental::new`, while `feasible` (what `lra::simplex_fallback` calls) consults no cell bound at all -- was MEASURED on 2026-09-08 over the committed 200-file QF_LRA list, 24 s and 8 GiB per file, with the instrumented binary named in the doc. 36 files reach `simplex_fallback` at all (3,129 calls); SEVEN build a tableau over this cap, at 4.2 to 8.8 million cells, and all seven end `unknown`. So adding the check here would refuse a population that decides nothing today -- and would buy nothing either, since nothing runs after `lra` on those files. NOT ADDED, and the reason is the second half of the measurement: the largest tableau observed is 8.8 M cells (282 MB), 30x smaller than the 360 M the earlier reading found, because `lra::simplex_admission` (2026-09-08) now prices that allocation against `memory_limit_mb` BEFORE `feasible` is called. At 8 GiB that gate admits 268 M cells, so the two bounds on one allocation differ by 67x in opposite units -- a fixed cell count and a memory budget. The residual unguarded caller is one that sets NO memory limit; a fixed 4 M cap is the wrong instrument for it, and choosing the right one needs its own ADR rather than a line here.",
     },
     ConfigEntry {
         name: "DEFAULT_STRING_BOUND",
