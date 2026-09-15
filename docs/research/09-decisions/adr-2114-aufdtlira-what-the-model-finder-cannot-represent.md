@@ -198,6 +198,13 @@ leaves no relaxation. `W1` is a different shape and depth unrolling does not
 reach it — an array-of-datatype field's expansion variable would carry datatype
 content into the residual, which `refuse_if_datatype_survives` must then refuse.
 
+**"0 recursive" is a strong negative, so it carries a positive control.** An
+empty result from a detector nobody has shown to fire is indistinguishable from
+a broken detector. Run over `repro/control-recursive.smt2`
+(`lst = nil | cons(car Int, cdr lst)`) and `repro/ground.smt2` (a depth-1
+record nest), `nesting-depth.py` separates them — `depth RECURSIVE 1`,
+`depth 1 1` (`census/nesting-control.txt`).
+
 ## 3. What the references do with the construct
 
 Read from the shipped sources, with a positive control on every negative.
