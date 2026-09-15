@@ -121,6 +121,18 @@ def main(argv: list[str]) -> int:
     any_break = set().union(*lost_sets.values()) if lost_sets else set()
     robust = [f for f in base_decided if f not in any_break]
     print(f"  {len(robust)} of {len(base_decided)} decided under every single-class removal")
+
+    # The distribution is the point, not the total: a file broken by ONE class
+    # has a single point of failure z3 depends on; a file broken by none is
+    # decided by at least two independent routes, and no single capability we
+    # could build would be what closes it.
+    print("\n=== per file: how many of the classes, removed SINGLY, break it ===")
+    depth: collections.Counter[int] = collections.Counter()
+    for name in base_decided:
+        depth[sum(1 for s in lost_sets.values() if name in s)] += 1
+    for count in sorted(depth):
+        label = "none — decided by a redundant portfolio" if count == 0 else f"{count} class(es)"
+        print(f"  {depth[count]:>3} files broken by {label}")
     return 0
 
 

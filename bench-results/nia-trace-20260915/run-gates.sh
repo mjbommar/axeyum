@@ -33,8 +33,9 @@ case "${1:-all}" in
     done
     ;;
   frontier)
-    step progress-frontier test -p axeyum-solver --test progress_frontier \
-        --features full -- --test-threads=1
+    echo "=== STEP progress-frontier (full output; the reference-frame lines decide whether the ratchet was ENFORCED) ==="
+    scripts/cargo-serialized.sh test -p axeyum-solver --test progress_frontier \
+        --features full -- --test-threads=1 2>&1 | grep -E "reference frame|NOT COMPARABLE|ADVISORY|REGRESSION|PROGRESS|^test result:|^error" | head -30
     ;;
   *)
     echo "usage: run-gates.sh {lib|dispatch|frontier}"; exit 2;;

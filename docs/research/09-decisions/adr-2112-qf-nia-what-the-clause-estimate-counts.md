@@ -1,7 +1,7 @@
 # ADR-2112: the QF_NIA clause estimate counts a circuit z3 never builds — and z3 does not decide these files by building one either
 
 Status: proposed
-Index-summary: The `QF_NIA` question was "why do we refuse ~42 files on `estimated 130191180 CNF clauses before lowering exceeds budget 64000000`, and what does z3 build instead". The answer moves the target off the blasting route entirely. **CENSUS**, all 116 undecided T1 rows at 8 widths, 0 dropped: the width a query's VARIABLES need has median **2 bits**, the width its LITERALS force has median **17**, and **95 of 115** files have the first strictly below the second — `encode_constant` (`int_blast.rs:603`) rejects the WHOLE blast when one literal overflows the requested width, so 29 files have exactly ONE admissible rung of eight sampled and 2 have none. **TWO CORRECTIONS TO ADR-2106, neither changing its numbers**: `dispatch_int_blast_width_ladder` returns its LAST rung's `Unknown` (`auto.rs:11664`), so the one sentence it bucketed is reported for THREE causes — 44 rows where no admissible width's estimate fits the cap, 69 where one does and a real solve ran and failed on its own merits, 2 with no admissible width; and the estimate/actual gap measured on TEN files rather than the one on record is **9.40x–17.72x**, with every one encoding to 6.1–8.4 M clauses against the 64 M cap that refused it. That does NOT license lifting the cap — raising it to 600 M was already measured at **0 of 49 decided**. **WHAT OUR ESTIMATE COUNTS**: `8·w²` per `BvMul` at a width a COEFFICIENT forced; on the first undecided row 2,116 multiplier nodes are **99.5 %** of the estimate. z3 never builds them — `nla2bv_tactic.cpp:225` sizes each variable from its OWN bounds (the base-2 log of its own range width, default 4), and `:238-247` keeps the bit-vector as an OFFSET so the literal never enters it at all. **AND IT DOES NOT MATTER**: three z3 arms per file, 24 s each, engine read from `-st` counters rather than the verdict, full coverage — `qfnia` decides **77 of 116**, default 76, and the `nla2bv` bit-blast arm decides **1**, on a file both other arms time out on (210 ms vs 24 s). `nlsat` conflicted on **67 of 76**; only 9 files are decided without it and 5 of those need nothing nonlinear. So the gap is a nonlinear-LEMMA and integer-CAD gap, not a blasting gap, and four blasting-side levers are now measured at zero decided files. Shipped DISARMED: an admissible-width floor, wired and reached (proved by a parse panic, not by a null) and worth **24.3 ms of 23,400** — 0.10 %, verdicts identical in all 7 paired runs. Mutation: three mutations, each killing EXACTLY ONE named test, no two the same.
+Index-summary: The `QF_NIA` question was "why do we refuse ~42 files on `estimated 130191180 CNF clauses before lowering exceeds budget 64000000`, and what does z3 build instead". The answer moves the target off the blasting route entirely. **CENSUS**, all 116 undecided T1 rows at 8 widths, 0 dropped: the width a query's VARIABLES need has median **2 bits**, the width its LITERALS force has median **17**, and **95 of 115** files have the first strictly below the second — `encode_constant` (`int_blast.rs:603`) rejects the WHOLE blast when one literal overflows the requested width, so 29 files have exactly ONE admissible rung of eight sampled and 2 have none. **TWO CORRECTIONS TO ADR-2106, neither changing its numbers**: `dispatch_int_blast_width_ladder` returns its LAST rung's `Unknown` (`auto.rs:11664`), so the one sentence it bucketed is reported for THREE causes — 44 rows where no admissible width's estimate fits the cap, 69 where one does and a real solve ran and failed on its own merits, 2 with no admissible width; and the estimate/actual gap measured on TEN files rather than the one on record is **9.40x–17.72x**, with every one encoding to 6.1–8.4 M clauses against the 64 M cap that refused it. That does NOT license lifting the cap — raising it to 600 M was already measured at **0 of 49 decided**. **WHAT OUR ESTIMATE COUNTS**: `8·w²` per `BvMul` at a width a COEFFICIENT forced; on the first undecided row 2,116 multiplier nodes are **99.5 %** of the estimate. z3 never builds them — `nla2bv_tactic.cpp:225` sizes each variable from its OWN bounds (the base-2 log of its own range width, default 4), and `:238-247` keeps the bit-vector as an OFFSET so the literal never enters it at all. **AND IT DOES NOT MATTER**: three z3 arms per file, 24 s each, engine read from `-st` counters rather than the verdict, full coverage — `qfnia` decides **77 of 116**, default 76, and the `nla2bv` bit-blast arm decides **1**, on a file both other arms time out on (210 ms vs 24 s). `nlsat` conflicted on **67 of 76**; only 9 files are decided without it and 5 of those need nothing nonlinear. **ABLATION, 78 files, 78-of-78 coverage on 8 arms, 75 baseline-decided: NO class reaches 15 and only `nlsat` reaches 5 (5 of 75, 6.7 %) -- against the 88.2 % of files its COUNTER conflicted on. 66 of 75 decide under EVERY single-class removal.** z3's advantage here is a redundant portfolio, not a class we lack, so no lemma prototype is built. Four blasting-side levers are now measured at zero decided files. Shipped DISARMED: an admissible-width floor, wired and reached (proved by a parse panic, not by a null) and worth **24.3 ms of 23,400** — 0.10 %, verdicts identical in all 7 paired runs. Mutation: three mutations, each killing EXACTLY ONE named test, no two the same.
 Index-status: proposed
 Date: 2026-09-15
 
@@ -237,7 +237,116 @@ belong to that lane's subject; the 9 are what a lemma layer alone reaches, and
 
 ## Part D — which class is LOAD-BEARING, by ablation rather than counting
 
-PENDING — the ablation is running; its table lands here.
+§C2's counters say a machine produced a conflict. They do not say the file
+needed it — z3 runs these as a portfolio, so "Grobner conflicted on 61 of 76"
+is equally consistent with Grobner being load-bearing on 61 files and on none.
+And §C1's pooling means the counters cannot separate order from tangent at all.
+
+So: turn each class OFF and re-run. `z3-ablate-classes.sh` does that with
+`smt.arith.nl.*`, eight arms per file including a `base` arm measured **in the
+same sweep on the same core**, so a file the baseline misses is excluded from
+every class rather than scored as a loss for all of them. Plain `(check-sat)`
+and not the `qfnia` tactic, because the tactic builds its own pipeline and does
+not route these parameters to the arithmetic solver; the script refuses to start
+unless z3 accepts every switch, since an ignored switch would make every arm
+equal the baseline and read exactly like "no class matters".
+
+**DENOMINATOR: 75 files.** The sweep completed; the denominator is the files the
+baseline itself decided — 78 reached, coverage 78 of 78 on every one of the
+eight arms, and 75 of them baseline-decided.
+
+| class disabled | files z3 stops deciding | z3's own file:line |
+|---|---:|---|
+| `no-nra` (nlsat) | **5 of 75** (6.7 %) | `src/nlsat/` |
+| `no-tangents` | 3 of 75 (4.0 %) | `nla_tangent_lemmas.cpp` |
+| `no-order` | 3 of 75 (4.0 %) | `nla_order_lemmas.cpp` |
+| `no-grobner` | 3 of 75 (4.0 %) | `nla_grobner.cpp` |
+| `no-horner` | 2 of 75 (2.7 %) | `horner.cpp` |
+| `no-int-branching` | 1 of 75 (1.3 %) | int branch-and-bound |
+| `no-cross-nested` | **0 of 75** | cross-nested consistency |
+
+**No class reaches 15 files. Only one reaches 5.** The threshold this ADR was
+conditioned on is not met by any absent class, and the honest answer is the
+histogram rather than a prototype.
+
+### D1 — the counters and the ablation disagree, and the ablation is right
+
+`nlsat` **conflicted** on 67 of 76 (88.2 %) and is **load-bearing** on 5 of 75
+(6.7 %). That gap is the whole reason this part exists: a conflict is not a
+necessity, and a lane that had stopped at §C2 would have reported "the QF_NIA
+gap is an integer-CAD gap" as a measured finding. It is not one.
+
+### D2 — what z3 actually has here is REDUNDANCY, not a class we lack
+
+| files broken by … | count |
+|---|---:|
+| **no single class removal at all** | **66 of 75** |
+| exactly 1 class | 4 |
+| exactly 2 classes | 4 |
+| 5 classes | 1 |
+
+**66 of 75 files decide under every single-class removal**, so only 9 of 75
+depend on any one capability. z3's advantage on this population is not a lemma
+family we are missing; it is that two or more independent routes reach the same
+file, and knocking any one out leaves the others.
+
+That reframes the gap and it is the finding with the longest reach here: a
+single new lemma class, built to parity with z3's, would on this evidence move
+**at most 5 files of 75** — and the three classes we lack score 3, 3 and 2.
+
+### D3 — the honest limits of this table
+
+- **75 files, and the per-class spread is 5/3/3/3/2/1/0.** At that denominator
+  those are within one or two files of each other; the table supports "no class
+  is large" and does NOT support ranking `no-nra` above `no-tangents`.
+- The host carried other users' load (average 6.1) during the sweep. Both arms
+  of a file run back to back on one pinned core so load largely cancels in the
+  comparison, but a slower arm times out more, which can only INFLATE how
+  load-bearing a class looks. The measured numbers are therefore upper bounds,
+  which strengthens the conclusion rather than weakening it.
+- Single-class removal does not measure a PAIR. A capability that only matters
+  when another is also absent is invisible here.
+
+## Part F — our Gröbner route is present, reached, and refused by its own ceiling
+
+§E lists Gröbner as present, and it is: `cas_ideal_refutation`
+(`cas_poly.rs:640`) routes into `unit_ideal_cofactors` (`:707`). Reading the
+ledger rather than the source changes the picture:
+
+| | rows |
+|---|---:|
+| trails that REACH `cas-ideal-refuter` | 115 of 200 |
+| undecided rows that reach it | 75 of 116 |
+| rows it DECIDES | **0** |
+
+And its own recorded reason, over all 200 rows:
+
+| decline detail | rows |
+|---|---:|
+| `nonlinear system exceeds the deterministic generator/atom/inequality ceilings` | **114** |
+| `no combination of the asserted equations collapsed to a constant of the refuting sign` | 2 |
+
+**The route is refused by its admission gate on 114 of 116 rows and actually
+searches on 2.** The ceilings are `MAX_IDEAL_GENERATORS = 8`,
+`MAX_IDEAL_INEQUALITIES = 8`, `MAX_IDEAL_ATOMS = 8`
+(`cas_poly.rs:541`, `:555`, `:572`), tested as a hard early return at `:694-700`
+against a corpus whose median file carries **342 integer symbols and 480
+cross-products**.
+
+The structural difference from z3 is the input, not the algorithm: ours takes
+ALL top-level conjuncts at once (`top_conjuncts`, `:644`) and refuses if the
+whole system is too big, whereas `nla_grobner` runs on a bounded slice of the
+current simplex tableau (`grobner_row_length_limit` 10, `grobner_frequency` 4)
+and is therefore small by construction however large the query is.
+
+Three env levers already exist — `AXEYUM_MAX_IDEAL_GENERATORS`,
+`AXEYUM_MAX_IDEAL_ATOMS`, `AXEYUM_MAX_IDEAL_INEQUALITIES` (`:551`, `:565`,
+`:582`) — and the step ceilings below them (`reduction_steps` 6,000,
+`pair_iterations` 1,500, `basis_size` 32, `poly_terms` 256, `ideal_limits()`
+`:587`) bound the Buchberger work, so raising the admission gate degrades to a
+step-ceiling decline rather than a hang. **That probe was NOT run here** and is
+named as the next lane's first experiment rather than claimed as a result. Part
+D bounds what it can be worth: z3's own Gröbner is load-bearing on 3 of 75.
 
 ## Part E — our lemma inventory against z3's, with `file:line` on both sides
 
@@ -296,13 +405,75 @@ does not have.
 
 ## Decision
 
-PENDING — lands with Part D.
+**1. No lever ships ON. This ADR is `proposed`.** The one lever it adds — the
+admissible-width floor, `AXEYUM_INT_BLAST_WIDTH_FLOOR` — ships DISARMED, and
+its own measurement is why: it is wired and reached (proved by setting it to a
+non-numeric value and watching `config_lever.rs:124` panic, rather than by a
+null result), and worth **24.3 ms against a ~23,400 ms budget — 0.10 %**, with
+verdicts identical in all 7 paired runs. The rungs it removes are the ones that
+fail FASTEST by construction: `ConstantOutOfRange` is raised inside
+`blast_integers`, before any AIG, any CNF and any SAT call. That closes open
+item 4 of [the 2026-08-21 diagnosis][diag] ("reconcile the ladder's constant-fit
+rule with what it is protecting"), filed and never measured: the rule is
+protecting nothing expensive.
+
+**2. The blasting side of `QF_NIA` is closed, with four measurements.** The cap
+lift (0 of 49), the 32→64 width escalation ([ADR-1921], 0 of 110), the ladder
+reorder ([ADR-2106], ceiling 3), and this lane's width floor (0.10 % of the
+clock). And Part C adds the reference-side reason they all return zero: z3's own
+bounds-derived per-variable blast decides **1 of 116**. A future lane should not
+re-open per-variable widths without first explaining why that 1 would become
+many.
+
+**3. Do NOT tighten the clause estimate or lift the cap.** §A2 measures the
+over-approximation at 9.40x–17.72x and every refused encoding at 6.1–8.4 M
+clauses against a 64 M cap, which looks like an invitation. §A3 is the refusal:
+raising the ceiling to 600 M — above every estimate measured — decided **0 of
+49**. The over-charge is a defect in the DIAGNOSIS, not a route to a decision.
+
+**4. Do NOT build a single nonlinear lemma class on this evidence.** Part D's
+threshold was "≥ 15 of the population"; the largest class scores **5 of 75** and
+the three we lack score 3, 3 and 2. **66 of 75 files are decided by a redundant
+portfolio and break under no single-class removal.** The next capability here is
+not order lemmas or monotonicity lemmas; it is whatever produces a SECOND
+independent route to files we already reach once.
+
+**5. What the ADR does hand forward, in order.** (a) Part F's ideal-ceiling
+probe — our Gröbner route is refused by an 8/8/8 admission gate on 114 of 116
+rows and never searches; three env levers already exist and the step ceilings
+below them bound the work, so it is a measurement and not a build. (b) Report
+the ladder's BINDING constraint instead of its last rung's
+(`auto.rs:11664`) — §A1 shows one sentence standing for three causes, and that
+is what made ADR-2106's bucket read as a partition. (c) The 67 files where
+`nlsat` conflicted are ADR-2110's population, not this one's; §D1 is the warning
+that goes with them — the counter says 88.2 % and the ablation says 7.3 %.
 
 ## Consequences
 
-PENDING — lands with Part D.
+**Easier.** `nia_estimate_census.rs` gives any lane the per-file integer shape,
+per-width admissibility and estimate-vs-actual in one command, and
+`z3-stat-capture.sh` keeps every `-st` key in long form so a new bucketing
+question does not need a new sweep. `ab-run-env.sh` generalises the
+one-binary interleaved A/B to a whole assignment list.
+
+**Harder.** Nothing. The lever is disarmed and byte-identical to the shipped
+ladder when unset; `the_floor_removes_only_inadmissible_rungs` asserts that.
+
+**Revisited when.** If a second independent nonlinear route lands (Part F's
+probe, or an integer CAD from ADR-2110), re-run `z3-ablate-classes.sh` — the
+interesting number is whether our own portfolio develops the redundancy §D2
+measures in z3's, not whether any one route got stronger.
+
+**A gate that did not answer what it was asked**, recorded because this lane
+relied on it once: `scripts/check-links.sh` extracts INLINE links only
+(`grep -oP '\]\(\K[^)]+'`, line 27) and never reference-style definitions
+`[X]: path`. It printed "all links ok" over a dangling `[ADR-2110]:` target
+naming a file that does not exist. Every reference definition in both ADRs
+touched here was then checked by hand: 3 of 3 in this one, 7 of 7 in
+[ADR-2106].
 
 [ADR-2060]: adr-2060-the-give-up-variant-could-not-tell-six-gates-apart-and-nothing-asked-it-to.md
 [ADR-2106]: adr-2106-derived-ladder-order.md
 
 [diag]: ../05-algorithms/nia-deficit-diagnosis-2026-08-21.md
+[ADR-1921]: adr-1921-the-int-blast-width-escalation-is-measured-and-not-shipped.md

@@ -156,4 +156,79 @@ because it asked whether a substring appeared anywhere. Both are recorded here
 rather than quietly fixed, because an extractor that returns empty is
 indistinguishable from an engine that did not run.
 
-RESULTS: see ADR-2112 Part C.
+RESULTS (`z3-trace-116.tsv`, full coverage on all three arms):
+
+| arm | decided of 116 | sat | unsat | z3 median |
+|---|---:|---:|---:|---:|
+| `qfnia` | **77** (66.4 %) | 40 | 37 | 1,309 ms |
+| `default` | 76 (65.5 %) | 39 | 37 | 1,210 ms |
+| `nla2bv` | **1** (0.9 %) | 1 | 0 | 210 ms |
+| union | 79 (68.1 %) | | | |
+
+The one `nla2bv` decision is `20220315-MathProblems/STC_0078.smt2`, where both
+other arms time out at 24 s and the blast returns `sat` in 210 ms — so it is a
+real 1 %, not a rounding artifact, and no other arm reaches that file.
+
+## The per-class ABLATION — `z3-ablate-classes.sh`, `z3-ablation.tsv`
+
+The counters above say a machine produced a conflict; they do not say the file
+needed it, and §C1's pooling means they cannot separate order from tangent at
+all. So each class is turned OFF (`smt.arith.nl.*`) and the file re-run: eight
+arms, with a `base` arm measured in the SAME sweep on the SAME core so a file
+the baseline misses is excluded from every class rather than scored as a loss
+for all of them.
+
+Plain `(check-sat)` and not the `qfnia` tactic — the tactic builds its own
+pipeline and does not route these parameters to the arithmetic solver, so an
+ablation under it would silently measure nothing. The script refuses to start
+unless z3 accepts every switch: an ignored switch would make every arm equal the
+baseline and read exactly like "no class matters".
+
+**Denominator: 75 files.** The sweep completed: 78 files reached, coverage 78 of
+78 on every arm, 75 of them baseline-decided — the 3 the baseline itself missed
+are excluded from every class rather than scored as a loss for all of them.
+
+| class disabled | z3 stops deciding |
+|---|---:|
+| `no-nra` (nlsat) | **5 of 75** (6.7 %) |
+| `no-tangents` | 3 of 75 |
+| `no-order` | 3 of 75 |
+| `no-grobner` | 3 of 75 |
+| `no-horner` | 2 of 75 |
+| `no-int-branching` | 1 of 75 |
+| `no-cross-nested` | 0 of 75 |
+
+and the distribution that matters more than the ranking:
+
+| files broken by … | count |
+|---|---:|
+| **no single class removal at all** | **66 of 75** |
+| exactly 1 class | 4 |
+| exactly 2 classes | 4 |
+| 5 classes | 1 |
+
+`nlsat` conflicted on 67 of 76 and is load-bearing on 5 of 75. Reading the
+counters alone would have filed "the gap is integer CAD"; the ablation says no
+class reaches 6 files and 66 of 75 are decided by a redundant portfolio.
+
+Caveats that bound this table: at 75 files a 5/3/3/3/2/1/0 spread does not rank
+the classes against each other; the host carried other users' load (average 6.1),
+which can only INFLATE how load-bearing a class looks, so these are upper
+bounds; and single-class removal cannot see a capability that only matters when
+another is also absent.
+
+## Our own Gröbner route, read from the ledger
+
+`cas-ideal-refuter` is a rung of the integer tail and its trail REACHES 115 of
+200 rows — and it decides **0**. Its own recorded decline, over all 200:
+
+| detail | rows |
+|---|---:|
+| `nonlinear system exceeds the deterministic generator/atom/inequality ceilings` | **114** |
+| `no combination of the asserted equations collapsed to a constant of the refuting sign` | 2 |
+
+The ceilings are 8/8/8 (`cas_poly.rs:541`, `:555`, `:572`, tested at `:694-700`)
+against a corpus whose median file carries 342 integer symbols and 480
+cross-products. Raising them is an env-lever probe (`AXEYUM_MAX_IDEAL_*`) with
+the Buchberger step ceilings underneath still bounding the work — **not run
+here**, and named in ADR-2112's Decision as the next lane's first experiment.
