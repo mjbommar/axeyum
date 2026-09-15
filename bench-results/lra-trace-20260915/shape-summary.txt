@@ -1,0 +1,25 @@
+population A (undecided): 93 rows
+population B (decided, CONTROL): 107 rows
+
+column                        A median     A min       A max    B median     B min       B max   A/B med
+--------------------------------------------------------------------------------------------------------
+bytes                          937,621    15,567  17,864,959         964       775   1,782,445   972.64x
+vars                             1,706        71      80,223           3         3       9,061   568.67x
+asserts                            160         1     251,371           1         1      25,306   160.00x
+atoms                            9,462       374     202,644           7         1      10,122  1351.71x
+equalities                       4,027       244     152,822           0         0       1,439       n/a
+eq_bool_hint                         0         0           0           0         0           0       n/a
+strict                             837         0      31,087           0         0       9,680       n/a
+muls                             5,770         0     185,990           1         0       5,556  5770.00x
+rational_lits                        0         0         151           1         0         137     0.00x
+max_numeral_digits                   5         2          10           4         2          10     1.25x
+max_denominator_digits               2         2           4           2         2          10     1.00x
+
+A undecided: :status {'sat': 37, 'unknown': 5, 'unsat': 51}
+A undecided: logic   {'QF_LRA': 93}
+A undecided: eq_share>=0.5 66/93  no-multiplication 22/93  numeral>18 digits 0/93  denominator>18 digits 0/93
+
+B decided: :status {'sat': 60, 'unknown': 10, 'unsat': 37}
+B decided: logic   {'QF_LRA': 107}
+B decided: eq_share>=0.5 19/107  no-multiplication 25/107  numeral>18 digits 0/107  denominator>18 digits 0/107
+
