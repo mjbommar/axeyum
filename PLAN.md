@@ -64369,7 +64369,7 @@ unblocks Eisenstein's lemma (step 1), which is the binding constraint. ADR-1260
 sizes the other two residues (the row-count-is-a-floor lemma, and the
 `p·y ≠ q·x` side condition, which is Euclid's lemma and cheap).
 
-**Lane quant-ladder-ownership (`IN PROGRESS`, quant-ladder-ownership,
+**Lane quant-ladder-ownership (`DONE`, quant-ladder-ownership,
 2026-09-15).** The second half of Phase 1 of
 [docs/plan/dispatch-and-instrumentation-2026-09-15.md](docs/plan/dispatch-and-instrumentation-2026-09-15.md),
 closed by
@@ -64501,11 +64501,48 @@ shards across s5/s6/s7. **The A arm is NOT the `7d922fe58` the brief named** —
 `main` moved (ADR-2104) and this lane was instructed to merge it, so measuring
 against `7d922fe58` would put ADR-2104's diff in the B arm.
 
-**The two files ADR-2100 named come back**: A `unknown` 3/3, B `unsat` 3/3,
-through ADR-2100's own `recheck-movers.sh`, exit status 0 on all twelve passes.
-Read the direction carefully — **A here INCLUDES ADR-2100**, so A is the arm
-that lost them. They are also exactly the two raw gains in the `AUFDTLIRA`
-pairing.
+**1,800 rows, 0 malformed.**
+
+| division | rows | A | B | net | gain | LOSS | FLIP | `rc` differs | `:status` cmp | disagree |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| AUFDTLIRA | 200 | 117 | 119 | +2 | 2 | 0 | 0 | 0 | 119 | 0 |
+| AUFLIRA | 200 | 178 | 178 | +0 | 0 | 0 | 0 | 0 | 178 | 0 |
+| QF_LIA | 200 | 127 | 127 | +0 | 0 | 0 | 0 | 0 | 124 | 0 |
+| QF_LRA | 200 | 107 | 107 | +0 | 0 | 0 | 0 | 0 | 97 | 0 |
+| QF_NIA | 200 | 82 | 83 | +1 | 1 | 0 | 0 | 0 | 83 | 0 |
+| UF | 200 | 90 | 90 | +0 | 0 | 0 | 0 | 0 | 88 | 0 |
+| UFDTLIRA | 200 | 143 | 144 | +1 | 1 | 0 | 0 | 0 | 144 | 0 |
+| UFLIA | 200 | 86 | 86 | +0 | 1 | **1** | 0 | 0 | 86 | 0 |
+| UFNIA | 200 | 54 | 54 | +0 | 0 | 0 | 0 | 0 | 15 | 0 |
+| **total** | **1,800** | **984** | **988** | **+4** | **5** | **1** | **0** | **0** | **934** | **0** |
+
+**Every mover re-run 3x per arm** through ADR-2100's `recheck-movers.sh`,
+unchanged — the raw column is not the answer, and ADR-1966 lost 11 of 18 movers
+to a re-check:
+
+| classification | file | A | B |
+|---|---|---|---|
+| **STABLE-GAIN** | `AUFDTLIRA/…/Q525-025__…length_check` | `unknown` x3 | `unsat` x3 |
+| **STABLE-GAIN** | `AUFDTLIRA/…/R509-011__…fold-T-defqtvc` | `unknown` x3 | `unsat` x3 |
+| BOTH-DECIDE | `QF_NIA/…/DivMinus.jar-obl-11__p28570_edge_closing_0` | `sat` x3 | `sat` x3 |
+| UNSTABLE | `UFDTLIRA/…/NB19-026__…_30_22_assert` | `unsat`/`unknown`/`unknown` | `unsat` x3 |
+| UNSTABLE | `UFLIA/sledgehammer/…/smtlib.1015458` | `unsat`/`unknown`/`unknown` | `unknown`/`unsat`/`unknown` |
+| UNSTABLE | `UFLIA/simplify/javafe.parser.TokenQueue.576` | `unsat`/`unknown`/`unknown` | `unsat`/`unknown`/`unknown` |
+
+**STABLE-GAIN 2, STABLE-LOSS 0, BOTH-DECIDE 1, UNSTABLE 3**, exit status 0 on
+all 36 passes. **The single raw loss is UNSTABLE with an IDENTICAL pattern in
+both arms** — one decision in three, on a budget-boundary file. `NB19-026` is
+its mirror image and is NOT claimed as a gain either.
+
+**The two STABLE-GAINs are the two files ADR-2100 named as its own stable
+losses.** Read the direction carefully — **A here INCLUDES ADR-2100**, so A is
+the arm that lost them.
+
+**A defect in the runner, found by launching it.** ADR-2100's `launch-ab.sh`
+launches every division AT ONCE, which put **129/129/133 concurrent shards on 4
+pinned cores** — 9x oversubscription, which collapses both columns toward
+`unknown`, and a wash of `unknown` reads exactly like no movement. Killed,
+discarded, redone at one shard per physical core.
 
 ### Resuming the A/B, if it is still running
 

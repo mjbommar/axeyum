@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+QF_NIA/20170427-VeryMax/ITS/From_T2__apchild-live.t2_fixed__p16479_terminationG_0.smt2	sat	22721	0	sat	24030	0	A	sat
+QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsKey.jar-obl-11__p30967_safety_0.smt2	unknown	10916	0	unknown	10917	0	B	sat
+QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__LeikeHeizmann-WST2014-Ex5_false-termination.c__p24052_edge_closing_0.smt2	sat	9915	0	sat	10017	0	A	sat
+QF_NIA/AProVE/aproveSMT2912633883485370336.smt2	sat	11017	0	sat	11016	0	B	sat
+QF_NIA/20170427-VeryMax/ITS/From_T2__svdcmp.c.i.svdcmp.pl.t2.nor.t2.rlgfixed.t2__p24935_safety_0.smt2	unknown	24231	0	unknown	24227	0	A	sat
+QF_NIA/20170427-VeryMax/ITS/From_T2__n-5.t2__p4694_edge_closing_0.smt2	sat	11520	0	sat	11517	0	B	sat
+QF_NIA/20170427-VeryMax/ITS/From_T2__edn.t2__p20676_safety_0.smt2	sat	10816	0	sat	10815	0	A	sat
+QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p2235_terminationG_0.smt2	unknown	11815	0	unknown	11819	0	B	sat
+QF_NIA/20170427-VeryMax/CInteger/Ton_Chanh_15__Benghazi_nondet_true-termination.c__p26690_terminationG_0.smt2	sat	10814	0	sat	10814	0	A	sat
+QF_NIA/AProVE/aproveSMT6902839063897808376.smt2	sat	10917	0	sat	11017	0	B	sat
+QF_NIA/20170427-VeryMax/SAT14/1509.smt2	unknown	18120	0	unknown	18126	0	A	sat
+QF_NIA/20170427-VeryMax/ITS/From_T2__pentagon.t2__p7110_edge_closing_0.smt2	unknown	24123	0	unknown	24125	0	B	unknown
+QF_NIA/20170427-VeryMax/ITS/From_T2__db2.t2_fixed__terminationS_29_0.smt2	unknown	24427	0	unknown	24431	0	A	unsat
+QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateRemove.jar-obl-11__p6984_safety_0.smt2	unknown	11718	0	unknown	11817	0	B	sat
+QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8992_safety_0.smt2	unknown	24124	0	unknown	24123	0	A	sat
+QF_NIA/20170427-VeryMax/ITS/From_T2__byron-4.t2__p17594_terminationG_0.smt2	unknown	24235	0	unknown	24228	0	B	unknown

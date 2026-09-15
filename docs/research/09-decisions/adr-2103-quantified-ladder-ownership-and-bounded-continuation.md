@@ -1,7 +1,7 @@
 # ADR-2103: the quantified ladder under the same ownership rule, and a bounded continuation for the two files it cost
 
 Status: accepted
-Index-summary: ADR-2100 typed the quantifier-free dispatch ladder and measured, on the way, that **482 of 643 undecided Tier 1 rows — 75 % — never reach it**: their budget goes to the `q:` rungs of the quantified ladder in `solve`, "a different ladder with its own decline discipline", and it said typing that one was the obvious next slice. This is that slice, plus the budget fix for the two stable losses ADR-2100 published rather than smoothed. **SIZING FIRST, and the ceiling over the 482 is ZERO — for every possible ownership table, not merely for the one this ADR ships.** No row in the population had its ladder ended by a rung's non-decision at all: 211 ran out of rungs and 271 ran out of clock. The sizing needed two corrections of its own and made a finding worth more than the ceiling. **`RouteTrace::record_result` maps `Unknown` to `record_declined`**, so a rung whose `Unknown` WAS the answer and a rung that declined are the same word on the trail; the first pass tested that word and got 0 of 482, which is exactly what a detector that cannot fire prints. **Six rungs record nothing when they decline**, so their absence is not evidence of a skip. And the 53 rows the corrected script did flag as candidates were all at the 24 s budget (24,015–24,950 ms of trail time, 0 of 53 under 90 % of it), clock-ended through **the one budget exit in the quantified ladder that records nothing** — `finish_quantified_solve_or_induct`'s `config_with_remaining_timeout` guard, which every other exit reaches via `quantified_timeout`. 11 % of the population, and 48 of `UF`'s 108, were invisible to the sink that exists to catch them. What shipped: `quant_ownership::QuantRoute`, seventeen rungs with exhaustive `owns`/`kind`, reusing `Construct`/`ConstructSet`/`RouteKind`/`Ownership`/`DispatchError` rather than growing a parallel mechanism; `solve`'s body moved to `solve_inner` over the typed channel, where **`rustc` named 29 sites**. The live defects it closed were not in the sizing's population: `q:checked-fast-path` had **eight bare `?`s**, each turning a probe's fragment refusal into `solve`'s ERROR with the whole ladder below unreached — ADR-1927's defect with eight instances in one function — and its five refutation searches were one short-circuiting disjunction of `?`s, so one probe declining skipped the four below it too. `q:egraph` asked `mbqi_source_shape_supported` and, when that said no, returned a retained finite-expansion `unknown` as the query's verdict: **one route reasoning about what another route can do**, which ADR-2065's own doc comment names as the thing a route cannot do soundly. That predicate is DELETED; the preference it existed for is applied at the end of the MBQI arm off a typed flag rather than a scan of the detail string. For ADR-2100's two stable losses — which were the price of an ATTEMPT and not routing, the same `decided_by`/`bound_by` to the millisecond and **25 instantiation rounds instead of 35 and 45** — `OWNERSHIP_CONTINUATION_SHARE` gives the rungs below a converted non-decision a quarter of the remaining clock, and **only inside a quantified rung's sub-solve**, because at the outermost dispatch the continuation IS the answer and capping there would pay for the losses with ADR-2100's two gains. Its nesting signal is a NEW unconditional counter: `route_trace`'s is gated on attribution being collected, so a budget policy keyed on it would branch one way under `--trace` and the other without — the instrument changing the thing it measures. The lane's own first patch turned **nine assertions red in five suites**, ADR-1966's experience exactly, and every one was the lane's bug and not the fixture's: the four quantifier-free HAND-OFFS are ladder TAILS, so routing their `check_auto` through the decline funnel broke ADR-1980's `propagate` lever and replaced its sentence with an invented "budget exhausted". Reclassified as `DispatchError::ladder`-style propagation, **no assertion was weakened and all nine came back**.
+Index-summary: ADR-2100 typed the quantifier-free dispatch ladder and measured, on the way, that **482 of 643 undecided Tier 1 rows — 75 % — never reach it**: their budget goes to the `q:` rungs of the quantified ladder in `solve`, "a different ladder with its own decline discipline", and it said typing that one was the obvious next slice. This is that slice, plus the budget fix for the two stable losses ADR-2100 published rather than smoothed. **SIZING FIRST, and the ceiling over the 482 is ZERO — for every possible ownership table, not merely for the one this ADR ships.** No row in the population had its ladder ended by a rung's non-decision at all: 211 ran out of rungs and 271 ran out of clock. The sizing needed two corrections of its own and made a finding worth more than the ceiling. **`RouteTrace::record_result` maps `Unknown` to `record_declined`**, so a rung whose `Unknown` WAS the answer and a rung that declined are the same word on the trail; the first pass tested that word and got 0 of 482, which is exactly what a detector that cannot fire prints. **Six rungs record nothing when they decline**, so their absence is not evidence of a skip. And the 53 rows the corrected script did flag as candidates were all at the 24 s budget (24,015–24,950 ms of trail time, 0 of 53 under 90 % of it), clock-ended through **the one budget exit in the quantified ladder that records nothing** — `finish_quantified_solve_or_induct`'s `config_with_remaining_timeout` guard, which every other exit reaches via `quantified_timeout`. 11 % of the population, and 48 of `UF`'s 108, were invisible to the sink that exists to catch them. What shipped: `quant_ownership::QuantRoute`, seventeen rungs with exhaustive `owns`/`kind`, reusing `Construct`/`ConstructSet`/`RouteKind`/`Ownership`/`DispatchError` rather than growing a parallel mechanism; `solve`'s body moved to `solve_inner` over the typed channel, where **`rustc` named 29 sites**. The live defects it closed were not in the sizing's population: `q:checked-fast-path` had **eight bare `?`s**, each turning a probe's fragment refusal into `solve`'s ERROR with the whole ladder below unreached — ADR-1927's defect with eight instances in one function — and its five refutation searches were one short-circuiting disjunction of `?`s, so one probe declining skipped the four below it too. `q:egraph` asked `mbqi_source_shape_supported` and, when that said no, returned a retained finite-expansion `unknown` as the query's verdict: **one route reasoning about what another route can do**, which ADR-2065's own doc comment names as the thing a route cannot do soundly. That predicate is DELETED; the preference it existed for is applied at the end of the MBQI arm off a typed flag rather than a scan of the detail string. For ADR-2100's two stable losses — which were the price of an ATTEMPT and not routing, the same `decided_by`/`bound_by` to the millisecond and **25 instantiation rounds instead of 35 and 45** — `OWNERSHIP_CONTINUATION_SHARE` gives the rungs below a converted non-decision a quarter of the remaining clock, and **only inside a quantified rung's sub-solve**, because at the outermost dispatch the continuation IS the answer and capping there would pay for the losses with ADR-2100's two gains. Its nesting signal is a NEW unconditional counter: `route_trace`'s is gated on attribution being collected, so a budget policy keyed on it would branch one way under `--trace` and the other without — the instrument changing the thing it measures. The lane's own first patch turned **nine assertions red in five suites**, ADR-1966's experience exactly, and every one was the lane's bug and not the fixture's: the four quantifier-free HAND-OFFS are ladder TAILS, so routing their `check_auto` through the decline funnel broke ADR-1980's `propagate` lever and replaced its sentence with an invented "budget exhausted". Reclassified as `DispatchError::ladder`-style propagation, **no assertion was weakened and all nine came back**. Measured: all **19** `dispatch/reason:` suites green at 183 tests, solver lib sweep **1,813/0**, `progress_frontier` 12/12 with no regression (and `bv_reduction` reading 36 against a committed 39 at a baseline of 30 -- NOT re-pinned, the same call ADR-2100 made on the same family one commit earlier), and three mutations each killing EXACTLY ONE named fixture. Interleaved two-binary A/B, nine divisions x 200 files, 24 s / 8 GiB, one shard per pinned PHYSICAL core -- **1,800 rows, 0 malformed, A 984 / B 988, net +4, 0 sat/unsat flips, 0 exit-status differences, 934 `:status` comparisons with 0 disagreements**. All 6 movers re-run 3x per arm through ADR-2100's own classifier: **2 STABLE-GAIN, 0 STABLE-LOSS**, 1 BOTH-DECIDE, 3 UNSTABLE -- and the two STABLE-GAINs ARE the two files ADR-2100 named as its own stable losses, with the direction inverted because **A here INCLUDES ADR-2100**. The single raw loss is UNSTABLE with an IDENTICAL pattern in both arms (`unsat`/`unknown`/`unknown`), a budget-boundary file rather than a regression. The A arm is `51baff9ef`, not the brief's `7d922fe58`, because `main` moved to ADR-2104 mid-lane and measuring against the older base would have put that ADR's diff in the B arm. And the lane's first launch exposed a defect in the runner it reused: ADR-2100's `launch-ab.sh` launches every division AT ONCE, which put **129/129/133 concurrent shards on 4 pinned cores** -- 9x oversubscription collapses both columns toward `unknown`, and a wash of `unknown` reads exactly like no movement.
 Index-status: accepted
 Date: 2026-09-15
 
@@ -469,7 +469,100 @@ direction. 36 is inside that band too, and this run had the lane's own mutation
 builds on the box beside it. The artifacts are restored; the observation is
 recorded here instead of being re-pinned silently or dropped.
 
-**4. Interleaved A/B — see the status file for the run.**
+**4. Interleaved A/B — MET. 0 stable losses, 0 flips, and both named files
+decide in B.**
+
+Nine divisions x 200 files, **1,800 rows, 0 malformed**. A = `51baff9ef` (this
+branch's merge-base), B = this branch, ADR-2100's `ab-run.sh` and its `ablists`
+reused unchanged, 24 s wall / 8 GiB `ulimit -v`, both arms back to back on the
+same file on the same pinned physical core with the arm order alternating, one
+shard per core pair.
+
+| division | rows | A | B | net | gain | LOSS | FLIP | `rc` differs | `:status` comparable | disagree |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| AUFDTLIRA | 200 | 117 | 119 | +2 | 2 | 0 | 0 | 0 | 119 | 0 |
+| AUFLIRA | 200 | 178 | 178 | +0 | 0 | 0 | 0 | 0 | 178 | 0 |
+| QF_LIA | 200 | 127 | 127 | +0 | 0 | 0 | 0 | 0 | 124 | 0 |
+| QF_LRA | 200 | 107 | 107 | +0 | 0 | 0 | 0 | 0 | 97 | 0 |
+| QF_NIA | 200 | 82 | 83 | +1 | 1 | 0 | 0 | 0 | 83 | 0 |
+| UF | 200 | 90 | 90 | +0 | 0 | 0 | 0 | 0 | 88 | 0 |
+| UFDTLIRA | 200 | 143 | 144 | +1 | 1 | 0 | 0 | 0 | 144 | 0 |
+| UFLIA | 200 | 86 | 86 | +0 | 1 | **1** | 0 | 0 | 86 | 0 |
+| UFNIA | 200 | 54 | 54 | +0 | 0 | 0 | 0 | 0 | 15 | 0 |
+| **total** | **1,800** | **984** | **988** | **+4** | **5** | **1** | **0** | **0** | **934** | **0** |
+
+**0 malformed rows**, published even though it is zero: ADR-1966 had to exclude
+39 by name because the harness wrote a refusal sentence into the row, and
+reading a parse failure as "no movement" is how a measurement manufactures a
+null. **934 comparisons against the files' declared `:status`, 0
+disagreements** — with the comparable denominator beside the zero, because 54
+decided rows carry no `:status` at all.
+
+### Every moved row re-run THREE TIMES PER ARM
+
+The raw column is not the answer and is not read as one. ADR-1966 reported 25
+raw movers and 22 after re-checking — **11 of its 18 movers outside the
+treatment division vanished**. All **6** rows that moved on verdict OR exit
+status were re-run 3x per arm through ADR-2100's `recheck-movers.sh`,
+**unchanged**, arms alternating within the three passes, on one pinned core:
+
+| classification | file | A | B |
+|---|---|---|---|
+| **STABLE-GAIN** | `AUFDTLIRA/…/Q525-025__…length_check` | `unknown` x3 | `unsat` x3 |
+| **STABLE-GAIN** | `AUFDTLIRA/…/R509-011__…fold-T-defqtvc` | `unknown` x3 | `unsat` x3 |
+| BOTH-DECIDE | `QF_NIA/…/DivMinus.jar-obl-11__p28570_edge_closing_0` | `sat` x3 | `sat` x3 |
+| UNSTABLE | `UFDTLIRA/…/NB19-026__…indefinite_bounded.adb_30_22_assert` | `unsat`/`unknown`/`unknown` | `unsat` x3 |
+| UNSTABLE | `UFLIA/sledgehammer/…/smtlib.1015458` | `unsat`/`unknown`/`unknown` | `unknown`/`unsat`/`unknown` |
+| UNSTABLE | `UFLIA/simplify/javafe.parser.TokenQueue.576` | `unsat`/`unknown`/`unknown` | `unsat`/`unknown`/`unknown` |
+
+**STABLE-GAIN 2, STABLE-LOSS 0, BOTH-DECIDE 1, UNSTABLE 3.** Exit status `0` on
+all 36 passes.
+
+**The one raw loss is not a loss, and the re-check says so in the strongest
+form available**: `javafe.parser.TokenQueue.576` came back
+`unsat`/`unknown`/`unknown` in **both arms** — the same pattern, one decision in
+three, on a file sitting on the budget boundary. A single pairing that catches A
+on its lucky pass and B on an unlucky one produces exactly the row the raw
+column showed. `NB19-026` is the mirror image and is not claimed as a gain
+either: B decided 3 of 3 and A decided 1 of 3, which is not `STABLE-GAIN` under
+this classifier and is reported as UNSTABLE rather than promoted.
+
+**The two files ADR-2100 named as its own stable losses are the two
+STABLE-GAINs, and they are also exactly the two raw gains in the `AUFDTLIRA`
+pairing.** Read the direction carefully, because it inverts: **A here INCLUDES
+ADR-2100**, so A is the arm that lost them and B is the arm with the bound.
+
+### Why the A arm is `51baff9ef` and not the brief's `7d922fe58`
+
+`7d922fe58` was `main` when this lane branched. `main` then moved — ADR-2104,
+typed `DeclineReason` detail — and this lane was instructed to merge it.
+Measuring against `7d922fe58` would therefore have put ADR-2104's diff in the B
+arm and attributed its effect to ADR-2103. `51baff9ef` is this branch's
+merge-base with `main` and isolates this lane's change exactly, which is the
+entire purpose of an A/B. The arms were checked to hash differently before the
+run, the B binary contains the `quant-route-ownership` marker string and the A
+binary does not, and `AXEYUM_OWNERSHIP_CONTINUATION_SHARE` was unset in the
+launching environment so B measured the shipped divisor.
+
+### A defect in the runner, found by launching it
+
+ADR-2100's `launch-ab.sh` takes N division specs and launches them **all at
+once**: its outer loop is over divisions and its inner loops over hosts x cores,
+so nine divisions is **36 concurrent `ab-run.sh` per host pinned onto 4 physical
+cores**. Measured on the first launch here: `pgrep -cf ab-run.sh` returned
+**129, 129 and 133** on s5/s6/s7 at one-minute load ~30 on 16 CPUs.
+
+That does not merely slow the run. `ab-run.sh`'s own header says both arms run
+"back to back on the SAME file on the SAME pinned physical core" so that ambient
+load "cancels in the DIFFERENCE rather than landing entirely on whichever arm
+ran second" — and at 9x oversubscription each 24 s solve gets about a ninth of a
+core, so nearly everything times out and both columns collapse toward `unknown`.
+**A wash of `unknown` reads exactly like "no movement".** The first launch was
+killed, its partial output discarded, and the run redone with one shard per
+physical core throughout — first sequentially, then two divisions at a time on
+**disjoint** core pairs once the topology was checked (`lscpu -p=CPU,CORE`: 8
+physical cores, siblings at +8), which preserves the one-shard-per-core property
+the design rests on while halving the wall clock.
 
 **5. Mutation — MET. Three mutations, each killing EXACTLY ONE named fixture,
 and three different fixtures.**

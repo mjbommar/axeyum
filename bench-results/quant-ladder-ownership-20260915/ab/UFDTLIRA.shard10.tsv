@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+UFDTLIRA/20200306-Kanig/spark2014bench/Q328-034__mut_discr__tokens.ads_24_18_inconsistent_pre___00.smt2	unknown	25026	0	unknown	24528	0	A	unknown
+UFDTLIRA/20200306-Kanig/spark2014bench/N627-026__defaults__with_default.adb_109_15_range_check___00.smt2	unsat	109	0	unsat	109	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/K113-024__satsub__sat.ads_7_10_postcondition___00.smt2	unsat	109	0	unsat	109	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_e7dc5f_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unsat	1210	0	unsat	1211	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/O522-028__loop_entry_update__a-cfdlli.ads_469_49_loop_types.ads_16_4_overflow_check___00.smt2	unknown	308	0	unknown	309	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/M123-014__loops__loops.adb_9_33_loop_invariant_init___00.smt2	unsat	108	0	unsat	108	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/S909-022__traversal__traversals.adb_34_14_postcondition___00.smt2	unknown	25027	0	unknown	25026	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/PA12-001__default_checks_on_private__tagged_component_check.ads_262_25_range_check___00.smt2	unknown	408	0	unknown	408	0	B	unknown
+UFDTLIRA/20200306-Kanig/spark2014bench/N219-007__flow_records_with_constrained_records__foo.adb_19_18_range_check___00.smt2	unsat	108	0	unsat	108	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/riposte__enums__enums.adb_67_19_postcondition___00.smt2	sat	108	0	sat	109	0	B	sat
+UFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_7d0be2_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unsat	2009	0	unsat	1810	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/O428-055__formal_vector__a-cofove.ads_749_35_loop_types.ads_12_4_range_check___00.smt2	unsat	108	0	unsat	109	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/L719-025__ordered_sets_equal__a-cforse.ads_1337_20_p.ads_10_4_precondition___00.smt2	unsat	107	0	unsat	108	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/S606-038__flow_loop_return__p.adb_15_13_dead_code___00.smt2	unknown	108	0	unknown	108	0	B	unknown
+UFDTLIRA/20200306-Kanig/spark2014bench/Q124-055__no_inlining__incr_expr_fun.adb_17_43_overflow_check___00.smt2	unsat	107	0	unsat	108	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/NB19-026__flow_formal_vectors__indefinite_bounded.adb_64_7_precondition___00.smt2	unsat	108	0	unsat	108	0	B	unsat

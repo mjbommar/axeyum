@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-08.smt2	unsat	106	0	unsat	107	0	A	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-01.smt2	sat	107	0	sat	107	0	B	sat
+QF_LIA/dillig/30-34.smt2	sat	809	0	sat	808	0	A	sat
+QF_LIA/prime-cone/prime_cone_unsat_20.smt2	unsat	108	0	unsat	107	0	B	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-06.smt2	sat	107	0	sat	108	0	A	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-03.smt2	sat	108	0	sat	107	0	B	sat
+QF_LIA/bofill-scheduling/SMT_real_LIA/ex6960_2400_100.smt2	sat	21617	0	sat	22424	0	A	sat
+QF_LIA/nec-smt/large/checkpass/prp-52-50.smt2	unknown	18321	0	unknown	18319	0	B	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-06.smt2	sat	109	0	sat	110	0	A	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-03.smt2	sat	109	0	sat	109	0	B	sat
+QF_LIA/bofill-scheduling/SMT_random_LIA/ex13800_2600_100.smt2	unknown	24130	0	unknown	24332	0	A	unsat
+QF_LIA/nec-smt/large/bftpd_login/prp-15-46.smt2	unknown	24631	0	unknown	25129	0	B	unsat
+QF_LIA/20210219-Dartagnan/ReachSafety-Loops/jm2006_variant-O0.smt2	unknown	25125	0	unknown	25130	0	A	unknown
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-11.smt2	unsat	109	0	unsat	108	0	B	unsat
+QF_LIA/CAV_2009_benchmarks/smt/10-vars/problem_2__030.smt2	unsat	109	0	unsat	110	0	A	unsat
+QF_LIA/nec-smt/large/getoption/prp-2-200.smt2	unknown	10517	0	unknown	10616	0	B	sat

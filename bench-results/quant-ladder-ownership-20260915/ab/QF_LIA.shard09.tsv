@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-12.smt2	sat	107	0	sat	109	0	A	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-03.smt2	sat	106	0	sat	111	0	B	sat
+QF_LIA/convert/convert-jpg2gif-query-1143.smt2	sat	8812	0	sat	8813	0	A	sat
+QF_LIA/nec-smt/med/checkpass_pwd/prp-0-19.smt2	unknown	24127	0	unknown	24129	0	B	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-03.smt2	sat	109	0	sat	109	0	A	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-14.smt2	sat	109	0	sat	108	0	B	sat
+QF_LIA/arctic-matrix/constraint-654327.smt2	unknown	510	0	unknown	508	0	A	unknown
+QF_LIA/nec-smt/large/bftpd_login/prp-70-49.smt2	unknown	24027	0	unknown	24423	0	B	unsat
+QF_LIA/20210219-Dartagnan/ReachSafety-Loops/apache-get-tag-O0.smt2	unknown	25027	0	unknown	25028	0	A	unknown
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-04.smt2	sat	109	0	sat	108	0	B	sat
+QF_LIA/CAV_2009_benchmarks/smt/10-vars/problem_2__034.smt2	unsat	110	0	unsat	109	0	A	unsat
+QF_LIA/nec-smt/large/bftpd_login/prp-57-48.smt2	unknown	25129	0	unknown	24927	0	B	unsat
+QF_LIA/20180326-Bromberger/more_slacked/cut_lemmas/20-vars/cut_lemma_02_016.smt2.slack.smt2	unknown	24134	0	unknown	24327	0	A	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-04.smt2	sat	108	0	sat	110	0	B	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-02.smt2	unsat	109	0	unsat	108	0	A	unsat
+QF_LIA/nec-smt/large/bftpd_login/prp-20-49.smt2	unknown	25125	0	unknown	24920	0	B	unsat

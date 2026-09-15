@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-04.smt2	sat	108	0	sat	109	0	A	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-09.smt2	sat	108	0	sat	108	0	B	sat
+QF_LIA/convert/convert-jpg2gif-query-1586.smt2	unknown	8812	0	unknown	8713	0	A	sat
+QF_LIA/nec-smt/med/int_from_list/prp-15-38.smt2	unknown	23424	0	unknown	23121	0	B	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-07.smt2	sat	108	0	sat	108	0	A	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-10.smt2	sat	110	0	sat	109	0	B	sat
+QF_LIA/bofill-scheduling/SMT_random_LIA/ex8500_2600_100.smt2	unknown	24229	0	unknown	24130	0	A	unsat
+QF_LIA/nec-smt/large/bftpd_login/prp-50-49.smt2	unknown	25125	0	unknown	25135	0	B	unsat
+QF_LIA/20220307-SMPT/BART-PT-002/RF-13.smt2	sat	108	0	sat	109	0	A	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-04.smt2	sat	109	0	sat	108	0	B	sat
+QF_LIA/CAV_2009_benchmarks/smt/10-vars/problem_2__018.smt2	sat	108	0	sat	109	0	A	sat
+QF_LIA/nec-smt/large/bftpd_login/prp-31-50.smt2	unknown	25127	0	unknown	25125	0	B	unsat
+QF_LIA/2019-cmodelsdiff/stillLive/0006-still_live-11-1.smt2	sat	1910	0	sat	1710	0	A	unknown
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-12.smt2	sat	109	0	sat	107	0	B	sat
+QF_LIA/CAV_2009_benchmarks/smt/10-vars/problem_2__026.smt2	unsat	109	0	unsat	109	0	A	unsat
+QF_LIA/nec-smt/large/checkpass_pwd/prp-4-38.smt2	unknown	24328	0	unknown	24534	0	B	sat

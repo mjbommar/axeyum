@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+UF/sledgehammer/Fundamental_Theorem_Algebra/uf.1158058.smt2	unknown	24423	0	unknown	24425	0	A	unsat
+UF/20170428-Barrett/cdt-cade2015/nada/distro/gram_lang/x2015_09_10_16_54_32_375_1480522.smt_in.smt2	unsat	4612	0	unsat	4812	0	B	unsat
+UF/20170428-Barrett/cdt-cade2015/nada/afp/abstract_completeness/x2015_09_10_17_00_22_297_1090463.smt_in.smt2	unsat	6813	0	unsat	6915	0	A	unsat
+UF/sledgehammer/Hoare/uf.1105286.smt2	unknown	25325	0	unknown	25333	0	B	unknown
+UF/grasshopper/instantiated/rec_remove_postcondition_of_rec_remove_20_4.smt2	unsat	12221	0	unsat	12217	0	A	unsat
+UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_11_51_397_2586526.smt_in.smt2	unsat	3211	0	unsat	3011	0	B	unsat
+UF/sledgehammer/QEpres/uf.787833.smt2	sat	109	0	sat	109	0	A	sat
+UF/sledgehammer/FFT/uf.863296.smt2	unknown	25220	0	unknown	25126	0	B	unsat
+UF/20170428-Barrett/cdt-cade2015/nada/distro/gram_lang/x2015_09_10_16_48_16_393_1116135.smt_in.smt2	unknown	19721	0	unknown	20822	0	A	unknown
+UF/sledgehammer/TypeSafe/smtlib.655487.smt2	unsat	11716	0	unsat	11616	0	B	unsat
+UF/sledgehammer/Fundamental_Theorem_Algebra/uf.908739.smt2	sat	108	0	sat	108	0	A	sat
+UF/20170428-Barrett/cdt-cade2015/nada/gandl/stern_brocot_tree/x2015_09_10_16_51_44_982_1071529.smt_in.smt2	unknown	20722	0	unknown	20724	0	B	unsat
+UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_05_53_248_2106236.smt_in.smt2	unknown	25230	0	unknown	25230	0	A	unknown
+UF/sledgehammer/QEpres/uf.1089524.smt2	unsat	16924	0	unsat	17122	0	B	unsat
+UF/sledgehammer/Fundamental_Theorem_Algebra/uf.1065126.smt2	unknown	21826	0	unknown	21330	0	A	unsat
+UF/20170428-Barrett/cdt-cade2015/nada/distro/rbt_impl/x2015_09_10_16_55_27_693_1550802.smt_in.smt2	unknown	21930	0	unknown	21923	0	B	unknown

@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+UFDTLIRA/20200306-Kanig/spark2014bench/P715-019__flow_subprogram_termination__a-cofuse.ads_272_16_formal_cont.ads_26_4_inconsistent_pre___00.smt2	unknown	1308	0	unknown	1307	0	A	unknown
+UFDTLIRA/20200306-Kanig/spark2014bench/MB06-039__private_type_with_a_container_component__a-cofuve.ads_300_52_a-cofove.ads_87_7_fail.ads_14_4_overflow_check___00.smt2	unsat	107	0	unsat	108	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/adacore_u__ints.adb_42_24_overflow_check___00.smt2	unknown	16221	0	unknown	11316	0	A	unknown
+UFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_360c00_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unsat	1311	0	unsat	1310	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/O217-033__liskov__dispatch_in_contract.adb_16_20_overflow_check___00.smt2	unsat	110	0	unsat	111	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/L413-031__fullview__int_list.adb_4_7_precondition___00.smt2	unsat	110	0	unsat	111	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/S325-002__red_black_trees__red_black_trees.adb_31_33_null_pointer_dereference___00.smt2	unsat	110	0	unsat	110	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/P405-006__arithmetic_from_dafny__mul_lemmas.adb_224_36_range_check___00.smt2	unsat	110	0	unsat	110	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/M613-039__expr_actions__a-cofove.ads_709_23_list.ads_9_4_precondition___00.smt2	unsat	110	0	unsat	111	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/T207-035__flow_constrained_depends__q.adb_6_12_range_check___00.smt2	unsat	110	0	unsat	110	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/QC11-016__for_of_cntex__a-cfdlli.ads_1422_23_lists.ads_4_1_precondition___00.smt2	unsat	110	0	unsat	109	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/NB04-027__classwide_prepost__dispatcher.adb_6_8_precondition___00.smt2	unknown	110	0	unknown	109	0	B	unknown
+UFDTLIRA/20200306-Kanig/spark2014bench/K624-029__amortize_queue__amortized_queue.ads_55_17_precondition___00.smt2	unsat	109	0	unsat	109	0	A	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/RA29-007__mutable_borrowers__walker.adb_17_9_null_pointer_dereference___00.smt2	unsat	109	0	unsat	108	0	B	unsat
+UFDTLIRA/20200306-Kanig/spark2014bench/P630-025__flow_tasking__gnat_bug.ads_16_52_interrupt_reserved___00.smt2	sat	108	0	sat	108	0	A	sat
+UFDTLIRA/20200306-Kanig/spark2014bench/N617-011__mutable_discr__discr.adb_102_22_assert___00.smt2	unsat	109	0	unsat	109	0	B	unsat

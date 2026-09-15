@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+UF/sledgehammer/Fundamental_Theorem_Algebra/uf.658398.smt2	unknown	24724	0	unknown	24823	0	A	unknown
+UF/20170428-Barrett/cdt-cade2015/nada/distro/rbt_impl/x2015_09_10_16_58_30_303_1827001.smt_in.smt2	unknown	12317	0	unknown	12118	0	B	unknown
+UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_00_37_157_1687977.smt_in.smt2	unknown	25029	0	unknown	25030	0	A	unsat
+UF/sledgehammer/NS_Shared/smtlib.820464.smt2	unknown	15523	0	unknown	15019	0	B	unknown
+UF/sledgehammer/Arrow_Order/uf.774042.smt2	unsat	6911	0	unsat	7013	0	A	unsat
+UF/20170428-Barrett/cdt-cade2015/nada/afp/huffman/x2015_09_10_16_49_00_867_1155527.smt_in.smt2	unknown	9816	0	unknown	9915	0	B	unsat
+UF/sledgehammer/StrongNorm/uf.838784.smt2	unsat	14918	0	unsat	15119	0	A	unsat
+UF/sledgehammer/Fundamental_Theorem_Algebra/uf.1318643.smt2	unsat	6412	0	unsat	6613	0	B	unsat
+UF/20170428-Barrett/cdt-cade2015/nada/distro/rbt_impl/x2015_09_10_16_50_41_894_1052743.smt_in.smt2	unsat	3111	0	unsat	3111	0	A	unsat
+UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_16_52_38_347_1246149.smt_in.smt2	unsat	4512	0	unsat	4412	0	B	unsat
+UF/sledgehammer/Hoare/uf.733610.smt2	unknown	8416	0	unknown	8314	0	A	unknown
+UF/grasshopper/uninstantiated/rec_remove_check_heap_access_23_4.smt2	unsat	2111	0	unsat	2111	0	B	unsat
+UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_20_02_499_2906170.smt_in.smt2	unknown	25526	0	unknown	25527	0	A	unsat
+UF/sledgehammer/QEpres/uf.967803.smt2	unknown	25131	0	unknown	25131	0	B	unknown
+UF/sledgehammer/Fundamental_Theorem_Algebra/uf.590503.smt2	unsat	5914	0	unsat	5916	0	A	unsat
+UF/20201221-induction-by-reflection-schoisswohl/reflectiveInductive/distr-0.smt2	unknown	21430	0	unknown	23329	0	B	unknown
