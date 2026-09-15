@@ -42,7 +42,13 @@ def main(argv):
     rows = []
     for path in argv[2:]:
         with open(path) as fh:
-            header = fh.readline().rstrip("\n").split("\t")
+            # `ab-noise.sh` writes a leading `#` banner saying both halves are
+            # the same arm. Skip comment lines rather than mistaking one for the
+            # header, which would silently drop the file's first data row.
+            line = fh.readline()
+            while line.startswith("#"):
+                line = fh.readline()
+            header = line.rstrip("\n").split("\t")
             for line in fh:
                 parts = line.rstrip("\n").split("\t")
                 if len(parts) != len(header):

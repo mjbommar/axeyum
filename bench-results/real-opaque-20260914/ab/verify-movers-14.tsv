@@ -1,0 +1,15 @@
+file	ours	status	z3	cvc5	agree
+AUFLIRA/nasa/fol_simplify_array_only/gauss_array_0390.fof.smt2	unsat	unsat	unsat	unsat	DISAGREEMENT-NONE
+AUFLIRA/nasa/fol_simplify_array_only/quaternion_ds1_inuse_0322.fof.smt2	unsat	unsat	unsat	unsat	DISAGREEMENT-NONE
+AUFLIRA/nasa/fol_simplify_structure_forall/thruster_inuse_0362.fof.smt2	unsat	unsat	unsat	unsat	DISAGREEMENT-NONE
+AUFLIRA/nasa/fol_simplify_structure_prop/gauss_array_0013.fof.smt2	unsat	unsat	unsat	unsat	DISAGREEMENT-NONE
+AUFLIRA/nasa/fol_simplify/gauss_init_0292.fof.smt2	unsat	unsat	unsat	unsat	DISAGREEMENT-NONE
+AUFLIRA/nasa/fol_simplify_array_only/gauss_array_0289.fof.smt2	unsat	unsat	unsat	unsat	DISAGREEMENT-NONE
+AUFLIRA/nasa/fol_simplify_array_only/gauss_array_0490.fof.smt2	unsat	unsat	unsat	unsat	DISAGREEMENT-NONE
+AUFLIRA/nasa/fol_simplify_array_only/quaternion_ds1_init_0082.fof.smt2	unsat	unsat	unsat	unsat	DISAGREEMENT-NONE
+AUFLIRA/nasa/fol_simplify_array_only/quaternion_ds1_init_0361.fof.smt2	unsat	unsat	unsat	unsat	DISAGREEMENT-NONE
+AUFLIRA/nasa/fol_simplify_array_only/quaternion_ds1_inuse_0221.fof.smt2	unsat	unsat	unsat	unsat	DISAGREEMENT-NONE
+AUFLIRA/nasa/fol_simplify_array_only/quaternion_ds1_inuse_0423.fof.smt2	unsat	unsat	unsat	unsat	DISAGREEMENT-NONE
+AUFLIRA/nasa/fol_simplify_structure_forall/thruster_inuse_0261.fof.smt2	unsat	unsat	unsat	unsat	DISAGREEMENT-NONE
+AUFLIRA/nasa/fol_simplify_structure_forall/thruster_inuse_0462.fof.smt2	unsat	unsat	unsat	unsat	DISAGREEMENT-NONE
+AUFLIRA/nasa/fol_simplify_structure_prop/quaternion_ds1_inuse_0013.fof.smt2	unsat	unsat	unsat	unsat	DISAGREEMENT-NONE
