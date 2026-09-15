@@ -46,6 +46,27 @@ Gaps to the per-division reference, on these same 200-file samples:
 `UF` is effectively closed. The four largest gaps are now `UFNIA`, `QF_NIA`,
 `UFLIA` and `AUFDTLIRA`.
 
+## Update, `787bbefee` — AUFLIRA 164 → 178, confirmed file for file
+
+ADR-2065 (`REAL-OPAQUE`) let the Real collector hold an opaque term instead of
+refusing the whole query on it. Its own interleaved A/B measured **+14** on a
+branch; this is the post-merge single-arm re-measure of the SAME 200-file list,
+on `787bbefee`, same envelope, 12 pinned cores:
+
+| | before | after |
+|---|---:|---:|
+| AUFLIRA decided | 164 | **178 / 200 (89 %)** |
+| gains / losses | | **14 / 0** |
+| soundness | | **178/178 agree with `:status`, 0 disagree** |
+
+**Checked at ROW level, not just in total**, because equal totals do not imply
+equal files: all **14 of the lane's predicted movers converted**, **0 failed to
+convert**, and **nothing else moved**. That is the check that caught a `+22`
+becoming `+6` on 2026-09-13.
+
+Tier 1 total moves **741 → 755 of 1,400 (54 %)**. The goal table's AUFLIRA rate
+of 4 % is now **89 %**.
+
 ## Method note
 
 Divisions run **serially** within a shard. Launching them concurrently on one
