@@ -547,12 +547,49 @@ def features_from_stdout(text: str) -> str:
     ADR-2102 prints no such line at all, and the empty string that comes back
     is a different answer from each of the other three -- see
     :data:`FEATURES_ABSENT`.
+
+    This is the FALLBACK path now (ADR-2105): a schema-3-or-later trail
+    carries `features` as its own JSON member (:attr:`route_trace_reader
+    .RouteTrail.features`), and :func:`features_from_capture` reads that
+    first.  This function stays for exactly the population that member cannot
+    answer -- a capture from a binary whose `to_json` predates it -- so a
+    committed schema-1/2 sweep stays readable without a re-run.
     """
     for line in text.splitlines():
         if line.startswith(FEATURES_PREFIX):
             payload = line[len(FEATURES_PREFIX) :].strip()
             return payload if payload else FEATURES_EMPTY
     return FEATURES_ABSENT
+
+
+#: The first `route_trace_reader` schema version whose `RouteTrail.features`
+#: is authoritative -- below this the JSON carries no such member at all
+#: (ADR-2105), and `None` from the reader would be indistinguishable from the
+#: real "not-dispatched" answer schema 3 can state. Matches
+#: `route_trace_reader.FIRST_SCHEMA_WITH_NAME_AND_FEATURES`, re-stated here
+#: (not imported as a bare int) so a schema bump the reader made and the
+#: ledger's own mapping did not is a reader-side constant question, not a
+#: silent divergence between the two.
+FIRST_SCHEMA_WITH_FEATURES_MEMBER = rtr.FIRST_SCHEMA_WITH_NAME_AND_FEATURES
+
+
+def features_from_capture(trail: "rtr.RouteTrail | None", text: str) -> str:
+    """The `features` column's value: the JSON member when it can answer,
+    the `; features` prose line otherwise (ADR-2105).
+
+    The JSON member is authoritative from schema 3 on, and on a schema-3
+    trail its `None` is the real, stated "not-dispatched" answer -- so it is
+    mapped to :data:`FEATURES_NOT_DISPATCHED`, never re-derived from prose
+    (which schema-3 binaries print too, but as a RENDERING of this same
+    field -- reading it again would be a second authority for one value).
+    Below schema 3, or with no trail at all, the member does not exist and
+    :func:`features_from_stdout` is the only source left.
+    """
+    if trail is not None and trail.schema_version >= FIRST_SCHEMA_WITH_FEATURES_MEMBER:
+        if trail.features is None:
+            return FEATURES_NOT_DISPATCHED
+        return trail.features
+    return features_from_stdout(text)
 
 
 def row_from_capture(
@@ -582,12 +619,17 @@ def row_from_capture(
     """
     text = Path(stdout_path).read_text(encoding="utf-8", errors="replace")
     verdict = verdict_from_stdout(text, exit_status)
-    features = features_from_stdout(text)
 
     try:
         trail = rtr.read_file(stdout_path)
     except rtr.NoTrailLine:
         trail = None
+
+    # ADR-2105: the JSON member when the trail's schema can carry one, the
+    # prose line otherwise -- see `features_from_capture`. Computed AFTER the
+    # trail lookup above (not before, as it was pre-ADR-2105) because which
+    # source answers depends on `trail.schema_version`.
+    features = features_from_capture(trail, text)
 
     if trail is None:
         return LedgerRow(
