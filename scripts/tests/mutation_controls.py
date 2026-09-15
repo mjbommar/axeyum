@@ -10290,6 +10290,88 @@ SUITES["quant-valid-universal-reserve"] = (
 # already shipped once.
 # --------------------------------------------------------------------------
 
+# --------------------------------------------------------------------------
+# `mbqi-loop-entry-note` -- ADR-2114's correction to the `mbqi declined an
+# unsupported fragment: …` sentence.
+#
+# The sentence names the engine that refused, and measured over 134 AUFDTLIRA
+# files it names the wrong one on 16 of the 17 rows that print it:
+# `prove_unsat_by_mbqi_inner` diverts to e-matching at five shape guards before
+# its loop, and e-matching's ground `check_auto` refusal comes back wearing
+# MBQI's name.  Population-wide the loop runs on 2 of 134.
+#
+# THREE GUARDS, DELIBERATELY SEPARATE, because they fail in different ways and
+# the third is the one that matters most:
+#
+#   * the flag is SET where the loop is entered -- without it the note fires
+#     on every refusal, including the two rows where MBQI genuinely ran;
+#   * the note is NON-EMPTY -- an empty constant makes the correction
+#     invisible while every wiring assertion still passes;
+#   * the selection reads the flag the RIGHT WAY ROUND.  A swapped correction
+#     is worse than no correction: it would clear exactly the rows that need
+#     the note and add it to the two that do not.  Pinning only the constant
+#     leaves those two arms swappable with everything green, which is why
+#     `mbqi_loop_note` is a named function and not an `if` at the call site.
+#
+# What this table does NOT claim: these mutations do not reach the dispatcher's
+# end-to-end wiring, because reliably driving the ladder into MBQI's
+# `Err(Unsupported)` arm from a unit test means pinning a route the ladder is
+# free to change.  The wiring is one `format!` over `mbqi_loop_note(...)`; the
+# SELECTION it calls is what is pinned here, and that gap is stated rather than
+# left for someone to discover.
+# --------------------------------------------------------------------------
+
+SUITES["mbqi-loop-entry-note"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "mbqi_loop"),
+        "mbqi-loop-entry-note",
+    ),
+    [
+        (
+            # THE FLAG. Never set means "the loop never ran" on every query,
+            # so the note is appended unconditionally.
+            "the loop-entry flag is set where the loop is entered",
+            "    *entered_loop = true;",
+            "    *entered_loop = false;",
+        ),
+        (
+            # THE CONSTANT. An empty note is a correction nobody can read.
+            "the correction sentence is non-empty",
+            "pub(crate) const MBQI_LOOP_NOT_ENTERED_NOTE: &str = \" [ADR-2114:",
+            "pub(crate) const MBQI_LOOP_NOT_ENTERED_NOTE: &str = \"\"; const _UNUSED_2114: &str = \" [ADR-2114:",
+        ),
+        (
+            # THE OTHER DIRECTION OF THE FLAG, and the reason the false-side
+            # test is not decoration. The three mutations around it all make
+            # the flag falser or the note louder; this one makes it TRUE
+            # unconditionally, which is the failure mode that would clear the
+            # note off all 132 rows that need it while every other assertion
+            # here still passed.
+            "the flag is not set before the shape guards run",
+            "    prove_unsat_by_mbqi_inner(arena, assertions, config, true, entered_loop)",
+            "    *entered_loop = true;\n"
+            "    prove_unsat_by_mbqi_inner(arena, assertions, config, true, entered_loop)",
+        ),
+        (
+            # THE SELECTION, and the reason `mbqi_loop_note` exists at all.
+            "the note fires on the queries where the loop did NOT run",
+            "pub(crate) fn mbqi_loop_note(entered_loop: bool) -> &'static str {\n"
+            "    if entered_loop {\n"
+            "        \"\"\n"
+            "    } else {\n"
+            "        MBQI_LOOP_NOT_ENTERED_NOTE\n"
+            "    }\n}",
+            "pub(crate) fn mbqi_loop_note(entered_loop: bool) -> &'static str {\n"
+            "    if entered_loop {\n"
+            "        MBQI_LOOP_NOT_ENTERED_NOTE\n"
+            "    } else {\n"
+            "        \"\"\n"
+            "    }\n}",
+        ),
+    ],
+)
+
 SUITES["dt-native-refusal-decline"] = (
     "crates/axeyum-solver/src/auto.rs",
     Cargo(

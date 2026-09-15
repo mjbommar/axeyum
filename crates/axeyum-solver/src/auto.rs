@@ -2459,7 +2459,15 @@ fn finish_quantified_solve(
             // `detail` string: reading a classification back out of prose is
             // ADR-2060's defect exactly.
             let mut refused_fragment = false;
-            let mbqi_result = match prove_unsat_by_mbqi(arena, assertions, &mbqi_config) {
+            // ADR-2114: telemetry only, never a branch condition. It decides
+            // one SUFFIX on the refusal sentence below and nothing else.
+            let mut mbqi_entered_loop = false;
+            let mbqi_result = match prove_unsat_by_mbqi_reporting(
+                arena,
+                assertions,
+                &mbqi_config,
+                &mut mbqi_entered_loop,
+            ) {
                 Ok(result) => result,
                 // GUARD, the same rule as the e-graph rung above: MBQI refusing
                 // this query's FRAGMENT is not a verdict on the query. Carry the
@@ -2468,9 +2476,16 @@ fn finish_quantified_solve(
                 // instead of ending the ladder with an error.
                 Err(SolverError::Unsupported(message)) => {
                     refused_fragment = true;
+                    // ADR-2114. The sentence up to and including `{message}` is
+                    // BYTE-IDENTICAL to what it was, because four committed
+                    // censuses match on this prefix and on the datatype
+                    // sentences inside `{message}`. The correction is appended,
+                    // so a census that matched before still matches and one
+                    // that wants the truth can read past it.
+                    let note = mbqi_loop_note(mbqi_entered_loop);
                     CheckResult::Unknown(UnknownReason {
                         kind: UnknownKind::Incomplete,
-                        detail: format!("mbqi declined an unsupported fragment: {message}"),
+                        detail: format!("mbqi declined an unsupported fragment: {message}{note}"),
                     })
                 }
                 Err(other) => return Err(DispatchError::at_quant(QuantRoute::Mbqi, other)),
@@ -12625,7 +12640,13 @@ fn complete_mbqi_one_level_fixed_candidate(
     let fixing = arena.eq(variable, constant)?;
     let mut fixed_assertions = assertions.to_vec();
     fixed_assertions.push(fixing);
-    let result = prove_unsat_by_mbqi_inner(arena, &fixed_assertions, &candidate_config, false)?;
+    let result = prove_unsat_by_mbqi_inner(
+        arena,
+        &fixed_assertions,
+        &candidate_config,
+        false,
+        &mut false,
+    )?;
     replay_one_level_fixed_mbqi_candidate(arena, assertions, result)
 }
 
@@ -12649,7 +12670,71 @@ pub fn prove_unsat_by_mbqi(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
-    prove_unsat_by_mbqi_inner(arena, assertions, config, true)
+    prove_unsat_by_mbqi_inner(arena, assertions, config, true, &mut false)
+}
+
+/// [`prove_unsat_by_mbqi`], additionally reporting whether the MBQI refutation
+/// loop was ever ENTERED on this query (ADR-2114).
+///
+/// # Why the dispatcher needs this and the message cannot supply it
+///
+/// `auto.rs`'s quantified arm labels any `Err(Unsupported)` coming back from
+/// MBQI as `mbqi declined an unsupported fragment: …`. That label is a
+/// statement about which engine refused, and it is **wrong on most queries
+/// that print it**: `prove_unsat_by_mbqi_inner` hands the whole query to
+/// `prove_unsat_by_ematching` at five shape guards before its loop is reached,
+/// and e-matching decides its instantiated query with a plain ground
+/// `check_auto` under a `?` ([`decide_instantiation`]). A refusal from the
+/// quantifier-FREE closure therefore arrives at the label wearing MBQI's name.
+///
+/// Measured over 134 `AUFDTLIRA` files (the 55 [ADR-2090] cores and the 79
+/// undecided originals, `bench-results/dt-quant-trace-20260915/`): 17 rows
+/// print a datatype wording behind that prefix and **16 of the 17 never entered
+/// the loop**. Population-wide the loop runs on **2 of 134**.
+///
+/// This is a flag rather than a scan of the `detail` string, for the reason the
+/// caller already states: reading a classification back out of prose is
+/// ADR-2060's defect. The flag is telemetry only — no caller branches on it,
+/// and the string it produces is appended AFTER the existing sentence so every
+/// committed census that greps the prefix, or the datatype sentence itself,
+/// matches exactly as before.
+///
+/// # Errors
+///
+/// Returns [`SolverError`] from the underlying engine or an internal builder.
+fn prove_unsat_by_mbqi_reporting(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    entered_loop: &mut bool,
+) -> Result<CheckResult, SolverError> {
+    prove_unsat_by_mbqi_inner(arena, assertions, config, true, entered_loop)
+}
+
+/// The sentence appended to a `mbqi declined …` refusal when MBQI's refutation
+/// loop never ran (ADR-2114). Empty when it did.
+///
+/// Named rather than inlined so a test can assert on the same bytes the
+/// dispatcher emits — a test that re-spells the string it is checking passes
+/// while the shipped message says something else.
+pub(crate) const MBQI_LOOP_NOT_ENTERED_NOTE: &str = " [ADR-2114: MBQI's refutation loop was never entered on this query -- a \
+     quantifier SHAPE guard handed it to e-matching, so the fragment named \
+     above was refused by the ground closure below, not by the model finder]";
+
+/// Which note the refusal sentence carries, given whether MBQI's refutation
+/// loop ran (ADR-2114).
+///
+/// A named function rather than an `if` at the call site, so the SELECTION is
+/// reachable from a test. Pinning only the constant would leave the two arms
+/// swappable with everything green — and a correction firing on exactly the
+/// queries it should not is worse than none: it would relabel the 2 of 134
+/// rows where MBQI really did run and clear the 132 where it did not.
+pub(crate) fn mbqi_loop_note(entered_loop: bool) -> &'static str {
+    if entered_loop {
+        ""
+    } else {
+        MBQI_LOOP_NOT_ENTERED_NOTE
+    }
 }
 
 /// Names the exit `prove_unsat_by_mbqi_inner` takes, under `AXEYUM_QPROBE`.
@@ -12779,6 +12864,10 @@ fn prove_unsat_by_mbqi_inner(
     assertions: &[TermId],
     config: &SolverConfig,
     allow_outer_candidate_retries: bool,
+    // Set to `true` at the one point the refutation loop is entered, and never
+    // read here. See [`prove_unsat_by_mbqi_reporting`] (ADR-2114) — this is
+    // telemetry, never a branch condition, so it cannot change a verdict.
+    entered_loop: &mut bool,
 ) -> Result<CheckResult, SolverError> {
     // Split into ground assertions and top-level universal prefixes. The
     // refutation loop below remains single-binder. Multi-binder prefixes get a
@@ -12849,6 +12938,11 @@ fn prove_unsat_by_mbqi_inner(
         return prove_unsat_by_ematching(arena, assertions, config);
     }
     mbqi_shape_probe("refutation-loop", universals.len(), ground.len());
+    // ADR-2114. THE loop-entry point: every path above returns
+    // `prove_unsat_by_ematching` instead, so this line and the `qprobe` tag
+    // beside it mark the same event, and the flag is what the dispatcher's
+    // message reads when the probe is off (which it is in every shipped run).
+    *entered_loop = true;
     let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
 
     // Honor the wall-clock budget and a deterministic instance cap: a universal whose
@@ -14292,6 +14386,139 @@ mod tests {
     use super::*;
 
     // -----------------------------------------------------------------------
+    // ADR-2114: `prove_unsat_by_mbqi_reporting`'s loop-entry flag.
+    //
+    // The flag exists because the dispatcher's `mbqi declined an unsupported
+    // fragment: …` sentence names the engine that refused, and over 134
+    // `AUFDTLIRA` files it names the wrong one on 16 of the 17 rows that print
+    // it.  These tests pin the two directions that matter: the flag is FALSE on
+    // a query MBQI hands to e-matching at a shape guard, and TRUE on one whose
+    // refutation loop actually runs.  Without both, the flag could be a
+    // constant and every caller would still look right.
+    // -----------------------------------------------------------------------
+
+    /// A shape guard fires, so the loop is never entered.
+    ///
+    /// `(forall x. forall y. …)` is a MULTI-BINDER prefix, one of the five
+    /// shapes `prove_unsat_by_mbqi_inner` refuses before its loop
+    /// (`mbqi_shape_probe("multi-binder-prefix", …)`).
+    #[test]
+    fn mbqi_loop_entry_flag_is_false_when_a_shape_guard_diverts() {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("adr2114_f", &[Sort::Int, Sort::Int], Sort::Int)
+            .unwrap();
+        let x = arena.declare("adr2114_x", Sort::Int).unwrap();
+        let y = arena.declare("adr2114_y", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        let app = arena.apply(f, &[xv, yv]).unwrap();
+        let zero = arena.int_const(0);
+        let body = arena.int_le(zero, app).unwrap();
+        let inner = arena.forall(y, body).unwrap();
+        let universal = arena.forall(x, inner).unwrap();
+
+        let mut entered = false;
+        let _ = prove_unsat_by_mbqi_reporting(
+            &mut arena,
+            &[universal],
+            &SolverConfig::new(),
+            &mut entered,
+        );
+        assert!(
+            !entered,
+            "a multi-binder prefix is diverted to e-matching before the loop, \
+             so the flag must stay false"
+        );
+    }
+
+    /// The POSITIVE CONTROL, and the reason this pair is not vacuous: a
+    /// single-binder prenex universal is the one shape the loop accepts, so the
+    /// flag must come back TRUE.  A flag hard-wired to `false` passes the test
+    /// above and fails this one.
+    #[test]
+    fn mbqi_loop_entry_flag_is_true_when_the_refutation_loop_runs() {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("adr2114_g", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let x = arena.declare("adr2114_z", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let app = arena.apply(f, &[xv]).unwrap();
+        let zero = arena.int_const(0);
+        let body = arena.int_le(zero, app).unwrap();
+        let universal = arena.forall(x, body).unwrap();
+        let c = arena.declare("adr2114_c", Sort::Int).unwrap();
+        let cv = arena.var(c);
+        let capp = arena.apply(f, &[cv]).unwrap();
+        let minus_one = arena.int_const(-1);
+        let ground = arena.eq(capp, minus_one).unwrap();
+
+        let mut entered = false;
+        let _ = prove_unsat_by_mbqi_reporting(
+            &mut arena,
+            &[universal, ground],
+            &SolverConfig::new(),
+            &mut entered,
+        );
+        assert!(
+            entered,
+            "a single-binder prenex universal plus ground assertions is the \
+             shape the refutation loop accepts, so the flag must be true"
+        );
+    }
+
+    /// The note is appended, and the sentence BEFORE it is byte-identical.
+    ///
+    /// Four committed censuses under `bench-results/` match on the prefix
+    /// `mbqi declined an unsupported fragment` and on the ADR-0022 datatype
+    /// sentences inside the message.  This pins that the correction cannot
+    /// break them: derived from the same constant the dispatcher formats, not
+    /// re-spelled, because a test that re-spells the string it checks passes
+    /// while the shipped message says something else.
+    #[test]
+    fn mbqi_loop_note_is_a_suffix_and_leaves_the_census_prefix_intact() {
+        let message = "congruence over a datatype argument whose expansion is not exact (ADR-0022)";
+        let with =
+            format!("mbqi declined an unsupported fragment: {message}{MBQI_LOOP_NOT_ENTERED_NOTE}");
+        let without = format!("mbqi declined an unsupported fragment: {message}");
+        assert!(with.starts_with(&without), "the note must be a SUFFIX");
+        assert!(with.contains("mbqi declined an unsupported fragment"));
+        assert!(with.contains(message));
+        assert!(
+            MBQI_LOOP_NOT_ENTERED_NOTE.contains("ADR-2114"),
+            "the note must name the decision that explains it"
+        );
+        assert!(
+            !MBQI_LOOP_NOT_ENTERED_NOTE.is_empty(),
+            "an empty note would make the correction invisible while every \
+             other assertion here still passed"
+        );
+    }
+
+    /// The SELECTION, both directions.
+    ///
+    /// The two flag tests above establish what the flag says; this establishes
+    /// that the message reads it the right way round. Without it the two arms
+    /// of `mbqi_loop_note` are swappable with everything green, and a swapped
+    /// correction is worse than no correction — it would clear exactly the
+    /// rows that need the note and add it to the two that do not.
+    #[test]
+    fn mbqi_loop_note_fires_only_when_the_loop_did_not_run() {
+        assert_eq!(
+            mbqi_loop_note(false),
+            MBQI_LOOP_NOT_ENTERED_NOTE,
+            "the loop did NOT run, so the sentence must carry the correction"
+        );
+        assert_eq!(
+            mbqi_loop_note(true),
+            "",
+            "the loop DID run, so `mbqi declined` is accurate and the sentence \
+             must be left exactly as it was"
+        );
+    }
+
+    // -----------------------------------------------------------------------
     // ADR-2102: the outcome ledger's `features` column.
     //
     // The rendering is pinned SEPARATELY from the recorder because the recorder
@@ -15588,7 +15815,7 @@ mod tests {
         let config = SolverConfig::new();
 
         assert!(matches!(
-            prove_unsat_by_mbqi_inner(&mut arena, &assertions, &config, false).unwrap(),
+            prove_unsat_by_mbqi_inner(&mut arena, &assertions, &config, false, &mut false).unwrap(),
             CheckResult::Unknown(_)
         ));
 
@@ -15597,7 +15824,8 @@ mod tests {
         let mut fixed_assertions = assertions.clone();
         fixed_assertions.push(fixing);
         let fixed_result =
-            prove_unsat_by_mbqi_inner(&mut arena, &fixed_assertions, &config, false).unwrap();
+            prove_unsat_by_mbqi_inner(&mut arena, &fixed_assertions, &config, false, &mut false)
+                .unwrap();
         assert!(
             matches!(fixed_result, CheckResult::Sat(_)),
             "fixed query must be satisfiable, got {fixed_result:?}"
@@ -15655,11 +15883,11 @@ mod tests {
         let config = SolverConfig::new().with_timeout(Duration::from_secs(2));
 
         assert!(matches!(
-            prove_unsat_by_mbqi_inner(&mut arena, &assertions, &config, false).unwrap(),
+            prove_unsat_by_mbqi_inner(&mut arena, &assertions, &config, false, &mut false).unwrap(),
             CheckResult::Unknown(_)
         ));
         let CheckResult::Sat(model) =
-            prove_unsat_by_mbqi_inner(&mut arena, &assertions, &config, true).unwrap()
+            prove_unsat_by_mbqi_inner(&mut arena, &assertions, &config, true, &mut false).unwrap()
         else {
             panic!("the outer profile completion must recover the checked model");
         };
