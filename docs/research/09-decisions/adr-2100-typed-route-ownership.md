@@ -185,74 +185,242 @@ pinned 72-site baseline, never to produce it.
 
 ## Sizing — the ceiling is ZERO, and Phase 1 is still worth doing
 
-**The number first, because the exit criterion asks for it up front: 0 of 643.**
+**The number first, because the exit criterion asks for it up front: 0, on all
+seven Tier 1 divisions, against a denominator of 645.**
 
-Method: all seven Tier 1 divisions, 200 files each, the **645 rows the
-2026-09-14 board left undecided**, re-run single-arm with `--trace` at 24 s /
-8 GiB `ulimit -v` on 12 pinned physical core pairs across s5/s6/s7 (two came
-back `unsat` this time, an ambient flip in the other direction, leaving 643).
-Then, per row: the last dispatch-ladder rung on its `; route-trail`, and whether
-a route BELOW it both **owns** the query's constructs and is **enterable** on
-them.
+### The frame
 
-| division | undecided rows | a route below owns | …and is enterable | never reached the ladder |
-|---|---:|---:|---:|---:|
-| AUFDTLIRA | 78 | 0 | 0 | 68 |
-| AUFLIRA | 22 | 0 | 0 | 14 |
-| QF_NIA | 116 | 0 | 0 | 1 |
-| UF | 110 | 0 | 0 | 79 |
-| UFDTLIRA | 56 | 0 | 0 | 52 |
-| UFLIA | 115 | 0 | 0 | 92 |
-| UFNIA | 146 | **5** | **0** | 124 |
-| **total** | **643** | **5** | **0** | **430** |
+Lane PLAN-SIZING's inventory
+(`bench-results/dispatch-plan-sizing-20260915/phase1-ceiling.tsv`) fixes it:
+645 undecided Tier 1 rows, of which **604 are `stopped_by_unknown`** — the last
+recorded attempt's reason is `budget` / `incomplete` / `verifier-rejected`, an
+actual `Ok(Unknown)`, so the ladder STOPPED rather than running out of rungs.
+The other 40 ended on an `unsupported` / `not-applicable` decline, which already
+let the ladder continue, so the ownership rule has nothing to change about them.
+
+That lane could not compute the ceiling and said so plainly:
+
+> The Phase 1 ceiling as the plan defines it … needs the ladder's fixed ORDER
+> and each route's Features-ownership predicate. **That predicate does not exist
+> yet — building it is Phase 1's own deliverable**, so it cannot be used to size
+> Phase 1 before Phase 1 exists.
+
+This ADR supplies the predicate, and this is the answer. The sweep was not
+re-run: the construct evidence comes from this lane's own `--trace` capture of
+the same 645 rows, joined to PLAN-SIZING's inventory by corpus-relative PATH —
+**645 of 645 join, checked, and the script ABORTS rather than reporting a
+smaller number if any row is missing from either side.**
+
+### The numbers
+
+| division | undecided | stopped by `Unknown` | a route below OWNS | …and is ENTERABLE | never reached the QF ladder |
+|---|---:|---:|---:|---:|---:|
+| AUFLIRA | 22 | 20 | 0 | **0** | 20 |
+| UFNIA | 147 | 136 | 5 | **0** | 130 |
+| UFLIA | 115 | 107 | 0 | **0** | 107 |
+| AUFDTLIRA | 79 | 68 | 0 | **0** | 67 |
+| QF_NIA | 116 | 114 | 0 | **0** | 0 |
+| UF | 110 | 108 | 0 | **0** | 108 |
+| UFDTLIRA | 56 | 51 | 0 | **0** | 50 |
+| **total** | **645** | **604** | **5** | **0** | **482** |
+
+(PLAN-SIZING's `undecided` and `stopped_by_unknown` columns; the last three are
+this lane's, over the 643 rows its own re-capture scored — two of the 645 came
+back `unsat` this time, an ambient flip, and one produced no output at all.)
+
+**This is the seven-division Tier 1 frame and NOT the 16-division public board**
+(`bench-results/board-ab-20260915/`), which is a different, QF_\*-heavy division
+set on a different harness. `UF` and `QF_NIA` appear on both, as separate sample
+runs. Do not add these counts to that board's totals.
 
 Artifacts: `bench-results/route-ownership-20260915/` — `trace-run.sh`,
-`launch-trace.sh`, `size-ceiling.py`, the raw per-row trails in
+`launch-trace.sh`, `size-ceiling.py`, the per-row trails in
 `trace-tier1-undecided.tsv`, and the run in `sizing.txt`.
 
-**Phase 1 is still worth doing, and this ADR says so rather than implying a
-gain.** The dispatch plan says the same in advance: *"None of these phases is
-measured in files decided. Phase 1 is measured in bug class killed."* The five
-ADRs above cost roughly a lane each and four of the five were found by accident
-while chasing something else; the fifth (ADR-1966) enumerated 72 sites
-mechanically and then had to be reverted. What this buys is that the next
-instance is a compile error or a named trail entry rather than a sixth ADR.
+### Phase 1 is still worth doing, and this ADR says so rather than implying a gain
+
+The dispatch plan says the same in advance: *"None of these phases is measured in
+files decided. Phase 1 is measured in bug class killed."* The five ADRs this
+closes cost roughly a lane each, **four of the five were found by accident while
+chasing something else**, and the fifth enumerated 72 sites mechanically and then
+had to be reverted for turning seven assertions red. What this buys is that the
+sixth instance is a compile error or a named trail entry rather than a sixth ADR.
 
 ### Three corrections the sizing produced, each of which would have been a claim
 
-**The first number was 102 and it was wrong, in the direction that flatters the
-lane.** `size-ceiling.py`'s first run reported 102 of 116 `QF_NIA` rows
-reachable, every one with `owner-below=qf-bv`. The ladder order it used was read
-off the SOURCE TEXT, and `dispatch_nonlinear_int_tail` is reached as
-`return dispatch_nonlinear_int_tail(..)` inside `if features.has_int` — so
-`qf-bv`, textually below it, is unreachable from any integer query. **A route
-ordering read off the text rather than off the control flow bounds nothing.**
+**The first number was 102 and it flattered the lane.** `size-ceiling.py`'s first
+run reported 102 of 116 `QF_NIA` rows reachable, every one with
+`owner-below=qf-bv`. The ladder order it used was read off the SOURCE TEXT, and
+`dispatch_nonlinear_int_tail` is reached as `return dispatch_nonlinear_int_tail(..)`
+inside `if features.has_int` — so `qf-bv`, textually below it, is unreachable
+from any integer query. **A route ordering read off the text rather than off the
+control flow bounds nothing.**
 
-**The second number was 5 and it was also wrong.** All five remaining rows named
-`array-fast-path` as the owner below, which owns `{…, Int, …}` and runs only
+**The second number was 5 and it was also wrong.** All five remaining rows name
+`array-fast-path` as the owner below. It owns `{…, Int, …}` and runs only
 `if features.has_array`. Owning a construct and being ENTERABLE on a query are
 different questions, and the second is what decides whether the route gets a
-turn. Confirmed against the corpus text: **0 occurrences of `Array` in any of
-the five** (`UFNIA/2019-Preiner/qf/t3_rw{353,597,658,1283,1466}.smt2`). Each
-correction is in the script as a comment beside the rule that implements it, so
-the next reader does not re-derive them.
+turn. Confirmed against the corpus text: **0 occurrences of `Array` in any of the
+five** (`UFNIA/2019-Preiner/qf/t3_rw{353,597,658,1283,1466}.smt2`). Each
+correction is a comment beside the rule that implements it, so the next reader
+does not re-derive them.
 
-**The finding worth more than the ceiling: 430 of 643 undecided Tier 1 rows —
-67 % — never reach the quantifier-free dispatch ladder at all.** Their whole
-budget goes to the `q:` rungs of the quantified ladder in `solve`, which is a
-different ladder with its own decline discipline (ADR-1927). No amount of
-quantifier-free route ownership can move them. That is a statement about where
-the remaining Tier 1 mass is, and it is measured rather than asserted: the
-per-row trails are committed.
+**The finding worth more than the ceiling: 482 of 643 undecided Tier 1 rows —
+75 % — never reach the quantifier-free dispatch ladder at all.** Their budget
+goes to the `q:` rungs of the quantified ladder in `solve`, which is a different
+ladder with its own decline discipline (ADR-1927). No amount of quantifier-free
+route ownership can move them. `QF_NIA` is the one division where every row
+reaches the ladder, and it is also the only quantifier-free division in the set.
+That is a statement about where Tier 1's remaining mass is, it is measured rather
+than asserted, and the per-row trails are committed.
 
 ### What the sizing does NOT say
 
-It does not bound the change's effect on **decided** rows, which is the risk
-side and is what the A/B in criterion 3 measures. ADR-1966's `UFLIA` control —
-chosen because nothing in it could trigger the guard — still lost one file
-reproducibly, because a route the ladder now reaches ate the budget the deciding
-route needed. A ceiling of 0 on the undecided population says nothing about
-that.
+It does not bound the change's effect on **decided** rows, which is the risk side
+and is what the A/B measures. ADR-1966's `UFLIA` control — chosen because nothing
+in it could trigger the guard — still lost one file reproducibly, because a route
+the ladder now reaches ate the budget the deciding route needed. A ceiling of 0
+on the undecided population says nothing about that.
+
+## What shipped
+
+`route_ownership`, a module inside `crates/axeyum-solver/src/auto.rs`:
+
+- **`Construct`** — eleven classes, one per `Features` flag. `has_bitblast` is
+  deliberately not one: it is a derived disjunction of four others, and a class
+  for it would let a route claim ownership of `Int` by claiming `BitBlast`.
+- **`ConstructSet`** — a bitset, so the subset test the ladder runs on every
+  non-decision is one instruction. Its `not_covered_by` returns the WITNESS
+  rather than a bool, because a decline whose reason is "the rule said so" is
+  one a reader cannot check.
+- **`DispatchRoute`** — twelve rungs, with `label`, `owns` and `kind` as
+  exhaustive `match`es. A rung added without a declaration does not compile.
+- **`RouteKind::{Decider, FastPath}`** — see below.
+- **`settle_rung` / `record_route_refusal`** — the rule, applied once.
+- **`DispatchError`** — the error channel with no `From<SolverError>`.
+
+`hand_back_unless_refuted` and `ArithRun::abstracted_opaque_reals` are deleted
+from `crates/axeyum-solver/src/dpll_lia.rs`.
+
+### `RouteKind` is the distinction ownership ALONE gets wrong
+
+Ownership by itself gets the datatype branch wrong, and getting it wrong is
+instructive. `datatype-elim` (ADR-0022 step A) and `datatype-native` (step B)
+are two halves of one decision procedure: step A folds read-over-construct and
+**refuses by design** when free datatype variables remain, precisely so step B
+gets them. Under ownership alone that refusal reads as "a route refused a
+fragment it declared" — the inconsistency report — on every `QF_DT` file, for a
+hand-off working exactly as intended.
+
+The fix is not "datatype is special". It is that a route is either the ladder's
+decision procedure for a fragment or an accelerator sitting above one, and the
+two have different contracts for a non-decision. ADR-1927 found the same class
+from the other side: it wrote a guard for `checked_quantified_fast_path`,
+measured it firing **0 times in 800 files**, and deleted it rather than ship an
+un-failable check — a fast path's refusal was never terminal there either.
+
+Five rungs are `FastPath` (`datatype-elim`, `uf-nra`,
+`uf-arith-overbound-probe`, `bv2nat-blast`, `abv-online-cdclt`) and seven are
+`Decider`. Two of the five already implemented the `FastPath` contract by hand:
+`bv2nat-blast` converts its own `Unknown` to a decline and falls through, and
+`abv-online-cdclt` does the same inside `dispatch_abv_online`. Their behaviour
+is unchanged; what changed is that the contract is now stated once instead of
+written twice and assumed everywhere else.
+
+### The compiler named seventeen sites
+
+Exit criterion 1 asks for the `Err(Unsupported)` sites **enumerated by the
+compiler**. `DispatchError` has no `From<SolverError>`, so inside
+`check_auto_dispatch_inner` every `?` and every `return Err(..)` is a type error
+until its site names the rung it belongs to. `rustc` printed **17**:
+
+| what | count | closed as |
+|---|---:|---|
+| the six rung funnels (`rung_or_decline(DispatchRoute::…, …)?`) | 6 | `DispatchError::at(<that rung>, e)` |
+| `datatype-elim` / `datatype-native` / `lira-dpll` / `nra` non-`Unsupported` arms | 4 | `DispatchError::at(<that rung>, e)` |
+| the `datatype-native` `Propagate` policy arm (ADR-1980's lever) | 1 | `DispatchError::at(DatatypeNative, …)` |
+| `decide_real_poly_constraint` and the two `bv2nat-blast` sub-calls | 3 | `DispatchError::at(Nra / Bv2NatBlast, e)` |
+| the `ite` lift (ladder machinery, no rung) | 1 | `DispatchError::ladder(e)` |
+| the two TAILS — `dispatch_nonlinear_int_tail` and the bit-blast fallback | 2 | `DispatchError::ladder(e)` |
+
+The two tails are the only sites left without a route, and ADR-1966 already
+classified `dispatch_nonlinear_int_tail` the same way — *"terminal — it is the
+last rung"*. They stop the ladder whatever they declare, so an ownership
+declaration decides nothing about them; declining there would return `Ok(None)`
+to a ladder with nothing below it and force the dispatcher to manufacture a
+second `unknown` that says strictly less than the one it discarded.
+
+The value of the type is not the one-off list. It is that the list stays
+produced by the compiler as the ladder changes: ADR-1966's own instrument went
+from 37 sites to 72 the moment it counted tail position, and warned that *"any
+future scan of this kind that counts only `?` is under-reporting by about
+half"*. Nothing here counts.
+
+### ADR-1966's 72 sites, re-derived
+
+`scripts/enumerate-dispatch-refusal-propagation.py` still runs, and its pinned
+baseline is `bench-results/dispatch-decline-audit-20260913/refusal-propagation-baseline.json`.
+Re-derived on this tree, the population and its classification are unchanged
+except for the one site this ADR moves: `check_auto_dispatch` →
+`check_with_datatype_native` was already converted by ADR-1980, and the
+remaining 62 "intra-route" sites — a CEGAR loop's own sub-solve, an NRA
+branch-and-bound relaxation, a warm incremental check — are unchanged, because
+**the enclosing function is one route, not a ladder**, and the ownership rule is
+about ladders. That classification is ADR-1966's and this ADR does not revisit
+it; what it adds is that the ten sites which ARE ladder rungs can no longer be
+written without naming a route.
+
+## The two defects this lane's own instruments found
+
+Neither was found by reading, and both would have shipped.
+
+### The fixture was vacuous and the mutation control said so
+
+`route-ownership-ladder`'s first run came back **SURVIVED — 20 tests ran, none
+depend on this guard**. The fixture
+`the_ladder_reaches_the_route_that_owns_the_construct` was asserting `unsat`
+through `check_auto_explained`, and with the default config the word-level
+reduction folds `select(store(a,i,v), i)` to `v` BEFORE dispatch. The residual
+is pure real, the trail is
+
+    ["probe", "dl-online:Declined", "nra-real-root:Declined", "nra:Decided(Unsat)"]
+
+and `lira-dpll` — the rung the test exists to pin — never runs at all. The test
+passed either way.
+
+Its own non-vacuity guard did not catch it, and the reason generalises: the
+guard accepted "one of `lira-dpll` | `nra` | `array-fast-path` appeared", and
+`nra` appears on the folded trail. **A non-vacuity check that admits a route
+other than the one under test is not one.** With `preprocess: false` and an
+assertion naming `lira-dpll` exactly, the mutation kills exactly one fixture.
+
+The fixture took three attempts before it reached the rung at all, each caught
+by that same guard:
+
+1. `select(store(a,i,v), i) > v` — difference logic, and `dl-online` is a
+   COMPLETE decider that runs first. Refuted at `attempts=2`.
+2. `3·read > 3·v` — normalises straight back to a difference. Same trail.
+3. `3·read − 2·v − w > 0 ∧ w = v` — three distinct symbols in one atom, which
+   is what puts it outside difference logic.
+
+ADR-1966's module note records the identical trap from the other end: its first
+fixture was refuted by `int-box-eval` at `attempts=3`, before the rung under
+test, so it passed on the UNFIXED tree and tested nothing.
+
+### This lane's own trace runner had ADR-2075's bug
+
+`bench-results/route-ownership-20260915/trace-run.sh` anchored on `^; route `
+and reported **103 of 645 rows** as having no trace. The watchdog-kill path
+prints `; partial route ` — a deliberate prefix — which is exactly the finding
+ADR-2075 published four weeks earlier and which cost it twelve files in two
+ADRs' censuses. Fixed to `-E '^; (partial )?route '` and the 103 re-captured on
+the same binary.
+
+The general shape is worth naming because it has now happened to a lane that had
+read the ADR: **a prefix a producer adds is a prefix every consumer must be
+written to strip, and prose in an ADR does not make that happen.** ADR-2101's
+`partial` FIELD is the structural fix; this runner predates the field reaching
+the artifact it reads.
 
 ## Exit criteria
 

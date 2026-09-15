@@ -246,12 +246,24 @@ def parse_ownership(auto_rs: str):
 
 
 def trail_routes(trail_cell: str):
-    """The ordered dispatch-ladder routes on this row's trail."""
-    marker = "; route-trail "
-    if not trail_cell.startswith(marker):
+    """The ordered dispatch-ladder routes on this row's trail.
+
+    Accepts BOTH prefixes. The watchdog-kill path prints `; partial route-trail `
+    (ADR-2075's deliberate prefix whose consumer half was never written), and
+    reading only `; route-trail ` drops every watchdog-killed file. This lane's
+    own capture runner fell into exactly that: 103 of 645 rows came back as "no
+    trace", 40 of them carrying a partial trail all along. A partial trail is a
+    trail -- it is a PREFIX of the attempt list, which is all this analysis
+    reads.
+    """
+    for marker in ("; route-trail ", "; partial route-trail "):
+        if trail_cell.startswith(marker):
+            payload = trail_cell[len(marker):]
+            break
+    else:
         return None
     try:
-        trace = json.loads(trail_cell[len(marker):])
+        trace = json.loads(payload)
     except json.JSONDecodeError:
         return None
     out = []
@@ -322,6 +334,8 @@ def main():
                 {"rows": 0, "reachable": 0, "enterable": 0, "no_dispatch": 0, "undet": 0},
             )
             per_div[div]["rows"] += 1
+            # `; partial route ...` carries the same fields, so both prefixes
+            # are read; see `trail_routes`.
             if "decided_by=none" not in route_line:
                 continue
             # THE FRAME. A row whose last attempt was an `unsupported` /
