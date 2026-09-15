@@ -8,10 +8,10 @@
 //! deterministic (run twice, identical trace).
 #![cfg(feature = "full")]
 
-use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
+use axeyum_ir::{Rational, Sort, TermArena, TermId, Value, eval};
 use axeyum_solver::{
-    CheckResult, DeclineReason, RouteOutcome, RouteTrace, SolverConfig, Verdict, check_auto,
-    check_auto_explained,
+    CheckResult, DeclineReason, RouteAttributionGuard, RouteOutcome, RouteTrace, SolverConfig,
+    Verdict, check_auto, check_auto_explained, last_route_attribution, solve,
 };
 
 /// A tiny deterministic linear-congruential generator (Numerical Recipes
@@ -558,4 +558,68 @@ fn resource_capped_lia_records_budget() {
             );
         }
     }
+}
+
+/// First-writer-wins for `RouteTrace::features` (ADR-2105), proven end to end
+/// through a genuinely quantified query rather than only at the `RouteTrace`
+/// level.
+///
+/// The query is `∀x:Int. x <= x` (trivially valid: its negation `c > c` over
+/// a fresh constant is UNSAT by plain LIA) plus an unrelated `y:Real > 0`.
+/// `quant_valid_universal::eliminate_valid_universals` tries to prove the
+/// universal valid by dispatching `¬body[x:=c]` — a sub-solve whose construct
+/// scan is `{Int}` — but that sub-solve runs through plain `check_auto`
+/// **nested** under the quantified ladder's armed `NestedDispatchGuard`
+/// (`solve`'s `quant_ladder`), which is `route_trace::Recorder::None`: the
+/// sub-solve never even has a trace to write `{Int}` onto (see
+/// `with_recorder`). Once the universal is proven valid it is rewritten to
+/// `true`; `y > 0` is untouched. The residual `[true, y > 0]` carries no more
+/// quantifier, so the ladder disarms and dispatches it as the one genuinely
+/// OUTERMOST `check_auto` this whole solve ever makes — and that scan is
+/// `{Real}`.
+///
+/// So the sub-solve's `{Int}` and the outermost `{Real}` really are different
+/// sets, and the recorded `features` must be `"Real"`: not `"Int"`, not a
+/// merge of both, and not absent (`not-dispatched`) — proving "first writer
+/// wins" names the outermost scan, not merely whichever ran first in the
+/// process (the old process-global's actual behaviour).
+#[test]
+fn quantified_valid_universal_sub_solve_does_not_own_the_recorded_features() {
+    let mut arena = TermArena::new();
+
+    let x = arena.declare("fw_x", Sort::Int).unwrap();
+    let xv = arena.var(x);
+    let x_le_x = arena.int_le(xv, xv).unwrap();
+    let forall_valid = arena.forall(x, x_le_x).unwrap();
+
+    let y = {
+        let s = arena.declare("fw_y", Sort::Real).unwrap();
+        arena.var(s)
+    };
+    let zero = arena.real_const(Rational::integer(0));
+    let y_gt_zero = arena.real_gt(y, zero).unwrap();
+
+    let assertions = vec![forall_valid, y_gt_zero];
+    // Preprocessing off: the word-level pipeline can eliminate the
+    // unconstrained `y > 0` conjunct before the residual ever reaches
+    // `check_auto_dispatch_inner`'s own scan, which would make the recorded
+    // `features` "none" for a reason that has nothing to do with the
+    // first-writer-wins property this test exists to check.
+    let cfg = SolverConfig::new().with_preprocess(false);
+
+    let guard = RouteAttributionGuard::enable();
+    let result = solve(&mut arena, &assertions, &cfg).unwrap();
+    let trace = last_route_attribution();
+    drop(guard);
+
+    assert!(
+        matches!(result, CheckResult::Sat(_)),
+        "the valid universal plus an unconstrained real bound must be SAT: {result:?}"
+    );
+    assert_eq!(
+        trace.features(),
+        Some("Real"),
+        "features must be the OUTERMOST (post-elimination) scan, not the \
+         Int-only sub-solve inside valid-universal elimination:\n{trace}"
+    );
 }

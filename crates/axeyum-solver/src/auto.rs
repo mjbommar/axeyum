@@ -107,7 +107,6 @@ use web_time::{Duration, Instant};
 /// ladder now reaches ate the budget the deciding route needed.
 pub(crate) mod route_ownership {
     use std::fmt;
-    use std::sync::atomic::{AtomicU32, Ordering};
 
     /// One class of query construct.
     ///
@@ -274,30 +273,31 @@ pub(crate) mod route_ownership {
         pub(crate) const fn is_empty(self) -> bool {
             self.0 == 0
         }
-
-        /// The raw bits, for the outcome-ledger recorder below and nothing
-        /// else. Not a public rendering: the wire form is
-        /// [`render_query_constructs`].
-        const fn bits(self) -> u16 {
-            self.0
-        }
-
-        /// Rebuilds a set from [`Self::bits`].
-        const fn from_bits(bits: u16) -> Self {
-            Self(bits)
-        }
     }
 
-    /// The construct set of the **first query the quantifier-free dispatch
-    /// ladder scanned in this process**, or [`UNSET_CONSTRUCTS`].
+    /// The wire form of a construct set: `Int|Real`, or `none` when empty —
+    /// the outcome ledger's `features` column (ADR-2102) and, since ADR-2105,
+    /// [`super::route_trace::RouteTrace::features`].
     ///
-    /// ADR-2102 (the outcome ledger) needs the `features` column, and the scan
-    /// that produces it is `Features::scan_within` deep inside the dispatcher —
-    /// there was no route by which a caller could see it. Rather than have the
-    /// ledger re-derive the classification in Python from the `.smt2` text,
-    /// which would be a second authority that drifts from this one, the
-    /// dispatcher records what it already computed and the CLI prints it as one
-    /// extra `--trace` line.
+    /// # History: a process-global, replaced
+    ///
+    /// ADR-2102 recorded this scan's result in a process-global `static
+    /// AtomicU32` (since removed; first writer wins by compare-exchange)
+    /// because at the time there was no other route from deep inside the
+    /// dispatcher back to a caller who could print it. ADR-2105 replaced that
+    /// global: every dispatch call already threads a
+    /// [`super::route_trace::Recorder`], so the caller
+    /// (`check_auto_dispatch_inner`) now hands this rendering straight to
+    /// [`super::route_trace::RouteTrace::record_features`] — which is `None`
+    /// (a no-op) for exactly the calls the global's own doc comment used to
+    /// worry about overwriting it: a NESTED sub-solve (`check_auto` under an
+    /// armed `NestedDispatchGuard`, or under an already-outermost dispatch)
+    /// never has a trace to write to at all, so first-writer-wins is now
+    /// almost always a property of the call graph rather than of an atomic —
+    /// [`RouteTrace::absorb`](super::route_trace::RouteTrace::absorb) still
+    /// carries the same rule for the one case that remains: a SECOND
+    /// genuinely-outermost dispatch sharing one thread's attribution (the
+    /// front door's post-dispatch second chances).
     ///
     /// # What this is NOT, said precisely
     ///
@@ -313,76 +313,6 @@ pub(crate) mod route_ownership {
     /// A top-level scan does not exist to record instead, and inventing one
     /// would mean running `Features::scan_within` on every query for the
     /// benefit of a telemetry column.
-    ///
-    /// **First writer wins**, deliberately: the first scan is the outermost one,
-    /// and a later sub-solve must not overwrite it. The cost is one relaxed
-    /// compare-exchange per dispatch.
-    ///
-    /// A process that dispatches many queries — `cargo test`, a library
-    /// embedding — therefore keeps the FIRST one until [`reset_query_constructs`]
-    /// is called. That is stated rather than worked around: `smtcomp_cli` solves
-    /// exactly one file per process, which is the only consumer.
-    static LAST_QUERY_CONSTRUCTS: AtomicU32 = AtomicU32::new(UNSET_CONSTRUCTS);
-
-    /// The sentinel meaning "no query has been dispatched in this process".
-    ///
-    /// Outside the `u16` range a [`ConstructSet`] can occupy, so it cannot
-    /// collide with the empty set — which is a real, different answer (a pure
-    /// Boolean query scans to no construct at all).
-    const UNSET_CONSTRUCTS: u32 = u32::MAX;
-
-    /// Records the first quantifier-free dispatch's construct set.
-    pub(crate) fn record_query_constructs(set: ConstructSet) {
-        let _ = LAST_QUERY_CONSTRUCTS.compare_exchange(
-            UNSET_CONSTRUCTS,
-            u32::from(set.bits()),
-            Ordering::Relaxed,
-            Ordering::Relaxed,
-        );
-    }
-
-    /// Clears the recording, so a process that dispatches several queries can
-    /// ask about the next one.
-    pub fn reset_query_constructs() {
-        LAST_QUERY_CONSTRUCTS.store(UNSET_CONSTRUCTS, Ordering::Relaxed);
-    }
-
-    /// The first quantifier-free dispatch's construct classes, in the machine
-    /// form the outcome ledger reads: `Int|Real`, or `none` for a scanned query
-    /// carrying no theory construct at all.
-    ///
-    /// Read [`LAST_QUERY_CONSTRUCTS`] for what this does and does not name on a
-    /// QUANTIFIED file before quoting it as "the file's features".
-    ///
-    /// `None` means no query has been dispatched in this process. The ledger
-    /// keeps that DISTINCT from `none` — "the binary never said" and "the set
-    /// was empty" are different answers, and collapsing them is how an absence
-    /// becomes a zero (ADR-2075).
-    ///
-    /// The separator is `|` and never `;`: ADR-2020's census split on `;` when
-    /// the field could contain one, and truncated its own largest bucket.
-    pub fn last_query_constructs() -> Option<String> {
-        let bits = LAST_QUERY_CONSTRUCTS.load(Ordering::Relaxed);
-        if bits == UNSET_CONSTRUCTS {
-            return None;
-        }
-        // `try_from` rather than `as`: the only writer is
-        // `record_query_constructs`, which widens a `u16`, so this cannot
-        // truncate -- but a silent `as` here would also swallow a future
-        // sentinel or a wider `ConstructSet`, and the failure mode would be a
-        // WRONG construct list rather than a missing one, which is the harder
-        // kind to notice in a ledger column.
-        let set = u16::try_from(bits).ok().map(ConstructSet::from_bits)?;
-        Some(render_query_constructs(set))
-    }
-
-    /// The wire form of a construct set: `Int|Real`, or `none` when empty.
-    ///
-    /// Split out from [`last_query_constructs`] so the RENDERING is testable
-    /// without touching a process-global. A test that had to dispatch a query
-    /// to check a string would be a test of the dispatcher, and one that read
-    /// the global would be order-dependent against every other test in the
-    /// binary.
     pub(crate) fn render_query_constructs(set: ConstructSet) -> String {
         if set.is_empty() {
             return "none".to_owned();
@@ -6888,12 +6818,20 @@ fn check_auto_dispatch_inner(
     // the rung's own `DispatchRoute::owns` declaration, never by which error
     // variant the rung happened to return.
     let query = features.constructs();
-    // ADR-2102. The outcome ledger's `features` column, taken from the scan
+    // ADR-2105. The outcome ledger's `features` column, taken from the scan
     // that just ran rather than re-derived from the `.smt2` text in Python --
     // a second authority that drifts from this one is the shape five
-    // instruments failed in last week. First writer wins, so a sub-solve does
-    // not overwrite the query the file states; see `record_query_constructs`.
-    route_ownership::record_query_constructs(query);
+    // instruments failed in last week. Handed straight to the RECORDER
+    // (`RouteTrace::record_features`, first writer wins) rather than to a
+    // process-global: `with_recorder` no-ops when `rec` is `None`, which is
+    // every NESTED sub-solve (a route's own `check_auto` call under an armed
+    // `NestedDispatchGuard`, or under an already-outermost dispatch), so a
+    // sub-solve's scan is never even offered a trace to overwrite. See
+    // `RouteTrace::features`'s own docs for what this does and does not name
+    // on a quantified query.
+    with_recorder(rec, |t| {
+        t.record_features(route_ownership::render_query_constructs(query));
+    });
     if features.has_datatype {
         // Datatype structural axioms (acyclicity / distinctness / injectivity):
         // a forced containment cycle (`x = cons(h, x)`), two constructors on one
