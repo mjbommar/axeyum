@@ -11453,6 +11453,118 @@ fn int_blast_ladder_widths(escalation_top: u32) -> Vec<u32> {
     widths
 }
 
+/// The smallest ladder width at which `blast_integers` can admit `assertions`
+/// at all, read from the query's own integer literals.
+///
+/// `encode_constant` (`axeyum-rewrite/src/int_blast.rs:603`) rejects the WHOLE
+/// blast with `IntBlastError::ConstantOutOfRange` when a single integer literal
+/// falls outside the signed range of the requested width. So every ladder rung
+/// below the width of the query's largest literal is a decided failure before
+/// it runs — and it is not free, because each rung clones the whole term DAG
+/// first ([ADR-2030] measured 105–309 identical refusals per file, each behind
+/// its own `arena.clone()`).
+///
+/// Returns `None` when no width this route accepts can hold the query: a
+/// `WideIntConst` is outside `i128` entirely, and `MAX_INT_BLAST_WIDTH` is 64.
+///
+/// # Direction of error
+///
+/// The scan runs on the assertions as the ladder receives them, BEFORE the
+/// array/function eliminations that `check_with_all_theories` performs inside
+/// each rung. Those passes rewrite and add; they do not constant-fold. If one
+/// ever did remove the largest literal, this floor would be too HIGH and would
+/// skip a rung that could have been admitted — a completeness loss, never a
+/// wrong verdict, and one the A/B's loss column is what gates.
+fn ladder_admissible_width_floor(arena: &TermArena, assertions: &[TermId]) -> Option<u32> {
+    use axeyum_ir::TermNode;
+
+    let mut floor = INT_BLAST_MIN_WIDTH;
+    let mut visited: std::collections::HashSet<TermId> = std::collections::HashSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !visited.insert(term) {
+            continue;
+        }
+        match arena.node(term) {
+            // The same two's-complement range test `encode_constant` applies.
+            TermNode::IntConst(value) => {
+                let value = *value;
+                let mut width = floor;
+                loop {
+                    let min = -(1_i128 << (width - 1));
+                    let max = (1_i128 << (width - 1)) - 1;
+                    if value >= min && value <= max {
+                        break;
+                    }
+                    width += 1;
+                    if width > axeyum_rewrite::MAX_INT_BLAST_WIDTH {
+                        return None;
+                    }
+                }
+                floor = floor.max(width);
+            }
+            // Outside `i128`: `WideConstantOutOfRange` at every width.
+            TermNode::WideIntConst(_) => return None,
+            TermNode::App { args, .. } => {
+                for &arg in &**args {
+                    stack.push(arg);
+                }
+            }
+            _ => {}
+        }
+    }
+    Some(floor)
+}
+
+/// ADR-2112's admissible-width floor, SHIPPED DISARMED.
+///
+/// `0` is the shipped arm and leaves [`int_blast_ladder_widths`]'s sequence
+/// byte-identical; `AXEYUM_INT_BLAST_WIDTH_FLOOR=1` arms it. Anything but an
+/// exact `1` is the shipped arm, so a typo cannot select an arm nobody chose.
+///
+/// It is a lever and not a default because the value it buys is a TIME saving
+/// on rungs that cannot decide, and ADR-2106 measured the neighbouring time
+/// saving on this same ladder at a ceiling of 3 files out of 115 undecided.
+/// Nothing ships armed here until an interleaved A/B says what it is worth.
+const INT_BLAST_WIDTH_FLOOR_ARMED: u32 = 0;
+
+axeyum_ir::cap_lever! {
+    /// [`INT_BLAST_WIDTH_FLOOR_ARMED`], or `AXEYUM_INT_BLAST_WIDTH_FLOOR`.
+    fn int_blast_width_floor_enabled() -> u32 =
+        "AXEYUM_INT_BLAST_WIDTH_FLOOR" or INT_BLAST_WIDTH_FLOOR_ARMED;
+}
+
+/// [`int_blast_ladder_widths`] with the rungs the query's literals have already
+/// decided against removed, when the floor lever is armed.
+///
+/// **The last rung is always retained.** When the floor removes everything, the
+/// ladder still runs one rung, so the `Unknown` a caller reads is produced by
+/// the same code that produces it today rather than reconstructed here — a
+/// reconstructed message is how a blocker census silently starts reading a
+/// different string ([ADR-1980]). With the floor disarmed this returns
+/// `widths` unchanged.
+fn apply_admissible_width_floor(
+    arena: &TermArena,
+    assertions: &[TermId],
+    widths: Vec<u32>,
+    enabled: bool,
+) -> Vec<u32> {
+    if !enabled || widths.is_empty() {
+        return widths;
+    }
+    // `None` is "no width can hold it": every rung would refuse, so keep the
+    // last one and let it say so in its own words.
+    let Some(floor) = ladder_admissible_width_floor(arena, assertions) else {
+        return vec![widths[widths.len() - 1]];
+    };
+    let kept: Vec<u32> = widths.iter().copied().filter(|&w| w >= floor).collect();
+    if kept.is_empty() {
+        vec![widths[widths.len() - 1]]
+    } else {
+        kept
+    }
+}
+
 /// Decides a pure-integer-arithmetic fallback query (the LIA engines above could
 /// not settle it) by **iterating the bounded bit-blast width** over a deterministic,
 /// trimmed ladder, returning the first replay-checked `Sat`.
@@ -11612,7 +11724,12 @@ fn dispatch_int_blast_width_ladder(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
-    let widths = int_blast_ladder_widths(int_blast_escalation_max_width());
+    let widths = apply_admissible_width_floor(
+        arena,
+        assertions,
+        int_blast_ladder_widths(int_blast_escalation_max_width()),
+        int_blast_width_floor_enabled() == 1,
+    );
 
     // Wall-clock deadline (only when a timeout is configured): each per-width
     // multiplier blast can otherwise run far past the configured budget. Checked
@@ -17845,6 +17962,229 @@ mod tests {
         assert_eq!(
             super::int_blast_ladder_widths(super::INT_BLAST_ESCALATION_MAX_WIDTH),
             vec![4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 24, 32],
+        );
+    }
+
+    // ---- ADR-2112: the admissible-width floor -----------------------------
+
+    /// `(and (<= -2 x) (<= x 2) (= (* 1073741825 x) c))` — the shape the
+    /// `20170427-VeryMax` Farkas-template family is made of: a five-element
+    /// variable box and a `2^30 + 1` coefficient. Measured over the 116
+    /// undecided `QF_NIA` rows, 95 of 115 have exactly this mismatch, with a
+    /// median variable need of 2 bits against a median literal need of 17.
+    fn farkas_shaped_query() -> (TermArena, Vec<TermId>) {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("x").expect("x");
+        let c = arena.int_var("c").expect("c");
+        let lo = arena.int_const(-2);
+        let hi = arena.int_const(2);
+        let big = arena.int_const(1_073_741_825);
+        let low = arena.int_le(lo, x).expect("-2 <= x");
+        let high = arena.int_le(x, hi).expect("x <= 2");
+        let product = arena.int_mul(big, x).expect("coefficient * x");
+        let equation = arena.eq(product, c).expect("= product c");
+        (arena, vec![low, high, equation])
+    }
+
+    /// The floor is read off the query's own literals and equals the width
+    /// `encode_constant` would first accept — 32 for `2^30 + 1`, whose signed
+    /// range needs 32 bits.
+    #[test]
+    fn the_floor_is_the_width_of_the_largest_literal() {
+        let (arena, assertions) = farkas_shaped_query();
+        assert_eq!(
+            super::ladder_admissible_width_floor(&arena, &assertions),
+            Some(32),
+            "`2^30 + 1` fits signed 32 and no narrower width"
+        );
+
+        // A control of the same KIND at the other end: a query whose literals
+        // are tiny must not be given a floor above the ladder's own minimum, or
+        // the lever would skip rungs on every query rather than on this family.
+        let mut small = TermArena::new();
+        let y = small.int_var("y").expect("y");
+        let three = small.int_const(3);
+        let atom = small.int_le(y, three).expect("y <= 3");
+        assert_eq!(
+            super::ladder_admissible_width_floor(&small, &[atom]),
+            Some(super::INT_BLAST_MIN_WIDTH),
+        );
+    }
+
+    /// Armed, the floor removes exactly the rungs that `encode_constant` has
+    /// already decided against; disarmed, the sequence is byte-identical.
+    #[test]
+    fn the_floor_removes_only_inadmissible_rungs() {
+        let (arena, assertions) = farkas_shaped_query();
+        let shipped = super::int_blast_ladder_widths(super::INT_BLAST_ESCALATION_MAX_WIDTH);
+
+        let disarmed =
+            super::apply_admissible_width_floor(&arena, &assertions, shipped.clone(), false);
+        assert_eq!(
+            disarmed, shipped,
+            "a lever that changes the sequence when unset is not a lever"
+        );
+
+        let armed = super::apply_admissible_width_floor(&arena, &assertions, shipped.clone(), true);
+        assert_eq!(
+            armed,
+            vec![32],
+            "14 of the 15 rungs cannot hold `2^30 + 1` and each one clones the \
+             whole term DAG before finding that out"
+        );
+        // Whatever it keeps must be a SUBSEQUENCE of the shipped ladder: the
+        // lever may only remove rungs, never invent or reorder one.
+        assert!(
+            armed.iter().all(|w| shipped.contains(w)),
+            "the floor invented a width that is not on the ladder: {armed:?}"
+        );
+    }
+
+    /// SOUNDNESS-NEGATIVE. A too-narrow width must never be able to turn a
+    /// satisfiable query into `unsat`, and the floor must never be the thing
+    /// that makes a wrong verdict reachable.
+    ///
+    /// Two halves, because the floor could break this in two different ways:
+    ///
+    /// 1. The floor must never drop the ladder BELOW what the literals need.
+    ///    A width under the floor is one where `blast_integers` refuses
+    ///    outright, so it can produce no model at all — but if the floor were
+    ///    ever computed too LOW (say by reading an unsigned range), a rung
+    ///    would run at a width that silently WRAPS `2^30 + 1` to a small
+    ///    number, and `(* 1073741825 x) = c` would be satisfiable in the
+    ///    bit-vector where it is not over the integers. The assertion is that
+    ///    the floor is at least the true signed requirement for every literal.
+    ///
+    /// 2. A bounded-width bit-vector `unsat` must NOT be reported as `unsat`.
+    ///    This is what makes narrowing safe at all
+    ///    (`lia.rs:96-107` degrades it to `Unknown`), and it is the property a
+    ///    width lever would silently depend on. Asserted directly rather than
+    ///    assumed, on a query that IS satisfiable over the integers and is NOT
+    ///    satisfiable inside a narrow box.
+    #[test]
+    fn a_narrow_width_cannot_manufacture_an_unsat() {
+        // Half 1: the floor is never below the true signed requirement.
+        for literal in [
+            1_073_741_825_i128,
+            -1_073_741_823,
+            4_294_967_295,
+            i128::from(i32::MIN),
+            127,
+            -128,
+            0,
+        ] {
+            let mut arena = TermArena::new();
+            let v = arena.int_var("v").expect("v");
+            let k = arena.int_const(literal);
+            let atom = arena.eq(v, k).expect("v = k");
+            let floor = super::ladder_admissible_width_floor(&arena, &[atom])
+                .expect("every literal here fits some width at or below 64");
+            let min = -(1_i128 << (floor - 1));
+            let max = (1_i128 << (floor - 1)) - 1;
+            assert!(
+                literal >= min && literal <= max,
+                "floor {floor} does not hold {literal}: a rung would run at a \
+                 width that WRAPS the literal"
+            );
+            if floor > super::INT_BLAST_MIN_WIDTH {
+                let narrower = floor - 1;
+                let min = -(1_i128 << (narrower - 1));
+                let max = (1_i128 << (narrower - 1)) - 1;
+                assert!(
+                    literal < min || literal > max,
+                    "floor {floor} is one wider than it needs to be for \
+                     {literal}; the lever would skip an admissible rung"
+                );
+            }
+        }
+
+        // Half 2: a bit-vector `unsat` inside a narrow box is NOT an integer
+        // `unsat`. `x * x = 289` has the integer solution 17, which does not
+        // fit signed 5 bits; the bounded blast must answer `Unknown`.
+        let mut arena = TermArena::new();
+        let x = arena.int_var("x").expect("x");
+        let square = arena.int_mul(x, x).expect("x * x");
+        let target = arena.int_const(289);
+        let equation = arena.eq(square, target).expect("x * x = 289");
+        let positive = arena.int_const(0);
+        let sign = arena.int_le(positive, x).expect("0 <= x");
+        let assertions = vec![equation, sign];
+
+        let mut backend = SatBvBackend::new();
+        let narrow = crate::lia::check_with_int_blasting(
+            &mut backend,
+            &mut arena,
+            &assertions,
+            5,
+            &SolverConfig::default(),
+        )
+        .expect("the narrow blast is a result, not an error");
+        assert!(
+            !matches!(narrow, CheckResult::Unsat),
+            "a bounded-width bit-vector `unsat` was reported as an integer \
+             `unsat`; every width lever in this file would then be a route to a \
+             WRONG verdict, not merely an incomplete one: {narrow:?}"
+        );
+
+        // Positive control of the same kind: wide enough, and the witness is
+        // found — so the `Unknown` above is the bound speaking, not the route
+        // being broken.
+        let mut wide_arena = TermArena::new();
+        let x = wide_arena.int_var("x").expect("x");
+        let square = wide_arena.int_mul(x, x).expect("x * x");
+        let target = wide_arena.int_const(289);
+        let equation = wide_arena.eq(square, target).expect("x * x = 289");
+        let positive = wide_arena.int_const(0);
+        let sign = wide_arena.int_le(positive, x).expect("0 <= x");
+        let mut backend = SatBvBackend::new();
+        let wide = crate::lia::check_with_int_blasting(
+            &mut backend,
+            &mut wide_arena,
+            &[equation, sign],
+            16,
+            &SolverConfig::default(),
+        )
+        .expect("the wide blast is a result");
+        assert!(
+            matches!(wide, CheckResult::Sat(_)),
+            "the control did not decide, so the narrow `Unknown` proves nothing \
+             about the bound: {wide:?}"
+        );
+    }
+
+    /// The degenerate literal every underspecified-operator rule in `CLAUDE.md`
+    /// asks for, on the operator this lever touches: a query carrying a literal
+    /// NO width accepts must still leave the ladder a rung to speak from, and
+    /// must not hand back an empty sequence (which would make the ladder return
+    /// its manufactured placeholder rather than a real refusal).
+    #[test]
+    fn a_literal_no_width_can_hold_still_leaves_one_rung() {
+        let mut arena = TermArena::new();
+        let v = arena.int_var("v").expect("v");
+        // 2^100: inside `i128`, outside every width the route accepts (64).
+        let huge = arena.int_const(1_i128 << 100);
+        let atom = arena.eq(v, huge).expect("v = 2^100");
+        let assertions = vec![atom];
+
+        assert_eq!(
+            super::ladder_admissible_width_floor(&arena, &assertions),
+            None,
+            "no width at or below MAX_INT_BLAST_WIDTH holds 2^100"
+        );
+
+        let shipped = super::int_blast_ladder_widths(super::INT_BLAST_ESCALATION_MAX_WIDTH);
+        let armed = super::apply_admissible_width_floor(&arena, &assertions, shipped.clone(), true);
+        assert_eq!(
+            armed,
+            vec![*shipped.last().expect("the shipped ladder is not empty")],
+            "when every rung is inadmissible the LAST one is retained, so the \
+             `Unknown` a caller reads is produced by the code that produces it \
+             today and not reconstructed here"
+        );
+        assert!(
+            !armed.is_empty(),
+            "an empty width sequence makes the ladder return its placeholder \
+             instead of the refusal that actually applies"
         );
     }
 

@@ -2843,6 +2843,37 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Ladder floor: narrower than this leaves no room for a genuine small witness.",
     },
     ConfigEntry {
+        name: "INT_BLAST_WIDTH_FLOOR_ARMED",
+        module: "crates/axeyum-solver/src/auto.rs",
+        value: "0",
+        unit: "armed (1) or disarmed (0)",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: Some("AXEYUM_INT_BLAST_WIDTH_FLOOR"),
+        justification: dated(
+            "ADR-2112",
+            "2026-09-15",
+            None,
+            &[
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "ladder_admissible_width_floor",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/auto.rs",
+                    "apply_admissible_width_floor",
+                ),
+            ],
+            &[
+                adr("ADR-2112"),
+                doc("bench-results/nia-trace-20260915/README.md"),
+            ],
+        ),
+        note: "SHIPPED DISARMED, and 0 leaves `int_blast_ladder_widths`'s sequence byte for byte. Armed, `dispatch_int_blast_width_ladder` skips the rungs whose width cannot hold the query's own largest integer literal -- `encode_constant` (`axeyum-rewrite/src/int_blast.rs:603`) rejects the WHOLE blast when one literal falls outside the requested width's signed range, so those rungs are decided failures before they run, and each pays an `arena.clone()` of the file's term DAG first (ADR-2030 measured 105-309 identical refusals per file behind exactly that clone). WHAT IT IS WORTH, said before the change: a TIME saving, not a decision. Measured over all 116 undecided QF_NIA T1 rows (`bench-results/nia-trace-20260915/census-undecided-116.tsv`), `constant_width` has median 17 and `bound_width` -- the width the query's own VARIABLES need -- has median 2; 95 of 115 files are forced wide by a literal rather than by their search space, and 29 have exactly ONE admissible rung of the 8 sampled. It cannot decide a file the ladder does not already decide, because a skipped rung returns `Unknown(ConstantOutOfRange)` today and is skipped tomorrow. SOUNDNESS is not in the floor but under it: a bounded-width bit-vector `unsat` is degraded to `Unknown` (`lia.rs:96-107`) and a `sat` model is replayed against the exact integers (`lia.rs:111-140`), so no width policy in this file can reach a wrong verdict; `auto::tests::a_narrow_width_cannot_manufacture_an_unsat` asserts both halves rather than assuming them. The LAST rung is always retained even when every rung is inadmissible, so the `Unknown` a caller reads is produced by the code that produces it today and not reconstructed (ADR-1980's rule).",
+    },
+    ConfigEntry {
         name: "INT_BOX_ENUM_FAST_CASES",
         module: "crates/axeyum-solver/src/auto.rs",
         value: "10_000",
