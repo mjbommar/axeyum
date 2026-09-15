@@ -75,7 +75,7 @@ at all, and the population is now the rows that came through the wrapper.
 
 Gates: clippy `-D warnings` exit 0; the four DT suites **24 / 6 / 3 / 5** and the
 `dt_*` gate suites **20 / 11 / 12 / 10**, 0 failed; `dispatch_rung_refusal_declines`
-6/6; `route_trace` 13/13; `config_registry::tests` 18/18; `progress_frontier`
+6/6; `route_trace` 13/13; `route_attribution` 8/8; `config_registry::tests` 18/18; `progress_frontier`
 12/12 rc 0, no REGRESSION; fmt 0; hygiene PASS; links ok. The `--lib` sweep is
 **1827 passed, 3 failed**, and all four failures across the run are wall-clock
 budget tests on a box at load 86-90 — **all four re-checked and all four re-pass** rather than assumed, and

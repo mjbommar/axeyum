@@ -436,6 +436,7 @@ selection it calls is what is pinned.
 | `dt_capability_1935` / `dt_constructor_arg_1942` / `dt_valued_result_1946` / `dt_uf_gate` | **20 / 11 / 12 / 10**, 0 failed |
 | `dispatch_rung_refusal_declines` (ADR-1980's own suite) | **6 / 6** |
 | `route_trace` | **13 / 13** |
+| `route_attribution` | **8 / 8** |
 | `decline_detail_typed` | **6 / 6** on re-run (see below) |
 | `config_registry::tests` | **18 / 18** |
 | `progress_frontier` | **12 / 12**, rc 0, no `REGRESSION` |
