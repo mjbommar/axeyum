@@ -4877,3 +4877,155 @@ mod fragment_probe_tests {
         assert!(refused > 0, "no atom was refused; the test is vacuous");
     }
 }
+
+#[cfg(test)]
+mod opaque_real_guard_tests {
+    use super::*;
+
+    use axeyum_ir::Sort;
+
+    /// Names a [`Decision`] variant for an assertion message. `Decision` is not
+    /// `Debug` (it carries a `Model`), and a failure that says only "not Sat"
+    /// cannot tell a decline apart from a refusal.
+    fn name(decision: &Decision) -> &'static str {
+        match decision {
+            Decision::Sat(_) => "Sat",
+            Decision::UnsatFarkas { .. } => "UnsatFarkas",
+            Decision::UnsatTrivial(_) => "UnsatTrivial",
+            Decision::TimedOut => "TimedOut",
+            Decision::Incomplete(_) => "Incomplete",
+            Decision::OutOfMemory(_) => "OutOfMemory",
+        }
+    }
+
+    /// A satisfiable system carrying ONE opaque real column, small enough that
+    /// Fourier-Motzkin decides it: `f(x) >= 0`.
+    fn tiny_satisfiable_with_opaque() -> (TermArena, Vec<TermId>) {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").expect("x");
+        let f = arena
+            .declare_fun("f", &[Sort::Real], Sort::Real)
+            .expect("declare f");
+        let fx = arena.apply(f, &[x]).expect("f(x)");
+        let zero = arena.real_const(Rational::zero());
+        let atom = arena.real_ge(fx, zero).expect("f(x) >= 0");
+        (arena, vec![atom])
+    }
+
+    /// The same, but WIDE enough that the route sends it to the exact-rational
+    /// simplex before Fourier-Motzkin ever runs
+    /// ([`crate::lra_route::SIMPLEX_FIRST_AT_CONSTRAINTS`] is 256), so the
+    /// `sat` exit exercised is `simplex_fallback`'s and not `replayed_sat`'s.
+    fn wide_satisfiable_with_opaque() -> (TermArena, Vec<TermId>) {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("f", &[Sort::Real], Sort::Real)
+            .expect("declare f");
+        let mut assertions = Vec::new();
+        for i in 0..300_i128 {
+            let x = arena.real_var(&format!("x{i}")).expect("a real variable");
+            let fx = arena.apply(f, &[x]).expect("f(x_i)");
+            let bound = arena.real_const(Rational::integer(i));
+            assertions.push(arena.real_le(fx, bound).expect("f(x_i) <= i"));
+        }
+        (arena, assertions)
+    }
+
+    /// GUARD G1 -- `replayed_sat`. Deleting it makes this test, and only this
+    /// test, die.
+    ///
+    /// Observable only from INSIDE the module: the public entry
+    /// ([`check_with_lra_opaque_apps_within`]) returns a type with no `Sat`
+    /// variant, so from outside the crate a deleted G1 is invisible. That is
+    /// the type doing its job and is exactly why this test reaches past it --
+    /// a guard nothing can observe is a guard nobody will keep.
+    #[test]
+    fn g1_fourier_motzkin_sat_over_an_abstraction_is_incomplete_not_sat() {
+        let (arena, assertions) = tiny_satisfiable_with_opaque();
+        // Control FIRST: without the abstraction this query is not even in the
+        // fragment, so a later `Incomplete` cannot be read as "nothing ran".
+        let refused = decide_within_with_options(&arena, &assertions, None, false);
+        assert!(
+            matches!(refused, Err(SolverError::Unsupported(_))),
+            "unabstracted, `f(x) >= 0` is outside the linear-real fragment; got {}",
+            refused.as_ref().map_or("an error", |d| name(d))
+        );
+
+        let decided = decide_within_with_options(&arena, &assertions, None, true)
+            .expect("the abstraction admits it");
+        match decided {
+            Decision::Sat(_) => panic!(
+                "a feasible point of a RELAXATION is not a model of the query;                  `replayed_sat` must decline on an opaque column"
+            ),
+            Decision::Incomplete(detail) => assert!(
+                detail.contains("opaque real-subterm abstraction is satisfiable"),
+                "the decline must say WHICH guard fired, or a later change cannot                  tell this apart from a timeout: {detail}"
+            ),
+            ref other => panic!("expected the opaque decline, got {}", name(other)),
+        }
+    }
+
+    /// GUARD G2 -- `simplex_fallback`. Same statement for the other engine.
+    ///
+    /// The width is what selects the engine, so the test asserts the engine was
+    /// actually the simplex by requiring the OTHER decline text: `simplex_fallback`
+    /// declines with `Ok(None)`, which `decide_within_with_options` reports as
+    /// its own `TimedOut`/size refusal rather than G1's message. A version of
+    /// this test that accepted either message would pass with G2 deleted.
+    #[test]
+    fn g2_simplex_sat_over_an_abstraction_is_not_sat() {
+        let (arena, assertions) = wide_satisfiable_with_opaque();
+        let decided = decide_within_with_options(&arena, &assertions, None, true)
+            .expect("the abstraction admits it");
+        assert!(
+            !matches!(decided, Decision::Sat(_)),
+            "a feasible point of a RELAXATION is not a model of the query, on either \
+             engine; got {}",
+            name(&decided)
+        );
+    }
+
+    /// The direction that DOES transfer, through the same entry point: an
+    /// abstracted system that is genuinely infeasible is `Unsat`.
+    ///
+    /// Paired with the two above so the pair says "the guard rejects `sat` and
+    /// does not reject everything" -- a guard that declined unconditionally
+    /// would pass both of those and fail this one.
+    #[test]
+    fn an_infeasible_abstraction_still_reaches_unsat() {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("x").expect("x");
+        let f = arena
+            .declare_fun("f", &[Sort::Real], Sort::Real)
+            .expect("declare f");
+        let fx = arena.apply(f, &[x]).expect("f(x)");
+        let zero = arena.real_const(Rational::zero());
+        let one = arena.real_const(Rational::integer(1));
+        let lo = arena.real_ge(fx, one).expect("f(x) >= 1");
+        let hi = arena.real_le(fx, zero).expect("f(x) <= 0");
+        let outcome = check_with_lra_opaque_apps_within(&arena, &[lo, hi], None)
+            .expect("in the fragment with the abstraction on");
+        assert!(
+            matches!(outcome, LraOpaqueOutcome::Unsat),
+            "1 <= f(x) <= 0 is infeasible in the relaxation, hence in the original: \
+             {outcome:?}"
+        );
+    }
+
+    /// The kill switch's polarity, without touching process environment.
+    ///
+    /// `AXEYUM_LRA_OPAQUE_APPS` is INVERTED relative to a normal opt-in flag.
+    /// A runner that gets this backwards measures the shipped arm in both halves
+    /// and reports the zero as a null, which is the failure ADR-2025 recorded.
+    #[test]
+    fn the_kill_switch_is_off_only_for_exactly_zero() {
+        assert!(!parse_opaque_real_apps_lever(Some("0")), "`0` disables");
+        assert!(parse_opaque_real_apps_lever(None), "unset is ON");
+        assert!(parse_opaque_real_apps_lever(Some("1")), "`1` is ON");
+        assert!(parse_opaque_real_apps_lever(Some("")), "empty is ON");
+        assert!(
+            parse_opaque_real_apps_lever(Some("off")),
+            "a typo is ON, not OFF"
+        );
+    }
+}

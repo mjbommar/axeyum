@@ -1,0 +1,52 @@
+{
+  "baseline_passed": [
+    "a_satisfiable_abstraction_with_an_opaque_column_yields_no_model",
+    "an_unsat_over_the_relaxation_agrees_with_the_unabstracted_query",
+    "array_axiom_violating_abstraction_must_never_become_sat",
+    "congruence_violating_abstraction_must_never_become_sat",
+    "w1_control_without_the_contradiction_is_not_unsat",
+    "w1_propositional_contradiction_through_an_opaque_application",
+    "w2_control_consistent_window_is_not_unsat",
+    "w2_shared_opaque_term_carries_the_contradiction",
+    "w3_array_read_of_real_sort_carries_the_contradiction",
+    "w3_control_consistent_array_read_is_not_unsat",
+    "w4_control_consistent_sum_is_not_unsat",
+    "w4_opaque_reads_as_leaves_of_a_linear_combination",
+    "w5_control_without_the_upper_bound_is_not_unsat",
+    "w5_opaque_and_ordinary_columns_in_one_system",
+    "w6_control_consistent_nested_term_is_not_unsat",
+    "w6_nested_opaque_term_is_abstracted_at_the_outermost_node"
+  ],
+  "rows": [
+    {
+      "guard": "G1-replayed-sat",
+      "what": "Fourier-Motzkin sat exit",
+      "status": "SURVIVED",
+      "killed": []
+    },
+    {
+      "guard": "G2-simplex-fallback",
+      "what": "exact-rational simplex sat exit",
+      "status": "SURVIVED",
+      "killed": []
+    },
+    {
+      "guard": "G3-support-fast-path",
+      "what": "dpll_lia support-set sat exit",
+      "status": "SURVIVED",
+      "killed": []
+    },
+    {
+      "guard": "G4-full-path",
+      "what": "dpll_lia full-path sat exit",
+      "status": "SURVIVED",
+      "killed": []
+    },
+    {
+      "guard": "G5-model-oracle",
+      "what": "sat-model reconstruction uses the UNabstracted decider",
+      "status": "SURVIVED",
+      "killed": []
+    }
+  ]
+}
