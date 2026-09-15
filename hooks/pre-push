@@ -791,6 +791,35 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #                              Unlike distinct_linear_soundness below, neither
   #                              rewrite has a lever to turn off — these
   #                              assertions are the whole gate.
+  #   replay_pairing_soundness
+  #                            — ADR-2070: `SmtLibSolved.assertions` and
+  #                              `.model` must be an actual PAIR. The string
+  #                              second chances decide against the SOURCE
+  #                              expressions and bind the parser's `!weq!<name>`
+  #                              sequence mirrors, while `assertions` stayed the
+  #                              PACKED flat vector over the declared names at
+  #                              `(_ BitVec string_total(m))` — different
+  #                              SymbolIds, names and sorts, so the replay could
+  #                              not evaluate at all (measured: 5 of 109 `sat`
+  #                              over the 217 string-division files). The
+  #                              verdicts were right; the damage was a FALSE
+  #                              ALARM, confirmed end to end through
+  #                              `axeyum-py`'s `Outcome.replay()` answering
+  #                              `False` on four of the five and `True` on the
+  #                              fifth over a substituted all-empty model.
+  #                              The pairs here straddle the packed cap
+  #                              (`STRING_MAX_LEN = 12`) by ONE numeral, so a
+  #                              build that withheld every string `sat` and a
+  #                              build that paired every one each fail exactly
+  #                              one half — neither can pass by doing less.
+  #                              `the_replay_can_still_answer_false` is the
+  #                              load-bearing one: the repair guards on
+  #                              COMPLETENESS of the binding, never on
+  #                              satisfaction, so the downstream `check_model`
+  #                              keeps its power to reject. Registered here
+  #                              because ADR-2000's soundness suite shipped
+  #                              registered nowhere and `check-suite-gating.py`
+  #                              caught it at the push.
   for suite in unknown_reason_coverage dt_uf_gate dt_capability_1935 \
                dt_constructor_arg_1942 dt_valued_result_1946 \
                datatype_solve_path quant_ladder_rung_refusal_declines \
@@ -798,6 +827,7 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
                dispatch_rung_refusal_declines quant_egraph_reserve_row \
                quant_valid_universal_reserve_row qinst_egraph_retry_share_row \
                distinct_linear_soundness parser_desugar_soundness \
+               replay_pairing_soundness \
                additive_no_overflow_never_becomes_unsat \
                lra_opaque_real_apps; do
     gated_test "dispatch/reason: $suite" \

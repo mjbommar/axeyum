@@ -316,6 +316,13 @@ plus the whole noise-floor division, all on the merged binary `bec2cf65b`:
 | the 14 movers | 14/14 STABLE-GAIN | **14/14 STABLE-GAIN**, three fresh passes per arm |
 | noise floor, `AUFLIRA` 200, same arm twice | 0 of 200 | **0 of 200**, 22 undecided in base |
 
+`main` then moved again with [ADR-2055], which replaced `simplex_fallback`'s
+dense row matrix with sparse rows — inside the very function this lane's second
+`sat` guard sits in. So the movers were re-checked a THIRD time, on
+`f4057b178`: **14/14 STABLE-GAIN again**, three more passes per arm
+(`ab/m2-stab-p{1,2,3}.tsv`). Three binaries, nine passes per arm in total, same
+14.
+
 If a mover had failed to convert, that would have been a finding and the full
 sweep would have been owed. None did, and the band is still zero, so re-running
 600 rows would buy a number already implied by both halves of it. The 200-row
@@ -449,5 +456,6 @@ so the instrument that caught it is the one R4 exists for.
 [ADR-1966]: adr-1966-a-rungs-refusal-of-a-construct-a-later-rung-owns-is-a-decline.md
 [ADR-2010]: adr-2010-the-sat-side-replay-cannot-see-the-parser.md
 [ADR-2025]: adr-2025-the-refutation-was-available-before-instantiating-and-we-dropped-the-assertion-carrying-it.md
+[ADR-2055]: adr-2055-the-tableau-is-the-memory-and-capping-it-costs-eighteen-clean-exits.md
 [ADR-2060]: adr-2060-the-give-up-variant-could-not-tell-six-gates-apart-and-nothing-asked-it-to.md
 [ADR-2050]: adr-2050-the-eleven-are-four-causes-and-the-largest-is-one-refused-atom.md
