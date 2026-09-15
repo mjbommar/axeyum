@@ -1,0 +1,137 @@
+== REAL-OPAQUE Sat-exit enumeration ==
+commit: 7df00fd8294c1276bece8548878789932c543faa
+date:   2026-09-14T20:08:55-04:00
+
+-- E0: every cfg(test) attribute, and why a single cut point is wrong --
+crates/axeyum-solver/src/lra.rs  total=4879  cfg(test)_at: 2482 2509 4162 4334 4455 4782 
+crates/axeyum-solver/src/dpll_lia.rs  total=6653  cfg(test)_at: 1730 4863 
+   The FIRST one is a test-only helper item in the middle of both files,
+   not the test module at the end. satexits.py skips each region by brace
+   balance instead, and asserts the shape it cannot handle.
+
+-- E1: every construction site of lra::Collector in the workspace --
+crates/axeyum-solver/src/lra.rs:541:    let mut ctx = Collector {
+crates/axeyum-solver/src/lra.rs:544:        ..Collector::default()
+crates/axeyum-solver/src/lra.rs:3800:    let mut ctx = Collector::default();
+   (each is either Collector::default() -- allow_opaque_apps == false --
+    or names the field explicitly)
+
+-- E1b: every mention of allow_opaque_apps in lra.rs --
+525:/// [`Collector::allow_opaque_apps`]**, which is what makes the `sat`-exit
+538:    allow_opaque_apps: bool,
+543:        allow_opaque_apps,
+601:    allow_opaque_apps: bool,
+627:        collect_constraints_with_options(arena, assertions, deadline, allow_opaque_apps)?
+1339:    /// Populated only when [`Collector::allow_opaque_apps`] is set. Keying by
+1358:    allow_opaque_apps: bool,
+1659:            } if self.allow_opaque_apps && is_real(arena, term) => {
+2288:/// `allow_opaque_apps` is `true` to match
+2365:    allow_opaque_apps: bool,
+2368:    lia_simplex_capped(arena, assertions, deadline, allow_opaque_apps, node_cap)
+2486:    allow_opaque_apps: bool,
+2488:    let mut ctx = IntCollector::new(allow_opaque_apps);
+2523:    allow_opaque_apps: bool,
+2527:    let mut ctx = IntCollector::new(allow_opaque_apps);
+2667:    allow_opaque_apps: bool,
+2670:    let mut ctx = IntCollector::new(allow_opaque_apps);
+2702:    allow_opaque_apps: bool,
+2704:    let mut ctx = IntCollector::new(allow_opaque_apps);
+2731:    minimize_lp_relaxation_core(arena, assertions, allow_opaque_apps, &mut core);
+2735:        lp_relaxation_feasibility_with_options(arena, &subset, allow_opaque_apps),
+2748:    allow_opaque_apps: bool,
+2767:                lp_relaxation_feasibility_with_options(arena, &trial, allow_opaque_apps),
+3398:    allow_opaque_apps: bool,
+3422:    /// collector's whole life, while `allow_opaque_apps`, `trivially_unsat` and
+3431:    fn new(allow_opaque_apps: bool) -> Self {
+3433:            allow_opaque_apps,
+3649:                    } if self.allow_opaque_apps && is_int(arena, t) => {
+
+-- E2: callers of collect_constraints_with_options (the only setter) --
+crates/axeyum-solver/src/lra.rs:519:    collect_constraints_with_options(arena, assertions, deadline, false)
+crates/axeyum-solver/src/lra.rs:534:fn collect_constraints_with_options(
+crates/axeyum-solver/src/lra.rs:627:        collect_constraints_with_options(arena, assertions, deadline, allow_opaque_apps)?
+crates/axeyum-solver/src/lra.rs:2152:    collect_constraints_with_options(arena, &[atom], None, true).map(|_| ())
+
+-- E2b: callers of decide_within_with_options --
+crates/axeyum-solver/src/lra.rs:583:    decide_within_with_options(arena, assertions, deadline, false)
+crates/axeyum-solver/src/lra.rs:597:fn decide_within_with_options(
+crates/axeyum-solver/src/lra.rs:2221:        match decide_within_with_options(arena, assertions, deadline, true)? {
+
+-- E3: every Sat CONSTRUCTION in both files, test regions EXCLUDED --
+   (by brace balance, not by cutting at the first cfg(test) -- see satexits.py:
+    the cut version discarded 2,397 + 3,133 production lines and looked clean)
+== crates/axeyum-solver/src/lra.rs ==
+   lines=4879 cfg(test)_regions=6 lines_in_test=738
+   Decision::Sat: raw=7 in_test=1 production=6 production_non_pattern=3
+      crates/axeyum-solver/src/lra.rs:153: Decision::Sat(model) => (CheckResult::Sat(model), None),
+      crates/axeyum-solver/src/lra.rs:868: Ok(Decision::Sat(model))
+      crates/axeyum-solver/src/lra.rs:1057: Ok(Some(Decision::Sat(model)))
+   CheckResult::Sat: raw=5 in_test=2 production=3 production_non_pattern=3
+      crates/axeyum-solver/src/lra.rs:153: Decision::Sat(model) => (CheckResult::Sat(model), None),
+      crates/axeyum-solver/src/lra.rs:2612: Ok(CheckResult::Sat(model))
+      crates/axeyum-solver/src/lra.rs:3833: Ok(CheckResult::Sat(model))
+   LraOpaqueOutcome: raw=5 in_test=0 production=5 production_non_pattern=4
+      crates/axeyum-solver/src/lra.rs:2222: Decision::UnsatFarkas { .. } | Decision::UnsatTrivial(_) => LraOpaqueOutcome::Unsat,
+      crates/axeyum-solver/src/lra.rs:2236: Decision::TimedOut => LraOpaqueOutcome::Undecided(UnknownReason {
+      crates/axeyum-solver/src/lra.rs:2242: Decision::Incomplete(detail) => LraOpaqueOutcome::Undecided(UnknownReason {
+      crates/axeyum-solver/src/lra.rs:2246: Decision::OutOfMemory(detail) => LraOpaqueOutcome::Undecided(UnknownReason {
+
+== crates/axeyum-solver/src/dpll_lia.rs ==
+   lines=6653 cfg(test)_regions=2 lines_in_test=1802
+   Decision::Sat: raw=0 in_test=0 production=0 production_non_pattern=0
+   CheckResult::Sat: raw=10 in_test=2 production=8 production_non_pattern=6
+      crates/axeyum-solver/src/dpll_lia.rs:371: CheckResult::Sat(model) => Ok(ArithDpllOutcome::Sat(model)),
+      crates/axeyum-solver/src/dpll_lia.rs:668: CheckResult::Sat(model) => return Ok(CheckResult::Sat(model)),
+      crates/axeyum-solver/src/dpll_lia.rs:1243: CheckResult::Sat(model) => model,
+      crates/axeyum-solver/src/dpll_lia.rs:3205: SatFinishAttempt::Result(CheckResult::Sat(model))
+      crates/axeyum-solver/src/dpll_lia.rs:3339: CheckResult::Sat(model) => Ok(TheoryModelOutcome::Model(model)),
+      crates/axeyum-solver/src/dpll_lia.rs:3381: SatResult::Sat(assignment) => Ok(CheckResult::Sat(self.model_from(&assignment))),
+   LraOpaqueOutcome: raw=0 in_test=0 production=0 production_non_pattern=0
+
+
+-- E3c: the guards that close them --
+838:    if ctx.has_opaque_vars() {
+1034:            if ctx.has_opaque_vars() {
+2494:    let has_opaque_vars = ctx.has_opaque_vars();
+2562:    let has_opaque_vars = ctx.has_opaque_vars();
+1338:                if !self.ctx.has_opaque_int_apps(arena) && !self.ctx.has_opaque_real_apps(arena) {
+1410:            if self.ctx.has_opaque_int_apps(arena) {
+1420:            if self.ctx.has_opaque_real_apps(arena) {
+1956:/// [`ArithAbstractor::has_opaque_real_apps`] before the call, and the third is
+3105:    // live entry guards the integer case via `has_opaque_int_apps`, but an opaque
+4542:    fn has_opaque_int_apps(&self, arena: &TermArena) -> bool {
+4549:    /// The real mirror of [`ArithAbstractor::has_opaque_int_apps`] (ADR-2065):
+4557:    fn has_opaque_real_apps(&self, arena: &TermArena) -> bool {
+5397:    /// guards this via `has_opaque_int_apps` → `Unknown` before `finish_sat`; this test
+
+-- E4: the real-theory consumers in dpll_lia.rs (whole file) --
+7://! [`crate::check_with_lra`] for reals (ADR-0015). This module lifts them to
+37:    check_with_lia_simplex_within, check_with_lra, check_with_lra_within,
+518:                    crate::lra::check_with_lra_opaque_apps_within(arena, &lits, None)?
+522:                Theory::Real => matches!(check_with_lra(arena, &lits)?, CheckResult::Unsat),
+1931:/// Distinct from [`real_model_oracle`], which is what sat-model reconstruction
+1933:fn real_theory_oracle(
+1940:            crate::lra::check_with_lra_opaque_apps_within(arena, conj, deadline)?
+1944:    check_with_lra_within(arena, conj, deadline)
+1950:/// Deliberately NOT [`real_theory_oracle`]. A model has to be a model of the
+1960:fn real_model_oracle(
+1965:    check_with_lra_within(arena, conj, deadline)
+2000:            oracle: real_theory_oracle,
+3106:    // *real* application reaches `check_with_lra` here). That is "no checkable model",
+3129:    let real_model = match theory_model(arena, &real_lits, real_model_oracle, deadline) {
+4456:        // is a WHOLE conjunctive decision (`check_with_lra` / `check_with_lia_
+4484:        // This used to be `check_with_lra(arena, &[atom])` /
+4496:        // see `lra::atom_in_lra_fragment` for the four sites and why nothing
+4514:                crate::lra::atom_in_lra_opaque_fragment(arena, atom)
+4516:            Theory::Real => crate::lra::atom_in_lra_fragment(arena, atom),
+
+-- E4b: every sat exit of the dpll_lia refinement loop --
+1341:                    match try_finish_sat(
+1429:            return finish_sat(
+3013:        match try_finish_sat(
+5378:            try_finish_sat(
+5426:        let outcome = try_finish_sat(
+5440:        let finished = finish_sat(&mut arena, &[assertion], &ctx, &propositional, &lits, None)
+5452:        let SatFinishAttempt::ReplayRejected(replay_rejection) = try_finish_sat(
+5474:        let result = finish_sat(&mut arena, &[assertion], &ctx, &propositional, &[], None)
+
