@@ -2948,6 +2948,51 @@ SUITES["typed-decline-detail"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `trail-typed-name-and-features` (ADR-2105) — the two members ADR-2102
+# named as remaining work and left the trail's JSON without: a per-attempt
+# `name` for the three ADR-2104 typed decline details, and a top-level
+# `features`. A guard that only checks "some `name`/`features` member is
+# present" cannot tell the CORRECT variant name from any other string; this
+# mutation makes `to_json`'s `UnsupportedDetail` arm emit a WRONG hardcoded
+# name instead of `detail.name()`, and must kill exactly the one test that
+# pins that variant's rendered bytes.
+# --------------------------------------------------------------------------
+
+SUITES["trail-typed-name-and-features"] = (
+    "crates/axeyum-solver/src/route_trace.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "route_trace"),
+        "trail-typed-name-and-features",
+    ),
+    [
+        (
+            # Kills `an_unsupported_decline_with_a_message_renders_the_message`
+            # and nothing else: the other pinned-literal tests
+            # (`every_outcome_variant_renders_its_documented_shape`,
+            # `default_to_json_is_unchanged_by_timing_support`,
+            # `detail_strings_are_json_escaped`) exercise `Budget`/
+            # `VerifierRejected` declines, whose OWN `push_json_string(&mut
+            # out, detail.name())` calls are separate match arms this edit
+            # does not touch -- `detail.name()` appears three times in
+            # `render_json`, once per typed-detail arm, and only the
+            # `UnsupportedDetail` arm's copy is anchored here (the preceding
+            # `push_json_string(&mut out, "unsupported");` line makes the
+            # anchor unique to that arm).
+            "to_json's UnsupportedDetail arm emits the wrong name",
+            "                        DeclineReason::UnsupportedDetail(detail) => {\n"
+            '                            push_json_string(&mut out, "unsupported");\n'
+            '                            out.push_str(",\\"name\\":");\n'
+            "                            push_json_string(&mut out, detail.name());",
+            "                        DeclineReason::UnsupportedDetail(detail) => {\n"
+            '                            push_json_string(&mut out, "unsupported");\n'
+            '                            out.push_str(",\\"name\\":");\n'
+            '                            push_json_string(&mut out, "wrong-name");',
+        ),
+    ],
+)
+
+
 def check_anchors() -> int:
     """Every registered anchor still matches its subject exactly once.
 
