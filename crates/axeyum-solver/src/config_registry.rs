@@ -5511,7 +5511,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
-        env_override: None,
+        env_override: Some("AXEYUM_LRA_ATOM_SCREEN"),
         justification: dated(
             "ADR-1752",
             "2026-09-07",
@@ -5543,7 +5543,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 commit("e62086742", "the online theory decides on"),
             ],
         ),
-        note: "THE WORKED EXAMPLE, and now a DIVERGENCE nobody has written down. It is no longer the LRA route's own admission gate — ADR-1752 replaced that with `budget_bytes / BYTES_PER_ADMITTED_ATOM`, which is 1,024 at the DEFAULT budget and 13,107 at `--memory-limit-mb 8192`. But `nra::admission_fits_consumer` still projects against this STATIC 1,024 and calls it that engine's capacity (ADR-1751). So above the default budget the two numbers are incommensurable again: the LRA consumer admits 13,107 atoms while the NRA gate refuses above 1,024. That is the same defect ADR-1751 existed to remove, reintroduced in a new form by ADR-1752, and it is recorded here rather than resolved — it needs a measurement, not an edit.",
+        note: "THE WORKED EXAMPLE, and now a DIVERGENCE nobody has written down. It is no longer the LRA route's own admission gate — ADR-1752 replaced that with `budget_bytes / BYTES_PER_ADMITTED_ATOM`, which is 1,024 at the DEFAULT budget and 13,107 at `--memory-limit-mb 8192`. But `nra::admission_fits_consumer` still projects against this STATIC 1,024 and calls it that engine's capacity (ADR-1751). So above the default budget the two numbers are incommensurable again: the LRA consumer admits 13,107 atoms while the NRA gate refuses above 1,024. That is the same defect ADR-1751 existed to remove, reintroduced in a new form by ADR-1752, and it is recorded here rather than resolved — it needs a measurement, not an edit. ADR-2111 (2026-09-15) put the SCREEN this number calibrates behind `AXEYUM_LRA_ATOM_SCREEN`, a multiplier defaulting to 1 so the shipped allowance is byte-identical, and recorded why raising it is a trap rather than an opportunity: THREE cost models were built to replace this screen and the corpus falsified all three (`ad2b40370`), the third of which bounded Fourier-Motzkin's own allocations correctly and STILL let `QF_LRA/miplib/danoint-266.smt2` reach 7.8 GB with `simplex_rows=n/a` -- the simplex engine did not exist, so those bytes were never the tableau and ADR-2111's sparse tableau cannot have removed them. What the sparse storage DID remove is cost model 2's quantity (the tableau is no longer quadratic in the row count). A lane that moves the multiplier owes a measurement on `danoint-266.smt2` and `_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2` by name, and should read ADR-2045 first: raising `memory_limit_mb` to 8 GiB moves this same screen to 13,107 and bought 21 rows reaching the engine, 0 newly decided, 19 dying at \"model did not replay\".",
     },
     ConfigEntry {
         name: "DEFAULT_REPAIR_CANDIDATE_CAP",

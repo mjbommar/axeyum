@@ -591,24 +591,34 @@ impl LraTheory {
         // working when it does.
         let forms = assign_forms(&mut atoms);
         let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
-        // ADR-1752, and this is the half the atom count was ACCIDENTALLY doing.
+        // THIS COMMENT DESCRIBED A GUARD THAT IS NOT HERE, and said so in the
+        // present tense for long enough that ADR-2111's lane read it as live
+        // code and had to `git log -S` to find out otherwise. Corrected rather
+        // than deleted, because the history is the reason the atom screen in
+        // `lra_theory.rs` still exists and a later reader needs it:
         //
-        // When the dense tableau does not fit, `LraTheory` silently falls back to
-        // Fourier-Motzkin — which is doubly exponential in the variable count and
-        // carries NO memory bound at all. The flat atom cap capped atoms, which
-        // capped rows, which kept that fallback away from large systems; its doc
-        // said "normalization" and never mentioned this, so removing the cap on
-        // the strength of that doc let `_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2`
-        // go from a 0.82 s decline at 121 MB to a **7.7 GB abort** — measured, and
-        // the budget could not see it because the bytes are not coefficients.
+        // `c615e835b` added a guard here refusing any system whose DENSE tableau
+        // exceeded `MAX_TABLEAU_CELLS`, because removing the flat atom cap had
+        // let `_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2` go from a 0.82 s
+        // decline at 121 MB to a 7.7 GB abort: when the tableau did not fit,
+        // `LraTheory` fell back to Fourier-Motzkin, which is doubly exponential
+        // and carried no memory bound at all.
         //
-        // So a system whose tableau exceeds the budget's tableau share is refused
-        // rather than handed to an unbounded engine. Refusing yields
-        // `Unknown(ResourceLimit)`, which is always a permitted verdict; running
-        // Fourier-Motzkin on a system this size yields an abort, which leaves the
-        // caller nothing. A tableau that merely OVERFLOWED (rather than being too
-        // big) still keeps the fallback, because that is a small system and
-        // Fourier-Motzkin is a real engine there.
+        // `6a37b934d` REMOVED that guard and replaced it, because it was
+        // measured wrong in the other direction on the same 200-file sweep: it
+        // also refused `TM/p5-driverlogNumeric_s9.smt2`, which Fourier-Motzkin
+        // decides `unsat` in 0.18 s at 41 MB. Net 97 -> 97, one gain and one
+        // loss. The right quantity was never the tableau: it is Fourier-Motzkin's
+        // ENTRY cost, `n^2 * size_of::<Rational>()` for the `unit_vec`
+        // multipliers `solve` hands every input constraint before a single
+        // variable is eliminated, which `MAX_FM_CONSTRAINTS` (a per-STEP count)
+        // says nothing whatever about.
+        //
+        // So the protection is real and lives where the allocation is made, not
+        // here. What survives at this site is only the ordering note above: forms
+        // are assigned BEFORE the tableau is built, because
+        // `build_simplex_engine` can decline and the cheap bound check must keep
+        // working when it does.
         // Order-preserving scan filter for `propagate_bounds`; see the field docs.
         let propagatable = propagatable_atoms(&atoms, forms);
         Ok(Self {
