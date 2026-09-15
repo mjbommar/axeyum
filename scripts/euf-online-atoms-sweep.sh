@@ -66,43 +66,60 @@ run_one() {
   # A missing attempt is `not-reached`, which is a DIFFERENT finding from a
   # decline and must not print as one.
   python3 - "$verdict" "$wall_ms" "$file" <<'PY' "$trail" "$atoms"
-import json
+import os
 import re
 import sys
+
+sys.path.insert(0, os.path.join(os.environ["AX_ROOT"], "scripts"))
+import route_trace_reader as rtr  # noqa: E402
 
 verdict, wall_ms, file = sys.argv[1], sys.argv[2], sys.argv[3]
 trail, atoms = sys.argv[4], sys.argv[5]
 
-outcome, elapsed_ms, decided_by, bound_by = "not-reached", "", "", ""
-match = re.search(r'(\{"schema_version".*\})\s*$', trail)
-if match:
-    try:
-        data = json.loads(match.group(1))
-    except json.JSONDecodeError:
-        data = None
-    if data:
-        for attempt in data.get("attempts", []):
-            if attempt.get("route") == "euf-online":
-                outcome = attempt.get("outcome", "?")
-                elapsed_ms = str(attempt.get("elapsed_ns", 0) // 1_000_000)
-            if attempt.get("outcome") == "decided":
-                decided_by = attempt.get("route", "")
-bound = re.search(r"bound_by=(\S+)", trail)
-if bound:
-    bound_by = bound.group(1)
+# Off the shared reader (ADR-2101). The hand-rolled parse this replaces had
+# two defects of its own: it re-implemented the escaper-sensitive JSON hunt
+# with a regex, and it looked for `bound_by=` INSIDE the trail line -- a field
+# that only ever appears on the PROSE line, so `bound_by` was empty on every
+# row this sweep has ever written. The reader computes it from the trail.
+outcome, elapsed_ms, decided_by, bound_by, partial = "not-reached", "", "", "", "no"
+try:
+    parsed = rtr.parse_trail_line(trail.strip())
+except (rtr.RouteTraceError, ValueError):
+    parsed = None
+if parsed is not None:
+    for attempt in parsed.attempts:
+        if attempt.route == "euf-online":
+            outcome = attempt.outcome
+            elapsed_ms = str((attempt.elapsed_ns or 0) // 1_000_000)
+    decided_by = parsed.decided_by or ""
+    bound_by = parsed.bound_by or ""
+    partial = "yes" if parsed.partial else "no"
 
 atoms_line = re.sub(r"^.*?euf-online-atoms", "euf-online-atoms", atoms).strip()
 print(
     "\t".join(
-        [file, verdict, wall_ms, outcome, elapsed_ms, decided_by, bound_by, atoms_line]
+        [
+            file,
+            verdict,
+            wall_ms,
+            outcome,
+            elapsed_ms,
+            decided_by,
+            bound_by,
+            partial,
+            atoms_line,
+        ]
     )
 )
 PY
 }
 export -f run_one
-export ARM BIN BUDGET_S MEM_GB
+# `run_one` executes under `xargs`/`parallel`, so the reader's location has
+# to travel in the environment rather than be derived from $0.
+AX_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export ARM BIN BUDGET_S MEM_GB AX_ROOT
 
-printf 'file\tverdict\twall_ms\teuf_online_outcome\teuf_online_ms\tdecided_by\tbound_by\tatoms_line\n' > "$OUT_TSV"
+printf 'file\tverdict\twall_ms\teuf_online_outcome\teuf_online_ms\tdecided_by\tbound_by\tpartial\tatoms_line\n' > "$OUT_TSV"
 # `xargs -P` rather than a shell loop: the sweep is 200 files x 24 s and a
 # serial run is 80 minutes per arm. Rows arrive out of order and are sorted
 # below, so the artifact is deterministic even though the run is not.

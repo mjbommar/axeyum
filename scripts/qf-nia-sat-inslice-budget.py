@@ -18,10 +18,9 @@ instead would have understated the bracket by charging the split for
 """
 import argparse
 import csv
-import json
 import os
-import re
 import subprocess
+import sys
 import time
 
 ROOT = subprocess.run(["git", "rev-parse", "--show-toplevel"],
@@ -29,7 +28,8 @@ ROOT = subprocess.run(["git", "rev-parse", "--show-toplevel"],
                       cwd=os.path.dirname(os.path.abspath(__file__))).stdout.strip()
 D = os.path.join(ROOT, "bench-results/qf-nia-sat-20260913")
 BUDGET_MS = 24000
-TRAIL = re.compile(r"^; route-trail (\{.*\})$", re.M)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import route_trace_reader as rtr  # noqa: E402
 
 
 def trail_of(cli, path, budget_ms):
@@ -41,12 +41,25 @@ def trail_of(cli, path, budget_ms):
     for line in out.splitlines():
         if line.strip() in ("sat", "unsat", "unknown"):
             verdict = line.strip()
-    m = TRAIL.search(out)
-    if not m:
+    # The shared reader (ADR-2101). The regex this replaces was anchored at
+    # `^; route-trail `, which the watchdog path never prints -- it prints
+    # `; partial route-trail ` -- so a file killed mid-search returned an
+    # EMPTY per-route budget and read as "no route cost anything".
+    found = None
+    for line in out.splitlines():
+        if line.startswith(rtr.TRAIL_PREFIX) or line.startswith(
+            rtr.PARTIAL_TRAIL_PREFIX
+        ):
+            found = line
+    if found is None:
+        return verdict, {}
+    try:
+        trail = rtr.parse_trail_line(found, path)
+    except rtr.RouteTraceError:
         return verdict, {}
     per = {}
-    for a in json.loads(m.group(1))["attempts"]:
-        per[a["route"]] = per.get(a["route"], 0) + a.get("elapsed_ns", 0) / 1e6
+    for a in trail.attempts:
+        per[a.route] = per.get(a.route, 0) + (a.elapsed_ns or 0) / 1e6
     return verdict, per
 
 

@@ -20,10 +20,12 @@ a lower bound, so they are reported as-is and never divided.
 """
 
 import collections
-import json
 import os
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import route_trace_reader as rtr  # noqa: E402
 
 
 def parse_log(path):
@@ -75,32 +77,47 @@ def parse_log(path):
             crossed = re.search(r" crossed=\d+ (.*)$", line)
             if crossed:
                 rec["crossed"] = re.findall(r"(\S+?)=(\d+)/(\d+)", crossed.group(1))
-        elif line.startswith("; route ") or line.startswith("; partial route "):
-            for key in ("decided_by", "bound_by", "bound_ms", "total_ms", "attempts"):
-                m = re.search(rf"\b{key}=(\S+)", line)
-                if m:
-                    rec[key] = m.group(1)
-        elif "route-trail " in line:
-            try:
-                blob = json.loads(line.split("route-trail ", 1)[1])
-                rec["trail"] = [
-                    (a["route"], a.get("reason", a.get("outcome", "")),
-                     a["elapsed_ns"] / 1e6)
-                    for a in blob["attempts"]
-                ]
-            except (ValueError, KeyError):
-                pass
         elif line.startswith("; lazy-smt ") or line.startswith("; partial lazy-smt "):
             rec["lazy"] = dict(re.findall(r"\b(\w+)=(\S+)", line))
             rec["lazy_partial"] = line.startswith("; partial")
-        elif line.startswith("; partial route-open "):
-            rec["route_open"] = dict(
-                re.findall(r"\b(ms|after|attributed_ms)=(\S+)", line)
-            )
         elif line.startswith("; partial bv-stage "):
             rec["bv_stage"] = line.split("in=", 1)[1].split()[0]
         elif line.startswith("; give-up "):
             rec["give_up"] = line
+    # The route attribution comes off the shared reader, never off the prose
+    # (ADR-2101). This block used to `startswith("; route ")` and then
+    # `startswith("; partial route ")`, i.e. it knew the prefix convention --
+    # which is exactly the knowledge ADR-2075 showed every OTHER census in this
+    # repository lacked. Now nothing here knows it.
+    try:
+        trail = rtr.read_file(path)
+    except rtr.RouteTraceError:
+        trail = None
+    if trail is not None:
+        rec["decided_by"] = trail.decided_by or "none"
+        rec["bound_by"] = trail.bound_by or "none"
+        rec["attempts"] = str(trail.attempt_count)
+        rec["total_ms"] = "" if trail.total_elapsed_ms is None else str(trail.total_elapsed_ms)
+        bound_ns = max(
+            (a.elapsed_ns or 0 for a in trail.attempts), default=None
+        )
+        rec["bound_ms"] = "" if bound_ns is None else str(bound_ns // 1_000_000)
+        rec["trail"] = [
+            (a.route, a.reason or a.outcome, (a.elapsed_ns or 0) / 1e6)
+            for a in trail.attempts
+        ]
+        # Completeness now arrives as a FIELD. `watchdog` stays as it was (it
+        # reads the header line, a different instrument) so the two can be
+        # compared rather than conflated.
+        rec["route_partial"] = trail.partial
+        rec["route_partial_source"] = trail.partial_source
+        rec["bound_is_answer"] = trail.bound_by_is_the_answer
+        if trail.open_segment_ns is not None:
+            rec["route_open"] = {
+                "ms": str(trail.open_segment_ns // 1_000_000),
+                "after": trail.in_flight_after or "none",
+                "attributed_ms": str(trail.total_elapsed_ms or 0),
+            }
     return rec
 
 
