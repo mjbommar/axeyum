@@ -1,0 +1,22 @@
+test word_reconstruct::tests::constant_clash_chained ... ok
+test word_reconstruct::tests::constant_clash_direct ... ok
+test word_reconstruct::tests::constant_clash_direct_multichar_interior_position ... ok
+test word_reconstruct::tests::disequality_chained_through_variables ... ok
+test word_reconstruct::tests::disequality_direct ... ok
+test ufbv_online::tests::dynamic_row_insertion_respects_the_shared_interface_cap ... ok
+test word_reconstruct::tests::kernel_rejects_discriminator_on_equal_strings ... ok
+test word_reconstruct::tests::kernel_rejects_unrelated_hypothesis_chain ... ok
+test word_reconstruct::tests::end_to_end_prove_unsat_to_lean_module_reports_word_fragment ... ok
+test word_reconstruct::tests::satisfiable_system_declines ... ok
+test word_reconstruct::tests::scanner_rejects_non_word_shape ... ok
+test word_reconstruct::tests::scanner_routes_word_shape_to_word_equation_fragment ... ok
+test word_reconstruct::tests::self_loop_length_shape_declines ... ok
+test word_reconstruct::tests::variable_prefix_cancellation_declines ... ok
+test smtlib::solve_smtlib_with_model_tests::solve_smtlib_with_model_replays_over_the_regression_corpus ... ok
+test word_reconstruct::tests::property_generated_refutations_reconstruct_and_kernel_check ... ok
+test euf_egraph::tests::check_qf_uf_with_config_is_bounded_by_timeout ... ok
+
+test result: ok. 1813 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 410.53s
+
+
+[exited with code 0]

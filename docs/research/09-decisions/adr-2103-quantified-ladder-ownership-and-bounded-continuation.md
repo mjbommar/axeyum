@@ -437,13 +437,18 @@ enumerates the sites; each named — MET.** `quant_ownership::QuantRoute` reuses
 error channel still has no `From<SolverError>`; `rustc` named **29**, and the
 table above names each one and how it is closed.
 
-**3. The named suites green with nonzero counts — MET on the `dispatch/reason:`
-block.** All **19** suites of `hooks/pre-push`'s `dispatch/reason:` block — the
+**3. The named suites green with nonzero counts — MET.** All **19** suites of `hooks/pre-push`'s `dispatch/reason:` block — the
 list read out of the hook rather than retyped — **183 tests, 0 failed, 0
 inert**, and the runner's own two guards (a zero-count suite is reported as
 `ZERO TESTS -- an inert suite is not a passing one`, and a missing result line
 as `DID NOT RUN` rather than as a pass) both stayed quiet.
 `bench-results/quant-ladder-ownership-20260915/dispatch-reason-suites.txt`.
+
+**The solver unit sweep: `cargo test -p axeyum-solver --lib --features full`
+— 1,813 passed, 0 failed**, a nonzero count confirmed rather than assumed.
+`route_attribution` 8/8 green too, which is the suite that would have caught the
+two decline records added to `q:eq-partition` and `q:unsat-universal` changing
+an attempt count something pins.
 
 This is the run AFTER the nine-red episode above, on the corrected tree, and it
 is the same nineteen-suite list ADR-2100 gated on.

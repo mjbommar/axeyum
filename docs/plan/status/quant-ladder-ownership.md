@@ -104,6 +104,8 @@ back and no assertion was weakened.**
 |---|---|
 | the 19 `dispatch/reason:` suites (list read out of `hooks/pre-push`) | **GREEN, 183 tests, 0 failed, 0 inert** |
 | `progress_frontier --features full -- --test-threads=1` | **12/12, no regression**, every family `comparable`/`ratchetable` |
+| `cargo test -p axeyum-solver --lib --features full` | **1,813 passed, 0 failed** |
+| `--test route_attribution` | 8/8 green |
 | `cargo check -p axeyum-solver --all-targets` (DEFAULT features) | clean |
 | `cargo fmt --all --check` | exit 0 |
 | `scripts/check-merge-hygiene.sh` | `PASS` |
