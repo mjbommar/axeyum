@@ -1065,10 +1065,10 @@ fn checked_quantified_fast_path(
     query: ConstructSet,
     is_quantified: bool,
 ) -> Result<Option<CheckResult>, DispatchError> {
+    const ROUTE: QuantRoute = QuantRoute::CheckedFastPath;
     if !is_quantified {
         return Ok(None);
     }
-    const ROUTE: QuantRoute = QuantRoute::CheckedFastPath;
 
     if quant_rung_or_decline(
         ROUTE,

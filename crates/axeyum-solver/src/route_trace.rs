@@ -907,7 +907,7 @@ impl RouteTrace {
         self.elapsed.extend_from_slice(&other.elapsed);
         self.last = Instant::now();
         if self.features.is_none() {
-            self.features = other.features.clone();
+            self.features.clone_from(&other.features);
         }
     }
 
