@@ -8203,8 +8203,34 @@ fn check_auto_dispatch_inner(
             with_recorder(rec, |t| t.record_result("nra-real-root", &result));
             return Ok(result);
         }
+        // ADR-2110. This rung's decline used to be `not-applicable` for every
+        // shape it refuses, and that token appears in the trail of **78 of the
+        // 83** QF_NRA files the 2026-09-15 board leaves undecided -- the
+        // largest single piece of routing telemetry the division produces,
+        // distinguishing nothing. `nra_real_root::cad_decline()` is the
+        // decomposition's own record of which guard stopped it; when it says
+        // the decider never ran, the rung keeps the payload-free token it
+        // always had.
+        let cad = crate::nra_real_root::cad_decline();
         with_recorder(rec, |t| {
-            t.record_declined("nra-real-root", DeclineReason::NotApplicable);
+            if cad == crate::nra_real_root::CadDecline::NotAttempted {
+                t.record_declined("nra-real-root", DeclineReason::NotApplicable);
+            } else {
+                t.record_declined(
+                    "nra-real-root",
+                    DeclineReason::Incomplete(UnknownReason {
+                        kind: UnknownKind::Incomplete,
+                        // The arm is in the text so a capture says which side
+                        // of the A/B produced it; the two arms differ only in
+                        // the cell cap, which is invisible from a verdict.
+                        detail: format!(
+                            "exact real-polynomial decider declined: {} (cad-arm={})",
+                            cad.name(),
+                            crate::nra_real_root::cad_policy().arm
+                        ),
+                    }),
+                );
+            }
         });
         // The exact real-root decider handles one shared variable exactly and a
         // two-variable component by resultants; a system of coupled multivariate

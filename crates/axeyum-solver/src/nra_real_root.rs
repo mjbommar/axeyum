@@ -341,6 +341,10 @@ pub fn decide_real_poly_constraint(
     if assertions.is_empty() {
         return Ok(None);
     }
+    // ADR-2110: one decision, one attribution slot. Cleared here rather than in
+    // the decomposition so a caller that never reaches the decomposition reads
+    // `not-attempted` and not the previous query's cause.
+    reset_cad_decline();
     // Scope the wall-clock deadline for every root isolation reached below (#85):
     // a single huge-polynomial `isolate_roots` was the un-clocked step that overran
     // a per-branch budget. Restored on drop, so nested/recursive calls compose.
@@ -2389,7 +2393,15 @@ fn decompose_multivariate(
     // 1. Re-collect every assertion as a multivariate comparison.
     let mut atoms: Vec<MultiAtom> = Vec::new();
     for &a in assertions {
-        collect_multi_conjuncts(arena, a, &mut atoms)?;
+        // ADR-2110: the exact decider takes a CONJUNCTION of polynomial
+        // comparisons and nothing else, so one `or` anywhere in the query
+        // ends it here -- before any projection, cell or root isolation. That
+        // is a different fact from "the decomposition tried and could not
+        // finish", and until this note both printed `not-applicable`.
+        note(
+            CadDecline::NonConjunctive,
+            collect_multi_conjuncts(arena, a, &mut atoms),
+        )?;
     }
     if atoms.is_empty() {
         return None;
@@ -3694,16 +3706,198 @@ struct CellBudget {
 impl CellBudget {
     fn new() -> Self {
         CellBudget {
-            remaining: core::cell::Cell::new(MAX_CAD_CELLS),
+            remaining: core::cell::Cell::new(cad_policy().cell_cap),
         }
     }
 
     /// Charge one produced cell; `None` (decline) once the budget is exhausted.
     fn charge(&self) -> Option<()> {
-        let next = self.remaining.get().checked_sub(1)?;
+        let Some(next) = self.remaining.get().checked_sub(1) else {
+            return note(CadDecline::CellBudget, None);
+        };
         self.remaining.set(next);
         Some(())
     }
+}
+
+// ---------------------------------------------------------------------------
+// Why the N-variable decomposition declined (ADR-2110)
+// ---------------------------------------------------------------------------
+//
+// The `nra-real-root` rung records ONE decline reason for every shape it
+// refuses: `not-applicable`. Measured 2026-09-15 on the 83 QF_NRA files the
+// board leaves undecided, that token appears in the trail of **78 of them** --
+// so the largest single piece of routing telemetry this division produces
+// distinguishes nothing, and "the exact decider was not applicable" reads the
+// same whether the query had a disjunction in it, whether a projection
+// overflowed `i128`, or whether the cell cap ran out three cells in.
+//
+// ADR-2060 is the same shape: one give-up string stood for 28 program points
+// and 15 causes, and an `i128` overflow was reported as a clock expiring. This
+// is that, one rung down.
+//
+// What follows is the smallest thing that answers the question: a thread-local
+// slot, a `note` helper that records a cause when an `Option` is `None`, and
+// the ~15 decline sites of the recursion wrapped in it. It cannot change a
+// verdict -- `note` returns its argument unchanged and nothing reads the slot
+// except the reporter.
+
+/// The cause of the innermost decline in the cylindrical decomposition.
+///
+/// Recorded FIRST-WINS within one decision (see [`record_cad_decline`]): the
+/// recursion unwinds through several `?` sites on its way out and the outermost
+/// of them is the least informative.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub(crate) enum CadDecline {
+    /// No decision has run since the last reset.
+    #[default]
+    NotAttempted,
+    /// The query is not a conjunction of polynomial comparisons, so the exact
+    /// decider never saw it. The single largest class on the 2026-09-15 census.
+    NonConjunctive,
+    /// The isolate-deadline guard fired mid-decomposition.
+    Deadline,
+    /// The global cell cap ([`cad_policy`]) ran out.
+    CellBudget,
+    /// One axis produced more critical values than [`MAX_CAD_CELLS`] allows.
+    CriticalCountCap,
+    /// A polynomial could not be cleared to `i128` integer coefficients --
+    /// `MAX_ABS_COEFF` is `1 << 40` and projection multiplies coefficients.
+    CoefficientRange,
+    /// Real-root isolation could not be completed exactly.
+    RootIsolation,
+    /// Two critical values could not be ordered exactly.
+    RootOrdering,
+    /// The projection (discriminants / pairwise resultants) declined.
+    Projection,
+    /// A polynomial was nullified at the base point, so delineability fails.
+    NullifiedResidual,
+    /// An algebraic critical value could not be coarsened to a safe bracket.
+    AlgebraicCoarsening,
+    /// An atom's sign at a complete sample point was indeterminate.
+    IndeterminateSign,
+}
+
+impl CadDecline {
+    /// A stable, matchable key. **Exhaustive, so a new cause does not compile
+    /// until it is named here** (ADR-2060's method).
+    pub(crate) const fn name(self) -> &'static str {
+        match self {
+            Self::NotAttempted => "not-attempted",
+            Self::NonConjunctive => "non-conjunctive",
+            Self::Deadline => "deadline",
+            Self::CellBudget => "cell-budget",
+            Self::CriticalCountCap => "critical-count-cap",
+            Self::CoefficientRange => "coefficient-range",
+            Self::RootIsolation => "root-isolation",
+            Self::RootOrdering => "root-ordering",
+            Self::Projection => "projection",
+            Self::NullifiedResidual => "nullified-residual",
+            Self::AlgebraicCoarsening => "algebraic-coarsening",
+            Self::IndeterminateSign => "indeterminate-sign",
+        }
+    }
+
+    /// Every cause, for a test that derives its population from the authority
+    /// rather than from a maintainer's memory.
+    #[cfg(test)]
+    pub(crate) const ALL: &'static [Self] = &[
+        Self::NotAttempted,
+        Self::NonConjunctive,
+        Self::Deadline,
+        Self::CellBudget,
+        Self::CriticalCountCap,
+        Self::CoefficientRange,
+        Self::RootIsolation,
+        Self::RootOrdering,
+        Self::Projection,
+        Self::NullifiedResidual,
+        Self::AlgebraicCoarsening,
+        Self::IndeterminateSign,
+    ];
+}
+
+thread_local! {
+    static CAD_DECLINE: core::cell::Cell<CadDecline> =
+        const { core::cell::Cell::new(CadDecline::NotAttempted) };
+}
+
+/// Clear the slot. Called at the top of every entry point that can attribute.
+pub(crate) fn reset_cad_decline() {
+    CAD_DECLINE.with(|slot| slot.set(CadDecline::NotAttempted));
+}
+
+/// Record `reason`, unless a more specific (inner) one is already recorded.
+pub(crate) fn record_cad_decline(reason: CadDecline) {
+    CAD_DECLINE.with(|slot| {
+        if slot.get() == CadDecline::NotAttempted {
+            slot.set(reason);
+        }
+    });
+}
+
+/// The recorded cause, leaving the slot as it is.
+pub(crate) fn cad_decline() -> CadDecline {
+    CAD_DECLINE.with(core::cell::Cell::get)
+}
+
+/// Record `reason` when `value` is `None`, and hand `value` back unchanged.
+///
+/// The identity on `Some` is what makes this safe to sprinkle over a decision
+/// procedure: there is no arm in which it constructs, drops or alters a value.
+fn note<T>(reason: CadDecline, value: Option<T>) -> Option<T> {
+    if value.is_none() {
+        record_cad_decline(reason);
+    }
+    value
+}
+
+// ---------------------------------------------------------------------------
+// The cell cap as a lever (ADR-2110)
+// ---------------------------------------------------------------------------
+
+/// The N-variable decomposition's bounded-cost policy, read once from
+/// `AXEYUM_NRA_CAD`.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct CadPolicy {
+    /// The arm's name, as `AXEYUM_NRA_CAD` spells it.
+    pub(crate) arm: &'static str,
+    /// Total cells the whole recursion may produce.
+    pub(crate) cell_cap: usize,
+}
+
+impl CadPolicy {
+    /// The shipped arm: byte-identical to the pre-ADR-2110 engine.
+    pub(crate) const DEFAULT: Self = Self {
+        arm: "default",
+        cell_cap: MAX_CAD_CELLS,
+    };
+
+    /// 16x the cells. Raising the cap can only let the decomposition VISIT more
+    /// cells before declining, and a definite verdict is returned only after
+    /// complete coverage -- so this arm can turn an `unknown` into a verdict and
+    /// can never flip one. It ships OFF because the cost is unmeasured, not
+    /// because the verdict is in doubt.
+    pub(crate) const WIDE: Self = Self {
+        arm: "wide",
+        cell_cap: MAX_CAD_CELLS * 16,
+    };
+}
+
+/// The arm used when `AXEYUM_NRA_CAD` is unset or unrecognized.
+///
+/// Byte-identical to the pre-ADR-2110 engine: its `cell_cap` IS
+/// [`MAX_CAD_CELLS`], which is what makes the A/B one binary. See the
+/// `CAD_DEFAULT` row of `config_registry`.
+pub(crate) const CAD_DEFAULT: CadPolicy = CadPolicy::DEFAULT;
+
+/// The CAD policy in force, read once from `AXEYUM_NRA_CAD`.
+pub(crate) fn cad_policy() -> CadPolicy {
+    static POLICY: std::sync::OnceLock<CadPolicy> = std::sync::OnceLock::new();
+    *POLICY.get_or_init(|| match std::env::var("AXEYUM_NRA_CAD") {
+        Ok(v) if v.eq_ignore_ascii_case("wide") => CadPolicy::WIDE,
+        _ => CAD_DEFAULT,
+    })
 }
 
 /// One rational sample point: a binding of each (already-eliminated / sampled)
@@ -3780,7 +3974,7 @@ fn visit_rational_cells(
     visit: &mut dyn FnMut(&SamplePoint) -> Option<Visit>,
 ) -> Option<bool> {
     if isolate_deadline_reached() {
-        return None;
+        return note(CadDecline::Deadline, None);
     }
     if vars.is_empty() {
         budget.charge()?;
@@ -3791,22 +3985,25 @@ fn visit_rational_cells(
         let mut roots: Vec<Root> = Vec::new();
         for p in polys {
             if isolate_deadline_reached() {
-                return None;
+                return note(CadDecline::Deadline, None);
             }
             if degree_in(p, var) == 0 {
                 continue;
             }
-            let ipoly = p.to_single_var_integer_poly(var)?;
+            let ipoly = note(
+                CadDecline::CoefficientRange,
+                p.to_single_var_integer_poly(var),
+            )?;
             if ipoly.len() <= 1 {
                 continue;
             }
-            roots.extend(isolate_roots(&ipoly)?);
+            roots.extend(note(CadDecline::RootIsolation, isolate_roots(&ipoly))?);
         }
-        let crit = dedup_sorted_roots(&roots)?;
-        let samples = selection.samples(&crit)?;
+        let crit = note(CadDecline::RootOrdering, dedup_sorted_roots(&roots))?;
+        let samples = note(CadDecline::CriticalCountCap, selection.samples(&crit))?;
         for s in samples {
             if isolate_deadline_reached() {
-                return None;
+                return note(CadDecline::Deadline, None);
             }
             budget.charge()?;
             let mut pt = partial.clone();
@@ -3821,7 +4018,7 @@ fn visit_rational_cells(
     let elim = *vars.iter().next().unwrap();
     let mut rest: BTreeSet<SymbolId> = vars.clone();
     rest.remove(&elim);
-    let projected = project_strict(polys, elim, &rest)?;
+    let projected = note(CadDecline::Projection, project_strict(polys, elim, &rest))?;
 
     visit_rational_cells(
         &projected,
@@ -3831,31 +4028,37 @@ fn visit_rational_cells(
         selection,
         &mut |base_pt| {
             if isolate_deadline_reached() {
-                return None;
+                return note(CadDecline::Deadline, None);
             }
             let mut roots: Vec<Root> = Vec::new();
             for p in polys {
                 if isolate_deadline_reached() {
-                    return None;
+                    return note(CadDecline::Deadline, None);
                 }
                 if degree_in(p, elim) == 0 {
                     continue;
                 }
-                let residual = substitute_rationals(p, base_pt)?;
+                let residual = note(
+                    CadDecline::CoefficientRange,
+                    substitute_rationals(p, base_pt),
+                )?;
                 if degree_in(&residual, elim) == 0 {
-                    return None;
+                    return note(CadDecline::NullifiedResidual, None);
                 }
-                let ipoly = residual.to_single_var_integer_poly(elim)?;
+                let ipoly = note(
+                    CadDecline::CoefficientRange,
+                    residual.to_single_var_integer_poly(elim),
+                )?;
                 if ipoly.len() <= 1 {
-                    return None;
+                    return note(CadDecline::NullifiedResidual, None);
                 }
-                roots.extend(isolate_roots(&ipoly)?);
+                roots.extend(note(CadDecline::RootIsolation, isolate_roots(&ipoly))?);
             }
-            let crit = dedup_sorted_roots(&roots)?;
-            let samples = selection.samples(&crit)?;
+            let crit = note(CadDecline::RootOrdering, dedup_sorted_roots(&roots))?;
+            let samples = note(CadDecline::CriticalCountCap, selection.samples(&crit))?;
             for s in samples {
                 if isolate_deadline_reached() {
-                    return None;
+                    return note(CadDecline::Deadline, None);
                 }
                 budget.charge()?;
                 let mut pt = base_pt.clone();
@@ -4419,7 +4622,10 @@ fn decide_strict_cad_nvar(comp: &[&MultiAtom], vars: &BTreeSet<SymbolId>) -> Opt
         for atom in comp {
             // Every variable of the atom is in `vars`, so the point is complete; an
             // indeterminate sign ⇒ decline (never a gap).
-            let s = multipoly_sign_at(&atom.poly, &value_pt)?;
+            let s = note(
+                CadDecline::IndeterminateSign,
+                multipoly_sign_at(&atom.poly, &value_pt),
+            )?;
             if !sign_satisfies(atom.cmp, s) {
                 all_hold = false;
                 break;
@@ -4564,7 +4770,10 @@ fn decide_nonstrict_cad_nvar(
         }
         let mut all_hold = true;
         for atom in comp {
-            let s = multipoly_sign_at(&atom.poly, &value_pt)?;
+            let s = note(
+                CadDecline::IndeterminateSign,
+                multipoly_sign_at(&atom.poly, &value_pt),
+            )?;
             if !sign_satisfies(atom.cmp, s) {
                 all_hold = false;
                 break;
@@ -4809,15 +5018,18 @@ fn visit_all_cells_value(
             if degree_in(p, var) == 0 {
                 continue;
             }
-            let ipoly = p.to_single_var_integer_poly(var)?;
+            let ipoly = note(
+                CadDecline::CoefficientRange,
+                p.to_single_var_integer_poly(var),
+            )?;
             if ipoly.len() <= 1 {
                 continue;
             }
-            roots.extend(isolate_roots(&ipoly)?);
+            roots.extend(note(CadDecline::RootIsolation, isolate_roots(&ipoly))?);
         }
-        let crit = dedup_sorted_roots(&roots)?;
+        let crit = note(CadDecline::RootOrdering, dedup_sorted_roots(&roots))?;
         if crit.len() > MAX_CAD_CELLS {
-            return None;
+            return note(CadDecline::CriticalCountCap, None);
         }
         return visit_axis_values(&crit, var, partial, budget, visit);
     }
@@ -4827,7 +5039,7 @@ fn visit_all_cells_value(
     let elim = *vars.iter().next().unwrap();
     let mut rest: BTreeSet<SymbolId> = vars.clone();
     rest.remove(&elim);
-    let projected = project_strict(polys, elim, &rest)?;
+    let projected = note(CadDecline::Projection, project_strict(polys, elim, &rest))?;
 
     visit_all_cells_value(&projected, &rest, partial, budget, &mut |base_pt| {
         // Derive the `elim`-fiber boundaries at this (possibly algebraic) base point
@@ -4837,13 +5049,16 @@ fn visit_all_cells_value(
             if degree_in(p, elim) == 0 {
                 continue;
             }
-            if let FiberBoundary::Poly(ipoly) = fiber_boundary_poly(p, base_pt, elim)? {
-                roots.extend(isolate_roots(&ipoly)?);
+            if let FiberBoundary::Poly(ipoly) = note(
+                CadDecline::Projection,
+                fiber_boundary_poly(p, base_pt, elim),
+            )? {
+                roots.extend(note(CadDecline::RootIsolation, isolate_roots(&ipoly))?);
             }
         }
-        let crit = dedup_sorted_roots(&roots)?;
+        let crit = note(CadDecline::RootOrdering, dedup_sorted_roots(&roots))?;
         if crit.len() > MAX_CAD_CELLS {
-            return None;
+            return note(CadDecline::CriticalCountCap, None);
         }
         if visit_axis_values(&crit, elim, base_pt, budget, &mut |pt| visit(pt))? {
             Some(Visit::Stop)
@@ -4865,7 +5080,7 @@ fn visit_axis_values(
     visit: &mut dyn FnMut(&ValuePoint) -> Option<Visit>,
 ) -> Option<bool> {
     // Open-cell interiors first (rational ⇒ a simpler witness), then the 0-cells.
-    let open = cell_samples(crit)?;
+    let open = note(CadDecline::CriticalCountCap, cell_samples(crit))?;
     for q in open {
         budget.charge()?;
         let mut pt = base.clone();
@@ -4876,7 +5091,7 @@ fn visit_axis_values(
     }
     for r in crit {
         budget.charge()?;
-        let val = root_to_point_value(r)?;
+        let val = note(CadDecline::AlgebraicCoarsening, root_to_point_value(r))?;
         let mut pt = base.clone();
         pt.insert(var, val);
         if matches!(visit(&pt)?, Visit::Stop) {
@@ -7747,6 +7962,133 @@ mod tests {
         // Empty synthetic inputs isolate the caller's entry policy: without the
         // explicit poll this would reach the empty residual cell and report Sat.
         assert!(strict_cad_along(&[], &[], y, x).is_none());
+    }
+
+    // -----------------------------------------------------------------------
+    // ADR-2110: the decline attribution and the `AXEYUM_NRA_CAD` lever
+    // -----------------------------------------------------------------------
+
+    /// **The soundness-negative fixture for the `wide` arm.**
+    ///
+    /// The arm raises the cell cap, which lets the decomposition visit MORE
+    /// cells before it gives up. The danger a raised search bound always
+    /// carries is that the extra search reaches a "no cell satisfied it"
+    /// conclusion it has not earned. This drives a query that IS satisfiable
+    /// (`x·y·z ≥ 0` has the witness the test above pins) through the
+    /// decomposition with each arm's cap in force and requires that neither
+    /// returns `Unsat`.
+    ///
+    /// It is not a round-trip of the arm selector: it calls the decision with
+    /// the cap the arm defines, so deleting the `Sat`-before-`Unsat` ordering
+    /// or the exhaustiveness argument in `decide_nonstrict_cad_nvar` is what
+    /// it is watching, not `cad_policy`'s `match`.
+    #[test]
+    fn a_raised_cell_cap_never_turns_a_satisfiable_system_unsat() {
+        let (x_symbol, y_symbol, z_symbol) = three_syms();
+        let xyz = MultiPoly::var(x_symbol)
+            .mul(&MultiPoly::var(y_symbol))
+            .unwrap()
+            .mul(&MultiPoly::var(z_symbol))
+            .unwrap();
+        let atom = MultiAtom {
+            cmp: Cmp::Ge,
+            poly: xyz,
+        };
+        let vars: BTreeSet<SymbolId> = [x_symbol, y_symbol, z_symbol].into_iter().collect();
+        for policy in [CadPolicy::DEFAULT, CadPolicy::WIDE] {
+            let budget = CellBudget {
+                remaining: core::cell::Cell::new(policy.cell_cap),
+            };
+            let mut found = false;
+            let polys = xyz_polys(&atom);
+            let origin = SamplePoint::new();
+            let mut visit = |pt: &SamplePoint| -> Option<Visit> {
+                let mut value_pt: BTreeMap<SymbolId, Value> = BTreeMap::new();
+                for (&v, &q) in pt {
+                    value_pt.insert(v, Value::Real(q));
+                }
+                let sign = multipoly_sign_at(&atom.poly, &value_pt)?;
+                if sign_satisfies(atom.cmp, sign) {
+                    found = true;
+                    return Some(Visit::Stop);
+                }
+                Some(Visit::Continue)
+            };
+            let stopped = visit_all_cells(&polys, &vars, &origin, &budget, &mut visit);
+            assert_eq!(
+                stopped,
+                Some(true),
+                "arm {} must find a satisfying cell for x*y*z >= 0, not conclude \
+                 the arrangement has none",
+                policy.arm
+            );
+            assert!(found, "arm {} bound no witness", policy.arm);
+        }
+    }
+
+    /// The polynomial set a one-atom component decomposes over.
+    fn xyz_polys(atom: &MultiAtom) -> Vec<MultiPoly> {
+        coprime_split(std::slice::from_ref(&atom.poly))
+    }
+
+    /// The two arms differ in the cell cap and in NOTHING else.
+    ///
+    /// A lever whose arms differ in more than the one quantity it names is not
+    /// an A/B; it is two builds with one switch. `CadPolicy` has two fields and
+    /// this asserts on both, so adding a third without deciding what the arms
+    /// do with it does not compile past here silently.
+    #[test]
+    fn the_wide_arm_only_raises_the_cap() {
+        assert_eq!(CadPolicy::DEFAULT.cell_cap, MAX_CAD_CELLS);
+        assert_eq!(CadPolicy::WIDE.cell_cap, MAX_CAD_CELLS * 16);
+        assert_ne!(CadPolicy::DEFAULT.arm, CadPolicy::WIDE.arm);
+        // The shipped arm is the pre-ADR-2110 engine, so an A/B run with the
+        // env var unset is a control and not a second treatment.
+        assert_eq!(CadPolicy::DEFAULT.arm, "default");
+    }
+
+    /// Every decline cause has a distinct wire name.
+    ///
+    /// Derived from [`CadDecline::ALL`], which is exhaustive by construction --
+    /// a new cause does not compile until it is named in `name()` AND listed
+    /// there. A literal list here would measure the maintainer's memory
+    /// instead, which is how a taxonomy silently grows a duplicate and two
+    /// causes start counting as one.
+    #[test]
+    fn every_cad_decline_cause_has_its_own_name() {
+        let mut names: Vec<&str> = CadDecline::ALL.iter().map(|c| c.name()).collect();
+        let total = names.len();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(
+            names.len(),
+            total,
+            "two CadDecline causes share a wire name: {names:?}"
+        );
+        assert!(total >= 12, "the taxonomy lost causes: only {total} left");
+    }
+
+    /// `note` is the identity on `Some` and records on `None`.
+    ///
+    /// This is the whole soundness argument for sprinkling it across a
+    /// decision procedure, so it is asserted rather than asserted-in-a-comment.
+    #[test]
+    fn note_is_the_identity_on_some_and_records_on_none() {
+        reset_cad_decline();
+        assert_eq!(note(CadDecline::Projection, Some(7u32)), Some(7));
+        assert_eq!(
+            cad_decline(),
+            CadDecline::NotAttempted,
+            "a `Some` must record nothing"
+        );
+        assert_eq!(note(CadDecline::Projection, None::<u32>), None);
+        assert_eq!(cad_decline(), CadDecline::Projection);
+        // First wins: the recursion unwinds through outer sites on its way out
+        // and the outermost of them is the least informative.
+        assert_eq!(note(CadDecline::CellBudget, None::<u32>), None);
+        assert_eq!(cad_decline(), CadDecline::Projection);
+        reset_cad_decline();
+        assert_eq!(cad_decline(), CadDecline::NotAttempted);
     }
 
     #[test]
