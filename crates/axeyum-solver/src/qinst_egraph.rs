@@ -8786,9 +8786,15 @@ fn select_trigger_groups_with_cap(
         .iter()
         .copied()
         .filter(|&candidate| {
+            // Drop the CONTAINER, keep the contained: `candidate` goes when it
+            // has another full-cover candidate strictly inside it. Written the
+            // other way round this silently keeps the deepest pattern, which
+            // matches least often -- the exact opposite of both references, and
+            // the inversion `a_candidate_containing_another_full_cover_candidate_is_dropped`
+            // caught on its first honest run.
             !full
                 .iter()
-                .any(|&other| other != candidate && is_proper_subterm(arena, other, candidate))
+                .any(|&other| other != candidate && is_proper_subterm(arena, candidate, other))
         })
         .collect();
     // `minimal` cannot be empty -- proper containment is a strict partial order
@@ -15189,6 +15195,127 @@ mod tests {
         let x = arena.declare("x", u).expect("x");
         let var_index: HashMap<SymbolId, u32> = [(x, 0)].into_iter().collect();
         (arena, var_index, x)
+    }
+
+    #[test]
+    fn the_shipped_cap_proposes_exactly_one_alternative() {
+        // The OFF arm, pinned against the function it replaced. If these ever
+        // disagree the lever is not OFF by default, whatever its value says.
+        let (mut arena, var_index, x) = trigger_fixture();
+        let f = arena.find_function("f").expect("f");
+        let g = arena.find_function("g").expect("g");
+        let xt = arena.var(x);
+        let fx = arena.apply(f, &[xt]).expect("f x");
+        let gx = arena.apply(g, &[xt]).expect("g x");
+        let body = arena.eq(fx, gx).expect("f x = g x");
+        assert_eq!(
+            select_trigger_groups_with_cap(&arena, body, &var_index, 1),
+            vec![select_triggers(&arena, body, &var_index)],
+        );
+        assert_eq!(
+            select_trigger_groups_with_cap(&arena, body, &var_index, 0),
+            vec![select_triggers(&arena, body, &var_index)],
+            "a cap of 0 is the shipped arm, not an empty trigger set"
+        );
+    }
+
+    #[test]
+    fn a_raised_cap_proposes_both_incomparable_candidates() {
+        // NON-VACUITY CONTROL for every soundness test of this lever. `f(x)` and
+        // `g(x)` both cover `x` and neither contains the other, so the cap has
+        // something to select; if this returned one group, every "a raised cap
+        // did not refute the satisfiable query" assertion elsewhere would be
+        // measuring the SHIPPED arm twice.
+        let (mut arena, var_index, x) = trigger_fixture();
+        let f = arena.find_function("f").expect("f");
+        let g = arena.find_function("g").expect("g");
+        let xt = arena.var(x);
+        let fx = arena.apply(f, &[xt]).expect("f x");
+        let gx = arena.apply(g, &[xt]).expect("g x");
+        let body = arena.eq(fx, gx).expect("f x = g x");
+        let groups = select_trigger_groups_with_cap(&arena, body, &var_index, 4);
+        assert_eq!(groups.len(), 2, "both candidates should survive");
+        let flat: Vec<TermId> = groups.iter().flatten().copied().collect();
+        assert!(flat.contains(&fx) && flat.contains(&gx));
+        assert_eq!(
+            select_trigger_groups_with_cap(&arena, body, &var_index, 1).len(),
+            1,
+            "and the shipped cap still proposes one, so the two arms differ"
+        );
+    }
+
+    #[test]
+    fn a_candidate_containing_another_full_cover_candidate_is_dropped() {
+        // `g(x)` is a proper subterm of `f(g(x))` and both cover `x`. Every
+        // ground match of the outer term carries a match of the inner one, so
+        // the outer proposes a subset at strictly higher matching cost. z3
+        // reaches the same conclusion in `filter_bigger_patterns`.
+        let (mut arena, var_index, x) = trigger_fixture();
+        let f = arena.find_function("f").expect("f");
+        let g = arena.find_function("g").expect("g");
+        let xt = arena.var(x);
+        let sort = arena.sort_of(xt);
+        let a = arena.declare("a", sort).expect("a");
+        let at = arena.var(a);
+        let gx = arena.apply(g, &[xt]).expect("g x");
+        let fgx = arena.apply(f, &[gx]).expect("f (g x)");
+        let body = arena.eq(fgx, at).expect("f (g x) = a");
+        let groups = select_trigger_groups_with_cap(&arena, body, &var_index, 8);
+        assert_eq!(
+            groups,
+            vec![vec![gx]],
+            "the containing candidate must not survive"
+        );
+    }
+
+    #[test]
+    fn the_alternative_order_is_smallest_first_and_total() {
+        // Determinism is a public API promise. `f(x)` has two subterms and
+        // `g(h(x))` three, so size decides; the tie-break on `TermId` is what
+        // makes the order total when two candidates have the same size, and
+        // `TermId`s are dense in insertion order.
+        let (mut arena, var_index, x) = trigger_fixture();
+        let xt = arena.var(x);
+        let sort = arena.sort_of(xt);
+        arena.declare_fun("h", &[sort], sort).expect("h");
+        let f = arena.find_function("f").expect("f");
+        let g = arena.find_function("g").expect("g");
+        let h = arena.find_function("h").expect("h");
+        let fx = arena.apply(f, &[xt]).expect("f x");
+        let hx = arena.apply(h, &[xt]).expect("h x");
+        let ghx = arena.apply(g, &[hx]).expect("g (h x)");
+        let body = arena.eq(fx, ghx).expect("f x = g (h x)");
+        let groups = select_trigger_groups_with_cap(&arena, body, &var_index, 8);
+        // `h(x)` is a candidate too and is a proper subterm of `g(h(x))`, so
+        // the survivors are `f(x)` and `h(x)`, both of size 2. The order is
+        // then decided by `TermId`, and `f(x)` was built first.
+        assert_eq!(groups, vec![vec![fx], vec![hx]]);
+        for _ in 0..4 {
+            assert_eq!(
+                select_trigger_groups_with_cap(&arena, body, &var_index, 8),
+                groups,
+                "two identical calls ordered the alternatives differently"
+            );
+        }
+        assert_eq!(
+            select_trigger_groups_with_cap(&arena, body, &var_index, 1).len(),
+            1,
+            "the cap truncates"
+        );
+    }
+
+    #[test]
+    fn a_body_with_no_full_cover_candidate_falls_back_to_select_triggers() {
+        // `x` occurs only under interpreted operators, so no application covers
+        // it and the raised cap must behave exactly like the shipped one --
+        // including when `select_triggers` itself returns empty.
+        let (mut arena, var_index, x) = trigger_fixture();
+        let xt = arena.var(x);
+        let body = arena.eq(xt, xt).expect("x = x");
+        assert_eq!(
+            select_trigger_groups_with_cap(&arena, body, &var_index, 8),
+            vec![select_triggers(&arena, body, &var_index)],
+        );
     }
 
     #[test]
