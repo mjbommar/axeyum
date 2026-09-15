@@ -30,7 +30,23 @@ forecast is how a lane over-promises:
    are counted in their own bucket (`UNDETERMINED`) and never folded into either
    answer.
 
-Usage: size-ceiling.py <auto.rs> <trace.tsv>...
+Usage: size-ceiling.py <auto.rs> <phase1-ceiling.tsv> <trace.tsv>...
+
+The first TSV is lane PLAN-SIZING's inventory
+(`bench-results/dispatch-plan-sizing-20260915/phase1-ceiling.tsv`), which fixes
+the FRAME: 645 undecided Tier 1 rows, of which **604 are `stopped_by_unknown`**
+-- the last recorded attempt's reason is `budget`/`incomplete`/
+`verifier-rejected`, an actual `Ok(Unknown)`, so the ladder STOPPED rather than
+running out of rungs. Those 604 are the only rows the ownership rule can reach
+by construction: on the other 40 the last attempt was an `unsupported` /
+`not-applicable` decline, which already let the ladder continue.
+
+That lane could not compute the ceiling itself and said so plainly: *"that
+predicate does not exist yet -- building it is Phase 1's own deliverable, so it
+cannot be used to size Phase 1 before Phase 1 exists."* This script supplies the
+predicate. It does NOT re-run the sweep: the construct evidence comes from this
+lane's own `--trace` capture of the same 645 rows, joined to PLAN-SIZING's
+inventory by corpus-relative PATH (645 of 645 join, checked, not assumed).
 """
 
 import json
@@ -259,9 +275,26 @@ def constructs_from_trail(routes):
     return known, conflict
 
 
+def read_frame(path: str):
+    """PLAN-SIZING's inventory: `stopped_by_unknown` and `last_route` per row."""
+    frame = {}
+    for line in open(path):
+        cells = line.rstrip("\n").split("\t")
+        if cells[0] == "division":
+            continue
+        # division, path, partial, attempts, last_route, decided_by,
+        # decline_reasons, stopped_by_unknown, bound_by, ceiling_hit, capture
+        frame[cells[1]] = (cells[7], cells[4])
+    if len(frame) < 600:
+        sys.exit(f"ABORT: the frame parse found {len(frame)} rows, not a plausible count")
+    return frame
+
+
 def main():
-    auto_rs, *tsvs = sys.argv[1:]
+    auto_rs, frame_tsv, *tsvs = sys.argv[1:]
     owns, kinds = parse_ownership(auto_rs)
+    frame = read_frame(frame_tsv)
+    joined = stopped = 0
 
     total = reachable = enterable_rows = no_dispatch = undetermined = 0
     per_div = {}
@@ -276,6 +309,14 @@ def main():
                 continue
             total += 1
             div = path.split("/", 1)[0]
+            stopped_by_unknown, _plan_last_route = frame.get(path, ("MISSING", ""))
+            if stopped_by_unknown == "MISSING":
+                sys.exit(
+                    f"ABORT: {path} is in this lane's capture and not in PLAN-SIZING's "
+                    "inventory. The two populations must be the same 645 rows or the "
+                    "denominators below are describing different things."
+                )
+            joined += 1
             per_div.setdefault(
                 div,
                 {"rows": 0, "reachable": 0, "enterable": 0, "no_dispatch": 0, "undet": 0},
@@ -283,6 +324,13 @@ def main():
             per_div[div]["rows"] += 1
             if "decided_by=none" not in route_line:
                 continue
+            # THE FRAME. A row whose last attempt was an `unsupported` /
+            # `not-applicable` decline already let the ladder continue, so the
+            # ownership rule has nothing to change about it. Only a row the
+            # ladder STOPPED at can be reached.
+            if stopped_by_unknown != "yes":
+                continue
+            stopped += 1
             routes = trail_routes(trail_cell)
             if not routes:
                 no_dispatch += 1
@@ -321,6 +369,8 @@ def main():
                 per_div[div]["enterable"] += 1
 
     print(f"undecided rows scanned      : {total}")
+    print(f"  joined to PLAN-SIZING       : {joined} (must equal the line above)")
+    print(f"  stopped_by_unknown (frame)  : {stopped}")
     print(f"  no dispatch-ladder attempt: {no_dispatch}")
     print(f"  UNDETERMINED (conflicting): {undetermined}")
     print(f"  a route below OWNS the constructs           : {reachable}")

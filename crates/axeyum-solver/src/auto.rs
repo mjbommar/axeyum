@@ -297,13 +297,28 @@ pub(crate) mod route_ownership {
     /// # Why an enum and not the `&'static str` labels
     ///
     /// The labels are the route-trail vocabulary and stay byte-identical —
-    /// [`Self::label`] is the only place they are spelled, and a sibling lane
-    /// is turning `route_trace`'s own constants into an enum, so nothing here
-    /// touches that module. What the enum buys is the **payload** ADR-2060's
-    /// method needs: the ladder's funnel takes a `DispatchRoute` rather than a
-    /// `&str`, so every call site is a type error until it names a variant, and
-    /// [`Self::owns`] is an exhaustive `match`, so a rung added without an
-    /// ownership declaration does not compile.
+    /// [`Self::label`] is the only place they are spelled. What the enum buys
+    /// is the **payload** ADR-2060's method needs: the ladder's funnel takes a
+    /// `DispatchRoute` rather than a `&str`, so every call site is a type error
+    /// until it names a variant, and [`Self::owns`] is an exhaustive `match`,
+    /// so a rung added without an ownership declaration does not compile.
+    ///
+    /// # Its boundary with [`crate::route_trace::Route`] (ADR-2101)
+    ///
+    /// The two enums **partition** the trail's vocabulary; they do not overlap,
+    /// and `every_dispatch_label_is_outside_the_declared_route_enum` checks that
+    /// rather than assuming it. ADR-2101 typed the `fd:` front-door stages and
+    /// the `q:` quantified rungs — the labels that were already declared as
+    /// `pub const` and so had an authority to derive an enum from — and said in
+    /// its own words why it stopped there:
+    ///
+    /// > The dispatch ladder's own rung labels (`"qf-bv"`, `"lia-dpll"`, …) are
+    /// > string literals at their call sites inside `auto.rs`, not declared
+    /// > constants, so there is no authority to derive an enum from; **typing
+    /// > them is the ownership work (Phase 1)**, not this.
+    ///
+    /// This is that half. `Route::from_wire` returns `None` for every label
+    /// here, by design and by test.
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     pub(crate) enum DispatchRoute {
         /// Read-over-construct folding plus the residual decision (ADR-0022
@@ -6878,7 +6893,8 @@ fn check_auto_dispatch_inner(
         let real_config = config_with_remaining_deadline(config, dispatch_deadline);
         let uf_nra = dispatch_uf_nra(arena, assertions, &real_config, &features, rec);
         if let Some(result) = rung_or_decline(DispatchRoute::UfNra, query, uf_nra, rec)
-        .map_err(|e| DispatchError::at(DispatchRoute::UfNra, e))? {
+            .map_err(|e| DispatchError::at(DispatchRoute::UfNra, e))?
+        {
             return Ok(result);
         }
         // Conjunction of single-variable nonlinear-real polynomial constraints
@@ -7013,7 +7029,7 @@ fn check_auto_dispatch_inner(
         dispatch_arith_uf_overbound_probe_before_lia(arena, assertions, config, &features, rec);
     if let Some(result) =
         rung_or_decline(DispatchRoute::UfArithOverboundProbe, query, overbound, rec)
-        .map_err(|e| DispatchError::at(DispatchRoute::UfArithOverboundProbe, e))?
+            .map_err(|e| DispatchError::at(DispatchRoute::UfArithOverboundProbe, e))?
     {
         return Ok(result);
     }
@@ -7106,7 +7122,7 @@ fn check_auto_dispatch_inner(
         );
         if let Some(result) =
             rung_or_decline(DispatchRoute::IntLinearRefuters, query, int_refuters, rec)
-        .map_err(|e| DispatchError::at(DispatchRoute::IntLinearRefuters, e))?
+                .map_err(|e| DispatchError::at(DispatchRoute::IntLinearRefuters, e))?
         {
             return Ok(result);
         }
@@ -7117,15 +7133,15 @@ fn check_auto_dispatch_inner(
     // base-sort semantics outside congruence, which falls through to bit-blasting.
     let uf_routes = dispatch_uf_routes(arena, assertions, config, &features, rec);
     if let Some(result) = rung_or_decline(DispatchRoute::UfRoutes, query, uf_routes, rec)
-        .map_err(|e| DispatchError::at(DispatchRoute::UfRoutes, e))? {
+        .map_err(|e| DispatchError::at(DispatchRoute::UfRoutes, e))?
+    {
         return Ok(result);
     }
     if features.has_array {
         let abv_online =
             dispatch_abv_online(arena, assertions, config, &features, dispatch_deadline, rec);
-        if let Some(result) =
-            rung_or_decline(DispatchRoute::AbvOnlineCdclt, query, abv_online, rec)
-        .map_err(|e| DispatchError::at(DispatchRoute::AbvOnlineCdclt, e))?
+        if let Some(result) = rung_or_decline(DispatchRoute::AbvOnlineCdclt, query, abv_online, rec)
+            .map_err(|e| DispatchError::at(DispatchRoute::AbvOnlineCdclt, e))?
         {
             return Ok(result);
         }
@@ -7152,7 +7168,7 @@ fn check_auto_dispatch_inner(
         };
         let array_fast = dispatch_array_fast_paths(arena, assertions, &ladder_config, &features);
         if let Some(result) = rung_or_decline(DispatchRoute::ArrayFastPath, query, array_fast, rec)
-        .map_err(|e| DispatchError::at(DispatchRoute::ArrayFastPath, e))?
+            .map_err(|e| DispatchError::at(DispatchRoute::ArrayFastPath, e))?
         {
             with_recorder(rec, |t| t.record_result("array-fast-path", &result));
             return Ok(result);
@@ -12796,6 +12812,46 @@ mod tests {
                  declaration names a rung that does not exist"
             );
         }
+    }
+
+    /// The two route enums partition the trail's vocabulary, and neither one
+    /// claims a label belonging to the other.
+    ///
+    /// ADR-2101 types the DECLARED labels — the `fd:` front-door stages and the
+    /// `q:` quantified rungs, which exist as `pub const` and so have an
+    /// authority to derive from. ADR-2100 types the dispatch rungs, which do
+    /// not. A label in both would be a rung classified as belonging to two
+    /// ladders by every consumer that splits on the prefix, and the two enums
+    /// living in different modules is exactly the condition under which that
+    /// goes unnoticed.
+    ///
+    /// Both directions are checked. `from_wire` returning `None` for a dispatch
+    /// label is the property ADR-2101 states; the positive control is that it
+    /// returns `Some` for a label it DOES own, so a `from_wire` that had been
+    /// broken into returning `None` unconditionally could not pass this.
+    #[test]
+    fn every_dispatch_label_is_outside_the_declared_route_enum() {
+        use crate::route_trace::Route;
+        for route in DispatchRoute::ALL {
+            assert!(
+                Route::from_wire(route.label()).is_none(),
+                "`{}` is claimed by BOTH `DispatchRoute` (ADR-2100) and \
+                 `route_trace::Route` (ADR-2101). The two vocabularies partition \
+                 the trail; an overlap makes one rung two things to every consumer \
+                 that classifies by prefix",
+                route.label(),
+            );
+        }
+        // The positive control. Without it this test passes on a `from_wire`
+        // that answers `None` to everything, which is the un-failable checker
+        // this repository keeps deleting.
+        assert_eq!(
+            Route::from_wire(crate::route_trace::front_door_stage::PARSE),
+            Some(Route::FdParse),
+            "fixture check: `from_wire` still resolves a label it DOES own, so \
+             the assertions above are about the partition and not about a \
+             lookup that stopped working"
+        );
     }
 
     /// A route's ownership declaration must be consistent with its own gate:

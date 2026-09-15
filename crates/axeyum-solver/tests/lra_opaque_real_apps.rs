@@ -663,7 +663,19 @@ fn the_ladder_reaches_the_route_that_owns_the_construct() {
     let gt = arena.real_gt(lhs, zero).unwrap();
     let tie = arena.eq(w, v).unwrap();
 
-    let config = SolverConfig::default();
+    // **`preprocess: false` is the fixture too, and the mutation control is what
+    // said so.** With the default config the word-level reduction folds
+    // `select(store(a,i,v), i)` to `v` BEFORE dispatch, the residual is pure
+    // real, and the trail is `["probe", "dl-online:Declined", "nra-real-root:
+    // Declined", "nra:Decided(Unsat)"]` -- `lira-dpll` never runs and the
+    // ownership check is never consulted. The test PASSED in that state and
+    // `route-ownership-ladder`'s mutation SURVIVED, which is the only reason
+    // anyone found out. The reduction is not what this test is about; the rung
+    // ordering is.
+    let config = SolverConfig {
+        preprocess: false,
+        ..SolverConfig::default()
+    };
     let (result, trace) = axeyum_solver::check_auto_explained(&mut arena, &[gt, tie], &config)
         .expect("the dispatcher decides or declines; it does not error");
 
@@ -696,15 +708,17 @@ fn the_ladder_reaches_the_route_that_owns_the_construct() {
     // decided. Without this the test passes on a tree where the rung was
     // reordered out of the way entirely, which is not the property -- it is the
     // property being unreachable.
-    let arith_ran = trace
-        .attempts()
-        .iter()
-        .any(|a| matches!(a.route, "lira-dpll" | "nra" | "array-fast-path"));
+    // The rung under test must have RUN and not decided. Naming it exactly --
+    // rather than "one of the arithmetic rungs" -- is what makes the guard
+    // observable: an earlier version of this assertion accepted `nra` as well,
+    // and passed on a tree where preprocessing folded the array read away and
+    // `lira-dpll` was never reached at all.
     assert!(
-        arith_ran,
-        "this fixture must still travel through the rungs whose ordering it is \
-         about; if none of them appears the assertion above is vacuous. \
-         Trail: {trail:?}"
+        trace.attempts().iter().any(|a| a.route == "lira-dpll"),
+        "REGRESSION or VACUITY: this fixture exists to pin what the ladder does \
+         with `lira-dpll`'s non-decision, so `lira-dpll` has to be on the trail. \
+         If it is not, the assertions above are about some other rung's verdict \
+         and prove nothing about ownership. Trail: {trail:?}"
     );
 }
 

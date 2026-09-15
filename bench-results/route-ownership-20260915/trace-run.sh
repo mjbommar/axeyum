@@ -32,8 +32,14 @@ while read -r f; do
   rc=$?
   t1=$(date +%s%N)
   v=$(printf '%s\n' "$raw" | grep -m1 -oE '^(sat|unsat|unknown)$')
-  route=$(printf '%s\n' "$raw" | grep -m1 '^; route ' | tr '\t' ' ')
-  trail=$(printf '%s\n' "$raw" | grep -m1 '^; route-trail ' | tr '\t' ' ')
+  # ADR-2075's trap, and this script FELL INTO IT on its first run: the
+  # watchdog-kill path prints `; partial route ` and `; partial route-trail `,
+  # a DELIBERATE prefix, so a `^; route ` anchor silently drops every
+  # watchdog-killed file. Measured here: 103 of 645 rows came back with no
+  # route line at all and the cause was this anchor, not a missing trace.
+  # `-E '^; (partial )?route '` is the whole fix.
+  route=$(printf '%s\n' "$raw" | grep -m1 -E '^; (partial )?route ' | tr '\t' ' ')
+  trail=$(printf '%s\n' "$raw" | grep -m1 -E '^; (partial )?route-trail ' | tr '\t' ' ')
   printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
     "${f#"$CORPUS"}" "${v:-none}" "$rc" "$(( (t1 - t0) / 1000000 ))" \
     "${route:-none}" "${trail:-none}" >> "$OUT"
