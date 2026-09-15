@@ -15348,22 +15348,29 @@ mod tests {
         // filter leaves both and size alone decides. `q(f(x), y)` is built
         // FIRST, so arena order and size order are OPPOSITE: only a size key
         // puts `p(x, y)` in front.
+        // Names are spelled out rather than single letters: six one-character
+        // bindings in one scope trips `clippy::many_single_char_names`, which is
+        // `-D warnings` here.
         let mut arena = TermArena::new();
-        let u = Sort::Uninterpreted(arena.declare_uninterpreted_sort("U"));
-        arena.declare_fun("f", &[u], u).expect("f");
-        arena.declare_fun("p", &[u, u], u).expect("p");
-        arena.declare_fun("q", &[u, u], u).expect("q");
-        let x = arena.declare("x", u).expect("x");
-        let y = arena.declare("y", u).expect("y");
-        let var_index: HashMap<SymbolId, u32> = [(x, 0), (y, 1)].into_iter().collect();
-        let f = arena.find_function("f").expect("f");
-        let p = arena.find_function("p").expect("p");
-        let q = arena.find_function("q").expect("q");
-        let xt = arena.var(x);
-        let yt = arena.var(y);
-        let fx = arena.apply(f, &[xt]).expect("f x");
-        let qfxy = arena.apply(q, &[fx, yt]).expect("q (f x) y");
-        let pxy = arena.apply(p, &[xt, yt]).expect("p x y");
+        let sort_u = Sort::Uninterpreted(arena.declare_uninterpreted_sort("U"));
+        arena.declare_fun("f", &[sort_u], sort_u).expect("f");
+        arena
+            .declare_fun("p", &[sort_u, sort_u], sort_u)
+            .expect("p");
+        arena
+            .declare_fun("q", &[sort_u, sort_u], sort_u)
+            .expect("q");
+        let var_x = arena.declare("x", sort_u).expect("x");
+        let var_y = arena.declare("y", sort_u).expect("y");
+        let var_index: HashMap<SymbolId, u32> = [(var_x, 0), (var_y, 1)].into_iter().collect();
+        let fun_f = arena.find_function("f").expect("f");
+        let fun_p = arena.find_function("p").expect("p");
+        let fun_q = arena.find_function("q").expect("q");
+        let xt = arena.var(var_x);
+        let yt = arena.var(var_y);
+        let fx = arena.apply(fun_f, &[xt]).expect("f x");
+        let qfxy = arena.apply(fun_q, &[fx, yt]).expect("q (f x) y");
+        let pxy = arena.apply(fun_p, &[xt, yt]).expect("p x y");
         assert!(qfxy < pxy, "the fixture needs arena order OPPOSITE to size");
         assert!(
             witness_size(&arena, pxy) < witness_size(&arena, qfxy),
