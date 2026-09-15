@@ -358,6 +358,26 @@ report the resulting zero as a null.
 continuation IS the answer, so capping there would pay for ADR-2100's two losses
 with its two gains, which is not a fix.
 
+### Both named files come back, 3/3 in both arms
+
+The two files ADR-2100 named as its own stable losses were re-run through that
+ADR's own `recheck-movers.sh`, unchanged, three passes per arm, arms alternating
+within the three, on one pinned physical core pair at the same 24 s / 8 GiB
+envelope:
+
+| file | A (`51baff9ef`) | B (this branch) | |
+|---|---|---|---|
+| `AUFDTLIRA/…/Q525-025__controlling_result__fixed_string.adb_18_11_length_check` | `unknown` / `unknown` / `unknown` | `unsat` / `unsat` / `unsat` | **STABLE-GAIN** |
+| `AUFDTLIRA/…/R509-011__higher_order_proof__why_bfafe7_…fold-T-defqtvc` | `unknown` / `unknown` / `unknown` | `unsat` / `unsat` / `unsat` | **STABLE-GAIN** |
+
+Read the direction carefully, because the arms are not the ones ADR-2100 used.
+**A here INCLUDES ADR-2100**, so A is the arm that lost these two files and B is
+the arm with the bound. `STABLE-GAIN` therefore means exactly what the exit
+criterion asks: the bound recovers both, reproducibly, 0 of 6 passes
+disagreeing with its classification. Exit status is `0` on all twelve passes.
+
+`bench-results/quant-ladder-ownership-20260915/named-losses-recheck.tsv`.
+
 ### The nesting signal is a new counter, and that is the point
 
 `route_trace::NestedDispatchGuard` answers "am I inside a quantified ladder"
