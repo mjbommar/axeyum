@@ -806,6 +806,12 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #                              Unlike distinct_linear_soundness below, neither
   #                              rewrite has a lever to turn off — these
   #                              assertions are the whole gate.
+  #   decline_detail_typed
+  #                            — ADR-2104: every DeclineReason detail is a closed
+  #                              enum with an exhaustive name(); this suite DRIVES
+  #                              each producer that can be reached from a query.
+  #                              Landed without a gate; the suite-gating L0 check
+  #                              refused the push, which is what it is for.
   #   replay_pairing_soundness
   #                            — ADR-2070: `SmtLibSolved.assertions` and
   #                              `.model` must be an actual PAIR. The string
@@ -844,7 +850,7 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
                distinct_linear_soundness parser_desugar_soundness \
                replay_pairing_soundness \
                additive_no_overflow_never_becomes_unsat \
-               lra_opaque_real_apps; do
+               lra_opaque_real_apps decline_detail_typed; do
     gated_test "dispatch/reason: $suite" \
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
   done
