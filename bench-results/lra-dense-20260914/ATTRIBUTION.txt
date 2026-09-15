@@ -1,0 +1,57 @@
+rows=74
+  rows with a `; lazy-smt` trace line = 34
+  rows WITHOUT one = 40  (a process that aborts prints no trace)
+    their exit statuses: {'134': 40}   (134 = abort)
+
+== WHICH PHASE HELD THE BUDGET, on the rows that could report ==
+   26  cube_simplex_ms
+    7  skeleton_ms
+    1  mixed(top=cube_simplex_ms)
+
+== the phases, as a share of accounted time ==
+  skeleton_ms        n= 34  median  33.3 %   min  0.0 %   max  84.2 %
+  cube_simplex_ms    n= 34  median  63.3 %   min 13.7 %   max  99.7 %
+  cube_fm_ms         n= 34  median   0.0 %   min  0.0 %   max   0.0 %
+  cube_collect_ms    n= 34  median   2.6 %   min  0.2 %   max  19.9 %
+  theory_other_ms    n= 34  median   0.2 %   min  0.0 %   max   0.3 %
+  core_ms            n= 34  median   0.2 %   min  0.0 %   max   0.4 %
+
+  DENSE-ENGINE-BOUND (cube_simplex_ms is top AND >= half): 26 of 34 traced rows
+  SKELETON-BOUND: 7 rows, lazy-SMT rounds median 1,087  max 1,483
+
+== per row ==
+ rc  acct_ms  simplex simplex%  skeleton  skel%  th_oth  rounds          binding  file
+  0   23,985   23,923    99.7%         9   0.0%       2       1  cube_simplex_ms  ecoliFBAyicesTest-3875-4.smt2
+  0   23,953   22,794    95.2%       908   3.8%      10      64  cube_simplex_ms  danoint-266.smt2
+  0   23,467   20,795    88.6%     1,811   7.7%      26      17  cube_simplex_ms  joey_false-termination.c_Iteration1_Loop_7-phaseTemp
+  0   22,364   20,162    90.2%     1,852   8.3%      12      15  cube_simplex_ms  OpposedDisjuncts.bpl_Iteration1_Lasso_2-pieceTemplat
+  0   23,759   19,754    83.1%     3,170  13.3%      25      11  cube_simplex_ms  Gcd.bpl_Iteration1_Lasso_7-phaseTemplate.smt2
+  0   22,095   19,702    89.2%     2,042   9.2%      12      15  cube_simplex_ms  SyntaxSupportBooleans5.bpl_Iteration1_Loop_4-pieceTe
+  0   24,318   19,654    80.8%     3,871  15.9%      17      12  cube_simplex_ms  collatz.t2.c_Iteration3_Loop_7-phaseTemplate.smt2
+  0   23,824   19,249    80.8%     3,333  14.0%      48      75  cube_simplex_ms  _standard_strcmp_ground.i_4_2_2.bpl_11.smt2
+  0   23,856   18,174    76.2%     4,333  18.2%      47      46  cube_simplex_ms  Gcd_havoc.bpl_Iteration1_Lasso_6-phaseTemplate.smt2
+  0   22,667   17,888    78.9%     2,781  12.3%      44      33  cube_simplex_ms  matrixsqrt.t2.c_Iteration12_Loop_7-phaseTemplate.smt
+  0   23,863   16,603    69.6%     4,124  17.3%      60     204  cube_simplex_ms  fixnet-5000.smt2
+  0   23,657   15,571    65.8%     7,308  30.9%      70     464  cube_simplex_ms  sc-39.base.cvc.smt2
+  0   23,778   15,443    64.9%     7,606  32.0%      60     657  cube_simplex_ms  sc-29.base.cvc.smt2
+  0   23,824   15,282    64.2%     7,817  32.8%      51     460  cube_simplex_ms  sc-37.base.cvc.smt2
+  0   23,863   15,267    64.0%     7,542  31.6%      47     514  cube_simplex_ms  vpm2-5.smt2
+  0   23,816   15,152    63.6%     7,930  33.3%      46     564  cube_simplex_ms  sc-33.base.cvc.smt2
+  0   23,821   15,088    63.3%     7,931  33.3%      59     519  cube_simplex_ms  sc-35.base.cvc.smt2
+  0   23,840   15,082    63.3%     5,126  21.5%      60     735  cube_simplex_ms  2013POPL-BenAmGen-Ex4.2.bpl_Iteration1_Lasso_4-piece
+  0   23,816   14,852    62.4%     8,224  34.5%      48     667  cube_simplex_ms  sc-27.base.cvc.smt2
+  0   23,815   13,977    58.7%     9,194  38.6%      68     183  cube_simplex_ms  opt1217--57.smt2
+  0   23,168   12,174    52.5%    10,209  44.1%      54     824  cube_simplex_ms  sc-21.base.cvc.smt2
+  0   22,387   12,061    53.9%     9,558  42.7%      54     810  cube_simplex_ms  sc-23.base.cvc.smt2
+  0   23,404   11,882    50.8%    10,807  46.2%      57     810  cube_simplex_ms  sc-19.base.cvc.smt2
+  0   18,033   10,650    59.1%     6,634  36.8%      45     827  cube_simplex_ms  pursuit-safety-16.smt2
+  0   23,451   10,591    45.2%    12,159  51.9%      49     885      skeleton_ms  sc-17.base.cvc.smt2
+  0   23,752   10,371    43.7%     8,520  35.9%      65     905 mixed(top=cube_simplex_ms)  _standard_init5_ground.i_3_2_2.bpl_7.smt2
+  0   23,645    9,184    38.8%    13,775  58.3%      42   1,004      skeleton_ms  sc-15.base.cvc.smt2
+  0   15,009    8,797    58.6%     5,629  37.5%      46     470  cube_simplex_ms  sc-25.base.cvc.smt2
+  0   22,698    7,737    34.1%    14,314  63.1%      40   1,087      skeleton_ms  sc-13.base.cvc.smt2
+  0   23,471    7,042    30.0%    15,863  67.6%      27     289      skeleton_ms  p7-driverlogNumeric_s8.smt2
+  0   23,801    6,080    25.5%    17,159  72.1%      34   1,142      skeleton_ms  sc-11.base.cvc.smt2
+  0   23,793    4,376    18.4%    18,960  79.7%      28   1,359      skeleton_ms  sc-9.base.cvc.smt2
+  0   23,794    3,270    13.7%    20,044  84.2%      31   1,483      skeleton_ms  sc-7.base.cvc.smt2
+  0    2,713    1,447    53.4%     1,231  45.4%       5      11  cube_simplex_ms  rand_80_340_1159656267_0.lp.smt2

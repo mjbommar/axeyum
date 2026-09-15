@@ -1,0 +1,4 @@
+file	key	verdict	rc	ms	maxrss_kb	stderr1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/CooperatingT2/brp_withassume.t2.c_Iteration1_Loop_6-phaseTemplate.smt2	63b673bb2e66	none	134	14299	7743172	memory allocation of 3179296 bytes failed
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/CooperatingT2/sas2.t2.c_Iteration7_Loop_7-phaseTemplate.smt2	98bf0e2a17e2	none	134	15763	7523040	memory allocation of 2939648 bytes failed
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/LassoRanker/Ultimate/TelAviv-AmirMinimum.bpl_Iteration1_Loop_4-pieceTemplate.smt2	6d30255df9f1	none	134	9072	7788600	memory allocation of 1554752 bytes failed

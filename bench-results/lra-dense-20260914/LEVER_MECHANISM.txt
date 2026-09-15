@@ -1,0 +1,24 @@
+== 0. the probe is off by default (it must print nothing) ==
+   probe lines with AXEYUM_LRADENSEPROBE unset: 0   (must be 0)
+
+== 1. AXEYUM_LRA_SPARSE_ROWS: the row form is formatted FROM the value ==
+   file: _standard_init5_ground.i_3_2_2.bpl_7.smt2
+   SPARSE_ROWS=UNSET  ; LRADENSEPROBE site=dense-rows-built rss_kb=31036 nvars=179 m=1839 nnz=5432 dense_cells=329181 sparse=0
+                        ; LRADENSEPROBE site=tableau-built rss_kb=148560 nvars=179 m=1839 tableau_cells=3711102 nnz=5432
+   SPARSE_ROWS=1      ; LRADENSEPROBE site=dense-rows-built rss_kb=24012 nvars=179 m=1839 nnz=5432 dense_cells=329181 sparse=1
+                        ; LRADENSEPROBE site=tableau-built rss_kb=138320 nvars=179 m=1839 tableau_cells=3711102 nnz=5432
+bench-results/lra-dense-20260914/scripts/lever-mechanism-probe.sh: line 43: rss_kb: command not found
+   ^ the  at dense-rows-built is the round trip; at tableau-built it is the peak.
+
+== 2. AXEYUM_LRA_CELL_CAP: the decline line exists only when set ==
+   file: _sanfoundry_10_ground.i_6_3_3.bpl_13.smt2   (its tableau is OVER MAX_TABLEAU_CELLS)
+   CELL_CAP=UNSET  cell-cap-declined lines: 0    
+                      ; LRADENSEPROBE site=feasible_within-entry rss_kb=791344 nvars=1173 m=18402 tableau_cells=360219150
+   CELL_CAP=1      cell-cap-declined lines: 1    ; LRADENSEPROBE site=cell-cap-declined rss_kb=791284 nvars=1173 m=18402 cells=360219150
+                      ; LRADENSEPROBE site=feasible_within-entry rss_kb=791284 nvars=1173 m=18402 tableau_cells=360219150
+
+== 3. a value that is not exactly "1" must NOT enable a lever ==
+   SPARSE_ROWS="0"     -> sparse=0
+   SPARSE_ROWS="true"  -> sparse=0
+   SPARSE_ROWS="yes"   -> sparse=0
+   SPARSE_ROWS=" 1 "   -> sparse=1
