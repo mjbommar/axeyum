@@ -403,6 +403,50 @@ it is measured against is real: 49× the median 8,086 nonzeros over the 23 rows
 that reach this engine and 11.6× the median 34,555 [ADR-2055] measured on the
 offline route. Nobody has taken the tail.
 
+### The lever is INERT on the population it was aimed at, and a mechanism probe said so before the A/B did
+
+This is the finding this lane is least pleased with and the one most worth
+keeping. §3.2 argued that the 32 `lra.rs` rows are on the weak offline route
+because the online engine's byte budget refuses them, and that
+`TableauReserve::Sparse` — freeing 112 MiB of a 640 MiB budget — is the screen
+that moves them. **It is not.** Both arms were run on the group's representative
+and produced the *same route, the same give-up, and the same
+`online_probe=admission-screen`.**
+
+The screen that actually refuses them is `lra_theory.rs:305`, and it is an atom
+COUNT wearing byte clothing:
+
+```rust
+let admitted_atoms = budget_bytes / crate::lra_online::BYTES_PER_ADMITTED_ATOM;
+if atom_terms.len() > admitted_atoms { … refuse … }
+```
+
+with `BYTES_PER_ADMITTED_ATOM = DEFAULT_ONLINE_LRA_BUDGET_BYTES / 1_024`, so at
+the default budget `admitted_atoms` is **exactly 1,024** — its own doc says it
+is "byte-identical to the `MAX_ONLINE_LRA_ATOMS = 1_024` count it replaces". The
+representative has **1,839 atoms** and is refused there. `TableauReserve` is
+read by `NormalizationLimits::for_budget` and `estimated_bytes`, both of which
+run **after** this screen has already decided. The two arms differ by 122 MiB
+against 15 MiB and **neither number appears in the expression that refuses the
+file**.
+
+That is ADR-2045's own finding one level down — *"one knob drives two screens
+wanting opposite settings"* — and it means **the lever's A/B was not run,
+deliberately.** It would have printed `net +0` on this population by
+construction, and `net +0` from an inert arm is indistinguishable from `net +0`
+from a working one that does not help. Asking what the command would print if
+the lever were doing nothing, and finding that it is what the command would
+print, is the whole reason to take the mechanism probe first.
+
+The lever still ships, still `Dense`, and is still correct about bytes: the
+reserve it fixes is real and is spent on every projection that gets past the
+outer screen. What it is **not** is the thing that moves the 32 rows. The screen
+that would is `lra_theory.rs:305`, and that experiment has already been run:
+[ADR-2045] raised `memory_limit_mb` to 8 GiB, which does move it (13,107 atoms
+admitted), and got **21 rows reaching the engine, 0 newly decided, 19 dying at
+"model did not replay"**. So the route is not what is holding this population —
+the online engine's own capability is, which is claim 2.
+
 ### The mechanism, on one file, before any A/B
 
 `AXEYUM_LRADENSEPROBE=1` on `LassoRanker/CooperatingT2/sas2.t2.c_Iteration6_Lasso_6-phaseTemplate.smt2`
