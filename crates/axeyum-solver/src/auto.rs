@@ -2783,14 +2783,19 @@ fn solve_inner(
         }
         quant_ladder.disarm();
         quant_depth.disarm();
-        let Some(result) = quant_rung_or_decline(
-            QuantRoute::SkolemQf,
-            query,
-            check_auto(arena, assertions, &remaining),
-        )?
-        else {
-            return Ok(quantified_timeout("existential skolemization"));
-        };
+        // ADR-2103 CORRECTION, and `dt_uf_gate::terminates_on_an_array_of_datatypes`
+        // is what said so. This `check_auto` is the quantifier-free LADDER, not
+        // a rung of this one, so an `Unsupported` out of it is that ladder's
+        // terminal answer and there is nothing below to hand it to. Routing it
+        // through `quant_rung_or_decline` turned ADR-1980's `propagate` lever
+        // into a decline AND replaced its sentence with an invented
+        // "budget exhausted" -- a message that is simply false about what
+        // happened. ADR-2100 classified its own two tails the same way for the
+        // same reason: "declining there would return `Ok(None)` to a ladder with
+        // nothing below it and force the dispatcher to manufacture a second
+        // `unknown` that says strictly less than the one it discarded".
+        let result = check_auto(arena, assertions, &remaining)
+            .map_err(|e| DispatchError::at_quant(QuantRoute::SkolemQf, e))?;
         let certified =
             certify_skolemized_negated_universals(arena, &original_assertions, result, &remaining);
         if is_quantified {
@@ -2875,14 +2880,9 @@ fn solve_inner(
         );
         quant_ladder.disarm();
         quant_depth.disarm();
-        let Some(result) = quant_rung_or_decline(
-            QuantRoute::ValidUniversalQf,
-            query,
-            check_auto(arena, assertions, &remaining),
-        )?
-        else {
-            return Ok(quantified_timeout("valid-universal elimination"));
-        };
+        // The quantifier-free ladder's terminal answer; see `q:skolem-qf` above.
+        let result = check_auto(arena, assertions, &remaining)
+            .map_err(|e| DispatchError::at_quant(QuantRoute::ValidUniversalQf, e))?;
         route_trace::record_quant_rung_result(route_trace::quant_rung::VALID_UNIVERSAL_QF, &result);
         // Same hand-off shape as `q:skolem-qf` above; see the note there.
         return Ok(
@@ -2908,14 +2908,17 @@ fn solve_inner(
     // leaves, which the *valid*-universal pass cannot (it is not valid). Exact
     // (changes no model) and strictly additive (a universal not proven vacuous is
     // left untouched), so it never weakens the problem nor risks a wrong verdict.
-    let Some(vacuous) = quant_rung_or_decline(
+    // A rung's own refusal, so under the ownership rule it is a decline -- and
+    // the value a decline carries is the UN-ELIMINATED assertion list, which is
+    // what the `q:valid-universal-qf` GUARD one rung above has always returned.
+    // Returning a manufactured `quantified_timeout` here instead would report a
+    // clock that had not run out.
+    let vacuous = quant_rung_or_decline(
         QuantRoute::VacuousUniversalQf,
         query,
         crate::quant_vacuous_universal::eliminate_vacuous_universals(arena, assertions),
     )?
-    else {
-        return Ok(quantified_timeout("vacuous-universal elimination"));
-    };
+    .unwrap_or_else(|| (assertions.to_vec(), false));
     let assertions: &[TermId] = &vacuous.0;
     if vacuous.1 && !has_quantifier(arena, assertions) {
         let Some(remaining) = config_with_remaining_timeout(config, deadline) else {
@@ -2927,14 +2930,9 @@ fn solve_inner(
         );
         quant_ladder.disarm();
         quant_depth.disarm();
-        let Some(result) = quant_rung_or_decline(
-            QuantRoute::VacuousUniversalQf,
-            query,
-            check_auto(arena, assertions, &remaining),
-        )?
-        else {
-            return Ok(quantified_timeout("vacuous-universal elimination"));
-        };
+        // The quantifier-free ladder's terminal answer; see `q:skolem-qf` above.
+        let result = check_auto(arena, assertions, &remaining)
+            .map_err(|e| DispatchError::at_quant(QuantRoute::VacuousUniversalQf, e))?;
         route_trace::record_quant_rung_result(
             route_trace::quant_rung::VACUOUS_UNIVERSAL_QF,
             &result,
@@ -3083,14 +3081,9 @@ fn solve_inner(
         );
         quant_ladder.disarm();
         quant_depth.disarm();
-        let Some(result) = quant_rung_or_decline(
-            QuantRoute::FourierMotzkin,
-            query,
-            check_auto(arena, fm_assertions, &remaining),
-        )?
-        else {
-            return Ok(quantified_timeout("Fourier-Motzkin elimination"));
-        };
+        // The quantifier-free ladder's terminal answer; see `q:skolem-qf` above.
+        let result = check_auto(arena, fm_assertions, &remaining)
+            .map_err(|e| DispatchError::at_quant(QuantRoute::FourierMotzkin, e))?;
         route_trace::record_quant_rung_result(route_trace::quant_rung::FOURIER_MOTZKIN, &result);
         // Same hand-off shape as `q:skolem-qf` above; see the note there.
         return Ok(
@@ -14152,6 +14145,10 @@ mod tests {
     #[test]
     fn the_ownership_rule_decides_each_cell_of_its_own_table() {
         let mut rec: Recorder<'_> = None;
+        // ADR-2103's continuation flag. These rows are about the OWNERSHIP
+        // rule, so the flag is a bystander here; the budget bound it drives has
+        // its own fixture.
+        let conversion = OwnershipConversion::default();
         let unknown = || {
             CheckResult::Unknown(UnknownReason {
                 kind: UnknownKind::Incomplete,
@@ -14210,7 +14207,8 @@ mod tests {
                 constructs![Datatype],
                 unknown(),
                 &mut rec,
-            , &conversion)
+                &conversion,
+            )
             .is_none(),
             "ADR-0022 step A hands to step B by design; an accelerator that could \
              end the ladder would take the query from the rung it exists to feed"
@@ -14248,23 +14246,30 @@ mod tests {
     fn an_owning_deciders_refusal_is_reported_and_a_declining_routes_is_not() {
         let mut trace = RouteTrace::new();
         let mut rec: Recorder<'_> = Some(&mut trace);
+        // ADR-2103's continuation flag. These rows are about the RECORDING
+        // rule, so the flag is a bystander here; the budget bound it drives
+        // has its own fixture.
+        let conversion = OwnershipConversion::default();
         record_route_refusal(
             DispatchRoute::LiraDpll,
             constructs![Int, Real],
             "a fragment this route declared as its own",
             &mut rec,
+            &conversion,
         );
         record_route_refusal(
             DispatchRoute::LiraDpll,
             constructs![Int, Real, Array],
             "a fragment this route never claimed",
             &mut rec,
+            &conversion,
         );
         record_route_refusal(
             DispatchRoute::DatatypeElim,
             constructs![Datatype],
             "step A hands to step B",
             &mut rec,
+            &conversion,
         );
 
         let reported: Vec<bool> = trace
@@ -17454,5 +17459,349 @@ mod tests {
                 "ladder for top={top} is not strictly increasing: {widths:?}"
             );
         }
+    }
+
+    // ================= ADR-2103: quantified-ladder ownership =================
+
+    /// `ConstructSet::EVERY` is the fold of every class, derived from
+    /// [`Construct::ALL`] rather than trusting the spelled-out constant.
+    ///
+    /// A test named "every X" must derive its X from the authority. Without
+    /// this, a class added to `Construct` silently stops being in `EVERY`, and
+    /// `EVERY` is the value the quantified ladder falls back to when the
+    /// feature scan cannot run — so a missing class would make a rung OWN a
+    /// construct nobody had looked at, which is the one direction that is not
+    /// safe.
+    #[test]
+    fn construct_set_every_is_the_fold_of_every_class() {
+        let folded = Construct::ALL
+            .iter()
+            .fold(ConstructSet::EMPTY, |set, &class| set.with(class));
+        assert_eq!(
+            folded,
+            ConstructSet::EVERY,
+            "`ConstructSet::EVERY` and the fold of `Construct::ALL` disagree, so a \
+             class was added to one and not the other"
+        );
+        for &class in Construct::ALL {
+            assert!(
+                ConstructSet::EVERY.contains(class),
+                "`EVERY` does not contain {}",
+                class.name()
+            );
+        }
+    }
+
+    /// Every `q:` route in ADR-2101's declared vocabulary has an ownership
+    /// declaration, and `q:timeout` — which is the ladder's BUDGET SINK and not
+    /// a rung — is the only exception.
+    ///
+    /// The population comes from `route_trace::Route::ALL`, so a rung added
+    /// there without a declaration here fails this test rather than silently
+    /// running under no contract at all. `QuantRoute::ALL` alone could not
+    /// catch that: it would just be a shorter list agreeing with itself.
+    #[test]
+    fn every_declared_quantified_rung_has_an_ownership_declaration() {
+        use crate::route_trace::Route;
+
+        let declared: BTreeSet<&str> = Route::ALL
+            .iter()
+            .map(|r| r.as_str())
+            .filter(|s| s.starts_with("q:"))
+            .collect();
+        assert!(
+            declared.len() >= 15,
+            "the `q:` vocabulary scan found {} routes, which is not a plausible \
+             count -- the parse lost its subject",
+            declared.len()
+        );
+
+        let owned: BTreeSet<&str> = QuantRoute::ALL.iter().map(|r| r.label()).collect();
+        assert_eq!(
+            owned.len(),
+            QuantRoute::ALL.len(),
+            "two `QuantRoute` variants share a label, so one rung's declaration \
+             is being read for another's refusals"
+        );
+
+        // `q:timeout` is recorded by `quantified_timeout` from nine program
+        // points and is the ladder's machinery, not a route. Naming it here
+        // rather than filtering by prefix keeps the exemption checked: if it
+        // stops existing, this assertion says so.
+        let sink = "q:timeout";
+        assert!(
+            declared.contains(sink),
+            "the budget sink {sink:?} is not in the declared vocabulary any more; \
+             a stale exemption hides whatever replaced it"
+        );
+        let expected: BTreeSet<&str> = declared.iter().copied().filter(|&s| s != sink).collect();
+        assert_eq!(
+            owned, expected,
+            "every declared `q:` route except the budget sink must carry an \
+             ADR-2103 ownership declaration"
+        );
+    }
+
+    /// The four quantifier-free hand-offs own exactly what the quantifier-free
+    /// LADDER owns, re-derived from `DispatchRoute::ALL`.
+    ///
+    /// `q:skolem-qf` and its three siblings end by handing a quantifier-free
+    /// residual to `check_auto` and returning its verdict, so their fragment IS
+    /// that ladder's fragment. Deriving the union here rather than retyping it
+    /// is what keeps the two tables from drifting apart: a class added to a
+    /// `DispatchRoute`'s declaration moves this one or fails.
+    #[test]
+    fn the_qf_handoffs_own_exactly_what_the_qf_ladder_owns() {
+        let ladder = DispatchRoute::ALL
+            .iter()
+            .fold(ConstructSet::EMPTY, |set, route| {
+                Construct::ALL
+                    .iter()
+                    .filter(|&&class| route.owns().contains(class))
+                    .fold(set, |set, &class| set.with(class))
+            });
+        for route in [
+            QuantRoute::SkolemQf,
+            QuantRoute::ValidUniversalQf,
+            QuantRoute::VacuousUniversalQf,
+            QuantRoute::FourierMotzkin,
+        ] {
+            assert_eq!(
+                route.owns(),
+                ladder,
+                "`{}` hands a quantifier-free residual to the other ladder, so it \
+                 must declare that ladder's fragment and nothing else. Declared \
+                 {}, the ladder owns {}",
+                route.label(),
+                route.owns(),
+                ladder,
+            );
+        }
+    }
+
+    /// The two classes ADR-2100 declares unowned stay unowned on this ladder
+    /// too.
+    ///
+    /// `NestedArray`: `Sort::array_sorts` returns `None` for a nested array
+    /// sort, so every array route that predates nesting already refuses one.
+    /// `WideInt`: the opt-in is per route and nothing has opted in (ADR-1702
+    /// slice 2). A quantified rung claiming either would be claiming a fragment
+    /// no quantifier-free rung underneath it can actually decide.
+    #[test]
+    fn no_quantified_rung_owns_a_class_nobody_owns() {
+        for &class in &[Construct::NestedArray, Construct::WideInt] {
+            let claimants: Vec<&str> = QuantRoute::ALL
+                .iter()
+                .filter(|r| r.owns().contains(class))
+                .map(|r| r.label())
+                .collect();
+            assert!(
+                claimants.is_empty(),
+                "{} is owned by nobody on the quantifier-free ladder, and {claimants:?} \
+                 claim it here",
+                class.name(),
+            );
+        }
+    }
+
+    /// A one-directional rung's `Unknown` is always a decline; a `Decider`'s is
+    /// terminal exactly when it owns the query's constructs; and a DECISION is
+    /// never touched by the rule.
+    ///
+    /// **This is the guard the `quant-route-ownership-rule` mutation kills.**
+    #[test]
+    fn a_one_directional_quantified_rungs_unknown_never_terminates_the_ladder() {
+        let _attribution = crate::route_trace::RouteAttributionGuard::enable();
+        let unknown = || {
+            CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: "the rung's own reason".to_owned(),
+            })
+        };
+
+        // `q:egraph` is refutation-only: it owns nothing and is a `FastPath`, so
+        // even on a query carrying no construct at all its `Unknown` declines.
+        // This is the case that used to end the ladder before ADR-2103, via the
+        // `mbqi_source_shape_supported` branch that is now deleted.
+        assert!(
+            matches!(
+                settle_quant_rung(QuantRoute::Egraph, ConstructSet::EMPTY, unknown()),
+                QuantSettled::Declined(_)
+            ),
+            "`q:egraph` is a refuter -- it can decide but never conclude the query \
+             is undecidable -- so its non-decision must never end the ladder"
+        );
+
+        // `q:mbqi` is the ladder's `Decider`. On a query inside its declared
+        // fragment its `Unknown` IS the answer; on one carrying a construct it
+        // does not own it is a decline.
+        assert!(
+            matches!(
+                settle_quant_rung(QuantRoute::Mbqi, constructs![Int, Function], unknown()),
+                QuantSettled::Terminal(_)
+            ),
+            "`q:mbqi` owns {}, which covers a query carrying {{Int, Function}}, so \
+             its `Unknown` is the ladder's answer",
+            QuantRoute::Mbqi.owns(),
+        );
+        assert!(
+            matches!(
+                settle_quant_rung(QuantRoute::Mbqi, constructs![Int, Datatype], unknown()),
+                QuantSettled::Declined(_)
+            ),
+            "`q:mbqi` does not own `Datatype`, so it may not end the ladder on a \
+             query carrying one"
+        );
+
+        // A verdict passes through whatever the declaration says. Ownership
+        // never stands between a rung and a decision -- a rule that could
+        // discard an `unsat` would be a soundness change, not a policy one.
+        for route in [
+            QuantRoute::Egraph,
+            QuantRoute::Mbqi,
+            QuantRoute::GroundSubset,
+        ] {
+            assert!(
+                matches!(
+                    settle_quant_rung(route, ConstructSet::EVERY, CheckResult::Unsat),
+                    QuantSettled::Terminal(CheckResult::Unsat)
+                ),
+                "`{}` returned a VERDICT on a query carrying every construct; the \
+                 rule must not discard it",
+                route.label(),
+            );
+        }
+    }
+
+    /// An `Err(Unsupported)` from a quantified decider that declares the
+    /// fragment is reported as an inconsistency, and one from anything else is
+    /// not.
+    ///
+    /// The marker is a constant both the producer and every consumer read, so
+    /// the checker cannot silently stop matching what the producer emits.
+    /// **This is the guard the `quant-route-ownership-marker` mutation kills.**
+    #[test]
+    fn an_owning_quant_deciders_refusal_is_reported_and_a_one_directional_rungs_is_not() {
+        let _attribution = crate::route_trace::RouteAttributionGuard::enable();
+        record_quant_route_refusal(
+            QuantRoute::Mbqi,
+            constructs![Int, Function],
+            "a fragment this rung declared as its own",
+        );
+        record_quant_route_refusal(
+            QuantRoute::Mbqi,
+            constructs![Int, Datatype],
+            "a fragment this rung never claimed",
+        );
+        record_quant_route_refusal(
+            QuantRoute::Egraph,
+            ConstructSet::EMPTY,
+            "a refuter declining to refute",
+        );
+
+        let trace = crate::route_trace::last_route_attribution();
+        let reported: Vec<bool> = trace
+            .attempts()
+            .iter()
+            .map(|a| format!("{:?}", a.outcome).contains(QUANT_OWNERSHIP_INCONSISTENCY_MARKER))
+            .collect();
+        assert_eq!(
+            reported,
+            vec![true, false, false],
+            "exactly the first refusal is an inconsistency: a decider refusing a \
+             fragment it declares. The second is ADR-1966's ordinary decline and the \
+             third is a refuter's one-directional hand-off, and reporting either of \
+             those would make the marker fire on healthy code -- a checker that \
+             cannot distinguish its subject is worse than no checker"
+        );
+    }
+
+    /// The continuation-share lever's spellings, tested **without touching
+    /// process environment** so it is not a gate on one shell.
+    ///
+    /// An UNSET variable keeps the shipped divisor and a malformed one keeps it
+    /// too: a policy that silently reverted on a typo would let an A/B measure
+    /// the shipped arm in both halves and report the resulting zero as a null,
+    /// which is the `AXEYUM_ZERO_INST_SKELETON` trap from the other side. Only
+    /// `off` / `0` / `1` disable, and they say so.
+    #[test]
+    fn the_ownership_continuation_share_lever_fails_closed() {
+        assert_eq!(
+            parse_ownership_continuation_share(None),
+            OWNERSHIP_CONTINUATION_SHARE,
+            "unset must keep the SHIPPED divisor"
+        );
+        assert_eq!(
+            parse_ownership_continuation_share(Some("nonsense")),
+            OWNERSHIP_CONTINUATION_SHARE,
+            "a malformed value must keep the shipped divisor, not silently disable \
+             the policy"
+        );
+        for spelling in ["off", "0", "1"] {
+            assert_eq!(
+                parse_ownership_continuation_share(Some(spelling)),
+                0,
+                "{spelling:?} is the control arm's spelling and must disable the bound"
+            );
+        }
+        assert_eq!(parse_ownership_continuation_share(Some("8")), 8);
+        assert_eq!(
+            OWNERSHIP_CONTINUATION_SHARE, 4,
+            "the shipped divisor is the quarter `UF_ARITH_LADDER_RESERVE_SHARE`, \
+             `ABV_ONLINE_LADDER_RESERVE_SHARE` and `DL_LADDER_RESERVE_SHARE` all \
+             use; moving it is a policy change that needs its own measurement"
+        );
+    }
+
+    /// The continuation bound applies ONLY inside a quantified rung's sub-solve.
+    ///
+    /// At the outermost dispatch the continuation IS the answer — ADR-2100's two
+    /// stable gains came from it — so capping there would pay for that ADR's two
+    /// losses with its two gains, which is not a fix. This is the guard the
+    /// `quant-continuation-nesting` mutation kills.
+    #[test]
+    fn the_continuation_bound_applies_only_inside_a_quantified_ladder() {
+        let config = SolverConfig::default().with_timeout(Duration::from_secs(24));
+        let deadline = Instant::now().checked_add(Duration::from_secs(24));
+
+        assert!(
+            !inside_quantified_ladder(),
+            "a test that starts inside a quantified ladder would pass whatever the \
+             policy does"
+        );
+        assert!(
+            ownership_continuation_config(&config, deadline).is_none(),
+            "at the OUTERMOST dispatch the continuation is the ladder's answer and \
+             must keep the caller's clock"
+        );
+
+        let mut depth = QuantifiedLadderDepth::arm_if(true);
+        assert!(inside_quantified_ladder());
+        let narrowed = ownership_continuation_config(&config, deadline)
+            .expect("inside a quantified ladder the continuation is bounded");
+        let capped = narrowed
+            .timeout
+            .expect("a bounded continuation has a timeout");
+        assert!(
+            capped <= Duration::from_secs(24) / OWNERSHIP_CONTINUATION_SHARE,
+            "the continuation got {capped:?}, which is more than a \
+             1/{OWNERSHIP_CONTINUATION_SHARE} share of the remaining clock"
+        );
+        assert!(
+            capped > Duration::from_secs(4),
+            "the continuation got {capped:?}, which is far less than its share -- \
+             a bound that starves the continuation loses ADR-2100's gains as \
+             surely as no bound loses its two files"
+        );
+
+        // `disarm` is what the quantifier-free HAND-OFF rungs call, and the
+        // counter must come back down or every later solve on this thread is
+        // treated as nested.
+        depth.disarm();
+        assert!(
+            !inside_quantified_ladder(),
+            "`disarm` left the counter armed; every later dispatch on this thread \
+             would then be budget-capped as a sub-solve"
+        );
     }
 }
