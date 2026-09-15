@@ -1,0 +1,292 @@
+INSTANCE 0	Heap_5_	this	inv_	?p_!63	inv_	BasicMethodology
+INSTANCE 1	Heap_5_	this	inv_	?p_!63	localinv_	BasicMethodology
+INSTANCE 2	Heap_0_	this	NonNullFieldsAreInitialized_	?p_!63	allocated_	Smt.true
+INSTANCE 3	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	?p_!63	allocated_	System.Object
+INSTANCE 4	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	?p_!63	allocated_	temp1_0
+INSTANCE 5	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	?p_!63	allocated_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 6	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	?p_!63	allocated_	80
+INSTANCE 7	Heap_5_	this	inv_	?p_!63	allocated_	BasicMethodology
+INSTANCE 8	Heap_0_	this	NonNullFieldsAreInitialized_	?p_!63	ownerRef_	Smt.true
+INSTANCE 9	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	?p_!63	ownerRef_	System.Object
+INSTANCE 10	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	?p_!63	ownerRef_	temp1_0
+INSTANCE 11	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	?p_!63	ownerRef_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 12	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	?p_!63	ownerRef_	80
+INSTANCE 13	Heap_5_	this	inv_	?p_!63	ownerRef_	BasicMethodology
+INSTANCE 14	Heap_5_	this	inv_	?p_!63	ownerFrame_	BasicMethodology
+INSTANCE 15	Heap_5_	this	inv_	?o_!64	ownerFrame_	BasicMethodology
+INSTANCE 16	Heap_5_	this	inv_	this	sharingMode_	BasicMethodology
+INSTANCE 17	Heap_5_	this	inv_	?o_!64	ownerRef_	BasicMethodology
+INSTANCE 18	Heap_5_	this	inv_	this	BasicMethodology.x	BasicMethodology
+INSTANCE 19	Heap_5_	this	inv_	this	localinv_	BasicMethodology
+INSTANCE 20	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	?p_!65	inv_	80
+INSTANCE 21	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	?p_!63	inv_	80
+INSTANCE 22	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!63	inv_	System.Object
+INSTANCE 23	(store2 Heap_9_ stack0o_1 inv_ Component)	this	inv_	?p_!63	inv_	BasicMethodology
+INSTANCE 24	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	?p_!63	allocated_	80
+INSTANCE 25	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!63	allocated_	System.Object
+INSTANCE 26	(store2 Heap_9_ stack0o_1 inv_ Component)	this	inv_	?p_!63	allocated_	BasicMethodology
+INSTANCE 27	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	?p_!63	localinv_	80
+INSTANCE 28	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!63	localinv_	System.Object
+INSTANCE 29	(store2 Heap_9_ stack0o_1 inv_ Component)	this	inv_	this	BasicMethodology.c	BasicMethodology
+INSTANCE 30	(store2 Heap_9_ stack0o_1 inv_ Component)	this	inv_	?p_!63	localinv_	BasicMethodology
+INSTANCE 31	(store2 Heap_9_ stack0o_1 inv_ Component)	this	inv_	?p_!63	ownerFrame_	BasicMethodology
+INSTANCE 32	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	?p_!63	ownerRef_	80
+INSTANCE 33	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!63	ownerRef_	System.Object
+INSTANCE 34	(store2 Heap_9_ stack0o_1 inv_ Component)	this	inv_	?p_!63	ownerRef_	BasicMethodology
+INSTANCE 35	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	?o_!64	ownerFrame_	80
+INSTANCE 36	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	?o_!64	ownerFrame_	System.Object
+INSTANCE 37	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	?o_!64	ownerFrame_	temp3_0
+INSTANCE 38	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	?o_!64	ownerFrame_	80
+INSTANCE 39	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?o_!64	ownerFrame_	Component
+INSTANCE 40	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	this	sharingMode_	80
+INSTANCE 41	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	sharingMode_	System.Object
+INSTANCE 42	(store2 Heap_9_ stack0o_1 inv_ Component)	this	inv_	this	sharingMode_	BasicMethodology
+INSTANCE 43	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	?o_!64	ownerRef_	80
+INSTANCE 44	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	?o_!64	ownerRef_	System.Object
+INSTANCE 45	(store2 Heap_9_ stack0o_1 inv_ Component)	this	inv_	?o_!64	ownerRef_	BasicMethodology
+INSTANCE 46	(store2 Heap_9_ stack0o_1 inv_ Component)	this	inv_	BasicMethodology
+INSTANCE 47	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!65	inv_	System.Object
+INSTANCE 48	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	?p_!65	localinv_	80
+INSTANCE 49	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!65	localinv_	System.Object
+INSTANCE 50	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	?p_!65	inv_	80
+INSTANCE 51	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	?p_!65	inv_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 52	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	?p_!65	inv_	temp1_0
+INSTANCE 53	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	this	ownerFrame_	80
+INSTANCE 54	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	ownerFrame_	System.Object
+INSTANCE 55	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	?p_!65	ownerRef_	80
+INSTANCE 56	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!65	ownerRef_	System.Object
+INSTANCE 57	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	?p_!65	ownerFrame_	80
+INSTANCE 58	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!65	ownerFrame_	System.Object
+INSTANCE 59	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	(select2 (store2 Heap_9_ stack0o_1 inv_ Component) this (AsRepField BasicMethodology.c BasicMethodology))	Component.y	Component
+INSTANCE 60	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	inv_	System.Object
+INSTANCE 61	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	localinv_	System.Object
+INSTANCE 62	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	this	localinv_	80
+INSTANCE 63	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	BasicMethodology.x	System.Object
+INSTANCE 64	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	80
+INSTANCE 65	(store2 Heap_9_ stack0o_1 inv_ Component)	this	inv_	this	BasicMethodology.x	BasicMethodology
+INSTANCE 66	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!66	inv_	System.Object
+INSTANCE 67	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!66	localinv_	System.Object
+INSTANCE 68	Heap_5_	?p_!66
+INSTANCE 69	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!66	ownerRef_	System.Object
+INSTANCE 70	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!66	ownerFrame_	System.Object
+INSTANCE 71	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	(select2 Heap_6_ this BasicMethodology.c)	localinv_	System.Object
+INSTANCE 72	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	System.Object
+INSTANCE 73	Heap_5_	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	BasicMethodology.c	System.Object
+INSTANCE 74	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	(select2 Heap_6_ this BasicMethodology.c)	inv_	80
+INSTANCE 75	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	(select2 Heap_6_ this BasicMethodology.c)	localinv_	80
+INSTANCE 76	Heap_5_	this	BasicMethodology.c	BasicMethodology
+INSTANCE 77	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	this	BasicMethodology.c	80
+INSTANCE 78	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	?o_!64	ownerFrame_	(select2 (store2 Heap_8_ stack0o_2 Component.y 80) this BasicMethodology.x)
+INSTANCE 79	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_8_ this BasicMethodology.c)	Component.y	this	BasicMethodology.x	80
+INSTANCE 80	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_8_ this BasicMethodology.c)	exposeVersion_	this	BasicMethodology.x	temp3_0
+INSTANCE 81	Heap_6_	(select2 Heap_8_ this BasicMethodology.c)	inv_	this	BasicMethodology.x	System.Object
+INSTANCE 82	Heap_6_	(select2 Heap_8_ this BasicMethodology.c)	inv_	?o_!64	ownerFrame_	System.Object
+INSTANCE 83	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_8_ this BasicMethodology.c)	exposeVersion_	?o_!64	ownerFrame_	temp3_0
+INSTANCE 84	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_8_ this BasicMethodology.c)	Component.y	?o_!64	ownerFrame_	80
+INSTANCE 85	(store2 Heap_8_ stack0o_2 Component.y 80)	(select2 Heap_8_ this BasicMethodology.c)	inv_	?o_!64	ownerFrame_	(typeof_ stack0o_1)
+INSTANCE 86	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	this	BasicMethodology.c	temp3_0
+INSTANCE 87	Heap_6_	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	BasicMethodology.c	System.Object
+INSTANCE 88	(store2 Heap_9_ stack0o_1 inv_ Component)	this	inv_	?o_!64	ownerFrame_	BasicMethodology
+INSTANCE 89	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	sharingMode_	Component
+INSTANCE 90	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	this	sharingMode_	80
+INSTANCE 91	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	this	sharingMode_	temp3_0
+INSTANCE 92	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	sharingMode_	System.Object
+INSTANCE 93	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?o_!64	ownerRef_	System.Object
+INSTANCE 94	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	?o_!64	ownerRef_	temp3_0
+INSTANCE 95	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	?o_!64	ownerRef_	80
+INSTANCE 96	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?o_!64	ownerRef_	Component
+INSTANCE 97	(store2 (store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80) (select2 Heap_6_ this BasicMethodology.c) inv_ Component)	this	inv_	?o_!64	ownerRef_	BasicMethodology
+INSTANCE 98	(store2 (store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80) (select2 Heap_6_ this BasicMethodology.c) inv_ Component)	this	inv_	?p_!63	inv_	BasicMethodology
+INSTANCE 99	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!63	inv_	Component
+INSTANCE 100	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	?p_!63	inv_	80
+INSTANCE 101	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	?p_!63	inv_	temp3_0
+INSTANCE 102	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!63	inv_	System.Object
+INSTANCE 103	(store2 (store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80) (select2 Heap_6_ this BasicMethodology.c) inv_ Component)	this	inv_	?p_!63	localinv_	BasicMethodology
+INSTANCE 104	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!63	localinv_	Component
+INSTANCE 105	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	?p_!63	localinv_	80
+INSTANCE 106	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	?p_!63	localinv_	temp3_0
+INSTANCE 107	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!63	localinv_	System.Object
+INSTANCE 108	(store2 (store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80) (select2 Heap_6_ this BasicMethodology.c) inv_ Component)	this	inv_	?p_!63	ownerRef_	BasicMethodology
+INSTANCE 109	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!63	ownerRef_	Component
+INSTANCE 110	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	?p_!63	ownerRef_	80
+INSTANCE 111	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	?p_!63	ownerRef_	temp3_0
+INSTANCE 112	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!63	ownerRef_	System.Object
+INSTANCE 113	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!63	allocated_	System.Object
+INSTANCE 114	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	?p_!63	allocated_	temp3_0
+INSTANCE 115	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	?p_!63	allocated_	80
+INSTANCE 116	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!63	allocated_	Component
+INSTANCE 117	(store2 (store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80) (select2 Heap_6_ this BasicMethodology.c) inv_ Component)	this	inv_	?p_!63	allocated_	BasicMethodology
+INSTANCE 118	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!63	ownerFrame_	Component
+INSTANCE 119	(store2 (store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80) (select2 Heap_6_ this BasicMethodology.c) inv_ Component)	this	inv_	?p_!63	ownerFrame_	BasicMethodology
+INSTANCE 120	(store2 Heap_12_ this inv_ BasicMethodology)	this	BasicMethodology.c	BasicMethodology
+INSTANCE 121	(store2 (store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80) (select2 Heap_6_ this BasicMethodology.c) inv_ Component)	this	inv_	this	BasicMethodology.c	BasicMethodology
+INSTANCE 122	Heap_0_	this	NonNullFieldsAreInitialized_	this	BasicMethodology.x	Smt.true
+INSTANCE 123	(store2 (store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80) (select2 Heap_6_ this BasicMethodology.c) inv_ Component)	this	inv_	this	BasicMethodology.x	BasicMethodology
+INSTANCE 124	(store2 Heap_9_ stack0o_1 inv_ Component)	this	inv_	this	localinv_	BasicMethodology
+INSTANCE 125	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	this	ownerFrame_	System.Object
+INSTANCE 126	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	this	ownerFrame_	temp1_0
+INSTANCE 127	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	this	ownerFrame_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 128	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	ownerFrame_	System.Object
+INSTANCE 129	Heap_7_	stack0o_1	exposeVersion_	this	ownerFrame_	temp3_0
+INSTANCE 130	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_8_ this BasicMethodology.c)	Component.y	this	ownerFrame_	80
+INSTANCE 131	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!65	inv_	System.Object
+INSTANCE 132	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	?p_!65	inv_	temp3_0
+INSTANCE 133	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	?p_!65	inv_	80
+INSTANCE 134	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!65	inv_	Component
+INSTANCE 135	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	Component
+INSTANCE 136	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!65	localinv_	Component
+INSTANCE 137	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	?p_!65	localinv_	80
+INSTANCE 138	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	?p_!65	localinv_	temp3_0
+INSTANCE 139	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!65	localinv_	System.Object
+INSTANCE 140	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!65	ownerRef_	System.Object
+INSTANCE 141	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	?p_!65	ownerRef_	temp3_0
+INSTANCE 142	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	?p_!65	ownerRef_	80
+INSTANCE 143	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!65	ownerRef_	Component
+INSTANCE 144	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!65	ownerFrame_	System.Object
+INSTANCE 145	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	?p_!65	ownerFrame_	temp3_0
+INSTANCE 146	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	?p_!65	ownerFrame_	80
+INSTANCE 147	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!65	ownerFrame_	Component
+INSTANCE 148	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	(select2 (store2 (store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80) (select2 Heap_6_ this BasicMethodology.c) inv_ Component) this BasicMethodology.c)	Component.y	Component
+INSTANCE 149	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	BasicMethodology.c	Component
+INSTANCE 150	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	this	BasicMethodology.c	80
+INSTANCE 151	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	BasicMethodology.x	Component
+INSTANCE 152	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	this	BasicMethodology.x	80
+INSTANCE 153	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	this	BasicMethodology.x	temp3_0
+INSTANCE 154	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	BasicMethodology.x	System.Object
+INSTANCE 155	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	inv_	Component
+INSTANCE 156	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	this	inv_	80
+INSTANCE 157	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	this	inv_	temp3_0
+INSTANCE 158	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	inv_	System.Object
+INSTANCE 159	(store2 (store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0) (select2 Heap_8_ this BasicMethodology.c) Component.y 80)	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	localinv_	Component
+INSTANCE 160	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	this	localinv_	80
+INSTANCE 161	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	this	localinv_	temp3_0
+INSTANCE 162	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	localinv_	System.Object
+INSTANCE 163	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	?p_!66	inv_	80
+INSTANCE 164	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	?p_!66	inv_	temp3_0
+INSTANCE 165	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!66	inv_	System.Object
+INSTANCE 166	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	?p_!66	localinv_	80
+INSTANCE 167	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	?p_!66	localinv_	temp3_0
+INSTANCE 168	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!66	localinv_	System.Object
+INSTANCE 169	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	?p_!66
+INSTANCE 170	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!66	ownerRef_	System.Object
+INSTANCE 171	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	?p_!66	ownerRef_	temp3_0
+INSTANCE 172	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	?p_!66	ownerRef_	80
+INSTANCE 173	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	?p_!66	ownerFrame_	System.Object
+INSTANCE 174	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	?p_!66	ownerFrame_	temp3_0
+INSTANCE 175	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	?p_!66	ownerFrame_	80
+INSTANCE 176	Heap_8_	this	BasicMethodology.c	BasicMethodology
+INSTANCE 177	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	(select2 Heap_6_ this BasicMethodology.c)	localinv_	80
+INSTANCE 178	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	(select2 Heap_6_ this BasicMethodology.c)	localinv_	temp3_0
+INSTANCE 179	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	(select2 Heap_6_ this BasicMethodology.c)	localinv_	System.Object
+INSTANCE 180	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_6_ this BasicMethodology.c)	Component.y	(select2 Heap_6_ this BasicMethodology.c)	inv_	80
+INSTANCE 181	(store2 Heap_7_ stack0o_1 exposeVersion_ temp3_0)	(select2 Heap_8_ this BasicMethodology.c)	Component.y	80
+INSTANCE 182	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	System.Object
+INSTANCE 183	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	(select2 Heap_6_ this BasicMethodology.c)	inv_	temp3_0
+INSTANCE 184	(select2 Heap_8_ stack0o_2 inv_)
+INSTANCE 185	(store2 Heap_6_ stack0o_1 inv_ System.Object)	(select2 Heap_6_ this BasicMethodology.c)	exposeVersion_	this	BasicMethodology.c	temp3_0
+INSTANCE 186	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	(select2 Heap_6_ this BasicMethodology.c)	inv_	this	BasicMethodology.c	System.Object
+INSTANCE 187	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	(select2 Heap_6_ this BasicMethodology.c)	inv_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 188	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	(select2 Heap_6_ this BasicMethodology.c)	inv_	temp1_0
+INSTANCE 189	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	(select2 Heap_6_ this BasicMethodology.c)	inv_	System.Object
+INSTANCE 190	(typeof_ (select2 Heap_0_ this BasicMethodology.c))
+INSTANCE 191	(select2 Heap_0_ this BasicMethodology.c)	Component
+INSTANCE 192	BasicMethodology.c	Component
+INSTANCE 193	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	BasicMethodology.c	Component
+INSTANCE 194	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.c	BasicMethodology
+INSTANCE 195	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	(select2 Heap_6_ this BasicMethodology.c)	localinv_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 196	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	(select2 Heap_6_ this BasicMethodology.c)	localinv_	temp1_0
+INSTANCE 197	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	(select2 Heap_6_ this BasicMethodology.c)	localinv_	System.Object
+INSTANCE 198	Heap_0_	this	BasicMethodology.c	BasicMethodology
+INSTANCE 199	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	(select2 Heap_0_ this BasicMethodology.c)
+INSTANCE 200	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	BasicMethodology.c	BasicMethodology
+INSTANCE 201	Heap_0_	this	NonNullFieldsAreInitialized_	this	BasicMethodology.c	Smt.true
+INSTANCE 202	Heap_0_	this	NonNullFieldsAreInitialized_	?o_!64	ownerFrame_	Smt.true
+INSTANCE 203	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	?o_!64	ownerFrame_	System.Object
+INSTANCE 204	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	?o_!64	ownerFrame_	temp1_0
+INSTANCE 205	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	?o_!64	ownerFrame_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 206	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	inv_	?o_!64	ownerFrame_	BasicMethodology
+INSTANCE 207	(store2 Heap_12_ this inv_ BasicMethodology)	this	inv_	?o_!64	ownerFrame_	SubClass
+INSTANCE 208	?o_!64
+INSTANCE 209	this
+INSTANCE 210	Heap_0_	this	NonNullFieldsAreInitialized_	this	sharingMode_	Smt.true
+INSTANCE 211	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	this	sharingMode_	System.Object
+INSTANCE 212	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	this	sharingMode_	temp1_0
+INSTANCE 213	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	this	sharingMode_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 214	Heap_12_	this	inv_	this	sharingMode_	BasicMethodology
+INSTANCE 215	(store2 Heap_12_ this inv_ BasicMethodology)	this	inv_	this	sharingMode_	SubClass
+INSTANCE 216	(store2 Heap_12_ this inv_ BasicMethodology)	this	inv_	this	localinv_	SubClass
+INSTANCE 217	(store2 Heap_12_ this inv_ BasicMethodology)	this	inv_	SubClass
+INSTANCE 218	Heap_0_	this	NonNullFieldsAreInitialized_	?o_!64	ownerRef_	Smt.true
+INSTANCE 219	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	?o_!64	ownerRef_	System.Object
+INSTANCE 220	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	?o_!64	ownerRef_	temp1_0
+INSTANCE 221	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	?o_!64	ownerRef_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 222	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	inv_	?o_!64	ownerRef_	BasicMethodology
+INSTANCE 223	(store2 Heap_12_ this inv_ BasicMethodology)	this	inv_	?o_!64	ownerRef_	SubClass
+INSTANCE 224	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	inv_	this	BasicMethodology.x	BasicMethodology
+INSTANCE 225	Heap_12_	this	inv_	BasicMethodology
+INSTANCE 226	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	inv_	this	localinv_	BasicMethodology
+INSTANCE 227	?p_!63
+INSTANCE 228	?p_!63
+INSTANCE 229	?p_!63
+INSTANCE 230	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	inv_	?p_!63	inv_	BasicMethodology
+INSTANCE 231	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	?p_!63	inv_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 232	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	?p_!63	inv_	temp1_0
+INSTANCE 233	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	?p_!63	inv_	System.Object
+INSTANCE 234	Heap_0_	this	NonNullFieldsAreInitialized_	?p_!63	inv_	Smt.true
+INSTANCE 235	Heap_0_	this	NonNullFieldsAreInitialized_	?p_!63	allocated_	Smt.true
+INSTANCE 236	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	?p_!63	allocated_	System.Object
+INSTANCE 237	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	?p_!63	allocated_	temp1_0
+INSTANCE 238	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	?p_!63	allocated_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 239	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	inv_	?p_!63	allocated_	BasicMethodology
+INSTANCE 240	Heap_0_	this	NonNullFieldsAreInitialized_	?p_!63	localinv_	Smt.true
+INSTANCE 241	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	?p_!63	localinv_	System.Object
+INSTANCE 242	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	?p_!63	localinv_	temp1_0
+INSTANCE 243	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	?p_!63	localinv_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 244	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	inv_	?p_!63	localinv_	BasicMethodology
+INSTANCE 245	Heap_0_	this	NonNullFieldsAreInitialized_	?p_!63	ownerFrame_	Smt.true
+INSTANCE 246	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	?p_!63	ownerFrame_	System.Object
+INSTANCE 247	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	?p_!63	ownerFrame_	temp1_0
+INSTANCE 248	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	?p_!63	ownerFrame_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 249	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	inv_	?p_!63	ownerFrame_	BasicMethodology
+INSTANCE 250	Heap_0_	this	NonNullFieldsAreInitialized_	?p_!63	ownerRef_	Smt.true
+INSTANCE 251	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	?p_!63	ownerRef_	System.Object
+INSTANCE 252	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	?p_!63	ownerRef_	temp1_0
+INSTANCE 253	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	?p_!63	ownerRef_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 254	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	inv_	?p_!63	ownerRef_	BasicMethodology
+INSTANCE 255	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	this	localinv_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 256	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	this	localinv_	temp1_0
+INSTANCE 257	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	this	localinv_	System.Object
+INSTANCE 258	this	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)
+INSTANCE 259	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	this	BasicMethodology.x	temp1_0
+INSTANCE 260	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	this	BasicMethodology.x	System.Object
+INSTANCE 261	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	?p_!65	inv_	System.Object
+INSTANCE 262	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	?p_!65	localinv_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 263	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	?p_!65	localinv_	temp1_0
+INSTANCE 264	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	?p_!65	localinv_	System.Object
+INSTANCE 265	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	?p_!65	inv_	temp1_0
+INSTANCE 266	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	?p_!65	inv_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 267	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	?p_!65
+INSTANCE 268	(typeof_ this)	SubClass	BasicMethodology
+INSTANCE 269	this	SubClass
+INSTANCE 270	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	?p_!65	ownerRef_	System.Object
+INSTANCE 271	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	?p_!65	ownerRef_	temp1_0
+INSTANCE 272	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	?p_!65	ownerRef_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 273	Heap_0_	this	NonNullFieldsAreInitialized_	?p_!65	ownerFrame_	Smt.true
+INSTANCE 274	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	?p_!65	ownerFrame_	System.Object
+INSTANCE 275	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	?p_!65	ownerFrame_	temp1_0
+INSTANCE 276	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	?p_!65	ownerFrame_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 277	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	BasicMethodology.c	Component
+INSTANCE 278	Heap_0_	this	NonNullFieldsAreInitialized_	Smt.true
+INSTANCE 279	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	this	BasicMethodology.c	System.Object
+INSTANCE 280	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	this	BasicMethodology.c	temp1_0
+INSTANCE 281	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	this	BasicMethodology.c	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 282	(store2 Heap_3_ this BasicMethodology.x stack0i_1)	this	BasicMethodology.x	this	inv_	80
+INSTANCE 283	System.Object	BasicMethodology
+INSTANCE 284	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	stack0i_1
+INSTANCE 285	(store2 Heap_2_ this exposeVersion_ temp1_0)	this	BasicMethodology.x	this	inv_	(select2 Heap_4_ this BasicMethodology.x)
+INSTANCE 286	Heap_0_	this	NonNullFieldsAreInitialized_	this	inv_	Smt.true
+INSTANCE 287	Heap_0_	this	NonNullFieldsAreInitialized_	this	localinv_	Smt.true
+INSTANCE 288	Heap_0_	this	NonNullFieldsAreInitialized_	this	ownerFrame_	Smt.true
+INSTANCE 289	(store2 Heap_1_ this inv_ System.Object)	this	exposeVersion_	this	inv_	temp1_0
+INSTANCE 290	this	SubClass
+INSTANCE 291	(store2 Heap_0_ this NonNullFieldsAreInitialized_ Smt.true)	this	inv_	System.Object

@@ -1,0 +1,13 @@
+INSTANCE 0	RES_122.21_122.21
+INSTANCE 1	T_javafe.tc.TypeSig
+INSTANCE 2	RES_122.21_122.21
+INSTANCE 3	(asField count_67.33 T_int)	RES_122.21_122.21	?brokenObj_2_!22	(select1 elementCount_11.90.35 vec_120.41)
+INSTANCE 4	?brokenObj_2_!22
+INSTANCE 5	(asField count_67.33 T_int)	RES_122.21_122.21	?brokenObj_7_!24	(select1 elementCount_11.90.35 vec_120.41)
+INSTANCE 6	?i_62.31!25
+INSTANCE 7	?i_62.31!25
+INSTANCE 8	?brokenObj_7_!24
+INSTANCE 9	?brokenObj_15_!23
+INSTANCE 10	(asField count_67.33 T_int)	RES_122.21_122.21	?brokenObj_15_!23	(select1 elementCount_11.90.35 vec_120.41)
+INSTANCE 11	(asField count_67.33 T_int)	RES_122.21_122.21	(select1 elementCount_11.90.35 vec_120.41)
+INSTANCE 12	vec_120.41

@@ -1,0 +1,8 @@
+INSTANCE 0	(asField decl_38.43 T_javafe.ast.GenericVarDecl)	T_javafe.ast.GenericVarDecl	this
+INSTANCE 1	RES_1_	T_javafe.ast.GenericVarDecl
+INSTANCE 2	this	(asChild T_javafe.tc.EnvForCU T_javafe.tc.Env)
+INSTANCE 3	(asChild T_javafe.tc.EnvForCU T_javafe.tc.Env)	T_javafe.tc.Env	T_java.lang.Object
+INSTANCE 4	(typeof this)	(asChild T_javafe.tc.EnvForCU T_javafe.tc.Env)	T_javafe.tc.Env
+INSTANCE 5	(typeof this)	(asChild T_javafe.tc.EnvForLocals T_javafe.tc.Env)	T_javafe.tc.Env
+INSTANCE 6	this	(asChild T_javafe.tc.EnvForLocals T_javafe.tc.Env)
+INSTANCE 7	(asChild T_javafe.tc.EnvForLocals T_javafe.tc.Env)	T_javafe.tc.Env	T_java.lang.Object

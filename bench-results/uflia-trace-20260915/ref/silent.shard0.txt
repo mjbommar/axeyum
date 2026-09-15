@@ -1,0 +1,64 @@
+==== UFLIA_boogie_Cast_Cast.R_System.Object_System.Int32.smt2.core.smt2
+universals 7
+  FIRED               1   14.3%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED        6   85.7%
+  rejects[ALL-REJECTED] rej_nocontext=7260
+==== UFLIA_boogie_Chunker11c_Chunker.SpecSharp.CheckInvariant_System.Boolean.smt2.core.smt2
+universals 21
+  FIRED               2    9.5%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED       19   90.5%
+  rejects[ALL-REJECTED] rej_nocontext=149790
+==== UFLIA_boogie_DefaultLoopInv0_A.M-modifiesOnLoop-noinfer.smt2.core.smt2
+NO-PROBE-ROWS
+==== UFLIA_grasshopper_uninstantiated_merge_loop_check_heap_access_60_6.smt2.core.smt2
+universals 9
+  FIRED               9  100.0%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED        0    0.0%
+==== UFLIA_simplify2_front_end_suite_javafe.ast.ImportDeclVec.015.smt2.core.smt2
+universals 47
+  FIRED               5   10.6%
+  NO-TRIGGER          1    2.1%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED       41   87.2%
+  rejects[ALL-REJECTED] rej_nocontext=464816
+==== UFLIA_simplify2_front_end_suite_javafe.ast.ParenExpr.006.smt2.core.smt2
+universals 21
+  FIRED               2    9.5%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED       19   90.5%
+  rejects[ALL-REJECTED] rej_nocontext=7224
+==== UFLIA_simplify2_front_end_suite_javafe.ast.TypeModifierPragmaVec.013.smt2.core.smt2
+universals 23
+  FIRED               2    8.7%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED       21   91.3%
+  rejects[ALL-REJECTED] rej_nocontext=260406
+==== UFLIA_simplify2_front_end_suite_javafe.filespace.HashTree.001.smt2.core.smt2
+universals 8
+  FIRED               2   25.0%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED        6   75.0%
+  rejects[ALL-REJECTED] rej_nocontext=29856
+==== UFLIA_simplify2_front_end_suite_javafe.filespace.ZipTree.005.smt2.core.smt2
+universals 21
+  FIRED               3   14.3%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED       18   85.7%
+  rejects[ALL-REJECTED] rej_nocontext=18363
+==== UFLIA_simplify2_front_end_suite_javafe.parser.TagConstants.001.smt2.core.smt2
+universals 3
+  FIRED               1   33.3%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED        2   66.7%
+  rejects[ALL-REJECTED] rej_nocontext=1976

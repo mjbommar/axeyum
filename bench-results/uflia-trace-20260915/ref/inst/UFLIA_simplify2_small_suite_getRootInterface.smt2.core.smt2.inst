@@ -1,0 +1,17 @@
+INSTANCE 0	(asField rootCache_987.20_ T_javafe.tc.TypeSig)	this	RES_977.14_977.14
+INSTANCE 1	RES_937.26_937.26
+INSTANCE 2	RES_936.24_936.24
+INSTANCE 3	RES_937.26_937.26
+INSTANCE 4	RES_937.26_937.26
+INSTANCE 5	RES_937.26_937.26
+INSTANCE 6	(cast RES_941.1_0_942.35_942.35 T_javafe.ast.MethodDecl)
+INSTANCE 7	(cast RES_941.1_0_942.35_942.35 T_javafe.ast.MethodDecl)
+INSTANCE 8	(typeof (cast RES_941.1_0_942.35_942.35 T_javafe.ast.MethodDecl))	T_javafe.ast.MethodDecl	T_javafe.ast.RoutineDecl
+INSTANCE 9	RES_941.1_0_942.35_942.35	T_javafe.ast.MethodDecl
+INSTANCE 10	T_javafe.ast.MethodDecl	T_javafe.ast.ASTNode	T_java.lang.Object
+INSTANCE 11	T_javafe.ast.MethodDecl	T_javafe.ast.RoutineDecl	T_javafe.ast.ASTNode
+INSTANCE 12	(cast RES_941.1_0_942.35_942.35 T_javafe.ast.MethodDecl)	T_javafe.ast.RoutineDecl
+INSTANCE 13	T_javafe.ast.RoutineDecl	T_javafe.ast.ASTNode	T_java.lang.Object
+INSTANCE 14	RES_941.1_0_942.35_942.35
+INSTANCE 15	RES_941.1_0_942.35_942.35
+INSTANCE 16	RES_941.1_0_942.35_942.35	T_javafe.ast.MethodDecl

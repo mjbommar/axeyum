@@ -1,0 +1,8 @@
+qinst-trigger-alternatives: baseline green, 6 tests (scripts/cargo-serialized.sh test -p axeyum-solver --lib --features full qinst_egraph::tests::trigger_alt_)
+  the containment filter drops the CONTAINER, not the contained DID NOT RUN — collection changed: 5 tests ran, the baseline ran 6
+  the shipped cap short-circuits to the single-group path killed 1: qinst_egraph::tests::trigger_alt_shipped_cap_proposes_exactly_one
+  alternatives are ordered SMALLEST first, not by arena order DID NOT RUN — collection changed: 5 tests ran, the baseline ran 6
+  `is_proper_subterm` is proper      killed 1: qinst_egraph::tests::trigger_alt_proper_subterm_is_irreflexive_and_finds_nesting
+qinst-trigger-alternatives: 2 mutation(s) NOT MEASURED — these are not results:
+    the containment filter drops the CONTAINER, not the contained: DID NOT RUN — collection changed: 5 tests ran, the baseline ran 6
+    alternatives are ordered SMALLEST first, not by arena order: DID NOT RUN — collection changed: 5 tests ran, the baseline ran 6

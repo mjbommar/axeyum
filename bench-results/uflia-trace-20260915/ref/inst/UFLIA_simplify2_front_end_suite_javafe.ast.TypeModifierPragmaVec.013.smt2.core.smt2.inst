@@ -1,0 +1,29 @@
+INSTANCE 0	(asField count_67.33 T_int)	RES_212.35_212.35	?brokenObj_5_!17	(select1 count_67.33 this)
+INSTANCE 1	?i_62.31!18
+INSTANCE 2	?brokenObj_5_!17
+INSTANCE 3	(asField count_67.33 T_int)	RES_212.35_212.35	?brokenObj_7_!19	(select1 count_67.33 this)
+INSTANCE 4	?brokenObj_7_!19
+INSTANCE 5	this
+INSTANCE 6	RES_212.35_212.35
+INSTANCE 7	(select1 elements_61.47 this)
+INSTANCE 8	this
+INSTANCE 9	(asField count_67.33 T_int)	RES_212.35_212.35	?brokenObj_6_!16	(select1 count_67.33 this)
+INSTANCE 10	this
+INSTANCE 11	?brokenObj_6_!16
+INSTANCE 12	(asField count_67.33 T_int)	RES_212.35_212.35	?brokenObj_2_!23	(select1 count_67.33 this)
+INSTANCE 13	?brokenObj_2_!23
+INSTANCE 14	this
+INSTANCE 15	?i_62.31!22
+INSTANCE 16	?i_62.31!22
+INSTANCE 17	?brokenObj!21
+INSTANCE 18	(asField count_67.33 T_int)	RES_212.35_212.35	?brokenObj!21	(select1 count_67.33 this)
+INSTANCE 19	?brokenObj!21
+INSTANCE 20	(?i_62.31!20 ?brokenObj!21)
+INSTANCE 21	?brokenObj!21
+INSTANCE 22	?i_62.31!22
+INSTANCE 23	(asField count_67.33 T_int)	RES_212.35_212.35	this	(select1 count_67.33 this)
+INSTANCE 24	RES_212.35_212.35
+INSTANCE 25	?brokenObj_3_!24
+INSTANCE 26	(asField count_67.33 T_int)	RES_212.35_212.35	?brokenObj_3_!24	(select1 count_67.33 this)
+INSTANCE 27	(asField count_67.33 T_int)	RES_212.35_212.35	(select1 count_67.33 this)
+INSTANCE 28	this

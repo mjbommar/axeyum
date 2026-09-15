@@ -1,0 +1,14 @@
+INSTANCE 0	Heap_0_	this	inv_	this	localinv_	D
+INSTANCE 1	Heap_0_	this	inv_	this	sharingMode_	D
+INSTANCE 2	Heap_0_	this	inv_	D
+INSTANCE 3	this
+INSTANCE 4	D	System.Object	(DeclType ?f_!5)
+INSTANCE 5	?o_!6	?f_!5
+INSTANCE 6	Heap_0_	this	inv_	?o_!6	?f_!5	D
+INSTANCE 7	Heap_0_	this	inv_	?o_!7	ownerRef_	D
+INSTANCE 8	?o_!7
+INSTANCE 9	Heap_0_	this	inv_	?o_!7	ownerFrame_	D
+INSTANCE 10	?p_!4
+INSTANCE 11	?p_!4
+INSTANCE 12	?p_!4
+INSTANCE 13	this	D

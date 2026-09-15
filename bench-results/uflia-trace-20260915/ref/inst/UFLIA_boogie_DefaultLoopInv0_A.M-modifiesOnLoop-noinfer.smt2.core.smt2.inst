@@ -1,0 +1,96 @@
+INSTANCE 0	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	?p_!9	localinv_	Smt.true
+INSTANCE 1	(store2 Heap_ this inv_ System.Object)	(select2 Heap_2_ ?p_!9 ownerRef_)	exposeVersion_	?p_!9	inv_	temp0_0
+INSTANCE 2	Heap_	(select2 Heap_2_ ?p_!9 ownerRef_)	inv_	?p_!9	inv_	(select2 (store2 (store2 Heap_0_ this exposeVersion_ temp0_0) stack50000o_0 allocated_ Smt.true) this inv_)
+INSTANCE 3	Heap_	(select2 Heap_3_ ?p_!9 ownerRef_)	inv_	(select2 Heap_3_ ?p_!9 ownerRef_)	localinv_	(BaseClass_ (select2 Heap_2_ ?p_!9 ownerFrame_))
+INSTANCE 4	(store2 Heap_ this inv_ System.Object)	(select2 Heap_3_ ?p_!9 ownerRef_)	exposeVersion_	(select2 Heap_3_ ?p_!9 ownerRef_)	localinv_	temp0_0
+INSTANCE 5	Heap_	(select2 Heap_2_ ?p_!9 ownerRef_)	inv_	?p_!9	ownerRef_	(select2 (store2 (store2 Heap_0_ this exposeVersion_ temp0_0) stack50000o_0 allocated_ Smt.true) this inv_)
+INSTANCE 6	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	?p_!9	ownerRef_	Smt.true
+INSTANCE 7	Heap_	(select2 Heap_2_ ?p_!9 ownerRef_)	inv_	?p_!9	ownerFrame_	(select2 (store2 (store2 Heap_0_ this exposeVersion_ temp0_0) stack50000o_0 allocated_ Smt.true) this inv_)
+INSTANCE 8	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	?p_!9	ownerFrame_	Smt.true
+INSTANCE 9	Heap_	this	inv_	this	ownerRef_	System.Object
+INSTANCE 10	(store2 Heap_ this inv_ System.Object)	this	exposeVersion_	this	ownerRef_	temp0_0
+INSTANCE 11	this
+INSTANCE 12	Heap_	this	inv_	this	ownerFrame_	System.Object
+INSTANCE 13	(store2 Heap_ this inv_ System.Object)	this	exposeVersion_	this	ownerFrame_	temp0_0
+INSTANCE 14	Heap_	this	inv_	?p_!9	ownerRef_	(select2 (store2 (store2 Heap_0_ this exposeVersion_ temp0_0) stack50000o_0 allocated_ Smt.true) this inv_)
+INSTANCE 15	Heap_3_	this	A.bb	?p_!9	ownerRef_	stack50000o_0
+INSTANCE 16	Heap_	this	inv_	?p_!9	ownerFrame_	(select2 (store2 (store2 Heap_0_ this exposeVersion_ temp0_0) stack50000o_0 allocated_ Smt.true) this inv_)
+INSTANCE 17	Heap_3_	this	A.bb	?p_!9	ownerFrame_	stack50000o_0
+INSTANCE 18	Heap_	this	inv_	?p_!9	localinv_	System.Object
+INSTANCE 19	(store2 Heap_ this inv_ System.Object)	this	exposeVersion_	?p_!9	localinv_	temp0_0
+INSTANCE 20	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	?p_!9	localinv_	Smt.true
+INSTANCE 21	(BaseClass_ (select2 Heap_2_ ?p_!9 ownerFrame_))	(select2 Heap_3_ ?p_!9 ownerFrame_)
+INSTANCE 22	this	A
+INSTANCE 23	Heap_	?p_!9
+INSTANCE 24	Heap_	this	inv_	?p_!9	inv_	System.Object
+INSTANCE 25	Heap_	(select2 Heap_3_ ?p_!9 ownerRef_)	inv_	(select2 Heap_3_ ?p_!9 ownerRef_)	ownerRef_	(BaseClass_ (select2 Heap_2_ ?p_!9 ownerFrame_))
+INSTANCE 26	(store2 Heap_ this inv_ System.Object)	(select2 Heap_3_ ?p_!9 ownerRef_)	exposeVersion_	(select2 Heap_3_ ?p_!9 ownerRef_)	ownerRef_	temp0_0
+INSTANCE 27	Heap_	(select2 Heap_3_ ?p_!9 ownerRef_)	inv_	(select2 Heap_3_ ?p_!9 ownerRef_)	ownerFrame_	(BaseClass_ (select2 Heap_2_ ?p_!9 ownerFrame_))
+INSTANCE 28	(store2 Heap_ this inv_ System.Object)	(select2 Heap_3_ ?p_!9 ownerRef_)	exposeVersion_	(select2 Heap_3_ ?p_!9 ownerRef_)	ownerFrame_	temp0_0
+INSTANCE 29	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	this	ownerFrame_	Smt.true
+INSTANCE 30	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	this	ownerRef_	Smt.true
+INSTANCE 31	(store2 Heap_ this inv_ System.Object)	this	exposeVersion_	?p_!9	inv_	temp0_0
+INSTANCE 32	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	?p_!9	inv_	Smt.true
+INSTANCE 33	?p_!9
+INSTANCE 34	Heap_	this	inv_	?p_!9	ownerRef_	System.Object
+INSTANCE 35	Heap_	this	inv_	?p_!9	ownerFrame_	System.Object
+INSTANCE 36	(store2 Heap_ this inv_ System.Object)	this	exposeVersion_	?p_!9	ownerRef_	temp0_0
+INSTANCE 37	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	?p_!9	ownerFrame_	Smt.true
+INSTANCE 38	(store2 Heap_ this inv_ System.Object)	this	exposeVersion_	?p_!9	ownerFrame_	temp0_0
+INSTANCE 39	Heap_3_	this	A.bb	?p_!9	ownerFrame_	stack50000o_0
+INSTANCE 40	?p_!9	ownerFrame_
+INSTANCE 41	?p_!9	ownerRef_
+INSTANCE 42	Heap_3_	this	A.bb	?p_!9	ownerRef_	stack50000o_0
+INSTANCE 43	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	?p_!9	ownerRef_	Smt.true
+INSTANCE 44	(store2 Heap_0_ this exposeVersion_ temp0_0)	?p_!9	ownerRef_
+INSTANCE 45	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	?p_!9	allocated_	Smt.true
+INSTANCE 46	?p_!9
+INSTANCE 47	?p_!9
+INSTANCE 48	Heap_3_	this	A.bb	?p_!9	allocated_	stack50000o_0
+INSTANCE 49	?p_!9	allocated_
+INSTANCE 50	Heap_3_	this	A.bb	?p_!9	inv_	stack50000o_0
+INSTANCE 51	?p_!9	inv_
+INSTANCE 52	Heap_3_	this	A.bb	?p_!9	localinv_	stack50000o_0
+INSTANCE 53	?p_!9	localinv_
+INSTANCE 54	Heap_3_	this	A.bb	this	inv_	stack50000o_0
+INSTANCE 55	this	inv_
+INSTANCE 56	Heap_3_	this	A.bb	this	localinv_	stack50000o_0
+INSTANCE 57	this	localinv_
+INSTANCE 58	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	this	localinv_	Smt.true
+INSTANCE 59	(store2 Heap_ this inv_ System.Object)	this	exposeVersion_	this	localinv_	temp0_0
+INSTANCE 60	Heap_	this	inv_	this	localinv_	(select2 (store2 (store2 Heap_0_ this exposeVersion_ temp0_0) stack50000o_0 allocated_ Smt.true) this inv_)
+INSTANCE 61	Heap_3_	this	A.bb	stack50000o_0	ownerRef_	stack50000o_0
+INSTANCE 62	?o_!10	ownerFrame_
+INSTANCE 63	Heap_	this	inv_	?o_!10	ownerRef_	(select2 (store2 (store2 Heap_0_ this exposeVersion_ temp0_0) stack50000o_0 allocated_ Smt.true) this inv_)
+INSTANCE 64	(store2 Heap_ this inv_ System.Object)	this	exposeVersion_	?o_!10	ownerRef_	temp0_0
+INSTANCE 65	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	?o_!10	ownerRef_	Smt.true
+INSTANCE 66	Heap_3_	this	A.bb	?o_!10	ownerRef_	stack50000o_0
+INSTANCE 67	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	stack50000o_0	ownerRef_	Smt.true
+INSTANCE 68	Heap_3_	(select2 (store2 Heap_5_ this inv_ A) ?o_!10 ownerRef_)	A.bb	stack50000o_0	ownerRef_	stack50000o_0
+INSTANCE 69	Heap_5_	this	inv_	?o_!10	ownerRef_	A
+INSTANCE 70	?o_!10
+INSTANCE 71	?o_!10	ownerRef_
+INSTANCE 72	Heap_3_	(select2 (store2 Heap_5_ this inv_ A) ?o_!10 ownerRef_)	A.bb	?o_!10	ownerRef_	stack50000o_0
+INSTANCE 73	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	?o_!10	ownerRef_	Smt.true
+INSTANCE 74	(store2 Heap_0_ this exposeVersion_ temp0_0)	?o_!10	ownerRef_
+INSTANCE 75	Heap_	this	inv_	?o_!10	ownerFrame_	(select2 (store2 (store2 Heap_0_ this exposeVersion_ temp0_0) stack50000o_0 allocated_ Smt.true) this inv_)
+INSTANCE 76	(store2 Heap_ this inv_ System.Object)	this	exposeVersion_	?o_!10	ownerFrame_	temp0_0
+INSTANCE 77	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	?o_!10	ownerFrame_	Smt.true
+INSTANCE 78	?o_!10
+INSTANCE 79	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	?o_!10	allocated_	Smt.true
+INSTANCE 80	(store2 Heap_ this inv_ System.Object)	this	exposeVersion_	?o_!10	allocated_	temp0_0
+INSTANCE 81	Heap_	this	inv_	?o_!10	allocated_	(select2 (store2 (store2 Heap_0_ this exposeVersion_ temp0_0) stack50000o_0 allocated_ Smt.true) this inv_)
+INSTANCE 82	Heap_3_	this	A.bb	?o_!10	ownerFrame_	stack50000o_0
+INSTANCE 83	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	stack50000o_0	ownerFrame_	Smt.true
+INSTANCE 84	(select2 (store2 (store2 Heap_0_ this exposeVersion_ temp0_0) stack50000o_0 allocated_ Smt.true) this inv_)	A
+INSTANCE 85	Heap_5_	this	inv_	?o_!10	ownerFrame_	A
+INSTANCE 86	Heap_	this	inv_	System.Object
+INSTANCE 87	(store2 Heap_ this inv_ System.Object)	this	exposeVersion_	this	inv_	temp0_0
+INSTANCE 88	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	this	inv_	Smt.true
+INSTANCE 89	this
+INSTANCE 90	(store2 Heap_0_ this exposeVersion_ temp0_0)	stack50000o_0	allocated_	this	allocated_	Smt.true
+INSTANCE 91	(store2 Heap_ this inv_ System.Object)	this	exposeVersion_	this	allocated_	temp0_0
+INSTANCE 92	Heap_	this	inv_	this	allocated_	System.Object
+INSTANCE 93	this	A
+INSTANCE 94	(store2 Heap_ this inv_ System.Object)	this	exposeVersion_	stack50000o_0	allocated_	temp0_0
+INSTANCE 95	Heap_	this	inv_	stack50000o_0	allocated_	System.Object

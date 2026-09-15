@@ -1,0 +1,3 @@
+INSTANCE 0	(stringCat (stringCat (stringCat (stringCat S_141_12 (S_select start_23_14 this)) S_142_7) (S_select end_26_14 this)) S_143_7)	(arrayLength (S_select toks_20_18 this))
+INSTANCE 1	this
+INSTANCE 2	(S_select toks_20_18 this)	(asElems elems)

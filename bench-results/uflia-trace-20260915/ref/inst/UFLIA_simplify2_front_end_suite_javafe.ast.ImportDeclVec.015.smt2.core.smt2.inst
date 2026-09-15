@@ -1,0 +1,54 @@
+INSTANCE 0	?i_62.31!27
+INSTANCE 1	(asElems elems)	tmp0_new_ImportDecl___231.33	after_235.13_235.13_9.342.17
+INSTANCE 2	after_235.13_235.13_9.342.17	(arrayLength (select1 elements_61.39 this))	?i_62.31!27	x_229.42
+INSTANCE 3	(select1 elems_1_ tmp5_elements_238.4)	(arrayLength (select1 elements_61.39 this))	x_229.42
+INSTANCE 4	elems_235.13_9.342.17	(select1 elements_61.39_1_ this)	(store1 (select1 elems_1_ tmp5_elements_238.4) tmp6_old_count_238.13 x_229.42)
+INSTANCE 5	count_67.33	this	?brokenObj!26	(+ 1 tmp6_old_count_238.13)
+INSTANCE 6	(asField elements_61.39 (array T_javafe.ast.ImportDecl))	this	?brokenObj!26	(select1 elements_61.39_1_ this)
+INSTANCE 7	(asElems elems)	(select1 elements_61.39_1_ this)	(select1 elements_61.39_1_ ?brokenObj!26)	after_235.13_235.13_9.342.17
+INSTANCE 8	elems_235.13_9.342.17	(select1 elements_61.39_1_ this)	(select1 elements_61.39_1_ ?brokenObj!26)	(store1 (select1 elems_1_ tmp5_elements_238.4) tmp6_old_count_238.13 x_229.42)
+INSTANCE 9	(asField elements_61.39 (array T_javafe.ast.ImportDecl))	this	?brokenObj_4_!29	(select1 elements_61.39_1_ this)
+INSTANCE 10	(asField elements_61.39 (array T_javafe.ast.ImportDecl))	this	?brokenObj_1_!25	(select1 elements_61.39_1_ this)
+INSTANCE 11	(asField owner_4.35.28 T_java.lang.Object)	tmp0_new_ImportDecl___231.33	this
+INSTANCE 12	(asField owner_4.35.28 T_java.lang.Object)	(select1 elements_61.39_1_ this)	(select1 elements_61.39_1_ ?brokenObj_3_!24)	this
+INSTANCE 13	(asField elements_61.39 (array T_javafe.ast.ImportDecl))	this	?brokenObj_3_!24	(select1 elements_61.39_1_ this)
+INSTANCE 14	(select1 elements_61.39_1_ this)
+INSTANCE 15	(select1 elements_61.39_1_ this)	alloc
+INSTANCE 16	(asField elements_61.39 (array T_javafe.ast.ImportDecl))	this	tmp0_new_ImportDecl___231.33
+INSTANCE 17	?brokenObj_6_!20
+INSTANCE 18	?brokenObj_9_!22
+INSTANCE 19	(select1 elements_61.39 ?brokenObj_8_!19)	alloc
+INSTANCE 20	tmp0_new_ImportDecl___231.33
+INSTANCE 21	(asField owner_4.35.28 T_java.lang.Object)	tmp0_new_ImportDecl___231.33	(select1 elements_61.39 ?brokenObj_8_!19)	this
+INSTANCE 22	?brokenObj_8_!19
+INSTANCE 23	?i_62.31!18
+INSTANCE 24	(select1 elements_61.39 this)
+INSTANCE 25	?i_62.31!18
+INSTANCE 26	tmp0_new_ImportDecl___231.33
+INSTANCE 27	tmp0_new_ImportDecl___231.33
+INSTANCE 28	(select1 elements_61.39 this)
+INSTANCE 29	this
+INSTANCE 30	tmp0_new_ImportDecl___231.33	alloc	alloc_1_	(asElems elems)	(* 2 tmp1_cond_231.71)	(array T_javafe.ast.ImportDecl)	null
+INSTANCE 31	null	alloc	alloc_1_	(asElems elems)	(* 2 tmp1_cond_231.71)	(array T_javafe.ast.ImportDecl)	null
+INSTANCE 32	count_67.33	this	?brokenObj!26	(select1 count_238.13 this)
+INSTANCE 33	?i_62.31!27
+INSTANCE 34	?brokenObj!26
+INSTANCE 35	(asElems elems)	(select1 elements_61.39_1_ this)	(select1 elements_61.39_1_ ?brokenObj!26)	(store1 (select1 elems_1_ tmp5_elements_238.4) tmp6_old_count_238.13 x_229.42)
+INSTANCE 36	(select1 elems_1_ tmp5_elements_238.4)	(select1 count_67.33 this)	x_229.42
+INSTANCE 37	this
+INSTANCE 38	?i_62.31!27
+INSTANCE 39	(select1 elems_1_ tmp5_elements_238.4)	(select1 count_67.33 this)	?i_62.31!27	x_229.42
+INSTANCE 40	elems_1_	(select1 elements_61.39_1_ this)	(store1 (select1 elems_1_ tmp5_elements_238.4) tmp6_old_count_238.13 x_229.42)
+INSTANCE 41	this
+INSTANCE 42	?brokenObj!26
+INSTANCE 43	count_67.33	this	?brokenObj_1_!25	(select1 count_238.13 this)
+INSTANCE 44	?brokenObj_1_!25
+INSTANCE 45	?brokenObj_4_!29
+INSTANCE 46	?brokenObj_3_!24
+INSTANCE 47	count_67.33	this	?brokenObj_2_!28	(select1 count_238.13 this)
+INSTANCE 48	?brokenObj_2_!28
+INSTANCE 49	count_67.33	this	(+ 1 tmp6_old_count_238.13)
+INSTANCE 50	this
+INSTANCE 51	this
+INSTANCE 52	this
+INSTANCE 53	T_javafe.ast.ImportDecl

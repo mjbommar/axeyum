@@ -7125,6 +7125,44 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "REGISTERED BY HAND, and that is the entry's second purpose. `RelevancePolicy` is STRUCT-valued, and this file's coverage scanner matches only scalar and `Duration` types -- the same blind spot recorded on ONLINE_QUANTIFIER_LIMITS on 2026-09-09, which is not closed by either entry. A struct-valued governing constant anywhere in a governed file is still invisible to `every_governing_constant_is_registered`, so it is registered here because someone chose to, not because a gate would have caught its absence. The object itself is the selection policy of the quantifier instantiation loop, the counterpart to GroundBudget's volume policy; `shipped_relevance_policy_is_the_shipped_selection` pins that no arm moves one of the three thresholds instead of one of the three levers, which is what would make an A/B on a lever not an A/B on that lever.",
     },
     ConfigEntry {
+        name: "TRIGGER_ALTERNATIVE_CAP",
+        module: "crates/axeyum-solver/src/qinst_egraph.rs",
+        value: "1",
+        unit: "trigger alternatives proposed per universal by AUTO selection",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::None,
+        guarded_by: "a trigger's only output is a SUBSTITUTION: every admitted instance is `replace_subterms(body, x |-> t)` and `forall x. B |= B[x := t]` for every ground `t`, whatever proposed it. So raising this can only add entailed conjuncts -- it can cost search time and change which refutation is found first, and cannot produce a wrong `unsat`. `usable_trigger_groups` documents the same asymmetry from the declining side; `quantifier_trigger_alternatives.rs` tries to refute it over SATISFIABLE queries at caps 1, 2, 3, 4, 8 and 32, through the isolated loop and through `solve_smtlib`",
+        env_override: Some("AXEYUM_QINST_TRIGGER_ALTERNATIVES"),
+        justification: dated(
+            "doc comment",
+            "2026-09-15",
+            Some("318a441ef"),
+            &[
+                sym(
+                    "crates/axeyum-solver/src/qinst_egraph.rs",
+                    "select_trigger_groups_with_cap",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/qinst_egraph.rs",
+                    "select_triggers",
+                ),
+            ],
+            &[
+                doc("docs/research/09-decisions/adr-2113-uflia-the-instance-we-never-produce.md"),
+                live(
+                    "TriggerAlternativeCapGuard",
+                    "crates/axeyum-solver/src/qinst_egraph.rs",
+                ),
+                live(
+                    "is_proper_subterm",
+                    "crates/axeyum-solver/src/qinst_egraph.rs",
+                ),
+            ],
+        ),
+        note: "SHIPPED `1`, which is byte for byte the historical behaviour: `select_trigger_groups_with_cap` short-circuits at `<= 1` to the single `select_triggers` call the compile loop used to inline, so an unset environment cannot reach the new selection at all. BOTH REFERENCES KEEP SEVERAL: z3 turns every surviving full-cover candidate into its own single-pattern (`pattern_inference.cpp:458-467`) and attaches them all (`:718`), ranking by more-free-variables-then-SMALLEST (`pattern_weight_lt`, `:399-408`) after dropping non-minimal ones (`filter_bigger_patterns`, `:391-396`); cvc5 registers a `Trigger` per single pattern term -- \"add all considered single triggers\" (`inst_strategy_e_matching.cpp:277-302`) -- under the default `triggerSelMode = MIN`. We kept ONE. MEASURED 2026-09-15 (ADR-2113) on the 53 UFLIA reference-minimal cores of ADR-2090, and the measurement argues AGAINST raising it ON THIS DIVISION: the `silent-split.py` census puts NEVER-MATCHED (a trigger present that matched nothing -- the ONLY class more trigger alternatives can move) at **0 of 478 universals**, against ALL-REJECTED at 429 of 478 whose rejections are **100.0 % of 2,139,815 `rej_nocontext`**, a nested universal with no positive-replacement context. A division whose silence IS unmatched triggers is a different shape -- `universals-without-triggers-2026-09-10.md` measures UF's category A at 728 triggerless universals -- and this lever exists to measure that. Determinism: alternatives are ordered by `witness_size` then `TermId`, which is total because `TermId`s are dense in insertion order.",
+    },
+    ConfigEntry {
         name: "MAX_BOUND_BOOL_BRANCHES",
         module: "crates/axeyum-solver/src/quant_bool_model_sat.rs",
         value: "131_072",

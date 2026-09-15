@@ -1,0 +1,7 @@
+INSTANCE 0	0
+INSTANCE 1	RES_169.5_0_171.32_171.32	T_javafe.filespace.Tree
+INSTANCE 2	RES_169.26_169.26
+INSTANCE 3	RES_169.26_169.26
+INSTANCE 4	RES_169.5_0_171.32_171.32	T_javafe.filespace.Tree
+INSTANCE 5	(typeof XRES_165.14_165.14)	T_java.io.IOException	T_java.lang.Exception
+INSTANCE 6	(typeof XRES_165.14_165.14)	T_java.util.zip.ZipException	T_java.io.IOException

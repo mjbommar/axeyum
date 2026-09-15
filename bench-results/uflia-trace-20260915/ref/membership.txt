@@ -1,0 +1,99 @@
+==== UFLIA_boogie_Cast_Cast.R_System.Object_System.Int32.smt2.core.smt2
+ground rows 218  chars 464460  instance arguments 6  control CAN-ANSWER-ABSENT
+  PRESENT      6 100.0%
+  ABSENT       0   0.0%
+  NOT-GROUND     0   0.0%
+==== UFLIA_boogie_Chunker11c_Chunker.SpecSharp.CheckInvariant_System.Boolean.smt2.core.smt2
+ground rows 1598  chars 15310977  instance arguments 6  control CAN-ANSWER-ABSENT
+  PRESENT      6 100.0%
+  ABSENT       0   0.0%
+  NOT-GROUND     0   0.0%
+==== UFLIA_boogie_DefaultLoopInv0_A.M-modifiesOnLoop-noinfer.smt2.core.smt2
+ground rows 4812  chars 3743950  instance arguments 477  control CAN-ANSWER-ABSENT
+  PRESENT    385  80.7%
+  ABSENT      10   2.1%
+  NOT-GROUND    82  17.2%
+  ABSENT-TERM (select2 (store2 (store2 Heap_0_ this exposeVersion_ temp0_0) stack50000o_0 allocated_ Smt.true) this inv_)
+==== UFLIA_grasshopper_uninstantiated_merge_loop_check_heap_access_60_6.smt2.core.smt2
+ground rows 5673  chars 3576258  instance arguments 53  control CAN-ANSWER-ABSENT
+  PRESENT     53 100.0%
+  ABSENT       0   0.0%
+  NOT-GROUND     0   0.0%
+==== UFLIA_simplify2_front_end_suite_javafe.ast.ImportDeclVec.015.smt2.core.smt2
+ground rows 2717  chars 4115812  instance arguments 129  control CAN-ANSWER-ABSENT
+  PRESENT     97  75.2%
+  ABSENT       2   1.6%
+  NOT-GROUND    30  23.3%
+  ABSENT-TERM (+ 1 tmp6_old_count_238.13)
+==== UFLIA_simplify2_front_end_suite_javafe.ast.ParenExpr.006.smt2.core.smt2
+ground rows 1323  chars 99629  instance arguments 2  control CAN-ANSWER-ABSENT
+  PRESENT      2 100.0%
+  ABSENT       0   0.0%
+  NOT-GROUND     0   0.0%
+==== UFLIA_simplify2_front_end_suite_javafe.ast.TypeModifierPragmaVec.013.smt2.core.smt2
+ground rows 1769  chars 1175387  instance arguments 52  control CAN-ANSWER-ABSENT
+  PRESENT     33  63.5%
+  ABSENT       0   0.0%
+  NOT-GROUND    19  36.5%
+==== UFLIA_simplify2_front_end_suite_javafe.filespace.HashTree.001.smt2.core.smt2
+ground rows 1765  chars 903495  instance arguments 47  control CAN-ANSWER-ABSENT
+  PRESENT     36  76.6%
+  ABSENT       0   0.0%
+  NOT-GROUND    11  23.4%
+==== UFLIA_simplify2_front_end_suite_javafe.filespace.ZipTree.005.smt2.core.smt2
+ground rows 4296  chars 1373422  instance arguments 13  control CAN-ANSWER-ABSENT
+  PRESENT     13 100.0%
+  ABSENT       0   0.0%
+  NOT-GROUND     0   0.0%
+==== UFLIA_simplify2_front_end_suite_javafe.parser.TagConstants.001.smt2.core.smt2
+ground rows 741  chars 70959  instance arguments 2  control CAN-ANSWER-ABSENT
+  PRESENT      2 100.0%
+  ABSENT       0   0.0%
+  NOT-GROUND     0   0.0%
+==== UFLIA_simplify2_front_end_suite_javafe.reader.CachedReader.003.smt2.core.smt2
+ground rows 5431  chars 853747  instance arguments 13  control CAN-ANSWER-ABSENT
+  PRESENT     13 100.0%
+  ABSENT       0   0.0%
+  NOT-GROUND     0   0.0%
+==== UFLIA_simplify2_front_end_suite_javafe.tc.TypeSigVec.005.smt2.core.smt2
+ground rows 2639  chars 897755  instance arguments 24  control CAN-ANSWER-ABSENT
+  PRESENT     16  66.7%
+  ABSENT       0   0.0%
+  NOT-GROUND     8  33.3%
+==== UFLIA_simplify2_front_end_suite_javafe.test.SuperlinksTest.004.smt2.core.smt2
+ground rows 7724  chars 1465971  instance arguments 10  control CAN-ANSWER-ABSENT
+  PRESENT     10 100.0%
+  ABSENT       0   0.0%
+  NOT-GROUND     0   0.0%
+==== UFLIA_simplify2_small_suite_getRootInterface.smt2.core.smt2
+ground rows 4848  chars 1927668  instance arguments 30  control CAN-ANSWER-ABSENT
+  PRESENT     29  96.7%
+  ABSENT       1   3.3%
+  NOT-GROUND     0   0.0%
+  ABSENT-TERM (typeof (cast RES_941.1_0_942.35_942.35 T_javafe.ast.MethodDecl))
+==== UFLIA_simplify_javafe.ast.NewInstanceExpr.271.smt2.core.smt2
+ground rows 1178  chars 101384  instance arguments 3  control CAN-ANSWER-ABSENT
+  PRESENT      3 100.0%
+  ABSENT       0   0.0%
+  NOT-GROUND     0   0.0%
+==== UFLIA_simplify_javafe.ast.TypeDeclElemPragma.373.smt2.core.smt2
+ground rows 1601  chars 736944  instance arguments 8  control CAN-ANSWER-ABSENT
+  PRESENT      6  75.0%
+  ABSENT       0   0.0%
+  NOT-GROUND     2  25.0%
+==== UFLIA_simplify_javafe.ast.UnaryExpr.424.smt2.core.smt2
+ground rows 2475  chars 783443  instance arguments 16  control CAN-ANSWER-ABSENT
+  PRESENT     12  75.0%
+  ABSENT       0   0.0%
+  NOT-GROUND     4  25.0%
+==== UFLIA_simplify_javafe.parser.TokenQueue.576.smt2.core.smt2
+ground rows 581  chars 86749  instance arguments 5  control CAN-ANSWER-ABSENT
+  PRESENT      5 100.0%
+  ABSENT       0   0.0%
+  NOT-GROUND     0   0.0%
+==== UFLIA_sledgehammer_QEpres_smtlib.1237382.smt2.core.smt2
+ground rows 106  chars 27649  instance arguments 2  control CAN-ANSWER-ABSENT
+  PRESENT      1  50.0%
+  ABSENT       0   0.0%
+  NOT-GROUND     1  50.0%
+MEMBERSHIP-DONE
