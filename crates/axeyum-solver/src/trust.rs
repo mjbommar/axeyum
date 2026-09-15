@@ -543,8 +543,8 @@ impl TrustId {
     /// when no result that relies on it is trusted-uncertified — which is what the
     /// prose has always claimed, and what the hand-written `match` this replaced
     /// did not do. Three ids read `true` under a *different*, looser rule ("a
-    /// certifying route exists somewhere"): [`BitBlast`], [`Tseitin`] and
-    /// [`SatRefutation`]. All three are recorded `certified: false` on live
+    /// certifying route exists somewhere"): `BitBlast`, `Tseitin` and
+    /// `SatRefutation`. All three are recorded `certified: false` on live
     /// routes — the default DRAT front door attaches a *checked* DRAT proof while
     /// leaving the bit-blasting trusted, and a proof-production timeout returns a
     /// bare `Evidence::Unsat(None)` that relies on the SAT refutation with nothing

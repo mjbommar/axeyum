@@ -847,7 +847,7 @@ pub mod front_door_stage {
 /// The consequence was not a missing trace but a *wrong* one. Most of these
 /// rungs decide their own sub-queries through [`crate::check_auto`], and each
 /// such call was, on the attribution's own accounting, an OUTERMOST dispatch
-/// (`solve` is not itself `check_auto`, so [`DISPATCH_DEPTH`] was still zero).
+/// (`solve` is not itself `check_auto`, so `DISPATCH_DEPTH` was still zero).
 /// So a quantified file's attribution was the concatenation of every
 /// speculative sub-solve's QF route trail, and
 /// [`RouteTrace::decided_by`] named whichever QF route last said `sat`/`unsat`

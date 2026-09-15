@@ -769,7 +769,7 @@ pub fn parse_script_within(
 /// `"mutant:vacuous[:<n>]"` / `"mutant:shared[:<n>]"` select the **deliberately
 /// wrong** encodings the mutation control needs.
 ///
-/// This exists because [`DistinctLinear::from_env`] latches a `OnceLock` — the
+/// This exists because `DistinctLinear::from_env` latches a `OnceLock` — the
 /// determinism promise — so a single process cannot otherwise compare the two
 /// arms, and a soundness-negative suite that cannot run both arms in one
 /// process is a suite that can only test the shipped one.
