@@ -465,3 +465,106 @@ fn an_unsat_over_the_relaxation_agrees_with_the_unabstracted_query() {
          the abstraction rather than about the query"
     );
 }
+
+// ---------------------------------------------------------------------------
+// The enumeration itself, pinned.
+// ---------------------------------------------------------------------------
+
+/// The `Sat`-exit enumeration (ADR-2065 §1) is only worth having if a NEW `Sat`
+/// exit cannot appear without someone re-running it. This pins the counts the
+/// enumeration was taken over.
+///
+/// It derives the counts from the SOURCE, not from a remembered list, and the
+/// numbers are the ones `bench-results/real-opaque-20260914/satexits.py`
+/// printed. If this fails, the right response is to re-run that script and
+/// re-check `ref/sat-exits.md` — **not** to bump the number here, which would
+/// turn the guard into a record of whoever edited last.
+///
+/// Test regions are excluded by brace balance. The first version of the
+/// enumerator cut each file at its first `#[cfg(test)]` line instead, and
+/// because that attribute marks a test-only helper in the MIDDLE of both files
+/// it discarded 2,397 and 3,133 lines of production code — including a whole
+/// `CheckResult::Sat` construction — while printing a clean-looking result.
+#[test]
+fn the_sat_exit_enumeration_still_describes_the_source() {
+    let lra = include_str!("../src/lra.rs");
+    let dpll = include_str!("../src/dpll_lia.rs");
+
+    assert_eq!(
+        (
+            production_sat_sites(lra, "Decision::Sat("),
+            production_sat_sites(lra, "CheckResult::Sat("),
+            production_sat_sites(dpll, "CheckResult::Sat("),
+        ),
+        (3, 3, 6),
+        "the `Sat` construction sites moved. Re-run \
+         `bash bench-results/real-opaque-20260914/sat-exits.sh`, decide for each new \
+         site whether an ABSTRACTED system can reach it, and update \
+         `ref/sat-exits.md`. Do not just change these numbers."
+    );
+
+    // The closures, by presence. A guard that is deleted rather than moved must
+    // not pass this file silently — the guard-deletion matrix in
+    // `ref/guard-deletion.md` is what says each one is load-bearing.
+    assert_eq!(
+        lra.matches("if ctx.has_opaque_vars() {").count(),
+        2,
+        "both `Decision::Sat` exits reachable from an abstracted system are closed \
+         on `has_opaque_vars`. The `if` spelling is load-bearing in this pin: the \
+         INTEGER collector's own (pre-existing, unrelated) downgrade binds the same \
+         predicate with `let`, and counting the bare call name gives 4"
+    );
+    assert_eq!(
+        dpll.matches("self.ctx.has_opaque_real_apps(arena)").count(),
+        2,
+        "both refinement-loop sat exits are gated on `has_opaque_real_apps`"
+    );
+    assert!(
+        dpll.contains("theory_model(arena, &real_lits, real_model_oracle, deadline)"),
+        "sat-model reconstruction must use the UNabstracted real oracle"
+    );
+}
+
+/// Counts `needle` outside every `#[cfg(test)]` region, skipping each region by
+/// brace balance from the attribute to the column-0 close brace.
+fn production_sat_sites(src: &str, needle: &str) -> usize {
+    let lines: Vec<&str> = src.lines().collect();
+    let mut in_test = vec![false; lines.len()];
+    let mut i = 0;
+    while i < lines.len() {
+        if lines[i].starts_with("#[cfg(test)]") {
+            let mut depth: i64 = 0;
+            let mut opened = false;
+            let mut j = i;
+            while j < lines.len() {
+                depth += lines[j].matches('{').count() as i64;
+                depth -= lines[j].matches('}').count() as i64;
+                if lines[j].contains('{') {
+                    opened = true;
+                }
+                if opened && depth <= 0 {
+                    break;
+                }
+                j += 1;
+            }
+            assert!(
+                opened && j < lines.len() && lines[j].trim_end() == "}",
+                "a cfg(test) region starting at line {} does not end at a column-0 \
+                 close brace; this counter cannot be trusted on that shape and must \
+                 fail rather than skip it",
+                i + 1
+            );
+            for entry in in_test.iter_mut().take(j + 1).skip(i) {
+                *entry = true;
+            }
+            i = j + 1;
+        } else {
+            i += 1;
+        }
+    }
+    lines
+        .iter()
+        .enumerate()
+        .filter(|(k, line)| !in_test[*k] && line.contains(needle) && !line.contains("::Sat(_)"))
+        .count()
+}

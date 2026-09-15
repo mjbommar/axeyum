@@ -126,7 +126,20 @@ would be predicting the instrument.
 
 ## 4. Hosts
 
-At most **4 pinned pairs**, named here: `s5` cores 2,3 · `s6` cores 2,3 ·
-`s7` cores 2,3 — three hosts, two cores each, so no more than 6 slots are ever
-live and the reference passes get an idle host. Announced because s5/s6/s7 are
-shared with two concurrent lanes.
+At most **4 pinned slots live at once**, named here: `s5` cores 2,3 (the
+`AUFLIRA` halves) and `s6` cores 2,3 (the `QF_LRA` control halves). `QF_UFLRA`
+(a secondary, not a control) and the noise floor run AFTER those finish, on the
+same four slots. `s7` is left idle for the reference passes, because ADR-2045's
+first reference pass read z3 = 155 against the board's 166 by running six
+concurrent shards.
+
+Announced because s5/s6/s7 are shared with two concurrent lanes.
+
+**Correction, made before any measurement and recorded rather than edited
+away**: the first draft of this paragraph allowed 6 live slots across three
+hosts. The brief caps it at 4 pinned pairs. The cap is tightened, never
+loosened, and no number in this directory was produced under the wider version.
+
+Each list is split into **interleaved** halves (odd/even lines), not a prefix
+and a suffix: these lists are path-sorted, so a prefix is one family and a
+half-finished prefix run is not a sample of the division.
