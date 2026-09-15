@@ -1,0 +1,25 @@
+== QF_LRA CONTROL 200 ==  rows=200  files=200
+  VERDICT   same=200
+  EXIT      same=200
+  NET (gains - losses - flips) = 0
+  EXIT REGRESSIONS (base ok -> lever not ok) = 0
+  denominators: undecided in base = 93/200, ok in base = 160/200
+
+  wall clock: off=1695.1s on=1695.2s ratio=1.00x
+rows                 : 200
+UNDECIDED in base    : 93/200   <- the room the zero had
+non-ok exit in base  : 40/200
+
+route BINDING the undecided rows (base arm):
+     45  nra
+     41  NONE
+      6  dl-online
+      1  fd:parse
+
+route that DECIDED the decided rows (base arm):
+     71  nra
+     30  dl-online
+      6  qf-bv
+
+NON-VACUOUS: 93 rows were undecided in the base arm and did not move;
+  6 of them are bound by an arithmetic route.

@@ -507,6 +507,18 @@ impl ArithDpllRefutation {
                         CheckResult::Unsat
                     )
                 }
+                // ADR-2065: with the abstraction armed, a real lemma core can
+                // contain an opaque atom, and the unabstracted decider answers
+                // `Unsupported` on it — which would make this re-check report
+                // `Ok(false)` for a refutation that is in fact sound. Ask the
+                // same oracle the loop asked. Sound because the opaque oracle's
+                // `Unsat` transfers to the original literals; its type has no
+                // `Sat` to mistake for one.
+                Theory::Real if crate::lra::opaque_real_apps_enabled() => matches!(
+                    crate::lra::check_with_lra_opaque_apps_within(arena, &lits, None)?
+                        .into_check_result(),
+                    CheckResult::Unsat
+                ),
                 Theory::Real => matches!(check_with_lra(arena, &lits)?, CheckResult::Unsat),
             };
             if !unsat {
@@ -1323,7 +1335,7 @@ impl IncrementalArithDpll {
                     )?;
                     continue;
                 }
-                if !self.ctx.has_opaque_int_apps(arena) {
+                if !self.ctx.has_opaque_int_apps(arena) && !self.ctx.has_opaque_real_apps(arena) {
                     self.support_stats.model_attempts += 1;
                     let _phase = crate::phase_breadcrumb::enter("dpll-lia:finish-sat");
                     match try_finish_sat(
@@ -1400,6 +1412,17 @@ impl IncrementalArithDpll {
                     kind: UnknownKind::Incomplete,
                     detail: "linear-arithmetic abstraction with opaque integer UF applications is \
                              satisfiable; use the UFLIA backend for model lifting"
+                        .to_owned(),
+                }));
+            }
+            // The real mirror (ADR-2065). The abstraction is a relaxation, so a
+            // satisfiable abstraction says nothing about the original query.
+            if self.ctx.has_opaque_real_apps(arena) {
+                return Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail: "linear-arithmetic abstraction with opaque real UF applications or \
+                             array reads is satisfiable; a relaxation's model is not a model of \
+                             the original query"
                         .to_owned(),
                 }));
             }
@@ -1896,8 +1919,45 @@ fn int_model_oracle(
     check_with_lia_simplex_within(arena, conj, deadline)
 }
 
-/// The real oracle the lazy loop drives: conjunctive `QF_LRA`, deadline-bounded.
+/// The real oracle the lazy loop drives: conjunctive `QF_LRA`, deadline-bounded,
+/// and — unless the ADR-2065 kill switch is set — tolerating opaque real UF
+/// applications and array reads.
+///
+/// The opaque form **cannot** return a `Sat`: its outcome type
+/// ([`crate::lra::LraOpaqueOutcome`]) has no such variant, because the
+/// abstraction is a relaxation and only `unsat` transfers. The loop reads
+/// exactly `Unsat` from this call, so nothing is lost by that; what it buys is
+/// that the `sat` side cannot be reached through here by any future edit.
+/// Distinct from [`real_model_oracle`], which is what sat-model reconstruction
+/// must use.
 fn real_theory_oracle(
+    arena: &TermArena,
+    conj: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<CheckResult, SolverError> {
+    if crate::lra::opaque_real_apps_enabled() {
+        return Ok(
+            crate::lra::check_with_lra_opaque_apps_within(arena, conj, deadline)?
+                .into_check_result(),
+        );
+    }
+    check_with_lra_within(arena, conj, deadline)
+}
+
+/// The real oracle used for **sat-model reconstruction**: the plain conjunctive
+/// `QF_LRA` decision (which returns a model), deadline-bounded.
+///
+/// Deliberately NOT [`real_theory_oracle`]. A model has to be a model of the
+/// original assertions, and the abstraction's solutions are not — so this side
+/// keeps the unabstracted decider, which answers `Unsupported` on exactly the
+/// atoms the abstraction admitted. That decline is the caller's "no checkable
+/// model" case and degrades to a first-class `Unknown`. It is the second of
+/// three independent closures of the same `sat` exit; the first is
+/// [`ArithAbstractor::has_opaque_real_apps`] before the call, and the third is
+/// the full model replay against the original assertions after it.
+///
+/// Mirrors [`int_model_oracle`], which exists for exactly this reason.
+fn real_model_oracle(
     arena: &TermArena,
     conj: &[TermId],
     deadline: Option<Instant>,
@@ -3066,7 +3126,7 @@ fn try_finish_sat(
             return SatFinishAttempt::Result(sat_reconstruction_unknown("integer", &error));
         }
     };
-    let real_model = match theory_model(arena, &real_lits, real_theory_oracle, deadline) {
+    let real_model = match theory_model(arena, &real_lits, real_model_oracle, deadline) {
         Ok(TheoryModelOutcome::Empty) => None,
         Ok(TheoryModelOutcome::Model(model)) => Some(model),
         Ok(TheoryModelOutcome::Declined(reason)) => {
@@ -4441,8 +4501,18 @@ impl ArithAbstractor {
         // 11,236 decisions to one per DISTINCT atom. That is the right guard
         // and it is not enough: 540 distinct atoms is still 540 whole
         // decisions. Not running the search is what makes the phase cheap.
+        //
+        // ADR-2065: the real side now asks the SAME question the integer side
+        // has always asked — membership *with* uninterpreted real applications
+        // and real array reads admitted as opaque columns. Before it, two to
+        // four such atoms discarded a 14-conjunct `AUFLIRA` query whose
+        // refutation was propositional. With the kill switch set this is
+        // byte-for-byte the old membership test.
         let result = match theory {
             Theory::Int => crate::lra::atom_in_lia_opaque_fragment(arena, atom),
+            Theory::Real if crate::lra::opaque_real_apps_enabled() => {
+                crate::lra::atom_in_lra_opaque_fragment(arena, atom)
+            }
             Theory::Real => crate::lra::atom_in_lra_fragment(arena, atom),
         };
         match result {
@@ -4474,6 +4544,22 @@ impl ArithAbstractor {
             atom.theory == Theory::Int
                 && contains_int_uf_application(arena, atom.term, &mut HashSet::new())
         })
+    }
+
+    /// The real mirror of [`ArithAbstractor::has_opaque_int_apps`] (ADR-2065):
+    /// whether any admitted real atom carries a subterm the linear-real
+    /// collector only accepted by making it an opaque column.
+    ///
+    /// Gates both `sat` exits of the refinement loop. With the abstraction off
+    /// no such atom can have been admitted, so this is `false` by construction
+    /// and the scan is skipped rather than merely returning `false` — a scan
+    /// over every atom of every round is not free.
+    fn has_opaque_real_apps(&self, arena: &TermArena) -> bool {
+        crate::lra::opaque_real_apps_enabled()
+            && self.atoms.iter().any(|atom| {
+                atom.theory == Theory::Real
+                    && contains_real_opaque_subterm(arena, atom.term, &mut HashSet::new())
+            })
     }
 }
 
@@ -4707,6 +4793,32 @@ fn contains_int_uf_application(
     }
     args.iter()
         .any(|&arg| contains_int_uf_application(arena, arg, seen))
+}
+
+/// Whether `term` contains a real-sorted subterm that the ADR-2065 abstraction
+/// would turn into an opaque column — an uninterpreted application or an array
+/// read of real sort.
+///
+/// The shapes here must be the SAME two the linearizer's opaque arm accepts
+/// (`lra::Collector::linearize_uncached`). They are the authority; this is the
+/// detector, and a shape admitted there but missed here would be an atom whose
+/// abstraction no `sat` guard sees.
+fn contains_real_opaque_subterm(
+    arena: &TermArena,
+    term: TermId,
+    seen: &mut HashSet<TermId>,
+) -> bool {
+    if !seen.insert(term) {
+        return false;
+    }
+    let TermNode::App { op, args } = arena.node(term) else {
+        return false;
+    };
+    if matches!(op, Op::Apply(_) | Op::Select) && arena.sort_of(term) == Sort::Real {
+        return true;
+    }
+    args.iter()
+        .any(|&arg| contains_real_opaque_subterm(arena, arg, seen))
 }
 
 fn contains_smtlib_unspecified_arith(arena: &TermArena, assertions: &[TermId]) -> bool {
