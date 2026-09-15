@@ -1,0 +1,13 @@
+=== Q525-025__controlling_result__fixed_string.adb_18_11_length_check___00.smt2
+  A verdict=unsat
+  ; route decided_by=q:egraph bound_by=q:mbqi last=q:egraph bound_ms=10616 total_ms=14822 attempts=35
+  B verdict=unknown
+  ; give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+  ; partial route decided_by=none bound_by=q:mbqi last=q:egraph bound_ms=10599 total_ms=15528 attempts=25
+=== R509-011__higher_order_proof__why_bfafe7_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2
+  A verdict=unsat
+  ; route decided_by=q:egraph bound_by=q:mbqi last=q:egraph bound_ms=10425 total_ms=14362 attempts=45
+  B verdict=unknown
+  ; give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+  ; partial route decided_by=none bound_by=q:mbqi last=q:egraph bound_ms=10428 total_ms=15322 attempts=25
+WHY-LOST-DONE

@@ -1,10 +1,8 @@
 # ADR-2100: typed route ownership — whether the ladder stops is a declaration on the route, not the error variant a function returned
 
-Status: proposed
-Index-summary: DRAFT — the design note landed first so the ownership table could
-be reviewed before any dispatch code moved. Sizing, implementation and the
-interleaved A/B follow in this same file.
-Index-status: proposed
+Status: accepted
+Index-summary: Whether a dispatch rung's non-decision STOPS the ladder was decided per call site by which error variant a function happened to return — `Err(Unsupported)` meaning "not mine, keep going" and `Ok(Unknown)` meaning "mine, tried, failed, stop" — with 38 `Unsupported` mentions in `auto.rs`, seven sites of the shape that matches a decision or an unknown in one arm and an unsupported refusal in the other, and nothing checking them against each other. **The same defect shipped five times** (ADR-1927, 1966, 1980, 2030, 2065), four of the five found by accident while chasing something else, and the fifth enumerated 72 sites mechanically and then had to be REVERTED for turning seven assertions red. Decision: **each route DECLARES the construct classes it owns, and the ladder consults the declaration.** A route that does not own every construct the query carries cannot stop the ladder whatever it returned; one that does, can; and an `Err(Unsupported)` from an owning route is a recorded inconsistency carrying a fixed greppable marker rather than a silent fall-through. `hand_back_unless_refuted` — this rule hand-written for ONE rung by ADR-2065 — is DELETED, and its own doc comment names why it had to be narrow: a repair inside the route "would require this route to reason about what OTHER routes can do". A declaration consulted by the LADDER requires nothing of the kind. The declaration is DERIVED, not invented: almost every rung already opens with a `Features` conjunction that returns `Ok(None)`, and that conjunction IS the statement of what it refuses. `RouteKind::{Decider, FastPath}` is not a softening but the distinction ownership ALONE gets wrong — `datatype-elim` (ADR-0022 step A) refuses BY DESIGN so step B gets the query, and under ownership alone that hand-off reads as an inconsistency on every `QF_DT` file. **The sites are enumerated by the COMPILER**, ADR-2060's method: `DispatchError` has no `From<SolverError>`, so every `?` and `return Err` in the ladder is a type error until its site names a rung — **`rustc` named 17**, fifteen closed by a route and two by position (ADR-1966's own "terminal — it is the last rung"). **SIZING FIRST, and the ceiling is ZERO of 645** undecided Tier 1 rows, inside lane PLAN-SIZING's frame of 604 `stopped_by_unknown` — joined 645/645 by corpus PATH, with the script ABORTING rather than reporting a smaller number. Three corrections got there: a first answer of 102 that modelled the ladder from SOURCE TEXT rather than control flow (`dispatch_nonlinear_int_tail` is a `return`, so `qf-bv` is unreachable from any integer query), a second of 5 that confused owning a construct with being ENTERABLE on it (0 occurrences of `Array` in any of the five files), and the finding worth more than the ceiling: **482 of 643 undecided Tier 1 rows — 75 % — never reach the quantifier-free dispatch ladder at all.** Phase 1 is still worth doing for the bug class and this ADR says so rather than implying a gain. Measured: all **19** `dispatch/reason:` suites plus the four DT suites and 93 `auto::tests` green **with the helper deleted**; solver lib sweep 1,805/0; `progress_frontier` 12/12. Interleaved two-binary A/B (the runner REFUSES if the arms hash the same), nine divisions × 200 files, both arms back to back on one pinned core, order alternating, 24 s / 8 GiB: **0 `sat`↔`unsat` flips, 865 `:status` comparisons with 0 disagreements, +2/−2 net 0** — and, with all 11 movers re-run 3× per arm, **2 STABLE-GAIN, 2 STABLE-LOSS**, so **exit criterion 3 is NOT MET on losses and that is reported rather than smoothed**. One of the two losses is literally a file ADR-1966 named as its own reproducible loss from the identical mechanism: a rung that declines instead of stopping makes more routes run, and on a quantified file the extra work lands inside `solve`'s sub-solves. The lane's own instruments caught two defects reading did not: the mutation control came back **SURVIVED** on its first run because preprocessing folds the fixture's read-over-write before dispatch so `lira-dpll` never ran — its non-vacuity guard had accepted `nra` as well, and **a non-vacuity check that admits a route other than the one under test is not one** — and this lane's trace runner reproduced ADR-2075's bug four weeks later, anchoring on `^; route ` and dropping the 103 rows whose watchdog path prints `; partial route `.
+Index-status: accepted
 Date: 2026-09-15
 
 ## Context
@@ -358,17 +356,49 @@ half"*. Nothing here counts.
 
 ### ADR-1966's 72 sites, re-derived
 
-`scripts/enumerate-dispatch-refusal-propagation.py` still runs, and its pinned
-baseline is `bench-results/dispatch-decline-audit-20260913/refusal-propagation-baseline.json`.
-Re-derived on this tree, the population and its classification are unchanged
-except for the one site this ADR moves: `check_auto_dispatch` →
-`check_with_datatype_native` was already converted by ADR-1980, and the
-remaining 62 "intra-route" sites — a CEGAR loop's own sub-solve, an NRA
+**72 is the number ADR-1966 ENUMERATED; 67 is the number it PINNED**, and the
+difference is its own five closures. Confusing the two is the "site count is not
+file count" family of error that ADR-1966 itself catalogues (143→6, 51→2,
+173→10, 84→49, 27,150→1,135, 19,620→0), one level up.
+
+`scripts/enumerate-dispatch-refusal-propagation.py` re-derived on this tree:
+
+| | pinned at `df5030319` | this tree |
+|---|---:|---:|
+| `sites_core` | **67** | **67** |
+| distinct `(file, fn, kind, callee)` | 63 | 63 |
+| `core_with_a_rung_below` | 35 | **34** |
+| `can_return_unsupported` (the seed) | 1,206 | 1,222 |
+| `dispatch_reachable` | 3,816 | 3,901 |
+
+Two entries change spelling and one real site closes:
+
+- **GONE** `check_auto_dispatch --propagate-?-- check_with_datatype_native`.
+  This is the site ADR-1966 sized at +22/−2 and declined to take, and ADR-1980
+  took behind a lever. The typed channel is what makes it **no longer a
+  propagation at all** — and `core_with_a_rung_below` 35 → 34 is that one site.
+- **GONE / NEW** `dispatch_nonlinear_int_tail` moves from
+  `check_auto_dispatch` to `check_auto_dispatch_inner`. One site, two
+  attributions: the enclosing function resolves as `_inner` now that the ladder
+  body carries its own error type. Same classification, and it is ADR-1966's own
+  — *"terminal — it is the last rung"*.
+- **NEW** `check_auto_dispatch --propagate-tail-- relabel_with_datatype_refusal`,
+  visible because the datatype `?` above it is gone. Not a rung: it relabels a
+  result the ladder has already produced, and nothing runs after it.
+
+The remaining 62 "intra-route" sites — a CEGAR loop's own sub-solve, an NRA
 branch-and-bound relaxation, a warm incremental check — are unchanged, because
 **the enclosing function is one route, not a ladder**, and the ownership rule is
 about ladders. That classification is ADR-1966's and this ADR does not revisit
-it; what it adds is that the ten sites which ARE ladder rungs can no longer be
+it; what it adds is that the sites which ARE ladder rungs can no longer be
 written without naming a route.
+
+The pin is updated, and `repin-ratchet.sh` checks BOTH directions rather than
+just re-pinning: the clean tree exits 0 (0 new against 63), and a tree with one
+bare `?` re-introduced at the `lira-dpll` rung exits non-zero and names that
+site. **A gate that "fails" unconditionally looks exactly like a working one
+until you check that it also passes when it should** — the inverted control
+ADR-1966's own lane caught in itself.
 
 ## The two defects this lane's own instruments found
 
@@ -422,21 +452,247 @@ written to strip, and prose in an ADR does not make that happen.** ADR-2101's
 `partial` FIELD is the structural fix; this runner predates the field reaching
 the artifact it reads.
 
-## Exit criteria
+## The A/B
 
-1. Every `Err(Unsupported)` site in `auto.rs` reachable only from a route that
-   does not own the construct, enumerated by the compiler; [1966]'s 72 sites
-   re-derived on this tree, each closed by the declaration or listed with a
-   reason.
-2. The nine named suites plus the whole 19-suite `dispatch/reason:` block green
-   **with `hand_back_unless_refuted` deleted**.
-3. Interleaved per-file A/B on the seven Tier 1 divisions plus `QF_LIA` and
-   `QF_LRA`: 0 losses, 0 `sat`↔`unsat` flips, identical exit status per file.
-4. Mutation: delete the ownership check on one route, exactly one named fixture
-   dies; the anchor registered in `scripts/tests/mutation_controls.py`.
-5. The sizing number above, stated up front. **If it is under ten, Phase 1 is
-   still worth doing for the bug class**, and this ADR says so rather than
-   implying a gain.
+**Two binaries, because ADR-2100 is not a lever.** The ownership rule is
+unconditional code, so there is no env value to flip and the arms have to be two
+builds — which makes one failure mode possible that a one-binary A/B cannot
+have: *the same binary in both arms*, producing a perfect zero that looks
+exactly like agreement. `ab-run.sh` refuses unless the two binaries hash
+differently, the check ADR-2060's runner established for the same reason.
+
+- **A** = `main` at this branch's merge-base, `6ac97756c9fffe865c3bff7b2e1ef8c807c9ee12`,
+  built from a `scripts/lane-snapshot.sh` extraction (`--touch`-stamped, so
+  cargo cannot serve a stale artifact for an older commit).
+- **B** = this branch.
+- Nine divisions × 200 files: the seven Tier 1 divisions plus `QF_LIA` and
+  `QF_LRA`. **1,800 rows, 0 malformed.**
+- Both arms **back to back on the same file on the same pinned physical core**,
+  arm order alternating per file, 24 s wall, 8 GiB `ulimit -v`, 12 shards across
+  s5/s6/s7.
+- Exit status recorded per arm as **its own column**, never folded into the
+  verdict: ADR-2045 measured `losses=0` by verdict and five new ABORTS
+  underneath it.
+
+### Why the A arm scores below the published single-arm board, and why that is not a finding
+
+| division | A arm here | published 2026-09-14 board | delta |
+|---|---:|---:|---:|
+| AUFLIRA | 172 | 178 | −6 |
+| UFNIA | 54 | 53 | +1 |
+| UFLIA | 78 | 85 | −7 |
+| AUFDTLIRA | 117 | 121 | −4 |
+| QF_NIA | 61 | 84 | **−23** |
+| UF | 78 | 90 | −12 |
+| UFDTLIRA | 138 | 144 | −6 |
+
+An interleaved A/B runs **two** 24 s solves per file on one core, at twelve
+shards, so every row competes with its own other arm and with eleven siblings;
+the published board was a single arm. The same binary has scored **77, 79 and
+85** on one division in a single day purely on ambient load. **A single-arm
+level is only comparable against another single-arm run at similar load; the
+DIFFERENCE is what survives contention**, which is the entire reason the arms
+are interleaved rather than swept. The A-arm column above is reported so nobody
+reads the B-arm column as a board row, and neither column is one.
+
+### The raw pairing
+
+| division | rows | A | B | net | gain | LOSS | FLIP | `rc` differs | `:status` comparable | disagree |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| AUFDTLIRA | 200 | 117 | 116 | −1 | 2 | 3 | 0 | 0 | 116 | 0 |
+| AUFLIRA | 200 | 172 | 172 | +0 | 0 | 0 | 0 | 0 | 172 | 0 |
+| QF_LIA | 200 | 115 | 116 | +1 | 1 | 0 | 0 | 0 | 113 | 0 |
+| QF_LRA | 200 | 99 | 99 | +0 | 0 | 0 | 0 | **1** | 93 | 0 |
+| QF_NIA | 200 | 61 | 62 | +1 | 1 | 0 | 0 | 0 | 62 | 0 |
+| UF | 200 | 78 | 78 | +0 | 0 | 0 | 0 | 0 | 76 | 0 |
+| UFDTLIRA | 200 | 138 | 140 | +2 | 2 | 0 | 0 | 0 | 140 | 0 |
+| UFLIA | 200 | 78 | 78 | +0 | 0 | 0 | 0 | 0 | 78 | 0 |
+| UFNIA | 200 | 54 | 53 | −1 | 0 | 1 | 0 | 0 | 15 | 0 |
+| **total** | **1,800** | **912** | **914** | **+2** | **6** | **4** | **0** | **1** | **865** | **0** |
+
+**0 malformed rows.** ADR-1966 had to exclude 39 by name because the harness
+wrote a refusal sentence into the row; reading a parse failure of the results
+file as "no movement" is how a measurement manufactures a null, so the count is
+published even when it is zero.
+
+### Every moved row re-run THREE TIMES PER ARM
+
+Reporting the raw column alone would overstate both directions. ADR-1966
+reported 25 raw movers and 22 after re-checking — **11 of its 18 movers outside
+the treatment division vanished**. All 11 rows that moved here (verdict OR exit
+status) were re-run 3× per arm on one pinned physical core at the same 24 s /
+8 GiB envelope, arms alternating within the three passes:
+
+| classification | rows |
+|---|---:|
+| **STABLE-GAIN** (A never decided, B decided 3/3) | **2** |
+| **STABLE-LOSS** (A decided 3/3, B never decided) | **2** |
+| BOTH-DECIDE (the pairing's difference was ambient) | 5 |
+| NEITHER-DECIDES | 1 |
+| UNSTABLE | 1 |
+
+- **STABLE-GAIN**: `AUFDTLIRA/…/N624-020__perm_rem__perm.adb_130_45_index_check2`,
+  `UFDTLIRA/…/Q327-014__no_pre__dispatch.adb_24_24_overflow_check`.
+- **STABLE-LOSS**: `AUFDTLIRA/…/Q525-025__controlling_result__fixed_string.adb_18_11_length_check`,
+  `AUFDTLIRA/…/R509-011__higher_order_proof__why_bfafe7_…fold-T-defqtvc`.
+- **UNSTABLE**: `UFNIA/sledgehammer/FFT/z3.885941.smt2`, A `unsat/unknown/unsat`.
+  This is the row ADR-2030 and ADR-2035 both name as *"the same row that produced
+  EVERY loss in both arms"* and which ADR-2035 re-ran UNSTABLE in the opposite
+  direction. It is a budget-boundary file, not a signal.
+- **The one exit-status difference is ambient.** `QF_LRA/LassoRanker/…/yPositive-SIscaled50…`
+  came back `none/134` on **all six passes, both arms**. The single pairing had A
+  abort and B not; re-run, both abort identically. **0 exit-status differences
+  after re-check.**
+
+**Net: +2 / −2 = 0. Zero `sat`↔`unsat` flips, in the raw pairing and in every
+re-check pass. 865 comparisons against the files' declared `:status`, 0
+disagreements** — with the comparable denominator published beside the zero
+because 49 decided rows carry no `:status` at all, and ADR-1966 published a
+"three-way check" one of whose authorities was comparable on 0 of 23.
+
+### Exit criterion 3 is NOT MET, and the two losses are the documented cost of this change class
+
+The criterion is **0 losses**. There are **2**, both reproducible 3/3, and
+saying so is the point of measuring.
+
+Both are exactly the mechanism ADR-1966 measured and named, and one of the two
+files is *literally in ADR-1966's own loss list*:
+
+> two `…higher_ordermnfold-T-defqtvc…` files — base `unsat` 3/3, fixed `unknown`
+> 3/3. **Real, reproducible losses.** The ladder now runs to `attempts=20` and
+> `attempts=43` instead of 8 and 15, and spends the budget.
+
+#### The mechanism, read off both arms' trails rather than assumed
+
+A loss count is not a diagnosis. `why-lost.sh` runs both arms with `--trace` on
+one pinned core at the same envelope, and the two rows say the same thing:
+
+```
+Q525-025 …length_check
+  A unsat    route decided_by=q:egraph bound_by=q:mbqi last=q:egraph bound_ms=10616 total_ms=14822 attempts=35
+  B unknown  give-up kind=Watchdog
+             partial route decided_by=none bound_by=q:mbqi last=q:egraph bound_ms=10599 total_ms=15528 attempts=25
+
+why_bfafe7 …fold-T-defqtvc
+  A unsat    route decided_by=q:egraph bound_by=q:mbqi last=q:egraph bound_ms=10425 total_ms=14362 attempts=45
+  B unknown  give-up kind=Watchdog
+             partial route decided_by=none bound_by=q:mbqi last=q:egraph bound_ms=10428 total_ms=15322 attempts=25
+```
+
+**Nothing about the ROUTING of the quantified ladder changed.** `decided_by` in
+A and `last` in B are the SAME route, `q:egraph`; `bound_by` is `q:mbqi` in both
+and costs the same to the millisecond (10,616 vs 10,599; 10,425 vs 10,428). What
+changed is the price of an attempt: **the same fifteen seconds buys 25 attempts
+instead of 35 and 45.** Each quantified rung decides its sub-query through
+`check_auto`, and a sub-solve that used to stop at a rung's terminal `Unknown`
+now runs the rest of the quantifier-free ladder. `q:egraph` therefore never
+reaches the instantiation round that refutes, and the watchdog fires.
+
+That is ADR-1927's own cost note made concrete a second time — *"the refusal was
+fast because it was wrong"* — and ADR-1966's `UFLIA` control lost one file to
+exactly this while being structurally unable to trigger its guard at all. The
+general form is theirs: **the cost of this change is not confined to the queries
+whose refusal it converts.**
+
+What this ADR will not do is trade the rule for the two files. The obvious
+narrowings — declare more, exempt the datatype branch, re-order — each put a
+route back in the position of deciding on another route's behalf, which is the
+defect. The honest accounting is **net 0 verdicts, 0 flips, 0 soundness
+disagreements, 0 exit-status differences, and a bug class closed**, with the two
+files named so a later lane can take them rather than rediscover them.
+
+## What this ADR does NOT claim
+
+- **No new theory capability.** Nothing in the datatype, UF, array, NRA or
+  arithmetic backends changed; the same routes decide the same fragments. What
+  changed is which routes get to run, and on what authority.
+- **The quantified ladder in `solve` is untouched.** It is a different ladder
+  with its own decline discipline (ADR-1927), and **75 % of Tier 1's undecided
+  mass ends there**. Typing its rungs the same way is the obvious next slice and
+  nothing here is evidence about it.
+- **The refusal SENTENCE an undecided file ends on can change.** When a route's
+  `Unknown` becomes a decline and nothing below decides either, the message the
+  caller sees is the tail's rather than that route's. ADR-1980 built
+  `relabel_with_datatype_refusal` for exactly this on the datatype branch and it
+  is untouched; outside that branch the tail's sentence now wins on the affected
+  rows. A verdict A/B cannot see that, and a blocker census keyed on those
+  strings should be re-taken rather than inherited — which is ADR-1927's own
+  headline finding pointing at this change.
+- **`bv2nat-blast` and `abv-online-cdclt` did not change behaviour.** Both
+  already implemented the `FastPath` contract by hand; only their labels now
+  come from the declaration. That their hand-written behaviour matches the
+  general contract is evidence the contract is the right one, not a result.
+- **The 40 Tier 1 rows that were NOT `stopped_by_unknown`** already let the
+  ladder continue before this change. The rule has nothing to do for them and
+  they are outside every number here.
+- **The capability ratchet's five artifacts are deliberately NOT re-pinned.**
+  `progress_frontier` passed 12 of 12 with every family `comparable: true`,
+  `ratchetable: true`, `verdict: ok`, and it rewrote its own JSON on the way
+  through — one family, `bv_reduction`, reading **38 against a committed 39**
+  (baseline 30, so far above the ratchet). That family's committed history is
+  **40 → 34 → 39** at a fixed baseline, so one point is inside its own
+  variance and a single run is not grounds to move a shared pin in either
+  direction — `frontier-ratchet-reference-frame.md`'s own rule. The artifacts
+  are restored; the observation is recorded here instead of being re-pinned
+  silently or dropped.
+
+## Exit criteria, each MET or NOT MET
+
+**1. Every `Err(Unsupported)` site in the ladder reachable only from a route
+that does not own the construct, enumerated by the COMPILER — MET, with two
+sites named as exceptions.** `DispatchError` has no `From<SolverError>`, so
+`rustc` named **17** sites in `check_auto_dispatch_inner`; fifteen are closed by
+`DispatchError::at(<rung>, e)` and the ownership rule, and two — the int tail and
+the bit-blast fallback — carry `DispatchError::ladder` because they are terminal
+by position and have no route below to hand anything to, which is ADR-1966's own
+classification of the first. ADR-1966's population re-derived: `sites_core`
+**67 → 67**, `core_with_a_rung_below` **35 → 34**, the removal being the
+datatype `?` the typed channel closes. The pin is updated and `repin-ratchet.sh`
+proves the ratchet still fires on a re-introduced site.
+
+**2. The named suites green with `hand_back_unless_refuted` DELETED — MET.**
+All **19** suites of `hooks/pre-push`'s `dispatch/reason:` block (the list read
+out of the hook, not retyped), plus `datatype_native` (24), `datatype_elim` (6)
+and `datatype_int_fields` (5), plus all **93** `auto::tests`. The whole solver
+unit sweep is **1,805 passed / 0 failed**; `corpus_regression` 2/2;
+`progress_frontier` **12/12 with no frontier regression**. Five assertions in
+`lra_opaque_real_apps` were RELOCATED rather than weakened (ADR-1980's method),
+and the suite's module comment carries the four-row table of which went where.
+
+**3. Interleaved A/B, 0 losses / 0 flips / identical exit status — NOT MET on
+losses; MET on flips and exit status.**
+
+| channel | required | measured |
+|---|---|---|
+| `sat`↔`unsat` flips | 0 | **0** — raw pairing and every re-check pass |
+| exit status | identical per file | **0 differences after re-check** (the one raw difference is `none/134` on all six passes of both arms) |
+| losses | 0 | **2**, reproducible 3/3, named below |
+| soundness | — | **865 comparisons vs `:status`, 0 disagreements** |
+| net verdicts | — | **+2 / −2 = 0** over 1,800 rows |
+
+The two stable losses are
+`AUFDTLIRA/…/Q525-025__controlling_result__fixed_string.adb_18_11_length_check`
+and `AUFDTLIRA/…/R509-011__higher_order_proof__why_bfafe7_…fold-T-defqtvc`. The
+second is **literally one of the two files ADR-1966 named as its own real,
+reproducible losses** from the identical mechanism.
+
+**4. Mutation: delete the ownership check on one route, exactly one named
+fixture dies — MET.**
+
+| mutation | suite run | kills |
+|---|---|---|
+| the ownership check on a decider's non-decision | `--test lra_opaque_real_apps` | **exactly 1**: `the_ladder_reaches_the_route_that_owns_the_construct` |
+| the inconsistency report on an owning decider's refusal | `--lib auto::tests::` | 1: `an_owning_deciders_refusal_is_reported_and_a_declining_routes_is_not` |
+| the `FastPath`/`Decider` distinction | `--lib auto::tests::` | 2 |
+
+Registered as `route-ownership-ladder` and `route-ownership-marker` in
+`scripts/tests/mutation_controls.py`; `--check-anchors` reports
+`suites=133|anchors=1055|stale=0`. **The first run of the first mutation came
+back SURVIVED**, and that is how the vacuous fixture above was found.
+
+**5. The sizing stated up front — MET, and the number is 0.** It is under ten,
+so this ADR says in its own sizing section that **Phase 1 is worth doing for the
+bug class** rather than implying a gain, which is what the criterion asks for.
 
 [1965]: adr-1965-the-nested-array-prize-was-never-the-array-theory-it-was-congruence.md
 [1927]: adr-1927-a-ladder-rungs-fragment-refusal-is-a-decline-not-the-querys-verdict.md

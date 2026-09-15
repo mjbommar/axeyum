@@ -66164,7 +66164,7 @@ transfer.
 | decision record | `docs/research/09-decisions/adr-1760-*.md` |
 | measurement | `docs/research/12-performance/route-attribution-2026-09-07.md` |
 
-**Lane route-ownership (`IN REVIEW`, route-ownership, 2026-09-15).** Phase 1 of
+**Lane route-ownership (`DONE`, route-ownership, 2026-09-15).** Phase 1 of
 [docs/plan/dispatch-and-instrumentation-2026-09-15.md](docs/plan/dispatch-and-instrumentation-2026-09-15.md),
 closed by [ADR-2100](docs/research/09-decisions/adr-2100-typed-route-ownership.md).
 Whether a ladder rung's non-decision stops the ladder is now decided by an
@@ -66208,6 +66208,9 @@ is a type error until its site names a rung. `rustc` named **17**.
 | mutation: the ownership check deleted | **kills exactly 1** named fixture |
 | mutation: the inconsistency report deleted | kills 1 |
 | mutation: `FastPath` collapsed into `Decider` | kills 2 |
+| A/B: rows / flips / `:status` disagreements | **1,800 / 0 / 0 of 865** |
+| A/B: stable gains / stable losses, all 11 movers re-run 3x per arm | **2 / 2**, net **0** |
+| solver lib sweep, `corpus_regression`, `progress_frontier` | 1,805-0 / 2-0 / **12-0, no frontier regression** |
 
 ## What the lane's own instruments caught, that reading did not
 
@@ -66225,10 +66228,22 @@ is a type error until its site names a rung. `rustc` named **17**.
 
 ## Left undone, named
 
-- **The A/B is the open item.** Interleaved per-file, both arms back to back on
-  one pinned core, order alternating, 24 s / 8 GiB, nine divisions (seven Tier 1
-  plus `QF_LIA` and `QF_LRA`), 12 shards on s5/s6/s7. `ab-run.sh` refuses if the
-  two binaries hash the same. Status is in this lane's report, not assumed here.
+- **Exit criterion 3 is NOT MET on losses: 2 of them, reproducible 3/3.** The
+  A/B is 1,800 rows over nine divisions, both arms back to back on one pinned
+  core, order alternating, 24 s / 8 GiB, 12 shards on s5/s6/s7 (`ab-run.sh`
+  refuses if the two binaries hash the same). **0 flips, 0 `:status`
+  disagreements over 865 comparisons, 0 exit-status differences after re-check,
+  +2/-2 net 0.** Both losses are the documented cost mechanism, measured off
+  both arms' trails: routing does not change (`q:egraph` both sides, `q:mbqi`
+  binding to the millisecond) -- the same fifteen seconds buys 25 attempts
+  instead of 35 and 45, because a sub-solve that used to stop at a terminal
+  `Unknown` now runs the rest of the QF ladder. One of the two files is
+  literally in ADR-1966's own loss list.
+- **The two losses are named, not absorbed**:
+  `AUFDTLIRA/.../Q525-025__controlling_result__fixed_string.adb_18_11_length_check`
+  and `AUFDTLIRA/.../R509-011__higher_order_proof__why_bfafe7_...fold-T-defqtvc`.
+  The obvious narrowings all put a route back in the position of deciding on
+  another route's behalf, which is the defect.
 - **The quantified ladder in `solve` is untouched.** It is a different ladder
   with its own decline discipline (ADR-1927), and 75 % of Tier 1's undecided
   mass ends there. Typing its rungs the same way is the obvious next slice and
