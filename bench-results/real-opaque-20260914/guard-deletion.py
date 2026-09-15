@@ -42,8 +42,8 @@ GUARDS = [
     (
         "G2-simplex-fallback",
         f"{SOLVER}/lra.rs",
-        "            if ctx.has_opaque_vars() {\n                return Ok(None);",
-        "            if false && ctx.has_opaque_vars() {\n                return Ok(None);",
+        "            if ctx.has_opaque_vars() {\n                return Ok(Some(Decision::Incomplete(",
+        "            if false && ctx.has_opaque_vars() {\n                return Ok(Some(Decision::Incomplete(",
         "exact-rational simplex sat exit",
     ),
     (
@@ -66,6 +66,31 @@ GUARDS = [
         "theory_model(arena, &real_lits, real_model_oracle, deadline)",
         "theory_model(arena, &real_lits, real_theory_oracle, deadline)",
         "sat-model reconstruction uses the UNabstracted decider",
+    ),
+]
+
+
+# Composites. The guards on this route are NESTED (entry gate -> model oracle
+# -> replay -> the outcome TYPE), not parallel, so removing an inner one is
+# invisible while an outer one still returns. These peel them in order and are
+# the only way to say how deep the closure actually goes -- and, for the last
+# one, to record that the deepest layer cannot be removed by any local edit
+# because it is a type with no `Sat` variant.
+COMPOSITES = [
+    ("C1-both-entry-gates", ["G3-support-fast-path", "G4-full-path"]),
+    (
+        "C2-entry-gates-and-model-oracle",
+        ["G3-support-fast-path", "G4-full-path", "G5-model-oracle"],
+    ),
+    (
+        "C3-everything-but-the-type",
+        [
+            "G1-replayed-sat",
+            "G2-simplex-fallback",
+            "G3-support-fast-path",
+            "G4-full-path",
+            "G5-model-oracle",
+        ],
     ),
 ]
 
@@ -145,6 +170,41 @@ def main():
             assert_clean([path])
         rows.append({"guard": gid, "what": what, "status": status, "killed": killed})
         print(f"   {gid}: {status} killed={len(killed)} {killed}")
+
+    by_id = {g[0]: g for g in GUARDS}
+    for cid, members in COMPOSITES:
+        touched = sorted({by_id[m][1] for m in members})
+        applied = True
+        for m in members:
+            _, path, needle, repl, _ = by_id[m]
+            src = open(path).read()
+            if src.count(needle) != 1:
+                applied = False
+                break
+            open(path, "w").write(src.replace(needle, repl))
+        try:
+            if not applied:
+                status, killed = "ANCHOR-NOT-UNIQUE", []
+            else:
+                ok, res = run_suite()
+                if ok is None:
+                    status, killed = "DOES-NOT-COMPILE", []
+                else:
+                    killed = res["failed"]
+                    status = "ok" if killed else "SURVIVED"
+        finally:
+            for path in touched:
+                sh(["git", "checkout", "HEAD", "--", path])
+            assert_clean(touched)
+        rows.append(
+            {
+                "guard": cid,
+                "what": "composite: " + " + ".join(members),
+                "status": status,
+                "killed": killed,
+            }
+        )
+        print(f"   {cid}: {status} killed={len(killed)} {killed}")
 
     json.dump(
         {"baseline_passed": base["passed"], "rows": rows},

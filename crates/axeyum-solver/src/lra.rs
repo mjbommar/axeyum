@@ -1031,8 +1031,23 @@ fn simplex_fallback(
         crate::simplex::SimplexOutcome::Feasible(point) => {
             // SAT EXIT 2 of 2 on this route (ADR-2065 §1), closed. Same argument
             // as `replayed_sat`: a relaxation's feasible point is not a model.
+            //
+            // `Some(Incomplete)` and not the `Ok(None)` this function uses for
+            // every other decline, for two reasons. `None` means "I could not
+            // decide, try the elimination", and the elimination would decide
+            // the SAME abstracted system Feasible and decline again at
+            // `replayed_sat` -- a whole Fourier-Motzkin run whose answer is
+            // already known. And a silent decline is a guard nothing can
+            // observe: measured, deleting this `if` when it returned `None`
+            // killed ZERO tests, because the model replay below then declined
+            // for its own reason and the verdict was identical. A guard that
+            // does not name itself is a guard the next change removes.
             if ctx.has_opaque_vars() {
-                return Ok(None);
+                return Ok(Some(Decision::Incomplete(
+                    "lra simplex: opaque real-subterm abstraction is satisfiable; a \
+                     relaxation's model is not a model of the original query"
+                        .to_owned(),
+                )));
             }
             // Build a model over the original symbols and replay-check it (the trust
             // anchor for `sat`); decline to `unknown` if it does not verify.
@@ -4977,12 +4992,24 @@ mod opaque_real_guard_tests {
         let (arena, assertions) = wide_satisfiable_with_opaque();
         let decided = decide_within_with_options(&arena, &assertions, None, true)
             .expect("the abstraction admits it");
-        assert!(
-            !matches!(decided, Decision::Sat(_)),
-            "a feasible point of a RELAXATION is not a model of the query, on either \
-             engine; got {}",
-            name(&decided)
-        );
+        match decided {
+            Decision::Sat(_) => panic!(
+                "a feasible point of a RELAXATION is not a model of the query, on \
+                 either engine"
+            ),
+            Decision::Incomplete(detail) => assert!(
+                detail.contains("lra simplex: opaque real-subterm abstraction"),
+                "the SIMPLEX guard must be the one that fired -- this fixture is wide \
+                 enough that the simplex decides it first -- and it must say so, or \
+                 deleting it is invisible: {detail}"
+            ),
+            ref other => panic!(
+                "expected the simplex's opaque decline, got {}. If this fixture stopped \
+                 reaching the simplex the test is measuring the WRONG guard and must be \
+                 rebuilt, not relaxed.",
+                name(other)
+            ),
+        }
     }
 
     /// The direction that DOES transfer, through the same entry point: an
