@@ -1,0 +1,78 @@
+== A/B  division=ALL200  rows=200 ==
+polarity: A = base (both levers UNSET, ships today); A2 = base repeated;
+          B = SPARSE_ROWS; C = CELL_CAP; D = both
+arm measures THIS BRANCH (the lane's worktree binary), 8 GiB / 24 s,
+6 pinned pairs on s5/s6/s7, arms back to back per file, order rotating.
+
+ arm  decided  net vs A  aborts  wallkill
+   A      107        +0      41         0
+  A2      107        +0      41         0
+   B      107        +0      41         0
+   C      106        -1      59         0
+   D      106        -1      58         0
+
+== NOISE FLOOR (A vs A2, the SAME configuration) ==
+  rows differing by VERDICT      : 0 of 200
+  rows differing by EXIT STATUS  : 0 of 200
+  decided count A=107  A2=107  (a stable count can still hide moving rows)
+
+== arm B vs base A ==
+  net=+0   gains=0  losses=0  flips=0   gain rate 95% Wilson [0.00%, 1.88%]
+  EXIT STATUS: aborts 41 -> 41   NEW aborts (clean in base, abort in arm) = 0   aborts CONVERTED to a clean exit = 0
+
+== arm C vs base A ==
+  net=-1   gains=0  losses=1  flips=0   gain rate 95% Wilson [0.00%, 1.88%]
+  EXIT STATUS: aborts 41 -> 59   NEW aborts (clean in base, abort in arm) = 18   aborts CONVERTED to a clean exit = 0
+  *** these are LOSSES the verdict column does not show: ***
+      unknown(rc0) ->    none(rc134)  _standard_strcmp_ground.i_4_2_2.bpl_11.smt2
+          sat(rc0) ->    none(rc134)  ecoliMILPglycerolYices3-50000.smt2
+      unknown(rc0) ->    none(rc134)  Gcd.bpl_Iteration1_Lasso_7-phaseTemplate.smt2
+      unknown(rc0) ->    none(rc134)  vpm2-5.smt2
+      unknown(rc0) ->    none(rc134)  joey_false-termination.c_Iteration1_Loop_7-phaseTemplate
+      unknown(rc0) ->    none(rc134)  Gcd_havoc.bpl_Iteration1_Lasso_6-phaseTemplate.smt2
+      unknown(rc0) ->    none(rc134)  danoint-266.smt2
+      unknown(rc0) ->    none(rc134)  0132-labyrinth-12-0.smt2
+      unknown(rc0) ->    none(rc134)  Lobnya-Boolean-Reordered.bpl_Iteration1_Lasso_7-phaseTem
+      unknown(rc0) ->    none(rc134)  p7-driverlogNumeric_s8.smt2
+      unknown(rc0) ->    none(rc134)  fixnet-5000.smt2
+      unknown(rc0) ->    none(rc134)  OpposedDisjuncts.bpl_Iteration1_Lasso_2-pieceTemplate.sm
+      unknown(rc0) ->    none(rc134)  opt1217--57.smt2
+      unknown(rc0) ->    none(rc134)  collatz.t2.c_Iteration3_Loop_7-phaseTemplate.smt2
+      unknown(rc0) ->    none(rc134)  matrixsqrt.t2.c_Iteration12_Loop_7-phaseTemplate.smt2
+      unknown(rc0) ->    none(rc134)  NoriSharma-2013FSE-Fig8_true-termination.c_Iteration1_Lo
+      unknown(rc0) ->    none(rc134)  SyntaxSupportBooleans5.bpl_Iteration1_Loop_4-pieceTempla
+      unknown(rc0) ->    none(rc134)  ecoliFBAyicesTest-3875-4.smt2
+    LOSS     sat ->    none  status=    sat  ecoliMILPglycerolYices3-50000.smt2
+
+== arm D vs base A ==
+  net=-1   gains=0  losses=1  flips=0   gain rate 95% Wilson [0.00%, 1.88%]
+  EXIT STATUS: aborts 41 -> 58   NEW aborts (clean in base, abort in arm) = 17   aborts CONVERTED to a clean exit = 0
+  *** these are LOSSES the verdict column does not show: ***
+      unknown(rc0) ->    none(rc134)  _standard_strcmp_ground.i_4_2_2.bpl_11.smt2
+          sat(rc0) ->    none(rc134)  ecoliMILPglycerolYices3-50000.smt2
+      unknown(rc0) ->    none(rc134)  Gcd.bpl_Iteration1_Lasso_7-phaseTemplate.smt2
+      unknown(rc0) ->    none(rc134)  vpm2-5.smt2
+      unknown(rc0) ->    none(rc134)  joey_false-termination.c_Iteration1_Loop_7-phaseTemplate
+      unknown(rc0) ->    none(rc134)  Gcd_havoc.bpl_Iteration1_Lasso_6-phaseTemplate.smt2
+      unknown(rc0) ->    none(rc134)  danoint-266.smt2
+      unknown(rc0) ->    none(rc134)  Lobnya-Boolean-Reordered.bpl_Iteration1_Lasso_7-phaseTem
+      unknown(rc0) ->    none(rc134)  p7-driverlogNumeric_s8.smt2
+      unknown(rc0) ->    none(rc134)  fixnet-5000.smt2
+      unknown(rc0) ->    none(rc134)  OpposedDisjuncts.bpl_Iteration1_Lasso_2-pieceTemplate.sm
+      unknown(rc0) ->    none(rc134)  opt1217--57.smt2
+      unknown(rc0) ->    none(rc134)  collatz.t2.c_Iteration3_Loop_7-phaseTemplate.smt2
+      unknown(rc0) ->    none(rc134)  matrixsqrt.t2.c_Iteration12_Loop_7-phaseTemplate.smt2
+      unknown(rc0) ->    none(rc134)  NoriSharma-2013FSE-Fig8_true-termination.c_Iteration1_Lo
+      unknown(rc0) ->    none(rc134)  SyntaxSupportBooleans5.bpl_Iteration1_Loop_4-pieceTempla
+      unknown(rc0) ->    none(rc134)  ecoliFBAyicesTest-3875-4.smt2
+    LOSS     sat ->    none  status=    sat  ecoliMILPglycerolYices3-50000.smt2
+
+== soundness vs declared :status ==
+  arm  A: comparable=  97  disagreements=0
+  arm A2: comparable=  97  disagreements=0
+  arm  B: comparable=  97  disagreements=0
+  arm  C: comparable=  96  disagreements=0
+  arm  D: comparable=  96  disagreements=0
+
+== first-arm balance (no arm may be systematically first) ==
+  {'A': 42, 'A2': 42, 'B': 42, 'C': 38, 'D': 36}

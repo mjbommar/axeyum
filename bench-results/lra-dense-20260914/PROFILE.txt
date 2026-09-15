@@ -1,0 +1,119 @@
+rows=74
+rows reaching the offline simplex (shape reported) = 74 of 74
+
+== the shape of the systems handed to the dense engine ==
+  nvars          median        1,778
+  m (rows)       median       10,514
+  nnz (real data)median       34,555
+  dense_cells    median    9,241,988   (the round trip, m x nvars)
+  tableau_cells  median   19,198,877   (the tableau, m x (nvars+m))
+
+  tableau DENSITY (nnz / cells): median 0.0288 %   min 0.0056 %   max 0.2861 %
+
+  rows whose tableau exceeds MAX_TABLEAU_CELLS (4,000,000): 46 of 74
+    over by: median 69.2x  min 1.1x  max 1140.4x
+
+== THE SPLIT: what fraction of the two allocations is the round trip? ==
+  ARITHMETIC (cells x 32B): n= 59  round-trip share median  14.0 %   min  3.0 %   max 19.3 %
+  MEASURED   (RSS deltas): n= 31  round-trip share median  12.2 %   min  0.2 %   max 18.1 %
+
+  round trip as a share of PEAK PROCESS RSS: n=59  median 13.8 %   min 2.9 %   max 96.4 %
+    rows where it is >= 10 % of peak: 46 of 59
+
+  peak process RSS over these rows: median 7.37 GiB   max 7.46 GiB
+
+  process ABORTS (rc=134): 40 of 74
+  episodes per file: median 1
+
+== the two halves answer differently, so they are split ==
+  ABORT (rc=134): n=40   round trip as a share of the bytes the process ACTUALLY held: median 30.2 %  (min 3.5, max 96.4)
+      the tableau it was building needs: median 10.53 GiB   min 0.00   max 135.94
+  CLOCK (terminated): n=34   round trip as a share of the bytes the process ACTUALLY held: median 12.2 %  (min 2.9, max 18.4)
+      the tableau it was building needs: median 0.20 GiB   min 0.01   max 5.75
+
+== PREDICTION (pre-A/B): of the 40 aborting rows, removing the round trip lets 0 fit under the 8 GiB ceiling ==
+   Conservative in the lever's FAVOUR: the aborting rows are credited
+   with holding none of the tableau at the moment they died.
+     needs     0.03 GiB  rc=  0  sc-7.base.cvc.smt2
+     needs     0.03 GiB  rc=  0  sc-9.base.cvc.smt2
+     needs     0.04 GiB  rc=  0  sc-11.base.cvc.smt2
+     needs     0.05 GiB  rc=  0  sc-13.base.cvc.smt2
+     needs     0.06 GiB  rc=  0  sc-15.base.cvc.smt2
+     needs     0.07 GiB  rc=  0  sc-17.base.cvc.smt2
+
+== per row ==
+ rc verdict  peakGiB   nvars       m       nnz  dense_MB     tab_MB    rt%  file
+134    none     7.40   3,002  66,054   556,865    6051.5   139203.6   4.2%  yPositive-SIscaled75.bpl_Iteration1_Loop_7-phaseTemplate.smt2
+134    none     7.35   2,921  52,598   241,191    4688.7    89117.1   5.0%  toeplz.c.i.toeplz.pl.t2.fixed.t2.c_Iteration2_Loop_7-phaseTemplate.smt2
+134    none     7.38   1,849  42,086   179,567    2374.8    56428.5   4.0%  ludcmp.t2.c_Iteration8_Loop_7-phaseTemplate.smt2
+134    none     7.43   6,237  38,497    96,393    7327.4    52555.1  12.2%  janne_complex.t2.c_Iteration3_Lasso_4-pieceTemplate.smt2
+134    none     7.39   2,546  39,048   147,440    3033.9    49565.5   5.8%  sas2.t2.c_Iteration6_Lasso_6-phaseTemplate.smt2
+134    none     7.35   2,792  38,368   149,576    3269.1    48194.2   6.4%  sas2.t2.c_Iteration5_Lasso_6-phaseTemplate.smt2
+134    none     7.44   2,795  38,300   171,875    3266.9    48032.8   6.4%  ex11.t2.c_Iteration1_Lasso_7-phaseTemplate.smt2
+134    none     7.45   4,060  33,993   192,555    4211.8    39475.6   9.6%  BradleyMannaSipma-2005CAV-Fig1_true-termination.c_Iteration1_Lasso_7-phaseTemplate.smt2
+134    none     7.42   1,520  31,153   127,511    1445.1    31062.7   4.4%  sumit.t2.c_Iteration1_Lasso_7-phaseTemplate.smt2
+134    none     7.39   1,598  30,710   151,043    1497.6    30278.9   4.7%  p-46.t2.c_Iteration2_Loop_7-phaseTemplate.smt2
+134    none     7.42   6,810  28,245    96,154    5870.0    30216.3  16.3%  Ben-Amram-2010LMCS-Ex2.3_true-termination.c_Iteration1_Lasso_3-pieceTemplate.smt2
+134    none     7.43   1,275  28,492   116,755    1108.6    25882.6   4.1%  queens.t2.c_Iteration19_Loop_7-phaseTemplate.smt2
+134    none     7.45   4,764  25,080   126,142    3646.3    22842.0  13.8%  yPositive-SIscaled50.bpl_Iteration1_Loop_4-pieceTemplate.smt2
+134    none     7.45   6,076  22,258    65,133    4127.2    19246.2  17.7%  firewire.t2.c_Iteration3_Loop_4-pieceTemplate.smt2
+134    none     7.45   3,887  21,893    62,837    2597.0    17224.2  13.1%  eric.t2.c_Iteration1_Lasso_4-pieceTemplate.smt2
+134    none     7.46   1,974  20,801    79,196    1253.1    14457.5   8.0%  elmhes.c.i.elmhes.pl.t2.fixed.t2.c_Iteration5_Loop_6-phaseTemplate.smt2
+134    none     7.44   1,996  19,563    61,239    1191.6    12871.1   8.5%  sas2.t2.c_Iteration3_Lasso_5-phaseTemplate.smt2
+134    none     7.39   1,017  18,775    77,839     582.7    11340.2   4.9%  afagp-fail.t2.c_Iteration1_Lasso_7-phaseTemplate.smt2
+134    none     7.46   1,173  18,402    59,387     658.7    10993.0   5.7%  _sanfoundry_10_ground.i_6_3_3.bpl_13.smt2
+134    none     7.42   2,852  17,537    71,368    1526.4    10911.9  12.3%  Canberra.bpl_Iteration1_Lasso_6-phaseTemplate.smt2
+134    none     7.45   4,555  16,551    50,293    2300.7    10660.6  17.8%  LeeJonesBen-Amram-2001POPL-Ex5_true-termination.c_Iteration2_Lasso_3-pieceTemplate.smt2
+134    none     7.43   3,973  16,650    50,359    2018.8    10478.9  16.2%  Masse_true-termination.c_Iteration1_Loop_4-pieceTemplate.smt2
+134    none     7.43   3,557  15,560    45,645    1689.1     9077.8  15.7%  p-43.t2.c_Iteration4_Loop_4-pieceTemplate.smt2
+134    none     7.43     553  15,734    66,069     265.5     7820.4   3.3%  ludcmp.c.i.ludcmp.pl.t2.fixed.t2.c_Iteration8_Loop_7-phaseTemplate.smt2
+134    none     7.42   1,674  15,122    73,187     772.5     7751.1   9.1%  LeeJonesBen-Amram-2001POPL-Ex5_true-termination.c_Iteration2_Loop_7-phaseTemplate.smt2
+  0 unknown     6.25   1,068  13,365    79,727     435.6     5886.8   6.9%  Gcd.bpl_Iteration1_Lasso_7-phaseTemplate.smt2
+  0 unknown     5.10     395  12,594    58,995     151.8     4992.2   3.0%  collatz.t2.c_Iteration3_Loop_7-phaseTemplate.smt2
+  0 unknown     5.04   2,369  10,775    34,555     779.0     4322.1  15.3%  OpposedDisjuncts.bpl_Iteration1_Lasso_2-pieceTemplate.smt2
+  0 unknown     4.27     477  11,398    56,735     165.9     4130.6   3.9%  matrixsqrt.t2.c_Iteration12_Loop_7-phaseTemplate.smt2
+  0 unknown     4.65   2,053  10,514    63,367     658.7     4032.3  14.0%  joey_false-termination.c_Iteration1_Loop_7-phaseTemplate.smt2
+  0 unknown     4.68   2,209  10,436    27,671     703.5     4027.2  14.9%  SyntaxSupportBooleans5.bpl_Iteration1_Loop_4-pieceTemplate.smt2
+  0 unknown     2.70   2,124   7,546    20,820     489.1     2226.9  18.0%  _standard_strcmp_ground.i_4_2_2.bpl_11.smt2
+  0 unknown     1.83     813   6,974    27,184     173.0     1657.3   9.5%  Gcd_havoc.bpl_Iteration1_Lasso_6-phaseTemplate.smt2
+  0 unknown     1.49   1,708   5,411    17,627     282.0     1175.6  19.3%  ecoliFBAyicesTest-3875-4.smt2
+  0 unknown     0.98     767   4,917     5,971     115.1      852.9  11.9%  opt1217--57.smt2
+  0 unknown     0.83   1,067   4,225     7,007     137.6      682.3  16.8%  fixnet-5000.smt2
+  0 unknown     0.80     759   4,314     5,650      99.9      667.9  13.0%  rand_80_340_1159656267_0.lp.smt2
+  0 unknown     0.63     996   3,596     7,652     109.3      503.9  17.8%  danoint-266.smt2
+  0 unknown     0.33     554   2,702     4,688      45.7      268.5  14.5%  sc-39.base.cvc.smt2
+  0 unknown     0.30     526   2,564     4,448      41.2      241.8  14.5%  sc-37.base.cvc.smt2
+  0 unknown     0.27     558   2,401     3,298      40.9      216.8  15.9%  vpm2-5.smt2
+  0 unknown     0.27     498   2,426     4,208      36.9      216.5  14.6%  sc-35.base.cvc.smt2
+  0 unknown     0.24     470   2,288     3,968      32.8      192.6  14.6%  sc-33.base.cvc.smt2
+  0 unknown     0.23     536   2,097     3,165      34.3      168.5  16.9%  p7-driverlogNumeric_s8.smt2
+  0 unknown     0.19     414   2,012     3,488      25.4      149.0  14.6%  sc-29.base.cvc.smt2
+  0 unknown     0.17     386   1,874     3,248      22.1      129.2  14.6%  sc-27.base.cvc.smt2
+  0 unknown     0.14     179   1,839     5,432      10.0      113.3   8.1%  _standard_init5_ground.i_3_2_2.bpl_7.smt2
+  0 unknown     0.15     358   1,736     3,008      19.0      110.9  14.6%  sc-25.base.cvc.smt2
+  0 unknown     0.13     306   1,680     5,873      15.7      101.8  13.4%  2013POPL-BenAmGen-Ex4.2.bpl_Iteration1_Lasso_4-pieceTemplate.smt2
+  0 unknown     0.13     330   1,598     2,768      16.1       94.0  14.6%  sc-23.base.cvc.smt2
+  0 unknown     0.11     302   1,460     2,528      13.5       78.5  14.6%  sc-21.base.cvc.smt2
+  0 unknown     0.10     236   1,444     2,272      10.4       74.0  12.3%  pursuit-safety-16.smt2
+  0 unknown     0.09     274   1,322     2,288      11.1       64.4  14.7%  sc-19.base.cvc.smt2
+  0 unknown     0.08     246   1,184     2,048       8.9       51.7  14.7%  sc-17.base.cvc.smt2
+  0 unknown     0.07     218   1,046     1,808       7.0       40.3  14.7%  sc-15.base.cvc.smt2
+  0 unknown     0.05     190     908     1,568       5.3       30.4  14.8%  sc-13.base.cvc.smt2
+  0 unknown     0.04     162     770     1,328       3.8       21.9  14.8%  sc-11.base.cvc.smt2
+  0 unknown     0.04     134     632     1,088       2.6       14.8  14.9%  sc-9.base.cvc.smt2
+  0 unknown     0.03     106     494       848       1.6        9.0  15.0%  sc-7.base.cvc.smt2
+134    none     7.38  22,826      na        na       0.0        0.0   nan%  brp_withassume.t2.c_Iteration8_Loop_6-phaseTemplate.smt2
+134    none     7.43   9,240      na        na       0.0        0.0   nan%  firewire.t2.c_Iteration1_Lasso_4-lexTemplate.smt2
+134    none     7.08  77,833      na        na       0.0        0.0   nan%  TelAviv-Amir-Minimum_true-termination.c_Iteration1_Loop_4-pieceTemplate.smt2
+134    none     7.41  17,216      na        na       0.0        0.0   nan%  simple-scaled200.bpl_Iteration1_Lasso_7-nestedTemplate.smt2
+134    none     7.39  18,731      na        na       0.0        0.0   nan%  CookSeeZuleger-2013TACAS-Fig3_true-termination.c_Iteration1_Loop_4-pieceTemplate.smt2
+134    none     7.38  47,641      na        na       0.0        0.0   nan%  aviad_true-termination.c_Iteration1_Loop_4-nestedTemplate.smt2
+134    none     7.40   3,658      na        na       0.0        0.0   nan%  disj_nightmare.t2.c_Iteration2_Loop_7-phaseTemplate.smt2
+134    none     7.43  20,096      na        na       0.0        0.0   nan%  hongyi1.t2.c_Iteration1_Loop_4-lexTemplate.smt2
+134    none     7.42   8,282      na        na       0.0        0.0   nan%  sas2.t2.c_Iteration7_Loop_7-phaseTemplate.smt2
+134    none     7.38  49,607      na        na       0.0        0.0   nan%  KroeningSharyginaTsitovichWintersteiger-2010CAV-Fig1_true-termination.c_Iteration1_Lasso_3-pieceTemplate.smt2
+134    none     7.42  20,700      na        na       0.0        0.0   nan%  hongyi1.t2.c_Iteration9_Loop_4-lexTemplate.smt2
+134    none     7.43  10,294      na        na       0.0        0.0   nan%  TelAviv-AmirMinimum.bpl_Iteration1_Loop_4-pieceTemplate.smt2
+134    none     7.42  17,696      na        na       0.0        0.0   nan%  brp_withassume.t2.c_Iteration1_Loop_6-phaseTemplate.smt2
+134    none     7.38  49,886      na        na       0.0        0.0   nan%  Collatz.bpl_Iteration1_Loop_6-phaseTemplate.smt2
+134    none     7.43  25,820      na        na       0.0        0.0   nan%  simple-scaled200.bpl_Iteration1_Lasso_3-pieceTemplate.smt2

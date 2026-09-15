@@ -72,6 +72,25 @@ use crate::euf_egraph::{
 use crate::model::Model;
 use crate::simplex;
 
+/// Diagnostic (`AXEYUM_LRAMODELPROBE=1`): report WHICH way online model
+/// reconstruction failed.
+///
+/// [ADR-2045] named *"online CDCL(T) LRA model did not replay (arithmetic
+/// outside the incremental engine)"* as this division's capability wall — 19 of
+/// 21 rows that reach the engine die on it. That one sentence covers two
+/// structurally different failures and five distinct sites, which demand
+/// different work, so a lane sizing the wall from the message alone cannot tell
+/// what to build. Printed, never acted on: nothing branches on this.
+pub(crate) fn model_probe(site: &str) {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    if !*ENABLED
+        .get_or_init(|| std::env::var("AXEYUM_LRAMODELPROBE").is_ok_and(|v| v.trim() == "1"))
+    {
+        return;
+    }
+    eprintln!("; LRAMODELPROBE site={site}");
+}
+
 /// Hard ceiling on constraints produced by a single Fourier–Motzkin elimination
 /// step inside an incremental feasibility check. Mirrors the offline
 /// `MAX_FM_CONSTRAINTS`: above it the step declines (feasibility check returns
@@ -1058,20 +1077,65 @@ impl LraTheory {
     /// gets a satisfying rational, returned as a [`Model`] over the original
     /// symbols. Returns `None` if the system is (now) infeasible or arithmetic
     /// overflows — the caller then yields `Unknown`, never a wrong `sat`.
+    ///
+    /// Diagnostic (`AXEYUM_LRAMODELPROBE=1`): each `None` says WHICH of the five
+    /// ways it failed. [ADR-2045] found 19 of 21 rows that reach this engine die
+    /// at one string — *"online CDCL(T) LRA model did not replay (arithmetic
+    /// outside the incremental engine)"* — and named that as the capability
+    /// wall for the next lane. But that one string stands for **two structurally
+    /// different failures** at its two call sites in `lra_theory.rs`: this
+    /// function returning `None`, and a model that WAS built failing
+    /// `replays()`. They demand opposite work — the first is reconstruction, the
+    /// second is an encoding or skeleton-leaf gap — and the message cannot tell
+    /// them apart. That is the same shape as ADR-2045's own `lra.rs:159`
+    /// finding, one level down.
+    ///
+    /// `feasible-but-witness-out-of-i128` is the arm worth separating most: the
+    /// system IS feasible and we decline anyway, because
+    /// [`crate::simplex::Incremental::point`] narrows to `i128` and drops the
+    /// whole vector if one coordinate does not fit. That is already tracked as
+    /// roadmap item 2.3, so if this arm dominates, the "capability wall" is a
+    /// known open item rather than new work.
     #[must_use]
     fn model(&self, builder_vars: &[SymbolId]) -> Option<Model> {
-        let values = match &self.simplex {
-            Some(cell) => {
-                let mut engine = cell.borrow_mut();
-                if !engine.sync(&self.live) {
+        let values = if let Some(cell) = &self.simplex {
+            let mut engine = cell.borrow_mut();
+            if !engine.sync(&self.live) {
+                model_probe("sync-failed");
+                return None;
+            }
+            match engine.inner.check(self.deadline) {
+                simplex::Status::Feasible => {
+                    let Some(point) = engine.inner.point() else {
+                        // FEASIBLE, and still no witness. `point()` narrows to
+                        // `i128` rationals and discards the WHOLE vector if any
+                        // coordinate does not fit — the boundary `simplex.rs`
+                        // pins as roadmap item 2.3. So this arm is a query that
+                        // HAS a model we decline to report. [ADR-2055] measured
+                        // it at 0 of 23 rows, so it is NOT what this division's
+                        // wall is made of.
+                        model_probe("feasible-but-witness-out-of-i128");
+                        return None;
+                    };
+                    point
+                }
+                simplex::Status::Infeasible(_) => {
+                    model_probe("live-system-infeasible");
                     return None;
                 }
-                match engine.inner.check(self.deadline) {
-                    simplex::Status::Feasible => engine.inner.point()?,
-                    simplex::Status::Infeasible(_) | simplex::Status::Unknown => return None,
+                simplex::Status::Unknown => {
+                    model_probe("simplex-declined");
+                    return None;
                 }
             }
-            None => solve_values(&self.live, self.nvars, self.deadline, self.budget_bytes)?,
+        } else {
+            let Some(values) =
+                solve_values(&self.live, self.nvars, self.deadline, self.budget_bytes)
+            else {
+                model_probe("fm-fallback-declined");
+                return None;
+            };
+            values
         };
         let mut model = Model::new();
         for (index, &symbol) in builder_vars.iter().enumerate() {

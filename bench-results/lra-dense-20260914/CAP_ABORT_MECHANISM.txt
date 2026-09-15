@@ -1,0 +1,19 @@
+== base ==
+   exit          : 0
+   verdict       : unknown
+   give-up       : ; give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lra: Fou
+   stderr        : 
+   offline-route entries : 11
+   tableaux BUILT        : 11
+   cap declines          : 0
+   lazy-smt      : lra_rounds=11 skeleton_ms=2827 blocking_clauses=10 blocking_literals=20 cube_simplex_ms=20086 
+bench-results/lra-dense-20260914/scripts/cap-abort-probe.sh: line 32: 3250075 Aborted                    (core dumped) ( ulimit -v $VLIM; env "$@" AXEYUM_LRADENSEPROBE=1 timeout 60 "$BIN" "$F" --timeout-ms $B --trace ) > "$T/$label.out" 2> "$T/$label.err"
+== cap ==
+   exit          : 134
+   verdict       : none
+   give-up       : 
+   stderr        : memory allocation of 427680 bytes failed
+   offline-route entries : 1
+   tableaux BUILT        : 0
+   cap declines          : 1
+   lazy-smt      : 
