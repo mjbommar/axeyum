@@ -1,7 +1,7 @@
 # ADR-2111: `QF_LRA` — the same simplex, and the four things ours does differently
 
 Status: proposed
-Index-summary: Every reference decides the `QF_LRA` files we lose with the same Dutertre–de Moura simplex we ship, so the gap is not the algorithm's name. Census of **all 93** undecided rows over four cause channels (the give-up string is one of them and loses the largest bucket alone, [ADR-2045]): **40 `rc=134` allocation aborts, 36 `budget/other`, 7 `incomplete`, 5 `bound-no-decline`, 5 `not-applicable`**, 0 without a capture — and the typed decline name **types nothing here**, all 36 budget rows carrying `Budget::Other`, which is [ADR-2102]'s empty `decline_names` seen from the producer side. Shape census against the **107 decided as a control**: atoms separate the halves **1,351×** (median 9,462 vs 7) while **coefficient size does not** — max numeral 5 digits median and 10 max on BOTH halves, 0 of 200 rows over 18 against `i128`'s 38 — so every arithmetic decline here is pivot GROWTH, never the file's own numbers, which kills the "big coefficients" reading before a trace is read. **Reference trace, same 24 s / 8 GiB envelope, same pinned cores: z3 `smt.arith.solver=6` decides 57 of 93, `=2` (`theory_mi_arith`, predating every `lp/` refinement) decides 56, they agree on 53, and `lar_solver` accounts for FOUR files** — so "their newer simplex is better" is not the explanation; **and 33 of 93 are decided by NOBODY at 24 s, so the addressable prize is 60, not 93**. **The largest bucket by COUNT is not the largest by ADDRESSABILITY**, which this lane learned after aiming at the first: the 40 aborts are 50 % reachable (20) while the 32 rows dying inside `lra.rs` before the simplex gets a system are **28 reachable at 86–91 %** — and their trail says why, **652 rounds buying one 4.8-literal blocking clause against 1,839 atoms, with `cube_simplex_calls=651` COLD solves, one per SAT model**, where all four references keep the basis across backtracking and undo only bound stacks (z3 `lar_core_solver.h:122-129`, cvc5 `partial_model.h:220-229`, `OpenSMT` `LRAModel.cc:60-74`, `SMTInterpol` `LinArSolve.java:535-583`). Four design differences with `file:line` on both sides. **(1) The tableau**: ours was a dense `m × (nvars+m)` `Vec<Vec<Rational>>` and **none of z3, cvc5, `OpenSMT` or `SMTInterpol` stores a dense one** (`static_matrix.h:88-89`, `matrix.h:56-196`, `Tableau.h:62,118-119`, `TableauxRow.java:22-34`), all four threading the COLUMNS too. FIXED: `row_val` sparse aligned with the `row_nz` index that already existed plus a `col_rows` transpose — without which two `0..m` column scans become `O(m log nnz)`, a regression dressed as a fix. Measured on the median abort row: **1,624,162,512 cells holding 147,440 nonzeros**, 48.4 GiB against an 8 GiB ceiling, and the arm turns a core-dumped `rc=134` into a clean `unknown` at **203 MB** — mechanism, NOT a verdict claim. **(2) Theory propagation is not weak but absent**: over the 23 of 93 rows reaching the online engine, a median **19** propagations against **836,531** decisions — 24,509 decisions and 3,352,038 atom visits each — because `lra_online.rs:842` rescans every propagatable atom on every call, while z3 analyses only `touched_rows` (`lar_solver.h:284-302`), skips rows over 300 (`lp_settings.h:238`), and **pre-axiomatises the bound ORDERING as SAT clauses** (`theory_lra.cpp:2841,2963`); we generate no bound axioms at all. NOT FIXED, sized. **(3) The per-cube RE-SOLVE**, §3.2. **(4) The equality hypothesis is REFUTED on the reference side**: 66 of 93 rows are ≥50 % equalities and we do no Gaussian elimination — but z3 has no `solve_eqs` either and cvc5's is capped at `ppAssertMaxSubSize = 2`. Degeneracy handling and explanation minimisation were measured and do NOT order the field (z3 does not minimise at all and decides most). The failing allocation is **median 1.33 MB**, the STRAW at the ceiling and not the load. The shipped lever is the CONSEQUENCE, not the storage: `for_budget` reserves **128 MiB, 20 % of the 640 MiB online budget**, for a structure now costing ~1.4 MB, and that reserve decides which queries the engine ADMITS instead of dropping to the weak offline loop; `TableauReserve` ships **`Dense`** because ADR-2045's budget raise bought **0 verdicts and five NEW aborts** and ADR-2055's cap turned **18 clean exits into `rc=134`**.
+Index-summary: Every reference decides the `QF_LRA` files we lose with the same Dutertre–de Moura simplex we ship, so the gap is not the algorithm's name. Census of **all 93** undecided rows over four cause channels (the give-up string alone loses the largest bucket, [ADR-2045]): **40 `rc=134` allocation aborts, 36 `budget/other`, 7 `incomplete`, 5 `bound-no-decline`, 5 `not-applicable`**, 0 without a capture — and the typed decline name **types nothing here**, all 36 budget rows carrying `Budget::Other`. Shape census against the **107 decided as a control**: atoms separate the halves **1,351×** while **coefficient size does not** (max 10 digits on BOTH halves against `i128`'s 38), killing the "big coefficients" reading before a trace is read. **Reference trace, same envelope and cores: z3 `smt.arith.solver=6` decides 57 of 93, `=2` (`theory_mi_arith`, predating every `lp/` refinement) 56, agreeing on 53 — `lar_solver` accounts for FOUR files**, so "their newer simplex is better" is not the explanation; **and 33 of 93 are decided by NOBODY at 24 s, so the prize is 60, not 93**. **The largest bucket by COUNT is not the largest by ADDRESSABILITY**, learned after aiming at the first: the 40 aborts are 50 % reachable, the 32 rows dying inside `lra.rs` before the simplex are **28 reachable at 86–91 %**, and their trail says why — **652 rounds buying one 4.8-literal blocking clause against 1,839 atoms, `cube_simplex_calls=651` COLD solves, one per SAT model**, where all four references keep the basis across backtracking. FIXED: the tableau was a dense `m × (nvars+m)` `Vec<Vec<Rational>>` and **none of z3, cvc5, `OpenSMT` or `SMTInterpol` stores a dense one** (`static_matrix.h:88-89`, `matrix.h:56-196`, `Tableau.h:62,118-119`, `TableauxRow.java:22-34`), all four threading the COLUMNS too; it is now `row_val` sparse aligned with the `row_nz` index that already existed plus a `col_rows` transpose — without which two `0..m` column scans become `O(m log nnz)`, a regression dressed as a fix. **A/B, two hash-checked binaries, `QF_LRA` COMPLETE at 200 of 200: net +0, 0 gains, 0 losses, 0 flips, 0 soundness disagreements at a comparable denominator of 97, arm A re-deriving the board's 107 exactly, and 40 exit statuses moving `134 → 0` — so 0 of 40 aborting rows DECIDES at 24 s**; on the median abort row 1,624,162,512 cells holding 147,440 nonzeros (48.4 GiB against an 8 GiB ceiling) becomes a clean `unknown` at 203 MB, and the cost is that those rows now spend the full budget instead of dying at 6–11 s. 0 movers, so the 3× recheck has a comparable denominator of 0; the exposure arm is INCOMPLETE -- `QF_LIA` 34 of 200 at net +0, the other four at ZERO rows and reported **did not run**, so the regression question is OPEN outside `QF_LRA`. NOT FIXED and sized: theory propagation is not weak but **absent** — a median **19** propagations against **836,531** decisions and 12.2 M atom visits, because `lra_online.rs:842` rescans every atom on every call while z3 analyses only `touched_rows` and **pre-axiomatises the bound ORDERING as SAT clauses**, which we do not generate at all. REFUTED on the reference side: the equality hypothesis (66 of 93 rows ≥50 % equalities, no Gaussian elimination here) — z3 has no `solve_eqs` either and cvc5's is capped at 2; degeneracy handling and explanation minimisation likewise do not order the field. Two levers, **both default-off**: `TableauReserve` (`Dense`) is **INERT** on its target population — the screen refusing those rows is an atom COUNT at `lra_theory.rs:305`, so its A/B was deliberately NOT run, `net +0` from an inert arm being indistinguishable from `net +0` from a working one — and `AXEYUM_LRA_ATOM_SCREEN` (multiplier 1) carries the reason raising it is a trap: **three cost models were built to replace that screen and the corpus falsified all three** (`ad2b40370`), the third bounding Fourier–Motzkin correctly and still letting `miplib/danoint-266.smt2` reach 7.8 GB **with `simplex_rows=n/a`** — the simplex did not exist, so those bytes were never the tableau and the sparse storage cannot have removed them.
 Index-status: proposed
 Date: 2026-09-15
 
@@ -555,6 +555,78 @@ soundness-negative fixture is covered by fifteen other tests, so it is a
 **named and readable** guard rather than a uniquely necessary one. That is still
 worth having — the fifteen fail with no hint that a fill-in cell was lost — but
 it is not the sole thing standing between the engine and a wrong `sat`.
+
+## 5a. The A/B — the sparse tableau buys 0 verdicts and removes 40 aborts
+
+Two binaries, hashes checked different by the runner before it starts (it
+refuses otherwise, because two identical arms produce a perfect zero that looks
+exactly like agreement):
+
+| arm | binary | what it is |
+|---|---|---|
+| **A** | `815489e3…` | `main` at `f0904bfe2`, the merge base |
+| **B** | `af93b938…` | this branch, sparse tableau, both levers at their defaults |
+
+Both arms run **back to back on the same file on the same pinned core**, arm
+order alternating per file, at 24 s / 8 GiB — so ambient load cancels in the
+DIFFERENCE rather than landing on whichever arm ran second. Every table below
+prints the rows it actually has; a division's denominator is never implied.
+
+```text
+division      rows    A    B   net  gain  LOSS  FLIP  rc!=   cmp  DIS
+QF_LRA         200  107  107    +0     0     0     0    40    97    0
+QF_LIA          34   29   29    +0     0     0     0     0    29    0
+TOTAL          234  136  136    +0     0     0     0    40   126    0
+```
+
+**`QF_LRA` is COMPLETE at 200 of 200.** `QF_LIA` is **34 of 200 — PARTIAL**, and
+is reported as a partial rather than as a division: 34 rows is not a sample of
+anything, it is the prefix the shards had reached when this lane closed, and a
+prefix of a path-sorted list cannot show an effect that is not uniform over the
+path order. It is here because zero movement over 34 rows is still worth more
+than silence about whether the shared simplex broke something; it is not here as
+an exposure result.
+
+- **`net +0`. Zero gains, zero losses, zero `sat`↔`unsat` flips.**
+- **Soundness: 0 disagreements against the files' declared `:status`, at a
+  comparable denominator of 97**, published beside the count.
+- **Arm A re-derives 107**, which is the committed board's `QF_LRA` figure
+  exactly — the base arm is the baseline, not something near it.
+- **40 exit statuses moved, every one `134 → 0`**, and 40 is precisely the abort
+  bucket §1 censused. Not a single row that changed is a verdict.
+- **0 movers, so the 3× mover recheck has a comparable denominator of 0.** That
+  is printed rather than omitted: a recheck over an empty set is not evidence of
+  stability, it is the absence of anything to re-check.
+
+**So the answer to "does any aborting row DECIDE at 24 s" is 0 of 40**, and it
+was worth asking rather than assuming: [ADR-2045] predicted it from a different
+arm and this measures it on the real one. What the change buys is that a
+division-wide bug class stops existing — a `rc=134` core dump, which leaves the
+caller nothing and the ladder below it unrun, becomes a first-class `unknown` at
+203 MB where the same file previously asked for 48.4 GiB.
+
+**It also costs wall clock on exactly those rows**, and the raw table shows it:
+an aborting row used to die in 6–11 s and now spends the full budget. PAR-2 is
+unchanged (both are undecided), throughput is not. That is the honest trade and
+it is not hidden in the `net` column.
+
+**The exposure arm is INCOMPLETE and the ADR claims nothing from it.**
+`QF_UFLRA`, `QF_UFLIA`, `QF_IDL` and `QF_RDL` have **0 rows** and are reported
+as **did not run**, not as zero movement — a division with no rows is not a
+division with no movement. `QF_LIA` has 34. The simplex is shared, so this arm
+is what would catch a regression outside the treatment division, and until it
+has full denominators the honest statement is that **the regression question is
+open outside `QF_LRA`**. The population lists, both binaries and the runner are
+committed, so a successor resumes rather than rebuilds.
+
+## 5b. The atom-screen lever — built, controlled, NOT MEASURED
+
+`AXEYUM_LRA_ATOM_SCREEN` ships at `1` (byte-identical), `screen-ab.sh` is
+committed with both control files wired in by name, and the population is pinned
+at `lists/lra-presimplex-34.txt`. **The A/B was not run**: the two pinned core
+pairs were still occupied by §5a, and this lane takes no cores it was not given.
+Reported as **did not run**, with everything a successor needs already on disk —
+not as a null.
 
 ## 6. What this lane did not do, sized — and where the three findings converge
 

@@ -1757,21 +1757,21 @@ impl Tableau {
         // the FIRST nonbasic problem variable it meets (the decline below) is
         // the same one. `n` has a median of 12,292 on this population and a row
         // a median handful of nonzeros, and this runs once per refutation.
-        for k in 0..self.row_nz[r].len() {
-            let v = self.row_nz[r][k];
-            if self.is_basic[v] {
+        for slot in 0..self.row_nz[r].len() {
+            let col = self.row_nz[r][slot];
+            if self.is_basic[col] {
                 continue;
             }
-            let a = self.row_val[r][k];
-            debug_assert!(!a.is_zero(), "row_nz named a zero cell");
-            if v < self.nvars {
+            let coeff = self.row_val[r][slot];
+            debug_assert!(!coeff.is_zero(), "row_nz named a zero cell");
+            if col < self.nvars {
                 // A nonbasic problem variable in the row ⇒ not the pure-slack shape
                 // infeasibility guarantees; decline the closed-form cert.
                 self.counters.farkas_declined_nonbasic_problem_var += 1;
                 return Ok(Vec::new());
             }
-            // yⱼ = −sign·aⱼ over the input row of slack `v`.
-            y[v - self.nvars] = mul(sub(Rational::zero(), sign)?, a)?;
+            // yⱼ = −sign·aⱼ over the input row of slack `col`.
+            y[col - self.nvars] = mul(sub(Rational::zero(), sign)?, coeff)?;
         }
         // Self-check: return the certificate only if it genuinely refutes the input.
         if farkas_holds(self.nvars, &self.rows_sparse, &self.rel_rhs, &y) {
