@@ -1,0 +1,119 @@
+##### AUFDTLIRA_20200306-Kanig_spark2014bench_O512-022__stacks__stacks.ads_84_58_index_check___00.smt2.core.smt2
+unsat
+ :datatype-accessor-ax      9
+ :datatype-constructor-ax   9
+ :max-generation            2
+ :quant-instantiations      4
+  matching lines: 0
+  total lines: 168
+  matching lines: 0
+##### AUFDTLIRA_20200306-Kanig_spark2014bench_O512-022__vscomp2014_partition_rte__partition_refinement.adb_180_10_precondition6___00.smt2.core.smt2
+unsat
+ :datatype-accessor-ax      54
+ :datatype-constructor-ax   34
+ :max-generation            1
+ :quant-instantiations      3
+unsat
+  matching lines: 0
+  total lines: 30
+  matching lines: 0
+##### AUFDTLIRA_20200306-Kanig_spark2014bench_P518-021__loop_frame_condition__do_loops.adb_112_22_assert___00.smt2.core.smt2
+unsat
+ :datatype-accessor-ax      359
+ :datatype-constructor-ax   332
+ :max-generation            2
+ :quant-instantiations      19
+  matching lines: 0
+  total lines: 1140
+  matching lines: 0
+##### AUFDTLIRA_20200306-Kanig_spark2014bench_PA14-032__dic__bounded_strings.adb_8_19_length_check___00.smt2.core.smt2
+unsat
+ :datatype-accessor-ax      15
+ :datatype-constructor-ax   11
+unsat
+  matching lines: 0
+  total lines: 30
+  matching lines: 0
+##### AUFDTLIRA_20200306-Kanig_spark2014bench_Q930-002__itp__bounded_dynamic_arrays.ads_66_13_bounded_dynamic_strings.ads_5_1_postcondition___00.smt2.core.smt2
+unsat
+ :datatype-accessor-ax      18
+ :datatype-constructor-ax   18
+ :max-generation            1
+ :quant-instantiations      1
+  matching lines: 0
+  total lines: 52
+  matching lines: 0
+##### AUFDTLIRA_20200306-Kanig_spark2014bench_RM_Examples__stacks_1.ads_14_19_postcondition___00.smt2.core.smt2
+unsat
+ :datatype-accessor-ax      10
+ :datatype-constructor-ax   6
+ :max-generation            1
+ :quant-instantiations      7
+  matching lines: 0
+  total lines: 218
+  matching lines: 0
+##### AUFDTLIRA_20200306-Kanig_spark2014bench_RM_MS__other_proof_types_and_functions__stack_functional_spec.ads_58_21_postcondition___00.smt2.core.smt2
+unsat
+ :datatype-accessor-ax      15
+ :datatype-constructor-ax   12
+ :max-generation            1
+ :quant-instantiations      10
+  matching lines: 0
+  total lines: 47758
+  matching lines: 0
+##### AUFDTLIRA_20200306-Kanig_spark2014bench_S117-008__pointer__formal_vectors.adb_101_33_use_formal_vectors.ads_10_4_loop_invariant_preserv___00.smt2.core.smt2
+unsat
+ :datatype-accessor-ax      203
+ :datatype-constructor-ax   196
+unsat
+  matching lines: 0
+  total lines: 27
+  matching lines: 0
+##### AUFDTLIRA_20200306-Kanig_spark2014bench_S117-008__pointer__formal_vectors.adb_118_8_use_formal_vectors.ads_10_4_predicate_check___00.smt2.core.smt2
+unsat
+ :datatype-accessor-ax      398
+ :datatype-constructor-ax   383
+ :max-generation            3
+ :quant-instantiations      61
+  matching lines: 0
+  total lines: 4484
+  matching lines: 0
+##### AUFDTLIRA_20200306-Kanig_spark2014bench_S117-008__pointer__formal_vectors.adb_182_35_use_formal_vectors.ads_10_4_null_pointer_dereference___01.smt2.core.smt2
+unsat
+ :datatype-accessor-ax      103
+ :datatype-constructor-ax   100
+unsat
+  matching lines: 0
+  total lines: 27
+  matching lines: 0
+##### AUFDTLIRA_20200306-Kanig_spark2014bench_S531-010__loop_frame_condition__do_loops.adb_131_19_index_check___00.smt2.core.smt2
+unsat
+ :datatype-accessor-ax      1952
+ :datatype-constructor-ax   1900
+ :max-generation            2
+ :quant-instantiations      20
+unsat
+  matching lines: 0
+  total lines: 30
+  matching lines: 0
+##### AUFDTLIRA_20200306-Kanig_spark2014bench_S531-010__loop_frame_condition__do_loops.adb_47_13_index_check___00.smt2.core.smt2
+unsat
+ :datatype-accessor-ax      513
+ :datatype-constructor-ax   503
+ :max-generation            1
+ :quant-instantiations      3
+unsat
+  matching lines: 0
+  total lines: 30
+  matching lines: 0
+##### AUFDTLIRA_20200306-Kanig_spark2014bench_S531-010__loop_frame_condition__do_loops.adb_82_26_null_pointer_dereference___00.smt2.core.smt2
+unsat
+ :datatype-accessor-ax        1488
+ :datatype-constructor-ax     1450
+ :max-generation              10
+ :missed-quant-instantiations 3
+ :quant-instantiations        29
+unsat
+  matching lines: 0
+  total lines: 30
+  matching lines: 0
