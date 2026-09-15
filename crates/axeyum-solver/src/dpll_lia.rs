@@ -1092,6 +1092,14 @@ pub(crate) struct IncrementalArithDpll {
     blocking: Vec<TermId>,
     lemmas: Vec<Vec<ArithLemmaLiteral>>,
     initial_lemma_count: usize,
+    /// Simple integer bounds extracted from `ctx.atoms[..]`, retained across
+    /// refreshes. Populated only on the indexed refresh path
+    /// ([`initial_bound_index_enabled`]); empty and unread otherwise.
+    initial_bounds: Vec<SimpleIntBound>,
+    /// How many atoms [`Self::initial_bounds`] covers. `None` until the first
+    /// indexed refresh, which is what distinguishes "nothing extracted yet"
+    /// from "extracted, and there were no atoms".
+    initial_bounds_atoms: Option<usize>,
     core_stats: ArithCoreStats,
     min_budget: MinimizationBudget,
     support_stats: ArithSupportStats,
@@ -1148,6 +1156,8 @@ impl IncrementalArithDpll {
             blocking: Vec::new(),
             lemmas: Vec::new(),
             initial_lemma_count: 0,
+            initial_bounds: Vec::new(),
+            initial_bounds_atoms: None,
             core_stats: ArithCoreStats::default(),
             min_budget: MinimizationBudget::default(),
             support_stats: ArithSupportStats::default(),
@@ -1211,8 +1221,80 @@ impl IncrementalArithDpll {
     }
 
     fn refresh_initial_lemmas(&mut self, arena: &mut TermArena) -> Result<(), SolverError> {
+        if initial_bound_index_enabled() {
+            return self.refresh_initial_lemmas_indexed(arena);
+        }
         let mut initial_lemmas = initial_int_bound_mutex_lemmas(arena, &self.ctx)?;
         initial_lemmas.extend(initial_int_bound_implication_lemmas(arena, &self.ctx)?);
+        self.seed_initial_lemmas(arena, initial_lemmas)
+    }
+
+    /// The incremental form of [`Self::refresh_initial_lemmas`], behind
+    /// [`initial_bound_index_enabled`].
+    ///
+    /// # Why the shipped form is quadratic in the number of ASSERTIONS
+    ///
+    /// [`Self::assert_incremental`] calls the refresh **once per assertion**,
+    /// and the shipped refresh rebuilds everything from scratch: an O(atoms)
+    /// rescan through [`simple_int_literal_bounds`] and then a pair loop over
+    /// the bounds it found. Measured 2026-09-15 on
+    /// `UFNIA/vcc-havoc/havoc-bench_sum.1.bar.smt2` under an attribution build:
+    /// **293,304 refresh calls**, `mutex_ms=21100` of a 24,000 ms budget, of
+    /// which `extract_ms=20585` is the rescan — against a high-water mark of
+    /// **7,794 atoms** and **90 bounds**. So the atom set is read about 2.3
+    /// billion times to find at most ninety bounds, and the quadratic pair loop
+    /// everyone looks at is 0.5 s of the 21.1 s.
+    ///
+    /// Three changes, each **output-preserving by construction**:
+    ///
+    /// 1. **No new atoms, no work.** Both passes are pure functions of
+    ///    `ctx.atoms` (the arena only ever gains hash-consed nodes, so the same
+    ///    atoms yield the same clause handles), so a refresh at an unchanged
+    ///    atom count can only re-derive clauses `initial_clauses` already
+    ///    holds. Returning early is not an approximation.
+    /// 2. **The bound extraction is cached.** `ctx.atoms` is append-only
+    ///    (`ArithAbstractor::atom_for` is the only writer), and
+    ///    [`simple_int_literal_bounds`] reads an atom and the arena and nothing
+    ///    else, so extending the cache over the new suffix yields exactly the
+    ///    vector a full rescan would build.
+    /// 3. **The pair loop is indexed by expression.** [`conflicting_bounds`]
+    ///    returns `None` unless `a.expr == b.expr`, so the shipped loop spends
+    ///    almost all of its iterations proving two bounds are about different
+    ///    terms. [`scan_bound_conflicts_indexed`] visits the same `(i, j)`
+    ///    pairs in the same order and skips only pairs the shipped loop
+    ///    rejects.
+    ///
+    /// **Not a cap.** Nothing is dropped, so this cannot convert a row that
+    /// decides today into a faster `unknown` — the failure mode an input cap
+    /// has (ADR-2055 measured one costing 18 clean exits).
+    fn refresh_initial_lemmas_indexed(&mut self, arena: &mut TermArena) -> Result<(), SolverError> {
+        if self.initial_bounds_atoms == Some(self.ctx.atoms.len()) {
+            return Ok(());
+        }
+        let from = self.initial_bounds_atoms.unwrap_or(0);
+        for idx in from..self.ctx.atoms.len() {
+            let more = simple_int_literal_bounds(arena, idx, &self.ctx.atoms[idx]);
+            self.initial_bounds.extend(more);
+        }
+        self.initial_bounds_atoms = Some(self.ctx.atoms.len());
+
+        let mut initial_lemmas =
+            initial_int_bound_mutex_lemmas_indexed(arena, &self.ctx, &self.initial_bounds)?;
+        initial_lemmas.extend(initial_int_bound_implication_lemmas_indexed(
+            arena,
+            &self.ctx,
+            &self.initial_bounds,
+        )?);
+        self.seed_initial_lemmas(arena, initial_lemmas)
+    }
+
+    /// Asserts each initial lemma clause that is new to this solver. Shared by
+    /// both refresh paths so neither can drift from the other.
+    fn seed_initial_lemmas(
+        &mut self,
+        arena: &mut TermArena,
+        initial_lemmas: Vec<(TermId, Vec<ArithLemmaLiteral>)>,
+    ) -> Result<(), SolverError> {
         for (clause, lemma) in initial_lemmas {
             if self.initial_clauses.insert(clause) {
                 self.prop_solver.assert(arena, clause)?;
@@ -3789,6 +3871,24 @@ fn negate_original_arith_literal(
     }
 }
 
+/// Whether the initial bound-lemma refresh takes the incremental, expression-
+/// indexed path. `AXEYUM_LIA_INITIAL_BOUND_INDEX=1`; **off by default**.
+///
+/// Both paths stay compiled in deliberately: that is what lets an A/B run **one
+/// binary under two environment values** rather than comparing two builds, and
+/// it is what makes the differential test in this module able to run the two
+/// side by side on one input.
+///
+/// Read once through a `OnceLock`. The refresh is entered once per assertion —
+/// 293,304 times on the worst measured row — so a per-call `env::var` would put
+/// an allocating lookup in the path this exists to make cheap.
+pub(crate) fn initial_bound_index_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var("AXEYUM_LIA_INITIAL_BOUND_INDEX").is_ok_and(|v| v.trim() == "1")
+    })
+}
+
 /// Adds cheap theory lemmas for contradictory simple integer bounds before the
 /// first SAT solve.
 ///
@@ -3811,7 +3911,34 @@ fn initial_int_bound_mutex_lemmas(
     for (idx, atom) in ctx.atoms.iter().enumerate() {
         bounds.extend(simple_int_literal_bounds(arena, idx, atom));
     }
+    let conflicts = scan_bound_conflicts(&bounds);
+    emit_bound_mutex_lemmas(arena, ctx, &conflicts)
+}
 
+/// [`initial_int_bound_mutex_lemmas`] over an already-extracted bound vector,
+/// with the expression-indexed scan. See
+/// [`IncrementalArithDpll::refresh_initial_lemmas_indexed`] for why both exist
+/// and why the two produce the same lemma sequence.
+fn initial_int_bound_mutex_lemmas_indexed(
+    arena: &mut TermArena,
+    ctx: &ArithAbstractor,
+    bounds: &[SimpleIntBound],
+) -> Result<Vec<(TermId, Vec<ArithLemmaLiteral>)>, SolverError> {
+    let conflicts = scan_bound_conflicts_indexed(bounds);
+    emit_bound_mutex_lemmas(arena, ctx, &conflicts)
+}
+
+/// The shipped scan: every ordered pair of bounds, in `(i, j)` lexicographic
+/// order, truncated at [`MAX_INITIAL_BOUND_MUTEX_LEMMAS`] conflicts FOUND.
+///
+/// The cap is tested inside the loop, so it bounds what this produces and not
+/// what it reads — which is the distinction [ADR-2075] §7(B) named. The measured
+/// consequence is in [`IncrementalArithDpll::refresh_initial_lemmas_indexed`],
+/// and it is not the one that ADR expected: the loop this walks is over the
+/// BOUNDS (90 of them on the worst measured row), not over the atoms (7,794).
+///
+/// [ADR-2075]: https://github.com/axeyum/axeyum/blob/main/docs/research/09-decisions/adr-2075-the-silent-hang-is-not-silent-it-is-the-inventory-of-code-that-polls-no-deadline.md
+fn scan_bound_conflicts(bounds: &[SimpleIntBound]) -> Vec<(SimpleIntBound, SimpleIntBound)> {
     let mut conflicts = Vec::new();
     let mut seen = HashSet::new();
     for i in 0..bounds.len() {
@@ -3834,7 +3961,68 @@ fn initial_int_bound_mutex_lemmas(
             break;
         }
     }
+    conflicts
+}
 
+/// [`scan_bound_conflicts`] with the inner loop restricted to the bounds that
+/// can possibly match.
+///
+/// [`conflicting_bounds`] answers `None` unless `a.expr == b.expr`, so grouping
+/// the indices by `expr` first and visiting only a group's members costs the
+/// same answer for a fraction of the iterations. Each group's index vector is
+/// built in increasing `i`, so it is sorted, and `partition_point` finds the
+/// first member above `i`: the accepted pairs are therefore visited in exactly
+/// the order the shipped double loop visits them, **including under the
+/// truncation cap**, which is what makes the two sequences equal rather than
+/// merely equal as sets.
+///
+/// The map is only ever looked up, never iterated, so no output here depends on
+/// hash order (the determinism promise in `CLAUDE.md`).
+fn scan_bound_conflicts_indexed(
+    bounds: &[SimpleIntBound],
+) -> Vec<(SimpleIntBound, SimpleIntBound)> {
+    let mut by_expr: HashMap<TermId, Vec<usize>> = HashMap::new();
+    for (i, bound) in bounds.iter().enumerate() {
+        by_expr.entry(bound.expr).or_default().push(i);
+    }
+
+    let mut conflicts = Vec::new();
+    let mut seen = HashSet::new();
+    for i in 0..bounds.len() {
+        let Some(group) = by_expr.get(&bounds[i].expr) else {
+            continue;
+        };
+        let start = group.partition_point(|&j| j <= i);
+        for &j in &group[start..] {
+            let Some((lower, upper)) = conflicting_bounds(&bounds[i], &bounds[j]) else {
+                continue;
+            };
+            if !lower.truth || !upper.truth {
+                continue;
+            }
+            let key = (lower.atom_idx, lower.truth, upper.atom_idx, upper.truth);
+            if seen.insert(key) {
+                conflicts.push((*lower, *upper));
+                if conflicts.len() >= MAX_INITIAL_BOUND_MUTEX_LEMMAS {
+                    break;
+                }
+            }
+        }
+        if conflicts.len() >= MAX_INITIAL_BOUND_MUTEX_LEMMAS {
+            break;
+        }
+    }
+    conflicts
+}
+
+/// Builds the blocking clause and the reusable lemma for each conflicting bound
+/// pair. Shared by both scans so the two paths cannot drift in what they emit,
+/// only in which pairs they find.
+fn emit_bound_mutex_lemmas(
+    arena: &mut TermArena,
+    ctx: &ArithAbstractor,
+    conflicts: &[(SimpleIntBound, SimpleIntBound)],
+) -> Result<Vec<(TermId, Vec<ArithLemmaLiteral>)>, SolverError> {
     let mut out = Vec::with_capacity(conflicts.len());
     for (lower, upper) in conflicts {
         let mut truths = vec![false; ctx.atoms.len()];
@@ -3866,26 +4054,65 @@ fn initial_int_bound_implication_lemmas(
     arena: &mut TermArena,
     ctx: &ArithAbstractor,
 ) -> Result<Vec<(TermId, Vec<ArithLemmaLiteral>)>, SolverError> {
-    if ctx.atoms.len() > MAX_INITIAL_BOUND_IMPLICATION_ATOMS {
-        // An empty lemma vector is what this returns when there are no bound
-        // implications to find, so the skip and the empty result are the same
-        // value. The crossing is the only evidence the pass was declined.
-        crate::config_registry::note_crossed(
-            "crates/axeyum-solver/src/dpll_lia.rs::MAX_INITIAL_BOUND_IMPLICATION_ATOMS",
-            ctx.atoms.len() as u64,
-            MAX_INITIAL_BOUND_IMPLICATION_ATOMS as u64,
-        );
+    if implication_pass_declined(ctx) {
         return Ok(Vec::new());
     }
 
-    let mut groups: BTreeMap<(TermId, BoundSide), Vec<SimpleIntBound>> = BTreeMap::new();
+    let mut bounds = Vec::new();
     for (idx, atom) in ctx.atoms.iter().enumerate() {
-        for bound in simple_int_literal_bounds(arena, idx, atom) {
-            groups
-                .entry((bound.expr, bound.side))
-                .or_default()
-                .push(bound);
-        }
+        bounds.extend(simple_int_literal_bounds(arena, idx, atom));
+    }
+    initial_int_bound_implication_lemmas_from(arena, ctx, &bounds)
+}
+
+/// Whether the implication pass declines because its INPUT is too large, and
+/// the record of that decline.
+///
+/// This is the half of the pair [ADR-2075] §7(B) singled out: the cap is tested
+/// at entry, against what the pass would READ, and the crossing is recorded
+/// where a census can see it — because an empty lemma vector is also what a
+/// pass that ran and found nothing returns, so without the record the two
+/// readings are the same bytes.
+///
+/// [ADR-2075]: https://github.com/axeyum/axeyum/blob/main/docs/research/09-decisions/adr-2075-the-silent-hang-is-not-silent-it-is-the-inventory-of-code-that-polls-no-deadline.md
+fn implication_pass_declined(ctx: &ArithAbstractor) -> bool {
+    if ctx.atoms.len() <= MAX_INITIAL_BOUND_IMPLICATION_ATOMS {
+        return false;
+    }
+    crate::config_registry::note_crossed(
+        "crates/axeyum-solver/src/dpll_lia.rs::MAX_INITIAL_BOUND_IMPLICATION_ATOMS",
+        ctx.atoms.len() as u64,
+        MAX_INITIAL_BOUND_IMPLICATION_ATOMS as u64,
+    );
+    true
+}
+
+/// [`initial_int_bound_implication_lemmas`] over an already-extracted bound
+/// vector. The grouping below depends only on the ORDER of `bounds`, and the
+/// cache the indexed refresh keeps is built by the same per-atom extraction in
+/// the same order, so the two see identical groups.
+fn initial_int_bound_implication_lemmas_indexed(
+    arena: &mut TermArena,
+    ctx: &ArithAbstractor,
+    bounds: &[SimpleIntBound],
+) -> Result<Vec<(TermId, Vec<ArithLemmaLiteral>)>, SolverError> {
+    if implication_pass_declined(ctx) {
+        return Ok(Vec::new());
+    }
+    initial_int_bound_implication_lemmas_from(arena, ctx, bounds)
+}
+
+fn initial_int_bound_implication_lemmas_from(
+    arena: &mut TermArena,
+    ctx: &ArithAbstractor,
+    bounds: &[SimpleIntBound],
+) -> Result<Vec<(TermId, Vec<ArithLemmaLiteral>)>, SolverError> {
+    let mut groups: BTreeMap<(TermId, BoundSide), Vec<SimpleIntBound>> = BTreeMap::new();
+    for bound in bounds {
+        groups
+            .entry((bound.expr, bound.side))
+            .or_default()
+            .push(*bound);
     }
 
     let mut implications = Vec::new();
@@ -3964,13 +4191,13 @@ fn static_lemma_literal(
     })
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum BoundSide {
     Lower,
     Upper,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct SimpleIntBound {
     atom_idx: usize,
     expr: TermId,
@@ -6722,6 +6949,164 @@ mod tests {
         assert!(
             cores[0].indices.len() <= WIDE_THEORY_CORE_ATOMS,
             "and it must come back narrow enough to stop charging the retention budget"
+        );
+    }
+
+    // ---- LEMMA-INPUT: the incremental, expression-indexed bound refresh -----
+
+    /// A fixture with SEVERAL distinct bounded expressions and several
+    /// conflicting bound pairs per expression, which is what makes the indexed
+    /// scan's skipping observable: with one expression the index degenerates to
+    /// the shipped loop and nothing is skipped.
+    ///
+    /// Each assertion is `(or (<= x_e a) (<= a+2 x_e))`, so every atom is a
+    /// simple integer bound and `x_e <= a` conflicts with `a' + 2 <= x_e`
+    /// whenever `a' + 2 > a`.
+    fn bound_scan_fixture(arena: &mut TermArena) -> Vec<TermId> {
+        let mut assertions = Vec::new();
+        for expr_index in 0..3 {
+            let symbol = arena
+                .declare(&format!("li_x{expr_index}"), Sort::Int)
+                .expect("fresh integer symbol");
+            let value = arena.var(symbol);
+            for threshold in 0..5i128 {
+                let low = arena.int_const(threshold);
+                let high = arena.int_const(threshold + 2);
+                let upper = arena.int_le(value, low).expect("upper bound atom");
+                let lower = arena.int_le(high, value).expect("lower bound atom");
+                assertions.push(arena.or(upper, lower).expect("bound disjunction"));
+            }
+        }
+        assertions
+    }
+
+    /// Extracts the bound vector the mutex pass reads, the way both passes do.
+    fn fixture_bounds(arena: &TermArena, ctx: &ArithAbstractor) -> Vec<SimpleIntBound> {
+        let mut bounds = Vec::new();
+        for (idx, atom) in ctx.atoms.iter().enumerate() {
+            bounds.extend(simple_int_literal_bounds(arena, idx, atom));
+        }
+        bounds
+    }
+
+    /// The fixture abstracted, with the bound vector both scans read.
+    fn fixture_bound_vector(arena: &mut TermArena) -> Vec<SimpleIntBound> {
+        let assertions = bound_scan_fixture(arena);
+        let solver = IncrementalArithDpll::new(arena, &assertions).expect("fixture abstracts");
+        fixture_bounds(arena, &solver.ctx)
+    }
+
+    /// **The fixture-validity control.** It deliberately does NOT call
+    /// `scan_bound_conflicts_indexed`, so it survives every mutation of the
+    /// indexed path and fails only when the fixture stops being able to tell
+    /// the two scans apart — which is exactly how both `collect_eq_atoms` tests
+    /// in ADR-2075 came out vacuous on their first mutation run.
+    #[test]
+    fn the_bound_scan_fixture_can_tell_the_two_scans_apart() {
+        let mut arena = TermArena::new();
+        let bounds = fixture_bound_vector(&mut arena);
+
+        let distinct_exprs: HashSet<TermId> = bounds.iter().map(|bound| bound.expr).collect();
+        assert!(
+            distinct_exprs.len() >= 2,
+            "the fixture must bound more than one expression, else the index \
+             degenerates to the shipped loop; saw {}",
+            distinct_exprs.len()
+        );
+
+        let mut cross_expr_pairs = 0usize;
+        for i in 0..bounds.len() {
+            for j in (i + 1)..bounds.len() {
+                if bounds[i].expr != bounds[j].expr {
+                    cross_expr_pairs += 1;
+                }
+            }
+        }
+        assert!(
+            cross_expr_pairs > 0,
+            "the fixture must contain pairs the index SKIPS, else the two scans \
+             visit the same iterations and the differential test is vacuous"
+        );
+
+        assert!(
+            !scan_bound_conflicts(&bounds).is_empty(),
+            "the fixture must produce at least one conflict, else both scans \
+             return the empty vector and equality proves nothing"
+        );
+    }
+
+    /// R12: the indexed scan produces the **same sequence** of conflicting
+    /// pairs, not merely the same set — the truncation cap makes order
+    /// observable.
+    #[test]
+    fn the_indexed_bound_scan_matches_the_quadratic_scan_pair_for_pair() {
+        let mut arena = TermArena::new();
+        let bounds = fixture_bound_vector(&mut arena);
+
+        let shipped = scan_bound_conflicts(&bounds);
+        let indexed = scan_bound_conflicts_indexed(&bounds);
+        assert_eq!(
+            shipped, indexed,
+            "the expression-indexed scan must visit the same accepted pairs in \
+             the same order as the shipped double loop"
+        );
+    }
+
+    /// R12 end to end: driving the incremental refresh one assertion at a time
+    /// leaves the solver holding exactly what a full rebuild leaves. This is
+    /// what covers the two halves the scan test does not — the cached
+    /// extraction and the unchanged-atom-count early return.
+    #[test]
+    fn the_indexed_refresh_seeds_exactly_the_clauses_a_full_rebuild_does() {
+        assert!(
+            !initial_bound_index_enabled(),
+            "this test compares the two refresh paths against each other, so \
+             the ambient environment must not already have selected one: unset \
+             AXEYUM_LIA_INITIAL_BOUND_INDEX"
+        );
+
+        let mut arena = TermArena::new();
+        let assertions = bound_scan_fixture(&mut arena);
+        let seed = arena.bool_const(true);
+
+        // BASE: `assert_incremental` routes through `refresh_initial_lemmas`,
+        // which takes the shipped path because the lever is off.
+        let mut base = IncrementalArithDpll::new(&mut arena, &[seed]).expect("base solver");
+        for &assertion in &assertions {
+            base.assert_incremental(&mut arena, assertion)
+                .expect("base incremental assertion");
+        }
+
+        // ARM: the same assertions, one at a time, through the indexed refresh.
+        let mut arm = IncrementalArithDpll::new(&mut arena, &[seed]).expect("arm solver");
+        for &assertion in &assertions {
+            arm.assert_one(&mut arena, assertion)
+                .expect("arm assertion");
+            arm.refresh_initial_lemmas_indexed(&mut arena)
+                .expect("arm indexed refresh");
+            // Most of the 293,304 refreshes measured on the worst row add no
+            // atoms at all, so the repeated call is the common case and must be
+            // a no-op rather than a second seeding.
+            arm.refresh_initial_lemmas_indexed(&mut arena)
+                .expect("arm indexed refresh, repeated");
+        }
+
+        assert!(
+            !base.lemmas.is_empty(),
+            "the fixture must seed at least one initial lemma, else this \
+             compares two empty solvers"
+        );
+        assert_eq!(
+            base.lemmas, arm.lemmas,
+            "the indexed refresh must record the same lemmas, in the same order"
+        );
+        let mut base_clauses: Vec<TermId> = base.initial_clauses.iter().copied().collect();
+        let mut arm_clauses: Vec<TermId> = arm.initial_clauses.iter().copied().collect();
+        base_clauses.sort_unstable();
+        arm_clauses.sort_unstable();
+        assert_eq!(
+            base_clauses, arm_clauses,
+            "the indexed refresh must assert the same initial clause set"
         );
     }
 }
