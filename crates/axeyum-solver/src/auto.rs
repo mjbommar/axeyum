@@ -1523,7 +1523,7 @@ fn rung_or_decline(
         Ok(None) => Ok(None),
         Ok(Some(result)) => Ok(settle_rung(route, query, result, rec, conversion)),
         Err(SolverError::Unsupported(message)) => {
-            record_route_refusal(route, query, &message, rec, conversion);
+            record_route_refusal(route, query, &message, rec);
             Ok(None)
         }
         Err(other) => Err(other),
@@ -1897,19 +1897,22 @@ fn record_route_refusal(
     query: ConstructSet,
     message: &str,
     rec: &mut Recorder<'_>,
-    conversion: &OwnershipConversion,
 ) {
-    // An `Err(Unsupported)` from a rung was ALREADY a decline before ADR-2100
-    // (that is ADR-1966's rule, unchanged), so unlike `settle_rung` this is not
-    // a conversion and the continuation below it is not new work. Only a
-    // `FastPath`'s refusal is: before `RouteKind` existed there was no such
-    // category, and a fast path that refused a fragment it declared stopped the
-    // ladder. Noting it here and not for the `Decider` arm is the difference
-    // between bounding the work ADR-2100 added and bounding work that predates
-    // it.
-    if matches!(route.kind(), RouteKind::FastPath) {
-        conversion.note();
-    }
+    // ADR-2103 DELIBERATELY DOES NOT mark an ownership conversion here, and the
+    // first draft did. An `Err(Unsupported)` from a ladder rung was ALREADY a
+    // decline before ADR-2100 -- ADR-1966's rule, landed by ADR-1980 -- so the
+    // rungs below one are not work ADR-2100 added and must not be charged its
+    // narrowed clock.
+    //
+    // The draft marked a conversion for every `FastPath` refusal on the theory
+    // that a fast path refusing a declared fragment used to stop the ladder. It
+    // does not, and the counter-example is the commonest refusal in the tree:
+    // `datatype-elim` is a `FastPath` that refuses BY DESIGN on essentially
+    // every datatype file (ADR-0022 step A handing to step B) and has continued
+    // to `datatype-native` since long before ADR-2100. Charging that a
+    // quarter-clock would have slowed `AUFDTLIRA` and `UFDTLIRA` -- two of the
+    // nine divisions this lane measures -- for a hand-off working exactly as
+    // intended, and the A/B would have read the cost as this ADR's.
     let reason = match (route.kind(), route.ownership_of(query)) {
         (RouteKind::FastPath, _) | (RouteKind::Decider, Ownership::NotOwned(_)) => {
             unsupported_decline(message)
@@ -7960,13 +7963,7 @@ fn check_auto_dispatch_inner(
                 }
             }
             Err(SolverError::Unsupported(message)) => {
-                record_route_refusal(
-                    DispatchRoute::DatatypeElim,
-                    query,
-                    &message,
-                    rec,
-                    &conversion,
-                );
+                record_route_refusal(DispatchRoute::DatatypeElim, query, &message, rec);
                 // `datatype-elim` did not decide; the shared
                 // `datatype-native` rung below runs for BOTH of this
                 // match's non-deciding arms.
@@ -8041,7 +8038,6 @@ fn check_auto_dispatch_inner(
                             query,
                             &native_message,
                             rec,
-                            &conversion,
                         );
                         // Fall through to the rungs below. The datatype
                         // rung's message is the specific capability
@@ -8079,7 +8075,7 @@ fn check_auto_dispatch_inner(
                 }
             }
             Err(SolverError::Unsupported(message)) => {
-                record_route_refusal(DispatchRoute::LiraDpll, query, &message, rec, &conversion);
+                record_route_refusal(DispatchRoute::LiraDpll, query, &message, rec);
             }
             Err(other) => return Err(DispatchError::at(DispatchRoute::LiraDpll, other)),
         }
@@ -14265,21 +14261,18 @@ mod tests {
             constructs![Int, Real],
             "a fragment this route declared as its own",
             &mut rec,
-            &conversion,
         );
         record_route_refusal(
             DispatchRoute::LiraDpll,
             constructs![Int, Real, Array],
             "a fragment this route never claimed",
             &mut rec,
-            &conversion,
         );
         record_route_refusal(
             DispatchRoute::DatatypeElim,
             constructs![Datatype],
             "step A hands to step B",
             &mut rec,
-            &conversion,
         );
 
         let reported: Vec<bool> = trace
