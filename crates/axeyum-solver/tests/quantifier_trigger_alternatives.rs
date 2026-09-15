@@ -149,10 +149,10 @@ fn the_front_door_also_refuses_the_satisfiable_query_at_a_raised_cap() {
 fn the_guard_does_not_cross_a_thread_boundary() {
     let outer = TriggerAlternativeCapGuard::set(32);
     let observed = std::thread::spawn(|| {
-        // Any observable that depends on the cap would do; the guard's own
-        // absence is the point, so this asks the loop for its instances on a
-        // fixture whose alternative set differs between the two arms.
-        let _inner_has_no_guard = ();
+        // No guard is set on THIS thread -- that absence is the whole point.
+        // Any observable that depends on the cap would do; this asks the loop
+        // for its instances on a fixture whose alternative set differs between
+        // the two arms.
         let mut script = parse_script(UNSAT_REACHED_BY_BOTH).expect("parses");
         axeyum_solver::instantiate_forall_via_egraph(
             &mut script.arena,

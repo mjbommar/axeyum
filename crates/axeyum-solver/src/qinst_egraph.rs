@@ -8805,7 +8805,7 @@ fn select_trigger_groups_with_cap(
             // has another full-cover candidate strictly inside it. Written the
             // other way round this silently keeps the deepest pattern, which
             // matches least often -- the exact opposite of both references, and
-            // the inversion `a_candidate_containing_another_full_cover_candidate_is_dropped`
+            // the inversion `trigger_alt_container_candidate_is_dropped`
             // caught on its first honest run.
             !full
                 .iter()
@@ -15213,7 +15213,7 @@ mod tests {
     }
 
     #[test]
-    fn the_shipped_cap_proposes_exactly_one_alternative() {
+    fn trigger_alt_shipped_cap_proposes_exactly_one() {
         // The OFF arm, pinned against the function it replaced. If these ever
         // disagree the lever is not OFF by default, whatever its value says.
         let (mut arena, var_index, x) = trigger_fixture();
@@ -15235,7 +15235,7 @@ mod tests {
     }
 
     #[test]
-    fn a_raised_cap_proposes_both_incomparable_candidates() {
+    fn trigger_alt_raised_cap_proposes_both_incomparable() {
         // NON-VACUITY CONTROL for every soundness test of this lever. `f(x)` and
         // `g(x)` both cover `x` and neither contains the other, so the cap has
         // something to select; if this returned one group, every "a raised cap
@@ -15260,7 +15260,7 @@ mod tests {
     }
 
     #[test]
-    fn a_candidate_containing_another_full_cover_candidate_is_dropped() {
+    fn trigger_alt_container_candidate_is_dropped() {
         // `g(x)` is a proper subterm of `f(g(x))` and both cover `x`. Every
         // ground match of the outer term carries a match of the inner one, so
         // the outer proposes a subset at strictly higher matching cost. z3
@@ -15284,7 +15284,7 @@ mod tests {
     }
 
     #[test]
-    fn the_alternative_order_is_smallest_first_and_total() {
+    fn trigger_alt_order_is_smallest_first_and_total() {
         // Determinism is a public API promise. `f(x)` has two subterms and
         // `g(h(x))` three, so size decides; the tie-break on `TermId` is what
         // makes the order total when two candidates have the same size, and
@@ -15320,7 +15320,7 @@ mod tests {
     }
 
     #[test]
-    fn a_body_with_no_full_cover_candidate_falls_back_to_select_triggers() {
+    fn trigger_alt_no_full_cover_falls_back() {
         // `x` occurs only under interpreted operators, so no application covers
         // it and the raised cap must behave exactly like the shipped one --
         // including when `select_triggers` itself returns empty.

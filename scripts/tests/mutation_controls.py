@@ -10907,5 +10907,68 @@ SUITES["derived-ladder-order"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `qinst-trigger-alternatives` -- ADR-2113's auto trigger-alternative selection.
+#
+# This lane's own first implementation had the containment filter INVERTED --
+# it kept the CONTAINER and dropped the contained candidate, the opposite of
+# z3's `filter_bigger_patterns` and of what its own comment claimed.  Nothing
+# that looks at a VERDICT could have caught it: a worse trigger loses decisions,
+# not soundness, and on a small fixture both patterns reach the refutation.  The
+# test that fired asserts the surviving `TermId`.  These mutations are that
+# episode turned into a standing control.
+# --------------------------------------------------------------------------
+
+SUITES["qinst-trigger-alternatives"] = (
+    "crates/axeyum-solver/src/qinst_egraph.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            # ONE filter: `cargo test` takes a single TESTNAME, and a second one
+            # is `error: unexpected argument`, which the harness reports as
+            # BASELINE DID NOT BUILD -- a whole suite unmeasurable for a reason
+            # that has nothing to do with any mutation. The five tests share the
+            # `trigger_alt_` prefix so one filter names exactly them.
+            "qinst_egraph::tests::trigger_alt_",
+        ),
+        "qinst-trigger-alternatives",
+    ),
+    [
+        (
+            # The exact inversion this lane shipped and its own test caught.
+            "the containment filter drops the CONTAINER, not the contained",
+            ".any(|&other| other != candidate && is_proper_subterm(arena, candidate, other))",
+            ".any(|&other| other != candidate && is_proper_subterm(arena, other, candidate))",
+        ),
+        (
+            # Without the cap check the OFF arm stops being byte-for-byte the
+            # shipped expression, which is the whole promise of the lever.
+            "the shipped cap short-circuits to the single-group path",
+            "    if cap <= 1 {",
+            "    if cap <= 0 {",
+        ),
+        (
+            # Order by arena insertion instead of by size: still deterministic,
+            # still total, and no longer the references' smallest-first
+            # preference -- so a test asserting only determinism survives it.
+            "alternatives are ordered SMALLEST first, not by arena order",
+            "    ranked.sort_by_key(|&term| (witness_size(arena, term), term));",
+            "    ranked.sort_by_key(|&term| (0_usize, term));",
+        ),
+        (
+            # `is_proper_subterm` must be PROPER: reflexive containment makes
+            # every candidate contain itself and the filter deletes all of them.
+            "`is_proper_subterm` is proper",
+            "    if haystack == needle {\n        return false;\n    }",
+            "    if haystack == needle {\n        return true;\n    }",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
