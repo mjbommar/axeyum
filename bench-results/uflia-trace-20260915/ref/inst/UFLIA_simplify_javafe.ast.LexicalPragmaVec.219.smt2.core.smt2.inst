@@ -1,0 +1,18 @@
+INSTANCE 0	(asField count_67_33 T_int)	this	?brokenObj_3_!33	(+ (- 1) tmp3_old_count_244_4_0_249_1)
+INSTANCE 1	?brokenObj!31
+INSTANCE 2	(asField count_67_33 T_int)	this	?brokenObj!31	(+ (- 1) tmp3_old_count_244_4_0_249_1)
+INSTANCE 3	(asElems elems)	(S_select elements_61_42 this)	(S_select elements_61_42 ?brokenObj!31)	(S_store (S_select elems tmp0_elements_244_4_0_247_1_0_248_3) 0 (S_select (S_select elems (S_select elements_61_42 this)) 1))
+INSTANCE 4	this
+INSTANCE 5	(S_select elems (S_select elements_61_42 this))	0	(S_select (S_select elems (S_select elements_61_42 this)) 1)
+INSTANCE 6	(asElems elems)	(S_select elements_61_42 this)	(S_store (S_select elems tmp0_elements_244_4_0_247_1_0_248_3) 0 (S_select (S_select elems (S_select elements_61_42 this)) 1))
+INSTANCE 7	this
+INSTANCE 8	1
+INSTANCE 9	?brokenObj!31
+INSTANCE 10	?brokenObj_3_!33
+INSTANCE 11	?i_62_31!32
+INSTANCE 12	?brokenObj!31
+INSTANCE 13	this
+INSTANCE 14	(asElems elems)	(S_select elements_61_42 this)	1
+INSTANCE 15	?brokenObj_1_!30
+INSTANCE 16	(asField count_67_33 T_int)	this	?brokenObj_1_!30	(+ (- 1) tmp3_old_count_244_4_0_249_1)
+INSTANCE 17	(asField count_67_33 T_int)	this	(+ (- 1) tmp3_old_count_244_4_0_249_1)

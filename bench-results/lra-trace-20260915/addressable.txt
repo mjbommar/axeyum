@@ -1,0 +1,14 @@
+population 93   addressable 60
+
+sub-bucket                                                                 n  addr   share
+------------------------------------------------------------------------------------------
+alloc-failure | memory allocation of <n> bytes failed                     40    20     50%
+budget/other | lra: the deadline passed building the Fourier–Motzkin un   21    18     86%
+budget/other | lra: the deadline had already passed when the conjunctiv   11    10     91%
+incomplete/incomplete | online CDCL                                        7     4     57%
+not-applicable/unnamed                                                     5     3     60%
+bound-no-decline | nra                                                     3     3    100%
+budget/other | lra: the deadline passed while linearizing the assertion    2     1     50%
+budget/other | budget exhausted in the online difference-logic driver      1     1    100%
+bound-no-decline | fd:parse                                                2     0      0%
+budget/other | timeout in the online CDCL                                  1     0      0%

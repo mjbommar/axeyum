@@ -1,0 +1,54 @@
+==== UFLIA_simplify2_front_end_suite_javafe.reader.CachedReader.003.smt2.core.smt2
+universals 6
+  FIRED               2   33.3%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED        4   66.7%
+==== UFLIA_simplify2_front_end_suite_javafe.tc.TypeSigVec.005.smt2.core.smt2
+universals 45
+  FIRED               3    6.7%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED       42   93.3%
+==== UFLIA_simplify2_front_end_suite_javafe.test.SuperlinksTest.004.smt2.core.smt2
+universals 39
+  FIRED               3    7.7%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED       36   92.3%
+==== UFLIA_simplify2_small_suite_getRootInterface.smt2.core.smt2
+universals 156
+  FIRED               4    2.6%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED      152   97.4%
+==== UFLIA_simplify_javafe.ast.NewInstanceExpr.271.smt2.core.smt2
+universals 32
+  FIRED               1    3.1%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED       31   96.9%
+==== UFLIA_simplify_javafe.ast.TypeDeclElemPragma.373.smt2.core.smt2
+universals 5
+  FIRED               2   40.0%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED        3   60.0%
+==== UFLIA_simplify_javafe.ast.UnaryExpr.424.smt2.core.smt2
+universals 23
+  FIRED               2    8.7%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED       21   91.3%
+==== UFLIA_simplify_javafe.parser.TokenQueue.576.smt2.core.smt2
+universals 8
+  FIRED               3   37.5%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED        5   62.5%
+==== UFLIA_sledgehammer_QEpres_smtlib.1237382.smt2.core.smt2
+universals 4
+  FIRED               1   25.0%
+  NO-TRIGGER          0    0.0%
+  NEVER-MATCHED       0    0.0%
+  ALL-REJECTED        3   75.0%

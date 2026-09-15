@@ -1,0 +1,80 @@
+file	parse	n_dt	n_inexact_dt	n_w1_dt	w1	w1_dt	w1_sort	w2	w3	w3_mentions	predicted	n_assert	n_forall	n_exists	max_qdepth	dt_binders	arraydt_binders	r_q_dt_binder	r_q_arraydt_binder	r_selector	r_tester	r_constructor	r_sel_over_dt_array	r_uf_dt_arg	r_uf_dt_result	r_uf_mentions_dt	r_eq_dt	r_ite_dt	a_q_dt_binder	a_q_arraydt_binder	a_selector	a_tester	a_constructor	a_sel_over_dt_array	a_uf_dt_arg	a_uf_dt_result	a_uf_mentions_dt	a_eq_dt	a_ite_dt	unresolved_sorts
+adacore_u__communication.adb_41_32_overflow_check___00.smt2	OK	20	6	0	0	NONE	NONE	1	1	0	W3	37	32	1	6	2	0	1	0	10	0	2	0	0	0	0	1	0	2	0	8	0	2	0	0	0	0	1	0	0
+adacore_u__p.adb_99_42_overflow_check___00.smt2	OK	13	1	0	0	NONE	NONE	0	0	0	NONE	18	20	0	4	0	0	0	0	0	0	0	0	0	16	0	0	0	0	0	0	0	0	0	0	16	0	0	0	0
+evoting__evoting.adb_229_13_loop_invariant_preserv___00.smt2	OK	16	0	0	0	NONE	NONE	0	0	0	NONE	16	38	11	11	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+ghc_sort__ghc_sort.adb_51_24_range_check___00.smt2	OK	18	5	0	0	NONE	NONE	0	0	0	NONE	27	45	16	17	0	0	0	0	0	0	0	0	0	70	0	0	0	0	0	0	0	0	0	0	66	0	0	0	0
+ghc_sort__ghc_sort.adb_85_22_overflow_check___00.smt2	OK	14	3	0	0	NONE	NONE	0	0	0	NONE	16	29	10	10	0	0	0	0	0	0	0	0	0	84	0	0	0	0	0	0	0	0	0	0	58	0	0	0	0
+K223-023__search__search.ads_8_9_postcondition___00.smt2	OK	11	0	0	0	NONE	NONE	0	0	0	NONE	12	22	5	6	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+K606-027__slice__fb20a00.adb_37_49_overflow_check___00.smt2	OK	16	4	0	0	NONE	NONE	0	0	0	NONE	18	25	0	6	1	0	0	0	0	0	0	0	38	58	0	0	0	1	0	0	0	0	0	7	27	0	0	0	0
+K627-010__stable_marriage__stable_marriage.ads_21_14_postcondition___00.smt2	OK	11	0	0	0	NONE	NONE	0	0	0	NONE	15	32	6	5	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+KB25-003__slices__pack.adb_65_22_assert___00.smt2	OK	11	0	0	0	NONE	NONE	0	0	0	NONE	10	18	0	4	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+L502-031_spaces__natural_set.ads_16_19_postcondition___00.smt2	OK	15	3	0	0	NONE	NONE	1	1	0	W3	35	29	0	4	7	0	2	0	10	0	4	0	18	0	0	1	0	7	0	10	0	4	0	15	0	0	1	0	0
+M301-012__array_of_iter__iter_array.adb_21_19_assert___00.smt2	OK	11	0	0	0	NONE	NONE	0	0	0	NONE	14	23	3	5	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+MA11-009__invariant__kmp.adb_16_17_loop_invariant_preserv___00.smt2	OK	15	5	0	0	NONE	NONE	0	0	0	NONE	15	29	6	15	0	0	0	0	0	0	0	0	0	44	0	0	0	0	0	0	0	0	0	0	31	0	0	0	0
+N120-055__perm__sort.adb_48_22_precondition___00.smt2	OK	14	1	0	0	NONE	NONE	0	0	0	NONE	21	26	0	4	3	0	0	0	7	0	0	0	15	0	0	0	0	3	0	4	0	0	0	12	0	0	0	0	0
+N217-028__update_checks__ar.adb_55_45_range_check___00.smt2	OK	10	0	0	0	NONE	NONE	0	0	0	NONE	10	16	0	4	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+N530-032__swap__sorters.adb_60_25_assert___00.smt2	OK	13	2	0	0	NONE	NONE	0	0	0	NONE	15	26	7	13	1	0	0	0	0	0	0	0	14	0	0	0	0	1	0	0	0	0	0	5	0	0	0	0	0
+N617-013__vscomp2014__p.adb_9_36_loop_invariant_init___00.smt2	OK	9	0	0	0	NONE	NONE	0	0	0	NONE	8	14	0	4	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+N624-020__perm_occ__perm.adb_32_10_precondition___00.smt2	OK	15	2	0	0	NONE	NONE	0	0	0	NONE	27	45	0	5	15	0	7	0	0	0	0	0	57	62	0	2	0	15	0	0	0	0	0	49	64	0	3	0	0
+N624-020__perm_occ__sort.adb_36_39_index_check___00.smt2	OK	18	4	0	0	NONE	NONE	0	0	0	NONE	30	59	0	4	27	0	17	0	0	0	0	0	85	35	0	1	0	27	0	0	0	0	0	80	34	0	1	0	0
+N624-020__perm_rem__perm.adb_130_45_index_check2___00.smt2	OK	13	1	0	0	NONE	NONE	0	0	0	NONE	25	53	0	4	10	0	2	0	0	0	0	0	63	79	0	0	0	10	0	0	0	0	0	70	103	0	8	0	0
+N624-020__perm_rem__sort.adb_135_33_precondition3___00.smt2	OK	17	1	0	0	NONE	NONE	0	0	0	NONE	29	60	2	7	36	0	26	0	0	0	0	0	99	18	0	0	0	36	0	0	0	0	0	83	12	0	0	0	0
+N624-020__perm_rem__sort.adb_40_28_precondition___00.smt2	OK	16	1	0	0	NONE	NONE	0	0	0	NONE	29	94	2	4	58	0	45	0	0	0	0	0	284	158	0	0	0	58	0	0	0	0	0	175	61	0	0	0	0
+N624-020__perm_rem__sort.adb_59_48_precondition___00.smt2	OK	16	1	0	0	NONE	NONE	0	0	0	NONE	29	134	2	4	71	0	58	0	0	0	0	0	555	372	0	0	0	71	0	0	0	0	0	247	80	0	0	0	0
+N624-020__perm_rem__sort.adb_69_36_precondition2___00.smt2	OK	16	1	0	0	NONE	NONE	0	0	0	NONE	29	96	2	4	57	0	44	0	0	0	0	0	300	172	0	0	0	57	0	0	0	0	0	190	74	0	0	0	0
+N624-020__perm_rem__sort.adb_75_44_precondition___00.smt2	OK	16	1	0	0	NONE	NONE	0	0	0	NONE	29	124	2	4	67	0	54	0	0	0	0	0	438	274	0	0	0	67	0	0	0	0	0	270	122	0	0	0	0
+N624-020__perm_rem__sort.ads_9_16_precondition2___00.smt2	OK	17	1	0	0	NONE	NONE	0	0	0	NONE	29	71	9	9	50	0	40	0	0	0	0	0	142	36	0	0	0	50	0	0	0	0	0	125	30	0	0	0	0
+O416-002__type_contracts__communications.ads_16_9_invariant_check_on_default_value___00.smt2	OK	26	12	8	1	map__ref1	Array/('Int',)/('D', 'us_rep')	1	1	1	W1	49	38	4	4	2	4	1	0	8	0	0	5	0	0	4	1	0	2	4	8	0	0	5	0	0	4	1	0	0
+O512-022__infoflow__infoflow.adb_181_22_overflow_check___00.smt2	OK	15	1	0	0	NONE	NONE	0	0	0	NONE	13	16	0	4	0	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	17	0	0	0	0
+O512-022__infoflow__infoflow.ads_136_24_contract_case___00.smt2	OK	15	1	0	0	NONE	NONE	0	0	0	NONE	13	22	6	7	0	0	0	0	0	0	0	0	0	12	0	0	0	0	0	0	0	0	0	0	28	0	0	0	0
+O512-022__prefix_sum__prefixsum.ads_18_32_unreachable_branch___00.smt2	OK	10	0	0	0	NONE	NONE	0	0	0	NONE	9	15	0	4	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+O512-022__stacks__stacks.ads_84_58_index_check___00.smt2	OK	26	12	0	0	NONE	NONE	1	1	0	W3	59	41	0	4	13	0	6	0	6	0	0	0	43	35	0	0	0	13	0	6	0	0	0	44	39	0	0	0	0
+O512-022__vscomp2014_partition_rte__partition_refinement.adb_180_10_precondition6___00.smt2	OK	73	28	0	0	NONE	NONE	1	1	0	W3	183	161	3	7	52	0	25	0	20	0	155	0	181	106	0	3	0	52	0	20	0	129	0	146	103	0	5	0	0
+OA20-032__refinement__patris.adb_121_63_index_check___00.smt2	OK	26	3	0	0	NONE	NONE	1	1	0	W3	111	130	0	5	5	0	3	0	42	0	1	0	12	3	0	1	0	5	0	42	0	1	0	12	3	0	1	0	0
+P115-039__spark16demo__concurrency_example.adb_14_13_dead_code___00.smt2	OK	11	0	0	0	NONE	NONE	0	0	0	NONE	22	18	0	4	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+P412-021__conc_discr_dyn__p.adb_6_19_range_check___00.smt2	OK	33	17	0	0	NONE	NONE	1	1	0	W3	56	25	0	4	2	0	0	0	2	0	0	0	3	0	0	0	0	2	0	2	0	0	0	3	0	0	0	0	0
+P518-021__loop_frame_condition__do_loops.adb_112_22_assert___00.smt2	OK	22	10	7	1	map__ref	Array/('Int',)/('D', 'us_rep')	1	1	1	W1	39	30	24	6	30	5	21	0	229	0	43	80	0	0	4	37	0	30	5	229	0	43	80	0	0	4	37	0	0
+P720-007__replay__harness.adb_13_19_assert___00.smt2	OK	15	3	0	0	NONE	NONE	1	1	0	W3	38	29	0	4	11	0	3	0	14	0	6	0	19	0	0	0	0	11	0	14	0	6	0	18	0	0	0	0	0
+PA14-032__dic__bounded_strings.adb_8_19_length_check___00.smt2	OK	29	14	0	0	NONE	NONE	1	1	0	W3	54	34	0	4	4	0	0	0	4	0	2	0	8	20	0	0	0	4	0	3	0	2	0	7	5	0	0	0	0
+Q124-055__no_inlining__array_arith.ads_18_14_postcondition___00.smt2	OK	9	0	0	0	NONE	NONE	0	0	0	NONE	8	14	0	4	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+Q328-034__mut_discr__screen_output.adb_70_10_dead_code___00.smt2	OK	15	1	0	0	NONE	NONE	0	0	0	NONE	37	51	0	4	6	0	0	0	0	0	0	0	42	14	0	0	0	6	0	0	0	0	0	42	13	0	0	0	0
+Q519-015__array_cast__cast_array.ads_10_14_postcondition___00.smt2	OK	14	0	0	0	NONE	NONE	0	0	0	NONE	18	32	5	7	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+Q529-038__predicate__bounded_stacks.ads_18_20_integer_stacks.ads_4_1_postcondition___00.smt2	OK	31	17	0	0	NONE	NONE	1	1	0	W3	83	55	0	4	39	0	18	0	10	0	7	0	84	37	0	1	0	39	0	10	0	7	0	84	37	0	1	0	0
+Q607-015__quantifiers__search_ter_p.ads_33_25_inconsistent_pre___00.smt2	OK	18	5	0	0	NONE	NONE	1	1	0	W3	29	22	1	4	10	0	4	0	0	0	0	0	12	32	0	0	0	10	0	0	0	0	0	12	37	0	0	0	0
+Q912-021__codepeer_by_example__assign_arr_unk.adb_4_18_overflow_check___00.smt2	OK	11	1	0	0	NONE	NONE	0	0	0	NONE	13	14	0	4	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+Q930-002__itp__bounded_dynamic_arrays.ads_66_13_bounded_dynamic_strings.ads_5_1_postcondition___00.smt2	OK	21	7	0	0	NONE	NONE	1	1	0	W3	35	25	0	4	2	0	0	0	4	0	0	0	9	14	0	0	0	2	0	4	0	0	0	8	14	0	0	0	0
+QA23-042__ok_pointers__spark04.adb_22_10_null_pointer_dereference___00.smt2	OK	21	6	0	0	NONE	NONE	1	1	0	W3	48	53	9	11	16	0	6	0	5	0	13	0	95	88	0	13	0	16	0	6	0	7	0	80	12	0	13	0	0
+R509-011__higher_order_proof__why_0ad1c3_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	OK	24	6	0	0	NONE	NONE	0	0	0	NONE	36	64	3	14	4	0	2	0	0	0	0	0	37	120	0	0	0	4	0	0	0	0	0	29	107	0	0	0	0
+R509-011__higher_order_proof__why_17e539_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	OK	24	6	0	0	NONE	NONE	0	0	0	NONE	36	62	14	10	5	0	3	0	0	0	0	0	34	140	0	1	0	5	0	0	0	0	0	32	127	0	1	0	0
+R509-011__higher_order_proof__why_2309ac_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	OK	24	5	0	0	NONE	NONE	0	0	0	NONE	41	83	11	6	56	0	50	0	0	0	0	0	182	201	0	0	0	56	0	0	0	0	0	127	184	0	0	0	0
+R509-011__higher_order_proof__why_7beb29_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	OK	24	5	0	0	NONE	NONE	0	0	0	NONE	42	111	0	7	63	0	55	0	0	0	0	0	183	186	0	0	0	63	0	0	0	0	0	135	156	0	0	0	0
+R509-011__higher_order_proof__why_880db6_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	OK	24	5	0	0	NONE	NONE	0	0	0	NONE	42	99	0	4	53	0	45	0	0	0	0	0	139	157	0	0	0	53	0	0	0	0	0	113	149	0	0	0	0
+R509-011__higher_order_proof__why_aa8afb_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	OK	21	4	0	0	NONE	NONE	0	0	0	NONE	36	46	0	4	10	0	6	0	0	0	0	0	29	54	0	0	0	10	0	0	0	0	0	22	53	0	0	0	0
+R509-011__higher_order_proof__why_b5aa01_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	OK	14	2	0	0	NONE	NONE	0	0	0	NONE	22	17	0	4	0	0	0	0	0	0	0	0	0	8	0	0	0	0	0	0	0	0	0	0	13	0	0	0	0
+R509-011__higher_order_proof__why_ec30e5_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	OK	21	4	0	0	NONE	NONE	0	0	0	NONE	37	40	0	4	10	0	9	0	0	0	0	0	23	54	0	0	0	10	0	0	0	0	0	15	51	0	0	0	0
+R514-013__invariant__sorted.ads_14_14_postcondition___00.smt2	OK	14	2	0	0	NONE	NONE	0	0	0	NONE	21	24	0	4	1	0	0	0	0	0	0	0	0	0	0	0	0	1	0	0	0	0	0	0	0	0	0	0	0
+R728-002__aggregates__pragmarc-b_strings.adb_79_22_range_check___00.smt2	OK	102	86	0	0	NONE	NONE	1	1	0	W3	279	159	0	9	190	0	95	0	7	0	2	0	411	620	0	33	0	190	0	7	0	2	0	411	618	0	33	0	0
+R906-030__recursion__test_rec.adb_45_33_loop_invariant_preserv___00.smt2	OK	19	5	0	0	NONE	NONE	0	0	0	NONE	21	54	5	23	9	0	7	0	0	0	0	0	46	0	0	0	0	9	0	0	0	0	0	38	0	0	0	0	0
+RB05-005__unsound__main.adb_13_74_main.adb_22_4_range_check___00.smt2	OK	16	1	0	0	NONE	NONE	0	0	0	NONE	54	75	3	6	19	0	4	0	0	0	0	0	202	246	0	8	0	19	0	0	0	0	0	158	15	0	8	0	0
+riposte__array_aggregates__array_aggregates.adb_309_22_assert___00.smt2	OK	10	0	0	0	NONE	NONE	0	0	0	NONE	9	16	0	4	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+riposte__array_applications__why_0df1aa_array_applications-T-defqtvc__00.smt2	OK	12	0	0	0	NONE	NONE	0	0	0	NONE	13	32	0	14	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+riposte__arrays__arrays.adb_161_16_index_check___00.smt2	OK	15	3	0	0	NONE	NONE	1	1	0	W3	25	23	0	5	2	0	1	0	6	0	1	0	0	0	0	1	0	2	0	6	0	1	0	0	0	0	1	0	0
+riposte__arrays_of_records__arrays_of_records.adb_264_22_postcondition___00.smt2	OK	14	4	1	1	map__ref	Array/('Int',)/('D', 'us_rep')	1	1	1	W1	21	20	0	6	0	9	0	2	12	0	4	11	0	0	4	1	0	0	9	10	0	4	9	0	0	4	1	0	0
+riposte__simple_arrays__simple_arrays.adb_101_22_postcondition___00.smt2	OK	9	0	0	0	NONE	NONE	0	0	0	NONE	10	17	0	4	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+riposte__simple_arrays__simple_arrays.adb_674_22_assert___00.smt2	OK	10	0	0	0	NONE	NONE	0	0	0	NONE	8	13	0	4	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+RM_Examples__stacks_1.ads_14_19_postcondition___00.smt2	OK	15	3	0	0	NONE	NONE	1	1	0	W3	33	29	0	4	6	0	3	0	9	0	6	0	10	0	0	0	0	6	0	9	0	6	0	10	0	0	0	0	0
+RM_MS__attributes_of_unconstrained_out_parameter_in_precondition__p.ads_10_19_postcondition___00.smt2	OK	13	2	0	0	NONE	NONE	0	0	0	NONE	17	21	0	4	0	0	0	0	0	0	0	0	0	25	0	0	0	0	0	0	0	0	0	0	2	0	0	0	0
+RM_MS__other_proof_types_and_functions__stack_functional_spec.ads_58_21_postcondition___00.smt2	OK	16	3	0	0	NONE	NONE	1	1	0	W3	37	50	0	8	26	0	16	0	9	0	3	0	67	20	0	4	0	26	0	9	0	3	0	64	20	0	4	0	0
+S117-008__pointer__formal_vectors.adb_101_33_use_formal_vectors.ads_10_4_loop_invariant_preserv___00.smt2	OK	34	16	10	1	map__ref	Array/('Int',)/('D', 'us_rep1')	1	1	1	W1	50	81	0	16	39	4	29	0	209	0	73	28	97	10	4	5	0	39	4	196	0	65	28	85	13	4	5	0	0
+S117-008__pointer__formal_vectors.adb_118_8_use_formal_vectors.ads_10_4_predicate_check___00.smt2	OK	34	16	10	1	map__ref	Array/('Int',)/('D', 'us_rep1')	1	1	1	W1	50	79	5	14	42	4	32	0	228	0	75	34	103	9	4	7	0	42	4	215	0	67	34	91	12	4	7	0	0
+S117-008__pointer__formal_vectors.adb_146_8_use_formal_vectors.ads_10_4_null_pointer_dereference___00.smt2	OK	34	16	10	1	map__ref	Array/('Int',)/('D', 'us_rep1')	1	1	1	W1	50	86	3	12	48	4	38	0	174	0	64	35	132	16	4	7	0	48	4	168	0	55	35	118	14	4	7	0	0
+S117-008__pointer__formal_vectors.adb_182_35_use_formal_vectors.ads_10_4_null_pointer_dereference___01.smt2	OK	35	17	10	1	map__ref	Array/('Int',)/('D', 'us_rep1')	1	1	1	W1	47	62	0	11	23	4	16	0	132	0	26	23	59	6	4	3	0	23	4	122	0	22	23	51	9	4	3	0	0
+S117-008__pointer__formal_vectors.adb_54_14_use_formal_vectors.ads_10_4_predicate_check___00.smt2	OK	36	19	13	1	map__ref	Array/('Int',)/('D', 'us_rep1')	1	1	1	W1	51	55	2	14	17	4	8	0	44	0	6	12	33	4	9	7	0	17	4	43	0	6	12	27	7	5	7	0	0
+S212-028__update__generic_ring_buffer.adb_78_13_tester.adb_9_4_predicate_check___00.smt2	OK	22	7	0	0	NONE	NONE	1	1	0	W3	52	38	0	5	9	0	4	0	20	0	9	0	16	7	0	2	0	9	0	20	0	9	0	15	7	0	2	0	0
+S531-010__loop_frame_condition__do_loops.adb_131_19_index_check___00.smt2	OK	35	16	13	1	map__ref	Array/('Int',)/('D', 'us_rep')	1	1	1	W1	44	69	68	63	59	13	56	9	797	0	122	73	0	4	4	70	0	59	13	724	0	116	73	0	6	4	70	0	0
+S531-010__loop_frame_condition__do_loops.adb_47_13_index_check___00.smt2	OK	35	16	13	1	map__ref	Array/('Int',)/('D', 'us_rep')	1	1	1	W1	44	56	2	29	16	7	14	3	187	0	29	21	0	1	4	18	0	16	7	175	0	27	21	0	3	4	18	0	0
+S531-010__loop_frame_condition__do_loops.adb_82_26_null_pointer_dereference___00.smt2	OK	35	16	13	1	map__ref	Array/('Int',)/('D', 'us_rep')	1	1	1	W1	44	62	28	51	35	9	32	5	422	0	77	37	0	4	4	37	0	35	9	374	0	73	37	0	6	4	37	0	0
+S702-024__record_attributes_in_allocators__test_constrained.adb_45_22_assert___00.smt2	OK	19	8	4	1	map__ref	Array/('Int',)/('D', 'us_rep')	1	1	1	W1	19	15	0	4	1	6	0	0	5	0	0	5	0	0	4	1	0	1	6	6	0	0	5	0	1	4	1	0	0
+SB07-003__crash__a-cfdlli.ads_610_49_database.adb_10_4_overflow_check___00.smt2	OK	40	19	0	0	NONE	NONE	1	1	0	W3	71	53	1	4	17	0	10	0	3	0	2	0	51	6	0	1	0	17	0	4	0	4	0	41	8	0	2	0	0
+tagged_stacks__stacks.adb_17_19_index_check___00.smt2	OK	31	13	0	0	NONE	NONE	1	1	0	W3	98	92	0	5	38	0	19	0	60	0	4	0	127	43	0	6	3	38	0	32	0	4	0	104	27	0	6	1	0
+tetris__tetris_flow.adb_59_63_index_check___00.smt2	OK	24	3	0	0	NONE	NONE	1	1	0	W3	92	106	0	5	1	0	0	0	7	0	0	0	0	0	0	0	0	1	0	7	0	0	0	0	0	0	0	0	0

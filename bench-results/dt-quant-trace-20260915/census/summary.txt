@@ -1,0 +1,111 @@
+shape-cores.tsv: shape=55 trace=134 joined=55
+shape-originals.tsv: shape=79 trace=134 joined=79
+
+verdict (n=134)
+  unknown                                                     128   95.5 %
+  unsat                                                         6    4.5 %
+
+DID MBQI's refutation loop run -- WHOLE population (n=134)
+  NO                                                          132   98.5 %
+  yes                                                           2    1.5 %
+
+mbqi_exit, distinct -- WHOLE population (n=134)
+  nested-binder-in-matrix+quantifier-below-top-level           44   32.8 %
+  quantifier-below-top-level                                   43   32.1 %
+  nested-binder-in-matrix                                      38   28.4 %
+  NONE                                                          5    3.7 %
+  multi-binder-prefix                                           2    1.5 %
+  refutation-loop                                               2    1.5 %
+
+OBSERVED decline wording (n=134)
+  NONE                                                        117   87.3 %
+  W1                                                            9    6.7 %
+  INEXACT                                                       8    6.0 %
+
+PREDICTED wording (dtshape.py) x OBSERVED (n=134)
+  NONE  NONE                                                   79   59.0 %
+  INEXACT  NONE                                                27   20.1 %
+  W1  NONE                                                     11    8.2 %
+  W1  W1                                                        9    6.7 %
+  INEXACT  INEXACT                                              8    6.0 %
+
+--- the 17 rows that DID print a datatype wording ---
+
+  mbqi_exit, distinct (AXEYUM_QPROBE) (n=17)
+  quantifier-below-top-level                                   10   58.8 %
+  nested-binder-in-matrix                                       4   23.5 %
+  NONE                                                          1    5.9 %
+  nested-binder-in-matrix+quantifier-below-top-level            1    5.9 %
+  refutation-loop                                               1    5.9 %
+
+  DID MBQI's refutation loop run at all (n=17)
+  NO                                                           16   94.1 %
+  yes                                                           1    5.9 %
+
+  message carries the "mbqi declined" prefix (n=17)
+  yes                                                          16   94.1 %
+  no                                                            1    5.9 %
+
+  bound_by on those rows (n=17)
+  q:mbqi                                                        7   41.2 %
+  q:mbqi-quick                                                  5   29.4 %
+  q:egraph                                                      3   17.6 %
+  q:eq-partition                                                1    5.9 %
+  q:skolem-qf                                                   1    5.9 %
+
+  CONTROL -- did the loop run on the rows with NO datatype wording (n=117)
+  NO                                                          116   99.1 %
+  yes                                                           1    0.9 %
+
+--- construct presence, let-RESOLVED, over all joined rows ---
+  r_constructor                present on   45 / 134   33.6 %
+  r_eq_dt                      present on   49 / 134   36.6 %
+  r_ite_dt                     present on    1 / 134    0.7 %
+  r_q_arraydt_binder           present on    7 / 134    5.2 %
+  r_q_dt_binder                present on   77 / 134   57.5 %
+  r_sel_over_dt_array          present on   20 / 134   14.9 %
+  r_selector                   present on   56 / 134   41.8 %
+  r_tester                     present on    0 / 134    0.0 %
+  r_uf_dt_arg                  present on   75 / 134   56.0 %
+  r_uf_dt_result               present on   82 / 134   61.2 %
+  r_uf_mentions_dt             present on   12 / 134    9.0 %
+
+--- classifier/binary disagreements: 38 of 134 ---
+  pred=W3    obs=NONE  AUFDTLIRA_20200306-Kanig_spark2014bench_adacore_u__communication.adb_41_32_overflow_check___00.s
+  pred=W3    obs=NONE  AUFDTLIRA_20200306-Kanig_spark2014bench_L502-031_spaces__natural_set.ads_16_19_postcondition___0
+  pred=W3    obs=NONE  AUFDTLIRA_20200306-Kanig_spark2014bench_OA20-032__refinement__patris.adb_121_63_index_check___00
+  pred=W3    obs=NONE  AUFDTLIRA_20200306-Kanig_spark2014bench_Q529-038__predicate__bounded_stacks.ads_18_20_integer_st
+  pred=W3    obs=NONE  AUFDTLIRA_20200306-Kanig_spark2014bench_R728-002__aggregates__pragmarc-b_strings.adb_79_22_range
+  pred=W3    obs=NONE  AUFDTLIRA_20200306-Kanig_spark2014bench_riposte__arrays__arrays.adb_161_16_index_check___00.smt2
+  pred=W1    obs=NONE  AUFDTLIRA_20200306-Kanig_spark2014bench_S117-008__pointer__formal_vectors.adb_146_8_use_formal_v
+  pred=W3    obs=NONE  AUFDTLIRA_20200306-Kanig_spark2014bench_S212-028__update__generic_ring_buffer.adb_78_13_tester.a
+  pred=W3    obs=NONE  AUFDTLIRA_20200306-Kanig_spark2014bench_SB07-003__crash__a-cfdlli.ads_610_49_database.adb_10_4_o
+  pred=W3    obs=NONE  AUFDTLIRA_20200306-Kanig_spark2014bench_tagged_stacks__stacks.adb_17_19_index_check___00.smt2.co
+  pred=W3    obs=NONE  adacore_u__communication.adb_41_32_overflow_check___00.smt2
+  pred=W3    obs=NONE  L502-031_spaces__natural_set.ads_16_19_postcondition___00.smt2
+  pred=W1    obs=NONE  O416-002__type_contracts__communications.ads_16_9_invariant_check_on_default_value___00.smt2
+  pred=W3    obs=NONE  O512-022__stacks__stacks.ads_84_58_index_check___00.smt2
+  pred=W3    obs=NONE  O512-022__vscomp2014_partition_rte__partition_refinement.adb_180_10_precondition6___00.smt2
+  pred=W3    obs=NONE  OA20-032__refinement__patris.adb_121_63_index_check___00.smt2
+  pred=W3    obs=NONE  P412-021__conc_discr_dyn__p.adb_6_19_range_check___00.smt2
+  pred=W3    obs=NONE  PA14-032__dic__bounded_strings.adb_8_19_length_check___00.smt2
+  pred=W3    obs=NONE  Q529-038__predicate__bounded_stacks.ads_18_20_integer_stacks.ads_4_1_postcondition___00.smt2
+  pred=W3    obs=NONE  Q607-015__quantifiers__search_ter_p.ads_33_25_inconsistent_pre___00.smt2
+  pred=W3    obs=NONE  QA23-042__ok_pointers__spark04.adb_22_10_null_pointer_dereference___00.smt2
+  pred=W3    obs=NONE  R728-002__aggregates__pragmarc-b_strings.adb_79_22_range_check___00.smt2
+  pred=W3    obs=NONE  riposte__arrays__arrays.adb_161_16_index_check___00.smt2
+  pred=W1    obs=NONE  riposte__arrays_of_records__arrays_of_records.adb_264_22_postcondition___00.smt2
+  pred=W3    obs=NONE  RM_Examples__stacks_1.ads_14_19_postcondition___00.smt2
+  pred=W3    obs=NONE  RM_MS__other_proof_types_and_functions__stack_functional_spec.ads_58_21_postcondition___00.smt2
+  pred=W1    obs=NONE  S117-008__pointer__formal_vectors.adb_101_33_use_formal_vectors.ads_10_4_loop_invariant_preserv_
+  pred=W1    obs=NONE  S117-008__pointer__formal_vectors.adb_118_8_use_formal_vectors.ads_10_4_predicate_check___00.smt
+  pred=W1    obs=NONE  S117-008__pointer__formal_vectors.adb_146_8_use_formal_vectors.ads_10_4_null_pointer_dereference
+  pred=W1    obs=NONE  S117-008__pointer__formal_vectors.adb_182_35_use_formal_vectors.ads_10_4_null_pointer_dereferenc
+  pred=W1    obs=NONE  S117-008__pointer__formal_vectors.adb_54_14_use_formal_vectors.ads_10_4_predicate_check___00.smt
+  pred=W3    obs=NONE  S212-028__update__generic_ring_buffer.adb_78_13_tester.adb_9_4_predicate_check___00.smt2
+  pred=W1    obs=NONE  S531-010__loop_frame_condition__do_loops.adb_131_19_index_check___00.smt2
+  pred=W1    obs=NONE  S531-010__loop_frame_condition__do_loops.adb_47_13_index_check___00.smt2
+  pred=W1    obs=NONE  S531-010__loop_frame_condition__do_loops.adb_82_26_null_pointer_dereference___00.smt2
+  pred=W3    obs=NONE  SB07-003__crash__a-cfdlli.ads_610_49_database.adb_10_4_overflow_check___00.smt2
+  pred=W3    obs=NONE  tagged_stacks__stacks.adb_17_19_index_check___00.smt2
+  pred=W3    obs=NONE  tetris__tetris_flow.adb_59_63_index_check___00.smt2

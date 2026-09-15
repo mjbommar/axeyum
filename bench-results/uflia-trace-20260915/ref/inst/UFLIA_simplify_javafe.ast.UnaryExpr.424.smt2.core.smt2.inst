@@ -1,0 +1,6 @@
+INSTANCE 0	(asField op_26_13 T_int)	RES_64_24_64_24	op_62_35
+INSTANCE 1	(asField op_26_13 T_int)	RES_64_24_64_24	?brokenObj_1_!233	op_62_35
+INSTANCE 2	?brokenObj_1_!233
+INSTANCE 3	(asField locOp_32_13 T_int)	RES_64_24_64_24	locOp_62_68
+INSTANCE 4	(asField locOp_32_13 T_int)	RES_64_24_64_24	?brokenObj!234	locOp_62_68
+INSTANCE 5	?brokenObj!234

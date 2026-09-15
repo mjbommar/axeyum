@@ -1,0 +1,36 @@
+shape=79 ax=134 ref=79 joined=79
+
+z3 engine attribution -- ALL joined rows (n=79)
+  GROUND                                                 39   49.4 %
+  UNDECIDED                                              24   30.4 %
+  EMATCHING                                              16   20.3 %
+
+our verdict x z3 attribution (n=79)
+  unknown  GROUND                                        38   48.1 %
+  unknown  UNDECIDED                                     24   30.4 %
+  unknown  EMATCHING                                     16   20.3 %
+  unsat  GROUND                                           1    1.3 %
+
+===== THE 4 ROWS WE REFUSE ON A DATATYPE CONSTRUCT =====
+
+  z3 attribution on exactly those rows (n=4)
+  UNDECIDED                                               2   50.0 %
+  EMATCHING                                               1   25.0 %
+  GROUND                                                  1   25.0 %
+
+  wording x z3 attribution (n=4)
+  INEXACT  EMATCHING                                      1   25.0 %
+  INEXACT  UNDECIDED                                      1   25.0 %
+  W1  GROUND                                              1   25.0 %
+  W1  UNDECIDED                                           1   25.0 %
+
+  CONVERTIBLE-BY-A-GROUND-CAPABILITY: 1 of 4
+  (z3 refutes these with smt.ematching=false smt.mbqi=false, so no
+   quantifier reasoning is needed and a ground datatype theory reaches them)
+    W1       z3_ctor_ax=332   z3_acc_ax=359   qi=103    P518-021__loop_frame_condition__do_loops.adb_112_22_assert___00.smt2
+
+  z3 datatype-axiom counters on those rows (theory_datatype.cpp:140 / :167)
+    constructor-ax         min=0      med=18     max=332    zero_on=2/4
+    accessor-ax            min=0      med=18     max=359    zero_on=2/4
+    quant-instantiations   min=0      med=26     max=103    zero_on=2/4
+    max-generation         min=0      med=1      max=3      zero_on=2/4

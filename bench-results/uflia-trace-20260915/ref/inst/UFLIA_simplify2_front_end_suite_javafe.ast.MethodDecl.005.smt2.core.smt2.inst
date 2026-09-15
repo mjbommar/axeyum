@@ -1,0 +1,24 @@
+INSTANCE 0	(typeof this)	(asChild T_javafe.ast.BinaryExpr T_javafe.ast.Expr)	(asChild T_javafe.ast.VarInit T_javafe.ast.ASTNode)
+INSTANCE 1	this	(asChild T_javafe.ast.BinaryExpr T_javafe.ast.Expr)
+INSTANCE 2	(asChild T_javafe.ast.BinaryExpr T_javafe.ast.Expr)	(asChild T_javafe.ast.VarInit T_javafe.ast.ASTNode)	T_java.lang.Object
+INSTANCE 3	(asChild T_javafe.ast.BinaryExpr T_javafe.ast.Expr)	(asChild T_javafe.ast.Expr T_javafe.ast.VarInit)	(asChild T_javafe.ast.VarInit T_javafe.ast.ASTNode)
+INSTANCE 4	(typeof this)	(asChild T_javafe.ast.UnaryExpr T_javafe.ast.Expr)	(asChild T_javafe.ast.VarInit T_javafe.ast.ASTNode)
+INSTANCE 5	this	(asChild T_javafe.ast.UnaryExpr T_javafe.ast.Expr)
+INSTANCE 6	(asChild T_javafe.ast.UnaryExpr T_javafe.ast.Expr)	(asChild T_javafe.ast.VarInit T_javafe.ast.ASTNode)	T_java.lang.Object
+INSTANCE 7	(asChild T_javafe.ast.UnaryExpr T_javafe.ast.Expr)	(asChild T_javafe.ast.Expr T_javafe.ast.VarInit)	(asChild T_javafe.ast.VarInit T_javafe.ast.ASTNode)
+INSTANCE 8	(typeof this)	(asChild T_javafe.ast.PrimitiveType T_javafe.ast.Type)	(asChild T_javafe.ast.Type T_javafe.ast.ASTNode)
+INSTANCE 9	(typeof this)	(asChild T_javafe.ast.Type T_javafe.ast.ASTNode)	(asChild T_javafe.ast.ASTNode T_java.lang.Object)
+INSTANCE 10	this	(asChild T_javafe.ast.PrimitiveType T_javafe.ast.Type)
+INSTANCE 11	(asChild T_javafe.ast.PrimitiveType T_javafe.ast.Type)	(asChild T_javafe.ast.Type T_javafe.ast.ASTNode)	T_java.lang.Object
+INSTANCE 12	(asChild T_javafe.ast.Type T_javafe.ast.ASTNode)	(asChild T_javafe.ast.ASTNode T_java.lang.Object)	T_java.lang.Object
+INSTANCE 13	(typeof this)	(asChild T_javafe.ast.LiteralExpr T_javafe.ast.Expr)	(asChild T_javafe.ast.VarInit T_javafe.ast.ASTNode)
+INSTANCE 14	(typeof this)	(asChild T_javafe.ast.VarInit T_javafe.ast.ASTNode)	(asChild T_javafe.ast.ASTNode T_java.lang.Object)
+INSTANCE 15	(typeof this)	(asChild T_javafe.ast.RoutineDecl T_javafe.ast.ASTNode)	(asChild T_javafe.ast.ASTNode T_java.lang.Object)
+INSTANCE 16	(typeof this)	(asChild T_javafe.ast.MethodDecl T_javafe.ast.RoutineDecl)	(asChild T_javafe.ast.RoutineDecl T_javafe.ast.ASTNode)
+INSTANCE 17	this	(asChild T_javafe.ast.MethodDecl T_javafe.ast.RoutineDecl)
+INSTANCE 18	(asChild T_javafe.ast.MethodDecl T_javafe.ast.RoutineDecl)	(asChild T_javafe.ast.RoutineDecl T_javafe.ast.ASTNode)	T_java.lang.Object
+INSTANCE 19	(asChild T_javafe.ast.RoutineDecl T_javafe.ast.ASTNode)	(asChild T_javafe.ast.ASTNode T_java.lang.Object)	T_java.lang.Object
+INSTANCE 20	this	(asChild T_javafe.ast.LiteralExpr T_javafe.ast.Expr)
+INSTANCE 21	(asChild T_javafe.ast.LiteralExpr T_javafe.ast.Expr)	(asChild T_javafe.ast.VarInit T_javafe.ast.ASTNode)	T_java.lang.Object
+INSTANCE 22	(asChild T_javafe.ast.VarInit T_javafe.ast.ASTNode)	(asChild T_javafe.ast.ASTNode T_java.lang.Object)	T_java.lang.Object
+INSTANCE 23	(asChild T_javafe.ast.LiteralExpr T_javafe.ast.Expr)	(asChild T_javafe.ast.Expr T_javafe.ast.VarInit)	(asChild T_javafe.ast.VarInit T_javafe.ast.ASTNode)

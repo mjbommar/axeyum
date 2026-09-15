@@ -1,0 +1,31 @@
+INSTANCE 0	Heap_	this	localinv_	?p_!11	localinv_	System.Object
+INSTANCE 1	AssignToRepField	System.Object
+INSTANCE 2	(store2 Heap_0_ this exposeVersion_ temp0_0)	?p_!11
+INSTANCE 3	Heap_	this	localinv_	this	inv_	System.Object
+INSTANCE 4	(store2 Heap_ this localinv_ System.Object)	this	exposeVersion_	this	inv_	temp0_0
+INSTANCE 5	Heap_	this	localinv_	?p_!11	inv_	System.Object
+INSTANCE 6	(store2 Heap_ this localinv_ System.Object)	this	exposeVersion_	?p_!11	inv_	temp0_0
+INSTANCE 7	(store2 Heap_0_ this exposeVersion_ temp0_0)	this	AssignToRepField.f	?p_!11	inv_	nullObject
+INSTANCE 8	(store2 Heap_ this localinv_ System.Object)	this	exposeVersion_	?p_!11	localinv_	temp0_0
+INSTANCE 9	(store2 Heap_0_ this exposeVersion_ temp0_0)	this	AssignToRepField.f	?p_!11	localinv_	nullObject
+INSTANCE 10	Heap_	?p_!11
+INSTANCE 11	Heap_	this	localinv_	?p_!11	ownerFrame_	System.Object
+INSTANCE 12	(store2 Heap_ this localinv_ System.Object)	this	exposeVersion_	?p_!11	ownerFrame_	temp0_0
+INSTANCE 13	(store2 Heap_0_ this exposeVersion_ temp0_0)	this	AssignToRepField.f	?p_!11	ownerFrame_	nullObject
+INSTANCE 14	(store2 Heap_0_ this exposeVersion_ temp0_0)	this	AssignToRepField.f	this	localinv_	nullObject
+INSTANCE 15	Heap_	this	localinv_	?o_!12	ownerFrame_	System.Object
+INSTANCE 16	(store2 Heap_ this localinv_ System.Object)	this	exposeVersion_	?o_!12	ownerFrame_	temp0_0
+INSTANCE 17	(store2 Heap_0_ this exposeVersion_ temp0_0)	this	AssignToRepField.f	?o_!12	ownerFrame_	nullObject
+INSTANCE 18	(store2 Heap_1_ this AssignToRepField.f nullObject)	this	localinv_	?o_!12	ownerFrame_	(typeof_ this)
+INSTANCE 19	Heap_	this	localinv_	?o_!12	ownerRef_	System.Object
+INSTANCE 20	(store2 Heap_ this localinv_ System.Object)	this	exposeVersion_	?o_!12	ownerRef_	temp0_0
+INSTANCE 21	(store2 Heap_0_ this exposeVersion_ temp0_0)	this	AssignToRepField.f	?o_!12	ownerRef_	nullObject
+INSTANCE 22	(store2 Heap_1_ this AssignToRepField.f nullObject)	this	localinv_	?o_!12	ownerRef_	(typeof_ this)
+INSTANCE 23	(store2 Heap_ this localinv_ System.Object)	this	exposeVersion_	this	localinv_	temp0_0
+INSTANCE 24	Heap_	this	localinv_	System.Object
+INSTANCE 25	(store2 Heap_0_ this exposeVersion_ temp0_0)	this	AssignToRepField.f	?p_!11	ownerRef_	nullObject
+INSTANCE 26	this	AssignToRepField
+INSTANCE 27	(store2 Heap_ this localinv_ System.Object)	this	exposeVersion_	?p_!11	ownerRef_	temp0_0
+INSTANCE 28	Heap_	this	localinv_	?p_!11	ownerRef_	System.Object
+INSTANCE 29	this
+INSTANCE 30	this	AssignToRepField

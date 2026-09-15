@@ -1,0 +1,26 @@
+population: 93 rows we do NOT decide  (malformed: 0)
+
+  z3 solver=6 (theory_lra, the QF_LRA default) decides   57/93
+  z3 solver=2 (theory_mi_arith, classic simplex) decides  56/93
+  cvc5 1.3.4                                    decides  36/93
+
+  decided by BOTH z3 arms                  53
+  decided ONLY by solver=6 (lar_solver)     4
+  decided ONLY by solver=2 (classic)        3
+  decided by SOME reference                60
+  **decided by NO reference at 24 s**      33
+     ^ not winnable at this budget by these references; counting it in
+       a 'gap' overstates what is reachable.
+
+  z3s6   {'sat': 23, 'timeout': 36, 'unsat': 34}
+  z3s2   {'sat': 22, 'timeout': 37, 'unsat': 34}
+  cvc5   {'none': 57, 'sat': 14, 'unsat': 22}
+
+  OUR bucket x decided by some reference
+  bucket                                n  ref decides  nobody
+  ------------------------------------------------------------
+  alloc-failure                        40           20      20
+  budget/other                         36           30       6
+  incomplete/incomplete                 7            4       3
+  not-applicable/unnamed                5            3       2
+  bound-no-decline                      5            3       2
