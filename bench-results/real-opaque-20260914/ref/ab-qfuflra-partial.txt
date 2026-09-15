@@ -1,0 +1,8 @@
+== QF_UFLRA PARTIAL secondary ==  rows=47  files=47
+  VERDICT   same=47
+  EXIT      same=47
+  NET (gains - losses - flips) = 0
+  EXIT REGRESSIONS (base ok -> lever not ok) = 0
+  denominators: undecided in base = 25/47, ok in base = 47/47
+
+  wall clock: off=609.3s on=608.1s ratio=1.00x

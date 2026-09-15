@@ -194,7 +194,7 @@ by mechanism before any measuring starts.
 | denominators | undecided in base **36/200**; `ok` in base **200/200** |
 | stability | **14/14 STABLE-GAIN**, three passes per arm, on the final binary |
 | authorities | `:status` **14/14 unsat**, z3 **14/14 unsat**, cvc5 **14/14 unsat**; **0 disagreements at a comparable denominator of 14/14 on each** — fourteen agreements, not fourteen no-opinions |
-| noise floor | same arm twice, whole division: **0 of 200** moved, 22 undecided in base |
+| noise floor | same arm twice, **whole division, both halves**: **0 of 200** moved, 22 undecided in base, 1.00x |
 | control `QF_LRA` | **0 of 200** moved, 0 exit regressions, 1.00x |
 
 14 of 36 undecided rows is **38.9 %**, Wilson 95 % **[24.8 %, 55.1 %]** (plain
@@ -316,7 +316,7 @@ arm reproducing after the merge; nothing else in the ladder is touched.
 | P1 | `Sat` exits closable, under 10 sites | **right** — 9 |
 | P2 | the integer soundness argument transfers; the difference is in the consumers | **right**, §2 |
 | P3 | fewer than 6 of the 6 witnesses convert | **WRONG** — 6 of 6, plus 8 more |
-| P4 | control 0; `QF_UFLRA` nonzero | control **right**; `QF_UFLRA` see §7 |
+| P4 | control 0; `QF_UFLRA` nonzero | control **right**; `QF_UFLRA` **not answered** — 47 of 200 rows, 0 moved, and §7 says why that is not a division result |
 | P5 | at least one LOSS in `AUFLIRA` | **WRONG** — 0 losses and 0 exit regressions |
 
 P3 and P5 are the useful ones to have got wrong, and they are wrong the same
@@ -327,15 +327,23 @@ so the instrument that caught it is the one R4 exists for.
 
 ## 7. Not measured here, and reported as "did not run"
 
-- **`QF_UFLRA` (the secondary) had not finished when this ADR was written.** It
-  is 200 pinned files on `s6` cores 2–3 and it is a secondary, not a control:
-  real UF applications are its defining feature, so it is expected to MOVE, and
-  a move there is a result rather than a regression. Its state is whatever
-  `bench-results/real-opaque-20260914/ab/qfuflra-*.tsv` holds; if the files are
-  absent or short of 100 rows each, the run did not finish and nothing about
-  that division is claimed.
-- **`control-executes.sh` over all 100 rows of `QF_LRA.a` had not finished.** The
-  20-row probe is what §4 quotes and it is labelled as 20.
+- **`QF_UFLRA` (the secondary) DID NOT FINISH.** 200 pinned files on `s6` cores
+  2–3; **47 of 200 rows** at the time of writing, snapshotted as
+  `ab/qfuflra-PARTIAL-*.tsv`. On those 47: **0 moved, 0 exit regressions, ratio
+  1.00x, 25 of 47 undecided in the base arm.**
+
+  Pre-registered **P4 predicted this division would move by a nonzero amount**,
+  because real UF applications are its defining feature. On the quarter measured
+  it did not, and the likely reason is worth writing down for whoever finishes
+  it: `QF_UFLRA` is **quantifier-free**, so the two rungs that took all 14
+  `AUFLIRA` gains — `q:mbqi-quick` and `q:bool-skeleton` — are not on its
+  ladder at all, and its own `uflra-online` route already handles real UF
+  applications without going through the refusing site. **47 of 200 is not a
+  division result and nothing here is claimed about `QF_UFLRA`**; the snapshot
+  exists so a later reader can re-summarise the finished TSVs rather than
+  inherit this number.
+- **`control-executes.sh` over all 100 rows of `QF_LRA.a` DID NOT FINISH.** The
+  20-row probe is what §4 quotes and it is labelled as 20, not extrapolated.
 - **No division outside `AUFLIRA`, `QF_LRA` and `QF_UFLRA` was measured.** The
   corpus rate of this capability is unknown and [ADR-2050]'s R1 forbids
   transferring a per-division number.

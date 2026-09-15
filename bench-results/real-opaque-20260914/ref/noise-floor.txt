@@ -1,8 +1,8 @@
-== NOISE FLOOR AUFLIRA.a (A/A) ==  rows=100  files=100
-  VERDICT   same=100
-  EXIT      same=100
+== NOISE FLOOR AUFLIRA both halves (A/A) ==  rows=200  files=200
+  VERDICT   same=200
+  EXIT      same=200
   NET (gains - losses - flips) = 0
   EXIT REGRESSIONS (base ok -> lever not ok) = 0
-  denominators: undecided in base = 13/100, ok in base = 100/100
+  denominators: undecided in base = 22/200, ok in base = 200/200
 
-  wall clock: off=287.1s on=286.2s ratio=1.00x
+  wall clock: off=522.5s on=521.6s ratio=1.00x
