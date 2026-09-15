@@ -370,10 +370,27 @@ loop never ran. The sentence up to and including the original message is
 match on that prefix and on the ADR-0022 sentences inside it; nothing branches
 on `UnknownReason::detail`, so it cannot move a verdict.
 
-Four tests and a four-guard mutation suite (`mbqi-loop-entry-note`). Measured on
-the first three guards: baseline green at 4 tests, **each guard killed exactly
-one test, three different ones**; `--check-anchors` reports `suites=141
-anchors=1069 stale=0`.
+Four tests and a four-guard mutation suite (`mbqi-loop-entry-note`): baseline
+green at 4 tests, and **each of the four guards killed exactly one test, four
+different ones** —
+
+| guard deleted | test that died |
+|---|---|
+| the flag is set where the loop is entered | `…_is_true_when_the_refutation_loop_runs` |
+| the flag is not set before the shape guards | `…_is_false_when_a_shape_guard_diverts` |
+| the correction sentence is non-empty | `…_is_a_suffix_and_leaves_the_census_prefix_intact` |
+| the note fires where the loop did NOT run | `…_fires_only_when_the_loop_did_not_run` |
+
+`--check-anchors` reports `suites=141 anchors=1069 stale=0`.
+
+The fourth guard exists because the first three all make the flag falser or the
+note louder; only it makes the flag unconditionally TRUE, which is the failure
+mode that would clear the correction off all 132 rows that need it. And what
+the table does **not** claim is stated in the suite itself: these mutations do
+not reach the dispatcher's end-to-end wiring, because driving the ladder into
+MBQI's `Err(Unsupported)` arm from a unit test means pinning a route the ladder
+is free to change. The wiring is one `format!` over `mbqi_loop_note(…)`; the
+selection it calls is what is pinned.
 
 ## Consequences
 
