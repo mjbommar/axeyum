@@ -1,0 +1,18 @@
+base=134 arm=134 compared=134
+
+VERDICT CHANGES: 0 of 134
+sat<->unsat FLIPS: 0
+
+verdict totals
+  base  {'unknown': 128, 'unsat': 6}
+  arm   {'unknown': 128, 'unsat': 6}
+
+NON-VACUITY, over the 17 datatype-wording rows
+  of those, carrying the "mbqi declined an unsupported fragment" prefix: 16
+  carry the correction, ARM  : 15 of 16
+  carry the correction, BASE : 0  (must be 0 -- the base binary predates it)
+  correction on the WRONG side of the loop flag: 0
+  rows where the loop DID run (must carry no note): 1
+  NON-VACUITY OK
+
+RESULT: IDENTICAL

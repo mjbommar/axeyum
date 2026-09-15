@@ -1,0 +1,11 @@
+files=2  files with a RECURSIVE datatype=1
+max datatype-field NESTING DEPTH per file:
+   depth 1          1
+   depth RECURSIVE  1
+the field sorts W1 (`register_datatype`) refuses, by sort:
+
+# POSITIVE CONTROL for the "0 of 134 files declares a RECURSIVE datatype"
+# negative in ADR-2114 section 2.  Inputs: repro/control-recursive.smt2 (a
+# recursive `lst`) and repro/ground.smt2 (a depth-1 record nest).  The
+# detector must separate them, and it does -- an empty result from a detector
+# nobody has shown to fire is indistinguishable from a broken detector.

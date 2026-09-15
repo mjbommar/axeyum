@@ -1,0 +1,44 @@
+shape=55 ax=134 ref=55 joined=55
+
+z3 engine attribution -- ALL joined rows (n=55)
+  GROUND                                                 44   80.0 %
+  EMATCHING                                              11   20.0 %
+
+our verdict x z3 attribution (n=55)
+  unknown  GROUND                                        40   72.7 %
+  unknown  EMATCHING                                     10   18.2 %
+  unsat  GROUND                                           4    7.3 %
+  unsat  EMATCHING                                        1    1.8 %
+
+===== THE 13 ROWS WE REFUSE ON A DATATYPE CONSTRUCT =====
+
+  z3 attribution on exactly those rows (n=13)
+  GROUND                                                 12   92.3 %
+  EMATCHING                                               1    7.7 %
+
+  wording x z3 attribution (n=13)
+  W1  GROUND                                              7   53.8 %
+  INEXACT  GROUND                                         5   38.5 %
+  INEXACT  EMATCHING                                      1    7.7 %
+
+  CONVERTIBLE-BY-A-GROUND-CAPABILITY: 12 of 13
+  (z3 refutes these with smt.ematching=false smt.mbqi=false, so no
+   quantifier reasoning is needed and a ground datatype theory reaches them)
+    INEXACT  z3_ctor_ax=9     z3_acc_ax=9     qi=4      AUFDTLIRA_20200306-Kanig_spark2014bench_O512-022__stacks__stacks.ads_8
+    INEXACT  z3_ctor_ax=34    z3_acc_ax=54    qi=3      AUFDTLIRA_20200306-Kanig_spark2014bench_O512-022__vscomp2014_partition
+    W1       z3_ctor_ax=332   z3_acc_ax=359   qi=19     AUFDTLIRA_20200306-Kanig_spark2014bench_P518-021__loop_frame_condition
+    INEXACT  z3_ctor_ax=11    z3_acc_ax=15    qi=0      AUFDTLIRA_20200306-Kanig_spark2014bench_PA14-032__dic__bounded_strings
+    INEXACT  z3_ctor_ax=18    z3_acc_ax=18    qi=1      AUFDTLIRA_20200306-Kanig_spark2014bench_Q930-002__itp__bounded_dynamic
+    INEXACT  z3_ctor_ax=6     z3_acc_ax=10    qi=7      AUFDTLIRA_20200306-Kanig_spark2014bench_RM_Examples__stacks_1.ads_14_1
+    W1       z3_ctor_ax=196   z3_acc_ax=203   qi=0      AUFDTLIRA_20200306-Kanig_spark2014bench_S117-008__pointer__formal_vect
+    W1       z3_ctor_ax=383   z3_acc_ax=398   qi=61     AUFDTLIRA_20200306-Kanig_spark2014bench_S117-008__pointer__formal_vect
+    W1       z3_ctor_ax=100   z3_acc_ax=103   qi=0      AUFDTLIRA_20200306-Kanig_spark2014bench_S117-008__pointer__formal_vect
+    W1       z3_ctor_ax=1900  z3_acc_ax=1952  qi=20     AUFDTLIRA_20200306-Kanig_spark2014bench_S531-010__loop_frame_condition
+    W1       z3_ctor_ax=503   z3_acc_ax=513   qi=3      AUFDTLIRA_20200306-Kanig_spark2014bench_S531-010__loop_frame_condition
+    W1       z3_ctor_ax=1450  z3_acc_ax=1488  qi=29     AUFDTLIRA_20200306-Kanig_spark2014bench_S531-010__loop_frame_condition
+
+  z3 datatype-axiom counters on those rows (theory_datatype.cpp:140 / :167)
+    constructor-ax         min=6      med=100    max=1900   zero_on=0/13
+    accessor-ax            min=9      med=103    max=1952   zero_on=0/13
+    quant-instantiations   min=0      med=4      max=61     zero_on=3/13
+    max-generation         min=0      med=1      max=10     zero_on=3/13

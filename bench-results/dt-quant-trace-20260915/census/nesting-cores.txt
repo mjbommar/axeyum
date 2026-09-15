@@ -1,0 +1,11 @@
+files=55  files with a RECURSIVE datatype=0
+max datatype-field NESTING DEPTH per file:
+   depth 0          6
+   depth 1          26
+   depth 2          8
+   depth 3          7
+   depth 4          5
+   depth 5          3
+the field sorts W1 (`register_datatype`) refuses, by sort:
+   ('Array', ('Int',), ('D', 'us_rep'))                                   46
+   ('Array', ('Int',), ('D', 'us_rep1'))                                  40
