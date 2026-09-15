@@ -705,6 +705,15 @@ fn route_attribution_report_lines(trace: &axeyum_solver::RouteTrace) -> Vec<Stri
     if trace.is_empty() {
         return vec!["; route unavailable: no attribution recorded".to_string()];
     }
+    // The `; partial ` marker is READ OFF THE TRACE, not applied from outside
+    // by whoever happens to know the query was killed (ADR-2101). The bytes are
+    // the same bytes the watchdog path printed before; the difference is that
+    // the completeness now lives in the JSON on the second line, where a
+    // consumer gets it without knowing the prefix convention exists. ADR-2075
+    // is what that convention cost: every census in this repository greps
+    // `^; route `, so the twelve files that printed this prefix matched nothing
+    // and were recorded as having no route line at all.
+    let marker = if trace.is_partial() { "partial " } else { "" };
     let decided = trace
         .decided_by()
         .map_or_else(|| "none".to_string(), |(_, a, _)| a.route.to_string());
@@ -717,12 +726,12 @@ fn route_attribution_report_lines(trace: &axeyum_solver::RouteTrace) -> Vec<Stri
         .map_or_else(|| "none".to_string(), |a| a.route.to_string());
     vec![
         format!(
-            "; route decided_by={decided} bound_by={bound} last={last} \
+            "; {marker}route decided_by={decided} bound_by={bound} last={last} \
              bound_ms={bound_ms} total_ms={} attempts={}",
             trace.total_elapsed().as_millis(),
             trace.attempts().len()
         ),
-        format!("; route-trail {}", trace.to_json_with_timing()),
+        format!("; {marker}route-trail {}", trace.to_json_with_timing()),
     ]
 }
 
@@ -1034,9 +1043,12 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
     }
     match board.sample::<RouteTrace>(instrument::ROUTE) {
         Some(route) if !route.value.is_empty() => {
-            for line in route_attribution_report_lines(&route.value) {
-                lines.push(partial_line(&line));
-            }
+            // Mark FIRST, render second. `marked_partial` captures the open
+            // segment and the boundary route into the trace, so both the prose
+            // prefix and the JSON's `"partial":true` come from one field
+            // instead of from two places that have to agree.
+            let reading = route.value.clone().marked_partial();
+            lines.extend(route_attribution_report_lines(&reading));
             // The segment no attempt accounts for, WITHOUT which the partial
             // route line is quietly misleading. `bound_by` maximises over
             // recorded attempts, and an attempt is recorded when it finishes —
@@ -1046,8 +1058,11 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
             // bound_ms=20 total_ms=26` on a 25,241 ms run. Every field correct,
             // every conclusion wrong. This line carries the missing time and
             // says outright when `bound_by` is not the answer.
-            let open = route.value.open_segment();
-            let attributed = route.value.total_elapsed();
+            let reading_detail = reading
+                .partial_reading()
+                .expect("marked_partial always yields a reading");
+            let open = reading_detail.open_segment;
+            let attributed = reading.total_elapsed();
             let verdict = if open > attributed {
                 "bound_by is NOT the answer: most of the budget is in the open segment"
             } else {
@@ -1056,7 +1071,7 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
             lines.push(format!(
                 "; partial route-open ms={} after={} attributed_ms={} note: {verdict}",
                 open.as_millis(),
-                route.value.last_recorded_route().unwrap_or("none"),
+                reading_detail.in_flight_after.unwrap_or("none"),
                 attributed.as_millis(),
             ));
             note("route", route.sampled);
@@ -2340,6 +2355,72 @@ mod tests {
                 .iter()
                 .any(|l| l.starts_with("; lia unavailable")),
             "got: {trace_lines:?}"
+        );
+    }
+
+    /// The completeness of the two route lines is READ OFF THE TRACE, and the
+    /// JSON carries it (ADR-2101).
+    ///
+    /// # Why this test and not the prefix test next door
+    ///
+    /// `partial_line_only_replaces_the_leading_token` pins the PREFIX, which
+    /// is the half ADR-2075 showed no consumer reads. The assertion that
+    /// matters here is the other half: `"partial":true` inside the trail JSON,
+    /// on the same line, so a consumer that never learned the prefix
+    /// convention still cannot mistake a mid-search reading for a total. Both
+    /// are asserted together because the whole point is that they agree by
+    /// construction rather than by two functions remembering to.
+    #[test]
+    fn a_partial_route_reading_says_so_in_the_prefix_and_in_the_json() {
+        let mut trace = RouteTrace::new();
+        trace.record_declined("dl-online", axeyum_solver::DeclineReason::NotApplicable);
+        let board = LiveInstruments::new();
+        board.publish(instrument::ROUTE, trace, Sampled::InFlight);
+
+        let lines = watchdog_trace_lines(true, &board, "watchdog fired");
+        let route_line = lines
+            .iter()
+            .find(|l| l.starts_with("; partial route "))
+            .unwrap_or_else(|| panic!("no partial route line in {lines:?}"));
+        assert!(
+            route_line.contains("bound_by=dl-online"),
+            "got: {route_line}"
+        );
+        let trail = lines
+            .iter()
+            .find(|l| l.starts_with("; partial route-trail "))
+            .unwrap_or_else(|| panic!("no partial route-trail line in {lines:?}"));
+        assert!(
+            trail.contains("\"partial\":true"),
+            "the trail JSON must carry the completeness, not only the prefix: {trail}"
+        );
+        assert!(
+            trail.contains("\"in_flight_after\":\"dl-online\""),
+            "the trail JSON must name the boundary the open segment started at: {trail}"
+        );
+        // …and the open segment is in the JSON too, so the `route-open` prose
+        // line is a rendering and not the only place the number exists.
+        assert!(trail.contains("\"open_segment_ns\":"), "got: {trail}");
+    }
+
+    /// The other side of the same coin, so the assertion above is not passing
+    /// because the renderer marks EVERYTHING partial. A completed trace takes
+    /// the un-prefixed form and says `"partial":false`.
+    #[test]
+    fn a_completed_route_reading_takes_the_unprefixed_form() {
+        let mut trace = RouteTrace::new();
+        trace.record_decided("qf-bv", axeyum_solver::Verdict::Unsat);
+        let lines = route_attribution_report_lines(&trace);
+        assert_eq!(lines.len(), 2, "got: {lines:?}");
+        assert!(
+            lines[0].starts_with("; route decided_by=qf-bv "),
+            "got: {}",
+            lines[0]
+        );
+        assert!(
+            lines[1].starts_with("; route-trail {\"schema_version\":2,\"partial\":false,"),
+            "got: {}",
+            lines[1]
         );
     }
 

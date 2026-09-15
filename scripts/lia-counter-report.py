@@ -16,8 +16,10 @@ from __future__ import annotations
 
 import csv
 import os
-
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import route_trace_reader as rtr  # noqa: E402
 
 GROUPS = ("offline", "theory", "propagation")
 
@@ -34,15 +36,28 @@ def parse_lia_line(line: str) -> dict[str, str] | None:
     return out
 
 
-def parse_route_line(line: str) -> dict[str, str] | None:
-    if not line.startswith("; route "):
+def route_fields(log_path: str) -> dict[str, str] | None:
+    """The route attribution for one log, off the shared reader.
+
+    This used to read `; route ` with a `startswith`, which is the ADR-2075
+    defect verbatim: the watchdog path prints `; partial route `, so every
+    file killed mid-search contributed `None` here and the
+    `bound_by on undecided files` histogram below silently dropped exactly the
+    files it exists to describe. The reader takes the JSON and reports the
+    completeness as a field.
+    """
+    try:
+        trail = rtr.read_file(log_path)
+    except rtr.RouteTraceError:
         return None
-    out: dict[str, str] = {}
-    for token in line[len("; route "):].strip().split():
-        if "=" in token:
-            key, value = token.split("=", 1)
-            out[key] = value
-    return out
+    return {
+        "decided_by": trail.decided_by or "none",
+        "bound_by": trail.bound_by or "none",
+        "last": trail.last or "none",
+        "attempts": str(trail.attempt_count),
+        "total_ms": "" if trail.total_elapsed_ms is None else str(trail.total_elapsed_ms),
+        "partial": "yes" if trail.partial else "no",
+    }
 
 
 def load(sweep_dir: str) -> list[dict]:
@@ -64,9 +79,7 @@ def load(sweep_dir: str) -> list[dict]:
                         lia = parse_lia_line(line)
                         if lia is not None:
                             record["lia"] = lia
-                        route = parse_route_line(line)
-                        if route is not None:
-                            record["route"] = route
+                record["route"] = route_fields(log)
             rows.append(record)
     return rows
 

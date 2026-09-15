@@ -2793,6 +2793,59 @@ def run_demo() -> int:
     return 0
 
 
+# --------------------------------------------------------------------------
+# `route-trace-completeness` (ADR-2101) — the route-label vocabulary and the
+# `partial` field.  Every census in this repository now reads these two
+# through `scripts/route_trace_reader.py`, so a guard here that cannot fail
+# makes the whole instrument unfalsifiable rather than merely untested — which
+# is the exact position ADR-2075 found the prose prefix in.
+#
+# Each mutation makes ONE PRODUCER emit the WRONG VARIANT and must kill exactly
+# one named test.  They are deliberately self-consistent mutations (the wire
+# string is changed at its single definition, so `as_str`/`from_wire`/`ALL`
+# still agree with each other) — the whole point is that a test deriving its
+# population from the authority cannot notice, and only a test pinning the
+# EXTERNAL contract can.
+# --------------------------------------------------------------------------
+
+SUITES["route-trace-completeness"] = (
+    "crates/axeyum-solver/src/route_trace.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "route_trace"),
+        "route-trace-completeness",
+    ),
+    [
+        (
+            # Kills `every_constant_keeps_the_exact_bytes_it_had_before_the_enum`
+            # and nothing else: the round-trip and coverage tests derive from
+            # the enum, so they stay green on a self-consistent rename. That is
+            # precisely why the byte pin has to exist separately.
+            "a front-door label's wire bytes move",
+            '    FdParse => "fd:parse",',
+            '    FdParse => "fd:parse ",',
+        ),
+        (
+            # Kills `a_dispatch_rung_label_is_deliberately_not_a_route`, the
+            # positive control on the negative answer. Without it, `from_wire`
+            # could answer `None` for everything and the suite would not care.
+            "the probe label stops resolving",
+            '    Probe => "probe",',
+            '    Probe => "probe-x",',
+        ),
+        (
+            # Kills `a_partial_reading_renders_its_boundary_and_its_open_segment`.
+            # The producer still marks the reading partial, still reports an
+            # open segment, and still renders valid JSON -- it just forgets
+            # WHERE the open segment started, which is the field ADR-2075 says
+            # a partial reading is worthless without.
+            "a partial reading forgets the boundary it opened at",
+            "            in_flight_after: self.last_recorded_route(),",
+            "            in_flight_after: None,",
+        ),
+    ],
+)
+
+
 def check_anchors() -> int:
     """Every registered anchor still matches its subject exactly once.
 

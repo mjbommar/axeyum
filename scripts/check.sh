@@ -564,6 +564,15 @@ step credit-transaction python3 scripts/check-credit-transaction.py
 # kill EXACTLY its own designated canary from a disjoint set of nine.
 step credit-transaction-tests python3 scripts/tests/test-credit-transaction.py
 step credit-transaction-mutations bash scripts/tests/test-credit-transaction-mutations.sh
+# ADR-2101: the ONE reader every route census now goes through. Registered here
+# because a checker no gate runs rots -- three checkers were found red on main
+# in one week, each registered in exactly one place nobody ran. 12 control
+# tests, exit status the finding, three of them NEGATIVE controls (a file with
+# no trail refused by name, an explicit `route unavailable` kept distinct from
+# it, an unknown schema refused rather than guessed) and one a FRESHNESS
+# control that reads the Rust renderer's own pinned literals, so a fixture
+# that drifts from `route_trace.rs` fails loudly instead of testing itself.
+step route-trace-reader python3 scripts/tests/test-route-trace-reader.py
 # ADR-0790: 15 of the identity classes above have BOTH members registered as
 # ledger facts -- 15 propositions counted as 2,121 proved facts twice. Facts
 # are never deleted (ADR-0542); one member of each pair carries a new

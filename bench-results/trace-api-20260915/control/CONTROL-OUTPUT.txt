@@ -1,0 +1,26 @@
+== running ==
+  killed: rc=0 verdict=unknown
+  finishes: rc=0 verdict=unsat
+
+== the two route-trail lines, verbatim (first 240 bytes) ==
+  killed: ; partial route-trail {"schema_version":2,"partial":true,"in_flight_after":"q:uf-fmf-probe","open_segment_ns":1274130239,"attempts":[{"route":"fd:parse","outcome":"probe","detail":"string_bound=12","elapsed_ns":407250637},{"route":"q:ground
+  finishes: ; route-trail {"schema_version":2,"partial":false,"attempts":[{"route":"fd:parse","outcome":"probe","detail":"string_bound=12","elapsed_ns":275353},{"route":"probe","outcome":"probe","detail":"fragment {bv}","elapsed_ns":31730},{"route":"dl
+
+== the reader ==
+file	partial	partial_source	schema	decided_by	verdict	bound_by	bound_is_answer	last	attempts	total_ms	in_flight_after	open_segment_ms
+/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-a788dc35ca31d28b8/bench-results/trace-api-20260915/control/killed.log	yes	field	2	none	none	q:forall-exists-witness	yes	q:uf-fmf-probe	6	5725	q:uf-fmf-probe	1274
+/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-a788dc35ca31d28b8/bench-results/trace-api-20260915/control/finishes.log	no	field	2	qf-bv	unsat	dl-online	yes	qf-bv	4	1		
+
+== the aggregate, both directions ==
+  [OK  ] killed run is PARTIAL (partial=True)
+  [OK  ] …and it came from the FIELD, not the prefix (source=field)
+  [OK  ] …schema 2
+  [OK  ] …and it still names a bound_by the old `^; route ` grep could not see: q:forall-exists-witness
+  [OK  ] …with the boundary and the open segment: after=q:uf-fmf-probe open_ms=1274
+  [OK  ] completed run is NOT partial (partial=False)
+  [OK  ] …and it has a decider: qf-bv -> unsat
+  [OK  ] the aggregate REFUSED the mix: 1 of the trails are PARTIAL readings and cannot be summed as totals: /home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-a788dc35ca31d28b8/bench-results/trace-api-20260915/control/killed.log. Pass include_partial=True if that is what you mean.
+  [OK  ] …and included it when told: {'none': 1, 'qf-bv': 1}
+  [OK  ] …while the complete half alone needs no permission: {'qf-bv': 1}
+
+PARTIAL POSITIVE CONTROL: PASSED
