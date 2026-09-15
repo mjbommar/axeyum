@@ -1,0 +1,22 @@
+pid=209318 worker_tid=209331 file=UFNIA/2019-Zohar-ic/full/int_check_bvsgt_bvadd_ltr_inv_r.smt2
+PROFILED /home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-a567f41a664e53536/bench-results/silent-hang-20260915/prof/fp-zohar rc=0
+### file: UFNIA/2019-Zohar-ic/full/int_check_bvsgt_bvadd_ltr_inv_r.smt2
+### rc=0  (R7: exit status is its own channel)
+### leaf self-cost
+    18.67%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_ir::eval::eval_with_memo::<rustc_hash::FxBuildHasher>
+     5.84%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_ir::eval::apply
+     5.17%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <core::iter::adapters::map::Map<core::slice::iter::Iter<axeyum_ir::term::TermId>, axeyum_ir::eval::eval_with_memo<rustc_hash::FxBuildHasher>::{closure#0}> as core::iter::traits::iterator::Iterator>::fold::<(), core::iter::traits::iterator::Iterator::for_each::call<axeyum_ir::value::Value, <alloc::vec::Vec<axeyum_ir::value::Value>>::extend_trusted<core::iter::adapters::map::Map<core::slice::iter::Iter<axeyum_ir::term::TermId>, axeyum_ir::eval::eval_with_memo<rustc_hash::FxBuildHasher>::{closure#0}>>::{closure#0}>::{closure#0}>
+     4.68%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <hashbrown::raw::RawTable<(axeyum_ir::term::SymbolId, axeyum_ir::value::Value)>>::reserve_rehash::<hashbrown::map::make_hasher<axeyum_ir::term::SymbolId, axeyum_ir::value::Value, rustc_hash::FxBuildHasher>::{closure#0}>
+     4.32%  smtcomp_cli-fp  libc.so.6         [.] _int_malloc
+     4.05%  smtcomp_cli-fp  libc.so.6         [.] __memmove_avx_unaligned_erms
+     3.77%  smtcomp_cli-fp  libc.so.6         [.] __libc_malloc2
+     3.63%  smtcomp_cli-fp  libc.so.6         [.] _int_free_chunk
+     3.00%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <hashbrown::map::HashMap<axeyum_ir::term::TermId, axeyum_ir::value::Value, rustc_hash::FxBuildHasher>>::insert
+     2.57%  smtcomp_cli-fp  libc.so.6         [.] cfree@GLIBC_2.2.5
+     2.35%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <alloc::vec::Vec<axeyum_ir::value::Value> as alloc::vec::spec_from_iter::SpecFromIter<axeyum_ir::value::Value, core::iter::adapters::map::Map<core::slice::iter::Iter<axeyum_ir::term::TermId>, axeyum_ir::eval::eval_with_memo<rustc_hash::FxBuildHasher>::{closure#0}>>>::from_iter
+     2.29%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <axeyum_ir::value::Value as core::clone::Clone>::clone
+### caller chains (folded)
+    18.67%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_ir::eval::eval_with_memo::<rustc_hash::FxBuildHasher>
+     5.84%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_ir::eval::apply
+     5.17%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <core::iter::adapters::map::Map<core::slice::iter::Iter<axeyum_ir::term::TermId>, axeyum_ir::eval::eval_with_memo<rustc_hash::FxBuildHasher>::{closure#0}> as core::iter::traits::iterator::Iterator>::fold::<(), core::iter::traits::iterator::Iterator::for_each::call<axeyum_ir::value::Value, <alloc::vec::Vec<axeyum_ir::value::Value>>::extend_trusted<core::iter::adapters::map::Map<core::slice::iter::Iter<axeyum_ir::term::TermId>, axeyum_ir::eval::eval_with_memo<rustc_hash::FxBuildHasher>::{closure#0}>>::{closure#0}>::{closure#0}>
+     4.68%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <hashbrown::raw::RawTable<(axeyum_ir::term::SymbolId, axeyum_ir::value::Value)>>::reserve_rehash::<hashbrown::map::make_hasher<axeyum_ir::term::SymbolId, axeyum_ir::value::Value, rustc_hash::FxBuildHasher>::{closure#0}>

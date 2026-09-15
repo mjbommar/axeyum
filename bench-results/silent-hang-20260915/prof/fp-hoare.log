@@ -1,0 +1,22 @@
+pid=209317 worker_tid=209332 file=UFNIA/sledgehammer/Hoare/z3.850818.smt2
+PROFILED /home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-a567f41a664e53536/bench-results/silent-hang-20260915/prof/fp-hoare rc=0
+### file: UFNIA/sledgehammer/Hoare/z3.850818.smt2
+### rc=0  (R7: exit status is its own channel)
+### leaf self-cost
+    16.71%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_solver::sat_bv_backend::handle_sat_result
+     8.53%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_egraph::check_congruence
+     7.81%  smtcomp_cli-fp  libc.so.6         [.] __memmove_avx_unaligned_erms
+     6.68%  smtcomp_cli-fp  libc.so.6         [.] __libc_malloc2
+     5.57%  smtcomp_cli-fp  libc.so.6         [.] _int_free_chunk
+     4.32%  smtcomp_cli-fp  libc.so.6         [.] _int_malloc
+     3.54%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <hashbrown::map::HashMap<axeyum_ir::term::TermNode, axeyum_ir::term::TermId, rustc_hash::FxBuildHasher> as core::clone::Clone>::clone
+     3.52%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <axeyum_cnf::proof_sat::Cdcl<&mut axeyum_cnf::drat::VecProofSink>>::solve
+     2.72%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_solver::uflia_online::check_qf_uflia_boolean_enumerative
+     2.57%  smtcomp_cli-fp  libc.so.6         [.] _int_free_merge_chunk
+     2.17%  smtcomp_cli-fp  [unknown]         [k] 0xffffffff8ba2c90a
+     1.73%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <hashbrown::raw::RawTable<(axeyum_ir::term::TermNode, axeyum_ir::term::TermId)> as core::ops::drop::Drop>::drop
+### caller chains (folded)
+    16.71%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_solver::sat_bv_backend::handle_sat_result
+     8.53%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_egraph::check_congruence
+     7.81%  smtcomp_cli-fp  libc.so.6         [.] __memmove_avx_unaligned_erms
+     6.68%  smtcomp_cli-fp  libc.so.6         [.] __libc_malloc2

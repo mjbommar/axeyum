@@ -1,0 +1,15 @@
+### file: UFNIA/spec_sharp/test14-DafnyAst.ssc.30.Microsoft.Dafny.ClassType.Boogie.ContractConsistencyCheck.ToString.smt2
+### rc=0  (R7: exit status is its own channel)
+### perf samples: 0  -- ZERO means THE PROFILER FAILED, not that nothing ran
+### leaf self-cost
+    54.29%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_rewrite::quantifiers::instantiate_with_triggers
+    19.50%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&axeyum_ir::term::SymbolId>
+     6.95%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <std::hash::random::DefaultHasher as core::hash::Hasher>::write
+     3.02%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <axeyum_ir::term::Op as core::cmp::PartialEq>::eq
+     2.71%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <hashbrown::raw::RawTable<(axeyum_ir::term::SymbolId, axeyum_ir::value::Value)> as core::clone::Clone>::clone
+     1.13%  smtcomp_cli-fp  smtcomp_cli-fp    [.] core::ptr::drop_glue::<axeyum_ir::value::Value>
+### caller chains (folded)
+    54.29%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_rewrite::quantifiers::instantiate_with_triggers
+    19.50%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&axeyum_ir::term::SymbolId>
+     6.95%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <std::hash::random::DefaultHasher as core::hash::Hasher>::write
+     3.02%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <axeyum_ir::term::Op as core::cmp::PartialEq>::eq

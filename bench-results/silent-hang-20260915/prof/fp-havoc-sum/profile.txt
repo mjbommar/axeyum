@@ -1,0 +1,10 @@
+### file: UFNIA/vcc-havoc/havoc-bench_sum.1.bar.smt2
+### rc=0  (R7: exit status is its own channel)
+### leaf self-cost
+    53.18%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_solver::dpll_lia::simple_int_literal_bounds
+    25.31%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_solver::dpll_lia::simple_int_bounds_for_order
+    17.49%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <axeyum_solver::dpll_lia::IncrementalArithDpll>::refresh_initial_lemmas
+### caller chains (folded)
+    53.18%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_solver::dpll_lia::simple_int_literal_bounds
+    25.31%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_solver::dpll_lia::simple_int_bounds_for_order
+    17.49%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <axeyum_solver::dpll_lia::IncrementalArithDpll>::refresh_initial_lemmas

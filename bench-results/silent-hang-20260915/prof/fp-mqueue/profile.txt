@@ -1,0 +1,26 @@
+### file: UFNIA/lahiri-cav09-storm-queries/mqueue_example_2_2_2_4.smt2
+### rc=0  (R7: exit status is its own channel)
+### perf samples: 18K of event 'cpu_core/cycles/P'  -- ZERO means THE PROFILER FAILED, not that nothing ran
+### leaf self-cost
+    22.57%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_solver::euf_egraph::collect_eq_atoms
+    13.03%  smtcomp_cli-fp  libc.so.6         [.] _int_free_chunk
+    10.43%  smtcomp_cli-fp  libc.so.6         [.] __libc_malloc2
+     8.11%  smtcomp_cli-fp  libc.so.6         [.] _int_malloc
+     4.82%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&axeyum_lean_kernel::expr::ExprId>
+     4.65%  smtcomp_cli-fp  libc.so.6         [.] cfree@GLIBC_2.2.5
+     4.20%  smtcomp_cli-fp  libc.so.6         [.] _int_free_merge_chunk
+     4.15%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <hashbrown::map::HashMap<axeyum_ir::term::TermId, (), std::hash::random::RandomState>>::insert
+     3.63%  smtcomp_cli-fp  libc.so.6         [.] malloc
+     2.84%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <core::hash::sip::Hasher<core::hash::sip::Sip13Rounds> as core::hash::Hasher>::write
+     2.59%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <axeyum_egraph::EGraph>::equal
+     2.25%  smtcomp_cli-fp  libc.so.6         [.] __memmove_avx_unaligned_erms
+### caller chains (folded)
+    22.57%  smtcomp_cli-fp  smtcomp_cli-fp    [.] axeyum_solver::euf_egraph::collect_eq_atoms
+    13.03%  smtcomp_cli-fp  libc.so.6         [.] _int_free_chunk
+    10.43%  smtcomp_cli-fp  libc.so.6         [.] __libc_malloc2
+     8.11%  smtcomp_cli-fp  libc.so.6         [.] _int_malloc
+     4.82%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <std::hash::random::RandomState as core::hash::BuildHasher>::hash_one::<&axeyum_lean_kernel::expr::ExprId>
+     4.65%  smtcomp_cli-fp  libc.so.6         [.] cfree@GLIBC_2.2.5
+     4.20%  smtcomp_cli-fp  libc.so.6         [.] _int_free_merge_chunk
+     4.15%  smtcomp_cli-fp  smtcomp_cli-fp    [.] <hashbrown::map::HashMap<axeyum_ir::term::TermId, (), std::hash::random::RandomState>>::insert
+     3.63%  smtcomp_cli-fp  libc.so.6         [.] malloc
