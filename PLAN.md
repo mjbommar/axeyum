@@ -12700,7 +12700,10 @@ per-universal probe runs, **444 of 500 universals admit nothing all run**, the
 loop makes **4.3 M joins** and admits **37,414** instances. The split that
 matters — `silent-split.py`, built here because no aggregate count can make it —
 is **NEVER-MATCHED 0 of 478** and **ALL-REJECTED 429 of 478**, with **100.0 % of
-2,139,815 rejections a single reason, `rej_nocontext`**: a universal nested under
+2,139,815 rejections a single reason, `rej_nocontext`**. And the terms z3
+substitutes are already ours: of the 741 GROUND arguments in z3's own proofs
+across those cores, **728 (98.2 %) are in our accumulated ground set**. We build
+them, we match them, and we throw the instances away — a universal nested under
 a disjunction, compiled and matched, every tuple discarded because
 `A ∨ (∀y. B(y))` does not entail `B(t)` and no positive-replacement context
 exists for it. **UFLIA has ZERO e-matching fixpoint give-ups** — the brief's "12

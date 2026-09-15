@@ -157,7 +157,15 @@ regime, reached in seconds.
 
 Three situations produce `admitted=0` and have **opposite** remedies. Counting
 silent universals cannot separate them; `silent-split.py` does, from the
-per-universal probe rows, over the 19 shaped cores:
+per-universal probe rows.
+
+**Its denominator is 478 universals over 18 cores, not §2's 500 over 19, and
+the difference is not a discrepancy to reconcile away.** This is a SEPARATE run
+-- the split needs `AXEYUM_QPROBE_CENSUS=1` on top of `AXEYUM_QPROBE=1`, which
+costs a hash lookup per pool term per round -- and which cores reach the probe
+block at all is load-dependent, so one core that printed in §2 did not print
+here. The shares below are over the rows this pass actually shaped, and §2's are
+over the rows that one shaped; neither is a subset claim about the other.
 
 | class | n | share |
 |---|---:|---:|
@@ -205,7 +213,22 @@ The brief asks for *"the instance z3 needed that we never produced -- name it."*
 ground set at the loop's exit -- and asks, for every term `proof-instances.py`
 pulled out of z3's own `quant-inst` rules, whether we ever built it.
 
-<!-- MEMBERSHIP-RESULT -->
+Over all 19 shaped cores, 0 of which failed to produce a dump
+(`ref/membership.txt`):
+
+| | n | share |
+|---|---:|---:|
+| **PRESENT** — we built it | **728** | **81.1 %** |
+| **ABSENT** — we did not | **13** | **1.4 %** |
+| `NOT-GROUND` — still mentions a z3 bound variable, so no solver's ground set holds it | 157 | 17.5 % |
+| total instance arguments | 898 | |
+
+**Of the terms that are ground at all, we had built 728 of 741 — 98.2 %.** The
+13 we had not are compounds z3 built by rewriting, and they are worth naming
+rather than counting: `(+ 1 tmp6_old_count_238.13)`,
+`(select2 (store2 (store2 Heap_0_ this exposeVersion_ temp0_0) …) …)`,
+`(typeof (cast RES_941.1_0_942.35_942.35 T_javafe.ast.MethodDecl))`. Ten of the
+13 are on one core.
 
 This separates the two situations that produce identical `unknown`s and need
 opposite fixes: *we never build it* (no cap, budget or ranking can reach it) and
