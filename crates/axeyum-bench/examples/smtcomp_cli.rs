@@ -386,7 +386,9 @@ fn features_trace_line(trace_mode: bool) -> Option<String> {
     if !trace_mode {
         return None;
     }
-    features_line_from(axeyum_solver::last_query_constructs())
+    Some(features_line_from(
+        axeyum_solver::last_query_constructs().as_deref(),
+    ))
 }
 
 /// [`features_trace_line`]'s rendering, without the global read.
@@ -395,11 +397,8 @@ fn features_trace_line(trace_mode: bool) -> Option<String> {
 /// that does not have to dispatch a query -- the reading is a process-global
 /// and a test that set it would be order-dependent against every other test in
 /// this binary.
-fn features_line_from(classes: Option<String>) -> Option<String> {
-    Some(format!(
-        "; features {}",
-        classes.as_deref().unwrap_or(FEATURES_NOT_DISPATCHED)
-    ))
+fn features_line_from(classes: Option<&str>) -> String {
+    format!("; features {}", classes.unwrap_or(FEATURES_NOT_DISPATCHED))
 }
 
 /// What the `; features` line says when nothing reached the quantifier-free
@@ -2239,10 +2238,7 @@ mod tests {
 
     #[test]
     fn the_features_line_carries_the_prefix_the_ledger_anchors_on() {
-        assert_eq!(
-            features_line_from(Some("Int|Real".to_owned())),
-            Some("; features Int|Real".to_owned())
-        );
+        assert_eq!(features_line_from(Some("Int|Real")), "; features Int|Real");
     }
 
     #[test]
@@ -2250,10 +2246,7 @@ mod tests {
         // `none` and NO LINE are different answers: no line means this binary
         // predates the instrument. Printing nothing for the empty set would
         // make a pure-Boolean query indistinguishable from a 2026-09-14 build.
-        assert_eq!(
-            features_line_from(Some("none".to_owned())),
-            Some("; features none".to_owned())
-        );
+        assert_eq!(features_line_from(Some("none")), "; features none");
     }
 
     #[test]
@@ -2261,16 +2254,13 @@ mod tests {
         // A missing line means the BINARY predates the instrument. A query that
         // never reached the quantifier-free ladder is a different finding, and
         // ADR-2100 measured it at 482 of 643 undecided Tier 1 rows.
-        assert_eq!(
-            features_line_from(None),
-            Some("; features not-dispatched".to_owned())
-        );
+        assert_eq!(features_line_from(None), "; features not-dispatched");
     }
 
     #[test]
     fn the_three_features_answers_are_all_distinct() {
-        let dispatched = features_line_from(Some("Int".to_owned()));
-        let empty_set = features_line_from(Some("none".to_owned()));
+        let dispatched = features_line_from(Some("Int"));
+        let empty_set = features_line_from(Some("none"));
         let never_ran = features_line_from(None);
         assert_ne!(dispatched, empty_set);
         assert_ne!(empty_set, never_ran);
