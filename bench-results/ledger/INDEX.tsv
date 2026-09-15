@@ -13,3 +13,4 @@ t1-UF-db31113fa	t1-UF-db31113fa.tsv	2	2026-09-15T15:56:46Z	ledger-structure-2026
 t1-UFDTLIRA-db31113fa	t1-UFDTLIRA-db31113fa.tsv	2	2026-09-15T15:56:46Z	ledger-structure-20260915 Phase-3-sizing T1 sweep, db31113fa, 3 hosts x 4 core pairs, 24s/8GiB
 t1-UFLIA-db31113fa	t1-UFLIA-db31113fa.tsv	2	2026-09-15T15:56:46Z	ledger-structure-20260915 Phase-3-sizing T1 sweep, db31113fa, 3 hosts x 4 core pairs, 24s/8GiB
 t1-UFNIA-db31113fa	t1-UFNIA-db31113fa.tsv	2	2026-09-15T15:56:46Z	ledger-structure-20260915 Phase-3-sizing T1 sweep, db31113fa, 3 hosts x 4 core pairs, 24s/8GiB
+nra-trace-census-20260915	nra-trace-census-20260915.tsv	2	2026-09-15T20:33:26Z	ADR-2110 lane nra-trace: the 83 QF_NRA files the 2026-09-15 board leaves undecided, --trace, s5 cores 1,9 + 3,11, 24s/8GiB

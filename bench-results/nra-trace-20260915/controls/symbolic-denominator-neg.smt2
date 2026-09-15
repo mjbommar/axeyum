@@ -1,0 +1,5 @@
+(set-logic QF_NRA)
+(set-info :status unsat)
+(declare-fun x () Real)
+(assert (< (/ x 2) 1))
+(check-sat)

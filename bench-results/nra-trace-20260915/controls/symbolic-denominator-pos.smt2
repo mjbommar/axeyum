@@ -1,0 +1,7 @@
+(set-logic QF_NRA)
+(set-info :status sat)
+(declare-fun x () Real)
+(declare-fun y () Real)
+(assert (< (/ x y) (/ 1 2)))
+(assert (= (^ x 3) (* 2 y)))
+(check-sat)
