@@ -173,10 +173,10 @@ axeyum_ir::cap_lever! {
 ///   More rounds, and more clock, are both worth exactly zero. The gap is
 ///   instance *selection* or trigger *coverage*.
 /// - [`GrowthHeadroom`](Self::GrowthHeadroom) -- the remaining wall clock could
-///   not fit another round with [`round_growth_headroom`] to spare. This is a
+///   not fit another round with `round_growth_headroom` to spare. This is a
 ///   CLOCK exit wearing a round exit's clothes.
 /// - [`RoundCeiling`](Self::RoundCeiling) -- the loop ran
-///   [`instantiation_round_ceiling`] rounds. **This, and only this, is the
+///   `instantiation_round_ceiling` rounds. **This, and only this, is the
 ///   round budget the historical string names.**
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InstantiationLoopExit {
@@ -200,7 +200,7 @@ pub enum InstantiationLoopExit {
     ///
     /// Measured on the 129-row winnable `UFNIA`/`UFLIA` population
     /// (ADR-2015's census): **29 of 45 `SHAPE` exits sit at exactly
-    /// `ground=8192`**, which is [`MAX_GROUND_TERMS`]. Two thirds of the
+    /// `ground=8192`**, which is `MAX_GROUND_TERMS`. Two thirds of the
     /// "fixpoints" in that family are saturations.
     ///
     /// This is a statement about the CAP BEING IN FORCE, not a proof that the
@@ -1097,7 +1097,7 @@ impl Drop for SkolemPrimeGuard {
 ///
 /// The variable holds a decimal total; `AXEYUM_QINST_SKOLEM_PRIME=512` is the
 /// arm the 2026-09-10 A/B ran. An unset or unparseable value is
-/// [`SKOLEM_PRIME_SHIPPED`] (`0`, the pass off), so a typo degrades to the
+/// `SKOLEM_PRIME_SHIPPED` (`0`, the pass off), so a typo degrades to the
 /// shipped behaviour rather than to a budget nobody chose — and in particular a
 /// typo cannot silently turn on a route measured to cost a win.
 #[must_use]

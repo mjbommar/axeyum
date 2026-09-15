@@ -1,0 +1,7 @@
+id	before_1	before_2	before_3	after_1	after_2	after_3	stability
+f01	unknown	unknown	unknown	unsat	unsat	unsat	STABLE-GAIN
+f03	unknown	unknown	unknown	unsat	unsat	unsat	STABLE-GAIN
+f04	unknown	unknown	unknown	unsat	unsat	unsat	STABLE-GAIN
+f08	unknown	unknown	unknown	unsat	unsat	unsat	STABLE-GAIN
+f11	unknown	unknown	unknown	unsat	unsat	unsat	STABLE-GAIN
+f12	unknown	unknown	unknown	unsat	unsat	unsat	STABLE-GAIN

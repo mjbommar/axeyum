@@ -1,0 +1,26 @@
+rows collected: 200 (expected 200)
+
+CHANNEL 3 (give-up detail) -- MUST MOVE
+  rows whose give-up detail changed: 37/200
+  example: joey_false-termination.c_Iteration1_Loop_7-phaseTemplate.smt2
+    base: ; give-up kind=Watchdog detail=watchdog fired before the worker thread returned
+    arm : ; give-up kind=Timeout detail=preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] lra: the deadline passed building the Fourier–Motzkin unit-multiplie
+
+CHANNEL 1 (verdict) -- MUST NOT MOVE
+  base decided 107/200   arm decided 107/200
+  GAINS (arm decided, base did not): 0/200
+  LOSSES (base decided, arm did not): 0/200
+  FLIPS (sat<->unsat between arms): 0/159
+  comparable denominator: both arms emitted a verdict line on 159/200
+
+CHANNEL 2 (exit status) -- MUST NOT MOVE
+  rows whose exit CLASS changed: 0/200
+  both arms exited 0 on 159/200
+
+SOUNDNESS
+  verdicts disagreeing with :status: 0/185
+  (denominator: rows carrying a :status annotation)
+
+VERDICT: VERDICT-NEUTRAL AND EXIT-STATUS-NEUTRAL, with the give-up
+         detail channel moving on 37/200 rows,
+         which is what proves the two arms are different binaries.

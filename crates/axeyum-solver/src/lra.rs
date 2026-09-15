@@ -153,11 +153,16 @@ pub(crate) fn check_with_lra_within_certified(
         Decision::Sat(model) => (CheckResult::Sat(model), None),
         Decision::UnsatFarkas { certificate, .. } => (CheckResult::Unsat, Some(certificate)),
         Decision::UnsatTrivial(_) => (CheckResult::Unsat, None),
-        Decision::TimedOut => (
+        // Every one of these five is a resource gate, so they share
+        // `ResourceLimit` exactly as the single string they replace did. What
+        // changes is the DETAIL: it names the gate that fired instead of naming
+        // one engine for all of them. The sixth producer -- an `i128` overflow
+        // while linearizing -- is not a resource gate and is no longer routed
+        // here at all; it is `Decision::Incomplete` below (ADR-2060).
+        Decision::GaveUp(gave_up) => (
             CheckResult::Unknown(UnknownReason {
                 kind: UnknownKind::ResourceLimit,
-                detail: "lra: Fourier–Motzkin elimination exceeded the wall-clock / size budget"
-                    .to_owned(),
+                detail: gave_up.detail(),
             }),
             None,
         ),
@@ -223,7 +228,7 @@ pub(crate) fn lra_farkas_certificate_within(
         Decision::UnsatFarkas { certificate, .. } => Ok(Some(certificate)),
         Decision::Sat(_)
         | Decision::UnsatTrivial(_)
-        | Decision::TimedOut
+        | Decision::GaveUp(_)
         | Decision::Incomplete(_)
         | Decision::OutOfMemory(_) => Ok(None),
     }
@@ -294,7 +299,7 @@ pub fn lra_unsat_core(
         // A literally-`false` assertion is its own (singleton) core.
         Decision::UnsatTrivial(origin) => Ok(Some(vec![origin])),
         Decision::Sat(_)
-        | Decision::TimedOut
+        | Decision::GaveUp(_)
         | Decision::Incomplete(_)
         | Decision::OutOfMemory(_) => Ok(None),
     }
@@ -315,9 +320,18 @@ enum Decision {
     /// Unsatisfiable because a literally-`false` assertion was present (no
     /// linear refutation is meaningful); carries that assertion's index.
     UnsatTrivial(usize),
-    /// The Fourier–Motzkin elimination did not finish within the wall-clock /
-    /// size budget; the query is left undecided (a timely, sound `unknown`).
-    TimedOut,
+    /// A resource gate ended the decision without a verdict; the query is left
+    /// undecided (a timely, sound `unknown`). Carries **which** gate fired.
+    ///
+    /// This variant was the unit `TimedOut`, and the doc comment here said
+    /// *"the Fourier–Motzkin elimination did not finish within the wall-clock /
+    /// size budget"*. [`check_with_lra_within_certified`] rendered that sentence
+    /// faithfully for every producer, and ADR-2045 measured that **34 of 34**
+    /// `QF_LRA` rows wearing it had `cube_matrices=0` and
+    /// `cube_simplex_calls>0` — the elimination had not built one matrix on any
+    /// of them. The wrong claim was here, in the doc, and the string was only
+    /// its echo; ADR-2060 split the variant so it cannot be made again.
+    GaveUp(GaveUp),
     /// The simplex found a candidate model, but *verifying* it against the
     /// original assertions could not be completed — e.g. an `i128` overflow while
     /// evaluating the model. We cannot certify `sat`, so we decline to a graceful
@@ -328,14 +342,282 @@ enum Decision {
     /// The query was declined because deciding it would not fit, or did not fit,
     /// in `SolverConfig::memory_limit_mb`. Carries the numbers.
     ///
-    /// Separate from [`Decision::TimedOut`] because the two demand opposite
-    /// fixes and a consumer must not have to guess: `TimedOut` says the search
+    /// Separate from [`Decision::GaveUp`] because the two demand opposite
+    /// fixes and a consumer must not have to guess: `GaveUp` says the search
     /// was too slow or too wide, this says the machine ran out of room. Before
     /// this variant existed the second case was not reported at all — the
     /// process was killed by the kernel OOM killer and there was no verdict to
     /// classify (`docs/research/12-performance/span-log-sweep-2026-09-08.md`).
     OutOfMemory(String),
 }
+
+/// Which gate ended a conjunctive `QF_LRA` decision without a verdict.
+///
+/// **One value per program point that can end a decision this way.** The
+/// rendered `unknown` names the gate that actually fired, so a census over the
+/// detail string measures the binding cause instead of measuring whichever
+/// engine a doc comment happened to mention.
+///
+/// # Why an enum and not a `String`
+///
+/// [`Decision::Incomplete`] and [`Decision::OutOfMemory`] carry a `String`, and
+/// that is right for them: their details interpolate measured numbers. These do
+/// not. The set is closed and known at compile time, and a closed set is what
+/// lets [`give_up_reason_tests`] assert that **every** producer has a reason of
+/// its own without the test carrying a literal list to go stale against — the
+/// list comes from [`GaveUp::ALL`], and a new variant that no test drives fails
+/// that test rather than silently inheriting a neighbour's sentence.
+///
+/// # Why two of the five carry a nested pair
+///
+/// Reaching the simplex means the elimination already declined, so the honest
+/// answer to *"why is this undecided"* is two facts, not one: which gate
+/// stopped Fourier–Motzkin, and which one then stopped the simplex. The old
+/// string asserted the first and was silent about the second, which is how a
+/// simplex cost came to be attributed to an elimination that built zero
+/// matrices.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GaveUp {
+    /// [`decide_within`]'s entry poll: the caller's deadline had already passed
+    /// (or a portfolio stop was requested) before anything ran. No constraint
+    /// was collected and neither engine was entered.
+    DeadlineOnEntry,
+    /// The deadline passed while linearizing the assertions, so the constraint
+    /// system was never finished and neither engine was entered.
+    DeadlineCollectingConstraints,
+    /// The deadline passed inside the `n`-wide Farkas unit-multiplier loop —
+    /// the `32*n^2`-byte allocation [`fm_admission`] prices. This is the one
+    /// gate that is genuinely *about* Fourier–Motzkin and it is still not the
+    /// elimination: the elimination had not started.
+    DeadlineBuildingFarkasMatrix,
+    /// Both engines declined, the exact-rational simplex first (it ran ahead of
+    /// the elimination under [`crate::lra_route`]) and Fourier–Motzkin after
+    /// it. [`simplex_after_elimination`] did not re-run the simplex, because a
+    /// second run on the identical system cannot decide what the first did not.
+    SimplexThenEliminationDeclined {
+        simplex: SimplexDecline,
+        fm: FmDecline,
+    },
+    /// Both engines declined, Fourier–Motzkin first and the exact-rational
+    /// simplex fallback after it.
+    EliminationThenSimplexDeclined {
+        fm: FmDecline,
+        simplex: SimplexDecline,
+    },
+}
+
+impl GaveUp {
+    /// The `unknown` detail a caller reads.
+    ///
+    /// Every sentence names the gate and, where two engines ran, both of them.
+    /// A sentence says "not a budget" wherever the gate is not one, because the
+    /// defect this type exists to prevent was precisely a clock-shaped sentence
+    /// over a size guard and an `i128` overflow.
+    ///
+    /// Written with `concat!` and not with `\`-continued string literals.
+    /// `rustfmt` rejoins a continued literal onto one line and keeps the
+    /// continuation's leading indentation INSIDE the string, so the shipped
+    /// detail grows runs of spaces that no assertion about substrings would
+    /// notice — measured on this very change, and now pinned by
+    /// `no_detail_blames_an_engine_that_did_not_run`.
+    fn detail(self) -> String {
+        match self {
+            Self::DeadlineOnEntry => concat!(
+                "lra: the deadline had already passed when the conjunctive decider was ",
+                "entered (an expired budget or a portfolio stop); no constraint was ",
+                "collected and neither engine ran",
+            )
+            .to_owned(),
+            Self::DeadlineCollectingConstraints => concat!(
+                "lra: the deadline passed while linearizing the assertions; the ",
+                "constraint system was never finished and neither engine ran",
+            )
+            .to_owned(),
+            Self::DeadlineBuildingFarkasMatrix => concat!(
+                "lra: the deadline passed building the Fourier–Motzkin unit-multiplier ",
+                "matrix; the elimination itself never started",
+            )
+            .to_owned(),
+            Self::SimplexThenEliminationDeclined { simplex, fm } => format!(
+                concat!(
+                    "lra: both engines declined — the exact-rational simplex ran first ",
+                    "and {}, then Fourier–Motzkin {}; the simplex was not re-run on the ",
+                    "identical system",
+                ),
+                simplex.describe(),
+                fm.describe(),
+            ),
+            Self::EliminationThenSimplexDeclined { fm, simplex } => format!(
+                concat!(
+                    "lra: both engines declined — Fourier–Motzkin {}, then the ",
+                    "exact-rational simplex fallback {}",
+                ),
+                fm.describe(),
+                simplex.describe(),
+            ),
+        }
+    }
+}
+
+/// Why Fourier–Motzkin elimination stopped without a verdict.
+///
+/// Three of these five are not the wall clock, and the two overflows are not a
+/// resource bound of any kind — they are the fixed `i128` width of the exact
+/// rationals being too narrow for this system. All five used to render as
+/// *"exceeded the wall-clock / size budget"*.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FmDecline {
+    /// The deadline was observed between two variable eliminations.
+    DeadlineBetweenVariables,
+    /// The deadline was observed inside one variable's `|pos|·|neg|` cross
+    /// product, which is uninterruptible between derived rows.
+    DeadlineInCrossProduct,
+    /// [`MAX_FM_CONSTRAINTS`]: the next cross product would exceed the
+    /// deterministic size guard. **Clock-independent** — the same query
+    /// declines here on any machine at any budget.
+    SizeGuard,
+    /// An `i128` overflow in the elimination's exact-rational arithmetic (a
+    /// coefficient product, a negation, or a multiplier combination). **Not a
+    /// budget of any kind.**
+    OverflowEliminating,
+    /// An `i128` overflow reconstructing the satisfying model by back
+    /// substitution, after the projection was already found feasible. **Not a
+    /// budget of any kind**, and the query is in fact satisfiable — we simply
+    /// cannot name the point.
+    OverflowBackSubstituting,
+}
+
+impl FmDecline {
+    /// A verb phrase completing "Fourier–Motzkin …".
+    fn describe(self) -> &'static str {
+        match self {
+            Self::DeadlineBetweenVariables => {
+                "stopped on the deadline between two variable eliminations"
+            }
+            Self::DeadlineInCrossProduct => {
+                "stopped on the deadline inside a variable's cross product"
+            }
+            Self::SizeGuard => {
+                "hit its deterministic MAX_FM_CONSTRAINTS size guard (a size bound, not the clock)"
+            }
+            Self::OverflowEliminating => {
+                "hit an i128 overflow in its exact-rational arithmetic (not a budget at all)"
+            }
+            Self::OverflowBackSubstituting => concat!(
+                "found the projection feasible but hit an i128 overflow reconstructing ",
+                "the model by back substitution (not a budget at all)",
+            ),
+        }
+    }
+}
+
+/// Why the exact-rational simplex returned no decision.
+///
+/// [`simplex_fallback`] returns a [`Decision`] only for a replay-checked `sat`
+/// or a re-verified Farkas `unsat`, so it has six ways to hand back nothing and
+/// only one of them is a clock. Before ADR-2060 all six arrived at the caller as
+/// a single `Ok(None)` and were rendered as a Fourier–Motzkin timeout — the
+/// wrong engine and, five times out of six, the wrong kind of event.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SimplexDecline {
+    /// The deadline passed while building the dense `n x nvars` tableau rows.
+    DeadlineBuildingRows,
+    /// An `i128` overflow negating a constraint's constant to form a row's
+    /// right-hand side. **Not a budget.**
+    OverflowBuildingRows,
+    /// A feasible point was found but it did not replay against the original
+    /// assertions, so `sat` could not be certified. **Not a budget**, and a
+    /// standing signal worth its own count: the model replay is the trust
+    /// anchor for every `sat` this route produces.
+    ModelDidNotReplay,
+    /// The system was infeasible but the transcribed Farkas certificate failed
+    /// its own self-check, so `unsat` could not be certified. **Not a budget**,
+    /// and the loudest of the six.
+    CertificateFailedSelfCheck,
+    /// The system was infeasible with no rational Farkas certificate (a
+    /// strict-delta refutation), so there was nothing to certify `unsat` with.
+    /// **Not a budget.**
+    InfeasibleWithoutCertificate,
+    /// [`crate::simplex::feasible_within`] itself declined — its own deadline,
+    /// its pivot budget, or an exact-arithmetic decline.
+    EngineDeclined,
+}
+
+impl SimplexDecline {
+    /// A verb phrase completing "the exact-rational simplex …".
+    fn describe(self) -> &'static str {
+        match self {
+            Self::DeadlineBuildingRows => "stopped on the deadline building its dense tableau rows",
+            Self::OverflowBuildingRows => concat!(
+                "hit an i128 overflow negating a constraint constant while building its ",
+                "rows (not a budget at all)",
+            ),
+            Self::ModelDidNotReplay => concat!(
+                "found a point that did not replay against the original assertions, so ",
+                "sat could not be certified (not a budget at all)",
+            ),
+            Self::CertificateFailedSelfCheck => concat!(
+                "found the system infeasible but its Farkas certificate failed the ",
+                "self-check, so unsat could not be certified (not a budget at all)",
+            ),
+            Self::InfeasibleWithoutCertificate => concat!(
+                "found the system infeasible with no rational Farkas certificate, a ",
+                "strict-delta refutation nothing could certify (not a budget at all)",
+            ),
+            Self::EngineDeclined => concat!(
+                "declined in exact arithmetic (its own deadline, its pivot budget, or a ",
+                "zero-divisor decline)",
+            ),
+        }
+    }
+}
+
+/// Why [`eliminate`] bailed out of one variable's elimination.
+///
+/// It used to return a bare `None` for all four, and [`solve`] recovered
+/// *memory* from the sticky watchdog flag and assumed *clock* for everything
+/// else — so the size guard and the overflow both left as timeouts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ElimBail {
+    /// The wall-clock deadline (or a portfolio stop) fired inside the cross
+    /// product.
+    Deadline,
+    /// The memory watchdog was observed tripped inside the cross product.
+    MemoryWatchdog,
+    /// The derived system would exceed [`MAX_FM_CONSTRAINTS`].
+    SizeGuard,
+    /// An `i128` overflow in the exact-rational arithmetic.
+    Overflow,
+}
+
+/// Why [`collect_constraints`] stopped before it had linearized everything.
+///
+/// The caller used to re-read the clock to tell these apart, which is a guess
+/// made after the fact; this is the observation made where it happens. The
+/// precedence is deliberately unchanged: an expired deadline outranks a tripped
+/// watchdog, exactly as the re-read did, because the re-read ran after
+/// collection returned and would have seen the same expired clock.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CollectDecline {
+    /// The deadline had passed (or a portfolio stop was requested).
+    Deadline,
+    /// The memory watchdog was tripped and the deadline had **not** passed.
+    MemoryWatchdog,
+}
+
+/// [`collect_constraints`]'s outcome: the collected system, or why there is
+/// none.
+///
+/// An alias and not an enum: one side is a [`Collector`] and the other is a
+/// one-byte cause, which is `clippy::large_enum_variant`'s subject, and boxing
+/// the big side to quiet it would add an allocation per conjunctive decision on
+/// a route that makes thousands of them per solve.
+type Collected = Result<Collector, CollectDecline>;
+
+/// [`simplex_fallback`]'s outcome: a certified decision, or why there is none.
+/// An alias for the same reason as [`Collected`] — a [`Decision`] carries a
+/// [`Model`] and a certificate.
+type Attempted = Result<Decision, SimplexDecline>;
 
 /// One conjunctive decision's stage timings, so every exit records the same
 /// shape.
@@ -496,17 +778,18 @@ fn simplex_admission(n: usize, nvars: usize) -> Option<Decision> {
     )))
 }
 
-/// Linearizes every assertion into the collected constraint system, or `None`
-/// when the memory watchdog trips part-way through.
+/// Linearizes every assertion into the collected constraint system, or a
+/// [`CollectDecline`] naming why it stopped part-way through.
 ///
 /// Collection is itself a growth site — one `LinExpr` (a `BTreeMap`) per atom,
 /// tens of thousands of them on these benchmarks — and it runs before any of
 /// the admission gates can price anything, because the constraint count they
 /// price is what this loop is producing. One relaxed atomic load per assertion.
 ///
-/// Returns `None` rather than the [`Decision`] so the phase name in the
-/// refusal stays at the call site, next to the other phases that can produce
-/// one.
+/// Returns a [`CollectDecline`] rather than the [`Decision`] so the phase name
+/// in the refusal stays at the call site, next to the other phases that can
+/// produce one — but the *cause* is decided here, where it is observed, rather
+/// than guessed by the caller re-reading the clock afterwards.
 ///
 /// # Errors
 ///
@@ -515,7 +798,7 @@ fn collect_constraints(
     arena: &TermArena,
     assertions: &[TermId],
     deadline: Option<Instant>,
-) -> Result<Option<Collector>, SolverError> {
+) -> Result<Collected, SolverError> {
     let _phase = crate::phase_breadcrumb::enter("lra:collect");
     let mut ctx = Collector {
         deadline,
@@ -523,7 +806,16 @@ fn collect_constraints(
     };
     for (index, &assertion) in assertions.iter().enumerate() {
         if crate::memory_budget::watchdog_tripped() {
-            return Ok(None);
+            // An expired deadline outranks the tripped watchdog, which is
+            // exactly what the caller's after-the-fact `past_deadline` re-read
+            // did before ADR-2060 — it ran after collection returned and would
+            // have seen this same expired clock. The precedence is preserved on
+            // purpose: only the place the cause is DECIDED has moved.
+            return Ok(Err(if past_deadline(deadline) {
+                CollectDecline::Deadline
+            } else {
+                CollectDecline::MemoryWatchdog
+            }));
         }
         // The wall clock beside the memory watchdog. Linearizing a cube builds
         // a `BTreeMap` per atom, and the refinement loop hands this a cube that
@@ -537,15 +829,18 @@ fn collect_constraints(
         // One `Instant::now()` against a `collect` that linearizes a whole
         // assertion is not a cost worth rationing.
         if past_deadline(deadline) {
-            return Ok(None);
+            return Ok(Err(CollectDecline::Deadline));
         }
         ctx.current_origin = index;
         ctx.collect(arena, assertion, false)?;
         if ctx.timed_out {
-            return Ok(None);
+            // `Collector::timed_out` is set at exactly one place, immediately
+            // after its own `past_deadline`, so this is a clock observation and
+            // not an inference from one.
+            return Ok(Err(CollectDecline::Deadline));
         }
     }
-    Ok(Some(ctx))
+    Ok(Ok(ctx))
 }
 
 // Linear driver: entry poll, collection, two admission gates, the multiplier
@@ -571,7 +866,7 @@ fn decide_within(
     // 1,065 of 1,082 samples of a `QF_UFLRA` run that the harness watchdog then
     // had to kill.
     if past_deadline(deadline) {
-        return Ok(Decision::TimedOut);
+        return Ok(Decision::GaveUp(GaveUp::DeadlineOnEntry));
     }
     // A breadcrumb frame, not a counter: on a watchdog kill this is the phase
     // the worker is inside, and every other instrument in this tree records
@@ -581,31 +876,51 @@ fn decide_within(
     let _phase = crate::phase_breadcrumb::enter("lra:decide");
     let counting = crate::lazy_smt_counters::enabled();
     let collect_started = counting.then(Instant::now);
-    let Some(mut ctx) = collect_constraints(arena, assertions, deadline)? else {
+    let mut ctx = match collect_constraints(arena, assertions, deadline)? {
+        Ok(ctx) => ctx,
         // Collection declined. It has two reasons and they demand opposite
-        // fixes, so the clock is re-read rather than the memory reason borrowed.
-        if past_deadline(deadline) {
-            return Ok(Decision::TimedOut);
+        // fixes, so it now reports WHICH rather than leaving the caller to
+        // re-read the clock and infer one.
+        Err(CollectDecline::Deadline) => {
+            return Ok(Decision::GaveUp(GaveUp::DeadlineCollectingConstraints));
         }
-        return Ok(Decision::OutOfMemory(
-            crate::memory_budget::watchdog_decline("lra constraint collection").map_or_else(
-                || "lra: memory budget exceeded while collecting constraints".to_owned(),
-                |reason| reason.detail,
-            ),
-        ));
+        Err(CollectDecline::MemoryWatchdog) => {
+            return Ok(Decision::OutOfMemory(
+                crate::memory_budget::watchdog_decline("lra constraint collection").map_or_else(
+                    || "lra: memory budget exceeded while collecting constraints".to_owned(),
+                    |reason| reason.detail,
+                ),
+            ));
+        }
     };
     let collect_elapsed = collect_started.map_or(Duration::ZERO, |s| s.elapsed());
     // An `i128` overflow while linearizing poisons the collection: the
     // placeholder constraints are garbage and must not be interpreted. Degrade to
     // a graceful `unknown` BEFORE any constraint is solved (overflow never becomes
     // a wrong sat/unsat).
+    //
+    // This returned `Decision::TimedOut` until ADR-2060, and was rendered as
+    // "Fourier–Motzkin elimination exceeded the wall-clock / size budget" — the
+    // wrong engine (neither engine has run at this line) and the wrong kind of
+    // event (nothing timed out; the exact rationals are too narrow for this
+    // system). `Decision::Incomplete` is where this already belonged: its own
+    // doc names "an `i128` overflow" as its example, and it carries
+    // `UnknownKind::Incomplete`, which is what "the procedure is incomplete for
+    // this query" means. This is the ONE `UnknownKind` this change moves.
     if ctx.overflow {
         CubeStages {
             collect: collect_elapsed,
             ..CubeStages::default()
         }
         .record(counting);
-        return Ok(Decision::TimedOut);
+        return Ok(Decision::Incomplete(
+            concat!(
+                "lra: an i128 overflow while linearizing the assertions left the ",
+                "constraint system unusable, so neither engine was run (an ",
+                "exact-arithmetic width limit, not a clock and not a memory budget)",
+            )
+            .to_owned(),
+        ));
     }
     if ctx.trivially_unsat {
         CubeStages {
@@ -640,12 +955,17 @@ fn decide_within(
     // exists: the simplex's own dense `n x (nvars + n)` tableau was the second
     // unpriced matrix. When it refuses, the elimination gets the query and
     // reports its own refusal.
-    if crate::lra_route::configured().simplex_first(n)
-        && simplex_admission(n, nvars).is_none()
-        && let Some(decision) =
-            simplex_first(arena, assertions, &ctx, counting, &mut stages, deadline)?
-    {
-        return Ok(decision);
+    // Why the simplex declined, when it ran first and declined. Held here
+    // rather than in `CubeStages` because it is not a timing and because
+    // `simplex_after_elimination` is the only reader: the guard it replaces
+    // (`stages.simplex.is_some()`) and `Some(_)` here are set on exactly the
+    // same control path, and the `debug_assert!` there ties them together.
+    let mut simplex_declined: Option<SimplexDecline> = None;
+    if crate::lra_route::configured().simplex_first(n) && simplex_admission(n, nvars).is_none() {
+        match simplex_first(arena, assertions, &ctx, counting, &mut stages, deadline)? {
+            Ok(decision) => return Ok(decision),
+            Err(why) => simplex_declined = Some(why),
+        }
     }
 
     if let Some(fm_refusal) = fm_admission(n, nvars) {
@@ -663,7 +983,7 @@ fn decide_within(
         // same day.
         if stages.simplex.is_none()
             && simplex_admission(n, nvars).is_none()
-            && let Some(decision) = simplex_fallback(arena, assertions, &ctx, deadline)?
+            && let Ok(decision) = simplex_fallback(arena, assertions, &ctx, deadline)?
         {
             return Ok(decision);
         }
@@ -694,7 +1014,7 @@ fn decide_within(
         // `None` reads no clock.
         if past_deadline(deadline) {
             stages.record(counting);
-            return Ok(Decision::TimedOut);
+            return Ok(Decision::GaveUp(GaveUp::DeadlineBuildingFarkasMatrix));
         }
         constraint.mult = unit_vec(n, i);
     }
@@ -702,11 +1022,11 @@ fn decide_within(
     let fm_started = counting.then(Instant::now);
     let feasibility = solve(&ctx.constraints, nvars, deadline);
     stages.fm = fm_started.map_or(Duration::ZERO, |s| s.elapsed());
-    // Only `TimedOut` hands the cube to the simplex, so only `TimedOut` is a
+    // Only `Declined` hands the cube to the simplex, so only `Declined` is a
     // decline in the counter's sense; a memory decline hands it to nobody.
     // Every other outcome is recorded here, which is why the `OutOfMemory` arm
     // below records nothing of its own.
-    stages.fm_declined = matches!(feasibility, Feasibility::TimedOut);
+    stages.fm_declined = matches!(feasibility, Feasibility::Declined(_));
     if !stages.fm_declined {
         stages.record(counting);
     }
@@ -724,7 +1044,7 @@ fn decide_within(
                     ),
             ))
         }
-        Feasibility::TimedOut => simplex_after_elimination(
+        Feasibility::Declined(fm) => simplex_after_elimination(
             arena,
             assertions,
             &ctx,
@@ -732,6 +1052,8 @@ fn decide_within(
             nvars,
             counting,
             &mut stages,
+            simplex_declined,
+            fm,
             deadline,
         ),
         Feasibility::Unsat(multipliers) => {
@@ -810,9 +1132,11 @@ fn replayed_sat(
 ///
 /// Two guards, one from each of the lanes that met in this function:
 ///
-/// - `stages.simplex.is_some()` — the simplex-first arm already ran and
+/// - `simplex_declined.is_some()` — the simplex-first arm already ran and
 ///   declined, on the identical constraint system, so a second call cannot
-///   decide what the first did not.
+///   decide what the first did not. It carries WHY it declined, because in that
+///   case the honest `unknown` names two gates: the one that stopped the
+///   simplex and the one that then stopped the elimination.
 /// - `simplex_admission` — the simplex's own dense `n x (nvars + n)` tableau
 ///   was the *second* unpriced matrix behind the 26.6 GB measurement.
 ///
@@ -832,12 +1156,21 @@ fn simplex_after_elimination(
     nvars: usize,
     counting: bool,
     stages: &mut CubeStages,
+    simplex_declined: Option<SimplexDecline>,
+    fm: FmDecline,
     deadline: Option<Instant>,
 ) -> Result<Decision, SolverError> {
     let _phase = crate::phase_breadcrumb::enter("lra:simplex-after-elim");
-    if stages.simplex.is_some() {
+    if let Some(simplex) = simplex_declined {
+        debug_assert!(
+            stages.simplex.is_some(),
+            "a recorded simplex decline implies the simplex-first arm ran and was timed"
+        );
         stages.record(counting);
-        return Ok(Decision::TimedOut);
+        return Ok(Decision::GaveUp(GaveUp::SimplexThenEliminationDeclined {
+            simplex,
+            fm,
+        }));
     }
     if let Some(refusal) = simplex_admission(n, nvars) {
         stages.record(counting);
@@ -847,10 +1180,13 @@ fn simplex_after_elimination(
     let fallback = simplex_fallback(arena, assertions, ctx, deadline);
     stages.simplex = Some(started.map_or(Duration::ZERO, |s| s.elapsed()));
     stages.record(counting);
-    if let Some(decision) = fallback? {
-        return Ok(decision);
+    match fallback? {
+        Ok(decision) => Ok(decision),
+        Err(simplex) => Ok(Decision::GaveUp(GaveUp::EliminationThenSimplexDeclined {
+            fm,
+            simplex,
+        })),
     }
-    Ok(Decision::TimedOut)
 }
 
 /// Runs the exact-rational simplex on the collected system **before**
@@ -883,17 +1219,20 @@ fn simplex_first(
     counting: bool,
     stages: &mut CubeStages,
     deadline: Option<Instant>,
-) -> Result<Option<Decision>, SolverError> {
+) -> Result<Attempted, SolverError> {
     let _phase = crate::phase_breadcrumb::enter("lra:simplex-first");
     let started = counting.then(Instant::now);
     let fallback = simplex_fallback(arena, assertions, ctx, deadline);
     stages.simplex = Some(started.map_or(Duration::ZERO, |s| s.elapsed()));
     match fallback {
-        Ok(Some(decision)) => {
+        Ok(Ok(decision)) => {
             stages.record(counting);
-            Ok(Some(decision))
+            Ok(Ok(decision))
         }
-        Ok(None) => Ok(None),
+        // The decline reason travels to `simplex_after_elimination`, which is
+        // where it becomes half of the reported `unknown`. Recording is left to
+        // the elimination's own exit, as before.
+        Ok(Err(why)) => Ok(Err(why)),
         Err(error) => {
             stages.record(counting);
             Err(error)
@@ -903,10 +1242,17 @@ fn simplex_first(
 
 /// P1.9 · T1.9.2 — feasibility fallback for when Fourier–Motzkin exhausts its size
 /// budget: retry on the exact-rational simplex over the **same** collected
-/// constraints. Returns `Some(Decision)` only for a *certified* outcome — a
+/// constraints. Returns `Ok(Decision)` only for a *certified* outcome — a
 /// replay-checked `Sat` model, or an `Unsat` whose Farkas certificate re-verifies —
-/// and `None` (keep the FM `unknown`) otherwise, so it can never produce a wrong
-/// verdict.
+/// and a [`SimplexDecline`] (keep the FM `unknown`) otherwise, so it can never
+/// produce a wrong verdict.
+///
+/// **There are six ways to decline and only one of them is a clock.** Until
+/// ADR-2060 all six were one `Ok(None)` and every one of them was rendered to
+/// the caller as a Fourier–Motzkin timeout. Two of the six — a model that did
+/// not replay and a certificate that failed its self-check — are standing
+/// signals about the trust anchors of `sat` and `unsat` on this route, and they
+/// had no way to be counted at all.
 ///
 /// Each collected constraint is `Σ cᵢ·xᵢ + k {<,≤} 0`; translated to the simplex
 /// row `Σ cᵢ·xᵢ {<,≤} −k`. Because every collected constraint is a `≤`/`<` row, the
@@ -933,7 +1279,7 @@ fn simplex_fallback(
     assertions: &[TermId],
     ctx: &Collector,
     deadline: Option<Instant>,
-) -> Result<Option<Decision>, SolverError> {
+) -> Result<Attempted, SolverError> {
     let _phase = crate::phase_breadcrumb::enter("lra:simplex-fallback");
     let nvars = ctx.vars.len();
     crate::simplex::dense_probe(
@@ -949,15 +1295,15 @@ fn simplex_fallback(
         // allocate the tableau, which IS the growth site. One relaxed atomic
         // load.
         if let Some(reason) = crate::memory_budget::watchdog_decline("lra simplex tableau build") {
-            return Ok(Some(Decision::OutOfMemory(reason.detail)));
+            return Ok(Ok(Decision::OutOfMemory(reason.detail)));
         }
         // The wall clock at the same boundary. `None` reads no clock.
         if past_deadline(deadline) {
-            return Ok(None);
+            return Ok(Err(SimplexDecline::DeadlineBuildingRows));
         }
         // `Σ cᵢxᵢ + k {<,≤} 0`  ⇒  `Σ cᵢxᵢ {<,≤} −k`.
         let Some(rhs) = constraint.expr.constant.checked_neg() else {
-            return Ok(None); // overflow → keep `unknown`
+            return Ok(Err(SimplexDecline::OverflowBuildingRows));
         };
         let rel = if constraint.strict {
             crate::simplex::Rel::Lt
@@ -1020,10 +1366,10 @@ fn simplex_fallback(
             }
             for &assertion in assertions {
                 if !matches!(eval(arena, assertion, &assignment), Ok(Value::Bool(true))) {
-                    return Ok(None);
+                    return Ok(Err(SimplexDecline::ModelDidNotReplay));
                 }
             }
-            Ok(Some(Decision::Sat(model)))
+            Ok(Ok(Decision::Sat(model)))
         }
         crate::simplex::SimplexOutcome::Infeasible(multipliers) if !multipliers.is_empty() => {
             // `multipliers` line up 1:1 with `ctx.constraints` (same build order).
@@ -1036,17 +1382,24 @@ fn simplex_fallback(
                 vars: ctx.vars.clone(),
             };
             if certificate.verify() {
-                Ok(Some(Decision::UnsatFarkas {
+                Ok(Ok(Decision::UnsatFarkas {
                     certificate,
                     origins,
                 }))
             } else {
-                Ok(None)
+                Ok(Err(SimplexDecline::CertificateFailedSelfCheck))
             }
         }
-        // Infeasible with no rational certificate (strict-δ), or `Unknown` (overflow):
-        // keep the Fourier–Motzkin `unknown` rather than an uncertified verdict.
-        _ => Ok(None),
+        // Infeasible with no rational certificate (a strict-δ refutation): keep
+        // the Fourier–Motzkin `unknown` rather than an uncertified verdict. The
+        // guard on the arm above is `!multipliers.is_empty()`, so this arm is
+        // reached exactly when the certificate is empty.
+        crate::simplex::SimplexOutcome::Infeasible(_) => {
+            Ok(Err(SimplexDecline::InfeasibleWithoutCertificate))
+        }
+        // The engine itself declined: its own deadline, its pivot budget, or an
+        // exact-arithmetic decline.
+        crate::simplex::SimplexOutcome::Unknown => Ok(Err(SimplexDecline::EngineDeclined)),
     }
 }
 
@@ -1325,8 +1678,15 @@ struct Collector {
     /// by 0.006 s, because the whole cost is inside a single `collect` call.
     deadline: Option<Instant>,
     /// Set once the deadline is observed to have passed; the recursion then
-    /// unwinds without doing further work and `decide_within` reports
-    /// [`Decision::TimedOut`].
+    /// unwinds without doing further work, [`collect_constraints`] reports
+    /// [`CollectDecline::Deadline`], and `decide_within` turns that into
+    /// [`GaveUp::DeadlineCollectingConstraints`].
+    ///
+    /// It is set at exactly one place, immediately after that place's own
+    /// `past_deadline` call, so it is a clock OBSERVATION and not an inference
+    /// from one. That matters: before ADR-2060 the caller re-read the clock
+    /// after collection returned in order to guess which of two causes it had
+    /// been.
     timed_out: bool,
 }
 
@@ -1559,13 +1919,17 @@ enum Feasibility {
     Sat(Vec<Rational>),
     Unsat(Vec<Rational>),
     Bug(String),
-    /// Elimination ran past the wall-clock deadline or the size guard before a
-    /// verdict; left undecided (a sound `unknown` upstream).
-    TimedOut,
+    /// Elimination stopped before a verdict; left undecided (a sound `unknown`
+    /// upstream). Carries **why**.
+    ///
+    /// This was the unit `TimedOut` and its doc said "the wall-clock deadline or
+    /// the size guard", which already understated it: two of its producers are
+    /// `i128` overflows and are neither. See [`FmDecline`].
+    Declined(FmDecline),
     /// The memory watchdog observed the process over `memory_limit_mb` while the
     /// elimination ran; left undecided.
     ///
-    /// Distinct from [`Feasibility::TimedOut`] because the caller must not
+    /// Distinct from [`Feasibility::Declined`] because the caller must not
     /// answer a memory decline by starting the simplex retry, which allocates a
     /// dense `n x nvars` tableau on a process that is already over budget.
     OutOfMemory,
@@ -1595,7 +1959,7 @@ fn solve(constraints: &[Constraint], nvars: usize, deadline: Option<Instant>) ->
         // cross product per step), so a long elimination would overrun the
         // caller's deterministic budget. Bail to a timely `unknown` instead.
         if past_deadline(deadline) {
-            return Feasibility::TimedOut;
+            return Feasibility::Declined(FmDecline::DeadlineBetweenVariables);
         }
         // Memory bound, at the same boundary as the wall-clock one. `saved`
         // keeps a full CLONE of the system per variable, so this loop's
@@ -1607,15 +1971,23 @@ fn solve(constraints: &[Constraint], nvars: usize, deadline: Option<Instant>) ->
         }
         saved.push((v, current.clone()));
         match eliminate(&current, v, deadline) {
-            Some(next) => current = next,
-            // `eliminate` reports a bail as `None` whatever caused it, so ask
-            // the watchdog which it was. The flag is sticky for the life of the
-            // guard, so a `true` here is a real observation of this query
-            // having been over budget, not a guess.
-            None if crate::memory_budget::watchdog_tripped() => {
+            Ok(next) => current = next,
+            Err(ElimBail::MemoryWatchdog) => return Feasibility::OutOfMemory,
+            // The sticky watchdog flag keeps its PRECEDENCE over a clock, size
+            // or overflow bail, exactly as before ADR-2060: a process already
+            // over budget must not be handed to the simplex retry, whatever
+            // else also went wrong. What changed is that the other three no
+            // longer collapse into one another once the watchdog is quiet.
+            Err(_) if crate::memory_budget::watchdog_tripped() => {
                 return Feasibility::OutOfMemory;
             }
-            None => return Feasibility::TimedOut,
+            Err(ElimBail::Deadline) => {
+                return Feasibility::Declined(FmDecline::DeadlineInCrossProduct);
+            }
+            Err(ElimBail::SizeGuard) => return Feasibility::Declined(FmDecline::SizeGuard),
+            Err(ElimBail::Overflow) => {
+                return Feasibility::Declined(FmDecline::OverflowEliminating);
+            }
         }
     }
     // After eliminating every variable, only constant constraints remain. The
@@ -1633,7 +2005,12 @@ fn solve(constraints: &[Constraint], nvars: usize, deadline: Option<Instant>) ->
             PickValue::Value(value) => model[*v] = value,
             // Overflow during back-substitution: degrade to a graceful `unknown`
             // (never a wrong verdict, never a spurious `Bug` soundness alarm).
-            PickValue::Overflow => return Feasibility::TimedOut,
+            // The projection is already known FEASIBLE here — the query is
+            // satisfiable and we merely cannot name the point — so reporting it
+            // as an exhausted budget was the least informative label available.
+            PickValue::Overflow => {
+                return Feasibility::Declined(FmDecline::OverflowBackSubstituting);
+            }
             PickValue::NoValue => {
                 return Feasibility::Bug(format!(
                     "lra: feasible projection but no value for variable {v} (Fourier–Motzkin bug)"
@@ -1647,15 +2024,20 @@ fn solve(constraints: &[Constraint], nvars: usize, deadline: Option<Instant>) ->
 /// Fourier–Motzkin elimination of variable `v` from a constraint system,
 /// carrying each derived constraint's nonnegative multiplier combination.
 ///
-/// Returns `None` to bail (a sound `unknown` upstream) when the wall-clock
-/// `deadline` passes mid-elimination, or when the derived system would exceed
-/// [`MAX_FM_CONSTRAINTS`] (a deterministic, clock-independent size guard against
-/// the `|pos|·|neg|` cross-product blowup).
+/// Returns an [`ElimBail`] (a sound `unknown` upstream) naming which of the
+/// four bails fired: the wall-clock `deadline`, the memory watchdog, the
+/// deterministic [`MAX_FM_CONSTRAINTS`] size guard against the `|pos|·|neg|`
+/// cross-product blowup, or an `i128` overflow in the exact-rational arithmetic.
+///
+/// It returned a bare `None` for all four until ADR-2060, and [`solve`] then
+/// recovered *memory* from the sticky watchdog flag and assumed *clock* for
+/// everything else — so the size guard and the overflow both reached the caller
+/// as timeouts.
 fn eliminate(
     system: &[Constraint],
     v: usize,
     deadline: Option<Instant>,
-) -> Option<Vec<Constraint>> {
+) -> Result<Vec<Constraint>, ElimBail> {
     let mut out = Vec::new();
     let mut pos = Vec::new();
     let mut neg = Vec::new();
@@ -1667,7 +2049,7 @@ fn eliminate(
         } else {
             // Overflow here (uncomparable sign) degrades to `unknown`, never a
             // wrong verdict.
-            match a.checked_cmp(&zero)? {
+            match a.checked_cmp(&zero).ok_or(ElimBail::Overflow)? {
                 core::cmp::Ordering::Greater => pos.push(c),
                 core::cmp::Ordering::Less => neg.push(c),
                 core::cmp::Ordering::Equal => out.push(c.clone()),
@@ -1681,7 +2063,7 @@ fn eliminate(
         .saturating_add(pos.len().saturating_mul(neg.len()))
         > MAX_FM_CONSTRAINTS
     {
-        return None;
+        return Err(ElimBail::SizeGuard);
     }
     for p in &pos {
         for n in &neg {
@@ -1689,14 +2071,15 @@ fn eliminate(
             // so an outer-loop-only check can still overrun by seconds. Poll per
             // derived row when timed; untimed calls retain the original hot path.
             if deadline.is_some() && past_deadline(deadline) {
-                return None;
+                return Err(ElimBail::Deadline);
             }
             // The cross product is where the derived rows (and their multiplier
             // vectors, each `n` `Rational`s wide) are allocated, so it is the
             // one place inside FM where memory grows per iteration. One relaxed
-            // atomic load; the caller asks the watchdog why the `None` came.
+            // atomic load. The caller used to have to ask the watchdog why the
+            // `None` came; the bail now says so itself.
             if crate::memory_budget::watchdog_tripped() {
-                return None;
+                return Err(ElimBail::MemoryWatchdog);
             }
             let a = p.expr.coeff(v); // > 0
             let b = n.expr.coeff(v); // < 0
@@ -1704,9 +2087,18 @@ fn eliminate(
             // positive, so the multiplier combination stays nonnegative.
             // Coefficient blowup mid-elimination overflows `i128`; degrade to a
             // graceful `unknown` (`None`) rather than panic or wrong-answer.
-            let neg_b = b.checked_neg()?;
-            let combined = p.expr.scale(neg_b)?.add(&n.expr.scale(a)?)?;
-            let mult = add_vec(&scale_vec(&p.mult, neg_b)?, &scale_vec(&n.mult, a)?)?;
+            let neg_b = b.checked_neg().ok_or(ElimBail::Overflow)?;
+            let combined = p
+                .expr
+                .scale(neg_b)
+                .ok_or(ElimBail::Overflow)?
+                .add(&n.expr.scale(a).ok_or(ElimBail::Overflow)?)
+                .ok_or(ElimBail::Overflow)?;
+            let mult = add_vec(
+                &scale_vec(&p.mult, neg_b).ok_or(ElimBail::Overflow)?,
+                &scale_vec(&n.mult, a).ok_or(ElimBail::Overflow)?,
+            )
+            .ok_or(ElimBail::Overflow)?;
             out.push(Constraint {
                 expr: combined,
                 strict: p.strict || n.strict,
@@ -1718,7 +2110,7 @@ fn eliminate(
             });
         }
     }
-    Some(out)
+    Ok(out)
 }
 
 /// Whether a constant constraint `c <op> 0` holds.
@@ -4476,17 +4868,18 @@ mod memory_limit_tests {
     /// 1,082 samples.
     ///
     /// The system below is decided instantly with no deadline (the positive
-    /// control), so `TimedOut` here is about the clock and not about the query.
+    /// control), so the give-up here is about the clock and not about the query.
     ///
-    /// **What this does NOT pin, measured rather than assumed.** `decide_within`
-    /// now polls at four boundaries — its entry, `collect_constraints`, the
-    /// Farkas multiplier-matrix loop, and `simplex_fallback`'s row build — and
-    /// each bounds a DIFFERENT stretch of one decision. This test cannot
-    /// separate them: deleting the entry poll alone leaves all 1,705 unit tests
-    /// green, because collection's own poll then produces the same
-    /// `TimedOut`. Treat it as a guard on the phase, not on any one line; the
-    /// individually mutation-killed deadline guards in this change are
-    /// `simplex::feasible_within`'s and the three in `dpll_t`.
+    /// **This used to be unable to pin WHICH poll fired, and now it is.** Its
+    /// own note said so: `decide_within` polls at four boundaries — its entry,
+    /// `collect_constraints`, the Farkas multiplier-matrix loop, and
+    /// `simplex_fallback`'s row build — and *"deleting the entry poll alone
+    /// leaves all 1,705 unit tests green, because collection's own poll then
+    /// produces the same `TimedOut`"*. That was a true statement about a variant
+    /// that could not tell two gates apart. Since ADR-2060 it can, so the
+    /// assertion below names [`GaveUp::DeadlineOnEntry`] and deleting the entry
+    /// poll makes this test fail on
+    /// `GaveUp::DeadlineCollectingConstraints` — verified by deleting it.
     #[test]
     fn an_expired_deadline_ends_the_conjunctive_decider_without_a_verdict() {
         let _lock = WATCHDOG_LOCK
@@ -4500,9 +4893,9 @@ mod memory_limit_tests {
         assert!(
             matches!(
                 decide_within(&arena, &assertions, Some(expired)).expect("a decision"),
-                Decision::TimedOut
+                Decision::GaveUp(GaveUp::DeadlineOnEntry)
             ),
-            "an expired deadline must end the decision before collection"
+            "an expired deadline must end the decision AT THE ENTRY POLL, before collection"
         );
         assert!(
             matches!(
@@ -4610,5 +5003,828 @@ mod fragment_probe_tests {
         }
         assert!(supported > 0, "no atom was admitted; the test is vacuous");
         assert!(refused > 0, "no atom was refused; the test is vacuous");
+    }
+}
+
+/// ADR-2060: every give-up reason is tied to the producer that makes it.
+///
+/// # What this module exists to stop happening again
+///
+/// `Decision::TimedOut` was a unit variant rendered as one fixed sentence about
+/// the Fourier–Motzkin elimination, and **nothing in the workspace asserted
+/// anything about that sentence** — a `grep` over `crates/` and `tests/`
+/// returned only the definition, and the compiler found exactly ONE test
+/// referencing the variant at all, which asserted only *that* the decision gave
+/// up. So it was free to be wrong, and ADR-2045 measured that it was: 34 of 34
+/// `QF_LRA` rows wearing it had `cube_matrices=0`.
+///
+/// The checks below are deliberately different in kind, because a suite where
+/// every guard rejects through one shared check is a suite with one guard:
+///
+/// 1. [`every_declared_give_up_variant_is_listed`] derives its population from
+///    **this file's own source text**, not from a literal in the test. Adding a
+///    variant without listing it fails here; and `name()` is an exhaustive
+///    `match`, so adding one without naming it does not compile at all.
+/// 2. [`each_producer_reports_its_own_reason`] drives the producers and asserts
+///    the value each one yields, and checks the set it drove against the set
+///    the source declares minus an explicit, reasoned undrivable list.
+/// 3. [`no_detail_blames_an_engine_that_did_not_run`] is the regression itself:
+///    a gate that is not the elimination must not render as the elimination,
+///    and a cause that is not a budget must say so.
+#[cfg(test)]
+mod give_up_reason_tests {
+    use super::*;
+
+    use crate::memory_budget::{WATCHDOG_LOCK, clear_watchdog_for_test, trip_watchdog_for_test};
+    use std::collections::BTreeSet;
+
+    impl GaveUp {
+        /// A stable, matchable key for one gate. Exhaustive, so a new variant
+        /// does not compile until it is named here.
+        fn name(self) -> &'static str {
+            match self {
+                Self::DeadlineOnEntry => "DeadlineOnEntry",
+                Self::DeadlineCollectingConstraints => "DeadlineCollectingConstraints",
+                Self::DeadlineBuildingFarkasMatrix => "DeadlineBuildingFarkasMatrix",
+                Self::SimplexThenEliminationDeclined { .. } => "SimplexThenEliminationDeclined",
+                Self::EliminationThenSimplexDeclined { .. } => "EliminationThenSimplexDeclined",
+            }
+        }
+    }
+
+    impl FmDecline {
+        fn name(self) -> &'static str {
+            match self {
+                Self::DeadlineBetweenVariables => "DeadlineBetweenVariables",
+                Self::DeadlineInCrossProduct => "DeadlineInCrossProduct",
+                Self::SizeGuard => "SizeGuard",
+                Self::OverflowEliminating => "OverflowEliminating",
+                Self::OverflowBackSubstituting => "OverflowBackSubstituting",
+            }
+        }
+    }
+
+    impl SimplexDecline {
+        fn name(self) -> &'static str {
+            match self {
+                Self::DeadlineBuildingRows => "DeadlineBuildingRows",
+                Self::OverflowBuildingRows => "OverflowBuildingRows",
+                Self::ModelDidNotReplay => "ModelDidNotReplay",
+                Self::CertificateFailedSelfCheck => "CertificateFailedSelfCheck",
+                Self::InfeasibleWithoutCertificate => "InfeasibleWithoutCertificate",
+                Self::EngineDeclined => "EngineDeclined",
+            }
+        }
+    }
+
+    const ANY_FM: FmDecline = FmDecline::SizeGuard;
+    const ANY_SIMPLEX: SimplexDecline = SimplexDecline::EngineDeclined;
+
+    fn listed_give_ups() -> Vec<GaveUp> {
+        vec![
+            GaveUp::DeadlineOnEntry,
+            GaveUp::DeadlineCollectingConstraints,
+            GaveUp::DeadlineBuildingFarkasMatrix,
+            GaveUp::SimplexThenEliminationDeclined {
+                simplex: ANY_SIMPLEX,
+                fm: ANY_FM,
+            },
+            GaveUp::EliminationThenSimplexDeclined {
+                fm: ANY_FM,
+                simplex: ANY_SIMPLEX,
+            },
+        ]
+    }
+
+    fn listed_fm_declines() -> Vec<FmDecline> {
+        vec![
+            FmDecline::DeadlineBetweenVariables,
+            FmDecline::DeadlineInCrossProduct,
+            FmDecline::SizeGuard,
+            FmDecline::OverflowEliminating,
+            FmDecline::OverflowBackSubstituting,
+        ]
+    }
+
+    fn listed_simplex_declines() -> Vec<SimplexDecline> {
+        vec![
+            SimplexDecline::DeadlineBuildingRows,
+            SimplexDecline::OverflowBuildingRows,
+            SimplexDecline::ModelDidNotReplay,
+            SimplexDecline::CertificateFailedSelfCheck,
+            SimplexDecline::InfeasibleWithoutCertificate,
+            SimplexDecline::EngineDeclined,
+        ]
+    }
+
+    /// The variant names an `enum` DECLARES, read out of this file's own source.
+    ///
+    /// The authority for "which reasons exist" is the enum declaration, and the
+    /// only way for a test to consult it rather than the author's memory is to
+    /// read it. Brace-depth tracking is what keeps a struct variant's FIELDS
+    /// (`simplex: SimplexDecline,`) from being counted as variants of their own.
+    fn declared_variants(enum_name: &str) -> Vec<String> {
+        let src = include_str!("lra.rs");
+        let head = format!("\nenum {enum_name} {{\n");
+        let start = src
+            .find(&head)
+            .unwrap_or_else(|| panic!("`enum {enum_name}` is declared in lra.rs"))
+            + head.len();
+        let body = &src[start..];
+        let end = body
+            .find("\n}\n")
+            .expect("the enum declaration has a closing brace at column 0");
+        let mut depth = 0usize;
+        let mut names = Vec::new();
+        for line in body[..end].lines() {
+            let trimmed = line.trim();
+            if depth == 0
+                && !trimmed.is_empty()
+                && !trimmed.starts_with("//")
+                && !trimmed.starts_with('#')
+            {
+                let name: String = trimmed
+                    .chars()
+                    .take_while(|c| c.is_alphanumeric() || *c == '_')
+                    .collect();
+                assert!(!name.is_empty(), "unparsed variant line: {trimmed:?}");
+                names.push(name);
+            }
+            depth = depth + line.matches('{').count() - line.matches('}').count();
+        }
+        names
+    }
+
+    /// The population every reason test runs against comes from the source, and
+    /// the source says the same thing the lists above do.
+    ///
+    /// **Controls.** The positive control is that the parse is non-empty and
+    /// contains a name known to exist; the negative control is that asking for
+    /// an enum that is not declared here panics rather than returning an empty
+    /// list, because an empty list from a parser that never found its subject is
+    /// indistinguishable from a strong negative.
+    #[test]
+    fn every_declared_give_up_variant_is_listed() {
+        let gave_up = declared_variants("GaveUp");
+        assert!(
+            gave_up.contains(&"DeadlineOnEntry".to_owned()),
+            "positive control: the source parse found {gave_up:?}"
+        );
+        let missing = std::panic::catch_unwind(|| declared_variants("NoSuchDeclineEnum"));
+        assert!(
+            missing.is_err(),
+            "negative control: a parse that never found its subject must panic, not return \
+             an empty list"
+        );
+
+        for (enum_name, listed) in [
+            (
+                "GaveUp",
+                listed_give_ups()
+                    .iter()
+                    .map(|g| g.name())
+                    .collect::<Vec<_>>(),
+            ),
+            (
+                "FmDecline",
+                listed_fm_declines()
+                    .iter()
+                    .map(|f| f.name())
+                    .collect::<Vec<_>>(),
+            ),
+            (
+                "SimplexDecline",
+                listed_simplex_declines()
+                    .iter()
+                    .map(|s| s.name())
+                    .collect::<Vec<_>>(),
+            ),
+        ] {
+            let declared = declared_variants(enum_name);
+            assert!(
+                !declared.is_empty(),
+                "{enum_name}: the source parse found no variants at all"
+            );
+            assert_eq!(
+                declared, listed,
+                "{enum_name}: the variants DECLARED in lra.rs and the ones this module \
+                 exercises have drifted apart"
+            );
+        }
+    }
+
+    /// Every reason renders a detail of its own, and no detail blames an engine
+    /// that did not run.
+    ///
+    /// This is the defect, stated as an assertion. The string it replaces said
+    /// "Fourier–Motzkin elimination exceeded the wall-clock / size budget" for
+    /// all six producers, of which four never entered the elimination, one never
+    /// entered either engine, and one was an `i128` overflow.
+    #[test]
+    fn no_detail_blames_an_engine_that_did_not_run() {
+        let mut seen: Vec<String> = Vec::new();
+        for gave_up in listed_give_ups() {
+            let detail = gave_up.detail();
+            assert!(
+                detail.starts_with("lra: "),
+                "{}: every detail keeps the module prefix a census greps on: {detail:?}",
+                gave_up.name()
+            );
+            // A `\`-continued string literal that `rustfmt` rejoins keeps the
+            // continuation's INDENTATION inside the literal. It happened on
+            // this very change and no substring assertion noticed, because a
+            // run of spaces breaks nothing a `contains` looks for -- it only
+            // corrupts the sentence a human and a census both read.
+            assert!(
+                !detail.contains("  ") && !detail.contains('\n') && !detail.contains('\t'),
+                "{}: a detail must be one clean line: {detail:?}",
+                gave_up.name()
+            );
+            assert!(
+                !seen.contains(&detail),
+                "{}: two gates render the SAME sentence, which is the whole defect: {detail:?}",
+                gave_up.name()
+            );
+            seen.push(detail);
+        }
+
+        // Neither engine has run at these two gates, so neither may be blamed.
+        for gave_up in [
+            GaveUp::DeadlineOnEntry,
+            GaveUp::DeadlineCollectingConstraints,
+        ] {
+            let detail = gave_up.detail();
+            assert!(
+                !detail.contains("Fourier") && !detail.contains("simplex"),
+                "{}: no engine had run, so the detail must not name one: {detail:?}",
+                gave_up.name()
+            );
+        }
+        // The multiplier matrix IS Fourier–Motzkin's, so naming it is right —
+        // but the elimination had not started, and the old string said it had.
+        let matrix = GaveUp::DeadlineBuildingFarkasMatrix.detail();
+        assert!(
+            matrix.contains("Fourier") && matrix.contains("never started"),
+            "the matrix is the elimination's, but the elimination had not run: {matrix:?}"
+        );
+
+        // A cause that is not a budget must say so, because the `unknown` it
+        // produces carries `UnknownKind::ResourceLimit` and a reader who stops
+        // at the kind would draw exactly the wrong conclusion.
+        for fm in listed_fm_declines() {
+            assert!(
+                !fm.describe().contains("  "),
+                "FmDecline::{}: {:?}",
+                fm.name(),
+                fm.describe()
+            );
+            assert_eq!(
+                fm.name().starts_with("Overflow"),
+                fm.describe().contains("not a budget"),
+                "FmDecline::{}: an overflow must disclaim the budget and a budget must not: {:?}",
+                fm.name(),
+                fm.describe()
+            );
+        }
+        for simplex in listed_simplex_declines() {
+            assert!(
+                !simplex.describe().contains("  "),
+                "SimplexDecline::{}: {:?}",
+                simplex.name(),
+                simplex.describe()
+            );
+            let is_a_budget = matches!(
+                simplex,
+                SimplexDecline::DeadlineBuildingRows | SimplexDecline::EngineDeclined
+            );
+            assert_ne!(
+                is_a_budget,
+                simplex.describe().contains("not a budget"),
+                "SimplexDecline::{}: {:?}",
+                simplex.name(),
+                simplex.describe()
+            );
+        }
+
+        // Both engines ran, so both are named, with both causes. The old string
+        // named one engine for every case and it was usually the wrong one.
+        let both = GaveUp::EliminationThenSimplexDeclined {
+            fm: FmDecline::SizeGuard,
+            simplex: SimplexDecline::ModelDidNotReplay,
+        }
+        .detail();
+        assert!(
+            both.contains("Fourier") && both.contains("simplex"),
+            "when both engines declined, both must appear: {both:?}"
+        );
+        assert!(
+            both.contains("MAX_FM_CONSTRAINTS") && both.contains("did not replay"),
+            "and so must BOTH causes: {both:?}"
+        );
+    }
+
+    // ---- driving the producers -----------------------------------------
+
+    /// An instant one second in the past. Returned bare rather than as
+    /// `Option<Instant>` so the `Some` is visible at the call site: a deadline
+    /// argument of `None` means "no bound at all" and is the CONTROL in most of
+    /// the cases below, so the two must not look alike here.
+    fn expired() -> Instant {
+        Instant::now()
+            .checked_sub(Duration::from_secs(1))
+            .expect("an instant one second ago")
+    }
+
+    /// One row `coeff·x0 + constant {<,≤} 0`, with no multiplier vector (the
+    /// decline paths below never read one).
+    fn row(coeff: i128, constant: i128) -> Constraint {
+        let mut coeffs = BTreeMap::new();
+        coeffs.insert(0usize, Rational::integer(coeff));
+        Constraint {
+            expr: LinExpr {
+                coeffs,
+                constant: Rational::integer(constant),
+            },
+            strict: false,
+            mult: Vec::new(),
+            origin: 0,
+        }
+    }
+
+    /// `pos` upper bounds and `neg` lower bounds on `x0`; the cross product is
+    /// `pos · neg`, which is what [`MAX_FM_CONSTRAINTS`] bounds.
+    fn crossing_system(pos: usize, neg: usize) -> Vec<Constraint> {
+        let mut system = Vec::with_capacity(pos + neg);
+        for i in 0..pos {
+            system.push(row(1, -(i as i128) - 1));
+        }
+        for i in 0..neg {
+            system.push(row(-1, -(i as i128) - 1));
+        }
+        system
+    }
+
+    /// `x <= 5`, collected, so the tests below hold a real [`Collector`] rather
+    /// than a hand-built one whose invariants nobody checks.
+    fn collected_x_le_5() -> (TermArena, Vec<TermId>, Collector) {
+        let mut arena = TermArena::new();
+        let x = arena.real_var("give_up_x").expect("a real variable");
+        let five = arena.real_const(Rational::integer(5));
+        let assertion = arena.real_le(x, five).expect("x <= 5");
+        let assertions = vec![assertion];
+        let ctx = collect_constraints(&arena, &assertions, None)
+            .expect("collection succeeds")
+            .expect("nothing declines with no deadline and no watchdog");
+        (arena, assertions, ctx)
+    }
+
+    /// The producers no test below drives, each with the reason it cannot be
+    /// driven. **Named rather than omitted**: a coverage set that silently
+    /// covers fewer producers is exactly the shape this whole change exists to
+    /// remove.
+    ///
+    /// - `SimplexDecline::CertificateFailedSelfCheck` — reachable only when the
+    ///   simplex reports `Infeasible` with multipliers that then fail
+    ///   `FarkasCertificate::verify`, i.e. only from a procedure bug in one of
+    ///   the two. Constructing it means constructing the bug.
+    /// - `SimplexDecline::InfeasibleWithoutCertificate` — needs
+    ///   `SimplexOutcome::Infeasible` with an EMPTY multiplier vector, which
+    ///   `narrow` produces only for a strict-delta refutation the engine cannot
+    ///   express in rationals. No input is known to produce one.
+    const UNDRIVABLE_SIMPLEX_DECLINES: &[&str] =
+        &["CertificateFailedSelfCheck", "InfeasibleWithoutCertificate"];
+
+    /// Reasons whose producer needs the clock to expire INSIDE one phase rather
+    /// than before it, so the test calibrates the machine and sets the deadline
+    /// as a ratio of a measured run. They are driven, and asserted — but a
+    /// miss is reported as a miss instead of failing the suite, because a
+    /// scheduler stall is not a defect in the code under test.
+    ///
+    /// Everything NOT listed here is asserted unconditionally.
+    const CALIBRATED_FM_DECLINES: &[&str] = &["DeadlineInCrossProduct"];
+    const CALIBRATED_GIVE_UPS: &[&str] = &[
+        "DeadlineCollectingConstraints",
+        "DeadlineBuildingFarkasMatrix",
+    ];
+
+    /// Each producer, driven, reports its own reason — and the set driven is
+    /// checked against the set the SOURCE declares.
+    ///
+    /// Every case carries a control that must move: the same construction
+    /// without the condition under test decides, so a case cannot pass by the
+    /// engine failing for an unrelated reason.
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn each_producer_reports_its_own_reason() {
+        let _lock = WATCHDOG_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        clear_watchdog_for_test();
+
+        let mut fm_seen: BTreeSet<&'static str> = BTreeSet::new();
+        let mut simplex_seen: BTreeSet<&'static str> = BTreeSet::new();
+        let mut gave_up_seen: BTreeSet<&'static str> = BTreeSet::new();
+
+        // --- `eliminate`: four bails that used to be one bare `None` --------
+        let big = crossing_system(150, 150); // 22 500 > MAX_FM_CONSTRAINTS
+        assert_eq!(
+            eliminate(&big, 0, None).err(),
+            Some(ElimBail::SizeGuard),
+            "the deterministic size guard is not a clock"
+        );
+        let small = crossing_system(3, 3); // the control: 9 rows, well under
+        assert!(
+            eliminate(&small, 0, None).is_ok(),
+            "control: the same shape under the guard must eliminate"
+        );
+
+        let overflowing = vec![row(1, -1), row(i128::MIN, -1)];
+        assert_eq!(
+            eliminate(&overflowing, 0, None).err(),
+            Some(ElimBail::Overflow),
+            "an i128 overflow is not a clock either"
+        );
+        assert!(
+            eliminate(&[row(1, -1), row(-1, -1)], 0, None).is_ok(),
+            "control: the same shape with a representable coefficient eliminates"
+        );
+
+        assert_eq!(
+            eliminate(&small, 0, Some(expired())).err(),
+            Some(ElimBail::Deadline),
+            "and the clock is still the clock"
+        );
+
+        trip_watchdog_for_test(1, 2);
+        assert_eq!(
+            eliminate(&small, 0, None).err(),
+            Some(ElimBail::MemoryWatchdog),
+            "a tripped watchdog reports itself instead of being recovered by the caller"
+        );
+        clear_watchdog_for_test();
+
+        // --- `solve`: the elimination's four reported reasons ---------------
+        for (system, nvars, deadline, expected) in [
+            (
+                crossing_system(3, 3),
+                1,
+                Some(expired()),
+                FmDecline::DeadlineBetweenVariables,
+            ),
+            (crossing_system(150, 150), 1, None, FmDecline::SizeGuard),
+            (
+                vec![row(1, -1), row(i128::MIN, -1)],
+                1,
+                None,
+                FmDecline::OverflowEliminating,
+            ),
+            // The projection is FEASIBLE here and the overflow is in the back
+            // substitution, so the query is satisfiable and we merely cannot
+            // name the point — the case the old label described as an exhausted
+            // budget.
+            (
+                vec![row(1, i128::MIN)],
+                1,
+                None,
+                FmDecline::OverflowBackSubstituting,
+            ),
+        ] {
+            let outcome = solve(&system, nvars, deadline);
+            let Feasibility::Declined(fm) = outcome else {
+                panic!("expected FmDecline::{}", expected.name());
+            };
+            assert_eq!(fm, expected, "solve reported FmDecline::{}", fm.name());
+            fm_seen.insert(fm.name());
+        }
+        // Control: a system with none of those properties is decided.
+        assert!(
+            matches!(solve(&crossing_system(3, 3), 1, None), Feasibility::Sat(_)),
+            "control: an ordinary small system is still decided"
+        );
+
+        // `DeadlineInCrossProduct` is `solve`'s mapping of `ElimBail::Deadline`,
+        // and reaching it needs the clock to expire AFTER `solve`'s own
+        // per-variable poll and INSIDE one variable's cross product. The budget
+        // is calibrated from the machine rather than assumed: the uninterrupted
+        // elimination is timed first and the deadline set to a quarter of it,
+        // so the margin is a ratio on this host and not a constant.
+        let crossing = crossing_system(100, 100);
+        let started = Instant::now();
+        assert!(
+            eliminate(&crossing, 0, None).is_ok(),
+            "control: the calibration run itself must eliminate"
+        );
+        let uninterrupted = started.elapsed();
+        let deadline = Some(Instant::now() + uninterrupted / 4);
+        match solve(&crossing, 1, deadline) {
+            Feasibility::Declined(fm @ FmDecline::DeadlineInCrossProduct) => {
+                fm_seen.insert(fm.name());
+            }
+            other => {
+                // Not a failure: on a machine where the calibration run is
+                // shorter than the scheduler's own granularity the poll at the
+                // top of `solve` wins instead. Report it rather than assert a
+                // timing race.
+                let named = match other {
+                    Feasibility::Declined(fm) => fm.name(),
+                    _ => "a verdict",
+                };
+                println!(
+                    "NOT DRIVEN: FmDecline::DeadlineInCrossProduct (calibration \
+                     {uninterrupted:?} reached {named} instead); the `ElimBail::Deadline` \
+                     half is pinned above"
+                );
+            }
+        }
+
+        // --- `simplex_fallback`: six declines that used to be one `Ok(None)` --
+        let (arena, assertions, ctx) = collected_x_le_5();
+        assert_eq!(
+            simplex_fallback(&arena, &assertions, &ctx, Some(expired()))
+                .expect("no backend error")
+                .err(),
+            Some(SimplexDecline::DeadlineBuildingRows)
+        );
+        assert!(
+            matches!(
+                simplex_fallback(&arena, &assertions, &ctx, None).expect("no backend error"),
+                Ok(Decision::Sat(_))
+            ),
+            "control: with no deadline the same system is decided sat"
+        );
+        simplex_seen.insert("DeadlineBuildingRows");
+
+        let mut poisoned = collected_x_le_5().2;
+        poisoned.constraints[0].expr.constant = Rational::integer(i128::MIN);
+        assert_eq!(
+            simplex_fallback(&arena, &assertions, &poisoned, None)
+                .expect("no backend error")
+                .err(),
+            Some(SimplexDecline::OverflowBuildingRows)
+        );
+        simplex_seen.insert("OverflowBuildingRows");
+
+        // A satisfiable system whose model cannot replay, because the assertion
+        // it is replayed against is `false`. This decline is a standing signal
+        // about the trust anchor for every `sat` on this route, and before
+        // ADR-2060 it was rendered as a Fourier–Motzkin timeout.
+        let mut false_arena = TermArena::new();
+        let never = false_arena.bool_const(false);
+        assert_eq!(
+            simplex_fallback(&false_arena, &[never], &ctx, None)
+                .expect("no backend error")
+                .err(),
+            Some(SimplexDecline::ModelDidNotReplay)
+        );
+        simplex_seen.insert("ModelDidNotReplay");
+
+        // Zero rows: the row loop never runs, so the expired deadline reaches
+        // `simplex::feasible_within`, whose pivot loop polls on entry.
+        let empty = Collector::default();
+        assert_eq!(
+            simplex_fallback(&arena, &[], &empty, Some(expired()))
+                .expect("no backend error")
+                .err(),
+            Some(SimplexDecline::EngineDeclined)
+        );
+        assert!(
+            matches!(
+                simplex_fallback(&arena, &[], &empty, None).expect("no backend error"),
+                Ok(Decision::Sat(_))
+            ),
+            "control: the empty system with no deadline is decided sat"
+        );
+        simplex_seen.insert("EngineDeclined");
+
+        // --- the two two-engine gates ---------------------------------------
+        let mut stages = CubeStages {
+            simplex: Some(Duration::ZERO),
+            ..CubeStages::default()
+        };
+        let decision = simplex_after_elimination(
+            &arena,
+            &assertions,
+            &ctx,
+            1,
+            1,
+            false,
+            &mut stages,
+            Some(SimplexDecline::ModelDidNotReplay),
+            FmDecline::SizeGuard,
+            None,
+        )
+        .expect("no backend error");
+        assert_eq!(
+            decision_gave_up(&decision),
+            Some(GaveUp::SimplexThenEliminationDeclined {
+                simplex: SimplexDecline::ModelDidNotReplay,
+                fm: FmDecline::SizeGuard,
+            }),
+            "a simplex that already declined is not re-run, and BOTH causes are reported"
+        );
+        gave_up_seen.insert("SimplexThenEliminationDeclined");
+
+        let mut stages = CubeStages::default();
+        let decision = simplex_after_elimination(
+            &arena,
+            &assertions,
+            &ctx,
+            1,
+            1,
+            false,
+            &mut stages,
+            None,
+            FmDecline::OverflowEliminating,
+            Some(expired()),
+        )
+        .expect("no backend error");
+        assert_eq!(
+            decision_gave_up(&decision),
+            Some(GaveUp::EliminationThenSimplexDeclined {
+                fm: FmDecline::OverflowEliminating,
+                simplex: SimplexDecline::DeadlineBuildingRows,
+            }),
+            "the elimination's overflow and the simplex's clock are DIFFERENT facts"
+        );
+        gave_up_seen.insert("EliminationThenSimplexDeclined");
+
+        // --- `decide_within`'s own gates ------------------------------------
+        let (wide_arena, wide) = wide_system(1_500);
+        assert_eq!(
+            decide_within(&wide_arena, &wide, Some(expired()))
+                .ok()
+                .as_ref()
+                .and_then(decision_gave_up),
+            Some(GaveUp::DeadlineOnEntry),
+            "an expired deadline stops at the entry poll, before collection"
+        );
+        gave_up_seen.insert("DeadlineOnEntry");
+
+        // Collection is timed on THIS machine and the deadline set inside it,
+        // so the margin is a ratio rather than a constant.
+        let started = Instant::now();
+        assert!(
+            collect_constraints(&wide_arena, &wide, None)
+                .expect("no backend error")
+                .is_ok(),
+            "control: the calibration collection itself succeeds"
+        );
+        let collect_took = started.elapsed();
+        assert_eq!(
+            collect_constraints(&wide_arena, &wide, Some(expired()))
+                .expect("no backend error")
+                .err(),
+            Some(CollectDecline::Deadline),
+            "collection reports the clock itself instead of leaving the caller to re-read it"
+        );
+        match decide_within(&wide_arena, &wide, Some(Instant::now() + collect_took / 3))
+            .ok()
+            .as_ref()
+            .and_then(decision_gave_up)
+        {
+            Some(GaveUp::DeadlineCollectingConstraints) => {
+                gave_up_seen.insert("DeadlineCollectingConstraints");
+            }
+            other => println!(
+                "NOT DRIVEN: GaveUp::DeadlineCollectingConstraints (collection took \
+                 {collect_took:?}, got {other:?}); the `CollectDecline::Deadline` half is \
+                 pinned above"
+            ),
+        }
+
+        // The multiplier-matrix gate, with the deadline set PAST collection
+        // instead of inside it. 1 500 rows is at or above
+        // `lra_route::SIMPLEX_FIRST_AT_CONSTRAINTS`, so the simplex runs first,
+        // its `O(n²)` dense row build overruns a deadline that `O(n)` collection
+        // cleared, and the elimination's `O(n²)` multiplier loop is then the
+        // next thing polled. The margin is structural (one phase is quadratic in
+        // what the other is linear in), not a constant.
+        match decide_within(&wide_arena, &wide, Some(Instant::now() + collect_took * 3))
+            .ok()
+            .as_ref()
+            .and_then(decision_gave_up)
+        {
+            Some(GaveUp::DeadlineBuildingFarkasMatrix) => {
+                gave_up_seen.insert("DeadlineBuildingFarkasMatrix");
+            }
+            other => println!(
+                "NOT DRIVEN: GaveUp::DeadlineBuildingFarkasMatrix (collection took \
+                 {collect_took:?}, got {other:?})"
+            ),
+        }
+
+        // Coverage, against the SOURCE and not against a literal. Each
+        // exemption list is itself checked against the source, so a list that
+        // names a variant which no longer exists fails rather than silently
+        // excusing nothing.
+        for (kind, seen, exempt) in [
+            ("FmDecline", &fm_seen, CALIBRATED_FM_DECLINES),
+            ("SimplexDecline", &simplex_seen, UNDRIVABLE_SIMPLEX_DECLINES),
+            ("GaveUp", &gave_up_seen, CALIBRATED_GIVE_UPS),
+        ] {
+            let declared: BTreeSet<String> = declared_variants(kind).into_iter().collect();
+            let exempt_set: BTreeSet<&str> = exempt.iter().copied().collect();
+            assert!(
+                exempt_set.iter().all(|n| declared.contains(*n)),
+                "{kind}: an exemption names a variant the source no longer declares: \
+                 {exempt_set:?} vs {declared:?}"
+            );
+            let required: BTreeSet<&str> = declared
+                .iter()
+                .map(String::as_str)
+                .filter(|n| !exempt_set.contains(n))
+                .collect();
+            let missing: Vec<&&str> = required.iter().filter(|n| !seen.contains(**n)).collect();
+            assert!(
+                missing.is_empty(),
+                "{kind}: the source declares reasons no producer in this test drives: \
+                 {missing:?}. Add a case, or add it to the exemption list WITH A REASON."
+            );
+            for name in &exempt_set {
+                if !seen.contains(name) {
+                    println!("NOT DRIVEN (exempt): {kind}::{name}");
+                }
+            }
+        }
+    }
+
+    /// `GaveUp` if the decision gave up at a resource gate.
+    fn decision_gave_up(decision: &Decision) -> Option<GaveUp> {
+        match decision {
+            Decision::GaveUp(g) => Some(*g),
+            _ => None,
+        }
+    }
+
+    /// `count` real constraints `x_i <= i` over `count` distinct variables.
+    fn wide_system(count: usize) -> (TermArena, Vec<TermId>) {
+        let mut arena = TermArena::new();
+        let mut assertions = Vec::with_capacity(count);
+        for i in 0..count {
+            let x = arena
+                .real_var(&format!("give_up_wide_x{i}"))
+                .expect("a real variable");
+            let bound = arena.real_const(Rational::integer(i as i128));
+            assertions.push(arena.real_le(x, bound).expect("x_i <= i"));
+        }
+        (arena, assertions)
+    }
+
+    /// An `i128` overflow while linearizing is reported as an INCOMPLETENESS,
+    /// not as a clock.
+    ///
+    /// This is the producer ADR-2045 singled out: `lra.rs`'s `ctx.overflow`
+    /// branch returned `Decision::TimedOut` at a line where NEITHER engine has
+    /// run, and it rendered as "Fourier–Motzkin elimination exceeded the
+    /// wall-clock / size budget". The control below is the same query with a
+    /// representable coefficient, which is decided.
+    #[test]
+    fn an_overflow_while_linearizing_is_an_incompleteness_and_not_a_timeout() {
+        let _lock = WATCHDOG_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        clear_watchdog_for_test();
+
+        let build = |scale: i128| {
+            let mut arena = TermArena::new();
+            let x = arena.real_var("overflow_x").expect("a real variable");
+            let doubled = arena.real_add(x, x).expect("x + x");
+            let factor = arena.real_const(Rational::integer(scale));
+            let scaled = arena.real_mul(factor, doubled).expect("scale * (x + x)");
+            let zero = arena.real_const(Rational::zero());
+            let assertion = arena.real_le(scaled, zero).expect("<= 0");
+            (arena, vec![assertion])
+        };
+
+        let (arena, assertions) = build(i128::MAX);
+        let decision = decide_within(&arena, &assertions, None).expect("a decision");
+        let Decision::Incomplete(detail) = &decision else {
+            panic!("an i128 overflow must not be a resource gate");
+        };
+        assert!(
+            detail.contains("i128 overflow") && detail.contains("not a clock"),
+            "the detail must say what it is and what it is not: {detail:?}"
+        );
+        assert!(
+            !detail.contains("Fourier") && !detail.contains("simplex"),
+            "neither engine has run at this line: {detail:?}"
+        );
+
+        // The public surface carries the corrected kind, which is the half a
+        // machine reads.
+        let result = check_with_lra_within(&arena, &assertions, None).expect("a result");
+        let CheckResult::Unknown(reason) = &result else {
+            panic!("an overflowed collection cannot be a verdict: {result:?}");
+        };
+        assert_eq!(reason.kind, UnknownKind::Incomplete);
+
+        let (control_arena, control) = build(2);
+        assert!(
+            matches!(
+                decide_within(&control_arena, &control, None).expect("a decision"),
+                Decision::Sat(_)
+            ),
+            "control: the same query with a representable coefficient is decided"
+        );
     }
 }

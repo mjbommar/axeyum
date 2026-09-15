@@ -427,7 +427,7 @@ pub trait InprocessObserver {
     /// order.
     fn count(&mut self, name: &str, value: f64);
 
-    /// Work grant for equivalent-literal substitution ([`crate::decompose`])
+    /// Work grant for equivalent-literal substitution ([`mod@crate::decompose`])
     /// over `formula`, in graph steps. `None` means the pass does not run.
     ///
     /// **Defaulted to `None` on purpose.** The two occurrence-list passes get a
@@ -667,7 +667,7 @@ impl<O> TickValve<O> {
     }
 
     /// Sets the effort equivalent-literal substitution is offered under,
-    /// replacing [`DECOMPOSE_EFFORT`]. Resets that account's watermark and
+    /// replacing `DECOMPOSE_EFFORT`. Resets that account's watermark and
     /// backoff, so call it before the first round.
     #[must_use]
     pub fn with_decompose_effort(mut self, effort: TickEffort) -> Self {
@@ -1052,7 +1052,7 @@ pub struct ScheduledInprocess {
     /// Lifts a reduced model back to the original pre-BVE variables.
     pub reconstruction: Reconstruction,
     /// Fills in the variables equivalent-literal substitution removed. Identity
-    /// unless [`InprocessSchedule::decompose`] ran and substituted something.
+    /// unless `InprocessSchedule::decompose` ran and substituted something.
     ///
     /// **A caller that lifts a model must apply this too.** A substituted
     /// variable does not occur in [`Self::formula`], so its slot in a search's

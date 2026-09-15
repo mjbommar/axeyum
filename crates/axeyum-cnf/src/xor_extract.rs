@@ -179,10 +179,10 @@ pub fn extract_xors(cnf: &CnfFormula) -> ExtractedXors {
 /// # What the table can and cannot do
 ///
 /// Both routes run the *identical* grouping and the *identical*
-/// [`recognize_gate`]. The table changes one thing: which clauses are grouped
+/// `recognize_gate`. The table changes one thing: which clauses are grouped
 /// at all. Every clause of a group shares that group's variable set by
 /// definition, so a group is admitted whole or not at all — the table can never
-/// hand [`recognize_gate`] a truncated group. Therefore:
+/// hand `recognize_gate` a truncated group. Therefore:
 ///
 /// * A **wrong or stale** table can only *add* variable sets to look at. Those
 ///   groups are then recognized on their own merits, exactly as mining would

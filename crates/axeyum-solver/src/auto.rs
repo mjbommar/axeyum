@@ -4998,7 +4998,7 @@ thread_local! {
 /// Diagnostic only: nothing branches on it and no verdict depends on it. It
 /// exists because a test of `qinst_egraph_retry_slice` alone cannot fail when
 /// the DISPATCH SITE stops consulting it — reverting
-/// [`skolemized_egraph_retry`] to apply the bare [`QINST_EGRAPH_RETRY_SLICE`]
+/// `skolemized_egraph_retry` to apply the bare `QINST_EGRAPH_RETRY_SLICE`
 /// constant leaves every arithmetic test green while making the lever inert,
 /// which is exactly the shape of "a test that does not consume the declaration
 /// it names". Reading the applied budget back closes that.
@@ -5019,18 +5019,18 @@ pub fn reset_last_qinst_egraph_retry_budget() {
 ///
 /// # Why this exists
 ///
-/// [`finish_quantified_solve`]'s own comment already records the measured
+/// `finish_quantified_solve`'s own comment already records the measured
 /// behaviour of this rung: *"the e-graph instantiation loop reliably consumes
 /// every second it is given"*. The fix applied there was a bounded
-/// first-refusal MBQI rung ABOVE it ([`MBQI_FIRST_REFUSAL_SLICE`]); the rungs
+/// first-refusal MBQI rung ABOVE it (`MBQI_FIRST_REFUSAL_SLICE`); the rungs
 /// BELOW it -- full MBQI, the full pure-UF finite-model finder -- were left
 /// with whatever the loop returns, which on a clock-bound file is nothing. A
 /// file in that state ends the ladder at `quantified_timeout("e-matching")`,
 /// and that give-up string is the largest classified family in the `UFNIA`
 /// census (ADR-1970).
 ///
-/// This is the same shape as [`ABV_ONLINE_LADDER_RESERVE_SHARE`] and
-/// [`UF_ARITH_LADDER_RESERVE_SHARE`], and it is selected the same way: by an
+/// This is the same shape as `ABV_ONLINE_LADDER_RESERVE_SHARE` and
+/// `UF_ARITH_LADDER_RESERVE_SHARE`, and it is selected the same way: by an
 /// env var, so both arms come out of ONE binary and an A/B cannot accidentally
 /// compare two builds.
 ///
@@ -5038,7 +5038,7 @@ pub fn reset_last_qinst_egraph_retry_budget() {
 /// byte-identical to the behaviour before this type existed.** It ships off
 /// because a reserve is worth nothing unless a rung below the e-graph would
 /// decide the file, and that is a measurement, not a guess. `share = 1` hands
-/// the loop [`MIN_LADDER_SLICE`] and the ladder essentially everything, which
+/// the loop `MIN_LADDER_SLICE` and the ladder essentially everything, which
 /// is the one-way CEILING arm: strictly more clock to the lower rungs than any
 /// real reserve can give, so a file it does not decide is out of reach of every
 /// reserve.
@@ -5162,12 +5162,12 @@ fn quant_egraph_budget(config: &SolverConfig) -> SolverConfig {
 /// single largest blocker family on any datatype division — so it is the
 /// textbook case for a reserve. A reserve is nonetheless worth nothing unless a
 /// rung below would decide the file, and that is a measurement, not a guess:
-/// `share = 1` hands the pass [`MIN_LADDER_SLICE`] and the ladder essentially
+/// `share = 1` hands the pass `MIN_LADDER_SLICE` and the ladder essentially
 /// everything, which is the one-way CEILING arm. A file the ceiling arm does not
 /// decide is out of reach of every smaller reserve.
 ///
 /// Bounding the pass is sound at any budget because the pass is **strictly
-/// additive**: [`crate::quant_valid_universal::eliminate_valid_universals`]
+/// additive**: `crate::quant_valid_universal::eliminate_valid_universals`
 /// leaves untouched every universal it did not prove valid, and its own
 /// per-assertion loop already stops on a spent deadline and copies the
 /// remaining assertions through unchanged. A smaller budget therefore
@@ -5816,7 +5816,7 @@ const DL_EXTENDED_PROBE_SLICE: LadderSlice = LadderSlice::all_but_capped_reserve
     DL_EXTENDED_FALLBACK_RESERVE,
 );
 
-/// What [`check_auto_dispatch`] does with `check_with_datatype_native`'s
+/// What `check_auto_dispatch` does with `check_with_datatype_native`'s
 /// `Unsupported` refusal (ADR-1980).
 ///
 /// # Why this is a named arm rather than a rewrite
@@ -5847,7 +5847,7 @@ pub enum DatatypeNativeRefusalPolicy {
     /// [ADR-1966]'s rule: a route refusing a construct is a DECLINE, not the
     /// query's verdict, so the rungs below get their turn. The refusal's own
     /// sentence is carried out to whatever the ladder ends on by
-    /// [`relabel_with_datatype_refusal`], so the DT blocker census still reads
+    /// `relabel_with_datatype_refusal`, so the DT blocker census still reads
     /// it. **This is the shipped default** (ADR-1980).
     Decline,
 }

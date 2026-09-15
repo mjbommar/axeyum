@@ -1,0 +1,14 @@
+id	ax_skel	ax_pur	ax_prop	z3_pur	cvc5_pur	pur_terms
+f01	unknown	unknown	unsat	unsat	unsat	27
+f02	unknown	unknown	sat	unsat	unsat	26
+f03	unknown	unsat	sat	unsat	unsat	3
+f04	unknown	unsat	unsat	unsat	unsat	3
+f05	unsat	unsat	unsat	unsat	unsat	16
+f06	unknown	unsat	sat	unsat	unsat	778
+f07	unknown	-	DID-NOT-RUN	-	-	DID-NOT-RUN
+f08	unknown	unsat	unsat	unsat	unsat	3
+f09	unsat	unsat	unsat	unsat	unsat	34
+f10	unknown	-	DID-NOT-RUN	-	-	DID-NOT-RUN
+f11	unknown	unsat	sat	unsat	unsat	3
+f12	unknown	unsat	unsat	unsat	unsat	5
+f13	unknown	unknown	unsat	unsat	unsat	1950

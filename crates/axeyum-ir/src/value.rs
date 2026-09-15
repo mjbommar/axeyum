@@ -936,7 +936,7 @@ impl Value {
 /// `Sort` without the arena, and model values do not carry one. The check is
 /// therefore weakened to the value's *shape* for that one variant — still a
 /// real check (an `Int` in an array-component slot is caught), just not a
-/// componentwise one. Everything else is the full [`value_matches_sort`].
+/// componentwise one. Everything else is the full `value_matches_sort`.
 pub fn value_matches_key(value: &Value, key: ArraySortKey) -> bool {
     match key.to_sort() {
         Some(sort) => value_matches_sort(value, sort),

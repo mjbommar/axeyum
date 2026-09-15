@@ -660,3 +660,44 @@ the guard was real, it was tested, and it was answering a different question
 than the one that mattered. `mem-run.sh` answers "can one process exhaust the
 box?" The question that killed the session was "can the processes we allow
 CONCURRENTLY exhaust the box?", and nothing was asking it.
+
+## Nothing bounds a lane's own Python, and a `let`-expander will take the box
+
+**Same incident as the section above, from the other end.** That section asks
+why the host had no budget; this one asks what the 60.5 GiB process was
+doing and what would have stopped it at the source.
+
+`scripts/cargo-serialized.sh` holds a host-wide lock and runs cargo inside a
+scope carrying both `MemoryMax` and `MemorySwapMax`. That covers builds. It
+covers nothing else — and the analysis scripts a lane writes to answer its own
+question run with no ceiling at all.
+
+Measured 2026-09-14 (lane `qf-wall`): a ~40-line Python script that substitutes
+SMT-LIB `let` bindings away reached **63.4 GB resident** (the 60.5 GiB in the
+kernel record above) on
+`UFNIA/lahiri-cav09-storm-queries/usbsamp_bug_example_2_3_8_1.smt2` — 724 KB of
+source with **107 nested `let` bindings**. The kernel OOM-killer fired
+globally, killing the agent session's tmux scope. The script had a `timeout`
+around it; a timeout bounds wall clock and says nothing about memory.
+
+`let` is the specific trap because it exists precisely to express sharing.
+Expanding it turns a DAG into a tree, so cost is exponential in the nesting,
+and the files where you most want the expansion are the files with the most
+nesting. The same shape appears in any "flatten, then analyse" script:
+macro expansion, `define-fun` inlining, term-graph unfolding.
+
+Two rules, and the second is not optional because the first is present:
+
+```sh
+# 1. A ceiling on every script that expands, inlines or flattens.
+(ulimit -v 8388608; timeout 900 python3 expand.py "$in" "$out")
+
+# 2. Skip the known-pathological inputs BY NAME.
+#    A ceiling converts the crash into a MemoryError -- it does not make the
+#    work finish. An input that cannot terminate in bounded memory is a
+#    DID-NOT-RUN row, and it belongs in no bucket on either side.
+```
+
+Reporting matters as much as surviving. A row whose instrument was killed is
+not evidence for either answer, and folding it into the majority bucket is how
+a measurement acquires a result it never took.

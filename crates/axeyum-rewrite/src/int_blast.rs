@@ -83,7 +83,7 @@ pub const MAX_INT_BLAST_WIDTH: u32 = 64;
 const ADDITIVE_NO_OVERFLOW: usize = 1;
 
 axeyum_ir::cap_lever! {
-    /// The effective value of [`ADDITIVE_NO_OVERFLOW`]: the compiled default, or
+    /// The effective value of `ADDITIVE_NO_OVERFLOW`: the compiled default, or
     /// `AXEYUM_INT_BLAST_ADDITIVE_NO_OVERFLOW` when that variable is set.
     ///
     /// A measurement lever, not a tuning knob. With the variable unset this is
@@ -256,7 +256,7 @@ pub fn blast_integers(
 /// [`blast_integers`] with the additive no-overflow side-constraints selected
 /// EXPLICITLY rather than read from the process environment.
 ///
-/// The lever ([`ADDITIVE_NO_OVERFLOW`]) resolves once per process through a
+/// The lever (`ADDITIVE_NO_OVERFLOW`) resolves once per process through a
 /// `OnceLock`, so a test that sets the variable is a test of whichever test
 /// happened to read it first. Taking the flag as an argument is what makes the
 /// armed behaviour testable at all, and what lets a measurement harness arm it
@@ -427,7 +427,7 @@ impl Blaster {
                 product
             }
             // The ADDITIVE analogue, armed only by
-            // `AXEYUM_INT_BLAST_ADDITIVE_NO_OVERFLOW` (see [`ADDITIVE_NO_OVERFLOW`]).
+            // `AXEYUM_INT_BLAST_ADDITIVE_NO_OVERFLOW` (see `ADDITIVE_NO_OVERFLOW`).
             // With the lever off this arm's guard is false and the operators fall
             // through to the generic `App` arm below — the pre-lever behaviour,
             // unchanged. `IntAbs`, and the `bv_add`/`bv_sub` inside the Euclidean
@@ -520,7 +520,7 @@ impl Blaster {
     /// operation did NOT wrap. (`int_neg` is included because `-MIN` is exactly
     /// the value that wraps to itself, which no `add`/`sub` constraint catches.)
     ///
-    /// Soundness: see [`ADDITIVE_NO_OVERFLOW`]. This is a restriction at width
+    /// Soundness: see `ADDITIVE_NO_OVERFLOW`. This is a restriction at width
     /// `B`; `Sat` remains anchored by the exact-integer replay and an in-range
     /// `unsat` is already reported as `unknown`.
     ///
