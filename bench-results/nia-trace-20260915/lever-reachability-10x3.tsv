@@ -1,0 +1,8 @@
+file	repeat	disarmed	disarmed_ms	armed	armed_ms
+From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p1784_safety_0.smt2	1	unknown	23333	unknown	23241
+From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p1784_safety_0.smt2	2	unknown	23434	unknown	23342
+From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p1784_safety_0.smt2	3	unknown	23429	unknown	23331
+From_AProVE_2014__juHashMapCreateIteratorEntryLoop.jar-obl-12__p3150_safety_0.smt2	1	unknown	23528	unknown	23485
+From_AProVE_2014__juHashMapCreateIteratorEntryLoop.jar-obl-12__p3150_safety_0.smt2	2	unknown	23324	unknown	23232
+From_AProVE_2014__juHashMapCreateIteratorEntryLoop.jar-obl-12__p3150_safety_0.smt2	3	unknown	23333	unknown	23332
+From_AProVE_2014__juHashMapCreateContainsKey.jar-obl-11__p31818_safety_0.smt2	1	unknown	23327	unknown	23575

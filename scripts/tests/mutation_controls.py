@@ -11125,5 +11125,93 @@ SUITES["qinst-trigger-alternatives"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `int-blast-width-floor` (ADR-2112) -- the ladder's admissible-width floor.
+#
+# The floor skips int-blast rungs whose width cannot hold the query's own
+# largest integer literal.  It is a COMPLETENESS lever sitting directly on top
+# of a soundness property it does not own: a bounded-width bit-vector `unsat`
+# is degraded to `Unknown` in `lia.rs`, and a `sat` model is replayed against
+# the exact integers.  So the guards have to separate three things the compiler
+# cannot:
+#
+#   1. the floor is the width the literals actually need -- not one narrower
+#      (which would let a rung WRAP a literal) and not one wider (which would
+#      skip an admissible rung);
+#   2. the filter removes only inadmissible rungs, and only from the ladder;
+#   3. when NO rung is admissible the last one is still handed back, so the
+#      `Unknown` a caller reads is produced by the code that produces it today
+#      rather than reconstructed -- ADR-1980's rule.
+#
+# Each mutation below kills exactly one of those, which is the point: a
+# soundness guard that dies alongside every other guard is not isolating
+# anything.  The third mutation is deliberately subtle -- it keeps every
+# EXPECTED floor value in the suite correct and breaks only the TIGHTNESS half
+# of the soundness test, on a literal whose minimal signed width is odd.
+# --------------------------------------------------------------------------
+
+SUITES["int-blast-width-floor"] = (
+    "crates/axeyum-solver/src/auto.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            "--",
+            "the_floor_is_the_width",
+            "the_floor_removes_only",
+            "a_narrow_width_cannot",
+            "a_literal_no_width_can_hold",
+        ),
+        "int-blast-width-floor",
+    ),
+    [
+        (
+            # Drop the retained last rung.  The ladder then gets an EMPTY width
+            # sequence and returns its manufactured placeholder instead of the
+            # refusal that actually applies, so a blocker census reading
+            # `int-blast-ladder`'s detail starts reading a different string.
+            # Only the no-admissible-width test reaches this branch: every other
+            # fixture has a floor the ladder can satisfy.
+            "a query no width can hold still leaves the ladder a rung",
+            "    let Some(floor) = ladder_admissible_width_floor(arena, assertions) else {\n"
+            "        return vec![widths[widths.len() - 1]];\n"
+            "    };",
+            "    let Some(floor) = ladder_admissible_width_floor(arena, assertions) else {\n"
+            "        return Vec::new();\n"
+            "    };",
+            ),
+        (
+            # Invert the filter.  The floor now keeps exactly the rungs that
+            # CANNOT hold the query's literals and drops the ones that can --
+            # the lever becomes a guarantee of failure rather than a skip.  The
+            # no-admissible-width test never reaches the filter (its floor is
+            # `None`) and the two floor-VALUE tests do not call it at all.
+            "the filter keeps the admissible rungs, not the inadmissible ones",
+            "    let kept: Vec<u32> = widths.iter().copied().filter(|&w| w >= floor).collect();",
+            "    let kept: Vec<u32> = widths.iter().copied().filter(|&w| w <= floor).collect();",
+        ),
+        (
+            # Step the width search by two.  Every floor this suite asserts by
+            # VALUE is even (32 for `2^30 + 1`, 4 for the small control), so
+            # both floor-value guards still pass and so does the retained-rung
+            # guard.  What breaks is the soundness test's TIGHTNESS half on
+            # `-1073741823`, whose minimal signed width is 31: the search steps
+            # over 31 and reports 32, which is one bit wider than the literal
+            # needs -- so an admissible rung would be skipped.  A floor that is
+            # too wide loses completeness silently, which is exactly the failure
+            # the tightness assertion exists to catch.
+            "the floor is the width the literal needs, not the next one up",
+            "                    width += 1;\n"
+            "                    if width > axeyum_rewrite::MAX_INT_BLAST_WIDTH {",
+            "                    width += 2;\n"
+            "                    if width > axeyum_rewrite::MAX_INT_BLAST_WIDTH {",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))

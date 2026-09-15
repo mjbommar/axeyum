@@ -62,6 +62,17 @@ This is [ADR-2060]'s defect in miniature: `DeclineReason` renders a CNF-size
 refusal and a clock expiry with the same word. Only the detail text separates
 them, which is why the checker matches on the detail and not on the reason.
 
+> **Followed up by [ADR-2112] (2026-09-15), which does not change any number
+> above.** It re-read the same population and found the detail text does not
+> separate them either: `dispatch_int_blast_width_ladder` returns its LAST
+> rung's `Unknown` (`auto.rs:11664`), so this one sentence is reported for
+> three different causes — 44 of 115 undecided rows where no admissible width's
+> estimate fits the cap, 69 where one does and a real solve ran and failed on
+> its own merits, and 2 with no admissible width at all. It also measured the
+> estimate against the actual encoding on ten files rather than the one on
+> record: the over-approximation is 9.40x–17.72x and every one of the ten
+> encodes to 6.1–8.4 M clauses, well under the 64 M cap that refused it.
+
 ### A2 — `UFNIA`'s 126,764 ms is not a prefix
 
 `q:skolem-qf` records a **probe**, calls `check_auto` — the entire
@@ -316,3 +327,4 @@ derivation it claims to be. The reason is recorded at the `include_str!`, in
 [ADR-2102]: adr-2102-the-outcome-ledger.md
 [ADR-2103]: adr-2103-quantified-ladder-ownership-and-bounded-continuation.md
 [ADR-2104]: adr-2104-typed-decline-detail.md
+[ADR-2112]: adr-2112-qf-nia-what-the-clause-estimate-counts.md
