@@ -191,11 +191,20 @@ suite.
 | mutant | tests killed |
 |---|---|
 | G1 `replayed_sat` | **1** (exactly one) |
-| G2 `simplex_fallback` | **1** (exactly one, a different one) |
+| G2 `simplex_fallback` | **2**, both its own — its verdict test and the stage-recording pin |
 | G3 support fast path | 3 |
 | G4 full path | 3 — *the same 3* |
 | G5 `real_model_oracle` | **0 — SURVIVES** |
-| C3 = every runtime guard at once | 5 |
+| C3 = every runtime guard at once | 6 |
+
+**No test is shared between the G1 and G2 rows**, which is what the rule is
+about; "exactly one" is the floor, not the target. G2's second killer is the
+stage-recording pin, and it fires for a reason specific to G2: delete the guard
+and the short-circuit never runs, so Fourier–Motzkin's multiplier matrix is
+built after all. **The matrix was re-run unchanged after two merges of `main`**
+(ADR-2060's `SimplexDecline` split, ADR-2055's sparse rows) with the same result
+each time; only G2's mutation ANCHOR had to move, because ADR-2060 changed the
+guard's body without changing the guard.
 
 **G3 and G4 kill the same three.** They are the two entry gates of one route and
 this population reaches both. Said plainly rather than counted as two guards.

@@ -43,7 +43,7 @@ Two changes, and they are the transferable part:
 | mutant | status | tests killed |
 |---|---|---|
 | **G1** `replayed_sat`'s `has_opaque_vars` | ok | **1** — `g1_fourier_motzkin_sat_over_an_abstraction_is_incomplete_not_sat` |
-| **G2** `simplex_fallback`'s `has_opaque_vars` | ok | **1** — `g2_simplex_sat_over_an_abstraction_is_not_sat` |
+| **G2** `simplex_fallback`'s `has_opaque_vars` | ok | **2** — `g2_simplex_sat_over_an_abstraction_is_not_sat` and `the_opaque_short_circuit_records_one_cube_decision`, both its own |
 | **G3** `dpll_lia` support fast path | ok | 3 |
 | **G4** `dpll_lia` full path | ok | 3 (**the same 3**) |
 | **G5** `real_model_oracle` → `real_theory_oracle` | **SURVIVED** | 0 |
@@ -51,8 +51,16 @@ Two changes, and they are the transferable part:
 | C2 = G3+G4+G5 | ok | 3 |
 | C3 = every runtime guard | ok | 5 |
 
-**G1 and G2 each kill exactly one test, and a different one.** That is the rule
-satisfied literally.
+**G1 kills exactly one test. G2 kills two, and both are its own** — its verdict
+test and the stage-recording pin, which fires because deleting the guard means
+the short-circuit never runs and Fourier–Motzkin's multiplier matrix is built
+after all. Neither is shared with any other guard's row, which is the property
+the rule is about; "exactly one" is the floor, not the target.
+
+**Re-run unchanged after two merges of `main`** (ADR-2060's `SimplexDecline`
+split and ADR-2055's sparse rows), with the same result each time. The G2 anchor
+had to be re-pointed once, because ADR-2060 changed the guard's BODY without
+changing the guard.
 
 **G3 and G4 kill the same three.** They are the two entry gates on one route and
 this population reaches both; deleting either lets `try_finish_sat` run and the
@@ -92,6 +100,19 @@ Two closures survive every local edit:
   re-typing the oracle's outcome so it can carry a model — does not compile.
   That is what the type was for, and it is the one layer the matrix cannot
   score, because "cannot be deleted" is not a row.
+
+## A correction the merges forced: a text pin is a universal killer
+
+The suite gained `the_sat_exit_enumeration_still_describes_the_source`, which
+reads the SOURCE. The mutants here ARE source edits, so it died on every row —
+including **G5**, which it made look load-bearing when nothing behavioural
+observes it. The harness would then have printed "every guard has a killer",
+which is exactly the reassuring, false summary this whole exercise exists to
+avoid.
+
+**A check that rejects everything is the same disease as one that rejects
+nothing.** Text pins are excluded from the matrix, and only from the matrix;
+they still run in the suite, where they do the job they were written for.
 
 ## Method notes
 
