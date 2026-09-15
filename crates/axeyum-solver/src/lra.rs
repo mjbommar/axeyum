@@ -1627,8 +1627,15 @@ struct Collector {
     /// by 0.006 s, because the whole cost is inside a single `collect` call.
     deadline: Option<Instant>,
     /// Set once the deadline is observed to have passed; the recursion then
-    /// unwinds without doing further work and `decide_within` reports
-    /// [`Decision::TimedOut`].
+    /// unwinds without doing further work, [`collect_constraints`] reports
+    /// [`CollectDecline::Deadline`], and `decide_within` turns that into
+    /// [`GaveUp::DeadlineCollectingConstraints`].
+    ///
+    /// It is set at exactly one place, immediately after that place's own
+    /// `past_deadline` call, so it is a clock OBSERVATION and not an inference
+    /// from one. That matters: before ADR-2060 the caller re-read the clock
+    /// after collection returned in order to guess which of two causes it had
+    /// been.
     timed_out: bool,
 }
 
