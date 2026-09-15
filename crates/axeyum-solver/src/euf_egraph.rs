@@ -1759,6 +1759,10 @@ pub(crate) fn collect_eq_atoms(
     out: &mut Vec<TermId>,
     seen: &mut std::collections::HashSet<TermId>,
 ) {
+    if eq_atom_dag_walk_enabled() {
+        collect_eq_atoms_dag(arena, term, out, seen);
+        return;
+    }
     if let TermNode::App { op, args } = arena.node(term) {
         // Only equalities over a *data* sort (uninterpreted carrier / BV / …) are
         // theory atoms for the congruence closure. A Bool-sorted equality is an
@@ -1777,6 +1781,74 @@ pub(crate) fn collect_eq_atoms(
         let args = args.clone();
         for a in args {
             collect_eq_atoms(arena, a, out, seen);
+        }
+    }
+}
+
+/// Whether [`collect_eq_atoms`] walks the assertion **DAG** rather than
+/// re-walking it as a tree. `AXEYUM_EQ_ATOM_DAG_WALK=1`; **off by default**.
+///
+/// Read once through a `OnceLock`, never per call: this sits at the top of a
+/// function that recurses over every node of every assertion, so a per-call
+/// `env::var` would put an allocating lookup in the hot path it exists to make
+/// cheaper.
+pub(crate) fn eq_atom_dag_walk_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var("AXEYUM_EQ_ATOM_DAG_WALK").is_ok_and(|v| v.trim() == "1"))
+}
+
+/// [`collect_eq_atoms`] with the visited check its two siblings in this file
+/// already have.
+///
+/// # Why this is a separate function rather than a fix in place
+///
+/// The change is believed to be output-identical (see below) but that belief is
+/// a claim, so both walks stay in the binary and the lever selects between
+/// them. That is what lets an A/B run **one binary under two environment
+/// values** instead of comparing two builds.
+///
+/// # The defect
+///
+/// `collect_euf_atoms` and `collect_bool_symbols`, 30 and 90 lines below, both
+/// open with `if !seen.insert(term) { return; }`. `collect_eq_atoms` does not:
+/// its `seen.insert(term)` sits *inside* the `Op::Eq` test, where it dedups the
+/// OUTPUT list rather than marking the node visited. So every non-`Eq` node is
+/// re-walked once per path that reaches it — **a DAG walked as a tree** — and
+/// the `args.clone()` allocates a `Vec` on every one of those visits.
+///
+/// Measured 2026-09-15 (`bench-results/silent-hang-20260915/prof/fp-mqueue`):
+/// on `UFNIA/lahiri-cav09-storm-queries/mqueue_example_2_2_2_4.smt2` this
+/// function is **22.6 %** of sampled cycles with a further **44 %** in the
+/// allocator, and the `euf:offline` phase that calls it as its first statement
+/// had been inside that one call for **49,442 ms** of a 60 s budget when the
+/// watchdog read the breadcrumb.
+///
+/// # Why the output is the same
+///
+/// Legacy: an atom term is pushed the first time the walk reaches it (later
+/// reaches fail the inner `seen.insert`), and non-atoms are re-walked.
+/// Here: every term is visited exactly once, at its first reach, and pushed
+/// there if it is an atom. Pruning repeat visits cannot change which node is
+/// reached FIRST, so `out` holds the same terms in the same order. `seen` now
+/// holds every visited term rather than only the atoms; all four callers build
+/// it locally, pass it only to this function, and never read it afterwards.
+fn collect_eq_atoms_dag(
+    arena: &TermArena,
+    term: TermId,
+    out: &mut Vec<TermId>,
+    seen: &mut std::collections::HashSet<TermId>,
+) {
+    if !seen.insert(term) {
+        return;
+    }
+    if let TermNode::App { op, args } = arena.node(term) {
+        if matches!(op, Op::Eq) && args.len() == 2 && !matches!(arena.sort_of(args[0]), Sort::Bool)
+        {
+            out.push(term);
+        }
+        let args = args.clone();
+        for a in args {
+            collect_eq_atoms_dag(arena, a, out, seen);
         }
     }
 }
@@ -4182,5 +4254,169 @@ mod tests {
             !matches!(result, CheckResult::Unsat),
             "two unrelated false predicates were wrongly identified: {result:?}"
         );
+    }
+
+    /// Builds a term whose DAG is linear in `depth` and whose tree unfolding is
+    /// `2^depth`: each level names the level below it TWICE, and the arena
+    /// hash-conses, so the two children are the same node.
+    ///
+    /// **The `Eq` atom is at the BOTTOM, under the whole doubling stack**, so
+    /// it is reachable by `2^depth` distinct paths. That placement is the
+    /// entire point and the first version of this fixture got it wrong: with
+    /// the atom at the ROOT it is reachable by exactly one path, a walk with no
+    /// visited check pushes it exactly once, and the equivalence test below
+    /// passed under the very mutation it exists to catch. Both tests survived
+    /// that mutation; the fixture, not the assertion, was what made them
+    /// vacuous.
+    fn shared_dag_assertion(arena: &mut TermArena, depth: usize) -> TermId {
+        let x = arena.declare("sd_x", Sort::BitVec(8)).expect("declare x");
+        let y = arena.declare("sd_y", Sort::BitVec(8)).expect("declare y");
+        let xv = arena.var(x);
+        let yv = arena.var(y);
+        // A data-sorted equality: an atom for `collect_eq_atoms`, and the only
+        // one in the term.
+        let atom = arena.eq(xv, yv).expect("eq");
+        let mut acc = atom;
+        for _ in 0..depth {
+            acc = arena.and(acc, acc).expect("and doubling");
+        }
+        acc
+    }
+
+    /// The two walks must agree on the WHOLE output, terms and order.
+    ///
+    /// This is the obligation the lever's doc comment claims and it must be
+    /// checked rather than argued: pruning repeat visits cannot change which
+    /// node is reached first, so `out` must be identical. If it ever is not,
+    /// the lever is not a performance change and this test is what says so.
+    ///
+    /// Run at a depth whose tree unfolding is ~2M visits — big enough that the
+    /// walks genuinely diverge in cost, small enough that the tree walk still
+    /// finishes inside a unit test.
+    #[test]
+    fn the_eq_atom_dag_walk_returns_exactly_what_the_tree_walk_returns() {
+        const DEPTH: usize = 20;
+        let mut arena = TermArena::new();
+        let assertion = shared_dag_assertion(&mut arena, DEPTH);
+
+        let mut tree_out: Vec<TermId> = Vec::new();
+        let mut tree_seen = std::collections::HashSet::new();
+        // The legacy walk, called directly so the test does not depend on the
+        // process environment (a test that passes only under an ambient env var
+        // is a gate on one shell).
+        collect_eq_atoms_tree_for_test(&arena, assertion, &mut tree_out, &mut tree_seen);
+
+        let mut dag_out: Vec<TermId> = Vec::new();
+        let mut dag_seen = std::collections::HashSet::new();
+        collect_eq_atoms_dag(&arena, assertion, &mut dag_out, &mut dag_seen);
+
+        assert_eq!(
+            dag_out, tree_out,
+            "the DAG walk must produce the same atoms in the same order as the tree walk"
+        );
+        // A positive control on the fixture: if the construction stopped
+        // producing an atom, both sides would be empty and the equality above
+        // would hold vacuously.
+        assert_eq!(
+            dag_out.len(),
+            1,
+            "the fixture must carry exactly one Eq atom"
+        );
+    }
+
+    /// The FIXTURE's non-vacuity, and deliberately nothing else.
+    ///
+    /// The equivalence test above is only worth anything if its term really
+    /// does have an exponential tree unfolding over a linear DAG. This asserts
+    /// exactly that and **does not call the code under test at all**, so the
+    /// mutation that kills the equivalence test leaves this one alive: two
+    /// tests that die to one mutation are one test with a spare, and the whole
+    /// reason to run the mutation is to find out which you have.
+    ///
+    /// The count is capped so a fixture regression turns this into a failure
+    /// rather than a hang.
+    #[test]
+    fn the_shared_fixture_really_does_unfold_exponentially() {
+        const DEPTH: usize = 24;
+        const CAP: u64 = 5_000_000;
+        let mut arena = TermArena::new();
+        let assertion = shared_dag_assertion(&mut arena, DEPTH);
+
+        let mut visits: u64 = 0;
+        count_tree_visits(&arena, assertion, &mut visits, CAP);
+        assert_eq!(
+            visits, CAP,
+            "the tree traversal must reach the {CAP} visit cap on a DAG of depth {DEPTH} \
+             (its unfolding is 2^{DEPTH}); if it did not, this fixture no longer shares \
+             and the equivalence test above is vacuous"
+        );
+
+        // …over a DAG that is linear: the distinct-node count is what makes the
+        // gap a blow-up rather than a big term. Derived from DEPTH, not typed.
+        let mut distinct = std::collections::HashSet::new();
+        count_distinct_nodes(&arena, assertion, &mut distinct);
+        assert!(
+            distinct.len() <= DEPTH + 8,
+            "the fixture's DAG must be linear in depth: {} distinct nodes at depth {DEPTH}",
+            distinct.len()
+        );
+    }
+
+    /// Distinct nodes reachable from `term`, counted with a visited set of its
+    /// own so this control does not depend on the function under test.
+    fn count_distinct_nodes(
+        arena: &TermArena,
+        term: TermId,
+        seen: &mut std::collections::HashSet<TermId>,
+    ) {
+        if !seen.insert(term) {
+            return;
+        }
+        if let TermNode::App { args, .. } = arena.node(term) {
+            let args = args.clone();
+            for a in args {
+                count_distinct_nodes(arena, a, seen);
+            }
+        }
+    }
+
+    /// The pre-lever traversal, reproduced here so the equivalence test does
+    /// not depend on which way the lever happens to be set.
+    fn collect_eq_atoms_tree_for_test(
+        arena: &TermArena,
+        term: TermId,
+        out: &mut Vec<TermId>,
+        seen: &mut std::collections::HashSet<TermId>,
+    ) {
+        if let TermNode::App { op, args } = arena.node(term) {
+            if matches!(op, Op::Eq)
+                && args.len() == 2
+                && !matches!(arena.sort_of(args[0]), Sort::Bool)
+                && seen.insert(term)
+            {
+                out.push(term);
+            }
+            let args = args.clone();
+            for a in args {
+                collect_eq_atoms_tree_for_test(arena, a, out, seen);
+            }
+        }
+    }
+
+    /// Counts tree-shaped visits, stopping at `cap` so this can never hang.
+    fn count_tree_visits(arena: &TermArena, term: TermId, visits: &mut u64, cap: u64) {
+        if *visits >= cap {
+            return;
+        }
+        *visits += 1;
+        if let TermNode::App { args, .. } = arena.node(term) {
+            let args = args.clone();
+            for a in args {
+                count_tree_visits(arena, a, visits, cap);
+                if *visits >= cap {
+                    return;
+                }
+            }
+        }
     }
 }
