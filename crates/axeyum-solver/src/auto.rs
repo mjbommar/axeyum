@@ -18246,9 +18246,19 @@ mod tests {
     /// Included at compile time rather than retyped, because a test whose
     /// expectation is a literal measures the maintainer's memory. The authority
     /// is `bench-results/derived-order-20260915/derive.py`'s own output over
-    /// ADR-2102's ledger rows; this file IS that output.
+    /// ADR-2102's ledger rows; this file IS that output, written there by
+    /// `--tsv-out`.
+    ///
+    /// It lives under `docs/plan/fixtures/` and not beside the rest of the
+    /// lane's evidence in `bench-results/` for one concrete reason:
+    /// `scripts/tests/mutation_controls.py` EXCLUDES `bench-results` from the
+    /// work tree it copies (206 MB, and the exclusion has its own comment
+    /// there), so a fixture included from that path makes every mutation on
+    /// this file report `BASELINE DID NOT BUILD` — not a result. The same trap
+    /// cost a whole suite once already when `corpus` was excluded. Keep this
+    /// path inside a directory the harness copies.
     const DERIVED_ORDER_TSV: &str =
-        include_str!("../../../bench-results/derived-order-20260915/derived-order.tsv");
+        include_str!("../../../docs/plan/fixtures/derived-ladder-order-20260915.tsv");
 
     /// The `qf_nia_int` window's routes, in the position order the committed
     /// derivation put them in.

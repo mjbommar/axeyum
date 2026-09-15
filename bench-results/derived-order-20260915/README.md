@@ -162,7 +162,7 @@ what the key yields.
 | `sizing.txt`, `sizing.tsv` | `size.py`'s output |
 | `sizing-why.txt` | `size-why.py`'s output |
 | `prefix-decompose.txt` | `prefix-decompose.py`'s output |
-| `derived-order.tsv` | `derive.py`'s table |
+| `docs/plan/fixtures/derived-ladder-order-20260915.tsv` | `derive.py`'s table — **not in this directory**, because `scripts/tests/mutation_controls.py` excludes `bench-results` from the tree it copies, and a Rust fixture included from here turns every mutation into `BASELINE DID NOT BUILD` |
 | `cost-when-declining.txt` | `cost-when-declining.py`'s output |
 
 Every script's exit status depends on its finding: `size.py` exits 3 when no
@@ -177,7 +177,7 @@ python3 bench-results/derived-order-20260915/size.py \
 python3 bench-results/derived-order-20260915/size-why.py
 python3 bench-results/derived-order-20260915/prefix-decompose.py
 python3 bench-results/derived-order-20260915/derive.py \
-  --tsv-out bench-results/derived-order-20260915/derived-order.tsv
+  --tsv-out docs/plan/fixtures/derived-ladder-order-20260915.tsv
 ```
 
 [ADR-2102]: ../../docs/research/09-decisions/adr-2102-the-outcome-ledger.md

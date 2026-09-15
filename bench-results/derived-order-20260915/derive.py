@@ -51,6 +51,12 @@ Usage
 
     python3 derive.py [--ledger-dir DIR] [--repo PATH] [--tsv-out PATH]
 
+The committed `--tsv-out` target is `docs/plan/fixtures/derived-ladder-order-20260915.tsv`,
+and it is there rather than beside this script because
+`scripts/tests/mutation_controls.py` excludes `bench-results` from the tree it
+copies -- a Rust fixture included from this directory makes every mutation on
+`auto.rs` report `BASELINE DID NOT BUILD` instead of a result.
+
 Exit status depends on the finding: non-zero when the derived order for every
 window is identical to the hand order already in the source, because a
 "derived" order that changes nothing is a result to report, not a lever to
