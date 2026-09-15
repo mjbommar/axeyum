@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+UFNIA/2019-Zohar-ic/combined/int_check_bvule_bvor_ltr_no_inv.smt2	unknown	24131	0	unknown	24230	0	A	unsat
+UFNIA/2019-Preiner/partial/t3_rw1384.smt2	unknown	24131	0	unknown	24234	0	B	unknown
+UFNIA/2019-Preiner/combined/t3_rw1401.smt2	unknown	24128	0	unknown	24230	0	A	unknown
+UFNIA/sledgehammer/FFT/z3.885941.smt2	unknown	24328	0	unknown	24229	0	B	unsat
+UFNIA/2019-Preiner/qf/t3_rw1161.smt2	sat	12718	0	sat	13017	0	A	unknown
+UFNIA/2019-Preiner/full/t3_rw118.smt2	unknown	15319	0	unknown	15319	0	B	unknown
+UFNIA/spec_sharp/textbook-Factorial.dll.1.Factorial.F_System.Int32.smt2	unknown	16720	0	unknown	16523	0	A	unsat
+UFNIA/2019-Zohar-alive/partial/partial_AddSub:1539-2_values_0.smt2	unsat	108	0	unsat	108	0	B	unsat
+UFNIA/2019-Preiner/partial/f2_rw58.smt2	unknown	24228	0	unknown	24128	0	A	unknown
+UFNIA/2019-Preiner/combined/f2_rw77.smt2	unsat	609	0	unknown	24224	0	B	unknown
+UFNIA/20190909-CLEARSY/0023/00302.smt2	unknown	24126	0	unknown	14418	0	A	unknown
+UFNIA/2019-Preiner/qf/f2_rw223.smt2	sat	109	0	sat	108	0	B	unknown
+UFNIA/2019-Preiner/full/f2_rw242.smt2	unknown	15621	0	unknown	15816	0	A	unknown
+UFNIA/sledgehammer/TwoSquares/z3.806908.smt2	unknown	13219	0	unknown	13216	0	B	unknown
+UFNIA/2019-Zohar-ic/combined/int_check_bvslt_bvor_rtl.smt2	unknown	24125	0	unknown	24122	0	A	unknown
+UFNIA/2019-Preiner/partial/t3_rw576.smt2	unknown	24227	0	unknown	24123	0	B	unknown

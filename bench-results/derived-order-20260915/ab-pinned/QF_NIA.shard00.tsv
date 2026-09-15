@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+QF_NIA/20220315-MathProblems/STC_0713.smt2	sat	4109	0	sat	107	0	A	sat
+QF_NIA/20170427-VeryMax/ITS/From_T2__slayer-3.t2__p22227_terminationG_0.smt2	unknown	11819	0	unknown	11418	0	B	unknown
+QF_NIA/20170427-VeryMax/ITS/From_T2__hqr.c.i.hqr.pl.t2.nor.t2.rlgfixed.t2_fixed__terminationS_45_0.smt2	unknown	24331	0	unknown	24331	0	A	unsat
+QF_NIA/20170427-VeryMax/ITS/From_T2__apchildlive-succeed.t2_fixed__p16399_edge_closing_0.smt2	unknown	20927	0	unknown	18624	0	B	unknown
+QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsKey.jar-obl-11__p31253_safety_0.smt2	unknown	12219	0	unknown	13120	0	A	sat
+QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__DivWithoutMinus.c__p22517_edge_closing_0.smt2	sat	11118	0	sat	407	0	B	sat
+QF_NIA/AProVE/aproveSMT3326416242224032552.smt2	sat	107	0	sat	107	0	A	sat
+QF_NIA/20170427-VeryMax/ITS/From_T2__tqli.c.i.tqli.pl.t2.nor.t2.rlgfixed.t2__p25069_terminationG_0.smt2	unknown	24728	0	unknown	24831	0	B	sat
+QF_NIA/20170427-VeryMax/ITS/From_T2__n-10.t2__p3427_edge_closing_0.smt2	sat	10916	0	sat	307	0	A	sat
+QF_NIA/20170427-VeryMax/ITS/From_T2__agafp.t2_fixed__terminationS_0_0.smt2	unknown	24229	0	unknown	24931	0	B	unsat
+QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p2587_safety_0.smt2	unknown	10918	0	unknown	10817	0	A	sat
+QF_NIA/20170427-VeryMax/CInteger/Ton_Chanh_15__Hanoi_3vars_false-termination.c__terminationQ_13_0.smt2	unsat	3510	0	unknown	24128	0	B	unsat
+QF_NIA/AProVE/aproveSMT2045146210738691450.smt2	sat	108	0	sat	108	0	A	sat
+QF_NIA/20170427-VeryMax/SAT14/1623.smt2	unknown	16422	0	unknown	24531	0	B	sat
+QF_NIA/20210219-Dartagnan/ReachSafety-Loops/geo1-u_valuebound2-O0.smt2	unknown	11718	0	unknown	12119	0	A	unknown
+QF_NIA/20230328-sqrtmodinv-hoenicke/sqrtStep6a.smt2	unknown	1509	0	unknown	1509	0	B	unsat

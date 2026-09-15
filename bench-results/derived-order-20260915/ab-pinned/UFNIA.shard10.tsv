@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+UFNIA/2019-Zohar-alive/combined/combined_AndOrXor:144_values_0.smt2	unknown	24129	0	unknown	24124	0	A	unknown
+UFNIA/2019-Preiner/partial/f2_rw141.smt2	unsat	208	0	unsat	208	0	B	unknown
+UFNIA/2019-Preiner/combined/f2_rw160.smt2	unknown	24120	0	unknown	24624	0	A	unknown
+UFNIA/2019-Zohar-ic/partial/int_check_bvult_bvashr1_ltr_inv_g.smt2	unknown	24127	0	unknown	24124	0	B	unknown
+UFNIA/2019-Preiner/partial/t3_rw819.smt2	unknown	24227	0	unknown	24726	0	A	unknown
+UFNIA/2019-Preiner/combined/t3_rw838.smt2	unknown	24627	0	unknown	24525	0	B	unknown
+UFNIA/sledgehammer/QEpres/z3.857438.smt2	unknown	18321	0	unknown	17823	0	A	unknown
+UFNIA/2019-Preiner/qf/t3_rw597.smt2	unknown	24121	0	unknown	24124	0	B	unknown
+UFNIA/2019-Preiner/full/t3_rw615.smt2	unknown	17218	0	unknown	17120	0	A	unknown
+UFNIA/vcc-havoc/verisoft-sim.c.2.25.untranslated_write_sim.smt2	unknown	17221	0	unknown	17223	0	B	unsat
+UFNIA/2019-Zohar-ic/full/int_check_bvule_bvurem0_ltr_inv_g.smt2	unsat	108	0	unsat	309	0	A	unknown
+UFNIA/2019-Preiner/partial/t3_rw393.smt2	unknown	24131	0	unknown	24228	0	B	unknown
+UFNIA/2019-Preiner/combined/t3_rw410.smt2	unknown	24621	0	unknown	24725	0	A	unknown
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.616670.smt2	unknown	14717	0	unknown	24128	0	B	unknown
+UFNIA/2019-Preiner/qf/t3_rw900.smt2	sat	1409	0	sat	1409	0	A	unknown
+UFNIA/2019-Preiner/partial/t3_rw1262.smt2	unknown	24123	0	unknown	24325	0	B	unknown

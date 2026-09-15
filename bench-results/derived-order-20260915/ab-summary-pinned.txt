@@ -1,0 +1,27 @@
+division      rows    A    B   net  gain  LOSS  FLIP  rc!=   cmp  DIS
+QF_NIA         200   83   78    -5     3     8     0     0    78    0
+UFNIA          200   54   51    -3     0     3     0     0    14    0
+TOTAL          400  137  129    -8     3    11     0     0    92    0
+
+malformed rows (excluded, not scored as unchanged): 0
+
+LOSSES: 11
+  ('QF_NIA/20170427-VeryMax/CInteger/Ton_Chanh_15__Hanoi_3vars_false-termination.c__terminationQ_13_0.smt2', 'unsat', 'unknown')
+  ('QF_NIA/20170427-VeryMax/SAT14/1280.smt2', 'sat', 'unknown')
+  ('QF_NIA/20170427-VeryMax/SAT14/1854.smt2', 'sat', 'unknown')
+  ('QF_NIA/20170427-VeryMax/ITS/From_T2__n-21.t2__p3959_terminationG_0.smt2', 'unsat', 'unknown')
+  ('QF_NIA/20170427-VeryMax/ITS/From_T2__consts1nt.t2__p17935_terminationG_0.smt2', 'unsat', 'unknown')
+  ('QF_NIA/20170427-VeryMax/ITS/From_T2__n-7.t2_fixed__p4922_terminationG_0.smt2', 'unsat', 'unknown')
+  ('QF_NIA/20170427-VeryMax/ITS/From_T2__slayer-n1.t2_fixed__p22997_safety_0.smt2', 'unsat', 'unknown')
+  ('QF_NIA/20170427-VeryMax/SAT14/1395.smt2', 'sat', 'unknown')
+  ('UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.1400790.smt2', 'unsat', 'unknown')
+  ('UFNIA/2019-Preiner/combined/t3_rw777.smt2', 'unsat', 'unknown')
+  ('UFNIA/2019-Preiner/combined/f2_rw77.smt2', 'unsat', 'unknown')
+
+FLIPS: 0
+
+EXIT-STATUS DIFFERENCES: 0
+
+STATUS DISAGREEMENTS: 0
+
+CRITERION losses+flips+rc-differences+disagreements+malformed = 11

@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+UFNIA/2019-Preiner/qf/t3_rw292.smt2	sat	13114	0	sat	18324	0	A	unknown
+UFNIA/2019-Preiner/full/t3_rw31.smt2	unknown	25020	0	unknown	14422	0	B	unknown
+UFNIA/vcc-havoc/havoc-bench_sum.1.bar.smt2	unknown	25127	0	unknown	25133	0	A	unsat
+UFNIA/2019-Zohar-ic/combined/int_check_ne_bvnot_ltr_inv_g.smt2	unsat	1411	0	unsat	5213	0	B	unsat
+UFNIA/2019-Preiner/partial/t3_rw1505.smt2	unknown	24329	0	unknown	24628	0	A	unknown
+UFNIA/2019-Preiner/combined/t3_rw1524.smt2	unknown	24627	0	unknown	24231	0	B	unknown
+UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.1149016.smt2	unknown	10420	0	unknown	24127	0	A	unknown
+UFNIA/2019-Preiner/qf/t3_rw1283.smt2	unknown	24124	0	unknown	24122	0	B	unknown
+UFNIA/2019-Preiner/full/t3_rw1301.smt2	unknown	15417	0	unknown	15418	0	A	unknown
+UFNIA/vcc-havoc/CWindowsCard.c.41.nondet.smt2	unsat	109	0	unsat	108	0	B	unsat
+UFNIA/2019-Zohar-alive/partial/partial_InstCombineShift476_values_0.smt2	unknown	24129	0	unknown	24134	0	A	unknown
+UFNIA/2019-Preiner/partial/t3_rw108.smt2	unsat	1108	0	unsat	1310	0	B	unknown
+UFNIA/2019-Preiner/combined/t3_rw1098.smt2	unknown	24228	0	unknown	24526	0	A	unknown
+UFNIA/lahiri-cav09-storm-queries/mqueue_example_cegar_2_3_10.smt2	unknown	25125	0	unknown	25126	0	B	unsat
+UFNIA/2019-Preiner/qf/t3_rw170.smt2	sat	16320	0	sat	12116	0	A	unknown
+UFNIA/2019-Preiner/full/t3_rw92.smt2	unsat	409	0	unsat	608	0	B	unknown
