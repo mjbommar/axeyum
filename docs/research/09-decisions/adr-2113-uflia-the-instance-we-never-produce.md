@@ -355,6 +355,26 @@ passed every verdict check.**
   `a_raised_cap_proposes_both_incomparable_candidates` is the control: 2 groups
   at cap 4, 1 at cap 1.
 
+**The mutation control, and the run that could not measure it.** All four
+registered mutations kill **exactly one named test each** (`ref/mutation.txt`):
+the containment inversion kills
+`trigger_alt_container_candidate_is_dropped`, the short-circuit move kills
+`trigger_alt_shipped_cap_proposes_exactly_one`, the arena-order key kills
+`trigger_alt_order_is_smallest_first_and_total`, and the reflexive
+`is_proper_subterm` kills `trigger_alt_proper_subterm_is_irreflexive_and_finds_nesting`.
+`--check-anchors`: suites 141, anchors 1069, **stale 0**.
+
+An EARLIER run of the same four (`ref/mutation-contended.txt`) reported two of
+them `DID NOT RUN — collection changed: 5 tests ran, the baseline ran 6`, and
+that row is kept because it is the more instructive one. The harness reads its
+test count from libtest's `running N tests` line, and it was taken while this
+lane's own `cargo test` invocations were interleaving with it. Re-run with
+nothing else of this lane's competing, the same four mutations on the same tests
+report `killed 1` each — and both "unmeasurable" mutations were separately
+reproduced by hand, each printing `running 6 tests` and one FAILED. **An
+unmeasured mutation is not a survivor and must not be reported as one**, which is
+exactly the distinction the harness's own outcome vocabulary exists to make.
+
 `TriggerAlternativeCapGuard` is a thread-local in the shape of
 `GroundBudgetGuard`, because the process cap resolves once into a `OnceLock` and
 a lever whose ON arm is reachable only by re-launching the binary has no
