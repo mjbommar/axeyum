@@ -1108,6 +1108,67 @@ fn settle_rung(
     None
 }
 
+/// The dispatch ladder's error channel (ADR-2100).
+///
+/// # Why this type exists, and why it has no `From<SolverError>`
+///
+/// Exit criterion 1 of this phase is that every `Err(SolverError::Unsupported)`
+/// site in the ladder is reachable only from a route that does not own the
+/// construct, **enumerated by the compiler**. A grep cannot produce that list.
+/// ADR-1966 measured the gap: counting only `?` gave 37 sites, and adding tail
+/// position and `return f(..)` took the same population to **72** — "any future
+/// scan of this kind that counts only `?` is under-reporting by about half".
+/// ADR-2060 measured it from the other side: a name scan found **6**
+/// constructions where giving the variant a payload found the same six plus,
+/// by transitive closure over the cause-erasing returns feeding them, **28
+/// program points carrying 15 distinct causes**.
+///
+/// So the enumeration is done the way ADR-2060 did it — with a payload. This
+/// type deliberately implements **no** `From<SolverError>`, so inside
+/// [`check_auto_dispatch_inner`] every `?` on a route's
+/// `Result<_, SolverError>` and every `return Err(..)` is a **type error**
+/// until its site names the rung it belongs to. `rustc` prints the file and
+/// line of each one; that list is the enumeration, and it stays produced by the
+/// compiler as the ladder changes rather than being a number in a document.
+///
+/// # What it does NOT change
+///
+/// The value. [`check_auto_dispatch`] converts it back to the same
+/// `SolverError` the site produced, byte for byte, so the ladder's outward
+/// behaviour is identical and the route it carries is telemetry for the
+/// enumeration rather than a new branch condition. A diagnosis change that
+/// quietly moved a route would be a capability change wearing a diagnosis
+/// change's commit message (ADR-2060's own words).
+#[derive(Debug)]
+struct DispatchError {
+    /// The rung this came out of, or `None` for the ladder's own machinery —
+    /// the `ite` lift and the feature scan, which belong to no route.
+    ///
+    /// Recorded rather than discarded because "which frame propagated it" is
+    /// the question ADR-1980 needed three call frames of reading to answer:
+    /// **a refusal message names the rung that PRODUCED the sentence, never the
+    /// rung that decided to propagate it**, and on a ladder those are routinely
+    /// different frames.
+    #[allow(dead_code)]
+    route: Option<DispatchRoute>,
+    error: SolverError,
+}
+
+impl DispatchError {
+    /// An error out of a named rung.
+    fn at(route: DispatchRoute, error: SolverError) -> Self {
+        Self {
+            route: Some(route),
+            error,
+        }
+    }
+
+    /// An error out of the ladder's own machinery, which belongs to no rung.
+    fn ladder(error: SolverError) -> Self {
+        Self { route: None, error }
+    }
+}
+
 /// The greppable marker an ADR-2100 ownership inconsistency carries on the
 /// route trail.
 ///
@@ -6566,7 +6627,13 @@ fn check_auto_dispatch(
     rec: &mut Recorder<'_>,
 ) -> Result<CheckResult, SolverError> {
     let mut datatype_refusal: Option<String> = None;
-    let out = check_auto_dispatch_inner(arena, assertions, config, rec, &mut datatype_refusal);
+    // ADR-2100: the ladder's typed channel is converted back to the caller's
+    // `SolverError` here, and to the SAME value the site produced. The route it
+    // carries exists so the compiler can enumerate the sites (see
+    // [`DispatchError`]); it is not a branch condition, and folding it into the
+    // message would move the strings the DT blocker census reads.
+    let out = check_auto_dispatch_inner(arena, assertions, config, rec, &mut datatype_refusal)
+        .map_err(|e| e.error);
     relabel_with_datatype_refusal(out, datatype_refusal)
 }
 
@@ -6630,13 +6697,13 @@ fn check_auto_dispatch_inner(
     config: &SolverConfig,
     rec: &mut Recorder<'_>,
     datatype_refusal: &mut Option<String>,
-) -> Result<CheckResult, SolverError> {
+) -> Result<CheckResult, DispatchError> {
     // Lift Int/Real `ite` to the Boolean level (`ite(c,a,b)` → fresh `t` with
     // `c→t=a ∧ ¬c→t=b`) so the arithmetic linearizers, which only accept linear
     // arith terms, see a plain variable. An exact (equisatisfiable) rewrite, so
     // the dispatched result transfers directly. (BV `ite` is left for the
     // bit-blaster, which handles it natively.)
-    let lifted = lift_arith_ite(arena, assertions)?;
+    let lifted = lift_arith_ite(arena, assertions).map_err(DispatchError::ladder)?;
     let assertions = &lifted;
     let dispatch_deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     let Some(features) = Features::scan_within(arena, assertions, dispatch_deadline) else {
@@ -6696,7 +6763,7 @@ fn check_auto_dispatch_inner(
                 // `datatype-native` rung below runs for BOTH of this
                 // match's non-deciding arms.
             }
-            Err(other) => return Err(other),
+            Err(other) => return Err(DispatchError::at(DispatchRoute::DatatypeElim, other)),
         }
         // **THE SITE ADR-1966 SIZED AND DID NOT TAKE. TAKEN HERE
         // (ADR-1980).**
@@ -6746,7 +6813,10 @@ fn check_auto_dispatch_inner(
                     // `?` it replaced, RECORDER INCLUDED: the `?` never
                     // reached `record_result`, so neither does this.
                     DatatypeNativeRefusalPolicy::Propagate => {
-                        return Err(SolverError::Unsupported(native_message));
+                        return Err(DispatchError::at(
+                            DispatchRoute::DatatypeNative,
+                            SolverError::Unsupported(native_message),
+                        ));
                     }
                     DatatypeNativeRefusalPolicy::Decline => {
                         record_route_refusal(
@@ -6764,7 +6834,7 @@ fn check_auto_dispatch_inner(
                     }
                 }
             }
-            Err(other) => return Err(other),
+            Err(other) => return Err(DispatchError::at(DispatchRoute::DatatypeNative, other)),
         }
     }
     if let Some(result) = dispatch_difference_logic(arena, assertions, config, rec) {
@@ -6791,7 +6861,7 @@ fn check_auto_dispatch_inner(
             Err(SolverError::Unsupported(message)) => {
                 record_route_refusal(DispatchRoute::LiraDpll, query, &message, rec);
             }
-            Err(other) => return Err(other),
+            Err(other) => return Err(DispatchError::at(DispatchRoute::LiraDpll, other)),
         }
     }
     if features.has_real {
@@ -6807,7 +6877,8 @@ fn check_auto_dispatch_inner(
         // out-of-fragment elimination).
         let real_config = config_with_remaining_deadline(config, dispatch_deadline);
         let uf_nra = dispatch_uf_nra(arena, assertions, &real_config, &features, rec);
-        if let Some(result) = rung_or_decline(DispatchRoute::UfNra, query, uf_nra, rec)? {
+        if let Some(result) = rung_or_decline(DispatchRoute::UfNra, query, uf_nra, rec)
+        .map_err(|e| DispatchError::at(DispatchRoute::UfNra, e))? {
             return Ok(result);
         }
         // Conjunction of single-variable nonlinear-real polynomial constraints
@@ -6832,7 +6903,8 @@ fn check_auto_dispatch_inner(
                 arena,
                 assertions,
                 dispatch_deadline,
-            )?
+            )
+            .map_err(|e| DispatchError::at(DispatchRoute::Nra, e))?
         {
             // A `Some(Unknown)` from the exact real-root decider ends this branch
             // — `nra` below is never reached. That is deliberate (the decider has
@@ -6934,13 +7006,14 @@ fn check_auto_dispatch_inner(
                     }));
                 }
             }
-            Err(e) => return Err(e),
+            Err(e) => return Err(DispatchError::at(DispatchRoute::Nra, e)),
         }
     }
     let overbound =
         dispatch_arith_uf_overbound_probe_before_lia(arena, assertions, config, &features, rec);
     if let Some(result) =
-        rung_or_decline(DispatchRoute::UfArithOverboundProbe, query, overbound, rec)?
+        rung_or_decline(DispatchRoute::UfArithOverboundProbe, query, overbound, rec)
+        .map_err(|e| DispatchError::at(DispatchRoute::UfArithOverboundProbe, e))?
     {
         return Ok(result);
     }
@@ -6963,7 +7036,8 @@ fn check_auto_dispatch_inner(
             && !features.has_array
             && !features.has_uninterpreted_sort
             && !features.has_datatype
-            && let Some(blasted) = crate::bv2nat_blast::blast_bv2nat_linear(arena, assertions)?
+            && let Some(blasted) = crate::bv2nat_blast::blast_bv2nat_linear(arena, assertions)
+                .map_err(|e| DispatchError::at(DispatchRoute::Bv2NatBlast, e))?
         {
             let mut backend = SatBvBackend::new();
             match check_with_all_theories(&mut backend, arena, &blasted, DEFAULT_INT_WIDTH, config)
@@ -7007,7 +7081,7 @@ fn check_auto_dispatch_inner(
                         );
                     });
                 }
-                Err(e) => return Err(e),
+                Err(e) => return Err(DispatchError::at(DispatchRoute::Bv2NatBlast, e)),
             }
         }
         // `bv2nat(b)` finite-range refutation (G2): a `bv2nat(b)` of a `W`-bit
@@ -7031,7 +7105,8 @@ fn check_auto_dispatch_inner(
             rec,
         );
         if let Some(result) =
-            rung_or_decline(DispatchRoute::IntLinearRefuters, query, int_refuters, rec)?
+            rung_or_decline(DispatchRoute::IntLinearRefuters, query, int_refuters, rec)
+        .map_err(|e| DispatchError::at(DispatchRoute::IntLinearRefuters, e))?
         {
             return Ok(result);
         }
@@ -7041,14 +7116,16 @@ fn check_auto_dispatch_inner(
     // returns a replay-checked `sat`, a congruence `unsat`, or `unknown` for
     // base-sort semantics outside congruence, which falls through to bit-blasting.
     let uf_routes = dispatch_uf_routes(arena, assertions, config, &features, rec);
-    if let Some(result) = rung_or_decline(DispatchRoute::UfRoutes, query, uf_routes, rec)? {
+    if let Some(result) = rung_or_decline(DispatchRoute::UfRoutes, query, uf_routes, rec)
+        .map_err(|e| DispatchError::at(DispatchRoute::UfRoutes, e))? {
         return Ok(result);
     }
     if features.has_array {
         let abv_online =
             dispatch_abv_online(arena, assertions, config, &features, dispatch_deadline, rec);
         if let Some(result) =
-            rung_or_decline(DispatchRoute::AbvOnlineCdclt, query, abv_online, rec)?
+            rung_or_decline(DispatchRoute::AbvOnlineCdclt, query, abv_online, rec)
+        .map_err(|e| DispatchError::at(DispatchRoute::AbvOnlineCdclt, e))?
         {
             return Ok(result);
         }
@@ -7074,7 +7151,8 @@ fn check_auto_dispatch_inner(
             }
         };
         let array_fast = dispatch_array_fast_paths(arena, assertions, &ladder_config, &features);
-        if let Some(result) = rung_or_decline(DispatchRoute::ArrayFastPath, query, array_fast, rec)?
+        if let Some(result) = rung_or_decline(DispatchRoute::ArrayFastPath, query, array_fast, rec)
+        .map_err(|e| DispatchError::at(DispatchRoute::ArrayFastPath, e))?
         {
             with_recorder(rec, |t| t.record_result("array-fast-path", &result));
             return Ok(result);
@@ -7093,7 +7171,8 @@ fn check_auto_dispatch_inner(
     }
 
     if features.has_int {
-        return dispatch_nonlinear_int_tail(arena, assertions, config, dispatch_deadline, rec);
+        return dispatch_nonlinear_int_tail(arena, assertions, config, dispatch_deadline, rec)
+            .map_err(DispatchError::ladder);
     }
 
     let mut backend = SatBvBackend::new();
@@ -7150,7 +7229,7 @@ fn check_auto_dispatch_inner(
             with_recorder(rec, |t| t.record_result("qf-abv-array-decline", &result));
             Ok(result)
         }
-        Err(e) => Err(e),
+        Err(e) => Err(DispatchError::ladder(e)),
     }
 }
 

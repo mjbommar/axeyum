@@ -183,9 +183,76 @@ Two payloads here, and both are load-bearing:
 `grep` is used afterwards only to check the compiler's list against [1966]'s
 pinned 72-site baseline, never to produce it.
 
-## Sizing
+## Sizing — the ceiling is ZERO, and Phase 1 is still worth doing
 
-*(to be filled in before the implementation lands — see the exit criteria)*
+**The number first, because the exit criterion asks for it up front: 0 of 643.**
+
+Method: all seven Tier 1 divisions, 200 files each, the **645 rows the
+2026-09-14 board left undecided**, re-run single-arm with `--trace` at 24 s /
+8 GiB `ulimit -v` on 12 pinned physical core pairs across s5/s6/s7 (two came
+back `unsat` this time, an ambient flip in the other direction, leaving 643).
+Then, per row: the last dispatch-ladder rung on its `; route-trail`, and whether
+a route BELOW it both **owns** the query's constructs and is **enterable** on
+them.
+
+| division | undecided rows | a route below owns | …and is enterable | never reached the ladder |
+|---|---:|---:|---:|---:|
+| AUFDTLIRA | 78 | 0 | 0 | 68 |
+| AUFLIRA | 22 | 0 | 0 | 14 |
+| QF_NIA | 116 | 0 | 0 | 1 |
+| UF | 110 | 0 | 0 | 79 |
+| UFDTLIRA | 56 | 0 | 0 | 52 |
+| UFLIA | 115 | 0 | 0 | 92 |
+| UFNIA | 146 | **5** | **0** | 124 |
+| **total** | **643** | **5** | **0** | **430** |
+
+Artifacts: `bench-results/route-ownership-20260915/` — `trace-run.sh`,
+`launch-trace.sh`, `size-ceiling.py`, the raw per-row trails in
+`trace-tier1-undecided.tsv`, and the run in `sizing.txt`.
+
+**Phase 1 is still worth doing, and this ADR says so rather than implying a
+gain.** The dispatch plan says the same in advance: *"None of these phases is
+measured in files decided. Phase 1 is measured in bug class killed."* The five
+ADRs above cost roughly a lane each and four of the five were found by accident
+while chasing something else; the fifth (ADR-1966) enumerated 72 sites
+mechanically and then had to be reverted. What this buys is that the next
+instance is a compile error or a named trail entry rather than a sixth ADR.
+
+### Three corrections the sizing produced, each of which would have been a claim
+
+**The first number was 102 and it was wrong, in the direction that flatters the
+lane.** `size-ceiling.py`'s first run reported 102 of 116 `QF_NIA` rows
+reachable, every one with `owner-below=qf-bv`. The ladder order it used was read
+off the SOURCE TEXT, and `dispatch_nonlinear_int_tail` is reached as
+`return dispatch_nonlinear_int_tail(..)` inside `if features.has_int` — so
+`qf-bv`, textually below it, is unreachable from any integer query. **A route
+ordering read off the text rather than off the control flow bounds nothing.**
+
+**The second number was 5 and it was also wrong.** All five remaining rows named
+`array-fast-path` as the owner below, which owns `{…, Int, …}` and runs only
+`if features.has_array`. Owning a construct and being ENTERABLE on a query are
+different questions, and the second is what decides whether the route gets a
+turn. Confirmed against the corpus text: **0 occurrences of `Array` in any of
+the five** (`UFNIA/2019-Preiner/qf/t3_rw{353,597,658,1283,1466}.smt2`). Each
+correction is in the script as a comment beside the rule that implements it, so
+the next reader does not re-derive them.
+
+**The finding worth more than the ceiling: 430 of 643 undecided Tier 1 rows —
+67 % — never reach the quantifier-free dispatch ladder at all.** Their whole
+budget goes to the `q:` rungs of the quantified ladder in `solve`, which is a
+different ladder with its own decline discipline (ADR-1927). No amount of
+quantifier-free route ownership can move them. That is a statement about where
+the remaining Tier 1 mass is, and it is measured rather than asserted: the
+per-row trails are committed.
+
+### What the sizing does NOT say
+
+It does not bound the change's effect on **decided** rows, which is the risk
+side and is what the A/B in criterion 3 measures. ADR-1966's `UFLIA` control —
+chosen because nothing in it could trigger the guard — still lost one file
+reproducibly, because a route the ladder now reaches ate the budget the deciding
+route needed. A ceiling of 0 on the undecided population says nothing about
+that.
 
 ## Exit criteria
 
