@@ -544,6 +544,30 @@ run, the B binary contains the `quant-route-ownership` marker string and the A
 binary does not, and `AXEYUM_OWNERSHIP_CONTINUATION_SHARE` was unset in the
 launching environment so B measured the shipped divisor.
 
+### What moved on `main` between the measurement and the merge
+
+**The A/B stands as measured against `51baff9ef` and was NOT re-run.** `main`
+gained [ADR-2105] (TRAIL-WIRE, `56760a6cd`) afterwards, and this branch merged
+it. That lane is **telemetry only** — `RouteTrace` schema 3's per-attempt `name`,
+its top-level `features` member, and `record_features`/`absorb` — and is
+verdict-invariant by its own tests. Nothing in it reaches a routing decision, a
+budget, or an ownership declaration.
+
+Naming it rather than leaving the gap implicit is the point: an A/B's arms are
+two commits, and a reader who diffs this branch against `main` today will find a
+change neither arm contained. Re-running 1,800 rows to re-measure a telemetry
+refactor would spend two hours to move nothing, and claiming the published
+columns were taken across that merge would be false. They were taken across
+`51baff9ef`, and that is what the table above measures.
+
+One interaction was checked rather than assumed. ADR-2105 **deletes**
+`LAST_QUERY_CONSTRUCTS` and its helpers from `route_ownership`, which is exactly
+the surface this ADR builds on. This lane never read that static:
+`quantified_query_constructs` calls `Features::scan_within(..)` and
+`constructs()` directly, which is the shape ADR-2105's `features` design wants.
+Confirmed by count on the merged tree — 0 occurrences in `auto.rs` — rather than
+by reading the diff.
+
 ### A defect in the runner, found by launching it
 
 ADR-2100's `launch-ab.sh` takes N division specs and launches them **all at
@@ -602,4 +626,5 @@ still the guard; the comment names the spelling in prose now.
 [2065]: adr-2065-the-real-collector-can-hold-a-term-and-the-sat-exits-close-by-type.md
 [ADR-2100]: adr-2100-typed-route-ownership.md
 [ADR-2101]: adr-2101-the-trace-is-the-api.md
+[ADR-2105]: adr-2105-the-trail-carries-the-typed-name-and-the-construct-set.md
 [ADR-2090]: adr-2090-the-cores-are-small-and-findable-and-we-do-not-decide-them.md
