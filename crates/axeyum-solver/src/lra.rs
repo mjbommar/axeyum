@@ -516,9 +516,31 @@ fn collect_constraints(
     assertions: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<Option<Collector>, SolverError> {
+    collect_constraints_with_options(arena, assertions, deadline, false)
+}
+
+/// [`collect_constraints`] with the opaque-real-subterm abstraction selectable.
+///
+/// **This is the only function in the workspace that can set
+/// [`Collector::allow_opaque_apps`]**, which is what makes the `sat`-exit
+/// enumeration in ADR-2065 §1 finite and mechanical: the other two `Collector`
+/// construction sites ([`collect_constraints`] itself, via this function with
+/// `false`, and [`check_with_lra_simplex`]) build a `Collector::default`, whose
+/// flag is `false`.
+///
+/// # Errors
+///
+/// Propagates [`Collector::collect`]'s error.
+fn collect_constraints_with_options(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+    allow_opaque_apps: bool,
+) -> Result<Option<Collector>, SolverError> {
     let _phase = crate::phase_breadcrumb::enter("lra:collect");
     let mut ctx = Collector {
         deadline,
+        allow_opaque_apps,
         ..Collector::default()
     };
     for (index, &assertion) in assertions.iter().enumerate() {
@@ -558,6 +580,26 @@ fn decide_within(
     assertions: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<Decision, SolverError> {
+    decide_within_with_options(arena, assertions, deadline, false)
+}
+
+/// [`decide_within`] with the opaque-real abstraction selectable.
+///
+/// The **only** decision function the abstraction can reach (ADR-2065 §1), and
+/// therefore the only one whose `sat` exits have to be closed. There are two of
+/// them and both are closed by [`Collector::has_opaque_vars`]: [`replayed_sat`]
+/// and [`simplex_fallback`].
+///
+/// # Errors
+///
+/// Same as [`decide_within`].
+#[allow(clippy::too_many_lines)]
+fn decide_within_with_options(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+    allow_opaque_apps: bool,
+) -> Result<Decision, SolverError> {
     // Stage clocks, armed only when the lazy-SMT instrument is on: the
     // refinement loop's `theory_ms` is 97.9% of that route's budget after the
     // Farkas fix, and one number for a decider with three stages cannot say
@@ -581,7 +623,9 @@ fn decide_within(
     let _phase = crate::phase_breadcrumb::enter("lra:decide");
     let counting = crate::lazy_smt_counters::enabled();
     let collect_started = counting.then(Instant::now);
-    let Some(mut ctx) = collect_constraints(arena, assertions, deadline)? else {
+    let Some(mut ctx) =
+        collect_constraints_with_options(arena, assertions, deadline, allow_opaque_apps)?
+    else {
         // Collection declined. It has two reasons and they demand opposite
         // fixes, so the clock is re-read rather than the memory reason borrowed.
         if past_deadline(deadline) {
@@ -617,7 +661,11 @@ fn decide_within(
     }
 
     let n = ctx.constraints.len();
-    let nvars = ctx.vars.len();
+    // `variable_count`, not `vars.len()`: with the opaque abstraction on, the
+    // opaque columns are real columns of the system and `vars` holds only the
+    // symbol ones. Sizing from `vars.len()` would silently truncate every
+    // tableau and multiplier vector.
+    let nvars = ctx.variable_count();
     let mut stages = CubeStages {
         collect: collect_elapsed,
         ..CubeStages::default()
@@ -773,6 +821,27 @@ fn replayed_sat(
     ctx: &Collector,
     values: &[Rational],
 ) -> Result<Decision, SolverError> {
+    // SAT EXIT 1 of 2 on this route (ADR-2065 §1), closed.
+    //
+    // A feasible point of an ABSTRACTED system is a solution of a relaxation,
+    // not a model of the query: the opaque columns stand for terms whose value
+    // the original query constrains and the abstraction does not. So the
+    // abstraction's `sat` carries no information about the original and is
+    // reported as `unknown` — the `unsat` direction is the only one that
+    // transfers. Mirrors the integer side's `has_opaque_vars` downgrade in
+    // `lia_simplex_capped`.
+    //
+    // Before the model is built, not after: the model would be over
+    // `ctx.var_index` only, so it would not even bind the opaque terms, and a
+    // replay that "passes" by not mentioning them is exactly the shape of
+    // check this repository has shipped wrong verdicts behind.
+    if ctx.has_opaque_vars() {
+        return Ok(Decision::Incomplete(
+            "lra: opaque real-subterm abstraction is satisfiable; a relaxation's model is not a \
+             model of the original query"
+                .to_owned(),
+        ));
+    }
     let mut model = Model::new();
     let mut assignment = axeyum_ir::Assignment::new();
     for (&symbol, &index) in &ctx.var_index {
@@ -924,7 +993,8 @@ fn simplex_fallback(
     deadline: Option<Instant>,
 ) -> Result<Option<Decision>, SolverError> {
     let _phase = crate::phase_breadcrumb::enter("lra:simplex-fallback");
-    let nvars = ctx.vars.len();
+    // See `decide_within_with_options`: opaque columns are columns.
+    let nvars = ctx.variable_count();
     let mut rows = Vec::with_capacity(ctx.constraints.len());
     for constraint in &ctx.constraints {
         // The row loop allocates one dense `nvars`-wide vector per constraint,
@@ -959,11 +1029,23 @@ fn simplex_fallback(
 
     match crate::simplex::feasible_within(nvars, &rows, deadline) {
         crate::simplex::SimplexOutcome::Feasible(point) => {
+            // SAT EXIT 2 of 2 on this route (ADR-2065 §1), closed. Same argument
+            // as `replayed_sat`: a relaxation's feasible point is not a model.
+            if ctx.has_opaque_vars() {
+                return Ok(None);
+            }
             // Build a model over the original symbols and replay-check it (the trust
             // anchor for `sat`); decline to `unknown` if it does not verify.
+            //
+            // Keyed through `var_index`, not by `vars` position: the two agree
+            // exactly when no opaque column exists, and `var_index` stays right
+            // when one does. (The guard above means this loop never runs in that
+            // case; it is written correctly anyway, because a guard and an
+            // indexing convention that only agree by luck is how the next
+            // change here goes wrong.)
             let mut model = Model::new();
             let mut assignment = axeyum_ir::Assignment::new();
-            for (index, &symbol) in ctx.vars.iter().enumerate() {
+            for (&symbol, &index) in &ctx.var_index {
                 model.set(symbol, Value::Real(point[index]));
                 assignment.set(symbol, Value::Real(point[index]));
             }
@@ -1249,6 +1331,31 @@ pub(crate) struct Constraint {
 struct Collector {
     var_index: BTreeMap<SymbolId, usize>,
     vars: Vec<SymbolId>,
+    /// Column index assigned to each **opaque** real subterm, keyed by
+    /// [`TermId`] rather than by [`SymbolId`] — which is the whole structural
+    /// difference from the symbol-only map beside it, and the reason this mode
+    /// could not simply be switched on (ADR-2065 §2).
+    ///
+    /// Populated only when [`Collector::allow_opaque_apps`] is set. Keying by
+    /// `TermId` is what makes the sharing **sound**: the arena is hash-consed,
+    /// so one `TermId` is one term, and two occurrences of it denote the same
+    /// real in every model — so giving them one column is a fact about the
+    /// original query, not an assumption added by the abstraction.
+    opaque_var_index: BTreeMap<TermId, usize>,
+    /// Next free column. Symbol columns and opaque columns share ONE index
+    /// space, so this replaces `vars.len()` as the column allocator: with
+    /// opaque columns present `vars[k]` is no longer column `k`.
+    next_var: usize,
+    /// When set, a real-sorted subterm the linearizer cannot handle —
+    /// specifically an uninterpreted application or an array `select` — becomes
+    /// a fresh opaque real column instead of refusing the whole query.
+    ///
+    /// `false` on every [`Collector::default`], and settable only through
+    /// [`collect_constraints_with_options`], which is reachable only from
+    /// [`decide_within_with_options`]. See [`check_with_lra_opaque_apps_within`]
+    /// for the soundness statement and for why the resulting outcome type has
+    /// no `Sat` variant.
+    allow_opaque_apps: bool,
     constraints: Vec<Constraint>,
     trivially_unsat: bool,
     /// Set when an `i128` overflow was hit while building a linear expression.
@@ -1297,10 +1404,42 @@ impl Collector {
         if let Some(&index) = self.var_index.get(&symbol) {
             return index;
         }
-        let index = self.vars.len();
+        let index = self.next_var;
+        self.next_var += 1;
         self.vars.push(symbol);
         self.var_index.insert(symbol, index);
         index
+    }
+
+    /// The column for an opaque real subterm, minted on first sight.
+    ///
+    /// Shares the column space with [`Collector::index_of`]; see
+    /// [`Collector::opaque_var_index`] for why keying by [`TermId`] is what
+    /// makes the sharing sound.
+    fn index_of_opaque(&mut self, term: TermId) -> usize {
+        if let Some(&index) = self.opaque_var_index.get(&term) {
+            return index;
+        }
+        let index = self.next_var;
+        self.next_var += 1;
+        self.opaque_var_index.insert(term, index);
+        index
+    }
+
+    /// Total column count — symbol columns plus opaque ones.
+    ///
+    /// Every engine below sizes its vectors from this. `vars.len()` was the old
+    /// spelling and is now WRONG whenever an opaque column exists, which is why
+    /// no call site keeps it.
+    fn variable_count(&self) -> usize {
+        self.next_var
+    }
+
+    /// Whether this collection abstracted anything. The single predicate every
+    /// `sat` exit on this route is gated on; see
+    /// [`check_with_lra_opaque_apps_within`].
+    fn has_opaque_vars(&self) -> bool {
+        !self.opaque_var_index.is_empty()
     }
 
     /// Collects the linear constraints implied by `term` (a Boolean assertion),
@@ -1491,6 +1630,34 @@ impl Collector {
                 } else {
                     Err(unsupported("nonlinear real multiplication"))
                 }
+            }
+            // The opaque arm, and the ONE place the abstraction is introduced.
+            //
+            // A real-sorted uninterpreted application (`(log x)`, `(divide x
+            // y)` — in `AUFLIRA` these are *declared* functions, so plain
+            // opaque reals) or array read (`(select a i)`) denotes SOME real in
+            // any model of the original query. Replacing it by a fresh column
+            // constrained by nothing is therefore a **relaxation**: every model
+            // of the original extends to a solution of the abstraction, so
+            //
+            //     abstraction unsat  ⟹  original unsat
+            //
+            // and that is the only direction anything below is allowed to use.
+            // The converse is false — a solution of the abstraction need not
+            // respect functional congruence, the array axioms, or what `log`
+            // actually is — which is why the entry point's outcome type has no
+            // `Sat` variant at all.
+            //
+            // Deliberately NOT a blanket "any real subterm": nonlinear products
+            // and real division keep refusing, because turning their refusal
+            // into a weak `unknown` would take the query away from routes that
+            // can still decide it. The arms here are exactly the two shapes
+            // ADR-2050 measured refusing (`Op::Apply`, `Op::Select`).
+            TermNode::App {
+                op: Op::Apply(_) | Op::Select,
+                ..
+            } if self.allow_opaque_apps && is_real(arena, term) => {
+                Ok(LinExpr::var(self.index_of_opaque(term)))
             }
             _ => Err(unsupported(
                 "non-linear or non-real subterm in a constraint",
@@ -1961,6 +2128,155 @@ pub(crate) fn atom_in_lra_fragment(arena: &TermArena, atom: TermId) -> Result<()
     // fragment refusal — and `decide_within` turns it into `Ok(Decision::…)`,
     // i.e. "supported" as far as this caller is concerned. Preserved exactly.
     collect_constraints(arena, &[atom], None).map(|_| ())
+}
+
+/// [`atom_in_lra_fragment`] with the opaque-real abstraction on: whether one
+/// atom is inside the conjunctive linear-real fragment **once uninterpreted
+/// real applications and real array reads are treated as opaque columns**,
+/// without deciding it.
+///
+/// Same argument as the integer [`atom_in_lia_opaque_fragment`]: every
+/// `Unsupported` this route can raise comes from the collector, so collecting
+/// the single atom answers the membership question and the search after it
+/// could not change the answer. `Ok(None)` is a deadline/memory decline inside
+/// collection, not a fragment refusal, and with no deadline it cannot fire.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] exactly when `atom` is outside that
+/// fragment.
+pub(crate) fn atom_in_lra_opaque_fragment(
+    arena: &TermArena,
+    atom: TermId,
+) -> Result<(), SolverError> {
+    collect_constraints_with_options(arena, &[atom], None, true).map(|_| ())
+}
+
+/// What the opaque-real conjunctive oracle can return.
+///
+/// **There is no `Sat` variant, and that is the point.** The abstraction behind
+/// [`check_with_lra_opaque_apps_within`] is a relaxation of the query it is
+/// given, so `unsat` transfers to the original and `sat` does not. Every other
+/// way of saying that — a `CheckResult` with a comment, a runtime guard, a
+/// reviewer's argument — leaves a `Sat` value that some later caller can
+/// construct or forward. This type means the compiler enumerates the `sat`
+/// exits instead of a `grep` doing it: there are none.
+#[derive(Debug, Clone)]
+pub(crate) enum LraOpaqueOutcome {
+    /// The abstraction is unsatisfiable, hence so is the original query.
+    Unsat,
+    /// No verdict transfers: the abstraction was satisfiable, or the decision
+    /// declined (deadline, memory, admission gate, overflow).
+    Undecided(UnknownReason),
+}
+
+impl LraOpaqueOutcome {
+    /// Widens to the shared result type. `Unsat` transfers verbatim; everything
+    /// else becomes a first-class `unknown`. Total, and with no `Sat` arm to
+    /// write, so widening cannot introduce one.
+    pub(crate) fn into_check_result(self) -> CheckResult {
+        match self {
+            Self::Unsat => CheckResult::Unsat,
+            Self::Undecided(reason) => CheckResult::Unknown(reason),
+        }
+    }
+}
+
+/// Conjunctive `QF_LRA` oracle that treats real-valued uninterpreted-function
+/// applications and real array reads as opaque real variables — the real mirror
+/// of [`check_with_lia_opaque_apps`] (ADR-2065).
+///
+/// # Why this is sound, and in which direction
+///
+/// Under any model of the original assertions each such subterm denotes some
+/// real. Replacing it by a fresh, otherwise-unconstrained column therefore only
+/// adds solutions: the abstracted system is a **relaxation**. Hence
+///
+/// > abstraction unsat implies original unsat,
+///
+/// which is the only direction any caller may use, and is why the return type
+/// has no `Sat` variant. A solution of the abstraction need not respect
+/// functional congruence (`f(x)` and `f(y)` get different columns even when
+/// `x = y` is entailed), the array axioms, or the intended meaning of the
+/// symbol, so it is not a model of the original.
+///
+/// Sharing is by [`TermId`] and the arena is hash-consed, so two occurrences of
+/// the *same* term take one column. That is a fact about the query, not an
+/// assumption: one `TermId` is one term and denotes one real. A text-level
+/// version of this abstraction would not have that property.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] when an assertion is outside the
+/// fragment even with the abstraction on (a real disequality, a nonlinear
+/// product, a disjunction), or [`SolverError::Backend`] on a procedure-bug
+/// alarm from the underlying decision.
+pub(crate) fn check_with_lra_opaque_apps_within(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<LraOpaqueOutcome, SolverError> {
+    let _phase = crate::phase_breadcrumb::enter("lra:opaque-apps");
+    Ok(
+        match decide_within_with_options(arena, assertions, deadline, true)? {
+            Decision::UnsatFarkas { .. } | Decision::UnsatTrivial(_) => LraOpaqueOutcome::Unsat,
+            // The Farkas certificate is deliberately NOT forwarded. Its public
+            // `vars` field maps a dense column index to a `SymbolId`, and an
+            // opaque column has no symbol — so a certificate built over an
+            // abstracted system would hand a consumer (the Craig interpolant
+            // extractor, say) a column it would mis-read as a variable.
+            // `verify` itself does not read `vars`, so the self-check inside
+            // the decision is unaffected; what is refused here is re-export.
+            Decision::Sat(_) => LraOpaqueOutcome::Undecided(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: "lra: opaque real-subterm abstraction is satisfiable; a relaxation's \
+                         model is not a model of the original query"
+                    .to_owned(),
+            }),
+            Decision::TimedOut => LraOpaqueOutcome::Undecided(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: "lra opaque: Fourier-Motzkin elimination exceeded the wall-clock / size \
+                         budget"
+                    .to_owned(),
+            }),
+            Decision::Incomplete(detail) => LraOpaqueOutcome::Undecided(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail,
+            }),
+            Decision::OutOfMemory(detail) => LraOpaqueOutcome::Undecided(UnknownReason {
+                kind: UnknownKind::MemoryLimit,
+                detail,
+            }),
+        },
+    )
+}
+
+/// Whether the opaque-real abstraction is armed for this process.
+///
+/// **Kill switch, not an opt-in**: the rung runs unless
+/// `AXEYUM_LRA_OPAQUE_APPS=0`. The polarity is INVERTED relative to a normal
+/// feature flag, exactly as ADR-2025's `AXEYUM_ZERO_INST_SKELETON` is, and for
+/// the same reason it is stated here and in the A/B runner's header: anyone
+/// re-running `bench-results/real-opaque-20260914/ab-run.sh` against a later
+/// binary without noticing would measure the shipped arm in BOTH halves and
+/// report the resulting zero as a null.
+///
+/// Read through a `OnceLock` so an A/B cannot be perturbed mid-run.
+pub(crate) fn opaque_real_apps_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        parse_opaque_real_apps_lever(std::env::var("AXEYUM_LRA_OPAQUE_APPS").ok().as_deref())
+    })
+}
+
+/// Parses [`opaque_real_apps_enabled`]'s spelling. Split out so the ON/OFF
+/// polarity is testable **without touching process environment**.
+///
+/// Exactly `0` disables. Every other spelling — unset, empty, `1`, a typo —
+/// leaves the rung ON, so a malformed kill switch fails to the measured
+/// behaviour rather than silently reverting to the pre-ADR-2065 ladder.
+fn parse_opaque_real_apps_lever(raw: Option<&str>) -> bool {
+    raw != Some("0")
 }
 
 /// [`atom_in_lra_fragment`] for the integer side: whether one atom is inside the
@@ -3489,7 +3805,7 @@ pub fn check_with_lra_simplex(
         return Ok(CheckResult::Unsat);
     }
 
-    match simplex_feasible(&ctx.constraints, ctx.vars.len()) {
+    match simplex_feasible(&ctx.constraints, ctx.variable_count()) {
         Some(SimplexOutcome::Sat(values)) => {
             let mut model = Model::new();
             let mut assignment = axeyum_ir::Assignment::new();
