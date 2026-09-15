@@ -15214,23 +15214,72 @@ mod tests {
 
     #[test]
     fn trigger_alt_shipped_cap_proposes_exactly_one() {
-        // The OFF arm, pinned against the function it replaced. If these ever
-        // disagree the lever is not OFF by default, whatever its value says.
+        // The OFF arm, pinned against the function it replaced.
+        //
+        // THE FIXTURE HAS TO DISCRIMINATE, and the first one did not. On
+        // `f(x) = g(x)` both paths return one group and the same term, so a
+        // mutation moving the short-circuit from `cap <= 1` to `cap <= 0`
+        // SURVIVED: cap 1 fell through to the alternatives path and truncated
+        // back to the same answer. `g(h(x)) = f(x)` separates them --
+        // `select_triggers` takes the FIRST full-cover candidate in pre-order,
+        // which is `g(h x)`, while the alternatives path drops `g(h x)` for
+        // containing the full-cover `h x` and then ranks by size. The two paths
+        // therefore disagree at cap 1, which is what makes the equality below a
+        // measurement rather than a tautology.
         let (mut arena, var_index, x) = trigger_fixture();
+        let xt = arena.var(x);
+        let sort = arena.sort_of(xt);
+        arena.declare_fun("h", &[sort], sort).expect("h");
         let f = arena.find_function("f").expect("f");
         let g = arena.find_function("g").expect("g");
-        let xt = arena.var(x);
+        let h = arena.find_function("h").expect("h");
+        let hx = arena.apply(h, &[xt]).expect("h x");
+        let ghx = arena.apply(g, &[hx]).expect("g (h x)");
         let fx = arena.apply(f, &[xt]).expect("f x");
-        let gx = arena.apply(g, &[xt]).expect("g x");
-        let body = arena.eq(fx, gx).expect("f x = g x");
+        let body = arena.eq(ghx, fx).expect("g (h x) = f x");
+        let shipped = vec![select_triggers(&arena, body, &var_index)];
+        assert_eq!(shipped, vec![vec![ghx]], "the fixture's pre-order first");
+        assert_ne!(
+            select_trigger_groups_with_cap(&arena, body, &var_index, 2),
+            shipped,
+            "the fixture does not discriminate, so the two assertions below hold \
+             for any short-circuit and pin nothing"
+        );
         assert_eq!(
             select_trigger_groups_with_cap(&arena, body, &var_index, 1),
-            vec![select_triggers(&arena, body, &var_index)],
+            shipped,
         );
         assert_eq!(
             select_trigger_groups_with_cap(&arena, body, &var_index, 0),
-            vec![select_triggers(&arena, body, &var_index)],
+            shipped,
             "a cap of 0 is the shipped arm, not an empty trigger set"
+        );
+    }
+
+    #[test]
+    fn trigger_alt_proper_subterm_is_irreflexive_and_finds_nesting() {
+        // `is_proper_subterm` is tested DIRECTLY because the caller hides it: a
+        // reflexive version makes every candidate contain itself, `minimal`
+        // comes back empty, and `select_trigger_groups_with_cap`'s defensive
+        // fallback to `full` then returns the same answer -- so that mutation
+        // SURVIVED every test that went through the caller. A guard whose only
+        // coverage runs through code that repairs it is not covered.
+        let (mut arena, _var_index, x) = trigger_fixture();
+        let f = arena.find_function("f").expect("f");
+        let g = arena.find_function("g").expect("g");
+        let xt = arena.var(x);
+        let gx = arena.apply(g, &[xt]).expect("g x");
+        let fgx = arena.apply(f, &[gx]).expect("f (g x)");
+        assert!(is_proper_subterm(&arena, fgx, gx), "g x is inside f (g x)");
+        assert!(is_proper_subterm(&arena, fgx, xt), "x is inside f (g x)");
+        assert!(
+            !is_proper_subterm(&arena, fgx, fgx),
+            "PROPER excludes itself"
+        );
+        assert!(!is_proper_subterm(&arena, gx, gx));
+        assert!(
+            !is_proper_subterm(&arena, gx, fgx),
+            "and it is not symmetric"
         );
     }
 
@@ -15285,26 +15334,49 @@ mod tests {
 
     #[test]
     fn trigger_alt_order_is_smallest_first_and_total() {
-        // Determinism is a public API promise. `f(x)` has two subterms and
-        // `g(h(x))` three, so size decides; the tie-break on `TermId` is what
-        // makes the order total when two candidates have the same size, and
-        // `TermId`s are dense in insertion order.
-        let (mut arena, var_index, x) = trigger_fixture();
-        let xt = arena.var(x);
-        let sort = arena.sort_of(xt);
-        arena.declare_fun("h", &[sort], sort).expect("h");
+        // Determinism is a public API promise, and SMALLEST-FIRST is the
+        // reference order (z3's `pattern_weight_lt`, cvc5's default
+        // `triggerSelMode = MIN`).
+        //
+        // THE FIRST FIXTURE COULD NOT SEE THE DIFFERENCE. It compared `f(x)`
+        // against `h(x)`, both of size 2, so the tie-break on `TermId` decided
+        // and a mutation replacing the size key with a constant SURVIVED --
+        // the test measured determinism and nothing else.
+        //
+        // Two bound variables fix that. `p(x, y)` has 3 distinct subterms and
+        // `q(f(x), y)` has 4, and NEITHER contains the other, so the minimality
+        // filter leaves both and size alone decides. `q(f(x), y)` is built
+        // FIRST, so arena order and size order are OPPOSITE: only a size key
+        // puts `p(x, y)` in front.
+        let mut arena = TermArena::new();
+        let u = Sort::Uninterpreted(arena.declare_uninterpreted_sort("U"));
+        arena.declare_fun("f", &[u], u).expect("f");
+        arena.declare_fun("p", &[u, u], u).expect("p");
+        arena.declare_fun("q", &[u, u], u).expect("q");
+        let x = arena.declare("x", u).expect("x");
+        let y = arena.declare("y", u).expect("y");
+        let var_index: HashMap<SymbolId, u32> = [(x, 0), (y, 1)].into_iter().collect();
         let f = arena.find_function("f").expect("f");
-        let g = arena.find_function("g").expect("g");
-        let h = arena.find_function("h").expect("h");
+        let p = arena.find_function("p").expect("p");
+        let q = arena.find_function("q").expect("q");
+        let xt = arena.var(x);
+        let yt = arena.var(y);
         let fx = arena.apply(f, &[xt]).expect("f x");
-        let hx = arena.apply(h, &[xt]).expect("h x");
-        let ghx = arena.apply(g, &[hx]).expect("g (h x)");
-        let body = arena.eq(fx, ghx).expect("f x = g (h x)");
+        let qfxy = arena.apply(q, &[fx, yt]).expect("q (f x) y");
+        let pxy = arena.apply(p, &[xt, yt]).expect("p x y");
+        assert!(qfxy < pxy, "the fixture needs arena order OPPOSITE to size");
+        assert!(
+            witness_size(&arena, pxy) < witness_size(&arena, qfxy),
+            "and the two candidates must differ in SIZE, or this test cannot \
+             distinguish a size key from a constant one"
+        );
+        let body = arena.eq(pxy, qfxy).expect("p x y = q (f x) y");
         let groups = select_trigger_groups_with_cap(&arena, body, &var_index, 8);
-        // `h(x)` is a candidate too and is a proper subterm of `g(h(x))`, so
-        // the survivors are `f(x)` and `h(x)`, both of size 2. The order is
-        // then decided by `TermId`, and `f(x)` was built first.
-        assert_eq!(groups, vec![vec![fx], vec![hx]]);
+        assert_eq!(
+            groups,
+            vec![vec![pxy], vec![qfxy]],
+            "smallest first, not arena order"
+        );
         for _ in 0..4 {
             assert_eq!(
                 select_trigger_groups_with_cap(&arena, body, &var_index, 8),
