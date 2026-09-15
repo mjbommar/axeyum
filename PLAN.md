@@ -140,6 +140,7 @@ now. Nothing was deleted.
 | 2026-09-15 | `4a9638930` | Census of the 83 undecided QF_NRA files: 83 of 83 outcome-ledger rows, buckets keyed on the route that held the budget, shape features from a parser rather than a grep. Records the two wrong readings the instruments gave first. |
 | 2026-09-15 | `4def0b025` | `nra_real_root::CadDecline` — twelve causes behind what was one `not-applicable` for 78 of 83 files — plus the `AXEYUM_NRA_CAD` lever registered dated, and the three-arm z3 + cvc5 reference trace that sizes the gap. |
 | 2026-09-15 | `40b99ced8` | ADR-2110: the CAD-versus-linearization split, two design-difference claims with `file:line` on both sides, the QF_NRA A/B (+2, 0 losses, 0 flips), and the `nra-cad-attribution` mutation suite (three guards, each deletion killing exactly one named test). |
+| 2026-09-15 | `HEAD` | QF_NIA A/B (+0, 0 flips, 0 `:status` disagreements over 166 comparable verdicts) and the 3x mover recheck: 2 STABLE-GAIN, 0 STABLE-LOSS. ADR set to `proposed` -- the attribution landed unconditionally but no default moved. |
 | 2026-09-15 | `d92cf4277` | The regression repair: `hand_back_unless_refuted`, the one-way rule. Plus `RouteOutcome::{Decided, HandedBack}` in the suite, because a test that cannot tell a terminal decline from a hand-back cannot see a capability being taken from a later route; two new property tests; and the whole `dispatch/reason:` block as a runnable artifact that reads its suite list out of the hook. |
 | 2026-09-15 | `8d85758e6` | My helper's doc block had stolen the public function's. Clippy found `missing_docs`; rustdoc under `-D warnings` then found the intra-doc link to a private item that the clippy fix introduced. Two gates, two different findings. |
 | 2026-09-15 | `1b895bf68` | The design note and the ownership table, before any dispatch code moved. |
@@ -61398,6 +61399,12 @@ the first bucket key read the last trail decline and reported two QUANTIFIER
 routes as this division's largest buckets, and the shape reader called 40 and
 then 31 files "divisions" before the right question — is the DENOMINATOR
 constant — gave 0 of 83 and 0 of all 200.
+
+The ADR is `proposed`, not `accepted`: the attribution landed unconditionally,
+but no default moved -- `AXEYUM_NRA_CAD` ships OFF. Movers were re-run 3x per
+arm: **2 STABLE-GAIN, 0 STABLE-LOSS** across both divisions, with QF_NIA's raw
+1-gain/1-loss both resolving to ambient (BOTH-DECIDE and UNSTABLE with an
+identical pattern in each arm).
 
 Detail: [ADR-2110](docs/research/09-decisions/adr-2110-qf-nra-what-decides-the-seventy.md),
 artifacts in `bench-results/nra-trace-20260915/`.

@@ -1,0 +1,41 @@
+== QF_NRA 200 ==
+  rows            200
+  A (default)     117
+  B (wide)        119
+  net             +2
+  gains           2
+  losses          0
+  sat<->unsat     0
+  no-verdict rows 1
+
+  GAINS:
+    QF_NRA/meti-tarski/exp/problem/10/2/exp-problem-10-2-chunk-0017.smt2  A=unknown B=sat A_ms=5098 B_ms=189 first=A
+    QF_NRA/meti-tarski/exp/problem/10/3/exp-problem-10-3-chunk-0139.smt2  A=unknown B=sat A_ms=24208 B_ms=5296 first=A
+
+  rows where an arm produced NO verdict token:
+    QF_NRA/2019-ezsmt/reverseFolding/30-reverse_folding-0-0.smt2  A=none B=none
+
+  vs declared :status -- 0 disagreement(s) over 234 comparable verdicts
+
+  wall clock      A 1240s  B 1213s  (-26s)
+  order balance   A=100, B=100
+== QF_NIA 200 (shared nonlinear code) ==
+  rows            200
+  A (default)     83
+  B (wide)        83
+  net             +0
+  gains           1
+  losses          1
+  sat<->unsat     0
+  no-verdict rows 0
+
+  GAINS:
+    QF_NIA/20170427-VeryMax/ITS/From_T2__apchild-live.t2_fixed__p16479_terminationG_0.smt2  A=unknown B=sat A_ms=24517 B_ms=22806 first=B
+
+  LOSSES:
+    QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__NonTermination2_false-termination.c__p24932_edge_closing_0.smt2  A=sat B=unknown A_ms=23707 B_ms=24419 first=A
+
+  vs declared :status -- 0 disagreement(s) over 166 comparable verdicts
+
+  wall clock      A 3088s  B 3101s  (+13s)
+  order balance   A=100, B=100

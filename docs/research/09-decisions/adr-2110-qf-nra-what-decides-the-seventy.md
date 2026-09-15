@@ -1,15 +1,23 @@
 # ADR-2110: QF_NRA — 45 of the 70 are a CAD problem, and 22 are not
 
-Status: accepted
+Status: proposed
 Index-summary: The 83 QF_NRA files the board leaves undecided, censused by typed
 route trail and traced against z3's CAD and linearization engines separately.
 z3's linearization arm — the one shaped like `nra.rs` — decides 29 of 83; its
 CAD arm decides 45 more, 44 of them in under a second. The exact decider now
 records WHICH guard stopped it instead of one `not-applicable` for all 78. Lane NIA-TRACE measured nlsat conflicting on 67 of the 76 QF_NIA files z3 decides and we do not, so the nlsat/CAD route both lanes point at covers both nonlinear divisions -- 45 of 83 here, 67 of 76 there, disjoint populations and two different measurements that must not be added.
-Index-status: accepted
+Index-status: proposed
 Date: 2026-09-15
 
 **Lane:** `nra-trace`
+
+**What `proposed` refers to.** Decision 1 below -- the `CadDecline` attribution
+-- is LANDED and unconditional: it is the default behaviour of every traced run
+from this branch, with its own tests, mutation suite and gates. Decision 2's
+lever ships **OFF** (`AXEYUM_NRA_CAD=default`, byte-identical to the previous
+engine), and this ADR carries `proposed` for that reason: no default was moved.
+The measurements -- the census, the reference trace and the two design claims --
+are measurements, not proposals, and stand on the artifacts named at the end.
 
 ## Context
 
@@ -252,6 +260,39 @@ control on the A/B is that its baseline arm reproduces the board.
 Both gains are in the census population and both are declared `sat`:
 `meti-tarski/exp/problem/10/2/exp-problem-10-2-chunk-0017` (24.2 s → 0.2 s) and
 `meti-tarski/exp/problem/10/3/exp-problem-10-3-chunk-0139`.
+
+**QF_NIA, 200 files** — the nonlinear code is shared, so the division that did
+not motivate the lever is where a regression would show:
+
+| | |
+|---|---:|
+| rows | 200 |
+| A (`default`) | **83** |
+| B (`wide`) | **83** |
+| net | **+0** |
+| gains / losses / flips | 1 / 1 / **0** |
+| vs declared `:status` | **0 disagreements over 166 comparable verdicts** |
+
+Arm A's 83 sits against the board's own 85 for this division, two rows apart at
+the budget boundary.
+
+**Every mover re-run 3x per arm**, one pinned core, arms alternating within the
+three passes (`bench-results/route-ownership-20260915/recheck-movers.sh`, with
+the two arms as wrapper scripts over ONE binary so its same-binary guard still
+means something):
+
+| file | A | B | class |
+|---|---|---|---|
+| `exp-problem-10-2-chunk-0017` | `unknown` x3 | `sat` x3 | **STABLE-GAIN** |
+| `exp-problem-10-3-chunk-0139` | `unknown` x3 | `sat` x3 | **STABLE-GAIN** |
+| `From_T2__apchild-live...terminationG_0` | `sat` x3 | `sat` x3 | BOTH-DECIDE |
+| `Stroeder_15__NonTermination2...edge_closing_0` | `sat`/`sat`/`unknown` | `sat`/`sat`/`unknown` | **UNSTABLE** |
+
+So **2 stable gains, 0 stable losses, 0 flips across both divisions**. The
+QF_NIA pair are both ambient: one decides in both arms and the other has an
+IDENTICAL three-pass pattern in both arms, which is a budget-boundary file and
+not an effect. Reporting the raw `1 gain / 1 loss` as the result would have
+been wrong in both directions.
 
 **The default stays `default`.** +2 on one division is not a basis for changing
 a bound every real query passes through, and the attribution says the cap is not
