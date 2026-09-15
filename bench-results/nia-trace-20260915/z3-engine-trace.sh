@@ -33,23 +33,33 @@ ASLIMIT=${ASLIMIT:-8388608}
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
-printf 'path\tarm\tverdict\twall_ms\texit\tengine\tnlsat_stat\tgrobner_stat\tnla_stat\tmemory_mb\n' > "$OUT"
+printf 'path\tarm\tverdict\twall_ms\texit\tengine\tnlsat_conflicts\tgrobner_conflicts\tnla_lemmas\thorner_conflicts\tnra_calls\tsat_conflicts\tbv_bits\tmemory_mb\n' > "$OUT"
 
-# Which engine actually did the work, read from `-st` rather than from the
-# verdict. Reported as a single token; `none` means no nonlinear engine
-# statistic appeared at all (the query fell to simplification/linear arithmetic).
-engine_of() {
-    local stats=$1 engines=()
-    grep -q 'nlsat' <<<"$stats" && engines+=(nlsat)
-    grep -qE 'grobner|gb[- ]' <<<"$stats" && engines+=(grobner)
-    grep -qE 'arith-nla|nla-|horner|tangent|basic-lemma|order-lemma|monotonicity' <<<"$stats" && engines+=(nla)
-    grep -qE 'bv-|sat-|del-clause|propagations' <<<"$stats" && engines+=(sat)
-    if [ ${#engines[@]} -eq 0 ]; then printf 'none'; else printf '%s' "$(IFS=+; echo "${engines[*]}")"; fi
+# `:key value` from a `-st` block, by EXACT key. Empty when the key is absent,
+# which is the informative case: z3 prints a statistic only for machinery that
+# actually ran.
+#
+# The key is matched anchored and whole (`:key` followed by whitespace), so
+# `:nlsat-conflicts` cannot be read off `:nlsat-conflicts-of-something-else`,
+# and the captured group stops at the first non-numeric character.
+stat_of() {
+    sed -n "s/^[( ]*:$2[[:space:]]\\+\\([0-9][0-9.]*\\).*/\\1/p" <<<"$1" | head -1
 }
 
-stat_of() {
-    # `:key value` -> value, or empty. First match wins.
-    sed -n "s/.*:$2 *\\([0-9.]*\\).*/\\1/p" <<<"$1" | head -1
+# Which nonlinear engine did REAL work, decided from those counters rather than
+# from the verdict or from a key merely being present. Every QF_NIA query runs
+# the SAT core and the linear arithmetic layer, so naming those tells you
+# nothing; what separates the routes is which nonlinear machinery produced
+# conflicts. `none` means no nonlinear counter was nonzero -- the query fell to
+# simplification or linear arithmetic alone.
+engine_of() {
+    local stats=$1 engines=() value
+    value=$(stat_of "$stats" 'nlsat-conflicts');  [ -n "$value" ] && [ "$value" != 0 ] && engines+=(nlsat)
+    value=$(stat_of "$stats" 'arith-grobner-conflicts'); [ -n "$value" ] && [ "$value" != 0 ] && engines+=(grobner)
+    value=$(stat_of "$stats" 'arith-horner-conflicts');  [ -n "$value" ] && [ "$value" != 0 ] && engines+=(horner)
+    value=$(stat_of "$stats" 'arith-nla-lemmas');        [ -n "$value" ] && [ "$value" != 0 ] && engines+=(nla)
+    value=$(stat_of "$stats" 'bv-bit2core');             [ -n "$value" ] && [ "$value" != 0 ] && engines+=(bitblast)
+    if [ ${#engines[@]} -eq 0 ]; then printf 'none'; else printf '%s' "$(IFS=+; echo "${engines[*]}")"; fi
 }
 
 run_one() {
@@ -66,12 +76,16 @@ run_one() {
     elif grep -qx 'unknown' <<<"$out"; then verdict=unknown
     elif [ "$rc" -ge 124 ]; then verdict=timeout
     else verdict=error; fi
-    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
         "$file" "$arm" "$verdict" "$ms" "$rc" \
         "$(engine_of "$out")" \
-        "$(stat_of "$out" 'nlsat-.*')" \
-        "$(stat_of "$out" 'grobner.*')" \
-        "$(stat_of "$out" 'arith-nla.*')" \
+        "$(stat_of "$out" 'nlsat-conflicts')" \
+        "$(stat_of "$out" 'arith-grobner-conflicts')" \
+        "$(stat_of "$out" 'arith-nla-lemmas')" \
+        "$(stat_of "$out" 'arith-horner-conflicts')" \
+        "$(stat_of "$out" 'arith-nra-calls')" \
+        "$(stat_of "$out" 'conflicts')" \
+        "$(stat_of "$out" 'bv-bit2core')" \
         "$(stat_of "$out" 'memory')" >> "$OUT"
 }
 
