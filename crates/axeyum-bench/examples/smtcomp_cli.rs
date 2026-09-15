@@ -364,6 +364,57 @@ use axeyum_solver::Reading as SpanReading;
 /// every recorded run. ADR-1752's budget refusal states its numbers in exactly
 /// this field.
 ///
+/// The query's construct classes, as one `--trace` line (ADR-2102), now a
+/// RENDERING of `RouteTrace::features` (ADR-2105) rather than a read off a
+/// process-global — "the trace is the API, the prose is a rendering"
+/// (ADR-2101), applied to the one field that had not yet moved.
+///
+/// `; features Int|Real`, or `; features none` for a query carrying no theory
+/// construct at all. `None` — no line — when `--trace` is off, and also when
+/// nothing was dispatched in this process, which is a THIRD answer: the outcome
+/// ledger keeps "the binary never said" apart from "the set was empty", because
+/// an absence read as a zero is how ADR-2075's twelve files became a bucket.
+///
+/// The separator is `|` and never `;`: ADR-2020's census split on `;` when the
+/// field could contain one and truncated its own largest bucket. A class name
+/// is `[A-Za-z]+` by construction (`Construct::name`), so this line needs no
+/// escaping — and the ledger reads the whole payload rather than a capture
+/// group, so it cannot silently keep half of it.
+///
+/// Printed on the watchdog path too, and NOT marked `; partial `: the construct
+/// scan runs once, before any rung, and either completed or did not. There is
+/// no partial reading of it to mark, and marking it would put a prefix on the
+/// one line whose value a killed run still knows exactly. `features` comes
+/// from the same mirrored `RouteTrace` the watchdog path already reads for
+/// `bound_by`/`decided_by` (`RouteTrace::record_features` sets it before any
+/// rung runs, same as the old global did, so a kill cannot catch it half-done).
+fn features_trace_line(trace_mode: bool, features: Option<&str>) -> Option<String> {
+    if !trace_mode {
+        return None;
+    }
+    Some(features_line_from(features))
+}
+
+/// [`features_trace_line`]'s rendering, without the `trace_mode` gate.
+///
+/// Split out so the BYTES the outcome ledger anchors on are pinned by a test
+/// that does not have to dispatch a query.
+fn features_line_from(classes: Option<&str>) -> String {
+    format!("; features {}", classes.unwrap_or(FEATURES_NOT_DISPATCHED))
+}
+
+/// What the `; features` line says when nothing reached the quantifier-free
+/// dispatch ladder, so the construct scan never ran.
+///
+/// This is a THIRD answer and not a missing line, and the distinction is
+/// measured rather than hypothetical: ADR-2100 found that **482 of 643
+/// undecided Tier 1 rows — 75 %** never reach that ladder at all. Without this
+/// token a row from such a file is byte-identical, in the ledger, to a row from
+/// a binary built before this instrument existed — two completely different
+/// findings in one empty string, which is the absence-read-as-a-zero shape
+/// ADR-2075 cost twelve files.
+const FEATURES_NOT_DISPATCHED: &str = "not-dispatched";
+
 /// `None` off `--trace`: a competition run's stdout must stay byte-identical.
 fn give_up_unknown_line(trace_mode: bool, reason: &UnknownReason) -> Option<String> {
     trace_mode.then(|| format!("; give-up kind={:?} detail={}", reason.kind, reason.detail))
@@ -1041,6 +1092,10 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
         lines.push(partial_line(&lazy.value.trace_line()));
         note("lazy-smt", lazy.sampled);
     }
+    // ADR-2105: captured alongside the match below (from the SAME mirrored
+    // trace, whichever arm runs) rather than read from a process-global at
+    // the end of the function.
+    let mut features_from_trace: Option<String> = None;
     match board.sample::<RouteTrace>(instrument::ROUTE) {
         Some(route) if !route.value.is_empty() => {
             // Mark FIRST, render second. `marked_partial` captures the open
@@ -1048,6 +1103,7 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
             // prefix and the JSON's `"partial":true` come from one field
             // instead of from two places that have to agree.
             let reading = route.value.clone().marked_partial();
+            features_from_trace = reading.features().map(str::to_owned);
             lines.extend(route_attribution_report_lines(&reading));
             // The segment no attempt accounts for, WITHOUT which the partial
             // route line is quietly misleading. `bound_by` maximises over
@@ -1104,6 +1160,17 @@ fn watchdog_trace_lines(trace_mode: bool, board: &LiveInstruments, reason: &str)
             provenance.join(",")
         ),
     );
+    // ADR-2102/ADR-2105, LAST and unprefixed. Unlike every line above it this
+    // is not a mirrored instrument reading, so it is not in `provenance` and
+    // carries no `; partial ` marker: the construct scan runs once, before any
+    // rung, and a kill cannot catch it half-done. A killed file is exactly
+    // where the ledger's `features` column earns its place — "which routes
+    // could ever have owned this query" is the first question about a file
+    // nothing decided.
+    lines.extend(features_trace_line(
+        trace_mode,
+        features_from_trace.as_deref(),
+    ));
     lines
 }
 
@@ -1972,7 +2039,15 @@ fn main() -> ExitCode {
             // end of the `;` block finds the one line that names which route
             // decided the file and which route consumed the budget -- the two
             // questions every other line here can only be evidence for.
-            trace_lines.extend(route_attribution_report_lines(&last_route_attribution()));
+            let attribution = last_route_attribution();
+            trace_lines.extend(route_attribution_report_lines(&attribution));
+            // ADR-2102/ADR-2105. AFTER the route lines, because it is what
+            // they have to be read against: "`lira-dpll` declined" means
+            // something different on a query carrying `Array` than on one
+            // that does not, and until this line existed nothing in a run's
+            // own output said which. Read off the SAME trace the lines above
+            // just rendered, not a second global read.
+            trace_lines.extend(features_trace_line(trace_mode, attribution.features()));
         }
         // ADR-1752: the budget-relative atom cap can refuse before any stage
         // runs, and that refusal names the count, the budget and the remedy.
@@ -2164,6 +2239,53 @@ mod tests {
     use axeyum_solver::UnknownKind;
 
     use super::*;
+
+    // ---------------------------------------------------------------------
+    // `; features`: the outcome ledger's construct column (ADR-2102)
+    //
+    // These pin the EXTERNAL contract -- the exact bytes
+    // `scripts/outcome_ledger.py`'s `FEATURES_PREFIX` anchors on. A test
+    // deriving the prefix from this file would pass on any rename, which is
+    // the shape ADR-2101's mutations were built to expose.
+    // ---------------------------------------------------------------------
+
+    #[test]
+    fn the_features_line_carries_the_prefix_the_ledger_anchors_on() {
+        assert_eq!(features_line_from(Some("Int|Real")), "; features Int|Real");
+    }
+
+    #[test]
+    fn an_empty_construct_set_still_prints_a_line() {
+        // `none` and NO LINE are different answers: no line means this binary
+        // predates the instrument. Printing nothing for the empty set would
+        // make a pure-Boolean query indistinguishable from a 2026-09-14 build.
+        assert_eq!(features_line_from(Some("none")), "; features none");
+    }
+
+    #[test]
+    fn nothing_dispatched_yields_its_own_token_and_not_a_missing_line() {
+        // A missing line means the BINARY predates the instrument. A query that
+        // never reached the quantifier-free ladder is a different finding, and
+        // ADR-2100 measured it at 482 of 643 undecided Tier 1 rows.
+        assert_eq!(features_line_from(None), "; features not-dispatched");
+    }
+
+    #[test]
+    fn the_three_features_answers_are_all_distinct() {
+        let dispatched = features_line_from(Some("Int"));
+        let empty_set = features_line_from(Some("none"));
+        let never_ran = features_line_from(None);
+        assert_ne!(dispatched, empty_set);
+        assert_ne!(empty_set, never_ran);
+        assert_ne!(dispatched, never_ran);
+    }
+
+    #[test]
+    fn the_features_line_is_suppressed_without_trace() {
+        // Same off-by-default discipline as every other `;` line here: a
+        // competition run's stdout must stay byte-identical.
+        assert_eq!(features_trace_line(false, Some("Int")), None);
+    }
 
     // ---------------------------------------------------------------------
     // `; give-up`: an `unknown` that says why
@@ -2418,7 +2540,7 @@ mod tests {
             lines[0]
         );
         assert!(
-            lines[1].starts_with("; route-trail {\"schema_version\":2,\"partial\":false,"),
+            lines[1].starts_with("; route-trail {\"schema_version\":3,\"partial\":false,"),
             "got: {}",
             lines[1]
         );

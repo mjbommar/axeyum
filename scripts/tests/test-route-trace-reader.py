@@ -69,6 +69,35 @@ V2_PARTIAL = (
     '"elapsed_ns":20000000}]}'
 )
 
+#: Schema 3 (ADR-2105): the per-attempt `name` member on a typed decline
+#: detail, and the top-level `features` member. The `budget` decline's `name`
+#: is `"other"` (`Budget::Other`, the `from_unknown` pass-through) -- the same
+#: value `route_trace.rs`'s own `detail_strings_are_json_escaped` pins.
+V3_COMPLETE = (
+    '; route-trail {"schema_version":3,"partial":false,"features":"Int|Real",'
+    '"attempts":['
+    '{"route":"lia-dpll","outcome":"declined","reason":"budget","name":"other",'
+    '"detail":"nodes"},'
+    '{"route":"qf-bv","outcome":"decided","verdict":"sat","elapsed_ns":48200000}]}'
+)
+
+#: Schema 3, `features` ABSENT -- the real, stated "not-dispatched" answer
+#: (no genuinely-outermost scan ever ran), which is a DIFFERENT thing from a
+#: schema-1/2 capture that cannot be asked at all. Distinguishing these two is
+#: exactly what `RouteTrail.features`'s own docs say a caller must not skip.
+V3_NOT_DISPATCHED = (
+    '; route-trail {"schema_version":3,"partial":false,"attempts":['
+    '{"route":"q:ground-subset","outcome":"declined","reason":"not-applicable"}]}'
+)
+
+V3_PARTIAL = (
+    '; partial route-trail {"schema_version":3,"partial":true,'
+    '"in_flight_after":"q:mbqi","open_segment_ns":25215000000,"features":"none",'
+    '"attempts":['
+    '{"route":"q:mbqi","outcome":"declined","reason":"not-applicable",'
+    '"elapsed_ns":20000000}]}'
+)
+
 #: ADR-2020's defect, as a fixture. Every character here appeared in a real
 #: `why=` detail: the `;` that a split truncated on, the `;QPROBE ` record
 #: separator that had to be invented because of it, an `=` that a
@@ -129,6 +158,62 @@ def test_schema_2_reads_completeness_from_the_field():
     complete = rtr.parse_trail_line(V2_COMPLETE)
     assert complete.partial is False
     assert complete.partial_source == "field"
+
+
+def test_schema_3_reads_the_typed_name_and_the_construct_set():
+    """ADR-2105: the two members ADR-2102/ADR-2104 promised and never shipped.
+
+    `decline_names` was empty on all 220 of ADR-2102's own ledger rows because
+    `to_json` had no `name` member to read; `features` lived in a
+    process-global the JSON never carried at all. Both now round-trip through
+    this reader exactly like every other typed field.
+    """
+    trail = rtr.parse_trail_line(V3_COMPLETE)
+    assert trail.schema_version == 3
+    assert trail.features == "Int|Real", trail.features
+    declined = [a for a in trail.attempts if a.declined]
+    assert len(declined) == 1, declined
+    assert declined[0].reason == "budget"
+    assert declined[0].name == "other", declined[0].name
+    assert declined[0].detail == "nodes"
+    # …and a schema-2 attempt (no member at all) reads `name` as `None`, not
+    # as an empty string -- a real absence, not a stated blank.
+    older = rtr.parse_trail_line(V2_PARTIAL)
+    assert older.attempts[0].name is None
+
+
+def test_schema_3_not_dispatched_is_distinguished_from_an_older_capture():
+    """The THIRD value `features` can take, and why `None` alone cannot say it.
+
+    A schema-3 trail with no `features` member is a STATED answer --
+    "no genuinely-outermost scan ever ran" (ADR-2100 measured this at 482 of
+    643 undecided Tier 1 rows: the common case, not an edge one). A schema-1/2
+    trail also reads `features` as `None`, but for the opposite reason: the
+    binary predates the member and was never asked. Collapsing the two is
+    exactly ADR-2075's bug on a different field, so the schema has to be read
+    alongside the value, never the value alone.
+    """
+    not_dispatched = rtr.parse_trail_line(V3_NOT_DISPATCHED)
+    assert not_dispatched.schema_version == 3
+    assert not_dispatched.features is None
+
+    older = rtr.parse_trail_line(V2_COMPLETE)
+    assert older.schema_version == 2
+    assert older.features is None
+    # Same `None`, different meaning -- only `schema_version` tells them apart.
+    assert not_dispatched.features == older.features
+    assert not_dispatched.schema_version != older.schema_version
+
+
+def test_schema_3_partial_still_carries_features():
+    """`features` is recorded before any rung runs (ADR-2105, same as the old
+    global), so a KILLED file still names it -- the one field a watchdog
+    cannot catch half-done.
+    """
+    trail = rtr.parse_trail_line(V3_PARTIAL)
+    assert trail.partial is True
+    assert trail.partial_source == "field"
+    assert trail.features == "none", trail.features
 
 
 def test_schema_1_falls_back_to_the_prefix_and_says_so():
@@ -304,30 +389,49 @@ def test_the_fixtures_match_the_rust_renderer_bytes():
     """FRESHNESS CONTROL, and it postdates the question it answers.
 
     Python fixtures that drift from the Rust renderer make this whole suite a
-    test of the fixtures. So the schema-2 prefixes above are checked against
-    the literals `route_trace.rs` pins in its OWN tests: if the renderer moves
-    a byte, its test fails and so does this one, and nobody has to remember
-    that two files exist.
+    test of the fixtures. So the schema-3 prefixes above (the CURRENT
+    renderer's output -- `ROUTE_TRACE_JSON_SCHEMA_VERSION` is 3, ADR-2105) are
+    checked against the literals `route_trace.rs` pins in its OWN tests: if
+    the renderer moves a byte, its test fails and so does this one, and nobody
+    has to remember that two files exist.
+
+    The schema-1/2 fixtures above (`V1_*`/`V2_*`) are NOT re-checked here --
+    they exercise this reader's BACKWARD-compatibility contract for artifacts
+    the current renderer no longer produces, so there is nothing live in
+    `route_trace.rs` for them to stay fresh against; they are frozen examples
+    of a historical wire format, not a live one.
     """
     source = open(RUST_SOURCE, encoding="utf-8").read()
 
-    # The complete-rendering prefix, as `route_trace.rs` pins it.
-    pinned_complete = '{\\"schema_version\\":2,\\"partial\\":false,\\"attempts\\":'
-    assert source.count(pinned_complete) >= 1, (
-        "route_trace.rs no longer pins the complete rendering this suite's "
-        "fixtures are built from -- the fixtures are stale, not the reader"
+    # The complete-rendering prefix, as `route_trace.rs` pins it (the
+    # `features` member included, from the same test that pins the `name`
+    # member -- `a_trace_with_recorded_features_renders_the_member`).
+    pinned_complete = (
+        '{\\"schema_version\\":3,\\"partial\\":false,\\"features\\":\\"Int|Real\\",\\'
     )
-    assert V2_COMPLETE.startswith(
-        '; route-trail ' + pinned_complete.replace('\\"', '"')
-    ), V2_COMPLETE
+    assert source.count(pinned_complete) >= 1, (
+        "route_trace.rs no longer pins the complete+features rendering this "
+        "suite's V3_COMPLETE fixture is built from -- the fixture is stale, "
+        "not the reader"
+    )
+    assert V3_COMPLETE.startswith(
+        '; route-trail {"schema_version":3,"partial":false,"features":"Int|Real",'
+    ), V3_COMPLETE
 
-    # The partial rendering, likewise.
+    # The partial rendering, likewise (the `features` member is absent from
+    # every Rust-pinned partial literal, so only the shared prefix up to
+    # `in_flight_after` is checked here -- `render_json`'s own source is what
+    # fixes the field ORDER of the partial+features combination V3_PARTIAL
+    # exercises).
     pinned_partial = (
-        '{\\"schema_version\\":2,\\"partial\\":true,\\"in_flight_after\\":'
+        '{\\"schema_version\\":3,\\"partial\\":true,\\"in_flight_after\\":'
     )
     assert source.count(pinned_partial) >= 1, (
         "route_trace.rs no longer pins the partial rendering -- stale fixtures"
     )
+    assert V3_PARTIAL.startswith(
+        '; partial route-trail ' + pinned_partial.replace('\\"', '"')
+    ), V3_PARTIAL
 
     # And the version itself comes off the constant, not off this file.
     match = re.search(

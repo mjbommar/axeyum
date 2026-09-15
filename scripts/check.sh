@@ -573,6 +573,17 @@ step credit-transaction-mutations bash scripts/tests/test-credit-transaction-mut
 # control that reads the Rust renderer's own pinned literals, so a fixture
 # that drifts from `route_trace.rs` fails loudly instead of testing itself.
 step route-trace-reader python3 scripts/tests/test-route-trace-reader.py
+# ADR-2102: the outcome ledger -- the table three sweep runners append to, and
+# the only writer and reader of `bench-results/ledger/*.tsv`. Registered here
+# for the same reason as the line above: the ledger is a table other lanes will
+# QUOTE without re-deriving, so a library that silently truncates a field or
+# waves a branch binary through as `main` makes the wrong numbers faster to get
+# rather than merely being untested. 29 control tests, exit status the finding,
+# including a hostile round-trip fixture (tab, newline, CR, `|`, `;`, `=`,
+# quote, backslash) that asserts its own hostility, four NEGATIVE schema-drift
+# controls, and the staleness rule driven against a real git repository in both
+# directions plus the unresolvable case.
+step outcome-ledger-tests python3 -m unittest scripts.tests.test_outcome_ledger
 # ADR-0790: 15 of the identity classes above have BOTH members registered as
 # ledger facts -- 15 propositions counted as 2,121 proved facts twice. Facts
 # are never deleted (ADR-0542); one member of each pair carries a new

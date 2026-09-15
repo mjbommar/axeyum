@@ -626,6 +626,47 @@ pub struct RouteTrace {
     /// trail is everything that happened. Part of `PartialEq`: see
     /// [`PartialReading`] for why the distinction is not optional.
     partial: Option<PartialReading>,
+    /// The construct set of the **first genuinely-outermost query the
+    /// quantifier-free dispatch ladder scanned**, already rendered to its
+    /// wire form (`"Int|Real"`, or `"none"` for an empty set) — ADR-2105.
+    ///
+    /// # Why this lives on the trace, not a process-global
+    ///
+    /// ADR-2102 recorded this in a process-global `static AtomicU32` (since
+    /// removed, `route_ownership`'s old "last query constructs" cell)
+    /// because there was no other route from deep inside the dispatcher back
+    /// to a caller — the trace is the API
+    /// (ADR-2101), so once every dispatch call already threads a
+    /// [`Recorder`], the construct set belongs on the same object every
+    /// other observation of that dispatch lives on.
+    ///
+    /// # First writer wins, and why that is almost never a live question
+    ///
+    /// [`Self::record_features`] sets this only when it is still `None`. In
+    /// this crate's call graph a NESTED dispatch (a route's own sub-solve —
+    /// `check_auto` called under an armed `NestedDispatchGuard`, or while
+    /// [`with_outermost_dispatch`] is already true for an enclosing frame)
+    /// always runs with `rec == None`, so [`with_recorder`] never even offers
+    /// it a trace to write to — a sub-solve's scan cannot overwrite the
+    /// outermost one because it never reaches a trace at all. The guard still
+    /// has to exist and still has to be tested, because [`Self::absorb`] can
+    /// merge a SECOND genuinely-outermost dispatch's features into a trace
+    /// that already has one (the front door's post-dispatch second chances,
+    /// or two disjoint outermost calls sharing one thread's attribution), and
+    /// the first one recorded must stay authoritative there too.
+    ///
+    /// # What it does and does not name
+    ///
+    /// `None` means no genuinely-outermost dispatch reached the
+    /// quantifier-free ladder in this trace's lifetime at all (the CLI's
+    /// `not-dispatched`). `Some("none")` means the scan RAN and found no
+    /// construct. On a QUANTIFIED query this is the first SUB-SOLVE's
+    /// fragment, not the file's — `check_with_quantifiers` runs first and the
+    /// ladder is only ever reached from underneath it, so a query full of
+    /// arrays and reals can legitimately record `none` when the residual that
+    /// reaches the ladder is a trivial one. See `route_ownership`'s own docs
+    /// in `auto.rs` before quoting this as "the file's features".
+    features: Option<String>,
 }
 
 /// What a PARTIAL reading of a [`RouteTrace`] knows about the attempt that was
@@ -672,13 +713,14 @@ impl Default for RouteTrace {
             elapsed: Vec::new(),
             last: Instant::now(),
             partial: None,
+            features: None,
         }
     }
 }
 
-/// Structural equality: same recorded `(route, outcome)` sequence **and the
-/// same completeness**. Timing is deliberately excluded — see the
-/// [`RouteTrace`] struct docs.
+/// Structural equality: same recorded `(route, outcome)` sequence, **the same
+/// completeness**, and **the same recorded features**. Timing is deliberately
+/// excluded — see the [`RouteTrace`] struct docs.
 ///
 /// Completeness is *in* the comparison on purpose. A partial reading and a
 /// completed run that happened to record the same prefix are not the same
@@ -688,10 +730,16 @@ impl Default for RouteTrace {
 /// only the presence of the reading and its `in_flight_after` boundary
 /// participate — the two fields that are a function of the dispatch rather
 /// than of the clock.
+///
+/// `features` participates too: it is a function of the dispatch (which
+/// construct set the first genuinely-outermost scan found), not of the clock,
+/// so two runs of the same query record the same value and this adds no
+/// non-determinism risk to `trace_is_deterministic_across_runs`.
 impl PartialEq for RouteTrace {
     fn eq(&self, other: &Self) -> bool {
         self.attempts == other.attempts
             && self.partial.map(|p| p.in_flight_after) == other.partial.map(|p| p.in_flight_after)
+            && self.features == other.features
     }
 }
 
@@ -722,6 +770,28 @@ impl RouteTrace {
     #[must_use]
     pub fn partial_reading(&self) -> Option<PartialReading> {
         self.partial
+    }
+
+    /// The construct set of the first genuinely-outermost query the
+    /// quantifier-free dispatch ladder scanned, already rendered to its wire
+    /// form — `None` when no such scan happened in this trace's lifetime. See
+    /// the [`RouteTrace::features`] field docs.
+    #[must_use]
+    pub fn features(&self) -> Option<&str> {
+        self.features.as_deref()
+    }
+
+    /// Records the construct set of a genuinely-outermost dispatch's scan,
+    /// **first writer wins**: a no-op once [`Self::features`] is already
+    /// `Some`. `rendered` is the already-computed wire form (`"Int|Real"` /
+    /// `"none"`) — this method knows nothing about `ConstructSet` and never
+    /// will, so `route_trace` stays independent of `auto`'s construct
+    /// vocabulary (see `auto::route_ownership::render_query_constructs`, the
+    /// one caller).
+    pub(crate) fn record_features(&mut self, rendered: impl Into<String>) {
+        if self.features.is_none() {
+            self.features = Some(rendered.into());
+        }
     }
 
     /// Marks this trace as a partial reading, capturing the open segment and
@@ -823,10 +893,22 @@ impl RouteTrace {
     /// segment. The clock is then restarted, so the next locally recorded
     /// attempt measures only the time after `other` finished — without this the
     /// following front-door stage would be charged the entire dispatch again.
+    ///
+    /// `features` is merged **first writer wins**, the same rule
+    /// [`Self::record_features`] applies within one trace: if `self` already
+    /// has a recorded construct set, `other`'s is discarded rather than
+    /// overwriting it. This is what makes the outermost-scan guarantee
+    /// survive a merge, not only a single dispatch — a SECOND
+    /// genuinely-outermost dispatch absorbed later (the front door's
+    /// post-dispatch second chances) must not silently replace the first
+    /// scan the file's `features` column is supposed to name.
     pub fn absorb(&mut self, other: &Self) {
         self.attempts.extend_from_slice(&other.attempts);
         self.elapsed.extend_from_slice(&other.elapsed);
         self.last = Instant::now();
+        if self.features.is_none() {
+            self.features = other.features.clone();
+        }
     }
 
     /// How long the segment that no attempt accounts for has been open: the
@@ -1053,7 +1135,26 @@ impl core::fmt::Display for RouteTrace {
 /// how ADR-2075's twelve partial files were swept into an aggregate that
 /// thought it had totals. The version is what lets the shared reader say "this
 /// artifact predates the field" instead of guessing `false`.
-pub const ROUTE_TRACE_JSON_SCHEMA_VERSION: u32 = 2;
+///
+/// # Why 3 (ADR-2105)
+///
+/// Two members added, same "adding is not a rename, bump anyway" rule as
+/// version 2's own justification — a reader has to be able to say "this
+/// artifact predates the field" rather than reading an absence as a stated
+/// negative:
+///
+/// * a per-attempt `"name"` member on a `declined` outcome whose reason
+///   carries a typed detail (`UnsupportedDetail`/`Budget`/`VerifierRejected`,
+///   ADR-2104) — the exhaustive variant name beside the free-text `detail`
+///   that already existed, so `scripts/outcome_ledger.py`'s `decline_names`
+///   column (added in schema 2 of the *ledger's own* TSV, ADR-2102, and empty
+///   on every row until this landed) has something to read;
+/// * a top-level `"features"` member: the construct set of the first
+///   genuinely-outermost query the quantifier-free dispatch ladder scanned
+///   (ADR-2102's `features` ledger column), now recorded ON the trace instead
+///   of in a process-global `static` — "the trace is the API, the prose is a
+///   rendering" (ADR-2101), applied to the one field that had not yet moved.
+pub const ROUTE_TRACE_JSON_SCHEMA_VERSION: u32 = 3;
 
 /// Appends `value` to `out` as a JSON string literal, escaping per RFC 8259.
 ///
@@ -1120,11 +1221,12 @@ impl RouteTrace {
     /// # Schema
     ///
     /// ```text
-    /// {"schema_version":2,"partial":false,"attempts":[
+    /// {"schema_version":3,"partial":false,"features":"Int|Real","attempts":[
     ///   {"route":"probe","outcome":"probe","detail":"…"},
     ///   {"route":"qf-bv","outcome":"decided","verdict":"unsat"},
     ///   {"route":"nra-real-root","outcome":"declined","reason":"not-applicable"},
-    ///   {"route":"lia-simplex","outcome":"declined","reason":"budget","detail":"…"},
+    ///   {"route":"lia-simplex","outcome":"declined","reason":"budget",
+    ///    "name":"nia-relaxation-slice-expired","detail":"…"},
     ///   {"route":"euf-online","outcome":"declined","reason":"incomplete",
     ///    "kind":"incomplete","detail":"…"}
     /// ]}
@@ -1132,7 +1234,12 @@ impl RouteTrace {
     ///
     /// `detail` is present exactly when the variant carries one; `kind` only on
     /// `incomplete`, where it preserves the original [`UnknownKind`]
-    /// classification.
+    /// classification; `name` only on the three typed-detail declines
+    /// (`unsupported`/`budget`/`verifier-rejected` carrying a
+    /// [`UnsupportedDetail`]/[`Budget`]/[`VerifierRejected`] payload,
+    /// ADR-2104) — the exhaustive variant name beside the free-text `detail`.
+    /// The top-level `features` member is present exactly when
+    /// [`Self::features`] is `Some` (ADR-2105).
     #[must_use]
     pub fn to_json(&self) -> String {
         self.render_json(false)
@@ -1154,7 +1261,7 @@ impl RouteTrace {
     /// # Schema
     ///
     /// ```text
-    /// {"schema_version":2,"partial":false,"attempts":[
+    /// {"schema_version":3,"partial":false,"features":"none","attempts":[
     ///   {"route":"probe","outcome":"probe","detail":"…","elapsed_ns":1200},
     ///   {"route":"qf-bv","outcome":"decided","verdict":"unsat","elapsed_ns":48200000}
     /// ]}
@@ -1187,6 +1294,16 @@ impl RouteTrace {
                 out.push_str(&reading.open_segment.as_nanos().to_string());
             }
         }
+        // `features`, present exactly when a genuinely-outermost dispatch has
+        // recorded one (ADR-2105) — same "present exactly when there is
+        // something to say" rule `detail` follows on an attempt. Absence means
+        // no such dispatch reached the quantifier-free ladder in this trace's
+        // lifetime, which the CLI renders as `not-dispatched`; `"none"` is a
+        // real, different answer (the scan ran and found no construct).
+        if let Some(features) = &self.features {
+            out.push_str(",\"features\":");
+            push_json_string(&mut out, features);
+        }
         out.push_str(",\"attempts\":[");
         for (i, attempt) in self.attempts.iter().enumerate() {
             if i > 0 {
@@ -1217,6 +1334,8 @@ impl RouteTrace {
                         }
                         DeclineReason::UnsupportedDetail(detail) => {
                             push_json_string(&mut out, "unsupported");
+                            out.push_str(",\"name\":");
+                            push_json_string(&mut out, detail.name());
                             out.push_str(",\"detail\":");
                             push_json_string(&mut out, &detail.to_string());
                         }
@@ -1225,6 +1344,8 @@ impl RouteTrace {
                         }
                         DeclineReason::Budget(detail) => {
                             push_json_string(&mut out, "budget");
+                            out.push_str(",\"name\":");
+                            push_json_string(&mut out, detail.name());
                             out.push_str(",\"detail\":");
                             push_json_string(&mut out, &detail.to_string());
                         }
@@ -1237,6 +1358,8 @@ impl RouteTrace {
                         }
                         DeclineReason::VerifierRejected(detail) => {
                             push_json_string(&mut out, "verifier-rejected");
+                            out.push_str(",\"name\":");
+                            push_json_string(&mut out, detail.name());
                             out.push_str(",\"detail\":");
                             push_json_string(&mut out, &detail.to_string());
                         }
@@ -1817,7 +1940,7 @@ mod json_tests {
     fn empty_trace_renders_an_empty_attempt_list() {
         assert_eq!(
             RouteTrace::new().to_json(),
-            "{\"schema_version\":2,\"partial\":false,\"attempts\":[]}"
+            "{\"schema_version\":3,\"partial\":false,\"attempts\":[]}"
         );
     }
 
@@ -1842,15 +1965,16 @@ mod json_tests {
         trace.record_decided("f", Verdict::Unsat);
         assert_eq!(
             trace.to_json(),
-            "{\"schema_version\":2,\"partial\":false,\"attempts\":[\
+            "{\"schema_version\":3,\"partial\":false,\"attempts\":[\
 {\"route\":\"probe\",\"outcome\":\"probe\",\"detail\":\"bv\"},\
 {\"route\":\"a\",\"outcome\":\"declined\",\"reason\":\"unsupported\"},\
 {\"route\":\"b\",\"outcome\":\"declined\",\"reason\":\"not-applicable\"},\
-{\"route\":\"c\",\"outcome\":\"declined\",\"reason\":\"budget\",\"detail\":\"nodes\"},\
+{\"route\":\"c\",\"outcome\":\"declined\",\"reason\":\"budget\",\"name\":\"other\",\
+\"detail\":\"nodes\"},\
 {\"route\":\"d\",\"outcome\":\"declined\",\"reason\":\"incomplete\",\
 \"kind\":\"incomplete\",\"detail\":\"nl\"},\
 {\"route\":\"e\",\"outcome\":\"declined\",\"reason\":\"verifier-rejected\",\
-\"detail\":\"replay\"},\
+\"name\":\"backend\",\"detail\":\"replay\"},\
 {\"route\":\"f\",\"outcome\":\"decided\",\"verdict\":\"unsat\"}]}"
         );
     }
@@ -1875,10 +1999,10 @@ mod json_tests {
         );
         assert_eq!(
             trace.to_json(),
-            "{\"schema_version\":2,\"partial\":false,\"attempts\":[\
+            "{\"schema_version\":3,\"partial\":false,\"attempts\":[\
 {\"route\":\"payload-free\",\"outcome\":\"declined\",\"reason\":\"unsupported\"},\
 {\"route\":\"with-message\",\"outcome\":\"declined\",\"reason\":\"unsupported\",\
-\"detail\":\"free datatype variable under is-c\"}]}"
+\"name\":\"backend\",\"detail\":\"free datatype variable under is-c\"}]}"
         );
         assert_eq!(
             DeclineReason::UnsupportedDetail(UnsupportedDetail::Backend("m".into())).to_string(),
@@ -1914,8 +2038,8 @@ mod json_tests {
         );
         assert_eq!(
             trace.to_json(),
-            "{\"schema_version\":2,\"partial\":false,\"attempts\":[{\"route\":\"x\",\
-\"outcome\":\"declined\",\"reason\":\"budget\",\
+            "{\"schema_version\":3,\"partial\":false,\"attempts\":[{\"route\":\"x\",\
+\"outcome\":\"declined\",\"reason\":\"budget\",\"name\":\"other\",\
 \"detail\":\"a\\\"b\\\\c\\nd\\te\\u0001f\"}]}"
         );
     }
@@ -1986,15 +2110,16 @@ mod json_tests {
         trace.record_decided("f", Verdict::Unsat);
         assert_eq!(
             trace.to_json(),
-            "{\"schema_version\":2,\"partial\":false,\"attempts\":[\
+            "{\"schema_version\":3,\"partial\":false,\"attempts\":[\
 {\"route\":\"probe\",\"outcome\":\"probe\",\"detail\":\"bv\"},\
 {\"route\":\"a\",\"outcome\":\"declined\",\"reason\":\"unsupported\"},\
 {\"route\":\"b\",\"outcome\":\"declined\",\"reason\":\"not-applicable\"},\
-{\"route\":\"c\",\"outcome\":\"declined\",\"reason\":\"budget\",\"detail\":\"nodes\"},\
+{\"route\":\"c\",\"outcome\":\"declined\",\"reason\":\"budget\",\"name\":\"other\",\
+\"detail\":\"nodes\"},\
 {\"route\":\"d\",\"outcome\":\"declined\",\"reason\":\"incomplete\",\
 \"kind\":\"incomplete\",\"detail\":\"nl\"},\
 {\"route\":\"e\",\"outcome\":\"declined\",\"reason\":\"verifier-rejected\",\
-\"detail\":\"replay\"},\
+\"name\":\"backend\",\"detail\":\"replay\"},\
 {\"route\":\"f\",\"outcome\":\"decided\",\"verdict\":\"unsat\"}]}",
             "to_json must stay byte-identical once timing support lands"
         );
@@ -2143,6 +2268,89 @@ mod json_tests {
         // structural equality (route/outcome only) must still hold.
         assert_ne!(a.elapsed()[0], b.elapsed()[0]);
         assert_eq!(a, b, "RouteTrace equality must ignore timing");
+    }
+
+    // -----------------------------------------------------------------
+    // `features` (ADR-2105): recorded on the trace, first writer wins.
+    // -----------------------------------------------------------------
+
+    /// A trace that never recorded a construct scan renders no `features`
+    /// member at all — the same "absent, not a stated negative" contract
+    /// `partial` follows for schema 1 (ADR-2101 §2), now applied to this
+    /// field: `not-dispatched` is a DIFFERENT answer from an empty set, and
+    /// only the member's absence can say the first.
+    #[test]
+    fn a_trace_with_no_recorded_features_renders_no_features_member() {
+        let mut trace = RouteTrace::new();
+        trace.record_decided("qf-bv", Verdict::Sat);
+        assert_eq!(trace.features(), None);
+        assert!(
+            !trace.to_json().contains("\"features\""),
+            "{}",
+            trace.to_json()
+        );
+    }
+
+    /// A recorded construct set renders as its own member, between `partial`
+    /// and `attempts` — present exactly when there is something to say, the
+    /// same rule `detail` follows on an attempt.
+    #[test]
+    fn a_trace_with_recorded_features_renders_the_member() {
+        let mut trace = RouteTrace::new();
+        trace.record_features("Int|Real");
+        trace.record_decided("qf-bv", Verdict::Sat);
+        assert_eq!(trace.features(), Some("Int|Real"));
+        assert_eq!(
+            trace.to_json(),
+            "{\"schema_version\":3,\"partial\":false,\"features\":\"Int|Real\",\
+\"attempts\":[{\"route\":\"qf-bv\",\"outcome\":\"decided\",\"verdict\":\"sat\"}]}"
+        );
+    }
+
+    /// `record_features` is first-writer-wins WITHIN one trace: a second call
+    /// is a no-op, even though the first call recorded a DIFFERENT set. This
+    /// is the mechanism `quantified_valid_universal_sub_solve_does_not_own_the_recorded_features`
+    /// (`tests/route_trace.rs`) exercises end to end through a real quantified
+    /// query; this test pins the mechanism directly.
+    #[test]
+    fn record_features_is_first_writer_wins_within_one_trace() {
+        let mut trace = RouteTrace::new();
+        trace.record_features("Int");
+        trace.record_features("Real");
+        assert_eq!(
+            trace.features(),
+            Some("Int"),
+            "the SECOND recorded set must not overwrite the first"
+        );
+    }
+
+    /// `absorb` preserves first-writer-wins across a merge: a trace that
+    /// already has `features` keeps its own value regardless of what the
+    /// absorbed trace carries, and a trace with none takes the absorbed
+    /// trace's value. This is what makes the outermost-scan guarantee survive
+    /// a SECOND genuinely-outermost dispatch sharing one thread's attribution
+    /// (the front door's post-dispatch second chances), not only a single
+    /// dispatch.
+    #[test]
+    fn absorb_preserves_the_first_recorded_features() {
+        let mut already_set = RouteTrace::new();
+        already_set.record_features("Int");
+        let mut other = RouteTrace::new();
+        other.record_features("Real");
+        already_set.absorb(&other);
+        assert_eq!(
+            already_set.features(),
+            Some("Int"),
+            "absorbing a SECOND scan must not overwrite the first"
+        );
+
+        let mut empty = RouteTrace::new();
+        empty.absorb(&other);
+        assert_eq!(
+            empty.features(),
+            Some("Real"),
+            "a trace with no scan yet must take the absorbed trace's"
+        );
     }
 }
 
@@ -2315,7 +2523,7 @@ mod partial_tests {
         assert!(
             trace
                 .to_json()
-                .starts_with("{\"schema_version\":2,\"partial\":false,"),
+                .starts_with("{\"schema_version\":3,\"partial\":false,"),
             "{}",
             trace.to_json()
         );
@@ -2342,7 +2550,7 @@ mod partial_tests {
         let json = trace.to_json();
         assert!(
             json.starts_with(
-                "{\"schema_version\":2,\"partial\":true,\
+                "{\"schema_version\":3,\"partial\":true,\
 \"in_flight_after\":\"dl-online\",\"open_segment_ns\":"
             ),
             "{json}"
@@ -2364,7 +2572,7 @@ mod partial_tests {
         let json = RouteTrace::new().marked_partial().to_json();
         assert!(
             json.starts_with(
-                "{\"schema_version\":2,\"partial\":true,\"in_flight_after\":null,\
+                "{\"schema_version\":3,\"partial\":true,\"in_flight_after\":null,\
 \"open_segment_ns\":"
             ),
             "{json}"
@@ -2402,7 +2610,7 @@ mod partial_tests {
         assert!(
             trace
                 .to_json_with_timing()
-                .starts_with("{\"schema_version\":2,\"partial\":false,")
+                .starts_with("{\"schema_version\":3,\"partial\":false,")
         );
         assert!(
             trace

@@ -48217,6 +48217,57 @@ fact. No Rust and no checker was changed.
 digests checked); 25 of the 27 dispatches not re-run; no workspace test
 sweep; no mutation control (nothing mutable was changed).
 
+Status: **in progress**, one lane measuring. Phases 1, 2 and 3 of
+[dispatch-and-instrumentation-2026-09-15.md](docs/plan/dispatch-and-instrumentation-2026-09-15.md)
+are on `main`, each with an ADR and a measured exit criterion; Phase 1b's
+nine-division A/B is the open item. Phase 4 has not started and is conditional.
+
+## What landed, in order
+
+| phase | ADR | what it closed | measured |
+|---|---|---|---|
+| sizing | — | 254 routing-output readers classified by reading each; the Tier 1 harness never kept per-file output | 47 direct readers, 28 blind to `; partial`; ladder STOPPED on `Unknown` in **604 of 645** undecided rows |
+| 2 | 2101 | `partial` is a field, `Route` is a type, one reader replaces seven greps | three live consumer defects found by the migration; ADR-2075's 12 → 9 |
+| 1 | 2100 | ownership declared per rung; `hand_back_unless_refuted` deleted; rustc named 17 sites | 1,800-row A/B net 0 (+2/−2), 0 flips; sizing **0 of 645** — for the bug class, not a gain |
+| 2b | 2104 | 25 free-string decline details are closed enums (ADR-2101 counted 44: helper callers) | one mutation, one kill; three orphan controls registered |
+| 3 | 2102 | one ledger, three writers, staleness rule | ADR-2065's 14 movers exact; ADR-2045's 74 → 59 on today's tree; ADR-2075's 7 of 9; `--trace` moved 0 of 100 verdicts |
+| 3b | 2105 | typed name and construct set in the trail JSON; the process-global recorder deleted | first-writer-wins proven on a quantified query; ledger's two empty columns fill |
+| — | 2090 | assertion selection: z3's minimal cores are median 3 conjuncts and we still fail 193 of 230 of them | ceiling **36 of 645**; nothing built |
+
+## What the instruments now agree on
+
+Two independent measurements point at the same place. PLAN-SIZING: the ladder
+stops on an owning rung's `Unknown` in 93.6 % of undecided Tier 1 rows.
+CORE-SELECT: handed the reference's own minimal core, the quantified engine
+gives up at 13 s after ~20 attempts — 12 e-matching fixpoints, 17 mbqi datatype
+declines, 5 unreached nested quantifiers, 4 bounded at integer width 32. Neither
+ladder had a routing gain hiding in it (Phase 1: 0 of 645; Phase 1b: 0 of 482).
+The next capability lanes go at those four give-up classes, at their own
+denominators.
+
+## Open
+
+- **QUANT-LADDER-OWNERSHIP (ADR-2103)** — the `q:*` ladder under the ownership
+  rule plus a bounded continuation share. Live defects closed on the way (eight
+  bare `?`s in `q:checked-fast-path`; `q:egraph` asking what `q:mbqi` supports).
+  600 of 1,800 rows: +2, 0 losses, 0 flips, and both of ADR-2100's lost files
+  decide again. Six divisions and the 3× movers recheck outstanding; merges when
+  the criterion is measured, not before.
+- Phase 4 (derived ladder order) runs only if the ledger shows structure.
+- Not this plan's: `check-merge-hygiene.sh` fails on any host with a fresh
+  `shape_search` binary — two unadjudicated `AlgS` duplicate groups.
+
+## Corrections worth keeping
+
+- Two consecutive push logs ended in `failed to push some refs` with no
+  `pre-push: FAILED` line; I blamed the tool timeout, relaunched detached, and
+  it died at the same step. The step after the last `ok` — the unit sweep — was
+  red on main (an unregistered sentinel constant). Run that step by hand.
+- ADR-2101's "44 free-string sites" counted callers of two unchanged helpers;
+  rustc's number was 25.
+- A Sonnet lane's forked helpers inherited the whole brief and rebuilt both
+  deliverables in parallel. Helpers get their slice only, as fresh agents.
+
 Status: **all five landed and pushed** (origin `fcc988900`, 126 commits).
 ADRs 1672–1679. Detail, corrections and process notes:
 [notes/coordinator-math-five-topics-2026-09-06.md](docs/plan/notes/coordinator-math-five-topics-2026-09-06.md).
@@ -62391,6 +62442,93 @@ before and after.
 | `03e693425` | status stub |
 | `4b13f5eab` | the retirement policy, G11, the two controls, regenerated artifacts |
 
+**Lane outcome-ledger (`DONE`, outcome-ledger, 2026-09-15).** Phase 3 of
+[docs/plan/dispatch-and-instrumentation-2026-09-15.md](docs/plan/dispatch-and-instrumentation-2026-09-15.md),
+closed by [ADR-2102](docs/research/09-decisions/adr-2102-the-outcome-ledger.md).
+Every sweep this week produced `(file → route that decided → elapsed → routes
+declined and why)` and threw it away after grepping one token; that table now
+exists, three runner shapes append to it, and the questions that cost a lane
+each are queries.
+
+Branch base: `git merge-base main HEAD` is `7d922fe58`, which **is** local
+`main`'s HEAD at the time this lane merged it.
+
+## What changed
+
+**`scripts/outcome_ledger.py`** — the plan's §4 schema exactly, plus
+`decline_names` (schema 2, added when ADR-2104 landed mid-lane), TSV. The routing columns come from `scripts/route_trace_reader.py` (ADR-2101)
+and from nothing else; this lane never anchors on a `; route ` prefix. Three
+things carry a deliberate third value rather than a boolean:
+`partial` is `yes`/`no`/**`unknown`** (a capture with no trail cannot say
+whether the reading was a total), `features` is a class list / `none` /
+**empty** (the binary predates the instrument), and `sha_status` is
+`main`/`branch`/**`unknown-commit`**.
+
+**`scripts/ledger-run-one.sh`** — runs one file under the caller's envelope
+WITH `--trace`, keeps the stdout as a file, and appends one row through the
+library. It also carries `--no-trace-control`, which re-runs the same file on
+the same binary without `--trace` and prints `INVARIANCE ok|MOVED`.
+
+**Three writers under `scripts/ledger-sweeps/`**, one per runner shape that
+exists today — the per-lane A/B (ADR-2100's `ab-run.sh`, same-binary refusal
+kept), the 16-division board A/B (`ab-two-bins.sh`) and the Tier 1 single-arm
+board (`board-run.sh`). Each keeps its original TSV; none formats a ledger row.
+
+**`; features Int|Real`** — the construct scan the ladder already runs now
+records itself (`route_ownership::{record_query_constructs,
+last_query_constructs}`, one relaxed compare-exchange, first writer wins) and
+the CLI prints it as one extra `--trace` line on both the completed and the
+watchdog paths. Re-deriving the classification from `.smt2` text in Python
+would have been a second authority that drifts from this one.
+
+## Numbers
+
+| | |
+|---|---|
+| writers appending to one schema | **3** |
+| ledger rows produced, seven sweeps | **220** |
+| verdict invariance (`--trace` vs not), three smoke runs | **100 / 100 unchanged, 0 MOVED** |
+| ADR-2065's `+14`, re-derived from ledger rows | **+14** (arm A decides 0, arm B decides 14) |
+| ADR-2045's `74 of 93`, re-derived from the committed census | **74**; **59 of 93** on today's tree |
+| ADR-2075's nine partial rows | **7 of 9 partial on this tree**, both exceptions on the wire |
+| control suite | **43 tests**, registered as `step outcome-ledger-tests` |
+| mutations | 3 registered, **3 killed**, two of them exactly one named test |
+
+## Findings this lane did not go looking for
+
+- **A mutation SURVIVED and the guard was the problem, not the harness.**
+  Deleting the `cat-file -e` existence check from the staleness rule left all
+  31 tests green: `git merge-base --is-ancestor <garbage> main` exits non-zero
+  on its own, so the row was still flagged. The guard was real and
+  unfalsifiable at the same time. Fixed by making the classification
+  three-valued, which is a distinction a reader can act on.
+- **ADR-2101's correction to ADR-2075 is confirmed from a fresh measurement.**
+  `UFNIA/sledgehammer/Hoare/z3.850818.smt2` — the file ADR-2075 attributed its
+  "Fourteen lines." to, and which ADR-2101 showed took a `ResourceLimit` path
+  printing zero `; partial ` lines — comes back **`partial=no`** here, with a
+  complete 21-attempt trail.
+
+## Left undone, named
+
+- **`features` is empty on every row from a pre-ADR-2102 binary**, including
+  the whole `2611e14b0` arm of the A/B. That is the column's absent value and
+  is distinguishable from `none`; it is not backfillable, because the scan is
+  inside the binary.
+- **`decline_names` is empty on all 220 rows.** `route_trace.rs`'s `to_json`
+  emits `detail` and no `name` member, so ADR-2104's typed variant does not
+  cross the JSON boundary. That is a three-line addition to the trace lane's
+  wire format, not this lane's surface. The column, the schema version and the
+  reader path exist and are driven by a fixture, so it fills itself the day the
+  producer emits it.
+- **Phase 4 is not started.** No ladder order and no budget constant is derived
+  here. The ledger's minimum for deriving a default is the repository's minimum
+  for claiming a gain: three passes per arm, a published noise floor, and an
+  interleaved comparison.
+- **The ledger does not replace the A/B and must not be read as one.** A delta
+  between two single-arm ledger runs at different loads is the 77/79/85 error
+  with a database in front of it. Every aggregate carries `binary_sha`, `host`,
+  `load` and `partial` for that reason.
+
 **Status: DONE.** Audit/correction task, not a build task. No fact was
 reclassified, reopened, or edited.
 
@@ -69961,6 +70099,83 @@ every row that sweep has ever written.
 - **`bench-results/` consumers are not migrated**, deliberately: they are dated
   receipts of completed measurements, and editing them would change published
   evidence.
+
+**Lane trail-wire (`DONE`, trail-wire, 2026-09-15).** Continuation of Phase 3
+of
+[docs/plan/dispatch-and-instrumentation-2026-09-15.md](docs/plan/dispatch-and-instrumentation-2026-09-15.md),
+closed by
+[ADR-2105](docs/research/09-decisions/adr-2105-the-trail-carries-the-typed-name-and-the-construct-set.md).
+ADR-2102 shipped `decline_names` and `features` columns and said plainly that
+both were unfinished: `to_json` wrote `detail` with no `name` member (empty
+on all 220 committed rows), and `features` lived in a process-global
+`AtomicU32` read by a separate `; features` prose line — the exact
+string-report/grep-consume shape ADR-2101 closed for everything else. Both
+are now trace members.
+
+Branch base: `git merge --no-ff main` picked up local `main`'s
+`f11879df3` (ADR-2102) at start, then `9340fd07b` (config-registry
+EXEMPT-row fix for `UNSET_CONSTRUCTS`, from a coordinator note mid-lane) at
+commit `025c4117d`.
+
+## What changed
+
+**`crates/axeyum-solver/src/route_trace.rs`** — `RouteTrace::to_json` emits a
+per-attempt `"name"` member (ADR-2104's typed variant name) beside `"detail"`
+for the three typed-detail decline reasons, and a top-level `"features"`
+member: the construct set of the first genuinely-outermost dispatch scan,
+now recorded ON the trace (`RouteTrace::record_features`, first writer wins;
+`RouteTrace::absorb` merges the same way) instead of in a process-global.
+Schema bumped 2 → 3. Every existing byte-stability test extended, not
+loosened.
+
+**`crates/axeyum-solver/src/auto.rs`** — `route_ownership` loses
+`LAST_QUERY_CONSTRUCTS`, `record_query_constructs`, `reset_query_constructs`
+and the two now-dead `ConstructSet::bits`/`from_bits` helpers; its one call
+site in `check_auto_dispatch_inner` hands the rendered construct set to the
+recorder already in scope via `with_recorder` (a no-op for every nested
+sub-solve). Diff kept to the `route_ownership` module and this one call site,
+per the brief, so as not to collide with lane QUANT-LADDER-OWNERSHIP editing
+the same file's `q:*` rungs.
+
+**`crates/axeyum-bench/examples/smtcomp_cli.rs`** — the `; features` line is
+now a rendering of `RouteTrace::features()` on both the decided and watchdog
+paths; the old `axeyum_solver::last_query_constructs()` global read is gone.
+
+**`scripts/route_trace_reader.py`** — `KNOWN_SCHEMA_VERSIONS` gains 3;
+`RouteTrail.features` is new (`Attempt.name` was already wired, ADR-2101
+having anticipated it). 15 of 15 control tests (was 12).
+
+**`scripts/outcome_ledger.py`** — `features_from_capture` reads the JSON
+member from schema 3 on, falling back to the `; features` prose line for
+schema 1/2 captures. 44 of 44 control tests (was 43), fixtures moved to
+schema 3 by default with one retained schema-2 fixture proving the fallback.
+
+**`crates/axeyum-solver/src/config_registry.rs`** — dropped the EXEMPT row
+for `UNSET_CONSTRUCTS` once the sentinel it named was deleted (coordinator
+note; `config_registry::tests`, 18 tests, green both ways).
+
+## Numbers
+
+| | |
+|---|---|
+| `grep -c LAST_QUERY_CONSTRUCTS crates/` | **0** |
+| `route_trace.rs` lib tests (`--lib --features full route_trace`) | **25** (was 21) |
+| `tests/route_trace.rs` | **13** (was 12), incl. the end-to-end first-writer-wins proof |
+| `smtcomp_cli` example unit tests | **21** |
+| `decline_detail_typed.rs` | **6** |
+| `corpus_regression` | **2** |
+| the 19 `dispatch/reason:` suites (`hooks/pre-push`) | **all green** |
+| `cargo check -p axeyum-solver -p axeyum-bench --all-targets` (default features) | **clean** |
+| `route_trace_reader.py` control suite | **15** (was 12) |
+| `outcome_ledger.py` control suite | **44** (was 43) |
+| mutation (`trail-typed-name-and-features`) | **1 registered, 1 killed**, exactly the one named test |
+| `--check-anchors` | **stale=0** (1060 anchors, 136 suites) |
+| positive-control row, `decline_names`/`features` | **both non-empty** (`QF_LRA/2017-Heizmann.../_array1...smt2`, this lane's release build) |
+
+## What was left undone
+
+Nothing named in the brief. `scripts/lane-push.sh` was not run (out of
+scope: "do not push, do not merge to main").
 
 **Done (`trust-closure-equivalent`, 2026-08-31).**
 `scripts/check-trust-closure.py` is green again, resolved the way the gate's own

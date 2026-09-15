@@ -2847,6 +2847,74 @@ SUITES["route-trace-completeness"] = (
 
 
 # --------------------------------------------------------------------------
+# `outcome-ledger` (ADR-2102) -- the append-only table three sweep runners
+# write and every later lane reads WITHOUT re-deriving.  That is exactly the
+# position CLAUDE.md names: at N lanes the ledger IS the product, so a guard
+# here that cannot fail does not slow the flywheel, it makes it manufacture
+# unfalsifiable claims at full speed.
+#
+# Each mutation deletes ONE guard and must kill exactly one named test.  All
+# three are SILENT failures on the happy path -- the library still writes rows,
+# still reads them back, still aggregates -- which is the only kind worth
+# mutating here: a loud failure would have been noticed by whoever ran the
+# sweep.
+# --------------------------------------------------------------------------
+
+SUITES["outcome-ledger"] = (
+    "scripts/outcome_ledger.py",
+    "scripts.tests.test_outcome_ledger",
+    [
+        (
+            # Kills TWO tests -- `test_an_escaped_field_carries_no_separator`
+            # and `test_a_detail_containing_the_separators_survives_the_whole_row`
+            # -- and that is REPORTED rather than tuned down to one: the first
+            # pins the escape's output and the second the round trip through a
+            # real row, and narrowing either to make the count one would weaken
+            # a guard to flatter a number.
+            # Stop escaping the intra-field separator and a
+            # decline detail carrying `|` -- which the ADR-2060 give-up strings
+            # routinely do -- splits into two declines that never happened.
+            # This is ADR-2020's bug reproduced in a different separator: the
+            # census that split on `;` when the field CONTAINED `;` truncated
+            # its own largest bucket and nothing failed.
+            "the intra-field separator stops being escaped",
+            '    LIST_SEP: "\\\\p",\n',
+            "",
+        ),
+        (
+            # Kills `test_an_unknown_completeness_row_is_refused_too` and
+            # nothing else.  The aggregate still refuses a reading MARKED
+            # partial; it stops refusing one that cannot say.  That is the
+            # ADR-2075 collapse from the other side -- a capture with no trail
+            # line silently counted as a total -- and the `is_partial` test
+            # stays green throughout, which is why this needs its own guard.
+            "a reading that cannot state its completeness is summed as a total",
+            "        r.corpus_path for r in rows if r.is_partial or r.partial_is_unknown",
+            "        r.corpus_path for r in rows if r.is_partial",
+        ),
+        (
+            # Kills `test_an_unknown_commit_is_not_reported_as_a_branch` and
+            # NOTHING else -- the exactly-one case.
+            #
+            # The first version of this mutation SURVIVED, and that was the
+            # finding rather than a harness problem: `git merge-base
+            # --is-ancestor <garbage> main` exits non-zero on its own, so the
+            # row was still FLAGGED and all 31 tests stayed green. The guard
+            # was real and unfalsifiable at the same time. It became
+            # falsifiable when the classification went three-valued: a reader
+            # is now told `unknown-commit` instead of being sent to look for a
+            # branch that does not exist.
+            "an unknown commit is reported as a branch",
+            '    code, _ = _git(["cat-file", "-e", f"{sha}^{{commit}}"], repo=repo)\n'
+            "    if code != 0:\n"
+            "        return SHA_UNKNOWN\n",
+            "",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
 # `typed-decline-detail` (ADR-2104) — the three previously-free-string
 # `DeclineReason` details (`UnsupportedDetail`, `Budget`, `VerifierRejected`)
 # are now closed enums with driven producer tests
@@ -2875,6 +2943,51 @@ SUITES["typed-decline-detail"] = (
             "nia-square's coefficient-guard decline reports the wrong Budget variant",
             "            Budget::SquareCoefficientGuardExceeded,",
             "            Budget::NiaRelaxationSliceExpired,",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `trail-typed-name-and-features` (ADR-2105) — the two members ADR-2102
+# named as remaining work and left the trail's JSON without: a per-attempt
+# `name` for the three ADR-2104 typed decline details, and a top-level
+# `features`. A guard that only checks "some `name`/`features` member is
+# present" cannot tell the CORRECT variant name from any other string; this
+# mutation makes `to_json`'s `UnsupportedDetail` arm emit a WRONG hardcoded
+# name instead of `detail.name()`, and must kill exactly the one test that
+# pins that variant's rendered bytes.
+# --------------------------------------------------------------------------
+
+SUITES["trail-typed-name-and-features"] = (
+    "crates/axeyum-solver/src/route_trace.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "route_trace"),
+        "trail-typed-name-and-features",
+    ),
+    [
+        (
+            # Kills `an_unsupported_decline_with_a_message_renders_the_message`
+            # and nothing else: the other pinned-literal tests
+            # (`every_outcome_variant_renders_its_documented_shape`,
+            # `default_to_json_is_unchanged_by_timing_support`,
+            # `detail_strings_are_json_escaped`) exercise `Budget`/
+            # `VerifierRejected` declines, whose OWN `push_json_string(&mut
+            # out, detail.name())` calls are separate match arms this edit
+            # does not touch -- `detail.name()` appears three times in
+            # `render_json`, once per typed-detail arm, and only the
+            # `UnsupportedDetail` arm's copy is anchored here (the preceding
+            # `push_json_string(&mut out, "unsupported");` line makes the
+            # anchor unique to that arm).
+            "to_json's UnsupportedDetail arm emits the wrong name",
+            "                        DeclineReason::UnsupportedDetail(detail) => {\n"
+            '                            push_json_string(&mut out, "unsupported");\n'
+            '                            out.push_str(",\\"name\\":");\n'
+            "                            push_json_string(&mut out, detail.name());",
+            "                        DeclineReason::UnsupportedDetail(detail) => {\n"
+            '                            push_json_string(&mut out, "unsupported");\n'
+            '                            out.push_str(",\\"name\\":");\n'
+            '                            push_json_string(&mut out, "wrong-name");',
         ),
     ],
 )

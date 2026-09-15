@@ -37,6 +37,16 @@ nowhere else, because this is the compatibility shim and there is one of it.
 `RouteTrail.partial_source` says which channel answered, so a caller can tell
 a stated `false` from an inferred one.
 
+Schema 3 (ADR-2105) adds two more: a per-attempt `name` member on a typed
+decline detail (`Attempt.name`), and a top-level `features` member
+(`RouteTrail.features`) -- the construct set of the first genuinely-outermost
+dispatch scan, moved off a process-global onto the trace itself. Both are
+simply absent below schema 3, same "present exactly when there is something
+to say" contract the JSON renderer already follows for `detail`; a caller
+reading `features` on an older capture falls back to the CLI's own
+`; features` prose line (`scripts/outcome_ledger.py`'s `features_from_stdout`
+is that fallback) rather than reading `None` as "not-dispatched".
+
 A schema this reader does not know about is REFUSED, not guessed at.
 
 ----------------------------------------------------------------------------
@@ -78,11 +88,20 @@ from typing import Iterable, Sequence
 #: Schema versions this reader understands.  A newer one is refused rather
 #: than read optimistically: a member this code does not know about may be the
 #: one that changes what the numbers mean.
-KNOWN_SCHEMA_VERSIONS = frozenset({1, 2})
+KNOWN_SCHEMA_VERSIONS = frozenset({1, 2, 3})
 
 #: The first schema version that states completeness as a field.  Below this,
 #: `partial` is inferred from the line prefix -- see the module docstring.
 FIRST_SCHEMA_WITH_PARTIAL_FIELD = 2
+
+#: The first schema version that carries the per-attempt typed-detail `name`
+#: member (ADR-2104's variant name, e.g. `"backend"`, `"ingest-refusal"`) and
+#: the top-level `features` member (ADR-2102's construct-set column, moved off
+#: a process-global onto the trace by ADR-2105).  Below this, `Attempt.name`
+#: is always `None` and `RouteTrail.features` is always `None` -- which reads
+#: as "the binary predates the member", never as "not-dispatched" (that is a
+#: real, different, schema-3 answer -- see `RouteTrail.features`).
+FIRST_SCHEMA_WITH_NAME_AND_FEATURES = 3
 
 #: The complete and the partial spelling of the trail line.  These two literals
 #: are the ONLY place in this repository that should know the prefix exists.
@@ -163,6 +182,12 @@ class Attempt:
     reason: str | None = None
     #: The `UnknownKind` wire name, present only on an `incomplete` decline.
     kind: str | None = None
+    #: ADR-2104's typed detail VARIANT name (`"backend"`, `"ingest-refusal"`,
+    #: …), present only once the producer emits a `name` member beside
+    #: `detail`.  `None` on every artifact written before it does -- which is
+    #: a different answer from `""`, and the reason this is read with `.get`
+    #: rather than assumed.
+    name: str | None = None
     #: The producer's own message, present exactly when the variant carries one.
     detail: str | None = None
     #: This attempt's own wall clock, when the timed serializer was used.
@@ -195,6 +220,24 @@ class RouteTrail:
     in_flight_after: str | None = None
     #: On a schema-2 partial reading: the segment no attempt accounts for.
     open_segment_ns: int | None = None
+    #: The construct set of the first genuinely-outermost dispatch scan
+    #: (ADR-2102's ledger `features` column, moved onto the trace by
+    #: ADR-2105) -- `"Int|Real"`, `"none"` for a scan that ran and found no
+    #: construct, or `None`.
+    #:
+    #: `None` is ambiguous ON ITS OWN and deliberately so -- it means ONE of
+    #: two different things, and which one depends on :attr:`schema_version`:
+    #: below :data:`FIRST_SCHEMA_WITH_NAME_AND_FEATURES` it means "this
+    #: artifact predates the member and cannot be asked" (the caller's own
+    #: fallback -- e.g. the CLI's `; features` prose line on an older capture
+    #: -- is the only source left); at or above it, it means the JSON member
+    #: was genuinely absent, which is schema 3's real, stated answer
+    #: "not-dispatched" (no genuinely-outermost scan ever ran). Collapsing
+    #: those two is the exact absence-read-as-a-zero shape ADR-2075 cost
+    #: twelve files; a caller that must tell them apart checks
+    #: `schema_version` beside this field, the same discipline
+    #: `partial_source` already uses for `partial`.
+    features: str | None = None
     #: The whole line, kept so a caller can quote its evidence verbatim.
     raw_line: str = field(default="", repr=False)
 
@@ -318,6 +361,7 @@ def _attempt_from_json(obj: dict) -> Attempt:
         verdict=obj.get("verdict"),
         reason=obj.get("reason"),
         kind=obj.get("kind"),
+        name=obj.get("name"),
         detail=obj.get("detail"),
         elapsed_ns=obj.get("elapsed_ns"),
     )
@@ -359,6 +403,7 @@ def parse_trail_line(line: str, path: str = "<line>") -> RouteTrail:
         partial_source=partial_source,
         in_flight_after=obj.get("in_flight_after"),
         open_segment_ns=obj.get("open_segment_ns"),
+        features=obj.get("features"),
         raw_line=stripped,
     )
 
@@ -493,6 +538,7 @@ _COLUMNS = (
     "total_ms",
     "in_flight_after",
     "open_segment_ms",
+    "features",
 )
 
 
@@ -514,6 +560,11 @@ def _row(trail: RouteTrail) -> list[str]:
         "" if trail.total_elapsed_ms is None else str(trail.total_elapsed_ms),
         trail.in_flight_after or "",
         open_ms,
+        # Raw, not normalised: `""` (below schema 3, ambiguous -- see
+        # `RouteTrail.features`) is a DIFFERENT answer from a schema-3
+        # `"none"`, and collapsing them here would be the exact bug this
+        # column exists to keep this reader from reproducing.
+        trail.features or "",
     ]
 
 
