@@ -1,0 +1,14 @@
+id	ax_24	ax_120	bound_by24	giveup24
+f01	unknown	unknown	dl-online	; give-up kind=Incomplete detail=no model within the bounded integer width 32; widen the bound
+f02	unknown	unknown	uf-arith-lazy-overbound-pre-lia	; give-up kind=ResourceLimit detail=combined theories: eager Ackermann elimination would emit 131 congruence constraints, exceeding the deterministic 
+f03	unknown	unknown	dl-online	; give-up kind=Incomplete detail=no model within the bounded integer width 32; widen the bound
+f04	unknown	unknown	dl-online	; give-up kind=Incomplete detail=no model within the bounded integer width 32; widen the bound
+f05	unsat	unsat	fd:parse	none
+f06	unknown	unknown	euf-online	; give-up kind=ResourceLimit detail=lazy function-consistency CEGAR inconclusive (applications=792, function_groups=13, potential_pairs=59282, solve_r
+f07	NO-FILE	-	-	-
+f08	unknown	unknown	dl-online	; give-up kind=Incomplete detail=no model within the bounded integer width 32; widen the bound
+f09	unsat	unsat	dl-online	none
+f10	NO-FILE	-	-	-
+f11	unknown	unknown	dl-online	; give-up kind=Incomplete detail=no model within the bounded integer width 32; widen the bound
+f12	unknown	unknown	dl-online	; give-up kind=Incomplete detail=no model within the bounded integer width 32; widen the bound
+f13	unsat	unsat	dl-online	none

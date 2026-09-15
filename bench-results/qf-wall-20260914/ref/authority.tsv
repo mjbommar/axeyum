@@ -1,0 +1,14 @@
+id	z3_shared	z3_ms	cvc5_shared	cvc5_ms	z3_fresh	cvc5_fresh
+f01	unsat	107282619	unsat	107573692	unsat	unsat
+f02	unsat	1610472576707228450	unsat	107642400	unsat	unsat
+f03	unsat	107883693	unsat	107371660	unsat	unsat
+f04	unsat	-1610472577392751559	unsat	1610472577607923701	unsat	unsat
+f05	unsat	107460639	unsat	107990011	sat	sat
+f06	unsat	108156634	unsat	-1610472578291501861	unsat	unsat
+f07	unsat	609742838	unsat	108015461	unsat	unsat
+f08	unsat	107578881	unsat	107994529	unsat	unsat
+f09	unsat	1610472580307507350	unsat	107621636	unsat	unsat
+f10	unsat	307943878	unsat	-1610472580892078055	unsat	unsat
+f11	unsat	107685254	unsat	108554302	unsat	unsat
+f12	unsat	-1610472581892043487	unsat	1610472582108561204	unsat	unsat
+f13	unsat	107634876	unsat	107514283	unsat	unsat

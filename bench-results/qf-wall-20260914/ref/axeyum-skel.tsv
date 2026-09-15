@@ -1,0 +1,14 @@
+id	verdict	ms	bound_by	giveup
+f01	unknown	109341195	NONE	none
+f02	unknown	108836029	NONE	none
+f03	unknown	109237912	NONE	none
+f04	unknown	-1610472802391141095	NONE	none
+f05	unsat	1610472802609049031	NONE	none
+f06	unknown	710176207	NONE	none
+f07	unknown	108242872	NONE	none
+f08	unknown	1787624811883719038	NONE	none
+f09	unsat	109331719	NONE	none
+f10	unknown	109032359	NONE	none
+f11	unknown	109528254	NONE	none
+f12	unknown	109082974	NONE	none
+f13	unknown	108864802	NONE	none
