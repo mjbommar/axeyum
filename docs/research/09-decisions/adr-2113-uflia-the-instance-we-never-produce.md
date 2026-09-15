@@ -392,29 +392,35 @@ so a partial sweep is a fair sample of all six rather than a prefix of one.
 (shipped arm max `alternatives=1`, arm B max `4`), so a zero here would have been
 a measurement rather than a variable that never arrived.
 
-**832 of 1,200 rows** (`ref/ab-rows.tsv`, `ref/ab-summary.txt`). The sweep was
+**909 of 1,200 rows** (`ref/ab-rows.tsv`, `ref/ab-summary.txt`). The sweep was
 still running when this lane closed and is reported at the denominator it
 reached; it was not stopped early to make a number, and it was not restarted.
 
 | division | n | A (shipped) | B (cap 4) | delta |
 |---|---:|---:|---:|---:|
-| `AUFDTLIRA` | 100 | 69 | 71 | **+2** |
-| `AUFLIRA` | 178 | 164 | 164 | +0 |
-| **`UF`** | 100 | 43 | **47** | **+4** |
-| `UFDTLIRA` | 178 | 126 | 126 | +0 |
-| `UFLIA` | 99 | 39 | 40 | **+1** |
-| `UFNIA` | 177 | 49 | 48 | **−1** |
-| **total** | **832** | **490** | **496** | **+6** |
+| `AUFDTLIRA` | 114 | 77 | 79 | **+2** |
+| `AUFLIRA` | 191 | 171 | 170 | **−1** |
+| **`UF`** | 113 | 51 | **55** | **+4** |
+| `UFDTLIRA` | 190 | 133 | 133 | +0 |
+| `UFLIA` | 112 | 43 | 44 | **+1** |
+| `UFNIA` | 189 | 49 | 48 | **−1** |
+| **total** | **909** | **524** | **529** | **+5** |
 
-**Verdict disagreements (`sat` on one arm, `unsat` on the other): 0 of 832.**
-**Nonzero exit status: 0 of 832 on each arm** — counted separately, because a run
+**Verdict disagreements (`sat` on one arm, `unsat` on the other): 0 of 909.**
+**Nonzero exit status: 0 of 909 on each arm** — counted separately, because a run
 can report `losses=0` by verdict while creating new aborts underneath it.
 
-Raw movers: **9 gains, 3 losses**, NOT re-checked. A single 24 s pairing carries
+Raw movers: **10 gains, 5 losses**, NOT re-checked. A single 24 s pairing carries
 a measured 1–1.5 % ambient flip rate on these boxes, and [ADR-1966] lost 11 of
 its 18 out-of-division movers to a re-check, so these are raw counts and not an
 effect. `recheck-movers.sh` is committed and ready for the next lane; it did not
 run here.
+
+**An earlier snapshot of this same run, at 832 rows, read `+6` with 9 gains and
+3 losses — and `AUFLIRA` at `+0` where it now reads `−1`.** The total moved by
+one and a division flipped sign while 77 rows were added. That is what an
+un-re-checked mover column is worth, stated against itself rather than argued
+about.
 
 **The shape is the interesting part, and it is a prediction the census made
 before the A/B existed.** Six of the nine gains are in `UF` — the division whose

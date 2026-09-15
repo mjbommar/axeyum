@@ -29,9 +29,11 @@ measured at zero here. It may still matter on UF, whose category A is 728
 triggerless universals — a different shape.
 
 `AXEYUM_QINST_TRIGGER_ALTERNATIVES` is built, sound, deterministic, tested and
-**shipped OFF**. Its A/B reached **832 of 1,200 rows** before this lane closed:
-**+6 total, 0 verdict disagreements, 0 nonzero exit statuses**, 9 raw gains and
-3 raw losses NOT re-checked. **Six of the nine gains are in `UF`** — the division
+**shipped OFF**. Its A/B reached **909 of 1,200 rows** before this lane closed:
+**+5 total, 0 verdict disagreements, 0 nonzero exit statuses**, 10 raw gains and
+5 raw losses NOT re-checked (an earlier snapshot of the SAME run at 832 rows read
++6, with `AUFLIRA` at +0 where it now reads −1 — which is what an un-re-checked
+mover column is worth). **Six of the nine gains are in `UF`** — the division
 whose silence really is unmatched triggers — and `UFLIA`, whose NEVER-MATCHED
 class is 0 of 478, moves +1 on 99 rows. That is the census predicting the A/B,
 which is a check on the diagnosis and not a reason to ship. **Open for the next
