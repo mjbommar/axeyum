@@ -1,0 +1,20 @@
+rows: 200
+detail channel moved                            37/200
+  ATTRIBUTABLE (the old lra sentence -> a new)  32
+  other (the OUTER route or kind differs)       5
+
+BASE carries the old lra sentence               35/200
+ARM  carries the old lra sentence               0/200   <- must be 0
+ARM  carries one of the new sentences           33/200
+
+which gate the ARM names, on rows the BASE called a Fourier-Motzkin timeout:
+   18  lra: the deadline passed building
+   13  lra: the deadline had already passed
+    2  lra: the deadline passed while linearizing
+
+the 'other' rows, base give-up kind -> arm give-up kind:
+    3  Timeout -> Timeout
+    1  Watchdog -> Timeout
+    1  Timeout -> Watchdog
+
+OK: 0/200 rows still carry the old sentence, Wilson 95% [0.00000, 0.01885]

@@ -1280,7 +1280,7 @@ pub fn lex_order_verdict(script: &mut Script, config: &SolverConfig) -> Option<C
 ///
 /// Wired 2026-09-10 for roadmap item 2.7. `lex_reconstruct` was the one module
 /// in that item's list that SHOULD have had a caller and did not: the lex
-/// *verdict* was wired through [`apply_lex_order_route`], but the lex
+/// *verdict* was wired through `apply_lex_order_route`, but the lex
 /// *evidence* was not, so an `unsat` this route decided carried nothing a
 /// checker could read. It cannot ride `reconstruct.rs`'s ordinary dispatch
 /// because a `LexProblem` is not a term in the arena.

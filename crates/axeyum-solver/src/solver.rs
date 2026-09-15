@@ -118,7 +118,7 @@ impl<B: SolverBackend> Solver<B> {
     /// Replaces the per-check configuration.
     ///
     /// Any retained warm engine is discarded: it was built for the old
-    /// configuration and both its admissibility ([`warm_config_is_honored`])
+    /// configuration and both its admissibility (`warm_config_is_honored`)
     /// and its own timeout/resource budgets are fixed at construction.
     pub fn set_config(&mut self, config: SolverConfig) {
         self.config = config;
