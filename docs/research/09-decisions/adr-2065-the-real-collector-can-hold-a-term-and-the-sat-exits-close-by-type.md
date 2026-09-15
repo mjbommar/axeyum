@@ -1,7 +1,21 @@
 # ADR-2065: the real collector can hold a term, the `sat` exits close by TYPE, and the simulated +6 was a floor
 
 Status: accepted
-Index-summary: [ADR-2050] cause (A) — `lra.rs::linearize` refusing a WHOLE query on meeting a real subterm it cannot linearize — is built, shipped ON, and measured. **The `Sat`-exit enumeration [ADR-2050] asked for and did not run is 9 production sites across two files**, derived by construction site rather than by `?`-scan: the mode is `Refuse` on every `Collector::default`, ONE function can set it, and ONE decision function is reachable with it set. Two sites are reachable from an abstracted system and both close on `has_opaque_vars()`; a third (`try_finish_sat`) closes three ways; and the conflict oracle returns `LraOpaqueOutcome`, **which has no `Sat` variant at all** — so no single-hunk mutant of this design yields a wrong `sat`, and the one that would does not compile. **The integer precedent's soundness argument transfers verbatim** (both are relaxations) but its CONSUMERS do not: the integer side has no Farkas certificate to re-export and no `vars`-indexed interpolant consumer, so the real side additionally refuses to forward the certificate. **A/B on the pinned 200-file `AUFLIRA` parity list, one binary, two env values, interleaved per file, arm order rotating: +14 rows, 0 losses, 0 flips, 0 exit-status regressions**, against a same-arm noise floor of **0 of 200** and a `QF_LRA` control of **0 of 200** shown non-vacuous BY OBSERVATION (93 undecided in base; `lra::decide_within` measured executing on 6 of 20 probed rows) rather than by inference — the control's binding routes turned out to be `nra` and `NONE`, not an `lra` one, so the inference was not available. All 14 are STABLE-GAIN over three passes per arm and all 14 agree with `:status`, z3 AND cvc5 at a comparable denominator of **14/14 on each**, no abstentions. **All SIX of [ADR-2050]'s witnesses convert, plus eight rows the simulation never looked at** — this lane's own P3 predicted fewer than six and was wrong in the conservative direction. The converted rows are decided by `q:mbqi-quick` (8) and `q:bool-skeleton` (6), **not** by `lira-dpll`, the route that was refusing: the refusal sat upstream of several rungs. Cost is honestly split: **0.03x on the converted rows** (73.3 s → 2.2 s) and **1.33x on the 186 that did not move**, 1.13x overall. **A method finding worth more than the lever**: the first `Sat`-exit enumerator excluded test code by cutting each file at its FIRST `#[cfg(test)]` line, which in both files marks a helper in the MIDDLE — it discarded 2,397 and 3,133 lines of production code, including a whole `CheckResult::Sat` construction, and printed a clean, complete-looking enumeration of the accepted subset. And the first guard-deletion run came back **five survivors out of five**, not because the guards are redundant but because they are NESTED and every one of them produces a non-`sat`, so `!matches!(.., Sat)` passes with any single one deleted; the fix was to make each guard NAME itself and to assert the name.
+Index-summary: [ADR-2050] cause (A) — `lra.rs::linearize` refusing a WHOLE query on meeting a real subterm it cannot linearize — is built, shipped ON, and measured. **The `Sat`-exit enumeration [ADR-2050] asked for and did not run is 9 production sites across two files**, derived by construction site rather than by `?`-scan: the mode is `Refuse` on every `Collector::default`, ONE function can set it, and ONE decision function is reachable with it set. Two sites are reachable from an abstracted system and both close on `has_opaque_vars()`; a third (`try_finish_sat`) closes three ways; and the conflict oracle returns `LraOpaqueOutcome`, **which has no `Sat` variant at all** — so no single-hunk mutant of this design yields a wrong `sat`, and the one that would does not compile. **The integer precedent's soundness argument transfers verbatim** (both are relaxations) but its CONSUMERS do not: the integer side has no Farkas certificate to re-export and no `vars`-indexed interpolant consumer, so the real side additionally refuses to forward the certificate. **A/B on the pinned 200-file `AUFLIRA` parity list, one binary, two env values, interleaved per file, arm order rotating: +14 rows, 0 losses, 0 flips, 0 exit-status regressions**, against a same-arm noise floor of **0 of 200** and a `QF_LRA` control of **0 of 200** shown non-vacuous BY OBSERVATION (93 undecided in base; `lra::decide_within` measured executing on 6 of 20 probed rows) rather than by inference — the control's binding routes turned out to be `nra` and `NONE`, not an `lra` one, so the inference was not available. All 14 are STABLE-GAIN over three passes per arm and all 14 agree with `:status`, z3 AND cvc5 at a comparable denominator of **14/14 on each**, no abstentions. **All SIX of [ADR-2050]'s witnesses convert, plus eight rows the simulation never looked at** — this lane's own P3 predicted fewer than six and was wrong in the conservative direction. The converted rows are decided by `q:mbqi-quick` (8) and `q:bool-skeleton` (6), **not** by `lira-dpll`, the route that was refusing: the refusal sat upstream of several rungs. Cost is honestly split: **0.03x on the converted rows** (73.3 s → 2.2 s) and **1.33x on the 186 that did not move**, 1.13x overall. **And it shipped a capability REGRESSION that the push hook caught and this
+A/B structurally could not**: `lira-dpll` began CONSUMING queries whose
+relaxation it failed to refute, and because `auto.rs` returns on `Ok(_)` and
+falls through only on `Err(Unsupported)`, a read-over-write tautology
+`array-fast-path` used to decide in 2 ms stopped being reached at all — 10 route
+attempts and a verdict became 14 and `unknown`. The repair is a ONE-WAY RULE
+(§9): the abstraction may turn an `Unsupported` into an `Unsat` and may do
+nothing else. **The transferable finding is the gating hole, not the bug**: the
+regression lives in a synthetic fixture in a suite this change never named, so
+14 gains / 0 losses / 0 flips / identical exit status over 200 corpus files /
+zero noise floor / two non-vacuous controls could not see it and did not. **An
+A/B over corpus rows is not a superset of the fixture suites.** Cost of the
+repair, measured: **zero** — the 14 movers are 14/14 STABLE-GAIN over three
+fresh passes on the fixed binary. **A method finding worth more than the
+lever**: the first `Sat`-exit enumerator excluded test code by cutting each file at its FIRST `#[cfg(test)]` line, which in both files marks a helper in the MIDDLE — it discarded 2,397 and 3,133 lines of production code, including a whole `CheckResult::Sat` construction, and printed a clean, complete-looking enumeration of the accepted subset. And the first guard-deletion run came back **five survivors out of five**, not because the guards are redundant but because they are NESTED and every one of them produces a non-`sat`, so `!matches!(.., Sat)` passes with any single one deleted; the fix was to make each guard NAME itself and to assert the name.
 Index-status: accepted
 Date: 2026-09-14
 
@@ -382,6 +396,104 @@ rows** (`ref/control-executes-100.txt`). That is what makes the zero a statement
 about the column-space refactor rather than about a division the code never
 touches.
 
+## 4b. The regression, and the hole in how it was gated
+
+**This shipped broken and the `hooks/pre-push` `dispatch/reason:` block caught
+it on `main`.** Recorded here at length because the gating lesson outlives the
+bug.
+
+### What broke
+
+`nested_array_gate_map::flat_real_element_array_row_decides` — the Real-element
+read-over-write obligation [ADR-1960] lifted three gates to reach — stopped
+deciding. The query is
+`(not (= (select (store m i v) j) (ite (= i j) v (select m j))))` over
+`(Array Int Real)`: `unsat` for every element sort, and its `Int` twin is the
+pair that carries the meaning.
+
+Traced on the route trail rather than guessed:
+
+| | `decided_by` | attempts |
+|---|---|---:|
+| `AXEYUM_LRA_OPAQUE_APPS=0` | `array-fast-path` | **10** |
+| shipped (lever on) | `none` | **14** — `array-fast-path` absent entirely |
+
+**The abstraction was not wrong. It declined correctly.** What it did was
+CONSUME a query it had no business consuming: `auto.rs` dispatches this route by
+returning on `Ok(_)` and falling through only on `Err(Unsupported)`, so a route
+that REFUSES lets the ladder continue and one that DECLINES does not. Before
+ADR-2065 the real-sorted `select` made `ensure_supported_atom` refuse. After it,
+the atom is admitted, the relaxation is satisfiable, and the terminal
+`Ok(Unknown)` takes the query away from the route that owns the construct.
+
+This is [ADR-1966]'s subject from the other side: *a rung's refusal of a
+construct a later rung owns is a decline* — and turning that refusal into a
+considered `unknown` is the same error with the sign flipped.
+
+### Why the measurement could not see it
+
+| ADR-2065 ran | and it could not see this because |
+|---|---|
+| +14 / 0 losses / 0 flips on 200 `AUFLIRA` rows | the obligation is a **synthetic fixture**, not a corpus row |
+| exit status identical 200/200 | the run terminated cleanly; only the *verdict* changed |
+| noise floor 0 of 200, control 0 of 200 | both are corpus divisions too |
+| `QF_UFLRA` 0 of 200 | same |
+| 20-test soundness suite, guard-deletion matrix | every fixture in it asserts about the *abstraction*, none about the *ladder* |
+
+**An A/B over corpus rows is not a superset of the fixture suites**, and this
+lane's pre-merge list — clippy, fmt, two builds, `cargo doc`, the lib sweep, and
+the suites the change names — contained none of the 19 `dispatch/reason:`
+suites. The standing rule this buys: **a lever that changes which ROUTE a query
+takes needs the fixture suites run, not only a corpus A/B.**
+`bench-results/real-opaque-20260914/run-dispatch-reason-suites.sh` runs that
+whole block, reading the suite list **out of the hook** so it cannot drift.
+
+### The repair, and why this one
+
+Three obvious candidates were available and all three were rejected for the same
+reason: refusing the abstraction when a later route could decide, reordering the
+rung, and narrowing admission all require this route to reason about what OTHER
+routes can do — which it cannot do soundly, and which would need re-deciding
+every time the ladder changes.
+
+**`hand_back_unless_refuted`** needs no such knowledge. If the abstraction
+admitted an atom and the outcome is not `Unsat`, the route returns the
+`Unsupported` it would have returned without the abstraction. A weakening is
+allowed to help and never to harm, so the ladder is byte-for-byte what it was
+for every query and every later route, **including ones that do not exist yet**.
+Post-fix trail: `array-fast-path`, 10 attempts — identical to the lever-off run.
+
+It closes the CLASS rather than the witness. The fixture hits the
+`has_opaque_real_apps` gate, but a round limit or an exhausted budget on an
+abstracted query was terminal in exactly the same way and would have been the
+next lane's bug. The predicate is read from the ABSTRACTOR
+(`ArithRun::abstracted_opaque_reals`), never from a syntactic scan of the input,
+because a scan over-approximates what was actually admitted and would hand back
+queries this route used to decide — the same class of loss, reintroduced by the
+fix for it.
+
+### What it cost: nothing
+
+**14/14 STABLE-GAIN, three fresh passes per arm on the fixed binary.** The +14
+stands; it is not +11. That was not assumed — the alternative was a real trade
+and the number was measured before this sentence was written.
+
+### What the suite learned
+
+`RouteOutcome::{Decided, HandedBack}`, because `Decided` is terminal for the
+whole ladder and `HandedBack` is not, and a test that cannot tell them apart
+cannot see a capability being taken from a later route. The three sat-side tests
+now assert a HAND-BACK naming the gate — strictly stronger than the old "not
+`sat`", since a terminal `Unknown` is also not a `sat` and a terminal `Unknown`
+**is** the regression. Two new property tests: an unrefuted abstraction is handed
+back, and a refuting one still returns `unsat` (without the second, the rule
+would be satisfiable by deleting the capability).
+
+**The kill-switch discrimination moved from 16 red to 12 and is written down
+because it moved.** The 8 now green in both arms are the 6 non-vacuity controls
+— "did not refute" is true either way, which is their job and never was lever
+discrimination — and the 2 source-text scans.
+
 ## 5. Decision
 
 **Ship ON**, with `AXEYUM_LRA_OPAQUE_APPS=0` as the kill switch. The
@@ -422,7 +534,7 @@ arm reproducing after the merge; nothing else in the ladder is touched.
 | P2 | the integer soundness argument transfers; the difference is in the consumers | **right**, §2 |
 | P3 | fewer than 6 of the 6 witnesses convert | **WRONG** — 6 of 6, plus 8 more |
 | P4 | control 0; `QF_UFLRA` nonzero | control **right**; `QF_UFLRA` **WRONG** — 0 of 200 on the full division, 51 undecided in base |
-| P5 | at least one LOSS in `AUFLIRA` | **WRONG** — 0 losses and 0 exit regressions |
+| P5 | at least one LOSS in `AUFLIRA` | **WRONG on the corpus and RIGHT about the mechanism.** 0 losses over 200 `AUFLIRA` rows — and the loss P5 described ("admitting an atom takes the query away from a LATER route") happened anyway, in a fixture suite the A/B did not cover (§4b). The prediction named the right failure and the measurement was pointed at the wrong population |
 
 P3, P4 and P5 are the useful ones to have got wrong. P3 and P5 assumed that
 admitting an atom would cost something visible; on this division it did not. P4
@@ -453,6 +565,7 @@ so the instrument that caught it is the one R4 exists for.
   binary produced each.
 - **Causes (B), (C) and (D) of [ADR-2050] are untouched.**
 
+[ADR-1960]: adr-1960-the-real-element-array-gate-was-three-gates-and-none-of-the-19620-were-behind-it.md
 [ADR-1966]: adr-1966-a-rungs-refusal-of-a-construct-a-later-rung-owns-is-a-decline.md
 [ADR-2010]: adr-2010-the-sat-side-replay-cannot-see-the-parser.md
 [ADR-2025]: adr-2025-the-refutation-was-available-before-instantiating-and-we-dropped-the-assertion-carrying-it.md
