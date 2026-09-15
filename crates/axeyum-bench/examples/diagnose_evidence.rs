@@ -145,12 +145,17 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
     }
 }
 
-fn decline_detail(reason: &DeclineReason) -> Option<&str> {
+// ADR-2104 typed `Budget`/`VerifierRejected`/`UnsupportedDetail` payloads
+// (route_trace.rs) each carry a different Rust type, not a common `String`, so
+// this now renders through `Display` rather than borrowing a field — an owned
+// `String` instead of the old `&str`, and every existing caller shadow-binds
+// `.as_str()` immediately so its own logic is otherwise unchanged.
+fn decline_detail(reason: &DeclineReason) -> Option<String> {
     match reason {
-        DeclineReason::Budget(detail)
-        | DeclineReason::VerifierRejected(detail)
-        | DeclineReason::UnsupportedDetail(detail) => Some(detail),
-        DeclineReason::Incomplete(reason) => Some(&reason.detail),
+        DeclineReason::Budget(detail) => Some(detail.to_string()),
+        DeclineReason::VerifierRejected(detail) => Some(detail.to_string()),
+        DeclineReason::UnsupportedDetail(detail) => Some(detail.to_string()),
+        DeclineReason::Incomplete(reason) => Some(reason.detail.clone()),
         DeclineReason::Unsupported | DeclineReason::NotApplicable => None,
     }
 }
@@ -222,6 +227,7 @@ fn print_lazy_replay_terms(arena: &TermArena, assertions: &[TermId], trace: &Rou
         let Some(detail) = decline_detail(reason) else {
             continue;
         };
+        let detail = detail.as_str();
         if !detail.contains("last_candidate_replay=false(") {
             continue;
         }
