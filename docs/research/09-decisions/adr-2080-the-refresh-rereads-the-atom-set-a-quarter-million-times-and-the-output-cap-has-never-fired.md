@@ -617,6 +617,19 @@ path is byte-identical.
 | `run-dispatch-reason-suites.sh` (R16) | **19 suites**, `ALL dispatch/reason SUITES GREEN`, every count nonzero (7, 10, 20, 11, 12, 3, …, 13, 2, 20) |
 | `check-merge-hygiene.sh` | `MERGE_HYGIENE\|markers=0\|adr_index=ok\|generated=current\|…\|PASS` |
 | `check-suite-gating.py` | `SUITE_GATING\|suites=340\|gated=40\|excused=302\|PASS` — this lane adds no integration suite file (its tests are in the `dpll_lia` unit module) |
+| `--features z3 --test qf_lia_differential_fuzz` | `ok. 4 passed` |
+| `--features z3 --test qf_lra_differential_fuzz` | `ok. 4 passed` |
+| `--features z3 --test simplex_lra_fallback_differential` | `ok. 5 passed` |
+| `--features z3 --test qf_uflra_differential_fuzz` | `ok. 1 passed` |
+| `--features z3 --test difference_logic_differential_fuzz` | `ok. 1 passed` |
+
+The five z3 differential fuzzes are run because this is a LINEAR-ARITHMETIC
+change and `CLAUDE.md` requires them for one — they are the only checks that
+compare our verdicts against an independent solver, and they compile to ZERO
+tests without `--features z3`, so every count above is quoted to show it is not
+that. The default path here is a pure extraction of two helpers out of one
+function plus one `note_crossed`, and "pure extraction" is a claim these check
+rather than a claim the diff makes.
 
 `progress_frontier` rewrites its own machine record; the five
 `bench-results/frontier/*.json` it touched were **reverted, not committed**.

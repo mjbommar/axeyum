@@ -1,0 +1,124 @@
+   Compiling autocfg v1.5.1
+   Compiling proc-macro2 v1.0.106
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.45
+   Compiling rustc-hash v2.1.2
+   Compiling serde_core v1.0.228
+   Compiling zmij v1.0.21
+   Compiling serde v1.0.228
+   Compiling typenum v1.20.1
+   Compiling cfg-if v1.0.4
+   Compiling zerocopy v0.8.52
+   Compiling serde_json v1.0.150
+   Compiling itoa v1.0.18
+   Compiling pkg-config v0.3.33
+   Compiling memchr v2.8.1
+   Compiling libc v0.2.186
+   Compiling const-oid v0.10.2
+   Compiling rustix v1.1.4
+   Compiling ciborium-io v0.2.2
+   Compiling linux-raw-sys v0.12.1
+   Compiling bitflags v2.13.0
+   Compiling clap_lex v1.1.0
+   Compiling anstyle v1.0.14
+   Compiling axeyum-aig v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-aig)
+   Compiling cpufeatures v0.3.0
+   Compiling regex-syntax v0.8.11
+   Compiling either v1.16.0
+   Compiling num-traits v0.2.19
+   Compiling clap_builder v4.6.6
+   Compiling log v0.4.32
+   Compiling same-file v1.0.6
+   Compiling cast v0.3.0
+   Compiling itertools v0.10.5
+   Compiling web-time v1.1.0
+   Compiling walkdir v2.5.0
+   Compiling axeyum-egraph v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-egraph)
+   Compiling oorandom v11.1.5
+   Compiling once_cell v1.21.4
+   Compiling z3-sys v0.11.0
+   Compiling anes v0.1.6
+   Compiling syn v2.0.117
+   Compiling z3 v0.20.0
+   Compiling hybrid-array v0.4.12
+   Compiling num-integer v0.1.46
+   Compiling is-terminal v0.4.17
+   Compiling num-bigint v0.4.6
+   Compiling regex-automata v0.4.18
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.12.0
+   Compiling criterion-plot v0.5.0
+   Compiling axeyum-cnf v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-cnf)
+   Compiling digest v0.11.3
+   Compiling sha2 v0.11.0
+   Compiling clap v4.6.6
+   Compiling num-rational v0.4.2
+   Compiling axeyum-lean-kernel v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-lean-kernel)
+   Compiling axeyum-arith v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-arith)
+   Compiling regex v1.13.1
+   Compiling serde_derive v1.0.228
+   Compiling zerocopy-derive v0.8.52
+   Compiling axeyum-ir v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-ir)
+   Compiling axeyum-strings v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-strings)
+   Compiling axeyum-fp v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-fp)
+   Compiling axeyum-query v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-query)
+   Compiling axeyum-rewrite v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-rewrite)
+   Compiling axeyum-bv v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-bv)
+   Compiling axeyum-scenarios v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-scenarios)
+   Compiling tinytemplate v1.2.1
+   Compiling axeyum-cas v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-cas)
+   Compiling axeyum-smtlib v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-smtlib)
+   Compiling half v2.7.1
+   Compiling ciborium-ll v0.2.2
+   Compiling ciborium v0.2.2
+   Compiling criterion v0.5.1
+   Compiling axeyum-solver v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-solver)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 58.57s
+     Running tests/qf_lia_differential_fuzz.rs (/data0/axeyum/lemma-input-target-z3/debug/deps/qf_lia_differential_fuzz-93dd01e04a5354e2)
+
+running 4 tests
+test generation_is_reproducible_from_the_seed ... ok
+test corner_coverage_is_total ... ok
+test named_degenerate_cases_match_z3 ... ok
+test qf_lia_matches_z3 ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.14s
+
+   Compiling axeyum-solver v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ab6661e2d6fa55b63/crates/axeyum-solver)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.86s
+     Running tests/difference_logic_differential_fuzz.rs (/data0/axeyum/lemma-input-target-z3/debug/deps/difference_logic_differential_fuzz-57690508487bda87)
+
+running 4 tests
+test generation_is_reproducible_from_the_seed ... ok
+test corner_coverage_is_total ... ok
+test named_degenerate_cases_match_z3 ... ok
+test difference_logic_matches_z3 ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.19s
+
+     Running tests/qf_lra_differential_fuzz.rs (/data0/axeyum/lemma-input-target-z3/debug/deps/qf_lra_differential_fuzz-8c641cc98162f08c)
+
+running 5 tests
+test seed_realdiv_zero_over_zero_is_free ... ok
+test seed_realdiv_const_zero_free_value_is_sat ... ok
+test seed_realdiv_const_zero_congruence_is_unsat ... ok
+test seed_realdiv_symbolic_divisor_pinned_zero ... ok
+test qf_lra_differential_fuzz_disagree_zero ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.24s
+
+     Running tests/qf_uflra_differential_fuzz.rs (/data0/axeyum/lemma-input-target-z3/debug/deps/qf_uflra_differential_fuzz-72cd5fc8efcb2293)
+
+running 1 test
+test qf_uflra_differential_fuzz_disagree_zero ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.68s
+
+     Running tests/simplex_lra_fallback_differential.rs (/data0/axeyum/lemma-input-target-z3/debug/deps/simplex_lra_fallback_differential-def7bea938b33c4b)
+
+running 1 test
+test simplex_lra_fallback_disagree_zero has been running for over 60 seconds
+test simplex_lra_fallback_disagree_zero ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 82.26s
+
