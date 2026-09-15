@@ -2742,6 +2742,79 @@ SUITES["external-coupling"] = (
     ],
 )
 
+# --------------------------------------------------------------------------
+# `simplex-sparse-tableau` — ADR-2111 made `Tableau` sparse, and the one way a
+# sparse tableau can be wrong that a dense one cannot is by LOSING A CELL.
+#
+# `set_cell` is the single mutation point for a row cell and it now maintains
+# FOUR structures at once: `row_nz` (the sorted column index), `row_val` (the
+# values, positionally aligned with it), `col_nnz` and `col_rows` (the sorted
+# transpose).  Four structures behind one function is exactly the shape where a
+# guard stops being load-bearing without anyone noticing, so each of the three
+# mutations below removes one of them and the run says which test dies.
+#
+# The three are deliberately different KINDS of damage:
+#
+#   * losing a fill-in write is a SOUNDNESS defect — the row becomes weaker than
+#     the constraint it represents, and a weaker row is satisfiable where the
+#     real one is not, i.e. a wrong `sat`;
+#   * leaving a stale entry in the transpose is a CONSISTENCY defect the value
+#     arithmetic absorbs (a stale row scales by zero), so only the recount sees
+#     it;
+#   * appending to the transpose instead of inserting in order is a DETERMINISM
+#     defect: every verdict is unchanged and only the ORDER of the exact-rational
+#     adds moves, which is precisely the kind of change a verdict-only gate
+#     cannot see and which determinism is a public API promise about.
+#
+# Filtered to `simplex::tests` rather than to one test, so "exactly one died" is
+# a claim about a 36-test population and not about a suite of one.
+# --------------------------------------------------------------------------
+
+SUITES["simplex-sparse-tableau"] = (
+    "crates/axeyum-solver/src/simplex.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "simplex::tests"),
+        "simplex-sparse-tableau",
+    ),
+    [
+        (
+            # SOUNDNESS: a cell that becomes nonzero is never stored, so every
+            # fill-in the pivot writes is silently dropped.
+            "the fill-in write that enters a newly-nonzero cell",
+            "                self.row_nz[i].insert(at, v);\n"
+            "                self.row_val[i].insert(at, value);",
+            "                if false {\n"
+            "                    self.row_nz[i].insert(at, v);\n"
+            "                    self.row_val[i].insert(at, value);\n"
+            "                }",
+        ),
+        (
+            # CONSISTENCY: the transpose keeps a row whose cell just went to
+            # zero. The values still come out right (a stale row scales by a
+            # zero coefficient), so nothing but the recount can see it.
+            "the transpose entry removed when a cell goes to zero",
+            "                if let Ok(at) = self.col_rows[v].binary_search(&i) {\n"
+            "                    self.col_rows[v].remove(at);\n"
+            "                }",
+            "                if false\n"
+            "                    && let Ok(at) = self.col_rows[v].binary_search(&i)\n"
+            "                {\n"
+            "                    self.col_rows[v].remove(at);\n"
+            "                }",
+        ),
+        (
+            # DETERMINISM: the transpose is appended to rather than kept sorted.
+            # Every verdict is identical; only the order in which
+            # `update_nonbasic` and the pivot walk a column changes.
+            "the sorted position the transpose keeps its rows in",
+            "                let cat = self.col_rows[v].partition_point(|&r| r < i);\n"
+            "                self.col_rows[v].insert(cat, i);",
+            "                self.col_rows[v].push(i);",
+        ),
+    ],
+)
+
+
 DEMO_SUBJECT = "scripts/tests/fixtures/mutation_demo/subject.py"
 DEMO_CONTROL = "scripts/tests/fixtures/mutation_demo/suite_tests.py"
 
