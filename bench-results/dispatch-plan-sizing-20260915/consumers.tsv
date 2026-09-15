@@ -1,1 +1,255 @@
 path	reads	handles_partial	splits_on_semicolon	last_commit	note
+bench-results/decline-wiring-20260914/ackprobe-analyze.py	other	n.a.	no	ea8087cd4 2026-09-14	ACKPROBE analysis; parses site=auto.rs:4068/combined.rs:86 engaged/refuse logs, unrelated to ; route/route-trail
+bench-results/decline-wiring-20260914/ackprobe.sh	other	n.a.	no	d7360d8fe 2026-09-14	sweeps corpus recording site=auto.rs:4068/combined.rs:86 counts; no ; route output touched
+bench-results/dispatch-decline-audit-20260913/ab-launch.sh	other	n.a.	no	df5030319 2026-09-13	launcher; forks ab-run.sh per division, no direct route parsing itself
+bench-results/dispatch-decline-audit-20260913/ab-launch2.sh	other	n.a.	no	df5030319 2026-09-13	launcher; forks ab-run.sh per division, no direct route/decided_by parsing itself
+bench-results/dispatch-decline-audit-20260913/census-run.sh	prose-route	no	no	df5030319 2026-09-13	greps '; (partial )?route decided_by=...' via grep+cut field extraction
+bench-results/dispatch-decline-audit-20260913/guard-firing.sh	other	no	no	df5030319 2026-09-13	greps raw '; route-trail' line into a file, no json.loads/jq parse
+bench-results/dispatch-decline-audit-20260913/hit-rate.py	other	n.a.	no	df5030319 2026-09-13	static SMT-LIB text classifier (declare-fun shapes); no solver route output read
+bench-results/dispatch-decline-audit-20260913/mutation-control.py	other	n.a.	no	c87db313e 2026-09-13	Rust-source mutation testing of auto.rs guards; runs cargo test, no route text
+bench-results/dispatch-decline-audit-20260913/ufnra-guard-firing-scan.sh	other	no	no	c87db313e 2026-09-13	"grep -c substring-matches '""route"":""uf-nra""' in stored route-trail text, no JSON parse"
+bench-results/dt-exactness-20260913/refused-rows.py	other	no	no	7b1e88363 2026-09-13	reads bound_by/giveup/verdict columns from upstream census .winnable.tsv via csv.DictReader
+bench-results/dt-valued-result-20260912/analyze-census.py	other	n.a.	no	0c96ac73e 2026-09-12	custom DTRES-CENSUS datatype-route instrumentation, unrelated to ; route output
+bench-results/dt-valued-result-20260912/collect-census.py	other	n.a.	no	0c96ac73e 2026-09-12	merges DTRES-CENSUS shard TSVs; same unrelated custom instrumentation
+bench-results/fpbv-divisions-headtohead-20260912/census-run.sh	prose-route	no	no	3a536570f 2026-09-12	greps '; (partial )?route decided_by=...' plus separate route-open line, cut/grep fields
+bench-results/fpbv-divisions-headtohead-20260912/census-summarize.py	other	no	no	6cb188883 2026-09-12	reads attempts/giveup/open_after columns from census-run.sh's derived TSV, not stdout
+bench-results/fpbv-divisions-headtohead-20260912/controls/run-controls.sh	other	no	no	6cb188883 2026-09-12	control-tests census-summarize.py against hand-crafted TSV fixtures, not live solver output
+bench-results/inst-select-20260913/ours-run.sh	prose-route	no	no	6fc229391 2026-09-14	greps '; (partial )?route decided_by=...' plus route-open line via cut/grep
+bench-results/inst-select-20260913/ours-summarize.py	other	no	no	786d9d125 2026-09-13	reads bound_by/giveup/attempts columns from ours-run.sh's derived TSV shards
+bench-results/inst-select-20260913/ref-ablation-run.sh	other	n.a.	no	4f4a3181a 2026-09-13	runs cvc5 ablation arms; reads cvc5 verdicts/:status, no axeyum route output
+bench-results/instrument-coverage-2026-09-07/scripts/aggregate.py	other	n.a.	no	2ee156a66 2026-09-07	parses '; front-door/dl-online/bv-layer/theory-layer' stage timers, not ; route/route-trail
+bench-results/ladder-budget-20260908/analyze.py	other	no	no	3399c0f8b 2026-09-08	reads whole route_line text column from sweep.sh's TSV; stored, never field-parsed
+bench-results/ladder-budget-20260908/cells-sweep.sh	other	n.a.	no	3399c0f8b 2026-09-08	records '; lra-simplex-fallback' cell-count lines (AXEYUM_LRA_CELLS), not ; route
+bench-results/ladder-budget-20260908/mutate.sh	other	n.a.	no	3399c0f8b 2026-09-08	mutates auto.rs budget-allocation Rust source, runs cargo test; no route text read
+bench-results/ladder-budget-20260908/sweep.sh	prose-route	no	no	3399c0f8b 2026-09-08	greps '^; route ' only (complete form) and stores the whole line raw
+bench-results/lemma-input-20260915/control-nonvacuity.py	other	n.a.	no	8bcdb0134 2026-09-15	reads a separate attribution TSV's calls= counter field, unrelated instrument
+bench-results/lemma-input-20260915/route-line-census.sh	prose-route	yes	no	8bcdb0134 2026-09-15	explicitly buckets each row COMPLETE/PARTIAL/ABSENT testing both '^; route ' and '^; partial route '
+bench-results/lemma-input-20260915/trace-arms.sh	prose-route	yes	no	8bcdb0134 2026-09-15	counts complete vs PARTIAL route lines separately per arm, side by side
+bench-results/lia-warm-2026-09-08/attribute.py	other	n.a.	no	6807958e6 2026-09-08	json.load of a custom offline_calls/warm_checks counters file; unrelated schema
+bench-results/lra-dense-20260914/scripts/attrib-run.sh	prose-route	no	no	00cbc3fbc 2026-09-14	greps '^; route ' (complete only) raw into a TSV column, alongside '; lazy-smt'
+bench-results/lra-dense-20260914/scripts/cap-abort-probe.sh	other	n.a.	no	af574a840 2026-09-14	uses site=simplex-fallback-entry/tableau-built LRADENSEPROBE diagnostics, not ; route
+bench-results/lra-dense-20260914/scripts/nonvacuity.sh	prose-route	no	no	af574a840 2026-09-14	greps '^; route ' then extracts bound_by=/total_ms= from the isolated line
+bench-results/lra-dense-20260914/scripts/profile.py	other	n.a.	no	00cbc3fbc 2026-09-14	reads LRADENSEPROBE gzip logs (site=/rss_kb= fields); unrelated to route output
+bench-results/nested-array-ir-20260913/outer-use-census.py	other	n.a.	no	f44160a59 2026-09-13	static s-expression classifier of SMT-LIB array terms; no solver output read
+bench-results/parity-losses-20260908/scripts/abv-ab.sh	prose-route	no	no	bcc4dd15b 2026-09-08	greps '^; route ' then extracts bound_by/bound_ms/total_ms/decided_by from that line
+bench-results/qbudget-20260913/ab-run.sh	prose-route	no	no	eeb39c57f 2026-09-13	greps '; (partial )?route decided_by=...' for bound_by via grep+cut
+bench-results/qbudget-20260913/ab-summarize.py	other	no	no	eeb39c57f 2026-09-13	reads base_bound_by/base_giveup columns from ab-run.sh's derived TSV
+bench-results/qf-wall-20260914/axeyum-skel.sh	other	no	no	2af00d4b2 2026-09-14	"unanchored grep of quoted ""bound_by"":""...""/""giveup"" JSON fields from a custom qf-wall binary's output"
+bench-results/qf-wall-20260914/core-rest.sh	other	no	no	d1d254666 2026-09-14	substring-greps individual route-trail attempt entries {route,outcome,reason,detail}, no JSON parse
+bench-results/qf-wall-20260914/rederive.sh	other	no	no	12589b48d 2026-09-14	unanchored bound_by= grep plus substring match on a route-trail entry's route/outcome, no anchor or JSON parse
+bench-results/qf-wall-20260914/scope-ax.sh	other	no	no	d1d254666 2026-09-14	unanchored bound_by= grep across raw output, not anchored on '; route '
+bench-results/qf-wall-20260914/trails.sh	other	no	no	12589b48d 2026-09-14	unanchored attempts= grep plus substring match on route-trail attempt entries, no JSON parse
+bench-results/qflra-gap-20260914/scripts/census.py	both	no	no	d248502a1 2026-09-14	parses '^; route ' key=value fields AND json.loads '; route-trail' attempts array; both regexes are unanchored to the optional 'partial' prefix so partial-prefixed lines of either kind are silently missed
+bench-results/qflra-gap-20260914/scripts/which-matrix-probe.sh	other	n.a.	no	d248502a1 2026-09-14	extracts '; lazy-smt' engine counters (cube_matrices etc.), not ; route text
+bench-results/quant-rounds-20260913/exit-census.sh	prose-route	no	no	dc4c98446 2026-09-13	greps '; (partial )?route decided_by=...' to pull total_ms via chained grep
+bench-results/quant-rounds-20260913/route-hit.sh	other	no	no	dc4c98446 2026-09-13	"grep -q substring-matches '""route"":""q:egraph""' in route-trail text, no JSON parse"
+bench-results/quant-rounds-20260913/summarize.py	other	no	no	dc4c98446 2026-09-13	other: reads round-budget census TSVs (exit-/sweep-/hit-/shape-/cost-/round-/recheck-*.tsv) with QINST_ROUNDS-lane columns (exit_kind, egraph_rung, ground, rounds); never greps decided_by=/bound_by=/route= itself, only consumes columns another script derived
+bench-results/real-opaque-20260914/ab-noise.sh	other	no	no	2de0df23b 2026-09-14	other: unanchored `grep -oE 'decided_by=[^ ]*'`/`'bound_by=[^ ]*'` on raw stdout, not anchored on '; route '
+bench-results/real-opaque-20260914/ab-preflight.sh	other	no	no	b51c5cffc 2026-09-14	other: unanchored `grep -oE 'decided_by=[^ ]*'` on raw stdout (bound_by not read), no '; route ' anchor
+bench-results/real-opaque-20260914/ab-run.sh	other	no	no	edb12ee75 2026-09-14	other: unanchored `grep -oE 'decided_by=[^ ]*'`/`'bound_by=[^ ]*'` on raw stdout, no '; route ' anchor
+bench-results/real-opaque-20260914/control-executes.sh	other	n.a.	no	2de0df23b 2026-09-14	other: parses a different counter line (lra_entries=/cube_decisions=/cube_collect_ms= from AXEYUM_LAZY_SMT_COUNTERS); no decided_by/bound_by/route= touched anywhere in this file
+bench-results/real-opaque-20260914/control-nonvacuity.py	other	no	no	2de0df23b 2026-09-14	"other: reads the `off_route` column (pipe-joined ""decided_by|bound_by|refused"") that ab-noise.sh/ab-run.sh wrote, splits on '|' via off_route.split(""|"")"
+bench-results/real-opaque-20260914/gain-routes.py	other	no	no	3ab8d70fa 2026-09-14	other: reads `on_route`/`off_route` pipe-joined columns from ab-run.sh's TSV, splits on '|' to get decided_by/bound_by/refused
+bench-results/real-opaque-20260914/guard-deletion.py	other	n.a.	no	f10e0c815 2026-09-14	"other: mutation-tests LRA opaque-apps guards by parsing `cargo test` ""test ... ok/FAILED"" lines; zero contact with decided_by/bound_by/route data"
+bench-results/round-head-20260914/rh-run.sh	prose-route	yes	no	449b209de 2026-09-14	greps `'; (partial )?route decided_by=.*'` (explicit partial alternation), field-extracts bound_by/last/bound_ms/total_ms/attempts; also joins (not splits) multi-line cells with literal ';' via join1()
+bench-results/round-head-20260914/summarize.py	other	no	no	00780cd5c 2026-09-14	other: reads rh-run.sh's derived TSV columns c_bound_by/c_exits/c_giveup/r1_lines/r2_lines (csv.DictReader), regex-parses the joined c_exits cell rather than raw route text
+bench-results/route-attribution-2026-09-07/scripts/aggregate.py	route-trail	no	no	d40449080 2026-09-07	"regex `^; route-trail (\{.*\})\s*$` + json.loads on the trail; strict anchor has no partial variant, so a `; partial route-trail` line silently returns None (folded into ""without_trail"", not distinguished)"
+bench-results/route-attribution-2026-09-07/scripts/cost_ab.py	other	n.a.	no	4853ad9fd 2026-09-07	other: reads only wall_ms/verdict/arm/file columns from cost_ab.sh's TSV; no decided_by/bound_by/route= touched despite being in the route-attribution study
+bench-results/route-attribution-2026-09-07/scripts/cost_ab.sh	other	n.a.	no	4853ad9fd 2026-09-07	other: deliberately runs WITHOUT --trace (measuring the default path's cost), captures only the final verdict line via `tail -1`; no route contact at all
+bench-results/route-attribution-2026-09-07/scripts/run_division.sh	prose-route	no	no	0634f51f0 2026-09-07	"`route_line=$(grep -m1 '^; route ' ""$log_path"")` strict anchor, no `(partial )?` alternation, field-extracts decided_by/bound_by/last/bound_ms/total_ms/attempts; a partial run leaves every field ""NA"" silently"
+bench-results/route-attribution-2026-09-07/scripts/test_aggregate_guard.py	route-trail	no	no	4853ad9fd 2026-09-07	writes synthetic `; route-trail {json.dumps(...)}` fixture lines and json.loads(aggregate.py's own JSON report) to test its impossibility guards
+bench-results/silent-hang-20260915/budget-sweep.sh	other	no	no	2215eb74d 2026-09-15	other: orchestrates phase-census.sh then does `awk -F'\t'` positional field access ($6/$7/$9) on its derived TSV
+bench-results/silent-hang-20260915/control-nonvacuity.sh	other	n.a.	no	abccf4635 2026-09-15	other: parses a DIFFERENT breadcrumb, `'^; partial phase '` (enters=/deepest=), not decided_by/bound_by/route= at all; also reads census col $6 (=ms, not bound_by) via awk
+bench-results/silent-hang-20260915/derive-population.sh	other	yes	no	d6efa9a3e 2026-09-15	"other: `awk -F'\t'` filters fd-census-208.tsv's $3 (bound_by==""NONE"") and $7 (giveup_kind==""Watchdog"", the census's proxy for a watchdog/partial-killed run) to derive the population"
+bench-results/silent-hang-20260915/phase-census.sh	prose-route	yes	no	c9e002810 2026-09-15	greps strict `'^; route '` for bound_by, AND separately checks `'^; partial route '` to classify rk=partial distinctly from attributed/unavailable/absent
+bench-results/silent-hang-20260915/split.py	other	no	no	a7136429e 2026-09-15	"other: reads route_line/bound_by columns (values attributed/unavailable/partial/absent) from phase-census.sh's TSV via csv.DictReader; only tests `!= ""attributed""`, never `== ""partial""` specifically"
+bench-results/silent-hang-20260915/stack-sample.sh	other	n.a.	no	c9e002810 2026-09-15	other: gdb/perf/proc backtrace and RSS sampler; zero contact with route/decided_by/bound_by anywhere
+bench-results/six-divisions-headtohead-20260912/census-run.sh	prose-route	yes	no	5511b7954 2026-09-13	greps `'; (partial )?route decided_by=.*'` (explicit partial alternation), field-extracts attempts/decided_by/bound_by/last/bound_ms/total_ms
+bench-results/six-divisions-headtohead-20260912/census-summarize.py	other	yes	no	5511b7954 2026-09-13	"other: reads attempts/giveup/open_after/last columns from census-run.sh's TSV; `open_after != ""na""` (the route-open segment proxy) is used to exclude unfinished-dispatch rows as UNCLASSIFIED"
+bench-results/six-divisions-headtohead-20260912/controls/run-controls.sh	other	no	no	5511b7954 2026-09-13	other: control-test driver; copies board-fixture.tsv/census-fixture.tsv (which carry decided_by/bound_by columns) and greps summarize.py/census-summarize.py's printed output text
+bench-results/skeleton-reach-20260914/ab-preflight.sh	prose-route	yes	no	44844ac8c 2026-09-14	base arm greps strict `'^; route '`, arm greps `'^; \(partial \)\?route '` for bound_by
+bench-results/skeleton-reach-20260914/ab-run.sh	prose-route	yes	no	44844ac8c 2026-09-14	"digest() greps `'^; \(partial \)\?route '` for total_ms; also crude `grep -qF` substring match against route-trail JSON text (""route"":""q:bool-skeleton""...) -- not a structured parse"
+bench-results/skeleton-reach-20260914/control-nonvacuity.sh	prose-route	yes	no	cdbde5363 2026-09-14	both arms grep `'^; \(partial \)\?route '` for bound_by
+bench-results/skeleton-reach-20260914/fd-census.sh	prose-route	no	no	a7aab8053 2026-09-14	`grep -m1 '^; route '` strict, no partial alternation (this gap is documented in a sibling file's comment); also crude `grep -qF` substring match on route-trail JSON text, not a structured parse
+bench-results/skeleton-reach-20260914/fd-rows-across-arms.py	other	no	no	44844ac8c 2026-09-14	"other: reads `bound_by` column from fd-census.sh's TSV via csv.DictReader, filters `== ""fd:parse""`"
+bench-results/skeleton-reach-20260914/probe-2x2.sh	prose-route	no	no	86fbdacd6 2026-09-14	`grep -m1 '^; route '` strict (no partial alternation) for total_ms; also crude `grep -qF` substring match on route-trail JSON text
+bench-results/skeleton-reach-20260914/summarize-census.py	other	no	no	86fbdacd6 2026-09-14	other: reads `bound_by` column from fd-census.sh's TSV via csv.DictReader for a Counter breakdown
+bench-results/skeleton-reach-20260914/trace-one.sh	other	n.a.	no	a7aab8053 2026-09-14	other: runs the binary with --trace and dumps raw stdout+stderr verbatim for a human to eyeball; no route parsing in code at all
+bench-results/tier1-divisions-headtohead-20260913/census-crossdiv.py	other	yes	no	76b86a2f9 2026-09-13	"other: reads giveup/verdict/open_after/total_ms columns from census-run.sh's TSV; `open_after != ""na""` proxy excludes unfinished-dispatch rows as UNCLASSIFIED"
+bench-results/tier1-divisions-headtohead-20260913/census-run.sh	prose-route	yes	no	9afba4c94 2026-09-13	greps `'; (partial )?route decided_by=.*'` (explicit partial alternation), field-extracts attempts/decided_by/bound_by/last/bound_ms/total_ms
+bench-results/tier1-divisions-headtohead-20260913/census-summarize.py	other	yes	no	655605500 2026-09-13	"other: reads attempts/giveup/open_after columns from census-run.sh's TSV; `open_after != ""na""` proxy excludes partial-dispatch rows from ranking"
+bench-results/tier1-divisions-headtohead-20260913/controls/run-controls.sh	other	yes	no	e4bbf0a5e 2026-09-13	other: control-test driver; copies census-fixture.tsv (decided_by/bound_by/open-segment columns) and greps the summarizers' output, including assertions on the open-segment/UNCLASSIFIED split
+bench-results/timeout-diagnosis-20260914/scripts/attribute-detail-moves.py	other	n.a.	no	9073e71e1 2026-09-14	other: reads base_giveup/arm_giveup give-up DETAIL text columns only; no decided_by/bound_by/route= touched anywhere
+bench-results/uf-arith-overbound-20260908/scripts/analyze.py	both	no	no	3f4caaf7a 2026-09-08	"regex on the TSV's `route` column for bound_by=/decided_by=/bound_ms=, AND `re.match(r""; route-trail (.*)$"", ...)` + `json.loads(...)[""attempts""]` on the `trail` column; both patterns are strict/unanchored-for-partial, so a partial run's fields silently come back empty"
+bench-results/uf-arith-overbound-20260908/scripts/sweep.sh	prose-route	no	no	3f4caaf7a 2026-09-08	`grep '^; route '` and `grep '^; route-trail '`, both strict anchors with no partial alternation; captures the route-trail line as raw TEXT into a TSV cell, does not itself json.loads it (analyze.py does)
+bench-results/ufbv-caps-ab-20260912/ab-run.sh	prose-route	yes	no	a49501a13 2026-09-13	greps `'; (partial )?route decided_by=.*'` (explicit partial alternation), field-extracts attempts/decided_by/bound_by/bound_ms/total_ms
+bench-results/ufbv-caps-ab-20260912/control-vacuity.py	other	no	no	a49501a13 2026-09-13	"other: reads `decided_by`/`bound_by` columns directly from ab-run.sh's shard*.tsv, regex-searches the joined ""decided_by bound_by"" string for an ONLINE route pattern"
+bench-results/ufbv-caps-ab-20260912/controls/fixture.py	other	no	no	a49501a13 2026-09-13	other: builds synthetic TSV rows with literal decided_by/bound_by values baked in as fixtures for summarize.py; no raw-text or JSON parsing of its own
+bench-results/ufbv-caps-ab-20260912/exposure-probe.sh	route-trail	no	no	a49501a13 2026-09-13	"regex-extracts every ""route"":""..."" occurrence from route-trail JSON in raw --trace output; no partial handling"
+bench-results/ufbv-caps-ab-20260912/exposure-summary.py	other	no	no	a49501a13 2026-09-13	other: reads online_route_in_trail/cap_text_anywhere columns from a derived shard*.tsv that exposure-probe.sh produced, not raw stdout
+bench-results/ufdt-family-20260913/census-run.sh	prose-route	no	no	8c318db8d 2026-09-13	greps '; (partial )?route decided_by=...' prose line and cuts fields with grep -oE; matches partial optionally but never records the distinction
+bench-results/ufdt-family-20260913/census-summarize.py	other	no	no	8c318db8d 2026-09-13	other: reads census/<DIV>.winnable.tsv columns (attempts, giveup, open_after, verdict) from census-run.sh's derived TSV, not raw stdout
+bench-results/ufdt-family-20260913/compact-qtrace.py	other	no	no	8c318db8d 2026-09-13	other: in-place trims the 'qtrace' column of a derived census TSV; own docstring says decided_by/bound_by columns are untouched
+bench-results/ufdt-family-20260913/probe.sh	other	no	no	8c318db8d 2026-09-13	other: grep -c 'route decided_by=' as an unanchored presence/smoke count, not anchored on '; route '
+bench-results/ufdt-family-20260913/route-hit-rate.py	other	no	no	8c318db8d 2026-09-13	other: csv.DictReader reads decided_by/bound_by/qtrace columns directly from a derived census TSV, not raw stdout
+bench-results/uflia-interface-20260908/scripts/apply-defaults.py	other	n.a.	no	26d9d80e3 2026-09-08	other: no output parsing at all; patches Rust source constants (MAX_BOOLEAN_ATOMS, uflia_interface policy); 'route' only in doc-comment prose
+bench-results/uflia-interface-20260908/scripts/classify.py	both	yes	no	26d9d80e3 2026-09-08	trail_of() json.loads-parses '; route-trail '/'; partial route-trail '; route_line() matches prose '; route '/'; partial route ' but is unused dead code
+bench-results/uflia-interface-20260908/scripts/compare.py	route-trail	yes	no	26d9d80e3 2026-09-08	last_attempt() json.loads-parses '; route-trail '/'; partial route-trail ' lines from raw output
+bench-results/uflia-interface-20260908/scripts/sweep.sh	other	no	no	26d9d80e3 2026-09-08	other: captures full raw stdout (incl. route/route-trail lines) per file for classify.py/compare.py; its own verdict extraction just excludes lines starting with ';'
+bench-results/ufnia-uflia-census-20260913/census-run.sh	prose-route	no	no	c3c1a4fef 2026-09-13	byte-identical to ufdt-family's census-run.sh; same '; (partial )?route decided_by=' grep
+bench-results/ufnia-uflia-census-20260913/census-summarize.py	other	no	no	c3c1a4fef 2026-09-13	other: UFNIA/UFLIA variant of ufdt-family's script; same derived-TSV column reads (attempts/giveup/open_after)
+bench-results/ufnia-uflia-census-20260913/compact-qtrace.py	other	no	no	c3c1a4fef 2026-09-13	other: byte-identical to ufdt-family's compact-qtrace.py; trims qtrace column of derived census TSV
+bench-results/ufnia-uflia-census-20260913/probe.sh	other	no	no	c3c1a4fef 2026-09-13	other: same unanchored grep -c 'route decided_by=' smoke check as ufdt-family's probe.sh, different default binary path
+bench-results/ufnia-uflia-census-20260913/route-hit-rate.py	other	no	no	c3c1a4fef 2026-09-13	other: byte-identical to ufdt-family's route-hit-rate.py; reads decided_by/bound_by columns from derived census TSV
+bench-results/zero-inst-20260914/ab-preflight.sh	route-trail	no	no	6a2145d38 2026-09-14	"rung() fixed-string greps '""route"":""q:bool-skeleton"",""outcome"":""decided""' etc. out of route-trail JSON in raw AXEYUM_TRACE=1 output"
+bench-results/zero-inst-20260914/ab-run.sh	route-trail	no	no	4a90c114b 2026-09-14	run_arm() fixed-string greps the same q:bool-skeleton route/outcome pair from route-trail JSON
+bench-results/zero-inst-20260914/apply-lever-tests.py	other	n.a.	no	1a4be5eb9 2026-09-14	other: no output parsing; patches auto.rs to add Rust unit tests for the Boolean-skeleton lever
+bench-results/zero-inst-20260914/register-mutation-suite.py	other	n.a.	no	1a4be5eb9 2026-09-14	other: no output parsing; registers a mutation suite entry in scripts/tests/mutation_controls.py
+bench-results/zero-inst-20260914/verify-shipped-default.sh	route-trail	no	no	418872a81 2026-09-14	same fixed-string grep of q:bool-skeleton route/outcome from route-trail JSON
+scripts/analyze-ladder-slices.py	other	no	no	aaa5c2862 2026-09-08	other: json.load()s derived span-log JSON shards (route/outcome/wall_ns per route_attempt span) from scripts/span-log-sweep.sh, not raw solver stdout
+scripts/archive/check-autogenesis-extended-gcd-novel-dependency-audit-result.py	other	n.a.	no	98d17aeef 2026-08-29	false positive: 'route' is the autogenesis dependency-audit's chosen proof route (JSON keys like imported_xgcd_route_open), unrelated to solver dispatch output
+scripts/archive/check-autogenesis-subtractive-gcd-dependency-audit-result.py	other	n.a.	no	98d17aeef 2026-08-29	false positive: 'route' means route pruning/carrier selection in the gcd dependency audit JSON, unrelated to solver output
+scripts/archive/check-autogenesis-subtractive-gcd-route-frontier-audit-result.py	other	n.a.	no	98d17aeef 2026-08-29	false positive: verifies the gcd 'route-frontier audit' JSON result artifact, unrelated to solver dispatch route trail
+scripts/archive/check-autogenesis-xgcd-val-baseline-preserving-reconstruction-result.py	other	n.a.	no	98d17aeef 2026-08-29	false positive: 'route conclusion' is the autogenesis reconstruction's chosen proof route, unrelated to solver output
+scripts/archive/tests/test_check_autogenesis_subtractive_gcd_route_frontier_audit_result.py	other	n.a.	no	98d17aeef 2026-08-29	unit test for the file above; same false-positive 'route' usage, unrelated to solver output
+scripts/brief-step0.py	other	n.a.	no	1093e02f9 2026-08-30	false positive: 'proof route' prose (which theorem/module to work), unrelated to solver dispatch output
+scripts/check-agent-episode.py	other	n.a.	no	efbe6cc82 2026-08-25	false positive: single prose mention 'tier is the only route to proved', unrelated to solver output
+scripts/check-autogenesis-generated-gcd-carrier-audit-plan.py	other	n.a.	no	7853c5bf7 2026-08-30	false positive: 'route_result' references the gcd route-frontier-audit-result JSON artifact, unrelated to solver output
+scripts/check-autogenesis-holdout-isolation.py	other	n.a.	no	347785417 2026-09-01	false positive: 'route' means any route to a recorded held-out score, unrelated to solver dispatch output
+scripts/check-autogenesis-imported-testbit-bitwise-candidate.py	other	n.a.	no	cca5f9678 2026-08-26	false positive: 'required_route' is a statement-trust-floor field, unrelated to solver output
+scripts/check-autogenesis-nat-bit-constructor-family.py	other	n.a.	no	a3f9d7ff4 2026-09-02	false positive: checks fact['proof_route'] == 'kernel-lean' (fact-ledger field), unrelated to solver dispatch output
+scripts/check-autogenesis-nursery.py	other	n.a.	no	230f81fac 2026-09-02	false positive: 'route_hypotheses'/'route_hypothesis_families' are autogenesis nursery dependency-hypothesis fields, unrelated to solver output
+scripts/check-autogenesis-official-gcd-balanced-bezout-reconstruction-result-v3.py	other	n.a.	no	7853c5bf7 2026-08-30	false positive: 'lean_tactic_source_route_accepted' JSON field, unrelated to solver output
+scripts/check-autogenesis-open-frontier-axiom-freeness.py	other	n.a.	no	08db55944 2026-08-28	false positive: single prose mention of a Mathlib 'transport route', unrelated to solver output
+scripts/check-autogenesis-subtractive-gcd-route-frontier-audit-plan.py	other	n.a.	no	7853c5bf7 2026-08-30	false positive: verifies the gcd 'route-frontier audit plan' JSON, unrelated to solver dispatch route trail
+scripts/check-autogenesis-type-slice-producer-census.py	other	n.a.	no	cb8f39e21 2026-08-19	false positive: checks a 'default-route regression identity' in a producer-census JSON, unrelated to solver output
+scripts/check-capability-routes.py	other	n.a.	no	fb89e3cf0 2026-08-17	false positive: 'route' = named Rust fn/mod implementing a capability-table entry; checks the name resolves in source, no solver output touched
+scripts/check-cas-substance.py	other	n.a.	no	1ce9f2d82 2026-08-30	false positive: checks fact['proof_route'] == 'cas-certificate' (fact-ledger field), unrelated to solver dispatch output
+scripts/check-clippy-complete.sh	other	n.a.	no	65e44abfb 2026-08-14	false positive: single comment 'the env route dies with Argument list too long', unrelated to solver output
+scripts/check-curriculum-coverage.py	other	n.a.	no	26384401a 2026-08-17	false positive: 'route' = math_resource_*_routes.rs Rust test-suite files, unrelated to runtime routing text
+scripts/check-fact-depends-derived.py	other	n.a.	no	e952bebfd 2026-08-29	false positive: 'kernel-route fact' means fact['proof_route']=='kernel-lean', unrelated to solver dispatch output
+scripts/check-fact-derived-numbers.py	other	n.a.	no	4b5613e26 2026-08-18	"false positive: ""route"" is prose about a fact whose underlying computation route was rewired, fact-ledger domain"
+scripts/check-fact-evidence-replay.sh	other	n.a.	no	6a4a424d1 2026-08-30	false positive: `route=<checker>` is the fact-ledger evidence checker selected for a claim, not solver dispatch
+scripts/check-foundational-resources.sh	other	n.a.	no	f18904db7 2026-08-17	false positive: `--route <name>` selects a foundational-resource category (Diophantine/Farkas/Alethe), unrelated to solver dispatch
+scripts/check-generated-artifact-ownership.py	other	n.a.	no	c7eca7d87 2026-09-03	"false positive: ""by whatever route"" / ""any other route"" is prose about how a generated file got written"
+scripts/check-import-status.py	other	n.a.	no	7d6b50823 2026-08-30	false positive: `proof_route` is the fact-ledger provenance field (imported-kernel-lean etc.)
+scripts/check-lean-creal-library.sh	other	n.a.	no	fbca73e8a 2026-09-05	"false positive: ""the source route"" / ""the wire route"" refers to which Lean source feeds a count, not solver dispatch"
+scripts/check-lean-gate.sh	other	n.a.	no	62a9b1a81 2026-09-05	"false positive: ""the source route"" is about Lean elaboration, unrelated"
+scripts/check-lra-hypothesis-binding.py	other	n.a.	no	8dd681d8e 2026-08-18	"false positive: ""the route"" throughout means a Lean LRA-module CONSTRUCTION path (SOS route, Diophantine route, TermIdentity route), a math-library concept, not solver dispatch"
+scripts/check-merge-hygiene.sh	other	n.a.	no	b594ee3ba 2026-09-05	"false positive: ""the no-cargo route"" / ""the cargo route"" are build-invocation choices"
+scripts/check-mobility-census.py	other	n.a.	no	a3d790b7a 2026-08-30	"false positive: ""a frozen export is the ONLY route to..."" is prose about fact-ledger mobility"
+scripts/check-parity-ancestry.py	other	n.a.	no	dcb9cd8ff 2026-09-09	"false positive: ""the same default-route run"" refers to which harness run produced a count, not a parse of solver routing output"
+scripts/check-parity-docs.py	other	n.a.	no	e5a7b0082 2026-09-10	"false positive: ""route"" in doc-text assertions about README/doc wording (""a route that does not emit and check a proof..."")"
+scripts/check-parity-freshness.py	other	n.a.	no	df30d9fa9 2026-08-21	no narrow-marker match
+scripts/check-partition-edges.py	other	n.a.	no	230f81fac 2026-09-02	"false positive: ""route through a fact"" is a fact-ledger dependency-graph term"
+scripts/check-proposition-duplication.py	other	n.a.	no	81db71f5e 2026-08-31	"false positive: ""arrived by a route no existing guard could see"" is prose about a mutation-testing gap"
+scripts/check-settled-fact-statements.py	other	n.a.	no	648ba0a32 2026-09-04	"false positive: ""presented itself as a route upgrade"" -- prose about a code change, not solver dispatch"
+scripts/check-shape-duplicates.py	other	n.a.	no	9bbcc1153 2026-09-05	false positive: local variable `route` names which DUPLICATE-DETECTION MODE was chosen (prebuilt/file/cargo), unrelated to solver dispatch
+scripts/check-smt-evidence-certified.py	other	n.a.	no	fe47460bd 2026-08-21	"false positive: ""SMT-route fact"" is the fact-ledger's evidence-provenance label, not a read of live routing output"
+scripts/check-spivak-cas-column.py	other	n.a.	no	0fc28d0d5 2026-08-31	"false positive: ""CAS route"" / ""route column"" refer to a curriculum doc's citation column, unrelated"
+scripts/check-statement-identity-mutations.py	other	n.a.	no	658df40b5 2026-08-30	"false positive: ""the mirrors' hash-pinned-catalog route"" is prose about which code path a mirror check uses"
+scripts/check-trust-closure.py	other	n.a.	no	e35087423 2026-08-31	"false positive: ""kernel-route fact"" / ""kernel-route settled fact"" is the fact-ledger's Lean-kernel provenance label"
+scripts/check.sh	other	n.a.	no	d6210e1e5 2026-09-15	"false positive: ""route"" appears in comments about capability-routes.py and kernel-route facts; this is the aggregate gate script, not a routing-output reader"
+scripts/close-fact.py	other	n.a.	no	1d54f9975 2026-08-14	no narrow-marker match
+scripts/count-landmark-facts.py	other	n.a.	no	08b97603b 2026-09-05	false positive: `proof_route` fact-ledger field
+scripts/create-autogenesis-mathlib-candidates.py	other	n.a.	no	bd7b55bff 2026-08-18	no narrow-marker match
+scripts/create-autogenesis-mathlib-fact-catalog.py	other	n.a.	no	64ae9166e 2026-08-29	"false positive: ""route hypotheses"" is an autogenesis nursery dependency-hypothesis term"
+scripts/create-autogenesis-mathlib-nursery-split.py	other	n.a.	no	ec72607a9 2026-09-02	no narrow-marker match
+scripts/create-autogenesis-snapshot.py	other	n.a.	no	5a0c1e464 2026-08-25	"false positive: ""proof route is not kernel-lean"" is the fact-ledger provenance field"
+scripts/dag-blowup-repro-family.py	other	n.a.	no	b1a852035 2026-09-12	"false positive: ""route"" only in prose about which solver code path a DAG-blowup repro exercises; the script itself invokes smtcomp_cli but does not parse route-trail/decided_by/bound_by output, only wall-time and RSS"
+scripts/derive-lean-creal-refusals.py	other	n.a.	no	9dbdc2ebd 2026-09-05	no narrow-marker match
+scripts/enumerate-dispatch-refusal-propagation.py	other	n.a.	no	df5030319 2026-09-13	false positive at runtime: this is a STATIC source-code walker over auto.rs's Rust AST/text (entry points, refusal propagation in source), not a reader of solver stdout
+scripts/euf-online-atoms-compare.py	other	n.a.	no	0dbfa8cf2 2026-09-08	joins two/three euf-online-atoms-sweep.sh derived TSVs (decided_by/bound_by columns already extracted), diffs decided-vs-not and verdict disagreements
+scripts/euf-online-atoms-sweep.sh	route-trail	no	no	569b0d83b 2026-09-09	"grep -m1 'route-trail' (substring, so a ""; partial route-trail"" line still matches) then an embedded python heredoc extracts the {""schema_version""...} JSON via regex and json.loads; also regexes `bound_by=(\S+)` on that same line which is the PROSE field name applied to the JSON line, so that particular extraction likely never matches (looks like a latent bug in the script itself, separate from partial-handling)"
+scripts/fact-frontier.py	other	n.a.	no	f4df69696 2026-09-01	no narrow-marker match
+scripts/flywheel-status.sh	other	n.a.	no	89bfee07c 2026-09-01	false positive: `proof_route` fact-ledger field, read via a `collections.Counter` in an embedded python snippet
+scripts/frontier-shape-census.py	other	n.a.	no	bdc937f0d 2026-09-02	"false positive: `route_class` (""proof-route-only"" etc.) is a fact-ledger producer-contract-matching category, unrelated to solver dispatch"
+scripts/gen-autogenesis-baseline.py	other	n.a.	no	5a0c1e464 2026-08-25	"false positive: ""route metadata"" / ""route evidence"" / ""route hypotheses"" are autogenesis/fact-ledger terms"
+scripts/gen-autogenesis-euclidean-public-recursion-plan.py	other	n.a.	no	47322738b 2026-08-21	"false positive: ""the failed wrapper route"" is prose about a proof construction attempt"
+scripts/gen-autogenesis-nursery-refill.py	other	n.a.	no	b4f2571c4 2026-09-02	no narrow-marker match
+scripts/gen-dominance-scoreboard.py	other	n.a.	no	c9230908f 2026-08-21	"false positive: `PROOF_ROUTES` / ""Lean route"" / ""proof route"" name which Lean-reconstruction path a logic has, a dominance-scoreboard concept unrelated to solver dispatch"
+scripts/gen-foundational-concepts.py	other	n.a.	no	af1b15f5b 2026-08-31	no narrow-marker match
+scripts/gen-foundational-dashboards.py	other	n.a.	no	a3dc31d1b 2026-06-30	no narrow-marker match
+scripts/gen-infeasibility-instances.py	other	n.a.	no	a8fac8e57 2026-08-14	false positive: generates `:named route_p1_t1` SMT-LIB annotation labels in synthetic benchmarks it writes; does not read solver routing output
+scripts/gen-lean-axiom-ledger.py	other	n.a.	no	681ebbe68 2026-08-25	"false positive: ""lanes route around"" / ""shipped route... reasons over"" are prose, unrelated"
+scripts/gen-ledger-coverage.py	other	n.a.	no	340040c7e 2026-09-06	no narrow-marker match
+scripts/gen-obstruction-dashboard.py	other	n.a.	no	00a0803f7 2026-08-24	no narrow-marker match
+scripts/gen-obstruction-graph.py	other	n.a.	no	00a0803f7 2026-08-24	"false positive: ""a route generalizes"" / `row.get(""route"")` refer to an autogenesis PROOF STRATEGY route (a tactic/proposal field), not solver dispatch"
+scripts/gen-obstruction-producers.py	other	n.a.	no	4b13f5eab 2026-09-02	no narrow-marker match
+scripts/gen-product-health.py	other	n.a.	no	ce6a31b0c 2026-08-26	no narrow-marker match
+scripts/gen-production-provenance-ledger.py	other	n.a.	no	50aec8f8b 2026-08-22	"false positive: ""proof route written for that theorem"" is the fact-ledger provenance concept; `PROOF_ROUTES`-style enumeration of ledger route labels"
+scripts/gen-proof-gap-matrix.py	other	n.a.	no	1f61b1605 2026-08-20	"false positive: ""the UNSAT route is neither certified..."" is prose about proof-checking status, and ""bare-route audits"" names a doc-audit commit"
+scripts/gen-proof-gap-shape-census.py	other	n.a.	no	3b609d2d6 2026-07-21	no narrow-marker match
+scripts/gen-python-coverage.py	other	n.a.	no	48d7044a2 2026-08-24	"false positive: ""a deferral covering a whole route"" is prose about test coverage, unrelated"
+scripts/gen-rules-as-code-dashboard.py	other	n.a.	no	e8a083af2 2026-07-01	no narrow-marker match
+scripts/gen-safety-matrix.py	other	n.a.	no	a2b3830de 2026-08-30	no narrow-marker match
+scripts/lia-counter-report.py	prose-route	no	no	c557cbe6d 2026-09-08	"parse_route_line() only checks `line.startswith(""; route "")`, NOT `""; partial route ""` -- a partial trail's route line is silently skipped entirely (the exact ADR-2075 prefix bug, still present here)"
+scripts/lia-counter-sweep.sh	other	n.a.	no	9ec10100f 2026-09-08	captures full --trace stdout per file to <out>/<n>.log for lia-counter-report.py to read; the sweep script itself only greps the verdict line, so it is a PRODUCER, not a reader, of routing lines
+scripts/lib/graph_join.py	other	n.a.	no	a575b83ed 2026-08-30	"false positive: `fact.get(""proof_route"")` / `KERNEL_ROUTES` are fact-ledger provenance fields"
+scripts/linarith-retirement-census.py	other	n.a.	no	281b97a5d 2026-09-03	no narrow-marker match
+scripts/lra-lazy-report.py	other	n.a.	no	a7fd073c7 2026-09-08	no narrow-marker match; reads `; lazy-smt` LRA instrumentation lines, not the route/route-trail lines
+scripts/measure-producer-channel.py	other	n.a.	no	5d9bf340f 2026-09-06	false positive: `proof_route` field in the fact schema separates CAS/SMT/import producer channels; unrelated to solver dispatch
+scripts/nra-loss-classify.py	both	yes	no	3c279be68 2026-09-09	"parse_log() checks both `""; route ""` / `""; partial route ""` prefixes for the prose summary AND parses `""route-trail ""` (json.loads) for the full trail; comment explicitly documents a prior version that missed partial and misclassified every timeout as ""no route ran"""
+scripts/nursery-components.py	other	n.a.	no	ec72607a9 2026-09-02	"false positive: ""kernel-route fact"" is the fact-ledger provenance label"
+scripts/parity-run.sh	other	n.a.	no	26d75f328 2026-09-12	"false positive: ""route"" only in prose/comments (front-door vs evidence route, default-route run); no actual grep/parse of `; route`/`decided_by`/`route-trail` anywhere in the file"
+scripts/portfolio-ab.sh	other	no	no	bfb1b2606 2026-09-09	`grep -oE 'decided_by=[a-zA-Z0-9:_-]+'` unanchored on `; route ` -- matches the field anywhere in raw output
+scripts/portfolio-oracle-aggregate.py	other	n.a.	no	85d5f0420 2026-09-08	reads portfolio-oracle.py's derived TSV (winning-route column already extracted from route-trail), not raw stdout
+scripts/portfolio-oracle-table.py	other	n.a.	no	6236694ec 2026-09-08	joins route-solo-sweep.py's derived TSVs (a `route` column per row, already extracted) with portfolio-oracle.py's prize TSVs; not raw stdout
+scripts/portfolio-oracle.py	route-trail	no	no	00c65f64c 2026-09-08	"parse_trace() only checks `line.startswith(""; route-trail "")`, not the `""; partial route-trail ""` form -- a killed/partial run's trail is silently treated as trail_present=False (ADR-2075 prefix bug, still present)"
+scripts/prepare-autogenesis-fact-transaction.py	other	n.a.	no	cbaef1a1f 2026-08-26	"false positive: `proof_route`/`evidence.route`/""fixture route"" are fact-ledger and autogenesis-transaction provenance fields, unrelated to solver dispatch"
+scripts/propose-nursery-refill.py	other	n.a.	no	5f4095ed6 2026-09-01	no narrow-marker match
+scripts/provision-lean-import-toolchain.sh	other	n.a.	no	08db55944 2026-08-28	"false positive: ""the autogenesis import route"" is prose about a toolchain provisioning path"
+scripts/qf-nia-dispatch-census.py	prose-route	no	no	ab0c11110 2026-09-12	"`re.search(r""^; route decided_by=..."")`, NOT anchored to allow ""partial "" -- inconsistent with the SAME file's phase-stack regex two lines below, which explicitly does `(?:partial\s+)?phase` -- one field in one file handles partial, the other does not"
+scripts/qf-nia-dispatch-classify.py	other	n.a.	no	ab0c11110 2026-09-12	reads a census TSV's `detail`/give-up column (produced by qf-nia-dispatch-census.py), decomposes the ADR-1925 carrier prefix; does not touch decided_by/bound_by/route-trail directly
+scripts/qf-nia-dispatch-crosstab.py	other	no	no	ab0c11110 2026-09-12	csv.DictReader over a census TSV's `bound_by` column, cross-tabbed against the honest cause and declared :status
+scripts/qf-nia-sat-budget-detail.py	other	no	no	4017632d6 2026-09-13	reads `bench-results/qf-nia-sat-20260913/census-78-classified.tsv`'s `decided_by` column via csv
+scripts/qf-nia-sat-census-split.py	other	no	no	4017632d6 2026-09-13	csv.DictReader over the same census TSV's `bound_by` column
+scripts/qf-nia-sat-eager-split-surrogate.py	other	n.a.	no	4017632d6 2026-09-13	false positive: invokes the solver via run_solver() but only extracts the sat/unsat/unknown verdict line; no route/decided_by/bound_by/route-trail parsing anywhere
+scripts/qf-nia-sat-inslice-budget.py	route-trail	no	no	4017632d6 2026-09-13	"`TRAIL = re.compile(r""^; route-trail (\{.*\})$"", re.M)` then json.loads on the match; anchored to the non-partial prefix only"
+scripts/qf-nia-sat-realistic-budget.py	other	no	no	4017632d6 2026-09-13	csv.DictReader over census-78-classified.tsv's `total_ms` column plus a companion surrogate TSV
+scripts/qf_linear_a5_census.py	route-trail	no	no	d646382e7 2026-08-10	validate_trace() validates a pre-loaded `trace` dict (schema_version=1, attempts[].route/outcome/reason) against the route-trail schema; same shape as qf_uflia_a4_census.py, no partial handling visible
+scripts/qf_nia_a3_census.py	other	n.a.	no	882ec89da 2026-08-07	no narrow-marker match (companion to qf_uflia_a4_census.py by name, but did not match; not independently re-verified beyond the grep sweep)
+scripts/qf_uflia_a4_census.py	route-trail	no	no	a18171343 2026-08-07	validate_trace() validates a pre-loaded `trace` field against the route-trail schema (schema_version/attempts/route/outcome/reason); raises CensusError on any structural violation; no explicit partial-prefix handling found
+scripts/query-foundational-resources.py	other	n.a.	no	046bc8fb7 2026-07-02	false positive: `routes` is a foundational-resource-atlas subcommand/category (Diophantine, Farkas, Alethe, boolean, qf-bv as RESOURCE tags), unrelated to solver dispatch
+scripts/replicate-cover.sh	other	n.a.	no	19485befe 2026-08-13	"false positive: ""the monolithic route"" is prose comparing this script to another gate script"
+scripts/route-solo-slot.sh	other	n.a.	no	92608b5dd 2026-09-08	false positive: drives route-solo-sweep.py (see below) as a subprocess; does not itself parse output
+scripts/route-solo-sweep.py	other	n.a.	no	8be37ba41 2026-09-08	false positive: runs a SEPARATE `route_solo` binary with `--route <name>` (forces exactly one route, no ladder) and reads only a 4-column verdict/wall/detail line; never reads a dispatch route-trail/decided_by/bound_by line since only one route ever runs
+scripts/run-statement-import-blocker-census.py	other	n.a.	no	a43c7dc2d 2026-09-05	no narrow-marker match
+scripts/tests/check-countrange-bijection-numerics.py	other	n.a.	no	f05bc22ce 2026-08-30	no narrow-marker match
+scripts/tests/check-totient-mul-coprime-numerics.py	other	n.a.	no	da51017a0 2026-08-30	no narrow-marker match
+scripts/tests/check-totient-prime-power-numerics.py	other	n.a.	no	42eaf7add 2026-08-30	no narrow-marker match
+scripts/tests/mutation_controls.py	other	n.a.	no	d26341e97 2026-09-14	no narrow-marker match
+scripts/tests/test-brief-step0.sh	other	n.a.	no	1093e02f9 2026-08-30	no narrow-marker match
+scripts/tests/test-check-parity-ancestry.sh	other	n.a.	no	dcb9cd8ff 2026-09-09	no narrow-marker match
+scripts/tests/test-trust-closure.sh	other	n.a.	no	e35087423 2026-08-31	no narrow-marker match
+scripts/tests/test_check_agent_episode.py	other	n.a.	no	efbe6cc82 2026-08-25	no narrow-marker match
+scripts/tests/test_check_autogenesis_holdout_isolation.py	other	n.a.	no	f422754c0 2026-09-02	no narrow-marker match
+scripts/tests/test_check_capability_assurance.py	other	n.a.	no	1afc01781 2026-08-17	no narrow-marker match
+scripts/tests/test_check_capability_routes.py	other	n.a.	no	fb89e3cf0 2026-08-17	false positive: unit test for scripts/check-capability-routes.py, itself a static capability-table/code-symbol checker unrelated to runtime solver output
+scripts/tests/test_check_external_coupling.py	other	n.a.	no	70aaccb38 2026-08-24	no narrow-marker match
+scripts/tests/test_check_fact_depends_derived.py	other	n.a.	no	e952bebfd 2026-08-29	no narrow-marker match
+scripts/tests/test_check_import_status.py	other	n.a.	no	bdc8abe83 2026-08-16	no narrow-marker match beyond the parent script's fact-ledger proof_route field
+scripts/tests/test_check_lra_hypothesis_binding.py	other	n.a.	no	b943cfeaa 2026-08-19	"no narrow-marker match beyond the parent script's Lean-module ""route"" usage"
+scripts/tests/test_check_merge_hygiene.py	other	n.a.	no	3f0feccc9 2026-09-05	no narrow-marker match
+scripts/tests/test_check_spivak_cas_column.py	other	n.a.	no	0fc28d0d5 2026-08-31	"no narrow-marker match beyond the parent script's curriculum-doc ""route column"""
+scripts/tests/test_count_landmark_facts.py	other	n.a.	no	08b97603b 2026-09-05	false positive: `route=` kwarg in test fixtures is the fact-ledger proof_route field
+scripts/tests/test_fact_frontier.py	other	n.a.	no	2f8b30b49 2026-09-01	"false positive: `route=""smt-clausal""` / `route=""cas-bridge""` are fact-ledger proof_route test fixture values"
+scripts/tests/test_frontier_definition_coverage.py	other	n.a.	no	db5fb5aea 2026-08-29	no narrow-marker match
+scripts/tests/test_frontier_shape_census.py	other	n.a.	no	bdc937f0d 2026-09-02	no narrow-marker match beyond the parent script's route_class field
+scripts/tests/test_gen_autogenesis_baseline.py	other	n.a.	no	34fd8269e 2026-08-18	"false positive: `route=""kernel-lean""` fact-ledger fixture default"
+scripts/tests/test_gen_ledger_coverage.py	other	n.a.	no	340040c7e 2026-09-06	"false positive: `proof_route=""smt-term-level""` fact-ledger fixture field"
+scripts/tests/test_qf_nia_a3_census.py	other	n.a.	no	882ec89da 2026-08-07	no narrow-marker match
+scripts/tests/test_qf_uflia_a4_census.py	other	n.a.	no	a18171343 2026-08-07	no narrow-marker match (does not itself re-parse route-trail; tests other behavior of qf_uflia_a4_census.py)
+scripts/tests/test_validate_correspondences.py	other	n.a.	no	811edbacb 2026-08-25	no narrow-marker match
+scripts/tests/test_validate_facts.py	other	n.a.	no	08b97603b 2026-09-05	no narrow-marker match
+scripts/tests/test_validate_producer_contract_declines.py	other	n.a.	no	307e5d2e6 2026-09-01	"false positive: `route=""by-hand""` inside `make_resolution()` fixture, a producer-contract-decline resolution field"
+scripts/tests/test_validate_producer_contracts.py	other	n.a.	no	b79f9dbae 2026-09-03	"false positive: `route=""magic""` inside `make_contract()` fixture, a producer-contract field"
+scripts/trace-sweep-lia-shapes.py	other	no	no	7ba3dfa51 2026-09-08	"`re.search(r""\bbound_by=(\S+)"", text)` UNANCHORED on the whole per-file log text (not anchored to `; route `); the companion `; (?:partial )?lia ` regex two lines above DOES handle partial, this one does not"
+scripts/trace-sweep-report.py	both	yes	no	7ba3dfa51 2026-09-08	"parse_log() checks `""; route ""` / `""; partial route ""` prefixes for decided_by/bound_by/bound_ms/total_ms/attempts, ALSO parses `""route-trail ""` via json.loads, AND checks `""; partial route-open ""` separately; docstring states every `; partial` counter is reported as a lower bound and never used to derive a rate"
+scripts/validate-autogenesis-operations.py	other	n.a.	no	593c14055 2026-08-28	no narrow-marker match
+scripts/validate-correspondences.py	other	n.a.	no	811edbacb 2026-08-25	no narrow-marker match
+scripts/validate-facts.py	other	n.a.	no	e0f0be745 2026-09-05	no narrow-marker match
+scripts/validate-foundational-example-pack.py	other	n.a.	no	8970a88d2 2026-07-06	no narrow-marker match
+scripts/validate-producer-contract-declines.py	other	n.a.	no	71cd59d04 2026-09-01	no narrow-marker match
+scripts/validate-producer-contracts.py	other	n.a.	no	b79f9dbae 2026-09-03	no narrow-marker match
+scripts/validate-smt-fragment-atlas.py	other	n.a.	no	6952e49da 2026-06-28	no narrow-marker match
