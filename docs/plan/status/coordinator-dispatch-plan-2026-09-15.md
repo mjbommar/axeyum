@@ -2,10 +2,12 @@
 
 <!-- plan-section: lane-status -->
 
-Status: **in progress**, one lane measuring. Phases 1, 2 and 3 of
+Status: **phases 1–3 landed and pushed** (`origin/main` `db31113fa`). Every
+unconditional phase of
 [dispatch-and-instrumentation-2026-09-15.md](../dispatch-and-instrumentation-2026-09-15.md)
-are on `main`, each with an ADR and a measured exit criterion; Phase 1b's
-nine-division A/B is the open item. Phase 4 has not started and is conditional.
+is on `main` with an ADR and a measured exit criterion. Phase 4 is conditional
+on the ledger showing structure; lane LEDGER-STRUCTURE is measuring that
+condition over 1,400 fresh Tier 1 rows.
 
 ## What landed, in order
 
@@ -17,6 +19,7 @@ nine-division A/B is the open item. Phase 4 has not started and is conditional.
 | 2b | 2104 | 25 free-string decline details are closed enums (ADR-2101 counted 44: helper callers) | one mutation, one kill; three orphan controls registered |
 | 3 | 2102 | one ledger, three writers, staleness rule | ADR-2065's 14 movers exact; ADR-2045's 74 → 59 on today's tree; ADR-2075's 7 of 9; `--trace` moved 0 of 100 verdicts |
 | 3b | 2105 | typed name and construct set in the trail JSON; the process-global recorder deleted | first-writer-wins proven on a quantified query; ledger's two empty columns fill |
+| 1b | 2103 | the `q:*` ladder under the ownership rule; eight bare `?`s in `q:checked-fast-path` closed; a bounded continuation share | sizing **0 of 482**; 1,800-row A/B net +4, 0 flips, 0 stable losses; ADR-2100's two lost files decide again |
 | — | 2090 | assertion selection: z3's minimal cores are median 3 conjuncts and we still fail 193 of 230 of them | ceiling **36 of 645**; nothing built |
 
 ## What the instruments now agree on
@@ -32,13 +35,12 @@ denominators.
 
 ## Open
 
-- **QUANT-LADDER-OWNERSHIP (ADR-2103)** — the `q:*` ladder under the ownership
-  rule plus a bounded continuation share. Live defects closed on the way (eight
-  bare `?`s in `q:checked-fast-path`; `q:egraph` asking what `q:mbqi` supports).
-  600 of 1,800 rows: +2, 0 losses, 0 flips, and both of ADR-2100's lost files
-  decide again. Six divisions and the 3× movers recheck outstanding; merges when
-  the criterion is measured, not before.
-- Phase 4 (derived ladder order) runs only if the ledger shows structure.
+- **LEDGER-STRUCTURE** — fills the ledger with 1,400 Tier 1 rows on
+  `db31113fa` and answers the plan's §5 condition per feature class. Phase 4
+  runs only if it reports STRUCTURE, with the ceiling in files.
+- The four give-up classes CORE-SELECT located (e-matching fixpoint, mbqi
+  datatype decline, unreached nested quantifier, integer width 32) are the
+  capability lanes that follow this plan; none is dispatch.
 - Not this plan's: `check-merge-hygiene.sh` fails on any host with a fresh
   `shape_search` binary — two unadjudicated `AlgS` duplicate groups.
 
@@ -50,5 +52,8 @@ denominators.
   red on main (an unregistered sentinel constant). Run that step by hand.
 - ADR-2101's "44 free-string sites" counted callers of two unchanged helpers;
   rustc's number was 25.
+- Both Rust lanes' briefs asked for `cargo check`, not clippy; the push battery
+  found two lint errors after the merges. Briefs now name clippy on touched
+  crates.
 - A Sonnet lane's forked helpers inherited the whole brief and rebuilt both
   deliverables in parallel. Helpers get their slice only, as fresh agents.
