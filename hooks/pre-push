@@ -370,7 +370,16 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   step_seconds() {
     local start=$SECONDS label="$1"
     shift
-    "$@" || return 1
+    # Name the step on failure. Before 2026-09-15 a failing step here returned
+    # 1 with NOTHING printed, and a push whose battery died between the L0
+    # block and the first cargo scope left a log ending in git's own
+    # `failed to push some refs` -- three times in one day, two of them passed
+    # by a bare retry. A silent exit is indistinguishable from a kill.
+    if ! "$@"; then
+      local rc=$?
+      echo "pre-push: FAILED — ${label} (exit ${rc}, after $((SECONDS - start))s)" >&2
+      return 1
+    fi
     echo "pre-push:   ${label} — $((SECONDS - start))s" >&2
   }
 
