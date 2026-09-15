@@ -158,3 +158,42 @@ At most **6 pinned physical cores**, named here and held fixed:
 Every analysis script runs under `MEM_LIMIT_GB=16 scripts/mem-run.sh`; a lane's
 `let`-expander reached 63.4 GB under a `timeout`, which bounds wall clock and
 says nothing about memory.
+
+## Amendments
+
+Written **after** a 60-row seeded pilot and **before** any census row was
+counted. They are recorded here rather than folded silently into the rules,
+because an amendment you cannot see is the same thing as no preregistration.
+
+**A1 — a per-row wall-clock cap outside python.** `--min-budget` bounds only the
+minimisation loop; a bound on one phase is not a bound on the row. `core-run.sh`
+wraps each row in `timeout` and in `ulimit -v`, and a row that produces no line
+is written `ROW-ABORT:<rc>`, never a small core and never a missing row.
+
+**A2 — `CORE-FAILED` is a declared bucket.** The pilot found a row that is
+`unsat` on the split file and `unknown` under `:produce-unsat-cores`, because
+core production disables preprocessing. That is a measurement gap, not a large
+core, and it gets its own class rather than being folded into a size or dropped.
+
+**A3 — a POST-HOC classification, labelled as such wherever it is quoted.**
+The pilot showed that a minimal core of **1** does not mean what a median of 1
+looks like it means. On `AUFDTLIRA/.../K223-023__search__search`, the minimal
+core is one conjunct of twelve, and that conjunct is
+`(assert (not (forall ((pos Int) (pos1 Int) (result Int)) ...)))` — the entire
+verification condition. There is nothing to select. So the census splits
+`REF-UNSAT` rows three ways:
+
+| class | meaning | is selection the mechanism? |
+|---|---|---|
+| `SINGLETON` | `minimal == 1` | **no** — the refutation is inside one assertion |
+| `NEEDLE` | `1 < minimal < conjuncts` | this is the shape selection is FOR |
+| `WHOLE` | `minimal == conjuncts` | **no** — every conjunct is necessary |
+
+This split is **not** one of R1–R12. It was introduced by the data and is named
+as post-hoc every time it is quoted. R5's pre-registered test is unchanged and
+is still evaluated on the median `minimal` over all `REF-UNSAT` rows.
+
+**A4 — the strategy sizing (R7) runs only on rows where the ceiling (R6) is
+positive.** A strategy cannot beat the ceiling, so sizing one on a row we would
+not decide even with the reference's own core handed to us measures nothing.
+This narrows R7's denominator and the denominator is printed with it.
