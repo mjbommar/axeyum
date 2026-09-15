@@ -1,0 +1,41 @@
+cores traced and joined: 231 of 232 traced
+
+traced verdict vs untraced ceiling: 0 disagreements of 231
+
+--- WE REFUTE THE CORE (ceiling positive): 38 ---
+     17  bound_by=q:mbqi-quick       kind=NONE
+     13  bound_by=q:uf-fmf-probe     kind=NONE
+      3  bound_by=q:bool-skeleton    kind=NONE
+      2  bound_by=fd:parse           kind=NONE
+      2  bound_by=q:mbqi             kind=NONE
+      1  bound_by=uf-arithmetic      kind=NONE
+   attempts med=7 max=41   total_ms med=600 max=14681
+
+--- WE DO NOT (ceiling negative): 193 ---
+     40  bound_by=q:mbqi             kind=ResourceLimit
+     37  bound_by=q:mbqi             kind=Incomplete
+     31  bound_by=int-blast-ladder   kind=Timeout
+     26  bound_by=q:egraph           kind=ResourceLimit
+     17  bound_by=NONE               kind=Watchdog
+     14  bound_by=q:egraph           kind=Incomplete
+      4  bound_by=q:mbqi-quick       kind=Incomplete
+      3  bound_by=q:ground-subset    kind=ResourceLimit
+   attempts med=20 max=1156   total_ms med=13134 max=24939
+
+--- give-up DETAIL over the ceiling-negative rows, VERBATIM, top 12 ---
+    39  e-matching: instantiation time budget exhausted mid-round (the interleaved ground check did not decide the set inside th
+    30  preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [ResourceLimit] integer bit-blast 
+    28  quantified solve time budget exhausted after e-matching
+    17  watchdog fired before the worker thread returned
+     8  e-matching instantiation reached fixpoint without refuting after 2 rounds (no further instance to admit; more rounds can
+     7  mbqi declined an unsupported fragment: congruence over a datatype argument whose expansion is not exact (a field with no
+     7  mbqi declined an unsupported fragment: a datatype field sort with no expansion variable (native datatype solving expands
+     5  query has quantifiers instantiation does not reach (nested, existential, or non-top-level)
+     4  e-matching instantiation reached fixpoint without refuting after 3 rounds (no further instance to admit; more rounds can
+     4  no model within the bounded integer width 32; widen the bound
+     3  e-matching: no universal is asserted; the nested quantifiers present are registered, not instantiated
+     3  mbqi declined an unsupported fragment: an uninterpreted function applied to a datatype term that is neither a free varia
+
+of the 193 ceiling-negative rows:
+  gave up in under 2 s of the 24 s budget : 64
+  ran 20 s or more                        : 73
