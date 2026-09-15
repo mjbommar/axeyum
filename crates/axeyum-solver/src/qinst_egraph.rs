@@ -64,6 +64,31 @@ const MAX_EXTENDED_INSTANTIATION_ROUNDS: usize = 512;
 /// whole remaining wall clock cannot starve later rounds or the final check.
 const MID_LOOP_CHECK_BUDGET_DIVISOR: u32 = 4;
 
+/// How many trigger ALTERNATIVES auto-selection may propose for one universal
+/// when no user `:pattern` annotation applies (ADR-2113).
+///
+/// **Shipped `1`, which is byte for byte the historical behaviour**:
+/// [`select_trigger_groups`] at `1` evaluates exactly the expression the
+/// compile loop used to inline, so an unset environment cannot reach the new
+/// code path at all.
+///
+/// Both references keep several. z3 turns **every** surviving candidate that
+/// covers all bound variables into its own single-pattern
+/// (`pattern_inference.cpp:458-467`, `candidates2unary_patterns`) and attaches
+/// them all to the quantifier (`pattern_inference.cpp:718`); cvc5 registers a
+/// separate `Trigger` per single pattern term and comments the loop *"add all
+/// considered single triggers"* (`inst_strategy_e_matching.cpp:277-302`). We
+/// keep **one**: [`select_triggers`] returns the FIRST full-cover candidate in
+/// pre-order and the compile loop wraps it in a one-element `vec!`. A universal
+/// whose single chosen trigger never matches produces nothing for the whole
+/// run, which is what the census measures as a *silent* universal.
+///
+/// Raising this can cost search time and can never cost soundness: a trigger's
+/// only output is a substitution, and `∀x. B ⊨ B[x := t]` holds for every
+/// ground `t` whatever proposed it — the asymmetry [`usable_trigger_groups`]
+/// documents, from the other side.
+const TRIGGER_ALTERNATIVE_CAP: usize = 1;
+
 /// A new instantiation round is started only when the remaining budget is at
 /// least this multiple of the previous round's duration: per-round work has
 /// grown 10x+ round-over-round on real corpora, and the e-matcher runs with
@@ -137,6 +162,63 @@ fn instantiation_round_ceiling() -> usize {
         return ceiling;
     }
     process_round_ceiling()
+}
+
+axeyum_ir::cap_lever! {
+    /// The process-wide trigger-alternative cap: [`TRIGGER_ALTERNATIVE_CAP`],
+    /// or `AXEYUM_QINST_TRIGGER_ALTERNATIVES`.
+    ///
+    /// Unset is the shipped `1`, byte for byte: [`select_trigger_groups`]
+    /// short-circuits at `<= 1` to the single call the compile loop used to
+    /// inline, so the OFF path does not run one line of the new selection.
+    ///
+    /// Read through [`trigger_alternative_cap`], never directly — a live
+    /// [`TriggerAlternativeCapGuard`] outranks it.
+    fn process_trigger_alternative_cap() -> usize =
+        "AXEYUM_QINST_TRIGGER_ALTERNATIVES" or TRIGGER_ALTERNATIVE_CAP;
+}
+
+std::thread_local! {
+    /// A per-thread override of the process cap, set by
+    /// [`TriggerAlternativeCapGuard`].
+    ///
+    /// The process cap resolves ONCE from the environment into a `OnceLock`, so
+    /// without this no test in a process could exercise more than one arm — and
+    /// a lever whose ON arm is only reachable by re-launching the binary is a
+    /// lever whose end-to-end soundness test does not exist. The same reasoning,
+    /// and the same shape, as [`GroundBudgetGuard`] and [`RoundCeilingGuard`].
+    static TRIGGER_ALTERNATIVE_OVERRIDE: std::cell::Cell<Option<usize>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Forces a trigger-alternative cap on this thread for the guard's lifetime,
+/// restoring the previous setting on drop.
+pub struct TriggerAlternativeCapGuard(Option<usize>);
+
+impl TriggerAlternativeCapGuard {
+    /// Overrides the process cap on this thread.
+    #[must_use]
+    pub fn set(cap: usize) -> Self {
+        TriggerAlternativeCapGuard(
+            TRIGGER_ALTERNATIVE_OVERRIDE.with(|cell| cell.replace(Some(cap))),
+        )
+    }
+}
+
+impl Drop for TriggerAlternativeCapGuard {
+    fn drop(&mut self) {
+        TRIGGER_ALTERNATIVE_OVERRIDE.with(|cell| cell.set(self.0));
+    }
+}
+
+/// The trigger-alternative cap in force on this thread: a live
+/// [`TriggerAlternativeCapGuard`]'s choice, else the process cap.
+#[must_use]
+fn trigger_alternative_cap() -> usize {
+    if let Some(cap) = TRIGGER_ALTERNATIVE_OVERRIDE.with(std::cell::Cell::get) {
+        return cap;
+    }
+    process_trigger_alternative_cap()
 }
 
 axeyum_ir::cap_lever! {
@@ -5509,7 +5591,7 @@ impl IncrementalEmatchSession {
                     );
                 }
                 let source_groups =
-                    user_groups.unwrap_or_else(|| vec![select_triggers(arena, body, &var_index)]);
+                    user_groups.unwrap_or_else(|| select_trigger_groups(arena, body, &var_index));
                 for group in source_groups {
                     let mut group_indices = Vec::with_capacity(group.len());
                     for trigger in group {
@@ -8613,6 +8695,136 @@ fn select_triggers(arena: &TermArena, body: TermId, vars: &HashMap<SymbolId, u32
         }
     }
     chosen
+}
+
+/// The trigger ALTERNATIVES auto-selection proposes for one universal.
+///
+/// Each returned inner vector is one alternative: [`CompiledUniversal`]'s join
+/// unions the alternatives' tuple sets, so any one of them firing is enough.
+/// That machinery already exists and is already exercised — by user `:pattern`
+/// annotations, whose whole point is that there may be several — and its own
+/// doc comment names this gap: *"Auto trigger selection produces exactly one
+/// alternative."* This function is what removes that sentence, under a lever.
+///
+/// # What it does at a cap above one
+///
+/// 1. Every candidate application that covers **all** bound variables becomes a
+///    single-pattern alternative of its own, which is z3's
+///    `candidates2unary_patterns` (`pattern_inference.cpp:458-467`) and cvc5's
+///    *"add all considered single triggers"* loop
+///    (`inst_strategy_e_matching.cpp:277-302`).
+/// 2. A candidate that PROPERLY CONTAINS another full-cover candidate is
+///    dropped. Terms are hash-consed here, so containment is an exact
+///    structural test, and the drop is not a heuristic: if `b` is a subterm of
+///    `a` and both cover every variable, every ground match of `a` carries a
+///    match of `b`, so `a` proposes a subset of what `b` proposes and costs
+///    strictly more to match. This is z3's `filter_bigger_patterns`
+///    (`pattern_inference.cpp:391-396`) reached by a different argument.
+/// 3. The survivors are ordered by [`witness_size`] ascending, ties broken by
+///    `TermId`. **Determinism is a public API promise and this is where an
+///    alternative set could have broken it**: `collect_app_candidates` walks a
+///    cloned argument list in a fixed order and `TermId`s are assigned densely
+///    in insertion order, so the sort is total and identical runs order the
+///    alternatives identically. Smallest-first is both references' preference
+///    (z3 `pattern_weight_lt`, `pattern_inference.cpp:399-408`; cvc5's default
+///    `triggerSelMode=MIN`), and it is the right one for a matcher: a smaller
+///    pattern matches at least as often.
+/// 4. The list is truncated to the cap, and an empty result falls back to
+///    [`select_triggers`] — which is also the multi-pattern route, since a
+///    universal no single application covers has no full-cover candidate here.
+///
+/// # Soundness
+///
+/// Unconditional, and not a property of this ordering. A trigger's only output
+/// is a substitution; every instance the loop admits is
+/// `replace_subterms(body, x ↦ t)` and `∀x. B ⊨ B[x := t]` for **every** ground
+/// `t`, whatever proposed it. So adding alternatives can only add entailed
+/// conjuncts. It can cost time, and it can change which refutation is found
+/// first; it cannot produce a wrong `unsat`. See [`usable_trigger_groups`],
+/// which states the same asymmetry from the declining side.
+fn select_trigger_groups(
+    arena: &TermArena,
+    body: TermId,
+    vars: &HashMap<SymbolId, u32>,
+) -> Vec<Vec<TermId>> {
+    select_trigger_groups_with_cap(arena, body, vars, trigger_alternative_cap())
+}
+
+/// [`select_trigger_groups`] at an explicit cap.
+///
+/// Split out for the same reason `parse_ground_budget` is: the cap resolves
+/// through a `OnceLock`, so a test going through the resolver could only ever
+/// exercise the arm its process started with, and the arm that is NOT shipped
+/// is the one that needs the tests.
+fn select_trigger_groups_with_cap(
+    arena: &TermArena,
+    body: TermId,
+    vars: &HashMap<SymbolId, u32>,
+    cap: usize,
+) -> Vec<Vec<TermId>> {
+    if cap <= 1 {
+        // The shipped path, byte for byte the expression the compile loop
+        // inlined before this function existed.
+        return vec![select_triggers(arena, body, vars)];
+    }
+
+    let mut candidates: Vec<(TermId, HashSet<u32>)> = Vec::new();
+    collect_app_candidates(arena, body, vars, &mut candidates);
+    let all: HashSet<u32> = (0..u32::try_from(vars.len()).expect("var count fits u32")).collect();
+
+    let mut full: Vec<TermId> = Vec::new();
+    for (term, covered) in &candidates {
+        if *covered == all && !full.contains(term) {
+            full.push(*term);
+        }
+    }
+    if full.is_empty() {
+        return vec![select_triggers(arena, body, vars)];
+    }
+
+    let minimal: Vec<TermId> = full
+        .iter()
+        .copied()
+        .filter(|&candidate| {
+            !full
+                .iter()
+                .any(|&other| other != candidate && is_proper_subterm(arena, other, candidate))
+        })
+        .collect();
+    // `minimal` cannot be empty -- proper containment is a strict partial order
+    // on a finite set, so at least one element is minimal -- but an empty vector
+    // here would silently starve the universal, and a structural argument is not
+    // a guard. Falling back costs nothing and cannot be wrong.
+    let mut ranked = if minimal.is_empty() { full } else { minimal };
+    ranked.sort_by_key(|&term| (witness_size(arena, term), term));
+    ranked.truncate(cap);
+    ranked.into_iter().map(|term| vec![term]).collect()
+}
+
+/// Whether `needle` occurs as a PROPER subterm of `haystack`.
+///
+/// Exact, not approximate: the arena hash-conses, so structural equality is
+/// `TermId` equality. `needle == haystack` is false by construction, which is
+/// what "proper" means and what keeps [`select_trigger_groups`]'s containment
+/// filter from deleting every candidate.
+fn is_proper_subterm(arena: &TermArena, haystack: TermId, needle: TermId) -> bool {
+    if haystack == needle {
+        return false;
+    }
+    let mut stack = vec![haystack];
+    let mut seen: HashSet<TermId> = HashSet::new();
+    while let Some(current) = stack.pop() {
+        if !seen.insert(current) {
+            continue;
+        }
+        if current == needle {
+            return true;
+        }
+        if let TermNode::App { args, .. } = arena.node(current) {
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
 }
 
 /// Probe-only classification of a universal that [`select_triggers`] could not
