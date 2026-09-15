@@ -64381,7 +64381,8 @@ quantified ladder in `solve`; it named typing that one as the obvious next
 slice and published **two stable losses** it declined to trade the rule for.
 This lane is both.
 
-Branch base: `7d922fe58`, local `main` at ADR-2100's merge.
+Branch base: `51baff9ef` after merging `main` (ADR-2104, typed `DeclineReason`
+detail) mid-lane. The lane branched from `7d922fe58`, ADR-2100's merge.
 
 ## The sizing, first and unflattering
 
@@ -64464,12 +64465,58 @@ sentence with an invented `"quantified solve time budget exhausted"` — a messa
 simply false about what happened. Reclassified as propagation, **all nine came
 back and no assertion was weakened.**
 
+## Gates
+
+| gate | result |
+|---|---|
+| the 19 `dispatch/reason:` suites (list read out of `hooks/pre-push`) | **GREEN, 183 tests, 0 failed, 0 inert** |
+| `progress_frontier --features full -- --test-threads=1` | **12/12, no regression**, every family `comparable`/`ratchetable` |
+| `cargo check -p axeyum-solver --all-targets` (DEFAULT features) | clean |
+| `cargo fmt --all --check` | exit 0 |
+| `scripts/check-merge-hygiene.sh` | `PASS` |
+| `./scripts/check-links.sh` | `all links ok` |
+| `mutation_controls.py --check-anchors` | `suites=137\|anchors=1059\|stale=0` |
+
+**Mutation — three runners, three DIFFERENT fixtures, exactly one kill each:**
+
+| mutation | baseline | kills |
+|---|---:|---|
+| `quant-route-ownership-rule` | 101 green | 1: `a_one_directional_quantified_rungs_unknown_never_terminates_the_ladder` |
+| `quant-route-ownership-marker` | 101 green | 1: `an_owning_quant_deciders_refusal_is_reported_and_a_one_directional_rungs_is_not` |
+| `quant-continuation-bound` | 101 green | 1: `the_continuation_bound_applies_only_inside_a_quantified_ladder` |
+
+**The frontier artifacts are NOT re-pinned.** `bv_reduction` read **36 against a
+committed 39** at a baseline of 30. ADR-2100 saw **38** against the same 39 one
+commit earlier and recorded why it did not move the pin: that family's history
+is **40 → 34 → 39** at a fixed baseline, so a single point inside its own
+variance is not grounds to move a shared pin in either direction. Restored.
+
+## The A/B
+
+A = `51baff9ef` (this branch's merge-base), B = this branch, ADR-2100's
+`ab-run.sh` and `ablists` unchanged, 24 s / 8 GiB, one division at a time on 12
+shards across s5/s6/s7. **The A arm is NOT the `7d922fe58` the brief named** —
+`main` moved (ADR-2104) and this lane was instructed to merge it, so measuring
+against `7d922fe58` would put ADR-2104's diff in the B arm.
+
+**The two files ADR-2100 named come back**: A `unknown` 3/3, B `unsat` 3/3,
+through ADR-2100's own `recheck-movers.sh`, exit status 0 on all twelve passes.
+Read the direction carefully — **A here INCLUDES ADR-2100**, so A is the arm
+that lost them. They are also exactly the two raw gains in the `AUFDTLIRA`
+pairing.
+
 ## Landed changes
 
 | commit | what |
 |---|---|
 | `531a593eb` | the sizing: 0 of 482, per division, and the five scripts, before any Rust |
 | `2d7ecb967` | `quant_ownership`, the 29 typed sites, the deleted cross-route predicate, the bounded continuation |
+| `9cfcdeb43` | the fixtures; the four hand-offs reclassified as ladder TAILS |
+| `d52fd3c59` | `LadderSlice` + registry entry, two typed decline details, three mutation controls |
+| `58fe79992` | ADR-2103, this file, the regenerated index and plan |
+| `75a5e822a` | the bound narrowed to `settle_rung`'s conversion only; the A/B launchers |
+| `b006a66ed` | both named losses recovered 3/3; the sequential runner and why it exists |
+| `ae7329302` | the 19 suites, three mutations, the frontier run, division 1 of the A/B |
 
 <!-- /plan-section -->
 
