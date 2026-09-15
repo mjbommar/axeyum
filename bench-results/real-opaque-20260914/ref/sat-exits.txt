@@ -1,9 +1,9 @@
 == REAL-OPAQUE Sat-exit enumeration ==
-commit: cfcc294eea657a9cf0ba47759acdae65e3a64135
-date:   2026-09-14T21:41:54-04:00
+commit: 70baf9713be322385a205efd4d24d9ed9066a20b
+date:   2026-09-14T22:49:32-04:00
 
 -- E0: every cfg(test) attribute, and why a single cut point is wrong --
-crates/axeyum-solver/src/lra.rs  total=6430  cfg(test)_at: 2955 2982 4635 4807 4928 5256 5380 6238 
+crates/axeyum-solver/src/lra.rs  total=6529  cfg(test)_at: 3010 3037 4690 4862 4983 5311 5435 6293 
 crates/axeyum-solver/src/dpll_lia.rs  total=6653  cfg(test)_at: 1730 4863 
    The FIRST one is a test-only helper item in the middle of both files,
    not the test module at the end. satexits.py skips each region by brace
@@ -12,8 +12,8 @@ crates/axeyum-solver/src/dpll_lia.rs  total=6653  cfg(test)_at: 1730 4863
 -- E1: every construction site of lra::Collector in the workspace --
 crates/axeyum-solver/src/lra.rs:867:    let mut ctx = Collector {
 crates/axeyum-solver/src/lra.rs:870:        ..Collector::default()
-crates/axeyum-solver/src/lra.rs:4273:    let mut ctx = Collector::default();
-crates/axeyum-solver/src/lra.rs:5931:        let empty = Collector::default();
+crates/axeyum-solver/src/lra.rs:4328:    let mut ctx = Collector::default();
+crates/axeyum-solver/src/lra.rs:5986:        let empty = Collector::default();
    (each is either Collector::default() -- allow_opaque_apps == false --
     or names the field explicitly)
 
@@ -30,58 +30,67 @@ crates/axeyum-solver/src/lra.rs:5931:        let empty = Collector::default();
 921:    decide_within_with_options(arena, assertions, deadline, OpaqueReals::Refuse)
 939:    opaque_reals: OpaqueReals,
 964:    let mut ctx = match collect_constraints_with_options(arena, assertions, deadline, opaque_reals)?
-1783:    /// [`OpaqueReals::Refuse`] on every [`Collector::default`], and settable
-1788:    opaque_reals: OpaqueReals,
-2096:            } if self.opaque_reals == OpaqueReals::Abstract && is_real(arena, term) => {
-2621:    collect_constraints_with_options(arena, &[atom], None, OpaqueReals::Abstract).map(|_| ())
-2690:        match decide_within_with_options(arena, assertions, deadline, OpaqueReals::Abstract)? {
-6024:                collect_constraints_with_options(&arena, &opaque, None, OpaqueReals::Abstract)
-6304:        let refused = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Refuse);
-6311:        let decided = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Abstract)
-6350:        let decided = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Abstract)
+1838:    /// [`OpaqueReals::Refuse`] on every [`Collector::default`], and settable
+1843:    opaque_reals: OpaqueReals,
+2151:            } if self.opaque_reals == OpaqueReals::Abstract && is_real(arena, term) => {
+2676:    collect_constraints_with_options(arena, &[atom], None, OpaqueReals::Abstract).map(|_| ())
+2745:        match decide_within_with_options(arena, assertions, deadline, OpaqueReals::Abstract)? {
+6079:                collect_constraints_with_options(&arena, &opaque, None, OpaqueReals::Abstract)
+6359:        let refused = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Refuse);
+6366:        let decided = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Abstract)
+6405:        let decided = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Abstract)
+6458:        let decided = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Abstract)
    -- integer side, for contrast --
-1769:    /// Populated only when [`Collector::allow_opaque_apps`] is set. Keying by
-2761:/// `allow_opaque_apps` is `true` to match
-2838:    allow_opaque_apps: bool,
-2841:    lia_simplex_capped(arena, assertions, deadline, allow_opaque_apps, node_cap)
-2959:    allow_opaque_apps: bool,
-2961:    let mut ctx = IntCollector::new(allow_opaque_apps);
-2996:    allow_opaque_apps: bool,
-3000:    let mut ctx = IntCollector::new(allow_opaque_apps);
+1824:    /// Populated only when [`Collector::allow_opaque_apps`] is set. Keying by
+2816:/// `allow_opaque_apps` is `true` to match
+2893:    allow_opaque_apps: bool,
+2896:    lia_simplex_capped(arena, assertions, deadline, allow_opaque_apps, node_cap)
+3014:    allow_opaque_apps: bool,
+3016:    let mut ctx = IntCollector::new(allow_opaque_apps);
+3051:    allow_opaque_apps: bool,
+3055:    let mut ctx = IntCollector::new(allow_opaque_apps);
 
 -- E2: callers of collect_constraints_with_options (the only setter) --
 crates/axeyum-solver/src/lra.rs:838:    collect_constraints_with_options(arena, assertions, deadline, OpaqueReals::Refuse)
 crates/axeyum-solver/src/lra.rs:860:fn collect_constraints_with_options(
 crates/axeyum-solver/src/lra.rs:964:    let mut ctx = match collect_constraints_with_options(arena, assertions, deadline, opaque_reals)?
-crates/axeyum-solver/src/lra.rs:2621:    collect_constraints_with_options(arena, &[atom], None, OpaqueReals::Abstract).map(|_| ())
-crates/axeyum-solver/src/lra.rs:6024:                collect_constraints_with_options(&arena, &opaque, None, OpaqueReals::Abstract)
+crates/axeyum-solver/src/lra.rs:2676:    collect_constraints_with_options(arena, &[atom], None, OpaqueReals::Abstract).map(|_| ())
+crates/axeyum-solver/src/lra.rs:6079:                collect_constraints_with_options(&arena, &opaque, None, OpaqueReals::Abstract)
 
 -- E2b: callers of decide_within_with_options --
 crates/axeyum-solver/src/lra.rs:921:    decide_within_with_options(arena, assertions, deadline, OpaqueReals::Refuse)
 crates/axeyum-solver/src/lra.rs:935:fn decide_within_with_options(
-crates/axeyum-solver/src/lra.rs:2690:        match decide_within_with_options(arena, assertions, deadline, OpaqueReals::Abstract)? {
-crates/axeyum-solver/src/lra.rs:6304:        let refused = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Refuse);
-crates/axeyum-solver/src/lra.rs:6311:        let decided = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Abstract)
-crates/axeyum-solver/src/lra.rs:6350:        let decided = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Abstract)
+crates/axeyum-solver/src/lra.rs:2745:        match decide_within_with_options(arena, assertions, deadline, OpaqueReals::Abstract)? {
+crates/axeyum-solver/src/lra.rs:6359:        let refused = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Refuse);
+crates/axeyum-solver/src/lra.rs:6366:        let decided = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Abstract)
+crates/axeyum-solver/src/lra.rs:6405:        let decided = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Abstract)
+crates/axeyum-solver/src/lra.rs:6458:        let decided = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Abstract)
 
 -- E3: every Sat CONSTRUCTION in both files, test regions EXCLUDED --
    (by brace balance, not by cutting at the first cfg(test) -- see satexits.py:
     the cut version discarded 2,397 + 3,133 production lines and looked clean)
 == crates/axeyum-solver/src/lra.rs ==
-   lines=6430 cfg(test)_regions=8 lines_in_test=1789
+   lines=6529 cfg(test)_regions=8 lines_in_test=1833
    Decision::Sat: raw=14 in_test=8 production=6 production_non_pattern=3
       crates/axeyum-solver/src/lra.rs:153: Decision::Sat(model) => (CheckResult::Sat(model), None),
       crates/axeyum-solver/src/lra.rs:1257: Ok(Decision::Sat(model))
-      crates/axeyum-solver/src/lra.rs:1480: Ok(Ok(Decision::Sat(model)))
+      crates/axeyum-solver/src/lra.rs:1535: Ok(Ok(Decision::Sat(model)))
    CheckResult::Sat: raw=5 in_test=2 production=3 production_non_pattern=3
       crates/axeyum-solver/src/lra.rs:153: Decision::Sat(model) => (CheckResult::Sat(model), None),
-      crates/axeyum-solver/src/lra.rs:3085: Ok(CheckResult::Sat(model))
-      crates/axeyum-solver/src/lra.rs:4306: Ok(CheckResult::Sat(model))
+      crates/axeyum-solver/src/lra.rs:3140: Ok(CheckResult::Sat(model))
+      crates/axeyum-solver/src/lra.rs:4361: Ok(CheckResult::Sat(model))
    LraOpaqueOutcome: raw=6 in_test=1 production=5 production_non_pattern=4
-      crates/axeyum-solver/src/lra.rs:2691: Decision::UnsatFarkas { .. } | Decision::UnsatTrivial(_) => LraOpaqueOutcome::Unsat,
-      crates/axeyum-solver/src/lra.rs:2711: Decision::GaveUp(gave_up) => LraOpaqueOutcome::Undecided(UnknownReason {
-      crates/axeyum-solver/src/lra.rs:2715: Decision::Incomplete(detail) => LraOpaqueOutcome::Undecided(UnknownReason {
-      crates/axeyum-solver/src/lra.rs:2719: Decision::OutOfMemory(detail) => LraOpaqueOutcome::Undecided(UnknownReason {
+      crates/axeyum-solver/src/lra.rs:2746: Decision::UnsatFarkas { .. } | Decision::UnsatTrivial(_) => LraOpaqueOutcome::Unsat,
+      crates/axeyum-solver/src/lra.rs:2766: Decision::GaveUp(gave_up) => LraOpaqueOutcome::Undecided(UnknownReason {
+      crates/axeyum-solver/src/lra.rs:2770: Decision::Incomplete(detail) => LraOpaqueOutcome::Undecided(UnknownReason {
+      crates/axeyum-solver/src/lra.rs:2774: Decision::OutOfMemory(detail) => LraOpaqueOutcome::Undecided(UnknownReason {
+   Collector::default(): raw=3 in_test=1 production=2 production_non_pattern=2
+      crates/axeyum-solver/src/lra.rs:870: ..Collector::default()
+      crates/axeyum-solver/src/lra.rs:4328: let mut ctx = Collector::default();
+   Collector { (literal): raw=3 in_test=0 production=3 production_non_pattern=3
+      crates/axeyum-solver/src/lra.rs:867: let mut ctx = Collector {
+      crates/axeyum-solver/src/lra.rs:1816: struct Collector {
+      crates/axeyum-solver/src/lra.rs:1881: impl Collector {
 
 == crates/axeyum-solver/src/dpll_lia.rs ==
    lines=6653 cfg(test)_regions=2 lines_in_test=1802
@@ -94,15 +103,17 @@ crates/axeyum-solver/src/lra.rs:6350:        let decided = decide_within_with_op
       crates/axeyum-solver/src/dpll_lia.rs:3339: CheckResult::Sat(model) => Ok(TheoryModelOutcome::Model(model)),
       crates/axeyum-solver/src/dpll_lia.rs:3381: SatResult::Sat(assignment) => Ok(CheckResult::Sat(self.model_from(&assignment))),
    LraOpaqueOutcome: raw=0 in_test=0 production=0 production_non_pattern=0
+   Collector::default(): raw=0 in_test=0 production=0 production_non_pattern=0
+   Collector { (literal): raw=0 in_test=0 production=0 production_non_pattern=0
 
 
 -- E3c: the guards that close them --
 1227:    if ctx.has_opaque_vars() {
-1457:            if ctx.has_opaque_vars() {
-2967:    let has_opaque_vars = ctx.has_opaque_vars();
-3035:    let has_opaque_vars = ctx.has_opaque_vars();
-6027:            assert!(ctx.has_opaque_vars(), "the fixture must actually abstract");
-6045:                !plain_ctx.has_opaque_vars(),
+1512:            if ctx.has_opaque_vars() {
+3022:    let has_opaque_vars = ctx.has_opaque_vars();
+3090:    let has_opaque_vars = ctx.has_opaque_vars();
+6082:            assert!(ctx.has_opaque_vars(), "the fixture must actually abstract");
+6100:                !plain_ctx.has_opaque_vars(),
 1338:                if !self.ctx.has_opaque_int_apps(arena) && !self.ctx.has_opaque_real_apps(arena) {
 1410:            if self.ctx.has_opaque_int_apps(arena) {
 1420:            if self.ctx.has_opaque_real_apps(arena) {
