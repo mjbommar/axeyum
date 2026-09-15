@@ -1742,13 +1742,17 @@ fn ownership_continuation_config(
         return None;
     }
     let remaining = deadline?.checked_duration_since(Instant::now())?;
-    // Through `LadderSlice`, not a bare division: `auto`'s own
+    // Through `LadderSlice`, not a bare division. `auto`'s own
     // `every_route_budget_in_this_file_goes_through_the_slice_policy` refuses a
-    // `.timeout = Some(remaining / n)` written by hand, and it is right to --
-    // the clamp inside `slice_of` is the half of this policy that is easy to
-    // get wrong, and one mutation of it made NO test fail until that clamp was
-    // written to cap the floor at HALF the remaining budget rather than all of
-    // it.
+    // hand-written timeout assignment, and it is right to: the clamp inside
+    // `slice_of` is the half of this policy that is easy to get wrong, and one
+    // mutation of it made NO test fail until that clamp was written to cap the
+    // floor at HALF the remaining budget rather than all of it.
+    //
+    // (That guard scans for the assignment as TEXT, so quoting the spelling it
+    // rejects in this comment made it fire on the comment. Named here in prose
+    // instead -- a guard that cannot tell code from a comment about code is
+    // still the guard, and arguing with it costs more than rewording.)
     Some(LadderSlice::fraction("ownership-continuation", share).apply(config, Some(remaining)))
 }
 

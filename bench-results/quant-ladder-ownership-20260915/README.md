@@ -94,3 +94,49 @@ excluded by name in `SILENT_ON_DECLINE`.
 **And the candidate list was capped at 40.** `check-candidates.py`'s first run
 verified 40 of 53 rows and printed "EVERY candidate row is at the budget". The
 cap is gone; the published run covers 53 of 53.
+
+---
+
+## The A/B: what was run, and the two deviations from ADR-2100's recipe
+
+| | |
+|---|---|
+| A arm | `51baff9ef` — this branch's **merge-base** with `main` |
+| B arm | this branch |
+| divisions | the seven Tier 1 plus `QF_LIA` and `QF_LRA`, 200 files each |
+| envelope | 24 s wall, 8 GiB `ulimit -v`, one pinned physical core pair per shard |
+| shards | 12 — three hosts x four core pairs — **one division at a time** |
+| scripts | ADR-2100's `ab-run.sh` and `recheck-movers.sh`, **unchanged** |
+| lists | ADR-2100's `ablists/`, **unchanged** |
+
+**Deviation 1 — the A arm is `51baff9ef`, not the `7d922fe58` the brief named.**
+`7d922fe58` was `main` when this lane branched. `main` then moved (ADR-2104,
+typed `DeclineReason` detail) and the coordinator instructed this lane to merge
+it. Measuring against `7d922fe58` would therefore put ADR-2104's diff in the B
+arm and attribute its effect to ADR-2103. `51baff9ef` isolates this lane's
+change exactly, which is the entire purpose of an A/B.
+
+**Deviation 2 — the divisions run sequentially, and this is a defect in the
+runner, not a preference.** ADR-2100's `launch-ab.sh` takes N division specs and
+launches them ALL at once: its outer loop is over divisions and its inner loops
+are hosts x cores, so nine divisions is **36 concurrent `ab-run.sh` per host
+pinned onto 4 physical cores**. Measured on the first launch here:
+`pgrep -cf ab-run.sh` returned **129, 129 and 133** on s5/s6/s7, one-minute load
+~30 on 16 CPUs.
+
+That does not merely slow the run. `ab-run.sh`'s own header says both arms run
+"back to back on the SAME file on the SAME pinned physical core" so that ambient
+load "cancels in the DIFFERENCE rather than landing entirely on whichever arm
+ran second" — and at 9x oversubscription each 24 s solve gets about a ninth of a
+core, so nearly everything times out and both columns collapse toward `unknown`.
+**A wash of `unknown` reads exactly like "no movement".** The first launch was
+killed, its partial output discarded, and `run-ab-sequential.sh` runs one
+division at a time: 12 shards, one per pinned core pair, which is what
+ADR-2100's own prose describes.
+
+## The two files ADR-2100 named
+
+`named-losses-recheck.tsv` — both **STABLE-GAIN**, A `unknown` 3/3 and B `unsat`
+3/3, exit status 0 on all twelve passes. Read the direction carefully: **A here
+INCLUDES ADR-2100**, so A is the arm that lost these two files and B is the arm
+with the bound.

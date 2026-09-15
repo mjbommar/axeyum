@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+AUFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_d70bc5_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unsat	106	0	unsat	106	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/O512-022__infoflow__infoflow.ads_136_24_contract_case___00.smt2	unknown	25032	0	unknown	24330	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/MA11-009__invariant__kmp.adb_16_17_loop_invariant_preserv___00.smt2	unknown	25032	0	unknown	25032	0	A	unknown
+AUFDTLIRA/20200306-Kanig/spark2014bench/adacore_u__communication.adb_41_32_overflow_check___00.smt2	unknown	24329	0	unknown	25031	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/Q529-038__predicate__bounded_stacks.ads_18_20_integer_stacks.ads_4_1_postcondition___00.smt2	unknown	608	0	unknown	707	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/N624-020__perm_rem__perm.adb_261_42_precondition4___00.smt2	unsat	407	0	unsat	407	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/string_search__string_search.adb_48_94_overflow_check___00.smt2	unsat	107	0	unsat	107	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_880db6_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unknown	25030	0	unknown	25030	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/NA29-017__prove_all__sorting.adb_87_33_overflow_check___00.smt2	unsat	107	0	unsat	107	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/M607-025__rev_stack__list.ads_13_36_precondition2___00.smt2	unsat	207	0	unsat	207	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/S322-028__for_in_termination__bounded_table.adb_37_21_repro_main.adb_9_4_index_check___00.smt2	unsat	107	0	unsat	107	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/P820-002__protected_out__polyorb_hi-utils.adb_47_33_overflow_check___00.smt2	unsat	107	0	unsat	106	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/N624-020__perm_rem__perm.adb_154_33_precondition___00.smt2	unsat	106	0	unsat	107	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/riposte__array_applications__why_0df1aa_array_applications-T-defqtvc__00.smt2	unknown	24028	0	unknown	24129	0	B	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/R509-011__higher_order_proof__why_bfafe7_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2	unknown	25028	0	unsat	16020	0	A	unsat
+AUFDTLIRA/20200306-Kanig/spark2014bench/P412-021__conc_discr_dyn__p.adb_6_19_range_check___00.smt2	unknown	25128	0	unknown	25128	0	B	unknown

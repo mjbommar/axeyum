@@ -1,0 +1,4 @@
+quant-route-ownership-rule: baseline green, 101 tests (scripts/cargo-serialized.sh test -p axeyum-solver --lib --features full auto::tests::)
+  the ownership check on a one-directional quantified rung killed 1: auto::tests::a_one_directional_quantified_rungs_unknown_never_terminates_the_ladder
+
+[exited with code 0]

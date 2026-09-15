@@ -437,11 +437,65 @@ enumerates the sites; each named — MET.** `quant_ownership::QuantRoute` reuses
 error channel still has no `From<SolverError>`; `rustc` named **29**, and the
 table above names each one and how it is closed.
 
-**3. Suites — see the status file for the run.**
+**3. The named suites green with nonzero counts — MET on the `dispatch/reason:`
+block.** All **19** suites of `hooks/pre-push`'s `dispatch/reason:` block — the
+list read out of the hook rather than retyped — **183 tests, 0 failed, 0
+inert**, and the runner's own two guards (a zero-count suite is reported as
+`ZERO TESTS -- an inert suite is not a passing one`, and a missing result line
+as `DID NOT RUN` rather than as a pass) both stayed quiet.
+`bench-results/quant-ladder-ownership-20260915/dispatch-reason-suites.txt`.
+
+This is the run AFTER the nine-red episode above, on the corrected tree, and it
+is the same nineteen-suite list ADR-2100 gated on.
+
+**The capability ratchet: `progress_frontier` 12 of 12, no regression**, every
+family `comparable: true` and `ratchetable: true` — so the ratchet was
+*enforced*, not skipped, which is the distinction
+`frontier-ratchet-reference-frame.md` exists to make.
+
+**The five artifacts are deliberately NOT re-pinned**, and ADR-2100 made the
+same call on the same family one commit earlier. The run rewrote its own JSON,
+and one family — `bv_reduction` — read **36 against a committed 39**, at a
+baseline of 30, so far above the ratchet that it passed. ADR-2100 saw **38**
+against the same committed 39 and recorded why it did not move the pin: that
+family's committed history is **40 → 34 → 39 at a fixed baseline**, so a single
+point inside its own variance is not grounds to move a shared pin in either
+direction. 36 is inside that band too, and this run had the lane's own mutation
+builds on the box beside it. The artifacts are restored; the observation is
+recorded here instead of being re-pinned silently or dropped.
 
 **4. Interleaved A/B — see the status file for the run.**
 
-**5. Mutation — see the status file for the run.**
+**5. Mutation — MET. Three mutations, each killing EXACTLY ONE named fixture,
+and three different fixtures.**
+
+| mutation | baseline | kills |
+|---|---:|---|
+| `quant-route-ownership-rule` — the ownership check on a one-directional quantified rung | 101 green | **1**: `a_one_directional_quantified_rungs_unknown_never_terminates_the_ladder` |
+| `quant-route-ownership-marker` — the inconsistency report on an owning quantified decider's refusal | 101 green | **1**: `an_owning_quant_deciders_refusal_is_reported_and_a_one_directional_rungs_is_not` |
+| `quant-continuation-bound` — the bound on the ownership rule's continuation, set to unbounded | 101 green | **1**: `the_continuation_bound_applies_only_inside_a_quantified_ladder` |
+
+The third is the budget half the exit criterion asks for, and the mutation is on
+the SHARE GUARD rather than on the constant. Editing
+`const OWNERSHIP_CONTINUATION_SHARE: u32 = 4;` would also kill
+`the_ownership_continuation_share_lever_fails_closed`, which pins that literal
+and would die from ANY edit to the line — a kill set that includes a test fired
+by the changed line measures the edit, not the guard. ADR-2100 declined the same
+temptation for the same reason on `DispatchRoute::owns`.
+
+Three runners and not one, for the reason ADR-2100 gave: the halves fail in
+opposite directions, and a shared rejection path is how six of seven guards in
+one suite here were once removable with everything still green.
+`--check-anchors` reports `suites=137|anchors=1059|stale=0`.
+
+Its first run came back **BASELINE IS NOT GREEN**, killing
+`every_route_budget_in_this_file_goes_through_the_slice_policy` — and the reason
+is worth recording because it is the same shape as the anchor collision above.
+That guard scans for a hand-written timeout assignment **as text**, and the
+comment written beside `ownership_continuation_config` to explain why the code
+goes through `LadderSlice` **quoted the spelling the guard rejects**. The guard
+fired on the comment. A guard that cannot tell code from a comment about code is
+still the guard; the comment names the spelling in prose now.
 
 [1927]: adr-1927-a-ladder-rungs-fragment-refusal-is-a-decline-not-the-querys-verdict.md
 [1966]: adr-1966-a-rungs-refusal-of-a-construct-a-later-rung-owns-is-a-decline.md

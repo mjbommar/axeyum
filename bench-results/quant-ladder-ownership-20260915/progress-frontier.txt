@@ -1,0 +1,22 @@
+   Compiling axeyum-solver v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-a6cf84ff78b8d522a/crates/axeyum-solver)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.36s
+     Running tests/progress_frontier.rs (target/debug/deps/progress_frontier-fb9213ec6d679649)
+
+running 12 tests
+test artifact_directory_override_is_explicit_and_absolute ... ok
+test bv_reduction_falloff_is_the_lever ... ok
+test calibration_frames_the_measurement ... ok
+test every_generated_instance_self_checks ... ok
+test frontier_bv_reduction ... ok
+test frontier_lia_cuts ... ok
+test frontier_nia_unsat ... ok
+test frontier_nra_degree ... ok
+test frontier_string_bound ... ok
+test nonlinear_self_checks_reject_corruption ... ok
+test timing_baselines_are_internally_consistent ... ok
+test timing_ratchet_fires_on_a_slowdown_and_not_on_a_healthy_run ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 270.42s
+
+
+[exited with code 0]
