@@ -1,0 +1,21 @@
+sweep_id	arm	corpus_path	binary_sha	features	verdict	exit_status	decided_by	bound_by	attempts	attempt_trail	elapsed_ms	elapsed_ms_per_attempt	partial	decline_reasons	decline_details	decline_names	host	core	load
+synthetic-fixture	A	SYN/Int/structure_00.smt2	synthetic0	Int	sat	0	fast-route	fast-route	2	slow-route:declined\pfast-route:decided	550	500\p50	no	slow-route=budget	slow route gave up	other	fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Int/structure_01.smt2	synthetic0	Int	sat	0	fast-route	fast-route	2	slow-route:declined\pfast-route:decided	550	500\p50	no	slow-route=budget	slow route gave up	other	fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Int/structure_02.smt2	synthetic0	Int	sat	0	fast-route	fast-route	2	slow-route:declined\pfast-route:decided	550	500\p50	no	slow-route=budget	slow route gave up	other	fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Int/structure_03.smt2	synthetic0	Int	sat	0	fast-route	fast-route	2	slow-route:declined\pfast-route:decided	550	500\p50	no	slow-route=budget	slow route gave up	other	fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Int/structure_04.smt2	synthetic0	Int	sat	0	fast-route	fast-route	2	slow-route:declined\pfast-route:decided	550	500\p50	no	slow-route=budget	slow route gave up	other	fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Int/structure_05.smt2	synthetic0	Int	sat	0	fast-route	fast-route	2	slow-route:declined\pfast-route:decided	550	500\p50	no	slow-route=budget	slow route gave up	other	fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Int/structure_06.smt2	synthetic0	Int	sat	0	fast-route	fast-route	2	slow-route:declined\pfast-route:decided	550	500\p50	no	slow-route=budget	slow route gave up	other	fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Int/structure_07.smt2	synthetic0	Int	sat	0	fast-route	fast-route	2	slow-route:declined\pfast-route:decided	550	500\p50	no	slow-route=budget	slow route gave up	other	fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Int/single_decider_00.smt2	synthetic0	Int	unsat	0	slow-route	slow-route	1	slow-route:decided	400	400	no				fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Int/single_decider_01.smt2	synthetic0	Int	unsat	0	slow-route	slow-route	1	slow-route:decided	400	400	no				fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Real/single_route_00.smt2	synthetic0	Real	sat	0	only-route	only-route	1	only-route:decided	20	20	no				fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Real/single_route_01.smt2	synthetic0	Real	sat	0	only-route	only-route	1	only-route:decided	20	20	no				fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Real/single_route_02.smt2	synthetic0	Real	sat	0	only-route	only-route	1	only-route:decided	20	20	no				fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Real/single_route_03.smt2	synthetic0	Real	sat	0	only-route	only-route	1	only-route:decided	20	20	no				fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Real/single_route_04.smt2	synthetic0	Real	sat	0	only-route	only-route	1	only-route:decided	20	20	no				fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Real/single_route_05.smt2	synthetic0	Real	sat	0	only-route	only-route	1	only-route:decided	20	20	no				fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Real/single_route_06.smt2	synthetic0	Real	sat	0	only-route	only-route	1	only-route:decided	20	20	no				fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Real/single_route_07.smt2	synthetic0	Real	sat	0	only-route	only-route	1	only-route:decided	20	20	no				fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Real/single_route_08.smt2	synthetic0	Real	sat	0	only-route	only-route	1	only-route:decided	20	20	no				fixture	unpinned	0.0
+synthetic-fixture	A	SYN/Real/single_route_09.smt2	synthetic0	Real	sat	0	only-route	only-route	1	only-route:decided	20	20	no				fixture	unpinned	0.0

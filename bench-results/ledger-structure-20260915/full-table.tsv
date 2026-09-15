@@ -1,0 +1,13 @@
+division	features	rows	decided	top_decider	top_n	top_share	modal_first	modal_first_n	structure	modal_substantive	modal_substantive_n	structure_substantive	reorder_rows	ceiling_ms	ceiling_files	prefix_cost_ms	prefix_cost_files
+AUFDTLIRA	not-dispatched	200	130	q:mbqi-quick	107	0.823	fd:parse	200	STRUCTURE	q:ground-subset	198	STRUCTURE	107	134	200	42304	107
+AUFLIRA	not-dispatched	200	178	q:mbqi-quick	144	0.809	fd:parse	200	STRUCTURE	q:ground-subset	200	STRUCTURE	144	20	200	2790	144
+QF_NIA	Int	199	84	int-blast-ladder	65	0.774	fd:parse	199	STRUCTURE	probe	199	STRUCTURE	65	1264	199	631307	65
+QF_NIA	not-dispatched	1	0	None	0	0.000	fd:parse	1	no	none	1	no	0	270	1	0	0
+UF		4	0	None	0	0.000	none	4	no	none	4	no	0	0	0	0	0
+UF	not-dispatched	196	90	q:mbqi-quick	61	0.678	fd:parse	196	no	q:ground-subset	196	no	61	1385	196	318985	61
+UFDTLIRA	Int	2	2	q:skolem-qf	2	1.000	fd:parse	2	no	q:ground-subset	2	no	2	0	2	0	2
+UFDTLIRA	none	2	2	q:skolem-qf	2	1.000	fd:parse	2	no	q:ground-subset	2	no	2	0	2	0	2
+UFDTLIRA	not-dispatched	196	140	q:mbqi-quick	111	0.793	fd:parse	196	STRUCTURE	q:ground-subset	196	STRUCTURE	111	46	196	26211	111
+UFLIA	not-dispatched	200	86	q:bool-skeleton	35	0.407	fd:parse	200	no	q:ground-subset	200	no	35	812	200	5657	35
+UFNIA	Int|Function	30	24	q:skolem-qf	24	1.000	fd:parse	30	STRUCTURE	q:ground-subset	30	STRUCTURE	24	0	30	126764	24
+UFNIA	not-dispatched	170	30	q:mbqi-quick	16	0.533	fd:parse	170	no	q:ground-subset	165	no	16	1136	170	1639	16

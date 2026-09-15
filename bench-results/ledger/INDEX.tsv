@@ -6,3 +6,10 @@ qflra93-20260915	qflra93-20260915.tsv	1	2026-09-15T12:30:00Z	ADR-2102 Phase 3; s
 partial9-20260915	partial9-20260915.tsv	1	2026-09-15T12:30:00Z	ADR-2102 Phase 3; s5/s6, pinned core pair, 24 s / 8 GiB
 partial9-p2-20260915	partial9-p2-20260915.tsv	1	2026-09-15T12:30:00Z	ADR-2102 Phase 3; s5/s6, pinned core pair, 24 s / 8 GiB
 partial9-p3-20260915	partial9-p3-20260915.tsv	1	2026-09-15T12:30:00Z	ADR-2102 Phase 3; s5/s6, pinned core pair, 24 s / 8 GiB
+t1-AUFDTLIRA-db31113fa	t1-AUFDTLIRA-db31113fa.tsv	2	2026-09-15T15:56:46Z	ledger-structure-20260915 Phase-3-sizing T1 sweep, db31113fa, 3 hosts x 4 core pairs, 24s/8GiB
+t1-AUFLIRA-db31113fa	t1-AUFLIRA-db31113fa.tsv	2	2026-09-15T15:56:46Z	ledger-structure-20260915 Phase-3-sizing T1 sweep, db31113fa, 3 hosts x 4 core pairs, 24s/8GiB
+t1-QF_NIA-db31113fa	t1-QF_NIA-db31113fa.tsv	2	2026-09-15T15:56:46Z	ledger-structure-20260915 Phase-3-sizing T1 sweep, db31113fa, 3 hosts x 4 core pairs, 24s/8GiB
+t1-UF-db31113fa	t1-UF-db31113fa.tsv	2	2026-09-15T15:56:46Z	ledger-structure-20260915 Phase-3-sizing T1 sweep, db31113fa, 3 hosts x 4 core pairs, 24s/8GiB
+t1-UFDTLIRA-db31113fa	t1-UFDTLIRA-db31113fa.tsv	2	2026-09-15T15:56:46Z	ledger-structure-20260915 Phase-3-sizing T1 sweep, db31113fa, 3 hosts x 4 core pairs, 24s/8GiB
+t1-UFLIA-db31113fa	t1-UFLIA-db31113fa.tsv	2	2026-09-15T15:56:46Z	ledger-structure-20260915 Phase-3-sizing T1 sweep, db31113fa, 3 hosts x 4 core pairs, 24s/8GiB
+t1-UFNIA-db31113fa	t1-UFNIA-db31113fa.tsv	2	2026-09-15T15:56:46Z	ledger-structure-20260915 Phase-3-sizing T1 sweep, db31113fa, 3 hosts x 4 core pairs, 24s/8GiB
