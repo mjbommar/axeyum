@@ -98,6 +98,22 @@ def main():
     allx = [int(spl[f]['conjuncts']) for f in und_set if f in spl]
     print(f'{"ALL":<10} {len(allx):>15}  {quantiles(allx)}')
 
+    # ---- 2b. how many rows have NOTHING TO SELECT, before any solver runs
+    print('\n## 2b. Rows with nothing to select (structural, no solver)\n')
+    print(f'{"division":<10} {"undecided":>10} {"conj<=1":>9} {"conj<=2":>9} {"conj<=5":>9}')
+    t = [0, 0, 0, 0]
+    for d in sorted(byd, key=lambda d: -len(byd[d])):
+        xs = [int(spl[f]['conjuncts']) for f in und_set if div(f) == d and f in spl]
+        a = [len(xs), sum(1 for x in xs if x <= 1), sum(1 for x in xs if x <= 2),
+             sum(1 for x in xs if x <= 5)]
+        print(f'{d:<10} {a[0]:>10} {a[1]:>9} {a[2]:>9} {a[3]:>9}')
+        t = [t[i] + a[i] for i in range(4)]
+    print(f'{"TOTAL":<10} {t[0]:>10} {t[1]:>9} {t[2]:>9} {t[3]:>9}')
+    print(f'\n  conj<=2 over all undecided rows: {pct(t[2], t[0])}')
+    print('  A file with <= 2 conjuncts has at most one assertion to drop.'
+          ' Selection\n  cannot be the mechanism there, whatever the core size'
+          ' turns out to be.')
+
     # ---- 3. the reference buckets (R2)
     print('\n## 3. Reference buckets over the re-derived-undecided rows (R2)\n')
     if not cor:
@@ -195,6 +211,84 @@ def main():
             print(f'  {k:>5} {pct(s, len(rows)):>24} {pct(p, len(rows)):>24} {pct(m, len(rows)):>24}')
         print('\n  CONTAINING an unsat core is sufficient for the subset to be'
               ' unsat.\n  DECIDING it within 24 s is a separate claim, measured in § 7.')
+
+    # ---- 7. the classification, and the ceiling per class
+    print('\n## 7. What kind of row is it, and does the ceiling hold there?\n')
+    joined = read_tsv(os.path.join(R, 'joined.tsv'))
+    if not joined:
+        print('  ref/joined.tsv MISSING -- run join-census.py')
+        fail = fail or 13
+    else:
+        order = ['SINGLETON', 'NEEDLE', 'WHOLE', 'CORE-FAILED', 'REF-SAT',
+                 'REF-NONE', 'ROW-ABORT', 'MIN-MISSING', 'NOT-CENSUSED']
+        cls = {}
+        for r in joined:
+            cls.setdefault(r['class'], []).append(r)
+        n = len(joined)
+        print(f'{"class":<14} {"n":>5}  {"our verdict on the reference core"}')
+        for c in order + sorted(k for k in cls if k not in order):
+            rs = cls.get(c, [])
+            if not rs:
+                continue
+            v = {}
+            for r in rs:
+                v[r['core_ours']] = v.get(r['core_ours'], 0) + 1
+            detail = ' '.join(f'{k}={v[k]}' for k in sorted(v, key=lambda k: -v[k]))
+            print(f'{c:<14} {len(rs):>5}  {detail}')
+        print(f'{"TOTAL":<14} {n:>5}')
+
+        # the ceiling, on the rows where a ceiling is even defined
+        have = [r for r in joined if r['class'] in ('SINGLETON', 'NEEDLE', 'WHOLE')]
+        dec = [r for r in have if r['core_ours'] == 'unsat']
+        sim_ran = [r for r in have if r['core_ours'] != 'NOT-SIMULATED']
+        print(f'\n  rows with a core                 {len(have)}')
+        print(f'  simulated                        {len(sim_ran)}')
+        print(f'  WOULD-DECIDE (our solver: unsat) {pct(len(dec), len(sim_ran))}')
+        print('  This is the CEILING (R6): what selection could buy if selection'
+              '\n  were free and perfect. It is not a gain and not a conversion.')
+        byc = {}
+        for r in sim_ran:
+            k = r['class']
+            byc.setdefault(k, [0, 0])
+            byc[k][1] += 1
+            byc[k][0] += 1 if r['core_ours'] == 'unsat' else 0
+        for k in sorted(byc):
+            print(f'    {k:<12} {pct(byc[k][0], byc[k][1])}')
+        byd2 = {}
+        for r in sim_ran:
+            k = r['division']
+            byd2.setdefault(k, [0, 0])
+            byd2[k][1] += 1
+            byd2[k][0] += 1 if r['core_ours'] == 'unsat' else 0
+        print('\n  by division:')
+        for k in sorted(byd2, key=lambda k: -byd2[k][1]):
+            print(f'    {k:<12} {pct(byd2[k][0], byd2[k][1])}')
+
+    # ---- 8. the reference-free strategies, decided by OUR solver (R7)
+    print('\n## 8. Reference-free fixed-k rules, decided by OUR solver (R7)\n')
+    strat = read_tsv(os.path.join(R, 'sim-subsets.tsv'))
+    if not strat:
+        print('  ref/sim-subsets.tsv MISSING -- no strategy was sized.'
+              ' Reported as DID NOT RUN, never as zero.')
+    else:
+        agg = {}
+        for r in strat:
+            name = r['subset']
+            # <flat>.<tag><k>.smt2
+            mid = name[:-len('.smt2')].rsplit('.', 1)[-1]
+            tag = mid.rstrip('0123456789')
+            k = mid[len(tag):]
+            if not k:
+                continue
+            agg.setdefault((tag, int(k)), []).append(r['verdict'])
+        print(f'  {"rule":<10} {"k":>5} {"our unsat":>26}  {"sat (WRONG if core inside)":>26}')
+        for (tag, k) in sorted(agg, key=lambda t: (t[0], t[1])):
+            vs = agg[(tag, k)]
+            u = sum(1 for v in vs if v == 'unsat')
+            s = sum(1 for v in vs if v == 'sat')
+            print(f'  {tag:<10} {k:>5} {pct(u, len(vs)):>26}  {s:>26}')
+        print('\n  `prefix` is the CONTROL. If it scores like `suffix`, position'
+              '\n  carries no information and the suffix rule is not a finding.')
 
     sys.exit(fail)
 
