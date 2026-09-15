@@ -48,7 +48,22 @@ control `sort`=68) and no depth bound — it handles a nested datatype field by
 recursion in the e-graph (`theory_datatype.cpp:372-378`) and never weakens
 datatype equality, which is why it never has to refuse congruence. A finite
 universe of constructor terms exists only in cvc5, only for FMF, by iterative
-deepening on term size (`rep_set.cpp:131-165`, `type_enumerator.h:58`).
+deepening on term size (`rep_set.cpp:131-165`, `type_enumerator.h:58`). That it
+builds no universe here is measured, not only read: `-v:10` under
+`smt.ematching=false` emits **0** universe/model-finder lines across all 13
+datatype-refused cores, against a non-vacuous control of 27 to 47,758 lines.
+
+**The number that decides the lane is on the ORIGINALS, not the cores.** Four
+z3 configurations per file — the fourth being the both-engines-off control,
+without which every ground-refutable row reports "decided by either engine":
+z3 refutes **44 of 55 cores** and **39 of the 79 undecided originals (49.4 %)
+GROUND**, and **MBQI decides 0 of 134**. So `AUFDTLIRA`'s gap is substantially
+a ground capability gap — but of the **4** original rows we refuse on a
+datatype construct only **1** is `GROUND`, so a perfect ground datatype theory
+converts **at most 1 of 79**. **No datatype lever is built** ([ADR-2090]'s own
+rule). What ships is the mislabelled give-up sentence, corrected as a suffix on
+a byte-identical prefix, with 4 tests and a 4-guard mutation suite where each
+guard kills exactly one of four distinct tests.
 
 Detail in [ADR-2114]; artifacts under `bench-results/dt-quant-trace-20260915/`.
 
@@ -59,3 +74,6 @@ Detail in [ADR-2114]; artifacts under `bench-results/dt-quant-trace-20260915/`.
 
 | 2026-09-15 | `175ed2e8b` | `dtshape.py`: the datatype construct that refuses is decided by SORTS, so the classifier parses rather than greps; `let` resolved, not expanded. 55 cores + 79 originals classified, joined against ADR-2090's own traced give-ups 55 of 55. |
 | 2026-09-15 | `db7132eff` | The 134-file traced census with `AXEYUM_QPROBE`, the z3 four-configuration attribution runner (the fourth arm is the both-engines-off CONTROL, without which every ground-refutable row reports "decided by either engine"), and the nesting-depth sizing: 0 recursive datatypes, max depth 5, W1's refused sort `(Array Int <datatype>)` 86 of 86. |
+| 2026-09-15 | `8793f1387` | z3's engine attribution on the 55 cores, and the measured answer to "what does the model finder build for the datatype sorts": nothing — 0 universe/model-finder lines under `-v:10` with e-matching off, control 27 to 47,758 lines. |
+| 2026-09-15 | `75b716b95` | `mbqi declined an unsupported fragment: …` names the engine that refused and names the wrong one on 16 of the 17 rows that print it. A loop-entry flag through `prove_unsat_by_mbqi_reporting` appends a correction; the sentence up to the original message is byte-identical so the four committed censuses keep working; nothing branches on `UnknownReason::detail`. 4 tests, 4 mutation guards, each killing exactly one distinct test. |
+| 2026-09-15 | `e75f85413` | [ADR-2114]: no datatype lever is built — of the 4 undecided ORIGINALS we refuse on a datatype construct, 1 is ground-convertible. §4 names and sizes the representation anyway so the next lane need not re-derive it. |

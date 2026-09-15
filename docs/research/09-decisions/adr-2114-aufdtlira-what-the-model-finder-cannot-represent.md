@@ -1,7 +1,7 @@
 # ADR-2114: the model finder is not what cannot represent datatypes — the GROUND closure is, and the message names the wrong engine
 
 Status: accepted
-Index-summary: [ADR-2090]'s `AUFDTLIRA` give-up census recorded **17 "mbqi declined an unsupported DATATYPE fragment"** and named that as the reason the division's model finder never gets to build a model. **The premise does not survive the control.** Traced over **134 files** (the 55 ADR-2090 cores plus the 79 undecided originals, 24 s, pinned cores on an idle s7, `AXEYUM_QPROBE` throughout): MBQI's refutation loop **did not run on 132 of 134**, and on **127** the reason is a purely syntactic quantifier shape guard that mentions no datatype (125 of them `nested-binder-in-matrix` and/or `quantifier-below-top-level`, 2 `multi-binder-prefix`) — SPARK VCs are alternating and non-prenex, and the rung takes only single-binder prenex. 17 rows do print a datatype wording, and on **16 of 17** MBQI's loop had already been bypassed: the sentence is produced by a ground sub-solve inside e-matching (`decide_instantiation`, `auto.rs:13388`) and acquires its "mbqi declined" prefix at `auto.rs:2473`. **The control refuses the datatype reading of that**: the loop also did not run on **116 of the 117** rows with NO datatype wording, so "MBQI never got to build a model" is a fact about the ladder, not about datatypes; the narrow claim that survives is that the message names an engine that did not produce it. Constructs are classified by SORTS, not names (`field_sort_expands`/`datatype_expansion_is_exact` are invisible in a `declare-datatypes` form), 134 of 134 joined, **38 disagreements all one way** ("predicted a refusal, observed none" — the ladder ended before the Ackermann pass) and **0** the other. Two buckets: `W1` refuses a field sort, and that sort is `(Array Int <datatype>)` on **86 of 86** occurrences; `INEXACT` is a datatype-typed field at a UF boundary. The reference: z3 refutes **44 of 55 cores GROUND** (both quantifier engines off) and **MBQI decides 0 of 55**; on the 13 datatype-refused rows **12 of 13 are GROUND**, so the gap is real and quantifier-free. z3's model finder contains **zero** occurrences of `datatype`/`constructor` (control `sort`=68) and builds **no universe** — measured, not only read: `-v:10` under `smt.ematching=false` emits 0 universe/model-finder lines across all 13, against a non-vacuous control of 27 to 47,758 total lines. **No datatype lever is built**: the wording is the printed blocker on 13 of 55 CORES but only **4 of the 79 undecided ORIGINALS** — a reference-minimised core population over-reports this bucket by more than 3×, which no census in `bench-results/` currently distinguishes — and the 13 split across two designs while 127 of 134 die upstream of any theory question. What ships is the mislabelled sentence, corrected as a byte-identical-prefix suffix so the four committed censuses that read it keep working, with 4 tests and a 4-guard mutation suite (first three measured: **each killed exactly one test, three different ones**; `--check-anchors` `suites=141 anchors=1069 stale=0`). §4 names and sizes the representation the `INEXACT` bucket would need — recursive tag/field expansion to the datatype's own nesting depth, terminating because **0 of 134 files declares a recursive datatype and the deepest nest is 5** — so the next lane need not re-derive it.
+Index-summary: [ADR-2090]'s `AUFDTLIRA` give-up census recorded **17 "mbqi declined an unsupported DATATYPE fragment"** and named it as the reason the division's model finder never gets to build a model. **The premise does not survive the control.** Traced over **134 files** (the 55 ADR-2090 cores plus the 79 undecided originals, 24 s, pinned cores on an idle s7, `AXEYUM_QPROBE` throughout): MBQI's refutation loop **did not run on 132 of 134**, and on **127** the reason is a purely syntactic quantifier shape guard that mentions no datatype (125 `nested-binder-in-matrix` and/or `quantifier-below-top-level`, 2 `multi-binder-prefix`) -- SPARK VCs are alternating and non-prenex, and the rung takes only single-binder prenex. 17 rows do print a datatype wording, and on **16 of 17** MBQI's loop had already been bypassed: the sentence comes from a ground sub-solve inside e-matching (`decide_instantiation`'s `check_auto` on a quantifier-free query) and acquires its "mbqi declined" prefix on the way out. **The control refuses the datatype reading of that**: the loop also did not run on **116 of the 117** rows with NO datatype wording, so "MBQI never got to build a model" is a fact about the LADDER, not about datatypes; the narrow claim that survives is that the message names an engine that did not produce it. Constructs are classified by SORTS, not names (`field_sort_expands`/`datatype_expansion_is_exact` are invisible in a `declare-datatypes` form), 134 of 134 joined, **38 disagreements all one way** ("predicted a refusal, observed none" -- the ladder ended before the Ackermann pass) and **0** the other. Two buckets: `W1` refuses a field sort, and that sort is `(Array Int <datatype>)` on **86 of 86** occurrences; `INEXACT` is a datatype-typed field at a UF boundary. THE REFERENCE, four configurations per file including the both-engines-off CONTROL without which every ground-refutable row reports "decided by either engine": z3 refutes **44 of 55 cores** and **39 of the 79 undecided originals (49.4 %) GROUND**, needs e-matching on 11 and 16, and **MBQI decides 0 of 134** -- so `AUFDTLIRA`'s gap is substantially a GROUND capability gap. z3's model finder contains **zero** occurrences of `datatype`/`constructor` (control `sort`=68) and builds **no universe** -- measured, not only read: `-v:10` under `smt.ematching=false` emits 0 universe/model-finder lines across all 13 datatype-refused cores, against a non-vacuous control of 27 to 47,758 total lines. **NO DATATYPE LEVER IS BUILT**, and the number that decides it is on the originals rather than the cores: the wording is the printed blocker on 13 of 55 CORES but only **4 of the 79 undecided ORIGINALS**, and of those 4 only **1** is `GROUND` -- so a perfect ground datatype theory converts **at most 1 of 79**. A reference-minimised core population over-reports this bucket by more than 3x, which no census in `bench-results/` currently distinguishes. What ships is the mislabelled sentence, corrected as a suffix on a byte-identical prefix so the four committed censuses that read it keep working, with 4 tests and a 4-guard mutation suite (**each guard killed exactly one test, four different ones**; `--check-anchors` `suites=141 anchors=1069 stale=0`). §4 names and sizes the representation the `INEXACT` bucket would need -- recursive tag/field expansion to the datatype's own nesting depth, reusing the child slots `unfold_traversals` already creates, terminating because **0 of 134 files declares a recursive datatype and the deepest nest is 5** (with a positive control that the recursion detector fires) -- so the next lane need not re-derive it.
 Index-status: accepted
 Date: 2026-09-15
 
@@ -312,20 +312,45 @@ both-off control every ground-refutable row reports "decided by either engine",
 which is exactly what this lane's own first two-file probe printed before the
 control existed.
 
-**And it is still not the bucket to build for.** Three measurements against it:
+**And then the same four configurations were run on the 79 undecided ORIGINALS,
+which is the division's actual gap.** This is the measurement that decides the
+lane, and it was not available from the cores:
 
-1. **The datatype wording is the printed blocker on 13 of the 55 CORES but only
-   **4 of the 79 undecided ORIGINALS**. The core population over-reports this
+| z3 attribution, 79 undecided originals | n | share |
+|---|---:|---|
+| `GROUND` | **39** | 49.4 % |
+| `EMATCHING` | 16 | 20.3 % |
+| `MBQI` | **0** | — |
+| `UNDECIDED` — z3 cannot refute either at 60 s | 24 | 30.4 % |
+
+**Half of what we fail on, z3 refutes with both quantifier engines off.** So
+`AUFDTLIRA`'s remaining gap is substantially a GROUND capability gap — and
+`MBQI` decides **0 of 134** anywhere in this lane's population, cores and
+originals alike.
+
+**But on the 4 original rows we refuse on a datatype construct, only 1 is
+`GROUND`.** The other three are `EMATCHING` (1) and z3-`UNDECIDED` (2). So a
+perfect ground datatype theory — exact equality, no refusal, everything §4
+names — converts **at most 1 of the 79 undecided originals**.
+
+**And that is still not the bucket to build for.** Four measurements against it:
+
+1. **At most 1 of the 79 undecided originals is convertible**, by the
+   reference's own both-off arm. A soundness-critical recursive expansion in a
+   module whose comments already record two shipped wrong-`unsat` defects, for
+   one row, is a lever manufactured rather than earned.
+2. **The datatype wording is the printed blocker on 13 of the 55 CORES but only
+   4 of the 79 undecided ORIGINALS.** The core population over-reports this
    bucket by more than 3×, for [ADR-2090] §8's reason: taking the reference's
    minimal core removes the material the ladder was using, so a different rung
    ends the run. **A blocker census run on reference-minimised cores is not a
    census of the division**, and [ADR-2090]'s "17 mbqi datatype declines" is a
    core-population number.
-2. **The 13 split across two designs, not one.** 7 are `W1` — array-of-datatype
+3. **The 13 split across two designs, not one.** 7 are `W1` — array-of-datatype
    — which depth unrolling does not reach and which both references handle by
    leaving equality to the array theory. Only **5** are the `INEXACT` bucket
    that §4's recursive expansion fixes.
-3. **127 of 134 files never reach any datatype question**, dying at an MBQI
+4. **127 of 134 files never reach any datatype question**, dying at an MBQI
    quantifier shape guard. That is the largest bucket in this division by an
    order of magnitude, it is not a datatype change, and it belongs to the
    quantifier lane rather than this one.
