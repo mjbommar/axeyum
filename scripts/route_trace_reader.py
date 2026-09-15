@@ -163,6 +163,12 @@ class Attempt:
     reason: str | None = None
     #: The `UnknownKind` wire name, present only on an `incomplete` decline.
     kind: str | None = None
+    #: ADR-2104's typed detail VARIANT name (`"backend"`, `"ingest-refusal"`,
+    #: …), present only once the producer emits a `name` member beside
+    #: `detail`.  `None` on every artifact written before it does -- which is
+    #: a different answer from `""`, and the reason this is read with `.get`
+    #: rather than assumed.
+    name: str | None = None
     #: The producer's own message, present exactly when the variant carries one.
     detail: str | None = None
     #: This attempt's own wall clock, when the timed serializer was used.
@@ -318,6 +324,7 @@ def _attempt_from_json(obj: dict) -> Attempt:
         verdict=obj.get("verdict"),
         reason=obj.get("reason"),
         kind=obj.get("kind"),
+        name=obj.get("name"),
         detail=obj.get("detail"),
         elapsed_ns=obj.get("elapsed_ns"),
     )

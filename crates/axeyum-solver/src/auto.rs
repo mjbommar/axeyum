@@ -107,6 +107,7 @@ use web_time::{Duration, Instant};
 /// ladder now reaches ate the budget the deciding route needed.
 pub(crate) mod route_ownership {
     use std::fmt;
+    use std::sync::atomic::{AtomicU32, Ordering};
 
     /// One class of query construct.
     ///
@@ -273,6 +274,123 @@ pub(crate) mod route_ownership {
         pub(crate) const fn is_empty(self) -> bool {
             self.0 == 0
         }
+
+        /// The raw bits, for the outcome-ledger recorder below and nothing
+        /// else. Not a public rendering: the wire form is
+        /// [`render_query_constructs`].
+        const fn bits(self) -> u16 {
+            self.0
+        }
+
+        /// Rebuilds a set from [`Self::bits`].
+        const fn from_bits(bits: u16) -> Self {
+            Self(bits)
+        }
+    }
+
+    /// The construct set of the **first query the quantifier-free dispatch
+    /// ladder scanned in this process**, or [`UNSET_CONSTRUCTS`].
+    ///
+    /// ADR-2102 (the outcome ledger) needs the `features` column, and the scan
+    /// that produces it is `Features::scan_within` deep inside the dispatcher —
+    /// there was no route by which a caller could see it. Rather than have the
+    /// ledger re-derive the classification in Python from the `.smt2` text,
+    /// which would be a second authority that drifts from this one, the
+    /// dispatcher records what it already computed and the CLI prints it as one
+    /// extra `--trace` line.
+    ///
+    /// # What this is NOT, said precisely
+    ///
+    /// It is **not** "the file's features" and the name deliberately does not
+    /// claim to be. On a quantifier-free file the first scan IS the file's
+    /// query and the two coincide. On a QUANTIFIED file, `check_with_quantifiers`
+    /// runs first and the quantifier-free ladder is only ever reached by a
+    /// SUB-SOLVE — so what gets recorded is the fragment that sub-solve was
+    /// handed, which can legitimately be the empty set where the file is full of
+    /// arrays and reals. Measured on this lane's own `AUFLIRA` A/B: six of
+    /// twenty arm-B rows record `none`.
+    ///
+    /// A top-level scan does not exist to record instead, and inventing one
+    /// would mean running `Features::scan_within` on every query for the
+    /// benefit of a telemetry column.
+    ///
+    /// **First writer wins**, deliberately: the first scan is the outermost one,
+    /// and a later sub-solve must not overwrite it. The cost is one relaxed
+    /// compare-exchange per dispatch.
+    ///
+    /// A process that dispatches many queries — `cargo test`, a library
+    /// embedding — therefore keeps the FIRST one until [`reset_query_constructs`]
+    /// is called. That is stated rather than worked around: `smtcomp_cli` solves
+    /// exactly one file per process, which is the only consumer.
+    static LAST_QUERY_CONSTRUCTS: AtomicU32 = AtomicU32::new(UNSET_CONSTRUCTS);
+
+    /// The sentinel meaning "no query has been dispatched in this process".
+    ///
+    /// Outside the `u16` range a [`ConstructSet`] can occupy, so it cannot
+    /// collide with the empty set — which is a real, different answer (a pure
+    /// Boolean query scans to no construct at all).
+    const UNSET_CONSTRUCTS: u32 = u32::MAX;
+
+    /// Records the first quantifier-free dispatch's construct set.
+    pub(crate) fn record_query_constructs(set: ConstructSet) {
+        let _ = LAST_QUERY_CONSTRUCTS.compare_exchange(
+            UNSET_CONSTRUCTS,
+            u32::from(set.bits()),
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        );
+    }
+
+    /// Clears the recording, so a process that dispatches several queries can
+    /// ask about the next one.
+    pub fn reset_query_constructs() {
+        LAST_QUERY_CONSTRUCTS.store(UNSET_CONSTRUCTS, Ordering::Relaxed);
+    }
+
+    /// The first quantifier-free dispatch's construct classes, in the machine
+    /// form the outcome ledger reads: `Int|Real`, or `none` for a scanned query
+    /// carrying no theory construct at all.
+    ///
+    /// Read [`LAST_QUERY_CONSTRUCTS`] for what this does and does not name on a
+    /// QUANTIFIED file before quoting it as "the file's features".
+    ///
+    /// `None` means no query has been dispatched in this process. The ledger
+    /// keeps that DISTINCT from `none` — "the binary never said" and "the set
+    /// was empty" are different answers, and collapsing them is how an absence
+    /// becomes a zero (ADR-2075).
+    ///
+    /// The separator is `|` and never `;`: ADR-2020's census split on `;` when
+    /// the field could contain one, and truncated its own largest bucket.
+    pub fn last_query_constructs() -> Option<String> {
+        let bits = LAST_QUERY_CONSTRUCTS.load(Ordering::Relaxed);
+        if bits == UNSET_CONSTRUCTS {
+            return None;
+        }
+        // `try_from` rather than `as`: the only writer is
+        // `record_query_constructs`, which widens a `u16`, so this cannot
+        // truncate -- but a silent `as` here would also swallow a future
+        // sentinel or a wider `ConstructSet`, and the failure mode would be a
+        // WRONG construct list rather than a missing one, which is the harder
+        // kind to notice in a ledger column.
+        let set = u16::try_from(bits).ok().map(ConstructSet::from_bits)?;
+        Some(render_query_constructs(set))
+    }
+
+    /// The wire form of a construct set: `Int|Real`, or `none` when empty.
+    ///
+    /// Split out from [`last_query_constructs`] so the RENDERING is testable
+    /// without touching a process-global. A test that had to dispatch a query
+    /// to check a string would be a test of the dispatcher, and one that read
+    /// the global would be order-dependent against every other test in the
+    /// binary.
+    pub(crate) fn render_query_constructs(set: ConstructSet) -> String {
+        if set.is_empty() {
+            return "none".to_owned();
+        }
+        set.iter()
+            .map(Construct::name)
+            .collect::<Vec<_>>()
+            .join("|")
     }
 
     impl fmt::Display for ConstructSet {
@@ -6770,6 +6888,12 @@ fn check_auto_dispatch_inner(
     // the rung's own `DispatchRoute::owns` declaration, never by which error
     // variant the rung happened to return.
     let query = features.constructs();
+    // ADR-2102. The outcome ledger's `features` column, taken from the scan
+    // that just ran rather than re-derived from the `.smt2` text in Python --
+    // a second authority that drifts from this one is the shape five
+    // instruments failed in last week. First writer wins, so a sub-solve does
+    // not overwrite the query the file states; see `record_query_constructs`.
+    route_ownership::record_query_constructs(query);
     if features.has_datatype {
         // Datatype structural axioms (acyclicity / distinctness / injectivity):
         // a forced containment cycle (`x = cons(h, x)`), two constructors on one
@@ -12728,6 +12852,77 @@ mod tests {
 
     use super::route_ownership::constructs;
     use super::*;
+
+    // -----------------------------------------------------------------------
+    // ADR-2102: the outcome ledger's `features` column.
+    //
+    // The rendering is pinned SEPARATELY from the recorder because the recorder
+    // is a process-global (first writer wins) and a test that read it would be
+    // order-dependent against every other test in this binary.  What the ledger
+    // consumes is the STRING, so that is what is pinned.
+    // -----------------------------------------------------------------------
+
+    /// Every class renders, and the population comes from `Construct::ALL`
+    /// rather than from a literal -- a test named "every class" that carries
+    /// its own list measures the maintainer's memory.
+    #[test]
+    fn every_construct_class_appears_in_the_ledger_rendering() {
+        let mut all = ConstructSet::EMPTY;
+        for class in Construct::ALL {
+            all = all.with(*class);
+        }
+        let rendered = route_ownership::render_query_constructs(all);
+        for class in Construct::ALL {
+            assert!(
+                rendered.split('|').any(|part| part == class.name()),
+                "`{}` is missing from {rendered}",
+                class.name()
+            );
+        }
+        assert_eq!(
+            rendered.split('|').count(),
+            Construct::ALL.len(),
+            "the rendering has a different number of classes than the authority"
+        );
+    }
+
+    /// The EMPTY set renders as `none`, not as the empty string.
+    ///
+    /// The outcome ledger uses the empty string for "the binary never printed
+    /// the line", so an empty rendering here would collapse "this query carries
+    /// no theory construct" into "this binary predates the instrument" -- which
+    /// is ADR-2075's absence-read-as-a-zero with a different subject.
+    #[test]
+    fn an_empty_construct_set_renders_as_none_and_not_as_nothing() {
+        assert_eq!(
+            route_ownership::render_query_constructs(ConstructSet::EMPTY),
+            "none"
+        );
+    }
+
+    /// The separator is `|` and never `;` (ADR-2020), and never a space or a
+    /// comma -- `ConstructSet`'s `Display` uses `{Int, Real}` and this must not
+    /// silently become that.
+    #[test]
+    fn the_ledger_rendering_uses_the_pipe_separator_and_no_braces() {
+        // `Real` before `Int` because that is `Construct::ALL`'s order, not
+        // the order this call names them in -- which is the next test's point.
+        let rendered = route_ownership::render_query_constructs(constructs!(Int, Real));
+        assert_eq!(rendered, "Real|Int");
+        assert!(!rendered.contains(';'));
+        assert!(!rendered.contains('{'));
+        assert!(!rendered.contains(' '));
+    }
+
+    /// The order is `Construct::ALL`'s, so two runs on the same query render
+    /// byte-identically -- determinism is a public API promise here.
+    #[test]
+    fn the_ledger_rendering_is_in_authority_order_whatever_order_it_was_built_in() {
+        let forward = route_ownership::render_query_constructs(constructs!(Real, Int, Array));
+        let backward = route_ownership::render_query_constructs(constructs!(Array, Int, Real));
+        assert_eq!(forward, backward);
+        assert_eq!(forward, "Real|Int|Array");
+    }
 
     // -----------------------------------------------------------------------
     // ADR-2100: typed route ownership.
