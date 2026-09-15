@@ -77,12 +77,12 @@ TOTAL             645         2        91       137
 
 ## 5. Our solver on the reference core -- a CEILING, not a gain (R6)
 
-  subsets handed to our solver: 230
-    unknown      193/230 = 83.9% [78.6, 88.1]
-    unsat        37/230 = 16.1% [11.9, 21.4]
+  subsets handed to our solver: 232
+    unknown      193/232 = 83.2% [77.8, 87.5]
+    unsat        39/232 = 16.8% [12.5, 22.2]
 
-  soundness: a reference core is unsat, so any `sat` here is a WRONG ANSWER -- count 0 of 230
-  exit-status channel: nonzero rc on 0 of 230
+  soundness: a reference core is unsat, so any `sat` here is a WRONG ANSWER -- count 0 of 232
+  exit-status channel: nonzero rc on 0 of 232
 
 ## 6. Fixed-k reference-free rules: does the core LIE INSIDE? (R7)
 
@@ -107,7 +107,7 @@ TOTAL             645         2        91       137
 
 class              n  our verdict on the reference core
 SINGLETON         61  unknown=54 unsat=7
-NEEDLE           160  unknown=129 unsat=29 NOT-SIMULATED=2
+NEEDLE           160  unknown=129 unsat=31
 WHOLE             10  unknown=10
 CORE-FAILED        7  NOT-SIMULATED=7
 REF-SAT           68  NOT-SIMULATED=68
@@ -115,11 +115,11 @@ REF-NONE         339  NOT-SIMULATED=339
 TOTAL            645
 
   rows with a core                 231
-  simulated                        229
-  WOULD-DECIDE (our solver: unsat) 36/229 = 15.7% [11.6, 21.0]
+  simulated                        231
+  WOULD-DECIDE (our solver: unsat) 38/231 = 16.5% [12.2, 21.8]
   This is the CEILING (R6): what selection could buy if selection
   were free and perfect. It is not a gain and not a conversion.
-    NEEDLE       29/158 = 18.4% [13.1, 25.1]
+    NEEDLE       31/160 = 19.4% [14.0, 26.2]
     SINGLETON    7/61 = 11.5% [5.7, 21.8]
     WHOLE        0/10 = 0.0% [0.0, 27.8]
 
@@ -129,9 +129,38 @@ TOTAL            645
     UFNIA        6/41 = 14.6% [6.9, 28.4]
     QF_NIA       0/36 = 0.0% [0.0, 9.6]
     AUFLIRA      2/18 = 11.1% [3.1, 32.8]
+    UF           10/14 = 71.4% [45.4, 88.3]
     UFDTLIRA     2/14 = 14.3% [4.0, 39.9]
-    UF           8/12 = 66.7% [39.1, 86.2]
 
 ## 8. Reference-free fixed-k rules, decided by OUR solver (R7)
 
-  ref/sim-subsets.tsv MISSING -- no strategy was sized. Reported as DID NOT RUN, never as zero.
+  rule           k                  our unsat    sat
+  prefix         1     0/36 = 0.0% [0.0, 9.6]     28
+  prefix         2     0/36 = 0.0% [0.0, 9.6]     24
+  prefix         5    1/34 = 2.9% [0.5, 14.9]     15
+  prefix        10    1/33 = 3.0% [0.5, 15.3]     11
+  prefix        25    1/29 = 3.4% [0.6, 17.2]      7
+  prefix        50    1/25 = 4.0% [0.7, 19.5]      3
+  rel            0    2/36 = 5.6% [1.5, 18.1]     24
+  rel            1   4/36 = 11.1% [4.4, 25.3]      6
+  rel            2   5/36 = 13.9% [6.1, 28.7]      1
+  rel            3   4/36 = 11.1% [4.4, 25.3]      1
+  small          1    2/36 = 5.6% [1.5, 18.1]     32
+  small          2    2/36 = 5.6% [1.5, 18.1]     32
+  small          5    1/34 = 2.9% [0.5, 14.9]     29
+  small         10    1/33 = 3.0% [0.5, 15.3]     26
+  small         25    0/29 = 0.0% [0.0, 11.7]     17
+  small         50    0/25 = 0.0% [0.0, 13.3]      8
+  suffix         1   7/36 = 19.4% [9.8, 35.0]     12
+  suffix         2   6/36 = 16.7% [7.9, 31.9]     10
+  suffix         5   5/34 = 14.7% [6.4, 30.1]     10
+  suffix        10   4/33 = 12.1% [4.8, 27.3]      9
+  suffix        25   3/29 = 10.3% [3.6, 26.4]      8
+  suffix        50    1/25 = 4.0% [0.7, 19.5]      5
+
+  `prefix` is the CONTROL. If it scores like `suffix`, position
+  carries no information and the suffix rule is not a finding.
+
+  best single fixed rule: suffix(1) -> 7/38 = 18.4% [9.2, 33.4] of the 38-row CEILING
+  R9 build gate (>= 50 % of the ceiling): FAIL
+  against the whole undecided population: 7/645 = 1.1% [0.5, 2.2]

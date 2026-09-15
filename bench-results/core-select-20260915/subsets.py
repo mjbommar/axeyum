@@ -153,4 +153,5 @@ def main():
     print(f'{rel}\tOK\t{n}\t{",".join(made)}\t{",".join(sizes)}')
 
 
-main()
+if __name__ == '__main__':
+    main()

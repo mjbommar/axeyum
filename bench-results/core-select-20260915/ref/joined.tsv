@@ -230,7 +230,7 @@ UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_06_31_
 UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_10_47_003_2500061.smt_in.smt2	UF	unknown	unsat	349	NEEDLE	12	9	MINIMAL	347	257	245	unsat	12420
 UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_12_42_984_2647208.smt_in.smt2	UF	unknown	unknown	355	REF-NONE	NA	NA	NA	NA	NA	NA	NOT-SIMULATED	NA
 UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_16_38_492_2773691.smt_in.smt2	UF	unknown	unknown	351	REF-NONE	NA	NA	NA	NA	NA	NA	NOT-SIMULATED	NA
-UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_20_02_499_2906170.smt_in.smt2	UF	unknown	unsat	386	NEEDLE	5	5	MINIMAL	378	57	323	NOT-SIMULATED	NA
+UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_20_02_499_2906170.smt_in.smt2	UF	unknown	unsat	386	NEEDLE	5	5	MINIMAL	378	57	323	unsat	12118
 UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_stream/x2015_09_10_17_23_15_283_1135882.smt_in.smt2	UF	unknown	unknown	358	REF-NONE	NA	NA	NA	NA	NA	NA	NOT-SIMULATED	NA
 UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_stream/x2015_09_10_17_25_01_009_1227491.smt_in.smt2	UF	unknown	unknown	384	REF-NONE	NA	NA	NA	NA	NA	NA	NOT-SIMULATED	NA
 UF/20170428-Barrett/cdt-cade2015/nada/afp/hamming_stream/x2015_09_10_16_47_53_600_1082171.smt_in.smt2	UF	unknown	unknown	360	REF-NONE	NA	NA	NA	NA	NA	NA	NOT-SIMULATED	NA
@@ -270,7 +270,7 @@ UF/grasshopper/instantiated/dl_remove_postcondition_of_dl_remove_50_4.smt2	UF	un
 UF/grasshopper/uninstantiated/dl_copy_invariant_19_2.smt2	UF	unknown	unsat	50	NEEDLE	24	22	MINIMAL	47	50	50	unsat	12218
 UF/grasshopper/uninstantiated/dl_remove_loop_invariant_35_5.smt2	UF	unknown	unsat	61	REF-NONE	NA	NA	NA	NA	NA	NA	NOT-SIMULATED	NA
 UF/grasshopper/uninstantiated/insert_postcondition_of_insert_27_4.smt2	UF	unknown	unsat	97	NEEDLE	74	74	MIN-CAPPED>64	94	97	97	unknown	11118
-UF/sledgehammer/Arrow_Order/smtlib.663965.smt2	UF	unknown	unsat	499	NEEDLE	9	8	MINIMAL	498	499	171	NOT-SIMULATED	NA
+UF/sledgehammer/Arrow_Order/smtlib.663965.smt2	UF	unknown	unsat	499	NEEDLE	9	8	MINIMAL	498	499	171	unsat	12119
 UF/sledgehammer/Arrow_Order/uf.704291.smt2	UF	unknown	unsat	474	NEEDLE	11	10	MINIMAL	473	175	382	unsat	12118
 UF/sledgehammer/Arrow_Order/uf.850780.smt2	UF	unknown	unsat	513	REF-NONE	NA	NA	NA	NA	NA	NA	NOT-SIMULATED	NA
 UF/sledgehammer/FFT/uf.573210.smt2	UF	unknown	unsat	171	REF-NONE	NA	NA	NA	NA	NA	NA	NOT-SIMULATED	NA

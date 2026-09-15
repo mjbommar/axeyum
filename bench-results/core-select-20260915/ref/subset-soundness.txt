@@ -1,0 +1,14 @@
+
+strategy subsets            723
+our verdict `sat` on         318
+  containment CHECKED        318
+  containment NOT CHECKABLE  0
+  WRONG ANSWERS              0
+
+positive control
+  subsets that DO contain the core   152 of 723
+  of the 51 we refute, contain it  50
+
+A `sat` on a subset that does NOT contain the core is correct:
+dropping conjuncts weakens the formula. That is why this check
+exists -- the verdict tally alone cannot tell the two apart.

@@ -296,14 +296,31 @@ def main():
             if not k:
                 continue
             agg.setdefault((tag, int(k)), []).append(r['verdict'])
-        print(f'  {"rule":<10} {"k":>5} {"our unsat":>26}  {"sat (WRONG if core inside)":>26}')
+        print(f'  {"rule":<10} {"k":>5} {"our unsat":>26}  {"sat":>5}')
+        best = (0, None)
         for (tag, k) in sorted(agg, key=lambda t: (t[0], t[1])):
             vs = agg[(tag, k)]
             u = sum(1 for v in vs if v == 'unsat')
             s = sum(1 for v in vs if v == 'sat')
-            print(f'  {tag:<10} {k:>5} {pct(u, len(vs)):>26}  {s:>26}')
+            print(f'  {tag:<10} {k:>5} {pct(u, len(vs)):>26}  {s:>5}')
+            if u > best[0]:
+                best = (u, (tag, k, len(vs)))
         print('\n  `prefix` is the CONTROL. If it scores like `suffix`, position'
               '\n  carries no information and the suffix rule is not a finding.')
+
+        # R9: a strategy must reach the CEILING, not the population.  The
+        # denominator is the ceiling-positive rows, because a rule cannot
+        # convert a row we would not decide with the answer handed to us.
+        ceil_n = len([r for r in joined if r.get('core_ours') == 'unsat']) if joined else 0
+        if best[1] and ceil_n:
+            tag, k, n_rows = best[1]
+            frac = best[0] / ceil_n
+            print(f'\n  best single fixed rule: {tag}({k}) -> {pct(best[0], ceil_n)}'
+                  f' of the {ceil_n}-row CEILING')
+            print(f'  R9 build gate (>= 50 % of the ceiling): '
+                  f'{"PASS" if frac >= 0.50 else "FAIL"}')
+            print(f'  against the whole undecided population: '
+                  f'{pct(best[0], len(joined))}')
 
     sys.exit(fail)
 
