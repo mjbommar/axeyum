@@ -19,9 +19,9 @@ single-binder prenex universal.
 
 17 rows do print a datatype wording, and on **16 of 17** MBQI's loop had already
 been bypassed — the sentence was produced by a ground sub-solve inside
-e-matching (`decide_instantiation`, `auto.rs:13388`, `check_auto` on a
+e-matching (`decide_instantiation`, `auto.rs:13482`, `check_auto` on a
 quantifier-free query) and picked up its "mbqi declined" prefix on the way out
-at `auto.rs:2473`. **But the control refuses the datatype reading**: on the 117
+at `auto.rs:2488`. **But the control refuses the datatype reading**: on the 117
 rows with no datatype wording the loop also did not run, 116 of 117. So "MBQI
 did not get to build a model" is a fact about the ladder, not about datatypes.
 The narrow claim that survives is that the message names an engine that did not
@@ -73,6 +73,22 @@ ran correctly carries none. The checker was wrong before the code was: its first
 version demanded the correction on a row that never entered the quantified arm
 at all, and the population is now the rows that came through the wrapper.
 
+Gates: clippy `-D warnings` exit 0; the four DT suites **24 / 6 / 3 / 5** and the
+`dt_*` gate suites **20 / 11 / 12 / 10**, 0 failed; `dispatch_rung_refusal_declines`
+6/6; `route_trace` 13/13; `config_registry::tests` 18/18; `progress_frontier`
+12/12 rc 0, no REGRESSION; fmt 0; hygiene PASS; links ok. The `--lib` sweep is
+**1827 passed, 3 failed**, and all four failures across the run are wall-clock
+budget tests on a box at load 86-90 — **all four re-checked and all four re-pass** rather than assumed, and
+`quantified_route_trace::decider_agrees_with_the_verdict` settled by running
+**both binaries interleaved at load ~8: base 1/1 pass, this branch 1/1 pass**.
+Its failing assertion is the test's own `decided >= 4` non-vacuity guard; the
+misattribution assertion above it passed in every run.
+
+Not committed, deliberately: `progress_frontier` rewrote the five
+`bench-results/frontier/*.json` baselines with a saturated box's reference frame,
+including `lia_cuts` recording **35 → 26** while declaring itself
+`"comparable": false` at `load_start 37.27`. The five files were restored.
+
 Detail in [ADR-2114]; artifacts under `bench-results/dt-quant-trace-20260915/`.
 
 [ADR-2090]: ../../research/09-decisions/adr-2090-the-cores-are-small-and-findable-and-we-do-not-decide-them.md
@@ -85,3 +101,5 @@ Detail in [ADR-2114]; artifacts under `bench-results/dt-quant-trace-20260915/`.
 | 2026-09-15 | `8793f1387` | z3's engine attribution on the 55 cores, and the measured answer to "what does the model finder build for the datatype sorts": nothing — 0 universe/model-finder lines under `-v:10` with e-matching off, control 27 to 47,758 lines. |
 | 2026-09-15 | `75b716b95` | `mbqi declined an unsupported fragment: …` names the engine that refused and names the wrong one on 16 of the 17 rows that print it. A loop-entry flag through `prove_unsat_by_mbqi_reporting` appends a correction; the sentence up to the original message is byte-identical so the four committed censuses keep working; nothing branches on `UnknownReason::detail`. 4 tests, 4 mutation guards, each killing exactly one distinct test. |
 | 2026-09-15 | `e75f85413` | [ADR-2114]: no datatype lever is built — of the 4 undecided ORIGINALS we refuse on a datatype construct, 1 is ground-convertible. §4 names and sizes the representation anyway so the next lane need not re-derive it. |
+| 2026-09-15 | `3d8435c2f` | The same four z3 configurations on the 79 undecided ORIGINALS, which is the measurement the cores could not give: 39 GROUND (49.4 %), 16 EMATCHING, 0 MBQI, 24 z3 cannot refute either. Half the gap is ground — but only 1 of the 4 datatype-refused originals is, so the bucket converts at most 1 of 79. |
+| 2026-09-15 | `d53c89e8e` | Verdict invariance measured rather than argued: 0 verdict changes of 134, 0 flips, non-vacuity in both directions. The checker was wrong before the code was — it demanded the correction on a row that never entered the quantified arm. |

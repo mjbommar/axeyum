@@ -426,6 +426,68 @@ MBQI's `Err(Unsupported)` arm from a unit test means pinning a route the ladder
 is free to change. The wiring is one `format!` over `mbqi_loop_note(…)`; the
 selection it calls is what is pinned.
 
+## 7. Gates, with their counts and their reference frame
+
+| gate | result |
+|---|---|
+| `clippy -p axeyum-solver -p axeyum-bench --all-targets --features full -- -D warnings` | **exit 0**, clean |
+| default-features `cargo check -p axeyum-solver` (the no-C-dependency promise) | **rc 0** |
+| `datatype_native` / `datatype_elim` / `datatype_solve_path` / `datatype_int_fields` | **24 / 6 / 3 / 5**, 0 failed |
+| `dt_capability_1935` / `dt_constructor_arg_1942` / `dt_valued_result_1946` / `dt_uf_gate` | **20 / 11 / 12 / 10**, 0 failed |
+| `dispatch_rung_refusal_declines` (ADR-1980's own suite) | **6 / 6** |
+| `route_trace` | **13 / 13** |
+| `decline_detail_typed` | **6 / 6** on re-run (see below) |
+| `config_registry::tests` | **18 / 18** |
+| `progress_frontier` | **12 / 12**, rc 0, no `REGRESSION` |
+| `mutation_controls.py mbqi-loop-entry-note` | 4 guards, **each killed exactly 1 test, 4 distinct** |
+| `mutation_controls.py --check-anchors` | `suites=141 anchors=1069 stale=0` |
+| `cargo fmt --all --check` | 0 |
+| `check-merge-hygiene.sh` | `PASS` |
+| `check-links.sh` | `all links ok` |
+| `gen-plan.py`, `gen-adr-index.py` | regenerated and committed |
+| `--lib --features full` sweep | **1827 passed, 3 failed** — all three re-pass individually; see below |
+
+**The four failures are wall-clock budget tests on a box at load 86-90, and all
+four were re-checked individually — all four re-pass.** They are listed rather
+than summarised because "it was the load" is the easiest thing in this
+repository to say and the hardest to have earned.
+
+- `decline_detail_typed::budget_other_is_driven_by_a_resource_capped_query` —
+  a **1 ms** budget. Re-run on the **same binary** at load 90: **6/6 pass**. A
+  test that fails and then passes on the same bytes is non-deterministic, which
+  settles it without any appeal to a cause.
+- `auto::tests::arithmetic_uf_overbound_pre_lia_probe_decides_on_clone` and
+  `auto::tests::pathological_overbound_stays_terminal_under_every_policy` —
+  re-run individually: **2/2 pass**.
+- `euf_egraph::tests::check_qf_uf_with_config_is_bounded_by_timeout` — a
+  **50 ms** budget asserting the solve respects it. Re-run isolated at load
+  8.17: **1 passed**, in 343.65 s — a test asserting a 50 ms bound that itself
+  takes almost six minutes to set up is exactly the shape that fails first when
+  the box is busy.
+- `quantified_route_trace::decider_agrees_with_the_verdict` is the one that
+  needed real work, because it passed on the base commit and failed on this
+  branch, which is what a regression looks like. It is not one. The failing
+  assertion is the test's **own non-vacuity guard** — `decided >= 4`, "with
+  fewer than 4 this gate cannot distinguish a correct attribution from an
+  absent one" — while the **misattribution assertion above it passed in every
+  run**. Run INTERLEAVED, both binaries back to back on one box at load ~8
+  (CLAUDE.md's method, because load cancels in the difference and not in the
+  totals): **base 1/1 pass, this branch 1/1 pass**. The failure reproduces only
+  above load ~18.
+
+None of the four is in the code this diff touches: all are quantifier-free
+budget queries, and the diff is one flag plus one string suffix on the MBQI
+refusal path. The independent evidence is §6's row-level A/B — **0 verdict
+changes over 134 files**.
+
+**One thing this lane deliberately did not commit.** Running `progress_frontier`
+rewrote the five `bench-results/frontier/*.json` baselines with the reference
+frame of a saturated box. No ratchet was raised, but `lia_cuts` recorded its
+frontier dropping **35 → 26** while declaring itself `"comparable": false` at
+`load_start 37.27`. Writing that into a shared baseline would replace a clean
+frame (`load_start 1.19`) with a contaminated one and leave a spurious drop for
+the next reader. The five files were restored.
+
 ## Consequences
 
 - **[ADR-2090]'s `AUFDTLIRA` give-up bucket is re-attributed.** Its 17 "mbqi
