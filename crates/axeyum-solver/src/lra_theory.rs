@@ -400,8 +400,16 @@ pub fn check_qf_lra_online_cdclt(
             // Reconstruct a real model from the live atoms (the simplex's feasible
             // point, materialized), inject Boolean skeleton leaves from
             // the driver trail, and replay against the originals — the soundness gate.
+            // THESE TWO ARMS ARE DIFFERENT FAILURES BEHIND ONE SENTENCE, and
+            // ADR-2045 sized this division's capability wall from that sentence.
+            // `real_model()` returning `None` is a RECONSTRUCTION failure (the
+            // engine could not produce a point at all, for one of five reasons
+            // `lra_online::model` now names); a model that fails `replays` was
+            // produced and does not satisfy the originals, which is an encoding
+            // or skeleton-leaf gap. `AXEYUM_LRAMODELPROBE=1` separates them.
             let Some(mut model) = theory.inner().real_model() else {
                 crate::lazy_smt_counters::record_online_probe(OnlineProbe::ModelDidNotReplay);
+                crate::lra_online::model_probe("lra_theory:no-model-reconstructed");
                 return Ok(CheckResult::Unknown(unknown(
                     "online CDCL(T) LRA model did not replay (arithmetic outside the incremental engine)",
                 )));
@@ -412,6 +420,7 @@ pub fn check_qf_lra_online_cdclt(
                 Ok(CheckResult::Sat(model))
             } else {
                 crate::lazy_smt_counters::record_online_probe(OnlineProbe::ModelDidNotReplay);
+                crate::lra_online::model_probe("lra_theory:model-built-but-does-not-replay");
                 Ok(CheckResult::Unknown(unknown(
                     "online CDCL(T) LRA model did not replay (arithmetic outside the incremental engine)",
                 )))
