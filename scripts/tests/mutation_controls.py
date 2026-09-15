@@ -2914,6 +2914,40 @@ SUITES["outcome-ledger"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `typed-decline-detail` (ADR-2104) — the three previously-free-string
+# `DeclineReason` details (`UnsupportedDetail`, `Budget`, `VerifierRejected`)
+# are now closed enums with driven producer tests
+# (`tests/decline_detail_typed.rs`). A guard that only checks "some decline
+# happened" cannot tell "unsupported" from "budget", the exact defect ADR-2101
+# counted 44 sites of; this mutation makes ONE producer emit the WRONG named
+# variant and must kill exactly the one test that pins THAT variant, proving
+# the driven tests check the variant and not merely decline-or-not.
+# --------------------------------------------------------------------------
+
+SUITES["typed-decline-detail"] = (
+    "crates/axeyum-solver/src/nia_square.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--test", "decline_detail_typed"),
+        "typed-decline-detail",
+    ),
+    [
+        (
+            # Kills
+            # `budget_square_coefficient_guard_exceeded_is_driven_by_an_oversized_coefficient`
+            # and nothing else: the other driven tests pin different variants
+            # (`Budget::Other`, `UnsupportedDetail::Backend`/`IngestRefusal`)
+            # from different producers untouched by this edit, and the
+            # accounting test constructs its own variant instances rather than
+            # calling this producer.
+            "nia-square's coefficient-guard decline reports the wrong Budget variant",
+            "            Budget::SquareCoefficientGuardExceeded,",
+            "            Budget::NiaRelaxationSliceExpired,",
+        ),
+    ],
+)
+
+
 def check_anchors() -> int:
     """Every registered anchor still matches its subject exactly once.
 
@@ -10628,11 +10662,21 @@ SUITES["route-ownership-marker"] = (
             # An owning decider's refusal stops being reported and becomes an
             # ordinary decline -- the silent fall-through this ADR exists to
             # make impossible.
+            #
+            # ADR-2104 gave this arm's payload a typed
+            # `UnsupportedDetail::OwnershipInconsistency` (was a raw
+            # `format!` `String`) and wrapped the arm's body in a block,
+            # which is why the anchor now matches two lines rather than one;
+            # the mutation itself -- shadow the real arm with an unreachable
+            # duplicate that instead calls `unsupported_decline` -- is
+            # unchanged.
             "the inconsistency report on an owning decider's refusal",
-            "        (RouteKind::Decider, Ownership::Complete) => DeclineReason::UnsupportedDetail(",
+            "        (RouteKind::Decider, Ownership::Complete) => {\n"
+            "            DeclineReason::UnsupportedDetail(UnsupportedDetail::OwnershipInconsistency(format!(\n",
             "        (RouteKind::Decider, Ownership::Complete) => unsupported_decline(message),\n"
             "        #[allow(unreachable_patterns)]\n"
-            "        (RouteKind::Decider, Ownership::Complete) => DeclineReason::UnsupportedDetail(",
+            "        (RouteKind::Decider, Ownership::Complete) => {\n"
+            "            DeclineReason::UnsupportedDetail(UnsupportedDetail::OwnershipInconsistency(format!(\n",
         ),
         (
             # `FastPath` collapses into `Decider`, so `datatype-elim`'s designed

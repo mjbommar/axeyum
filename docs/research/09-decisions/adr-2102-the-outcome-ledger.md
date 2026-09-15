@@ -1,7 +1,7 @@
 # ADR-2102: the outcome ledger — one append-only table, written by three sweep shapes, so the question a lane spent a day on becomes a query
 
 Status: accepted
-Index-summary: Phase 3 of `docs/plan/dispatch-and-instrumentation-2026-09-15.md`. Every sweep in the preceding week computed `(file → route that decided → elapsed → routes declined and why)` and threw it away after grepping ONE token — `raw=$(timeout … "$AX" "$f")` then a bare-verdict `grep`, in THREE independent harnesses, none of which passes `--trace`, so even a kept capture would have carried no routing lines. PLAN-SIZING re-ran **645** undecided Tier 1 rows to recover exactly that. Decision: **one append-only table, one library that is its only writer and only reader, one shared per-file runner the sweeps call instead of inlining the capture.** 19 columns, the plan's §4 list; `exit_status` its own column ([ADR-2045] measured `losses=0` by verdict with five new ABORTS underneath); `corpus_path` never a basename (370 of the board's 3,200 are ambiguous). **Three columns carry a THIRD value and each third value is a bug already shipped here**: `partial` is yes/no/**unknown** (a capture with no trail cannot say), `features` is a class list/`none`/**empty**/**`not-dispatched`**, and `sha_status` is main/branch/**unknown-commit**. TSV over JSONL deliberately — exit criterion 2 `join`s ledger rows against committed board TSVs, and a ledger nobody can `cut`-check by hand is worse than one with an escape function; the separator hazard ([ADR-2020]) is answered by one `_escape`/`_unescape` pair with a hostile fixture that ASSERTS its own hostility. Three writers append, **none of them formats a row**, so schema drift at a writer is unreachable rather than tested for. The `features` column needed one line of Rust: the ladder's own construct scan now records itself (one relaxed compare-exchange, first writer wins) and the CLI prints one extra `--trace` line naming the classes — re-deriving it from `.smt2` text in Python would have been a second authority that drifts, the exact shape all five instruments in the plan's §0 failed in. Measured: **220 rows** across seven sweeps on s5/s6; **verdict invariance 100 of 100, 0 MOVED**; ADR-2065's 14 movers reproduced EXACTLY (**arm A 0 / arm B 14**, split `q:mbqi-quick` 8 / `q:bool-skeleton` 6, `lira-dpll` 0) with the base arm's tree CHECKED to predate the ADR rather than assumed to; ADR-2045's **74 of 93** re-derived from the committed census (40 aborts + 34 Fourier–Motzkin), and **59 of 93** on today's tree, a move the sparse-simplex entry between the two binaries explains and which is reported as a finding about the TREE; ADR-2075's nine reproduce as **7 of 9 partial, identical across three passes with the SAME two exceptions**, both completing their ladder at 23.3 s and 24.7 s of a 24 s budget — and one of them is precisely the file [ADR-2101] showed ADR-2075 had mis-attributed, an independent confirmation reached by a different route. Staleness fires on REAL rows in both directions (`2611e14b0` main, `cb460e737` branch, 20 of 40 flagged, `load()` refusing without `--allow-branch`). Mutation: 3 registered, **3 killed**, two of them exactly one named test — and the third **SURVIVED on its first run**, which was the finding: deleting the `cat-file -e` existence check left all 31 tests green because `merge-base --is-ancestor <garbage>` exits non-zero by itself, so the guard was real and unfalsifiable at once; it became falsifiable when the classification went three-valued. Stated rather than implied: `features` names the FIRST quantifier-free dispatch's fragment, which on a quantified file is a sub-solve's and not the file's (6 of 20 arm-B rows record `none` on files full of arrays and reals), and **the ledger does not replace the A/B** — a delta between two single-arm ledger runs at different loads is the 77/79/85 error with a database in front of it.
+Index-summary: Phase 3 of `docs/plan/dispatch-and-instrumentation-2026-09-15.md`. Every sweep in the preceding week computed `(file → route that decided → elapsed → routes declined and why)` and threw it away after grepping ONE token — `raw=$(timeout … "$AX" "$f")` then a bare-verdict `grep`, in THREE independent harnesses, none of which passes `--trace`, so even a kept capture would have carried no routing lines. PLAN-SIZING re-ran **645** undecided Tier 1 rows to recover exactly that. Decision: **one append-only table, one library that is its only writer and only reader, one shared per-file runner the sweeps call instead of inlining the capture.** 19 columns, the plan's §4 list, plus `decline_names` (schema 2) added while the lane was in flight when [ADR-2104] typed the decline detail -- before the ledger had writers rather than after, with `KNOWN_HEADERS` so the table can still read its own schema-1 history and `append_row` REFUSING to put a newer row into an older file; `exit_status` its own column ([ADR-2045] measured `losses=0` by verdict with five new ABORTS underneath); `corpus_path` never a basename (370 of the board's 3,200 are ambiguous). **Three columns carry a THIRD value and each third value is a bug already shipped here**: `partial` is yes/no/**unknown** (a capture with no trail cannot say), `features` is a class list/`none`/**empty**/**`not-dispatched`**, and `sha_status` is main/branch/**unknown-commit**. TSV over JSONL deliberately — exit criterion 2 `join`s ledger rows against committed board TSVs, and a ledger nobody can `cut`-check by hand is worse than one with an escape function; the separator hazard ([ADR-2020]) is answered by one `_escape`/`_unescape` pair with a hostile fixture that ASSERTS its own hostility. Three writers append, **none of them formats a row**, so schema drift at a writer is unreachable rather than tested for. The `features` column needed one line of Rust: the ladder's own construct scan now records itself (one relaxed compare-exchange, first writer wins) and the CLI prints one extra `--trace` line naming the classes — re-deriving it from `.smt2` text in Python would have been a second authority that drifts, the exact shape all five instruments in the plan's §0 failed in. Measured: **220 rows** across seven sweeps on s5/s6; **verdict invariance 100 of 100, 0 MOVED**; ADR-2065's 14 movers reproduced EXACTLY (**arm A 0 / arm B 14**, split `q:mbqi-quick` 8 / `q:bool-skeleton` 6, `lira-dpll` 0) with the base arm's tree CHECKED to predate the ADR rather than assumed to; ADR-2045's **74 of 93** re-derived from the committed census (40 aborts + 34 Fourier–Motzkin), and **59 of 93** on today's tree, a move the sparse-simplex entry between the two binaries explains and which is reported as a finding about the TREE; ADR-2075's nine reproduce as **7 of 9 partial, identical across three passes with the SAME two exceptions**, both completing their ladder at 23.3 s and 24.7 s of a 24 s budget — and one of them is precisely the file [ADR-2101] showed ADR-2075 had mis-attributed, an independent confirmation reached by a different route. Staleness fires on REAL rows in both directions (`2611e14b0` main, `cb460e737` branch, 20 of 40 flagged, `load()` refusing without `--allow-branch`). Mutation: 3 registered, **3 killed** over a 43-test suite, two of them exactly one named test — and the third **SURVIVED on its first run**, which was the finding: deleting the `cat-file -e` existence check left all 31 tests green because `merge-base --is-ancestor <garbage>` exits non-zero by itself, so the guard was real and unfalsifiable at once; it became falsifiable when the classification went three-valued. Stated rather than implied: `features` names the FIRST quantifier-free dispatch's fragment, which on a quantified file is a sub-solve's and not the file's (6 of 20 arm-B rows record `none` on files full of arrays and reals), `decline_names` is EMPTY on all 220 rows because `route_trace.rs`'s `to_json` does not emit a `name` member yet -- that producer change is the trace lane's surface and is named as remaining work, with the reader path driven by a fixture so the column is not unfalsifiable; and **the ledger does not replace the A/B** — a delta between two single-arm ledger runs at different loads is the 77/79/85 error with a database in front of it.
 Index-status: accepted
 Date: 2026-09-15
 
@@ -44,13 +44,14 @@ inlining the capture.
 
 ### The schema, and the three columns that are not booleans
 
-Nineteen columns, the plan's §4 list exactly:
+Nineteen columns, the plan's §4 list exactly — plus one, added while this lane
+was in flight and explained under "Schema 2" below:
 
 ```
 sweep_id  arm  corpus_path  binary_sha  features  verdict  exit_status
 decided_by  bound_by  attempts  attempt_trail  elapsed_ms
 elapsed_ms_per_attempt  partial  decline_reasons  decline_details
-host  core  load
+decline_names  host  core  load
 ```
 
 Three of them carry a **third value** rather than a boolean, and each third
@@ -88,6 +89,33 @@ reconstructible from what is committed."
 trail's. On a partial reading the two are supposed to disagree — the gap is
 the open segment no attempt accounts for, and keeping them in one column would
 hide exactly the quantity [ADR-2075] needed.
+
+### Schema 2: `decline_names`, and a reader that can read its own history
+
+[ADR-2104] landed while this lane was measuring and turned the three
+previously-free-string `DeclineReason` details into closed enums with an
+exhaustive `name()`. The typed axis and the prose axis then want **two
+columns**, not one string a consumer has to split — which is ADR-2020's bug
+pre-empted rather than repeated — so `decline_names` was added before the
+ledger had writers rather than after.
+
+Two consequences, both deliberate:
+
+- **The producer does not emit it yet.** `route_trace.rs`'s `to_json` writes
+  `detail` (the `Display` text) and no `name` member, so the typed name does
+  not cross the JSON boundary. Making it cross is a change to that wire format
+  and is the trace lane's surface, not this one's; it is a three-line addition
+  and is named here as the remaining work. Until then every row's
+  `decline_names` is empty — so the reader path is driven by a FIXTURE that
+  does carry the member, because a column that is always empty on real data is
+  the un-failable shape this repository has a rule about.
+- **The table keeps its history.** `KNOWN_HEADERS` maps each header to its
+  version; `read_ledger` accepts every version it knows and refuses anything
+  else, and a schema-1 row's missing column reads back as the empty string with
+  `names` PADDED to line up one-for-one with `reasons`. `append_row` refuses to
+  put a schema-2 row into a schema-1 file rather than dropping the column
+  silently: a file keeps the schema it was opened with, and a sweep is one file.
+  The 220 rows below are schema 1 and a test derives that from what is on disk.
 
 ### TSV, not JSONL
 
@@ -356,6 +384,10 @@ it is the common case and not an edge one.
 * A branch measurement cannot be quoted as a main one without the reader being
   told, and a row from a commit this repository has never seen is reported as
   `unknown-commit` rather than as a branch somebody could go and look at.
+* `decline_names` exists and is exercised, so [ADR-2104]'s typed detail has a
+  home the day `route_trace.rs` emits a `name` member — the schema does not
+  have to be reopened after the ledger has writers. That producer change is
+  NOT done here and is named as remaining work.
 * `features` is empty on every row from a pre-ADR-2102 binary and is not
   backfillable — the scan lives inside the binary. That is the column's absent
   value and is distinguishable from `none`.
@@ -388,3 +420,4 @@ not a level.
 [ADR-2075]: adr-2075-the-silent-hang-is-not-silent-it-is-the-inventory-of-code-that-polls-no-deadline.md
 [ADR-2100]: adr-2100-typed-route-ownership.md
 [ADR-2101]: adr-2101-the-trace-is-the-api.md
+[ADR-2104]: adr-2104-typed-decline-detail.md

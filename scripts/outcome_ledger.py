@@ -110,7 +110,13 @@ INDEX_NAME = "INDEX.tsv"
 #: Bumped on ANY column rename, removal, reordering or addition.  A reader that
 #: guesses at an unknown schema is how ADR-2075's watchdog rows were swept into
 #: an aggregate that thought it had totals; this refuses instead.
-SCHEMA_VERSION = 1
+#:
+#: **2** adds `decline_names` (ADR-2104's typed detail variant).  The table is
+#: append-only, so a file keeps the schema it was opened with: `read_ledger`
+#: understands every version in :data:`KNOWN_HEADERS` and `append_row` refuses
+#: to append a newer row to an older file rather than silently dropping the
+#: column.  A new sweep gets a new file and the current schema.
+SCHEMA_VERSION = 2
 
 #: The intra-field separator, fixed at `|` and never `;`.  ADR-2020: a census
 #: split records on `;` when the `why=` field CONTAINS `;`, and truncated its
@@ -118,8 +124,33 @@ SCHEMA_VERSION = 1
 #: is a real separator rather than a hopeful one.
 LIST_SEP = "|"
 
-#: Every column, in order.  This tuple is the schema: `append_row` validates
-#: against it and `load` refuses a file whose header differs.
+#: Schema 1: the plan's §4 list, and the shape of every row written before
+#: ADR-2104 typed the decline detail.  Kept so the committed sweeps stay
+#: readable -- an append-only table that cannot read its own history is not one.
+COLUMNS_V1: tuple[str, ...] = (
+    "sweep_id",
+    "arm",
+    "corpus_path",
+    "binary_sha",
+    "features",
+    "verdict",
+    "exit_status",
+    "decided_by",
+    "bound_by",
+    "attempts",
+    "attempt_trail",
+    "elapsed_ms",
+    "elapsed_ms_per_attempt",
+    "partial",
+    "decline_reasons",
+    "decline_details",
+    "host",
+    "core",
+    "load",
+)
+
+#: Every column of the CURRENT schema, in order.  This tuple is what
+#: `append_row` writes and validates against.
 COLUMNS: tuple[str, ...] = (
     # -- which run this row belongs to -----------------------------------
     "sweep_id",
@@ -141,11 +172,28 @@ COLUMNS: tuple[str, ...] = (
     "partial",
     "decline_reasons",
     "decline_details",
+    # ADR-2104 typed the three previously-free-string `DeclineReason` details
+    # into closed enums with an exhaustive `name()`. This column carries that
+    # NAME per decline, beside the still-free `decline_details` -- the typed
+    # axis and the prose axis in two columns rather than one string a consumer
+    # has to split, which is ADR-2020's bug pre-empted rather than repeated.
+    #
+    # It is EMPTY on every row written by a binary whose `to_json` does not yet
+    # emit a `name` member -- which today is all of them, including this ADR's
+    # own 220. That producer change is `route_trace.rs`'s wire format and
+    # belongs to the trace lane, not to this one; the column exists now so the
+    # schema does not have to be reopened after the ledger has writers, and the
+    # reader path is driven by a fixture so it is not an unfalsifiable column.
+    "decline_names",
     # -- the conditions the level has to be read against ------------------
     "host",
     "core",
     "load",
 )
+
+#: Every header this reader understands, and which schema version it is.
+#: A header that is not in here is REFUSED, not read positionally.
+KNOWN_HEADERS: dict[tuple[str, ...], int] = {COLUMNS_V1: 1, COLUMNS: 2}
 
 INDEX_COLUMNS: tuple[str, ...] = ("sweep_id", "file", "schema_version", "created_utc", "note")
 
@@ -350,6 +398,12 @@ class LedgerRow:
     host: str
     core: str
     load: str
+    #: ADR-2104's typed detail variant name per decline, `|`-joined, in the
+    #: same order as `decline_reasons`.  LAST in the dataclass and defaulted
+    #: (the wire order is `COLUMNS`, which `to_line` reads, so the two are free
+    #: to differ) because a schema-1 row has no such field and must still
+    #: construct.
+    decline_names: str = ""
 
     # -- typed views -------------------------------------------------------
 
@@ -385,6 +439,36 @@ class LedgerRow:
     @property
     def details(self) -> list[str]:
         return _split(self.decline_details)
+
+    @property
+    def names(self) -> list[str]:
+        """ADR-2104's typed detail variant per decline, in dispatch order.
+
+        ALIGNED one-for-one with :attr:`reasons`, always.  A row whose schema
+        has no such column, or whose producer emitted no `name` member, is
+        padded with empty strings rather than coming back short -- a consumer
+        that zips the three axes together must not have to know which schema
+        version each row came from, and a list that is silently shorter is how
+        an axis gets read off by one.
+
+        `[]` therefore means "no declines", never "no names"; use
+        :attr:`has_typed_names` for that question.
+        """
+        raw = _split(self.decline_names)
+        count = len(self.reasons)
+        if len(raw) < count:
+            raw = raw + [""] * (count - len(raw))
+        return raw
+
+    @property
+    def has_typed_names(self) -> bool:
+        """Whether ANY decline on this row carries a typed variant name.
+
+        `False` on every row written before the producer emits the `name`
+        member -- which is a fact about the BINARY, not about the declines, and
+        is why it is a separate question from :attr:`names`.
+        """
+        return any(name for name in _split(self.decline_names))
 
     @property
     def feature_classes(self) -> list[str] | None:
@@ -424,6 +508,11 @@ class LedgerRow:
         if len(fields) != len(header):
             raise SchemaDrift("<row>", header)
         values = {name: _unescape(value) for name, value in zip(header, fields)}
+        # Columns the row's schema does not have come back EMPTY rather than
+        # absent, so a caller reading a mixed population does not have to know
+        # which version each row came from to touch a field.
+        for column in COLUMNS:
+            values.setdefault(column, "")
         return cls(**values)
 
 
@@ -518,6 +607,7 @@ def row_from_capture(
             partial=PARTIAL_UNKNOWN,
             decline_reasons="",
             decline_details="",
+            decline_names="",
             host=host,
             core=core,
             load=load,
@@ -544,6 +634,9 @@ def row_from_capture(
         partial=PARTIAL_YES if trail.partial else PARTIAL_NO,
         decline_reasons=_join(f"{route}={reason}" for route, reason, _ in declines),
         decline_details=_join(detail or "" for _, _, detail in declines),
+        # ADR-2104's typed variant name, one per decline in the same order.
+        # `""` where the producer emitted no `name` member.
+        decline_names=_join(a.name or "" for a in trail.attempts if a.declined),
         host=host,
         core=core,
         load=load,
@@ -635,6 +728,10 @@ def append_row(
     if path.exists() and path.stat().st_size > 0:
         with path.open("r", encoding="utf-8") as handle:
             header = handle.readline().rstrip("\n").split("\t")
+        # A FILE keeps the schema it was opened with. Appending a current row
+        # to an older file would either shift every field or silently drop the
+        # newer column; both are worse than refusing, and a sweep is one file,
+        # so the fix is always "start the next sweep".
         if tuple(header) != COLUMNS:
             raise SchemaDrift(str(path), header)
         prelude = ""
@@ -729,6 +826,21 @@ def flag_stale(
 # ---------------------------------------------------------------------------
 
 
+def schema_of(header: Sequence[str]) -> int:
+    """The schema version this header is, or a refusal.
+
+    Looked up in :data:`KNOWN_HEADERS` rather than compared against the current
+    `COLUMNS` alone: an append-only table whose reader cannot read its own
+    history is not an append-only table.  A header that is in no version is
+    REFUSED and never read positionally -- a writer that invented a column, or
+    dropped one, would otherwise just shift every field one place.
+    """
+    version = KNOWN_HEADERS.get(tuple(header))
+    if version is None:
+        raise SchemaDrift("<header>", header)
+    return version
+
+
 def read_ledger(path: str | Path) -> list[LedgerRow]:
     """Every row in one ledger file, refusing on schema drift."""
     path = Path(path)
@@ -737,7 +849,7 @@ def read_ledger(path: str | Path) -> list[LedgerRow]:
         if not header_line:
             return []
         header = header_line.rstrip("\n").split("\t")
-        if tuple(header) != COLUMNS:
+        if tuple(header) not in KNOWN_HEADERS:
             raise SchemaDrift(str(path), header)
         return [LedgerRow.from_line(line, header) for line in handle if line.strip()]
 

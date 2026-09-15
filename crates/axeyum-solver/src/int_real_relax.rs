@@ -126,8 +126,7 @@ pub fn refute_int_via_real_relaxation(
         // is buying anything on that file.
         CheckResult::Sat(_) => {
             *why = Some(crate::route_trace::DeclineReason::VerifierRejected(
-                "the real relaxation is satisfiable, which does not transfer to the integers"
-                    .to_owned(),
+                crate::route_trace::VerifierRejected::RealRelaxationSatDoesNotTransfer,
             ));
             Ok(false)
         }

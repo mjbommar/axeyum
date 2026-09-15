@@ -1,0 +1,7 @@
+file	mode	conjuncts	split	z3_core	minimal	min_status	core_z3	core_cvc5	ms	host	core
+QF_NIA/20170427-VeryMax/ITS/From_T2__apchild-live.t2_fixed__p16479_terminationG_0.smt2	full	137	unknown	NA	NA	NA	NA	NA	60775	server5	1
+QF_NIA/mcm/106.smt2	full	119	unknown	NA	NA	NA	NA	NA	60320	server5	1
+UF/20170428-Barrett/cdt-cade2015/nada/afp/abstract_completeness/x2015_09_10_16_59_33_621_1039748.smt_in.smt2	full	379	unknown	NA	NA	NA	NA	NA	60898	server5	1
+UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_20_02_499_2906170.smt_in.smt2	full	386	unsat	5	5	MINIMAL	unsat	unsat	10962	server5	1
+UF/sledgehammer/Arrow_Order/smtlib.663965.smt2	full	499	unsat	9	8	MINIMAL	unsat	unsat	2388	server5	1
+UF/sledgehammer/QEpres/uf.924249.smt2	full	458	unknown	NA	NA	NA	NA	NA	61361	server5	1

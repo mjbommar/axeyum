@@ -547,9 +547,15 @@ fn resource_capped_lia_records_budget() {
         "expected at least one Declined entry:\n{trace}"
     );
     // Best-effort: if any decline is budget-classed, confirm it carries detail.
+    // `Budget` is a typed enum (ADR-2104): every variant renders real text, so
+    // this also catches an `Other(String)` pass-through that somehow lost its
+    // `UnknownReason::detail`.
     for a in trace.attempts() {
         if let RouteOutcome::Declined(DeclineReason::Budget(detail)) = &a.outcome {
-            assert!(!detail.is_empty(), "budget decline must carry detail");
+            assert!(
+                !detail.to_string().is_empty(),
+                "budget decline must carry detail"
+            );
         }
     }
 }

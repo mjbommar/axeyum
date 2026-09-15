@@ -368,11 +368,18 @@ def criterion_1() -> None:
         n = 0
         for sweep in sweeps:
             path = ol.ledger_path(sweep, ledger_dir=LEDGER)
-            header = path.read_text(encoding="utf-8").splitlines()[0].split("\t")
+            header = tuple(path.read_text(encoding="utf-8").splitlines()[0].split("\t"))
+            # Checked against every schema the library KNOWS, not against the
+            # current one alone: these seven sweeps are schema 1 and the
+            # `decline_names` column came later. A header in NO known version is
+            # still refused -- that is the drift case, and it is what this
+            # asserts.
+            version = ol.KNOWN_HEADERS.get(header)
             check(
-                f"{sweep}: header is the library's {len(ol.COLUMNS)}-column schema",
-                tuple(header),
-                ol.COLUMNS,
+                f"{sweep}: header is a schema the library knows",
+                version is not None,
+                True,
+                f"schema {version}, {len(header)} columns",
             )
             n += len(rows_of(sweep))
         report(f"{writer}: rows appended", n)

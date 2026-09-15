@@ -15,8 +15,8 @@ Branch base: `git merge-base main HEAD` is `7d922fe58`, which **is** local
 
 ## What changed
 
-**`scripts/outcome_ledger.py`** — 19 columns, the plan's §4 schema exactly,
-TSV. The routing columns come from `scripts/route_trace_reader.py` (ADR-2101)
+**`scripts/outcome_ledger.py`** — the plan's §4 schema exactly, plus
+`decline_names` (schema 2, added when ADR-2104 landed mid-lane), TSV. The routing columns come from `scripts/route_trace_reader.py` (ADR-2101)
 and from nothing else; this lane never anchors on a `; route ` prefix. Three
 things carry a deliberate third value rather than a boolean:
 `partial` is `yes`/`no`/**`unknown`** (a capture with no trail cannot say
@@ -46,12 +46,12 @@ would have been a second authority that drifts from this one.
 | | |
 |---|---|
 | writers appending to one schema | **3** |
-| ledger rows produced, six sweeps | **see ADR-2102 §Measurements** |
-| verdict invariance (`--trace` vs not), three smoke runs | **60 / 60 unchanged, 0 MOVED** |
+| ledger rows produced, seven sweeps | **220** |
+| verdict invariance (`--trace` vs not), three smoke runs | **100 / 100 unchanged, 0 MOVED** |
 | ADR-2065's `+14`, re-derived from ledger rows | **+14** (arm A decides 0, arm B decides 14) |
-| ADR-2045's `74 of 93`, re-derived from the committed census | **74** |
+| ADR-2045's `74 of 93`, re-derived from the committed census | **74**; **59 of 93** on today's tree |
 | ADR-2075's nine partial rows | **7 of 9 partial on this tree**, both exceptions on the wire |
-| control suite | **32 tests**, registered as `step outcome-ledger-tests` |
+| control suite | **43 tests**, registered as `step outcome-ledger-tests` |
 | mutations | 3 registered, **3 killed**, two of them exactly one named test |
 
 ## Findings this lane did not go looking for
@@ -74,6 +74,12 @@ would have been a second authority that drifts from this one.
   the whole `2611e14b0` arm of the A/B. That is the column's absent value and
   is distinguishable from `none`; it is not backfillable, because the scan is
   inside the binary.
+- **`decline_names` is empty on all 220 rows.** `route_trace.rs`'s `to_json`
+  emits `detail` and no `name` member, so ADR-2104's typed variant does not
+  cross the JSON boundary. That is a three-line addition to the trace lane's
+  wire format, not this lane's surface. The column, the schema version and the
+  reader path exist and are driven by a fixture, so it fills itself the day the
+  producer emits it.
 - **Phase 4 is not started.** No ladder order and no budget constant is derived
   here. The ledger's minimum for deriving a default is the repository's minimum
   for claiming a gain: three passes per arm, a published noise floor, and an

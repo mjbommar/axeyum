@@ -168,6 +168,209 @@ class EscapingRoundTrip(unittest.TestCase):
             self.assertEqual(back[0].reasons, [("q:bool-skeleton", "budget")])
 
 
+class TypedDeclineName(unittest.TestCase):
+    """ADR-2104's typed detail variant, carried beside the free-text detail.
+
+    The producer does not emit a `name` member yet -- that is
+    `route_trace.rs`'s wire format and the trace lane's surface -- so every
+    committed row has this column empty.  A column that is always empty on real
+    data is exactly the un-failable shape CLAUDE.md warns about, so the reader
+    path is DRIVEN here by a fixture that does carry the member.  The day the
+    producer emits it, these assertions are already the contract.
+    """
+
+    def _row_with_names(self, tmp: Path) -> ol.LedgerRow:
+        attempts = [
+            {"route": "fd:parse", "outcome": "probe", "elapsed_ns": 1_000_000},
+            {
+                "route": "nia-square",
+                "outcome": "declined",
+                "reason": "budget",
+                "name": "square-coefficient-guard-exceeded",
+                "detail": "coefficient 2^97 exceeds the guard",
+                "elapsed_ns": 2_000_000,
+            },
+            {
+                "route": "qf-bv",
+                "outcome": "declined",
+                "reason": "unsupported",
+                "name": "backend",
+                "detail": "term #9 has sort (Uninterpreted 4)",
+                "elapsed_ns": 3_000_000,
+            },
+        ]
+        capture = _capture(
+            tmp, "named.out", ["unknown", _trail_line(partial=False, attempts=attempts)]
+        )
+        return _row(tmp, capture)
+
+    def test_the_typed_name_survives_to_the_row(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            row = self._row_with_names(Path(tmpdir))
+            self.assertEqual(row.names, ["square-coefficient-guard-exceeded", "backend"])
+            self.assertTrue(row.has_typed_names)
+
+    def test_a_row_with_no_declines_at_all_has_no_names(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            attempts = [
+                {"route": "fd:parse", "outcome": "probe", "elapsed_ns": 1},
+                {"route": "qf-bv", "outcome": "decided", "verdict": "unsat", "elapsed_ns": 2},
+            ]
+            capture = _capture(
+                tmp, "d.out", ["unsat", _trail_line(partial=False, attempts=attempts)]
+            )
+            row = _row(tmp, capture)
+            self.assertEqual(row.reasons, [])
+            self.assertEqual(row.names, [])
+
+    def test_the_typed_axis_and_the_prose_axis_are_separate_columns(self):
+        """Two declines with the SAME reason and detail stay apart by name.
+
+        ADR-2101 drove the equivalent for `reason`/`kind`; this is the same
+        requirement one level down, and it is why `name` is its own column
+        rather than appended into `decline_reasons`.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            attempts = [
+                {
+                    "route": "r",
+                    "outcome": "declined",
+                    "reason": "unsupported",
+                    "name": "backend",
+                    "detail": "same words",
+                    "elapsed_ns": 1,
+                },
+                {
+                    "route": "r",
+                    "outcome": "declined",
+                    "reason": "unsupported",
+                    "name": "ingest-refusal",
+                    "detail": "same words",
+                    "elapsed_ns": 1,
+                },
+            ]
+            capture = _capture(
+                tmp, "t.out", ["unknown", _trail_line(partial=False, attempts=attempts)]
+            )
+            row = _row(tmp, capture)
+            self.assertEqual(row.reasons, [("r", "unsupported"), ("r", "unsupported")])
+            self.assertEqual(row.details, ["same words", "same words"])
+            self.assertEqual(row.names, ["backend", "ingest-refusal"])
+
+    def test_the_names_line_up_with_the_reasons_one_for_one(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            row = self._row_with_names(Path(tmpdir))
+            self.assertEqual(len(row.names), len(row.reasons))
+            self.assertEqual(len(row.names), len(row.details))
+
+    def test_a_producer_with_no_name_member_yields_empty_names_not_missing_ones(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            capture = _capture(
+                tmp,
+                "c.out",
+                ["unsat", _trail_line(partial=False, attempts=COMPLETE_ATTEMPTS)],
+            )
+            row = _row(tmp, capture)
+            # One decline in COMPLETE_ATTEMPTS, and it carries no `name`. The
+            # list is still ALIGNED with the reasons -- a consumer zipping the
+            # three axes must not have to know which producer wrote the row.
+            self.assertEqual(len(row.reasons), 1)
+            self.assertEqual(row.names, [""])
+            self.assertFalse(row.has_typed_names)
+
+    def test_the_name_round_trips_through_a_written_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            ol.append_row("fixture", self._row_with_names(tmp), ledger_dir=tmp / "ledger")
+            back = ol.read_ledger(tmp / "ledger" / "fixture.tsv")
+            self.assertEqual(back[0].names, ["square-coefficient-guard-exceeded", "backend"])
+
+
+class SchemaVersions(unittest.TestCase):
+    """An append-only table that cannot read its own history is not one."""
+
+    def test_the_current_schema_is_the_newest_known_header(self):
+        self.assertEqual(ol.KNOWN_HEADERS[ol.COLUMNS], ol.SCHEMA_VERSION)
+        self.assertEqual(max(ol.KNOWN_HEADERS.values()), ol.SCHEMA_VERSION)
+
+    def test_schema_1_differs_from_the_current_one_by_exactly_the_new_column(self):
+        # Derived, not listed: a future column added without a version fails
+        # here rather than measuring the maintainer's memory.
+        added = [c for c in ol.COLUMNS if c not in ol.COLUMNS_V1]
+        removed = [c for c in ol.COLUMNS_V1 if c not in ol.COLUMNS]
+        self.assertEqual(added, ["decline_names"])
+        self.assertEqual(removed, [])
+
+    def test_a_schema_1_file_is_still_readable(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "old.tsv"
+            values = {c: f"v-{c}" for c in ol.COLUMNS_V1}
+            path.write_text(
+                "\t".join(ol.COLUMNS_V1)
+                + "\n"
+                + "\t".join(values[c] for c in ol.COLUMNS_V1)
+                + "\n",
+                encoding="utf-8",
+            )
+            rows = ol.read_ledger(path)
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0].corpus_path, "v-corpus_path")
+            # The column the old schema has no room for comes back EMPTY, and
+            # `names` is then an empty LIST -- distinguishable from `[""]`,
+            # which is "one decline, producer said nothing".
+            self.assertEqual(rows[0].decline_names, "")
+            # One `decline_reasons` element in the fixture, so `names` is
+            # padded to one empty string rather than coming back short.
+            self.assertEqual(rows[0].names, [""])
+            self.assertFalse(rows[0].has_typed_names)
+
+    def test_every_committed_sweep_is_a_known_schema(self):
+        """Derived from what is on disk, not from a list.
+
+        The 220 rows this ADR committed are schema 1.  If a later change makes
+        them unreadable, this fails here rather than in whatever lane next
+        quotes them.
+        """
+        ledger = ROOT / "bench-results" / "ledger"
+        if not ledger.is_dir():
+            # `scripts/tests/mutation_controls.py` copies the tree to a scratch
+            # root with `bench-results/` EXCLUDED (206 MB), so this test's
+            # subject is genuinely absent there. Skipping says so; passing on an
+            # empty glob would be the "empty result from a tool never pointed at
+            # your subject" failure this repository has a rule about.
+            self.skipTest(f"{ledger} is not present (mutation scratch copy excludes it)")
+        files = [f for f in sorted(ledger.glob("*.tsv")) if f.name != ol.INDEX_NAME]
+        self.assertGreaterEqual(len(files), 7, f"{ledger} holds {len(files)} sweeps")
+        for path in files:
+            header = tuple(path.read_text(encoding="utf-8").splitlines()[0].split("\t"))
+            self.assertIn(header, ol.KNOWN_HEADERS, f"{path.name} is an unknown schema")
+            self.assertGreater(len(ol.read_ledger(path)), 0, f"{path.name} has no rows")
+
+    def test_appending_a_current_row_to_a_schema_1_file_is_refused(self):
+        """A FILE keeps the schema it was opened with.
+
+        The alternative is dropping the new column silently, which is the
+        schema-drift failure this library exists to make unreachable.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            ledger = tmp / "ledger"
+            ledger.mkdir()
+            (ledger / "fixture.tsv").write_text(
+                "\t".join(ol.COLUMNS_V1) + "\n", encoding="utf-8"
+            )
+            capture = _capture(
+                tmp,
+                "c.out",
+                ["unsat", _trail_line(partial=False, attempts=COMPLETE_ATTEMPTS)],
+            )
+            with self.assertRaises(ol.SchemaDrift):
+                ol.append_row("fixture", _row(tmp, capture), ledger_dir=ledger)
+
+
 class SchemaDrift(unittest.TestCase):
     """Exit criterion 1: a writer that emits an unknown column is refused."""
 

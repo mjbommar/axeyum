@@ -34,8 +34,8 @@
 use std::time::Duration;
 
 use axeyum_solver::{
-    DeclineReason, RouteAttributionGuard, RouteOutcome, SolverConfig, last_route_attribution,
-    solve_smtlib,
+    DeclineReason, RouteAttributionGuard, RouteOutcome, SolverConfig, UnsupportedDetail,
+    last_route_attribution, solve_smtlib,
 };
 
 /// A quantifier-free script the dispatch still **errors** on: an uninterpreted
@@ -289,7 +289,7 @@ fn a_parseable_script_records_no_fd_parse_decline() {
 fn the_two_unsupported_forms_are_distinguishable() {
     assert_ne!(
         DeclineReason::Unsupported.to_string(),
-        DeclineReason::UnsupportedDetail("why".to_owned()).to_string(),
+        DeclineReason::UnsupportedDetail(UnsupportedDetail::Backend("why".to_owned())).to_string(),
         "collapsing these two renders a reasoned decline as a placeholder"
     );
 }

@@ -16,6 +16,19 @@ python3 scripts/outcome_ledger.py agg  --sweep-id <id>            # verdict / bo
 python3 scripts/outcome_ledger.py show --sweep-id <id> --allow-branch
 ```
 
+## Schemas
+
+The seven sweeps here are **schema 1** (19 columns). The current schema is
+**2**, which adds `decline_names` -- ADR-2104's typed `DeclineReason` detail
+variant, beside the still-free `decline_details`. `read_ledger` understands
+both; `append_row` refuses to put a schema-2 row into a schema-1 file, because
+a file keeps the schema it was opened with and a sweep is one file.
+
+`decline_names` is EMPTY on every row written so far: `route_trace.rs`'s
+`to_json` emits `detail` and no `name` member, so the typed name does not cross
+the JSON boundary yet. The column exists now so the schema does not have to be
+reopened after the ledger has writers.
+
 ## Three things to read before quoting a number from here
 
 1. **A ledger row is not a board row.** The ledger RECORDS; the interleaved A/B
