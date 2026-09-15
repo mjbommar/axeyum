@@ -13,7 +13,7 @@ Dropping assertions WEAKENS the query, so the ground half may legitimately turn
 `unsat` into `sat`.  That is not what is being measured.  The question is
 whether the ADR-0022 DATATYPE SENTENCE still appears with no quantifier
 anywhere in the file -- if it does, the refusal is in the quantifier-free
-closure and `auto.rs:2473`'s "mbqi declined" prefix names the wrong engine.
+closure and `auto.rs:2488`'s "mbqi declined" prefix names the wrong engine.
 
 The quantified half is written too, and is the control in the other direction:
 if it did NOT refuse, the refusal would be coming from the ground assertions

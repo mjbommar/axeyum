@@ -14,8 +14,8 @@ Three things this prints that a single bucket count would hide.
 
 2.  `mbqi_exit`, from `AXEYUM_QPROBE`.  The message
     `mbqi declined an unsupported fragment: <a datatype sentence>` is produced
-    at `auto.rs:2473` by wrapping ANY `Err(Unsupported)` that comes back from
-    `prove_unsat_by_mbqi`, and `prove_unsat_by_mbqi_inner` (auto.rs:12777)
+    at `auto.rs:2488` by wrapping ANY `Err(Unsupported)` that comes back from
+    `prove_unsat_by_mbqi`, and `prove_unsat_by_mbqi_inner` (auto.rs:12862)
     delegates to `prove_unsat_by_ematching` at five shape guards BEFORE its
     refutation loop runs.  So the prefix does not establish that MBQI ran, and
     `mbqi_exit` is the column that does.
@@ -89,7 +89,7 @@ def exits(raw):
 def reached_loop(raw):
     """Did MBQI's refutation loop run at all on this row?
 
-    `refutation-loop` is printed at `auto.rs:12851`, immediately before the loop
+    `refutation-loop` is printed at `auto.rs:12940`, immediately before the loop
     that calls `check_mbqi_ground_seed`. Every other exit returns
     `prove_unsat_by_ematching` instead. So this is the yes/no the census turns
     on, and it is read from the binary rather than from the message.

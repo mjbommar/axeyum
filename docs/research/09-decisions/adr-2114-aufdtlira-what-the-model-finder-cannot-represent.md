@@ -1,7 +1,7 @@
 # ADR-2114: the model finder is not what cannot represent datatypes — the GROUND closure is, and the message names the wrong engine
 
 Status: accepted
-Index-summary: [ADR-2090]'s `AUFDTLIRA` give-up census recorded **17 "mbqi declined an unsupported DATATYPE fragment"** and named that as the reason the division's model finder never gets to build a model. **The premise does not survive the control.** Traced over **134 files** (the 55 ADR-2090 cores plus the 79 undecided originals, 24 s, pinned cores on an idle s7, `AXEYUM_QPROBE` throughout): MBQI's refutation loop **did not run on 132 of 134**, and on **127** the reason is a purely syntactic quantifier shape guard (`nested-binder-in-matrix`, `quantifier-below-top-level`) that mentions no datatype — SPARK VCs are alternating and non-prenex, and the rung takes only single-binder prenex. 17 rows do print a datatype wording, and on **16 of 17** MBQI's loop had already been bypassed: the sentence is produced by a ground sub-solve inside e-matching (`decide_instantiation`, `auto.rs:13388`) and acquires its "mbqi declined" prefix at `auto.rs:2473`. **The control refuses the datatype reading of that**: the loop also did not run on **116 of the 117** rows with NO datatype wording, so "MBQI never got to build a model" is a fact about the ladder, not about datatypes; the narrow claim that survives is that the message names an engine that did not produce it. Constructs are classified by SORTS, not names (`field_sort_expands`/`datatype_expansion_is_exact` are invisible in a `declare-datatypes` form), 134 of 134 joined, **38 disagreements all one way** ("predicted a refusal, observed none" — the ladder ended before the Ackermann pass) and **0** the other. Two buckets: `W1` refuses a field sort, and that sort is `(Array Int <datatype>)` on **86 of 86** occurrences; `INEXACT` is a datatype-typed field at a UF boundary. The reference: z3 refutes **44 of 55 cores GROUND** (both quantifier engines off) and **MBQI decides 0 of 55**; on the 13 datatype-refused rows **12 of 13 are GROUND**, so the gap is real and quantifier-free. z3's model finder contains **zero** occurrences of `datatype`/`constructor` (control `sort`=68) and builds **no universe** — measured, not only read: `-v:10` under `smt.ematching=false` emits 0 universe/model-finder lines across all 13, against a non-vacuous control of 27 to 47,758 total lines. **No datatype lever is built**: the wording is the printed blocker on 13 of 55 CORES but only **4 of the 79 undecided ORIGINALS** — a reference-minimised core population over-reports this bucket by more than 3×, which no census in `bench-results/` currently distinguishes — and the 13 split across two designs while 127 of 134 die upstream of any theory question. What ships is the mislabelled sentence, corrected as a byte-identical-prefix suffix so the four committed censuses that read it keep working, with 4 tests and a 4-guard mutation suite (first three measured: **each killed exactly one test, three different ones**; `--check-anchors` `suites=141 anchors=1069 stale=0`). §4 names and sizes the representation the `INEXACT` bucket would need — recursive tag/field expansion to the datatype's own nesting depth, terminating because **0 of 134 files declares a recursive datatype and the deepest nest is 5** — so the next lane need not re-derive it.
+Index-summary: [ADR-2090]'s `AUFDTLIRA` give-up census recorded **17 "mbqi declined an unsupported DATATYPE fragment"** and named that as the reason the division's model finder never gets to build a model. **The premise does not survive the control.** Traced over **134 files** (the 55 ADR-2090 cores plus the 79 undecided originals, 24 s, pinned cores on an idle s7, `AXEYUM_QPROBE` throughout): MBQI's refutation loop **did not run on 132 of 134**, and on **127** the reason is a purely syntactic quantifier shape guard that mentions no datatype (125 of them `nested-binder-in-matrix` and/or `quantifier-below-top-level`, 2 `multi-binder-prefix`) — SPARK VCs are alternating and non-prenex, and the rung takes only single-binder prenex. 17 rows do print a datatype wording, and on **16 of 17** MBQI's loop had already been bypassed: the sentence is produced by a ground sub-solve inside e-matching (`decide_instantiation`, `auto.rs:13388`) and acquires its "mbqi declined" prefix at `auto.rs:2473`. **The control refuses the datatype reading of that**: the loop also did not run on **116 of the 117** rows with NO datatype wording, so "MBQI never got to build a model" is a fact about the ladder, not about datatypes; the narrow claim that survives is that the message names an engine that did not produce it. Constructs are classified by SORTS, not names (`field_sort_expands`/`datatype_expansion_is_exact` are invisible in a `declare-datatypes` form), 134 of 134 joined, **38 disagreements all one way** ("predicted a refusal, observed none" — the ladder ended before the Ackermann pass) and **0** the other. Two buckets: `W1` refuses a field sort, and that sort is `(Array Int <datatype>)` on **86 of 86** occurrences; `INEXACT` is a datatype-typed field at a UF boundary. The reference: z3 refutes **44 of 55 cores GROUND** (both quantifier engines off) and **MBQI decides 0 of 55**; on the 13 datatype-refused rows **12 of 13 are GROUND**, so the gap is real and quantifier-free. z3's model finder contains **zero** occurrences of `datatype`/`constructor` (control `sort`=68) and builds **no universe** — measured, not only read: `-v:10` under `smt.ematching=false` emits 0 universe/model-finder lines across all 13, against a non-vacuous control of 27 to 47,758 total lines. **No datatype lever is built**: the wording is the printed blocker on 13 of 55 CORES but only **4 of the 79 undecided ORIGINALS** — a reference-minimised core population over-reports this bucket by more than 3×, which no census in `bench-results/` currently distinguishes — and the 13 split across two designs while 127 of 134 die upstream of any theory question. What ships is the mislabelled sentence, corrected as a byte-identical-prefix suffix so the four committed censuses that read it keep working, with 4 tests and a 4-guard mutation suite (first three measured: **each killed exactly one test, three different ones**; `--check-anchors` `suites=141 anchors=1069 stale=0`). §4 names and sizes the representation the `INEXACT` bucket would need — recursive tag/field expansion to the datatype's own nesting depth, terminating because **0 of 134 files declares a recursive datatype and the deepest nest is 5** — so the next lane need not re-derive it.
 Index-status: accepted
 Date: 2026-09-15
 
@@ -49,7 +49,8 @@ Three things are decided here.
 
 ## 1. What the message actually reports
 
-The string is assembled at `crates/axeyum-solver/src/auto.rs:2473`:
+The string is assembled in `crates/axeyum-solver/src/auto.rs`. As it stood
+before §6's correction:
 
 ```rust
 Err(SolverError::Unsupported(message)) => {
@@ -65,13 +66,16 @@ It wraps **any** `Err(Unsupported)` coming back from `prove_unsat_by_mbqi`. It
 is not a claim that MBQI examined a datatype, and it is not a claim that MBQI
 ran.
 
-`prove_unsat_by_mbqi_inner` (`auto.rs:12777`) hands the whole query to
+(Line numbers below are as of this ADR's own commit; §6's change moved them, so
+grep the identifier rather than trusting the number if the file has moved on.)
+
+`prove_unsat_by_mbqi_inner` (`auto.rs:12862`) hands the whole query to
 `prove_unsat_by_ematching` at **five** shape guards before its refutation loop
-is reached — `auto.rs:12807` `forall-arity`, `:12814`
-`nested-binder-in-matrix`, `:12824` `quantifier-below-top-level`, `:12832`
-`no-top-level-universal`, `:12848` `multi-binder-prefix`; the loop itself is
-entered at `:12851`. And `prove_unsat_by_ematching` decides its instantiated
-query with a plain ground solve, `auto.rs:13388`:
+is reached — `auto.rs:12896` `forall-arity`, `:12903`
+`nested-binder-in-matrix`, `:12913` `quantifier-below-top-level`, `:12921`
+`no-top-level-universal`, `:12937` `multi-binder-prefix`; the loop itself is
+entered at `:12940`. And `prove_unsat_by_ematching` decides its instantiated
+query with a plain ground solve, `auto.rs:13482`:
 
 ```rust
 let result = check_auto(arena, &instantiation.assertions, config)?;
@@ -79,11 +83,11 @@ let result = check_auto(arena, &instantiation.assertions, config)?;
 
 `instantiation.assertions` is quantifier-free. The `?` carries an
 `Err(Unsupported)` from the ground ladder straight back out through
-`prove_unsat_by_ematching` and `prove_unsat_by_mbqi_inner` to `auto.rs:2473`,
-where it acquires the "mbqi declined" prefix.
+`prove_unsat_by_ematching` and `prove_unsat_by_mbqi_inner` to the sentence
+above (`auto.rs:2488`), where it acquires the "mbqi declined" prefix.
 
 The distinction is measurable rather than inferred, because `AXEYUM_QPROBE`
-exists for exactly this — `mbqi_shape_probe`'s own doc comment (`auto.rs:12656`)
+exists for exactly this — `mbqi_shape_probe`'s own doc comment (`auto.rs:12740`)
 says the rung's `qtrace` line "cannot distinguish 'the MBQI refutation loop ran
 and failed' from 'a shape guard fired and the call was e-matching all along'".
 On

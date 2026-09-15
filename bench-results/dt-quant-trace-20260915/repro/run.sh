@@ -10,11 +10,28 @@
 #     argument whose expansion is not exact ... (ADR-0022)
 #
 # which says MBQI refused a datatype construct. Reading the code says otherwise:
-# `prove_unsat_by_mbqi_inner` (auto.rs:12777) solves its GROUND seed with
-# `check_mbqi_ground_seed` -> `check_auto` (auto.rs:12319) under a `?`, and
-# `auto.rs:2473` wraps whatever error comes back in the "mbqi declined" prefix.
-# If that reading is right the refusal is in the quantifier-FREE closure and has
-# nothing to do with quantifiers.
+# `prove_unsat_by_mbqi_inner` (auto.rs:12862) solves its GROUND seed with
+# `check_mbqi_ground_seed` -> `check_auto` under a `?`, and `auto.rs:2488` wraps
+# whatever error comes back in the "mbqi declined" prefix. If that reading is
+# right the refusal is in the quantifier-FREE closure and has nothing to do with
+# quantifiers.
+#
+# HOW IT TURNED OUT, recorded here because a hypothesis left in a file as though
+# it were the finding is how a stale reading gets cited later (ADR-2114 §1).
+#
+#   * The DIRECTION was right and the ROUTE was wrong. The refusal is indeed
+#     raised by the quantifier-free closure -- but not by MBQI's ground seed,
+#     because on 132 of 134 measured files MBQI's refutation loop is never
+#     entered at all. A quantifier SHAPE guard diverts to
+#     `prove_unsat_by_ematching` first, and it is E-MATCHING's ground
+#     `check_auto` (`decide_instantiation`, auto.rs:13482) whose `?` carries the
+#     error back to the "mbqi declined" prefix.
+#   * THESE THREE FILES DO NOT TEST EITHER READING. All three are decided --
+#     `ground.smt2` by `qf-bv`, the other two by `q:bool-skeleton` -- before the
+#     datatype rung runs at all. They are kept because that is the finding:
+#     a reproducer small enough to write by hand is decided by a rung above the
+#     one under test. `degroundify.py` beside them is the replacement, and
+#     `probe-core.sh` on a real core is what actually settled it.
 #
 # THE EXPERIMENT. Three files that differ in exactly one thing each:
 #

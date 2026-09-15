@@ -4,7 +4,7 @@
 #   probe-core.sh <file.smt2> [<smtcomp_cli>] [budget_ms]
 #
 # `AXEYUM_QPROBE` is the ONLY channel that says which exit
-# `prove_unsat_by_mbqi_inner` took. Its own doc comment (auto.rs:12656) says
+# `prove_unsat_by_mbqi_inner` took. Its own doc comment (auto.rs:12740) says
 # why: the rung's `qtrace` line cannot distinguish "the MBQI refutation loop ran
 # and failed" from "a shape guard fired and the call was e-matching all along",
 # because the two are the same `Ok(Unknown)` at the call site. This lane's whole
