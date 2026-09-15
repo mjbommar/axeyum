@@ -239,6 +239,37 @@ negated goal, median `minimal` 2, median `suffix_need` 11 — and the
 second-worst ceiling at **3 of 55**. Small, well-placed, trivially findable
 cores that we still do not decide.
 
+### 5a. The ceiling is a measurement of THIS BRANCH — and of the merged tree
+
+`main` moved a long way inside this lane's measurement window: [ADR-2100]
+(typed route ownership), [ADR-2101] (the route trail as an API), and the
+`PLAN-SIZING` lane, which independently reports *"the ladder STOPS on Unknown
+in **604 of 645** undecided Tier 1 rows"* — **the same 645**, derived by a
+different instrument, which is a cross-check on this lane's population that
+neither lane arranged.
+
+So the ceiling was re-measured on the merged tree with a freshly built binary
+(`BUILD-OK postmerge 4311bdf2a`, `find -newer` clean), same 232 cores, same
+24 s, same six pinned cores, and compared **at row level** — equal totals do
+not imply equal files:
+
+| | ceiling |
+|---|---:|
+| pre-merge (`b78b887b3`), the arm every number above was read on | **39 of 232** |
+| post-merge (`4311bdf2a`) | **41 of 232** |
+| row level | gains **3**, losses **1**, sat↔unsat flips **0** |
+
+**Soundness on the merged tree: 0 `sat` of 232.** The three gains and one loss
+are all `spark2014bench` rows. The conclusion does not move: 41 of 232 is
+**6.4 % of the 645 undecided rows** against 5.6 % pre-merge, still an order of
+magnitude below what a lever would need, and R9 is decided by the *strategy*
+reaching 18.4 % of the ceiling, not by the ceiling's own size.
+
+The lane's scripts were also re-run against the post-merge binary to confirm
+they still parse what the tree now emits: `bound_by`, `attempts` and
+`giveup_kind` all populate on `4311bdf2a`, so a future lane can re-run this
+census rather than rebuild it.
+
 ## 6. The strategy, sized before building it
 
 Every rule is computable from the query text alone; the reference may **decide**
@@ -348,6 +379,22 @@ would size the axis on the easy half of its own population. Of the 339
      13  :status sat       no core exists
 
 **36 is the firm lower bound on this census's blind spot.**
+
+And the instrument's own cost, A5's sampled half — a seeded 60-row sample of
+that bucket re-asked on the **original** file rather than the split one, because
+the `and`-split is an equivalence but not a performance-neutral one:
+
+    58  no verdict line — z3 prints `timeout` on `-T:` expiry, confirmed by
+        running one by hand; NOVERDICT here MEANS timed out, at 60,054 ms
+     1  unknown
+     1  unsat
+
+**One row in sixty is an artefact of the split: 1/60 = 1.7 % `[0.3, 8.9]`**
+(`UFNIA/lahiri-cav09-storm-queries/mqueue_example_cegar_2_3_10.smt2`, refuted on
+the original in 20.4 s and undecided on the split at 60 s). Scaled to the
+339-row bucket that is of order six rows. Small, real, and reported rather than
+rounded to zero — an instrument that costs 1.7 % is not an instrument that costs
+nothing.
 
 ## Consequences
 
