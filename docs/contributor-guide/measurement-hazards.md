@@ -701,3 +701,67 @@ Two rules, and the second is not optional because the first is present:
 Reporting matters as much as surviving. A row whose instrument was killed is
 not evidence for either answer, and folding it into the majority bucket is how
 a measurement acquires a result it never took.
+
+## An A/B over corpus rows is not a superset of the fixture suites
+
+**2026-09-15: a lever shipped with a measured `losses = 0` and a capability
+regression, and the two statements are both true.**
+
+ADR-2065 let the Real collector hold an opaque term instead of refusing the whole
+query on it. Its A/B was as thorough as any in this repository:
+
+    AUFLIRA  gain 14, loss 0, flip 0
+    exit status  200/200 identical
+    noise floor  same arm twice, whole division: 0 of 200
+    controls     QF_LRA 0/200, QF_UFLRA 0/200, both shown non-vacuous
+    re-checked   on three successive merged binaries, 14/14 stable each
+
+It also broke `nested_array_gate_map::flat_real_element_array_row_decides`, a
+Real-element read-over-write obligation that [ADR-1960] had lifted **three**
+separate gates to make reachable. Isolated in one line:
+
+    cargo test -p axeyum-solver --features full --test nested_array_gate_map
+      shipped default        -> FAILED. 11 passed; 1 failed
+      AXEYUM_LRA_OPAQUE_APPS=0 -> ok. 12 passed; 0 failed
+
+**Nothing in the A/B could have seen it.** That test is a SYNTHETIC FIXTURE, not
+a corpus row in any division measured. A verdict count over corpus files cannot
+see a capability that only a hand-built fixture exercises — and the fixture
+exists precisely because no corpus file reaches that obligation (its own comment
+says the reachable part of the blocked population is **zero**, because every such
+file is behind a parse refusal).
+
+**The coordinator's gate list missed it identically, twice.** `cargo fmt`,
+`cargo check --workspace --all-targets`, `cargo check -p axeyum-solver
+--all-targets` on default features, `RUSTDOCFLAGS="-D warnings" cargo doc`,
+`check-clippy-complete.sh` at 890/890, and the **1,783-test `--lib` sweep** were
+all run and all green. **None of them runs an integration suite.** `--lib` runs
+unit tests compiled into lib targets and skips every `tests/*.rs`.
+
+What caught it was `hooks/pre-push`'s `dispatch/reason:` block, which runs them
+by name. The generalisable rules:
+
+- **A lever that changes which ROUTE a query takes needs the FIXTURE suites run,
+  not only a corpus A/B.** The A/B answers "does the population move"; the
+  fixtures answer "does a named obligation still hold". Those are different
+  questions and a green answer to the first says nothing about the second.
+- **`--lib` is not a pre-merge gate on its own** (CLAUDE.md already says this for
+  parser/front-door changes; it is equally true for dispatch changes).
+- Post-merge, run the hook's own list rather than a remembered subset. Today it
+  is: `unknown_reason_coverage`, `dt_uf_gate`, `dt_capability_1935`,
+  `dt_constructor_arg_1942`, `dt_valued_result_1946`, `datatype_solve_path`,
+  `quant_ladder_rung_refusal_declines`, `nested_array_gate_map`,
+  `nested_array_row`, `real_element_array_row`,
+  `dispatch_rung_refusal_declines`, `quant_egraph_reserve_row`,
+  `quant_valid_universal_reserve_row`, `qinst_egraph_retry_share_row`,
+  `distinct_linear_soundness`, `parser_desugar_soundness`,
+  `replay_pairing_soundness`, `additive_no_overflow_never_becomes_unsat`,
+  `lra_opaque_real_apps`. **Read it from the hook, do not copy this list** — it
+  grows every time a lane lands a guard, and a stale copy is the failure mode
+  this entry is about.
+
+The mirror image is already on record: [ADR-1966] turned **7 assertions red in
+four other ADRs' suites** and was reverted; [ADR-1980] landed the same change by
+RELOCATING those assertions to where their guard actually lives. The repair for a
+fixture that a new route breaks is to understand the interaction, never to weaken
+the fixture — it is a pinned regression detector with a named ADR behind it.
