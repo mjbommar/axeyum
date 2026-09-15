@@ -48,6 +48,22 @@ CORPUS=${REAL_OPAQUE_CORPUS:-/nas3/data/axeyum/corpus/smtlib-2024/non-incrementa
 
 [ -x "$AX" ] || { echo "ABORT: $AX missing"; exit 2; }
 [ -s "$OUT" ] && { echo "ABORT: $OUT is non-empty; refusing to overwrite"; exit 2; }
+[ -s "$LIST" ] || { echo "ABORT: $LIST is empty or missing"; exit 2; }
+
+# The lists in `bench-results/parity-lists/` hold ABSOLUTE paths; other lanes'
+# lists hold paths relative to the corpus root. Accept both, and RESOLVE ONCE
+# here rather than guessing per row.
+resolve() { case "$1" in /*) printf '%s' "$1" ;; *) printf '%s/%s' "$CORPUS" "$1" ;; esac; }
+
+# STARTUP GUARD, and it is not ceremony. The first launch of this runner
+# prepended `$CORPUS` to lists that were already absolute, so every one of 200
+# files was unreadable, every run exited rc2 in 100 ms, and the TSV filled with
+# 200 perfectly well-formed `NONE|NONE|clean` rows. Nothing failed. A tool that
+# omits rather than refuses produces a measurement of the empty set, and this
+# one would have been summarised as "0 gains, 0 losses" -- the exact shape of a
+# credible null.
+FIRST=$(resolve "$(head -1 "$LIST")")
+[ -r "$FIRST" ] || { echo "ABORT: first list entry is unreadable: $FIRST"; exit 2; }
 
 # Prints "<verdict>\t<ms>\t<exit>\t<route>".
 #   verdict : sat | unsat | unknown | NONE
@@ -60,13 +76,13 @@ run_arm() {
     raw=$(AXEYUM_LRA_OPAQUE_APPS=0 AXEYUM_TRACE=1 \
             timeout $((BUDGET + HEADROOM)) taskset -c "$PIN" \
             bash -c "ulimit -v $VLIM; exec \"\$0\" \"\$1\" --timeout-ms $((BUDGET * 1000))" \
-            "$AX" "$CORPUS/$f" 2>&1)
+            "$AX" "$(resolve "$f")" 2>&1)
     rc=$?
   else
     raw=$(env -u AXEYUM_LRA_OPAQUE_APPS AXEYUM_TRACE=1 \
             timeout $((BUDGET + HEADROOM)) taskset -c "$PIN" \
             bash -c "ulimit -v $VLIM; exec \"\$0\" \"\$1\" --timeout-ms $((BUDGET * 1000))" \
-            "$AX" "$CORPUS/$f" 2>&1)
+            "$AX" "$(resolve "$f")" 2>&1)
     rc=$?
   fi
   t1=$(date +%s%N)

@@ -300,6 +300,26 @@ pub fn lra_unsat_core(
     }
 }
 
+/// Whether the linear-real collector may abstract a real subterm it cannot
+/// linearize into an opaque column (ADR-2065).
+///
+/// An enum rather than a fourth `bool` on [`Collector`], for the same reason
+/// [`IntCollector::record_touches`] is one: it is a MODE fixed for the
+/// collector's whole life, while `trivially_unsat`, `overflow` and `timed_out`
+/// are per-collection state. It also makes every call site say which it means
+/// instead of passing a bare `true`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) enum OpaqueReals {
+    /// Refuse the whole query on a subterm outside linear real arithmetic —
+    /// the pre-ADR-2065 behaviour, and what every non-opaque entry point uses.
+    #[default]
+    Refuse,
+    /// Admit an uninterpreted real application or real array read as a fresh
+    /// opaque column. Sound for `unsat` transfer only; see
+    /// [`check_with_lra_opaque_apps_within`].
+    Abstract,
+}
+
 /// The outcome of deciding a conjunctive `QF_LRA` query, carrying the evidence
 /// for each branch.
 enum Decision {
@@ -516,13 +536,13 @@ fn collect_constraints(
     assertions: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<Option<Collector>, SolverError> {
-    collect_constraints_with_options(arena, assertions, deadline, false)
+    collect_constraints_with_options(arena, assertions, deadline, OpaqueReals::Refuse)
 }
 
 /// [`collect_constraints`] with the opaque-real-subterm abstraction selectable.
 ///
 /// **This is the only function in the workspace that can set
-/// [`Collector::allow_opaque_apps`]**, which is what makes the `sat`-exit
+/// [`Collector::opaque_reals`]**, which is what makes the `sat`-exit
 /// enumeration in ADR-2065 §1 finite and mechanical: the other two `Collector`
 /// construction sites ([`collect_constraints`] itself, via this function with
 /// `false`, and [`check_with_lra_simplex`]) build a `Collector::default`, whose
@@ -535,12 +555,12 @@ fn collect_constraints_with_options(
     arena: &TermArena,
     assertions: &[TermId],
     deadline: Option<Instant>,
-    allow_opaque_apps: bool,
+    opaque_reals: OpaqueReals,
 ) -> Result<Option<Collector>, SolverError> {
     let _phase = crate::phase_breadcrumb::enter("lra:collect");
     let mut ctx = Collector {
+        opaque_reals,
         deadline,
-        allow_opaque_apps,
         ..Collector::default()
     };
     for (index, &assertion) in assertions.iter().enumerate() {
@@ -580,7 +600,7 @@ fn decide_within(
     assertions: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<Decision, SolverError> {
-    decide_within_with_options(arena, assertions, deadline, false)
+    decide_within_with_options(arena, assertions, deadline, OpaqueReals::Refuse)
 }
 
 /// [`decide_within`] with the opaque-real abstraction selectable.
@@ -598,7 +618,7 @@ fn decide_within_with_options(
     arena: &TermArena,
     assertions: &[TermId],
     deadline: Option<Instant>,
-    allow_opaque_apps: bool,
+    opaque_reals: OpaqueReals,
 ) -> Result<Decision, SolverError> {
     // Stage clocks, armed only when the lazy-SMT instrument is on: the
     // refinement loop's `theory_ms` is 97.9% of that route's budget after the
@@ -624,7 +644,7 @@ fn decide_within_with_options(
     let counting = crate::lazy_smt_counters::enabled();
     let collect_started = counting.then(Instant::now);
     let Some(mut ctx) =
-        collect_constraints_with_options(arena, assertions, deadline, allow_opaque_apps)?
+        collect_constraints_with_options(arena, assertions, deadline, opaque_reals)?
     else {
         // Collection declined. It has two reasons and they demand opposite
         // fixes, so the clock is re-read rather than the memory reason borrowed.
@@ -1365,12 +1385,12 @@ struct Collector {
     /// specifically an uninterpreted application or an array `select` — becomes
     /// a fresh opaque real column instead of refusing the whole query.
     ///
-    /// `false` on every [`Collector::default`], and settable only through
-    /// [`collect_constraints_with_options`], which is reachable only from
-    /// [`decide_within_with_options`]. See [`check_with_lra_opaque_apps_within`]
-    /// for the soundness statement and for why the resulting outcome type has
-    /// no `Sat` variant.
-    allow_opaque_apps: bool,
+    /// [`OpaqueReals::Refuse`] on every [`Collector::default`], and settable
+    /// only through [`collect_constraints_with_options`], which is reachable
+    /// only from [`decide_within_with_options`]. See
+    /// [`check_with_lra_opaque_apps_within`] for the soundness statement and for
+    /// why the resulting outcome type has no `Sat` variant.
+    opaque_reals: OpaqueReals,
     constraints: Vec<Constraint>,
     trivially_unsat: bool,
     /// Set when an `i128` overflow was hit while building a linear expression.
@@ -1671,7 +1691,7 @@ impl Collector {
             TermNode::App {
                 op: Op::Apply(_) | Op::Select,
                 ..
-            } if self.allow_opaque_apps && is_real(arena, term) => {
+            } if self.opaque_reals == OpaqueReals::Abstract && is_real(arena, term) => {
                 Ok(LinExpr::var(self.index_of_opaque(term)))
             }
             _ => Err(unsupported(
@@ -2164,7 +2184,7 @@ pub(crate) fn atom_in_lra_opaque_fragment(
     arena: &TermArena,
     atom: TermId,
 ) -> Result<(), SolverError> {
-    collect_constraints_with_options(arena, &[atom], None, true).map(|_| ())
+    collect_constraints_with_options(arena, &[atom], None, OpaqueReals::Abstract).map(|_| ())
 }
 
 /// What the opaque-real conjunctive oracle can return.
@@ -2233,7 +2253,7 @@ pub(crate) fn check_with_lra_opaque_apps_within(
 ) -> Result<LraOpaqueOutcome, SolverError> {
     let _phase = crate::phase_breadcrumb::enter("lra:opaque-apps");
     Ok(
-        match decide_within_with_options(arena, assertions, deadline, true)? {
+        match decide_within_with_options(arena, assertions, deadline, OpaqueReals::Abstract)? {
             Decision::UnsatFarkas { .. } | Decision::UnsatTrivial(_) => LraOpaqueOutcome::Unsat,
             // The Farkas certificate is deliberately NOT forwarded. Its public
             // `vars` field maps a dense column index to a `SymbolId`, and an
@@ -4959,14 +4979,14 @@ mod opaque_real_guard_tests {
         let (arena, assertions) = tiny_satisfiable_with_opaque();
         // Control FIRST: without the abstraction this query is not even in the
         // fragment, so a later `Incomplete` cannot be read as "nothing ran".
-        let refused = decide_within_with_options(&arena, &assertions, None, false);
+        let refused = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Refuse);
         assert!(
             matches!(refused, Err(SolverError::Unsupported(_))),
             "unabstracted, `f(x) >= 0` is outside the linear-real fragment; got {}",
             refused.as_ref().map_or("an error", |d| name(d))
         );
 
-        let decided = decide_within_with_options(&arena, &assertions, None, true)
+        let decided = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Abstract)
             .expect("the abstraction admits it");
         match decided {
             Decision::Sat(_) => panic!(
@@ -4990,7 +5010,7 @@ mod opaque_real_guard_tests {
     #[test]
     fn g2_simplex_sat_over_an_abstraction_is_not_sat() {
         let (arena, assertions) = wide_satisfiable_with_opaque();
-        let decided = decide_within_with_options(&arena, &assertions, None, true)
+        let decided = decide_within_with_options(&arena, &assertions, None, OpaqueReals::Abstract)
             .expect("the abstraction admits it");
         match decided {
             Decision::Sat(_) => panic!(

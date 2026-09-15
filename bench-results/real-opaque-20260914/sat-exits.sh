@@ -40,8 +40,12 @@ echo "   (each is either Collector::default() -- allow_opaque_apps == false --"
 echo "    or names the field explicitly)"
 echo
 
-echo "-- E1b: every mention of allow_opaque_apps in lra.rs --"
-grep -n 'allow_opaque_apps' "$S/lra.rs"
+echo "-- E1b: every mention of the REAL collector's mode in lra.rs --"
+echo "   (the integer collector's own, unrelated, pre-existing flag is still"
+echo "    spelled allow_opaque_apps and is listed after it for contrast)"
+grep -n 'opaque_reals\|OpaqueReals' "$S/lra.rs"
+echo "   -- integer side, for contrast --"
+grep -n 'allow_opaque_apps' "$S/lra.rs" | head -8
 echo
 
 echo "-- E2: callers of collect_constraints_with_options (the only setter) --"

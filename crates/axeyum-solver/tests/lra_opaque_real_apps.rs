@@ -533,13 +533,17 @@ fn production_sat_sites(src: &str, needle: &str) -> usize {
     let mut i = 0;
     while i < lines.len() {
         if lines[i].starts_with("#[cfg(test)]") {
-            let mut depth: i64 = 0;
+            // Signed depth without a cast: `isize::try_from` on a brace count
+            // cannot fail for any file this repository holds, and a `saturating`
+            // fallback would silently mis-scope a region rather than fail.
+            let mut depth: isize = 0;
             let mut opened = false;
             let mut j = i;
             while j < lines.len() {
-                depth += lines[j].matches('{').count() as i64;
-                depth -= lines[j].matches('}').count() as i64;
-                if lines[j].contains('{') {
+                let opens = isize::try_from(lines[j].matches('{').count()).expect("brace count");
+                let closes = isize::try_from(lines[j].matches('}').count()).expect("brace count");
+                depth += opens - closes;
+                if opens > 0 {
                     opened = true;
                 }
                 if opened && depth <= 0 {
