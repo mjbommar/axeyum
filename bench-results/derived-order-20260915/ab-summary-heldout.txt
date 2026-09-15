@@ -1,0 +1,31 @@
+division      rows    A    B   net  gain  LOSS  FLIP  rc!=   cmp  DIS
+QF_NIA         200   84   79    -5     4     9     0     0    79    0
+UFNIA          200   51   45    -6     0     6     0     0    11    0
+TOTAL          400  135  124   -11     4    15     0     0    90    0
+
+malformed rows (excluded, not scored as unchanged): 0
+
+LOSSES: 15
+  ('QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__svcomp_ex3b.c__p26036_terminationG_0.smt2', 'unsat', 'unknown')
+  ('QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__ChenFlurMukhopadhyay-SAS2012-Ex2.03_false-termination.c__p21056_terminationG_0.smt2', 'unsat', 'unknown')
+  ('QF_NIA/20170427-VeryMax/CInteger/Ton_Chanh_15__Hanoi_2vars_false-termination.c__p26907_terminationG_0.smt2', 'unsat', 'unknown')
+  ('QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__LeikeHeizmann-WST2014-Ex5_false-termination.c__p24047_terminationG_0.smt2', 'unsat', 'unknown')
+  ('QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__Middle.c__p24288_terminationG_0.smt2', 'unsat', 'unknown')
+  ('QF_NIA/20170427-VeryMax/ITS/From_T2__polyrank2.t2__p7393_terminationG_0.smt2', 'unsat', 'unknown')
+  ('QF_NIA/20170427-VeryMax/SAT14/1304.smt2', 'sat', 'unknown')
+  ('QF_NIA/20170427-VeryMax/SAT14/529.smt2', 'sat', 'unknown')
+  ('QF_NIA/20170427-VeryMax/SAT14/738.smt2', 'sat', 'unknown')
+  ('UFNIA/2019-Zohar-alive/combined/combined_Select:700_values_123.smt2', 'unsat', 'unknown')
+  ('UFNIA/sledgehammer/Fundamental_Theorem_Algebra/z3.1003977.smt2', 'unsat', 'unknown')
+  ('UFNIA/2019-Zohar-ic/combined/int_check_bvule_bvudiv1_rtl.smt2', 'unsat', 'unknown')
+  ('UFNIA/2019-Preiner/combined/f2_rw330.smt2', 'unsat', 'unknown')
+  ('UFNIA/2019-Preiner/full/f2_rw322.smt2', 'unsat', 'unknown')
+  ('UFNIA/2019-Preiner/full/f2_rw73.smt2', 'unsat', 'unknown')
+
+FLIPS: 0
+
+EXIT-STATUS DIFFERENCES: 0
+
+STATUS DISAGREEMENTS: 0
+
+CRITERION losses+flips+rc-differences+disagreements+malformed = 15

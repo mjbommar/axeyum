@@ -1,0 +1,25 @@
+division      both  A total s  B total s   saved s  A med ms  B med ms  B faster  B slower
+QF_NIA          75      723.9       95.3    +628.6     10818       308        70         0
+UFNIA           45      171.5      192.2     -20.7       608       210         8         6
+
+largest per-file clock differences on rows BOTH arms decide (positive = B faster):
+    -15111 ms  UFNIA      A=   807 B= 15918  UFNIA/2019-Zohar-ic/combined/int_check_bvslt_bvand_ltr_no_inv.smt2
+    +12913 ms  QF_NIA     A= 13220 B=   307  QF_NIA/AProVE/aproveSMT9074562597346712446.smt2
+    +12511 ms  QF_NIA     A= 22625 B= 10114  QF_NIA/20170427-VeryMax/ITS/From_T2__apchild-live.t2__p16624_terminationG_0.smt2
+    +11312 ms  QF_NIA     A= 20828 B=  9516  QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p9034_terminationG_0.smt2
+    +10812 ms  QF_NIA     A= 11220 B=   408  QF_NIA/20170427-VeryMax/ITS/From_T2__slayer-n1.t2_fixed__p23120_terminationG_0.smt2
+    +10812 ms  QF_NIA     A= 11521 B=   709  QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAll.jar-obl-11__p9395_terminationG_0.smt2
+    +10811 ms  QF_NIA     A= 13420 B=  2609  QF_NIA/20170427-VeryMax/ITS/From_T2__mc91test.t2__p3332_terminationG_0.smt2
+    +10810 ms  QF_NIA     A= 12019 B=  1209  QF_NIA/20170427-VeryMax/ITS/From_T2__s1-striped.t2__p13547_safety_0.smt2
+    +10810 ms  QF_NIA     A= 13019 B=  2209  QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__ChenFlurMukhopadhyay-SAS2012-Ex3.06_false-termination.c__p21924_terminationG_0.smt2
+    +10809 ms  QF_NIA     A= 11217 B=   408  QF_NIA/20170427-VeryMax/ITS/From_T2__broydn.c.i.broydn.pl.t2.fixed.t2__term_unfeasibility_5_0.smt2
+    +10807 ms  QF_NIA     A= 11316 B=   509  QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__LessLeaves.jar-obl-10__p9979_terminationG_0.smt2
+    +10712 ms  QF_NIA     A= 10818 B=   106  QF_NIA/20170427-VeryMax/ITS/From_T2__slayer-3.t2__p22377_safety_0.smt2
+    +10712 ms  QF_NIA     A= 11021 B=   309  QF_NIA/20170427-VeryMax/ITS/From_T2__s1-striped.t2_fixed__p10354_safety_0.smt2
+    +10712 ms  QF_NIA     A= 11320 B=   608  QF_NIA/20170427-VeryMax/ITS/From_T2__ex36.t2_fixed__p23329_safety_0.smt2
+    +10712 ms  QF_NIA     A= 10921 B=   209  QF_NIA/20170427-VeryMax/ITS/From_T2__s1.t2__p19927_safety_0.smt2
+    +10712 ms  QF_NIA     A= 12921 B=  2209  QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__Pure3Phase_true-termination.c__p25532_terminationG_0.smt2
+    +10712 ms  QF_NIA     A= 10820 B=   108  QF_NIA/AProVE/aproveSMT7955388010732821599.smt2
+    +10711 ms  QF_NIA     A= 11318 B=   607  QF_NIA/20170427-VeryMax/ITS/From_T2__ex36.t2__p31669_safety_0.smt2
+    +10711 ms  QF_NIA     A= 11019 B=   308  QF_NIA/20170427-VeryMax/ITS/From_T2__ns.t2__p6275_terminationG_0.smt2
+    +10711 ms  QF_NIA     A= 11520 B=   809  QF_NIA/20170427-VeryMax/ITS/From_T2__s1-striped.t2_fixed__p11013_safety_0.smt2

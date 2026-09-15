@@ -150,6 +150,65 @@ lever ship, so **`int_tail_order::SHIPPED` points at `HAND`** and `DERIVED` is
 retained exactly as derived, as the A/B's treatment arm and as the record of
 what the key yields.
 
+## The A/B, measured
+
+Interleaved ONE-BINARY A/B of `AXEYUM_LADDER_ORDER=hand` (A) against
+`=derived` (B), both arms back to back on the same file on the same pinned
+core with arm order alternating per file, 24 s wall / 8 GiB `ulimit -v`, 12
+pinned physical core pairs across s5/s6/s7, divisions serial per shard.
+
+### Pinned draw — the files the order was derived from
+
+| division | rows | A | B | net | gain | LOSS | FLIP | rc≠ | cmp | DIS |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| QF_NIA | 200 | 83 | 78 | −5 | 3 | 8 | 0 | 0 | 78 | 0 |
+| UFNIA | 200 | 54 | 51 | −3 | 0 | 3 | 0 | 0 | 14 | 0 |
+| **TOTAL** | **400** | **137** | **129** | **−8** | **3** | **11** | **0** | **0** | **92** | **0** |
+
+0 malformed. All 14 movers re-run 3× per arm:
+**11 STABLE-LOSS, 1 STABLE-GAIN, 2 BOTH-DECIDE, 0 UNSTABLE.**
+
+### Held-out draw — 200 fresh files per division
+
+| division | rows | A | B | net | gain | LOSS | FLIP | rc≠ | cmp | DIS |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| QF_NIA | 200 | 84 | 79 | −5 | 4 | 9 | 0 | 0 | 79 | 0 |
+| UFNIA | 200 | 51 | 45 | −6 | 0 | 6 | 0 | 0 | 11 | 0 |
+| **TOTAL** | **400** | **135** | **124** | **−11** | **4** | **15** | **0** | **0** | **90** | **0** |
+
+0 malformed. All 19 movers re-run 3x per arm:
+**14 STABLE-LOSS, 0 STABLE-GAIN, 4 BOTH-DECIDE, 1 UNSTABLE.**
+
+The held-out draw agrees with the pinned one and is worse, so the loss is not
+an artifact of measuring on the training set -- which is exactly what the
+plan's §7 risk ("Phase 4 optimises the sample") asked this draw to rule out.
+On the fresh files the derived order has fourteen stable losses and **not one**
+stable gain.
+
+`UFNIA` loses on both draws even though its own class ships nothing, and the
+mechanism is Correction 2's: a quantified `UFNIA` file reaches
+`dispatch_nonlinear_int_tail` **inside** `q:skolem-qf`'s hand-off, so a lever
+on the quantifier-free integer tail moves quantified divisions too. A lane
+measuring only the class's own division would have missed all of them.
+
+### The trade, in the other direction
+
+Reported separately, because a time saving does not license a loss. On the rows
+BOTH arms decide:
+
+| draw | division | both | A total | B total | saved | A median | B median |
+|---|---|---:|---:|---:|---:|---:|---:|
+| pinned | QF_NIA | 75 | 767.9 s | 129.0 s | **+638.9 s** | 10,918 ms | **407 ms** |
+| pinned | UFNIA | 51 | 137.5 s | 162.6 s | −25.0 s | 208 ms | 209 ms |
+| held-out | QF_NIA | 75 | 723.9 s | 95.3 s | **+628.6 s** | 10,818 ms | **308 ms** |
+| held-out | UFNIA | 45 | 171.5 s | 192.2 s | −20.7 s | 608 ms | 210 ms |
+
+**27–35× faster on the `QF_NIA` files it decides, five to eleven net files
+worse at deciding.** That is the honest shape, and it is why the mechanism
+ships and the order does not — the lever is one env value away for anyone
+measuring a budget where 12.5 s of losing clock at the head is affordable and
+10.9 s of median latency is not.
+
 ## Files
 
 | file | what it is |
@@ -164,6 +223,12 @@ what the key yields.
 | `prefix-decompose.txt` | `prefix-decompose.py`'s output |
 | `docs/plan/fixtures/derived-ladder-order-20260915.tsv` | `derive.py`'s table — **not in this directory**, because `scripts/tests/mutation_controls.py` excludes `bench-results` from the tree it copies, and a Rust fixture included from here turns every mutation into `BASELINE DID NOT BUILD` |
 | `cost-when-declining.txt` | `cost-when-declining.py`'s output |
+| `ab-run-lever.sh`, `launch-ab.sh`, `recheck-movers-lever.sh` | the one-binary A/B runner, its sharder, and the 3x-per-arm mover re-check |
+| `draw-heldout.py`, `heldout-lists/` | the seeded held-out draw and the lists it produced |
+| `ab-pinned/`, `ab-heldout/` | every A/B row, 24 shard files each |
+| `ab-summary-pinned.txt`, `ab-summary-heldout.txt` | the verdict / exit-status / `:status` / malformed tables |
+| `ab-time-pinned.txt`, `ab-time-heldout.txt` | the clock tables |
+| `movers.py`, `movers*.txt`, `movers-recheck*.tsv` | the movers and their 3x-per-arm classification |
 
 Every script's exit status depends on its finding: `size.py` exits 3 when no
 class clears five files, `size-why.py` exits 3 when no refined ceiling does, `prefix-decompose.py` exits 3 when no class has reorderable clock at all, and

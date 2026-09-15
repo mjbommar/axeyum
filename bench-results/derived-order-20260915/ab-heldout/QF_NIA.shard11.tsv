@@ -1,0 +1,17 @@
+file	A	A_ms	A_rc	B	B_ms	B_rc	first	status
+QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__Velroyen_false-termination.c__p26301_terminationG_0.smt2	sat	4711	0	sat	509	0	A	sat
+QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__NO_10.jar-obl-8__p11309_terminationG_0.smt2	unknown	24226	0	unknown	24227	0	B	unknown
+QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreate.jar-obl-10__p5142_safety_0.smt2	unknown	11117	0	unknown	11016	0	A	sat
+QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p2618_safety_0.smt2	unknown	23426	0	unknown	23426	0	B	sat
+QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8830_safety_0.smt2	unknown	24228	0	sat	13518	0	A	sat
+QF_NIA/20170427-VeryMax/ITS/From_T2__broydn.c.i.broydn.pl.t2.fixed.t2__term_unfeasibility_5_0.smt2	sat	11217	0	sat	408	0	B	sat
+QF_NIA/20170427-VeryMax/ITS/From_T2__ex36.t2__p31598_safety_0.smt2	unknown	24130	0	unknown	24125	0	A	unknown
+QF_NIA/20170427-VeryMax/ITS/From_T2__fun6.t2_fixed__p1060_terminationG_0.smt2	unknown	24226	0	unknown	24226	0	B	unsat
+QF_NIA/20170427-VeryMax/ITS/From_T2__n-46.t2__p4382_terminationG_0.smt2	unknown	24228	0	unknown	24229	0	A	unknown
+QF_NIA/20170427-VeryMax/ITS/From_T2__rlft3.t2__p9006_terminationG_0.smt2	unknown	24227	0	unknown	24122	0	B	unknown
+QF_NIA/20170427-VeryMax/ITS/From_T2__select.t2_fixed__p21329_terminationG_0.smt2	unknown	24231	0	unknown	24223	0	A	unsat
+QF_NIA/20170427-VeryMax/ITS/From_T2__svdcmp.c.i.svdcmp.pl.t2.nor.t2.rlgfixed.t2__terminationS_36_0.smt2	unknown	25130	0	unknown	24528	0	B	unsat
+QF_NIA/20170427-VeryMax/SAT14/1635.smt2	unknown	16522	0	unknown	24024	0	A	sat
+QF_NIA/20170427-VeryMax/SAT14/738.smt2	sat	9315	0	unknown	24325	0	B	sat
+QF_NIA/AProVE/aproveSMT1280478447198435015.smt2	unknown	24126	0	unknown	24128	0	A	unsat
+QF_NIA/AProVE/aproveSMT7955388010732821599.smt2	sat	10820	0	sat	108	0	B	sat
