@@ -361,6 +361,16 @@ Every decision is `unsat`. Four of them are not close:
 | `havoc-bench_036.1.AddElement` | **307 ms** | 9,116 ms | 24 s, `unknown` |
 | `test14-DafnyAst.ssc.91` | **408 ms** | no-opinion | 24 s, `unknown` |
 
+**These are a LOWER bound on the authorities and the caveat is stated rather
+than buried.** The run was pinned to one core of the lane's own box while this
+lane's A/B and profiles held five others, so `z3 decided 7` and `cvc5 decided 6`
+are what they managed under contention; an idle host can only move them up. The
+bias therefore runs *against* nothing claimed here — every conclusion below uses
+"an authority decides this and we do not", which contention can only understate.
+The two `timeout` rows in particular are not established as undecidable. The
+four sub-second rows are far enough from the 24 s budget that load cannot
+explain them.
+
 **This bucket is not hard.** That is what makes it worth the next lane's time,
 and it is the strongest argument in this ADR: a row z3 refutes in 107 ms, on
 which we spend 96 % of a 24 s budget inside one quadratic pass, is a performance
