@@ -5,7 +5,7 @@ Index-summary: The 83 QF_NRA files the board leaves undecided, censused by typed
 route trail and traced against z3's CAD and linearization engines separately.
 z3's linearization arm — the one shaped like `nra.rs` — decides 29 of 83; its
 CAD arm decides 45 more, 44 of them in under a second. The exact decider now
-records WHICH guard stopped it instead of one `not-applicable` for all 78.
+records WHICH guard stopped it instead of one `not-applicable` for all 78. Lane NIA-TRACE measured nlsat conflicting on 67 of the 76 QF_NIA files z3 decides and we do not, so the nlsat/CAD route both lanes point at covers both nonlinear divisions -- 45 of 83 here, 67 of 76 there, disjoint populations and two different measurements that must not be added.
 Index-status: accepted
 Date: 2026-09-15
 
@@ -135,6 +135,30 @@ Per bucket:
 engine and 5/26 for linearization. Bucket 2 is the other way round — 14 for
 linearization, 10 for the CAD engine. Treating "QF_NRA" as one gap and picking
 one fix for it is how a lane spends a week on the wrong half.
+
+### The same route covers QF_NIA, and that is a second lane's number
+
+Lane `NIA-TRACE` ran the equivalent trace on the other nonlinear division and
+measured **nlsat conflicting on 67 of the 76 QF_NIA files z3 decides and we do
+not**. Put beside this ADR's **45 of 83** on QF_NRA, the two say the same thing
+about the same missing engine:
+
+| division | files z3 decides and we do not | attributable to the CAD/nlsat engine |
+|---|---:|---:|
+| QF_NRA (this ADR) | 70 | **45** decided by the CAD arm and not by linearization |
+| QF_NIA (`NIA-TRACE`) | 76 | **67** on which nlsat conflicted |
+
+The two numbers are not the same measurement and must not be added as if they
+were: this ADR's 45 is "the CAD arm decides it and the linearization arm does
+not", while `NIA-TRACE`'s 67 is "nlsat recorded conflicts on it", which counts
+files nlsat worked on rather than files only nlsat decides. Read them as two
+independent lanes arriving at the same engine from opposite divisions, not as
+one 112-file total.
+
+The consequence for planning is the one that matters: a model-constructing
+nlsat/CAD route is **not** a QF_NRA-only investment. It is the single largest
+named capability gap across both nonlinear divisions, and the two lanes'
+populations are disjoint.
 
 ## Decision
 
