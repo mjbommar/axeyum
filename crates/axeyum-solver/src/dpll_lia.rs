@@ -607,61 +607,6 @@ pub fn check_with_lia_dpll(
     check_with_arith_dpll(arena, assertions, config)
 }
 
-/// The ADR-2065 abstraction's one-way rule: it may turn an `Unsupported` into
-/// an `Unsat`, and it may do nothing else.
-///
-/// # The regression this exists to prevent
-///
-/// `auto.rs`'s dispatch of this route returns on `Ok(_)` and falls through only
-/// on `Err(SolverError::Unsupported(_))`. So a route that REFUSES a query lets
-/// the ladder continue, and a route that DECLINES it does not. Before ADR-2065 a
-/// real-sorted `(select a i)` made `ensure_supported_atom` refuse, the ladder
-/// fell through, and `array-fast-path` decided the read-over-write tautology in
-/// 2 ms. With the abstraction armed the route ADMITS that atom, correctly finds
-/// the relaxation satisfiable, and returns a terminal `Ok(Unknown)` — and
-/// `array-fast-path` is never reached at all. Measured: 10 route attempts and a
-/// verdict became 14 attempts and `unknown`
-/// (`tests/nested_array_gate_map.rs::flat_real_element_array_row_decides`).
-///
-/// This is [ADR-1966]'s subject seen from the other side: a rung's refusal of a
-/// construct a later rung owns is a DECLINE, and turning that refusal into a
-/// considered `unknown` silently takes the construct away from its owner.
-///
-/// # Why the rule is this one and not a narrower one
-///
-/// The obvious repairs — refuse the abstraction when some later route could
-/// decide the query, or reorder the rung, or narrow which atoms are admitted —
-/// all require this route to reason about what OTHER routes can do, which it
-/// cannot do soundly and which would need re-deciding every time the ladder
-/// changes. The rule here needs no such knowledge: **a weakening is allowed to
-/// help and never to harm**, so when it does not refute, the route returns
-/// exactly the refusal it would have returned without it. The ladder is then
-/// byte-for-byte what it was, for every query and every later route, including
-/// ones that do not exist yet.
-///
-/// It also closes the whole class rather than the witnessed instance. The
-/// fixture that caught this hits the `has_opaque_real_apps` gate, but a round
-/// limit or an exhausted budget on an abstracted query was terminal in exactly
-/// the same way and would have been the next lane's bug.
-///
-/// [ADR-1966]: the refusal-propagation audit.
-fn hand_back_unless_refuted(run: ArithRun) -> Result<CheckResult, SolverError> {
-    if !run.abstracted_opaque_reals || matches!(run.result, CheckResult::Unsat) {
-        return Ok(run.result);
-    }
-    Err(SolverError::Unsupported(format!(
-        "lazy arithmetic: the opaque-real abstraction admitted an atom this route \
-         would otherwise have refused and did not refute the query, so it is handed \
-         back unchanged for a route that owns the construct (the abstraction is a \
-         relaxation: it can establish unsat and nothing else). Underlying outcome: {}",
-        match &run.result {
-            CheckResult::Sat(_) => "sat".to_owned(),
-            CheckResult::Unsat => "unsat".to_owned(),
-            CheckResult::Unknown(reason) => reason.detail.clone(),
-        }
-    )))
-}
-
 /// Decides a Boolean-structured linear-arithmetic query — integer, real, or
 /// combined `QF_LIRA` — by lazy-SMT over the exact-rational simplices.
 ///
@@ -672,13 +617,26 @@ fn hand_back_unless_refuted(run: ArithRun) -> Result<CheckResult, SolverError> {
 /// functions), so the caller can fall back; or [`SolverError::Backend`] on a
 /// replay alarm.
 ///
-/// **Also `Unsupported` when ADR-2065's opaque-real abstraction admitted an atom
-/// this route would otherwise have refused and then failed to refute the
-/// query** (`hand_back_unless_refuted`, private). That is a hand-back rather than a
-/// fragment refusal, and it is an `Err` for the same reason the others are: this
-/// route's callers treat `Err(Unsupported)` as "not mine, keep going" and `Ok`
-/// as final, so it is the only way to say "I did not decide this" without taking
-/// the query away from the route that can.
+/// # ADR-2065's hand-back was deleted here, and what replaced it (ADR-2100)
+///
+/// This route used to answer `Unsupported` in one further case: when ADR-2065's
+/// opaque-real abstraction admitted an atom the route would otherwise have
+/// refused and then failed to refute the query. The stated reason was that "this
+/// route's callers treat `Err(Unsupported)` as 'not mine, keep going' and `Ok`
+/// as final", so an error was the only way to say "I did not decide this"
+/// without taking the query away from the route that can.
+///
+/// **That premise no longer holds**: the dispatcher decides whether a rung's
+/// non-decision stops the ladder from the rung's own ownership declaration
+/// (`auto.rs`'s `route_ownership`), not from the variant it returned. This route
+/// is declared to own `{Int, Real}`, so on a query that also carries an array the
+/// ladder treats its `Unknown` as a decline and `array-fast-path` — the route
+/// that owns the construct — runs. That is exactly what the hand-back existed to
+/// achieve, and the general rule holds for every rung and every construct rather
+/// than for this one rung and opaque reals. `hand_back_unless_refuted`'s own doc
+/// comment named the constraint that forced it to be narrow: a repair inside the
+/// route "would require this route to reason about what OTHER routes can do".
+/// A declaration consulted by the ladder requires nothing of the kind.
 pub fn check_with_arith_dpll(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -716,7 +674,7 @@ pub fn check_with_arith_dpll(
     // argued: it is only taken when the *whole* query is nonlinear-integer, and any
     // frontier movement means it is too aggressive.
     if crate::nia_linearize::has_nonlinear_int_product(arena, assertions) {
-        return hand_back_unless_refuted(run_arith_dpll(arena, assertions, config)?);
+        return Ok(run_arith_dpll(arena, assertions, config)?.result);
     }
     // S2 dispatch-overrun fix: evaluate the pre-SAT skeleton size admission
     // BEFORE the online probe below spends its share of the caller's
@@ -747,12 +705,12 @@ pub fn check_with_arith_dpll(
             let Some(fallback_config) = remaining_config(config, probe_started) else {
                 return Ok(CheckResult::Unknown(reason));
             };
-            return hand_back_unless_refuted(run_arith_dpll(arena, assertions, &fallback_config)?);
+            return Ok(run_arith_dpll(arena, assertions, &fallback_config)?.result);
         }
         CheckResult::Unknown(_) => {}
     }
     let fallback_config = remaining_config(config, probe_started).unwrap_or_else(|| config.clone());
-    hand_back_unless_refuted(run_arith_dpll(arena, assertions, &fallback_config)?)
+    Ok(run_arith_dpll(arena, assertions, &fallback_config)?.result)
 }
 
 /// The share of the caller's wall clock the online CDCL(T) probe gets before the
@@ -835,16 +793,6 @@ struct ArithRun {
     skeleton: Vec<TermId>,
     lemmas: Vec<Vec<ArithLemmaLiteral>>,
     initial_lemma_count: usize,
-    /// Whether ADR-2065's opaque-real abstraction admitted at least one atom
-    /// this route would otherwise have refused.
-    ///
-    /// Read from the abstractor rather than re-derived from the assertions: the
-    /// question is what the abstractor DID, and a syntactic scan of the input
-    /// over-approximates it (a real application can sit in a position that never
-    /// becomes an arithmetic atom). Over-approximating here would hand back
-    /// queries this route used to decide, which is the same class of loss this
-    /// field exists to close.
-    abstracted_opaque_reals: bool,
 }
 
 /// Term-level arithmetic theory clauses learned by one lazy-LIA solve and
@@ -1610,10 +1558,9 @@ impl IncrementalArithDpll {
         }))
     }
 
-    fn into_run(self, arena: &TermArena, result: CheckResult) -> ArithRun {
+    fn into_run(self, result: CheckResult) -> ArithRun {
         ArithRun {
             result,
-            abstracted_opaque_reals: self.ctx.has_opaque_real_apps(arena),
             skeleton: self.skeleton,
             lemmas: self.lemmas,
             initial_lemma_count: self.initial_lemma_count,
@@ -1998,11 +1945,11 @@ fn run_arith_dpll(
                 solver.support_stats.summary(),
             ),
         };
-        return Ok(solver.into_run(arena, CheckResult::Unknown(reason)));
+        return Ok(solver.into_run(CheckResult::Unknown(reason)));
     }
     let solve_config = config_with_deadline(config, deadline);
     let result = solver.solve(arena, assertions, &solve_config)?;
-    Ok(solver.into_run(arena, result))
+    Ok(solver.into_run(result))
 }
 
 /// Records a theory conflict core as a structured lemma for certification.
@@ -7128,7 +7075,8 @@ mod tests {
         let seed = arena.bool_const(true);
         let mut arm = IncrementalArithDpll::new(&mut arena, &[seed]).expect("arm solver");
         for &assertion in &assertions {
-            arm.assert_one(&mut arena, assertion).expect("arm assertion");
+            arm.assert_one(&mut arena, assertion)
+                .expect("arm assertion");
             arm.refresh_initial_lemmas_indexed(&mut arena)
                 .expect("arm indexed refresh");
         }
