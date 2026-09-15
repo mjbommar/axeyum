@@ -219,11 +219,13 @@ UFNIA/vcc-havoc/verisoft-sim.c.1.13.untranslated_write_sim.smt2	3	1	MINIMAL	1	1	
 UFNIA/vcc-havoc/verisoft-sim.c.2.25.untranslated_write_sim.smt2	3	1	MINIMAL	1	1	2	2	3	unsat	unknown
 UF/20170428-Barrett/cdt-cade2015/nada/afp/bindag/x2015_09_10_16_53_56_537_1094926.smt_in.smt2	357	4	MINIMAL	1	8	356	9	352	unsat	unsat
 UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_10_47_003_2500061.smt_in.smt2	349	9	MINIMAL	2	256	347	257	245	unsat	unsat
+UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_20_02_499_2906170.smt_in.smt2	386	5	MINIMAL	8	56	378	57	323	unsat	unsat
 UF/20170428-Barrett/cdt-cade2015/nada/distro/gram_lang/x2015_09_10_16_53_37_371_1432776.smt_in.smt2	361	4	MINIMAL	6	198	355	199	344	unsat	unsat
 UF/20170428-Barrett/cdt-cade2015/nada/distro/rbt_impl/x2015_09_10_16_49_54_437_992499.smt_in.smt2	358	6	MINIMAL	2	144	356	145	193	unsat	unsat
 UF/grasshopper/instantiated/dl_remove_postcondition_of_dl_remove_50_4.smt2	296	86	MIN-CAPPED>64	1	295	295	296	296	unsat	unsat
 UF/grasshopper/uninstantiated/dl_copy_invariant_19_2.smt2	50	22	MINIMAL	3	49	47	50	50	unsat	unsat
 UF/grasshopper/uninstantiated/insert_postcondition_of_insert_27_4.smt2	97	74	MIN-CAPPED>64	3	96	94	97	97	unknown	NOVERDICT
+UF/sledgehammer/Arrow_Order/smtlib.663965.smt2	499	8	MINIMAL	1	498	498	499	171	unsat	unsat
 UF/sledgehammer/Arrow_Order/uf.704291.smt2	474	10	MINIMAL	1	174	473	175	382	unsat	unsat
 UF/sledgehammer/FFT/uf.863296.smt2	311	5	MINIMAL	2	289	309	290	307	unsat	unsat
 UF/sledgehammer/Hoare/uf.834137.smt2	35	3	MINIMAL	2	4	33	5	35	unsat	unsat

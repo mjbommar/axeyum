@@ -154,6 +154,7 @@ QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__whileNested_rec.jar-obl-9__p14976_
 QF_NIA/20170427-VeryMax/ITS/From_T2__afagp-fail.t2__p15482_terminationG_0.smt2	full	60	unknown	NA	NA	NA	NA	NA	60056	server7	3
 QF_NIA/20170427-VeryMax/ITS/From_T2__agafp.t2_fixed__terminationS_0_0.smt2	full	151	unsat	137	137	MIN-CAPPED>64	unsat	NOVERDICT	120073	server7	3
 QF_NIA/20170427-VeryMax/ITS/From_T2__apchild-accepted.t2__p16321_terminationG_0.smt2	full	386	unknown	NA	NA	NA	NA	NA	60214	server5	1
+QF_NIA/20170427-VeryMax/ITS/From_T2__apchild-live.t2_fixed__p16479_terminationG_0.smt2	full	137	unknown	NA	NA	NA	NA	NA	60775	server5	1
 QF_NIA/20170427-VeryMax/ITS/From_T2__apchildlive-succeed.t2_fixed__p16399_edge_closing_0.smt2	full	659	unknown	NA	NA	NA	NA	NA	60806	server5	1
 QF_NIA/20170427-VeryMax/ITS/From_T2__byron-4.t2__p17594_terminationG_0.smt2	full	34	unknown	NA	NA	NA	NA	NA	60026	server5	1
 QF_NIA/20170427-VeryMax/ITS/From_T2__db2.t2_fixed__terminationS_29_0.smt2	full	277	unsat	46	13	MINIMAL	unsat	unsat	30957	server6	3
@@ -216,6 +217,8 @@ QF_NIA/AProVE/aproveSMT5048239408100334127.smt2	full	81	unsat	18	16	MINIMAL	unsa
 QF_NIA/AProVE/aproveSMT6461796824751951221.smt2	full	161	unsat	54	37	MINIMAL	unsat	unsat	92701	server6	3
 QF_NIA/AProVE/aproveSMT7795667227375240089.smt2	full	30	unsat	19	16	MINIMAL	unsat	unsat	7081	server6	3
 QF_NIA/UltimateLassoRanker/LarrazOliverasRodriguez-CarbonellRubio-2013FMCAD-Fig1-alloca_unknown-termination.c.i_Iteration6_Lasso+nonterminationTemplate.smt2	full	3	unsat	2	1	MINIMAL	unsat	unsat	1356	server7	0
+QF_NIA/mcm/106.smt2	full	119	unknown	NA	NA	NA	NA	NA	60320	server5	1
+UF/20170428-Barrett/cdt-cade2015/nada/afp/abstract_completeness/x2015_09_10_16_59_33_621_1039748.smt_in.smt2	full	379	unknown	NA	NA	NA	NA	NA	60898	server5	1
 UF/20170428-Barrett/cdt-cade2015/nada/afp/bindag/x2015_09_10_16_53_56_537_1094926.smt_in.smt2	full	357	unsat	4	4	MINIMAL	unsat	unsat	618	server7	0
 UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_16_51_06_177_1165813.smt_in.smt2	full	360	unknown	NA	NA	NA	NA	NA	60272	server7	1
 UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_16_54_53_962_1372467.smt_in.smt2	full	360	unknown	NA	NA	NA	NA	NA	60189	server7	1
@@ -228,6 +231,7 @@ UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_06_31_
 UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_10_47_003_2500061.smt_in.smt2	full	349	unsat	12	9	MINIMAL	unsat	unsat	713	server5	1
 UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_12_42_984_2647208.smt_in.smt2	full	355	unknown	NA	NA	NA	NA	NA	60307	server6	3
 UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_16_38_492_2773691.smt_in.smt2	full	351	unknown	NA	NA	NA	NA	NA	60606	server6	3
+UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_20_02_499_2906170.smt_in.smt2	full	386	unsat	5	5	MINIMAL	unsat	unsat	10962	server5	1
 UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_stream/x2015_09_10_17_23_15_283_1135882.smt_in.smt2	full	358	unknown	NA	NA	NA	NA	NA	60447	server6	3
 UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_stream/x2015_09_10_17_25_01_009_1227491.smt_in.smt2	full	384	unknown	NA	NA	NA	NA	NA	55136	server7	0
 UF/20170428-Barrett/cdt-cade2015/nada/afp/hamming_stream/x2015_09_10_16_47_53_600_1082171.smt_in.smt2	full	360	unknown	NA	NA	NA	NA	NA	60247	server7	0
@@ -267,6 +271,7 @@ UF/grasshopper/instantiated/dl_remove_postcondition_of_dl_remove_50_4.smt2	full	
 UF/grasshopper/uninstantiated/dl_copy_invariant_19_2.smt2	full	50	unsat	24	22	MINIMAL	unsat	unsat	346793	server7	3
 UF/grasshopper/uninstantiated/dl_remove_loop_invariant_35_5.smt2	full	61	unknown	NA	NA	NA	NA	NA	60099	server5	1
 UF/grasshopper/uninstantiated/insert_postcondition_of_insert_27_4.smt2	full	97	unsat	74	74	MIN-CAPPED>64	unknown	NOVERDICT	133139	server5	1
+UF/sledgehammer/Arrow_Order/smtlib.663965.smt2	full	499	unsat	9	8	MINIMAL	unsat	unsat	2388	server5	1
 UF/sledgehammer/Arrow_Order/uf.704291.smt2	full	474	unsat	11	10	MINIMAL	unsat	unsat	617	server5	1
 UF/sledgehammer/Arrow_Order/uf.850780.smt2	full	513	unknown	NA	NA	NA	NA	NA	47104	server6	3
 UF/sledgehammer/FFT/uf.573210.smt2	full	171	unknown	NA	NA	NA	NA	NA	60510	server6	3
@@ -310,6 +315,7 @@ UF/sledgehammer/QEpres/uf.595470.smt2	full	166	unknown	NA	NA	NA	NA	NA	61633	serv
 UF/sledgehammer/QEpres/uf.814223.smt2	full	98	unknown	NA	NA	NA	NA	NA	60137	server5	1
 UF/sledgehammer/QEpres/uf.850857.smt2	full	365	unknown	NA	NA	NA	NA	NA	54009	server5	1
 UF/sledgehammer/QEpres/uf.883950.smt2	full	337	unknown	NA	NA	NA	NA	NA	45880	server5	1
+UF/sledgehammer/QEpres/uf.924249.smt2	full	458	unknown	NA	NA	NA	NA	NA	61361	server5	1
 UF/sledgehammer/QEpres/uf.967803.smt2	full	83	unknown	NA	NA	NA	NA	NA	60670	server6	3
 UF/sledgehammer/StrongNorm/uf.560863.smt2	full	477	unknown	NA	NA	NA	NA	NA	53168	server6	3
 UF/sledgehammer/StrongNorm/uf.599383.smt2	full	35	unknown	NA	NA	NA	NA	NA	60201	server6	3

@@ -219,11 +219,13 @@ UFNIA/vcc-havoc/verisoft-sim.c.1.13.untranslated_write_sim.smt2	UFNIA	3	1	0	1	le
 UFNIA/vcc-havoc/verisoft-sim.c.2.25.untranslated_write_sim.smt2	UFNIA	3	1	0	1	let
 UF/20170428-Barrett/cdt-cade2015/nada/afp/bindag/x2015_09_10_16_53_56_537_1094926.smt_in.smt2	UF	357	4	0	4	not.fun_app$a,fun_app$a,forall,forall
 UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_10_47_003_2500061.smt_in.smt2	UF	349	9	0	9	not.lnull$,forall,forall,forall,forall,forall,forall,=,forall
+UF/20170428-Barrett/cdt-cade2015/nada/afp/coinductive_list/x2015_09_10_17_20_02_499_2906170.smt_in.smt2	UF	386	5	0	5	forall,not.fun_app$bn,forall,forall,forall
 UF/20170428-Barrett/cdt-cade2015/nada/distro/gram_lang/x2015_09_10_16_53_37_371_1432776.smt_in.smt2	UF	361	4	1	3	not.=,forall,fun_app$e,forall
 UF/20170428-Barrett/cdt-cade2015/nada/distro/rbt_impl/x2015_09_10_16_49_54_437_992499.smt_in.smt2	UF	358	6	1	5	not.=,forall,forall,=,forall,forall
 UF/grasshopper/instantiated/dl_remove_postcondition_of_dl_remove_50_4.smt2	UF	296	86	1	83	forall,forall,forall,forall,forall,forall,or,or,or,or,forall,forall
 UF/grasshopper/uninstantiated/dl_copy_invariant_19_2.smt2	UF	50	22	0	22	forall,forall,or,=,=,=,dlseg_struct$0,=,=,=,forall,or
 UF/grasshopper/uninstantiated/insert_postcondition_of_insert_27_4.smt2	UF	97	74	1	72	=,=,=,=,=,forall,forall,forall,forall,forall,forall,forall
+UF/sledgehammer/Arrow_Order/smtlib.663965.smt2	UF	499	8	1	7	forall,forall,forall,forall,forall,forall,=,not.=>
 UF/sledgehammer/Arrow_Order/uf.704291.smt2	UF	474	10	1	9	forall,forall,forall,not.=,=,distinct,forall,forall,forall,=
 UF/sledgehammer/FFT/uf.863296.smt2	UF	311	5	0	5	forall,let,=,let,forall
 UF/sledgehammer/Hoare/uf.834137.smt2	UF	35	3	1	2	not.forall,forall,forall
