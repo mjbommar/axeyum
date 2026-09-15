@@ -1447,8 +1447,9 @@ macro_rules! full_exports {
         #[doc(hidden)]
         pub use regex_reconstruct::reconstruct_regex_emptiness_to_lean_module;
         pub use route_trace::{
-            DeclineReason, RouteAttempt, RouteAttributionGuard, RouteOutcome, RouteTrace, Verdict,
-            attribution_collecting, front_door_stage, last_route_attribution,
+            DeclineReason, PartialReading, Route, RouteAttempt, RouteAttributionGuard, RouteOutcome,
+            RouteTrace, Verdict, attribution_collecting, front_door_stage, last_route_attribution,
+            quant_rung,
         };
         #[doc(hidden)]
         pub use set_cardinality::{
