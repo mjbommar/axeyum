@@ -23,9 +23,17 @@
 # `losses=0` by verdict and created five new process aborts:
 #   verdict, PROCESS EXIT STATUS (134 abort / 124 wall kill), wall ms, peak RSS.
 #
-# Usage: ab-run.sh <tag> <list> <out.tsv> <logdir> <cores> <bin> [budget_s]
+# The CONTROL and EXPOSURE divisions run the 2-arm form `A D` instead: the
+# question there is not which lever does what, it is whether the configuration
+# that would SHIP moves a division it must not (control) or loses anything where
+# it shares the changed code (exposure). Two arms answer that at a fifth of the
+# cost, and the arms that are not run are written as `na` rather than left to
+# read as a verdict.
+#
+# Usage: ab-run.sh <tag> <list> <out.tsv> <logdir> <cores> <bin> [budget_s] [arms]
 set -u
 TAG="$1"; LIST="$2"; OUT="$3"; LOGD="$4"; PIN="$5"; BIN="$6"; BUDGET="${7:-24}"
+ARMS="${8:-A A2 B C D}"
 HEADROOM=16
 VLIM=$((8 * 1024 * 1024))   # 8 GiB, identical to the board run
 
@@ -60,15 +68,21 @@ run() {   # $1 = arm letter, $2 = stdout path, $3 = stderr path
 
 printf 'file\tA\tA_rc\tA_ms\tA_rss\tA2\tA2_rc\tA2_ms\tA2_rss\tB\tB_rc\tB_ms\tB_rss\tC\tC_rc\tC_ms\tC_rss\tD\tD_rc\tD_ms\tD_rss\tfirst\tstatus\n' > "$OUT"
 
-ORDER=("A A2 B C D" "A2 B C D A" "B C D A A2" "C D A A2 B" "D A A2 B C")
+# Rotate the starting arm with the file index so no arm is systematically first
+# (first place is worth real milliseconds on a cold page cache).
+set -- $ARMS
+NARMS=$#
 n=0
 while read -r f; do
   [ -z "$f" ] && continue
   key=$(printf '%s' "$f" | sha1sum | cut -c1-12)
   st=$(grep -m1 -oE ':status +(sat|unsat|unknown)' -- "$f" 2>/dev/null | awk '{print $2}')
-  seq=${ORDER[$((n % 5))]}
+  # rotate $ARMS left by (n mod NARMS)
+  seq=$(printf '%s\n' $ARMS | awk -v k=$((n % NARMS)) \
+        '{a[NR]=$0} END{for(i=0;i<NR;i++) printf "%s ", a[(k+i)%NR+1]}')
   first=${seq%% *}
   declare -A R=()
+  for arm in A A2 B C D; do R[$arm]="na	na	na	na"; done
   for arm in $seq; do
     R[$arm]=$(run "$arm" "$LOGD/$key.$arm.out" "$LOGD/$key.$arm.err")
     rm -f "$LOGD/$key.$arm.err" "$LOGD/$key.$arm.err.rss" "$LOGD/$key.$arm.out"

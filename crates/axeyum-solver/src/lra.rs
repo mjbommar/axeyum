@@ -914,24 +914,17 @@ fn simplex_first(
 /// [`FarkasCertificate`] expects, in the same atom order — so the certificate maps
 /// across directly and its self-check (`Σ λ·k > 0`, or `= 0` with a strict atom)
 /// coincides with the simplex verifier.
-/// Lever (`AXEYUM_LRA_SPARSE_ROWS=1`): hand the simplex its rows in the sparse
-/// form it stores, instead of materialising a dense `m × nvars` matrix of
-/// [`Rational`] that [`crate::simplex::Tableau`] re-sparsifies as its first act.
 ///
-/// [ADR-2045] named this round trip and could not price it. It is a lever rather
-/// than an unconditional rewrite **only so the A/B is one binary under two
-/// environment values** — two builds cannot be interleaved on the same core
-/// against the same file, which is how this repository's benchmark noise gets
-/// mistaken for an effect. The two paths are intended to be denotationally
-/// identical, and that is tested rather than asserted
-/// (`simplex_sparse_rows_match_dense`).
-pub(crate) fn sparse_simplex_rows_enabled() -> bool {
-    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    *ENABLED.get_or_init(|| {
-        std::env::var("AXEYUM_LRA_SPARSE_ROWS").is_ok_and(|value| value.trim() == "1")
-    })
-}
-
+/// Rows are handed over in the SPARSE form the tableau stores.
+/// [ADR-2045] found this function materialising a dense `m × nvars` matrix of
+/// [`Rational`] whose only consumer was `densify_to_sparse`, called by the
+/// tableau as its first act, and could not price it. [ADR-2055] priced it: over
+/// the 74 rows of this route it is **14.0 % of the two allocations** (12.2 %
+/// measured as resident-set growth), and on the 40 that abort it is **30.2 % of
+/// the bytes the process actually held when it died**. Removing it is a real
+/// reduction and it decides **nothing** — measured at net +0 with 0 losses and
+/// 0 new aborts over the whole division — because the structure that holds the
+/// memory is the TABLEAU, which is `m × (nvars+m)` and **0.0288 % dense**.
 // Returns `Result` to match `decide_within`'s style and the `?` call site; the body
 // is currently infallible (declines to `Ok(None)` on every non-decision).
 #[allow(clippy::unnecessary_wraps)]
@@ -948,22 +941,17 @@ fn simplex_fallback(
         &format!("nvars={nvars} constraints={}", ctx.constraints.len()),
     );
     let mut rows: Vec<crate::simplex::SparseConstraint> = Vec::with_capacity(ctx.constraints.len());
-    let mut dense_rows: Vec<crate::simplex::Constraint> = Vec::new();
-    if !sparse_simplex_rows_enabled() {
-        dense_rows.reserve(ctx.constraints.len());
-    }
     for constraint in &ctx.constraints {
-        // The row loop allocates one dense `nvars`-wide vector per constraint,
-        // so it is a growth site: stop on a tripped watchdog rather than finish
-        // filling a tableau the process cannot hold. One relaxed atomic load.
+        // The watchdog is still polled per row. The row build is no longer the
+        // growth site it was — it is O(nnz) now, not the dense `m × nvars`
+        // matrix — but the loop still runs once per constraint on systems
+        // reaching 244,460 of them, and `feasible_within_sparse` is about to
+        // allocate the tableau, which IS the growth site. One relaxed atomic
+        // load.
         if let Some(reason) = crate::memory_budget::watchdog_decline("lra simplex tableau build") {
             return Ok(Some(Decision::OutOfMemory(reason.detail)));
         }
-        // The wall clock at the same boundary and for the same reason. `n *
-        // nvars` exact rationals is seconds of `memmove` on the shapes this
-        // route meets (42% of a killed `cpachecker-induction` run's profile),
-        // and until the deadline reached this function the whole stretch was
-        // invisible to the budget. `None` reads no clock.
+        // The wall clock at the same boundary. `None` reads no clock.
         if past_deadline(deadline) {
             return Ok(None);
         }
@@ -977,11 +965,22 @@ fn simplex_fallback(
             crate::simplex::Rel::Le
         };
         // Ascending by column with no explicit zeros — `BTreeMap` iteration is
-        // ascending by key, and the filter reproduces `densify_to_sparse`'s own,
-        // so this is the identical row the dense path would have produced.
+        // ascending by key, and this filter reproduces `densify_to_sparse`'s
+        // own, so this is the IDENTICAL row the retired dense path produced.
+        // That equality is the whole soundness argument for dropping the round
+        // trip, and it is tested rather than asserted:
+        // `sparse_rows_and_the_dense_round_trip_build_the_same_row` covers it on
+        // the shapes that make it interesting (an explicit zero, an all-zero
+        // row, a last-column-only row), and
+        // `the_sparse_entry_point_decides_exactly_what_the_dense_one_decides`
+        // compares the two entry points' VERDICTS over 200 generated systems.
+        //
+        // The filter is load-bearing and not defensive: `LinExpr::add` retains
+        // only nonzeros but `LinExpr::scale` and `bound_constraint` do not, and
+        // `lra_online` already filters at its own reader for the same reason.
         //
         // An index `>= nvars` panics either way: out of bounds in the dense
-        // vector, and on `feasible_within_sparse`'s assertion in the sparse one.
+        // vector, and on `feasible_within_sparse`'s assertion here.
         let coeffs: Vec<(usize, Rational)> = constraint
             .expr
             .coeffs
@@ -989,42 +988,27 @@ fn simplex_fallback(
             .filter(|(_, value)| !value.is_zero())
             .map(|(&index, &value)| (index, value))
             .collect();
-        if sparse_simplex_rows_enabled() {
-            rows.push(crate::simplex::SparseConstraint { coeffs, rel, rhs });
-        } else {
-            let mut dense = vec![Rational::zero(); nvars];
-            for &(index, value) in &coeffs {
-                dense[index] = value;
-            }
-            dense_rows.push(crate::simplex::Constraint {
-                coeffs: dense,
-                rel,
-                rhs,
-            });
-        }
+        rows.push(crate::simplex::SparseConstraint { coeffs, rel, rhs });
     }
     // The row build is complete and still live across the call below, so the
     // resident set here minus the entry reading is what the build itself cost.
+    // `dense_cells` is the COUNTERFACTUAL -- what the retired round trip would
+    // have allocated -- kept because it is the figure ADR-2055 priced and the
+    // one a future reader will want to compare against.
     crate::simplex::dense_probe(
         "dense-rows-built",
         &format!(
-            "nvars={nvars} m={} nnz={} dense_cells={} sparse={}",
+            "nvars={nvars} m={} nnz={} dense_cells={}",
             ctx.constraints.len(),
             ctx.constraints
                 .iter()
                 .map(|c| c.expr.coeffs.len())
                 .sum::<usize>(),
             ctx.constraints.len().saturating_mul(nvars),
-            u8::from(sparse_simplex_rows_enabled()),
         ),
     );
 
-    let outcome = if sparse_simplex_rows_enabled() {
-        crate::simplex::feasible_within_sparse(nvars, &rows, deadline)
-    } else {
-        crate::simplex::feasible_within(nvars, &dense_rows, deadline)
-    };
-    match outcome {
+    match crate::simplex::feasible_within_sparse(nvars, &rows, deadline) {
         crate::simplex::SimplexOutcome::Feasible(point) => {
             // Build a model over the original symbols and replay-check it (the trust
             // anchor for `sat`); decline to `unknown` if it does not verify.

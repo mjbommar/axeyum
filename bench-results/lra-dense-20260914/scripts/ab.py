@@ -53,6 +53,14 @@ def main():
             for line in fh:
                 rows.append(dict(zip(head, line.rstrip("\n").split("\t"))))
 
+    # An arm the runner did not execute writes `na`, and an arm that is not
+    # DISTINGUISHED from one that ran and decided nothing reads as a catastrophic
+    # regression: the first draft of this script reported the 2-arm control run
+    # as "A2 net -148, noise floor 200 of 200 rows". Report unrun arms as DID NOT
+    # RUN and exclude them from every figure.
+    ran = [a for a in ARMS if any(r.get(a, "na") != "na" for r in rows)] if rows else []
+    skipped = [a for a in ARMS if a not in ran]
+
     print(f"== A/B  division={div}  rows={len(rows)} ==")
     print("polarity: A = base (both levers UNSET, ships today); A2 = base repeated;")
     print("          B = SPARSE_ROWS; C = CELL_CAP; D = both")
@@ -63,31 +71,41 @@ def main():
         print("NO ROWS -- this measured nothing.")
         return 1
 
-    dec = {a: sum(1 for r in rows if r[a] in DEC) for a in ARMS}
-    ab = {a: sum(1 for r in rows if r[f"{a}_rc"] == "134") for a in ARMS}
-    kill = {a: sum(1 for r in rows if r[f"{a}_rc"] == "124") for a in ARMS}
+    if skipped:
+        print(f"ARMS NOT RUN in this division: {', '.join(skipped)} -- DID NOT RUN,")
+        print("  reported as such and excluded below, never as a zero.\n")
+    dec = {a: sum(1 for r in rows if r[a] in DEC) for a in ran}
+    ab = {a: sum(1 for r in rows if r[f"{a}_rc"] == "134") for a in ran}
+    kill = {a: sum(1 for r in rows if r[f"{a}_rc"] == "124") for a in ran}
     print(f"{'arm':>4} {'decided':>8} {'net vs A':>9} {'aborts':>7} {'wallkill':>9}")
-    for a in ARMS:
+    for a in ran:
         print(
             f"{a:>4} {dec[a]:>8} {dec[a] - dec['A']:>+9} {ab[a]:>7} {kill[a]:>9}"
         )
 
     # ---- the noise floor, measured here, at ROW level -------------------------
-    nf = [r for r in rows if r["A"] != r["A2"]]
-    nf_rc = [r for r in rows if r["A_rc"] != r["A2_rc"]]
-    print(
-        f"\n== NOISE FLOOR (A vs A2, the SAME configuration) ==\n"
-        f"  rows differing by VERDICT      : {len(nf)} of {len(rows)}\n"
-        f"  rows differing by EXIT STATUS  : {len(nf_rc)} of {len(rows)}\n"
-        f"  decided count A={dec['A']}  A2={dec['A2']}  (a stable count can still hide moving rows)"
-    )
-    for r in nf[:10]:
-        print(f"    NOISE {r['A']:>7} -> {r['A2']:>7}  {os.path.basename(r['file'])[:60]}")
-    for r in nf_rc[:10]:
-        print(f"    NOISE rc {r['A_rc']:>4} -> {r['A2_rc']:>4}  {os.path.basename(r['file'])[:56]}")
+    if "A2" in ran:
+        nf = [r for r in rows if r["A"] != r["A2"]]
+        nf_rc = [r for r in rows if r["A_rc"] != r["A2_rc"]]
+        print(
+            f"\n== NOISE FLOOR (A vs A2, the SAME configuration) ==\n"
+            f"  rows differing by VERDICT      : {len(nf)} of {len(rows)}\n"
+            f"  rows differing by EXIT STATUS  : {len(nf_rc)} of {len(rows)}\n"
+            f"  decided count A={dec['A']}  A2={dec['A2']}"
+            f"  (a stable count can still hide moving rows)"
+        )
+        for r in nf[:10]:
+            print(f"    NOISE {r['A']:>7} -> {r['A2']:>7}  {os.path.basename(r['file'])[:60]}")
+        for r in nf_rc[:10]:
+            print(f"    NOISE rc {r['A_rc']:>4} -> {r['A2_rc']:>4}  {os.path.basename(r['file'])[:56]}")
+    else:
+        print("\n== NOISE FLOOR: DID NOT RUN in this division (arm A2 not executed) ==")
+        print("  The SUBJECT division's floor is the one that licenses calling a net a")
+        print("  null, and it was measured there at 0 of 200 rows. This division is a")
+        print("  control/exposure check, not a subject, and does not carry its own.")
 
     # ---- per arm against the base -------------------------------------------
-    for a in ("B", "C", "D"):
+    for a in [x for x in ("B", "C", "D") if x in ran]:
         gains = [r for r in rows if r["A"] not in DEC and r[a] in DEC]
         losses = [r for r in rows if r["A"] in DEC and r[a] not in DEC]
         flips = [r for r in rows if r["A"] in DEC and r[a] in DEC and r["A"] != r[a]]
@@ -123,7 +141,7 @@ def main():
 
     # ---- soundness, with the comparable denominator printed beside the zero ---
     print("\n== soundness vs declared :status ==")
-    for a in ARMS:
+    for a in ran:
         comp = [r for r in rows if r[a] in DEC and r["status"] in DEC]
         dis = [r for r in comp if r[a] != r["status"]]
         print(f"  arm {a:>2}: comparable={len(comp):>4}  disagreements={len(dis)}")

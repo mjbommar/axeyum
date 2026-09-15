@@ -1,0 +1,28 @@
+== A/B  division=QF_S  rows=200 ==
+polarity: A = base (both levers UNSET, ships today); A2 = base repeated;
+          B = SPARSE_ROWS; C = CELL_CAP; D = both
+arm measures THIS BRANCH (the lane's worktree binary), 8 GiB / 24 s,
+6 pinned pairs on s5/s6/s7, arms back to back per file, order rotating.
+
+ARMS NOT RUN in this division: A2, C, D -- DID NOT RUN,
+  reported as such and excluded below, never as a zero.
+
+ arm  decided  net vs A  aborts  wallkill
+   A      186        +0       0         0
+   B      186        +0       0         0
+
+== NOISE FLOOR: DID NOT RUN in this division (arm A2 not executed) ==
+  The SUBJECT division's floor is the one that licenses calling a net a
+  null, and it was measured there at 0 of 200 rows. This division is a
+  control/exposure check, not a subject, and does not carry its own.
+
+== arm B vs base A ==
+  net=+0   gains=0  losses=0  flips=0   gain rate 95% Wilson [0.00%, 1.88%]
+  EXIT STATUS: aborts 0 -> 0   NEW aborts (clean in base, abort in arm) = 0   aborts CONVERTED to a clean exit = 0
+
+== soundness vs declared :status ==
+  arm  A: comparable= 165  disagreements=0
+  arm  B: comparable= 165  disagreements=0
+
+== first-arm balance (no arm may be systematically first) ==
+  {'A': 102, 'B': 98}

@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
 # Launch the 6-shard interleaved A/B over one division.
-# Usage: launch-ab.sh <DIV>   where <DIV> names $L/lists/<DIV>.sh{0..5}.txt
+# Usage: launch-ab.sh <DIV> [arms]
+#   <DIV> names $L/lists/<DIV>.sh{0..5}.txt; [arms] defaults to all five.
+#   The control and exposure divisions use "A B" -- base against what SHIPS.
 set -u
 L=/nas3/data/axeyum/harness/lra-dense
 BIN=$L/bin/smtcomp_cli-4abc994a0
 DIV="$1"
+ARMS="${2:-A A2 B C D}"
 
 launch() {  # $1=host $2=shard $3=pin
   ssh -o BatchMode=yes "$1" \
     "nohup setsid bash $L/scripts/ab-run.sh $DIV.sh$2 $L/lists/$DIV.sh$2.txt \
-       $L/out/ab.$DIV.sh$2.tsv $L/logs/ab-$DIV-sh$2 $3 $BIN 24 \
+       $L/out/ab.$DIV.sh$2.tsv $L/logs/ab-$DIV-sh$2 $3 $BIN 24 '$ARMS' \
        > $L/logs/ab.$DIV.sh$2.log 2>&1 < /dev/null &" \
-    && echo "launched A/B $DIV shard $2 on $1 pin $3"
+    && echo "launched A/B $DIV shard $2 on $1 pin $3 arms='$ARMS'"
 }
 
 launch s5 0 0,8

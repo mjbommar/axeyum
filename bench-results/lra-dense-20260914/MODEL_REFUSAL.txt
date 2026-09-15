@@ -1,0 +1,33 @@
+2     unknown _array1.i_3_2_2.bpl_11.smt2
+2     unknown _half_2.i_3_6_2.bpl_7.smt2
+2     unknown _standard_copy3_ground.i_3_2_2.bpl_7.smt2
+2     unknown _standard_two_index_06.i_3_2_2.bpl_7.smt2
+0     unknown Braverman-2006CAV-Ex1-int.bpl_Iteration1_Lasso_6-phaseTe
+1     unsat   clocksynchro_2clocks.main_invar.base.smt2
+1     unsat   clocksynchro_4clocks.main_invar.base.smt2
+1     unsat   clocksynchro_6clocks.main_invar.base.smt2
+1     unsat   clocksynchro_8clocks.main_invar.base.smt2
+2     unknown pp08a-1000.smt2
+2     unknown pp08a-7349.smt2
+1     unknown pursuit-safety-16.smt2
+1     unknown sc-11.base.cvc.smt2
+1     unknown sc-13.base.cvc.smt2
+1     unknown sc-15.base.cvc.smt2
+1     unknown sc-17.base.cvc.smt2
+1     unknown sc-19.base.cvc.smt2
+1     unknown sc-21.base.cvc.smt2
+1     unknown sc-23.base.cvc.smt2
+1     unknown sc-25.base.cvc.smt2
+1     unsat   sc-5.base.cvc.smt2
+1     unknown sc-7.base.cvc.smt2
+1     unknown sc-9.base.cvc.smt2
+
+== rows=23 ==
+== which refusal, by OCCURRENCE ==
+     16 site=lra_theory:model-built-but-does-not-replay
+      6 site=simplex-declined
+      6 site=lra_theory:no-model-reconstructed
+== which refusal, by ROW (a row that looped 400 times counts once) ==
+     16 site=lra_theory:model-built-but-does-not-replay
+      6 site=simplex-declined
+      6 site=lra_theory:no-model-reconstructed

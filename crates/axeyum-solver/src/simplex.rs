@@ -568,6 +568,17 @@ impl Delta {
 /// thread never came back on its own. That is the ADR-1906 shape one more time
 /// — a deadline test the workload cannot reach — except here the counter was
 /// fine and the *argument* was the constant.
+///
+/// **Test-only since [ADR-2055].** `lra.rs` — the one production caller this
+/// ever had — now builds [`SparseConstraint`] directly and calls
+/// [`feasible_within_sparse`]. This remains because the tableau's own suites are
+/// written against dense input, and because keeping it is what makes
+/// `the_sparse_entry_point_decides_exactly_what_the_dense_one_decides` a real
+/// differential: the dense entry converts and delegates, so that test compares
+/// `densify_to_sparse(scatter(x))` against `x` end to end, on verdicts, over 200
+/// generated systems. Delete it and the round trip's soundness argument loses
+/// its standing check.
+#[cfg(test)]
 #[must_use]
 pub fn feasible_within(
     nvars: usize,
@@ -676,10 +687,30 @@ pub fn feasible_within_sparse(
 /// Lever (`AXEYUM_LRA_CELL_CAP=1`): consult [`MAX_TABLEAU_CELLS`] in
 /// [`feasible_within_sparse`], which [ADR-2045] found it does not.
 ///
-/// It is a lever and not simply switched on because **a cap converts an abort
-/// into a decline, which is correct but is not by itself a gain** — ADR-2045
-/// cleared a whole admission screen and decided nothing. Whether it belongs on
-/// by default is a measured question, so it is measurable from one binary.
+/// **IT SHIPS `Off` BECAUSE IT IS A LOSS, AND THE LOSS IS NOT WHAT ANYONE
+/// EXPECTED.** [ADR-2055] measured it interleaved over the whole `QF_LRA` board:
+/// net **−1**, and it turns **18 rows that terminate cleanly into `rc=134`
+/// process aborts**, one of which was answering `sat`. A cap is supposed to
+/// convert an abort INTO a decline, so this is the opposite direction, and the
+/// mechanism was measured rather than guessed:
+///
+/// ```text
+/// base : 11 offline entries, 11 tableaux built, cube_simplex_ms=20086 of 24000 -> unknown, rc 0
+/// cap  :  1 offline entry,    0 tableaux built, 1 decline               -> "memory allocation of 427680 bytes failed", rc 134
+/// ```
+///
+/// The dense tableau was consuming 20 of the 24 seconds. Declining it hands the
+/// query its whole budget back, and the route that then runs allocates past the
+/// 8 GiB ceiling. The loop does **not** run away — one entry, not thousands —
+/// so this is not a spin; the enormous tableau was accidentally acting as a
+/// **sink that kept these queries away from a worse route**.
+///
+/// Do not turn this on without re-measuring the exit-status channel. A verdict
+/// count reports this lever as `losses=1`; the damage is 18 rows wide and
+/// almost all of it is invisible there.
+///
+/// It is kept, rather than deleted, so the finding stays reproducible from the
+/// shipped tree: the measurement is only meaningful if someone can re-run it.
 /// Would the dense tableau for `m` rows over `nvars` problem variables exceed
 /// [`MAX_TABLEAU_CELLS`]?
 ///
