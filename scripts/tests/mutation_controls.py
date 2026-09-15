@@ -10183,14 +10183,20 @@ SUITES["dt-native-refusal-decline"] = (
             # two-arm fixtures' control assertions. A survivor here means they
             # are comparing the shipped arm against itself.
             #
-            # RE-INDENTED for ADR-2100, not rewritten: the `datatype-native`
-            # rung moved out of the `datatype-elim` `Err(Unsupported)` arm (it
-            # now runs for BOTH of that match's non-deciding arms), so the
-            # block lost one nesting level. `--check-anchors` is what caught
-            # it; the guard and its kill are unchanged.
+            # RE-ANCHORED TWICE for ADR-2100, and rewritten neither time.
+            # First the `datatype-native` rung moved out of the
+            # `datatype-elim` `Err(Unsupported)` arm -- it now runs for BOTH
+            # of that match's non-deciding arms -- so the block lost one
+            # nesting level. Then the ladder gained its own error type and
+            # the arm spells the refusal as `DispatchError::at(..)`. The
+            # guard and its kill are unchanged both times; `--check-anchors`
+            # caught both, which is what it is for.
             "the historical `propagate` arm is really reached",
             "                    DatatypeNativeRefusalPolicy::Propagate => {\n"
-            "                        return Err(SolverError::Unsupported(native_message));\n"
+            "                        return Err(DispatchError::at(\n"
+            "                            DispatchRoute::DatatypeNative,\n"
+            "                            SolverError::Unsupported(native_message),\n"
+            "                        ));\n"
             "                    }",
             "                    DatatypeNativeRefusalPolicy::Propagate => {\n"
             "                        *datatype_refusal = Some(native_message);\n"

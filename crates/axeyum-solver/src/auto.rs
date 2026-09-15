@@ -198,6 +198,12 @@ pub(crate) mod route_ownership {
 
         /// The `Features` field this class reads, so a test can check the
         /// declaration against the scan rather than against a comment.
+        ///
+        /// Test-only: nothing at run time needs the field NAME, only the flag's
+        /// value, which `Features::constructs` already reads directly. Leaving
+        /// it in the shipped build would be a `&'static str` table with no
+        /// consumer -- the un-failable-checker shape one level down.
+        #[cfg(test)]
         pub(crate) const fn feature_field(self) -> &'static str {
             match self {
                 Self::Real => "has_real",
@@ -354,6 +360,13 @@ pub(crate) mod route_ownership {
     impl DispatchRoute {
         /// Every rung this declaration covers, for a test that derives its
         /// population from the authority.
+        ///
+        /// Test-only. At run time the ladder names each rung at its own call
+        /// site; a list of all of them is what a TEST needs so it does not carry
+        /// a literal of its own. `size-ceiling.py` reads the same population out
+        /// of the source text rather than through this constant, for the same
+        /// reason.
+        #[cfg(test)]
         pub(crate) const ALL: &'static [Self] = &[
             Self::DatatypeElim,
             Self::DatatypeNative,
@@ -426,6 +439,12 @@ pub(crate) mod route_ownership {
         /// Declaring too MUCH lets a route end the search on a fragment it
         /// cannot handle, which is the defect this module exists to close. When
         /// a gate is ambiguous, declare less.
+        // Several arms COINCIDE today and are kept apart on purpose: each is a
+        // statement about one rung's own gate, derived independently from that
+        // gate. Merging `UfNra` with `Nra` because both read `{Real, Function}`
+        // would make one rung's declaration move when the other's gate changes,
+        // which is the coupling this table exists to remove.
+        #[allow(clippy::match_same_arms)]
         pub(crate) const fn owns(self) -> ConstructSet {
             match self {
                 // `datatype_elim` folds read-over-construct and hands the
@@ -513,6 +532,9 @@ pub(crate) mod route_ownership {
         /// Whether this route is the ladder's decision procedure for its
         /// fragment or an accelerator above one. **Exhaustive, so a rung added
         /// without a kind does not compile.**
+        // Same reason as `owns`: seven arms say `Decider` and five say
+        // `FastPath`, and each is one rung's own contract rather than a group's.
+        #[allow(clippy::match_same_arms)]
         pub(crate) const fn kind(self) -> RouteKind {
             match self {
                 // Step A of ADR-0022. Refuses BY DESIGN when free datatype
@@ -602,10 +624,11 @@ pub(crate) mod route_ownership {
         NotOwned(ConstructSet),
     }
 
+    #[cfg(test)]
     pub(crate) use constructs;
 }
 
-use route_ownership::{Construct, ConstructSet, DispatchRoute, Ownership, RouteKind, constructs};
+use route_ownership::{Construct, ConstructSet, DispatchRoute, Ownership, RouteKind};
 
 fn checked_quantified_fast_path(
     arena: &mut TermArena,
@@ -7204,7 +7227,7 @@ fn check_auto_dispatch_inner(
     match check_with_all_theories(&mut backend, arena, assertions, DEFAULT_INT_WIDTH, config) {
         Ok(result) => {
             with_recorder(rec, |t| {
-                t.record_result(DispatchRoute::QfBv.label(), &result)
+                t.record_result(DispatchRoute::QfBv.label(), &result);
             });
             Ok(result)
         }
@@ -12708,6 +12731,7 @@ mod uf_overbound_live_tests {
 mod tests {
     use std::fmt::Write as _;
 
+    use super::route_ownership::constructs;
     use super::*;
 
     // -----------------------------------------------------------------------
