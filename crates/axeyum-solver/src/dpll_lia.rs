@@ -594,15 +594,6 @@ pub fn check_with_lia_dpll(
     check_with_arith_dpll(arena, assertions, config)
 }
 
-/// Decides a Boolean-structured linear-arithmetic query — integer, real, or
-/// combined `QF_LIRA` — by lazy-SMT over the exact-rational simplices.
-///
-/// # Errors
-///
-/// Returns [`SolverError::Unsupported`] if an assertion is not Boolean structure
-/// over linear-arithmetic atoms (e.g. it mentions bit-vectors, arrays, or
-/// functions), so the caller can fall back; or [`SolverError::Backend`] on a
-/// replay alarm.
 /// The ADR-2065 abstraction's one-way rule: it may turn an `Unsupported` into
 /// an `Unsat`, and it may do nothing else.
 ///
@@ -658,6 +649,23 @@ fn hand_back_unless_refuted(run: ArithRun) -> Result<CheckResult, SolverError> {
     )))
 }
 
+/// Decides a Boolean-structured linear-arithmetic query — integer, real, or
+/// combined `QF_LIRA` — by lazy-SMT over the exact-rational simplices.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Unsupported`] if an assertion is not Boolean structure
+/// over linear-arithmetic atoms (e.g. it mentions bit-vectors, arrays, or
+/// functions), so the caller can fall back; or [`SolverError::Backend`] on a
+/// replay alarm.
+///
+/// **Also `Unsupported` when ADR-2065's opaque-real abstraction admitted an atom
+/// this route would otherwise have refused and then failed to refute the
+/// query** (`hand_back_unless_refuted`, private). That is a hand-back rather than a
+/// fragment refusal, and it is an `Err` for the same reason the others are: this
+/// route's callers treat `Err(Unsupported)` as "not mine, keep going" and `Ok`
+/// as final, so it is the only way to say "I did not decide this" without taking
+/// the query away from the route that can.
 pub fn check_with_arith_dpll(
     arena: &mut TermArena,
     assertions: &[TermId],
