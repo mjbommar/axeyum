@@ -29,6 +29,25 @@ ROOT = _sp.run(["git", "rev-parse", "--show-toplevel"],
 CLI = os.path.join(ROOT, "target/release/examples/smtcomp_cli")
 
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import route_trace_reader as rtr  # noqa: E402
+
+
+def _trail_line(out: str) -> str | None:
+    """The LAST route-trail line in a `--trace` run's output, complete or partial.
+
+    Both spellings, because completeness is not this function's business --
+    the reader reports it as a field.
+    """
+    found = None
+    for line in out.splitlines():
+        if line.startswith(rtr.TRAIL_PREFIX) or line.startswith(
+            rtr.PARTIAL_TRAIL_PREFIX
+        ):
+            found = line
+    return found
+
+
 def run_one(path, budget_ms, wall_s, binary, env_extra=None):
     env = dict(os.environ)
     if env_extra:
@@ -52,21 +71,34 @@ def run_one(path, budget_ms, wall_s, binary, env_extra=None):
             verdict = s
     m = re.search(r"^; give-up kind=(\S+) detail=(.*)$", out, re.M)
     kind, detail = (m.group(1), m.group(2).strip()) if m else ("none", "none")
-    m = re.search(
-        r"^; route decided_by=(\S+) bound_by=(\S+) last=(\S+) "
-        r"bound_ms=(\d+) total_ms=(\d+) attempts=(\d+)", out, re.M)
-    if m:
-        decided, bound, last, bound_ms, total_ms, attempts = m.groups()
-    else:
+    # Route attribution off the shared reader (ADR-2101), never off the prose.
+    # The regex this replaces was anchored at `^; route `, so a file the
+    # watchdog killed -- which prints `; partial route ` -- fell into the
+    # `else` and was censused as `bound_by=none bound_ms=-1`. That is
+    # ADR-2075's defect exactly, in a census of the division it was found in.
+    partial = "no"
+    try:
+        trail = rtr.parse_trail_line(_trail_line(out), path)
+    except (rtr.RouteTraceError, TypeError):
         decided = bound = last = "none"
         bound_ms = total_ms = attempts = "-1"
+    else:
+        decided = trail.decided_by or "none"
+        bound = trail.bound_by or "none"
+        last = trail.last or "none"
+        bound_ns = max((a.elapsed_ns or 0 for a in trail.attempts), default=0)
+        bound_ms = str(bound_ns // 1_000_000)
+        total_ms = str(trail.total_elapsed_ms if trail.total_elapsed_ms is not None else -1)
+        attempts = str(trail.attempt_count)
+        partial = "yes" if trail.partial else "no"
     m = re.search(r"^;\s*(?:partial\s+)?phase (stack=.*)$", out, re.M)
     phase = m.group(1).strip() if m else "none"
     return {
         "file": path, "verdict": verdict, "rc": rc, "wall_s": f"{wall:.1f}",
         "kind": kind, "detail": detail, "decided_by": decided,
         "bound_by": bound, "last": last, "bound_ms": bound_ms,
-        "total_ms": total_ms, "attempts": attempts, "phase": phase,
+        "total_ms": total_ms, "attempts": attempts, "partial": partial,
+        "phase": phase,
     }
 
 
@@ -95,7 +127,8 @@ def main():
                 print(f"  {done}/{len(files)}", flush=True)
     rows.sort(key=lambda r: r["file"])
     cols = ["file", "verdict", "rc", "wall_s", "kind", "detail", "decided_by",
-            "bound_by", "last", "bound_ms", "total_ms", "attempts", "phase"]
+            "bound_by", "last", "bound_ms", "total_ms", "attempts", "partial",
+            "phase"]
     with open(args.out, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=cols, delimiter="\t")
         w.writeheader()

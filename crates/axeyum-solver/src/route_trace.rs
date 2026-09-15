@@ -51,6 +51,166 @@ pub enum Verdict {
     Unsat,
 }
 
+// ---------------------------------------------------------------------------
+// The route-label vocabulary as a type (ADR-2101)
+// ---------------------------------------------------------------------------
+
+/// Declares [`Route`] together with its wire spelling, its exhaustive
+/// [`Route::as_str`], the authority list [`Route::ALL`], and the inverse
+/// [`Route::from_wire`] — from ONE list, so the four can never disagree.
+///
+/// A second, hand-maintained `name()`-style table is exactly the shape
+/// ADR-2060 found lying: the enum grew a variant, the table did not, and the
+/// mismatch was invisible because nothing derived one from the other. Here a
+/// new variant that is not given a wire string does not compile, and a variant
+/// that is given one is in `ALL` and in `from_wire` by construction.
+macro_rules! declare_routes {
+    ($(
+        $(#[$meta:meta])*
+        $variant:ident => $wire:literal
+    ),+ $(,)?) => {
+        /// A route label from the **closed** front-door / quantified-ladder
+        /// vocabulary, as a type rather than as a `&'static str`.
+        ///
+        /// # What this is and is not total over
+        ///
+        /// [`Route`] covers exactly the labels the [`front_door_stage`] and
+        /// [`quant_rung`] modules declare as `pub const`, plus the `"probe"`
+        /// label [`RouteTrace::record_probe`] hardcodes. Those are the
+        /// vocabularies that were *declared* — a consumer that names one of
+        /// them now fails to compile if the label does not exist.
+        ///
+        /// It is deliberately **not** total over the trail. The dispatch
+        /// ladder's own rung labels (`"qf-bv"`, `"lia-dpll"`, …) are string
+        /// literals at their call sites inside `auto.rs`, not declared
+        /// constants, so there is no authority to derive an enum from; typing
+        /// them is the ownership work (Phase 1), not this. [`Route::from_wire`]
+        /// therefore returns `None` for a dispatch rung, and every consumer
+        /// keeps the raw `&'static str` it always had. Nothing is narrowed;
+        /// the declared half simply stopped being stringly typed.
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        pub enum Route {
+            $(
+                $(#[$meta])*
+                $variant,
+            )+
+        }
+
+        impl Route {
+            /// This route's wire spelling — byte-identical to the `pub const`
+            /// it replaces, which `route_enum_tests` pins const by const.
+            ///
+            /// `const fn` so the constants in [`front_door_stage`] and
+            /// [`quant_rung`] can be *defined* as `Route::X.as_str()`: there is
+            /// then one source of the bytes, not two that agree today.
+            #[must_use]
+            pub const fn as_str(self) -> &'static str {
+                match self {
+                    $( Route::$variant => $wire, )+
+                }
+            }
+
+            /// Every declared route, in declaration order.
+            ///
+            /// The authority a test must derive its population from — a test
+            /// that lists the routes itself measures the maintainer's memory.
+            pub const ALL: &'static [Route] = &[ $( Route::$variant, )+ ];
+
+            /// The route with this wire spelling, or `None`.
+            ///
+            /// `None` for a dispatch-ladder rung label, which is a real answer
+            /// and not a failure — see the type docs.
+            #[must_use]
+            pub fn from_wire(wire: &str) -> Option<Self> {
+                match wire {
+                    $( $wire => Some(Route::$variant), )+
+                    _ => None,
+                }
+            }
+        }
+    };
+}
+
+declare_routes! {
+    /// The probe classification preamble, recorded by
+    /// [`RouteTrace::record_probe`].
+    Probe => "probe",
+
+    // -- front-door stages (`fd:`) --
+    /// Script ingest (parse).
+    FdParse => "fd:parse",
+    /// The source-first word-only parse fallback.
+    FdWordOnlyFallback => "fd:word-only-fallback",
+    /// The source-level FP prefix monotonic fold.
+    FdSourceFpPrefix => "fd:source-fp-prefix",
+    /// The source-level string route ladder.
+    FdSourceString => "fd:source-string",
+    /// The flat auto-dispatch seen as one front-door stage.
+    FdDispatch => "fd:dispatch",
+    /// The `StringGate` confirmation.
+    FdStringGate => "fd:string-gate",
+    /// The source-level semantic-unsat upgrade.
+    FdSourceStringSemanticUnsat => "fd:source-string-semantic-unsat",
+    /// The flat word-equation second chance.
+    FdWordRoute => "fd:word-route",
+    /// The online CDCL(T) string second chance.
+    FdOnlineString => "fd:online-string",
+    /// The regex-membership second chance.
+    FdMembership => "fd:membership",
+    /// The lexicographic-order second chance.
+    FdLexOrder => "fd:lex-order",
+    /// The length-to-LIA second chance.
+    FdLengthLia => "fd:length-lia",
+    /// The bounded concrete source-witness probe.
+    FdSourceStringSatProbe => "fd:source-string-sat-probe",
+    /// The bounded-completeness `unknown` -> `unsat` upgrade.
+    FdBoundedCompletenessUnsat => "fd:bounded-completeness-unsat",
+
+    // -- quantified-ladder rungs (`q:`) --
+    /// Ground-subset refutation.
+    QGroundSubset => "q:ground-subset",
+    /// Boolean-skeleton refutation.
+    QBoolSkeleton => "q:bool-skeleton",
+    /// The checked quantified fast paths.
+    QCheckedFastPath => "q:checked-fast-path",
+    /// Top-level existential skolemization left a QF residual.
+    QSkolemQf => "q:skolem-qf",
+    /// Valid-universal elimination left a QF residual.
+    QValidUniversalQf => "q:valid-universal-qf",
+    /// Vacuous-universal elimination left a QF residual.
+    QVacuousUniversalQf => "q:vacuous-universal-qf",
+    /// The exact finite equality-partition refutation.
+    QEqPartition => "q:eq-partition",
+    /// The always-false single-atom universal detector.
+    QUnsatUniversal => "q:unsat-universal",
+    /// Fourier-Motzkin universal elimination.
+    QFourierMotzkin => "q:fourier-motzkin",
+    /// Bounded `∀∃` Skolem-witness synthesis.
+    QForallExistsWitness => "q:forall-exists-witness",
+    /// Finite quantifier expansion.
+    QFiniteExpansion => "q:finite-expansion",
+    /// The bounded pure-UF finite-model-finding probe.
+    QUfFmfProbe => "q:uf-fmf-probe",
+    /// The bounded first-refusal MBQI rung.
+    QMbqiQuick => "q:mbqi-quick",
+    /// The e-graph instantiation refuter.
+    QEgraph => "q:egraph",
+    /// The full MBQI pass.
+    QMbqi => "q:mbqi",
+    /// The full pure-UF finite-model finder.
+    QUfFmfFull => "q:uf-fmf-full",
+    /// ℕ-induction over a guarded negated universal.
+    QNatInduction => "q:nat-induction",
+    /// The ladder ran out of wall-clock budget at the named stage.
+    QTimeout => "q:timeout",
+}
+
+impl core::fmt::Display for Route {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// Why a dispatch route declined to decide the query.
 ///
 /// This reuses the existing [`UnknownKind`] / [`UnknownReason`] vocabulary
@@ -198,6 +358,48 @@ pub struct RouteTrace {
     /// instant the trace was created, before any attempt exists). Used to
     /// compute the next `elapsed` entry.
     last: Instant,
+    /// `Some` when this trace is a reading taken while the query was still
+    /// running. `None` — the default — means the dispatch finished and the
+    /// trail is everything that happened. Part of `PartialEq`: see
+    /// [`PartialReading`] for why the distinction is not optional.
+    partial: Option<PartialReading>,
+}
+
+/// What a PARTIAL reading of a [`RouteTrace`] knows about the attempt that was
+/// still in flight when the reading was taken.
+///
+/// # Why completeness is a field and not a prefix
+///
+/// The CLI used to say this by writing `; partial route …` instead of
+/// `; route …`. That is a real distinction and the prefix really carried it —
+/// but only the writer ever knew about it. Every census in this repository
+/// greps `^; route `, so twelve files printing fourteen diagnostic lines each
+/// matched nothing and became "the second-largest unexplained bucket" in two
+/// ADRs (ADR-2075). A field cannot go unread that way: a consumer that reads
+/// the JSON gets `partial` whether it asked for it or not, and the aggregate
+/// helper refuses to sum over partials unless told.
+///
+/// # What it can and cannot name
+///
+/// [`Self::in_flight_after`] is the route the trail most recently RECORDED, and
+/// an attempt is recorded when it FINISHES — so this names the *boundary* the
+/// open segment started at, not the route that was running. That is as much as
+/// the instrument honestly knows and the name says so. The route that was
+/// actually consuming the budget has contributed nothing to
+/// [`RouteTrace::bound_by`], which is exactly why
+/// [`Self::open_segment`] has to travel with it: when the open segment
+/// dominates the attributed total, `bound_by` is not the answer to "where did
+/// the budget go". Measured 2026-09-08 on the one `QF_LRA` file in the blind
+/// population that took the watchdog path: `bound_by=dl-online bound_ms=20
+/// total_ms=26` on a 25,241 ms run.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PartialReading {
+    /// The route after which the open segment has been running — the boundary,
+    /// not the route in flight. `None` for a reading with no recorded attempt.
+    pub in_flight_after: Option<&'static str>,
+    /// How long the segment that no attempt accounts for had been open when
+    /// the reading was taken.
+    pub open_segment: Duration,
 }
 
 impl Default for RouteTrace {
@@ -206,15 +408,27 @@ impl Default for RouteTrace {
             attempts: Vec::new(),
             elapsed: Vec::new(),
             last: Instant::now(),
+            partial: None,
         }
     }
 }
 
-/// Structural equality: same recorded `(route, outcome)` sequence. Timing is
-/// deliberately excluded — see the [`RouteTrace`] struct docs.
+/// Structural equality: same recorded `(route, outcome)` sequence **and the
+/// same completeness**. Timing is deliberately excluded — see the
+/// [`RouteTrace`] struct docs.
+///
+/// Completeness is *in* the comparison on purpose. A partial reading and a
+/// completed run that happened to record the same prefix are not the same
+/// observation, and an equality that says they are is the same collapse the
+/// prose prefix suffered from. The `open_segment` inside a
+/// [`PartialReading`] is a wall-clock duration and would break determinism, so
+/// only the presence of the reading and its `in_flight_after` boundary
+/// participate — the two fields that are a function of the dispatch rather
+/// than of the clock.
 impl PartialEq for RouteTrace {
     fn eq(&self, other: &Self) -> bool {
         self.attempts == other.attempts
+            && self.partial.map(|p| p.in_flight_after) == other.partial.map(|p| p.in_flight_after)
     }
 }
 
@@ -231,6 +445,40 @@ impl RouteTrace {
     #[must_use]
     pub fn attempts(&self) -> &[RouteAttempt] {
         &self.attempts
+    }
+
+    /// Whether this trace is a PARTIAL reading — sampled while the query was
+    /// still running — rather than a completed dispatch.
+    #[must_use]
+    pub fn is_partial(&self) -> bool {
+        self.partial.is_some()
+    }
+
+    /// What a partial reading knows about the attempt still in flight, or
+    /// `None` on a completed trace. See [`PartialReading`].
+    #[must_use]
+    pub fn partial_reading(&self) -> Option<PartialReading> {
+        self.partial
+    }
+
+    /// Marks this trace as a partial reading, capturing the open segment and
+    /// the boundary route **now**.
+    ///
+    /// Called by whoever takes the reading — the watchdog path, which is the
+    /// only code that knows the query was killed rather than finished. Doing it
+    /// here rather than at render time is what makes the completeness travel
+    /// with the trace through a clone, a mirror, and a serialisation, instead
+    /// of living only in the format string of one printer.
+    ///
+    /// Idempotent in the sense that re-marking re-reads the clock; a trace is
+    /// never un-marked, because nothing can un-kill a query.
+    #[must_use]
+    pub fn marked_partial(mut self) -> Self {
+        self.partial = Some(PartialReading {
+            in_flight_after: self.last_recorded_route(),
+            open_segment: self.open_segment(),
+        });
+        self
     }
 
     /// Wall-clock elapsed per recorded attempt, aligned by index with
@@ -531,7 +779,18 @@ impl core::fmt::Display for RouteTrace {
 
 /// Schema version of [`RouteTrace::to_json`]'s output. Bump on any field
 /// rename/removal so a consumer can reject a rendering it does not understand.
-pub const ROUTE_TRACE_JSON_SCHEMA_VERSION: u32 = 1;
+///
+/// # Why 2 (ADR-2101)
+///
+/// Version 2 added the top-level `partial` member. Adding a member is not a
+/// rename or a removal, so by the rule above this did not have to bump — and
+/// bumping is nevertheless the whole point. Without it a reader cannot tell a
+/// v1 object (completeness ABSENT, and therefore unknown) from a v2 object
+/// that says `"partial":false`. Treating the first as the second is precisely
+/// how ADR-2075's twelve partial files were swept into an aggregate that
+/// thought it had totals. The version is what lets the shared reader say "this
+/// artifact predates the field" instead of guessing `false`.
+pub const ROUTE_TRACE_JSON_SCHEMA_VERSION: u32 = 2;
 
 /// Appends `value` to `out` as a JSON string literal, escaping per RFC 8259.
 ///
@@ -598,7 +857,7 @@ impl RouteTrace {
     /// # Schema
     ///
     /// ```text
-    /// {"schema_version":1,"attempts":[
+    /// {"schema_version":2,"partial":false,"attempts":[
     ///   {"route":"probe","outcome":"probe","detail":"…"},
     ///   {"route":"qf-bv","outcome":"decided","verdict":"unsat"},
     ///   {"route":"nra-real-root","outcome":"declined","reason":"not-applicable"},
@@ -632,7 +891,7 @@ impl RouteTrace {
     /// # Schema
     ///
     /// ```text
-    /// {"schema_version":1,"attempts":[
+    /// {"schema_version":2,"partial":false,"attempts":[
     ///   {"route":"probe","outcome":"probe","detail":"…","elapsed_ns":1200},
     ///   {"route":"qf-bv","outcome":"decided","verdict":"unsat","elapsed_ns":48200000}
     /// ]}
@@ -647,6 +906,24 @@ impl RouteTrace {
         let mut out = String::with_capacity(64 + self.attempts.len() * per_attempt_capacity);
         out.push_str("{\"schema_version\":");
         out.push_str(&ROUTE_TRACE_JSON_SCHEMA_VERSION.to_string());
+        // Completeness, ALWAYS present, immediately after the version: a
+        // consumer that reads the object at all reads this, which is the one
+        // property the prose prefix could not give it. `in_flight_after` /
+        // `open_segment_ns` follow only on a partial reading, the same
+        // "present exactly when there is something to say" rule `detail`
+        // follows on an attempt.
+        match &self.partial {
+            None => out.push_str(",\"partial\":false"),
+            Some(reading) => {
+                out.push_str(",\"partial\":true,\"in_flight_after\":");
+                match reading.in_flight_after {
+                    Some(route) => push_json_string(&mut out, route),
+                    None => out.push_str("null"),
+                }
+                out.push_str(",\"open_segment_ns\":");
+                out.push_str(&reading.open_segment.as_nanos().to_string());
+            }
+        }
         out.push_str(",\"attempts\":[");
         for (i, attempt) in self.attempts.iter().enumerate() {
             if i > 0 {
@@ -800,36 +1077,37 @@ pub mod front_door_stage {
     /// Script ingest (parse). Recorded so a file whose whole budget went to
     /// parsing is attributed to parsing rather than to whichever route printed
     /// last.
-    pub const PARSE: &str = "fd:parse";
+    pub const PARSE: &str = super::Route::FdParse.as_str();
     /// The source-first word-only parse fallback (`decide_word_only`).
-    pub const WORD_ONLY_FALLBACK: &str = "fd:word-only-fallback";
+    pub const WORD_ONLY_FALLBACK: &str = super::Route::FdWordOnlyFallback.as_str();
     /// The source-level FP prefix monotonic fold.
-    pub const SOURCE_FP_PREFIX: &str = "fd:source-fp-prefix";
+    pub const SOURCE_FP_PREFIX: &str = super::Route::FdSourceFpPrefix.as_str();
     /// The source-level string route ladder, given first refusal ahead of the
     /// bounded encoding.
-    pub const SOURCE_STRING: &str = "fd:source-string";
+    pub const SOURCE_STRING: &str = super::Route::FdSourceString.as_str();
     /// The flat auto-dispatch (`crate::check_auto`) seen as one front-door
     /// stage. Recorded only when the dispatch produced no attempts of its own,
     /// so the stage is never double-counted against its own route entries.
-    pub const DISPATCH: &str = "fd:dispatch";
+    pub const DISPATCH: &str = super::Route::FdDispatch.as_str();
     /// The `StringGate` confirmation applied to the flat dispatch's verdict.
-    pub const STRING_GATE: &str = "fd:string-gate";
+    pub const STRING_GATE: &str = super::Route::FdStringGate.as_str();
     /// The source-level semantic-unsat upgrade.
-    pub const SOURCE_STRING_SEMANTIC_UNSAT: &str = "fd:source-string-semantic-unsat";
+    pub const SOURCE_STRING_SEMANTIC_UNSAT: &str =
+        super::Route::FdSourceStringSemanticUnsat.as_str();
     /// The flat word-equation second chance.
-    pub const WORD_ROUTE: &str = "fd:word-route";
+    pub const WORD_ROUTE: &str = super::Route::FdWordRoute.as_str();
     /// The online CDCL(T) string second chance.
-    pub const ONLINE_STRING: &str = "fd:online-string";
+    pub const ONLINE_STRING: &str = super::Route::FdOnlineString.as_str();
     /// The regex-membership second chance.
-    pub const MEMBERSHIP: &str = "fd:membership";
+    pub const MEMBERSHIP: &str = super::Route::FdMembership.as_str();
     /// The lexicographic-order second chance.
-    pub const LEX_ORDER: &str = "fd:lex-order";
+    pub const LEX_ORDER: &str = super::Route::FdLexOrder.as_str();
     /// The length-to-LIA second chance.
-    pub const LENGTH_LIA: &str = "fd:length-lia";
+    pub const LENGTH_LIA: &str = super::Route::FdLengthLia.as_str();
     /// The bounded concrete source-witness probe.
-    pub const SOURCE_STRING_SAT_PROBE: &str = "fd:source-string-sat-probe";
+    pub const SOURCE_STRING_SAT_PROBE: &str = super::Route::FdSourceStringSatProbe.as_str();
     /// The bounded-completeness `unknown` -> `unsat` upgrade.
-    pub const BOUNDED_COMPLETENESS_UNSAT: &str = "fd:bounded-completeness-unsat";
+    pub const BOUNDED_COMPLETENESS_UNSAT: &str = super::Route::FdBoundedCompletenessUnsat.as_str();
 }
 
 /// Labels for the rungs of the **quantified ladder** (`crate::solve`).
@@ -863,47 +1141,47 @@ pub mod front_door_stage {
 /// by inspection.
 pub mod quant_rung {
     /// Ground-subset refutation of the quantified query.
-    pub const GROUND_SUBSET: &str = "q:ground-subset";
+    pub const GROUND_SUBSET: &str = super::Route::QGroundSubset.as_str();
     /// Boolean-skeleton refutation: every maximal quantified subformula
     /// replaced by an opaque atom, and the abstraction refuted on its own.
     /// Distinct from [`GROUND_SUBSET`], which DROPS whole conjuncts that
     /// contain a quantifier and so cannot see a refutation living inside one
     /// (ADR-2025).
-    pub const BOOL_SKELETON: &str = "q:bool-skeleton";
+    pub const BOOL_SKELETON: &str = super::Route::QBoolSkeleton.as_str();
     /// The checked quantified fast paths (`checked_quantified_fast_path`).
-    pub const CHECKED_FAST_PATH: &str = "q:checked-fast-path";
+    pub const CHECKED_FAST_PATH: &str = super::Route::QCheckedFastPath.as_str();
     /// Top-level existential skolemization left a quantifier-free residual,
     /// decided by the ordinary QF dispatch.
-    pub const SKOLEM_QF: &str = "q:skolem-qf";
+    pub const SKOLEM_QF: &str = super::Route::QSkolemQf.as_str();
     /// Valid-universal elimination left a quantifier-free residual.
-    pub const VALID_UNIVERSAL_QF: &str = "q:valid-universal-qf";
+    pub const VALID_UNIVERSAL_QF: &str = super::Route::QValidUniversalQf.as_str();
     /// Vacuous-universal elimination left a quantifier-free residual.
-    pub const VACUOUS_UNIVERSAL_QF: &str = "q:vacuous-universal-qf";
+    pub const VACUOUS_UNIVERSAL_QF: &str = super::Route::QVacuousUniversalQf.as_str();
     /// The exact finite equality-partition refutation (ADR-0101).
-    pub const EQ_PARTITION: &str = "q:eq-partition";
+    pub const EQ_PARTITION: &str = super::Route::QEqPartition.as_str();
     /// The always-false single-atom universal detector.
-    pub const UNSAT_UNIVERSAL: &str = "q:unsat-universal";
+    pub const UNSAT_UNIVERSAL: &str = super::Route::QUnsatUniversal.as_str();
     /// Fourier-Motzkin universal elimination — an outright `unsat`, or a
     /// rewrite that left a quantifier-free residual.
-    pub const FOURIER_MOTZKIN: &str = "q:fourier-motzkin";
+    pub const FOURIER_MOTZKIN: &str = super::Route::QFourierMotzkin.as_str();
     /// Bounded `∀∃` Skolem-witness synthesis.
-    pub const FORALL_EXISTS_WITNESS: &str = "q:forall-exists-witness";
+    pub const FORALL_EXISTS_WITNESS: &str = super::Route::QForallExistsWitness.as_str();
     /// Finite quantifier expansion.
-    pub const FINITE_EXPANSION: &str = "q:finite-expansion";
+    pub const FINITE_EXPANSION: &str = super::Route::QFiniteExpansion.as_str();
     /// The bounded pure-UF finite-model-finding probe.
-    pub const UF_FMF_PROBE: &str = "q:uf-fmf-probe";
+    pub const UF_FMF_PROBE: &str = super::Route::QUfFmfProbe.as_str();
     /// The bounded first-refusal MBQI rung.
-    pub const MBQI_QUICK: &str = "q:mbqi-quick";
+    pub const MBQI_QUICK: &str = super::Route::QMbqiQuick.as_str();
     /// The e-graph instantiation refuter.
-    pub const EGRAPH: &str = "q:egraph";
+    pub const EGRAPH: &str = super::Route::QEgraph.as_str();
     /// The full MBQI pass.
-    pub const MBQI: &str = "q:mbqi";
+    pub const MBQI: &str = super::Route::QMbqi.as_str();
     /// The full pure-UF finite-model finder.
-    pub const UF_FMF_FULL: &str = "q:uf-fmf-full";
+    pub const UF_FMF_FULL: &str = super::Route::QUfFmfFull.as_str();
     /// ℕ-induction over a guarded negated universal.
-    pub const NAT_INDUCTION: &str = "q:nat-induction";
+    pub const NAT_INDUCTION: &str = super::Route::QNatInduction.as_str();
     /// The ladder ran out of wall-clock budget at the named stage.
-    pub const TIMEOUT: &str = "q:timeout";
+    pub const TIMEOUT: &str = super::Route::QTimeout.as_str();
 
     /// Every label in this module, for a test that must derive the vocabulary
     /// from the authority rather than from a maintainer's memory.
@@ -1276,7 +1554,7 @@ mod json_tests {
     fn empty_trace_renders_an_empty_attempt_list() {
         assert_eq!(
             RouteTrace::new().to_json(),
-            "{\"schema_version\":1,\"attempts\":[]}"
+            "{\"schema_version\":2,\"partial\":false,\"attempts\":[]}"
         );
     }
 
@@ -1298,7 +1576,7 @@ mod json_tests {
         trace.record_decided("f", Verdict::Unsat);
         assert_eq!(
             trace.to_json(),
-            "{\"schema_version\":1,\"attempts\":[\
+            "{\"schema_version\":2,\"partial\":false,\"attempts\":[\
 {\"route\":\"probe\",\"outcome\":\"probe\",\"detail\":\"bv\"},\
 {\"route\":\"a\",\"outcome\":\"declined\",\"reason\":\"unsupported\"},\
 {\"route\":\"b\",\"outcome\":\"declined\",\"reason\":\"not-applicable\"},\
@@ -1329,7 +1607,7 @@ mod json_tests {
         );
         assert_eq!(
             trace.to_json(),
-            "{\"schema_version\":1,\"attempts\":[\
+            "{\"schema_version\":2,\"partial\":false,\"attempts\":[\
 {\"route\":\"payload-free\",\"outcome\":\"declined\",\"reason\":\"unsupported\"},\
 {\"route\":\"with-message\",\"outcome\":\"declined\",\"reason\":\"unsupported\",\
 \"detail\":\"free datatype variable under is-c\"}]}"
@@ -1365,7 +1643,7 @@ mod json_tests {
         trace.record_declined("x", DeclineReason::Budget("a\"b\\c\nd\te\u{1}f".into()));
         assert_eq!(
             trace.to_json(),
-            "{\"schema_version\":1,\"attempts\":[{\"route\":\"x\",\
+            "{\"schema_version\":2,\"partial\":false,\"attempts\":[{\"route\":\"x\",\
 \"outcome\":\"declined\",\"reason\":\"budget\",\
 \"detail\":\"a\\\"b\\\\c\\nd\\te\\u0001f\"}]}"
         );
@@ -1434,7 +1712,7 @@ mod json_tests {
         trace.record_decided("f", Verdict::Unsat);
         assert_eq!(
             trace.to_json(),
-            "{\"schema_version\":1,\"attempts\":[\
+            "{\"schema_version\":2,\"partial\":false,\"attempts\":[\
 {\"route\":\"probe\",\"outcome\":\"probe\",\"detail\":\"bv\"},\
 {\"route\":\"a\",\"outcome\":\"declined\",\"reason\":\"unsupported\"},\
 {\"route\":\"b\",\"outcome\":\"declined\",\"reason\":\"not-applicable\"},\
@@ -1591,5 +1869,272 @@ mod json_tests {
         // structural equality (route/outcome only) must still hold.
         assert_ne!(a.elapsed()[0], b.elapsed()[0]);
         assert_eq!(a, b, "RouteTrace equality must ignore timing");
+    }
+}
+
+/// The route-label vocabulary, checked against its own authority (ADR-2101).
+///
+/// Every test here derives its population from [`Route::ALL`] or from the
+/// constant modules themselves. A test that listed the routes would measure
+/// the maintainer's memory, which is the defect this whole lane exists to
+/// remove from the instrument side.
+#[cfg(test)]
+mod route_enum_tests {
+    use super::*;
+
+    /// The bytes on the wire did not move. Every constant that existed before
+    /// the enum did must still be the same string, checked one by one against
+    /// the literal it used to hold — not against `Route::X.as_str()`, which is
+    /// now its definition and would make the check circular.
+    #[test]
+    fn every_constant_keeps_the_exact_bytes_it_had_before_the_enum() {
+        let pinned: &[(&str, &str)] = &[
+            (front_door_stage::PARSE, "fd:parse"),
+            (
+                front_door_stage::WORD_ONLY_FALLBACK,
+                "fd:word-only-fallback",
+            ),
+            (front_door_stage::SOURCE_FP_PREFIX, "fd:source-fp-prefix"),
+            (front_door_stage::SOURCE_STRING, "fd:source-string"),
+            (front_door_stage::DISPATCH, "fd:dispatch"),
+            (front_door_stage::STRING_GATE, "fd:string-gate"),
+            (
+                front_door_stage::SOURCE_STRING_SEMANTIC_UNSAT,
+                "fd:source-string-semantic-unsat",
+            ),
+            (front_door_stage::WORD_ROUTE, "fd:word-route"),
+            (front_door_stage::ONLINE_STRING, "fd:online-string"),
+            (front_door_stage::MEMBERSHIP, "fd:membership"),
+            (front_door_stage::LEX_ORDER, "fd:lex-order"),
+            (front_door_stage::LENGTH_LIA, "fd:length-lia"),
+            (
+                front_door_stage::SOURCE_STRING_SAT_PROBE,
+                "fd:source-string-sat-probe",
+            ),
+            (
+                front_door_stage::BOUNDED_COMPLETENESS_UNSAT,
+                "fd:bounded-completeness-unsat",
+            ),
+            (quant_rung::GROUND_SUBSET, "q:ground-subset"),
+            (quant_rung::BOOL_SKELETON, "q:bool-skeleton"),
+            (quant_rung::CHECKED_FAST_PATH, "q:checked-fast-path"),
+            (quant_rung::SKOLEM_QF, "q:skolem-qf"),
+            (quant_rung::VALID_UNIVERSAL_QF, "q:valid-universal-qf"),
+            (quant_rung::VACUOUS_UNIVERSAL_QF, "q:vacuous-universal-qf"),
+            (quant_rung::EQ_PARTITION, "q:eq-partition"),
+            (quant_rung::UNSAT_UNIVERSAL, "q:unsat-universal"),
+            (quant_rung::FOURIER_MOTZKIN, "q:fourier-motzkin"),
+            (quant_rung::FORALL_EXISTS_WITNESS, "q:forall-exists-witness"),
+            (quant_rung::FINITE_EXPANSION, "q:finite-expansion"),
+            (quant_rung::UF_FMF_PROBE, "q:uf-fmf-probe"),
+            (quant_rung::MBQI_QUICK, "q:mbqi-quick"),
+            (quant_rung::EGRAPH, "q:egraph"),
+            (quant_rung::MBQI, "q:mbqi"),
+            (quant_rung::UF_FMF_FULL, "q:uf-fmf-full"),
+            (quant_rung::NAT_INDUCTION, "q:nat-induction"),
+            (quant_rung::TIMEOUT, "q:timeout"),
+        ];
+        assert_eq!(
+            pinned.len(),
+            32,
+            "the two constant modules declare 32 labels"
+        );
+        for (actual, expected) in pinned {
+            assert_eq!(actual, expected, "route label changed bytes");
+        }
+    }
+
+    /// The enum is total over both constant modules: every declared constant is
+    /// a `Route`, and every `Route` except the hardcoded probe label is a
+    /// declared constant. Derived from `quant_rung::ALL` and from the pinned
+    /// front-door list, never from a hand-copy of `Route::ALL`.
+    #[test]
+    fn the_enum_and_the_constant_modules_cover_each_other() {
+        let front_door = [
+            front_door_stage::PARSE,
+            front_door_stage::WORD_ONLY_FALLBACK,
+            front_door_stage::SOURCE_FP_PREFIX,
+            front_door_stage::SOURCE_STRING,
+            front_door_stage::DISPATCH,
+            front_door_stage::STRING_GATE,
+            front_door_stage::SOURCE_STRING_SEMANTIC_UNSAT,
+            front_door_stage::WORD_ROUTE,
+            front_door_stage::ONLINE_STRING,
+            front_door_stage::MEMBERSHIP,
+            front_door_stage::LEX_ORDER,
+            front_door_stage::LENGTH_LIA,
+            front_door_stage::SOURCE_STRING_SAT_PROBE,
+            front_door_stage::BOUNDED_COMPLETENESS_UNSAT,
+        ];
+        for label in front_door.iter().chain(quant_rung::ALL.iter()) {
+            assert!(
+                Route::from_wire(label).is_some(),
+                "declared constant {label:?} is not a Route variant"
+            );
+        }
+        assert_eq!(
+            Route::ALL.len(),
+            front_door.len() + quant_rung::ALL.len() + 1,
+            "Route must be exactly the 32 declared constants plus the \
+             hardcoded \"probe\" label and nothing else"
+        );
+        assert_eq!(Route::ALL.len(), 33);
+    }
+
+    /// `as_str` and `from_wire` are inverse, in both directions, over the whole
+    /// authority — so a variant cannot be given a wire string that another
+    /// variant already owns without this failing.
+    #[test]
+    fn as_str_and_from_wire_round_trip_over_every_variant() {
+        for route in Route::ALL {
+            assert_eq!(
+                Route::from_wire(route.as_str()),
+                Some(*route),
+                "{route} does not round-trip"
+            );
+            assert_eq!(route.to_string(), route.as_str(), "Display must be as_str");
+        }
+        let distinct: std::collections::BTreeSet<&str> =
+            Route::ALL.iter().map(|r| r.as_str()).collect();
+        assert_eq!(
+            distinct.len(),
+            Route::ALL.len(),
+            "two variants share one wire string"
+        );
+    }
+
+    /// The honest boundary of the type: a DISPATCH rung label is not a
+    /// `Route`, and `from_wire` says `None` rather than inventing one.
+    ///
+    /// This is a positive control on the negative answer — without it,
+    /// `from_wire` returning `None` for everything would pass the round-trip
+    /// test above only by accident of the `Some` assertions, and a reader that
+    /// silently dropped every dispatch rung would look correct.
+    #[test]
+    fn a_dispatch_rung_label_is_deliberately_not_a_route() {
+        for rung in ["qf-bv", "lia-dpll", "dl-online", "nra-real-root"] {
+            assert_eq!(
+                Route::from_wire(rung),
+                None,
+                "{rung} is an auto.rs string literal, not a declared route"
+            );
+        }
+        // …and the probe label, which IS declared here, still resolves — so the
+        // `None`s above are a finding about the dispatch rungs and not about a
+        // broken lookup.
+        assert_eq!(Route::from_wire("probe"), Some(Route::Probe));
+    }
+}
+
+/// Completeness as a field (ADR-2101).
+#[cfg(test)]
+mod partial_tests {
+    use super::*;
+
+    /// A completed trace says so, in the JSON, without being asked.
+    #[test]
+    fn a_completed_trace_renders_partial_false() {
+        let mut trace = RouteTrace::new();
+        trace.record_decided("qf-bv", Verdict::Unsat);
+        assert!(!trace.is_partial());
+        assert_eq!(trace.partial_reading(), None);
+        assert!(
+            trace
+                .to_json()
+                .starts_with("{\"schema_version\":2,\"partial\":false,"),
+            "{}",
+            trace.to_json()
+        );
+    }
+
+    /// A marked trace carries the completeness, the boundary route, and the
+    /// open segment — the three things the prose prefix could only say one of.
+    #[test]
+    fn a_partial_reading_renders_its_boundary_and_its_open_segment() {
+        let mut trace = RouteTrace::new();
+        trace.record_declined("dl-online", DeclineReason::NotApplicable);
+        std::thread::sleep(Duration::from_millis(5));
+        let trace = trace.marked_partial();
+
+        assert!(trace.is_partial());
+        let reading = trace.partial_reading().expect("marked partial");
+        assert_eq!(reading.in_flight_after, Some("dl-online"));
+        assert!(
+            reading.open_segment >= Duration::from_millis(4),
+            "the open segment must carry the time no attempt accounts for: {:?}",
+            reading.open_segment
+        );
+
+        let json = trace.to_json();
+        assert!(
+            json.starts_with(
+                "{\"schema_version\":2,\"partial\":true,\
+\"in_flight_after\":\"dl-online\",\"open_segment_ns\":"
+            ),
+            "{json}"
+        );
+        // The attempts half is byte-identical to what the same trace would
+        // render unmarked: the field was ADDED, the rendering was not rewritten.
+        let attempts = &json[json.find(",\"attempts\":").expect("attempts member")..];
+        assert_eq!(
+            attempts,
+            ",\"attempts\":[{\"route\":\"dl-online\",\"outcome\":\"declined\",\
+\"reason\":\"not-applicable\"}]}"
+        );
+    }
+
+    /// A reading taken before any attempt was recorded has no boundary to
+    /// name, and says `null` rather than inventing one or omitting the member.
+    #[test]
+    fn a_partial_reading_with_no_recorded_attempt_names_null() {
+        let json = RouteTrace::new().marked_partial().to_json();
+        assert!(
+            json.starts_with(
+                "{\"schema_version\":2,\"partial\":true,\"in_flight_after\":null,\
+\"open_segment_ns\":"
+            ),
+            "{json}"
+        );
+        assert!(json.ends_with(",\"attempts\":[]}"), "{json}");
+    }
+
+    /// Completeness is part of equality. A partial reading and a completed run
+    /// that recorded the same attempts are different observations, and a
+    /// comparison that calls them equal is the prose prefix's collapse with a
+    /// `==` in front of it.
+    #[test]
+    fn equality_separates_a_partial_reading_from_a_completed_one() {
+        let mut complete = RouteTrace::new();
+        complete.record_decided("qf-bv", Verdict::Sat);
+        let partial = complete.clone().marked_partial();
+        assert_ne!(
+            complete, partial,
+            "completeness must not be invisible to =="
+        );
+        assert_eq!(
+            partial,
+            complete.clone().marked_partial(),
+            "two partial readings with the same boundary are still equal"
+        );
+    }
+
+    /// The timed serializer carries the field too — it is the rendering the
+    /// CLI actually prints, so a `partial` that only appeared in `to_json`
+    /// would be absent from every artifact on disk.
+    #[test]
+    fn the_timed_serializer_carries_completeness_as_well() {
+        let mut trace = RouteTrace::new();
+        trace.record_decided("qf-bv", Verdict::Unsat);
+        assert!(
+            trace
+                .to_json_with_timing()
+                .starts_with("{\"schema_version\":2,\"partial\":false,")
+        );
+        assert!(
+            trace
+                .marked_partial()
+                .to_json_with_timing()
+                .contains("\"partial\":true")
+        );
     }
 }

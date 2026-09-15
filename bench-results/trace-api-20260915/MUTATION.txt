@@ -1,0 +1,5 @@
+route-trace-completeness: baseline green, 21 tests (scripts/cargo-serialized.sh test -p axeyum-solver --lib --features full route_trace)
+  a front-door label's wire bytes move killed 1: route_trace::route_enum_tests::every_constant_keeps_the_exact_bytes_it_had_before_the_enum
+  the probe label stops resolving    killed 1: route_trace::route_enum_tests::a_dispatch_rung_label_is_deliberately_not_a_route
+  a partial reading forgets the boundary it opened at killed 1: route_trace::partial_tests::a_partial_reading_renders_its_boundary_and_its_open_segment
+MUTATION_EXIT=0
