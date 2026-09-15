@@ -5590,8 +5590,23 @@ impl IncrementalEmatchSession {
                         user_groups.as_ref().map_or(0, Vec::len)
                     );
                 }
+                let annotated = user_groups.is_some();
                 let source_groups =
                     user_groups.unwrap_or_else(|| select_trigger_groups(arena, body, &var_index));
+                // The AUTO-selection counterpart of the `user-triggers` line
+                // above, and the only observable that says whether
+                // `AXEYUM_QINST_TRIGGER_ALTERNATIVES` reached the solve at all.
+                // Without it an A/B in which the variable never arrives prints a
+                // perfect zero that looks exactly like agreement, and nothing
+                // distinguishes the two.
+                if qprobe_enabled() && !annotated {
+                    eprintln!(
+                        "QPROBE auto-triggers vars={} alternatives={} cap={}",
+                        vars.len(),
+                        source_groups.len(),
+                        trigger_alternative_cap(),
+                    );
+                }
                 for group in source_groups {
                     let mut group_indices = Vec::with_capacity(group.len());
                     for trigger in group {

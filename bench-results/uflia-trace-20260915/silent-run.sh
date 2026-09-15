@@ -10,7 +10,9 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 while IFS= read -r p; do
   [ -n "$p" ] || continue
   echo "==== $(basename "$p")" >> "$OUT"
-  AXEYUM_QPROBE=1 taskset -c "$PIN" timeout $((BUDGET + 40)) \
+  # AXEYUM_QPROBE_CENSUS is NOT optional here: without it every `rej_*` field
+  # prints 0 and the per-class reason is unmeasured rather than absent.
+  AXEYUM_QPROBE=1 AXEYUM_QPROBE_CENSUS=1 taskset -c "$PIN" timeout $((BUDGET + 40)) \
     "$AX" "$p" --timeout-ms $((BUDGET * 1000)) 2>&1 \
     | python3 "$HERE/silent-split.py" >> "$OUT"
 done < "$LIST"
