@@ -64505,6 +64505,35 @@ Read the direction carefully — **A here INCLUDES ADR-2100**, so A is the arm
 that lost them. They are also exactly the two raw gains in the `AUFDTLIRA`
 pairing.
 
+### Resuming the A/B, if it is still running
+
+The run is unattended on s5/s6/s7 and writes to
+`/nas3/data/axeyum/harness/quant-ladder-ownership/out/`. To finish it:
+
+```sh
+# 1. is it still going?  (nine divisions x twelve shards = 108 logs when done)
+grep -l AB-DONE /nas3/data/axeyum/harness/quant-ladder-ownership/out/*.log | wc -l
+
+# 2. the pairing, per division and total
+python3 bench-results/route-ownership-20260915/ab-summarize.py \
+        /nas3/data/axeyum/harness/quant-ladder-ownership/out/*.shard*.tsv
+
+# 3. every MOVED row -- verdict OR exit status -- then 3x per arm
+python3 bench-results/quant-ladder-ownership-20260915/movers.py \
+        /nas3/data/axeyum/harness/quant-ladder-ownership/out/*.shard*.tsv > movers.txt
+bash bench-results/quant-ladder-ownership-20260915/launch-recheck.sh \
+        movers.txt /nas3/data/axeyum/harness/quant-ladder-ownership/recheck \
+        /nas3/data/axeyum/harness/quant-ladder-ownership/bin/smtcomp_cli-A \
+        /nas3/data/axeyum/harness/quant-ladder-ownership/bin/smtcomp_cli-B 24
+```
+
+**The raw pairing is not the answer** and must not be read as one. ADR-1966
+reported 25 raw movers and 22 after re-checking — **11 of its 18 movers outside
+the treatment division vanished** — so only the 3×-per-arm classification
+(`STABLE-GAIN` / `STABLE-LOSS` / `UNSTABLE`) may be read off for an exit
+criterion. The two named files have already been through that classifier and
+both came back `STABLE-GAIN`.
+
 ## Landed changes
 
 | commit | what |
