@@ -41,8 +41,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use axeyum_ir::{Sort, SymbolId, TermArena, TermId, TermNode, Value};
-use axeyum_smtlib::{decode_packed_string, packed_string_max_len};
+use axeyum_ir::{SymbolId, TermArena, TermId, TermNode};
 use axeyum_solver::{
     CheckResult, RouteAttributionGuard, RouteOutcome, SolverConfig, Verdict, check_model,
     last_route_attribution,
@@ -72,42 +71,83 @@ struct Counts {
     withheld: usize,
 }
 
-fn main() {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    let mut budget_ms = 3_000u64;
-    let mut require_paired = false;
-    let mut explain = false;
-    let mut try_lift = false;
-    let mut expect_mismatch: Option<usize> = None;
-    let mut roots: Vec<PathBuf> = Vec::new();
+impl Counts {
+    /// Records one `sat` row into both the total and its route's slot, so the
+    /// two can never drift apart by a missed arm.
+    fn add(&mut self, verdict: Replay, slot: &mut [usize; 4]) {
+        let (total, index) = match verdict {
+            Replay::Holds => (&mut self.holds, 0),
+            Replay::Refuted => (&mut self.refuted, 1),
+            Replay::Errored => (&mut self.errored, 2),
+            Replay::Withheld => (&mut self.withheld, 3),
+        };
+        *total += 1;
+        slot[index] += 1;
+    }
+}
+
+/// The parsed command line.
+struct Args {
+    budget_ms: u64,
+    require_paired: bool,
+    explain: bool,
+    expect_mismatch: Option<usize>,
+    roots: Vec<PathBuf>,
+}
+
+fn parse_args() -> Args {
+    let argv: Vec<String> = std::env::args().skip(1).collect();
+    let mut parsed = Args {
+        budget_ms: 3_000,
+        require_paired: false,
+        explain: false,
+        expect_mismatch: None,
+        roots: Vec::new(),
+    };
     let mut i = 0;
-    while i < args.len() {
-        match args[i].as_str() {
+    while i < argv.len() {
+        match argv[i].as_str() {
             "--budget-ms" => {
                 i += 1;
-                budget_ms = args[i].parse().expect("--budget-ms takes a number");
+                parsed.budget_ms = argv[i].parse().expect("--budget-ms takes a number");
             }
-            "--require-paired" => require_paired = true,
-            "--explain" => explain = true,
-            "--try-lift" => try_lift = true,
+            "--require-paired" => parsed.require_paired = true,
+            "--explain" => parsed.explain = true,
             "--expect-mismatch" => {
                 i += 1;
-                expect_mismatch = Some(args[i].parse().expect("--expect-mismatch takes a number"));
+                parsed.expect_mismatch =
+                    Some(argv[i].parse().expect("--expect-mismatch takes a number"));
             }
-            other => roots.push(PathBuf::from(other)),
+            other => parsed.roots.push(PathBuf::from(other)),
         }
         i += 1;
     }
-    assert!(!roots.is_empty(), "no corpus roots given");
+    assert!(!parsed.roots.is_empty(), "no corpus roots given");
+    parsed
+}
 
+/// The `.smt2` files under `roots`, in a deterministic order.
+fn corpus(roots: &[PathBuf]) -> Vec<PathBuf> {
     let mut files: Vec<PathBuf> = Vec::new();
-    for root in &roots {
+    for root in roots {
         collect(root, &mut files);
     }
     files.sort();
     assert!(!files.is_empty(), "corpus roots matched no .smt2 files");
+    files
+}
 
+fn main() {
+    let Args {
+        budget_ms,
+        require_paired,
+        explain,
+        expect_mismatch,
+        roots,
+    } = parse_args();
+    let files = corpus(&roots);
     let config = SolverConfig::default().with_timeout(Duration::from_millis(budget_ms));
+
     let mut examined = 0usize;
     let mut undecided = 0usize;
     let mut unsat = 0usize;
@@ -140,10 +180,9 @@ fn main() {
             Ok(solved) => solved,
             Err(error) => {
                 errored_out += 1;
-                error_detail
+                *error_detail
                     .entry(error.to_string().chars().take(80).collect::<String>())
-                    .and_modify(|n| *n += 1)
-                    .or_insert(1usize);
+                    .or_insert(0) += 1;
                 continue;
             }
         };
@@ -160,56 +199,67 @@ fn main() {
             CheckResult::Sat(_) => {}
         }
         sat += 1;
-        let (verdict, detail) = match &solved.model {
-            None => (Replay::Withheld, String::new()),
-            Some(model) => match check_model(&solved.script.arena, &solved.assertions, model) {
-                Ok(true) => (Replay::Holds, String::new()),
-                Ok(false) => (Replay::Refuted, "check_model returned false".to_owned()),
-                Err(error) => (Replay::Errored, error.to_string()),
-            },
-        };
-        let slot = per_route.entry(route.clone()).or_insert([0; 4]);
-        match verdict {
-            Replay::Holds => {
-                total.holds += 1;
-                slot[0] += 1;
-            }
-            Replay::Refuted => {
-                total.refuted += 1;
-                slot[1] += 1;
-            }
-            Replay::Errored => {
-                total.errored += 1;
-                slot[2] += 1;
-            }
-            Replay::Withheld => {
-                total.withheld += 1;
-                slot[3] += 1;
-            }
-        }
+        let (verdict, detail) = classify(&solved);
+        total.add(verdict, per_route.entry(route.clone()).or_insert([0; 4]));
         if matches!(verdict, Replay::Refuted | Replay::Errored) {
             if explain {
                 explain_mismatch(file, &solved);
             }
-            if try_lift {
-                probe_lift(file, &solved);
-            }
-            mismatches.push((
-                file.display().to_string(),
-                route,
-                detail.chars().take(200).collect(),
-            ));
+            mismatches.push((file.display().to_string(), route, detail));
         }
     }
 
-    // The denominator is printed beside every count, always: a bare zero here
-    // would be indistinguishable from a census that examined nothing.
+    report(
+        budget_ms,
+        examined,
+        undecided,
+        errored_out,
+        &error_detail,
+        unsat,
+        sat,
+        &total,
+        &per_route,
+        &mismatches,
+    );
+    gate(require_paired, expect_mismatch, sat, &total);
+}
+
+/// What the canonical replay says about one `sat` row's shipped pair.
+fn classify(solved: &SmtLibSolved) -> (Replay, String) {
+    let Some(model) = &solved.model else {
+        return (Replay::Withheld, String::new());
+    };
+    match check_model(&solved.script.arena, &solved.assertions, model) {
+        Ok(true) => (Replay::Holds, String::new()),
+        Ok(false) => (Replay::Refuted, "check_model returned false".to_owned()),
+        Err(error) => (
+            Replay::Errored,
+            error.to_string().chars().take(200).collect(),
+        ),
+    }
+}
+
+/// Prints the census. Every count carries its denominator: a bare zero here
+/// would be indistinguishable from a census that examined nothing.
+#[allow(clippy::too_many_arguments)]
+fn report(
+    budget_ms: u64,
+    examined: usize,
+    undecided: usize,
+    errored_out: usize,
+    error_detail: &BTreeMap<String, usize>,
+    unsat: usize,
+    sat: usize,
+    total: &Counts,
+    per_route: &BTreeMap<String, [usize; 4]>,
+    mismatches: &[(String, String, String)],
+) {
     let carrying = sat - total.withheld;
     println!("budget                                {budget_ms:>6} ms");
     println!("files examined (denominator)          {examined:>6}");
     println!("  undecided                           {undecided:>6}");
     println!("  front door returned Err             {errored_out:>6}");
-    for (detail, count) in &error_detail {
+    for (detail, count) in error_detail {
         println!("      {count:>4}  {detail}");
     }
     println!("  unsat                               {unsat:>6}");
@@ -224,7 +274,7 @@ fn main() {
     println!("      replay Err(..)                  {:>6}", total.errored);
     println!();
     println!("per deciding front-door stage (Ok(true) / Ok(false) / Err / withheld):");
-    for (route, counts) in &per_route {
+    for (route, counts) in per_route {
         println!(
             "  {route:<40} {:>4} {:>4} {:>4} {:>4}",
             counts[0], counts[1], counts[2], counts[3]
@@ -233,12 +283,16 @@ fn main() {
     if !mismatches.is_empty() {
         println!();
         println!("mispaired rows ({}):", mismatches.len());
-        for (file, route, detail) in &mismatches {
+        for (file, route, detail) in mismatches {
             println!("  {file}");
             println!("      route={route}  {detail}");
         }
     }
+}
 
+/// Makes the exit status depend on the finding. A census that always exits 0 is
+/// a report, not a checker.
+fn gate(require_paired: bool, expect_mismatch: Option<usize>, sat: usize, total: &Counts) {
     let mismatch_total = total.refuted + total.errored;
     let mut failed = false;
     if require_paired && mismatch_total > 0 {
@@ -304,122 +358,6 @@ fn explain_mismatch(file: &Path, solved: &SmtLibSolved) {
     println!();
 }
 
-/// Dry-runs repair (b) — lift the source-level `Seq` witness into the packed
-/// bit-vector space — and reports what `check_model` says AFTERWARDS.
-///
-/// This is the measurement the repair choice turns on, and it has three
-/// possible answers, only one of which is the repair working:
-///
-/// * `Ok(true)` — the lift is real evidence: the packed vector is satisfied by
-///   the packed witness, so the replay checks the run that happened.
-/// * `Ok(false)` — the lift ran and the packed vector REJECTS the source
-///   witness. That is not a repair; it converts an honest `Err` into a false
-///   soundness signal, which is strictly worse.
-/// * unliftable — the witness cannot be represented in the packed encoding at
-///   all (a code point above a byte, or a length past the packed cap). Then
-///   repair (b) is impossible for that row, not merely large.
-fn probe_lift(file: &Path, solved: &SmtLibSolved) {
-    let Some(model) = &solved.model else {
-        return;
-    };
-    let script = &solved.script;
-    let arena = &script.arena;
-    let mut lifted = model.clone();
-    let mut unliftable: Vec<String> = Vec::new();
-    let mut packed = 0usize;
-    for &(symbol, _) in &script.declared_strings {
-        if lifted.get(symbol).is_some() {
-            continue;
-        }
-        let (name, sort) = arena.symbol(symbol);
-        let Sort::BitVec(width) = sort else {
-            continue;
-        };
-        let Some(word) = arena.find_internal_symbol(&format!("!weq!{name}")) else {
-            unliftable.push(format!("{name}: no `!weq!` witness symbol"));
-            continue;
-        };
-        let Some(Value::Seq(elements)) = lifted.get(word) else {
-            unliftable.push(format!("{name}: `!weq!{name}` carries no `Seq` value"));
-            continue;
-        };
-        let mut bytes = Vec::with_capacity(elements.len());
-        let mut wide = None;
-        for element in &elements {
-            match element {
-                Value::Bv { value, .. } if *value <= 0xff => {
-                    bytes.push(u8::try_from(*value).expect("masked to a byte"));
-                }
-                Value::Bv { value, .. } => wide = Some(*value),
-                _ => wide = Some(u128::MAX),
-            }
-        }
-        if let Some(code) = wide {
-            unliftable.push(format!(
-                "{name}: witness carries code point {code}, outside the packed BYTE encoding"
-            ));
-            continue;
-        }
-        let Some(max_len) = packed_string_max_len(width) else {
-            unliftable.push(format!(
-                "{name}: width {width} is not a packed string layout"
-            ));
-            continue;
-        };
-        if bytes.len() > max_len as usize {
-            unliftable.push(format!(
-                "{name}: witness is {} bytes, past the packed cap {max_len} for width {width}",
-                bytes.len()
-            ));
-            continue;
-        }
-        let lw = 32 - max_len.leading_zeros();
-        let mut content: u128 = 0;
-        for (i, &b) in bytes.iter().enumerate() {
-            content |= u128::from(b) << (8 * i);
-        }
-        let bits = (content << lw) | u128::from(bytes.len() as u32);
-        if decode_packed_string(width, bits).as_deref() != Some(bytes.as_slice()) {
-            unliftable.push(format!(
-                "{name}: packing did not round-trip through the decoder"
-            ));
-            continue;
-        }
-        lifted.set(symbol, Value::Bv { width, value: bits });
-        packed += 1;
-    }
-    let after = match check_model(arena, &solved.assertions, &lifted) {
-        Ok(true) => "Ok(true)  -- the lift IS real evidence".to_owned(),
-        Ok(false) => "Ok(false) -- the packed vector REJECTS the source witness".to_owned(),
-        Err(error) => format!("Err({error})"),
-    };
-    // Is the packed vector satisfiable AT ALL? For a row whose source witness
-    // is longer than the packed cap this is the decisive question: if the packed
-    // assertions have no model, then no lift can exist, and pairing ANY model
-    // with them would replay `false` on a correct `sat`.
-    let mut probe_arena = arena.clone();
-    let packed_satisfiable = match axeyum_solver::check_auto(
-        &mut probe_arena,
-        &solved.assertions,
-        &SolverConfig::default().with_timeout(Duration::from_millis(5_000)),
-    ) {
-        Ok(CheckResult::Sat(_)) => "sat",
-        Ok(CheckResult::Unsat) => "UNSAT -- no lift can exist",
-        Ok(CheckResult::Unknown(_)) => "unknown",
-        Err(_) => "error",
-    };
-    println!("  LIFT PROBE {}", file.display());
-    println!("    packed assertion vector alone: {packed_satisfiable}");
-    println!(
-        "    symbols packed: {packed}   unliftable: {}",
-        unliftable.len()
-    );
-    for reason in &unliftable {
-        println!("      {reason}");
-    }
-    println!("    check_model after lift: {after}");
-}
-
 /// Collects the free symbols of `term`'s DAG.
 fn free_symbols(arena: &TermArena, term: TermId, out: &mut BTreeSet<SymbolId>) {
     match arena.node(term) {
@@ -461,7 +399,7 @@ fn collect(root: &Path, out: &mut Vec<PathBuf>) {
     let Ok(entries) = std::fs::read_dir(root) else {
         return;
     };
-    let mut paths: Vec<PathBuf> = entries.filter_map(|e| e.ok()).map(|e| e.path()).collect();
+    let mut paths: Vec<PathBuf> = entries.flatten().map(|e| e.path()).collect();
     paths.sort();
     for path in paths {
         collect(&path, out);

@@ -14,58 +14,121 @@
 //! `SmtLibSolved`'s own documentation says `model` is `Some` exactly when the
 //! flat path decided `Sat` over `assertions`, so
 //! `check_model(&solved.script.arena, &solved.assertions, model)` is meaningful.
-//! Until 2026-09-14 that was false: the string second chances
-//! (`fd:word-route`, `fd:membership`, `fd:length-lia`, ...) decide against the
+//! Until 2026-09-14 that was false: the string second chances decide against the
 //! SOURCE expressions and bind the parser's `!weq!<name>` sequence mirrors,
 //! while `assertions` stayed the PACKED flat vector over the declared names at
 //! `(_ BitVec string_total(m))`. Different `SymbolId`s, different names,
-//! different sorts — so the replay could not evaluate at all.
+//! different sorts — so the replay could not evaluate at all. Measured over the
+//! 217 string-division files: **5 of 109 `sat` results**.
 //!
-//! Measured over the 217 string-division files: **5 of 109 `sat` results**, all
-//! failing as `no value bound for symbol #0`. The verdicts were all correct;
-//! the damage was a FALSE ALARM, and it was confirmed end to end rather than
-//! traced — `axeyum-py`'s `Outcome.replay()`, run on those five rows, answered
-//! `False` on four (its docs call that "a soundness signal") and `True` on the
-//! fifth over an all-empty substituted model, which is a vacuous pass and
-//! worse.
+//! # EVERY test here asserts WHICH ROUTE DECIDED IT, and that is not decoration
 //!
-//! # Why every test here is paired with a control
+//! The first version of this suite named the routes in its test names and
+//! reached **none of them**. `(= (str.len x) 10)` and a short `str.in_re` are
+//! both decided by the FLAT path (`bv2nat-blast`), because the bounded encoding
+//! can represent a ten-character witness perfectly well — the second chances
+//! only ever run after the flat path declines. So three tests called
+//! "the ... route ships a replayable pair" were passing without the lift ever
+//! executing, and the mutation table is what exposed it: deleting the entire
+//! `lift_source_strings_onto_packed` call **survived all nine tests**.
 //!
-//! ADR-1976 measured that a satisfiable query is a VACUOUS control: an
-//! underconstrained `sat` stays `sat` under a deliberately broken rewrite. So
-//! "this row now replays `Ok(true)`" is not on its own evidence of anything —
-//! a repair that simply stopped checking would also produce it. Each pair below
-//! therefore differs in ONE small term and lands on OPPOSITE sides of the
-//! packed encoding's cap, so a build that withheld everything and a build that
-//! paired everything each fail exactly one half.
+//! Every test therefore pins its deciding stage through
+//! [`RouteAttributionGuard`]. A fixture that drifts onto another route now fails
+//! loudly instead of quietly testing nothing.
 //!
-//! # The one test that keeps the checker honest
+//! # What the routes can and cannot do, measured
 //!
-//! `the_replay_can_still_answer_false` is the load-bearing one.
-//! `pair_replay_state` deliberately does NOT consult `check_model` before
-//! shipping a pair — it guards on completeness of the binding instead — because
-//! verifying satisfaction there would make every downstream replay a tautology.
-//! That test proves the replay retains its power to reject.
+//! `fd:length-lia` and `fd:membership` exist precisely to decide rows whose
+//! witness EXCEEDS the packed cap — which is the same condition that makes the
+//! flat path decline and hand over to them. In this corpus and in these
+//! fixtures they are therefore reached only by rows that can never be lifted,
+//! and they can only withhold. The lift is exercised through `fd:word-route`,
+//! whose witnesses can be short. Both halves are pinned below.
+//!
+//! # The load-bearing test
+//!
+//! `the_replay_can_still_answer_false`. `pair_replay_state` deliberately does
+//! NOT consult `check_model` before shipping a pair — it guards on completeness
+//! of the binding instead — because verifying satisfaction there would make
+//! every downstream replay a tautology. That test proves the replay retains its
+//! power to reject.
 
 use axeyum_ir::{Sort, Value};
+use axeyum_smtlib::parse_script;
 use axeyum_solver::{
-    CheckResult, SolverConfig, check_model,
+    CheckResult, RouteAttributionGuard, RouteOutcome, SolverConfig, Verdict, check_auto,
+    check_model, front_door_stage, last_route_attribution,
     smtlib::{SmtLibSolved, solve_smtlib_with_model},
 };
 
-/// Decide a script through the shipped front door, carrying replay state.
+/// The `r1_QF_SLIA_type002` shape, one of the four corpus rows the defect was
+/// measured on. `i >= 420` forces `x` to be at least three digits, and the
+/// witness (`x = "500"`, `y = "5"`, `z = "0"`) sits well inside the packed cap,
+/// so this row is LIFTABLE.
+const WORD_ROUTE_SHORT: &str = "(set-logic QF_SLIA)\n\
+     (declare-fun x () String)\n\
+     (declare-fun y () String)\n\
+     (declare-fun z () String)\n\
+     (declare-fun i () Int)\n\
+     (assert (>= i 420))\n\
+     (assert (= x (str.from_int i)))\n\
+     (assert (= x (str.++ y \"0\" z)))\n\
+     (assert (not (= y \"\")))\n\
+     (assert (not (= z \"\")))\n\
+     (check-sat)";
+
+/// **The non-vacuity control for `WORD_ROUTE_SHORT`, differing in one numeral.**
+/// `4_200_000_000_000` is thirteen digits and the packed cap is twelve, so the
+/// same shape on the same route is UNLIFTABLE and must withhold. Without this
+/// half, a build that paired everything unconditionally would pass; without the
+/// other half, a build that withheld everything would.
+const WORD_ROUTE_LONG: &str = "(set-logic QF_SLIA)\n\
+     (declare-fun x () String)\n\
+     (declare-fun y () String)\n\
+     (declare-fun z () String)\n\
+     (declare-fun i () Int)\n\
+     (assert (>= i 4200000000000))\n\
+     (assert (= x (str.from_int i)))\n\
+     (assert (= x (str.++ y \"0\" z)))\n\
+     (assert (not (= y \"\")))\n\
+     (assert (not (= z \"\")))\n\
+     (check-sat)";
+
+/// Decide a script through the shipped front door, carrying replay state, and
+/// report the front-door stage that decided it.
 #[track_caller]
-fn solve(src: &str) -> SmtLibSolved {
-    solve_smtlib_with_model(src, &SolverConfig::default())
-        .unwrap_or_else(|e| panic!("front door failed: {e:?}\n--- source ---\n{src}"))
+fn solve(src: &str) -> (SmtLibSolved, String) {
+    let solved = {
+        let _guard = RouteAttributionGuard::enable();
+        solve_smtlib_with_model(src, &SolverConfig::default())
+            .unwrap_or_else(|e| panic!("front door failed: {e:?}\n--- source ---\n{src}"))
+    };
+    let trace = last_route_attribution();
+    let route = trace
+        .attempts()
+        .iter()
+        .rev()
+        .find(|a| matches!(a.outcome, RouteOutcome::Decided(Verdict::Sat)))
+        .map_or_else(|| "UNATTRIBUTED".to_owned(), |a| a.route.to_owned());
+    (solved, route)
 }
 
+/// The row is `sat` AND it was decided by the stage this test claims.
+///
+/// The second half is what keeps the test from measuring nothing: a fixture
+/// that drifts onto the flat path still answers `sat`, and without this it
+/// would keep passing while the code it names never runs.
 #[track_caller]
-fn assert_sat(label: &str, solved: &SmtLibSolved) {
+fn assert_sat_via(label: &str, expected: &str, (solved, route): &(SmtLibSolved, String)) {
     assert!(
         matches!(solved.outcome.result, CheckResult::Sat(_)),
         "{label}: expected sat, got {:?}",
         solved.outcome.result
+    );
+    assert_eq!(
+        route, expected,
+        "{label}: this fixture no longer reaches `{expected}` — it was decided by `{route}`, so \
+         the test is measuring a different code path than its name claims"
     );
 }
 
@@ -101,115 +164,189 @@ fn assert_withholds(label: &str, solved: &SmtLibSolved) {
 }
 
 // ---------------------------------------------------------------------------
-// The cap boundary. These two differ in ONE numeral and must land on opposite
-// sides, which is what makes neither of them vacuous.
+// The word route, both sides of the packed cap. This is the pair that
+// exercises the LIFT; everything else in this file exercises the withhold.
+// ---------------------------------------------------------------------------
+
+/// The repair itself: a source-route witness is packed onto the declared
+/// symbol, so the replay runs and holds. Before ADR-2070 this row answered
+/// `sat` with `check_model` -> `Err("no value bound for symbol #0")`.
+#[test]
+fn the_word_route_lifts_a_short_witness_into_a_replayable_pair() {
+    let row = solve(WORD_ROUTE_SHORT);
+    assert_sat_via("word-short", front_door_stage::WORD_ROUTE, &row);
+    assert_pairs("word-short", &row.0);
+}
+
+/// **The control, one numeral apart.** Same route, same shape, a witness of
+/// thirteen digits against a twelve-byte cap: unliftable, so it must withhold
+/// rather than ship a pair that cannot be evaluated.
+#[test]
+fn the_word_route_withholds_when_the_witness_is_past_the_packed_cap() {
+    let row = solve(WORD_ROUTE_LONG);
+    assert_sat_via("word-long", front_door_stage::WORD_ROUTE, &row);
+    assert_withholds("word-long", &row.0);
+}
+
+/// The lift must bind the DECLARED symbol, not merely leave a `Seq` lying
+/// around under `!weq!x`. Reads the value back at the packed sort and requires
+/// it to decode to a non-empty string — the empty packing is what
+/// `complete_with_defaults` produced downstream before the repair, and it is
+/// exactly the wrong model `axeyum-py` was reporting to users.
+#[test]
+fn the_lift_binds_the_declared_symbol_and_not_only_the_word_mirror() {
+    let (solved, _) = solve(WORD_ROUTE_SHORT);
+    let model = solved.model.as_ref().expect("the short witness pairs");
+    let mut checked = 0;
+    for &(symbol, _) in &solved.script.declared_strings {
+        let (name, sort) = solved.script.arena.symbol(symbol);
+        let Sort::BitVec(width) = sort else { continue };
+        let value = model
+            .get(symbol)
+            .unwrap_or_else(|| panic!("declared string `{name}` is unbound after the lift"));
+        assert!(
+            matches!(value, Value::Bv { width: w, .. } if w == width),
+            "declared string `{name}` is bound at the wrong sort: {value:?}"
+        );
+        checked += 1;
+    }
+    // Without this the test would pass over an empty `declared_strings`, which
+    // is the vacuity this suite already fell into once.
+    assert!(
+        checked >= 3,
+        "expected the three declared strings of this fixture, examined {checked}"
+    );
+    // `x = str.from_int i` with `i >= 420`, so at least one string is non-empty.
+    // An all-empty model is what the defect produced, and it would satisfy every
+    // structural assertion above.
+    let non_empty = solved.script.declared_strings.iter().any(
+        |&(symbol, _)| matches!(model.get(symbol), Some(Value::Bv { value, .. }) if value != 0),
+    );
+    assert!(
+        non_empty,
+        "every declared string packed to the EMPTY string — that is the defaulted model the \
+         defect produced, not the witness the route found"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// The two routes that can only ever withhold, and their flat-path controls.
 // ---------------------------------------------------------------------------
 //
-// `STRING_MAX_LEN` is 12 bytes for a declared `String`. A witness at or under
-// it is representable in the packed layout, so the lift exists and the replay
-// is real evidence. A witness past it is representable by NOTHING: running the
-// packed vector alone through `check_auto` returns `unsat`, so there is no model
-// to lift to and pairing anything with it would replay `false` on a correct
-// `sat`.
+// Each pair differs in ONE numeral and crosses `STRING_MAX_LEN = 12`. Below the
+// cap the FLAT path decides and the pair is real; above it the flat path
+// declines, the second chance answers, and there is nothing to lift to. That is
+// why these two routes withhold rather than pair: not a limitation of the lift,
+// but the reason the routes exist.
 
-/// The exact shape ADR-2010 handed off as `r1_QF_SLIA_re-inter-stack-ovf`,
-/// reduced to the one assertion that matters. The witness must be ≥ 15 bytes
-/// and the packed cap is 12, so this row MUST withhold.
+/// `fd:length-lia`, ADR-2010's own headline witness. Twenty characters against
+/// a twelve-byte cap: `check_auto` on the packed vector alone is `unsat`, so no
+/// lift exists and pairing anything with it would replay `false` on a correct
+/// `sat`.
 #[test]
-fn a_witness_past_the_packed_cap_withholds_rather_than_shipping_an_unreplayable_pair() {
-    let solved = solve(
+fn the_length_lia_route_withholds_past_the_packed_cap() {
+    let row = solve(
+        "(set-logic QF_SLIA)\n\
+         (declare-fun x () String)\n\
+         (assert (= (str.len x) 20))\n\
+         (check-sat)",
+    );
+    assert_sat_via("length-lia", front_door_stage::LENGTH_LIA, &row);
+    assert_withholds("length-lia", &row.0);
+}
+
+/// **The control for the row above**, differing in one numeral. Twelve is the
+/// cap, so the FLAT path decides this and the pair is genuine. It pins that the
+/// boundary is the cap and not "string rows withhold" in general — and that the
+/// repair did not start emptying vectors the flat path filled correctly.
+#[test]
+fn a_length_constraint_within_the_cap_is_decided_flat_and_pairs() {
+    let row = solve(
+        "(set-logic QF_SLIA)\n\
+         (declare-fun x () String)\n\
+         (assert (= (str.len x) 12))\n\
+         (check-sat)",
+    );
+    assert_sat_via("length-flat", "bv2nat-blast", &row);
+    assert_pairs("length-flat", &row.0);
+}
+
+/// `fd:membership`, the shape of the fifth measured corpus row
+/// (`r1_QF_SLIA_re-inter-stack-ovf`): `(<= 15 (str.len var0))` past a cap of 12.
+#[test]
+fn the_membership_route_withholds_past_the_packed_cap() {
+    let row = solve(
         "(set-logic QF_SLIA)\n\
          (declare-fun var0 () String)\n\
          (assert (str.in_re var0 (re.+ (re.union (str.to_re \"0\") (str.to_re \"1\")))))\n\
          (assert (<= 15 (str.len var0)))\n\
          (check-sat)",
     );
-    assert_sat("past-the-cap", &solved);
-    assert_withholds("past-the-cap", &solved);
+    assert_sat_via("membership", front_door_stage::MEMBERSHIP, &row);
+    assert_withholds("membership", &row.0);
 }
 
-/// **The control for the test above, differing in one numeral.** Ten bytes fits
-/// the packed cap of twelve, so this row must NOT withhold — it must ship a
-/// pair whose replay holds. Without this half, a build that withheld every
-/// string `sat` would pass the test above and have removed the evidence
-/// entirely, which is exactly the repair this ADR rejected.
+/// **The control for the row above**, `15` -> `11`. Inside the cap the flat
+/// path decides the same regex and the pair is genuine.
 #[test]
-fn a_witness_within_the_packed_cap_ships_a_pair_whose_replay_holds() {
-    let solved = solve(
+fn a_membership_within_the_cap_is_decided_flat_and_pairs() {
+    let row = solve(
         "(set-logic QF_SLIA)\n\
          (declare-fun var0 () String)\n\
          (assert (str.in_re var0 (re.+ (re.union (str.to_re \"0\") (str.to_re \"1\")))))\n\
-         (assert (<= 10 (str.len var0)))\n\
+         (assert (<= 11 (str.len var0)))\n\
          (check-sat)",
     );
-    assert_sat("within-the-cap", &solved);
-    assert_pairs("within-the-cap", &solved);
+    assert_sat_via("membership-flat", "bv2nat-blast", &row);
+    assert_pairs("membership-flat", &row.0);
 }
 
-// ---------------------------------------------------------------------------
-// The routes. Each of the four string second chances that can replace the
-// verdict with a source-level model gets a row, because the defect is per-route
-// and a repair wired into three of four would look identical on any aggregate.
-// ---------------------------------------------------------------------------
-
-/// `fd:word-route`. Four of the five measured corpus rows were decided here.
+/// **Why the withholding rows are permanent, pinned rather than asserted.**
+///
+/// It would be easy to read "these rows withhold" as a limitation of the lift —
+/// something a later lane could push further. It is not. For a row whose
+/// witness exceeds the packed cap, the PACKED ASSERTION VECTOR ITSELF IS
+/// `unsat`: there is no model in that space, so no lift can exist and pairing
+/// ANY model with those assertions would replay `false` on a correct `sat`.
+///
+/// This runs `check_auto` over the parser's own assertion vector for the
+/// past-the-cap membership row and requires `unsat`. Its control is the same
+/// regex one numeral below the cap, which must be `sat` — without that half a
+/// build whose parser produced a trivially unsatisfiable vector for EVERY
+/// string query would pass, and the conclusion drawn here would be wrong.
 #[test]
-fn the_word_route_ships_a_replayable_pair() {
-    let solved = solve(
-        "(set-logic QF_SLIA)\n\
-         (declare-fun x () String)\n\
-         (declare-fun y () String)\n\
-         (assert (= (str.++ x y) \"abc\"))\n\
-         (assert (= (str.len x) 1))\n\
-         (check-sat)",
-    );
-    assert_sat("word-route", &solved);
-    assert_pairs("word-route", &solved);
-}
-
-/// `fd:length-lia` — **ADR-2010's own headline witness**, and the route the
-/// 217-file corpus never reaches. A repair validated only against the corpus
-/// would leave this one unfixed and every aggregate would still read clean.
-#[test]
-fn the_length_lia_route_ships_a_replayable_pair() {
-    let solved = solve(
-        "(set-logic QF_SLIA)\n\
-         (declare-fun x () String)\n\
-         (assert (= (str.len x) 10))\n\
-         (check-sat)",
-    );
-    assert_sat("length-lia", &solved);
-    assert_pairs("length-lia", &solved);
-}
-
-/// **The control for the row above**, differing in one numeral and crossing the
-/// cap. `str.len x = 20` is ADR-2010's literal example; twenty is past twelve,
-/// so this must withhold while `= 10` pairs. The pair pins that the boundary
-/// is the packed CAP and not "string routes withhold" in general.
-#[test]
-fn the_length_lia_route_withholds_past_the_cap() {
-    let solved = solve(
-        "(set-logic QF_SLIA)\n\
-         (declare-fun x () String)\n\
-         (assert (= (str.len x) 20))\n\
-         (check-sat)",
-    );
-    assert_sat("length-lia-past-cap", &solved);
-    assert_withholds("length-lia-past-cap", &solved);
-}
-
-/// `fd:membership`. The fifth measured corpus row was decided here.
-#[test]
-fn the_membership_route_ships_a_replayable_pair() {
-    let solved = solve(
-        "(set-logic QF_SLIA)\n\
+fn past_the_cap_the_packed_vector_has_no_model_at_all() {
+    let past = "(set-logic QF_SLIA)\n\
          (declare-fun var0 () String)\n\
-         (assert (str.in_re var0 (re.++ (str.to_re \"ab\") (re.* (str.to_re \"c\")))))\n\
-         (assert (<= 4 (str.len var0)))\n\
-         (check-sat)",
+         (assert (str.in_re var0 (re.+ (re.union (str.to_re \"0\") (str.to_re \"1\")))))\n\
+         (assert (<= 15 (str.len var0)))\n\
+         (check-sat)";
+    let within = past.replace("<= 15", "<= 11");
+
+    let mut script = parse_script(past).expect("parse the past-the-cap row");
+    let assertions = script.assertions.clone();
+    let verdict = check_auto(&mut script.arena, &assertions, &SolverConfig::default())
+        .expect("the packed vector decides");
+    assert!(
+        matches!(verdict, CheckResult::Unsat),
+        "the packed vector for a 15-byte demand against a 12-byte cap should have NO model; got \
+         {verdict:?}. If this is no longer `unsat`, the withholding above is not permanent and \
+         the lift should be reconsidered."
     );
-    assert_sat("membership", &solved);
-    assert_pairs("membership", &solved);
+
+    let mut control = parse_script(&within).expect("parse the within-the-cap control");
+    let control_assertions = control.assertions.clone();
+    let control_verdict = check_auto(
+        &mut control.arena,
+        &control_assertions,
+        &SolverConfig::default(),
+    )
+    .expect("the control decides");
+    assert!(
+        matches!(control_verdict, CheckResult::Sat(_)),
+        "the SAME regex one numeral below the cap must be `sat` — otherwise the `unsat` above \
+         says nothing about the cap; got {control_verdict:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -218,28 +355,19 @@ fn the_membership_route_ships_a_replayable_pair() {
 
 /// **Load-bearing.** The repair would be worthless — worse than the bug — if it
 /// made `check_model` unable to reject. `pair_replay_state` guards on
-/// COMPLETENESS of the binding, never on satisfaction, precisely so that the
+/// COMPLETENESS of the binding, never on satisfaction, precisely so the
 /// downstream replay keeps its teeth.
 ///
-/// This takes a row that now pairs, replaces the lifted string binding with a
-/// DIFFERENT well-formed packing, and requires the replay to answer `Ok(false)`
-/// — not `Ok(true)`, and not `Err`. A build in which the front door verified
-/// satisfaction before shipping would still pass this (the tampering happens
-/// after), but a build whose replay had been narrowed to something that cannot
-/// fail would not.
+/// This takes the lifted word-route row, replaces every lifted string binding
+/// with the packing of the EMPTY string, and requires the replay to answer
+/// `Ok(false)` — not `Ok(true)`, and not `Err`. The empty model is not a
+/// strawman: it is exactly what `complete_with_defaults` substituted downstream
+/// before the repair, and what `axeyum-py` was reporting to users.
 #[test]
 fn the_replay_can_still_answer_false() {
-    let solved = solve(
-        "(set-logic QF_SLIA)\n\
-         (declare-fun x () String)\n\
-         (assert (= (str.len x) 10))\n\
-         (check-sat)",
-    );
+    let (solved, _) = solve(WORD_ROUTE_SHORT);
     assert_pairs("tamper-base", &solved);
     let mut tampered = solved.model.clone().expect("the row pairs");
-    // Rebind every declared string to the packing of the EMPTY string (length
-    // field zero, no content). The query demands length 10, so this model is a
-    // genuine non-model and the replay must say so.
     let mut retargeted = 0;
     for &(symbol, _) in &solved.script.declared_strings {
         let (_, sort) = solved.script.arena.symbol(symbol);
@@ -254,28 +382,28 @@ fn the_replay_can_still_answer_false() {
         retargeted > 0,
         "the tamper retargeted NO symbol, so this test proves nothing"
     );
-    assert_eq!(
-        check_model(&solved.script.arena, &solved.assertions, &tampered).expect("replay evaluates"),
-        false,
-        "the replay accepted a model binding every string to the empty string for a query \
-         demanding length 10 — it has been narrowed to something that cannot fail"
+    assert!(
+        !check_model(&solved.script.arena, &solved.assertions, &tampered)
+            .expect("the replay evaluates"),
+        "the replay accepted a model binding every string to the empty string for a query that \
+         forces a three-digit one — it has been narrowed to something that cannot fail"
     );
 }
 
 /// The non-string control for the whole suite. A plain `QF_BV` `sat` never went
-/// through a source route and must be untouched by the repair: it pairs, as it
-/// always did. If this ever withholds, `pair_replay_state`'s completeness guard
-/// has started firing on rows it was never meant to see.
+/// through a source route and must be untouched: it pairs, as it always did. If
+/// this ever withholds, the completeness guard has started firing on rows it
+/// was never meant to see.
 #[test]
 fn a_plain_bv_sat_is_untouched_by_the_pairing_repair() {
-    let solved = solve(
+    let row = solve(
         "(set-logic QF_BV)\n\
          (declare-fun x () (_ BitVec 8))\n\
          (assert (= x #x2a))\n\
          (check-sat)",
     );
-    assert_sat("qf-bv-control", &solved);
-    assert_pairs("qf-bv-control", &solved);
+    assert!(matches!(row.0.outcome.result, CheckResult::Sat(_)));
+    assert_pairs("qf-bv-control", &row.0);
 }
 
 /// An `unsat` must keep its assertion vector. The repair touches only the `Sat`
@@ -283,7 +411,7 @@ fn a_plain_bv_sat_is_untouched_by_the_pairing_repair() {
 /// empty a vector other callers read (the unsat-core and certificate routes).
 #[test]
 fn an_unsat_keeps_its_assertion_vector() {
-    let solved = solve(
+    let (solved, _) = solve(
         "(set-logic QF_SLIA)\n\
          (declare-fun x () String)\n\
          (assert (= x \"ab\"))\n\

@@ -2504,6 +2504,13 @@ fn pair_replay_state(
 /// and the declined symbol makes [`pair_replay_state`] withhold instead.
 fn lift_source_strings_onto_packed(script: &Script, model: &mut Model) {
     for &(symbol, _) in &script.declared_strings {
+        // A binding the flat path already made is not a source route's to
+        // replace. SURVIVOR in the `replay-pairing-state` mutation table:
+        // deleting this kills nothing, because reaching it needs a model that
+        // binds BOTH the packed symbol and its `!weq!` mirror, and no fixture
+        // found here produces one. Kept rather than deleted because the
+        // alternative behaviour is to silently overwrite an assignment the
+        // solver actually made, and "unkilled" is not the same as "harmless".
         if model.get(symbol).is_some() {
             continue;
         }
@@ -2556,6 +2563,16 @@ fn pack_source_string(width: u32, elements: &[Value]) -> Option<u128> {
         content |= u128::from(byte) << (8 * i);
     }
     let bits = (content << lw) | u128::try_from(bytes.len()).ok()?;
+    // SURVIVOR in the `replay-pairing-packing` mutation table, and deliberately
+    // so. Given the three guards above (valid layout, length within the cap,
+    // every element a byte) the encode is exactly this decoder's inverse, so no
+    // single-mutation test can isolate it — it is the backstop that ABSORBS the
+    // layout-validity mutant, and the layout guard is in turn unreachable from
+    // the only caller, which packs widths taken from `declared_strings`. What it
+    // really guards is the `len_width` MIRROR below: the parser's copy is
+    // `pub(crate)` in another crate, so this is the runtime check that a drift
+    // declines instead of shipping a different string. Reported as unkilled
+    // rather than counted as covered.
     (decode_packed_string(width, bits).as_deref() == Some(bytes.as_slice())).then_some(bits)
 }
 
@@ -4679,6 +4696,18 @@ mod pack_source_string_tests {
     fn a_witness_past_the_cap_declines_and_is_not_truncated() {
         let thirteen = seq(&[u32::from(b'x'); 13]);
         assert_eq!(pack_source_string(DECLARED_WIDTH, &thirteen), None);
+    }
+
+    /// The cap guard is load-bearing in a SECOND way the test above cannot
+    /// show, and the mutation table is what surfaced it: at 13 bytes the
+    /// round-trip guard would decline anyway (the decoder rejects a length
+    /// field above `max_len`), so deleting the cap check survives that test.
+    /// Far past the cap it is the only thing between here and a shift of 8·39
+    /// bits on a `u128` — a panic in debug. This pins it.
+    #[test]
+    fn a_witness_far_past_the_cap_declines_without_overflowing_the_shift() {
+        let forty = seq(&[u32::from(b'x'); 40]);
+        assert_eq!(pack_source_string(DECLARED_WIDTH, &forty), None);
     }
 
     /// **The boundary control.** Exactly at the cap must still pack, so the
