@@ -1,0 +1,10 @@
+window	position	route	decisions	attempts	rate	median_ms
+qf_nia_int	0	int-blast-ladder	65	177	0.367232	339
+qf_nia_int	1	nia-linearize	19	198	0.095960	788
+qf_nia_int	2	cas-ideal-refuter	0	115	0.000000	0
+qf_nia_int	3	nia-bounded-blast	0	179	0.000000	0
+qf_nia_int	4	nia-square	0	199	0.000000	0
+qf_nia_int	5	int-real-relax	0	198	0.000000	4020
+ufnia_int_function	0	q:skolem-qf	24	30	0.800000	0
+ufnia_int_function	1	q:bool-skeleton	0	30	0.000000	0
+ufnia_int_function	2	q:ground-subset	0	30	0.000000	0

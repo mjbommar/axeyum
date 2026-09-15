@@ -1,0 +1,25 @@
+=== QF_NIA / Int -- int-blast-ladder ===
+  size.py candidates: 47 of 115 undecided
+  the decider's own recorded decline, on those rows:
+      42  reason=budget  name=other
+       3  reason=<no recorded decline>  name=-
+       2  reason=incomplete  name=-
+  CAPACITY refusals (a size ceiling, not a clock): 42
+  FRAGMENT refusals (a width ceiling, not a clock): 2
+  not-capacity, not-fragment / clock-shaped:       0
+  no recorded decline by the decider at all:       3
+    ... of which the decider was NEVER reached:    3
+  REFINED CEILING IN FILES = 3 of 115 undecided
+  one capacity detail, verbatim: estimated 130191180 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)
+    FRAGMENT QF_NIA/20210219-Dartagnan/ReachSafety-Loops/geo1-u_valuebound2-O0.smt2
+             detail=integer constant 4294967295 does not fit the bounded width 32; widen the bound
+    FRAGMENT QF_NIA/20230328-sqrtmodinv-hoenicke/sqrtStep6a.smt2
+             detail=integer constant 462408296549760 does not fit the bounded width 32; widen the bound
+    SILENT   QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p2868_edge_closing_0.smt2  (NEVER REACHED)
+    SILENT   QF_NIA/20170427-VeryMax/ITS/From_T2__tqli.c.i.tqli.pl.t2.nor.t2.rlgfixed.t2__p25069_terminationG_0.smt2  (NEVER REACHED)
+    SILENT   QF_NIA/20170427-VeryMax/ITS/From_T2__rlft3.c.i.rlft3.pl.t2.fixed.t2__p8813_terminationG_0.smt2  (NEVER REACHED)
+
+=== UFNIA / Int|Function -- q:skolem-qf ===
+  size.py candidates: 0 of 6 undecided
+  (nothing to refine)
+
