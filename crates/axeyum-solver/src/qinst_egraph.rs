@@ -47,6 +47,7 @@ use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, Unknow
 use crate::cdclt::{Lit as CdcltLit, Outcome as CdcltOutcome};
 use crate::euf_egraph::{Encoder as EufEncoder, EufTheory, collect_euf_atoms};
 use crate::native_cdclt::{NativeSolveOutcome, WarmNativeCdclT};
+use crate::qinst_session_theory::{EufLiaSessionTheory, session_lia_hostable_atom};
 
 /// Historical e-matching round budget. It is now the *cadence anchor* for the
 /// interleaved refutation checks: the first mid-loop ground refutation check
@@ -420,6 +421,27 @@ fn ground_session_level() -> usize {
 #[must_use]
 fn ground_session_abstracts() -> bool {
     ground_session_level() >= 1
+}
+
+/// Whether the retained session HOSTS the arithmetic theory beside its `EUF`
+/// e-graph rather than abstracting the arithmetic away (ADR-2130).
+///
+/// This is the difference between a session that can decline to re-solve and a
+/// session that can **refute**. At level 1 an arithmetic comparison becomes a
+/// free propositional variable: sound, because a free variable only adds models,
+/// but the session can never derive a contradiction through it. At level 2 the
+/// same comparison is registered as a real atom of a
+/// [`crate::qinst_session_theory::EufLiaSessionTheory`], whose `LIA` half
+/// returns a Farkas core.
+///
+/// Level 2 implies level 1: an arithmetic comparison is hosted, and every OTHER
+/// unencodable Boolean-position shape — a datatype tester, a `distinct` — is
+/// still abstracted, because hosting those needs a theory this session does not
+/// have. So level 2 is strictly more capable than level 1 on the same file, and
+/// the A/B between them measures only the arithmetic.
+#[must_use]
+fn ground_session_hosts_arithmetic() -> bool {
+    ground_session_level() >= 2
 }
 
 /// Polarity at the `index`-th argument of `op`, given the polarity at `op`
@@ -2852,9 +2874,35 @@ fn prove_quantified_unsat_via_egraph_impl(
                 let session_ground = quantifier_cache
                     .quantifier_free_subset(arena, &ground)
                     .unwrap_or_else(|| ground.clone());
+                let build = Instant::now();
                 online_clauses =
                     OnlineQuantifierClauseSession::new(arena, &session_ground, deadline);
                 online_attempted = true;
+                // ADR-2130. Emitted UNCONDITIONALLY, including on a decline:
+                // a core that prints no line printed an ABSENCE, which is not a
+                // zero, and "the session declined" and "the session was never
+                // attempted" would otherwise be the same observation. `hosted`
+                // is the number this lane is measured on -- a session that
+                // exists but hosts no arithmetic is ADR-2124's lever, not this
+                // one.
+                let (built, atoms, hosted, opaque) = match online_clauses.as_mut() {
+                    Some(session) => (
+                        1,
+                        session.solver.theory().atom_count(),
+                        usize::from(session.solver.theory().hosts_arithmetic()),
+                        session.opaque_variables.len(),
+                    ),
+                    None => (0, 0, 0, 0),
+                };
+                crate::auto::qtrace(
+                    "ground-session",
+                    build,
+                    &format!(
+                        "built={built} level={} round={round} ground={} atoms={atoms}                          hosted={hosted} opaque={opaque}",
+                        ground_session_level(),
+                        session_ground.len(),
+                    ),
+                );
             }
         }
         // Schedule conflict/unit-like instances globally before noisier clauses.
@@ -4471,7 +4519,7 @@ struct OnlineQuantifierClauseSession {
     /// `EufTheory`, which is why there is no sibling `theory` field any more:
     /// `axeyum_cnf::NativeIncrementalCdcl` owns its theory, and a session
     /// holding both as siblings would be a self-referential struct.
-    solver: WarmNativeCdclT<EufTheory>,
+    solver: WarmNativeCdclT<EufLiaSessionTheory>,
     atom_terms: Vec<TermId>,
     atom_variables: HashMap<TermId, usize>,
     /// ADR-2124. Boolean-position terms the `EUF` encoder has no arm for — an
@@ -4534,6 +4582,33 @@ impl OnlineQuantifierClauseSession {
             }
             collect_euf_atoms(arena, assertion, &mut atom_terms, &mut seen);
         }
+        // ADR-2130. At level 2 the arithmetic ORDER atoms of the ground set join
+        // the atom list, which is what makes `Encoder::encode` hand them their
+        // reserved theory variable instead of reaching its abstraction arm. Done
+        // in a SECOND pass with its own `seen` set, after the EUF atoms, so the
+        // EUF atom indices are byte for byte what they were at levels 0 and 1
+        // and only the tail is new -- a level that renumbered the existing atoms
+        // would not be comparable to the ones below it.
+        if ground_session_hosts_arithmetic() {
+            let mut lia_seen = HashSet::new();
+            let mut lia_atoms = Vec::new();
+            for &assertion in ground {
+                if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+                    return None;
+                }
+                crate::qinst_session_theory::collect_session_lia_atoms(
+                    arena,
+                    assertion,
+                    &mut lia_atoms,
+                    &mut lia_seen,
+                );
+            }
+            for atom in lia_atoms {
+                if !atom_terms.contains(&atom) {
+                    atom_terms.push(atom);
+                }
+            }
+        }
         let atom_variables: HashMap<TermId, usize> = atom_terms
             .iter()
             .copied()
@@ -4547,6 +4622,7 @@ impl OnlineQuantifierClauseSession {
         // per-round, see `GROUND_SESSION_LEVEL`) for its whole run. At level 1
         // the same term becomes a free propositional variable.
         let abstracts = ground_session_abstracts();
+        let hosts_arithmetic = ground_session_hosts_arithmetic();
         let mut encoder = EufEncoder::new(&atom_terms)
             .with_bool_apply_atoms()
             .with_opaque_bool_atoms(abstracts);
@@ -4626,7 +4702,17 @@ impl OnlineQuantifierClauseSession {
         } else {
             HashMap::new()
         };
-        let theory = EufTheory::new(arena, &atom_terms).with_deadline(deadline);
+        // ADR-2130. At levels 0 and 1 this is the historical `EufTheory`, wrapped
+        // in a type whose every method forwards to it. At level 2 a `LIA`
+        // sub-theory is built beside it over the SAME atom index space, so the
+        // session's `unsat` can be a Farkas conflict rather than only a
+        // congruence one.
+        let euf = EufTheory::new(arena, &atom_terms).with_deadline(deadline);
+        let theory = if hosts_arithmetic {
+            EufLiaSessionTheory::euf_with_lia(arena, euf, atom_terms.clone(), deadline)
+        } else {
+            EufLiaSessionTheory::euf_only(euf, atom_terms.clone())
+        };
         let solver = WarmNativeCdclT::new(
             encoder.var_count,
             atom_terms.len(),
@@ -4679,6 +4765,11 @@ impl OnlineQuantifierClauseSession {
             }
             self.add_equality_clause(arena, term)?;
         }
+        // ADR-2130. One arithmetic-theory rebuild per BATCH, not per atom: the
+        // batch has just registered every instance atom of this round, and the
+        // rebuild is O(atoms) with an arena clone in it. A no-op at levels 0
+        // and 1, and a no-op at level 2 on a batch that added no atom.
+        self.solver.theory_mut().flush_pending_atoms(arena);
         Some(self.solve_current())
     }
 
@@ -4765,6 +4856,10 @@ impl OnlineQuantifierClauseSession {
             return None;
         }
         let (variable, solver_atom) = self.solver.add_theory_variable();
+        // ADR-2130. `add_atom_or_inert_at_root` under the hood, so an arithmetic
+        // comparison that reached here (because `online_opaque_clause_atom`
+        // declined it at level 2) takes a dense slot on the `EUF` side and a
+        // real constraint row on the `LIA` side.
         let theory_atom = self
             .solver
             .theory_mut()
@@ -4880,6 +4975,14 @@ fn online_clause_atom(arena: &TermArena, term: TermId) -> bool {
 /// why nothing would have failed and the loss would have been silent.
 fn online_opaque_clause_atom(arena: &TermArena, term: TermId) -> bool {
     if !ground_session_abstracts() || arena.sort_of(term) != Sort::Bool {
+        return false;
+    }
+    // ADR-2130. At level 2 an arithmetic ORDER atom is hosted by the session's
+    // `LIA` sub-theory, so abstracting it here would throw away exactly the
+    // reasoning that level exists to add. Every other unencodable shape -- a
+    // datatype tester, a `distinct` -- is still abstracted, because no theory in
+    // this session can host one.
+    if ground_session_hosts_arithmetic() && session_lia_hostable_atom(arena, term) {
         return false;
     }
     match arena.node(term) {
@@ -13318,6 +13421,109 @@ mod tests {
             session.opaque_variables.len(),
             1,
             "exactly the one integer comparison should have been abstracted"
+        );
+    }
+
+    /// ADR-2130: level 2 HOSTS the comparison level 1 abstracts.
+    ///
+    /// Three arms, because two would not separate the three behaviours this
+    /// lever sits between. Level 0 must still refuse the ground set outright
+    /// (the shipped arm, byte for byte). Level 1 must build the session with
+    /// the comparison ABSTRACTED — one opaque variable, no theory atom for it.
+    /// Level 2 must build the session with the comparison HOSTED — zero opaque
+    /// variables, and the arithmetic sub-theory present.
+    ///
+    /// The opaque count is the discriminating observation and is asserted at
+    /// both levels rather than only at 2: a level-2 session that had silently
+    /// kept abstracting would still exist, still be `Some`, and still pass
+    /// every liveness check, while doing exactly what level 1 does.
+    #[test]
+    fn ground_session_level_2_hosts_the_comparison_level_1_abstracts() {
+        let mut arena = TermArena::new();
+        let (ground, _, _) = ground_session_arithmetic_fixture(&mut arena);
+
+        assert_eq!(ground_session_level(), 0, "the shipped level must be 0");
+        assert!(
+            OnlineQuantifierClauseSession::new(&arena, &ground, None).is_none(),
+            "level 0 must keep refusing an arithmetic ground set, byte for byte"
+        );
+
+        {
+            let _guard = GroundSessionLevelGuard::set(1);
+            let mut session = OnlineQuantifierClauseSession::new(&arena, &ground, None)
+                .expect("level 1 builds the session by abstracting");
+            assert_eq!(
+                session.opaque_variables.len(),
+                1,
+                "level 1 abstracts the one integer comparison"
+            );
+            assert!(
+                !session.solver.theory().hosts_arithmetic(),
+                "level 1 must NOT build an arithmetic sub-theory -- if it does, \
+                 ADR-2124's measured arm is no longer what it measured"
+            );
+        }
+
+        let _guard = GroundSessionLevelGuard::set(2);
+        let mut session = OnlineQuantifierClauseSession::new(&arena, &ground, None)
+            .expect("level 2 builds the session by hosting");
+        assert_eq!(
+            session.opaque_variables.len(),
+            0,
+            "level 2 must abstract NOTHING here -- the comparison is hosted, and \
+             an abstracted atom is one the session can never refute through"
+        );
+        assert!(
+            session.solver.theory().hosts_arithmetic(),
+            "level 2 must build the arithmetic sub-theory"
+        );
+    }
+
+    /// The capability difference, measured through the SESSION rather than the
+    /// theory: a ground set whose only refutation is arithmetic.
+    ///
+    /// `a < 1 ∧ a > 5` alongside an `EUF` equality. Level 1 abstracts both
+    /// comparisons to free propositional variables, so its skeleton is
+    /// satisfiable and the session reports `Sat`. Level 2 hosts them and the
+    /// session reports `Unsat`.
+    ///
+    /// **Both arms are asserted.** A test that only showed level 2 refuting
+    /// would pass against a session that refutes everything, which is the
+    /// failure mode that matters here.
+    #[test]
+    fn ground_session_level_2_refutes_an_arithmetic_ground_set_level_1_cannot() {
+        let mut arena = TermArena::new();
+        let a = arena.declare("qsa2_a", Sort::Int).unwrap();
+        let av = arena.var(a);
+        let b = arena.declare("qsa2_b", Sort::Int).unwrap();
+        let bv = arena.var(b);
+        let one = arena.int_const(1);
+        let five = arena.int_const(5);
+        let ground = vec![
+            arena.eq(av, bv).unwrap(),
+            arena.int_lt(av, one).unwrap(),
+            arena.int_gt(av, five).unwrap(),
+        ];
+
+        {
+            let _guard = GroundSessionLevelGuard::set(1);
+            let mut session = OnlineQuantifierClauseSession::new(&arena, &ground, None)
+                .expect("level 1 builds the session");
+            assert_eq!(
+                session.solve_current(),
+                CdcltOutcome::Sat,
+                "an abstracted comparison carries no arithmetic, so the level-1 \
+                 skeleton is satisfiable -- this is the weakness being removed"
+            );
+        }
+
+        let _guard = GroundSessionLevelGuard::set(2);
+        let mut session = OnlineQuantifierClauseSession::new(&arena, &ground, None)
+            .expect("level 2 builds the session");
+        assert_eq!(
+            session.solve_current(),
+            CdcltOutcome::Unsat,
+            "level 2 hosts the comparisons and must refute through them"
         );
     }
 

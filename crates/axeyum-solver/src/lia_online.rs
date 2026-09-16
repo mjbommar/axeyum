@@ -832,6 +832,36 @@ impl LiaTheory {
         }
     }
 
+    /// Every atom currently assigned, in ascending atom order (ADR-2130).
+    ///
+    /// Exists so a caller that must REBUILD this theory over a grown atom list
+    /// can replay what was asserted into the replacement rather than remembering
+    /// it separately — a second record of the same facts is a second place for
+    /// them to disagree.
+    ///
+    /// Ascending index order, not assertion order, because the caller replays
+    /// into an empty theory where order does not change the resulting live set
+    /// and determinism is a public promise.
+    ///
+    /// # Panics
+    ///
+    /// In debug builds, if any decision scope is open. A rebuild is only
+    /// meaningful at the root scope: assignments made under a scope would be
+    /// replayed as root facts and would then survive a backjump that should
+    /// have retracted them, which is a wrong-`unsat` shape.
+    #[must_use]
+    pub(crate) fn root_assignments(&self) -> Vec<(usize, bool)> {
+        debug_assert!(
+            self.trail.is_empty(),
+            "root_assignments is only meaningful at the root scope"
+        );
+        self.assigned
+            .iter()
+            .enumerate()
+            .filter_map(|(atom, value)| value.map(|value| (atom, value)))
+            .collect()
+    }
+
     /// Attaches a wall-clock deadline to this theory. Once the deadline passes,
     /// feasibility and propagation probes return inconclusive results rather than
     /// deriving conflicts or propagations.

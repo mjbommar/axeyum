@@ -584,6 +584,42 @@ impl EufTheory {
         Ok(atom)
     }
 
+    /// Appends a dynamic atom at the root scope, registering its congruence
+    /// sides when it has any and an **inert slot** when it has none (ADR-2130).
+    ///
+    /// This is [`Self::add_atom_at_root`] with the one difference that a shape
+    /// the congruence closure has no opinion about — an arithmetic comparison,
+    /// say — is accepted as a no-op rather than refused. Asserting such an atom
+    /// is already a no-op here (`atoms` holds `None` for it, exactly as
+    /// [`Self::new`] does for a non-equality atom in the initial set), so this
+    /// adds no new behaviour to the theory; it only lets a caller that hosts a
+    /// SECOND theory over the same atom index space keep that space dense.
+    ///
+    /// Keeping it dense is not tidiness. An atom index that the two theories
+    /// disagree about is a silent misattribution of asserted literals, which is
+    /// a wrong-answer defect rather than a failure — the same hazard
+    /// `NativeTheoryAdapter::register_atom_variable` asserts against.
+    ///
+    /// # Errors
+    ///
+    /// Outside the root scope, for the same reason as [`Self::add_atom_at_root`]:
+    /// this may register previously unseen term structure and the new e-node ids
+    /// must stay stable across later backtracking.
+    pub(crate) fn add_atom_or_inert_at_root(
+        &mut self,
+        arena: &TermArena,
+        atom_term: TermId,
+    ) -> Result<usize, &'static str> {
+        if !self.trail.is_empty() {
+            return Err("dynamic EUF atom insertion requires the root scope");
+        }
+        let sides = euf_atom_sides(&mut self.bridge, arena, atom_term);
+        let atom = self.atoms.len();
+        self.atoms.push(sides);
+        self.assigned.push(None);
+        Ok(atom)
+    }
+
     /// Appends a dynamic equality atom while the theory is at its root scope.
     /// Unlike [`Self::add_atom_over_observed_terms`], this may register previously
     /// unseen term structure, so decision scopes must be closed to keep the new
