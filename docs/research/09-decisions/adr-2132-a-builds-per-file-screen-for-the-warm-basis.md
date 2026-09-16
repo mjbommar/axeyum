@@ -592,9 +592,57 @@ license carrying ADR-2125's mover CLASSIFICATIONS forward — a stable loss is a
 claim about a 3× recheck on a specific binary — which is why §6.7 re-checks this
 lane's own.
 
-### 6.7 The mover recheck
+### 6.7 The mover recheck, and the screen is strictly better than `on`
 
-PLACEHOLDER — filled in when the rechecks finish.
+Four movers across both complete draws, **derived** from the finished TSVs for
+BOTH comparisons rather than typed from what a partial run happened to show.
+Each re-run **3× per arm** on one pinned core pair with the arms alternating
+within the passes, at the same 24 s / 8 GiB envelope. ADR-1966 had 11 of its 18
+movers vanish under exactly this procedure, so a raw mover is never the finding.
+
+```text
+row                                      draw      off vs on          off vs screened
+latendresse/ecoliMILPglycerolYices3-…   pinned    STABLE-LOSS        BOTH-DECIDE
+sc/sc-7.base.cvc                        pinned    STABLE-GAIN        NEITHER-DECIDES
+sc/sc-18.induction.cvc                  held-out  NEITHER-DECIDES    STABLE-GAIN
+uart/uart-8.induction.cvc               held-out  STABLE-LOSS        STABLE-LOSS
+```
+
+Read down the two columns:
+
+```text
+                pinned              held-out            total
+on              1 gain, 1 LOSS      0 gains, 1 LOSS     1 gain, 2 LOSSES
+screened        0 gains, 0 LOSSES   1 gain,  1 LOSS     1 gain, 1 LOSS
+```
+
+**`on` reproduces [ADR-2125]'s headline exactly — 1 stable gain against 2 stable
+losses — on a new binary, a new branch base and a complete 400-row population
+rather than the two half-draws ADR-2125 could finish.** That is worth recording
+on its own: the result this lane set out to improve on is not an artefact of the
+partial population it was measured on.
+
+**And the screen is strictly better than `on` on both draws.**
+
+* On the PINNED draw it removes the stable loss — `ecoliMILPglycerolYices3-50000`
+  is 28 builds, below the threshold, so the screen never keeps a basis there and
+  the row comes back BOTH-DECIDE. It also gives up `on`'s stable gain on
+  `sc-7.base.cvc`, which is 1,695 builds: the screen ADMITS that row, and the 64
+  rounds it spends cold first are enough to lose the decision inside 24 s. **That
+  is the screen's own cost showing up as a forgone gain**, and it is the clearest
+  single price the threshold charges.
+* On the HELD-OUT draw it buys a stable gain `on` does not get
+  (`sc-18.induction.cvc`, 1,685 builds, `on` NEITHER-DECIDES) and takes the same
+  stable loss `on` takes.
+
+So the trade is: one pinned loss removed and one pinned gain forgone, plus one
+held-out gain bought. Net across both draws, `screened` is 1 gain / 1 loss where
+`on` is 1 gain / 2 losses.
+
+**It is still one stable loss, and criterion 3 is still not met.**
+`uart-8.induction.cvc` is 1,598 builds — the many-small shape — and no threshold
+in the sizing window separates it from the winning family. §2 measured that
+before this code existed; this is the 3×-per-arm confirmation on this binary.
 
 ### 6.8 The exposure divisions
 
@@ -646,9 +694,64 @@ three reasons that are not "to confirm what we know":
 * the −9.2 % attribution ADR-2125 was told not to skip needs the paired arms
   whatever the ship decision is.
 
-### 7.2 The result
+### 7.2 The result: `screened` ships `off`, on criterion 3
 
-PLACEHOLDER — filled in at the end of the lane.
+Against §7.1's six criteria, in order:
+
+1. **0 soundness disagreements** — **MET.** 0 against the files' declared
+   `:status` at comparable denominators of **194** (pinned) and **174**
+   (held-out), printed beside the counts. 0 exit-status differences in any arm.
+2. **0 stable losses and 0 flips on the pinned draw** — **MET.** 0 flips
+   anywhere, and the pinned draw's one raw mover under `screened`
+   (`ecoliMILPglycerolYices3-50000`) re-checks as BOTH-DECIDE. This is the
+   criterion `on` fails: the same row is a STABLE-LOSS for it.
+3. **0 stable losses on the HELD-OUT draw** — **NOT MET.**
+   `uart-8.induction.cvc` is a STABLE-LOSS, 3/3 in both directions. It is 1,598
+   builds, the many-small shape, and no threshold in the sizing window separates
+   it from the family the lever wins on.
+4. **No stable loss in the five exposure divisions** — see §6.8.
+5. **`built` on a nonzero share, and the screened arm's count strictly below
+   `on`'s** — **MET**, by the run rather than by assertion: 51 < 71 on the
+   pinned draw and 66 < 79 on the held-out one, all four nonzero. The screen
+   opened on **0** rows `on` did not.
+6. **Six z3 fuzzes green in all three arms with a nonzero count** — see §5.3.
+
+**Criterion 3 fails, so `AXEYUM_LRA_WARM_CUBE` keeps its default of `off` and
+`screened` ships alongside `on` as a second arm nobody turns on.**
+
+### 7.3 What the result actually is, because "ships off" is the wrong summary
+
+Three things are true at once and a reader who takes only the ship decision will
+carry away the wrong one.
+
+**The screen works.** It does exactly what it was built to do, and the evidence
+is not the verdict table: it is 0 of 93 rows below the threshold opening it,
+the admitted set matching a different lane's sizing on the nose at 51 of 51, and
+`cold_restarts = 0` throughout. Nothing here is an inert arm.
+
+**The screen is strictly better than the thing it screens.** `on` reproduces
+ADR-2125 at 1 stable gain against 2 stable losses over a complete 400 rows;
+`screened` is 1 gain against 1 loss, with a clean pinned draw. It also keeps
+about seven eighths of the speed (−13.9 % pinned, −12.1 % held-out, against
+`on`'s −16.0 % and −12.4 %).
+
+**And the axis it screens on is the wrong axis.** That is the finding, and it
+is not a conclusion about this threshold — it is a conclusion about
+builds-per-file. The held-out stable loss sits at 1,598 builds and the winning
+family starts at 841; there is no value in between that does not also refuse
+most of what the lever wins on. [ADR-2125] named that axis from one mover it
+had sized and two it had not, and labelled the second loss's reading a
+hypothesis in as many words. Sizing the two it had not is what this lane
+contributed, and the hypothesis did not survive it.
+
+The obvious next increment is therefore NOT a different threshold on this
+counter. §2.2 records the shape that does separate the two rows — pivots per
+build per atom, 0.263 against 0.124, clock-free — as an OBSERVATION over two
+points, deliberately unbuilt, because both of those points are held-out rows and
+building on them would spend the population meant to score the next screen. A
+successor should size that on the pinned 200 first, which is what this lane did
+with builds-per-file and is the only reason its threshold could be fixed before
+the code existed.
 
 ## 8. What this lane did not do
 

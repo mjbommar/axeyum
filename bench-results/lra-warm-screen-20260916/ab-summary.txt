@@ -167,3 +167,68 @@ measured binary, and swapping a binary mid-run is the one thing an A/B cannot
 survive. Every analysis here therefore reads the screen's refusals as
 `c_warm_checks = 0` with a nonzero `a_cold_builds`, which is unambiguous in v1's
 own data.
+
+THE MOVER RECHECK
+=================
+
+Four movers across both complete draws, DERIVED from the finished TSVs for both
+comparisons rather than typed from what a partial run showed. Each re-run 3x per
+arm on one pinned core pair, arms alternating within the passes, same envelope.
+
+    row                                      draw      off vs on          off vs screened
+    latendresse/ecoliMILPglycerolYices3-...  pinned    STABLE-LOSS        BOTH-DECIDE
+    sc/sc-7.base.cvc                         pinned    STABLE-GAIN        NEITHER-DECIDES
+    sc/sc-18.induction.cvc                   held-out  NEITHER-DECIDES    STABLE-GAIN
+    uart/uart-8.induction.cvc                held-out  STABLE-LOSS        STABLE-LOSS
+
+                    pinned              held-out            total
+    on              1 gain, 1 LOSS      0 gains, 1 LOSS     1 gain, 2 LOSSES
+    screened        0 gains, 0 LOSSES   1 gain,  1 LOSS     1 gain, 1 LOSS
+
+`on` REPRODUCES ADR-2125's HEADLINE EXACTLY -- 1 stable gain against 2 stable
+losses -- on a new binary, a new branch base, and a COMPLETE 400-row population
+rather than the two half-draws ADR-2125 could finish. The result this lane set
+out to improve on is not an artefact of its partial population.
+
+The screen is strictly better on both draws, and the trade is legible:
+
+  * PINNED, it removes the stable loss (28 builds, below the threshold, never
+    keeps a basis) and GIVES UP `on`'s stable gain on `sc-7.base.cvc`. That row
+    is 1,695 builds, so the screen ADMITS it, and the 64 rounds it spends cold
+    first are enough to lose the decision inside 24 s. That is the screen's own
+    cost arriving as a forgone gain -- the clearest single price the threshold
+    charges.
+  * HELD-OUT, it buys a stable gain `on` does not get (`sc-18.induction.cvc`,
+    1,685 builds) and takes the same stable loss.
+
+It is still ONE STABLE LOSS on the held-out draw, so criterion 3 fails and the
+lever ships `off`.
+
+AN INCIDENT IN THIS LANE'S OWN ORCHESTRATION
+=============================================
+
+The exposure shard 01 ran TWICE for about a minute, both instances on core pair
+`6,14`.
+
+What happened: a watcher launched it over ssh, and the ssh call returned **exit
+124**. I read that as "the launch did not happen" and launched it again. It
+means nothing of the kind -- 124 is the local `timeout` wrapper giving up on a
+connection the remote command is holding open, and it is a statement about the
+WRAPPER, not about the work. The second instance found `ab3.QF_LIA.01.tsv`
+already non-empty, correctly SKIPPED it, and started `QF_UFLRA.01` alongside the
+first instance's `QF_LIA.01` -- two solver jobs on one physical core pair, which
+is exactly the contention the pinning exists to prevent.
+
+Both shard-01 instances were stopped by PID and **every row either had written
+was discarded** (`ab3.QF_LIA.01.tsv`, `ab3.QF_UFLRA.01.tsv` and both capture
+directories), then shard 01 was relaunched once.
+
+Shard 00's seven rows were KEPT, and the reason is not convenience. It was on a
+different physical pair, and its two arms run back to back on the same file on
+the same core -- so ambient load, including a transient third job elsewhere on
+the box, cancels in the difference. That is the property interleaving exists for
+and the same argument ADR-2125 made about a peer lane holding cores 3 and 11
+throughout its run.
+
+The rule this cost: after any backgrounded launch, VERIFY the instance count on
+the target rather than reading the launcher's exit status.
