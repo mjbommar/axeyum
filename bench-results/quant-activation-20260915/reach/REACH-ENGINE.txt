@@ -48,22 +48,40 @@ binary is `unknown` on BOTH arms:
 Both A/B arms spent the whole 24 s budget. The probe run, on a different core
 class with different contention, finished inside it.
 
-**So the conversion is REAL and it is MARGINAL AGAINST THE CLOCK.** The ON arm
-does reach the refutation on this file; whether it reaches it inside 24 s is
-decided by the machine. Two consequences, and neither is comfortable:
+**RETRACTED, BY THIS LANE'S OWN RE-CHECK.** The paragraph that stood here read
+"the conversion is REAL and it is MARGINAL AGAINST THE CLOCK", on the strength of
+ONE observation. `recheck-movers.sh` then ran this file three times per arm on a
+pinned core with the arms alternating within the passes, and arm B returned
+`unknown` 3 of 3:
 
-1. **The A/B's +1 understates the lever**, and its -2 may equally be clock and
-   not capability. Every mover in this lane is at the noise floor for exactly
-   this reason, and `recheck-movers.sh` -- three passes per arm with the arms
-   alternating WITHIN the passes -- is not a formality here, it is the only
-   thing that separates the two.
-2. **A single 24 s pairing cannot settle this lever on this corpus.** The
-   honest ship position does not change (0 stable losses is the criterion and
-   it is not met), but "the lever does nothing" would be the wrong reading of
-   a `-1`. The right reading is that it converts at the edge of the budget,
-   which is a statement about where the remaining cost is -- the interleaved
-   ground closure over a set that is now larger -- and that is the next lane's
-   question, not this one's.
+    LabelStmt.011   A: unknown unknown unknown   B: unknown unknown unknown
+                    -> UNSTABLE
+
+So the single `unsat` does not reproduce, and it was not evidence of a
+conversion -- it was one run of a file that sits near the budget, on a different
+host and core class, with tracing on. The repository's own rule caught this and
+it was MY claim that failed it: *a traced plan's "verified numerically" is itself
+a claim -- re-run its numbers, do not inherit them.*
+
+**What survives is narrower and still worth having.** The handoff and
+`rej_nocontext` columns below are counters read off a single run, and they move
+by three to four orders of magnitude -- 0 to 18,688 handoffs, 33,090 to 0
+nocontext. A number that size is not a coin flip between two runs, and it says
+the mechanism executes at scale on real files. A VERDICT at the edge of a 24 s
+budget is a coin flip between two runs, and this file proved it. The two are
+different kinds of measurement and only the first is supported here. Two
+consequences follow, and neither is comfortable:
+
+1. **A single 24 s pairing cannot settle a VERDICT on this corpus**, in either
+   direction. The re-check bears this out on both sides: of the A/B's three raw
+   movers, one is STABLE-GAIN, one is STABLE-LOSS, and one is UNSTABLE -- the
+   `UFDTLIRA` "loss" was arm A deciding once and neither arm deciding on any of
+   the six re-check passes.
+2. **The counters are the durable finding, not the verdicts.** The lever empties
+   `rej_nocontext` on the files the corrected sizing predicts, and that is a
+   statement about where the remaining cost now is -- the interleaved ground
+   closure over a set that is larger than before -- which is the next lane's
+   question rather than this one's.
 
 ## WHAT IS STILL NOT SHOWN
 
