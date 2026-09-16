@@ -25,9 +25,25 @@
 # too -- which has its own way of being inert that `on` does not: the file can
 # simply never cross the threshold.
 #
+# # AXEYUM_AB3_ARMS: which arms to run
+#
+# `ABC` (the default) is the three-arm form the ship decision rests on. `AC` runs
+# only `off` and `screened`, which is what the EXPOSURE divisions need: their
+# question is "did the screen regress a division it was not aimed at", and that
+# is answered by the pair. Dropping `on` there is a deliberate spend of compute
+# on the populations the decision rests on, and the omitted arm's columns are
+# written EMPTY rather than as zeros -- an arm that did not run reports nothing,
+# not that it answered nothing, which is the distinction ADR-2125's `20 SILENT`
+# rows exist to keep.
+#
 # Usage: ab3-run.sh <tag> <list> <out.tsv> <cores> <bin> [budget_s]
 #        ab3-run.sh --mechanism-check <file> <cores> <bin>
 set -u
+ARMS="${AXEYUM_AB3_ARMS:-ABC}"
+case "$ARMS" in
+  ABC|AC) ;;
+  *) echo "ABORT: AXEYUM_AB3_ARMS must be ABC or AC, got '$ARMS'"; exit 2 ;;
+esac
 
 CORPUS=/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/
 HEADROOM=16
@@ -101,14 +117,25 @@ while read -r rel; do
   if [ ! -r "$f" ]; then echo "UNREADABLE $rel" >&2; continue; fi
   slug="$(printf '%s' "$rel" | tr '/' '_')"
   n=$((n + 1))
-  # Three rotations, so each arm is first on a third of the rows.
-  case $((n % 3)) in
-    1) order="ABC" ;;
-    2) order="BCA" ;;
-    *) order="CAB" ;;
-  esac
+  # Rotations, so each arm is first on an equal share of the rows.
+  if [ "$ARMS" = "AC" ]; then
+    case $((n % 2)) in
+      1) order="AC" ;;
+      *) order="CA" ;;
+    esac
+  else
+    case $((n % 3)) in
+      1) order="ABC" ;;
+      2) order="BCA" ;;
+      *) order="CAB" ;;
+    esac
+  fi
 
-  a_ms=0; b_ms=0; c_ms=0; arc=0; brc=0; crc=0
+  # EMPTY, not zero, for an arm this run does not have. `0` would read as
+  # "it exited cleanly in no time" and `none` as "it ran and decided
+  # nothing"; both are claims about an arm that never started. Only a
+  # rotation letter below replaces them.
+  a_ms=""; b_ms=""; c_ms=""; arc=""; brc=""; crc=""
   for arm in $(printf '%s' "$order" | fold -w1); do
     case "$arm" in
       A) t0=$(date +%s%N); run_one off      "$f" "$PIN" "$AX" "$BUDGET" "$OUTDIR/$slug.a"; arc=$?
@@ -120,18 +147,26 @@ while read -r rel; do
     esac
   done
 
-  av=$(grep -m1 -oE '^(sat|unsat|unknown)$' -- "$OUTDIR/$slug.a.out" 2>/dev/null || true)
-  bv=$(grep -m1 -oE '^(sat|unsat|unknown)$' -- "$OUTDIR/$slug.b.out" 2>/dev/null || true)
-  cv=$(grep -m1 -oE '^(sat|unsat|unknown)$' -- "$OUTDIR/$slug.c.out" 2>/dev/null || true)
+  # An arm that did not run leaves no capture, so `field` prints the empty
+  # string and every one of its columns is EMPTY. The summarizer reads that as
+  # "did not run" and puts the row in no denominator of that arm's table.
+  verdict_of() {  # $1 = capture prefix, $2 = that arm's rc (EMPTY if it did not run)
+    if [ -z "$2" ]; then printf ''; return; fi
+    v=$(grep -m1 -oE '^(sat|unsat|unknown)$' -- "$1.out" 2>/dev/null || true)
+    printf '%s' "${v:-none}"
+  }
+  av=$(verdict_of "$OUTDIR/$slug.a" "$arc")
+  bv=$(verdict_of "$OUTDIR/$slug.b" "$brc")
+  cv=$(verdict_of "$OUTDIR/$slug.c" "$crc")
   # The declared `:status`, for the soundness column. Absent on many files, which
   # is why the comparable denominator is published beside the count.
   st=$(sed -n 's/.*set-info *:status *\([a-z]*\).*/\1/p' -- "$f" 2>/dev/null | head -1)
 
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
     "$rel" "$order" \
-    "$arc" "$a_ms" "${av:-none}" "$(field "$OUTDIR/$slug.a.out" route total_ms)" \
-    "$brc" "$b_ms" "${bv:-none}" "$(field "$OUTDIR/$slug.b.out" route total_ms)" \
-    "$crc" "$c_ms" "${cv:-none}" "$(field "$OUTDIR/$slug.c.out" route total_ms)" \
+    "$arc" "$a_ms" "$av" "$(field "$OUTDIR/$slug.a.out" route total_ms)" \
+    "$brc" "$b_ms" "$bv" "$(field "$OUTDIR/$slug.b.out" route total_ms)" \
+    "$crc" "$c_ms" "$cv" "$(field "$OUTDIR/$slug.c.out" route total_ms)" \
     "$(field "$OUTDIR/$slug.a.out" lazy-smt simplex_cold_builds)" \
     "$(field "$OUTDIR/$slug.b.out" lazy-smt simplex_cold_builds)" \
     "$(field "$OUTDIR/$slug.c.out" lazy-smt simplex_cold_builds)" \

@@ -41,6 +41,18 @@ def num(r, key):
         return None
 
 
+def ran(r, arm):
+    """Did this arm run on this row?
+
+    An arm the run did not include leaves its columns EMPTY, which is a
+    different fact from `none` (it ran and decided nothing) and from `unknown`
+    (it ran and declined).  Folding the three would put rows in a denominator
+    for an arm that never started -- ADR-2125's `20 SILENT` distinction, one
+    level down.
+    """
+    return (r.get(f"{arm}_verdict") or "").strip() != ""
+
+
 def compare(rows, x, y, xname, yname):
     """One arm against another: gains, losses, flips, and the soundness column."""
     gain = []
@@ -49,6 +61,12 @@ def compare(rows, x, y, xname, yname):
     dis = []
     cmp_denom = 0
     xd = yd = 0
+    skipped = len(rows)
+    rows = [r for r in rows if ran(r, x) and ran(r, y)]
+    skipped -= len(rows)
+    if not rows:
+        print(f"  {xname:>9} vs {yname:<9} DID NOT RUN (no row has both arms)")
+        return []
     for r in rows:
         xv, yv = r[f"{x}_verdict"], r[f"{y}_verdict"]
         xd += xv in DECIDED
@@ -77,6 +95,7 @@ def compare(rows, x, y, xname, yname):
         f"{xname} {xd:>4}  {yname} {yd:>4}  net {yd - xd:+4d}  "
         f"gain {len(gain):>3}  LOSS {len(loss):>3}  FLIP {len(flip):>3}  "
         f"{xname} rc!=0 {xrc:>3}  {yname} rc!=0 {yrc:>3}  cmp {cmp_denom:>4}  DIS {len(dis):>3}"
+        + (f"   [{skipped} rows where one arm DID NOT RUN]" if skipped else "")
     )
     for f in gain:
         print(f"      raw GAIN ({xname}->{yname})  {f}")
@@ -92,6 +111,9 @@ def compare(rows, x, y, xname, yname):
 def mechanism(rows):
     """Did each treatment arm actually run, and did the screen do its job?"""
     for arm, name in (("b", "on"), ("c", "screened")):
+        if not any(ran(r, arm) for r in rows):
+            print(f"  {name:>9}: DID NOT RUN on this population")
+            continue
         built = sum(1 for r in rows if r.get(f"{arm}_warm_build") == "built")
         checks = sum(num(r, f"{arm}_warm_checks") or 0 for r in rows)
         restarts = sum(num(r, f"{arm}_warm_restarts") or 0 for r in rows)
@@ -124,18 +146,24 @@ def mechanism(rows):
 
 def cost(rows):
     """Wall clock on the rows ALL THREE arms decide, and the -9.2 % split."""
+    arms = [a for a in ("a", "b", "c") if any(ran(r, a) for r in rows)]
+    if len(arms) < 2:
+        print(f"  fewer than two arms ran ({', '.join(arms) or 'none'}); no cost comparison")
+        return
     common = [
         r
         for r in rows
-        if all(r[f"{a}_verdict"] in DECIDED for a in ("a", "b", "c"))
-        and all(num(r, f"{a}_total_ms") is not None for a in ("a", "b", "c"))
+        if all(r[f"{a}_verdict"] in DECIDED for a in arms)
+        and all(num(r, f"{a}_total_ms") is not None for a in arms)
     ]
     if not common:
-        print("  no row is decided by all three arms; no cost comparison")
+        print(f"  no row is decided by all of {','.join(arms)}; no cost comparison")
         return
-    tot = {a: sum(num(r, f"{a}_total_ms") for r in common) for a in ("a", "b", "c")}
-    print(f"  rows all three decide: {len(common)}")
+    tot = {a: sum(num(r, f"{a}_total_ms") for r in common) for a in arms}
+    print(f"  rows all {len(arms)} arms decide: {len(common)}")
     for a, name in (("a", "off"), ("b", "on"), ("c", "screened")):
+        if a not in tot:
+            continue
         d = (tot[a] - tot["a"]) * 100.0 / tot["a"] if tot["a"] else 0.0
         print(f"    {name:>9} total {tot[a]:>9} ms   {d:+7.1f} % against off")
 
@@ -143,6 +171,8 @@ def cost(rows):
     # trail line, on one interleaved pair of arms over one file -- no
     # counterfactual, no model. See `LazySmtCounters::warm_cube_solve`.
     for arm, name in (("b", "on"), ("c", "screened")):
+        if arm not in arms:
+            continue
         sized = [
             r
             for r in common
