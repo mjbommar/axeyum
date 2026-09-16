@@ -471,7 +471,7 @@ The rest, each with a nonzero count confirmed:
 | `check-config-registry-staleness.py` | 0 unexplained |
 | the 22 dispatch/reason suites | **all 22 green**, every count nonzero (7, 10, 20, 11, 12, 3, 3, 12, 12, 9, 6, 6, 6, 6, 7, 18, 13, 2, 20, 6, 7, 15) |
 | `--lib --features full -- --skip reconstruct::` | **1,576 passed, 1 failed** — the one red is the reference frame, measured; see §5.7 |
-| `progress_frontier --features full -- --test-threads=1` | **DID NOT COMPLETE** — see §8 |
+| `progress_frontier --features full -- --test-threads=1` | **12 passed, 0 failed, 0 REGRESSION** on an idle pinned frame; see §5.8 for why the contended run disagreed |
 
 The 22 dispatch suites are read out of `hooks/pre-push` **at run time**, not
 copied, and `run-gates.sh` refuses if it extracts fewer than 15: a copied list
@@ -561,6 +561,50 @@ What is NOT claimed: that a green isolated run proves the sweep would be green
 on a quiet box. It proves this test's red is not this tree's defect, which is
 the question that was asked. A successor seeing the same name should re-run it
 alone before spending a bisect — that is why both this ADR and ADR-2111 name it.
+
+### 5.8 The capability ratchet, and why a pass count is not its result
+
+This gate had to be run **three times**, and the first two are kept because the
+disagreement between them is the finding.
+
+| run | host / frame | result |
+|---|---|---|
+| 1, inside `run-gates.sh` | s4, load 9–24 | `12 passed, 0 failed` |
+| 2, `--nocapture` | s4, load **8.98 → 45.99**, calibration **2.00×** | `11 passed, 1 failed` — `TIMING REGRESSION [nra_degree]` 24.1 ms vs a 23.0 ms ceiling |
+| 3, idle and pinned | s5, load **1.11 → 1.11**, calibration **1.15×** | **`12 passed, 0 failed`, 0 REGRESSION** |
+
+**Two runs of the same binary on the same tree disagreed**, and every family in
+run 2 carried its own `ADVISORY ONLY … budget was scaled 2.00x` mark. So run 1's
+`12 passed` was never evidence either: a bare pass count is compatible with every
+family being unenforced, which is the shape of a gate that cannot fail.
+
+**Run 1 was worse than uninformative — this lane's own script destroyed the
+evidence.** `run_counted` captured the output to a temp file and deleted it,
+keeping only the count. That is fixed: the ratchet now runs `--nocapture`, keeps
+`frontier-ratchet.log`, echoes the reference-frame lines, and reports how many
+families came back NOT COMPARABLE instead of hiding them behind a pass.
+
+**The decisive number.** `nra_degree` — the only REGRESSION — reads **24.1 ms on
+the contended frame and 7.2 ms on the idle one**, against the same 23.0 ms
+ceiling. A **3.3× swing at fixed code**, and on the idle frame it is enforced
+(no `NOT COMPARABLE` mark) and passes with a 3× margin. [ADR-2122] measured the
+same failure mode at 21× on `nia_unsat`; this reproduces it on a different
+family.
+
+`nra_degree` is also **`QF_NRA`, not this lane's route** — but that is an
+argument and the idle re-run is the measurement, which is why the re-run was
+taken rather than the argument published.
+
+**What is NOT claimed.** Two families are marked `NOT COMPARABLE` *even on the
+idle run* — `bv_reduction` (throughput moved 63 % mid-sweep) and `lia_cuts`
+(39 %) — so their ratchets are not enforced on it either, and this ADR does not
+report a clean sweep of all five. `nia_unsat`, `nra_degree` and `string_bound`
+have stable frames and ARE enforced. **No baseline is raised from any of these
+runs**, including `string_bound`'s `PROGRESS (+32, ratchetable)`: raising a
+frontier baseline is not this lane's change to make.
+
+Both logs are committed (`frontier-ratchet.log`, `frontier-ratchet-s5-idle.log`)
+so the disagreement stays reproducible rather than surviving as a sentence.
 
 ## 6. The A/B
 
@@ -791,16 +835,17 @@ Named with what is known about each, rather than left implied.
 2. **Four exposure divisions did not run**, and `QF_LIA` ran 7 rows. A division
    with no rows is not a division with no movement. `QF_LIA` is the one that
    matters most — it drives the same simplex — and 7 rows is not a sample of it.
-3. **One gate did not complete**: `progress_frontier`. They were queued behind the mutation run and other lanes'
+3. **Every gate in §5.5 now has a reading**, which was not true when this
+   decision was first written — three were outstanding behind the shared
+   `cargo-serialized` flock. What remains unmeasured is narrower and is named
+   here: **two frontier families (`bv_reduction`, `lia_cuts`) are NOT COMPARABLE
+   even on the idle run**, so their ratchets are enforced on nothing and a
+   successor wanting them must find a frame whose throughput holds still. They were queued behind the mutation run and other lanes'
    jobs on the shared `cargo-serialized` flock, on a box that OOM-killed three of
    those lanes' jobs at their own 24 GiB scope ceilings while this lane waited.
-   `run-gates.sh` is committed and runs it by name.
-
-   This is a real gap in the evidence, not a formality: **`progress_frontier` is
-   the capability ratchet, and a solver-route change is exactly what it exists to
-   watch.** The 22 dispatch/reason suites and the lib sweep were both in this
-   list until they completed (§5.5, §5.7); a gap list is only worth having if it
-   shrinks when the gaps close.
+   A gap list is only worth having if it shrinks when the gaps close, and this
+   one has: the 22 dispatch/reason suites, the lib sweep and the ratchet were all
+   in it until they ran (§5.5, §5.7, §5.8).
 4. **The builds-per-file screen** (§7.3). The stable loss and the stable gain lie
    on one axis the lever is already instrumented for, and a decider that consults
    `simplex_cold_builds` is the obvious next increment. It is not built here

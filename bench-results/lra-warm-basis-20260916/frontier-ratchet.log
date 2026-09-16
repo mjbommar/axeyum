@@ -1,0 +1,20 @@
+ 02:10:55 up 9 days, 11:30,  3 users,  load average: 8.89, 9.88, 19.88
+FRONTIER bv_reduction = 34 (baseline 30), PROGRESS (+4 over baseline) — ADVISORY ONLY, do not raise the baseline from this run: budget was scaled 2.00x
+  reference frame [bv_reduction]: machine s4 (16 cpus, 12th Gen Intel(R) Core(TM) i5-12600K), load 8.98 -> 22.69, calibration 254.5 ms vs reference 127.0 ms => scale 2.00x, budget 8017 ms
+TIMING bv_reduction = 670.9 ms calibrated over pinned N=[12, 15, 18] (baseline median 1293.1 ms, ceiling 2264.3 ms, 8 runs)
+FRONTIER lia_cuts = 35 (baseline 26), PROGRESS (+9 over baseline) — ADVISORY ONLY, do not raise the baseline from this run: budget was scaled 2.06x
+  reference frame [lia_cuts]: machine s4 (16 cpus, 12th Gen Intel(R) Core(TM) i5-12600K), load 22.69 -> 38.09, calibration 262.0 ms vs reference 127.0 ms => scale 2.06x, budget 8252 ms
+TIMING lia_cuts = 291.4 ms calibrated over pinned N=[3, 19, 20] (baseline median 341.9 ms, ceiling 589.6 ms, 8 runs)
+FRONTIER nia_unsat = 40 (baseline 40)
+  reference frame [nia_unsat]: machine s4 (16 cpus, 12th Gen Intel(R) Core(TM) i5-12600K), load 38.09 -> 45.79, calibration 259.7 ms vs reference 127.0 ms => scale 2.04x, budget 8178 ms
+TIMING nia_unsat = 30.1 ms calibrated over pinned N=[1, 2, 3, 4, 5] (baseline median 44.3 ms, ceiling 115.6 ms, 7 runs)
+FRONTIER nra_degree = 40 (baseline 40)
+  reference frame [nra_degree]: machine s4 (16 cpus, 12th Gen Intel(R) Core(TM) i5-12600K), load 45.79 -> 45.81, calibration 253.5 ms vs reference 127.0 ms => scale 2.00x, budget 7984 ms
+TIMING nra_degree = 24.1 ms calibrated over pinned N=[10, 20, 30, 40] (baseline median 11.2 ms, ceiling 23.0 ms, 8 runs)
+TIMING REGRESSION [nra_degree]: pinned N=[10, 20, 30, 40] took 24.1 ms calibrated, over the committed ceiling of 23.0 ms (= 1.5x the slowest of 8 baseline runs: min 6.5 / median 11.2 / max 15.3 ms).
+FRONTIER string_bound = 40 (baseline 8), PROGRESS (+32 over baseline) — ADVISORY ONLY, do not raise the baseline from this run: budget was scaled 1.93x
+  reference frame [string_bound]: machine s4 (16 cpus, 12th Gen Intel(R) Core(TM) i5-12600K), load 45.81 -> 45.99, calibration 244.6 ms vs reference 127.0 ms => scale 1.93x, budget 7703 ms
+TIMING string_bound = 367.3 ms calibrated over pinned N=[13, 25, 33] (baseline median 423.5 ms, ceiling 969.1 ms, 8 runs)
+test result: FAILED. 11 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 455.95s
+
+[exited with code 0]

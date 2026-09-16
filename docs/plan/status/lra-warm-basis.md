@@ -130,9 +130,20 @@ next increment and is NOT built here.
    file, so a successor resumes rather than rebuilds) and run the five exposure
    divisions with their own denominators.
 2. A builds-per-file screen on the decider, A/B'd rather than assumed.
-3. One gate did not complete behind the shared cargo lock: `progress_frontier`,
-   the capability ratchet. The 22 dispatch/reason suites are all green (every
-   count nonzero) and the lib sweep is **1,576 passed, 1 failed** -- the one red
-   is `auto::tests::pathological_overbound_stays_terminal_under_every_policy`,
-   which passes ALONE in 4.26 s on the same tree, reproducing ADR-2111 §5a's
-   6.28 s on the same test by name. `run-gates.sh` runs the ratchet by name.
+3. Every gate now has a reading. The 22 dispatch/reason suites are green (every
+   count nonzero); the lib sweep is **1,576 passed, 1 failed**, the one red being
+   `auto::tests::pathological_overbound_stays_terminal_under_every_policy`, which
+   passes ALONE in 4.26 s on the same tree (ADR-2111 §5a measured the same test
+   at 6.28 s the same way); and `progress_frontier` is **12 passed, 0 failed, 0
+   REGRESSION** on an idle pinned frame.
+
+   The ratchet took THREE runs and the disagreement is the finding: on a
+   contended box (load 8.98 -> 45.99, calibration 2.00x) it reported a
+   `TIMING REGRESSION [nra_degree]` at 24.1 ms against a 23.0 ms ceiling; on an
+   idle pinned frame (load 1.11, calibration 1.15x) the same binary on the same
+   tree reads **7.2 ms** -- a 3.3x swing at fixed code, reproducing ADR-2122's
+   21x lesson on a different family.
+
+   Two families (`bv_reduction`, `lia_cuts`) are NOT COMPARABLE even on the idle
+   run, so their ratchets are enforced on nothing; that is what remains. No
+   baseline was raised from any run.
