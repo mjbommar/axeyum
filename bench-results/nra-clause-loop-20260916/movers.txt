@@ -1,0 +1,1 @@
+qfnra	QF_NRA/meti-tarski/sqrt/1mcosq/8/sqrt-1mcosq-8-chunk-0160.smt2	sat	unknown
