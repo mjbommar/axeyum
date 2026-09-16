@@ -48425,9 +48425,10 @@ denominators.
 - A Sonnet lane's forked helpers inherited the whole brief and rebuilt both
   deliverables in parallel. Helpers get their slice only, as fresh agents.
 
-Status: **in progress, round three**. Five trace lanes, then two rounds of
-build lanes (nine), all merged; two levers shipped ON (QF_NRA 117 → 122);
-the rest ship OFF with a measured reason and a named next increment. The frame
+Status: **in progress, round three closing**. Five trace lanes, then three
+rounds of build lanes (twelve) and three probes, all merged and pushed
+(`origin/main` `b548367ff`); two levers shipped ON (QF_NRA 117 → 122); the
+rest ship OFF with a measured reason and a named next increment. The frame
 is the 16-division board (200 files each) and the Tier 1 ledger sweep on
 `db31113fa`; the references are z3 4.13.3 and cvc5 1.3.4 on the same lists.
 Bitwuzla does neither arithmetic nor quantifiers and is not a reference here.
@@ -48467,6 +48468,22 @@ Two blanks filled: z3 on the Tier 1 lists gets UFNIA 94 (ours 54) and AUFLIRA 19
 Two of six were a real gain on the pinned lists; the held-out draw refused one
 of them. Every non-shipping lever names what to build next.
 
+## Round three (2026-09-16)
+
+| lane | ADR | result | ships |
+|---|---|---|---|
+| QUANT-SESSION-ARITH | 2130 | the session hosts the arithmetic theory; 366 atoms move into it; cores 15 → 17, 1 stable gain (the same file every lever moves) | OFF |
+| QUANT-INSTANCE-PROBE | — | handed z3's own proof instances, our ground ladder refutes 6 of 7 reconstructable cores in ~107 ms; 46 % of z3's instances are nested instantiations | the block is **instance reach**, not ground refutation |
+| QUANT-INSTANCE-SELECT | 2133 | the briefed selection lever already ships and acts on 0.3 % of rejections; a generation ladder reaches its check on 31 of 53 cores and refutes at none | OFF; the refutation is absent from our set, not buried |
+| LRA-WARM-SCREEN | 2132 | builds-per-file screen: strictly better than the arm it screens (1/1 vs 1/2), admitted set predicted 51 of 51; the held-out loss is the shape the lever wins on, so the axis is wrong; −9.2 % is ¾ skipped linearization; fill-in grows the warm tableau 21× | OFF |
+| NRA-CLAUSE-LOOP | 2131 | certified `unsat` for the Boolean loop; 10 of 16 admissible files reach the theory and every one is refused by the single-cell frontier (algebraic sample worth 5); the shipped checker had two false-reject bugs, fixed | measuring |
+
+Four lanes on the quantified divisions each removed a real block and moved
+one core; the probe then showed why: the six instances z3's proof uses are
+not among the ~1,473 we admit. QUANT-REACH-DIFF is classifying, per core,
+where each of z3's instances is lost (never matched / matched-rejected /
+nested) — that histogram is the next build's brief.
+
 ## What the day says
 
 Capability gaps that trace to one named mechanism moved (QF_NRA); the ones
@@ -48484,6 +48501,15 @@ ADR corrects at least one inherited number, including the briefs' own.
   ERR trap and a named `step_seconds` failure.
 - A finished lane's A/B shards kept running on cores I had given to the next
   lane; check the hosts, not the lane's claim, before assigning cores.
+- The five "silent 17-second" push deaths were my own `ulimit -v` in the
+  launching shell: a hard limit the hook's `mem-run.sh` could not raise.
+  Found by the xtrace the hook now writes; the wrapper keeps an inherited
+  limit and says so (`b548367ff`).
+- A 7-day prune of `target/*/build` gutted `z3-sys`'s download cache and left
+  its directory, so the `--all-features` lint failed on a "cached" archive
+  with no library. Prune whole `build/<crate>-<hash>` dirs, not files.
+- Lane worktrees have no `references/` clones (gitignored); one lane could
+  not verify its z3 citations and said so. Briefs give the absolute path.
 - Two lanes' first controls were vacuous (a population that could not decide;
   a column computed at the outermost node of a `let` tree); both caught by the
   lanes themselves and kept, labelled.
