@@ -318,6 +318,16 @@ impl CellCovering {
     pub fn cells(&self) -> &[CellReason] {
         &self.cells
     }
+
+    /// The cells, mutably.
+    ///
+    /// Exists for [`crate::nra_clause_cert::apply_mutation`], the adversarial
+    /// fixtures' damage surface. Nothing in the producer uses it: a covering is
+    /// built once and read many times, so a mutable view is only ever needed by
+    /// something that is deliberately breaking one.
+    pub fn cells_mut(&mut self) -> &mut [CellReason] {
+        &mut self.cells
+    }
 }
 
 /// A complete refutation: the atoms, the variable order, and the level-0
@@ -352,6 +362,12 @@ impl CellRefutation {
     #[must_use]
     pub const fn root(&self) -> &CellCovering {
         &self.root
+    }
+
+    /// The level-0 covering, mutably. See [`CellCovering::cells_mut`] for why
+    /// this exists.
+    pub const fn root_mut(&mut self) -> &mut CellCovering {
+        &mut self.root
     }
 }
 
@@ -1160,13 +1176,41 @@ fn has_root_strictly_inside(q_sf: &[Rational], cell: &Cell<'_>) -> Option<bool> 
     let mut lower = lo.cloned();
     let mut upper = hi.cloned();
     for _ in 0..REFINE_DEPTH {
-        let a = match &lower {
-            Some(r) => r.upper(),
-            None => bound_below(q_sf)?,
-        };
-        let b = match &upper {
-            Some(r) => r.strict_lower(),
-            None => bound_above(q_sf)?,
+        // An UNBOUNDED side takes a Cauchy bound, and that bound knows nothing
+        // about the cell's other endpoint -- so it can land at or inside it, and
+        // then `(a, b]` is empty, there is nothing on the infinite side to
+        // refine, and the loop spins to `REFINE_DEPTH` and REJECTS.
+        //
+        // ADR-2131 hit this on the cell `(2, +inf)` with `q = x`, whose Cauchy
+        // bound is exactly 2. Pushing the infinite side PAST the finite one
+        // costs nothing and cannot hide a root: every real root of `q` is
+        // strictly inside `(-C, C)`, so counting over `(a, b]` with `b >= C` is
+        // counting over `(a, +inf)`, which is the cell.
+        let a_fin = lower.as_ref().map(IsoRoot::upper);
+        let b_fin = upper.as_ref().map(IsoRoot::strict_lower);
+        let (a, b) = match (a_fin, b_fin) {
+            (Some(a), Some(b)) => (a, b),
+            (Some(a), None) => {
+                let c = bound_above(q_sf)?;
+                let past = a.checked_add(Rational::integer(1))?;
+                let b = if c.checked_cmp(&past)? == Ordering::Greater {
+                    c
+                } else {
+                    past
+                };
+                (a, b)
+            }
+            (None, Some(b)) => {
+                let c = bound_below(q_sf)?;
+                let past = b.checked_sub(Rational::integer(1))?;
+                let a = if c.checked_cmp(&past)? == Ordering::Less {
+                    c
+                } else {
+                    past
+                };
+                (a, b)
+            }
+            (None, None) => (bound_below(q_sf)?, bound_above(q_sf)?),
         };
         if a.checked_cmp(&b)? != Ordering::Less {
             // Brackets still overlap the interior; refine and retry.
@@ -1194,13 +1238,47 @@ fn has_root_strictly_inside(q_sf: &[Rational], cell: &Cell<'_>) -> Option<bool> 
         }
         // Roots of `q` in the slivers `(lower root, a]` and `(b, upper root)` are
         // missed by this count. Close the gap by refining until the slivers are
-        // root-free.
+        // root-free -- EXCEPT for a root of `q` sitting exactly ON the cell's
+        // boundary, which no amount of refinement removes and which is not
+        // strictly inside the cell anyway.
+        //
+        // ADR-2131 measured why that exception has to be here. The boundary of a
+        // cell is the root of a boundary polynomial, and the atom that CLOSES the
+        // cell is very often one of those same polynomials -- so `q` and the
+        // endpoint's polynomial share that root by construction. When the
+        // endpoint is EXACT the subtraction below `n` already handles it; when it
+        // is a bracket, the sliver count stays at 1 through every bisection and
+        // the whole check exhausts `REFINE_DEPTH` and REJECTS. `x > 1 ∧ x < 0` --
+        // as small an unsatisfiable conjunction as exists -- was rejected for
+        // exactly this reason, because bisection from the Cauchy bracket never
+        // lands on the rational 1 and so never marks that root exact.
+        //
+        // `sign_at_root` decides "does `q` vanish at this root" EXACTLY, using
+        // the endpoint's own polynomial and Sturm chain. So this subtracts a root
+        // it has PROVED is on the boundary, not one it has given up on. The
+        // direction is safe: a root at a closed endpoint does not break sign
+        // constancy on the OPEN cell, which is the property this function is
+        // asked about.
         let sliver_low = match &lower {
-            Some(r) if r.exact.is_none() => count_roots_in(&chain, r.lo, a)?,
+            Some(r) if r.exact.is_none() => {
+                let c = count_roots_in(&chain, r.lo, a)?;
+                if sign_at_root(q_sf, r)? == Sign::Zero {
+                    c.saturating_sub(1)
+                } else {
+                    c
+                }
+            }
             _ => 0,
         };
         let sliver_high = match &upper {
-            Some(r) if r.exact.is_none() => count_roots_in(&chain, b, r.hi)?,
+            Some(r) if r.exact.is_none() => {
+                let c = count_roots_in(&chain, b, r.hi)?;
+                if sign_at_root(q_sf, r)? == Sign::Zero {
+                    c.saturating_sub(1)
+                } else {
+                    c
+                }
+            }
             _ => 0,
         };
         if sliver_low == 0 && sliver_high == 0 {
@@ -2435,5 +2513,97 @@ mod tests {
         ];
         let names: BTreeSet<&str> = all.iter().map(CellCheckFailure::name).collect();
         assert_eq!(names.len(), all.len(), "names must be distinct");
+    }
+
+    // -----------------------------------------------------------------------
+    // ADR-2131: two coverings this checker used to REJECT, both reached by the
+    // shipped conjunctive route.
+    //
+    // They live here rather than in `nra_clause_loop` deliberately. The clause
+    // loop is what FOUND them, but neither needs it: both are plain
+    // conjunctions that `decide_single_cell` -- the route ADR-2126 ships --
+    // reaches and then drops with `certificate-rejected`. Putting them beside
+    // the checker says whose defect it was.
+    //
+    // Each asserts `Some(Unsat)`, which on this path means the checker ACCEPTED:
+    // `decide_single_cell` returns `None` and records `CertificateRejected` when
+    // it does not. So reverting either fix turns exactly the corresponding test
+    // red.
+    // -----------------------------------------------------------------------
+
+    fn conjunctive_unsat(script: &str) -> (bool, &'static str) {
+        let parsed = axeyum_smtlib::parse_script(script).expect("parse");
+        crate::nra_real_root::reset_cad_decline();
+        let out = crate::nra_single_cell::decide_single_cell(
+            &parsed.arena,
+            &parsed.assertions,
+            None,
+            true,
+        );
+        (
+            matches!(out, Some(crate::backend::CheckResult::Unsat)),
+            crate::nra_real_root::cad_decline().name(),
+        )
+    }
+
+    /// A root of the closing atom sitting exactly ON the cell's boundary.
+    ///
+    /// `x > 1 ∧ x < 0` is about as small as an unsatisfiable conjunction gets.
+    /// The arrangement is cut by `x - 1` and `x`, and the cell `(0, 1)` is closed
+    /// by `x - 1 > 0` -- whose root IS that cell's upper boundary. Bisection from
+    /// the Cauchy bracket never lands on the rational 1, so the endpoint is never
+    /// marked exact, so the sliver count at that endpoint stayed at 1 through
+    /// every bisection and the check exhausted `REFINE_DEPTH`.
+    ///
+    /// The atom that closes a cell is very often one of the boundary
+    /// polynomials, so this is not an exotic shape; it is the common one.
+    #[test]
+    fn a_closing_atom_whose_root_is_the_cell_boundary_is_accepted() {
+        let (unsat, cause) = conjunctive_unsat(
+            "(declare-fun x () Real)\n(assert (> x 1))\n(assert (< x 0))\n(check-sat)\n",
+        );
+        assert!(
+            unsat,
+            "the checker must accept this covering; it declined with {cause}"
+        );
+    }
+
+    /// An unbounded cell whose Cauchy bound does not clear its finite endpoint.
+    ///
+    /// `x > 2 ∧ x < 0` cuts the line at 0 and 2, and the cell `(2, +inf)` is
+    /// closed by `x < 0`. The Cauchy bound of `x` is exactly 2, so the counting
+    /// interval came out EMPTY -- and there is nothing on the infinite side to
+    /// refine, so the loop could only spin to `REFINE_DEPTH`.
+    #[test]
+    fn an_unbounded_cell_whose_cauchy_bound_meets_its_endpoint_is_accepted() {
+        let (unsat, cause) = conjunctive_unsat(
+            "(declare-fun x () Real)\n(assert (> x 2))\n(assert (< x 0))\n(check-sat)\n",
+        );
+        assert!(
+            unsat,
+            "the checker must accept this covering; it declined with {cause}"
+        );
+    }
+
+    /// The control that stops the two fixes above from being read as "the
+    /// checker got looser".
+    ///
+    /// A SATISFIABLE conjunction over the same shapes must never be refuted.
+    /// Without this, a fix that made `has_root_strictly_inside` always answer
+    /// "no root inside" would pass both tests above.
+    #[test]
+    fn the_boundary_fixes_do_not_refute_a_satisfiable_conjunction() {
+        for script in [
+            "(declare-fun x () Real)\n(assert (> x 1))\n(assert (< x 5))\n(check-sat)\n",
+            "(declare-fun x () Real)\n(assert (> x 2))\n(assert (< x 3))\n(check-sat)\n",
+            "(declare-fun x () Real)\n(assert (>= x 2))\n(assert (<= x 2))\n(check-sat)\n",
+            "(declare-fun x () Real)\n(assert (> (* x x) 2))\n(assert (< x 5))\n(check-sat)\n",
+        ] {
+            let (unsat, cause) = conjunctive_unsat(script);
+            assert!(
+                !unsat,
+                "a satisfiable conjunction was refuted ({cause}): {script}"
+            );
+        }
     }
 }

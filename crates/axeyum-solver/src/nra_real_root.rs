@@ -422,9 +422,16 @@ pub fn decide_real_poly_constraint(
     // cause rather than re-deriving the shape is deliberate -- the route's own
     // attribution is the authority on why it declined, and a second opinion here
     // could disagree with it.
+    // ADR-2131 widened this from `Sat` to `Sat | Unsat`. The `unsat` arm is not
+    // a policy choice here: `decide_clause_loop` returns `Unsat` only when
+    // `nra_clause_cert::check_clause_refutation` has ACCEPTED a certificate
+    // covering all three of the obligations ADR-2126 named, so a verdict from
+    // here carries strictly more evidence than one from the enumerative path
+    // below. A refused certificate is a decline, so this arm cannot widen what
+    // is answered without also widening what is checked.
     if cad_policy().clause_loop
         && cad_decline() == CadDecline::NonConjunctive
-        && let Some(res @ CheckResult::Sat(_)) =
+        && let Some(res @ (CheckResult::Sat(_) | CheckResult::Unsat)) =
             crate::nra_clause_loop::decide_clause_loop(arena, assertions, deadline)
     {
         return Ok(Some(res));
@@ -3873,17 +3880,24 @@ pub(crate) enum CadDecline {
     /// [`crate::nra_clause_loop::MAX_CLAUSE_LOOP_ROUNDS`] theory calls, or the
     /// SAT core stopping without a verdict (ADR-2126).
     ClauseLoopBudget,
-    /// The clause loop REFUTED the Boolean abstraction, and this arm does not
-    /// emit that as `unsat`.
+    /// The clause loop reached a refutation and its CERTIFICATE was refused
+    /// (ADR-2131).
     ///
-    /// Read it precisely: the loop reached a refutation, which is strictly more
-    /// than `unknown` says. It is withheld because an `unsat` here rests on three
-    /// things no checker in this tree can yet read -- the Tseitin encoding being
-    /// equisatisfiable, every blocking clause being implied, and the SAT core's
-    /// own refutation. The evidence that would close it is named in
-    /// [`crate::nra_clause_loop`]'s module docs: a `CellRefutation` per blocking
-    /// clause plus a DRAT refutation of the clause set (ADR-2126).
-    ClauseLoopUnsatUncertified,
+    /// This variant REPLACES ADR-2126's `ClauseLoopUnsatUncertified`, which said
+    /// "the loop refuted the abstraction and no checker exists for that". That
+    /// sentence is no longer true, and a cause no code can produce is worse than
+    /// no cause: it would read as a live limitation in every table that prints
+    /// the enum. See [`crate::nra_clause_cert`] for the checker that closed it.
+    ///
+    /// Strictly stronger than [`Self::ClauseLoopUnsatUncertified`], which means
+    /// "no checker exists". This one means the checker exists, ran, and said no:
+    /// a lemma's covering was rejected by
+    /// [`crate::nra_cell_cert::check_cell_refutation`], the assertion walk did
+    /// not match the gate table, the two SAT cores disagreed about the clause
+    /// set, or the DRAT proof did not check. The verdict is DROPPED -- never
+    /// weakened, never partially credited -- and the query falls through to the
+    /// rest of the ladder.
+    ClauseLoopCertificateRejected,
     /// A cell whose only satisfying points are ALGEBRAIC: every atom of the
     /// level holds at an irrational root, so a model exists there but the
     /// single-cell slice carries rational samples only and cannot descend into
@@ -3919,7 +3933,7 @@ impl CadDecline {
             Self::CertificateRejected => "certificate-rejected",
             Self::ClauseLoopShape => "clause-loop-shape",
             Self::ClauseLoopBudget => "clause-loop-budget",
-            Self::ClauseLoopUnsatUncertified => "clause-loop-unsat-uncertified",
+            Self::ClauseLoopCertificateRejected => "clause-loop-certificate-rejected",
             Self::AlgebraicWitness => "algebraic-witness",
             Self::UnsatWithheldByArm => "unsat-withheld-by-arm",
         }
@@ -3951,18 +3965,54 @@ impl CadDecline {
         Self::UnsatWithheldByArm,
         Self::ClauseLoopShape,
         Self::ClauseLoopBudget,
-        Self::ClauseLoopUnsatUncertified,
+        Self::ClauseLoopCertificateRejected,
     ];
 }
 
 thread_local! {
     static CAD_DECLINE: core::cell::Cell<CadDecline> =
         const { core::cell::Cell::new(CadDecline::NotAttempted) };
+
+    /// The CLAUSE LOOP's own cause, in a slot of its own.
+    ///
+    /// ADR-2131 measured why this is necessary and not decoration.
+    /// [`CAD_DECLINE`] is STICKY -- `record_cad_decline` writes only into an
+    /// empty slot -- and the clause loop runs only after
+    /// `decide_single_cell` has already filled it with
+    /// [`CadDecline::NonConjunctive`]. So on the `clause-loop` arm every one of
+    /// the loop's own causes was recorded into a slot that could not take it and
+    /// the trace reported `non-conjunctive` for all of them: the arm was
+    /// observable only through its verdicts, and a sizing scan asking "what did
+    /// the loop do with these files" could not be answered at all.
+    ///
+    /// Resetting the shared slot instead would have destroyed the single-cell
+    /// route's attribution, which other tables read. Two slots costs nothing and
+    /// loses neither.
+    static CLAUSE_DECLINE: core::cell::Cell<CadDecline> =
+        const { core::cell::Cell::new(CadDecline::NotAttempted) };
 }
 
-/// Clear the slot. Called at the top of every entry point that can attribute.
+/// Clear the slots. Called at the top of every entry point that can attribute.
 pub(crate) fn reset_cad_decline() {
     CAD_DECLINE.with(|slot| slot.set(CadDecline::NotAttempted));
+    CLAUSE_DECLINE.with(|slot| slot.set(CadDecline::NotAttempted));
+}
+
+/// Record the clause loop's own cause, unless one is already recorded.
+///
+/// First writer wins, as in [`record_cad_decline`]: the innermost refusal is the
+/// informative one.
+pub(crate) fn record_clause_decline(reason: CadDecline) {
+    CLAUSE_DECLINE.with(|slot| {
+        if slot.get() == CadDecline::NotAttempted {
+            slot.set(reason);
+        }
+    });
+}
+
+/// The clause loop's recorded cause, leaving the slot as it is.
+pub(crate) fn clause_decline() -> CadDecline {
+    CLAUSE_DECLINE.with(core::cell::Cell::get)
 }
 
 /// Record `reason`, unless a more specific (inner) one is already recorded.

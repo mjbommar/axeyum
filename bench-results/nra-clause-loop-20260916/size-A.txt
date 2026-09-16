@@ -1,0 +1,22 @@
+== bench-results/nra-clause-loop-20260916/size-A: 200 files, arm=single-cell ==
+
+decided    124   (sat 55, unsat 69)
+undecided   76
+
+files  nra-real-root cause (undecided only)
+-----  ------------------------------------
+   34  non-conjunctive
+   22  slice-bounds
+    6  algebraic-witness
+    4  ABSENT
+    3  coefficient-range
+    2  projection-resultant-zero
+    1  declined/not-applicable
+    1  root-ordering
+    1  projection-arithmetic
+    1  projection-sylvester-dim
+    1  certificate-rejected
+-----
+   76  TOTAL
+
+CONTROLS PASSED

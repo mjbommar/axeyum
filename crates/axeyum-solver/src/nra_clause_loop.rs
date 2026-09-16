@@ -13,9 +13,23 @@
 //! nothing about it, and the route refuses the whole file for one disjunction.
 //!
 //! This is the loop that removes that refusal. It is the same shape z3 runs
-//! (`nlsat_solver.cpp` `search()` is CDCL over sign atoms with the single-cell
-//! explanation as the conflict clause) and the same shape cvc5 runs (coverings
-//! inside theory combination).
+//! (`nlsat_solver.cpp:1848` `search()` is CDCL over sign atoms; a conflict goes
+//! to `resolve` at `:2639`, whose `resolve_lazy_justification` (`:2454`) calls
+//! the single-cell explainer at `:2469` and adds the result as a learned clause
+//! at `:2766`/`:2792`) and the same shape cvc5 runs (coverings inside theory
+//! combination: `coverings_solver.cpp:134` emits the covering conflict as a
+//! lemma, built by `cdcac.cpp:555` `getUnsatCoverImpl`).
+//!
+//! **Where this route differs from both is the EVIDENCE.** z3's nlsat produces
+//! no proof object for its lemmas at all -- `nlsat_tactic.cpp:144` is a literal
+//! `fail_if_proof_generation("nlsat", g)`, and the only validation available is
+//! an optional debug-mode re-solve of the negated lemma
+//! (`nlsat_solver.cpp:1160`). cvc5's coverings do produce a proof tree, but the
+//! arithmetic content of every covering step is a `ProofRule::TRUST` step tagged
+//! `TrustId::ARITH_NL_COVERING_DIRECT` / `_RECURSIVE`
+//! (`coverings/proof_generator.cpp:106`, `:139`) and its rule checker is a stub
+//! returning `Node::null()` (`coverings/proof_checker.cpp:33`). ADR-2131's
+//! certificate is CHECKED, not trusted -- see [`crate::nra_clause_cert`].
 //!
 //! # The loop
 //!
@@ -36,34 +50,44 @@
 //!    decline ends the loop with the theory's own recorded cause.
 //! 5. The SAT core reporting `unsat` means the abstraction is refuted.
 //!
-//! # Soundness, and why the two halves are not equally justified
+//! # Soundness, and why the two halves are justified differently
 //!
 //! **A `sat` from this loop rests on nothing in the Boolean layer.** The final
 //! step is the same one `decide_single_cell` performs: bind the sample and
 //! evaluate every ORIGINAL assertion through [`axeyum_ir::eval`], requiring
 //! `Bool(true)` from each. If the Tseitin encoding were wrong, if a blocking
 //! clause were too strong, if the SAT core returned a model of the wrong
-//! formula — a replayed model is still a model, and a wrong one fails the
-//! replay and declines. That is why this half can be measured and shipped on
-//! its own.
+//! formula -- a replayed model is still a model, and a wrong one fails the
+//! replay and declines.
 //!
-//! **An `unsat` from this loop is a different claim and is WITHHELD.** It would
-//! rest on (a) the Tseitin encoding being equisatisfiable, (b) every blocking
-//! clause being implied, and (c) the SAT core's refutation — three things, none
-//! of which this module can hand a checker. The evidence that would close it is
-//! named and not vague: the per-conflict [`crate::nra_cell_cert::CellRefutation`]
-//! for each blocking clause, plus a DRAT refutation of the clause set from
-//! [`axeyum_cnf::solve_with_drat_proof`], checked by `check_drat`. Until that
-//! exists the cause is [`CadDecline::ClauseLoopUnsatUncertified`] and the query
-//! falls through to the rest of the ladder. This is ADR-2121's pattern applied
-//! again: take the exact half, withhold the half whose evidence has no checker.
+//! **An `unsat` from this loop is a different claim, and it now carries a
+//! CERTIFICATE** (ADR-2131). ADR-2126 withheld it and named exactly what it
+//! would rest on -- (a) the Tseitin encoding being equisatisfiable, (b) every
+//! blocking clause being implied over the reals, (c) the SAT core's refutation.
+//! [`crate::nra_clause_cert`] is the checker for all three, and
+//! [`certify_unsat`] emits `unsat` only when it accepts:
 //!
-//! One consequence worth stating plainly, because it is the reason a blocking
-//! clause here does not need a certificate: a blocking clause can only make the
-//! loop **miss** a satisfying assignment, never invent one. So on the shipped
-//! (sat-only) arm an unsound blocking clause costs completeness and cannot cost
-//! soundness. On an arm that emitted `unsat` it would cost soundness — which is
-//! precisely why that arm does not exist yet.
+//! * **(b)** is discharged by the per-conflict
+//!   [`crate::nra_cell_cert::CellRefutation`] this loop now KEEPS for every
+//!   blocking clause, re-checked here by `check_cell_refutation`;
+//! * **(c)** by a DRAT refutation from [`axeyum_cnf::solve_with_drat_proof`] --
+//!   produced by a SECOND, independent solve, so the incremental solver that
+//!   found the refutation is not also the evidence for it -- checked by
+//!   `check_drat`;
+//! * **(a)** by the gate table: the certificate carries the Tseitin GATE
+//!   DEFINITIONS rather than the clauses, and the checker derives the clauses
+//!   itself, after confirming the gate variables are fresh and that the table
+//!   really describes the original assertions.
+//!
+//! A refused certificate is [`CadDecline::ClauseLoopCertificateRejected`]: the
+//! verdict is dropped and the query falls through to the rest of the ladder.
+//!
+//! One asymmetry is worth stating plainly, because it is why the two halves have
+//! different obligations: a blocking clause can only make the loop **miss** a
+//! satisfying assignment, never invent one. So on the `sat` side an unsound
+//! blocking clause costs completeness and cannot cost soundness -- while on the
+//! `unsat` side it would cost soundness, which is exactly why every one of them
+//! is now carried and re-checked rather than argued about.
 //!
 //! # Bounded by declaration
 //!
@@ -74,12 +98,19 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
-use axeyum_cnf::{CnfClause, CnfLit, CnfVar, IncrementalSat, SatResult};
+use axeyum_cnf::{
+    CnfClause, CnfLit, CnfVar, IncrementalSat, ProofSolveOutcome, SatResult,
+    solve_with_drat_proof_within,
+};
 use axeyum_ir::{Op, TermArena, TermId, TermNode};
 
 use crate::backend::CheckResult;
 use crate::nra_cell_cert::{CellCovering, CellReason, CellRefutation, CertAtom};
-use crate::nra_real_root::{CadDecline, cert_atom_of, record_cad_decline};
+use crate::nra_clause_cert::{
+    ClauseCheckStats, ClauseRefutation, GateDef, GateKind, TheoryLemma, apply_mutation,
+    check_clause_refutation, formula_of, gate_clauses,
+};
+use crate::nra_real_root::{CadDecline, cert_atom_of, record_cad_decline, record_clause_decline};
 use crate::nra_single_cell::{AtomOutcome, decide_atoms, replay_rational_model};
 
 /// The most distinct polynomial comparisons this loop will abstract.
@@ -112,9 +143,11 @@ pub(crate) fn decide_clause_loop(
     assertions: &[TermId],
     deadline: Option<Instant>,
 ) -> Option<CheckResult> {
+    LAST_CLAUSE_CHECK.with(|slot| slot.set(None));
     let skeleton = Skeleton::build(arena, assertions)?;
     if skeleton.atoms.len() > MAX_CLAUSE_ATOMS {
         record_cad_decline(CadDecline::ClauseLoopShape);
+        record_clause_decline(CadDecline::ClauseLoopShape);
         return None;
     }
 
@@ -124,22 +157,31 @@ pub(crate) fn decide_clause_loop(
         sat.add_clause(clause.clone()).ok()?;
     }
 
+    // Every blocking clause the loop learns, with the covering that justifies
+    // it. This is the theory half of the certificate and it is collected as the
+    // loop runs, not reconstructed afterwards: a covering that was discarded
+    // cannot be recovered, and a certificate assembled from a second run would
+    // be a certificate about a second run (ADR-2131).
+    let mut lemmas: Vec<TheoryLemma> = Vec::new();
+
     for _round in 0..MAX_CLAUSE_LOOP_ROUNDS {
         if deadline.is_some_and(|d| Instant::now() >= d) {
             record_cad_decline(CadDecline::Deadline);
+            record_clause_decline(CadDecline::Deadline);
             return None;
         }
         let model = match sat.solve(None) {
             Ok(SatResult::Sat(assignment)) => assignment,
             Ok(SatResult::Unsat(_)) => {
-                // The abstraction is refuted. That is NOT this route's `unsat`:
-                // see the module docs for the three things it would rest on and
-                // the evidence that would close each.
-                record_cad_decline(CadDecline::ClauseLoopUnsatUncertified);
-                return None;
+                // The abstraction is refuted. ADR-2131: that becomes this
+                // route's `unsat` only if the certificate for it is BUILT and
+                // ACCEPTED. The incremental solver's own refutation is not the
+                // evidence -- an independent proof-producing solve is.
+                return certify_unsat(arena, assertions, &skeleton, lemmas, deadline);
             }
             Ok(SatResult::Unknown(_)) | Err(_) => {
                 record_cad_decline(CadDecline::ClauseLoopBudget);
+                record_clause_decline(CadDecline::ClauseLoopBudget);
                 return None;
             }
         };
@@ -159,6 +201,7 @@ pub(crate) fn decide_clause_loop(
             // turns its output into a measurement of the part it understood.
             let Some(asserted) = values.get(i).copied() else {
                 record_cad_decline(CadDecline::ClauseLoopBudget);
+                record_clause_decline(CadDecline::ClauseLoopBudget);
                 return None;
             };
             polarity.push(asserted);
@@ -177,19 +220,198 @@ pub(crate) fn decide_clause_loop(
                 return Some(CheckResult::Sat(model));
             }
             AtomOutcome::Refuted(refutation) => {
-                let clause = blocking_clause(&refutation, &polarity)?;
+                let (clause, cited) = blocking_clause(&refutation, &polarity)?;
                 if clause.lits().is_empty() {
-                    // Nothing left to block: the abstraction is refuted and this
-                    // arm does not say so.
-                    record_cad_decline(CadDecline::ClauseLoopUnsatUncertified);
-                    return None;
+                    // Nothing left to block: the theory refuted the atoms under
+                    // this polarity with an EMPTY core. The empty clause goes
+                    // into the certificate like any other lemma and the DRAT
+                    // proof closes on it immediately.
+                    lemmas.push(TheoryLemma::new(clause, polarity, cited, refutation));
+                    return certify_unsat(arena, assertions, &skeleton, lemmas, deadline);
                 }
-                sat.add_clause(clause).ok()?;
+                sat.add_clause(clause.clone()).ok()?;
+                lemmas.push(TheoryLemma::new(clause, polarity, cited, refutation));
             }
         }
     }
     record_cad_decline(CadDecline::ClauseLoopBudget);
+    record_clause_decline(CadDecline::ClauseLoopBudget);
     None
+}
+
+/// Turn a refuted abstraction into a CHECKED `unsat`, or into a typed decline.
+///
+/// Three things happen here and their order is the argument:
+///
+/// 1. The certificate is assembled from the gate table, the assertion roots and
+///    the lemmas the loop collected.
+/// 2. The clause set is derived from it and handed to the PROOF-PRODUCING core
+///    ([`solve_with_drat_proof_within`]) -- a second, independent solve. The
+///    incremental solver found the refutation; it does not also get to be the
+///    evidence for it.
+/// 3. [`check_clause_refutation`] must accept. It re-runs the cell checker on
+///    every lemma, re-walks the assertions against the gate table, and checks
+///    the DRAT proof.
+///
+/// Any of the three failing is a DECLINE. The verdict is dropped, never
+/// weakened, and the query falls through to the rest of the ladder.
+fn certify_unsat(
+    arena: &TermArena,
+    assertions: &[TermId],
+    skeleton: &Skeleton,
+    lemmas: Vec<TheoryLemma>,
+    deadline: Option<Instant>,
+) -> Option<CheckResult> {
+    let cert = prove_certificate(skeleton, lemmas, deadline)?;
+    match check_clause_refutation(arena, assertions, &cert) {
+        Ok(stats) => {
+            LAST_CLAUSE_CHECK.with(|slot| slot.set(Some(stats)));
+            Some(CheckResult::Unsat)
+        }
+        Err(_failure) => {
+            record_cad_decline(CadDecline::ClauseLoopCertificateRejected);
+            record_clause_decline(CadDecline::ClauseLoopCertificateRejected);
+            None
+        }
+    }
+}
+
+/// Assemble the certificate and attach its DRAT proof, or decline.
+///
+/// Split out of [`certify_unsat`] so the adversarial fixtures can obtain a LIVE
+/// certificate -- one the producer really built for a query the route really
+/// refutes -- damage exactly one part of it, and require a named rejection. A
+/// fixture that assembled its own certificate would be testing the checker
+/// against a shape the producer never emits.
+fn prove_certificate(
+    skeleton: &Skeleton,
+    lemmas: Vec<TheoryLemma>,
+    deadline: Option<Instant>,
+) -> Option<ClauseRefutation> {
+    let mut cert = ClauseRefutation::new(
+        skeleton.atoms.clone(),
+        skeleton.gates.clone(),
+        skeleton.roots.clone(),
+        lemmas,
+        Vec::new(),
+    );
+    let Some(formula) = formula_of(&cert) else {
+        record_cad_decline(CadDecline::ClauseLoopCertificateRejected);
+        record_clause_decline(CadDecline::ClauseLoopCertificateRejected);
+        return None;
+    };
+    match solve_with_drat_proof_within(&formula, deadline) {
+        ProofSolveOutcome::Unsat(proof) => cert.set_drat(proof),
+        // The proof core found a MODEL of the clause set the incremental solver
+        // called unsat. That is a disagreement between two solvers, and the
+        // honest response is to decide nothing -- not to believe either.
+        ProofSolveOutcome::Sat(_) => {
+            record_cad_decline(CadDecline::ClauseLoopCertificateRejected);
+            record_clause_decline(CadDecline::ClauseLoopCertificateRejected);
+            return None;
+        }
+        ProofSolveOutcome::ResourceOut | ProofSolveOutcome::Interrupted => {
+            record_cad_decline(CadDecline::ClauseLoopBudget);
+            record_clause_decline(CadDecline::ClauseLoopBudget);
+            return None;
+        }
+    }
+    Some(cert)
+}
+
+/// Run the loop and hand back the PROVED certificate instead of a verdict.
+///
+/// For the adversarial fixtures only; nothing in dispatch calls it. It runs the
+/// same loop `decide_clause_loop` runs and stops one step short of the checker,
+/// so a fixture damages the real article.
+pub(crate) fn certificate_for_testing(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Option<ClauseRefutation> {
+    let skeleton = Skeleton::build(arena, assertions)?;
+    if skeleton.atoms.len() > MAX_CLAUSE_ATOMS {
+        return None;
+    }
+    let mut sat = IncrementalSat::new();
+    sat.reserve(skeleton.next_var).ok()?;
+    for clause in &skeleton.clauses {
+        sat.add_clause(clause.clone()).ok()?;
+    }
+    let mut lemmas: Vec<TheoryLemma> = Vec::new();
+    for _round in 0..MAX_CLAUSE_LOOP_ROUNDS {
+        let model = match sat.solve(None) {
+            Ok(SatResult::Sat(assignment)) => assignment,
+            Ok(SatResult::Unsat(_)) => {
+                return prove_certificate(&skeleton, lemmas, deadline);
+            }
+            Ok(SatResult::Unknown(_)) | Err(_) => return None,
+        };
+        let values = model.values();
+        let mut conj: Vec<CertAtom> = Vec::with_capacity(skeleton.atoms.len());
+        let mut polarity: Vec<bool> = Vec::with_capacity(skeleton.atoms.len());
+        for (i, atom) in skeleton.atoms.iter().enumerate() {
+            let asserted = values.get(i).copied()?;
+            polarity.push(asserted);
+            conj.push(if asserted {
+                atom.clone()
+            } else {
+                CertAtom::new(atom.cmp().negate(), atom.poly().clone())
+            });
+        }
+        match decide_atoms(&conj, deadline)? {
+            // A satisfiable query has no certificate to damage. That is a real
+            // answer for a fixture to assert on, not a failure.
+            AtomOutcome::Sat(_) => return None,
+            AtomOutcome::Refuted(refutation) => {
+                let (clause, cited) = blocking_clause(&refutation, &polarity)?;
+                let empty = clause.lits().is_empty();
+                if !empty {
+                    sat.add_clause(clause.clone()).ok()?;
+                }
+                lemmas.push(TheoryLemma::new(clause, polarity, cited, refutation));
+                if empty {
+                    return prove_certificate(&skeleton, lemmas, deadline);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Check a live certificate after exactly one named mutation.
+///
+/// The fixture surface. Returns `None` when the query produced no certificate
+/// (so a fixture can tell "nothing to damage" from "the checker accepted"), and
+/// otherwise `Ok(stats)` or `Err(failure-name)`.
+pub(crate) fn certificate_probe_for_testing(
+    arena: &TermArena,
+    assertions: &[TermId],
+    mutation: &str,
+) -> Option<Result<ClauseCheckStats, String>> {
+    let mut cert = certificate_for_testing(arena, assertions, None)?;
+    if !apply_mutation(&mut cert, mutation) {
+        // A mutation that silently did nothing would turn the fixture into a
+        // measurement of the mutator. Say so instead.
+        return Some(Err(format!("mutation-not-applicable:{mutation}")));
+    }
+    Some(check_clause_refutation(arena, assertions, &cert).map_err(|f| f.name().to_string()))
+}
+
+thread_local! {
+    /// What the clause-loop checker EXAMINED on the last `unsat` this route
+    /// emitted, or `None` if the last decision produced none.
+    ///
+    /// Same reason `nra_single_cell` keeps one: a fuzz that counts `unsat`
+    /// verdicts cannot tell an accepted certificate from a checker that stopped
+    /// looking, and this is what lets it assert the second.
+    static LAST_CLAUSE_CHECK: core::cell::Cell<Option<ClauseCheckStats>> =
+        const { core::cell::Cell::new(None) };
+}
+
+/// The stats from the last accepted clause-loop certificate.
+pub(crate) fn last_clause_check() -> Option<ClauseCheckStats> {
+    LAST_CLAUSE_CHECK.with(core::cell::Cell::get)
 }
 
 /// The clause that forbids the assignment a covering refuted.
@@ -204,7 +426,10 @@ pub(crate) fn decide_clause_loop(
 /// Falls back to the whole assignment if the covering cites nothing, which
 /// cannot happen for an accepted covering (every leaf cell is closed by an atom)
 /// but is the conservative direction if it ever does.
-fn blocking_clause(refutation: &CellRefutation, polarity: &[bool]) -> Option<CnfClause> {
+fn blocking_clause(
+    refutation: &CellRefutation,
+    polarity: &[bool],
+) -> Option<(CnfClause, Vec<usize>)> {
     let mut cited: Vec<usize> = Vec::new();
     collect_cited(refutation.root(), &mut cited);
     cited.sort_unstable();
@@ -213,7 +438,7 @@ fn blocking_clause(refutation: &CellRefutation, polarity: &[bool]) -> Option<Cnf
         cited = (0..polarity.len()).collect();
     }
     let mut lits: Vec<CnfLit> = Vec::with_capacity(cited.len());
-    for i in cited {
+    for &i in &cited {
         let asserted = *polarity.get(i)?;
         let var = CnfVar::new(i).ok()?;
         lits.push(if asserted {
@@ -222,7 +447,7 @@ fn blocking_clause(refutation: &CellRefutation, polarity: &[bool]) -> Option<Cnf
             CnfLit::positive(var)
         });
     }
-    Some(CnfClause::new(lits))
+    Some((CnfClause::new(lits), cited))
 }
 
 /// Every atom index a covering tree names as the reason for a cell.
@@ -246,6 +471,14 @@ struct Skeleton {
     atoms: Vec<CertAtom>,
     /// The CNF, including the unit clauses asserting each assertion.
     clauses: Vec<CnfClause>,
+    /// One Tseitin gate definition per gate variable, in allocation order.
+    ///
+    /// The CERTIFICATE carries this and not [`Self::clauses`]: the checker
+    /// derives the clauses from the table itself, so there is nowhere for a
+    /// producer to put a clause the table does not justify (ADR-2131).
+    gates: Vec<GateDef>,
+    /// The literal asserted for each original assertion, in order.
+    roots: Vec<CnfLit>,
     /// One past the highest variable index used.
     next_var: usize,
 }
@@ -254,11 +487,13 @@ impl Skeleton {
     fn build(arena: &TermArena, assertions: &[TermId]) -> Option<Self> {
         if assertions.is_empty() {
             record_cad_decline(CadDecline::ClauseLoopShape);
+            record_clause_decline(CadDecline::ClauseLoopShape);
             return None;
         }
         let mut b = Builder {
             atoms: Vec::new(),
             clauses: Vec::new(),
+            gates: Vec::new(),
             next_var: 0,
             memo: BTreeMap::new(),
         };
@@ -268,17 +503,22 @@ impl Skeleton {
         // cleaner but would walk the term twice; instead gates are allocated
         // from a HIGH base that no atom can reach, which is what the cap buys.
         b.next_var = MAX_CLAUSE_ATOMS;
+        let mut roots: Vec<CnfLit> = Vec::with_capacity(assertions.len());
         for &a in assertions {
             let lit = b.encode(arena, a)?;
             b.clauses.push(CnfClause::new(vec![lit]));
+            roots.push(lit);
         }
         if b.atoms.is_empty() {
             record_cad_decline(CadDecline::ClauseLoopShape);
+            record_clause_decline(CadDecline::ClauseLoopShape);
             return None;
         }
         Some(Self {
             atoms: b.atoms,
             clauses: b.clauses,
+            gates: b.gates,
+            roots,
             next_var: b.next_var,
         })
     }
@@ -287,6 +527,7 @@ impl Skeleton {
 struct Builder {
     atoms: Vec<CertAtom>,
     clauses: Vec<CnfClause>,
+    gates: Vec<GateDef>,
     next_var: usize,
     memo: BTreeMap<TermId, CnfLit>,
 }
@@ -304,6 +545,7 @@ impl Builder {
         } else {
             if self.atoms.len() >= MAX_CLAUSE_ATOMS {
                 record_cad_decline(CadDecline::ClauseLoopShape);
+                record_clause_decline(CadDecline::ClauseLoopShape);
                 return None;
             }
             self.atoms.push(atom);
@@ -363,6 +605,7 @@ impl Builder {
             self.atom_lit(atom)
         } else {
             record_cad_decline(CadDecline::ClauseLoopShape);
+            record_clause_decline(CadDecline::ClauseLoopShape);
             None
         }
     }
@@ -375,44 +618,35 @@ impl Builder {
         Some(out)
     }
 
+    /// Emit a gate and the clauses its definition contributes.
+    ///
+    /// The clauses come from [`gate_clauses`] -- the SAME function the checker
+    /// derives them with -- so the certificate's gate table and the formula the
+    /// loop actually searched cannot describe different things (ADR-2131).
+    fn emit_gate(&mut self, kind: GateKind, inputs: Vec<CnfLit>) -> Option<CnfLit> {
+        let var = self.fresh()?;
+        let def = GateDef::new(var, kind, inputs);
+        self.clauses.extend(gate_clauses(&def));
+        self.gates.push(def);
+        Some(CnfLit::positive(var))
+    }
+
     fn gate_and(&mut self, kids: &[CnfLit]) -> Option<CnfLit> {
         if kids.len() == 1 {
             return Some(kids[0]);
         }
-        let g = CnfLit::positive(self.fresh()?);
-        let mut back = Vec::with_capacity(kids.len() + 1);
-        back.push(g);
-        for &k in kids {
-            self.clauses.push(CnfClause::new(vec![g.negated(), k]));
-            back.push(k.negated());
-        }
-        self.clauses.push(CnfClause::new(back));
-        Some(g)
+        self.emit_gate(GateKind::And, kids.to_vec())
     }
 
     fn gate_or(&mut self, kids: &[CnfLit]) -> Option<CnfLit> {
         if kids.len() == 1 {
             return Some(kids[0]);
         }
-        let g = CnfLit::positive(self.fresh()?);
-        let mut fwd = Vec::with_capacity(kids.len() + 1);
-        fwd.push(g.negated());
-        for &k in kids {
-            self.clauses.push(CnfClause::new(vec![g, k.negated()]));
-            fwd.push(k);
-        }
-        self.clauses.push(CnfClause::new(fwd));
-        Some(g)
+        self.emit_gate(GateKind::Or, kids.to_vec())
     }
 
     fn gate_xor(&mut self, a: CnfLit, b: CnfLit) -> Option<CnfLit> {
-        let g = CnfLit::positive(self.fresh()?);
-        self.clauses.push(CnfClause::new(vec![g.negated(), a, b]));
-        self.clauses
-            .push(CnfClause::new(vec![g.negated(), a.negated(), b.negated()]));
-        self.clauses.push(CnfClause::new(vec![g, a.negated(), b]));
-        self.clauses.push(CnfClause::new(vec![g, a, b.negated()]));
-        Some(g)
+        self.emit_gate(GateKind::Xor, vec![a, b])
     }
 }
 
@@ -480,26 +714,67 @@ mod tests {
     }
 
     /// An unsatisfiable combination whose refutation needs cells from **two
-    /// different branches** of the disjunction.
+    /// different branches** of the disjunction, answered with a CHECKED
+    /// certificate (ADR-2131).
     ///
     /// Neither branch is refutable without looking at it: `x > 1 ∧ x < 0` dies
     /// on its own atoms and so does `x < -1 ∧ x > 0`, and the loop must refute
-    /// BOTH before the abstraction closes. The arm withholds the verdict, so
-    /// what is asserted is the CAUSE -- `clause-loop-unsat-uncertified` means
-    /// "the loop reached a refutation and this arm does not emit it", which is a
-    /// stronger statement than `unknown`.
+    /// BOTH before the abstraction closes.
+    ///
+    /// Under ADR-2126 this asserted the CAUSE, because the verdict was withheld.
+    /// It now asserts the verdict AND that the checker examined something, which
+    /// is strictly more: an acceptance with zero lemmas and zero cells is the
+    /// vacuous pass a bare `Unsat` cannot distinguish.
     #[test]
-    fn an_unsatisfiable_combination_needing_two_branches_reaches_a_refutation() {
+    fn an_unsatisfiable_combination_needing_two_branches_is_certified() {
         let script = format!(
             "{DECL2}\
              (assert (or (and (> x 1) (< x 0)) (and (< x (- 1)) (> x 0))))\n\
              (assert (= y 0))\n(check-sat)\n"
         );
         let (r, cause) = decide(&script);
-        assert!(r.is_none(), "the sat-only arm must not answer: {r:?}");
-        assert_eq!(
-            cause, "clause-loop-unsat-uncertified",
-            "the loop must have REACHED the refutation, not merely given up"
+        assert!(
+            matches!(r, Some(CheckResult::Unsat)),
+            "expected a certified unsat, got {r:?} ({cause})"
+        );
+        let stats = last_clause_check().expect("an accepted certificate");
+        assert!(
+            stats.lemmas >= 2,
+            "the refutation must need BOTH branches: {stats:?}"
+        );
+        assert!(
+            stats.lemma_cells > 0 && stats.drat_steps > 0,
+            "the checker must have examined cells AND a proof: {stats:?}"
+        );
+        assert!(
+            stats.roots > 0 && stats.gates > 0,
+            "the abstraction walk must have examined the gate table: {stats:?}"
+        );
+    }
+
+    /// A satisfiable Boolean combination in which the two branches SHARE a
+    /// variable and only one branch is infeasible.
+    ///
+    /// The extension ADR-2131 required over
+    /// [`a_satisfiable_combination_is_not_refuted`]: there the branches are
+    /// independent, so a loop that confused which atoms a covering cited could
+    /// still stumble onto the right answer. Here `x` appears in BOTH branches
+    /// and `y` couples them, so a blocking clause naming the wrong atom blocks
+    /// the LIVE branch and the loop refutes a satisfiable query.
+    ///
+    /// The assertion is `not Unsat` rather than `Sat`, deliberately: a decline
+    /// is a permitted answer on this route and a WRONG ANSWER is not.
+    #[test]
+    fn a_shared_variable_with_one_dead_branch_is_never_refuted() {
+        let script = format!(
+            "{DECL2}\
+             (assert (or (and (> x 1) (< x 0)) (and (> x 1) (< x 5))))\n\
+             (assert (and (> y x) (< y 6)))\n(check-sat)\n"
+        );
+        let (r, cause) = decide(&script);
+        assert!(
+            !matches!(r, Some(CheckResult::Unsat)),
+            "a satisfiable query must never be refuted: {r:?} ({cause})"
         );
     }
 

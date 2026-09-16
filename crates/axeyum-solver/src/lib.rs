@@ -152,6 +152,7 @@ macro_rules! full_modules {
         mod nia_univariate_cert;
         mod nra;
         mod nra_cell_cert;
+        mod nra_clause_cert;
         mod nra_clause_loop;
         mod nra_even_power;
         mod nra_fbbt;
@@ -1479,6 +1480,54 @@ macro_rules! full_exports {
         #[must_use]
         pub fn single_cell_decline_cause() -> &'static str {
             crate::nra_real_root::cad_decline().name()
+        }
+
+        /// The cause the CLAUSE LOOP last recorded, as a stable key (ADR-2131).
+        ///
+        /// A separate slot from [`single_cell_decline_cause`], and separate for a
+        /// measured reason: the shared slot is sticky and is already full of
+        /// `non-conjunctive` by the time the loop runs, so every one of the
+        /// loop's own causes was unobservable before this existed.
+        #[doc(hidden)]
+        #[must_use]
+        pub fn clause_loop_decline_cause() -> &'static str {
+            crate::nra_real_root::clause_decline().name()
+        }
+
+        /// Check a clause-loop certificate after exactly one named mutation
+        /// (ADR-2131).
+        ///
+        /// `mutation` is `"none"` for the control, or one of `"lemma-cell"`,
+        /// `"lemma-clause"`, `"drat"`, `"gate-kind"`, `"root"`,
+        /// `"gate-shadow"`. Returns `None` when the query produced no
+        /// certificate at all, `Ok(stats)` when the checker accepted, and
+        /// `Err(name)` with the ONE guard that fired.
+        ///
+        /// This is NOT a dispatch entry point and nothing in the solver calls
+        /// it. It exists because a certificate a fixture assembles itself tests
+        /// the checker against a shape the producer never emits; this hands the
+        /// fixture the real article.
+        #[doc(hidden)]
+        #[must_use]
+        pub fn clause_loop_certificate_probe(
+            arena: &axeyum_ir::TermArena,
+            assertions: &[axeyum_ir::TermId],
+            mutation: &str,
+        ) -> Option<Result<crate::nra_clause_cert::ClauseCheckStats, String>> {
+            crate::nra_real_root::reset_cad_decline();
+            crate::nra_clause_loop::certificate_probe_for_testing(arena, assertions, mutation)
+        }
+
+        /// What the clause-loop CERTIFICATE checker examined on the last `unsat`
+        /// this route emitted, or `None` if the last decision produced none.
+        ///
+        /// A fuzz that counts `unsat` verdicts cannot tell an accepted
+        /// certificate from a checker that stopped looking. This is what lets it
+        /// assert the second — see `nra_clause_cert::ClauseCheckStats`.
+        #[doc(hidden)]
+        #[must_use]
+        pub fn clause_loop_last_check() -> Option<crate::nra_clause_cert::ClauseCheckStats> {
+            crate::nra_clause_loop::last_clause_check()
         }
 
         /// What the cell-covering checker EXAMINED on the last `unsat` the
