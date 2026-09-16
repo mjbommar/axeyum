@@ -4469,6 +4469,28 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "ACCOUNTING, NOT ADMISSION. Until 2026-08-21 the same constant was an admission width-gate; the doc records why that was the wrong direction. It now only decides whether a retained core counts against `MAX_DYNAMIC_LARGE_CORE_LITERALS`. Registered because a reader who greps the name will otherwise assume the old contract.",
     },
     ConfigEntry {
+        name: "AXEYUM_LRA_WARM_CUBE",
+        module: "crates/axeyum-solver/src/dpll_t.rs",
+        value: "off",
+        unit: "lever: `on` decides the offline lazy-SMT loop's cubes on a persistent tableau and basis",
+        protects: Protects::Time,
+        on_exceed: OnExceed::SearchEvent,
+        signal: Signal::None,
+        guarded_by: "lra_online::tests::a_warm_cube_sequence_decides_exactly_what_a_cold_one_does_and_keeps_the_invariant -- every cube of a 32-cube sequence is compared against a theory rebuilt for that cube alone, and the tableau invariant (every basic variable's value equals its row) is required to hold Some(true) after each; plus lra_online::tests::a_stale_bound_from_a_popped_cube_would_refute_a_satisfiable_one, the soundness-negative pair",
+        env_override: Some("AXEYUM_LRA_WARM_CUBE"),
+        justification: dated(
+            "docs/research/09-decisions/adr-2125-a-warm-simplex-basis-across-sat-decisions.md",
+            "2026-09-16",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/dpll_t.rs",
+                "warm_cube_enabled",
+            )],
+            &[adr("ADR-2125")],
+        ),
+        note: "ADR-2125. [ADR-2111] measured `cube_simplex_calls=651` with `cube_matrices=0` on one `QF_LRA` row -- 651 simplex solves FROM SCRATCH, one per SAT model -- against four references that keep the basis across every backjump and trail only the bounds (z3 `lar_core_solver::push` saves the strategy scalar and the column types and NOTHING else, `lar_core_solver.h:123-130`, and `m_r_pushed_basis` is declared at `:35` and referenced nowhere in `src/`; cvc5 gives its bound journal the SAT context and default-constructs the tableau without one, `theory_arith_private.cpp:117,122`). `on` builds ONE tableau per entry into the loop and moves only row bounds between cubes. It ships `off` until the A/B is read. The decider can only SHORTCUT -- every outcome it does not produce falls through to exactly the cold decision that would have run -- so the risk it carries is cost, not correctness, and the cost is what the A/B prices.",
+    },
+    ConfigEntry {
         name: "MAX_CERTIFIABLE_BOOLS",
         module: "crates/axeyum-solver/src/dpll_t.rs",
         value: "22",
@@ -6355,10 +6377,17 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "",
         env_override: Some("AXEYUM_NRA_CAD"),
         justification: dated(
-            "docs/research/09-decisions/adr-2121-single-cell-cad-for-nra.md",
-            "2026-09-15",
+            "docs/research/09-decisions/adr-2126-exact-delineability-and-the-clause-loop-for-nra.md",
+            "2026-09-16",
             None,
-            // Two measurements now. ADR-2110: "on the 83 QF_NRA files the
+            // RE-DATED by ADR-2126, and the re-dating is a re-measurement and not
+            // a refresh: that ADR ran the SAME interleaved A/B protocol on the
+            // same 200-file QF_NRA list with this entry's value as arm A, and arm
+            // A scored 121 -- the number ADR-2121 shipped this default on. A
+            // basis that still reproduces is the only thing that makes a date
+            // move mean anything.
+            //
+            // Three measurements now. ADR-2110: "on the 83 QF_NRA files the
             // 2026-09-15 board leaves undecided, the `nra-real-root` rung
             // declines with a cause that is NOT the cell cap". ADR-2121 adds the
             // `single-cell` arm, whose `cell_cap` is IDENTICAL to `default`'s --
@@ -6377,11 +6406,20 @@ pub static REGISTRY: &[ConfigEntry] = &[
                     "decide_single_cell",
                     "crates/axeyum-solver/src/nra_single_cell.rs",
                 ),
+                live(
+                    "check_delineability_exact",
+                    "crates/axeyum-solver/src/nra_cell_cert.rs",
+                ),
+                live(
+                    "decide_clause_loop",
+                    "crates/axeyum-solver/src/nra_clause_loop.rs",
+                ),
                 doc("bench-results/nra-trace-20260915/README.md"),
                 doc("bench-results/nra-single-cell-20260915/README.md"),
+                doc("bench-results/nra-cell-exact-20260916/README.md"),
             ],
         ),
-        note: "Whether the N-variable CAD gets the shipped cell budget or 16x it. DEFAULT is the shipped arm and is byte-identical to the pre-ADR-2110 engine (`CadPolicy::DEFAULT.cell_cap` IS `MAX_CAD_CELLS`), so the A/B is one binary and one env var. Raising the cap can only let the decomposition VISIT more cells before declining, and a definite verdict is returned only after COMPLETE coverage of the arrangement -- so `wide` can turn an `unknown` into a verdict and can never flip one; `the_wide_arm_only_raises_the_cap` holds that the two arms differ in exactly the cap and nothing else. It ships OFF because the cost was unmeasured when it landed, not because the verdict was in doubt. The lever exists because the ADR-2110 census could not otherwise tell a cell-cap decline from a projection decline: measured 2026-09-15, the exact decider's OWN recorded cause on the largest bucket is `non-conjunctive` and `projection`, NOT `cell-budget`, which is what this lever was built to test and is why the A/B is expected to move little. Read the A/B in `bench-results/nra-trace-20260915/README.md` before raising the default. ADR-2121 adds a THIRD arm, `single-cell`, which leaves the cap at `MAX_CAD_CELLS` and instead offers the query to `nra_single_cell::decide_single_cell` -- the model-constructing CDCAC route that builds one cell per conflict instead of enumerating the arrangement -- before the enumerative decomposition. Its `cell_cap` is IDENTICAL to `default`'s, so an A/B between `default` and `single-cell` isolates the ROUTE and not the budget, and the two levers do not interact. It also ships OFF, and its `unsat` is emitted only after `nra_cell_cert::check_cell_refutation` accepts the covering, so a bug in it declines rather than answers. Read `bench-results/nra-single-cell-20260915/README.md` for that arm's A/B. ADR-2121 then MOVED THIS DEFAULT, from `CadPolicy::DEFAULT` to `CadPolicy::SINGLE_CELL_SAT`, which is the first time this entry's shipped value has changed. The measured basis: QF_NRA 117 -> 121 (+4), 4 STABLE-GAIN and 0 STABLE-LOSS on a three-pass recheck, 0 sat<->unsat flips across QF_NRA + QF_NIA + a QF_LRA control that moved 0 rows, and 0 disagreements against declared `:status` over 593 comparable verdicts. The decisive fact is not the +4 but WHICH verdicts it is: all four are `sat`, a rational model replayed through the ground evaluator against the original assertions, which is exact. The route's `unsat` half -- gated on `nra_cell_cert`'s SAMPLING delineability check -- is withheld on this arm as `CadDecline::UnsatWithheldSampledDelineability` and reaches no default. The cell cap is unchanged, so this is a route change and not a budget change, and `AXEYUM_NRA_CAD=default` still selects the pre-ADR-2121 engine through an EXPLICIT arm in `parse_cad_arm` rather than the catch-all.",
+        note: "Whether the N-variable CAD gets the shipped cell budget or 16x it. DEFAULT is the shipped arm and is byte-identical to the pre-ADR-2110 engine (`CadPolicy::DEFAULT.cell_cap` IS `MAX_CAD_CELLS`), so the A/B is one binary and one env var. Raising the cap can only let the decomposition VISIT more cells before declining, and a definite verdict is returned only after COMPLETE coverage of the arrangement -- so `wide` can turn an `unknown` into a verdict and can never flip one; `the_wide_arm_only_raises_the_cap` holds that the two arms differ in exactly the cap and nothing else. It ships OFF because the cost was unmeasured when it landed, not because the verdict was in doubt. The lever exists because the ADR-2110 census could not otherwise tell a cell-cap decline from a projection decline: measured 2026-09-15, the exact decider's OWN recorded cause on the largest bucket is `non-conjunctive` and `projection`, NOT `cell-budget`, which is what this lever was built to test and is why the A/B is expected to move little. Read the A/B in `bench-results/nra-trace-20260915/README.md` before raising the default. ADR-2121 adds a THIRD arm, `single-cell`, which leaves the cap at `MAX_CAD_CELLS` and instead offers the query to `nra_single_cell::decide_single_cell` -- the model-constructing CDCAC route that builds one cell per conflict instead of enumerating the arrangement -- before the enumerative decomposition. Its `cell_cap` is IDENTICAL to `default`'s, so an A/B between `default` and `single-cell` isolates the ROUTE and not the budget, and the two levers do not interact. It also ships OFF, and its `unsat` is emitted only after `nra_cell_cert::check_cell_refutation` accepts the covering, so a bug in it declines rather than answers. Read `bench-results/nra-single-cell-20260915/README.md` for that arm's A/B. ADR-2121 then MOVED THIS DEFAULT, from `CadPolicy::DEFAULT` to `CadPolicy::SINGLE_CELL_SAT`, which is the first time this entry's shipped value has changed. The measured basis: QF_NRA 117 -> 121 (+4), 4 STABLE-GAIN and 0 STABLE-LOSS on a three-pass recheck, 0 sat<->unsat flips across QF_NRA + QF_NIA + a QF_LRA control that moved 0 rows, and 0 disagreements against declared `:status` over 593 comparable verdicts. The decisive fact is not the +4 but WHICH verdicts it is: all four are `sat`, a rational model replayed through the ground evaluator against the original assertions, which is exact. The route's `unsat` half was withheld on this arm as `CadDecline::UnsatWithheldByArm` (ADR-2121 spelled that cause `UnsatWithheldSampledDelineability`, after the reason it withheld) and reaches no default. The cell cap is unchanged, so this is a route change and not a budget change, and `AXEYUM_NRA_CAD=default` still selects the pre-ADR-2121 engine through an EXPLICIT arm in `parse_cad_arm` rather than the catch-all. ADR-2126 then changed WHAT THE WITHHELD HALF IS WORTH WITHHOLDING, without touching any arm: `nra_cell_cert`'s delineability test is no longer sampling. Check 6a proves delineability over the whole cell exactly -- leading coefficients, discriminants and pairwise resultants required to be root-free on the cell by Sturm counting against its ALGEBRAIC endpoints -- the old probe survives as 6b, an independent cross-check that can now only fire on a disagreement between two implementations of one property, and 6c names the argument's scope boundary and REJECTS a generalisation resting on another generalisation (`NestedOpenGeneralization`), which the sampling check silently assumed. So `single-cell`'s `unsat` no longer rests on a finite sample, and the A/B between `single-cell-sat` and `single-cell` prices that half on its own. ADR-2126 also adds a FIFTH arm, `clause-loop`, which differs from `single-cell-sat` in exactly one field (`clause_loop`) and offers the query to `nra_clause_loop::decide_clause_loop` -- CDCL(T) over the sign atoms -- only where the conjunctive route just recorded `non-conjunctive`, which is 12 of ADR-2121's 24 in-bounds files. Its `sat` is a model replayed against the ORIGINAL assertions, so nothing in the Boolean layer is load-bearing for it; its `unsat` is withheld as `ClauseLoopUnsatUncertified` because it would rest on the Tseitin encoding, the blocking clauses and the SAT core's refutation, none of which a checker in this tree can yet read. Read `bench-results/nra-cell-exact-20260916/README.md`.",
     },
     ConfigEntry {
         name: "COARSEN_MAX_EXP",
@@ -8242,6 +8280,28 @@ pub static REGISTRY: &[ConfigEntry] = &[
             ],
         ),
         note: "STALE IN ITS OWN UNIT SINCE ADR-2111 (2026-09-15), AND THAT IS THE FIRST THING TO READ HERE: this bound counts CELLS and the tableau no longer has cells. `Tableau::row_val` is now a sparse vector aligned with `row_nz`, so a tableau costs `nnz * 40` bytes and not `m * (nvars+m) * 32`; over the 74 QF_LRA rows [ADR-2055] profiled, the median was 34,555 nonzeros in 19,198,877 cells, so the same structure that priced at 614 MB in this unit prices at 1.4 MB in the real one -- a factor of 439 at the median, 3,472 at the density extreme. Four reference implementations of this same algorithm were read for ADR-2111 and NONE of them stores a dense tableau (z3 `static_matrix.h:88-89`, cvc5 `matrix.h:56-196`, OpenSMT `Tableau.h:62,118-119`, SMTInterpol `TableauxRow.java:22-34`). A cell count is therefore no longer a memory bound at all: it is an upper bound on a quantity the program does not allocate, so it can only refuse systems that would fit. It is left in place rather than deleted because it still bounds the PIVOT'S WORK -- `select_entering` and the row combination are O(nnz), but the number of cells is what bounds how large nnz can grow under fill-in -- and because ADR-2055 measured that capping it costs EIGHTEEN clean exits, a result that was about routing rather than about bytes and is not invalidated by the representation change. Whether a nonzero-count bound should replace it needs the fill-in measurement ADR-2111 did not take. Everything below this sentence is the 2026-09-08 reading, preserved because the routing half of it still holds. About 128 MB at two `i128`s per cell. `Incremental::new` returns `None`, so the caller falls back to Fourier-Motzkin. Deterministic (no clock, no resident-set probe), which is what lets it be part of a reproducible verdict. THE GAP `lra_online::BYTES_PER_ADMITTED_ATOM`'s note reports -- this bound is checked ONLY in `Incremental::new`, while `feasible` (what `lra::simplex_fallback` calls) consults no cell bound at all -- was MEASURED on 2026-09-08 over the committed 200-file QF_LRA list, 24 s and 8 GiB per file, with the instrumented binary named in the doc. 36 files reach `simplex_fallback` at all (3,129 calls); SEVEN build a tableau over this cap, at 4.2 to 8.8 million cells, and all seven end `unknown`. So adding the check here would refuse a population that decides nothing today -- and would buy nothing either, since nothing runs after `lra` on those files. NOT ADDED, and the reason is the second half of the measurement: the largest tableau observed is 8.8 M cells (282 MB), 30x smaller than the 360 M the earlier reading found, because `lra::simplex_admission` (2026-09-08) now prices that allocation against `memory_limit_mb` BEFORE `feasible` is called. At 8 GiB that gate admits 268 M cells, so the two bounds on one allocation differ by 67x in opposite units -- a fixed cell count and a memory budget. The residual unguarded caller is one that sets NO memory limit; a fixed 4 M cap is the wrong instrument for it, and choosing the right one needs its own ADR rather than a line here.",
+    },
+    ConfigEntry {
+        name: "MAX_WARM_CUBE_NONZEROS",
+        module: "crates/axeyum-solver/src/simplex.rs",
+        value: "400_000",
+        unit: "stored nonzeros (~40 B each, so 16 MiB)",
+        protects: Protects::Memory,
+        on_exceed: OnExceed::DeclineRoute,
+        signal: Signal::ToCaller,
+        guarded_by: "",
+        env_override: None,
+        justification: dated(
+            "docs/research/09-decisions/adr-2125-a-warm-simplex-basis-across-sat-decisions.md",
+            "2026-09-16",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/simplex.rs",
+                "MAX_WARM_CUBE_NONZEROS",
+            )],
+            &[adr("ADR-2125")],
+        ),
+        note: "ADR-2125, and it exists because `MAX_TABLEAU_CELLS` above it is in the WRONG CURRENCY for the structure it guards. Since ADR-2111 the tableau stores `nnz` pairs, not dense cells, and on `QF_LRA/sc/sc-39.base.cvc.smt2` the two disagree by three orders of magnitude -- 8,797,712 cells against 4,688 nonzeros, 188 KB of real storage. The dense cap therefore refused the warm cube engine outright while the cold path, which consults it only under the default-off `AXEYUM_LRA_CELL_CAP`, built that identical system 839 times; the ADR-2125 lever's first mechanism check read `warm_cube_checks=0` in BOTH arms because of it. The value is not new: it is ADR-2111's own `TableauReserve::Sparse` figure, 11.6x ADR-2055's measured median of 34,555 nonzeros on this route and 2.7x its extreme of 147,440. `MAX_TABLEAU_CELLS` is deliberately NOT changed -- it also governs the online engine's admission, and moving it would make an A/B of one lever an A/B of two routes.",
     },
     ConfigEntry {
         name: "DEFAULT_STRING_BOUND",

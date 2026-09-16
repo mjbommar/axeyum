@@ -1,0 +1,37 @@
+population: 200 rows   decided 107   undecided 93
+  reached the lazy-SMT loop (a `; lazy-smt` line):      180
+  of those, built >=1 from-scratch tableau:             68
+  never reached it (silent, NOT zero):                  20
+
+share of wall clock, over the 68 rows that re-solve
+  quantity                              median     min      max
+  tableau CONSTRUCTION only               0.95 %   0.00 %   1.80 %
+  the whole from-scratch call (CEILING)   4.15 %   0.61 %  99.31 %
+    ... plus per-cube linearization      24.21 %   0.93 %  99.58 %
+
+THE LEVER'S CEILING (cube_collect_ms + cube_simplex_ms), over all 153 rows that reach the loop
+  median   0.00 %   min   0.00 %   max  99.58 %
+  rows at or above 10 %: 61 of 153    at or above 25 %: 37
+  restricted to the 73 UNDECIDED rows that reach it: median  23.87 %   min   0.00 %   max  99.58 %
+
+counts, median over the same rows
+  from-scratch tableaux built               148  (max 1543)
+  pivots from a pristine basis            11958  (max 404257)
+  refinement rounds                         148
+  atoms                                    7260
+  cube flips (summed over rounds)           235
+
+cube churn: median 1.79 flipped literals per round against a median 7260 atoms (67 rows with a predecessor)
+
+the ten highest ceilings, by file
+    share   cold_ms  total_ms  builds  file
+   99.31 %    23908     24073       1  QF_LRA/latendresse/ecoliFBAyicesTest-3875-4.smt2
+   95.69 %    23022     24058      42  QF_LRA/miplib/danoint-266.smt2
+   65.27 %     7937     12161      28  QF_LRA/latendresse/ecoliMILPglycerolYices3-50000.smt2
+   28.09 %     6742     24005    1268  QF_LRA/LassoRanker/Ultimate/2013POPL-BenAmGen-Ex4.2.bpl_Iteration1_Lasso_4-pieceTemplate.smt2
+   23.83 %     5720     24007     894  QF_LRA/sc/sc-39.base.cvc.smt2
+   21.82 %     5241     24014     951  QF_LRA/sc/sc-37.base.cvc.smt2
+   21.70 %     5210     24010     841  QF_LRA/sc/sc-35.base.cvc.smt2
+   21.26 %     5108     24030     859  QF_LRA/sc/sc-33.base.cvc.smt2
+   20.64 %     4959     24025    1006  QF_LRA/sc/sc-27.base.cvc.smt2
+   20.32 %     4881     24018    1044  QF_LRA/sc/sc-19.base.cvc.smt2

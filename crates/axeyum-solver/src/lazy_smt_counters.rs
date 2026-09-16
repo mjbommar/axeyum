@@ -463,6 +463,79 @@ pub struct LazySmtCounters {
     /// and an ORDER that no test can see is an order the next refactor undoes.
     pub cube_matrices: u64,
 
+    /// Entries into [`crate::simplex::feasible_within_sparse`] — the FROM-SCRATCH
+    /// simplex path, which allocates a new tableau, chooses a pristine basis and
+    /// pivots from it.
+    ///
+    /// ADR-2125's ceiling counter. The warm engine
+    /// ([`crate::simplex::Incremental`]) the online CDCL(T) theory drives keeps
+    /// its tableau and basis across asserts and pops; this route builds one per
+    /// cube. [`Self::cube_simplex_calls`] already counted the CALLS, but a call
+    /// is not a REBUILD — the cell cap can decline before any structure is
+    /// allocated, and the same entry point is reachable from the implied-bound
+    /// checker. So this counts the structures actually allocated, and
+    /// [`Self::simplex_cold_build`] prices them against [`Self::simplex_cold`],
+    /// which is the whole solve.
+    ///
+    /// Read the three together: `simplex_cold_build / simplex_cold` is the share
+    /// of a from-scratch solve a warm basis removes OUTRIGHT, and the pivots are
+    /// what it can only shorten.
+    pub simplex_cold_builds: u64,
+    /// Time inside the from-scratch tableau CONSTRUCTION, summed — the part a
+    /// warm basis removes entirely rather than shortens.
+    pub simplex_cold_build: Duration,
+    /// Time inside [`crate::simplex::feasible_within_sparse`] as a whole, summed
+    /// — construction, pivot loop and witness materialization.
+    pub simplex_cold: Duration,
+    /// Pivots performed by the from-scratch solves, summed.
+    ///
+    /// The part a warm basis SHORTENS rather than removes: resuming from a basis
+    /// that is still dual-feasible after a bound change costs the pivots that
+    /// repair the one changed column, not the pivots that reach feasibility from
+    /// a pristine basis.
+    pub simplex_cold_pivots: u64,
+
+    /// Which screen the ADR-2125 warm cube decider got past, or stopped at.
+    ///
+    /// An ENUM and not a count, for [ADR-2045]'s reason: the remedies are
+    /// disjoint. A memory-budget refusal is a number to argue about; a
+    /// no-tableau refusal is a structural ceiling in the wrong currency; a
+    /// deadline refusal is a query that was already lost. Collapsing them into
+    /// "the lever did not run" is what made ADR-2111's inert arm unreadable
+    /// until a mechanism probe was written for it.
+    pub warm_cube_build: WarmCubeBuild,
+    /// Cubes the ADR-2125 warm decider ANSWERED — a verdict, either side.
+    ///
+    /// The mechanism counter. [ADR-2111] shipped a lever whose arm was INERT on
+    /// the population it was aimed at, and recorded that `net +0` from an inert
+    /// arm is indistinguishable from `net +0` from a working one that does not
+    /// help. These five fields are what tells the two apart from the trail
+    /// alone: a run whose `warm_cube_checks` is 0 measured nothing about the
+    /// warm basis, whatever its verdict column says.
+    pub warm_cube_checks: u64,
+    /// Cubes the warm decider DECLINED, which fall through to the cold decision
+    /// that would otherwise have run.
+    ///
+    /// Read against [`Self::warm_cube_checks`]: at a ratio near 1 the lever is
+    /// paying for a warm engine and deciding nothing on it, which is a cost with
+    /// no verdict attached and the shape a `net +0` would otherwise hide.
+    pub warm_cube_declines: u64,
+    /// Row bounds the warm engine has RETRACTED over its whole life.
+    /// Cumulative on the engine, so this is SET rather than added to.
+    pub warm_cube_retractions: u64,
+    /// Row bounds the warm engine has (re-)ASSERTED over its whole life.
+    /// Cumulative on the engine, so this is SET rather than added to.
+    pub warm_cube_assertions: u64,
+    /// Checks that discarded the basis and restarted from the pristine one.
+    ///
+    /// **The tripwire this lever lives or dies by.** A warm basis is only warm
+    /// if it is not being rebuilt, and a rebuild here is invisible in every
+    /// other column: the verdicts are identical, the retraction counts are
+    /// identical, and only the clock moves. Any nonzero reading means the engine
+    /// was not warm for that many checks and the measurement is about something
+    /// else.
+    pub warm_cube_cold_restarts: u64,
+
     /// What the online CDCL(T) LRA probe at the head of the linear loop did.
     ///
     /// The loop below that probe is the WEAK route: offline lazy SMT with total
@@ -473,6 +546,46 @@ pub struct LazySmtCounters {
     /// unsupported skeleton is an encoder gap — so this is recorded as an enum
     /// rather than a count.
     pub online_probe: OnlineProbe,
+}
+
+/// What became of the ADR-2125 warm cube decider's construction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum WarmCubeBuild {
+    /// The lever is off. The default, and the only value that says nothing about
+    /// whether the decider COULD have been built.
+    #[default]
+    Off,
+    /// Built, with a warm tableau. The only value under which the `warm_cube_*`
+    /// counters below mean anything.
+    Built,
+    /// The atom translation hit its wall-clock deadline.
+    Deadline,
+    /// The atom translation hit a normalization ceiling.
+    ResourceLimit,
+    /// The atom translation's projected footprint exceeded its byte budget
+    /// (ADR-1752's screen). NOT raised by ADR-2125: [ADR-2045] raised exactly
+    /// this on exactly this population for 0 newly decided rows and five new
+    /// aborts.
+    MemoryBudget,
+    /// The theory was built but has no warm tableau, so it would have decided on
+    /// Fourier–Motzkin — a DIFFERENT engine, and answering from it would make an
+    /// A/B of this lever an A/B of two engines.
+    NoTableau,
+}
+
+impl WarmCubeBuild {
+    /// The stable token this renders as in the `--trace` line.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            WarmCubeBuild::Off => "off",
+            WarmCubeBuild::Built => "built",
+            WarmCubeBuild::Deadline => "deadline",
+            WarmCubeBuild::ResourceLimit => "resource-limit",
+            WarmCubeBuild::MemoryBudget => "memory-budget",
+            WarmCubeBuild::NoTableau => "no-tableau",
+        }
+    }
 }
 
 /// What the online CDCL(T) LRA probe at the head of
@@ -658,7 +771,10 @@ impl LazySmtCounters {
              cores_full_assignment={} accounted_ms={} \
              cube_flips={} cube_identical={} cube_decisions={} cube_collect_ms={} \
              cube_fm_ms={} cube_fm_declines={} cube_simplex_ms={} cube_simplex_calls={} \
-             cube_matrices={} online_probe={}",
+             cube_matrices={} simplex_cold_builds={} simplex_cold_build_ms={} \
+             simplex_cold_ms={} simplex_cold_pivots={} warm_cube_checks={} \
+             warm_cube_declines={} warm_cube_retractions={} warm_cube_assertions={} \
+             warm_cube_cold_restarts={} warm_cube_build={} online_probe={}",
             self.reading().label(),
             self.lra_entries,
             self.lra_rounds,
@@ -696,6 +812,16 @@ impl LazySmtCounters {
             self.cube_simplex.as_millis(),
             self.cube_simplex_calls,
             self.cube_matrices,
+            self.simplex_cold_builds,
+            self.simplex_cold_build.as_millis(),
+            self.simplex_cold.as_millis(),
+            self.simplex_cold_pivots,
+            self.warm_cube_checks,
+            self.warm_cube_declines,
+            self.warm_cube_retractions,
+            self.warm_cube_assertions,
+            self.warm_cube_cold_restarts,
+            self.warm_cube_build.label(),
             self.online_probe.label(),
         )
     }
@@ -774,6 +900,16 @@ const fn zero_counters() -> LazySmtCounters {
         cube_simplex: Duration::ZERO,
         cube_simplex_calls: 0,
         cube_matrices: 0,
+        simplex_cold_builds: 0,
+        simplex_cold_build: Duration::ZERO,
+        simplex_cold: Duration::ZERO,
+        simplex_cold_pivots: 0,
+        warm_cube_build: WarmCubeBuild::Off,
+        warm_cube_checks: 0,
+        warm_cube_declines: 0,
+        warm_cube_retractions: 0,
+        warm_cube_assertions: 0,
+        warm_cube_cold_restarts: 0,
         online_probe: OnlineProbe::NotProbed,
     }
 }
@@ -1135,6 +1271,60 @@ pub(crate) fn record_cube_stages(
     });
 }
 
+/// One FROM-SCRATCH entry into [`crate::simplex::feasible_within_sparse`]: how
+/// long the whole call took, how long its tableau construction took, and how
+/// many pivots it performed.
+///
+/// `built` is `false` when the call declined before allocating a tableau (the
+/// cell cap), so [`LazySmtCounters::simplex_cold_builds`] counts structures
+/// actually allocated rather than calls — [`LazySmtCounters::cube_simplex_calls`]
+/// already counts calls, and conflating the two would make a declined call look
+/// like a rebuild a warm basis could have saved.
+pub(crate) fn record_cold_simplex(
+    total: Duration,
+    construction: Duration,
+    allocated: bool,
+    pivots: u64,
+) {
+    record(|c| {
+        c.simplex_cold += total;
+        if allocated {
+            c.simplex_cold_builds = c.simplex_cold_builds.saturating_add(1);
+            c.simplex_cold_build += construction;
+        }
+        c.simplex_cold_pivots = c.simplex_cold_pivots.saturating_add(pivots);
+    });
+}
+
+/// One cube decided — or declined — by the ADR-2125 warm decider, with the
+/// engine's cumulative churn.
+///
+/// `churn` is `(retractions, assertions, cold_restarts)` read from the engine,
+/// which accumulates them over its whole life, so those three are ASSIGNED and
+/// not added to. Passing them every round rather than once at the end is
+/// deliberate: the loop has several exits, and a counter written only on the
+/// orderly one reads as zero on exactly the budget-bound rows this lever is
+/// aimed at.
+pub(crate) fn record_warm_cube(answered: bool, churn: Option<(u64, u64, u64)>) {
+    record(|c| {
+        if answered {
+            c.warm_cube_checks = c.warm_cube_checks.saturating_add(1);
+        } else {
+            c.warm_cube_declines = c.warm_cube_declines.saturating_add(1);
+        }
+        if let Some((retractions, assertions, cold_restarts)) = churn {
+            c.warm_cube_retractions = retractions;
+            c.warm_cube_assertions = assertions;
+            c.warm_cube_cold_restarts = cold_restarts;
+        }
+    });
+}
+
+/// Which screen the ADR-2125 warm cube decider reached; see [`WarmCubeBuild`].
+pub(crate) fn record_warm_cube_build(outcome: WarmCubeBuild) {
+    record(|c| c.warm_cube_build = outcome);
+}
+
 /// What the online CDCL(T) LRA probe did with the query; see [`OnlineProbe`].
 pub(crate) fn record_online_probe(outcome: OnlineProbe) {
     record(|c| c.online_probe = outcome);
@@ -1184,11 +1374,257 @@ fn flush() {
 #[cfg(test)]
 mod tests {
     use super::{
-        LazySmtCountersGuard, LazySmtLoop, LazySmtReading, RoundOutcome, last_lazy_smt_counters,
-        live_lazy_smt_counters, record_blocking, record_entry, record_skeleton, record_theory,
+        LazySmtCounters, LazySmtCountersGuard, LazySmtLoop, LazySmtReading, RoundOutcome,
+        last_lazy_smt_counters, live_lazy_smt_counters, record_blocking, record_entry,
+        record_skeleton, record_theory,
     };
     use crate::live_instruments::{LiveInstruments, Sampled, install};
     use std::time::Duration;
+
+    /// The `key=value` pairs the trace line MUST carry, derived from the STRUCT.
+    ///
+    /// Split out of the test only so the test stays readable; the contract is
+    /// unchanged and lives here. The destructuring below carries **no** `..`
+    /// rest, so the compiler refuses this function the moment a field is added
+    /// to `LazySmtCounters` -- which is what makes the list the struct's rather
+    /// than the maintainer's memory of it.
+    // A 1:1 table over the struct's fields, so its LENGTH is the struct's. The
+    // only way to shorten it is to stop listing a field, which is exactly the
+    // failure the exhaustive destructuring exists to prevent.
+    #[allow(clippy::too_many_lines)]
+    fn expected_trace_fields(counters: &LazySmtCounters) -> Vec<(&'static str, String)> {
+        let LazySmtCounters {
+            lra_entries,
+            lra_rounds,
+            nra_entries,
+            nra_rounds,
+            nia_entries,
+            nia_rounds,
+            round_hist: _,
+            pending_round,
+            pending_loop: _,
+            skeleton_solve,
+            skeleton_sat,
+            skeleton_unsat,
+            skeleton_unknown,
+            theory_check,
+            theory_sat,
+            theory_unsat,
+            theory_unknown,
+            core_extraction,
+            blocking_clauses,
+            blocking_literals,
+            atoms,
+            cores_reused,
+            cores_rederived_absent,
+            cores_rederived_stale,
+            cores_rederived_unverified,
+            cores_full_assignment,
+            cube_flips,
+            cube_identical,
+            cube_decisions,
+            cube_collect,
+            cube_fm,
+            cube_fm_declines,
+            cube_simplex,
+            cube_simplex_calls,
+            cube_matrices,
+            simplex_cold_builds,
+            simplex_cold_build,
+            simplex_cold,
+            simplex_cold_pivots,
+            warm_cube_checks,
+            warm_cube_declines,
+            warm_cube_retractions,
+            warm_cube_assertions,
+            warm_cube_cold_restarts,
+            warm_cube_build: _,
+            online_probe: _,
+        } = counters;
+
+        vec![
+            ("lra_entries", lra_entries.to_string()),
+            ("lra_rounds", lra_rounds.to_string()),
+            ("nra_entries", nra_entries.to_string()),
+            ("nra_rounds", nra_rounds.to_string()),
+            ("nia_entries", nia_entries.to_string()),
+            ("nia_rounds", nia_rounds.to_string()),
+            ("pending_round_ms", pending_round.as_millis().to_string()),
+            ("skeleton_ms", skeleton_solve.as_millis().to_string()),
+            ("skeleton_sat", skeleton_sat.to_string()),
+            ("skeleton_unsat", skeleton_unsat.to_string()),
+            ("skeleton_unknown", skeleton_unknown.to_string()),
+            ("theory_ms", theory_check.as_millis().to_string()),
+            ("theory_sat", theory_sat.to_string()),
+            ("theory_unsat", theory_unsat.to_string()),
+            ("theory_unknown", theory_unknown.to_string()),
+            ("core_ms", core_extraction.as_millis().to_string()),
+            ("blocking_clauses", blocking_clauses.to_string()),
+            ("blocking_literals", blocking_literals.to_string()),
+            ("atoms", atoms.to_string()),
+            ("cores_reused", cores_reused.to_string()),
+            ("cores_rederived_absent", cores_rederived_absent.to_string()),
+            ("cores_rederived_stale", cores_rederived_stale.to_string()),
+            (
+                "cores_rederived_unverified",
+                cores_rederived_unverified.to_string(),
+            ),
+            ("cores_full_assignment", cores_full_assignment.to_string()),
+            ("cube_flips", cube_flips.to_string()),
+            ("cube_identical", cube_identical.to_string()),
+            ("cube_decisions", cube_decisions.to_string()),
+            ("cube_collect_ms", cube_collect.as_millis().to_string()),
+            ("cube_fm_ms", cube_fm.as_millis().to_string()),
+            ("cube_fm_declines", cube_fm_declines.to_string()),
+            ("cube_simplex_ms", cube_simplex.as_millis().to_string()),
+            ("cube_simplex_calls", cube_simplex_calls.to_string()),
+            ("cube_matrices", cube_matrices.to_string()),
+            ("simplex_cold_builds", simplex_cold_builds.to_string()),
+            (
+                "simplex_cold_build_ms",
+                simplex_cold_build.as_millis().to_string(),
+            ),
+            ("simplex_cold_ms", simplex_cold.as_millis().to_string()),
+            ("simplex_cold_pivots", simplex_cold_pivots.to_string()),
+            ("warm_cube_checks", warm_cube_checks.to_string()),
+            ("warm_cube_declines", warm_cube_declines.to_string()),
+            ("warm_cube_retractions", warm_cube_retractions.to_string()),
+            ("warm_cube_assertions", warm_cube_assertions.to_string()),
+            (
+                "warm_cube_cold_restarts",
+                warm_cube_cold_restarts.to_string(),
+            ),
+        ]
+    }
+
+    /// Every numeric field of [`LazySmtCounters`] appears in
+    /// [`LazySmtCounters::trace_line`], at the value it holds.
+    ///
+    /// The `let LazySmtCounters { … }` destructuring below carries **no** `..`
+    /// rest, so the compiler refuses this test the moment a field is added: the
+    /// field list is the STRUCT's, not the maintainer's memory of it, which is
+    /// the only form of "every X" this language can enforce. A test that pinned
+    /// the rendered line byte for byte would instead go green on a field that
+    /// was added to the struct and never rendered — the counter would read as
+    /// absent to every consumer while the pin, which never mentioned it, still
+    /// passed.
+    ///
+    /// Each field gets a **distinct** value, so rendering the wrong source field
+    /// fails as loudly as rendering none: with every field at `1` a line that
+    /// printed `cube_matrices` where `simplex_cold_builds` belongs would pass.
+    /// The durations are distinct in WHOLE MILLISECONDS because that is the unit
+    /// the line renders; sub-millisecond distinctions would collide at the
+    /// renderer and the test would be asserting about a difference the output
+    /// cannot carry.
+
+    #[test]
+    fn every_lazy_smt_counter_reaches_the_trace_line() {
+        /// The three keys `round_hist` renders per loop. Named, not matched by a
+        /// loose suffix rule, so a new SCALAR ending in `_hist` cannot slip
+        /// through the allow-list below.
+        const HIST_RENDERED: [&str; 3] = ["_hist", "_max_ms", "_max_round"];
+        let counters = distinct_lazy_smt_counters();
+        let line = counters.trace_line();
+        let expected = expected_trace_fields(&counters);
+
+        for (key, value) in &expected {
+            let token = format!("{key}={value}");
+            assert!(
+                line.split_whitespace().any(|field| field == token),
+                "`{token}` is not a field of the trace line; a counter that does \
+                 not render reads as absent to every consumer.\nline: {line}"
+            );
+        }
+
+        // The other half: the line must not carry a field this test does not
+        // know about. Without it a field could be RENDERED and never destructured
+        // -- the compiler only refuses the missing direction.
+        //
+        // `round_hist` is bound to `_` above because it is a DISTRIBUTION, not a
+        // scalar: it renders as three keys per loop and is covered by the
+        // histogram's own tests; `HIST_RENDERED` (top of this function) names its
+        // rendered suffixes explicitly rather than matching them loosely, so a
+        // new SCALAR ending in `_hist` cannot slip through the allow-list.
+        let rendered: Vec<&str> = line
+            .split_whitespace()
+            .filter(|field| field.contains('='))
+            .collect();
+        let known: std::collections::BTreeSet<&str> = expected
+            .iter()
+            .map(|(key, _)| *key)
+            .chain([
+                "reading",
+                "online_probe",
+                "warm_cube_build",
+                "accounted_ms",
+                "cores_rederived",
+            ])
+            .collect();
+        for field in rendered {
+            let key = field.split('=').next().expect("non-empty split");
+            assert!(
+                known.contains(key) || HIST_RENDERED.iter().any(|tail| key.ends_with(tail)),
+                "the trace line renders `{key}`, which this test does not \
+                 destructure -- add it to the struct pattern rather than to the \
+                 allow-list.\nline: {line}"
+            );
+        }
+    }
+
+    /// Every counter at a **distinct** value, so rendering the wrong source
+    /// field fails as loudly as rendering none.
+    fn distinct_lazy_smt_counters() -> LazySmtCounters {
+        // A struct LITERAL with `..Default::default()` for the two
+        // non-scalar fields, rather than `default()` plus assignments: the
+        // literal is what makes a NEWLY ADDED field visible here as a
+        // compile error alongside the destructuring above, which is the
+        // whole contract this helper serves.
+        LazySmtCounters {
+            lra_entries: 101,
+            lra_rounds: 102,
+            nra_entries: 103,
+            nra_rounds: 104,
+            nia_entries: 105,
+            nia_rounds: 106,
+            pending_round: Duration::from_millis(107),
+            skeleton_solve: Duration::from_millis(108),
+            skeleton_sat: 109,
+            skeleton_unsat: 110,
+            skeleton_unknown: 111,
+            theory_check: Duration::from_millis(112),
+            theory_sat: 113,
+            theory_unsat: 114,
+            theory_unknown: 115,
+            core_extraction: Duration::from_millis(116),
+            blocking_clauses: 117,
+            blocking_literals: 118,
+            atoms: 119,
+            cores_reused: 120,
+            cores_rederived_absent: 121,
+            cores_rederived_stale: 122,
+            cores_rederived_unverified: 123,
+            cores_full_assignment: 124,
+            cube_flips: 125,
+            cube_identical: 126,
+            cube_decisions: 127,
+            cube_collect: Duration::from_millis(128),
+            cube_fm: Duration::from_millis(129),
+            cube_fm_declines: 130,
+            cube_simplex: Duration::from_millis(131),
+            cube_simplex_calls: 132,
+            cube_matrices: 133,
+            simplex_cold_builds: 134,
+            simplex_cold_build: Duration::from_millis(135),
+            simplex_cold: Duration::from_millis(136),
+            simplex_cold_pivots: 137,
+            warm_cube_checks: 138,
+            warm_cube_declines: 139,
+            warm_cube_retractions: 140,
+            warm_cube_assertions: 141,
+            warm_cube_cold_restarts: 142,
+            ..LazySmtCounters::default()
+        }
+    }
 
     /// The three readings are three different statements, and no two of them
     /// are the same token. A test that only checked `Some(..)` would pass with

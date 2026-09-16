@@ -50,9 +50,12 @@
 //!   covering.** The checker re-derives the arrangement with its own root
 //!   isolation and re-substitutes every polynomial from the multivariate form.
 //!   A rejection makes the route decline ([`CadDecline::CertificateRejected`]) —
-//!   the verdict is dropped, never downgraded to a guess. Note the honest label:
-//!   the checker's delineability test is *sampling*, so an `unsat` here is
-//!   **checked**, not proved. See that module's docs.
+//!   the verdict is dropped, never downgraded to a guess. Since ADR-2126 that
+//!   checker's delineability test is **exact** — leading coefficients,
+//!   discriminants and pairwise resultants required to be root-free on the cell
+//!   by Sturm counting against its algebraic endpoints — and it rejects a
+//!   covering whose generalisation would reach past the argument's scope. See
+//!   that module's docs for what it establishes and where it stops.
 //! * **`sat` is a rational model replayed against the original assertions** by
 //!   the ground evaluator before it leaves this module. An algebraic witness is
 //!   not represented: a cell that satisfies every atom only at an irrational
@@ -81,9 +84,13 @@
 //!   [`CadDecline::NonConjunctive`];
 //! * a resultant whose Sylvester dimension exceeds `nra_real_root`'s
 //!   `MAX_MULTI_SYLVESTER_DIM` (6), because the multivariate determinant is an
-//!   exact Leibniz expansion — [`CadDecline::Projection`]. This is the binding
-//!   constraint on high per-variable degree and ADR-2121 records how much of the
-//!   slice it costs.
+//!   exact Leibniz expansion — [`CadDecline::ProjectionSylvesterDim`]. This is
+//!   the binding constraint on high per-variable degree. ADR-2121 recorded it
+//!   inside a single `Projection` bucket that also held an identically-zero
+//!   resultant, a derivative overflow and a coefficient overflow; ADR-2126 split
+//!   the four apart, because only this one is what a fraction-free determinant
+//!   would remove, and a bundle is an upper bound on each member and a
+//!   measurement of none.
 //!
 //! # Two arms, two assurance levels
 //!
@@ -91,12 +98,20 @@
 //!
 //! * `AXEYUM_NRA_CAD=single-cell` runs it whole;
 //! * `AXEYUM_NRA_CAD=single-cell-sat` runs it and **withholds every `unsat`** as
-//!   [`CadDecline::UnsatWithheldSampledDelineability`], keeping only the `sat`
+//!   [`CadDecline::UnsatWithheldByArm`], keeping only the `sat`
 //!   side — a rational model replayed through the ground evaluator against the
 //!   original assertions, which is exact and rests on no sample.
 //!
 //! That is the whole difference between them: the cell cap is identical on both
 //! and on `default`, so an A/B between any two isolates exactly one thing.
+//!
+//! **ADR-2126 changed what the difference BUYS, without touching either arm.**
+//! The reason `single-cell-sat` was the shipped arm is that the full arm's
+//! `unsat` rested on a sampling delineability check. That check is now exact
+//! ([`crate::nra_cell_cert`] check 6a), it names its own scope boundary
+//! (check 6c), and a covering outside that boundary is REJECTED rather than
+//! accepted. So the A/B between the two arms now prices an `unsat` half whose
+//! justification carries no sample at all.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::Instant;
@@ -113,9 +128,10 @@ use crate::nra_cell_cert::{
     check_cell_refutation,
 };
 use crate::nra_real_root::{
-    CadDecline, MAX_ABS_COEFF, MultiPoly, ResultantOutcome, Root, cell_samples, coeffs_in_elim,
-    collect_cert_atoms, dedup_sorted_roots, degree_in, derivative_in, isolate_roots,
-    multi_resultant, multipoly_from_cert, multipoly_to_cert, record_cad_decline, sort_roots,
+    CadDecline, MAX_ABS_COEFF, MultiPoly, ResultantDecline, ResultantOutcome, Root, cell_samples,
+    coeffs_in_elim, collect_cert_atoms, dedup_sorted_roots, degree_in, derivative_in,
+    isolate_roots, multi_resultant_classified, multipoly_from_cert, multipoly_to_cert,
+    record_cad_decline, sort_roots,
 };
 
 /// Most variables the slice accepts. Four covers ADR-2110's largest CAD-decided
@@ -224,6 +240,65 @@ pub(crate) fn decide_single_cell(
 ) -> Option<CheckResult> {
     LAST_CELL_CHECK.with(|slot| slot.set(None));
     let atoms = collect_cert_atoms(arena, assertions)?;
+    match decide_atoms(&atoms, deadline)? {
+        AtomOutcome::Sat(sample) => {
+            let model = replay_rational_model(arena, assertions, &sample)?;
+            Some(CheckResult::Sat(model))
+        }
+        AtomOutcome::Refuted(refutation) => {
+            if !emit_unsat {
+                // The `single-cell-sat` arm: the exact half of this route only.
+                // Withheld BEFORE the checker runs, deliberately -- running a
+                // checker whose result is thrown away is pure cost on a default
+                // path, and the cause says "a covering was reached and this arm
+                // does not emit `unsat`", not "a checked refutation was
+                // discarded". The second would be a claim about the checker that
+                // this branch has no evidence for.
+                record_cad_decline(CadDecline::UnsatWithheldByArm);
+                return None;
+            }
+            match check_cell_refutation(&refutation) {
+                Ok(stats) => {
+                    LAST_CELL_CHECK.with(|slot| slot.set(Some(stats)));
+                    Some(CheckResult::Unsat)
+                }
+                Err(_failure) => {
+                    // The producer built something its own checker refuses. The
+                    // verdict is DROPPED -- not weakened, not reported.
+                    record_cad_decline(CadDecline::CertificateRejected);
+                    None
+                }
+            }
+        }
+    }
+}
+
+/// What the route concluded about a CONJUNCTION of certificate atoms, before any
+/// arm policy, model replay or certificate check is applied.
+///
+/// Split out of [`decide_single_cell`] by ADR-2126 so the clause loop
+/// ([`crate::nra_clause_loop`]) can call the same core once per Boolean model
+/// without going back through the term arena. The two callers then apply
+/// DIFFERENT policies to the same outcome -- `decide_single_cell` replays the
+/// model against its own assertions and runs the certificate checker, while the
+/// clause loop replays against the ORIGINAL Boolean query and uses a refutation
+/// only to learn a clause -- so the split is where their obligations genuinely
+/// diverge.
+pub(crate) enum AtomOutcome {
+    /// A complete rational sample satisfying every atom. **Not yet a model**: the
+    /// caller must replay it against the original assertions.
+    Sat(Vec<(SymbolId, Rational)>),
+    /// A covering of the whole space in which every cell is closed. **Not yet an
+    /// `unsat`**: the caller must decide whether its checker accepts it.
+    Refuted(CellRefutation),
+}
+
+/// Decide a conjunction of certificate atoms. See [`AtomOutcome`] for what the
+/// caller still owes.
+///
+/// Declines (`None`) on everything outside the declared slice, recording the
+/// cause through [`crate::nra_real_root::record_cad_decline`].
+pub(crate) fn decide_atoms(atoms: &[CertAtom], deadline: Option<Instant>) -> Option<AtomOutcome> {
     if atoms.is_empty() {
         record_cad_decline(CadDecline::NonConjunctive);
         return None;
@@ -231,7 +306,7 @@ pub(crate) fn decide_single_cell(
 
     // --- The slice bounds, declared and refused up front. ---
     let mut vars: BTreeSet<SymbolId> = BTreeSet::new();
-    for atom in &atoms {
+    for atom in atoms {
         for (mono, coeff) in atom.poly() {
             let mut total = 0u32;
             for &(v, e) in mono {
@@ -279,7 +354,7 @@ pub(crate) fn decide_single_cell(
     }
 
     let mut ctx = Ctx {
-        atoms: &atoms,
+        atoms,
         order: &order,
         by_level,
         deadline,
@@ -287,36 +362,12 @@ pub(crate) fn decide_single_cell(
     };
 
     match solve_level(&mut ctx, 0, &[])? {
-        LevelOutcome::Sat(sample) => {
-            let model = replay_rational_model(arena, assertions, &sample)?;
-            Some(CheckResult::Sat(model))
-        }
-        LevelOutcome::Refuted { covering, .. } => {
-            if !emit_unsat {
-                // The `single-cell-sat` arm: the exact half of this route only.
-                // Withheld BEFORE the checker runs, deliberately -- running a
-                // checker whose result is thrown away is pure cost on a default
-                // path, and the cause says "a covering was reached and this arm
-                // does not emit `unsat`", not "a checked refutation was
-                // discarded". The second would be a claim about the checker that
-                // this branch has no evidence for.
-                record_cad_decline(CadDecline::UnsatWithheldSampledDelineability);
-                return None;
-            }
-            let refutation = CellRefutation::new(order.clone(), atoms.clone(), covering);
-            match check_cell_refutation(&refutation) {
-                Ok(stats) => {
-                    LAST_CELL_CHECK.with(|slot| slot.set(Some(stats)));
-                    Some(CheckResult::Unsat)
-                }
-                Err(_failure) => {
-                    // The producer built something its own checker refuses. The
-                    // verdict is DROPPED -- not weakened, not reported.
-                    record_cad_decline(CadDecline::CertificateRejected);
-                    None
-                }
-            }
-        }
+        LevelOutcome::Sat(sample) => Some(AtomOutcome::Sat(sample)),
+        LevelOutcome::Refuted { covering, .. } => Some(AtomOutcome::Refuted(CellRefutation::new(
+            order.clone(),
+            atoms.to_vec(),
+            covering,
+        ))),
     }
 }
 
@@ -663,6 +714,24 @@ fn project_level(
     elim: SymbolId,
     sample: &BTreeMap<SymbolId, Rational>,
 ) -> Option<Vec<CertPoly>> {
+    /// Map a resultant decline onto the attribution cause it belongs to.
+    ///
+    /// The split exists so the counts can be read: only
+    /// [`CadDecline::ProjectionSylvesterDim`] is what a fraction-free
+    /// determinant would remove, and ADR-2121's single `Projection` bucket was
+    /// an upper bound on it rather than a measurement (ADR-2126).
+    const fn projection_cause(why: ResultantDecline) -> CadDecline {
+        match why {
+            ResultantDecline::SylvesterDim => CadDecline::ProjectionSylvesterDim,
+            // `Degenerate` is unreachable from here (both callers filter on
+            // positive degree in `elim` first), and if it ever were reached it is
+            // an arithmetic-shaped surprise, not a dimension cap.
+            ResultantDecline::Degenerate | ResultantDecline::Arithmetic => {
+                CadDecline::ProjectionArithmetic
+            }
+        }
+    }
+
     let multi: Vec<MultiPoly> = polys
         .iter()
         .map(|p| {
@@ -701,7 +770,7 @@ fn project_level(
         }
         // Every coefficient in `elim`, not only the leading one.
         let Some(coeffs) = coeffs_in_elim(p, elim) else {
-            record_cad_decline(CadDecline::Projection);
+            record_cad_decline(CadDecline::ProjectionArithmetic);
             return None;
         };
         for c in &coeffs {
@@ -712,18 +781,22 @@ fn project_level(
         // The discriminant, `Res_elim(p, dp/d elim)`.
         if degree_in(p, elim) >= 2 {
             let Some(dp) = derivative_in(p, elim) else {
-                record_cad_decline(CadDecline::Projection);
+                record_cad_decline(CadDecline::ProjectionDerivative);
                 return None;
             };
             if degree_in(&dp, elim) > 0 {
-                match multi_resultant(p, &dp, elim) {
-                    Some(ResultantOutcome::Poly(disc)) => push(&disc, &mut out),
-                    Some(ResultantOutcome::NonzeroConstant) => {}
+                match multi_resultant_classified(p, &dp, elim) {
+                    Ok(ResultantOutcome::Poly(disc)) => push(&disc, &mut out),
+                    Ok(ResultantOutcome::NonzeroConstant) => {}
                     // An identically-zero discriminant means a repeated root for
                     // every value of the remaining variables -- the projection
                     // cannot separate them.
-                    Some(ResultantOutcome::Zero) | None => {
-                        record_cad_decline(CadDecline::Projection);
+                    Ok(ResultantOutcome::Zero) => {
+                        record_cad_decline(CadDecline::ProjectionResultantZero);
+                        return None;
+                    }
+                    Err(why) => {
+                        record_cad_decline(projection_cause(why));
                         return None;
                     }
                 }
@@ -734,11 +807,15 @@ fn project_level(
     // Pairwise resultants: where two of them collide.
     for i in 0..elim_bearing.len() {
         for j in (i + 1)..elim_bearing.len() {
-            match multi_resultant(elim_bearing[i], elim_bearing[j], elim) {
-                Some(ResultantOutcome::Poly(res)) => push(&res, &mut out),
-                Some(ResultantOutcome::NonzeroConstant) => {}
-                Some(ResultantOutcome::Zero) | None => {
-                    record_cad_decline(CadDecline::Projection);
+            match multi_resultant_classified(elim_bearing[i], elim_bearing[j], elim) {
+                Ok(ResultantOutcome::Poly(res)) => push(&res, &mut out),
+                Ok(ResultantOutcome::NonzeroConstant) => {}
+                Ok(ResultantOutcome::Zero) => {
+                    record_cad_decline(CadDecline::ProjectionResultantZero);
+                    return None;
+                }
+                Err(why) => {
+                    record_cad_decline(projection_cause(why));
                     return None;
                 }
             }
@@ -796,7 +873,7 @@ fn is_nullified_at(p: &MultiPoly, elim: SymbolId, sample: &BTreeMap<SymbolId, Ra
 /// ground evaluator. Returns `None` (a decline) unless every assertion evaluates
 /// to `true` — an overflow or an unresolved evaluation is a decline, never a
 /// `Sat`.
-fn replay_rational_model(
+pub(crate) fn replay_rational_model(
     arena: &TermArena,
     assertions: &[TermId],
     sample: &[(SymbolId, Rational)],
@@ -1052,6 +1129,16 @@ mod tests {
             stats.coverings >= 2 && stats.cells >= 3 && stats.deeper_cells >= 1,
             "the checker must have walked a real covering tree, not an empty one: {stats:?}"
         );
+        assert_eq!(
+            stats.deeper_cells,
+            stats.open_deeper_cells + stats.point_deeper_cells,
+            "every `Deeper` cell is either over an open cell or over a point: {stats:?}"
+        );
+        assert!(
+            stats.open_deeper_cells == 0 || stats.delineability_exact_tests > 0,
+            "a generalisation over an open cell must have been proved EXACTLY, \
+             not merely probed: {stats:?}"
+        );
         assert!(
             stats.delineability_probes > 0 || stats.point_deeper_cells > 0,
             "every `Deeper` cell must have been either probed or a point cell: {stats:?}"
@@ -1133,7 +1220,7 @@ mod tests {
             match &full {
                 Some(CheckResult::Unsat) => {
                     assert!(held.is_none(), "an `unsat` must become a decline: {held:?}");
-                    assert_eq!(cause, "unsat-withheld-sampled-delineability");
+                    assert_eq!(cause, "unsat-withheld-by-arm");
                     withheld += 1;
                 }
                 Some(CheckResult::Sat(_)) => {

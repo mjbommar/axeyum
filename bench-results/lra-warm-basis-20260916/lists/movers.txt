@@ -1,0 +1,3 @@
+QF_LRA/latendresse/ecoliMILPglycerolYices3-50000.smt2
+QF_LRA/sc/sc-14.induction.cvc.smt2
+QF_LRA/uart/uart-8.induction.cvc.smt2

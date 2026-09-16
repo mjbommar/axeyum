@@ -60407,6 +60407,152 @@ outside the instrumented search, unexplained. (2) Where `miplib/danoint-266`'s
 `miplib/pp08a-1000`: 30,443 refutations at a 138-literal mean core width over
 527 live rows, i.e. lemmas that each exclude close to one assignment.
 
+**Lane LRA-WARM-BASIS (`MEASURED, SHIPS OFF`, lra-warm-basis, 2026-09-16.)**
+ADR: [ADR-2125](docs/research/09-decisions/adr-2125-a-warm-simplex-basis-across-sat-decisions.md).
+Artifacts: `bench-results/lra-warm-basis-20260916/`.
+Compute: **s5, physical core pairs `5,13` and `6,14`**, and nothing else.
+
+Measured. The lever `AXEYUM_LRA_WARM_CUBE` ships **`off`** -- a stable loss on
+each `QF_LRA` draw. The result is a MIXED positive, not ADR-2122's clean
+negative; see §4.
+
+ADR-2111 named the per-cube cold re-solve as an unpulled lever and ADR-2122
+named it again without taking it. This lane took it, sized it first, and found
+two things worth more than the lever itself.
+
+### 1. The ceiling was measured before the code, over the whole pinned 200
+
+`simplex_cold_builds` / `_build_ms` / `_ms` / `_pivots` are four additive trail
+fields counting the FROM-SCRATCH simplex path. A call is not a rebuild — the
+cell cap can decline before allocating, and the same entry point is reachable
+from the implied-bound checker — so the quantity a warm basis competes against
+was not derivable from the counters that existed.
+
+```
+200 rows | 107 decided | 93 undecided
+180 reached the lazy-SMT loop | 68 built >=1 from-scratch tableau
+ 20 never reached it (silent, NOT zero -- folded into no denominator)
+
+share of wall clock over the 68 that re-solve   median     min      max
+  tableau CONSTRUCTION only                      0.95 %   0.00 %   1.80 %
+  the whole from-scratch call                    4.15 %   0.61 %  99.31 %
+  ... plus per-cube linearization                24.21 %  0.93 %  99.58 %
+
+THE LEVER'S CEILING (collect + simplex), 153 rows that reach the loop:
+  median 0.00 %   61 rows at or above 10 %   37 at or above 25 %
+  restricted to the 73 UNDECIDED rows: median 23.87 %   max 99.58 %
+
+cube churn: median 1.79 flipped literals per round against 7,260 atoms
+```
+
+**The basis alone is worth 4 % of the clock at the median.** The lever is worth
+more only because a cube it answers also skips the per-cube linearization. The
+honest ceiling is 23.87 % on undecided rows, and 0.00 % over every row that
+reaches the loop — a file the ladder already decides in 107 ms spends no
+measurable time here.
+
+### 2. The arm was INERT, and the cap that refused it is in the wrong currency
+
+The first mechanism check read `warm_cube_checks=0` in **both** arms.
+`Incremental::new` refuses at `MAX_TABLEAU_CELLS = 4_000_000` **dense cells**,
+and since ADR-2111 this tableau stores nonzeros. On `sc-39.base.cvc.smt2`:
+8,797,712 cells against **4,688 nonzeros** — 188 KB of real storage refused by a
+cap sized for dense ones, while the cold path (which consults that constant only
+under a default-off lever) built the identical system 797 times.
+
+`MAX_TABLEAU_CELLS` is **not** changed — it governs the online engine too.
+`with_nonzero_admission` is a second door for one call site, capped at
+`MAX_WARM_CUBE_NONZEROS = 400_000` (ADR-2111's own `TableauReserve::Sparse`
+figure, 11.6x ADR-2055's measured median and 2.7x its extreme).
+
+`warm_cube_build` now renders `off | built | deadline | resource-limit |
+memory-budget | no-tableau`, so a refusal names its screen.
+
+### 3. The prefix reconciliation is the wrong shape for a cube
+
+With the engine admitted, the arm worked and was **slower**: `lra_rounds` fell
+798 -> 633, with 1,133,095 retractions over 632 checks — the whole cube, every
+round. `SimplexEngine::sync` reconciles by SHARED PREFIX, right for a DPLL(T)
+trail (the divergence is a suffix) and wrong for a cube (the flips are anywhere,
+so the prefix ends at the first one). `sync_cube` diffs per row instead, which is
+z3's `m_columns_with_changed_bounds` shape.
+
+```
+assertions per file   1,135,797 -> 4,238   (949 checks, ~4.5 per cube)
+lra_rounds                  798 ->   950   (+19 %)
+simplex_cold_builds         797 ->     0
+warm_cube_cold_restarts               0    (the basis is genuinely kept)
+```
+
+### 4. The A/B: a MIXED positive, and it ships `off`
+
+One binary, two env values, arms back to back per file with alternating order.
+Both `QF_LRA` draws are PARTIALS and deliberately **not prefixes** -- the run was
+stopped and the remainder seeded-shuffled, because `QF_LRA/` path order is
+family-clustered on exactly the families the sizing found heaviest, so a prefix
+would bias the number TOWARD this lane's own lever.
+
+```
+population          rows       A    B   net  gain  LOSS  FLIP  cmp  DIS
+QF_LRA pinned       100/200   52   51    -1     0     1     0    97    0
+QF_LRA held-out      95/200   49   49    +0     1     1     0    96    0
+QF_LIA (partial)      7/200    4    4    +0     0     0     0     8    0
+QF_UFLRA / QF_UFLIA / QF_IDL / QF_RDL      DID NOT RUN
+```
+
+Mechanism, over the 71 rows where the decider was built: **46,450 cubes
+answered, 40,916 from-scratch tableaux -> 0, `cold_restarts = 0`.** Cost
+**-9.2 %** (pinned) -- the OPPOSITE of ADR-2122's +12-35 %.
+
+3x recheck: **2 STABLE-LOSS, 1 STABLE-GAIN, 0 UNSTABLE.** The gain
+(`sc-14.induction.cvc`) is from the family at 850-1,050 builds -- many small
+re-solves. The loss the sizing covers (`ecoliMILPglycerolYices3-50000`) is 28
+builds -- few enormous solves, nothing to reuse. The second loss is not in the
+sizing table and its builds are uncounted, so that reading is a hypothesis for
+it, not a measurement.
+
+**Criteria 2 and 3 both fail (a stable loss on each draw), so the lever ships
+`off`.** But this is not ADR-2122's clean negative: it buys a real held-out
+verdict, it is faster, and its loss has a named discriminator
+(`simplex_cold_builds`) the decider could consult. That screen is the obvious
+next increment and is NOT built here.
+
+## Landed
+
+| SHA | files | what |
+|---|---:|---|
+| `63d7b44e3` | 2 | the sizing instrument: four additive trail fields and a coverage test derived from the struct, no `..` rest |
+| `e5728a151` | 11 | `cube_check`, the lever, the invariant and soundness-negative fixtures, the new z3 seed class |
+| `47dfee015` | 10 | the inert-arm fix (nonzero admission), the per-row cube diff, the full sizing |
+| `83d30e528` | 7 | the ADR, the verified reference citations, the mutation suite |
+| `40edfdd64` | 3 | both mutation survivors turned into kills |
+| `503bbe8ea` | 5 | the mover recheck and the shuffled-remainder tooling |
+| `f6f3d5621` | 9 | clippy `-D warnings` clean (two extractions it forced), plus the A/B data |
+
+## Next
+
+1. Complete both `QF_LRA` draws to 200 (the runner refuses a non-empty output
+   file, so a successor resumes rather than rebuilds) and run the five exposure
+   divisions with their own denominators.
+2. A builds-per-file screen on the decider, A/B'd rather than assumed.
+3. Every gate now has a reading. The 22 dispatch/reason suites are green (every
+   count nonzero); the lib sweep is **1,576 passed, 1 failed**, the one red being
+   `auto::tests::pathological_overbound_stays_terminal_under_every_policy`, which
+   passes ALONE in 4.26 s on the same tree (ADR-2111 §5a measured the same test
+   at 6.28 s the same way); and `progress_frontier` is **12 passed, 0 failed, 0
+   REGRESSION** on an idle pinned frame.
+
+   The ratchet took THREE runs and the disagreement is the finding: on a
+   contended box (load 8.98 -> 45.99, calibration 2.00x) it reported a
+   `TIMING REGRESSION [nra_degree]` at 24.1 ms against a 23.0 ms ceiling; on an
+   idle pinned frame (load 1.11, calibration 1.15x) the same binary on the same
+   tree reads **7.2 ms** -- a 3.3x swing at fixed code, reproducing ADR-2122's
+   21x lesson on a different family.
+
+   Two families (`bv_reduction`, `lia_cuts`) are NOT COMPARABLE even on the idle
+   run, so their ratchets are enforced on nothing; that is what remains. No
+   baseline was raised from any run.
+
 Status: LANDED — LUB's ADR-0603 row 2 is a kernel-checked theorem, axiom-free.
 
 Outcome 1 of the three the brief listed: **a proved implication from a stated
@@ -62115,6 +62261,166 @@ scratch copy and restoring). Folding it in is the coordinator's step.
 | 2026-09-07 | Backtick logic names in the new doc comments (workspace clippy) | `f27b1dbd1` |
 | 2026-09-07 | The 200-file confirming run, the census correction block, the family-doc follow-up, and the capability entry's measured boundary | `0857e419c` |
 | 2026-09-07 | Merge of local `main` (ADR index regenerated to resolve); post-merge workspace `check` and `clippy -D warnings` both green | `1c078316b` |
+
+Status: the exact delineability check, its scope guard, the `CadDecline::Projection`
+split, the clause loop and both fuzz seed classes are landed. **No sample is
+load-bearing in `nra_cell_cert` any more.** Ship decisions are in ADR-2126.
+
+## What this lane was
+
+[ADR-2121](docs/research/09-decisions/adr-2121-single-cell-cad-for-nra.md)
+shipped the single-cell CAD route's `sat` half and withheld its `unsat` for one
+reason it stated plainly: the certificate checker's delineability test was
+**sampling**, and sampling can falsify delineability but never establish it.
+This lane replaces that test.
+
+## The exact check, in three parts
+
+| check | what | status |
+|---|---|---|
+| 6a | leading coefficients, discriminants and pairwise resultants required to be **root-free on the cell**, by Sturm counting against its ALGEBRAIC endpoints | **exact** — no sample anywhere |
+| 6b | the old three-point probe | demoted to an independent **cross-check**; a failure after 6a accepts is a disagreement between two implementations of one property |
+| 6c | `NestedOpenGeneralization` — a generalisation over an open cell may not rest on **another** generalisation, because that needs delineability over a 2-D region and 6a is 1-D | **new**; ADR-2121's check had the same gap and named none of it |
+
+Resultants are Sylvester determinants over ℚ[t] through `axeyum_ir::poly`'s exact
+evaluation–interpolation. `None` from any step is a rejection: a check that
+cannot run must not be reported as one that ran.
+
+## The sizing correction
+
+ADR-2121 flagged its own `CadDecline::Projection` count of 2 as an upper bound.
+Split into four causes and re-run on the same 24 files:
+
+| files | cause | what would fix it |
+|---:|---|---|
+| 12 | `non-conjunctive` | the clause loop |
+| 6 | `algebraic-witness` | an algebraic sample |
+| 2 | *decided* | nothing |
+| 1 | `certificate-rejected` | the checker accepting what the producer built |
+| 1 | `projection-arithmetic` | wider coefficient arithmetic |
+| **1** | **`projection-sylvester-dim`** | **a fraction-free (Bareiss) determinant** |
+| 1 | `root-ordering` | exact ordering of two critical values |
+
+**The determinant lever is worth 1 file, not 2.** And the other six rows are a
+control: this scan ran under the exact checker and `certificate-rejected` is
+still 1, *decided* still 2 — the strengthening cost zero files.
+
+## The clause loop
+
+`nra_clause_loop.rs`: CDCL(T) over sign atoms with single-cell CAD as the
+theory, through `axeyum_cnf::IncrementalSat` rather than a new SAT loop. Removes
+the `non-conjunctive` refusal that costs 12 of the 24.
+
+`sat` rests on **nothing** in the Boolean layer — the sample is replayed against
+the original assertions. `unsat` is **withheld**
+(`ClauseLoopUnsatUncertified`), and the evidence that would close it is named: a
+`CellRefutation` per blocking clause plus a DRAT refutation of the clause set.
+A blocking clause can only make the loop *miss* a model, never invent one, so on
+the sat-only arm an unsound one costs completeness and cannot cost soundness.
+
+`AXEYUM_NRA_CAD=clause-loop` ships **OFF**, unmeasured.
+
+## The numbers
+
+Interleaved A/B, one binary and two env values, four shards on s5 cores
+1, 9, 3, 11, 24 s / 8 GiB. Arm A is the shipped default (`single-cell-sat`);
+arm B is `single-cell`. They differ in exactly `emit_unsat`.
+
+| division | rows | A | B | net | gain / loss / flip | vs `:status` |
+|---|---:|---:|---:|---:|:---:|---|
+| QF_NRA (pinned) | 200 | 121 | **122** | +1 | 2 / 1 / 0 | 0 over 241 |
+| QF_NRA (held-out) | 200 | 109 | 109 | +0 | **0 / 0 / 0** | 0 over 216 |
+| QF_NIA | 200 | 79 | 79 | +0 | **0 / 0 / 0** | 0 over 158 |
+| QF_LRA (control) | 200 | 107 | 107 | +0 | **0 / 0 / 0** | 0 over 194 |
+
+Both baseline arms reproduce ADR-2121's own numbers (QF_NRA 121, QF_LRA 107).
+The `sat` column is identical on both arms, which is what "they differ in exactly
+`emit_unsat`" predicts, measured rather than assumed.
+
+Three-pass recheck of every mover: **2 STABLE-GAIN, 0 STABLE-LOSS, 1
+BOTH-DECIDE, 0 UNSTABLE**, exit status 0 on all 18 runs. The sweep's one loss is
+arm B deciding it `unsat` 3 of 3 on a quiet core — and `--trace` had already
+shown both arms declining that file at `nra-real-root` in microseconds, with its
+`unsat` coming from a later rung at 18.8 s of a 24 s budget.
+
+**Across all four sweeps: 0 `sat`↔`unsat` flips and 0 disagreements against
+declared `:status` over 809 comparable verdicts.**
+
+Mutation: `nra-cell-exact-delineability` and `nra-cell-exact-clause-loop`, each
+killing **exactly one** named fixture; `--check-anchors` `suites=151 anchors=1100
+stale=0`.
+
+Differential fuzz, `nra_differential_fuzz` 7 tests green with **DISAGREEMENTS: 0**:
+
+| class | instances | decided | agreements |
+|---|---:|---:|---:|
+| general | 2000 | — | **0 disagreements** |
+| single-cell | 1500 | 239 (237 sat / 2 unsat) | 239 |
+| **clause-loop (new)** | 1500 | **368** | **368** |
+
+1,485 of the 1,500 clause-loop instances carry a real disjunction (asserted).
+`open_deeper_cells=2` and `exact_delineability_tests=4` — asserted nonzero, so
+whether the fuzz reaches check 6a is a number and not a hope.
+
+## The ship decision
+
+**`CAD_DEFAULT` moves to `CadPolicy::SINGLE_CELL`: the route's `unsat` half
+ships ON.** Every gate met — 0 stable losses on both draws, 0 flips, the control
+unmoved, 0 `:status` disagreements.
+
+**And the honest limit on that.** The gain is two files in four hundred, the
+held-out draw found none, and **neither of the two rests on the exact check** —
+both are atom-cell refutations that never reach it. The decision is not "the
+exact check bought +2"; it is that the reason ADR-2121 withheld this half no
+longer exists, the half costs nothing on two independent draws and a control,
+and it is worth two files where its shape appears.
+
+`AXEYUM_NRA_CAD=clause-loop` ships **OFF**, unmeasured on any corpus.
+
+## Gates
+
+`nra_cell_cert` 20 / `nra_clause_loop` 7 / `nra_single_cell` 19 /
+`config_registry` 18 passed; lib sweep `--skip reconstruct::` **1,586 passed, 0
+failed**; the 22 dispatch suites all green (211 tests); `progress_frontier` 12
+passed with no REGRESSION; the **8** nonlinear z3 fuzzes green on the SHIPPED
+tree (re-run after the default moved, because four had passed against the old
+one); default-features workspace check, clippy `-D warnings` on solver+bench
+`--features full`, and `cargo fmt --all --check` all exit 0; staleness 0
+unexplained; `check-links` and `check-merge-hygiene` pass; `--check-anchors`
+stale=0.
+
+Clippy was **red with 14 lints on this lane's own code** while `cargo check` was
+green on all of it — recorded because they are different gates and only one
+fires.
+
+## What this lane did not do
+
+- **Lazard evaluation.** ADR-2126 §2 prices it: minimal-polynomial extraction, a
+  tower of algebraic extensions, univariate factorization *over each level of
+  that tower*, exact multivariate division, and a Gröbner basis under an
+  elimination order. cvc5 gets all of it from GPL CoCoALib and still defaults
+  `nlCovProjection` to `MCCALLUM`. A lane of its own.
+- **The 2-D generalisation** (check 6c's boundary).
+- **The clause loop's `unsat`**, and the algebraic sample (6 of 24), and the
+  fraction-free determinant (1 of 24, measured).
+- **A gap found and left**: `config_registry`'s `GOVERNED_FILES` contains
+  `nra.rs` and none of `nra_real_root.rs`, `nra_single_cell.rs`,
+  `nra_cell_cert.rs` or `nra_clause_loop.rs`, so every bounded-cost constant on
+  this route is watched by nothing. Adding the files demands registry entries
+  for all their constants at once — a cross-lane change, recorded rather than
+  made.
+
+## Landed changes
+
+| commit | what |
+|---|---|
+| `2d72b5e6d` | `CadDecline::Projection` split into four causes with four different fixes |
+| `8bb5cb970` | exact delineability (6a), the sampling probe demoted to a cross-check (6b), the scope guard (6c) |
+| `6e4c70754` | the 24-file re-bucketing and its controls |
+| `a699cf4bc` | the clause loop, its arm, and seven tests |
+| `0c9c5da61` | mutation restructure: one mutation, one dead test |
+| `51c3baf4b` | the clause-loop fuzz class, the 6a-reached tally, the pairwise-resultant fixture |
+| `21fb3897e` | the three-division A/B data and the held-out draw |
 
 Status: the route, its certificate checker, its fuzz seed class and its mutation
 suites are landed. **`AXEYUM_NRA_CAD=single-cell-sat` is now the shipped
@@ -65791,6 +66097,86 @@ both came back `STABLE-GAIN`.
 | `ae7329302` | the 19 suites, three mutations, the frontier run, division 1 of the A/B |
 
 <!-- /plan-section -->
+
+**Both premises reversed by measurement; the pass is built, measured, and stays
+off** (`DONE`, quant-preprocess, 2026-09-16, ADR-2127,
+`bench-results/quant-preprocess-20260916/`).
+
+DT-GROUND-PROBE established that ADR-2114's `GROUND` attribution is z3's
+*preprocessing* of the quantified assertions, and named two mechanisms:
+Skolemizing a negated-universal goal, and folding definitional
+`forall`-equalities into ground macros. This lane was to build both behind one
+lever and measure them.
+
+**1. Goal skolemization already ships, and already fires on every file this
+question is about.** `crates/axeyum-solver/src/quant_skolemize.rs` is a
+polarity-aware NNF + Skolemize + prenex pass over the WHOLE assertion set,
+emitting Skolem *functions* over enclosing universals, wired into
+`prove_unsat_by_ematching`. Measured with the pass's own `AXEYUM_QPROBE`
+instrumentation over 90 undecided files (30 each AUFDTLIRA/UFLIA/UF):
+**0 of 90 `skolem-bail`, 0 of 90 `skolemize-unchanged`, and a residual
+quantifier survives on 86 of 86** where the rung was reached. The instantiation
+loop then dies on the clock (59 `timeout-mid-round`, 2 `timeout-round-head`,
+23 `CLOCK`). Building a second skolemizer would have bought nothing, and the
+census's 414-of-525 "has a skolemizable position" is a description of the
+corpus, not headroom.
+
+**2. The first macro ablation was vacuous and printed a clean answer.**
+`z3 smt.macro_finder=false` vs plain `z3` gave `same` on **297 of 297 rows** —
+exactly what a working ablation with no effect prints.
+`smt_params::setup_AUFLIRA()` assigns `m_macro_finder = true` unconditionally
+(`smt_params.cpp:420`) and the logic setup runs AFTER the command line, so the
+flag was overwritten and both arms ran with macros ON for
+AUFDTLIRA/UFDTLIRA/AUFLIRA and OFF for UFLIA/UFNIA/UF. The obvious check is
+useless here: z3 DOES reject unknown option names, so "the flag was accepted"
+was true throughout. Fixed with `auto_config=false`; a positive control
+(`unsat` with macros on, `unknown` with them off) is now RUN BY the ablation
+script, which exits 4 before writing a row if the arms agree.
+
+**3. Corrected ablation: macro finding is net NEGATIVE on this population.**
+One binary, two arms, interleaved per file, 12 s / 8 GiB, s7 `1,9`/`3,11`, over
+the files our ladder leaves undecided. **All 525 undecided files, all six divisions,
+no prefix: 520 identical, 2 LOST without macros, 3 GAINED without macros, 0
+sat/unsat disagreements. Net −1.**
+All three GAINED files are in UFNIA — the division z3's own authors commented
+the flag out for, giving the reason "It destroys the existing patterns"
+(`smt_params.cpp:399-401`). The measurement reproduces their stated reason on a
+population they never ran. For scale: z3 decides 241 of these 525 files our
+ladder does not; macro finding accounts for 2 of them.
+
+**Census (criterion 1), 1200 files, 525 undecided.** Undecided files carrying:
+a top-level skolemizable position 254, a deep one 281, one needing a Skolem
+FUNCTION 181, ANY skolemizable position **414 (78%)**, a definitional macro
+**126 (24%)**, a quasi-macro 43. `sk_conj` is 0 in all six divisions — no
+assertion puts a negated universal under a top-level `and`; the goal is always
+directly `(assert (not (forall ...)))`.
+
+**Shipped:** `crates/axeyum-solver/src/quant_macro_inline.rs` behind
+`AXEYUM_MACRO_INLINE` (armed only by exactly `"1"`), **OFF**, wired as a PREFIX
+in `prove_unsat_by_ematching` so shipped behaviour is a floor even when armed.
+`unsat` transfers; `sat` does not, and the producer says so
+(`MacroInlining::sat_transfers`) rather than the call site restating it. 14
+unit tests + `tests/quant_macro_inline_route.rs` (5), gated in `hooks/pre-push`
+**twice** — the default arm and `AXEYUM_MACRO_INLINE=1` — because the lever
+ships off and gating only the default arm would register a suite that cannot
+fail for the reason it exists.
+
+**Mutation finding worth carrying:** dropping the OCCURS CHECK kills **zero**
+tests, including the one named for it. The acyclicity check over the definition
+set subsumes it — a self-occurrence is a self-loop — and dropping acyclicity
+instead kills **exactly one** named test. No fixture can separate them in this
+IR, so the check is kept for parity with z3 and the redundancy is recorded at
+the code rather than left to look like protection.
+
+**Left undone:** quasi-macros (not implemented; the simple-macro ceiling
+removes the reason), model reconstruction that would let `sat` transfer through
+inlining, and an our-own-binary A/B of the lever over the six divisions — the
+z3 ablation already answers the ship question in the negative, and the pass is
+off.
+
+**The open question this lane surfaced** is not preprocessing at all: a
+universal survives skolemization on 86 of 86 files and the instantiation loop
+then exhausts its budget. That is where this population is lost.
 
 **Lane quant-rounds (`DONE`, quant-rounds, 2026-09-13).** ADR-1950 named the
 largest actionable blocker on the six-division board: `e-matching instantiation

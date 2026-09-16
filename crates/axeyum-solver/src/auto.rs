@@ -13413,6 +13413,55 @@ pub fn prove_unsat_by_ematching(
     let deadline = config
         .timeout
         .and_then(|timeout| Instant::now().checked_add(timeout));
+
+    // ADR-2127: definitional macro inlining, OFF unless `AXEYUM_MACRO_INLINE=1`.
+    //
+    // A `∀x̄. f(x̄) = t[x̄]` assertion that passes the macro conditions is a
+    // DEFINITION of `f`: inlining it removes `f` from the query and turns one
+    // quantified assertion into ground content, which is z3's `macro_finder`.
+    //
+    // The wiring is deliberately a PREFIX and not a replacement: the inlined
+    // query is tried first, and ONLY an `unsat` from it is taken. Anything else
+    // falls through to the original assertions and the ladder proceeds exactly
+    // as it did before, so with the lever off this block is not on the path at
+    // all and with it on the shipped behaviour is a floor.
+    //
+    // `unsat` transfers because inlining under the full conditions is an
+    // equivalence. `sat` does NOT: the inlined query's model has no
+    // interpretation for `f`, so it cannot be replayed against the original
+    // term (CLAUDE.md, Hard Rules), and `MacroInlining::sat_transfers` says so
+    // at the producer rather than here.
+    if crate::quant_macro_inline::macro_inline_enabled() {
+        let inlined = crate::quant_macro_inline::inline_definitional_macros(arena, assertions)
+            .map_err(|error| SolverError::Backend(error.to_string()))?;
+        if inlined.changed {
+            debug_assert!(
+                !inlined.sat_transfers,
+                "a sat-transferring inlining would need model reconstruction this call site does not do"
+            );
+            // How many definitions were folded, under the same `AXEYUM_QPROBE`
+            // flag the rest of the quantified ladder instruments with. Without
+            // it an A/B that moves nothing cannot be told apart from an A/B
+            // where the pass never fired -- and those call for opposite next
+            // steps.
+            if std::env::var_os("AXEYUM_QPROBE").is_some() {
+                eprintln!(
+                    "QPROBE macro-inline inlined={} assertions_before={} assertions_after={}",
+                    inlined.inlined,
+                    assertions.len(),
+                    inlined.assertions.len()
+                );
+            }
+            let inner = instantiate_with_triggers(arena, &inlined.assertions)
+                .map_err(|error| SolverError::Backend(error.to_string()))?;
+            if !inner.residual_quantifier
+                && let CheckResult::Unsat = decide_instantiation(arena, &inner, config)?
+            {
+                return Ok(CheckResult::Unsat);
+            }
+        }
+    }
+
     let instantiation = instantiate_with_triggers(arena, assertions)
         .map_err(|error| SolverError::Backend(error.to_string()))?;
     if !instantiation.residual_quantifier {

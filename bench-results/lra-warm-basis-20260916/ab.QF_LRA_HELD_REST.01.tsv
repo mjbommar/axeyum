@@ -1,0 +1,42 @@
+file	first	a_rc	a_ms	a_verdict	a_total_ms	b_rc	b_ms	b_verdict	b_total_ms	b_warm_build	b_warm_checks	b_warm_declines	b_warm_cold_restarts	a_cold_builds	b_cold_builds	status
+QF_LRA/meti-tarski/atan/problem/2/weak2/atan-problem-2-weak2-chunk-0131.smt2	A	0	107	unsat	4	0	107	unsat	3	off	0	0	0	0	0	unsat
+QF_LRA/meti-tarski/Chua/2/IL/L/Chua-2-IL-L-chunk-0064.smt2	B	0	107	sat	0	0	107	sat	0	off	0	0	0	0	0	sat
+QF_LRA/DTP-Scheduling/constraints-tempo-matrix3x3.pddl.smt2	A	0	107	sat	8	0	107	sat	8	off	0	0	0	0	0	sat
+QF_LRA/LassoRanker/SV-COMP/aviad_true-termination.c_Iteration1_Loop_7-phaseTemplate.smt2	B	0	25130	unknown		0	25132	unknown								sat
+QF_LRA/LassoRanker/SV-COMP/Ben-Amram-2010LMCS-Ex2.3_true-termination.c_Iteration1_Lasso_4-pieceTemplate.smt2	A	0	24624	unknown	24472	0	24730	unknown	24553	built	25	1	0	22	0	unsat
+QF_LRA/LassoRanker/SV-COMP/aviad_true-termination.c_Iteration1_Loop_4-lexTemplate.smt2	B	0	25126	unknown		0	25129	unknown								sat
+QF_LRA/sc/sc-14.induction.cvc.smt2	A	0	24029	unknown	24011	0	9916	sat	9851	built	982	0	0	1698	0	sat
+QF_LRA/LassoRanker/Ultimate/simple-scaled250.bpl_Iteration1_Lasso_5-phaseTemplate.smt2	B	0	25127	unknown		0	25130	unknown								sat
+QF_LRA/sal/gasburner/gasburner-prop3-15.smt2	A	0	24026	unknown	24009	0	24026	unknown	24007	off	0	0	0	0	0	unsat
+QF_LRA/2019-ezsmt/travellingSalesperson/tsp_rand_70_300_1155482584_8.lp.smt2	B	0	2809	sat	2685	0	2708	sat	2564	off	0	0	0	0	0	unknown
+QF_LRA/tta_startup/simple_startup_14nodes.abstract.base.smt2	A	0	24129	unknown	24016	0	24129	unknown	24022	built	1352	1	0	1222	0	unsat
+QF_LRA/LassoRanker/CooperatingT2/bubbleSort.t2.c_Iteration3_Loop_4-pieceTemplate.smt2	B	0	24128	unknown	24052	0	24127	unknown	24061	built	470	1	0	329	0	sat
+QF_LRA/tta_startup/simple_startup_12nodes.synchro.base.smt2	A	0	24127	unknown	24026	0	24127	unknown	24036	built	1264	1	0	1155	0	unsat
+QF_LRA/sc/sc-17.induction3.cvc.smt2	B	0	24129	unknown	24014	0	24129	unknown	24054	off	0	0	0	738	738	sat
+QF_LRA/sal/carpark/Carpark2-t1-1.smt2	A	0	106	unsat	29	0	107	unsat	30	off	0	0	0	0	0	unsat
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_jain_5.i_2_4_3.bpl_7.smt2	B	0	24128	unknown	24026	0	24129	unknown	24032	built	1327	1	0	1014	0	unsat
+QF_LRA/meti-tarski/log/fun-ineq/log-fun-ineq-g-chunk-0010.smt2	A	0	106	unsat	0	0	107	unsat	0	off	0	0	0	0	0	unsat
+QF_LRA/DTP-Scheduling/constraints-tempo-depth-8.smt2	B	0	107	sat	3	0	107	sat	3	off	0	0	0	0	0	sat
+QF_LRA/sc/sc-15.induction2.cvc.smt2	A	0	24127	unknown	24020	0	24029	unknown	24011	built	1527	1	0	1353	0	sat
+QF_LRA/meti-tarski/Chua/1/VC2/L/Chua-1-VC2-L-chunk-0030.smt2	B	0	107	sat	0	0	107	sat	0	off	0	0	0	0	0	sat
+QF_LRA/sal/tgc/tgc_io-safe-16.smt2	A	0	6612	unknown	6513	0	6412	unknown	6376	off	0	0	0	0	0	unsat
+QF_LRA/meti-tarski/sin/344/3/sin-344-3-chunk-0016.smt2	B	0	107	unsat	4	0	106	unsat	4	off	0	0	0	0	0	unsat
+QF_LRA/DTP-Scheduling/constraints-tempo-depth-10.smt2	A	0	107	sat	4	0	107	sat	3	off	0	0	0	0	0	sat
+QF_LRA/tta_startup/simple_startup_8nodes.missing.induct.smt2	B	0	24029	unknown	24013	0	24127	unknown	24010	built	1245	1	0	1141	0	sat
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0145.smt2	A	0	106	unsat	5	0	106	unsat	4	off	0	0	0	0	0	unsat
+QF_LRA/LassoRanker/CooperatingT2/brp_withassume.t2.c_Iteration1_Loop_5-phaseTemplate.smt2	B	0	24825	unknown	24541	0	24929	unknown	24704	built	27	1	0	21	0	sat
+QF_LRA/sc/sc-10.induction.cvc.smt2	A	0	5912	sat	5834	0	6413	sat	6387	built	810	0	0	824	0	sat
+QF_LRA/uart/uart-35.base.cvc.smt2	B	0	24126	unknown	24043	0	24130	unknown	24048	built	616	1	0	538	0	unsat
+QF_LRA/LassoRanker/CooperatingT2/p-43.t2.c_Iteration2_Loop_4-pieceTemplate.smt2	A	0	24228	unknown	24161	0	24227	unknown	24138	built	154	1	0	128	0	sat
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0040.smt2	B	0	107	unsat	5	0	107	unsat	5	off	0	0	0	0	0	unsat
+QF_LRA/tta_startup/simple_startup_6nodes.synchro.base.smt2	A	0	107	unsat	61	0	107	unsat	63	off	0	0	0	0	0	unsat
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0069.smt2	B	0	108	sat	5	0	107	sat	5	off	0	0	0	0	0	sat
+QF_LRA/uart/uart-30.induction.cvc.smt2	A	0	24129	unknown	24018	0	24126	unknown	24039	built	735	1	0	659	0	sat
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0021.smt2	B	0	107	sat	0	0	107	sat	0	off	0	0	0	0	0	sat
+QF_LRA/meti-tarski/Chua/1/IL/U/Chua-1-IL-U-chunk-0056.smt2	A	0	107	sat	0	0	108	sat	0	off	0	0	0	0	0	sat
+QF_LRA/spider_benchmarks/fs_no_op_accs.base.smt2	B	0	407	unsat	313	0	407	unsat	321	off	0	0	0	0	0	unsat
+QF_LRA/tropical-matrix/constraint-269735.smt2	A	0	24126	unknown	24011	0	24129	unknown	24019	built	425	1	0	354	0	sat
+QF_LRA/sc/sc-11.induction3.cvc.smt2	B	0	24131	unknown	24013	0	24131	unknown	24011	off	0	0	0	322	323	sat
+QF_LRA/clock_synchro/clocksynchro_7clocks.main_invar.base.smt2	A	0	3911	unsat	3881	0	3411	unsat	3391	built	603	0	0	583	0	unsat
+QF_LRA/uart/uart-8.induction.cvc.smt2	B	0	19025	sat	18912	0	24130	unknown	24017	built	1924	1	0	1598	0	sat
+QF_LRA/LassoRanker/CooperatingT2/ludcmp.t2.c_Iteration7_Loop_7-phaseTemplate.smt2	A	0	24229	unknown	24100	0	24225	unknown	24137	built	132	1	0	87	0	sat

@@ -74,6 +74,17 @@ use axeyum_ir::Rational;
 /// keeps whatever engine it had. Purely structural (no clock), so the decline is deterministic.
 pub(crate) const MAX_TABLEAU_CELLS: usize = 4_000_000;
 
+/// Nonzeros the ADR-2125 warm cube engine admits, the currency the sparse
+/// tableau is actually stored in (~40 bytes each, so this is **16 MiB**).
+///
+/// Not a new number: it is [ADR-2111]'s own `TableauReserve::Sparse` figure,
+/// reused rather than invented so the two ceilings on one structure agree. What
+/// it is measured against is real — [ADR-2055] measured a median **34,555**
+/// nonzeros over the 74 rows of this route and an extreme of **147,440**, so
+/// this is 11.6× the median and 2.7× the extreme. Nobody has taken the tail, and
+/// this is stated rather than implied.
+pub(crate) const MAX_WARM_CUBE_NONZEROS: usize = 400_000;
+
 /// Diagnostic (`AXEYUM_LRADENSEPROBE=1`): report resident-set size at each of the
 /// four points on the offline dense LRA route where a large allocation either
 /// lands or is released, so the 5.07 GiB median [ADR-2045] measured over this
@@ -638,6 +649,60 @@ pub fn feasible_within_sparse(
     constraints: &[SparseConstraint],
     deadline: Option<Instant>,
 ) -> SimplexOutcome {
+    // ADR-2125's ceiling instrument. Clocked only when the lazy-SMT counters are
+    // armed, which is `--trace` and nothing else: this entry point is on the
+    // per-cube hot path and an unconditional `Instant::now` pair here would be
+    // two clock reads per cube on a route that takes hundreds of them per
+    // second. One thread-local `bool` read otherwise.
+    //
+    // The three quantities are recorded by ONE call rather than three, because
+    // they are one event: a caller that read `simplex_cold_build` without
+    // `simplex_cold` would be reading a numerator with no denominator, which is
+    // the shape this repository keeps being caught by.
+    if !crate::lazy_smt_counters::enabled() {
+        return feasible_within_sparse_inner(
+            nvars,
+            constraints,
+            deadline,
+            &mut ColdSimplexProbe::default(),
+        );
+    }
+    let started = Instant::now();
+    let mut probe = ColdSimplexProbe::default();
+    let outcome = feasible_within_sparse_inner(nvars, constraints, deadline, &mut probe);
+    crate::lazy_smt_counters::record_cold_simplex(
+        started.elapsed(),
+        probe.build,
+        probe.built,
+        probe.pivots,
+    );
+    outcome
+}
+
+/// What one from-scratch [`feasible_within_sparse`] call did, for the ADR-2125
+/// ceiling. Filled in only when the lazy-SMT counters are armed.
+///
+/// `built` is separate from a nonzero `build` deliberately: a tableau whose
+/// construction is too fast for the clock's resolution still IS a rebuild, and
+/// inferring the count from the duration would under-count exactly the cheap
+/// cubes a warm basis helps least on — biasing the ceiling upward.
+#[derive(Default)]
+struct ColdSimplexProbe {
+    /// Time inside `Tableau::new_sparse`.
+    build: std::time::Duration,
+    /// Whether a tableau was actually allocated (the cell cap can decline first).
+    built: bool,
+    /// Pivots the run performed.
+    pivots: u64,
+}
+
+#[must_use]
+fn feasible_within_sparse_inner(
+    nvars: usize,
+    constraints: &[SparseConstraint],
+    deadline: Option<Instant>,
+    probe: &mut ColdSimplexProbe,
+) -> SimplexOutcome {
     for c in constraints {
         assert!(
             c.coeffs.iter().all(|&(j, _)| j < nvars),
@@ -659,7 +724,10 @@ pub fn feasible_within_sparse(
         );
         return SimplexOutcome::Unknown;
     }
+    let build_started = Instant::now();
     let mut tableau = Tableau::new_sparse(nvars, constraints);
+    probe.build = build_started.elapsed();
+    probe.built = true;
     dense_probe(
         "tableau-built",
         &format!(
@@ -668,6 +736,7 @@ pub fn feasible_within_sparse(
         ),
     );
     let outcome = tableau.run(deadline, MAX_PIVOTS);
+    probe.pivots = tableau.total_pivots;
     dense_probe(
         "run-done",
         &format!("nvars={nvars} m={m} pivots={}", tableau.total_pivots),
@@ -1860,6 +1929,58 @@ impl Incremental {
         Incremental::with_policy(nvars, rows_sparse, configured_policy())
     }
 
+    /// As [`Incremental::new`], but admitting on **nonzeros** rather than on
+    /// dense cells (ADR-2125).
+    ///
+    /// # The measurement this exists for
+    ///
+    /// [`Incremental::new`] refuses when `m × (nvars+m)` exceeds
+    /// [`MAX_TABLEAU_CELLS`]. That is a DENSE-CELL count, and since [ADR-2111]
+    /// this tableau does not store dense cells: it stores `nnz` pairs at about
+    /// 40 bytes each. On `QF_LRA/sc/sc-39.base.cvc.smt2` the two currencies
+    /// disagree by three orders of magnitude — 8,797,712 cells against **4,688
+    /// nonzeros**, 188 KB of actual storage — so the cap refuses an engine that
+    /// would cost nothing, and the ADR-2125 lever measured `warm_cube_checks=0`
+    /// in both arms because of it: an INERT arm, the exact failure [ADR-2111]
+    /// recorded for its own `TableauReserve`.
+    ///
+    /// What makes the refusal indefensible rather than merely conservative is
+    /// the other side of it. The offline route's cold path
+    /// ([`feasible_within_sparse`]) consults [`MAX_TABLEAU_CELLS`] **only** under
+    /// the default-off `AXEYUM_LRA_CELL_CAP` lever, so on that same file the same
+    /// structural ceiling refuses ONE warm tableau and permits **839 cold builds
+    /// of the identical system**. This is [ADR-1752]'s finding one level down: a
+    /// count is the wrong currency, and the right one is the bytes.
+    ///
+    /// [`MAX_TABLEAU_CELLS`] is deliberately NOT changed. It governs the online
+    /// engine's admission too, and moving it would make an A/B of one lever an
+    /// A/B of two routes — which is how [ADR-2111]'s `TableauReserve` arm became
+    /// unreadable. This is a second door for one call site.
+    pub(crate) fn with_nonzero_admission(
+        nvars: usize,
+        rows_sparse: Vec<Vec<(usize, Rational)>>,
+        max_nonzeros: usize,
+    ) -> Option<Self> {
+        crate::config_registry::note_consulted(
+            "crates/axeyum-solver/src/simplex.rs::MAX_WARM_CUBE_NONZEROS",
+        );
+        let m = rows_sparse.len();
+        // `n` is still checked for overflow: the tableau indexes columns
+        // `0..nvars+m` whatever its storage costs, so a width that does not fit a
+        // `usize` is a refusal on every admission currency.
+        let _n = nvars.checked_add(m)?;
+        let nnz: usize = rows_sparse.iter().map(Vec::len).sum();
+        if nnz > max_nonzeros {
+            return None;
+        }
+        Some(Incremental {
+            tab: Tableau::new_rows_with_policy(nvars, rows_sparse, configured_policy()),
+            poisoned: false,
+            checks: 0,
+            cold_restarts: 0,
+        })
+    }
+
     /// As [`Incremental::new`], under an explicit [`PivotPolicy`].
     ///
     /// This is the A/B seam: the dense/Bland arm every measurement of a new rule
@@ -2001,6 +2122,74 @@ impl Incremental {
     #[must_use]
     pub fn cold_restarts(&self) -> u64 {
         self.cold_restarts
+    }
+
+    /// Whether the tableau invariant holds RIGHT NOW: every basic variable's
+    /// value equals its row evaluated over the other variables, the basic /
+    /// nonbasic split is internally consistent, and no row stores a coefficient
+    /// for its own basic column.
+    ///
+    /// This is what "the basis persists across pops" has to MEAN to be checkable
+    /// (ADR-2125). A warm engine that keeps a basis it has corrupted is worse
+    /// than one that rebuilds: the pivot loop repairs bound violations, it does
+    /// not repair a row that no longer expresses its basic variable, and the
+    /// result of pivoting from such a row is an unsound verdict rather than a
+    /// slow one.
+    ///
+    /// Three distinct answers, and the distinction is the point:
+    ///
+    /// * `Some(true)` — checked and holds.
+    /// * `Some(false)` — checked and VIOLATED.
+    /// * `None` — the check's own exact arithmetic overflowed, so nothing was
+    ///   established. A caller that folded this into `true` would have a
+    ///   verifier that passes hardest exactly where the numbers are most
+    ///   extreme, which is the shape of a control that cannot fail.
+    ///
+    /// `O(nnz)`, so a test may call it after every bound move; nothing on the
+    /// solve path does. Every caller is `#[cfg(test)]` (the `lra_online`
+    /// wrapper and its fixtures), so this is too: under `--all-features`
+    /// without `test` the `bench-internals` gate compiled it with no caller and
+    /// the workspace clippy refused the push on `dead_code`.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn tableau_invariant_holds(&self) -> Option<bool> {
+        let t = &self.tab;
+        // The split itself, before any arithmetic: `basic` and `is_basic` are two
+        // encodings of one fact, and a disagreement between them is a defect the
+        // value check below could mask (a row whose "basic" variable is also
+        // nonbasic evaluates to whatever it evaluates to).
+        let mut flagged = vec![false; t.n];
+        for i in 0..t.m {
+            let b = t.basic[i];
+            if b >= t.n || !t.is_basic[b] || flagged[b] {
+                return Some(false);
+            }
+            flagged[b] = true;
+        }
+        if t.is_basic.iter().filter(|&&f| f).count() != t.m {
+            return Some(false);
+        }
+        for i in 0..t.m {
+            let b = t.basic[i];
+            // A row must not store a coefficient for its own basic column:
+            // `update_nonbasic` scales by `cell(i, v)` for nonbasic `v` only, so
+            // a stored self-coefficient would be silently ignored there and
+            // silently counted here -- the two would disagree for a reason no
+            // verdict could show.
+            if t.row_nz[i].contains(&b) {
+                return Some(false);
+            }
+            let mut acc = Delta::zero();
+            for k in 0..t.row_nz[i].len() {
+                let j = t.row_nz[i][k];
+                let term = t.value[j].scale(t.row_val[i][k]).ok()?;
+                acc = acc.add(term).ok()?;
+            }
+            if acc.cmp(t.value[b]) != core::cmp::Ordering::Equal {
+                return Some(false);
+            }
+        }
+        Some(true)
     }
 
     /// A concrete rational point for the problem variables after a

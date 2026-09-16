@@ -1,0 +1,26 @@
+[cause 1] unknown :: declined: exact real-polynomial decider declined: non-conjunctive (cad-arm=single-cell)
+[cause 2] unknown :: declined: exact real-polynomial decider declined: non-conjunctive (cad-arm=single-cell)
+[cause 3] unknown :: declined: exact real-polynomial decider declined: non-conjunctive (cad-arm=single-cell)
+[cause 4] unknown :: declined: exact real-polynomial decider declined: non-conjunctive (cad-arm=single-cell)
+[cause 5] unknown :: declined: exact real-polynomial decider declined: projection-arithmetic (cad-arm=single-cell)
+[cause 6] unknown :: declined: exact real-polynomial decider declined: algebraic-witness (cad-arm=single-cell)
+[cause 7] unknown :: declined: exact real-polynomial decider declined: non-conjunctive (cad-arm=single-cell)
+[cause 8] unknown :: declined: exact real-polynomial decider declined: non-conjunctive (cad-arm=single-cell)
+[cause 9] unknown :: declined: exact real-polynomial decider declined: non-conjunctive (cad-arm=single-cell)
+[cause 10] unknown :: declined: exact real-polynomial decider declined: non-conjunctive (cad-arm=single-cell)
+[cause 11] unknown :: declined: exact real-polynomial decider declined: non-conjunctive (cad-arm=single-cell)
+[cause 12] sat :: declined: exact real-polynomial decider declined: non-conjunctive (cad-arm=single-cell)
+[cause 13] unknown :: declined: exact real-polynomial decider declined: non-conjunctive (cad-arm=single-cell)
+[cause 14] unknown :: declined: exact real-polynomial decider declined: algebraic-witness (cad-arm=single-cell)
+[cause 15] unknown :: declined: exact real-polynomial decider declined: algebraic-witness (cad-arm=single-cell)
+[cause 16] unknown :: declined: exact real-polynomial decider declined: algebraic-witness (cad-arm=single-cell)
+[cause 17] unknown :: declined: exact real-polynomial decider declined: root-ordering (cad-arm=single-cell)
+[cause 18] unsat :: decided
+[cause 19] unknown :: declined: exact real-polynomial decider declined: algebraic-witness (cad-arm=single-cell)
+[cause 20] sat :: decided
+[cause 21] sat :: declined: exact real-polynomial decider declined: non-conjunctive (cad-arm=single-cell)
+[cause 22] unknown :: declined: exact real-polynomial decider declined: algebraic-witness (cad-arm=single-cell)
+[cause 23] unknown :: declined: exact real-polynomial decider declined: projection-sylvester-dim (cad-arm=single-cell)
+[cause 24] unknown :: declined: exact real-polynomial decider declined: certificate-rejected (cad-arm=single-cell)
+cause-scan: 24 files -> /home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ae1a98fb7ccdc8d8c/bench-results/nra-cell-exact-20260916/recause-inbounds-24.tsv
+SCAN_EXIT=0
