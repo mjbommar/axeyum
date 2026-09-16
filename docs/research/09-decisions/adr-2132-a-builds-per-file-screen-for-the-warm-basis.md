@@ -930,7 +930,62 @@ the code existed.
 
 ## 8. What this lane did not do
 
-PLACEHOLDER — filled in at the end of the lane.
+Named with what is known about each, rather than left implied.
+
+1. **The screen that would actually work is not built.** §2.2 measured pivots per
+   build per atom at 0.263 on the gain and 0.124 on the loss — a 2.1× separation,
+   clock-free — and stopped there. Two points is a fit, and both points are
+   HELD-OUT rows; building on them would spend the population that is supposed to
+   score the next screen. The successor's first move is to size that quantity on
+   the pinned 200, which is what this lane did with builds-per-file and is the
+   only reason its threshold could be fixed before the code existed.
+
+2. **`simplex_cold_builds` is not split per route**, and §4.2 measured the error
+   it causes in the SIZING: 0 of 68 on the pinned 200 where the threshold was
+   derived, at least 3 of 47 on the held-out draw. The SCREEN is unaffected
+   because it compares a delta from loop entry. A successor sizing any screen on
+   this counter should split it first; this lane did not, and those two numbers
+   are how far it can say the error goes.
+
+3. **The threshold was never swept.** One value, 64, chosen from a window before
+   the code existed and measured once. Whether 48 or 128 does better on the
+   pinned draw is unmeasured — including whether a lower value would have kept
+   `on`'s stable gain on `sc-7.base.cvc` (1,695 builds), which the screen gives
+   up because its first 64 rounds run cold. That row is PINNED, so tuning against
+   it would not be training-set fitting, and it is a legitimate next measurement
+   that this lane did not take.
+
+4. **The fill-in tail is not taken.** §4.4's 21× is seven files. It answers
+   ADR-2111's yes/no and does not characterise the distribution or license a new
+   constant. Nobody has measured what the largest `fill_peak / entry_nnz` on this
+   route actually is, which is precisely what a successor re-pricing
+   `MAX_WARM_CUBE_NONZEROS` would need.
+
+5. **The attribution's residual is named, not decomposed.** §4.3's three terms
+   over-explain the theory-layer saving by −11.9 %, because `theory_ms` covers
+   the whole `cube_check` including model materialization and `rows_to_core`, and
+   neither has a field. Folding it into the basis would have reported the basis
+   at 25 % instead of 37 %, so it is a printed column — but it is 36 s of
+   unattributed time across 67 rows.
+
+6. **The exposure divisions ran two arms, not three.** `on` is absent from their
+   tables and the summariser prints `DID NOT RUN` rather than a zero. So those
+   divisions say whether the SCREEN regressed them; they do not compare the
+   screen against the unscreened arm there.
+
+7. **Bound-AXIOM generation** remains the largest unpulled piece of [ADR-2111]'s
+   claim 2, named again by [ADR-2122] and by [ADR-2125], and untouched here.
+
+8. **Four defects in this lane's own instruments** are fixed and recorded rather
+   than quietly repaired, because the shape recurs: a fuzz runner that called a
+   FAILING suite an inert one and deleted the evidence (§5.5); a gate runner that
+   blamed a real lint failure on a missing `z3-sys` asset, and also deleted the
+   evidence (§5.3); a summariser that reported an absent arm as a disagreement;
+   and an ssh `exit 124` read as "the launch did not happen", which ran one
+   exposure shard twice on one core pair. Every row either instance of that shard
+   wrote was discarded. **All four were found by reading the output against what
+   it was describing, not by any test** — which is the argument for reading your
+   own instruments rather than their exit status.
 
 [ADR-2045]: adr-2045-the-bound-is-not-the-wall-qf-lra-is-one-offline-dense-engine.md
 [ADR-2055]: adr-2055-the-tableau-is-the-memory-and-capping-it-costs-eighteen-clean-exits.md
