@@ -1,6 +1,21 @@
 DT-FIELD-EXPANSION -- the one MOVER in the partial A/B, rechecked, and it does
 NOT come from the bucket this lane predicted.
 
+WHY THE FIRST RUN ENDED AT 82 ROWS, ON THE RECORD. It did not die. **The
+coordinator stopped it deliberately**, by the process groups of the four PIDs
+this lane's own report named, because that report said "harvest it or kill
+those PIDs; do not leave it orphaned" and the verdict-only zero-diff at the 50
+rows harvested up to then read as uninformative. The coordinator has recorded
+that as a misjudgment: the next 32 rows held this mover.
+
+It is written down because "the run died" and "a person stopped the run" are
+different facts with different lessons, and this lane published the first one
+before checking. The lesson that survives is the one §5a already carries: a
+verdict-only zero-diff on a PREFIX of a sweep is not evidence that the sweep
+has nothing in it -- a prefix of a path-sorted list cannot show the effect
+(CLAUDE.md, "never read a prefix of a sorted benchmark list"), and here the
+83rd row was the finding.
+
 THE ROW. `ab-summarize.py` over the first 82 of 200 `AUFDTLIRA` files:
 
     rows=82  (base-first 40 / arm-first 42)

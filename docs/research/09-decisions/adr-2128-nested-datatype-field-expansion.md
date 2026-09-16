@@ -374,7 +374,9 @@ reader:
 **The interleaved A/B did not complete in this lane, so no ship decision is
 taken and the lever stays OFF -- which is what it ships as.** What ran is the
 first **82 of 200** `AUFDTLIRA` files (`census/ab-AUFDTLIRA-partial*`; the run
-then DIED without writing its `DONE` marker and was relaunched). One binary,
+was then STOPPED BY THE COORDINATOR at 82 rows -- deliberately, on this lane's
+own "harvest it or kill those PIDs" note, and recorded as a misjudgment once
+the 82 rows turned out to hold the mover -- and relaunched). One binary,
 two env values, the two arms back to back per file on one core, order
 alternated per file, 24 s, this lane's pinned pairs on s7:
 

@@ -51507,8 +51507,10 @@ both** — the lever MOVES THE BLOCKER without moving the verdict here.
 
 **A/B, PARTIAL: 82 of 200 `AUFDTLIRA` files — 1 GAIN, 0 losses, 0 flips**
 (`census/ab-AUFDTLIRA-partial.txt`; base `unsat` 52 / `unknown` 30, arm 53/29;
-base-first 40 / arm-first 42). No soundness incident. The run then DIED without
-writing its `DONE` marker and was relaunched.
+base-first 40 / arm-first 42). No soundness incident. The run was then STOPPED
+BY THE COORDINATOR at 82 rows, on this lane's own "harvest it or kill those
+PIDs" note and on a verdict-only zero-diff read from the first 50 rows; the
+next 32 held the mover. Relaunched from row 1.
 
 The mover is `O512-022__stacks__stacks.ads_84_58_index_check___00.smt2`,
 `unknown` → `unsat`, and it is verified
