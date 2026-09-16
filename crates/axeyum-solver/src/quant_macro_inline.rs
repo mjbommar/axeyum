@@ -57,6 +57,13 @@
 //! `∀x. f(x) = g(f(x))` is a recursive constraint; inlining it does not
 //! terminate and does not preserve models.
 //!
+//! It is also, **measured**, redundant here: deleting it kills ZERO tests,
+//! because a self-occurrence is a self-loop and [`acyclic`] refuses it first.
+//! The full reading is at the check itself. It is kept for parity with z3 and
+//! because it rejects locally, not because any fixture would notice its
+//! absence — and saying so is the point, since a guard that reads as protection
+//! and provides none is worse than no guard at all (CLAUDE.md).
+//!
 //! [`acyclic`] is z3 `macro_manager::insert`'s dependency-cycle rejection
 //! (`macro_manager.cpp:130-134`). Each definition passes the occurs check on its
 //! own and two of them can still close a loop: `∀x. f(x) = g(x)` together with
@@ -272,6 +279,21 @@ fn read_definition(arena: &TermArena, assertion: TermId) -> Option<(FuncId, Macr
         let Some((func, params)) = is_macro_head(arena, head, &binders) else {
             continue;
         };
+        // MEASURED SUBSUMED, and recorded here rather than left looking like
+        // protection it does not provide. Deleting this check kills ZERO tests
+        // -- including `occurs_check_refuses_a_recursive_definition`, the test
+        // named for it -- because `f` occurring in its own body is a SELF-LOOP
+        // in the dependency graph, which [`acyclic`] refuses first. Dropping
+        // `acyclic` instead kills exactly one named test. No fixture can
+        // separate the two in this IR, because a function can only occur as an
+        // application, so there is no shape that is a self-occurrence but not a
+        // self-loop.
+        //
+        // Kept anyway, for two reasons that are not "it might catch
+        // something": it is z3's own condition at the same point in the
+        // pipeline (`macro_util.cpp:182`), and it rejects LOCALLY before a
+        // definition is inserted and a graph built. What it is not is a guard
+        // whose removal any test would notice.
         if occurs_func(arena, def_body, func) {
             continue;
         }
@@ -664,9 +686,17 @@ mod tests {
     }
 
     #[test]
-    fn occurs_check_refuses_a_recursive_definition() {
+    fn a_recursive_definition_is_refused_though_acyclic_is_what_refuses_it() {
         // SOUNDNESS NEGATIVE. `∀x. f(x) = g(f(x))` is not a definition: inlining
         // it does not terminate and does not preserve models.
+        //
+        // The name says which guard actually does the work, because the obvious
+        // name was measured WRONG. Deleting the occurs check leaves this test
+        // passing: `f` in its own body is a self-loop, and `acyclic` refuses it
+        // first. Naming it after the occurs check would claim a coverage
+        // relationship that a mutation disproves -- and a test whose name
+        // misattributes what it pins is how a redundant guard goes on looking
+        // load-bearing (CLAUDE.md, evidence discipline).
         let mut fix = Fix::new();
         let (x, xt) = fix.int_sym("x");
         let f = fix.int_fn("f", 1);
@@ -679,7 +709,10 @@ mod tests {
         let t = fix.arena.bool_const(true);
 
         let out = inline_definitional_macros(&mut fix.arena, &[def, t]).unwrap();
-        assert!(!out.changed, "the occurs check must refuse this");
+        assert!(
+            !out.changed,
+            "a recursive pseudo-definition must be refused"
+        );
         assert_eq!(out.inlined, 0);
     }
 
