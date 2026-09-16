@@ -554,6 +554,16 @@ pub struct LazySmtCounters {
     /// the fill-in measurement. This is that measurement's numerator: read it
     /// against the nonzeros the engine was admitted on.
     pub warm_cube_fill_peak: u64,
+    /// Nonzeros the warm tableau was CONSTRUCTED with — the denominator
+    /// [`Self::warm_cube_fill_peak`] is meaningless without (ADR-2132).
+    ///
+    /// The engine is admitted on this number (`MAX_WARM_CUBE_NONZEROS`), and the
+    /// peak is what the pivot loop grew it to. A peak read without it says only
+    /// "the tableau got this big", which is compatible with the cap doing all
+    /// the work and with fill-in doing all of it, and those are opposite answers
+    /// to whether a construction-time nonzero bound is the right instrument.
+    /// Cumulative on the engine, so this is SET rather than added to.
+    pub warm_cube_entry_nnz: u64,
     /// Time inside the warm engine's PIVOT LOOP, summed over every cube it was
     /// asked about — the basis re-solve proper (ADR-2132).
     ///
@@ -851,7 +861,7 @@ impl LazySmtCounters {
              cube_matrices={} simplex_cold_builds={} simplex_cold_build_ms={} \
              simplex_cold_ms={} simplex_cold_pivots={} warm_cube_checks={} \
              warm_cube_declines={} warm_cube_retractions={} warm_cube_assertions={} \
-             warm_cube_cold_restarts={} warm_cube_fill_peak={} \
+             warm_cube_cold_restarts={} warm_cube_fill_peak={} warm_cube_entry_nnz={} \
              warm_cube_solve_ms={} warm_cube_sync_ms={} \
              warm_cube_build={} online_probe={}",
             self.reading().label(),
@@ -901,6 +911,7 @@ impl LazySmtCounters {
             self.warm_cube_assertions,
             self.warm_cube_cold_restarts,
             self.warm_cube_fill_peak,
+            self.warm_cube_entry_nnz,
             self.warm_cube_solve.as_millis(),
             self.warm_cube_sync.as_millis(),
             self.warm_cube_build.label(),
@@ -993,6 +1004,7 @@ const fn zero_counters() -> LazySmtCounters {
         warm_cube_assertions: 0,
         warm_cube_cold_restarts: 0,
         warm_cube_fill_peak: 0,
+        warm_cube_entry_nnz: 0,
         warm_cube_solve: Duration::ZERO,
         warm_cube_sync: Duration::ZERO,
         online_probe: OnlineProbe::NotProbed,
@@ -1405,18 +1417,19 @@ pub(crate) fn record_warm_cube_time(sync: Duration, solve: Duration) {
 /// deliberate: the loop has several exits, and a counter written only on the
 /// orderly one reads as zero on exactly the budget-bound rows this lever is
 /// aimed at.
-pub(crate) fn record_warm_cube(answered: bool, churn: Option<(u64, u64, u64, u64)>) {
+pub(crate) fn record_warm_cube(answered: bool, churn: Option<(u64, u64, u64, u64, u64)>) {
     record(|c| {
         if answered {
             c.warm_cube_checks = c.warm_cube_checks.saturating_add(1);
         } else {
             c.warm_cube_declines = c.warm_cube_declines.saturating_add(1);
         }
-        if let Some((retractions, assertions, cold_restarts, fill_peak)) = churn {
+        if let Some((retractions, assertions, cold_restarts, fill_peak, entry_nnz)) = churn {
             c.warm_cube_retractions = retractions;
             c.warm_cube_assertions = assertions;
             c.warm_cube_cold_restarts = cold_restarts;
             c.warm_cube_fill_peak = fill_peak;
+            c.warm_cube_entry_nnz = entry_nnz;
         }
     });
 }
@@ -1540,6 +1553,7 @@ mod tests {
             warm_cube_assertions,
             warm_cube_cold_restarts,
             warm_cube_fill_peak,
+            warm_cube_entry_nnz,
             warm_cube_solve,
             warm_cube_sync,
             warm_cube_build: _,
@@ -1599,6 +1613,7 @@ mod tests {
                 warm_cube_cold_restarts.to_string(),
             ),
             ("warm_cube_fill_peak", warm_cube_fill_peak.to_string()),
+            ("warm_cube_entry_nnz", warm_cube_entry_nnz.to_string()),
             (
                 "warm_cube_solve_ms",
                 warm_cube_solve.as_millis().to_string(),

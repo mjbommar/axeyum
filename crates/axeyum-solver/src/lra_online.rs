@@ -2236,14 +2236,16 @@ impl LraTheory {
     /// `cold_restarts` that stays 0 across thousands of checks is what
     /// distinguishes a warm reconciliation from a rebuild wearing its name.
     #[must_use]
-    pub(crate) fn warm_engine_churn(&self) -> Option<(u64, u64, u64, u64)> {
+    pub(crate) fn warm_engine_churn(&self) -> Option<(u64, u64, u64, u64, u64)> {
         let cell = self.simplex.as_ref()?;
         let engine = cell.borrow();
+        let counters = engine.inner.counters();
         Some((
             engine.sync_retractions,
             engine.sync_assertions,
             engine.inner.cold_restarts(),
-            engine.inner.counters().fill_nnz_peak,
+            counters.fill_nnz_peak,
+            counters.entry_nnz,
         ))
     }
 
@@ -6644,7 +6646,7 @@ mod tests {
              question: feasible={feasible} unsat={infeasible} decline={declined}"
         );
 
-        let (retractions, assertions, cold_restarts, _fill_peak) =
+        let (retractions, assertions, cold_restarts, _fill_peak, _entry_nnz) =
             warm.warm_engine_churn().expect("warm engine exists");
         assert_eq!(
             cold_restarts, 0,

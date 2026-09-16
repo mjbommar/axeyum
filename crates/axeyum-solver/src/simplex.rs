@@ -378,6 +378,17 @@ pub struct TableauCounters {
     /// Samples behind `fill_nnz_sum`; the denominator, never assumed equal to
     /// the check count.
     pub fill_samples: u64,
+    /// Nonzeros the tableau was CONSTRUCTED with, before any pivot (ADR-2132).
+    ///
+    /// The DENOMINATOR [`Self::fill_nnz_peak`] is meaningless without. A peak of
+    /// 176,776 against an admission cap of 400,000 says nothing on its own: it
+    /// is a different claim depending on whether the tableau entered at 170,000
+    /// nonzeros or at 4,688. The first says the cap is doing the work; the
+    /// second says fill-in is, and only the second makes a construction-time
+    /// nonzero bound the wrong instrument.
+    ///
+    /// Set once, at construction, and never added to.
+    pub entry_nnz: u64,
     /// The LARGEST of those samples (ADR-2132).
     ///
     /// The mean beside it answers "how sparse is this tableau typically"; this
@@ -1075,6 +1086,12 @@ impl Tableau {
             tie_break_state: policy.tie_break_seed,
         };
         t.reset_structure();
+        // ADR-2132. The DENOMINATOR `fill_nnz_peak` is meaningless without: a
+        // peak against an admission cap is a different claim depending on
+        // whether the tableau ENTERED near that cap or three orders of magnitude
+        // below it. Recorded after `reset_structure`, which is what builds the
+        // index, and never touched again.
+        t.counters.entry_nnz = t.total_nnz();
         t
     }
 
