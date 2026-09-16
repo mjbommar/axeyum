@@ -21,20 +21,40 @@ the verdicts are in `ab-summary.txt`.
    The three are `sc/sc-24.induction3`, `sc/sc-18.induction3` and
    `sc/sc-11.induction3`, at 2,257 / 1,137 / 339 cold builds. They render
    `warm_cube_build=off` in the `on` arm TOO, and `on` builds its decider
-   unconditionally whenever the linear offline loop is entered. So the loop was
-   never entered on those rows: their thousands of from-scratch tableaux come
-   from the NRA (or NIA) loop, which shares these counters -- the reading
-   ADR-2125 section 6.4 warned a reader would otherwise take at face value.
+   unconditionally whenever the linear offline loop is entered -- so that loop
+   was never entered.
 
-   **The consequence for a screen is new and this lane owns it.**
-   `simplex_cold_builds` IS NOT LOOP-SPECIFIC. A file can score high on the
-   sizing axis entirely on builds the lever cannot act on, so a builds-per-file
-   threshold admits rows the warm basis can do nothing for. Here that is 3 of
-   47 -- small, and it is a systematic bias rather than noise, because the NRA
-   loop's files are a family and not a scattering.
+   READ FROM THE CAPTURE RATHER THAN INFERRED. On `sc-24.induction3`:
 
-   A successor sizing ANY screen on this counter should split it per loop first.
-   This lane did not, and the 3 rows are how far it can say the error goes.
+       ; lazy-smt reading=not-reached lra_entries=0 nra_entries=0 nia_entries=0
+                  atoms=0 simplex_cold_builds=2264 warm_cube_build=off
+       ; route decided_by=none bound_by=lira-dpll last=fd:bounded-completeness-unsat
+
+   **No lazy-SMT loop ran at all.** All 2,264 from-scratch tableaux come from the
+   `lira-dpll` rung. (An earlier draft of this file said "the NRA loop", reading
+   across from ADR-2125 section 6.4's warning about the shared counters. That was
+   a guess at the mechanism and the capture refutes it: `nra_entries` is 0 too.)
+
+   **So `simplex_cold_builds` counts every route that calls
+   `feasible_within_sparse`, not the offline lazy-SMT loops.** Two consequences,
+   and they point opposite ways:
+
+   * THE SCREEN IS UNAFFECTED, and the reason is a design choice that now has a
+     measured example behind it. `WarmCubeScreen::Waiting` snapshots the counter
+     when the LINEAR LOOP IS ENTERED and compares a DELTA, so a rung that burned
+     2,264 builds before the loop started contributes nothing to the comparison.
+     Had the screen read the counter absolutely -- the obvious implementation --
+     this file would have tripped it on its first round.
+   * THE SIZING AXIS OVER-COUNTS on files like these. The threshold was derived
+     from the pinned 200, where the error is **exactly zero**: all 68 rows with
+     a nonzero build count have `lra_entries > 0`, checked against ADR-2125's own
+     committed sizing. On the held-out draw it is at least 3 of 47. That is the
+     training population failing to contain a shape the evaluation one has, which
+     is what a held-out draw is for.
+
+   A successor sizing any screen on this counter should split it per route
+   first. This lane did not; 0 of 68 pinned and 3 of 47 held-out is how far it
+   can say the error goes.
 
 3. THE SCREEN ANSWERS FEWER CUBES THAN `on` ON 42 OF THE 44 IT OPENS ON
    --------------------------------------------------------------------
