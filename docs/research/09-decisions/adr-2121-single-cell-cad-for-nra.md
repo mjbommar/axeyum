@@ -5,10 +5,13 @@ Index-summary: ADR-2110 measured 45 of 83 undecided QF_NRA files as decided by
 z3's CAD arm and not by its linearization arm, and named the design difference:
 we enumerate the arrangement, z3 and cvc5 build one cell per conflict. This
 builds the second shape as a bounded slice. The lever `AXEYUM_NRA_CAD=single-cell`
-is measured at +6 on QF_NRA (6 STABLE-GAIN, 0 STABLE-LOSS, 0 flips on a 3x
-recheck, of which +4 is the route deciding and 2 are files it declines), +0 on
-QF_NIA and 0 movement on the QF_LRA control, with its baseline arm reproducing
-the board's own 117; an `unsat` is emitted only after an independent cell-covering
+is measured at +6 on QF_NRA (6 STABLE-GAIN, 0 STABLE-LOSS, 0 flips). It ships
+OFF because its `unsat` is gated on a SAMPLING delineability check -- but that
+reason covers only ONE of the route's two halves, so a second arm
+`single-cell-sat` keeps the exact `sat` half and withholds the `unsat` as a typed
+decline. That arm measures +4 with 4 STABLE-GAIN / 0 STABLE-LOSS / 0 flips / 0
+disagreements over 593 comparable verdicts and a control that moved 0 rows, adds
+no verdict resting on a sample, and **SHIPS ON as the default**; an `unsat` is emitted only after an independent cell-covering
 checker accepts it, and the honest label on that checker is CHECKED, not proved,
 because its delineability test is sampling. The sizing correction matters more
 than the +6: this lane's own first ceiling of 24 was wrong, and the corrected
@@ -409,6 +412,93 @@ assertion would pass on the mutant. `x·y² − x` is the zero polynomial in `y`
 `x = 0`, and because both its atoms are level 1 the level-0 cell's sample IS
 `x = 0` — the route reaches the nullified point by construction, not by luck.
 
+## The sat-only arm — taking the exact half
+
+The reason the full route stays off is that its `unsat` is gated on a **sampling**
+delineability check. That reason applies to exactly one of its two halves. A
+`sat` from this route is a rational model replayed through the ground evaluator
+against the original assertions: exact, with no sample anywhere in its
+justification. Leaving the whole route off spends the exact half to pay for the
+sampled one.
+
+`AXEYUM_NRA_CAD=single-cell-sat` separates them. It runs the route and converts
+every `unsat` it reaches into
+[`CadDecline::UnsatWithheldSampledDelineability`]. The cell cap is identical to
+`default` and to `single-cell`, and the two single-cell arms differ in exactly
+`emit_unsat` — so an A/B between them prices the `unsat` half on its own.
+
+**Read the cause precisely.** It means "a covering was reached and this arm does
+not emit `unsat`". It does *not* mean a checked refutation was discarded: the
+withholding happens **before** the certificate checker runs, because running a
+checker whose result is thrown away is pure cost on a path that is now a default.
+Whether the certificate would have been accepted is unknown at that point, and
+the code must not claim it.
+
+### QF_NRA
+
+| | |
+|---|---:|
+| rows | 200 |
+| A (`default`) | **117** |
+| B (`single-cell-sat`) | **121** |
+| net | **+4** |
+| gains / losses / `sat`↔`unsat` flips | **4 / 0 / 0** |
+| rows where an arm produced no verdict token | 0 |
+| vs declared `:status` | **0 disagreements over 236 comparable verdicts** |
+| wall clock | A 1,224 s, B **1,184 s** |
+
+The four gains are **exactly the four `sat` verdicts** of the full arm's six, and
+the full arm's two `unsat` gains (`sin-cos-346-b-chunk-0147`,
+`exp-problem-10-3-weak-chunk-0081`) are absent. That is the arm doing precisely
+what it was built to do, confirmed by the mover list rather than asserted from
+the design.
+
+Three-pass recheck, one pinned core, arms alternating within the passes, one
+binary behind two wrappers:
+
+| file | A × 3 | B × 3 | class |
+|---|---|---|---|
+| `sin-problem-7-weak-chunk-0131` | `unknown` ×3 | `sat` ×3 | **STABLE-GAIN** |
+| `sqrt-1mcosq-8-chunk-0562` | `unknown` ×3 | `sat` ×3 | **STABLE-GAIN** |
+| `atan-vega-3-weak-chunk-0243` | `unknown` ×3 | `sat` ×3 | **STABLE-GAIN** |
+| `sin-problem-7-chunk-0124` | `unknown` ×3 | `sat` ×3 | **STABLE-GAIN** |
+
+**4 STABLE-GAIN, 0 STABLE-LOSS, 0 UNSTABLE, exit status 0 on all 24 runs.**
+
+### QF_NIA, and the QF_LRA control
+
+| | QF_NIA | QF_LRA (control) |
+|---|---:|---:|
+| rows | 200 | 200 |
+| A (`default`) | 82 | 107 |
+| B (`single-cell-sat`) | **81** | **107** |
+| gains / losses / flips | 0 / 1 / 0 | **0 / 0 / 0** |
+| vs declared `:status` | 0 over 163 | 0 over 194 |
+
+**The QF_NIA `-1` is not a loss.** The row is
+`From_T2__n-21.t2__p3959_terminationG_0`, and a three-pass recheck on a quiet
+core gives `A: unsat ×3, B: unsat ×3` — **BOTH-DECIDE**
+(`recheck-sat-nia-loss.tsv`). Arm B decides it every time; the sweep row is
+ambient, and it is the same file the full arm's sweep flagged and its recheck
+cleared. Shipping on the raw `-1` would have been wrong; refusing to ship on it
+would have been wrong too, and only the recheck separates those.
+
+Across all three divisions: **0 `sat`↔`unsat` flips, 0 disagreements against
+declared `:status` over 593 comparable verdicts, 0 rows where either arm failed
+to produce a verdict token, 4 STABLE-GAIN and 0 STABLE-LOSS.**
+
+
+
+### A cost I expected and did not find
+
+Withholding makes a refutable query fall **through** to the rest of the ladder
+instead of returning early, so this arm does strictly more work than
+`single-cell` on every query the route refutes, and could have lost
+budget-boundary files to the extra time. Losses are 0 and arm B is still the
+faster arm on the target division. The extra fall-through did not cost a verdict
+here. That is a measurement on these three divisions at this envelope, not a
+proof that it never can.
+
 ## Decision
 
 1. **The single-cell CAD route lands, behind `AXEYUM_NRA_CAD=single-cell`, OFF.**
@@ -426,27 +516,53 @@ assertion would pass on the mutant. `x·y² − x` is the zero polynomial in `y`
    `AlgebraicWitness` — and stays exhaustive, so a new cause does not compile
    until it is named.
 
-4. **The default stays `default`.** See below.
+4. **`single-cell-sat` becomes the shipped default.** `CAD_DEFAULT` moves from
+   [`CadPolicy::DEFAULT`] to [`CadPolicy::SINGLE_CELL_SAT`] — the first time this
+   entry's shipped value has changed. `AXEYUM_NRA_CAD=default` still selects the
+   pre-ADR-2121 engine, through an **explicit** arm in `parse_cad_arm` rather
+   than the catch-all: `CAD_DEFAULT` is now `SINGLE_CELL_SAT`, so without that
+   arm every A/B's arm A would silently have become its arm B.
 
-## Why the default does not move
+5. **The full `single-cell` arm stays OFF.** Its `unsat` is what the sampling
+   check gates, and that half reaches no default.
 
-The A/B result is positive (6 stable gains, 0 stable losses, 0 flips, 0
-`:status` disagreements over 594 comparable verdicts, a clean control, and arm B
-the faster arm on the target division). By the numbers alone it would ship ON.
-It stays off anyway, for one reason that is not about the numbers: **the `unsat` side of this
-route is gated by a checker whose delineability test is sampling.** Every other
-`unsat` producer in this tree is gated by something exact. Making this route the
-default would make a sampling check load-bearing on the default path, and that is
-a decision to take deliberately with the Lazard route in hand, not as a side
-effect of a +6.
+## Why the `unsat` half does not ship, and the `sat` half does
 
-The measured facts a later lane needs in order to take it:
+The A/B on the **full** arm is positive: 6 stable gains, 0 stable losses, 0
+flips, 0 `:status` disagreements over 594 comparable verdicts, a clean control,
+and arm B the faster arm. By the numbers alone it would ship. It does not, for
+one reason that is not about the numbers: **its `unsat` is gated by a checker
+whose delineability test is sampling**, and every other `unsat` producer in this
+tree is gated by something exact. Making a sampling check load-bearing on the
+default path is a decision to take deliberately, with Lazard evaluation in hand.
 
-- the lever is one env var and the arms differ in exactly one bool;
+**That reason applies to exactly one of the route's two halves**, and leaving the
+whole route off spends the other for nothing. A `sat` here is a rational model
+replayed through the ground evaluator against the original assertions — exact,
+with no sample anywhere in its justification. So the arm that keeps the `sat` and
+withholds the `unsat` adds **no verdict justified by a finite sample**, and that
+is the arm that ships:
+
+| | full `single-cell` | `single-cell-sat` |
+|---|---:|---:|
+| QF_NRA net | +6 | **+4** |
+| STABLE-GAIN / STABLE-LOSS | 6 / 0 | **4 / 0** |
+| of the gains, `sat` / `unsat` | 4 / 2 | **4 / 0** |
+| verdicts resting on a sample | the 2 `unsat` | **none** |
+| shipped | no | **yes, as the default** |
+
+The +4 is the payoff; the assurance argument is the reason. Note the honest shape
+of the trade: shipping the sat-only arm gives up **two** stable gains that the
+full arm had, and they are given up deliberately.
+
+What a later lane needs in order to ship the `unsat` half too:
+
+- the lever is one env var, and the two single-cell arms differ in exactly
+  `emit_unsat`, so the `unsat` half can be priced on its own;
 - the checker rejects rather than accepts when it cannot run a check — an
   arithmetic-exhausted probe is a rejection, and that is asserted;
-- `algebraic-witness` is the dominant blocker inside the declared shape, and
-  `non-conjunctive` is the dominant blocker across the in-bounds set.
+- Lazard evaluation (`coverings/lazard_evaluation.cpp:590`) is the named way to
+  stop the sampling being load-bearing at all.
 
 ## What this does not say
 
