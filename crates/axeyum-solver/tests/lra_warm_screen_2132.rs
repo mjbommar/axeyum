@@ -150,6 +150,12 @@ struct Arm {
     cold_builds: u64,
     warm_checks: u64,
     warm_restarts: u64,
+    /// The stable token `warm_cube_build` renders as on the `; lazy-smt` line.
+    ///
+    /// Read as the LABEL rather than as the enum, because the label is what
+    /// every consumer of the trail reads and it is the thing that can silently
+    /// stop distinguishing two cases.
+    build: &'static str,
 }
 
 fn run(mode: WarmCubeMode, seed: u64, disjoin_in: u64) -> Arm {
@@ -168,6 +174,7 @@ fn run(mode: WarmCubeMode, seed: u64, disjoin_in: u64) -> Arm {
         cold_builds: c.simplex_cold_builds,
         warm_checks: c.warm_cube_checks,
         warm_restarts: c.warm_cube_cold_restarts,
+        build: c.warm_cube_build.label(),
     }
 }
 
@@ -267,6 +274,18 @@ fn a_file_below_the_threshold_keeps_no_basis_at_all() {
         "the screen opened on a file that built only {} tableaux -- below \
          {MIN_BUILDS} the screened arm must be the cold route, unchanged",
         off.cold_builds
+    );
+    // The trail must SAY the screen refused, not merely fail to say it opened.
+    // `off` is what a run with the lever disabled renders, so without a separate
+    // token a screened arm that refused every row is indistinguishable from an
+    // arm nobody turned on -- and "the screen is too tight" and "the lever was
+    // off" are the two readings a `net +0` on this arm has to be told apart by.
+    assert_eq!(
+        (off.build, screened.build),
+        ("off", "below-screen"),
+        "the `off` arm rendered {} and the screened arm {}",
+        off.build,
+        screened.build
     );
     assert_eq!(
         off.verdict, screened.verdict,

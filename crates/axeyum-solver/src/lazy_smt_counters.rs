@@ -633,6 +633,20 @@ pub enum WarmCubeBuild {
     /// Fourier–Motzkin — a DIFFERENT engine, and answering from it would make an
     /// A/B of this lever an A/B of two engines.
     NoTableau,
+    /// The lever is `screened` and this file never crossed
+    /// `MIN_WARM_CUBE_SCREEN_BUILDS`, so no decider was ever attempted
+    /// (ADR-2132).
+    ///
+    /// A separate variant from [`WarmCubeBuild::Off`] for [ADR-2045]'s reason,
+    /// which is this enum's whole reason for existing: the remedies are
+    /// disjoint. `Off` means nobody asked for a warm basis. This means somebody
+    /// did and the file did not qualify — and the two are the difference between
+    /// "the arm was disabled" and "the screen is refusing the population", which
+    /// is exactly the question a `net +0` on the screened arm raises. Collapsing
+    /// them would make a screened run that refused every row indistinguishable
+    /// from a run with the lever off, which is ADR-2111's inert-arm reading in a
+    /// new costume.
+    BelowScreen,
 }
 
 impl WarmCubeBuild {
@@ -646,6 +660,7 @@ impl WarmCubeBuild {
             WarmCubeBuild::ResourceLimit => "resource-limit",
             WarmCubeBuild::MemoryBudget => "memory-budget",
             WarmCubeBuild::NoTableau => "no-tableau",
+            WarmCubeBuild::BelowScreen => "below-screen",
         }
     }
 }

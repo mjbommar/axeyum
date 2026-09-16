@@ -955,8 +955,17 @@ pub use layers::{
     last_bv_backend_counters, last_bv_layer_stats, live_bv_layer_stats,
 };
 pub use lazy_smt_counters::{
-    LazySmtCounters, LazySmtCountersGuard, LazySmtCountersMirror, LazySmtLoop, LazySmtReading,
-    last_lazy_smt_counters, live_lazy_smt_counters,
+    LazySmtCounters,
+    LazySmtCountersGuard,
+    LazySmtCountersMirror,
+    LazySmtLoop,
+    LazySmtReading,
+    // ADR-2132: the transition fixture asserts on the LABEL this renders, so the
+    // type has to be nameable outside the crate. `warm_cube_build` has always
+    // been a public field of a public struct; only its type was unreachable.
+    WarmCubeBuild,
+    last_lazy_smt_counters,
+    live_lazy_smt_counters,
 };
 pub use live_instruments::{
     LiveInstruments, LiveInstrumentsGuard, LiveSample, Sampled,

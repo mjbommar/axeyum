@@ -1229,6 +1229,15 @@ impl WarmCubeScreen {
             if crate::simplex::cold_builds_so_far().saturating_sub(at_entry)
                 < MIN_WARM_CUBE_SCREEN_BUILDS
             {
+                // Recorded, not merely absent. Without this the trail renders
+                // `warm_cube_build=off` for a screened run that never crossed,
+                // which reads as "the lever was disabled" -- and a screened arm
+                // that refused every row would then be indistinguishable from an
+                // arm nobody turned on. That is ADR-2111's inert-arm reading in
+                // a new costume, and ADR-2125 wrote this enum to prevent exactly
+                // it. Idempotent: the field is SET, so a file that crosses on a
+                // later round overwrites this with its real outcome.
+                crate::lazy_smt_counters::record_warm_cube_build(WarmCubeBuild::BelowScreen);
                 return None;
             }
             *self = match warm_cube_decider(arena, ctx, deadline) {
