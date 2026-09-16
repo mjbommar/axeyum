@@ -1,0 +1,3 @@
+(assert (or (not (subtypes T_javafe.tc.TypeSig T_java.lang.Object)) (= (= Smt.true (is RES_116.36_116.36 T_javafe.tc.TypeSig)) (or (= RES_116.36_116.36 null) (subtypes (typeof RES_116.36_116.36) T_javafe.tc.TypeSig)))))
+(assert (or (subtypes T_javafe.tc.TypeSig T_java.lang.Object) (not (subtypes T_javafe.tc.TypeSig T_javafe.ast.Type)) (not (subtypes T_javafe.ast.Type T_java.lang.Object))))
+(assert (or (subtypes T_javafe.ast.Type T_java.lang.Object) (not (subtypes T_javafe.ast.Type T_javafe.ast.ASTNode)) (not (subtypes T_javafe.ast.ASTNode T_java.lang.Object))))

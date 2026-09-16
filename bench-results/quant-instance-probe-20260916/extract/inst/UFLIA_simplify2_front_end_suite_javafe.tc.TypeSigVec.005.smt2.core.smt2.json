@@ -1,0 +1,21 @@
+{
+ "raw_count": 13,
+ "bodies": [
+  "(or (= RES_122.21_122.21 null) (not (= (select1 elements_61.36 RES_122.21_122.21) null)))",
+  "(= (elemtype (array T_javafe.tc.TypeSig)) T_javafe.tc.TypeSig)",
+  "(or (= RES_122.21_122.21 null) (= (typeof (select1 elements_61.36 RES_122.21_122.21)) (array T_javafe.tc.TypeSig)) (not (= Smt.true (is RES_122.21_122.21 T_javafe.tc.TypeSigVec))))",
+  "(= (select1 (store1 (asField count_67.33 T_int) RES_122.21_122.21 (select1 elementCount_11.90.35 vec_120.41)) RES_122.21_122.21) (select1 elementCount_11.90.35 vec_120.41))",
+  "(or (= vec_120.41 null) (>= (select1 elementCount_11.90.35 vec_120.41) 0) (not (= Smt.true (is vec_120.41 T_java.util.Vector))))"
+ ],
+ "not_ground": [
+  "(or (= RES_122.21_122.21 ?brokenObj_2_!22) (= (select1 (store1 (asField count_67.33 T_int) RES_122.21_122.21 (select1 elementCount_11.90.35 vec_120.41)) ?brokenObj_2_!22) (select1 (asField count_67.33 T_int) ?brokenObj_2_!22)))",
+  "(or (= ?brokenObj_2_!22 null) (<= (+ (select1 count_67.33 ?brokenObj_2_!22) (* (- 1) (arrayLength (select1 elements_61.36 ?brokenObj_2_!22)))) 0) (not (= Smt.true (is ?brokenObj_2_!22 T_javafe.tc.TypeSigVec))))",
+  "(or (= RES_122.21_122.21 ?brokenObj_7_!24) (= (select1 (store1 (asField count_67.33 T_int) RES_122.21_122.21 (select1 elementCount_11.90.35 vec_120.41)) ?brokenObj_7_!24) (select1 (asField count_67.33 T_int) ?brokenObj_7_!24)))",
+  "(or (= Smt.true (select1 containsNull_13.70.29 vec_120.41)) (not (= (select1 (select1 elems anArray_124.5_124.5_11.188.45) ?i_62.31!25) null)) (>= (+ ?i_62.31!25 (* (- 1) (select1 elementCount_11.90.35 vec_120.41))) 0) (not (>= ?i_62.31!25 0)))",
+  "(or (not (= (select1 (select1 elems (select1 elements_61.36 ?brokenObj_7_!24)) ?i_62.31!25) null)) (not (>= ?i_62.31!25 0)) (>= (+ ?i_62.31!25 (* (- 1) (select1 count_67.33 ?brokenObj_7_!24))) 0))",
+  "(or (= ?brokenObj_7_!24 null) (not (= Smt.true (is ?brokenObj_7_!24 T_javafe.tc.TypeSigVec))) (forall ((?i_62.31 Int)) (! (let (((>= ?i_62.31 0) (>= ?i_62.31 0))) (let (((not (>= ?i_62.31 0)) (not (>= ?i_62.31 0)))) (let (((>= (+ ?i_62.31 (* (- 1) (select1 count_67.33 ?brokenObj_7_!24))) 0) (>= (+ ?i_62.31 (* (- 1) (select1 count_67.33 ?brokenObj_7_!24))) 0))) (let (((select1 elements_61.36 ?brokenObj_7_!24) (select1 elements_61.36 ?brokenObj_7_!24))) (let (((select1 elems (select1 elements_61.36 ?brokenObj_7_!24)) (select1 elems (select1 elements_61.36 ?brokenObj_7_!24)))) (let (((select1 (select1 elems (select1 elements_61.36 ?brokenObj_7_!24)) ?i_62.31) (select1 (select1 elems (select1 elements_61.36 ?brokenObj_7_!24)) ?i_62.31))) (let (((not (= (select1 (select1 elems (select1 elements_61.36 ?brokenObj_7_!24)) ?i_62.31) null)) (not (= (select1 (select1 elems (select1 elements_61.36 ?brokenObj_7_!24)) ?i_62.31) null)))) (or (not (= (select1 (select1 elems (select1 elements_61.36 ?brokenObj_7_!24)) ?i_62.31) null)) (>= (+ ?i_62.31 (* (- 1) (select1 count_67.33 ?brokenObj_7_!24))) 0) (not (>= ?i_62.31 0)))))))))) :pattern ((select1 (select1 elems (select1 elements_61.36 ?brokenObj_7_!24)) ?i_62.31)) :qid k!223)))",
+  "(or (= ?brokenObj_15_!23 null) (>= (select1 count_67.33 ?brokenObj_15_!23) 0) (not (= Smt.true (is ?brokenObj_15_!23 T_javafe.tc.TypeSigVec))))",
+  "(or (= RES_122.21_122.21 ?brokenObj_15_!23) (= (select1 (store1 (asField count_67.33 T_int) RES_122.21_122.21 (select1 elementCount_11.90.35 vec_120.41)) ?brokenObj_15_!23) (select1 (asField count_67.33 T_int) ?brokenObj_15_!23)))"
+ ],
+ "unmatched": 0
+}

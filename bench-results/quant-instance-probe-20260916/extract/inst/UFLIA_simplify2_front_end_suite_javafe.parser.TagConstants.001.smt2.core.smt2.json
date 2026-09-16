@@ -1,0 +1,8 @@
+{
+ "raw_count": 1,
+ "bodies": [
+  "(= (= (integralLE code_115.36 LAST_KEYWORD_103.26) Smt.true) (<= (+ code_115.36 (* (- 1) LAST_KEYWORD_103.26)) 0))"
+ ],
+ "not_ground": [],
+ "unmatched": 0
+}

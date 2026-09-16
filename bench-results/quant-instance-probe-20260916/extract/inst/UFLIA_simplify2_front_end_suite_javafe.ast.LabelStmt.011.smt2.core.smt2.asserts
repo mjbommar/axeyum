@@ -1,0 +1,1 @@
+(assert (or (= this null) (not (= (select1 label_15.34 this) null))))
