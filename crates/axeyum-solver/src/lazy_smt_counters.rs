@@ -463,6 +463,38 @@ pub struct LazySmtCounters {
     /// and an ORDER that no test can see is an order the next refactor undoes.
     pub cube_matrices: u64,
 
+    /// Entries into [`crate::simplex::feasible_within_sparse`] — the FROM-SCRATCH
+    /// simplex path, which allocates a new tableau, chooses a pristine basis and
+    /// pivots from it.
+    ///
+    /// ADR-2125's ceiling counter. The warm engine
+    /// ([`crate::simplex::Incremental`]) the online CDCL(T) theory drives keeps
+    /// its tableau and basis across asserts and pops; this route builds one per
+    /// cube. [`Self::cube_simplex_calls`] already counted the CALLS, but a call
+    /// is not a REBUILD — the cell cap can decline before any structure is
+    /// allocated, and the same entry point is reachable from the implied-bound
+    /// checker. So this counts the structures actually allocated, and
+    /// [`Self::simplex_cold_build`] prices them against [`Self::simplex_cold`],
+    /// which is the whole solve.
+    ///
+    /// Read the three together: `simplex_cold_build / simplex_cold` is the share
+    /// of a from-scratch solve a warm basis removes OUTRIGHT, and the pivots are
+    /// what it can only shorten.
+    pub simplex_cold_builds: u64,
+    /// Time inside the from-scratch tableau CONSTRUCTION, summed — the part a
+    /// warm basis removes entirely rather than shortens.
+    pub simplex_cold_build: Duration,
+    /// Time inside [`crate::simplex::feasible_within_sparse`] as a whole, summed
+    /// — construction, pivot loop and witness materialization.
+    pub simplex_cold: Duration,
+    /// Pivots performed by the from-scratch solves, summed.
+    ///
+    /// The part a warm basis SHORTENS rather than removes: resuming from a basis
+    /// that is still dual-feasible after a bound change costs the pivots that
+    /// repair the one changed column, not the pivots that reach feasibility from
+    /// a pristine basis.
+    pub simplex_cold_pivots: u64,
+
     /// What the online CDCL(T) LRA probe at the head of the linear loop did.
     ///
     /// The loop below that probe is the WEAK route: offline lazy SMT with total
@@ -658,7 +690,8 @@ impl LazySmtCounters {
              cores_full_assignment={} accounted_ms={} \
              cube_flips={} cube_identical={} cube_decisions={} cube_collect_ms={} \
              cube_fm_ms={} cube_fm_declines={} cube_simplex_ms={} cube_simplex_calls={} \
-             cube_matrices={} online_probe={}",
+             cube_matrices={} simplex_cold_builds={} simplex_cold_build_ms={} \
+             simplex_cold_ms={} simplex_cold_pivots={} online_probe={}",
             self.reading().label(),
             self.lra_entries,
             self.lra_rounds,
@@ -696,6 +729,10 @@ impl LazySmtCounters {
             self.cube_simplex.as_millis(),
             self.cube_simplex_calls,
             self.cube_matrices,
+            self.simplex_cold_builds,
+            self.simplex_cold_build.as_millis(),
+            self.simplex_cold.as_millis(),
+            self.simplex_cold_pivots,
             self.online_probe.label(),
         )
     }
@@ -774,6 +811,10 @@ const fn zero_counters() -> LazySmtCounters {
         cube_simplex: Duration::ZERO,
         cube_simplex_calls: 0,
         cube_matrices: 0,
+        simplex_cold_builds: 0,
+        simplex_cold_build: Duration::ZERO,
+        simplex_cold: Duration::ZERO,
+        simplex_cold_pivots: 0,
         online_probe: OnlineProbe::NotProbed,
     }
 }
@@ -1135,6 +1176,26 @@ pub(crate) fn record_cube_stages(
     });
 }
 
+/// One FROM-SCRATCH entry into [`crate::simplex::feasible_within_sparse`]: how
+/// long the whole call took, how long its tableau construction took, and how
+/// many pivots it performed.
+///
+/// `built` is `false` when the call declined before allocating a tableau (the
+/// cell cap), so [`LazySmtCounters::simplex_cold_builds`] counts structures
+/// actually allocated rather than calls — [`LazySmtCounters::cube_simplex_calls`]
+/// already counts calls, and conflating the two would make a declined call look
+/// like a rebuild a warm basis could have saved.
+pub(crate) fn record_cold_simplex(total: Duration, build: Duration, built: bool, pivots: u64) {
+    record(|c| {
+        c.simplex_cold += total;
+        if built {
+            c.simplex_cold_builds = c.simplex_cold_builds.saturating_add(1);
+            c.simplex_cold_build += build;
+        }
+        c.simplex_cold_pivots = c.simplex_cold_pivots.saturating_add(pivots);
+    });
+}
+
 /// What the online CDCL(T) LRA probe did with the query; see [`OnlineProbe`].
 pub(crate) fn record_online_probe(outcome: OnlineProbe) {
     record(|c| c.online_probe = outcome);
@@ -1184,11 +1245,207 @@ fn flush() {
 #[cfg(test)]
 mod tests {
     use super::{
-        LazySmtCountersGuard, LazySmtLoop, LazySmtReading, RoundOutcome, last_lazy_smt_counters,
-        live_lazy_smt_counters, record_blocking, record_entry, record_skeleton, record_theory,
+        LazySmtCounters, LazySmtCountersGuard, LazySmtLoop, LazySmtReading, RoundOutcome,
+        last_lazy_smt_counters, live_lazy_smt_counters, record_blocking, record_entry,
+        record_skeleton, record_theory,
     };
     use crate::live_instruments::{LiveInstruments, Sampled, install};
     use std::time::Duration;
+
+    /// Every numeric field of [`LazySmtCounters`] appears in
+    /// [`LazySmtCounters::trace_line`], at the value it holds.
+    ///
+    /// The `let LazySmtCounters { … }` destructuring below carries **no** `..`
+    /// rest, so the compiler refuses this test the moment a field is added: the
+    /// field list is the STRUCT's, not the maintainer's memory of it, which is
+    /// the only form of "every X" this language can enforce. A test that pinned
+    /// the rendered line byte for byte would instead go green on a field that
+    /// was added to the struct and never rendered — the counter would read as
+    /// absent to every consumer while the pin, which never mentioned it, still
+    /// passed.
+    ///
+    /// Each field gets a **distinct** value, so rendering the wrong source field
+    /// fails as loudly as rendering none: with every field at `1` a line that
+    /// printed `cube_matrices` where `simplex_cold_builds` belongs would pass.
+    /// The durations are distinct in WHOLE MILLISECONDS because that is the unit
+    /// the line renders; sub-millisecond distinctions would collide at the
+    /// renderer and the test would be asserting about a difference the output
+    /// cannot carry.
+    #[test]
+    fn every_lazy_smt_counter_reaches_the_trace_line() {
+        let counters = distinct_lazy_smt_counters();
+        let line = counters.trace_line();
+        let LazySmtCounters {
+            lra_entries,
+            lra_rounds,
+            nra_entries,
+            nra_rounds,
+            nia_entries,
+            nia_rounds,
+            round_hist: _,
+            pending_round,
+            pending_loop: _,
+            skeleton_solve,
+            skeleton_sat,
+            skeleton_unsat,
+            skeleton_unknown,
+            theory_check,
+            theory_sat,
+            theory_unsat,
+            theory_unknown,
+            core_extraction,
+            blocking_clauses,
+            blocking_literals,
+            atoms,
+            cores_reused,
+            cores_rederived_absent,
+            cores_rederived_stale,
+            cores_rederived_unverified,
+            cores_full_assignment,
+            cube_flips,
+            cube_identical,
+            cube_decisions,
+            cube_collect,
+            cube_fm,
+            cube_fm_declines,
+            cube_simplex,
+            cube_simplex_calls,
+            cube_matrices,
+            simplex_cold_builds,
+            simplex_cold_build,
+            simplex_cold,
+            simplex_cold_pivots,
+            online_probe: _,
+        } = counters;
+
+        let expected: Vec<(&str, String)> = vec![
+            ("lra_entries", lra_entries.to_string()),
+            ("lra_rounds", lra_rounds.to_string()),
+            ("nra_entries", nra_entries.to_string()),
+            ("nra_rounds", nra_rounds.to_string()),
+            ("nia_entries", nia_entries.to_string()),
+            ("nia_rounds", nia_rounds.to_string()),
+            ("pending_round_ms", pending_round.as_millis().to_string()),
+            ("skeleton_ms", skeleton_solve.as_millis().to_string()),
+            ("skeleton_sat", skeleton_sat.to_string()),
+            ("skeleton_unsat", skeleton_unsat.to_string()),
+            ("skeleton_unknown", skeleton_unknown.to_string()),
+            ("theory_ms", theory_check.as_millis().to_string()),
+            ("theory_sat", theory_sat.to_string()),
+            ("theory_unsat", theory_unsat.to_string()),
+            ("theory_unknown", theory_unknown.to_string()),
+            ("core_ms", core_extraction.as_millis().to_string()),
+            ("blocking_clauses", blocking_clauses.to_string()),
+            ("blocking_literals", blocking_literals.to_string()),
+            ("atoms", atoms.to_string()),
+            ("cores_reused", cores_reused.to_string()),
+            ("cores_rederived_absent", cores_rederived_absent.to_string()),
+            ("cores_rederived_stale", cores_rederived_stale.to_string()),
+            (
+                "cores_rederived_unverified",
+                cores_rederived_unverified.to_string(),
+            ),
+            ("cores_full_assignment", cores_full_assignment.to_string()),
+            ("cube_flips", cube_flips.to_string()),
+            ("cube_identical", cube_identical.to_string()),
+            ("cube_decisions", cube_decisions.to_string()),
+            ("cube_collect_ms", cube_collect.as_millis().to_string()),
+            ("cube_fm_ms", cube_fm.as_millis().to_string()),
+            ("cube_fm_declines", cube_fm_declines.to_string()),
+            ("cube_simplex_ms", cube_simplex.as_millis().to_string()),
+            ("cube_simplex_calls", cube_simplex_calls.to_string()),
+            ("cube_matrices", cube_matrices.to_string()),
+            ("simplex_cold_builds", simplex_cold_builds.to_string()),
+            (
+                "simplex_cold_build_ms",
+                simplex_cold_build.as_millis().to_string(),
+            ),
+            ("simplex_cold_ms", simplex_cold.as_millis().to_string()),
+            ("simplex_cold_pivots", simplex_cold_pivots.to_string()),
+        ];
+
+        for (key, value) in &expected {
+            let token = format!("{key}={value}");
+            assert!(
+                line.split_whitespace().any(|field| field == token),
+                "`{token}` is not a field of the trace line; a counter that does \
+                 not render reads as absent to every consumer.\nline: {line}"
+            );
+        }
+
+        // The other half: the line must not carry a field this test does not
+        // know about. Without it a field could be RENDERED and never destructured
+        // -- the compiler only refuses the missing direction.
+        //
+        // `round_hist` is bound to `_` above because it is a DISTRIBUTION, not a
+        // scalar: it renders as three keys per loop and is covered by the
+        // histogram's own tests. Its rendered suffixes are named here rather
+        // than pattern-matched loosely, so a new scalar ending in `_hist` cannot
+        // slip through the allow-list.
+        const HIST_RENDERED: [&str; 3] = ["_hist", "_max_ms", "_max_round"];
+        let rendered: Vec<&str> = line
+            .split_whitespace()
+            .filter(|field| field.contains('='))
+            .collect();
+        let known: std::collections::BTreeSet<&str> = expected
+            .iter()
+            .map(|(key, _)| *key)
+            .chain(["reading", "online_probe", "accounted_ms", "cores_rederived"])
+            .collect();
+        for field in rendered {
+            let key = field.split('=').next().expect("non-empty split");
+            assert!(
+                known.contains(key) || HIST_RENDERED.iter().any(|tail| key.ends_with(tail)),
+                "the trace line renders `{key}`, which this test does not \
+                 destructure -- add it to the struct pattern rather than to the \
+                 allow-list.\nline: {line}"
+            );
+        }
+    }
+
+    /// Every counter at a **distinct** value, so rendering the wrong source
+    /// field fails as loudly as rendering none.
+    fn distinct_lazy_smt_counters() -> LazySmtCounters {
+        let mut c = LazySmtCounters::default();
+        c.lra_entries = 101;
+        c.lra_rounds = 102;
+        c.nra_entries = 103;
+        c.nra_rounds = 104;
+        c.nia_entries = 105;
+        c.nia_rounds = 106;
+        c.pending_round = Duration::from_millis(107);
+        c.skeleton_solve = Duration::from_millis(108);
+        c.skeleton_sat = 109;
+        c.skeleton_unsat = 110;
+        c.skeleton_unknown = 111;
+        c.theory_check = Duration::from_millis(112);
+        c.theory_sat = 113;
+        c.theory_unsat = 114;
+        c.theory_unknown = 115;
+        c.core_extraction = Duration::from_millis(116);
+        c.blocking_clauses = 117;
+        c.blocking_literals = 118;
+        c.atoms = 119;
+        c.cores_reused = 120;
+        c.cores_rederived_absent = 121;
+        c.cores_rederived_stale = 122;
+        c.cores_rederived_unverified = 123;
+        c.cores_full_assignment = 124;
+        c.cube_flips = 125;
+        c.cube_identical = 126;
+        c.cube_decisions = 127;
+        c.cube_collect = Duration::from_millis(128);
+        c.cube_fm = Duration::from_millis(129);
+        c.cube_fm_declines = 130;
+        c.cube_simplex = Duration::from_millis(131);
+        c.cube_simplex_calls = 132;
+        c.cube_matrices = 133;
+        c.simplex_cold_builds = 134;
+        c.simplex_cold_build = Duration::from_millis(135);
+        c.simplex_cold = Duration::from_millis(136);
+        c.simplex_cold_pivots = 137;
+        c
+    }
 
     /// The three readings are three different statements, and no two of them
     /// are the same token. A test that only checked `Some(..)` would pass with

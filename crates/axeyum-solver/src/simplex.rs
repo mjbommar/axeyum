@@ -638,6 +638,60 @@ pub fn feasible_within_sparse(
     constraints: &[SparseConstraint],
     deadline: Option<Instant>,
 ) -> SimplexOutcome {
+    // ADR-2125's ceiling instrument. Clocked only when the lazy-SMT counters are
+    // armed, which is `--trace` and nothing else: this entry point is on the
+    // per-cube hot path and an unconditional `Instant::now` pair here would be
+    // two clock reads per cube on a route that takes hundreds of them per
+    // second. One thread-local `bool` read otherwise.
+    //
+    // The three quantities are recorded by ONE call rather than three, because
+    // they are one event: a caller that read `simplex_cold_build` without
+    // `simplex_cold` would be reading a numerator with no denominator, which is
+    // the shape this repository keeps being caught by.
+    if !crate::lazy_smt_counters::enabled() {
+        return feasible_within_sparse_inner(
+            nvars,
+            constraints,
+            deadline,
+            &mut ColdSimplexProbe::default(),
+        );
+    }
+    let started = Instant::now();
+    let mut probe = ColdSimplexProbe::default();
+    let outcome = feasible_within_sparse_inner(nvars, constraints, deadline, &mut probe);
+    crate::lazy_smt_counters::record_cold_simplex(
+        started.elapsed(),
+        probe.build,
+        probe.built,
+        probe.pivots,
+    );
+    outcome
+}
+
+/// What one from-scratch [`feasible_within_sparse`] call did, for the ADR-2125
+/// ceiling. Filled in only when the lazy-SMT counters are armed.
+///
+/// `built` is separate from a nonzero `build` deliberately: a tableau whose
+/// construction is too fast for the clock's resolution still IS a rebuild, and
+/// inferring the count from the duration would under-count exactly the cheap
+/// cubes a warm basis helps least on — biasing the ceiling upward.
+#[derive(Default)]
+struct ColdSimplexProbe {
+    /// Time inside `Tableau::new_sparse`.
+    build: std::time::Duration,
+    /// Whether a tableau was actually allocated (the cell cap can decline first).
+    built: bool,
+    /// Pivots the run performed.
+    pivots: u64,
+}
+
+#[must_use]
+fn feasible_within_sparse_inner(
+    nvars: usize,
+    constraints: &[SparseConstraint],
+    deadline: Option<Instant>,
+    probe: &mut ColdSimplexProbe,
+) -> SimplexOutcome {
     for c in constraints {
         assert!(
             c.coeffs.iter().all(|&(j, _)| j < nvars),
@@ -659,7 +713,10 @@ pub fn feasible_within_sparse(
         );
         return SimplexOutcome::Unknown;
     }
+    let build_started = Instant::now();
     let mut tableau = Tableau::new_sparse(nvars, constraints);
+    probe.build = build_started.elapsed();
+    probe.built = true;
     dense_probe(
         "tableau-built",
         &format!(
@@ -668,6 +725,7 @@ pub fn feasible_within_sparse(
         ),
     );
     let outcome = tableau.run(deadline, MAX_PIVOTS);
+    probe.pivots = tableau.total_pivots;
     dense_probe(
         "run-done",
         &format!("nvars={nvars} m={m} pivots={}", tableau.total_pivots),
