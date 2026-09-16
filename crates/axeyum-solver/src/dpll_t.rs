@@ -376,6 +376,37 @@ pub fn check_with_lra_dpll_within(
     config: &SolverConfig,
     deadline: Option<Instant>,
 ) -> Result<CheckResult, SolverError> {
+    check_with_lra_dpll_within_mode(arena, assertions, config, deadline, warm_cube_mode())
+}
+
+/// [`check_with_lra_dpll_within`] with the ADR-2125/ADR-2132 lever passed in
+/// rather than read from the environment.
+///
+/// # Why the mode is a parameter and not a second code path
+///
+/// The lever is read once per PROCESS into a `OnceLock`, which is right for a
+/// measurement — a mid-run change cannot produce two halves of one A/B — and
+/// wrong for a test, because the property the screen has to have is that all
+/// three arms AGREE ON THE VERDICT, and asserting that needs all three in one
+/// process. A fixture built out of three separate test binaries could not fail
+/// on a disagreement; it could only fail on each arm's own expectation, which is
+/// the maintainer's memory of the answer rather than a comparison.
+///
+/// So this takes the mode, the public entry passes `warm_cube_mode()`, and there
+/// is exactly ONE production caller. It is not a test-only route: it is the
+/// route, with its one environmental read lifted to the boundary.
+///
+/// # Errors
+///
+/// Propagates the abstraction's, the skeleton solver's and the theory
+/// decision's errors.
+pub fn check_with_lra_dpll_within_mode(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+    mode: WarmCubeMode,
+) -> Result<CheckResult, SolverError> {
     let _phase = crate::phase_breadcrumb::enter("dpll-t:lra-dpll");
     // Prefer the shared generic CDCL(T) spine for pure Boolean-structured LRA.
     // Mixed real+BV/array/UF shapes decline its skeleton encoder quickly and retain
@@ -436,8 +467,17 @@ pub fn check_with_lra_dpll_within(
     // allocated when counting is armed.
     let mut previous_cube: Option<Vec<bool>> = None;
     // ADR-2125: built once, over the atoms every cube will ever assign, and
-    // `None` when the lever is off.
-    let mut warm = warm_cube_decider(arena, &ctx, deadline);
+    // absent when the lever is off. ADR-2132 adds the third arm, where the build
+    // is DEFERRED until the file has shown the shape a warm basis helps: the
+    // snapshot below is what makes the screen a per-entry delta.
+    let mut warm = match mode {
+        WarmCubeMode::Off => WarmCubeScreen::Done,
+        WarmCubeMode::On => warm_cube_decider(arena, &ctx, deadline)
+            .map_or(WarmCubeScreen::Done, WarmCubeScreen::Ready),
+        WarmCubeMode::Screened => WarmCubeScreen::Waiting {
+            at_entry: crate::simplex::cold_builds_so_far(),
+        },
+    };
     // The route trail labels this whole function `nra` and reports its share of
     // the budget; nothing said how that time divides between the two halves of
     // a round, or how many rounds there were. On the 22 `QF_LRA` files that
@@ -498,7 +538,7 @@ pub fn check_with_lra_dpll_within(
         // ADR-2125. The warm decider can only SHORTCUT: every outcome it does
         // not produce falls through to exactly the cold decision that would have
         // run, so a verdict this route reaches today cannot be lost to it.
-        if let Some(theory) = warm.as_mut() {
+        if let Some(theory) = warm.decider(arena, &ctx, deadline) {
             match warm_cube_round(arena, assertions, &ctx, &propositional, &assignment, theory)? {
                 WarmRound::Decided(result) => return Ok(result),
                 WarmRound::Blocked(clause) => {
@@ -1012,20 +1052,68 @@ fn is_pure_bool_real(arena: &TermArena, term: TermId) -> bool {
     true
 }
 
-/// Lever (`AXEYUM_LRA_WARM_CUBE=on`): decide the offline lazy-SMT loop's cubes on
-/// a simplex whose tableau and basis PERSIST across rounds, instead of building
-/// a fresh tableau per cube (ADR-2125).
+/// From-scratch tableaux a file must have built before the ADR-2132 screen lets
+/// it keep a basis.
 ///
-/// **It ships `off` until the A/B has been read**, which is this repository's
-/// standing rule for a route change that cannot be argued from a verdict count
-/// alone. The risk a default-off lever carries is [ADR-2055]'s: a path defaulting
-/// `off` is exercised by no gate. That is why the five z3 differential fuzzes are
-/// run in BOTH arms for this change and why the mutation suite targets the warm
-/// decider rather than the route around it.
+/// **A value measured from a WINDOW, not fitted to a point.** [ADR-2125] shipped
+/// the warm basis `off` on 1 STABLE-GAIN against 2 STABLE-LOSS and named the axis
+/// that separates them: it wins where the cubes are many and small and loses
+/// where they are few and large. `simplex_cold_builds` is that axis, and over
+/// the pinned `QF_LRA` 200 the two shapes do not overlap —
+///
+/// * the rows whose cold simplex is a handful of ENORMOUS solves sit at 1, 28
+///   and 42 builds, at 23,908 / 283.5 / 548.1 ms per build, and the 28-build row
+///   **is** ADR-2125's pinned stable loss;
+/// * the family its stable gain came from runs 841–1,543 builds at 0.4–6.4 ms
+///   each.
+///
+/// Every row at or above **51** builds costs at most 12.2 ms per build, and every
+/// row above 20 ms per build has at most **42**. So any threshold in `[43, 51]`
+/// separates the two shapes exactly, and this is the next power of two above
+/// that window: 1.52× the largest few-enormous row and 13.1× below the smallest
+/// winning one. Taking the window's own edge would make the constant a function
+/// of this population's largest outlier.
+///
+/// `cold_builds / lra_rounds` is 1.00 above 100 builds, so the screen trips after
+/// about 64 refinement rounds — 4.1–7.6 % of the winning family's rounds run cold
+/// before the basis is kept. That is what a screen costs instead of a clock, and
+/// it is a price rather than a risk: below the threshold the file runs the route
+/// it runs today, byte for byte.
+pub(crate) const MIN_WARM_CUBE_SCREEN_BUILDS: u64 = 64;
+
+/// What `AXEYUM_LRA_WARM_CUBE` selects (ADR-2125 built the first two; ADR-2132
+/// added the third).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WarmCubeMode {
+    /// The default. The decider is never built and the loop is the route it has
+    /// always been.
+    Off,
+    /// [ADR-2125]'s arm: one decider built at the loop's entry, used from the
+    /// first round. Kept as the A/B's REFERENCE arm rather than deleted — the
+    /// screen's whole claim is that it keeps this arm's gain without its losses,
+    /// and a claim of that shape needs the thing it is compared against to still
+    /// be runnable.
+    On,
+    /// ADR-2132's arm: the decider is built only once the file has crossed
+    /// [`MIN_WARM_CUBE_SCREEN_BUILDS`] from-scratch tableaux, so a file whose
+    /// cubes are FEW AND ENORMOUS never keeps a basis and runs exactly as `Off`
+    /// does.
+    Screened,
+}
+
+/// Lever (`AXEYUM_LRA_WARM_CUBE`): decide the offline lazy-SMT loop's cubes on
+/// a simplex whose tableau and basis PERSIST across rounds, instead of building
+/// a fresh tableau per cube (ADR-2125), and — under `screened` — only on the
+/// files whose builds-per-file says a basis has something to reuse (ADR-2132).
+///
+/// **Unrecognised values are `Off`, including the empty string.** The variable
+/// is the A/B's only difference between arms, so a typo must produce the
+/// shipped route and not a third behaviour: a misspelt arm that quietly became
+/// something else would be measured as the arm it was labelled.
 ///
 /// Read once into a `OnceLock`, so the process answers one way for its whole
 /// life and a mid-run change cannot produce two halves of one measurement.
-fn warm_cube_enabled() -> bool {
+fn warm_cube_mode() -> WarmCubeMode {
     /// The lever's environment variable, and the `config_registry` entry's name.
     ///
     /// A named constant rather than a literal at the two use sites: the registry
@@ -1034,13 +1122,29 @@ fn warm_cube_enabled() -> bool {
     /// `every_entry_names_a_live_constant` instead of silently becoming a lever
     /// nothing can turn on.
     const AXEYUM_LRA_WARM_CUBE: &str = "AXEYUM_LRA_WARM_CUBE";
-    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    *ENABLED.get_or_init(|| {
+    static MODE: std::sync::OnceLock<WarmCubeMode> = std::sync::OnceLock::new();
+    *MODE.get_or_init(|| {
         crate::config_registry::note_consulted(
             "crates/axeyum-solver/src/dpll_t.rs::AXEYUM_LRA_WARM_CUBE",
         );
-        std::env::var(AXEYUM_LRA_WARM_CUBE).is_ok_and(|value| value.trim() == "on")
+        parse_warm_cube_mode(std::env::var(AXEYUM_LRA_WARM_CUBE).ok().as_deref())
     })
+}
+
+/// The lever's spelling, as a total function of what the environment held.
+///
+/// Separate from [`warm_cube_mode`] because that one memoises into a `OnceLock`
+/// and so answers once per process: a test of the SPELLING would then be a test
+/// of whichever value happened to be set when the first query ran. Every
+/// unrecognised spelling — including `""`, `"ON"` and `"screen"` — is
+/// [`WarmCubeMode::Off`], which is the shipped route, so a typo in an A/B
+/// launcher measures the default rather than a third behaviour nobody named.
+fn parse_warm_cube_mode(value: Option<&str>) -> WarmCubeMode {
+    match value.map(str::trim) {
+        Some("on") => WarmCubeMode::On,
+        Some("screened") => WarmCubeMode::Screened,
+        _ => WarmCubeMode::Off,
+    }
 }
 
 /// The persistent theory the offline loop decides its cubes on, or `None` when
@@ -1061,9 +1165,6 @@ fn warm_cube_decider(
     ctx: &Abstractor,
     deadline: Option<Instant>,
 ) -> Option<LraTheory> {
-    if !warm_cube_enabled() {
-        return None;
-    }
     let atom_terms: Vec<TermId> = ctx.atoms.iter().map(|a| a.term).collect();
     // The refusal is RECORDED, never swallowed. This lane's first mechanism
     // check read `warm_cube_checks=0` in both arms and the trail could not say
@@ -1087,6 +1188,59 @@ fn warm_cube_decider(
     }
     crate::lazy_smt_counters::record_warm_cube_build(WarmCubeBuild::Built);
     Some(theory)
+}
+
+/// The ADR-2132 screen's state for one entry into the offline loop.
+///
+/// Three states and not an `Option`, because "the decider was never built" and
+/// "the decider was tried and refused" are different facts about the run and the
+/// screen must not retry a refusal every round: `try_new_for_cubes` walks every
+/// atom, and on a file at 7,260 atoms retrying it per round would be a cost with
+/// no verdict attached — the shape [ADR-2125] found its first working arm in.
+enum WarmCubeScreen {
+    /// The decider exists (or the lever is `on` and it was built at entry).
+    Ready(LraTheory),
+    /// Waiting for the file to prove it has many small re-solves. `at_entry` is
+    /// the from-scratch tableau count when this loop was entered, so the
+    /// comparison is a DELTA and not an absolute: the counter is per-thread and
+    /// cumulative over the process, so an absolute reading would carry every
+    /// earlier query on this thread and trip the screen on a file that built
+    /// nothing.
+    Waiting { at_entry: u64 },
+    /// Either the lever is `off`, or a build was attempted and refused. Nothing
+    /// further is tried.
+    Done,
+}
+
+impl WarmCubeScreen {
+    /// The decider to use for this round, building it if the screen has just
+    /// been crossed.
+    ///
+    /// The transition happens at most once per entry: a refused build goes to
+    /// [`WarmCubeScreen::Done`], which is what stops a file whose atoms are too
+    /// many from paying for the refusal every round.
+    fn decider(
+        &mut self,
+        arena: &TermArena,
+        ctx: &Abstractor,
+        deadline: Option<Instant>,
+    ) -> Option<&mut LraTheory> {
+        if let WarmCubeScreen::Waiting { at_entry } = *self {
+            if crate::simplex::cold_builds_so_far().saturating_sub(at_entry)
+                < MIN_WARM_CUBE_SCREEN_BUILDS
+            {
+                return None;
+            }
+            *self = match warm_cube_decider(arena, ctx, deadline) {
+                Some(theory) => WarmCubeScreen::Ready(theory),
+                None => WarmCubeScreen::Done,
+            };
+        }
+        match self {
+            WarmCubeScreen::Ready(theory) => Some(theory),
+            WarmCubeScreen::Waiting { .. } | WarmCubeScreen::Done => None,
+        }
+    }
 }
 
 /// One round's cube: the theory conjunction and the `(prop, truth)` assignment
@@ -1829,8 +1983,8 @@ impl Abstractor {
 #[cfg(test)]
 mod tests {
     use super::{
-        CarriedCertificate, SkeletonSolvePolicy, SkeletonSolver, conflict_core,
-        skeleton_is_pure_boolean,
+        CarriedCertificate, MIN_WARM_CUBE_SCREEN_BUILDS, SkeletonSolvePolicy, SkeletonSolver,
+        WarmCubeMode, conflict_core, parse_warm_cube_mode, skeleton_is_pure_boolean,
     };
     use axeyum_ir::{Rational, Sort, SymbolId, TermArena, TermId};
 
@@ -2322,6 +2476,156 @@ mod tests {
         assert!(
             matches!(result, CheckResult::Unsat),
             "a shared contradictory conjunction is unsat, got {result:?}"
+        );
+    }
+
+    /// Every spelling the lever accepts, and the rule for every one it does not.
+    ///
+    /// Driven through [`parse_warm_cube_mode`] rather than through
+    /// [`super::warm_cube_mode`] because that one memoises into a `OnceLock`: a
+    /// test of the SPELLING routed through it would answer whatever the first
+    /// query in the process happened to set, and would pass for any table.
+    ///
+    /// The unrecognised cases are the point. `AXEYUM_LRA_WARM_CUBE` is the only
+    /// difference between the arms of an A/B, so a launcher typo must produce
+    /// the SHIPPED route: an arm labelled `screened` that silently became a
+    /// third behaviour would be measured under the wrong name, which is the one
+    /// failure an A/B cannot see from its own numbers.
+    #[test]
+    fn an_unrecognised_lever_value_is_off() {
+        assert_eq!(parse_warm_cube_mode(Some("on")), WarmCubeMode::On);
+        assert_eq!(
+            parse_warm_cube_mode(Some("screened")),
+            WarmCubeMode::Screened
+        );
+        // Surrounding whitespace is trimmed, because a shell heredoc and an
+        // `env` file disagree about trailing newlines and neither is a typo.
+        assert_eq!(parse_warm_cube_mode(Some("  on  ")), WarmCubeMode::On);
+        assert_eq!(
+            parse_warm_cube_mode(Some("\tscreened\n")),
+            WarmCubeMode::Screened
+        );
+        for unrecognised in [
+            None,
+            Some(""),
+            Some("ON"),
+            Some("Screened"),
+            Some("screen"),
+            Some("1"),
+            Some("true"),
+            Some("off"),
+        ] {
+            assert_eq!(
+                parse_warm_cube_mode(unrecognised),
+                WarmCubeMode::Off,
+                "{unrecognised:?} must be the shipped route, not a third behaviour"
+            );
+        }
+    }
+
+    /// The screen counter the routing decision reads and the traced counter the
+    /// SIZING was measured from are the same number — **and the first one moves
+    /// with tracing OFF**, which is the whole reason it exists.
+    ///
+    /// They are two counters on one event. The hazard is specific and it is why
+    /// the screen does not simply read `LazySmtCounters::simplex_cold_builds`:
+    /// that field is armed only by `--trace`, so a screen consulting it would
+    /// route one way under instrumentation and the other way without — and every
+    /// A/B of this lever would then measure a route production never takes.
+    ///
+    /// Driven at `feasible_within_sparse`, the site that increments both, rather
+    /// than through a query: the claim is a property of that function, and a
+    /// query wide enough to reach it from the offline loop needs more than a
+    /// thousand atoms (the online engine decides everything narrower, which is
+    /// what the first version of this test discovered by going VACUOUS).
+    ///
+    /// The unarmed half is asserted first and separately. A test that only
+    /// compared the two while armed would pass on an implementation that
+    /// incremented the screen counter inside the `if enabled()` branch — the
+    /// exact defect this counter was added to avoid.
+    #[test]
+    fn a_screen_count_and_the_traced_count_are_the_same_number() {
+        use crate::lazy_smt_counters::{LazySmtCountersGuard, last_lazy_smt_counters};
+        use crate::simplex::{Rel, SparseConstraint, cold_builds_so_far, feasible_within_sparse};
+
+        // `x >= 2 and x <= 1` over one variable: infeasible, and small enough
+        // that the pivot loop cannot be what this test is timing.
+        let rows = || {
+            vec![
+                SparseConstraint {
+                    coeffs: vec![(0, Rational::integer(1))],
+                    rel: Rel::Ge,
+                    rhs: Rational::integer(2),
+                },
+                SparseConstraint {
+                    coeffs: vec![(0, Rational::integer(1))],
+                    rel: Rel::Le,
+                    rhs: Rational::integer(1),
+                },
+            ]
+        };
+
+        // Half one: UNARMED. Nothing is collecting, and the screen counter must
+        // still move -- this is the assertion that fails if the increment is put
+        // inside the `enabled()` branch.
+        let before_cold = cold_builds_so_far();
+        let _ = feasible_within_sparse(1, &rows(), None);
+        let unarmed = cold_builds_so_far() - before_cold;
+        assert_eq!(
+            unarmed, 1,
+            "the screen counter did not move with the lazy-SMT counters \
+             disarmed: a screen reading it would refuse every file on a run \
+             without `--trace`, which is every shipped run"
+        );
+
+        // Half two: ARMED. Both counters see the same three calls.
+        let calls = 3;
+        let before_cold = cold_builds_so_far();
+        let guard = LazySmtCountersGuard::enable();
+        for _ in 0..calls {
+            let _ = feasible_within_sparse(1, &rows(), None);
+        }
+        drop(guard);
+        let screened = cold_builds_so_far() - before_cold;
+        let traced = last_lazy_smt_counters()
+            .expect("the guard armed collection")
+            .simplex_cold_builds;
+
+        assert_eq!(
+            traced, calls,
+            "the traced counter saw {traced} of {calls} from-scratch builds"
+        );
+        assert_eq!(
+            screened, traced,
+            "the always-on screen counter and the `--trace` counter disagree: \
+             {screened} against {traced}. They are two counters on one event, \
+             and a screen reading the first would route differently from every \
+             measurement taken with the second."
+        );
+    }
+
+    /// The threshold is a value the registry carries, and this is the arithmetic
+    /// that makes it a SCREEN rather than a second `on`.
+    ///
+    /// Stated as a property of the constant rather than as a comparison against
+    /// a literal: a threshold of 0 admits every file, which is exactly `on`, and
+    /// the whole lane is about the difference.
+    #[test]
+    fn the_screen_waits_until_the_builds_threshold_is_crossed() {
+        assert!(
+            MIN_WARM_CUBE_SCREEN_BUILDS > 0,
+            "a threshold of 0 opens on the first round, which is `on` wearing \
+             the name `screened` -- every A/B of the screen would then be a \
+             re-run of ADR-2125"
+        );
+        // The sizing's window. The three `few enormous` rows on the pinned 200
+        // are at 1, 28 and 42 builds and the winning family starts at 841, so a
+        // threshold outside [43, 841] separates nothing that was measured.
+        assert!(
+            (43..841).contains(&MIN_WARM_CUBE_SCREEN_BUILDS),
+            "{MIN_WARM_CUBE_SCREEN_BUILDS} is outside the window the pinned \
+             sizing measured: at or below 42 it admits the stable loss, at or \
+             above 841 it refuses the family the stable gain came from"
         );
     }
 }

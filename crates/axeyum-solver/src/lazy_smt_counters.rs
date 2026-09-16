@@ -535,6 +535,68 @@ pub struct LazySmtCounters {
     /// was not warm for that many checks and the measurement is about something
     /// else.
     pub warm_cube_cold_restarts: u64,
+    /// The LARGEST nonzero count the warm tableau has held, over this engine's
+    /// whole life. Cumulative on the engine, so this is SET rather than added to.
+    ///
+    /// # The question it settles, which nothing in the tree could answer before
+    ///
+    /// The warm cube engine is admitted on nonzeros at CONSTRUCTION
+    /// (`MAX_WARM_CUBE_NONZEROS`), and [ADR-2125] asked whether the OTHER
+    /// ceiling on the same structure — `MAX_TABLEAU_CELLS`, `m × (nvars+m)` —
+    /// should be restated in the same currency. It should not, and the reason
+    /// is a property of the ALGORITHM rather than of the storage: a pivot
+    /// combines rows, so it creates nonzeros. `Tableau::select_entering`'s
+    /// fill-in-minimising rule exists for exactly that and says so in its own
+    /// comment. The construction count therefore bounds the entry footprint and
+    /// nothing after it; the cell count bounds where fill-in can end up.
+    ///
+    /// [ADR-2111] changed the representation and recorded that it did not take
+    /// the fill-in measurement. This is that measurement's numerator: read it
+    /// against the nonzeros the engine was admitted on.
+    pub warm_cube_fill_peak: u64,
+    /// Time inside the warm engine's PIVOT LOOP, summed over every cube it was
+    /// asked about — the basis re-solve proper (ADR-2132).
+    ///
+    /// # This field exists to stop the saving being credited to the wrong half
+    ///
+    /// [ADR-2125] measured the lever at **−9.2 %** of wall clock and said in as
+    /// many words that a successor must not attribute that to the basis: a cube
+    /// the warm decider answers skips TWO things, the from-scratch simplex AND
+    /// the per-cube linearization (`Collector::collect`), and its §1.3 priced
+    /// the simplex alone at 4.15 % of the clock against 24.21 % for the pair.
+    /// Nothing in the trail separated them.
+    ///
+    /// With this field and [`Self::warm_cube_sync`] the split is two differences
+    /// between fields that are both ON the line, on one interleaved pair of arms
+    /// over one file — no counterfactual and no modelling:
+    ///
+    /// ```text
+    /// saved by the BASIS        = off.cube_simplex_ms
+    ///                             - (on.cube_simplex_ms + on.warm_cube_solve_ms
+    ///                                                   + on.warm_cube_sync_ms)
+    /// saved by the LINEARIZATION = off.cube_collect_ms - on.cube_collect_ms
+    /// ```
+    ///
+    /// The second term works because the warm arm's `cube_collect_ms` accrues
+    /// only for cubes that FELL THROUGH: an answered cube never reaches
+    /// `decide_cube`, so it never builds a `Collector`. The arm's own collect
+    /// figure is therefore already the residue, and the difference is the
+    /// linearization that did not happen.
+    pub warm_cube_solve: Duration,
+    /// Time inside [`crate::lra_online::SimplexEngine::sync_cube`], summed — the
+    /// per-cube bound reconciliation, which is what KEEPING the basis costs
+    /// (ADR-2132).
+    ///
+    /// Split out from [`Self::warm_cube_solve`] rather than pooled with it
+    /// because [ADR-2125] §4.3 is the reason this lever works at all: its first
+    /// working arm was SLOWER, reconciling by shared prefix at 1,133,095
+    /// retractions over 632 checks, and `sync_cube` — a per-row diff, z3's
+    /// `m_columns_with_changed_bounds` shape — took that to 4,238 assertions and
+    /// 0 retractions. A successor that makes the diff worse would see
+    /// `warm_cube_solve` unchanged and this field grow, which is the reading
+    /// that tells a reconciliation regression from a pivoting one. Pooled, the
+    /// two are one number that says only "slower".
+    pub warm_cube_sync: Duration,
 
     /// What the online CDCL(T) LRA probe at the head of the linear loop did.
     ///
@@ -774,7 +836,9 @@ impl LazySmtCounters {
              cube_matrices={} simplex_cold_builds={} simplex_cold_build_ms={} \
              simplex_cold_ms={} simplex_cold_pivots={} warm_cube_checks={} \
              warm_cube_declines={} warm_cube_retractions={} warm_cube_assertions={} \
-             warm_cube_cold_restarts={} warm_cube_build={} online_probe={}",
+             warm_cube_cold_restarts={} warm_cube_fill_peak={} \
+             warm_cube_solve_ms={} warm_cube_sync_ms={} \
+             warm_cube_build={} online_probe={}",
             self.reading().label(),
             self.lra_entries,
             self.lra_rounds,
@@ -821,6 +885,9 @@ impl LazySmtCounters {
             self.warm_cube_retractions,
             self.warm_cube_assertions,
             self.warm_cube_cold_restarts,
+            self.warm_cube_fill_peak,
+            self.warm_cube_solve.as_millis(),
+            self.warm_cube_sync.as_millis(),
             self.warm_cube_build.label(),
             self.online_probe.label(),
         )
@@ -910,6 +977,9 @@ const fn zero_counters() -> LazySmtCounters {
         warm_cube_retractions: 0,
         warm_cube_assertions: 0,
         warm_cube_cold_restarts: 0,
+        warm_cube_fill_peak: 0,
+        warm_cube_solve: Duration::ZERO,
+        warm_cube_sync: Duration::ZERO,
         online_probe: OnlineProbe::NotProbed,
     }
 }
@@ -1296,6 +1366,21 @@ pub(crate) fn record_cold_simplex(
     });
 }
 
+/// The two halves of one warm cube decision: the per-row bound reconciliation
+/// and the pivot loop that followed it (ADR-2132).
+///
+/// Recorded by ONE call for the reason
+/// [`crate::simplex::feasible_within_sparse`]'s three are: they are one event,
+/// and a reader holding `warm_cube_solve` without `warm_cube_sync` has the
+/// pivoting half of a cost whose other half is the thing [ADR-2125] §4.3 had to
+/// rewrite. The caller clocks them only when collection is armed.
+pub(crate) fn record_warm_cube_time(sync: Duration, solve: Duration) {
+    record(|c| {
+        c.warm_cube_sync += sync;
+        c.warm_cube_solve += solve;
+    });
+}
+
 /// One cube decided — or declined — by the ADR-2125 warm decider, with the
 /// engine's cumulative churn.
 ///
@@ -1305,17 +1390,18 @@ pub(crate) fn record_cold_simplex(
 /// deliberate: the loop has several exits, and a counter written only on the
 /// orderly one reads as zero on exactly the budget-bound rows this lever is
 /// aimed at.
-pub(crate) fn record_warm_cube(answered: bool, churn: Option<(u64, u64, u64)>) {
+pub(crate) fn record_warm_cube(answered: bool, churn: Option<(u64, u64, u64, u64)>) {
     record(|c| {
         if answered {
             c.warm_cube_checks = c.warm_cube_checks.saturating_add(1);
         } else {
             c.warm_cube_declines = c.warm_cube_declines.saturating_add(1);
         }
-        if let Some((retractions, assertions, cold_restarts)) = churn {
+        if let Some((retractions, assertions, cold_restarts, fill_peak)) = churn {
             c.warm_cube_retractions = retractions;
             c.warm_cube_assertions = assertions;
             c.warm_cube_cold_restarts = cold_restarts;
+            c.warm_cube_fill_peak = fill_peak;
         }
     });
 }
@@ -1438,6 +1524,9 @@ mod tests {
             warm_cube_retractions,
             warm_cube_assertions,
             warm_cube_cold_restarts,
+            warm_cube_fill_peak,
+            warm_cube_solve,
+            warm_cube_sync,
             warm_cube_build: _,
             online_probe: _,
         } = counters;
@@ -1494,6 +1583,12 @@ mod tests {
                 "warm_cube_cold_restarts",
                 warm_cube_cold_restarts.to_string(),
             ),
+            ("warm_cube_fill_peak", warm_cube_fill_peak.to_string()),
+            (
+                "warm_cube_solve_ms",
+                warm_cube_solve.as_millis().to_string(),
+            ),
+            ("warm_cube_sync_ms", warm_cube_sync.as_millis().to_string()),
         ]
     }
 

@@ -680,6 +680,12 @@ pub mod theories {
     pub mod arithmetic {
         pub use crate::dpll_lia::{check_with_arith_dpll, check_with_lia_dpll};
         pub use crate::dpll_t::check_with_lra_dpll;
+        // ADR-2132. Exported so the transition fixture can run all three arms of
+        // `AXEYUM_LRA_WARM_CUBE` in ONE process: the lever is memoised per
+        // process, so a fixture that read the environment could assert each arm
+        // only against a verdict written into its own source, never against the
+        // other arms. The production caller is `check_with_lra_dpll_within`.
+        pub use crate::dpll_t::{WarmCubeMode, check_with_lra_dpll_within_mode};
         pub use crate::lia::{DEFAULT_INT_WIDTH, check_with_int_blasting};
         pub use crate::lia_online::{LiaTheory, check_qf_lia_online};
         pub use crate::lia_theory::check_qf_lia_online_cdclt;
@@ -1144,6 +1150,8 @@ macro_rules! full_exports {
         pub use dpll_t::check_with_lra_dpll;
         #[doc(hidden)]
         pub use dpll_t::{LemmaLiteral, LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat};
+        #[doc(hidden)]
+        pub use dpll_t::{WarmCubeMode, check_with_lra_dpll_within_mode};
         #[doc(hidden)]
         pub use enums::{EnumError, EnumSort, EnumVar};
         #[doc(hidden)]

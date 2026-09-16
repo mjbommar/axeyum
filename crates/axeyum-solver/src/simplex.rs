@@ -63,9 +63,45 @@
 //!   [`check_farkas`] here in tests): a bad certificate cannot masquerade as a
 //!   sound `unsat`.
 
+use std::cell::Cell;
 use std::time::Instant;
 
 use axeyum_ir::Rational;
+
+thread_local! {
+    /// ADR-2132's screen counter: from-scratch tableaux this thread has
+    /// allocated, counted ALWAYS.
+    ///
+    /// # Why this is not [`crate::lazy_smt_counters::LazySmtCounters::simplex_cold_builds`]
+    ///
+    /// It is the same event in the same currency — incremented at exactly the
+    /// site that increments that field, on exactly the same condition — and it
+    /// is a second counter anyway, because that one is armed only by `--trace`.
+    /// ADR-2132's screen is a ROUTING decision on the shipped path: it has to
+    /// read the count on a run with no instrumentation, and a screen that
+    /// consults a counter only a trace flag arms would route one way under
+    /// `--trace` and the other way without it. That is the [ADR-2100] hazard in
+    /// its worst form — the measurement and the shipped behaviour diverging —
+    /// and the whole point of an A/B is that they do not.
+    ///
+    /// `a_screen_count_and_the_traced_count_are_the_same_number` is the test
+    /// that keeps the two in step, and it fails if either site moves.
+    ///
+    /// Read as a DELTA against a snapshot taken at the loop's entry, never
+    /// absolutely: it is per-thread and cumulative over the process, so the
+    /// absolute value carries every earlier query on this thread. There is
+    /// deliberately no reset — a reset is a second way for two queries to
+    /// interfere, and a delta needs none.
+    static COLD_BUILDS: Cell<u64> = const { Cell::new(0) };
+}
+
+/// From-scratch tableaux allocated on this thread so far (ADR-2132).
+///
+/// Meaningful only as a difference between two reads; see [`COLD_BUILDS`].
+#[must_use]
+pub(crate) fn cold_builds_so_far() -> u64 {
+    COLD_BUILDS.with(Cell::get)
+}
 
 /// Hard ceiling on the dense tableau [`Incremental::new`] will build (rows ×
 /// columns). A `Rational` is two `i128`s — still true after ADR-1702, whose
@@ -342,6 +378,20 @@ pub struct TableauCounters {
     /// Samples behind `fill_nnz_sum`; the denominator, never assumed equal to
     /// the check count.
     pub fill_samples: u64,
+    /// The LARGEST of those samples (ADR-2132).
+    ///
+    /// The mean beside it answers "how sparse is this tableau typically"; this
+    /// answers the only question a CEILING can be argued from. `Incremental` is
+    /// admitted on nonzeros at CONSTRUCTION
+    /// ([`MAX_WARM_CUBE_NONZEROS`]) while [`MAX_TABLEAU_CELLS`] bounds
+    /// `m × (nvars+m)`, which is the ceiling fill-in cannot pass —
+    /// [`Tableau::select_entering`]'s fill-in-minimising rule exists precisely
+    /// because a pivot grows the stored set. Whether the construction-time
+    /// bound is therefore the wrong instrument is a question about how far the
+    /// peak runs above the entry count, and until this counter existed nothing
+    /// in the tree could answer it: [ADR-2111] took the representation change
+    /// and recorded that it did not take the fill-in measurement.
+    pub fill_nnz_peak: u64,
     /// [`Tableau::farkas`] declines because the infeasible row's basic variable
     /// is a **problem** variable rather than a slack (`simplex.rs` first decline
     /// arm). A decline yields an empty certificate, which widens the theory's
@@ -660,16 +710,22 @@ pub fn feasible_within_sparse(
     // `simplex_cold` would be reading a numerator with no denominator, which is
     // the shape this repository keeps being caught by.
     if !crate::lazy_smt_counters::enabled() {
-        return feasible_within_sparse_inner(
-            nvars,
-            constraints,
-            deadline,
-            &mut ColdSimplexProbe::default(),
-        );
+        let mut probe = ColdSimplexProbe::default();
+        let outcome = feasible_within_sparse_inner(nvars, constraints, deadline, &mut probe);
+        // ADR-2132. The screen counter is bumped on BOTH arms of this branch and
+        // from `probe.built`, the same field and the same condition the traced
+        // counter uses — so the screen sees the identical number with the trace
+        // flag on and off. A screen that counted only under `--trace` would
+        // route differently in the measurement from the way it routes in
+        // production, which would make every A/B of it a measurement of
+        // something else.
+        bump_cold_builds(&probe);
+        return outcome;
     }
     let started = Instant::now();
     let mut probe = ColdSimplexProbe::default();
     let outcome = feasible_within_sparse_inner(nvars, constraints, deadline, &mut probe);
+    bump_cold_builds(&probe);
     crate::lazy_smt_counters::record_cold_simplex(
         started.elapsed(),
         probe.build,
@@ -677,6 +733,14 @@ pub fn feasible_within_sparse(
         probe.pivots,
     );
     outcome
+}
+
+/// One from-scratch tableau onto the ADR-2132 screen counter, on the same
+/// condition [`crate::lazy_smt_counters::record_cold_simplex`] uses.
+fn bump_cold_builds(probe: &ColdSimplexProbe) {
+    if probe.built {
+        COLD_BUILDS.with(|c| c.set(c.get().saturating_add(1)));
+    }
 }
 
 /// What one from-scratch [`feasible_within_sparse`] call did, for the ADR-2125
@@ -1445,8 +1509,15 @@ impl Tableau {
         // Fill-in is sampled once per call rather than per pivot: `total_nnz` is
         // O(columns) thanks to the maintained counts, but per-pivot it would
         // still be the largest single term in a cheap pivot.
-        self.counters.fill_nnz_sum += self.total_nnz();
+        let nnz = self.total_nnz();
+        self.counters.fill_nnz_sum += nnz;
         self.counters.fill_samples += 1;
+        // ADR-2132. The PEAK and not just the mean, because the question this
+        // answers is about a CEILING: `MAX_WARM_CUBE_NONZEROS` bounds nonzeros
+        // at CONSTRUCTION, and `select_entering`'s own fill-in rule exists
+        // because a pivot GROWS them. A mean cannot say whether the ceiling was
+        // ever approached; the largest sample can.
+        self.counters.fill_nnz_peak = self.counters.fill_nnz_peak.max(nnz);
         Ok(outcome)
     }
 
