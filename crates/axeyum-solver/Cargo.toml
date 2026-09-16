@@ -169,3 +169,7 @@ required-features = ["full"]
 [[example]]
 name = "nra_cell_check_stats"
 required-features = ["full"]
+
+[[example]]
+name = "nra_algebraic_witness_replay"
+required-features = ["full"]

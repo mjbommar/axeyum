@@ -303,6 +303,53 @@ index is canonical once the polynomial is canonical, which is why
 
 ## Measurement
 
-See `bench-results/nra-algebraic-witness-20260916/README.md` for the sizing, the
-A/B protocol and the harness incident. The A/B results and the ship decision are
-recorded in `docs/plan/status/nra-algebraic-witness.md`.
+`bench-results/nra-algebraic-witness-20260916/README.md` carries the full tables,
+the protocol and a harness incident. The headline:
+
+**QF_NRA pinned 200, one binary, two env values, interleaved per file:
+`single-cell` 124 → `algebraic-witness` 128, +4. Four movers, every one
+`unknown → sat`. 0 `sat`↔`unsat` flips. 0 arm runs without a verdict token.**
+
+Three-pass recheck of all four movers, arms alternating within the passes:
+**4 STABLE-GAIN, 0 STABLE-LOSS, 0 UNSTABLE, exit status 0 on all 24 runs.**
+
+Every gained `sat` replayed independently through the front door
+(`examples/nra_algebraic_witness_replay.rs`):
+`files=4 sat_with_algebraic_coordinate=4 replay_failures=0` — four of four, each
+with exactly one irrational coordinate, each nameable as a root object. The same
+checker on the shipped arm finds nothing and **exits 3**, so the evidence fails
+in both directions rather than only one.
+
+### The sizing did not predict the movers
+
+This is the ADR's second finding and it corrects its own §Context.
+
+Of the 6 sized `algebraic-witness` + `unknown` files, **1** moved. **3 of the 4
+movers were sized `non-conjunctive`.** Traced rather than assumed: on
+`atan-problem-2-weak-chunk-0018.smt2` both arms decline the `nra-real-root` rung
+with `non-conjunctive` — the cause the census reads — and the verdict diverges at
+a LATER rung, where `nra.rs:339` calls `decide_real_poly_constraint`, which
+offers `decide_single_cell` with `cad_policy().algebraic_witness`. The lever is
+reached on a SUBPROBLEM long after the top-level rung has stamped a first-wins
+slot.
+
+**A first-wins decline slot makes a cause census non-predictive of a lever's
+effect whenever the same decider is reachable from more than one rung.** The
+census answers "why did this rung refuse"; it does not answer "what is this lever
+worth", and §Context's ceiling of 6 is neither an upper nor a lower bound on the
+measured +4. The A/B is the sizing. Any future lane sizing an NRA lever from
+`CadDecline` counts should read this paragraph first.
+
+## Status of the ship decision
+
+**Not `accepted`.** The criterion for a default move is 0 stable losses on the
+pinned draw **and** on the held-out draw, with the QF_NIA and QF_LRA controls
+flat. At the time of writing, the pinned QF_NRA half is complete and clean (+4,
+4 STABLE-GAIN, 0 STABLE-LOSS, 0 flips); the QF_NIA control, the QF_LRA control
+and the held-out 200-file QF_NRA draw were still running, as was the
+binary-against-binary A/B that prices the `sign_at` exactness fix.
+
+So this ADR is `proposed` and the lever ships **OFF**. The evidence in hand
+supports the default move; the evidence required for it is not all in, and the
+missing half is named rather than waved at. `docs/plan/status/nra-algebraic-witness.md`
+carries what completed.

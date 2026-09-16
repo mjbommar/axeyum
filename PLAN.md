@@ -62592,9 +62592,9 @@ wrong sign in the trusted evaluator, fixed and not behind any lever.
 | 1. sizing before code | **MET** — `algebraic-witness` = 7 of the pinned 200, 6 of them `unknown` |
 | 2. design claims at `file:line` | **MET** — ADR-2134 §"Design claims" |
 | 3. lever, exact replay, root objects, three fixtures, fuzz nonzero | **MET** — fuzz `algebraic_models=855`, 855 agreements, 0 disagreements |
-| 4. interleaved A/B | see below |
-| 5. mutation | see below |
-| 6. gates | see below |
+| 4. interleaved A/B | **PARTIAL** — QF_NRA pinned 200 done and clean (+4, 4 STABLE-GAIN, 0 STABLE-LOSS, 0 flips, 4/4 replays accepted); QF_NIA, QF_LRA and held-out still running |
+| 5. mutation | **MET** — 14 mutations across 4 suites, every one killed, `--check-anchors` 1130 anchors stale=0 |
+| 6. gates | **PARTIAL** — clippy 903/903 targets 0 diagnostics, default-features workspace check 0, fmt 0, `config_registry` 18/0, staleness 0 unexplained, 29 dispatch suites green (none inert); lib sweep and `progress_frontier` still running |
 
 ## The finding
 
@@ -62644,6 +62644,31 @@ FIRST cause and the loop runs after `non-conjunctive` is already recorded, so an
 
 Full table and the seven file names:
 `bench-results/nra-algebraic-witness-20260916/README.md`.
+
+## The A/B, so far
+
+Treatment `df2dfc0f…` against baseline `6261a505…`, one binary and two env
+values, interleaved per file on pinned cores `5,13` and `6,14` of s5.
+
+**QF_NRA pinned 200: `single-cell` 124 → `algebraic-witness` 128, +4.** Four
+movers, all `unknown → sat`. **0 flips, 0 arm runs without a verdict token.**
+Three-pass recheck: **4 STABLE-GAIN, 0 STABLE-LOSS, 0 UNSTABLE, exit 0 on all 24
+runs.** Independent front-door replay of every gained `sat`:
+`sat_with_algebraic_coordinate=4 replay_failures=0`; the same checker on the
+shipped arm finds nothing and exits 3.
+
+### The sizing did not predict the movers
+
+Of the 6 sized `algebraic-witness` + `unknown` files, **1** moved. **3 of the 4
+movers were sized `non-conjunctive`.** Traced, not guessed: both arms decline the
+`nra-real-root` rung with `non-conjunctive`, and the verdict diverges at a later
+rung where `nra.rs:339` → `decide_real_poly_constraint` → `decide_single_cell`
+reaches the lever on a SUBPROBLEM. The decline slot keeps the FIRST cause, so the
+census attributes the file to a rung the lever does not help.
+
+**A first-wins decline slot makes a cause census non-predictive of a lever's
+effect whenever the same decider is reachable from more than one rung.** The
+ceiling of 6 above is neither an upper nor a lower bound on the measured +4.
 
 ## Landed changes
 

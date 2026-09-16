@@ -1,0 +1,6 @@
+# AXEYUM_NRA_CAD=algebraic-witness
+sat	algebraic=1	replay=OK	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/meti-tarski/atan/problem/2/atan-problem-2-chunk-0014.smt2
+sat	algebraic=1	replay=OK	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/meti-tarski/atan/problem/2/weak/atan-problem-2-weak-chunk-0018.smt2
+sat	algebraic=1	replay=OK	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/meti-tarski/atan/problem/2/weak/atan-problem-2-weak-chunk-0089.smt2
+sat	algebraic=1	replay=OK	/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/meti-tarski/atan/problem/2/weak/atan-problem-2-weak-chunk-0159.smt2
+REPLAY_SUMMARY|files=4|sat_with_algebraic_coordinate=4|replay_failures=0
