@@ -13,6 +13,11 @@ Lane `quant-ground-incremental`.  Artifacts, in the order they were produced.
 | `cores/cores.tsv` | one row per core, both arms |
 | `cores/CORES-SUMMARY.txt` | the probe's own report |
 | `cores/raw.tar.gz` | **the raw per-core capture**, `tar xzf` it to get `raw/<core>.<arm>.{out,err}` |
+| `cores2/` | the SAME probe re-run on the CORRECTED binary (`327b5e2d9`); `cores/` was taken before the connective-exclusion fix and is kept, labelled, rather than replaced |
+| `ab/ab.shard*.tsv` | the six-division A/B, 1,200 rows |
+| `ab/AB-SUMMARY.txt` | its summary: −4, 0 verdict disagreements, 2 raw gains / 6 raw losses |
+| `ab/movers.list`, `ab/movers-recheck.tsv` | every raw mover, 3 passes per arm |
+| `ab/RECHECK.txt` | **the decision**: 1 STABLE-GAIN, 5 STABLE-LOSS, 2 UNSTABLE — ship criterion not met |
 | `ab-self-check.sh` | refuses the A/B unless the two arms resolve DIFFERENT configurations and arm B's own line names the override |
 | `ab-launch.sh` / `ab-run.sh` | the six-division A/B, one binary at two env values, interleaved per file |
 | `ab-summarize.py` | reads the A/B shards |

@@ -500,6 +500,27 @@ atom and the session refuses, so it cannot displace the cold check for nothing.
 `AUFDTLIRA` and `UFDTLIRA` are both in the divisional A/B, which measures this
 directly rather than sizing an exclusion that does not exist.
 
+### 6.2b The probe re-run on the CORRECTED binary confirms it
+
+The probe in §6.1 was taken on the binary whose connective-exclusion list was two
+arms short (§5 / commit `327b5e2d9`). It was re-run end to end on the corrected
+one, with the mover re-check given sole use of its core first so the two sweeps
+could not contend. Artifacts: `cores2/`.
+
+| | §6.1 (pre-fix) | re-run (shipped) |
+|---|---:|---:|
+| OFF decided | 15 | 15 |
+| ON decided | **16** | **16** |
+| moved / GAIN / LOSS / **FLIP** | 1 / 1 / 0 / **0** | 1 / 1 / 0 / **0** |
+| cold checks, OFF → ON | 513 → 450 | 530 → 467 |
+| seconds in the check, OFF → ON | 452.4 → 404.0 | 453.1 → 403.1 |
+| seconds removed | 48.4 (10.7 %) | **50.0 (11.0 %)** |
+
+The summariser's exit status depends on the finding — a `sat`/`unsat` flip returns
+1 — and it returned **0**. The completed exclusion list changed nothing material
+on this population, which is what a strengthening that only removes needless
+abstraction should do.
+
 ### 6.3 The six-division A/B — −4 over 1,200, and five of the losses are stable
 
 One binary at two env values, arms back to back on the SAME file on the SAME
