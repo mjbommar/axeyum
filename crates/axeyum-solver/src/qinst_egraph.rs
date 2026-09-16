@@ -4850,6 +4850,13 @@ fn online_clause_atom(arena: &TermArena, term: TermId) -> bool {
 /// but silently drops the strongest thing the session knew about that clause.
 /// Refusing keeps the historical `Unsupported` → session-disabled → cold-route
 /// behaviour for those shapes, which is the conservative arm.
+///
+/// **The list is exactly `EufEncoder::encode_app`'s connective arms**, and it
+/// has to be read off that function rather than recalled: `BoolXor` and `Ite`
+/// were missing from the first version of this predicate, so a generated `xor`
+/// or Boolean `ite` would have been abstracted even though the encoder has a
+/// Tseitin arm for it. That is sound — every abstraction is — which is exactly
+/// why nothing would have failed and the loss would have been silent.
 fn online_opaque_clause_atom(arena: &TermArena, term: TermId) -> bool {
     if !ground_session_abstracts() || arena.sort_of(term) != Sort::Bool {
         return false;
@@ -4857,7 +4864,14 @@ fn online_opaque_clause_atom(arena: &TermArena, term: TermId) -> bool {
     match arena.node(term) {
         TermNode::App { op, .. } => !matches!(
             op,
-            Op::Eq | Op::Apply(_) | Op::BoolNot | Op::BoolAnd | Op::BoolOr | Op::BoolImplies
+            Op::Eq
+                | Op::Apply(_)
+                | Op::BoolNot
+                | Op::BoolAnd
+                | Op::BoolOr
+                | Op::BoolImplies
+                | Op::BoolXor
+                | Op::Ite
         ),
         _ => false,
     }
