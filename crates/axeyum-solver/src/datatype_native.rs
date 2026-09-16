@@ -360,35 +360,15 @@ fn decide_with_eq_mode(
         };
         replacements.insert(site.term, arena.var(field));
     }
-    let mut relaxed_eq_encoding = false;
-    // Copied out of the scan so the `&mut arena` the builder needs does not sit
-    // next to a live borrow of `scan` (which the builder also reads, through
-    // `dt_symbols`).
-    let eq_sites: Vec<(TermId, SymbolId, SymbolId)> = scan
-        .eqs
-        .iter()
-        .map(|site| (site.term, site.left, site.right))
-        .collect();
-    let mut eq_memo: BTreeMap<(SymbolId, SymbolId, u32), (TermId, bool)> = BTreeMap::new();
-    let depth = nested_field_expansion_depth();
-    for (term, left, right) in eq_sites {
-        let (eq_term, one_directional) = build_dt_eq(
-            arena,
-            left,
-            right,
-            &layout,
-            &links,
-            &scan.dt_symbols,
-            &mut extra,
-            eq_mode,
-            depth,
-            &mut eq_memo,
-        )?;
-        relaxed_eq_encoding |= one_directional;
-        replacements.insert(term, eq_term);
-    }
-
-    relaxed |= relaxed_eq_encoding;
+    relaxed |= insert_eq_replacements(
+        arena,
+        &scan,
+        &layout,
+        &links,
+        &mut extra,
+        &mut replacements,
+        eq_mode,
+    )?;
 
     let mut reduced = Vec::with_capacity(unfolded.len() + extra.len());
     let mut memo: HashMap<TermId, TermId> = HashMap::new();
@@ -421,6 +401,51 @@ fn decide_with_eq_mode(
     project_and_replay(
         arena, simplified, &scan, &layout, &links, &witnesses, &ack_sites, relaxed, &model,
     )
+}
+
+/// Encodes every `o == o'` site into `replacements`, and reports whether any of
+/// them came out ONE-DIRECTIONAL (a relaxation the caller must replay-check).
+///
+/// # Errors
+///
+/// See [`build_dt_eq`].
+fn insert_eq_replacements(
+    arena: &mut TermArena,
+    scan: &Scan,
+    layout: &BTreeMap<SymbolId, SymVars>,
+    links: &Links,
+    extra: &mut Vec<TermId>,
+    replacements: &mut HashMap<TermId, TermId>,
+    eq_mode: EqMode,
+) -> Result<bool, SolverError> {
+    // Copied out of the scan so the `&mut arena` the builder needs does not sit
+    // next to a live borrow of `scan` (which the builder also reads, through
+    // `dt_symbols`).
+    let eq_sites: Vec<(TermId, SymbolId, SymbolId)> = scan
+        .eqs
+        .iter()
+        .map(|site| (site.term, site.left, site.right))
+        .collect();
+    let mut memo: BTreeMap<(SymbolId, SymbolId, u32), (TermId, bool)> = BTreeMap::new();
+    let depth = nested_field_expansion_depth();
+    let mut relaxed_eq_encoding = false;
+    for (term, left, right) in eq_sites {
+        let (eq_term, one_directional) = build_dt_eq(
+            arena,
+            left,
+            right,
+            layout,
+            links,
+            &scan.dt_symbols,
+            extra,
+            eq_mode,
+            depth,
+            &mut memo,
+        )?;
+        relaxed_eq_encoding |= one_directional;
+        replacements.insert(term, eq_term);
+    }
+    Ok(relaxed_eq_encoding)
 }
 
 /// Per-symbol expansion variables.
@@ -645,28 +670,7 @@ fn materialize_nested_children(
                     continue;
                 };
                 let key = (sym, ctor_idx, field_idx);
-                let child = match links.get(&key) {
-                    Some(&child) => child,
-                    None => {
-                        created += 1;
-                        if created > MAX_NESTED_CHILDREN {
-                            return Err(unsupported(
-                                "nested datatype field expansion needs more child slots than \
-                                 the bound allows, so the exactness the depth budget promises \
-                                 cannot be built (ADR-2128)",
-                            ));
-                        }
-                        // The SAME name `unfold_traversals` uses, deliberately:
-                        // `declare_internal` is idempotent by name, so a slot
-                        // reached by both passes is one child variable.
-                        let name = format!("!dt_child_{}_{ctor_idx}_{field_idx}", sym.index());
-                        let child = arena
-                            .declare_internal(&name, fsort)
-                            .map_err(|e| SolverError::Backend(e.to_string()))?;
-                        links.insert(key, child);
-                        child
-                    }
-                };
+                let child = child_slot(arena, links, key, fsort, &mut created)?;
                 scan.dt_symbols.insert(child, inner);
                 if seen.insert((child, remaining - 1)) {
                     queue.push((child, remaining - 1));
@@ -675,6 +679,45 @@ fn materialize_nested_children(
         }
     }
     Ok(created)
+}
+
+/// The child variable for one datatype-typed field slot, created if absent
+/// (ADR-2128).
+///
+/// The name is **the same string `unfold_traversals` builds**, deliberately:
+/// `declare_internal` is idempotent by name, so a slot reached by both passes
+/// resolves to ONE child variable and the two passes cannot disagree about what
+/// it denotes.
+///
+/// # Errors
+///
+/// [`SolverError::Unsupported`] above [`MAX_NESTED_CHILDREN`] — a REFUSAL and
+/// never a truncation, because stopping short of the budget would claim an
+/// exactness the expansion did not build.
+fn child_slot(
+    arena: &mut TermArena,
+    links: &mut Links,
+    key: (SymbolId, usize, usize),
+    field_sort: Sort,
+    created: &mut usize,
+) -> Result<SymbolId, SolverError> {
+    if let Some(&child) = links.get(&key) {
+        return Ok(child);
+    }
+    *created += 1;
+    if *created > MAX_NESTED_CHILDREN {
+        return Err(unsupported(
+            "nested datatype field expansion needs more child slots than the bound allows, \
+             so the exactness the depth budget promises cannot be built (ADR-2128)",
+        ));
+    }
+    let (sym, ctor_idx, field_idx) = key;
+    let name = format!("!dt_child_{}_{ctor_idx}_{field_idx}", sym.index());
+    let child = arena
+        .declare_internal(&name, field_sort)
+        .map_err(|e| SolverError::Backend(e.to_string()))?;
+    links.insert(key, child);
+    Ok(child)
 }
 
 /// A `select_{c,i}(construct_d(...))` with `d != c` — SMT-LIB's UNSPECIFIED
@@ -2144,53 +2187,20 @@ fn build_dt_eq_inner(
     let mut all_exact = true;
     let mut sufficient = arena.bool_const(true);
     for (j, (lrow, rrow)) in left.fields.iter().zip(&right.fields).enumerate() {
-        let mut fields_eq = arena.bool_const(true);
-        let mut comparable = 0usize;
-        let mut exact = true;
-        for (i, (lf, rf)) in lrow.iter().zip(rrow).enumerate() {
-            let fe = match (lf, rf) {
-                (Some(lf), Some(rf)) => {
-                    let lfv = arena.var(*lf);
-                    let rfv = arena.var(*rf);
-                    arena
-                        .eq(lfv, rfv)
-                        .map_err(|e| SolverError::Backend(e.to_string()))?
-                }
-                // A DATATYPE-TYPED FIELD (ADR-2128). With the lever ON it has a
-                // materialised child on both sides and the conjunct is the
-                // children's own equality; with the lever OFF, or no child,
-                // this is the pre-ADR-2128 skip and the constructor is inexact.
-                _ => match nested_child_eq(
-                    arena,
-                    left_sym,
-                    right_sym,
-                    j,
-                    i,
-                    layout,
-                    links,
-                    dt_symbols,
-                    extra,
-                    EqMode::Relaxation,
-                    depth,
-                    memo,
-                )? {
-                    Some((child_eq, child_exact)) => {
-                        exact &= child_exact;
-                        all_exact &= child_exact;
-                        child_eq
-                    }
-                    None => {
-                        exact = false;
-                        all_exact = false;
-                        continue;
-                    }
-                },
-            };
-            fields_eq = arena
-                .and(fields_eq, fe)
-                .map_err(|e| SolverError::Backend(e.to_string()))?;
-            comparable += 1;
-        }
+        let (fields_eq, comparable, exact) = ctor_field_agreement(
+            arena,
+            (left_sym, right_sym),
+            j,
+            (lrow, rrow),
+            layout,
+            links,
+            dt_symbols,
+            extra,
+            EqMode::Relaxation,
+            depth,
+            memo,
+        )?;
+        all_exact &= exact;
         let tag_j = arena
             .bv_const(left.tag_width, j as u128)
             .map_err(|e| SolverError::Backend(e.to_string()))?;
@@ -2281,49 +2291,20 @@ fn build_dt_eq_restriction(
         .map_err(|e| SolverError::Backend(e.to_string()))?;
     let mut all_exact = true;
     for (j, (lrow, rrow)) in left.fields.iter().zip(&right.fields).enumerate() {
-        let mut fields_eq = arena.bool_const(true);
-        let mut comparable = 0usize;
-        for (i, (lf, rf)) in lrow.iter().zip(rrow).enumerate() {
-            let fe = match (lf, rf) {
-                (Some(lf), Some(rf)) => {
-                    let lfv = arena.var(*lf);
-                    let rfv = arena.var(*rf);
-                    arena
-                        .eq(lfv, rfv)
-                        .map_err(|e| SolverError::Backend(e.to_string()))?
-                }
-                // ADR-2128, and the RESTRICTION arm gets it for the same reason
-                // the relaxation does: a nested field it cannot see is a
-                // difference it cannot WITNESS, which is this arm's whole job.
-                _ => match nested_child_eq(
-                    arena,
-                    left_sym,
-                    right_sym,
-                    j,
-                    i,
-                    layout,
-                    links,
-                    dt_symbols,
-                    extra,
-                    EqMode::Restriction,
-                    depth,
-                    memo,
-                )? {
-                    Some((child_eq, child_exact)) => {
-                        all_exact &= child_exact;
-                        child_eq
-                    }
-                    None => {
-                        all_exact = false;
-                        continue;
-                    }
-                },
-            };
-            fields_eq = arena
-                .and(fields_eq, fe)
-                .map_err(|e| SolverError::Backend(e.to_string()))?;
-            comparable += 1;
-        }
+        let (fields_eq, comparable, exact) = ctor_field_agreement(
+            arena,
+            (left_sym, right_sym),
+            j,
+            (lrow, rrow),
+            layout,
+            links,
+            dt_symbols,
+            extra,
+            EqMode::Restriction,
+            depth,
+            memo,
+        )?;
+        all_exact &= exact;
         if comparable == 0 {
             // Nothing to say about this constructor. Emitting the vacuous
             // conjunct once PER CONSTRUCTOR is what cost two `vlsat3` files
@@ -2414,6 +2395,109 @@ fn nested_child_eq(
         memo,
     )?;
     Ok(Some((term, !one_directional)))
+}
+
+/// One constructor's field-agreement conjunction: the `AND` over its slots, how
+/// many of them were COMPARABLE, and whether every one of them was EXACT.
+///
+/// `comparable == 0` matters to both callers and is returned rather than
+/// re-derived: a nullary constructor would otherwise contribute a vacuous
+/// conjunct once PER CONSTRUCTOR, and a pure enum has hundreds of them (the
+/// `vlsat3` family), which cost two files their verdict.
+///
+/// # Errors
+///
+/// See [`build_dt_eq`].
+#[allow(clippy::too_many_arguments)]
+fn ctor_field_agreement(
+    arena: &mut TermArena,
+    syms: (SymbolId, SymbolId),
+    ctor_idx: usize,
+    rows: (&[Option<SymbolId>], &[Option<SymbolId>]),
+    layout: &BTreeMap<SymbolId, SymVars>,
+    links: &Links,
+    dt_symbols: &BTreeMap<SymbolId, DatatypeId>,
+    extra: &mut Vec<TermId>,
+    mode: EqMode,
+    depth: u32,
+    memo: &mut BTreeMap<(SymbolId, SymbolId, u32), (TermId, bool)>,
+) -> Result<(TermId, usize, bool), SolverError> {
+    let (lrow, rrow) = rows;
+    let mut fields_eq = arena.bool_const(true);
+    let mut comparable = 0usize;
+    let mut exact = true;
+    for (i, (lf, rf)) in lrow.iter().zip(rrow).enumerate() {
+        let Some((fe, field_exact)) = field_conjunct(
+            arena,
+            syms,
+            (ctor_idx, i),
+            (*lf, *rf),
+            layout,
+            links,
+            dt_symbols,
+            extra,
+            mode,
+            depth,
+            memo,
+        )?
+        else {
+            exact = false;
+            continue;
+        };
+        exact &= field_exact;
+        fields_eq = arena
+            .and(fields_eq, fe)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        comparable += 1;
+    }
+    Ok((fields_eq, comparable, exact))
+}
+
+/// The `==` conjunct for ONE field slot, and whether that conjunct is EXACT.
+///
+/// `None` means the slot contributes nothing and the constructor's comparison
+/// is therefore inexact — the pre-ADR-2128 skip. **Both `==` encodings go
+/// through this one function**, so the relaxation and the restriction cannot
+/// drift apart about which slots they can see, which is the drift ADR-1920
+/// measured as a wrong `unsat`.
+///
+/// # Errors
+///
+/// See [`build_dt_eq`].
+#[allow(clippy::too_many_arguments)]
+fn field_conjunct(
+    arena: &mut TermArena,
+    syms: (SymbolId, SymbolId),
+    slot: (usize, usize),
+    vars: (Option<SymbolId>, Option<SymbolId>),
+    layout: &BTreeMap<SymbolId, SymVars>,
+    links: &Links,
+    dt_symbols: &BTreeMap<SymbolId, DatatypeId>,
+    extra: &mut Vec<TermId>,
+    mode: EqMode,
+    depth: u32,
+    memo: &mut BTreeMap<(SymbolId, SymbolId, u32), (TermId, bool)>,
+) -> Result<Option<(TermId, bool)>, SolverError> {
+    // A SCALAR field: it has an expansion variable on both sides and the
+    // conjunct is those two variables' equality, which is exact.
+    if let (Some(lf), Some(rf)) = vars {
+        let lfv = arena.var(lf);
+        let rfv = arena.var(rf);
+        let fe = arena
+            .eq(lfv, rfv)
+            .map_err(|e| SolverError::Backend(e.to_string()))?;
+        return Ok(Some((fe, true)));
+    }
+    // A DATATYPE-TYPED field (ADR-2128). With the lever ON it has a materialised
+    // child on both sides and the conjunct is the children's own equality; with
+    // the lever OFF, or no child, `nested_child_eq` returns `None` and the
+    // caller records the constructor as inexact.
+    let (left_sym, right_sym) = syms;
+    let (ctor_idx, field_idx) = slot;
+    nested_child_eq(
+        arena, left_sym, right_sym, ctor_idx, field_idx, layout, links, dt_symbols, extra, mode,
+        depth, memo,
+    )
 }
 
 /// Projects the expansion model back to datatype values and replays it against

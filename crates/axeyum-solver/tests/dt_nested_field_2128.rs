@@ -139,8 +139,8 @@ fn nested_congruence(arena: &mut TermArena, tag: &str) -> Vec<TermId> {
     let fa = arena.apply(f, &[a]).expect("apply");
     let fb = arena.apply(f, &[b]).expect("apply");
     let eab = arena.eq(a, b).expect("eq");
-    let efab = arena.eq(fa, fb).expect("eq");
-    let nef = arena.not(efab).expect("not");
+    let results_eq = arena.eq(fa, fb).expect("eq");
+    let nef = arena.not(results_eq).expect("not");
     vec![eab, nef]
 }
 
@@ -213,8 +213,8 @@ fn sound_nested_congruence_does_not_force_equal_results() {
             .expect("declare f");
         let fa = arena.apply(f, &[a]).expect("apply");
         let fb = arena.apply(f, &[b]).expect("apply");
-        let efab = arena.eq(fa, fb).expect("eq");
-        let nef = arena.not(efab).expect("not");
+        let results_eq = arena.eq(fa, fb).expect("eq");
+        let nef = arena.not(results_eq).expect("not");
         // The records agree on `oc` but their nested `ic` values differ, so
         // `a != b` and `f(a) != f(b)` is perfectly satisfiable.
         let oca = arena.dt_select(mk_outer, 1, a).expect("select");
@@ -226,10 +226,14 @@ fn sound_nested_congruence_does_not_force_equal_results() {
         let icb = arena.dt_select(mk_inner, 0, inb).expect("select");
         let one = int_const(&mut arena, 1);
         let two = int_const(&mut arena, 2);
-        let ic_a1 = arena.eq(ica, one).expect("eq");
-        let ic_b2 = arena.eq(icb, two).expect("eq");
+        let left_inner_is_one = arena.eq(ica, one).expect("eq");
+        let right_inner_is_two = arena.eq(icb, two).expect("eq");
 
-        let out = check_with_datatype_native(&mut arena, &[nef, oc_eq, ic_a1, ic_b2], &cfg());
+        let out = check_with_datatype_native(
+            &mut arena,
+            &[nef, oc_eq, left_inner_is_one, right_inner_is_two],
+            &cfg(),
+        );
         assert!(
             !matches!(out, Ok(CheckResult::Unsat)),
             "WRONG UNSAT at depth {depth}: `a` and `b` differ in the nested \
@@ -271,11 +275,11 @@ fn sound_two_distinct_nested_values_do_not_collide() {
         let icb = arena.dt_select(mk_inner, 0, inb).expect("select");
         let one = int_const(&mut arena, 1);
         let two = int_const(&mut arena, 2);
-        let ic_a1 = arena.eq(ica, one).expect("eq");
-        let ic_b2 = arena.eq(icb, two).expect("eq");
+        let left_inner_is_one = arena.eq(ica, one).expect("eq");
+        let right_inner_is_two = arena.eq(icb, two).expect("eq");
         let eab = arena.eq(a, b).expect("eq");
         let neq = arena.not(eab).expect("not");
-        let asserts = [oc_eq, ic_a1, ic_b2, neq];
+        let asserts = [oc_eq, left_inner_is_one, right_inner_is_two, neq];
 
         let out = check_with_datatype_native(&mut arena, &asserts, &cfg());
         assert!(
