@@ -1,0 +1,21 @@
+off       qf_lra_differential_fuzz                   rc=0 tests=5 failed=0 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.27s
+off       simplex_lra_fallback_differential          rc=0 tests=1 failed=0 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 82.67s
+off       qf_uflra_differential_fuzz                 rc=0 tests=1 failed=0 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.80s
+off       difference_logic_differential_fuzz         rc=0 tests=4 failed=0 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.29s
+off       qf_lia_differential_fuzz                   rc=0 tests=4 failed=0 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 23.21s
+off       qf_lra_cube_sequence_differential_fuzz     rc=0 tests=2 failed=0 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.33s
+off       TOTAL tests=17
+on        qf_lra_differential_fuzz                   rc=0 tests=5 failed=0 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.40s
+on        simplex_lra_fallback_differential          rc=0 tests=1 failed=0 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 88.92s
+on        qf_uflra_differential_fuzz                 rc=0 tests=1 failed=0 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.25s
+on        difference_logic_differential_fuzz         rc=0 tests=4 failed=0 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.79s
+on        qf_lia_differential_fuzz                   rc=0 tests=4 failed=0 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.13s
+on        qf_lra_cube_sequence_differential_fuzz     rc=0 tests=2 failed=0 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.94s
+on        TOTAL tests=17
+screened  qf_lra_differential_fuzz                   rc=0 tests=5 failed=0 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.63s
+screened  simplex_lra_fallback_differential          rc=0 tests=1 failed=0 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 88.50s
+screened  qf_uflra_differential_fuzz                 rc=0 tests=1 failed=0 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.53s
+screened  difference_logic_differential_fuzz         rc=0 tests=4 failed=0 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.74s
+screened  qf_lia_differential_fuzz                   rc=0 tests=4 failed=0 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.38s
+screened  qf_lra_cube_sequence_differential_fuzz     rc=0 tests=2 failed=0 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.95s
+screened  TOTAL tests=17

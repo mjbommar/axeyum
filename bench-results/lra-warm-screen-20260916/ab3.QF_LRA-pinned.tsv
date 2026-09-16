@@ -1,0 +1,201 @@
+file	order	a_rc	a_ms	a_verdict	a_total_ms	b_rc	b_ms	b_verdict	b_total_ms	c_rc	c_ms	c_verdict	c_total_ms	a_cold_builds	b_cold_builds	c_cold_builds	a_cube_collect_ms	a_cube_simplex_ms	b_cube_collect_ms	b_cube_simplex_ms	b_warm_solve_ms	b_warm_sync_ms	b_warm_checks	b_warm_build	b_warm_restarts	b_warm_fill_peak	c_cube_collect_ms	c_cube_simplex_ms	c_warm_solve_ms	c_warm_sync_ms	c_warm_checks	c_warm_build	c_warm_restarts	c_warm_fill_peak	status
+QF_LRA/LassoRanker/Ultimate/Gcd_havoc.bpl_Iteration1_Lasso_6-phaseTemplate.smt2	ABC	0	24130	unknown	24022	0	24128	unknown	24036	0	24124	unknown	24040	367	0	64	9414	1437	0	0	172	82	628	built	0	32104	1635	191	132	66	496	built	0	32104	sat
+QF_LRA/sc/sc-37.base.cvc.smt2	BCA	0	24028	unknown	24012	0	24128	unknown	24019	0	24128	unknown	24036	944	0	64	1119	5464	0	0	3904	65	953	built	0	95323	72	39	2678	62	923	built	0	128093	unsat
+QF_LRA/LassoRanker/CooperatingT2/firewire.t2.c_Iteration1_Lasso_4-lexTemplate.smt2	CAB	0	25026	unknown	24836	0	24828	unknown	24638	0	24928	unknown	24733	35	0	35	3139	891	0	0	25	28	40	built	0	123146	3136	891	0	0	0	off	0	0	sat
+QF_LRA/DTP-Scheduling/constraints-tempo-width-9.smt2	ABC	0	106	sat	15	0	106	sat	15	0	106	sat	15	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_array1.i_3_2_2.bpl_11.smt2	BCA	0	24025	unknown	24008	0	24025	unknown	24007	0	24026	unknown	24008	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/Chua/1/IL/L/Chua-1-IL-L-chunk-0142.smt2	CAB	0	106	sat	0	0	107	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_init5_ground.i_3_2_2.bpl_7.smt2	ABC	0	24128	unknown	24016	0	24125	unknown	24033	0	24124	unknown	24036	1325	0	64	7121	1764	0	0	659	89	1687	built	0	15030	337	37	738	95	1571	built	0	19711	unsat
+QF_LRA/meti-tarski/sin/problem/8/weak/sin-problem-8-weak-chunk-0009.smt2	BCA	0	106	sat	3	0	106	sat	3	0	106	sat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/CooperatingT2/firewire.t2.c_Iteration3_Loop_4-pieceTemplate.smt2	CAB	0	24326	unknown	24200	0	24428	unknown	24351	0	24528	unknown	24383	95	0	64	4494	1188	0	0	42	40	123	built	0	66176	3020	796	14	13	40	built	0	65844	sat
+QF_LRA/LassoRanker/SV-COMP/Ben-Amram-2010LMCS-Ex2.3_true-termination.c_Iteration1_Lasso_3-pieceTemplate.smt2	ABC	0	24228	unknown	24118	0	24328	unknown	24187	0	24427	unknown	24346	58	0	59	3866	1041	0	0	35	32	70	built	0	99013	3875	1042	0	0	0	off	0	0	unsat
+QF_LRA/sal/tgc/tgc_io-nosafe-4.smt2	BCA	0	106	unsat	81	0	106	unsat	84	0	106	unsat	81	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/DTP-Scheduling/constraints-cooking22.smt2	CAB	0	106	sat	5	0	106	sat	5	0	106	sat	5	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/sc/sc-39.base.cvc.smt2	ABC	0	24028	unknown	24010	0	24129	unknown	24045	0	24128	unknown	24045	876	0	64	1117	5819	0	0	3084	55	969	built	0	111568	78	42	2588	52	904	built	0	139379	unsat
+QF_LRA/meti-tarski/sin/problem/8/weak/sin-problem-8-weak-chunk-0023.smt2	BCA	0	106	unsat	3	0	106	unsat	3	0	106	unsat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/sal/windowreal/windowreal-no_t_deadlock-17.smt2	CAB	0	114	unsat	85	0	106	unsat	94	0	105	unsat	87	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/Chua/1/VC1/L/Chua-1-VC1-L-chunk-0028.smt2	ABC	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/CooperatingT2/eric.t2.c_Iteration1_Lasso_4-pieceTemplate.smt2	BCA	0	24429	unknown	24288	0	24329	unknown	24220	0	24329	unknown	24233	84	0	64	4453	1029	0	0	39	36	107	built	0	66757	3394	757	10	9	28	built	0	65548	sat
+QF_LRA/LassoRanker/CooperatingT2/ex11.t2.c_Iteration1_Lasso_7-phaseTemplate.smt2	CAB	0	24429	unknown	24269	0	24729	unknown	24577	0	24426	unknown	24271	22	0	22	4080	691	0	0	21	21	28	built	0	176776	4101	694	0	0	0	off	0	0	unsat
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2	ABC	0	24527	unknown	24400	0	24534	unknown	24453	0	24628	unknown	24469	83	0	64	5104	856	0	0	40	30	109	built	0	68788	3934	632	15	7	23	built	0	68783	unknown
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0050.smt2	BCA	0	106	sat	0	0	106	sat	0	0	107	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/2019-ezsmt/robotics/4_3.smt2	CAB	0	106	unsat	2	0	106	unsat	2	0	106	unsat	2	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unknown
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0065.smt2	ABC	0	106	sat	5	0	106	sat	5	0	106	sat	4	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/Ultimate/simple-scaled250.bpl_Iteration1_Lasso_6-phaseTemplate.smt2	BCA	0	25129	unknown		0	25129	unknown		0	25128	unknown																							sat
+QF_LRA/2019-ezsmt/travellingSalesperson/rand_80_340_1159656267_0.lp.smt2	CAB	0	24229	unknown	24103	0	24127	unknown	24093	0	24123	unknown	24090	34	0	35	68	179	0	0	24	2	37	built	0	17844	70	187	0	0	0	off	0	0	unknown
+QF_LRA/miplib/opt1217--57.smt2	ABC	0	24127	unknown	24082	0	24127	unknown	24065	0	24128	unknown	24059	444	0	64	1247	799	0	0	55	29	502	built	0	9655	175	94	49	26	438	built	0	9655	unsat
+QF_LRA/clock_synchro/clocksynchro_2clocks.main_invar.base.smt2	BCA	0	2709	unsat	2638	0	807	unsat	732	0	1708	unsat	1665	127	0	64	23	45	0	0	4	0	127	built	0	1278	11	20	3	0	63	built	0	1415	unsat
+QF_LRA/LassoRanker/Ultimate/2013POPL-BenAmGen-Ex4.2.bpl_Iteration1_Lasso_4-pieceTemplate.smt2	CAB	0	24028	unknown	24005	0	24028	unknown	24009	0	24128	unknown	24024	1229	0	64	6041	7139	0	0	3288	122	1642	built	0	38064	305	42	2294	107	1490	built	0	34773	unsat
+QF_LRA/LassoRanker/CooperatingT2/sas2.t2.c_Iteration7_Loop_7-phaseTemplate.smt2	ABC	0	25129	unknown		0	25129	unknown		0	25128	unknown																							unsat
+QF_LRA/DTP-Scheduling/constraints-tempo-depth-9.smt2	BCA	0	106	sat	3	0	105	sat	3	0	106	sat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/CooperatingT2/collatz.t2.c_Iteration3_Loop_7-phaseTemplate.smt2	CAB	0	24227	unknown	24103	0	24228	unknown	24106	0	24227	unknown	24160	135	0	64	9050	1268	0	0	62	43	228	built	0	60433	4255	556	35	23	123	built	0	60094	unsat
+QF_LRA/meti-tarski/sin/problem/7/sin-problem-7-chunk-0014.smt2	ABC	0	106	sat	3	0	106	sat	3	0	106	sat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/Ultimate/Lobnya-Boolean-Reordered.bpl_Iteration1_Lasso_7-phaseTemplate.smt2	BCA	0	24128	unknown	24082	0	24228	unknown	24112	0	24129	unknown	24085	144	0	64	8565	1670	0	0	54	39	244	built	0	65964	3965	711	31	22	135	built	0	65964	unsat
+QF_LRA/meti-tarski/bottom-plate-mixer/bottom-plate-mixer-chunk-0011.smt2	CAB	0	106	sat	0	0	107	sat	0	0	112	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/sc/sc-17.base.cvc.smt2	ABC	0	24127	unknown	24025	0	24028	unknown	24011	0	24127	unknown	24018	1144	0	64	606	4334	0	0	887	51	1383	built	0	24452	30	20	1053	46	1195	built	0	28088	unsat
+QF_LRA/keymaera/bouncing-ball-inv-node1886.smt2	BCA	0	106	unsat	0	0	106	unsat	0	0	106	unsat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/LassoRanker/Ultimate/simple-scaled200.bpl_Iteration1_Lasso_7-nestedTemplate.smt2	CAB	0	25127	unknown		0	25129	unknown		0	25127	unknown																							sat
+QF_LRA/meti-tarski/cbrt/3/weak/cbrt-problem-3-weak-chunk-0049.smt2	ABC	0	106	unsat	4	0	107	unsat	4	0	106	unsat	4	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/sqrt/1mcosq/7/sqrt-1mcosq-7-chunk-0069.smt2	BCA	0	108	sat	3	0	107	sat	3	0	107	sat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/meti-tarski/cbrt/3/cbrt-problem-3-chunk-0048.smt2	CAB	0	107	unsat	3	0	108	unsat	3	0	107	unsat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/sqrt/1mcosq/7/sqrt-1mcosq-7-chunk-0059.smt2	ABC	0	106	sat	3	0	107	sat	3	0	108	sat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/keymaera/intersection-example-simple.proof-node634.smt2	BCA	0	107	unsat	0	0	108	unsat	0	0	108	unsat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0060.smt2	CAB	0	107	sat	0	0	108	sat	0	0	107	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/sc/sc-25.base.cvc.smt2	ABC	0	24130	unknown	24020	0	24130	unknown	24029	0	24028	unknown	24008	938	0	64	831	2600	0	0	1072	51	886	built	0	45097	54	32	1132	55	914	built	0	53409	unsat
+QF_LRA/clock_synchro/clocksynchro_6clocks.main_invar.base.smt2	BCA	0	2208	unsat	2129	0	1808	unsat	1772	0	1907	unsat	1803	475	0	64	212	390	0	0	43	5	489	built	0	5674	28	38	38	4	430	built	0	5787	unsat
+QF_LRA/meti-tarski/Chua/1/VC2/L/Chua-1-VC2-L-chunk-0008.smt2	CAB	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/sc/sc-15.base.cvc.smt2	ABC	0	24027	unknown	24015	0	24028	unknown	24005	0	24127	unknown	24020	1378	0	64	624	2906	0	0	598	51	1446	built	0	16010	26	18	742	59	1417	built	0	17349	unsat
+QF_LRA/meti-tarski/sin/problem/7/sin-problem-7-chunk-0037.smt2	BCA	0	107	sat	3	0	106	sat	3	0	106	sat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/sc/sc-9.base.cvc.smt2	CAB	0	24127	unknown	24022	0	24026	unknown	24008	0	24027	unknown	24009	1429	0	64	413	1680	0	0	440	39	1717	built	0	6817	15	12	426	40	1639	built	0	8399	unsat
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0019.smt2	ABC	0	106	unsat	3	0	106	unsat	3	0	106	unsat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/LassoRanker/CooperatingT2/brp_withassume.t2.c_Iteration8_Loop_6-phaseTemplate.smt2	BCA	0	25128	unknown		0	25128	unknown		0	25128	unknown																							sat
+QF_LRA/LassoRanker/CooperatingT2/toeplz.c.i.toeplz.pl.t2.fixed.t2.c_Iteration2_Loop_7-phaseTemplate.smt2	CAB	0	25129	unknown		0	25126	unknown		0	25129	unknown																							sat
+QF_LRA/meti-tarski/Chua/2/VC2/L/Chua-2-VC2-L-chunk-0048.smt2	ABC	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/meti-tarski/atan/problem/2/weak2/atan-problem-2-weak2-chunk-0014.smt2	BCA	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/SV-COMP/BradleyMannaSipma-2005CAV-Fig1_true-termination.c_Iteration1_Lasso_7-phaseTemplate.smt2	CAB	0	24229	unknown	24133	0	24429	unknown	24315	0	24328	unknown	24138	32	0	32	5349	1174	0	0	200	66	44	built	0	215876	5356	1174	0	0	0	off	0	0	sat
+QF_LRA/2019-ezsmt/Labyrinth/SCC_Strong/0132-labyrinth-12-0.smt2	ABC	0	25130	unknown		0	25129	unknown		0	25130	unknown																							unknown
+QF_LRA/sal/gasburner/gasburner-prop3-9.smt2	BCA	0	606	unsat	520	0	607	unsat	517	0	607	unsat	516	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/sin/problem/7/weak2/sin-problem-7-weak2-chunk-0037.smt2	CAB	0	106	sat	4	0	107	sat	4	0	106	sat	4	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/clock_synchro/clocksynchro_4clocks.main_invar.base.smt2	ABC	0	807	unsat	794	0	707	unsat	629	0	707	unsat	671	283	0	64	83	152	0	0	20	2	286	built	0	3292	18	28	18	1	223	built	0	2960	unsat
+QF_LRA/LassoRanker/Ultimate/yPositive-SIscaled50.bpl_Iteration1_Loop_4-pieceTemplate.smt2	BCA	0	24529	unknown	24437	0	24524	unknown	24382	0	24428	unknown	24310	51	0	50	6127	893	0	0	26	26	68	built	0	126112	5987	894	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0033.smt2	CAB	0	106	unsat	4	0	106	unsat	4	0	106	unsat	4	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/sin/problem/8/sin-problem-8-chunk-0011.smt2	ABC	0	106	sat	3	0	106	sat	3	0	106	sat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/meti-tarski/sin/problem/7/sin-problem-7-chunk-0063.smt2	BCA	0	106	sat	3	0	113	sat	3	0	106	sat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/SV-COMP/CookSeeZuleger-2013TACAS-Fig3_true-termination.c_Iteration1_Loop_4-pieceTemplate.smt2	CAB	0	24529	unknown	24308	0	25028	unknown	24770	0	25128	unknown		16	0		2032	675	0	0	18	21	18	built	0	190585									unsat
+QF_LRA/meti-tarski/sin/problem/7/weak2/sin-problem-7-weak2-chunk-0028.smt2	ABC	0	106	sat	3	0	107	sat	3	0	106	sat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_half_2.i_3_6_2.bpl_7.smt2	BCA	0	24026	unknown	24010	0	24022	unknown	24005	0	24028	unknown	24007	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/2019-ezsmt/routingMin/SCC_strong/d50.9.smt2	CAB	0	206	sat	96	0	206	sat	93	0	206	sat	93	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unknown
+QF_LRA/sal/tgc/tgc_io-safe-13.smt2	ABC	0	4310	unknown	4273	0	4310	unknown	4249	0	4410	unknown	4305	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/sin/problem/7/weak2/sin-problem-7-weak2-chunk-0048.smt2	BCA	0	106	unsat	4	0	106	unsat	4	0	107	unsat	4	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/LassoRanker/CooperatingT2/matrixsqrt.t2.c_Iteration12_Loop_7-phaseTemplate.smt2	CAB	0	24225	unknown	24103	0	24228	unknown	24106	0	24229	unknown	24143	155	0	64	9373	1501	0	0	84	57	273	built	0	59986	3859	581	52	33	157	built	0	59612	sat
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_count_by_k.i_3_3_2.bpl_7.smt2	ABC	0	24027	unknown	24006	0	24027	unknown	24006	0	24026	unknown	24004	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/Chua/1/IL/L/Chua-1-IL-L-chunk-0013.smt2	BCA	0	106	sat	0	0	106	sat	0	0	107	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/meti-tarski/Chua/1/VC1/L/Chua-1-VC1-L-chunk-0005.smt2	CAB	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/CooperatingT2/sas2.t2.c_Iteration3_Lasso_5-phaseTemplate.smt2	ABC	0	24224	unknown	24153	0	24228	unknown	24156	0	24428	unknown	24279	95	0	64	5888	986	0	0	53	44	129	built	0	70815	3959	662	20	15	43	built	0	69492	sat
+QF_LRA/meti-tarski/sin/problem/7/sin-problem-7-chunk-0004.smt2	BCA	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/SV-COMP/TelAviv-Amir-Minimum_true-termination.c_Iteration1_Loop_4-pieceTemplate.smt2	CAB	0	25131	unknown		0	25131	unknown		0	25129	unknown																							sat
+QF_LRA/meti-tarski/cbrt/3/weak/cbrt-problem-3-weak-chunk-0065.smt2	ABC	0	107	sat	0	0	106	sat	0	0	107	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/2019-ezsmt/blending/17.smt2	BCA	0	106	sat	9	0	106	sat	9	0	107	sat	9	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unknown
+QF_LRA/spider_benchmarks/no_op_accs.base.smt2	CAB	0	1208	unsat	1197	0	1208	unsat	1183	0	1308	unsat	1200	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0041.smt2	ABC	0	107	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/spider_benchmarks/frame_prop.base.smt2	BCA	0	1108	unsat	1067	0	1107	unsat	1059	0	1107	unsat	1054	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/LassoRanker/Ultimate/Canberra.bpl_Iteration1_Lasso_6-phaseTemplate.smt2	CAB	0	24128	unknown	24059	0	24328	unknown	24202	0	24329	unknown	24218	101	0	64	6122	1356	0	0	147	69	141	built	0	78722	3885	874	60	26	50	built	0	77893	unsat
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0037.smt2	ABC	0	106	sat	4	0	106	sat	4	0	106	sat	4	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/CooperatingT2/sas2.t2.c_Iteration6_Lasso_6-phaseTemplate.smt2	BCA	0	24428	unknown	24240	0	24824	unknown	24604	0	24428	unknown	24290	29	0	29	4777	738	0	0	25	25	38	built	0	152347	4880	740	0	0	0	off	0	0	sat
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0046.smt2	CAB	0	106	sat	4	0	106	sat	4	0	107	sat	4	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/DTP-Scheduling/constraints-tms-2-3-light-30.smt2	ABC	0	106	sat	12	0	106	sat	12	0	106	sat	12	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/sc/sc-33.base.cvc.smt2	BCA	0	24128	unknown	24016	0	24125	unknown	24051	0	24126	unknown	24017	938	0	64	1008	6092	0	0	2274	60	1026	built	0	80859	64	36	1202	58	983	built	0	99099	unsat
+QF_LRA/LassoRanker/Ultimate/Collatz.bpl_Iteration1_Loop_6-phaseTemplate.smt2	CAB	0	25129	unknown		0	25129	unknown		0	25130	unknown																							unsat
+QF_LRA/sc/sc-13.base.cvc.smt2	ABC	0	24028	unknown	24008	0	24129	unknown	24031	0	24030	unknown	24003	1321	0	64	593	2834	0	0	535	60	1501	built	0	14663	26	18	541	58	1269	built	0	14547	unsat
+QF_LRA/meti-tarski/CMOS/CMOS-opamp-chunk-0016.smt2	BCA	0	107	sat	3	0	107	sat	3	0	108	sat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/meti-tarski/sin/344/3/sin-344-3-weak-chunk-0016.smt2	CAB	0	107	unsat	4	0	107	unsat	4	0	106	unsat	4	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/TM/p-driverlogNumeric_s7.smt2	ABC	0	107	sat	79	0	106	sat	77	0	106	sat	77	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/2019-ezsmt/travellingSalesperson/rand_70_300_1155482584_12.lp.smt2	BCA	0	3109	sat	3039	0	2809	sat	2674	0	3009	sat	2873	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unknown
+QF_LRA/LassoRanker/CooperatingT2/sas2.t2.c_Iteration5_Lasso_6-phaseTemplate.smt2	CAB	0	24424	unknown	24218	0	24523	unknown	24335	0	24428	unknown	24253	30	0	30	4962	778	0	0	26	28	39	built	0	154227	4968	774	0	0	0	off	0	0	sat
+QF_LRA/2019-ezsmt/Labyrinth/SCC_Strong/0051-labyrinth-12-0.smt2	ABC	0	25130	unknown		0	25130	unknown		0	25130	unknown																							unknown
+QF_LRA/TM/p7-driverlogNumeric_s8.smt2	BCA	0	24128	unknown	24033	0	24127	unknown	24049	0	24129	unknown	24058	433	0	64	797	263	0	0	25	13	452	built	0	3165	117	35	22	11	370	built	0	3165	sat
+QF_LRA/DTP-Scheduling/constraints-tms-2-3-light-04.smt2	CAB	0	106	sat	1	0	106	sat	1	0	106	sat	1	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/2019-ezsmt/robotics/1_4.smt2	ABC	0	107	unsat	1	0	107	unsat	0	0	107	unsat	1	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unknown
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0007.smt2	BCA	0	106	sat	2	0	107	sat	3	0	106	sat	2	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/sc/sc-23.base.cvc.smt2	CAB	0	24027	unknown	24003	0	24128	unknown	24026	0	24128	unknown	24027	1204	0	64	859	4145	0	0	1005	62	1177	built	0	38114	46	27	1511	63	1117	built	0	46427	unsat
+QF_LRA/meti-tarski/Chua/1/VC2/U/Chua-1-VC2-U-chunk-0128.smt2	ABC	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/sc/sc-19.base.cvc.smt2	BCA	0	24127	unknown	24036	0	24128	unknown	24016	0	24028	unknown	24009	1105	0	64	627	4947	0	0	1185	63	1226	built	0	28093	35	23	1246	63	1166	built	0	34463	unsat
+QF_LRA/LassoRanker/SV-COMP/LeeJonesBen-Amram-2001POPL-Ex5_true-termination.c_Iteration2_Loop_7-phaseTemplate.smt2	CAB	0	24128	unknown	24065	0	24228	unknown	24146	0	24227	unknown	24182	110	0	64	7817	1273	0	0	168	78	170	built	0	86943	4546	727	84	35	74	built	0	83529	unsat
+QF_LRA/spider_benchmarks/reint_to_least.base.smt2	ABC	0	206	unsat	99	0	206	unsat	99	0	206	unsat	98	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/LassoRanker/Ultimate/yPositive-SIscaled75.bpl_Iteration1_Loop_7-phaseTemplate.smt2	BCA	0	25128	unknown		0	25128	unknown		0	25127	unknown																							sat
+QF_LRA/LassoRanker/Ultimate/TelAviv-AmirMinimum.bpl_Iteration1_Loop_4-pieceTemplate.smt2	CAB	0	24528	unknown	24376	0	24929	unknown	24778	0	24529	unknown	24408	32	0	32	2925	782	0	0	29	26	38	built	0	138443	2968	795	0	0	0	off	0	0	sat
+QF_LRA/sal/gasburner/gasburner-prop3-2.smt2	ABC	0	106	unsat	19	0	106	unsat	19	0	106	unsat	20	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/miplib/danoint-266.smt2	BCA	0	24126	unknown	24083	0	24128	unknown	24029	0	24228	unknown	24123	46	0	46	167	23163	0	0	7337	45	431	built	0	228596	166	23153	0	0	0	off	0	0	sat
+QF_LRA/meti-tarski/cbrt/3/cbrt-problem-3-chunk-0040.smt2	CAB	0	107	unsat	3	0	106	unsat	3	0	106	unsat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/bottom-plate-mixer/bottom-plate-mixer-chunk-0051.smt2	ABC	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0144.smt2	BCA	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/2019-ezsmt/travellingSalesperson/tsp_rand_70_300_1155482584_7.lp.smt2	CAB	0	4210	sat	4112	0	4309	sat	4161	0	4210	sat	4148	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unknown
+QF_LRA/LassoRanker/CooperatingT2/ludcmp.c.i.ludcmp.pl.t2.fixed.t2.c_Iteration8_Loop_7-phaseTemplate.smt2	ABC	0	24228	unknown	24162	0	24328	unknown	24228	0	24326	unknown	24214	101	0	64	7595	1074	0	0	103	49	155	built	0	78941	4828	646	44	18	57	built	0	75994	sat
+QF_LRA/sal/windowreal/windowreal-no_t_deadlock-6.smt2	BCA	0	106	unsat	87	0	106	unsat	90	0	106	unsat	87	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/DTP-Scheduling/constraints-tempo-matrix8x8.pddl.smt2	CAB	0	1207	sat	1130	0	1207	sat	1131	0	1207	sat	1158	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/meti-tarski/Chua/1/VC2/L/Chua-1-VC2-L-chunk-0056.smt2	ABC	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0016.smt2	BCA	0	106	sat	3	0	106	sat	3	0	106	sat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/spider_benchmarks/fs_not_sc_seen.base.smt2	CAB	0	1207	unsat	1192	0	1207	unsat	1188	0	1207	unsat	1188	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/sal/windowreal/windowreal-safe2-1.smt2	ABC	0	106	unsat	2	0	106	unsat	2	0	106	unsat	2	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/atan/problem/2/weak2/atan-problem-2-weak2-chunk-0034.smt2	BCA	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/Ultimate/bound-scaled600.bpl_Iteration1_Loop_7-phaseTemplate.smt2	CAB	0	25125	unknown		0	25124	unknown		0	25128	unknown																							sat
+QF_LRA/sal/windowreal/windowreal-no_t_deadlock-1.smt2	ABC	0	106	unsat	2	0	106	unsat	2	0	107	unsat	2	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/DTP-Scheduling/constraints-cooking14.smt2	BCA	0	106	sat	4	0	107	sat	4	0	106	sat	4	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/SV-COMP/aviad_true-termination.c_Iteration1_Loop_4-nestedTemplate.smt2	CAB	0	25128	unknown		0	25127	unknown		0	25129	unknown																							sat
+QF_LRA/sc/sc-29.base.cvc.smt2	ABC	0	24126	unknown	24019	0	24027	unknown	24010	0	24027	unknown	24005	1172	0	64	955	4427	0	0	972	57	1157	built	0	55847	54	32	1766	68	1077	built	0	70959	unsat
+QF_LRA/sc/sc-11.base.cvc.smt2	BCA	0	24129	unknown	24020	0	24128	unknown	24024	0	24128	unknown	24026	1300	0	64	488	2268	0	0	568	44	1572	built	0	9466	19	14	482	47	1494	built	0	10579	unsat
+QF_LRA/latendresse/ecoliMILPglycerolYices3-50000.smt2	CAB	0	10916	sat	10870	0	24129	unknown	24087	0	10916	sat	10825	28	0	28	3301	7178	0	0	23523	3	27	built	0	183244	3250	7186	0	0	0	off	0	0	sat
+QF_LRA/sal/tgc/tgc_io-safe-20.smt2	ABC	0	5211	unknown	5170	0	5112	unknown	5043	0	5212	unknown	5099	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/Ultimate/Gcd.bpl_Iteration1_Lasso_7-phaseTemplate.smt2	BCA	0	24128	unknown	24043	0	24125	unknown	24058	0	24229	unknown	24129	120	0	64	8741	1953	0	0	378	157	199	built	0	93878	4631	1038	196	75	95	built	0	93796	sat
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_two_index_06.i_3_2_2.bpl_7.smt2	CAB	0	24026	unknown	24005	0	24025	unknown	24005	0	24026	unknown	24006	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/LassoRanker/Ultimate/SyntaxSupportBooleans5.bpl_Iteration1_Loop_4-pieceTemplate.smt2	ABC	0	24129	unknown	24034	0	24128	unknown	24092	0	24128	unknown	24073	244	0	64	5383	1681	0	0	86	56	326	built	0	40266	1395	333	69	41	260	built	0	40282	sat
+QF_LRA/meti-tarski/sqrt/1mcosq/7/sqrt-1mcosq-7-chunk-0008.smt2	BCA	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/sc/sc-35.base.cvc.smt2	CAB	0	24127	unknown	24028	0	24124	unknown	24013	0	24128	unknown	24021	930	0	64	1036	6053	0	0	1916	54	1037	built	0	110894	66	37	3544	58	926	built	0	119464	unsat
+QF_LRA/meti-tarski/sin/problem/7/weak2/sin-problem-7-weak2-chunk-0006.smt2	ABC	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/2019-ezsmt/travellingSalesperson/rand_80_340_1159656267_4.lp.smt2	BCA	0	4611	sat	4499	0	4510	sat	4445	0	4510	sat	4439	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unknown
+QF_LRA/LassoRanker/SV-COMP/GulwaniJainKoskinen-2009PLDI-Fig1_true-termination.c_Iteration1_Lasso_4-pieceTemplate.smt2	CAB	0	25129	unknown		0	25129	unknown		0	25129	unknown																							unknown
+QF_LRA/meti-tarski/sqrt/1mcosq/8/sqrt-1mcosq-8-chunk-0010.smt2	ABC	0	106	sat	3	0	106	sat	3	0	106	sat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/CooperatingT2/hongyi1.t2.c_Iteration9_Loop_4-lexTemplate.smt2	BCA	0	25129	unknown		0	24930	unknown	24701	0	25129	unknown			0				0	0	28	32	32	built	0	193570									sat
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0089.smt2	CAB	0	107	unsat	5	0	106	unsat	4	0	106	unsat	5	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/LassoRanker/CooperatingT2/p-43.t2.c_Iteration4_Loop_4-pieceTemplate.smt2	ABC	0	24228	unknown	24156	0	24330	unknown	24178	0	24328	unknown	24250	144	0	64	4892	1203	0	0	49	41	187	built	0	46936	2187	535	26	21	100	built	0	46986	sat
+QF_LRA/clock_synchro/clocksynchro_8clocks.main_invar.base.smt2	BCA	0	4710	unsat	4635	0	4010	unsat	3905	0	3809	unsat	3714	706	0	64	455	833	0	0	79	12	736	built	0	6029	40	52	68	10	639	built	0	6420	unsat
+QF_LRA/sal/pursuit/pursuit-safety-16.smt2	CAB	0	24127	unknown	24013	0	24128	unknown	24015	0	24127	unknown	24022	1535	0	64	935	3203	0	0	218	47	1751	built	0	10484	38	22	248	42	1627	built	0	12724	unsat
+QF_LRA/sc/sc-31.base.cvc.smt2	ABC	0	24128	unknown	24018	0	24028	unknown	24008	0	24128	unknown	24037	1081	0	64	1092	5188	0	0	1212	51	1116	built	0	75637	58	33	2335	68	1007	built	0	79746	unsat
+QF_LRA/meti-tarski/atan/problem/2/weak2/atan-problem-2-weak2-chunk-0127.smt2	BCA	0	106	sat	0	0	106	sat	0	0	105	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/miplib/pp08a-7349.smt2	CAB	0	24126	unknown	24019	0	24132	unknown	24019	0	24127	unknown	24020	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/sc/sc-27.base.cvc.smt2	ABC	0	24123	unknown	24013	0	24128	unknown	24036	0	24027	unknown	24005	1101	0	64	882	5784	0	0	1454	67	1164	built	0	44206	47	29	2735	68	1049	built	0	61063	unsat
+QF_LRA/meti-tarski/polypaver/bench-exp-3d/polypaver-bench-exp-3d-chunk-0097.smt2	BCA	0	106	unsat	4	0	105	unsat	4	0	106	unsat	4	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/bottom-plate-mixer/bottom-plate-mixer-chunk-0019.smt2	CAB	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/Ultimate/OpposedDisjuncts.bpl_Iteration1_Lasso_2-pieceTemplate.smt2	ABC	0	24128	unknown	24036	0	24129	unknown	24060	0	24228	unknown	24111	261	0	64	6117	1551	0	0	86	58	350	built	0	39230	1520	365	65	44	263	built	0	39079	unsat
+QF_LRA/LassoRanker/CooperatingT2/janne_complex.t2.c_Iteration3_Lasso_4-pieceTemplate.smt2	BCA	0	24729	unknown	24569	0	24728	unknown	24570	0	24729	unknown	24607	35	0	35	2871	664	0	0	22	23	39	built	0	97838	2871	662	0	0	0	off	0	0	unsat
+QF_LRA/TM/p5-driverlogNumeric_s9.smt2	CAB	0	206	unsat	164	0	206	unsat	172	0	206	unsat	169	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/LassoRanker/CooperatingT2/hongyi1.t2.c_Iteration1_Loop_4-lexTemplate.smt2	ABC	0	25029	unknown		0	25028	unknown	24848	0	24728	unknown	24529		0	29			0	0	29	32	35	built	0	187090	3572	1171	0	0	0	off	0	0	sat
+QF_LRA/meti-tarski/cbrt/3/weak/cbrt-problem-3-weak-chunk-0097.smt2	BCA	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/sc/sc-5.base.cvc.smt2	CAB	0	11115	unsat	11088	0	4810	unsat	4790	0	5110	unsat	5009	1283	0	64	190	545	0	0	96	7	897	built	0	2839	9	10	78	6	858	built	0	2906	unsat
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_copy3_ground.i_3_2_2.bpl_7.smt2	ABC	0	24122	unknown	24010	0	24026	unknown	24009	0	24027	unknown	24009	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/sin/problem/7/weak2/sin-problem-7-weak2-chunk-0014.smt2	BCA	0	107	unsat	3	0	106	unsat	4	0	106	unsat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/LassoRanker/CooperatingT2/sumit.t2.c_Iteration1_Lasso_7-phaseTemplate.smt2	CAB	0	24728	unknown	24600	0	24929	unknown	24753	0	24427	unknown	24279	34	0	34	4994	688	0	0	26	22	44	built	0	131780	4833	674	0	0	0	off	0	0	sat
+QF_LRA/meti-tarski/atan/problem/1/atan-problem-1-chunk-0031.smt2	ABC	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/CooperatingT2/brp_withassume.t2.c_Iteration1_Loop_6-phaseTemplate.smt2	BCA	0	25129	unknown		0	25129	unknown		0	25129	unknown																							sat
+QF_LRA/meti-tarski/sqrt/1mcosq/8/sqrt-1mcosq-8-chunk-0417.smt2	CAB	0	106	sat	3	0	106	sat	3	0	106	sat	4	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/sc/sc-7.base.cvc.smt2	ABC	0	24128	unknown	24019	0	23327	unsat	23241	0	24026	unknown	24011	1695	0	64	374	1184	0	0	367	33	1827	built	0	4959	12	12	380	29	1775	built	0	4984	unsat
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_strcmp_ground.i_4_2_2.bpl_11.smt2	BCA	0	24125	unknown	24041	0	24128	unknown	24069	0	24128	unknown	24057	424	0	64	6627	1547	0	0	322	99	609	built	0	50663	984	179	352	89	501	built	0	55998	unsat
+QF_LRA/meti-tarski/sqrt/1mcosq/7/sqrt-1mcosq-7-chunk-0103.smt2	CAB	0	107	sat	4	0	106	sat	4	0	107	sat	4	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/CooperatingT2/p-46.t2.c_Iteration2_Loop_7-phaseTemplate.smt2	ABC	0	24929	unknown	24720	0	24429	unknown	24282	0	24628	unknown	24449	35	0	35	5795	852	0	0	30	24	47	built	0	164252	5803	842	0	0	0	off	0	0	unsat
+QF_LRA/LassoRanker/SV-COMP/KroeningSharyginaTsitovichWintersteiger-2010CAV-Fig1_true-termination.c_Iteration1_Lasso_3-pieceTemplate.smt2	BCA	0	25128	unknown		0	25128	unknown		0	25129	unknown																							unsat
+QF_LRA/LassoRanker/CooperatingT2/queens.t2.c_Iteration19_Loop_7-phaseTemplate.smt2	CAB	0	24528	unknown	24366	0	24426	unknown	24316	0	24729	unknown	24553	45	0	45	6375	812	0	0	29	28	64	built	0	115737	6371	838	0	0	0	off	0	0	sat
+QF_LRA/2019-ezsmt/blending/1.smt2	ABC	0	5010	unsat	4980	0	5110	unsat	5005	0	5110	unsat	5002	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unknown
+QF_LRA/meti-tarski/Chua/2/IL/L/Chua-2-IL-L-chunk-0071.smt2	BCA	0	106	sat	0	0	106	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/meti-tarski/Chua/1/VC1/L/Chua-1-VC1-L-chunk-0156.smt2	CAB	0	106	unsat	0	0	106	unsat	0	0	106	unsat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/miplib/pp08a-1000.smt2	ABC	0	24126	unknown	24025	0	24127	unknown	24028	0	24126	unknown	24026	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/cbrt/3/cbrt-problem-3-chunk-0074.smt2	BCA	0	107	unsat	3	0	106	unsat	3	0	106	unsat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/LassoRanker/CooperatingT2/ludcmp.t2.c_Iteration8_Loop_7-phaseTemplate.smt2	CAB	0	24828	unknown	24551	0	24924	unknown	24641	0	24829	unknown	24551	20	0	20	4096	609	0	0	15	17	25	built	0	179059	3926	606	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/SV-COMP/Masse_true-termination.c_Iteration1_Loop_4-pieceTemplate.smt2	ABC	0	24228	unknown	24160	0	24324	unknown	24219	0	24228	unknown	24159	114	0	64	4748	1156	0	0	66	40	150	built	0	58551	2653	574	35	18	67	built	0	59297	unsat
+QF_LRA/meti-tarski/atan/problem/2/weak2/atan-problem-2-weak2-chunk-0106.smt2	BCA	0	106	unsat	3	0	106	unsat	3	0	106	unsat	3	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/LassoRanker/Ultimate/Braverman-2006CAV-Ex1-int.bpl_Iteration1_Lasso_6-phaseTemplate.smt2	CAB	0	24027	unknown	24005	0	24026	unknown	24005	0	24027	unknown	24005	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0055.smt2	ABC	0	106	sat	4	0	106	sat	4	0	106	sat	4	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/Ultimate/simple-scaled200.bpl_Iteration1_Lasso_3-pieceTemplate.smt2	BCA	0	25128	unknown		0	25127	unknown		0	25128	unknown																							sat
+QF_LRA/LassoRanker/SV-COMP/NoriSharma-2013FSE-Fig8_true-termination.c_Iteration1_Loop_5-phaseTemplate.smt2	CAB	0	24229	unknown	24098	0	24129	unknown	24083	0	24229	unknown	24110	183	0	64	7295	1779	0	0	385	88	266	built	0	66788	2536	591	211	51	176	built	0	61197	unsat
+QF_LRA/latendresse/ecoliFBAyicesTest-3875-4.smt2	ABC	0	24128	unknown	24087	0	24128	unknown	24073	0	24122	unknown	24074	1	0	1	54	23955	0	0	23927	0	0	built	0	118756	58	23939	0	0	0	off	0	0	sat
+QF_LRA/DTP-Scheduling/constraints-tempo-width-40.smt2	BCA	0	1107	sat	1003	0	1107	sat	1000	0	1107	sat	998	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/spider_benchmarks/pd_init_op_accs.base.smt2	CAB	0	1207	unsat	1192	0	1207	unsat	1197	0	1207	unsat	1192	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/meti-tarski/Arthan/1A/Arthan1A-chunk-0016.smt2	ABC	0	107	sat	0	0	107	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/keymaera/water_tank-node23593.smt2	BCA	0	106	unsat	0	0	106	unsat	0	0	107	unsat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/sal/gasburner/gasburner-prop3-12.smt2	CAB	0	7012	unsat	6994	0	7012	unsat	6953	0	7112	unsat	7034	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/LassoRanker/SV-COMP/LeeJonesBen-Amram-2001POPL-Ex5_true-termination.c_Iteration2_Lasso_3-pieceTemplate.smt2	ABC	0	24129	unknown	24061	0	24126	unknown	24078	0	24227	unknown	24152	150	0	64	5224	1457	0	0	58	48	192	built	0	55341	2212	561	36	28	114	built	0	55333	unsat
+QF_LRA/sal/carpark/Carpark2-ausgabe-8.smt2	BCA	0	207	unknown	97	0	207	unknown	97	0	206	unknown	98	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/miplib/vpm2-5.smt2	CAB	0	24127	unknown	24015	0	24128	unknown	24033	0	24128	unknown	24015	923	0	64	1625	4127	0	0	132	33	1064	built	0	7044	107	181	125	32	991	built	0	7044	unsat
+QF_LRA/DTP-Scheduling/constraints-cooking06.smt2	ABC	0	106	sat	2	0	107	sat	2	0	106	sat	2	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/2019-ezsmt/blending/5.smt2	BCA	0	5111	unsat	5034	0	5111	unsat	5048	0	5110	unsat	5027	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unknown
+QF_LRA/2019-ezsmt/blending/24.smt2	CAB	0	3309	sat	3261	0	3309	sat	3269	0	3309	sat	3259	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unknown
+QF_LRA/DTP-Scheduling/constraints-temporal-machine-shop-2-3-A10.smt2	ABC	0	106	sat	5	0	106	sat	5	0	106	sat	5	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/LassoRanker/CooperatingT2/afagp-fail.t2.c_Iteration1_Lasso_7-phaseTemplate.smt2	BCA	0	24428	unknown	24269	0	24429	unknown	24294	0	24323	unknown	24172	81	0	64	7465	1021	0	0	59	42	123	built	0	84493	5835	764	17	10	27	built	0	80348	unsat
+QF_LRA/LassoRanker/CooperatingT2/elmhes.c.i.elmhes.pl.t2.fixed.t2.c_Iteration5_Loop_6-phaseTemplate.smt2	CAB	0	24329	unknown	24160	0	24328	unknown	24169	0	24428	unknown	24274	74	0	64	5928	1022	0	0	46	35	106	built	0	90397	5212	875	10	5	14	built	0	87893	sat
+QF_LRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0026.smt2	ABC	0	106	sat	4	0	106	sat	4	0	106	sat	4	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/sc/sc-21.base.cvc.smt2	BCA	0	24027	unknown	24011	0	24127	unknown	24028	0	24027	unknown	24007	1221	0	64	778	3917	0	0	1354	53	1192	built	0	34733	36	24	1363	62	1196	built	0	39805	unsat
+QF_LRA/meti-tarski/atan/problem/2/weak2/atan-problem-2-weak2-chunk-0054.smt2	CAB	0	106	sat	0	0	107	sat	0	0	106	sat	0	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/sal/pursuit/pursuit-safety-5.smt2	ABC	0	207	unsat	154	0	206	unsat	154	0	206	unsat	154	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	unsat
+QF_LRA/LassoRanker/SV-COMP/joey_false-termination.c_Iteration1_Loop_7-phaseTemplate.smt2	BCA	0	24128	unknown	24042	0	24228	unknown	24095	0	24128	unknown	24048	171	0	64	8472	1799	0	0	272	65	279	built	0	77552	3169	635	215	44	172	built	0	68727	sat
+QF_LRA/DTP-Scheduling/constraints-tempo-depth-30.smt2	CAB	0	106	sat	11	0	106	sat	11	0	106	sat	11	0	0	0	0	0	0	0	0	0	0	off	0	0	0	0	0	0	0	off	0	0	sat
+QF_LRA/miplib/fixnet-5000.smt2	ABC	0	24128	unknown	24022	0	24128	unknown	24014	0	24128	unknown	24029	589	0	64	8452	4694	0	0	1636	58	1104	built	0	48955	914	506	1706	51	976	built	0	36170	sat
+QF_LRA/LassoRanker/CooperatingT2/disj_nightmare.t2.c_Iteration2_Loop_7-phaseTemplate.smt2	BCA	0	25028	unknown	24714	0	25127	unknown		0	25027	unknown	24769	10		10	3089	552									3174	552	0	0	0	off	0	0	unsat

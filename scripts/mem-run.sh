@@ -16,6 +16,14 @@ set -euo pipefail
 
 LIMIT_GB="${MEM_LIMIT_GB:-64}"
 # ulimit -v is in KiB.
-ulimit -v "$(( LIMIT_GB * 1024 * 1024 ))"
+# `ulimit -v` sets the HARD limit too, and a hard limit cannot be raised: a
+# caller that already lowered it (a coordinator shell that ran `ulimit -v
+# 40000000` before launching a push) makes this line fail, and under `set -e`
+# the wrapper exited before running anything -- which is how five push
+# batteries died ~2 s after the L0 block with nothing in the log (2026-09-15/16).
+# A tighter inherited limit is still a bound, so keep it and say so.
+if ! ulimit -v "$(( LIMIT_GB * 1024 * 1024 ))" 2>/dev/null; then
+  echo "mem-run: cannot set ${LIMIT_GB} GiB (inherited hard limit is lower: $(ulimit -H -v) KiB); keeping the inherited limit" >&2
+fi
 
 exec "$@"

@@ -1,0 +1,5 @@
+file	armA=off	A1	A2	A3	armB=screened	B1	B2	B3	verdict
+QF_LRA/latendresse/ecoliMILPglycerolYices3-50000.smt2		sat/0	sat/0	sat/0		sat/0	sat/0	sat/0	BOTH-DECIDE
+QF_LRA/sc/sc-18.induction.cvc.smt2		unknown/0	unknown/0	unknown/0		sat/0	sat/0	sat/0	STABLE-GAIN
+QF_LRA/sc/sc-7.base.cvc.smt2		unknown/0	unknown/0	unknown/0		unknown/0	unknown/0	unknown/0	NEITHER-DECIDES
+QF_LRA/uart/uart-8.induction.cvc.smt2		sat/0	sat/0	sat/0		unknown/0	unknown/0	unknown/0	STABLE-LOSS

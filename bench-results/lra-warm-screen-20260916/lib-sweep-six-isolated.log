@@ -1,0 +1,14 @@
+    Blocking waiting for file lock on build directory
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 16.27s
+     Running unittests src/lib.rs (target/debug/deps/axeyum_solver-acf47eaa496561d6)
+
+running 6 tests
+test array_bv_abs::tests::refutes_rw213_by_bv_abstraction ... ok
+test auto::tests::arithmetic_uf_overbound_pre_lia_probe_decides_on_clone ... ok
+test auto::tests::cap_overflowing_skolemized_chain_is_refuted_via_the_egraph_loop ... ok
+test auto::tests::every_policy_gives_the_same_verdict_on_an_overbound_query ... ok
+test auto::tests::negated_quantified_implication_exposes_counterexample_witness ... ok
+test auto::tests::top_level_negated_universal_exposes_counterexample_witness ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 1933 filtered out; finished in 0.49s
+

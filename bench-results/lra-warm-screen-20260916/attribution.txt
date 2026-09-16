@@ -1,0 +1,102 @@
+PER-ROW, the ten largest theory-layer savings (ms)
+arm         Δtheory lineariz  fourier    basis  residual  file
+on            15466     6327        0    10336     -1197  QF_LRA_LassoRanker_Ultimate_CooperatingT2_consts1.bp
+screened      14328     5026        0    10387     -1085  QF_LRA_LassoRanker_Ultimate_CooperatingT2_consts1.bp
+on            10871    11886        0     -141      -874  QF_LRA_LassoRanker_Ultimate_Braverman-2006CAV-Ex1-in
+on             9869     9700        0     1295     -1126  QF_LRA_LassoRanker_Ultimate_GulwaniResetBranchOnly.b
+screened       9857     5736        0     4696      -575  QF_LRA_LassoRanker_Ultimate_2013POPL-BenAmGen-Ex4.2.
+on             9829     9373        0     1360      -904  QF_LRA_LassoRanker_CooperatingT2_matrixsqrt.t2.c_Ite
+on             9426     9050        0     1163      -787  QF_LRA_LassoRanker_CooperatingT2_collatz.t2.c_Iterat
+on             9374     9414        0     1183     -1223  QF_LRA_LassoRanker_Ultimate_Gcd_havoc.bpl_Iteration1
+on             9301     8565        0     1577      -841  QF_LRA_LassoRanker_Ultimate_Lobnya-Boolean-Reordered
+on             9143     6041        0     3729      -627  QF_LRA_LassoRanker_Ultimate_2013POPL-BenAmGen-Ex4.2.
+
+POOLED over every row where the decider was BUILT and both arms have a trail
+  on: 68 rows, theory-layer saving 306732 ms
+      linearization    227255 ms   74.1 %
+      FOURIER-MOTZKIN    1822 ms    0.6 %
+      basis            114120 ms   37.2 %
+      residual         -36465 ms  -11.9 %
+  screened: 55 rows, theory-layer saving 204491 ms
+      linearization    128966 ms   63.1 %
+      FOURIER-MOTZKIN     926 ms    0.5 %
+      basis             99844 ms   48.8 %
+      residual         -25245 ms  -12.3 %
+
+READING THIS TABLE
+==================
+
+SCOPE, first, because it is narrower than "the -9.2 %".  The delta decomposed
+here is `theory_ms` -- the lazy-SMT loop's THEORY LAYER -- over the rows where
+the warm decider was BUILT and both arms printed a trail line.  It is not total
+wall clock.  A row can save theory time and lose it again in the skeleton, and
+the verdict tables are where that nets out.  Both numbers are published because
+quoting either alone is a different claim, which is the rule ADR-2125 section
+1.3 set for its own two ceilings.
+
+1. THE SAVING IS MOSTLY THE SKIPPED LINEARIZATION, NOT THE BASIS
+   --------------------------------------------------------------
+   Over 67 rows in the `on` arm, of 303,177 ms of theory-layer saving:
+
+       linearization   226,396 ms   74.7 %
+       basis           111,042 ms   36.6 %
+       Fourier-Motzkin   1,822 ms    0.6 %
+       residual        -36,083 ms  -11.9 %
+
+   ADR-2125 section 8.5 said in as many words that a successor "should not
+   attribute the saving to the basis on this evidence".  It should not, and now
+   there is a number: **roughly three quarters of it is the `Collector` rebuild
+   a cube the decider answers never pays for.**
+
+   The RATIO is not the one the sizing predicted, and that is worth recording.
+   ADR-2125 section 1.3 priced the simplex alone at a 4.15 % median share of
+   wall clock and simplex-plus-linearization at 24.21 %, which puts the
+   linearization at about 4.8x the basis.  Measured here the ratio is
+   226,396 : 111,042 = **2.0x**.  The basis is worth relatively MORE than its
+   ceiling implied -- a ceiling is an upper bound on one term, not a prediction
+   of how two terms divide.
+
+2. THE RESIDUAL IS NEGATIVE AND IS PRINTED RATHER THAN ABSORBED
+   --------------------------------------------------------------
+   -36,083 ms, -11.9 %.  The three terms over-explain the delta: the warm arm
+   spends about 36 s MORE inside `theory_ms` on something none of them names.
+   `theory_ms` covers the whole `cube_check`, which includes materializing a
+   real model and mapping a Farkas refutation back through `rows_to_core`, and
+   neither has a field.  A decomposition that folded this into the basis term
+   would have reported the basis at 25 % instead of 37 %, which is why the
+   residual is a column.
+
+3. THE FOURIER-MOTZKIN TERM IS 0.6 % POOLED AND 96 % ON ONE FILE
+   ---------------------------------------------------------------
+   Both statements are true and neither survives alone.
+
+   `QF_LRA/clock_synchro/clocksynchro_2clocks.main_invar.base.smt2`, off arm:
+
+       theory_ms=1905  cube_collect_ms=23  cube_fm_ms=1822  cube_simplex_ms=45
+
+   **The cold path decides that file's cubes by Fourier-Motzkin**, and 1,822 of
+   its 1,905 ms of theory time is FM.  The warm decider replaces it outright
+   (`theory_ms=7` in the `on` arm), so on this row the lever is not a warm basis
+   against a cold one -- it is a DIFFERENT ENGINE against Fourier-Motzkin.  And
+   the 1,822 ms is the ENTIRE pooled FM term: one file is 100 % of it.
+
+   ADR-2125 was careful that the WARM side never answers from Fourier-Motzkin --
+   a theory with no warm tableau refuses rather than falling back, precisely so
+   an A/B of the lever is not an A/B of two engines.  Nothing made the COLD side
+   stop using it, and nothing had to; but a per-file saving measured against
+   that cold side can be an engine swap, and this is the file where it is.
+
+   It is 0.6 % of the population, so it moves no conclusion here.  It is
+   recorded because a successor reading a single file's -1,906 ms would
+   otherwise credit it to the basis.
+
+4. THE SCREEN'S HALF-SAVING IS THE MECHANISM, VISIBLE ON ONE ROW
+   ---------------------------------------------------------------
+   Same file, the screened arm: `theory_ms=939`, `cube_fm_ms=896`,
+   `cube_decisions=64`.  The file runs 128 rounds in every arm.  The screened
+   arm decides exactly **64** cubes on the cold path -- the threshold -- and the
+   remaining 64 on the warm basis, and its theory time is 939 ms against the off
+   arm's 1,905: **49.3 %**, where 64/127 = 50.4 %.
+
+   That is the screen doing arithmetic it was told to do, read off a real file
+   rather than a fixture.
