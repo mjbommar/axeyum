@@ -167,51 +167,21 @@ def cost(rows):
         d = (tot[a] - tot["a"]) * 100.0 / tot["a"] if tot["a"] else 0.0
         print(f"    {name:>9} total {tot[a]:>9} ms   {d:+7.1f} % against off")
 
-    # THE ATTRIBUTION. Both terms are differences between fields that are ON the
-    # trail line, on one interleaved pair of arms over one file -- no
-    # counterfactual, no model. See `LazySmtCounters::warm_cube_solve`.
-    for arm, name in (("b", "on"), ("c", "screened")):
-        if arm not in arms:
-            continue
-        sized = [
-            r
-            for r in common
-            if r.get(f"{arm}_warm_build") == "built"
-            and all(
-                num(r, k) is not None
-                for k in (
-                    "a_cube_simplex_ms",
-                    "a_cube_collect_ms",
-                    f"{arm}_cube_simplex_ms",
-                    f"{arm}_cube_collect_ms",
-                    f"{arm}_warm_solve_ms",
-                    f"{arm}_warm_sync_ms",
-                )
-            )
-        ]
-        if not sized:
-            print(f"    {name}: no row both decides everywhere and kept a basis; NO SPLIT")
-            continue
-        basis = sum(
-            num(r, "a_cube_simplex_ms")
-            - num(r, f"{arm}_cube_simplex_ms")
-            - num(r, f"{arm}_warm_solve_ms")
-            - num(r, f"{arm}_warm_sync_ms")
-            for r in sized
-        )
-        linear = sum(
-            num(r, "a_cube_collect_ms") - num(r, f"{arm}_cube_collect_ms") for r in sized
-        )
-        sync = sum(num(r, f"{arm}_warm_sync_ms") for r in sized)
-        solve = sum(num(r, f"{arm}_warm_solve_ms") for r in sized)
-        total = basis + linear
-        share = (lambda v: f"{v * 100.0 / total:6.1f} %" if total else "     -- ")
-        print(
-            f"    {name}: over {len(sized)} rows that decided everywhere AND kept a basis --\n"
-            f"        saved by the BASIS         {basis:>8} ms  {share(basis)}\n"
-            f"        saved by the LINEARIZATION {linear:>8} ms  {share(linear)}\n"
-            f"        (the warm arm PAID: sync {sync} ms + solve {solve} ms)"
-        )
+    # THE ATTRIBUTION IS NOT HERE, AND THIS IS THE CORRECTION THAT MOVED IT.
+    #
+    # This function used to print a TWO-term split -- linearization and basis --
+    # over the `cube_*` columns in the TSV.  It did not reconcile.  On
+    # `clock_synchro/clocksynchro_2clocks` the `on` arm is 1,906 ms faster and
+    # those two terms account for 64 ms of it, because that file's COLD path
+    # decides its cubes by Fourier-Motzkin (`cube_fm_ms=1822` of
+    # `theory_ms=1905`) and the two-term formula has nowhere to put that.
+    #
+    # The split is THREE terms plus a printed residual and it lives in
+    # `attribute.py`, which reads them out of the captures rather than the TSV
+    # -- the TSV never carried `cube_fm_ms`.  Printing the old split beside the
+    # right one would leave a wrong number in the tooling for a reader to quote,
+    # so it is deleted rather than kept for comparison.
+    print("  attribution: see `attribute.py` (three terms + residual, from the captures)")
 
 
 def main():
