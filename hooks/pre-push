@@ -392,8 +392,10 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
     # block and the first cargo scope left a log ending in git's own
     # `failed to push some refs` -- three times in one day, two of them passed
     # by a bare retry. A silent exit is indistinguishable from a kill.
-    if ! "$@"; then
-      local rc=$?
+    local rc=0
+    "$@" || rc=$?
+    if [ "$rc" -ne 0 ]; then
+      # (`local rc=$?` would read `local`'s own status, always 0.)
       echo "pre-push: FAILED — ${label} (exit ${rc}, after $((SECONDS - start))s)" >&2
       return 1
     fi
