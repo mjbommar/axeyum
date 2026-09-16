@@ -18,3 +18,5 @@ nia-groebner-gate-16	nia-groebner-gate-16.tsv	2	2026-09-16T02:20:29Z	QF_NIA ladd
 nia-groebner-gate-32	nia-groebner-gate-32.tsv	2	2026-09-16T02:20:29Z	QF_NIA ladder rung 32
 nia-groebner-gate-64	nia-groebner-gate-64.tsv	2	2026-09-16T02:20:29Z	QF_NIA ladder rung 64
 nia-groebner-gate-unbounded	nia-groebner-gate-unbounded.tsv	2	2026-09-16T02:20:29Z	QF_NIA ladder rung unbounded (1e6)
+nia-groebner-gate-crossdiv-QF_NRA	nia-groebner-gate-crossdiv-QF_NRA.tsv	2	2026-09-16T03:48:08Z	cross-division check: shipped vs unbounded, QF_NIA gate probe, 200/200 complete
+nia-groebner-gate-crossdiv-UFNIA	nia-groebner-gate-crossdiv-UFNIA.tsv	2	2026-09-16T03:48:08Z	cross-division check: shipped vs unbounded, QF_NIA gate probe, 182/200 -- closed out on coordinator instruction, denominator as-is

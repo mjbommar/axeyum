@@ -11,7 +11,10 @@ Status: **DONE.** The QF_NIA ladder is measured (§2); the answer is **no —
 raising the gate to any level, including literally unbounded, decides 0 of
 the 116 undecided rows.** The cross-division check (§2, QF_NRA/UFNIA) ran the
 shipped arm against the unbounded arm to confirm there is no loss even at the
-most aggressive setting tested.
+most aggressive setting tested — QF_NRA completed all 200/200 files, UFNIA
+closed out at 182/200 (the completed denominator; not relaunched) on the
+coordinator's instruction to close out from what was on disk. Nothing ships;
+no ADR-2123 is written.
 
 ## 1. The gate, read
 
@@ -149,10 +152,27 @@ runs on Real assertions too, `nra.rs`'s route, but it's a different admission
 path — and UFNIA is a reach check, since `q:skolem-qf` hands off to the same
 quantifier-free ladder).
 
-| division | files | shipped decided | unbounded decided | gains | losses | flips |
-|---|---:|---:|---:|---:|---:|---:|
-| QF_NRA | 200 | (filled below) | | | | |
-| UFNIA | 200 | | | | | |
+| division | files (denominator) | shipped decided | unbounded decided | gains | losses | flips | shipped median/p90 ms | unbounded median/p90 ms |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| QF_NRA | 200 of 200 (complete) | 118 | 118 | 0 | 0 | 0 | 1108 / 24121 | 1108 / 24123 |
+| UFNIA | 182 of 200† | 50 | 50 | 0 | 0 | 0 | 17770 / 24523 | 18870 / 24623 |
+
+† UFNIA was still running when this lane closed out on the coordinator's
+instruction to report the completed denominator rather than relaunch; 182 of
+200 files have both arms landed and every one of them agrees (0 gains, 0
+losses, 0 flips). QF_NRA is the complete 200/200.
+
+Both divisions confirm the QF_NIA finding: **zero movement in either
+direction.** On QF_NRA, `cas-ideal-refuter` is reached on 119 of 200 files
+(81 `not-reached`) and already **decides 1 file at the shipped 8/8/8** —
+unchanged at unbounded, so this is a pre-existing capability, not a lever
+effect; the other 118 reached files move from a `refuses`/`admits-but-fails`
+mix at shipped (65 refuses, 53 admits-but-fails) to 118 admits-but-fails at
+unbounded, exactly mirroring the QF_NIA pattern (more searching, same
+verdicts). On UFNIA, `cas-ideal-refuter` is **not reached on any of the 182
+files sampled**, at either arm — this corpus's quantified queries never
+produce a `≥2`-nonlinear-hypothesis candidate after the skolemization ladder
+hands off, so the lever is provably inert here regardless of its value.
 
 ## 3. Verdict
 
@@ -180,6 +200,13 @@ levels ≥ 64, the Gröbner search itself becomes the thing that exhausts the
 remaining budget, denying every downstream route its turn — with no verdict
 consequence here, but it is the shape of cost a corpus with a genuinely
 reachable large system could pay for.
+
+**No loss elsewhere.** QF_NRA (200/200, complete) and UFNIA (182/200,
+complete denominator as sampled) both hold 0 gains / 0 losses / 0 flips at
+the unbounded arm against shipped. QF_NRA already decides 1 file through
+`cas-ideal-refuter` at the shipped default, unchanged at unbounded; UFNIA
+never reaches the route at all in either arm. The gate's effect is
+uniformly null across all three divisions measured.
 
 ## 4. Ship decision
 
