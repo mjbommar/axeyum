@@ -51,6 +51,7 @@ RE_PROBE = re.compile(P + r"LRAMODELPROBE site=(\S+)")
 RE_ONLINE_PROBE = re.compile(r"online_probe=(\S+)")
 RE_TL = re.compile(r"; (?:partial )?theory-layer (.*)")
 RE_ROUTE = re.compile(r"; (?:partial )?route decided_by=(\S+) bound_by=(\S+)")
+RE_CFG = re.compile(r"; (?:partial )?config digest=\S+ .*?consulted=\d+ (.*)")
 
 TL_KEYS = [
     "theory_propagate_ms",
@@ -117,6 +118,7 @@ for rel, lrow in sorted(ledger.items()):
     tl = {}
     online_probe = ""
     decided_by = ""
+    cfg_crossed = ""
     for src in (out, err):
         if not src.exists():
             continue
@@ -134,6 +136,11 @@ for rel, lrow in sorted(ledger.items()):
         m = RE_ROUTE.search(text)
         if m:
             decided_by = m.group(1)
+        m = RE_CFG.search(text)
+        if m:
+            cfg_crossed = ",".join(
+                x.rsplit("::", 1)[-1] for x in m.group(1).split()
+            )
 
     dominant_fail = max(sorted(fails.items()), key=lambda kv: kv[1])[0] if fails else ""
     # `status|construct+construct` -> just the construct half.
@@ -163,6 +170,7 @@ for rel, lrow in sorted(ledger.items()):
         construct=construct,
         unsupported_kinds=";".join(f"{k}={v}" for k, v in sorted(unsup_kinds.items())),
         model_decline=dominant_decline,
+        config_crossed=cfg_crossed,
         probe_sites=";".join(f"{k}={v}" for k, v in sorted(probes.items())),
     )
     for k in TL_KEYS:

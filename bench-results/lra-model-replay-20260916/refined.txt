@@ -1,0 +1,39 @@
+census blocks ended in a failure on: 53 files
+  of which the query was STILL DECIDED by a later route: 6
+      unsat  disequality(eq-asserted-false)                 QF_LRA/clock_synchro/clocksynchro_2clocks.main_invar.base.smt2
+      unsat  disequality(eq-asserted-false)                 QF_LRA/clock_synchro/clocksynchro_4clocks.main_invar.base.smt2
+      unsat  disequality(eq-asserted-false)                 QF_LRA/clock_synchro/clocksynchro_6clocks.main_invar.base.smt2
+      unsat  disequality(eq-asserted-false)                 QF_LRA/clock_synchro/clocksynchro_8clocks.main_invar.base.smt2
+      sat    NO-MODEL:fm-fallback-declined:clock-left       QF_LRA/latendresse/ecoliMILPglycerolYices3-50000.smt2
+      unsat  disequality(eq-asserted-false)                 QF_LRA/sc/sc-5.base.cvc.smt2
+  of which the query ended UNDECIDED (the wall is the answer): 47
+
+HISTOGRAM over the UNDECIDED target population:
+    27  NO-MODEL:fm-fallback-declined:clock-left
+    11  disequality(eq-asserted-false)
+     7  NO-MODEL:simplex-declined:clock-gone
+     2  NO-MODEL:fm-fallback-declined:clock-gone
+
+  exit statuses in that population:
+    47  exit=0
+
+  unsupported atoms across that population: 0
+  files with any unsupported atom: 0
+
+  tableau present/absent:
+    29  tableau ABSENT
+    18  tableau present
+
+DISEQUALITY bucket, per file (the only construct):
+file	eq_atoms	eq_asserted_false	assertions	assert_false	verdict
+QF_LRA/sal/pursuit/pursuit-safety-16.smt2	650	392	217	2	unknown
+QF_LRA/sc/sc-11.base.cvc.smt2	342	162	45	1	unknown
+QF_LRA/sc/sc-13.base.cvc.smt2	404	192	53	1	unknown
+QF_LRA/sc/sc-15.base.cvc.smt2	466	224	61	1	unknown
+QF_LRA/sc/sc-17.base.cvc.smt2	528	254	69	1	unknown
+QF_LRA/sc/sc-19.base.cvc.smt2	590	282	77	1	unknown
+QF_LRA/sc/sc-21.base.cvc.smt2	652	308	85	1	unknown
+QF_LRA/sc/sc-23.base.cvc.smt2	714	341	93	1	unknown
+QF_LRA/sc/sc-25.base.cvc.smt2	776	371	101	1	unknown
+QF_LRA/sc/sc-7.base.cvc.smt2	218	103	29	1	unknown
+QF_LRA/sc/sc-9.base.cvc.smt2	280	135	37	1	unknown

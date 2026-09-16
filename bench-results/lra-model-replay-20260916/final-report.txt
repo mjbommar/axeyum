@@ -1,0 +1,211 @@
+############ BASELINE (shipped binary, screen UNSET) ############
+rows: 200
+binary sha256: 1ca58672c11008f8a679df7868cbf77a62a3e0f86606b0f39a63a07536ba1de2
+--- verdicts ---
+     93 unknown
+     66 sat
+     41 unsat
+--- DECIDED (sat+unsat) ---
+107
+--- exit statuses ---
+    200 0
+
+############ CENSUS ARM (screen=16, census on) ############
+rows: 200
+binary sha256: 7c6e8765ffefcd05a880191649ba3d76738c214a2aad69ef44b978a863ad14ce
+--- verdicts ---
+     85 unknown
+     66 sat
+     41 unsat
+      8 none
+--- DECIDED (sat+unsat) ---
+107
+
+############ ANALYSIS ############
+files in ledger:                          200
+files with any census block:              80
+online_probe=model-did-not-replay:        53
+last_arm=no-replay:                       16
+last_arm=no-model:                        37
+last_arm=replayed:                        27
+TARGET population (no-replay + no-model): 53
+
+HISTOGRAM over the target population:
+    28  NO-MODEL:fm-fallback-declined:clock-left
+    16  disequality(eq-asserted-false)
+     7  NO-MODEL:simplex-declined:clock-gone
+     2  NO-MODEL:fm-fallback-declined:clock-gone
+
+Model-decline discriminator (no-model files only):
+    28  fm-fallback-declined|deadline=false|wd=false
+     7  simplex-declined|deadline=true|wd=false
+     2  fm-fallback-declined|deadline=true|wd=false
+
+Verdicts over the whole sweep:
+     8  none
+    66  sat
+    85  unknown
+    41  unsat
+
+Exit statuses:
+   192  exit=0
+     8  exit=134
+
+############ TARGET POPULATION, PER FILE ############
+target files: 53
+file	last_arm	atoms	order	equality	unsupported	eq_asserted_false	assertions	assert_false	assert_eval_err	simplex_rows	model_decline	construct	ms	exit
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_array1.i_3_2_2.bpl_11.smt2	no-model	493	305	188	0	105	0	0	0	681	simplex-declined|deadline=true|wd=false		24123	0
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_count_by_k.i_3_3_2.bpl_7.smt2	no-model	366	202	164	0	105	0	0	0	530	simplex-declined|deadline=true|wd=false		24021	0
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_half_2.i_3_6_2.bpl_7.smt2	no-model	480	240	240	0	136	0	0	0	720	simplex-declined|deadline=true|wd=false		24023	0
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_sanfoundry_10_ground.i_6_3_3.bpl_13.smt2	no-model	10786	3170	7616	0	1	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24424	0
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_strcmp_ground.i_4_2_2.bpl_11.smt2	no-model	5058	2570	2488	0	1	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24224	0
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_two_index_06.i_3_2_2.bpl_7.smt2	no-model	387	239	148	0	80	0	0	0	535	simplex-declined|deadline=true|wd=false		24023	0
+QF_LRA/LassoRanker/CooperatingT2/afagp-fail.t2.c_Iteration1_Lasso_7-phaseTemplate.smt2	no-model	10676	2577	8099	0	0	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24424	0
+QF_LRA/LassoRanker/CooperatingT2/collatz.t2.c_Iteration3_Loop_7-phaseTemplate.smt2	no-model	7314	2034	5280	0	0	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24323	0
+QF_LRA/LassoRanker/CooperatingT2/elmhes.c.i.elmhes.pl.t2.fixed.t2.c_Iteration5_Loop_6-phaseTemplate.smt2	no-model	12425	4049	8376	0	0	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24323	0
+QF_LRA/LassoRanker/CooperatingT2/eric.t2.c_Iteration1_Lasso_4-pieceTemplate.smt2	no-model	14369	6845	7524	0	0	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24224	0
+QF_LRA/LassoRanker/CooperatingT2/firewire.t2.c_Iteration3_Loop_4-pieceTemplate.smt2	no-model	15069	7880	7189	0	0	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24325	0
+QF_LRA/LassoRanker/CooperatingT2/ludcmp.c.i.ludcmp.pl.t2.fixed.t2.c_Iteration8_Loop_7-phaseTemplate.smt2	no-model	8956	2178	6778	0	0	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24325	0
+QF_LRA/LassoRanker/CooperatingT2/matrixsqrt.t2.c_Iteration12_Loop_7-phaseTemplate.smt2	no-model	6764	2130	4634	0	0	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24224	0
+QF_LRA/LassoRanker/CooperatingT2/queens.t2.c_Iteration19_Loop_7-phaseTemplate.smt2	no-model	15647	2802	12845	0	0	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24623	0
+QF_LRA/LassoRanker/CooperatingT2/sas2.t2.c_Iteration3_Lasso_5-phaseTemplate.smt2	no-model	11265	2967	8298	0	0	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24224	0
+QF_LRA/LassoRanker/SV-COMP/LeeJonesBen-Amram-2001POPL-Ex5_true-termination.c_Iteration2_Lasso_3-pieceTemplate.smt2	no-model	11575	6599	4976	0	0	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24124	0
+QF_LRA/LassoRanker/Ultimate/2013POPL-BenAmGen-Ex4.2.bpl_Iteration1_Lasso_4-pieceTemplate.smt2	no-model	1194	708	486	0	187	0	0	0	1680	simplex-declined|deadline=true|wd=false		24022	0
+QF_LRA/LassoRanker/Ultimate/Gcd.bpl_Iteration1_Lasso_7-phaseTemplate.smt2	no-model	9103	4841	4262	0	0	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24324	0
+QF_LRA/LassoRanker/Ultimate/Gcd_havoc.bpl_Iteration1_Lasso_6-phaseTemplate.smt2	no-model	4628	2282	2346	0	0	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24124	0
+QF_LRA/LassoRanker/Ultimate/Lobnya-Boolean-Reordered.bpl_Iteration1_Lasso_7-phaseTemplate.smt2	no-model	8465	4810	3655	0	0	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24425	0
+QF_LRA/LassoRanker/Ultimate/yPositive-SIscaled50.bpl_Iteration1_Loop_4-pieceTemplate.smt2	no-model	14931	4782	10149	0	0	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24524	0
+QF_LRA/TM/p7-driverlogNumeric_s8.smt2	no-model	1049	1	1048	0	512	0	0	0	n/a	fm-fallback-declined|deadline=true|wd=false		24126	0
+QF_LRA/latendresse/ecoliFBAyicesTest-3875-4.smt2	no-model	4413	3415	998	0	0	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24122	0
+QF_LRA/latendresse/ecoliMILPglycerolYices3-50000.smt2	no-model	4699	3597	1102	0	52	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		11316	0
+QF_LRA/miplib/danoint-266.smt2	no-model	2295	994	1301	0	626	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24125	0
+QF_LRA/miplib/fixnet-5000.smt2	no-model	2613	1001	1612	0	945	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24124	0
+QF_LRA/miplib/opt1217--57.smt2	no-model	2468	19	2449	0	1635	0	0	0	n/a	fm-fallback-declined|deadline=true|wd=false		24127	0
+QF_LRA/miplib/pp08a-1000.smt2	no-model	536	249	287	0	148	0	0	0	823	simplex-declined|deadline=true|wd=false		24123	0
+QF_LRA/miplib/pp08a-7349.smt2	no-model	536	249	287	0	148	0	0	0	823	simplex-declined|deadline=true|wd=false		24123	0
+QF_LRA/miplib/vpm2-5.smt2	no-model	1507	613	894	0	504	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24124	0
+QF_LRA/sc/sc-27.base.cvc.smt2	no-model	1036	198	838	0	217	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24123	0
+QF_LRA/sc/sc-29.base.cvc.smt2	no-model	1112	212	900	0	233	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24122	0
+QF_LRA/sc/sc-31.base.cvc.smt2	no-model	1188	226	962	0	249	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24123	0
+QF_LRA/sc/sc-33.base.cvc.smt2	no-model	1264	240	1024	0	265	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24122	0
+QF_LRA/sc/sc-35.base.cvc.smt2	no-model	1340	254	1086	0	281	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24124	0
+QF_LRA/sc/sc-37.base.cvc.smt2	no-model	1416	268	1148	0	297	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24124	0
+QF_LRA/sc/sc-39.base.cvc.smt2	no-model	1492	282	1210	0	313	0	0	0	n/a	fm-fallback-declined|deadline=false|wd=false		24124	0
+QF_LRA/clock_synchro/clocksynchro_2clocks.main_invar.base.smt2	no-replay	150	91	59	0	20	1	1	0	209		disequality(eq-asserted-false)	2608	0
+QF_LRA/clock_synchro/clocksynchro_4clocks.main_invar.base.smt2	no-replay	302	187	115	0	32	1	1	0	417		disequality(eq-asserted-false)	907	0
+QF_LRA/clock_synchro/clocksynchro_6clocks.main_invar.base.smt2	no-replay	486	307	179	0	44	1	1	0	665		disequality(eq-asserted-false)	2208	0
+QF_LRA/clock_synchro/clocksynchro_8clocks.main_invar.base.smt2	no-replay	702	451	251	0	56	1	1	0	953		disequality(eq-asserted-false)	4710	0
+QF_LRA/sal/pursuit/pursuit-safety-16.smt2	no-replay	809	159	650	0	392	217	2	0	1459		disequality(eq-asserted-false)	24123	0
+QF_LRA/sc/sc-11.base.cvc.smt2	no-replay	428	86	342	0	162	45	1	0	770		disequality(eq-asserted-false)	24123	0
+QF_LRA/sc/sc-13.base.cvc.smt2	no-replay	504	100	404	0	192	53	1	0	908		disequality(eq-asserted-false)	24122	0
+QF_LRA/sc/sc-15.base.cvc.smt2	no-replay	580	114	466	0	224	61	1	0	1046		disequality(eq-asserted-false)	24122	0
+QF_LRA/sc/sc-17.base.cvc.smt2	no-replay	656	128	528	0	254	69	1	0	1184		disequality(eq-asserted-false)	24022	0
+QF_LRA/sc/sc-19.base.cvc.smt2	no-replay	732	142	590	0	282	77	1	0	1322		disequality(eq-asserted-false)	24123	0
+QF_LRA/sc/sc-21.base.cvc.smt2	no-replay	808	156	652	0	308	85	1	0	1460		disequality(eq-asserted-false)	24124	0
+QF_LRA/sc/sc-23.base.cvc.smt2	no-replay	884	170	714	0	341	93	1	0	1598		disequality(eq-asserted-false)	24021	0
+QF_LRA/sc/sc-25.base.cvc.smt2	no-replay	960	184	776	0	371	101	1	0	1736		disequality(eq-asserted-false)	24123	0
+QF_LRA/sc/sc-5.base.cvc.smt2	no-replay	200	44	156	0	74	21	1	0	356		disequality(eq-asserted-false)	11114	0
+QF_LRA/sc/sc-7.base.cvc.smt2	no-replay	276	58	218	0	103	29	1	0	494		disequality(eq-asserted-false)	24122	0
+QF_LRA/sc/sc-9.base.cvc.smt2	no-replay	352	72	280	0	135	37	1	0	632		disequality(eq-asserted-false)	24122	0
+
+############ CROSS-CHECK: simplex_rows=n/a vs fm-fallback ############
+  30  fm-fallback-declined         tableau ABSENT
+  16  (model built)                tableau present
+   7  simplex-declined             tableau present
+
+unsupported-atom count over the whole target population: 0
+files with any unsupported atom: 0
+
+artifacts in /tmp/lra-model-replay-final and copied to ~/lra-model-replay-work/
+census blocks ended in a failure on: 53 files
+  of which the query was STILL DECIDED by a later route: 6
+      unsat  disequality(eq-asserted-false)                 QF_LRA/clock_synchro/clocksynchro_2clocks.main_invar.base.smt2
+      unsat  disequality(eq-asserted-false)                 QF_LRA/clock_synchro/clocksynchro_4clocks.main_invar.base.smt2
+      unsat  disequality(eq-asserted-false)                 QF_LRA/clock_synchro/clocksynchro_6clocks.main_invar.base.smt2
+      unsat  disequality(eq-asserted-false)                 QF_LRA/clock_synchro/clocksynchro_8clocks.main_invar.base.smt2
+      sat    NO-MODEL:fm-fallback-declined:clock-left       QF_LRA/latendresse/ecoliMILPglycerolYices3-50000.smt2
+      unsat  disequality(eq-asserted-false)                 QF_LRA/sc/sc-5.base.cvc.smt2
+  of which the query ended UNDECIDED (the wall is the answer): 47
+
+HISTOGRAM over the UNDECIDED target population:
+    27  NO-MODEL:fm-fallback-declined:clock-left
+    11  disequality(eq-asserted-false)
+     7  NO-MODEL:simplex-declined:clock-gone
+     2  NO-MODEL:fm-fallback-declined:clock-gone
+
+  exit statuses in that population:
+    47  exit=0
+
+  unsupported atoms across that population: 0
+  files with any unsupported atom: 0
+
+  tableau present/absent:
+    29  tableau ABSENT
+    18  tableau present
+
+DISEQUALITY bucket, per file (the only construct):
+file	eq_atoms	eq_asserted_false	assertions	assert_false	verdict
+QF_LRA/sal/pursuit/pursuit-safety-16.smt2	650	392	217	2	unknown
+QF_LRA/sc/sc-11.base.cvc.smt2	342	162	45	1	unknown
+QF_LRA/sc/sc-13.base.cvc.smt2	404	192	53	1	unknown
+QF_LRA/sc/sc-15.base.cvc.smt2	466	224	61	1	unknown
+QF_LRA/sc/sc-17.base.cvc.smt2	528	254	69	1	unknown
+QF_LRA/sc/sc-19.base.cvc.smt2	590	282	77	1	unknown
+QF_LRA/sc/sc-21.base.cvc.smt2	652	308	85	1	unknown
+QF_LRA/sc/sc-23.base.cvc.smt2	714	341	93	1	unknown
+QF_LRA/sc/sc-25.base.cvc.smt2	776	371	101	1	unknown
+QF_LRA/sc/sc-7.base.cvc.smt2	218	103	29	1	unknown
+QF_LRA/sc/sc-9.base.cvc.smt2	280	135	37	1	unknown
+target population:                                      53
+of which in LRA-TRACE's 93 undecided:                    47
+of which NOT in the 93 (decided at the shipped screen):  6
+    outside-93: QF_LRA/clock_synchro/clocksynchro_2clocks.main_invar.base.smt2
+    outside-93: QF_LRA/clock_synchro/clocksynchro_4clocks.main_invar.base.smt2
+    outside-93: QF_LRA/clock_synchro/clocksynchro_6clocks.main_invar.base.smt2
+    outside-93: QF_LRA/clock_synchro/clocksynchro_8clocks.main_invar.base.smt2
+    outside-93: QF_LRA/latendresse/ecoliMILPglycerolYices3-50000.smt2
+    outside-93: QF_LRA/sc/sc-5.base.cvc.smt2
+
+LRA-TRACE's own modelprobe column, restricted to our target n 93:
+    30  n/a
+    11  lra_theory:model-built-but-does-not-replay
+     6  simplex-declined|lra_theory:no-model-reconstructed
+census blocks ended in a failure on: 53 files
+  of which the query was STILL DECIDED by a later route: 6
+      unsat  disequality(eq-asserted-false)                 QF_LRA/clock_synchro/clocksynchro_2clocks.main_invar.base.smt2
+      unsat  disequality(eq-asserted-false)                 QF_LRA/clock_synchro/clocksynchro_4clocks.main_invar.base.smt2
+      unsat  disequality(eq-asserted-false)                 QF_LRA/clock_synchro/clocksynchro_6clocks.main_invar.base.smt2
+      unsat  disequality(eq-asserted-false)                 QF_LRA/clock_synchro/clocksynchro_8clocks.main_invar.base.smt2
+      sat    NO-MODEL:fm-fallback-declined:clock-left       QF_LRA/latendresse/ecoliMILPglycerolYices3-50000.smt2
+      unsat  disequality(eq-asserted-false)                 QF_LRA/sc/sc-5.base.cvc.smt2
+  of which the query ended UNDECIDED (the wall is the answer): 47
+
+HISTOGRAM over the UNDECIDED target population:
+    27  NO-MODEL:fm-fallback-declined:clock-left
+    11  disequality(eq-asserted-false)
+     7  NO-MODEL:simplex-declined:clock-gone
+     2  NO-MODEL:fm-fallback-declined:clock-gone
+
+  exit statuses in that population:
+    47  exit=0
+
+  unsupported atoms across that population: 0
+  files with any unsupported atom: 0
+
+  tableau present/absent:
+    29  tableau ABSENT
+    18  tableau present
+
+DISEQUALITY bucket, per file (the only construct):
+file	eq_atoms	eq_asserted_false	assertions	assert_false	verdict
+QF_LRA/sal/pursuit/pursuit-safety-16.smt2	650	392	217	2	unknown
+QF_LRA/sc/sc-11.base.cvc.smt2	342	162	45	1	unknown
+QF_LRA/sc/sc-13.base.cvc.smt2	404	192	53	1	unknown
+QF_LRA/sc/sc-15.base.cvc.smt2	466	224	61	1	unknown
+QF_LRA/sc/sc-17.base.cvc.smt2	528	254	69	1	unknown
+QF_LRA/sc/sc-19.base.cvc.smt2	590	282	77	1	unknown
+QF_LRA/sc/sc-21.base.cvc.smt2	652	308	85	1	unknown
+QF_LRA/sc/sc-23.base.cvc.smt2	714	341	93	1	unknown
+QF_LRA/sc/sc-25.base.cvc.smt2	776	371	101	1	unknown
+QF_LRA/sc/sc-7.base.cvc.smt2	218	103	29	1	unknown
+QF_LRA/sc/sc-9.base.cvc.smt2	280	135	37	1	unknown
