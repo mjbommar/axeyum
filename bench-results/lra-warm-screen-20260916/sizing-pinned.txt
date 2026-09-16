@@ -1,0 +1,116 @@
+== QF_LRA pinned 200: 200 rows | 180 reached the loop | 20 SILENT
+   builds          0   112  ############################################################
+   builds        1-3     1  #
+   builds      16-63    16  ################
+   builds     64-255    21  #####################
+   builds   256-1023    16  ################
+   builds  1024-4095    14  ##############
+   builds: min 0  p25 0  median 0  p75 88  p90 951  max 1543   |  >0: 68 rows
+     at or above     1 builds:   68 of 180 that spoke  (37.8 %)
+     at or above     4 builds:   67 of 180 that spoke  (37.2 %)
+     at or above    16 builds:   67 of 180 that spoke  (37.2 %)
+     at or above    32 builds:   58 of 180 that spoke  (32.2 %)
+     at or above    64 builds:   51 of 180 that spoke  (28.3 %)
+     at or above   100 builds:   42 of 180 that spoke  (23.3 %)
+     at or above   128 builds:   38 of 180 that spoke  (21.1 %)
+     at or above   200 builds:   32 of 180 that spoke  (17.8 %)
+     at or above   256 builds:   30 of 180 that spoke  (16.7 %)
+     at or above   512 builds:   23 of 180 that spoke  (12.8 %)
+   MOVER STABLE-LOSS  builds=28       total_ms=12161    QF_LRA/latendresse/ecoliMILPglycerolYices3-50000.smt2
+
+THE SHAPE THE SCREEN HAS TO SEPARATE: ms per cold build
+A `few enormous solves` row and a `many small re-solves` row have the SAME
+share of the clock and opposite value to a warm basis; `ms/build` is what
+tells them apart, and `builds` is what a screen can see WITHOUT a clock.
+
+ builds  cold_ms  ms/build  rounds  b/round  file
+      1    23908   23908.0       1     1.00  QF_LRA/latendresse/ecoliFBAyicesTest-3875-4.smt2
+     19      327      17.2      20     0.95  QF_LRA/LassoRanker/CooperatingT2/ludcmp.t2.c_Iteration8_Loop_7-phaseTemplate.smt2
+     23      336      14.6      24     0.96  QF_LRA/LassoRanker/CooperatingT2/ex11.t2.c_Iteration1_Lasso_7-phaseTemplate.smt2
+     26      380      14.6      27     0.96  QF_LRA/LassoRanker/CooperatingT2/sas2.t2.c_Iteration6_Lasso_6-phaseTemplate.smt2
+     27      429      15.9      28     0.96  QF_LRA/LassoRanker/CooperatingT2/sas2.t2.c_Iteration5_Lasso_6-phaseTemplate.smt2
+     28      366      13.1      29     0.97  QF_LRA/LassoRanker/CooperatingT2/sumit.t2.c_Iteration1_Lasso_7-phaseTemplate.smt2
+     28      418      14.9      29     0.97  QF_LRA/LassoRanker/Ultimate/TelAviv-AmirMinimum.bpl_Iteration1_Loop_4-pieceTemplate.smt2
+     28     7937     283.5      28     1.00  QF_LRA/latendresse/ecoliMILPglycerolYices3-50000.smt2
+     29      728      25.1      30     0.97  QF_LRA/LassoRanker/SV-COMP/BradleyMannaSipma-2005CAV-Fig1_true-termination.c_Iteration1_Lasso_7-phaseTemplate.smt2
+     30      332      11.1      31     0.97  QF_LRA/LassoRanker/CooperatingT2/janne_complex.t2.c_Iteration3_Lasso_4-pieceTemplate.smt2
+     32      464      14.5      33     0.97  QF_LRA/LassoRanker/CooperatingT2/p-46.t2.c_Iteration2_Loop_7-phaseTemplate.smt2
+     33      158       4.8      34     0.97  QF_LRA/2019-ezsmt/travellingSalesperson/rand_80_340_1159656267_0.lp.smt2
+     36      422      11.7      37     0.97  QF_LRA/LassoRanker/CooperatingT2/firewire.t2.c_Iteration1_Lasso_4-lexTemplate.smt2
+     39      452      11.6      40     0.97  QF_LRA/LassoRanker/CooperatingT2/queens.t2.c_Iteration19_Loop_7-phaseTemplate.smt2
+     42    23022     548.1      42     1.00  QF_LRA/miplib/danoint-266.smt2
+     51      450       8.8      52     0.98  QF_LRA/LassoRanker/Ultimate/yPositive-SIscaled50.bpl_Iteration1_Loop_4-pieceTemplate.smt2
+     57      495       8.7      58     0.98  QF_LRA/LassoRanker/SV-COMP/Ben-Amram-2010LMCS-Ex2.3_true-termination.c_Iteration1_Lasso_3-pieceTemplate.smt2
+    841     5210       6.2     841     1.00  QF_LRA/sc/sc-35.base.cvc.smt2
+    859     5108       5.9     860     1.00  QF_LRA/sc/sc-33.base.cvc.smt2
+    878     3837       4.4     879     1.00  QF_LRA/miplib/vpm2-5.smt2
+    894     5720       6.4     894     1.00  QF_LRA/sc/sc-39.base.cvc.smt2
+    951     5241       5.5     952     1.00  QF_LRA/sc/sc-37.base.cvc.smt2
+    986     4804       4.9     987     1.00  QF_LRA/sc/sc-31.base.cvc.smt2
+   1006     4959       4.9    1007     1.00  QF_LRA/sc/sc-27.base.cvc.smt2
+   1022     4619       4.5    1023     1.00  QF_LRA/sc/sc-29.base.cvc.smt2
+   1044     4881       4.7    1045     1.00  QF_LRA/sc/sc-19.base.cvc.smt2
+   1049     2441       2.3    1050     1.00  QF_LRA/sc/sc-25.base.cvc.smt2
+   1110     3724       3.4    1111     1.00  QF_LRA/sc/sc-21.base.cvc.smt2
+   1114     3730       3.3    1115     1.00  QF_LRA/sc/sc-23.base.cvc.smt2
+   1121     4134       3.7    1122     1.00  QF_LRA/sc/sc-17.base.cvc.smt2
+   1204     2228       1.9    1205     1.00  QF_LRA/sc/sc-11.base.cvc.smt2
+   1228     2650       2.2    1229     1.00  QF_LRA/sal/pursuit/pursuit-safety-16.smt2
+   1252     2740       2.2    1253     1.00  QF_LRA/sc/sc-13.base.cvc.smt2
+   1268     6742       5.3    1269     1.00  QF_LRA/LassoRanker/Ultimate/2013POPL-BenAmGen-Ex4.2.bpl_Iteration1_Lasso_4-pieceTemplate.smt2
+   1283      577       0.4    1284     1.00  QF_LRA/sc/sc-5.base.cvc.smt2
+   1364     2758       2.0    1365     1.00  QF_LRA/sc/sc-15.base.cvc.smt2
+   1409     1470       1.0    1410     1.00  QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_init5_ground.i_3_2_2.bpl_7.smt2
+   1432     1605       1.1    1433     1.00  QF_LRA/sc/sc-9.base.cvc.smt2
+   1543     1120       0.7    1544     1.00  QF_LRA/sc/sc-7.base.cvc.smt2
+
+WHERE A THRESHOLD SEPARATES THE GAIN FROM THE LOSS
+==================================================
+
+ADR-2125 section 6.5 named the axis and this is it measured, over the pinned 200
+whose sizing that lane committed (`../lra-warm-basis-20260916/sizing.0{0,1}.tsv`).
+
+The three rows whose cold simplex is a HANDFUL OF ENORMOUS SOLVES -- the shape a
+warm basis has nothing to reuse across -- are, with their builds:
+
+    builds    ms/build   file
+         1    23908.0    latendresse/ecoliFBAyicesTest-3875-4
+        28      283.5    latendresse/ecoliMILPglycerolYices3-50000   <- the STABLE-LOSS
+        42      548.1    miplib/danoint-266
+
+The rows that are MANY SMALL RE-SOLVES -- the shape the STABLE-GAIN came from --
+run 841 to 1,543 builds at 0.4 to 6.4 ms each.
+
+The separation on this population is exact and it is not marginal:
+
+  * every row with `cold_builds >= 51` has `ms/build <= 12.2`;
+  * every row with `ms/build > 20` has `cold_builds <= 42`.
+
+So ANY threshold in [43, 51] separates the two shapes on the pinned 200, and a
+threshold is being chosen from a window rather than fitted to a point.
+
+THE VALUE REGISTERED IS 64. It is the next power of two above that window:
+1.52x the largest "few enormous" row (42 builds) and 13.1x below the smallest
+row of the winning family (841). Choosing the window's own edge would make the
+threshold a function of this population's largest outlier; 64 is a round number
+with margin on both sides, which is what it is registered as.
+
+WHAT 64 COSTS THE ROWS IT ADMITS. `cold_builds / lra_rounds` is 1.00 on every
+row above 100 builds, so the screen trips after 64 refinement rounds. On the
+winning family that is 64/841 = 7.6 % to 64/1543 = 4.1 % of the file's rounds run
+cold before the basis is kept -- the price of not deciding from a clock.
+
+HOW MANY ROWS FALL ON EACH SIDE, pinned 200
+    180 reached the lazy-SMT loop, 20 SILENT (they report NOTHING, not zero)
+     51 of the 180 are at or above 64 builds  -- the screen ADMITS these
+    129 of the 180 are below it               -- the screen REFUSES these, and
+                                                 they run exactly as `off` does
+That 51 is the CEILING of what the screened arm can move on this population, and
+the 129 are the risk it declines to take.
+
+WHAT THIS TABLE CANNOT SAY. ADR-2125's other two movers are NOT in it:
+`sc/sc-14.induction.cvc` (the STABLE-GAIN) and `uart/uart-8.induction.cvc` (the
+second STABLE-LOSS) are on the HELD-OUT draw, which has no sizing. The pinned
+`sc/*` rows are the `.base.cvc` subfamily, not `.induction.cvc`, so reading the
+gain's builds off them would be a family-level guess presented as a measurement.
+Both are sized separately; see `sizing-heldout.txt`.
