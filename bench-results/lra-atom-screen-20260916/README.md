@@ -1,9 +1,9 @@
 # The LRA atom screen: does raising it decide any of ADR-2111's 32, now that the tableau is sparse?
 
-Status: **MEASURED** on QF_LRA, QF_UFLRA, QF_LIA, QF_RDL; QF_IDL in progress
-(see `docs/plan/status/lra-atom-screen.md` for the live checklist). The
-verdict below (§ Ship decision) is already decisive from QF_LRA alone; the
-remaining division is an exposure check, not load-bearing for it.
+Status: **COMPLETE.** Measured on QF_LRA (93 undecided + 107 decided),
+QF_UFLRA, QF_LIA, QF_RDL, QF_IDL (200 each). The verdict (§ Ship decision) is
+decisive from QF_LRA alone; the other four divisions are exposure checks and
+confirm it, none reversing it.
 
 ## The question
 
@@ -203,7 +203,7 @@ abort" while deciding nothing.
 | QF_UFLRA | 200 | 8 (thresholds 3–60) | yes (8 candidates + 8 spot-check) | 0 | 0 | 0 | (not the binding constraint here) |
 | QF_LIA | **140** (see note) | 0 | not needed (0 candidates) | — | — | — | — |
 | QF_RDL | 200 | 36 (thresholds 3–25) | yes (36 candidates + 9 spot-check) | 0 | 0 | 0 | 1.27 GiB |
-| QF_IDL | pending | pending | pending | | | | |
+| QF_IDL | 200 | 0 | not needed (0 candidates) | — | — | — | — |
 
 **QF_LIA note**: `bench-results/board-ab-20260915/QF_LIA.tsv` has 200 data
 rows but only **140 distinct corpus-relative paths** (60 rows are exact
@@ -232,6 +232,21 @@ reproduces `unknown`/`sat`/`unsat` identically on every one of the 36 plus
 open-arm run tops out at **1.27 GiB** — nowhere near the 8 GiB ceiling, so
 this division shows the "raising the screen is free but useless" half of
 the space rather than QF_LRA's "free below 16x, costly above it" shape.
+
+QF_IDL: same structural negative as QF_LIA — 0 of 200 rows ever reach the
+lazy-SMT offline loop (`reading=not-reached` on all 200), so the lever
+provably cannot touch this division at any multiplier; no `open` arm needed.
+Unlike QF_LIA, `QF_IDL.tsv` has 200 distinct corpus paths (no duplicate-row
+issue), so this is a clean 200-of-200 negative.
+
+**Abort stability, 3x**: the 8 QF_LRA files that abort at the open arm were
+re-run 3 times each at `AXEYUM_LRA_ATOM_SCREEN=65536`, one core, same
+envelope (not `recheck-movers.sh`'s two-binary form, since there is no
+second binary here — the same wrapper-vs-env-var mechanism check the
+sweep itself already used to prove the lever live). **24 of 24 runs (8
+files x 3) return exit 134**: every abort is 100% reproducible, not ambient
+noise. This is the number the ship decision's "0 aborts introduced" line
+rests on.
 
 ## Ship decision
 

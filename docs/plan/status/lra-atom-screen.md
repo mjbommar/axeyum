@@ -2,7 +2,7 @@
 
 <!-- plan-section: lane-status -->
 
-**Lane LRA-ATOM-SCREEN (`IN PROGRESS`, lra-atom-screen, 2026-09-16.)**
+**Lane LRA-ATOM-SCREEN (`MEASURED, DOES NOT SHIP`, lra-atom-screen, 2026-09-16.)**
 Reads: [ADR-2111](../../research/09-decisions/adr-2111-qf-lra-what-the-same-simplex-does-differently.md)
 (the atom screen, § 5b, its A/B left unrun), [ADR-2122](../../research/09-decisions/adr-2122-lra-bound-propagation-into-the-sat-core.md),
 [ADR-2125](../../research/09-decisions/adr-2125-a-warm-simplex-basis-across-sat-decisions.md),
@@ -33,24 +33,50 @@ and ADR-2045 already named: opening the screen without fixing "model did not
 replay" repeats that result. This is one file, not the finding; the full
 sweep is running.
 
-### Status at last update
+### Final result
 
-- Binary built (`target/release/examples/smtcomp_cli`,
-  sha256 `6261a505ea6767af32873bfc897ae64f8879b6388e5ea1074d27a6d3e12218e3`),
-  deployed to `/nas3/data/axeyum/harness/lra-atom-screen/` (self-contained:
-  `bin/`, `scripts/ledger-run-one.sh` + its two Python deps, `rss-wrap.sh`,
-  `run-ladder.sh`, the five population lists).
-- **Running in background on s5**: `shipped` pass (multiplier 1, `--trace`,
-  24 s / 8 GiB) over all 200 `QF_LRA` rows on core 1 (this establishes the
-  loss control AND recovers each refused row's exact atom count from the
-  admission screen's own decline detail, which is what lets the ladder be
-  derived rather than brute-force swept — see `run-ladder.sh`); and, on core
-  3, the same `shipped` pass over `QF_UFLRA`, `QF_LIA`, `QF_RDL`, `QF_IDL`
-  (200 each), which decides whether any of those divisions can even reach
-  this screen before spending time on an "open" arm there.
-- Not yet run: the "open" (admitted) arm on whichever files the shipped
-  passes refuse; the 3x mover recheck; the README verdict.
+**Does not ship at any tested level (2x, 4x, 16x, off/65536x). No
+config_registry change, no ADR-2137, no Rust touched.**
+
+Every level fails "≥1 stable gain" (0 newly decided `QF_LRA` rows at any
+multiplier, over the full 200-row population, the 70-row admission-screen-
+refused subset, and the specific 32-row `lra.rs` bucket this census was
+about). 16x and off additionally fail "0 aborts introduced": 6 and 8 new
+allocator aborts respectively (`exit=134`, `SIGABRT`), each confirmed
+STABLE 3/3 on a follow-up recheck (24 of 24 runs across the 8 aborting
+files return exit 134). Peak RSS on one such file: 120.6 MiB shipped →
+7.38 GiB at 65536x, killed at the 8 GiB `ulimit -v` ceiling — the exact
+"screen is a conservative stand-in for an allocation nobody has found"
+failure mode ADR-2111's own doc predicted, still present after the sparse
+tableau (ADR-2125/2132).
+
+**Why**: the 32-row bucket's true wall is "online CDCL(T) LRA model did not
+replay", not atom count. 10 of 32 are already admitted at the shipped
+multiplier and stuck behind that wall; the 22 the screen does refuse
+(thresholds 2–13, all admitted by 16x) mostly walk into the SAME wall from
+the other side once admitted (18 of 22), with the remaining 4 becoming new
+aborts. Reproduces ADR-2045's finding under a different lever, matches
+ADR-2111 §6 item 2 ("model did not replay" is prior/separate work).
+
+Cross-division (all measured, none reverses the QF_LRA verdict): QF_UFLRA
+8 admission-screen hits, 0 gains/losses/aborts. QF_RDL 36 hits, 0
+gains/losses/aborts, max RSS only 1.27 GiB (no memory blowup there). QF_LIA
+and QF_IDL: 0 candidates each — the lazy-SMT offline loop this screen
+guards entry to is never reached at all on either population
+(`reading=not-reached` on every row), so the lever provably cannot affect
+either division. (QF_LIA's board TSV has only 140 distinct corpus paths of
+200 data rows — 60 exact duplicates — recorded so "checked all 200" isn't
+overstated; the other three cross-division boards are clean.)
+
+Full numbers, method (why two passes suffice for a five-level ladder — the
+screen gates one boolean and the multiplier value is never read again after
+that check passes, so a file's admitted behaviour doesn't depend on WHICH
+admitting multiplier was used), and the worked mechanism example:
+`bench-results/lra-atom-screen-20260916/README.md`.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-09-16 | (pending) | Lane start: mechanism confirmed live, baseline sweeps launched. |
+| 2026-09-16 | `0ac3fed2b` | Lane start: harness, population lists, mechanism confirmed live. |
+| 2026-09-16 | `eb327f569` | QF_LRA/QF_UFLRA/QF_LIA measured: 0 gains at every level, 16x/off introduce new allocator aborts. |
+| 2026-09-16 | `e8733acb0` | QF_RDL measured: 36 admission-screen hits, 0 gains/losses/aborts. |
+| 2026-09-16 | (pending) | QF_IDL measured (0 candidates), abort stability 3x (24/24 stable), final README + ship decision. |
