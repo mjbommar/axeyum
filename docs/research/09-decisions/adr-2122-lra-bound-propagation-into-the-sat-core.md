@@ -129,6 +129,11 @@ A median 140,606 passes examining 252 M constraint coefficients and installing
 8.3 M column bounds. **That is what the A/B has to earn back**, and it is stated
 before the A/B rather than after it.
 
+These three are the *instrumented* cost — what the propagator did — and not a
+profile. Nothing here says which part of it is expensive; §5.1 is where one
+part was removed on the strength of an explicit estimate, labelled as an
+estimate.
+
 ## 2. The design claims, with `file:line` on both sides
 
 Verified against `references/z3` at `e18d63bda04fcab8240eb55314d567db3e43d540`
@@ -448,12 +453,22 @@ aggregate of the partial run was computed, and the change is a pure performance
 fix with no effect on what is offered.
 
 `ImpliedBounds::reset_scratch` walked `0..nvars` once per pass. §1.3 measured a
-median **140,606 passes** against ADR-2111's median **1,706 variables** on this
-population — about 240 M slot reads to copy a handful of bounds, the same order
-as the 252 M coefficient reads the row analysis itself does. **Half the
-mechanism's cost was the reset, and none of it was arithmetic.** It now walks
-only the variables that have ever held a seed bound. Measuring a version that
-was not going to ship would have reported a cost that does not exist.
+median **140,606 passes**; ADR-2111's shape census measured a median **1,706
+variables** on the undecided half. Multiplying those gives about **240 M slot
+reads** per file to copy a handful of bounds — the same order as the 252 M
+coefficient reads the row analysis itself does.
+
+**That product is an ESTIMATE, not a measurement, and it is labelled as one
+here.** The two medians come from different populations — 22 rows' pass counts
+against 93 rows' variable counts — so they do not multiply into a fact about any
+single file, and no profile was taken. What it is enough for is a decision: a
+per-pass loop over every variable, run six figures of times, is work with no
+arithmetic in it, and removing it cannot make the mechanism worse. It now walks
+only the variables that have ever held a seed bound.
+
+The A/B therefore measures the version that ships. Measuring the other one would
+have reported a cost that does not exist — and would have reported it as the
+propagator's, which is the wrong attribution as well as the wrong number.
 
 PLACEHOLDER-AB
 
