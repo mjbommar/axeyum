@@ -207,6 +207,15 @@ impl Instance {
         if rng.below(4) == 0 {
             return Instance::generate_fbbt_bound_chain(rng);
         }
+        // ~1 in 4 of what is left is the **single-cell shape** (ADR-2121): a
+        // conjunction of 2..=4-variable polynomial comparisons of total degree
+        // up to 8, no division. That is the fragment `nra_single_cell` accepts,
+        // and the general distribution below cannot reach it -- it caps the
+        // degree at 2 and divides by a variable a quarter of the time, so the
+        // single-cell route declines almost every instance it generates.
+        if rng.below(4) == 0 {
+            return Instance::generate_single_cell_shape(rng);
+        }
         let num_vars = rng.below(3) + 2; // 2..=4
         let num_atoms = rng.below(4) + 1; // 1..=4
         let mut atoms = Vec::with_capacity(num_atoms);
@@ -246,6 +255,83 @@ impl Instance {
                 monomials,
                 cmp: Cmp::pick(rng),
                 divisor,
+            });
+        }
+        Instance { num_vars, atoms }
+    }
+
+    /// The **single-cell seed class** (ADR-2121): the exact fragment
+    /// [`axeyum_solver::single_cell_decide_for_testing`] accepts.
+    ///
+    /// # Why this class had to be added
+    ///
+    /// `nra_single_cell` is a new `unsat` producer AND a new `sat` producer, so
+    /// a bug in its projection is a wrong verdict in either direction, and this
+    /// fuzz is the only check that compares it against an independent solver.
+    ///
+    /// The general generator above **structurally cannot reach it**. It caps a
+    /// monomial at two variable factors (total degree 2), and the interesting
+    /// behaviour of a CAD route -- root isolation, the arrangement, a projection
+    /// that has something to project -- begins above that. It also divides by a
+    /// variable in a quarter of its atoms, and the single-cell route declines
+    /// every `RealDiv` it cannot collect. So the route would be exercised on
+    /// almost nothing.
+    ///
+    /// This class builds the corner deliberately:
+    ///
+    /// - 2..=4 real variables, which is the slice's `MAX_CELL_VARS`;
+    /// - 1..=4 atoms, all CONJUNCTIVE and none divided;
+    /// - monomials of total degree up to 8 (`MAX_CELL_DEGREE`), built by drawing
+    ///   0..=8 variable factors, so the same variable can repeat and a genuine
+    ///   high per-variable degree occurs;
+    /// - comparators uniform over all six, so equalities -- whose witnesses are
+    ///   exactly the algebraic points the slice refuses to represent -- occur at
+    ///   the same rate as strict inequalities and the route's decline path is
+    ///   exercised as hard as its decide path;
+    /// - ~1 in 6 atoms is FORCED to share its monomial support with the previous
+    ///   atom, which is what makes two polynomials collide in the eliminated
+    ///   variable and gives the pairwise resultant something to do.
+    ///
+    /// Z3 adjudicates, exactly as for the other classes.
+    fn generate_single_cell_shape(rng: &mut Lcg) -> Instance {
+        let num_vars = rng.below(3) + 2; // 2..=4
+        let num_atoms = rng.below(4) + 1; // 1..=4
+        let mut atoms: Vec<Atom> = Vec::with_capacity(num_atoms);
+        let mut previous: Vec<Vec<usize>> = Vec::new();
+        for i in 0..num_atoms {
+            let num_monos = rng.below(3) + 1; // 1..=3
+            let mut monomials = Vec::with_capacity(num_monos + 1);
+            let share = i > 0 && !previous.is_empty() && rng.below(6) == 0;
+            for k in 0..num_monos {
+                let coeff = rng.in_range(-3, 3);
+                let factors = if share && k < previous.len() {
+                    // Reuse the previous atom's monomial support verbatim, so the
+                    // two polynomials genuinely collide in the eliminated variable.
+                    previous[k].clone()
+                } else {
+                    let degree = rng.below(9); // 0..=8 variable factors
+                    (0..degree)
+                        .map(|_| rng.below(num_vars as u64))
+                        .collect::<Vec<usize>>()
+                };
+                monomials.push(Monomial {
+                    num: i128::from(coeff),
+                    den: 1,
+                    factors,
+                });
+            }
+            if rng.below(2) == 0 {
+                monomials.push(Monomial {
+                    num: i128::from(rng.in_range(-3, 3)),
+                    den: 1,
+                    factors: Vec::new(),
+                });
+            }
+            previous = monomials.iter().map(|m| m.factors.clone()).collect();
+            atoms.push(Atom {
+                monomials,
+                cmp: Cmp::pick(rng),
+                divisor: None, // conjunctive polynomial fragment: no RealDiv
             });
         }
         Instance { num_vars, atoms }
@@ -1116,4 +1202,199 @@ fn dump_model(syms: &[SymbolId], model: &axeyum_solver::Model) -> String {
         parts.push(format!("{}={:?}", names[i], v));
     }
     parts.join(", ")
+}
+
+// ---------------------------------------------------------------------------
+// ADR-2121: the single-cell CAD route, adjudicated directly against z3.
+//
+// The route ships OFF behind `AXEYUM_NRA_CAD`, which is read once per process.
+// A fuzz that set that variable would be a gate on one shell (and setting it
+// from a test is racy, and `unsafe` in edition 2024, which is denied
+// workspace-wide), so this calls the route through the explicit
+// `single_cell_decide_for_testing` hook instead. That is not a weaker test: it
+// exercises exactly the code the lever enables, with no ambient state, and the
+// counters below say how much of it actually ran.
+// ---------------------------------------------------------------------------
+
+/// Instances for the single-cell sweep. Smaller than the main sweep's 2000
+/// because each instance can carry degree-8 monomials in four variables, and the
+/// route's projection is an exact Leibniz determinant.
+const SINGLE_CELL_INSTANCES: u64 = 1500;
+
+/// Every `unsat` and every `sat` the ADR-2121 single-cell route produces must
+/// agree with z3, and every `sat` model must replay against the assertions.
+///
+/// An `unknown`/decline is not a failure — the route is a bounded slice and
+/// declining is its designed behaviour. What the assertions at the end hold is
+/// that it did NOT decline everything, so a route that quietly stopped working
+/// fails here instead of passing vacuously.
+#[test]
+#[allow(
+    clippy::too_many_lines,
+    reason = "one sweep with its adjudication table and its tally; splitting it \
+              would separate a verdict from the counters that qualify it"
+)]
+fn single_cell_differential_fuzz_disagree_zero() {
+    let mut total = 0u64;
+    let mut decided = 0u64;
+    let mut sat_decided = 0u64;
+    let mut unsat_decided = 0u64;
+    let mut agreements = 0u64;
+    let mut declined = 0u64;
+    let mut z3_unknown_skipped = 0u64;
+    let mut causes: std::collections::BTreeMap<String, u64> = std::collections::BTreeMap::new();
+
+    for seed in 0..SINGLE_CELL_INSTANCES {
+        total += 1;
+        let mut rng = Lcg::new(seed ^ 0x2121_0915_c4d0_51e1);
+        let inst = Instance::generate_single_cell_shape(&mut rng);
+        let (arena, syms, assertions) = inst.build();
+
+        let outcome = axeyum_solver::single_cell_decide_for_testing(&arena, &assertions);
+        let cause = axeyum_solver::single_cell_decline_cause().to_owned();
+
+        let ax = match &outcome {
+            None => {
+                declined += 1;
+                *causes.entry(cause.clone()).or_insert(0) += 1;
+                continue;
+            }
+            Some(CheckResult::Unknown(_)) => {
+                declined += 1;
+                *causes.entry(format!("unknown:{cause}")).or_insert(0) += 1;
+                continue;
+            }
+            Some(CheckResult::Sat(model)) => {
+                // Every `sat` must replay against the ORIGINAL assertions. This
+                // is checked here as well as inside the route, because "the
+                // route checked it" is exactly the claim a fuzz exists to doubt.
+                let asg = model.to_assignment();
+                for (i, &a) in assertions.iter().enumerate() {
+                    assert!(
+                        matches!(eval(&arena, a, &asg), Ok(Value::Bool(true))),
+                        "SINGLE-CELL WRONG SAT: seed {seed} assertion #{i} does not hold \
+                         under the model\n{}\nmodel: {}",
+                        inst.dump(),
+                        dump_model(&syms, model)
+                    );
+                }
+                sat_decided += 1;
+                Verdict::Sat
+            }
+            Some(CheckResult::Unsat) => {
+                unsat_decided += 1;
+                Verdict::Unsat
+            }
+        };
+        decided += 1;
+
+        let z3 = z3_decide(&inst);
+        if z3 == Verdict::Unknown {
+            z3_unknown_skipped += 1;
+            continue;
+        }
+        assert!(
+            not_a_disagreement(ax, z3),
+            "SINGLE-CELL DISAGREEMENT: seed {seed} axeyum={ax:?} z3={z3:?}\n{}",
+            inst.dump()
+        );
+        if ax == z3 {
+            agreements += 1;
+        }
+    }
+
+    eprintln!(
+        "[single-cell-fuzz] total={total} decided={decided} (sat={sat_decided} \
+         unsat={unsat_decided}) agreements={agreements} declined={declined} \
+         z3_unknown_skipped={z3_unknown_skipped}"
+    );
+    eprintln!("[single-cell-fuzz] decline causes:");
+    for (k, v) in &causes {
+        eprintln!("    {k:28} {v:6}");
+    }
+
+    // The route must have RUN. A sweep where it declined everything would pass
+    // every assertion above while checking nothing, which is the vacuous-green
+    // shape this repository has shipped before.
+    assert!(
+        decided > 0,
+        "the single-cell route decided NOTHING in {total} instances: the fuzz \
+         checked no verdict at all"
+    );
+    // And both directions must be exercised: a sweep that only ever refutes
+    // never touches the sat-side replay, and one that only ever satisfies never
+    // touches the certificate checker.
+    assert!(
+        sat_decided > 0 && unsat_decided > 0,
+        "single-cell fuzz exercised only one direction: sat={sat_decided} \
+         unsat={unsat_decided}"
+    );
+    // Every decided instance z3 also decided must have AGREED.
+    assert_eq!(
+        agreements,
+        decided - z3_unknown_skipped,
+        "every jointly-decided instance must agree"
+    );
+}
+
+/// The degenerate-argument class for this route's one underspecified operator.
+///
+/// `nra_single_cell` never divides: its collector declines any `RealDiv` it
+/// cannot fold, so the route's exposure to SMT-LIB's underspecified `x/0` is
+/// "refuses to look at it". CLAUDE.md's hard rule still applies — a route that
+/// *claims* not to touch a partial operator has to be shown not to, on the
+/// degenerate argument itself, or the claim is a comment.
+///
+/// Both shapes below are SATISFIABLE (SMT-LIB leaves `x/0` free), so the only
+/// wrong answer this can produce is `unsat`. A decline is the expected result
+/// and is accepted; `unsat` is not.
+#[test]
+fn single_cell_never_refutes_a_division_by_constant_zero() {
+    let mut a = TermArena::new();
+    let x = a.declare("x", Sort::Real).unwrap();
+    let y = a.declare("y", Sort::Real).unwrap();
+    let xt = a.var(x);
+    let yt = a.var(y);
+    let zero = a.real_const(Rational::zero());
+    let five = a.real_const(Rational::integer(5));
+
+    // `(/ x 0) = 5 ∧ y*y > 1` -- free `x/0`, so SAT.
+    let div = a.real_div(xt, zero).unwrap();
+    let eq = Cmp::Eq.build(&mut a, div, five);
+    let sq = a.real_mul(yt, yt).unwrap();
+    let one = a.real_const(Rational::integer(1));
+    let gt = Cmp::Gt.build(&mut a, sq, one);
+    let out = axeyum_solver::single_cell_decide_for_testing(&a, &[eq, gt]);
+    assert!(
+        !matches!(out, Some(CheckResult::Unsat)),
+        "the single-cell route REFUTED a satisfiable `x/0` query: {out:?} (cause {})",
+        axeyum_solver::single_cell_decline_cause()
+    );
+    // z3 agrees it is satisfiable, so the assertion above is testing a real
+    // property and not an accident of the encoding.
+    let zx = Real::new_const("x");
+    let zy = Real::new_const("y");
+    let zdiv = zx / Real::from_rational(0, 1);
+    let zeq = zdiv.eq(Real::from_rational(5, 1));
+    let zgt = (zy.clone() * zy).gt(Real::from_rational(1, 1));
+    assert_eq!(nra_z3(&[zeq, zgt]), Verdict::Sat, "control: z3 says sat");
+
+    // And a DIVISION BY A VARIABLE that can be zero, same expectation.
+    let mut b = TermArena::new();
+    let bx = b.declare("x", Sort::Real).unwrap();
+    let by = b.declare("y", Sort::Real).unwrap();
+    let bxt = b.var(bx);
+    let byt = b.var(by);
+    let bfive = b.real_const(Rational::integer(5));
+    let bdiv = b.real_div(bxt, byt).unwrap();
+    let beq = Cmp::Eq.build(&mut b, bdiv, bfive);
+    let bsq = b.real_mul(byt, byt).unwrap();
+    let bzero = b.real_const(Rational::zero());
+    let bgt = Cmp::Gt.build(&mut b, bsq, bzero);
+    let bout = axeyum_solver::single_cell_decide_for_testing(&b, &[beq, bgt]);
+    assert!(
+        !matches!(bout, Some(CheckResult::Unsat)),
+        "the single-cell route REFUTED a satisfiable symbolic-divisor query: {bout:?} (cause {})",
+        axeyum_solver::single_cell_decline_cause()
+    );
 }

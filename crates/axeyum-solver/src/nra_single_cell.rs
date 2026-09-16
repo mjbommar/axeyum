@@ -145,10 +145,12 @@ enum LevelOutcome {
 
 /// One cell of a 1-D arrangement, with the exact point the route tests it at.
 struct ArrangementCell {
-    /// `true` for an open interval, `false` for a single root point.
-    open: bool,
     /// The point the cell is tested at: a rational interior sample for an open
     /// cell, or the root itself for a point cell.
+    ///
+    /// The cell's KIND (open vs point) is deliberately not carried: the
+    /// certificate does not record it and the checker recomputes it from its own
+    /// arrangement, so a field here could only ever disagree with the authority.
     rep: CellRep,
 }
 
@@ -204,7 +206,11 @@ pub(crate) fn decide_single_cell(
             let mut total = 0u32;
             for &(v, e) in mono {
                 vars.insert(v);
-                total = total.checked_add(e)?;
+                let Some(next) = total.checked_add(e) else {
+                    record_cad_decline(CadDecline::SliceBounds);
+                    return None;
+                };
+                total = next;
             }
             if total > MAX_CELL_DEGREE {
                 record_cad_decline(CadDecline::SliceBounds);
@@ -232,7 +238,13 @@ pub(crate) fn decide_single_cell(
     let order: Vec<SymbolId> = vars.into_iter().collect();
     let mut by_level: Vec<Vec<usize>> = vec![Vec::new(); order.len()];
     for (i, atom) in atoms.iter().enumerate() {
-        let level = atom_level(atom, &order)?;
+        let Some(level) = atom_level(atom, &order) else {
+            // A variable-free atom, or one over a variable outside the order:
+            // both are shapes the fold above should have caught, so reaching
+            // here at all is a decline and not a silent `None`.
+            record_cad_decline(CadDecline::NonConjunctive);
+            return None;
+        };
         by_level[level].push(i);
     }
 
@@ -304,7 +316,10 @@ fn solve_level(
         record_cad_decline(CadDecline::Deadline);
         return None;
     }
-    let var = *ctx.order.get(level)?;
+    let Some(&var) = ctx.order.get(level) else {
+        record_cad_decline(CadDecline::SliceBounds);
+        return None;
+    };
     let sample_map: BTreeMap<SymbolId, Rational> = sample.iter().copied().collect();
 
     // The boundary set starts as this level's own atoms and grows only with the
@@ -322,7 +337,11 @@ fn solve_level(
         }
         let roots = arrangement_roots(ctx, &boundary, &sample_map, var)?;
         let cells = arrangement_cells(&roots)?;
-        ctx.cells_seen = ctx.cells_seen.checked_add(cells.len())?;
+        let Some(seen) = ctx.cells_seen.checked_add(cells.len()) else {
+            record_cad_decline(CadDecline::CellBudget);
+            return None;
+        };
+        ctx.cells_seen = seen;
         if ctx.cells_seen > MAX_TOTAL_CELLS {
             record_cad_decline(CadDecline::CellBudget);
             return None;
@@ -463,11 +482,9 @@ fn arrangement_cells(roots: &[Root]) -> Option<Vec<ArrangementCell>> {
     }
     for (i, r) in roots.iter().enumerate() {
         out.push(ArrangementCell {
-            open: true,
             rep: CellRep::Rational(samples[i]),
         });
         out.push(ArrangementCell {
-            open: false,
             rep: match r {
                 Root::Rational(q) => CellRep::Rational(*q),
                 Root::Algebraic(a) => CellRep::Algebraic(a.clone()),
@@ -475,7 +492,6 @@ fn arrangement_cells(roots: &[Root]) -> Option<Vec<ArrangementCell>> {
         });
     }
     out.push(ArrangementCell {
-        open: true,
         rep: CellRep::Rational(samples[roots.len()]),
     });
     Some(out)
