@@ -381,16 +381,16 @@ impl Instance {
         let mut clauses: Vec<Vec<usize>> = Vec::with_capacity(num_clauses);
         for _ in 0..num_clauses {
             let width = rng.below(3) + 1; // 1..=3
-            let mut lits: Vec<usize> = Vec::with_capacity(width as usize);
+            let mut lits: Vec<usize> = Vec::with_capacity(width);
             for _ in 0..width {
-                lits.push(rng.below(n as u64) as usize);
+                lits.push(rng.below(n as u64));
             }
             clauses.push(lits);
         }
         // Force a genuine disjunction somewhere, or this class silently degrades
         // into the conjunctive one it exists to be different from.
         if !clauses.iter().any(|c| c.len() >= 2) && n >= 2 {
-            let a = rng.below(n as u64) as usize;
+            let a = rng.below(n as u64);
             let b = (a + 1) % n;
             clauses[0] = vec![a, b];
         }
@@ -1642,11 +1642,11 @@ fn clause_loop_never_refutes_a_division_by_constant_zero() {
     );
 
     // And with a SYMBOLIC divisor that can be zero.
-    let divy = a.real_div(xv, yv).unwrap();
-    let lhs2 = a.real_gt(divy, one).unwrap();
+    let div_by_y = a.real_div(xv, yv).unwrap();
+    let lhs2 = a.real_gt(div_by_y, one).unwrap();
     let rhs2 = a.real_gt(xv, five).unwrap();
-    let disj2 = a.or(lhs2, rhs2).unwrap();
-    let out2 = axeyum_solver::clause_loop_decide_for_testing(&a, &[disj2, rhs2]);
+    let disj_symbolic = a.or(lhs2, rhs2).unwrap();
+    let out2 = axeyum_solver::clause_loop_decide_for_testing(&a, &[disj_symbolic, rhs2]);
     assert!(
         !matches!(out2, Some(CheckResult::Unsat)),
         "a satisfiable query with a symbolic divisor was refuted: {out2:?}"
