@@ -1,0 +1,7 @@
+qinst-positive-path: baseline green, 15 tests (scripts/cargo-serialized.sh test -p axeyum-solver --features full --test quantifier_positive_path)
+  the instance is rebuilt INTO its owner, so the clause carries the activation literal killed 3: a_correct_positive_replacement_certificate_is_accepted, the_bare_instance_is_refused_as_a_replacement_conclusion, a_satisfiable_query_is_not_refuted_at_any_level
+  `not` flips the polarity           killed 3: a_replacement_at_a_negative_position_is_refused, a_universal_at_a_negative_position_is_never_registered, a_satisfiable_query_is_not_refuted_at_any_level
+  the checker refuses ARRIVAL at a negative position killed 1: a_replacement_at_a_negative_position_is_refused
+  a replacement's owner must be an assertion or carry its own derivation killed 1: a_replacement_whose_owner_is_not_trusted_is_refused
+  the recomputed conclusion must equal the recorded one killed 1: the_bare_instance_is_refused_as_a_replacement_conclusion
+MUTATION_ANCHORS|suites=146|anchors=1087|stale=0

@@ -7208,6 +7208,44 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Found UNREGISTERED on 2026-09-09 while attributing the `UF` loss population. It is the only constant in `qinst_egraph.rs` (31 of them) that this registry did not carry, and the reason is mechanical rather than an oversight: it is a STRUCT-valued constant (`OnlineQuantifierLimits`), and the coverage scanner in this file matches only scalar and `Duration` types, so `every_governing_constant_is_registered` could never have named it even had the file been in `GOVERNED_FILES`. That blind spot is the finding; this entry closes the instance. Exceeding any of the three disables only the retained-CDCL(T) accelerator (ADR-0119) -- the established fresh-QF route stays live, so a crossing costs speed and never a verdict.",
     },
     ConfigEntry {
+        name: "POSITIVE_PATH_LEVEL",
+        module: "crates/axeyum-solver/src/qinst_egraph.rs",
+        value: "0",
+        unit: "how far a positive POSITION is tracked when registering a nested universal",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::None,
+        guarded_by: "the CHECKER is not gated by this level. `positive_instance_formula` walks the path itself at the fixed `CHECKER_POSITIVE_PATH_LEVEL`, refuses any step outside the monotone fragment, refuses arrival at a NEGATIVE position, refuses any crossed binder, and re-derives the conclusion from `(owner, path, vars, bindings)` alone -- so a certificate is rejected on its own merits and never on a configuration. `check_positive_replacement` re-runs exactly that at admission and additionally requires the owner to be an assertion or to carry its own checked derivation. `quantifier_positive_path.rs` tries to REFUTE the rule over SATISFIABLE queries at levels 0 and 1, including the shape whose other disjunct is true",
+        env_override: Some("AXEYUM_QINST_POSITIVE_PATH"),
+        justification: dated(
+            "doc comment",
+            "2026-09-15",
+            None,
+            &[
+                sym(
+                    "crates/axeyum-solver/src/qinst_egraph.rs",
+                    "positive_path_step",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/qinst_egraph.rs",
+                    "positive_instance_formula",
+                ),
+            ],
+            &[
+                doc("docs/research/09-decisions/adr-2120-quantifier-activation-by-assignment.md"),
+                live(
+                    "PositivePathLevelGuard",
+                    "crates/axeyum-solver/src/qinst_egraph.rs",
+                ),
+                live(
+                    "QuantifierPositiveReplacementCertificate",
+                    "crates/axeyum-solver/src/qinst_egraph.rs",
+                ),
+            ],
+        ),
+        note: "SHIPPED `0`, which is byte for byte the historical behaviour: `positive_path_step` at level 0 evaluates exactly `positive && matches!(op, Op::BoolAnd | Op::BoolOr)`, the expression `collect_nested_registrations_rec` used to inline, with the sticky `false` renamed to `None`. WHAT LEVEL 1 ADDS: polarity tracking, so `not` flips, `=>` flips its antecedent and keeps its consequent, and an `ite` BRANCH keeps -- `ite(c,t,e)` is `(c and t) or (not c and e)`, monotone in both branches. REFUSED AT EVERY LEVEL, and not out of conservatism: the CONDITION of an `ite` and both arguments of a boolean `=`/`xor` occur at BOTH polarities, so a replacement inside them is monotone in neither direction; and every step that crosses a binder, for the counterexample `PositiveContext` carries (`A or forall u.(B(u) or forall y.Q(u,y))` does not entail the `u := c` replacement). MEASURED 2026-09-15 (ADR-2120) before it was built, over all 1,200 Tier 1 rows of the six quantified divisions: the shipped whitelist computes a context on **3 of the 525 undecided files**, while **97** hold a positively occurring universal under a disjunction whose path crosses a connective it refuses -- UFLIA 52 of 114, AUFLIRA 11 of 22, UFNIA 23 of 146. The BROAD shape ceiling (368 of 525) is refused by its own control: 499 of 675 DECIDED files carry the same shape, so shape presence does not predict undecidedness and only the narrow column is a ceiling. Determinism: the walk is indexed by argument POSITION and visits arguments in index order, so the registration sequence does not depend on any hash iteration.",
+    },
+    ConfigEntry {
         name: "RELEVANCE_EVICT_MIN_GROUND",
         module: "crates/axeyum-solver/src/qinst_egraph.rs",
         value: "FLOOD_THROTTLE_MIN_GROUND",

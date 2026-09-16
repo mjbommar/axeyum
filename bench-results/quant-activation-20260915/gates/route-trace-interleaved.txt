@@ -1,0 +1,44 @@
+QUANT-ACTIVATION -- `quantified_route_trace` is FLAKY UNDER LOAD ON BOTH SIDES.
+
+The suite failed on this branch on its first run, which is what a regression
+looks like. It is not one.
+
+The failing assertion is the test's OWN NON-VACUITY FLOOR, not its
+misattribution check:
+
+    quantified_route_trace.rs:213
+    only 3 quantified corpus files were decided; with fewer than 4 this gate
+    cannot distinguish a correct attribution from an absent one
+
+The misattribution assertion sits ABOVE it (`:200`) and passed in every run.
+
+METHOD: `interleave-suite.sh`, base snapshot and branch back to back on the same
+box, twice, with the load at each arm's start printed. CLAUDE.md's rule --- load
+cancels in the DIFFERENCE and not in the totals, and a suite that fails on the
+branch and passes on the base at different MOMENTS is not a comparison.
+
+  base   = d19a4af58 (this lane's sizing commit, NO Rust change)
+  branch = f06880717 (the lever and the certificate)
+
+    rep1 base   load_start=7.10   test result: FAILED. 5 passed; 1 failed
+    rep1 branch load_start=12.95  test result: ok.     6 passed; 0 failed
+    rep2 base   load_start=12.25  test result: ok.     6 passed; 0 failed
+    rep2 branch load_start=11.31  test result: FAILED. 5 passed; 1 failed
+
+THE BASE FAILS AND THE BRANCH PASSES IN rep1; THE BRANCH FAILS AND THE BASE
+PASSES IN rep2. The failure is present on both sides and flips between
+repetitions at a fixed commit, which settles it without any appeal to a cause:
+a test that fails and then passes on the same bytes is non-deterministic.
+
+This is the same failure ADR-2114 §7 recorded for this suite and for the same
+assertion, and its note that the failure "reproduces only above load ~18" is
+too optimistic --- it reproduced here at load 7.10 and 11.31, and did NOT
+reproduce at 12.25 and 12.95, so load ORDERS the runs badly rather than gating
+them. The honest statement is that the `decided >= 4` floor is a race against
+the per-file budgets on a shared box, at any load this repository's lanes
+actually run at.
+
+NOT FIXED HERE, and deliberately: raising or removing that floor would be a lane
+weakening a gate it does not own, in the same session in which it needed the
+gate to be green. It is recorded instead, with the interleaved measurement, so
+the next reader has the comparison rather than the verdict.

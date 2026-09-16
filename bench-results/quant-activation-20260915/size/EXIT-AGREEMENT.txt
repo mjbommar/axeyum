@@ -1,0 +1,15 @@
+observed rows with at least one exit : 129
+observed rows with NO exit (rung never reached): 5
+observed rows with no shape row to join to      : 0
+
+JOINED                       : 129
+prediction among observed    : 126 (97.7%)
+
+DISCRIMINATING SUBSET -- observed set has exactly ONE distinct exit,
+so containment IS equality and the test can fail:
+  rows                       : 85
+  prediction equals observed : 82 (96.5%)
+
+DISAGREEMENTS (predicted -> observed set), the failing direction:
+     2  quantifier-below-top-level    not in {refutation-loop}
+     1  quantifier-below-top-level    not in {nested-binder-in-matrix}

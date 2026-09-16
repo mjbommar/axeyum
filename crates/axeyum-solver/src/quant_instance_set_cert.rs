@@ -227,7 +227,14 @@ pub(crate) fn portable_certificate(
     let mut instances = Vec::with_capacity(derivations.len());
     for derivation in derivations {
         // A propagation certificate carries nested structure that this
-        // positional form does not describe. Decline rather than half-record it.
+        // positional form does not describe, and so does an ADR-2120
+        // positive replacement -- its conclusion is not the instance of any
+        // assertion, it is an owner formula with one subformula swapped, and
+        // this form has no field for the path or the owner. Decline rather than
+        // half-record it. The decline is the intended outcome and is what keeps
+        // `certified=1` honest; `collect_ground_derivations` still checks the
+        // in-arena derivation, so the refutation is checked even where the
+        // PORTABLE form cannot be produced.
         let QuantifierGroundDerivation::Instance(recorded) = derivation else {
             return None;
         };

@@ -1,0 +1,21 @@
+== INTERLEAVED A/B, one binary at two env values ==
+A = AXEYUM_QINST_POSITIVE_PATH unset (shipped)   B = 1
+
+division   n     A    B    delta  A_rc!=0  B_rc!=0
+AUFDTLIRA  142   95   95   +0     0        0      
+AUFLIRA    200   178  178  +0     0        0      
+UF         141   64   63   -1     2        2      
+UFDTLIRA   200   144  143  -1     0        0      
+UFLIA      141   49   50   +1     0        0      
+UFNIA      200   54   54   +0     0        0      
+TOTAL      1024  584  583  -1     2        2      
+
+VERDICT DISAGREEMENTS (sat on one arm, unsat on the other): 0 of 1024
+
+RAW movers, NOT re-checked -- a single 24 s pairing carries a measured
+1-1.5 % ambient flip rate and ADR-1966 lost 11 of 18 movers to a re-check.
+  gains  1
+    GAIN UFLIA/simplify2/front_end_suite/javafe.parser.TagConstants.001.smt2
+  losses 2
+    LOSS UFDTLIRA/20200306-Kanig/spark2014bench/NB19-026__flow_formal_vectors__indefinite_bounded.adb_30_22_assert___00.smt2
+    LOSS UF/20170428-Barrett/cdt-cade2015/nada/afp/lmirror/x2015_09_10_16_48_05_804_1088878.smt_in.smt2

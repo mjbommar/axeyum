@@ -11294,6 +11294,83 @@ SUITES["qinst-trigger-alternatives"] = (
 )
 
 
+
+# --------------------------------------------------------------------------
+# `qinst-positive-path` -- ADR-2120's positive-position registration rule and
+# the replacement certificate that carries the activation literal.
+#
+# The inference under test is the one `rej_nocontext` exists to prevent:
+# `A or (forall y. B(y))` does NOT entail `B(t)`, so a matched tuple may become
+# only the CLAUSE `A or B(t)` -- the same clause z3 adds as `not q or
+# body[x:=t]` (`qi_queue.cpp:274-289`) and cvc5 as `(=> q body)`
+# (`instantiate.cpp:293`), with the residual context playing the part of the
+# quantifier's SAT literal.
+#
+# Every mutation below removes ONE obligation of that inference, and each is a
+# WRONG-`unsat` or an unchecked certificate rather than a lost decision. The
+# suite is split one test per guard for exactly this reason: a mutation that
+# kills a three-assertion test proves only that something in it fired.
+# --------------------------------------------------------------------------
+
+SUITES["qinst-positive-path"] = (
+    "crates/axeyum-solver/src/qinst_egraph.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--test",
+            "quantifier_positive_path",
+        ),
+        "qinst-positive-path",
+    ),
+    [
+        (
+            # THE activation-literal guard. Without the spine rebuild the
+            # conclusion is the BARE INSTANCE `B(t)` and not `A or B(t)`, which
+            # is unsound on exactly the shape this lane exists for.
+            "the instance is rebuilt INTO its owner, so the clause carries the "
+            "activation literal",
+            "        rebuilt = axeyum_rewrite::build_app(arena, op, &args).ok()?;",
+            "        let _ = axeyum_rewrite::build_app(arena, op, &args).ok()?;",
+        ),
+        (
+            # `not` is ANTITONE. Without the flip a universal under a negation
+            # -- an existential -- is replaced by an instance, which strengthens
+            # the owner instead of weakening it.
+            "`not` flips the polarity",
+            "        Op::BoolNot => (arity == 1).then_some(!polarity),",
+            "        Op::BoolNot => (arity == 1).then_some(polarity),",
+        ),
+        (
+            # The checker's own arrival test. The producer never offers a
+            # negative arrival, so this guard is reachable only from a
+            # hand-built certificate -- which is why one exists.
+            "the checker refuses ARRIVAL at a negative position",
+            "    if !polarity {\n        return None;\n    }",
+            "    if false {\n        return None;\n    }",
+        ),
+        (
+            # A `None` `owner_derivation` is a CLAIM that the owner is asserted.
+            # Without this the claim is taken at face value and any term can be
+            # an owner.
+            "a replacement's owner must be an assertion or carry its own "
+            "derivation",
+            "                if !self.assertions.contains(&certificate.owner) {",
+            "                if false {",
+        ),
+        (
+            # The recomputed conclusion must EQUAL the recorded one. Comparing
+            # only that a conclusion exists accepts any certificate whose fields
+            # happen to form a legal replacement of something else.
+            "the recomputed conclusion must equal the recorded one",
+            "        ) == Some(certificate.conclusion)",
+            "        ) .is_some()",
+        ),
+    ],
+)
+
 # --------------------------------------------------------------------------
 # `int-blast-width-floor` (ADR-2112) -- the ladder's admissible-width floor.
 #

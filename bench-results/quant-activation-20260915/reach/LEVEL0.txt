@@ -1,0 +1,59 @@
+QUANT-ACTIVATION -- IS THE SHIPPED ARM ACTUALLY UNCHANGED?
+
+THE A/B CANNOT ANSWER THIS. Both of its arms are the NEW binary, one with the
+variable unset, so it measures level 0 against level 1 and says nothing about
+level 0 against the code that shipped before. "Byte for byte the historical
+behaviour" is an ARGUMENT about `positive_path_step` at level 0 -- and the diff
+also touches `NestedDiscovery::stage`, which runs at EVERY level because it
+records the replacement certificate that did not exist before.
+
+  base  = d19a4af58, this lane's sizing commit, NO Rust change
+  arm   = f06880717's binary with AXEYUM_QINST_POSITIVE_PATH UNSET
+  method= interleaved per file, arm order alternating, 24 s / 8 GiB, pinned
+
+## RUN 1 WAS VACUOUS, AND IT IS KEPT HERE BECAUSE IT WAS
+
+    rows 55, disagreements 0, nonzero exit status 0 on both arms
+    base  unknown 55
+    lvl0  unknown 55
+
+Zero disagreements over 55 rows reads like a clean identity result. **It is not
+a result at all.** Every row is `unknown` on BOTH arms, because the population
+was drawn from the UNDECIDED Tier 1 rows -- files selected precisely because we
+do not decide them. A population that cannot produce a decision cannot lose one,
+so the comparison had no way to fail, and "the shipped arm is unchanged" and
+"these files decide nothing either way" are indistinguishable in it.
+
+This is the un-failable checker this repository keeps deleting, built by
+accident, and the tell was in the output the whole time: a verdict mix with one
+value in it. The rule it re-earns: a zero is only evidence beside a population
+that could have produced a non-zero.
+
+## RUN 2, THE ONE WITH DISCRIMINATING POWER
+
+Drawn from the DECIDED rows instead -- 42 `engine_widen_target` files, where the
+diff's non-lever code actually runs, plus 24 NON-targets as the control, evenly
+spaced within each division's path-sorted list and round-robined across the six.
+A row that was decided on the base and is not decided on the new binary's level
+0 is a change to the shipped arm, and now such a row is possible.
+
+    rows                     66
+    DISAGREEMENTS             0
+    nonzero exit status       0 on both arms
+    base   unsat 62   sat 4
+    level0 unsat 62   sat 4
+
+66 of 66 agree, and 66 of 66 are DECIDED -- so a lost decision was a possible
+outcome of this run and did not occur. 42 of the rows are
+`engine_widen_target` files, which is where `NestedDiscovery::stage`'s new
+certificate recording actually executes; 24 are non-targets, as the control that
+the population is not entirely the code under test.
+
+**So "level 0 is byte for byte the shipped behaviour" is now a MEASUREMENT.**
+Before this it was an argument about `positive_path_step`, and the argument did
+not cover the half of the diff that runs at every level.
+
+WHAT IT STILL DOES NOT COVER. 66 files is not 1,200, and a verdict is not a
+trace: two runs can agree on `unsat` and differ in which route produced it. The
+claim this supports is the narrow one -- no decision was lost and no abort was
+introduced on a population that could have shown either.

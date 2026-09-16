@@ -1,0 +1,58 @@
+QUANT-ACTIVATION -- DOES THE LEVER REACH ITS OWN TARGET ON THE REAL CORPUS?
+
+The A/B answers "does the lever CONVERT a file". This answers the step before:
+is a widened registration produced and HANDED OFF at all. The two disagree in
+the way that matters --- a lever that reaches its target and does not convert is
+a capability question, while one that never reaches it is a plumbing failure
+reported as a null, and a sweep that prints `+0` cannot tell them apart.
+
+POPULATION. 24 of the 174 `widen_target` undecided files in `UFLIA`, `AUFLIRA`
+and `UFNIA`, sampled EVENLY SPACED within each division's path-sorted list and
+then round-robined ACROSS the three. Not a prefix: a prefix of a path-sorted
+corpus list is one directory, not a sample of a division, and reading one has
+published false nulls in this repository before.
+
+INSTRUMENT. `reach-probe.sh`, `AXEYUM_QPROBE=1` AND `AXEYUM_QPROBE_CENSUS=1` ---
+both, because `AdmissionCensus::enabled` is the AND of the two and with only the
+first every `rej_*` field prints 0. Reading those zeros as "nothing was
+rejected" attributes a cause to a measurement nobody took (ADR-2113 §6 records
+that exact error).
+
+    rej_nocontext   the universal is a registration with NO context: its tuples
+                    are joined and then DISCARDED
+    rej_handoff     the universal HAS a context: its tuples went to the
+                    positive-replacement driver instead
+
+RESULT.
+
+    rows                                24
+    probe printed on EITHER arm           2
+    probe printed on NEITHER arm         22
+    handoff ROSE from arm A to arm B      2  (of the 2 that printed)
+    verdict changed                       0
+
+    file                                                   A_probed A_nocontext A_handoff   B_probed B_nocontext B_handoff
+    UFNIA/vcc-havoc/vccp-union1.c.6.reint2.smt2                   0           0         0        372        9990     18944
+    UFNIA/spec_sharp/textbook-Sum.dll.6.C.TransformQuant_...       0           0         0        432       33090     18688
+
+THE LEVER REACHES ITS TARGET. On both files that produced a per-universal probe
+line at all, arm B hands off **18,944** and **18,688** tuples where arm A hands
+off **zero**. These are tuples that were joined and then discarded outright on
+the shipped arm --- the exact 100.0 %-of-2,139,815 bucket ADR-2113 located --- and
+the widened rule turns them into entailed positive replacements. The mechanism
+is not inert on the real corpus; it does the thing it was built to do, at scale,
+on files it does not convert inside 24 s.
+
+THE 22 ARE NOT ZEROS, and this is the same caveat ADR-2113 had to make about
+34 of its 53 cores. The per-universal probe block sits behind a condition the
+loop reaches only on certain exits; a file whose loop ends on a time budget
+before it prints NOTHING, which is indistinguishable in the output from a file
+that handed off nothing. So this table's denominator for the handoff claim is
+2, not 24, and it is stated that way rather than as "2 of 24 reached the
+target".
+
+WHAT THIS DOES NOT SHOW. It does not show that handing the tuples off is worth
+the clock. Both files stayed `unknown` on both arms, and the A/B's raw losses
+are timing-shaped (a 1.5 s arm-A `unsat` against a 22.9 s arm-B `unknown` on one
+`UFDTLIRA` file). Reaching the target and paying for it are different questions,
+and only the second decides whether the lever ships.

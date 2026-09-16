@@ -1,0 +1,61 @@
+QUANT-ACTIVATION -- THE MOVER RE-CHECK, AND IT DECIDES THE SHIP CRITERION.
+
+`recheck-movers.sh`: three passes per arm, ONE pinned core, arms alternating
+WITHIN the passes so a drift in machine state across the ~2.5 minutes a row
+takes does not land entirely on one arm. Same 24 s / 8 GiB envelope as the A/B.
+A row is classified only if all three passes agree.
+
+    STABLE-GAIN   A never decided, B decided 3/3
+    STABLE-LOSS   A decided 3/3, B never decided
+    UNSTABLE      anything else -- ambient, not an effect
+
+FOUR ROWS: the A/B's three raw movers, plus `javafe.ast.LabelStmt.011`, which the
+reach probe had seen convert while the A/B recorded `unknown` on both arms.
+
+  UFLIA/.../javafe.parser.TagConstants.001      STABLE-GAIN
+      A: unknown unknown unknown    B: unsat unsat unsat
+
+  UF/.../nada/afp/lmirror/x2015_09_10_...       STABLE-LOSS
+      A: unsat unsat unsat          B: unknown unknown unknown
+
+  UFDTLIRA/.../NB19-026__flow_formal_vectors    UNSTABLE
+      A: unknown unknown unknown    B: unknown unknown unknown
+
+  UFLIA/.../javafe.ast.LabelStmt.011            UNSTABLE
+      A: unknown unknown unknown    B: unknown unknown unknown
+
+    STABLE-GAIN 1    STABLE-LOSS 1    UNSTABLE 2
+
+## THE SHIP CRITERION IS NOT MET
+
+0 stable losses was the condition. There is **1 STABLE-LOSS**. The lever ships
+OFF and ADR-2120 stays `proposed`. This is the whole decision and it does not
+turn on anything else in the lane.
+
+## WHAT THE RE-CHECK CORRECTED, IN BOTH DIRECTIONS
+
+**A raw loss evaporated.** `NB19-026` was one of the A/B's two losses. Across six
+re-check passes NEITHER arm decides it: the A/B's arm A had decided it once, at
+1.5 s, and that single decision was the whole "loss". Reporting the raw column
+would have charged the lever for a file it does not affect.
+
+**And one of THIS LANE'S OWN CLAIMS was refuted.** `REACH-ENGINE.txt` recorded
+`LabelStmt.011` converting to `unsat` on the ON arm and drew a conclusion from
+it -- "the conversion is REAL and it is MARGINAL AGAINST THE CLOCK". Three passes
+per arm return `unknown` 3 of 3 on arm B. The single `unsat` does not reproduce.
+That paragraph is retracted in place rather than deleted, with this measurement
+beside it.
+
+The rule it re-earns is one this repository already has, and it applies to a
+lane's own output exactly as it applies to a handoff it inherits: *a traced
+plan's "verified numerically" is itself a claim -- re-run its numbers, do not
+inherit them.* One observation of a verdict at the edge of a 24 s budget is not
+a measurement, whoever made it.
+
+## WHAT SURVIVES THE CORRECTION
+
+The COUNTERS, not the verdicts. `rej_handoff` moving 0 -> 18,688 and
+`rej_nocontext` 33,090 -> 0 on a single run is not a coin flip between two runs;
+a verdict at the budget edge is, and this file proved it. So the supported claim
+is that the mechanism executes at scale on real files and empties the bucket
+ADR-2113 located -- and NOT that it converts them.

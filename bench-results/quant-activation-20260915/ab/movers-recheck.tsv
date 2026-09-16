@@ -1,0 +1,5 @@
+file	A1	A2	A3	B1	B2	B3	verdict
+UFLIA/simplify2/front_end_suite/javafe.parser.TagConstants.001.smt2	unknown/0	unknown/0	unknown/0	unsat/0	unsat/0	unsat/0	STABLE-GAIN
+UFDTLIRA/20200306-Kanig/spark2014bench/NB19-026__flow_formal_vectors__indefinite_bounded.adb_30_22_assert___00.smt2	unknown/0	unknown/0	unknown/0	unknown/0	unknown/0	unknown/0	UNSTABLE
+UF/20170428-Barrett/cdt-cade2015/nada/afp/lmirror/x2015_09_10_16_48_05_804_1088878.smt_in.smt2	unsat/0	unsat/0	unsat/0	unknown/0	unknown/0	unknown/0	STABLE-LOSS
+UFLIA/simplify2/front_end_suite/javafe.ast.LabelStmt.011.smt2	unknown/0	unknown/0	unknown/0	unknown/0	unknown/0	unknown/0	UNSTABLE
