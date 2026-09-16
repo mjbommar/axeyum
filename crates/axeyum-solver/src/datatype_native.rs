@@ -171,9 +171,21 @@ fn has_inexact_equality(arena: &TermArena, assertions: &[TermId]) -> bool {
         let TermNode::App { op, args } = arena.node(term) else {
             continue;
         };
+        // ADR-2128: with the nested-field lever ON and a budget that covers
+        // the datatype's own closure, the datatype-typed field DOES get an
+        // expansion variable (a materialised child slot), so `build_dt_eq` is
+        // exact and the two encodings coincide again -- one pass, not two.
+        // With the lever OFF `datatype_expansion_is_exact` is the pre-ADR-2128
+        // predicate, which is false for any datatype that has a datatype-typed
+        // field, so this conjunction reduces to `dt_has_datatype_field` and the
+        // shipped behaviour is unchanged. Both conjuncts are kept because
+        // neither implies the other: a `W1` datatype is inexact WITHOUT having a
+        // datatype-typed field, and running the two-pass arm for it would only
+        // reach the same refusal twice.
         if *op == Op::Eq
             && let Sort::Datatype(dt) = arena.sort_of(args[0])
             && dt_has_datatype_field(arena, dt)
+            && !datatype_expansion_is_exact(arena, dt)
         {
             return true;
         }
@@ -239,12 +251,21 @@ fn decide_with_eq_mode(
     // are unconstrained), recorded in `links` so projection can reconstruct the
     // nested value. Because it only enlarges the model space, reduced-`unsat`
     // still implies original-`unsat` (sound, no guards); `sat` is replay-guarded.
-    let (unfolded, links) =
+    let (unfolded, mut links) =
         unfold_traversals(arena, &expanded).map_err(|e| SolverError::Backend(e.to_string()))?;
 
     // Immutable scan: validate the fragment and collect the datatype variables
     // used, the `is`/`select` sites to rewrite, and per-datatype layout.
-    let scan = scan_fragment(arena, &unfolded)?;
+    let mut scan = scan_fragment(arena, &unfolded)?;
+
+    // ADR-2128. Give every COMPARED datatype-typed field slot a child variable,
+    // to the lever's depth, reusing the very `links` entries `unfold_traversals`
+    // creates for a TRAVERSED one -- the child names are the same string, so a
+    // slot that is both traversed and compared is ONE child, not two.
+    // `nested_field_expansion_depth() == 0` (the shipped default) makes this a
+    // no-op that creates nothing and leaves `links` exactly as it was.
+    materialize_nested_children(arena, &mut scan, &mut links)?;
+    let scan = scan;
     // The query is a relaxation (so a `sat` candidate must be replay-checked and
     // a mismatch is `unknown`) if it traverses datatype fields or compares
     // datatypes that have datatype fields.
@@ -340,16 +361,31 @@ fn decide_with_eq_mode(
         replacements.insert(site.term, arena.var(field));
     }
     let mut relaxed_eq_encoding = false;
-    for site in &scan.eqs {
+    // Copied out of the scan so the `&mut arena` the builder needs does not sit
+    // next to a live borrow of `scan` (which the builder also reads, through
+    // `dt_symbols`).
+    let eq_sites: Vec<(TermId, SymbolId, SymbolId)> = scan
+        .eqs
+        .iter()
+        .map(|site| (site.term, site.left, site.right))
+        .collect();
+    let mut eq_memo: BTreeMap<(SymbolId, SymbolId, u32), (TermId, bool)> = BTreeMap::new();
+    let depth = nested_field_expansion_depth();
+    for (term, left, right) in eq_sites {
         let (eq_term, one_directional) = build_dt_eq(
             arena,
-            &layout[&site.left],
-            &layout[&site.right],
+            left,
+            right,
+            &layout,
+            &links,
+            &scan.dt_symbols,
             &mut extra,
             eq_mode,
+            depth,
+            &mut eq_memo,
         )?;
         relaxed_eq_encoding |= one_directional;
-        replacements.insert(site.term, eq_term);
+        replacements.insert(term, eq_term);
     }
 
     relaxed |= relaxed_eq_encoding;
@@ -509,6 +545,136 @@ fn unfold_traversals(
         }
         current = next;
     }
+}
+
+/// Gives every datatype-typed field slot of a COMPARED datatype variable its
+/// own child variable, to the lever's depth (ADR-2128).
+///
+/// # What this is, and what it is not
+///
+/// [`unfold_traversals`] already creates a child slot for a datatype-typed field
+/// the query `select`s INTO, and records it in `links` so [`project_slot`] can
+/// rebuild the nested value. What it does not do is create one for a field the
+/// query only COMPARES — and that is precisely the slot `build_dt_eq` needs an
+/// expansion variable for, which is why
+/// [`datatype_expansion_is_exact`] was false for every nested datatype and why
+/// the Ackermann congruence arms refused (`:904`, `:963`).
+///
+/// This pass closes that gap by creating exactly the missing children, **under
+/// the same `!dt_child_{sym}_{ctor}_{field}` name `unfold_traversals` uses**, so
+/// a slot that is both traversed and compared resolves to ONE child variable
+/// (`declare_internal` is idempotent by name) and the two passes cannot
+/// disagree about what a slot denotes.
+///
+/// # Why it is seeded from the equality sites and not from every variable
+///
+/// Both references do the same thing, and neither has a depth bound because of
+/// it. cvc5 splits a nested field only when some selector was applied to that
+/// equivalence class — `theory_datatypes.cpp:1932-1948`, whose comment is "if
+/// there are no selectors for this equivalence class, and its possible values
+/// are infinite, then do not split". z3 creates a theory variable for a
+/// datatype-sorted argument only under `internalize_term`'s constructor guard
+/// (`theory_datatype.cpp:330`, `:354-378`) and declines one for an infinite sort
+/// outright (`:432-436`, "If s is an infinite sort, then it is not necessary to
+/// create a theory variable"). Materialising for every declared variable would
+/// be a term explosion on the SPARK divisions, which declare over a thousand
+/// datatypes in a single file.
+///
+/// # The two guards, and what each one is for
+///
+/// * **A cyclic field closure is skipped entirely.** No finite unrolling of
+///   `list = nil | cons(car Int, cdr list)` is exact, so
+///   [`datatype_expansion_is_exact_to_depth`] answers `false` for it at every
+///   budget and any children built here could never be paid for. Skipping is a
+///   COST decision resting on a SOUNDNESS fact established independently — the
+///   two are deliberately not the same line of code, so removing this guard
+///   cannot make a verdict wrong, only make the encoding bigger. The unit test
+///   that dies when it is removed counts the children, because that is the only
+///   thing it changes.
+/// * **[`MAX_NESTED_CHILDREN`] is a refusal, never a truncation.** Stopping
+///   short of the budget would claim an exactness this pass did not build.
+///
+/// # Errors
+///
+/// [`SolverError::Unsupported`] above [`MAX_NESTED_CHILDREN`]; a
+/// [`SolverError::Backend`] from the arena.
+fn materialize_nested_children(
+    arena: &mut TermArena,
+    scan: &mut Scan,
+    links: &mut Links,
+) -> Result<usize, SolverError> {
+    let depth = nested_field_expansion_depth();
+    if depth == 0 {
+        return Ok(0);
+    }
+    // Seed from the equality sites, in a deterministic order. `BTreeSet` and the
+    // `Vec` worklist together make the child DECLARATION ORDER a function of the
+    // query alone, which determinism is a public promise about.
+    let mut queue: Vec<(SymbolId, u32)> = Vec::new();
+    let mut seen: BTreeSet<(SymbolId, u32)> = BTreeSet::new();
+    for site in &scan.eqs {
+        for sym in [site.left, site.right] {
+            if seen.insert((sym, depth)) {
+                queue.push((sym, depth));
+            }
+        }
+    }
+
+    let mut created = 0usize;
+    let mut head = 0usize;
+    while head < queue.len() {
+        let (sym, remaining) = queue[head];
+        head += 1;
+        if remaining == 0 {
+            continue;
+        }
+        let Some(&dt) = scan.dt_symbols.get(&sym) else {
+            continue;
+        };
+        // THE CYCLIC-CLOSURE GUARD. See the doc comment above: a cost decision,
+        // not the soundness argument.
+        if datatype_field_closure_is_cyclic(arena, dt) {
+            continue;
+        }
+        let Some(ctors) = scan.layouts.get(&dt).cloned() else {
+            continue;
+        };
+        for (ctor_idx, (_ctor, field_sorts)) in ctors.iter().enumerate() {
+            for (field_idx, &fsort) in field_sorts.iter().enumerate() {
+                let Sort::Datatype(inner) = fsort else {
+                    continue;
+                };
+                let key = (sym, ctor_idx, field_idx);
+                let child = match links.get(&key) {
+                    Some(&child) => child,
+                    None => {
+                        created += 1;
+                        if created > MAX_NESTED_CHILDREN {
+                            return Err(unsupported(
+                                "nested datatype field expansion needs more child slots than \
+                                 the bound allows, so the exactness the depth budget promises \
+                                 cannot be built (ADR-2128)",
+                            ));
+                        }
+                        // The SAME name `unfold_traversals` uses, deliberately:
+                        // `declare_internal` is idempotent by name, so a slot
+                        // reached by both passes is one child variable.
+                        let name = format!("!dt_child_{}_{ctor_idx}_{field_idx}", sym.index());
+                        let child = arena
+                            .declare_internal(&name, fsort)
+                            .map_err(|e| SolverError::Backend(e.to_string()))?;
+                        links.insert(key, child);
+                        child
+                    }
+                };
+                scan.dt_symbols.insert(child, inner);
+                if seen.insert((child, remaining - 1)) {
+                    queue.push((child, remaining - 1));
+                }
+            }
+        }
+    }
+    Ok(created)
 }
 
 /// A `select_{c,i}(construct_d(...))` with `d != c` — SMT-LIB's UNSPECIFIED
@@ -999,6 +1165,103 @@ struct AckSite {
 /// term explosion that spends the whole budget and yields nothing. The bound is
 /// on PAIRS rather than applications because that is what costs.
 const MAX_ACK_PAIRS: usize = 20_000;
+
+/// The most nested child slots one call will materialise before refusing
+/// (ADR-2128).
+///
+/// [`materialize_nested_children`] creates one child datatype variable per
+/// (compared symbol, constructor, datatype-typed field) triple, per level, so
+/// its cost is the product of the compared-symbol count and the datatype's
+/// branching — and the SPARK divisions declare over a thousand datatypes in one
+/// file (`AUFDTLIRA` undecided: 1717 datatypes across 82 files, measured
+/// 2026-09-16). Refusing at a bound is an `Unsupported` the harness reads as a
+/// decline; not refusing is a term explosion that spends the whole budget and
+/// yields nothing — the same trade, for the same reason, as [`MAX_ACK_PAIRS`].
+///
+/// The bound must be a REFUSAL and never a silent fall-back to the shallower
+/// encoding: [`datatype_expansion_is_exact_to_depth`] has already been consulted
+/// by the time this runs, so an encoding that quietly stopped short of the
+/// budget would be claiming an exactness it did not build.
+const MAX_NESTED_CHILDREN: usize = 20_000;
+
+/// The largest nested-field expansion depth the lever will accept (ADR-2128).
+///
+/// The deepest datatype-field nest measured anywhere in this lane's seven
+/// populations is **5** (`bench-results/dt-field-expansion-20260916`), and every
+/// deeper request would be budget spent on a shape no corpus file has. The cap
+/// is on the PARSED value rather than on the walk so that a typo
+/// (`AXEYUM_DT_NESTED_FIELD_DEPTH=1000`) degrades to a bounded run instead of a
+/// term explosion.
+const MAX_NESTED_FIELD_DEPTH: u32 = 8;
+
+thread_local! {
+    /// Test-scoped override of the nested-field expansion depth; see
+    /// [`NestedFieldExpansionGuard`].
+    static NESTED_FIELD_DEPTH_OVERRIDE: std::cell::Cell<Option<u32>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Sets the nested-field expansion depth for the current thread, restoring the
+/// previous setting on drop (ADR-2128).
+///
+/// Exists so a test can drive both arms of the lever without setting a
+/// process-wide environment variable — CLAUDE.md's rule that a test passing only
+/// under an ambient env var is a gate on one shell.
+pub struct NestedFieldExpansionGuard(Option<u32>);
+
+impl NestedFieldExpansionGuard {
+    /// Overrides the process depth on this thread. `0` is OFF (the shipped
+    /// default); any larger value is clamped to [`MAX_NESTED_FIELD_DEPTH`].
+    #[must_use]
+    pub fn set(depth: u32) -> Self {
+        NestedFieldExpansionGuard(
+            NESTED_FIELD_DEPTH_OVERRIDE
+                .with(|c| c.replace(Some(depth.min(MAX_NESTED_FIELD_DEPTH)))),
+        )
+    }
+}
+
+impl Drop for NestedFieldExpansionGuard {
+    fn drop(&mut self) {
+        NESTED_FIELD_DEPTH_OVERRIDE.with(|c| c.set(self.0));
+    }
+}
+
+/// Parses `AXEYUM_DT_NESTED_FIELD_DEPTH` (ADR-2128).
+///
+/// An absent variable, an empty value, `off`, `0` and anything unparseable all
+/// resolve to the SHIPPED default, **0 — the lever is OFF** — so a typo degrades
+/// to the shipped behaviour rather than to an arm nobody chose. A parseable
+/// positive integer is the expansion depth, clamped to
+/// [`MAX_NESTED_FIELD_DEPTH`].
+fn parse_nested_field_depth(value: Option<&str>) -> u32 {
+    match value {
+        Some(v) => v
+            .trim()
+            .parse::<u32>()
+            .unwrap_or(0)
+            .min(MAX_NESTED_FIELD_DEPTH),
+        None => 0,
+    }
+}
+
+/// The nested-field expansion depth in force on this thread (ADR-2128): a live
+/// [`NestedFieldExpansionGuard`]'s choice, else the process value resolved once
+/// from `AXEYUM_DT_NESTED_FIELD_DEPTH`. `0` means the lever is OFF and every
+/// predicate below reduces to its pre-ADR-2128 form.
+fn nested_field_expansion_depth() -> u32 {
+    static RESOLVED: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
+    if let Some(depth) = NESTED_FIELD_DEPTH_OVERRIDE.with(std::cell::Cell::get) {
+        return depth;
+    }
+    *RESOLVED.get_or_init(|| {
+        parse_nested_field_depth(
+            std::env::var("AXEYUM_DT_NESTED_FIELD_DEPTH")
+                .ok()
+                .as_deref(),
+        )
+    })
+}
 
 /// Replaces every uninterpreted-function application that has a datatype-sorted
 /// argument with a fresh witness symbol, and asserts pairwise congruence
@@ -1574,12 +1837,79 @@ fn field_sort_expands(arena: &TermArena, sort: Sort) -> bool {
 /// The property the soundness argument needs is exactness, so that is what is
 /// checked.
 fn datatype_expansion_is_exact(arena: &TermArena, dt: DatatypeId) -> bool {
+    datatype_expansion_is_exact_to_depth(arena, dt, nested_field_expansion_depth())
+}
+
+/// Whether the tag/field expansion of `dt` is exact once datatype-typed fields
+/// are themselves expanded `depth` levels deep (ADR-2128).
+///
+/// `depth == 0` is the pre-ADR-2128 predicate verbatim: a `Sort::Datatype`
+/// field gets no expansion variable, so it is not exact. Each level of
+/// `depth` permits one more layer of datatype-typed field, provided that
+/// layer's own fields are exact under the remaining budget.
+///
+/// **This must stay in lockstep with [`materialize_nested_children`], which is
+/// what actually creates the child slots the exactness claim rests on.** They
+/// are two statements of one property and ADR-1920's measured lesson is that
+/// two predicates written twice in different words do not stay the same
+/// predicate — so both walk `Sort::Datatype` on the same budget, both stop at
+/// zero, and both refuse to descend into a cyclic closure. A widening of one
+/// without the other is exactly the wrong-`unsat` shape ADR-1930 shipped.
+///
+/// **Termination on a RECURSIVE datatype is by the budget, not by the
+/// detector.** `depth` strictly decreases on the datatype arm and the other arm
+/// does not recurse, so `list = nil | cons(car Int, cdr list)` walks
+/// `depth, depth-1, …, 0` and answers `false` at the bottom — no finite
+/// unrolling of a cyclic closure is ever exact, at any budget. The detector
+/// [`datatype_field_closure_is_cyclic`] exists to stop the materialiser from
+/// building `depth` useless levels of child slots, not to make this predicate
+/// terminate.
+fn datatype_expansion_is_exact_to_depth(arena: &TermArena, dt: DatatypeId, depth: u32) -> bool {
     arena.datatype_constructors(dt).iter().all(|&ctor| {
-        arena
-            .constructor_fields(ctor)
-            .iter()
-            .all(|(_, sort)| field_sort_expands(arena, *sort))
+        arena.constructor_fields(ctor).iter().all(|(_, sort)| {
+            if let Sort::Datatype(inner) = sort {
+                depth > 0 && datatype_expansion_is_exact_to_depth(arena, *inner, depth - 1)
+            } else {
+                field_sort_expands(arena, *sort)
+            }
+        })
     })
+}
+
+/// Whether `dt` can reach itself through a chain of datatype-typed fields.
+///
+/// This is the detector ADR-2114 §4 named. A cyclic closure has **no finite
+/// unrolling**, so no depth budget makes
+/// [`datatype_expansion_is_exact_to_depth`] true for it; the materialiser skips
+/// such a datatype entirely rather than building a budget's worth of child
+/// slots that cannot pay for themselves.
+///
+/// Measured 2026-09-16 over the four DT divisions' undecided files
+/// (`bench-results/dt-field-expansion-20260916/census/reach-*.tsv`): **29 of 29**
+/// undecided `QF_DT` files declare a cyclic datatype (`nat = succ(pred nat)`,
+/// `list = cons(car tree, cdr list)`, blocksworld's
+/// `Tower = stack(top Enum, rest Tower)`), against **0 of 82** `AUFDTLIRA` and
+/// **0 of 57** `UFDTLIRA`. So this guard is not a corner case: it is the whole
+/// of one division and none of two others.
+fn datatype_field_closure_is_cyclic(arena: &TermArena, dt: DatatypeId) -> bool {
+    fn walk(arena: &TermArena, dt: DatatypeId, path: &mut Vec<DatatypeId>) -> bool {
+        if path.contains(&dt) {
+            return true;
+        }
+        path.push(dt);
+        let hit = arena.datatype_constructors(dt).iter().any(|&ctor| {
+            arena
+                .constructor_fields(ctor)
+                .iter()
+                .any(|(_, sort)| match sort {
+                    Sort::Datatype(inner) => walk(arena, *inner, path),
+                    _ => false,
+                })
+        });
+        path.pop();
+        hit
+    }
+    walk(arena, dt, &mut Vec::new())
 }
 
 /// Whether any constructor of `dt` has a datatype-typed field.
@@ -1718,16 +2048,80 @@ fn build_sym_vars(
 /// Where a datatype-typed field is involved the equality is one-directional, the
 /// caller marks the query `relaxed_eq`, and a `sat` candidate is replay-checked
 /// against the original assertions.
+///
+/// # The nested field (ADR-2128)
+///
+/// A datatype-typed field used to be skipped outright, which is what made
+/// `all_exact` false and the whole encoding one-directional. With the lever ON,
+/// [`materialize_nested_children`] has given that slot a child variable on BOTH
+/// sides, so the field's conjunct becomes the CHILD PAIR'S OWN `==` term, built
+/// by recursing into this same function on a budget one smaller. The recursion
+/// terminates on `depth`, which strictly decreases; `memo` keeps a slot pair
+/// reached twice to one Boolean and one set of clauses, so the emitted term is a
+/// function of the query and not of the traversal.
+///
+/// The field is exact exactly when the CHILD comparison is exact, so `all_exact`
+/// is threaded up from the recursion rather than re-derived — one statement of
+/// the property, as ADR-1920 requires, and it is the same one
+/// [`datatype_expansion_is_exact_to_depth`] makes on the same budget.
+///
+/// When the lever is OFF (`depth == 0`), or a child is missing on either side,
+/// the field falls back to the pre-ADR-2128 `exact = false` skip, so the OFF arm
+/// builds the same terms it always did.
+#[allow(clippy::too_many_arguments)]
 fn build_dt_eq(
     arena: &mut TermArena,
-    left: &SymVars,
-    right: &SymVars,
+    left_sym: SymbolId,
+    right_sym: SymbolId,
+    layout: &BTreeMap<SymbolId, SymVars>,
+    links: &Links,
+    dt_symbols: &BTreeMap<SymbolId, DatatypeId>,
     extra: &mut Vec<TermId>,
     mode: EqMode,
+    depth: u32,
+    memo: &mut BTreeMap<(SymbolId, SymbolId, u32), (TermId, bool)>,
 ) -> Result<(TermId, bool), SolverError> {
-    if mode == EqMode::Restriction {
-        return build_dt_eq_restriction(arena, left, right);
+    if let Some(&hit) = memo.get(&(left_sym, right_sym, depth)) {
+        return Ok(hit);
     }
+    let out = build_dt_eq_inner(
+        arena, left_sym, right_sym, layout, links, dt_symbols, extra, mode, depth, memo,
+    )?;
+    memo.insert((left_sym, right_sym, depth), out);
+    Ok(out)
+}
+
+/// The body of [`build_dt_eq`], split out so the memo is consulted and written
+/// in exactly one place.
+///
+/// # Errors
+///
+/// See [`build_dt_eq`].
+#[allow(clippy::too_many_arguments)]
+fn build_dt_eq_inner(
+    arena: &mut TermArena,
+    left_sym: SymbolId,
+    right_sym: SymbolId,
+    layout: &BTreeMap<SymbolId, SymVars>,
+    links: &Links,
+    dt_symbols: &BTreeMap<SymbolId, DatatypeId>,
+    extra: &mut Vec<TermId>,
+    mode: EqMode,
+    depth: u32,
+    memo: &mut BTreeMap<(SymbolId, SymbolId, u32), (TermId, bool)>,
+) -> Result<(TermId, bool), SolverError> {
+    if !layout.contains_key(&left_sym) || !layout.contains_key(&right_sym) {
+        return Err(SolverError::Backend(
+            "a datatype equality site names a symbol with no expansion layout".to_owned(),
+        ));
+    }
+    if mode == EqMode::Restriction {
+        return build_dt_eq_restriction(
+            arena, left_sym, right_sym, layout, links, dt_symbols, extra, depth, memo,
+        );
+    }
+    let left = &layout[&left_sym];
+    let right = &layout[&right_sym];
     let equal = arena
         .declare_internal(
             &format!("!dt_eq_{}_{}", left.tag.index(), right.tag.index()),
@@ -1753,19 +2147,45 @@ fn build_dt_eq(
         let mut fields_eq = arena.bool_const(true);
         let mut comparable = 0usize;
         let mut exact = true;
-        for (lf, rf) in lrow.iter().zip(rrow) {
-            let (Some(lf), Some(rf)) = (lf, rf) else {
-                // A datatype-typed field: no expansion variable, so this
-                // constructor's comparison cannot be exact.
-                exact = false;
-                all_exact = false;
-                continue;
+        for (i, (lf, rf)) in lrow.iter().zip(rrow).enumerate() {
+            let fe = match (lf, rf) {
+                (Some(lf), Some(rf)) => {
+                    let lfv = arena.var(*lf);
+                    let rfv = arena.var(*rf);
+                    arena
+                        .eq(lfv, rfv)
+                        .map_err(|e| SolverError::Backend(e.to_string()))?
+                }
+                // A DATATYPE-TYPED FIELD (ADR-2128). With the lever ON it has a
+                // materialised child on both sides and the conjunct is the
+                // children's own equality; with the lever OFF, or no child,
+                // this is the pre-ADR-2128 skip and the constructor is inexact.
+                _ => match nested_child_eq(
+                    arena,
+                    left_sym,
+                    right_sym,
+                    j,
+                    i,
+                    layout,
+                    links,
+                    dt_symbols,
+                    extra,
+                    EqMode::Relaxation,
+                    depth,
+                    memo,
+                )? {
+                    Some((child_eq, child_exact)) => {
+                        exact &= child_exact;
+                        all_exact &= child_exact;
+                        child_eq
+                    }
+                    None => {
+                        exact = false;
+                        all_exact = false;
+                        continue;
+                    }
+                },
             };
-            let lfv = arena.var(*lf);
-            let rfv = arena.var(*rf);
-            let fe = arena
-                .eq(lfv, rfv)
-                .map_err(|e| SolverError::Backend(e.to_string()))?;
             fields_eq = arena
                 .and(fields_eq, fe)
                 .map_err(|e| SolverError::Backend(e.to_string()))?;
@@ -1840,11 +2260,20 @@ fn build_dt_eq(
 /// negative one. Only a `sat` may be believed, and only after the replay against
 /// the original assertions — which is exactly what the caller does. See the
 /// two-encoding note in [`check_with_datatype_native`].
+#[allow(clippy::too_many_arguments)]
 fn build_dt_eq_restriction(
     arena: &mut TermArena,
-    left: &SymVars,
-    right: &SymVars,
+    left_sym: SymbolId,
+    right_sym: SymbolId,
+    layout: &BTreeMap<SymbolId, SymVars>,
+    links: &Links,
+    dt_symbols: &BTreeMap<SymbolId, DatatypeId>,
+    extra: &mut Vec<TermId>,
+    depth: u32,
+    memo: &mut BTreeMap<(SymbolId, SymbolId, u32), (TermId, bool)>,
 ) -> Result<(TermId, bool), SolverError> {
+    let left = &layout[&left_sym];
+    let right = &layout[&right_sym];
     let lt = arena.var(left.tag);
     let rt = arena.var(right.tag);
     let mut conj = arena
@@ -1854,16 +2283,42 @@ fn build_dt_eq_restriction(
     for (j, (lrow, rrow)) in left.fields.iter().zip(&right.fields).enumerate() {
         let mut fields_eq = arena.bool_const(true);
         let mut comparable = 0usize;
-        for (lf, rf) in lrow.iter().zip(rrow) {
-            let (Some(lf), Some(rf)) = (lf, rf) else {
-                all_exact = false;
-                continue;
+        for (i, (lf, rf)) in lrow.iter().zip(rrow).enumerate() {
+            let fe = match (lf, rf) {
+                (Some(lf), Some(rf)) => {
+                    let lfv = arena.var(*lf);
+                    let rfv = arena.var(*rf);
+                    arena
+                        .eq(lfv, rfv)
+                        .map_err(|e| SolverError::Backend(e.to_string()))?
+                }
+                // ADR-2128, and the RESTRICTION arm gets it for the same reason
+                // the relaxation does: a nested field it cannot see is a
+                // difference it cannot WITNESS, which is this arm's whole job.
+                _ => match nested_child_eq(
+                    arena,
+                    left_sym,
+                    right_sym,
+                    j,
+                    i,
+                    layout,
+                    links,
+                    dt_symbols,
+                    extra,
+                    EqMode::Restriction,
+                    depth,
+                    memo,
+                )? {
+                    Some((child_eq, child_exact)) => {
+                        all_exact &= child_exact;
+                        child_eq
+                    }
+                    None => {
+                        all_exact = false;
+                        continue;
+                    }
+                },
             };
-            let lfv = arena.var(*lf);
-            let rfv = arena.var(*rf);
-            let fe = arena
-                .eq(lfv, rfv)
-                .map_err(|e| SolverError::Backend(e.to_string()))?;
             fields_eq = arena
                 .and(fields_eq, fe)
                 .map_err(|e| SolverError::Backend(e.to_string()))?;
@@ -1892,6 +2347,73 @@ fn build_dt_eq_restriction(
             .map_err(|e| SolverError::Backend(e.to_string()))?;
     }
     Ok((conj, !all_exact))
+}
+
+/// The `==` term for ONE datatype-typed field slot, compared through its
+/// materialised child variables (ADR-2128).
+///
+/// Returns `None` — the pre-ADR-2128 skip, and the caller then marks the
+/// constructor inexact — in every case where the comparison cannot be built:
+///
+/// * the budget is exhausted (`depth == 0`), which is the lever OFF and also the
+///   bottom of an unrolling;
+/// * either side has no child slot for `(constructor, field)`, which is what
+///   [`materialize_nested_children`]'s cyclic-closure guard leaves behind;
+/// * a child slot exists but has no expansion layout, i.e. the scan never saw
+///   it as a datatype variable.
+///
+/// Each of those is a REASON the encoding is a relaxation at this slot, and
+/// returning `None` is what records it. The alternative — comparing a slot
+/// whose children were never built — is the wrong-`unsat` shape ADR-1930
+/// shipped, so the three conditions are checked here rather than assumed by the
+/// caller.
+///
+/// # Errors
+///
+/// See [`build_dt_eq`].
+#[allow(clippy::too_many_arguments)]
+fn nested_child_eq(
+    arena: &mut TermArena,
+    left_sym: SymbolId,
+    right_sym: SymbolId,
+    ctor_idx: usize,
+    field_idx: usize,
+    layout: &BTreeMap<SymbolId, SymVars>,
+    links: &Links,
+    dt_symbols: &BTreeMap<SymbolId, DatatypeId>,
+    extra: &mut Vec<TermId>,
+    mode: EqMode,
+    depth: u32,
+    memo: &mut BTreeMap<(SymbolId, SymbolId, u32), (TermId, bool)>,
+) -> Result<Option<(TermId, bool)>, SolverError> {
+    if depth == 0 {
+        return Ok(None);
+    }
+    let (Some(&lchild), Some(&rchild)) = (
+        links.get(&(left_sym, ctor_idx, field_idx)),
+        links.get(&(right_sym, ctor_idx, field_idx)),
+    ) else {
+        return Ok(None);
+    };
+    if !layout.contains_key(&lchild) || !layout.contains_key(&rchild) {
+        return Ok(None);
+    }
+    if !dt_symbols.contains_key(&lchild) || !dt_symbols.contains_key(&rchild) {
+        return Ok(None);
+    }
+    let (term, one_directional) = build_dt_eq(
+        arena,
+        lchild,
+        rchild,
+        layout,
+        links,
+        dt_symbols,
+        extra,
+        mode,
+        depth - 1,
+        memo,
+    )?;
+    Ok(Some((term, !one_directional)))
 }
 
 /// Projects the expansion model back to datatype values and replays it against
@@ -2141,4 +2663,211 @@ fn project_slot(
 
 fn unsupported(what: &str) -> SolverError {
     SolverError::Unsupported(format!("{what} (ADR-0022)"))
+}
+
+#[cfg(test)]
+mod nested_field_tests {
+    //! ADR-2128's unit-level guards: the lever's parser, the depth-aware
+    //! exactness predicate, the cyclic-closure detector, and the ONE thing the
+    //! detector actually changes -- how many child slots the materialiser
+    //! builds.
+    //!
+    //! The materialiser's cyclic guard is a COST decision resting on a soundness
+    //! fact established independently (`datatype_expansion_is_exact_to_depth`
+    //! answers `false` for a cyclic closure at every budget, by the budget and
+    //! not by the detector). So deleting the guard cannot make a verdict wrong,
+    //! only make the encoding bigger -- and a test that asserted a verdict would
+    //! survive the deletion and prove nothing. `the_cyclic_guard_*` count
+    //! children, because the count is the only thing the guard moves.
+
+    use super::*;
+
+    fn outer_pair(arena: &mut TermArena) -> (DatatypeId, DatatypeId) {
+        let idt = arena.declare_datatype("InnerU");
+        arena.add_constructor(idt, "mk_innerU", &[("icU".to_owned(), Sort::Int)]);
+        let odt = arena.declare_datatype("OuterU");
+        arena.add_constructor(
+            odt,
+            "mk_outerU",
+            &[
+                ("in_U".to_owned(), Sort::Datatype(idt)),
+                ("ocU".to_owned(), Sort::Int),
+            ],
+        );
+        (odt, idt)
+    }
+
+    fn cyclic(arena: &mut TermArena) -> DatatypeId {
+        let dt = arena.declare_datatype("LstU");
+        arena.add_constructor(dt, "nilU", &[]);
+        arena.add_constructor(
+            dt,
+            "consU",
+            &[
+                ("carU".to_owned(), Sort::Int),
+                ("cdrU".to_owned(), Sort::Datatype(dt)),
+            ],
+        );
+        dt
+    }
+
+    #[test]
+    fn the_lever_parses_to_off_on_anything_unparseable() {
+        assert_eq!(parse_nested_field_depth(None), 0, "absent is OFF");
+        assert_eq!(parse_nested_field_depth(Some("")), 0, "empty is OFF");
+        assert_eq!(parse_nested_field_depth(Some("off")), 0, "`off` is OFF");
+        assert_eq!(parse_nested_field_depth(Some("0")), 0, "`0` is OFF");
+        assert_eq!(
+            parse_nested_field_depth(Some("banana")),
+            0,
+            "a typo degrades to the SHIPPED default, never to an arm nobody chose"
+        );
+        assert_eq!(parse_nested_field_depth(Some("3")), 3, "a depth is a depth");
+        assert_eq!(
+            parse_nested_field_depth(Some("4294967295")),
+            MAX_NESTED_FIELD_DEPTH,
+            "an absurd depth is clamped, not obeyed"
+        );
+    }
+
+    #[test]
+    fn exactness_at_depth_zero_is_the_pre_adr_2128_predicate() {
+        let mut arena = TermArena::new();
+        let (odt, idt) = outer_pair(&mut arena);
+        assert!(
+            datatype_expansion_is_exact_to_depth(&arena, idt, 0),
+            "a datatype whose every field is scalar is exact at depth 0"
+        );
+        assert!(
+            !datatype_expansion_is_exact_to_depth(&arena, odt, 0),
+            "at depth 0 a datatype-typed field has NO expansion variable, which \
+             is exactly what the pre-ADR-2128 predicate said"
+        );
+    }
+
+    #[test]
+    fn exactness_widens_with_the_budget_and_never_for_a_cycle() {
+        let mut arena = TermArena::new();
+        let (odt, _idt) = outer_pair(&mut arena);
+        assert!(
+            datatype_expansion_is_exact_to_depth(&arena, odt, 1),
+            "one level of budget covers a depth-1 nest"
+        );
+        let ldt = cyclic(&mut arena);
+        for depth in [0u32, 1, 2, 5, MAX_NESTED_FIELD_DEPTH] {
+            assert!(
+                !datatype_expansion_is_exact_to_depth(&arena, ldt, depth),
+                "NO finite unrolling of a cyclic closure is exact, and depth \
+                 {depth} must not claim otherwise"
+            );
+        }
+    }
+
+    #[test]
+    fn the_cycle_detector_separates_the_two_shapes() {
+        let mut arena = TermArena::new();
+        let (odt, idt) = outer_pair(&mut arena);
+        let ldt = cyclic(&mut arena);
+        assert!(
+            !datatype_field_closure_is_cyclic(&arena, idt),
+            "a scalar-only datatype has no cycle"
+        );
+        assert!(
+            !datatype_field_closure_is_cyclic(&arena, odt),
+            "a depth-1 record nest has no cycle -- the POSITIVE control for the \
+             negative below, without which a detector that answered `true` for \
+             everything would look identical"
+        );
+        assert!(
+            datatype_field_closure_is_cyclic(&arena, ldt),
+            "`LstU = nilU | consU(carU : Int, cdrU : LstU)` reaches itself"
+        );
+    }
+
+    #[test]
+    fn the_cycle_detector_follows_a_mutual_cycle() {
+        // `A = mkA(b : B)`, `B = mkB(a : A)` -- neither datatype mentions
+        // ITSELF, so a detector that only checked for a self-field would answer
+        // `false` here and the materialiser would spend the whole budget on it.
+        let mut arena = TermArena::new();
+        let adt = arena.declare_datatype("MutA");
+        let bdt = arena.declare_datatype("MutB");
+        arena.add_constructor(adt, "mkA", &[("b".to_owned(), Sort::Datatype(bdt))]);
+        arena.add_constructor(bdt, "mkB", &[("a".to_owned(), Sort::Datatype(adt))]);
+        assert!(
+            datatype_field_closure_is_cyclic(&arena, adt),
+            "a MUTUAL cycle is a cycle"
+        );
+        assert!(datatype_field_closure_is_cyclic(&arena, bdt));
+    }
+
+    /// Materialises for one compared symbol pair and returns how many child
+    /// slots were built.
+    fn materialize_count(arena: &mut TermArena, dt: DatatypeId, depth: u32) -> usize {
+        let _g = NestedFieldExpansionGuard::set(depth);
+        let l = arena.declare("mat_l", Sort::Datatype(dt)).expect("declare");
+        let r = arena.declare("mat_r", Sort::Datatype(dt)).expect("declare");
+        let lv = arena.var(l);
+        let rv = arena.var(r);
+        let term = arena.eq(lv, rv).expect("eq");
+        let mut layouts: BTreeMap<DatatypeId, Vec<(ConstructorId, Vec<Sort>)>> = BTreeMap::new();
+        register_datatype(arena, dt, &mut layouts).expect("register");
+        let mut dt_symbols = BTreeMap::new();
+        dt_symbols.insert(l, dt);
+        dt_symbols.insert(r, dt);
+        let mut scan = Scan {
+            dt_symbols,
+            layouts,
+            tests: Vec::new(),
+            selects: Vec::new(),
+            eqs: vec![EqSite {
+                term,
+                left: l,
+                right: r,
+            }],
+            relaxed_eq: false,
+        };
+        let mut links: Links = BTreeMap::new();
+        materialize_nested_children(arena, &mut scan, &mut links).expect("materialize")
+    }
+
+    #[test]
+    fn the_cyclic_guard_builds_no_children_for_a_cyclic_datatype() {
+        let mut arena = TermArena::new();
+        let ldt = cyclic(&mut arena);
+        assert_eq!(
+            materialize_count(&mut arena, ldt, 5),
+            0,
+            "a cyclic closure gets NO child slots at any budget -- no finite \
+             unrolling of it is exact, so every child built would be term \
+             weight that cannot be paid for. THIS is the assertion the \
+             cyclic-closure guard owns; a verdict assertion would survive its \
+             deletion, because the guard changes cost and not soundness."
+        );
+    }
+
+    #[test]
+    fn the_cyclic_guard_is_not_vacuous_on_an_acyclic_datatype() {
+        let mut arena = TermArena::new();
+        let (odt, _idt) = outer_pair(&mut arena);
+        assert_eq!(
+            materialize_count(&mut arena, odt, 5),
+            2,
+            "the POSITIVE control for the test above: two compared symbols, one \
+             datatype-typed field each, so exactly two children. A guard that \
+             skipped everything would pass the cyclic test and fail this one."
+        );
+    }
+
+    #[test]
+    fn the_lever_off_materialises_nothing() {
+        let mut arena = TermArena::new();
+        let (odt, _idt) = outer_pair(&mut arena);
+        assert_eq!(
+            materialize_count(&mut arena, odt, 0),
+            0,
+            "depth 0 is the shipped default and must create no slot at all, or \
+             the OFF arm of every A/B is not the shipped code"
+        );
+    }
 }

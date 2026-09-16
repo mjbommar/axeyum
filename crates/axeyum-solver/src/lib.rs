@@ -690,6 +690,7 @@ pub mod theories {
     pub mod datatypes {
         pub use crate::datatype_acyclicity::prove_datatype_unsat_structurally;
         pub use crate::datatype_elim::check_with_datatype_elimination;
+        pub use crate::datatype_native::NestedFieldExpansionGuard;
         pub use crate::datatype_native::check_with_datatype_native;
         pub use crate::enums::{EnumError, EnumSort, EnumVar};
         pub use crate::records::{RecordError, RecordSort};
@@ -1120,6 +1121,8 @@ macro_rules! full_exports {
         pub use datatype_acyclicity::prove_datatype_unsat_structurally;
         #[doc(hidden)]
         pub use datatype_elim::check_with_datatype_elimination;
+        #[doc(hidden)]
+        pub use datatype_native::NestedFieldExpansionGuard;
         #[doc(hidden)]
         pub use datatype_native::check_with_datatype_native;
         #[doc(hidden)]

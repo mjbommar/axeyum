@@ -668,6 +668,17 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #   dt_capability_1935       — ADR-1935's exactness precondition and the
   #                              messages the blocker census is read from.
   #   datatype_solve_path      — the native datatype route stays reachable.
+  #   dt_nested_field_2128     — ADR-2128's nested datatype FIELD expansion,
+  #                              behind a dated lever that is OFF by default.
+  #                              Registered here because the suite's value is
+  #                              a DIFFERENCE between two arms: its
+  #                              `off_arm_refuses_the_nested_congruence` is
+  #                              the non-vacuity control, and it fails if the
+  #                              lever ever defaults ON or if the OFF arm
+  #                              starts deciding the query by another route —
+  #                              either of which would make every A/B run
+  #                              against it meaningless without failing
+  #                              anything else.
   #   quant_ladder_rung_refusal_declines
   #                            — ADR-1927: a rung's fragment refusal is a
   #                              DECLINE, not the query's verdict. Regressing
@@ -872,7 +883,8 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
                replay_pairing_soundness \
                additive_no_overflow_never_becomes_unsat \
                lra_opaque_real_apps decline_detail_typed \
-               quantifier_trigger_alternatives quantifier_positive_path; do
+               quantifier_trigger_alternatives quantifier_positive_path \
+               dt_nested_field_2128; do
     gated_test "dispatch/reason: $suite" \
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
   done
