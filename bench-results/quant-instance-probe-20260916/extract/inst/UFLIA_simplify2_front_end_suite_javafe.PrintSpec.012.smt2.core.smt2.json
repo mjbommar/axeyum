@@ -1,0 +1,9 @@
+{
+ "raw_count": 2,
+ "bodies": [
+  "(or (subtypes (typeof XRES_174.11_174.11) T_java.lang.Exception) (not (subtypes (typeof XRES_174.11_174.11) T_java.io.FileNotFoundException)) (not (subtypes T_java.io.FileNotFoundException T_java.lang.Exception)))",
+  "(or (subtypes T_java.io.FileNotFoundException T_java.lang.Exception) (not (subtypes T_java.io.FileNotFoundException T_java.io.IOException)) (not (subtypes T_java.io.IOException T_java.lang.Exception)))"
+ ],
+ "not_ground": [],
+ "unmatched": 0
+}

@@ -1,0 +1,78 @@
+ADR-2132: HOW FAR FILL-IN CARRIES THE WARM TABLEAU ABOVE ITS ADMISSION COUNT
+=============================================================================
+
+[ADR-2125] found `Incremental::new` refusing the warm cube engine at
+`MAX_TABLEAU_CELLS = 4_000_000` DENSE CELLS while the tableau stores nonzeros,
+and asked whether the dense cap should simply be restated in the sparse
+currency. It opened a second door (`MAX_WARM_CUBE_NONZEROS = 400_000`) for the
+one call site rather than move the constant, and left the question open.
+
+`config_registry.rs`'s own note says why it is open:
+
+    "Whether a nonzero-count bound should replace it needs the fill-in
+     measurement ADR-2111 did not take."
+
+This is that measurement. Binary `axeyum.v2` (sha256 2fd1173301205606), s4,
+24 s, `AXEYUM_LRA_WARM_CUBE=on`, one core pair, seven `QF_LRA` files.
+
+    entry_nnz  fill_peak   growth   atoms   checks  file
+       65,133     65,852    1.01x  22,258      116  LassoRanker/.../firewire Iteration3
+       96,154     98,960    1.03x  28,245       69  LassoRanker/.../Ben-Amram-2010LMCS-Ex2.3
+       27,184     32,104    1.18x   6,974      583  LassoRanker/.../Gcd_havoc
+        2,288     28,093   12.28x   1,322    1,213  sc/sc-19.base.cvc
+        4,448     95,323   21.43x   2,564      921  sc/sc-37.base.cvc
+        4,688     98,572   21.03x   2,702      815  sc/sc-39.base.cvc
+
+(One file printed no `; lazy-smt` line and is SILENT rather than zero; it is in
+no row above.)
+
+THE ANSWER: THE CELL CAP STAYS, AND NOW THERE IS A NUMBER
+---------------------------------------------------------
+
+**Fill-in grows the stored set by up to 21x.** `sc-39.base.cvc` is ADR-2125's
+own probe file -- the one it measured at **4,688 nonzeros** against 8,797,712
+dense cells, and used to argue the dense cap was in the wrong currency. It is
+right that the cap refuses a 188 KB structure. It is wrong that 4,688 describes
+the structure:
+
+    entry     4,688 nonzeros   (what `MAX_WARM_CUBE_NONZEROS` admits on)
+    peak     98,572 nonzeros   (what the pivot loop grows it to)
+    cells 8,797,712            (what `MAX_TABLEAU_CELLS` bounds)
+
+So a construction-time nonzero bound is **not a bound on the structure at all**
+once the engine runs. `MAX_TABLEAU_CELLS` is loose -- the peak is 1.1 % of it --
+but it is a real ceiling, and it is the only one of the two that fill-in cannot
+pass.
+
+The concrete hazard this makes visible: at 24.6 % of `MAX_WARM_CUBE_NONZEROS`,
+`sc-39` is comfortable. A file entering four times larger would pass admission
+on its entry count and then exceed the nonzero cap after fill-in, with nothing
+consulting it again. That is not a defect today (nothing re-checks, so nothing
+refuses), and it is the shape a successor raising or re-purposing that constant
+has to price.
+
+GROWTH IS SHAPE-DEPENDENT, WHICH IS THE SECOND FINDING
+-------------------------------------------------------
+
+The two families separate cleanly, and it is the OPPOSITE of the intuition that
+big tableaux fill in most:
+
+  * `LassoRanker/*` enter at 27k-96k nonzeros and grow **1.01x to 1.18x**.
+  * `sc/*` enter at 2.3k-4.7k and grow **12x to 21x**.
+
+The rows that enter SPARSE are the rows fill-in changes. `sc/*` is also the
+family this lane's screen admits and ADR-2125's gain came from, so the files the
+warm basis helps most are the files whose footprint the admission count
+describes least.
+
+WHAT IS NOT CLAIMED
+-------------------
+
+Seven files is a probe, not a population. It is enough to answer the yes/no
+question ADR-2111 left open -- does fill-in move the number materially, yes, by
+up to 21x -- and it is not enough to characterise the distribution or to set a
+new constant from. Nobody has taken the tail here either.
+
+It is also a MECHANISM probe on a LATER BINARY than the A/B, by design:
+`warm_cube_entry_nnz` did not exist when `axeyum.v1` was built. Nothing from
+this table appears in a verdict table, which is the line that matters.

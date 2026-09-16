@@ -1,0 +1,14 @@
+{
+ "raw_count": 6,
+ "bodies": [
+  "(= (S_select (S_store (asField op_26_13 T_int) RES_64_24_64_24 op_62_35) RES_64_24_64_24) op_62_35)",
+  "(= (S_select (S_store (asField locOp_32_13 T_int) RES_64_24_64_24 locOp_62_68) RES_64_24_64_24) locOp_62_68)"
+ ],
+ "not_ground": [
+  "(or (= RES_64_24_64_24 ?brokenObj_1_!233) (= (S_select (S_store (asField op_26_13 T_int) RES_64_24_64_24 op_62_35) ?brokenObj_1_!233) (S_select (asField op_26_13 T_int) ?brokenObj_1_!233)))",
+  "(or (= ?brokenObj_1_!233 null) (= (S_select op_26_13 ?brokenObj_1_!233) UNARYADD_15_54_26) (= (S_select op_26_13 ?brokenObj_1_!233) UNARYSUB_15_55_26) (= (S_select op_26_13 ?brokenObj_1_!233) NOT_15_56_26) (= (S_select op_26_13 ?brokenObj_1_!233) BITNOT_15_57_26) (= (S_select op_26_13 ?brokenObj_1_!233) INC_15_58_26) (= (S_select op_26_13 ?brokenObj_1_!233) DEC_15_59_26) (= (S_select op_26_13 ?brokenObj_1_!233) POSTFIXINC_15_62_26) (= (S_select op_26_13 ?brokenObj_1_!233) POSTFIXDEC_15_63_26) (not (= true_term (is ?brokenObj_1_!233 T_javafe_ast_UnaryExpr))))",
+  "(or (= RES_64_24_64_24 ?brokenObj!234) (= (S_select (S_store (asField locOp_32_13 T_int) RES_64_24_64_24 locOp_62_68) ?brokenObj!234) (S_select (asField locOp_32_13 T_int) ?brokenObj!234)))",
+  "(or (= ?brokenObj!234 null) (not (= (S_select locOp_32_13 ?brokenObj!234) NULL_17_60_26)) (not (= true_term (is ?brokenObj!234 T_javafe_ast_UnaryExpr))))"
+ ],
+ "unmatched": 0
+}

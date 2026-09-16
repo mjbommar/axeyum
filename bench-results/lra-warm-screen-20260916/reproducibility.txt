@@ -1,0 +1,49 @@
+ADR-2132: DOES THIS LANE'S A/B REPRODUCE ADR-2125's?
+=====================================================
+
+An A/B is only worth reading if the harness under it is stable. ADR-2125 ran the
+same two arms (`off` and `on`) on the same corpus at the same 24 s / 8 GiB
+envelope on the same two core pairs of the same host -- on a different day, on a
+different binary, from a different branch base. Its per-file verdicts are
+committed at `../lra-warm-basis-20260916/ab.QF_LRA*.tsv`.
+
+So the two runs can be compared where they overlap, and that comparison is a
+control on the MEASUREMENT rather than on the lever.
+
+    ADR-2125 rows           195
+    this lane (partial)     150
+    overlap                 120
+
+    `off` arm agrees on     119 / 120
+    `on`  arm agrees on     119 / 120
+    rows where either differs                     1
+
+THE ONE DIFFERENCE MOVES BOTH ARMS TOGETHER
+-------------------------------------------
+
+    clock_synchro/clocksynchro_7clocks.worst_case_skew.induct
+        ADR-2125   off=unknown   on=unknown
+        this lane  off=unsat     on=unsat
+
+Both arms moved, and they moved the same way. So it is not attributable to the
+lever in either run: it is either the ambient 1-1.5 % flip rate these boxes
+carry at a 24 s budget on a file sitting near the boundary, or a change on `main`
+between the two branch bases (ADR-2125 branched at `5cb9553a6`; this lane merged
+`677c0192c`, which carries the NRA-CELL-EXACT merge among others). This lane does
+not say which, because it did not measure it -- and it does not need to, since a
+row that moves in BOTH arms cancels in the difference the A/B reports.
+
+WHAT THIS DOES AND DOES NOT LICENSE
+-----------------------------------
+
+It licenses reading the two lanes' numbers as one series: 119/120 across two
+runs is the harness, the envelope, the core pinning and the corpus all holding
+still. It is the control that makes "ADR-2125 measured -9.2 %, this lane
+measures X" a comparison rather than two anecdotes.
+
+It does NOT license carrying ADR-2125's mover classifications forward. A stable
+loss is a claim about a 3x-per-arm recheck on a specific binary, and this lane
+re-checks its own movers rather than inheriting them -- which is also why
+section 2's re-sizing of `uart-8.induction.cvc` was worth taking: ADR-2125's
+reading of that row was explicitly a hypothesis, and 119/120 agreement on
+verdicts says nothing about whether a hypothesis about BUILDS was right.

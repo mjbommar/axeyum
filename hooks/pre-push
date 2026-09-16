@@ -392,8 +392,10 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
     # block and the first cargo scope left a log ending in git's own
     # `failed to push some refs` -- three times in one day, two of them passed
     # by a bare retry. A silent exit is indistinguishable from a kill.
-    if ! "$@"; then
-      local rc=$?
+    local rc=0
+    "$@" || rc=$?
+    if [ "$rc" -ne 0 ]; then
+      # (`local rc=$?` would read `local`'s own status, always 0.)
       echo "pre-push: FAILED — ${label} (exit ${rc}, after $((SECONDS - start))s)" >&2
       return 1
     fi
@@ -861,6 +863,19 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #                              would register a suite that cannot fail for the
   #                              reason it exists. The armed run is the line after
   #                              this loop.
+  #   quant_session_arith_certificate
+  #                            — ADR-2130: every `Unsat` exit of
+  #                              `prove_quantified_unsat_via_egraph_impl` assigns an
+  #                              instance-set certificate first. A SOURCE invariant,
+  #                              not a behavioural fixture, and registered here
+  #                              deliberately: ADR-2124 repaired one such exit and
+  #                              MEASURED that nothing noticed the repair being
+  #                              removed — 9 tests of the whole
+  #                              `quant_instance_set_cert::` surface ran and all 9
+  #                              SURVIVED. Carries its own non-vacuity controls on
+  #                              the function body it read and on the exit count, so
+  #                              a rename or a shrunken body fails rather than
+  #                              quantifying over nothing.
   #   quant_ground_session_soundness
   #                            — ADR-2124: the ground-session lever's soundness-negative
   #                              fixtures over SATISFIABLE UFLIA queries at levels 0
@@ -871,6 +886,21 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #   quantifier_trigger_alternatives
   #                            — ADR-2113: the trigger-alternative lever's soundness-
   #                              negative fixtures over satisfiable queries at six caps.
+  #   quant_generation_ladder
+  #                            — ADR-2133: the generation ladder on the final
+  #                              refutation check, at levels 0 and 1. The lever is
+  #                              strictly ADDITIVE (every layer is a subset of the
+  #                              conjunction the full check already takes), so it has
+  #                              no `sat` path and the usual "a sat claimed too early"
+  #                              fixture has no analogue; the failure mode it really
+  #                              has is a ladder whose non-refutation SWALLOWS the
+  #                              full check, which is what the two `UNSAT_` fixtures
+  #                              are for — and those are simultaneously the positive
+  #                              controls that stop the two satisfiable fixtures
+  #                              passing against an engine that decides nothing.
+  #                              Layer PRECISION is pinned in `qinst_egraph`'s unit
+  #                              tests, where generations can be constructed exactly;
+  #                              mutation-checked at `quant-generation-ladder`.
   #   decline_detail_typed
   #                            — ADR-2104: every DeclineReason detail is a closed
   #                              enum with an exhaustive name(); this suite DRIVES
@@ -906,6 +936,19 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #                              because ADR-2000's soundness suite shipped
   #                              registered nowhere and `check-suite-gating.py`
   #                              caught it at the push.
+  #   lra_warm_screen_2132     - ADR-2132's builds-per-file screen for the warm
+  #                              simplex basis. Three arms of one lever in ONE
+  #                              process, because the property is that they
+  #                              AGREE on the verdict and the lever is memoised
+  #                              per process: three separate binaries could
+  #                              assert each arm only against a verdict written
+  #                              into their own source. Both mechanism halves are
+  #                              asserted from the counters, so neither test can
+  #                              pass by never opening the screen -- ADR-2125's
+  #                              own arm was INERT and only a mechanism probe
+  #                              said so. Registered here rather than left to the
+  #                              `--lib` sweep, which does not compile
+  #                              `tests/*.rs` at all.
   for suite in unknown_reason_coverage dt_uf_gate dt_capability_1935 \
                dt_constructor_arg_1942 dt_valued_result_1946 \
                datatype_solve_path quant_ladder_rung_refusal_declines \
@@ -918,7 +961,8 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
                lra_opaque_real_apps decline_detail_typed \
                quantifier_trigger_alternatives quantifier_positive_path \
                dt_nested_field_2128 quant_macro_inline_route quant_ground_session_soundness \
-               nra_clause_cert_2131; do
+               nra_clause_cert_2131 \
+               quant_session_arith_certificate quant_generation_ladder lra_warm_screen_2132; do
     gated_test "dispatch/reason: $suite" \
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
   done

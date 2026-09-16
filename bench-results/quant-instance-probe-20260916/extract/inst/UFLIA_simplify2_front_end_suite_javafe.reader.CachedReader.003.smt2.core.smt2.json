@@ -1,0 +1,14 @@
+{
+ "raw_count": 7,
+ "bodies": [
+  "(or (subtypes (typeof value_86.65) T_java.lang.Object) (not (subtypes (typeof value_86.65) T_javafe.ast.CompilationUnit)) (not (subtypes T_javafe.ast.CompilationUnit T_java.lang.Object)))",
+  "(or (not (subtypes T_javafe.ast.CompilationUnit T_java.lang.Object)) (= (= Smt.true (is value_86.65 T_javafe.ast.CompilationUnit)) (or (= value_86.65 null) (subtypes (typeof value_86.65) T_javafe.ast.CompilationUnit))))",
+  "(or (subtypes T_javafe.ast.CompilationUnit T_java.lang.Object) (not (subtypes T_javafe.ast.CompilationUnit T_javafe.ast.ASTNode)) (not (subtypes T_javafe.ast.ASTNode T_java.lang.Object)))",
+  "(or (not (subtypes T_java.lang.String T_java.lang.Object)) (= (= Smt.true (is RES_87.29_87.29 T_java.lang.String)) (or (= RES_87.29_87.29 null) (subtypes (typeof RES_87.29_87.29) T_java.lang.String))))",
+  "(or (= this null) (= (select1 keyType_8.16.25 (select1 cache_59.24 this)) T_java.lang.String) (not (= Smt.true (is this T_javafe.reader.CachedReader))))",
+  "(or (= this null) (not (= (select1 cache_59.24 this) null)) (not (= Smt.true (is this T_javafe.reader.CachedReader))))",
+  "(or (= this null) (= (select1 elementType_8.26.25 (select1 cache_59.24 this)) T_java.lang.Object) (not (= Smt.true (is this T_javafe.reader.CachedReader))))"
+ ],
+ "not_ground": [],
+ "unmatched": 0
+}

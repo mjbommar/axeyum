@@ -176,6 +176,7 @@ macro_rules! full_modules {
         mod qfufbv_alethe;
         mod qfuflia_alethe;
         mod qinst_egraph;
+        mod qinst_session_theory;
         mod quant_affine_growth_cert;
         mod quant_alethe;
         mod quant_bool_model_sat;
@@ -548,8 +549,8 @@ pub mod certificates {
     /// Quantifier certificate families and their independent checkers.
     pub mod quantifiers {
         pub use crate::qinst_egraph::{
-            GroundBudget, GroundBudgetGuard, GroundSessionLevelGuard, InstantiationLoopExit,
-            PositivePathLevelGuard, QuantifierClausePropagationCertificate,
+            GenerationLadderGuard, GroundBudget, GroundBudgetGuard, GroundSessionLevelGuard,
+            InstantiationLoopExit, PositivePathLevelGuard, QuantifierClausePropagationCertificate,
             QuantifierFalseSiblingJustification, QuantifierGroundDerivation,
             QuantifierInstanceCertificate, QuantifierPositiveReplacementCertificate,
             RelevanceCriterion, RelevanceFunnel, RelevancePolicy, RelevancePolicyGuard,
@@ -681,6 +682,12 @@ pub mod theories {
     pub mod arithmetic {
         pub use crate::dpll_lia::{check_with_arith_dpll, check_with_lia_dpll};
         pub use crate::dpll_t::check_with_lra_dpll;
+        // ADR-2132. Exported so the transition fixture can run all three arms of
+        // `AXEYUM_LRA_WARM_CUBE` in ONE process: the lever is memoised per
+        // process, so a fixture that read the environment could assert each arm
+        // only against a verdict written into its own source, never against the
+        // other arms. The production caller is `check_with_lra_dpll_within`.
+        pub use crate::dpll_t::{WarmCubeMode, check_with_lra_dpll_within_mode};
         pub use crate::lia::{DEFAULT_INT_WIDTH, check_with_int_blasting};
         pub use crate::lia_online::{LiaTheory, check_qf_lia_online};
         pub use crate::lia_theory::check_qf_lia_online_cdclt;
@@ -950,8 +957,17 @@ pub use layers::{
     last_bv_backend_counters, last_bv_layer_stats, live_bv_layer_stats,
 };
 pub use lazy_smt_counters::{
-    LazySmtCounters, LazySmtCountersGuard, LazySmtCountersMirror, LazySmtLoop, LazySmtReading,
-    last_lazy_smt_counters, live_lazy_smt_counters,
+    LazySmtCounters,
+    LazySmtCountersGuard,
+    LazySmtCountersMirror,
+    LazySmtLoop,
+    LazySmtReading,
+    // ADR-2132: the transition fixture asserts on the LABEL this renders, so the
+    // type has to be nameable outside the crate. `warm_cube_build` has always
+    // been a public field of a public struct; only its type was unreachable.
+    WarmCubeBuild,
+    last_lazy_smt_counters,
+    live_lazy_smt_counters,
 };
 pub use live_instruments::{
     LiveInstruments, LiveInstrumentsGuard, LiveSample, Sampled,
@@ -1146,6 +1162,8 @@ macro_rules! full_exports {
         #[doc(hidden)]
         pub use dpll_t::{LemmaLiteral, LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat};
         #[doc(hidden)]
+        pub use dpll_t::{WarmCubeMode, check_with_lra_dpll_within_mode};
+        #[doc(hidden)]
         pub use enums::{EnumError, EnumSort, EnumVar};
         #[doc(hidden)]
         pub use euf::{AckermannUnsatCertificate, certify_ackermann_unsat};
@@ -1321,8 +1339,8 @@ macro_rules! full_exports {
         pub use qfuflia_alethe::prove_qf_uflia_unsat_alethe;
         #[doc(hidden)]
         pub use qinst_egraph::{
-            GroundBudget, GroundBudgetGuard, GroundSessionLevelGuard, InstantiationLoopExit,
-            PositivePathLevelGuard, QuantifierClausePropagationCertificate,
+            GenerationLadderGuard, GroundBudget, GroundBudgetGuard, GroundSessionLevelGuard,
+            InstantiationLoopExit, PositivePathLevelGuard, QuantifierClausePropagationCertificate,
             QuantifierFalseSiblingJustification, QuantifierGroundDerivation,
             QuantifierInstanceCertificate, QuantifierPositiveReplacementCertificate,
             RelevanceCriterion, RelevanceFunnel, RelevancePolicy, RelevancePolicyGuard,

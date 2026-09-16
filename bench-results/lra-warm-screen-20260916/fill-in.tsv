@@ -1,0 +1,8 @@
+file	build	checks	entry_nnz	fill_peak	atoms	lra_rounds
+QF_LRA/LassoRanker/CooperatingT2/firewire.t2.c_Iteration1_Lasso_4-lexTemplate.smt2						
+QF_LRA/LassoRanker/CooperatingT2/firewire.t2.c_Iteration3_Loop_4-pieceTemplate.smt2	built	116	65133	65852	22258	117
+QF_LRA/LassoRanker/SV-COMP/Ben-Amram-2010LMCS-Ex2.3_true-termination.c_Iteration1_Lasso_3-pieceTemplate.smt2	built	69	96154	98960	28245	70
+QF_LRA/LassoRanker/Ultimate/Gcd_havoc.bpl_Iteration1_Lasso_6-phaseTemplate.smt2	built	583	27184	32104	6974	584
+QF_LRA/sc/sc-19.base.cvc.smt2	built	1213	2288	28093	1322	1214
+QF_LRA/sc/sc-37.base.cvc.smt2	built	921	4448	95323	2564	922
+QF_LRA/sc/sc-39.base.cvc.smt2	built	815	4688	98572	2702	816

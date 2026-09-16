@@ -1,0 +1,87 @@
+ADR-2132: THE FUZZ RUNNER REPORTED A FAILING SUITE AS AN INERT ONE
+===================================================================
+
+`run-fuzzes.sh`'s first run printed this, and both halves of it are wrong:
+
+    on   difference_logic_differential_fuzz  rc=101 tests=0 test result: FAILED. 3 passed; 1 failed; ... 24.98s
+    on   difference_logic_differential_fuzz  ZERO TESTS -- the suite compiled to nothing
+
+The raw data is kept at `fuzz-arms-run1-FAILED.txt`.
+
+1. THE PARSER'S DEFECT
+   --------------------
+   It read the count with `sed -n 's/.*ok\. \([0-9]*\) passed.*/\1/p'` --
+   anchored on `ok.`. A suite reporting `FAILED. 3 passed; 1 failed` matched
+   nothing, so `n` defaulted to 0, and the zero-count branch then announced that
+   the suite had "compiled to nothing".
+
+   **An inert suite and a failing suite have opposite remedies**: one needs a
+   feature flag, the other needs a fix. A gate that confuses them sends the
+   reader to the wrong place, and this one did.
+
+   Fixed to parse `\([0-9][0-9]*\) passed` unanchored, to parse the failed count
+   separately, and to branch THREE ways -- NO RESULT LINE / FAILED / ZERO TESTS
+   -- rather than two. Verified against all three shapes before use:
+
+       passed=4 failed=0  <- ok. 4 passed; 0 failed; ...
+       passed=3 failed=1  <- FAILED. 3 passed; 1 failed; ...
+       passed=0 failed=0  <- ok. 0 passed; 0 failed; ...
+
+2. THE SECOND DEFECT: THE EVIDENCE WAS DELETED
+   --------------------------------------------
+   The runner did `rm -f "$log"` unconditionally, so the ONE failing run of the
+   lane left no message. This is precisely the defect [ADR-2125] section 5.8 had
+   to fix in its own ratchet runner, which "captured the output to a temp file
+   and deleted it, keeping only the count" -- and this lane reintroduced it in a
+   different script. Failing logs are now copied to `fuzz-failures/`.
+
+3. WHAT THE FAILURE WAS, BOUNDED FROM THE SOURCE
+   ----------------------------------------------
+   It is **not** a soundness disagreement, and that is provable from the suite
+   rather than inferred from a re-run. Every verdict comparison in the file
+   routes through one function:
+
+       fn adjudicate(inst: &Instance, ax: Ax, z3: Ax) {
+           match (ax, z3) {
+               (Ax::Sat, Ax::Unsat) | (Ax::Unsat, Ax::Sat) => { panic!("DISAGREEMENT: ...") }
+               _ => {}
+           }
+       }
+
+   It panics ONLY on a genuine sat/unsat contradiction; every pairing involving
+   `Unknown` falls through. And our side's timeout produces exactly `Unknown`:
+
+       rx.recv_timeout(AXEYUM_TIMEOUT).unwrap_or(AxRun { verdict: Ax::Unknown, .. })
+       const AXEYUM_TIMEOUT: Duration = Duration::from_secs(5);
+
+   So a slow run cannot manufacture a disagreement. What it CAN fail is one of
+   the two COVERAGE FLOORS at the end of the sweep, both of which count
+   `Unknown` against themselves:
+
+       assert!(dl_decided >= INSTANCES / 4, "... dispatch regression?");
+       assert!(agree      >= INSTANCES / 2, "... (axeyum-unknown {ax_unknown})");
+
+   The timing corroborates it: the failing run took **24.98 s** against **1.92 s**
+   (`off`), **1.71 s** (`screened`) and **2.11 s** on an isolated re-run of the
+   same arm -- a 13x slowdown, on a box measured at load 135 twenty minutes
+   earlier. Many instances hitting a 5 s timeout is the shape that produces it.
+
+   **WHAT IS NOT CLAIMED:** which of the two floors fired. The message is gone,
+   because the runner deleted it. That is the cost of defect 2 and it is stated
+   rather than papered over with a re-run that happened to pass. The re-run is
+   evidence about the tree; it is not evidence about what the failing assertion
+   said.
+
+4. THE ARM IS NOT SUSPICIOUS, AND SAYING WHY IS NOT THE SAME AS MEASURING IT
+   ---------------------------------------------------------------------------
+   `AXEYUM_LRA_WARM_CUBE` is read once per process by the LINEAR offline loop's
+   decider. `difference_logic_differential_fuzz` exercises `dl-online`, a
+   different route that the lever is not on -- which is why the same suite is
+   green in the `off` and `screened` arms of the same run and green on an
+   isolated re-run of the `on` arm. A load-shaped failure landing in the `on`
+   arm is a coincidence of scheduling.
+
+   That is an argument, not a measurement, so the suite is still run in all
+   three arms and was re-run in all three: [ADR-2055]'s rule is that a path
+   defaulting `off` is exercised by no gate, and "the lever is not on this
+   route" is exactly the kind of reasoning that stops being true quietly.

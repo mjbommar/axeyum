@@ -1,0 +1,234 @@
+ADR-2132: THE THREE-ARM A/B
+============================
+
+One binary, `axeyum.v1` (sha256 91675258916e4aeb), three values of
+`AXEYUM_LRA_WARM_CUBE`. Arms run BACK TO BACK on the same file on the same
+pinned core with the order ROTATING three ways per file, 24 s / 8 GiB, s5
+physical core pairs `5,13` and `6,14`, nothing else on the box.
+
+`ab3-run.sh --mechanism-check` was run before any timing and is the guard
+ADR-2125 needed twice:
+
+    mechanism-check: off=0/928 on=996/built screened=953/built
+    mechanism-check OK: all three arms distinguishable on this file
+
+A = `off`, B = `on` (ADR-2125's arm, the reference), C = `screened`.
+
+QF_LRA PINNED 200 -- COMPLETE
+-----------------------------
+
+    comparison         rows  off  arm  net  gain  LOSS  FLIP  rc!=0  cmp  DIS
+    off vs screened     200  107  107   +0     0     0     0      0  194    0
+    off vs on           200  107  107   +0     1     1     0      0  194    0
+
+      raw GAIN (off->on)   sc/sc-7.base.cvc
+      raw LOSS (off->on)   latendresse/ecoliMILPglycerolYices3-50000
+
+**THE SCREEN REMOVES ADR-2125's PINNED STABLE LOSS.** That row is 28 builds --
+a handful of enormous solves -- and the screen refuses it at any threshold above
+42. The `on` arm still takes it, on this binary, on this run: ADR-2125's result
+is reproduced rather than inherited.
+
+`off` decides 107 of 200, which is the board's standing `QF_LRA` figure to the
+row.
+
+QF_LRA HELD-OUT 200 -- COMPLETE
+--------------------------------
+
+    comparison         rows  off  arm  net  gain  LOSS  FLIP  rc!=0  cmp  DIS
+    off vs screened     200   93   93   +0     1     1     0      0  174    0
+    off vs on           200   93   92   -1     0     1     0      0  173    0
+
+      raw GAIN (off->screened)   sc/sc-18.induction.cvc
+      raw LOSS (off->screened)   uart/uart-8.induction.cvc
+      raw LOSS (off->on)         uart/uart-8.induction.cvc
+
+**THE SCREEN DOES NOT REMOVE THE HELD-OUT LOSS, AND SECTION 2 SAID SO BEFORE
+THE CODE EXISTED.** `uart-8.induction.cvc` is 1,598 builds at 1.04 ms each --
+the many-small shape the lever WINS on -- so the screen ADMITS it (1,872 cubes
+answered warm) and the loss survives unchanged. ADR-2125 offered the
+builds-per-file reading for that row as an explicit hypothesis; this is the
+hypothesis being refuted by the arm built on it.
+
+The screen also picks up a raw GAIN the unscreened arm does not
+(`sc-18.induction.cvc`, 1,685 builds, `off` and `on` both `unknown`, `screened`
+`sat`). A raw mover is not a finding and it goes to the 3x recheck like the
+rest.
+
+`off` decides 93 of 200 on this draw.
+
+WHAT THE THREE MOVERS ADR-2125 PUBLISHED DID HERE
+--------------------------------------------------
+
+         off       on  screened  builds  scr_cubes   what
+         sat  unknown       sat      28          0   ADR-2125 pinned STABLE-LOSS
+                                                     latendresse/ecoliMILPglycerolYices3-50000
+         sat      sat       sat   1,815      1,106   ADR-2125 held STABLE-GAIN
+                                                     sc/sc-14.induction.cvc
+         sat  unknown   unknown   1,598      1,872   ADR-2125 held STABLE-LOSS
+                                                     uart/uart-8.induction.cvc
+
+  * The PINNED LOSS is removed: 0 cubes answered warm, because 28 builds is
+    below the threshold. The screen did exactly the job it was built for.
+  * The HELD-OUT LOSS is not removed: 1,872 cubes answered warm, because 1,598
+    builds is far above it.
+  * **ADR-2125's HELD-OUT GAIN is not a gain in this run at all** -- the `off`
+    arm decides it (`sat` in all three arms). That is not a contradiction of
+    ADR-2125: it is a boundary file that ADR-2125's `off` arm failed 3/3 at 24 s
+    and this lane's `off` arm decides, and §6.6's control shows one such row in
+    120 moving in both arms between the two runs. It does mean the gain that
+    motivated the screen is not present in this population to be kept, which is
+    worth saying plainly rather than leaving for a reader to notice.
+
+MECHANISM, HELD-OUT
+-------------------
+
+    arm         rows `built`   cubes answered   cold tableaux left   cold_restarts
+    on                    79           59,320                7,869               0
+    screened              66           53,516               11,664               0
+    off                    -                -               58,874               -
+
+The screen refused 13 of the 79 rows `on` kept a basis on, and opened on 0 that
+`on` did not. `cold_restarts = 0` in both arms.
+
+    population          rows all 3 decide   off          on           screened
+    QF_LRA held-out                    92   97,533 ms    85,406 ms    85,710 ms
+                                                 ---      -12.4 %      -12.1 %
+
+A DEFECT IN THIS LANE'S OWN LAUNCH, AND WHY THE SHARD IS STILL TRUSTED
+-----------------------------------------------------------------------
+
+The held-out shard's log is EMPTY. Its launch redirected stdout twice --
+`> LRAheld.log 2>&1 ... > /dev/null 2>&1` -- and the last redirection wins, so
+every line the runner printed, including its closing `AB3-DONE`, went to
+`/dev/null`. The chain waiting on that marker would have waited out its six-hour
+timeout on a shard that had finished.
+
+The marker was NOT written by hand to satisfy the guard. A guard satisfied by
+hand is not a guard. The shard's completeness was established from the artifact
+instead, which is a stronger check than the marker anyway -- the marker only says
+the loop exited:
+
+    held TSV data rows:                                 200
+    list rows:                                          200
+    rows with all three verdicts non-empty:             200
+    distinct files in TSV:                              200
+    files in the list but NOT in the TSV:                 0
+
+THE MECHANISM, AND THE PREDICTION IT CONFIRMS
+---------------------------------------------
+
+    arm         rows `built`   cubes answered   cold tableaux left   cold_restarts
+    on                    71           38,344                    0               0
+    screened              51           32,742                3,871               0
+    off                    -                -               33,158               -
+
+  * `cold_restarts = 0` in both treatment arms. That is the tripwire: a warm
+    basis quietly being rebuilt gives identical verdicts, identical churn counts,
+    and differs only in the clock, so nothing else here could see it.
+  * The screen REFUSED 20 of the 71 rows `on` kept a basis on, and opened on
+    **0** that `on` did not. The second number is the one that would indicate a
+    bug; it is zero.
+  * 51 < 71, both nonzero: criterion 5 is met by construction of the run rather
+    than by assertion.
+
+**THE ADMITTED SET WAS PREDICTED EXACTLY, NOT JUST ITS SIZE.** Section 1.4
+derived, from ADR-2125's committed sizing -- a different lane, a different
+binary, a different day -- that 51 of the pinned 200 sit at or above 64 builds
+and that the screen would admit those. Measured:
+
+    predicted from ADR-2125's sizing (builds >= 64):   51
+    screened arm built a decider on:                   51
+    screened arm answered >=1 cube warm on:            51
+      predicted but NOT built:                          0
+      built but NOT predicted:                          0
+
+Same count and the SAME SET. That is the sizing axis being reproducible enough
+to route on, which is a stronger statement than the histogram alone supports and
+is the reason the threshold could be chosen before the code existed.
+
+WHAT IT COSTS
+-------------
+
+    population        rows all 3 decide   off        on          screened
+    QF_LRA pinned                   106   61,555 ms  51,727 ms   53,003 ms
+                                               ---    -16.0 %     -13.9 %
+
+The screen keeps about seven eighths of the unscreened arm's speed while
+refusing 20 of its 71 rows -- the rows it refuses are the cheap ones, which is
+what a threshold at 64 builds selects for.
+
+NOTE ON THE `warm_cube_build` COLUMN IN THIS DATA
+--------------------------------------------------
+`axeyum.v1` predates the `below-screen` token, so in these captures a screened
+row that never crossed the threshold renders `warm_cube_build=off` -- the same
+token a DISABLED lever renders. That defect is fixed in the tree but not in the
+measured binary, and swapping a binary mid-run is the one thing an A/B cannot
+survive. Every analysis here therefore reads the screen's refusals as
+`c_warm_checks = 0` with a nonzero `a_cold_builds`, which is unambiguous in v1's
+own data.
+
+THE MOVER RECHECK
+=================
+
+Four movers across both complete draws, DERIVED from the finished TSVs for both
+comparisons rather than typed from what a partial run showed. Each re-run 3x per
+arm on one pinned core pair, arms alternating within the passes, same envelope.
+
+    row                                      draw      off vs on          off vs screened
+    latendresse/ecoliMILPglycerolYices3-...  pinned    STABLE-LOSS        BOTH-DECIDE
+    sc/sc-7.base.cvc                         pinned    STABLE-GAIN        NEITHER-DECIDES
+    sc/sc-18.induction.cvc                   held-out  NEITHER-DECIDES    STABLE-GAIN
+    uart/uart-8.induction.cvc                held-out  STABLE-LOSS        STABLE-LOSS
+
+                    pinned              held-out            total
+    on              1 gain, 1 LOSS      0 gains, 1 LOSS     1 gain, 2 LOSSES
+    screened        0 gains, 0 LOSSES   1 gain,  1 LOSS     1 gain, 1 LOSS
+
+`on` REPRODUCES ADR-2125's HEADLINE EXACTLY -- 1 stable gain against 2 stable
+losses -- on a new binary, a new branch base, and a COMPLETE 400-row population
+rather than the two half-draws ADR-2125 could finish. The result this lane set
+out to improve on is not an artefact of its partial population.
+
+The screen is strictly better on both draws, and the trade is legible:
+
+  * PINNED, it removes the stable loss (28 builds, below the threshold, never
+    keeps a basis) and GIVES UP `on`'s stable gain on `sc-7.base.cvc`. That row
+    is 1,695 builds, so the screen ADMITS it, and the 64 rounds it spends cold
+    first are enough to lose the decision inside 24 s. That is the screen's own
+    cost arriving as a forgone gain -- the clearest single price the threshold
+    charges.
+  * HELD-OUT, it buys a stable gain `on` does not get (`sc-18.induction.cvc`,
+    1,685 builds) and takes the same stable loss.
+
+It is still ONE STABLE LOSS on the held-out draw, so criterion 3 fails and the
+lever ships `off`.
+
+AN INCIDENT IN THIS LANE'S OWN ORCHESTRATION
+=============================================
+
+The exposure shard 01 ran TWICE for about a minute, both instances on core pair
+`6,14`.
+
+What happened: a watcher launched it over ssh, and the ssh call returned **exit
+124**. I read that as "the launch did not happen" and launched it again. It
+means nothing of the kind -- 124 is the local `timeout` wrapper giving up on a
+connection the remote command is holding open, and it is a statement about the
+WRAPPER, not about the work. The second instance found `ab3.QF_LIA.01.tsv`
+already non-empty, correctly SKIPPED it, and started `QF_UFLRA.01` alongside the
+first instance's `QF_LIA.01` -- two solver jobs on one physical core pair, which
+is exactly the contention the pinning exists to prevent.
+
+Both shard-01 instances were stopped by PID and **every row either had written
+was discarded** (`ab3.QF_LIA.01.tsv`, `ab3.QF_UFLRA.01.tsv` and both capture
+directories), then shard 01 was relaunched once.
+
+Shard 00's seven rows were KEPT, and the reason is not convenience. It was on a
+different physical pair, and its two arms run back to back on the same file on
+the same core -- so ambient load, including a transient third job elsewhere on
+the box, cancels in the difference. That is the property interleaving exists for
+and the same argument ADR-2125 made about a peer lane holding cores 3 and 11
+throughout its run.
+
+The rule this cost: after any backgrounded launch, VERIFY the instance count on
+the target rather than reading the launcher's exit status.

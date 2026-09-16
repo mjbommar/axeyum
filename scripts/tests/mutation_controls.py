@@ -2993,6 +2993,87 @@ SUITES["lra-implied-bound-propagation"] = (
 # claim about a population and not about a suite of one.
 # --------------------------------------------------------------------------
 
+# --------------------------------------------------------------------------
+# `lra-warm-screen` -- ADR-2132 puts a SCREEN in front of ADR-2125's warm basis:
+# a file keeps a basis only once it has built `MIN_WARM_CUBE_SCREEN_BUILDS`
+# from-scratch tableaux. The screen is pure ROUTING -- it can change which engine
+# answers a cube and must never change the answer -- so the defect it can carry
+# is not one of the reconciliation defects `lra-warm-cube-basis` watches.
+#
+# A screen that admits at ZERO builds is `on` wearing the name `screened`.
+# Nothing about the verdicts changes, which is precisely why no verdict
+# comparison can see it: the whole lane would be a re-run of ADR-2125 reported
+# as a new measurement. TWO fixtures see it and both are expected to die --
+# one asserts the screen stayed SHUT below the threshold, the other that
+# `screened` answers strictly FEWER cubes than `on`. They observe one defect
+# from two sides and their kill sets are NESTED rather than disjoint; that is
+# said here rather than reported as a coverage number.
+#
+# Filtered to the ADR-2132 test BINARY, because both fixtures live there: the
+# screen's property is that three arms of one lever agree, and asserting that
+# needs all three in one process.
+# --------------------------------------------------------------------------
+
+SUITES["lra-warm-screen"] = (
+    "crates/axeyum-solver/src/dpll_t.rs",
+    Cargo(
+        (
+            "--release",
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--test",
+            "lra_warm_screen_2132",
+        ),
+        "lra-warm-screen",
+    ),
+    [
+        (
+            "the builds threshold the screen opens at",
+            "                < MIN_WARM_CUBE_SCREEN_BUILDS",
+            "                < 0",
+        ),
+    ],
+)
+
+# --------------------------------------------------------------------------
+# `lra-screen-counter` -- the screen reads an ALWAYS-ON count of from-scratch
+# tableaux rather than `LazySmtCounters::simplex_cold_builds`, which is armed by
+# `--trace` alone.
+#
+# Moving the bump inside the armed branch is invisible to every verdict and to
+# every TRACED measurement; it shows up only on a run with no instrumentation,
+# which is every shipped run. A screen that counted only under `--trace` would
+# route one way in the A/B and the other way in production, and the A/B would be
+# a measurement of a route nobody ships.
+#
+# The fixture that sees it asserts the UNARMED half FIRST and separately, which
+# is why exactly this mutation has somewhere to land.
+# --------------------------------------------------------------------------
+
+SUITES["lra-screen-counter"] = (
+    "crates/axeyum-solver/src/simplex.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            "dpll_t::tests",
+        ),
+        "lra-screen-counter",
+    ),
+    [
+        (
+            "the screen counter's bump on the UNTRACED path",
+            "        bump_cold_builds(&probe);\n        return outcome;",
+            "        return outcome;",
+        ),
+    ],
+)
+
 SUITES["lra-warm-cube-basis"] = (
     "crates/axeyum-solver/src/lra_online.rs",
     Cargo(
@@ -11906,6 +11987,112 @@ SUITES["qinst-ground-session"] = (
 )
 
 
+# ADR-2130 -- the quantifier session HOSTS the arithmetic theory.
+#
+# Every guard below is aimed at a WRONG ANSWER or at an inert lever, not at a
+# stylistic preference. The arithmetic sub-theory is the first thing in this
+# session that can REFUTE, so it is the first thing that can refute something
+# true.
+SUITES["qinst-session-arith"] = (
+    "crates/axeyum-solver/src/qinst_session_theory.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--lib",
+            "qinst_session_theory",
+        ),
+        "qinst-session-arith",
+    ),
+    [
+        (
+            # THE SOUNDNESS GUARD. An arithmetic bound asserted under a decision
+            # must be gone once that decision is backjumped over. There is no
+            # bound trail to unwind -- `IntSimplexEngine::sync` re-derives the
+            # imposed bounds from the live assignment set on every check -- so
+            # the retraction IS this forwarded `pop` unassigning the atom.
+            # Without it a branch the search abandoned keeps constraining the
+            # theory and the next check refutes a set nobody asserted.
+            "pop forwards to the arithmetic sub-theory, retracting its bounds",
+            "    fn pop(&mut self) {\n        self.euf.pop();\n        if let Some(lia) = self.lia.as_mut() {\n            lia.pop();\n        }\n    }",
+            "    fn pop(&mut self) {\n        self.euf.pop();\n    }",
+        ),
+        (
+            # Drop the arithmetic half of `assert`. The theory stops refuting
+            # through arithmetic entirely -- level 1's behaviour wearing level
+            # 2's name. Not a wrong answer, but an INERT lever, which is the
+            # failure mode the engagement probe exists to catch and which a
+            # verdict-only A/B would have reported as "hosting does not help".
+            "assert reaches the arithmetic sub-theory at all",
+            "            lia.assert(atom, value)?;",
+            "            let _ = (lia, atom, value);",
+        ),
+        (
+            # Skip the root-assignment replay on a rebuild. The rebuilt theory
+            # forgets every root-level bound, so a refutation available before
+            # an instance landed is silently unavailable after it.
+            "a rebuild replays the root assignments into the replacement",
+            "        for &(atom, value) in &root_assignments {",
+            "        for &(atom, value) in &root_assignments[..0] {",
+        ),
+        (
+            # Host the equality atoms too. An integer equality already reaches
+            # the theory as an EUF atom, so pulling it out of the abstraction
+            # here is a SECOND route to the same atom.
+            "only order atoms are pulled back from the abstraction",
+            "            op: Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe,",
+            "            op: Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe | Op::Eq,",
+        ),
+        (
+            # Report the driver-registered atoms through `take_new_atoms`. The
+            # core then appends a SECOND SAT variable for an atom that already
+            # has one and every later atom index is off by one -- a silent
+            # misattribution of asserted literals, not a crash.
+            "take_new_atoms stays zero on the driver-registered route",
+            "    fn take_new_atoms(&mut self) -> usize {\n        0\n    }",
+            "    fn take_new_atoms(&mut self) -> usize {\n        self.lia_pending\n    }",
+        ),
+    ],
+)
+
+
+# ADR-2130 -- the certificate ADR-2124 repaired and left covered by NOTHING.
+#
+# ADR-2124 section 8 measured its own gap: it removed this exact collection and
+# ran the whole `quant_instance_set_cert::` surface against the mutant, and 9
+# tests ran and SURVIVED. So the repair's presence in a diff was the only thing
+# keeping it there.
+#
+# `quant_session_arith_certificate` is what notices now. It is a SOURCE
+# invariant, not a behavioural fixture, and ADR-2130 section 8 says so plainly:
+# reaching `CandidateFixpointStep::Refuted` needs the candidate-equality
+# fixpoint to produce a session `Unsat` on a query small enough to be a fixture,
+# and neither lane found one.
+SUITES["qinst-refuted-certificate"] = (
+    "crates/axeyum-solver/src/qinst_egraph.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--test",
+            "quant_session_arith_certificate",
+        ),
+        "qinst-refuted-certificate",
+    ),
+    [
+        (
+            "the fixpoint refutation exit collects an instance-set certificate",
+            "                    // which is why the gap had to close with it.\n                    *certificate =\n                        collect_ground_derivations(arena, anchor, &ground, &ground_derivations);",
+            "                    // which is why the gap had to close with it.",
+        ),
+    ],
+)
+
+
 # ADR-2124, the mutation that SURVIVED and what its survival measured.
 #
 # `add_checked_batch`'s `unwind_to_root()` was expected to be the stale-clause
@@ -11966,6 +12153,49 @@ SUITES["qinst-session-refutation-certificate"] = (
             "a refutation reached through the retained session still carries its instance set",
             "                    // which is why the gap had to close with it.\n                    *certificate =\n                        collect_ground_derivations(arena, anchor, &ground, &ground_derivations);\n                    return Ok(CheckResult::Unsat);",
             "                    // which is why the gap had to close with it.\n                    return Ok(CheckResult::Unsat);",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `quant-generation-ladder` -- ADR-2133's generation ladder on the quantifier
+# loop's final refutation check.
+#
+# The lever is strictly additive: every layer is a SUBSET of the conjunction
+# the unchanged full check already takes, so a layer's `unsat` refutes the
+# whole set and a layer's non-`unsat` is discarded rather than believed. There
+# is therefore no `sat` path to claim a wrong verdict on, and the brief's
+# suggested soundness-negative -- "a `sat` claimed before the lazy queue
+# drains" -- has no analogue. The failure mode this lever really has is the
+# first mutation below: a ladder that refuses to fall through swallows the full
+# check and turns an `unsat` into an `unknown`.
+#
+# The second mutation is on the generation bookkeeping the ladder rests on:
+# a layer that admits terms ABOVE its own generation is still sound (it is all
+# still a subset of `ground`) but destroys the ladder's reason to exist, and
+# nothing else in the suite would notice.
+# --------------------------------------------------------------------------
+
+SUITES["quant-generation-ladder"] = (
+    "crates/axeyum-solver/src/qinst_egraph.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "generation_ladder"),
+        "quant-generation-ladder",
+    ),
+    [
+        (
+            "a ladder that refutes nothing must FALL THROUGH to the full check",
+            "    Ok(None)\n}",
+            "    Ok(Some(CheckResult::Unknown(UnknownReason {\n"
+            "        kind: UnknownKind::Incomplete,\n"
+            "        detail: String::new(),\n"
+            "    })))\n}",
+        ),
+        (
+            "a layer admits only terms at or below its OWN generation",
+            "            .filter(|&term| generations.generation(term) <= layer)",
+            "            .filter(|&term| generations.generation(term) <= layer + 1)",
         ),
     ],
 )

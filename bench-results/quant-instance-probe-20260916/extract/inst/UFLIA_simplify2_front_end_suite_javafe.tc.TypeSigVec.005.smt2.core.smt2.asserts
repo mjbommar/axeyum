@@ -1,0 +1,5 @@
+(assert (or (= RES_122.21_122.21 null) (not (= (select1 elements_61.36 RES_122.21_122.21) null))))
+(assert (= (elemtype (array T_javafe.tc.TypeSig)) T_javafe.tc.TypeSig))
+(assert (or (= RES_122.21_122.21 null) (= (typeof (select1 elements_61.36 RES_122.21_122.21)) (array T_javafe.tc.TypeSig)) (not (= Smt.true (is RES_122.21_122.21 T_javafe.tc.TypeSigVec)))))
+(assert (= (select1 (store1 (asField count_67.33 T_int) RES_122.21_122.21 (select1 elementCount_11.90.35 vec_120.41)) RES_122.21_122.21) (select1 elementCount_11.90.35 vec_120.41)))
+(assert (or (= vec_120.41 null) (>= (select1 elementCount_11.90.35 vec_120.41) 0) (not (= Smt.true (is vec_120.41 T_java.util.Vector)))))

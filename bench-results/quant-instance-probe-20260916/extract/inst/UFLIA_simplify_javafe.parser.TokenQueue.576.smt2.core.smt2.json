@@ -1,0 +1,8 @@
+{
+ "raw_count": 3,
+ "bodies": [
+  "(or (= this null) (= true_term (nonnullelements (S_select toks_20_18 this) elems)) (not (= true_term (is this T_javafe_parser_TokenQueue))))"
+ ],
+ "not_ground": [],
+ "unmatched": 2
+}

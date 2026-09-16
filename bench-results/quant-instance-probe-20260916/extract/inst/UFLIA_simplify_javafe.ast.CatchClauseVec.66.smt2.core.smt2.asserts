@@ -1,0 +1,5 @@
+(assert (= (S_select (S_store (asField owner_4_35_28 T_java_lang_Object) (S_select elements_92_6 RES_91_36_91_36) RES_91_36_91_36) (S_select elements_92_6 RES_91_36_91_36)) RES_91_36_91_36))
+(assert (or (= true_term (isAllocated (S_select elements_92_6 RES_91_36_91_36) after_91_36_91_36)) (= (S_select owner_4_35_28 tmp0_new_CatchClause___92_17) null) (not (= true_term (isAllocated (S_select elements_92_6 RES_91_36_91_36) alloc_1_)))))
+(assert (or (= (S_select elements_92_6 RES_91_36_91_36) RES_91_36_91_36) (= (S_select (S_store (asField owner_4_35_28 T_java_lang_Object) (S_select elements_92_6 RES_91_36_91_36) RES_91_36_91_36) RES_91_36_91_36) (S_select (asField owner_4_35_28 T_java_lang_Object) RES_91_36_91_36))))
+(assert (= (S_select (S_store (S_store count_67_33 RES_91_36_91_36 0) RES_91_36_91_36 0) RES_91_36_91_36) 0))
+(assert (= (S_select (S_store (S_store elements_61_40 RES_91_36_91_36 elements_zero) RES_91_36_91_36 tmp0_new_CatchClause___92_17) RES_91_36_91_36) tmp0_new_CatchClause___92_17))

@@ -1,0 +1,54 @@
+core	ours_verdict	ground	dump_reason	admitted	gen0	gen1	gen2plus	ours_maxgen	flood_slices	eager_kept	deep_seen	rej_flood	rej_nocontext	rej_ceiling	z3_maxgen	z3_qinst	proof_qinst
+UFLIA_boogie_AdvancedTypes_InternalSubClass..ctor-orderStrength_1.smt2.core.smt2.txt	unknown	3665	SHAPE	1772	1893	57	1715	3	195	0	723	0	105051	0	2	78	11
+UFLIA_boogie_Arrays_Q3-noinfer.smt2.core.smt2.txt	unsat			0	0	0	0					0	0	0	1	3	2
+UFLIA_boogie_AssignToRepField_AssignToRepField.N.smt2.core.smt2.txt	unknown	1330	timeout-mid-round	102	1228	44	58	2				0	0	0	3	442	31
+UFLIA_boogie_BasicMethodology_SubClass..ctor.smt2.core.smt2.txt	unknown	2404	timeout-mid-round	183	2221	87	96	3				0	0	0	10	7259	292
+UFLIA_boogie_Cast_Cast.R_System.Object_System.Int32.smt2.core.smt2.txt	unknown	34	timeout-mid-round	32	2	32	0	1				0	0	0	1	4	3
+UFLIA_boogie_Chunker11c_Chunker.SpecSharp.CheckInvariant_System.Boolean.smt2.core.smt2.txt	unknown	1232	SHAPE	1229	3	1017	212	4	0	0	0	0	149790	0	1	3	2
+UFLIA_boogie_DefaultLoopInv0_A.M-modifiesOnLoop-noinfer.smt2.core.smt2.txt	unknown	1086	timeout-mid-round	0	1086	0	0	0	135	7002	1488	0	69257	0	7	1690	96
+UFLIA_boogie_ExposeVersion_D..ctor-level_2.smt2.core.smt2.txt	unknown	2828	timeout-mid-round	123	2705	18	105	2				0	0	0	3	117	14
+UFLIA_boogie_Interval_Cell.Shift_System.Int32.smt2.core.smt2.txt	unknown	1451	CLOCK	18	1433	18	0	1	171	4510	1381	0	14550	0	4	462	38
+UFLIA_boogie_Spouse_Person..ctor.smt2.core.smt2.txt	unknown	3834	SHAPE	2058	1776	120	1938	3	229	3981	968	0	104353	0	2	130	13
+UFLIA_boogie_loopinv1_LoopInv1.Test1a_F_notnull-infer_eh.smt2.core.smt2.txt	unknown	1651	CLOCK	271	1380	271	0	1				0	0	0	7	11113	143
+UFLIA_grasshopper_instantiated_delete_check_heap_access_53_12.smt2.core.smt2.txt	unsat			0	0	0	0					0	0	0	3	5	5
+UFLIA_grasshopper_instantiated_insertion_sort_postcondition_of_insertion_sort_63_1.smt2.core.smt2.txt	unsat	2854	CLOCK	2828	26	2828	0	1				0	0	0	8	205	34
+UFLIA_grasshopper_uninstantiated_merge_loop_check_heap_access_60_6.smt2.core.smt2.txt	unknown	5673	SHAPE	5663	10	596	5067	2	17	4677	14133	10950	0	0	8	126	17
+UFLIA_simplify2_front_end_suite_javafe.PrintSpec.012.smt2.core.smt2.txt	unsat			0	0	0	0					0	0	0	2	3	2
+UFLIA_simplify2_front_end_suite_javafe.ast.ImportDeclVec.015.smt2.core.smt2.txt	unknown	516	timeout-mid-round	475	41	273	202	2	16	0	28	0	464816	0	3	271	54
+UFLIA_simplify2_front_end_suite_javafe.ast.LabelStmt.011.smt2.core.smt2.txt	unsat			0	0	0	0					0	0	0	1	1	1
+UFLIA_simplify2_front_end_suite_javafe.ast.MethodDecl.005.smt2.core.smt2.txt	unknown	8183	timeout-mid-round	0	8183	0	0	0	2	218	83	0	2556	0	5	142	24
+UFLIA_simplify2_front_end_suite_javafe.ast.ParenExpr.006.smt2.core.smt2.txt	unknown	508	timeout-mid-round	0	508	0	0	0	0	0	0	0	7224	0	1	10	1
+UFLIA_simplify2_front_end_suite_javafe.ast.StandardPrettyPrint.008.smt2.core.smt2.txt	unsat			0	0	0	0					0	0	0	0	0	0
+UFLIA_simplify2_front_end_suite_javafe.ast.TypeModifierPragmaVec.013.smt2.core.smt2.txt	unknown	1059	CLOCK	1021	38	333	688	3	0	0	0	0	260406	0	3	155	29
+UFLIA_simplify2_front_end_suite_javafe.ast.VariableAccess.001.smt2.core.smt2.txt	unsat			0	0	0	0					0	0	0	1	4	3
+UFLIA_simplify2_front_end_suite_javafe.filespace.HashTree.001.smt2.core.smt2.txt	unknown	205	timeout-mid-round	181	24	52	129	3	0	0	0	0	29856	0	1	39	17
+UFLIA_simplify2_front_end_suite_javafe.filespace.ZipTree.005.smt2.core.smt2.txt	unknown	53	timeout-mid-round	0	53	0	0	0	44	95381	922	56	18363	0	2	36	7
+UFLIA_simplify2_front_end_suite_javafe.parser.Parse.005.smt2.core.smt2.txt	unknown	250	timeout-mid-round	236	14	64	172	2				0	0	0	5	307	23
+UFLIA_simplify2_front_end_suite_javafe.parser.TagConstants.001.smt2.core.smt2.txt	unknown	291	timeout-mid-round	0	291	0	0	0	0	0	0	0	1976	0	1	1	1
+UFLIA_simplify2_front_end_suite_javafe.reader.CachedReader.003.smt2.core.smt2.txt	unknown	1061	timeout-mid-round	1028	33	515	513	2	7	18661	1896	960	999	0	3	15	7
+UFLIA_simplify2_front_end_suite_javafe.tc.EnvForLocals.007.smt2.core.smt2.txt	unknown	1625	timeout-mid-round	0	1625	0	0	0	20	9072	12102	7769	810	0	3	24	8
+UFLIA_simplify2_front_end_suite_javafe.tc.FlowInsensitiveChecks.017.smt2.core.smt2.txt	unknown	10165	ground-ceiling	0	10165	0	0	0				0	0	0	5	26	8
+UFLIA_simplify2_front_end_suite_javafe.tc.TypeSig.001.smt2.core.smt2.txt	unknown	3905	SHAPE	3899	6	2027	1872	2	77	150515	1152	0	31004	0	3	7	3
+UFLIA_simplify2_front_end_suite_javafe.tc.TypeSigVec.005.smt2.core.smt2.txt	unknown	740	timeout-mid-round	690	50	295	395	2	0	0	0	0	950752	0	3	86	13
+UFLIA_simplify2_front_end_suite_javafe.tc.Types.035.smt2.core.smt2.txt	unknown	299	SHAPE	296	3	296	0	1	0	0	0	0	36252	0	2	71	10
+UFLIA_simplify2_front_end_suite_javafe.test.SuperlinksTest.004.smt2.core.smt2.txt	unknown	4016	timeout-mid-round	3937	79	368	3569	2	7	15314	1740	666	17134	0	2	14	6
+UFLIA_simplify2_small_suite_getRootInterface.smt2.core.smt2.txt	unknown	4103	SHAPE	4094	9	404	3690	4	17	4182	3282	1485	42184	0	4	250	17
+UFLIA_simplify_javafe.ast.CatchClauseVec.66.smt2.core.smt2.txt	unknown	230	timeout-mid-round	193	37	193	0	1	41	0	76	0	146476	0	3	141	28
+UFLIA_simplify_javafe.ast.LexicalPragmaVec.219.smt2.core.smt2.txt	unknown	112	timeout-mid-round	66	46	58	8	2				0	0	0	2	106	18
+UFLIA_simplify_javafe.ast.NewInstanceExpr.271.smt2.core.smt2.txt	unknown	516	timeout-mid-round	4	512	4	0	1	0	0	0	0	35020	0	1	8	2
+UFLIA_simplify_javafe.ast.StandardPrettyPrint.322.smt2.core.smt2.txt	unsat			0	0	0	0					0	0	0	1	2	1
+UFLIA_simplify_javafe.ast.TypeDeclElemPragma.373.smt2.core.smt2.txt	unknown	174	timeout-mid-round	150	24	27	123	3	0	0	0	0	11496	0	1	6	3
+UFLIA_simplify_javafe.ast.UnaryExpr.424.smt2.core.smt2.txt	unknown	500	timeout-mid-round	0	500	0	0	0	0	0	0	0	73440	0	2	23	6
+UFLIA_simplify_javafe.parser.TokenQueue.576.smt2.core.smt2.txt	unsat	452	SHAPE	444	8	375	69	2	0	0	0	0	65381	0	2	14	3
+UFLIA_simplify_tohtml.Java2Html.832.smt2.core.smt2.txt	unknown	1079	timeout-mid-round	981	98	981	0	1				0	0	0	2	100	4
+UFLIA_sledgehammer_FFT_smtlib.898060.smt2.core.smt2.txt	unknown			0	0	0	0					0	0	0	1	6	2
+UFLIA_sledgehammer_Fundamental_Theorem_Algebra_smtlib.1057395.smt2.core.smt2.txt	unsat			0	0	0	0					0	0	0	3	22	5
+UFLIA_sledgehammer_Fundamental_Theorem_Algebra_smtlib.1462528.smt2.core.smt2.txt	unknown			0	0	0	0					0	0	0	3	12	6
+UFLIA_sledgehammer_Fundamental_Theorem_Algebra_smtlib.972059.smt2.core.smt2.txt	unsat			0	0	0	0					0	0	0	1	3	2
+UFLIA_sledgehammer_Hoare_smtlib.1175889.smt2.core.smt2.txt	unsat			0	0	0	0					0	0	0	3	6	4
+UFLIA_sledgehammer_Hoare_smtlib.581330.smt2.core.smt2.txt	unknown			0	0	0	0					0	0	0	5	23	20
+UFLIA_sledgehammer_Hoare_smtlib.993567.smt2.core.smt2.txt	unsat			0	0	0	0					0	0	0	1	2	2
+UFLIA_sledgehammer_QEpres_smtlib.1065390.smt2.core.smt2.txt	unsat			0	0	0	0					0	0	0	1	2	2
+UFLIA_sledgehammer_QEpres_smtlib.1120322.smt2.core.smt2.txt	unsat			0	0	0	0					0	0	0	3	4	3
+UFLIA_sledgehammer_QEpres_smtlib.1237382.smt2.core.smt2.txt	unknown	106	SHAPE	105	1	73	32	2	0	0	0	0	3718	0	1	2	1
+UFLIA_tokeneer_auditlog_init-31.smt2.core.smt2.txt	unknown	337	timeout-mid-round	324	13	64	260	3				0	0	0	2	28	17

@@ -153,6 +153,8 @@ now. Nothing was deleted.
 | 2026-09-16 | quant-ground-incremental | six-division A/B **−4 over 1,200, 0 verdict disagreements**; movers re-checked 3x/arm: **1 STABLE-GAIN, 5 STABLE-LOSS, 2 UNSTABLE** — ship criterion NOT met, lever stays OFF, held-out draw not spent |
 | 2026-09-16 | quant-ground-incremental | three red gates attributed to the BOX with control distributions on both trees: serialized this tree is 1576/0, main flakes on the same test, and REMOVING this lane's fixtures made the sweep worse (3 vs 1) |
 | 2026-09-16 | quant-ground-incremental | the certificate repair and the `unwind_to_root` call are both measured UNCOVERED (two mutation suites, 9 and 1 tests, both SURVIVED) — recorded rather than assumed |
+| 2026-09-16 | quant-instance-probe | `scripts/z3-proof-instances.py` + 27 unit tests: recovers the GROUND consequence of a z3 `quant-inst` proof step (not just the substituted terms `proof-instances.py` already named), splitting GROUND from NOT-GROUND (nested-instantiation) bodies; 53/53 positive control against ADR-2113's `proof_qinst` |
+| 2026-09-16 | quant-instance-probe | `bench-results/quant-instance-probe-20260916/`: the ground-only file builders (`build-ground-only.py`, `build-ground-from-dump.py`), the driver scripts, and the full 53-core × 2-arm result table + README — 6 of 7 z3-confirmed-complete cores refuted correctly by our own ladder, zero wrong-unsat disagreements |
 | 2026-09-15 | `894b960a2` | lra-trace: `screen-ab.sh`, with its two named control files wired in rather than remembered |
 | 2026-09-15 | `ee8f64513` | lra-trace: the atom screen becomes `AXEYUM_LRA_ATOM_SCREEN` (default 1); three falsified cost models say why raising it is a trap |
 | 2026-09-15 | `9e691e0fd` | lra-trace: A/B resume helper, and the duplicate-writer near-miss that shaped its warning |
@@ -48423,9 +48425,10 @@ denominators.
 - A Sonnet lane's forked helpers inherited the whole brief and rebuilt both
   deliverables in parallel. Helpers get their slice only, as fresh agents.
 
-Status: **in progress, round three**. Five trace lanes, then two rounds of
-build lanes (nine), all merged; two levers shipped ON (QF_NRA 117 → 122);
-the rest ship OFF with a measured reason and a named next increment. The frame
+Status: **in progress, round three closing**. Five trace lanes, then three
+rounds of build lanes (twelve) and three probes, all merged and pushed
+(`origin/main` `b548367ff`); two levers shipped ON (QF_NRA 117 → 122); the
+rest ship OFF with a measured reason and a named next increment. The frame
 is the 16-division board (200 files each) and the Tier 1 ledger sweep on
 `db31113fa`; the references are z3 4.13.3 and cvc5 1.3.4 on the same lists.
 Bitwuzla does neither arithmetic nor quantifiers and is not a reference here.
@@ -48465,6 +48468,22 @@ Two blanks filled: z3 on the Tier 1 lists gets UFNIA 94 (ours 54) and AUFLIRA 19
 Two of six were a real gain on the pinned lists; the held-out draw refused one
 of them. Every non-shipping lever names what to build next.
 
+## Round three (2026-09-16)
+
+| lane | ADR | result | ships |
+|---|---|---|---|
+| QUANT-SESSION-ARITH | 2130 | the session hosts the arithmetic theory; 366 atoms move into it; cores 15 → 17, 1 stable gain (the same file every lever moves) | OFF |
+| QUANT-INSTANCE-PROBE | — | handed z3's own proof instances, our ground ladder refutes 6 of 7 reconstructable cores in ~107 ms; 46 % of z3's instances are nested instantiations | the block is **instance reach**, not ground refutation |
+| QUANT-INSTANCE-SELECT | 2133 | the briefed selection lever already ships and acts on 0.3 % of rejections; a generation ladder reaches its check on 31 of 53 cores and refutes at none | OFF; the refutation is absent from our set, not buried |
+| LRA-WARM-SCREEN | 2132 | builds-per-file screen: strictly better than the arm it screens (1/1 vs 1/2), admitted set predicted 51 of 51; the held-out loss is the shape the lever wins on, so the axis is wrong; −9.2 % is ¾ skipped linearization; fill-in grows the warm tableau 21× | OFF |
+| NRA-CLAUSE-LOOP | 2131 | certified `unsat` for the Boolean loop; 10 of 16 admissible files reach the theory and every one is refused by the single-cell frontier (algebraic sample worth 5); the shipped checker had two false-reject bugs, fixed | measuring |
+
+Four lanes on the quantified divisions each removed a real block and moved
+one core; the probe then showed why: the six instances z3's proof uses are
+not among the ~1,473 we admit. QUANT-REACH-DIFF is classifying, per core,
+where each of z3's instances is lost (never matched / matched-rejected /
+nested) — that histogram is the next build's brief.
+
 ## What the day says
 
 Capability gaps that trace to one named mechanism moved (QF_NRA); the ones
@@ -48482,6 +48501,15 @@ ADR corrects at least one inherited number, including the briefs' own.
   ERR trap and a named `step_seconds` failure.
 - A finished lane's A/B shards kept running on cores I had given to the next
   lane; check the hosts, not the lane's claim, before assigning cores.
+- The five "silent 17-second" push deaths were my own `ulimit -v` in the
+  launching shell: a hard limit the hook's `mem-run.sh` could not raise.
+  Found by the xtrace the hook now writes; the wrapper keeps an inherited
+  limit and says so (`b548367ff`).
+- A 7-day prune of `target/*/build` gutted `z3-sys`'s download cache and left
+  its directory, so the `--all-features` lint failed on a "cached" archive
+  with no library. Prune whole `build/<crate>-<hash>` dirs, not files.
+- Lane worktrees have no `references/` clones (gitignored); one lane could
+  not verify its z3 citations and said so. Briefs give the absolute path.
 - Two lanes' first controls were vacuous (a population that could not decide;
   a column computed at the outermost node of a `let` tree); both caught by the
   lanes themselves and kept, labelled.
@@ -60577,6 +60605,274 @@ next increment and is NOT built here.
    run, so their ratchets are enforced on nothing; that is what remains. No
    baseline was raised from any run.
 
+**Lane LRA-WARM-SCREEN (`MEASURED, SHIPS OFF`, lra-warm-screen, 2026-09-16.)**
+ADR: [ADR-2132](docs/research/09-decisions/adr-2132-a-builds-per-file-screen-for-the-warm-basis.md).
+Artifacts: `bench-results/lra-warm-screen-20260916/`.
+Compute: **s5, physical core pairs `5,13` and `6,14`**, and nothing else (both
+checked for a previous lane's leftover shards before the first timing; none).
+
+[ADR-2125] shipped the warm basis `off` on 1 STABLE-GAIN against 2 STABLE-LOSS
+and named the axis its successor should screen on: `simplex_cold_builds`, *"it
+wins where the cubes are many and small and loses where they are few and
+large"*. This lane sized that axis, built the screen, and found that **the axis
+does not separate the held-out loss**.
+
+### 1. The sizing, over the pinned 200, before any code
+
+ADR-2125 committed per-file trail data for the whole pinned draw, so the axis did
+not have to be re-run. The distribution is bimodal and the modes do not overlap:
+
+```
+180 of 200 reached the loop | 20 SILENT (report NOTHING, not zero)
+ 68 built >= 1 tableau; the rest 0
+
+builds  ms/build  file
+     1  23,908.0  latendresse/ecoliFBAyicesTest-3875-4
+    28     283.5  latendresse/ecoliMILPglycerolYices3-50000  <- the PINNED stable loss
+    42     548.1  miplib/danoint-266
+841-1543  0.4-6.4  the sc/* family and friends               <- the winning shape
+
+every row at or above 51 builds costs <= 12.2 ms/build
+every row above 20 ms/build has <= 42 builds
+=> any threshold in [43, 51] separates the two shapes exactly
+```
+
+`MIN_WARM_CUBE_SCREEN_BUILDS = 64` is the next power of two above that window:
+1.52x the largest few-enormous row, 13.1x below the smallest winning one. Chosen
+from a window, not fitted to a point. 51 of the 180 rows that spoke are at or
+above it; 129 are below and run exactly as `off` does.
+
+`cold_builds / lra_rounds` is 1.00 above 100 builds, so the screen trips after
+~64 rounds — 4.1-7.6 % of the winning family's rounds run cold first. That is
+what a screen costs instead of a clock, and **a clock is not available**:
+determinism is a public promise, so a wall-clock screen would make the verdict
+depend on the machine.
+
+### 2. The finding: the discriminator does not discriminate
+
+ADR-2125 could place only ONE of its three movers in its sizing table and
+labelled the reading for the second loss a HYPOTHESIS in as many words. Counted
+here:
+
+| ADR-2125 verdict | builds | ms/build | atoms | cold_pivots | file |
+|---|---:|---:|---:|---:|---|
+| STABLE-LOSS | 28 | 283.5 | — | — | `latendresse/ecoliMILPglycerolYices3-50000` |
+| **STABLE-GAIN** | **1,815** | 1.7 | 976 | 466,693 | `sc/sc-14.induction.cvc` |
+| **STABLE-LOSS** | **1,598** | 1.0 | 1,272 | 252,412 | `uart/uart-8.induction.cvc` |
+
+**The hypothesis is refuted.** `uart-8` is the many-small shape — the winning
+shape — 14 % from the gain. No builds-per-file threshold separates them, so the
+screen removes the pinned loss and cannot touch the held-out one. Measured
+BEFORE the constant was written into the source.
+
+**The threshold was not then moved to 1,700**, which would separate them: those
+two rows ARE the held-out evaluation population, and a boundary drawn between
+two of its members is fitted to the set it is scored on.
+
+What separates them instead, offered as two points and explicitly NOT built:
+pivots per build per atom, 0.263 on the gain against 0.124 on the loss — a 2.1x
+separation that is clock-free. A successor should size it on the pinned 200
+first, the way this lane sized builds-per-file.
+
+### 3. What was built
+
+* `AXEYUM_LRA_WARM_CUBE` is three-valued: `off` | `on` | `screened`. Every
+  unrecognised spelling is `off`, so a launcher typo measures the shipped route
+  rather than a third behaviour nobody named. `on` is KEPT as the A/B's
+  reference arm — the screen's claim is comparative.
+* The screen reads its OWN always-on counter (`simplex::cold_builds_so_far`),
+  not `LazySmtCounters::simplex_cold_builds`, which is armed by `--trace` alone.
+  A screen consulting the traced field would route one way in the measurement
+  and the other way in production.
+* Two additive schema-3 fields (`warm_cube_solve_ms`, `warm_cube_sync_ms`) make
+  ADR-2125's un-attributed −9.2 % a split between fields that are both ON the
+  line, with no counterfactual. A third (`warm_cube_fill_peak`) takes the
+  fill-in measurement ADR-2111 recorded as untaken.
+* The dense-cell cap in `Incremental::new` is **not** restated in nonzeros, and
+  the reason is a property of the algorithm: a pivot creates nonzeros
+  (`select_entering`'s fill-in-minimising rule exists for exactly that), so a
+  construction-time count bounds the entry footprint and nothing after it.
+* The lever's mode is a parameter of `check_with_lra_dpll_within_mode` with one
+  production caller, so the transition fixture can run all three arms in ONE
+  process and assert they AGREE rather than each matching a verdict written into
+  its own source.
+
+### 4. The attribution: three quarters LINEARIZATION, not the basis
+
+ADR-2125 §8.5 said a successor must not credit its −9.2 % to the basis without
+splitting it. Pooled over 67 rows where the decider was built, of 303,177 ms of
+theory-layer saving in the `on` arm:
+
+```
+linearization   226,396 ms   74.7 %
+basis           111,042 ms   36.6 %
+Fourier-Motzkin   1,822 ms    0.6 %
+residual        -36,083 ms  -11.9 %
+```
+
+**Roughly three quarters is the `Collector` rebuild an answered cube never pays
+for.** The ratio is not the one the sizing predicted: ADR-2125 §1.3's 4.15 % /
+24.21 % puts the linearization at about 4.8× the basis, and measured it is 2.0×.
+A ceiling is an upper bound on one term, not a prediction of how two divide.
+
+Getting there took catching my own split being wrong. A TWO-term formula
+attributed 64 ms of a 1,906 ms saving on `clocksynchro_2clocks`, because that
+file's COLD path decides its cubes by Fourier–Motzkin (`cube_fm_ms=1822` of
+`theory_ms=1905`) — the warm decider there replaces a different ENGINE, not a
+cold basis. The FM term is 0.6 % pooled and 96 % on that one file, which is
+100 % of the pooled term. The residual is a printed column and is NEGATIVE:
+folding it into the basis would have reported 25 % instead of 37 %.
+
+Scope, stated because it is narrower than "the −9.2 %": the decomposed delta is
+`theory_ms`, not total wall clock.
+
+### 5. The screen's mechanism, on real rows
+
+Over the complete 400 A/B rows: **0 of 244** rows below the threshold had the
+screened arm answer a cube warm, and `cold_restarts` is **0 across both
+treatment arms on all 400**. Above it, the screen opens on 117 of 123 and
+answers fewer cubes than `on` on 112 of the 117.
+
+The three it does not open on are a finding about the SIZING AXIS:
+`simplex_cold_builds` counts every route that calls `feasible_within_sparse`,
+not the lazy-SMT loops. `sc/sc-24.induction3` carries 2,264 builds with
+`lra_entries=0`, `nra_entries=0` and `bound_by=lira-dpll` — no lazy-SMT loop ran
+at all. The SCREEN is unaffected because it compares a DELTA from loop entry
+(had it read the counter absolutely, that file would have tripped it on round
+one); the SIZING over-counts, at 0 of 68 on the pinned 200 where the threshold
+was derived and 6 of the 123 at or above it over the complete 400 — all six
+on the held-out draw and all six `sc/*.induction3.cvc`, one subfamily.
+
+### 6. The A/B — both `QF_LRA` draws complete at 200
+
+Three arms, one binary (`axeyum.v1`, sha256 `91675258916e4aeb`), order rotating
+three ways per file, 24 s / 8 GiB, s5 pairs `5,13` and `6,14`. The two draws are
+verified disjoint (200 unique each, 0 overlap). Ship criteria were committed in
+ADR §7.1 **before** either shard finished.
+
+```
+comparison            rows  off  arm  net  gain  LOSS  FLIP  rc!=0  cmp  DIS
+pinned   off/screened  200  107  107   +0     0     0     0      0  194    0
+pinned   off/on        200  107  107   +0     1     1     0      0  194    0
+held-out off/screened  200   93   93   +0     1     1     0      0  174    0
+held-out off/on        200   93   92   -1     0     1     0      0  173    0
+```
+
+After the 3×-per-arm recheck of all four movers:
+
+```
+                pinned              held-out            total
+on              1 gain, 1 LOSS      0 gains, 1 LOSS     1 gain, 2 LOSSES
+screened        0 gains, 0 LOSSES   1 gain,  1 LOSS     1 gain, 1 LOSS
+```
+
+**`on` reproduces ADR-2125's headline exactly** — 1 stable gain against 2 stable
+losses — on a new binary, a new branch base and a complete 400 rows rather than
+the two half-draws ADR-2125 could finish.
+
+**The screen is strictly better than `on` on both draws**, and the trade is
+legible: pinned it removes the stable loss and gives up `on`'s stable gain on
+`sc-7.base.cvc` (1,695 builds — the screen admits it, and the 64 cold rounds
+cost the decision inside 24 s, which is the threshold's clearest single price);
+held-out it buys a stable gain `on` does not get and takes the same stable loss.
+
+Mechanism: `cold_restarts = 0` throughout; the screen opened on **0** rows `on`
+did not; 51 < 71 pinned and 66 < 79 held-out, all nonzero. Cost −13.9 % pinned
+and −12.1 % held-out, against `on`'s −16.0 % and −12.4 %.
+
+**The admitted set was predicted exactly.** §1.4 derived from ADR-2125's
+committed sizing that 51 of the pinned 200 sit at or above 64 builds; the
+screened arm built on exactly those 51 — same set, 0 missing, 0 extra.
+
+### 7. Decision: ships `off`, on criterion 3
+
+Criteria 1, 2 and 5 are met (0 disagreements at 194 and 174; 0 stable losses and
+0 flips on pinned — the criterion `on` fails; 51 < 71 and 66 < 79). **Criterion
+3 is not met**: `uart-8.induction.cvc` is a stable loss under `screened` too.
+
+"Ships off" is the wrong summary, though. The screen works, it is strictly
+better than the arm it screens, and **the axis it screens on is the wrong
+axis** — that last is the finding, and it is a conclusion about builds-per-file
+rather than about this threshold. The obvious next increment is therefore not a
+different value on this counter.
+
+### 8. Two defects found in this lane's own instruments
+
+* **The fuzz runner called a FAILING suite an inert one.** Its count parser was
+  anchored on `ok.`, so `FAILED. 3 passed; 1 failed` read as 0 tests and was
+  announced as "compiled to nothing" — opposite remedies. It also deleted the
+  failing log, the same defect ADR-2125 §5.8 had to fix in its own runner. Both
+  fixed; the failure is bounded from the source as a load-sensitive coverage
+  floor and **not** a soundness disagreement (`adjudicate` panics only on
+  `(Sat, Unsat)`/`(Unsat, Sat)`; a timeout yields `Unknown`, which falls
+  through). Which of the two floors fired is unrecovered, and that is stated.
+* **Exposure shard 01 ran twice for a minute** because I read an ssh `exit 124`
+  as "the launch did not happen" — 124 is the local wrapper, not the work. Every
+  row either instance wrote was discarded and the shard relaunched once.
+
+## Landed
+
+| SHA | files | what |
+|---|---:|---|
+| `4cf519547` | 2 | the sizing: the builds-per-file distribution and a threshold chosen from a window |
+| `d9a83d3e7` | 9 | the three-valued lever, the screen, the always-on counter, the attribution fields, the fixtures |
+| `44956e4a2` | 5 | the ADR, the refutation of ADR-2125's hypothesis, the verified z3 citations |
+| `71817e15b` | 3 | the two mutation suites and this status doc |
+| `e3bdf9ac3` | 3 | a two-arm mode; an arm that did not run reports NOTHING, not zero |
+| `2fdd1be22` | 7 | `below-screen`: a screened run that never crossed rendered `off` |
+| `c7f017a4f` | 2 | the ship criteria, committed before the A/B finished |
+| `183a3c346` | 1 | correction: those builds are `lira-dpll`, not the NRA loop |
+| `5e0b635d4` | 2 | the THREE-term attribution, after the two-term one did not reconcile |
+| `5b69933e7` | 1 | delete the superseded split rather than leave a wrong number in the tooling |
+| `60de05922` | 1 | the pinned 200 complete — the screen removes ADR-2125's pinned stable loss |
+| `56c2a8dff` | 1 | the held-out 200 complete — the screen cannot remove that draw's loss |
+| `eea926282` | 2 | the decision, the mover recheck, and the shard-01 orchestration incident |
+| `c0d6a6eb0` | 3 | the recheck's raw rows and the derived mover list |
+| `76fe33037` | 3 | the fuzz runner called a failing suite inert, and deleted the evidence |
+
+### 9. The exposure divisions
+
+```
+division   rows  off  screened  net  gain  LOSS  FLIP  cmp   DIS   the lever
+QF_LIA      200  127       127   +0     0     0     0   248    0   INERT
+QF_UFLRA    200  149       149   +0     0     0     0   298    0   ACTIVE (6 rows, 417 cubes)
+QF_UFLIA    200  162       162   +0     0     0     0   324    0   INERT
+QF_IDL      200  109       110   +1     1     0     0   219    0   INERT
+QF_RDL      200  149       149   +0     0     0     0   298    0   ACTIVE (8 rows, 240 cubes)
+------------------------------------------------------------------------
+total      1000  696       697   +1     1     0     0  1387    0
+```
+
+**0 stable losses AND 0 stable gains.** The single raw mover
+(`QF_IDL/asp/Solitaire/solitaire-edge-time=29`) re-checks **NEITHER-DECIDES**,
+0/3 in both arms. 0 flips, 0 soundness disagreements, `cold_restarts = 0`
+throughout. **Criterion 4 met in its strong form.**
+
+The last column is why the total is not the headline: **three of the five are
+INERT** — no file in them reaches the offline linear loop's cold simplex — so
+their zeros are evidence about the population, not about the screen. Only
+`QF_UFLRA` and `QF_RDL` exercise the lever, at 14 rows and 657 cubes between
+them. Writing "1,000 rows, 0 losses" would credit the screen with three
+populations it never touched.
+
+`QF_IDL`'s raw gain was predicted ambient from the mechanism (the screened arm
+answered zero cubes warm anywhere in that division) and the recheck agreed. Both
+are recorded: the argument would have been worth nothing had the recheck
+disagreed.
+
+## Next
+
+1. Size **pivots per build per atom** on the pinned 200 — the shape §2 observed
+   on two held-out rows at 0.263 against 0.124 and deliberately did not build
+   on, because both points are held-out rows.
+2. Sweep the threshold — one value was measured, never a range, including
+   whether a lower one keeps `on`'s pinned gain on `sc-7.base.cvc` (1,695
+   builds, a PINNED row, so tuning against it is not training-set fitting).
+3. Split `simplex_cold_builds` per route. It counts every caller of
+   `feasible_within_sparse`, not the lazy-SMT loops; the screen is unaffected
+   (it compares a delta from loop entry) but the SIZING over-counts, at 0 of 68
+   on the pinned 200 and 6 of 123 over the complete 400, all one subfamily.
+
 Status: LANDED — LUB's ADR-0603 row 2 is a kernel-checked theorem, axiom-free.
 
 Outcome 1 of the three the brief listed: **a proved implication from a stated
@@ -66153,6 +66449,147 @@ sweep at **1576 / 0**.
 
 [ADR-2120]: ../../research/09-decisions/adr-2120-quantifier-activation-by-assignment.md
 
+**Lane QUANT-INSTANCE-PROBE (`DONE`, quant-instance-probe, 2026-09-16).**
+ADR-2113/ADR-2120/ADR-2124/ADR-2130 left one question unreconciled: our
+engine admits a median of 1,473 quantifier instances per core against z3's
+proof using 6 (ADR-2113) — is the block instance SELECTION (our 1,473 drown a
+ground solver that would refute z3's 6 at once) or ground REFUTATION (even
+handed z3's own instances, our ladder does not decide the set)? This lane ran
+the experiment: extracted z3's own used instantiations from its refutation
+proof (`scripts/z3-proof-instances.py`, new), built ground-only `QF_UFLIA`
+files from them with every quantifier stripped, and ran our release engine on
+them directly — bypassing our own e-matching loop entirely.
+
+**Answer: predominantly SELECTION.** Of 53 cores, z3-checking the
+reconstructed file finds **7 z3-confirmed-complete** (the extraction
+recovered every used instance) and **41 incomplete** (some instance was not
+recovered — 46 % of the 1,021 raw recovered bodies across all 53 cores still
+carry an unresolved outer bound variable from a NESTED instantiation, the
+same `rej_nocontext` mechanism ADR-2113 §4b already named, independently
+reconfirmed here from the opposite direction). **Of the 7 complete cores, our
+existing ladder (`euf-online`/`uf-arithmetic`) refutes 6 (86 %)** — handed
+z3's own minimal instance set as plain ground assertions, with no selection
+problem left to solve, our ground checker closes the SAME refutation z3 finds
+in 5 of 6 cases in ~107 ms. Zero wrong-unsat disagreements against the
+z3-ground check across all 48 built files.
+
+**A second arm (our OWN admitted instances, via `AXEYUM_QGROUNDDUMP`) found a
+tooling gap worth naming precisely because it is a NEW finding.** 16 of 29
+buildable files fail immediately at PARSE — not at solve — because the
+dumped admitted-instance set leaks OUR OWN internal Skolem constant names
+(`!qsk_N`/`!qu_N`/`!q.?x_.N`, declared in `quant_skolemize.rs:64-65` with no
+standalone `declare-fun`) that `axeyum-smtlib/src/parse.rs:16570` correctly
+refuses once re-serialized bare. This is a defect in this lane's OWN
+`build-ground-from-dump.py`, not a ground-refutation measurement, and is
+reported as such rather than left to read as a negative result. Of the 13
+files that DID parse, our engine decided only 1 (`unsat`, using 2,828 of its
+own admitted instances) and 5 of the remaining 8 unknowns ran to the full
+~25 s budget — consistent with, though at n=13 not conclusive proof of, the
+"large admitted set drowns the ground checker" half of the hypothesis.
+
+**Full table, methodology, and both dominant-typed-reason citations** (one
+already-known and independently reconfirmed, one new) are in
+[`bench-results/quant-instance-probe-20260916/README.md`](bench-results/quant-instance-probe-20260916/README.md).
+
+**What is left.** The nested-instantiation chain that makes 46 % of z3's own
+instances not-ground is not resolved (would need enough of z3's
+`quant-intro` proof-rule semantics reimplemented to track schema variables
+across the proof DAG) — this is why Count 1 is 7 of 53 rather than higher,
+and a cleaner extraction is the most direct way to widen the clean-ground-truth
+population this experiment runs on. The Skolem-leak parse failure on the
+admitted-instances arm is fixable (`build-ground-from-dump.py` would need to
+also emit `declare-fun` lines for every referenced internal symbol, with the
+right sort) but was not attempted here. `FFT_smtlib.898060` is a genuine,
+narrow ground-refutation miss (whole ladder declines, 107 ms, 26 attempts) —
+worth a look on its own, separate from the selection question this lane
+answers.
+
+**Lane QUANT-INSTANCE-SELECT (`DONE`, quant-instance-select, 2026-09-16).**
+[ADR-2133](docs/research/09-decisions/adr-2133-generation-bounded-instance-selection.md);
+artifacts in `bench-results/quant-instance-select-20260916/`.
+
+## What this lane was asked to build, and why it did not
+
+Build generation- and relevance-bounded instantiation with a per-round cap,
+behind a dated lever, on the premise (QUANT-INSTANCE-PROBE) that UFLIA's block
+is instance SELECTION rather than ground REFUTATION.
+
+**Step 0 of the brief — does it already exist? — answered yes.** All three
+briefed pillars are shipped in `crates/axeyum-solver/src/qinst_egraph.rs`:
+
+| briefed pillar | already in tree |
+|---|---|
+| per-term generation, cost `weight + generation` | `TermGenerations` (`:4478`), `derivation_generation` (`:4510`) |
+| queue in cost order, per-round cap | `budget_flood_slice` (`:4256`), `FLOOD_ROUND_ADMISSION_CAP = 256` (`:1225`) |
+| eager/lazy split | `FLOOD_EAGER_GENERATION_MAX = 1` (`:1233`) |
+| incremental matching (new terms only) | ADR-0112, module doc `:16-22` |
+| nested universals registered for matching | `AXEYUM_NESTED_QUANT`, default ON |
+| generation-bounded final check | `FLOOD_FINAL_SUBSET_MAX_GENERATION = 1` (`:5235`) |
+
+So the lane's first deliverable is the SIZING that says what the shipped
+machinery does on the 53 cores, and that measurement retired the lever.
+
+## Measured (53 ADR-2113 UFLIA cores, s6 pinned pairs, 24 s / 8 GiB)
+
+- The whole selection apparatus is gated on `FLOOD_THROTTLE_MIN_GROUND = 2048`
+  and on a deferred pool larger than 256. **`budget_flood_slice` engaged on
+  0 cores.** Ceiling for the briefed lever on this population: **0**.
+- Of 38 cores we do not decide, 35 leave a generation dump. On **22 of 35** our
+  ground set never reaches the generation z3's own refutation needs
+  (`ours_maxgen < z3_maxgen`) — a REACH gap, which selecting harder cannot
+  close. On the other **13** we do reach it, at a median ground set of **516**
+  terms, which is not a set any ground checker drowns in.
+- z3 `:max-generation`: **25 of 53** cores need generation >= 3; our single
+  subset-first final check only ever sees generation <= 1, and only at
+  ground >= 2048 (**11 of 37** dumped cores).
+
+Full numbers and the two measurement traps hit on the way (a census-gated
+counter read as a zero; a join key that silently dropped every row) are in
+`bench-results/quant-instance-select-20260916/README.md`.
+
+## The lever, and its A/B
+
+`GENERATION_LADDER_LEVEL = 0` / `AXEYUM_QINST_GEN_LADDER` — a generation LADDER
+on the final refutation check (`gen <= 0`, `<= 1`, … ascending, first `unsat`
+wins, fall through to the unchanged full check), **OFF**. Strictly additive, so
+it has no `sat` path and cannot produce a wrong verdict in either direction.
+
+Interleaved per-file A/B on the 53 cores: OFF decides 16, ON decides 15.
+**0 stable gains, 0 stable losses, 0 flips** — the one apparent loss is
+`unknown` on all six runs of a 3x interleaved recheck.
+
+**The null is not a coverage hole.** The ladder reached the check on **31 of 53**
+cores and ran **1 to 4 layers over 35 invocations**, with `refuted_at=none` on
+**all 35**. Not one shallow subset of our accumulated ground set was refutable
+when the full set was not. Beside the probe's result that our ground checker
+refutes 6 of 7 cores when handed z3's OWN instances, that says the refutation is
+**absent from our ground set at every generation, not buried in it**.
+
+By the brief's criterion (stop if ON decides < 20 of 53), the lane stops at the
+ADR: no division-level A/B, no held-out draw.
+
+## Landed changes
+
+| commit | files | what |
+|---|---:|---|
+| `c2c34bc66` | 6 | the sizing: harness, per-core TSV, README, status |
+| `f024696f4` | 10 | the generation ladder behind `AXEYUM_QINST_GEN_LADDER`, OFF; unit + integration fixtures; mutation entry; pre-push registration; ADR-2133 |
+
+## Next
+
+Not selection. **Reach.** `rej_nocontext` is 36.06 % of rejected traffic and 22
+of 35 open cores never reach the generation z3's refutation needs — the nested /
+context-dependent activation wall of ADR-2113 §4b, which QUANT-INSTANCE-PROBE
+independently re-derived from the reconstruction side (46 % of z3's own
+recovered instances are nested instantiations). A fifth lane tuning the ground
+side of this loop is a fifth null.
+
+A cheaper separate experiment the sizing exposed and this lane did NOT run:
+`FLOOD_FINAL_SUBSET_CHECK_MIN_GROUND = 2048` keeps the shipped shallow pre-check
+from running on 26 of 37 dumped cores (median ground 1,061). The ladder result
+suggests lowering it would also be a null on this population, but that is an
+inference, not a measurement.
+
 **Lane quant-ladder-ownership (`DONE`, quant-ladder-ownership,
 2026-09-15).** The second half of Phase 1 of
 [docs/plan/dispatch-and-instrumentation-2026-09-15.md](docs/plan/dispatch-and-instrumentation-2026-09-15.md),
@@ -66551,6 +66988,74 @@ population, not an instantiation one — price real QE / a real-model MBQI again
 `2010-Monniaux-QE` + `scholl-smt08` (117 pinned rows, 98+19). (b) AUFLIA's 4
 CLOCK + 4 other rows and BV's 10 non-trivial fixpoints are separate and unsized.
 (c) The 38 `mbqi`→BV-backend declines board-six left open.
+
+**Lane QUANT-SESSION-ARITH (`DONE`, quant-session-arith, 2026-09-16).**
+[ADR-2124]'s named next increment: the quantifier-instance session hosts the
+arithmetic theory beside its `EUF` e-graph instead of abstracting the arithmetic
+away, so its `unsat` can be a Farkas conflict rather than only a congruence one.
+
+**What it is.** `EufLiaSessionTheory` (`qinst_session_theory.rs`) runs `EUF` and
+`LIA` side by side over **one shared atom index space**. No index mapping is
+needed because both sub-theories were already written to tolerate an atom they
+cannot represent, so composite atom `i` is `EUF` atom `i` and `LIA` atom `i` and
+a conflict core from either half is already in composite indices. Behind
+ground-session level 2, shipped **OFF**.
+
+**The sizing, before any code.** 77 of ADR-2124's 101 ground-check rows are
+arithmetic-bearing — AUFDTLIRA 18/18, AUFLIRA 6/6, UFLIA 28/28, UFNIA 24/44,
+UFDTLIRA 1/1, UF 0/4. **53 of them carry a comparison in a GROUND position** and
+24 acquire one only through an instance, which is why the original assertions
+needed their own collection pass and not just the instance route. `dt-only` is
+**0 of 108**, so the typed datatype decline the brief asked for excludes nothing.
+
+**The lever engages, measured before any A/B.** On ADR-2113's 53 UFLIA cores,
+level 1 abstracts **366 atoms across 20 cores** and level 2 abstracts **0** — at
+least 365 of them `IntLt`/`IntLe`/`IntGt`/`IntGe` becoming real constraints.
+`filespace.ZipTree` goes `atoms=45 abstracted=7` to `atoms=52 abstracted=0`.
+
+**And the verdict does not move.** Paired probe, 24 s, interleaved per file on
+one pinned idle s6 core: OFF 15 decided, ON 17, 2 raw gains, 0 losses, **0
+flips**. The 3× re-check makes that **1 STABLE-GAIN and 1 ambient**, and the
+stable one is `TypeDeclElemPragma.373` — the same single file ADR-2124's
+abstraction moved. **Hosting arithmetic adds zero net movers over abstracting
+it** on this population, so the divisions were not run and the lever ships OFF.
+Twelve of these cores still die naming the interleaved ground check *with the
+arithmetic hosted*, which is where the next lane should look.
+
+**Three corrections to the brief, each verified in-tree.**
+`TheorySolver::take_new_atoms` is **not** the hook for this route and using it
+would have been a wrong-answer defect — it is polled inside a solve, so it
+cannot hand an index back to a caller still building the clause; the warm route
+registers driver-side and this theory's `take_new_atoms` returns `0` with a
+fixture pinning it. **[ADR-2125] built no bound trail to reuse**: its subject is
+the offline cube loop and its lever ships `off`; the trail it was confused with
+is ADR-1701/ADR-2122's and lives on `LraTheory`, not `LiaTheory`. There is also
+nothing to build — `IntSimplexEngine::sync` re-derives the imposed bounds from
+the live set on every check, so the forwarded `LiaTheory::pop` **is** the
+retraction, and the mutation suite aims at exactly that. And `LiaTheory` lives
+in `lia_online.rs`.
+
+**A fourth correction, to ADR-2124 itself.** Its premise is that one integer
+comparison anywhere in the ground set refuses the session, so UFLIA takes the
+cold branch for its entire run. Measured directly: the **shipped** arm reached
+the session-construction site on 45 of 53 cores and **built a session on 26** of
+them. Round 0's ground set is the quantifier-free subset, and on most
+Boogie/Simplify-family files that subset is EUF-only — their arithmetic is
+encoded through uninterpreted functions over `Int`.
+
+**What is left.** `simplex::Incremental` exposes no row- or column-append
+method, so a growth event **rebuilds** the arithmetic tableau; the Boolean
+search, clause database, learned clauses and e-graph stay warm across it, but a
+real `add_row` is the next increment and cvc5's shape (keep the column, replay
+the registration) is the model. No interface equalities are propagated between
+the two sub-theories — an incompleteness, free here because the session's `Sat`
+is never a verdict. The new differential seed class (incrementally assembled
+`QF_UFLIA` sets compared against z3 on the whole set) was **not built**, and it
+is the most valuable thing left undone.
+
+[ADR-2113]: ../../research/09-decisions/adr-2113-uflia-the-instance-we-never-produce.md
+[ADR-2124]: ../../research/09-decisions/adr-2124-incremental-ground-closure-for-quantifier-instances.md
+[ADR-2125]: ../../research/09-decisions/adr-2125-a-warm-simplex-basis-across-sat-decisions.md
 
 **Status:** complete. `Nat.count` and `Nat.divMaxPow` declared (definitions and
 evaluation tests only, ADR-0653); a four-family draw now passes R5 / R9 /

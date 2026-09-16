@@ -1,0 +1,7 @@
+== ADR-2130: the movers, re-checked ==
+
+STABLE-SAME   off=unknown,unknown,unknown  on=unknown,unknown,unknown
+              UFLIA_boogie_Cast_Cast.R_System.Object_System.Int32.smt2.core.smt2
+STABLE-GAIN   off=unknown,unknown,unknown  on=unsat,unsat,unsat
+              UFLIA_simplify_javafe.ast.TypeDeclElemPragma.373.smt2.core.smt2
+

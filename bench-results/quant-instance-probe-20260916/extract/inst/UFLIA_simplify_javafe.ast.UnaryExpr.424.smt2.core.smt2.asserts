@@ -1,0 +1,2 @@
+(assert (= (S_select (S_store (asField op_26_13 T_int) RES_64_24_64_24 op_62_35) RES_64_24_64_24) op_62_35))
+(assert (= (S_select (S_store (asField locOp_32_13 T_int) RES_64_24_64_24 locOp_62_68) RES_64_24_64_24) locOp_62_68))

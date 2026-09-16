@@ -794,6 +794,16 @@ impl<T: TheorySolver> WarmNativeCdclT<T> {
     pub(crate) fn theory_mut(&mut self) -> &mut T {
         self.solver.theory_mut().inner_mut()
     }
+
+    /// The wrapped theory, for a caller that only needs to READ it — a trace
+    /// counter, a test assertion (ADR-2130).
+    ///
+    /// Goes through the same `inner_mut` as [`Self::theory_mut`] and reborrows
+    /// shared, rather than adding a second accessor path down the adapter, so
+    /// there is one place the theory is reached from.
+    pub(crate) fn theory(&mut self) -> &T {
+        self.solver.theory_mut().inner_mut()
+    }
 }
 
 /// A `(var, positive)` pair as a [`CnfLit`].

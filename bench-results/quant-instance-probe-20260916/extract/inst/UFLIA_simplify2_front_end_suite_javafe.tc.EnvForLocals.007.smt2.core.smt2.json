@@ -1,0 +1,15 @@
+{
+ "raw_count": 8,
+ "bodies": [
+  "(= Smt.true (is (select1 (asField (asField decl_38.43 T_javafe.ast.GenericVarDecl) T_javafe.ast.GenericVarDecl) this) T_javafe.ast.GenericVarDecl))",
+  "(or (not (= Smt.true (is RES_1_ T_javafe.ast.GenericVarDecl))) (= (cast RES_1_ T_javafe.ast.GenericVarDecl) RES_1_))",
+  "(or (not (subtypes (asChild T_javafe.tc.EnvForCU T_javafe.tc.Env) T_java.lang.Object)) (= (= Smt.true (is this (asChild T_javafe.tc.EnvForCU T_javafe.tc.Env))) (or (= this null) (subtypes (typeof this) (asChild T_javafe.tc.EnvForCU T_javafe.tc.Env)))))",
+  "(or (subtypes (asChild T_javafe.tc.EnvForCU T_javafe.tc.Env) T_java.lang.Object) (not (subtypes (asChild T_javafe.tc.EnvForCU T_javafe.tc.Env) T_javafe.tc.Env)) (not (subtypes T_javafe.tc.Env T_java.lang.Object)))",
+  "(or (not (subtypes (typeof this) (asChild (asChild T_javafe.tc.EnvForCU T_javafe.tc.Env) T_javafe.tc.Env))) (= (classDown T_javafe.tc.Env (typeof this)) (asChild (asChild T_javafe.tc.EnvForCU T_javafe.tc.Env) T_javafe.tc.Env)))",
+  "(or (not (subtypes (typeof this) (asChild (asChild T_javafe.tc.EnvForLocals T_javafe.tc.Env) T_javafe.tc.Env))) (= (classDown T_javafe.tc.Env (typeof this)) (asChild (asChild T_javafe.tc.EnvForLocals T_javafe.tc.Env) T_javafe.tc.Env)))",
+  "(or (not (subtypes (asChild T_javafe.tc.EnvForLocals T_javafe.tc.Env) T_java.lang.Object)) (= (= Smt.true (is this (asChild T_javafe.tc.EnvForLocals T_javafe.tc.Env))) (or (= this null) (subtypes (typeof this) (asChild T_javafe.tc.EnvForLocals T_javafe.tc.Env)))))",
+  "(or (subtypes (asChild T_javafe.tc.EnvForLocals T_javafe.tc.Env) T_java.lang.Object) (not (subtypes (asChild T_javafe.tc.EnvForLocals T_javafe.tc.Env) T_javafe.tc.Env)) (not (subtypes T_javafe.tc.Env T_java.lang.Object)))"
+ ],
+ "not_ground": [],
+ "unmatched": 0
+}

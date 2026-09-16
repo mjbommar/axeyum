@@ -1,0 +1,263 @@
+   Compiling axeyum-solver v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ae44578a669fdbe8c/crates/axeyum-solver)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 19s
+     Running tests/progress_frontier.rs (target/debug/deps/progress_frontier-fb9213ec6d679649)
+
+running 12 tests
+test artifact_directory_override_is_explicit_and_absolute ... ok
+test bv_reduction_falloff_is_the_lever ... bv_reduction lever check: N=6 (depth 36) → reduction-ON unsat / reduction-OFF(capped) unknown
+ok
+test calibration_frames_the_measurement ... CALIBRATION median 127.4 ms (reference 127.0 ms, scale 1.00x) on s4 / 16 cpus / 12th Gen Intel(R) Core(TM) i5-12600K, load 11.05
+ok
+test every_generated_instance_self_checks ... ok
+test frontier_bv_reduction ...   retry [bv_reduction N=35]: 3 attempts, final unsat at 4793.2 ms (load 9.34)
+  retry [bv_reduction N=36]: 3 attempts, final timeout at 4955.9 ms (load 11.94)
+  retry [bv_reduction N=37]: 3 attempts, final timeout at 4955.9 ms (load 13.44)
+  retry [bv_reduction N=38]: 3 attempts, final timeout at 4955.9 ms (load 12.06)
+  retry [bv_reduction N=39]: 3 attempts, final timeout at 4955.9 ms (load 11.34)
+--- frontier curve: bv_reduction ---
+   N    decided     status    solve_ms
+   1        yes      unsat         0.2
+   2        yes      unsat        11.3
+   3        yes      unsat        17.2
+   4        yes      unsat        15.2
+   5        yes      unsat        23.9
+   6        yes      unsat        19.1
+   7        yes      unsat        19.2
+   8        yes      unsat        27.8
+   9        yes      unsat        23.7
+  10        yes      unsat        27.3
+  11        yes      unsat        31.4
+  12        yes      unsat       103.3
+  13        yes      unsat       174.9
+  14        yes      unsat       270.7
+  15        yes      unsat       357.7
+  16        yes      unsat       487.5
+  17        yes      unsat       573.1
+  18        yes      unsat       693.4
+  19        yes      unsat       812.8
+  20        yes      unsat       961.9
+  21        yes      unsat      1145.6
+  22        yes      unsat      1244.7
+  23        yes      unsat      1484.1
+  24        yes      unsat      1608.2
+  25        yes      unsat      1681.1
+  26        yes      unsat      1927.9
+  27        yes      unsat      2300.1
+  28        yes      unsat      2497.3
+  29        yes      unsat      2832.0
+  30        yes      unsat      3030.5
+  31        yes      unsat      3209.1
+  32        yes      unsat      3565.0
+  33        yes      unsat      3474.9
+  34        yes      unsat      3798.2
+  35        yes      unsat      4793.2
+  36         no    timeout      4955.9
+  37         no    timeout      4955.9
+  38         no    timeout      4955.9
+  39         no    timeout      4955.9
+FRONTIER bv_reduction = 35 (baseline 30), PROGRESS (+5 over baseline) — ADVISORY ONLY, do not raise the baseline from this run: budget was scaled 0.99x
+  reference frame [bv_reduction]: machine s4 (16 cpus, 12th Gen Intel(R) Core(TM) i5-12600K), load 11.05 -> 11.79, calibration 125.6 ms vs reference 127.0 ms => scale 0.99x, budget 3956 ms
+  NOT COMPARABLE [bv_reduction]: throughput moved 109 % during the sweep (125.6 ms -> 262.8 ms) — the number above is recorded but the ratchet below is not enforced on it. Re-run on an idle box.
+TIMING bv_reduction = 1167.4 ms calibrated over pinned N=[12, 15, 18] (baseline median 1293.1 ms, ceiling 2264.3 ms, 8 runs) — ADVISORY, not enforced on this run
+  pinned [bv_reduction]: N=12 104.5 ms (raw 103.3), N=15 361.8 ms (raw 357.7), N=18 701.2 ms (raw 693.4)
+  near-budget [bv_reduction] (>= 3165 ms of a 3956 ms budget): N=31 at 3209 ms, N=32 at 3565 ms, N=33 at 3475 ms, N=34 at 3798 ms, N=35 at 4793 ms
+ok
+test frontier_lia_cuts ...   retry [lia_cuts N=29]: 3 attempts, final unknown at 8080.4 ms (load 15.29)
+  retry [lia_cuts N=36]: 3 attempts, final unknown at 8082.5 ms (load 13.32)
+  retry [lia_cuts N=37]: 3 attempts, final unknown at 8149.6 ms (load 10.11)
+--- frontier curve: lia_cuts ---
+   N    decided     status    solve_ms
+   1        yes        sat         1.5
+   2        yes        sat         2.5
+   3        yes        sat       115.6
+   4        yes        sat         4.6
+   5        yes        sat         9.1
+   6        yes        sat         5.6
+   7        yes        sat         6.7
+   8        yes        sat        18.6
+   9        yes        sat        11.5
+  10        yes        sat         8.6
+  11        yes        sat        18.8
+  12        yes        sat        17.7
+  13        yes        sat        35.5
+  14        yes        sat        16.5
+  15        yes        sat        46.9
+  16        yes        sat        14.2
+  17        yes        sat        20.4
+  18        yes        sat        17.4
+  19        yes        sat        34.4
+  20        yes        sat       406.2
+  21        yes        sat      1685.2
+  22        yes        sat      3944.6
+  23        yes        sat        37.7
+  24        yes        sat        27.0
+  25        yes        sat      4121.3
+  26        yes        sat        21.5
+  27        yes        sat      6653.3
+  28        yes        sat      4645.9
+  29         no    unknown      8080.4
+  30        yes        sat      2848.4
+  31        yes        sat      1781.9
+  32        yes        sat        33.2
+  33        yes        sat      3222.9
+  34        yes        sat      4227.9
+  35        yes        sat      3328.4
+  36         no    unknown      8082.5
+  37         no    unknown      8149.6
+  38        yes        sat      2478.6
+  39        yes        sat      7064.1
+  40        yes        sat        65.2
+FRONTIER lia_cuts = 40 (baseline 26), PROGRESS (+14 over baseline) — ADVISORY ONLY, do not raise the baseline from this run: budget was scaled 2.01x
+  reference frame [lia_cuts]: machine s4 (16 cpus, 12th Gen Intel(R) Core(TM) i5-12600K), load 11.79 -> 9.17, calibration 255.1 ms vs reference 127.0 ms => scale 2.01x, budget 8033 ms
+  NOT COMPARABLE [lia_cuts]: throughput moved 46 % during the sweep (255.1 ms -> 137.0 ms) — the number above is recorded but the ratchet below is not enforced on it. Re-run on an idle box.
+TIMING lia_cuts = 277.0 ms calibrated over pinned N=[3, 19, 20] (baseline median 341.9 ms, ceiling 589.6 ms, 8 runs) — ADVISORY, not enforced on this run
+  pinned [lia_cuts]: N=3 57.6 ms (raw 115.6), N=19 17.1 ms (raw 34.4), N=20 202.3 ms (raw 406.2)
+  near-budget [lia_cuts] (>= 6427 ms of a 8033 ms budget): N=27 at 6653 ms, N=39 at 7064 ms
+ok
+test frontier_nia_unsat ... --- frontier curve: nia_unsat ---
+   N    decided     status    solve_ms
+   1        yes      unsat         1.5
+   2        yes      unsat         1.6
+   3        yes      unsat         4.0
+   4        yes      unsat         6.3
+   5        yes      unsat        13.5
+   6        yes      unsat      1463.6
+   7        yes      unsat      1453.4
+   8        yes      unsat      1453.4
+   9        yes      unsat        23.6
+  10        yes      unsat      1451.1
+  11        yes      unsat      1448.7
+  12        yes      unsat      1466.1
+  13        yes      unsat      1469.5
+  14        yes      unsat      1494.8
+  15        yes      unsat      1455.0
+  16        yes      unsat      1457.7
+  17        yes      unsat      1464.4
+  18        yes      unsat      1454.2
+  19        yes      unsat      1450.9
+  20        yes      unsat      1487.2
+  21        yes      unsat      1493.8
+  22        yes      unsat      1513.1
+  23        yes      unsat      1460.9
+  24        yes      unsat      1466.6
+  25        yes      unsat      1477.0
+  26        yes      unsat      1457.9
+  27        yes      unsat      1458.8
+  28        yes      unsat      1523.1
+  29        yes      unsat      1505.5
+  30        yes      unsat      1536.9
+  31        yes      unsat      1460.2
+  32        yes      unsat      1491.1
+  33        yes      unsat      1535.2
+  34        yes      unsat      1479.7
+  35        yes      unsat      1473.8
+  36        yes      unsat      1600.8
+  37        yes      unsat      1646.9
+  38        yes      unsat      1669.7
+  39        yes      unsat      1466.1
+  40        yes      unsat      1497.5
+FRONTIER nia_unsat = 40 (baseline 40)
+  reference frame [nia_unsat]: machine s4 (16 cpus, 12th Gen Intel(R) Core(TM) i5-12600K), load 9.17 -> 7.66, calibration 136.3 ms vs reference 127.0 ms => scale 1.07x, budget 4293 ms
+  NOT COMPARABLE [nia_unsat]: throughput moved 75 % during the sweep (136.3 ms -> 238.4 ms) — the number above is recorded but the ratchet below is not enforced on it. Re-run on an idle box.
+TIMING nia_unsat = 25.1 ms calibrated over pinned N=[1, 2, 3, 4, 5] (baseline median 44.3 ms, ceiling 115.6 ms, 7 runs) — ADVISORY, not enforced on this run
+  pinned [nia_unsat]: N=1 1.4 ms (raw 1.5), N=2 1.5 ms (raw 1.6), N=3 3.7 ms (raw 4.0), N=4 5.9 ms (raw 6.3), N=5 12.6 ms (raw 13.5)
+ok
+test frontier_nra_degree ... --- frontier curve: nra_degree ---
+   N    decided     status    solve_ms
+   1        yes      unsat         1.2
+   2        yes      unsat         1.1
+   3        yes      unsat         1.3
+   4        yes      unsat         1.2
+   5        yes      unsat         1.6
+   6        yes      unsat         1.7
+   7        yes      unsat         1.8
+   8        yes      unsat         1.4
+   9        yes      unsat         1.8
+  10        yes      unsat         1.5
+  11        yes      unsat         2.0
+  12        yes      unsat         2.1
+  13        yes      unsat         2.3
+  14        yes      unsat         2.5
+  15        yes      unsat         2.5
+  16        yes      unsat         1.6
+  17        yes      unsat         2.8
+  18        yes      unsat         2.9
+  19        yes      unsat         3.0
+  20        yes      unsat         3.1
+  21        yes      unsat         3.2
+  22        yes      unsat         3.3
+  23        yes      unsat         3.4
+  24        yes      unsat         2.4
+  25        yes      unsat         3.7
+  26        yes      unsat         3.8
+  27        yes      unsat         2.7
+  28        yes      unsat         4.3
+  29        yes      unsat         4.3
+  30        yes      unsat         4.5
+  31        yes      unsat         4.4
+  32        yes      unsat         4.2
+  33        yes      unsat         4.7
+  34        yes      unsat         4.8
+  35        yes      unsat         3.5
+  36        yes      unsat         5.0
+  37        yes      unsat         5.1
+  38        yes      unsat         5.2
+  39        yes      unsat         5.0
+  40        yes      unsat         3.9
+FRONTIER nra_degree = 40 (baseline 40)
+  reference frame [nra_degree]: machine s4 (16 cpus, 12th Gen Intel(R) Core(TM) i5-12600K), load 7.66 -> 7.37, calibration 136.8 ms vs reference 127.0 ms => scale 1.08x, budget 4309 ms
+TIMING nra_degree = 12.1 ms calibrated over pinned N=[10, 20, 30, 40] (baseline median 11.2 ms, ceiling 23.0 ms, 8 runs)
+  pinned [nra_degree]: N=10 1.4 ms (raw 1.5), N=20 2.9 ms (raw 3.1), N=30 4.2 ms (raw 4.5), N=40 3.6 ms (raw 3.9)
+ok
+test frontier_string_bound ... --- frontier curve: string_bound ---
+   N    decided     status    solve_ms
+   2        yes        sat        15.2
+   3        yes        sat        15.3
+   4        yes        sat        15.8
+   5        yes        sat        12.9
+   6        yes        sat        14.1
+   7        yes        sat        15.2
+   8        yes        sat        15.7
+   9        yes        sat        15.8
+  10        yes        sat        16.0
+  11        yes        sat        16.0
+  12        yes        sat        15.9
+  13        yes        sat        49.3
+  14        yes        sat        48.3
+  15        yes        sat        49.1
+  16        yes        sat        47.6
+  17        yes        sat        45.9
+  18        yes        sat        46.0
+  19        yes        sat        46.4
+  20        yes        sat        46.2
+  21        yes        sat        45.8
+  22        yes        sat        45.8
+  23        yes        sat        48.5
+  24        yes        sat        46.8
+  25        yes        sat        98.2
+  26        yes        sat        98.7
+  27        yes        sat        97.7
+  28        yes        sat        97.8
+  29        yes        sat        99.4
+  30        yes        sat       108.9
+  31        yes        sat       100.0
+  32        yes        sat        97.5
+  33        yes        sat       203.5
+  34        yes        sat       198.7
+  35        yes        sat       197.2
+  36        yes        sat       199.6
+  37        yes        sat       199.1
+  38        yes        sat       203.3
+  39        yes        sat       196.3
+  40        yes        sat       196.8
+FRONTIER string_bound = 40 (baseline 8), PROGRESS (+32 over baseline, ratchetable)
+  reference frame [string_bound]: machine s4 (16 cpus, 12th Gen Intel(R) Core(TM) i5-12600K), load 7.37 -> 7.10, calibration 131.3 ms vs reference 127.0 ms => scale 1.03x, budget 4137 ms
+TIMING string_bound = 339.4 ms calibrated over pinned N=[13, 25, 33] (baseline median 423.5 ms, ceiling 969.1 ms, 8 runs)
+  pinned [string_bound]: N=13 47.7 ms (raw 49.3), N=25 95.0 ms (raw 98.2), N=33 196.7 ms (raw 203.5)
+ok
+test nonlinear_self_checks_reject_corruption ... ok
+test timing_baselines_are_internally_consistent ... ok
+test timing_ratchet_fires_on_a_slowdown_and_not_on_a_healthy_run ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 311.55s
+

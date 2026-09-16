@@ -1,0 +1,10 @@
+{
+ "raw_count": 4,
+ "bodies": [
+  "(or (= (PO_LT (typeof XRES_95_86_95_86) T_java_io_IOException) true_term) (not (= (PO_LT T_java_io_FileNotFoundException T_java_io_IOException) true_term)) (not (= (PO_LT (typeof XRES_95_86_95_86) T_java_io_FileNotFoundException) true_term)))",
+  "(or (not (= (is RES_100_12_0_101_39_101_39 T_tohtml_Package) true_term)) (= (cast RES_100_12_0_101_39_101_39 T_tohtml_Package) RES_100_12_0_101_39_101_39))",
+  "(or (not (= (PO_LT T_tohtml_Package T_java_lang_Object) true_term)) (= (= (is RES_100_12_0_101_39_101_39 T_tohtml_Package) true_term) (or (= RES_100_12_0_101_39_101_39 null) (= (PO_LT (typeof RES_100_12_0_101_39_101_39) T_tohtml_Package) true_term))))"
+ ],
+ "not_ground": [],
+ "unmatched": 1
+}

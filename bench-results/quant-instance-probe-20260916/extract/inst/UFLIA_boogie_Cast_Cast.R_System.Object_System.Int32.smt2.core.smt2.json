@@ -1,0 +1,10 @@
+{
+ "raw_count": 3,
+ "bodies": [
+  "(= (= (Is_ nullObject (RefArray System.Object 1)) Smt.true) (or (= nullObject nullObject) (subtypes (typeof_ nullObject) (RefArray System.Object 1))))",
+  "(= (= (Is_ nullObject J) Smt.true) (or (= nullObject nullObject) (subtypes (typeof_ nullObject) J)))",
+  "(= (= (Is_ nullObject System.String) Smt.true) (or (= nullObject nullObject) (subtypes (typeof_ nullObject) System.String)))"
+ ],
+ "not_ground": [],
+ "unmatched": 0
+}
