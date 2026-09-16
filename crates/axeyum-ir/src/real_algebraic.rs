@@ -49,8 +49,8 @@ use axeyum_arith::big::BigRational;
 use axeyum_arith::big::Zero;
 
 use crate::poly_big::{
-    BigAlgebraic, Combine, big_eval_int_at, big_poly_divides, big_sign, bigint_poly_from_i128,
-    bigrational_from_i128, combine_retry,
+    BigAlgebraic, Combine, RootCounter, big_eval_int_at, big_poly_divides, big_sign,
+    bigint_poly_from_i128, bigrational_from_i128, combine_retry,
 };
 use crate::rational::Rational;
 
@@ -250,12 +250,43 @@ impl RealAlgebraic {
     }
 
     /// As [`RealAlgebraic::sign_at`] but for a bignum-integer polynomial `q`.
+    ///
+    /// # The side condition on the endpoint read, and why it is not optional
+    ///
+    /// The bracket `(lo, hi)` isolates `α` as a root of **this** number's
+    /// defining polynomial. It says nothing about `q`. So agreeing, nonzero
+    /// signs at `q(lo)` and `q(hi)` do **not** imply that `q` holds that sign
+    /// across the bracket — they are two point samples, not an enclosure of
+    /// `q`'s range, and `q` may have an even number of roots inside and dip
+    /// through the opposite sign between them, exactly where `α` may lie.
+    ///
+    /// Concretely, for `α = √2` bracketed by `(1, 2)` and
+    /// `q = 25x² − 70x + 48 = (5x − 6)(5x − 8)`: `q(1) = 3 > 0` and
+    /// `q(2) = 8 > 0`, while `q(√2) ≈ −0.995 < 0`. Reading the endpoints alone
+    /// answers `Pos` for a value that is `Neg`. That is a wrong sign in the
+    /// trusted evaluation path, and `regression_two_roots_inside_the_bracket`
+    /// pins it.
+    ///
+    /// So the endpoint read is accepted only alongside the exact side condition
+    /// [`big_no_root_in_open`]: `q` has no root strictly inside the bracket. With
+    /// that, the intermediate value theorem gives `q` a constant nonzero sign on
+    /// the whole interval, so the answer holds for every point in it — including
+    /// `α`, wherever in the bracket it sits. No separation bound is needed, and
+    /// no "the interval got small" heuristic is used: a small interval is not
+    /// evidence, a root count is.
+    ///
+    /// When the side condition cannot be decided exactly, this keeps refining
+    /// (a narrower bracket may separate the endpoints' signs outright) and
+    /// finally returns `None` — a decline, never a guess.
     #[must_use]
     pub fn sign_at_big(&self, q: &[BigInt]) -> Option<Sign> {
         // Exact vanishing test: `poly | q` over the rationals ⇒ q(α) = 0.
         if big_poly_divides(&self.inner.poly, q) {
             return Some(Sign::Zero);
         }
+        // Built once and reused across bisections: the bracket narrows, the
+        // polynomial does not.
+        let counter = RootCounter::new(q);
         let mut probe = self.clone();
         for _ in 0..MAX_REFINE_STEPS {
             let vlo = big_eval_int_at(q, &probe.inner.lo);
@@ -265,7 +296,13 @@ impl RealAlgebraic {
             }
             let slo = sign_of_big(&vlo);
             let shi = sign_of_big(&vhi);
-            if slo == shi && slo != Sign::Zero {
+            if slo == shi
+                && slo != Sign::Zero
+                && counter
+                    .as_ref()
+                    .and_then(|c| c.no_root_in_open(&probe.inner.lo, &probe.inner.hi))
+                    == Some(true)
+            {
                 return Some(slo);
             }
             if probe.refine_once() == Sign::Zero {
@@ -603,6 +640,115 @@ mod tests {
     fn display_form() {
         let a = sqrt2();
         assert_eq!(a.to_string(), "root of 1*x^2 - 2 in (1, 2)");
+    }
+
+    /// **Regression (ADR-2134).** Two roots of `q` inside the isolating bracket.
+    ///
+    /// `alpha = sqrt(2) ~ 1.41421` is bracketed by `(1, 2)`.
+    /// `q = 25x^2 - 70x + 48 = (5x - 6)(5x - 8)` has roots `1.2` and `1.6`, so it
+    /// is POSITIVE at both endpoints (`q(1) = 3`, `q(2) = 8`) and NEGATIVE at
+    /// `alpha` (`q(sqrt 2) ~ -0.995`).
+    ///
+    /// Reading the two endpoint signs alone answers `Pos` here -- a WRONG sign in
+    /// the trusted evaluation path. The exact side condition (`q` has no root
+    /// strictly inside the bracket) is what rejects that read and forces
+    /// refinement until the bracket separates from both roots.
+    ///
+    /// This shape is unreachable by `sign_at_matches_float_oracle`: that sweep
+    /// runs `c0, c1 in -5..=5` and `c2 in -3..=3`, and the constraints
+    /// `q(1) > 0`, `q(2) > 0`, `q(sqrt 2) < 0` have NO integer solution in that
+    /// box (they force `c1 < -4.83` together with a `c0` in an interval of width
+    /// `< 0.08`). A blind population that cannot contain the defect measures the
+    /// subset it happens to cover.
+    #[test]
+    fn regression_two_roots_inside_the_bracket() {
+        let a = sqrt2();
+        // q = 25x^2 - 70x + 48, LSB-first.
+        let q = [48, -70, 25];
+        // Both endpoints of the isolating bracket are POSITIVE -- the trap.
+        assert_eq!(
+            big_sign(&big_eval_int_at(
+                &bigint_poly_from_i128(&q),
+                &bigrational_from_i128(1, 1)
+            )),
+            Sign::Pos,
+            "q(1) must be positive for this fixture to be the trap it claims"
+        );
+        assert_eq!(
+            big_sign(&big_eval_int_at(
+                &bigint_poly_from_i128(&q),
+                &bigrational_from_i128(2, 1)
+            )),
+            Sign::Pos,
+            "q(2) must be positive for this fixture to be the trap it claims"
+        );
+        // The true sign at sqrt(2) is NEGATIVE.
+        assert_eq!(a.sign_at(&q), Some(Sign::Neg));
+        // ... and negating q flips it, so the answer is not a constant.
+        assert_eq!(a.sign_at(&[-48, 70, -25]), Some(Sign::Pos));
+    }
+
+    /// The same trap as a FAMILY rather than one point: every quadratic whose two
+    /// rational roots straddle `sqrt(2)` strictly inside the bracket `(1, 2)`.
+    ///
+    /// `q(x) = (d*x - n1)(d*x - n2)` with `n1/d < sqrt 2 < n2/d` is positive at
+    /// both endpoints and negative at `alpha`. The oracle here is ALGEBRAIC, not
+    /// floating point: a product of two linear factors is negative exactly
+    /// between its roots, and `n1/d < sqrt 2 < n2/d` is decided exactly by
+    /// comparing `n^2` against `2 d^2`.
+    #[test]
+    fn sign_at_two_roots_straddling_alpha_family() {
+        let a = sqrt2();
+        let mut checked = 0usize;
+        for d in 2..=12i128 {
+            for n1 in 1..(2 * d) {
+                for n2 in (n1 + 1)..(2 * d) {
+                    // Strictly inside (1, 2): d < n < 2d.
+                    if n1 <= d || n2 <= d {
+                        continue;
+                    }
+                    // n1/d < sqrt 2 < n2/d, exactly.
+                    if !(n1 * n1 < 2 * d * d && n2 * n2 > 2 * d * d) {
+                        continue;
+                    }
+                    // q = (d x - n1)(d x - n2) = d^2 x^2 - d(n1+n2) x + n1 n2.
+                    let q = [n1 * n2, -d * (n1 + n2), d * d];
+                    assert_eq!(
+                        a.sign_at(&q),
+                        Some(Sign::Neg),
+                        "q=(({d}x-{n1})({d}x-{n2})) is negative at sqrt(2)"
+                    );
+                    // The negation must flip, never agree.
+                    assert_eq!(
+                        a.sign_at(&[-(n1 * n2), d * (n1 + n2), -(d * d)]),
+                        Some(Sign::Pos),
+                        "negated q must be positive at sqrt(2)"
+                    );
+                    checked += 1;
+                }
+            }
+        }
+        // The population must be non-empty: an adversarial family that generates
+        // nothing is a test that cannot fail.
+        assert!(
+            checked >= 20,
+            "the straddling family must be non-trivial, got {checked}"
+        );
+    }
+
+    /// The side condition is a SIDE condition, not the answer: a polynomial with
+    /// no root in the bracket still resolves on the first read, so the fix does
+    /// not turn ordinary sign queries into declines.
+    #[test]
+    fn sign_at_still_resolves_when_no_root_is_inside() {
+        let a = sqrt2();
+        // (x - 5): root at 5, far outside (1, 2).
+        assert_eq!(a.sign_at(&[-5, 1]), Some(Sign::Neg));
+        // (x^2 - 9): roots at +-3, outside (1, 2).
+        assert_eq!(a.sign_at(&[-9, 0, 1]), Some(Sign::Neg));
+        // A nonzero constant has no roots anywhere.
+        assert_eq!(a.sign_at(&[7]), Some(Sign::Pos));
+        assert_eq!(a.sign_at(&[-7]), Some(Sign::Neg));
     }
 
     /// Property: `sign_at` agrees with a brute-force floating-point oracle on a

@@ -899,3 +899,113 @@ pub(crate) fn big_poly_divides(divisor: &[BigInt], dividend: &[BigInt]) -> bool 
         None => false,
     }
 }
+
+// ============================================================================
+// Exact constancy of a polynomial's sign over an interval (ADR-2134)
+// ============================================================================
+
+/// Iteration guard for the Sturm chain built by [`RootCounter`].
+///
+/// Deliberately much larger than [`BIG_MAX_DEGREE_GUARD`]: that bound sizes a
+/// *resultant* built by the field arithmetic, whereas this one sizes a chain
+/// over a polynomial handed in by a caller — an atom of the query. Capping it at
+/// the resultant bound would turn an ordinary degree-30 atom into a decline, and
+/// the cost here is one Euclidean chain, not a Sylvester determinant.
+const BIG_STURM_MAX_DEGREE: usize = 256;
+
+/// An exact counter for the real roots of one fixed polynomial inside an
+/// interval, built once and queried on successively narrower intervals.
+///
+/// # Why this exists
+///
+/// [`crate::RealAlgebraic::sign_at`] decides the sign of a polynomial `q` at an
+/// algebraic point `α` by locating `α` in a bracket and reading `q` at the
+/// bracket's endpoints. Agreeing, nonzero endpoint signs do **not** by
+/// themselves imply that `q` keeps that sign across the bracket: `q` may have an
+/// even number of roots inside and dip through the opposite sign in between —
+/// exactly where `α` might be. `q(lo)` and `q(hi)` are two *samples*, not an
+/// enclosure of `q`'s range.
+///
+/// [`RootCounter::no_root_in_open`] is the exact side condition that makes the
+/// endpoint read sound. With no root of `q` strictly inside `(lo, hi)` and
+/// `q(lo) ≠ 0`, `q` has constant nonzero sign on the whole open interval by the
+/// intermediate value theorem, so `sign(q(α)) = sign(q(lo))` for **every** `α`
+/// in it — no assumption about where in the bracket `α` sits, and no separation
+/// bound to refine below.
+///
+/// z3 reaches the same guarantee differently: `eval_sign_at`
+/// (`references/z3/src/math/polynomial/algebraic_numbers.cpp:2453-2484`) refines
+/// until an *interval evaluation* of `q` over the box provably excludes zero
+/// (`bqim().contains_zero(ri)`), which is an enclosure of the range rather than
+/// two point samples, and falls back to a resultant plus
+/// `nonzero_root_lower_bound` (`:2565`) to conclude an exact zero. A Sturm count
+/// decides in one chain instead of refining toward a bound, and our exact-zero
+/// case is settled by polynomial divisibility instead of a resultant.
+///
+/// The chain is built once because `sign_at` narrows the same bracket many
+/// times; rebuilding a Euclidean chain per bisection would make the sound path
+/// cost a multiple of the unsound one.
+pub(crate) enum RootCounter {
+    /// A nonzero constant: no real roots anywhere, so every interval is clear.
+    NoRootsAnywhere,
+    /// The Sturm chain of the squarefree part, plus that squarefree part (needed
+    /// to test whether the upper endpoint is itself a root).
+    Chain {
+        /// `S₀ = sf`, `S₁ = sf'`, `S_{k+1} = −rem(S_{k−1}, S_k)`.
+        chain: Vec<BigVec>,
+        /// The squarefree part — the same root SET as `q`, which is all this
+        /// asks about.
+        squarefree: BigVec,
+    },
+}
+
+impl RootCounter {
+    /// Build the counter for the bignum-integer polynomial `q` (LSB-first).
+    ///
+    /// `None` when no exact count can be formed — the zero polynomial (which
+    /// vanishes everywhere and has no meaningful degree), a remainder that did
+    /// not cancel, or the degree guard. The caller must **decline**, never
+    /// assume either answer.
+    pub(crate) fn new(q: &[BigInt]) -> Option<RootCounter> {
+        let qr = bigint_poly_to_rat(q);
+        let deg = big_degree(&qr)?;
+        if deg == 0 {
+            return Some(RootCounter::NoRootsAnywhere);
+        }
+        if deg > BIG_STURM_MAX_DEGREE {
+            return None;
+        }
+        // Sturm's theorem needs a squarefree polynomial; the squarefree part has
+        // the same root SET.
+        let squarefree = big_squarefree_part(&qr, BIG_STURM_MAX_DEGREE)?;
+        let chain = big_sturm_chain(&squarefree, BIG_STURM_MAX_DEGREE)?;
+        Some(RootCounter::Chain { chain, squarefree })
+    }
+
+    /// Whether the polynomial has **no real root strictly inside** the open
+    /// interval `(lo, hi)`.
+    ///
+    /// `Some(true)`  — provably no root in `(lo, hi)`.
+    /// `Some(false)` — provably at least one root in `(lo, hi)`.
+    /// `None`        — the count could not be formed for this interval (a
+    ///                 degenerate interval, or a subtraction that underflowed).
+    ///                 The caller must decline.
+    pub(crate) fn no_root_in_open(&self, lo: &BigRational, hi: &BigRational) -> Option<bool> {
+        if lo >= hi {
+            return None;
+        }
+        let (chain, squarefree) = match self {
+            RootCounter::NoRootsAnywhere => return Some(true),
+            RootCounter::Chain { chain, squarefree } => (chain, squarefree),
+        };
+        // `big_count_roots_in` counts distinct roots in the HALF-OPEN `(lo, hi]`.
+        let half_open = big_count_roots_in(chain, lo, hi)?;
+        // Drop `hi` itself if it is a root, to get the count over the OPEN one.
+        let open = if big_sign(&big_eval(squarefree, hi)) == Sign::Zero {
+            half_open.checked_sub(1)?
+        } else {
+            half_open
+        };
+        Some(open == 0)
+    }
+}
