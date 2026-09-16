@@ -1,0 +1,101 @@
+file	order	a_rc	a_ms	a_verdict	a_total_ms	b_rc	b_ms	b_verdict	b_total_ms	c_rc	c_ms	c_verdict	c_total_ms	a_cold_builds	b_cold_builds	c_cold_builds	a_cube_collect_ms	a_cube_simplex_ms	b_cube_collect_ms	b_cube_simplex_ms	b_warm_solve_ms	b_warm_sync_ms	b_warm_checks	b_warm_build	b_warm_restarts	b_warm_fill_peak	c_cube_collect_ms	c_cube_simplex_ms	c_warm_solve_ms	c_warm_sync_ms	c_warm_checks	c_warm_build	c_warm_restarts	c_warm_fill_peak	status
+QF_UFLRA/mathsat/RandomCoupled/pb_real_10_0100_10_22.smt2	AC	0	7413	sat	7349					0	4911	sat	4817	107		64	20	141									12	60	25	0	43	built	0	2592	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_30_0600_10_16.smt2	CA	0	25030	unknown						0	25027	unknown																							sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_40_80_60_30.smt2	AC	0	7514	sat	7438					0	7714	sat	7678	37		37	52	36									54	36	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_30_0900_10_18.smt2	CA	0	4811	unsat	4715					0	4811	unsat	4744	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.32_1_cilled_true-unreach-call_ok_nondet_linux-3.4-32_1-drivers--staging--speakup--speakup_soft.ko-ldv_main0_sequence_infinite_withcheck_stateful.cil.out.c.smt2	AC	0	24125	unknown	24047					0	24126	unknown	24046	50		44	222	5									200	4	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_75_45_40.smt2	CA	0	3208	unsat	3111					0	3208	unsat	3143	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_30_0600_10_22.smt2	AC	0	25129	unknown						0	25124	unknown																							sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_50_100_30_26.smt2	CA	0	7813	sat	7727					0	7813	sat	7728	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.rule57_ebda_blast.c_false-unreach-call.i.smt2	AC	0	106	sat	23					0	106	sat	23	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_75_45_28.smt2	CA	0	2609	unsat	2553					0	2608	unsat	2564	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_10_0100_10_28.smt2	AC	0	1007	sat	989					0	1108	sat	1003	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.43_1a_cilled_true-unreach-call_ok_nondet_linux-43_1a-drivers--input--misc--ab8500-ponkey.ko-ldv_main0_sequence_infinite_withcheck_stateful.cil.out.c.smt2	CA	0	107	unsat	0					0	107	unsat	0	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_60_45_80.smt2	AC	0	2809	sat	2724					0	2509	sat	2477	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.minepump_spec1_product50_false-unreach-call.cil.c.smt2	CA	0	24130	unknown	24017					0	24129	unknown	24017	0		0	287	0									284	0	0	0	0	off	0	0	sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.sll_to_dll_rev_false-unreach-call.i.smt2	AC	0	1207	sat	1119					0	1408	sat	1349	0		0	37	0									44	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_20_0600_10_28.smt2	CA	0	3109	unsat	3074					0	3109	unsat	3089	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_50_100_30_20.smt2	AC	0	25129	unknown						0	25131	unknown																							sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_30_0900_10_24.smt2	CA	0	4911	unsat	4800					0	4911	unsat	4812	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_40_0600_10_26.smt2	AC	0	25031	unknown						0	25129	unknown																							sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.s3_srvr.blast.14_false-unreach-call.i.cil.c.smt2	CA	0	306	sat	294					0	407	sat	303	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/cpachecker-bmc-svcomp14/cpachecker-bmc.rekcba_ctm_true-unreach-call.1.c.smt2	AC	0	25229	unknown						0	25230	unknown																							sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.jain_2_true-unreach-call.i.smt2	CA	0	105	sat	2					0	105	sat	2	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_20_0400_10_26.smt2	AC	0	1507	sat	1447					0	1507	sat	1428	0		0	45	0									44	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_40_80_60_72.smt2	CA	0	4710	sat	4675					0	4709	sat	4664	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_10_0200_10_24.smt2	AC	0	3309	sat	3266					0	3410	sat	3309	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_40_0800_10_24.smt2	CA	0	25030	unknown						0	25130	unknown																							sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.email_spec3_product34_false-unreach-call.cil.c.smt2	AC	0	25131	unknown						0	25133	unknown																							sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.32_1_cilled_true-unreach-call_ok_nondet_linux-3.4-32_1-drivers--media--dvb--dvb-usb--dvb-usb-nova-t-usb2.ko-ldv_main0_sequence_infinite_withcheck_stateful.cil.out.c.smt2	CA	0	21024	unknown	3872					0	22228	unknown	4518	570		623	358	43									390	49	0	0	0	off	0	0	sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.fo_test.c_false-unreach-call.i.smt2	AC	0	106	sat	5					0	106	sat	5	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_75_45_46.smt2	CA	0	3209	unsat	3190					0	3209	unsat	3182	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.array_false-unreach-call.i.smt2	AC	0	106	sat	19					0	106	sat	20	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_60_45_50.smt2	CA	0	2308	unsat	2223					0	2308	unsat	2237	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_40_80_60_90.smt2	AC	0	4710	sat	4665					0	4711	sat	4654	18		18	13	3									13	3	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_50_100_30_68.smt2	CA	0	7513	unsat	7446					0	7513	unsat	7446	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_40_80_60_36.smt2	AC	0	5610	sat	5510					0	5411	sat	5378	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_10_0300_10_26.smt2	CA	0	307	unsat	210					0	307	unsat	214	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/cpachecker-bmc-svcomp14/cpachecker-bmc.floppy_false-unreach-call.i.cil.c.smt2	AC	0	25030	unknown						0	25029	unknown																							sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_40_1200_10_14.smt2	CA	0	16421	unsat	16323					0	16317	unsat	16218	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.minepump_spec3_product29_false-unreach-call.cil.c.smt2	AC	0	24131	unknown	24021					0	24130	unknown	24022	0		0	220	0									216	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_20_0200_10_24.smt2	CA	0	1108	sat	1062					0	1108	sat	1065	1		1	34	0									34	0	0	0	0	off	0	0	sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.43_1a_cilled_true-unreach-call_ok_nondet_linux-43_1a-drivers--rtc--rtc-ds1390.ko-ldv_main0_sequence_infinite_withcheck_stateful.cil.out.c.smt2	AC	0	107	unsat	0					0	106	unsat	0	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/FFT/smtlib.620524.smt2	CA	0	106	unknown	4					0	107	unknown	4	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.Problem13_60_false-unreach-call.c.smt2	AC	0	25031	unknown						0	25027	unknown																							sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_60_45_38.smt2	CA	0	2608	sat	2532					0	2608	sat	2524	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_20_0600_10_22.smt2	AC	0	2608	unsat	2539					0	2608	unsat	2547	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_60_45_02.smt2	CA	0	3009	sat	2926					0	3009	sat	2924	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_30_0300_10_14.smt2	AC	0	6412	sat	6386					0	6413	sat	6300	48		48	131	15									129	15	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_40_80_60_24.smt2	CA	0	4508	unsat	4498					0	4610	unsat	4530	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_60_45_44.smt2	AC	0	1807	sat	1730					0	1807	sat	1737	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_60_45_98.smt2	CA	0	2710	sat	2634					0	2709	sat	2677	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_50_100_30_74.smt2	AC	0	25130	unknown						0	25130	unknown																							sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_75_45_88.smt2	CA	0	3209	unsat	3191					0	3309	unsat	3198	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.Problem07_60_false-unreach-call.c.smt2	AC	0	25130	unknown						0	25130	unknown																							sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_20_0400_10_20.smt2	CA	0	13218	sat	13153					0	13620	sat	13559	93		93	192	9									190	9	0	0	0	off	0	0	sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.minepump_spec3_product41_true-unreach-call.cil.c.smt2	AC	0	24128	unknown	24016					0	24129	unknown	24015	0		0	337	0									336	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_40_1200_10_20.smt2	CA	0	12518	unsat	12428					0	12717	unsat	12634	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.43_1a_cilled_true-unreach-call_ok_nondet_linux-43_1a-drivers--input--touchscreen--inexio.ko-ldv_main0_sequence_infinite_withcheck_stateful.cil.out.c.smt2	AC	0	107	unsat	0					0	107	unsat	0	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.minepump_spec3_product35_false-unreach-call.cil.c.smt2	CA	0	10417	sat	10388					0	10215	sat	10125	0		0	180	0									174	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_40_80_60_42.smt2	AC	0	5212	sat	5142					0	5111	sat	5069	0		0	6	0									6	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_50_100_30_32.smt2	CA	0	7612	sat	7550					0	7612	sat	7528	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_75_45_94.smt2	AC	0	2508	unsat	2407					0	2508	unsat	2400	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.32_1_cilled_true-unreach-call_ok_nondet_linux-3.4-32_1-drivers--media--video--gspca--gspca_stv0680.ko-ldv_main0_sequence_infinite_withcheck_stateful.cil.out.c.smt2	CA	0	106	unsat	42					0	106	unsat	43	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_20_0200_10_12.smt2	AC	0	8114	sat	8020					0	8013	sat	7954	133		133	79	17									79	17	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_40_80_60_78.smt2	CA	0	5011	sat	4970					0	5011	sat	4939	0		0	14	0									16	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_30_0600_10_10.smt2	AC	0	25131	unknown						0	25131	unknown																							sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_75_45_82.smt2	CA	0	3310	unsat	3263					0	3210	unsat	3120	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_20_0500_10_12.smt2	AC	0	2910	unsat	2849					0	2810	unsat	2782	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_20_0200_10_18.smt2	CA	0	1309	sat	1210					0	1308	sat	1202	0		0	20	0									20	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_20_0400_10_14.smt2	AC	0	25130	unknown						0	25130	unknown																							sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_60_45_92.smt2	CA	0	2407	sat	2392					0	2508	sat	2411	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.linear_sea.ch_true-unreach-call.i.smt2	AC	0	213	sat	192					0	206	sat	185	0		0	4	0									4	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_10_0100_10_10.smt2	CA	0	1407	sat	1298					0	1307	sat	1295	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_40_80_60_84.smt2	AC	0	4810	sat	4734					0	4810	sat	4778	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_40_0400_10_10.smt2	CA	0	20726	sat	20615					0	20521	sat	20498	6		6	427	1									433	1	0	0	0	off	0	0	sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.minepump_spec1_product56_false-unreach-call.cil.c.smt2	AC	0	25128	unknown						0	25030	unknown																							sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.minepump_spec2_product38_true-unreach-call.cil.c.smt2	CA	0	16823	unsat	16771					0	17123	unsat	17038	0		0	301	0									298	0	0	0	0	off	0	0	unsat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.Problem16_50_true-unreach-call.c.smt2	AC	0	10715	unsat	10643					0	10715	unsat	10652	0		0	101	0									100	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_60_45_32.smt2	CA	0	2608	sat	2586					0	2608	sat	2554	4		4	0	1									0	1	0	0	0	off	0	0	sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.pointer_extension_false-unreach-call.i.smt2	AC	0	105	sat	3					0	105	sat	3	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_75_45_76.smt2	CA	0	3209	unsat	3173					0	3209	unsat	3152	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/FFT/smtlib.626139.smt2	AC	0	106	unknown	0					0	106	unknown	0	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_40_0800_10_18.smt2	CA	0	25131	unknown						0	25128	unknown																							unsat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_60_45_86.smt2	AC	0	3210	sat	3155					0	3209	sat	3116	6		6	0	1									0	1	0	0	0	off	0	0	sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.32_1_cilled_true-unreach-call_ok_nondet_linux-3.4-32_1-drivers--power--wm831x_power.ko-ldv_main0_sequence_infinite_withcheck_stateful.cil.out.c.smt2	CA	0	15118	unknown	1442					0	14921	unknown	1407	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_50_100_30_86.smt2	AC	0	7413	sat	7312					0	7212	sat	7183	0		0	1	0									1	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_40_0400_10_16.smt2	CA	0	25130	unknown						0	25131	unknown																							sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_30_0300_10_20.smt2	AC	0	3709	sat	3668					0	3810	sat	3698	0		0	134	0									136	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_10_0100_10_16.smt2	CA	0	2008	sat	1910					0	2008	sat	1934	120		64	19	54									10	22	7	0	56	built	0	1964	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_10_0250_10_10.smt2	AC	0	406	unsat	301					0	306	unsat	288	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_10_0200_10_18.smt2	CA	0	2909	sat	2886					0	2908	sat	2882	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_10_0250_10_16.smt2	AC	0	306	unsat	208					0	306	unsat	209	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.minepump_spec2_product62_true-unreach-call.cil.c.smt2	CA	0	18125	unsat	18037					0	18124	unsat	18034	0		0	194	0									195	0	0	0	0	off	0	0	unsat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.43_1a_cilled_true-unreach-call_ok_nondet_linux-43_1a-drivers--media--dvb--dvb-usb--dvb-usb-vp7045.ko-ldv_main0_sequence_infinite_withcheck_stateful.cil.out.c.smt2	AC	0	9917	sat	9788					0	9515	sat	9432	63		63	72	4									70	4	0	0	0	off	0	0	sat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.minepump_spec3_product47_false-unreach-call.cil.c.smt2	CA	0	25132	unknown						0	25130	unknown																							sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_50_100_30_38.smt2	AC	0	6713	sat	6673					0	6913	sat	6799	0		0	13	0									13	0	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_50_100_30_80.smt2	CA	0	9415	sat	9344					0	9316	sat	9215	17		17	55	6									51	6	0	0	0	off	0	0	sat
+QF_UFLRA/mathsat/RandomDecoupled/pb_real_30_75_45_34.smt2	AC	0	3410	unsat	3366					0	3409	unsat	3364	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_40_1200_10_26.smt2	CA	0	4510	unsat	4421					0	4610	unsat	4532	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_30_0600_10_28.smt2	AC	0	25130	unknown						0	25131	unknown																							sat
+QF_UFLRA/mathsat/RandomCoupled/pb_real_40_0800_10_12.smt2	CA	0	25130	unknown						0	25131	unknown																							sat
