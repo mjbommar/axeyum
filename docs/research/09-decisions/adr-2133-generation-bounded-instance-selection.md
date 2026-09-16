@@ -93,6 +93,15 @@ gen1 16.8 %, gen2 22.4 %, gen3 7.8 %, gen4 0.3 %. So
 reduction — and `FLOOD_FINAL_SUBSET_CHECK_MIN_GROUND = 2048` keeps that
 pre-check from running at all on 26 of the 37 dumped cores.
 
+**Positive control on the headline z3 column.** `>= 3 on 25 of 53` rests on
+`ref-cores.tsv`'s `z3_maxgen`, which this lane inherited from ADR-2113. It was
+re-derived here rather than trusted: `z3 -st` on all 53 cores, reading
+`:max-generation` directly (`zmaxgen.sh`, output in
+`z3-maxgen-rederived.tsv`). **52 of 53 agree exactly.** The one difference is
+`UFLIA_simplify2_front_end_suite_javafe.ast.StandardPrettyPrint.008`, where z3
+prints no `:max-generation` line at all and ADR-2113 recorded `0` — consistent,
+not a disagreement. The `>= 3` count is **25 of 53** on both readings.
+
 ## The lever
 
 `GENERATION_LADDER_LEVEL = 0` (`AXEYUM_QINST_GEN_LADDER`, or

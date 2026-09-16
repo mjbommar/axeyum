@@ -91,6 +91,15 @@ Our own ground sets, pooled over the 37 cores that dump: gen0 52.7 %, gen1
 and `FLOOD_FINAL_SUBSET_CHECK_MIN_GROUND = 2048` means that check does not run
 at all on **26 of the 37** dumped cores (median ground **1061**).
 
+**Positive control on the headline z3 column.** `>= 3 on 25 of 53` rests on
+`ref-cores.tsv`'s `z3_maxgen`, which this lane inherited from ADR-2113. It was
+re-derived here rather than trusted: `z3 -st` on all 53 cores, reading
+`:max-generation` directly (`zmaxgen.sh`, output in
+`z3-maxgen-rederived.tsv`). **52 of 53 agree exactly.** The one difference is
+`UFLIA_simplify2_front_end_suite_javafe.ast.StandardPrettyPrint.008`, where z3
+prints no `:max-generation` line at all and ADR-2113 recorded `0` — consistent,
+not a disagreement. The `>= 3` count is **25 of 53** on both readings.
+
 ## The increment this indicates, and the lever it ships behind
 
 Not a per-round admission cap. A **generation LADDER on the final refutation
