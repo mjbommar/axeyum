@@ -1,7 +1,7 @@
 # ADR-2122: `QF_LRA` — implied-bound propagation into the SAT core, and the 24.5 % it can reach
 
 Status: proposed
-Index-summary: ADR-2111 named theory propagation the largest lever in `QF_LRA` from a RATIO -- a median **19 theory propagations against 836,531 decisions** on the 23 of 93 undecided rows that reach the online engine -- and **a ratio is not a prize**. This lane measured the prize BEFORE building: a `probe` mode that builds the identical column-bound table and offers nothing, plus a `note_decision` driver hook (the driver is the only party that can tell a BRANCH from a unit propagation, since a theory sees `assert` for both). **The ceiling is 405,738 of 1,654,631 decisions on tracked atoms = 24.5 %, and 7.0 % of ALL decisions**; median per-row share 19.0 %, **min 0.3 %, max 70.5 % -- the spread is the finding** -- and **the two `miplib/pp08a-*` rows, one of them ADR-2111's own median, have `tracked = 0`: not one of their 169,645 and 291,314 decisions is on an atom the theory tracks, so the lever provably cannot reach the division's representative file**. Built anyway, and it works: a COLUMN-bound table rather than a basis-row scan, which is FORCED here rather than chosen -- z3's `is_unit_var` makes `x <= 3` a column bound with **no row at all** (`theory_lra.cpp:807-809,856-857`) while ours makes a slack row per template, so **no problem variable ever carries a bound** and a direct port of `propagate_bounds_for_touched_rows` would have been INERT. Seeds from unit constraints, rounds over the asserted rows at one candidate per row entry per direction, emission when an atom's expression is confined to one side of zero; basis-independent, so the offered sequence does not depend on the last check's pivots. **Three of ADR-2111's citations are corrected, one of which would have cost a successor: z3 does NOT emit at most two implied bounds per row** -- `analyze()` returns at most 2 but that counts DIRECTIONS, and `limit_all_monoids_from_below` (`bound_analyzer_on_row.h:196-220`) calls `limit_j` once per row ENTRY, so a row of length n emits up to 2n; also `try_add_bound` does not exist (`add_bound`, `lp_bound_propagator.h:150-190`) and `:54-80` truncates `analyze()` mid-body. Soundness by a checker sharing NO arithmetic with the producer: every offered literal's reasons plus its own NEGATION go to the simplex, which must refute them -- **904 verified, 0 inconclusive, 0 refuted over 1,000 LCG systems**, floor asserted at 200 so a propagator that goes quiet dies rather than passing by checking nothing; the soundness-negative fixture is a PAIR with the satisfiable arm first; the positive control carries its own negative control. The five z3 differential fuzzes run in **BOTH** arms (15 tests, exit 0 each) because a lever shipping `off` is otherwise exercised by nothing. **A/B, one binary two env values, `QF_LRA` COMPLETE at 400 rows across the pinned board AND a seeded held-out draw disjoint from it: pinned 107/107 net +0 with 0 movers (arm A re-deriving the board's 107 exactly), held-out 93/92 net -1, 0 gains, 0 flips, 0 exit-status differences, 183 `:status` comparisons with 0 disagreements** -- and the one mover re-run 3x per arm is **STABLE-LOSS** (3/3 `unsat` off, 3/3 `unknown` on), not ambient. **Implied-bound propagation buys ZERO verdicts and costs +35.4 % / +12.2 % of wall clock on the rows both arms decide.** SHIPS `off`. The mutation run found a guard that was DECORATION -- the self-explanation `continue` was removable with all 38 tests green, because every reason atom is asserted and the target is not -- now a `debug_assert!`; and it found two guards with the SAME five-test kill set, which a new fixture separates (still nested, and the ADR says so). Final run: 39-test baseline, exit 0, killed 5/2/1/6, `--check-anchors` stale=0. The capability ratchet had to be run twice and the first run is kept: it FAILED with a `TIMING REGRESSION [nia_unsat]` at 401.2 ms on a box at load 10.6 whose own reference frames said NOT COMPARABLE for two families; re-run quiet it is **18.8 ms, 12 passed, 0 REGRESSION, 0 NOT COMPARABLE** -- a 21x swing at fixed code. Two runner defects were found and fixed by reading the logs of a run that had already 'succeeded': a list of ABSOLUTE paths made every row UNREADABLE while `AB-DONE ... 0 files` printed on stdout, and a missing list made the launcher SKIP a division and silently reorder the queue; both now refuse. The five exposure divisions are reported **did not run**, never as zero movement.
+Index-summary: ADR-2111 named theory propagation the largest lever in `QF_LRA` from a RATIO -- a median **19 theory propagations against 836,531 decisions** on the 23 of 93 undecided rows that reach the online engine -- and **a ratio is not a prize**. This lane measured the prize BEFORE building: a `probe` mode that builds the identical column-bound table and offers nothing, plus a `note_decision` driver hook (the driver is the only party that can tell a BRANCH from a unit propagation, since a theory sees `assert` for both). **The ceiling is 405,738 of 1,654,631 decisions on tracked atoms = 24.5 %, and 7.0 % of ALL decisions**; median per-row share 19.0 %, **min 0.3 %, max 70.5 % -- the spread is the finding** -- and **the two `miplib/pp08a-*` rows, one of them ADR-2111's own median, have `tracked = 0`: not one of their 169,645 and 291,314 decisions is on an atom the theory tracks, so the lever provably cannot reach the division's representative file**. Built anyway, and it works: a COLUMN-bound table rather than a basis-row scan, which is FORCED here rather than chosen -- z3's `is_unit_var` makes `x <= 3` a column bound with **no row at all** (`theory_lra.cpp:807-809,856-857`) while ours makes a slack row per template, so **no problem variable ever carries a bound** and a direct port of `propagate_bounds_for_touched_rows` would have been INERT. Seeds from unit constraints, rounds over the asserted rows at one candidate per row entry per direction, emission when an atom's expression is confined to one side of zero; basis-independent, so the offered sequence does not depend on the last check's pivots. **Three of ADR-2111's citations are corrected, one of which would have cost a successor: z3 does NOT emit at most two implied bounds per row** -- `analyze()` returns at most 2 but that counts DIRECTIONS, and `limit_all_monoids_from_below` (`bound_analyzer_on_row.h:196-220`) calls `limit_j` once per row ENTRY, so a row of length n emits up to 2n; also `try_add_bound` does not exist (`add_bound`, `lp_bound_propagator.h:150-190`) and `:54-80` truncates `analyze()` mid-body. Soundness by a checker sharing NO arithmetic with the producer: every offered literal's reasons plus its own NEGATION go to the simplex, which must refute them -- **904 verified, 0 inconclusive, 0 refuted over 1,000 LCG systems**, floor asserted at 200 so a propagator that goes quiet dies rather than passing by checking nothing; the soundness-negative fixture is a PAIR with the satisfiable arm first; the positive control carries its own negative control. The five z3 differential fuzzes run in **BOTH** arms (15 tests, exit 0 each) because a lever shipping `off` is otherwise exercised by nothing. **A/B, one binary two env values, **600 rows across THREE complete populations -- the pinned `QF_LRA` board, a seeded held-out `QF_LRA` draw disjoint from it, and `QF_LIA`: pinned 107/107 net +0 with 0 movers (arm A re-deriving the board's 107 exactly), held-out 93/92 net -1, `QF_LIA` 127/127 net +0, **0 gains anywhere**, 0 flips, 0 exit-status differences, 307 `:status` comparisons with 0 disagreements** -- and the one mover re-run 3x per arm is **STABLE-LOSS** (3/3 `unsat` off, 3/3 `unknown` on), not ambient. **Implied-bound propagation buys ZERO verdicts and costs +35.4 % / +12.2 % of wall clock on the rows both arms decide.** SHIPS `off`. The mutation run found a guard that was DECORATION -- the self-explanation `continue` was removable with all 38 tests green, because every reason atom is asserted and the target is not -- now a `debug_assert!`; and it found two guards with the SAME five-test kill set, which a new fixture separates (still nested, and the ADR says so). Final run: 39-test baseline, exit 0, killed 5/2/1/6, `--check-anchors` stale=0. The capability ratchet had to be run twice and the first run is kept: it FAILED with a `TIMING REGRESSION [nia_unsat]` at 401.2 ms on a box at load 10.6 whose own reference frames said NOT COMPARABLE for two families; re-run quiet it is **18.8 ms, 12 passed, 0 REGRESSION, 0 NOT COMPARABLE** -- a 21x swing at fixed code. Two runner defects were found and fixed by reading the logs of a run that had already 'succeeded': a list of ABSOLUTE paths made every row UNREADABLE while `AB-DONE ... 0 files` printed on stdout, and a missing list made the launcher SKIP a division and silently reorder the queue; both now refuse. The five exposure divisions are reported **did not run**, never as zero movement.
 Index-status: proposed
 Date: 2026-09-15
 
@@ -505,7 +505,7 @@ The A/B therefore measures the version that ships. Measuring the other one would
 have reported a cost that does not exist — and would have reported it as the
 propagator's, which is the wrong attribution as well as the wrong number.
 
-### 5.2 `QF_LRA`, both draws, 400 rows
+### 5.2 600 rows across three complete populations
 
 One binary (`935ad9cd…`), two env values, arms back to back on the same file on
 the same pinned core, arm order alternating per file, 24 s / 8 GiB.
@@ -514,15 +514,18 @@ the same pinned core, arm order alternating per file, 24 s / 8 GiB.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `QF_LRA` pinned | 200 | 107 | 107 | +0 | 0 | 0 | 0 | 0 | 0 | 97 | 0 |
 | `QF_LRA` held-out | 200 | 93 | 92 | **−1** | 0 | **1** | 0 | 0 | 0 | 86 | 0 |
-| **TOTAL** | **400** | **200** | **199** | **−1** | **0** | **1** | **0** | **0** | **0** | **183** | **0** |
+| `QF_LIA` | 200 | 127 | 127 | +0 | 0 | 0 | 0 | 0 | 0 | 124 | 0 |
+| **TOTAL** | **600** | **327** | **326** | **−1** | **0** | **1** | **0** | **0** | **0** | **307** | **0** |
 
 - **Arm A re-derives 107 on the pinned draw**, which is the committed board's
   `QF_LRA` figure exactly and the number [ADR-2111] is written against. The base
   arm is the baseline, not something near it.
 - **0 soundness disagreements against the files' declared `:status`, at a
-  comparable denominator of 183**, published beside the count.
-- **0 flips and 0 exit-status differences** in either direction, on either draw.
-- **0 gains.** Not "few": none, on 400 rows.
+  comparable denominator of 307**, published beside the count.
+- **0 flips and 0 exit-status differences** anywhere, on any population.
+- **0 gains.** Not "few": none, on 600 rows.
+- **`QF_LIA` is the exposure division that matters most** — it drives the same
+  simplex — and it moves nothing in either direction.
 
 ### 5.3 The one mover is a STABLE-LOSS, not ambient
 
@@ -553,14 +556,26 @@ The pinned median is **unchanged** at 107 ms, and 15 of 107 rows are more than
 uniform tax either — it is concentrated on the rows where the propagator has
 something to chew on, which is the same shape §1.1's spread showed.
 
-### 5.5 The five exposure divisions
+### 5.5 The exposure divisions: one ran, four did not
 
-`QF_LIA`, `QF_UFLRA`, `QF_UFLIA`, `QF_IDL` and `QF_RDL` were queued behind the
-two `QF_LRA` draws on the same two core pairs and had not finished when this
-lane closed. They are reported as **did not run**, not as zero movement: a
-division with no rows is not a division with no movement, and ADR-2111's own
-exposure arm had to make exactly this distinction after reporting four empty
-divisions.
+`QF_LIA` ran to **200 of 200** and is in the table above: `net +0`, 0 movers, 0
+disagreements over 124 comparisons. It is the exposure division with the
+strongest claim on this change, because it drives the same simplex.
+
+**`QF_UFLRA`, `QF_UFLIA`, `QF_IDL` and `QF_RDL` DID NOT RUN.** They were queued
+behind the two `QF_LRA` draws and `QF_LIA` on the same two pinned core pairs and
+had not started when this lane closed. They are reported as **did not run**, not
+as zero movement: a division with no rows is not a division with no movement,
+and ADR-2111's own exposure arm had to make exactly this distinction after
+reporting four empty divisions.
+
+One `QF_LIA` attempt was **discarded rather than reported**, and it is worth
+recording why: clearing a core pair for the mover recheck, this lane ran
+`pkill -TERM -f smtcomp_cli.arm-c`, a pattern that matched **both** shards'
+solvers and killed the one it did not mean to. The 48 rows that shard had
+produced were deleted and `QF_LIA` was re-run whole. A partial from a run
+stopped by the measurer is not a measurement of anything, and the repository's
+own rule — never `pkill` on a broad pattern — is the one that was broken.
 
 **That gap does not change the decision**, because the decision is already
 `off` on the treatment division's own evidence, and `off` is the shipped
@@ -644,14 +659,17 @@ Against the criteria in §7.1, written before the numbers:
    all). Pinned `net +0`.
 3. **0 stable losses on the HELD-OUT draw — NOT MET.** One, and the 3× recheck
    says it is real: 3/3 `unsat` under `off`, 3/3 `unknown` under `on`.
-4. The five exposure divisions **did not run**.
+4. **`QF_LIA` ran to 200 of 200 and moves nothing** — `net +0`, 0 movers, 0
+   disagreements over 124 comparisons — so the shared simplex is not
+   regressed by the propagator being available. `QF_UFLRA`, `QF_UFLIA`,
+   `QF_IDL` and `QF_RDL` **did not run**.
 
 Criterion 3 alone settles it. `AXEYUM_LRA_BOUND_PROPAGATION` stays `off`.
 
 ### 7.2 The result is a measured negative, and it is the useful kind
 
 **Implied-bound propagation buys ZERO verdicts on `QF_LRA` at 24 s — 0 gains
-over 400 rows — and costs one file and 12–35 % of the wall clock on what both
+over 600 rows across three complete populations — and costs one file and 12–35 % of the wall clock on what both
 arms decide.** That is not a weak positive that needs more tuning to become a
 strong one; it is a clean negative on the axis the division is scored on.
 

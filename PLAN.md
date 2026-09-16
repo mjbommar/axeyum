@@ -164,6 +164,7 @@ now. Nothing was deleted.
 | 2026-09-15 | `cc949ea74` | lra-propagation: the scratch reset was half the propagator's cost, and one guard the mutation run found was decoration |
 | 2026-09-15 | `4f8ebf8cd` | lra-propagation: two A/B runner defects that let an EMPTY run print `AB-DONE`, and the workspace gate script |
 | 2026-09-15 | `137007f7f` | lra-propagation: a path-ordered list makes a PARTIAL run a prefix, not a sample -- seeded run-order shuffle with a set digest that must not move |
+| 2026-09-15 | `79877c71c` | lra-propagation: the A/B answer -- implied-bound propagation buys ZERO verdicts and costs one STABLE-LOSS; ADR-2122 ships `off` |
 | 2026-09-15 | `4447b5a14` | Exit criterion 1, committed before any code: the slice ceiling is 24 of ADR-2110's 45, and 9 are lost to the `i128` clearing. |
 | 2026-09-15 | `c03bf39f7` | `nra_cell_cert.rs` — the cell-covering certificate and an independent checker, landed BEFORE the producer so the format is fixed by what can be checked. |
 | 2026-09-15 | `31e150738` | `nra_single_cell.rs` — CDCAC behind `AXEYUM_NRA_CAD=single-cell`, OFF. `unsat` gated on the checker, `sat` on a rational model replay. |
@@ -60056,15 +60057,16 @@ guard that is real instead. Final run: 39-test baseline, exit 0, killed 5/2/1/6,
 `--check-anchors` stale = 0.
 
 **The A/B, and the answer is a clean negative.** One binary, two env values,
-`QF_LRA` COMPLETE at 400 rows across the pinned board **and** a seeded held-out
-draw disjoint from it: **pinned 107/107 net +0 with 0 movers** — arm A
-re-deriving the board's 107 exactly — **held-out 93/92 net −1, 0 gains, 0 flips,
-0 exit-status differences, 183 `:status` comparisons with 0 disagreements**. The
+**600 rows across three COMPLETE populations** — the pinned `QF_LRA` board, a
+seeded held-out `QF_LRA` draw disjoint from it, and `QF_LIA`: **pinned 107/107
+net +0 with 0 movers** (arm A re-deriving the board's 107 exactly), **held-out
+93/92 net −1**, **`QF_LIA` 127/127 net +0**, **0 gains anywhere**, 0 flips, 0
+exit-status differences, **307 `:status` comparisons with 0 disagreements**. The
 one mover re-run **3× per arm is STABLE-LOSS** (3/3 `unsat` off, 3/3 `unknown`
 on), not ambient. On the rows both arms decide it costs **+35.4 %** (pinned) and
 **+12.2 %** (held-out) of wall clock. **Implied-bound propagation buys ZERO
-verdicts here.** The lever **ships `off`**; the five exposure divisions are
-reported **did not run**, never as zero movement.
+verdicts here.** The lever **ships `off`**; `QF_UFLRA`, `QF_UFLIA`, `QF_IDL` and
+`QF_RDL` are reported **did not run**, never as zero movement.
 
 **The lesson is about sizing, not about propagation.** ADR-2111 ranked this
 lever from a RATIO (836,531 decisions per 19 propagations) and a ratio is not a
