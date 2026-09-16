@@ -32,10 +32,88 @@ is reproduced rather than inherited.
 `off` decides 107 of 200, which is the board's standing `QF_LRA` figure to the
 row.
 
-QF_LRA HELD-OUT 200
+QF_LRA HELD-OUT 200 -- COMPLETE
+--------------------------------
+
+    comparison         rows  off  arm  net  gain  LOSS  FLIP  rc!=0  cmp  DIS
+    off vs screened     200   93   93   +0     1     1     0      0  174    0
+    off vs on           200   93   92   -1     0     1     0      0  173    0
+
+      raw GAIN (off->screened)   sc/sc-18.induction.cvc
+      raw LOSS (off->screened)   uart/uart-8.induction.cvc
+      raw LOSS (off->on)         uart/uart-8.induction.cvc
+
+**THE SCREEN DOES NOT REMOVE THE HELD-OUT LOSS, AND SECTION 2 SAID SO BEFORE
+THE CODE EXISTED.** `uart-8.induction.cvc` is 1,598 builds at 1.04 ms each --
+the many-small shape the lever WINS on -- so the screen ADMITS it (1,872 cubes
+answered warm) and the loss survives unchanged. ADR-2125 offered the
+builds-per-file reading for that row as an explicit hypothesis; this is the
+hypothesis being refuted by the arm built on it.
+
+The screen also picks up a raw GAIN the unscreened arm does not
+(`sc-18.induction.cvc`, 1,685 builds, `off` and `on` both `unknown`, `screened`
+`sat`). A raw mover is not a finding and it goes to the 3x recheck like the
+rest.
+
+`off` decides 93 of 200 on this draw.
+
+WHAT THE THREE MOVERS ADR-2125 PUBLISHED DID HERE
+--------------------------------------------------
+
+         off       on  screened  builds  scr_cubes   what
+         sat  unknown       sat      28          0   ADR-2125 pinned STABLE-LOSS
+                                                     latendresse/ecoliMILPglycerolYices3-50000
+         sat      sat       sat   1,815      1,106   ADR-2125 held STABLE-GAIN
+                                                     sc/sc-14.induction.cvc
+         sat  unknown   unknown   1,598      1,872   ADR-2125 held STABLE-LOSS
+                                                     uart/uart-8.induction.cvc
+
+  * The PINNED LOSS is removed: 0 cubes answered warm, because 28 builds is
+    below the threshold. The screen did exactly the job it was built for.
+  * The HELD-OUT LOSS is not removed: 1,872 cubes answered warm, because 1,598
+    builds is far above it.
+  * **ADR-2125's HELD-OUT GAIN is not a gain in this run at all** -- the `off`
+    arm decides it (`sat` in all three arms). That is not a contradiction of
+    ADR-2125: it is a boundary file that ADR-2125's `off` arm failed 3/3 at 24 s
+    and this lane's `off` arm decides, and §6.6's control shows one such row in
+    120 moving in both arms between the two runs. It does mean the gain that
+    motivated the screen is not present in this population to be kept, which is
+    worth saying plainly rather than leaving for a reader to notice.
+
+MECHANISM, HELD-OUT
 -------------------
 
-    PENDING -- filled in when the shard finishes.
+    arm         rows `built`   cubes answered   cold tableaux left   cold_restarts
+    on                    79           59,320                7,869               0
+    screened              66           53,516               11,664               0
+    off                    -                -               58,874               -
+
+The screen refused 13 of the 79 rows `on` kept a basis on, and opened on 0 that
+`on` did not. `cold_restarts = 0` in both arms.
+
+    population          rows all 3 decide   off          on           screened
+    QF_LRA held-out                    92   97,533 ms    85,406 ms    85,710 ms
+                                                 ---      -12.4 %      -12.1 %
+
+A DEFECT IN THIS LANE'S OWN LAUNCH, AND WHY THE SHARD IS STILL TRUSTED
+-----------------------------------------------------------------------
+
+The held-out shard's log is EMPTY. Its launch redirected stdout twice --
+`> LRAheld.log 2>&1 ... > /dev/null 2>&1` -- and the last redirection wins, so
+every line the runner printed, including its closing `AB3-DONE`, went to
+`/dev/null`. The chain waiting on that marker would have waited out its six-hour
+timeout on a shard that had finished.
+
+The marker was NOT written by hand to satisfy the guard. A guard satisfied by
+hand is not a guard. The shard's completeness was established from the artifact
+instead, which is a stronger check than the marker anyway -- the marker only says
+the loop exited:
+
+    held TSV data rows:                                 200
+    list rows:                                          200
+    rows with all three verdicts non-empty:             200
+    distinct files in TSV:                              200
+    files in the list but NOT in the TSV:                 0
 
 THE MECHANISM, AND THE PREDICTION IT CONFIRMS
 ---------------------------------------------
