@@ -473,7 +473,9 @@ pub fn check_with_lra_dpll_within_mode(
     let mut warm = match mode {
         WarmCubeMode::Off => WarmCubeScreen::Done,
         WarmCubeMode::On => warm_cube_decider(arena, &ctx, deadline)
-            .map_or(WarmCubeScreen::Done, WarmCubeScreen::Ready),
+            .map_or(WarmCubeScreen::Done, |theory| {
+                WarmCubeScreen::Ready(Box::new(theory))
+            }),
         WarmCubeMode::Screened => WarmCubeScreen::Waiting {
             at_entry: crate::simplex::cold_builds_so_far(),
         },
@@ -1081,6 +1083,31 @@ fn is_pure_bool_real(arena: &TermArena, term: TermId) -> bool {
 /// it runs today, byte for byte.
 pub(crate) const MIN_WARM_CUBE_SCREEN_BUILDS: u64 = 64;
 
+/// The threshold's two invariants, checked by the COMPILER rather than by a test.
+///
+/// These were a `#[test]` until clippy's `assertions_on_constants` pointed out
+/// that a runtime assertion over a constant is a runtime assertion about
+/// nothing. Moving them into `const` blocks is strictly stronger: a value
+/// outside the window no longer fails a test somebody has to run, it fails the
+/// build.
+///
+/// The first says the screen is not a second `on`: a threshold of 0 opens on the
+/// first round, and every A/B of it would be a re-run of [ADR-2125].
+///
+/// The second is the sizing's own window. The three few-enormous rows on the
+/// pinned 200 are at 1, 28 and 42 builds and the winning family starts at 841,
+/// so a value outside `[43, 841)` separates nothing that was measured — at or
+/// below 42 it admits the stable loss, at or above 841 it refuses the family the
+/// stable gain came from.
+const _: () = assert!(
+    MIN_WARM_CUBE_SCREEN_BUILDS > 0,
+    "a threshold of 0 opens on the first round, which is `on` wearing the name `screened`"
+);
+const _: () = assert!(
+    MIN_WARM_CUBE_SCREEN_BUILDS >= 43 && MIN_WARM_CUBE_SCREEN_BUILDS < 841,
+    "the threshold is outside the window the pinned sizing measured"
+);
+
 /// What `AXEYUM_LRA_WARM_CUBE` selects (ADR-2125 built the first two; ADR-2132
 /// added the third).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1199,7 +1226,15 @@ fn warm_cube_decider(
 /// no verdict attached — the shape [ADR-2125] found its first working arm in.
 enum WarmCubeScreen {
     /// The decider exists (or the lever is `on` and it was built at entry).
-    Ready(LraTheory),
+    ///
+    /// `Box`ed because `LraTheory` is about 976 bytes and the other two variants
+    /// are 8 and 0, so an unboxed enum would carry the theory's whole footprint
+    /// in every `WarmCubeScreen` — including the `Waiting` state a screened run
+    /// spends most of its rounds in. The box costs ONE allocation per entry into
+    /// the loop, against a 976-byte move on each state transition; the decider
+    /// itself is reached through it once per round, which is a pointer hop
+    /// beside a simplex check.
+    Ready(Box<LraTheory>),
     /// Waiting for the file to prove it has many small re-solves. `at_entry` is
     /// the from-scratch tableau count when this loop was entered, so the
     /// comparison is a DELTA and not an absolute: the counter is per-thread and
@@ -1241,12 +1276,12 @@ impl WarmCubeScreen {
                 return None;
             }
             *self = match warm_cube_decider(arena, ctx, deadline) {
-                Some(theory) => WarmCubeScreen::Ready(theory),
+                Some(theory) => WarmCubeScreen::Ready(Box::new(theory)),
                 None => WarmCubeScreen::Done,
             };
         }
         match self {
-            WarmCubeScreen::Ready(theory) => Some(theory),
+            WarmCubeScreen::Ready(theory) => Some(theory.as_mut()),
             WarmCubeScreen::Waiting { .. } | WarmCubeScreen::Done => None,
         }
     }
@@ -1992,8 +2027,8 @@ impl Abstractor {
 #[cfg(test)]
 mod tests {
     use super::{
-        CarriedCertificate, MIN_WARM_CUBE_SCREEN_BUILDS, SkeletonSolvePolicy, SkeletonSolver,
-        WarmCubeMode, conflict_core, parse_warm_cube_mode, skeleton_is_pure_boolean,
+        CarriedCertificate, SkeletonSolvePolicy, SkeletonSolver, WarmCubeMode, conflict_core,
+        parse_warm_cube_mode, skeleton_is_pure_boolean,
     };
     use axeyum_ir::{Rational, Sort, SymbolId, TermArena, TermId};
 
@@ -2610,31 +2645,6 @@ mod tests {
              {screened} against {traced}. They are two counters on one event, \
              and a screen reading the first would route differently from every \
              measurement taken with the second."
-        );
-    }
-
-    /// The threshold is a value the registry carries, and this is the arithmetic
-    /// that makes it a SCREEN rather than a second `on`.
-    ///
-    /// Stated as a property of the constant rather than as a comparison against
-    /// a literal: a threshold of 0 admits every file, which is exactly `on`, and
-    /// the whole lane is about the difference.
-    #[test]
-    fn the_screen_waits_until_the_builds_threshold_is_crossed() {
-        assert!(
-            MIN_WARM_CUBE_SCREEN_BUILDS > 0,
-            "a threshold of 0 opens on the first round, which is `on` wearing \
-             the name `screened` -- every A/B of the screen would then be a \
-             re-run of ADR-2125"
-        );
-        // The sizing's window. The three `few enormous` rows on the pinned 200
-        // are at 1, 28 and 42 builds and the winning family starts at 841, so a
-        // threshold outside [43, 841] separates nothing that was measured.
-        assert!(
-            (43..841).contains(&MIN_WARM_CUBE_SCREEN_BUILDS),
-            "{MIN_WARM_CUBE_SCREEN_BUILDS} is outside the window the pinned \
-             sizing measured: at or below 42 it admits the stable loss, at or \
-             above 841 it refuses the family the stable gain came from"
         );
     }
 }

@@ -26,7 +26,16 @@
 set -u
 
 fail=0
+# Where a FAILING step's log is kept. A gate that throws away the evidence of its
+# own failure can report that something broke and never say what -- the defect
+# ADR-2125 section 5.8 fixed in its ratchet runner, and the one this lane's FUZZ
+# runner had to have fixed mid-run. Leaving it in a sibling script would have
+# been the same mistake a third time.
+KEEP="$(dirname -- "$0")/gate-failures"
 note() { printf '%-64s %s\n' "$1" "$2"; }
+keep_log() {  # $1 = label slug, $2 = log path
+  mkdir -p "$KEEP" && cp "$2" "$KEEP/$1.log" && echo "      log kept at $KEEP/$1.log"
+}
 
 run_counted() {
   # $1 label, rest: cargo args
@@ -40,7 +49,9 @@ run_counted() {
   f=$(sed -n 's/^test result: .*; \([0-9][0-9]*\) failed.*/\1/p' "$log" | head -1)
   f="${f:-0}"
   if [ "$rc" -ne 0 ]; then
-    note "$label" "FAILED rc=$rc ($n passed, $f failed)"; tail -40 "$log"; fail=1
+    note "$label" "FAILED rc=$rc ($n passed, $f failed)"
+    keep_log "$(printf '%s' "$label" | tr -c 'A-Za-z0-9._-' '_')" "$log"
+    tail -40 "$log"; fail=1
   elif [ "$n" = "0" ]; then
     note "$label" "INERT (0 tests) -- not evidence"; fail=1
   else
@@ -55,7 +66,9 @@ run_plain() {
   "$@" > "$log" 2>&1
   local rc=$?
   if [ "$rc" -ne 0 ]; then
-    note "$label" "FAILED rc=$rc"; tail -40 "$log"; fail=1
+    note "$label" "FAILED rc=$rc"
+    keep_log "$(printf '%s' "$label" | tr -c 'A-Za-z0-9._-' '_')" "$log"
+    tail -40 "$log"; fail=1
   else
     note "$label" "ok"
   fi
@@ -75,7 +88,12 @@ if scripts/cargo-serialized.sh clippy --workspace --all-targets --all-features \
   note "clippy --workspace --all-targets --all-features -D warnings" "ok"
 else
   crc=$?
-  if grep -qE 'z3-sys|failed to (download|fetch)|Could not find libz3|No such file.*z3' "$clippy_log"; then
+  # The z3-sys pattern must be matched against a line that is actually about
+  # fetching, not merely a line that MENTIONS z3-sys -- a clippy error inside a
+  # z3-gated file names the crate too, and this branch would then report a real
+  # lint failure as an environment problem. The log is kept either way.
+  keep_log "clippy_workspace_all_features" "$clippy_log"
+  if grep -qE 'failed to (download|fetch|run custom build)|Could not find libz3|error: could not find system library' "$clippy_log"; then
     note "clippy --workspace --all-targets --all-features" \
       "COULD NOT RUN (z3-sys asset, rc=$crc) -- SUBSTITUTING the narrower form"
     run_plain "clippy -p solver -p bench -p cnf --all-targets --all-features -D warnings" \

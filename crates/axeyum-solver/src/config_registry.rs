@@ -4527,7 +4527,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
         protects: Protects::Time,
         on_exceed: OnExceed::SearchEvent,
         signal: Signal::None,
-        guarded_by: "lra_warm_screen_2132::a_file_that_crosses_the_threshold_mid_run_decides_what_off_decides -- the transition fixture: one query whose cubes cross the threshold must return the verdict the `off` arm returns, so the screen is a routing change and never a verdict change; plus dpll_t::tests::the_screen_waits_until_the_builds_threshold_is_crossed and ::an_unrecognised_lever_value_is_off",
+        guarded_by: "lra_warm_screen_2132::a_file_that_crosses_the_threshold_mid_run_decides_what_off_decides -- the transition fixture: one query whose cubes cross the threshold must return the verdict the `off` arm returns, so the screen is a routing change and never a verdict change; plus lra_warm_screen_2132::a_file_below_the_threshold_keeps_no_basis_at_all (below it the screened arm must answer ZERO cubes warm and render `below-screen`, not `off`) and dpll_t::tests::an_unrecognised_lever_value_is_off. The VALUE's own two invariants -- greater than 0, and inside the sizing's [43, 841) window -- are `const _: () = assert!(..)` beside the constant rather than a test: they were a `#[test]` until clippy's `assertions_on_constants` pointed out that a runtime assertion over a constant asserts nothing at runtime, and a const block fails the BUILD instead.",
         env_override: None,
         justification: dated(
             "docs/research/09-decisions/adr-2132-a-builds-per-file-screen-for-the-warm-basis.md",
