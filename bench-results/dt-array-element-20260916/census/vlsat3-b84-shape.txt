@@ -1,0 +1,21 @@
+0
+1
+
+The two numbers above are, in order, the count of `Array` occurrences and of
+`declare-datatype` occurrences in QF_DT/20210312-Bouvier/vlsat3_b84.smt2 --
+the ONLY mover in 800 A/B rows.
+
+Zero arrays. One datatype, and it is a pure NULLARY enum:
+
+  (declare-datatype Unit ((u0) (u1) (u2) ... (u63) ...))
+
+`field_is_opaque` matches only `Sort::Datatype(_)` and `Sort::Array { .. }`, and
+a nullary enum has NO FIELDS AT ALL, so neither arm of it is ever evaluated on
+this file. `dt_has_opaque_field` and `dt_has_datatype_field` both answer false
+for a field-free datatype. The two arms therefore execute IDENTICAL code here,
+and the loss cannot be an effect of the lever -- it is the ambient flip rate
+this repository measures at 1-1.5% on a 24 s pairing (the file is 8.0 MB /
+266,733 lines).
+
+That is a claim about the CODE, not about the run, so it is checked by the
+3-passes-per-arm recheck beside it rather than asserted from it.

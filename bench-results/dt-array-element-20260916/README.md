@@ -116,3 +116,52 @@ built against a reach census showing `LEVER CONVERTS=410` datatypes on the same
 AUFDTLIRA population — measured **+3 / −0** on AUFDTLIRA, **+1 / −0** on
 UFDTLIRA, **0 / 0** on QF_DT, and shipped OFF. The reach-vs-terminal gap that
 produced that outcome is the same gap this table shows as 12-vs-2.
+
+---
+
+## 6. The A/B — 800 rows, 0 gains, 0 stable losses, 0 flips
+
+One binary (`smtcomp_cli-2135`, sha256 `66604134b6ec…`, built from `9fab977cc`,
+licensed by a `find -newer` check over `crates/**/*.rs`), two env values, arms
+back to back per file on one pinned s7 core, order alternated, 24 s / 8 GiB,
+divisions SERIAL across cores 1/3/5/6 (one thread of each physical pair).
+
+| division | base | arm | gains | losses | flips |
+|---|---|---|---:|---:|---:|
+| `AUFDTLIRA` | unsat 119, unk 81 | unsat 119, unk 81 | 0 | 0 | 0 |
+| `UFDTLIRA` | unsat 138, sat 6, unk 56 | unsat 138, sat 6, unk 56 | 0 | 0 | 0 |
+| `QF_DT` | unsat 107, sat 64, unk 29 | unsat 106, sat 64, unk 30 | 0 | 1 raw → **0 stable** | 0 |
+| `QF_ABV` (control) | sat 132, unsat 55, unk 13 | sat 132, unsat 55, unk 13 | 0 | 0 | 0 |
+
+`census/ab-divisions.txt`, `census/ab-*.shard*.tsv`.
+
+**The all-agreeing rows are a genuine null, not an unarmed run**
+(`scripts/arm-liveness.sh`, `census/arm-liveness.txt`): on both of the two rows
+whose terminal reason is the refusal, the ON arm emits **0** of the W1 refusals
+the OFF arm emits, changes the route, and still does not decide — at 117x and 5x
+the solver's own `--trace` wall time and 14x the attempts.
+
+**The one raw mover is not this lever** (`census/movers-recheck-QF_DT.tsv`,
+`census/vlsat3-b84-shape.txt`): `vlsat3_b84.smt2` rechecks NEITHER-DECIDES 3 of
+3 per arm, and contains **0 occurrences of `Array`** plus one field-free nullary
+enum, so `field_is_opaque` is never reached and both arms run identical code.
+
+**The held-out draw was NOT RUN.** No division moved, so there is nothing for it
+to confirm, and it cannot turn 0 gains into a reason to ship.
+
+## 7. A tool that lied: `date +%s%3N` on s7
+
+The `base_ms`/`arm_ms` columns of these shard TSVs — and of
+`bench-results/dt-field-expansion-20260916`'s, same script, same host — are
+**nanoseconds under a millisecond header**. s7 runs uutils coreutils 0.8.0,
+whose `date` ignores the width modifier in `%3N` and prints nine nanosecond
+digits (30 of 30 samples 19 chars; GNU gives 13). Found because this lane's cost
+pass reported a total of **−20,454,778,950,164,076,537 ms**
+(`census/ab-cost.txt`, kept and labelled as refuted).
+
+Fixed here: `scripts/ab-run.sh` times from the `EPOCHREALTIME` bash builtin and
+**aborts before any solve** if a 200 ms sleep does not read as 150–400 ms;
+`scripts/ab-cost.py` refuses a file whose elapsed values are outside
+`[0, 10 × budget]` with exit 3 rather than reporting from it. Verified on s7
+end to end: `v1l30030.cvc.smt2  unsat  114  unsat  113`. Verdict columns are
+unaffected — `ab-summarize.py` reads only verdicts.

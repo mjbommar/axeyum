@@ -95,14 +95,14 @@ fn array_of_datatype_record(arena: &mut TermArena) -> (DatatypeId, ConstructorId
 /// the DECLARATION and untouched by the query — the shape the lever exists for.
 fn scalar_field_query(arena: &mut TermArena, other: i128) -> Vec<TermId> {
     let (dt, mk, _) = array_of_datatype_record(arena);
-    let r = var_of(arena, "r", Sort::Datatype(dt));
-    let is_mk = arena.dt_test(mk, r).expect("test");
-    let n = arena.dt_select(mk, 1, r).expect("select");
+    let rec = var_of(arena, "r", Sort::Datatype(dt));
+    let is_mk = arena.dt_test(mk, rec).expect("test");
+    let num = arena.dt_select(mk, 1, rec).expect("select");
     let five = arena.int_const(5);
-    let o = arena.int_const(other);
-    let a = arena.eq(n, five).expect("eq");
-    let b = arena.eq(n, o).expect("eq");
-    vec![is_mk, a, b]
+    let other_const = arena.int_const(other);
+    let first = arena.eq(num, five).expect("eq");
+    let second = arena.eq(num, other_const).expect("eq");
+    vec![is_mk, first, second]
 }
 
 // ==========================================================================

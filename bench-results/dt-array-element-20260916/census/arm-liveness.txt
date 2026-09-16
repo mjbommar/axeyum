@@ -1,0 +1,17 @@
+$ ssh s7 'taskset -c 9 bash .../arm-liveness.sh'
+S702-024__record_attributes_in_allocators__test_constrained.adb_45_22_assert___00.smt2 base_refusals=2 arm_refusals=0 LIVE
+P518-021__loop_frame_condition__do_loops.adb_112_22_assert___00.smt2   base_refusals=2 arm_refusals=0 LIVE
+ARM IS LIVE: the ON arm removes the W1 refusal on every probed file
+RC=0
+
+The route trace on the same two files, both arms, s7 core 1, 24 s budget --
+the arm does NOT decide them, and on the second it does 14x the work:
+
+  S702-024 base  ; route decided_by=none bound_by=q:eq-partition last=fd:bounded-completeness-unsat bound_ms=3    total_ms=13    attempts=22
+  S702-024 arm   ; route decided_by=none bound_by=q:mbqi-quick   last=q:mbqi-quick                 bound_ms=1520 total_ms=1525  attempts=9
+  P518-021 base  ; route decided_by=none bound_by=q:egraph       last=fd:bounded-completeness-unsat bound_ms=1813 total_ms=2705  attempts=23
+  P518-021 arm   ; route decided_by=none bound_by=q:egraph       last=fd:bounded-completeness-unsat bound_ms=1818 total_ms=13707 attempts=325
+
+So the all-agreeing A/B below is a genuine NULL, not an unarmed run: the lever
+fires, removes the refusal, changes the route, and the quantifier layer that
+the sizing said was the real terminal blocker still does not decide.
