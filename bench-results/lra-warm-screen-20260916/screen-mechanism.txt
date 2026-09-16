@@ -1,0 +1,64 @@
+ADR-2132: DOES THE SCREEN DO WHAT IT SAYS, ON REAL ROWS?
+=========================================================
+
+Read off the interleaved three-arm A/B's own columns, over the first 150 rows of
+the two `QF_LRA` draws (80 pinned + 70 held-out), binary `axeyum.v1`
+(sha256 91675258916e4aeb). This is a MECHANISM check, not the verdict table;
+the verdicts are in `ab-summary.txt`.
+
+    150 rows | 93 below 64 builds | 47 at or above | 10 SILENT
+
+1. BELOW THE THRESHOLD, THE SCREEN IS SHUT.  **0 of 93**
+   ------------------------------------------------------
+   Not one row with `a_cold_builds < 64` had the screened arm answer a single
+   cube on a warm basis. That is the screen's whole contract -- below the
+   threshold the file runs the route it runs today -- checked on 93 real files
+   rather than on the two the fixture builds.
+
+2. ABOVE IT, THE SCREEN OPENS ON 44 OF 47 -- AND THE THREE IT DOES NOT ARE A
+   FINDING ABOUT THE SIZING AXIS, NOT ABOUT THE SCREEN
+   --------------------------------------------------------------------------
+   The three are `sc/sc-24.induction3`, `sc/sc-18.induction3` and
+   `sc/sc-11.induction3`, at 2,257 / 1,137 / 339 cold builds. They render
+   `warm_cube_build=off` in the `on` arm TOO, and `on` builds its decider
+   unconditionally whenever the linear offline loop is entered. So the loop was
+   never entered on those rows: their thousands of from-scratch tableaux come
+   from the NRA (or NIA) loop, which shares these counters -- the reading
+   ADR-2125 section 6.4 warned a reader would otherwise take at face value.
+
+   **The consequence for a screen is new and this lane owns it.**
+   `simplex_cold_builds` IS NOT LOOP-SPECIFIC. A file can score high on the
+   sizing axis entirely on builds the lever cannot act on, so a builds-per-file
+   threshold admits rows the warm basis can do nothing for. Here that is 3 of
+   47 -- small, and it is a systematic bias rather than noise, because the NRA
+   loop's files are a family and not a scattering.
+
+   A successor sizing ANY screen on this counter should split it per loop first.
+   This lane did not, and the 3 rows are how far it can say the error goes.
+
+3. THE SCREEN ANSWERS FEWER CUBES THAN `on` ON 42 OF THE 44 IT OPENS ON
+   --------------------------------------------------------------------
+   That is the screen's signature: the rounds below the threshold ran cold in
+   one arm and warm in the other. The gap is 78-86 cubes on the smaller files,
+   which is the ~64-round screen plus the different rate the two arms then run
+   at.
+
+   The TWO exceptions are both `unknown` in all three arms:
+
+       a_builds=938  on= 886  screened= 914   sc/sc-25.base.cvc
+       a_builds=931  on=1102  screened=1109   sc/sc-40.induction2.cvc
+
+   Neither is a defect. At a 24 s wall-clock budget the number of cubes an arm
+   answers is a race, not a property: an arm that runs marginally faster reaches
+   more rounds inside the budget. The in-process fixture
+   `a_file_that_crosses_the_threshold_mid_run_decides_what_off_decides` asserts
+   `on > screened` with NO deadline, where it is deterministic, which is why
+   that assertion belongs in the fixture and not in this table.
+
+WHAT THIS DOES NOT SHOW
+-----------------------
+That the screen is right. It shows the screen is doing what it was built to do
+on the population it was aimed at. Whether doing that is worth anything is the
+verdict table's question, and section 2 of the ADR already answers half of it:
+the held-out stable loss is at 1,598 builds and no threshold in the sizing
+window separates it from the gain.
