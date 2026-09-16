@@ -94,11 +94,58 @@ first, the way this lane sized builds-per-file.
   process and assert they AGREE rather than each matching a verdict written into
   its own source.
 
-### 4. The A/B
+### 4. The attribution: three quarters LINEARIZATION, not the basis
 
-IN PROGRESS — three arms (`off` / `on` / `screened`), one binary, order rotating
-three ways per file, 24 s / 8 GiB, `QF_LRA` pinned 200 and ADR-2125's held-out
-200 running first on disjoint core pairs.
+ADR-2125 §8.5 said a successor must not credit its −9.2 % to the basis without
+splitting it. Pooled over 67 rows where the decider was built, of 303,177 ms of
+theory-layer saving in the `on` arm:
+
+```
+linearization   226,396 ms   74.7 %
+basis           111,042 ms   36.6 %
+Fourier-Motzkin   1,822 ms    0.6 %
+residual        -36,083 ms  -11.9 %
+```
+
+**Roughly three quarters is the `Collector` rebuild an answered cube never pays
+for.** The ratio is not the one the sizing predicted: ADR-2125 §1.3's 4.15 % /
+24.21 % puts the linearization at about 4.8× the basis, and measured it is 2.0×.
+A ceiling is an upper bound on one term, not a prediction of how two divide.
+
+Getting there took catching my own split being wrong. A TWO-term formula
+attributed 64 ms of a 1,906 ms saving on `clocksynchro_2clocks`, because that
+file's COLD path decides its cubes by Fourier–Motzkin (`cube_fm_ms=1822` of
+`theory_ms=1905`) — the warm decider there replaces a different ENGINE, not a
+cold basis. The FM term is 0.6 % pooled and 96 % on that one file, which is
+100 % of the pooled term. The residual is a printed column and is NEGATIVE:
+folding it into the basis would have reported 25 % instead of 37 %.
+
+Scope, stated because it is narrower than "the −9.2 %": the decomposed delta is
+`theory_ms`, not total wall clock.
+
+### 5. The screen's mechanism, on real rows
+
+Over the first 150 A/B rows: **0 of 93** rows below the threshold had the
+screened arm answer a cube warm. Above it, the screen opens on 44 of 47 and
+answers fewer cubes than `on` on 42 of the 44.
+
+The three it does not open on are a finding about the SIZING AXIS:
+`simplex_cold_builds` counts every route that calls `feasible_within_sparse`,
+not the lazy-SMT loops. `sc/sc-24.induction3` carries 2,264 builds with
+`lra_entries=0`, `nra_entries=0` and `bound_by=lira-dpll` — no lazy-SMT loop ran
+at all. The SCREEN is unaffected because it compares a DELTA from loop entry
+(had it read the counter absolutely, that file would have tripped it on round
+one); the SIZING over-counts, at 0 of 68 on the pinned 200 where the threshold
+was derived and at least 3 of 47 on the held-out draw.
+
+### 6. The A/B
+
+IN PROGRESS — three arms (`off` / `on` / `screened`), one binary
+(`axeyum.v1`, sha256 `91675258916e4aeb`), order rotating three ways per file,
+24 s / 8 GiB, on s5 core pairs `5,13` and `6,14`. The pinned 200 and ADR-2125's
+held-out 200 (verified disjoint, 200 unique each, 0 overlap) run first. Ship
+criteria are committed in ADR §7.1, written while the shards stood at 74 and 68
+rows of 200 — and **criterion 3 is already known to fail** (§2).
 
 ## Landed
 
@@ -107,6 +154,13 @@ three ways per file, 24 s / 8 GiB, `QF_LRA` pinned 200 and ADR-2125's held-out
 | `4cf519547` | 2 | the sizing: the builds-per-file distribution and a threshold chosen from a window |
 | `d9a83d3e7` | 9 | the three-valued lever, the screen, the always-on counter, the attribution fields, the fixtures |
 | `44956e4a2` | 5 | the ADR, the refutation of ADR-2125's hypothesis, the verified z3 citations |
+| `71817e15b` | 3 | the two mutation suites and this status doc |
+| `e3bdf9ac3` | 3 | a two-arm mode; an arm that did not run reports NOTHING, not zero |
+| `2fdd1be22` | 7 | `below-screen`: a screened run that never crossed rendered `off` |
+| `c7f017a4f` | 2 | the ship criteria, committed before the A/B finished |
+| `183a3c346` | 1 | correction: those builds are `lira-dpll`, not the NRA loop |
+| `5e0b635d4` | 2 | the THREE-term attribution, after the two-term one did not reconcile |
+| `5b69933e7` | 1 | delete the superseded split rather than leave a wrong number in the tooling |
 
 ## Next
 
