@@ -48431,13 +48431,7 @@ denominators.
 - A Sonnet lane's forked helpers inherited the whole brief and rebuilt both
   deliverables in parallel. Helpers get their slice only, as fresh agents.
 
-Status: **in progress, round three closing**. Five trace lanes, then three
-rounds of build lanes (twelve) and three probes, all merged and pushed
-(`origin/main` `b548367ff`); two levers shipped ON (QF_NRA 117 → 122); the
-rest ship OFF with a measured reason and a named next increment. The frame
-is the 16-division board (200 files each) and the Tier 1 ledger sweep on
-`db31113fa`; the references are z3 4.13.3 and cvc5 1.3.4 on the same lists.
-Bitwuzla does neither arithmetic nor quantifiers and is not a reference here.
+Status: **paused at the user's request, 2026-09-16 afternoon; rounds one to four closed, round five wound down after sizing**. Five trace lanes, four rounds of build lanes and probes (nineteen lanes), all merged; two levers shipped ON (QF_NRA 117 → 122, ADR-2121/2126); one more lever is +4 stable on the pinned list with its held-out draw unfinished (ADR-2134, OFF); every other lever ships OFF with an A/B and a named next increment. `origin/main` is `b548367ff`; local main carries the day's landings and the push runs after the final fuzz pass. The frame is the 16-division board (200 files each) and the Tier 1 ledger sweep on `db31113fa`; the references are z3 4.13.3 and cvc5 1.3.4 on the same lists (UFLIA's "144" is the z3∪cvc5 union; cvc5 alone is 142). Bitwuzla does neither arithmetic nor quantifiers and is not a reference here.
 
 ## The traces (all `proposed`, all merged)
 
@@ -48483,6 +48477,7 @@ of them. Every non-shipping lever names what to build next.
 | QUANT-INSTANCE-SELECT | 2133 | the briefed selection lever already ships and acts on 0.3 % of rejections; a generation ladder reaches its check on 31 of 53 cores and refutes at none | OFF; the refutation is absent from our set, not buried |
 | LRA-WARM-SCREEN | 2132 | builds-per-file screen: strictly better than the arm it screens (1/1 vs 1/2), admitted set predicted 51 of 51; the held-out loss is the shape the lever wins on, so the axis is wrong; −9.2 % is ¾ skipped linearization; fill-in grows the warm tableau 21× | OFF |
 | NRA-CLAUSE-LOOP | 2131 | certified `unsat` for the Boolean loop; A/B on 800 files (QF_NRA, QF_NIA, QF_LRA control, QF_NRA held-out): 0 stable gains, 0 stable losses, 0 flips, the one mover was ambient (NEITHER-DECIDES at 3×/arm); 10 of 16 admissible files reach the theory and are refused by the single-cell frontier (algebraic sample worth 5); the shipped checker had two false-reject bugs, fixed; the treatment arm was confounded with the sat half and is rebased | OFF; merged `931e9d173` |
+| NRA-CLAUSE-LOOP (follow-up) | 2131 | the clause-loop z3 fuzz asserted the withholding ADR-2131 removed and went red on main for the eight fuzzes the lane had not run; it now adjudicates every certified `unsat` against z3 and re-reads the certificate: 1,500 instances, 373 decided (5 `unsat`), 373 agreements, 0 disagreements; one generated refutation was refused by the loop's own checker and dropped | merged `fd5d64e70` |
 
 Four lanes on the quantified divisions each removed a real block and moved
 one core; the probe then showed why: the six instances z3's proof uses are
@@ -48494,8 +48489,8 @@ nested) — that histogram is the next build's brief.
 
 | lane | ADR | question | state |
 |---|---|---|---|
-| NRA-ALGEBRAIC-WITNESS | 2134 | the algebraic sample the clause-loop census pointed at (5 of 16, 6 of 24 in ADR-2126's bucketing) | A/B done, QF_NRA 124 → 128 (+4) on the pinned list per the lane's commit; held-out and rechecks pending |
-| NIA-ORDER-LEMMAS | 2136 | z3's order/monotonicity lemma portfolio, the only QF_NIA mechanism the trace left untried | QF_NRA control clean 124/124; pass reached on 59 of 116 undecided; UFNIA and held-out sweeping |
+| NRA-ALGEBRAIC-WITNESS | 2134 | the algebraic sample the clause-loop census pointed at | built OFF: an algebraic FINAL coordinate gated on exact replay; pinned QF_NRA 124 → 128, 4 STABLE-GAIN / 0 loss / 0 unstable at 3×/arm, QF_NIA and QF_LRA controls flat, 0 flips; **held-out draw stopped at 23 of 200 when the round closed**, so the criterion is unmet and the lever stays OFF (~60 min to finish); the census predicted 1 of the 4 movers (a first-wins decline slot makes a cause census non-predictive); **`RealAlgebraic::sign_at` read two endpoint samples as an enclosure and returned a wrong sign** — fixed with an exact Sturm count, no shipped wrong verdict found; merged `20e835755` |
+| NIA-ORDER-LEMMAS | 2136 | z3's order/monotonicity lemma portfolio, the only QF_NIA mechanism the trace left untried | QF_NRA control clean 124/124; QF_NIA pinned sweep complete on disk; lane killed by the account limit mid-analysis and resumed; report pending |
 | LRA-ATOM-SCREEN | — | the atom-count admission screen ADR-2111 left unrun, now that the tableau is sparse | measured, does not ship: QF_LRA decided 106 at 1x/2x/4x/16x/off while admitted rose 130 → 200; 16x and off add 6 and 8 allocator aborts (7.4 GiB, 24/24 stable); QF_UFLRA and QF_RDL null, QF_LIA and QF_IDL never reach the offline loop; 28 of the 32 target rows stop at "model did not replay" in the online engine's model reconstruction, which is the next QF_LRA increment; merged `5d827fe02` |
 | QUANT-REACH-DIFF | — | per core, where each of z3's proof instances is lost | done: 1,025 unique bodies over 53 UFLIA cores — ADMITTED 11, MATCHED-REJECTED 169, NEVER-MATCHED 369, NESTED 476 (46 %, reproducing the probe's 46 %); nested universals are matched and their tuples computed, then dropped as inactive at `qinst_egraph.rs:7294` because nothing records that the universal is currently entailed; ADR-2120's activation-by-assignment (built, OFF) recovers 102 of the 169 rejected; three worked examples at `file:line`; merged `8441384c0` |
 
@@ -48507,8 +48502,8 @@ has an A/B and a written reason, and the one that measured a non-null
 
 | lane | ADR | question | host |
 |---|---|---|---|
-| QUANT-COMPOSE | 2138 | the four OFF quantifier levers (ADR-2120 activation, 2130 session arithmetic, 2133 generation ladder, 2127 macro inline) were each "necessary, not sufficient" alone; measured together on the 53 UFLIA cores, each alone, all ON, all-but-one; the 800-file A/B only if a core moves; nested-universal activation designed at `file:line` against z3's `smt_quantifier.cpp` and cvc5's `instantiate.cpp` | s5 `1,9`/`3,11` |
-| LRA-MODEL-REPLAY | 2139 | the 28 QF_LRA files LRA-ATOM-SCREEN found stopping at "online CDCL(T) LRA model did not replay (arithmetic outside the incremental engine)" (`lra_theory.rs:493`): census of which construct is outside the engine per file, then the smallest sound change that hosts it, with the five LRA/DL/LIA z3 fuzzes mandatory | s7 `1,9`/`3,11` |
+| QUANT-COMPOSE | — (2138 unspent) | the four OFF quantifier levers composed | stopped after sizing at the user's pause: the levers share no read site (composition is a data-flow claim); the three ADRs' OFF arms read 15/15/16 on the same 53 cores, so a sweep needs a threshold above ±1; z3 and cvc5 activate a universal inside an instantiated body by asserting the instance back into the SAT layer (`qi_queue.cpp:288`, `smt_context.cpp:1482`; cvc5 `theory_quantifiers.cpp:173`), while ours forces `PositiveContext` to `None` for the whole subtree on entering a `forall` body (`qinst_egraph.rs:1948`) before any lever level is consulted, so ADR-2120 never reaches a universal nested inside another binder — a reading, not a fixture; `AXEYUM_MACRO_INLINE` has no registry row; 13 of 71 citations were wrong on first check and two exit-status checkers now hold them at BAD=0; merged `e6392a554` |
+| LRA-MODEL-REPLAY | — (2139 unspent) | the 28 QF_LRA files stopping at "online CDCL(T) LRA model did not replay" (`lra_theory.rs:493`) | scoped down at the user's pause to the per-file census of which construct is outside the incremental engine; lane killed by the account limit while launching the s7 census and resumed; report pending |
 
 ## What the day says
 
