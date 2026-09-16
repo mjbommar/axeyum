@@ -692,6 +692,19 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #                              either of which would make every A/B run
   #                              against it meaningless without failing
   #                              anything else.
+  #   dt_array_element_2135    — ADR-2135's opaque array-of-datatype FIELD,
+  #                              behind a dated lever that is OFF by default.
+  #                              Registered for the same reason as
+  #                              `dt_nested_field_2128`: the suite's value is a
+  #                              DIFFERENCE between two arms, and its
+  #                              `off_is_the_shipped_default_with_no_guard_and_no_env`
+  #                              fails if the lever ever defaults ON — which
+  #                              would silently change the encoding for every
+  #                              lane without failing anything else. Its
+  #                              `select_of_the_opaque_field_declines_it_does_not_error`
+  #                              is the traversal guard that makes the admission
+  #                              sound, and its `sound_*` pair is the ADR-1930
+  #                              wrong-`unsat` shape on the new field class.
   #   quant_ladder_rung_refusal_declines
   #                            — ADR-1927: a rung's fragment refusal is a
   #                              DECLINE, not the query's verdict. Regressing
@@ -960,7 +973,8 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
                additive_no_overflow_never_becomes_unsat \
                lra_opaque_real_apps decline_detail_typed \
                quantifier_trigger_alternatives quantifier_positive_path \
-               dt_nested_field_2128 quant_macro_inline_route quant_ground_session_soundness \
+               dt_nested_field_2128 dt_array_element_2135 \
+               quant_macro_inline_route quant_ground_session_soundness \
                quant_session_arith_certificate quant_generation_ladder lra_warm_screen_2132; do
     gated_test "dispatch/reason: $suite" \
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
@@ -973,6 +987,18 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   gated_test "dispatch/reason: quant_macro_inline_route (AXEYUM_MACRO_INLINE=1)" \
     env AXEYUM_MACRO_INLINE=1 \
       cargo test -p axeyum-solver --features full --quiet --test quant_macro_inline_route
+
+  # ADR-2135's ARMED arm, for the same reason as the line above: the process
+  # value of `AXEYUM_DT_ARRAY_ELEMENT` is resolved once per process, so the loop
+  # run reaches the admission arm only through the thread-local guard. This run
+  # exercises the ENV path itself -- the one a benchmark sweep actually uses --
+  # and would catch a parse that silently resolved `on` to the default. The
+  # suite's two `off_*` tests assert the shipped default and are skipped by name
+  # here, because with the variable set they are asserting the wrong arm.
+  gated_test "dispatch/reason: dt_array_element_2135 (AXEYUM_DT_ARRAY_ELEMENT=on)" \
+    env AXEYUM_DT_ARRAY_ELEMENT=on \
+      cargo test -p axeyum-solver --features full --quiet --test dt_array_element_2135 \
+        -- --skip off_
 
   # The GOLDEN LEAN MODULE pins, diff-scoped to the crate that renders them.
   #
