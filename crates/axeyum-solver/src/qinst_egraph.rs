@@ -13286,17 +13286,29 @@ mod tests {
 
     /// The abstraction is a WEAKENING and must never manufacture a refutation.
     ///
-    /// The ground set below is satisfiable, and it stays satisfiable as
-    /// checked instances arrive across three separate batches — which is what
-    /// puts decisions on the trail between insertions and makes
-    /// `add_checked_batch`'s `unwind_to_root` load-bearing. A session that
-    /// inserted a clause under a live trail would be recording a level-0 fact
-    /// that only holds under those decisions, and the next backjump would keep
-    /// it: the stale-clause hazard. This fixture is the one that dies when the
-    /// unwind is removed.
+    /// The ground set below is satisfiable, and it stays satisfiable as checked
+    /// instances arrive across three separate batches, each after the previous
+    /// solve has left a trail behind it.
+    ///
+    /// **THE STALE-CLAUSE HAZARD HAS NO MECHANISM HERE, AND THAT IS A MEASURED
+    /// RESULT RATHER THAN AN ASSUMPTION.** Removing `add_checked_batch`'s
+    /// `unwind_to_root()` — the call that looks like the guard against
+    /// inserting a permanent clause under a live trail — kills nothing in this
+    /// module (ADR-2124, mutation `qinst-ground-session`, SURVIVED).
+    /// `NativeIncrementalCdcl::add_clause`
+    /// (`crates/axeyum-cnf/src/proof_sat/incremental.rs:486`) calls
+    /// `between_solves()` itself, unconditionally, so a clause is always
+    /// registered into an unassigned solver whether or not the caller asked.
+    /// What the session's own call buys is LIVENESS: it closes the previous
+    /// solve's theory epoch so `EufTheory::add_atom_at_root`, reached from
+    /// `ensure_atom` before the batch's first `add_clause`, accepts a
+    /// registration instead of refusing it. The mutation that measures THAT is
+    /// `qinst-online-session-epoch`, against a fixture whose batch registers a
+    /// real EUF atom — which this one cannot, because its instances abstract to
+    /// opaque variables and those need no epoch.
     ///
     /// The independent `check_auto` at the end is the control: it says the set
-    /// really is satisfiable, so a `Unsat` from the session would be a
+    /// really is satisfiable, so an `Unsat` from the session would be a
     /// manufactured one and not a correct verdict on a set the fixture got
     /// wrong.
     #[test]

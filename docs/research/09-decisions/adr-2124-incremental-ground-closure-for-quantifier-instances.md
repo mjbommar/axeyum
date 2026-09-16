@@ -231,12 +231,21 @@ abstraction useful, not what makes it sound.
 same ground set. The session picks WHEN to look; the cold route still says
 whether the refutation is real.
 
-**There is no retraction, so the stale-clause hazard has no mechanism.**
-`add_checked_batch` calls `unwind_to_root()` before inserting and every insertion
-is `add_permanent_clause` at root; `ground` is only ever appended to. A learned
-clause is therefore derived from permanent root clauses and stays entailed by
-them. The fixture below is written so that removing the `unwind_to_root` — the
-one place that discipline lives — kills it.
+**There is no retraction, so the stale-clause hazard has no mechanism** — and
+this lane's own mutation is what established it rather than the reading that
+motivated the brief. `ground` is only ever appended to and every insertion is
+`add_permanent_clause`, so a learned clause is derived from permanent root
+clauses and stays entailed by them. Removing `add_checked_batch`'s
+`unwind_to_root()` — the call that *looks* like the guard against inserting
+under a live trail — **killed nothing** (§5.1). `NativeIncrementalCdcl::add_clause`
+(`crates/axeyum-cnf/src/proof_sat/incremental.rs:486`) calls `between_solves()`
+itself, unconditionally, before touching the database: a clause is always
+registered into an unassigned solver whether or not the caller asked. What the
+session's own call buys is stated in that method's own doc comment
+(`incremental.rs:515-520`) and is **liveness, not soundness** — it closes the
+previous solve's theory epoch so `EufTheory::add_atom_at_root`, reached from
+`ensure_atom` before the batch's first `add_clause`, accepts a registration
+instead of refusing it.
 
 ### Fixtures
 
@@ -245,7 +254,7 @@ one place that discipline lives — kills it.
 | fixture | what it refutes |
 |---|---|
 | `ground_session_level_1_hosts_an_arithmetic_ground_set_level_0_refuses` | both halves: level 0 still refuses byte for byte, level 1 hosts. A test showing only level 1 working would pass if level 0 had silently started working too, and then the A/B's OFF arm would not be the shipped behaviour |
-| `ground_session_level_1_never_manufactures_an_unsat_on_a_satisfiable_set` | **the stale-clause fixture.** Three batches of checked instances over a satisfiable arithmetic ground set, each arriving after the previous solve put decisions on the trail. Carries an independent `check_auto` control that the set really is satisfiable |
+| `ground_session_level_1_never_manufactures_an_unsat_on_a_satisfiable_set` | three batches of checked instances over a satisfiable arithmetic ground set, each arriving after the previous solve left a trail. Carries an independent `check_auto` control that the set really is satisfiable |
 | `ground_session_level_1_reuses_one_variable_per_abstracted_term` | one variable per abstracted term across the construction boundary, and that it never enters the theory's atom map or the candidate-equality proposal |
 | `ground_session_level_1_declines_a_ground_set_with_no_theory_atom` | the vacuous-session guard |
 
@@ -256,13 +265,97 @@ levels on every fixture):
 |---|---|
 | `SAT_ABSTRACTED_COMPARISONS` | an abstraction that is not a weakening — one that asserted the abstracted variable on the comparison's syntactic shape, or collapsed a polarity |
 | `SAT_DISTINCT_COMPARISONS_NOT_COLLAPSED` | an abstraction keyed on anything coarser than the `TermId` (the operator, the sort, the right-hand constant): both comparisons collapse to one variable and the query becomes `v ∧ ¬v` |
-| `SAT_MANY_ROUNDS` | the root-level insertion discipline end to end |
+| `SAT_MANY_ROUNDS` | the accumulate-across-rounds path end to end |
 | `UNSAT_EUF_INSTANCE`, `UNSAT_EUF_INSTANCE_BESIDE_ARITHMETIC` | **positive controls.** A suite of satisfiable queries passes trivially against an engine that decides nothing |
 | `the_two_levels_never_disagree_on_a_decided_verdict` | the ship gate as an assertion, with a `compared >= 2` guard so a differential that compared nothing cannot pass |
 
+### 5.1 Mutations — and the one that SURVIVED is the more useful result
+
+`scripts/tests/mutation_controls.py qinst-ground-session`, filter
+`--lib ground_session` (baseline **4 tests**, so every kill count below is
+against that denominator):
+
+| guard removed | outcome |
+|---|---|
+| an abstracted atom never reaches the `EUF` theory | **killed 1** — `..._never_manufactures_an_unsat_on_a_satisfiable_set` |
+| one variable per abstracted term, reused across occurrences | **killed 1** — `..._reuses_one_variable_per_abstracted_term` |
+| a session with no theory atom is declined, not kept | **killed 1** — `..._declines_a_ground_set_with_no_theory_atom` |
+| level 1 actually turns the abstraction on | **killed 3** |
+
+`--check-anchors` over the whole file: **151 suites, 1,103 anchors, stale=0**.
+
+**The fifth mutation SURVIVED, and its survival is a finding about the code, not
+about the fixtures.** Removing `add_checked_batch`'s `unwind_to_root()` — the
+call the brief and this lane both read as the guard against inserting a
+permanent clause under a live trail — killed nothing. The reason is that the
+hazard has no mechanism at that layer: `NativeIncrementalCdcl::add_clause`
+(`crates/axeyum-cnf/src/proof_sat/incremental.rs:486`) calls `between_solves()`
+**itself, unconditionally**, before touching the database, so a clause is always
+registered into an unassigned solver whether or not the caller asked.
+
+What the session's own call buys is written in that method's own doc comment
+(`incremental.rs:515-520`) and is **liveness, not soundness**: it closes the
+previous solve's theory epoch so `EufTheory::add_atom_at_root` — reached from
+`ensure_atom` before the batch's first `add_clause` — accepts a registration
+instead of refusing it. That is measured by a second suite,
+`qinst-online-session-epoch`, against a fixture whose batch registers a real
+`EUF` atom. The `ground_session` fixtures structurally cannot measure it: their
+instances abstract to opaque variables, and an opaque variable needs no epoch.
+
+The statement that survives is therefore narrower and true: **there is no
+retraction, so no learned clause can go stale**, and the root discipline that
+makes that so lives one layer down and is not this session's to lose.
+
 ## 6. Measurement
 
-_(Filled in by the 53-core probe and the divisional A/B; see §8.)_
+### 6.1 The 53-core probe — the cores move, and nothing flips
+
+53 UFLIA cores, one binary at two env values, both arms `--trace` +
+`AXEYUM_QTRACE=1`, **interleaved per file on the same pinned core** (s6 physical
+pairs 1,9 / 3,11 / 5,13 / 6,14), 24 s, 8 GiB.
+Artifacts: `bench-results/quant-ground-incremental-20260916/cores/`.
+
+| | OFF | ON |
+|---|---:|---:|
+| decided | 15 | **16** |
+| verdict moved | — | **1** |
+| …GAIN (`unknown` → decided) | — | **1** |
+| …LOSS (decided → `unknown`) | — | **0** |
+| …**FLIP** (`sat` ↔ `unsat`) | — | **0** |
+
+The mover is `UFLIA_simplify_javafe.ast.TypeDeclElemPragma.373`: `unknown` at
+`fd:bounded-completeness-unsat=budget` becomes `unsat` at `q:mbqi-quick=decided`,
+and its interleaved-check cost drops from **12.7 s over 27 calls to 0.7 s over
+1**.
+
+**The seconds, and they are smaller than one core suggested.**
+
+| | OFF | ON |
+|---|---:|---:|
+| the check ran on | 45 of 53 | 45 of 53 |
+| calls | 513 | **450** |
+| total seconds in it | 452.4 | **404.0** |
+
+**48.4 s removed — 10.7 % of what OFF spent there, 3.8 % of the whole 24 s × 53
+budget.** It is not evenly spread: **20 cores gain (57.3 s, max 12.6 s), 11 cores
+LOSE (−9.1 s, worst −6.2 s), 22 are unchanged**. And the session suppresses the
+cold check on only **13 of 53** — on 38 the call count is identical. The
+mechanism fires where the loop is *starved* (no instance admitted, so the
+candidate fixpoint runs), not on every round.
+
+**The regime change is larger than the seconds.** How each arm ENDED:
+
+| | budget | decided | incomplete |
+|---|---:|---:|---:|
+| OFF | 29 | 15 | 9 |
+| ON | **24** | **16** | **13** |
+
+Five cores move out of "died on the clock" into an **honest fixpoint** — seven ON
+rows now say *"e-matching instantiation reached fixpoint without refuting after N
+rounds"*, which OFF could not reach because it ran out of budget first. The
+detail naming the interleaved ground check drops from 13 rows to **8**. A file
+that reports a fixpoint is a file whose next blocker is the instance SET, not the
+clock; that is a different lane's problem and it is now visible.
 
 ## 7. Decision
 
