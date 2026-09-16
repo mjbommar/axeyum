@@ -879,6 +879,30 @@ pub struct TheoryLayerStats {
     pub bound_scan_calls: Option<u64>,
     /// Atoms those calls examined; see `bound_scan_calls`.
     pub bound_scan_atoms: Option<u64>,
+    /// Passes the ADR-2122 implied-bound propagator ran: the touched filter
+    /// (`ImpliedBounds::epoch`) let this many through, one per change of the
+    /// asserted set. `0` with the lever off is the honest reading — the
+    /// propagator exists and did nothing.
+    pub implied_bound_passes: Option<u64>,
+    /// Constraint coefficients the row analysis examined across every pass —
+    /// the clock-free price of the mechanism, so its cost is a count and not a
+    /// wall time a contended host moves.
+    pub implied_bound_rows_scanned: Option<u64>,
+    /// Column bounds installed across every pass, seeds included.
+    pub implied_bounds_derived: Option<u64>,
+    /// Literals the implied-bound propagator OFFERED the driver. Against
+    /// `theory_propagations` this says how much of the theory's propagation is
+    /// ADR-2122's rather than the older form-level scan's.
+    pub implied_bound_propagations: Option<u64>,
+    /// Search DECISIONS on atoms this theory tracks, as reported by the driver
+    /// through `note_decision` — the denominator
+    /// `decisions_on_implied_atoms` is a share of.
+    pub decisions_on_tracked_atoms: Option<u64>,
+    /// Of those, decisions on an atom the column bounds already entailed:
+    /// ADR-2122's ceiling on what implied-bound propagation can remove. An
+    /// UNDER-count by construction (see `LraTheory::note_decision`), so it is a
+    /// floor on the prize and never a ceiling on it.
+    pub decisions_on_implied_atoms: Option<u64>,
     /// Cells the simplex pivot actually wrote, summed over the engine's life.
     /// `pivot_cells_written / simplex_pivots` is the measured cost of one pivot
     /// in exact-rational multiply-adds; `simplex_rows × simplex_columns` is the

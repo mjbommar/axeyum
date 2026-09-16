@@ -159,6 +159,18 @@ now. Nothing was deleted.
 | 2026-09-15 | `e75f85413` | [ADR-2114]: no datatype lever is built — of the 4 undecided ORIGINALS we refuse on a datatype construct, 1 is ground-convertible. §4 names and sizes the representation anyway so the next lane need not re-derive it. |
 | 2026-09-15 | `3d8435c2f` | The same four z3 configurations on the 79 undecided ORIGINALS, which is the measurement the cores could not give: 39 GROUND (49.4 %), 16 EMATCHING, 0 MBQI, 24 z3 cannot refute either. Half the gap is ground — but only 1 of the 4 datatype-refused originals is, so the bucket converts at most 1 of 79. |
 | 2026-09-15 | `d53c89e8e` | Verdict invariance measured rather than argued: 0 verdict changes of 134, 0 flips, non-vacuity in both directions. The checker was wrong before the code was — it demanded the correction on a row that never entered the quantified arm. |
+| 2026-09-15 | `03dc0e33c` | lra-propagation: implied-bound propagation into the SAT core -- `ImpliedBounds` column table, the `note_decision` driver hook, six additive trail counters, five registered caps, the simplex-backed explanation checker, lever `off` |
+| 2026-09-15 | `ef4492312` | lra-propagation: the sizing sweep -- the ceiling is **24.5 %** of tracked decisions, with the per-row spread and the two rows the lever provably cannot reach |
+| 2026-09-15 | `cc949ea74` | lra-propagation: the scratch reset was half the propagator's cost, and one guard the mutation run found was decoration |
+| 2026-09-15 | `4f8ebf8cd` | lra-propagation: two A/B runner defects that let an EMPTY run print `AB-DONE`, and the workspace gate script |
+| 2026-09-15 | `137007f7f` | lra-propagation: a path-ordered list makes a PARTIAL run a prefix, not a sample -- seeded run-order shuffle with a set digest that must not move |
+| 2026-09-15 | `79877c71c` | lra-propagation: the A/B answer -- implied-bound propagation buys ZERO verdicts and costs one STABLE-LOSS; ADR-2122 ships `off` |
+| 2026-09-15 | `4447b5a14` | Exit criterion 1, committed before any code: the slice ceiling is 24 of ADR-2110's 45, and 9 are lost to the `i128` clearing. |
+| 2026-09-15 | `c03bf39f7` | `nra_cell_cert.rs` — the cell-covering certificate and an independent checker, landed BEFORE the producer so the format is fixed by what can be checked. |
+| 2026-09-15 | `31e150738` | `nra_single_cell.rs` — CDCAC behind `AXEYUM_NRA_CAD=single-cell`, OFF. `unsat` gated on the checker, `sat` on a rational model replay. |
+| 2026-09-15 | `5755582bf` | Rational point cells are descended into; `algebraic-witness` split out of `algebraic-coarsening`; the conjunctivity correction (24 → 12) and the cause scan. |
+| 2026-09-15 | `4ff928964` | The `generate_single_cell_shape` fuzz seed class and a route-level differential test; 195 unattributed declines found and closed. |
+| 2026-09-15 | `db89894c9` | Two mutation suites (3 mutations, 3 kills, one named test each); clippy clean on solver+bench. |
 | 2026-09-15 | `4a9638930` | Census of the 83 undecided QF_NRA files: 83 of 83 outcome-ledger rows, buckets keyed on the route that held the budget, shape features from a parser rather than a grep. Records the two wrong readings the instruments gave first. |
 | 2026-09-15 | `4def0b025` | `nra_real_root::CadDecline` — twelve causes behind what was one `not-applicable` for 78 of 83 files — plus the `AXEYUM_NRA_CAD` lever registered dated, and the three-arm z3 + cvc5 reference trace that sizes the gap. |
 | 2026-09-15 | `40b99ced8` | ADR-2110: the CAD-versus-linearization split, two design-difference claims with `file:line` on both sides, the QF_NRA A/B (+2, 0 losses, 0 flips), and the `nra-cad-attribution` mutation suite (three guards, each deletion killing exactly one named test). |
@@ -59988,6 +60000,83 @@ anything on a budget-bound route, **measure the exit-status channel**. A verdict
 count reports the cap as `losses=1`; the damage is 18 rows wide and almost all
 of it is invisible there.
 
+**Lane LRA-PROPAGATION (`DONE`, lra-propagation, 2026-09-15).** [ADR-2111] named
+theory propagation as the largest lever it did not pull: over the 23 of 93
+undecided `QF_LRA` rows that reach the online CDCL(T) engine, a median **19
+theory propagations against 836,531 decisions**. This lane built it, sized it
+before building it, and scored it. ADR-2122 is **`proposed`**; the lever ships
+`off`.
+
+**Sizing first, and it is the headline.** `AXEYUM_LRA_BOUND_PROPAGATION=probe`
+builds the identical column-bound table and offers nothing, so it measures the
+search that actually ran. Over the same 23 rows (re-derived from ADR-2111's
+committed census by the `decisions` column being present — the other 70 never
+reach the engine and contribute nothing, not a zero): **405,738 of 1,654,631
+decisions on tracked atoms, 24.5 %, were on an atom the bounds already
+entailed.** Of ALL decisions it is 7.0 %; both denominators are printed because
+a `QF_LRA` skeleton has Tseitin variables the theory cannot reach. Median
+per-row share **19.0 %**, min 0.3 %, max 70.5 % — **the spread is the finding**.
+`theory_propagations` reads a median 18.5 today, re-deriving ADR-2111's 19 on a
+different run.
+
+**Two rows the lever provably cannot help**: `miplib/pp08a-1000` and
+`pp08a-7349` take 291,314 and 169,645 decisions with **`tracked = 0`** — not one
+decision on an atom the theory tracks. `pp08a-7349` is ADR-2111's own median row.
+
+**What was built.** A COLUMN-bound table, not a scan of the tableau's rows, and
+that is forced rather than chosen: z3's `is_unit_var` makes `x ≤ 3` a column
+bound with **no row at all** (`theory_lra.cpp:807-809,856-857`), while ours
+makes a slack row per template, so **no problem variable ever carries a bound**
+and a direct port of `propagate_bounds_for_touched_rows` would have been INERT.
+Seeds from unit constraints, rounds over the asserted rows (one candidate per row
+entry per direction — z3's actual shape), emission when an atom's expression is
+confined to one side of zero. Basis-independent, so the offered sequence does not
+depend on the last check's pivots.
+
+**Three of ADR-2111's citations are corrected**, one of which would have cost a
+successor: **z3 does NOT yield at most two implied bounds per row.** `analyze()`
+returns at most 2, but that counts DIRECTIONS; `limit_all_monoids_from_below`
+(`bound_analyzer_on_row.h:196-220`) calls `limit_j` once per row ENTRY, so a row
+of length *n* emits up to 2*n*. Also: `try_add_bound` does not exist
+(`add_bound`, `lp_bound_propagator.h:150-190`), and `:54-80` truncates
+`analyze()` mid-body.
+
+**Soundness by a checker that shares no arithmetic with the producer.** Every
+offered literal's reasons plus its own NEGATION go to the simplex, which must
+refute them. Over 1,000 LCG systems: **904 verified, 0 inconclusive, 0 refuted**,
+with an asserted floor of 200 so a propagator that goes quiet dies rather than
+passing by checking nothing. The soundness-negative fixture is a PAIR with the
+satisfiable arm first, and the positive control carries its own negative control
+(the form-level scan offers nothing on the same state).
+
+**The mutation run found a guard that was decoration and it was not engineered
+away.** The self-explanation `continue` was removable with all 38 tests green —
+unreachable, because every reason atom is asserted and the target is not. It is
+now a `debug_assert!` stating that invariant, and the mutation suite watches a
+guard that is real instead. Final run: 39-test baseline, exit 0, killed 5/2/1/6,
+`--check-anchors` stale = 0.
+
+**The A/B, and the answer is a clean negative.** One binary, two env values,
+**600 rows across three COMPLETE populations** — the pinned `QF_LRA` board, a
+seeded held-out `QF_LRA` draw disjoint from it, and `QF_LIA`: **pinned 107/107
+net +0 with 0 movers** (arm A re-deriving the board's 107 exactly), **held-out
+93/92 net −1**, **`QF_LIA` 127/127 net +0**, **0 gains anywhere**, 0 flips, 0
+exit-status differences, **307 `:status` comparisons with 0 disagreements**. The
+one mover re-run **3× per arm is STABLE-LOSS** (3/3 `unsat` off, 3/3 `unknown`
+on), not ambient. On the rows both arms decide it costs **+35.4 %** (pinned) and
+**+12.2 %** (held-out) of wall clock. **Implied-bound propagation buys ZERO
+verdicts here.** The lever **ships `off`**; `QF_UFLRA`, `QF_UFLIA`, `QF_IDL` and
+`QF_RDL` are reported **did not run**, never as zero movement.
+
+**The lesson is about sizing, not about propagation.** ADR-2111 ranked this
+lever from a RATIO (836,531 decisions per 19 propagations) and a ratio is not a
+prize. The number that sizes a lever is how many of those decisions it could
+have removed — 24.5 % of the tracked ones, 7.0 % of all of them, and 0 % on the
+division's own median file. Measuring it cost one env-gated probe and one driver
+hook, and it would have re-ordered the work.
+
+[ADR-2111]: ../../research/09-decisions/adr-2111-qf-lra-what-the-same-simplex-does-differently.md
+
 **`WIP`, lra-theory-side, 2026-09-07.** QF_LRA is 84 files behind the real
 frontier after [ADR-1732](docs/research/09-decisions/adr-1732-second-reference-per-division-not-a-replacement.md)
 (Yices 181, cvc5 145, ours 97). This lane took the theory side. Full record,
@@ -61751,6 +61840,127 @@ scratch copy and restoring). Folding it in is the coordinator's step.
 | 2026-09-07 | Backtick logic names in the new doc comments (workspace clippy) | `f27b1dbd1` |
 | 2026-09-07 | The 200-file confirming run, the census correction block, the family-doc follow-up, and the capability entry's measured boundary | `0857e419c` |
 | 2026-09-07 | Merge of local `main` (ADR index regenerated to resolve); post-merge workspace `check` and `clippy -D warnings` both green | `1c078316b` |
+
+Status: the route, its certificate checker, its fuzz seed class and its mutation
+suites are landed. **`AXEYUM_NRA_CAD=single-cell-sat` is now the shipped
+default** — it runs the route and keeps only its exact `sat` half. The full
+`single-cell` arm ships **OFF**, because its `unsat` is the half gated on a
+sampling delineability check.
+
+## What this lane was
+
+ADR-2110 ended with "the model-constructing nlsat/CAD route is the
+recommendation, not this lane's build". This is that build, bounded: ≤ 4
+variables, total degree ≤ 8, conjunctive, coefficients inside the existing
+`i128` clearing.
+
+## The numbers
+
+| | |
+|---|---:|
+| ADR-2110's CAD-only population | 45 |
+| inside the slice's BOUND ceiling (≤4 vars, degree ≤8, coeff ≤ `1<<40`) | 24 |
+| **corrected** shape ceiling (also genuinely conjunctive after `let` expansion) | **12** |
+| excluded by the `1<<40` coefficient clearing alone | 9 |
+| of the 24, decided by the route | 2 |
+| QF_NRA A/B: A `default` → B `single-cell` | **117 → 123 (+6)** |
+| of that, attributable to the route deciding | **+4** (2 gains are files it declines) |
+| 3x recheck: STABLE-GAIN / STABLE-LOSS / UNSTABLE | **6 / 0 / 2** |
+| QF_NIA | 81 → 81, both movers UNSTABLE |
+| QF_LRA control | 107 → 107, **0 movement of any kind** |
+| `sat`↔`unsat` flips, all three divisions | **0** |
+| vs declared `:status` | 0 disagreements over 594 comparable verdicts |
+| differential fuzz | 1500 instances, 239 decided (237 sat / 2 unsat), 0 disagreements |
+
+## The sat-only arm — what actually shipped
+
+The reason the full route stays off applies to **one of its two halves**. A
+`sat` is a rational model replayed exactly against the original assertions; only
+the `unsat` is gated on a sampling delineability check. `single-cell-sat` runs
+the route and withholds every `unsat` as
+`CadDecline::UnsatWithheldSampledDelineability`, keeping the exact half.
+
+| | |
+|---|---:|
+| QF_NRA: A `default` → B `single-cell-sat` | **117 → 121 (+4)** |
+| gains / losses / flips | **4 / 0 / 0** |
+| 3× recheck | **4 STABLE-GAIN, 0 STABLE-LOSS, 0 UNSTABLE** |
+| vs declared `:status` | 0 disagreements over 236 comparable verdicts |
+| wall clock | A 1,224 s, B **1,184 s** — the withholding arm is still faster |
+
+The four gains are exactly the full arm's four `sat` verdicts; its two `unsat`
+gains are gone, which is the arm doing what it was built to do — confirmed from
+the mover list, not asserted from the design.
+
+| QF_NIA | 82 → 81; the one row rechecks **BOTH-DECIDE** (`unsat` ×3 both arms) |
+| QF_LRA control | 107 → 107, **0 movement of any kind** |
+| flips / `:status` disagreements, all three divisions | **0 / 0 over 593 comparable verdicts** |
+
+**Shipped.** `CAD_DEFAULT` moved from `CadPolicy::DEFAULT` to
+`CadPolicy::SINGLE_CELL_SAT` — the first time this entry's shipped value has
+changed. `AXEYUM_NRA_CAD=default` still selects the pre-ADR-2121 engine, through
+an explicit arm in `parse_cad_arm` rather than the catch-all.
+
+The trade is deliberate and worth stating plainly: the sat-only arm gives up
+**two** stable gains the full arm had (its two `unsat` verdicts), in exchange for
+a default on which **no verdict rests on a finite sample**.
+
+
+## Gates
+
+`clippy -D warnings` on solver + bench with `--features full`: exit 0.
+`cargo fmt --all --check`: clean. `cargo check --workspace --all-targets` on
+default features: clean. Solver lib sweep (`--skip reconstruct::`): **1562
+passed, 0 failed**. `corpus_regression`: 2 passed. All **eight** nonlinear z3
+differential fuzzes green with nonzero counts. `config_registry::tests`: 18
+passed. Merge hygiene, links, `gen-plan --check`, `gen-adr-index`: PASS.
+Holdout isolation: PASS at 206 held-out. `progress_frontier` (`--features full`,
+`--test-threads=1`, load 2.9-3.3): **12 passed, 0 failed, no REGRESSION**, with
+`frontier_nia_unsat` and `frontier_nra_degree` — the two families this route
+could touch — both green. The five `bench-results/frontier/*.json` files the run
+rewrites were restored and are NOT committed.
+
+The route/dispatch integration suites (`route_trace`, `route_attribution`,
+`dispatch_rung_refusal_declines`, `nra_fbbt_route`, `ufnra_route`,
+`cas_ideal_route`, `decision_and_evidence_routes_agree`,
+`math_resource_lra_routes`, `quantified_route_trace`): all green.
+
+**Two suites failed on the first pass and both were load, not code.**
+`auto::tests::pathological_overbound_stays_terminal_under_every_policy` and
+`route_attribution::attribution_does_not_change_any_verdict` both assert inside a
+5-second budget, and both were run in a parallel sweep on a box carrying a
+four-core benchmark. Each passes on a quiet box at the same HEAD, and neither is
+on a code path this lane touches. The number reported above is the quiet run.
+
+## The two things worth carrying forward
+
+**This lane's first sizing was wrong, and the way it was wrong generalises.** It
+read `has_top_or` from ADR-2110's shape table — a column computed at the
+**outermost node** of each assertion. `meti-tarski` files are one enormous
+`let`-bound `and` tree, so an `or` six levels inside does not move it. The
+ceiling was not a guess that came out high; it was the wrong question answered
+exactly. A column computed at the top of a term is not a statement about the
+term.
+
+**An `unsat` from this route is CHECKED, not PROVED.** The certificate checker
+establishes atom-cell sign-invariance exactly (no root strictly inside the cell,
+by an independent Sturm count) but tests *delineability* by sampling three
+further interior points. That is why the default does not move: every other
+`unsat` producer here is gated by something exact, and making a sampling check
+load-bearing on the default path is a decision to take deliberately.
+
+## What was left undone, and why
+
+- **The held-out 200-file QF_NRA draw was NOT run.** It is the gate for shipping
+  ON; the decision is OFF, so spending a blind population on a lever that is not
+  moving would spend it for nothing.
+- **Lazard evaluation** (`references/cvc5/src/theory/arith/nl/coverings/lazard_evaluation.cpp:590`)
+  is the named way to stop declining on a nullified polynomial. Not built.
+- The three blockers, in measured order: a **clause loop** over sign atoms
+  (`non-conjunctive`, 12 of 24 and 311 of 1500), an **algebraic sample**
+  (`algebraic-witness`, 6 of 24), and a **fraction-free multivariate
+  determinant** so the projection is not capped at Sylvester dimension 6
+  (`projection`, 2 of 24 and 188 of 1500).
 
 **The QF_NRA gap is sized and split** (`DONE`, nra-trace, 2026-09-15). The board
 records 117 of 200 against z3's 187. The 83 undecided files were censused

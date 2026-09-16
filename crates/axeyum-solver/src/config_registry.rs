@@ -5314,6 +5314,116 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "A COUNT that said nothing about the bytes behind it — the doc names the 7.8 GB abort on `danoint-266.smt2` it failed to catch. ADR-1752 added a byte gate ALONGSIDE it rather than replacing it, so the Fourier-Motzkin fallback now has two ceilings in two units, deliberately.",
     },
     ConfigEntry {
+        name: "MAX_IMPLIED_BOUNDS_PER_PASS",
+        module: "crates/axeyum-solver/src/lra_online.rs",
+        value: "4_096",
+        unit: "column bounds installed per pass",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::None,
+        guarded_by: "lra_online::tests::every_offered_implied_bound_explanation_is_a_valid_implication -- every literal the propagator offers is re-checked by handing its reasons and its own NEGATION to the simplex, which must refute them; a bound this cap refuses to derive is a propagation not made, never a wrong one",
+        env_override: Some("AXEYUM_LRA_BOUND_PROPAGATION"),
+        justification: dated(
+            "docs/research/09-decisions/adr-2122-lra-bound-propagation-into-the-sat-core.md",
+            "2026-09-15",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/lra_online.rs",
+                "MAX_IMPLIED_BOUNDS_PER_PASS",
+            )],
+            &[adr("ADR-2122")],
+        ),
+        note: "ADR-2122. The belt on the rounds' braces: a pass over many short rows can install far more bounds than the round count alone suggests, and this stops one pass from spending the budget. Neither reference has a counterpart -- both bound the work by what CHANGED instead -- so this is a deliberate conservatism in a lever that ships OFF.",
+    },
+    ConfigEntry {
+        name: "MAX_IMPLIED_BOUND_EXPLANATION",
+        module: "crates/axeyum-solver/src/lra_online.rs",
+        value: "16",
+        unit: "atoms per derived bound's explanation",
+        protects: Protects::Completeness,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::None,
+        guarded_by: "lra_online::tests::every_offered_implied_bound_explanation_is_a_valid_implication -- every literal the propagator offers is re-checked by handing its reasons and its own NEGATION to the simplex, which must refute them; a bound this cap refuses to derive is a propagation not made, never a wrong one",
+        env_override: Some("AXEYUM_LRA_BOUND_PROPAGATION"),
+        justification: dated(
+            "docs/research/09-decisions/adr-2122-lra-bound-propagation-into-the-sat-core.md",
+            "2026-09-15",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/lra_online.rs",
+                "MAX_IMPLIED_BOUND_EXPLANATION",
+            )],
+            &[adr("ADR-2122")],
+        ),
+        note: "ADR-2122. An explanation becomes the body of a clause the SAT core learns and then carries, so a bound justified by forty literals costs more in the clause database than the propagation buys. Dropping the bound is sound. Neither reference has a directly comparable number -- z3's explanation is a flat set of constraint indices with no cap (`lar_solver.h:219-223`), cvc5 caps the ROW length instead at `arithPropagateMaxLength` = 16 -- so this is a choice this repository owns, not an imported constant.",
+    },
+    ConfigEntry {
+        name: "MAX_IMPLIED_BOUND_PROPAGATIONS_PER_CALL",
+        module: "crates/axeyum-solver/src/lra_online.rs",
+        value: "256",
+        unit: "literals offered per pass",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::None,
+        guarded_by: "lra_online::tests::every_offered_implied_bound_explanation_is_a_valid_implication -- every literal the propagator offers is re-checked by handing its reasons and its own NEGATION to the simplex, which must refute them; a bound this cap refuses to derive is a propagation not made, never a wrong one",
+        env_override: Some("AXEYUM_LRA_BOUND_PROPAGATION"),
+        justification: dated(
+            "docs/research/09-decisions/adr-2122-lra-bound-propagation-into-the-sat-core.md",
+            "2026-09-15",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/lra_online.rs",
+                "MAX_IMPLIED_BOUND_PROPAGATIONS_PER_CALL",
+            )],
+            &[adr("ADR-2122")],
+        ),
+        note: "ADR-2122. Deliberately the same value as `MAX_BOUND_PROPAGATIONS_PER_CALL`, and free for the same structural reason: the driver runs propagation to a FIXPOINT, and a literal this pass offered is assigned before the next iteration runs, so a capped pass defers work rather than discarding it. z3 has no per-round numeric cap at all on this path -- the throttle there is `bound_is_interesting` plus `m_unassigned_bounds[v] == 0` (`theory_lra.cpp:2422-2437,2499-2502`), i.e. it stops when there is nothing left to imply rather than when it has done enough.",
+    },
+    ConfigEntry {
+        name: "MAX_IMPLIED_BOUND_ROUNDS",
+        module: "crates/axeyum-solver/src/lra_online.rs",
+        value: "2",
+        unit: "row-tightening rounds per propagation pass",
+        protects: Protects::Termination,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::None,
+        guarded_by: "lra_online::tests::every_offered_implied_bound_explanation_is_a_valid_implication -- every literal the propagator offers is re-checked by handing its reasons and its own NEGATION to the simplex, which must refute them; a bound this cap refuses to derive is a propagation not made, never a wrong one",
+        env_override: Some("AXEYUM_LRA_BOUND_PROPAGATION"),
+        justification: dated(
+            "docs/research/09-decisions/adr-2122-lra-bound-propagation-into-the-sat-core.md",
+            "2026-09-15",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/lra_online.rs",
+                "MAX_IMPLIED_BOUND_ROUNDS",
+            )],
+            &[adr("ADR-2122")],
+        ),
+        note: "ADR-2122. Exact-rational bound tightening over a CYCLE of rows does not converge in general -- it approaches a limit one strictly-tighter step at a time and never reaches it -- so a fixpoint loop here would not terminate. z3 bounds the same work differently, by clearing its touched-row set after each pass rather than by counting rounds (`lar_solver.h:283-304`); the effect is the same and a count is what this engine can state. `2` is the value the A/B in ADR-2122 was run at and is NOT measured as optimal: round 1 derives from the seed bounds, round 2 from round 1's, and nobody has priced round 3.",
+    },
+    ConfigEntry {
+        name: "MAX_IMPLIED_BOUND_ROW_LENGTH",
+        module: "crates/axeyum-solver/src/lra_online.rs",
+        value: "300",
+        unit: "coefficients per analysed constraint",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::None,
+        guarded_by: "lra_online::tests::every_offered_implied_bound_explanation_is_a_valid_implication -- every literal the propagator offers is re-checked by handing its reasons and its own NEGATION to the simplex, which must refute them; a bound this cap refuses to derive is a propagation not made, never a wrong one",
+        env_override: Some("AXEYUM_LRA_BOUND_PROPAGATION"),
+        justification: dated(
+            "docs/research/09-decisions/adr-2122-lra-bound-propagation-into-the-sat-core.md",
+            "2026-09-15",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/lra_online.rs",
+                "MAX_IMPLIED_BOUND_ROW_LENGTH",
+            )],
+            &[adr("ADR-2122")],
+        ),
+        note: "ADR-2122, and the one number here taken VERBATIM from a reference: z3 refuses the same work above `max_row_length_for_bound_propagation`, default 300 (`src/math/lp/lp_settings.h:245`, applied at `lar_solver.h:114`), for the same reason -- the per-variable derivation re-reads the row, so the cost is quadratic in the length and one wide row can cost more than every narrow one together. cvc5's equivalent is FAR tighter, `arithPropagateMaxLength` = 16 (`src/options/arith_options.toml:113-119`), and PROBABILISTIC above it rather than a hard skip (`theory_arith_private.cpp:5466-5471`). The two references are 19x apart on this axis, which is why it is registered as a choice rather than as a fact.",
+    },
+    ConfigEntry {
         name: "MAX_LRA_CACHED_COEFFICIENTS",
         module: "crates/axeyum-solver/src/lra_online.rs",
         value: "262_144",
@@ -6183,33 +6293,41 @@ pub static REGISTRY: &[ConfigEntry] = &[
     ConfigEntry {
         name: "CAD_DEFAULT",
         module: "crates/axeyum-solver/src/nra_real_root.rs",
-        value: "CadPolicy::DEFAULT",
-        unit: "policy arm for the N-variable cylindrical decomposition's cell cap",
+        value: "CadPolicy::SINGLE_CELL_SAT",
+        unit: "policy arm for the N-variable cylindrical decomposition: cell cap, and whether the single-cell route runs",
         protects: Protects::Memory,
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
         env_override: Some("AXEYUM_NRA_CAD"),
         justification: dated(
-            "docs/research/09-decisions/adr-2110-qf-nra-what-decides-the-seventy.md",
+            "docs/research/09-decisions/adr-2121-single-cell-cad-for-nra.md",
             "2026-09-15",
             None,
-            // The measurement is "on the 83 QF_NRA files the 2026-09-15 board
-            // leaves undecided, the `nra-real-root` rung declines with a cause
-            // that is NOT the cell cap". It rests on the attribution existing
-            // (`cad_decline`) and on the budget still being what the recursion
-            // charges against.
+            // Two measurements now. ADR-2110: "on the 83 QF_NRA files the
+            // 2026-09-15 board leaves undecided, the `nra-real-root` rung
+            // declines with a cause that is NOT the cell cap". ADR-2121 adds the
+            // `single-cell` arm, whose `cell_cap` is IDENTICAL to `default`'s --
+            // so the third arm's A/B isolates the route, not the budget. Both
+            // rest on the attribution existing (`cad_decline`) and on the budget
+            // still being what the recursion charges against.
             &[
                 sym("crates/axeyum-solver/src/nra_real_root.rs", "cad_decline"),
                 sym("crates/axeyum-solver/src/nra_real_root.rs", "CellBudget"),
+                sym("crates/axeyum-solver/src/nra_real_root.rs", "SINGLE_CELL"),
             ],
             &[
                 live("cad_policy", "crates/axeyum-solver/src/nra_real_root.rs"),
                 live("note", "crates/axeyum-solver/src/nra_real_root.rs"),
+                live(
+                    "decide_single_cell",
+                    "crates/axeyum-solver/src/nra_single_cell.rs",
+                ),
                 doc("bench-results/nra-trace-20260915/README.md"),
+                doc("bench-results/nra-single-cell-20260915/README.md"),
             ],
         ),
-        note: "Whether the N-variable CAD gets the shipped cell budget or 16x it. DEFAULT is the shipped arm and is byte-identical to the pre-ADR-2110 engine (`CadPolicy::DEFAULT.cell_cap` IS `MAX_CAD_CELLS`), so the A/B is one binary and one env var. Raising the cap can only let the decomposition VISIT more cells before declining, and a definite verdict is returned only after COMPLETE coverage of the arrangement -- so `wide` can turn an `unknown` into a verdict and can never flip one; `the_wide_arm_only_raises_the_cap` holds that the two arms differ in exactly the cap and nothing else. It ships OFF because the cost was unmeasured when it landed, not because the verdict was in doubt. The lever exists because the ADR-2110 census could not otherwise tell a cell-cap decline from a projection decline: measured 2026-09-15, the exact decider's OWN recorded cause on the largest bucket is `non-conjunctive` and `projection`, NOT `cell-budget`, which is what this lever was built to test and is why the A/B is expected to move little. Read the A/B in `bench-results/nra-trace-20260915/README.md` before raising the default.",
+        note: "Whether the N-variable CAD gets the shipped cell budget or 16x it. DEFAULT is the shipped arm and is byte-identical to the pre-ADR-2110 engine (`CadPolicy::DEFAULT.cell_cap` IS `MAX_CAD_CELLS`), so the A/B is one binary and one env var. Raising the cap can only let the decomposition VISIT more cells before declining, and a definite verdict is returned only after COMPLETE coverage of the arrangement -- so `wide` can turn an `unknown` into a verdict and can never flip one; `the_wide_arm_only_raises_the_cap` holds that the two arms differ in exactly the cap and nothing else. It ships OFF because the cost was unmeasured when it landed, not because the verdict was in doubt. The lever exists because the ADR-2110 census could not otherwise tell a cell-cap decline from a projection decline: measured 2026-09-15, the exact decider's OWN recorded cause on the largest bucket is `non-conjunctive` and `projection`, NOT `cell-budget`, which is what this lever was built to test and is why the A/B is expected to move little. Read the A/B in `bench-results/nra-trace-20260915/README.md` before raising the default. ADR-2121 adds a THIRD arm, `single-cell`, which leaves the cap at `MAX_CAD_CELLS` and instead offers the query to `nra_single_cell::decide_single_cell` -- the model-constructing CDCAC route that builds one cell per conflict instead of enumerating the arrangement -- before the enumerative decomposition. Its `cell_cap` is IDENTICAL to `default`'s, so an A/B between `default` and `single-cell` isolates the ROUTE and not the budget, and the two levers do not interact. It also ships OFF, and its `unsat` is emitted only after `nra_cell_cert::check_cell_refutation` accepts the covering, so a bug in it declines rather than answers. Read `bench-results/nra-single-cell-20260915/README.md` for that arm's A/B. ADR-2121 then MOVED THIS DEFAULT, from `CadPolicy::DEFAULT` to `CadPolicy::SINGLE_CELL_SAT`, which is the first time this entry's shipped value has changed. The measured basis: QF_NRA 117 -> 121 (+4), 4 STABLE-GAIN and 0 STABLE-LOSS on a three-pass recheck, 0 sat<->unsat flips across QF_NRA + QF_NIA + a QF_LRA control that moved 0 rows, and 0 disagreements against declared `:status` over 593 comparable verdicts. The decisive fact is not the +4 but WHICH verdicts it is: all four are `sat`, a rational model replayed through the ground evaluator against the original assertions, which is exact. The route's `unsat` half -- gated on `nra_cell_cert`'s SAMPLING delineability check -- is withheld on this arm as `CadDecline::UnsatWithheldSampledDelineability` and reaches no default. The cell cap is unchanged, so this is a route change and not a budget change, and `AXEYUM_NRA_CAD=default` still selects the pre-ADR-2121 engine through an EXPLICIT arm in `parse_cad_arm` rather than the catch-all.",
     },
     ConfigEntry {
         name: "COARSEN_MAX_EXP",

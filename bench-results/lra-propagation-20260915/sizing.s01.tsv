@@ -1,0 +1,12 @@
+file	mode	rc	ms	verdict	decisions	dec_tracked	dec_implied	passes	row_cells	derived	props	theory_props	capture
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_count_by_k.i_3_3_2.bpl_7.smt2	probe	0	24024	unknown	459534	144493	84786	264551	298370481	13343280	0	74	./captures-s01/QF_LRA_2017-Heizmann-UltimateInvariantSynthesis__count_by_k.i_3_3_2.bpl_7.smt2.out
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_copy3_ground.i_3_2_2.bpl_7.smt2	probe	0	24024	unknown	56929	37851	17919	56857	215120799	4407190	0	81	./captures-s01/QF_LRA_2017-Heizmann-UltimateInvariantSynthesis__standard_copy3_ground.i_3_2_2.bpl_7.smt2.out
+QF_LRA/2019-ezsmt/travellingSalesperson/rand_80_340_1159656267_0.lp.smt2	probe	0	24227	unknown	456741	n/a	n/a	n/a	n/a	n/a	n/a	0	./captures-s01/QF_LRA_2019-ezsmt_travellingSalesperson_rand_80_340_1159656267_0.lp.smt2.out
+QF_LRA/miplib/pp08a-1000.smt2	probe	0	24125	unknown	291314	0	0	143424	255580677	19240337	0	0	./captures-s01/QF_LRA_miplib_pp08a-1000.smt2.out
+QF_LRA/sal/carpark/Carpark2-ausgabe-8.smt2	probe	0	1908	unknown	35939	2905	2048	21042	20382724	5190830	0	41	./captures-s01/QF_LRA_sal_carpark_Carpark2-ausgabe-8.smt2.out
+QF_LRA/sal/tgc/tgc_io-safe-13.smt2	probe	0	24025	unknown	746140	192020	132693	435080	286299324	54359641	0	18	./captures-s01/QF_LRA_sal_tgc_tgc_io-safe-13.smt2.out
+QF_LRA/sc/sc-11.base.cvc.smt2	probe	0	24126	unknown	30071	9136	2277	24863	27593346	1841929	0	11	./captures-s01/QF_LRA_sc_sc-11.base.cvc.smt2.out
+QF_LRA/sc/sc-15.base.cvc.smt2	probe	0	24026	unknown	69256	17848	3897	52419	78577126	5008374	0	15	./captures-s01/QF_LRA_sc_sc-15.base.cvc.smt2.out
+QF_LRA/sc/sc-19.base.cvc.smt2	probe	0	24026	unknown	124969	34682	3989	99154	185934675	7862844	0	19	./captures-s01/QF_LRA_sc_sc-19.base.cvc.smt2.out
+QF_LRA/sc/sc-23.base.cvc.smt2	probe	0	24128	unknown	320103	78633	6811	238433	524770672	18999028	0	23	./captures-s01/QF_LRA_sc_sc-23.base.cvc.smt2.out
+QF_LRA/sc/sc-7.base.cvc.smt2	probe	0	24127	unknown	18406	5311	2223	14631	9900568	960303	0	7	./captures-s01/QF_LRA_sc_sc-7.base.cvc.smt2.out

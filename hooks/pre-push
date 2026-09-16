@@ -61,6 +61,12 @@
 #
 # Install (per checkout): git config core.hooksPath hooks
 set -euo pipefail
+# Name the line on any `set -e` exit. Three push batteries on 2026-09-15 died
+# 17 s in -- ~3 s after the L0 block, before any named step -- with nothing in
+# the log but git's own `failed to push some refs`, and an unchanged retry
+# passed each time. Without this trap a transient failure in the lock/slot
+# block below is indistinguishable from a kill.
+trap 'rc=$?; echo "pre-push: EXITED rc=$rc at line $LINENO: $BASH_COMMAND" >&2' ERR
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 CALLER_HEAD="$(git rev-parse HEAD)"
