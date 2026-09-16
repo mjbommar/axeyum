@@ -1,0 +1,9 @@
+file	atoms	threshold_mult	online_probe	reading
+QF_UFLRA/cpachecker-bmc-svcomp14/cpachecker-bmc.floppy_false-unreach-call.i.cil.c.smt2	2537	3	admission-screen	measured
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.32_1_cilled_true-unreach-call_ok_nondet_linux-3.4-32_1-drivers--leds--leds-bd2802.ko-ldv_main0_sequence_infinite_withcheck_stateful.cil.out.c.smt2	46234	46	admission-screen	measured
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.32_1_cilled_true-unreach-call_ok_nondet_linux-3.4-32_1-drivers--media--common--tuners--mxl5007t.ko-ldv_main0_sequence_infinite_withcheck_stateful.cil.out.c.smt2	2874	3	admission-screen	measured
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.32_1_cilled_true-unreach-call_ok_nondet_linux-3.4-32_1-drivers--power--wm831x_power.ko-ldv_main0_sequence_infinite_withcheck_stateful.cil.out.c.smt2	61179	60	admission-screen	measured
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.32_1_cilled_true-unreach-call_ok_nondet_linux-3.4-32_1-drivers--staging--speakup--speakup_soft.ko-ldv_main0_sequence_infinite_withcheck_stateful.cil.out.c.smt2	2145	3	admission-screen	measured
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.Problem13_60_false-unreach-call.c.smt2	2346	3	admission-screen	measured
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.ddv_machzwd_outb_false-unreach-call.i.smt2	2724	3	admission-screen	measured
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.main3_true-unreach-call_drivers-staging-usbip-vhci-hcd-ko--132_1a--927c3fa-1.c.smt2	2574	3	admission-screen	measured

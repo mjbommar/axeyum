@@ -1,49 +1,58 @@
 #!/usr/bin/env python3
 """Derive the atom-screen ladder table (2x, 4x, 16x, "off") from the passes
 `run-ladder.sh` actually executes -- `shipped` (every file) and one
-higher-multiplier "open" arm (run only on files the shipped pass refused via
-the admission screen, plus a spot-check subset of files it did not refuse).
+higher-multiplier "open" arm (run only on files the shipped pass's admission
+screen refused, plus a spot-check subset of files it did not refuse).
 
 # Why a derivation and not five raw sweeps
 
 `AXEYUM_LRA_ATOM_SCREEN` gates exactly one boolean in
 `crates/axeyum-solver/src/lra_theory.rs::check_qf_lra_online_cdclt`:
-`atom_terms.len() > admitted_atoms`, where
-`admitted_atoms = (budget_bytes / BYTES_PER_ADMITTED_ATOM) * multiplier`.
-Nothing downstream reads the multiplier or `admitted_atoms` again --
-`CdcltLraTheory::new` is built from the actual atom list and `budget_bytes`,
-not from the screen's allowance. So for a FIXED file, execution is a step
-function of the multiplier: refused (and therefore bit-identical to the
-shipped arm) for every multiplier below the file's own threshold
-`ceil(atoms / admitted_at_1)`, and bit-identical to the measured "open" run
-for every multiplier at or above it. This script reads that atom count
-straight from the ledger's `decline_details` column (the admission screen's
-own refusal message), computes each file's threshold, and for each requested
-ladder level looks up whichever of the two measured passes sits on the
-correct side of that threshold. Nothing here runs untested code or
-extrapolates a number that was not measured.
+`atom_terms.len() > admitted_atoms`. Nothing downstream reads the multiplier
+or `admitted_atoms` again, so for a FIXED file execution is a step function
+of the multiplier: refused (bit-identical to shipped) below the file's own
+threshold `ceil(atoms / admitted_at_1)`, bit-identical to the measured
+"open" run at or above it. `find_candidates.py` recovers each refused
+file's exact atom count from the `; lazy-smt reading=... atoms=N
+online_probe=admission-screen` diagnostic line in its `shipped` capture
+(the admission screen's own refusal STRING is not surfaced anywhere in the
+trail -- see that script's docstring); this script combines that threshold
+with the measured verdict/time/exit-status/RSS from whichever of the two
+passes sits on the correct side of it, for every requested ladder level.
+Nothing here runs untested code or extrapolates a number that was not
+measured.
 
 Usage:
   derive_ladder.py --ledger PATH/lra-atom-screen-20260916.tsv \
-      --rss-dir PATH/rss --open-mult 65536 --levels 2,4,16,off \
-      --admitted-at-1 1024
+      --candidates PATH/candidates.tsv --rss-dir PATH/rss \
+      --open-mult 65536 --levels 2,4,16,off
 """
 from __future__ import annotations
 
 import argparse
 import csv
-import math
 import re
 import sys
 from pathlib import Path
-
-ADMIT_RE = re.compile(r"admission screen: (\d+) atoms exceeds the (\d+) a")
 
 
 def read_ledger_tsv(path: Path):
     with path.open(newline="", encoding="utf-8") as fh:
         r = csv.DictReader(fh, delimiter="\t")
         return list(r)
+
+
+def read_candidates(path: Path) -> dict[str, int]:
+    out: dict[str, int] = {}
+    with path.open(newline="", encoding="utf-8") as fh:
+        for line in fh:
+            if line.startswith("#") or line.startswith("file\t"):
+                continue
+            parts = line.rstrip("\n").split("\t")
+            if len(parts) < 3:
+                continue
+            out[parts[0]] = int(parts[2])
+    return out
 
 
 def peak_rss_kb(rss_path: Path):
@@ -54,34 +63,21 @@ def peak_rss_kb(rss_path: Path):
     return int(m.group(1)) if m else ""
 
 
-def atom_threshold(row: dict, admitted_at_1: int) -> int:
-    """1 if never refused by the admission screen (identical at every
-    multiplier); otherwise ceil(atoms / admitted_at_1)."""
-    details = row.get("decline_details", "") or ""
-    names = row.get("decline_reasons", "") or ""
-    if "admission" not in names and "admission" not in details:
-        return 1
-    for chunk in details.split("|"):
-        m = ADMIT_RE.search(chunk)
-        if m:
-            atoms = int(m.group(1))
-            return math.ceil(atoms / admitted_at_1)
-    return 1
-
-
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--ledger", required=True, type=Path)
+    ap.add_argument("--candidates", required=True, type=Path, help="find_candidates.py output")
     ap.add_argument("--rss-dir", required=True, type=Path)
     ap.add_argument("--open-mult", required=True, type=int)
     ap.add_argument("--levels", default="2,4,16,off")
-    ap.add_argument("--admitted-at-1", type=int, default=1024)
     args = ap.parse_args()
 
     rows = read_ledger_tsv(args.ledger)
     by_arm_file: dict[tuple[str, str], dict] = {}
     for row in rows:
         by_arm_file[(row["arm"], row["corpus_path"])] = row
+
+    thresholds = read_candidates(args.candidates)
 
     open_arm = str(args.open_mult)
     levels = []
@@ -108,7 +104,7 @@ def main() -> int:
 
     for f in shipped_files:
         shipped_row = by_arm_file[("shipped", f)]
-        threshold = atom_threshold(shipped_row, args.admitted_at_1)
+        threshold = thresholds.get(f, 1)
         slug = f.replace("/", "_")
         for label, mult in levels:
             admitted = mult >= threshold
@@ -116,9 +112,7 @@ def main() -> int:
                 src_row = by_arm_file.get((open_arm, f))
                 src_arm = open_arm
                 if src_row is None:
-                    # Not yet measured at the open arm (not in the candidate
-                    # or spot-check set); skip rather than guess.
-                    continue
+                    continue  # not measured at the open arm; skip, don't guess
             else:
                 src_row = shipped_row
                 src_arm = "shipped"
