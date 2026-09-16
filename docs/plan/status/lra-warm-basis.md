@@ -1,10 +1,11 @@
 # Lane: `lra-warm-basis` — a warm simplex basis across the offline loop's cubes
 
-ADR: [ADR-2125](../../research/09-decisions/adr-2125-a-warm-simplex-basis-across-sat-decisions.md)
-Artifacts: `bench-results/lra-warm-basis-20260916/`
-Compute: **s5, physical core pairs `5,13` and `6,14`**, and nothing else.
+<!-- plan-section: lane-status -->
 
-## Status
+**Lane LRA-WARM-BASIS (`MEASURED, SHIPS OFF`, lra-warm-basis, 2026-09-16.)**
+ADR: [ADR-2125](../../research/09-decisions/adr-2125-a-warm-simplex-basis-across-sat-decisions.md).
+Artifacts: `bench-results/lra-warm-basis-20260916/`.
+Compute: **s5, physical core pairs `5,13` and `6,14`**, and nothing else.
 
 Measured. The lever `AXEYUM_LRA_WARM_CUBE` ships **`off`** -- a stable loss on
 each `QF_LRA` draw. The result is a MIXED positive, not ADR-2122's clean
