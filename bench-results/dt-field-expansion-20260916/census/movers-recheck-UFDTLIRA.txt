@@ -1,0 +1,33 @@
+DT-FIELD-EXPANSION -- the UFDTLIRA mover, rechecked 3x per arm and checked
+against two independent verdict sources.
+
+    ########## UFDTLIRA ##########
+    rows=200  (base-first 100 / arm-first 100)
+    base : unsat 138  unknown 56  sat 6
+    arm  : unsat 139  unknown 55  sat 6
+    GAINS  1 of 200   LOSSES 0   sat<->unsat FLIPS 0
+
+| mover | z3 -T:60 | `:status` | base x3 | arm x3 |
+|---|---|---|---|---|
+| `PB21-057__formal_containers__a-cfdlli.ads_1029_43_instances.ads_13_4_overflow_check___00.smt2` | `unsat` | `unsat` | `unknown` x3 | `unsat` x3 |
+
+Stable 3 of 3, and agreeing with both an independent solver and the benchmark
+author's own declared status.
+
+NOTE THE `sat` COLUMN, which is the reason this division is worth more than
+`AUFDTLIRA` as a soundness check: `UFDTLIRA` is the only one of the three with
+`sat` rows on BOTH arms (6 and 6), so it is the only division where the lever
+had the opportunity to turn a `sat` into an `unsat` or vice versa. It did not:
+0 flips, and the `sat` count is unchanged at 6.
+
+RAW, as captured:
+
+=== PB21-057__formal_containers__a-cfdlli...overflow_check___00.smt2 ===
+:status : (set-info :status unsat)
+z3      : unsat
+run1 base=unknown
+run1 arm =unsat
+run2 base=unknown
+run2 arm =unsat
+run3 base=unknown
+run3 arm =unsat
