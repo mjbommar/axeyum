@@ -1280,12 +1280,17 @@ pub(crate) fn record_cube_stages(
 /// actually allocated rather than calls — [`LazySmtCounters::cube_simplex_calls`]
 /// already counts calls, and conflating the two would make a declined call look
 /// like a rebuild a warm basis could have saved.
-pub(crate) fn record_cold_simplex(total: Duration, build: Duration, built: bool, pivots: u64) {
+pub(crate) fn record_cold_simplex(
+    total: Duration,
+    construction: Duration,
+    allocated: bool,
+    pivots: u64,
+) {
     record(|c| {
         c.simplex_cold += total;
-        if built {
+        if allocated {
             c.simplex_cold_builds = c.simplex_cold_builds.saturating_add(1);
-            c.simplex_cold_build += build;
+            c.simplex_cold_build += construction;
         }
         c.simplex_cold_pivots = c.simplex_cold_pivots.saturating_add(pivots);
     });
@@ -1376,29 +1381,18 @@ mod tests {
     use crate::live_instruments::{LiveInstruments, Sampled, install};
     use std::time::Duration;
 
-    /// Every numeric field of [`LazySmtCounters`] appears in
-    /// [`LazySmtCounters::trace_line`], at the value it holds.
+    /// The `key=value` pairs the trace line MUST carry, derived from the STRUCT.
     ///
-    /// The `let LazySmtCounters { … }` destructuring below carries **no** `..`
-    /// rest, so the compiler refuses this test the moment a field is added: the
-    /// field list is the STRUCT's, not the maintainer's memory of it, which is
-    /// the only form of "every X" this language can enforce. A test that pinned
-    /// the rendered line byte for byte would instead go green on a field that
-    /// was added to the struct and never rendered — the counter would read as
-    /// absent to every consumer while the pin, which never mentioned it, still
-    /// passed.
-    ///
-    /// Each field gets a **distinct** value, so rendering the wrong source field
-    /// fails as loudly as rendering none: with every field at `1` a line that
-    /// printed `cube_matrices` where `simplex_cold_builds` belongs would pass.
-    /// The durations are distinct in WHOLE MILLISECONDS because that is the unit
-    /// the line renders; sub-millisecond distinctions would collide at the
-    /// renderer and the test would be asserting about a difference the output
-    /// cannot carry.
-    #[test]
-    fn every_lazy_smt_counter_reaches_the_trace_line() {
-        let counters = distinct_lazy_smt_counters();
-        let line = counters.trace_line();
+    /// Split out of the test only so the test stays readable; the contract is
+    /// unchanged and lives here. The destructuring below carries **no** `..`
+    /// rest, so the compiler refuses this function the moment a field is added
+    /// to `LazySmtCounters` -- which is what makes the list the struct's rather
+    /// than the maintainer's memory of it.
+    // A 1:1 table over the struct's fields, so its LENGTH is the struct's. The
+    // only way to shorten it is to stop listing a field, which is exactly the
+    // failure the exhaustive destructuring exists to prevent.
+    #[allow(clippy::too_many_lines)]
+    fn expected_trace_fields(counters: &LazySmtCounters) -> Vec<(&'static str, String)> {
         let LazySmtCounters {
             lra_entries,
             lra_rounds,
@@ -1448,7 +1442,7 @@ mod tests {
             online_probe: _,
         } = counters;
 
-        let expected: Vec<(&str, String)> = vec![
+        vec![
             ("lra_entries", lra_entries.to_string()),
             ("lra_rounds", lra_rounds.to_string()),
             ("nra_entries", nra_entries.to_string()),
@@ -1500,7 +1494,38 @@ mod tests {
                 "warm_cube_cold_restarts",
                 warm_cube_cold_restarts.to_string(),
             ),
-        ];
+        ]
+    }
+
+    /// Every numeric field of [`LazySmtCounters`] appears in
+    /// [`LazySmtCounters::trace_line`], at the value it holds.
+    ///
+    /// The `let LazySmtCounters { … }` destructuring below carries **no** `..`
+    /// rest, so the compiler refuses this test the moment a field is added: the
+    /// field list is the STRUCT's, not the maintainer's memory of it, which is
+    /// the only form of "every X" this language can enforce. A test that pinned
+    /// the rendered line byte for byte would instead go green on a field that
+    /// was added to the struct and never rendered — the counter would read as
+    /// absent to every consumer while the pin, which never mentioned it, still
+    /// passed.
+    ///
+    /// Each field gets a **distinct** value, so rendering the wrong source field
+    /// fails as loudly as rendering none: with every field at `1` a line that
+    /// printed `cube_matrices` where `simplex_cold_builds` belongs would pass.
+    /// The durations are distinct in WHOLE MILLISECONDS because that is the unit
+    /// the line renders; sub-millisecond distinctions would collide at the
+    /// renderer and the test would be asserting about a difference the output
+    /// cannot carry.
+
+    #[test]
+    fn every_lazy_smt_counter_reaches_the_trace_line() {
+        /// The three keys `round_hist` renders per loop. Named, not matched by a
+        /// loose suffix rule, so a new SCALAR ending in `_hist` cannot slip
+        /// through the allow-list below.
+        const HIST_RENDERED: [&str; 3] = ["_hist", "_max_ms", "_max_round"];
+        let counters = distinct_lazy_smt_counters();
+        let line = counters.trace_line();
+        let expected = expected_trace_fields(&counters);
 
         for (key, value) in &expected {
             let token = format!("{key}={value}");
@@ -1517,10 +1542,9 @@ mod tests {
         //
         // `round_hist` is bound to `_` above because it is a DISTRIBUTION, not a
         // scalar: it renders as three keys per loop and is covered by the
-        // histogram's own tests. Its rendered suffixes are named here rather
-        // than pattern-matched loosely, so a new scalar ending in `_hist` cannot
-        // slip through the allow-list.
-        const HIST_RENDERED: [&str; 3] = ["_hist", "_max_ms", "_max_round"];
+        // histogram's own tests; `HIST_RENDERED` (top of this function) names its
+        // rendered suffixes explicitly rather than matching them loosely, so a
+        // new SCALAR ending in `_hist` cannot slip through the allow-list.
         let rendered: Vec<&str> = line
             .split_whitespace()
             .filter(|field| field.contains('='))
@@ -1550,50 +1574,56 @@ mod tests {
     /// Every counter at a **distinct** value, so rendering the wrong source
     /// field fails as loudly as rendering none.
     fn distinct_lazy_smt_counters() -> LazySmtCounters {
-        let mut c = LazySmtCounters::default();
-        c.lra_entries = 101;
-        c.lra_rounds = 102;
-        c.nra_entries = 103;
-        c.nra_rounds = 104;
-        c.nia_entries = 105;
-        c.nia_rounds = 106;
-        c.pending_round = Duration::from_millis(107);
-        c.skeleton_solve = Duration::from_millis(108);
-        c.skeleton_sat = 109;
-        c.skeleton_unsat = 110;
-        c.skeleton_unknown = 111;
-        c.theory_check = Duration::from_millis(112);
-        c.theory_sat = 113;
-        c.theory_unsat = 114;
-        c.theory_unknown = 115;
-        c.core_extraction = Duration::from_millis(116);
-        c.blocking_clauses = 117;
-        c.blocking_literals = 118;
-        c.atoms = 119;
-        c.cores_reused = 120;
-        c.cores_rederived_absent = 121;
-        c.cores_rederived_stale = 122;
-        c.cores_rederived_unverified = 123;
-        c.cores_full_assignment = 124;
-        c.cube_flips = 125;
-        c.cube_identical = 126;
-        c.cube_decisions = 127;
-        c.cube_collect = Duration::from_millis(128);
-        c.cube_fm = Duration::from_millis(129);
-        c.cube_fm_declines = 130;
-        c.cube_simplex = Duration::from_millis(131);
-        c.cube_simplex_calls = 132;
-        c.cube_matrices = 133;
-        c.simplex_cold_builds = 134;
-        c.simplex_cold_build = Duration::from_millis(135);
-        c.simplex_cold = Duration::from_millis(136);
-        c.simplex_cold_pivots = 137;
-        c.warm_cube_checks = 138;
-        c.warm_cube_declines = 139;
-        c.warm_cube_retractions = 140;
-        c.warm_cube_assertions = 141;
-        c.warm_cube_cold_restarts = 142;
-        c
+        // A struct LITERAL with `..Default::default()` for the two
+        // non-scalar fields, rather than `default()` plus assignments: the
+        // literal is what makes a NEWLY ADDED field visible here as a
+        // compile error alongside the destructuring above, which is the
+        // whole contract this helper serves.
+        LazySmtCounters {
+            lra_entries: 101,
+            lra_rounds: 102,
+            nra_entries: 103,
+            nra_rounds: 104,
+            nia_entries: 105,
+            nia_rounds: 106,
+            pending_round: Duration::from_millis(107),
+            skeleton_solve: Duration::from_millis(108),
+            skeleton_sat: 109,
+            skeleton_unsat: 110,
+            skeleton_unknown: 111,
+            theory_check: Duration::from_millis(112),
+            theory_sat: 113,
+            theory_unsat: 114,
+            theory_unknown: 115,
+            core_extraction: Duration::from_millis(116),
+            blocking_clauses: 117,
+            blocking_literals: 118,
+            atoms: 119,
+            cores_reused: 120,
+            cores_rederived_absent: 121,
+            cores_rederived_stale: 122,
+            cores_rederived_unverified: 123,
+            cores_full_assignment: 124,
+            cube_flips: 125,
+            cube_identical: 126,
+            cube_decisions: 127,
+            cube_collect: Duration::from_millis(128),
+            cube_fm: Duration::from_millis(129),
+            cube_fm_declines: 130,
+            cube_simplex: Duration::from_millis(131),
+            cube_simplex_calls: 132,
+            cube_matrices: 133,
+            simplex_cold_builds: 134,
+            simplex_cold_build: Duration::from_millis(135),
+            simplex_cold: Duration::from_millis(136),
+            simplex_cold_pivots: 137,
+            warm_cube_checks: 138,
+            warm_cube_declines: 139,
+            warm_cube_retractions: 140,
+            warm_cube_assertions: 141,
+            warm_cube_cold_restarts: 142,
+            ..LazySmtCounters::default()
+        }
     }
 
     /// The three readings are three different statements, and no two of them

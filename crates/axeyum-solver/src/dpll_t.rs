@@ -491,77 +491,21 @@ pub fn check_with_lra_dpll_within(
         };
 
         // 3. Read each atom's truth and form the theory conjunction.
-        let mut theory_lits = Vec::with_capacity(ctx.atoms.len());
-        let mut assignment: Vec<(SymbolId, bool)> = Vec::with_capacity(ctx.atoms.len());
-        for atom in &ctx.atoms {
-            let truth = propositional
-                .get(atom.prop)
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-            assignment.push((atom.prop, truth));
-            theory_lits.push(if truth {
-                atom.term
-            } else {
-                arena.not(atom.term)?
-            });
-        }
+        let (theory_lits, assignment) = read_cube(arena, &ctx, &propositional)?;
 
         record_cube_churn(&assignment, &mut previous_cube);
 
         // ADR-2125. The warm decider can only SHORTCUT: every outcome it does
         // not produce falls through to exactly the cold decision that would have
-        // run, so a verdict this route reaches today cannot be lost to it. A
-        // `Feasible` whose model does not replay falls through for the same
-        // reason — the cold decider replay-checks its own witness and may still
-        // answer, and declining here on its behalf would be a verdict thrown
-        // away rather than a shortcut declined.
+        // run, so a verdict this route reaches today cannot be lost to it.
         if let Some(theory) = warm.as_mut() {
-            let truths: Vec<bool> = assignment.iter().map(|&(_, truth)| truth).collect();
-            let started = crate::lazy_smt_counters::enabled().then(Instant::now);
-            let verdict = theory.cube_check(&truths);
-            crate::lazy_smt_counters::record_warm_cube(
-                !matches!(verdict, CubeVerdict::Decline),
-                theory.warm_engine_churn(),
-            );
-            if let Some(started) = started {
-                let outcome = match &verdict {
-                    CubeVerdict::Feasible(_) => RoundOutcome::Sat,
-                    CubeVerdict::Unsat(_) => RoundOutcome::Unsat,
-                    CubeVerdict::Decline => RoundOutcome::Unknown,
-                };
-                crate::lazy_smt_counters::record_theory(started.elapsed(), outcome);
-            }
-            match verdict {
-                CubeVerdict::Feasible(theory_model) => {
-                    let finished =
-                        finish_sat(arena, assertions, &ctx, &propositional, &theory_model)?;
-                    if matches!(finished, CheckResult::Sat(_)) {
-                        return Ok(finished);
-                    }
+            match warm_cube_round(arena, assertions, &ctx, &propositional, &assignment, theory)? {
+                WarmRound::Decided(result) => return Ok(result),
+                WarmRound::Blocked(clause) => {
+                    blocking.push(clause);
+                    continue;
                 }
-                CubeVerdict::Unsat(core) => {
-                    // The core is the atoms carrying a nonzero, self-verified
-                    // Farkas multiplier, in the theory's own atom indexing, which
-                    // is `ctx.atoms` order — the same indexing `conflict_core`
-                    // reads a carried certificate through. Mapped back to
-                    // `(prop, truth)` pairs so the clause is built by the one
-                    // function that builds every blocking clause on this route.
-                    let blocked: Vec<(SymbolId, bool)> = core
-                        .iter()
-                        .filter_map(|lit| {
-                            assignment.get(lit.atom).map(|&(prop, _)| (prop, lit.value))
-                        })
-                        .collect();
-                    if !blocked.is_empty() {
-                        crate::lazy_smt_counters::record_blocking(
-                            blocked.len() as u64,
-                            Duration::ZERO,
-                        );
-                        blocking.push(block_clause(arena, &blocked)?);
-                        continue;
-                    }
-                }
-                CubeVerdict::Decline => {}
+                WarmRound::FellThrough => {}
             }
         }
 
@@ -1143,6 +1087,137 @@ fn warm_cube_decider(
     }
     crate::lazy_smt_counters::record_warm_cube_build(WarmCubeBuild::Built);
     Some(theory)
+}
+
+/// One round's cube: the theory conjunction and the `(prop, truth)` assignment
+/// behind it, POSITIONALLY ALIGNED with `ctx.atoms`.
+///
+/// A named type rather than a bare tuple because the alignment is the contract:
+/// `conflict_core` reads Farkas multiplier `i` as `assignment[i]`, and ADR-2125's
+/// warm decider indexes both by the theory's own atom index.
+type Cube = (Vec<TermId>, Vec<(SymbolId, bool)>);
+
+/// Reads each atom's truth out of the propositional model and forms both the
+/// theory conjunction and the `(prop, truth)` assignment.
+///
+/// The two are built together and returned together because they are
+/// POSITIONALLY ALIGNED with `ctx.atoms`, and every consumer downstream depends
+/// on that: `conflict_core` reads Farkas multiplier `i` as `assignment[i]`, and
+/// ADR-2125's warm decider indexes both by the theory's own atom index. Building
+/// one without the other, or in a different order, is a wrong CORE rather than a
+/// wrong verdict.
+///
+/// An atom the model does not assign reads as `false`, which is the behaviour
+/// this loop has always had: the skeleton solver returns a TOTAL assignment over
+/// the atom propositions, so the default is unreachable rather than a policy.
+///
+/// # Errors
+///
+/// Propagates the arena's negation error.
+fn read_cube(
+    arena: &mut TermArena,
+    ctx: &Abstractor,
+    propositional: &Model,
+) -> Result<Cube, SolverError> {
+    let mut theory_lits = Vec::with_capacity(ctx.atoms.len());
+    let mut assignment: Vec<(SymbolId, bool)> = Vec::with_capacity(ctx.atoms.len());
+    for atom in &ctx.atoms {
+        let truth = propositional
+            .get(atom.prop)
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        assignment.push((atom.prop, truth));
+        theory_lits.push(if truth {
+            atom.term
+        } else {
+            arena.not(atom.term)?
+        });
+    }
+    Ok((theory_lits, assignment))
+}
+
+/// What one round of the ADR-2125 warm decider produced.
+///
+/// Three outcomes and not two, because "the decider answered" and "the query is
+/// over" are different statements: a `Feasible` whose model does not replay has
+/// been ANSWERED by the engine and has still decided nothing, and it must reach
+/// the cold path rather than ending the query.
+enum WarmRound {
+    /// The query is over: a replayed `sat` model.
+    Decided(CheckResult),
+    /// The cube was refuted; here is the clause that blocks its core.
+    Blocked(TermId),
+    /// Nothing was concluded. The caller must run the cold decision that would
+    /// otherwise have run — this is what makes the lever unable to LOSE a
+    /// verdict, only to save time reaching one.
+    FellThrough,
+}
+
+/// Decide one round's cube on the warm theory, or fall through.
+///
+/// Extracted from [`check_with_lra_dpll_within`] rather than inlined, for one
+/// reason worth stating: the fall-through is the soundness argument for the
+/// whole lever, and inline it was one arm of a `match` inside a `match` inside a
+/// loop, where "does this path `continue`, `return`, or carry on?" had to be
+/// read off the control flow. As a function it is three named variants.
+///
+/// # Errors
+///
+/// Propagates the model replay's and the clause construction's errors.
+fn warm_cube_round(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    ctx: &Abstractor,
+    propositional: &Model,
+    assignment: &[(SymbolId, bool)],
+    theory: &mut LraTheory,
+) -> Result<WarmRound, SolverError> {
+    let truths: Vec<bool> = assignment.iter().map(|&(_, truth)| truth).collect();
+    let started = crate::lazy_smt_counters::enabled().then(Instant::now);
+    let verdict = theory.cube_check(&truths);
+    crate::lazy_smt_counters::record_warm_cube(
+        !matches!(verdict, CubeVerdict::Decline),
+        theory.warm_engine_churn(),
+    );
+    if let Some(started) = started {
+        let outcome = match &verdict {
+            CubeVerdict::Feasible(_) => RoundOutcome::Sat,
+            CubeVerdict::Unsat(_) => RoundOutcome::Unsat,
+            CubeVerdict::Decline => RoundOutcome::Unknown,
+        };
+        crate::lazy_smt_counters::record_theory(started.elapsed(), outcome);
+    }
+    match verdict {
+        CubeVerdict::Feasible(theory_model) => {
+            let finished = finish_sat(arena, assertions, ctx, propositional, &theory_model)?;
+            // A witness that does not replay is NOT a decline on the query's
+            // behalf. The cold decider replay-checks its own witness and may
+            // still answer, so ending here would throw a verdict away rather
+            // than decline a shortcut.
+            if matches!(finished, CheckResult::Sat(_)) {
+                return Ok(WarmRound::Decided(finished));
+            }
+            Ok(WarmRound::FellThrough)
+        }
+        CubeVerdict::Unsat(core) => {
+            // The core is the atoms carrying a nonzero, self-verified Farkas
+            // multiplier, in the theory's own atom indexing, which is
+            // `ctx.atoms` order — the same indexing `conflict_core` reads a
+            // carried certificate through. Mapped back to `(prop, truth)` pairs
+            // so the clause is built by the one function that builds every
+            // blocking clause on this route.
+            let blocked: Vec<(SymbolId, bool)> = core
+                .iter()
+                .filter_map(|lit| assignment.get(lit.atom).map(|&(prop, _)| (prop, lit.value)))
+                .collect();
+            if blocked.is_empty() {
+                return Ok(WarmRound::FellThrough);
+            }
+            crate::lazy_smt_counters::record_blocking(blocked.len() as u64, Duration::ZERO);
+            Ok(WarmRound::Blocked(block_clause(arena, &blocked)?))
+        }
+        CubeVerdict::Decline => Ok(WarmRound::FellThrough),
+    }
 }
 
 /// Builds the final `sat` model (real values + original Boolean values) and
