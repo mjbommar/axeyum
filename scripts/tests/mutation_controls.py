@@ -12005,5 +12005,48 @@ SUITES["qinst-session-refutation-certificate"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `quant-generation-ladder` -- ADR-2133's generation ladder on the quantifier
+# loop's final refutation check.
+#
+# The lever is strictly additive: every layer is a SUBSET of the conjunction
+# the unchanged full check already takes, so a layer's `unsat` refutes the
+# whole set and a layer's non-`unsat` is discarded rather than believed. There
+# is therefore no `sat` path to claim a wrong verdict on, and the brief's
+# suggested soundness-negative -- "a `sat` claimed before the lazy queue
+# drains" -- has no analogue. The failure mode this lever really has is the
+# first mutation below: a ladder that refuses to fall through swallows the full
+# check and turns an `unsat` into an `unknown`.
+#
+# The second mutation is on the generation bookkeeping the ladder rests on:
+# a layer that admits terms ABOVE its own generation is still sound (it is all
+# still a subset of `ground`) but destroys the ladder's reason to exist, and
+# nothing else in the suite would notice.
+# --------------------------------------------------------------------------
+
+SUITES["quant-generation-ladder"] = (
+    "crates/axeyum-solver/src/qinst_egraph.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "generation_ladder"),
+        "quant-generation-ladder",
+    ),
+    [
+        (
+            "a ladder that refutes nothing must FALL THROUGH to the full check",
+            "    Ok(None)\n}",
+            "    Ok(Some(CheckResult::Unknown(UnknownReason {\n"
+            "        kind: UnknownKind::Incomplete,\n"
+            "        detail: String::new(),\n"
+            "    })))\n}",
+        ),
+        (
+            "a layer admits only terms at or below its OWN generation",
+            "            .filter(|&term| generations.generation(term) <= layer)",
+            "            .filter(|&term| generations.generation(term) <= layer + 1)",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
