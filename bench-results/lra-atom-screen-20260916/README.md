@@ -1,9 +1,9 @@
 # The LRA atom screen: does raising it decide any of ADR-2111's 32, now that the tableau is sparse?
 
-Status: **MEASURED** on QF_LRA, QF_UFLRA, QF_LIA; QF_RDL/QF_IDL in progress
+Status: **MEASURED** on QF_LRA, QF_UFLRA, QF_LIA, QF_RDL; QF_IDL in progress
 (see `docs/plan/status/lra-atom-screen.md` for the live checklist). The
 verdict below (§ Ship decision) is already decisive from QF_LRA alone; the
-remaining two divisions are exposure checks, not load-bearing for it.
+remaining division is an exposure check, not load-bearing for it.
 
 ## The question
 
@@ -198,12 +198,12 @@ abort" while deciding nothing.
 
 ## Cross-division check
 
-| division | unique rows checked | admission-screen hits | open-arm run | gains | losses | new aborts |
-|---|---:|---:|---|---:|---:|---:|
-| QF_UFLRA | 200 | 8 (thresholds 3–60) | yes (8 candidates + 8 spot-check) | 0 | 0 | 0 |
-| QF_LIA | **140** (see note) | 0 | not needed (0 candidates) | — | — | — |
-| QF_RDL | pending | pending | pending | | | |
-| QF_IDL | pending | pending | pending | | | |
+| division | unique rows checked | admission-screen hits | open-arm run | gains | losses | new aborts | max open-arm RSS |
+|---|---:|---:|---|---:|---:|---:|---:|
+| QF_UFLRA | 200 | 8 (thresholds 3–60) | yes (8 candidates + 8 spot-check) | 0 | 0 | 0 | (not the binding constraint here) |
+| QF_LIA | **140** (see note) | 0 | not needed (0 candidates) | — | — | — | — |
+| QF_RDL | 200 | 36 (thresholds 3–25) | yes (36 candidates + 9 spot-check) | 0 | 0 | 0 | 1.27 GiB |
+| QF_IDL | pending | pending | pending | | | | |
 
 **QF_LIA note**: `bench-results/board-ab-20260915/QF_LIA.tsv` has 200 data
 rows but only **140 distinct corpus-relative paths** (60 rows are exact
@@ -222,6 +222,16 @@ of them, `unknown` on every spot-check non-candidate, and **introduces no
 aborts** — unlike QF_LRA's own 8 (different corpus shape: these files'
 absolute atom counts are smaller in aggregate, and none evidently trip
 whatever unnamed allocation the QF_LRA aborts hit).
+
+QF_RDL: 36 files hit the admission screen (thresholds 3–25 — the
+`sal/fischer*-mutex-*` and `scheduling/{abz7,swv1[1-4]}_*` families,
+threshold clustering by family since these are parametrised benchmark
+sets with near-identical atom counts within a family). The `open` arm
+reproduces `unknown`/`sat`/`unsat` identically on every one of the 36 plus
+9 spot-checks (0 gains, 0 losses, 0 flips), and peak RSS across the whole
+open-arm run tops out at **1.27 GiB** — nowhere near the 8 GiB ceiling, so
+this division shows the "raising the screen is free but useless" half of
+the space rather than QF_LRA's "free below 16x, costly above it" shape.
 
 ## Ship decision
 
