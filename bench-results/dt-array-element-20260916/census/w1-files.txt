@@ -1,0 +1,14 @@
+### t1-AUFDTLIRA-db31113fa.tsv
+  W1-TERMINAL            S702-024__record_attributes_in_allocators__test_constrained.adb_45_22_assert___00.smt2
+  ARRAY-NONBV-TERMINAL   QA23-042__ok_pointers__spark04.adb_22_10_null_pointer_dereference___00.smt2
+  ARRAY-NONBV-TERMINAL   Q529-038__predicate__bounded_stacks.ads_18_20_integer_stacks.ads_4_1_postcondition___00.smt2
+  W1-TERMINAL            P518-021__loop_frame_condition__do_loops.adb_112_22_assert___00.smt2
+  ARRAY-NONBV-TERMINAL   R728-002__aggregates__pragmarc-b_strings.adb_79_22_range_check___00.smt2
+  W1-in-trail            S117-008__pointer__formal_vectors.adb_54_14_use_formal_vectors.ads_10_4_predicate_check___00.smt2
+  ARRAY-NONBV-TERMINAL   tagged_stacks__stacks.adb_17_19_index_check___00.smt2
+  W1-in-trail            S531-010__loop_frame_condition__do_loops.adb_131_19_index_check___00.smt2
+  W1-in-trail            S531-010__loop_frame_condition__do_loops.adb_47_13_index_check___00.smt2
+  W1-in-trail            S531-010__loop_frame_condition__do_loops.adb_82_26_null_pointer_dereference___00.smt2
+
+### t1-UFDTLIRA-db31113fa.tsv
+

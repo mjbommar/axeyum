@@ -3992,6 +3992,28 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Effective value 64, through `crate::uflia_interface::MAX_INTERFACE_PAIRS` since 2026-09-08 — this copy and `uflia_online.rs::MAX_SPLIT_DEPTH` are now ONE definition, so the \"mirrors the cold core\" claim below is enforced by the compiler instead of by prose. Byte-identical doc comment to `combined_theory.rs::MAX_SPLIT_PAIRS` ('mirroring the cold core's `MAX_SPLIT_DEPTH` decline...'), same value, independent definition — see that entry's note for the full four-copy chain across this file, `combined_theory.rs`, `uflia_online.rs::MAX_SPLIT_DEPTH`, and `uflra_online.rs::MAX_SPLIT_DEPTH`.",
     },
     ConfigEntry {
+        name: "DT_ARRAY_ELEMENT_DEFAULT",
+        module: "crates/axeyum-solver/src/datatype_native.rs",
+        value: "false",
+        unit: "on/off: admit an array-of-datatype datatype FIELD as an opaque container",
+        protects: Protects::Soundness,
+        on_exceed: OnExceed::Relax,
+        signal: Signal::None,
+        guarded_by: "the field gets NO expansion variable, so `field_sort_expands` still answers false for it and `datatype_expansion_is_exact` is still false for the owning datatype -- no congruence is emitted over it (ADR-1935/1946) and `build_dt_eq` keeps the free-boolean RELAXED form (ADR-1930), which is the same regime a datatype-typed field has had since ADR-1930. Traversal is refused twice: `scan_fragment`'s `DtSelect` arm refuses a select of an opaque field, and `refuse_if_datatype_survives` refuses any residual term whose sort mentions a datatype, through the UNCHANGED `sort_mentions_datatype`. Neither guard is weakened; what the lever lifts is the refusal that fires on the DECLARATION before any traversal is known about",
+        env_override: Some("AXEYUM_DT_ARRAY_ELEMENT"),
+        justification: dated(
+            "docs/research/09-decisions/adr-2135-arrays-of-datatypes-as-opaque-elements.md",
+            "2026-09-16",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/datatype_native.rs",
+                "field_is_opaque",
+            )],
+            &[doc("bench-results/dt-array-element-20260916/README.md")],
+        ),
+        note: "THE DEFAULT IS `off` -- THE LEVER IS OFF. `field_is_opaque` reduces to `matches!(sort, Sort::Datatype(_))`, the pre-ADR-2135 predicate, so the shipped behaviour is byte-identical. Sizing (`bench-results/dt-array-element-20260916/README.md`): the refusal this lifts is 142 of 142 `(Array Int <datatype>)` on the probe population and 112 of 112 on `AUFDTLIRA`'s undecided files -- the premise is exactly right about WHICH sort -- but only 2 of 81 undecided `AUFDTLIRA` rows TERMINATE at it, 0 of 56 `UFDTLIRA`, 0 of 29 `QF_DT`. Ceiling 6 of 800 rows across the four A/B divisions, counting the separate `auto.rs` uninterpreted-component bucket. Anything but `on`/`1` -- including a typo -- resolves to OFF rather than to an arm nobody chose.",
+    },
+    ConfigEntry {
         name: "MAX_ACK_PAIRS",
         module: "crates/axeyum-solver/src/datatype_native.rs",
         value: "20_000",

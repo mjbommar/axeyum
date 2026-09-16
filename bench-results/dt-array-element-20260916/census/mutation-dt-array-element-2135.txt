@@ -1,0 +1,7 @@
+$ python3 scripts/tests/mutation_controls.py dt-array-element-2135
+dt-array-element-2135: baseline green, 12 tests (scripts/cargo-serialized.sh test -p axeyum-solver --features full --test dt_array_element_2135)
+  the scan refuses a select of an OPAQUE field killed 1: select_of_the_opaque_field_declines_it_does_not_error
+  the sufficiency clause speaks only about EXACT constructors killed 1: sound_two_records_differing_only_in_the_opaque_field_are_not_unsat
+
+$ python3 scripts/tests/mutation_controls.py --check-anchors
+MUTATION_ANCHORS|suites=162|anchors=1124|stale=0

@@ -1,0 +1,25 @@
+### AUFDTLIRA: 200 rows, 119 decided, 81 undecided
+  terminal site (undecided rows):
+      30  quant:time-budget
+      26  quant:ematching
+       5  OTHER: quant-route ownership (ADR-2103): `q:skolem-qf` owns {Real, Int, BvOrFloat, Datatype, Function, Unin
+       4  array:non-bv
+       4  OTHER: quantifier over non-enumerable domain Int
+       3  dt:exactness-arg
+       3  OTHER: quantifier over non-enumerable domain (Array Int (Uninterpreted 5))
+       2  dt:field-sort-W1
+       1  bv:datatype-sorted-term
+       1  OTHER: quantifier over non-enumerable domain (Array Int (Uninterpreted 4))
+       1  OTHER: quantifier over non-enumerable domain (Uninterpreted 6)
+       1  OTHER: quantifier over non-enumerable domain (Datatype 12)
+  undecided rows whose TERMINAL detail is the W1 refusal: 2 / 81
+  undecided rows where the W1 refusal appears ANYWHERE in the trail: 6 / 81
+  reach join: 78 / 81 undecided rows have a reach row
+  undecided rows whose FILE declares >=1 W1-refused datatype: 12 / 81
+  refused-sort split (datatype instances, over those rows' files):
+      112  array-datatype-element
+  terminal site of the W1-carrying undecided rows:
+       6  quant:ematching
+       4  OTHER: quant-route ownership (ADR-2103): `q:skolem-qf` owns {Real, Int, BvOrFloat, Datatype, Function, Unin
+       2  dt:field-sort-W1
+

@@ -1,0 +1,83 @@
+REFUTED DATA -- DO NOT READ A TIMING NUMBER OUT OF THIS FILE.
+
+Every number below is wrong, and the file is kept because it is the evidence
+for WHY. It was produced by `scripts/ab-cost.py` over shard TSVs whose
+`base_ms`/`arm_ms` columns were written with `date +%s%3N` on s7. s7 carries
+**uutils coreutils 0.8.0**, not GNU coreutils, and its `date` ignores the width
+modifier -- `%3N` prints all NINE nanosecond digits, so the column is
+nanoseconds under a millisecond header. Measured 2026-09-16: 30 consecutive
+`date +%s%3N` calls on s7 are 19 characters each, where GNU gives 13.
+
+The tell is in the first line: a total elapsed of -20,454,778,950,164,076,537 ms.
+
+REMOVAL RULE: delete this file when the divisions are re-swept with the fixed
+`scripts/ab-run.sh` (which times from the `EPOCHREALTIME` bash builtin and
+self-checks a 200 ms sleep before any solve). Until then it stays, labelled.
+`scripts/ab-cost.py` now REFUSES such a file with exit 3 instead of reporting
+from it, so this output can no longer be reproduced by accident -- it is the
+last copy.
+
+The same defect is in `bench-results/dt-field-expansion-20260916/ab-run.sh`
+(ADR-2128), which ran on the same host, so that lane's shard TSVs carry it too.
+Its VERDICT columns, and this lane's, are unaffected: `ab-summarize.py` reads
+only the verdicts, and every ship-relevant number in ADR-2135 comes from those
+or from the solver's own `--trace` clock.
+
+================================================================================
+
+### AUFDTLIRA: 200 rows
+  total base 8375186989754820594 ms / arm -12079591960409255943 ms (-20454778950164076537 ms, -244.2%)
+  per-file delta (arm - base): median -353670 ms, mean -102273894750820384.0 ms
+  rows where the arm is SLOWER by >1000 ms: 87
+  rows where the arm is FASTER by >1000 ms: 113
+  worst 3 regressions:
+    +3221225873997219907 ms  base=-1610612911867663748 arm=1610612962129556159  P412-021__conc_discr_dyn__p.adb_6_19_range_check___00.smt2
+    +3221225139600231426 ms  base=-1610612568986890830 arm=1610612570613340596  N624-020__perm_rem__perm.adb_62_19_precondition3___00.smt2
+    +3221224929000451832 ms  base=-1610612464388427140 arm=1610612464612024692  K627-010__stable_marriage__stable_marriage.adb_33_26_index_check___00.smt2
+  best 3 speedups:
+    -3543346594260860925 ms  base=1771673297342679132 arm=-1771673296918181793  O512-022__prefix_sum__prefixsum.ads_18_32_unreachable_branch___00.smt2
+    -3382286536439951661 ms  base=1610612636512629566 arm=-1771673899927322095  N624-020__perm_rem__perm.adb_154_33_precondition___00.smt2
+    -3382286224589778533 ms  base=1610612488012930330 arm=-1771673736576848203  KB04-013__expr_action__search.adb_13_61_overflow_check___00.smt2
+
+### UFDTLIRA: 200 rows
+  total base -5927057131612727339 ms / arm 4992901644612002857 ms (+10919958776224730196 ms, +1091995877622473162752.0%)
+  per-file delta (arm - base): median -29104 ms, mean +54599793881123648.0 ms
+  rows where the arm is SLOWER by >1000 ms: 99
+  rows where the arm is FASTER by >1000 ms: 101
+  worst 3 regressions:
+    +3221226903599853932 ms  base=-1610613451688322493 arm=1610613451911531439  O414-015__flow_constants_in_contracts_review_tests__info_flow_tests.adb_51_12_range_check___00.smt2
+    +3221226883800635009 ms  base=-1610613441789834456 arm=1610613442010800553  O831-003__do333_mode_logic_qgen__at_least_one_lateral_mode_active.adb_59_22_assert___00.smt2
+    +3221226840598477947 ms  base=-1610613420188684198 arm=1610613420409793749  QB03-022__exit_status__incr.adb_3_11_overflow_check___00.smt2
+  best 3 speedups:
+    -3221226906200399039 ms  base=1610613477730191880 arm=-1610613428470207159  R509-011__higher_order_proof__why_9c81cc_sparkmnhigher_ordermnfold-T-defqtvc__00.smt2
+    -3221226898199687364 ms  base=1610613449212527362 arm=-1610613448987160002  M613-039__expr_actions__a-cofove.ads_709_23_list.ads_9_4_precondition___00.smt2
+    -3221226849601510050 ms  base=1610613424911247997 arm=-1610613424690262053  N317-015__inlining__incr_expr_fun.adb_20_40_overflow_check___00.smt2
+
+### QF_DT: 200 rows
+  total base 2899104418664127613 ms / arm -3559455865782544821 ms (-6458560284446672434 ms, -222.8%)
+  per-file delta (arm - base): median +110704 ms, mean -32292801422233364.0 ms
+  rows where the arm is SLOWER by >1000 ms: 104
+  rows where the arm is FASTER by >1000 ms: 96
+  worst 3 regressions:
+    +3221227036801185553 ms  base=-1610613518087599126 arm=1610613518713586427  blocksworld_from_12_7_0_to_14_5_0_negated_goal_bmc_36.smt2
+    +3221227033201197514 ms  base=-1610613516489144876 arm=1610613516712052638  typed_v1l80088.cvc.smt2
+    +3221227031399304941 ms  base=-1610613515588855795 arm=1610613515810449146  v2l50036.cvc.smt2
+  best 3 speedups:
+    -3382288428330195338 ms  base=1610613537411827172 arm=-1771674890918368166  v5l80028.cvc.smt2
+    -3382288422659091147 ms  base=1610613534712088745 arm=-1771674887947002402  typed_v1l30029.cvc.smt2
+    -3221227067399963302 ms  base=1610613533811764778 arm=-1610613533588198524  v10l70077.cvc.smt2
+
+### QF_ABV: 200 rows
+  total base 10307928475330226435 ms / arm -7875901084345300077 ms (-18183829559675526512 ms, -176.4%)
+  per-file delta (arm - base): median -130786 ms, mean -90919147798377632.0 ms
+  rows where the arm is SLOWER by >1000 ms: 95
+  rows where the arm is FASTER by >1000 ms: 105
+  worst 3 regressions:
+    +3221227547599768644 ms  base=-1610613767083359425 arm=1610613780516409219  no_init_multi_delete45.smt2
+    +3221227461600681966 ms  base=-1610613730687778070 arm=1610613730912903896  egt-0082.smt2
+    +3221227459800006792 ms  base=-1610613729787327991 arm=1610613730012678801  try5_small_noof_functions_flanagansaxe_sha1sum.get_quoting_style.il.flanagansaxe.smt2
+  best 3 speedups:
+    -3543350362199089433 ms  base=1771675181212630392 arm=-1771675180986459041  egt-2859.smt2
+    -3543350027580014407 ms  base=1771675013902831082 arm=-1771675013677183325  egt-1599.smt2
+    -3221227600200182496 ms  base=1610613800212606518 arm=-1610613799987575978  egt-1621.smt2
+

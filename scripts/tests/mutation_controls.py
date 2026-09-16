@@ -1774,6 +1774,61 @@ def baseline_and_mutants(name: str, quiet: bool = False) -> tuple[int, list[tupl
 # catch them drifting apart.
 # --------------------------------------------------------------------------
 
+# --------------------------------------------------------------------------
+# `dt-array-element-2135` — ADR-2135's opaque array-of-datatype FIELD.
+#
+# Two guards, and neither is the admission itself. Admitting the field is not a
+# guard; what makes the admission SOUND is that nothing may reach through it and
+# that its absence from the comparison may never be read as agreement.
+#
+# The TRAVERSAL guard (`scan_fragment`'s ADR-2135 arm) is the one this lane
+# added. Without it the `select_{mk,0}(r)` site falls through to a `None` field
+# slot and surfaces as a `Backend` error — not a wrong verdict, but a give-up
+# the ladder cannot walk past, which is the ADR-1966 shape that cost thirteen
+# rungs their turn. The test that dies asserts the DECLINE and its message.
+#
+# The SUFFICIENCY guard (`if exact` in `build_dt_eq_inner`) is pre-existing, and
+# ADR-2135 is what makes it load-bearing for a NEW field class: an opaque array
+# field is not comparable, so `exact` is false for its constructor and the
+# sufficiency clause must say `tag_l != j` rather than "the comparable fields
+# agreed". Forcing the exact branch makes `p != q` unsat whenever the two
+# records agree on every field the expansion can see — the ADR-1930 wrong-`unsat`
+# shape, on the field class this lane opened. The test that dies is a
+# SATISFIABLE query, per CLAUDE.md's rule that an adversarial fixture must be
+# one.
+#
+# What mutation CANNOT see here, stated rather than implied: the kill count is
+# scoped to THIS suite's runner, so "exactly one died" means exactly one of
+# `dt_array_element_2135`'s twelve. The sufficiency mutation certainly kills
+# tests in `dt_capability_1935` and `datatype_native` too; that is a different
+# measurement and this harness does not make it.
+# --------------------------------------------------------------------------
+
+SUITES["dt-array-element-2135"] = (
+    "crates/axeyum-solver/src/datatype_native.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--test", "dt_array_element_2135"),
+        "dt-array-element-2135",
+    ),
+    [
+        (
+            # TRAVERSAL guard: without it a select of the opaque field is an
+            # internal error instead of a decline.
+            "the scan refuses a select of an OPAQUE field",
+            "                if field_is_opaque(arena, field_sort) {",
+            "                if false && field_is_opaque(arena, field_sort) {",
+        ),
+        (
+            # SUFFICIENCY guard: without it an unexpandable field's absence from
+            # the comparison is read as agreement, and a disequality that is
+            # satisfiable comes back `unsat`.
+            "the sufficiency clause speaks only about EXACT constructors",
+            "        if exact {\n            if comparable > 0 {",
+            "        if true {\n            if comparable > 0 {",
+        ),
+    ],
+)
+
 SUITES["dt-nested-field-2128"] = (
     "crates/axeyum-solver/src/datatype_native.rs",
     Cargo(

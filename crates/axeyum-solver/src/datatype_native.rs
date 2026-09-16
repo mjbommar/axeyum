@@ -941,13 +941,26 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
                 // Selecting a *datatype-typed* field traverses into the recursive
                 // structure, which needs depth-bounded unfolding (the next unit);
                 // selecting a scalar field is in this fragment.
-                if matches!(
-                    arena.constructor_fields(constructor)[index as usize].1,
-                    Sort::Datatype(_)
-                ) {
+                let field_sort = arena.constructor_fields(constructor)[index as usize].1;
+                if matches!(field_sort, Sort::Datatype(_)) {
                     return Err(unsupported(
                         "select of a datatype-typed field traverses recursive structure; \
                          needs depth-bounded unfolding",
+                    ));
+                }
+                // ADR-2135. An opaque array-of-datatype field HAS no expansion
+                // variable, so a `select` of it has nothing to rewrite to. This
+                // refusal is what makes admitting the field in
+                // `register_datatype` sound: the field is admitted on the
+                // DECLARATION and refused the moment anything traverses it.
+                // Without this arm the site falls through to `selects` and the
+                // `None` slot below surfaces as a `Backend` error rather than a
+                // decline the ladder can walk past.
+                if field_is_opaque(arena, field_sort) {
+                    return Err(unsupported(
+                        "select of an array-of-datatype field: the field is an opaque \
+                         container with no expansion variable, so the tag/field expansion \
+                         cannot reach into its elements",
                     ));
                 }
                 register_datatype(arena, dt, &mut layouts)?;
@@ -973,7 +986,14 @@ fn scan_fragment(arena: &TermArena, roots: &[TermId]) -> Result<Scan, SolverErro
                 // datatype fields defaulted — pass; a real difference is
                 // `unknown`). Mark the query relaxed so replay downgrades rather
                 // than errors.
-                if dt_has_datatype_field(arena, dt) {
+                // ADR-2135: `dt_has_OPAQUE_field`, not `dt_has_datatype_field`.
+                // An opaque array-of-datatype field is skipped by `build_dt_eq`
+                // for exactly the same reason a datatype-typed one is, so the
+                // same relaxation flag has to be set — otherwise a replay
+                // mismatch on such a query surfaces as an ERROR instead of the
+                // `unknown` it is. With the lever OFF the two predicates are the
+                // same function.
+                if dt_has_opaque_field(arena, dt) {
                     relaxed_eq = true;
                 }
                 let left = expect_dt_symbol(arena, args[0])?;
@@ -1268,6 +1288,74 @@ impl Drop for NestedFieldExpansionGuard {
     fn drop(&mut self) {
         NESTED_FIELD_DEPTH_OVERRIDE.with(|c| c.set(self.0));
     }
+}
+
+/// The SHIPPED value of the ADR-2135 opaque array-element lever: **`false` —
+/// OFF**. `AXEYUM_DT_ARRAY_ELEMENT=on` (or `=1`) turns it on for a process, and
+/// [`DatatypeArrayElementGuard`] for a thread; every other value, including a
+/// typo and an absent variable, resolves here.
+///
+/// A named constant rather than a literal because `config_registry::REGISTRY`
+/// binds its entry to a live symbol in this file and `every_entry_names_a_live_constant`
+/// fails if the symbol goes away — the registry's value and this default are one
+/// definition, not two that can drift.
+const DT_ARRAY_ELEMENT_DEFAULT: bool = false;
+
+thread_local! {
+    /// Test-scoped override of the opaque array-element admission; see
+    /// [`DatatypeArrayElementGuard`].
+    static DT_ARRAY_ELEMENT_OVERRIDE: std::cell::Cell<Option<bool>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Sets the ADR-2135 opaque array-element admission for the current thread,
+/// restoring the previous setting on drop.
+///
+/// Exists so a test can drive both arms of the lever without setting a
+/// process-wide environment variable — CLAUDE.md's rule that a test passing only
+/// under an ambient env var is a gate on one shell.
+pub struct DatatypeArrayElementGuard(Option<bool>);
+
+impl DatatypeArrayElementGuard {
+    /// Overrides the process setting on this thread. `false` is the shipped
+    /// default (the lever is OFF).
+    #[must_use]
+    pub fn set(on: bool) -> Self {
+        DatatypeArrayElementGuard(DT_ARRAY_ELEMENT_OVERRIDE.with(|c| c.replace(Some(on))))
+    }
+}
+
+impl Drop for DatatypeArrayElementGuard {
+    fn drop(&mut self) {
+        DT_ARRAY_ELEMENT_OVERRIDE.with(|c| c.set(self.0));
+    }
+}
+
+/// Parses `AXEYUM_DT_ARRAY_ELEMENT` (ADR-2135).
+///
+/// An absent variable, an empty value, and anything that is not exactly `on` or
+/// `1` resolve to the SHIPPED default, **`false` — the lever is OFF** — so a typo
+/// degrades to the shipped behaviour rather than to an arm nobody chose.
+fn parse_dt_array_element(value: Option<&str>) -> bool {
+    match value.map(str::trim) {
+        Some("on" | "1") => true,
+        _ => DT_ARRAY_ELEMENT_DEFAULT,
+    }
+}
+
+/// Whether an array-sorted datatype FIELD whose components mention a datatype is
+/// admitted as an OPAQUE field (ADR-2135): a live [`DatatypeArrayElementGuard`]'s
+/// choice, else the process value resolved once from `AXEYUM_DT_ARRAY_ELEMENT`.
+/// `false` means the lever is OFF and [`field_is_opaque`] reduces to its
+/// pre-ADR-2135 form, `matches!(sort, Sort::Datatype(_))`.
+fn dt_array_element_admitted() -> bool {
+    static RESOLVED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    if let Some(on) = DT_ARRAY_ELEMENT_OVERRIDE.with(std::cell::Cell::get) {
+        return on;
+    }
+    *RESOLVED.get_or_init(|| {
+        parse_dt_array_element(std::env::var("AXEYUM_DT_ARRAY_ELEMENT").ok().as_deref())
+    })
 }
 
 /// Parses `AXEYUM_DT_NESTED_FIELD_DEPTH` (ADR-2128).
@@ -1815,6 +1903,15 @@ fn register_datatype(
                     field_sorts.push(*sort);
                 }
                 _ if field_sort_expands(arena, *sort) => field_sorts.push(*sort),
+                // ADR-2135. An array whose component sorts mention a datatype is
+                // an OPAQUE CONTAINER: recorded so the layout is closed, given no
+                // expansion variable by `build_sym_vars`, refused by
+                // `scan_fragment` the moment anything selects it, and projected
+                // to `well_founded_default`. **Deliberately no recursion into the
+                // array's component datatypes** — the array is not a field to
+                // expand, and a closure that reaches a datatype only through one
+                // is not registered. Off by default; see [`field_is_opaque`].
+                _ if field_is_opaque(arena, *sort) => field_sorts.push(*sort),
                 _ => {
                     return Err(unsupported(
                         "a datatype field sort with no expansion variable (native datatype \
@@ -1828,6 +1925,83 @@ fn register_datatype(
     }
     layouts.insert(dt, ctors);
     Ok(())
+}
+
+/// Whether a datatype FIELD of this sort is **OPAQUE**: recorded in the layout,
+/// given NO expansion variable, and sound only for as long as nothing traverses
+/// it (ADR-2135).
+///
+/// **This is the one definition of "opaque", and it has to stay the one
+/// definition.** Three things must agree about a field sort — whether
+/// [`register_datatype`] admits it, whether [`build_sym_vars`] declares a
+/// variable for it, and whether [`scan_fragment`] refuses a `select` of it —
+/// and ADR-1920's measured lesson is that two predicates written twice in
+/// different words do not stay the same predicate. All three call this.
+///
+/// `Sort::Datatype(_)` is the pre-existing member and its treatment is
+/// unchanged: no variable, never traversed, projected to a well-founded
+/// default. ADR-2135 adds, **behind an off-by-default lever**, an array sort
+/// whose component sorts mention a datatype — SPARK's `(Array Int us_rep)`,
+/// which is 142 of 142 of the sorts `register_datatype` refuses on the measured
+/// populations (`bench-results/dt-array-element-20260916`).
+///
+/// # Why admitting it as opaque is sound, and what it is NOT
+///
+/// The array is an opaque **container**, not a field to expand. It gets no
+/// expansion variable, so:
+///
+/// * [`datatype_expansion_is_exact`] is `false` for the owning datatype —
+///   [`field_sort_expands`] rejects the array sort and this function does not
+///   change that. So no congruence is emitted over such a datatype
+///   (ADR-1935/1946) and [`build_dt_eq`] uses the FREE-boolean relaxed form
+///   (ADR-1930), exactly as for a datatype-typed field.
+/// * Any query that actually TRAVERSES the field is refused, twice over: the
+///   `select` arm of [`scan_fragment`] refuses it directly, and a residual term
+///   of array-of-datatype sort is refused by [`refuse_if_datatype_survives`]
+///   through the unchanged [`crate::datatype_elim::sort_mentions_datatype`].
+///   Neither guard is weakened by this function; the refusal it lifts is the
+///   one that fires on the DECLARATION, before any traversal is known about.
+/// * The model projection already has a value for it: `well_founded_default`
+///   answers `(Array Int D)` with a `Value::GenericArray` whose default is
+///   `D`'s own well-founded default, so a projected model is total and replays.
+///
+/// What it is not: it is **not** an expansion of the array's elements, and it
+/// deliberately does not recurse into the array's component datatypes. A field
+/// closure that reaches a datatype only THROUGH an array is therefore not
+/// registered at all — which is the point. ADR-2128 built the recursion for
+/// datatype-typed fields and measured that it reaches none of this.
+fn field_is_opaque(arena: &TermArena, sort: Sort) -> bool {
+    match sort {
+        Sort::Datatype(_) => true,
+        Sort::Array { .. } => {
+            let opaque = dt_array_element_admitted()
+                && crate::datatype_elim::sort_mentions_datatype(arena, sort);
+            if opaque {
+                // The `else` this lever would otherwise never have. The verdict
+                // is unchanged either way; what changes is that a `--trace` run
+                // can say an array-of-datatype field was admitted as opaque, and
+                // that the shipped default is not what decided this query.
+                crate::config_registry::note_crossed(
+                    "crates/axeyum-solver/src/datatype_native.rs::DT_ARRAY_ELEMENT_DEFAULT",
+                    1,
+                    u64::from(DT_ARRAY_ELEMENT_DEFAULT),
+                );
+            }
+            opaque
+        }
+        _ => false,
+    }
+}
+
+/// Whether any constructor of `dt` has an OPAQUE field ([`field_is_opaque`]),
+/// i.e. a field `build_dt_eq` cannot compare.
+fn dt_has_opaque_field(arena: &TermArena, dt: DatatypeId) -> bool {
+    arena.datatype_constructors(dt).iter().any(|&ctor| {
+        arena
+            .constructor_fields(ctor)
+            .iter()
+            .any(|(_, sort)| field_is_opaque(arena, *sort))
+    })
 }
 
 /// Whether a datatype FIELD of this sort gets an expansion variable.
@@ -2016,10 +2190,13 @@ fn build_sym_vars(
     for (j, (_ctor, field_sorts)) in ctors.iter().enumerate() {
         let mut row = Vec::with_capacity(field_sorts.len());
         for (i, &fsort) in field_sorts.iter().enumerate() {
-            // Datatype-typed fields are never traversed (the scan rejects such
+            // OPAQUE fields are never traversed (the scan rejects such
             // `select`/`==`), so they get no variable and no guard — they are
             // projected to a well-founded default. Only scalar fields expand.
-            if matches!(fsort, Sort::Datatype(_)) {
+            // `field_is_opaque` is the SAME predicate `register_datatype` admits
+            // on and `scan_fragment` refuses on (ADR-1920's lockstep rule); with
+            // the ADR-2135 lever OFF it is `matches!(fsort, Sort::Datatype(_))`.
+            if field_is_opaque(arena, fsort) {
                 row.push(None);
                 continue;
             }

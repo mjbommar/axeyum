@@ -1,0 +1,27 @@
+########## AUFDTLIRA
+rows=200  (base-first 100 / arm-first 100)
+base : {'unsat': 119, 'unknown': 81}
+arm  : {'unsat': 119, 'unknown': 81}
+GAINS  (unknown -> decided): 0 of 200
+LOSSES (decided -> unknown): 0 of 200
+sat<->unsat FLIPS: 0
+NOTE: the two arms agree on every row. That is consistent with the lever changing nothing on this population AND with the arm never having been enabled -- the two are not distinguishable from this file. Check the runner's env and the suite's off_arm/on_arm pair before reading it as a null result.
+summarize_rc=0
+########## UFDTLIRA
+rows=200  (base-first 100 / arm-first 100)
+base : {'unknown': 56, 'unsat': 138, 'sat': 6}
+arm  : {'unknown': 56, 'unsat': 138, 'sat': 6}
+GAINS  (unknown -> decided): 0 of 200
+LOSSES (decided -> unknown): 0 of 200
+sat<->unsat FLIPS: 0
+NOTE: the two arms agree on every row. That is consistent with the lever changing nothing on this population AND with the arm never having been enabled -- the two are not distinguishable from this file. Check the runner's env and the suite's off_arm/on_arm pair before reading it as a null result.
+summarize_rc=0
+########## QF_DT
+rows=200  (base-first 100 / arm-first 100)
+base : {'unsat': 107, 'sat': 64, 'unknown': 29}
+arm  : {'unsat': 106, 'sat': 64, 'unknown': 30}
+GAINS  (unknown -> decided): 0 of 200
+LOSSES (decided -> unknown): 1 of 200
+   -unsat  vlsat3_b84.smt2
+sat<->unsat FLIPS: 0
+summarize_rc=2
