@@ -1,0 +1,2 @@
+files=79  files with a CYCLIC datatype closure=0  files the lever converts at least one datatype in=64
+datatypes=1657  cyclic=0  exact today=1148  W1-refused today=112  LEVER CONVERTS=397
