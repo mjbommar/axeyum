@@ -6,17 +6,24 @@
 2026-09-16).** [ADR-2120] §7 named the ground closure as the quantified
 divisions' block. The mechanism turns out to be one `if`.
 
-**What it is.** `prove_quantified_unsat_via_egraph_impl` fires the interleaved
-cold ground check behind `online_clauses.is_none()`. So the retained CDCL(T)
-session and the from-scratch re-solve are **alternatives, not companions**: when
-the session exists the loop updates it, and when it does not, every due round
-re-solves the WHOLE accumulated ground set through `check_auto`. And
+**What it is.** `prove_quantified_unsat_via_egraph_impl` selects between two
+interleaved ground-check sites on `online_clauses.is_none()`, and
 `OnlineQuantifierClauseSession::new` builds its encoder with no opaque
-abstraction, so `EufEncoder::encode` returns `None` on the first Boolean-sorted
-application it has no arm for — an integer comparison is one — and the whole
-construction refuses. A `UFLIA` ground set has one in its first round. The loop
-is therefore in the re-solve regime for its **entire run**, on every file in four
+abstraction — so `EufEncoder::encode` returns `None` on the first Boolean-sorted
+application it has no arm for, an integer comparison is one, and the whole
+construction refuses. A `UFLIA` ground set has one in its first round, so the
+loop takes the cold branch for its **entire run**, on every file in four
 divisions, and nothing in it ever tries again.
+
+**The first version of this block overstated that, and the probe's own numbers
+caught it.** It said the two were "alternatives, not companions" and that a live
+session never re-solves. 38 of 53 cores ran an IDENTICAL number of cold checks in
+both arms, which suppression cannot produce. The true difference is **seven
+rounds**: the no-session branch checks on rounds 0–6 and then 7, 15, 31, …; a
+live session skips to the exponential schedule alone. On top of that a live
+session changes what each round DOES (candidate equalities on a starved round),
+so the arms' round sequences diverge and counts can differ by more — the heaviest
+core goes 30 → 15 — in either direction.
 
 Neither reference solver does this, verified at `file:line` in the checked-out
 clones. z3 internalizes the instance clause into the live `smt::context`

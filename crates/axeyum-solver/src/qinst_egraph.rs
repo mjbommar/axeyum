@@ -332,13 +332,31 @@ fn positive_path_level() -> usize {
 ///
 /// At `0` [`OnlineQuantifierClauseSession::new`] declines any ground set holding
 /// a Boolean-position term its `EUF` encoder has no arm for — an arithmetic
-/// comparison, a datatype tester, a `distinct` — and the instantiation loop then
-/// pays a **full cold re-solve of the whole accumulated ground set** on every
-/// due round, because `online_clauses.is_none()` is the gate that fires the
-/// interleaved check.
+/// comparison, a datatype tester, a `distinct` — so `online_clauses` stays
+/// `None` and the loop takes the cold branch of the interleaved ground check for
+/// its whole run. At `1` those terms are abstracted to opaque propositional
+/// variables and the session exists.
 ///
-/// At `1` those terms are abstracted to opaque propositional variables and the
-/// session exists, so the loop updates one persistent CDCL(T) state instead.
+/// # What the gate selects, precisely
+///
+/// The loop has TWO interleaved-check sites, one per branch, and they differ by
+/// **seven rounds and nothing else**:
+///
+/// - no session: `interleaved_check_due(round)` =
+///   `round < instantiation_cadence() || (round + 1).is_power_of_two()`, so
+///   rounds **0,1,2,3,4,5,6**, then 7, 15, 31, 63, …
+/// - live session: a separate
+///   `round + 1 >= instantiation_cadence() && (round + 1).is_power_of_two()`, so
+///   7, 15, 31, 63, … only.
+///
+/// So by CADENCE the lever removes exactly the first seven per-round cold
+/// re-solves. It is not the whole difference — a live session also changes what
+/// each round does, because `scoped_candidate_fixpoint_step` proposes candidate
+/// equalities on a round that admitted nothing, so the two arms' round SEQUENCES
+/// diverge — but it is the part that is forced rather than measured, and an
+/// earlier draft of this comment claimed the cold check was suppressed outright.
+/// Measured 2026-09-16 (ADR-2124): 38 of 53 cores run an IDENTICAL number of
+/// cold checks in both arms, which suppression could not produce.
 const GROUND_SESSION_LEVEL: usize = 0;
 
 axeyum_ir::cap_lever! {
@@ -2912,26 +2930,28 @@ fn prove_quantified_unsat_via_egraph_impl(
             )? {
                 CandidateFixpointStep::Refuted => {
                     // ADR-2124. THIS EXIT USED TO RETURN `Unsat` WITH NO
-                    // CERTIFICATE. The two cold-check exits above it
-                    // (`ground-ceiling` and the interleaved cadence) both
-                    // collect one from the same `(anchor, ground,
-                    // ground_derivations)` triple; this one did not, so a
-                    // refutation that arrived through the retained session
-                    // reached the front door as a bare `unsat` with no instance
-                    // set behind it.
+                    // CERTIFICATE, and it is one of a MATCHED PAIR whose other
+                    // half was already right.
                     //
-                    // It is the SAME certificate and rests on the same facts:
-                    // `scoped_candidate_fixpoint_step` reaches `Refuted` only
-                    // through `replay_online_refutation`, which re-establishes
-                    // the refutation over this very `ground` with the ordinary
-                    // cold quantifier-free route. So the session's verdict is
-                    // never the evidence; the replay is, exactly as at the other
-                    // two exits.
+                    // The session has two refutation exits. The batch path
+                    // (`add_checked_batch` -> `Some(CdcltOutcome::Unsat)` ->
+                    // `replay_online_refutation`) collects the certificate and
+                    // carries a comment saying why: "the online CDCL(T) session
+                    // found the conflict, but `replay_online_refutation`
+                    // re-established it against `ground` -- so this is a ground
+                    // refutation by the same instances as every other exit, and
+                    // is certifiable." This path reaches `Refuted` through the
+                    // IDENTICAL `replay_online_refutation` over the IDENTICAL
+                    // `ground`, and collected nothing. The two cold-check exits
+                    // make it four sites, three of which were right.
+                    //
+                    // So the session's verdict is never the evidence; the replay
+                    // is, exactly as at the other three.
                     //
                     // Before this lane the gap was nearly invisible, because the
                     // session declined every ground set with an arithmetic atom
                     // and this exit was reachable only on `EUF`-only files. At
-                    // level 1 it becomes the main refutation route on UFLIA,
+                    // level 1 the session exists on UFLIA,
                     // which is why the gap had to close with it.
                     *certificate =
                         collect_ground_derivations(arena, anchor, &ground, &ground_derivations);
@@ -4522,9 +4542,10 @@ impl OnlineQuantifierClauseSession {
             .collect();
         // ADR-2124. At level 0 the encoder REFUSES a Boolean-position term it has
         // no arm for and this constructor returns `None` — which is why a UFLIA
-        // ground set could never reach the warm path and the loop paid a full
-        // cold re-solve every due round instead. At level 1 the same term becomes
-        // a free propositional variable.
+        // ground set could never reach the warm path, and why the loop took the
+        // cold branch of the interleaved check (its first seven rounds
+        // per-round, see `GROUND_SESSION_LEVEL`) for its whole run. At level 1
+        // the same term becomes a free propositional variable.
         let abstracts = ground_session_abstracts();
         let mut encoder = EufEncoder::new(&atom_terms)
             .with_bool_apply_atoms()

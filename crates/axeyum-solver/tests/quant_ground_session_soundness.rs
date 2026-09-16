@@ -2,16 +2,17 @@
 //! session hosting a ground set with arithmetic in it (ADR-2124,
 //! `AXEYUM_QINST_GROUND_SESSION` / [`GroundSessionLevelGuard`]).
 //!
-//! **What the mechanism is.** The instantiation loop's interleaved ground check
-//! fires behind ONE gate — `online_clauses.is_none()` in
-//! `qinst_egraph::prove_quantified_unsat_via_egraph_impl`. When the retained
-//! session exists, the loop updates it; when it does not, every due round
-//! re-solves the WHOLE accumulated ground set from scratch. At the shipped level
-//! the session refuses any ground set holding a Boolean-position term its `EUF`
-//! encoder has no arm for — an integer comparison is one — so on `UFLIA` the
-//! session never exists and the loop is in the re-solve regime for its whole
-//! run. Measured on ADR-2120's 53 reference-minimal `UFLIA` cores: 493 cold
-//! checks over sets of up to 8,019 terms, 33 of 53 dying on the clock.
+//! **What the mechanism is.** The instantiation loop has two interleaved
+//! ground-check sites, selected by `online_clauses.is_none()` in
+//! `qinst_egraph::prove_quantified_unsat_via_egraph_impl`, and they differ by
+//! seven rounds: the no-session branch re-solves the whole accumulated ground
+//! set on rounds 0–6 and then on 7, 15, 31, …, while a live session skips
+//! straight to the exponential schedule. At the shipped level the session
+//! refuses any ground set holding a Boolean-position term its `EUF` encoder has
+//! no arm for — an integer comparison is one — so on `UFLIA` the session never
+//! exists and the loop takes the cold branch for its whole run. Measured on
+//! ADR-2120's 53 reference-minimal `UFLIA` cores: 493 cold checks over sets of
+//! up to 8,019 terms, 33 of 53 dying on the clock.
 //!
 //! Level 1 abstracts that term to a free propositional variable, so the session
 //! exists and the loop asserts instances into it instead. Neither reference
@@ -137,12 +138,18 @@ const SAT_DISTINCT_COMPARISONS_NOT_COLLAPSED: &str = r"
 /// A satisfiable query whose universal is instantiated many times, so the
 /// session accumulates clauses across several rounds.
 ///
-/// This is the shape that exercises the session's ROOT-LEVEL insertion
-/// discipline end to end: each round's instances are inserted after the previous
-/// solve has put decisions on the trail. A session that inserted under a live
-/// trail would record a fact holding only under those decisions and keep it
-/// after the next backjump — the stale-clause hazard — and a stale clause on a
-/// satisfiable query is a manufactured `unsat`.
+/// This is the shape that exercises the accumulate-across-rounds path end to
+/// end: each round's instances are inserted after the previous solve has left a
+/// trail behind it, and the accumulated set stays satisfiable throughout, so any
+/// `unsat` is manufactured.
+///
+/// **It is NOT a stale-clause fixture, and an earlier draft of this comment said
+/// it was.** The stale-clause hazard has no mechanism here:
+/// `NativeIncrementalCdcl::add_clause`
+/// (`crates/axeyum-cnf/src/proof_sat/incremental.rs:486`) calls
+/// `between_solves()` itself, unconditionally, so a clause is always registered
+/// into an unassigned solver. ADR-2124's mutation control measured that by
+/// removing the session's own `unwind_to_root()` and killing nothing.
 const SAT_MANY_ROUNDS: &str = r"
     (set-logic UFLIA)
     (declare-fun f (Int) Int)

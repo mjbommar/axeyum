@@ -36,19 +36,52 @@ This lane's contribution is that those are not two facts. They are one.
 | the session's construction | `OnlineQuantifierClauseSession::new_with_limits` |
 | **the decline site** | `let top = encoder.encode(arena, assertion, &mut clauses)?;` — the `?` on an encoder built `EufEncoder::new(&atom_terms).with_bool_apply_atoms()` and **no** `.with_opaque_bool_atoms(true)` |
 | what the encoder does there | `euf_egraph.rs` `Encoder::encode`, arm `None => return None` — reached for any Boolean-sorted application with no connective arm: an arithmetic comparison, a `distinct`, an `is_int`, a datatype tester |
-| the session's refutation exit | `scoped_candidate_fixpoint_step` → `CdcltOutcome::Unsat` → `replay_online_refutation` → `CandidateFixpointStep::Refuted` |
-| the loop's handling of it | `CandidateFixpointStep::Refuted => …` in `prove_quantified_unsat_via_egraph_impl` |
+| the session's refutation exits, **both of them** | (a) the batch path: `add_checked_batch` → `Some(CdcltOutcome::Unsat)` → `replay_online_refutation` → `return Ok(CheckResult::Unsat)`, which **already collected the certificate**; (b) the fixpoint path: `scoped_candidate_fixpoint_step` → `CdcltOutcome::Unsat` → `replay_online_refutation` → `CandidateFixpointStep::Refuted`, which **did not** |
+| the interleaved check with a LIVE session | a second site: `if online_clauses.is_some() && round + 1 >= instantiation_cadence() && (round + 1).is_power_of_two()` — see §2.1.1 |
 
-**Read the gate and the decline site together and the regime is forced.** The
-session and the cold check are alternatives. One integer comparison in the ground
-set — and a `UFLIA` ground set has one in its first round — makes
-`OnlineQuantifierClauseSession::new` return `None`, `online_clauses` stays `None`
-for the whole run, and the loop pays a full cold re-solve of a monotonically
-growing set on every due round. Nothing in the loop ever tries again.
+**Read the gate and the decline site together and the regime is forced.** One
+integer comparison in the ground set — and a `UFLIA` ground set has one in its
+first round — makes `OnlineQuantifierClauseSession::new` return `None`,
+`online_clauses` stays `None` for the whole run, and the loop takes the cold
+branch every time. Nothing in the loop ever tries again.
 
-This is the repository's oldest pattern, and it already has a documented fix in
-the same tree: `axeyum-cnf`'s `IncrementalSat` and `IncrementalCnf` (ADR-0009)
-exist because the BV path had it too.
+### 2.1.1 What the gate actually selects — and the correction this lane had to make to itself
+
+The first version of this ADR said the session and the cold check are
+"alternatives, not companions", and that when the session exists the loop never
+re-solves. **That is wrong, and the probe's own numbers are what exposed it**:
+38 of 53 cores ran an IDENTICAL number of cold checks in both arms, which a
+clean alternation could not produce. Reading further down the loop found the
+reason, and the true statement is narrower.
+
+There are **two** interleaved-check sites, one per branch:
+
+| branch | site | cadence | rounds it fires on |
+|---|---|---|---|
+| no session | inside `if online_clauses.is_none()`, guarded by `interleaved_check_due(round)` = `round < instantiation_cadence() \|\| (round + 1).is_power_of_two()` | per-round then exponential | **0,1,2,3,4,5,6**, 7, 15, 31, 63, … |
+| live session | a separate `if online_clauses.is_some() && round + 1 >= instantiation_cadence() && (round + 1).is_power_of_two()` | exponential only | 7, 15, 31, 63, … |
+
+`instantiation_cadence()` is `MAX_INSTANTIATION_ROUNDS = 8`. So the difference
+the lever buys **by cadence alone is exactly rounds 0–6: seven per-round cold
+re-solves**, and from round 7 onward the two regimes run the identical
+exponential schedule.
+
+That is not the whole difference, and the probe shows why: the heaviest core goes
+from **30 cold checks to 15**, which is more than seven. A live session also
+changes what each round DOES — `scoped_candidate_fixpoint_step` proposes
+candidate equalities to the matcher on a round that admitted nothing — so the two
+arms diverge in their round SEQUENCES and the call counts diverge with them. The
+cadence difference is the floor; the sequence divergence is the rest, and it can
+go either way (11 of 53 cores spend MORE time in the check at level 1).
+
+**Both halves of that are worth stating because the first version of this ADR
+stated neither.** A reader who took "alternatives, not companions" at face value
+would over-predict the saving by the whole exponential tail, which is where the
+ground sets are largest.
+
+This is still the repository's oldest pattern, and it already has a documented
+fix in the same tree: `axeyum-cnf`'s `IncrementalSat` and `IncrementalCnf`
+(ADR-0009) exist because the BV path had it too.
 
 ### 2.2 z3 — the instance is internalized into the live context
 
@@ -203,17 +236,29 @@ wrong-answer defect. `add_variable` never touches the map.
 ### 4.4 The certificate hole, found and closed here
 
 `CandidateFixpointStep::Refuted` returned `Ok(CheckResult::Unsat)` with **no
-`*certificate`**. The two cold-check exits beside it — the ground-ceiling exit and
-the interleaved-cadence exit — both do
-`*certificate = collect_ground_derivations(arena, anchor, &ground, &ground_derivations)`.
+`*certificate`**.
 
-It is the same certificate over the same facts: `scoped_candidate_fixpoint_step`
-reaches `Refuted` only through `replay_online_refutation`, which re-establishes
-the refutation over that very `ground` with the ordinary cold route. Before this
-lane the gap was nearly invisible, because the session declined every arithmetic
-file and the exit was reachable only on `EUF`-only ground sets. At level 1 it
-becomes the main refutation route on `UFLIA` — so a lever that shipped without
-this fix would have converted certified refutations into bare ones.
+**The argument for the repair is stronger than "the cold exits do it", and the
+strongest form was found by reading rather than assumed.** The session has TWO
+refutation exits, not one. The batch path — `add_checked_batch` returns
+`Some(CdcltOutcome::Unsat)`, `replay_online_refutation` confirms — **already
+collected the certificate**, with a comment saying exactly why:
+
+> *"The online CDCL(T) session found the conflict, but `replay_online_refutation`
+> re-established it against `ground` — so this is a ground refutation by the same
+> instances as every other exit, and is certifiable."*
+
+The fixpoint path reaches `Refuted` through the identical `replay_online_refutation`
+over the identical `ground`, and collected nothing. So this was not a design
+question at all: it was one of a matched pair, written and justified, with the
+other half missing. Two cold-check exits (the ground ceiling and the
+interleaved cadence) make it four sites, three of which were right.
+
+Before this lane the gap was nearly invisible, because the session declined every
+arithmetic file and the fixpoint exit was reachable only on `EUF`-only ground
+sets. At level 1 the session exists on `UFLIA` — so a lever that shipped without
+this fix would have turned certified refutations into bare ones on exactly the
+division it targets.
 
 ## 5. Soundness
 
@@ -357,13 +402,65 @@ detail naming the interleaved ground check drops from 13 rows to **8**. A file
 that reports a fixpoint is a file whose next blocker is the instance SET, not the
 clock; that is a different lane's problem and it is now visible.
 
+### 6.2 Datatypes are hosted, not declined — and that is a deliberate deviation
+
+The brief anticipated that the session could not host `theory_datatype` and
+asked for a **typed decline** on datatype ground sets, plus a sizing of what that
+excludes. It is not needed, and declining would have been the worse design.
+
+A datatype tester is `Op::DtTest(ctor)`, a Bool-sorted application with no
+connective arm — exactly the shape level 1 abstracts, by the same weakening
+argument as an integer comparison and with no datatype reasoning required. There
+is no sub-case to decline. Measured on an `AUFDTLIRA` file from the Tier 1
+list (`O512-022__infoflow__infoflow.adb_181_22_overflow_check___00`,
+2026-09-16): the interleaved cold check runs **39 times OFF and 24 times ON**, so
+the session is built and is suppressing checks on a datatype ground set.
+
+What keeps the degenerate case out is the **vacuous-session guard**, not a
+per-theory decline: a ground set whose atoms are *all* abstracted has no theory
+atom and the session refuses, so it cannot displace the cold check for nothing.
+`AUFDTLIRA` and `UFDTLIRA` are both in the divisional A/B, which measures this
+directly rather than sizing an exclusion that does not exist.
+
 ## 7. Decision
 
-_(Filled in with the ship decision.)_
+_(Filled in with the ship decision once the divisional A/B closes.)_
 
 ## 8. What this lane did not do
 
-_(Filled in.)_
+**The certificate repair has no fixture.** §4.4's fix is correct by construction
+— the `Refuted` exit is reached only through `replay_online_refutation`, so the
+derivations describe exactly the refutation the cold route just re-established —
+but reaching that exit requires the candidate-equality fixpoint to produce a
+session `Unsat` on a query small enough to be a fixture, and this lane did not
+build one. The mutation suite `qinst-session-refutation-certificate` asks
+whether anything in the instance-set certificate surface notices the repair being
+taken away; its outcome is recorded in §5.1 rather than assumed. **Nobody should
+read the repair's presence in the diff as evidence that a later change could not
+silently undo it.**
+
+**The session still falls back rather than growing its theory.** Level 1 hosts an
+arithmetic ground set by ABSTRACTING the arithmetic, not by hosting
+`CombinedIncrementalLia` (`combined_theory_lia.rs`, which already implements
+`TheorySolver` and is what `uflia_online` drives). That is the real incremental
+CDCL(T)-with-arithmetic session, and the reason it is not here is a bounded,
+named piece of work: its interface pairs are computed **once up front** from the
+full atom set (`CombinedIncrementalLia::build`), and `LiaTheory` is constructed
+over a fixed combined layout, so an instance introducing a new integer term has
+nowhere to go. `TheorySolver::take_new_atoms` is the growth hook the trait already
+has; `EufTheory::add_atom_at_root` is the pattern. A lane that adds
+`add_atom_at_root` to `LiaTheory` and re-derives the partition incrementally gets
+a session that can REFUTE on arithmetic rather than only decline to re-solve.
+
+**The one thing that would make the saving larger is not this lever.** The probe
+shows the session suppressing the cold check on 13 of 53 cores and leaving the
+call count identical on 38. The loop only consults the session when a round
+admits NOTHING (`admitted.is_empty() && candidate_equalities_enabled` guards
+`scoped_candidate_fixpoint_step`); on a productive round the cold check is
+skipped anyway because `online_clauses` is `Some`. So the remaining cost is on
+rounds where the session exists, is consulted, returns `Sat`, and the loop then
+still pays a cold check later. Widening that is a cadence question and belongs to
+whoever owns `interleaved_check_due`.
 
 [ADR-2113]: adr-2113-uflia-the-instance-we-never-produce.md
 [ADR-2114]: adr-2114-aufdtlira-what-the-model-finder-cannot-represent.md
