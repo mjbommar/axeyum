@@ -199,6 +199,7 @@ qf_dt_differential_fuzz: unreviewed
 qf_dt_equality_differential_fuzz: unreviewed
 qf_dt_selector_differential_fuzz: unreviewed
 qf_lia_differential_fuzz: unreviewed
+qf_lra_cube_sequence_differential_fuzz: needs libz3 (`--features z3`), an ADR-0002 C/C++ leaf dependency that cannot be a default gate. WITHOUT the feature this file is `#![cfg(feature = "z3")]` and compiles to ZERO tests while exiting 0, so adding it to the hook's `--features full` block would register a gate that cannot fail -- the exact silent-inertness trap that left the corpus sweep inert in this same hook for 15 days. Run instead by `bench-results/lra-warm-basis-20260916/run-fuzzes.sh` in BOTH arms of the ADR-2125 lever, beside the other five z3 differential fuzzes, with a nonzero test count confirmed each time.
 qf_lra_differential_fuzz: unreviewed
 qf_nia_bounded_product_differential_fuzz: unreviewed
 qf_nia_divmod_const_differential_fuzz: unreviewed

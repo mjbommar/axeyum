@@ -2903,6 +2903,87 @@ SUITES["lra-implied-bound-propagation"] = (
 )
 
 
+# `lra-warm-cube-basis` -- ADR-2125 keeps the simplex tableau and basis across
+# the offline lazy-SMT loop's cubes, so the only thing that moves between rounds
+# is the set of ROW BOUNDS. Every defect this suite watches for is therefore a
+# defect of the RECONCILIATION, and the dangerous ones share a shape a verdict
+# comparison on a SINGLE query cannot see: the damage is state one cube leaves
+# behind for the next, so only a fixture that runs two cubes IN ORDER can tell
+# a warm engine from a broken one.
+#
+#   * NOT UN-TRAILING a bound the new cube does not want is the wrong-`unsat`
+#     shape this lever exists to be checked against: the engine then refutes a
+#     system carrying a constraint nobody asserted, while a cold solve of the
+#     same cube answers `sat`.
+#   * SKIPPING the re-assert of a row whose bound CHANGED is that defect from
+#     the other side -- the row keeps the previous cube's polarity.
+#   * Losing the POSITIONAL alignment between `active` and `live` is a wrong
+#     CORE rather than a wrong verdict: multiplier position `i` then names a
+#     different atom, and the blocking clause rules out satisfiable assignments.
+#   * Not refusing a cube that names an atom the theory cannot represent lets
+#     the engine decide a system strictly WEAKER than the cube.
+#
+# Filtered to `lra_online::tests` rather than to one test, so a kill count is a
+# claim about a population and not about a suite of one.
+# --------------------------------------------------------------------------
+
+SUITES["lra-warm-cube-basis"] = (
+    "crates/axeyum-solver/src/lra_online.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "lra_online::tests"),
+        "lra-warm-cube-basis",
+    ),
+    [
+        (
+            # SOUNDNESS, and the one ADR-2125's criterion 5 names: the bound the
+            # PREVIOUS cube imposed is never lifted, so the engine decides the new
+            # cube PLUS a constraint the search did not assert. On a satisfiable
+            # cube that is a wrong `unsat`.
+            "the bound un-trailing a cube that no longer wants a row",
+            "            if wanted[row].is_none() && self.row_bounded[row] {",
+            "            if false && wanted[row].is_none() && self.row_bounded[row] {",
+        ),
+        (
+            # SOUNDNESS, the mirror image: a row whose bound CHANGED keeps the
+            # previous cube's polarity, because the "already carries this bound"
+            # fast path is made unconditional.
+            "the re-assert of a row whose bound changed",
+            "            if self.row_bound[row] == Some((rel, rhs)) {"
+            "\n                continue;"
+            "\n            }",
+            "            if true {"
+            "\n                continue;"
+            "\n            }",
+        ),
+        (
+            # A wrong CORE rather than a wrong verdict. `live_indices` and
+            # `rows_to_core` read a Farkas refutation through the POSITIONAL
+            # alignment of `active` with `live`; reversing it makes multiplier
+            # position `i` name a different atom. No verdict on a single cube can
+            # see this.
+            "the positional alignment a Farkas core is read through",
+            "        self.active = next;\n        true\n    }",
+            "        next.reverse();\n        self.active = next;\n        true\n    }",
+        ),
+        (
+            # The refusal that keeps the engine from deciding a system strictly
+            # WEAKER than the cube. An `Unsupported` atom and an equality asserted
+            # FALSE both add no constraint, so without this the engine answers
+            # about a relaxation and the caller reads it as the cube.
+            "the refusal of a cube naming an atom the theory cannot represent",
+            "                (AtomKind::Equality { .. }, false) | (AtomKind::Unsupported, _) => {"
+            "\n                    self.live.clear();"
+            "\n                    while let Some(atom) = self.assigned_log.pop() {"
+            "\n                        self.assigned[atom] = None;"
+            "\n                    }"
+            "\n                    return CubeVerdict::Decline;"
+            "\n                }",
+            "                (AtomKind::Equality { .. }, false) | (AtomKind::Unsupported, _) => {}",
+        ),
+    ],
+)
+
+
 DEMO_SUBJECT = "scripts/tests/fixtures/mutation_demo/subject.py"
 DEMO_CONTROL = "scripts/tests/fixtures/mutation_demo/suite_tests.py"
 

@@ -1,0 +1,8 @@
+file	first	a_rc	a_ms	a_verdict	a_total_ms	b_rc	b_ms	b_verdict	b_total_ms	b_warm_build	b_warm_checks	b_warm_declines	b_warm_cold_restarts	a_cold_builds	b_cold_builds	status
+QF_LIA/nec-smt/large/bftpd_login/prp-50-49.smt2	A	0	25130	unknown		0	25129	unknown								unsat
+QF_LIA/nec-smt/large/bftpd_login/prp-56-47.smt2	B	0	23228	unknown	11411	0	23028	unknown	11432	off	0	0	0	0	0	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-02.smt2	A	0	107	sat	1	0	107	sat	0	off	0	0	0	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-14.smt2	B	0	107	sat	0	0	106	sat	0	off	0	0	0	0	0	sat
+QF_LIA/nec-smt/large/bftpd_login/prp-29-47.smt2	A	0	25127	unknown		0	25131	unknown								unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-12.smt2	B	0	107	sat	0	0	107	sat	0	off	0	0	0	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-10.smt2	A	0	107	sat	0	0	107	sat	0	off	0	0	0	0	0	sat

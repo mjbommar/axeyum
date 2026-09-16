@@ -332,6 +332,33 @@ enum Feasibility {
     Unknown,
 }
 
+/// What [`LraTheory::cube_check`] concluded about one TOTAL cube (ADR-2125).
+///
+/// Distinct from [`Feasibility`] in exactly one way, and it is the reason this
+/// type exists: `Feasibility::Unknown` is rendered as `Sat` by
+/// [`TheorySolver::final_check`], because the online driver's model replay is
+/// what gates its `sat` and answering `Unknown` there would be more conservative
+/// than that route has ever been. The offline lazy-SMT loop has the opposite
+/// need — an inconclusive warm check must FALL THROUGH to the cold decider that
+/// would otherwise have run, and a verdict it could have produced must not be
+/// lost to a shortcut. Folding the two into one token is what would lose it.
+pub(crate) enum CubeVerdict {
+    /// Jointly feasible, with a real witness over the theory's own symbols. The
+    /// caller replays it against the ORIGINAL assertions; that replay, not this
+    /// value, is what makes a `sat` trustworthy.
+    Feasible(Model),
+    /// Jointly infeasible. The payload is the conflict core — the distinct
+    /// asserted atom literals carrying a nonzero, self-verified Farkas
+    /// multiplier — which is the same shape, from the same certificate, that the
+    /// cold route's `conflict_core` produces.
+    Unsat(Vec<TheoryLit>),
+    /// No answer from the warm engine: arithmetic declined, the pivot budget ran
+    /// out, the cube named an atom this theory cannot represent, or the engine
+    /// does not see the whole system. **Never** a verdict, and the caller must
+    /// run the cold decider rather than treat it as either side.
+    Decline,
+}
+
 /// A parsed real atom: its normalized constraints for each polarity. An order
 /// atom (`<`, `<=`, `>`, `>=`) has exactly one constraint per polarity. An
 /// equality atom asserted *true* is two `<=` constraints; asserted *false* it is
@@ -375,6 +402,15 @@ struct SimplexEngine {
     /// row means the live system is not representable here and [`SimplexEngine::sync`]
     /// declines rather than silently dropping the earlier bound.
     row_bounded: Vec<bool>,
+    /// Per row: the bound currently imposed on it, or `None`.
+    ///
+    /// [`SimplexEngine::row_bounded`] answers "is this row bounded"; this answers
+    /// "with WHAT", which is the question [`SimplexEngine::sync_cube`] has to ask
+    /// to move only what changed. The two are redundant on purpose: `row_bounded`
+    /// is the O(1) invariant guard the prefix `sync` already relied on, and
+    /// splitting them keeps that guard exactly as it was rather than re-deriving
+    /// it from a richer structure a bug could make disagree with itself.
+    row_bound: Vec<Option<(simplex::Rel, Rational)>>,
     /// Rows [`SimplexEngine::sync`] has retracted over this engine's whole life.
     /// Diagnostic only (S4): with a persistent bound stack this stays far below
     /// `checks × rows`, which is what distinguishes a warm reconciliation from a
@@ -414,6 +450,7 @@ impl SimplexEngine {
                 .expect("non-empty above the shared prefix");
             self.inner.retract(row);
             self.row_bounded[row] = false;
+            self.row_bound[row] = None;
             self.sync_retractions += 1;
         }
         for c in &live[shared..] {
@@ -425,9 +462,100 @@ impl SimplexEngine {
             }
             self.inner.assert_bound(row, rel, rhs);
             self.row_bounded[row] = true;
+            self.row_bound[row] = Some((rel, rhs));
             self.active.push((row, rel, rhs));
             self.sync_assertions += 1;
         }
+        true
+    }
+
+    /// Installs a whole cube by MOVING ONLY THE BOUNDS THAT CHANGED (ADR-2125).
+    ///
+    /// # Why [`SimplexEngine::sync`] is the wrong shape for a cube
+    ///
+    /// `sync` reconciles by SHARED PREFIX, which is exactly right for a DPLL(T)
+    /// trail: the driver grows `live` by `assert` and truncates it by `pop`, so
+    /// the divergence is always a suffix and the prefix test finds it in O(1)
+    /// comparisons per shared entry.
+    ///
+    /// A cube is not a trail. Two consecutive cubes differ by a handful of
+    /// literals anywhere in the atom order, so the shared prefix ends at the
+    /// FIRST flip and everything after it is retracted and re-asserted. Measured
+    /// on `QF_LRA/sc/sc-39.base.cvc.smt2` at 24 s: **1,133,095 retractions and
+    /// 1,135,797 assertions over 632 checks** — about 1,793 bound moves per
+    /// check against 2,702 atoms, i.e. the whole cube, every round. The warm
+    /// basis removed 796 tableau builds and paid for them in reconciliation;
+    /// `lra_rounds` fell from 796 to 633 in the same budget.
+    ///
+    /// # What this does instead
+    ///
+    /// Compares the bound each row SHOULD carry against the one it DOES
+    /// ([`SimplexEngine::row_bound`]) and touches only the differences. That is
+    /// z3's shape — it patches `m_columns_with_changed_bounds` and nothing else
+    /// (`lar_solver.cpp:1280-1283`) — and with a measured 1.4 flipped literals
+    /// per round it turns a four-figure count of bound moves into a single-digit
+    /// one.
+    ///
+    /// `active` is still rebuilt POSITIONALLY against `live`, because that
+    /// alignment is what [`SimplexEngine::live_indices`] and
+    /// `LraTheory::rows_to_core` read a Farkas refutation through. Getting it
+    /// wrong makes multiplier position `i` name some other atom: a wrong CORE,
+    /// and so a blocking clause that rules out satisfiable assignments. The
+    /// alignment is a `Vec` rebuild and costs no tableau work; only the bound
+    /// moves are diffed.
+    ///
+    /// Returns `false`, having installed nothing new, if any live constraint has
+    /// no registered row or two of them want the same row — the caller must then
+    /// not trust a refutation, because the engine would not see the whole system.
+    fn sync_cube(&mut self, live: &[Constraint]) -> bool {
+        // Pass 1: what the cube wants, and the representability check. Done
+        // BEFORE any mutation so a refusal leaves the engine exactly as it was
+        // -- a half-installed cube would be a state no verdict describes.
+        let mut next: Vec<(usize, simplex::Rel, Rational)> = Vec::with_capacity(live.len());
+        for c in live {
+            let Some((row, rel, rhs)) = c.row else {
+                return false;
+            };
+            next.push((row, rel, rhs));
+        }
+        // A row holds ONE bound at a time. Two live constraints on one row is
+        // the same condition the prefix `sync` refuses through `row_bounded`,
+        // checked here over the target set rather than as it installs.
+        let mut wanted: Vec<Option<(simplex::Rel, Rational)>> = vec![None; self.row_bound.len()];
+        for &(row, rel, rhs) in &next {
+            if row >= wanted.len() || wanted[row].is_some() {
+                return false;
+            }
+            wanted[row] = Some((rel, rhs));
+        }
+
+        // Pass 2: retract what this cube does not want. Only rows the PREVIOUS
+        // cube bounded can need it, so this walks `active` rather than every row
+        // -- the difference is the cube's width against the tableau's.
+        for &(row, _, _) in &self.active {
+            if wanted[row].is_none() && self.row_bounded[row] {
+                self.inner.retract(row);
+                self.row_bounded[row] = false;
+                self.row_bound[row] = None;
+                self.sync_retractions += 1;
+            }
+        }
+
+        // Pass 3: assert what changed. A row already carrying the identical
+        // bound is skipped entirely: `assert_bound` would clamp its slack again
+        // and the clamp is where the engine's value repair happens, so a
+        // redundant one is not free.
+        for &(row, rel, rhs) in &next {
+            if self.row_bound[row] == Some((rel, rhs)) {
+                continue;
+            }
+            self.inner.assert_bound(row, rel, rhs);
+            self.row_bounded[row] = true;
+            self.row_bound[row] = Some((rel, rhs));
+            self.sync_assertions += 1;
+        }
+
+        self.active = next;
         true
     }
 
@@ -1172,6 +1300,25 @@ impl LraTheory {
         deadline: Option<Instant>,
         budget_bytes: usize,
     ) -> Result<Self, LraTheoryBuildStop> {
+        Self::try_new_with_budget_and_admission(
+            arena,
+            atom_terms,
+            deadline,
+            budget_bytes,
+            TableauAdmission::DenseCells,
+        )
+    }
+
+    /// The same construction, admitting the tableau on the currency the caller
+    /// names (ADR-2125). The online route keeps [`TableauAdmission::DenseCells`]
+    /// byte for byte; only the warm cube decider asks the other question.
+    pub(crate) fn try_new_with_budget_and_admission(
+        arena: &TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+        budget_bytes: usize,
+        admission: TableauAdmission,
+    ) -> Result<Self, LraTheoryBuildStop> {
         let mut builder = AtomBuilder::with_deadline(deadline, budget_bytes);
         let mut atoms = Vec::with_capacity(atom_terms.len());
         for &term in atom_terms {
@@ -1193,7 +1340,7 @@ impl LraTheory {
         // overflowed right-hand side) and the cheap bound check must keep
         // working when it does.
         let forms = assign_forms(&mut atoms);
-        let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
+        let simplex = build_simplex_engine(&mut atoms, nvars, admission).map(RefCell::new);
         // THIS COMMENT DESCRIBED A GUARD THAT IS NOT HERE, and said so in the
         // present tense for long enough that ADR-2111's lane read it as live
         // code and had to `git log -S` to find out otherwise. Corrected rather
@@ -1848,6 +1995,226 @@ impl LraTheory {
     #[must_use]
     pub(crate) fn real_model(&self) -> Option<Model> {
         self.model(&self.vars)
+    }
+
+    /// Decides ONE total cube on the **warm** engine, reusing the tableau and the
+    /// basis this instance already holds (ADR-2125).
+    ///
+    /// # What is warm and what is not
+    ///
+    /// The tableau structure — one row per constraint template, built once in
+    /// [`Self::try_new_with_budget`] — is **never** rebuilt here, and the basis
+    /// [`simplex::Incremental::check`] left behind on the previous cube is the
+    /// basis this one resumes from. What moves is the set of ROW BOUNDS:
+    /// [`SimplexEngine::sync`] retracts the bounds that diverge from the new cube
+    /// and asserts the rest, which is Dutertre–de Moura's `assert`/`check` split
+    /// and is what every reference does across a SAT backjump (z3 trails bounds
+    /// only, `lar_core_solver::push` saving nothing but the strategy scalar and
+    /// the column types, `lar_core_solver.h:123-130`; cvc5 gives its bound
+    /// journal the SAT context and default-constructs the tableau without one,
+    /// `theory_arith_private.cpp:117,122`).
+    ///
+    /// The offline lazy-SMT loop this serves previously built a fresh `Collector`
+    /// and a fresh tableau for every cube — ADR-2111 measured
+    /// `cube_simplex_calls=651` with `cube_matrices=0` on one file, 651 solves
+    /// from scratch, one per SAT model.
+    ///
+    /// # Why the cube is installed WHOLE rather than by difference
+    ///
+    /// Two consecutive cubes differ by a handful of literals (ADR-2111 measured
+    /// 1.1 to 4.2 flips against 265–1,736 atoms), so a difference-based install
+    /// is tempting. It is not taken, because [`Self::live`] is the index space
+    /// [`Self::rows_to_core`] reads a Farkas refutation through: a `live` list
+    /// that was not rebuilt in a known order would make multiplier position `i`
+    /// mean something different from atom `i`, which is a wrong CORE — a
+    /// blocking clause ruling out satisfiable assignments — rather than a slow
+    /// one. Rebuilding `live` is a `Vec` of small values and touches no tableau;
+    /// `sync` then does the difference over the ROWS, where the cost actually is,
+    /// and its shared-prefix test compares the whole bound rather than the row
+    /// index, which is the guard `push_assert_pop_restores_feasibility` was
+    /// written for.
+    ///
+    /// # Refusals, and why each is a `Decline` rather than a verdict
+    ///
+    /// * **No warm engine.** `simplex` is `None` when the tableau declined to
+    ///   exist; the Fourier–Motzkin fallback behind it is a DIFFERENT engine, not
+    ///   a cold version of this one, so answering from it would make an A/B of
+    ///   this lever an A/B of two engines.
+    /// * **An atom this theory does not represent** — [`AtomKind::Unsupported`],
+    ///   or an equality asserted FALSE, which is a disjunction. Asserting neither
+    ///   adds no constraint, so the system the engine would decide is strictly
+    ///   WEAKER than the cube. A refutation of a weaker system is still sound,
+    ///   but a `Feasible` on one is not a witness for the cube, and the two
+    ///   cannot be told apart at the call site. Refused whole.
+    ///
+    /// Every other outcome is the engine's own, and `Unsat` carries only rows
+    /// whose Farkas multiplier was self-verified before this function saw them.
+    pub(crate) fn cube_check(&mut self, truths: &[bool]) -> CubeVerdict {
+        if self.simplex.is_none() || truths.len() != self.atoms.len() {
+            return CubeVerdict::Decline;
+        }
+        // Reset to a level-0 state. `assigned_log` is the authority for which
+        // atoms carry a value, so it is drained rather than the whole `assigned`
+        // vector being cleared: at 1,839 atoms the difference is the length of
+        // the previous cube against the atom count, every round.
+        while let Some(atom) = self.assigned_log.pop() {
+            self.assigned[atom] = None;
+        }
+        self.live.clear();
+        self.trail.clear();
+
+        for (index, &value) in truths.iter().enumerate() {
+            match (&self.atoms[index], value) {
+                (AtomKind::Order { when_true, .. }, true) => {
+                    let c = tag(when_true, index);
+                    self.live.push(c);
+                }
+                (AtomKind::Order { when_false, .. }, false) => {
+                    let c = tag(when_false, index);
+                    self.live.push(c);
+                }
+                (AtomKind::Equality { when_true }, true) => {
+                    self.live.push(tag(&when_true[0], index));
+                    self.live.push(tag(&when_true[1], index));
+                }
+                // The two shapes that add NOTHING, and so would leave the engine
+                // deciding a weaker system than the cube. See the doc above.
+                (AtomKind::Equality { .. }, false) | (AtomKind::Unsupported, _) => {
+                    self.live.clear();
+                    while let Some(atom) = self.assigned_log.pop() {
+                        self.assigned[atom] = None;
+                    }
+                    return CubeVerdict::Decline;
+                }
+            }
+            self.assigned[index] = Some(value);
+            self.assigned_log.push(index);
+        }
+
+        match self.cube_feasibility() {
+            Feasibility::Sat => self
+                .real_model()
+                .map_or(CubeVerdict::Decline, CubeVerdict::Feasible),
+            Feasibility::Unsat(rows) => {
+                let core = self.rows_to_core(&rows);
+                if core.is_empty() {
+                    // `rows_to_core` widens to the whole asserted set rather than
+                    // returning nothing, so an empty core here means there was
+                    // nothing asserted at all — a cube of zero representable
+                    // atoms, which is not a refutation of anything.
+                    return CubeVerdict::Decline;
+                }
+                CubeVerdict::Unsat(core)
+            }
+            Feasibility::Unknown => CubeVerdict::Decline,
+        }
+    }
+
+    /// The theory the OFFLINE lazy-SMT loop drives its cubes on (ADR-2125), or
+    /// the screen that refused it.
+    ///
+    /// Two things differ from [`Self::try_new_with_deadline`], and both are
+    /// forced by a measurement rather than chosen:
+    ///
+    /// * **The tableau is admitted on NONZEROS.** See
+    ///   [`simplex::Incremental::with_nonzero_admission`]: the dense-cell cap
+    ///   refuses a 188 KB tableau on `sc-39.base.cvc.smt2` while the cold path
+    ///   builds that same system 839 times uncapped, and with it the ADR-2125
+    ///   lever measured `warm_cube_checks=0` in BOTH arms.
+    /// * **The atom budget is the same.** It is NOT raised. [ADR-2045] raised
+    ///   exactly this budget on exactly this population and got **21 rows
+    ///   reaching the engine, 0 newly decided, and five NEW aborts**; repeating
+    ///   that inside a lever whose question is a warm basis would answer a
+    ///   different question with the same number.
+    ///
+    /// The error is returned rather than swallowed so the caller can record
+    /// WHICH screen refused. A lever that declines silently is indistinguishable
+    /// from one that ran and found nothing, which is the reading [ADR-2111] had
+    /// to publish about its own inert arm.
+    pub(crate) fn try_new_for_cubes(
+        arena: &TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Result<Self, LraTheoryBuildStop> {
+        Self::try_new_with_budget_and_admission(
+            arena,
+            atom_terms,
+            deadline,
+            DEFAULT_ONLINE_LRA_BUDGET_BYTES,
+            TableauAdmission::Nonzeros(simplex::MAX_WARM_CUBE_NONZEROS),
+        )
+    }
+
+    /// [`Self::feasibility`] over a whole CUBE, reconciled by
+    /// [`SimplexEngine::sync_cube`] rather than by shared prefix (ADR-2125).
+    ///
+    /// Identical to `feasibility` in every other respect, including the refusal
+    /// to trust a refutation from an engine that does not see the whole live
+    /// system. It does NOT fall back to Fourier–Motzkin when the warm engine is
+    /// absent: `cube_check` has already refused that case, because deciding on a
+    /// different engine would make an A/B of this lever an A/B of two engines.
+    fn cube_feasibility(&self) -> Feasibility {
+        if self.live.is_empty() {
+            return Feasibility::Sat;
+        }
+        let Some(cell) = &self.simplex else {
+            return Feasibility::Unknown;
+        };
+        let mut engine = cell.borrow_mut();
+        if !engine.sync_cube(&self.live) {
+            return Feasibility::Unknown;
+        }
+        match engine.inner.check(self.deadline) {
+            simplex::Status::Feasible => Feasibility::Sat,
+            simplex::Status::Infeasible(rows) => Feasibility::Unsat(engine.live_indices(&rows)),
+            simplex::Status::Unknown => Feasibility::Unknown,
+        }
+    }
+
+    /// Whether this instance decides on the warm simplex rather than the
+    /// Fourier–Motzkin fallback (ADR-2125).
+    ///
+    /// Read at the offline loop's construction site so a warm cube decider that
+    /// silently became a Fourier–Motzkin decider refuses to exist rather than
+    /// answering from an engine the lever does not name.
+    #[must_use]
+    pub(crate) fn has_warm_engine(&self) -> bool {
+        self.simplex.is_some()
+    }
+
+    /// Whether the warm engine's tableau invariant holds right now (ADR-2125);
+    /// see [`simplex::Incremental::tableau_invariant_holds`] for the three
+    /// answers and why `None` is not `true`.
+    ///
+    /// `None` also when there is no warm engine at all, which a caller must
+    /// distinguish -- [`Self::has_warm_engine`] is the question that separates
+    /// the two.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn tableau_invariant_holds(&self) -> Option<bool> {
+        self.simplex
+            .as_ref()?
+            .borrow()
+            .inner
+            .tableau_invariant_holds()
+    }
+
+    /// Rows the warm engine has retracted and (re-)asserted over its whole life,
+    /// and the checks it has run (ADR-2125). Diagnostic only.
+    ///
+    /// `None` when there is no warm engine. Reported because "the tableau was
+    /// never rebuilt" is otherwise not observable from outside this module: a
+    /// `cold_restarts` that stays 0 across thousands of checks is what
+    /// distinguishes a warm reconciliation from a rebuild wearing its name.
+    #[must_use]
+    pub(crate) fn warm_engine_churn(&self) -> Option<(u64, u64, u64)> {
+        let cell = self.simplex.as_ref()?;
+        let engine = cell.borrow();
+        Some((
+            engine.sync_retractions,
+            engine.sync_assertions,
+            engine.inner.cold_restarts(),
+        ))
     }
 
     /// The engine counters behind [`TheorySolver::engine_counters`] (S4).
@@ -2527,7 +2894,29 @@ fn assign_forms(atoms: &mut [AtomKind]) -> usize {
 /// Returns `None` — leaving the theory on Fourier–Motzkin, unchanged — when a
 /// template's right-hand side overflows `i128` or the dense tableau would exceed
 /// [`simplex::MAX_TABLEAU_CELLS`]. Both declines are structural and deterministic.
-fn build_simplex_engine(atoms: &mut [AtomKind], nvars: usize) -> Option<SimplexEngine> {
+/// Which structural ceiling [`build_simplex_engine`] admits the tableau by
+/// (ADR-2125).
+///
+/// Two currencies for one structure, and they disagree by three orders of
+/// magnitude on a real file — see
+/// [`simplex::Incremental::with_nonzero_admission`] for the measurement. An
+/// enum rather than an `Option<usize>` so a call site states which question it
+/// is asking instead of encoding it in the absence of a number.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum TableauAdmission {
+    /// `m × (nvars+m)` against `simplex::MAX_TABLEAU_CELLS`. What the ONLINE
+    /// engine uses, and what it keeps using: this lane does not move it.
+    DenseCells,
+    /// Stored nonzeros against a cap. What the ADR-2125 warm cube decider uses,
+    /// because that is what the sparse tableau costs.
+    Nonzeros(usize),
+}
+
+fn build_simplex_engine(
+    atoms: &mut [AtomKind],
+    nvars: usize,
+    admission: TableauAdmission,
+) -> Option<SimplexEngine> {
     /// Opens a fresh row for `c` and records the **upper** bound asserting it
     /// imposes: `expr {<,≤} 0` with `expr = Σ aⱼ·xⱼ + k` is the row `Σ aⱼ·xⱼ {<,≤} −k`.
     fn open_row(
@@ -2596,14 +2985,21 @@ fn build_simplex_engine(atoms: &mut [AtomKind], nvars: usize) -> Option<SimplexE
     if rows_sparse.is_empty() {
         return None;
     }
-    let inner = simplex::Incremental::new(nvars, rows_sparse)?;
+    let inner = match admission {
+        TableauAdmission::DenseCells => simplex::Incremental::new(nvars, rows_sparse)?,
+        TableauAdmission::Nonzeros(max) => {
+            simplex::Incremental::with_nonzero_admission(nvars, rows_sparse, max)?
+        }
+    };
     debug_assert_eq!(inner.rows(), row_atom.len());
     let row_bounded = vec![false; row_atom.len()];
+    let row_bound = vec![None; row_atom.len()];
     Some(SimplexEngine {
         inner,
         row_atom,
         active: Vec::new(),
         row_bounded,
+        row_bound,
         sync_retractions: 0,
         sync_assertions: 0,
     })
@@ -5357,7 +5753,8 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
     let nvars = builder.vars.len();
     let mut atoms = atoms;
     let forms = assign_forms(&mut atoms);
-    let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
+    let simplex =
+        build_simplex_engine(&mut atoms, nvars, TableauAdmission::DenseCells).map(RefCell::new);
     // Order-preserving scan filter for `propagate_bounds`; see the field docs.
     let propagatable = propagatable_atoms(&atoms, forms);
     let implied = implied_state(nvars, &atoms);
@@ -6109,6 +6506,398 @@ mod tests {
         assert_eq!(verdict, CheckResult::Unsat, "explained core must be unsat");
     }
 
+    /// One `LraTheory` driven over a SEQUENCE of cubes must, at every step,
+    /// agree with a theory that saw only that cube — and must keep the tableau
+    /// invariant across every retract and re-assert (ADR-2125).
+    ///
+    /// This is the fixture the warm basis lives or dies by, and it has two
+    /// halves because the two failures are independent:
+    ///
+    /// * **The verdict.** `warm` is reused across the whole sequence; `cold` is
+    ///   rebuilt for each cube, so its basis is pristine and its tableau is
+    ///   freshly constructed. That is exactly the comparison "does keeping the
+    ///   basis change the answer" -- and it is run over cubes that FLIP
+    ///   polarities back and forth, so the same row takes an upper bound, then a
+    ///   lower one, then the upper one again. ADR-2111 records the bug this
+    ///   shape catches: comparing row INDICES alone in `SimplexEngine::sync` left
+    ///   the old bound in place, a stale-bound wrong `unsat`.
+    /// * **The invariant.** A verdict comparison alone cannot see a basis that is
+    ///   corrupt but still happens to pivot to the right answer on these inputs.
+    ///   `tableau_invariant_holds` is checked after EVERY cube, and `Some(true)`
+    ///   is required -- `None` (the check's own arithmetic declined) is a
+    ///   failure here, not a pass, because a verifier that goes quiet under
+    ///   extreme numbers passes hardest where it is needed most.
+    ///
+    /// The engine must also report `cold_restarts == 0` for the whole sequence:
+    /// a warm engine that quietly rebuilds gives identical verdicts, identical
+    /// invariants and identical retraction counts, and differs only in the clock
+    /// -- so nothing else in this test could see it.
+    #[test]
+    fn a_warm_cube_sequence_decides_exactly_what_a_cold_one_does_and_keeps_the_invariant() {
+        // Three variables, five order atoms over them, chosen so the cube space
+        // contains both feasible and infeasible corners: a cube sequence whose
+        // every member is feasible would exercise no refutation, and one whose
+        // every member is infeasible would never materialize a witness.
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let z = rvar(&mut arena, "z");
+        let zero = rconst(&mut arena, 0);
+        let one = rconst(&mut arena, 1);
+        let two = rconst(&mut arena, 2);
+        let xy = arena.real_add(x, y).expect("x+y");
+        let yz = arena.real_sub(y, z).expect("y-z");
+        let atoms = vec![
+            arena.real_le(x, one).expect("x<=1"),
+            arena.real_le(y, two).expect("y<=2"),
+            arena.real_le(xy, zero).expect("x+y<=0"),
+            arena.real_lt(z, zero).expect("z<0"),
+            arena.real_le(yz, one).expect("y-z<=1"),
+        ];
+
+        let mut warm = LraTheory::new(&arena, &atoms);
+        assert!(
+            warm.has_warm_engine(),
+            "this system is small enough that the warm tableau must exist; \
+             without it the comparison below is between two Fourier-Motzkin \
+             runs and says nothing about a basis"
+        );
+
+        // Every cube of five atoms. Exhaustive rather than sampled: 32 is small,
+        // and a sampled sequence could miss the polarity flip that matters.
+        let mut feasible = 0usize;
+        let mut infeasible = 0usize;
+        let mut declined = 0usize;
+        for mask in 0u32..32 {
+            let truths: Vec<bool> = (0..5).map(|i| mask & (1 << i) != 0).collect();
+
+            let mut cold = LraTheory::new(&arena, &atoms);
+            let cold_verdict = cold.cube_check(&truths);
+            let warm_verdict = warm.cube_check(&truths);
+
+            let label = |v: &CubeVerdict| match v {
+                CubeVerdict::Feasible(_) => "feasible",
+                CubeVerdict::Unsat(_) => "unsat",
+                CubeVerdict::Decline => "decline",
+            };
+            assert_eq!(
+                label(&warm_verdict),
+                label(&cold_verdict),
+                "cube {truths:?}: the warm engine disagreed with a cold solve of \
+                 the same system -- a basis carried across a pop decided \
+                 something a pristine one does not"
+            );
+
+            assert_eq!(
+                warm.tableau_invariant_holds(),
+                Some(true),
+                "cube {truths:?}: the tableau invariant does not hold after the \
+                 bound moves for this cube; a basic variable's value no longer \
+                 equals its row, and pivoting from there is unsound rather than \
+                 slow"
+            );
+
+            match warm_verdict {
+                CubeVerdict::Feasible(_) => feasible += 1,
+                CubeVerdict::Unsat(_) => infeasible += 1,
+                CubeVerdict::Decline => declined += 1,
+            }
+        }
+
+        // The population, published rather than implied. A run in which every
+        // cube declined would satisfy every assertion above and establish
+        // nothing whatever about a warm basis.
+        assert!(
+            feasible > 0 && infeasible > 0,
+            "the cube space must contain BOTH a feasible and an infeasible \
+             corner or this fixture compares two engines on one kind of \
+             question: feasible={feasible} unsat={infeasible} decline={declined}"
+        );
+
+        let (retractions, assertions, cold_restarts) =
+            warm.warm_engine_churn().expect("warm engine exists");
+        assert_eq!(
+            cold_restarts, 0,
+            "the engine restarted from a pristine basis {cold_restarts} times; \
+             a warm basis that is being rebuilt gives identical verdicts and \
+             identical invariants, so this counter is the only thing in this \
+             test that can see it"
+        );
+        // The reconciliation must have RUN, and it must have moved only what
+        // changed. The second half is the property `sync_cube` exists for and it
+        // is asserted as a BOUND against the strawman rather than as a pinned
+        // number, so it discriminates without flaking on a generator change.
+        //
+        // `retractions` is deliberately NOT required to be positive, and the
+        // reason is a finding rather than a concession: a TOTAL cube over order
+        // atoms bounds every row -- `when_true` takes the slack's upper bound and
+        // `when_false` its lower, on the same row -- so a row is never left
+        // unbounded and nothing is ever retracted. Requiring a retraction here
+        // would be requiring the engine to do work the cube does not imply, and
+        // the first version of this fixture did exactly that: it was written
+        // against the prefix `sync`, which retracts the whole suffix after the
+        // first flip, and it failed the moment the diff stopped doing that.
+        let cubes = 32usize;
+        let atoms_n = atoms.len();
+        assert!(
+            assertions > 0,
+            "the sequence moved no bounds at all -- the cubes were installed once \
+             and the reconciliation this fixture exists to check never ran"
+        );
+        assert!(
+            usize::try_from(assertions).is_ok_and(|n| n < cubes * atoms_n),
+            "the reconciliation re-asserted {assertions} bounds over {cubes} cubes \
+             of {atoms_n} atoms; at or above {} it is re-installing the WHOLE cube \
+             every round, which is what `sync_cube` replaced -- the warm basis \
+             would then be removing a tableau build and paying for it in bound \
+             moves (measured on `sc-39.base.cvc.smt2` as 1,133,095 retractions \
+             over 632 checks)",
+            cubes * atoms_n
+        );
+        let _ = retractions;
+    }
+
+    /// `sync_cube` must RETRACT a row the new system no longer bounds, and a
+    /// system that was infeasible with it must come back feasible without it
+    /// (ADR-2125).
+    ///
+    /// # Why this drives `sync_cube` directly instead of going through `cube_check`
+    ///
+    /// The mutation run found the retraction pass SURVIVING: all 41 tests stayed
+    /// green with it disabled. That is a real finding about the CALLER, not about
+    /// the guard. Measured with a probe over every order-atom shape in this
+    /// module -- `le`, `lt`, `ge`, `gt`, and a scaled `2x <= 1` -- each gives its
+    /// two polarities ONE shared row (ADR-1701's 4x cut: `when_false` is the
+    /// exact negation of `when_true`, so the same slack takes an upper bound for
+    /// one and a lower bound for the other), and an equality gives two rows that
+    /// are both installed whenever it is asserted true. `cube_check` declines any
+    /// cube naming an equality asserted FALSE. So **every cube `cube_check`
+    /// accepts wants exactly the same row set**, and nothing is ever retracted.
+    ///
+    /// A guard that cannot fire, shaped like a soundness filter, is worse than no
+    /// filter -- it is a line a reader counts as protection. The two honest
+    /// responses are to delete it or to test it at its own contract, and deleting
+    /// it would be wrong: `sync_cube` is a function with a contract of its own,
+    /// and the row set stops being invariant the moment a normalizer change makes
+    /// `negates` false for some atom. So this test drives the contract.
+    #[test]
+    fn sync_cube_retracts_a_row_the_new_system_no_longer_bounds() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let zero = rconst(&mut arena, 0);
+        let three = rconst(&mut arena, 3);
+        // `x >= 3` and `x <= 0` are jointly infeasible and separately feasible,
+        // so the retraction is the ONLY difference between the two verdicts.
+        let atoms = vec![
+            arena.real_ge(x, three).expect("x>=3"),
+            arena.real_le(x, zero).expect("x<=0"),
+        ];
+        let mut theory = LraTheory::new(&arena, &atoms);
+        assert!(theory.has_warm_engine(), "the warm tableau must exist here");
+
+        // Both true: infeasible. This is what leaves both rows BOUNDED.
+        assert!(
+            matches!(theory.cube_check(&[true, true]), CubeVerdict::Unsat(_)),
+            "x>=3 and x<=0 is infeasible; without this the second half has no \
+             bound to retract and the test is vacuous"
+        );
+
+        // Now the contract: the same engine, a system naming only the FIRST
+        // constraint. The second row must be retracted, and the verdict must flip.
+        let live: Vec<Constraint> = theory.live[..1].to_vec();
+        let dropped = theory.live[1].row.expect("registered row").0;
+        let kept = live[0].row.expect("registered row").0;
+        assert_ne!(
+            dropped, kept,
+            "the two atoms must ride DIFFERENT rows or there is nothing to retract"
+        );
+
+        let (bounded_after, verdict) = {
+            let cell = theory.simplex.as_ref().expect("warm engine");
+            let mut engine = cell.borrow_mut();
+            assert!(
+                engine.row_bounded[dropped],
+                "the previous cube must have left this row bounded"
+            );
+            assert!(
+                engine.sync_cube(&live),
+                "the one-row system is representable"
+            );
+            let bounded = engine.row_bounded[dropped];
+            (bounded, engine.inner.check(None))
+        };
+
+        assert!(
+            !bounded_after,
+            "row {dropped} still carries the bound the previous cube imposed; the \
+             engine is deciding a system with a constraint nobody asserted, which \
+             is a wrong `unsat` and not a slow one"
+        );
+        assert!(
+            matches!(verdict, simplex::Status::Feasible),
+            "x>=3 alone is satisfiable and the engine refused it -- the stale \
+             bound from the previous system was not lifted"
+        );
+        assert_eq!(
+            theory.tableau_invariant_holds(),
+            Some(true),
+            "the tableau invariant must survive the retraction"
+        );
+    }
+
+    /// A cube naming an atom this theory cannot represent must be refused WHOLE
+    /// (ADR-2125).
+    ///
+    /// The mutation run found this refusal SURVIVING, because no other fixture in
+    /// the module hands `cube_check` an atom outside its language. The defect it
+    /// guards against is quiet by construction: `Unsupported` and an equality
+    /// asserted FALSE both add NO constraint, so without the refusal the engine
+    /// decides a system strictly WEAKER than the cube -- and a `Feasible` on a
+    /// relaxation is not a witness for the cube, while the call site reads it as
+    /// one. No verdict comparison can see that, because the verdict is
+    /// `Feasible` either way and only the MEANING changes.
+    ///
+    /// Both shapes are covered, and the arm that must still WORK is checked as
+    /// well, so a refusal of everything would fail too.
+    #[test]
+    fn a_cube_naming_an_atom_the_theory_cannot_represent_is_refused_whole() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let one = rconst(&mut arena, 1);
+        let bv = arena.declare("b", Sort::BitVec(8)).expect("declare bv");
+        let bvar = arena.var(bv);
+        let k = arena.bv_const(8, 5).expect("bv const");
+        let atoms = vec![
+            arena.real_le(x, one).expect("x<=1"),
+            arena.eq(bvar, k).expect("b=5"),
+            arena.eq(y, one).expect("y=1"),
+        ];
+        let mut theory = LraTheory::new(&arena, &atoms);
+        assert!(theory.has_warm_engine(), "the warm tableau must exist here");
+        assert!(
+            !theory.tracks(1),
+            "the BV equality must register as Unsupported or this fixture is \
+             testing the wrong thing"
+        );
+
+        // The BV atom, at BOTH polarities: it adds nothing either way.
+        for value in [true, false] {
+            assert!(
+                matches!(
+                    theory.cube_check(&[true, value, true]),
+                    CubeVerdict::Decline
+                ),
+                "a cube naming an unrepresentable atom at polarity {value} was \
+                 ANSWERED; the engine decided a system weaker than the cube"
+            );
+        }
+
+        // The equality asserted FALSE is a disjunction and is refused for the
+        // same reason -- a different shape reaching the same arm.
+        assert!(
+            matches!(
+                theory.cube_check(&[true, true, false]),
+                CubeVerdict::Decline
+            ),
+            "an equality asserted FALSE is a disjunction this conjunctive theory \
+             cannot represent, and a cube naming one must be refused"
+        );
+
+        // The control, without which a refusal of EVERYTHING would pass: the
+        // cube that names only representable atoms must still be answered.
+        let mut ok = LraTheory::new(&arena, &atoms[..1]);
+        assert!(
+            matches!(ok.cube_check(&[true]), CubeVerdict::Feasible(_)),
+            "x<=1 alone is satisfiable and must still be decided; a fixture whose \
+             every arm declines cannot tell a refusal from a broken engine"
+        );
+    }
+
+    /// A satisfiable system that a STALE basic-variable assignment, left over
+    /// from a bound the previous cube imposed and this one does not, would
+    /// report `unsat` (ADR-2125).
+    ///
+    /// The soundness-negative fixture, and it is a PAIR with the satisfiable arm
+    /// SECOND for once — deliberately, because here the infeasible arm is what
+    /// creates the stale state the satisfiable arm has to survive:
+    ///
+    /// 1. Cube A asserts `x >= 3` together with `x + y <= 1` and `y >= 0`, which
+    ///    is infeasible. Deciding it drives `x`'s value up and leaves the basis
+    ///    and the assignment where the refutation left them.
+    /// 2. Cube B keeps `x + y <= 1` and `y >= 0` and takes the OPPOSITE polarity
+    ///    on the first atom (`x < 3`), which is satisfiable (`x = 0, y = 0`).
+    ///
+    /// If the bound from cube A is not un-trailed — or if the basic variable
+    /// carrying it keeps the value the refutation left — the engine refutes a
+    /// satisfiable system: a wrong `unsat`, the one verdict this route may never
+    /// produce. The witness is checked, not just the verdict token: a `Feasible`
+    /// with a model that does not satisfy cube B would be the same defect
+    /// wearing the right answer.
+    #[test]
+    fn a_stale_bound_from_a_popped_cube_would_refute_a_satisfiable_one() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let zero = rconst(&mut arena, 0);
+        let one = rconst(&mut arena, 1);
+        let three = rconst(&mut arena, 3);
+        let xy = arena.real_add(x, y).expect("x+y");
+        let atoms = vec![
+            arena.real_ge(x, three).expect("x>=3"),
+            arena.real_le(xy, one).expect("x+y<=1"),
+            arena.real_ge(y, zero).expect("y>=0"),
+        ];
+
+        let mut theory = LraTheory::new(&arena, &atoms);
+        assert!(theory.has_warm_engine(), "the warm tableau must exist here");
+
+        // Arm 1: infeasible, and it is what leaves the stale state behind.
+        let a = theory.cube_check(&[true, true, true]);
+        assert!(
+            matches!(a, CubeVerdict::Unsat(_)),
+            "x>=3, x+y<=1, y>=0 is infeasible; without this refutation the \
+             second arm has no stale bound to survive and the fixture is vacuous"
+        );
+
+        // Arm 2: the SAME two other atoms, the first one flipped. Satisfiable.
+        let b = theory.cube_check(&[false, true, true]);
+        let CubeVerdict::Feasible(model) = b else {
+            panic!(
+                "x<3, x+y<=1, y>=0 is satisfiable (x=0, y=0) and the warm engine \
+                 refused it -- the bound `x>=3` from the previous cube was not \
+                 un-trailed, which is a wrong `unsat`"
+            );
+        };
+
+        // The witness, not merely the token. A `Feasible` whose model violates
+        // the cube is the same defect with the right label on it, and no verdict
+        // comparison anywhere in this suite could tell the two apart. Checked by
+        // EVALUATING the cube's literals under the model -- the same replay the
+        // production path gates its `sat` on -- rather than by reading the two
+        // coordinates out and re-deriving the inequalities here, which would be
+        // this test agreeing with its own arithmetic.
+        let mut assignment = axeyum_ir::Assignment::new();
+        for (symbol, value) in model.iter() {
+            assignment.set(symbol, value);
+        }
+        let mut checked = 0usize;
+        for (index, truth) in [(0usize, false), (1, true), (2, true)] {
+            let literal = if truth {
+                atoms[index]
+            } else {
+                arena.not(atoms[index]).expect("negate")
+            };
+            assert_eq!(
+                axeyum_ir::eval(&arena, literal, &assignment).ok(),
+                Some(Value::Bool(true)),
+                "the witness does not satisfy cube literal {index} at polarity                  {truth}; a `Feasible` whose model violates its own cube is the                  same defect as a wrong `unsat`, wearing the right label"
+            );
+            checked += 1;
+        }
+        assert_eq!(checked, 3, "every cube literal must be replayed, not some");
+    }
+
     #[test]
     fn push_assert_pop_restores_feasibility() {
         // Start feasible (x >= 0). Push, add x <= -1 (infeasible), pop, feasible
@@ -6792,7 +7581,8 @@ mod tests {
         let nvars = builder.vars.len();
         let mut atoms = atoms;
         let forms = assign_forms(&mut atoms);
-        let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
+        let simplex =
+            build_simplex_engine(&mut atoms, nvars, TableauAdmission::DenseCells).map(RefCell::new);
         // Order-preserving scan filter for `propagate_bounds`; see the field docs.
         let propagatable = propagatable_atoms(&atoms, forms);
         let implied = implied_state(nvars, &atoms);

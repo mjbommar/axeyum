@@ -1,0 +1,30 @@
+=== QF_LRA pinned ===
+  part:   53 rows from ab.QF_LRA.00.tsv
+  part:   47 rows from ab.QF_LRA_REST.00.tsv
+rows 100   A 52   B 51   net -1   gain 0   LOSS 1   FLIP 0   A rc!=0 0   B rc!=0 0   cmp 97   DIS 0
+  LOSS: QF_LRA/latendresse/ecoliMILPglycerolYices3-50000.smt2  A=sat B=unknown
+  arm B `warm_cube_build`: built=37  none=12  off=51   [in arm B, `off` = the LINEAR lazy-SMT loop was never entered]
+  over the 37 rows where the decider was built: 18517 cubes answered, 34 declined; from-scratch tableaux 15618 -> 0
+  warm_cube_cold_restarts total: 0
+  cost over the 51 rows both decide: A 24857 ms   B 22567 ms   -9.2 %   median A 107 ms  B 107 ms
+
+=== QF_LRA held-out ===
+  part:   54 rows from ab.QF_LRA_HELD.01.tsv
+  part:   41 rows from ab.QF_LRA_HELD_REST.01.tsv
+rows 95   A 49   B 49   net +0   gain 1   LOSS 1   FLIP 0   A rc!=0 0   B rc!=0 0   cmp 96   DIS 0
+  GAIN: QF_LRA/sc/sc-14.induction.cvc.smt2  A=unknown B=sat
+  LOSS: QF_LRA/uart/uart-8.induction.cvc.smt2  A=sat B=unknown
+  arm B `warm_cube_build`: built=34  none=6  off=55   [in arm B, `off` = the LINEAR lazy-SMT loop was never entered]
+  over the 34 rows where the decider was built: 27933 cubes answered, 28 declined; from-scratch tableaux 25298 -> 0
+  warm_cube_cold_restarts total: 0
+  cost over the 48 rows both decide: A 18437 ms   B 18336 ms   -0.5 %   median A 107.0 ms  B 107.0 ms
+
+=== QF_LIA (PARTIAL, 8 of 200) ===
+rows 7   A 4   B 4   net +0   gain 0   LOSS 0   FLIP 0   A rc!=0 0   B rc!=0 0   cmp 8   DIS 0
+  arm B `warm_cube_build`: none=2  off=5   [in arm B, `off` = the LINEAR lazy-SMT loop was never entered]
+  cost over the 4 rows both decide: A 428 ms   B 427 ms   -0.2 %   median A 107.0 ms  B 107.0 ms
+
+QF_UFLRA: DID NOT RUN (0 rows) -- not the same statement as zero movement
+QF_UFLIA: DID NOT RUN (0 rows) -- not the same statement as zero movement
+QF_IDL:   DID NOT RUN (0 rows) -- not the same statement as zero movement
+QF_RDL:   DID NOT RUN (0 rows) -- not the same statement as zero movement

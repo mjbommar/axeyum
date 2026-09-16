@@ -1,0 +1,255 @@
+
+running 12 tests
+test artifact_directory_override_is_explicit_and_absolute ... ok
+test bv_reduction_falloff_is_the_lever ... bv_reduction lever check: N=6 (depth 36) → reduction-ON unsat / reduction-OFF(capped) unknown
+ok
+test calibration_frames_the_measurement ... CALIBRATION median 146.1 ms (reference 127.0 ms, scale 1.15x) on server5 / 2 cpus / AMD Ryzen 7 7840HS w/ Radeon 780M Graphics, load 0.08
+ok
+test every_generated_instance_self_checks ... ok
+test frontier_bv_reduction ...   retry [bv_reduction N=38]: 3 attempts, final timeout at 5619.0 ms (load 0.79)
+  retry [bv_reduction N=39]: 3 attempts, final timeout at 5619.0 ms (load 0.91)
+  retry [bv_reduction N=40]: 3 attempts, final timeout at 5619.0 ms (load 1.16)
+--- frontier curve: bv_reduction ---
+   N    decided     status    solve_ms
+   1        yes      unsat         0.1
+   2        yes      unsat        12.2
+   3        yes      unsat        17.1
+   4        yes      unsat        14.7
+   5        yes      unsat        16.3
+   6        yes      unsat        18.0
+   7        yes      unsat        10.2
+   8        yes      unsat        21.3
+   9        yes      unsat        26.1
+  10        yes      unsat        29.7
+  11        yes      unsat        34.8
+  12        yes      unsat       111.1
+  13        yes      unsat       191.5
+  14        yes      unsat       296.8
+  15        yes      unsat       402.6
+  16        yes      unsat       531.9
+  17        yes      unsat       628.9
+  18        yes      unsat       759.6
+  19        yes      unsat       885.5
+  20        yes      unsat      1033.4
+  21        yes      unsat      1237.7
+  22        yes      unsat      1338.0
+  23        yes      unsat      1640.7
+  24        yes      unsat      1745.9
+  25        yes      unsat      1802.1
+  26        yes      unsat      2098.0
+  27        yes      unsat      2231.1
+  28        yes      unsat      2527.6
+  29        yes      unsat      2873.6
+  30        yes      unsat      3106.2
+  31        yes      unsat      3294.1
+  32        yes      unsat      3792.0
+  33        yes      unsat      3900.3
+  34        yes      unsat      4419.5
+  35        yes      unsat      4875.5
+  36        yes      unsat      5171.8
+  37        yes      unsat      5459.7
+  38         no    timeout      5619.0
+  39         no    timeout      5619.0
+  40         no    timeout      5619.0
+FRONTIER bv_reduction = 37 (baseline 30), PROGRESS (+7 over baseline) — ADVISORY ONLY, do not raise the baseline from this run: budget was scaled 1.15x
+  reference frame [bv_reduction]: machine server5 (2 cpus, AMD Ryzen 7 7840HS w/ Radeon 780M Graphics), load 0.08 -> 1.16, calibration 146.6 ms vs reference 127.0 ms => scale 1.15x, budget 4619 ms
+  NOT COMPARABLE [bv_reduction]: throughput moved 63 % during the sweep (146.6 ms -> 238.6 ms) — the number above is recorded but the ratchet below is not enforced on it. Re-run on an idle box.
+TIMING bv_reduction = 1102.8 ms calibrated over pinned N=[12, 15, 18] (baseline median 1293.1 ms, ceiling 2264.3 ms, 8 runs) — ADVISORY, not enforced on this run
+  pinned [bv_reduction]: N=12 96.2 ms (raw 111.1), N=15 348.7 ms (raw 402.6), N=18 657.8 ms (raw 759.6)
+  near-budget [bv_reduction] (>= 3695 ms of a 4619 ms budget): N=32 at 3792 ms, N=33 at 3900 ms, N=34 at 4420 ms, N=35 at 4876 ms, N=36 at 5172 ms, N=37 at 5460 ms
+ok
+test frontier_lia_cuts ...   retry [lia_cuts N=27]: 3 attempts, final unknown at 7539.7 ms (load 1.14)
+  retry [lia_cuts N=29]: 3 attempts, final unknown at 7653.8 ms (load 1.16)
+  retry [lia_cuts N=36]: 3 attempts, final unknown at 7566.9 ms (load 1.08)
+  retry [lia_cuts N=37]: 3 attempts, final unknown at 7738.6 ms (load 1.05)
+--- frontier curve: lia_cuts ---
+   N    decided     status    solve_ms
+   1        yes        sat         0.5
+   2        yes        sat         0.9
+   3        yes        sat        77.4
+   4        yes        sat         2.6
+   5        yes        sat         2.6
+   6        yes        sat         3.3
+   7        yes        sat         4.3
+   8        yes        sat         4.2
+   9        yes        sat         7.0
+  10        yes        sat         6.6
+  11        yes        sat         9.3
+  12        yes        sat         9.2
+  13        yes        sat        13.3
+  14        yes        sat        16.0
+  15        yes        sat        12.5
+  16        yes        sat        12.8
+  17        yes        sat        20.9
+  18        yes        sat        17.1
+  19        yes        sat        40.6
+  20        yes        sat       453.2
+  21        yes        sat      1271.2
+  22        yes        sat      2758.1
+  23        yes        sat        20.8
+  24        yes        sat        18.3
+  25        yes        sat      3986.4
+  26        yes        sat        26.5
+  27         no    unknown      7539.7
+  28        yes        sat      5293.7
+  29         no    unknown      7653.8
+  30        yes        sat      2510.2
+  31        yes        sat      1369.6
+  32        yes        sat        37.5
+  33        yes        sat      3822.3
+  34        yes        sat      4269.7
+  35        yes        sat      3222.8
+  36         no    unknown      7566.9
+  37         no    unknown      7738.6
+FRONTIER lia_cuts = 35 (baseline 26), PROGRESS (+9 over baseline) — ADVISORY ONLY, do not raise the baseline from this run: budget was scaled 1.88x
+  reference frame [lia_cuts]: machine server5 (2 cpus, AMD Ryzen 7 7840HS w/ Radeon 780M Graphics), load 1.23 -> 1.05, calibration 238.4 ms vs reference 127.0 ms => scale 1.88x, budget 7509 ms
+  NOT COMPARABLE [lia_cuts]: throughput moved 39 % during the sweep (238.4 ms -> 145.3 ms) — the number above is recorded but the ratchet below is not enforced on it. Re-run on an idle box.
+TIMING lia_cuts = 304.3 ms calibrated over pinned N=[3, 19, 20] (baseline median 341.9 ms, ceiling 589.6 ms, 8 runs) — ADVISORY, not enforced on this run
+  pinned [lia_cuts]: N=3 41.2 ms (raw 77.4), N=19 21.6 ms (raw 40.6), N=20 241.4 ms (raw 453.2)
+ok
+test frontier_nia_unsat ... --- frontier curve: nia_unsat ---
+   N    decided     status    solve_ms
+   1        yes      unsat         0.9
+   2        yes      unsat         0.8
+   3        yes      unsat         1.9
+   4        yes      unsat         6.7
+   5        yes      unsat        13.0
+   6        yes      unsat      1557.2
+   7        yes      unsat      1549.7
+   8        yes      unsat      1551.1
+   9        yes      unsat        27.3
+  10        yes      unsat      1547.5
+  11        yes      unsat      1548.3
+  12        yes      unsat      1564.1
+  13        yes      unsat      1567.8
+  14        yes      unsat      1593.4
+  15        yes      unsat      1554.4
+  16        yes      unsat      1556.3
+  17        yes      unsat      1562.2
+  18        yes      unsat      1552.2
+  19        yes      unsat      1552.5
+  20        yes      unsat      1585.4
+  21        yes      unsat      1591.3
+  22        yes      unsat      1619.0
+  23        yes      unsat      1560.0
+  24        yes      unsat      1562.5
+  25        yes      unsat      1570.2
+  26        yes      unsat      1554.1
+  27        yes      unsat      1554.7
+  28        yes      unsat      1622.3
+  29        yes      unsat      1605.0
+  30        yes      unsat      1642.7
+  31        yes      unsat      1560.5
+  32        yes      unsat      1562.9
+  33        yes      unsat      1589.0
+  34        yes      unsat      1557.0
+  35        yes      unsat      1557.2
+  36        yes      unsat      1626.3
+  37        yes      unsat      1658.8
+  38        yes      unsat      1678.4
+  39        yes      unsat      1563.9
+  40        yes      unsat      1566.2
+FRONTIER nia_unsat = 40 (baseline 40)
+  reference frame [nia_unsat]: machine server5 (2 cpus, AMD Ryzen 7 7840HS w/ Radeon 780M Graphics), load 1.05 -> 1.12, calibration 145.6 ms vs reference 127.0 ms => scale 1.15x, budget 4586 ms
+TIMING nia_unsat = 20.4 ms calibrated over pinned N=[1, 2, 3, 4, 5] (baseline median 44.3 ms, ceiling 115.6 ms, 7 runs)
+  pinned [nia_unsat]: N=1 0.8 ms (raw 0.9), N=2 0.7 ms (raw 0.8), N=3 1.7 ms (raw 1.9), N=4 5.8 ms (raw 6.7), N=5 11.4 ms (raw 13.0)
+ok
+test frontier_nra_degree ... --- frontier curve: nra_degree ---
+   N    decided     status    solve_ms
+   1        yes      unsat         1.1
+   2        yes      unsat         0.6
+   3        yes      unsat         0.6
+   4        yes      unsat         0.7
+   5        yes      unsat         0.8
+   6        yes      unsat         0.8
+   7        yes      unsat         0.9
+   8        yes      unsat         1.0
+   9        yes      unsat         1.0
+  10        yes      unsat         1.1
+  11        yes      unsat         1.1
+  12        yes      unsat         1.2
+  13        yes      unsat         1.3
+  14        yes      unsat         1.4
+  15        yes      unsat         1.5
+  16        yes      unsat         1.5
+  17        yes      unsat         1.5
+  18        yes      unsat         1.6
+  19        yes      unsat         1.7
+  20        yes      unsat         1.7
+  21        yes      unsat         1.8
+  22        yes      unsat         1.8
+  23        yes      unsat         1.9
+  24        yes      unsat         1.9
+  25        yes      unsat         2.0
+  26        yes      unsat         2.1
+  27        yes      unsat         2.3
+  28        yes      unsat         2.4
+  29        yes      unsat         2.4
+  30        yes      unsat         2.5
+  31        yes      unsat         2.5
+  32        yes      unsat         2.6
+  33        yes      unsat         2.6
+  34        yes      unsat         2.7
+  35        yes      unsat         2.7
+  36        yes      unsat         2.8
+  37        yes      unsat         2.9
+  38        yes      unsat         2.9
+  39        yes      unsat         3.0
+  40        yes      unsat         3.0
+FRONTIER nra_degree = 40 (baseline 40)
+  reference frame [nra_degree]: machine server5 (2 cpus, AMD Ryzen 7 7840HS w/ Radeon 780M Graphics), load 1.11 -> 1.11, calibration 145.8 ms vs reference 127.0 ms => scale 1.15x, budget 4594 ms
+TIMING nra_degree = 7.2 ms calibrated over pinned N=[10, 20, 30, 40] (baseline median 11.2 ms, ceiling 23.0 ms, 8 runs)
+  pinned [nra_degree]: N=10 0.9 ms (raw 1.1), N=20 1.5 ms (raw 1.7), N=30 2.1 ms (raw 2.5), N=40 2.6 ms (raw 3.0)
+ok
+test frontier_string_bound ... --- frontier curve: string_bound ---
+   N    decided     status    solve_ms
+   2        yes        sat        14.5
+   3        yes        sat        13.6
+   4        yes        sat        13.6
+   5        yes        sat        13.6
+   6        yes        sat        13.6
+   7        yes        sat        13.7
+   8        yes        sat        13.7
+   9        yes        sat        13.7
+  10        yes        sat        13.8
+  11        yes        sat        13.7
+  12        yes        sat        13.7
+  13        yes        sat        50.0
+  14        yes        sat        50.0
+  15        yes        sat        50.4
+  16        yes        sat        49.9
+  17        yes        sat        50.0
+  18        yes        sat        50.1
+  19        yes        sat        50.3
+  20        yes        sat        50.1
+  21        yes        sat        50.1
+  22        yes        sat        50.2
+  23        yes        sat        50.3
+  24        yes        sat        50.1
+  25        yes        sat       106.1
+  26        yes        sat       106.2
+  27        yes        sat       106.2
+  28        yes        sat       106.3
+  29        yes        sat       106.2
+  30        yes        sat       106.1
+  31        yes        sat       106.6
+  32        yes        sat       106.5
+  33        yes        sat       212.9
+  34        yes        sat       212.7
+  35        yes        sat       212.3
+  36        yes        sat       212.5
+  37        yes        sat       212.3
+  38        yes        sat       212.2
+  39        yes        sat       212.5
+  40        yes        sat       212.7
+FRONTIER string_bound = 40 (baseline 8), PROGRESS (+32 over baseline, ratchetable)
+  reference frame [string_bound]: machine server5 (2 cpus, AMD Ryzen 7 7840HS w/ Radeon 780M Graphics), load 1.11 -> 1.10, calibration 145.5 ms vs reference 127.0 ms => scale 1.15x, budget 4582 ms
+TIMING string_bound = 322.1 ms calibrated over pinned N=[13, 25, 33] (baseline median 423.5 ms, ceiling 969.1 ms, 8 runs)
+  pinned [string_bound]: N=13 43.6 ms (raw 50.0), N=25 92.6 ms (raw 106.1), N=33 185.9 ms (raw 212.9)
+ok
+test nonlinear_self_checks_reject_corruption ... ok
+test timing_baselines_are_internally_consistent ... ok
+test timing_ratchet_fires_on_a_slowdown_and_not_on_a_healthy_run ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 308.81s
+
