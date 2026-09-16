@@ -65476,7 +65476,10 @@ main runs). And removing this lane's four fixtures made the sweep WORSE, not
 better (3 failures against 1) — so it is not this lane's fixtures crowding the
 pool either. `quantified_route_trace` is 1-of-3 red on main at load 9–10 and its
 assertion is its own non-vacuity guard. `progress_frontier` is green twice, 12
-passed, no REGRESSION.
+passed, no REGRESSION. **The final pass at HEAD on a quiet box is green
+throughout** — fmt, clippy, workspace check, the 23 dispatch/reason suites, the
+z3 fuzzes, staleness, suite gating, merge hygiene, links, and the serialized lib
+sweep at **1576 / 0**.
 
 [ADR-2120]: ../../research/09-decisions/adr-2120-quantifier-activation-by-assignment.md
 

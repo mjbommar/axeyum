@@ -429,6 +429,22 @@ statement about how many files finished inside a budget. Pre-existing.
 **`progress_frontier` is green twice** (12 passed, 0 failed, pinned to the P-cores,
 `--test-threads=1`): no REGRESSION.
 
+**The final pass at HEAD, on a quiet box (load 4.8 → 3.8), is green throughout:**
+
+| gate | result |
+|---|---|
+| `cargo fmt --all --check` | clean |
+| `clippy -p axeyum-solver -p axeyum-bench --all-targets --features full -- -D warnings` | clean |
+| `cargo check --workspace --all-targets`, default features | clean |
+| **`-p axeyum-solver --lib --features full -- --skip reconstruct:: --test-threads=1`** | **1576 passed, 0 failed** |
+| `--test quant_ground_session_soundness` | 3 passed, 0 failed |
+| `--lib ground_session` | 4 passed, 0 failed |
+| `--lib config_registry::` | 18 passed, 0 failed |
+| `check-config-registry-staleness.py` | 0 unexplained |
+| `check-suite-gating.py` | PASS |
+| `check-merge-hygiene.sh` | PASS, markers=0 |
+| `check-links.sh` | all links ok |
+
 ## 6. Measurement
 
 ### 6.1 The 53-core probe — the cores move, and nothing flips
