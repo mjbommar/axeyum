@@ -2,7 +2,7 @@
 
 Status: accepted
 Index-summary: Goal skolemization already ships and fires on 90 of 90; definitional macro inlining is built behind `AXEYUM_MACRO_INLINE` and stays OFF, because z3's own macro finder is net NEGATIVE (2 gained, 3 lost) over all 525 undecided Tier-1 files.
-Index-status: Accepted
+Index-status: proposed
 Date: 2026-09-16
 
 ## Status
