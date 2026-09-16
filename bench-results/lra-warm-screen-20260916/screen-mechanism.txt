@@ -54,7 +54,7 @@ the verdicts are in `ab-summary.txt`.
    * THE SIZING AXIS OVER-COUNTS on files like these. The threshold was derived
      from the pinned 200, where the error is **exactly zero**: all 68 rows with
      a nonzero build count have `lra_entries > 0`, checked against ADR-2125's own
-     committed sizing. On the held-out draw it is at least 3 of 47. That is the
+     committed sizing. Over the complete 400 it is 6 of 123. That is the
      training population failing to contain a shape the evaluation one has, which
      is what a held-out draw is for.
 

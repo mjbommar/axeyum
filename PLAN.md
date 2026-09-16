@@ -60700,9 +60700,10 @@ Scope, stated because it is narrower than "the −9.2 %": the decomposed delta i
 
 ### 5. The screen's mechanism, on real rows
 
-Over the first 150 A/B rows: **0 of 93** rows below the threshold had the
-screened arm answer a cube warm. Above it, the screen opens on 44 of 47 and
-answers fewer cubes than `on` on 42 of the 44.
+Over the complete 400 A/B rows: **0 of 244** rows below the threshold had the
+screened arm answer a cube warm, and `cold_restarts` is **0 across both
+treatment arms on all 400**. Above it, the screen opens on 117 of 123 and
+answers fewer cubes than `on` on 112 of the 117.
 
 The three it does not open on are a finding about the SIZING AXIS:
 `simplex_cold_builds` counts every route that calls `feasible_within_sparse`,
@@ -60711,7 +60712,8 @@ not the lazy-SMT loops. `sc/sc-24.induction3` carries 2,264 builds with
 at all. The SCREEN is unaffected because it compares a DELTA from loop entry
 (had it read the counter absolutely, that file would have tripped it on round
 one); the SIZING over-counts, at 0 of 68 on the pinned 200 where the threshold
-was derived and at least 3 of 47 on the held-out draw.
+was derived and 6 of the 123 at or above it over the complete 400 — all six
+on the held-out draw and all six `sc/*.induction3.cvc`, one subfamily.
 
 ### 6. The A/B — both `QF_LRA` draws complete at 200
 
@@ -60809,7 +60811,7 @@ different value on this counter.
 3. Split `simplex_cold_builds` per route. It counts every caller of
    `feasible_within_sparse`, not the lazy-SMT loops; the screen is unaffected
    (it compares a delta from loop entry) but the SIZING over-counts, at 0 of 68
-   on the pinned 200 and at least 3 of 47 held-out.
+   on the pinned 200 and 6 of 123 over the complete 400, all one subfamily.
 
 Status: LANDED — LUB's ADR-0603 row 2 is a kernel-checked theorem, axiom-free.
 
