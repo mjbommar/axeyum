@@ -1,0 +1,6 @@
+file	datatype	depth	cyclic	has_dt_field	today_exact	today_w1	w1_sort	lever_converts
+/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ad47d0b57fe8c3e60/bench-results/dt-field-expansion-20260916/../dt-quant-trace-20260915/repro/ground.smt2	inner	0	0	0	1	0	NONE	0
+/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ad47d0b57fe8c3e60/bench-results/dt-field-expansion-20260916/../dt-quant-trace-20260915/repro/ground.smt2	outer	1	0	1	0	0	NONE	1
+/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ad47d0b57fe8c3e60/bench-results/dt-field-expansion-20260916/../dt-quant-trace-20260915/repro/control-recursive.smt2	lst	RECURSIVE	1	1	0	0	NONE	0
+/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ad47d0b57fe8c3e60/bench-results/dt-field-expansion-20260916/repro/control-arraydt.smt2	inner	0	0	0	1	0	NONE	0
+/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-ad47d0b57fe8c3e60/bench-results/dt-field-expansion-20260916/repro/control-arraydt.smt2	holder	0	0	0	0	1	('Array', ('Int',), ('D', 'inner'))	0

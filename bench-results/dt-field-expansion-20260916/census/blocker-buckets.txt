@@ -1,0 +1,19 @@
+rows=318
+verdicts: {'unknown': 312, 'unsat': 6}
+WARNING: 23 undecided rows had NO reach row -- the join is incomplete and every CLEAN count below is a LOWER bound
+
+terminal site                   n  CLEAN
+quant:ematching               101     26
+quant:watchdog                 53     38
+dt:exactness-result            40      4
+quant:time-budget              31     21
+dt:relaxation-incomplete       29      0
+quant:instantiation-sat        14      0
+dt:exactness-arg               12      6
+backend:sort-mismatch           7      7
+bv:datatype-sorted-term         7      4
+dt:ack-pair-bound               6      6
+dt:model-lacks-field            5      1
+quant:mbqi-unsupported          4      4
+dt:field-sort-W1                2      0
+quant:mbqi-rounds               1      0

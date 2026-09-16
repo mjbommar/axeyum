@@ -1745,6 +1745,72 @@ def baseline_and_mutants(name: str, quiet: bool = False) -> tuple[int, list[tupl
 # no other lane's build is disturbed.
 # --------------------------------------------------------------------------
 
+# --------------------------------------------------------------------------
+# `dt-nested-field-2128` — ADR-2128's nested datatype field expansion.
+#
+# Two guards, and they fail in OPPOSITE WAYS on purpose.
+#
+# The CYCLIC-CLOSURE guard in `materialize_nested_children` is a COST decision
+# resting on a soundness fact established independently:
+# `datatype_expansion_is_exact_to_depth` answers `false` for a cyclic closure at
+# every budget, by its OWN decreasing budget and not by the detector. So
+# deleting the detector cannot make a verdict wrong — it can only make the
+# encoding bigger — and a mutation test that asserted a VERDICT here would
+# survive the deletion and report a guard it never checked. Its test therefore
+# COUNTS CHILDREN, which is the only thing the guard moves.
+#
+# The EXACTNESS guard is the opposite: `depth > 0 &&` in
+# `datatype_expansion_is_exact_to_depth` is what stops a cyclic closure ever
+# being called exact, and exactness is the Ackermann congruence antecedent's
+# precondition — a weaker antecedent makes the congruence clause STRONGER than
+# the true axiom, which is the ADR-1920 shape that shipped as ADR-1930. Removing
+# it is a SOUNDNESS mutation and the test that dies asserts a property of the
+# predicate.
+#
+# CLAUDE.md's rule applies to both: mutation measures the guards that EXIST,
+# never the ones that are missing. What it cannot see here is a slot the
+# materialiser never builds and the predicate never claims — the two are written
+# to walk `Sort::Datatype` on the same budget precisely because no test can
+# catch them drifting apart.
+# --------------------------------------------------------------------------
+
+SUITES["dt-nested-field-2128"] = (
+    "crates/axeyum-solver/src/datatype_native.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "nested_field_tests"),
+        "dt-nested-field-2128",
+    ),
+    [
+        (
+            # COST guard: deleting it builds children for a cyclic closure that
+            # can never be exact. No verdict moves, so the test that must die is
+            # the one that COUNTS them.
+            "the materialiser skips a CYCLIC field closure",
+            "        if datatype_field_closure_is_cyclic(arena, dt) {",
+            "        if false && datatype_field_closure_is_cyclic(arena, dt) {",
+        ),
+        (
+            # SOUNDNESS guard: the budget alone is not the property. Without the
+            # RECURSIVE check a datatype-typed field counts as exact whenever
+            # any budget remains, so a cyclic closure is called exact -- which
+            # is the ADR-1920 antecedent-weakening shape.
+            #
+            # NOTE ON THE MUTANT'S SHAPE, because the obvious one is not usable.
+            # Deleting the `depth > 0 &&` conjunct instead makes the predicate
+            # DIVERGE on a cyclic datatype: measured 2026-09-16, that mutant
+            # reported `INCONSISTENT -- 1 test binaries started but 0 reported a
+            # result`, i.e. it took the binary down rather than failing a test.
+            # A crash is a kill in the crudest sense and it names nothing, so
+            # the mutant used here keeps the budget and drops the RECURSION,
+            # which terminates and is wrong.
+            "the exactness predicate recurses into the nested field",
+            "                depth > 0 && datatype_expansion_is_exact_to_depth(arena, *inner, depth - 1)",
+            "                depth > 0",
+        ),
+    ],
+)
+
+
 SUITES["fp-width-guard"] = (
     "crates/axeyum-fp/src/lib.rs",
     Cargo(("-p", "axeyum-fp", "--test", "width_guard"), "fp-width-guard"),

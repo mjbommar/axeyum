@@ -1,0 +1,84 @@
+DT-FIELD-EXPANSION -- the one MOVER in the partial A/B, rechecked, and it does
+NOT come from the bucket this lane predicted.
+
+WHY THE FIRST RUN ENDED AT 82 ROWS, ON THE RECORD. It did not die. **The
+coordinator stopped it deliberately**, by the process groups of the four PIDs
+this lane's own report named, because that report said "harvest it or kill
+those PIDs; do not leave it orphaned" and the verdict-only zero-diff at the 50
+rows harvested up to then read as uninformative. The coordinator has recorded
+that as a misjudgment: the next 32 rows held this mover.
+
+It is written down because "the run died" and "a person stopped the run" are
+different facts with different lessons, and this lane published the first one
+before checking. The lesson that survives is the one §5a already carries: a
+verdict-only zero-diff on a PREFIX of a sweep is not evidence that the sweep
+has nothing in it -- a prefix of a path-sorted list cannot show the effect
+(CLAUDE.md, "never read a prefix of a sorted benchmark list"), and here the
+83rd row was the finding.
+
+THE ROW. `ab-summarize.py` over the first 82 of 200 `AUFDTLIRA` files:
+
+    rows=82  (base-first 40 / arm-first 42)
+    base : unsat 52  unknown 30
+    arm  : unsat 53  unknown 29
+    GAINS 1   LOSSES 0   sat<->unsat FLIPS 0
+      +unsat  O512-022__stacks__stacks.ads_84_58_index_check___00.smt2
+
+RECHECKED 3x PER ARM, same file, same core (s7 `taskset -c 5`), 24 s, one
+binary (`smtcomp_cli-arm2`, BUILD-OK `70c50a703`), two env values:
+
+    run1 base=unknown   run1 arm=unsat
+    run2 base=unknown   run2 arm=unsat
+    run3 base=unknown   run3 arm=unsat
+
+Stable 3 of 3. Not a timing artifact.
+
+THE VERDICT IS RIGHT, checked two ways that do not share a source:
+
+    the file's own header   (set-info :status unsat)
+    z3 -T:60                unsat
+
+So the arm's `unsat` agrees with the declared status AND with an independent
+solver. No wrong answer.
+
+AND NOW THE PART THAT DOES NOT FIT THE STORY. This file is NOT in any of the
+three ADR-2128 datatype buckets. Its row in `census/blocker-buckets.txt`'s
+source trace is
+
+    verdict=unknown  bound_by=q:egraph  last=fd:bounded-completeness-unsat
+    attempts=22  total_ms=24577  giveup_kind=ResourceLimit
+    detail="quantified solve time budget exhausted after MBQI and the
+            finite-model finder"
+
+-- the `quant:time-budget` bucket. And under the base arm its give-up is
+`kind=Watchdog detail=watchdog fired before the worker thread returned`, i.e.
+it spends the entire budget. Under the arm:
+
+    ; route decided_by=q:mbqi-quick bound_by=q:mbqi-quick last=q:mbqi-quick
+      bound_ms=301 total_ms=337 attempts=10
+
+**337 ms, decided by `q:mbqi-quick`.**
+
+SO THE MECHANISM IS NOT THE ONE THIS LANE PREDICTED. The lane's `CLEAN` count
+(10 of the 81 files in the three datatype buckets) was built as a predictor of
+where gains would come from, and the single observed gain came from OUTSIDE
+those 81. What the lever did here was make the GROUND SUB-SOLVES INSIDE THE
+QUANTIFIER LOOP stronger -- `decide_instantiation`'s `check_auto` on a
+quantifier-free query, the same path ADR-2114 §1 traced -- so the loop
+converged in 337 ms instead of exhausting 24 s. It is not "the refusal was
+removed and the verdict followed".
+
+This is recorded as written rather than folded into the CLEAN framing, because
+fitting an observation to the story that preceded it is how a lane manufactures
+a false predictor. One mover is one mover: it does not establish the mechanism
+for any other file, and the `CLEAN` count should not be quoted as a forecast of
+gains until something has measured that it is one.
+
+A PLEASING COINCIDENCE, AND IT IS ONLY THAT. `O512-022__stacks__stacks.ads_84_58_index_check`
+is the file ADR-2114 §1 quotes by name to illustrate the datatype refusal
+("whose give-up reads `mbqi declined an unsupported fragment: congruence over a
+datatype argument whose expansion is not exact`"). That was measured on a
+different binary at a different commit; the give-up this lane observes on it
+under the base is the watchdog, not that sentence. Do not report "the lever
+converts ADR-2114's own example" without saying which give-up was observed
+when.

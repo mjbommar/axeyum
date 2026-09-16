@@ -1,0 +1,2 @@
+files=3  files with a CYCLIC datatype closure=1  files the lever converts at least one datatype in=1
+datatypes=5  cyclic=1  exact today=2  W1-refused today=1  LEVER CONVERTS=1

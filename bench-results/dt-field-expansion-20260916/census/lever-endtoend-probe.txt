@@ -1,0 +1,55 @@
+DT-FIELD-EXPANSION -- the lever is enabled END TO END, and the VERDICT column
+alone cannot show it.
+
+Binary: /nas3/data/axeyum/harness/dt-field-expansion/bin/smtcomp_cli-arm2
+        BUILD-OK arm2 70c50a70370f2ab82ed527c8691f55f1ce353b42
+Host:   s7, taskset -c 13, 24 s budget, AXEYUM_TRACE=1.
+File:   AUFDTLIRA/20200306-Kanig/spark2014bench/
+        P720-007__replay__harness.adb_13_19_assert___00.smt2
+        (a `dt:exactness-arg` row of census/blocker-buckets.txt)
+
+WHY THIS PROBE EXISTS. The unit-level discriminating query -- ADR-2114's own
+`repro/ground.smt2` -- answers `unsat` through the FRONT DOOR under BOTH arms,
+because a lower rung (ADR-0022 step A datatype elimination) decides it after
+`check_with_datatype_native` declines. So the front door cannot be used to
+confirm the lever is live on that file, and a front-door A/B that saw no
+difference there would be indistinguishable from an arm that was never
+enabled. A real corpus file from the exactness bucket can.
+
+BASE (AXEYUM_DT_NESTED_FIELD_DEPTH unset):
+
+  ; give-up kind=Incomplete detail=mbqi declined an unsupported fragment:
+    CONGRUENCE OVER A DATATYPE ARGUMENT WHOSE EXPANSION IS NOT EXACT (a field
+    with no expansion variable makes the encoded equality WEAKER than real
+    equality, and a weaker congruence antecedent is STRONGER than the true
+    axiom -- a wrong `unsat`) (ADR-0022); and no rung below the datatype route
+    decided it either: term #494 uses unsupported pure-Rust BV operator
+    DtSelect { constructor: ConstructorId(11), index: 2 } [...]
+  unknown
+
+ARM (AXEYUM_DT_NESTED_FIELD_DEPTH=5):
+
+  ; give-up kind=Incomplete detail=mbqi declined an unsupported fragment:
+    term #1104 has sort (Uninterpreted 6) that the pure-Rust BV backend cannot
+    bit-blast; and no rung below the datatype route decided it either: term
+    #494 uses unsupported pure-Rust BV operator DtSelect { constructor:
+    ConstructorId(11), index: 2 } [...]
+  unknown
+
+READING IT. The exactness refusal is GONE under the arm: the lever admitted
+the Ackermann congruence it used to refuse, and the query then died further
+down on an unrelated reason (a `declare-sort`-sorted term the BV backend
+cannot bit-blast). THE VERDICT IS `unknown` UNDER BOTH ARMS.
+
+So on this population the lever MOVES THE BLOCKER without moving the verdict,
+and a verdict-only A/B would report a perfect zero-diff that reads as "the
+lever does nothing" -- the same shape as "the arm was never enabled". That is
+why `ab-summarize.py` prints a NOTE on a zero-diff rather than letting the
+zeros speak, and why this probe is committed beside the A/B rather than folded
+into it.
+
+AND IT IS A REASON TO BE CAREFUL ABOUT THE OTHER DIRECTION TOO. The arm's
+sentence names a DIFFERENT site, so a census keyed on the give-up wording will
+report the lever as having "moved 52 files out of the datatype bucket" when
+what it did was hand them to the next rung. Moving a blocker is progress only
+if the next rung can do something with it; on this file it cannot.

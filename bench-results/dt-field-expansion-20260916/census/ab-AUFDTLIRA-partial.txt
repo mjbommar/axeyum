@@ -1,0 +1,7 @@
+rows=82  (base-first 40 / arm-first 42)
+base : {'unsat': 52, 'unknown': 30}
+arm  : {'unsat': 53, 'unknown': 29}
+GAINS  (unknown -> decided): 1 of 82
+   +unsat  O512-022__stacks__stacks.ads_84_58_index_check___00.smt2
+LOSSES (decided -> unknown): 0 of 82
+sat<->unsat FLIPS: 0
