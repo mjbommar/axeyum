@@ -400,7 +400,7 @@ impl Instance {
         let two_vars = rng.below(2) == 0;
         let num_vars = if two_vars { 2 } else { 1 };
         let last = num_vars - 1;
-        let c = NON_SQUARES[(rng.below(NON_SQUARES.len() as u64)) as usize];
+        let c = NON_SQUARES[rng.below(NON_SQUARES.len() as u64)];
 
         let mut atoms: Vec<Atom> = Vec::new();
 
@@ -457,7 +457,7 @@ impl Instance {
                     Monomial {
                         num: i128::from(q),
                         den: 1,
-                        factors: vec![last; degree as usize],
+                        factors: vec![last; degree],
                     },
                     Monomial {
                         num: i128::from(p),

@@ -6,8 +6,8 @@
 //! The single-cell CAD route (ADR-2121) finds a cell in which every collected
 //! atom holds and hands the cell's representative point back as a model. When
 //! that point is an irrational root the route used to refuse
-//! (`CadDecline::AlgebraicWitness`) — measured at **7 of the pinned 200 QF_NRA
-//! files** on the shipped default, 6 of them `unknown`, which is the largest
+//! (`CadDecline::AlgebraicWitness`) — measured at **7 of the pinned 200
+//! `QF_NRA` files** on the shipped default, 6 of them `unknown`, which is the largest
 //! named lever left in the division.
 //!
 //! The lever accepts such a point **only as the last coordinate** and **only if
@@ -169,8 +169,14 @@ fn a_rational_approximation_can_satisfy_what_the_exact_point_violates() {
     let eq = arena.eq(xx, two).unwrap();
     let zero = rc(&mut arena, 0);
     let pos = arena.real_gt(x, zero).unwrap();
-    let five = rc(&mut arena, 5);
-    let seven = rc(&mut arena, 7);
+    // Bound to locals and reused for BOTH the query and the arithmetic check
+    // below, so the check follows the fixture instead of restating it. It also
+    // stops being a compile-time constant, which is a lint here and a fair one:
+    // an assertion over literals is a claim about the source, not a test.
+    let coef = 5_i128;
+    let limit = 7_i128;
+    let five = rc(&mut arena, coef);
+    let seven = rc(&mut arena, limit);
     let fivex = arena.real_mul(five, x).unwrap();
     let bounded = arena.real_lt(fivex, seven).unwrap();
     let assertions = vec![eq, pos, bounded];
@@ -188,11 +194,13 @@ fn a_rational_approximation_can_satisfy_what_the_exact_point_violates() {
         "the approximation must satisfy 5x < 7 -- this is what makes it a trap"
     );
     // ... and that the EXACT point does not. Checked in exact integer
-    // arithmetic, independently of anything the solver does: 5√2 > 7 iff
-    // 25·2 > 49.
+    // arithmetic, independently of anything the solver does: `c·√2 > k` iff
+    // `2c² > k²`.
     assert!(
-        25 * 2 > 49,
-        "5√2 > 7, so the exact point violates the bound"
+        2 * coef * coef > limit * limit,
+        "({coef}·√2)² = {} > {} = {limit}², so the exact point violates the bound",
+        2 * coef * coef,
+        limit * limit
     );
 
     // The route, with the lever ON, must not answer `sat`.
@@ -260,12 +268,14 @@ fn a_sign_needing_deep_refinement_is_still_decided_exactly() {
     //          b·(a + b√2) > b·(985a + 1393b)/985
     //      hence the gap is below `985 / (b·(985a + 1393b))`. Requiring that to
     //      be under 1e-12 is requiring `b·(985a + 1393b) > 985e12`.
+    // The rational that bounds `b·√2` from below, as locals for the same reason.
+    let (pn, pd) = (1393_i128, 985_i128);
     assert!(
-        1393_i128 * 1393 < 2 * 985 * 985,
-        "1393/985 must be a LOWER bound on √2 for the estimate below"
+        pn * pn < 2 * pd * pd,
+        "{pn}/{pd} must be a LOWER bound on √2 for the estimate below"
     );
     assert!(
-        b * (985 * a + 1393 * b) > 985 * 1_000_000_000_000,
+        b * (pd * a + pn * b) > pd * 1_000_000_000_000,
         "the separation must be finer than 1e-12"
     );
 

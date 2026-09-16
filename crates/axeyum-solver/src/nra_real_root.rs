@@ -4027,6 +4027,14 @@ fn note<T>(reason: CadDecline, value: Option<T>) -> Option<T> {
 /// The N-variable decomposition's bounded-cost policy, read once from
 /// `AXEYUM_NRA_CAD`.
 #[derive(Clone, Copy, Debug)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "this is a POLICY TABLE, not a state machine: each bool is one \
+              named, independently-selectable dimension of an A/B arm, and the \
+              lint's usual fix -- collapsing them into an enum of states -- \
+              would destroy exactly the property every arm here is built on, \
+              that two arms differ in EXACTLY one field"
+)]
 pub(crate) struct CadPolicy {
     /// The arm's name, as `AXEYUM_NRA_CAD` spells it.
     pub(crate) arm: &'static str,
@@ -8490,6 +8498,12 @@ mod tests {
     /// The cap must be EQUAL across these two arms: that is what makes an A/B
     /// between them isolate the route rather than the budget.
     #[test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one table read with every invariant that makes an A/B on it \
+                  meaningful; splitting it would separate an arm's field from \
+                  the reason that field has to differ"
+    )]
     fn the_single_cell_arm_differs_in_exactly_the_route() {
         // Read from [`CadPolicy::ALL`], the authority, and looked up BY NAME.
         //
@@ -8603,10 +8617,21 @@ mod tests {
             "the shipped default must have the acceptance OFF, or the lever \
              is not OFF at all"
         );
+        // Read through the arm list at RUNTIME rather than asserted on the
+        // constant: a const assertion is a compile-time claim about a literal
+        // (clippy rejects it), and it would not fail if the default were
+        // repointed at some other arm.
+        let shipped_accepts: Vec<&str> = arms
+            .iter()
+            .filter(|p| p.arm == CAD_DEFAULT.arm)
+            .filter(|p| p.algebraic_witness)
+            .map(|p| p.arm)
+            .collect();
         assert!(
-            !CAD_DEFAULT.algebraic_witness,
-            "ADR-2134 ships OFF: the default must not accept an algebraic \
-             coordinate until an A/B says so"
+            shipped_accepts.is_empty(),
+            "ADR-2134 ships OFF: the default ({}) must not accept an algebraic \
+             coordinate until an A/B says so",
+            CAD_DEFAULT.arm
         );
 
         assert_eq!(
