@@ -100,7 +100,8 @@ use axeyum_ir::{
 use crate::backend::CheckResult;
 use crate::model::Model;
 use crate::nra_cell_cert::{
-    CellCovering, CellReason, CellRefutation, CertAtom, CertCmp, CertPoly, check_cell_refutation,
+    CellCheckStats, CellCovering, CellReason, CellRefutation, CertAtom, CertCmp, CertPoly,
+    check_cell_refutation,
 };
 use crate::nra_real_root::{
     CadDecline, MAX_ABS_COEFF, MultiPoly, ResultantOutcome, Root, cell_samples, coeffs_in_elim,
@@ -128,6 +129,24 @@ const MAX_REFINE_ROUNDS: usize = 24;
 /// Total cells the whole recursion may examine. A second, global bound so a
 /// shallow-but-wide arrangement cannot spend the budget the per-level cap allows.
 const MAX_TOTAL_CELLS: usize = 4096;
+
+thread_local! {
+    /// What [`crate::nra_cell_cert::check_cell_refutation`] examined on the last
+    /// `unsat` this route emitted.
+    ///
+    /// Exists so a test that claims "every `unsat` passed the checker" can read
+    /// what the checker actually looked at, instead of asserting something it can
+    /// re-derive for itself. A test that re-derives its subject inline passes
+    /// while the shipped artifact is wrong.
+    static LAST_CELL_CHECK: core::cell::Cell<Option<CellCheckStats>> =
+        const { core::cell::Cell::new(None) };
+}
+
+/// The checker's counts from the last accepted refutation, or `None` if the last
+/// decision did not produce one.
+pub(crate) fn last_cell_check() -> Option<CellCheckStats> {
+    LAST_CELL_CHECK.with(core::cell::Cell::get)
+}
 
 /// What one level of the recursion produced.
 enum LevelOutcome {
@@ -193,6 +212,7 @@ pub(crate) fn decide_single_cell(
     assertions: &[TermId],
     deadline: Option<Instant>,
 ) -> Option<CheckResult> {
+    LAST_CELL_CHECK.with(|slot| slot.set(None));
     let atoms = collect_cert_atoms(arena, assertions)?;
     if atoms.is_empty() {
         record_cad_decline(CadDecline::NonConjunctive);
@@ -264,7 +284,10 @@ pub(crate) fn decide_single_cell(
         LevelOutcome::Refuted { covering, .. } => {
             let refutation = CellRefutation::new(order.clone(), atoms.clone(), covering);
             match check_cell_refutation(&refutation) {
-                Ok(_stats) => Some(CheckResult::Unsat),
+                Ok(stats) => {
+                    LAST_CELL_CHECK.with(|slot| slot.set(Some(stats)));
+                    Some(CheckResult::Unsat)
+                }
                 Err(_failure) => {
                     // The producer built something its own checker refuses. The
                     // verdict is DROPPED -- not weakened, not reported.
@@ -984,17 +1007,41 @@ mod tests {
     #[test]
     fn an_unsat_that_the_checker_would_reject_is_never_emitted() {
         // The route's own gate: every `Unsat` it returns has passed
-        // `check_cell_refutation`. Exercised by construction here -- a refuted
-        // system whose certificate we then re-check independently.
+        // `check_cell_refutation`. The assertion reads what the CHECKER
+        // recorded, not something this test re-derives for itself -- a test that
+        // re-derives its subject inline passes while the shipped artifact is
+        // wrong.
         let script =
             format!("{DECL2}(assert (< (+ (* x x) (* y y)) 1))\n(assert (> x 2))\n(check-sat)\n");
         let parsed = axeyum_smtlib::parse_script(&script).expect("parse");
         reset_cad_decline();
         let out = decide_single_cell(&parsed.arena, &parsed.assertions, None);
         assert!(is_unsat(out.as_ref()), "expected unsat, got {out:?}");
-        // And the checker accepts a non-vacuous amount of work.
-        let atoms = collect_cert_atoms(&parsed.arena, &parsed.assertions).expect("atoms");
-        assert_eq!(atoms.len(), 2, "two atoms in the fixture");
+        let stats = last_cell_check().expect("an accepted `unsat` records its check");
+        assert!(
+            stats.coverings >= 2 && stats.cells >= 3 && stats.deeper_cells >= 1,
+            "the checker must have walked a real covering tree, not an empty one: {stats:?}"
+        );
+        assert!(
+            stats.delineability_probes > 0 || stats.point_deeper_cells > 0,
+            "every `Deeper` cell must have been either probed or a point cell: {stats:?}"
+        );
+    }
+
+    #[test]
+    fn a_declined_decision_records_no_certificate_check() {
+        // The negative half: `last_cell_check` must be cleared at the top of
+        // every decision, or an accepted refutation from an EARLIER query would
+        // be read as this one's evidence -- which is how the test above would
+        // pass on a route that stopped checking.
+        let (r, _) = decide(&format!(
+            "{DECL2}(assert (or (> x 0) (> y 0)))\n(check-sat)\n"
+        ));
+        assert!(r.is_none());
+        assert!(
+            last_cell_check().is_none(),
+            "a declined decision must not leave another query's check behind it"
+        );
     }
 
     #[test]

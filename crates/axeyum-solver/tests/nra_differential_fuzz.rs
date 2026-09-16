@@ -1242,6 +1242,7 @@ fn single_cell_differential_fuzz_disagree_zero() {
     let mut agreements = 0u64;
     let mut declined = 0u64;
     let mut z3_unknown_skipped = 0u64;
+    let mut checked_cells = 0usize;
     let mut causes: std::collections::BTreeMap<String, u64> = std::collections::BTreeMap::new();
 
     for seed in 0..SINGLE_CELL_INSTANCES {
@@ -1282,6 +1283,21 @@ fn single_cell_differential_fuzz_disagree_zero() {
                 Verdict::Sat
             }
             Some(CheckResult::Unsat) => {
+                // Every `unsat` must carry a check that actually walked the
+                // covering. Counting `unsat` verdicts alone cannot tell an
+                // accepted certificate from a checker that stopped looking.
+                let stats = axeyum_solver::single_cell_last_check().unwrap_or_else(|| {
+                    panic!(
+                        "SINGLE-CELL UNSAT WITH NO RECORDED CHECK: seed {seed}\n{}",
+                        inst.dump()
+                    )
+                });
+                assert!(
+                    stats.cells > 0 && stats.coverings > 0,
+                    "SINGLE-CELL UNSAT WITH A VACUOUS CHECK: seed {seed} {stats:?}\n{}",
+                    inst.dump()
+                );
+                checked_cells += stats.cells;
                 unsat_decided += 1;
                 Verdict::Unsat
             }
@@ -1306,7 +1322,7 @@ fn single_cell_differential_fuzz_disagree_zero() {
     eprintln!(
         "[single-cell-fuzz] total={total} decided={decided} (sat={sat_decided} \
          unsat={unsat_decided}) agreements={agreements} declined={declined} \
-         z3_unknown_skipped={z3_unknown_skipped}"
+         z3_unknown_skipped={z3_unknown_skipped} checked_cells={checked_cells}"
     );
     eprintln!("[single-cell-fuzz] decline causes:");
     for (k, v) in &causes {

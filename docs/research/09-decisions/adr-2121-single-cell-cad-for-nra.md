@@ -364,9 +364,17 @@ Not "improve the CAD". Three things, in order of measured blocking power:
 2. **An algebraic sample**, so `algebraic-witness` (6 of 24) stops being a
    refusal. `Value::RealAlgebraic` already exists and `axeyum_ir::eval` already
    does algebraic field arithmetic for everything but `RealDiv`.
-3. **A fraction-free multivariate determinant**, so the projection is not capped
-   at Sylvester dimension 6 by an exact Leibniz expansion. This is what
-   `projection` (2 of 24, 188 of 1500) names.
+3. **A fraction-free multivariate determinant** (Bareiss over the `MultiPoly`
+   ring, which supports the exact division it needs), so the projection is not
+   capped at Sylvester dimension 6 by an exact Leibniz expansion.
+
+   Note the attribution limit here, because it is the kind that gets quoted too
+   hard: `CadDecline::Projection` covers **several** failures — the dimension cap,
+   an identically-zero resultant, and a derivative overflow — and it fires on 2
+   of the 24 and 188 of 1500. **Those counts are an upper bound on what the
+   determinant would fix, not a measurement of it.** Splitting `Projection` the
+   way `AlgebraicWitness` was split out of `AlgebraicCoarsening` is the cheap
+   first step, and it should come before the determinant work, not after.
 
 ## Evidence
 

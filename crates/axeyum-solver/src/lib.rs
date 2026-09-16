@@ -1438,6 +1438,20 @@ macro_rules! full_exports {
         pub fn single_cell_decline_cause() -> &'static str {
             crate::nra_real_root::cad_decline().name()
         }
+
+        /// What the cell-covering checker EXAMINED on the last `unsat` the
+        /// single-cell route emitted, or `None` if the last decision produced
+        /// none.
+        ///
+        /// A fuzz that counts `unsat` verdicts cannot tell an accepted
+        /// certificate from a checker that stopped looking; this is what lets it
+        /// assert the second. Cleared at the top of every decision, so a
+        /// declined query cannot be credited with an earlier one's check.
+        #[doc(hidden)]
+        #[must_use]
+        pub fn single_cell_last_check() -> Option<crate::nra_cell_cert::CellCheckStats> {
+            crate::nra_single_cell::last_cell_check()
+        }
         #[doc(hidden)]
         pub use quant_uf_model_sat_cert::{
             QUANTIFIED_UF_BINDER_CAP, QUANTIFIED_UF_PROFILE_CAP, QuantifiedUfModelSatCertificate,
