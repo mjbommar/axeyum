@@ -1,0 +1,36 @@
+rows: 23   counters present: 22   no warm engine (n/a): 1   no theory-layer line: 0
+
+file                                                                             decisions    tracked    implied   share  th.props
+-Heizmann-UltimateInvariantSynthesis/_standard_two_index_06.i_3_2_2.bpl_7.smt2      488636     201387       4413    2.2%        87
+r/Ultimate/Braverman-2006CAV-Ex1-int.bpl_Iteration1_Lasso_6-phaseTemplate.smt2      362419     196028       4325    2.2%        41
+QF_LRA/sal/tgc/tgc_io-safe-13.smt2                                                  746140     192020     132693   69.1%        18
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_array1.i_3_2_2.bpl_11.smt2         441738     191458       8536    4.5%       114
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_count_by_k.i_3_3_2.bpl_7.smt2      459534     144493      84786   58.7%        74
+QF_LRA/sc/sc-25.base.cvc.smt2                                                       456444     137012      14192   10.4%        12
+QF_LRA/sal/tgc/tgc_io-safe-20.smt2                                                  470143     118222      76693   64.9%        32
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_half_2.i_3_6_2.bpl_7.smt2          426042     100385        264    0.3%        67
+QF_LRA/sc/sc-13.base.cvc.smt2                                                       367650      83998      12292   14.6%        13
+QF_LRA/sc/sc-23.base.cvc.smt2                                                       320103      78633       6811    8.7%        23
+-Heizmann-UltimateInvariantSynthesis/_standard_copy3_ground.i_3_2_2.bpl_7.smt2       56929      37851      17919   47.3%        81
+QF_LRA/sc/sc-19.base.cvc.smt2                                                       124969      34682       3989   11.5%        19
+QF_LRA/sc/sc-21.base.cvc.smt2                                                       121357      34187       3500   10.2%        21
+QF_LRA/sc/sc-17.base.cvc.smt2                                                       108086      29406       4770   16.2%        16
+QF_LRA/sal/pursuit/pursuit-safety-16.smt2                                           200453      24935      15798   63.4%         4
+QF_LRA/sc/sc-15.base.cvc.smt2                                                        69256      17848       3897   21.8%        15
+QF_LRA/sc/sc-9.base.cvc.smt2                                                         52029      14734       4312   29.3%         9
+QF_LRA/sc/sc-11.base.cvc.smt2                                                        30071       9136       2277   24.9%        11
+QF_LRA/sc/sc-7.base.cvc.smt2                                                         18406       5311       2223   41.9%         7
+QF_LRA/sal/carpark/Carpark2-ausgabe-8.smt2                                           35939       2905       2048   70.5%        41
+QF_LRA/miplib/pp08a-7349.smt2                                                       169645          0          0     n/a         0
+QF_LRA/miplib/pp08a-1000.smt2                                                       291314          0          0     n/a         0
+
+SUM  decisions=5817303  tracked=1654631  implied=405738
+POOLED share of TRACKED decisions already implied: 24.5%
+POOLED share of ALL decisions already implied:     7.0%
+MEDIAN per-row share of tracked: 19.0%   min 0.3%   max 70.5%
+MEDIAN theory_propagations on these rows (today): 18.5
+
+cost, clock-free:
+  passes       median       140606  sum        3890798
+  row_cells    median    252523020  sum     7455294715
+  derived      median      8295660  sum      374077135

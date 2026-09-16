@@ -376,7 +376,7 @@ impl<T: TheorySolver> NativeTheoryAdapter<T> {
     /// Copies the theory's engine counters to the mirror, if one is installed.
     fn mirror_engine_counters(&self) {
         if let Some(mirror) = self.engine_mirror.as_ref() {
-            mirror.store(self.theory.engine_counters());
+            mirror.store(self.theory.engine_counters().as_ref());
         }
     }
 
@@ -533,6 +533,18 @@ impl<T: TheorySolver> NativeTheory for NativeTheoryAdapter<T> {
             self.var_for_atom.push(var);
         }
         fresh
+    }
+
+    /// Forwards the core's branch notice to the wrapped theory, translated from
+    /// the core's variable index into the theory's atom index (ADR-2122). A
+    /// variable with no atom — a Tseitin variable, or one a clause added
+    /// between warm solves introduced — is not a theory branch and is dropped
+    /// here rather than reported as atom `0`.
+    fn note_decision(&mut self, var: usize, value: bool) {
+        let Some(atom) = self.atom_for_var.get(var).copied().flatten() else {
+            return;
+        };
+        self.theory.note_decision(atom, value);
     }
 }
 
@@ -786,9 +798,13 @@ impl EngineCountersMirror {
     /// Stores `counters`, overwriting the previous store. A poisoned lock is
     /// recovered rather than propagated: telemetry must not turn one panic into
     /// two.
-    fn store(&self, counters: Option<TheoryEngineCounters>) {
+    // ADR-2122 took `TheoryEngineCounters` past clippy's 256-byte by-value
+    // limit (264 B with the six implied-bound counters). Borrowed rather than
+    // allowed: the struct is `Copy`, so the caller keeps its value either way,
+    // and a `#[allow]` here would silently cover the NEXT counter too.
+    fn store(&self, counters: Option<&TheoryEngineCounters>) {
         let mut slot = self.slot.lock().unwrap_or_else(PoisonError::into_inner);
-        *slot = counters;
+        *slot = counters.copied();
     }
 
     /// The most recent counters, readable from any thread at any time.
@@ -826,7 +842,7 @@ pub fn live_theory_layer_stats(board: &LiveInstruments) -> Option<LiveSample<The
             .sample::<Arc<EngineCountersMirror>>(instrument::THEORY_ENGINE_MIRROR)
             .and_then(|m| m.value.sample());
         Some(LiveSample {
-            value: theory_layer_stats(&native, engine),
+            value: theory_layer_stats(&native, engine.as_ref()),
             // Always partial: the mirror is written on an iteration cadence
             // from inside the search loop, never at a verdict.
             sampled: Sampled::InFlight,
@@ -994,7 +1010,7 @@ pub(crate) fn solve_native_counted<T: TheorySolver>(
         // reporting simplex pivots through this engine too.
         crate::cdclt::publish_theory_layer_stats(&theory_layer_stats(
             &native_stats,
-            adapter.theory.engine_counters(),
+            adapter.theory.engine_counters().as_ref(),
         ));
     }
     // Read before the match so every arm reports the same number, exactly as
@@ -1050,7 +1066,7 @@ fn configured_search_profile() -> SearchProfile {
 /// "zero".
 fn theory_layer_stats(
     native: &axeyum_cnf::NativeLayerStats,
-    engine: Option<crate::euf_egraph::TheoryEngineCounters>,
+    engine: Option<&crate::euf_egraph::TheoryEngineCounters>,
 ) -> crate::layers::TheoryLayerStats {
     crate::layers::TheoryLayerStats {
         boolean_propagate: native.boolean_propagate,
@@ -1098,6 +1114,12 @@ fn theory_layer_stats(
         final_check_live_rows: engine.map(|e| e.final_check_live_rows),
         bound_scan_calls: engine.map(|e| e.bound_scan_calls),
         bound_scan_atoms: engine.map(|e| e.bound_scan_atoms),
+        implied_bound_passes: engine.map(|e| e.implied_bound_passes),
+        implied_bound_rows_scanned: engine.map(|e| e.implied_bound_rows_scanned),
+        implied_bounds_derived: engine.map(|e| e.implied_bounds_derived),
+        implied_bound_propagations: engine.map(|e| e.implied_bound_propagations),
+        decisions_on_tracked_atoms: engine.map(|e| e.decisions_on_tracked_atoms),
+        decisions_on_implied_atoms: engine.map(|e| e.decisions_on_implied_atoms),
         pivot_cells_written: engine.map(|e| e.pivot_cells_written),
         pivot_rows_combined: engine.map(|e| e.pivot_rows_combined),
         entering_scan_cells: engine.map(|e| e.entering_scan_cells),

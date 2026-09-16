@@ -279,6 +279,11 @@ impl TheorySolver for CdcltLraTheory {
     fn engine_counters(&self) -> Option<TheoryEngineCounters> {
         self.inner.engine_counters()
     }
+
+    /// Forwards the driver's branch notice (ADR-2122, diagnostic only).
+    fn note_decision(&mut self, atom: usize, value: bool) {
+        self.inner.note_decision(atom, value);
+    }
 }
 
 /// Decides a `QF_LRA` query (an arbitrary Boolean combination of linear real

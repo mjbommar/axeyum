@@ -2815,6 +2815,94 @@ SUITES["simplex-sparse-tableau"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `lra-implied-bound-propagation` -- ADR-2122 propagates a literal into the SAT
+# core with an explanation clause, and an explanation is the one artefact here
+# whose defect is INVISIBLE to a verdict comparison: a propagation with a bound
+# missing from its reason is a clause that is not valid over the reals, and the
+# search happily learns it and reports `unsat` on a satisfiable system.
+#
+# The four mutations remove four different guards, and they are different KINDS
+# of damage:
+#
+#   * dropping a bound from the explanation is a SOUNDNESS defect and it is the
+#     one this ADR exists to be checked against -- the propagated literal is
+#     still correct, only its justification is short, so nothing but a checker
+#     that re-derives the implication can see it;
+#   * reading a unit constraint's bound on the WRONG SIDE is a soundness defect
+#     of the opposite shape: the bound itself is false of every point the
+#     constraint allows, and the propagation it licenses is a wrong one;
+#   * losing the attainment flag is a STRICTNESS defect: `sup = 0` then entails
+#     `expr < 0`, which is false exactly at the boundary and nowhere else;
+#   * dropping the self-explanation guard lets a literal be explained by itself,
+#     which is a clause the SAT core cannot use and a dependency cycle nothing
+#     downstream checks.
+#
+# Filtered to `lra_online::tests` rather than to one test, so a kill count is a
+# claim about a population (38 tests) and not about a suite of one.
+# --------------------------------------------------------------------------
+
+SUITES["lra-implied-bound-propagation"] = (
+    "crates/axeyum-solver/src/lra_online.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "lra_online::tests"),
+        "lra-implied-bound-propagation",
+    ),
+    [
+        (
+            # SOUNDNESS: the explanation loses one atom per bound it uses. A
+            # SEED bound's `why` holds exactly one atom, so `skip(1)` drops it
+            # entirely and the clause no longer names the bound it rests on.
+            # The literal offered is unchanged, so no verdict comparison and no
+            # propagation COUNT can see this.
+            "one bound dropped from every explanation",
+            "        for &atom in &bound.why {",
+            "        for &atom in bound.why.iter().skip(1) {",
+        ),
+        (
+            # SOUNDNESS, the other shape: `-x - 3 <= 0` is `x >= -3`, a LOWER
+            # bound, because dividing by a negative coefficient flips the
+            # relation. Read as an upper bound it is false of every point the
+            # constraint allows.
+            "the side a negative coefficient puts the unit bound on",
+            "    let upper = coeff.checked_cmp(&Rational::zero())? == Ordering::Greater;\n"
+            "    let value = c.expr.constant.checked_neg()?.checked_div(coeff)?;",
+            "    let upper = true;\n"
+            "    let value = c.expr.constant.checked_neg()?.checked_div(coeff)?;",
+        ),
+        (
+            # STRICTNESS: the supremum is reported as ATTAINED even when a
+            # strict bound contributed, so `sup = 0` starts entailing
+            # `expr < 0`. Wrong exactly at the boundary and nowhere else.
+            "the attainment flag a strict bound clears",
+            "        if bound.strict {\n            attained = false;\n        }",
+            "        if false && bound.strict {\n            attained = false;\n        }",
+        ),
+        (
+            # The guard that stops an ALREADY-ASSIGNED atom being "propagated".
+            # Without it the pass offers literals the search has already set,
+            # which is not a wrong answer but is a flood of no-op propagations
+            # and a count nobody can read.
+            #
+            # This mutation REPLACED one that SURVIVED. The original fourth
+            # guard was a `continue` refusing a literal explained by itself; the
+            # run found all 38 tests green without it, so it was decoration --
+            # unreachable, because every `why` atom is asserted and the target
+            # is not. It is now a `debug_assert!` stating that invariant, which
+            # is the thing that was actually true. The finding is recorded in
+            # ADR-2122 rather than engineered away.
+            "the guard skipping an atom the search has already assigned",
+            "                    if self.assigned[atom].is_some() {\n"
+            "                        continue;\n"
+            "                    }",
+            "                    if false && self.assigned[atom].is_some() {\n"
+            "                        continue;\n"
+            "                    }",
+        ),
+    ],
+)
+
+
 DEMO_SUBJECT = "scripts/tests/fixtures/mutation_demo/subject.py"
 DEMO_CONTROL = "scripts/tests/fixtures/mutation_demo/suite_tests.py"
 

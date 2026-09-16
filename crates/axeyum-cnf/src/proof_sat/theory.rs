@@ -218,6 +218,25 @@ pub trait NativeTheory {
         let _ = next_var;
         0
     }
+
+    /// The driver is about to BRANCH on `var` at `value` — not propagate it,
+    /// not assume it, but spend a decision level on it (ADR-2122).
+    ///
+    /// Diagnostic only, and the default is a no-op, so a theory that does not
+    /// override this is byte-identical. It exists because "how many of the
+    /// search's decisions were on atoms the theory could already have implied"
+    /// is the ceiling on what theory propagation can buy, and that number is
+    /// **not** derivable from the theory's own counters: a theory sees
+    /// `assert` for a decision and for a unit propagation alike, with nothing
+    /// to tell them apart. The driver is the only party that knows, so the
+    /// driver says.
+    ///
+    /// Called AFTER the decision literal is enqueued and BEFORE it is
+    /// propagated, so the theory state a probe reads is the state the decision
+    /// was taken from.
+    fn note_decision(&mut self, var: usize, value: bool) {
+        let _ = (var, value);
+    }
 }
 
 /// The theory that does nothing: the default for every shipping entry point.
@@ -258,6 +277,9 @@ impl NativeTheory for NullTheory {
     fn take_new_atoms(&mut self, _next_var: usize) -> usize {
         0
     }
+
+    #[inline]
+    fn note_decision(&mut self, _var: usize, _value: bool) {}
 }
 
 /// A theory reached through a mutable borrow is the same theory.
@@ -302,5 +324,10 @@ impl<T: NativeTheory + ?Sized> NativeTheory for &mut T {
     #[inline]
     fn take_new_atoms(&mut self, next_var: usize) -> usize {
         (**self).take_new_atoms(next_var)
+    }
+
+    #[inline]
+    fn note_decision(&mut self, var: usize, value: bool) {
+        (**self).note_decision(var, value);
     }
 }

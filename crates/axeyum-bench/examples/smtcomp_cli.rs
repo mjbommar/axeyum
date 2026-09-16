@@ -534,7 +534,10 @@ fn theory_layer_report_line(
          pivot_cells_written={} pivot_rows_combined={} entering_scan_cells={} \
          leaving_scan_rows={} fill_nnz_sum={} fill_samples={} bland_fallbacks={} \
          farkas_certificates={} farkas_declined_basic_not_slack={} \
-         farkas_declined_nonbasic_problem_var={} farkas_declined_self_check={}",
+         farkas_declined_nonbasic_problem_var={} farkas_declined_self_check={} \
+         implied_bound_passes={} implied_bound_rows_scanned={} \
+         implied_bounds_derived={} implied_bound_propagations={} \
+         decisions_on_tracked_atoms={} decisions_on_implied_atoms={}",
         stats.boolean_propagate.as_millis(),
         stats.theory_assert.as_millis(),
         stats.theory_propagate.as_millis(),
@@ -576,6 +579,12 @@ fn theory_layer_report_line(
         optional(stats.farkas_declined_basic_not_slack),
         optional(stats.farkas_declined_nonbasic_problem_var),
         optional(stats.farkas_declined_self_check),
+        optional(stats.implied_bound_passes),
+        optional(stats.implied_bound_rows_scanned),
+        optional(stats.implied_bounds_derived),
+        optional(stats.implied_bound_propagations),
+        optional(stats.decisions_on_tracked_atoms),
+        optional(stats.decisions_on_implied_atoms),
     )
 }
 
