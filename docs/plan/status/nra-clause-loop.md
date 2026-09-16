@@ -2,10 +2,11 @@
 
 <!-- plan-section: lane-status -->
 
-Status: the certificate for the clause loop's `unsat` is built and gating, the
-two false-reject bugs it uncovered in ADR-2126's cell checker are fixed with
-regression tests, the A/B arm is rebased so it is no longer confounded, and the
-sizing is measured. Ship decision is in ADR-2131.
+Status: COMPLETE. The certificate for the clause loop's `unsat` is built and
+gating, the two false-reject bugs it uncovered in ADR-2126's cell checker are
+fixed with regression tests, the A/B arm is rebased so it is no longer
+confounded, and the A/B is run on four divisions. **Ships OFF on 0 gains**
+(ADR-2131, proposed); `CAD_DEFAULT` is unchanged.
 
 ## What this lane was
 
@@ -83,6 +84,43 @@ steps are `ProofRule::TRUST` (`coverings/proof_generator.cpp:106`, `:139`) and
 its rule checker returns `Node::null()` unconditionally
 (`coverings/proof_checker.cpp:33`). Our reach on this route is small; the
 checked-evidence axis is uncontested.
+
+## The A/B
+
+One binary, two `AXEYUM_NRA_CAD` values, s5 idle, cores 1/9 and 3/11, 24 s /
+8 GiB, divisions serial.
+
+| division | A | B | gains / losses / flips | `:status` |
+|---|---:|---:|---|---|
+| QF_NRA | 123 | 122 | 0 / 1 / 0 | 0 over 243 |
+| QF_NIA | 79 | 79 | 0 / 0 / 0 | 0 over 158 |
+| QF_LRA (control) | 107 | 107 | 0 / 0 / 0 | 0 over 194 |
+| QF_NRA held-out | 109 | 109 | 0 / 0 / 0 | 0 over 216 |
+
+The one raw QF_NRA mover rechecks 3x per arm as **NEITHER-DECIDES** -- arm A
+does not decide it either, so the `sat` in the sweep was a single lucky run at
+24 s. Net: **0 stable gains, 0 stable losses, 0 flips** over 800 files, and 0
+disagreements against declared `:status` over 811 comparable verdicts. The
+held-out draw is disjoint from the pinned one, overlap 0 of 200.
+
+Ships OFF: the criterion for ON (0 stable losses, 0 flips) is satisfied and the
+lever is harmless, but it gains nothing measured, and a default that adds a
+route plus two solver calls and a certificate check per refutation for zero
+verdicts is cost without benefit.
+
+## Why zero, as a measurement
+
+Of the 16 admissible files the loop refuses 6 itself (`clause-loop-shape`) and
+the other **10 reach the theory and are refused by the SINGLE-CELL THEORY** --
+`algebraic-witness` 5, `projection-resultant-zero` 3, `slice-bounds` 2. The
+Boolean layer is not the binding constraint on this corpus. Next increment: an
+algebraic sample, worth 5 of 16 here and 6 of 24 in ADR-2126's independent
+re-bucketing.
+
+Reading that table required fixing the instrument first: the theory's cause was
+written into the sticky slot already holding `non-conjunctive` and discarded, so
+the first scan reported 10 of 16 as `DID-NOT-RUN` -- indistinguishable from "the
+loop was never offered them". 16 of 16 attributed now, 0 unattributed.
 
 ## Landed changes
 

@@ -23,7 +23,18 @@ by the SHIPPED conjunctive route, not by anything new — through two false-reje
 bugs in `has_root_strictly_inside`, both now fixed with regression tests beside
 the checker. Neither z3 nor cvc5 checks a nonlinear lemma: z3's nlsat calls
 `fail_if_proof_generation`, and cvc5's covering steps are `ProofRule::TRUST`
-with a stub checker.
+with a stub checker. The A/B on four divisions (800 files, one binary two env
+values, s5 idle) is **0 stable gains, 0 stable losses, 0 flips, 0 `:status`
+disagreements over 811 comparable verdicts**; the one raw QF_NRA mover recheck
+3x as NEITHER-DECIDES, so arm A does not decide it either. **Ships OFF on 0
+gains** -- the lever is harmless but buys nothing measured. And the reason is a
+measurement, not a shrug: of the 16 admissible files the loop refuses 6 itself
+and the other 10 reach the theory and are refused by the SINGLE-CELL THEORY
+(`algebraic-witness` 5, `projection-resultant-zero` 3, `slice-bounds` 2), so the
+Boolean layer is not the binding constraint and an algebraic sample is the next
+increment at 5 of 16. Reading that table at all required fixing the instrument:
+the theory's cause was being written into a sticky slot already full of
+`non-conjunctive` and discarded, which reported 10 of 16 as `DID-NOT-RUN`.
 Index-status: proposed
 Date: 2026-09-16
 
@@ -317,6 +328,75 @@ Both reference solvers run this shape. Neither checks the lemma.
 This is an uncontested axis rather than a parity claim. Our *reach* on this
 route is 16 files; theirs is the division. What is different is that a verdict
 from here carries evidence a referee can re-run.
+
+## Decision 6 — the A/B, and the ship decision
+
+One binary (`sha256 bb44d56c…`), two `AXEYUM_NRA_CAD` values, s5 idle at load 2,
+pinned to core pairs 1/9 and 3/11, 24 s wall and 8 GiB `ulimit -v`, divisions
+serial so four cores carry one division at a time and an interleaved pair never
+sits beside another division's shard.
+
+| division | A (default) | B (clause-loop) | net | gains / losses / flips | vs declared `:status` | wall A / B |
+|---|---:|---:|---:|---|---|---|
+| QF_NRA | 123 | 122 | −1 | 0 / 1 / 0 | 0 over 243 | 1238 s / 1235 s |
+| QF_NIA | 79 | 79 | 0 | 0 / 0 / 0 | 0 over 158 | 3180 s / 3179 s |
+| QF_LRA *(control)* | 107 | 107 | 0 | 0 / 0 / 0 | 0 over 194 | 2335 s / 2336 s |
+| QF_NRA held-out | 109 | 109 | 0 | 0 / 0 / 0 | 0 over 216 | 1505 s / 1504 s |
+
+**0 gains anywhere. 0 flips. 0 `:status` disagreements over 811 comparable
+verdicts. 0 rows where either arm failed to produce a verdict token.** The
+QF_LRA control moving 0 rows is what makes the rest readable — a mover there
+would have been a finding about the harness, not the lever. The held-out draw is
+ADR-2126's, reused with its seed and **checked disjoint: overlap 0 of 200**.
+
+### The one mover was ambient
+
+The single QF_NRA row (`sqrt-1mcosq-8-chunk-0160.smt2`, `A=sat → B=unknown`)
+re-ran 3× per arm on one pinned core:
+
+| file | A ×3 | B ×3 | class |
+|---|---|---|---|
+| `meti-tarski/sqrt/1mcosq/8/sqrt-1mcosq-8-chunk-0160.smt2` | unknown, unknown, unknown | unknown, unknown, unknown | **NEITHER-DECIDES** |
+
+**Arm A does not decide it either.** The `sat` in the sweep was arm A getting
+lucky once at 24 s; on three clean passes neither arm decides it, and all six
+runs exited 0. So the A/B is **0 stable gains, 0 stable losses, 0 flips** over
+800 files.
+
+Reporting the raw −1 as a loss would have been wrong, and the 1–1.5 % ambient
+flip rate this harness has measured is exactly why a raw mover column is not a
+result. Arm A itself scored 124 on this same list in the sizing pass and 123 in
+the sweep, which is the same effect visible from the other side.
+
+### Ship decision: **OFF**
+
+The brief's criterion for shipping ON is 0 stable losses and 0 flips, and that
+**is** satisfied — the lever is harmless. It still ships OFF, because it gains
+**nothing measured** on either QF_NRA draw, and a default that adds a route, two
+solver calls and a certificate check per refutation in exchange for zero
+measured verdicts is cost without benefit. `CAD_DEFAULT` is unchanged at
+`CadPolicy::SINGLE_CELL`. This ADR is therefore **proposed**, not accepted: no
+default moved.
+
+What ships regardless of the lever, because it is not behind it:
+
+- the two false-reject fixes in `nra_cell_cert`, which are on the **shipped**
+  conjunctive route and cost nothing to reach;
+- the certificate itself, which is what makes the `clause-loop` arm's `unsat`
+  emittable at all if the theory frontier moves.
+
+### Why zero, stated as a measurement rather than a shrug
+
+Decision 1b is the answer: of the 16 files the loop could admit, 6 it refuses
+itself and **10 reach the theory and are refused by the single-cell theory** —
+`algebraic-witness` 5, `projection-resultant-zero` 3, `slice-bounds` 2. The
+Boolean layer is not the binding constraint on this corpus. The loop removes the
+`non-conjunctive` refusal exactly as designed and lands on the conjunctive
+route's own frontier.
+
+So the next increment is named and sized: **an algebraic sample
+(`Value::RealAlgebraic`) is worth 5 of the 16**, and ADR-2126's independent
+re-bucketing put the same lever at 6 of its 24. Two populations, one answer.
 
 ## Consequences
 
