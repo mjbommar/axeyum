@@ -67,7 +67,7 @@ nested) — that histogram is the next build's brief.
 |---|---|---|---|
 | NRA-ALGEBRAIC-WITNESS | 2134 | the algebraic sample the clause-loop census pointed at (5 of 16, 6 of 24 in ADR-2126's bucketing) | A/B done, QF_NRA 124 → 128 (+4) on the pinned list per the lane's commit; held-out and rechecks pending |
 | NIA-ORDER-LEMMAS | 2136 | z3's order/monotonicity lemma portfolio, the only QF_NIA mechanism the trace left untried | QF_NRA control clean 124/124; pass reached on 59 of 116 undecided; UFNIA and held-out sweeping |
-| LRA-ATOM-SCREEN | 2137 (only if a default moves) | pivots-per-build-per-atom screen for the tableau, the axis ADR-2132 named | QF_RDL: 36 screen hits, 0 gains, 0 losses; QF_IDL sweeping |
+| LRA-ATOM-SCREEN | — | the atom-count admission screen ADR-2111 left unrun, now that the tableau is sparse | measured, does not ship: QF_LRA decided 106 at 1x/2x/4x/16x/off while admitted rose 130 → 200; 16x and off add 6 and 8 allocator aborts (7.4 GiB, 24/24 stable); QF_UFLRA and QF_RDL null, QF_LIA and QF_IDL never reach the offline loop; 28 of the 32 target rows stop at "model did not replay" in the online engine's model reconstruction, which is the next QF_LRA increment; merged `5d827fe02` |
 | QUANT-REACH-DIFF | — | per core, where each of z3's proof instances is lost: never matched / matched-rejected / nested | classifying; README with the histogram and three worked examples pending |
 
 Round three closed with NRA-CLAUSE-LOOP's merge; every round-three lever
