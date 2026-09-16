@@ -1,0 +1,16 @@
+
+== bench-results/nra-cell-exact-20260916/recause-inbounds-24.tsv: 24 files, 7 distinct causes ==
+
+files  cause                         what would fix it
+-----  ----------------------------  --------------------------------------------------
+   12  non-conjunctive               the clause loop (CDCAC over a Boolean combination)
+    6  algebraic-witness             an algebraic sample (`Value::RealAlgebraic`)
+    2  DECIDED                       nothing -- the route already decides this file
+    1  certificate-rejected          the checker accepting what the producer built
+    1  projection-arithmetic         wider coefficient arithmetic
+    1  projection-sylvester-dim      a fraction-free (Bareiss) multivariate determinant
+    1  root-ordering                 exact ordering of two critical values
+-----
+   24  TOTAL
+
+CONTROLS PASSED

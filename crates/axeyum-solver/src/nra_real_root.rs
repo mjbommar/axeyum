@@ -417,6 +417,19 @@ pub fn decide_real_poly_constraint(
         return Ok(Some(res));
     }
 
+    // ADR-2126: the clause loop, offered ONLY where the conjunctive route just
+    // refused for the one reason the loop exists to remove. Reading the recorded
+    // cause rather than re-deriving the shape is deliberate -- the route's own
+    // attribution is the authority on why it declined, and a second opinion here
+    // could disagree with it.
+    if cad_policy().clause_loop
+        && cad_decline() == CadDecline::NonConjunctive
+        && let Some(res @ CheckResult::Sat(_)) =
+            crate::nra_clause_loop::decide_clause_loop(arena, assertions, deadline)
+    {
+        return Ok(Some(res));
+    }
+
     let decomposed = decompose_multivariate(arena, assertions, deadline);
     match decomposed {
         // A definitive verdict from the decomposition wins; nothing below can
@@ -3785,8 +3798,36 @@ pub(crate) enum CadDecline {
     RootIsolation,
     /// Two critical values could not be ordered exactly.
     RootOrdering,
-    /// The projection (discriminants / pairwise resultants) declined.
+    /// The projection (discriminants / pairwise resultants) declined. Recorded
+    /// by the **enumerative** decider's `project_strict` only. The single-cell
+    /// route's own projection records one of the four `Projection*` causes below
+    /// instead: ADR-2121 flagged this one as a bundle whose members have
+    /// different fixes, so its count was an upper bound on each of them and a
+    /// measurement of none (ADR-2126).
     Projection,
+    /// The single-cell projection needed a resultant whose Sylvester dimension
+    /// (`deg_elim(p) + deg_elim(q)`) exceeds `MAX_MULTI_SYLVESTER_DIM`.
+    ///
+    /// **This is the cause a fraction-free (Bareiss) determinant over the
+    /// [`MultiPoly`] ring would remove**, and it is the only one of the four that
+    /// it would: the cap exists only to bound the factorial cost of the exact
+    /// Leibniz expansion, not because the resultant does not exist (ADR-2126).
+    ProjectionSylvesterDim,
+    /// The single-cell projection produced an IDENTICALLY ZERO discriminant or
+    /// pairwise resultant: the two polynomials share a factor in the eliminated
+    /// variable for *every* value of the remaining ones, so the projection cannot
+    /// isolate where they meet. A wider determinant does not fix this; a
+    /// squarefree decomposition or a content/primitive-part split would
+    /// (ADR-2126).
+    ProjectionResultantZero,
+    /// The single-cell projection could not form `∂p/∂elim`: the coefficient
+    /// multiply by the exponent overflowed (ADR-2126).
+    ProjectionDerivative,
+    /// The single-cell projection ran out of exact arithmetic somewhere other
+    /// than the dimension cap: a degree overflow while viewing a polynomial in
+    /// the eliminated variable, or a coefficient overflow inside the determinant
+    /// (ADR-2126).
+    ProjectionArithmetic,
     /// A polynomial was nullified at the base point, so delineability fails.
     NullifiedResidual,
     /// An algebraic critical value could not be coarsened to a safe bracket.
@@ -3814,7 +3855,35 @@ pub(crate) enum CadDecline {
     /// result is thrown away is pure cost on a default path. Whether the
     /// certificate would have been accepted is unknown at this point and must
     /// not be claimed.
-    UnsatWithheldSampledDelineability,
+    ///
+    /// Renamed by ADR-2126. It was `UnsatWithheldSampledDelineability`, after
+    /// the reason ADR-2121 withheld the half: the checker's delineability test
+    /// was sampling. That test is now EXACT
+    /// ([`crate::nra_cell_cert`] check 6a), so the old name asserted something
+    /// about the checker that stopped being true. The cause is about the ARM,
+    /// not about the checker, and now says so.
+    UnsatWithheldByArm,
+    /// The clause loop was offered a query whose Boolean structure it does not
+    /// abstract: a leaf that is not a polynomial comparison (a Boolean variable,
+    /// say), a connective outside `not`/`and`/`or`/`xor`/`=>`, or more than
+    /// [`crate::nra_clause_loop::MAX_CLAUSE_ATOMS`] distinct atoms. A REFUSAL by
+    /// declaration (ADR-2126).
+    ClauseLoopShape,
+    /// The clause loop ran out of its declared budget --
+    /// [`crate::nra_clause_loop::MAX_CLAUSE_LOOP_ROUNDS`] theory calls, or the
+    /// SAT core stopping without a verdict (ADR-2126).
+    ClauseLoopBudget,
+    /// The clause loop REFUTED the Boolean abstraction, and this arm does not
+    /// emit that as `unsat`.
+    ///
+    /// Read it precisely: the loop reached a refutation, which is strictly more
+    /// than `unknown` says. It is withheld because an `unsat` here rests on three
+    /// things no checker in this tree can yet read -- the Tseitin encoding being
+    /// equisatisfiable, every blocking clause being implied, and the SAT core's
+    /// own refutation. The evidence that would close it is named in
+    /// [`crate::nra_clause_loop`]'s module docs: a `CellRefutation` per blocking
+    /// clause plus a DRAT refutation of the clause set (ADR-2126).
+    ClauseLoopUnsatUncertified,
     /// A cell whose only satisfying points are ALGEBRAIC: every atom of the
     /// level holds at an irrational root, so a model exists there but the
     /// single-cell slice carries rational samples only and cannot descend into
@@ -3839,13 +3908,20 @@ impl CadDecline {
             Self::RootIsolation => "root-isolation",
             Self::RootOrdering => "root-ordering",
             Self::Projection => "projection",
+            Self::ProjectionSylvesterDim => "projection-sylvester-dim",
+            Self::ProjectionResultantZero => "projection-resultant-zero",
+            Self::ProjectionDerivative => "projection-derivative",
+            Self::ProjectionArithmetic => "projection-arithmetic",
             Self::NullifiedResidual => "nullified-residual",
             Self::AlgebraicCoarsening => "algebraic-coarsening",
             Self::IndeterminateSign => "indeterminate-sign",
             Self::SliceBounds => "slice-bounds",
             Self::CertificateRejected => "certificate-rejected",
+            Self::ClauseLoopShape => "clause-loop-shape",
+            Self::ClauseLoopBudget => "clause-loop-budget",
+            Self::ClauseLoopUnsatUncertified => "clause-loop-unsat-uncertified",
             Self::AlgebraicWitness => "algebraic-witness",
-            Self::UnsatWithheldSampledDelineability => "unsat-withheld-sampled-delineability",
+            Self::UnsatWithheldByArm => "unsat-withheld-by-arm",
         }
     }
 
@@ -3862,13 +3938,20 @@ impl CadDecline {
         Self::RootIsolation,
         Self::RootOrdering,
         Self::Projection,
+        Self::ProjectionSylvesterDim,
+        Self::ProjectionResultantZero,
+        Self::ProjectionDerivative,
+        Self::ProjectionArithmetic,
         Self::NullifiedResidual,
         Self::AlgebraicCoarsening,
         Self::IndeterminateSign,
         Self::SliceBounds,
         Self::CertificateRejected,
         Self::AlgebraicWitness,
-        Self::UnsatWithheldSampledDelineability,
+        Self::UnsatWithheldByArm,
+        Self::ClauseLoopShape,
+        Self::ClauseLoopBudget,
+        Self::ClauseLoopUnsatUncertified,
     ];
 }
 
@@ -3931,6 +4014,14 @@ pub(crate) struct CadPolicy {
     /// an arm can take the exact half and leave the sampled half behind, and the
     /// `single-cell-sat` arm is exactly that.
     pub(crate) emit_unsat: bool,
+    /// Whether the clause loop ([`crate::nra_clause_loop`]) is offered the query
+    /// when the conjunctive route declines `non-conjunctive` (ADR-2126).
+    ///
+    /// Strictly additive by construction: the loop runs only AFTER the
+    /// conjunctive route has refused, so an arm with it on decides everything
+    /// the same arm without it decides, plus possibly more. Its `unsat` is not
+    /// emitted at all, so it cannot flip a verdict either.
+    pub(crate) clause_loop: bool,
 }
 
 impl CadPolicy {
@@ -3940,6 +4031,7 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS,
         single_cell: false,
         emit_unsat: true,
+        clause_loop: false,
     };
 
     /// 16x the cells. Raising the cap can only let the decomposition VISIT more
@@ -3952,6 +4044,7 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS * 16,
         single_cell: false,
         emit_unsat: true,
+        clause_loop: false,
     };
 
     /// ADR-2121's arm: run [`crate::nra_single_cell`] ahead of the enumerative
@@ -3963,6 +4056,7 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS,
         single_cell: true,
         emit_unsat: true,
+        clause_loop: false,
     };
 
     /// The **exact half only**: run the route, take its `sat` (a rational model
@@ -3977,25 +4071,76 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS,
         single_cell: true,
         emit_unsat: false,
+        clause_loop: false,
+    };
+
+    /// ADR-2126's arm: the shipped `single-cell-sat` route PLUS the clause loop
+    /// ([`crate::nra_clause_loop`]) behind it, for the queries the conjunctive
+    /// route refuses as `non-conjunctive` — 12 of ADR-2121's 24 in-bounds files,
+    /// half the slice.
+    ///
+    /// It differs from [`Self::SINGLE_CELL_SAT`] in exactly `clause_loop`: same
+    /// cell cap, same `single_cell`, same `emit_unsat`. So an A/B between the two
+    /// prices the loop alone, and the loop runs only where the conjunctive route
+    /// has already refused — strictly additive, and its `unsat` is withheld, so
+    /// it cannot flip a verdict.
+    pub(crate) const CLAUSE_LOOP: Self = Self {
+        arm: "clause-loop",
+        cell_cap: MAX_CAD_CELLS,
+        single_cell: true,
+        emit_unsat: false,
+        clause_loop: true,
     };
 }
 
 /// The arm used when `AXEYUM_NRA_CAD` is unset or unrecognized.
 ///
-/// **ADR-2121 moved this from [`CadPolicy::DEFAULT`] to
+/// **ADR-2126 moved this from [`CadPolicy::SINGLE_CELL_SAT`] to
+/// [`CadPolicy::SINGLE_CELL`]** — the route's `unsat` half now reaches the
+/// default. The reason ADR-2121 withheld it is gone: [`crate::nra_cell_cert`]'s
+/// delineability test is no longer sampling (check 6a), the old probe survives
+/// only as an independent cross-check (6b), and a covering whose generalisation
+/// would reach past the argument is REJECTED rather than assumed (6c).
+///
+/// The measured basis, on two independent 200-file `QF_NRA` draws:
+///
+/// * pinned draw 121 → 122, and the three-pass recheck classifies every mover —
+///   **2 STABLE-GAIN, 0 STABLE-LOSS, 1 BOTH-DECIDE**, exit status 0 on all 18
+///   runs. The BOTH-DECIDE row is the sweep's apparent loss: arm B decides it
+///   `unsat` 3 of 3 on a quiet core, and `--trace` shows BOTH arms declining it
+///   at `nra-real-root` in microseconds with its `unsat` coming from a later
+///   rung at 18.8 s of a 24 s budget;
+/// * held-out draw (fresh 200, seeded, disjoint — checked) 109 → 109 with
+///   **zero movers of any kind**;
+/// * `QF_NIA` 79 → 79 and the `QF_LRA` control 107 → 107, neither moving a row;
+/// * **0 `sat`↔`unsat` flips and 0 disagreements against declared `:status`
+///   over 809 comparable verdicts** across all four sweeps.
+///
+/// Read the honest shape of the gain, because it is small and specific: the two
+/// files are single-level refutations closed entirely by ATOM cells, so the
+/// delineability check never runs on either. They were never gated on a sample.
+/// What the exact check buys is that this arm's `unsat` can carry a default at
+/// all — for that class because it needed nothing, and for every other class
+/// because 6a is exact. See ADR-2126 §4.
+///
+/// [`CadPolicy::SINGLE_CELL_SAT`] and [`CadPolicy::DEFAULT`] both remain
+/// selectable by name through EXPLICIT arms in [`parse_cad_arm`], so an A/B can
+/// still ask for either.
+///
+/// Superseded context — **ADR-2121 moved this from [`CadPolicy::DEFAULT`] to
 /// [`CadPolicy::SINGLE_CELL_SAT`]**, on a measured +4 with 0 stable losses, 0
 /// flips and 0 `:status` disagreements — and, decisively, on the fact that every
 /// verdict the new default adds is a `sat` replayed exactly against the original
 /// assertions. The half of that route whose justification is a finite sample
 /// (`unsat`, gated on `nra_cell_cert`'s sampling delineability check) is
-/// withheld here as [`CadDecline::UnsatWithheldSampledDelineability`] and reaches
+/// withheld here as [`CadDecline::UnsatWithheldByArm`] and reaches
 /// no default.
 ///
 /// The cell cap is unchanged at [`MAX_CAD_CELLS`], so this is a route change and
 /// not a budget change. `AXEYUM_NRA_CAD=default` still selects the pre-ADR-2121
 /// engine, by an EXPLICIT arm in [`parse_cad_arm`] rather than by the fallback.
 /// See the `CAD_DEFAULT` row of `config_registry`.
-pub(crate) const CAD_DEFAULT: CadPolicy = CadPolicy::SINGLE_CELL_SAT;
+pub(crate) const CAD_DEFAULT: CadPolicy = CadPolicy::SINGLE_CELL;
 
 /// The CAD policy in force, read once from `AXEYUM_NRA_CAD`.
 pub(crate) fn cad_policy() -> CadPolicy {
@@ -4018,6 +4163,8 @@ fn parse_cad_arm(value: &str) -> CadPolicy {
         CadPolicy::SINGLE_CELL
     } else if value.eq_ignore_ascii_case("single-cell-sat") {
         CadPolicy::SINGLE_CELL_SAT
+    } else if value.eq_ignore_ascii_case("clause-loop") {
+        CadPolicy::CLAUSE_LOOP
     } else if value.eq_ignore_ascii_case("default") {
         // EXPLICIT, not a fallback. `CAD_DEFAULT` is `SINGLE_CELL_SAT` as of
         // ADR-2121, so without this arm `AXEYUM_NRA_CAD=default` would resolve
@@ -4373,16 +4520,72 @@ pub(crate) fn multi_resultant(
     q: &MultiPoly,
     elim: SymbolId,
 ) -> Option<ResultantOutcome> {
-    let pc = multipoly_in_elim(p, elim)?; // Vec<MultiPoly>, LSB-first in elim
-    let qc = multipoly_in_elim(q, elim)?;
-    let m = pc.len().checked_sub(1)?; // deg_elim(p)
-    let n = qc.len().checked_sub(1)?; // deg_elim(q)
-    if m == 0 || n == 0 {
-        return None; // not genuinely of positive e-degree
+    multi_resultant_classified(p, q, elim).ok()
+}
+
+/// Why [`multi_resultant_classified`] could not produce a resultant at all.
+///
+/// [`multi_resultant`] collapses all three into `None`. They are kept apart here
+/// because they say **different things about what would fix them**, and a bundle
+/// whose members have different fixes is an upper bound on each of them rather
+/// than a measurement of any (ADR-2126, splitting ADR-2121's
+/// `CadDecline::Projection`).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum ResultantDecline {
+    /// `deg_elim(p) + deg_elim(q)` exceeds [`MAX_MULTI_SYLVESTER_DIM`]. **This is
+    /// the one a fraction-free (Bareiss) determinant over the [`MultiPoly`] ring
+    /// would remove**, because the cap exists only to bound the factorial cost of
+    /// the exact Leibniz expansion.
+    SylvesterDim,
+    /// One of the two arguments does not genuinely have positive degree in
+    /// `elim`, so there is no Sylvester matrix to build. A caller that filtered
+    /// on `degree_in(..) > 0` cannot reach this.
+    Degenerate,
+    /// Exact arithmetic ran out: a degree overflow while viewing a polynomial in
+    /// `elim`, or a coefficient overflow inside the determinant. A wider
+    /// determinant would NOT fix this one.
+    Arithmetic,
+}
+
+impl ResultantDecline {
+    /// A stable, matchable key. Test-only: the production path maps the decline
+    /// onto a [`CadDecline`], which carries the wire name the trace prints.
+    #[cfg(test)]
+    pub(crate) const fn name(self) -> &'static str {
+        match self {
+            Self::SylvesterDim => "sylvester-dim",
+            Self::Degenerate => "degenerate",
+            Self::Arithmetic => "arithmetic",
+        }
     }
-    let dim = m.checked_add(n)?;
+}
+
+/// [`multi_resultant`], but reporting **which** of the three declines fired.
+///
+/// The classification is the whole point: the dimension cap is a bounded-cost
+/// refusal a better determinant removes, and an overflow is not.
+pub(crate) fn multi_resultant_classified(
+    p: &MultiPoly,
+    q: &MultiPoly,
+    elim: SymbolId,
+) -> Result<ResultantOutcome, ResultantDecline> {
+    // Vec<MultiPoly>, LSB-first in elim.
+    let pc = multipoly_in_elim(p, elim).ok_or(ResultantDecline::Arithmetic)?;
+    let qc = multipoly_in_elim(q, elim).ok_or(ResultantDecline::Arithmetic)?;
+    let m = pc
+        .len()
+        .checked_sub(1)
+        .ok_or(ResultantDecline::Degenerate)?; // deg_elim(p)
+    let n = qc
+        .len()
+        .checked_sub(1)
+        .ok_or(ResultantDecline::Degenerate)?; // deg_elim(q)
+    if m == 0 || n == 0 {
+        return Err(ResultantDecline::Degenerate); // not genuinely of positive e-degree
+    }
+    let dim = m.checked_add(n).ok_or(ResultantDecline::Arithmetic)?;
     if dim > MAX_MULTI_SYLVESTER_DIM {
-        return None;
+        return Err(ResultantDecline::SylvesterDim);
     }
     // Build the (m+n) × (m+n) Sylvester matrix of `pc` (MSB-first rows) over `qc`.
     // Mirror the univariate layout: `n` shifted rows of `p`'s coefficients, then
@@ -4399,14 +4602,14 @@ pub(crate) fn multi_resultant(
             mat[n + row][slot + i] = c.clone();
         }
     }
-    let det = multipoly_determinant(&mat)?;
+    let det = multipoly_determinant(&mat).ok_or(ResultantDecline::Arithmetic)?;
     if det.is_zero() {
-        return Some(ResultantOutcome::Zero);
+        return Ok(ResultantOutcome::Zero);
     }
     if det.vars().is_empty() {
-        return Some(ResultantOutcome::NonzeroConstant);
+        return Ok(ResultantOutcome::NonzeroConstant);
     }
-    Some(ResultantOutcome::Poly(det))
+    Ok(ResultantOutcome::Poly(det))
 }
 
 /// View `p` as a univariate polynomial in `elim` with [`MultiPoly`] coefficients
@@ -8207,6 +8410,7 @@ mod tests {
             CadPolicy::WIDE,
             CadPolicy::SINGLE_CELL,
             CadPolicy::SINGLE_CELL_SAT,
+            CadPolicy::CLAUSE_LOOP,
         ];
 
         let routed: Vec<&str> = arms
@@ -8216,8 +8420,21 @@ mod tests {
             .collect();
         assert_eq!(
             routed,
-            vec!["single-cell", "single-cell-sat"],
-            "exactly the two single-cell arms turn the route on"
+            vec!["single-cell", "single-cell-sat", "clause-loop"],
+            "exactly the single-cell arms turn the route on"
+        );
+
+        // ADR-2126's arm turns the clause loop on and NOTHING else does, so an
+        // A/B against `single-cell-sat` prices the loop alone.
+        let looping: Vec<&str> = arms
+            .iter()
+            .filter(|p| p.clause_loop)
+            .map(|p| p.arm)
+            .collect();
+        assert_eq!(
+            looping,
+            vec!["clause-loop"],
+            "exactly one arm turns the clause loop on"
         );
 
         // The `unsat`-withholding arm is the ONLY one that withholds. An arm
@@ -8230,9 +8447,21 @@ mod tests {
             .collect();
         assert_eq!(
             withholding,
-            vec!["single-cell-sat"],
-            "exactly one arm withholds `unsat`"
+            vec!["single-cell-sat", "clause-loop"],
+            "exactly the two sat-only arms withhold `unsat`"
         );
+
+        // `clause-loop` differs from `single-cell-sat` in EXACTLY `clause_loop`.
+        // The two ways this A/B could go vacuous are the arm carrying
+        // `clause_loop: false` (the treatment IS the control) and the arm
+        // carrying a different cell cap or `emit_unsat` (the A/B measures two
+        // things at once). Both would print a clean number.
+        let sat_only = arms[3];
+        let looped = arms[4];
+        assert_eq!(sat_only.cell_cap, looped.cell_cap);
+        assert_eq!(sat_only.single_cell, looped.single_cell);
+        assert_eq!(sat_only.emit_unsat, looped.emit_unsat);
+        assert_ne!(sat_only.clause_loop, looped.clause_loop);
 
         let default = arms[0];
         assert_eq!(
@@ -8257,22 +8486,36 @@ mod tests {
             default.arm, "default",
             "the pre-ADR-2121 arm keeps its name, so an A/B can still ask for it"
         );
-        // And the shipped default is the sat-only arm, which must never emit an
-        // `unsat` justified by a sample. Read through the arm list rather than
+        // The shipped default must RUN the single-cell route and must be an arm
+        // that exists in the table. Read through the arm list rather than
         // asserted on the constant: a const assertion is a compile-time claim
         // about a literal, which clippy rejects and which would not fail if the
-        // default were repointed at an arm that DOES emit one.
+        // default were repointed somewhere unintended.
+        //
+        // ADR-2121's version of this assertion required the default NOT to emit
+        // `unsat`, because the checker gating it was sampling. ADR-2126 made that
+        // checker exact and moved the default onto the full arm, so the
+        // invariant that replaces it is the one that is still true and still
+        // load-bearing: whatever arm ships, it is in the table and it routes.
+        // Weakening "does not emit `unsat`" to nothing would have left the
+        // default unguarded, which is why something takes its place.
         let shipped: Vec<&str> = arms
             .iter()
             .filter(|p| p.arm == CAD_DEFAULT.arm)
-            .filter(|p| !p.emit_unsat)
+            .filter(|p| p.single_cell)
             .map(|p| p.arm)
             .collect();
         assert_eq!(
             shipped,
             vec![CAD_DEFAULT.arm],
-            "the shipped default ({}) must not emit a sampled `unsat`",
+            "the shipped default ({}) must be a table arm that runs the route",
             CAD_DEFAULT.arm
+        );
+        // And the cell cap is STILL the shipped one, so moving the default is a
+        // route change and not a budget change.
+        assert_eq!(
+            CAD_DEFAULT.cell_cap, default.cell_cap,
+            "moving the default must not move the cell budget with it"
         );
     }
 
@@ -8324,6 +8567,80 @@ mod tests {
             "two CadDecline causes share a wire name: {names:?}"
         );
         assert!(total >= 12, "the taxonomy lost causes: only {total} left");
+    }
+
+    /// Every resultant decline has its own wire name (ADR-2126).
+    ///
+    /// The three exist because they have DIFFERENT fixes: only `SylvesterDim`
+    /// is what a fraction-free determinant would remove. A shared name would
+    /// re-merge exactly the bundle this ADR split.
+    #[test]
+    fn every_resultant_decline_has_its_own_name() {
+        let all = [
+            ResultantDecline::SylvesterDim,
+            ResultantDecline::Degenerate,
+            ResultantDecline::Arithmetic,
+        ];
+        let mut names: Vec<&str> = all.iter().map(|d| d.name()).collect();
+        let total = names.len();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(
+            names.len(),
+            total,
+            "two ResultantDecline causes share a name"
+        );
+    }
+
+    /// The dimension cap is reported AS the dimension cap, and a pair inside it
+    /// is not reported as a decline at all.
+    ///
+    /// Both halves matter. ADR-2121's `CadDecline::Projection` could not tell
+    /// this apart from an overflow, so its count was an upper bound on what a
+    /// better determinant would buy. The positive control is the other half: a
+    /// classifier that returned `SylvesterDim` for everything would pass a
+    /// negative-only test (ADR-2126).
+    #[test]
+    fn the_sylvester_dimension_cap_is_reported_as_itself() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Real).expect("declare x");
+        let y = arena.declare("y", Sort::Real).expect("declare y");
+
+        // `p = x^d + y`, `q = x^d - y`: Sylvester dimension in `x` is `2d`.
+        let power = |d: u32| {
+            let mut p = MultiPoly::zero();
+            p.add_term(vec![(x, d)], Rational::integer(1)).expect("x^d");
+            p
+        };
+        let with_y = |mut p: MultiPoly, sign: i128| {
+            p.add_term(vec![(y, 1)], Rational::integer(sign))
+                .expect("y term");
+            p
+        };
+
+        // dim = 2*2 = 4 <= MAX_MULTI_SYLVESTER_DIM: a real resultant comes back.
+        let inside = multi_resultant_classified(&with_y(power(2), 1), &with_y(power(2), -1), x);
+        assert!(
+            matches!(
+                inside,
+                Ok(ResultantOutcome::Poly(_) | ResultantOutcome::NonzeroConstant)
+            ),
+            "a pair inside the cap must not decline"
+        );
+
+        // dim = 2*4 = 8 > MAX_MULTI_SYLVESTER_DIM.
+        let outside = multi_resultant_classified(&with_y(power(4), 1), &with_y(power(4), -1), x);
+        assert_eq!(
+            outside.err(),
+            Some(ResultantDecline::SylvesterDim),
+            "the dimension cap must be reported as the dimension cap, not as arithmetic"
+        );
+
+        // And `multi_resultant` still collapses it, so no existing caller moved.
+        assert!(
+            multi_resultant(&with_y(power(4), 1), &with_y(power(4), -1), x).is_none(),
+            "the Option wrapper must keep its old contract"
+        );
     }
 
     /// `note` is the identity on `Some`, and a `Some` records nothing.
@@ -8948,6 +9265,33 @@ pub(crate) fn collect_cert_atoms(
         out.push(CertAtom::new(cmp, atom.poly.terms.into_iter().collect()));
     }
     Some(out)
+}
+
+/// ONE polynomial comparison as a certificate atom, or `None` if `term` is not
+/// one.
+///
+/// The leaf case of the clause loop's Boolean abstraction
+/// ([`crate::nra_clause_loop`]): `collect_cert_atoms` walks a CONJUNCTION and
+/// refuses at the first non-`and` node, which is exactly the refusal ADR-2126
+/// removes, so the loop needs the single-atom match on its own (ADR-2126).
+///
+/// Records NO decline: a non-atom leaf is an ordinary outcome for a caller that
+/// is deciding which encoding a node needs, and the caller attributes.
+pub(crate) fn cert_atom_of(
+    arena: &TermArena,
+    term: TermId,
+) -> Option<crate::nra_cell_cert::CertAtom> {
+    use crate::nra_cell_cert::{CertAtom, CertCmp};
+    let (cmp, poly) = match_multi_constraint(arena, term)?;
+    let cmp = match cmp {
+        Cmp::Eq => CertCmp::Eq,
+        Cmp::Ne => CertCmp::Ne,
+        Cmp::Lt => CertCmp::Lt,
+        Cmp::Le => CertCmp::Le,
+        Cmp::Gt => CertCmp::Gt,
+        Cmp::Ge => CertCmp::Ge,
+    };
+    Some(CertAtom::new(cmp, poly.terms.into_iter().collect()))
 }
 
 /// A [`MultiPoly`] from the certificate representation. Both are monomial maps,

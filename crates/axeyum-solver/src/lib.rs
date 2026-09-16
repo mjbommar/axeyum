@@ -152,6 +152,7 @@ macro_rules! full_modules {
         mod nia_univariate_cert;
         mod nra;
         mod nra_cell_cert;
+        mod nra_clause_loop;
         mod nra_even_power;
         mod nra_fbbt;
         mod nra_handelman_cert;
@@ -1446,6 +1447,25 @@ macro_rules! full_exports {
         ) -> Option<crate::backend::CheckResult> {
             crate::nra_real_root::reset_cad_decline();
             crate::nra_single_cell::decide_single_cell(arena, assertions, None, false)
+        }
+
+        /// Drive the ADR-2126 CLAUSE LOOP directly, bypassing the
+        /// `AXEYUM_NRA_CAD` gate.
+        ///
+        /// Same reason as [`single_cell_decide_for_testing`]: the policy is read
+        /// once per process through a `OnceLock`, so a test that set the
+        /// variable would measure whichever test ran first, and setting it from
+        /// a test is racy and `unsafe`, which is denied workspace-wide.
+        ///
+        /// This is NOT a dispatch entry point and nothing in the solver calls it.
+        #[doc(hidden)]
+        #[must_use]
+        pub fn clause_loop_decide_for_testing(
+            arena: &axeyum_ir::TermArena,
+            assertions: &[axeyum_ir::TermId],
+        ) -> Option<crate::backend::CheckResult> {
+            crate::nra_real_root::reset_cad_decline();
+            crate::nra_clause_loop::decide_clause_loop(arena, assertions, None)
         }
 
         /// The cause the single-cell route last recorded, as a stable key.

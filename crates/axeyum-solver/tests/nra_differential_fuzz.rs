@@ -176,6 +176,15 @@ struct Atom {
 struct Instance {
     num_vars: usize,
     atoms: Vec<Atom>,
+    /// The Boolean SKELETON over the atoms, as a CNF: one inner `Vec` per
+    /// clause, holding indices into `atoms`.
+    ///
+    /// **Empty means a plain conjunction** — one assertion per atom, which is
+    /// what every pre-ADR-2126 generator produces and what the conjunctive route
+    /// accepts. A non-empty skeleton makes `build` emit one assertion per clause
+    /// as an `or`, which is the shape `nra_single_cell` refuses outright and the
+    /// clause loop exists to decide (ADR-2126).
+    clauses: Vec<Vec<usize>>,
 }
 
 impl Instance {
@@ -257,7 +266,11 @@ impl Instance {
                 divisor,
             });
         }
-        Instance { num_vars, atoms }
+        Instance {
+            num_vars,
+            atoms,
+            clauses: Vec::new(),
+        }
     }
 
     /// The **single-cell seed class** (ADR-2121): the exact fragment
@@ -334,7 +347,58 @@ impl Instance {
                 divisor: None, // conjunctive polynomial fragment: no RealDiv
             });
         }
-        Instance { num_vars, atoms }
+        Instance {
+            num_vars,
+            atoms,
+            clauses: Vec::new(),
+        }
+    }
+
+    /// The **clause-loop seed class** (ADR-2126): the same polynomial shapes the
+    /// single-cell class emits, wrapped in a genuine Boolean skeleton.
+    ///
+    /// # Why this class had to be added
+    ///
+    /// `nra_clause_loop` is a NEW decision route, and every other generator in
+    /// this file emits a plain CONJUNCTION — `build` writes one assertion per
+    /// atom and nothing ever nests an `or`. So none of them can reach the loop
+    /// at all: the conjunctive route decides or declines first and the loop is
+    /// never offered the query. A fuzz that structurally cannot generate the
+    /// shape under test is not a gate on it, which is the rule CLAUDE.md states
+    /// after `a946f925`.
+    ///
+    /// The skeleton is a CNF over the atoms: 2..=3 clauses of 1..=3 atom
+    /// indices, drawn with repetition so an atom can appear in several clauses
+    /// and so a clause can be a unit. At least one clause is forced to have
+    /// **two or more** literals, because a CNF of units is a conjunction wearing
+    /// a hat and would leave this class measuring the conjunctive route again.
+    ///
+    /// Z3 adjudicates the same formula, built from the same skeleton.
+    fn generate_clause_loop_shape(rng: &mut Lcg) -> Instance {
+        let base = Instance::generate_single_cell_shape(rng);
+        let n = base.atoms.len();
+        let num_clauses = rng.below(2) + 2; // 2..=3
+        let mut clauses: Vec<Vec<usize>> = Vec::with_capacity(num_clauses);
+        for _ in 0..num_clauses {
+            let width = rng.below(3) + 1; // 1..=3
+            let mut lits: Vec<usize> = Vec::with_capacity(width as usize);
+            for _ in 0..width {
+                lits.push(rng.below(n as u64) as usize);
+            }
+            clauses.push(lits);
+        }
+        // Force a genuine disjunction somewhere, or this class silently degrades
+        // into the conjunctive one it exists to be different from.
+        if !clauses.iter().any(|c| c.len() >= 2) && n >= 2 {
+            let a = rng.below(n as u64) as usize;
+            let b = (a + 1) % n;
+            clauses[0] = vec![a, b];
+        }
+        Instance {
+            num_vars: base.num_vars,
+            atoms: base.atoms,
+            clauses,
+        }
     }
 
     /// The **FBBT seed class**: a nonlinear component in 1–2 variables, coupled
@@ -539,7 +603,11 @@ impl Instance {
             });
         }
 
-        Instance { num_vars, atoms }
+        Instance {
+            num_vars,
+            atoms,
+            clauses: Vec::new(),
+        }
     }
 
     /// A single-variable **tight-anchored** instance (slice-7 axis): an equality
@@ -600,7 +668,11 @@ impl Instance {
                 divisor: None,
             });
         }
-        Instance { num_vars: 1, atoms }
+        Instance {
+            num_vars: 1,
+            atoms,
+            clauses: Vec::new(),
+        }
     }
 
     /// Materialize the instance as IR assertions over a fresh arena, returning
@@ -637,7 +709,27 @@ impl Instance {
             }
             assertions.push(atom.cmp.build(&mut a, lhs, zero));
         }
-        (a, syms, assertions)
+        if self.clauses.is_empty() {
+            return (a, syms, assertions);
+        }
+        // A Boolean skeleton: one assertion per clause, each an `or` over the
+        // atom terms built above. The atom terms are SHARED between clauses --
+        // the arena interns them -- which is exactly the `let`-bound shape the
+        // real meti-tarski files have and the reason a top-of-term shape column
+        // says nothing about them (ADR-2121's sizing correction).
+        let mut out = Vec::with_capacity(self.clauses.len());
+        for clause in &self.clauses {
+            let mut acc: Option<TermId> = None;
+            for &i in clause {
+                let lit = assertions[i];
+                acc = Some(match acc {
+                    None => lit,
+                    Some(prev) => a.or(prev, lit).unwrap(),
+                });
+            }
+            out.push(acc.expect("every clause has at least one literal"));
+        }
+        (a, syms, out)
     }
 
     /// Build the same instance as a list of Z3 `Bool` atoms over fresh Z3
@@ -645,6 +737,23 @@ impl Instance {
     /// (ADR-0015), so the adjudication queries Z3 directly with the z3 crate's
     /// real arithmetic — the exact same theory the deciders target.
     fn to_z3(&self) -> Vec<Bool> {
+        let atoms = self.atom_bools();
+        if self.clauses.is_empty() {
+            return atoms;
+        }
+        // The SAME skeleton, so the oracle adjudicates the formula the solver
+        // was given and not the conjunction underneath it.
+        self.clauses
+            .iter()
+            .map(|clause| {
+                let refs: Vec<&Bool> = clause.iter().map(|&i| &atoms[i]).collect();
+                Bool::or(&refs)
+            })
+            .collect()
+    }
+
+    /// The atoms as Z3 `Bool`s, before any Boolean skeleton is applied.
+    fn atom_bools(&self) -> Vec<Bool> {
         let names = ["x", "y", "z", "w"];
         let vars: Vec<Real> = (0..self.num_vars)
             .map(|i| Real::new_const(names[i]))
@@ -1243,6 +1352,16 @@ fn single_cell_differential_fuzz_disagree_zero() {
     let mut declined = 0u64;
     let mut z3_unknown_skipped = 0u64;
     let mut checked_cells = 0usize;
+    // ADR-2126: is the EXACT delineability check (6a) ever REACHED?
+    //
+    // This is not a detail. Measured on the corpus, both `unsat` verdicts the
+    // A/B gains are single-level refutations closed entirely by ATOM cells --
+    // `deeper = 0`, so 6a never runs on either. "The checker is exact" would
+    // then be a true statement about a check with no measured exercise, which
+    // is the shape of an unfalsifiable claim. These two counters make the fuzz
+    // say whether it reaches 6a, so the answer is a number and not a hope.
+    let mut open_deeper_cells = 0usize;
+    let mut exact_delineability_tests = 0usize;
     let mut causes: std::collections::BTreeMap<String, u64> = std::collections::BTreeMap::new();
 
     for seed in 0..SINGLE_CELL_INSTANCES {
@@ -1298,6 +1417,8 @@ fn single_cell_differential_fuzz_disagree_zero() {
                     inst.dump()
                 );
                 checked_cells += stats.cells;
+                open_deeper_cells += stats.open_deeper_cells;
+                exact_delineability_tests += stats.delineability_exact_tests;
                 unsat_decided += 1;
                 Verdict::Unsat
             }
@@ -1322,7 +1443,9 @@ fn single_cell_differential_fuzz_disagree_zero() {
     eprintln!(
         "[single-cell-fuzz] total={total} decided={decided} (sat={sat_decided} \
          unsat={unsat_decided}) agreements={agreements} declined={declined} \
-         z3_unknown_skipped={z3_unknown_skipped} checked_cells={checked_cells}"
+         z3_unknown_skipped={z3_unknown_skipped} checked_cells={checked_cells} \
+         open_deeper_cells={open_deeper_cells} \
+         exact_delineability_tests={exact_delineability_tests}"
     );
     eprintln!("[single-cell-fuzz] decline causes:");
     for (k, v) in &causes {
@@ -1340,6 +1463,21 @@ fn single_cell_differential_fuzz_disagree_zero() {
     // And both directions must be exercised: a sweep that only ever refutes
     // never touches the sat-side replay, and one that only ever satisfies never
     // touches the certificate checker.
+    // ADR-2126. The corpus A/B's two `unsat` verdicts are single-level
+    // refutations with NO `Deeper` cell, so the exact delineability check never
+    // runs on either. If the fuzz also never reaches it, then 6a has no measured
+    // exercise anywhere outside its unit fixtures -- and "the checker is exact"
+    // would be a claim about a check nothing observed. Whichever way this goes,
+    // the number is printed above and this assertion is what makes it a finding
+    // instead of a line in a log.
+    assert!(
+        open_deeper_cells > 0 && exact_delineability_tests > 0,
+        "the EXACT delineability check (6a) was never reached in {total} instances: \
+         open_deeper_cells={open_deeper_cells} exact_tests={exact_delineability_tests}. \
+         Every refutation this sweep produced was closed by atom cells alone, so the \
+         generalisation 6a exists to justify was never performed and the check has no \
+         measured exercise here"
+    );
     assert!(
         sat_decided > 0 && unsat_decided > 0,
         "single-cell fuzz exercised only one direction: sat={sat_decided} \
@@ -1364,6 +1502,157 @@ fn single_cell_differential_fuzz_disagree_zero() {
 /// Both shapes below are SATISFIABLE (SMT-LIB leaves `x/0` free), so the only
 /// wrong answer this can produce is `unsat`. A decline is the expected result
 /// and is accepted; `unsat` is not.
+/// The **clause-loop differential sweep** (ADR-2126).
+///
+/// Boolean combinations of polynomial sign atoms through
+/// [`axeyum_solver::clause_loop_decide_for_testing`], adjudicated by z3 on the
+/// same formula. The loop is driven through the testing hook rather than by
+/// setting `AXEYUM_NRA_CAD`, for the reason ADR-2121 records: the lever is read
+/// once per process, so a fuzz that set it would be a gate on one shell.
+///
+/// Four assertions keep this from passing vacuously, and they are the same four
+/// the single-cell sweep carries because the same three ways to be vacuous
+/// apply:
+///
+/// * `decided > 0` — a sweep that declines everything agrees with everything;
+/// * every `sat` is REPLAYED here against the original assertions, not only
+///   inside the route, because "the route checked it" is exactly the claim a
+///   fuzz exists to doubt;
+/// * `agreements == decided` (the loop never emits `unsat`, so a z3 `unknown`
+///   can only meet a `sat`, which z3 does not report `unknown` for after
+///   deciding — the tally is asserted rather than assumed);
+/// * the class must actually produce **disjunctions**: the generator's
+///   skeleton is checked for a clause of width ≥ 2, because a CNF of units is a
+///   conjunction wearing a hat and would leave this sweep measuring the
+///   conjunctive route a second time.
+#[test]
+fn clause_loop_differential_fuzz_disagree_zero() {
+    let mut total = 0u64;
+    let mut decided = 0u64;
+    let mut agreements = 0u64;
+    let mut declined = 0u64;
+    let mut z3_unknown_skipped = 0u64;
+    let mut with_a_real_disjunction = 0u64;
+    let mut causes: std::collections::BTreeMap<String, u64> = std::collections::BTreeMap::new();
+
+    for seed in 0..SINGLE_CELL_INSTANCES {
+        total += 1;
+        let mut rng = Lcg::new(seed ^ 0x2126_0916_9c1a_05e2);
+        let inst = Instance::generate_clause_loop_shape(&mut rng);
+        if inst.clauses.iter().any(|c| c.len() >= 2) {
+            with_a_real_disjunction += 1;
+        }
+        let (arena, syms, assertions) = inst.build();
+
+        let outcome = axeyum_solver::clause_loop_decide_for_testing(&arena, &assertions);
+        let cause = axeyum_solver::single_cell_decline_cause().to_owned();
+
+        let ax = match &outcome {
+            None | Some(CheckResult::Unknown(_)) => {
+                declined += 1;
+                *causes.entry(cause.clone()).or_insert(0) += 1;
+                continue;
+            }
+            Some(CheckResult::Sat(model)) => {
+                let asg = model.to_assignment();
+                for (i, &a) in assertions.iter().enumerate() {
+                    assert!(
+                        matches!(eval(&arena, a, &asg), Ok(Value::Bool(true))),
+                        "CLAUSE-LOOP WRONG SAT: seed {seed} assertion #{i} does not hold \
+                         under the model\n{}\nmodel: {}",
+                        inst.dump(),
+                        dump_model(&syms, model)
+                    );
+                }
+                decided += 1;
+                Verdict::Sat
+            }
+            Some(CheckResult::Unsat) => {
+                panic!(
+                    "CLAUSE-LOOP EMITTED UNSAT: seed {seed}. The arm withholds every \
+                     `unsat` (ADR-2126); reaching one here means the withholding was \
+                     removed and an uncertified refutation is on a decision path.\n{}",
+                    inst.dump()
+                );
+            }
+        };
+
+        let z3 = z3_decide(&inst);
+        if z3 == Verdict::Unknown {
+            z3_unknown_skipped += 1;
+            continue;
+        }
+        assert!(
+            ax == z3 || not_a_disagreement(ax, z3),
+            "CLAUSE-LOOP DISAGREEMENT: seed {seed} axeyum={ax:?} z3={z3:?}\n{}",
+            inst.dump()
+        );
+        agreements += 1;
+    }
+
+    let cause_summary: Vec<String> = causes.iter().map(|(k, v)| format!("{k} {v}")).collect();
+    println!(
+        "clause-loop fuzz: total={total} decided={decided} agreements={agreements} \
+         declined={declined} z3_unknown_skipped={z3_unknown_skipped} \
+         disjunctive_instances={with_a_real_disjunction}\n  decline causes: {}",
+        cause_summary.join(", ")
+    );
+
+    assert!(
+        decided > 0,
+        "the clause-loop sweep decided NOTHING, so it agreed with z3 vacuously"
+    );
+    assert_eq!(
+        agreements,
+        decided - z3_unknown_skipped.min(decided),
+        "every decided instance z3 also decided must have been adjudicated"
+    );
+    assert!(
+        with_a_real_disjunction * 2 > total,
+        "fewer than half the instances carry a real disjunction ({with_a_real_disjunction} \
+         of {total}); this class would be measuring the conjunctive route"
+    );
+}
+
+#[test]
+fn clause_loop_never_refutes_a_division_by_constant_zero() {
+    // The degenerate-argument class CLAUDE.md's hard rule requires, at the fuzz
+    // level rather than only in the unit tests. `(/ x 0)` inside a DISJUNCTION
+    // is the shape the loop is the first route to reach, and both fixtures are
+    // SATISFIABLE, so a route that folded division-by-zero to a convention and
+    // refuted would fail here rather than silently agreeing.
+    let mut a = TermArena::new();
+    let x = a.declare("x", Sort::Real).unwrap();
+    let y = a.declare("y", Sort::Real).unwrap();
+    let xv = a.var(x);
+    let yv = a.var(y);
+    let zero = a.real_const(Rational::zero());
+    let one = a.real_const(Rational::integer(1));
+    let five = a.real_const(Rational::integer(5));
+
+    // (or (> (/ x 0) 1) (> y 5)) /\ (> y 5)  -- satisfiable via the second arm.
+    let div0 = a.real_div(xv, zero).unwrap();
+    let lhs = a.real_gt(div0, one).unwrap();
+    let rhs = a.real_gt(yv, five).unwrap();
+    let disj = a.or(lhs, rhs).unwrap();
+    let out = axeyum_solver::clause_loop_decide_for_testing(&a, &[disj, rhs]);
+    assert!(
+        !matches!(out, Some(CheckResult::Unsat)),
+        "a satisfiable query with a constant-zero divisor was refuted: {out:?}"
+    );
+
+    // And with a SYMBOLIC divisor that can be zero.
+    let divy = a.real_div(xv, yv).unwrap();
+    let lhs2 = a.real_gt(divy, one).unwrap();
+    let rhs2 = a.real_gt(xv, five).unwrap();
+    let disj2 = a.or(lhs2, rhs2).unwrap();
+    let out2 = axeyum_solver::clause_loop_decide_for_testing(&a, &[disj2, rhs2]);
+    assert!(
+        !matches!(out2, Some(CheckResult::Unsat)),
+        "a satisfiable query with a symbolic divisor was refuted: {out2:?}"
+    );
+}
+
 #[test]
 fn single_cell_never_refutes_a_division_by_constant_zero() {
     let mut a = TermArena::new();
