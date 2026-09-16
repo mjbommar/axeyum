@@ -147,6 +147,38 @@ order and monotonicity lemmas need no static bound at all — that is
 structure for a lemma to bite on. It also grants the loop the larger budget
 slice `refine` selects. Both are behind the lever.
 
+## Part C1 — the arm is wired, and it also RUNS
+
+Two different claims, and only the first is usually checked. **Wired**:
+`AXEYUM_NIA_ORDER_LEMMAS=notanumber` makes `config_lever.rs:124` panic, which
+is [ADR-2112]'s own method — a lever proved by a panic rather than by a null
+result. That proves the lever is READ and nothing more.
+
+**Runs**: `reachability.sh`, all 116 undecided rows, armed arm, 24 s / 8 GiB,
+0 dropped, every file classified from its trace rather than from its verdict.
+
+| | files of 116 |
+|---|---:|
+| round 0 returned a spurious `sat` — the only way into the refinement loop | 47 |
+| round 0 returned `unknown` — the relaxation itself ran out of budget | 67 |
+| no round-0 line at all (parse fallback) | 2 |
+| **built ≥ 1 order or monotonicity lemma** | **59 (50.9 %)** |
+
+Lemmas built per reached file: 21 / **76** / 603 (min/median/max) over 3 / 13 /
+47 refinement rounds.
+
+**The ceiling here is the relaxation, not the lemma.** 67 files never produce a
+spurious model to cut, because the linear DPLL(T) cannot solve the relaxation
+inside its slice. That is a different problem from this lane's, and it bounds
+everything in Part D: a lemma class cannot decide a file whose relaxation never
+returns.
+
+One file is decided by the armed arm in that single-arm probe —
+`QF_NIA/UltimateLassoRanker/LarrazOliverasRodriguez-CarbonellRubio-2013FMCAD-Fig1-alloca_unknown-termination.c.i_Iteration6_Lasso+nonterminationTemplate.smt2`.
+Paired directly, same binary, same file, 24 s each: lever `0` → `unknown`,
+lever `1` → **`unsat`**, and the benchmark's own `(set-info :status unsat)`
+agrees with the armed arm.
+
 ## Part D — the A/B
 
 PLACEHOLDER — filled from `bench-results/nia-order-lemmas-20260916/` before
