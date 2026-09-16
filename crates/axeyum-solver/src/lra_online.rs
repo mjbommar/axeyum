@@ -122,6 +122,85 @@ const DEFAULT_STEP_BUDGET: usize = 16_000_000;
 /// population, so it bounds a pathological call rather than a normal one.
 const MAX_BOUND_PROPAGATIONS_PER_CALL: usize = 256;
 
+// ---------------------------------------------------------------------------
+// ADR-2122 — implied-bound propagation from the asserted rows into the SAT core
+// ---------------------------------------------------------------------------
+
+/// Rounds of row-driven bound tightening one propagation pass performs.
+///
+/// Round 0 is the seed table alone (the bounds an asserted UNIT constraint
+/// gives a problem variable directly); each further round re-reads every
+/// asserted row and derives a bound on one of its variables from the bounds of
+/// the others. The rounds are capped because exact-rational bound tightening
+/// over a cycle of rows does not converge in general — it approaches a limit
+/// one strictly-tighter step at a time and never reaches it — so a fixpoint
+/// loop here would be a non-terminating one. z3 bounds the same work by
+/// clearing its touched-row set after each pass rather than by a round count
+/// (`lar_solver::propagate_bounds_for_touched_rows`); the effect is the same
+/// and a count is what this engine can state.
+const MAX_IMPLIED_BOUND_ROUNDS: usize = 2;
+
+/// Atoms one derived bound's explanation may name before the bound is dropped.
+///
+/// An explanation is a clause the SAT core learns and then carries, so a
+/// derived bound justified by forty literals costs more in the clause database
+/// than the propagation buys. Dropping the bound is sound — a bound not
+/// derived is a propagation not made, which costs completeness and never
+/// soundness.
+const MAX_IMPLIED_BOUND_EXPLANATION: usize = 16;
+
+/// Coefficients a constraint may carry and still be analysed for implied
+/// bounds. z3 refuses the same work above
+/// `max_row_length_for_bound_propagation`, default **300**
+/// (`src/math/lp/lp_settings.h`), and for the same reason: the per-variable
+/// derivation is quadratic in the row length, so one wide row can cost more
+/// than every narrow one together.
+const MAX_IMPLIED_BOUND_ROW_LENGTH: usize = 300;
+
+/// Column bounds one pass will derive before it stops tightening.
+const MAX_IMPLIED_BOUNDS_PER_PASS: usize = 4_096;
+
+/// Literals one implied-bound pass will offer the driver. Same structural
+/// argument as [`MAX_BOUND_PROPAGATIONS_PER_CALL`]: the driver runs
+/// propagation to a fixpoint, so a capped pass defers work to the next
+/// iteration rather than discarding it.
+const MAX_IMPLIED_BOUND_PROPAGATIONS_PER_CALL: usize = 256;
+
+/// What the ADR-2122 implied-bound propagator does, read once from
+/// `AXEYUM_LRA_BOUND_PROPAGATION`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum BoundPropagation {
+    /// Today's behaviour byte for byte: no column-bound table is built, no
+    /// entailment is tested, and nothing new is offered. The **shipped
+    /// default** until the A/B says otherwise.
+    Off,
+    /// The table is built and entailment is TESTED, but no literal is offered
+    /// to the driver. This is the sizing mode: it moves counters and nothing
+    /// else, so a run in it answers "how many of the search's decisions were on
+    /// atoms the theory already implied" without changing the search that
+    /// produced them. A probe that changed the trajectory would be measuring a
+    /// different search from the one it is sizing.
+    Probe,
+    /// The table is built and entailed literals are offered with their
+    /// explanations.
+    On,
+}
+
+/// Reads the ADR-2122 lever once. An unset or unrecognised value is
+/// [`BoundPropagation::Off`] — the shipped behaviour — so a typo in the
+/// variable name cannot silently turn a measurement into a different one.
+pub(crate) fn bound_propagation_mode() -> BoundPropagation {
+    static MODE: std::sync::OnceLock<BoundPropagation> = std::sync::OnceLock::new();
+    *MODE.get_or_init(|| match std::env::var("AXEYUM_LRA_BOUND_PROPAGATION") {
+        Ok(v) => match v.trim() {
+            "on" => BoundPropagation::On,
+            "probe" => BoundPropagation::Probe,
+            _ => BoundPropagation::Off,
+        },
+        Err(_) => BoundPropagation::Off,
+    })
+}
+
 /// Whether the caller-owned absolute deadline has passed.
 fn past_deadline(deadline: Option<Instant>) -> bool {
     crate::portfolio::stop_or_past_deadline(deadline)
@@ -468,6 +547,9 @@ pub struct LraTheory {
     final_check_core_literals: u64,
     final_check_core_widenings: u64,
     final_check_live_rows: u64,
+    /// ADR-2122's implied-bound propagator. Inert unless
+    /// `AXEYUM_LRA_BOUND_PROPAGATION` says otherwise; see [`ImpliedBounds`].
+    implied: Option<Box<ImpliedBounds>>,
 }
 
 /// A bound on one linear form, currently asserted, with the atom that imposed
@@ -489,6 +571,527 @@ struct BoundUndo {
     form: usize,
     upper: bool,
     previous: Option<FormBound>,
+}
+
+/// A bound on one **problem variable** implied by the currently-asserted
+/// constraints, with the asserted atoms whose conjunction implies it
+/// (ADR-2122).
+///
+/// This is the quantity [`FormBound`] is not. A `FormBound` is a bound on a
+/// canonical linear FORM, installed verbatim by the atom that asserts it, and
+/// it entails another atom only when the two share a form. A `ColBound` is a
+/// bound on a single VARIABLE, and it is what lets a bound asserted on one form
+/// entail an atom over a completely different one — which is the whole of what
+/// z3's `lp_bound_propagator` buys and the reason ADR-2111 measured 19 theory
+/// propagations against 836,531 decisions.
+#[derive(Debug, Clone)]
+struct ColBound {
+    /// `x ≤ value` for an upper bound, `x ≥ value` for a lower one.
+    value: Rational,
+    /// Whether the bound is strict (`<` / `>`), i.e. is a supremum the variable
+    /// never attains rather than a maximum it can.
+    strict: bool,
+    /// The asserted atoms whose conjunction implies it — **ascending and
+    /// deduplicated**, because it becomes the body of a learned clause and a
+    /// clause's literal order is part of the determinism promise.
+    why: Vec<usize>,
+}
+
+/// What one live constraint changed in the SEED column-bound tables, so `pop`
+/// can undo it — the ADR-2122 sibling of [`BoundUndo`], kept positionally
+/// aligned with [`LraTheory::live`] for the same reason and undone by the same
+/// truncation.
+#[derive(Debug, Clone)]
+struct ColUndo {
+    var: usize,
+    upper: bool,
+    previous: Option<ColBound>,
+}
+
+/// The ADR-2122 implied-bound state: a column-bound table over the problem
+/// variables, the touched-variable filter that decides when a pass is worth
+/// running, and the counters the lever is scored on.
+///
+/// # Why a column table and not the tableau's own rows
+///
+/// z3 propagates over the rows of its *current basis*
+/// (`lar_solver::propagate_bounds_for_touched_rows`), which works there because
+/// a single-variable atom `x ≤ 3` creates **no row at all** — `is_unit_var`
+/// short-circuits and the atom becomes a column bound on `x`
+/// (`theory_lra.cpp:807-809,856-857`). Ours makes one slack row per constraint
+/// template, `x ≤ 3` included, so in this encoding **no problem variable ever
+/// carries a bound** and a scan of the pristine rows derives nothing: every row
+/// relates a bounded slack to unbounded problem variables.
+///
+/// This table supplies the missing half. An asserted UNIT constraint gives its
+/// one variable a column bound directly (the *seed*); every asserted row then
+/// bounds each of its variables from the others' column bounds (the *rounds*);
+/// and an atom is entailed when the interval its own expression is confined to
+/// lies entirely on one side of zero. That is z3's `bound_analyzer_on_row`
+/// arithmetic over this engine's constraint templates rather than over its
+/// basis, and it is basis-independent — so it does not depend on which pivots
+/// the last feasibility check happened to make, which is a determinism
+/// property the basis form would not have.
+struct ImpliedBounds {
+    /// What this instance does; see [`BoundPropagation`].
+    mode: BoundPropagation,
+    /// Per problem variable, the tightest bound an asserted UNIT constraint
+    /// gives it, with the single atom that imposed it.
+    seed_lower: Vec<Option<ColBound>>,
+    seed_upper: Vec<Option<ColBound>>,
+    /// One entry per [`LraTheory::live`] constraint: the seed slot it
+    /// overwrote, so `pop` restores the table by truncation in lockstep with
+    /// `live` — exactly as [`LraTheory::bound_log`] does for the form tables.
+    seed_log: Vec<Option<ColUndo>>,
+    /// Problem variables whose seed bound has moved since the last pass — the
+    /// touched filter. An empty list means the same seeds would derive the same
+    /// bounds and entail the same atoms, so the pass is provably output-empty
+    /// and is skipped. This is the counterpart of z3's touched-row set
+    /// (`lar_solver.h`), and the reason this scan is bounded by what CHANGED
+    /// rather than by a per-call literal cap over a full rescan.
+    dirty: Vec<usize>,
+    /// Membership bit for [`Self::dirty`], so adding a variable is `O(1)`
+    /// rather than a linear scan of a list that can hold every variable.
+    dirty_mark: Vec<bool>,
+    /// `var_atoms[v]` = the registered ORDER atoms at least one of whose
+    /// polarity templates mentions variable `v`, ascending. Built once; this is
+    /// what turns "which atoms could a moved bound on `v` newly entail" from a
+    /// full atom scan into a lookup.
+    var_atoms: Vec<Vec<usize>>,
+    /// Scratch bound tables a pass derives into, on top of the seeds.
+    ///
+    /// Derived bounds are deliberately NOT persisted across an assert: they
+    /// depend on other derived bounds, so undoing one on `pop` would mean
+    /// undoing a dependency graph, and the repository's own rule is that a
+    /// structure whose invalidation is hard to get right is where a wrong
+    /// answer hides. Recomputing from the seeds is `O(asserted rows × rounds)`
+    /// and runs only when the touched filter says something moved.
+    lo: Vec<Option<ColBound>>,
+    hi: Vec<Option<ColBound>>,
+    /// Scratch slots written since the last reset, so a pass clears exactly
+    /// what it wrote instead of walking all `nvars`.
+    scratch_written: Vec<usize>,
+    /// Membership bit for [`Self::scratch_written`].
+    scratch_mark: Vec<bool>,
+    /// Every problem variable that has EVER held a seed bound, ascending-ish
+    /// and never removed (a pop can drop a seed, and the stale entry then
+    /// simply finds `None` and does nothing).
+    ///
+    /// This exists because [`Self::reset_scratch`] runs once per pass and used
+    /// to walk `0..nvars`. The ADR-2122 sizing run measured a median **140,606
+    /// passes** against a median **1,706 variables** on this population, i.e.
+    /// about 240 M slot reads to copy a handful of bounds -- the same order as
+    /// the 252 M coefficient reads the row analysis itself does. Half the
+    /// propagator's cost was the reset, and none of it was arithmetic.
+    seeded: Vec<usize>,
+    /// Membership bit for [`Self::seeded`].
+    seeded_mark: Vec<bool>,
+    /// Per atom, the pass number that last put it on the candidate list — an
+    /// epoch stamp, so deduplicating candidates costs no allocation.
+    cand_epoch: Vec<u64>,
+    /// Bumped once per change to the ASSERTED set: every constraint `assert`
+    /// pushes, and every `pop` that truncates. This is the touched filter's
+    /// authority, and it is a counter rather than a dirty flag for one reason
+    /// — a pop followed by an assert can leave `live` the same LENGTH with
+    /// different CONTENT, and a length test would then read a stale scratch
+    /// table as current.
+    epoch: u64,
+    /// The [`Self::epoch`] the scratch tables were last built at. Equal means
+    /// nothing has changed and the pass would derive exactly what is already
+    /// there.
+    scratch_epoch: u64,
+    /// Passes entered (the touched filter let them through).
+    passes: u64,
+    /// Tightening rounds run across every pass.
+    rounds: u64,
+    /// Column bounds installed across every pass, seeds included.
+    derived: u64,
+    /// Literals offered to the driver by this propagator.
+    propagations: u64,
+    /// Constraint coefficients the row analysis examined — the clock-free cost
+    /// of the whole mechanism, so "what did propagation cost" is a count and
+    /// not a wall time a busy host moves.
+    row_cells: u64,
+    /// Search DECISIONS on atoms this theory tracks, and how many of those were
+    /// on an atom the column bounds ALREADY entailed (ADR-2122's ceiling).
+    /// Populated in [`BoundPropagation::Probe`] and [`BoundPropagation::On`].
+    decisions_seen: u64,
+    decisions_implied: u64,
+}
+
+impl ImpliedBounds {
+    /// Builds the state for a theory over `atoms` with `nvars` problem
+    /// variables. `mode` decides whether anything is ever done with it.
+    fn new(mode: BoundPropagation, nvars: usize, atoms: &[AtomKind]) -> Self {
+        let mut var_atoms: Vec<Vec<usize>> = vec![Vec::new(); nvars];
+        if mode != BoundPropagation::Off {
+            for (index, atom) in atoms.iter().enumerate() {
+                let AtomKind::Order {
+                    when_true,
+                    when_false,
+                } = atom
+                else {
+                    // Only an ORDER atom is a propagation TARGET: an equality
+                    // asserted false is a disjunction this theory declines, and
+                    // an unsupported atom has no constraint at all. Both can
+                    // still HOLD a bound, and both do so through `live`, which
+                    // the seeding walks — so leaving them out of this index
+                    // loses no derivation.
+                    continue;
+                };
+                // The two polarity templates are exact negations, so they touch
+                // the same variables; both are walked anyway rather than
+                // assuming it, because an overflowed normalization can leave
+                // one of them shaped differently from the other.
+                for c in [when_true, when_false] {
+                    for (&j, &coeff) in &c.expr.coeffs {
+                        if coeff.is_zero() || j >= nvars {
+                            continue;
+                        }
+                        // Atoms are walked in ascending index order, so the
+                        // last entry is the only one that can repeat: one
+                        // comparison deduplicates, and the list comes out
+                        // ascending, which is what makes the candidate order
+                        // reproducible.
+                        if var_atoms[j].last().copied() != Some(index) {
+                            var_atoms[j].push(index);
+                        }
+                    }
+                }
+            }
+        }
+        Self {
+            mode,
+            seed_lower: vec![None; nvars],
+            seed_upper: vec![None; nvars],
+            seed_log: Vec::new(),
+            dirty: Vec::new(),
+            dirty_mark: vec![false; nvars],
+            var_atoms,
+            lo: vec![None; nvars],
+            hi: vec![None; nvars],
+            scratch_written: Vec::new(),
+            scratch_mark: vec![false; nvars],
+            seeded: Vec::new(),
+            seeded_mark: vec![false; nvars],
+            cand_epoch: vec![u64::MAX; atoms.len()],
+            epoch: 0,
+            // Deliberately NOT `0`: a fresh theory has never built a scratch
+            // table, and starting both at zero would make the very first pass
+            // look like a repeat and skip it.
+            scratch_epoch: u64::MAX,
+            passes: 0,
+            rounds: 0,
+            derived: 0,
+            propagations: 0,
+            row_cells: 0,
+            decisions_seen: 0,
+            decisions_implied: 0,
+        }
+    }
+
+    /// Whether this instance does anything at all.
+    fn active(&self) -> bool {
+        self.mode != BoundPropagation::Off
+    }
+
+    /// Records the seed bound `c` gives a problem variable, if it is a unit
+    /// constraint and the bound is strictly tighter than what is held.
+    ///
+    /// Exactly one entry is pushed onto [`Self::seed_log`] per call, so the log
+    /// stays positionally aligned with [`LraTheory::live`] and `pop` undoes it
+    /// by truncation. A constraint that is not unit, whose arithmetic declined,
+    /// or whose bound is not an improvement pushes `None` — a slot, not
+    /// nothing, because the alignment is the undo.
+    fn install_seed(&mut self, c: &Constraint) {
+        if !self.active() {
+            return;
+        }
+        // One bump per live constraint, tighter bound or not: the asserted set
+        // changed, and the ROW analysis reads the whole asserted set, not only
+        // the constraints that moved a seed.
+        self.epoch = self.epoch.wrapping_add(1);
+        let Some((var, upper, value, strict)) = unit_col_bound(c) else {
+            self.seed_log.push(None);
+            return;
+        };
+        if var >= self.seed_lower.len() {
+            self.seed_log.push(None);
+            return;
+        }
+        let current = if upper {
+            self.seed_upper[var].as_ref()
+        } else {
+            self.seed_lower[var].as_ref()
+        };
+        if !tighter_col(&value, strict, current, upper) {
+            self.seed_log.push(None);
+            return;
+        }
+        let fresh = ColBound {
+            value,
+            strict,
+            why: vec![c.atom],
+        };
+        let previous = if upper {
+            self.seed_upper[var].replace(fresh)
+        } else {
+            self.seed_lower[var].replace(fresh)
+        };
+        self.seed_log.push(Some(ColUndo {
+            var,
+            upper,
+            previous,
+        }));
+        if !self.seeded_mark[var] {
+            self.seeded_mark[var] = true;
+            self.seeded.push(var);
+        }
+        self.derived += 1;
+        if !self.dirty_mark[var] {
+            self.dirty_mark[var] = true;
+            self.dirty.push(var);
+        }
+    }
+
+    /// Undoes every seed change recorded at or above `live_len`.
+    ///
+    /// The touched list is deliberately NOT extended here. A pop only ever
+    /// LOOSENS a bound, and a looser bound entails a subset of what the tighter
+    /// one did, so no propagation can become available because of a pop. Adding
+    /// the popped variables would buy a pass that is provably output-empty.
+    fn undo(&mut self, live_len: usize) {
+        if self.seed_log.len() > live_len {
+            self.epoch = self.epoch.wrapping_add(1);
+        }
+        while self.seed_log.len() > live_len {
+            let Some(entry) = self.seed_log.pop() else {
+                continue;
+            };
+            let Some(undo) = entry else { continue };
+            if undo.upper {
+                self.seed_upper[undo.var] = undo.previous;
+            } else {
+                self.seed_lower[undo.var] = undo.previous;
+            }
+        }
+    }
+
+    /// Resets the scratch tables to the seeds, clearing exactly the slots the
+    /// last pass wrote.
+    fn reset_scratch(&mut self) {
+        for &var in &self.scratch_written {
+            self.lo[var] = None;
+            self.hi[var] = None;
+            self.scratch_mark[var] = false;
+        }
+        self.scratch_written.clear();
+        // `seeded`, not `0..nvars`: only a variable that has held a seed bound
+        // can contribute anything here, and the pass runs often enough that the
+        // difference is half this mechanism's cost (see the field docs). A
+        // STALE entry -- a variable whose seed a `pop` has since removed -- is
+        // harmless: both slots read `None` and nothing is written.
+        for index in 0..self.seeded.len() {
+            let var = self.seeded[index];
+            let mut written = false;
+            if let Some(b) = &self.seed_lower[var] {
+                self.lo[var] = Some(b.clone());
+                written = true;
+            }
+            if let Some(b) = &self.seed_upper[var] {
+                self.hi[var] = Some(b.clone());
+                written = true;
+            }
+            if written {
+                self.scratch_mark[var] = true;
+                self.scratch_written.push(var);
+            }
+        }
+    }
+
+    /// Installs a derived bound into the scratch tables if it is strictly
+    /// tighter, returning whether it was.
+    fn install_derived(
+        &mut self,
+        var: usize,
+        upper: bool,
+        value: Rational,
+        strict: bool,
+        why: Vec<usize>,
+    ) -> bool {
+        let current = if upper {
+            self.hi[var].as_ref()
+        } else {
+            self.lo[var].as_ref()
+        };
+        if !tighter_col(&value, strict, current, upper) {
+            return false;
+        }
+        let fresh = ColBound { value, strict, why };
+        if upper {
+            self.hi[var] = Some(fresh);
+        } else {
+            self.lo[var] = Some(fresh);
+        }
+        if !self.scratch_mark[var] {
+            self.scratch_mark[var] = true;
+            self.scratch_written.push(var);
+        }
+        self.derived += 1;
+        true
+    }
+}
+
+/// The ADR-2122 state for a theory over `atoms`, or `None` when the lever is
+/// `off` — which is the shipped default, so a default build allocates no table,
+/// builds no `var_atoms` index, and takes no branch it did not take before.
+fn implied_state(nvars: usize, atoms: &[AtomKind]) -> Option<Box<ImpliedBounds>> {
+    let mode = bound_propagation_mode();
+    if mode == BoundPropagation::Off {
+        return None;
+    }
+    Some(Box::new(ImpliedBounds::new(mode, nvars, atoms)))
+}
+
+/// Whether `(value, strict)` is a strictly tighter bound than `current` on the
+/// given side. Inconclusive arithmetic answers `false` — a bound not installed
+/// costs completeness, never soundness.
+fn tighter_col(value: &Rational, strict: bool, current: Option<&ColBound>, upper: bool) -> bool {
+    let Some(cur) = current else { return true };
+    let Some(ord) = value.checked_cmp(&cur.value) else {
+        return false;
+    };
+    let better = if upper {
+        ord == Ordering::Less
+    } else {
+        ord == Ordering::Greater
+    };
+    better || (ord == Ordering::Equal && strict && !cur.strict)
+}
+
+/// The column bound an asserted UNIT constraint gives its one variable:
+/// `(variable, is an upper bound, value, strict)`.
+///
+/// `c` reads `Σ aⱼ·xⱼ + k ≤ 0` (`<` when strict). With one nonzero coefficient
+/// `a` at `x`, that is `x ≤ −k/a` for `a > 0` and `x ≥ −k/a` for `a < 0` — the
+/// division by a negative is what flips the side, and getting that backwards is
+/// a wrong bound, which is why `a`'s sign is compared explicitly rather than
+/// inferred from the value.
+///
+/// `None` when the constraint is not unit or the exact arithmetic declined.
+fn unit_col_bound(c: &Constraint) -> Option<(usize, bool, Rational, bool)> {
+    let mut nonzero = c.expr.coeffs.iter().filter(|(_, v)| !v.is_zero());
+    let (&var, &coeff) = nonzero.next()?;
+    if nonzero.next().is_some() {
+        return None;
+    }
+    let upper = coeff.checked_cmp(&Rational::zero())? == Ordering::Greater;
+    let value = c.expr.constant.checked_neg()?.checked_div(coeff)?;
+    Some((var, upper, value, c.strict))
+}
+
+/// The supremum (`maximise`) or infimum of `expr` under the column bounds
+/// `lo`/`hi`, the atoms justifying it appended to `why`, and whether the
+/// extremum is **attained**.
+///
+/// `skip` names a variable to leave OUT of the sum — the one a row analysis is
+/// deriving a bound FOR; `usize::MAX` skips nothing. The constant term is never
+/// skipped: a row analysis needs `inf(rest + k)`, not `inf(rest)`.
+///
+/// `None` when a variable is unbounded on the side its sign needs, the exact
+/// arithmetic declined, or the explanation grew past
+/// [`MAX_IMPLIED_BOUND_EXPLANATION`]. All three are "no bound derived", which
+/// costs completeness and never soundness.
+fn extremum(
+    expr: &LinExpr,
+    lo: &[Option<ColBound>],
+    hi: &[Option<ColBound>],
+    maximise: bool,
+    skip: usize,
+    why: &mut Vec<usize>,
+) -> Option<(Rational, bool)> {
+    let zero = Rational::zero();
+    let mut total = expr.constant;
+    let mut attained = true;
+    for (&j, &coeff) in &expr.coeffs {
+        if j == skip || coeff.is_zero() {
+            continue;
+        }
+        let positive = coeff.checked_cmp(&zero)? == Ordering::Greater;
+        // Maximising takes the UPPER bound of a positively-signed term and the
+        // LOWER bound of a negatively-signed one; minimising takes the other.
+        let bound = if positive == maximise {
+            hi.get(j)?.as_ref()?
+        } else {
+            lo.get(j)?.as_ref()?
+        };
+        total = total.checked_add(coeff.checked_mul(bound.value)?)?;
+        if bound.strict {
+            attained = false;
+        }
+        for &atom in &bound.why {
+            if let Err(at) = why.binary_search(&atom) {
+                why.insert(at, atom);
+                if why.len() > MAX_IMPLIED_BOUND_EXPLANATION {
+                    return None;
+                }
+            }
+        }
+    }
+    Some((total, attained))
+}
+
+/// Whether the column bounds ENTAIL the constraint `c` (`expr ≤ 0`, strict when
+/// `c.strict`), with the justifying atoms left in `why`.
+///
+/// Soundness in one line: `expr ≤ sup` holds at every point the bounds allow,
+/// so `sup ≤ 0` gives `expr ≤ 0` everywhere. The strict cases are the two the
+/// attainment flag exists for — `expr < 0` needs `sup < 0`, **or** `sup = 0`
+/// with the supremum never reached; and `expr ≤ 0` is content with `sup = 0`
+/// whether or not it is reached.
+fn entails(
+    c: &Constraint,
+    lo: &[Option<ColBound>],
+    hi: &[Option<ColBound>],
+    why: &mut Vec<usize>,
+) -> bool {
+    let Some((sup, attained)) = extremum(&c.expr, lo, hi, true, usize::MAX, why) else {
+        return false;
+    };
+    let Some(ord) = sup.checked_cmp(&Rational::zero()) else {
+        return false;
+    };
+    match ord {
+        Ordering::Less => true,
+        Ordering::Equal => !c.strict || !attained,
+        Ordering::Greater => false,
+    }
+}
+
+/// One constraint template as a row the simplex can decide: `Σ aⱼ·xⱼ ⋈ −k`.
+///
+/// This is the bridge the explanation CHECKER needs. A propagation's
+/// explanation is a claim — "these asserted literals imply this one" — and the
+/// only way to check it without re-running the arithmetic that produced it is
+/// to hand the reasons plus the propagated literal's NEGATION to the
+/// feasibility engine and require `unsat`. That engine shares no code with
+/// [`extremum`], so a sign error in one is not a sign error in the other.
+fn sparse_row(c: &Constraint) -> Option<simplex::SparseConstraint> {
+    let mut coeffs = Vec::new();
+    for (&j, &v) in &c.expr.coeffs {
+        if !v.is_zero() {
+            coeffs.push((j, v));
+        }
+    }
+    Some(simplex::SparseConstraint {
+        coeffs,
+        rel: if c.strict {
+            simplex::Rel::Lt
+        } else {
+            simplex::Rel::Le
+        },
+        rhs: c.expr.constant.checked_neg()?,
+    })
 }
 
 /// Why construction of an online LRA theory stopped before all atoms were
@@ -621,6 +1224,9 @@ impl LraTheory {
         // working when it does.
         // Order-preserving scan filter for `propagate_bounds`; see the field docs.
         let propagatable = propagatable_atoms(&atoms, forms);
+        // ADR-2122's column-bound table, built BEFORE `atoms` is moved into the
+        // struct because it indexes them.
+        let implied = implied_state(nvars, &atoms);
         Ok(Self {
             atoms,
             nvars,
@@ -645,6 +1251,7 @@ impl LraTheory {
             final_check_core_literals: 0,
             final_check_core_widenings: 0,
             final_check_live_rows: 0,
+            implied,
         })
     }
 
@@ -681,6 +1288,29 @@ impl LraTheory {
     #[must_use]
     pub(crate) fn with_deferred_final_check(mut self) -> Self {
         self.deferred_final_check = true;
+        self
+    }
+
+    /// Replaces the ADR-2122 propagator's mode, for tests.
+    ///
+    /// The shipped mode comes from a process-wide `OnceLock` over an
+    /// environment variable, which is the right shape for a lever and the
+    /// wrong shape for a test: one process cannot then exercise two modes, and
+    /// a suite that sets the variable is a gate on one shell. This rebuilds the
+    /// state instead, and must be called BEFORE any `assert`, because
+    /// `seed_log` is positionally aligned with `live`.
+    #[cfg(test)]
+    #[must_use]
+    fn with_bound_propagation(mut self, mode: BoundPropagation) -> Self {
+        assert!(
+            self.live.is_empty(),
+            "the seed log is aligned with `live`; set the mode before asserting"
+        );
+        self.implied = if mode == BoundPropagation::Off {
+            None
+        } else {
+            Some(Box::new(ImpliedBounds::new(mode, self.nvars, &self.atoms)))
+        };
         self
     }
 
@@ -727,6 +1357,15 @@ impl LraTheory {
     fn install_bounds(&mut self, first: usize) -> Option<Vec<TheoryLit>> {
         let mut conflict: Option<Vec<TheoryLit>> = None;
         for index in first..self.live.len() {
+            // ADR-2122: one seed entry per live constraint, pushed FIRST and
+            // unconditionally, so `seed_log` stays positionally aligned with
+            // `live` whatever the form bookkeeping below decides. The two logs
+            // are separate because they undo different tables, and a single
+            // `continue` in the form path would otherwise skip the seed's slot
+            // and silently shear the alignment `pop` relies on.
+            if let Some(imp) = self.implied.as_mut() {
+                imp.install_seed(&self.live[index]);
+            }
             let Some((form, upper, value, strict)) = Self::form_bound(&self.live[index]) else {
                 self.bound_log.push(None);
                 continue;
@@ -805,6 +1444,9 @@ impl LraTheory {
     /// Undoes every bound change recorded at or above `live_len`, restoring the
     /// tables to the state that matches `live[..live_len]`.
     fn undo_bounds(&mut self, live_len: usize) {
+        if let Some(imp) = self.implied.as_mut() {
+            imp.undo(live_len);
+        }
         while self.bound_log.len() > live_len {
             let Some(entry) = self.bound_log.pop() else {
                 continue;
@@ -913,6 +1555,288 @@ impl LraTheory {
         }
     }
 
+    /// ADR-2122's implied-bound pass: rebuild the scratch column bounds from
+    /// the seeds, tighten them against the asserted rows, and offer the driver
+    /// every unassigned atom the result entails.
+    ///
+    /// # What makes a propagation from here sound
+    ///
+    /// Every bound in the table is an implication from a set of ASSERTED
+    /// literals, carried on the bound as [`ColBound::why`]: a seed bound is
+    /// implied by the one constraint that gave it, and a derived bound by that
+    /// row's atom together with the bounds the row's other variables held.
+    /// [`entails`] then confines the candidate atom's own expression to an
+    /// interval lying wholly on one side of zero, so the offered literal is a
+    /// consequence of the union of those `why` sets and of nothing else. The
+    /// explanation clause is `¬⋀why ∨ lit`, valid over ℝ.
+    ///
+    /// The claim is not left resting on that paragraph. In debug builds every
+    /// offered literal is re-checked by
+    /// [`Self::implied_propagation_is_valid`], which hands the reasons and the
+    /// literal's NEGATION to the simplex and requires `unsat` — an engine that
+    /// shares no arithmetic with [`extremum`], so a sign error here is not a
+    /// sign error there.
+    ///
+    /// # What bounds the work
+    ///
+    /// The pass runs only when the asserted set has CHANGED since the last one
+    /// ([`ImpliedBounds::epoch`]); z3 gates the same work on a touched-row set
+    /// it clears after each pass (`lar_solver.h:283-304`). Within a pass:
+    /// [`MAX_IMPLIED_BOUND_ROUNDS`] tightening rounds, rows longer than
+    /// [`MAX_IMPLIED_BOUND_ROW_LENGTH`] skipped entirely (z3's
+    /// `max_row_length_for_bound_propagation`, default 300,
+    /// `lar_solver.h:114`), [`MAX_IMPLIED_BOUNDS_PER_PASS`] installs, and
+    /// [`MAX_IMPLIED_BOUND_PROPAGATIONS_PER_CALL`] literals offered.
+    // The pass is one decision procedure and reads as one: the rounds derive
+    // the table the emission reads, and splitting them would put the scratch
+    // tables' lifetime across a function boundary the borrow checker would then
+    // need a second structure to express.
+    #[allow(clippy::too_many_lines)]
+    fn implied_bound_pass(&mut self, queue: &mut PropagationQueue) {
+        // Disjoint-field borrows: `implied` mutably, the rest shared. Nothing
+        // below may call a `&mut self` method, which is why the pass is one
+        // function rather than a chain of helpers.
+        let Some(imp) = self.implied.as_mut() else {
+            return;
+        };
+        if !imp.active() || self.nvars == 0 || imp.epoch == imp.scratch_epoch {
+            return;
+        }
+        if past_deadline(self.deadline) {
+            return;
+        }
+        imp.passes += 1;
+        imp.scratch_epoch = imp.epoch;
+        let pass = imp.passes;
+        imp.reset_scratch();
+
+        // `changed` starts as the variables whose SEED moved since the last
+        // pass and grows with every variable a round newly bounds; it is both
+        // the tightening worklist's record and the emission candidate set.
+        // `dirty_mark` is its membership bit, left set from `install_seed` and
+        // cleared once at the end.
+        let mut changed: Vec<usize> = std::mem::take(&mut imp.dirty);
+        let mut budget = MAX_IMPLIED_BOUNDS_PER_PASS;
+        for _ in 0..MAX_IMPLIED_BOUND_ROUNDS {
+            if budget == 0 || past_deadline(self.deadline) {
+                break;
+            }
+            imp.rounds += 1;
+            let mut moved = false;
+            for c in &self.live {
+                let len = c.expr.coeffs.len();
+                // A UNIT row is the seed table's own job and a zero-variable
+                // row bounds nothing; a row past the length cap is refused
+                // outright, because the per-variable derivation re-reads the
+                // row and so costs O(len^2).
+                if !(2..=MAX_IMPLIED_BOUND_ROW_LENGTH).contains(&len) {
+                    continue;
+                }
+                imp.row_cells += len as u64;
+                for (&j, &a) in &c.expr.coeffs {
+                    if a.is_zero() || budget == 0 {
+                        continue;
+                    }
+                    // `c` reads `a·xⱼ + rest ≤ 0`, so `a·xⱼ ≤ −rest` and
+                    // therefore `a·xⱼ ≤ −inf(rest)`. The result is strict when
+                    // the row is, and ALSO when the infimum is not attained:
+                    // `rest > inf` then gives `−rest < −inf`.
+                    let mut why: Vec<usize> = Vec::new();
+                    let Some((inf, attained)) =
+                        extremum(&c.expr, &imp.lo, &imp.hi, false, j, &mut why)
+                    else {
+                        continue;
+                    };
+                    let Some(sign) = a.checked_cmp(&Rational::zero()) else {
+                        continue;
+                    };
+                    let Some(value) = inf.checked_neg().and_then(|r| r.checked_div(a)) else {
+                        continue;
+                    };
+                    // Dividing by a NEGATIVE coefficient flips the side. Read
+                    // off the sign rather than from the value, because a wrong
+                    // side here is a wrong bound and a wrong bound is a wrong
+                    // propagation.
+                    let upper = sign == Ordering::Greater;
+                    let strict = c.strict || !attained;
+                    if let Err(at) = why.binary_search(&c.atom) {
+                        why.insert(at, c.atom);
+                        if why.len() > MAX_IMPLIED_BOUND_EXPLANATION {
+                            continue;
+                        }
+                    }
+                    if imp.install_derived(j, upper, value, strict, why) {
+                        moved = true;
+                        budget -= 1;
+                        if !imp.dirty_mark[j] {
+                            imp.dirty_mark[j] = true;
+                            changed.push(j);
+                        }
+                    }
+                }
+            }
+            if !moved {
+                break;
+            }
+        }
+
+        // Emission. `Probe` stops here: it has built exactly the same table and
+        // will answer exactly the same entailment questions at
+        // `note_decision`, but it offers nothing, so the search it is sizing is
+        // the search that actually ran.
+        if imp.mode == BoundPropagation::On {
+            let mut emitted = 0usize;
+            'outer: for &var in &changed {
+                for k in 0..imp.var_atoms[var].len() {
+                    if emitted >= MAX_IMPLIED_BOUND_PROPAGATIONS_PER_CALL
+                        || past_deadline(self.deadline)
+                    {
+                        break 'outer;
+                    }
+                    let atom = imp.var_atoms[var][k];
+                    // One epoch stamp per pass deduplicates the candidate list
+                    // without allocating a set; `changed` is ascending only in
+                    // its seed prefix, so a stamp is the honest form.
+                    if imp.cand_epoch[atom] == pass {
+                        continue;
+                    }
+                    imp.cand_epoch[atom] = pass;
+                    if self.assigned[atom].is_some() {
+                        continue;
+                    }
+                    let AtomKind::Order {
+                        when_true,
+                        when_false,
+                    } = &self.atoms[atom]
+                    else {
+                        continue;
+                    };
+                    for (constraint, value) in [(when_true, true), (when_false, false)] {
+                        let mut why: Vec<usize> = Vec::new();
+                        if !entails(constraint, &imp.lo, &imp.hi, &mut why) {
+                            continue;
+                        }
+                        // A literal explained by ITSELF is not an
+                        // implication -- and this cannot happen, so it is
+                        // ASSERTED rather than filtered. Every atom in `why`
+                        // came from a bound installed by a LIVE constraint and
+                        // is therefore assigned; `atom` reached this line only
+                        // because it is NOT assigned.
+                        //
+                        // It was a `continue` until the mutation run said
+                        // otherwise: deleting the guard left all 38 tests
+                        // green, i.e. it was decoration, and decoration shaped
+                        // like a soundness filter is worse than no filter at
+                        // all -- it is a line a reader counts as protection.
+                        // What is real here is the invariant, so the invariant
+                        // is what is checked.
+                        debug_assert!(
+                            !why.contains(&atom),
+                            "ADR-2122: atom {atom} is explained by itself; every \
+                             reason atom must be asserted and this one is not"
+                        );
+                        let mut reason = Vec::with_capacity(why.len());
+                        let mut usable = true;
+                        for &r in &why {
+                            let Some(v) = self.assigned.get(r).copied().flatten() else {
+                                usable = false;
+                                break;
+                            };
+                            reason.push(TheoryLit { atom: r, value: v });
+                        }
+                        if !usable || reason.is_empty() {
+                            continue;
+                        }
+                        debug_assert!(
+                            Self::implied_propagation_is_valid(
+                                &self.atoms,
+                                self.nvars,
+                                atom,
+                                value,
+                                &reason,
+                                self.deadline,
+                            ) != Some(false),
+                            "ADR-2122: the simplex refuted an implied-bound explanation \
+                             for atom {atom}={value}: {reason:?}"
+                        );
+                        queue.push_eager(TheoryLit { atom, value }, reason);
+                        imp.propagations += 1;
+                        emitted += 1;
+                        break;
+                    }
+                }
+            }
+        }
+
+        for &var in &changed {
+            imp.dirty_mark[var] = false;
+        }
+        changed.clear();
+        imp.dirty = changed;
+    }
+
+    /// Re-checks one implied-bound propagation with the **simplex**:
+    /// `Some(true)` when the reasons together with the NEGATION of the
+    /// propagated literal are infeasible (so the explanation clause is a valid
+    /// implication over ℝ), `Some(false)` when they are satisfiable (the
+    /// explanation is WRONG), and `None` when the engine declined and the check
+    /// is inconclusive.
+    ///
+    /// This is deliberately not a re-run of [`extremum`]. A checker that
+    /// recomputes what the producer computed agrees with the producer's own
+    /// sign errors — the shape this repository keeps being caught by — so the
+    /// check goes through the general feasibility engine, which shares no
+    /// arithmetic with the interval reasoning above and is itself gated by the
+    /// Farkas self-check.
+    fn implied_propagation_is_valid(
+        atoms: &[AtomKind],
+        nvars: usize,
+        atom: usize,
+        value: bool,
+        reason: &[TheoryLit],
+        deadline: Option<Instant>,
+    ) -> Option<bool> {
+        /// The constraint a registered atom imposes at the given polarity, or
+        /// `None` when that polarity imposes none (an equality asserted false).
+        fn template(atoms: &[AtomKind], atom: usize, value: bool) -> Option<&Constraint> {
+            match (atoms.get(atom)?, value) {
+                (
+                    AtomKind::Order {
+                        when_true,
+                        when_false,
+                    },
+                    v,
+                ) => Some(if v { when_true } else { when_false }),
+                (AtomKind::Equality { when_true }, true) => Some(&when_true[0]),
+                (AtomKind::Equality { .. }, false) | (AtomKind::Unsupported, _) => None,
+            }
+        }
+        let mut rows = Vec::with_capacity(reason.len() + 2);
+        for lit in reason {
+            rows.push(sparse_row(template(atoms, lit.atom, lit.value)?)?);
+            // An equality asserted true is TWO constraints; naming only the
+            // first would check a weaker premise than the one that was used,
+            // which is a check that can pass over a wrong explanation.
+            if let Some(AtomKind::Equality { when_true }) = atoms.get(lit.atom)
+                && lit.value
+            {
+                rows.push(sparse_row(&when_true[1])?);
+            }
+        }
+        rows.push(sparse_row(template(atoms, atom, !value)?)?);
+        if rows
+            .iter()
+            .any(|r| r.coeffs.iter().any(|&(j, _)| j >= nvars))
+        {
+            return None;
+        }
+        match simplex::feasible_within_sparse(nvars, &rows, deadline) {
+            simplex::SimplexOutcome::Infeasible(_) => Some(true),
+            simplex::SimplexOutcome::Feasible(_) => Some(false),
+            simplex::SimplexOutcome::Unknown => None,
+        }
+    }
+
     /// A real witness for the currently-asserted constraints, over the original
     /// symbols, or `None` if the live system is infeasible / arithmetic overflowed.
     /// The crate-internal reader the online theory-combination path
@@ -949,6 +1873,12 @@ impl LraTheory {
             final_check_live_rows: self.final_check_live_rows,
             bound_scan_calls: self.bound_scan_calls,
             bound_scan_atoms: self.bound_scan_atoms,
+            implied_bound_passes: self.implied.as_ref().map_or(0, |i| i.passes),
+            implied_bound_rows_scanned: self.implied.as_ref().map_or(0, |i| i.row_cells),
+            implied_bounds_derived: self.implied.as_ref().map_or(0, |i| i.derived),
+            implied_bound_propagations: self.implied.as_ref().map_or(0, |i| i.propagations),
+            decisions_on_tracked_atoms: self.implied.as_ref().map_or(0, |i| i.decisions_seen),
+            decisions_on_implied_atoms: self.implied.as_ref().map_or(0, |i| i.decisions_implied),
             pivot_cells_written: engine.inner.counters().pivot_cells_written,
             pivot_rows_combined: engine.inner.counters().pivot_rows_combined,
             entering_scan_cells: engine.inner.counters().entering_scan_cells,
@@ -1363,6 +2293,13 @@ impl TheorySolver for LraTheory {
     fn propagate_into(&mut self, queue: &mut PropagationQueue) {
         if self.deferred_final_check {
             self.propagate_bounds(queue);
+            // ADR-2122. Ordered AFTER the form-level scan deliberately: the two
+            // derive different things (a form bound entails an atom over the
+            // SAME form; a column bound entails one over any form that mentions
+            // the variable), and running the cheaper, older one first keeps a
+            // default build's trajectory byte-identical when the lever is off,
+            // because the call below returns on its first line.
+            self.implied_bound_pass(queue);
             return;
         }
         for prop in LraTheory::propagate(self) {
@@ -1373,6 +2310,50 @@ impl TheorySolver for LraTheory {
 
     fn engine_counters(&self) -> Option<TheoryEngineCounters> {
         LraTheory::engine_counters(self)
+    }
+
+    /// ADR-2122's ceiling, counted rather than estimated: of the decisions the
+    /// search spends on atoms this theory tracks, how many were on an atom the
+    /// column bounds ALREADY entailed — one the propagator would have supplied
+    /// as a unit instead.
+    ///
+    /// The scratch table this reads is the one the last
+    /// [`Self::implied_bound_pass`] built, and a pass runs whenever the
+    /// asserted set changed, so at a decision — which the driver takes only
+    /// after propagation has reached a fixpoint — it is current. It is
+    /// deliberately a READ and not a recomputation: recomputing here would
+    /// measure a table the search never had.
+    ///
+    /// This is an UNDER-count and says so. An atom whose entailment needed more
+    /// than [`MAX_IMPLIED_BOUND_ROUNDS`] rounds, or whose explanation exceeded
+    /// [`MAX_IMPLIED_BOUND_EXPLANATION`], is not counted, so the number is a
+    /// floor on what propagation could have removed and never a ceiling on it.
+    fn note_decision(&mut self, atom: usize, _value: bool) {
+        let Some(imp) = self.implied.as_mut() else {
+            return;
+        };
+        if !imp.active() {
+            return;
+        }
+        let Some(AtomKind::Order {
+            when_true,
+            when_false,
+        }) = self.atoms.get(atom)
+        else {
+            return;
+        };
+        imp.decisions_seen += 1;
+        for constraint in [when_true, when_false] {
+            let mut why: Vec<usize> = Vec::new();
+            // The `why.contains` test is kept HERE, where the emission path
+            // asserts the same invariant instead: this is a COUNTER, and a
+            // counter that over-reports its own ceiling is a worse failure than
+            // a redundant comparison. It costs one scan of a list capped at 16.
+            if entails(constraint, &imp.lo, &imp.hi, &mut why) && !why.contains(&atom) {
+                imp.decisions_implied += 1;
+                return;
+            }
+        }
     }
 }
 
@@ -4379,6 +5360,7 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
     let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
     // Order-preserving scan filter for `propagate_bounds`; see the field docs.
     let propagatable = propagatable_atoms(&atoms, forms);
+    let implied = implied_state(nvars, &atoms);
     let mut theory = LraTheory {
         atoms,
         nvars,
@@ -4403,6 +5385,7 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
         final_check_core_literals: 0,
         final_check_core_widenings: 0,
         final_check_live_rows: 0,
+        implied,
     };
     let mut solver = Dpll::new(enc.var_count, atom_count, clauses);
     let _ = solver.solve(&mut theory);
@@ -5812,6 +6795,7 @@ mod tests {
         let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
         // Order-preserving scan filter for `propagate_bounds`; see the field docs.
         let propagatable = propagatable_atoms(&atoms, forms);
+        let implied = implied_state(nvars, &atoms);
         let theory = LraTheory {
             atoms,
             nvars,
@@ -5836,6 +6820,7 @@ mod tests {
             final_check_core_literals: 0,
             final_check_core_widenings: 0,
             final_check_live_rows: 0,
+            implied,
         };
         let solver = Dpll::new(enc.var_count, atom_count, clauses);
         (solver, theory)
@@ -6035,6 +7020,517 @@ mod tests {
              (unsat, restarts) {first:?} != {second:?}"
         );
         assert!(first.1 > 0, "expected restarts to fire (count={})", first.1);
+    }
+
+    // ---------------------------------------------------------------------
+    // ADR-2122 — implied-bound propagation
+    // ---------------------------------------------------------------------
+
+    /// Drains one implied-bound pass into `(literal, reason)` pairs.
+    ///
+    /// Deliberately NOT a re-derivation of the pass: it reads what the theory
+    /// actually offered the driver, which is the only thing a soundness claim
+    /// about propagation can be made of.
+    fn implied_pass(theory: &mut LraTheory) -> Vec<(TheoryLit, Vec<TheoryLit>)> {
+        let mut queue = PropagationQueue::default();
+        theory.implied_bound_pass(&mut queue);
+        queue
+            .entries()
+            .iter()
+            .map(|(lit, why)| {
+                let TheoryExplanation::Eager(reason) = why else {
+                    panic!("ADR-2122 offers only eager explanations");
+                };
+                (*lit, reason.clone())
+            })
+            .collect()
+    }
+
+    /// The whole point of the mechanism, as a positive control with its own
+    /// negative control beside it.
+    ///
+    /// `x ≤ 1` and `y ≤ 2` entail `x + y ≤ 5`, and the form-level propagator
+    /// **cannot see it**: the three atoms bound three different linear forms,
+    /// and [`LraTheory::propagate_bounds`] only ever compares bounds on the
+    /// SAME form. That is exactly the gap ADR-2111 measured as 19 propagations
+    /// against 836,531 decisions, so the test asserts both halves — the new
+    /// pass offers the literal, and the old scan offers nothing on the same
+    /// state. A pass that fired but on something the form scan already had
+    /// would be worth nothing and would pass a one-sided test.
+    #[test]
+    fn implied_bounds_propagate_an_atom_no_form_bound_could() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let one = rconst(&mut arena, 1);
+        let two = rconst(&mut arena, 2);
+        let five = rconst(&mut arena, 5);
+        let sum = arena.real_add(x, y).expect("x+y");
+        let a0 = arena.real_le(x, one).expect("x<=1");
+        let a1 = arena.real_le(y, two).expect("y<=2");
+        let a2 = arena.real_le(sum, five).expect("x+y<=5");
+        let atoms = [a0, a1, a2];
+
+        let mut theory = LraTheory::new(&arena, &atoms)
+            .with_deferred_final_check()
+            .with_bound_propagation(BoundPropagation::On);
+        theory.assert(0, true).expect("x<=1 is feasible");
+        theory.assert(1, true).expect("y<=2 is feasible");
+
+        let offered = implied_pass(&mut theory);
+        assert_eq!(
+            offered.len(),
+            1,
+            "exactly the one unassigned atom is entailed: {offered:?}"
+        );
+        assert_eq!(
+            offered[0].0,
+            TheoryLit {
+                atom: 2,
+                value: true
+            },
+            "x+y<=5 must be propagated TRUE"
+        );
+        assert_eq!(
+            offered[0].1,
+            vec![
+                TheoryLit {
+                    atom: 0,
+                    value: true
+                },
+                TheoryLit {
+                    atom: 1,
+                    value: true
+                }
+            ],
+            "the explanation names exactly the two bounds the sum used, ascending"
+        );
+        assert_eq!(
+            LraTheory::implied_propagation_is_valid(
+                &theory.atoms,
+                theory.nvars,
+                2,
+                true,
+                &offered[0].1,
+                None,
+            ),
+            Some(true),
+            "the simplex must refute the reasons together with the negation"
+        );
+
+        // The negative control, on the SAME state: the form-level scan this
+        // pass sits beside offers nothing here, so the literal above is new
+        // capability and not a second route to something we already had.
+        let mut form_only = LraTheory::new(&arena, &atoms).with_deferred_final_check();
+        form_only.assert(0, true).expect("x<=1 is feasible");
+        form_only.assert(1, true).expect("y<=2 is feasible");
+        let mut queue = PropagationQueue::default();
+        form_only.propagate_bounds(&mut queue);
+        assert!(
+            queue.is_empty(),
+            "the form-level scan must offer nothing on this state: {:?}",
+            queue.entries()
+        );
+    }
+
+    /// **The soundness-negative fixture.** A satisfiable system in which one
+    /// wrong implied bound propagates a literal that makes it unsat.
+    ///
+    /// The one way [`unit_col_bound`] can be wrong that nothing else catches is
+    /// the SIDE: `−x − 3 ≤ 0` is `x ≥ −3`, a LOWER bound, because the
+    /// coefficient is negative and dividing by a negative flips the relation.
+    /// Read as an upper bound it becomes `x ≤ −3`, which is false of every
+    /// point the constraint actually allows.
+    ///
+    /// The pair is written with the **satisfiable arm first**, so the `unsat`
+    /// below is read as a distinction the engine draws rather than as a blanket
+    /// refusal:
+    ///
+    /// - `x ≥ −3 ∧ x > 0` is FEASIBLE (`x = 1`), so the propagator must not
+    ///   offer anything that contradicts it;
+    /// - `x ≥ −3 ∧ x ≤ −5` is INFEASIBLE, and the propagator must see it
+    ///   coming: from `x ≥ −3` alone it propagates `¬(x ≤ −5)`.
+    ///
+    /// Under the flipped side the second propagation **disappears** — `x ≤ −3`
+    /// gives `−x` no upper bound at all — so the mutation is caught by an
+    /// absence, and the first arm is what shows the absence is not the whole
+    /// mechanism being off.
+    #[test]
+    fn a_seed_bound_on_the_wrong_side_would_propagate_into_a_satisfiable_system() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let zero = rconst(&mut arena, 0);
+        let minus_three = rconst(&mut arena, -3);
+        let minus_five = rconst(&mut arena, -5);
+        // `x >= -3`, `x <= 0`, `x <= -5`.
+        let a0 = arena.real_ge(x, minus_three).expect("x>=-3");
+        let a1 = arena.real_le(x, zero).expect("x<=0");
+        let a2 = arena.real_le(x, minus_five).expect("x<=-5");
+        let atoms = [a0, a1, a2];
+
+        // Arm 1, SATISFIABLE: `x >= -3` and `x > 0` have the model `x = 1`.
+        let mut sat = LraTheory::new(&arena, &atoms)
+            .with_deferred_final_check()
+            .with_bound_propagation(BoundPropagation::On);
+        sat.assert(0, true).expect("x>=-3");
+        sat.assert(1, false).expect("x>0");
+        assert!(
+            matches!(sat.final_check(), FinalCheckOutcome::Sat),
+            "x >= -3 and x > 0 are jointly satisfiable"
+        );
+
+        // Arm 2: from `x >= -3` alone the propagator must refute `x <= -5`, and
+        // the explanation must be the one asserted literal.
+        let mut probe = LraTheory::new(&arena, &atoms)
+            .with_deferred_final_check()
+            .with_bound_propagation(BoundPropagation::On);
+        probe.assert(0, true).expect("x>=-3");
+        let offered = implied_pass(&mut probe);
+        let refutation = offered
+            .iter()
+            .find(|(lit, _)| lit.atom == 2)
+            .expect("x >= -3 refutes x <= -5, so atom 2 must be propagated");
+        assert!(!refutation.0.value, "atom 2 is propagated FALSE");
+        assert_eq!(
+            refutation.1,
+            vec![TheoryLit {
+                atom: 0,
+                value: true
+            }],
+            "explained by the single bound that implies it"
+        );
+        for (lit, reason) in &offered {
+            assert_eq!(
+                LraTheory::implied_propagation_is_valid(
+                    &probe.atoms,
+                    probe.nvars,
+                    lit.atom,
+                    lit.value,
+                    reason,
+                    None,
+                ),
+                Some(true),
+                "every offered explanation must be a valid implication: {lit:?} {reason:?}"
+            );
+        }
+
+        // Arm 3, the distinction: asserting BOTH is infeasible, and the engine
+        // says so rather than refusing everything.
+        let mut unsat = LraTheory::new(&arena, &atoms)
+            .with_deferred_final_check()
+            .with_bound_propagation(BoundPropagation::On);
+        unsat.assert(0, true).expect("x>=-3");
+        let crossed = unsat.assert(2, true).is_err()
+            || matches!(unsat.final_check(), FinalCheckOutcome::Conflict(_));
+        assert!(crossed, "x >= -3 and x <= -5 are infeasible");
+    }
+
+    /// Strictness is where an interval argument goes wrong quietly, so both
+    /// directions are pinned: a STRICT bound entails the non-strict atom at the
+    /// same threshold, and a non-strict bound does **not** entail the strict
+    /// one.
+    #[test]
+    fn strictness_at_the_boundary_entails_one_way_only() {
+        for (strict_source, expect) in [(true, true), (false, false)] {
+            let mut arena = TermArena::new();
+            let x = rvar(&mut arena, "x");
+            let y = rvar(&mut arena, "y");
+            let one = rconst(&mut arena, 1);
+            let zero = rconst(&mut arena, 0);
+            let sum = arena.real_add(x, y).expect("x+y");
+            // Source: `x < 1` or `x <= 1`; target: `x + y < 1` with `y <= 0`.
+            let a0 = if strict_source {
+                arena.real_lt(x, one).expect("x<1")
+            } else {
+                arena.real_le(x, one).expect("x<=1")
+            };
+            let a1 = arena.real_le(y, zero).expect("y<=0");
+            let a2 = arena.real_lt(sum, one).expect("x+y<1");
+            let atoms = [a0, a1, a2];
+            let mut theory = LraTheory::new(&arena, &atoms)
+                .with_deferred_final_check()
+                .with_bound_propagation(BoundPropagation::On);
+            theory.assert(0, true).expect("bound on x");
+            theory.assert(1, true).expect("y<=0");
+            let offered = implied_pass(&mut theory);
+            let fired = offered.iter().any(|(lit, _)| lit.atom == 2 && lit.value);
+            assert_eq!(
+                fired, expect,
+                "strict_source={strict_source}: sup(x+y-1) = 0, so only a STRICT \
+                 supremum entails the strict atom; offered {offered:?}"
+            );
+            for (lit, reason) in &offered {
+                assert_eq!(
+                    LraTheory::implied_propagation_is_valid(
+                        &theory.atoms,
+                        theory.nvars,
+                        lit.atom,
+                        lit.value,
+                        reason,
+                        None,
+                    ),
+                    Some(true),
+                    "offered explanation must verify: {lit:?} {reason:?}"
+                );
+            }
+        }
+    }
+
+    /// The lever is OFF by default and the pass is then not merely quiet but
+    /// **absent**: no table is allocated and the entry point returns on its
+    /// first line, which is what makes "a default build is byte-identical" a
+    /// property rather than a hope.
+    ///
+    /// The ambient variable is honoured rather than assumed away — a test that
+    /// passes only under one shell's environment is a gate on that shell.
+    #[test]
+    fn the_implied_bound_lever_is_off_by_default_and_the_pass_is_absent() {
+        assert_eq!(bound_propagation_mode(), bound_propagation_mode());
+        if std::env::var_os("AXEYUM_LRA_BOUND_PROPAGATION").is_none() {
+            assert_eq!(bound_propagation_mode(), BoundPropagation::Off);
+            let mut arena = TermArena::new();
+            let x = rvar(&mut arena, "x");
+            let one = rconst(&mut arena, 1);
+            let a0 = arena.real_le(x, one).expect("x<=1");
+            let theory = LraTheory::new(&arena, &[a0]).with_deferred_final_check();
+            assert!(
+                theory.implied.is_none(),
+                "the default build allocates no implied-bound table"
+            );
+        }
+    }
+
+    /// `Probe` builds the same table and answers the same entailment questions
+    /// but offers NOTHING, which is what makes a sizing run a measurement of
+    /// the search that actually happened rather than of a different one.
+    #[test]
+    fn probe_mode_counts_without_propagating() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let one = rconst(&mut arena, 1);
+        let two = rconst(&mut arena, 2);
+        let five = rconst(&mut arena, 5);
+        let sum = arena.real_add(x, y).expect("x+y");
+        let atoms = [
+            arena.real_le(x, one).expect("x<=1"),
+            arena.real_le(y, two).expect("y<=2"),
+            arena.real_le(sum, five).expect("x+y<=5"),
+        ];
+        let mut theory = LraTheory::new(&arena, &atoms)
+            .with_deferred_final_check()
+            .with_bound_propagation(BoundPropagation::Probe);
+        theory.assert(0, true).expect("x<=1");
+        theory.assert(1, true).expect("y<=2");
+        assert!(
+            implied_pass(&mut theory).is_empty(),
+            "Probe offers no literal"
+        );
+        // ...and the ceiling counter still sees the decision it would have saved.
+        theory.note_decision(2, true);
+        let counters = theory.engine_counters().expect("warm engine");
+        assert_eq!(counters.decisions_on_tracked_atoms, 1);
+        assert_eq!(
+            counters.decisions_on_implied_atoms, 1,
+            "atom 2 was entailed when the search decided it"
+        );
+        assert_eq!(
+            counters.implied_bound_propagations, 0,
+            "Probe never offers, so the propagation counter stays at zero"
+        );
+    }
+
+    /// A propagation is an assignment the driver has not made yet, so offering
+    /// an atom the search has ALREADY assigned is not a propagation — it is a
+    /// no-op the driver must re-discard, and at the pass's emission cap it
+    /// crowds out real ones.
+    ///
+    /// This test exists because of what the mutation run said, and the reason
+    /// is worth keeping: deleting the assigned-atom skip and deleting the
+    /// explanation's bounds killed the **same five tests**, so no test in the
+    /// suite could tell those two guards apart. Two guards with one kill set is
+    /// the shape this repository has been caught by — six of seven guards in
+    /// one suite were removable because they all rejected through one shared
+    /// check. This one asks only about the atoms, never about the explanations,
+    /// so it separates them.
+    #[test]
+    fn the_pass_never_offers_an_atom_the_search_has_already_assigned() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let one = rconst(&mut arena, 1);
+        let two = rconst(&mut arena, 2);
+        let five = rconst(&mut arena, 5);
+        let sum = arena.real_add(x, y).expect("x+y");
+        let atoms = [
+            arena.real_le(x, one).expect("x<=1"),
+            arena.real_le(y, two).expect("y<=2"),
+            arena.real_le(sum, five).expect("x+y<=5"),
+        ];
+        let mut theory = LraTheory::new(&arena, &atoms)
+            .with_deferred_final_check()
+            .with_bound_propagation(BoundPropagation::On);
+        theory.assert(0, true).expect("x<=1");
+        theory.assert(1, true).expect("y<=2");
+        // Assign the ENTAILED atom too, so the only atoms the bounds imply are
+        // ones the search already holds. A correct pass then offers NOTHING.
+        theory.assert(2, true).expect("x+y<=5 is consistent");
+        let offered = implied_pass(&mut theory);
+        for (lit, _) in &offered {
+            assert!(
+                theory.assigned[lit.atom].is_none(),
+                "the pass offered atom {} which the search had already assigned \
+                 to {:?}: {offered:?}",
+                lit.atom,
+                theory.assigned[lit.atom]
+            );
+        }
+        assert!(
+            offered.is_empty(),
+            "every atom this fixture entails is already assigned, so a correct \
+             pass offers nothing: {offered:?}"
+        );
+    }
+
+    /// Determinism is a public API promise, so the offered sequence is pinned
+    /// against a second run rather than merely against the count.
+    #[test]
+    fn implied_bound_propagation_is_reproducible() {
+        let mut arena = TermArena::new();
+        let vars: Vec<TermId> = (0..4).map(|i| rvar(&mut arena, &format!("v{i}"))).collect();
+        let mut atoms = Vec::new();
+        for (i, &v) in vars.iter().enumerate() {
+            let k = rconst(&mut arena, i128::try_from(i).expect("small") + 1);
+            atoms.push(arena.real_le(v, k).expect("bound"));
+        }
+        let s01 = arena.real_add(vars[0], vars[1]).expect("v0+v1");
+        let s23 = arena.real_add(vars[2], vars[3]).expect("v2+v3");
+        let total = arena.real_add(s01, s23).expect("sum");
+        let big = rconst(&mut arena, 50);
+        atoms.push(arena.real_le(total, big).expect("sum<=50"));
+        let run = || {
+            let mut theory = LraTheory::new(&arena, &atoms)
+                .with_deferred_final_check()
+                .with_bound_propagation(BoundPropagation::On);
+            for atom in 0..4 {
+                theory.assert(atom, true).expect("feasible");
+            }
+            let mut queue = PropagationQueue::default();
+            theory.implied_bound_pass(&mut queue);
+            queue
+                .entries()
+                .iter()
+                .map(|(lit, _)| (lit.atom, lit.value))
+                .collect::<Vec<_>>()
+        };
+        let first = run();
+        assert!(!first.is_empty(), "the fixture must propagate something");
+        assert_eq!(first, run(), "the offered sequence is reproducible");
+    }
+
+    /// **The explanation checker, over a generated population.** Every literal
+    /// the propagator offers on a pseudo-random linear system is handed, with
+    /// its reasons and its own negation, to the simplex — which must refute
+    /// them. The engine shares no arithmetic with [`extremum`], so a sign error
+    /// in the interval reasoning is not a sign error in the check.
+    ///
+    /// The generator is a deterministic LCG, so a failure is reproducible from
+    /// its seed. The test requires a NONZERO number of verified propagations:
+    /// a generator that happened to produce nothing entailed would otherwise
+    /// pass while checking nothing, which is the shape of an empty result from
+    /// a tool that never pointed at its subject.
+    #[test]
+    fn every_offered_implied_bound_explanation_is_a_valid_implication() {
+        /// The 64-bit LCG used elsewhere in this crate: explicit state, no
+        /// clock, so the population is a function of the seed alone.
+        fn next(state: &mut u64) -> u64 {
+            *state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            *state >> 33
+        }
+
+        let mut verified = 0usize;
+        let mut inconclusive = 0usize;
+        for seed in 0..1_000u64 {
+            let mut state = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(1);
+            let mut arena = TermArena::new();
+            let nvars = 2 + usize::try_from(next(&mut state) % 3).expect("small");
+            let vars: Vec<TermId> = (0..nvars)
+                .map(|i| rvar(&mut arena, &format!("x{i}")))
+                .collect();
+            let mut atoms: Vec<TermId> = Vec::new();
+            for _ in 0..(3 + next(&mut state) % 6) {
+                // A term over one, two or three variables with small integer
+                // coefficients, bounded by a small integer.
+                let width = 1 + usize::try_from(next(&mut state) % 3).expect("small");
+                let mut expr: Option<TermId> = None;
+                for _ in 0..width {
+                    let v = vars[usize::try_from(next(&mut state) % nvars as u64).expect("small")];
+                    let c = rconst(&mut arena, i128::from(next(&mut state) % 5) - 2);
+                    let term = arena.real_mul(c, v).expect("c*v");
+                    expr = Some(match expr {
+                        None => term,
+                        Some(e) => arena.real_add(e, term).expect("sum"),
+                    });
+                }
+                let expr = expr.expect("non-empty");
+                let rhs = rconst(&mut arena, i128::from(next(&mut state) % 9) - 4);
+                atoms.push(match next(&mut state) % 4 {
+                    0 => arena.real_le(expr, rhs).expect("<="),
+                    1 => arena.real_lt(expr, rhs).expect("<"),
+                    2 => arena.real_ge(expr, rhs).expect(">="),
+                    _ => arena.real_gt(expr, rhs).expect(">"),
+                });
+            }
+            let mut theory = LraTheory::new(&arena, &atoms)
+                .with_deferred_final_check()
+                .with_bound_propagation(BoundPropagation::On);
+            // A random assertion prefix, so the table is built from a partial
+            // assignment — the state propagation actually runs in.
+            for atom in 0..atoms.len() {
+                if next(&mut state).is_multiple_of(2) {
+                    continue;
+                }
+                let value = next(&mut state).is_multiple_of(2);
+                if theory.assert(atom, value).is_err() {
+                    break;
+                }
+                let mut queue = PropagationQueue::default();
+                theory.implied_bound_pass(&mut queue);
+                for (lit, why) in queue.entries() {
+                    let TheoryExplanation::Eager(reason) = why else {
+                        panic!("ADR-2122 offers only eager explanations");
+                    };
+                    match LraTheory::implied_propagation_is_valid(
+                        &theory.atoms,
+                        theory.nvars,
+                        lit.atom,
+                        lit.value,
+                        reason,
+                        None,
+                    ) {
+                        Some(true) => verified += 1,
+                        Some(false) => panic!(
+                            "seed {seed}: the simplex SATISFIED the reasons together with \
+                             the negation of {lit:?} — the explanation {reason:?} is not a \
+                             valid implication"
+                        ),
+                        None => inconclusive += 1,
+                    }
+                }
+            }
+        }
+        // A FLOOR, not the measured value. `verified > 0` alone would let a
+        // propagator that went almost completely silent still pass, and a test
+        // pinned to the exact count would fail on any harmless generator
+        // change. Measured on this population at the time of writing:
+        // verified = 904, inconclusive = 0 over 1,000 seeds.
+        assert!(
+            verified >= 200,
+            "the generator produced too few entailed literals for this to be \
+             checking anything: verified={verified} inconclusive={inconclusive}"
+        );
     }
 }
 

@@ -159,6 +159,19 @@ pub trait TheorySolver {
     fn engine_counters(&self) -> Option<TheoryEngineCounters> {
         None
     }
+
+    /// The driver is about to BRANCH on `atom` at `value` (ADR-2122).
+    ///
+    /// Diagnostic only; the default is a no-op, so a theory that does not
+    /// override this is byte-identical. The driver is the only party that can
+    /// tell a decision from a unit propagation — a theory sees `assert` for
+    /// both — so "how many decisions were on atoms the theory already implied"
+    /// is a number only the driver can hand it. That ratio is the ceiling on
+    /// what theory propagation can buy, which is why it is measured before a
+    /// propagator is built rather than after.
+    fn note_decision(&mut self, atom: usize, value: bool) {
+        let _ = (atom, value);
+    }
 }
 
 /// A theory reached through a mutable borrow is the same theory.
@@ -209,6 +222,10 @@ impl<T: TheorySolver + ?Sized> TheorySolver for &mut T {
 
     fn engine_counters(&self) -> Option<TheoryEngineCounters> {
         (**self).engine_counters()
+    }
+
+    fn note_decision(&mut self, atom: usize, value: bool) {
+        (**self).note_decision(atom, value);
     }
 }
 
@@ -268,6 +285,30 @@ pub struct TheoryEngineCounters {
     pub bound_scan_calls: u64,
     /// Atoms those calls examined; see `bound_scan_calls`.
     pub bound_scan_atoms: u64,
+    /// Passes the ADR-2122 implied-bound propagator ran: the touched filter
+    /// (`ImpliedBounds::epoch`) let this many through, one per change of the
+    /// asserted set. `0` with the lever off is the honest reading — the
+    /// propagator exists and did nothing.
+    pub implied_bound_passes: u64,
+    /// Constraint coefficients the row analysis examined across every pass —
+    /// the clock-free price of the mechanism, so its cost is a count and not a
+    /// wall time a contended host moves.
+    pub implied_bound_rows_scanned: u64,
+    /// Column bounds installed across every pass, seeds included.
+    pub implied_bounds_derived: u64,
+    /// Literals the implied-bound propagator OFFERED the driver. Against
+    /// `theory_propagations` this says how much of the theory's propagation is
+    /// ADR-2122's rather than the older form-level scan's.
+    pub implied_bound_propagations: u64,
+    /// Search DECISIONS on atoms this theory tracks, as reported by the driver
+    /// through `note_decision` — the denominator
+    /// `decisions_on_implied_atoms` is a share of.
+    pub decisions_on_tracked_atoms: u64,
+    /// Of those, decisions on an atom the column bounds already entailed:
+    /// ADR-2122's ceiling on what implied-bound propagation can remove. An
+    /// UNDER-count by construction (see `LraTheory::note_decision`), so it is a
+    /// floor on the prize and never a ceiling on it.
+    pub decisions_on_implied_atoms: u64,
     /// Cells the simplex pivot actually wrote, summed over its life
     /// (`simplex::TableauCounters::pivot_cells_written`).
     ///

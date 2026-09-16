@@ -3521,6 +3521,17 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                         positive.negated()
                     };
                     self.enqueue(decision, Reason::DECISION);
+                    // ADR-2122: the driver is the only party that can tell a
+                    // BRANCH from a unit propagation, and "how many decisions
+                    // were on atoms the theory already implied" is the ceiling
+                    // on what theory propagation can buy. Gated on the
+                    // associated const, so a `NullTheory` search is the same
+                    // machine it was at monomorphization time; the default
+                    // body is empty, so a theory that does not override this
+                    // is byte-identical too.
+                    if T::HAS_THEORY {
+                        self.theory.note_decision(var, self.phase[var]);
+                    }
                 } else {
                     // Total Boolean assignment: the one moment a theory's
                     // COMPLETE check runs (ADR-1701's `final_check`). It sits

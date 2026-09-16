@@ -2308,6 +2308,12 @@ impl CdclT {
             final_check_live_rows: engine.map(|e| e.final_check_live_rows),
             bound_scan_calls: engine.map(|e| e.bound_scan_calls),
             bound_scan_atoms: engine.map(|e| e.bound_scan_atoms),
+            implied_bound_passes: engine.map(|e| e.implied_bound_passes),
+            implied_bound_rows_scanned: engine.map(|e| e.implied_bound_rows_scanned),
+            implied_bounds_derived: engine.map(|e| e.implied_bounds_derived),
+            implied_bound_propagations: engine.map(|e| e.implied_bound_propagations),
+            decisions_on_tracked_atoms: engine.map(|e| e.decisions_on_tracked_atoms),
+            decisions_on_implied_atoms: engine.map(|e| e.decisions_on_implied_atoms),
             pivot_cells_written: engine.map(|e| e.pivot_cells_written),
             pivot_rows_combined: engine.map(|e| e.pivot_rows_combined),
             entering_scan_cells: engine.map(|e| e.entering_scan_cells),
@@ -2448,6 +2454,13 @@ impl CdclT {
                         theory.push();
                     }
                     let polarity = self.saved_phase[var];
+                    // ADR-2122: tell the theory this is a BRANCH, not a unit
+                    // propagation — the distinction a theory cannot make from
+                    // `assert` alone, and the one the propagation ceiling is
+                    // measured in. Diagnostic only; the trait default is empty.
+                    if let Some(atom) = self.theory_atom_for_var[var] {
+                        theory.note_decision(atom, polarity);
+                    }
                     if let Err(core) =
                         self.assign(theory, var, polarity, Cause::Decision, None, false)
                     {

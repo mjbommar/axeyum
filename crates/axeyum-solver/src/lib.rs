@@ -151,12 +151,14 @@ macro_rules! full_modules {
         mod nia_square;
         mod nia_univariate_cert;
         mod nra;
+        mod nra_cell_cert;
         mod nra_even_power;
         mod nra_fbbt;
         mod nra_handelman_cert;
         mod nra_monomial_bound_cert;
         mod nra_product_cert;
         mod nra_real_root;
+        mod nra_single_cell;
         mod nra_zero_product_cert;
         mod optimize;
         mod pb;
@@ -496,6 +498,10 @@ pub mod certificates {
         pub use crate::nia_univariate_cert::{
             IntUnivariateRefutationCertificate, IntUnivariateRefutationReason,
             check_int_univariate_refutation, int_univariate_refutation,
+        };
+        pub use crate::nra_cell_cert::{
+            CellCheckFailure, CellCheckStats, CellCovering, CellReason, CellRefutation, CertAtom,
+            CertCmp, CertPoly, check_cell_refutation,
         };
         pub use crate::nra_even_power::{
             NraEvenPowerRefutationCertificate, nra_even_power_refutation,
@@ -1404,6 +1410,62 @@ macro_rules! full_exports {
             AffineSkolemWitness, QuantifiedSkolemSatCertificate, check_quantified_skolem_sat,
         };
         pub use quant_sat_cert::{check_model, check_model_with_assignment};
+
+        /// Run the ADR-2121 single-cell CAD route DIRECTLY, bypassing the
+        /// `AXEYUM_NRA_CAD` dispatch gate.
+        ///
+        /// This exists for the differential fuzz. The route ships OFF behind an
+        /// environment variable read once per process, so a fuzz that relied on
+        /// setting that variable would be a gate on one shell -- and setting it
+        /// from inside a test is both racy and (in edition 2024) `unsafe`, which
+        /// is denied workspace-wide. An explicit entry point is the honest
+        /// alternative: the fuzz exercises exactly the code the lever enables,
+        /// with no ambient state, and the count of tests it runs is visible.
+        ///
+        /// This is NOT a dispatch entry point and nothing in the solver calls it.
+        #[doc(hidden)]
+        #[must_use]
+        pub fn single_cell_decide_for_testing(
+            arena: &axeyum_ir::TermArena,
+            assertions: &[axeyum_ir::TermId],
+        ) -> Option<crate::backend::CheckResult> {
+            crate::nra_real_root::reset_cad_decline();
+            crate::nra_single_cell::decide_single_cell(arena, assertions, None, true)
+        }
+
+        /// As [`single_cell_decide_for_testing`], but with `unsat` withheld —
+        /// the `single-cell-sat` arm's behaviour.
+        #[doc(hidden)]
+        #[must_use]
+        pub fn single_cell_decide_sat_only_for_testing(
+            arena: &axeyum_ir::TermArena,
+            assertions: &[axeyum_ir::TermId],
+        ) -> Option<crate::backend::CheckResult> {
+            crate::nra_real_root::reset_cad_decline();
+            crate::nra_single_cell::decide_single_cell(arena, assertions, None, false)
+        }
+
+        /// The cause the single-cell route last recorded, as a stable key.
+        /// Reset by every [`single_cell_decide_for_testing`] call.
+        #[doc(hidden)]
+        #[must_use]
+        pub fn single_cell_decline_cause() -> &'static str {
+            crate::nra_real_root::cad_decline().name()
+        }
+
+        /// What the cell-covering checker EXAMINED on the last `unsat` the
+        /// single-cell route emitted, or `None` if the last decision produced
+        /// none.
+        ///
+        /// A fuzz that counts `unsat` verdicts cannot tell an accepted
+        /// certificate from a checker that stopped looking; this is what lets it
+        /// assert the second. Cleared at the top of every decision, so a
+        /// declined query cannot be credited with an earlier one's check.
+        #[doc(hidden)]
+        #[must_use]
+        pub fn single_cell_last_check() -> Option<crate::nra_cell_cert::CellCheckStats> {
+            crate::nra_single_cell::last_cell_check()
+        }
         #[doc(hidden)]
         pub use quant_uf_model_sat_cert::{
             QUANTIFIED_UF_BINDER_CAP, QUANTIFIED_UF_PROFILE_CAP, QuantifiedUfModelSatCertificate,

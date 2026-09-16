@@ -657,7 +657,8 @@ fn the_channel_reset_scopes_the_count_to_one_dispatch() {
 #[test]
 fn every_engine_counter_reaches_the_trace_line() {
     let counters = distinct_engine_counters();
-    let stats = super::theory_layer_stats(&axeyum_cnf::NativeLayerStats::default(), Some(counters));
+    let stats =
+        super::theory_layer_stats(&axeyum_cnf::NativeLayerStats::default(), Some(&counters));
     for (name, got, want) in forwarding_table(&stats, counters) {
         assert_eq!(
             got,
@@ -707,6 +708,12 @@ fn distinct_engine_counters() -> crate::euf_egraph::TheoryEngineCounters {
         farkas_declined_basic_not_slack: 24,
         farkas_declined_nonbasic_problem_var: 25,
         farkas_declined_self_check: 26,
+        implied_bound_passes: 27,
+        implied_bound_rows_scanned: 28,
+        implied_bounds_derived: 29,
+        implied_bound_propagations: 30,
+        decisions_on_tracked_atoms: 31,
+        decisions_on_implied_atoms: 32,
     }
 }
 
@@ -724,7 +731,7 @@ fn distinct_engine_counters() -> crate::euf_egraph::TheoryEngineCounters {
 fn forwarding_table(
     stats: &crate::layers::TheoryLayerStats,
     counters: crate::euf_egraph::TheoryEngineCounters,
-) -> [(&'static str, Option<u64>, u64); 26] {
+) -> [(&'static str, Option<u64>, u64); 32] {
     let crate::euf_egraph::TheoryEngineCounters {
         simplex_pivots,
         simplex_checks,
@@ -752,6 +759,12 @@ fn forwarding_table(
         farkas_declined_basic_not_slack,
         farkas_declined_nonbasic_problem_var,
         farkas_declined_self_check,
+        implied_bound_passes,
+        implied_bound_rows_scanned,
+        implied_bounds_derived,
+        implied_bound_propagations,
+        decisions_on_tracked_atoms,
+        decisions_on_implied_atoms,
     } = counters;
 
     [
@@ -844,6 +857,36 @@ fn forwarding_table(
             "farkas_declined_self_check",
             stats.farkas_declined_self_check,
             farkas_declined_self_check,
+        ),
+        (
+            "implied_bound_passes",
+            stats.implied_bound_passes,
+            implied_bound_passes,
+        ),
+        (
+            "implied_bound_rows_scanned",
+            stats.implied_bound_rows_scanned,
+            implied_bound_rows_scanned,
+        ),
+        (
+            "implied_bounds_derived",
+            stats.implied_bounds_derived,
+            implied_bounds_derived,
+        ),
+        (
+            "implied_bound_propagations",
+            stats.implied_bound_propagations,
+            implied_bound_propagations,
+        ),
+        (
+            "decisions_on_tracked_atoms",
+            stats.decisions_on_tracked_atoms,
+            decisions_on_tracked_atoms,
+        ),
+        (
+            "decisions_on_implied_atoms",
+            stats.decisions_on_implied_atoms,
+            decisions_on_implied_atoms,
         ),
     ]
 }

@@ -1,0 +1,13 @@
+file	mode	rc	ms	verdict	decisions	dec_tracked	dec_implied	passes	row_cells	derived	props	theory_props	capture
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_array1.i_3_2_2.bpl_11.smt2	probe	0	24029	unknown	441738	191458	8536	334645	673715339	5995590	0	114	./captures-s00/QF_LRA_2017-Heizmann-UltimateInvariantSynthesis__array1.i_3_2_2.bpl_11.smt2.out
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_half_2.i_3_6_2.bpl_7.smt2	probe	0	24029	unknown	426042	100385	264	234162	525222703	6279850	0	67	./captures-s00/QF_LRA_2017-Heizmann-UltimateInvariantSynthesis__half_2.i_3_6_2.bpl_7.smt2.out
+QF_LRA/2017-Heizmann-UltimateInvariantSynthesis/_standard_two_index_06.i_3_2_2.bpl_7.smt2	probe	0	24020	unknown	488636	201387	4413	351713	637116292	10171472	0	87	./captures-s00/QF_LRA_2017-Heizmann-UltimateInvariantSynthesis__standard_two_index_06.i_3_2_2.bpl_7.smt2.out
+QF_LRA/LassoRanker/Ultimate/Braverman-2006CAV-Ex1-int.bpl_Iteration1_Lasso_6-phaseTemplate.smt2	probe	0	24026	unknown	362419	196028	4325	282413	1417419240	3524745	0	41	./captures-s00/QF_LRA_LassoRanker_Ultimate_Braverman-2006CAV-Ex1-int.bpl_Iteration1_Lasso_6-phaseTemplate.smt2.out
+QF_LRA/miplib/pp08a-7349.smt2	probe	0	24125	unknown	169645	0	0	109230	194646969	14524400	0	0	./captures-s00/QF_LRA_miplib_pp08a-7349.smt2.out
+QF_LRA/sal/pursuit/pursuit-safety-16.smt2	probe	0	24027	unknown	200453	24935	15798	137788	274957242	77326558	0	4	./captures-s00/QF_LRA_sal_pursuit_pursuit-safety-16.smt2.out
+QF_LRA/sal/tgc/tgc_io-safe-20.smt2	probe	0	24025	unknown	470143	118222	76693	246246	249465364	59015894	0	32	./captures-s00/QF_LRA_sal_tgc_tgc_io-safe-20.smt2.out
+QF_LRA/sc/sc-13.base.cvc.smt2	probe	0	24122	unknown	367650	83998	12292	246645	309360603	19108751	0	13	./captures-s00/QF_LRA_sc_sc-13.base.cvc.smt2.out
+QF_LRA/sc/sc-17.base.cvc.smt2	probe	0	24125	unknown	108086	29406	4770	82957	141813270	7331629	0	16	./captures-s00/QF_LRA_sc_sc-17.base.cvc.smt2.out
+QF_LRA/sc/sc-21.base.cvc.smt2	probe	0	24026	unknown	121357	34187	3500	99290	207034677	8728477	0	21	./captures-s00/QF_LRA_sc_sc-21.base.cvc.smt2.out
+QF_LRA/sc/sc-25.base.cvc.smt2	probe	0	24026	unknown	456444	137012	14192	375441	887538449	28158728	0	12	./captures-s00/QF_LRA_sc_sc-25.base.cvc.smt2.out
+QF_LRA/sc/sc-9.base.cvc.smt2	probe	0	24126	unknown	52029	14734	4312	39814	34474175	2697285	0	9	./captures-s00/QF_LRA_sc_sc-9.base.cvc.smt2.out

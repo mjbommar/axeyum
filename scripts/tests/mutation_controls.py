@@ -2815,6 +2815,94 @@ SUITES["simplex-sparse-tableau"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `lra-implied-bound-propagation` -- ADR-2122 propagates a literal into the SAT
+# core with an explanation clause, and an explanation is the one artefact here
+# whose defect is INVISIBLE to a verdict comparison: a propagation with a bound
+# missing from its reason is a clause that is not valid over the reals, and the
+# search happily learns it and reports `unsat` on a satisfiable system.
+#
+# The four mutations remove four different guards, and they are different KINDS
+# of damage:
+#
+#   * dropping a bound from the explanation is a SOUNDNESS defect and it is the
+#     one this ADR exists to be checked against -- the propagated literal is
+#     still correct, only its justification is short, so nothing but a checker
+#     that re-derives the implication can see it;
+#   * reading a unit constraint's bound on the WRONG SIDE is a soundness defect
+#     of the opposite shape: the bound itself is false of every point the
+#     constraint allows, and the propagation it licenses is a wrong one;
+#   * losing the attainment flag is a STRICTNESS defect: `sup = 0` then entails
+#     `expr < 0`, which is false exactly at the boundary and nowhere else;
+#   * dropping the self-explanation guard lets a literal be explained by itself,
+#     which is a clause the SAT core cannot use and a dependency cycle nothing
+#     downstream checks.
+#
+# Filtered to `lra_online::tests` rather than to one test, so a kill count is a
+# claim about a population (38 tests) and not about a suite of one.
+# --------------------------------------------------------------------------
+
+SUITES["lra-implied-bound-propagation"] = (
+    "crates/axeyum-solver/src/lra_online.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--lib", "--features", "full", "lra_online::tests"),
+        "lra-implied-bound-propagation",
+    ),
+    [
+        (
+            # SOUNDNESS: the explanation loses one atom per bound it uses. A
+            # SEED bound's `why` holds exactly one atom, so `skip(1)` drops it
+            # entirely and the clause no longer names the bound it rests on.
+            # The literal offered is unchanged, so no verdict comparison and no
+            # propagation COUNT can see this.
+            "one bound dropped from every explanation",
+            "        for &atom in &bound.why {",
+            "        for &atom in bound.why.iter().skip(1) {",
+        ),
+        (
+            # SOUNDNESS, the other shape: `-x - 3 <= 0` is `x >= -3`, a LOWER
+            # bound, because dividing by a negative coefficient flips the
+            # relation. Read as an upper bound it is false of every point the
+            # constraint allows.
+            "the side a negative coefficient puts the unit bound on",
+            "    let upper = coeff.checked_cmp(&Rational::zero())? == Ordering::Greater;\n"
+            "    let value = c.expr.constant.checked_neg()?.checked_div(coeff)?;",
+            "    let upper = true;\n"
+            "    let value = c.expr.constant.checked_neg()?.checked_div(coeff)?;",
+        ),
+        (
+            # STRICTNESS: the supremum is reported as ATTAINED even when a
+            # strict bound contributed, so `sup = 0` starts entailing
+            # `expr < 0`. Wrong exactly at the boundary and nowhere else.
+            "the attainment flag a strict bound clears",
+            "        if bound.strict {\n            attained = false;\n        }",
+            "        if false && bound.strict {\n            attained = false;\n        }",
+        ),
+        (
+            # The guard that stops an ALREADY-ASSIGNED atom being "propagated".
+            # Without it the pass offers literals the search has already set,
+            # which is not a wrong answer but is a flood of no-op propagations
+            # and a count nobody can read.
+            #
+            # This mutation REPLACED one that SURVIVED. The original fourth
+            # guard was a `continue` refusing a literal explained by itself; the
+            # run found all 38 tests green without it, so it was decoration --
+            # unreachable, because every `why` atom is asserted and the target
+            # is not. It is now a `debug_assert!` stating that invariant, which
+            # is the thing that was actually true. The finding is recorded in
+            # ADR-2122 rather than engineered away.
+            "the guard skipping an atom the search has already assigned",
+            "                    if self.assigned[atom].is_some() {\n"
+            "                        continue;\n"
+            "                    }",
+            "                    if false && self.assigned[atom].is_some() {\n"
+            "                        continue;\n"
+            "                    }",
+        ),
+    ],
+)
+
+
 DEMO_SUBJECT = "scripts/tests/fixtures/mutation_demo/subject.py"
 DEMO_CONTROL = "scripts/tests/fixtures/mutation_demo/suite_tests.py"
 
@@ -11109,6 +11197,37 @@ SUITES["nra-cad-attribution"] = (
             "        cell_cap: MAX_CAD_CELLS * 16,",
             "        cell_cap: MAX_CAD_CELLS,",
         ),
+        (
+            # ADR-2121's arm, same hazard one level along: an A/B whose two arms
+            # carry the SAME `single_cell` value measures nothing and reports 0
+            # movement, which reads exactly like a real null.
+            "the `single-cell` arm actually turns the route on",
+            '        arm: "single-cell",\n        cell_cap: MAX_CAD_CELLS,\n'
+            "        single_cell: true,",
+            '        arm: "single-cell",\n        cell_cap: MAX_CAD_CELLS,\n'
+            "        single_cell: false,",
+        ),
+        (
+            # Drop the arm from the PARSER. `AXEYUM_NRA_CAD=single-cell` then
+            # falls through to `default`, the treatment arm never runs, and the
+            # A/B is one binary measured against itself -- with no error anywhere.
+            "`AXEYUM_NRA_CAD=single-cell` actually selects the single-cell arm",
+            '    } else if value.eq_ignore_ascii_case("single-cell") {',
+            "    } else if false {",
+        ),
+        (
+            # The `single-cell-sat` arm exists to take the EXACT half of the
+            # route and leave the sampled half behind. An arm that ran the route
+            # and quietly kept its `unsat` would make the sat-only A/B a second
+            # measurement of the full arm -- and would put a verdict justified by
+            # a finite sample onto the default path, which is the one thing this
+            # arm was created to avoid.
+            "the `single-cell-sat` arm actually withholds `unsat`",
+            '        arm: "single-cell-sat",\n        cell_cap: MAX_CAD_CELLS,\n'
+            "        single_cell: true,\n        emit_unsat: false,",
+            '        arm: "single-cell-sat",\n        cell_cap: MAX_CAD_CELLS,\n'
+            "        single_cell: true,\n        emit_unsat: true,",
+        ),
     ],
 )
 
@@ -11335,6 +11454,97 @@ SUITES["int-blast-width-floor"] = (
             "                    if width > axeyum_rewrite::MAX_INT_BLAST_WIDTH {",
             "                    width += 2;\n"
             "                    if width > axeyum_rewrite::MAX_INT_BLAST_WIDTH {",
+        ),
+    ],
+)
+
+
+# `nra-single-cell-delineability` -- the one guard ADR-2121's soundness rests on.
+#
+# `nra_single_cell::project_level` applies McCallum's projection operator, which
+# is valid over a cell only when no eliminated polynomial is NULLIFIED on it.
+# The route checks that at the sample and declines; the projection is also
+# widened to carry EVERY coefficient in the eliminated variable, so
+# non-nullification at one point plus sign-invariance of the coefficients gives
+# it on the whole cell.
+#
+# The mutation deletes the check. Note what it does NOT do: the fixture's system
+# is unsatisfiable either way, and the route still reaches `unsat` through a
+# refined arrangement, so a test asserting the VERDICT passes on the mutant. The
+# named fixture asserts the recorded CAUSE, which is the only observable that
+# distinguishes "the guard stopped this" from "something else did". That is why
+# the test is written the way it is, and why exactly one test dies.
+# --------------------------------------------------------------------------
+
+SUITES["nra-single-cell-delineability"] = (
+    "crates/axeyum-solver/src/nra_single_cell.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "nra_single_cell::tests"),
+        "nra-single-cell-delineability",
+    ),
+    [
+        (
+            # Without the nullification check the route projects through a point
+            # where the polynomial has no roots to delineate, so the learned cell
+            # is derived from a projection whose theorem does not apply there.
+            "a nullified polynomial stops the projection",
+            "        if is_nullified_at(p, elim, sample) {",
+            "        if false {",
+        ),
+        (
+            # Ignore the arm's instruction and emit the refutation anyway. On the
+            # `single-cell-sat` default that is a verdict justified by a sampling
+            # delineability check reaching the shipped path -- silently, because
+            # the verdict is CORRECT on every fixture and only its JUSTIFICATION
+            # changed. Nothing that looks at a verdict alone could catch it.
+            "the withholding arm does not emit the refutation it reached",
+            "            if !emit_unsat {",
+            "            if false {",
+        ),
+    ],
+)
+
+
+# `nra-single-cell-certificate` -- the checker that gates every `unsat`.
+#
+# `nra_cell_cert::check_delineability` is the sampling half of the certificate
+# check: at further interior points of a `Deeper` cell, every boundary
+# polynomial of the sub-covering must keep the same distinct-real-root count. A
+# projection that OMITS a polynomial, or is skipped entirely, makes the learned
+# cell too wide, and a too-wide cell crosses a root-count change -- which is the
+# only thing this check can see and the only thing it needs to.
+#
+# Two mutations, one test each, and they are separated on purpose: a single test
+# asserting both "the probe compares" and "an unrunnable probe is a rejection"
+# would pass on either deletion whenever the other assertion fired first.
+# --------------------------------------------------------------------------
+
+SUITES["nra-single-cell-certificate"] = (
+    "crates/axeyum-solver/src/nra_cell_cert.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "nra_cell_cert::tests"),
+        "nra-single-cell-certificate",
+    ),
+    [
+        (
+            # Stop comparing the probe against the witness. The checker then
+            # ACCEPTS a covering whose cells span a delineability boundary --
+            # which is precisely the wrong-`unsat` this whole module exists to
+            # refuse -- while still counting the probes it made, so a test that
+            # only read `delineability_probes` would not notice.
+            "the delineability probe compares the root counts it collected",
+            "            if at_probe != at_witness {",
+            "            if false {",
+        ),
+        (
+            # Turn a cell the certificate itself marks undecided into an accepted
+            # one. A producer that gave up mid-covering could then have its
+            # partial refutation accepted as a complete one.
+            "a cell the certificate admits it did not decide is rejected",
+            "            CellReason::Undecided => {\n"
+            "                return Err(CellCheckFailure::UndecidedCell { level, cell: idx });\n"
+            "            }",
+            "            CellReason::Undecided => {}",
         ),
     ],
 )

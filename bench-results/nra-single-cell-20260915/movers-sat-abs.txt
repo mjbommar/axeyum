@@ -1,0 +1,4 @@
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0131.smt2
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/meti-tarski/sqrt/1mcosq/8/sqrt-1mcosq-8-chunk-0562.smt2
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/meti-tarski/atan/vega/3/weak/atan-vega-3-weak-chunk-0243.smt2
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NRA/meti-tarski/sin/problem/7/sin-problem-7-chunk-0124.smt2

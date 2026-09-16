@@ -1,0 +1,9 @@
+file	A1	A2	A3	B1	B2	B3	verdict
+QF_NRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0131.smt2	unknown/0	unknown/0	unknown/0	sat/0	sat/0	sat/0	STABLE-GAIN
+QF_NRA/meti-tarski/sqrt/1mcosq/8/sqrt-1mcosq-8-chunk-0562.smt2	unknown/0	unknown/0	unknown/0	sat/0	sat/0	sat/0	STABLE-GAIN
+QF_NRA/meti-tarski/sin/cos/sin-cos-346-b-chunk-0147.smt2	unknown/0	unknown/0	unknown/0	unsat/0	unsat/0	unsat/0	STABLE-GAIN
+QF_NRA/meti-tarski/atan/vega/3/weak/atan-vega-3-weak-chunk-0243.smt2	unknown/0	unknown/0	unknown/0	sat/0	sat/0	sat/0	STABLE-GAIN
+QF_NRA/meti-tarski/sin/problem/7/sin-problem-7-chunk-0124.smt2	unknown/0	unknown/0	unknown/0	sat/0	sat/0	sat/0	STABLE-GAIN
+QF_NRA/meti-tarski/exp/problem/10/3/weak/exp-problem-10-3-weak-chunk-0081.smt2	unknown/0	unknown/0	unknown/0	unsat/0	unsat/0	unsat/0	STABLE-GAIN
+QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__NonTermination2_false-termination.c__p24932_edge_closing_0.smt2	sat/0	sat/0	unknown/0	unknown/0	sat/0	unknown/0	UNSTABLE
+QF_NIA/20170427-VeryMax/ITS/From_T2__n-21.t2__p3959_terminationG_0.smt2	unsat/0	unsat/0	unsat/0	unknown/0	unsat/0	unsat/0	UNSTABLE
