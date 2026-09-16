@@ -1,7 +1,7 @@
 # ADR-2125: `QF_LRA` — a warm simplex basis across the offline loop's cubes, and the two screens that made it inert
 
 Status: proposed
-Index-summary: PLACEHOLDER — rewritten when the A/B lands.
+Index-summary: [ADR-2111] named the per-cube cold re-solve as its unpulled lever and [ADR-2122] named it again; this lane took it, SIZED IT FIRST over the whole pinned 200, and the sizing is the headline: **the basis alone is 4.15 % of wall clock at the median** (construction 0.95 %), and the lever is worth more only because a cube it answers also skips the per-cube LINEARIZATION -- **median 23.87 % over the 73 UNDECIDED rows that reach the loop, 0.00 % over all 153**, because a file the ladder decides in 107 ms spends no measurable time here. Churn reproduces ADR-2111 on a new population: **1.79 flipped literals per round against 7,260 atoms**. THE ARM WAS INERT AND THE MECHANISM PROBE IS WHAT SAID SO -- `warm_cube_checks=0` in BOTH arms, because `Incremental::new` refuses at `MAX_TABLEAU_CELLS` **dense cells** while the tableau has stored NONZEROS since ADR-2111: on `sc-39.base.cvc.smt2` that is **8,797,712 cells against 4,688 nonzeros**, 188 KB refused, while the cold path (which consults that constant only under a default-off lever) built the identical system **797 times**. `MAX_TABLEAU_CELLS` is NOT changed -- it governs the online engine too; a second door (`MAX_WARM_CUBE_NONZEROS = 400_000`, ADR-2111's own Sparse figure) serves one call site, and `warm_cube_build` now renders `off` / `built` / `deadline` / `resource-limit` / `memory-budget` / `no-tableau` so a refusal names its screen. The SAME probe then found the arm SLOWER: `lra_rounds` 798 -> 633 with **1,133,095 retractions over 632 checks**, the whole cube every round, because `SimplexEngine::sync` reconciles by SHARED PREFIX -- right for a DPLL(T) trail whose divergence is a suffix, wrong for a cube whose flips are anywhere. `sync_cube` diffs per ROW (z3's `m_columns_with_changed_bounds` shape, `lar_solver.cpp:1280-1283`): **assertions 1,135,797 -> 4,238, `lra_rounds` 798 -> 950 (+19 %)**. A/B, one binary two env values, interleaved per file: both `QF_LRA` draws are PARTIALS and deliberately **not prefixes** -- the run was stopped and the remainder seeded-shuffled, because `QF_LRA/` path order is family-clustered on exactly the families the sizing found heaviest, so a prefix would bias the number TOWARD this lane's lever. **Pinned 100 of 200 net -1, held-out 95 of 200 net +0, `QF_LIA` 7 of 200 net +0; 0 flips, 0 exit-status differences, 0 soundness disagreements at comparable denominators of 97/96/8.** Mechanism not inert: **40,916 from-scratch tableaux -> 0** over the 71 rows where the decider was built, 46,450 cubes answered, **`cold_restarts = 0`** (the tripwire -- a rebuilt basis differs only in the clock). Cost **-9.2 %** pinned, the OPPOSITE of ADR-2122's +12-35 %. The 3x recheck gives **2 STABLE-LOSS, 1 STABLE-GAIN, 0 UNSTABLE**, and on the one loss the sizing covers they lie on an axis it can measure: `ecoliMILPglycerolYices3-50000` is 28 builds (few, enormous solves -- nothing to reuse) against `sc-14.induction.cvc` from the family at 850-1,050 builds (many small ones); the second loss is not in the sizing table and its builds are UNCOUNTED, so that reading is a hypothesis for it and the ADR says so. SHIPS `off` on criteria 2 AND 3, but this is a MIXED POSITIVE and not ADR-2122's clean negative: it buys a real held-out verdict, it is faster, and its loss has a named discriminator (`simplex_cold_builds`) the decider could consult. Mutation: first run found TWO survivors -- the un-trailing pass is unreachable from `cube_check` because every order atom shares one row for both polarities (probed over five shapes), and no fixture handed the decider an unrepresentable atom; both are now kills, three of four killing EXACTLY ONE, with the nesting stated. Four exposure divisions **did not run**, and `QF_LIA` ran only 7 rows; neither is reported as zero movement.
 Index-status: proposed
 Date: 2026-09-16
 
@@ -436,15 +436,281 @@ registering a gate that cannot fail is worse than registering none.
 
 ### 5.5 The gates, each with a nonzero count
 
-PLACEHOLDER — filled when the runs land.
+**The five z3 differential fuzzes run in BOTH arms**, plus this lane's sixth.
+All six are `#![cfg(feature = "z3")]` and compile to ZERO tests without it,
+printing "running 0 tests ... ok" and exiting 0 — the trap that left the corpus
+sweep inert in `hooks/pre-push` for 15 days — so `run-fuzzes.sh` parses the
+harness's own `test result:` line and FAILS on a zero count.
+
+| suite | tests | `off` | `on` |
+|---|---:|---|---|
+| `qf_lra_differential_fuzz` | 5 | ok | ok |
+| `simplex_lra_fallback_differential` | 1 | ok | ok |
+| `qf_uflra_differential_fuzz` | 1 | ok | ok |
+| `difference_logic_differential_fuzz` | 4 | ok | ok |
+| `qf_lia_differential_fuzz` | 4 | ok | ok |
+| `qf_lra_cube_sequence_differential_fuzz` (new) | 2 | ok | ok |
+| **total** | **17 per arm** | **PASSED** | **PASSED** |
+
+The rest, each with a nonzero count confirmed:
+
+| gate | measured |
+|---|---|
+| `cargo fmt --all --check` | ok |
+| `cargo check --workspace --all-targets` (default features) | rc 0 |
+| clippy `-D warnings`, solver + bench + cnf, `--all-targets --features full` | rc 0 |
+| `--lib --features full lra` | **145 passed**, 0 failed |
+| `--lib --features full simplex` | **41 passed**, 0 failed |
+| `--lib --features full config_registry::tests` | **18 passed**, 0 failed |
+| `--lib --features full lazy_smt_counters` | **6 passed**, 0 failed |
+| `--lib --features full lra_online::tests` | **43 passed**, 0 failed |
+| `mutation_controls.py --check-anchors` | 150 suites, 1,102 anchors, **stale = 0** |
+| `scripts/check-suite-gating.py` | PASS (344 suites, 43 gated, 303 excused) |
+| `scripts/check-merge-hygiene.sh` | PASS |
+| `scripts/check-links.sh` | all links ok |
+| `check-config-registry-staleness.py` | 0 unexplained |
+| the 22 dispatch/reason suites | **DID NOT COMPLETE** — see §8 |
+| `--lib --features full -- --skip reconstruct::` | **DID NOT COMPLETE** — see §8 |
+| `progress_frontier --features full -- --test-threads=1` | **DID NOT COMPLETE** — see §8 |
+
+The 22 dispatch suites are read out of `hooks/pre-push` **at run time**, not
+copied, and `run-gates.sh` refuses if it extracts fewer than 15: a copied list
+measures the maintainer's memory of what the hook runs, and a shrinking list then
+reports as a passing one.
+
+### 5.6 The mutation run, and the two survivors it found first
+
+`scripts/tests/mutation_controls.py lra-warm-cube-basis`, filtered to
+`lra_online::tests` so a kill count is a claim about a population.
+
+**The first run found TWO guards removable with all 41 tests green**, and both
+were real findings rather than gaps to paper over.
+
+**The un-trailing pass is unreachable from `cube_check`.** A probe over every
+order-atom shape in the module — `le`, `lt`, `ge`, `gt`, a scaled `2x ≤ 1` —
+shows each gives its two polarities ONE shared row ([ADR-1701]'s 4× cut:
+`when_false` is the exact negation of `when_true`, so one slack takes an upper
+bound for one polarity and a lower bound for the other), and an equality gives
+two rows both installed whenever it is true. `cube_check` declines any cube
+naming an equality asserted FALSE. So **every cube it accepts wants the same row
+set**, and nothing is ever retracted. Deleting the pass would be wrong —
+`sync_cube` has a contract of its own, and the row set stops being invariant the
+moment a normalizer change makes `negates` false — so the new fixture drives the
+CONTRACT rather than the caller.
+
+**No fixture had ever handed the decider an atom outside its language.** That
+defect is quiet by construction: the verdict is `Feasible` either way and only
+the MEANING changes.
+
+The second run, 43-test baseline, exit 0:
+
+| guard removed | kind of damage | killed |
+|---|---|---:|
+| the bound un-trailing a cube no longer wants a row for | **soundness** | **1** |
+| the re-assert of a row whose bound changed | **soundness** | 3 |
+| the positional alignment a Farkas core is read through | **wrong core** | **1** |
+| the refusal of an unrepresentable atom | weaker system | **1** |
+
+**Three of four kill exactly one**, including the un-trailing guard criterion 5
+names. The sets are **not all disjoint and this says so**: guards 1 and 3 each
+kill a proper subset of guard 2's three, so they are separated in one direction
+only; guard 4's set is disjoint from all of them.
 
 ## 6. The A/B
 
-PLACEHOLDER — filled when the runs land.
+### 6.1 One binary, two env values — and the guard that caught a dead arm
+
+One binary (`909445ab…`), two values of `AXEYUM_LRA_WARM_CUBE`, arms back to back
+on the same file on the same pinned core, arm order alternating per file, at
+24 s / 8 GiB.
+
+[ADR-2100]'s runner refuses unless its two BINARIES hash differently, because two
+identical arms produce a perfect zero that looks exactly like agreement. With one
+binary the risk moves to "the binary never reads the variable", and
+`ab-run.sh --mechanism-check` is where that is refused. **It fired**, twice — §4
+is the whole record. The check that passes is:
+
+```text
+mechanism-check: off=0 on=899 build=built
+mechanism-check OK: the lever moves the engine on this file
+```
+
+### 6.2 What the population IS, said exactly
+
+Both `QF_LRA` draws are **partials, and they are not prefixes.** The run measured
+out at about 2.5 minutes per row, so 200 rows per shard does not finish. `QF_LRA/`
+path order is family-clustered — the head is
+`2017-Heizmann-UltimateInvariantSynthesis/` and `LassoRanker/`, which §1.5 measured
+as among the heaviest users of the route under test — so reporting a prefix as
+"n of 200" would publish a number biased **toward** this lane's own lever.
+
+Both shards were therefore stopped, the completed rows kept, and the REMAINDER
+shuffled with a seeded RNG (`remainder-shuffled.py`, seed a constant in the
+source). What is reported is **the first k by path order plus a uniform sample of
+the other 200−k**, and the row counts of the two parts are printed with every
+table.
+
+| population | composition | rows |
+|---|---|---:|
+| `QF_LRA` pinned | 53 by path order + 47 sampled from the other 147 | **100 of 200** |
+| `QF_LRA` held-out | 54 by path order + 41 sampled from the other 146 | **95 of 200** |
+| `QF_LIA` | 7 usable rows by path order | **PARTIAL, 7 of 200** |
+| `QF_UFLRA`, `QF_UFLIA`, `QF_IDL`, `QF_RDL` | — | **DID NOT RUN** |
+
+### 6.3 The verdict tables
+
+```text
+population          rows    A    B   net  gain  LOSS  FLIP  A rc≠0  B rc≠0  cmp  DIS
+QF_LRA pinned        100   52   51    -1     0     1     0       0       0   97    0
+QF_LRA held-out       95   49   49    +0     1     1     0       0       0   96    0
+QF_LIA (partial)       7    4    4    +0     0     0     0       0       0    8    0
+```
+
+- **0 soundness disagreements** against the files' declared `:status`, at
+  comparable denominators of **97**, **96** and **8**, published beside the
+  counts.
+- **0 flips** and **0 exit-status differences** anywhere.
+- Three raw movers: one loss on the pinned draw, one gain and one loss on the
+  held-out draw. §6.5 re-checks them.
+
+### 6.4 The mechanism, and it is not inert
+
+```text
+population        rows `built`   cubes answered   declined   cold tableaux A -> B   cold_restarts
+QF_LRA pinned          37             18,517           34        15,618 ->  0             0
+QF_LRA held-out        34             27,933           28        25,298 ->  0             0
+```
+
+**The from-scratch tableau count goes to exactly zero on every row the decider is
+built for** — 40,916 of them across the two draws — and `warm_cube_cold_restarts`
+is **0**, which is the tripwire: a warm basis that is quietly being rebuilt gives
+identical verdicts, identical churn counts, and differs only in the clock.
+
+`off` in arm B does **not** mean the lever was off — it is read once per process
+and arm B always has it on. It means the LINEAR lazy-SMT loop was never entered
+and the `; lazy-smt` line came from the NRA or NIA loop, which share these
+counters. That is spelled out in the summarizer because a reader taking it at
+face value would conclude the arm was disabled on those rows.
+
+### 6.5 The mover recheck
+
+Three raw movers, each re-run **3x per arm** on one pinned core pair with the
+arms alternating within the passes. A raw mover is never the finding: [ADR-1966]
+reported 25 raw movers and 22 after re-checking, with 11 of its 18 outside the
+treatment division vanishing under exactly this procedure.
+
+```text
+file                                          A1      A2      A3      B1       B2       B3       verdict
+latendresse/ecoliMILPglycerolYices3-50000    sat     sat     sat     unknown  unknown  unknown  STABLE-LOSS
+sc/sc-14.induction.cvc                       unknown unknown unknown sat      sat      sat      STABLE-GAIN
+uart/uart-8.induction.cvc                    sat     sat     sat     unknown  unknown  unknown  STABLE-LOSS
+```
+
+**2 STABLE-LOSS, 1 STABLE-GAIN, 0 UNSTABLE.** Three for three in both directions
+on all three, so none of them is the 1-1.5 % ambient flip rate these boxes
+carry.
+
+**The loss is the shape §1.5 predicted, and that is the useful part.**
+`ecoliMILPglycerolYices3-50000` was in the sizing table at a 65.27 % ceiling
+across **28** builds in 12.1 s — a handful of ENORMOUS solves, not many small
+ones. A warm basis has almost nothing to reuse between 28 cubes, while the
+per-cube reconciliation still walks a row set that size. §1.5 said in as many
+words that a high share across FEW builds is a warning rather than a prize, and
+this is that warning arriving as a verdict.
+
+**The gain is the opposite shape.** `sc-14.induction.cvc` is from the `sc/*`
+family, which §1.5 listed at 20–24 % across 850–1,050 builds — many small
+re-solves, which is exactly what a warm basis removes. It goes from `unknown`
+three times to `sat` three times.
+
+`uart-8.induction.cvc`, the second loss, is **not** in the sizing table, so the
+builds-per-file reading is offered for it as a HYPOTHESIS and not as a
+measurement: nothing here has counted its builds. Saying otherwise would be
+fitting the explanation to the two rows that suit it.
+
+So the lever is not uniformly good or bad: it **wins where the cubes are many
+and small and loses where they are few and large**, which is the same axis the
+sizing measured and is a sharper statement than a net.
+
+### 6.6 What it costs, on the rows both arms decide
+
+| population | rows both decide | A total | B total | delta | median A | median B |
+|---|---:|---:|---:|---:|---:|---:|
+| `QF_LRA` pinned | 51 | 24,857 ms | 22,567 ms | **−9.2 %** | 107 ms | 107 ms |
+| `QF_LRA` held-out | 48 | 18,437 ms | 18,336 ms | −0.5 % | 107 ms | 107 ms |
+
+The lever is **faster**, not slower — the opposite of [ADR-2122]'s propagator,
+which cost +12–35 %. The medians are unmoved at 107 ms because the median row is
+one the ladder decides long before this loop; the saving is concentrated on the
+rows where the decider is built, which is the same shape §1.3's ceiling has.
 
 ## 7. Decision
 
-PLACEHOLDER — filled when the runs land.
+**The lever ships `off`, and the mechanism ships with it.**
+
+Against the criteria in §7.1, written before the numbers:
+
+1. **0 soundness disagreements** at comparable denominators of 97, 96 and 8, all
+   printed — **met**.
+2. **0 flips** — met. **0 stable losses on the pinned draw — NOT MET.** One, and
+   the 3x recheck says it is real: 3/3 `sat` under `off`, 3/3 `unknown` under
+   `on`.
+3. **0 stable losses on the HELD-OUT draw — NOT MET either.**
+   `uart/uart-8.induction.cvc` is 3/3 `sat` under `off` and 3/3 `unknown` under
+   `on`. Its one raw GAIN does re-check as a STABLE-GAIN, so the held-out draw is
+   net 0 with one real win and one real loss.
+4. **The five exposure divisions.** `QF_LIA` ran **7 of 200** and moved nothing;
+   7 rows is a partial, not a division, and is labelled as one.
+   `QF_UFLRA`, `QF_UFLIA`, `QF_IDL` and `QF_RDL` **did not run**.
+5. **`warm_cube_build = built` on a nonzero share** — met, and by a wide margin:
+   37 of 100 and 34 of 95, 46,450 cubes answered, 40,916 from-scratch tableaux
+   removed, `cold_restarts = 0`.
+
+**Criteria 2 AND 3 both fail.** `AXEYUM_LRA_WARM_CUBE` stays `off`.
+
+### 7.2 The result is a mixed positive, and that is a different animal from ADR-2122's
+
+This is worth separating from the ship decision, because the two point different
+ways and a reader who sees only `off` will draw the wrong conclusion about what
+to do next.
+
+[ADR-2122]'s propagator was a **clean negative**: 0 gains over 600 rows, 1 stable
+loss, +12–35 % wall clock. There was nothing to tune, because the ceiling it was
+measured against was 7 % of all decisions and the two rows the division was
+represented by had `tracked = 0`.
+
+This is not that.
+
+- **It buys a real verdict.** One STABLE-GAIN, 3/3 in both directions, on the
+  held-out draw — the population that is not the training set. It also loses two,
+  which is why the net is what it is; the point is that the wins and the losses
+  are both REAL and both explained, not that the wins outnumber them.
+- **It is FASTER**, −9.2 % on the pinned rows both arms decide, against
+  ADR-2122's +35 %.
+- **It removes the work it was built to remove**, exactly: 40,916 from-scratch
+  tableau builds to zero, with the basis provably kept (`cold_restarts = 0`).
+- **Its one stable loss has a named mechanism** that the sizing predicted before
+  the A/B ran, on an axis the sizing can measure: builds per file.
+
+What it does NOT have is a population big enough to ship on. Both draws are half
+of 200, the exposure divisions are four `did not run` and one 7-row partial, and
+one raw mover is un-rechecked. Shipping `on` from that would be shipping from a
+half-measured board.
+
+### 7.3 What would change the answer, and it is not tuning
+
+The loss and the gain are on one axis — **builds per file** — and the lever is
+free to consult it. `simplex_cold_builds` is already a counter, and a decider
+that refuses a cube set whose builds are few and huge would keep the `sc/*` gain
+without taking the `latendresse/*` loss. That is a routing question with a
+measured discriminator, not a cap to tune, and it is the obvious next increment.
+
+Three things would have to be true to ship:
+
+1. Both `QF_LRA` draws **complete at 200**, with every mover re-checked.
+2. The five exposure divisions run with their own denominators.
+3. Either 0 stable losses, or a screen on builds-per-file that removes the loss
+   and is itself A/B'd rather than assumed.
 
 ### 7.1 The criteria, written before the numbers
 
@@ -469,7 +735,36 @@ Anything short of all five ships `off`.
 
 ## 8. What this lane did not do
 
-PLACEHOLDER — filled at the end.
+Named with what is known about each, rather than left implied.
+
+1. **The two `QF_LRA` draws did not complete.** 100 of 200 and 95 of 200. Each is
+   a path-ordered prefix plus a seeded uniform sample of the remainder, which is
+   why §6.2 states the composition rather than writing "n of 200". The lists, the
+   runner, the launcher and the shuffler are committed, and `ab-run.sh` refuses a
+   non-empty output file, so a successor resumes rather than rebuilds.
+2. **Four exposure divisions did not run**, and `QF_LIA` ran 7 rows. A division
+   with no rows is not a division with no movement. `QF_LIA` is the one that
+   matters most — it drives the same simplex — and 7 rows is not a sample of it.
+3. **Three gates did not complete**: the 22 dispatch/reason suites, the
+   `--skip reconstruct::` lib sweep, and `progress_frontier`. They were queued
+   behind the mutation run and other lanes' jobs on the shared `cargo-serialized`
+   flock. `run-gates.sh` is committed and runs them by name. This is a real gap
+   in the evidence, not a formality: `progress_frontier` is the capability
+   ratchet, and a solver-route change is exactly what it exists to watch.
+4. **The builds-per-file screen** (§7.3). The stable loss and the stable gain lie
+   on one axis the lever is already instrumented for, and a decider that consults
+   `simplex_cold_builds` is the obvious next increment. It is not built here
+   because it would need its own A/B and this lane's compute went to sizing and
+   scoring the first mechanism properly rather than half-building two — which is
+   the choice [ADR-2122] made for the same reason and recorded.
+5. **The per-cube linearization is where the rest of the ceiling is.** §1.3
+   measured the simplex at 4.15 % and the simplex-plus-linearization at 24.21 %.
+   The warm decider removes both for a cube it answers, but the SPLIT is
+   unmeasured: nothing here says how much of the −9.2 % is the basis and how much
+   is not rebuilding the `Collector`. A successor should not attribute the saving
+   to the basis on this evidence.
+6. **Bound-AXIOM generation** remains the largest unpulled piece of ADR-2111's
+   claim 2, named again by ADR-2122 and untouched here.
 
 [ADR-1701]: adr-1701-the-theory-interface-gains-final-check-a-driver-owned-queue-lazy-explanation-and-dynamic-atoms.md
 [ADR-1752]: adr-1752-the-lra-admission-cap-becomes-budget-relative.md
