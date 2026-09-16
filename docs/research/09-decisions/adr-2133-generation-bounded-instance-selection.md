@@ -45,6 +45,18 @@ match-only-terms-new-since-the-last-round is ADR-0112. cvc5's `instMaxLevel` is
 the same generation ceiling under another name, and `instWhenMode` is the
 cadence `interleaved_check_due` already implements.
 
+**What in that table this lane verified, and what it did not.** Every
+`qinst_egraph.rs` and `config_registry.rs` line above was read at this lane's
+HEAD. The z3 and cvc5 attributions were **not** read from their source:
+`references/` holds no solver clone on this host (`scripts/fetch-references.sh`
+was not run), so `qi_queue.cpp`, `smt_enode.h`, `mam.cpp`,
+`inst_strategy_e_matching` and `quantifiers_options.toml` are cited here as the
+shipped doc comments already cite them. What this lane did verify about z3 is
+BEHAVIOURAL and first-hand: `:max-generation` from `z3 -st` on all 53 cores
+(52 of 53 agreeing with the inherited column, below), and the per-quantifier
+`max_generation` column of `smt.qi.profile=true`. Treat the `file:line`
+attributions as inherited and the generation numbers as measured.
+
 Three prior lanes (ADR-2120 activation, ADR-2124 incremental ground closure,
 ADR-2130 session-hosted arithmetic) each moved one core and none moved the
 population. This is the fourth reading of the same wall from a new angle.
