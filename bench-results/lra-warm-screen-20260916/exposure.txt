@@ -1,0 +1,48 @@
+ADR-2132: THE FIVE EXPOSURE DIVISIONS
+======================================
+
+Criterion 4 of section 7.1: no stable loss in a division the screen was not
+aimed at, each with its own denominator, and a division with no rows reported as
+DID NOT RUN rather than as zero movement.
+
+Two arms here -- `off` and `screened` -- and not three. The ship question is
+settled on the two `QF_LRA` draws; these ask only whether the screen regressed
+somewhere it was not pointed. The `on` arm's columns are written EMPTY rather
+than as zeros and the summarizer prints `DID NOT RUN` for it, because an arm
+that never started is a different fact from an arm that answered nothing.
+
+`axeyum.v1` (sha256 91675258916e4aeb), 24 s / 8 GiB, s5 pairs `5,13` and
+`6,14`, order alternating per file, 100 rows per shard per division.
+
+    division   rows  off  screened  net  gain  LOSS  FLIP  rc!=0  cmp  DIS
+    QF_LIA      200  127       127   +0     0     0     0      0  248    0
+    QF_UFLRA          RUNNING
+    QF_UFLIA          PENDING
+    QF_IDL            PENDING
+    QF_RDL            PENDING
+
+QF_LIA: ZERO MOVEMENT, AND THE ARM IS INERT -- BOTH, NOT ONE
+-------------------------------------------------------------
+
+    screened: rows `built` 0   cubes answered 0   cold tableaux left 0
+    off:      cold tableaux 0
+
+Not one file in the division reaches the offline linear loop's cold simplex, so
+the screen never had anything to open on and the lever cannot act there at all.
+
+**Reporting the net alone would be the ADR-2111 trap**, which this repository has
+been caught by twice: `net +0` from an inert arm is indistinguishable from
+`net +0` from a working one that does not help, and only the mechanism counters
+tell them apart. So the reading is stated in the form the evidence supports:
+
+    QF_LIA is evidence of NO REGRESSION. It is not evidence of no effect,
+    because there was no effect available to measure.
+
+That is the useful answer for criterion 4 -- the criterion asks whether the
+screen broke a division it was not aimed at, and a lever that never engages
+cannot have. It is NOT an answer to "does the warm basis help QF_LIA", which
+this population cannot address.
+
+The cost column agrees: +0.2 % over the 127 rows both arms decide, against a
+noise floor measured at 2.4 % on files at or above 50 ms and 0.4 % above 500 ms
+(section 6.5). +0.2 % is not a number, it is the floor.
