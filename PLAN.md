@@ -48477,13 +48477,26 @@ of them. Every non-shipping lever names what to build next.
 | QUANT-INSTANCE-PROBE | — | handed z3's own proof instances, our ground ladder refutes 6 of 7 reconstructable cores in ~107 ms; 46 % of z3's instances are nested instantiations | the block is **instance reach**, not ground refutation |
 | QUANT-INSTANCE-SELECT | 2133 | the briefed selection lever already ships and acts on 0.3 % of rejections; a generation ladder reaches its check on 31 of 53 cores and refutes at none | OFF; the refutation is absent from our set, not buried |
 | LRA-WARM-SCREEN | 2132 | builds-per-file screen: strictly better than the arm it screens (1/1 vs 1/2), admitted set predicted 51 of 51; the held-out loss is the shape the lever wins on, so the axis is wrong; −9.2 % is ¾ skipped linearization; fill-in grows the warm tableau 21× | OFF |
-| NRA-CLAUSE-LOOP | 2131 | certified `unsat` for the Boolean loop; 10 of 16 admissible files reach the theory and every one is refused by the single-cell frontier (algebraic sample worth 5); the shipped checker had two false-reject bugs, fixed | measuring |
+| NRA-CLAUSE-LOOP | 2131 | certified `unsat` for the Boolean loop; A/B on 800 files (QF_NRA, QF_NIA, QF_LRA control, QF_NRA held-out): 0 stable gains, 0 stable losses, 0 flips, the one mover was ambient (NEITHER-DECIDES at 3×/arm); 10 of 16 admissible files reach the theory and are refused by the single-cell frontier (algebraic sample worth 5); the shipped checker had two false-reject bugs, fixed; the treatment arm was confounded with the sat half and is rebased | OFF; merged `931e9d173` |
 
 Four lanes on the quantified divisions each removed a real block and moved
 one core; the probe then showed why: the six instances z3's proof uses are
 not among the ~1,473 we admit. QUANT-REACH-DIFF is classifying, per core,
 where each of z3's instances is lost (never matched / matched-rejected /
 nested) — that histogram is the next build's brief.
+
+## Round four (2026-09-16, in flight)
+
+| lane | ADR | question | state |
+|---|---|---|---|
+| NRA-ALGEBRAIC-WITNESS | 2134 | the algebraic sample the clause-loop census pointed at (5 of 16, 6 of 24 in ADR-2126's bucketing) | A/B done, QF_NRA 124 → 128 (+4) on the pinned list per the lane's commit; held-out and rechecks pending |
+| NIA-ORDER-LEMMAS | 2136 | z3's order/monotonicity lemma portfolio, the only QF_NIA mechanism the trace left untried | QF_NRA control clean 124/124; pass reached on 59 of 116 undecided; UFNIA and held-out sweeping |
+| LRA-ATOM-SCREEN | 2137 (only if a default moves) | pivots-per-build-per-atom screen for the tableau, the axis ADR-2132 named | QF_RDL: 36 screen hits, 0 gains, 0 losses; QF_IDL sweeping |
+| QUANT-REACH-DIFF | — | per core, where each of z3's proof instances is lost: never matched / matched-rejected / nested | classifying; README with the histogram and three worked examples pending |
+
+Round three closed with NRA-CLAUSE-LOOP's merge; every round-three lever
+has an A/B and a written reason, and the one that measured a non-null
+(QF_NRA 117 → 122, ADR-2121/2126) shipped.
 
 ## What the day says
 
