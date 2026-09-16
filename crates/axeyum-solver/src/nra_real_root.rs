@@ -4095,7 +4095,39 @@ impl CadPolicy {
 
 /// The arm used when `AXEYUM_NRA_CAD` is unset or unrecognized.
 ///
-/// **ADR-2121 moved this from [`CadPolicy::DEFAULT`] to
+/// **ADR-2126 moved this from [`CadPolicy::SINGLE_CELL_SAT`] to
+/// [`CadPolicy::SINGLE_CELL`]** — the route's `unsat` half now reaches the
+/// default. The reason ADR-2121 withheld it is gone: [`crate::nra_cell_cert`]'s
+/// delineability test is no longer sampling (check 6a), the old probe survives
+/// only as an independent cross-check (6b), and a covering whose generalisation
+/// would reach past the argument is REJECTED rather than assumed (6c).
+///
+/// The measured basis, on two independent 200-file QF_NRA draws:
+///
+/// * pinned draw 121 → 122, and the three-pass recheck classifies every mover —
+///   **2 STABLE-GAIN, 0 STABLE-LOSS, 1 BOTH-DECIDE**, exit status 0 on all 18
+///   runs. The BOTH-DECIDE row is the sweep's apparent loss: arm B decides it
+///   `unsat` 3 of 3 on a quiet core, and `--trace` shows BOTH arms declining it
+///   at `nra-real-root` in microseconds with its `unsat` coming from a later
+///   rung at 18.8 s of a 24 s budget;
+/// * held-out draw (fresh 200, seeded, disjoint — checked) 109 → 109 with
+///   **zero movers of any kind**;
+/// * QF_NIA 79 → 79 and the QF_LRA control 107 → 107, neither moving a row;
+/// * **0 `sat`↔`unsat` flips and 0 disagreements against declared `:status`
+///   over 809 comparable verdicts** across all four sweeps.
+///
+/// Read the honest shape of the gain, because it is small and specific: the two
+/// files are single-level refutations closed entirely by ATOM cells, so the
+/// delineability check never runs on either. They were never gated on a sample.
+/// What the exact check buys is that this arm's `unsat` can carry a default at
+/// all — for that class because it needed nothing, and for every other class
+/// because 6a is exact. See ADR-2126 §4.
+///
+/// [`CadPolicy::SINGLE_CELL_SAT`] and [`CadPolicy::DEFAULT`] both remain
+/// selectable by name through EXPLICIT arms in [`parse_cad_arm`], so an A/B can
+/// still ask for either.
+///
+/// Superseded context — **ADR-2121 moved this from [`CadPolicy::DEFAULT`] to
 /// [`CadPolicy::SINGLE_CELL_SAT`]**, on a measured +4 with 0 stable losses, 0
 /// flips and 0 `:status` disagreements — and, decisively, on the fact that every
 /// verdict the new default adds is a `sat` replayed exactly against the original
@@ -4108,7 +4140,7 @@ impl CadPolicy {
 /// not a budget change. `AXEYUM_NRA_CAD=default` still selects the pre-ADR-2121
 /// engine, by an EXPLICIT arm in [`parse_cad_arm`] rather than by the fallback.
 /// See the `CAD_DEFAULT` row of `config_registry`.
-pub(crate) const CAD_DEFAULT: CadPolicy = CadPolicy::SINGLE_CELL_SAT;
+pub(crate) const CAD_DEFAULT: CadPolicy = CadPolicy::SINGLE_CELL;
 
 /// The CAD policy in force, read once from `AXEYUM_NRA_CAD`.
 pub(crate) fn cad_policy() -> CadPolicy {
@@ -8454,22 +8486,36 @@ mod tests {
             default.arm, "default",
             "the pre-ADR-2121 arm keeps its name, so an A/B can still ask for it"
         );
-        // And the shipped default is the sat-only arm, which must never emit an
-        // `unsat` justified by a sample. Read through the arm list rather than
+        // The shipped default must RUN the single-cell route and must be an arm
+        // that exists in the table. Read through the arm list rather than
         // asserted on the constant: a const assertion is a compile-time claim
         // about a literal, which clippy rejects and which would not fail if the
-        // default were repointed at an arm that DOES emit one.
+        // default were repointed somewhere unintended.
+        //
+        // ADR-2121's version of this assertion required the default NOT to emit
+        // `unsat`, because the checker gating it was sampling. ADR-2126 made that
+        // checker exact and moved the default onto the full arm, so the
+        // invariant that replaces it is the one that is still true and still
+        // load-bearing: whatever arm ships, it is in the table and it routes.
+        // Weakening "does not emit `unsat`" to nothing would have left the
+        // default unguarded, which is why something takes its place.
         let shipped: Vec<&str> = arms
             .iter()
             .filter(|p| p.arm == CAD_DEFAULT.arm)
-            .filter(|p| !p.emit_unsat)
+            .filter(|p| p.single_cell)
             .map(|p| p.arm)
             .collect();
         assert_eq!(
             shipped,
             vec![CAD_DEFAULT.arm],
-            "the shipped default ({}) must not emit a sampled `unsat`",
+            "the shipped default ({}) must be a table arm that runs the route",
             CAD_DEFAULT.arm
+        );
+        // And the cell cap is STILL the shipped one, so moving the default is a
+        // route change and not a budget change.
+        assert_eq!(
+            CAD_DEFAULT.cell_cap, default.cell_cap,
+            "moving the default must not move the cell budget with it"
         );
     }
 
