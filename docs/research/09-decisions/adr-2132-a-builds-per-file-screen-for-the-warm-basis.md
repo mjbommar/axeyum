@@ -271,7 +271,26 @@ The same fact bites the SIZING, in the other direction, and §8 records it as a
 gap rather than a fix: the builds histogram in §1 counts every route too. On the
 pinned 200, where the threshold was derived, the error is **exactly zero** —
 all 68 rows with a nonzero build count have `lra_entries > 0`, checked against
-ADR-2125's own committed sizing. On the held-out draw it is at least 3 of 47.
+ADR-2125's own committed sizing. Over the complete 400 A/B rows it is **6 of the
+123 at or above the threshold**, every one of them on the HELD-OUT draw, and all
+six are `sc/*.induction3.cvc` — **one subfamily, not a scattering**, so it is a
+systematic bias rather than noise.
+
+The screen's own behaviour over those 400 rows is the other half of the check:
+
+```text
+400 rows | 244 below 64 builds | 123 at or above | 33 SILENT
+  below the threshold, rows where the screened arm answered a cube warm:   0 of 244
+  at or above, rows the screen opened on:                                117 of 123
+  of those, rows where `screened` answered FEWER cubes than `on`:         112 of 117
+  warm_cube_cold_restarts, summed over BOTH treatment arms, 400 rows:       0
+```
+
+**0 of 244 and `cold_restarts = 0` are the two that matter.** The first is the
+screen's whole contract — below the threshold the file runs the route it runs
+today — checked on 244 real files rather than on the two the fixture builds. The
+second is the tripwire: a warm basis quietly being rebuilt gives identical
+verdicts, identical churn counts, and differs only in the clock.
 
 ### 4.3 The attribution ADR-2125 said a successor must not skip
 
