@@ -60577,7 +60577,7 @@ next increment and is NOT built here.
    run, so their ratchets are enforced on nothing; that is what remains. No
    baseline was raised from any run.
 
-**Lane LRA-WARM-SCREEN (`IN PROGRESS`, lra-warm-screen, 2026-09-16.)**
+**Lane LRA-WARM-SCREEN (`MEASURED, SHIPS OFF`, lra-warm-screen, 2026-09-16.)**
 ADR: [ADR-2132](docs/research/09-decisions/adr-2132-a-builds-per-file-screen-for-the-warm-basis.md).
 Artifacts: `bench-results/lra-warm-screen-20260916/`.
 Compute: **s5, physical core pairs `5,13` and `6,14`**, and nothing else (both
@@ -60713,14 +60713,72 @@ at all. The SCREEN is unaffected because it compares a DELTA from loop entry
 one); the SIZING over-counts, at 0 of 68 on the pinned 200 where the threshold
 was derived and at least 3 of 47 on the held-out draw.
 
-### 6. The A/B
+### 6. The A/B — both `QF_LRA` draws complete at 200
 
-IN PROGRESS — three arms (`off` / `on` / `screened`), one binary
-(`axeyum.v1`, sha256 `91675258916e4aeb`), order rotating three ways per file,
-24 s / 8 GiB, on s5 core pairs `5,13` and `6,14`. The pinned 200 and ADR-2125's
-held-out 200 (verified disjoint, 200 unique each, 0 overlap) run first. Ship
-criteria are committed in ADR §7.1, written while the shards stood at 74 and 68
-rows of 200 — and **criterion 3 is already known to fail** (§2).
+Three arms, one binary (`axeyum.v1`, sha256 `91675258916e4aeb`), order rotating
+three ways per file, 24 s / 8 GiB, s5 pairs `5,13` and `6,14`. The two draws are
+verified disjoint (200 unique each, 0 overlap). Ship criteria were committed in
+ADR §7.1 **before** either shard finished.
+
+```
+comparison            rows  off  arm  net  gain  LOSS  FLIP  rc!=0  cmp  DIS
+pinned   off/screened  200  107  107   +0     0     0     0      0  194    0
+pinned   off/on        200  107  107   +0     1     1     0      0  194    0
+held-out off/screened  200   93   93   +0     1     1     0      0  174    0
+held-out off/on        200   93   92   -1     0     1     0      0  173    0
+```
+
+After the 3×-per-arm recheck of all four movers:
+
+```
+                pinned              held-out            total
+on              1 gain, 1 LOSS      0 gains, 1 LOSS     1 gain, 2 LOSSES
+screened        0 gains, 0 LOSSES   1 gain,  1 LOSS     1 gain, 1 LOSS
+```
+
+**`on` reproduces ADR-2125's headline exactly** — 1 stable gain against 2 stable
+losses — on a new binary, a new branch base and a complete 400 rows rather than
+the two half-draws ADR-2125 could finish.
+
+**The screen is strictly better than `on` on both draws**, and the trade is
+legible: pinned it removes the stable loss and gives up `on`'s stable gain on
+`sc-7.base.cvc` (1,695 builds — the screen admits it, and the 64 cold rounds
+cost the decision inside 24 s, which is the threshold's clearest single price);
+held-out it buys a stable gain `on` does not get and takes the same stable loss.
+
+Mechanism: `cold_restarts = 0` throughout; the screen opened on **0** rows `on`
+did not; 51 < 71 pinned and 66 < 79 held-out, all nonzero. Cost −13.9 % pinned
+and −12.1 % held-out, against `on`'s −16.0 % and −12.4 %.
+
+**The admitted set was predicted exactly.** §1.4 derived from ADR-2125's
+committed sizing that 51 of the pinned 200 sit at or above 64 builds; the
+screened arm built on exactly those 51 — same set, 0 missing, 0 extra.
+
+### 7. Decision: ships `off`, on criterion 3
+
+Criteria 1, 2 and 5 are met (0 disagreements at 194 and 174; 0 stable losses and
+0 flips on pinned — the criterion `on` fails; 51 < 71 and 66 < 79). **Criterion
+3 is not met**: `uart-8.induction.cvc` is a stable loss under `screened` too.
+
+"Ships off" is the wrong summary, though. The screen works, it is strictly
+better than the arm it screens, and **the axis it screens on is the wrong
+axis** — that last is the finding, and it is a conclusion about builds-per-file
+rather than about this threshold. The obvious next increment is therefore not a
+different value on this counter.
+
+### 8. Two defects found in this lane's own instruments
+
+* **The fuzz runner called a FAILING suite an inert one.** Its count parser was
+  anchored on `ok.`, so `FAILED. 3 passed; 1 failed` read as 0 tests and was
+  announced as "compiled to nothing" — opposite remedies. It also deleted the
+  failing log, the same defect ADR-2125 §5.8 had to fix in its own runner. Both
+  fixed; the failure is bounded from the source as a load-sensitive coverage
+  floor and **not** a soundness disagreement (`adjudicate` panics only on
+  `(Sat, Unsat)`/`(Unsat, Sat)`; a timeout yields `Unknown`, which falls
+  through). Which of the two floors fired is unrecovered, and that is stated.
+* **Exposure shard 01 ran twice for a minute** because I read an ssh `exit 124`
+  as "the launch did not happen" — 124 is the local wrapper, not the work. Every
+  row either instance wrote was discarded and the shard relaunched once.
 
 ## Landed
 
@@ -60736,14 +60794,22 @@ rows of 200 — and **criterion 3 is already known to fail** (§2).
 | `183a3c346` | 1 | correction: those builds are `lira-dpll`, not the NRA loop |
 | `5e0b635d4` | 2 | the THREE-term attribution, after the two-term one did not reconcile |
 | `5b69933e7` | 1 | delete the superseded split rather than leave a wrong number in the tooling |
+| `60de05922` | 1 | the pinned 200 complete — the screen removes ADR-2125's pinned stable loss |
+| `56c2a8dff` | 1 | the held-out 200 complete — the screen cannot remove that draw's loss |
+| `eea926282` | 2 | the decision, the mover recheck, and the shard-01 orchestration incident |
+| `c0d6a6eb0` | 3 | the recheck's raw rows and the derived mover list |
+| `76fe33037` | 3 | the fuzz runner called a failing suite inert, and deleted the evidence |
 
 ## Next
 
-1. Finish the three-arm A/B on both `QF_LRA` draws at 200, recheck every mover
-   3x per arm, then the five exposure divisions.
-2. Report the −9.2 % split between the basis and the skipped linearization.
-3. Size `pivots per build per atom` on the pinned 200 — the shape §2 observed on
-   two held-out rows and deliberately did not build on.
+1. The five exposure divisions (running; `QF_LIA` first on both shards).
+2. Size **pivots per build per atom** on the pinned 200 — the shape §2 observed
+   on two held-out rows at 0.263 against 0.124 and deliberately did not build
+   on, because both points are held-out rows.
+3. Split `simplex_cold_builds` per route. It counts every caller of
+   `feasible_within_sparse`, not the lazy-SMT loops; the screen is unaffected
+   (it compares a delta from loop entry) but the SIZING over-counts, at 0 of 68
+   on the pinned 200 and at least 3 of 47 held-out.
 
 Status: LANDED — LUB's ADR-0603 row 2 is a kernel-checked theorem, axiom-free.
 
