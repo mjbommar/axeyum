@@ -331,11 +331,44 @@ program allocates.
 What that registry note then says is the gap: *"Whether a nonzero-count bound
 should replace it needs the fill-in measurement ADR-2111 did not take."*
 
-**So what is new here is the instrument, not the argument.**
-`warm_cube_fill_peak` is that measurement's numerator — the largest nonzero
-count the warm tableau has held over its life — reported in §6 against the count
-the engine was admitted on. Until this counter existed, "fill-in is why the cell
-cap stays" was a reading of the algorithm with no number under it.
+**So what is new here is the instrument, and then the number.**
+`warm_cube_fill_peak` is the measurement's numerator and `warm_cube_entry_nnz`
+its denominator; the peak alone settles nothing, because 98,572 nonzeros against
+a 400,000 cap is one claim if the tableau entered at 90,000 and the opposite
+claim if it entered at 4,688.
+
+Measured over seven `QF_LRA` files (`fill-in.txt`):
+
+```text
+entry_nnz  fill_peak   growth   file
+   65,133     65,852    1.01x   LassoRanker/.../firewire Iteration3
+   96,154     98,960    1.03x   LassoRanker/.../Ben-Amram-2010LMCS-Ex2.3
+   27,184     32,104    1.18x   LassoRanker/.../Gcd_havoc
+    2,288     28,093   12.28x   sc/sc-19.base.cvc
+    4,448     95,323   21.43x   sc/sc-37.base.cvc
+    4,688     98,572   21.03x   sc/sc-39.base.cvc
+```
+
+**Fill-in grows the stored set by up to 21×, and the decisive row is
+ADR-2125's own.** `sc-39.base.cvc` is the file it measured at **4,688 nonzeros
+against 8,797,712 dense cells** and used to argue the dense cap was in the wrong
+currency. It is right that the cap refuses a 188 KB structure. It is wrong that
+4,688 describes the structure: the peak is **98,572**.
+
+So a construction-time nonzero bound is not a bound on the structure at all once
+the engine runs. `MAX_TABLEAU_CELLS` is loose — the peak is 1.1 % of it — but it
+is a real ceiling and the only one of the two fill-in cannot pass. **The cell cap
+stays, and the reason is now a number rather than a reading of the pivot loop.**
+
+The second finding is the shape, and it inverts the intuition: the rows that
+enter SPARSE are the rows fill-in changes. `LassoRanker/*` enters at 27k–96k and
+grows 1.01–1.18×; `sc/*` enters at 2.3k–4.7k and grows 12–21×. `sc/*` is the
+family this lane's screen admits and ADR-2125's gain came from, so **the files
+the warm basis helps most are the files whose footprint the admission count
+describes least.**
+
+Seven files is a probe, not a population: enough to answer ADR-2111's yes/no,
+not enough to set a constant from. Nobody has taken the tail here either.
 
 The second reason is ADR-2125's and unchanged: the constant governs the ONLINE
 engine's admission too, so moving it would make an A/B of one lever an A/B of
