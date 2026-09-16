@@ -37,11 +37,12 @@
 
 use std::time::Duration;
 
-use axeyum_ir::{Sort, TermArena};
+use axeyum_ir::{Sort, SymbolId, TermArena, TermId};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
-    CheckResult, PositivePathLevelGuard, SolverConfig, prove_quantified_unsat_via_egraph,
-    solve_smtlib,
+    CheckResult, PositivePathLevelGuard, QuantifierGroundDerivation,
+    QuantifierPositiveReplacementCertificate, SolverConfig, check_quantifier_ground_derivation,
+    prove_quantified_unsat_via_egraph, solve_smtlib,
 };
 
 /// Level 0 is the shipped arm; level 1 is what ADR-2120 measures. Both are
@@ -112,19 +113,28 @@ const SAT_UNDER_IMPLIES: &str = r"
     (check-sat)
 ";
 
-/// **The polarity control.** The universal sits under a `not`, so it is at a
-/// NEGATIVE position: `¬(∀y. q(y))` is an EXISTENTIAL, and replacing it by
-/// `¬q(w)` would STRENGTHEN the owner rather than weaken it. A rule that
-/// tracked the step but not the flip admits that replacement, and it is
-/// unsound — here it would let the engine conclude `¬q(w)`, contradicting the
-/// asserted `q(w)` and refuting a SAT query.
+/// **The polarity control, and it is built so a missed flip is a WRONG UNSAT
+/// rather than a missed opportunity.**
+///
+/// The universal sits under a `not`, so it is at a NEGATIVE position:
+/// `¬(∀y. q(y))` is an EXISTENTIAL, and replacing it by `¬q(w)` would
+/// STRENGTHEN the owner rather than weaken it.
+///
+/// `f` is FALSE, so the owner forces `¬(∀y. q(y))`, i.e. SOME `y` fails `q` —
+/// and `q(w)` says `w` is not that one. With a carrier of two or more elements
+/// this is SATISFIABLE. A rule that tracked the `not` step but not its FLIP
+/// would replace the universal anyway, yielding `f ∨ ¬q(w)`, which with `¬f`
+/// gives `¬q(w)` and contradicts the asserted `q(w)`. So a single missing
+/// polarity flip turns this file's verdict from `sat` to a wrong `unsat`, which
+/// is what makes this fixture a control and not a decoration.
 const SAT_UNDER_NOT: &str = r"
     (set-logic UF)
     (declare-sort U 0)
     (declare-fun q (U) Bool)
     (declare-const w U)
-    (declare-const t Bool)
-    (assert (or t (not (forall ((y U)) (q y)))))
+    (declare-const f Bool)
+    (assert (not f))
+    (assert (or f (not (forall ((y U)) (q y)))))
     (assert (q w))
     (check-sat)
 ";
@@ -406,21 +416,31 @@ fn a_shape_the_widening_does_not_reach_is_identical_at_both_levels() {
     }
 }
 
-/// The certificate must exist, not merely be possible.
-///
-/// ADR-2120 §3 found that a positive replacement was pushed into the ground set
-/// with NO derivation recorded, so `collect_ground_derivations` declined at its
-/// `derivations.get(&term)?` and every `unsat` downstream of one shipped
-/// uncertified. This test asks the checker directly: a replacement certificate
-/// built from the fixture must be accepted, and the same certificate with its
-/// conclusion replaced by an unrelated term must be REFUSED.
-#[test]
-fn a_positive_replacement_certificate_is_checked_and_a_wrong_one_is_refused() {
-    use axeyum_solver::{
-        QuantifierGroundDerivation, QuantifierPositiveReplacementCertificate,
-        check_quantifier_ground_derivation,
-    };
+// ---------------------------------------------------------------------------
+// THE CHECKER, guard by guard. These are split into one test per guard rather
+// than asserted together, because a mutation that removes one guard and kills a
+// three-assertion test proves only that SOMETHING in it fired. One test per
+// guard is what makes the mutation table attributable.
+// ---------------------------------------------------------------------------
 
+/// The fixture every checker test below is built from: the owner
+/// `p ∨ ∀y. q(y)`, the witness `w`, and the conclusion `p ∨ q(w)`.
+struct CheckerFixture {
+    arena: TermArena,
+    owner: TermId,
+    /// The owner with the universal at `[1]` replaced by `q(w)` — the CLAUSE.
+    conclusion: TermId,
+    /// The bare instance `q(w)`, which is NOT entailed and must be refused.
+    bare_instance: TermId,
+    /// `t ∨ ¬(∀y. q(y))`: the universal here is at a NEGATIVE position.
+    negative_owner: TermId,
+    /// The other disjunct of `negative_owner`, so a test can rebuild its clause.
+    negative_sibling: TermId,
+    binder: SymbolId,
+    witness: TermId,
+}
+
+fn checker_fixture() -> CheckerFixture {
     let mut arena = TermArena::new();
     let carrier = arena.declare_uninterpreted_sort("PprS");
     let sort = Sort::Uninterpreted(carrier);
@@ -432,55 +452,141 @@ fn a_positive_replacement_certificate_is_checked_and_a_wrong_one_is_refused() {
     let side = arena.declare("ppr_p", Sort::Bool).unwrap();
     let side_var = arena.var(side);
     let owner = arena.or(side_var, universal).unwrap();
-    let witness = arena.declare("ppr_w", sort).unwrap();
-    let witness_term = arena.var(witness);
-    let q_w = arena.apply(predicate, &[witness_term]).unwrap();
-    let conclusion = arena.or(side_var, q_w).unwrap();
+    let witness_sym = arena.declare("ppr_w", sort).unwrap();
+    let witness = arena.var(witness_sym);
+    let bare_instance = arena.apply(predicate, &[witness]).unwrap();
+    let conclusion = arena.or(side_var, bare_instance).unwrap();
+    let negated = arena.not(universal).unwrap();
+    let other = arena.declare("ppr_t", Sort::Bool).unwrap();
+    let negative_sibling = arena.var(other);
+    let negative_owner = arena.or(negative_sibling, negated).unwrap();
+    CheckerFixture {
+        arena,
+        owner,
+        conclusion,
+        bare_instance,
+        negative_owner,
+        negative_sibling,
+        binder,
+        witness,
+    }
+}
 
-    let good = QuantifierGroundDerivation::PositiveReplacement(Box::new(
+fn replacement(
+    owner: TermId,
+    path: Vec<u32>,
+    binder: SymbolId,
+    witness: TermId,
+    conclusion: TermId,
+) -> QuantifierGroundDerivation {
+    QuantifierGroundDerivation::PositiveReplacement(Box::new(
         QuantifierPositiveReplacementCertificate {
             owner,
-            path: vec![1],
+            path,
             vars: vec![binder],
-            bindings: vec![witness_term],
+            bindings: vec![witness],
             conclusion,
             owner_derivation: None,
         },
-    ));
-    assert!(
-        check_quantifier_ground_derivation(&mut arena, &[owner], &good),
-        "the checker refused a correct positive replacement: `p or forall y. q(y)` \
-         does entail `p or q(w)`"
-    );
+    ))
+}
 
-    // Same certificate, wrong conclusion. The checker re-derives from
-    // `(owner, path, vars, bindings)` alone, so this must fail on the
-    // comparison rather than on anything the producer told it.
-    let wrong = QuantifierGroundDerivation::PositiveReplacement(Box::new(
-        QuantifierPositiveReplacementCertificate {
-            owner,
-            path: vec![1],
-            vars: vec![binder],
-            bindings: vec![witness_term],
-            conclusion: q_w,
-            owner_derivation: None,
-        },
-    ));
+/// The POSITIVE control for the three refusals below. Without it a checker that
+/// refused everything would pass all of them.
+#[test]
+fn a_correct_positive_replacement_certificate_is_accepted() {
+    let mut fx = checker_fixture();
+    let good = replacement(fx.owner, vec![1], fx.binder, fx.witness, fx.conclusion);
     assert!(
-        !check_quantifier_ground_derivation(&mut arena, &[owner], &wrong),
-        "the checker ACCEPTED the BARE instance `q(w)` as the conclusion of a \
-         replacement into `p or forall y. q(y)`. That is precisely the unsound \
-         inference `rej_nocontext` exists to prevent"
+        check_quantifier_ground_derivation(&mut fx.arena, &[fx.owner], &good),
+        "the checker refused a CORRECT positive replacement: \
+         `p or forall y. q(y)` does entail `p or q(w)`, so every refusal test \
+         in this file could be passing for the wrong reason"
     );
+}
 
-    // And an owner that is not an assertion and carries no derivation must be
-    // refused: `None` is a claim that the owner is asserted, never permission
-    // to skip the check.
+/// **The activation literal must be in the clause.** The conclusion of a
+/// replacement into `p ∨ ∀y. q(y)` is `p ∨ q(w)`, never the bare `q(w)` —
+/// `A ∨ (∀y.B(y))` does not entail `B(t)`, and admitting it anyway is precisely
+/// the inference `rej_nocontext` exists to prevent.
+#[test]
+fn the_bare_instance_is_refused_as_a_replacement_conclusion() {
+    let mut fx = checker_fixture();
+    let wrong = replacement(fx.owner, vec![1], fx.binder, fx.witness, fx.bare_instance);
     assert!(
-        !check_quantifier_ground_derivation(&mut arena, &[conclusion], &good),
+        !check_quantifier_ground_derivation(&mut fx.arena, &[fx.owner], &wrong),
+        "the checker ACCEPTED the bare instance `q(w)` as the conclusion of a \
+         replacement into `p or forall y. q(y)`. The activation literal is not \
+         in the clause and the inference is unsound"
+    );
+}
+
+/// **A universal at a NEGATIVE position may not be replaced.** `t ∨ ¬(∀y.q(y))`
+/// is an existential claim; replacing the universal by `q(w)` there yields
+/// `t ∨ ¬q(w)`, which the owner does not entail. The path `[1, 0]` reaches it
+/// through an `or` and then a `not`, so the arrival polarity is negative.
+#[test]
+fn a_replacement_at_a_negative_position_is_refused() {
+    let mut fx = checker_fixture();
+    let negated_instance = fx.arena.not(fx.bare_instance).unwrap();
+    let conclusion = fx.arena.or(fx.negative_sibling, negated_instance).unwrap();
+    let wrong = replacement(
+        fx.negative_owner,
+        vec![1, 0],
+        fx.binder,
+        fx.witness,
+        conclusion,
+    );
+    assert!(
+        !check_quantifier_ground_derivation(&mut fx.arena, &[fx.negative_owner], &wrong),
+        "the checker ACCEPTED a replacement at a NEGATIVE position: under a \
+         `not` the universal is an existential, and replacing it by an instance \
+         STRENGTHENS the owner instead of weakening it"
+    );
+}
+
+/// **A `None` `owner_derivation` is a claim that the owner is asserted, never
+/// permission to skip the check.** Here the owner is absent from the assertion
+/// set and carries no derivation, so the certificate must be refused even
+/// though the replacement itself is correct.
+#[test]
+fn a_replacement_whose_owner_is_not_trusted_is_refused() {
+    let mut fx = checker_fixture();
+    let good = replacement(fx.owner, vec![1], fx.binder, fx.witness, fx.conclusion);
+    assert!(
+        !check_quantifier_ground_derivation(&mut fx.arena, &[fx.conclusion], &good),
         "the checker accepted a replacement whose owner is neither an assertion \
          nor carried by an `owner_derivation`"
     );
+}
+
+/// **A universal at a NEGATIVE position is never even registered**, at either
+/// level — the producer's half of the same rule the checker enforces above.
+///
+/// This is separate from the verdict tests on purpose. A missing polarity flip
+/// shows up here as a registration that should not exist, one step before it
+/// can show up as a wrong `unsat`, and a test that reads the registration count
+/// cannot be passed by an engine that simply failed to reach the query.
+#[test]
+fn a_universal_at_a_negative_position_is_never_registered() {
+    for level in LEVELS {
+        let _guard = PositivePathLevelGuard::set(level);
+        assert_eq!(
+            registrations_with_context(SAT_UNDER_NOT),
+            0,
+            "level {level}: a universal under a `not` was given a positive \
+             context. It is an EXISTENTIAL there, and replacing it by an \
+             instance is unsound -- the polarity flip on `not` is missing"
+        );
+        assert_eq!(
+            registrations_with_context(SAT_UNDER_ITE_CONDITION),
+            0,
+            "level {level}: a universal in an `ite` CONDITION was given a \
+             positive context. The condition occurs at BOTH polarities in \
+             `(c and t) or (not c and e)`, so a replacement there is monotone \
+             in neither direction"
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -539,9 +645,7 @@ fn the_widened_level_converts_a_refutation_the_shipped_level_cannot_reach() {
 /// and requires that they exist and that at least one is the new variant.
 #[test]
 fn the_converted_refutation_carries_its_replacement_derivation() {
-    use axeyum_solver::{
-        QuantifierGroundDerivation, prove_quantified_unsat_via_egraph_with_instances,
-    };
+    use axeyum_solver::prove_quantified_unsat_via_egraph_with_instances;
 
     let _guard = PositivePathLevelGuard::set(1);
     let mut script = parse_script(UNSAT_OTHER_DISJUNCT_FALSE).expect("parses");
