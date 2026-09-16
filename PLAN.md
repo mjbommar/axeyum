@@ -60802,9 +60802,31 @@ different value on this counter.
 | `c0d6a6eb0` | 3 | the recheck's raw rows and the derived mover list |
 | `76fe33037` | 3 | the fuzz runner called a failing suite inert, and deleted the evidence |
 
+### 9. The exposure divisions
+
+```
+division   rows  off  screened  net  gain  LOSS  FLIP  rc!=0  cmp  DIS   lever
+QF_LIA      200  127       127   +0     0     0     0      0  248    0   INERT
+QF_UFLRA    200  149       149   +0     0     0     0      0  298    0   active (6 rows, 417 cubes)
+QF_UFLIA    200  162       162   +0     0     0     0      0  324    0   INERT
+QF_IDL      200  109       110   +1     1     0     0      0  219    0   INERT
+QF_RDL            RUNNING
+```
+
+**0 stable losses and 0 flips in all four measured so far**, 0 soundness
+disagreements everywhere. But three of the four are INERT — no file in them
+reaches the offline linear loop's cold simplex — so they are evidence of no
+regression, not of no effect, and the mechanism columns are what separate the
+two. Only `QF_UFLRA` exercises the lever.
+
+`QF_IDL`'s single raw gain is on a provably inert arm, so it is ambient by
+construction; at 1 in 200 it also calibrates the floor at 0.5 %, inside the
+documented 1–1.5 % ambient flip rate. It still goes to the 3× recheck, which is
+chained behind `QF_RDL`.
+
 ## Next
 
-1. The five exposure divisions (running; `QF_LIA` first on both shards).
+1. `QF_RDL`, and the 3× recheck of every exposure mover (both chained).
 2. Size **pivots per build per atom** on the pinned 200 — the shape §2 observed
    on two held-out rows at 0.263 against 0.124 and deliberately did not build
    on, because both points are held-out rows.
