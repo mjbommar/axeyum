@@ -41,9 +41,27 @@ use axeyum_solver::{CheckResult, LazySmtCountersGuard, SolverConfig, last_lazy_s
 /// this file would go green having tested nothing.
 const ATOMS: usize = 1_100;
 /// The online screen's own arithmetic, restated so that a budget change there
-/// fails a test HERE rather than silently redirecting this file to the warm
-/// online engine, where every arm agrees trivially.
+/// fails HERE rather than silently redirecting this file to the warm online
+/// engine, where every arm agrees trivially.
 const ONLINE_ADMITTED_ATOMS: usize = 1_024;
+
+/// The width claim, checked by the COMPILER.
+///
+/// This was a `#[test]` comparing two constants until clippy's
+/// `assertions_on_constants` pointed out that such an assertion asserts nothing
+/// at runtime. A `const` block is strictly stronger: a generator narrowed below
+/// the online engine's admission no longer fails a test somebody has to run, it
+/// fails the build.
+///
+/// It is only half the claim. That the CONSTANT is large enough is this; that
+/// the generator and the abstraction actually produce that many atoms is a
+/// different statement, and `the_generator_outruns_the_online_admission_screen`
+/// below measures it from the loop's own counter.
+const _: () = assert!(
+    ATOMS > ONLINE_ADMITTED_ATOMS,
+    "the generator does not outrun the online engine's admission, so every \
+     instance in this file would be decided by a different engine"
+);
 const VARS: usize = 3;
 
 /// Deterministic LCG (MMIX constants, the house convention). No clock, no
@@ -156,6 +174,10 @@ struct Arm {
     /// every consumer of the trail reads and it is the thing that can silently
     /// stop distinguishing two cases.
     build: &'static str,
+    /// Atoms the abstraction handed the loop — what
+    /// `the_generator_outruns_the_online_admission_screen` measures, and the
+    /// only number here that can say the file exercised the OFFLINE route.
+    atoms: u64,
 }
 
 fn run(mode: WarmCubeMode, seed: u64, disjoin_in: u64) -> Arm {
@@ -175,6 +197,7 @@ fn run(mode: WarmCubeMode, seed: u64, disjoin_in: u64) -> Arm {
         warm_checks: c.warm_cube_checks,
         warm_restarts: c.warm_cube_cold_restarts,
         build: c.warm_cube_build.label(),
+        atoms: c.atoms,
     }
 }
 
@@ -298,18 +321,27 @@ fn a_file_below_the_threshold_keeps_no_basis_at_all() {
     );
 }
 
-/// The generator outruns the online admission screen, checked as arithmetic on
-/// two named constants rather than left as a comment.
+/// The generator outruns the online admission screen — measured from the loop's
+/// own counter, not restated from the constants.
 ///
-/// [ADR-2125] wrote this check for its own seed class and gave the reason: the
-/// screen lives in another module, so a budget change there would silently
-/// redirect this whole file to the warm ONLINE engine — where all three arms
-/// agree because none of them is the arm under test, and nothing would go red.
+/// [ADR-2125] wrote a check like this for its own seed class and gave the
+/// reason: the screen lives in another module, so a budget change there would
+/// silently redirect this whole file to the warm ONLINE engine, where all three
+/// arms agree because none of them is the arm under test and nothing goes red.
+///
+/// The CONSTANT half of that claim is the `const _` above, where the compiler
+/// enforces it. This is the half a constant cannot make: that the generator and
+/// the Boolean abstraction actually hand the offline loop more atoms than the
+/// online engine admits. A generator that silently produced fewer — a changed
+/// disjunction rate, an arena that folded duplicate literals — would satisfy the
+/// constant and still test the wrong engine.
 #[test]
 fn the_generator_outruns_the_online_admission_screen() {
+    let arm = run(WarmCubeMode::Off, 0x2132_0003, 2);
     assert!(
-        ATOMS > ONLINE_ADMITTED_ATOMS,
-        "{ATOMS} atoms does not outrun the online engine's {ONLINE_ADMITTED_ATOMS}; \
-         every instance in this file would be decided by a different engine"
+        arm.atoms > ONLINE_ADMITTED_ATOMS as u64,
+        "the loop saw {} atoms, which does not outrun the online engine's \
+         {ONLINE_ADMITTED_ATOMS}: this file would be measuring a different engine",
+        arm.atoms
     );
 }
