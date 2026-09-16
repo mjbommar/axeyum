@@ -1261,22 +1261,22 @@ fn has_root_strictly_inside(q_sf: &[Rational], cell: &Cell<'_>) -> Option<bool> 
         // asked about.
         let sliver_low = match &lower {
             Some(r) if r.exact.is_none() => {
-                let c = count_roots_in(&chain, r.lo, a)?;
+                let raw = count_roots_in(&chain, r.lo, a)?;
                 if sign_at_root(q_sf, r)? == Sign::Zero {
-                    c.saturating_sub(1)
+                    raw.saturating_sub(1)
                 } else {
-                    c
+                    raw
                 }
             }
             _ => 0,
         };
         let sliver_high = match &upper {
             Some(r) if r.exact.is_none() => {
-                let c = count_roots_in(&chain, b, r.hi)?;
+                let raw = count_roots_in(&chain, b, r.hi)?;
                 if sign_at_root(q_sf, r)? == Sign::Zero {
-                    c.saturating_sub(1)
+                    raw.saturating_sub(1)
                 } else {
-                    c
+                    raw
                 }
             }
             _ => 0,
