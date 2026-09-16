@@ -469,7 +469,7 @@ The rest, each with a nonzero count confirmed:
 | `scripts/check-merge-hygiene.sh` | PASS |
 | `scripts/check-links.sh` | all links ok |
 | `check-config-registry-staleness.py` | 0 unexplained |
-| the 22 dispatch/reason suites | **DID NOT COMPLETE** — see §8 |
+| the 22 dispatch/reason suites | **all 22 green**, every count nonzero (7, 10, 20, 11, 12, 3, 3, 12, 12, 9, 6, 6, 6, 6, 7, 18, 13, 2, 20, 6, 7, 15) |
 | `--lib --features full -- --skip reconstruct::` | **DID NOT COMPLETE** — see §8 |
 | `progress_frontier --features full -- --test-threads=1` | **DID NOT COMPLETE** — see §8 |
 
@@ -745,12 +745,17 @@ Named with what is known about each, rather than left implied.
 2. **Four exposure divisions did not run**, and `QF_LIA` ran 7 rows. A division
    with no rows is not a division with no movement. `QF_LIA` is the one that
    matters most — it drives the same simplex — and 7 rows is not a sample of it.
-3. **Three gates did not complete**: the 22 dispatch/reason suites, the
-   `--skip reconstruct::` lib sweep, and `progress_frontier`. They were queued
-   behind the mutation run and other lanes' jobs on the shared `cargo-serialized`
-   flock. `run-gates.sh` is committed and runs them by name. This is a real gap
-   in the evidence, not a formality: `progress_frontier` is the capability
-   ratchet, and a solver-route change is exactly what it exists to watch.
+3. **Two gates did not complete**: the `--skip reconstruct::` lib sweep and
+   `progress_frontier`. They were queued behind the mutation run and other lanes'
+   jobs on the shared `cargo-serialized` flock, on a box that OOM-killed three of
+   those lanes' jobs at their own 24 GiB scope ceilings while this lane waited.
+   `run-gates.sh` is committed and runs them by name.
+
+   This is a real gap in the evidence, not a formality: **`progress_frontier` is
+   the capability ratchet, and a solver-route change is exactly what it exists to
+   watch.** The 22 dispatch/reason suites DID complete and are green (§5.5); they
+   were in this list until they did, which is the right direction for a list like
+   this to move.
 4. **The builds-per-file screen** (§7.3). The stable loss and the stable gain lie
    on one axis the lever is already instrumented for, and a decider that consults
    `simplex_cold_builds` is the obvious next increment. It is not built here

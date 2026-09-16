@@ -60320,9 +60320,10 @@ next increment and is NOT built here.
    file, so a successor resumes rather than rebuilds) and run the five exposure
    divisions with their own denominators.
 2. A builds-per-file screen on the decider, A/B'd rather than assumed.
-3. Three gates did not complete behind the shared cargo lock -- the 22
-   dispatch/reason suites, the `--skip reconstruct::` lib sweep, and
-   `progress_frontier`. `run-gates.sh` runs them by name.
+3. Two gates did not complete behind the shared cargo lock -- the
+   `--skip reconstruct::` lib sweep and `progress_frontier`. The 22
+   dispatch/reason suites DID complete and are all green, every count nonzero.
+   `run-gates.sh` runs the remaining two by name.
 
 Status: LANDED — LUB's ADR-0603 row 2 is a kernel-checked theorem, axiom-free.
 
