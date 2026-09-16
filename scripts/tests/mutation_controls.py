@@ -2993,6 +2993,87 @@ SUITES["lra-implied-bound-propagation"] = (
 # claim about a population and not about a suite of one.
 # --------------------------------------------------------------------------
 
+# --------------------------------------------------------------------------
+# `lra-warm-screen` -- ADR-2132 puts a SCREEN in front of ADR-2125's warm basis:
+# a file keeps a basis only once it has built `MIN_WARM_CUBE_SCREEN_BUILDS`
+# from-scratch tableaux. The screen is pure ROUTING -- it can change which engine
+# answers a cube and must never change the answer -- so the defect it can carry
+# is not one of the reconciliation defects `lra-warm-cube-basis` watches.
+#
+# A screen that admits at ZERO builds is `on` wearing the name `screened`.
+# Nothing about the verdicts changes, which is precisely why no verdict
+# comparison can see it: the whole lane would be a re-run of ADR-2125 reported
+# as a new measurement. TWO fixtures see it and both are expected to die --
+# one asserts the screen stayed SHUT below the threshold, the other that
+# `screened` answers strictly FEWER cubes than `on`. They observe one defect
+# from two sides and their kill sets are NESTED rather than disjoint; that is
+# said here rather than reported as a coverage number.
+#
+# Filtered to the ADR-2132 test BINARY, because both fixtures live there: the
+# screen's property is that three arms of one lever agree, and asserting that
+# needs all three in one process.
+# --------------------------------------------------------------------------
+
+SUITES["lra-warm-screen"] = (
+    "crates/axeyum-solver/src/dpll_t.rs",
+    Cargo(
+        (
+            "--release",
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--test",
+            "lra_warm_screen_2132",
+        ),
+        "lra-warm-screen",
+    ),
+    [
+        (
+            "the builds threshold the screen opens at",
+            "                < MIN_WARM_CUBE_SCREEN_BUILDS",
+            "                < 0",
+        ),
+    ],
+)
+
+# --------------------------------------------------------------------------
+# `lra-screen-counter` -- the screen reads an ALWAYS-ON count of from-scratch
+# tableaux rather than `LazySmtCounters::simplex_cold_builds`, which is armed by
+# `--trace` alone.
+#
+# Moving the bump inside the armed branch is invisible to every verdict and to
+# every TRACED measurement; it shows up only on a run with no instrumentation,
+# which is every shipped run. A screen that counted only under `--trace` would
+# route one way in the A/B and the other way in production, and the A/B would be
+# a measurement of a route nobody ships.
+#
+# The fixture that sees it asserts the UNARMED half FIRST and separately, which
+# is why exactly this mutation has somewhere to land.
+# --------------------------------------------------------------------------
+
+SUITES["lra-screen-counter"] = (
+    "crates/axeyum-solver/src/simplex.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            "dpll_t::tests",
+        ),
+        "lra-screen-counter",
+    ),
+    [
+        (
+            "the screen counter's bump on the UNTRACED path",
+            "        bump_cold_builds(&probe);\n        return outcome;",
+            "        return outcome;",
+        ),
+    ],
+)
+
 SUITES["lra-warm-cube-basis"] = (
     "crates/axeyum-solver/src/lra_online.rs",
     Cargo(

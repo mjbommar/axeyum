@@ -58,7 +58,7 @@ use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use axeyum_ir::{
     Assignment, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
@@ -2161,10 +2161,39 @@ impl LraTheory {
             return Feasibility::Unknown;
         };
         let mut engine = cell.borrow_mut();
-        if !engine.sync_cube(&self.live) {
+        // ADR-2132's attribution instrument. Clocked only when the lazy-SMT
+        // counters are armed — one thread-local `bool` read otherwise — for the
+        // reason `feasible_within_sparse` gives about the same hot path: this
+        // runs once per cube and the route takes hundreds per second.
+        //
+        // The two halves are clocked SEPARATELY and filed by one call. A cube
+        // this engine answers skips both a from-scratch simplex and a
+        // `Collector` rebuild, and [ADR-2125] measured −9.2 % without being able
+        // to say which of the two paid for it; `warm_cube_sync` is what keeping
+        // the basis COSTS and `warm_cube_solve` is what re-solving from it
+        // costs, so the saving can be attributed instead of asserted.
+        let clocked = crate::lazy_smt_counters::enabled();
+        let sync_started = clocked.then(Instant::now);
+        let synced = engine.sync_cube(&self.live);
+        let sync_elapsed = sync_started.map_or(Duration::ZERO, |t| t.elapsed());
+        if !synced {
+            // A refused sync still SPENT the reconciliation pass, and charging
+            // it to nothing would make the field a measurement of the cubes that
+            // happened to succeed. The solve half is genuinely zero here.
+            if clocked {
+                crate::lazy_smt_counters::record_warm_cube_time(sync_elapsed, Duration::ZERO);
+            }
             return Feasibility::Unknown;
         }
-        match engine.inner.check(self.deadline) {
+        let solve_started = clocked.then(Instant::now);
+        let status = engine.inner.check(self.deadline);
+        if clocked {
+            crate::lazy_smt_counters::record_warm_cube_time(
+                sync_elapsed,
+                solve_started.map_or(Duration::ZERO, |t| t.elapsed()),
+            );
+        }
+        match status {
             simplex::Status::Feasible => Feasibility::Sat,
             simplex::Status::Infeasible(rows) => Feasibility::Unsat(engine.live_indices(&rows)),
             simplex::Status::Unknown => Feasibility::Unknown,
@@ -2207,13 +2236,16 @@ impl LraTheory {
     /// `cold_restarts` that stays 0 across thousands of checks is what
     /// distinguishes a warm reconciliation from a rebuild wearing its name.
     #[must_use]
-    pub(crate) fn warm_engine_churn(&self) -> Option<(u64, u64, u64)> {
+    pub(crate) fn warm_engine_churn(&self) -> Option<(u64, u64, u64, u64, u64)> {
         let cell = self.simplex.as_ref()?;
         let engine = cell.borrow();
+        let counters = engine.inner.counters();
         Some((
             engine.sync_retractions,
             engine.sync_assertions,
             engine.inner.cold_restarts(),
+            counters.fill_nnz_peak,
+            counters.entry_nnz,
         ))
     }
 
@@ -6614,7 +6646,7 @@ mod tests {
              question: feasible={feasible} unsat={infeasible} decline={declined}"
         );
 
-        let (retractions, assertions, cold_restarts) =
+        let (retractions, assertions, cold_restarts, _fill_peak, _entry_nnz) =
             warm.warm_engine_churn().expect("warm engine exists");
         assert_eq!(
             cold_restarts, 0,

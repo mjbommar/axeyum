@@ -1,0 +1,1 @@
+QF_IDL/asp/Solitaire/solitaire-edge-time=29.smt2

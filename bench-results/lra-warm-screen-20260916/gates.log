@@ -1,0 +1,82 @@
+=== ADR-2132 gates ===
+cargo fmt --all --check                                          ok
+cargo check --workspace --all-targets (default features)         ok
+clippy --workspace --all-targets --all-features -D warnings      ok
+--lib --features full lra                                        ok (145 passed, 0 failed)
+--lib --features full simplex                                    ok (41 passed, 0 failed)
+--lib --features full config_registry::tests                     ok (18 passed, 0 failed)
+--lib --features full lazy_smt_counters                          ok (6 passed, 0 failed)
+--lib --features full dpll_t::tests                              ok (15 passed, 0 failed)
+--test lra_warm_screen_2132 (release)                            ok (3 passed, 0 failed)
+--- the dispatch/reason suites, read out of the hook by the shared runner ---
+run-dispatch-reason-suites.sh                                    ok
+--- the static checks ---
+check-suite-gating.py                                            ok
+check-config-registry-staleness.py                               ok
+check-merge-hygiene.sh                                           ok
+check-links.sh                                                   ok
+mutation_controls.py --check-anchors                             ok
+--- the lib sweep ---
+--lib --features full -- --skip reconstruct::                    FAILED rc=101 (1613 passed, 6 failed)
+      log kept at bench-results/lra-warm-screen-20260916/gate-failures/--lib_--features_full_--_--skip_reconstruct__.log
+
+---- auto::tests::top_level_negated_universal_exposes_counterexample_witness stdout ----
+
+thread 'auto::tests::top_level_negated_universal_exposes_counterexample_witness' (3245650) panicked at crates/axeyum-solver/src/auto.rs:15568:9:
+assertion `left == right` failed
+  left: Unknown(UnknownReason { kind: ResourceLimit, detail: "quantified solve time budget exhausted after valid-universal elimination" })
+ right: Unsat
+
+---- array_bv_abs::tests::refutes_rw213_by_bv_abstraction stdout ----
+
+thread 'array_bv_abs::tests::refutes_rw213_by_bv_abstraction' (3233692) panicked at crates/axeyum-solver/src/array_bv_abs.rs:344:14:
+rw213 is inconsistent after array-read abstraction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- auto::tests::arithmetic_uf_overbound_pre_lia_probe_decides_on_clone stdout ----
+
+thread 'auto::tests::arithmetic_uf_overbound_pre_lia_probe_decides_on_clone' (3234333) panicked at crates/axeyum-solver/src/auto.rs:16619:9:
+assertion `left == right` failed
+  left: None
+ right: Some(Unsat)
+
+---- auto::tests::every_policy_gives_the_same_verdict_on_an_overbound_query stdout ----
+
+thread 'auto::tests::every_policy_gives_the_same_verdict_on_an_overbound_query' (3235819) panicked at crates/axeyum-solver/src/auto.rs:18183:13:
+assertion `left == right` failed: policy terminal changed the verdict
+  left: Unknown(UnknownReason { kind: Timeout, detail: "preprocessed dispatch timeout after reduced solve; the reduced solve's own reason was [Incomplete] lazy function-consistency CEGAR inconclusive (applications=260, function_groups=1, potential_pairs=33670, solve_rounds=1, elapsed_ms=40572, sat_candidates=0, first_candidate_ms=none, last_candidate_ms=none, pair_checks=0, equal_arg_pairs=0, violated_pairs=0, preseeded_lemmas=0, sibling_lemmas=0, lemmas_added=0, last_new_lemmas=0, lemma_batch_cap=off): arith DPLL candidate failed full model replay at assertion ordinal 1 (term #1055): evaluated false; original-symbol bindings=260/260 (unbound=0); all selected arithmetic literals replayed true" })
+ right: Unsat
+
+
+failures:
+    array_bv_abs::tests::refutes_rw213_by_bv_abstraction
+    auto::tests::arithmetic_uf_overbound_pre_lia_probe_decides_on_clone
+    auto::tests::cap_overflowing_skolemized_chain_is_refuted_via_the_egraph_loop
+    auto::tests::every_policy_gives_the_same_verdict_on_an_overbound_query
+    auto::tests::negated_quantified_implication_exposes_counterexample_witness
+    auto::tests::top_level_negated_universal_exposes_counterexample_witness
+
+test result: FAILED. 1613 passed; 6 failed; 0 ignored; 0 measured; 320 filtered out; finished in 525.19s
+
+error: test failed, to rerun pass `-p axeyum-solver --lib`
+--- the capability ratchet ---
+FRONTIER bv_reduction = 35 (baseline 30), PROGRESS (+5 over baseline) — ADVISORY ONLY, do not raise the baseline from this run: budget was scaled 0.99x
+  reference frame [bv_reduction]: machine s4 (16 cpus, 12th Gen Intel(R) Core(TM) i5-12600K), load 11.05 -> 11.79, calibration 125.6 ms vs reference 127.0 ms => scale 0.99x, budget 3956 ms
+  NOT COMPARABLE [bv_reduction]: throughput moved 109 % during the sweep (125.6 ms -> 262.8 ms) — the number above is recorded but the ratchet below is not enforced on it. Re-run on an idle box.
+TIMING bv_reduction = 1167.4 ms calibrated over pinned N=[12, 15, 18] (baseline median 1293.1 ms, ceiling 2264.3 ms, 8 runs) — ADVISORY, not enforced on this run
+FRONTIER lia_cuts = 40 (baseline 26), PROGRESS (+14 over baseline) — ADVISORY ONLY, do not raise the baseline from this run: budget was scaled 2.01x
+  reference frame [lia_cuts]: machine s4 (16 cpus, 12th Gen Intel(R) Core(TM) i5-12600K), load 11.79 -> 9.17, calibration 255.1 ms vs reference 127.0 ms => scale 2.01x, budget 8033 ms
+  NOT COMPARABLE [lia_cuts]: throughput moved 46 % during the sweep (255.1 ms -> 137.0 ms) — the number above is recorded but the ratchet below is not enforced on it. Re-run on an idle box.
+TIMING lia_cuts = 277.0 ms calibrated over pinned N=[3, 19, 20] (baseline median 341.9 ms, ceiling 589.6 ms, 8 runs) — ADVISORY, not enforced on this run
+FRONTIER nia_unsat = 40 (baseline 40)
+  reference frame [nia_unsat]: machine s4 (16 cpus, 12th Gen Intel(R) Core(TM) i5-12600K), load 9.17 -> 7.66, calibration 136.3 ms vs reference 127.0 ms => scale 1.07x, budget 4293 ms
+  NOT COMPARABLE [nia_unsat]: throughput moved 75 % during the sweep (136.3 ms -> 238.4 ms) — the number above is recorded but the ratchet below is not enforced on it. Re-run on an idle box.
+TIMING nia_unsat = 25.1 ms calibrated over pinned N=[1, 2, 3, 4, 5] (baseline median 44.3 ms, ceiling 115.6 ms, 7 runs) — ADVISORY, not enforced on this run
+FRONTIER nra_degree = 40 (baseline 40)
+  reference frame [nra_degree]: machine s4 (16 cpus, 12th Gen Intel(R) Core(TM) i5-12600K), load 7.66 -> 7.37, calibration 136.8 ms vs reference 127.0 ms => scale 1.08x, budget 4309 ms
+TIMING nra_degree = 12.1 ms calibrated over pinned N=[10, 20, 30, 40] (baseline median 11.2 ms, ceiling 23.0 ms, 8 runs)
+FRONTIER string_bound = 40 (baseline 8), PROGRESS (+32 over baseline, ratchetable)
+  reference frame [string_bound]: machine s4 (16 cpus, 12th Gen Intel(R) Core(TM) i5-12600K), load 7.37 -> 7.10, calibration 131.3 ms vs reference 127.0 ms => scale 1.03x, budget 4137 ms
+TIMING string_bound = 339.4 ms calibrated over pinned N=[13, 25, 33] (baseline median 423.5 ms, ceiling 969.1 ms, 8 runs)
+progress_frontier (--nocapture, log kept)                        ok (12 passed; 3 family/families NOT COMPARABLE -- read bench-results/lra-warm-screen-20260916/frontier-ratchet.log)
+GATES FAILED

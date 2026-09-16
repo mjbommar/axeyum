@@ -1,0 +1,76 @@
+ADR-2132: ADR-2125's THREE MOVERS, EACH WITH ITS BUILDS-PER-FILE COUNT
+======================================================================
+
+ADR-2125 section 6.5 published three re-checked movers and offered ONE
+explanation for them -- the axis a successor should screen on:
+
+    "it wins where the cubes are many and small and loses where they are
+     few and large"
+
+Two of the three were not in its sizing table.  It said so, and labelled the
+reading for the second loss a HYPOTHESIS:
+
+    "`uart-8.induction.cvc`, the second loss, is NOT in the sizing table, so the
+     builds-per-file reading is offered for it as a HYPOTHESIS and not as a
+     measurement: nothing here has counted its builds.  Saying otherwise would
+     be fitting the explanation to the two rows that suit it."
+
+Counted here, on `axeyum.v1` (sha256 91675258916e4aeb), s5 core 5, 24 s budget,
+`--trace`, the route trail's own `simplex_cold_builds`:
+
+  verdict under     builds   ms/build  atoms  cold_ms  cold_pivots  file
+  ADR-2125's A/B
+  ----------------------------------------------------------------------------
+  STABLE-LOSS           28      283.5      -     7937            -  latendresse/ecoliMILPglycerolYices3-50000
+  STABLE-GAIN        1,815        1.7    976     3044      466,693  sc/sc-14.induction.cvc
+  STABLE-LOSS        1,598        1.0  1,272     1670      252,412  uart/uart-8.induction.cvc
+
+(The first row is from ADR-2125's own committed sizing; the other two are new.)
+
+THE HYPOTHESIS IS REFUTED, AND THAT IS THIS LANE'S CENTRAL FINDING
+------------------------------------------------------------------
+
+`uart-8.induction.cvc` is 1,598 builds at 1.04 ms each.  That is the MANY SMALL
+RE-SOLVES shape -- the winning shape -- not the few-enormous one.  It sits on
+the same side of every threshold in the window the pinned sizing measured
+([43, 51]), and on the same side as the gain at every threshold whatever:
+1,598 and 1,815 are 14 % apart.
+
+So a builds-per-file screen CANNOT remove that loss.  It removes the pinned
+loss (28 builds, refused at any threshold above 42) and leaves the held-out one
+exactly where it was.  Against ADR-2132's ship criterion -- 0 stable losses on
+BOTH draws -- the screen was therefore already unable to ship when this was
+measured, and it was measured before the threshold was written into the code.
+
+THE THRESHOLD WAS NOT THEN MOVED, AND THAT IS DELIBERATE
+---------------------------------------------------------
+
+A threshold of 1,700 separates 1,598 from 1,815 and would "fix" the held-out
+loss.  It is not taken.  Those two rows ARE the held-out evaluation population,
+and a boundary drawn between two of its members is fitted to the set it is
+scored on -- which is the one thing a held-out draw exists to prevent.  The
+value stays at 64, chosen from the pinned sizing's window before any of this
+was known, and the lane reports what that value does rather than what some
+other value would have done.
+
+WHAT SEPARATES THEM INSTEAD -- AN OBSERVATION, NOT A SCREEN
+------------------------------------------------------------
+
+Offered as two points and labelled as two points.  The warm arm replaces
+(linearize + cold simplex) per cube with (sync + warm solve), and `sync_cube`
+is O(live atoms) while the cold simplex is O(pivots).  So the trade should turn
+on cold WORK PER ATOM, and on these two rows it does:
+
+    sc-14   (gain)   466,693 pivots / 1,815 builds =  257 pivots per build
+                     257 / 976 atoms              = 0.263 pivots per atom
+    uart-8  (loss)   252,412 pivots / 1,598 builds =  158 pivots per build
+                     158 / 1,272 atoms            = 0.124 pivots per atom
+
+A 2.1x separation, and it is CLOCK-FREE -- pivots and atoms, not milliseconds,
+so a screen on it would not break determinism the way a wall-clock screen would.
+
+This is NOT built and NOT registered.  Two points is a fit, not a discriminator,
+and both of them are held-out rows: building a screen on them would spend the
+blind population that is supposed to score the next one.  It is recorded as the
+shape a successor should SIZE first, on the pinned 200, exactly as this lane
+sized builds-per-file before touching the code.

@@ -1,0 +1,101 @@
+file	order	a_rc	a_ms	a_verdict	a_total_ms	b_rc	b_ms	b_verdict	b_total_ms	c_rc	c_ms	c_verdict	c_total_ms	a_cold_builds	b_cold_builds	c_cold_builds	a_cube_collect_ms	a_cube_simplex_ms	b_cube_collect_ms	b_cube_simplex_ms	b_warm_solve_ms	b_warm_sync_ms	b_warm_checks	b_warm_build	b_warm_restarts	b_warm_fill_peak	c_cube_collect_ms	c_cube_simplex_ms	c_warm_solve_ms	c_warm_sync_ms	c_warm_checks	c_warm_build	c_warm_restarts	c_warm_fill_peak	status
+QF_LIA/20220307-SMPT/BART-PT-002/RF-13.smt2	AC	0	108	sat	61					0	107	sat	60	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-14.smt2	CA	0	108	sat	0					0	108	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-11.smt2	AC	0	107	unsat	0					0	108	unsat	0	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/bofill-scheduling/SMT_random_LIA/ex13800_2600_100.smt2	CA	0	24229	unknown	24120					0	24120	unknown	24066	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/2019-ezsmt/weightedSequence/09-treeWeight-729-8leaves.smt2	AC	0	8514	sat	8402					0	8414	sat	8391	0		0	0	0									0	0	0	0	0	off	0	0	unknown
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-07.smt2	CA	0	106	sat	0					0	107	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-08.smt2	AC	0	107	unsat	0					0	107	unsat	0	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/bofill-scheduling/SMT_random_LIA/ex27000_2600_100.smt2	CA	0	24229	unknown	24153					0	24230	unknown	24187	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-07.smt2	AC	0	108	sat	0					0	107	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/nec-smt/large/bftpd_login/prp-70-49.smt2	CA	0	23830	unknown	11705					0	23629	unknown	11534	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20180326-Bromberger/unbd-sage/unbd010v15c/unbd-sage5.smt2	AC	0	106	sat	8					0	106	sat	8	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/cut_lemmas/20-vars/cut_lemma_03_009.smt2	CA	0	24128	unknown	24019					0	24029	unknown	24015	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-05.smt2	AC	0	106	sat	0					0	107	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-03.smt2	CA	0	106	sat	0					0	107	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-09.smt2	AC	0	107	sat	0					0	108	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-03.smt2	CA	0	108	sat	0					0	107	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-03.smt2	AC	0	105	sat	0					0	106	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/nec-smt/large/bftpd_login/prp-19-50.smt2	CA	0	25133	unknown						0	25125	unknown																							unsat
+QF_LIA/nec-smt/large/bftpd_login/prp-60-49.smt2	AC	0	25130	unknown						0	25131	unknown																							unsat
+QF_LIA/20220307-SMPT/BART-PT-002/RF-13.smt2	CA	0	107	sat	64					0	107	sat	65	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-08.smt2	AC	0	107	sat	0					0	107	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/CAV_2009_benchmarks/smt/10-vars/problem_2__030.smt2	CA	0	106	unsat	2					0	107	unsat	2	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20180326-Bromberger/more_slacked/CAV_2009_benchmarks/smt/10-vars/v10_problem_2__016.smt2.slack.smt2	AC	0	107	unsat	1					0	107	unsat	1	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-13.smt2	CA	0	107	sat	0					0	106	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-04.smt2	AC	0	107	sat	0					0	107	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/CAV_2009_benchmarks/smt/10-vars/problem_2__034.smt2	CA	0	106	unsat	2					0	107	unsat	2	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20210219-Dartagnan/ReachSafety-Loops/apache-get-tag-O0.smt2	AC	0	25030	unknown						0	25129	unknown																							unknown
+QF_LIA/arctic-matrix/constraint-654327.smt2	CA	0	507	unknown	392					0	407	unknown	371	0		0	0	0									0	0	0	0	0	off	0	0	unknown
+QF_LIA/nec-smt/large/bftpd_login/prp-49-49.smt2	AC	0	25131	unknown						0	25131	unknown																							unsat
+QF_LIA/nec-smt/large/checkpass_pwd/prp-26-37.smt2	CA	0	21327	unknown	10305					0	21328	unknown	10300	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-04.smt2	AC	0	107	sat	0					0	107	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20180326-Bromberger/more_slacked/cut_lemmas/10-vars/cut_lemma_02_010.smt2.slack.smt2	CA	0	107	unsat	0					0	107	unsat	0	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/dillig/20-30.smt2	AC	0	10116	sat	10084					0	10113	sat	10026	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20180326-Bromberger/more_slacked/CAV_2009_benchmarks/coef-size/smt/size-10/c10_problem__001.smt2.slack.smt2	CA	0	107	sat	0					0	107	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/rings/ring_2exp6_6vars_4ite_unsat.smt2	AC	0	24129	unknown	24074					0	24025	unknown	24013	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/nec-smt/large/bftpd_login/prp-9-47.smt2	CA	0	25031	unknown	11225					0	24829	unknown	11191	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/nec-smt/large/checkpass_pwd/prp-17-34.smt2	AC	0	22228	unknown	10250					0	22026	unknown	10225	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/convert/convert-jpg2gif-query-1143.smt2	CA	0	8713	sat	8674					0	8713	sat	8673	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-10.smt2	AC	0	106	sat	0					0	106	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-10.smt2	CA	0	106	sat	0					0	105	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/bofill-scheduling/SMT_real_LIA/ex8280_2400_100.smt2	AC	0	17021	sat	16989					0	17122	sat	17064	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/nec-smt/large/checkpass/prp-52-50.smt2	CA	0	17823	unknown	10987					0	18024	unknown	11096	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-03.smt2	AC	0	107	sat	0					0	107	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/dillig/30-34.smt2	CA	0	807	sat	736					0	807	sat	736	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/CAV_2009_benchmarks/coef-size/smt/size-10/problem__003.smt2	AC	0	307	unsat	203					0	307	unsat	202	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20180326-Bromberger/more_slacked/CAV_2009_benchmarks/smt/20-vars/v20_problem_2__031.smt2.slack.smt2	CA	0	107	unsat	71					0	107	unsat	71	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-12.smt2	AC	0	107	sat	0					0	106	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-12.smt2	CA	0	108	sat	0					0	107	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/rings/ring_2exp14_5vars_3ite_unsat.smt2	AC	0	24130	unknown	24065					0	24027	unknown	24012	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-03.smt2	CA	0	106	sat	0					0	106	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/rings/ring_2exp10_8vars_3ite_unsat.smt2	AC	0	24125	unknown	24032					0	24126	unknown	24059	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-02.smt2	CA	0	105	unsat	0					0	106	unsat	0	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-14.smt2	AC	0	106	unsat	0					0	106	unsat	0	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-06.smt2	CA	0	106	sat	1					0	106	sat	1	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/nec-smt/large/bftpd_login/prp-34-50.smt2	AC	0	25129	unknown						0	25130	unknown																							unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-05.smt2	CA	0	106	sat	0					0	106	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-11.smt2	AC	0	106	unsat	0					0	106	unsat	0	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/nec-smt/large/bftpd_login/prp-22-48.smt2	CA	0	25129	unknown						0	25130	unknown																							unsat
+QF_LIA/nec-smt/med/int_from_list/prp-36-31.smt2	AC	0	16220	unknown	10086					0	16220	unknown	10086	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-01.smt2	CA	0	105	sat	0					0	105	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-00.smt2	AC	0	105	unsat	0					0	106	unsat	0	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-07.smt2	CA	0	106	sat	0					0	106	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/nec-smt/large/bftpd_login/prp-15-46.smt2	AC	0	25030	unknown	11104					0	25129	unknown		0			0	0																	unsat
+QF_LIA/nec-smt/large/bftpd_login/prp-27-47.smt2	CA	0	24728	unknown	11383					0	25131	unknown		0			0	0																	unsat
+QF_LIA/CAV_2009_benchmarks/smt/10-vars/problem_2__026.smt2	AC	0	105	unsat	2					0	105	unsat	2	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20210219-Dartagnan/ReachSafety-Loops/jm2006_variant-O0.smt2	CA	0	25026	unknown						0	25125	unknown																							unknown
+QF_LIA/cut_lemmas/15-vars/cut_lemma_01_009.smt2	AC	0	106	unsat	57					0	106	unsat	56	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-06.smt2	CA	0	106	sat	1					0	106	sat	1	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/nec-smt/large/getoption/prp-2-200.smt2	AC	0	10516	unknown	10406					0	10517	unknown	10451	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20180326-Bromberger/more_slacked/CAV_2009_benchmarks/smt/45-vars/v45_problem_2__011.smt2.slack.smt2	CA	0	9315	sat	9233					0	9314	sat	9219	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/rings/ring_2exp16_9vars_1ite_unsat.smt2	AC	0	24026	unknown	24004					0	24026	unknown	24004	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/nec-smt/med/checkpass_pwd/prp-0-19.smt2	CA	0	24129	unknown	24034					0	24128	unknown	24047	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-01.smt2	AC	0	106	sat	0					0	107	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-12.smt2	CA	0	107	unsat	0					0	107	unsat	0	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RF-05.smt2	AC	0	107	sat	0					0	107	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20180326-Bromberger/more_slacked/cut_lemmas/20-vars/cut_lemma_02_016.smt2.slack.smt2	CA	0	24328	unknown	24247					0	24128	unknown	24078	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/nec-smt/large/bftpd_login/prp-0-47.smt2	AC	0	25130	unknown						0	25129	unknown																							unsat
+QF_LIA/20180326-Bromberger/more_slacked/CAV_2009_benchmarks/smt/15-vars/v15_problem_2__015.smt2.slack.smt2	CA	0	507	sat	420					0	507	sat	425	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/nec-smt/large/bftpd_login/prp-0-48.smt2	AC	0	25031	unknown	11528					0	24728	unknown	11414	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/nec-smt/large/bftpd_login/prp-57-48.smt2	CA	0	24129	unknown	11381					0	24128	unknown	11367	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/nec-smt/large/bftpd_login/prp-9-46.smt2	AC	0	24829	unknown	11090					0	25029	unknown	11090	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/nec-smt/large/bftpd_login/prp-20-49.smt2	CA	0	24831	unknown	11751					0	24830	unknown	11596	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-15.smt2	AC	0	106	unsat	0					0	106	unsat	0	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/pb2010/normalized-j606_1-unsat.smt2	CA	0	207	unsat	97					0	206	unsat	95	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/bofill-scheduling/SMT_real_LIA/ex6960_2400_100.smt2	AC	0	20023	sat	19982					0	20123	sat	20038	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-02.smt2	CA	0	106	unsat	0					0	105	unsat	0	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-12.smt2	AC	0	106	sat	0					0	106	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-13.smt2	CA	0	106	sat	0					0	106	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-00.smt2	AC	0	106	sat	0					0	106	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-06.smt2	CA	0	106	sat	1					0	106	sat	1	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-03.smt2	AC	0	106	sat	0					0	106	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-08.smt2	CA	0	106	unsat	0					0	106	unsat	0	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/bofill-scheduling/SMT_real_LIA/ex9600_2400_100.smt2	AC	0	15119	sat	15075					0	15321	sat	15210	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/prime-cone/prime_cone_unsat_20.smt2	CA	0	107	unsat	55					0	107	unsat	55	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-11.smt2	AC	0	106	sat	0					0	106	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/nec-smt/large/checkpass/prp-39-48.smt2	CA	0	22829	unknown	10823					0	22929	unknown	10853	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_LIA/nec-smt/large/bftpd_login/prp-48-49.smt2	AC	0	24831	unknown	11744					0	25126	unknown		0			0	0																	unsat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-00.smt2	CA	0	106	sat	0					0	106	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/20220307-SMPT/2PhLockVParam/RC-11.smt2	AC	0	106	sat	0					0	106	sat	0	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_LIA/bofill-scheduling/SMT_random_LIA/ex20400_2600_100.smt2	CA	0	24126	unknown	24058					0	24226	unknown	24146	0		0	0	0									0	0	0	0	0	off	0	0	sat
