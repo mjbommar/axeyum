@@ -1,0 +1,38 @@
+
+== qfnra ==
+  rows                       200
+  A (default)                121
+  B (exact)                  122
+  net                        +1
+  gains / losses / flips     2 / 1 / 0
+  rows where an arm produced no verdict token   0
+  vs declared :status        0 disagreements over 241 comparable verdicts
+  wall clock                 A 1272 s, B 1227 s
+    GAIN   A=unknown -> B=unsat   QF_NRA/meti-tarski/sin/cos/sin-cos-346-b-chunk-0147.smt2
+    GAIN   A=unknown -> B=unsat   QF_NRA/meti-tarski/exp/problem/10/3/weak/exp-problem-10-3-weak-chunk-0081.smt2
+    LOSS   A=unsat -> B=unknown   QF_NRA/hycomp/etcs_braking_2.01.redlog_global_15.smt2
+
+== qfnia ==
+  rows                       200
+  A (default)                79
+  B (exact)                  79
+  net                        +0
+  gains / losses / flips     0 / 0 / 0
+  rows where an arm produced no verdict token   0
+  vs declared :status        0 disagreements over 158 comparable verdicts
+  wall clock                 A 3173 s, B 3175 s
+
+== qflra ==
+  rows                       200
+  A (default)                107
+  B (exact)                  107
+  net                        +0
+  gains / losses / flips     0 / 0 / 0
+  rows where an arm produced no verdict token   0
+  vs declared :status        0 disagreements over 194 comparable verdicts
+  wall clock                 A 2344 s, B 2343 s
+  CONTROL: the linear division moved 0 rows -- as expected
+
+wrote bench-results/nra-cell-exact-20260916/movers-all.txt (3 movers)
+
+movers per division: qfnra=3
