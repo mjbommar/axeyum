@@ -310,11 +310,147 @@ of the conclusion is inverted by the corrected mechanism. **This is recorded, no
 re-measured here**; the next lane on that give-up should confirm it with
 `AXEYUM_QTRACE=1` before building against either version.
 
-## 4. What ships
+## 4. What ships, and the second blocker that was not predicted
 
-*(Section reserved: implementation, fixtures, mutation, A/B and the ship
-decision are added as they are measured. Nothing is claimed here in advance of
-the number.)*
+`AXEYUM_QINST_POSITIVE_PATH`, shipped `0` — byte for byte today's behaviour.
+
+### 4a. The registration rule
+
+`positive_path_step` replaces the inlined
+`positive && matches!(op, Op::BoolAnd | Op::BoolOr)` with a polarity rule, and
+level `0` **is** that expression with its sticky `false` renamed to `None`, so
+an unset environment does not reach one line of the new rule. Level `1` tracks
+polarity: `not` flips, `=>` flips its antecedent and keeps its consequent, an
+`ite` BRANCH keeps.
+
+Refused at **every** level, and none of it is conservatism:
+
+| refused | why |
+|---|---|
+| the `ite` CONDITION | `ite(c,t,e) ≡ (c ∧ t) ∨ (¬c ∧ e)`, so `c` occurs at BOTH polarities and a replacement inside it is monotone in neither direction |
+| both arguments of a boolean `=` / `xor` | the same, for the same reason |
+| every step crossing a `Forall`/`Exists` | a real unsoundness, with the counterexample already in `PositiveContext`'s own doc |
+| arriving at a NEGATIVE position | `¬(∀y.B)` is an existential; replacing it by `B(t)` STRENGTHENS the owner |
+| `BoolImplies` at any arity but 2 | the front end folds an n-ary `=>` right-associatively into binary pairs, so a wider node is a shape this rule has not been argued for. Refused rather than guessed at |
+
+### 4b. The blocker the sizing did not predict, found by running the fixture
+
+`prove_quantified_unsat_via_egraph_impl` partitions the assertions into ground
+terms and top-level `forall`s, and when the `forall` list is **empty** it returns
+
+    e-matching: no universal is asserted; the nested quantifiers present are
+    registered, not instantiated
+
+**before any registration is compiled.** So on a query whose universals are ALL
+nested — exactly the shape this mechanism exists for — the registration
+machinery was unreachable, whatever the whitelist said. This was found by
+probing the lane's own fixtures and reading the `unknown` detail, not by reading
+the code: the first three fixtures all came back `unknown` with a context
+already computed at level 0, which is a combination the design says should be
+impossible.
+
+At level 1 the loop runs on registrations alone when at least one carries a
+context. It is not a weaker check — a registration with a context is a universal
+whose instances are admissible as the entailed replacement
+`owner[∀y⃗.B := B(t⃗)]`, which is the same inference the loop already performs
+beside an asserted universal. What changes is only that the loop is allowed to
+start.
+
+### 4c. The checker is not gated by the level
+
+`positive_instance_formula` walks the path itself at a fixed
+`CHECKER_POSITIVE_PATH_LEVEL`, refuses arrival at a negative position, and
+re-derives the conclusion from `(owner, path, vars, bindings)` alone. Reading
+the lever there would make a certificate's validity depend on an environment
+variable — the same certificate accepted under one process and refused under
+another. The two constants are separate for exactly that reason, and the
+consequence is deliberate: at level 0 the producer never builds a `not`/`=>`
+path, so the checker's extra reach is unreachable.
+
+### 4d. The certificate hole, closed in the same change
+
+§3(a) is not a note for a later lane; widening the rule without closing it would
+have turned a path taken on 3 files into one taken on 97. So
+`QuantifierPositiveReplacementCertificate` and a `PositiveReplacement` variant
+now exist, with `check_positive_replacement` requiring **both**:
+
+* the owner is an original assertion, **or** `owner_derivation` checks here and
+  concludes exactly `owner`. A missing `owner_derivation` on a non-asserted
+  owner is a refusal, never a pass;
+* `positive_instance_formula` re-derives the conclusion and it **equals** the
+  recorded one.
+
+`portable_certificate` declines on the new variant exactly as it declines on
+`Propagation` — its positional form has no field for a path or an owner — and
+now says so in its own comment. The decline is the intended outcome: the
+refutation is still checked in the producing arena, and it is the PORTABLE form
+that cannot be produced.
+
+## 5. Tests, and what each one can fail on
+
+`crates/axeyum-solver/tests/quantifier_positive_path.rs`, **15 tests, 0 failed.**
+
+**Soundness-negative**, five SATISFIABLE fixtures at BOTH levels, through the
+isolated loop and through the front door. The load-bearing one is
+`SAT_OTHER_DISJUNCT_TRUE`: `p` true, `(or p (forall y. q y))`, `(not (q w))` —
+SAT, and refuted the moment anything admits the bare instance `q(w)` instead of
+the clause `p ∨ q(w)`.
+
+**`SAT_UNDER_NOT` was rebuilt after its first version turned out to be a
+decoration.** As first written, the other disjunct was unconstrained, so a rule
+that took the `not` step *without* its flip produced `t ∨ ¬q(w)` — which is
+satisfiable, so the fixture could not fail and the mutation that removes the
+flip would have SURVIVED it. It now asserts `¬f` alongside
+`(or f (not (forall y. q y)))` and `(q w)`: still SAT (some `y` fails `q`, and
+`w` is not that one), but a missing flip now yields `¬q(w)` and contradicts the
+asserted `q(w)`. A single missing polarity flip is a wrong `unsat`.
+
+**The conversion**, which is what stops every assertion above from being passed
+by an engine that refutes nothing.
+`the_widened_level_converts_a_refutation_the_shipped_level_cannot_reach`:
+`UNSAT_OTHER_DISJUNCT_FALSE` differs from `SAT_OTHER_DISJUNCT_TRUE` in ONE
+polarity and is `unknown` at level 0, **`unsat` at level 1**. And
+`the_converted_refutation_carries_its_replacement_derivation` requires that
+refutation to carry a `PositiveReplacement` derivation, so the certificate is
+asserted to EXIST rather than argued to be possible.
+
+**The producer's polarity half is read one step before the verdict.**
+`a_universal_at_a_negative_position_is_never_registered` asserts a registration
+COUNT of zero for the `not` fixture and the `ite`-condition fixture at both
+levels, because a test that reads a count cannot be passed by an engine that
+simply failed to reach the query.
+
+Plus: an off-path equivalence check, determinism across runs, the guard's
+restoration, and `the_positive_path_guard_does_not_cross_a_thread_boundary`,
+which is why the A/B uses the environment variable and not the guard —
+`smtcomp_cli` solves on a watchdog worker thread.
+
+### 5a. Mutation
+
+`mutation_controls.py qinst-positive-path`, baseline green at 15 tests. **Every
+guard deleted kills at least one named test:**
+
+| guard deleted | killed |
+|---|---|
+| the instance is rebuilt INTO its owner, so the clause carries the activation literal | **3** — `a_correct_positive_replacement_certificate_is_accepted`, `the_bare_instance_is_refused_as_a_replacement_conclusion`, `a_satisfiable_query_is_not_refuted_at_any_level` |
+| `not` flips the polarity | **3** — `a_replacement_at_a_negative_position_is_refused`, `a_universal_at_a_negative_position_is_never_registered`, `a_satisfiable_query_is_not_refuted_at_any_level` |
+| the checker refuses ARRIVAL at a negative position | **1** — `a_replacement_at_a_negative_position_is_refused` |
+| a replacement's owner must be an assertion or carry its own derivation | **1** — `a_replacement_whose_owner_is_not_trusted_is_refused` |
+| the recomputed conclusion must equal the recorded one | **1** — `the_bare_instance_is_refused_as_a_replacement_conclusion` |
+
+`--check-anchors`: `suites=146 anchors=1087 stale=0`.
+
+The two that kill three are the two deepest obligations, and
+`positive_instance_formula` is both the producer and the checker, so a mutation
+in it breaks both roles at once. The number is reported as measured rather than
+trimmed to one.
+
+**And what the table does not claim.** The FRONT-DOOR soundness test SURVIVES
+the activation-literal mutation, because the ladder decides those fixtures `sat`
+on an earlier rung and never reaches the e-matching route. The isolated loop is
+the attributable instrument and the front door is not; that is why both exist,
+and a mutation table that reported only the front door would have shown a
+survivor where the guard is in fact load-bearing.
 
 ## 6. What this lane measured about its own instrument
 
