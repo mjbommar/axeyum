@@ -346,6 +346,12 @@ the session, so UFLIA takes the cold branch for its entire run. Measured
 directly: the **shipped** arm reached the site on 45 cores and **built a session
 on 26 of them**. It refuses on 19 of 45, not on 45 of 45.
 
+**Corroborated on a second, independent run.** The 24 s paired probe of §6.2 —
+different host, different budget, idle box — reports the shipped arm building a
+session on **24 of 53** (`cores/cores.tsv`, `off_built`). Two runs at two
+budgets on two hosts both say the shipped arm builds a session on roughly half
+this population, which is not what "one integer comparison refuses it" predicts.
+
 The reason is that the round-0 ground set is the *quantifier-free subset*, and
 on most of these Boogie/Simplify-family files that subset is EUF-only: their
 arithmetic is encoded through uninterpreted functions over `Int` (`intLess`,
@@ -483,12 +489,31 @@ all 9 `quant_instance_set_cert::` tests SURVIVING. Reaching that exit needs the
 candidate-equality fixpoint to produce a session `Unsat` on a query small enough
 to be a fixture; ADR-2124 did not find one and neither did this lane.
 `quant_session_arith_certificate.rs` instead asserts the property the repair is
-an instance of — **no exit of `prove_quantified_unsat_via_egraph_impl` returns
-`Unsat` without assigning the certificate first** — over the function's own
-source, with a non-vacuity control on the body it read and on the exit count.
-That guards the three exits already right and any exit added later, and it is
-what a change would have to violate to undo the repair. It is **not** a
-behavioural check and must not be quoted as one.
+an instance of — **every unsat exit of `prove_quantified_unsat_via_egraph_impl`
+that refutes BY THE INSTANCE SET assigns the certificate first** — over the
+function's own source, with non-vacuity controls on the body it read and on both
+exit counts. It is **not** a behavioural check and must not be quoted as one.
+
+**Its first honest run was itself a finding, and it corrected ADR-2124's count.**
+Written first over *every* unsat exit, it failed: the function has **seven**
+`return Ok(CheckResult::Unsat)` exits, not the four ADR-2124 counted
+(*"two cold-check exits … make it four sites, three of which were right"*), and
+two of them assign no certificate.
+
+Those two are not defects, and the test was too strong rather than the code
+being wrong: they are `if try_closed_universal_refutations(…)?` and
+`if try_targeted_quantifier_refutations(…)?` — **delegated** routes that run
+before the instantiation loop and refute a quantifier directly, producing no
+instances at all. An instance-set certificate for one of them would be empty,
+and an empty certificate asserted as evidence is worse than no claim.
+
+So the population is **derived from the source**, not listed: an exit whose
+guard calls a `try_…` helper is delegated and carries its own evidence; the
+other five refute by the accumulated ground set and must carry the certificate.
+Both counts are asserted, so neither a new delegated route nor a new loop exit
+can join the wrong population silently — and in particular, if the guard window
+ever stops reaching those conditions, every delegated exit would silently join
+the demanding population, which the delegated-count assertion catches.
 
 **The divisional A/B, the movers' 3x on six divisions, and the held-out draw
 were not run**, per §7.

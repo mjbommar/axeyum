@@ -2874,7 +2874,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                 let session_ground = quantifier_cache
                     .quantifier_free_subset(arena, &ground)
                     .unwrap_or_else(|| ground.clone());
-                let build = Instant::now();
+                let session_start = Instant::now();
                 online_clauses =
                     OnlineQuantifierClauseSession::new(arena, &session_ground, deadline);
                 online_attempted = true;
@@ -2925,7 +2925,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                 };
                 crate::auto::qtrace(
                     "ground-session",
-                    build,
+                    session_start,
                     &format!(
                         "built={built} level={level} round={round} ground={ground_len} \
                          atoms={atoms} hosted={hosted} abstracted={abstracted} \
@@ -3341,8 +3341,9 @@ enum GroundCheckSchedule {
     ExponentialOnly,
 }
 
-/// The round at which the two schedules stop differing: `instantiation_cadence()
-/// - 1`, which is `7` at the shipped [`MAX_INSTANTIATION_ROUNDS`].
+/// The round at which the two schedules stop differing: one below
+/// `instantiation_cadence()`, which is `7` at the shipped
+/// [`MAX_INSTANTIATION_ROUNDS`].
 ///
 /// Not a tunable of its own. It is DERIVED from the cadence so an override
 /// moves both schedules together, and it is a named function rather than an
@@ -3381,6 +3382,80 @@ impl GroundCheckSchedule {
             Self::ExponentialOnly => round >= split && exponential,
         }
     }
+}
+
+/// Whether the encoded session fits inside [`ONLINE_QUANTIFIER_LIMITS`], and
+/// records the crossing under the registry key when it does not.
+///
+/// The record is required by `config_registry`'s coverage ratchet: the entry is
+/// `Signal::None`, so declining here is invisible to the caller — which sees
+/// only the (correct) fresh quantifier-free route — and without a record the
+/// crossing is unattributable. A `--trace` run then says which of the three
+/// ceilings disabled the retained accelerator and by how much. The three share
+/// one key because they share one constant and one decline.
+fn within_online_quantifier_limits(
+    var_count: usize,
+    clauses: &[Vec<crate::euf_egraph::Lit>],
+    limits: OnlineQuantifierLimits,
+) -> bool {
+    let literal_count = clauses.iter().map(Vec::len).sum::<usize>();
+    let (observed, bound) = if var_count > limits.variables {
+        (var_count, limits.variables)
+    } else if clauses.len() > limits.clauses {
+        (clauses.len(), limits.clauses)
+    } else if literal_count > limits.literals {
+        (literal_count, limits.literals)
+    } else {
+        return true;
+    };
+    crate::config_registry::note_crossed(
+        "crates/axeyum-solver/src/qinst_egraph.rs::ONLINE_QUANTIFIER_LIMITS",
+        observed as u64,
+        bound as u64,
+    );
+    false
+}
+
+/// Appends the ground set's arithmetic ORDER atoms to `atom_terms` (ADR-2130).
+///
+/// This is what makes `Encoder::encode` hand those terms their reserved theory
+/// variable instead of reaching its abstraction arm. Without it the arithmetic
+/// sub-theory never sees a comparison that was in the ORIGINAL assertions, no
+/// matter what later instances do — and per
+/// `bench-results/quant-session-arith-20260916/SIZING-ledger.txt` that is 53 of
+/// the 77 arithmetic-bearing files, the larger half.
+///
+/// A SECOND pass with its own `seen` set, run AFTER the `EUF` atoms, so the
+/// existing atom indices are byte for byte what they were at levels 0 and 1 and
+/// only the tail is new. A level that renumbered the existing atoms would not be
+/// comparable to the levels below it, and the whole A/B rests on that
+/// comparability.
+///
+/// Returns `false` when the caller's deadline passed mid-walk, which the caller
+/// turns into a declined session rather than a partial atom list.
+fn append_session_lia_atoms(
+    arena: &TermArena,
+    ground: &[TermId],
+    deadline: Option<Instant>,
+    atom_terms: &mut Vec<TermId>,
+) -> bool {
+    let mut seen = HashSet::new();
+    let mut found = Vec::new();
+    for &assertion in ground {
+        if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            return false;
+        }
+        crate::qinst_session_theory::collect_session_lia_atoms(
+            arena, assertion, &mut found, &mut seen,
+        );
+    }
+    let already: HashSet<TermId> = atom_terms.iter().copied().collect();
+    for atom in found {
+        if !already.contains(&atom) {
+            atom_terms.push(atom);
+        }
+    }
+    true
 }
 
 /// Whether the session-less per-round ground check is due: every round inside
@@ -4694,32 +4769,10 @@ impl OnlineQuantifierClauseSession {
             }
             collect_euf_atoms(arena, assertion, &mut atom_terms, &mut seen);
         }
-        // ADR-2130. At level 2 the arithmetic ORDER atoms of the ground set join
-        // the atom list, which is what makes `Encoder::encode` hand them their
-        // reserved theory variable instead of reaching its abstraction arm. Done
-        // in a SECOND pass with its own `seen` set, after the EUF atoms, so the
-        // EUF atom indices are byte for byte what they were at levels 0 and 1
-        // and only the tail is new -- a level that renumbered the existing atoms
-        // would not be comparable to the ones below it.
-        if ground_session_hosts_arithmetic() {
-            let mut lia_seen = HashSet::new();
-            let mut lia_atoms = Vec::new();
-            for &assertion in ground {
-                if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
-                    return None;
-                }
-                crate::qinst_session_theory::collect_session_lia_atoms(
-                    arena,
-                    assertion,
-                    &mut lia_atoms,
-                    &mut lia_seen,
-                );
-            }
-            for atom in lia_atoms {
-                if !atom_terms.contains(&atom) {
-                    atom_terms.push(atom);
-                }
-            }
+        if ground_session_hosts_arithmetic()
+            && !append_session_lia_atoms(arena, ground, deadline, &mut atom_terms)
+        {
+            return None;
         }
         let atom_variables: HashMap<TermId, usize> = atom_terms
             .iter()
@@ -4759,31 +4812,7 @@ impl OnlineQuantifierClauseSession {
         if abstracts && atom_terms.is_empty() {
             return None;
         }
-        let literal_count = clauses.iter().map(Vec::len).sum::<usize>();
-        if encoder.var_count > limits.variables
-            || clauses.len() > limits.clauses
-            || literal_count > limits.literals
-        {
-            // Records the crossing under the registry key and in the unit the
-            // entry declares, so a `--trace` run says which of the three
-            // ceilings disabled the retained accelerator and by how much.
-            // Required by `config_registry`'s coverage ratchet: the entry is
-            // `Signal::None` -- declining here is invisible to the caller,
-            // which sees only the (correct) fresh quantifier-free route -- so
-            // without a record the crossing is unattributable. The three share
-            // one key because they share one constant and one decline.
-            let (observed, bound) = if encoder.var_count > limits.variables {
-                (encoder.var_count, limits.variables)
-            } else if clauses.len() > limits.clauses {
-                (clauses.len(), limits.clauses)
-            } else {
-                (literal_count, limits.literals)
-            };
-            crate::config_registry::note_crossed(
-                "crates/axeyum-solver/src/qinst_egraph.rs::ONLINE_QUANTIFIER_LIMITS",
-                observed as u64,
-                bound as u64,
-            );
+        if !within_online_quantifier_limits(encoder.var_count, &clauses, limits) {
             return None;
         }
         let clauses: Vec<Vec<CdcltLit>> = clauses
