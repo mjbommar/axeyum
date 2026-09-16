@@ -1,6 +1,6 @@
-# Lane NRA-ALGEBRAIC-WITNESS
+# Lane `nra-algebraic-witness` — exact replay at an algebraic sample (ADR-2134)
 
-ADR-2134 — exact replay at an algebraic sample (QF_NRA).
+<!-- plan-section: lane-status -->
 
 ## Status
 

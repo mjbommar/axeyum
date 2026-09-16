@@ -6442,8 +6442,14 @@ pub static REGISTRY: &[ConfigEntry] = &[
                     "decide_clause_loop",
                     "crates/axeyum-solver/src/nra_clause_loop.rs",
                 ),
-                live("ALGEBRAIC_WITNESS", "crates/axeyum-solver/src/nra_real_root.rs"),
-                live("replay_model", "crates/axeyum-solver/src/nra_single_cell.rs"),
+                live(
+                    "ALGEBRAIC_WITNESS",
+                    "crates/axeyum-solver/src/nra_real_root.rs",
+                ),
+                live(
+                    "replay_model",
+                    "crates/axeyum-solver/src/nra_single_cell.rs",
+                ),
                 doc("bench-results/nra-trace-20260915/README.md"),
                 doc("bench-results/nra-single-cell-20260915/README.md"),
                 doc("bench-results/nra-cell-exact-20260916/README.md"),

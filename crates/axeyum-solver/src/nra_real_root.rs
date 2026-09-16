@@ -8491,17 +8491,20 @@ mod tests {
     /// between them isolate the route rather than the budget.
     #[test]
     fn the_single_cell_arm_differs_in_exactly_the_route() {
-        // Collected at runtime so the assertions are about the ARMS and not
-        // three constants the compiler folds away (clippy rejects the folded
-        // form, and it is right to: a const assertion is a compile-time claim
-        // about a literal, not a test of the table).
-        let arms: Vec<CadPolicy> = vec![
-            CadPolicy::DEFAULT,
-            CadPolicy::WIDE,
-            CadPolicy::SINGLE_CELL,
-            CadPolicy::SINGLE_CELL_SAT,
-            CadPolicy::CLAUSE_LOOP,
-        ];
+        // Read from [`CadPolicy::ALL`], the authority, and looked up BY NAME.
+        //
+        // Both of those are corrections. This test used to carry its own
+        // five-entry literal list, so ADR-2134's arm was invisible to it; and it
+        // indexed that list positionally, so inserting an arm anywhere but the
+        // end would have silently re-pointed every assertion at a different arm
+        // while still passing.
+        let arms: Vec<CadPolicy> = CadPolicy::ALL.to_vec();
+        let by_name = |want: &str| -> CadPolicy {
+            *arms
+                .iter()
+                .find(|p| p.arm == want)
+                .unwrap_or_else(|| panic!("no arm named {want}"))
+        };
 
         let routed: Vec<&str> = arms
             .iter()
@@ -8510,7 +8513,12 @@ mod tests {
             .collect();
         assert_eq!(
             routed,
-            vec!["single-cell", "single-cell-sat", "clause-loop"],
+            vec![
+                "single-cell",
+                "single-cell-sat",
+                "clause-loop",
+                "algebraic-witness"
+            ],
             "exactly the single-cell arms turn the route on"
         );
 
@@ -8527,7 +8535,20 @@ mod tests {
             "exactly one arm turns the clause loop on"
         );
 
-        // The `unsat`-withholding arm is the ONLY one that withholds. An arm
+        // ADR-2134's arm turns the algebraic acceptance on and NOTHING else
+        // does, so an A/B against the shipped default prices it alone.
+        let algebraic: Vec<&str> = arms
+            .iter()
+            .filter(|p| p.algebraic_witness)
+            .map(|p| p.arm)
+            .collect();
+        assert_eq!(
+            algebraic,
+            vec!["algebraic-witness"],
+            "exactly one arm accepts an algebraic final coordinate"
+        );
+
+        // The `unsat`-withholding arms are the ONLY ones that withhold. An arm
         // that ran the route and silently kept its `unsat` would make the
         // sat-only A/B measure the full route instead.
         let withholding: Vec<&str> = arms
@@ -8541,31 +8562,65 @@ mod tests {
             "exactly the two sat-only arms withhold `unsat`"
         );
 
+        let default = by_name("default");
+        let single = by_name("single-cell");
+        let sat_only = by_name("single-cell-sat");
+        let looped = by_name("clause-loop");
+        let witness = by_name("algebraic-witness");
+
         // `clause-loop` differs from `single-cell-sat` in EXACTLY `clause_loop`.
         // The two ways this A/B could go vacuous are the arm carrying
         // `clause_loop: false` (the treatment IS the control) and the arm
         // carrying a different cell cap or `emit_unsat` (the A/B measures two
         // things at once). Both would print a clean number.
-        let sat_only = arms[3];
-        let looped = arms[4];
         assert_eq!(sat_only.cell_cap, looped.cell_cap);
         assert_eq!(sat_only.single_cell, looped.single_cell);
         assert_eq!(sat_only.emit_unsat, looped.emit_unsat);
         assert_ne!(sat_only.clause_loop, looped.clause_loop);
 
-        let default = arms[0];
+        // ADR-2134's arm differs from the SHIPPED DEFAULT in exactly
+        // `algebraic_witness`, and the A/B is run against that default. Same two
+        // vacuity modes, and the first of them was a MEASURED hole: flipping
+        // this arm's `algebraic_witness` to `false` -- which turns the treatment
+        // silently into the control and makes the whole A/B report a flawless
+        // null -- killed no test in this module until these four lines existed.
+        // `every_arm_name_is_a_value_the_parser_accepts` cannot catch it: it
+        // compares the PARSED arm against the SAME constant, so both sides move
+        // together and it passes. A derived expectation cannot pin the value it
+        // derives from.
+        assert_eq!(witness.cell_cap, single.cell_cap);
+        assert_eq!(witness.single_cell, single.single_cell);
+        assert_eq!(witness.emit_unsat, single.emit_unsat);
+        assert_eq!(witness.clause_loop, single.clause_loop);
+        assert_ne!(witness.algebraic_witness, single.algebraic_witness);
+        assert!(
+            witness.algebraic_witness,
+            "the `algebraic-witness` arm must have the acceptance ON, or the \
+             treatment is the control"
+        );
+        assert!(
+            !single.algebraic_witness,
+            "the shipped default must have the acceptance OFF, or the lever \
+             is not OFF at all"
+        );
+        assert!(
+            !CAD_DEFAULT.algebraic_witness,
+            "ADR-2134 ships OFF: the default must not accept an algebraic \
+             coordinate until an A/B says so"
+        );
+
         assert_eq!(
-            arms[2].cell_cap, default.cell_cap,
+            single.cell_cap, default.cell_cap,
             "the single-cell A/B must isolate the ROUTE, not the cell budget"
         );
         assert_eq!(
-            arms[3].cell_cap, default.cell_cap,
+            sat_only.cell_cap, default.cell_cap,
             "the sat-only A/B must isolate the ROUTE, not the cell budget"
         );
         // The two single-cell arms differ in EXACTLY `emit_unsat`, so an A/B
         // between them prices the `unsat` half on its own.
-        assert_eq!(arms[2].single_cell, arms[3].single_cell);
-        assert_ne!(arms[2].emit_unsat, arms[3].emit_unsat);
+        assert_eq!(single.single_cell, sat_only.single_cell);
+        assert_ne!(single.emit_unsat, sat_only.emit_unsat);
 
         let mut names: Vec<&str> = arms.iter().map(|p| p.arm).collect();
         let total = names.len();
