@@ -861,6 +861,19 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #                              would register a suite that cannot fail for the
   #                              reason it exists. The armed run is the line after
   #                              this loop.
+  #   quant_session_arith_certificate
+  #                            — ADR-2130: every `Unsat` exit of
+  #                              `prove_quantified_unsat_via_egraph_impl` assigns an
+  #                              instance-set certificate first. A SOURCE invariant,
+  #                              not a behavioural fixture, and registered here
+  #                              deliberately: ADR-2124 repaired one such exit and
+  #                              MEASURED that nothing noticed the repair being
+  #                              removed — 9 tests of the whole
+  #                              `quant_instance_set_cert::` surface ran and all 9
+  #                              SURVIVED. Carries its own non-vacuity controls on
+  #                              the function body it read and on the exit count, so
+  #                              a rename or a shrunken body fails rather than
+  #                              quantifying over nothing.
   #   quant_ground_session_soundness
   #                            — ADR-2124: the ground-session lever's soundness-negative
   #                              fixtures over SATISFIABLE UFLIA queries at levels 0
@@ -917,7 +930,8 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
                additive_no_overflow_never_becomes_unsat \
                lra_opaque_real_apps decline_detail_typed \
                quantifier_trigger_alternatives quantifier_positive_path \
-               dt_nested_field_2128 quant_macro_inline_route quant_ground_session_soundness; do
+               dt_nested_field_2128 quant_macro_inline_route quant_ground_session_soundness \
+               quant_session_arith_certificate; do
     gated_test "dispatch/reason: $suite" \
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
   done
