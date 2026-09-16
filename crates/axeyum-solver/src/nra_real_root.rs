@@ -3880,6 +3880,24 @@ pub(crate) enum CadDecline {
     /// [`crate::nra_clause_loop::MAX_CLAUSE_LOOP_ROUNDS`] theory calls, or the
     /// SAT core stopping without a verdict (ADR-2126).
     ClauseLoopBudget,
+    /// The clause loop declined and recorded no cause of its own (ADR-2131).
+    ///
+    /// A BACKSTOP, not an outcome anything aims at. Every decline path in
+    /// [`crate::nra_clause_loop`] records a cause; this exists so that a path
+    /// added later which does NOT record one says so, instead of leaving the
+    /// slot empty and reading in the trace exactly like "the loop was never
+    /// offered this query". Those are different findings with different next
+    /// increments, and an instrument that prints them identically is worse than
+    /// no instrument. Seeing this in a trace means the loop has an exit that
+    /// needs attributing.
+    ClauseLoopUnattributed,
+    /// The clause loop found a satisfying Boolean model whose theory sample
+    /// could not be replayed against the ORIGINAL assertions (ADR-2131).
+    ///
+    /// The replay is the whole justification for this route's `sat`, so failing
+    /// it is a decline and never a verdict. It means the Boolean layer and the
+    /// theory agreed on something the ground evaluator does not confirm.
+    ClauseLoopReplayFailed,
     /// The clause loop reached a refutation and its CERTIFICATE was refused
     /// (ADR-2131).
     ///
@@ -3934,6 +3952,8 @@ impl CadDecline {
             Self::ClauseLoopShape => "clause-loop-shape",
             Self::ClauseLoopBudget => "clause-loop-budget",
             Self::ClauseLoopCertificateRejected => "clause-loop-certificate-rejected",
+            Self::ClauseLoopUnattributed => "clause-loop-unattributed",
+            Self::ClauseLoopReplayFailed => "clause-loop-replay-failed",
             Self::AlgebraicWitness => "algebraic-witness",
             Self::UnsatWithheldByArm => "unsat-withheld-by-arm",
         }
@@ -3966,6 +3986,8 @@ impl CadDecline {
         Self::ClauseLoopShape,
         Self::ClauseLoopBudget,
         Self::ClauseLoopCertificateRejected,
+        Self::ClauseLoopUnattributed,
+        Self::ClauseLoopReplayFailed,
     ];
 }
 

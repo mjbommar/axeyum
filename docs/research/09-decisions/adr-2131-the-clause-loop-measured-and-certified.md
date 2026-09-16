@@ -115,6 +115,70 @@ surface, not reach. The 16 admissible files are also narrow in provenance — 10
 are `meti-tarski` chunks and 3 are `Pine` — so the ceiling is small AND
 concentrated.
 
+## Decision 1b — what the loop actually does on the files it admits
+
+The A/B says the loop gains nothing on the pinned QF_NRA draw. That is a number
+and not a reason, and the difference decides what to build next. Running the 16
+under the `clause-loop` arm and reading the loop's OWN decline cause:
+
+| files | the loop's cause | what it means |
+|---:|---|---|
+| **6** | `clause-loop-shape` | the loop refuses the query: a leaf that is not a polynomial comparison |
+| **5** | `algebraic-witness` | the THEORY declined — the satisfying points of a cell are algebraic and the slice carries rational samples only |
+| **3** | `projection-resultant-zero` | the THEORY declined — an identically-zero resultant in projection |
+| **2** | `slice-bounds` | the THEORY declined — past 4 variables or degree 8 |
+| **16** | | |
+
+**Ten of the sixteen reach the theory, and every one of those ten is refused by
+the SINGLE-CELL THEORY rather than by the Boolean layer.** That is the result
+worth having. The clause loop does exactly what it was built to do — it removes
+the `non-conjunctive` refusal, abstracts the Boolean structure, and gets the
+query in front of the decision procedure — and the query then lands on the
+conjunctive route's OWN frontier, which ADR-2121 and ADR-2126 had already named.
+The loop is not the thing that is failing.
+
+So the next increment is named and sized rather than guessed: **an algebraic
+sample (`Value::RealAlgebraic`) is worth 5 of these 16**, the largest single
+item, and it is the same lever ADR-2126's re-bucketing put at 6 of its 24. The
+two populations agree, which is a weak check on both.
+
+### And the 16 is itself an over-estimate
+
+Six files the shape analysis called admissible are refused by the ENCODER. The
+parser counted a leaf as an atom when its head was one of `= < <= > >=`;
+`cert_atom_of` additionally requires the comparison to be POLYNOMIAL, and these
+carry division — two of them are literally from
+`Rational_Function_Proof_Calls_With_Disjunctive_Denominator_Simplifications`.
+
+The encoder is the authority and the parser was wrong. Recorded here rather than
+quietly corrected upstream, because the shape of the error is the transferable
+part: an independent re-implementation of an admission test will agree with the
+real one on the cases you thought of. The number it produces is an upper bound
+on admissibility, never a measurement of it. **The loop's true reach on the
+pinned draw is at most 10, not 16, and 0 of those 10 are decided today.**
+
+### The instrument had to be fixed before any of this could be read
+
+The first run of this scan reported **ten of the sixteen as `DID-NOT-RUN`** —
+no cause at all. That is indistinguishable from "the loop was never offered the
+file", and the two have different next increments, so it could not be reported
+either way.
+
+The cause was ours. `decide_atoms` records its reason through
+`record_cad_decline`, into the slot that is STICKY and already holds
+`non-conjunctive` from the conjunctive route that just refused. The theory's
+reason for refusing each Boolean model was being written into a slot that could
+not take it and was discarded. The loop now BORROWS the shared slot around the
+theory call and gives it back, so the theory's own cause reaches
+`CLAUSE_DECLINE` while nothing downstream sees a different outer attribution.
+Four other exits that returned `None` through a bare `?` without recording
+anything are attributed too, and `CadDecline::ClauseLoopUnattributed` is a
+backstop so that a path added later which records nothing SAYS so instead of
+printing as a strong negative.
+
+After the fix: 16 of 16 attributed, 0 unattributed. Before it, the honest
+reading of this table was that it had none.
+
 ## Decision 2 — the certificate
 
 New module `crates/axeyum-solver/src/nra_clause_cert.rs`. `certify_unsat` emits

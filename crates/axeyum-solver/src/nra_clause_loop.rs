@@ -110,7 +110,10 @@ use crate::nra_clause_cert::{
     ClauseCheckStats, ClauseRefutation, GateDef, GateKind, TheoryLemma, apply_mutation,
     check_clause_refutation, formula_of, gate_clauses,
 };
-use crate::nra_real_root::{CadDecline, cert_atom_of, record_cad_decline, record_clause_decline};
+use crate::nra_real_root::{
+    CadDecline, cad_decline, cert_atom_of, clause_decline, record_cad_decline,
+    record_clause_decline, reset_cad_decline,
+};
 use crate::nra_single_cell::{AtomOutcome, decide_atoms, replay_rational_model};
 
 /// The most distinct polynomial comparisons this loop will abstract.
@@ -144,6 +147,24 @@ pub(crate) fn decide_clause_loop(
     deadline: Option<Instant>,
 ) -> Option<CheckResult> {
     LAST_CLAUSE_CHECK.with(|slot| slot.set(None));
+    let out = decide_clause_loop_inner(arena, assertions, deadline);
+    if out.is_none() && clause_decline() == CadDecline::NotAttempted {
+        // A BACKSTOP, and it exists because the first version of this
+        // instrument could not tell two different things apart. Every decline
+        // path above records a cause; if one is ever added that does not, an
+        // empty slot would read in the trace exactly like "the loop was never
+        // offered this query" -- a strong negative manufactured out of a
+        // missing write. This makes that case say so instead.
+        record_clause_decline(CadDecline::ClauseLoopUnattributed);
+    }
+    out
+}
+
+fn decide_clause_loop_inner(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Option<CheckResult> {
     let skeleton = Skeleton::build(arena, assertions)?;
     if skeleton.atoms.len() > MAX_CLAUSE_ATOMS {
         record_cad_decline(CadDecline::ClauseLoopShape);
@@ -152,9 +173,15 @@ pub(crate) fn decide_clause_loop(
     }
 
     let mut sat = IncrementalSat::new();
-    sat.reserve(skeleton.next_var).ok()?;
+    if sat.reserve(skeleton.next_var).is_err() {
+        record_clause_decline(CadDecline::ClauseLoopBudget);
+        return None;
+    }
     for clause in &skeleton.clauses {
-        sat.add_clause(clause.clone()).ok()?;
+        if sat.add_clause(clause.clone()).is_err() {
+            record_clause_decline(CadDecline::ClauseLoopBudget);
+            return None;
+        }
     }
 
     // Every blocking clause the loop learns, with the covering that justifies
@@ -212,15 +239,45 @@ pub(crate) fn decide_clause_loop(
             });
         }
 
-        match decide_atoms(&conj, deadline)? {
+        // BORROW the shared slot for the theory call, then give it back.
+        //
+        // ADR-2131 measured why. `decide_atoms` records its own cause --
+        // `slice-bounds`, `algebraic-witness`, `coefficient-range` -- through
+        // `record_cad_decline`, and that slot is STICKY and already holds
+        // `non-conjunctive` from the conjunctive route that just refused. So the
+        // theory's reason for refusing a Boolean model was written into a slot
+        // that could not take it and was lost. The first admissible-file scan
+        // reported ten of sixteen files as `DID-NOT-RUN` purely because of this,
+        // which is indistinguishable from "the loop was never offered them" --
+        // and those are different findings with different next increments.
+        //
+        // The outer attribution is restored immediately, so nothing downstream
+        // sees a different cause than it did before.
+        let outer = cad_decline();
+        reset_cad_decline();
+        let outcome = decide_atoms(&conj, deadline);
+        let theory_cause = cad_decline();
+        reset_cad_decline();
+        record_cad_decline(outer);
+        let Some(outcome) = outcome else {
+            record_clause_decline(theory_cause);
+            return None;
+        };
+        match outcome {
             AtomOutcome::Sat(sample) => {
                 // Replayed against the ORIGINAL assertions, not against `conj`.
                 // Every claim the Boolean layer made is discharged here.
-                let model = replay_rational_model(arena, assertions, &sample)?;
+                let Some(model) = replay_rational_model(arena, assertions, &sample) else {
+                    record_clause_decline(CadDecline::ClauseLoopReplayFailed);
+                    return None;
+                };
                 return Some(CheckResult::Sat(model));
             }
             AtomOutcome::Refuted(refutation) => {
-                let (clause, cited) = blocking_clause(&refutation, &polarity)?;
+                let Some((clause, cited)) = blocking_clause(&refutation, &polarity) else {
+                    record_clause_decline(CadDecline::ClauseLoopBudget);
+                    return None;
+                };
                 if clause.lits().is_empty() {
                     // Nothing left to block: the theory refuted the atoms under
                     // this polarity with an EMPTY core. The empty clause goes
@@ -229,7 +286,10 @@ pub(crate) fn decide_clause_loop(
                     lemmas.push(TheoryLemma::new(clause, polarity, cited, refutation));
                     return certify_unsat(arena, assertions, &skeleton, lemmas, deadline);
                 }
-                sat.add_clause(clause.clone()).ok()?;
+                if sat.add_clause(clause.clone()).is_err() {
+                    record_clause_decline(CadDecline::ClauseLoopBudget);
+                    return None;
+                }
                 lemmas.push(TheoryLemma::new(clause, polarity, cited, refutation));
             }
         }
