@@ -1,0 +1,62 @@
+DT-FIELD-EXPANSION -- every AUFDTLIRA mover, rechecked 3x per arm and checked
+against two independent verdict sources.
+
+A/B: one binary (`smtcomp_cli-arm2`, BUILD-OK `70c50a703`), two env values, the
+two arms back to back per file on one core, order alternated per file, 24 s,
+s7 pinned pairs 5,13 / 6,14.
+
+    ########## AUFDTLIRA ##########
+    rows=200  (base-first 100 / arm-first 100)
+    base : unsat 119  unknown 81
+    arm  : unsat 122  unknown 78
+    GAINS  3 of 200   LOSSES 0   sat<->unsat FLIPS 0
+
+THE RECHECK, and why it is three runs PER ARM rather than one. A single
+observation of `base=unknown, arm=unsat` on a 24 s budget is consistent with
+the lever deciding the file AND with the base arm having been unlucky on a
+loaded box -- CLAUDE.md records one sweep reading 35 / 39 / 40 verdicts on a
+single commit purely from load. Three runs of each arm, same core, back to
+back, separate the two.
+
+| mover | z3 -T:60 | `:status` | base x3 | arm x3 |
+|---|---|---|---|---|
+| `O512-022__stacks__stacks.ads_84_58_index_check___00.smt2` | `unsat` | `unsat` | `unknown` x3 | `unsat` x3 |
+| `PA14-032__dic__bounded_strings.adb_8_19_length_check___00.smt2` | `unsat` | `unsat` | `unknown` x3 | `unsat` x3 |
+| `RM_Examples__stacks_1.ads_14_19_postcondition___00.smt2` | `unsat` | `unsat` | `unknown` x3 | `unsat` x3 |
+
+**3 of 3 movers are stable 3 of 3, and every one of them agrees with BOTH an
+independent solver and the file's own declared status.** Those two sources do
+not share an origin: `:status` is the benchmark author's, `z3 -T:60` is a
+solver that shares no code with ours.
+
+0 losses and 0 flips across all 200, so there is no soundness incident to
+weigh against the gains.
+
+RAW, as captured:
+
+=== PA14-032__dic__bounded_strings.adb_8_19_length_check___00.smt2 ===
+z3   : unsat
+run1 base=unknown
+run1 arm =unsat
+run2 base=unknown
+run2 arm =unsat
+run3 base=unknown
+run3 arm =unsat
+=== RM_Examples__stacks_1.ads_14_19_postcondition___00.smt2 ===
+z3   : unsat
+run1 base=unknown
+run1 arm =unsat
+run2 base=unknown
+run2 arm =unsat
+run3 base=unknown
+run3 arm =unsat
+
+`O512-022__stacks` was rechecked separately and earlier; its runs, its route
+trace (base: watchdog at 24 s; arm: `decided_by=q:mbqi-quick` in 337 ms) and
+the warning about its census bucket are in `census/mover-O512-022-stacks.txt`.
+
+WHAT THIS DOES NOT ESTABLISH. The mechanism. `O512-022__stacks` was traced and
+its gain came from the quantifier loop converging, NOT from a datatype refusal
+being lifted -- its census bucket is `quant:time-budget`. The other two have
+not been traced, so nothing here says they share that mechanism or the one §1b
+predicted. Three movers is three movers.

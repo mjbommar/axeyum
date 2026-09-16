@@ -1,0 +1,12 @@
+########## AUFDTLIRA ##########
+rows=200  (base-first 100 / arm-first 100)
+base : {'unsat': 119, 'unknown': 81}
+arm  : {'unsat': 122, 'unknown': 78}
+GAINS  (unknown -> decided): 3 of 200
+   +unsat  O512-022__stacks__stacks.ads_84_58_index_check___00.smt2
+   +unsat  PA14-032__dic__bounded_strings.adb_8_19_length_check___00.smt2
+   +unsat  RM_Examples__stacks_1.ads_14_19_postcondition___00.smt2
+LOSSES (decided -> unknown): 0 of 200
+sat<->unsat FLIPS: 0
+summarize_rc=0
+ab-UFDTLIRA: launched 2 shards on s7 cores [5 6] depth=5 budget=24s
