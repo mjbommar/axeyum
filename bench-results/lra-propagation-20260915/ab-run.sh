@@ -91,10 +91,12 @@ run_arm() {  # $1 = the lever value
 
 printf 'file\tA\tA_ms\tA_rc\tB\tB_ms\tB_rc\tfirst\tstatus\n' > "$OUT"
 n=0
+missing=0
+want=$(grep -cve '^[[:space:]]*$' -- "$LIST")
 while read -r rel; do
   [ -z "$rel" ] && continue
   f="$CORPUS$rel"
-  [ -r "$f" ] || { echo "UNREADABLE $rel" >&2; continue; }
+  [ -r "$f" ] || { echo "UNREADABLE $rel" >&2; missing=$((missing + 1)); continue; }
   n=$((n + 1))
   st=$(grep -m1 -oE ':status +(sat|unsat|unknown)' -- "$f" 2>/dev/null | awk '{print $2}')
   if [ $((n % 2)) -eq 1 ]; then
@@ -104,4 +106,22 @@ while read -r rel; do
   fi
   printf '%s\t%s\t%s\t%s\t%s\n' "$rel" "$a" "$b" "$first" "${st:-none}" >> "$OUT"
 done < "$LIST"
+
+# REFUSE a run that covered less than the whole list. A list of ABSOLUTE paths
+# handed to a runner that prefixes `$CORPUS` produces a doubled path for EVERY
+# row; the old code skipped each one with a line on stderr and then printed
+# `AB-DONE ... 0 files` on stdout, which is a green-looking completion over an
+# empty population. That happened on this lane's held-out draw, and the only
+# thing that distinguished it from a real run was the number in the middle of a
+# line nobody was reading. The exit status now depends on the finding.
+if [ "$missing" -gt 0 ]; then
+  echo "ABORT $TAG: $missing of $want rows were UNREADABLE (ran $n)."
+  echo "  A list whose paths do not resolve under $CORPUS is a wrong list, not a"
+  echo "  small population. Check whether it holds ABSOLUTE paths."
+  exit 4
+fi
+if [ "$n" -eq 0 ] || [ "$n" -ne "$want" ]; then
+  echo "ABORT $TAG: ran $n of $want rows"
+  exit 4
+fi
 echo "AB-DONE $TAG $n files -> $OUT  binary=$H"

@@ -35,8 +35,15 @@ for job in $JOBS; do
     continue
   fi
   if [ ! -r "$list" ]; then
-    echo "ABORT $tag $SHARD: $list unreadable"
-    continue
+    # REFUSE the whole shard, do not skip to the next job. A missing list that
+    # only skips silently REORDERS the queue -- the run then measures a
+    # different set of divisions from the one it was asked for, and the only
+    # trace is one line in a log nobody reads until the numbers are wrong. This
+    # happened once on this lane (`QF_LRA.txt` was not uploaded and shard 00
+    # quietly started `QF_LIA` instead), which is why it is an exit and not a
+    # `continue`.
+    echo "ABORT $SHARD: $list unreadable -- refusing the whole queue"
+    exit 2
   fi
   echo "START $tag $SHARD $(date -Is)"
   ./ab-run.sh "$tag.$SHARD" "$list" "$out" "$PIN" "$AX" 24
