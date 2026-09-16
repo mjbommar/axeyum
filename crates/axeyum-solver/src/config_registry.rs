@@ -6737,19 +6737,22 @@ pub static REGISTRY: &[ConfigEntry] = &[
         guarded_by: "",
         env_override: None,
         justification: dated(
-            "doc comment",
-            "2026-08-01",
-            Some("8066e48be"),
+            "docs/research/09-decisions/adr-2133-generation-bounded-instance-selection.md",
+            "2026-09-16",
+            None,
             &[sym(
                 "crates/axeyum-solver/src/qinst_egraph.rs",
                 "FLOOD_FINAL_SUBSET_CHECK_MIN_GROUND",
             )],
-            &[commit(
-                "8066e48be",
-                "flood-prevention admission for the UF e-graph instantiation loop",
-            )],
+            &[
+                commit(
+                    "8066e48be",
+                    "flood-prevention admission for the UF e-graph instantiation loop",
+                ),
+                doc("docs/research/09-decisions/adr-2133-generation-bounded-instance-selection.md"),
+            ],
         ),
-        note: "Activation threshold for the generation-layered subset-first final check. Below it the plain final check runs; the doc comment measures a 26.7s wasted full check on `uf.1158058` at 8192 conjuncts as the wall this exists to avoid.",
+        note: "Activation threshold for the generation-layered subset-first final check. Below it the plain final check runs; the original doc comment measures a 26.7s wasted full check on `uf.1158058` at 8192 conjuncts as the wall this exists to avoid. RE-MEASURED 2026-09-16 on ADR-2113's 53 reference-minimal UFLIA cores (ADR-2133), and the measurement QUESTIONS this value rather than confirming it: those ground sets have a MEDIAN of 1,061 terms, so the threshold keeps the subset-first check from running at all on 26 of the 37 cores that leave a ground dump, and where it does run the companion FLOOD_FINAL_SUBSET_MAX_GENERATION = 1 admits 69.5 % of the terms. Lowering it is a separate experiment and was NOT run here: ADR-2133 measured the generation LADDER (which carries no floor) instead, and found it reaches 31 of 53 cores, runs 1-4 layers over 35 invocations, and refutes at none of them -- so on this population no floor setting would have helped, because no shallow subset was refutable at all. The value is unchanged.",
     },
     ConfigEntry {
         name: "FLOOD_FINAL_SUBSET_MAX_GENERATION",
@@ -6890,7 +6893,7 @@ pub static REGISTRY: &[ConfigEntry] = &[
                 "docs/research/09-decisions/adr-2133-generation-bounded-instance-selection.md",
             )],
         ),
-        note: "OFF in the shipped configuration (`0`), so this entry describes an A/B arm, not a live bound. Sized 2026-09-16 on ADR-2113's 53 reference-minimal UFLIA cores (`bench-results/quant-instance-select-20260916/`): the shipped single-layer pre-check is gated at ground >= 2048 and so does not run on 26 of the 37 cores that leave a ground dump (median ground 1061), and where it does run it admits 69.5 % of the terms. z3's own `:max-generation` needs generation >= 3 on 25 of the 53. The ladder replaces the one fixed depth with an ascending sequence under one fractional budget.",
+        note: "OFF in the shipped configuration (`0`), so this entry describes an A/B arm, not a live bound. Sized 2026-09-16 on ADR-2113's 53 reference-minimal UFLIA cores (`bench-results/quant-instance-select-20260916/`): the shipped single-layer pre-check is gated at ground >= 2048 and so does not run on 26 of the 37 cores that leave a ground dump (median ground 1061), and where it does run it admits 69.5 % of the terms. z3's own `:max-generation` needs generation >= 3 on 25 of the 53. The ladder replaces the one fixed depth with an ascending sequence under one fractional budget, and deliberately carries NO ground-set floor of its own -- that is the substantive difference from FLOOD_FINAL_SUBSET_CHECK_MIN_GROUND = 2048, whose floor is why the shipped pre-check is absent exactly where the probe (QUANT-INSTANCE-PROBE) showed our ground checker refutes z3's own small instance sets. Cost is bounded by GENERATION_LADDER_BUDGET_DIVISOR instead.",
     },
     ConfigEntry {
         name: "GENERATION_LADDER_MAX_GENERATION",
@@ -6915,30 +6918,6 @@ pub static REGISTRY: &[ConfigEntry] = &[
             )],
         ),
         note: "Chosen from the measured dumps rather than picked: pooled over the 37 cores that leave a ground dump, the generation histogram is gen0 52.7 %, gen1 16.8 %, gen2 22.4 %, gen3 7.8 %, gen4 0.3 % and nothing deeper, so `4` covers every generation this population reaches and the cap binds on no measured core.",
-    },
-    ConfigEntry {
-        name: "GENERATION_LADDER_MIN_GROUND",
-        module: "crates/axeyum-solver/src/qinst_egraph.rs",
-        value: "0",
-        unit: "accumulated ground terms",
-        protects: Protects::Time,
-        on_exceed: OnExceed::Truncate,
-        signal: Signal::None,
-        guarded_by: "a floor on when the ladder runs at all; below it the shipped full check is reached unchanged, and above it the ladder is still bounded by GENERATION_LADDER_BUDGET_DIVISOR rather than by this value",
-        env_override: None,
-        justification: dated(
-            "docs/research/09-decisions/adr-2133-generation-bounded-instance-selection.md",
-            "2026-09-16",
-            None,
-            &[sym(
-                "crates/axeyum-solver/src/qinst_egraph.rs",
-                "GENERATION_LADDER_MIN_GROUND",
-            )],
-            &[doc(
-                "docs/research/09-decisions/adr-2133-generation-bounded-instance-selection.md",
-            )],
-        ),
-        note: "`0` deliberately, and that is the substantive difference from FLOOD_FINAL_SUBSET_CHECK_MIN_GROUND = 2048. The measured ground sets on this population have a median of 1061 terms, so a 2048 floor is why the shipped pre-check is absent exactly where the probe (QUANT-INSTANCE-PROBE) showed our ground checker refutes z3's own small instance sets. Cost is bounded by the ladder's fractional budget instead.",
     },
     ConfigEntry {
         name: "GROUND_SESSION_LEVEL",

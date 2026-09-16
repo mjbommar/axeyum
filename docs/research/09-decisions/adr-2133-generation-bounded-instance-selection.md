@@ -3,7 +3,7 @@
 Status: proposed
 Date: 2026-09-16
 Index-status: proposed
-Index-summary: The lane was briefed to build generation- and relevance-bounded instantiation with a per-round cap, on QUANT-INSTANCE-PROBE's finding that UFLIA's block is instance SELECTION. **Every briefed pillar already ships** — `TermGenerations` (`qinst_egraph.rs:4597`), `budget_flood_slice` (`:4256`) ordering the deferred pool by generation then index, `FLOOD_ROUND_ADMISSION_CAP = 256`, `FLOOD_EAGER_GENERATION_MAX = 1` (whose own doc comment names z3's `qi.eager_threshold`), ADR-0112's match-only-new-terms incrementality, and nested-universal discovery ON by default. So the deliverable became the sizing, and the sizing retired the lever. Measured on ADR-2113's 53 reference-minimal UFLIA cores (s6, pinned pairs, 24 s / 8 GiB): the per-round cap **does** engage, on **14 of the 26** cores that print the fixpoint census — but pooled over all 53 its own truncation is `rej_flood = 21,886` of **7,328,804** rejections, **0.30 %**, against `rej_nocontext` **36.06 %** and `rej_poscap` **27.41 %**. Tuning a cap that truncates 0.30 % of candidates cannot move this population, whatever it orders by. Two deeper facts say why: on **22 of the 35** open cores that dump, our ground set **never reaches the generation z3's own refutation needs** (a REACH gap no selection policy closes; 8 of them admit zero instances), and on the 13 that do reach it the median ground set handed to the final check is **516** terms — not a set any ground checker drowns in. Meanwhile z3's `:max-generation` needs generation **>= 3 on 25 of 53**, while our one generation-bounded final check sees only generation **<= 1** (69.5 % of terms) and only above ground 2048, so it does not run at all on **26 of the 37** dumped cores (median ground 1061). The increment that follows is therefore not an admission cap but a **generation LADDER on the final refutation check** — `gen <= 0`, `<= 1`, … ascending, first `unsat` wins, fall through to the unchanged full check otherwise — shipped **OFF** behind `AXEYUM_QINST_GEN_LADDER` / `GenerationLadderGuard`. It is strictly additive (every layer is a subset of the conjunction the full check already takes, so a layer's `unsat` refutes the whole set and a layer's non-`unsat` is discarded), so it has no `sat` path and the brief's suggested soundness-negative has no analogue; the real failure mode — a ladder that swallows the full check — is mutation-killed at exactly one named fixture. Two measurement traps are recorded rather than quietly fixed: `flood_slices` is itself gated on a SECOND variable (`AXEYUM_QPROBE_CENSUS`), so the first arm reported "engaged on 0 of 26" when the answer is 14 of 26; and a join key that kept the capture's `.txt` suffix silently dropped every `ref-cores.tsv` row while every other column still looked right.
+Index-summary: The lane was briefed to build generation- and relevance-bounded instantiation with a per-round cap, on QUANT-INSTANCE-PROBE's finding that UFLIA's block is instance SELECTION. **Every briefed pillar already ships** — `TermGenerations` (`qinst_egraph.rs:4597`), `budget_flood_slice` (`:4256`) ordering the deferred pool by generation then index, `FLOOD_ROUND_ADMISSION_CAP = 256`, `FLOOD_EAGER_GENERATION_MAX = 1` (whose own doc comment names z3's `qi.eager_threshold`), ADR-0112's match-only-new-terms incrementality, and nested-universal discovery ON by default. So the deliverable became the sizing, and the sizing retired the lever. Measured on ADR-2113's 53 reference-minimal UFLIA cores (s6, pinned pairs, 24 s / 8 GiB): the per-round cap **does** engage, on **14 of the 26** cores that print the fixpoint census — but pooled over all 53 its own truncation is `rej_flood = 21,886` of **7,328,804** rejections, **0.30 %**, against `rej_nocontext` **36.06 %** and `rej_poscap` **27.41 %**. Tuning a cap that truncates 0.30 % of candidates cannot move this population, whatever it orders by. Two deeper facts say why: on **22 of the 35** open cores that dump, our ground set **never reaches the generation z3's own refutation needs** (a REACH gap no selection policy closes; 8 of them admit zero instances), and on the 13 that do reach it the median ground set handed to the final check is **516** terms — not a set any ground checker drowns in. Meanwhile z3's `:max-generation` needs generation **>= 3 on 25 of 53**, while our one generation-bounded final check sees only generation **<= 1** (69.5 % of terms) and only above ground 2048, so it does not run at all on **26 of the 37** dumped cores (median ground 1061). The increment that follows is therefore not an admission cap but a **generation LADDER on the final refutation check** — `gen <= 0`, `<= 1`, … ascending, first `unsat` wins, fall through to the unchanged full check otherwise — shipped **OFF** behind `AXEYUM_QINST_GEN_LADDER` / `GenerationLadderGuard`. It is strictly additive (every layer is a subset of the conjunction the full check already takes, so a layer's `unsat` refutes the whole set and a layer's non-`unsat` is discarded), so it has no `sat` path and the brief's suggested soundness-negative has no analogue; the real failure mode — a ladder that swallows the full check — is mutation-killed at exactly one named fixture. Two measurement traps are recorded rather than quietly fixed: `flood_slices` is itself gated on a SECOND variable (`AXEYUM_QPROBE_CENSUS`), so the first arm reported "engaged on 0 of 26" when the answer is 14 of 26; and a join key that kept the capture's `.txt` suffix silently dropped every `ref-cores.tsv` row while every other column still looked right. **The ladder's own A/B is a null, and a real one**: interleaved per file on the 53 cores it is 0 stable gains, 0 stable losses, 0 flips (OFF decides 16, ON 15; the single apparent loss is `unknown` on all six runs of a 3x interleaved recheck). That null is not a coverage hole, because the ladder now prints what it did: it **reached the check on 31 of 53 cores** and ran **1 to 4 layers** across **35 invocations**, with **`refuted_at=none` on all 35**. Not one shallow subset of our accumulated ground set was refutable when the full set was not. Set beside the probe's result that our ground checker refutes 6 of 7 cores when handed z3's OWN instances, that is the sharpest statement of where UFLIA stands: **the refutation is absent from our ground set at every generation, not buried in it** — so no ranking, cap, or layered check over that set can recover it, and the next increment is REACH (`rej_nocontext`, nested activation), not selection. By the brief's own criterion (stop if ON decides < 20 of 53) ON decides 15, so the lane stops at this ADR: no division-level A/B, no held-out draw.
 
 ## Context
 
@@ -100,7 +100,10 @@ pre-check from running at all on 26 of the 37 dumped cores.
 `generation_ladder_check` restricts the accumulated ground set to
 generation `<= 0`, then `<= 1`, … ascending to
 `GENERATION_LADDER_MAX_GENERATION = 4`, skipping a layer that adds nothing and
-never running the full set; the whole ladder runs under
+never running the full set. It carries **no ground-set floor of its own** —
+that is the substantive difference from `FLOOD_FINAL_SUBSET_CHECK_MIN_GROUND =
+2048`, whose floor is why the shipped pre-check is absent on the majority of
+this population. The whole ladder runs under
 `remaining / GENERATION_LADDER_BUDGET_DIVISOR = 4`, split equally across the
 layers still to run, so it costs no more before the full check than the shipped
 single-layer pre-check already could.
@@ -138,6 +141,48 @@ non-refutation swallows the full check, and that is what the fixtures aim at.
     **killed 1**, exactly `a_generation_ladder_that_refutes_nothing_must_not_swallow_the_full_check`.
   - "a layer admits only terms at or below its OWN generation" — **killed 2**.
   - `--check-anchors`: 159 suites, 1120 anchors, **stale = 0**.
+
+## The A/B, and why its null is a real one
+
+53 cores, ladder OFF vs ON, **interleaved per file** — same core file, same
+pinned physical core pair, OFF then ON back to back, so ambient load cancels in
+the difference rather than being attributed to an arm. s6, 24 s / 8 GiB.
+
+| | decided | unknown |
+|---|---:|---:|
+| OFF | 16 | 37 |
+| ON | 15 | 38 |
+
+**Gains 0. Flips 0.** The one apparent loss
+(`UFLIA_boogie_Cast_Cast.R_System.Object_System.Int32`) was re-run three times
+per arm, interleaved, on the same pinned pair: **`unknown` on all six runs**,
+so it is the OFF arm getting lucky once and not a stable loss. Stable gains 0,
+stable losses 0, flips 0.
+
+**The null is not a coverage hole, and this is the number that says so.** With
+`AXEYUM_QPROBE` the ladder now prints what it did, because otherwise "the ladder
+changed no verdict" and "the ladder never ran" are the same observation. Over
+the 53 cores it **reached `generation_ladder_check` on 31**, and ran layers on
+every one of them:
+
+| layers run in one invocation | 1 | 2 | 3 | 4 |
+|---|---:|---:|---:|---:|
+| invocations | 13 | 11 | 9 | 2 |
+
+35 invocations across 31 cores, 1 to 4 layers each — and **`refuted_at=none`
+on all 35**. Not one shallow subset of our accumulated ground set was refutable
+when the full set was not.
+
+Put beside QUANT-INSTANCE-PROBE's result — our ground checker refutes 6 of 7
+cores when handed z3's OWN instances — that is the sharpest statement of where
+UFLIA actually stands: **the refutation is absent from our ground set at every
+generation, not buried in it.** A set of 8,019 terms that contains no refutable
+subset at any depth is not a volume problem, and no ranking, cap, or
+layered check over that set can become one.
+
+By the brief's own criterion — "if ON decides < 20 of 53, stop at the ADR with
+the histogram" — ON decides **15**, so this lane stops here. No division-level
+A/B was run and no held-out draw was made.
 
 ## Measurement traps recorded rather than quietly fixed
 

@@ -66119,19 +66119,48 @@ Full numbers and the two measurement traps hit on the way (a census-gated
 counter read as a zero; a join key that silently dropped every row) are in
 `bench-results/quant-instance-select-20260916/README.md`.
 
+## The lever, and its A/B
+
+`GENERATION_LADDER_LEVEL = 0` / `AXEYUM_QINST_GEN_LADDER` — a generation LADDER
+on the final refutation check (`gen <= 0`, `<= 1`, … ascending, first `unsat`
+wins, fall through to the unchanged full check), **OFF**. Strictly additive, so
+it has no `sat` path and cannot produce a wrong verdict in either direction.
+
+Interleaved per-file A/B on the 53 cores: OFF decides 16, ON decides 15.
+**0 stable gains, 0 stable losses, 0 flips** — the one apparent loss is
+`unknown` on all six runs of a 3x interleaved recheck.
+
+**The null is not a coverage hole.** The ladder reached the check on **31 of 53**
+cores and ran **1 to 4 layers over 35 invocations**, with `refuted_at=none` on
+**all 35**. Not one shallow subset of our accumulated ground set was refutable
+when the full set was not. Beside the probe's result that our ground checker
+refutes 6 of 7 cores when handed z3's OWN instances, that says the refutation is
+**absent from our ground set at every generation, not buried in it**.
+
+By the brief's criterion (stop if ON decides < 20 of 53), the lane stops at the
+ADR: no division-level A/B, no held-out draw.
+
 ## Landed changes
 
 | commit | files | what |
-|---|---|---|
-| (see ADR-2133) | `bench-results/quant-instance-select-20260916/` | sizing harness, per-core TSV, README |
+|---|---:|---|
+| `c2c34bc66` | 6 | the sizing: harness, per-core TSV, README, status |
+| `f024696f4` | 10 | the generation ladder behind `AXEYUM_QINST_GEN_LADDER`, OFF; unit + integration fixtures; mutation entry; pre-push registration; ADR-2133 |
 
 ## Next
 
-The increment the sizing indicates is not a per-round admission cap. It is a
-**generation-layered final refutation check** — today one layer at generation
-<= 1, gated at ground >= 2048, so it never runs on 31 of 37 dumped cores. A
-ladder over generations is strictly additive (a subset `unsat` refutes the
-conjunction) and so cannot produce a wrong verdict in either direction.
+Not selection. **Reach.** `rej_nocontext` is 36.06 % of rejected traffic and 22
+of 35 open cores never reach the generation z3's refutation needs — the nested /
+context-dependent activation wall of ADR-2113 §4b, which QUANT-INSTANCE-PROBE
+independently re-derived from the reconstruction side (46 % of z3's own
+recovered instances are nested instantiations). A fifth lane tuning the ground
+side of this loop is a fifth null.
+
+A cheaper separate experiment the sizing exposed and this lane did NOT run:
+`FLOOD_FINAL_SUBSET_CHECK_MIN_GROUND = 2048` keeps the shipped shallow pre-check
+from running on 26 of 37 dumped cores (median ground 1,061). The ladder result
+suggests lowering it would also be a null on this population, but that is an
+inference, not a measurement.
 
 **Lane quant-ladder-ownership (`DONE`, quant-ladder-ownership,
 2026-09-15).** The second half of Phase 1 of

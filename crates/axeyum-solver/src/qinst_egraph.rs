@@ -1282,12 +1282,6 @@ const FLOOD_FINAL_SUBSET_MAX_GENERATION: u32 = 1;
 /// `tests/quant_generation_ladder.rs`.
 const GENERATION_LADDER_LEVEL: usize = 0;
 
-/// Ground-set floor for the generation ladder when it is on. `0` — unlike the
-/// shipped single-layer pre-check, the ladder is meant to reach the small sets
-/// that are the measured majority of this population, and its cost is bounded
-/// by its own fractional budget rather than by a size gate.
-const GENERATION_LADDER_MIN_GROUND: usize = 0;
-
 /// Generation ceiling for the ladder: it builds at most this many layers above
 /// generation 0, whatever the ground set's depth. `4` covers every generation
 /// present in the measured dumps (max observed: 4).
@@ -5328,7 +5322,6 @@ fn collect_generated_ground(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 /// The ADR-2133 generation ladder: try the accumulated ground set restricted to
 /// generation `<= 0`, then `<= 1`, … stopping at the first layer that refutes.
 ///
@@ -5382,7 +5375,7 @@ fn generation_ladder_check(
         }
         // Each layer gets an equal share of what is left of the ladder's own
         // budget, so one expensive shallow layer cannot consume the ladder.
-        let layers_left = u32::try_from(deepest - layer).unwrap_or(1).max(1);
+        let layers_left = (deepest - layer).max(1);
         let layer_deadline = fractional_deadline(ladder_deadline, layers_left);
         stats.ladder_layers_checked += 1;
         stats.ladder_subset_terms += subset.len();
@@ -5397,6 +5390,7 @@ fn generation_ladder_check(
     Ok(None)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn finish_quantified_ground_check(
     arena: &mut TermArena,
     ground: &[TermId],
@@ -5412,12 +5406,26 @@ fn finish_quantified_ground_check(
     // LADDER over generations instead of at one fixed depth and one fixed
     // ground-set floor. Ascending order, first `unsat` wins, and no layer can
     // stop the full check below from running.
-    if generation_ladder_enabled()
-        && ground.len() >= GENERATION_LADDER_MIN_GROUND
-        && let Some(result) =
-            generation_ladder_check(arena, ground, config, deadline, stats, cache, generations)?
-    {
-        return Ok(result);
+    if generation_ladder_enabled() {
+        let outcome =
+            generation_ladder_check(arena, ground, config, deadline, stats, cache, generations)?;
+        // The A/B's non-vacuity instrument. Without it, "the ladder changed no
+        // verdict" and "the ladder never ran" are the same observation, and
+        // the first is a result while the second is a coverage hole.
+        if qprobe_enabled() {
+            eprintln!(
+                "QPROBE gen-ladder ground={} layers_checked={} subset_terms={} refuted_at={}",
+                ground.len(),
+                stats.ladder_layers_checked,
+                stats.ladder_subset_terms,
+                stats
+                    .ladder_refuted_at
+                    .map_or_else(|| "none".to_string(), |layer| layer.to_string()),
+            );
+        }
+        if let Some(result) = outcome {
+            return Ok(result);
+        }
     }
     // Flood regime: the full-set final check over a near-cap conjunction is
     // itself a wall (measured 26.7s-then-unknown over 8192 conjuncts on

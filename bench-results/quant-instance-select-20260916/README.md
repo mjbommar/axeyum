@@ -106,6 +106,38 @@ universal — so a layer's `unsat` refutes the whole set, a layer's non-`unsat`
 is discarded rather than believed, and no layer can stop the full check from
 running. It is strictly additive: `unknown` -> `unsat` and nothing else.
 
+## The A/B on the lever, and the number that makes its null real
+
+53 cores, ladder OFF vs ON, **interleaved per file** (same file, same pinned
+core pair, OFF then ON back to back). s6, 24 s / 8 GiB.
+
+| | decided | unknown |
+|---|---:|---:|
+| OFF | 16 | 37 |
+| ON | 15 | 38 |
+
+Gains 0, flips 0. The one apparent loss
+(`UFLIA_boogie_Cast_Cast.R_System.Object_System.Int32`) was re-run 3x per arm,
+interleaved, on the same pinned pair: `unknown` on all six runs, so it is the
+OFF arm getting lucky once. **0 stable gains, 0 stable losses, 0 flips.**
+
+**The null is not a coverage hole.** With `AXEYUM_QPROBE` the ladder prints what
+it did, because otherwise "the ladder changed no verdict" and "the ladder never
+ran" are the same observation:
+
+- reached `generation_ladder_check` on **31 of 53** cores
+- **35 invocations**, running 1 layer (13), 2 (11), 3 (9) or 4 (2)
+- **`refuted_at=none` on all 35**
+
+Not one shallow subset of our accumulated ground set was refutable when the
+full set was not. Beside QUANT-INSTANCE-PROBE's result — our ground checker
+refutes 6 of 7 cores when handed z3's OWN instances — that says the refutation
+is **absent from our ground set at every generation, not buried in it**. No
+ranking, cap, or layered check over that set can recover what is not in it.
+
+By the brief's criterion (stop if ON decides < 20 of 53), ON decides 15 and the
+lane stops at the ADR. No division-level A/B, no held-out draw.
+
 ## Two measurement traps hit on the way, both of which printed a wrong number
 
 - **`flood_slices` is itself census-gated.** `census.flood_slices +=
@@ -129,6 +161,11 @@ running. It is strictly additive: `unknown` -> `unsat` and nothing else.
 |---|---|
 | `size-report.py` | the analysis; reads both arms, writes `sizing.tsv` |
 | `sizing.tsv` | one row per core: our verdict, ground, generation histogram, census counters, z3's columns |
-| `size-sweep.sh`, `size-sweep2.sh` | the two sweep arms (staged under `/nas3/data/axeyum/lanes/quant-instance-select/`) |
+| `size-sweep.sh`, `size-sweep2.sh` | the two sizing sweep arms |
+| `ab-report.py` | the OFF-vs-ON comparison, with its own non-vacuity check |
+| `ab.sh`, `ladderprobe.sh`, `recheck.sh` | the interleaved A/B, the ladder non-vacuity probe, the 3x mover recheck |
+
+(Sweep runners are staged under `/nas3/data/axeyum/lanes/quant-instance-select/`
+so s6 can read them; the copies here are the record.)
 
 Reproduce: `python3 bench-results/quant-instance-select-20260916/size-report.py`.
