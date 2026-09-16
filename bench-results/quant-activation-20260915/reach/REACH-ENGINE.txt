@@ -1,0 +1,73 @@
+QUANT-ACTIVATION -- THE REACH PROBE ON THE **CORRECTED** TARGET POPULATION.
+
+`REACH.txt` ran on the first `widen_target` column, which ADR-2120 §1a records
+as an undercount of more than half. This is the same instrument on the
+`engine_widen_target` population -- the one that simulates the engine's own walk
+-- sampled 36 of 218: 6 per division, EVENLY SPACED within each division's
+path-sorted list and round-robined across all six. Not a prefix.
+
+    rows                                  36
+    probe printed on EITHER arm           18
+    handoff ROSE from arm A to arm B       8
+    nocontext FELL from arm A to arm B     9
+    VERDICT CHANGED                        1   (unknown -> unsat)
+
+Against `REACH.txt`'s 2-of-24 on the wrong population, this is 18 of 36 with a
+measurement at all and 8 of those moving. The corrected column is not just
+bigger, it is the one the lever acts on.
+
+THE ROWS WHERE SOMETHING MOVED, verbatim (`p`=probe lines, `nc`=rej_nocontext,
+`h`=rej_handoff):
+
+  AUFDTLIRA .../O512-022__stacks    A[p=44   nc=628   h=0]   B[p=56   nc=0     h=592]
+  AUFDTLIRA .../N624-020__perm_occ  A[p=0    nc=0     h=0]   B[p=186  nc=160   h=978]
+  UFLIA .../javafe.ast.NewInstance  A[p=118  nc=468   h=0]   B[p=374  nc=50    h=1280]
+  UFLIA .../javafe.ast.LabelStmt    A[p=0    nc=0     h=0]   B[p=164  nc=0     h=144]   unknown -> UNSAT
+  UFNIA .../textbook-Sum.dll        A[p=0    nc=0     h=0]   B[p=432  nc=33090 h=18688]
+  UF .../nada/distro/stream         A[p=2146 nc=1476  h=72]  B[p=2176 nc=0     h=98]
+  UFLIA .../Fundamental_Theorem_Alg A[p=153  nc=1288  h=0]   B[p=153  nc=1243  h=238]
+  UF .../sledgehammer/FTA/uf.10651  A[p=858  nc=68    h=0]   B[p=1290 nc=59    h=9]
+  UF .../hamming_stream             A[p=1119 nc=352   h=0]   B[p=1167 nc=0     h=0]
+  UF .../nada/distro/gram_lang      A[p=1093 nc=2658  h=0]   B[p=458  nc=0     h=0]
+  UFDTLIRA .../PA12-001__DIC        A[p=17   nc=44    h=0]   B[p=12   nc=0     h=0]
+  AUFDTLIRA .../K223-023__search    A[p=20   nc=27202 h=0]   B[p=0    nc=0     h=0]
+
+`rej_nocontext` goes to ZERO on seven of these. That is the bucket ADR-2113
+measured at 100.0 % of 2,139,815 rejections, emptied on the files the corrected
+sizing says it should be emptied on.
+
+## THE FINDING THAT MATTERS MOST, AND IT CONTRADICTS THIS LANE'S OWN A/B
+
+`UFLIA/simplify2/front_end_suite/javafe.ast.LabelStmt.011.smt2` came back
+**`unsat` on the ON arm here** -- and in the A/B, the SAME file on the SAME
+binary is `unknown` on BOTH arms:
+
+    A/B row:   unknown  24231 ms   unknown  24131 ms   (arm order B first)
+    probe run: unknown             UNSAT              (pinned s4 cores 0-7)
+
+Both A/B arms spent the whole 24 s budget. The probe run, on a different core
+class with different contention, finished inside it.
+
+**So the conversion is REAL and it is MARGINAL AGAINST THE CLOCK.** The ON arm
+does reach the refutation on this file; whether it reaches it inside 24 s is
+decided by the machine. Two consequences, and neither is comfortable:
+
+1. **The A/B's +1 understates the lever**, and its -2 may equally be clock and
+   not capability. Every mover in this lane is at the noise floor for exactly
+   this reason, and `recheck-movers.sh` -- three passes per arm with the arms
+   alternating WITHIN the passes -- is not a formality here, it is the only
+   thing that separates the two.
+2. **A single 24 s pairing cannot settle this lever on this corpus.** The
+   honest ship position does not change (0 stable losses is the criterion and
+   it is not met), but "the lever does nothing" would be the wrong reading of
+   a `-1`. The right reading is that it converts at the edge of the budget,
+   which is a statement about where the remaining cost is -- the interleaved
+   ground closure over a set that is now larger -- and that is the next lane's
+   question, not this one's.
+
+## WHAT IS STILL NOT SHOWN
+
+The 18 rows that printed no probe line on either arm are NOT zeros. The
+per-universal block sits behind a loop exit a file on a time budget never
+reaches, and ADR-2113 had to make the same caveat about 34 of its 53 cores. The
+denominators above are stated over the rows that produced a measurement.
