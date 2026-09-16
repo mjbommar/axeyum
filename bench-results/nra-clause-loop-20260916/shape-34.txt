@@ -1,0 +1,60 @@
+selected rows with nra_real_root_cause == 'non-conjunctive': 118
+wrote /home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-abfd320dbe10bed2c/bench-results/nra-clause-loop-20260916/shape-34.tsv (118 data rows)
+
+=== ALL non-conjunctive rows (rows=118) ===
+parsed ok: 118   errored: 0   capped: 0   lower-bound-marked: 0
+  n_assert      n=118  min=1        median=1          max=2526
+  n_or          n=118  min=0        median=54.5       max=7542
+  widest_or     n=118  min=0        median=2          max=4
+  n_and         n=118  min=2        median=21         max=3235
+  widest_and    n=118  min=2        median=2          max=1056
+  n_atoms       n=118  min=3        median=136.5      max=63180
+  n_bool_vars   n=118  min=0        median=0          max=128
+  expanded_nodes n=118  min=28       median=3423.5     max=517374
+  visited_nodes n=118  min=28       median=1521.5     max=371704
+  has_ite       True in 0 / 118
+  has_implies   True in 0 / 118
+  has_xor       True in 0 / 118
+  has_not       True in 98 / 118
+  has_distinct  True in 0 / 118
+  over_48       True in 63 / 118
+  widest_or histogram:
+         0 :   13  #############
+         2 :  104  ############################################################
+         4 :    1  #
+  HEADLINE n_bool_vars>0 (clause loop CANNOT take) : 46
+  HEADLINE n_atoms>48    (over the atom cap)       : 63
+  HEADLINE neither       (admissible subset)       : 55
+
+NOTE: the cause filter alone yields 118 rows, of which 84 are DECIDED by a later rung and can gain nothing.
+      The 34 undecided ones are the population the ceiling is computed over.
+
+=== non-conjunctive AND verdict == unknown  [THE CEILING POPULATION] (rows=34) ===
+parsed ok: 34   errored: 0   capped: 0   lower-bound-marked: 0
+  n_assert      n=34   min=1        median=2          max=2526
+  n_or          n=34   min=0        median=16         max=7542
+  widest_or     n=34   min=0        median=2          max=4
+  n_and         n=34   min=2        median=10.5       max=2520
+  widest_and    n=34   min=2        median=11.5       max=1056
+  n_atoms       n=34   min=3        median=223        max=63180
+  n_bool_vars   n=34   min=0        median=0          max=30
+  expanded_nodes n=34   min=68       median=2655.5     max=517374
+  visited_nodes n=34   min=68       median=1968       max=371704
+  has_ite       True in 0 / 34
+  has_implies   True in 0 / 34
+  has_xor       True in 0 / 34
+  has_not       True in 15 / 34
+  has_distinct  True in 0 / 34
+  over_48       True in 18 / 34
+  widest_or histogram:
+         0 :    6  ######
+         2 :   27  ###########################
+         4 :    1  #
+  HEADLINE n_bool_vars>0 (clause loop CANNOT take) : 1
+  HEADLINE n_atoms>48    (over the atom cap)       : 18
+  HEADLINE neither       (admissible subset)       : 16
+
+--- errored files ---
+  (none)
+
+CONTROLS PASSED

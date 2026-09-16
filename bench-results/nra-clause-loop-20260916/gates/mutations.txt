@@ -1,0 +1,5 @@
+nra-clause-loop-certified-unsat: baseline green, 12 tests (scripts/cargo-serialized.sh test -p axeyum-solver --features full --test nra_clause_cert_2131)
+  `unsat` is emitted only when the certificate CHECKER accepts killed 1: every_unsat_leaves_an_accepted_certificate
+nra-clause-loop-certificate: baseline green, 12 tests (scripts/cargo-serialized.sh test -p axeyum-solver --features full --test nra_clause_cert_2131)
+  the DRAT refutation of the derived clause set is CHECKED killed 3: a_truncated_drat_proof_is_refused, every_mutation_applies_to_this_certificate, each_mutation_fires_its_own_guard
+  a covering may not close a cell with an atom its clause omits killed 3: each_mutation_fires_its_own_guard, a_mutated_cell_is_refused, every_mutation_applies_to_this_certificate

@@ -11469,8 +11469,19 @@ SUITES["nra-cad-attribution"] = (
             # Without first-wins the OUTERMOST `?` on the unwind path overwrites
             # the innermost cause, so `projection` degrades to whatever the
             # shallowest site names and the taxonomy collapses to one bucket.
+            # ADR-2131 LENGTHENED this anchor. It was the bare
+            # `if slot.get() == CadDecline::NotAttempted {`, which matched one
+            # place until ADR-2131 added `record_clause_decline` -- a second
+            # first-writer-wins slot with a byte-identical body -- and then
+            # matched two, so the harness could not say which copy it mutated
+            # and reported AMBIGUOUS ANCHOR rather than a result. The function
+            # name above the body is what distinguishes them.
             "the innermost decline cause survives the unwind",
+            "pub(crate) fn record_cad_decline(reason: CadDecline) {\n"
+            "    CAD_DECLINE.with(|slot| {\n"
             "        if slot.get() == CadDecline::NotAttempted {",
+            "pub(crate) fn record_cad_decline(reason: CadDecline) {\n"
+            "    CAD_DECLINE.with(|slot| {\n"
             "        if true {",
         ),
         (
@@ -11865,23 +11876,84 @@ SUITES["nra-cell-exact-delineability"] = (
 # verdict could notice.
 # --------------------------------------------------------------------------
 
-SUITES["nra-cell-exact-clause-loop"] = (
+# ADR-2131 REPLACED the entry that used to be here. It mutated
+# `record_cad_decline(CadDecline::ClauseLoopUnsatUncertified)` -- the cause that
+# meant "the loop refuted the abstraction and no checker exists for that". The
+# checker now exists, the cause is gone, and the anchor with it. An anchor that
+# matches nothing reports NOT APPLIED, which is not a result; leaving it would
+# have quietly subtracted one mutation from the coverage count.
+#
+# What replaces it is two mutations against the thing that took the cause's
+# place: the certificate. Each removes ONE guard, and the fixtures that die are
+# named in the label so a reader can check the harness against the suite.
+
+SUITES["nra-clause-loop-certified-unsat"] = (
     "crates/axeyum-solver/src/nra_clause_loop.rs",
     Cargo(
-        ("-p", "axeyum-solver", "--features", "full", "--lib", "nra_clause_loop::tests"),
-        "nra-cell-exact-clause-loop",
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--test",
+            "nra_clause_cert_2131",
+        ),
+        "nra-clause-loop-certified-unsat",
     ),
     [
         (
-            "a refuted abstraction is recorded as a refutation, not as a budget",
-            "                record_cad_decline(CadDecline::ClauseLoopUnsatUncertified);\n"
-            "                return None;\n"
-            "            }\n"
-            "            Ok(SatResult::Unknown(_)) | Err(_) => {",
-            "                record_cad_decline(CadDecline::ClauseLoopBudget);\n"
-            "                return None;\n"
-            "            }\n"
-            "            Ok(SatResult::Unknown(_)) | Err(_) => {",
+            # The whole gate: emit `unsat` without running the checker. Every
+            # rejection fixture in the suite dies, which is the point -- this is
+            # the one mutation that must not be survivable by anything, because
+            # surviving it would mean the route's `unsat` does not depend on its
+            # certificate at all.
+            "`unsat` is emitted only when the certificate CHECKER accepts",
+            "    match check_clause_refutation(arena, assertions, &cert) {\n"
+            "        Ok(stats) => {",
+            "    match Ok::<_, crate::nra_clause_cert::ClauseCheckFailure>(\n"
+            "        crate::nra_clause_cert::ClauseCheckStats::default(),\n"
+            "    ) {\n"
+            "        Ok(stats) => {",
+        ),
+    ],
+)
+
+SUITES["nra-clause-loop-certificate"] = (
+    "crates/axeyum-solver/src/nra_clause_cert.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--test",
+            "nra_clause_cert_2131",
+        ),
+        "nra-clause-loop-certificate",
+    ),
+    [
+        (
+            # THE RESOLUTION STEP. Accept any DRAT proof. The theory lemmas are
+            # still each checked against their covering and the abstraction is
+            # still walked, so the only thing lost is the proof that the clause
+            # set is unsatisfiable -- which is exactly the obligation ADR-2126
+            # named third. Kills `a_truncated_drat_proof_is_refused`.
+            "the DRAT refutation of the derived clause set is CHECKED",
+            "    match check_drat(&formula, cert.drat()) {\n"
+            "        Ok(true) => Ok(stats),",
+            "    match Ok::<bool, axeyum_cnf::DratError>(true) {\n"
+            "        Ok(true) => Ok(stats),",
+        ),
+        (
+            # THE CITED-ATOM GUARD. A blocking clause is over the atoms the
+            # covering CITED, which is sound only if every cell really is closed
+            # by one of them. Without this walk the clause can claim more than
+            # the covering proves and nothing notices, because the clause set is
+            # well formed and the DRAT proof still checks. Kills
+            # `a_mutated_cell_is_refused`.
+            "a covering may not close a cell with an atom its clause omits",
+            "    walk_cited(lemma.refutation().root(), &cited, &mut outside);",
+            "    let _ = walk_cited;",
         ),
     ],
 )

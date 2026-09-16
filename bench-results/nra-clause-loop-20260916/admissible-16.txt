@@ -1,0 +1,16 @@
+QF_NRA/20200911-Pine/1599121863243316000.smt2
+QF_NRA/20200911-Pine/1599121905450496000.smt2
+QF_NRA/20200911-Pine/1599122164633784000.smt2
+QF_NRA/20220314-Uncu/Rational_Function_Proof_Calls_With_Disjunctive_Denominator_Simplifications/DDC_ProveIneq_ISSAC05_Bessack_5_m4.smt2
+QF_NRA/20220314-Uncu/Rational_Function_Proof_Calls_With_Disjunctive_Denominator_Simplifications/DDC_ProveIneq_Mitrinovic_8_3.smt2
+QF_NRA/meti-tarski/atan/problem/2/weak/atan-problem-2-weak-chunk-0018.smt2
+QF_NRA/meti-tarski/atan/problem/2/weak/atan-problem-2-weak-chunk-0089.smt2
+QF_NRA/meti-tarski/atan/problem/2/weak/atan-problem-2-weak-chunk-0159.smt2
+QF_NRA/meti-tarski/atan/vega/3/atan-vega-3-chunk-0242.smt2
+QF_NRA/meti-tarski/atan/vega/3/atan-vega-3-chunk-0545.smt2
+QF_NRA/meti-tarski/atan/vega/3/weak/atan-vega-3-weak-chunk-0388.smt2
+QF_NRA/meti-tarski/atan/vega/3/weak/atan-vega-3-weak-chunk-0653.smt2
+QF_NRA/meti-tarski/Chua/1/VC1/L/Chua-1-VC1-L-chunk-0080.smt2
+QF_NRA/meti-tarski/sin/problem/7/weak2/sin-problem-7-weak2-chunk-0129.smt2
+QF_NRA/meti-tarski/sqrt/1mcosq/8/sqrt-1mcosq-8-chunk-0228.smt2
+QF_NRA/meti-tarski/sqrt/1mcosq/8/sqrt-1mcosq-8-chunk-0421.smt2

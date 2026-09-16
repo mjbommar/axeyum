@@ -8239,9 +8239,19 @@ fn check_auto_dispatch_inner(
                         // of the A/B produced it; the two arms differ only in
                         // the cell cap, which is invisible from a verdict.
                         detail: format!(
-                            "exact real-polynomial decider declined: {} (cad-arm={})",
+                            "exact real-polynomial decider declined: {} (cad-arm={}){}",
                             cad.name(),
-                            crate::nra_real_root::cad_policy().arm
+                            crate::nra_real_root::cad_policy().arm,
+                            // ADR-2131: the clause loop's own cause, when it
+                            // ran. Appended rather than substituted -- the
+                            // single-cell cause is what other tables key on, and
+                            // the loop only ever runs AFTER that cause is
+                            // `non-conjunctive`, so both are informative and
+                            // neither replaces the other.
+                            match crate::nra_real_root::clause_decline() {
+                                crate::nra_real_root::CadDecline::NotAttempted => String::new(),
+                                c => format!(" clause-loop={}", c.name()),
+                            }
                         ),
                     }),
                 );

@@ -1,0 +1,46 @@
+
+== qfnra ==
+  rows                       200
+  A (default)                123
+  B (clauseloop)             122
+  net                        -1
+  gains / losses / flips     0 / 1 / 0
+  rows where an arm produced no verdict token   0
+  vs declared :status        0 disagreements over 243 comparable verdicts
+  wall clock                 A 1238 s, B 1235 s
+    LOSS   A=sat -> B=unknown   QF_NRA/meti-tarski/sqrt/1mcosq/8/sqrt-1mcosq-8-chunk-0160.smt2
+
+== qfnia ==
+  rows                       200
+  A (default)                79
+  B (clauseloop)             79
+  net                        +0
+  gains / losses / flips     0 / 0 / 0
+  rows where an arm produced no verdict token   0
+  vs declared :status        0 disagreements over 158 comparable verdicts
+  wall clock                 A 3180 s, B 3179 s
+
+== qflra ==
+  rows                       200
+  A (default)                107
+  B (clauseloop)             107
+  net                        +0
+  gains / losses / flips     0 / 0 / 0
+  rows where an arm produced no verdict token   0
+  vs declared :status        0 disagreements over 194 comparable verdicts
+  wall clock                 A 2335 s, B 2336 s
+  CONTROL: the linear division moved 0 rows -- as expected
+
+== qfnraheldout ==
+  rows                       200
+  A (default)                109
+  B (clauseloop)             109
+  net                        +0
+  gains / losses / flips     0 / 0 / 0
+  rows where an arm produced no verdict token   0
+  vs declared :status        0 disagreements over 216 comparable verdicts
+  wall clock                 A 1505 s, B 1504 s
+
+wrote bench-results/nra-clause-loop-20260916/movers.txt (1 movers)
+
+movers per division: qfnra=1

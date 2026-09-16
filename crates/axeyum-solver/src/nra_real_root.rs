@@ -422,9 +422,16 @@ pub fn decide_real_poly_constraint(
     // cause rather than re-deriving the shape is deliberate -- the route's own
     // attribution is the authority on why it declined, and a second opinion here
     // could disagree with it.
+    // ADR-2131 widened this from `Sat` to `Sat | Unsat`. The `unsat` arm is not
+    // a policy choice here: `decide_clause_loop` returns `Unsat` only when
+    // `nra_clause_cert::check_clause_refutation` has ACCEPTED a certificate
+    // covering all three of the obligations ADR-2126 named, so a verdict from
+    // here carries strictly more evidence than one from the enumerative path
+    // below. A refused certificate is a decline, so this arm cannot widen what
+    // is answered without also widening what is checked.
     if cad_policy().clause_loop
         && cad_decline() == CadDecline::NonConjunctive
-        && let Some(res @ CheckResult::Sat(_)) =
+        && let Some(res @ (CheckResult::Sat(_) | CheckResult::Unsat)) =
             crate::nra_clause_loop::decide_clause_loop(arena, assertions, deadline)
     {
         return Ok(Some(res));
@@ -3873,17 +3880,42 @@ pub(crate) enum CadDecline {
     /// [`crate::nra_clause_loop::MAX_CLAUSE_LOOP_ROUNDS`] theory calls, or the
     /// SAT core stopping without a verdict (ADR-2126).
     ClauseLoopBudget,
-    /// The clause loop REFUTED the Boolean abstraction, and this arm does not
-    /// emit that as `unsat`.
+    /// The clause loop declined and recorded no cause of its own (ADR-2131).
     ///
-    /// Read it precisely: the loop reached a refutation, which is strictly more
-    /// than `unknown` says. It is withheld because an `unsat` here rests on three
-    /// things no checker in this tree can yet read -- the Tseitin encoding being
-    /// equisatisfiable, every blocking clause being implied, and the SAT core's
-    /// own refutation. The evidence that would close it is named in
-    /// [`crate::nra_clause_loop`]'s module docs: a `CellRefutation` per blocking
-    /// clause plus a DRAT refutation of the clause set (ADR-2126).
-    ClauseLoopUnsatUncertified,
+    /// A BACKSTOP, not an outcome anything aims at. Every decline path in
+    /// [`crate::nra_clause_loop`] records a cause; this exists so that a path
+    /// added later which does NOT record one says so, instead of leaving the
+    /// slot empty and reading in the trace exactly like "the loop was never
+    /// offered this query". Those are different findings with different next
+    /// increments, and an instrument that prints them identically is worse than
+    /// no instrument. Seeing this in a trace means the loop has an exit that
+    /// needs attributing.
+    ClauseLoopUnattributed,
+    /// The clause loop found a satisfying Boolean model whose theory sample
+    /// could not be replayed against the ORIGINAL assertions (ADR-2131).
+    ///
+    /// The replay is the whole justification for this route's `sat`, so failing
+    /// it is a decline and never a verdict. It means the Boolean layer and the
+    /// theory agreed on something the ground evaluator does not confirm.
+    ClauseLoopReplayFailed,
+    /// The clause loop reached a refutation and its CERTIFICATE was refused
+    /// (ADR-2131).
+    ///
+    /// This variant REPLACES ADR-2126's `ClauseLoopUnsatUncertified`, which said
+    /// "the loop refuted the abstraction and no checker exists for that". That
+    /// sentence is no longer true, and a cause no code can produce is worse than
+    /// no cause: it would read as a live limitation in every table that prints
+    /// the enum. See [`crate::nra_clause_cert`] for the checker that closed it.
+    ///
+    /// Strictly stronger than [`Self::ClauseLoopUnsatUncertified`], which means
+    /// "no checker exists". This one means the checker exists, ran, and said no:
+    /// a lemma's covering was rejected by
+    /// [`crate::nra_cell_cert::check_cell_refutation`], the assertion walk did
+    /// not match the gate table, the two SAT cores disagreed about the clause
+    /// set, or the DRAT proof did not check. The verdict is DROPPED -- never
+    /// weakened, never partially credited -- and the query falls through to the
+    /// rest of the ladder.
+    ClauseLoopCertificateRejected,
     /// A cell whose only satisfying points are ALGEBRAIC: every atom of the
     /// level holds at an irrational root, so a model exists there but the
     /// single-cell slice carries rational samples only and cannot descend into
@@ -3919,7 +3951,9 @@ impl CadDecline {
             Self::CertificateRejected => "certificate-rejected",
             Self::ClauseLoopShape => "clause-loop-shape",
             Self::ClauseLoopBudget => "clause-loop-budget",
-            Self::ClauseLoopUnsatUncertified => "clause-loop-unsat-uncertified",
+            Self::ClauseLoopCertificateRejected => "clause-loop-certificate-rejected",
+            Self::ClauseLoopUnattributed => "clause-loop-unattributed",
+            Self::ClauseLoopReplayFailed => "clause-loop-replay-failed",
             Self::AlgebraicWitness => "algebraic-witness",
             Self::UnsatWithheldByArm => "unsat-withheld-by-arm",
         }
@@ -3951,18 +3985,56 @@ impl CadDecline {
         Self::UnsatWithheldByArm,
         Self::ClauseLoopShape,
         Self::ClauseLoopBudget,
-        Self::ClauseLoopUnsatUncertified,
+        Self::ClauseLoopCertificateRejected,
+        Self::ClauseLoopUnattributed,
+        Self::ClauseLoopReplayFailed,
     ];
 }
 
 thread_local! {
     static CAD_DECLINE: core::cell::Cell<CadDecline> =
         const { core::cell::Cell::new(CadDecline::NotAttempted) };
+
+    /// The CLAUSE LOOP's own cause, in a slot of its own.
+    ///
+    /// ADR-2131 measured why this is necessary and not decoration.
+    /// [`CAD_DECLINE`] is STICKY -- `record_cad_decline` writes only into an
+    /// empty slot -- and the clause loop runs only after
+    /// `decide_single_cell` has already filled it with
+    /// [`CadDecline::NonConjunctive`]. So on the `clause-loop` arm every one of
+    /// the loop's own causes was recorded into a slot that could not take it and
+    /// the trace reported `non-conjunctive` for all of them: the arm was
+    /// observable only through its verdicts, and a sizing scan asking "what did
+    /// the loop do with these files" could not be answered at all.
+    ///
+    /// Resetting the shared slot instead would have destroyed the single-cell
+    /// route's attribution, which other tables read. Two slots costs nothing and
+    /// loses neither.
+    static CLAUSE_DECLINE: core::cell::Cell<CadDecline> =
+        const { core::cell::Cell::new(CadDecline::NotAttempted) };
 }
 
-/// Clear the slot. Called at the top of every entry point that can attribute.
+/// Clear the slots. Called at the top of every entry point that can attribute.
 pub(crate) fn reset_cad_decline() {
     CAD_DECLINE.with(|slot| slot.set(CadDecline::NotAttempted));
+    CLAUSE_DECLINE.with(|slot| slot.set(CadDecline::NotAttempted));
+}
+
+/// Record the clause loop's own cause, unless one is already recorded.
+///
+/// First writer wins, as in [`record_cad_decline`]: the innermost refusal is the
+/// informative one.
+pub(crate) fn record_clause_decline(reason: CadDecline) {
+    CLAUSE_DECLINE.with(|slot| {
+        if slot.get() == CadDecline::NotAttempted {
+            slot.set(reason);
+        }
+    });
+}
+
+/// The clause loop's recorded cause, leaving the slot as it is.
+pub(crate) fn clause_decline() -> CadDecline {
+    CLAUSE_DECLINE.with(core::cell::Cell::get)
 }
 
 /// Record `reason`, unless a more specific (inner) one is already recorded.
@@ -4074,21 +4146,36 @@ impl CadPolicy {
         clause_loop: false,
     };
 
-    /// ADR-2126's arm: the shipped `single-cell-sat` route PLUS the clause loop
+    /// ADR-2126's arm: the shipped route PLUS the clause loop
     /// ([`crate::nra_clause_loop`]) behind it, for the queries the conjunctive
-    /// route refuses as `non-conjunctive` — 12 of ADR-2121's 24 in-bounds files,
-    /// half the slice.
+    /// route refuses as `non-conjunctive`.
     ///
-    /// It differs from [`Self::SINGLE_CELL_SAT`] in exactly `clause_loop`: same
-    /// cell cap, same `single_cell`, same `emit_unsat`. So an A/B between the two
-    /// prices the loop alone, and the loop runs only where the conjunctive route
-    /// has already refused — strictly additive, and its `unsat` is withheld, so
-    /// it cannot flip a verdict.
+    /// **ADR-2131 rebased this arm from [`Self::SINGLE_CELL_SAT`] onto
+    /// [`Self::SINGLE_CELL`]** by flipping `emit_unsat` to `true`, and the reason
+    /// is that the A/B was otherwise CONFOUNDED. ADR-2126 built the arm when
+    /// `CAD_DEFAULT` was `SINGLE_CELL_SAT`; ADR-2126 then moved the default to
+    /// `SINGLE_CELL`. From that moment an A/B of default-against-`clause-loop`
+    /// differed in TWO fields -- `emit_unsat` AND `clause_loop` -- so the
+    /// single-cell route's `unsat` half would have been switched OFF in the
+    /// treatment arm and every verdict it contributes would have read as a loss
+    /// caused by the loop.
+    ///
+    /// It now differs from [`Self::SINGLE_CELL`], which IS the shipped default,
+    /// in exactly `clause_loop`: same cell cap, same `single_cell`, same
+    /// `emit_unsat`. So an A/B between them prices the loop alone, and the loop
+    /// runs only where the conjunctive route has already refused with
+    /// [`CadDecline::NonConjunctive`] — strictly additive.
+    ///
+    /// Its `unsat` is no longer withheld. It is emitted only when
+    /// [`crate::nra_clause_cert::check_clause_refutation`] accepts a certificate
+    /// covering the abstraction, every theory lemma and the propositional
+    /// refutation (ADR-2131), so the arm cannot widen what is answered without
+    /// widening what is checked.
     pub(crate) const CLAUSE_LOOP: Self = Self {
         arm: "clause-loop",
         cell_cap: MAX_CAD_CELLS,
         single_cell: true,
-        emit_unsat: false,
+        emit_unsat: true,
         clause_loop: true,
     };
 }
@@ -8425,7 +8512,7 @@ mod tests {
         );
 
         // ADR-2126's arm turns the clause loop on and NOTHING else does, so an
-        // A/B against `single-cell-sat` prices the loop alone.
+        // A/B against the shipped default prices the loop alone.
         let looping: Vec<&str> = arms
             .iter()
             .filter(|p| p.clause_loop)
@@ -8440,6 +8527,10 @@ mod tests {
         // The `unsat`-withholding arm is the ONLY one that withholds. An arm
         // that ran the route and silently kept its `unsat` would make the
         // sat-only A/B measure the full route instead.
+        //
+        // ADR-2131 removed `clause-loop` from this list: its `unsat` is emitted,
+        // certificate-gated, and keeping it withheld would have left the arm one
+        // field away from the SHIPPED DEFAULT in two directions at once.
         let withholding: Vec<&str> = arms
             .iter()
             .filter(|p| !p.emit_unsat)
@@ -8447,21 +8538,35 @@ mod tests {
             .collect();
         assert_eq!(
             withholding,
-            vec!["single-cell-sat", "clause-loop"],
-            "exactly the two sat-only arms withhold `unsat`"
+            vec!["single-cell-sat"],
+            "exactly the sat-only arm withholds `unsat`"
         );
 
-        // `clause-loop` differs from `single-cell-sat` in EXACTLY `clause_loop`.
-        // The two ways this A/B could go vacuous are the arm carrying
-        // `clause_loop: false` (the treatment IS the control) and the arm
-        // carrying a different cell cap or `emit_unsat` (the A/B measures two
-        // things at once). Both would print a clean number.
-        let sat_only = arms[3];
+        // `clause-loop` differs from the SHIPPED DEFAULT in EXACTLY
+        // `clause_loop`, and this is the assertion that keeps its A/B honest.
+        //
+        // ADR-2131 rebased it. It used to compare against `single-cell-sat`,
+        // which WAS the default when ADR-2126 wrote it -- but ADR-2126 also
+        // moved the default to `single-cell`, and from that moment an A/B of
+        // default-against-`clause-loop` differed in `emit_unsat` as well. The
+        // treatment arm would have had the single-cell route's `unsat` half
+        // switched OFF, and every verdict that half contributes would have read
+        // as a loss caused by the loop: a confounded A/B that prints a clean
+        // number. So the comparison is against the arm the runner's control arm
+        // actually selects, and it is read out of `CAD_DEFAULT` rather than
+        // named, so repointing the default without rebasing the arm fails here.
+        let shipped = *arms
+            .iter()
+            .find(|p| p.arm == CAD_DEFAULT.arm)
+            .expect("the shipped default must be one of the arms");
         let looped = arms[4];
-        assert_eq!(sat_only.cell_cap, looped.cell_cap);
-        assert_eq!(sat_only.single_cell, looped.single_cell);
-        assert_eq!(sat_only.emit_unsat, looped.emit_unsat);
-        assert_ne!(sat_only.clause_loop, looped.clause_loop);
+        assert_eq!(shipped.cell_cap, looped.cell_cap);
+        assert_eq!(shipped.single_cell, looped.single_cell);
+        assert_eq!(
+            shipped.emit_unsat, looped.emit_unsat,
+            "the clause-loop A/B must isolate the LOOP, not the `unsat` half"
+        );
+        assert_ne!(shipped.clause_loop, looped.clause_loop);
 
         let default = arms[0];
         assert_eq!(
