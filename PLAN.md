@@ -48423,8 +48423,9 @@ denominators.
 - A Sonnet lane's forked helpers inherited the whole brief and rebuilt both
   deliverables in parallel. Helpers get their slice only, as fresh agents.
 
-Status: **in progress**. Five Opus trace lanes are merged and pushed; four
-build lanes followed, two merged, one shipped ON, two closing out. The frame
+Status: **in progress, round three**. Five trace lanes, then two rounds of
+build lanes (nine), all merged; two levers shipped ON (QF_NRA 117 → 122);
+the rest ship OFF with a measured reason and a named next increment. The frame
 is the 16-division board (200 files each) and the Tier 1 ledger sweep on
 `db31113fa`; the references are z3 4.13.3 and cvc5 1.3.4 on the same lists.
 Bitwuzla does neither arithmetic nor quantifiers and is not a reference here.
@@ -48449,6 +48450,20 @@ Two blanks filled: z3 on the Tier 1 lists gets UFNIA 94 (ours 54) and AUFLIRA 19
 | LRA-PROPAGATION | 2122 | implied-bound propagation into the SAT core; sized at 24.5 % of tracked decisions, 0 on the median file; A/B 0 gains, 1 stable loss, +35 % time | OFF |
 | QUANT-ACTIVATION | 2120 | nested universals activate by assignment; `rej_nocontext` 33,090 → 0 at scale; 1,200-row A/B −1 (1 stable gain, 1 stable loss); 53-core census running to name the next block | OFF |
 | NIA-GROEBNER-GATE | — | the 8/8/8 admission ladder decides **0 of 116 at every level up to unbounded** | nothing |
+
+## Round two (2026-09-16)
+
+| lane | ADR | result | ships |
+|---|---|---|---|
+| NRA-CELL-EXACT | 2126 | exact delineability (Sturm on the cell's algebraic endpoints); `Projection` split into four causes; a Boolean clause loop lands OFF | **`unsat` half ON — QF_NRA 121 → 122**, 0 losses on pinned and held-out |
+| DT-FIELD-EXPANSION | 2128 | nested field expansion: pinned **+4/0** over 600, held-out AUFDTLIRA **+1/−2** (both stable), UFDTLIRA +2/0; 0 flips over 1,000 rows | OFF — the held-out draw is the only reason |
+| QUANT-GROUND-INCREMENTAL | 2124 | the cold re-solve is a seven-round schedule difference selected by `online_clauses.is_none()`; incremental session: cores +1/0, divisions −4 (1 gain / 5 stable losses) | OFF; next: let the session host arithmetic |
+| LRA-WARM-BASIS | 2125 | warm basis across cubes: 40,916 from-scratch tableaux → 0, −9.2 % time, +1/−2 stable; the admission screen still counted dense cells | OFF; next: a builds-per-file screen |
+| QUANT-PREPROCESS | 2127 | our skolemizer already fires on 90 of 90; z3's macro finder is net −1 on our 525 undecided (its authors disabled it for the same reason) | OFF |
+| DT-GROUND-PROBE | — | ADR-2114's "ground" was z3's preprocessing: stripped files are 83 of 83 sat | correction |
+
+Two of six were a real gain on the pinned lists; the held-out draw refused one
+of them. Every non-shipping lever names what to build next.
 
 ## What the day says
 
