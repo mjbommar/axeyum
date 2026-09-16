@@ -89,6 +89,54 @@ const MID_LOOP_CHECK_BUDGET_DIVISOR: u32 = 4;
 /// documents, from the other side.
 const TRIGGER_ALTERNATIVE_CAP: usize = 1;
 
+/// How far [`collect_nested_registrations_rec`] may track a POSITIVE POSITION
+/// when deciding whether a nested universal gets a [`PositiveContext`]
+/// (ADR-2120).
+///
+/// **Shipped `0`, which is byte for byte the historical behaviour**:
+/// [`positive_path_step`] at level `0` evaluates exactly the expression the
+/// walk used to inline, `positive && matches!(op, Op::BoolAnd | Op::BoolOr)`,
+/// so an unset environment cannot reach one line of the new rule.
+///
+/// **What the level buys, and why it is sound.** A universal at a positive
+/// position of a trusted formula may be replaced by anything it entails:
+/// `∀y.B ⊨ B(t)`, so `owner ⊨ owner[∀y.B := B(t)]`. The shipped whitelist
+/// establishes positivity by construction — `and` and `or` are monotone in
+/// every argument, so a path of them cannot leave a positive position — at the
+/// cost of refusing every path that crosses anything else. Level `1` tracks the
+/// polarity instead: `not` flips it, `=>` flips its antecedent and keeps its
+/// consequent, and `ite(c,t,e) ≡ (c ∧ t) ∨ (¬c ∧ e)` is monotone in both
+/// branches. The CONDITION of an `ite`, and both arguments of a boolean `=` or
+/// `xor`, occur at BOTH polarities and are refused at every level; so is every
+/// step that crosses a binder, which is not conservatism but a real
+/// unsoundness ([`PositiveContext`] carries the counterexample).
+///
+/// **Sized before it was built.** Over all 1,200 Tier 1 rows of the six
+/// quantified divisions, the shipped whitelist computes a context on **3 of the
+/// 525 undecided files**, while **97** hold a positively occurring universal
+/// under a disjunction whose path crosses a connective it refuses — and those
+/// files' tuples are joined and then dropped outright, which [ADR-2113]
+/// measured at 100.0 % of 2,139,815 rejections on `UFLIA`.
+///
+/// Raising this can cost search time and can never cost soundness: the CHECKER,
+/// [`positive_instance_formula`], enforces the polarity rule itself and is not
+/// gated by this level at all. The level decides only what the PRODUCER offers.
+///
+/// [ADR-2113]: `docs/research/09-decisions/adr-2113-uflia-the-instance-we-never-produce.md`
+const POSITIVE_PATH_LEVEL: usize = 0;
+
+/// The level [`positive_instance_formula`] — the CHECKER — always uses,
+/// whatever [`POSITIVE_PATH_LEVEL`] or its environment override says.
+///
+/// A checker that read the lever would make a certificate's validity depend on
+/// an environment variable, and the same certificate would be accepted under one
+/// process and refused under another. So the checker enforces the widest rule
+/// that is SOUND, and the lever governs only what the producer bothers to offer.
+/// The consequence is deliberate and is the reason the two are separate
+/// constants: at level `0` the producer never builds a `not`/`=>`/`ite` path, so
+/// the checker's extra reach is unreachable and the shipped arm is unchanged.
+const CHECKER_POSITIVE_PATH_LEVEL: usize = 1;
+
 /// A new instantiation round is started only when the remaining budget is at
 /// least this multiple of the previous round's duration: per-round work has
 /// grown 10x+ round-over-round on real corpora, and the e-matcher runs with
@@ -219,6 +267,110 @@ fn trigger_alternative_cap() -> usize {
         return cap;
     }
     process_trigger_alternative_cap()
+}
+
+axeyum_ir::cap_lever! {
+    /// The process-wide positive-path level: [`POSITIVE_PATH_LEVEL`], or
+    /// `AXEYUM_QINST_POSITIVE_PATH`.
+    ///
+    /// Unset is the shipped `0`, byte for byte: [`positive_path_step`] at `0`
+    /// evaluates exactly the `and`/`or` whitelist the walk used to inline.
+    ///
+    /// Read through [`positive_path_level`], never directly — a live
+    /// [`PositivePathLevelGuard`] outranks it.
+    fn process_positive_path_level() -> usize =
+        "AXEYUM_QINST_POSITIVE_PATH" or POSITIVE_PATH_LEVEL;
+}
+
+std::thread_local! {
+    /// A per-thread override of the process level, set by
+    /// [`PositivePathLevelGuard`].
+    ///
+    /// Same reason and same shape as [`TRIGGER_ALTERNATIVE_OVERRIDE`]: the
+    /// process level resolves ONCE into a `OnceLock`, so without this no test in
+    /// a process could exercise more than one arm, and a lever whose ON arm is
+    /// reachable only by re-launching the binary has no in-process soundness
+    /// test at all.
+    static POSITIVE_PATH_OVERRIDE: std::cell::Cell<Option<usize>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Forces a positive-path level on this thread for the guard's lifetime,
+/// restoring the previous setting on drop.
+///
+/// **It does not cross a thread boundary**, and `smtcomp_cli` solves on a
+/// watchdog worker thread — so an A/B must use the environment variable, not
+/// this guard. That is not a comment: `the_positive_path_guard_does_not_cross_a_thread_boundary`
+/// is the same statement written as a failing condition.
+pub struct PositivePathLevelGuard(Option<usize>);
+
+impl PositivePathLevelGuard {
+    /// Overrides the process level on this thread.
+    #[must_use]
+    pub fn set(level: usize) -> Self {
+        PositivePathLevelGuard(POSITIVE_PATH_OVERRIDE.with(|cell| cell.replace(Some(level))))
+    }
+}
+
+impl Drop for PositivePathLevelGuard {
+    fn drop(&mut self) {
+        POSITIVE_PATH_OVERRIDE.with(|cell| cell.set(self.0));
+    }
+}
+
+/// The positive-path level in force on this thread: a live
+/// [`PositivePathLevelGuard`]'s choice, else the process level.
+#[must_use]
+fn positive_path_level() -> usize {
+    if let Some(level) = POSITIVE_PATH_OVERRIDE.with(std::cell::Cell::get) {
+        return level;
+    }
+    process_positive_path_level()
+}
+
+/// Polarity at the `index`-th argument of `op`, given the polarity at `op`
+/// itself — or `None` when the step leaves the monotone fragment and no
+/// position below it may be replaced.
+///
+/// `Some(true)` is a positive position: a subformula there may be replaced by
+/// anything it entails without weakening the whole. `Some(false)` is negative,
+/// and `None` is "not tracked", which is sticky — every descendant is `None`.
+///
+/// **Level 0 is the shipped whitelist, expressed in this vocabulary.** `and`
+/// and `or` are monotone in every argument, so a path of them starting positive
+/// stays positive; anything else yields `None`. That is exactly
+/// `positive && matches!(op, Op::BoolAnd | Op::BoolOr)` with the sticky `false`
+/// renamed to `None`, so the OFF arm runs the same decisions it always did.
+///
+/// **Level 1 tracks the polarity.** `not` flips; `=>` flips its antecedent and
+/// keeps its consequent; `ite`'s two BRANCHES keep it, because
+/// `ite(c,t,e) ≡ (c ∧ t) ∨ (¬c ∧ e)` and `t`, `e` occur only positively there.
+///
+/// **What stays refused at every level, and why it is not conservatism.** The
+/// CONDITION of an `ite` occurs at both polarities in that expansion, so
+/// replacing a subformula inside it is not monotone in either direction; the
+/// same holds for both arguments of a boolean `=` and of `xor`. `BoolImplies`
+/// is accepted at arity 2 only — the front end folds an n-ary `=>` right-
+/// associatively into binary pairs (`parse.rs`), so a wider node is a shape this
+/// rule has not been argued for and is refused rather than guessed at.
+///
+/// Binder steps are not this function's business: [`collect_nested_registrations_rec`]
+/// handles `Forall` before it is reached, and drops tracking there.
+fn positive_path_step(
+    op: &Op,
+    arity: usize,
+    index: usize,
+    polarity: bool,
+    level: usize,
+) -> Option<bool> {
+    match op {
+        Op::BoolAnd | Op::BoolOr => Some(polarity),
+        _ if level == 0 => None,
+        Op::BoolNot => (arity == 1).then_some(!polarity),
+        Op::BoolImplies if arity == 2 => Some(if index == 0 { !polarity } else { polarity }),
+        Op::Ite => (arity == 3 && index >= 1).then_some(polarity),
+        _ => None,
+    }
 }
 
 axeyum_ir::cap_lever! {
@@ -1391,6 +1543,29 @@ fn extract_nested_universals(arena: &mut TermArena, assertions: &[TermId]) -> Un
     out
 }
 
+/// How many nested universals of `assertions` are registered WITH a
+/// [`PositiveContext`] at the positive-path level in force on this thread.
+///
+/// This exists because the lever's effect is otherwise unobservable from
+/// outside: a registration without a context is still compiled and still
+/// matched, and its tuples are dropped after the join — so an instance count, a
+/// witness-tuple count and a verdict are all identical between the two arms on a
+/// query the widening reaches but does not decide. A lever whose ON arm cannot
+/// be distinguished from its OFF arm by any public observable has no in-process
+/// test, and its A/B cannot be self-checked; `quantifier_positive_path.rs` reads
+/// this and would otherwise be asserting nothing.
+///
+/// It runs the same extraction the loop runs, so it reports the registrations
+/// the loop would actually hold, not a re-derivation of them.
+#[must_use]
+pub fn positive_context_registrations(arena: &mut TermArena, assertions: &[TermId]) -> usize {
+    extract_nested_universals(arena, assertions)
+        .nested
+        .iter()
+        .filter(|registration| registration.context.is_some())
+        .count()
+}
+
 /// Conjunctive descent; returns `false` if the arena refused a rebuild, in which
 /// case the caller keeps the original assertion.
 fn extract_entailed(
@@ -1432,7 +1607,7 @@ fn extract_entailed(
         &mut prefix.clone(),
         wrapped,
         &mut Vec::new(),
-        true,
+        Some(true),
         &mut out.nested,
     );
     out.assertions.push(wrapped);
@@ -1441,18 +1616,20 @@ fn extract_entailed(
 
 /// Registers every universal reachable inside a non-conjunctive leaf.
 ///
-/// `path` accumulates the argument indices walked from `owner`'s matrix. While
-/// `positive` holds, every step so far has been an `and`/`or` argument, so the
-/// current position admits the positive replacement of [`PositiveContext`]; once
-/// a `forall` body is entered the flag clears permanently for that subtree and
-/// the deeper registrations are recorded without a context (inert, as in slice 2).
+/// `path` accumulates the argument indices walked from `owner`'s matrix, and
+/// `polarity` is the position it has reached: `Some(true)` positive (the
+/// positive replacement of [`PositiveContext`] applies), `Some(false)` negative,
+/// `None` untracked. `None` is sticky, and entering a `forall` body forces it
+/// for that whole subtree -- the deeper registrations are recorded without a
+/// context, inert as in slice 2. Which steps keep tracking is
+/// [`positive_path_step`], and how far it tracks is [`POSITIVE_PATH_LEVEL`].
 fn collect_nested_registrations(
     arena: &mut TermArena,
     term: TermId,
     prefix: &mut Vec<SymbolId>,
     owner: TermId,
     path: &mut Vec<u32>,
-    positive: bool,
+    polarity: Option<bool>,
     out: &mut Vec<NestedRegistration>,
 ) {
     let mut scan = NestedRegistrationScan {
@@ -1460,7 +1637,7 @@ fn collect_nested_registrations(
         out,
         has_forall: HashMap::new(),
     };
-    collect_nested_registrations_rec(arena, term, prefix, path, positive, &mut scan);
+    collect_nested_registrations_rec(arena, term, prefix, path, polarity, &mut scan);
 }
 
 /// The parts of a [`collect_nested_registrations`] walk that do not change as it
@@ -1500,7 +1677,7 @@ fn collect_nested_registrations_rec(
     term: TermId,
     prefix: &mut Vec<SymbolId>,
     path: &mut Vec<u32>,
-    positive: bool,
+    polarity: Option<bool>,
     scan: &mut NestedRegistrationScan<'_>,
 ) {
     // The arena is a shared DAG, and this walk is indexed by *position* (`path`),
@@ -1535,7 +1712,11 @@ fn collect_nested_registrations_rec(
                 quantifier,
                 vars,
                 body: inner_body,
-                context: positive.then(|| PositiveContext {
+                // A context exists exactly at a tracked POSITIVE position.
+                // `Some(false)` — a tracked NEGATIVE one — is not a context: the
+                // universal there is effectively existential and replacing it by
+                // an instance would strengthen, not weaken, the owner.
+                context: (polarity == Some(true)).then(|| PositiveContext {
                     owner: scan.owner,
                     path: path.clone(),
                 }),
@@ -1543,17 +1724,20 @@ fn collect_nested_registrations_rec(
         }
         // Keep descending: a universal may nest further universals, and those
         // see this chain's binders too. The path would now cross this binder, so
-        // positivity is dropped (see `PositiveContext`).
+        // tracking is dropped (see `PositiveContext`).
         let depth = prefix.len();
         prefix.extend(inner_vars);
-        collect_nested_registrations_rec(arena, inner_body, prefix, path, false, scan);
+        collect_nested_registrations_rec(arena, inner_body, prefix, path, None, scan);
         prefix.truncate(depth);
         return;
     }
-    let step_positive = positive && matches!(op, Op::BoolAnd | Op::BoolOr);
+    let level = positive_path_level();
+    let arity = args.len();
     for (index, arg) in args.into_iter().enumerate() {
+        let step =
+            polarity.and_then(|polarity| positive_path_step(&op, arity, index, polarity, level));
         path.push(u32::try_from(index).unwrap_or(u32::MAX));
-        collect_nested_registrations_rec(arena, arg, prefix, path, step_positive, scan);
+        collect_nested_registrations_rec(arena, arg, prefix, path, step, scan);
         path.pop();
     }
 }
@@ -1569,9 +1753,14 @@ fn collect_nested_registrations_rec(
 /// It re-derives the conclusion from nothing but `(owner, path, vars, bindings)`
 /// and enforces every side condition, returning `None` on any violation:
 ///
-/// * the path reaches the universal through `BoolAnd`/`BoolOr` arguments only —
-///   monotone connectives in NNF, so the position is positive, and no binder is
-///   crossed (crossing one is genuinely unsound, see [`PositiveContext`]);
+/// * the path reaches the universal at a tracked POSITIVE position, through
+///   the steps [`positive_path_step`] admits at its widest — `and`/`or` in any
+///   argument, `not` flipping, `=>` flipping its antecedent, an `ite` BRANCH
+///   keeping — arriving positive, and crossing no binder (crossing one is
+///   genuinely unsound, see [`PositiveContext`]). **This checker is not gated by
+///   [`POSITIVE_PATH_LEVEL`]**: the rule it enforces is a soundness statement,
+///   and the level decides only what the producer offers. A certificate is
+///   rejected here on its own merits, never on a configuration;
 /// * every binder of the reached universal is instantiated (a partially
 ///   instantiated universal leaves free symbols, which is *not* entailed);
 /// * every named variable is actually in scope, sorts match, and no binding
@@ -1596,18 +1785,34 @@ fn positive_instance_formula(
     }
     let (outer, matrix) = peel_foralls(arena, owner);
     let mut node = matrix;
+    let mut polarity = true;
     let mut spine: Vec<(Op, Vec<TermId>, usize)> = Vec::new();
     for &step in path {
         let TermNode::App { op, args } = arena.node(node).clone() else {
             return None;
         };
-        if !matches!(op, Op::BoolAnd | Op::BoolOr) {
-            return None;
-        }
         let index = usize::try_from(step).ok()?;
+        // The widest rule, deliberately: this is the checker, so it decides
+        // soundness rather than reachability. `CHECKER_POSITIVE_PATH_LEVEL` is a
+        // named constant and not `positive_path_level()` — reading the lever here
+        // would make a certificate's validity depend on an environment variable,
+        // which is the one thing a checker must never do.
+        polarity = positive_path_step(
+            &op,
+            args.len(),
+            index,
+            polarity,
+            CHECKER_POSITIVE_PATH_LEVEL,
+        )?;
         let next = *args.get(index)?;
         spine.push((op, args.to_vec(), index));
         node = next;
+    }
+    // Arriving NEGATIVE is not an error in the walk, it is a refusal: at a
+    // negative position `∀y.B` may not be replaced by `B(t)` — that would
+    // strengthen the owner, not weaken it.
+    if !polarity {
+        return None;
     }
     let (inner, inner_body) = peel_foralls(arena, node);
     if inner.is_empty() {
@@ -1693,6 +1898,12 @@ struct NestedDiscovery {
     trusted: HashSet<TermId>,
     /// Conclusions already produced, so a re-fired trigger is not re-derived.
     produced: HashSet<TermId>,
+    /// How each formula this discovery made trusted was derived, so a later
+    /// replacement whose OWNER is one of them can name its provenance instead of
+    /// forfeiting the certificate (ADR-2120). Keyed by conclusion; original
+    /// assertions are absent, which is what `None` in a
+    /// [`QuantifierPositiveReplacementCertificate`] means.
+    derivations: HashMap<TermId, QuantifierGroundDerivation>,
     pending_registrations: Vec<NestedRegistration>,
     positive_instances: usize,
     discovered_registrations: usize,
@@ -1749,7 +1960,7 @@ impl NestedDiscovery {
                 &mut prefix.clone(),
                 formula,
                 &mut Vec::new(),
-                true,
+                Some(true),
                 &mut found,
             );
             for registration in found {
@@ -1778,7 +1989,7 @@ impl NestedDiscovery {
         &mut self,
         arena: &mut TermArena,
         matcher: &mut IncrementalEmatchSession,
-        retained: &HashMap<TermId, QuantifierGroundDerivation>,
+        retained: &mut HashMap<TermId, QuantifierGroundDerivation>,
         seen: &mut HashSet<TermId>,
         ground: &mut Vec<TermId>,
         generations: &mut TermGenerations,
@@ -1811,9 +2022,37 @@ impl NestedDiscovery {
             if !self.produced.insert(formula) {
                 continue;
             }
+            // ADR-2120: record HOW this conclusion was derived, at the moment it
+            // becomes trusted. Before this the conclusion was pushed into the
+            // ground set with no derivation, so `collect_ground_derivations`
+            // declined at its `derivations.get(&term)?` and every `unsat`
+            // downstream of one shipped uncertified.
+            //
+            // `owner_derivation` is `None` exactly when the owner is an original
+            // assertion. `self.derivations` and `retained` are the two places an
+            // owner's provenance can live -- a replacement's own, and an
+            // admitted instance's -- and an owner in NEITHER, while
+            // `is_trusted` said yes, means it came from the assertion list.
+            let owner_derivation = self
+                .derivations
+                .get(&context.owner)
+                .or_else(|| retained.get(&context.owner))
+                .cloned()
+                .map(Box::new);
+            let replacement = QuantifierGroundDerivation::PositiveReplacement(Box::new(
+                QuantifierPositiveReplacementCertificate {
+                    owner: context.owner,
+                    path: context.path.clone(),
+                    vars: vars.clone(),
+                    bindings: tuple.clone(),
+                    conclusion: formula,
+                    owner_derivation,
+                },
+            ));
             // The conclusion is a checked consequence either way, so it is a
             // legitimate owner for further replacements from here on.
             self.trusted.insert(formula);
+            self.derivations.insert(formula, replacement.clone());
             let generation = tuple
                 .iter()
                 .map(|&binding| generations.generation(binding))
@@ -1824,6 +2063,11 @@ impl NestedDiscovery {
                 if ground.len() < ground_budget().ceiling && seen.insert(formula) {
                     generations.record_admitted(arena, formula, generation);
                     ground.push(formula);
+                    // First writer wins, as everywhere else in `retained`: an
+                    // earlier derivation for the same conclusion is already
+                    // checked, and replacing it would change which certificate a
+                    // later replay names for no gain.
+                    retained.entry(formula).or_insert(replacement);
                     self.admitted_ground += 1;
                     admitted.push(formula);
                 }
@@ -1866,7 +2110,7 @@ fn nested_discovery_step(
     foralls: &mut Vec<TermId>,
     nested: &mut Vec<NestedRegistration>,
     admitted: &[TermId],
-    retained: &HashMap<TermId, QuantifierGroundDerivation>,
+    retained: &mut HashMap<TermId, QuantifierGroundDerivation>,
     seen: &mut HashSet<TermId>,
     ground: &mut Vec<TermId>,
     generations: &mut TermGenerations,
@@ -2246,7 +2490,25 @@ fn prove_quantified_unsat_via_egraph_impl(
     // list verbatim.)
     let mut assertions: Vec<TermId> = assertions.to_vec();
     let (mut ground, mut foralls) = partition_top_level_foralls(arena, &assertions);
-    if foralls.is_empty() {
+    // ADR-2120. A query whose universals are ALL nested has no top-level
+    // `forall` to instantiate, and the arm below refuses outright: the
+    // registrations are compiled by nobody, matched by nobody, and the positive
+    // replacement never gets a chance to run. That refusal is what the shipped
+    // arm does and it is kept byte for byte at level 0.
+    //
+    // At level 1 the loop runs on registrations alone when at least one of them
+    // carries a context. It is not a weaker check: a registration WITH a context
+    // is exactly a universal whose instances are admissible as the entailed
+    // replacement `owner[∀y⃗.B := B(t⃗)]`, which is a checked consequence of an
+    // assertion -- the same inference the loop already performs beside an
+    // asserted universal, with the asserted universal absent. What changes is
+    // only that the loop is allowed to start.
+    let registrations_are_usable = nested
+        .iter()
+        .any(|registration| registration.context.is_some());
+    let run_on_registrations_alone =
+        positive_path_level() >= 1 && foralls.is_empty() && registrations_are_usable;
+    if foralls.is_empty() && !run_on_registrations_alone {
         if nested.is_empty() {
             return quantifier_qf_check(arena, &ground, config, deadline, stats);
         }
@@ -2538,7 +2800,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                 &mut foralls,
                 &mut nested,
                 &admitted,
-                &ground_derivations,
+                &mut ground_derivations,
                 &mut seen,
                 &mut ground,
                 &mut generations,
@@ -3902,6 +4164,7 @@ impl TermGenerations {
         let bindings = match derivation {
             QuantifierGroundDerivation::Instance(certificate) => &certificate.bindings,
             QuantifierGroundDerivation::Propagation(propagation) => &propagation.bindings,
+            QuantifierGroundDerivation::PositiveReplacement(replacement) => &replacement.bindings,
         };
         bindings
             .iter()
@@ -4409,6 +4672,7 @@ fn collect_generated_ground(
                         let held = match existing.get() {
                             QuantifierGroundDerivation::Instance(other) => other.assertion,
                             QuantifierGroundDerivation::Propagation(other) => other.assertion,
+                            QuantifierGroundDerivation::PositiveReplacement(other) => other.owner,
                         };
                         if held != owner
                             && let Some(slot) = matcher.admission_census.for_assertion(owner)
@@ -4735,6 +4999,9 @@ impl AdmissionCensus {
         let assertion = match derivation {
             QuantifierGroundDerivation::Instance(certificate) => certificate.assertion,
             QuantifierGroundDerivation::Propagation(propagation) => propagation.assertion,
+            // A replacement is attributed to the formula it rewrote, which is
+            // the nearest thing it has to a producing assertion.
+            QuantifierGroundDerivation::PositiveReplacement(replacement) => replacement.owner,
         };
         self.for_assertion(assertion)
     }
@@ -4825,6 +5092,47 @@ pub struct QuantifierInstanceCertificate {
     pub instance: TermId,
 }
 
+/// Exact provenance for one POSITIVE-POSITION replacement: a universal sitting
+/// at a positive position of an already-trusted formula, replaced in place by
+/// its own instance (ADR-2120).
+///
+/// This is the same clause both reference solvers emit for a nested universal,
+/// reached from the other side. z3 mints a boolean variable for the quantifier
+/// and adds `¬q ∨ body[x:=t]` (`qi_queue.cpp`), cvc5 adds `(=> q body)` and lets
+/// its CNF stream produce that clause (`instantiate.cpp`); we rewrite the owner
+/// in place, so for `owner = A ∨ ∀y.B(y)` the conclusion is `A ∨ B(t)` — the
+/// residual context `A` IS the activation literal, carried inside the term, and
+/// the ground solver's own search is the assignment that discharges it.
+///
+/// **Why it needs its own certificate rather than riding on
+/// [`QuantifierInstanceCertificate`].** That one says "this ground term is the
+/// instance of an ASSERTION". A replacement's conclusion is not an instance of
+/// anything; it is the owner with one subformula swapped. Before ADR-2120 the
+/// conclusion was pushed into the ground set with no derivation recorded at all,
+/// so `collect_ground_derivations` declined at its `derivations.get(&term)?` and
+/// every `unsat` downstream of one shipped UNCERTIFIED — sound, because
+/// [`positive_instance_formula`] checked it in line, but with the evidence path
+/// severed. This variant is what closes that.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QuantifierPositiveReplacementCertificate {
+    /// The formula the universal was replaced inside. Either an original
+    /// assertion or the conclusion of `owner_derivation`.
+    pub owner: TermId,
+    /// Argument indices from `owner`'s matrix down to the replaced universal.
+    pub path: Vec<u32>,
+    /// The replaced universal's binders, plus any of `owner`'s own binders the
+    /// substitution instantiates, in substitution order.
+    pub vars: Vec<SymbolId>,
+    /// Ground terms substituted, in `vars` order.
+    pub bindings: Vec<TermId>,
+    /// The reconstructed conclusion `owner[∀y⃗.B := B(t⃗)]`.
+    pub conclusion: TermId,
+    /// How `owner` itself became trusted, when it is not an original assertion.
+    /// `None` means "`owner` must be in the assertion set", and the checker
+    /// enforces exactly that rather than taking the `None` as permission.
+    pub owner_derivation: Option<Box<QuantifierGroundDerivation>>,
+}
+
 /// A generated ground equality/disequality derivation used by a later
 /// false-sibling justification (ADR-0118).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -4833,6 +5141,9 @@ pub enum QuantifierGroundDerivation {
     Instance(QuantifierInstanceCertificate),
     /// An earlier independently checked detached propagation.
     Propagation(Box<QuantifierClausePropagationCertificate>),
+    /// A universal replaced by its instance at a positive position of a trusted
+    /// owner (ADR-2120).
+    PositiveReplacement(Box<QuantifierPositiveReplacementCertificate>),
 }
 
 impl QuantifierGroundDerivation {
@@ -4840,6 +5151,7 @@ impl QuantifierGroundDerivation {
         match self {
             Self::Instance(certificate) => certificate.instance,
             Self::Propagation(certificate) => certificate.propagated_literal,
+            Self::PositiveReplacement(certificate) => certificate.conclusion,
         }
     }
 }
@@ -5108,7 +5420,58 @@ impl QuantifierProvenanceChecker {
             QuantifierGroundDerivation::Propagation(certificate) => {
                 self.check_propagation(arena, certificate, depth)
             }
+            QuantifierGroundDerivation::PositiveReplacement(certificate) => {
+                self.check_positive_replacement(arena, certificate, depth)
+            }
         }
+    }
+
+    /// Independently checks one positive-position replacement (ADR-2120).
+    ///
+    /// Two obligations, and the certificate is refused unless BOTH hold:
+    ///
+    /// * **the owner is trusted** — it is an original assertion, or
+    ///   `owner_derivation` checks here and concludes exactly `owner`. A missing
+    ///   `owner_derivation` on a non-asserted owner is a refusal, never a pass;
+    /// * **the conclusion is the one the owner licenses** —
+    ///   [`positive_instance_formula`] re-derives it from
+    ///   `(owner, path, vars, bindings)` alone and it must equal
+    ///   `certificate.conclusion`. Every side condition (positive arrival, no
+    ///   binder crossed, sorts, capture, complete instantiation) lives there and
+    ///   is enforced by re-running it, not by trusting that the producer ran it.
+    ///
+    /// The recursion is bounded by the shared depth and node budgets, so an
+    /// owner chain cannot make a check unbounded.
+    fn check_positive_replacement(
+        &mut self,
+        arena: &mut TermArena,
+        certificate: &QuantifierPositiveReplacementCertificate,
+        depth: usize,
+    ) -> bool {
+        if !self.take_node() {
+            return false;
+        }
+        match &certificate.owner_derivation {
+            None => {
+                if !self.assertions.contains(&certificate.owner) {
+                    return false;
+                }
+            }
+            Some(owner_derivation) => {
+                if owner_derivation.conclusion() != certificate.owner
+                    || !self.check_derivation(arena, owner_derivation, depth + 1)
+                {
+                    return false;
+                }
+            }
+        }
+        positive_instance_formula(
+            arena,
+            certificate.owner,
+            &certificate.path,
+            &certificate.vars,
+            &certificate.bindings,
+        ) == Some(certificate.conclusion)
     }
 
     fn check_instance(
@@ -10480,7 +10843,7 @@ mod tests {
                 &mut Vec::new(),
                 term,
                 &mut Vec::new(),
-                true,
+                Some(true),
                 &mut found,
             );
             found.len()
@@ -10511,7 +10874,7 @@ mod tests {
             &mut Vec::new(),
             leaf,
             &mut Vec::new(),
-            true,
+            Some(true),
             &mut found,
         );
         assert_eq!(found.len(), 1, "the disjunctive universal is registered");
@@ -15175,10 +15538,11 @@ mod tests {
         let mut seen = HashSet::new();
         let mut ground = Vec::new();
         let mut generations = TermGenerations::seed_sources(&arena, &[]);
+        let mut retained = HashMap::new();
         let (admitted, promoted) = discovery.stage(
             &mut arena,
             &mut matcher,
-            &HashMap::new(),
+            &mut retained,
             &mut seen,
             &mut ground,
             &mut generations,
@@ -15186,6 +15550,13 @@ mod tests {
         assert!(admitted.is_empty() && promoted.is_empty());
         assert_eq!(discovery.rejected, 1, "the untrusted owner was refused");
         assert!(ground.is_empty());
+        // ADR-2120: a refused replacement must leave no derivation behind
+        // either. Recording provenance for something the trust check rejected
+        // would put an unchecked conclusion in reach of a later owner.
+        assert!(
+            retained.is_empty(),
+            "a refused replacement still recorded a derivation"
+        );
     }
 
     // -----------------------------------------------------------------------
