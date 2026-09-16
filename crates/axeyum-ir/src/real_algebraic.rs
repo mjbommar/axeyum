@@ -49,8 +49,8 @@ use axeyum_arith::big::BigRational;
 use axeyum_arith::big::Zero;
 
 use crate::poly_big::{
-    BigAlgebraic, Combine, RootCounter, big_eval_int_at, big_poly_divides, big_sign,
-    bigint_poly_from_i128, bigrational_from_i128, combine_retry,
+    BigAlgebraic, Combine, RootCounter, big_eval_int_at, big_poly_divides, big_root_object,
+    big_sign, bigint_poly_from_i128, bigrational_from_i128, combine_retry,
 };
 use crate::rational::Rational;
 
@@ -353,6 +353,28 @@ impl RealAlgebraic {
         None
     }
 
+    /// The **root-object** form of this number: its squarefree, primitive,
+    /// positive-leading defining polynomial (LSB-first bignum integers) and the
+    /// 1-based index of this root among that polynomial's distinct real roots in
+    /// ascending order.
+    ///
+    /// This is the only exact, portable way to *name* an irrational value. The
+    /// pair `(p, k)` denotes "the k-th smallest real root of p", which is what
+    /// z3 writes as `(root-obj p k)`
+    /// (`references/z3/src/math/polynomial/algebraic_numbers.cpp:3216-3224`).
+    /// Both halves are canonical, so two [`RealAlgebraic`]s denoting the same
+    /// number produce the same pair regardless of how their brackets were
+    /// refined or how their stored polynomial was scaled.
+    ///
+    /// `None` when no exact answer can be formed (the degree guard, a Sturm
+    /// chain that does not close). A caller that cannot get a root object must
+    /// **decline to print the value** -- rounding an algebraic coordinate to a
+    /// nearby rational produces a model that does not satisfy the query.
+    #[must_use]
+    pub fn root_object(&self) -> Option<(Vec<BigInt>, usize)> {
+        big_root_object(&self.inner.poly, &self.inner.lo)
+    }
+
     /// A rational strictly inside the current isolating interval — the interval
     /// midpoint — usable as a coarse numeric stand-in (never used for any sign
     /// decision, only for display/diagnostics). `None` if it does not fit `i128`.
@@ -640,6 +662,91 @@ mod tests {
     fn display_form() {
         let a = sqrt2();
         assert_eq!(a.to_string(), "root of 1*x^2 - 2 in (1, 2)");
+    }
+
+    /// The root-object index is the position among DISTINCT real roots, and the
+    /// polynomial is canonical: the same value from a scaled defining polynomial
+    /// gives the same pair.
+    #[test]
+    fn root_object_is_canonical_and_indexed() {
+        // +sqrt(2) is the SECOND root of x^2 - 2 (the first is -sqrt(2)).
+        let a = sqrt2();
+        let (poly, k) = a.root_object().expect("sqrt(2) has a root object");
+        assert_eq!(k, 2);
+        assert_eq!(
+            poly,
+            vec![BigInt::from(-2), BigInt::from(0), BigInt::from(1)]
+        );
+
+        // -sqrt(2) is the FIRST root of the same polynomial.
+        let neg = RealAlgebraic::new(vec![-2, 0, 1], Rational::integer(-2), Rational::integer(-1))
+            .expect("-sqrt(2) brackets");
+        let (npoly, nk) = neg.root_object().expect("-sqrt(2) has a root object");
+        assert_eq!(nk, 1);
+        assert_eq!(npoly, poly, "the same polynomial names both roots");
+
+        // A SCALED defining polynomial denotes the same number and must print
+        // the same: 2x^2 - 4 has the same roots as x^2 - 2.
+        let scaled = RealAlgebraic::new(vec![-4, 0, 2], Rational::integer(1), Rational::integer(2))
+            .expect("scaled brackets");
+        assert_eq!(
+            scaled.root_object(),
+            Some((poly.clone(), 2)),
+            "content and leading sign must be normalised away"
+        );
+
+        // A NEGATED leading coefficient likewise: -x^2 + 2 has the same roots.
+        let flipped =
+            RealAlgebraic::new(vec![2, 0, -1], Rational::integer(1), Rational::integer(2))
+                .expect("flipped brackets");
+        assert_eq!(flipped.root_object(), Some((poly, 2)));
+    }
+
+    /// A polynomial with a repeated factor still indexes over DISTINCT roots,
+    /// because the root object is built from the squarefree part.
+    #[test]
+    fn root_object_indexes_distinct_roots_of_a_repeated_factor() {
+        // (x^2 - 2)^2 = x^4 - 4x^2 + 4 has the SAME two real roots, each double.
+        // It has no sign change across +-sqrt(2), so it cannot bracket a root;
+        // use (x^2 - 2)^2 * (x^2 - 2) = (x^2 - 2)^3, which does.
+        // (x^2-2)^3 = x^6 - 6x^4 + 12x^2 - 8.
+        let a = RealAlgebraic::new(
+            vec![-8, 0, 12, 0, -6, 0, 1],
+            Rational::integer(1),
+            Rational::integer(2),
+        )
+        .expect("(x^2-2)^3 brackets +sqrt(2)");
+        let (poly, k) = a.root_object().expect("root object");
+        // Squarefree part is x^2 - 2 (up to content/sign), and +sqrt(2) is its
+        // second distinct root -- NOT its sixth.
+        assert_eq!(
+            poly,
+            vec![BigInt::from(-2), BigInt::from(0), BigInt::from(1)]
+        );
+        assert_eq!(k, 2);
+    }
+
+    /// Three distinct roots: the index must track position, not sign.
+    ///
+    /// Every bracket here is asserted to BUILD before it is asserted on -- an
+    /// `if let Some` around the check would make the test pass by doing nothing.
+    #[test]
+    fn root_object_index_tracks_position() {
+        // x^3 - 6x^2 + 11x - 6 = (x-1)(x-2)(x-3).
+        let p = vec![-6, 11, -6, 1];
+        for (lo, hi, want) in [
+            (Rational::new(1, 2), Rational::new(3, 2), 1usize),
+            (Rational::new(3, 2), Rational::new(5, 2), 2),
+            (Rational::new(5, 2), Rational::new(7, 2), 3),
+        ] {
+            let r = RealAlgebraic::new(p.clone(), lo, hi)
+                .expect("each bracket straddles exactly one root of (x-1)(x-2)(x-3)");
+            assert_eq!(
+                r.root_object().map(|(_, k)| k),
+                Some(want),
+                "root in ({lo}, {hi}) must be number {want}"
+            );
+        }
     }
 
     /// **Regression (ADR-2134).** Two roots of `q` inside the isolating bracket.

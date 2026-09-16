@@ -4284,11 +4284,90 @@ fn smtlib_value_text(arena: &TermArena, value: &Value, as_string: bool) -> Resul
                                             SMT-LIB spelling (the carrier token is a model \
                                             artifact, not a term)"
             .to_owned()),
-        Value::RealAlgebraic(_) => Err(
-            "an algebraic real has no SMT-LIB spelling (it is a root of a polynomial, \
-                 not a rational literal)"
-                .to_owned(),
-        ),
+        // `(root-obj p k)` -- "the k-th smallest real root of p" -- which is the
+        // only EXACT way to name an irrational value in an SMT-LIB model
+        // (ADR-2134). It is z3's spelling, produced by `display_root_smt2` at
+        // `references/z3/src/math/polynomial/algebraic_numbers.cpp:3216-3224`
+        // over the polynomial printer at
+        // `references/z3/src/math/polynomial/upolynomial.cpp:1195-1236`; the
+        // rendering below follows that printer term for term, including the
+        // `(- n)` spelling of a negative coefficient (SMT-LIB has no negative
+        // numeral) and the descending-degree `(+ ...)` order.
+        //
+        // The alternative is a rounded rational, and that is not a weaker
+        // answer but a WRONG one: the rounded point does not satisfy the query
+        // it is offered as a model of. So when the root object cannot be formed
+        // exactly this REFUSES, exactly as it did before this arm existed.
+        Value::RealAlgebraic(a) => match a.root_object() {
+            Some((poly, index)) => Ok(format!(
+                "(root-obj {} {index})",
+                smtlib_root_poly_text(&poly)
+            )),
+            None => Err("an algebraic real whose root object could not be formed \
+                         exactly (degree guard, or a Sturm chain that did not close); \
+                         refusing rather than rounding it to a rational"
+                .to_owned()),
+        },
+    }
+}
+
+/// Render a root object's defining polynomial as an SMT-LIB s-expression over
+/// the variable `x`, following z3's `display_smt2`
+/// (`references/z3/src/math/polynomial/upolynomial.cpp:1195-1236`) term for
+/// term so the text is the one an SMT-LIB reader already accepts:
+///
+/// * a negative coefficient is `(- n)` (there is no negative numeral);
+/// * `x^1` is bare `x`, higher powers are `(^ x k)`;
+/// * a unit coefficient drops the `(* 1 ...)`;
+/// * a single nonzero term is printed alone, otherwise `(+ ...)` in DESCENDING
+///   degree.
+///
+/// The coefficients arrive LSB-first from
+/// [`axeyum_ir::RealAlgebraic::root_object`], already squarefree, primitive and
+/// positive-leading, so two equal values render identically -- determinism is a
+/// public API promise and a model line is output.
+fn smtlib_root_poly_text(coeffs: &[axeyum_arith::big::BigInt]) -> String {
+    use axeyum_arith::big::{BigInt, Zero};
+
+    let numeral = |n: &BigInt| -> String {
+        if *n < BigInt::from(0) {
+            format!("(- {})", -n.clone())
+        } else {
+            n.to_string()
+        }
+    };
+    let power = |k: usize| -> String {
+        if k == 1 {
+            "x".to_owned()
+        } else {
+            format!("(^ x {k})")
+        }
+    };
+    let monomial = |n: &BigInt, k: usize| -> String {
+        if k == 0 {
+            numeral(n)
+        } else if *n == BigInt::from(1) {
+            power(k)
+        } else {
+            format!("(* {} {})", numeral(n), power(k))
+        }
+    };
+
+    let nonzero: Vec<usize> = (0..coeffs.len())
+        .filter(|&i| !coeffs[i].is_zero())
+        .collect();
+    match nonzero.len() {
+        0 => "0".to_owned(),
+        1 => monomial(&coeffs[nonzero[0]], nonzero[0]),
+        _ => {
+            let mut text = String::from("(+");
+            for &i in nonzero.iter().rev() {
+                text.push(' ');
+                text.push_str(&monomial(&coeffs[i], i));
+            }
+            text.push(')');
+            text
+        }
     }
 }
 
@@ -4822,5 +4901,89 @@ mod pack_source_string_tests {
         assert_eq!(len_width(7), 3);
         assert_eq!(len_width(1), 1);
         assert_eq!(len_width(0), 0);
+    }
+}
+
+#[cfg(test)]
+mod root_object_printing_tests {
+    use super::{smtlib_root_poly_text, smtlib_value_text};
+    use axeyum_arith::big::BigInt;
+    use axeyum_ir::{Rational, RealAlgebraic, TermArena, Value};
+
+    fn big(coeffs: &[i128]) -> Vec<BigInt> {
+        coeffs.iter().map(|c| BigInt::from(*c)).collect()
+    }
+
+    /// The spelling follows z3's `display_smt2`
+    /// (`references/z3/src/math/polynomial/upolynomial.cpp:1195-1236`) term for
+    /// term. Each case below is one rule of that printer, asserted separately so
+    /// a regression names the rule it broke instead of just "the text changed".
+    #[test]
+    fn the_polynomial_spelling_follows_the_reference_printer() {
+        // Descending degree, `(^ x k)` for k > 1, `(- n)` for a negative
+        // coefficient, `(* 1 …)` dropped for a unit coefficient.
+        assert_eq!(
+            smtlib_root_poly_text(&big(&[-2, 0, 1])),
+            "(+ (^ x 2) (- 2))"
+        );
+        // A non-unit coefficient keeps its `(* c …)`.
+        assert_eq!(
+            smtlib_root_poly_text(&big(&[-4, 0, 3])),
+            "(+ (* 3 (^ x 2)) (- 4))"
+        );
+        // Degree 1 is bare `x`, not `(^ x 1)`.
+        assert_eq!(smtlib_root_poly_text(&big(&[-5, 1])), "(+ x (- 5))");
+        // A single nonzero term is printed alone, with no `(+ …)` wrapper.
+        assert_eq!(smtlib_root_poly_text(&big(&[0, 0, 1])), "(^ x 2)");
+        assert_eq!(smtlib_root_poly_text(&big(&[7])), "7");
+        assert_eq!(smtlib_root_poly_text(&big(&[-7])), "(- 7)");
+        // Interior zero coefficients are skipped, not printed as `(* 0 …)`.
+        assert_eq!(smtlib_root_poly_text(&big(&[1, 0, 0, 1])), "(+ (^ x 3) 1)");
+        // The zero polynomial is `0` -- it never reaches a model value, but the
+        // printer is total.
+        assert_eq!(smtlib_root_poly_text(&[]), "0");
+    }
+
+    /// An algebraic model value prints as `(root-obj p k)` and carries NO
+    /// decimal approximation. Rounding it would name a point that does not
+    /// satisfy the query the model answers.
+    #[test]
+    fn an_algebraic_model_value_prints_as_a_root_object() {
+        let arena = TermArena::new();
+        // +√2: the second real root of x² − 2.
+        let alpha = RealAlgebraic::new(vec![-2, 0, 1], Rational::integer(1), Rational::integer(2))
+            .expect("√2 brackets");
+        let text = smtlib_value_text(&arena, &Value::RealAlgebraic(alpha), false)
+            .expect("an algebraic value must render as a root object");
+        assert_eq!(text, "(root-obj (+ (^ x 2) (- 2)) 2)");
+        assert!(
+            !text.contains('.'),
+            "a root object must carry no decimal approximation: {text}"
+        );
+
+        // −√2 is the FIRST root of the same polynomial, so the index -- not the
+        // polynomial -- is what distinguishes the two values.
+        let neg = RealAlgebraic::new(vec![-2, 0, 1], Rational::integer(-2), Rational::integer(-1))
+            .expect("−√2 brackets");
+        assert_eq!(
+            smtlib_value_text(&arena, &Value::RealAlgebraic(neg), false).expect("renders"),
+            "(root-obj (+ (^ x 2) (- 2)) 1)"
+        );
+    }
+
+    /// Two stored forms of the SAME number print identically. Determinism is a
+    /// public API promise and a model line is output.
+    #[test]
+    fn equal_values_print_the_same_text() {
+        let arena = TermArena::new();
+        let plain = RealAlgebraic::new(vec![-2, 0, 1], Rational::integer(1), Rational::integer(2))
+            .expect("brackets");
+        // 2x² − 4 has the same roots as x² − 2.
+        let scaled = RealAlgebraic::new(vec![-4, 0, 2], Rational::integer(1), Rational::integer(2))
+            .expect("brackets");
+        assert_eq!(
+            smtlib_value_text(&arena, &Value::RealAlgebraic(plain), false).expect("renders"),
+            smtlib_value_text(&arena, &Value::RealAlgebraic(scaled), false).expect("renders"),
+        );
     }
 }

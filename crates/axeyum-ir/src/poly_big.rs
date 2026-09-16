@@ -26,6 +26,7 @@ use core::cmp::Ordering;
 use axeyum_arith::big::BigInt;
 use axeyum_arith::big::BigRational;
 use axeyum_arith::big::Integer;
+use axeyum_arith::big::Signed;
 use axeyum_arith::big::{One, Zero};
 
 use crate::real_algebraic::Sign;
@@ -1008,4 +1009,93 @@ impl RootCounter {
         };
         Some(open == 0)
     }
+}
+
+/// The canonical root-object form of an algebraic number: its **squarefree,
+/// primitive, positive-leading** defining polynomial (LSB-first bignum
+/// integers), and the **1-based index** of the root that `(lo, hi)` isolates
+/// among that polynomial's distinct real roots in ascending order.
+///
+/// # Why a canonical polynomial rather than the stored one
+///
+/// `(root-obj p k)` only names a value if `p` and `k` agree on what "the k-th
+/// root" means. A polynomial with repeated factors has fewer distinct roots than
+/// its degree suggests, so indexing is ambiguous unless the polynomial is
+/// squarefree. The squarefree part has exactly the same root SET, so it denotes
+/// the same value and makes the index unambiguous.
+///
+/// Content and leading sign are normalised for the same reason **determinism**
+/// is a public promise elsewhere: two [`crate::RealAlgebraic`]s that denote the
+/// same number must print the same text. Without it `x² − 2` and `2x² − 4` —
+/// both legitimate stored forms for `√2` — would print differently.
+///
+/// z3 keeps its `algebraic_cell::m_p` squarefree by construction and computes
+/// the index lazily the same way, at
+/// `references/z3/src/math/polynomial/algebraic_numbers.cpp:3209-3212`
+/// (`c->m_i = upm().get_root_id(c->m_p_sz, c->m_p, lower(c)) + 1`).
+///
+/// `None` when no exact answer can be formed (a constant polynomial, the degree
+/// guard, a chain that does not close). The caller must then decline to print a
+/// root object — never round to a rational.
+pub(crate) fn big_root_object(poly: &[BigInt], lo: &BigRational) -> Option<(Vec<BigInt>, usize)> {
+    let qr = bigint_poly_to_rat(poly);
+    let deg = big_degree(&qr)?;
+    if deg == 0 || deg > BIG_STURM_MAX_DEGREE {
+        return None;
+    }
+    let sf = big_squarefree_part(&qr, BIG_STURM_MAX_DEGREE)?;
+    let chain = big_sturm_chain(&sf, BIG_STURM_MAX_DEGREE)?;
+    let sf_int = big_normalize_primitive(&big_to_int_poly(&sf)?)?;
+
+    // Cauchy: every real root `r` of `sf_int` satisfies `|r| < 1 + max|a_i|/|a_n|`,
+    // so `-bound` lies strictly below every root and the half-open Sturm count
+    // over `(-bound, lo]` is the count of ALL roots `<= lo`.
+    let n = big_degree(&bigint_poly_to_rat(&sf_int))?;
+    let lead = BigRational::from(sf_int[n].clone());
+    let mut max_ratio = BigRational::from(BigInt::from(0));
+    for c in &sf_int[..n] {
+        let r = BigRational::from(c.clone().abs()) / &lead;
+        let r = if r < BigRational::from(BigInt::from(0)) {
+            -r
+        } else {
+            r
+        };
+        if r > max_ratio {
+            max_ratio = r;
+        }
+    }
+    let bound = max_ratio + BigRational::from(BigInt::from(1));
+    // `lo` must lie inside the bound for the count to mean what it says.
+    if lo <= &(-bound.clone()) {
+        return None;
+    }
+    let below = big_count_roots_in(&chain, &(-bound), lo)?;
+    Some((sf_int, below.checked_add(1)?))
+}
+
+/// Divide out the content and force a positive leading coefficient, so that two
+/// integer polynomials with the same real roots and the same squarefree part
+/// have the SAME representation. `None` for the zero polynomial.
+fn big_normalize_primitive(p: &[BigInt]) -> Option<Vec<BigInt>> {
+    let mut n = p.len();
+    while n > 0 && p[n - 1].is_zero() {
+        n -= 1;
+    }
+    if n == 0 {
+        return None;
+    }
+    let mut content = BigInt::from(0);
+    for c in &p[..n] {
+        content = content.gcd(c);
+    }
+    if content.is_zero() {
+        return None;
+    }
+    let negate = p[n - 1] < BigInt::from(0);
+    let mut out = Vec::with_capacity(n);
+    for c in &p[..n] {
+        let q = c / &content;
+        out.push(if negate { -q } else { q });
+    }
+    Some(out)
 }

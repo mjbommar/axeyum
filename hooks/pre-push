@@ -961,7 +961,8 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
                lra_opaque_real_apps decline_detail_typed \
                quantifier_trigger_alternatives quantifier_positive_path \
                dt_nested_field_2128 quant_macro_inline_route quant_ground_session_soundness \
-               quant_session_arith_certificate quant_generation_ladder lra_warm_screen_2132; do
+               quant_session_arith_certificate quant_generation_ladder lra_warm_screen_2132 \
+               nra_algebraic_witness; do
     gated_test "dispatch/reason: $suite" \
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
   done

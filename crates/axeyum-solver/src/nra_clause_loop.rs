@@ -80,7 +80,7 @@ use axeyum_ir::{Op, TermArena, TermId, TermNode};
 use crate::backend::CheckResult;
 use crate::nra_cell_cert::{CellCovering, CellReason, CellRefutation, CertAtom};
 use crate::nra_real_root::{CadDecline, cert_atom_of, record_cad_decline};
-use crate::nra_single_cell::{AtomOutcome, decide_atoms, replay_rational_model};
+use crate::nra_single_cell::{AtomOutcome, decide_atoms, replay_model};
 
 /// The most distinct polynomial comparisons this loop will abstract.
 ///
@@ -111,6 +111,7 @@ pub(crate) fn decide_clause_loop(
     arena: &TermArena,
     assertions: &[TermId],
     deadline: Option<Instant>,
+    algebraic_witness: bool,
 ) -> Option<CheckResult> {
     let skeleton = Skeleton::build(arena, assertions)?;
     if skeleton.atoms.len() > MAX_CLAUSE_ATOMS {
@@ -169,11 +170,11 @@ pub(crate) fn decide_clause_loop(
             });
         }
 
-        match decide_atoms(&conj, deadline)? {
+        match decide_atoms(&conj, deadline, algebraic_witness)? {
             AtomOutcome::Sat(sample) => {
                 // Replayed against the ORIGINAL assertions, not against `conj`.
                 // Every claim the Boolean layer made is discharged here.
-                let model = replay_rational_model(arena, assertions, &sample)?;
+                let model = replay_model(arena, assertions, &sample)?;
                 return Some(CheckResult::Sat(model));
             }
             AtomOutcome::Refuted(refutation) => {
@@ -426,7 +427,7 @@ mod tests {
     fn decide(script: &str) -> (Option<CheckResult>, &'static str) {
         let parsed = axeyum_smtlib::parse_script(script).expect("parse");
         reset_cad_decline();
-        let out = decide_clause_loop(&parsed.arena, &parsed.assertions, None);
+        let out = decide_clause_loop(&parsed.arena, &parsed.assertions, None, false);
         (out, cad_decline().name())
     }
 
@@ -451,6 +452,7 @@ mod tests {
             &parsed.assertions,
             None,
             true,
+            false,
         );
         assert!(conj.is_none(), "the control is that the OLD route refuses");
         assert_eq!(cad_decline().name(), "non-conjunctive");

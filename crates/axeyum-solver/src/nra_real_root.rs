@@ -412,6 +412,7 @@ pub fn decide_real_poly_constraint(
                 assertions,
                 deadline,
                 cad_policy().emit_unsat,
+                cad_policy().algebraic_witness,
             )
     {
         return Ok(Some(res));
@@ -424,8 +425,12 @@ pub fn decide_real_poly_constraint(
     // could disagree with it.
     if cad_policy().clause_loop
         && cad_decline() == CadDecline::NonConjunctive
-        && let Some(res @ CheckResult::Sat(_)) =
-            crate::nra_clause_loop::decide_clause_loop(arena, assertions, deadline)
+        && let Some(res @ CheckResult::Sat(_)) = crate::nra_clause_loop::decide_clause_loop(
+            arena,
+            assertions,
+            deadline,
+            cad_policy().algebraic_witness,
+        )
     {
         return Ok(Some(res));
     }
@@ -3892,6 +3897,27 @@ pub(crate) enum CadDecline {
     /// declines to represent, and it is the route's dominant cause on the real
     /// corpus (ADR-2121).
     AlgebraicWitness,
+    /// An ALGEBRAIC sample was accepted by the cell scan, but replaying it
+    /// through the ground evaluator against the ORIGINAL assertions did not
+    /// resolve -- the evaluator reported an overflow, or an operation for which
+    /// it has no exact algebraic rule (ADR-2134).
+    ///
+    /// Distinct from [`Self::AlgebraicReplayRefuted`], which is the evaluator
+    /// deciding the assertion FALSE. This one is "we do not know"; that one is
+    /// "we know, and it is wrong", and the two say different things about what
+    /// would fix them.
+    AlgebraicReplayUndecided,
+    /// An ALGEBRAIC sample the cell scan accepted was replayed through the
+    /// ground evaluator and an original assertion evaluated to `false`
+    /// (ADR-2134).
+    ///
+    /// This is a **producer disagreement**, not a budget: the scan selected a
+    /// cell in which every collected atom holds, so the assertions it was
+    /// collected from must hold too. A row here means the atom collection lost
+    /// something the assertion still says. The verdict is DROPPED either way --
+    /// the replay is the authority and it refused -- but the cause is named
+    /// apart so a nonzero count is visible as the defect it is.
+    AlgebraicReplayRefuted,
 }
 
 impl CadDecline {
@@ -3921,6 +3947,8 @@ impl CadDecline {
             Self::ClauseLoopBudget => "clause-loop-budget",
             Self::ClauseLoopUnsatUncertified => "clause-loop-unsat-uncertified",
             Self::AlgebraicWitness => "algebraic-witness",
+            Self::AlgebraicReplayUndecided => "algebraic-replay-undecided",
+            Self::AlgebraicReplayRefuted => "algebraic-replay-refuted",
             Self::UnsatWithheldByArm => "unsat-withheld-by-arm",
         }
     }
@@ -3948,6 +3976,8 @@ impl CadDecline {
         Self::SliceBounds,
         Self::CertificateRejected,
         Self::AlgebraicWitness,
+        Self::AlgebraicReplayUndecided,
+        Self::AlgebraicReplayRefuted,
         Self::UnsatWithheldByArm,
         Self::ClauseLoopShape,
         Self::ClauseLoopBudget,
@@ -4014,6 +4044,20 @@ pub(crate) struct CadPolicy {
     /// an arm can take the exact half and leave the sampled half behind, and the
     /// `single-cell-sat` arm is exactly that.
     pub(crate) emit_unsat: bool,
+    /// Whether a cell whose representative point is an ALGEBRAIC root may be
+    /// accepted as the FINAL coordinate of a model (ADR-2134).
+    ///
+    /// Off, the route refuses such a cell as [`CadDecline::AlgebraicWitness`] --
+    /// measured at 7 of the pinned 200 `QF_NRA` files on the shipped default,
+    /// 6 of them currently `unknown`, which is this lever's ceiling.
+    ///
+    /// On, it is accepted only at the LAST level, where the sample is complete
+    /// and no deeper level has to substitute the coordinate into a polynomial,
+    /// and only if the exact replay through the ground evaluator accepts every
+    /// ORIGINAL assertion at that point. So this can only turn a decline into a
+    /// `sat` whose model was checked the same way every other `sat` from this
+    /// route is checked -- it emits no `unsat` and cannot flip a verdict.
+    pub(crate) algebraic_witness: bool,
     /// Whether the clause loop ([`crate::nra_clause_loop`]) is offered the query
     /// when the conjunctive route declines `non-conjunctive` (ADR-2126).
     ///
@@ -4031,6 +4075,7 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS,
         single_cell: false,
         emit_unsat: true,
+        algebraic_witness: false,
         clause_loop: false,
     };
 
@@ -4044,6 +4089,7 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS * 16,
         single_cell: false,
         emit_unsat: true,
+        algebraic_witness: false,
         clause_loop: false,
     };
 
@@ -4056,6 +4102,7 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS,
         single_cell: true,
         emit_unsat: true,
+        algebraic_witness: false,
         clause_loop: false,
     };
 
@@ -4071,6 +4118,7 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS,
         single_cell: true,
         emit_unsat: false,
+        algebraic_witness: false,
         clause_loop: false,
     };
 
@@ -4089,8 +4137,53 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS,
         single_cell: true,
         emit_unsat: false,
+        algebraic_witness: false,
         clause_loop: true,
     };
+
+    /// ADR-2134's arm: the shipped `single-cell` route PLUS the algebraic final
+    /// coordinate. It differs from [`Self::SINGLE_CELL`] in exactly
+    /// `algebraic_witness`: same cell cap, same `single_cell`, same
+    /// `emit_unsat`, same `clause_loop`. So an A/B between the two prices the
+    /// algebraic witness alone.
+    ///
+    /// Strictly additive: the acceptance sits on the branch that otherwise
+    /// records [`CadDecline::AlgebraicWitness`] and returns `None`, so every
+    /// query the shipped arm decides this arm decides identically, and the only
+    /// new outcome is a `sat`. That `sat` is gated on the exact replay of every
+    /// ORIGINAL assertion at the algebraic point through the ground evaluator,
+    /// which is the same gate every other `sat` from this route passes -- with
+    /// the coordinate evaluated by exact algebraic field arithmetic (ADR-0038)
+    /// rather than rational arithmetic. No `unsat` is added, so no verdict can
+    /// flip.
+    pub(crate) const ALGEBRAIC_WITNESS: Self = Self {
+        arm: "algebraic-witness",
+        cell_cap: MAX_CAD_CELLS,
+        single_cell: true,
+        emit_unsat: true,
+        algebraic_witness: true,
+        clause_loop: false,
+    };
+
+    /// **Every arm, and the authority on what an arm is.**
+    ///
+    /// [`parse_cad_arm`] resolves a name by scanning this list, and
+    /// `every_arm_name_is_a_value_the_parser_accepts` iterates it. So an arm
+    /// added here is selectable and covered the moment it exists, and an arm NOT
+    /// here is unreachable by name -- the two cannot drift apart.
+    ///
+    /// That is not a stylistic preference. Until ADR-2134 the coverage test held
+    /// a LITERAL list of four arms, and `CLAUSE_LOOP` -- added by ADR-2126 --
+    /// was not in it. The test named "every arm" was measuring the maintainer's
+    /// memory, which is the one thing a test of that name must not do.
+    pub(crate) const ALL: &'static [Self] = &[
+        Self::DEFAULT,
+        Self::WIDE,
+        Self::SINGLE_CELL,
+        Self::SINGLE_CELL_SAT,
+        Self::CLAUSE_LOOP,
+        Self::ALGEBRAIC_WITNESS,
+    ];
 }
 
 /// The arm used when `AXEYUM_NRA_CAD` is unset or unrecognized.
@@ -4157,24 +4250,21 @@ pub(crate) fn cad_policy() -> CadPolicy {
 /// process through a `OnceLock`, so a test that set the variable would measure
 /// whichever test ran first.
 fn parse_cad_arm(value: &str) -> CadPolicy {
-    if value.eq_ignore_ascii_case("wide") {
-        CadPolicy::WIDE
-    } else if value.eq_ignore_ascii_case("single-cell") {
-        CadPolicy::SINGLE_CELL
-    } else if value.eq_ignore_ascii_case("single-cell-sat") {
-        CadPolicy::SINGLE_CELL_SAT
-    } else if value.eq_ignore_ascii_case("clause-loop") {
-        CadPolicy::CLAUSE_LOOP
-    } else if value.eq_ignore_ascii_case("default") {
-        // EXPLICIT, not a fallback. `CAD_DEFAULT` is `SINGLE_CELL_SAT` as of
-        // ADR-2121, so without this arm `AXEYUM_NRA_CAD=default` would resolve
-        // through the catch-all below to the NEW default and every A/B's arm A
-        // would silently become its arm B. `every_arm_name_is_a_value_the_parser_accepts`
-        // is what holds this.
-        CadPolicy::DEFAULT
-    } else {
-        CAD_DEFAULT
+    // Scanned rather than spelled out: [`CadPolicy::ALL`] is the authority on
+    // what arms exist, and a hand-written `else if` chain beside it is a second
+    // list that can disagree with the first.
+    //
+    // `default` resolves through this scan like any other arm, which is what
+    // keeps `AXEYUM_NRA_CAD=default` selecting the pre-ADR-2121 engine instead
+    // of falling through to whatever `CAD_DEFAULT` currently is -- without that,
+    // every A/B's arm A would silently become its arm B.
+    for policy in CadPolicy::ALL {
+        if value.eq_ignore_ascii_case(policy.arm) {
+            return *policy;
+        }
     }
+    // An unrecognised value is the shipped arm, never a treatment.
+    CAD_DEFAULT
 }
 
 /// One rational sample point: a binding of each (already-eliminated / sampled)
@@ -8527,22 +8617,41 @@ mod tests {
     /// under a treatment label.
     #[test]
     fn every_arm_name_is_a_value_the_parser_accepts() {
-        for policy in [
-            CadPolicy::DEFAULT,
-            CadPolicy::WIDE,
-            CadPolicy::SINGLE_CELL,
-            CadPolicy::SINGLE_CELL_SAT,
-        ] {
+        // Derived from [`CadPolicy::ALL`], not from a literal list. The literal
+        // version of this test omitted `CLAUSE_LOOP` for the whole of ADR-2126's
+        // life: a test named "every arm" that carries its own copy of the arms
+        // measures the maintainer's memory instead of the code.
+        assert!(
+            CadPolicy::ALL.len() >= 6,
+            "the arm authority lost entries: {}",
+            CadPolicy::ALL.len()
+        );
+        for policy in CadPolicy::ALL {
             let parsed = parse_cad_arm(policy.arm);
             assert_eq!(
                 parsed.arm, policy.arm,
                 "`AXEYUM_NRA_CAD={}` does not select the arm of that name",
                 policy.arm
             );
-            assert_eq!(parsed.single_cell, policy.single_cell);
-            assert_eq!(parsed.emit_unsat, policy.emit_unsat);
-            assert_eq!(parsed.cell_cap, policy.cell_cap);
+            // EVERY field, so an arm that parses to the right name but the wrong
+            // behaviour still fails here.
+            assert_eq!(parsed.single_cell, policy.single_cell, "{}", policy.arm);
+            assert_eq!(parsed.emit_unsat, policy.emit_unsat, "{}", policy.arm);
+            assert_eq!(parsed.cell_cap, policy.cell_cap, "{}", policy.arm);
+            assert_eq!(parsed.clause_loop, policy.clause_loop, "{}", policy.arm);
+            assert_eq!(
+                parsed.algebraic_witness, policy.algebraic_witness,
+                "{}",
+                policy.arm
+            );
         }
+        // Arm names are distinct, or two arms would be one.
+        let mut names: Vec<&str> = CadPolicy::ALL.iter().map(|p| p.arm).collect();
+        names.sort_unstable();
+        let before = names.len();
+        names.dedup();
+        assert_eq!(before, names.len(), "two arms share a name: {names:?}");
+
         // An unrecognised value is the shipped arm, never a treatment.
         assert_eq!(parse_cad_arm("nonsense").arm, CAD_DEFAULT.arm);
         assert_eq!(parse_cad_arm("").arm, CAD_DEFAULT.arm);

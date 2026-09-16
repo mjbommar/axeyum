@@ -13,6 +13,10 @@ publish = false
 
 [dependencies]
 axeyum-aig.workspace = true
+# Arbitrary-precision integers, for rendering a `(root-obj p k)` model value
+# whose coefficients do not fit `i128` (ADR-2134). Already an indirect
+# dependency through `axeyum-ir`, and pure Rust -- no C/C++ is added.
+axeyum-arith.workspace = true
 axeyum-bv.workspace = true
 # Exact multivariate polynomial normalization for the `cas-*` refutation routes
 # (ADR-0386). Pure Rust and WASM-safe, so it does not touch the
