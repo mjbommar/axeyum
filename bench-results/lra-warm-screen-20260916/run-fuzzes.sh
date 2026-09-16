@@ -24,6 +24,9 @@
 # Usage: run-fuzzes.sh [out.txt]
 set -u
 OUT="${1:-fuzz-arms.txt}"
+# Where a FAILING run's log is kept. A gate that throws away the evidence of its
+# own failure can report that something broke and never say what.
+KEEP="${2:-$(dirname -- "$OUT")/fuzz-failures}"
 SUITES="qf_lra_differential_fuzz simplex_lra_fallback_differential \
         qf_uflra_differential_fuzz difference_logic_differential_fuzz \
         qf_lia_differential_fuzz qf_lra_cube_sequence_differential_fuzz"
@@ -45,11 +48,34 @@ for arm in off on screened; do
     # The harness's own count. `grep -c` inside arithmetic is banned here and a
     # bare exit status is what this script exists not to trust.
     line=$(sed -n 's/^test result: .*/&/p' "$log" | tail -1)
-    n=$(printf '%s' "$line" | sed -n 's/.*ok\. \([0-9]*\) passed.*/\1/p')
+    # `\([0-9]*\) passed` WITHOUT anchoring on `ok.` -- this parser read only
+    # `ok. N passed`, so a suite that reported `FAILED. 3 passed; 1 failed` came
+    # back as n=0 and was then announced as "ZERO TESTS -- compiled to nothing".
+    # That is a misdiagnosis with the OPPOSITE remedy: an inert suite needs a
+    # feature flag, a failing one needs a fix. It happened on this lane's first
+    # run, on `difference_logic_differential_fuzz` in the `on` arm.
+    n=$(printf '%s' "$line" | sed -n 's/.*[^0-9]\([0-9][0-9]*\) passed.*/\1/p')
     n="${n:-0}"
-    printf '%-9s %-42s rc=%s tests=%s %s\n' "$arm" "$suite" "$rc" "$n" "${line:-NO-RESULT-LINE}" >> "$OUT"
-    if [ "$rc" -ne 0 ]; then fail=1; fi
-    if [ "$n" -eq 0 ]; then
+    f=$(printf '%s' "$line" | sed -n 's/.*; \([0-9][0-9]*\) failed.*/\1/p')
+    f="${f:-0}"
+    printf '%-9s %-42s rc=%s tests=%s failed=%s %s\n' \
+      "$arm" "$suite" "$rc" "$n" "$f" "${line:-NO-RESULT-LINE}" >> "$OUT"
+    # THREE outcomes, not two, because their remedies are disjoint.
+    if [ -z "$line" ]; then
+      printf '%-9s %-42s NO RESULT LINE -- the run did not happen (build? disk?)\n' \
+        "$arm" "$suite" >> "$OUT"
+      fail=1
+    elif [ "$rc" -ne 0 ] || [ "$f" -ne 0 ]; then
+      printf '%-9s %-42s FAILED (%s passed, %s failed) -- log kept at %s\n' \
+        "$arm" "$suite" "$n" "$f" "$KEEP/$arm.$suite.log" >> "$OUT"
+      # THE FAILING LOG IS KEPT. The first version deleted every log, so this
+      # lane's one real failure could not be diagnosed at all -- exactly the
+      # defect ADR-2125 section 5.8 had to fix in its own ratchet runner, which
+      # "captured the output to a temp file and deleted it, keeping only the
+      # count".
+      mkdir -p "$KEEP" && cp "$log" "$KEEP/$arm.$suite.log"
+      fail=1
+    elif [ "$n" -eq 0 ]; then
       printf '%-9s %-42s ZERO TESTS -- the suite compiled to nothing\n' "$arm" "$suite" >> "$OUT"
       fail=1
     fi
