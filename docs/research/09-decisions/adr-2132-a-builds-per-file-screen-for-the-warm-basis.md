@@ -293,13 +293,29 @@ pivot combines rows, so it creates nonzeros. `MAX_WARM_CUBE_NONZEROS` bounds the
 count at CONSTRUCTION and nothing after it; `m × (nvars+m)` is the ceiling
 fill-in cannot pass.
 
-[ADR-2111] changed the representation and recorded that it did **not** take the
-fill-in measurement. `warm_cube_fill_peak` is that measurement's numerator — the
-largest nonzero count the warm tableau has held over its life — and it is
-reported in §6 against the count the engine was admitted on. The history
-(`git log -S MAX_TABLEAU_CELLS`) adds the second reason, which is ADR-2125's and
-unchanged: the constant governs the ONLINE engine's admission too, and moving it
-would make an A/B of one lever an A/B of two routes.
+**The reason is not new and this lane does not claim it.** `config_registry.rs`'s
+own note on `MAX_TABLEAU_CELLS` already says the constant is *"STALE IN ITS OWN
+UNIT SINCE ADR-2111"* and that it is left in place because *"it still bounds the
+PIVOT'S WORK … the number of cells is what bounds how large nnz can grow under
+fill-in"*. The history confirms the first half: the commit that introduced it
+(2026-08-03, the one that put the online theory on the warm simplex) reasons in
+*"a 4× cut in tableau cells"* and the doc comment prices 4M cells at ~128 MB
+because a `Rational` is two `i128`s. It was a MEMORY bound in the dense era.
+ADR-2111 made the storage sparse and the unit stopped describing anything the
+program allocates.
+
+What that registry note then says is the gap: *"Whether a nonzero-count bound
+should replace it needs the fill-in measurement ADR-2111 did not take."*
+
+**So what is new here is the instrument, not the argument.**
+`warm_cube_fill_peak` is that measurement's numerator — the largest nonzero
+count the warm tableau has held over its life — reported in §6 against the count
+the engine was admitted on. Until this counter existed, "fill-in is why the cell
+cap stays" was a reading of the algorithm with no number under it.
+
+The second reason is ADR-2125's and unchanged: the constant governs the ONLINE
+engine's admission too, so moving it would make an A/B of one lever an A/B of
+two routes.
 
 ## 5. Soundness and the gates
 
@@ -365,6 +381,52 @@ PLACEHOLDER — filled in at the end of the lane.
 PLACEHOLDER — filled in at the end of the lane.
 
 ## 7. Decision
+
+### 7.1 The criteria, written before the numbers
+
+Recorded here, in this file, **before the A/B on either draw had finished** —
+the reading taken immediately after this section was written put the two
+`QF_LRA` shards at **74 and 68 rows of 200**, and the committing SHA is the
+evidence of when. [ADR-2125] put its
+criteria in a §7.1 after its §7 for the same reason and said so; this puts them
+in before it, which is the same discipline one step earlier.
+
+`screened` ships ON only if **all** of the following hold. Anything short of all
+of them ships `off`.
+
+1. **0 soundness disagreements** against the files' declared `:status`, at a
+   comparable denominator that is printed rather than implied.
+2. **0 stable losses and 0 flips** on the pinned `QF_LRA` draw, where "stable"
+   means the 3×-per-arm recheck agrees. A raw mover is not a finding: ADR-1966
+   had 11 of 18 vanish under exactly this recheck.
+3. **0 stable losses on the HELD-OUT draw too.** The pinned list is the
+   population every number in ADR-2111 and on the board was measured on, so an
+   A/B on it alone is an A/B on the training set.
+4. **No stable loss in the five exposure divisions**, each with its own
+   denominator, and a division with no rows reported as **did not run** rather
+   than as zero movement.
+5. **`warm_cube_build = built` on a nonzero share of the treatment rows**, and
+   the screened arm's `built` count **strictly below** the `on` arm's. This is
+   ADR-2125's criterion 5 plus the half that is specific to a screen: an arm
+   that opened on everything is `on` under another name, and would satisfy
+   criteria 1–4 while measuring nothing this lane built.
+6. **Every one of the six z3 differential fuzzes green in all three arms with a
+   NONZERO test count.** They are `#![cfg(feature = "z3")]` and compile to zero
+   tests without the feature, printing `running 0 tests ... ok` and exiting 0.
+
+**Criterion 3 is already known to fail.** §2 measured `uart-8.induction.cvc` at
+1,598 builds — the winning shape — before this code existed, so a builds-per-file
+screen cannot remove that stable loss. The A/B is run anyway and in full, for
+three reasons that are not "to confirm what we know":
+
+* a stable loss is a claim about a 3× recheck on THIS binary, not an inheritance
+  from ADR-2125's;
+* criteria 1, 5 and 6 are about soundness and mechanism and are not implied by
+  criterion 3's failure; and
+* the −9.2 % attribution ADR-2125 was told not to skip needs the paired arms
+  whatever the ship decision is.
+
+### 7.2 The result
 
 PLACEHOLDER — filled in at the end of the lane.
 
