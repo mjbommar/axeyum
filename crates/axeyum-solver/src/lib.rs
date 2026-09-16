@@ -1428,7 +1428,19 @@ macro_rules! full_exports {
             assertions: &[axeyum_ir::TermId],
         ) -> Option<crate::backend::CheckResult> {
             crate::nra_real_root::reset_cad_decline();
-            crate::nra_single_cell::decide_single_cell(arena, assertions, None)
+            crate::nra_single_cell::decide_single_cell(arena, assertions, None, true)
+        }
+
+        /// As [`single_cell_decide_for_testing`], but with `unsat` withheld —
+        /// the `single-cell-sat` arm's behaviour.
+        #[doc(hidden)]
+        #[must_use]
+        pub fn single_cell_decide_sat_only_for_testing(
+            arena: &axeyum_ir::TermArena,
+            assertions: &[axeyum_ir::TermId],
+        ) -> Option<crate::backend::CheckResult> {
+            crate::nra_real_root::reset_cad_decline();
+            crate::nra_single_cell::decide_single_cell(arena, assertions, None, false)
         }
 
         /// The cause the single-cell route last recorded, as a stable key.

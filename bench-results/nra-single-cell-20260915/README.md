@@ -27,3 +27,22 @@ which this slice does not close.
 
 **24 is a ceiling, not a prediction.** It is the count of files the route is
 allowed to attempt. What it decides is what the A/B measures.
+
+## What is here, and what is deliberately not
+
+**Committed**: every list a run consumed (`*-200.txt`, `shard<N>-<div>.txt`,
+`movers-*`), every measurement it produced (`*.tsv`, `*.txt`), and every runner
+(`*.sh`, `*.py`). The shard lists are committed even though a stride over the
+200-file list reproduces them, because "which core ran which file" is part of an
+interleaved A/B's frame and a later reader should not have to re-derive it.
+
+**Not committed, and not scratch either — deleted**: the `ab-*-shard<N>.log`
+progress logs. They carry one line per file (`[ab0 41] A=… B=… <path>`) and the
+TSV beside them carries the same rows with the timings, so the log is strictly
+redundant with committed data. `probe-inbounds-24.tsv` was deleted for a
+different reason: it was produced by a binary from BEFORE the rational-point-cell
+fix, so it describes an engine that no longer exists.
+`cause-inbounds-24.tsv` supersedes it on the same 24 files.
+
+**Never committed**: `bench-results/frontier/*.json`. The `progress_frontier`
+ratchet rewrites five of them on every run; they were restored, not staged.

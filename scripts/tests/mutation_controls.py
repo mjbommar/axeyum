@@ -11127,6 +11127,19 @@ SUITES["nra-cad-attribution"] = (
             '    } else if value.eq_ignore_ascii_case("single-cell") {',
             "    } else if false {",
         ),
+        (
+            # The `single-cell-sat` arm exists to take the EXACT half of the
+            # route and leave the sampled half behind. An arm that ran the route
+            # and quietly kept its `unsat` would make the sat-only A/B a second
+            # measurement of the full arm -- and would put a verdict justified by
+            # a finite sample onto the default path, which is the one thing this
+            # arm was created to avoid.
+            "the `single-cell-sat` arm actually withholds `unsat`",
+            '        arm: "single-cell-sat",\n        cell_cap: MAX_CAD_CELLS,\n'
+            "        single_cell: true,\n        emit_unsat: false,",
+            '        arm: "single-cell-sat",\n        cell_cap: MAX_CAD_CELLS,\n'
+            "        single_cell: true,\n        emit_unsat: true,",
+        ),
     ],
 )
 
@@ -11312,6 +11325,16 @@ SUITES["nra-single-cell-delineability"] = (
             "a nullified polynomial stops the projection",
             "        if is_nullified_at(p, elim, sample) {",
             "        if false {",
+        ),
+        (
+            # Ignore the arm's instruction and emit the refutation anyway. On the
+            # `single-cell-sat` default that is a verdict justified by a sampling
+            # delineability check reaching the shipped path -- silently, because
+            # the verdict is CORRECT on every fixture and only its JUSTIFICATION
+            # changed. Nothing that looks at a verdict alone could catch it.
+            "the withholding arm does not emit the refutation it reached",
+            "            if !emit_unsat {",
+            "            if false {",
         ),
     ],
 )
