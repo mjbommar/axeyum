@@ -96,6 +96,15 @@ now. Nothing was deleted.
   zero admissible raw shards. Resumable/process-free readiness work exists, but
   a representative current-main run has not been admitted or published.
 
+- The five worst divisions (QF_NRA, QF_LRA, QF_NIA, UFLIA, AUFDTLIRA) were
+  traced end to end against z3 and cvc5 on 2026-09-15/16 (nineteen lanes):
+  QF_NRA 117 → 122 shipped (ADR-2121/2126); every other gap now names a
+  mechanism at `file:line` with an A/B behind it, and two measured gains wait
+  on the ship criterion (ADR-2134, ADR-2136). Scoreboard, findings and the
+  ranked resume queue:
+  [five-divisions-stock-take-2026-09-16.md](docs/plan/five-divisions-stock-take-2026-09-16.md)
+  (queue item A13).
+
 ### Recent landed changes that set the next direction
 
 | Date | Commit | Result |

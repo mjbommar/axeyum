@@ -133,6 +133,15 @@ now. Nothing was deleted.
   zero admissible raw shards. Resumable/process-free readiness work exists, but
   a representative current-main run has not been admitted or published.
 
+- The five worst divisions (QF_NRA, QF_LRA, QF_NIA, UFLIA, AUFDTLIRA) were
+  traced end to end against z3 and cvc5 on 2026-09-15/16 (nineteen lanes):
+  QF_NRA 117 → 122 shipped (ADR-2121/2126); every other gap now names a
+  mechanism at `file:line` with an A/B behind it, and two measured gains wait
+  on the ship criterion (ADR-2134, ADR-2136). Scoreboard, findings and the
+  ranked resume queue:
+  [five-divisions-stock-take-2026-09-16.md](docs/plan/five-divisions-stock-take-2026-09-16.md)
+  (queue item A13).
+
 ### Recent landed changes that set the next direction
 
 | Date | Commit | Result |
@@ -48433,7 +48442,7 @@ denominators.
 - A Sonnet lane's forked helpers inherited the whole brief and rebuilt both
   deliverables in parallel. Helpers get their slice only, as fresh agents.
 
-Status: **paused at the user's request, 2026-09-16 afternoon; rounds one to four closed, round five wound down after sizing**. Five trace lanes, four rounds of build lanes and probes (nineteen lanes), all merged; two levers shipped ON (QF_NRA 117 → 122, ADR-2121/2126); one more lever is +4 stable on the pinned list with its held-out draw unfinished (ADR-2134, OFF); every other lever ships OFF with an A/B and a named next increment. `origin/main` is `b548367ff`; local main carries the day's landings and the push runs after the final fuzz pass. The frame is the 16-division board (200 files each) and the Tier 1 ledger sweep on `db31113fa`; the references are z3 4.13.3 and cvc5 1.3.4 on the same lists (UFLIA's "144" is the z3∪cvc5 union; cvc5 alone is 142). Bitwuzla does neither arithmetic nor quantifiers and is not a reference here.
+Status: **paused at the user's request, 2026-09-16 afternoon; rounds one to four closed, round five wound down after sizing**. Five trace lanes, four rounds of build lanes and probes (nineteen lanes), all merged; two levers shipped ON (QF_NRA 117 → 122, ADR-2121/2126); one more lever is +4 stable on the pinned list with its held-out draw unfinished (ADR-2134, OFF); every other lever ships OFF with an A/B and a named next increment. The frame is the 16-division board (200 files each) and the Tier 1 ledger sweep on `db31113fa`; the references are z3 4.13.3 and cvc5 1.3.4 on the same lists (UFLIA's "144" is the z3∪cvc5 union; cvc5 alone is 142). Bitwuzla does neither arithmetic nor quantifiers and is not a reference here. The stock-take and the ranked resume queue are in [five-divisions-stock-take-2026-09-16.md](docs/plan/five-divisions-stock-take-2026-09-16.md) (queue item A13); `origin/main` is `16087e477` after the 2026-09-16 push.
 
 ## The traces (all `proposed`, all merged)
 
@@ -74897,6 +74906,41 @@ that ADR first (Phase B0 of
 [12-cdcl-consolidation-plan.md](docs/solver-comparison-2026-09/12-cdcl-consolidation-plan.md))
 so the wider trait is not built on the wrong engine. Do not treat any number produced here as a parity
 ledger entry; this is instrumentation, not a `PARITY.md` sweep.
+
+### A13 — The five worst divisions: mechanism-named queue (`PAUSED`, P1)
+
+**State, 2026-09-16.** Nineteen lanes over 2026-09-15/16 traced QF_NRA,
+QF_LRA, QF_NIA, UFLIA and AUFDTLIRA end to end against z3 and cvc5 and built
+a lever for each named block. QF_NRA moved 117 → 122 (ADR-2121, ADR-2126);
+nothing else moved a default. Two levers hold measured gains short of the ship
+bar (ADR-2134 +4 on QF_NRA pending its held-out draw; ADR-2136 +10/−3 over
+800 files on QF_NIA and UFNIA). Every other lever ships OFF with an A/B and a
+written reason. The stock-take, the scoreboard, and what each gap is at
+`file:line` are in
+[five-divisions-stock-take-2026-09-16.md](docs/plan/five-divisions-stock-take-2026-09-16.md);
+the lane-by-lane record is the coordinator's status file below. Paused at the
+user's request; the campaign resumes from this queue, in this order:
+
+1. Finish ADR-2134's held-out draw (~60 min); on 0 stable losses, ship the
+   algebraic witness (QF_NRA 126 expected).
+2. QF_LRA: admit the online tableau on nonzeros, not dense cells (27 of the 47
+   files that lose on the mislabelled "arithmetic outside the engine" refusal),
+   then the disequality split lemma at the replay gate (11 files). Five
+   LRA/DL/LIA z3 fuzzes mandatory.
+3. QF_NIA: separate "emit the order/monotonicity lemmas" from "widen the refine
+   slice"; the three stable-loss files score it. On 0 stable losses, arm
+   `AXEYUM_NIA_ORDER_LEMMAS`.
+4. UFLIA/AUFDTLIRA: two fixtures on activating a universal nested inside
+   another binder (`qinst_egraph.rs:1948` forces the positive context off),
+   a per-core split of `inactive_dropped`, then the levers-composed sweep with
+   a threshold above the ±1 noise floor.
+5. Re-measure the 16-division board on current head before scoring any of the
+   above; the ledger frame (`db31113fa`) is 313 commits behind.
+
+**Exit.** Each of items 1–4 either moves a default under the ship criterion
+(0 stable losses, 0 flips, ≥1 stable gain on pinned AND held-out) or records
+its A/B and the next increment in an ADR. **Stop.** A lever whose A/B shows a
+stable loss stays OFF; nothing ships on a pinned-list gain alone.
 
 ## Families and divisions
 
