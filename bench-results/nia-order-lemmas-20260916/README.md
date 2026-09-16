@@ -207,7 +207,7 @@ exits 0 — the shape that left one gate inert for 15 days here.
 | `cargo check --workspace --all-targets` (default features) | clean |
 | `run-dispatch-reason-suites.sh` | **28 of 28 suites green**, every one with a nonzero count; `ALL dispatch/reason SUITES GREEN` |
 | `cargo test -p axeyum-solver --lib --features full -- --skip reconstruct::` | 1644 passed, **2 failed** — see below |
-| `cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1` | **12 passed, 0 failed**, including `frontier_nia_unsat`; no `REGRESSION` |
+| `cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1` | **12 passed, 0 failed**. Re-run with `--nocapture` on a QUIET frame (load 5.5 → 6.5, calibration scale 1.08x) to read the frames rather than infer them: **`FRONTIER nia_unsat = 40 (baseline 40)`** — the family that once regressed 17 points, holding — plus `nra_degree` 40/40 and three `PROGRESS` rows (`bv_reduction` +6, `lia_cuts` +9, `string_bound` +32) that predate this lane. **No `REGRESSION` anywhere.** `bench-results/frontier/*.json` deliberately NOT committed. |
 | `config_registry::tests` | **18 passed, 0 failed** |
 | mutation `nia-order-lemmas` | baseline **27 green**; 2 mutations, both MEASURED, killing 5 and 2; `--check-anchors` `suites=162 anchors=1124 stale=0` |
 | `check-config-registry-staleness.py` | 516 entries, **0 unexplained** |
