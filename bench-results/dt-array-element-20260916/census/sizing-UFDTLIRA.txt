@@ -1,0 +1,21 @@
+### UFDTLIRA: 200 rows, 144 decided, 56 undecided
+  terminal site (undecided rows):
+      14  quant:instantiation-sat
+      12  quant:ematching
+       7  dt:ack-pair-bound
+       6  bv:datatype-sorted-term
+       4  quant:mbqi-unsupported
+       4  dt:exactness-arg
+       2  quant:time-budget
+       2  dt:exactness-result
+       2  OTHER: quantifier over non-enumerable domain (Uninterpreted 4)
+       1  quant:mbqi-rounds
+       1  OTHER: quantifier over non-enumerable domain Int
+       1  OTHER: quantifier over non-enumerable domain (Datatype 9)
+  undecided rows whose TERMINAL detail is the W1 refusal: 0 / 56
+  undecided rows where the W1 refusal appears ANYWHERE in the trail: 0 / 56
+  reach join: 55 / 56 undecided rows have a reach row
+  undecided rows whose FILE declares >=1 W1-refused datatype: 0 / 56
+  refused-sort split (datatype instances, over those rows' files):
+  terminal site of the W1-carrying undecided rows:
+
