@@ -311,6 +311,72 @@ That is load-bearing, and it is what the mutation suite aims at.
 `crates/axeyum-solver/tests/quant_session_arith_certificate.rs` (3): the
 certificate invariant — see §7.
 
+### 5.1 Mutations — all six killed, and one of them only after a fixture was fixed
+
+`scripts/tests/mutation_controls.py`, suites `qinst-session-arith` (baseline
+**8** tests) and `qinst-refuted-certificate` (baseline **3**):
+
+| guard removed | outcome |
+|---|---|
+| **`pop` forwards to the arithmetic sub-theory, retracting its bounds** | **killed exactly 1** — `pop_retracts_an_arithmetic_bound_a_backjump_undid` |
+| `assert` reaches the arithmetic sub-theory at all | killed 2 |
+| a rebuild replays the root assignments into the replacement | killed 1 |
+| only order atoms are pulled back from the abstraction | killed 1 |
+| `take_new_atoms` stays zero on the driver-registered route | killed 1 |
+| **the fixpoint refutation exit collects an instance-set certificate** | **killed 2** — `the_candidate_fixpoint_refutation_exit_is_certified` and `every_instance_set_unsat_exit_assigns_a_certificate` |
+
+The last row is [ADR-2124]'s surviving mutation, now closed: its own run of the
+same removal against the whole `quant_instance_set_cert::` surface left 9 tests
+running and all 9 surviving.
+
+**The fifth row SURVIVED on its first run, and the fixture was the defect.**
+`take_new_atoms_is_always_zero_because_the_driver_registers` flushed the pending
+registration and *then* asserted — and `lia_pending` is zero after a flush, so it
+read `0` whether or not the channel was reporting. The assertion now runs **while
+a registration is pending**, which is the only moment the wrong answer is
+observable, and keeps the post-flush check as a second case. This is the failure
+mode the discipline names: a test that cannot fail for the reason it exists.
+
+`--check-anchors` over the whole file: **158 suites, 1,118 anchors, stale=0**.
+
+### 5.2 Verification
+
+Every row ran with a **nonzero** test count, checked because a feature-gated
+suite compiles to nothing and exits 0.
+
+| gate | result |
+|---|---|
+| `clippy --workspace --all-targets --all-features -- -D warnings` | **clean** |
+| `cargo fmt --all --check` | clean |
+| `cargo check --workspace --all-targets`, default features | clean |
+| `--test quant_session_arith_certificate` | 3 passed, 0 failed |
+| `--lib qinst_session_theory` | 8 passed, 0 failed |
+| `--lib ground_session` | 6 passed, 0 failed |
+| `--lib schedule` | 12 passed, 0 failed |
+| `--lib config_registry::` | 18 passed, 0 failed |
+| `--test quantified_route_trace` | 6 passed, 0 failed |
+| `--test quantifier_positive_path` | 15 passed, 0 failed |
+| `--test quantifier_trigger_alternatives` | 7 passed, 0 failed |
+| `--test quant_ground_session_soundness` | 3 passed, 0 failed |
+| `--features z3 --test qf_uflra_differential_fuzz` | 1 passed, 0 failed |
+| `--features z3 --test qf_lia_differential_fuzz` | 4 passed, 0 failed |
+| `--features z3 --test qf_lra_differential_fuzz` | 5 passed, 0 failed |
+| `check-config-registry-staleness.py` | PASS, 0 unexplained |
+| `check-suite-gating.py` | PASS, the new suite gated |
+| `check-merge-hygiene.sh` | PASS, markers=0 |
+| `check-links.sh` | all links ok |
+
+**The workspace lint is the form that matters, and it found three defects the
+per-crate form did not.** `-p … --features full` clippy was clean on all of
+them: a `build`/`built` near-collision at the trace site, a doc backtick pair
+split across a line break, and `new_with_limits` crossing the 100-line ceiling
+once the level-2 atom pass was added. The last is why that pass and the limits
+check are now `append_session_lia_atoms` and `within_online_quantifier_limits`.
+
+The quantified suites and the default-features check were **re-run** after that
+extraction rather than inherited from the earlier battery: "the earlier run was
+green" is a claim about earlier code.
+
 ## 6. Measurement
 
 ### 6.1 The lever engages — and this had to be measured before any A/B
@@ -520,9 +586,13 @@ were not run**, per §7.
 
 **The new differential seed class was not built.** The brief asked for
 quantifier-free UFLIA sets assembled incrementally (atoms pushed in rounds) and
-compared against z3 on the whole set. That is the check that would catch a
-wrong-`unsat` from the growth path on shapes no committed corpus contains, and
-it is the most valuable thing left undone here.
+compared against z3 on the whole set. The three existing z3 fuzzes ran green
+(§5.2) but **none of them exercises the growth path**: they build a theory once
+over a fixed atom set, which is the one thing this lane changed. So the route
+that rebuilds the arithmetic tableau mid-session has **no oracle coverage at
+all**, and its soundness rests on the in-crate fixtures, the mutation suite, and
+the argument in §4.5 and §5. That is the most valuable thing left undone here,
+and it is the gap a reader should weigh before turning this lever on.
 
 **Interface equalities are not propagated** between the two sub-theories (§4.1),
 and **growth rebuilds the arithmetic tableau** rather than appending to it

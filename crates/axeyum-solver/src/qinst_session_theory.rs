@@ -760,13 +760,28 @@ mod tests {
         let (a_lt_one, a_gt_five, _, a_eq_b) = fixture(&mut arena);
         let atoms = vec![a_eq_b, a_gt_five];
         let mut theory = hosted(&arena, &atoms);
-        assert_eq!(theory.take_new_atoms(), 0);
+        assert_eq!(theory.take_new_atoms(), 0, "nothing registered yet");
+
+        // ASSERTED WHILE A REGISTRATION IS PENDING, which is the only moment the
+        // wrong answer is observable. The first version of this fixture flushed
+        // first and then asserted -- and `lia_pending` is 0 after a flush, so it
+        // read 0 whether or not the channel was reporting. The mutation suite
+        // found that: "take_new_atoms stays zero on the driver-registered route"
+        // SURVIVED against 8 tests, none of which depended on the guard.
         theory.add_atom_at_root(&arena, a_lt_one).unwrap();
+        assert_eq!(
+            theory.take_new_atoms(),
+            0,
+            "an atom registered through the DRIVER-side channel must NOT also be \
+             reported here -- the core would append a second SAT variable for it \
+             and every later atom index would be off by one"
+        );
+
         theory.flush_pending_atoms(&arena);
         assert_eq!(
             theory.take_new_atoms(),
             0,
-            "registering an atom must NOT be reported through this channel"
+            "and still zero once the pending registration has been flushed"
         );
     }
 
