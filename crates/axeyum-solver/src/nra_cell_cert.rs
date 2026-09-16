@@ -157,6 +157,24 @@ impl CertCmp {
         }
     }
 
+    /// The comparison that holds exactly when this one does not.
+    ///
+    /// A sign atom's negation is another sign atom over the SAME polynomial, so
+    /// a Boolean layer above this never has to hand the theory a negation --
+    /// which is what lets [`crate::nra_clause_loop`] turn a propositional model
+    /// straight into a conjunction (ADR-2126).
+    #[must_use]
+    pub const fn negate(self) -> Self {
+        match self {
+            Self::Eq => Self::Ne,
+            Self::Ne => Self::Eq,
+            Self::Lt => Self::Ge,
+            Self::Ge => Self::Lt,
+            Self::Le => Self::Gt,
+            Self::Gt => Self::Le,
+        }
+    }
+
     /// A stable, matchable key.
     #[must_use]
     pub const fn name(self) -> &'static str {
@@ -2234,6 +2252,40 @@ mod tests {
             ok.is_ok(),
             "the guard must not refuse a sound covering: {ok:?}"
         );
+    }
+
+    /// Negation is an involution and disagrees with the original on EVERY sign.
+    ///
+    /// Derived over all six comparisons and all three signs, not spot-checked:
+    /// this is the identity the clause loop turns a false propositional literal
+    /// into a theory atom with, and a single wrong row would make the loop hand
+    /// the theory a constraint the Boolean model did not ask for.
+    #[test]
+    fn negating_a_comparison_flips_it_at_every_sign() {
+        let all = [
+            CertCmp::Eq,
+            CertCmp::Ne,
+            CertCmp::Lt,
+            CertCmp::Le,
+            CertCmp::Gt,
+            CertCmp::Ge,
+        ];
+        for cmp in all {
+            assert_eq!(
+                cmp.negate().negate(),
+                cmp,
+                "{} is not an involution",
+                cmp.name()
+            );
+            for sign in [Sign::Neg, Sign::Zero, Sign::Pos] {
+                assert_ne!(
+                    cmp.holds(sign),
+                    cmp.negate().holds(sign),
+                    "{} and its negation agree at {sign:?}",
+                    cmp.name()
+                );
+            }
+        }
     }
 
     #[test]

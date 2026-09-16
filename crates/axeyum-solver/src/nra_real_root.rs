@@ -417,6 +417,19 @@ pub fn decide_real_poly_constraint(
         return Ok(Some(res));
     }
 
+    // ADR-2126: the clause loop, offered ONLY where the conjunctive route just
+    // refused for the one reason the loop exists to remove. Reading the recorded
+    // cause rather than re-deriving the shape is deliberate -- the route's own
+    // attribution is the authority on why it declined, and a second opinion here
+    // could disagree with it.
+    if cad_policy().clause_loop
+        && cad_decline() == CadDecline::NonConjunctive
+        && let Some(res @ CheckResult::Sat(_)) =
+            crate::nra_clause_loop::decide_clause_loop(arena, assertions, deadline)
+    {
+        return Ok(Some(res));
+    }
+
     let decomposed = decompose_multivariate(arena, assertions, deadline);
     match decomposed {
         // A definitive verdict from the decomposition wins; nothing below can
@@ -3842,7 +3855,35 @@ pub(crate) enum CadDecline {
     /// result is thrown away is pure cost on a default path. Whether the
     /// certificate would have been accepted is unknown at this point and must
     /// not be claimed.
-    UnsatWithheldSampledDelineability,
+    ///
+    /// Renamed by ADR-2126. It was `UnsatWithheldSampledDelineability`, after
+    /// the reason ADR-2121 withheld the half: the checker's delineability test
+    /// was sampling. That test is now EXACT
+    /// ([`crate::nra_cell_cert`] check 6a), so the old name asserted something
+    /// about the checker that stopped being true. The cause is about the ARM,
+    /// not about the checker, and now says so.
+    UnsatWithheldByArm,
+    /// The clause loop was offered a query whose Boolean structure it does not
+    /// abstract: a leaf that is not a polynomial comparison (a Boolean variable,
+    /// say), a connective outside `not`/`and`/`or`/`xor`/`=>`, or more than
+    /// [`crate::nra_clause_loop::MAX_CLAUSE_ATOMS`] distinct atoms. A REFUSAL by
+    /// declaration (ADR-2126).
+    ClauseLoopShape,
+    /// The clause loop ran out of its declared budget --
+    /// [`crate::nra_clause_loop::MAX_CLAUSE_LOOP_ROUNDS`] theory calls, or the
+    /// SAT core stopping without a verdict (ADR-2126).
+    ClauseLoopBudget,
+    /// The clause loop REFUTED the Boolean abstraction, and this arm does not
+    /// emit that as `unsat`.
+    ///
+    /// Read it precisely: the loop reached a refutation, which is strictly more
+    /// than `unknown` says. It is withheld because an `unsat` here rests on three
+    /// things no checker in this tree can yet read -- the Tseitin encoding being
+    /// equisatisfiable, every blocking clause being implied, and the SAT core's
+    /// own refutation. The evidence that would close it is named in
+    /// [`crate::nra_clause_loop`]'s module docs: a `CellRefutation` per blocking
+    /// clause plus a DRAT refutation of the clause set (ADR-2126).
+    ClauseLoopUnsatUncertified,
     /// A cell whose only satisfying points are ALGEBRAIC: every atom of the
     /// level holds at an irrational root, so a model exists there but the
     /// single-cell slice carries rational samples only and cannot descend into
@@ -3876,8 +3917,11 @@ impl CadDecline {
             Self::IndeterminateSign => "indeterminate-sign",
             Self::SliceBounds => "slice-bounds",
             Self::CertificateRejected => "certificate-rejected",
+            Self::ClauseLoopShape => "clause-loop-shape",
+            Self::ClauseLoopBudget => "clause-loop-budget",
+            Self::ClauseLoopUnsatUncertified => "clause-loop-unsat-uncertified",
             Self::AlgebraicWitness => "algebraic-witness",
-            Self::UnsatWithheldSampledDelineability => "unsat-withheld-sampled-delineability",
+            Self::UnsatWithheldByArm => "unsat-withheld-by-arm",
         }
     }
 
@@ -3904,7 +3948,10 @@ impl CadDecline {
         Self::SliceBounds,
         Self::CertificateRejected,
         Self::AlgebraicWitness,
-        Self::UnsatWithheldSampledDelineability,
+        Self::UnsatWithheldByArm,
+        Self::ClauseLoopShape,
+        Self::ClauseLoopBudget,
+        Self::ClauseLoopUnsatUncertified,
     ];
 }
 
@@ -3967,6 +4014,14 @@ pub(crate) struct CadPolicy {
     /// an arm can take the exact half and leave the sampled half behind, and the
     /// `single-cell-sat` arm is exactly that.
     pub(crate) emit_unsat: bool,
+    /// Whether the clause loop ([`crate::nra_clause_loop`]) is offered the query
+    /// when the conjunctive route declines `non-conjunctive` (ADR-2126).
+    ///
+    /// Strictly additive by construction: the loop runs only AFTER the
+    /// conjunctive route has refused, so an arm with it on decides everything
+    /// the same arm without it decides, plus possibly more. Its `unsat` is not
+    /// emitted at all, so it cannot flip a verdict either.
+    pub(crate) clause_loop: bool,
 }
 
 impl CadPolicy {
@@ -3976,6 +4031,7 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS,
         single_cell: false,
         emit_unsat: true,
+        clause_loop: false,
     };
 
     /// 16x the cells. Raising the cap can only let the decomposition VISIT more
@@ -3988,6 +4044,7 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS * 16,
         single_cell: false,
         emit_unsat: true,
+        clause_loop: false,
     };
 
     /// ADR-2121's arm: run [`crate::nra_single_cell`] ahead of the enumerative
@@ -3999,6 +4056,7 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS,
         single_cell: true,
         emit_unsat: true,
+        clause_loop: false,
     };
 
     /// The **exact half only**: run the route, take its `sat` (a rational model
@@ -4013,6 +4071,25 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS,
         single_cell: true,
         emit_unsat: false,
+        clause_loop: false,
+    };
+
+    /// ADR-2126's arm: the shipped `single-cell-sat` route PLUS the clause loop
+    /// ([`crate::nra_clause_loop`]) behind it, for the queries the conjunctive
+    /// route refuses as `non-conjunctive` — 12 of ADR-2121's 24 in-bounds files,
+    /// half the slice.
+    ///
+    /// It differs from [`Self::SINGLE_CELL_SAT`] in exactly `clause_loop`: same
+    /// cell cap, same `single_cell`, same `emit_unsat`. So an A/B between the two
+    /// prices the loop alone, and the loop runs only where the conjunctive route
+    /// has already refused — strictly additive, and its `unsat` is withheld, so
+    /// it cannot flip a verdict.
+    pub(crate) const CLAUSE_LOOP: Self = Self {
+        arm: "clause-loop",
+        cell_cap: MAX_CAD_CELLS,
+        single_cell: true,
+        emit_unsat: false,
+        clause_loop: true,
     };
 }
 
@@ -4024,7 +4101,7 @@ impl CadPolicy {
 /// verdict the new default adds is a `sat` replayed exactly against the original
 /// assertions. The half of that route whose justification is a finite sample
 /// (`unsat`, gated on `nra_cell_cert`'s sampling delineability check) is
-/// withheld here as [`CadDecline::UnsatWithheldSampledDelineability`] and reaches
+/// withheld here as [`CadDecline::UnsatWithheldByArm`] and reaches
 /// no default.
 ///
 /// The cell cap is unchanged at [`MAX_CAD_CELLS`], so this is a route change and
@@ -4054,6 +4131,8 @@ fn parse_cad_arm(value: &str) -> CadPolicy {
         CadPolicy::SINGLE_CELL
     } else if value.eq_ignore_ascii_case("single-cell-sat") {
         CadPolicy::SINGLE_CELL_SAT
+    } else if value.eq_ignore_ascii_case("clause-loop") {
+        CadPolicy::CLAUSE_LOOP
     } else if value.eq_ignore_ascii_case("default") {
         // EXPLICIT, not a fallback. `CAD_DEFAULT` is `SINGLE_CELL_SAT` as of
         // ADR-2121, so without this arm `AXEYUM_NRA_CAD=default` would resolve
@@ -8299,6 +8378,7 @@ mod tests {
             CadPolicy::WIDE,
             CadPolicy::SINGLE_CELL,
             CadPolicy::SINGLE_CELL_SAT,
+            CadPolicy::CLAUSE_LOOP,
         ];
 
         let routed: Vec<&str> = arms
@@ -8308,8 +8388,21 @@ mod tests {
             .collect();
         assert_eq!(
             routed,
-            vec!["single-cell", "single-cell-sat"],
-            "exactly the two single-cell arms turn the route on"
+            vec!["single-cell", "single-cell-sat", "clause-loop"],
+            "exactly the single-cell arms turn the route on"
+        );
+
+        // ADR-2126's arm turns the clause loop on and NOTHING else does, so an
+        // A/B against `single-cell-sat` prices the loop alone.
+        let looping: Vec<&str> = arms
+            .iter()
+            .filter(|p| p.clause_loop)
+            .map(|p| p.arm)
+            .collect();
+        assert_eq!(
+            looping,
+            vec!["clause-loop"],
+            "exactly one arm turns the clause loop on"
         );
 
         // The `unsat`-withholding arm is the ONLY one that withholds. An arm
@@ -8322,9 +8415,21 @@ mod tests {
             .collect();
         assert_eq!(
             withholding,
-            vec!["single-cell-sat"],
-            "exactly one arm withholds `unsat`"
+            vec!["single-cell-sat", "clause-loop"],
+            "exactly the two sat-only arms withhold `unsat`"
         );
+
+        // `clause-loop` differs from `single-cell-sat` in EXACTLY `clause_loop`.
+        // The two ways this A/B could go vacuous are the arm carrying
+        // `clause_loop: false` (the treatment IS the control) and the arm
+        // carrying a different cell cap or `emit_unsat` (the A/B measures two
+        // things at once). Both would print a clean number.
+        let sat_only = arms[3];
+        let looped = arms[4];
+        assert_eq!(sat_only.cell_cap, looped.cell_cap);
+        assert_eq!(sat_only.single_cell, looped.single_cell);
+        assert_eq!(sat_only.emit_unsat, looped.emit_unsat);
+        assert_ne!(sat_only.clause_loop, looped.clause_loop);
 
         let default = arms[0];
         assert_eq!(
@@ -9114,6 +9219,33 @@ pub(crate) fn collect_cert_atoms(
         out.push(CertAtom::new(cmp, atom.poly.terms.into_iter().collect()));
     }
     Some(out)
+}
+
+/// ONE polynomial comparison as a certificate atom, or `None` if `term` is not
+/// one.
+///
+/// The leaf case of the clause loop's Boolean abstraction
+/// ([`crate::nra_clause_loop`]): `collect_cert_atoms` walks a CONJUNCTION and
+/// refuses at the first non-`and` node, which is exactly the refusal ADR-2126
+/// removes, so the loop needs the single-atom match on its own (ADR-2126).
+///
+/// Records NO decline: a non-atom leaf is an ordinary outcome for a caller that
+/// is deciding which encoding a node needs, and the caller attributes.
+pub(crate) fn cert_atom_of(
+    arena: &TermArena,
+    term: TermId,
+) -> Option<crate::nra_cell_cert::CertAtom> {
+    use crate::nra_cell_cert::{CertAtom, CertCmp};
+    let (cmp, poly) = match_multi_constraint(arena, term)?;
+    let cmp = match cmp {
+        Cmp::Eq => CertCmp::Eq,
+        Cmp::Ne => CertCmp::Ne,
+        Cmp::Lt => CertCmp::Lt,
+        Cmp::Le => CertCmp::Le,
+        Cmp::Gt => CertCmp::Gt,
+        Cmp::Ge => CertCmp::Ge,
+    };
+    Some(CertAtom::new(cmp, poly.terms.into_iter().collect()))
 }
 
 /// A [`MultiPoly`] from the certificate representation. Both are monomial maps,
