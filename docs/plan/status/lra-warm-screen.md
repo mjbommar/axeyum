@@ -230,31 +230,41 @@ different value on this counter.
 ### 9. The exposure divisions
 
 ```
-division   rows  off  screened  net  gain  LOSS  FLIP  rc!=0  cmp  DIS   lever
-QF_LIA      200  127       127   +0     0     0     0      0  248    0   INERT
-QF_UFLRA    200  149       149   +0     0     0     0      0  298    0   active (6 rows, 417 cubes)
-QF_UFLIA    200  162       162   +0     0     0     0      0  324    0   INERT
-QF_IDL      200  109       110   +1     1     0     0      0  219    0   INERT
-QF_RDL            RUNNING
+division   rows  off  screened  net  gain  LOSS  FLIP  cmp   DIS   the lever
+QF_LIA      200  127       127   +0     0     0     0   248    0   INERT
+QF_UFLRA    200  149       149   +0     0     0     0   298    0   ACTIVE (6 rows, 417 cubes)
+QF_UFLIA    200  162       162   +0     0     0     0   324    0   INERT
+QF_IDL      200  109       110   +1     1     0     0   219    0   INERT
+QF_RDL      200  149       149   +0     0     0     0   298    0   ACTIVE (8 rows, 240 cubes)
+------------------------------------------------------------------------
+total      1000  696       697   +1     1     0     0  1387    0
 ```
 
-**0 stable losses and 0 flips in all four measured so far**, 0 soundness
-disagreements everywhere. But three of the four are INERT — no file in them
-reaches the offline linear loop's cold simplex — so they are evidence of no
-regression, not of no effect, and the mechanism columns are what separate the
-two. Only `QF_UFLRA` exercises the lever.
+**0 stable losses AND 0 stable gains.** The single raw mover
+(`QF_IDL/asp/Solitaire/solitaire-edge-time=29`) re-checks **NEITHER-DECIDES**,
+0/3 in both arms. 0 flips, 0 soundness disagreements, `cold_restarts = 0`
+throughout. **Criterion 4 met in its strong form.**
 
-`QF_IDL`'s single raw gain is on a provably inert arm, so it is ambient by
-construction; at 1 in 200 it also calibrates the floor at 0.5 %, inside the
-documented 1–1.5 % ambient flip rate. It still goes to the 3× recheck, which is
-chained behind `QF_RDL`.
+The last column is why the total is not the headline: **three of the five are
+INERT** — no file in them reaches the offline linear loop's cold simplex — so
+their zeros are evidence about the population, not about the screen. Only
+`QF_UFLRA` and `QF_RDL` exercise the lever, at 14 rows and 657 cubes between
+them. Writing "1,000 rows, 0 losses" would credit the screen with three
+populations it never touched.
+
+`QF_IDL`'s raw gain was predicted ambient from the mechanism (the screened arm
+answered zero cubes warm anywhere in that division) and the recheck agreed. Both
+are recorded: the argument would have been worth nothing had the recheck
+disagreed.
 
 ## Next
 
-1. `QF_RDL`, and the 3× recheck of every exposure mover (both chained).
-2. Size **pivots per build per atom** on the pinned 200 — the shape §2 observed
+1. Size **pivots per build per atom** on the pinned 200 — the shape §2 observed
    on two held-out rows at 0.263 against 0.124 and deliberately did not build
    on, because both points are held-out rows.
+2. Sweep the threshold — one value was measured, never a range, including
+   whether a lower one keeps `on`'s pinned gain on `sc-7.base.cvc` (1,695
+   builds, a PINNED row, so tuning against it is not training-set fitting).
 3. Split `simplex_cold_builds` per route. It counts every caller of
    `feasible_within_sparse`, not the lazy-SMT loops; the screen is unaffected
    (it compares a delta from loop entry) but the SIZING over-counts, at 0 of 68
