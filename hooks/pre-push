@@ -824,6 +824,21 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #   quantifier_positive_path
   #                            — ADR-2120: the positive-path activation lever's soundness
   #                              fixtures and its instance-set certificate.
+  #   quant_macro_inline_route
+  #                            — ADR-2127: definitional macro inlining. Its three
+  #                              soundness fixtures are stated over SATISFIABLE
+  #                              queries (occurs check, partial coverage, and a
+  #                              consistent definition), because a refutation
+  #                              fixture cannot tell "refused the macro" from
+  #                              "inlined it and the query was unsat anyway".
+  #                              RUN TWICE, and the second run is the one that
+  #                              matters: `AXEYUM_MACRO_INLINE` is read once per
+  #                              process through a `OnceLock`, and it ships OFF,
+  #                              so the default-arm run exercises a code path the
+  #                              lever keeps disabled. Gating only the default arm
+  #                              would register a suite that cannot fail for the
+  #                              reason it exists. The armed run is the line after
+  #                              this loop.
   #   quantifier_trigger_alternatives
   #                            — ADR-2113: the trigger-alternative lever's soundness-
   #                              negative fixtures over satisfiable queries at six caps.
@@ -872,10 +887,19 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
                replay_pairing_soundness \
                additive_no_overflow_never_becomes_unsat \
                lra_opaque_real_apps decline_detail_typed \
-               quantifier_trigger_alternatives quantifier_positive_path; do
+               quantifier_trigger_alternatives quantifier_positive_path \
+               quant_macro_inline_route; do
     gated_test "dispatch/reason: $suite" \
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
   done
+
+  # ADR-2127's ARMED arm. See the `quant_macro_inline_route` note above: the
+  # lever ships OFF and is read once per process, so the loop's run above covers
+  # only the disabled path. This is the run in which the three satisfiable-query
+  # soundness fixtures actually reach the inlining code.
+  gated_test "dispatch/reason: quant_macro_inline_route (AXEYUM_MACRO_INLINE=1)" \
+    env AXEYUM_MACRO_INLINE=1 \
+      cargo test -p axeyum-solver --features full --quiet --test quant_macro_inline_route
 
   # The GOLDEN LEAN MODULE pins, diff-scoped to the crate that renders them.
   #

@@ -198,6 +198,9 @@ macro_rules! full_modules {
         mod quant_guard_vacuity_search;
         mod quant_guarded_int;
         mod quant_instance_set_cert;
+        // Definitional macro finding and inlining (ADR-2127), behind the
+        // `AXEYUM_MACRO_INLINE` lever.
+        mod quant_macro_inline;
         mod quant_negated_exists_cert;
         mod quant_negated_exists_search;
         mod quant_nested_xor_cert;
