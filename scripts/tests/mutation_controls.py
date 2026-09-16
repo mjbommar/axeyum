@@ -1790,12 +1790,22 @@ SUITES["dt-nested-field-2128"] = (
             "        if false && datatype_field_closure_is_cyclic(arena, dt) {",
         ),
         (
-            # SOUNDNESS guard: without the budget check a cyclic closure recurses
-            # until the stack gives out, and any finite answer it produced would
-            # be a claim of exactness no expansion built.
-            "the exactness budget bottoms out at zero",
+            # SOUNDNESS guard: the budget alone is not the property. Without the
+            # RECURSIVE check a datatype-typed field counts as exact whenever
+            # any budget remains, so a cyclic closure is called exact -- which
+            # is the ADR-1920 antecedent-weakening shape.
+            #
+            # NOTE ON THE MUTANT'S SHAPE, because the obvious one is not usable.
+            # Deleting the `depth > 0 &&` conjunct instead makes the predicate
+            # DIVERGE on a cyclic datatype: measured 2026-09-16, that mutant
+            # reported `INCONSISTENT -- 1 test binaries started but 0 reported a
+            # result`, i.e. it took the binary down rather than failing a test.
+            # A crash is a kill in the crudest sense and it names nothing, so
+            # the mutant used here keeps the budget and drops the RECURSION,
+            # which terminates and is wrong.
+            "the exactness predicate recurses into the nested field",
             "                depth > 0 && datatype_expansion_is_exact_to_depth(arena, *inner, depth - 1)",
-            "                datatype_expansion_is_exact_to_depth(arena, *inner, depth.saturating_sub(1))",
+            "                depth > 0",
         ),
     ],
 )

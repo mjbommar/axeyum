@@ -289,10 +289,55 @@ the code:
    ("congruence over a datatype argument whose expansion is not exact"); the ON
    arm answers `unsat`.
 
-## 5. Measurement
+## 5. The OBSERVED blocker census, and what it says the lever is worth
 
-See `bench-results/dt-field-expansion-20260916/` and §"Ship decision" in
-`docs/plan/status/dt-field-expansion.md`.
+The §1b table is a SHAPE count. This is the observed one: all **318 undecided
+files** of the four DT divisions, `--trace` at 24 s on s7 pinned cores 5 and 6,
+bucketed by the code site the give-up sentence NAMES — a substring of the raw
+detail, never a bucket label, because [ADR-2020]'s census reported one cause
+where the raw details held four, and this lane's own first reading of
+DT-GROUND-PROBE's largest bucket was wrong about which sort was refused.
+
+| terminal site | n | CLEAN |
+|---|---:|---:|
+| `quant:ematching` | 101 | 26 |
+| `quant:watchdog` | 53 | 38 |
+| **`dt:exactness-result` (`:904`)** | **40** | 4 |
+| `quant:time-budget` | 31 | 21 |
+| **`dt:relaxation-incomplete`** | **29** | 0 |
+| `quant:instantiation-sat` | 14 | 0 |
+| **`dt:exactness-arg` (`:963`)** | **12** | 6 |
+| `backend:sort-mismatch` | 7 | 7 |
+| `bv:datatype-sorted-term` | 7 | 4 |
+| `dt:ack-pair-bound` | 6 | 6 |
+| `dt:model-lacks-field` | 5 | 1 |
+| `quant:mbqi-unsupported` | 4 | 4 |
+| `dt:field-sort-W1` | 2 | 0 |
+| `quant:mbqi-rounds` | 1 | 0 |
+
+**0 unmatched sentences**, and the classifier prints any it cannot match rather
+than folding them into a catch-all — a catch-all absorbs new items and reports a
+stable number that is stably wrong.
+
+The three ADR-2128 buckets are **81 of 318 (25.5 %)**. `CLEAN` is **10 of those
+81**, and is a LOWER bound: 23 undecided rows have no reach row because the
+file declares no datatype at all, and the join prints that warning rather than
+dropping them.
+
+`dt:relaxation-incomplete` (29) is `project_and_replay` throwing away a `sat`
+candidate because the traversed-field children are FREE. That is the
+relaxation's own incompleteness, it belongs with the exactness arms, and
+exactness is what would stop the children being free — but all 29 sit in files
+that are cyclic or `W1`-blocked, so the lever reaches none of them.
+
+**The interleaved A/B did not complete in this lane, so no ship decision is
+taken and the lever stays OFF — which is what it ships as.** The runner is
+committed (`ab-run.sh`: ONE binary, TWO env values, the two arms back to back
+per file on one core so load cancels in the difference, order alternated per
+file so a first-run penalty cannot land on one arm) along with the three
+200-file lists, so the measurement is a re-run rather than a re-derivation.
+
+[ADR-2020]: adr-2020-giveup-census-buckets.md
 
 ## Tests
 
