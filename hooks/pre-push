@@ -824,6 +824,13 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #   quantifier_positive_path
   #                            — ADR-2120: the positive-path activation lever's soundness
   #                              fixtures and its instance-set certificate.
+  #   quant_ground_session_soundness
+  #                            — ADR-2124: the ground-session lever's soundness-negative
+  #                              fixtures over SATISFIABLE UFLIA queries at levels 0
+  #                              and 1, plus the two positive controls that stop the
+  #                              suite passing against an engine deciding nothing and
+  #                              the differential's own `compared >= 2` guard against
+  #                              a vacuous comparison.
   #   quantifier_trigger_alternatives
   #                            — ADR-2113: the trigger-alternative lever's soundness-
   #                              negative fixtures over satisfiable queries at six caps.
@@ -872,7 +879,8 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
                replay_pairing_soundness \
                additive_no_overflow_never_becomes_unsat \
                lra_opaque_real_apps decline_detail_typed \
-               quantifier_trigger_alternatives quantifier_positive_path; do
+               quantifier_trigger_alternatives quantifier_positive_path \
+               quant_ground_session_soundness; do
     gated_test "dispatch/reason: $suite" \
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
   done
