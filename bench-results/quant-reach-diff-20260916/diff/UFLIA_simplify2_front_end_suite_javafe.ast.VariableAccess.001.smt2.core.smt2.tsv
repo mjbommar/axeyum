@@ -1,0 +1,4 @@
+class	reason	detail	body	params
+NEVER-MATCHED	missing-term	missing=['this'] nested_product=False	(or (= this null) (not (= (select1 decl_26.38 this) null)))	["this"]
+NEVER-MATCHED	missing-term	missing=['(select1 id_19.34 this)', '(select1 id_19.34 this)'] nested_product=False	(= (= (refEQ (select1 id_19.34 this) (select1 id_19.34 this)) Smt.true) (= (select1 id_19.34 this) (select1 id_19.34 this)))	["(select1 id_19.34 this)", "(select1 id_19.34 this)"]
+NEVER-MATCHED	missing-term	missing=['this'] nested_product=False	(or (= this null) (= (select1 id_15.32.34 (select1 decl_26.38 this)) (select1 id_19.34 this)) (not (= Smt.true (is this T_javafe.ast.VariableAccess))))	["this"]

@@ -97,8 +97,18 @@ COMMUTATIVE = {"+", "*", "=", "distinct", "and", "or"}
 GROUND_ROW_RE = re.compile(r"^GROUND\s+(\d+)\s+gen=(\d+)\s+(.*)$")
 UNIVERSAL_RE = re.compile(
     r"QPROBE\s+universal\[(\d+)\] vars=(\d+) patterns=(\d+) joined=(\d+) "
-    r"starved_joins=(\d+) admitted=(\d+) (.*)$"
+    r"starved_joins=(\d+) admitted=(\d+) (.*)$",
+    re.M,
 )
+# `re.M` is load-bearing here, exactly as
+# `bench-results/uflia-trace-20260915/silent-split.py`'s own docstring warns:
+# without it `$` anchors to the end of the WHOLE input, so `.*$` matches only
+# when a universal's line happens to be the very LAST line of the file. This
+# was caught on a real run, not assumed: `parse_universal_census` on a real
+# 17-universal `.err` capture (AdvancedTypes core) returned 0 rows even
+# though `grep` found nonzero `rej_nocontext` for 13 of 17 -- the exact
+# "empty result from a tool never pointed at your subject" trap CLAUDE.md
+# names.
 REJ_RE = re.compile(r"(rej_\w+)=(\d+)")
 REJ_FIELDS = [
     "rej_handoff",
@@ -147,6 +157,34 @@ def canon_render(text: str) -> str:
         # rather than silently dropped -- it will simply never match, which
         # is the safe direction (see module docstring on lower/upper bounds).
         return text.strip()
+
+
+def flatten_subterms(node, out: set) -> None:
+    """Adds the canon-rendered form of `node` AND every one of its subterms
+    (recursively, including bare leaves) to `out`. This is what
+    "argument presence" must be checked against -- see the comment in
+    `classify_core` on why a top-level-row-only check is wrong.
+
+    ONE bottom-up pass that renders each subterm EXACTLY ONCE and reuses a
+    child's rendered string when building its parent's. The first version
+    called `canon(node)` again at every recursion level -- `canon` itself
+    recurses over the WHOLE subtree it is given -- and a second version
+    that fixed that still called `Z3PI.render()` (also whole-subtree
+    recursive) again at every level, so both were O(depth * size) per row.
+    Neither finished in a bounded lane session on the real dumps (measured:
+    10 of 53 cores in 34 minutes on the first version, killed). This
+    version is O(size)."""
+
+    def render_and_collect(canon_node) -> str:
+        if isinstance(canon_node, str):
+            out.add(canon_node)
+            return canon_node
+        parts = [render_and_collect(c) for c in canon_node]
+        rendered = "(" + " ".join(parts) + ")"
+        out.add(rendered)
+        return rendered
+
+    render_and_collect(canon(node))
 
 
 # ---------------------------------------------------------------------------
@@ -301,8 +339,45 @@ def classify_core(
     Returns one row per UNIQUE z3 ground ('not nested') ground ('not
     nested') body: `{body, params, class, reason, detail}`.
     """
-    our_ground_any = {canon_render(t) for _, _, t in our_ground_rows}
+    # ADMITTED stays a TOP-LEVEL row check: the whole instantiated formula
+    # must itself have been asserted as an instance.
     our_ground_admitted = {canon_render(t) for _, g, t in our_ground_rows if g >= 1}
+    # Argument presence, by contrast, must NOT be a top-level check. Bare
+    # leaf symbols (a declared constant like `this`) are essentially NEVER
+    # dumped as their own `GROUND` row -- `AXEYUM_QGROUNDDUMP` records
+    # asserted/derived FORMULAS, not every e-graph leaf -- so a top-level-only
+    # membership test reads every atomic substitution argument as "missing"
+    # even when it trivially exists inside a larger asserted term. This was
+    # caught, not assumed: the first full run of this classifier put EVERY
+    # non-admitted, non-nested instance in NEVER-MATCHED/missing-term (0 in
+    # MATCHED-REJECTED, 0 in trigger-did-not-fire) with `missing=[...]`
+    # naming bare declared symbols -- exactly what a broken presence check
+    # prints, per CLAUDE.md's "ask what it would print if it were broken."
+    # So: presence is checked against the SET OF ALL SUBTERMS appearing
+    # anywhere in the dump (any generation), not just top-level rows.
+    # Rows past this raw length are skipped for flattening, not just capped
+    # in depth: measured on a real dump (loopinv1), 232 of 1651 rows are
+    # >120,000 characters -- deep chains of nested quantifier instances
+    # (gen>=2 admitted instances built from other admitted instances) -- and
+    # canon-rendering ONE such row costs ~0.37s, so this single core alone
+    # would cost ~85s. z3's own substitution arguments (what this set is
+    # actually checked against) are declared constants or modest compound
+    # terms; ADR-2113's own median is 6 instantiations per core, none of
+    # them 100+ KB. A term this large is already several instance-chain
+    # generations deep and vanishingly unlikely to equal a literal z3
+    # substitution argument, so skipping it costs no real recall here while
+    # keeping the classifier's own runtime bounded on the real corpus.
+    HUGE_ROW_CHARS = 20000
+    our_ground_any: set = set()
+    skipped_huge = 0
+    for _, _, t in our_ground_rows:
+        if len(t) > HUGE_ROW_CHARS:
+            skipped_huge += 1
+            continue
+        try:
+            flatten_subterms(parse_term(t), our_ground_any)
+        except Exception:
+            our_ground_any.add(canon_render(t))
 
     # Core-level dominant rejection reason: summed over every universal's
     # `rej_*` fields. Documented in the module docstring as a core-level,

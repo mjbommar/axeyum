@@ -1,0 +1,4 @@
+class	reason	detail	body	params
+MATCHED-REJECTED	rej_seen	core-dominant-rej=rej_seen n=160682	(or (not (subtypes T_javafe.tc.TypeSig T_java.lang.Object)) (= (= Smt.true (is RES_116.36_116.36 T_javafe.tc.TypeSig)) (or (= RES_116.36_116.36 null) (subtypes (typeof RES_116.36_116.36) T_javafe.tc.TypeSig))))	["RES_116.36_116.36", "T_javafe.tc.TypeSig"]
+MATCHED-REJECTED	rej_seen	core-dominant-rej=rej_seen n=160682	(or (subtypes T_javafe.tc.TypeSig T_java.lang.Object) (not (subtypes T_javafe.tc.TypeSig T_javafe.ast.Type)) (not (subtypes T_javafe.ast.Type T_java.lang.Object)))	["T_javafe.tc.TypeSig", "T_javafe.ast.Type", "T_java.lang.Object"]
+MATCHED-REJECTED	rej_seen	core-dominant-rej=rej_seen n=160682	(or (subtypes T_javafe.ast.Type T_java.lang.Object) (not (subtypes T_javafe.ast.Type T_javafe.ast.ASTNode)) (not (subtypes T_javafe.ast.ASTNode T_java.lang.Object)))	["T_javafe.ast.Type", "T_javafe.ast.ASTNode", "T_java.lang.Object"]

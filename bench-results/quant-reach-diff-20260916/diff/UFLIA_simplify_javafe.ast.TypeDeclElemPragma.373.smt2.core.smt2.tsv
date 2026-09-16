@@ -1,0 +1,4 @@
+class	reason	detail	body	params
+MATCHED-REJECTED	rej_seen	core-dominant-rej=rej_seen n=129884	(= (S_select (S_store (asField parent_18_18 T_javafe_ast_TypeDecl) this p_21_33) this) p_21_33)	["(asField parent_18_18 T_javafe_ast_TypeDecl)", "this", "p_21_33"]
+NESTED	unresolved-outer-bound-var		(or (= this ?brokenObj!6) (= (S_select (S_store (asField parent_18_18 T_javafe_ast_TypeDecl) this p_21_33) ?brokenObj!6) (S_select (asField parent_18_18 T_javafe_ast_TypeDecl) ?brokenObj!6)))	["(asField parent_18_18 T_javafe_ast_TypeDecl)", "this", "?brokenObj!6", "p_21_33"]
+NESTED	unresolved-outer-bound-var		(or (= ?brokenObj!6 null) (not (= (S_select parent_18_18 ?brokenObj!6) null)) (not (= true_term (is ?brokenObj!6 T_javafe_ast_TypeDeclElemPragma))) (not (= true_term (S_select hasParent_4_149_30 ?brokenObj!6))))	["?brokenObj!6"]

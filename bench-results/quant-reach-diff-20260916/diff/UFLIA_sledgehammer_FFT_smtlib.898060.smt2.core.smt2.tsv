@@ -1,0 +1,3 @@
+class	reason	detail	body	params
+NEVER-MATCHED	missing-term	missing=['f12', 'f13', 'f14'] nested_product=False	(or (= f12 f20) (= (f9 (f10 f11 (f6 f25 f12)) (f17 f18 (+ (f15 f16 f14) (* (- 1) (f15 f16 f13))))) (f6 (f7 f8 (f9 (f10 f11 f12) f13)) (f9 (f10 f11 f12) f14))) (not (>= (+ (f15 f16 f14) (* (- 1) (f15 f16 f13))) 0)))	["f12", "f13", "f14"]
+NEVER-MATCHED	missing-term	missing=['f12'] nested_product=False	(= (f6 f25 f12) (f6 (f7 f8 f19) f12))	["f12"]

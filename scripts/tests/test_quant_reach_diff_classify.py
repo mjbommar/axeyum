@@ -62,6 +62,33 @@ class CanonRenderTests(unittest.TestCase):
         )
 
 
+class FlattenSubtermsTests(unittest.TestCase):
+    """Regression test for the bug the first real 53-core run surfaced: an
+    argument-presence check against TOP-LEVEL ground rows only reads a bare
+    declared symbol (e.g. `this`) as "missing" even when it is a leaf of a
+    larger asserted term, because `AXEYUM_QGROUNDDUMP` records asserted
+    FORMULAS, not every e-graph leaf. `classify_core` must check presence
+    against the flattened subterm set, not row equality."""
+
+    def test_bare_leaf_inside_a_larger_row_is_present(self):
+        apps = [{"params": ["this"], "body": "(= (f this) 1)", "nested": False}]
+        # "this" never appears as its OWN row -- only nested inside a larger
+        # asserted term, exactly like a real AXEYUM_QGROUNDDUMP capture.
+        ground_rows = [(0, 0, "(not (= allocated_ this))")]
+        rows = classify.classify_core(apps, [], ground_rows, {})
+        self.assertEqual(rows[0]["class"], classify.CLASS_NEVER_MATCHED)
+        self.assertEqual(rows[0]["reason"], "trigger-did-not-fire")
+
+    def test_genuinely_absent_leaf_is_still_missing(self):
+        # Negative control: a symbol that occurs NOWHERE in the dump (not
+        # even nested) must still read as missing.
+        apps = [{"params": ["neverseen_"], "body": "(= (f neverseen_) 1)", "nested": False}]
+        ground_rows = [(0, 0, "(not (= allocated_ this))")]
+        rows = classify.classify_core(apps, [], ground_rows, {})
+        self.assertEqual(rows[0]["class"], classify.CLASS_NEVER_MATCHED)
+        self.assertEqual(rows[0]["reason"], "missing-term")
+
+
 class GroundDumpParsingTests(unittest.TestCase):
     def test_last_block_only(self):
         text = (
@@ -95,6 +122,31 @@ class UniversalCensusParsingTests(unittest.TestCase):
         census = classify.parse_universal_census(text)
         self.assertEqual(census[0]["joined"], 5)
         self.assertEqual(census[0]["rej"]["rej_nocontext"], 4)
+
+    def test_a_non_final_line_is_still_parsed(self):
+        # Regression test for a REAL bug this lane shipped and caught on a
+        # live run: UNIVERSAL_RE without `re.M` only matches `.*$` against a
+        # line that happens to be the LAST line of the whole input (Python's
+        # `$` without MULTILINE anchors to end-of-string, or just before a
+        # trailing newline AT the end of string) -- exactly the trap
+        # `silent-split.py`'s own docstring names. The two-line fixture
+        # above accidentally could not catch this because its target line
+        # (the second QPROBE line) WAS the last line before the final
+        # newline. Here universal[7]'s line is buried in the middle,
+        # followed by other content, which is what a real multi-universal,
+        # multi-round trace looks like.
+        text = (
+            "; some other trace noise\n"
+            "QPROBE   universal[7] vars=1 patterns=1 joined=99 starved_joins=0 admitted=0 "
+            "rej_handoff=0 rej_poscap=0 rej_nocontext=42 rej_expired=0 rej_subst=0 "
+            "rej_true=0 rej_unreleased=0 rej_flood=0 rej_ceiling=0 rej_check=0 "
+            "rej_seen=0 rej_dupother=0 rej_true_newterm=0 census_admitted=0\n"
+            "; more trace noise after it\n"
+            "; and even more\n"
+        )
+        census = classify.parse_universal_census(text)
+        self.assertIn(7, census)
+        self.assertEqual(census[7]["rej"]["rej_nocontext"], 42)
 
 
 class ClassifyCoreTests(unittest.TestCase):

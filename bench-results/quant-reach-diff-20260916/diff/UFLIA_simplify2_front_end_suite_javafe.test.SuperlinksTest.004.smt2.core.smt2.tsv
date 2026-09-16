@@ -1,0 +1,7 @@
+class	reason	detail	body	params
+ADMITTED			(or (not (= Smt.true (is RES_86.1_0_87.37_87.37 T_javafe.ast.TypeDecl))) (= (cast RES_86.1_0_87.37_87.37 T_javafe.ast.TypeDecl) RES_86.1_0_87.37_87.37))	["RES_86.1_0_87.37_87.37", "T_javafe.ast.TypeDecl"]
+MATCHED-REJECTED	rej_seen	core-dominant-rej=rej_seen n=2755	(or (= this null) (not (= Smt.true (select1 containsNull_18.70.29 (select1 decls_77.11 this)))) (not (= Smt.true (is this T_javafe.test.SuperlinksTest))))	["this"]
+MATCHED-REJECTED	rej_seen	core-dominant-rej=rej_seen n=2755	(or (= this null) (= (select1 elementType_18.65.27 (select1 decls_77.11 this)) T_javafe.ast.TypeDecl) (not (= Smt.true (is this T_javafe.test.SuperlinksTest))))	["this"]
+MATCHED-REJECTED	rej_seen	core-dominant-rej=rej_seen n=2755	(or (= this null) (not (= (select1 decls_77.11 this) null)) (not (= Smt.true (is this T_javafe.test.SuperlinksTest))))	["this"]
+ADMITTED			(or (not (subtypes T_javafe.ast.TypeDecl T_java.lang.Object)) (= (= Smt.true (is RES_86.1_0_87.37_87.37 T_javafe.ast.TypeDecl)) (or (= RES_86.1_0_87.37_87.37 null) (subtypes (typeof RES_86.1_0_87.37_87.37) T_javafe.ast.TypeDecl))))	["RES_86.1_0_87.37_87.37", "T_javafe.ast.TypeDecl"]
+MATCHED-REJECTED	rej_seen	core-dominant-rej=rej_seen n=2755	(or (subtypes T_javafe.ast.TypeDecl T_java.lang.Object) (not (subtypes T_javafe.ast.TypeDecl T_javafe.ast.ASTNode)) (not (subtypes T_javafe.ast.ASTNode T_java.lang.Object)))	["T_javafe.ast.TypeDecl", "T_javafe.ast.ASTNode", "T_java.lang.Object"]
