@@ -1,5 +1,7 @@
 # Lane `nra-single-cell` — single-cell CAD for QF_NRA (ADR-2121)
 
+<!-- plan-section: lane-status -->
+
 Status: the route, its certificate checker, its fuzz seed class and its mutation
 suites are landed. The lever `AXEYUM_NRA_CAD=single-cell` ships **OFF**.
 
@@ -54,10 +56,8 @@ load-bearing on the default path is a decision to take deliberately.
   determinant** so the projection is not capped at Sylvester dimension 6
   (`projection`, 2 of 24 and 188 of 1500).
 
-## Landed changes
+<!-- plan-section: landed-changes -->
 
-| date | commit | what |
-|---|---|---|
 | 2026-09-15 | `4447b5a14` | Exit criterion 1, committed before any code: the slice ceiling is 24 of ADR-2110's 45, and 9 are lost to the `i128` clearing. |
 | 2026-09-15 | `c03bf39f7` | `nra_cell_cert.rs` — the cell-covering certificate and an independent checker, landed BEFORE the producer so the format is fixed by what can be checked. |
 | 2026-09-15 | `31e150738` | `nra_single_cell.rs` — CDCAC behind `AXEYUM_NRA_CAD=single-cell`, OFF. `unsat` gated on the checker, `sat` on a rational model replay. |

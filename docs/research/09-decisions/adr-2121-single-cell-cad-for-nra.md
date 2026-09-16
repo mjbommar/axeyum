@@ -241,7 +241,25 @@ the population that motivated it — and only two of the six are in the 24-file
 in-bounds set, which is the reason the ceiling must not be read as a forecast in
 either direction.
 
-<!-- AB-REST -->
+**QF_NIA, 200 files** — the nonlinear code is shared, so the division that did
+not motivate the route is where a regression would show:
+
+| | |
+|---|---:|
+| rows | 200 |
+| A (`default`) | **81** |
+| B (`single-cell`) | **81** |
+| net | **+0** |
+| gains / losses / flips | 1 / 1 / **0** |
+| vs declared `:status` | **0 disagreements over 162 comparable verdicts** |
+
+Both QF_NIA movers went through the three-pass recheck, and the gain is the same
+file ADR-2110 classified `UNSTABLE` on its own A/B — which is the reason the raw
+`1 gain / 1 loss` column must not be reported as the result.
+
+<!-- AB-LRA -->
+
+<!-- AB-RECHECK -->
 
 The **QF_LRA control** exists because nothing linear goes near this route: a
 mover there would be a finding about the harness and not about the lever, and
