@@ -1,7 +1,7 @@
 # ADR-2136: order and monotonicity lemmas for QF_NIA — built, valid, and measured
 
 Status: proposed
-Index-summary: PLACEHOLDER — rewritten from the A/B before this ADR lands.
+Index-summary: ADR-2112 Part E measured ORDER and MONOTONICITY lemmas ABSENT from `nia_linearize.rs` and its z3 ablation said no absent class is load-bearing on more than 3 of the 75 files z3 decides — a statement about z3's portfolio of seven, not ours of four. This builds both behind one dated lever shipped DISARMED and measures them on OURS. **SIZING first**, all 116 undecided QF_NIA T1 rows, 0 errored: the order lemma's step is available on **111**, monotonicity's on **115**, with a median **2,249** shared-factor product pairs per file and a max of **9,407,886** — so emission must be model-driven and capped, as z3's is. `unbounded_products` equals `products` at every quantile, which is why arming also has to widen `RefinementSetup::refine`: the entailed-bound passes produce nothing here, so without it the loop runs ONE round and the pass is unreachable. **REACHABILITY**, measured rather than assumed: the pass runs on **59 of 116** rows; the other 67 never produce a spurious model because the linear relaxation itself times out, so the ceiling on this population is the RELAXATION, not the lemma. **A/B**, one binary two env values, interleaved per file, 24 s/8 GiB, four populations at full 200/200 coverage: QF_NIA 82→80, QF_NRA control 124→124 (0 movers, as a Real-sorted control must), UFNIA **54→61**, held-out QF_NIA 85→85. **DISAGREEMENTS 0 of 800.** 15 raw movers re-checked 3x per arm: **10 STABLE-GAIN, 3 STABLE-LOSS, 2 UNSTABLE** — seven of the gains in UFNIA alone. **SHIPS DISARMED**: the criterion was 0 stable losses on pinned AND held-out, and there are 2 and 1. All three losses are `unsat → unknown` — budget starvation of a later ladder route, a SCHEDULING cost and not a lemma defect, which is the next lane's one-line experiment. Mutation: 2 mutations, both measured, killing 5 and 2, kill sets DIFFERENT, the soundness-negative fixture in the first. NOT RUN: all six z3 NIA differential fuzzes.
 Index-status: proposed
 Date: 2026-09-16
 
@@ -181,20 +181,117 @@ agrees with the armed arm.
 
 ## Part D — the A/B
 
-PLACEHOLDER — filled from `bench-results/nia-order-lemmas-20260916/` before
-this ADR lands.
+One binary (release `smtcomp_cli`, sha256 `bc8adc98…59e32`), two env values,
+both arms back to back on the same file on the same pinned core with the arm
+order alternating per file, 24 s / 8 GiB. s6, this lane's pairs `5,13` and
+`6,14`; **all four logical cores ran at once** to fit the window, so each
+physical core carried two sweeps. That inflates timeouts on BOTH arms of every
+file — conservative for a ship gate, not for a gain, and every gain below was
+re-checked 3× per arm.
+
+| division | rows | A decided | B decided |
+|---|---:|---:|---:|
+| **QF_NIA** (pinned target) | **200** | **82** | **80** |
+| **QF_NRA** (control) | **200** | 124 | 124 |
+| **UFNIA** (target) | **200** | **54** | **61** |
+| **QF_NIA held-out draw** | **200** | 85 | 85 |
+
+**Disagreements (one arm `sat`, the other `unsat`): 0 of 800.** The control
+moves nothing, which is what a control in the Real-sorted division has to do.
+
+15 raw movers, each re-run three times per arm and classified only when all
+three passes agree:
+
+| division | STABLE-GAIN | STABLE-LOSS | UNSTABLE |
+|---|---:|---:|---:|
+| QF_NIA (pinned) | 1 | **2** | 1 |
+| QF_NRA (control) | 0 | 0 | 0 |
+| UFNIA | **7** | 0 | 0 |
+| QF_NIA held-out | 2 | **1** | 1 |
+| **total** | **10** | **3** | **2** |
+
+The seven `UFNIA` gains are all `unknown → unsat` (`f2_rw160`, `f2_rw120`,
+`f2_rw163`, `t3_rw96`, `t3_rw25`, `t3_rw21`,
+`int_check_bvugt_bvneg_ltr_inv_g`). The pinned `QF_NIA` gain agrees with the
+benchmark's own `(set-info :status unsat)`.
+
+### D1 — what the three losses are
+
+All three are `unsat → unknown`: files the shipped arm refutes and the armed
+arm does not. Nothing unsound happened; `unknown` is a first-class result. What
+was lost is TIME. Arming does two things to the refinement loop — it emits
+lemmas (median 76 per reached file over up to 47 rounds) and it widens
+`RefinementSetup::refine`, which also grants the loop a larger share of the
+caller's remaining budget (§C). On a file some LATER route in the ladder
+refutes, spending that budget in the relaxation starves the route that was
+going to decide it. That is a scheduling cost, not a lemma defect.
 
 ## Decision
 
-PLACEHOLDER — filled from Part D.
+**1. The lever stays DISARMED and this ADR is `proposed`.** The criterion was
+0 stable losses and 0 flips with at least one stable gain, on the pinned list
+AND the held-out draw. Flips: **0 of 800**, met. Stable gains: **10**, met on
+both `QF_NIA` populations and on `UFNIA`. Stable losses: **2 pinned, 1
+held-out** — **not met**, so nothing ships ON.
+
+**2. [ADR-2112]'s decision 4 is REFINED, not overturned.** It said not to build
+a single nonlinear lemma class, on the evidence that z3's own order class is
+load-bearing on 3 of the 75 files z3 decides. Measured on OUR portfolio the two
+classes are worth **10 stable gains across 800 files with zero flips**, and
+**7 of those are in one division** (`UFNIA`, 54 → 61, +13 %). The classes are
+not worthless to us. What costs more than they pay, on `QF_NIA`, is the loop
+that hosts them.
+
+**3. The next lane's question is the SCHEDULE, not the lemma.** All three
+losses are budget starvation of a later ladder route, and §C's widened `refine`
+predicate is the mechanism. Separating "emit these lemmas" from "grant the loop
+a larger slice" is a one-line experiment that the three named losing files can
+score directly.
+
+**4. The ceiling is the relaxation.** §C1 measured the pass reached on 59 of
+116 undecided rows; the other 67 never produce a spurious model because the
+linear DPLL(T) cannot solve the relaxation inside its slice. No lemma class can
+decide a file whose relaxation never returns, and that bounds every number in
+Part D.
 
 ## Gates, with counts
 
-PLACEHOLDER.
+| gate | result |
+|---|---|
+| `cargo fmt --all --check` | clean |
+| `cargo-serialized.sh clippy --workspace --all-targets --all-features -- -D warnings` | **clean** (the battery's exact lint) |
+| `cargo check --workspace --all-targets` (default features) | clean |
+| `run-dispatch-reason-suites.sh` | **28 of 28 green**, every one a nonzero count |
+| `cargo test -p axeyum-solver --lib --features full -- --skip reconstruct::` | 1644 passed, 2 failed — both `auto::tests` wall-clock flakes in a file this lane does not touch; re-run alone **2 passed, 0 failed in 4.70 s** |
+| `progress_frontier --features full -- --test-threads=1` | **12 passed, 0 failed**; on a quiet frame (load 5.5 → 6.5, scale 1.08x) `FRONTIER nia_unsat = 40 (baseline 40)`, no `REGRESSION` |
+| `config_registry::tests` | **18 passed, 0 failed** |
+| mutation `nia-order-lemmas` | baseline **27 green**; 2 mutations both MEASURED, killing **5** and **2**; `--check-anchors` `suites=162 anchors=1124 stale=0` |
+| `check-config-registry-staleness.py` | 516 entries, **0 unexplained** |
+| `check-merge-hygiene.sh` / `check-links.sh` | PASS / `all links ok` (+ both reference-style definitions hand-checked) |
+
+**The six `z3` differential fuzzes were NOT RUN**, and that is the largest hole
+in this ADR's evidence: `nia_differential_fuzz`,
+`qf_nia_bounded_product_differential_fuzz`,
+`qf_nia_divmod_const_differential_fuzz`,
+`qf_nia_divmod_var_differential_fuzz`, `qf_nia_iand_differential_fuzz`,
+`qf_nia_pow2_differential_fuzz`. The lever is OFF, so they would have exercised
+the shipped route and not this one — but that is a reason they were low value
+here, not a reason they were run. Any lane that arms this lever must run all
+six with a NONZERO count in BOTH arms first.
 
 ## Consequences
 
-PLACEHOLDER.
+**Easier.** The two absent classes exist, are valid by construction, and are
+one env variable away. `reachability.sh` gives any lane the per-file "did the
+refinement loop even run" classification in one command, which is the number
+every future `nia_linearize` experiment needs before it starts.
+
+**Harder.** Nothing while the lever is `0`: the shared-factor index is never
+built and `timed_refine` cannot reach the pass.
+
+**Revisited when.** The scheduling experiment in decision 3 lands, or the
+relaxation's round-0 `unknown` rate on the 67 files improves. Either changes
+Part D's denominators.
 
 [ADR-2112]: adr-2112-qf-nia-what-the-clause-estimate-counts.md
 [ADR-2106]: adr-2106-derived-ladder-order.md

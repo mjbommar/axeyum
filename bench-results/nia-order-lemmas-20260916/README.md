@@ -273,3 +273,99 @@ Paired directly, same binary, same file, 24 s each: `AXEYUM_NIA_ORDER_LEMMAS=0`
 → **`unknown`**, `AXEYUM_NIA_ORDER_LEMMAS=1` → **`unsat`**, and the benchmark's
 own `(set-info :status unsat)` agrees with the armed arm. One file is one file;
 §4's interleaved A/B is what sizes it.
+
+## 4. The interleaved A/B (exit criterion 4)
+
+One binary (`smtcomp_cli`, release, sha256 `bc8adc98…59e32`), two env values:
+`AXEYUM_NIA_ORDER_LEMMAS=0` (A, the shipped arm) and `=1` (B, armed). Both arms
+run back to back on the SAME file on the SAME pinned core, and the arm order
+alternates per file, so ambient load cancels in the difference. 24 s / 8 GiB
+`ulimit -v`. `ab-run-env.sh` refuses to start if the two arms are equal.
+
+**Cores, and the honest part.** s6, this lane's pairs `5,13` and `6,14`. The
+brief's plan was one shard per PHYSICAL core, which would have taken about
+eight hours serially. To fit the window, **all four logical cores ran at once**:
+`QF_NIA` on 5, `QF_NRA` on 6, `UFNIA` on 13, the held-out draw on 14 — so each
+physical core carried two sweeps. That inflates timeouts on both arms of every
+file, which can only make a decision HARDER to obtain and a loss EASIER to
+observe, so it is conservative for a ship gate; it is not conservative for a
+gain, and every gain below is re-checked 3× per arm before being counted.
+
+### 4.1 Coverage and verdicts, all four populations complete
+
+| division | list | rows | A decided | B decided | malformed |
+|---|---:|---:|---:|---:|---:|
+| **QF_NIA** (pinned target) | 200 | **200** | **82** | **80** | 0 |
+| **QF_NRA** (control) | 200 | **200** | 124 | 124 | 0 |
+| **UFNIA** (target) | 200 | **200** | **54** | **61** | 0 |
+| **QF_NIA held-out draw** | 200 | **200** | 85 | 85 | 0 |
+
+**DISAGREEMENTS (one arm `sat`, the other `unsat`): 0 of 800.** There is no
+ambient-noise story for a disagreement — the two arms are the same binary on
+the same file on the same core — so any nonzero count would be a soundness
+finding. The analyser exits nonzero on one.
+
+**The control behaves as a control.** `QF_NRA` moves nothing: 124 decided in
+both arms, 0 movers. The lever sits in the INTEGER nonlinear route, and a
+Real-sorted query does not reach it.
+
+### 4.2 Movers, re-checked 3× per arm
+
+15 raw movers. Each was re-run three times per arm on one pinned core at the
+same envelope (`recheck-movers-env.sh`), and classified only when all three
+passes agree.
+
+| division | STABLE-GAIN | STABLE-LOSS | UNSTABLE |
+|---|---:|---:|---:|
+| QF_NIA (pinned) | 1 | **2** | 1 |
+| QF_NRA (control) | 0 | 0 | 0 |
+| UFNIA | **7** | 0 | 0 |
+| QF_NIA held-out | 2 | **1** | 1 |
+| **total** | **10** | **3** | **2** |
+
+Named, because a count is not a finding:
+
+- **UFNIA, 7 stable gains**, all `unknown → unsat`: `f2_rw160`, `f2_rw120`,
+  `f2_rw163`, `t3_rw96`, `t3_rw25`, `t3_rw21`,
+  `int_check_bvugt_bvneg_ltr_inv_g`. This is the largest single effect the lane
+  measured, and it is in the division where `q:skolem-qf` hands the nonlinear
+  integer tail to the quantifier-free ladder.
+- **QF_NIA pinned, 1 stable gain**:
+  `LarrazOliverasRodriguez-CarbonellRubio-2013FMCAD-Fig1-alloca_unknown-termination.c.i_Iteration6_Lasso+nonterminationTemplate.smt2`,
+  `unknown → unsat`, agreeing with the benchmark's own `(set-info :status unsat)`.
+- **QF_NIA pinned, 2 stable losses**: `From_T2__ex36.t2__p29986_safety_0.smt2`
+  and `From_T2__n-7.t2_fixed__p4922_terminationG_0.smt2`, both `unsat → unknown`.
+- **QF_NIA held-out, 2 stable gains** (`305.smt2`, `39.smt2`, `unknown → sat`)
+  **and 1 stable loss** (`From_T2__n-21.t2__p3984_terminationG_0.smt2`,
+  `unsat → unknown`).
+- 2 UNSTABLE, reported as ambient rather than as an effect.
+
+## 5. The ship decision
+
+**The lever stays DISARMED. `NIA_ORDER_LEMMAS_ARMED` remains `0`.**
+
+The criterion was *0 stable losses and 0 flips, with at least one stable gain,
+on the pinned list AND on the held-out draw*. Flips: **0 of 800**, met. Stable
+gains: **10**, met on both `QF_NIA` populations and on `UFNIA`. Stable losses:
+**2 on pinned and 1 on held-out**, so the criterion is **NOT met** and nothing
+ships ON.
+
+**Why the losses are the right thing to stop on, and what they are.** All three
+are `unsat → unknown`: files the shipped arm refutes and the armed arm does
+not. Nothing unsound happened — the armed arm returned `unknown`, which is a
+first-class result. What it lost is TIME. Arming does two things to the
+refinement loop: it emits lemmas (median 76 per reached file, over up to 47
+rounds), and it widens `RefinementSetup::refine`, which also grants the loop a
+larger share of the caller's remaining budget. On a file the shipped arm
+refutes by some LATER route in the ladder, spending that budget in the
+relaxation starves the route that was going to decide it. That is a scheduling
+cost, not a lemma defect, and it is the thing a follow-up has to fix before
+this can ship.
+
+**What the measurement does establish.** ADR-2112's decision 4 said not to
+build a single nonlinear lemma class, on the evidence that z3's own order class
+is load-bearing on 3 of the 75 files z3 decides. Built and measured on OUR
+portfolio, the two classes are worth **10 stable gains across 800 files**, with
+**7 of them in one division** (`UFNIA`, 54 → 61, +13 %) and **zero flips**. The
+classes are not worthless to us; the loop that hosts them costs more than they
+pay on `QF_NIA`.

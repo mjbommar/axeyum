@@ -145,6 +145,7 @@ now. Nothing was deleted.
 | 2026-09-16 | `2943e88c2` | The end-to-end lever probe (the arm clears the exactness refusal on a real corpus file) and `ab-summarize.py`, whose exit status depends on the finding. |
 | 2026-09-16 | `10aff7750` | `scripts/strip-quantified-assertions.py` + 18 unit tests: byte-verbatim quantifier-assert stripping, iterative tokenizer/parser (no recursive `let` expansion). |
 | 2026-09-16 | `5c46365f6` | `measure(nia)`: the sizing census — order lemmas apply to 111 of 116 undecided `QF_NIA` rows, monotonicity to 115; 8 fixture controls plus an independent cross-check against the engine's own cross-product count (89 of 89 nonzero, ratio median 1.00). |
+| 2026-09-16 | `52255968b` | `measure(nia)`: the `QF_NRA` control — 200/200, 124 decided in both arms, 0 movers, 0 disagreements. |
 | 2026-09-16 | quant-ground-incremental | ADR-2124: the interleaved cold ground check fires behind `online_clauses.is_none()`, so one integer comparison in the ground set puts the whole run in the re-solve regime — the mechanism behind ADR-2120 §7's block, located at `file:line` |
 | 2026-09-16 | quant-ground-incremental | sizing before code: 493 cold checks over sets up to 8,019 terms on 53 cores (6.1x more terms re-solved than asserted once); 101 of 1,400 Tier 1 rows end `unknown` with the quantifier route's own last decline naming the check |
 | 2026-09-16 | quant-ground-incremental | `AXEYUM_QINST_GROUND_SESSION` (OFF): the retained session hosts an arithmetic ground set by abstracting the unencodable Boolean-position term, with a vacuous-session guard and a no-connective guard |
@@ -62352,10 +62353,26 @@ loop runs ONE round on exactly the files this lane is aimed at. Arming
 therefore has to widen that predicate too, which is stated in [ADR-2136](docs/research/09-decisions/adr-2136-order-and-monotonicity-lemmas-for-nia.md) §C
 rather than buried.
 
-**Next:** the interleaved A/B (one binary, two env values) on `QF_NIA`,
-`QF_NRA` (control) and `UFNIA`, 200 files each at 24 s / 8 GiB on s6 cores 5
-and 6, movers re-checked 3x, then the held-out 200-file `QF_NIA` draw. Ships ON
-only with 0 stable losses and 0 flips on both.
+**DONE.** The A/B ran to full coverage on all four populations, 200/200 each:
+`QF_NIA` pinned 82 → 80, `QF_NRA` control 124 → 124 with 0 movers, **`UFNIA`
+54 → 61**, held-out `QF_NIA` 85 → 85. **Disagreements 0 of 800.** 15 raw movers
+re-checked 3x per arm: **10 STABLE-GAIN, 3 STABLE-LOSS, 2 UNSTABLE**, seven of
+the gains in `UFNIA` alone.
+
+**The lever stays DISARMED and ADR-2136 is `proposed`.** The criterion was 0
+stable losses on pinned AND held-out; there are 2 and 1. All three are
+`unsat → unknown` — budget starvation of a later ladder route, a SCHEDULING
+cost and not a lemma defect. What the lane does establish against ADR-2112's
+decision 4: the two classes are worth **10 stable gains across 800 files with
+zero flips**, so they are not worthless to us; the loop that hosts them costs
+more than they pay on `QF_NIA`.
+
+**Handed forward.** (a) Separate "emit these lemmas" from "grant the loop a
+larger budget slice" — a one-line experiment the three named losing files score
+directly. (b) The ceiling is the relaxation: the pass is reached on 59 of 116
+undecided rows and the other 67 never produce a spurious model at all. (c) The
+six `z3` NIA differential fuzzes were NOT RUN and must be, with a nonzero count
+in both arms, before anyone arms this lever.
 
 **Lane nia-trace (`DONE`, nia-trace, 2026-09-15).** [ADR-2112] — `proposed`.
 The question was why `QF_NIA` refuses ~42 files on
