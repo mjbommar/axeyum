@@ -114,7 +114,7 @@ use crate::nra_real_root::{
     CadDecline, cad_decline, cert_atom_of, clause_decline, record_cad_decline,
     record_clause_decline, reset_cad_decline,
 };
-use crate::nra_single_cell::{AtomOutcome, decide_atoms, replay_rational_model};
+use crate::nra_single_cell::{AtomOutcome, decide_atoms, replay_model};
 
 /// The most distinct polynomial comparisons this loop will abstract.
 ///
@@ -145,9 +145,10 @@ pub(crate) fn decide_clause_loop(
     arena: &TermArena,
     assertions: &[TermId],
     deadline: Option<Instant>,
+    algebraic_witness: bool,
 ) -> Option<CheckResult> {
     LAST_CLAUSE_CHECK.with(|slot| slot.set(None));
-    let out = decide_clause_loop_inner(arena, assertions, deadline);
+    let out = decide_clause_loop_inner(arena, assertions, deadline, algebraic_witness);
     if out.is_none() && clause_decline() == CadDecline::NotAttempted {
         // A BACKSTOP, and it exists because the first version of this
         // instrument could not tell two different things apart. Every decline
@@ -164,6 +165,7 @@ fn decide_clause_loop_inner(
     arena: &TermArena,
     assertions: &[TermId],
     deadline: Option<Instant>,
+    algebraic_witness: bool,
 ) -> Option<CheckResult> {
     let skeleton = Skeleton::build(arena, assertions)?;
     if skeleton.atoms.len() > MAX_CLAUSE_ATOMS {
@@ -255,7 +257,7 @@ fn decide_clause_loop_inner(
         // sees a different cause than it did before.
         let outer = cad_decline();
         reset_cad_decline();
-        let outcome = decide_atoms(&conj, deadline);
+        let outcome = decide_atoms(&conj, deadline, algebraic_witness);
         let theory_cause = cad_decline();
         reset_cad_decline();
         record_cad_decline(outer);
@@ -267,7 +269,7 @@ fn decide_clause_loop_inner(
             AtomOutcome::Sat(sample) => {
                 // Replayed against the ORIGINAL assertions, not against `conj`.
                 // Every claim the Boolean layer made is discharged here.
-                let Some(model) = replay_rational_model(arena, assertions, &sample) else {
+                let Some(model) = replay_model(arena, assertions, &sample) else {
                     record_clause_decline(CadDecline::ClauseLoopReplayFailed);
                     return None;
                 };
@@ -419,7 +421,7 @@ pub(crate) fn certificate_for_testing(
                 CertAtom::new(atom.cmp().negate(), atom.poly().clone())
             });
         }
-        match decide_atoms(&conj, deadline)? {
+        match decide_atoms(&conj, deadline, false)? {
             // A satisfiable query has no certificate to damage. That is a real
             // answer for a fixture to assert on, not a failure.
             AtomOutcome::Sat(_) => return None,
@@ -720,7 +722,7 @@ mod tests {
     fn decide(script: &str) -> (Option<CheckResult>, &'static str) {
         let parsed = axeyum_smtlib::parse_script(script).expect("parse");
         reset_cad_decline();
-        let out = decide_clause_loop(&parsed.arena, &parsed.assertions, None);
+        let out = decide_clause_loop(&parsed.arena, &parsed.assertions, None, false);
         (out, cad_decline().name())
     }
 
@@ -745,6 +747,7 @@ mod tests {
             &parsed.assertions,
             None,
             true,
+            false,
         );
         assert!(conj.is_none(), "the control is that the OLD route refuses");
         assert_eq!(cad_decline().name(), "non-conjunctive");

@@ -412,6 +412,7 @@ pub fn decide_real_poly_constraint(
                 assertions,
                 deadline,
                 cad_policy().emit_unsat,
+                cad_policy().algebraic_witness,
             )
     {
         return Ok(Some(res));
@@ -432,7 +433,12 @@ pub fn decide_real_poly_constraint(
     if cad_policy().clause_loop
         && cad_decline() == CadDecline::NonConjunctive
         && let Some(res @ (CheckResult::Sat(_) | CheckResult::Unsat)) =
-            crate::nra_clause_loop::decide_clause_loop(arena, assertions, deadline)
+            crate::nra_clause_loop::decide_clause_loop(
+                arena,
+                assertions,
+                deadline,
+                cad_policy().algebraic_witness,
+            )
     {
         return Ok(Some(res));
     }
@@ -3924,6 +3930,27 @@ pub(crate) enum CadDecline {
     /// declines to represent, and it is the route's dominant cause on the real
     /// corpus (ADR-2121).
     AlgebraicWitness,
+    /// An ALGEBRAIC sample was accepted by the cell scan, but replaying it
+    /// through the ground evaluator against the ORIGINAL assertions did not
+    /// resolve -- the evaluator reported an overflow, or an operation for which
+    /// it has no exact algebraic rule (ADR-2134).
+    ///
+    /// Distinct from [`Self::AlgebraicReplayRefuted`], which is the evaluator
+    /// deciding the assertion FALSE. This one is "we do not know"; that one is
+    /// "we know, and it is wrong", and the two say different things about what
+    /// would fix them.
+    AlgebraicReplayUndecided,
+    /// An ALGEBRAIC sample the cell scan accepted was replayed through the
+    /// ground evaluator and an original assertion evaluated to `false`
+    /// (ADR-2134).
+    ///
+    /// This is a **producer disagreement**, not a budget: the scan selected a
+    /// cell in which every collected atom holds, so the assertions it was
+    /// collected from must hold too. A row here means the atom collection lost
+    /// something the assertion still says. The verdict is DROPPED either way --
+    /// the replay is the authority and it refused -- but the cause is named
+    /// apart so a nonzero count is visible as the defect it is.
+    AlgebraicReplayRefuted,
 }
 
 impl CadDecline {
@@ -3955,6 +3982,8 @@ impl CadDecline {
             Self::ClauseLoopUnattributed => "clause-loop-unattributed",
             Self::ClauseLoopReplayFailed => "clause-loop-replay-failed",
             Self::AlgebraicWitness => "algebraic-witness",
+            Self::AlgebraicReplayUndecided => "algebraic-replay-undecided",
+            Self::AlgebraicReplayRefuted => "algebraic-replay-refuted",
             Self::UnsatWithheldByArm => "unsat-withheld-by-arm",
         }
     }
@@ -3982,6 +4011,8 @@ impl CadDecline {
         Self::SliceBounds,
         Self::CertificateRejected,
         Self::AlgebraicWitness,
+        Self::AlgebraicReplayUndecided,
+        Self::AlgebraicReplayRefuted,
         Self::UnsatWithheldByArm,
         Self::ClauseLoopShape,
         Self::ClauseLoopBudget,
@@ -4069,6 +4100,14 @@ fn note<T>(reason: CadDecline, value: Option<T>) -> Option<T> {
 /// The N-variable decomposition's bounded-cost policy, read once from
 /// `AXEYUM_NRA_CAD`.
 #[derive(Clone, Copy, Debug)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "this is a POLICY TABLE, not a state machine: each bool is one \
+              named, independently-selectable dimension of an A/B arm, and the \
+              lint's usual fix -- collapsing them into an enum of states -- \
+              would destroy exactly the property every arm here is built on, \
+              that two arms differ in EXACTLY one field"
+)]
 pub(crate) struct CadPolicy {
     /// The arm's name, as `AXEYUM_NRA_CAD` spells it.
     pub(crate) arm: &'static str,
@@ -4086,6 +4125,20 @@ pub(crate) struct CadPolicy {
     /// an arm can take the exact half and leave the sampled half behind, and the
     /// `single-cell-sat` arm is exactly that.
     pub(crate) emit_unsat: bool,
+    /// Whether a cell whose representative point is an ALGEBRAIC root may be
+    /// accepted as the FINAL coordinate of a model (ADR-2134).
+    ///
+    /// Off, the route refuses such a cell as [`CadDecline::AlgebraicWitness`] --
+    /// measured at 7 of the pinned 200 `QF_NRA` files on the shipped default,
+    /// 6 of them currently `unknown`, which is this lever's ceiling.
+    ///
+    /// On, it is accepted only at the LAST level, where the sample is complete
+    /// and no deeper level has to substitute the coordinate into a polynomial,
+    /// and only if the exact replay through the ground evaluator accepts every
+    /// ORIGINAL assertion at that point. So this can only turn a decline into a
+    /// `sat` whose model was checked the same way every other `sat` from this
+    /// route is checked -- it emits no `unsat` and cannot flip a verdict.
+    pub(crate) algebraic_witness: bool,
     /// Whether the clause loop ([`crate::nra_clause_loop`]) is offered the query
     /// when the conjunctive route declines `non-conjunctive` (ADR-2126).
     ///
@@ -4103,6 +4156,7 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS,
         single_cell: false,
         emit_unsat: true,
+        algebraic_witness: false,
         clause_loop: false,
     };
 
@@ -4116,6 +4170,7 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS * 16,
         single_cell: false,
         emit_unsat: true,
+        algebraic_witness: false,
         clause_loop: false,
     };
 
@@ -4128,6 +4183,7 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS,
         single_cell: true,
         emit_unsat: true,
+        algebraic_witness: false,
         clause_loop: false,
     };
 
@@ -4143,6 +4199,7 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS,
         single_cell: true,
         emit_unsat: false,
+        algebraic_witness: false,
         clause_loop: false,
     };
 
@@ -4176,8 +4233,53 @@ impl CadPolicy {
         cell_cap: MAX_CAD_CELLS,
         single_cell: true,
         emit_unsat: true,
+        algebraic_witness: false,
         clause_loop: true,
     };
+
+    /// ADR-2134's arm: the shipped `single-cell` route PLUS the algebraic final
+    /// coordinate. It differs from [`Self::SINGLE_CELL`] in exactly
+    /// `algebraic_witness`: same cell cap, same `single_cell`, same
+    /// `emit_unsat`, same `clause_loop`. So an A/B between the two prices the
+    /// algebraic witness alone.
+    ///
+    /// Strictly additive: the acceptance sits on the branch that otherwise
+    /// records [`CadDecline::AlgebraicWitness`] and returns `None`, so every
+    /// query the shipped arm decides this arm decides identically, and the only
+    /// new outcome is a `sat`. That `sat` is gated on the exact replay of every
+    /// ORIGINAL assertion at the algebraic point through the ground evaluator,
+    /// which is the same gate every other `sat` from this route passes -- with
+    /// the coordinate evaluated by exact algebraic field arithmetic (ADR-0038)
+    /// rather than rational arithmetic. No `unsat` is added, so no verdict can
+    /// flip.
+    pub(crate) const ALGEBRAIC_WITNESS: Self = Self {
+        arm: "algebraic-witness",
+        cell_cap: MAX_CAD_CELLS,
+        single_cell: true,
+        emit_unsat: true,
+        algebraic_witness: true,
+        clause_loop: false,
+    };
+
+    /// **Every arm, and the authority on what an arm is.**
+    ///
+    /// [`parse_cad_arm`] resolves a name by scanning this list, and
+    /// `every_arm_name_is_a_value_the_parser_accepts` iterates it. So an arm
+    /// added here is selectable and covered the moment it exists, and an arm NOT
+    /// here is unreachable by name -- the two cannot drift apart.
+    ///
+    /// That is not a stylistic preference. Until ADR-2134 the coverage test held
+    /// a LITERAL list of four arms, and `CLAUSE_LOOP` -- added by ADR-2126 --
+    /// was not in it. The test named "every arm" was measuring the maintainer's
+    /// memory, which is the one thing a test of that name must not do.
+    pub(crate) const ALL: &'static [Self] = &[
+        Self::DEFAULT,
+        Self::WIDE,
+        Self::SINGLE_CELL,
+        Self::SINGLE_CELL_SAT,
+        Self::CLAUSE_LOOP,
+        Self::ALGEBRAIC_WITNESS,
+    ];
 }
 
 /// The arm used when `AXEYUM_NRA_CAD` is unset or unrecognized.
@@ -4244,24 +4346,21 @@ pub(crate) fn cad_policy() -> CadPolicy {
 /// process through a `OnceLock`, so a test that set the variable would measure
 /// whichever test ran first.
 fn parse_cad_arm(value: &str) -> CadPolicy {
-    if value.eq_ignore_ascii_case("wide") {
-        CadPolicy::WIDE
-    } else if value.eq_ignore_ascii_case("single-cell") {
-        CadPolicy::SINGLE_CELL
-    } else if value.eq_ignore_ascii_case("single-cell-sat") {
-        CadPolicy::SINGLE_CELL_SAT
-    } else if value.eq_ignore_ascii_case("clause-loop") {
-        CadPolicy::CLAUSE_LOOP
-    } else if value.eq_ignore_ascii_case("default") {
-        // EXPLICIT, not a fallback. `CAD_DEFAULT` is `SINGLE_CELL_SAT` as of
-        // ADR-2121, so without this arm `AXEYUM_NRA_CAD=default` would resolve
-        // through the catch-all below to the NEW default and every A/B's arm A
-        // would silently become its arm B. `every_arm_name_is_a_value_the_parser_accepts`
-        // is what holds this.
-        CadPolicy::DEFAULT
-    } else {
-        CAD_DEFAULT
+    // Scanned rather than spelled out: [`CadPolicy::ALL`] is the authority on
+    // what arms exist, and a hand-written `else if` chain beside it is a second
+    // list that can disagree with the first.
+    //
+    // `default` resolves through this scan like any other arm, which is what
+    // keeps `AXEYUM_NRA_CAD=default` selecting the pre-ADR-2121 engine instead
+    // of falling through to whatever `CAD_DEFAULT` currently is -- without that,
+    // every A/B's arm A would silently become its arm B.
+    for policy in CadPolicy::ALL {
+        if value.eq_ignore_ascii_case(policy.arm) {
+            return *policy;
+        }
     }
+    // An unrecognised value is the shipped arm, never a treatment.
+    CAD_DEFAULT
 }
 
 /// One rational sample point: a binding of each (already-eliminated / sampled)
@@ -8487,18 +8586,27 @@ mod tests {
     /// The cap must be EQUAL across these two arms: that is what makes an A/B
     /// between them isolate the route rather than the budget.
     #[test]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one table read with every invariant that makes an A/B on it \
+                  meaningful; splitting it would separate an arm's field from \
+                  the reason that field has to differ"
+    )]
     fn the_single_cell_arm_differs_in_exactly_the_route() {
-        // Collected at runtime so the assertions are about the ARMS and not
-        // three constants the compiler folds away (clippy rejects the folded
-        // form, and it is right to: a const assertion is a compile-time claim
-        // about a literal, not a test of the table).
-        let arms: Vec<CadPolicy> = vec![
-            CadPolicy::DEFAULT,
-            CadPolicy::WIDE,
-            CadPolicy::SINGLE_CELL,
-            CadPolicy::SINGLE_CELL_SAT,
-            CadPolicy::CLAUSE_LOOP,
-        ];
+        // Read from [`CadPolicy::ALL`], the authority, and looked up BY NAME.
+        //
+        // Both of those are corrections. This test used to carry its own
+        // five-entry literal list, so ADR-2134's arm was invisible to it; and it
+        // indexed that list positionally, so inserting an arm anywhere but the
+        // end would have silently re-pointed every assertion at a different arm
+        // while still passing.
+        let arms: Vec<CadPolicy> = CadPolicy::ALL.to_vec();
+        let by_name = |want: &str| -> CadPolicy {
+            *arms
+                .iter()
+                .find(|p| p.arm == want)
+                .unwrap_or_else(|| panic!("no arm named {want}"))
+        };
 
         let routed: Vec<&str> = arms
             .iter()
@@ -8507,7 +8615,12 @@ mod tests {
             .collect();
         assert_eq!(
             routed,
-            vec!["single-cell", "single-cell-sat", "clause-loop"],
+            vec![
+                "single-cell",
+                "single-cell-sat",
+                "clause-loop",
+                "algebraic-witness"
+            ],
             "exactly the single-cell arms turn the route on"
         );
 
@@ -8524,7 +8637,20 @@ mod tests {
             "exactly one arm turns the clause loop on"
         );
 
-        // The `unsat`-withholding arm is the ONLY one that withholds. An arm
+        // ADR-2134's arm turns the algebraic acceptance on and NOTHING else
+        // does, so an A/B against the shipped default prices it alone.
+        let algebraic: Vec<&str> = arms
+            .iter()
+            .filter(|p| p.algebraic_witness)
+            .map(|p| p.arm)
+            .collect();
+        assert_eq!(
+            algebraic,
+            vec!["algebraic-witness"],
+            "exactly one arm accepts an algebraic final coordinate"
+        );
+
+        // The `unsat`-withholding arms are the ONLY ones that withhold. An arm
         // that ran the route and silently kept its `unsat` would make the
         // sat-only A/B measure the full route instead.
         //
@@ -8541,6 +8667,11 @@ mod tests {
             vec!["single-cell-sat"],
             "exactly the sat-only arm withholds `unsat`"
         );
+
+        let default = by_name("default");
+        let single = by_name("single-cell");
+        let sat_only = by_name("single-cell-sat");
+        let witness = by_name("algebraic-witness");
 
         // `clause-loop` differs from the SHIPPED DEFAULT in EXACTLY
         // `clause_loop`, and this is the assertion that keeps its A/B honest.
@@ -8559,7 +8690,7 @@ mod tests {
             .iter()
             .find(|p| p.arm == CAD_DEFAULT.arm)
             .expect("the shipped default must be one of the arms");
-        let looped = arms[4];
+        let looped = by_name("clause-loop");
         assert_eq!(shipped.cell_cap, looped.cell_cap);
         assert_eq!(shipped.single_cell, looped.single_cell);
         assert_eq!(
@@ -8568,19 +8699,60 @@ mod tests {
         );
         assert_ne!(shipped.clause_loop, looped.clause_loop);
 
-        let default = arms[0];
+        // ADR-2134's arm differs from the SHIPPED DEFAULT in exactly
+        // `algebraic_witness`, and the A/B is run against that default. Same two
+        // vacuity modes, and the first of them was a MEASURED hole: flipping
+        // this arm's `algebraic_witness` to `false` -- which turns the treatment
+        // silently into the control and makes the whole A/B report a flawless
+        // null -- killed no test in this module until these four lines existed.
+        // `every_arm_name_is_a_value_the_parser_accepts` cannot catch it: it
+        // compares the PARSED arm against the SAME constant, so both sides move
+        // together and it passes. A derived expectation cannot pin the value it
+        // derives from.
+        assert_eq!(witness.cell_cap, single.cell_cap);
+        assert_eq!(witness.single_cell, single.single_cell);
+        assert_eq!(witness.emit_unsat, single.emit_unsat);
+        assert_eq!(witness.clause_loop, single.clause_loop);
+        assert_ne!(witness.algebraic_witness, single.algebraic_witness);
+        assert!(
+            witness.algebraic_witness,
+            "the `algebraic-witness` arm must have the acceptance ON, or the \
+             treatment is the control"
+        );
+        assert!(
+            !single.algebraic_witness,
+            "the shipped default must have the acceptance OFF, or the lever \
+             is not OFF at all"
+        );
+        // Read through the arm list at RUNTIME rather than asserted on the
+        // constant: a const assertion is a compile-time claim about a literal
+        // (clippy rejects it), and it would not fail if the default were
+        // repointed at some other arm.
+        let shipped_accepts: Vec<&str> = arms
+            .iter()
+            .filter(|p| p.arm == CAD_DEFAULT.arm)
+            .filter(|p| p.algebraic_witness)
+            .map(|p| p.arm)
+            .collect();
+        assert!(
+            shipped_accepts.is_empty(),
+            "ADR-2134 ships OFF: the default ({}) must not accept an algebraic \
+             coordinate until an A/B says so",
+            CAD_DEFAULT.arm
+        );
+
         assert_eq!(
-            arms[2].cell_cap, default.cell_cap,
+            single.cell_cap, default.cell_cap,
             "the single-cell A/B must isolate the ROUTE, not the cell budget"
         );
         assert_eq!(
-            arms[3].cell_cap, default.cell_cap,
+            sat_only.cell_cap, default.cell_cap,
             "the sat-only A/B must isolate the ROUTE, not the cell budget"
         );
         // The two single-cell arms differ in EXACTLY `emit_unsat`, so an A/B
         // between them prices the `unsat` half on its own.
-        assert_eq!(arms[2].single_cell, arms[3].single_cell);
-        assert_ne!(arms[2].emit_unsat, arms[3].emit_unsat);
+        assert_eq!(single.single_cell, sat_only.single_cell);
+        assert_ne!(single.emit_unsat, sat_only.emit_unsat);
 
         let mut names: Vec<&str> = arms.iter().map(|p| p.arm).collect();
         let total = names.len();
@@ -8632,22 +8804,41 @@ mod tests {
     /// under a treatment label.
     #[test]
     fn every_arm_name_is_a_value_the_parser_accepts() {
-        for policy in [
-            CadPolicy::DEFAULT,
-            CadPolicy::WIDE,
-            CadPolicy::SINGLE_CELL,
-            CadPolicy::SINGLE_CELL_SAT,
-        ] {
+        // Derived from [`CadPolicy::ALL`], not from a literal list. The literal
+        // version of this test omitted `CLAUSE_LOOP` for the whole of ADR-2126's
+        // life: a test named "every arm" that carries its own copy of the arms
+        // measures the maintainer's memory instead of the code.
+        assert!(
+            CadPolicy::ALL.len() >= 6,
+            "the arm authority lost entries: {}",
+            CadPolicy::ALL.len()
+        );
+        for policy in CadPolicy::ALL {
             let parsed = parse_cad_arm(policy.arm);
             assert_eq!(
                 parsed.arm, policy.arm,
                 "`AXEYUM_NRA_CAD={}` does not select the arm of that name",
                 policy.arm
             );
-            assert_eq!(parsed.single_cell, policy.single_cell);
-            assert_eq!(parsed.emit_unsat, policy.emit_unsat);
-            assert_eq!(parsed.cell_cap, policy.cell_cap);
+            // EVERY field, so an arm that parses to the right name but the wrong
+            // behaviour still fails here.
+            assert_eq!(parsed.single_cell, policy.single_cell, "{}", policy.arm);
+            assert_eq!(parsed.emit_unsat, policy.emit_unsat, "{}", policy.arm);
+            assert_eq!(parsed.cell_cap, policy.cell_cap, "{}", policy.arm);
+            assert_eq!(parsed.clause_loop, policy.clause_loop, "{}", policy.arm);
+            assert_eq!(
+                parsed.algebraic_witness, policy.algebraic_witness,
+                "{}",
+                policy.arm
+            );
         }
+        // Arm names are distinct, or two arms would be one.
+        let mut names: Vec<&str> = CadPolicy::ALL.iter().map(|p| p.arm).collect();
+        names.sort_unstable();
+        let before = names.len();
+        names.dedup();
+        assert_eq!(before, names.len(), "two arms share a name: {names:?}");
+
         // An unrecognised value is the shipped arm, never a treatment.
         assert_eq!(parse_cad_arm("nonsense").arm, CAD_DEFAULT.arm);
         assert_eq!(parse_cad_arm("").arm, CAD_DEFAULT.arm);

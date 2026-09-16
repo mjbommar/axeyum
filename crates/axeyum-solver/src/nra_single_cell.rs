@@ -173,11 +173,41 @@ pub(crate) fn last_cell_check() -> Option<CellCheckStats> {
     LAST_CELL_CHECK.with(core::cell::Cell::get)
 }
 
+/// One coordinate of a complete sample.
+///
+/// The recursion carries RATIONAL coordinates downward -- a deeper level has to
+/// substitute the coordinate into a polynomial and isolate the result's roots,
+/// and this slice does that in exact rational arithmetic. Only the LAST
+/// coordinate may be algebraic, because nothing is substituted into anything
+/// after it (ADR-2134).
+#[derive(Clone, Debug)]
+pub(crate) enum SampleCoord {
+    /// An exact rational.
+    Rational(Rational),
+    /// An irrational algebraic root, as the final coordinate only.
+    Algebraic(RealAlgebraic),
+}
+
+impl SampleCoord {
+    /// The coordinate as a model [`Value`].
+    fn to_value(&self) -> Value {
+        match self {
+            SampleCoord::Rational(q) => Value::Real(*q),
+            SampleCoord::Algebraic(a) => Value::RealAlgebraic(a.clone()),
+        }
+    }
+
+    /// Whether this coordinate is irrational-algebraic.
+    fn is_algebraic(&self) -> bool {
+        matches!(self, SampleCoord::Algebraic(_))
+    }
+}
+
 /// What one level of the recursion produced.
 enum LevelOutcome {
-    /// A complete rational sample satisfying every atom of every level at or
-    /// above this one.
-    Sat(Vec<(SymbolId, Rational)>),
+    /// A complete sample satisfying every atom of every level at or above this
+    /// one. Every coordinate is rational except possibly the last (ADR-2134).
+    Sat(Vec<(SymbolId, SampleCoord)>),
     /// No value of this level's variable survives, under this sample.
     Refuted {
         /// The fixpoint covering.
@@ -215,6 +245,11 @@ struct Ctx<'a> {
     by_level: Vec<Vec<usize>>,
     deadline: Option<Instant>,
     cells_seen: usize,
+    /// Whether an ALGEBRAIC representative point may be accepted as the final
+    /// coordinate (ADR-2134). Carried on the context rather than read from the
+    /// environment so the route stays a pure function of its arguments and a
+    /// test can exercise both arms in one process.
+    algebraic_witness: bool,
 }
 
 impl Ctx<'_> {
@@ -237,12 +272,13 @@ pub(crate) fn decide_single_cell(
     assertions: &[TermId],
     deadline: Option<Instant>,
     emit_unsat: bool,
+    algebraic_witness: bool,
 ) -> Option<CheckResult> {
     LAST_CELL_CHECK.with(|slot| slot.set(None));
     let atoms = collect_cert_atoms(arena, assertions)?;
-    match decide_atoms(&atoms, deadline)? {
+    match decide_atoms(&atoms, deadline, algebraic_witness)? {
         AtomOutcome::Sat(sample) => {
-            let model = replay_rational_model(arena, assertions, &sample)?;
+            let model = replay_model(arena, assertions, &sample)?;
             Some(CheckResult::Sat(model))
         }
         AtomOutcome::Refuted(refutation) => {
@@ -285,9 +321,10 @@ pub(crate) fn decide_single_cell(
 /// only to learn a clause -- so the split is where their obligations genuinely
 /// diverge.
 pub(crate) enum AtomOutcome {
-    /// A complete rational sample satisfying every atom. **Not yet a model**: the
-    /// caller must replay it against the original assertions.
-    Sat(Vec<(SymbolId, Rational)>),
+    /// A complete sample satisfying every atom. **Not yet a model**: the caller
+    /// must replay it against the original assertions. Every coordinate is
+    /// rational except possibly the last (ADR-2134).
+    Sat(Vec<(SymbolId, SampleCoord)>),
     /// A covering of the whole space in which every cell is closed. **Not yet an
     /// `unsat`**: the caller must decide whether its checker accepts it.
     Refuted(CellRefutation),
@@ -298,7 +335,11 @@ pub(crate) enum AtomOutcome {
 ///
 /// Declines (`None`) on everything outside the declared slice, recording the
 /// cause through [`crate::nra_real_root::record_cad_decline`].
-pub(crate) fn decide_atoms(atoms: &[CertAtom], deadline: Option<Instant>) -> Option<AtomOutcome> {
+pub(crate) fn decide_atoms(
+    atoms: &[CertAtom],
+    deadline: Option<Instant>,
+    algebraic_witness: bool,
+) -> Option<AtomOutcome> {
     if atoms.is_empty() {
         record_cad_decline(CadDecline::NonConjunctive);
         return None;
@@ -359,6 +400,7 @@ pub(crate) fn decide_atoms(atoms: &[CertAtom], deadline: Option<Instant>) -> Opt
         by_level,
         deadline,
         cells_seen: 0,
+        algebraic_witness,
     };
 
     match solve_level(&mut ctx, 0, &[])? {
@@ -463,17 +505,44 @@ fn solve_level(
             //    must be rational because this slice does not carry algebraic
             //    coordinates into a lower level.
             let CellRep::Rational(x) = cell.rep else {
-                // Every atom of this level holds at an IRRATIONAL root. A model
-                // may well live there; this slice carries rational samples only,
-                // so it refuses rather than round. Recorded apart from
+                // Every atom of this level holds at an IRRATIONAL root.
+                //
+                // At the LAST level that is a complete model and the lever
+                // (ADR-2134) takes it: no deeper level exists, so nothing has to
+                // substitute this coordinate into a polynomial, and the sample
+                // handed back is `rationals..., alpha`. The caller replays it
+                // through the ground evaluator against the ORIGINAL assertions,
+                // which evaluates at an algebraic point by exact algebraic field
+                // arithmetic (ADR-0038) -- the same gate every other `sat` from
+                // this route passes, not a weaker one.
+                //
+                // At any INTERMEDIATE level it is still a refusal: the next level
+                // down substitutes the sample into its atoms and isolates the
+                // result's roots in exact RATIONAL arithmetic, which an algebraic
+                // coordinate does not fit. A model may well live there; this
+                // slice refuses rather than round. Recorded apart from
                 // `AlgebraicCoarsening` because the two say different things
                 // about what would fix them.
+                let CellRep::Algebraic(alpha) = &cell.rep else {
+                    unreachable!("CellRep is Rational or Algebraic")
+                };
+                if ctx.algebraic_witness && level + 1 == ctx.order.len() {
+                    let mut full: Vec<(SymbolId, SampleCoord)> = sample
+                        .iter()
+                        .map(|&(v, q)| (v, SampleCoord::Rational(q)))
+                        .collect();
+                    full.push((var, SampleCoord::Algebraic(alpha.clone())));
+                    return Some(LevelOutcome::Sat(full));
+                }
                 record_cad_decline(CadDecline::AlgebraicWitness);
                 return None;
             };
             if level + 1 == ctx.order.len() {
-                let mut full = sample.to_vec();
-                full.push((var, x));
+                let mut full: Vec<(SymbolId, SampleCoord)> = sample
+                    .iter()
+                    .map(|&(v, q)| (v, SampleCoord::Rational(q)))
+                    .collect();
+                full.push((var, SampleCoord::Rational(x)));
                 return Some(LevelOutcome::Sat(full));
             }
             // A RATIONAL point cell is descended into exactly like an open one.
@@ -873,21 +942,68 @@ fn is_nullified_at(p: &MultiPoly, elim: SymbolId, sample: &BTreeMap<SymbolId, Ra
 /// ground evaluator. Returns `None` (a decline) unless every assertion evaluates
 /// to `true` — an overflow or an unresolved evaluation is a decline, never a
 /// `Sat`.
-pub(crate) fn replay_rational_model(
+///
+/// # The replay is what makes the verdict, at a rational or an algebraic point
+///
+/// This is the route's only `sat` gate, and ADR-2134 does not weaken it to admit
+/// an algebraic coordinate — it relies on the ground evaluator already being
+/// exact there. [`axeyum_ir::eval`] evaluates `+`, `−`, `·` on real-sorted
+/// operands by exact algebraic field arithmetic and compares them by exact
+/// interval refinement (ADR-0038), and reports
+/// `IrError::AlgebraicArithmeticUnsupported` / `ArithmeticOverflow` rather than
+/// guessing. So an `Ok(Bool(true))` here is an exact statement about the
+/// original assertion at the exact point — the *same* statement it is at a
+/// rational point, reached by a different arithmetic.
+///
+/// **No rounding, ever.** An algebraic coordinate is never replaced by a nearby
+/// rational for the replay. A rational approximation can satisfy every atom
+/// while the exact point violates one — an atom `p(x) > 0` whose root lies
+/// between the approximation and `α` is enough — which is why
+/// `a_rational_approximation_can_satisfy_what_the_exact_point_violates` exists
+/// and why this function has no approximation path to take.
+///
+/// The three outcomes are named apart because they call for different fixes:
+///
+/// * every assertion `true` ⇒ a model;
+/// * an assertion decided `false` ⇒ [`CadDecline::AlgebraicReplayRefuted`], a
+///   producer disagreement (the scan picked a cell where the collected atoms
+///   hold, so the assertions they came from must hold too);
+/// * an assertion not decided ⇒ [`CadDecline::AlgebraicReplayUndecided`].
+///
+/// On an all-rational sample the cause stays [`CadDecline::IndeterminateSign`],
+/// unchanged from before ADR-2134, so the taxonomy on the shipped arm does not
+/// move.
+pub(crate) fn replay_model(
     arena: &TermArena,
     assertions: &[TermId],
-    sample: &[(SymbolId, Rational)],
+    sample: &[(SymbolId, SampleCoord)],
 ) -> Option<Model> {
+    let algebraic = sample.iter().any(|(_, c)| c.is_algebraic());
     let mut asg = Assignment::new();
     let mut model = Model::new();
-    for &(v, q) in sample {
-        asg.set(v, Value::Real(q));
-        model.set(v, Value::Real(q));
+    for (v, coord) in sample {
+        asg.set(*v, coord.to_value());
+        model.set(*v, coord.to_value());
     }
     for &a in assertions {
-        if !matches!(eval(arena, a, &asg), Ok(Value::Bool(true))) {
-            record_cad_decline(CadDecline::IndeterminateSign);
-            return None;
+        match eval(arena, a, &asg) {
+            Ok(Value::Bool(true)) => {}
+            Ok(Value::Bool(false)) => {
+                record_cad_decline(if algebraic {
+                    CadDecline::AlgebraicReplayRefuted
+                } else {
+                    CadDecline::IndeterminateSign
+                });
+                return None;
+            }
+            _ => {
+                record_cad_decline(if algebraic {
+                    CadDecline::AlgebraicReplayUndecided
+                } else {
+                    CadDecline::IndeterminateSign
+                });
+                return None;
+            }
         }
     }
     Some(model)
@@ -903,7 +1019,7 @@ mod tests {
         let parsed = axeyum_smtlib::parse_script(script).expect("parse");
         let (arena, assertions) = (parsed.arena, parsed.assertions);
         reset_cad_decline();
-        let out = decide_single_cell(&arena, &assertions, None, true);
+        let out = decide_single_cell(&arena, &assertions, None, true, false);
         (out, cad_decline().name())
     }
 
@@ -912,7 +1028,7 @@ mod tests {
     fn decide_sat_only(script: &str) -> (Option<CheckResult>, &'static str) {
         let parsed = axeyum_smtlib::parse_script(script).expect("parse");
         reset_cad_decline();
-        let out = decide_single_cell(&parsed.arena, &parsed.assertions, None, false);
+        let out = decide_single_cell(&parsed.arena, &parsed.assertions, None, false, false);
         (out, cad_decline().name())
     }
 
@@ -1122,7 +1238,7 @@ mod tests {
             format!("{DECL2}(assert (< (+ (* x x) (* y y)) 1))\n(assert (> x 2))\n(check-sat)\n");
         let parsed = axeyum_smtlib::parse_script(&script).expect("parse");
         reset_cad_decline();
-        let out = decide_single_cell(&parsed.arena, &parsed.assertions, None, true);
+        let out = decide_single_cell(&parsed.arena, &parsed.assertions, None, true, false);
         assert!(is_unsat(out.as_ref()), "expected unsat, got {out:?}");
         let stats = last_cell_check().expect("an accepted `unsat` records its check");
         assert!(
@@ -1165,7 +1281,7 @@ mod tests {
     fn an_empty_query_declines() {
         let arena = TermArena::new();
         reset_cad_decline();
-        assert!(decide_single_cell(&arena, &[], None, true).is_none());
+        assert!(decide_single_cell(&arena, &[], None, true, false).is_none());
     }
 
     /// And it keeps the half that IS exact.

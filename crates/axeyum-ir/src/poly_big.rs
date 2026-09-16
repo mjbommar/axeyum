@@ -26,6 +26,7 @@ use core::cmp::Ordering;
 use axeyum_arith::big::BigInt;
 use axeyum_arith::big::BigRational;
 use axeyum_arith::big::Integer;
+use axeyum_arith::big::Signed;
 use axeyum_arith::big::{One, Zero};
 
 use crate::real_algebraic::Sign;
@@ -898,4 +899,203 @@ pub(crate) fn big_poly_divides(divisor: &[BigInt], dividend: &[BigInt]) -> bool 
         Some(r) => big_degree(&r).is_none(),
         None => false,
     }
+}
+
+// ============================================================================
+// Exact constancy of a polynomial's sign over an interval (ADR-2134)
+// ============================================================================
+
+/// Iteration guard for the Sturm chain built by [`RootCounter`].
+///
+/// Deliberately much larger than [`BIG_MAX_DEGREE_GUARD`]: that bound sizes a
+/// *resultant* built by the field arithmetic, whereas this one sizes a chain
+/// over a polynomial handed in by a caller — an atom of the query. Capping it at
+/// the resultant bound would turn an ordinary degree-30 atom into a decline, and
+/// the cost here is one Euclidean chain, not a Sylvester determinant.
+const BIG_STURM_MAX_DEGREE: usize = 256;
+
+/// An exact counter for the real roots of one fixed polynomial inside an
+/// interval, built once and queried on successively narrower intervals.
+///
+/// # Why this exists
+///
+/// [`crate::RealAlgebraic::sign_at`] decides the sign of a polynomial `q` at an
+/// algebraic point `α` by locating `α` in a bracket and reading `q` at the
+/// bracket's endpoints. Agreeing, nonzero endpoint signs do **not** by
+/// themselves imply that `q` keeps that sign across the bracket: `q` may have an
+/// even number of roots inside and dip through the opposite sign in between —
+/// exactly where `α` might be. `q(lo)` and `q(hi)` are two *samples*, not an
+/// enclosure of `q`'s range.
+///
+/// [`RootCounter::no_root_in_open`] is the exact side condition that makes the
+/// endpoint read sound. With no root of `q` strictly inside `(lo, hi)` and
+/// `q(lo) ≠ 0`, `q` has constant nonzero sign on the whole open interval by the
+/// intermediate value theorem, so `sign(q(α)) = sign(q(lo))` for **every** `α`
+/// in it — no assumption about where in the bracket `α` sits, and no separation
+/// bound to refine below.
+///
+/// z3 reaches the same guarantee differently: `eval_sign_at`
+/// (`references/z3/src/math/polynomial/algebraic_numbers.cpp:2453-2484`) refines
+/// until an *interval evaluation* of `q` over the box provably excludes zero
+/// (`bqim().contains_zero(ri)`), which is an enclosure of the range rather than
+/// two point samples, and falls back to a resultant plus
+/// `nonzero_root_lower_bound` (`:2565`) to conclude an exact zero. A Sturm count
+/// decides in one chain instead of refining toward a bound, and our exact-zero
+/// case is settled by polynomial divisibility instead of a resultant.
+///
+/// The chain is built once because `sign_at` narrows the same bracket many
+/// times; rebuilding a Euclidean chain per bisection would make the sound path
+/// cost a multiple of the unsound one.
+pub(crate) enum RootCounter {
+    /// A nonzero constant: no real roots anywhere, so every interval is clear.
+    NoRootsAnywhere,
+    /// The Sturm chain of the squarefree part, plus that squarefree part (needed
+    /// to test whether the upper endpoint is itself a root).
+    Chain {
+        /// `S₀ = sf`, `S₁ = sf'`, `S_{k+1} = −rem(S_{k−1}, S_k)`.
+        chain: Vec<BigVec>,
+        /// The squarefree part — the same root SET as `q`, which is all this
+        /// asks about.
+        squarefree: BigVec,
+    },
+}
+
+impl RootCounter {
+    /// Build the counter for the bignum-integer polynomial `q` (LSB-first).
+    ///
+    /// `None` when no exact count can be formed — the zero polynomial (which
+    /// vanishes everywhere and has no meaningful degree), a remainder that did
+    /// not cancel, or the degree guard. The caller must **decline**, never
+    /// assume either answer.
+    pub(crate) fn new(q: &[BigInt]) -> Option<RootCounter> {
+        let qr = bigint_poly_to_rat(q);
+        let deg = big_degree(&qr)?;
+        if deg == 0 {
+            return Some(RootCounter::NoRootsAnywhere);
+        }
+        if deg > BIG_STURM_MAX_DEGREE {
+            return None;
+        }
+        // Sturm's theorem needs a squarefree polynomial; the squarefree part has
+        // the same root SET.
+        let squarefree = big_squarefree_part(&qr, BIG_STURM_MAX_DEGREE)?;
+        let chain = big_sturm_chain(&squarefree, BIG_STURM_MAX_DEGREE)?;
+        Some(RootCounter::Chain { chain, squarefree })
+    }
+
+    /// Whether the polynomial has **no real root strictly inside** the open
+    /// interval `(lo, hi)`.
+    ///
+    /// `Some(true)`  — provably no root in `(lo, hi)`.
+    /// `Some(false)` — provably at least one root in `(lo, hi)`.
+    /// `None`        — the count could not be formed for this interval (a
+    ///                 degenerate interval, or a subtraction that underflowed).
+    ///                 The caller must decline.
+    pub(crate) fn no_root_in_open(&self, lo: &BigRational, hi: &BigRational) -> Option<bool> {
+        if lo >= hi {
+            return None;
+        }
+        let (chain, squarefree) = match self {
+            RootCounter::NoRootsAnywhere => return Some(true),
+            RootCounter::Chain { chain, squarefree } => (chain, squarefree),
+        };
+        // `big_count_roots_in` counts distinct roots in the HALF-OPEN `(lo, hi]`.
+        let half_open = big_count_roots_in(chain, lo, hi)?;
+        // Drop `hi` itself if it is a root, to get the count over the OPEN one.
+        let open = if big_sign(&big_eval(squarefree, hi)) == Sign::Zero {
+            half_open.checked_sub(1)?
+        } else {
+            half_open
+        };
+        Some(open == 0)
+    }
+}
+
+/// The canonical root-object form of an algebraic number: its **squarefree,
+/// primitive, positive-leading** defining polynomial (LSB-first bignum
+/// integers), and the **1-based index** of the root that `(lo, hi)` isolates
+/// among that polynomial's distinct real roots in ascending order.
+///
+/// # Why a canonical polynomial rather than the stored one
+///
+/// `(root-obj p k)` only names a value if `p` and `k` agree on what "the k-th
+/// root" means. A polynomial with repeated factors has fewer distinct roots than
+/// its degree suggests, so indexing is ambiguous unless the polynomial is
+/// squarefree. The squarefree part has exactly the same root SET, so it denotes
+/// the same value and makes the index unambiguous.
+///
+/// Content and leading sign are normalised for the same reason **determinism**
+/// is a public promise elsewhere: two [`crate::RealAlgebraic`]s that denote the
+/// same number must print the same text. Without it `x² − 2` and `2x² − 4` —
+/// both legitimate stored forms for `√2` — would print differently.
+///
+/// z3 keeps its `algebraic_cell::m_p` squarefree by construction and computes
+/// the index lazily the same way, at
+/// `references/z3/src/math/polynomial/algebraic_numbers.cpp:3209-3212`
+/// (`c->m_i = upm().get_root_id(c->m_p_sz, c->m_p, lower(c)) + 1`).
+///
+/// `None` when no exact answer can be formed (a constant polynomial, the degree
+/// guard, a chain that does not close). The caller must then decline to print a
+/// root object — never round to a rational.
+pub(crate) fn big_root_object(poly: &[BigInt], lo: &BigRational) -> Option<(Vec<BigInt>, usize)> {
+    let qr = bigint_poly_to_rat(poly);
+    let deg = big_degree(&qr)?;
+    if deg == 0 || deg > BIG_STURM_MAX_DEGREE {
+        return None;
+    }
+    let sf = big_squarefree_part(&qr, BIG_STURM_MAX_DEGREE)?;
+    let chain = big_sturm_chain(&sf, BIG_STURM_MAX_DEGREE)?;
+    let sf_int = big_normalize_primitive(&big_to_int_poly(&sf)?)?;
+
+    // Cauchy: every real root `r` of `sf_int` satisfies `|r| < 1 + max|a_i|/|a_n|`,
+    // so `-bound` lies strictly below every root and the half-open Sturm count
+    // over `(-bound, lo]` is the count of ALL roots `<= lo`.
+    let n = big_degree(&bigint_poly_to_rat(&sf_int))?;
+    let lead = BigRational::from(sf_int[n].clone());
+    let mut max_ratio = BigRational::from(BigInt::from(0));
+    for c in &sf_int[..n] {
+        let r = BigRational::from(c.clone().abs()) / &lead;
+        let r = if r < BigRational::from(BigInt::from(0)) {
+            -r
+        } else {
+            r
+        };
+        if r > max_ratio {
+            max_ratio = r;
+        }
+    }
+    let bound = max_ratio + BigRational::from(BigInt::from(1));
+    // `lo` must lie inside the bound for the count to mean what it says.
+    if lo <= &(-bound.clone()) {
+        return None;
+    }
+    let below = big_count_roots_in(&chain, &(-bound), lo)?;
+    Some((sf_int, below.checked_add(1)?))
+}
+
+/// Divide out the content and force a positive leading coefficient, so that two
+/// integer polynomials with the same real roots and the same squarefree part
+/// have the SAME representation. `None` for the zero polynomial.
+fn big_normalize_primitive(p: &[BigInt]) -> Option<Vec<BigInt>> {
+    let mut n = p.len();
+    while n > 0 && p[n - 1].is_zero() {
+        n -= 1;
+    }
+    if n == 0 {
+        return None;
+    }
+    let mut content = BigInt::from(0);
+    for c in &p[..n] {
+        content = content.gcd(c);
+    }
+    if content.is_zero() {
+        return None;
+    }
+    let negate = p[n - 1] < BigInt::from(0);
+    let mut out = Vec::with_capacity(n);
+    for c in &p[..n] {
+        let q = c / &content;
+        out.push(if negate { -q } else { q });
+    }
+    Some(out)
 }

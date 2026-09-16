@@ -354,6 +354,134 @@ impl Instance {
         }
     }
 
+    /// The **algebraic-witness seed class** (ADR-2134): shapes whose satisfying
+    /// points are IRRATIONAL, so the route's final coordinate is algebraic.
+    ///
+    /// # Why this class had to be added
+    ///
+    /// ADR-2134 lets the single-cell route accept an algebraic root as the last
+    /// coordinate of a model. That is a NEW `sat` producer, and a wrong sign at
+    /// the algebraic point would be a wrong `sat` — the failure mode this whole
+    /// file exists to catch.
+    ///
+    /// Neither existing class reaches it with any reliability. The general
+    /// generator caps a monomial at total degree 2 and divides by a variable in
+    /// a quarter of its atoms. The single-cell class draws its comparator
+    /// uniformly over six and its monomial support at random, so an instance
+    /// whose solution set is *exactly* an irrational point is an accident. An
+    /// algebraic witness is not a random shape: it needs an EQUALITY that pins a
+    /// variable to an irrational value, and nothing in this file was generating
+    /// one on purpose.
+    ///
+    /// So this class builds the corner deliberately, in the shape the repository
+    /// rule for underspecified/degenerate cases demands:
+    ///
+    /// - the LAST variable in the route's order (variables are declared `x`,
+    ///   `y`, … and the route orders by ascending `SymbolId`, so index
+    ///   `num_vars − 1` is the deepest level) carries `v·v = c` with `c` drawn
+    ///   from NON-SQUARES, so **both** its roots are irrational and no rational
+    ///   sample can satisfy the system;
+    /// - 1..=2 further atoms over that same variable — linear, quadratic or
+    ///   cubic — whose signs at the algebraic point are what the exact sign
+    ///   decision has to resolve, including atoms whose own roots sit close to
+    ///   `±√c` so the decision is not trivial;
+    /// - with probability 1/2 a second variable carrying its own linear atom, so
+    ///   the algebraic coordinate is reached after a RATIONAL one and the
+    ///   "last coordinate only" restriction is exercised rather than assumed.
+    ///
+    /// Z3 adjudicates, exactly as for the other classes.
+    fn generate_algebraic_witness_shape(rng: &mut Lcg) -> Instance {
+        // Non-squares only: `v·v = c` then has two irrational roots. A SQUARE
+        // here would give rational roots and the class would quietly stop
+        // testing its own subject -- the fuzz counts algebraic models at the end
+        // so that failure is visible rather than silent.
+        const NON_SQUARES: [i128; 8] = [2, 3, 5, 6, 7, 8, 10, 11];
+
+        let two_vars = rng.below(2) == 0;
+        let num_vars = if two_vars { 2 } else { 1 };
+        let last = num_vars - 1;
+        let c = NON_SQUARES[rng.below(NON_SQUARES.len() as u64)];
+
+        let mut atoms: Vec<Atom> = Vec::new();
+
+        if two_vars {
+            // A linear atom on the FIRST variable, so its coordinate is rational
+            // and the algebraic one is genuinely the last.
+            atoms.push(Atom {
+                monomials: vec![
+                    Monomial {
+                        num: 1,
+                        den: 1,
+                        factors: vec![0],
+                    },
+                    Monomial {
+                        num: i128::from(rng.in_range(-4, 4)),
+                        den: 1,
+                        factors: Vec::new(),
+                    },
+                ],
+                cmp: if rng.below(2) == 0 { Cmp::Ge } else { Cmp::Le },
+                divisor: None,
+            });
+        }
+
+        // THE FORCING ATOM: `v·v − c = 0` with `c` a non-square.
+        atoms.push(Atom {
+            monomials: vec![
+                Monomial {
+                    num: 1,
+                    den: 1,
+                    factors: vec![last, last],
+                },
+                Monomial {
+                    num: -c,
+                    den: 1,
+                    factors: Vec::new(),
+                },
+            ],
+            cmp: Cmp::Eq,
+            divisor: None,
+        });
+
+        // 1..=2 sign atoms on the same variable. Their roots are drawn near
+        // `±√c` so the sign decision needs real refinement rather than a glance:
+        // a linear atom `q·v − p` has its root at `p/q`, and `p/q` is picked
+        // within one unit of `c`'s square root by construction.
+        let extra = rng.below(2) + 1;
+        for _ in 0..extra {
+            let degree = rng.below(3) + 1; // 1..=3 factors of the last variable
+            let q = rng.in_range(1, 5);
+            let p = rng.in_range(-6, 6);
+            atoms.push(Atom {
+                monomials: vec![
+                    Monomial {
+                        num: i128::from(q),
+                        den: 1,
+                        factors: vec![last; degree],
+                    },
+                    Monomial {
+                        num: i128::from(p),
+                        den: 1,
+                        factors: Vec::new(),
+                    },
+                ],
+                cmp: match rng.below(4) {
+                    0 => Cmp::Lt,
+                    1 => Cmp::Le,
+                    2 => Cmp::Gt,
+                    _ => Cmp::Ge,
+                },
+                divisor: None,
+            });
+        }
+
+        Instance {
+            num_vars,
+            atoms,
+            clauses: Vec::new(),
+        }
+    }
+
     /// The **clause-loop seed class** (ADR-2126): the same polynomial shapes the
     /// single-cell class emits, wrapped in a genuine Boolean skeleton.
     ///
@@ -1701,5 +1829,147 @@ fn single_cell_never_refutes_a_division_by_constant_zero() {
         !matches!(bout, Some(CheckResult::Unsat)),
         "the single-cell route REFUTED a satisfiable symbolic-divisor query: {bout:?} (cause {})",
         axeyum_solver::single_cell_decline_cause()
+    );
+}
+
+// ---------------------------------------------------------------------------
+// ADR-2134: the ALGEBRAIC-WITNESS sweep.
+//
+// Same reason for the explicit hook as the single-cell sweep above: the lever is
+// read once per process from `AXEYUM_NRA_CAD`, so a fuzz that set the variable
+// would be a gate on one shell. `algebraic_witness_decide_for_testing` differs
+// from `single_cell_decide_for_testing` in exactly the one flag.
+// ---------------------------------------------------------------------------
+
+/// Instances for the algebraic-witness sweep.
+const ALGEBRAIC_WITNESS_INSTANCES: u64 = 1200;
+
+/// Every `sat` whose final coordinate is ALGEBRAIC must agree with z3, and its
+/// model must replay against the original assertions through the exact
+/// evaluator.
+///
+/// The sweep is only meaningful if it actually produced algebraic models, so the
+/// count of those is asserted NONZERO at the end. A seed class that generated
+/// its shape but never reached the new producer would otherwise pass while
+/// testing nothing -- the same hole the FBBT class's own liveness assertion
+/// closes.
+#[test]
+#[allow(
+    clippy::too_many_lines,
+    reason = "one sweep with its adjudication table and its tally; splitting it \
+              would separate a verdict from the counters that qualify it"
+)]
+fn algebraic_witness_differential_fuzz_disagree_zero() {
+    let mut total = 0u64;
+    let mut decided = 0u64;
+    let mut sat_decided = 0u64;
+    let mut unsat_decided = 0u64;
+    let mut algebraic_models = 0u64;
+    let mut agreements = 0u64;
+    let mut declined = 0u64;
+    let mut z3_unknown_skipped = 0u64;
+    let mut causes: std::collections::BTreeMap<String, u64> = std::collections::BTreeMap::new();
+
+    for seed in 0..ALGEBRAIC_WITNESS_INSTANCES {
+        total += 1;
+        let mut rng = Lcg::new(seed ^ 0x2134_0916_a19e_b7c3_u64);
+        let inst = Instance::generate_algebraic_witness_shape(&mut rng);
+        let (arena, syms, assertions) = inst.build();
+
+        let outcome = axeyum_solver::algebraic_witness_decide_for_testing(&arena, &assertions);
+        let cause = axeyum_solver::single_cell_decline_cause().to_owned();
+
+        let ax = match &outcome {
+            None => {
+                declined += 1;
+                *causes.entry(cause.clone()).or_insert(0) += 1;
+                continue;
+            }
+            Some(CheckResult::Unknown(_)) => {
+                declined += 1;
+                *causes.entry(format!("unknown:{cause}")).or_insert(0) += 1;
+                continue;
+            }
+            Some(CheckResult::Sat(model)) => {
+                // Independent replay. "The route checked it" is exactly the
+                // claim a fuzz exists to doubt -- and here the replay is through
+                // EXACT ALGEBRAIC field arithmetic, which is the new code.
+                let asg = model.to_assignment();
+                for (i, &a) in assertions.iter().enumerate() {
+                    assert!(
+                        matches!(eval(&arena, a, &asg), Ok(Value::Bool(true))),
+                        "ALGEBRAIC-WITNESS WRONG SAT: seed {seed} assertion #{i} does \
+                         not hold under the model\n{}\nmodel: {}",
+                        inst.dump(),
+                        dump_model(&syms, model)
+                    );
+                }
+                if model
+                    .iter()
+                    .any(|(_, v)| matches!(v, Value::RealAlgebraic(_)))
+                {
+                    algebraic_models += 1;
+                    // Every algebraic coordinate must be NAMEABLE: a model value
+                    // that cannot be printed as a root object would have to be
+                    // rounded, and rounding names a point that does not satisfy
+                    // the query.
+                    for (_, v) in model.iter() {
+                        if let Value::RealAlgebraic(a) = &v {
+                            assert!(
+                                a.root_object().is_some(),
+                                "ALGEBRAIC-WITNESS UNNAMEABLE MODEL VALUE: seed \
+                                 {seed}\n{}",
+                                inst.dump()
+                            );
+                        }
+                    }
+                }
+                sat_decided += 1;
+                Verdict::Sat
+            }
+            Some(CheckResult::Unsat) => {
+                unsat_decided += 1;
+                Verdict::Unsat
+            }
+        };
+        decided += 1;
+
+        let z3 = z3_decide(&inst);
+        if z3 == Verdict::Unknown {
+            z3_unknown_skipped += 1;
+            continue;
+        }
+        assert!(
+            not_a_disagreement(ax, z3),
+            "ALGEBRAIC-WITNESS DISAGREEMENT: seed {seed} axeyum={ax:?} z3={z3:?}\n{}",
+            inst.dump()
+        );
+        if ax == z3 {
+            agreements += 1;
+        }
+    }
+
+    eprintln!(
+        "[algebraic-witness-fuzz] total={total} decided={decided} (sat={sat_decided} \
+         unsat={unsat_decided}) algebraic_models={algebraic_models} \
+         agreements={agreements} declined={declined} \
+         z3_unknown_skipped={z3_unknown_skipped}"
+    );
+    eprintln!("[algebraic-witness-fuzz] decline causes:");
+    for (cause, n) in &causes {
+        eprintln!("    {n:>5}  {cause}");
+    }
+
+    // LIVENESS. The class exists to reach the ADR-2134 producer; if it reached
+    // it zero times the sweep is decoration and this fails rather than passes.
+    assert!(
+        algebraic_models > 0,
+        "the algebraic-witness seed class generated its shape but NO model ever \
+         carried an algebraic coordinate -- the sweep tested nothing it was \
+         built for (decided={decided} sat={sat_decided} declined={declined})"
+    );
+    assert!(
+        decided > 0,
+        "the algebraic-witness sweep declined every instance"
     );
 }

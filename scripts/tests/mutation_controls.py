@@ -11502,12 +11502,35 @@ SUITES["nra-cad-attribution"] = (
             "        single_cell: false,",
         ),
         (
-            # Drop the arm from the PARSER. `AXEYUM_NRA_CAD=single-cell` then
-            # falls through to `default`, the treatment arm never runs, and the
-            # A/B is one binary measured against itself -- with no error anywhere.
-            "`AXEYUM_NRA_CAD=single-cell` actually selects the single-cell arm",
-            '    } else if value.eq_ignore_ascii_case("single-cell") {',
-            "    } else if false {",
+            # Drop the arm from the PARSER's authority. Until ADR-2134 this
+            # mutation removed an `else if` from a hand-written chain; the chain
+            # is gone and `parse_cad_arm` now scans `CadPolicy::ALL`, so the
+            # equivalent deletion is an entry of that list.
+            #
+            # It is retargeted from `single-cell` to `algebraic-witness` because
+            # under the scanning parser the two are not equivalent: dropping
+            # `single-cell` still resolves to a policy whose `arm` is
+            # "single-cell" (the shipped default IS that policy), while dropping
+            # `algebraic-witness` makes the TREATMENT silently become the
+            # CONTROL -- `AXEYUM_NRA_CAD=algebraic-witness` falls through to
+            # `CAD_DEFAULT`, which carries `algebraic_witness: false`. The A/B is
+            # then one arm measured against itself, reporting 0 movement, with no
+            # error anywhere. That is the hazard this guard exists for.
+            "`AXEYUM_NRA_CAD=algebraic-witness` actually selects the new arm",
+            "        Self::CLAUSE_LOOP,\n        Self::ALGEBRAIC_WITNESS,\n    ];",
+            "        Self::CLAUSE_LOOP,\n    ];",
+        ),
+        (
+            # ADR-2134's arm, the same hazard one level along: an arm whose
+            # `algebraic_witness` field matches the control's measures nothing
+            # and reports a null that reads exactly like a real one.
+            "the `algebraic-witness` arm actually turns the acceptance on",
+            '        arm: "algebraic-witness",\n        cell_cap: MAX_CAD_CELLS,\n'
+            "        single_cell: true,\n        emit_unsat: true,\n"
+            "        algebraic_witness: true,",
+            '        arm: "algebraic-witness",\n        cell_cap: MAX_CAD_CELLS,\n'
+            "        single_cell: true,\n        emit_unsat: true,\n"
+            "        algebraic_witness: false,",
         ),
         (
             # The `single-cell-sat` arm exists to take the EXACT half of the
@@ -12255,6 +12278,141 @@ SUITES["quant-generation-ladder"] = (
     ],
 )
 
+
+
+# --------------------------------------------------------------------------
+# ADR-2134 — the algebraic witness, and the sign that was read from two samples.
+#
+# `RealAlgebraic::sign_at` decided a polynomial's sign at an algebraic point by
+# comparing that polynomial's values at the two ENDPOINTS of the isolating
+# bracket. Two point samples are not an enclosure of a range: `q` may have an
+# EVEN number of roots strictly inside and dip through the opposite sign between
+# them, exactly where the algebraic point may lie. For `α = √2` bracketed by
+# `(1, 2)` and `q = 25x² − 70x + 48 = (5x − 6)(5x − 8)`, `q(1) = 3 > 0` and
+# `q(2) = 8 > 0` while `q(√2) ≈ −0.995 < 0` — a wrong sign in the trusted
+# evaluation path.
+#
+# A NOTE ON WHAT IS *NOT* REGISTERED HERE, because the absence is a finding.
+# The obvious mutant is "stop refining at a fixed width instead of counting
+# roots". It does not work, and the reason it does not work is the reason the
+# fix is a root count: a width threshold is ANDed with the endpoint-agreement
+# test, so it is strictly STRONGER than the defect and the fixtures still pass.
+# It would be registered as SURVIVED and read as "the guard is not load-bearing",
+# which is the opposite of true. The defect is not an interval that is too wide;
+# it is two samples read as an enclosure at ANY width, so the mutation that
+# isolates it is the removal of the root count itself.
+# --------------------------------------------------------------------------
+
+SUITES["nra-algebraic-witness-sign"] = (
+    "crates/axeyum-ir/src/real_algebraic.rs",
+    Cargo(
+        ("-p", "axeyum-ir", "--lib", "real_algebraic"),
+        "nra-algebraic-witness-sign",
+    ),
+    [
+        (
+            # THE DEFECT ITSELF: accept the endpoint read with no exact side
+            # condition, which is what the code did before ADR-2134.
+            "agreeing endpoint signs are not an enclosure of the range",
+            "            if slo == shi\n                && slo != Sign::Zero\n                && counter\n                    .as_ref()\n                    .and_then(|c| c.no_root_in_open(&probe.inner.lo, &probe.inner.hi))\n                    == Some(true)\n            {",
+            "            if slo == shi && slo != Sign::Zero {",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# ADR-2134 — the root object, which is the only exact way to NAME an irrational
+# model value.
+#
+# `(root-obj p k)` denotes a value only if `p` and `k` agree on what "the k-th
+# root" means, and only if two stored forms of the same number produce the same
+# pair. Both halves are guards, and both are deleted separately below.
+# --------------------------------------------------------------------------
+
+SUITES["nra-algebraic-witness-root-object"] = (
+    "crates/axeyum-ir/src/poly_big.rs",
+    Cargo(
+        ("-p", "axeyum-ir", "--lib", "real_algebraic"),
+        "nra-algebraic-witness-root-object",
+    ),
+    [
+        (
+            # Sturm counts roots in the HALF-OPEN `(lo, hi]`, so the index is
+            # one-based only after the count of roots strictly BELOW is taken.
+            # Dropping the `+ 1` makes `+√2` the first root of `x² − 2` rather
+            # than the second, i.e. it names `−√2`.
+            "the root index is one-based over the roots strictly below",
+            "    Some((sf_int, below.checked_add(1)?))",
+            "    Some((sf_int, below.max(1)))",
+        ),
+        (
+            # `x² − 2` and `2x² − 4` are both legitimate stored forms of `√2`.
+            # Without content normalisation they print differently, and
+            # determinism is a public API promise on a line of model output.
+            "content must be divided out so equal values name themselves alike",
+            "        let q = c / &content;\n        out.push(if negate { -q } else { q });",
+            "        let q = c.clone();\n        out.push(if negate { -q } else { q });",
+        ),
+        (
+            # `−x² + 2` has the same roots as `x² − 2`, but a negative leading
+            # coefficient reverses nothing about the roots and must not survive
+            # into the printed name.
+            "a negative leading coefficient must be normalised away",
+            "    let negate = p[n - 1] < BigInt::from(0);",
+            "    let negate = false;",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# ADR-2134 — the printed spelling of a root object.
+#
+# The text follows z3's `display_smt2`
+# (`references/z3/src/math/polynomial/upolynomial.cpp:1195-1236`) term for term,
+# because it has to be the text an SMT-LIB reader already accepts. Each mutation
+# below breaks one rule of that printer.
+# --------------------------------------------------------------------------
+
+SUITES["nra-algebraic-witness-printer"] = (
+    "crates/axeyum-solver/src/smtlib.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--lib",
+            "root_object_printing",
+        ),
+        "nra-algebraic-witness-printer",
+    ),
+    [
+        (
+            # SMT-LIB has no negative numeral; `-2` is a lexing error where
+            # `(- 2)` is the term. A printer that emits the first produces a
+            # model line no reader accepts.
+            "a negative coefficient is `(- n)`, never a bare minus",
+            '            format!("(- {})", -n.clone())',
+            '            format!("{}", n.clone())',
+        ),
+        (
+            # Descending degree is the reference printer's order. Ascending
+            # reads as a different polynomial to anything comparing text.
+            "monomials are printed in DESCENDING degree",
+            "            for &i in nonzero.iter().rev() {",
+            "            for &i in nonzero.iter() {",
+        ),
+        (
+            # `x^1` is bare `x`. `(^ x 1)` is not what the reference emits and
+            # not what a comparison against it will accept.
+            "degree one is bare `x`, not `(^ x 1)`",
+            '        if k == 1 {\n            "x".to_owned()\n        } else {',
+            '        if false {\n            "x".to_owned()\n        } else {',
+        ),
+    ],
+)
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))

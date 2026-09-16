@@ -2539,6 +2539,7 @@ mod tests {
             &parsed.assertions,
             None,
             true,
+            false,
         );
         (
             matches!(out, Some(crate::backend::CheckResult::Unsat)),

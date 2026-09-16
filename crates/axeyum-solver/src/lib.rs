@@ -1461,7 +1461,7 @@ macro_rules! full_exports {
             assertions: &[axeyum_ir::TermId],
         ) -> Option<crate::backend::CheckResult> {
             crate::nra_real_root::reset_cad_decline();
-            crate::nra_single_cell::decide_single_cell(arena, assertions, None, true)
+            crate::nra_single_cell::decide_single_cell(arena, assertions, None, true, false)
         }
 
         /// As [`single_cell_decide_for_testing`], but with `unsat` withheld —
@@ -1473,7 +1473,25 @@ macro_rules! full_exports {
             assertions: &[axeyum_ir::TermId],
         ) -> Option<crate::backend::CheckResult> {
             crate::nra_real_root::reset_cad_decline();
-            crate::nra_single_cell::decide_single_cell(arena, assertions, None, false)
+            crate::nra_single_cell::decide_single_cell(arena, assertions, None, false, false)
+        }
+
+        /// As [`single_cell_decide_for_testing`], but with ADR-2134's ALGEBRAIC
+        /// FINAL COORDINATE enabled — the `algebraic-witness` arm's behaviour.
+        ///
+        /// The two entry points differ in exactly the one flag, so a test can
+        /// run the SAME query through both in one process and attribute any
+        /// difference to the lever and to nothing else. That matters here more
+        /// than usual: the arm's whole claim is that it is strictly additive,
+        /// and a claim like that is only checkable against the arm it extends.
+        #[doc(hidden)]
+        #[must_use]
+        pub fn algebraic_witness_decide_for_testing(
+            arena: &axeyum_ir::TermArena,
+            assertions: &[axeyum_ir::TermId],
+        ) -> Option<crate::backend::CheckResult> {
+            crate::nra_real_root::reset_cad_decline();
+            crate::nra_single_cell::decide_single_cell(arena, assertions, None, true, true)
         }
 
         /// Drive the ADR-2126 CLAUSE LOOP directly, bypassing the
@@ -1492,7 +1510,7 @@ macro_rules! full_exports {
             assertions: &[axeyum_ir::TermId],
         ) -> Option<crate::backend::CheckResult> {
             crate::nra_real_root::reset_cad_decline();
-            crate::nra_clause_loop::decide_clause_loop(arena, assertions, None)
+            crate::nra_clause_loop::decide_clause_loop(arena, assertions, None, false)
         }
 
         /// The cause the single-cell route last recorded, as a stable key.

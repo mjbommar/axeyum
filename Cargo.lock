@@ -302,6 +302,7 @@ name = "axeyum-solver"
 version = "0.1.0"
 dependencies = [
  "axeyum-aig",
+ "axeyum-arith",
  "axeyum-bv",
  "axeyum-cas",
  "axeyum-cnf",
