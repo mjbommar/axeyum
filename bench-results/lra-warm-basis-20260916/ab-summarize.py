@@ -86,6 +86,16 @@ def main(tag, paths):
     brc = sum(1 for r in rows if r["b_rc"] != "0")
 
     print(f"=== {tag} ===")
+    # The composition of a PARTIAL, spelled out. This lane's run was stopped at a
+    # path-ordered prefix and resumed on a seeded shuffle of the remainder, so the
+    # population is "the first k by path order PLUS a uniform sample of the rest".
+    # Printing the two parts separately is what keeps a reader from rounding it to
+    # "n of 200" -- a prefix of a family-clustered list over-represents exactly the
+    # families this lever targets, which would bias the number toward the lever.
+    if len(paths) > 1:
+        for path in paths:
+            k = max(0, len(open(path).read().splitlines()) - 1)
+            print(f"  part: {k:4d} rows from {path.split('/')[-1]}")
     print(
         f"rows {len(rows)}   A {a}   B {b}   net {b - a:+d}   "
         f"gain {len(gains)}   LOSS {len(losses)}   FLIP {len(flips)}   "

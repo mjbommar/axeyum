@@ -6645,7 +6645,7 @@ mod tests {
              and the reconciliation this fixture exists to check never ran"
         );
         assert!(
-            (assertions as usize) < cubes * atoms_n,
+            usize::try_from(assertions).is_ok_and(|n| n < cubes * atoms_n),
             "the reconciliation re-asserted {assertions} bounds over {cubes} cubes \
              of {atoms_n} atoms; at or above {} it is re-installing the WHOLE cube \
              every round, which is what `sync_cube` replaced -- the warm basis \
@@ -6806,7 +6806,7 @@ mod tests {
 
         // The control, without which a refusal of EVERYTHING would pass: the
         // cube that names only representable atoms must still be answered.
-        let mut ok = LraTheory::new(&arena, &atoms[..1].to_vec());
+        let mut ok = LraTheory::new(&arena, &atoms[..1]);
         assert!(
             matches!(ok.cube_check(&[true]), CubeVerdict::Feasible(_)),
             "x<=1 alone is satisfiable and must still be decided; a fixture whose \
