@@ -2,7 +2,7 @@
 
 <!-- plan-section: lane-status -->
 
-**Lane LRA-PROPAGATION (`WIP`, lra-propagation, 2026-09-15).** [ADR-2111] named
+**Lane LRA-PROPAGATION (`DONE`, lra-propagation, 2026-09-15).** [ADR-2111] named
 theory propagation as the largest lever it did not pull: over the 23 of 93
 undecided `QF_LRA` rows that reach the online CDCL(T) engine, a median **19
 theory propagations against 836,531 decisions**. This lane built it, sized it
@@ -55,7 +55,26 @@ satisfiable arm first, and the positive control carries its own negative control
 away.** The self-explanation `continue` was removable with all 38 tests green —
 unreachable, because every reason atom is asserted and the target is not. It is
 now a `debug_assert!` stating that invariant, and the mutation suite watches a
-guard that is real instead.
+guard that is real instead. Final run: 39-test baseline, exit 0, killed 5/2/1/6,
+`--check-anchors` stale = 0.
+
+**The A/B, and the answer is a clean negative.** One binary, two env values,
+`QF_LRA` COMPLETE at 400 rows across the pinned board **and** a seeded held-out
+draw disjoint from it: **pinned 107/107 net +0 with 0 movers** — arm A
+re-deriving the board's 107 exactly — **held-out 93/92 net −1, 0 gains, 0 flips,
+0 exit-status differences, 183 `:status` comparisons with 0 disagreements**. The
+one mover re-run **3× per arm is STABLE-LOSS** (3/3 `unsat` off, 3/3 `unknown`
+on), not ambient. On the rows both arms decide it costs **+35.4 %** (pinned) and
+**+12.2 %** (held-out) of wall clock. **Implied-bound propagation buys ZERO
+verdicts here.** The lever **ships `off`**; the five exposure divisions are
+reported **did not run**, never as zero movement.
+
+**The lesson is about sizing, not about propagation.** ADR-2111 ranked this
+lever from a RATIO (836,531 decisions per 19 propagations) and a ratio is not a
+prize. The number that sizes a lever is how many of those decisions it could
+have removed — 24.5 % of the tracked ones, 7.0 % of all of them, and 0 % on the
+division's own median file. Measuring it cost one env-gated probe and one driver
+hook, and it would have re-ordered the work.
 
 [ADR-2111]: ../../research/09-decisions/adr-2111-qf-lra-what-the-same-simplex-does-differently.md
 
@@ -65,3 +84,4 @@ guard that is real instead.
 | 2026-09-15 | `ef4492312` | lra-propagation: the sizing sweep -- the ceiling is **24.5 %** of tracked decisions, with the per-row spread and the two rows the lever provably cannot reach |
 | 2026-09-15 | `cc949ea74` | lra-propagation: the scratch reset was half the propagator's cost, and one guard the mutation run found was decoration |
 | 2026-09-15 | `4f8ebf8cd` | lra-propagation: two A/B runner defects that let an EMPTY run print `AB-DONE`, and the workspace gate script |
+| 2026-09-15 | `137007f7f` | lra-propagation: a path-ordered list makes a PARTIAL run a prefix, not a sample -- seeded run-order shuffle with a set digest that must not move |

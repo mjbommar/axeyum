@@ -16,4 +16,4 @@ set -u
 cd "$(dirname "$0")/../.."
 export CARGO_TARGET_DIR="${1:-/data0/axeyum/lra-propagation-target}"
 taskset -c 0-7 scripts/cargo-serialized.sh test -p axeyum-solver \
-  --test progress_frontier --features full -- --test-threads=1
+  --test progress_frontier --features full -- --test-threads=1 --nocapture
