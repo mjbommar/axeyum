@@ -410,10 +410,10 @@ because this change touches it.
 | `--lib --features full simplex` | **41 passed**, 0 failed |
 | `--lib --features full config_registry::tests` | **18 passed**, 0 failed |
 | the 21 dispatch/reason integration suites | all green, every count nonzero (7, 10, 20, 11, 12, 3, 3, 12, 12, 9, 6, 6, 6, 6, 7, 18, 13, 2, 20, 6, 7) |
-| `--lib --features full -- --skip reconstruct::` | PLACEHOLDER-SWEEP |
-| `cargo check --workspace --all-targets` | PLACEHOLDER-CHECK |
-| clippy `-D warnings`, solver + bench + cnf, `--all-targets --features full` | PLACEHOLDER-CLIPPY |
-| `cargo fmt --all --check` | PLACEHOLDER-FMT |
+| `--lib --features full -- --skip reconstruct::` | **1,536 passed**, 0 failed, 320 filtered (399.7 s) |
+| `cargo check --workspace --all-targets` | rc 0, **0 errors** |
+| clippy `-D warnings`, solver + bench + cnf, `--all-targets --features full` | rc 0, **0 errors** |
+| `cargo fmt --all --check` | ok |
 | `mutation_controls.py --check-anchors` | 146 suites, 1,086 anchors, **stale = 0** |
 | `scripts/check-links.sh` | all links ok |
 
