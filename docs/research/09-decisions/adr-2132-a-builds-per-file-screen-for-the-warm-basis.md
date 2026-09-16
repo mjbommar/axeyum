@@ -249,6 +249,30 @@ asserts the **unarmed half first**: a test that only compared the two while arme
 would pass on an implementation that incremented the screen counter inside the
 `if enabled()` branch — the exact defect the counter exists to avoid.
 
+**The DELTA is not tidiness, and there is a file that proves it.** The counter is
+bumped at `feasible_within_sparse`, which is reachable from every route that
+calls it — not just the three lazy-SMT loops.
+`QF_LRA/sc/sc-24.induction3.cvc.smt2` is the demonstration, read off its own
+capture rather than argued:
+
+```text
+; lazy-smt reading=not-reached lra_entries=0 nra_entries=0 nia_entries=0
+           atoms=0 simplex_cold_builds=2264 warm_cube_build=off
+; route decided_by=none bound_by=lira-dpll last=fd:bounded-completeness-unsat
+```
+
+**2,264 from-scratch tableaux and no lazy-SMT loop ran at all** — they are the
+`lira-dpll` rung's. A screen reading the counter ABSOLUTELY would have tripped on
+its first round in the linear loop, on work that loop never did. Snapshotting at
+entry and comparing a difference is what makes the screen a statement about the
+route it is on.
+
+The same fact bites the SIZING, in the other direction, and §8 records it as a
+gap rather than a fix: the builds histogram in §1 counts every route too. On the
+pinned 200, where the threshold was derived, the error is **exactly zero** —
+all 68 rows with a nonzero build count have `lra_entries > 0`, checked against
+ADR-2125's own committed sizing. On the held-out draw it is at least 3 of 47.
+
 ### 4.3 The attribution ADR-2125 said a successor must not skip
 
 > nothing here says how much of the −9.2 % is the basis and how much is not
