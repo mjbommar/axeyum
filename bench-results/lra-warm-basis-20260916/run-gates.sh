@@ -88,8 +88,33 @@ run_counted "--lib --features full -- --skip reconstruct::" \
   test -p axeyum-solver --lib --features full -- --skip 'reconstruct::'
 
 echo "--- the capability ratchet ---"
-run_counted "progress_frontier --features full -- --test-threads=1" \
-  test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1
+#
+# `--nocapture`, and the output is KEPT, because a pass count is not a result
+# here. Each family calibrates the machine before and after its sweep and marks
+# the run `NOT COMPARABLE` (ratchet not enforced) or `ADVISORY ONLY` (do not
+# raise a baseline from it). A bare "12 passed" is compatible with every family
+# being NOT COMPARABLE, i.e. with the ratchet having been enforced on nothing --
+# which is exactly the shape of a gate that cannot fail.
+#
+# This was a REAL defect in this script: its first run through here reported
+# "ok (12 passed, 0 failed)" and `run_counted` then deleted the only copy of the
+# lines that say whether those 12 meant anything.
+ratchet_log="$(dirname "$0")/frontier-ratchet.log"
+scripts/cargo-serialized.sh test -p axeyum-solver --test progress_frontier \
+  --features full -- --test-threads=1 --nocapture > "$ratchet_log" 2>&1
+rc=$?
+n=$(sed -n 's/^test result: .* \([0-9][0-9]*\) passed.*/\1/p' "$ratchet_log" | head -1)
+n="${n:-0}"
+grep -E 'FRONTIER|TIMING|reference frame|NOT COMPARABLE|ADVISORY|REGRESSION' "$ratchet_log" || true
+if [ "$rc" -ne 0 ]; then
+  note "progress_frontier (--nocapture, log kept)" "FAILED rc=$rc"; fail=1
+elif [ "$n" = "0" ]; then
+  note "progress_frontier (--nocapture, log kept)" "INERT (0 tests) -- not evidence"; fail=1
+else
+  incomparable=$(grep -c 'NOT COMPARABLE' "$ratchet_log" || true)
+  note "progress_frontier (--nocapture, log kept)" \
+    "ok ($n passed; $incomparable family/families NOT COMPARABLE -- read $ratchet_log)"
+fi
 
 if [ "$fail" -ne 0 ]; then
   echo "GATES FAILED"

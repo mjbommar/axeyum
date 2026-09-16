@@ -531,10 +531,31 @@ hypothesis: [ADR-2111] §5a hit **this exact test**, by name, on a host at load 
 and recorded the same isolated result at **6.28 s**. Two lanes, two trees, two
 loaded boxes, the same name, the same resolution.
 
-The shape is the one that box-load breaks: `auto::tests` is a `QF_UF` test
-asserting something *about a budget* ("stays terminal under every policy"), and
-it touches no simplex. Ambient load was 9–24 throughout, with three peer-lane
-jobs OOM-killed at their own 24 GiB scope ceilings while this sweep queued.
+**The mechanism, read from the test rather than inherited from ADR-2111's
+phrasing** — which called it "a budget assertion", true but vaguer than the
+source supports. The failing line is a COUNT, not a clock:
+
+```text
+assertion `left == right` failed: policy terminal did not take the pathological refusal
+  left: 0   right: 1
+```
+
+`auto.rs`'s `pathological_overbound_stays_terminal_under_every_policy` builds a
+`QF_UFLIA` query with `C(k,2)` above `MAX_LAZY_ACKERMANN_CONGRUENCE_PAIRS`, runs
+it under a **5-second** timeout, and asserts `stats.pathological_refusals == 1` —
+that a SPECIFIC refusal site was reached. Under load an earlier rung of the
+ladder can exhaust those 5 seconds and return `Unknown` from a different site,
+which satisfies the test's verdict assertion (`matches!(verdict, Unknown)`) while
+leaving that counter at 0. So the assertion is load-sensitive **through the
+deadline**, even though what it reads is a count.
+
+It is `QF_UFLIA` over Ackermann congruence pairs, not linear real arithmetic.
+Ambient load was 9–24 throughout, with three peer-lane jobs OOM-killed at their
+own 24 GiB scope ceilings while this sweep queued.
+
+Why this lane's change is not a candidate cause, stated as a check rather than a
+conclusion: the refusal count is deterministic **given enough budget**, so a
+change that broke the refusal would fail in isolation too — and it does not.
 
 What is NOT claimed: that a green isolated run proves the sweep would be green
 on a quiet box. It proves this test's red is not this tree's defect, which is
