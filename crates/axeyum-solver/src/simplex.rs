@@ -2146,8 +2146,11 @@ impl Incremental {
     ///   extreme, which is the shape of a control that cannot fail.
     ///
     /// `O(nnz)`, so a test may call it after every bound move; nothing on the
-    /// solve path does.
-    #[cfg(any(test, feature = "bench-internals"))]
+    /// solve path does. Every caller is `#[cfg(test)]` (the `lra_online`
+    /// wrapper and its fixtures), so this is too: under `--all-features`
+    /// without `test` the `bench-internals` gate compiled it with no caller and
+    /// the workspace clippy refused the push on `dead_code`.
+    #[cfg(test)]
     #[must_use]
     pub(crate) fn tableau_invariant_holds(&self) -> Option<bool> {
         let t = &self.tab;
