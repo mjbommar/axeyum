@@ -464,6 +464,31 @@ per query rather than by depth alone -- `MAX_NESTED_CHILDREN` exists and is
 never approached on these files -- but that is a hypothesis, not a measurement,
 and it should be measured on the held-out draw before the pinned one.
 
+### The one gate this lane could not run
+
+`scripts/cargo-serialized.sh clippy --workspace --all-targets --all-features --
+-D warnings` -- the push battery's exact lint -- **is not runnable in a fresh
+worktree.** `--all-features` enables `z3-static`, whose `z3-sys v0.11.0` build
+script DOWNLOADS the `z3-4.16.0` release asset; a fresh target dir has no cached
+copy and the fetch fails (`error decoding response body`, `Could not get release
+asset for z3-4.16.0 with os=glibc and arch=x64`). The main checkout has the
+asset cached, so the lint runs there. **Run by the coordinator on the merged
+tree before push.**
+
+Recorded rather than silently substituted, because the narrower lint this lane
+DID run -- `-p axeyum-solver -p axeyum-bench --all-targets --features full`,
+clean -- cannot see a lint in a crate or feature combination it does not build,
+and that gap is what refuses pushes after the whole battery has been spent. The
+two are not the same gate and this ADR does not claim they are.
+
+What makes the substitution defensible as a stopgap rather than a fix: this
+lane's diff touches **no `Cargo.toml`, no `Cargo.lock`, no toolchain file and no
+`.cargo/` config** (the changed non-doc files are `datatype_native.rs`,
+`config_registry.rs`, `lib.rs`, `tests/dt_nested_field_2128.rs`, `hooks/pre-push`
+and `scripts/tests/mutation_controls.py`), so the `--all-features` dependency
+graph is identical on both sides of the merge base. That is an argument about
+the graph, not a measurement of the lint, and it is written here as the former.
+
 ## Tests
 
 `crates/axeyum-solver/tests/dt_nested_field_2128.rs` (8 tests, in the pre-push

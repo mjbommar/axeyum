@@ -51557,6 +51557,7 @@ model, not more coverage.
 | mutation `dt-nested-field-2128` | 2 guards, each killing exactly one DIFFERENT test |
 | `--check-anchors` | `suites=150 anchors=1100 stale=0` |
 | `check-merge-hygiene.sh` / `check-links.sh` | PASS / all links ok |
+| workspace `--all-targets --all-features` clippy | **NOT RUNNABLE HERE** — `z3-static` pulls `z3-sys`, whose build script downloads the `z3-4.16.0` release asset; a fresh worktree target dir has no cached copy. Run by the coordinator on the merged tree. The narrower `-p axeyum-solver -p axeyum-bench --all-targets --features full` is clean, and is **not the same gate**. |
 
 The lib-sweep failure is `auto::tests::pathological_overbound_stays_terminal_under_every_policy`
 in `auto.rs`, a file this lane does not touch. **Measured, not asserted:** the
