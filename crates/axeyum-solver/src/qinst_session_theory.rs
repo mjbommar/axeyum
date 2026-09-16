@@ -165,6 +165,47 @@ pub(crate) fn collect_session_lia_atoms(
     }
 }
 
+/// A compact histogram of the OPERATORS of the terms a session abstracted,
+/// for the trace (ADR-2130).
+///
+/// # Why a histogram and not a count
+///
+/// The count alone cannot answer the only question that matters when the lever
+/// looks inert: are the abstracted terms arithmetic this lane FAILED to host,
+/// or shapes no theory in this session could host anyway? Those are a defect
+/// and a ceiling respectively, and a bare `opaque=18` is the same observation
+/// for both. Measured on the first core this was pointed at, the answer was
+/// the second and it was not the one the lane expected.
+///
+/// Sorted by operator name, so the rendering is deterministic and a diff
+/// between two runs is readable. Truncated to the busiest few: a trace line
+/// that can grow without bound is a trace line that stops being read.
+pub(crate) fn abstracted_op_histogram(arena: &TermArena, terms: &[TermId]) -> String {
+    let mut counts: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
+    for &term in terms {
+        let label = match arena.node(term) {
+            TermNode::App { op, .. } => format!("{op:?}"),
+            other => format!("{other:?}"),
+        };
+        // `Apply(FuncId(7))` and `Apply(FuncId(9))` are the same SHAPE and
+        // differ only in which symbol; collapsing them keeps the line short
+        // without losing the distinction the question turns on.
+        let label = match label.split_once('(') {
+            Some((head, _)) => head.to_owned(),
+            None => label,
+        };
+        *counts.entry(label).or_default() += 1;
+    }
+    let mut pairs: Vec<(String, usize)> = counts.into_iter().collect();
+    pairs.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    pairs.truncate(6);
+    pairs
+        .iter()
+        .map(|(op, n)| format!("{op}:{n}"))
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
 /// `EUF` plus an optional `LIA` sub-theory over one shared atom index space.
 ///
 /// With `lia` absent this forwards every call to [`EufTheory`] and is behaviour-
@@ -260,6 +301,13 @@ impl EufLiaSessionTheory {
     }
 
     /// How many times the arithmetic sub-theory has been rebuilt.
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "read by the rebuild fixtures; no shipped caller yet"
+        )
+    )]
     pub(crate) fn lia_rebuild_count(&self) -> usize {
         self.lia_rebuilds
     }

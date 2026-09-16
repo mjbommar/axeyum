@@ -1,0 +1,55 @@
++0.002s built=1 level=2 round=0 ground=1892 atoms=1892 hosted=1 abstracted=0 gates=1892 shapes=BoolNot:1892   UFLIA_boogie_AdvancedTypes_InternalSubClass..ctor-
++0.000s built=1 level=2 round=0 ground=2 atoms=7 hosted=1 abstracted=0 gates=18 shapes=BoolAnd:9,BoolNot:5,BoolOr:3,BoolConst:1   UFLIA_boogie_Arrays_Q3-noinfer.smt2.core.smt2
++0.002s built=1 level=2 round=0 ground=1227 atoms=1227 hosted=1 abstracted=0 gates=1226 shapes=BoolNot:1226   UFLIA_boogie_AssignToRepField_AssignToRepField.N.s
++0.005s built=1 level=2 round=0 ground=2220 atoms=2220 hosted=1 abstracted=0 gates=2212 shapes=BoolNot:2212   UFLIA_boogie_BasicMethodology_SubClass..ctor.smt2.
++0.001s built=1 level=2 round=0 ground=1 atoms=1 hosted=1 abstracted=0 gates=1 shapes=BoolNot:1   UFLIA_boogie_Cast_Cast.R_System.Object_System.Int3
++0.000s built=1 level=2 round=0 ground=2 atoms=2 hosted=1 abstracted=0 gates=1 shapes=BoolNot:1   UFLIA_boogie_Chunker11c_Chunker.SpecSharp.CheckInv
++0.002s built=1 level=2 round=0 ground=1085 atoms=1085 hosted=1 abstracted=0 gates=1082 shapes=BoolNot:1082   UFLIA_boogie_DefaultLoopInv0_A.M-modifiesOnLoop-no
++0.006s built=1 level=2 round=0 ground=2704 atoms=2704 hosted=1 abstracted=0 gates=2702 shapes=BoolNot:2702   UFLIA_boogie_ExposeVersion_D..ctor-level_2.smt2.co
++0.002s built=1 level=2 round=0 ground=1432 atoms=1432 hosted=1 abstracted=0 gates=1432 shapes=BoolNot:1432   UFLIA_boogie_Interval_Cell.Shift_System.Int32.smt2
++0.004s built=1 level=2 round=0 ground=1775 atoms=1775 hosted=1 abstracted=0 gates=1772 shapes=BoolNot:1772   UFLIA_boogie_Spouse_Person..ctor.smt2.core.smt2
++0.005s built=1 level=2 round=0 ground=1379 atoms=1379 hosted=1 abstracted=0 gates=1379 shapes=BoolNot:1379   UFLIA_boogie_loopinv1_LoopInv1.Test1a_F_notnull-in
+NO-LINE   UFLIA_grasshopper_instantiated_delete_check_heap_access_53_12.smt2.cor
++0.000s built=1 level=2 round=0 ground=26 atoms=48 hosted=1 abstracted=0 gates=45 shapes=BoolAnd:29,BoolOr:7,BoolNot:6,Symbol:2,BoolConst:1   UFLIA_grasshopper_instantiated_insertion_sort_post
++0.000s built=1 level=2 round=0 ground=10 atoms=20 hosted=1 abstracted=0 gates=26 shapes=BoolAnd:18,BoolNot:3,BoolOr:2,Symbol:2,BoolConst:1   UFLIA_grasshopper_uninstantiated_merge_loop_check_
++0.000s built=1 level=2 round=0 ground=70 atoms=123 hosted=1 abstracted=0 gates=158 shapes=BoolAnd:111,BoolNot:28,BoolOr:18,BoolConst:1   UFLIA_simplify2_front_end_suite_javafe.PrintSpec.0
++0.001s built=1 level=2 round=0 ground=40 atoms=39 hosted=1 abstracted=0 gates=3 shapes=BoolNot:2,BoolConst:1   UFLIA_simplify2_front_end_suite_javafe.ast.ImportD
++0.001s built=1 level=2 round=0 ground=499 atoms=513 hosted=1 abstracted=0 gates=30 shapes=BoolAnd:21,BoolNot:6,BoolOr:2,BoolConst:1   UFLIA_simplify2_front_end_suite_javafe.ast.LabelSt
++0.020s built=1 level=2 round=0 ground=7636 atoms=7635 hosted=1 abstracted=0 gates=7504 shapes=BoolNot:7503,BoolConst:1   UFLIA_simplify2_front_end_suite_javafe.ast.MethodD
++0.000s built=1 level=2 round=0 ground=11 atoms=10 hosted=1 abstracted=0 gates=6 shapes=BoolNot:5,BoolConst:1   UFLIA_simplify2_front_end_suite_javafe.ast.ParenEx
+NO-LINE   UFLIA_simplify2_front_end_suite_javafe.ast.StandardPrettyPrint.008.smt
++0.000s built=1 level=2 round=0 ground=37 atoms=36 hosted=1 abstracted=0 gates=2 shapes=BoolConst:1,BoolNot:1   UFLIA_simplify2_front_end_suite_javafe.ast.TypeMod
++0.001s built=1 level=2 round=0 ground=508 atoms=512 hosted=1 abstracted=0 gates=15 shapes=BoolAnd:8,BoolNot:3,BoolConst:2,BoolOr:2   UFLIA_simplify2_front_end_suite_javafe.ast.Variabl
++0.000s built=1 level=2 round=0 ground=24 atoms=68 hosted=1 abstracted=0 gates=101 shapes=BoolAnd:70,BoolNot:18,BoolOr:11,BoolConst:2   UFLIA_simplify2_front_end_suite_javafe.filespace.H
++0.000s built=1 level=2 round=0 ground=52 atoms=52 hosted=1 abstracted=0 gates=8 shapes=BoolNot:8   UFLIA_simplify2_front_end_suite_javafe.filespace.Z
++0.009s built=1 level=2 round=0 ground=13 atoms=13 hosted=1 abstracted=0 gates=3 shapes=BoolNot:3   UFLIA_simplify2_front_end_suite_javafe.parser.Pars
++0.009s built=1 level=2 round=0 ground=13 atoms=13 hosted=1 abstracted=0 gates=7 shapes=BoolNot:7   UFLIA_simplify2_front_end_suite_javafe.parser.TagC
++0.002s built=1 level=2 round=0 ground=33 atoms=68 hosted=1 abstracted=0 gates=118 shapes=BoolAnd:69,BoolOr:29,BoolNot:18,BoolConst:2   UFLIA_simplify2_front_end_suite_javafe.reader.Cach
++0.004s built=1 level=2 round=0 ground=1491 atoms=1490 hosted=1 abstracted=0 gates=1486 shapes=BoolNot:1485,BoolConst:1   UFLIA_simplify2_front_end_suite_javafe.tc.EnvForLo
+NO-LINE   UFLIA_simplify2_front_end_suite_javafe.tc.FlowInsensitiveChecks.017.sm
++0.000s built=1 level=2 round=0 ground=5 atoms=4 hosted=1 abstracted=0 gates=2 shapes=BoolConst:1,BoolNot:1   UFLIA_simplify2_front_end_suite_javafe.tc.TypeSig.
++0.000s built=1 level=2 round=0 ground=49 atoms=48 hosted=1 abstracted=0 gates=3 shapes=BoolNot:2,BoolConst:1   UFLIA_simplify2_front_end_suite_javafe.tc.TypeSigV
++0.000s built=1 level=2 round=0 ground=2 atoms=1 hosted=1 abstracted=0 gates=2 shapes=BoolConst:1,BoolNot:1   UFLIA_simplify2_front_end_suite_javafe.tc.Types.03
++0.000s built=1 level=2 round=0 ground=78 atoms=114 hosted=1 abstracted=0 gates=112 shapes=BoolAnd:72,BoolOr:20,BoolNot:18,BoolConst:2   UFLIA_simplify2_front_end_suite_javafe.test.Superl
++0.002s built=1 level=2 round=0 ground=744 atoms=744 hosted=1 abstracted=0 gates=9 shapes=BoolNot:9   UFLIA_simplify2_small_suite_getRootInterface.smt2.
++0.001s built=1 level=2 round=0 ground=36 atoms=35 hosted=1 abstracted=0 gates=1 shapes=BoolConst:1   UFLIA_simplify_javafe.ast.CatchClauseVec.66.smt2.c
++0.000s built=1 level=2 round=0 ground=46 atoms=126 hosted=1 abstracted=0 gates=167 shapes=BoolAnd:121,BoolNot:28,BoolOr:16,BoolConst:2   UFLIA_simplify_javafe.ast.LexicalPragmaVec.219.smt
++0.001s built=1 level=2 round=0 ground=5 atoms=4 hosted=1 abstracted=0 gates=3 shapes=BoolNot:2,BoolConst:1   UFLIA_simplify_javafe.ast.NewInstanceExpr.271.smt2
++0.002s built=1 level=2 round=0 ground=871 atoms=890 hosted=1 abstracted=0 gates=84 shapes=BoolAnd:54,BoolOr:17,BoolNot:11,BoolConst:2   UFLIA_simplify_javafe.ast.StandardPrettyPrint.322.
++0.000s built=1 level=2 round=0 ground=24 atoms=27 hosted=1 abstracted=0 gates=11 shapes=BoolAnd:5,BoolNot:3,BoolConst:2,BoolOr:1   UFLIA_simplify_javafe.ast.TypeDeclElemPragma.373.s
++0.000s built=0 level=2 round=0 ground=1 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify_javafe.ast.UnaryExpr.424.smt2.core.
++0.000s built=1 level=2 round=0 ground=87 atoms=88 hosted=1 abstracted=0 gates=14 shapes=BoolAnd:5,BoolNot:5,BoolConst:2,BoolOr:2   UFLIA_simplify_javafe.parser.TokenQueue.576.smt2.c
++0.001s built=1 level=2 round=0 ground=96 atoms=96 hosted=1 abstracted=0 gates=17 shapes=BoolNot:17   UFLIA_simplify_tohtml.Java2Html.832.smt2.core.smt2
+NO-LINE   UFLIA_sledgehammer_FFT_smtlib.898060.smt2.core.smt2
+NO-LINE   UFLIA_sledgehammer_Fundamental_Theorem_Algebra_smtlib.1057395.smt2.cor
++0.000s built=1 level=2 round=0 ground=3 atoms=3 hosted=1 abstracted=0 gates=1 shapes=BoolNot:1   UFLIA_sledgehammer_Fundamental_Theorem_Algebra_smt
+NO-LINE   UFLIA_sledgehammer_Fundamental_Theorem_Algebra_smtlib.972059.smt2.core
++0.000s built=1 level=2 round=0 ground=4 atoms=4 hosted=1 abstracted=0 gates=1 shapes=BoolNot:1   UFLIA_sledgehammer_Hoare_smtlib.1175889.smt2.core.
++0.000s built=1 level=2 round=0 ground=1 atoms=2 hosted=1 abstracted=0 gates=2 shapes=BoolNot:1,Eq:1   UFLIA_sledgehammer_Hoare_smtlib.581330.smt2.core.s
+NO-LINE   UFLIA_sledgehammer_Hoare_smtlib.993567.smt2.core.smt2
+NO-LINE   UFLIA_sledgehammer_QEpres_smtlib.1065390.smt2.core.smt2
++0.000s built=1 level=2 round=0 ground=2 atoms=2 hosted=1 abstracted=0 gates=0 shapes=-   UFLIA_sledgehammer_QEpres_smtlib.1120322.smt2.core
++0.000s built=1 level=2 round=0 ground=12 atoms=11 hosted=1 abstracted=0 gates=4 shapes=BoolNot:3,BoolConst:1   UFLIA_sledgehammer_QEpres_smtlib.1237382.smt2.core
++0.000s built=1 level=2 round=0 ground=12 atoms=23 hosted=1 abstracted=0 gates=28 shapes=BoolNot:15,BoolOr:8,BoolAnd:4,BoolConst:1   UFLIA_tokeneer_auditlog_init-31.smt2.core.smt2
+
+level=2  cores=53  site reached=45  session built=44  HOSTING=44

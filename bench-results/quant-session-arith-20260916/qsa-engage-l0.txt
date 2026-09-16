@@ -1,0 +1,55 @@
++0.001s built=1 level=0 round=0 ground=1892 atoms=1892 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_boogie_AdvancedTypes_InternalSubClass..ctor-
++0.000s built=1 level=0 round=0 ground=2 atoms=7 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_boogie_Arrays_Q3-noinfer.smt2.core.smt2
++0.001s built=1 level=0 round=0 ground=1227 atoms=1227 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_boogie_AssignToRepField_AssignToRepField.N.s
++0.001s built=1 level=0 round=0 ground=2220 atoms=2220 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_boogie_BasicMethodology_SubClass..ctor.smt2.
++0.000s built=1 level=0 round=0 ground=1 atoms=1 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_boogie_Cast_Cast.R_System.Object_System.Int3
++0.000s built=1 level=0 round=0 ground=2 atoms=2 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_boogie_Chunker11c_Chunker.SpecSharp.CheckInv
++0.001s built=1 level=0 round=0 ground=1085 atoms=1085 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_boogie_DefaultLoopInv0_A.M-modifiesOnLoop-no
++0.001s built=1 level=0 round=0 ground=2704 atoms=2704 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_boogie_ExposeVersion_D..ctor-level_2.smt2.co
++0.001s built=1 level=0 round=0 ground=1432 atoms=1432 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_boogie_Interval_Cell.Shift_System.Int32.smt2
++0.001s built=1 level=0 round=0 ground=1775 atoms=1775 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_boogie_Spouse_Person..ctor.smt2.core.smt2
++0.001s built=1 level=0 round=0 ground=1379 atoms=1379 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_boogie_loopinv1_LoopInv1.Test1a_F_notnull-in
+NO-LINE   UFLIA_grasshopper_instantiated_delete_check_heap_access_53_12.smt2.cor
++0.000s built=0 level=0 round=0 ground=26 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_grasshopper_instantiated_insertion_sort_post
++0.000s built=1 level=0 round=0 ground=10 atoms=20 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_grasshopper_uninstantiated_merge_loop_check_
++0.000s built=0 level=0 round=0 ground=70 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.PrintSpec.0
++0.000s built=0 level=0 round=0 ground=40 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.ast.ImportD
++0.000s built=0 level=0 round=0 ground=499 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.ast.LabelSt
++0.004s built=1 level=0 round=0 ground=7636 atoms=7635 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.ast.MethodD
++0.000s built=1 level=0 round=0 ground=11 atoms=10 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.ast.ParenEx
+NO-LINE   UFLIA_simplify2_front_end_suite_javafe.ast.StandardPrettyPrint.008.smt
++0.000s built=0 level=0 round=0 ground=37 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.ast.TypeMod
++0.000s built=0 level=0 round=0 ground=508 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.ast.Variabl
++0.000s built=0 level=0 round=0 ground=24 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.filespace.H
++0.000s built=0 level=0 round=0 ground=52 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.filespace.Z
++0.000s built=1 level=0 round=0 ground=13 atoms=13 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.parser.Pars
++0.000s built=1 level=0 round=0 ground=13 atoms=13 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.parser.TagC
++0.000s built=0 level=0 round=0 ground=33 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.reader.Cach
++0.001s built=1 level=0 round=0 ground=1491 atoms=1490 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.tc.EnvForLo
+NO-LINE   UFLIA_simplify2_front_end_suite_javafe.tc.FlowInsensitiveChecks.017.sm
++0.000s built=1 level=0 round=0 ground=5 atoms=4 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.tc.TypeSig.
++0.000s built=0 level=0 round=0 ground=49 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.tc.TypeSigV
++0.000s built=1 level=0 round=0 ground=2 atoms=1 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.tc.Types.03
++0.000s built=0 level=0 round=0 ground=78 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_front_end_suite_javafe.test.Superl
++0.000s built=1 level=0 round=0 ground=8 atoms=8 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify2_small_suite_getRootInterface.smt2.
++0.000s built=0 level=0 round=0 ground=36 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify_javafe.ast.CatchClauseVec.66.smt2.c
++0.000s built=0 level=0 round=0 ground=46 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify_javafe.ast.LexicalPragmaVec.219.smt
++0.000s built=1 level=0 round=0 ground=5 atoms=4 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify_javafe.ast.NewInstanceExpr.271.smt2
++0.000s built=0 level=0 round=0 ground=871 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify_javafe.ast.StandardPrettyPrint.322.
++0.000s built=0 level=0 round=0 ground=24 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify_javafe.ast.TypeDeclElemPragma.373.s
++0.000s built=1 level=0 round=0 ground=1 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify_javafe.ast.UnaryExpr.424.smt2.core.
++0.000s built=0 level=0 round=0 ground=87 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify_javafe.parser.TokenQueue.576.smt2.c
++0.000s built=0 level=0 round=0 ground=96 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_simplify_tohtml.Java2Html.832.smt2.core.smt2
+NO-LINE   UFLIA_sledgehammer_FFT_smtlib.898060.smt2.core.smt2
+NO-LINE   UFLIA_sledgehammer_Fundamental_Theorem_Algebra_smtlib.1057395.smt2.cor
++0.000s built=1 level=0 round=0 ground=3 atoms=3 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_sledgehammer_Fundamental_Theorem_Algebra_smt
+NO-LINE   UFLIA_sledgehammer_Fundamental_Theorem_Algebra_smtlib.972059.smt2.core
++0.000s built=1 level=0 round=0 ground=4 atoms=4 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_sledgehammer_Hoare_smtlib.1175889.smt2.core.
++0.000s built=1 level=0 round=0 ground=1 atoms=2 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_sledgehammer_Hoare_smtlib.581330.smt2.core.s
+NO-LINE   UFLIA_sledgehammer_Hoare_smtlib.993567.smt2.core.smt2
+NO-LINE   UFLIA_sledgehammer_QEpres_smtlib.1065390.smt2.core.smt2
++0.000s built=1 level=0 round=0 ground=2 atoms=2 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_sledgehammer_QEpres_smtlib.1120322.smt2.core
++0.000s built=0 level=0 round=0 ground=12 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_sledgehammer_QEpres_smtlib.1237382.smt2.core
++0.000s built=0 level=0 round=0 ground=12 atoms=0 hosted=0 abstracted=0 gates=0 shapes=-   UFLIA_tokeneer_auditlog_init-31.smt2.core.smt2
+
+level=unset  cores=53  site reached=45  session built=26  HOSTING=0

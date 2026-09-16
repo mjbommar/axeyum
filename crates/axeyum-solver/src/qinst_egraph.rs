@@ -2878,29 +2878,58 @@ fn prove_quantified_unsat_via_egraph_impl(
                 online_clauses =
                     OnlineQuantifierClauseSession::new(arena, &session_ground, deadline);
                 online_attempted = true;
-                // ADR-2130. Emitted UNCONDITIONALLY, including on a decline:
-                // a core that prints no line printed an ABSENCE, which is not a
-                // zero, and "the session declined" and "the session was never
-                // attempted" would otherwise be the same observation. `hosted`
-                // is the number this lane is measured on -- a session that
-                // exists but hosts no arithmetic is ADR-2124's lever, not this
-                // one.
-                let (built, atoms, hosted, opaque) = match online_clauses.as_mut() {
-                    Some(session) => (
-                        1,
-                        session.solver.theory().atom_count(),
-                        usize::from(session.solver.theory().hosts_arithmetic()),
-                        session.opaque_variables.len(),
-                    ),
-                    None => (0, 0, 0, 0),
+                // ADR-2130. Emitted UNCONDITIONALLY, including on a decline: a core
+                // that prints no line printed an ABSENCE, which is not a zero, and
+                // "the session declined" and "the session was never attempted" would
+                // otherwise be the same observation.
+                //
+                // THE TWO COUNTS ARE DIFFERENT NUMBERS AND WERE CONFLATED ONCE.
+                // `abstracted` is the encoder's own count of terms it replaced by a
+                // free propositional variable -- the number this lane is trying to
+                // drive down. `gates` is `opaque_variables.len()`, which is
+                // `term_var` minus the theory atoms and therefore ALSO holds every
+                // Tseitin gate. Measured on the first real UFLIA core this was
+                // pointed at, `gates` was 18 -- `BoolAnd:9, BoolNot:5, BoolOr:3,
+                // BoolConst:1` -- while `abstracted` was 0. Reading the map size as
+                // the abstraction count would have reported a lever engaging on a
+                // file where it does nothing.
+                let (built, atoms, hosted, abstracted, gates, shapes) =
+                    match online_clauses.as_mut() {
+                        Some(session) => {
+                            let mut keys: Vec<TermId> =
+                                session.opaque_variables.keys().copied().collect();
+                            // Sorted before the histogram reads them:
+                            // `opaque_variables` is a `HashMap` and its iteration
+                            // order must never reach a trace line -- determinism is
+                            // a public promise.
+                            keys.sort_unstable();
+                            let shapes =
+                                crate::qinst_session_theory::abstracted_op_histogram(arena, &keys);
+                            (
+                                1,
+                                session.solver.theory().atom_count(),
+                                usize::from(session.solver.theory().hosts_arithmetic()),
+                                session.abstracted_atoms,
+                                keys.len(),
+                                shapes,
+                            )
+                        }
+                        None => (0, 0, 0, 0, 0, String::new()),
+                    };
+                let level = ground_session_level();
+                let ground_len = session_ground.len();
+                let shapes = if shapes.is_empty() {
+                    "-"
+                } else {
+                    shapes.as_str()
                 };
                 crate::auto::qtrace(
                     "ground-session",
                     build,
                     &format!(
-                        "built={built} level={} round={round} ground={} atoms={atoms}                          hosted={hosted} opaque={opaque}",
-                        ground_session_level(),
-                        session_ground.len(),
+                        "built={built} level={level} round={round} ground={ground_len} \
+                         atoms={atoms} hosted={hosted} abstracted={abstracted} \
+                         gates={gates} shapes={shapes}"
                     ),
                 );
             }
@@ -3198,8 +3227,7 @@ fn prove_quantified_unsat_via_egraph_impl(
         // check — which a deadline exit skips. The first check fires exactly
         // where the historical 8-round loop exited, preserving its reach.
         if online_clauses.is_some()
-            && round + 1 >= instantiation_cadence()
-            && (round + 1).is_power_of_two()
+            && GroundCheckSchedule::for_session(true).due(round)
             && deadline.is_none_or(|d| Instant::now() < d)
             && matches!(
                 quantifier_qf_refutation_check(
@@ -3281,12 +3309,86 @@ fn prove_quantified_unsat_via_egraph_impl(
     Ok(finished)
 }
 
+/// Which schedule the interleaved ground check runs on (ADR-2130).
+///
+/// # Why this is a named type and not two inline conditions
+///
+/// It was two inline conditions, seven hundred lines apart, selected by
+/// `online_clauses.is_none()` — and what that selection actually does was
+/// stated WRONGLY in this file, in its config-registry entry, and in the first
+/// draft of [ADR-2124], all at once. The claim was that a live session
+/// suppresses the cold check. It does not; it moves the check to a different
+/// schedule, and the two schedules agree from round
+/// [`GROUND_CHECK_SCHEDULE_SPLIT_ROUNDS`] onward. The measurement that exposed
+/// it is that **38 of 53 cores ran an IDENTICAL number of cold checks in both
+/// arms**, which suppression cannot produce.
+///
+/// A difference that three documents described wrongly while the code was two
+/// correct conditions is a difference that should not be spelled out at its use
+/// sites. Naming it puts the two schedules side by side, where the seven-round
+/// gap between them is visible without holding both call sites in mind, and
+/// gives the config registry something to attach the measurement to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GroundCheckSchedule {
+    /// No live session: every round of the historical window, then the
+    /// exponential tail. Rounds 0,1,2,3,4,5,6, then 7, 15, 31, 63, …
+    PerRoundThenExponential,
+    /// A live session: the exponential tail alone. Rounds 7, 15, 31, 63, …
+    ///
+    /// The session is what licenses dropping the per-round checks — it is
+    /// carrying the accumulated ground set warm, so a refutation that the cold
+    /// check would have found on round 3 is one the session can find itself.
+    ExponentialOnly,
+}
+
+/// The round at which the two schedules stop differing: `instantiation_cadence()
+/// - 1`, which is `7` at the shipped [`MAX_INSTANTIATION_ROUNDS`].
+///
+/// Not a tunable of its own. It is DERIVED from the cadence so an override
+/// moves both schedules together, and it is a named function rather than an
+/// inline `- 1` because it is the one number the two schedules differ by and
+/// the number the config registry's entry is about.
+///
+/// Both arms of [`GroundCheckSchedule::due`] are written in terms of it, which
+/// is what makes the seven-round gap structural rather than a coincidence of
+/// two conditions that happen to line up: below it the session-less schedule
+/// fires and the live-session one does not; at and above it they are the same
+/// exponential test.
+fn ground_check_split_round() -> usize {
+    instantiation_cadence().saturating_sub(1)
+}
+
+impl GroundCheckSchedule {
+    /// The schedule a loop with (or without) a live retained session runs on.
+    ///
+    /// This is the whole of what `online_clauses.is_none()` selected.
+    fn for_session(has_live_session: bool) -> Self {
+        if has_live_session {
+            Self::ExponentialOnly
+        } else {
+            Self::PerRoundThenExponential
+        }
+    }
+
+    /// Whether the interleaved ground check is due on `round` (0-based).
+    fn due(self, round: usize) -> bool {
+        let exponential = (round + 1).is_power_of_two();
+        let split = ground_check_split_round();
+        match self {
+            // `round <= split` is `round < instantiation_cadence()`.
+            Self::PerRoundThenExponential => round <= split || exponential,
+            // `round >= split` is `round + 1 >= instantiation_cadence()`.
+            Self::ExponentialOnly => round >= split && exponential,
+        }
+    }
+}
+
 /// Whether the session-less per-round ground check is due: every round inside
 /// the historical [`MAX_INSTANTIATION_ROUNDS`] window, then rounds whose
 /// 1-based index is a power of two (the same cadence as the retained-session
 /// interleaved checks).
 fn interleaved_check_due(round: usize) -> bool {
-    round < instantiation_cadence() || (round + 1).is_power_of_two()
+    GroundCheckSchedule::PerRoundThenExponential.due(round)
 }
 
 /// Which of the three deadline exits that shared one give-up string fired.
@@ -4542,6 +4644,16 @@ struct OnlineQuantifierClauseSession {
     ///
     /// Empty unless [`ground_session_abstracts`].
     opaque_variables: HashMap<TermId, usize>,
+    /// How many terms the encoder actually ABSTRACTED at construction
+    /// (ADR-2130), read off `EufEncoder::opaque_atoms`.
+    ///
+    /// Separate from `opaque_variables.len()` because that map is not the
+    /// abstraction count: it is `encoder.term_var` minus the theory atoms, so
+    /// it also holds every Tseitin gate. On the first real UFLIA core this was
+    /// measured against, the map held 18 entries and every one of them was a
+    /// gate. Reporting the map size as "atoms abstracted" would have made this
+    /// lane's engagement metric read 18 on a file where it is 0.
+    abstracted_atoms: usize,
     inserted_clauses: usize,
     inserted_literals: usize,
     solve_calls: usize,
@@ -4707,6 +4819,15 @@ impl OnlineQuantifierClauseSession {
         // sub-theory is built beside it over the SAME atom index space, so the
         // session's `unsat` can be a Farkas conflict rather than only a
         // congruence one.
+        // The encoder's own count of terms it ABSTRACTED, captured before the
+        // encoder is dropped. NOT `opaque_variables.len()`: that map is built
+        // from `encoder.term_var` minus the theory atoms, so it also holds every
+        // TSEITIN GATE. Measured 2026-09-16 on a real UFLIA core, the map held
+        // 18 entries -- `BoolAnd:9, BoolNot:5, BoolOr:3, BoolConst:1` -- and
+        // NONE of them was an abstraction. ADR-2124's unit test pinned the map
+        // size at 1 on a fixture with no connectives in it, so the conflation
+        // never surfaced there.
+        let abstracted_atoms = encoder.opaque_atoms;
         let euf = EufTheory::new(arena, &atom_terms).with_deadline(deadline);
         let theory = if hosts_arithmetic {
             EufLiaSessionTheory::euf_with_lia(arena, euf, atom_terms.clone(), deadline)
@@ -4725,6 +4846,7 @@ impl OnlineQuantifierClauseSession {
             atom_terms,
             atom_variables,
             opaque_variables,
+            abstracted_atoms,
             inserted_clauses: 0,
             inserted_literals: 0,
             solve_calls: 0,
@@ -13422,6 +13544,67 @@ mod tests {
             1,
             "exactly the one integer comparison should have been abstracted"
         );
+    }
+
+    /// ADR-2130: the two ground-check schedules differ by exactly the leading
+    /// rounds, and agree forever after.
+    ///
+    /// The differing set is DERIVED by running both schedules, not written down
+    /// as a list. A test that asserted the literal `{0,1,2,3,4,5,6}` would be
+    /// measuring the maintainer's memory of `MAX_INSTANTIATION_ROUNDS`, and
+    /// that memory is exactly what was wrong: this file, the config-registry
+    /// entry and ADR-2124's first draft all claimed a live session SUPPRESSES
+    /// the check, which would make the differing set infinite.
+    ///
+    /// The second assertion is the one that refutes the suppression reading
+    /// directly: past the split the two schedules fire on the SAME rounds, so a
+    /// live session pays every check the session-less loop pays from there on.
+    #[test]
+    fn the_two_ground_check_schedules_differ_by_exactly_the_leading_rounds() {
+        let with_session = GroundCheckSchedule::for_session(true);
+        let without = GroundCheckSchedule::for_session(false);
+        assert_eq!(with_session, GroundCheckSchedule::ExponentialOnly);
+        assert_eq!(without, GroundCheckSchedule::PerRoundThenExponential);
+
+        let differ: Vec<usize> = (0..256)
+            .filter(|&round| with_session.due(round) != without.due(round))
+            .collect();
+        let expected: Vec<usize> = (0..ground_check_split_round()).collect();
+        assert_eq!(
+            differ, expected,
+            "the schedules must differ on exactly the leading rounds; a longer \
+             list means a live session suppresses checks it does not suppress"
+        );
+        assert!(
+            !differ.is_empty(),
+            "an EMPTY differing set would make this test vacuous -- the two \
+             schedules would be the same schedule and the lever would be inert"
+        );
+
+        for round in ground_check_split_round()..256 {
+            assert_eq!(
+                with_session.due(round),
+                without.due(round),
+                "past the split the schedules must AGREE on round {round}"
+            );
+        }
+    }
+
+    /// The session-less helper is the named schedule, not a second copy of it.
+    ///
+    /// `interleaved_check_due` is the historical entry point and is still
+    /// called; if it ever stops agreeing with the schedule it claims to be, the
+    /// two conditions have drifted apart again -- which is the state this type
+    /// was introduced to end.
+    #[test]
+    fn the_historical_helper_agrees_with_the_named_schedule() {
+        for round in 0..256 {
+            assert_eq!(
+                interleaved_check_due(round),
+                GroundCheckSchedule::PerRoundThenExponential.due(round),
+                "round {round}"
+            );
+        }
     }
 
     /// ADR-2130: level 2 HOSTS the comparison level 1 abstracts.
