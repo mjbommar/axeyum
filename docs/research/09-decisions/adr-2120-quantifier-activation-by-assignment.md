@@ -1,7 +1,7 @@
 # ADR-2120: quantifier activation by assignment — the instance clause carries its own activation literal, and the whitelist that was supposed to supply one fires on 3 of 525 files
 
 Status: proposed
-Index-summary: [ADR-2113] located `UFLIA`'s blocker at `rej_nocontext` — 100.0 % of 2,139,815 rejections, a positively occurring universal under a disjunction whose every matched tuple is discarded because `A ∨ (∀y.B(y))` does not entail `B(t)` — and named a **boolean-assignment guard on quantifier activation** as the fix, with [ADR-2114] finding the same engine refusing 127 of 134 `AUFDTLIRA` files at five syntactic shape guards. This lane sized that fix before building it and the sizing changes what should be built. **The mechanism both references use is not a separate SAT literal reaching the e-matcher; it is a CLAUSE.** z3 emits `¬q ∨ body[x:=t]` (`qi_queue.cpp:274-289`) and cvc5 emits `(=> q body)` which its CNF stream turns into the same clause (`instantiate.cpp:293`) — and this repository **already builds that clause**, in `positive_instance_formula` (`qinst_egraph.rs:1587`), which replaces the universal in its owner disjunction and hands back `A ∨ B(t)`: the activation literal carried in the term, valid unconditionally, retracted for free by the ground solver's own search. What gates it is `PositiveContext`, whose path whitelist is `BoolAnd`/`BoolOr` **only** (`:1334-1336`) — so a path crossing a `not`, a `=>`, or an `ite` branch yields `context: None` and the tuples are dropped at `:6213`. Measured with a polarity-tracking parser over all 1,200 Tier 1 rows of the six quantified divisions, joined to the ledger verdict and validated against [ADR-2114]'s 134 observed `mbqi_exit` rows (**126 of 129 agree; 82 of 85 on the discriminating subset where containment is equality**): the shipped whitelist finds a context on **3 of 525 undecided files**, while **97 of 525 (18.5 %)** hold a positively occurring split universal it refuses — `UFLIA` 52 of 114, `AUFLIRA` 11 of 22, `UFNIA` 23 of 146. The broad shape ceiling is reported too and is **refused by its own control**: 368 of 525 undecided files (70.1 %) hold the shape, but so do 499 of 675 DECIDED files (73.9 %), so shape presence is not a predictor and only the narrower column is a ceiling. Two further findings this lane's sources do not yet record: the positive replacement is admitted into `ground` but never into `ground_derivations`, so `collect_ground_derivations` (`:4957`) returns `None` and any `unsat` downstream of one ships **uncertified**; and [ADR-2113]'s claim that `OnlineQuantifierClauseSession` "abstracts every arithmetic atom to a fresh boolean" is refuted — `with_opaque_bool_atoms` is never called, so on an arithmetic atom the session **declines to exist**, which inverts its follow-on claim about the interleaved check being suppressed on `UFLIA`.
+Index-summary: [ADR-2113] located `UFLIA`'s blocker at `rej_nocontext` (100.0 % of 2,139,815 rejections) and named a **boolean-assignment guard on quantifier activation** as the fix. Read at `file:line` on both references, what z3 and cvc5 EMIT is not a SAT literal plumbed into the matcher but a **CLAUSE** — `¬q ∨ body[x:=t]` (`qi_queue.cpp:274-289`; cvc5 `(=> q body)` at `instantiate.cpp:293`) — and this repository **already builds it**, in `positive_instance_formula`, where the residual disjunct IS the activation literal and the ground solver's own search is the assignment. What blocked it was `PositiveContext`'s path whitelist (`BoolAnd`/`BoolOr` only), measured over all 1,200 Tier 1 rows of the six quantified divisions at **3 of 525 undecided files**. Level 1 tracks polarity instead (`not` flips, `=>` flips its antecedent, an `ite` BRANCH keeps; the `ite` CONDITION, boolean `=`/`xor`, every crossed binder and every NEGATIVE arrival stay refused). A second blocker, found by running fixtures rather than reading code: when every universal is nested the driver refused before compiling any registration, so the machinery was unreachable on exactly the shape it exists for. **The certificate hole is closed in the same change** — a positive replacement entered `ground` but never `ground_derivations`, so every `unsat` downstream of one shipped UNCERTIFIED; `QuantifierPositiveReplacementCertificate` + `check_positive_replacement` now require the owner to be an assertion or carry its own checked derivation and re-derive the conclusion. 15 tests, 5 mutations each killing a named test, `--check-anchors` stale=0. **It ships OFF**: pinned A/B **−1 over 1,200 rows, 0 verdict disagreements**, re-check **1 STABLE-GAIN / 1 STABLE-LOSS / 2 UNSTABLE** against a criterion of 0 stable losses; held-out **+0 over 948 of 1,200**. Level 0 is verdict-identical to the pre-Rust binary on 66 DECIDED files (0 disagreements) — measured, because the A/B's two arms are both the new binary. **§7 is what the `−1` could not say.** On [ADR-2113]'s 53 reference-minimal cores with activation ON: **660,992 tuples handed off on 16 cores where the shipped arm handed off none**, 41,230 instances admitted, **87.9 % of z3's own substituted terms already in our ground set**, `qf-check` running on 45 of 53 over sets up to **8,019 terms** — and **verdict moved on 0 of 53**, with **31 of 53 dying on a clock that names the ground closure** (13 in its own words). So the block is neither triggers ([ADR-2113]) nor datatypes ([ADR-2114]) nor activation: it is the **GROUND CLOSURE over the instance set**, which re-solves the whole accumulated set from scratch every time it is due while the one warm accelerator declines to exist on any ground set carrying an arithmetic atom. Three of this lane's own instruments were wrong first and two were caught by a measurement rather than by re-reading them: a `let`-tree count that printed a 105-digit integer, a `widen_target` column that scored both A/B losses at zero (corrected ceiling **218 of 525**, discrimination control still flat at 41.5 % against 42.2 %), and a level-0 identity check whose first population could not fail. A single reach-probe observation was published as a conversion and then **refuted by this lane's own re-check**; it is retracted in place.
 Index-status: proposed
 Date: 2026-09-15
 
@@ -52,6 +52,14 @@ built.
    taken uncertified path into a common one, which is the opposite of this
    repository's direction of travel.
 
+**Outcome, measured: the lever ships OFF.** The pinned A/B is `−1` over 1,200
+rows with 0 verdict disagreements, and the mover re-check returns 1 STABLE-GAIN,
+1 STABLE-LOSS and 2 UNSTABLE. The criterion was 0 stable losses (§6e). What §7
+then establishes is the thing the `−1` could not: with activation ON the
+instances are found, handed off by the hundreds of thousands, and 87.9 % of the
+terms z3's own proofs substitute are already in our ground set — and **31 of 53
+reference-minimal cores still die on a clock that names the ground closure.**
+
 ## 1. Sizing, before any Rust
 
 **Denominator, read from the ledger rather than quoted.**
@@ -81,7 +89,7 @@ and it holds one somewhere"*. `(assert (forall ((x Int)) (or … (forall …))))
 and `(assert (or P (forall …)))` are the same file to a grep and land in
 different guards here. `let` is **resolved, not expanded** (CLAUDE.md records a
 lane's `let`-expander reaching 63.4 GB on this corpus), and the counts are over
-the **DAG**: see §6 for the 105-digit integer the first version printed.
+the **DAG**: see §8 for the 105-digit integer the first version printed.
 
 **The two columns, and why they are reported apart.**
 
@@ -501,7 +509,259 @@ the attributable instrument and the front door is not; that is why both exist,
 and a mutation table that reported only the front door would have shown a
 survivor where the guard is in fact load-bearing.
 
-## 6. What this lane measured about its own instrument
+## 6. The A/B, the re-check, and the ship decision
+
+### 6a. Pinned, 1,200 of 1,200 rows
+
+One binary at two environment values, interleaved per file with the arm order
+alternating, 24 s / 8 GiB, four pinned s6 physical core pairs, files interleaved
+ACROSS divisions so a partial read is a sample rather than a prefix. Arm A is the
+variable UNSET, not `=0`: an explicitly-set `0` and an unset variable take
+different paths through `cap_lever!`, and the arm that ships is the unset one.
+`ab-self-check.sh` PASSED against this binary first — its fixture is `unknown` on
+arm A and `unsat` on arm B, so a zero here is a measurement rather than a
+variable that never arrived.
+
+| division | n | A (shipped) | B (level 1) | delta | A rc≠0 | B rc≠0 |
+|---|---:|---:|---:|---:|---:|---:|
+| `AUFDTLIRA` | 200 | 119 | 119 | +0 | 0 | 0 |
+| `AUFLIRA` | 200 | 178 | 178 | +0 | 0 | 0 |
+| `UF` | 200 | 90 | 89 | **−1** | 3 | 3 |
+| `UFDTLIRA` | 200 | 144 | 143 | **−1** | 0 | 0 |
+| `UFLIA` | 200 | 86 | 87 | **+1** | 0 | 0 |
+| `UFNIA` | 200 | 54 | 54 | +0 | 0 | 0 |
+| **total** | **1200** | **671** | **670** | **−1** | 3 | 3 |
+
+**Verdict disagreements (`sat` on one arm, `unsat` on the other): 0 of 1,200.**
+Nonzero exit status is counted separately from the verdict and is equal on both
+arms, on the same rows.
+
+**The number did not move with the denominator** — `−1` at 655 rows, `−1` at 989,
+`−1` at 1,200, with the same division signs throughout. That is worth stating
+because [ADR-2113]'s comparable sweep read `+6` at 832 rows and `+5` at 909 with
+a division changing sign in between; the interim snapshots here are committed so
+the claim is checkable rather than asserted.
+
+### 6b. The re-check, which corrected the raw column in BOTH directions
+
+`recheck-movers.sh`: three passes per arm on one pinned core, arms alternating
+WITHIN the passes so a drift in machine state across the ~2.5 minutes a row takes
+does not land entirely on one arm.
+
+| file | classification |
+|---|---|
+| `UFLIA/…/javafe.parser.TagConstants.001` | **STABLE-GAIN** (A `unknown` 3/3, B `unsat` 3/3) |
+| `UF/…/nada/afp/lmirror/x2015_09_10_…` | **STABLE-LOSS** (A `unsat` 3/3, B `unknown` 3/3) |
+| `UFDTLIRA/…/NB19-026__flow_formal_vectors` | UNSTABLE (both arms `unknown` 3/3) |
+| `UFLIA/…/javafe.ast.LabelStmt.011` | UNSTABLE (both arms `unknown` 3/3) |
+
+**A raw LOSS evaporated.** `NB19-026` was one of the two. Across six re-check
+passes neither arm decides it: the A/B's arm A had decided it once, at 1.5 s, and
+that single decision was the entire "loss". Reporting the raw column would have
+charged the lever for a file it does not affect.
+
+**And one of this lane's own claims was refuted.** `REACH-ENGINE.txt` recorded
+`LabelStmt.011` converting to `unsat` on the ON arm and concluded "the conversion
+is REAL and MARGINAL AGAINST THE CLOCK" — from ONE observation. Three passes per
+arm return `unknown` 3 of 3 on arm B. The paragraph is retracted in place, with
+the refuting measurement beside it. The rule applies to a lane's own output
+exactly as to a handoff it inherits: *re-run its numbers, do not inherit them.*
+
+What survives is the COUNTERS and not the verdicts. `rej_handoff` moving
+0 → 18,688 on a single run is not a coin flip between two runs; a verdict at the
+edge of a 24 s budget is, and this file proved it.
+
+### 6c. Held-out
+
+200 files per division over all six, drawn through
+`derived-order-20260915/draw-heldout.py` unchanged at seed 20260915, with every
+pinned path and every committed ledger `corpus_path` excluded and the exclusion
+CHECKED rather than assumed. Interleaved across divisions before sharding.
+
+**948 of 1,200 rows at the time this ADR was written — the sweep was still
+running and is reported at the denominator it reached, not stopped early to make
+a number.**
+
+| division | n | A | B | delta |
+|---|---:|---:|---:|---:|
+| `AUFDTLIRA` | 116 | 86 | 85 | −1 |
+| `AUFLIRA` | 200 | 176 | 176 | +0 |
+| `UF` | 116 | 43 | 43 | +0 |
+| `UFDTLIRA` | 200 | 132 | 132 | +0 |
+| `UFLIA` | 200 | 84 | 84 | +0 |
+| `UFNIA` | 116 | 38 | 39 | +1 |
+| **total** | **948** | **559** | **559** | **+0** |
+
+Verdict disagreements 0 of 948; nonzero exit status 4 on each arm, the same rows.
+1 raw gain and 1 raw loss, **NOT re-checked** — and §6b is the measurement of what
+an un-re-checked mover column is worth.
+
+### 6d. Is the SHIPPED arm unchanged? The A/B cannot say, so it was measured separately
+
+Both A/B arms are the NEW binary, so the sweep compares level 0 against level 1
+and says nothing about level 0 against the code that shipped before. "Byte for
+byte" was an argument about `positive_path_step` — and the argument does not
+cover `NestedDiscovery::stage`, which the diff also touches and which runs at
+EVERY level because it records the replacement certificate.
+
+`level0-identity.sh` ran the pre-Rust binary against the lever binary with the
+variable UNSET, interleaved, same envelope.
+
+**Its first run was VACUOUS and is kept, labelled, rather than deleted:** 55 rows,
+0 disagreements — and every row `unknown` on BOTH arms, because the population was
+drawn from the UNDECIDED rows. A population that cannot produce a decision cannot
+lose one. The tell was in the output the whole time: a verdict mix with one value
+in it.
+
+Re-drawn from the DECIDED rows — 42 `engine_widen_target` files where `stage`'s
+new code actually executes, plus 24 non-targets as control:
+
+| | |
+|---|---:|
+| rows | **66** |
+| **disagreements** | **0** |
+| nonzero exit status | 0 on both arms |
+| base | 62 `unsat`, 4 `sat` |
+| level 0 | 62 `unsat`, 4 `sat` |
+
+A lost decision was a possible outcome and did not occur. What this does NOT
+cover is stated with it: 66 files is not 1,200, and a verdict is not a trace.
+
+### 6e. Ship decision
+
+The criterion was **0 stable losses**. There is **1 STABLE-LOSS**.
+`AXEYUM_QINST_POSITIVE_PATH` ships **`0`** and this ADR stays **`proposed`**.
+Nothing else in the lane bears on that decision.
+
+## 7. The 53 cores with activation ON: the block is DOWNSTREAM, and it is the ground closure
+
+§6's `-1` says the lever does not convert the division. It cannot say *what the
+files still fail on*. [ADR-2113]'s 53 reference-minimal `UFLIA` cores can,
+because z3 refutes **all 53 E-matching-only** (`smt.mbqi=false`, median 108 ms)
+using a **median of 6** instantiations — so on this population "the instances are
+findable and sufficient" is established by an independent solver, and whatever we
+still fail on is our engine rather than the problem.
+
+Both arms, `--trace` + `AXEYUM_QTRACE` + `AXEYUM_QPROBE` + `AXEYUM_QPROBE_CENSUS`
++ a ground dump, arm order alternating per core, 24 s / 8 GiB, one pinned s6 core
+pair. **53 of 53 completed.** Terminal reasons come from
+`scripts/route_trace_reader.py` and never from a grep over the CLI's prose.
+
+| | |
+|---|---:|
+| cores | **53** |
+| OFF decided | **15** |
+| ON decided | **15** |
+| **verdict moved** | **0** |
+
+### 7a. The lever reaches its target, at scale, and changes nothing
+
+| | |
+|---|---:|
+| cores with `rej_handoff > 0` on the ON arm | **17 of 53** |
+| …of those, the OFF arm's handoff was **zero** | **16** |
+| tuples handed off, ON arm, summed | **660,992** |
+| tuples still dropped as `rej_nocontext`, ON | 1,800,051 |
+| the same, OFF arm | 2,362,233 |
+| instances admitted, ON arm, summed | **41,230** |
+| cores where the per-universal probe printed at all | 18 of 53 |
+
+**660,992 tuples that the shipped arm joins and discards become entailed positive
+replacements, on 16 cores where the shipped arm handed off none — and not one
+core changes verdict.** That is the whole of §7 in one line. The activation was
+necessary and it is not the blocker.
+
+The 35 cores whose probe never printed are **not zeros**: the per-universal block
+sits behind a loop exit a file on a time budget never reaches, exactly as
+[ADR-2113] had to say about 34 of the same 53. Every denominator above is over
+the rows that produced a measurement.
+
+### 7b. The ON arm's terminal typed reason
+
+| n | route = reason |
+|---:|---|
+| **29** | `fd:bounded-completeness-unsat` = budget |
+| 11 | `q:mbqi-quick` = **decided** |
+| 3 | `q:mbqi-quick` = budget |
+| 3 | `fd:bounded-completeness-unsat` = incomplete |
+| 2 | `q:mbqi-quick` = incomplete |
+| 2 | `q:egraph` = **decided** |
+| 1 | `q:bool-skeleton` = **decided** |
+| 1 | `q:egraph` = budget |
+| 1 | `q:mbqi` = **decided** |
+
+A bucket's LABEL hides its causes, so the details are printed verbatim:
+
+| n | detail |
+|---:|---|
+| 18 | quantified solve time budget exhausted after MBQI and the finite-model finder |
+| **13** | **e-matching: instantiation time budget exhausted mid-round (the interleaved ground check did not decide the set inside the deadline)** |
+| 3 | mbqi declined an unsupported fragment: term #N has sort `(Uninterpreted k)` that the pure-Rust BV backend cannot bit-blast |
+| 2 | e-matching instantiation stopped after 2–3 rounds: the remaining budget could not fit another round with growth headroom |
+| 1 | e-matching: ground-term count budget exhausted |
+| 1 | combined theories: eager Ackermann elimination would emit 398,989 congruence constraints against an admission bound of 64 |
+
+### 7c. The ground closure RUNS, and it is where the clock goes
+
+| | |
+|---|---:|
+| cores where `qf-check` ran at all | **45 of 53** |
+| largest ground set handed to it | **8,019** terms |
+| `qf-check` calls on a single core | up to **29** |
+
+So the interleaved ground check is not being skipped and is not starved of
+material — it runs up to 29 times per core over sets of thousands of terms, and
+**13 of 53 cores name it in their own give-up string**. Together with the 18 that
+exhaust the whole quantified budget after MBQI and the FMF, **31 of 53 die on the
+clock with the instances in hand.**
+
+### 7d. And the instances are the right ones
+
+`AXEYUM_QGROUNDDUMP` against [ADR-2113]'s `proof-instances.py` artifacts — the
+terms z3's own `quant-inst` rules substitute:
+
+| | n | share |
+|---|---:|---:|
+| instance arguments in z3's proofs | 4,051 | |
+| **PRESENT in our ON-arm ground set** | **3,559** | **87.9 %** |
+
+PRESENT is the strong direction and ABSENT is a lower bound: the dump holds
+whatever the run accumulated before its deadline, so load can only move a row
+from PRESENT to ABSENT.
+
+### 7e. What this makes the next lane's question
+
+Put together — the terms z3 uses are 87.9 % ours, the tuples are handed off by
+the hundreds of thousands, the ground closure runs 45 of 53 times over sets up to
+8,019 terms, and 31 of 53 cores die on a clock naming that closure — **the block
+is neither trigger selection (ADR-2113), nor the datatype theory (ADR-2114), nor
+activation (this ADR). It is the GROUND CLOSURE over the instance set.**
+
+Two specific things follow, and neither needs another sizing pass:
+
+1. **The interleaved check re-solves from scratch.** `quantifier_qf_check` calls
+   `check_auto` over the WHOLE accumulated ground set every time it is due
+   (`qinst_egraph.rs`), so a core running it 29 times over a set growing toward
+   8,019 terms pays for the whole set 29 times. z3 does not: its ground state is
+   a live CDCL(T) that the instantiation lemmas are *added to*.
+2. **The one accelerator we have declines to exist on this division.**
+   `OnlineQuantifierClauseSession` is built with `with_bool_apply_atoms()` and
+   never `with_opaque_bool_atoms`, and `encode_app` has no arithmetic arm, so on
+   a `UFLIA` ground set carrying an arithmetic atom `encode` returns `None` and
+   the session is never created (§3(b)). The warm path exists and this division
+   cannot reach it.
+
+**The file list is `bench-results/quant-activation-20260915/cores/cores.tsv`**,
+one row per core with every column above, beside `CORES-SUMMARY.txt`.
+
+The raw per-arm capture (`cores/raw/`, 6.5 MB) and the ground dumps
+(`cores/dump/`, **479 MB**) are deliberately NOT committed — a half-gigabyte of
+reproducible intermediate does not belong in the history. `core-census.sh` plus
+the committed core list regenerates both, and `core-census.py --inst-dir` recomputes
+the membership number from them. Everything this section asserts is in the two
+committed files.
+
+## 8. What this lane measured about its own instruments
 
 **The count column was a tree count, and it printed a 105-digit integer.** The
 first version of `qshape.py` summed a `let`-bound value's findings at every
@@ -523,9 +783,50 @@ than division Y" statement would have come out the same. Only the absolute
 column was absurd, and only because one file happened to be extreme enough to be
 unreadable rather than merely wrong.
 
+**Three instruments were wrong before they were right, and two of the three were
+caught by a measurement rather than by re-reading them.** The DAG count above,
+the `widen_target` column (§1a — caught because the A/B's losses scored 0 on a
+column that says they cannot move), and the level-0 identity check (§6d — a
+55-row zero with no way to fail). The vacuous run is kept beside the sound one.
+
 ## Consequences
 
-*(Added with §4.)*
+- **Activation is built, sound, certified and OFF.** `AXEYUM_QINST_POSITIVE_PATH`
+  ships `0`; level 1 is a measured lever with 15 tests and a five-guard mutation
+  suite. The criterion was 0 stable losses; there is 1.
+- **The next lane's target is the GROUND CLOSURE over the instance set, and §7
+  hands it the denominators.** On [ADR-2113]'s 53 cores with activation ON:
+  660,992 tuples handed off on 16 cores where the shipped arm handed off none,
+  41,230 instances admitted, 87.9 % of z3's own substituted terms present in our
+  ground set, `qf-check` running on 45 of 53 over sets up to 8,019 terms — and
+  **31 of 53 cores dying on a clock that names that closure**, 13 of them in its
+  own words. Not triggers ([ADR-2113]), not datatypes ([ADR-2114]), not
+  activation.
+- **Two specific, already-located costs.** `quantifier_qf_check` re-solves the
+  WHOLE accumulated ground set from scratch every time it is due, so a core
+  running it 29 times over a set growing toward 8,019 terms pays for the whole
+  set 29 times; z3 adds instantiation lemmas to a live CDCL(T) instead. And the
+  one warm accelerator we have, `OnlineQuantifierClauseSession`, **declines to
+  exist** on any ground set carrying an arithmetic atom (§3(b)) — so `UFLIA`
+  structurally cannot reach it.
+- **[ADR-2113] §"Consequences" is corrected in two places.** Its route (a),
+  "gate quantifier activation on a boolean assignment", is what §2 shows both
+  references do — but the artifact they produce is a CLAUSE this repository
+  already builds, so the work was widening a path whitelist and not plumbing a
+  SAT literal. And its claim that `OnlineQuantifierClauseSession` "abstracts
+  every arithmetic atom to a fresh boolean" is refuted: `with_opaque_bool_atoms`
+  is never called, so the session declines to exist instead, which inverts its
+  follow-on claim about the interleaved check being suppressed.
+- **A sizing column that scores a mover at zero is a wrong column, not an
+  anomaly** (§1a). The first `widen_target` undercounted by more than half
+  because it modelled the engine's walk instead of simulating it; the corrected
+  ceiling is 218 of 525 undecided files, and its discrimination control is still
+  flat (41.5 % undecided against 42.2 % decided), so **the shape is everywhere in
+  this corpus and its presence does not predict whether we decide the file.**
+- **`positive_instance_formula` is now a certificate producer as well as a
+  checker.** Any future widening of `positive_path_step` inherits
+  `check_positive_replacement` for free; any route that admits a replacement
+  without recording one re-opens the uncertified path §3(a) closed.
 
 [ADR-2113]: adr-2113-uflia-the-instance-we-never-produce.md
 [ADR-2114]: adr-2114-aufdtlira-what-the-model-finder-cannot-represent.md

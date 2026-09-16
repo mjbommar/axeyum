@@ -1,0 +1,46 @@
+== 53 UFLIA CORES, LEVER OFF vs ON ==
+
+cores                          : 53
+OFF decided                    : 15
+ON  decided                    : 15
+verdict moved                  : 0
+
+-- the ON arm REACHED its target on: --
+   handoff > 0                 : 17 of 53
+   of those, OFF handoff was 0  : 16
+   probe printed on the ON arm  : 18 of 53  (a core whose loop exits
+                                   before the probe block prints NOTHING,
+                                   which is NOT a zero)
+
+-- the ON arm's TERMINAL typed reason, bucketed --
+     29  fd:bounded-completeness-unsat=budget
+     11  q:mbqi-quick=decided
+      3  q:mbqi-quick=budget
+      3  fd:bounded-completeness-unsat=incomplete
+      2  q:mbqi-quick=incomplete
+      2  q:egraph=decided
+      1  q:bool-skeleton=decided
+      1  q:egraph=budget
+      1  q:mbqi=decided
+
+-- its details, VERBATIM and unbucketed (a bucket's LABEL hides four causes) --
+     18  quantified solve time budget exhausted after MBQI and the finite-model finder
+     13  e-matching: instantiation time budget exhausted mid-round (the interleaved ground check did not decide the set inside the deadline)
+      1  e-matching instantiation stopped after 2 rounds: the remaining budget could not fit another round with growth headroom
+      1  combined theories: eager Ackermann elimination would emit 398989 congruence constraints, exceeding the deterministic admission bound of 64 (the O(k²) expansion 
+      1  e-matching: ground-term count budget exhausted
+      1  e-matching instantiation stopped after 3 rounds: the remaining budget could not fit another round with growth headroom
+      1  mbqi declined an unsupported fragment: term #74 has sort (Uninterpreted 4) that the pure-Rust BV backend cannot bit-blast [ADR-2114: MBQI's refutation loop was 
+      1  mbqi declined an unsupported fragment: term #83 has sort (Uninterpreted 6) that the pure-Rust BV backend cannot bit-blast [ADR-2114: MBQI's refutation loop was 
+      1  mbqi declined an unsupported fragment: term #161 has sort (Uninterpreted 0) that the pure-Rust BV backend cannot bit-blast [ADR-2114: MBQI's refutation loop was
+
+-- did the GROUND CLOSURE run on the ON arm? --
+   qf-check ran                : 45 of 53
+   max ground set handed to it : 8019
+
+-- are z3's own substituted terms in OUR ground set (ON arm)? --
+   instance arguments          : 4051
+   PRESENT                     : 3559
+   PRESENT is the strong direction: the dump holds whatever the run
+   accumulated before its deadline, so load can only move a row from
+   PRESENT to ABSENT. The ABSENT column is a LOWER BOUND.
