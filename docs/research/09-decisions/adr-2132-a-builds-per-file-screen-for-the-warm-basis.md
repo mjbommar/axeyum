@@ -838,9 +838,57 @@ held-out gain bought. Net across both draws, `screened` is 1 gain / 1 loss where
 in the sizing window separates it from the winning family. §2 measured that
 before this code existed; this is the 3×-per-arm confirmation on this binary.
 
-### 6.8 The exposure divisions
+### 6.8 The exposure divisions — all five, at 200 each
 
-PLACEHOLDER — filled in when the queues finish.
+Two arms here, `off` and `screened`, not three: the ship question is settled on
+the two `QF_LRA` draws and these ask only whether the screen regressed somewhere
+it was not pointed. The `on` arm's columns are written EMPTY and the summariser
+prints `DID NOT RUN` for it, because an arm that never started is a different
+fact from an arm that answered nothing.
+
+```text
+division   rows  off  screened  net  gain  LOSS  FLIP  cmp   DIS   the lever
+QF_LIA      200  127       127   +0     0     0     0   248    0   INERT
+QF_UFLRA    200  149       149   +0     0     0     0   298    0   ACTIVE  (6 rows, 417 cubes)
+QF_UFLIA    200  162       162   +0     0     0     0   324    0   INERT
+QF_IDL      200  109       110   +1     1     0     0   219    0   INERT
+QF_RDL      200  149       149   +0     0     0     0   298    0   ACTIVE  (8 rows, 240 cubes)
+---------------------------------------------------------------------------
+total      1000  696       697   +1     1     0     0  1387    0
+```
+
+**0 stable losses, 0 flips and 0 soundness disagreements across 1,000 rows** at a
+comparable denominator of 1,387, with `cold_restarts = 0` in every division.
+**Criterion 4 is MET.**
+
+**And the last column is why that total is not the headline.** Three of the five
+divisions are INERT — no file in them reaches the offline linear loop's cold
+simplex — so the screen never had anything to open on and could not have
+regressed them. Only `QF_UFLRA` and `QF_RDL` exercise the lever, at 14 rows and
+657 cubes between them.
+
+So the honest form of the answer is two sentences:
+
+* On the two divisions where the lever **acts**, it moved nothing: 0 gains,
+  0 losses, 0 flips over 400 rows.
+* On the three where it does not act, nothing could have moved, and their zeros
+  are evidence about the POPULATION rather than about the screen.
+
+Writing "five divisions, 1,000 rows, 0 losses" would be true and would credit the
+screen with three populations it never touched — [ADR-2111]'s inert-arm trap at
+division scale. The mechanism columns are the only thing in the table that
+prevents it, which is why they are printed beside the verdict columns rather
+than in an appendix.
+
+**The one raw gain is on an inert division** (`QF_IDL`,
+`asp/Solitaire/solitaire-edge-time=29.smt2`). The screened arm answered zero
+cubes warm anywhere in `QF_IDL`, so it cannot have moved a verdict there: below
+the threshold it runs the `off` route with one thread-local read per round added.
+The mover is ambient **by construction**, and it doubles as a clean calibration —
+1 in 200 is **0.5 %**, inside the documented 1–1.5 % ambient flip rate for these
+boxes at a 24 s budget, measured on an arm where the treatment provably did
+nothing. It still goes to the 3× recheck, because "the mechanism says it cannot
+be real" is an argument and the recheck is a measurement.
 
 ## 7. Decision
 
@@ -903,7 +951,13 @@ Against §7.1's six criteria, in order:
    `uart-8.induction.cvc` is a STABLE-LOSS, 3/3 in both directions. It is 1,598
    builds, the many-small shape, and no threshold in the sizing window separates
    it from the family the lever wins on.
-4. **No stable loss in the five exposure divisions** — see §6.8.
+4. **No stable loss in the five exposure divisions** — **MET.** All five at 200
+   rows: 0 stable losses, 0 flips, 0 soundness disagreements over 1,000 rows at
+   a comparable denominator of 1,387, `cold_restarts = 0` throughout. Read §6.8
+   before quoting that total, though: THREE of the five are divisions the lever
+   cannot act on at all, so their zeros are evidence about the population rather
+   than about the screen. On the two where it does act (`QF_UFLRA`, `QF_RDL`) it
+   moved nothing over 400 rows.
 5. **`built` on a nonzero share, and the screened arm's count strictly below
    `on`'s** — **MET**, by the run rather than by assertion: 51 < 71 on the
    pinned draw and 66 < 79 on the held-out one, all four nonzero. The screen

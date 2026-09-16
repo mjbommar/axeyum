@@ -19,7 +19,7 @@ that never started is a different fact from an arm that answered nothing.
     QF_UFLRA    200  149       149   +0     0     0     0      0  298    0
     QF_UFLIA    200  162       162   +0     0     0     0      0  324    0
     QF_IDL      200  109       110   +1     1     0     0      0  219    0
-    QF_RDL            RUNNING
+    QF_RDL      200  149       149   +0     0     0     0      0  298    0
 
 QF_LIA: ZERO MOVEMENT, AND THE ARM IS INERT -- BOTH, NOT ONE
 -------------------------------------------------------------
@@ -128,3 +128,51 @@ real" is an argument and the recheck is a measurement -- and this lane has spent
 the whole day preferring the second.
 
 Cost -0.3 %, inside the noise floor.
+
+
+QF_RDL: ZERO MOVEMENT WITH THE LEVER ACTIVE
+--------------------------------------------
+
+    screened: rows `built` 8   cubes answered 240   cold tableaux left 820
+    off:      cold tableaux 1,052
+
+Like `QF_UFLRA` and unlike the other three: the screen opens on eight files and
+240 cubes are answered on a warm basis, so this is the lever ACTING and not
+regressing. Cost +0.3 %, inside the noise floor.
+
+ALL FIVE, AND WHAT THE COLUMN THAT MATTERS SAYS
+================================================
+
+    division   rows  off  screened  net  gain  LOSS  FLIP  cmp  DIS   the lever
+    QF_LIA      200  127       127   +0     0     0     0  248    0   INERT
+    QF_UFLRA    200  149       149   +0     0     0     0  298    0   ACTIVE  (6 rows,   417 cubes)
+    QF_UFLIA    200  162       162   +0     0     0     0  324    0   INERT
+    QF_IDL      200  109       110   +1     1     0     0  219    0   INERT
+    QF_RDL      200  149       149   +0     0     0     0  298    0   ACTIVE  (8 rows,   240 cubes)
+    ---------------------------------------------------------------------------
+    total      1000  696       697   +1     1     0     0  1387   0
+
+**0 stable losses, 0 flips and 0 soundness disagreements across 1,000 rows at a
+comparable denominator of 1,387.** `cold_restarts` is 0 in every division.
+
+And the last column is why the total is not the headline. **THREE OF THE FIVE
+DIVISIONS ARE INERT** -- no file in them reaches the offline linear loop's cold
+simplex, so the screen never had anything to open on and could not have
+regressed them. Only `QF_UFLRA` and `QF_RDL` exercise the lever, at 14 rows and
+657 cubes between them.
+
+So the honest form of criterion 4's answer is two sentences and not one:
+
+    On the two divisions where the lever ACTS, it moved nothing: 0 gains,
+    0 losses, 0 flips over 400 rows.
+
+    On the three where it does not act, nothing could have moved, and their
+    zeros are evidence about the POPULATION rather than about the screen.
+
+Writing "five divisions, 1,000 rows, 0 losses" would be true and would credit
+the screen with three populations it never touched. That is the ADR-2111 inert-
+arm trap at division scale, and the mechanism columns are the only thing in this
+table that prevents it.
+
+The one raw gain (`QF_IDL`, an inert division) is ambient by construction and
+goes to the 3x recheck with any other exposure mover.
