@@ -16,7 +16,7 @@ that never started is a different fact from an arm that answered nothing.
 
     division   rows  off  screened  net  gain  LOSS  FLIP  rc!=0  cmp  DIS
     QF_LIA      200  127       127   +0     0     0     0      0  248    0
-    QF_UFLRA          RUNNING
+    QF_UFLRA    200  149       149   +0     0     0     0      0  298    0
     QF_UFLIA          PENDING
     QF_IDL            PENDING
     QF_RDL            PENDING
@@ -46,3 +46,38 @@ this population cannot address.
 The cost column agrees: +0.2 % over the 127 rows both arms decide, against a
 noise floor measured at 2.4 % on files at or above 50 ms and 0.4 % above 500 ms
 (section 6.5). +0.2 % is not a number, it is the floor.
+
+QF_UFLRA: ZERO MOVEMENT WITH THE LEVER ACTIVE -- WHICH IS THE STRONGER RESULT
+------------------------------------------------------------------------------
+
+    screened: rows `built` 6   cubes answered 417   cold tableaux left 3,068
+    off:      cold tableaux 3,436
+
+Unlike `QF_LIA`, the screen DOES open here: six files cross 64 builds and 417
+cubes are answered on a warm basis. So the 0 gains / 0 losses / 0 flips is a
+measurement of the lever acting and not regressing, rather than a measurement of
+the lever being absent.
+
+That distinction is the whole reason the mechanism columns are printed beside
+the verdict columns. `QF_LIA` and `QF_UFLRA` have identical verdict rows and
+they do not mean the same thing.
+
+Cost -0.6 % over the 149 rows both arms decide -- inside the noise floor.
+
+A REPORTING DEFECT IN THE SUMMARISER, FOUND ON THIS DIVISION
+-------------------------------------------------------------
+
+The mechanism block used to end with a line comparing the screened arm's
+`built` count against the `on` arm's, and in a two-arm run it printed
+
+    the screen REFUSED 0 of the rows `on` kept a basis on, and opened on 6 that
+    `on` did not (the second should be 0)
+
+`on` did not run. There was nothing to compare, and the line read as a defect
+indication -- "the second should be 0" -- about a number that was an artefact of
+the absent arm. It now says the comparison is unavailable and why.
+
+This is the same misdiagnosis class as the fuzz runner calling a FAILING suite
+an inert one, and the gate runner blaming a lint failure on z3-sys. Three in one
+lane, all in tooling this lane wrote, all found by reading the output against
+what it was describing rather than by a test.

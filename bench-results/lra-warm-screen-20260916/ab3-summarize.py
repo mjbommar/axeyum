@@ -127,6 +127,16 @@ def mechanism(rows):
     a_cold = sum(num(r, "a_cold_builds") or 0 for r in rows)
     print(f"  {'off':>9}: cold tableaux {a_cold:>7} (the denominator the two above removed from)")
     # The screen's own signature: it must open on FEWER rows than `on` builds on.
+    #
+    # ONLY when `on` ran.  In the two-arm exposure runs it does not, and this
+    # line was printing "the screen opened on 6 rows `on` did not (the second
+    # should be 0)" -- which reads as a defect indication when the truth is that
+    # nothing was compared.  A summariser that reports an absent arm as a
+    # disagreement is the same misdiagnosis class as a failing suite reported as
+    # an inert one, and this lane has now hit it twice.
+    if not any(ran(r, "b") for r in rows):
+        print("  the screen's `built` count cannot be compared here: the `on` arm DID NOT RUN")
+        return
     both = [
         r
         for r in rows
