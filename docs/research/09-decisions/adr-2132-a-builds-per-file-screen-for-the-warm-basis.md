@@ -415,7 +415,7 @@ feature-gated suite compiles to nothing and exits 0.
 | `check-links.sh` | all links ok |
 | `mutation_controls.py --check-anchors` | 158 suites, 1,102→1,114 anchors, **stale = 0** |
 | the six z3 fuzzes × three arms | **17 per arm, 51 total**, 0 failed (§5.5) |
-| `--lib --features full -- --skip reconstruct::` | **1,613 passed, 6 failed** — see below |
+| `--lib --features full -- --skip reconstruct::` | **1,613 passed, 6 failed** contended; **1,619 passed, 0 failed** on a quiet box (§5.3.2) |
 | `progress_frontier --features full -- --test-threads=1` | **12 passed, 0 failed, 0 REGRESSION** |
 
 **The clippy line is the battery's own, at full scope**, not the three-crate
@@ -476,8 +476,26 @@ that one before it.
 **What is NOT claimed**: that six is the same reading as ADR-2125's one. It is
 six, that is more, and this lane did not establish why more failed this time —
 the sweep ran immediately after 23 dispatch suites on a box that had been at
-load 135 earlier in the session. A re-run of the whole sweep on a quiet box is
-reported in §5.3.2 rather than argued for here.
+load 135 earlier in the session.
+
+#### 5.3.2 The same sweep, same tree, quiet box: green
+
+```text
+test result: ok. 1619 passed; 0 failed; 0 ignored; 0 measured; 320 filtered out; finished in 345.33s
+```
+
+**1,619 = 1,613 + 6.** The identical gate — not narrowed, not re-threaded, not
+filtered — run again at load 3.5 instead of on a box whose throughput the
+ratchet measured moving 109 % mid-sweep. It took **345 s against 525 s**, which
+is the contention showing up in the clock as well as in the verdicts.
+
+This is a stronger statement than [ADR-2125] was able to make about its own red.
+That ADR said explicitly: *"What is NOT claimed: that a green isolated run proves
+the sweep would be green on a quiet box."* Here the sweep itself was re-run and
+it is green, so the claim is available and is made: **the lib sweep passes on
+this tree.** The battery's `GATES FAILED` line reflects the contended run and is
+kept in `gates.log` rather than deleted, because a gate result that was later
+superseded is still what that run measured.
 
 ### 5.4 Mutation: two guards, two suites, and one honest disagreement with the brief
 
