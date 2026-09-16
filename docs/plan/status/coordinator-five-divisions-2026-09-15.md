@@ -74,6 +74,13 @@ Round three closed with NRA-CLAUSE-LOOP's merge; every round-three lever
 has an A/B and a written reason, and the one that measured a non-null
 (QF_NRA 117 → 122, ADR-2121/2126) shipped.
 
+## Round five (2026-09-16, in flight)
+
+| lane | ADR | question | host |
+|---|---|---|---|
+| QUANT-COMPOSE | 2138 | the four OFF quantifier levers (ADR-2120 activation, 2130 session arithmetic, 2133 generation ladder, 2127 macro inline) were each "necessary, not sufficient" alone; measured together on the 53 UFLIA cores, each alone, all ON, all-but-one; the 800-file A/B only if a core moves; nested-universal activation designed at `file:line` against z3's `smt_quantifier.cpp` and cvc5's `instantiate.cpp` | s5 `1,9`/`3,11` |
+| LRA-MODEL-REPLAY | 2139 | the 28 QF_LRA files LRA-ATOM-SCREEN found stopping at "online CDCL(T) LRA model did not replay (arithmetic outside the incremental engine)" (`lra_theory.rs:493`): census of which construct is outside the engine per file, then the smallest sound change that hosts it, with the five LRA/DL/LIA z3 fuzzes mandatory | s7 `1,9`/`3,11` |
+
 ## What the day says
 
 Capability gaps that trace to one named mechanism moved (QF_NRA); the ones
