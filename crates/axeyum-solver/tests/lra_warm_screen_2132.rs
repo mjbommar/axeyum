@@ -181,14 +181,18 @@ fn run(mode: WarmCubeMode, seed: u64, disjoin_in: u64) -> Arm {
 /// The transition fixture criterion 3 of ADR-2132 names: a query whose cubes
 /// CROSS the threshold mid-run must return the verdict the `off` arm returns.
 ///
-/// It checks four things, and the mechanism ones are not decoration:
+/// It checks five things, and the mechanism ones are not decoration:
 ///
 /// 1. the `off` arm really does build past the threshold, so the screen had
 ///    something to open on — without this the agreement is vacuous;
 /// 2. the screened arm really did answer cubes warm;
 /// 3. it answered FEWER than the `on` arm, which is the screen's own signature:
 ///    the rounds below the threshold ran cold in one arm and warm in the other;
-/// 4. all three verdicts agree.
+/// 4. all three verdicts agree; and
+/// 5. neither treatment arm restarted from a pristine basis. That last one is
+///    the only assertion here that can see a warm basis being quietly rebuilt —
+///    a rebuild gives identical verdicts, identical churn counts, and differs
+///    only in the clock, so items 1–4 all pass over it.
 #[test]
 fn a_file_that_crosses_the_threshold_mid_run_decides_what_off_decides() {
     // One atom in TWO opens a disjunction. Measured on this generator at
