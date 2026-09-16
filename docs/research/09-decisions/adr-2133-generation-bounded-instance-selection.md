@@ -88,6 +88,15 @@ is live. `budget_flood_slice` engaged on 14 of the 26 cores that print the
 fixpoint census, so the machinery is not idle; it is simply not where the
 instances are lost.
 
+**Both denominators, because the choice of denominator is itself a claim.**
+`rej_seen` and `rej_true` are not candidates any selection policy would have
+wanted — already admitted, or already entailed by the current congruence — so
+the narrower and fairer denominator is the traffic that was WANTED and BLOCKED
+(`nocontext` + `poscap` + `handoff` + `flood` + `dupother` = 4,763,596). On
+that denominator the per-round cap's share is **0.46 %**, and `rej_nocontext`
+is **55.48 %** with `rej_poscap` **42.18 %**. The conclusion is the same on
+either reading, and stronger on the narrower one.
+
 **Reach, not selection, on 22 of 35.** Of the 38 cores we do not decide, 35
 leave a ground dump:
 

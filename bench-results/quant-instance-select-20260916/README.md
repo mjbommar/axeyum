@@ -57,6 +57,15 @@ dominant blocker remains `rej_nocontext` — ADR-2113 §4b's finding, and the sa
 mechanism QUANT-INSTANCE-PROBE re-derived from the other side when 46 % of z3's
 own recovered instances turned out to be nested instantiations.
 
+**Both denominators, because the choice of denominator is itself a claim.**
+`rej_seen` and `rej_true` are not candidates any selection policy would have
+wanted — already admitted, or already entailed by the current congruence — so
+the narrower and fairer denominator is the traffic that was WANTED and BLOCKED
+(`nocontext` + `poscap` + `handoff` + `flood` + `dupother` = 4,763,596). On
+that denominator the per-round cap's share is **0.46 %**, and `rej_nocontext`
+is **55.48 %** with `rej_poscap` **42.18 %**. The conclusion is the same on
+either reading, and stronger on the narrower one.
+
 **2. On 22 of 35 open cores our ground set never reaches the generation z3's
 refutation needs.** That is a REACH gap; no selection policy closes it, because
 the needed instance is never built at all.
