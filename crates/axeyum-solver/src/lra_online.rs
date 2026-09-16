@@ -673,6 +673,19 @@ struct ImpliedBounds {
     scratch_written: Vec<usize>,
     /// Membership bit for [`Self::scratch_written`].
     scratch_mark: Vec<bool>,
+    /// Every problem variable that has EVER held a seed bound, ascending-ish
+    /// and never removed (a pop can drop a seed, and the stale entry then
+    /// simply finds `None` and does nothing).
+    ///
+    /// This exists because [`Self::reset_scratch`] runs once per pass and used
+    /// to walk `0..nvars`. The ADR-2122 sizing run measured a median **140,606
+    /// passes** against a median **1,706 variables** on this population, i.e.
+    /// about 240 M slot reads to copy a handful of bounds -- the same order as
+    /// the 252 M coefficient reads the row analysis itself does. Half the
+    /// propagator's cost was the reset, and none of it was arithmetic.
+    seeded: Vec<usize>,
+    /// Membership bit for [`Self::seeded`].
+    seeded_mark: Vec<bool>,
     /// Per atom, the pass number that last put it on the candidate list — an
     /// epoch stamp, so deduplicating candidates costs no allocation.
     cand_epoch: Vec<u64>,
@@ -759,6 +772,8 @@ impl ImpliedBounds {
             hi: vec![None; nvars],
             scratch_written: Vec::new(),
             scratch_mark: vec![false; nvars],
+            seeded: Vec::new(),
+            seeded_mark: vec![false; nvars],
             cand_epoch: vec![u64::MAX; atoms.len()],
             epoch: 0,
             // Deliberately NOT `0`: a fresh theory has never built a scratch
@@ -828,6 +843,10 @@ impl ImpliedBounds {
             upper,
             previous,
         }));
+        if !self.seeded_mark[var] {
+            self.seeded_mark[var] = true;
+            self.seeded.push(var);
+        }
         self.derived += 1;
         if !self.dirty_mark[var] {
             self.dirty_mark[var] = true;
@@ -867,7 +886,13 @@ impl ImpliedBounds {
             self.scratch_mark[var] = false;
         }
         self.scratch_written.clear();
-        for var in 0..self.seed_lower.len() {
+        // `seeded`, not `0..nvars`: only a variable that has held a seed bound
+        // can contribute anything here, and the pass runs often enough that the
+        // difference is half this mechanism's cost (see the field docs). A
+        // STALE entry -- a variable whose seed a `pop` has since removed -- is
+        // harmless: both slots read `None` and nothing is written.
+        for index in 0..self.seeded.len() {
+            let var = self.seeded[index];
             let mut written = false;
             if let Some(b) = &self.seed_lower[var] {
                 self.lo[var] = Some(b.clone());
@@ -1691,12 +1716,25 @@ impl LraTheory {
                         if !entails(constraint, &imp.lo, &imp.hi, &mut why) {
                             continue;
                         }
-                        // A literal explained by ITSELF is not an implication;
-                        // and a reason whose atom the search has since
-                        // unassigned cannot appear in a clause.
-                        if why.contains(&atom) {
-                            continue;
-                        }
+                        // A literal explained by ITSELF is not an
+                        // implication -- and this cannot happen, so it is
+                        // ASSERTED rather than filtered. Every atom in `why`
+                        // came from a bound installed by a LIVE constraint and
+                        // is therefore assigned; `atom` reached this line only
+                        // because it is NOT assigned.
+                        //
+                        // It was a `continue` until the mutation run said
+                        // otherwise: deleting the guard left all 38 tests
+                        // green, i.e. it was decoration, and decoration shaped
+                        // like a soundness filter is worse than no filter at
+                        // all -- it is a line a reader counts as protection.
+                        // What is real here is the invariant, so the invariant
+                        // is what is checked.
+                        debug_assert!(
+                            !why.contains(&atom),
+                            "ADR-2122: atom {atom} is explained by itself; every \
+                             reason atom must be asserted and this one is not"
+                        );
                         let mut reason = Vec::with_capacity(why.len());
                         let mut usable = true;
                         for &r in &why {
@@ -2307,6 +2345,10 @@ impl TheorySolver for LraTheory {
         imp.decisions_seen += 1;
         for constraint in [when_true, when_false] {
             let mut why: Vec<usize> = Vec::new();
+            // The `why.contains` test is kept HERE, where the emission path
+            // asserts the same invariant instead: this is a COUNTER, and a
+            // counter that over-reports its own ceiling is a worse failure than
+            // a redundant comparison. It costs one scan of a list capped at 16.
             if entails(constraint, &imp.lo, &imp.hi, &mut why) && !why.contains(&atom) {
                 imp.decisions_implied += 1;
                 return;
@@ -7295,6 +7337,58 @@ mod tests {
         assert_eq!(
             counters.implied_bound_propagations, 0,
             "Probe never offers, so the propagation counter stays at zero"
+        );
+    }
+
+    /// A propagation is an assignment the driver has not made yet, so offering
+    /// an atom the search has ALREADY assigned is not a propagation — it is a
+    /// no-op the driver must re-discard, and at the pass's emission cap it
+    /// crowds out real ones.
+    ///
+    /// This test exists because of what the mutation run said, and the reason
+    /// is worth keeping: deleting the assigned-atom skip and deleting the
+    /// explanation's bounds killed the **same five tests**, so no test in the
+    /// suite could tell those two guards apart. Two guards with one kill set is
+    /// the shape this repository has been caught by — six of seven guards in
+    /// one suite were removable because they all rejected through one shared
+    /// check. This one asks only about the atoms, never about the explanations,
+    /// so it separates them.
+    #[test]
+    fn the_pass_never_offers_an_atom_the_search_has_already_assigned() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let one = rconst(&mut arena, 1);
+        let two = rconst(&mut arena, 2);
+        let five = rconst(&mut arena, 5);
+        let sum = arena.real_add(x, y).expect("x+y");
+        let atoms = [
+            arena.real_le(x, one).expect("x<=1"),
+            arena.real_le(y, two).expect("y<=2"),
+            arena.real_le(sum, five).expect("x+y<=5"),
+        ];
+        let mut theory = LraTheory::new(&arena, &atoms)
+            .with_deferred_final_check()
+            .with_bound_propagation(BoundPropagation::On);
+        theory.assert(0, true).expect("x<=1");
+        theory.assert(1, true).expect("y<=2");
+        // Assign the ENTAILED atom too, so the only atoms the bounds imply are
+        // ones the search already holds. A correct pass then offers NOTHING.
+        theory.assert(2, true).expect("x+y<=5 is consistent");
+        let offered = implied_pass(&mut theory);
+        for (lit, _) in &offered {
+            assert!(
+                theory.assigned[lit.atom].is_none(),
+                "the pass offered atom {} which the search had already assigned \
+                 to {:?}: {offered:?}",
+                lit.atom,
+                theory.assigned[lit.atom]
+            );
+        }
+        assert!(
+            offered.is_empty(),
+            "every atom this fixture entails is already assigned, so a correct \
+             pass offers nothing: {offered:?}"
         );
     }
 

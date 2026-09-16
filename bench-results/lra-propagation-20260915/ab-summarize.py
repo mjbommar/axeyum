@@ -14,7 +14,11 @@ Columns of the input TSV (from `ab-run.sh`):
 `B_rc` the EXIT STATUSES, kept separate because ADR-2045 measured `losses=0` by
 verdict with five new aborts underneath it.
 
-Usage: ab-summarize.py <division>=<tsv> [...]
+Usage: ab-summarize.py [--movers-out FILE] <division>=<tsv> [...]
+
+`--movers-out` writes the moved rows' corpus-relative paths, one per line, for
+`recheck-movers.sh`. It is written even when EMPTY, so "no movers" is a file a
+successor can see rather than an absence they have to infer.
 """
 
 from __future__ import annotations
@@ -36,9 +40,15 @@ def load(path: Path) -> list[dict[str, str]]:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) < 2:
+    movers_out: Path | None = None
+    args = list(argv[1:])
+    if args and args[0] == "--movers-out":
+        movers_out = Path(args[1])
+        args = args[2:]
+    if not args:
         sys.stderr.write(__doc__ or "")
         return 2
+    argv = [argv[0], *args]
 
     print(
         f"{'division':12s} {'rows':>5s} {'A':>4s} {'B':>4s} {'net':>5s} "
@@ -95,6 +105,11 @@ def main(argv: list[str]) -> int:
             f"{totals[3]:+5d} {totals[4]:5d} {totals[5]:5d} {totals[6]:5d} "
             f"{totals[7]:8d} {totals[8]:8d} {totals[9]:5d} {len(dis_rows):4d}"
         )
+    if movers_out is not None:
+        movers_out.write_text(
+            "".join(f"{m.split(chr(9))[2]}\n" for m in movers)
+        )
+        print(f"mover paths -> {movers_out} ({len(movers)} rows)")
     print()
     if movers:
         print(f"MOVERS ({len(movers)}) -- each needs a 3x recheck before it counts:")
