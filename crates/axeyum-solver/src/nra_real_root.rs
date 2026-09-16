@@ -3944,11 +3944,25 @@ pub(crate) const CAD_DEFAULT: CadPolicy = CadPolicy::DEFAULT;
 /// The CAD policy in force, read once from `AXEYUM_NRA_CAD`.
 pub(crate) fn cad_policy() -> CadPolicy {
     static POLICY: std::sync::OnceLock<CadPolicy> = std::sync::OnceLock::new();
-    *POLICY.get_or_init(|| match std::env::var("AXEYUM_NRA_CAD") {
-        Ok(v) if v.eq_ignore_ascii_case("wide") => CadPolicy::WIDE,
-        Ok(v) if v.eq_ignore_ascii_case("single-cell") => CadPolicy::SINGLE_CELL,
-        _ => CAD_DEFAULT,
-    })
+    *POLICY
+        .get_or_init(|| std::env::var("AXEYUM_NRA_CAD").map_or(CAD_DEFAULT, |v| parse_cad_arm(&v)))
+}
+
+/// Map an `AXEYUM_NRA_CAD` value to its arm. An unrecognised value is the
+/// shipped arm, never a treatment.
+///
+/// Split out of [`cad_policy`] so the arm-separation tests can exercise the
+/// PARSER rather than the process environment: the policy is read once per
+/// process through a `OnceLock`, so a test that set the variable would measure
+/// whichever test ran first.
+fn parse_cad_arm(value: &str) -> CadPolicy {
+    if value.eq_ignore_ascii_case("wide") {
+        CadPolicy::WIDE
+    } else if value.eq_ignore_ascii_case("single-cell") {
+        CadPolicy::SINGLE_CELL
+    } else {
+        CAD_DEFAULT
+    }
 }
 
 /// One rational sample point: a binding of each (already-eliminated / sampled)
@@ -8100,6 +8114,79 @@ mod tests {
         // The shipped arm is the pre-ADR-2110 engine, so an A/B run with the
         // env var unset is a control and not a second treatment.
         assert_eq!(CadPolicy::DEFAULT.arm, "default");
+    }
+
+    /// The `single-cell` arm differs from `default` in EXACTLY the route, and
+    /// the arm string it answers to is the one the A/B sets.
+    ///
+    /// Two failure modes this catches, both of which produce a clean-looking
+    /// null rather than an error:
+    ///
+    /// * the two arms carrying the same `single_cell` value — an A/B whose arms
+    ///   are identical measures nothing and reports 0 movement, which reads
+    ///   exactly like a real null (ADR-2110 records the same hazard for `wide`);
+    /// * `cad_policy` not recognising the string the runner exports, so
+    ///   `AXEYUM_NRA_CAD=single-cell` silently falls through to `default` and the
+    ///   treatment arm never runs.
+    ///
+    /// The cap must be EQUAL across these two arms: that is what makes an A/B
+    /// between them isolate the route rather than the budget.
+    #[test]
+    fn the_single_cell_arm_differs_in_exactly_the_route() {
+        // Collected at runtime so the assertions are about the ARMS and not
+        // three constants the compiler folds away (clippy rejects the folded
+        // form, and it is right to: a const assertion is a compile-time claim
+        // about a literal, not a test of the table).
+        let arms: Vec<CadPolicy> =
+            vec![CadPolicy::DEFAULT, CadPolicy::WIDE, CadPolicy::SINGLE_CELL];
+
+        let routed: Vec<&str> = arms
+            .iter()
+            .filter(|p| p.single_cell)
+            .map(|p| p.arm)
+            .collect();
+        assert_eq!(
+            routed,
+            vec!["single-cell"],
+            "exactly one arm turns the single-cell route on"
+        );
+
+        let default = arms[0];
+        let single = arms[2];
+        assert_eq!(
+            single.cell_cap, default.cell_cap,
+            "the single-cell A/B must isolate the ROUTE, not the cell budget"
+        );
+
+        let mut names: Vec<&str> = arms.iter().map(|p| p.arm).collect();
+        let total = names.len();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(names.len(), total, "two arms share a name: {names:?}");
+        assert_eq!(default.arm, "default", "the shipped arm keeps its name");
+    }
+
+    /// The string `AXEYUM_NRA_CAD` accepts for each arm is the string the A/B
+    /// runner exports.
+    ///
+    /// Derived from the arms, not from a literal: a renamed arm that the parser
+    /// no longer recognises fails here instead of silently running `default`
+    /// under a treatment label.
+    #[test]
+    fn every_arm_name_is_a_value_the_parser_accepts() {
+        for policy in [CadPolicy::DEFAULT, CadPolicy::WIDE, CadPolicy::SINGLE_CELL] {
+            let parsed = parse_cad_arm(policy.arm);
+            assert_eq!(
+                parsed.arm, policy.arm,
+                "`AXEYUM_NRA_CAD={}` does not select the arm of that name",
+                policy.arm
+            );
+            assert_eq!(parsed.single_cell, policy.single_cell);
+            assert_eq!(parsed.cell_cap, policy.cell_cap);
+        }
+        // An unrecognised value is the shipped arm, never a treatment.
+        assert_eq!(parse_cad_arm("nonsense").arm, CAD_DEFAULT.arm);
+        assert_eq!(parse_cad_arm("").arm, CAD_DEFAULT.arm);
     }
 
     /// Every decline cause has a distinct wire name.

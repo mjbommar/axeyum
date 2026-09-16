@@ -11109,6 +11109,24 @@ SUITES["nra-cad-attribution"] = (
             "        cell_cap: MAX_CAD_CELLS * 16,",
             "        cell_cap: MAX_CAD_CELLS,",
         ),
+        (
+            # ADR-2121's arm, same hazard one level along: an A/B whose two arms
+            # carry the SAME `single_cell` value measures nothing and reports 0
+            # movement, which reads exactly like a real null.
+            "the `single-cell` arm actually turns the route on",
+            '        arm: "single-cell",\n        cell_cap: MAX_CAD_CELLS,\n'
+            "        single_cell: true,",
+            '        arm: "single-cell",\n        cell_cap: MAX_CAD_CELLS,\n'
+            "        single_cell: false,",
+        ),
+        (
+            # Drop the arm from the PARSER. `AXEYUM_NRA_CAD=single-cell` then
+            # falls through to `default`, the treatment arm never runs, and the
+            # A/B is one binary measured against itself -- with no error anywhere.
+            "`AXEYUM_NRA_CAD=single-cell` actually selects the single-cell arm",
+            '    } else if value.eq_ignore_ascii_case("single-cell") {',
+            "    } else if false {",
+        ),
     ],
 )
 
