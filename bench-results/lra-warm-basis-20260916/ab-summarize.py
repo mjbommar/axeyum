@@ -105,7 +105,17 @@ def main(tag, paths):
         builds[r.get("b_warm_build", "") or "none"] = (
             builds.get(r.get("b_warm_build", "") or "none", 0) + 1
         )
-    print("  arm B `warm_cube_build`: " + "  ".join(f"{k}={v}" for k, v in sorted(builds.items())))
+    # `off` in ARM B never means "the lever is off" -- the lever is read once per
+    # process and arm B always has it on. It means `record_warm_cube_build` was
+    # never called, i.e. the `; lazy-smt` line came from the NRA or NIA loop
+    # rather than the linear one (the three loops share these counters). `none`
+    # means no `; lazy-smt` line at all. Spelled out because a reader who takes
+    # `off` at face value would conclude the arm was disabled on those rows.
+    print(
+        "  arm B `warm_cube_build`: "
+        + "  ".join(f"{k}={v}" for k, v in sorted(builds.items()))
+        + "   [in arm B, `off` = the LINEAR lazy-SMT loop was never entered]"
+    )
     live = [r for r in rows if r.get("b_warm_build") == "built"]
     if live:
         checks = sum(int(r["b_warm_checks"] or 0) for r in live)

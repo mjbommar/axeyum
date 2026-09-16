@@ -6657,6 +6657,163 @@ mod tests {
         let _ = retractions;
     }
 
+    /// `sync_cube` must RETRACT a row the new system no longer bounds, and a
+    /// system that was infeasible with it must come back feasible without it
+    /// (ADR-2125).
+    ///
+    /// # Why this drives `sync_cube` directly instead of going through `cube_check`
+    ///
+    /// The mutation run found the retraction pass SURVIVING: all 41 tests stayed
+    /// green with it disabled. That is a real finding about the CALLER, not about
+    /// the guard. Measured with a probe over every order-atom shape in this
+    /// module -- `le`, `lt`, `ge`, `gt`, and a scaled `2x <= 1` -- each gives its
+    /// two polarities ONE shared row (ADR-1701's 4x cut: `when_false` is the
+    /// exact negation of `when_true`, so the same slack takes an upper bound for
+    /// one and a lower bound for the other), and an equality gives two rows that
+    /// are both installed whenever it is asserted true. `cube_check` declines any
+    /// cube naming an equality asserted FALSE. So **every cube `cube_check`
+    /// accepts wants exactly the same row set**, and nothing is ever retracted.
+    ///
+    /// A guard that cannot fire, shaped like a soundness filter, is worse than no
+    /// filter -- it is a line a reader counts as protection. The two honest
+    /// responses are to delete it or to test it at its own contract, and deleting
+    /// it would be wrong: `sync_cube` is a function with a contract of its own,
+    /// and the row set stops being invariant the moment a normalizer change makes
+    /// `negates` false for some atom. So this test drives the contract.
+    #[test]
+    fn sync_cube_retracts_a_row_the_new_system_no_longer_bounds() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let zero = rconst(&mut arena, 0);
+        let three = rconst(&mut arena, 3);
+        // `x >= 3` and `x <= 0` are jointly infeasible and separately feasible,
+        // so the retraction is the ONLY difference between the two verdicts.
+        let atoms = vec![
+            arena.real_ge(x, three).expect("x>=3"),
+            arena.real_le(x, zero).expect("x<=0"),
+        ];
+        let mut theory = LraTheory::new(&arena, &atoms);
+        assert!(theory.has_warm_engine(), "the warm tableau must exist here");
+
+        // Both true: infeasible. This is what leaves both rows BOUNDED.
+        assert!(
+            matches!(theory.cube_check(&[true, true]), CubeVerdict::Unsat(_)),
+            "x>=3 and x<=0 is infeasible; without this the second half has no \
+             bound to retract and the test is vacuous"
+        );
+
+        // Now the contract: the same engine, a system naming only the FIRST
+        // constraint. The second row must be retracted, and the verdict must flip.
+        let live: Vec<Constraint> = theory.live[..1].to_vec();
+        let dropped = theory.live[1].row.expect("registered row").0;
+        let kept = live[0].row.expect("registered row").0;
+        assert_ne!(
+            dropped, kept,
+            "the two atoms must ride DIFFERENT rows or there is nothing to retract"
+        );
+
+        let (bounded_after, verdict) = {
+            let cell = theory.simplex.as_ref().expect("warm engine");
+            let mut engine = cell.borrow_mut();
+            assert!(
+                engine.row_bounded[dropped],
+                "the previous cube must have left this row bounded"
+            );
+            assert!(
+                engine.sync_cube(&live),
+                "the one-row system is representable"
+            );
+            let bounded = engine.row_bounded[dropped];
+            (bounded, engine.inner.check(None))
+        };
+
+        assert!(
+            !bounded_after,
+            "row {dropped} still carries the bound the previous cube imposed; the \
+             engine is deciding a system with a constraint nobody asserted, which \
+             is a wrong `unsat` and not a slow one"
+        );
+        assert!(
+            matches!(verdict, simplex::Status::Feasible),
+            "x>=3 alone is satisfiable and the engine refused it -- the stale \
+             bound from the previous system was not lifted"
+        );
+        assert_eq!(
+            theory.tableau_invariant_holds(),
+            Some(true),
+            "the tableau invariant must survive the retraction"
+        );
+    }
+
+    /// A cube naming an atom this theory cannot represent must be refused WHOLE
+    /// (ADR-2125).
+    ///
+    /// The mutation run found this refusal SURVIVING, because no other fixture in
+    /// the module hands `cube_check` an atom outside its language. The defect it
+    /// guards against is quiet by construction: `Unsupported` and an equality
+    /// asserted FALSE both add NO constraint, so without the refusal the engine
+    /// decides a system strictly WEAKER than the cube -- and a `Feasible` on a
+    /// relaxation is not a witness for the cube, while the call site reads it as
+    /// one. No verdict comparison can see that, because the verdict is
+    /// `Feasible` either way and only the MEANING changes.
+    ///
+    /// Both shapes are covered, and the arm that must still WORK is checked as
+    /// well, so a refusal of everything would fail too.
+    #[test]
+    fn a_cube_naming_an_atom_the_theory_cannot_represent_is_refused_whole() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let one = rconst(&mut arena, 1);
+        let bv = arena.declare("b", Sort::BitVec(8)).expect("declare bv");
+        let bvar = arena.var(bv);
+        let k = arena.bv_const(8, 5).expect("bv const");
+        let atoms = vec![
+            arena.real_le(x, one).expect("x<=1"),
+            arena.eq(bvar, k).expect("b=5"),
+            arena.eq(y, one).expect("y=1"),
+        ];
+        let mut theory = LraTheory::new(&arena, &atoms);
+        assert!(theory.has_warm_engine(), "the warm tableau must exist here");
+        assert!(
+            !theory.tracks(1),
+            "the BV equality must register as Unsupported or this fixture is \
+             testing the wrong thing"
+        );
+
+        // The BV atom, at BOTH polarities: it adds nothing either way.
+        for value in [true, false] {
+            assert!(
+                matches!(
+                    theory.cube_check(&[true, value, true]),
+                    CubeVerdict::Decline
+                ),
+                "a cube naming an unrepresentable atom at polarity {value} was \
+                 ANSWERED; the engine decided a system weaker than the cube"
+            );
+        }
+
+        // The equality asserted FALSE is a disjunction and is refused for the
+        // same reason -- a different shape reaching the same arm.
+        assert!(
+            matches!(
+                theory.cube_check(&[true, true, false]),
+                CubeVerdict::Decline
+            ),
+            "an equality asserted FALSE is a disjunction this conjunctive theory \
+             cannot represent, and a cube naming one must be refused"
+        );
+
+        // The control, without which a refusal of EVERYTHING would pass: the
+        // cube that names only representable atoms must still be answered.
+        let mut ok = LraTheory::new(&arena, &atoms[..1].to_vec());
+        assert!(
+            matches!(ok.cube_check(&[true]), CubeVerdict::Feasible(_)),
+            "x<=1 alone is satisfiable and must still be decided; a fixture whose \
+             every arm declines cannot tell a refusal from a broken engine"
+        );
+    }
+
     /// A satisfiable system that a STALE basic-variable assignment, left over
     /// from a bound the previous cube imposed and this one does not, would
     /// report `unsat` (ADR-2125).
