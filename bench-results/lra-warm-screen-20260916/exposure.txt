@@ -17,8 +17,8 @@ that never started is a different fact from an arm that answered nothing.
     division   rows  off  screened  net  gain  LOSS  FLIP  rc!=0  cmp  DIS
     QF_LIA      200  127       127   +0     0     0     0      0  248    0
     QF_UFLRA    200  149       149   +0     0     0     0      0  298    0
-    QF_UFLIA          PENDING
-    QF_IDL            PENDING
+    QF_UFLIA    200  162       162   +0     0     0     0      0  324    0
+    QF_IDL            RUNNING
     QF_RDL            PENDING
 
 QF_LIA: ZERO MOVEMENT, AND THE ARM IS INERT -- BOTH, NOT ONE
@@ -81,3 +81,20 @@ This is the same misdiagnosis class as the fuzz runner calling a FAILING suite
 an inert one, and the gate runner blaming a lint failure on z3-sys. Three in one
 lane, all in tooling this lane wrote, all found by reading the output against
 what it was describing rather than by a test.
+
+
+QF_UFLIA: INERT, LIKE QF_LIA
+-----------------------------
+
+    screened: rows `built` 0   cubes answered 0   cold tableaux left 0
+    off:      cold tableaux 0
+
+Same reading as QF_LIA and it is stated the same way: evidence of NO REGRESSION,
+not evidence of no effect, because no file in the division reaches the offline
+linear loop's cold simplex and the lever therefore cannot act. Cost -0.1 %,
+inside the noise floor.
+
+So of the three divisions measured so far, ONE (`QF_UFLRA`) has the lever active
+and two do not. A reader adding up "three divisions, 0 gains, 0 losses" would be
+counting two populations where nothing was exercised alongside one where
+something was, and the mechanism columns are what stops that.
