@@ -402,6 +402,15 @@ struct SimplexEngine {
     /// row means the live system is not representable here and [`SimplexEngine::sync`]
     /// declines rather than silently dropping the earlier bound.
     row_bounded: Vec<bool>,
+    /// Per row: the bound currently imposed on it, or `None`.
+    ///
+    /// [`SimplexEngine::row_bounded`] answers "is this row bounded"; this answers
+    /// "with WHAT", which is the question [`SimplexEngine::sync_cube`] has to ask
+    /// to move only what changed. The two are redundant on purpose: `row_bounded`
+    /// is the O(1) invariant guard the prefix `sync` already relied on, and
+    /// splitting them keeps that guard exactly as it was rather than re-deriving
+    /// it from a richer structure a bug could make disagree with itself.
+    row_bound: Vec<Option<(simplex::Rel, Rational)>>,
     /// Rows [`SimplexEngine::sync`] has retracted over this engine's whole life.
     /// Diagnostic only (S4): with a persistent bound stack this stays far below
     /// `checks × rows`, which is what distinguishes a warm reconciliation from a
@@ -441,6 +450,7 @@ impl SimplexEngine {
                 .expect("non-empty above the shared prefix");
             self.inner.retract(row);
             self.row_bounded[row] = false;
+            self.row_bound[row] = None;
             self.sync_retractions += 1;
         }
         for c in &live[shared..] {
@@ -452,9 +462,100 @@ impl SimplexEngine {
             }
             self.inner.assert_bound(row, rel, rhs);
             self.row_bounded[row] = true;
+            self.row_bound[row] = Some((rel, rhs));
             self.active.push((row, rel, rhs));
             self.sync_assertions += 1;
         }
+        true
+    }
+
+    /// Installs a whole cube by MOVING ONLY THE BOUNDS THAT CHANGED (ADR-2125).
+    ///
+    /// # Why [`SimplexEngine::sync`] is the wrong shape for a cube
+    ///
+    /// `sync` reconciles by SHARED PREFIX, which is exactly right for a DPLL(T)
+    /// trail: the driver grows `live` by `assert` and truncates it by `pop`, so
+    /// the divergence is always a suffix and the prefix test finds it in O(1)
+    /// comparisons per shared entry.
+    ///
+    /// A cube is not a trail. Two consecutive cubes differ by a handful of
+    /// literals anywhere in the atom order, so the shared prefix ends at the
+    /// FIRST flip and everything after it is retracted and re-asserted. Measured
+    /// on `QF_LRA/sc/sc-39.base.cvc.smt2` at 24 s: **1,133,095 retractions and
+    /// 1,135,797 assertions over 632 checks** — about 1,793 bound moves per
+    /// check against 2,702 atoms, i.e. the whole cube, every round. The warm
+    /// basis removed 796 tableau builds and paid for them in reconciliation;
+    /// `lra_rounds` fell from 796 to 633 in the same budget.
+    ///
+    /// # What this does instead
+    ///
+    /// Compares the bound each row SHOULD carry against the one it DOES
+    /// ([`SimplexEngine::row_bound`]) and touches only the differences. That is
+    /// z3's shape — it patches `m_columns_with_changed_bounds` and nothing else
+    /// (`lar_solver.cpp:1280-1283`) — and with a measured 1.4 flipped literals
+    /// per round it turns a four-figure count of bound moves into a single-digit
+    /// one.
+    ///
+    /// `active` is still rebuilt POSITIONALLY against `live`, because that
+    /// alignment is what [`SimplexEngine::live_indices`] and
+    /// `LraTheory::rows_to_core` read a Farkas refutation through. Getting it
+    /// wrong makes multiplier position `i` name some other atom: a wrong CORE,
+    /// and so a blocking clause that rules out satisfiable assignments. The
+    /// alignment is a `Vec` rebuild and costs no tableau work; only the bound
+    /// moves are diffed.
+    ///
+    /// Returns `false`, having installed nothing new, if any live constraint has
+    /// no registered row or two of them want the same row — the caller must then
+    /// not trust a refutation, because the engine would not see the whole system.
+    fn sync_cube(&mut self, live: &[Constraint]) -> bool {
+        // Pass 1: what the cube wants, and the representability check. Done
+        // BEFORE any mutation so a refusal leaves the engine exactly as it was
+        // -- a half-installed cube would be a state no verdict describes.
+        let mut next: Vec<(usize, simplex::Rel, Rational)> = Vec::with_capacity(live.len());
+        for c in live {
+            let Some((row, rel, rhs)) = c.row else {
+                return false;
+            };
+            next.push((row, rel, rhs));
+        }
+        // A row holds ONE bound at a time. Two live constraints on one row is
+        // the same condition the prefix `sync` refuses through `row_bounded`,
+        // checked here over the target set rather than as it installs.
+        let mut wanted: Vec<Option<(simplex::Rel, Rational)>> = vec![None; self.row_bound.len()];
+        for &(row, rel, rhs) in &next {
+            if row >= wanted.len() || wanted[row].is_some() {
+                return false;
+            }
+            wanted[row] = Some((rel, rhs));
+        }
+
+        // Pass 2: retract what this cube does not want. Only rows the PREVIOUS
+        // cube bounded can need it, so this walks `active` rather than every row
+        // -- the difference is the cube's width against the tableau's.
+        for &(row, _, _) in &self.active {
+            if wanted[row].is_none() && self.row_bounded[row] {
+                self.inner.retract(row);
+                self.row_bounded[row] = false;
+                self.row_bound[row] = None;
+                self.sync_retractions += 1;
+            }
+        }
+
+        // Pass 3: assert what changed. A row already carrying the identical
+        // bound is skipped entirely: `assert_bound` would clamp its slack again
+        // and the clamp is where the engine's value repair happens, so a
+        // redundant one is not free.
+        for &(row, rel, rhs) in &next {
+            if self.row_bound[row] == Some((rel, rhs)) {
+                continue;
+            }
+            self.inner.assert_bound(row, rel, rhs);
+            self.row_bounded[row] = true;
+            self.row_bound[row] = Some((rel, rhs));
+            self.sync_assertions += 1;
+        }
+
+        self.active = next;
         true
     }
 
@@ -1199,6 +1300,25 @@ impl LraTheory {
         deadline: Option<Instant>,
         budget_bytes: usize,
     ) -> Result<Self, LraTheoryBuildStop> {
+        Self::try_new_with_budget_and_admission(
+            arena,
+            atom_terms,
+            deadline,
+            budget_bytes,
+            TableauAdmission::DenseCells,
+        )
+    }
+
+    /// The same construction, admitting the tableau on the currency the caller
+    /// names (ADR-2125). The online route keeps [`TableauAdmission::DenseCells`]
+    /// byte for byte; only the warm cube decider asks the other question.
+    pub(crate) fn try_new_with_budget_and_admission(
+        arena: &TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+        budget_bytes: usize,
+        admission: TableauAdmission,
+    ) -> Result<Self, LraTheoryBuildStop> {
         let mut builder = AtomBuilder::with_deadline(deadline, budget_bytes);
         let mut atoms = Vec::with_capacity(atom_terms.len());
         for &term in atom_terms {
@@ -1220,7 +1340,7 @@ impl LraTheory {
         // overflowed right-hand side) and the cheap bound check must keep
         // working when it does.
         let forms = assign_forms(&mut atoms);
-        let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
+        let simplex = build_simplex_engine(&mut atoms, nvars, admission).map(RefCell::new);
         // THIS COMMENT DESCRIBED A GUARD THAT IS NOT HERE, and said so in the
         // present tense for long enough that ADR-2111's lane read it as live
         // code and had to `git log -S` to find out otherwise. Corrected rather
@@ -1971,7 +2091,7 @@ impl LraTheory {
             self.assigned_log.push(index);
         }
 
-        match self.feasibility() {
+        match self.cube_feasibility() {
             Feasibility::Sat => self
                 .real_model()
                 .map_or(CubeVerdict::Decline, CubeVerdict::Feasible),
@@ -1987,6 +2107,67 @@ impl LraTheory {
                 CubeVerdict::Unsat(core)
             }
             Feasibility::Unknown => CubeVerdict::Decline,
+        }
+    }
+
+    /// The theory the OFFLINE lazy-SMT loop drives its cubes on (ADR-2125), or
+    /// the screen that refused it.
+    ///
+    /// Two things differ from [`Self::try_new_with_deadline`], and both are
+    /// forced by a measurement rather than chosen:
+    ///
+    /// * **The tableau is admitted on NONZEROS.** See
+    ///   [`simplex::Incremental::with_nonzero_admission`]: the dense-cell cap
+    ///   refuses a 188 KB tableau on `sc-39.base.cvc.smt2` while the cold path
+    ///   builds that same system 839 times uncapped, and with it the ADR-2125
+    ///   lever measured `warm_cube_checks=0` in BOTH arms.
+    /// * **The atom budget is the same.** It is NOT raised. [ADR-2045] raised
+    ///   exactly this budget on exactly this population and got **21 rows
+    ///   reaching the engine, 0 newly decided, and five NEW aborts**; repeating
+    ///   that inside a lever whose question is a warm basis would answer a
+    ///   different question with the same number.
+    ///
+    /// The error is returned rather than swallowed so the caller can record
+    /// WHICH screen refused. A lever that declines silently is indistinguishable
+    /// from one that ran and found nothing, which is the reading [ADR-2111] had
+    /// to publish about its own inert arm.
+    pub(crate) fn try_new_for_cubes(
+        arena: &TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Result<Self, LraTheoryBuildStop> {
+        Self::try_new_with_budget_and_admission(
+            arena,
+            atom_terms,
+            deadline,
+            DEFAULT_ONLINE_LRA_BUDGET_BYTES,
+            TableauAdmission::Nonzeros(simplex::MAX_WARM_CUBE_NONZEROS),
+        )
+    }
+
+    /// [`Self::feasibility`] over a whole CUBE, reconciled by
+    /// [`SimplexEngine::sync_cube`] rather than by shared prefix (ADR-2125).
+    ///
+    /// Identical to `feasibility` in every other respect, including the refusal
+    /// to trust a refutation from an engine that does not see the whole live
+    /// system. It does NOT fall back to Fourier–Motzkin when the warm engine is
+    /// absent: `cube_check` has already refused that case, because deciding on a
+    /// different engine would make an A/B of this lever an A/B of two engines.
+    fn cube_feasibility(&self) -> Feasibility {
+        if self.live.is_empty() {
+            return Feasibility::Sat;
+        }
+        let Some(cell) = &self.simplex else {
+            return Feasibility::Unknown;
+        };
+        let mut engine = cell.borrow_mut();
+        if !engine.sync_cube(&self.live) {
+            return Feasibility::Unknown;
+        }
+        match engine.inner.check(self.deadline) {
+            simplex::Status::Feasible => Feasibility::Sat,
+            simplex::Status::Infeasible(rows) => Feasibility::Unsat(engine.live_indices(&rows)),
+            simplex::Status::Unknown => Feasibility::Unknown,
         }
     }
 
@@ -2713,7 +2894,29 @@ fn assign_forms(atoms: &mut [AtomKind]) -> usize {
 /// Returns `None` — leaving the theory on Fourier–Motzkin, unchanged — when a
 /// template's right-hand side overflows `i128` or the dense tableau would exceed
 /// [`simplex::MAX_TABLEAU_CELLS`]. Both declines are structural and deterministic.
-fn build_simplex_engine(atoms: &mut [AtomKind], nvars: usize) -> Option<SimplexEngine> {
+/// Which structural ceiling [`build_simplex_engine`] admits the tableau by
+/// (ADR-2125).
+///
+/// Two currencies for one structure, and they disagree by three orders of
+/// magnitude on a real file — see
+/// [`simplex::Incremental::with_nonzero_admission`] for the measurement. An
+/// enum rather than an `Option<usize>` so a call site states which question it
+/// is asking instead of encoding it in the absence of a number.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum TableauAdmission {
+    /// `m × (nvars+m)` against `simplex::MAX_TABLEAU_CELLS`. What the ONLINE
+    /// engine uses, and what it keeps using: this lane does not move it.
+    DenseCells,
+    /// Stored nonzeros against a cap. What the ADR-2125 warm cube decider uses,
+    /// because that is what the sparse tableau costs.
+    Nonzeros(usize),
+}
+
+fn build_simplex_engine(
+    atoms: &mut [AtomKind],
+    nvars: usize,
+    admission: TableauAdmission,
+) -> Option<SimplexEngine> {
     /// Opens a fresh row for `c` and records the **upper** bound asserting it
     /// imposes: `expr {<,≤} 0` with `expr = Σ aⱼ·xⱼ + k` is the row `Σ aⱼ·xⱼ {<,≤} −k`.
     fn open_row(
@@ -2782,14 +2985,21 @@ fn build_simplex_engine(atoms: &mut [AtomKind], nvars: usize) -> Option<SimplexE
     if rows_sparse.is_empty() {
         return None;
     }
-    let inner = simplex::Incremental::new(nvars, rows_sparse)?;
+    let inner = match admission {
+        TableauAdmission::DenseCells => simplex::Incremental::new(nvars, rows_sparse)?,
+        TableauAdmission::Nonzeros(max) => {
+            simplex::Incremental::with_nonzero_admission(nvars, rows_sparse, max)?
+        }
+    };
     debug_assert_eq!(inner.rows(), row_atom.len());
     let row_bounded = vec![false; row_atom.len()];
+    let row_bound = vec![None; row_atom.len()];
     Some(SimplexEngine {
         inner,
         row_atom,
         active: Vec::new(),
         row_bounded,
+        row_bound,
         sync_retractions: 0,
         sync_assertions: 0,
     })
@@ -5543,7 +5753,8 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
     let nvars = builder.vars.len();
     let mut atoms = atoms;
     let forms = assign_forms(&mut atoms);
-    let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
+    let simplex =
+        build_simplex_engine(&mut atoms, nvars, TableauAdmission::DenseCells).map(RefCell::new);
     // Order-preserving scan filter for `propagate_bounds`; see the field docs.
     let propagatable = propagatable_atoms(&atoms, forms);
     let implied = implied_state(nvars, &atoms);
@@ -6412,13 +6623,38 @@ mod tests {
              identical invariants, so this counter is the only thing in this \
              test that can see it"
         );
+        // The reconciliation must have RUN, and it must have moved only what
+        // changed. The second half is the property `sync_cube` exists for and it
+        // is asserted as a BOUND against the strawman rather than as a pinned
+        // number, so it discriminates without flaking on a generator change.
+        //
+        // `retractions` is deliberately NOT required to be positive, and the
+        // reason is a finding rather than a concession: a TOTAL cube over order
+        // atoms bounds every row -- `when_true` takes the slack's upper bound and
+        // `when_false` its lower, on the same row -- so a row is never left
+        // unbounded and nothing is ever retracted. Requiring a retraction here
+        // would be requiring the engine to do work the cube does not imply, and
+        // the first version of this fixture did exactly that: it was written
+        // against the prefix `sync`, which retracts the whole suffix after the
+        // first flip, and it failed the moment the diff stopped doing that.
+        let cubes = 32usize;
+        let atoms_n = atoms.len();
         assert!(
-            retractions > 0 && assertions > 0,
-            "the sequence must actually MOVE bounds -- retractions={retractions} \
-             assertions={assertions}; zero on either side means the cubes were \
-             installed once and the reconciliation this fixture exists to check \
-             never ran"
+            assertions > 0,
+            "the sequence moved no bounds at all -- the cubes were installed once \
+             and the reconciliation this fixture exists to check never ran"
         );
+        assert!(
+            (assertions as usize) < cubes * atoms_n,
+            "the reconciliation re-asserted {assertions} bounds over {cubes} cubes \
+             of {atoms_n} atoms; at or above {} it is re-installing the WHOLE cube \
+             every round, which is what `sync_cube` replaced -- the warm basis \
+             would then be removing a tableau build and paying for it in bound \
+             moves (measured on `sc-39.base.cvc.smt2` as 1,133,095 retractions \
+             over 632 checks)",
+            cubes * atoms_n
+        );
+        let _ = retractions;
     }
 
     /// A satisfiable system that a STALE basic-variable assignment, left over
@@ -7188,7 +7424,8 @@ mod tests {
         let nvars = builder.vars.len();
         let mut atoms = atoms;
         let forms = assign_forms(&mut atoms);
-        let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
+        let simplex =
+            build_simplex_engine(&mut atoms, nvars, TableauAdmission::DenseCells).map(RefCell::new);
         // Order-preserving scan filter for `propagate_bounds`; see the field docs.
         let propagatable = propagatable_atoms(&atoms, forms);
         let implied = implied_state(nvars, &atoms);

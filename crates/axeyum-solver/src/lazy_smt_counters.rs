@@ -495,6 +495,15 @@ pub struct LazySmtCounters {
     /// a pristine basis.
     pub simplex_cold_pivots: u64,
 
+    /// Which screen the ADR-2125 warm cube decider got past, or stopped at.
+    ///
+    /// An ENUM and not a count, for [ADR-2045]'s reason: the remedies are
+    /// disjoint. A memory-budget refusal is a number to argue about; a
+    /// no-tableau refusal is a structural ceiling in the wrong currency; a
+    /// deadline refusal is a query that was already lost. Collapsing them into
+    /// "the lever did not run" is what made ADR-2111's inert arm unreadable
+    /// until a mechanism probe was written for it.
+    pub warm_cube_build: WarmCubeBuild,
     /// Cubes the ADR-2125 warm decider ANSWERED — a verdict, either side.
     ///
     /// The mechanism counter. [ADR-2111] shipped a lever whose arm was INERT on
@@ -537,6 +546,46 @@ pub struct LazySmtCounters {
     /// unsupported skeleton is an encoder gap — so this is recorded as an enum
     /// rather than a count.
     pub online_probe: OnlineProbe,
+}
+
+/// What became of the ADR-2125 warm cube decider's construction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum WarmCubeBuild {
+    /// The lever is off. The default, and the only value that says nothing about
+    /// whether the decider COULD have been built.
+    #[default]
+    Off,
+    /// Built, with a warm tableau. The only value under which the `warm_cube_*`
+    /// counters below mean anything.
+    Built,
+    /// The atom translation hit its wall-clock deadline.
+    Deadline,
+    /// The atom translation hit a normalization ceiling.
+    ResourceLimit,
+    /// The atom translation's projected footprint exceeded its byte budget
+    /// (ADR-1752's screen). NOT raised by ADR-2125: [ADR-2045] raised exactly
+    /// this on exactly this population for 0 newly decided rows and five new
+    /// aborts.
+    MemoryBudget,
+    /// The theory was built but has no warm tableau, so it would have decided on
+    /// Fourier–Motzkin — a DIFFERENT engine, and answering from it would make an
+    /// A/B of this lever an A/B of two engines.
+    NoTableau,
+}
+
+impl WarmCubeBuild {
+    /// The stable token this renders as in the `--trace` line.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            WarmCubeBuild::Off => "off",
+            WarmCubeBuild::Built => "built",
+            WarmCubeBuild::Deadline => "deadline",
+            WarmCubeBuild::ResourceLimit => "resource-limit",
+            WarmCubeBuild::MemoryBudget => "memory-budget",
+            WarmCubeBuild::NoTableau => "no-tableau",
+        }
+    }
 }
 
 /// What the online CDCL(T) LRA probe at the head of
@@ -725,7 +774,7 @@ impl LazySmtCounters {
              cube_matrices={} simplex_cold_builds={} simplex_cold_build_ms={} \
              simplex_cold_ms={} simplex_cold_pivots={} warm_cube_checks={} \
              warm_cube_declines={} warm_cube_retractions={} warm_cube_assertions={} \
-             warm_cube_cold_restarts={} online_probe={}",
+             warm_cube_cold_restarts={} warm_cube_build={} online_probe={}",
             self.reading().label(),
             self.lra_entries,
             self.lra_rounds,
@@ -772,6 +821,7 @@ impl LazySmtCounters {
             self.warm_cube_retractions,
             self.warm_cube_assertions,
             self.warm_cube_cold_restarts,
+            self.warm_cube_build.label(),
             self.online_probe.label(),
         )
     }
@@ -854,6 +904,7 @@ const fn zero_counters() -> LazySmtCounters {
         simplex_cold_build: Duration::ZERO,
         simplex_cold: Duration::ZERO,
         simplex_cold_pivots: 0,
+        warm_cube_build: WarmCubeBuild::Off,
         warm_cube_checks: 0,
         warm_cube_declines: 0,
         warm_cube_retractions: 0,
@@ -1264,6 +1315,11 @@ pub(crate) fn record_warm_cube(answered: bool, churn: Option<(u64, u64, u64)>) {
     });
 }
 
+/// Which screen the ADR-2125 warm cube decider reached; see [`WarmCubeBuild`].
+pub(crate) fn record_warm_cube_build(outcome: WarmCubeBuild) {
+    record(|c| c.warm_cube_build = outcome);
+}
+
 /// What the online CDCL(T) LRA probe did with the query; see [`OnlineProbe`].
 pub(crate) fn record_online_probe(outcome: OnlineProbe) {
     record(|c| c.online_probe = outcome);
@@ -1388,6 +1444,7 @@ mod tests {
             warm_cube_retractions,
             warm_cube_assertions,
             warm_cube_cold_restarts,
+            warm_cube_build: _,
             online_probe: _,
         } = counters;
 
@@ -1471,7 +1528,13 @@ mod tests {
         let known: std::collections::BTreeSet<&str> = expected
             .iter()
             .map(|(key, _)| *key)
-            .chain(["reading", "online_probe", "accounted_ms", "cores_rederived"])
+            .chain([
+                "reading",
+                "online_probe",
+                "warm_cube_build",
+                "accounted_ms",
+                "cores_rederived",
+            ])
             .collect();
         for field in rendered {
             let key = field.split('=').next().expect("non-empty split");

@@ -45,13 +45,14 @@ use web_time::Instant;
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::combined::check_with_all_theories;
+use crate::lazy_smt_counters::WarmCubeBuild;
 use crate::lazy_smt_counters::{CoreSource, LazySmtLoop, RoundOutcome};
 use crate::lia::DEFAULT_INT_WIDTH;
 use crate::lra::{
     FarkasCertificate, check_with_lra, check_with_lra_within_certified,
     lra_farkas_certificate_within,
 };
-use crate::lra_online::{CubeVerdict, LraTheory};
+use crate::lra_online::{CubeVerdict, LraTheory, LraTheoryBuildStop};
 use crate::model::Model;
 use crate::sat_bv_backend::SatBvBackend;
 
@@ -1120,8 +1121,28 @@ fn warm_cube_decider(
         return None;
     }
     let atom_terms: Vec<TermId> = ctx.atoms.iter().map(|a| a.term).collect();
-    let theory = LraTheory::try_new_with_deadline(arena, &atom_terms, deadline).ok()?;
-    theory.has_warm_engine().then_some(theory)
+    // The refusal is RECORDED, never swallowed. This lane's first mechanism
+    // check read `warm_cube_checks=0` in both arms and the trail could not say
+    // why -- which is the reading ADR-2111 had to publish about its own inert
+    // `TableauReserve` arm, and the reason a lever must name the screen that
+    // refused it rather than merely being absent.
+    let theory = match LraTheory::try_new_for_cubes(arena, &atom_terms, deadline) {
+        Ok(theory) => theory,
+        Err(stop) => {
+            crate::lazy_smt_counters::record_warm_cube_build(match stop {
+                LraTheoryBuildStop::Deadline => WarmCubeBuild::Deadline,
+                LraTheoryBuildStop::ResourceLimit => WarmCubeBuild::ResourceLimit,
+                LraTheoryBuildStop::MemoryBudget { .. } => WarmCubeBuild::MemoryBudget,
+            });
+            return None;
+        }
+    };
+    if !theory.has_warm_engine() {
+        crate::lazy_smt_counters::record_warm_cube_build(WarmCubeBuild::NoTableau);
+        return None;
+    }
+    crate::lazy_smt_counters::record_warm_cube_build(WarmCubeBuild::Built);
+    Some(theory)
 }
 
 /// Builds the final `sat` model (real values + original Boolean values) and

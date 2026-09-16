@@ -74,6 +74,17 @@ use axeyum_ir::Rational;
 /// keeps whatever engine it had. Purely structural (no clock), so the decline is deterministic.
 pub(crate) const MAX_TABLEAU_CELLS: usize = 4_000_000;
 
+/// Nonzeros the ADR-2125 warm cube engine admits, the currency the sparse
+/// tableau is actually stored in (~40 bytes each, so this is **16 MiB**).
+///
+/// Not a new number: it is [ADR-2111]'s own `TableauReserve::Sparse` figure,
+/// reused rather than invented so the two ceilings on one structure agree. What
+/// it is measured against is real — [ADR-2055] measured a median **34,555**
+/// nonzeros over the 74 rows of this route and an extreme of **147,440**, so
+/// this is 11.6× the median and 2.7× the extreme. Nobody has taken the tail, and
+/// this is stated rather than implied.
+pub(crate) const MAX_WARM_CUBE_NONZEROS: usize = 400_000;
+
 /// Diagnostic (`AXEYUM_LRADENSEPROBE=1`): report resident-set size at each of the
 /// four points on the offline dense LRA route where a large allocation either
 /// lands or is released, so the 5.07 GiB median [ADR-2045] measured over this
@@ -1916,6 +1927,58 @@ impl Incremental {
     /// whatever engine it had.
     pub fn new(nvars: usize, rows_sparse: Vec<Vec<(usize, Rational)>>) -> Option<Self> {
         Incremental::with_policy(nvars, rows_sparse, configured_policy())
+    }
+
+    /// As [`Incremental::new`], but admitting on **nonzeros** rather than on
+    /// dense cells (ADR-2125).
+    ///
+    /// # The measurement this exists for
+    ///
+    /// [`Incremental::new`] refuses when `m × (nvars+m)` exceeds
+    /// [`MAX_TABLEAU_CELLS`]. That is a DENSE-CELL count, and since [ADR-2111]
+    /// this tableau does not store dense cells: it stores `nnz` pairs at about
+    /// 40 bytes each. On `QF_LRA/sc/sc-39.base.cvc.smt2` the two currencies
+    /// disagree by three orders of magnitude — 8,797,712 cells against **4,688
+    /// nonzeros**, 188 KB of actual storage — so the cap refuses an engine that
+    /// would cost nothing, and the ADR-2125 lever measured `warm_cube_checks=0`
+    /// in both arms because of it: an INERT arm, the exact failure [ADR-2111]
+    /// recorded for its own `TableauReserve`.
+    ///
+    /// What makes the refusal indefensible rather than merely conservative is
+    /// the other side of it. The offline route's cold path
+    /// ([`feasible_within_sparse`]) consults [`MAX_TABLEAU_CELLS`] **only** under
+    /// the default-off `AXEYUM_LRA_CELL_CAP` lever, so on that same file the same
+    /// structural ceiling refuses ONE warm tableau and permits **839 cold builds
+    /// of the identical system**. This is [ADR-1752]'s finding one level down: a
+    /// count is the wrong currency, and the right one is the bytes.
+    ///
+    /// [`MAX_TABLEAU_CELLS`] is deliberately NOT changed. It governs the online
+    /// engine's admission too, and moving it would make an A/B of one lever an
+    /// A/B of two routes — which is how [ADR-2111]'s `TableauReserve` arm became
+    /// unreadable. This is a second door for one call site.
+    pub(crate) fn with_nonzero_admission(
+        nvars: usize,
+        rows_sparse: Vec<Vec<(usize, Rational)>>,
+        max_nonzeros: usize,
+    ) -> Option<Self> {
+        crate::config_registry::note_consulted(
+            "crates/axeyum-solver/src/simplex.rs::MAX_WARM_CUBE_NONZEROS",
+        );
+        let m = rows_sparse.len();
+        // `n` is still checked for overflow: the tableau indexes columns
+        // `0..nvars+m` whatever its storage costs, so a width that does not fit a
+        // `usize` is a refusal on every admission currency.
+        let _n = nvars.checked_add(m)?;
+        let nnz: usize = rows_sparse.iter().map(Vec::len).sum();
+        if nnz > max_nonzeros {
+            return None;
+        }
+        Some(Incremental {
+            tab: Tableau::new_rows_with_policy(nvars, rows_sparse, configured_policy()),
+            poisoned: false,
+            checks: 0,
+            cold_restarts: 0,
+        })
     }
 
     /// As [`Incremental::new`], under an explicit [`PivotPolicy`].
