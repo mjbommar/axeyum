@@ -10,7 +10,7 @@ Date: 2026-09-16
 [ADR-2125] kept the simplex basis warm across the offline lazy-SMT loop's cubes,
 measured **40,916 from-scratch tableaux → 0** and **−9.2 %** wall clock, and
 shipped `off` on **1 STABLE-GAIN against 2 STABLE-LOSS**. It then named its own
-successor in one sentence, twice — in §7.3 and again in §8.4:
+successor in one sentence, twice — in its own §7.3 and again in its §8.4:
 
 > The loss and the gain are on one axis — **builds per file** — and the lever is
 > free to consult it. `simplex_cold_builds` is already a counter, and a decider
@@ -466,7 +466,7 @@ feature-gated suite compiles to nothing and exits 0.
 | `check-merge-hygiene.sh` | PASS |
 | `check-links.sh` | all links ok |
 | `mutation_controls.py --check-anchors` | 158 suites, 1,102→1,114 anchors, **stale = 0** |
-| the six z3 fuzzes × three arms | **17 per arm, 51 total**, 0 failed (§5.5) |
+| the six z3 fuzzes × three arms | **17 per arm, 51 total**, 0 failed (`fuzz-arms.txt`) |
 | `--lib --features full -- --skip reconstruct::` | **1,613 passed, 6 failed** contended; **1,619 passed, 0 failed** on a quiet box (§5.3.2) |
 | `progress_frontier --features full -- --test-threads=1` | **12 passed, 0 failed, 0 REGRESSION** |
 
@@ -999,7 +999,8 @@ Named with what is known about each, rather than left implied.
 
 8. **Four defects in this lane's own instruments** are fixed and recorded rather
    than quietly repaired, because the shape recurs: a fuzz runner that called a
-   FAILING suite an inert one and deleted the evidence (§5.5); a gate runner that
+   FAILING suite an inert one and deleted the evidence (`fuzz-incident.txt`); a
+   gate runner that
    blamed a real lint failure on a missing `z3-sys` asset, and also deleted the
    evidence (§5.3); a summariser that reported an absent arm as a disagreement;
    and an ssh `exit 124` read as "the launch did not happen", which ran one
