@@ -3982,10 +3982,20 @@ impl CadPolicy {
 
 /// The arm used when `AXEYUM_NRA_CAD` is unset or unrecognized.
 ///
-/// Byte-identical to the pre-ADR-2110 engine: its `cell_cap` IS
-/// [`MAX_CAD_CELLS`], which is what makes the A/B one binary. See the
-/// `CAD_DEFAULT` row of `config_registry`.
-pub(crate) const CAD_DEFAULT: CadPolicy = CadPolicy::DEFAULT;
+/// **ADR-2121 moved this from [`CadPolicy::DEFAULT`] to
+/// [`CadPolicy::SINGLE_CELL_SAT`]**, on a measured +4 with 0 stable losses, 0
+/// flips and 0 `:status` disagreements — and, decisively, on the fact that every
+/// verdict the new default adds is a `sat` replayed exactly against the original
+/// assertions. The half of that route whose justification is a finite sample
+/// (`unsat`, gated on `nra_cell_cert`'s sampling delineability check) is
+/// withheld here as [`CadDecline::UnsatWithheldSampledDelineability`] and reaches
+/// no default.
+///
+/// The cell cap is unchanged at [`MAX_CAD_CELLS`], so this is a route change and
+/// not a budget change. `AXEYUM_NRA_CAD=default` still selects the pre-ADR-2121
+/// engine, by an EXPLICIT arm in [`parse_cad_arm`] rather than by the fallback.
+/// See the `CAD_DEFAULT` row of `config_registry`.
+pub(crate) const CAD_DEFAULT: CadPolicy = CadPolicy::SINGLE_CELL_SAT;
 
 /// The CAD policy in force, read once from `AXEYUM_NRA_CAD`.
 pub(crate) fn cad_policy() -> CadPolicy {
@@ -4008,6 +4018,13 @@ fn parse_cad_arm(value: &str) -> CadPolicy {
         CadPolicy::SINGLE_CELL
     } else if value.eq_ignore_ascii_case("single-cell-sat") {
         CadPolicy::SINGLE_CELL_SAT
+    } else if value.eq_ignore_ascii_case("default") {
+        // EXPLICIT, not a fallback. `CAD_DEFAULT` is `SINGLE_CELL_SAT` as of
+        // ADR-2121, so without this arm `AXEYUM_NRA_CAD=default` would resolve
+        // through the catch-all below to the NEW default and every A/B's arm A
+        // would silently become its arm B. `every_arm_name_is_a_value_the_parser_accepts`
+        // is what holds this.
+        CadPolicy::DEFAULT
     } else {
         CAD_DEFAULT
     }
@@ -8236,7 +8253,27 @@ mod tests {
         names.sort_unstable();
         names.dedup();
         assert_eq!(names.len(), total, "two arms share a name: {names:?}");
-        assert_eq!(default.arm, "default", "the shipped arm keeps its name");
+        assert_eq!(
+            default.arm, "default",
+            "the pre-ADR-2121 arm keeps its name, so an A/B can still ask for it"
+        );
+        // And the shipped default is the sat-only arm, which must never emit an
+        // `unsat` justified by a sample. Read through the arm list rather than
+        // asserted on the constant: a const assertion is a compile-time claim
+        // about a literal, which clippy rejects and which would not fail if the
+        // default were repointed at an arm that DOES emit one.
+        let shipped: Vec<&str> = arms
+            .iter()
+            .filter(|p| p.arm == CAD_DEFAULT.arm)
+            .filter(|p| !p.emit_unsat)
+            .map(|p| p.arm)
+            .collect();
+        assert_eq!(
+            shipped,
+            vec![CAD_DEFAULT.arm],
+            "the shipped default ({}) must not emit a sampled `unsat`",
+            CAD_DEFAULT.arm
+        );
     }
 
     /// The string `AXEYUM_NRA_CAD` accepts for each arm is the string the A/B
