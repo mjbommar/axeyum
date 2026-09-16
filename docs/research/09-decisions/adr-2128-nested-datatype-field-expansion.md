@@ -330,12 +330,65 @@ relaxation's own incompleteness, it belongs with the exactness arms, and
 exactness is what would stop the children being free — but all 29 sit in files
 that are cyclic or `W1`-blocked, so the lever reaches none of them.
 
+## 5a. The lever IS live end to end, and the verdict column cannot show it
+
+Before the A/B could be read at all, one thing had to be established: that the
+arm is actually enabled at the front door. **ADR-2114's own `repro/ground.smt2`
+-- the query the unit suite uses to separate the arms -- answers `unsat`
+through the FRONT DOOR under BOTH arms**, because a lower rung (ADR-0022 step A
+datatype elimination) decides it after `check_with_datatype_native` declines.
+So a front-door A/B seeing no difference there would be indistinguishable from
+an arm that was never enabled.
+
+A real corpus file from the `dt:exactness-arg` bucket settles it
+(`census/lever-endtoend-probe.txt`; binary `smtcomp_cli-arm2`, BUILD-OK at this
+ADR's own commit, s7 `taskset -c 13`, 24 s; the file is
+`AUFDTLIRA/.../P720-007__replay__harness.adb_13_19_assert___00.smt2`):
+
+| arm | the give-up sentence |
+|---|---|
+| BASE | "**congruence over a datatype argument whose expansion is not exact** ..." |
+| ARM (depth 5) | "term #1104 has sort `(Uninterpreted 6)` that the pure-Rust BV backend cannot bit-blast" |
+
+**The exactness refusal is gone under the arm** -- the lever admitted the
+Ackermann congruence it used to refuse -- and the query then died further down
+on an unrelated reason. **The verdict is `unknown` under both.**
+
+So on this population the lever MOVES THE BLOCKER without moving the verdict,
+and two traps follow, both written into the artifacts rather than left to a
+reader:
+
+- A verdict-only A/B reports a perfect zero-diff that reads as "the lever does
+  nothing", which is the same shape as "the arm was never enabled".
+  `ab-summarize.py` therefore PRINTS A NOTE on a zero-diff instead of letting
+  the zeros speak, and its exit status depends on the finding (3 on a flip, 2
+  on a loss).
+- The other direction is a trap too: the arm's sentence names a DIFFERENT site,
+  so a census keyed on the give-up wording would report the lever as having
+  "moved 52 files out of the datatype bucket" when what it did was hand them to
+  the next rung. Moving a blocker is progress only if the next rung can do
+  something with it; on this file it cannot.
+
+## 5b. The A/B, PARTIAL -- and no ship decision
+
 **The interleaved A/B did not complete in this lane, so no ship decision is
-taken and the lever stays OFF — which is what it ships as.** The runner is
-committed (`ab-run.sh`: ONE binary, TWO env values, the two arms back to back
-per file on one core so load cancels in the difference, order alternated per
-file so a first-run penalty cannot land on one arm) along with the three
-200-file lists, so the measurement is a re-run rather than a re-derivation.
+taken and the lever stays OFF -- which is what it ships as.** What ran is the
+first **50 of 200** `AUFDTLIRA` files (`census/ab-AUFDTLIRA-partial*`), one
+binary, two env values, the two arms back to back per file on one core, order
+alternated per file, 24 s, this lane's pinned pairs on s7:
+
+    rows=50  (base-first 24 / arm-first 26)
+    base : unsat 33  unknown 17
+    arm  : unsat 33  unknown 17
+    GAINS 0   LOSSES 0   sat<->unsat FLIPS 0
+
+**0 disagreements of 50, and no soundness incident** -- consistent with §5a's
+probe, which says the lever moves the blocker and not the verdict here. It is
+a PARTIAL and it is labelled as one: 50 of 200 in one of three divisions is not
+a division result, `UFDTLIRA` and `QF_DT` did not run at all, and the movers
+recheck and the held-out draw did not happen. The runner (`ab-run.sh`) and the
+three 200-file lists are committed, so the measurement is a re-run rather than
+a re-derivation.
 
 [ADR-2020]: adr-2020-giveup-census-buckets.md
 
@@ -358,6 +411,23 @@ The cyclic-guard unit tests **count children rather than assert a verdict**,
 and that is the point: the guard is a cost decision resting on a soundness fact
 established independently, so a verdict assertion would survive its deletion and
 prove nothing.
+
+**The mutation suite `dt-nested-field-2128`: both guards kill EXACTLY ONE test,
+and they are DIFFERENT tests** (`census/mutation-dt-nested-field-2128.txt`):
+
+| guard deleted | the test that died |
+|---|---|
+| the materialiser skips a CYCLIC field closure | `the_cyclic_guard_builds_no_children_for_a_cyclic_datatype` |
+| the exactness predicate recurses into the nested field | `exactness_widens_with_the_budget_and_never_for_a_cycle` |
+
+`--check-anchors` reports `suites=150 anchors=1100 stale=0`.
+
+**The first mutant for the second guard was not usable, and that is worth
+recording.** Deleting the `depth > 0 &&` conjunct reported `INCONSISTENT -- 1
+test binaries started but 0 reported a result`: without the budget check the
+predicate DIVERGES on a cyclic datatype and takes the binary down. A crash is a
+kill in the crudest sense and it names nothing, so the registered mutant keeps
+the budget and drops the RECURSION instead, which terminates and is wrong.
 
 [ADR-1920]: adr-1920-datatype-native-capability-gate.md
 [ADR-1930]: adr-1930-unspecified-selector-reads-are-free.md

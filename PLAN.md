@@ -140,6 +140,8 @@ now. Nothing was deleted.
 | 2026-09-16 | `09d03cc2e` | `expansion-reach.py` + the seven-population reach census, with three committed controls (fires on ADR-2114's own `ground.smt2`, not on either negative). |
 | 2026-09-16 | `cb60fb9ba` | ADR-2128: nested datatype field expansion behind `AXEYUM_DT_NESTED_FIELD_DEPTH` (default 0 = OFF); depth-aware exactness, cyclic-closure detector, demand-seeded materialiser, 16 tests, a new pre-push-gated suite. |
 | 2026-09-16 | `9fe46e8c3` | The observed blocker census (318 undecided files, 0 unmatched sentences), clippy clean, and the `dt-nested-field-2128` mutation suite. |
+| 2026-09-16 | `70c50a703` | ADR-2128 §5, the lane status, and a mutant replaced because it CRASHED rather than failed. |
+| 2026-09-16 | `2943e88c2` | The end-to-end lever probe (the arm clears the exactness refusal on a real corpus file) and `ab-summarize.py`, whose exit status depends on the finding. |
 | 2026-09-16 | `10aff7750` | `scripts/strip-quantified-assertions.py` + 18 unit tests: byte-verbatim quantifier-assert stripping, iterative tokenizer/parser (no recursive `let` expansion). |
 | 2026-09-15 | `894b960a2` | lra-trace: `screen-ab.sh`, with its two named control files wired in rather than remembered |
 | 2026-09-15 | `ee8f64513` | lra-trace: the atom screen becomes `AXEYUM_LRA_ATOM_SCREEN` (default 1); three falsified cost models say why raising it is a trap |
@@ -51473,22 +51475,48 @@ features `cargo check -p axeyum-solver` exit 0. `check-merge-hygiene.sh` PASS.
 `check-links.sh` all links ok. `mutation_controls.py --check-anchors`
 `suites=150 anchors=1100 stale=0`.
 
-**Mutation, and the first mutant was not usable.** Guard 1 (the materialiser
-skips a cyclic closure) killed **exactly one** test,
-`the_cyclic_guard_builds_no_children_for_a_cyclic_datatype` — which is the
-design: the guard moves the child COUNT and nothing else, so a verdict
-assertion would have survived it. Guard 2's obvious mutant — deleting
-`depth > 0 &&` — reported `INCONSISTENT — 1 test binaries started but 0
-reported a result`: without the budget check the predicate DIVERGES on a cyclic
-datatype and takes the binary down. A crash names nothing, so the registered
-mutant keeps the budget and drops the RECURSION instead, which terminates and
-is wrong.
+**Mutation: both guards kill EXACTLY ONE test, and they are DIFFERENT tests**
+(`census/mutation-dt-nested-field-2128.txt`, baseline green at 8 tests):
 
-**Ship decision: NOT TAKEN — the interleaved A/B did not complete in this
-lane.** The lever stays OFF, which is what it ships as. The runner
-(`ab-run.sh`, one binary two env values, arms back to back per file on one
-core, order alternated per file) and the three 200-file lists are committed, so
-the measurement is a re-run rather than a re-derivation.
+| guard deleted | the test that died |
+|---|---|
+| the materialiser skips a CYCLIC field closure | `the_cyclic_guard_builds_no_children_for_a_cyclic_datatype` |
+| the exactness predicate recurses into the nested field | `exactness_widens_with_the_budget_and_never_for_a_cycle` |
+
+**And the first mutant for guard 2 was not usable**, which is the more useful
+half of the result. Deleting the `depth > 0 &&` conjunct reported
+`INCONSISTENT — 1 test binaries started but 0 reported a result`: without the
+budget check the predicate DIVERGES on a cyclic datatype and takes the binary
+down. A crash is a kill in the crudest sense and it NAMES NOTHING, so it is not
+a result. The registered mutant keeps the budget and drops the RECURSION
+instead (`depth > 0 && ..._to_depth(inner, depth - 1)` → `depth > 0`), which
+terminates and is wrong: a datatype-typed field counts as exact whenever any
+budget remains, so a cyclic closure is called exact — the ADR-1920
+antecedent-weakening shape.
+
+**The lever IS live end to end, and the verdict column cannot show it.**
+ADR-2114's own `repro/ground.smt2` answers `unsat` through the FRONT DOOR under
+BOTH arms — a lower rung (ADR-0022 step A) decides it after
+`check_with_datatype_native` declines — so it cannot confirm the arm is
+enabled. A real `dt:exactness-arg` corpus file can
+(`census/lever-endtoend-probe.txt`): BASE gives up on "congruence over a
+datatype argument whose expansion is not exact", ARM at depth 5 gives up on an
+unrelated `(Uninterpreted 6)` sort the BV backend cannot bit-blast. **The
+exactness refusal is gone under the arm and the verdict is `unknown` under
+both** — the lever MOVES THE BLOCKER without moving the verdict here.
+
+**A/B, PARTIAL: 50 of 200 `AUFDTLIRA` files, 0 disagreements, 0 flips, 0
+losses** (`census/ab-AUFDTLIRA-partial.txt`; base `unsat` 33 / `unknown` 17,
+arm identical; base-first 24 / arm-first 26). No soundness incident.
+`UFDTLIRA` and `QF_DT` did not run, and neither did the movers recheck or the
+held-out draw.
+
+**Ship decision: NOT TAKEN.** The lever stays OFF, which is what it ships as.
+`ab-run.sh`, `ab-summarize.py` and the three 200-file lists are committed, so
+the measurement is a re-run rather than a re-derivation. `ab-summarize.py`
+prints a NOTE on a zero-diff — "consistent with the lever changing nothing AND
+with the arm never having been enabled" — and exits 3 on a flip, 2 on a loss,
+so it cannot report a pass by doing nothing.
 
 **The premise does not survive measurement, the way ADR-2114's own did not**
 (`DONE`, dt-ground-probe, 2026-09-16, `bench-results/dt-ground-probe-20260916/`).

@@ -1,0 +1,4 @@
+dt-nested-field-2128: baseline green, 8 tests (scripts/cargo-serialized.sh test -p axeyum-solver --features full --lib nested_field_tests)
+  the materialiser skips a CYCLIC field closure killed 1: datatype_native::nested_field_tests::the_cyclic_guard_builds_no_children_for_a_cyclic_datatype
+  the exactness predicate recurses into the nested field killed 1: datatype_native::nested_field_tests::exactness_widens_with_the_budget_and_never_for_a_cycle
+MUT2_DONE
