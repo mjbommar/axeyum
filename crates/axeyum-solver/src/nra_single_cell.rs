@@ -1083,6 +1083,16 @@ mod tests {
             stats.coverings >= 2 && stats.cells >= 3 && stats.deeper_cells >= 1,
             "the checker must have walked a real covering tree, not an empty one: {stats:?}"
         );
+        assert_eq!(
+            stats.deeper_cells,
+            stats.open_deeper_cells + stats.point_deeper_cells,
+            "every `Deeper` cell is either over an open cell or over a point: {stats:?}"
+        );
+        assert!(
+            stats.open_deeper_cells == 0 || stats.delineability_exact_tests > 0,
+            "a generalisation over an open cell must have been proved EXACTLY, \
+             not merely probed: {stats:?}"
+        );
         assert!(
             stats.delineability_probes > 0 || stats.point_deeper_cells > 0,
             "every `Deeper` cell must have been either probed or a point cell: {stats:?}"

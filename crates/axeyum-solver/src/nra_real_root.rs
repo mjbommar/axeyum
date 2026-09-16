@@ -4437,7 +4437,9 @@ pub(crate) enum ResultantDecline {
 }
 
 impl ResultantDecline {
-    /// A stable, matchable key.
+    /// A stable, matchable key. Test-only: the production path maps the decline
+    /// onto a [`CadDecline`], which carries the wire name the trace prints.
+    #[cfg(test)]
     pub(crate) const fn name(self) -> &'static str {
         match self {
             Self::SylvesterDim => "sylvester-dim",

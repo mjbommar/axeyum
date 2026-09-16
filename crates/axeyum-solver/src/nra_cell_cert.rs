@@ -42,40 +42,63 @@
 //!    the cell, that the sub-covering's sample is exactly this sample extended by
 //!    that witness, and (recursively) that the sub-covering checks out.
 //!
-//! And, by **sampling**, the one property that makes a `Deeper` cell generalise
-//! from its witness to the whole cell:
+//! And — **exactly**, since ADR-2126 — the one property that makes a `Deeper`
+//! cell generalise from its witness to the whole cell:
 //!
-//! 6. *delineability.* At [`DELINEABILITY_SAMPLES`] further interior points of
-//!    the cell, every boundary polynomial of the sub-covering is re-substituted
-//!    and re-isolated, and its number of distinct real roots must equal the count
-//!    at the witness. A change in root count over the cell is exactly a
-//!    delineability failure, and it is rejected here.
+//! 6. *delineability.* Write `t` for the cell's own variable and `v` for the
+//!    sub-covering's. Every boundary polynomial of the sub-covering is
+//!    re-substituted at the sample of the variables **before** `t`, leaving `t`
+//!    itself free — which is the entire difference between this and a probe at a
+//!    point. Over the open interval the cell denotes, three things are required,
+//!    each by exact root counting (Sturm bisection) against the cell's own
+//!    algebraic endpoints:
 //!
-//! **Check 6 is a sampling check, not a proof.** `McCallum`'s projection is valid
-//! over a cell on which no projection polynomial is nullified and every one is
-//! sign-invariant; the producer enforces the non-nullification condition at the
-//! sample and adds *every* coefficient of each eliminated polynomial to the
-//! projection (z3's `m_add_all_coeffs` escape hatch,
-//! `references/z3/src/nlsat/nlsat_explain.cpp:50`, and its
-//! `handle_nullified_poly`, `references/z3/src/nlsat/levelwise.cpp:268`, are the
-//! same manoeuvre). This module cannot re-derive that argument; it can only
-//! falsify it, and it does so at a finite sample. So an `unsat` gated on this
-//! checker is **checked**, not **proved**: the honest label is the one ADR-2121
-//! carries, and the route must not be described as producing a machine-checkable
-//! proof of unsatisfiability.
+//!    a. the leading coefficient in `v` has no root strictly inside the cell —
+//!       so `deg_v` cannot drop across it (no root escapes to infinity) and no
+//!       polynomial can be nullified on it;
+//!    b. the discriminant `Res_v(p, ∂p/∂v)` has no root strictly inside — so no
+//!       two roots of one polynomial merge there;
+//!    c. every pairwise resultant `Res_v(p, q)` has no root strictly inside — so
+//!       no root of one polynomial crosses a root of another.
 //!
-//! What check 6 *does* catch is the failure mode that matters in practice: a
-//! projection that omits a polynomial, or is skipped entirely, makes the cell too
-//! wide, and a too-wide cell almost always contains a root-count change. The
-//! mutation suite deletes the producer's delineability guard and requires exactly
-//! one named fixture to die here.
+//!    (a) and (b) give each polynomial a *constant* distinct-real-root count over
+//!    the cell; (c) gives the merged ordering of all of them. So the whole 1-D
+//!    arrangement one level up is combinatorially the same above every point of
+//!    the cell, and every boundary polynomial is sign-invariant on each
+//!    2-dimensional piece over it.
+//!
+//! **No sample appears anywhere in that argument.** ADR-2121 shipped this route's
+//! `unsat` half OFF for exactly one reason — check 6 was *sampling*, and sampling
+//! can falsify delineability but never establish it. [`DELINEABILITY_SAMPLES`]
+//! probing survives as check 6b, an independent cross-check that shares no code
+//! with 6a, so a disagreement between the two implementations of one property is
+//! a rejection rather than an invisible bug.
+//!
+//! # The scope boundary, named rather than assumed
+//!
+//! Check 6a carries an **atom** cell of the sub-covering across the whole cell,
+//! because the atom is in the boundary set and is therefore sign-invariant on the
+//! 2-dimensional piece. It does **not** carry a `Deeper` cell of the sub-covering
+//! across: that would need the level below to be delineable over a
+//! 2-dimensional region, and 6a is 1-dimensional. A *point* cell of the
+//! sub-covering is no better — over an open parent cell a point cell is a
+//! **curve**, not a point. So check 6c rejects a generalisation that rests on
+//! another generalisation ([`CellCheckFailure::NestedOpenGeneralization`]).
+//!
+//! ADR-2121's sampling check had the same gap and named none of it: probing three
+//! interior points says nothing about a level two down either. Naming it is what
+//! makes the accepted set a set the argument actually covers.
+//!
+//! The mutation suite deletes the producer's delineability guard, and separately
+//! makes 6a accept a non-delineable cell, and requires exactly one named fixture
+//! to die for each.
 
 use core::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::poly::{
     RatVec, count_roots_in, eval_rat_poly, rat_degree, rat_gcd, rat_trim, sign_of_rational,
-    squarefree_part, sturm_chain,
+    squarefree_part, sturm_chain, sylvester_determinant, sylvester_matrix,
 };
 use axeyum_ir::{Rational, Sign, SymbolId};
 
@@ -90,7 +113,10 @@ const CERT_MAX_DEGREE: usize = 64;
 const REFINE_DEPTH: u32 = 64;
 
 /// How many extra interior points of a [`CellReason::Deeper`] cell the
-/// delineability check samples, beyond the witness itself.
+/// delineability CROSS-CHECK (6b) samples, beyond the witness itself.
+///
+/// Since ADR-2126 this is no longer load-bearing: check 6a establishes
+/// delineability exactly and 6b only tries to falsify what 6a proved.
 ///
 /// Three, not one: a single extra point can coincide with the witness's own
 /// half of the cell for every polynomial at once, and two points cannot
@@ -331,7 +357,19 @@ pub struct CellCheckStats {
     /// so a test can tell "the probe did not need to run" from "the probe did
     /// not run".
     pub point_deeper_cells: usize,
-    /// Root-count comparisons made by the delineability sampling (check 6).
+    /// Of the [`Self::deeper_cells`], the ones over an OPEN cell, where the
+    /// generalisation from the witness to the whole cell had to be earned.
+    pub open_deeper_cells: usize,
+    /// EXACT root-freeness tests the delineability check ran: one per leading
+    /// coefficient, discriminant and pairwise resultant it required to have no
+    /// root strictly inside the cell (check 6a).
+    ///
+    /// Counted so a test can assert the exact check EXAMINED something. An
+    /// acceptance with zero exact tests over a covering that has open `Deeper`
+    /// cells is the vacuous pass a boolean cannot distinguish (ADR-2126).
+    pub delineability_exact_tests: usize,
+    /// Root-count comparisons made by the delineability sampling cross-check
+    /// (check 6b).
     pub delineability_probes: usize,
     /// The deepest level reached.
     pub max_level: usize,
@@ -422,6 +460,84 @@ pub enum CellCheckFailure {
         /// The root count at the probe point.
         at_probe: usize,
     },
+    /// A boundary polynomial of the sub-covering loses degree in the next
+    /// variable somewhere inside the cell: its LEADING coefficient, as a
+    /// polynomial in the cell's own variable, has a root strictly inside. A root
+    /// escapes to infinity there, so the arrangement above the cell is not the
+    /// one the sub-covering was built from (ADR-2126). Exact, not sampled.
+    DelineabilityDegreeDrop {
+        /// The level.
+        level: usize,
+        /// The cell index.
+        cell: usize,
+        /// Which boundary polynomial of the sub-covering.
+        boundary: usize,
+    },
+    /// Two roots of ONE boundary polynomial of the sub-covering merge somewhere
+    /// inside the cell: its discriminant in the next variable has a root strictly
+    /// inside. The distinct-real-root count can change there (ADR-2126).
+    DelineabilityRootCollision {
+        /// The level.
+        level: usize,
+        /// The cell index.
+        cell: usize,
+        /// Which boundary polynomial of the sub-covering.
+        boundary: usize,
+    },
+    /// Roots of TWO boundary polynomials of the sub-covering cross somewhere
+    /// inside the cell: their resultant in the next variable has a root strictly
+    /// inside. Each keeps its own root count, but the ORDER of the merged
+    /// arrangement changes, so the sub-covering's cell list is not the cell list
+    /// above the whole cell (ADR-2126).
+    DelineabilityCrossing {
+        /// The level.
+        level: usize,
+        /// The cell index.
+        cell: usize,
+        /// The first boundary index.
+        a: usize,
+        /// The second boundary index.
+        b: usize,
+    },
+    /// The exact delineability argument cannot even be FORMED here: a boundary
+    /// polynomial vanishes identically over the whole strip, or a discriminant or
+    /// resultant is identically zero (a shared factor for every value of the
+    /// cell's variable). A check that cannot run is a rejection, never a pass
+    /// (ADR-2126).
+    DelineabilityDegenerate {
+        /// The level.
+        level: usize,
+        /// The cell index.
+        cell: usize,
+        /// A short tag naming which form went degenerate.
+        step: &'static str,
+    },
+    /// A generalisation over an open cell rests on ANOTHER generalisation over an
+    /// open cell one level further down, and the exact delineability argument
+    /// does not compose that far.
+    ///
+    /// Read this precisely. Over an open cell the checker proves the
+    /// sub-covering's boundary set is delineable, so the arrangement one level up
+    /// is invariant across the cell and every boundary polynomial is
+    /// sign-invariant on each two-dimensional piece over it. That is enough to
+    /// carry an ATOM cell of the sub-covering across the whole cell. It is NOT
+    /// enough to carry a `Deeper` cell of the sub-covering across it: that would
+    /// need the level below to be delineable over a two-dimensional region, and
+    /// the check here is one-dimensional. A point cell of the sub-covering is no
+    /// better — over an open parent cell a point cell is a CURVE, not a point.
+    ///
+    /// ADR-2121's sampling check had the same gap and named none of it: probing
+    /// three interior points says nothing about a level two down either. This
+    /// variant is the gap made visible, and it is the scope boundary of the exact
+    /// check (ADR-2126).
+    NestedOpenGeneralization {
+        /// The level.
+        level: usize,
+        /// The cell index.
+        cell: usize,
+        /// The offending cell of the sub-covering.
+        sub_cell: usize,
+    },
     /// The certificate admits it did not decide a cell.
     UndecidedCell {
         /// The level.
@@ -471,6 +587,11 @@ impl CellCheckFailure {
             Self::WitnessOutsideCell { .. } => "witness-outside-cell",
             Self::SubSampleMismatch { .. } => "sub-sample-mismatch",
             Self::DelineabilityBroken { .. } => "delineability-broken",
+            Self::DelineabilityDegreeDrop { .. } => "delineability-degree-drop",
+            Self::DelineabilityRootCollision { .. } => "delineability-root-collision",
+            Self::DelineabilityCrossing { .. } => "delineability-crossing",
+            Self::DelineabilityDegenerate { .. } => "delineability-degenerate",
+            Self::NestedOpenGeneralization { .. } => "nested-open-generalization",
             Self::UndecidedCell { .. } => "undecided-cell",
             Self::FreeVariable { .. } => "free-variable",
             Self::ArithmeticExhausted { .. } => "arithmetic-exhausted",
@@ -1291,13 +1412,33 @@ fn check_covering(
                 if sub.sample != expected_sample {
                     return Err(CellCheckFailure::SubSampleMismatch { level, cell: idx });
                 }
-                // 6: delineability, by sampling -- and ONLY on an open cell. A
-                // point cell has no interior to probe, and needs none: the cell
-                // is the single point the sub-covering was built at, so
-                // refutation there IS refutation on the whole cell. Skipping the
-                // probe here is not a weakening; running it would be vacuous.
+                // 6: delineability -- and ONLY on an open cell. A point cell
+                // has nothing to generalise over: the cell IS the single point
+                // the sub-covering was built at, so refutation there IS
+                // refutation on the whole cell. Skipping here is not a
+                // weakening; running it would be vacuous.
                 if matches!(cell, Cell::Open { .. }) {
+                    stats.open_deeper_cells += 1;
+                    // 6a: EXACT. Proves the sub-covering's boundary set is
+                    // delineable over the whole cell. No sample anywhere in it.
+                    check_delineability_exact(sub, cell, level, idx, stats)?;
+                    // 6b: the sampling falsifier, KEPT as an independent
+                    // cross-check. It shares no code with 6a, and once 6a has
+                    // passed it can only fire on a disagreement between two
+                    // implementations of the same property -- which is a bug in
+                    // one of them, and a rejection either way.
                     check_delineability(sub, cell, level, idx, stats)?;
+                    // 6c: the composition guard. 6a carries an ATOM cell of the
+                    // sub-covering across the whole cell; it does not carry a
+                    // `Deeper` cell across, because that needs delineability
+                    // over a TWO-dimensional region and 6a is one-dimensional.
+                    if let Some(sub_cell) = first_non_atom_cell(sub) {
+                        return Err(CellCheckFailure::NestedOpenGeneralization {
+                            level,
+                            cell: idx,
+                            sub_cell,
+                        });
+                    }
                 } else {
                     stats.point_deeper_cells += 1;
                 }
@@ -1309,14 +1450,314 @@ fn check_covering(
     Ok(())
 }
 
-/// Check 6. Re-substitute each boundary polynomial of `sub` at
-/// [`DELINEABILITY_SAMPLES`] further interior points of `cell` (varying only
-/// `sub`'s parent variable) and require the distinct-real-root count in the next
-/// variable to be the same as at the witness.
+/// The first cell of `cov` that is not an [`CellReason::Atom`] cell.
 ///
-/// A projection that omits a polynomial, or is not run at all, makes the learned
-/// cell too wide; a too-wide cell crosses a root-count change, and this is where
-/// it surfaces.
+/// Used by check 6c: over an open parent cell, a sub-covering may close its
+/// cells by atoms and nothing else, because that is exactly as far as the
+/// one-dimensional delineability argument reaches.
+fn first_non_atom_cell(cov: &CellCovering) -> Option<usize> {
+    cov.cells
+        .iter()
+        .position(|c| !matches!(c, CellReason::Atom { .. }))
+}
+
+/// Substitute `vals` into `p`, keeping BOTH `keep` and `elim` free, and return
+/// the result as a polynomial in `elim` (LSB-first by `elim`'s exponent) whose
+/// coefficients are LSB-first univariate polynomials in `keep`.
+///
+/// Trailing zero coefficients are trimmed at both levels, so the last entry is
+/// the true leading coefficient in `elim` and an EMPTY result is the zero
+/// polynomial. `None` if `p` mentions a variable that is none of `vals`, `keep`
+/// or `elim`, on a degree past [`CERT_MAX_DEGREE`], or on any overflow.
+fn substitute_to_bivariate(
+    p: &CertPoly,
+    vals: &BTreeMap<SymbolId, Rational>,
+    keep: SymbolId,
+    elim: SymbolId,
+) -> Option<Vec<RatVec>> {
+    let mut out: Vec<RatVec> = Vec::new();
+    for (mono, coeff) in p {
+        let mut acc = *coeff;
+        let mut e_deg: u32 = 0;
+        let mut k_deg: u32 = 0;
+        for &(v, e) in mono {
+            if v == elim {
+                e_deg = e_deg.checked_add(e)?;
+                continue;
+            }
+            if v == keep {
+                k_deg = k_deg.checked_add(e)?;
+                continue;
+            }
+            let value = *vals.get(&v)?;
+            for _ in 0..e {
+                acc = acc.checked_mul(value)?;
+            }
+        }
+        let ei = usize::try_from(e_deg).ok()?;
+        let ki = usize::try_from(k_deg).ok()?;
+        if ei > CERT_MAX_DEGREE || ki > CERT_MAX_DEGREE {
+            return None;
+        }
+        if out.len() <= ei {
+            out.resize(ei + 1, Vec::new());
+        }
+        let slot = &mut out[ei];
+        if slot.len() <= ki {
+            slot.resize(ki + 1, Rational::zero());
+        }
+        slot[ki] = slot[ki].checked_add(acc)?;
+    }
+    for c in &mut out {
+        let trimmed = rat_trim(core::mem::take(c));
+        *c = trimmed;
+    }
+    while out.last().is_some_and(|c| rat_degree(c).is_none()) {
+        out.pop();
+    }
+    Some(out)
+}
+
+/// The formal derivative in the ELIMINATED variable of a polynomial held as
+/// [`substitute_to_bivariate`] returns it: `∂/∂elim` maps the coefficient of
+/// `elim^i` to `i ·` itself at `elim^(i-1)`. `None` on overflow.
+fn derivative_in_elim(coeffs: &[RatVec]) -> Option<Vec<RatVec>> {
+    let mut out: Vec<RatVec> = Vec::new();
+    for (i, c) in coeffs.iter().enumerate().skip(1) {
+        let k = Rational::integer(i128::try_from(i).ok()?);
+        let mut scaled: RatVec = Vec::with_capacity(c.len());
+        for r in c {
+            scaled.push(r.checked_mul(k)?);
+        }
+        out.push(rat_trim(scaled));
+    }
+    while out.last().is_some_and(|c| rat_degree(c).is_none()) {
+        out.pop();
+    }
+    Some(out)
+}
+
+/// `Res_elim(a, b)` for two polynomials in the eliminated variable whose
+/// coefficients are univariate in the surviving variable: the Sylvester
+/// determinant over ℚ[surviving], exact and with no floating point.
+///
+/// `None` when either argument has degree zero in the eliminated variable (there
+/// is no Sylvester matrix to build) or on overflow.
+fn bivariate_resultant(a: &[RatVec], b: &[RatVec]) -> Option<RatVec> {
+    let mat = sylvester_matrix(a, b)?;
+    Some(rat_trim(sylvester_determinant(&mat)?))
+}
+
+/// Does `q` -- a polynomial in the CELL'S OWN variable -- have a root strictly
+/// inside the cell?
+///
+/// The zero polynomial vanishes everywhere, so it counts as vanishing inside;
+/// callers that need to tell that case apart test for it first, because
+/// "identically zero" and "has a root here" call for different rejections.
+fn vanishes_inside(
+    q: &[Rational],
+    cell: &Cell<'_>,
+    level: usize,
+    stats: &mut CellCheckStats,
+) -> Result<bool, CellCheckFailure> {
+    stats.delineability_exact_tests += 1;
+    let Some(d) = rat_degree(q) else {
+        return Ok(true);
+    };
+    if d == 0 {
+        return Ok(false); // a nonzero constant vanishes nowhere
+    }
+    if d > CERT_MAX_DEGREE {
+        return Err(CellCheckFailure::ArithmeticExhausted {
+            level,
+            step: "delineability-degree",
+        });
+    }
+    let sf = squarefree_part(q, CERT_MAX_DEGREE).ok_or(CellCheckFailure::ArithmeticExhausted {
+        level,
+        step: "delineability-squarefree",
+    })?;
+    has_root_strictly_inside(&sf, cell).ok_or(CellCheckFailure::RefinementExhausted { level })
+}
+
+/// Check 6a — **exact** delineability of `sub`'s boundary set over `cell`.
+///
+/// # What it establishes, and why that is the whole property
+///
+/// Write `t` for the cell's own variable and `v` for `sub.var`. Every boundary
+/// polynomial of `sub` is re-substituted at the sample of the variables BEFORE
+/// `t` -- and `t` itself is deliberately left free, which is the entire
+/// difference between this and a probe at a point. What is left is a polynomial
+/// in `v` whose coefficients are polynomials in `t`. Over the open interval the
+/// cell denotes, all three of the following are required, each by exact root
+/// counting (Sturm bisection) against the cell's own algebraic endpoints:
+///
+/// 1. the LEADING coefficient in `v` has no root strictly inside the cell. One
+///    condition, two jobs: `deg_v` cannot drop across the cell (no root of the
+///    polynomial escapes to infinity) and the polynomial cannot be nullified;
+/// 2. the DISCRIMINANT `Res_v(p, ∂p/∂v)` has no root strictly inside the cell,
+///    for every boundary polynomial of degree ≥ 2 in `v`: no two roots of one
+///    polynomial may merge there;
+/// 3. every PAIRWISE resultant `Res_v(p, q)` has no root strictly inside the
+///    cell: no root of one boundary polynomial may cross a root of another.
+///
+/// Given 1 and 2, the `deg_v` complex roots of each boundary polynomial are
+/// distinct and vary continuously over the (connected) cell; a real root can
+/// leave the reals only by colliding with another root, which 2 excludes, and can
+/// leave the picture only by escaping to infinity, which 1 excludes. So each
+/// polynomial's distinct-real-root count is **constant** over the cell. Given 3,
+/// the merged ordering of all those roots is constant too. Hence the whole
+/// 1-D arrangement one level up is combinatorially the same above every point of
+/// the cell, and every boundary polynomial is sign-invariant on each
+/// 2-dimensional piece over it -- which is exactly what a `Deeper` cell needs to
+/// carry its sub-covering from the witness to the whole cell.
+///
+/// # No sample appears anywhere in the argument
+///
+/// ADR-2121 shipped the `unsat` half OFF for one reason: the delineability test
+/// was sampling, which can only FALSIFY delineability and never establish it.
+/// Every quantity above is a polynomial this checker computes itself and then
+/// counts roots of exactly. `None` from any step is a REJECTION, never a pass:
+/// a check that cannot run must not be reported as one that ran.
+///
+/// # What it does not establish
+///
+/// Delineability over a 2-dimensional region. See
+/// [`CellCheckFailure::NestedOpenGeneralization`], which is check 6c and is the
+/// scope boundary of this one.
+fn check_delineability_exact(
+    sub: &CellCovering,
+    cell: &Cell<'_>,
+    level: usize,
+    cell_idx: usize,
+    stats: &mut CellCheckStats,
+) -> Result<(), CellCheckFailure> {
+    let Some((parent_var, _)) = sub.sample.last().copied() else {
+        return Err(CellCheckFailure::SubSampleMismatch {
+            level,
+            cell: cell_idx,
+        });
+    };
+    // Everything BEFORE the parent variable is fixed. The parent variable ranges
+    // over the cell, so it stays free.
+    let base: BTreeMap<SymbolId, Rational> =
+        sub.sample[..sub.sample.len() - 1].iter().copied().collect();
+
+    let mut bi: Vec<Vec<RatVec>> = Vec::with_capacity(sub.boundary.len());
+    for p in &sub.boundary {
+        let coeffs = substitute_to_bivariate(p, &base, parent_var, sub.var).ok_or(
+            CellCheckFailure::ArithmeticExhausted {
+                level,
+                step: "delineability-substitute",
+            },
+        )?;
+        if coeffs.is_empty() {
+            // Identically zero over the whole strip: its "roots" are the plane.
+            return Err(CellCheckFailure::DelineabilityDegenerate {
+                level,
+                cell: cell_idx,
+                step: "nullified-boundary",
+            });
+        }
+        bi.push(coeffs);
+    }
+
+    // (1) The leading coefficient in `sub.var` must not vanish on the cell.
+    for (i, coeffs) in bi.iter().enumerate() {
+        let lead = coeffs
+            .last()
+            .ok_or(CellCheckFailure::RefinementExhausted { level })?
+            .clone();
+        if vanishes_inside(&lead, cell, level, stats)? {
+            return Err(CellCheckFailure::DelineabilityDegreeDrop {
+                level,
+                cell: cell_idx,
+                boundary: i,
+            });
+        }
+    }
+
+    // (2) No two roots of one boundary polynomial may merge on the cell.
+    for (i, coeffs) in bi.iter().enumerate() {
+        if coeffs.len() < 3 {
+            continue; // degree ≤ 1 in `sub.var`: at most one root, nothing to merge
+        }
+        let dp = derivative_in_elim(coeffs).ok_or(CellCheckFailure::ArithmeticExhausted {
+            level,
+            step: "delineability-derivative",
+        })?;
+        let disc =
+            bivariate_resultant(coeffs, &dp).ok_or(CellCheckFailure::ArithmeticExhausted {
+                level,
+                step: "delineability-discriminant",
+            })?;
+        if rat_degree(&disc).is_none() {
+            return Err(CellCheckFailure::DelineabilityDegenerate {
+                level,
+                cell: cell_idx,
+                step: "discriminant-identically-zero",
+            });
+        }
+        if vanishes_inside(&disc, cell, level, stats)? {
+            return Err(CellCheckFailure::DelineabilityRootCollision {
+                level,
+                cell: cell_idx,
+                boundary: i,
+            });
+        }
+    }
+
+    // (3) No root of one boundary polynomial may cross a root of another.
+    for i in 0..bi.len() {
+        if bi[i].len() < 2 {
+            continue; // constant in `sub.var`: contributes no root to cross
+        }
+        for j in (i + 1)..bi.len() {
+            if bi[j].len() < 2 {
+                continue;
+            }
+            let res = bivariate_resultant(&bi[i], &bi[j]).ok_or(
+                CellCheckFailure::ArithmeticExhausted {
+                    level,
+                    step: "delineability-resultant",
+                },
+            )?;
+            if rat_degree(&res).is_none() {
+                return Err(CellCheckFailure::DelineabilityDegenerate {
+                    level,
+                    cell: cell_idx,
+                    step: "resultant-identically-zero",
+                });
+            }
+            if vanishes_inside(&res, cell, level, stats)? {
+                return Err(CellCheckFailure::DelineabilityCrossing {
+                    level,
+                    cell: cell_idx,
+                    a: i,
+                    b: j,
+                });
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Check 6b — the sampling FALSIFIER, kept as an independent cross-check on
+/// [`check_delineability_exact`].
+///
+/// Re-substitute each boundary polynomial of `sub` at [`DELINEABILITY_SAMPLES`]
+/// further interior points of `cell` (varying only `sub`'s parent variable) and
+/// require the distinct-real-root count in the next variable to be the same as at
+/// the witness.
+///
+/// This was load-bearing before ADR-2126 and is not any more: sampling can
+/// falsify delineability but never establish it, which is the whole reason the
+/// route's `unsat` half did not ship. It stays because it shares no code with
+/// 6a -- root counts by Sturm isolation at points, against 6a's leading
+/// coefficients, discriminants and resultants -- so once 6a has ACCEPTED, a
+/// failure here is a disagreement between two independent implementations of one
+/// property. That is a bug in one of them and a rejection either way, and a
+/// checker that could not surface it would be the weaker artifact.
 fn check_delineability(
     sub: &CellCovering,
     cell: &Cell<'_>,
@@ -1589,7 +2030,17 @@ mod tests {
         assert_eq!(
             stats.delineability_probes,
             DELINEABILITY_SAMPLES - 1,
-            "the delineability check must actually have run: {stats:?}"
+            "the delineability cross-check must actually have run: {stats:?}"
+        );
+        // And the EXACT check must have examined something. `y` is the single
+        // boundary polynomial, linear in `y`, so 6a runs exactly one
+        // root-freeness test: its leading coefficient. Written against the
+        // covering's own shape rather than against a constant, so a checker that
+        // stopped running 6a fails here rather than passing with a zero.
+        assert_eq!(stats.open_deeper_cells, 1, "{stats:?}");
+        assert_eq!(
+            stats.delineability_exact_tests, 1,
+            "the EXACT delineability check must have run: {stats:?}"
         );
     }
 
@@ -1604,7 +2055,7 @@ mod tests {
     }
 
     #[test]
-    fn delineability_sampling_rejects_a_cell_whose_root_count_changes() {
+    fn delineability_rejects_a_cell_whose_root_count_changes() {
         let (x, y) = two_syms();
         // `y^2 - x < 0 ∧ y^2 - x > 0` is unsatisfiable at every x, but the
         // boundary polynomial `y^2 - x` has 0 roots in y for x < 0 and 2 for
@@ -1637,7 +2088,152 @@ mod tests {
         );
         let err = check_cell_refutation(&CellRefutation::new(vec![x, y], atoms, root))
             .expect_err("must reject");
+        // Since ADR-2126 the EXACT check (6a) sees this first and names the
+        // mechanism: the discriminant of `y^2 - x` in `y` is a nonzero multiple
+        // of `x`, whose root 0 lies strictly inside the level-0 cell, so the two
+        // roots merge there. The old `delineability-broken` was the sampling
+        // check noticing the CONSEQUENCE.
+        assert_eq!(err.name(), "delineability-root-collision", "got {err:?}");
+    }
+
+    /// The sampling cross-check (6b) still has its own teeth on the same cell.
+    ///
+    /// Asserted by calling it DIRECTLY, because 6a rejects first in the shipped
+    /// order and would otherwise hide whether 6b still works. Deleting 6a kills
+    /// the test above; deleting 6b kills this one. One guard, one killer.
+    #[test]
+    fn the_sampling_cross_check_also_rejects_the_root_count_change() {
+        let (x, y) = two_syms();
+        let p: CertPoly = canonicalize(vec![(vec![(y, 2)], r(1)), (vec![(x, 1)], r(-1))]);
+        let sub = CellCovering::new(
+            y,
+            vec![(x, r(1))],
+            vec![p],
+            vec![
+                CellReason::Atom { atom_index: 0 },
+                CellReason::Atom { atom_index: 0 },
+                CellReason::Atom { atom_index: 0 },
+            ],
+        );
+        // The level-0 cell is all of R: no boundary, so no roots.
+        let roots: Vec<IsoRoot> = Vec::new();
+        let cells = cells_of(&roots);
+        let mut stats = CellCheckStats::default();
+        let err = check_delineability(&sub, &cells[0], 0, 0, &mut stats).expect_err("must reject");
         assert_eq!(err.name(), "delineability-broken", "got {err:?}");
+    }
+
+    /// **The fixture ADR-2126 exists for**: a cell the SAMPLING check accepts and
+    /// the EXACT check refuses.
+    ///
+    /// `t·y − 1` has exactly one root in `y` for every `t ≠ 0` and none at all at
+    /// `t = 0`, where it collapses to the constant `−1`. Its leading coefficient
+    /// in `y` is `t`. So the root count is constant on the cell EXCEPT at the
+    /// single point `t = 0` — and a check that looks at finitely many points
+    /// misses a single point almost surely. The cell `(−1, 5)` is chosen so that
+    /// none of the three probes lands on 0.
+    ///
+    /// Both halves are asserted. If the sampling half ever started rejecting,
+    /// this fixture would stop demonstrating the gap, and a test that can go
+    /// quietly vacuous is worse than no test — so it fails instead.
+    #[test]
+    fn a_sampled_check_passes_a_non_delineable_cell_and_the_exact_check_refuses() {
+        let (t, y) = two_syms();
+        // Parent boundary `(t + 1)(t - 5) = t^2 - 4t - 5`, cutting out `(-1, 5)`.
+        let parent: RatVec = vec![r(-5), r(-4), r(1)];
+        let roots = isolate_roots_sturm(&parent).expect("isolate");
+        let roots = merge_roots(roots).expect("merge");
+        assert_eq!(
+            roots.len(),
+            2,
+            "the parent cell must be bounded on both sides"
+        );
+        let cells = cells_of(&roots);
+        let cell = &cells[2]; // the open cell between the two roots
+
+        // `t·y - 1`: leading coefficient in `y` is `t`, which vanishes at 0.
+        let p: CertPoly = canonicalize(vec![(vec![(t, 1), (y, 1)], r(1)), (Vec::new(), r(-1))]);
+        let sub = CellCovering::new(
+            y,
+            vec![(t, r(1))], // witness t = 1, strictly inside (-1, 5)
+            vec![p],
+            vec![
+                CellReason::Atom { atom_index: 0 },
+                CellReason::Atom { atom_index: 0 },
+                CellReason::Atom { atom_index: 0 },
+            ],
+        );
+
+        // The SAMPLING check accepts: every probe has the same root count as the
+        // witness, because none of them is the single bad point.
+        let mut sampled = CellCheckStats::default();
+        let sampled_verdict = check_delineability(&sub, cell, 0, 2, &mut sampled);
+        assert!(
+            sampled_verdict.is_ok(),
+            "the fixture stops showing the gap if sampling rejects: {sampled_verdict:?}"
+        );
+        assert!(
+            sampled.delineability_probes > 0,
+            "sampling must have actually probed: {sampled:?}"
+        );
+
+        // The EXACT check refuses, and names the mechanism.
+        let mut exact = CellCheckStats::default();
+        let err = check_delineability_exact(&sub, cell, 0, 2, &mut exact)
+            .expect_err("the exact check must refuse a non-delineable cell");
+        assert_eq!(err.name(), "delineability-degree-drop", "got {err:?}");
+        assert!(
+            exact.delineability_exact_tests > 0,
+            "the exact check must have examined something: {exact:?}"
+        );
+    }
+
+    /// A generalisation resting on another generalisation is refused, and the
+    /// SAME shape over a point cell is not.
+    ///
+    /// The negative half alone would pass on a checker that refused every
+    /// `Deeper` sub-cell, which would make the route answer nothing.
+    #[test]
+    fn a_generalisation_that_rests_on_another_generalisation_is_refused() {
+        let (x, y) = two_syms();
+        // A sub-covering whose single cell is itself a `Deeper` cell. The inner
+        // covering is never reached: 6c rejects before the recursion.
+        let inner = CellCovering::new(
+            y,
+            vec![(x, r(0)), (y, r(0))],
+            Vec::new(),
+            vec![CellReason::Atom { atom_index: 0 }],
+        );
+        let sub = CellCovering::new(
+            y,
+            vec![(x, r(0))],
+            Vec::new(),
+            vec![CellReason::Deeper {
+                witness: r(0),
+                sub: Box::new(inner),
+            }],
+        );
+        let root = CellCovering::new(
+            x,
+            Vec::new(),
+            Vec::new(), // one cell, all of R -- an OPEN cell
+            vec![CellReason::Deeper {
+                witness: r(0),
+                sub: Box::new(sub),
+            }],
+        );
+        let atoms = vec![CertAtom::new(CertCmp::Gt, lin(y))];
+        let err = check_cell_refutation(&CellRefutation::new(vec![x, y], atoms, root))
+            .expect_err("must reject");
+        assert_eq!(err.name(), "nested-open-generalization", "got {err:?}");
+
+        // The positive control: an all-atom sub-covering over the same open cell
+        // is accepted, so the guard is not "refuse every `Deeper` cell".
+        let ok = check_cell_refutation(&two_var_refutation());
+        assert!(
+            ok.is_ok(),
+            "the guard must not refuse a sound covering: {ok:?}"
+        );
     }
 
     #[test]
@@ -1672,6 +2268,32 @@ mod tests {
             },
             CellCheckFailure::WitnessOutsideCell { level: 0, cell: 0 },
             CellCheckFailure::SubSampleMismatch { level: 0, cell: 0 },
+            CellCheckFailure::DelineabilityDegreeDrop {
+                level: 0,
+                cell: 0,
+                boundary: 0,
+            },
+            CellCheckFailure::DelineabilityRootCollision {
+                level: 0,
+                cell: 0,
+                boundary: 0,
+            },
+            CellCheckFailure::DelineabilityCrossing {
+                level: 0,
+                cell: 0,
+                a: 0,
+                b: 0,
+            },
+            CellCheckFailure::DelineabilityDegenerate {
+                level: 0,
+                cell: 0,
+                step: "x",
+            },
+            CellCheckFailure::NestedOpenGeneralization {
+                level: 0,
+                cell: 0,
+                sub_cell: 0,
+            },
             CellCheckFailure::DelineabilityBroken {
                 level: 0,
                 cell: 0,
