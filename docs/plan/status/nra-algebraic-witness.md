@@ -12,7 +12,7 @@ wrong sign in the trusted evaluator, fixed and not behind any lever.
 | 1. sizing before code | **MET** — `algebraic-witness` = 7 of the pinned 200, 6 of them `unknown` |
 | 2. design claims at `file:line` | **MET** — ADR-2134 §"Design claims" |
 | 3. lever, exact replay, root objects, three fixtures, fuzz nonzero | **MET** — fuzz `algebraic_models=855`, 855 agreements, 0 disagreements |
-| 4. interleaved A/B | **PARTIAL** — QF_NRA pinned 200 done and clean (+4, 4 STABLE-GAIN, 0 STABLE-LOSS, 0 flips, 4/4 replays accepted); QF_NIA, QF_LRA and held-out still running |
+| 4. interleaved A/B | **PARTIAL** — QF_NRA +4 (4 STABLE-GAIN, 0 STABLE-LOSS), QF_NIA flat after recheck, QF_LRA flat (0 movers), 4/4 replays accepted; **held-out NOT COMPLETE (23 of 200)**, exactness A/B NOT RUN |
 | 5. mutation | **MET** — 14 mutations across 4 suites, every one killed, `--check-anchors` 1130 anchors stale=0 |
 | 6. gates | **MET** — see the table below |
 
@@ -70,6 +70,17 @@ Full table and the seven file names:
 Treatment `df2dfc0f…` against baseline `6261a505…`, one binary and two env
 values, interleaved per file on pinned cores `5,13` and `6,14` of s5.
 
+| division | A `single-cell` | B `algebraic-witness` | delta | movers | flips | missing |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| QF_NRA (pinned 200) | 124 | **128** | **+4** | 4 | 0 | 0 |
+| QF_NIA (200) | 85 | 84 | −1 | 1 | 0 | 0 |
+| QF_LRA (200) | 107 | 107 | **0** | **0** | 0 | 0 |
+
+QF_LRA — the division the lever cannot reach — moved nothing. QF_NIA's single
+`sat → unknown` is **ambient, not a loss**: the three-pass recheck returns
+NEITHER-DECIDES (both arms `unknown` 3/3), and arm A's lone `sat` in the sweep
+came at 23,225 ms of a 24,000 ms budget. **0 STABLE-LOSS across all three.**
+
 **QF_NRA pinned 200: `single-cell` 124 → `algebraic-witness` 128, +4.** Four
 movers, all `unknown → sat`. **0 flips, 0 arm runs without a verdict token.**
 Three-pass recheck: **4 STABLE-GAIN, 0 STABLE-LOSS, 0 UNSTABLE, exit 0 on all 24
@@ -119,6 +130,19 @@ number, and the wrapper had to touch all 14,392 build inputs to get it.
 | date | sha | what |
 | --- | --- | --- |
 | 2026-09-16 | `1a2d58286` | `sign_at` read two endpoint samples as an enclosure — wrong sign at an algebraic point; exact Sturm side condition, three tests, plus this lane's sizing scaffolding (4 files) |
+
+## What did NOT run
+
+* **Held-out 200-file QF_NRA draw — NOT COMPLETE**, 23 of 200 files (0 movers)
+  when the round closed. This is one quarter of the shipping criterion, so the
+  ADR stays `proposed` and the lever stays OFF. Finishing it is a re-run of
+  `ab-sweep.sh`'s `heldout` population, ~60 min on two pinned core pairs;
+  nothing new has to be decided.
+* **The binary-against-binary A/B pricing the `sign_at` exactness fix — NOT
+  RUN.** That fix is not behind a lever and is in BOTH arms of every number
+  above, so those numbers do not price it. It can only convert an accept into a
+  decline, so what is unmeasured is lost coverage, never a wrong verdict.
+  ~60 min per population.
 
 ## Next
 

@@ -320,6 +320,19 @@ with exactly one irrational coordinate, each nameable as a root object. The same
 checker on the shipped arm finds nothing and **exits 3**, so the evidence fails
 in both directions rather than only one.
 
+### The controls
+
+| division | A | B | delta | movers | flips |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| QF_NRA (pinned 200) | 124 | **128** | **+4** | 4 | 0 |
+| QF_NIA (200) | 85 | 84 | −1 | 1 | 0 |
+| QF_LRA (200) | 107 | 107 | **0** | **0** | 0 |
+
+QF_LRA — the division the lever cannot reach — moved nothing. QF_NIA's single
+`sat → unknown` is **ambient**: the three-pass recheck returns NEITHER-DECIDES
+(both arms `unknown` 3/3), and arm A's lone `sat` in the sweep came at 23,225 ms
+of a 24,000 ms budget. **0 STABLE-LOSS across all three divisions.**
+
 ### The sizing did not predict the movers
 
 This is the ADR's second finding and it corrects its own §Context.
@@ -342,14 +355,23 @@ measured +4. The A/B is the sizing. Any future lane sizing an NRA lever from
 
 ## Status of the ship decision
 
-**Not `accepted`.** The criterion for a default move is 0 stable losses on the
-pinned draw **and** on the held-out draw, with the QF_NIA and QF_LRA controls
-flat. At the time of writing, the pinned QF_NRA half is complete and clean (+4,
-4 STABLE-GAIN, 0 STABLE-LOSS, 0 flips); the QF_NIA control, the QF_LRA control
-and the held-out 200-file QF_NRA draw were still running, as was the
-binary-against-binary A/B that prices the `sign_at` exactness fix.
+**Not `accepted`, and the lever ships OFF.**
 
-So this ADR is `proposed` and the lever ships **OFF**. The evidence in hand
-supports the default move; the evidence required for it is not all in, and the
-missing half is named rather than waved at. `docs/plan/status/nra-algebraic-witness.md`
-carries what completed.
+The criterion for a default move is 0 stable losses on the pinned draw **and** on
+the held-out draw, with the QF_NIA and QF_LRA controls flat. Three of those four
+are in and clean: pinned QF_NRA +4 with 4 STABLE-GAIN / 0 STABLE-LOSS / 0
+UNSTABLE, QF_NIA flat after recheck, QF_LRA flat with zero movers, 0 flips
+anywhere, 0 arm runs without a verdict token.
+
+**The held-out 200-file QF_NRA draw did not complete** — it reached 23 of 200
+files (0 movers) before the round closed. One quarter of the shipping criterion
+is therefore unmeasured, and a default move on three of four is not the
+criterion. `Status:` stays `proposed`.
+
+Also unmeasured: the binary-against-binary A/B that prices the `sign_at`
+exactness fix. That fix is not behind a lever and is already in both arms above,
+so those numbers say nothing about its cost. It can only convert an accept into a
+decline, never a correct verdict into a wrong one, so what is unknown is lost
+coverage rather than soundness.
+
+`docs/plan/status/nra-algebraic-witness.md` carries the per-criterion state.

@@ -71,7 +71,7 @@ fn main() {
         // report into a statement about some other run. `--timeout-ms 24000` is
         // what the sweep passes, so this is what it has to pass too.
         let config = SolverConfig {
-            timeout: Some(Duration::from_millis(24_000)),
+            timeout: Some(Duration::from_secs(24)),
             ..SolverConfig::default()
         };
         let solved = match axeyum_solver::solve_smtlib_with_model(&text, &config) {

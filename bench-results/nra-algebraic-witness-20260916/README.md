@@ -136,6 +136,29 @@ root object. The negative control is the same checker on the shipped arm
 and **exit 3** rather than 0 — a clean report over an empty set is not evidence,
 so the program refuses to call it one.
 
+### The controls
+
+| division | A `single-cell` | B `algebraic-witness` | delta | movers | flips | missing |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| QF_NRA (pinned 200) | 124 | **128** | **+4** | 4 | 0 | 0 |
+| QF_NIA (200) | 85 | 84 | −1 | 1 | 0 | 0 |
+| QF_LRA (200) | 107 | 107 | **0** | **0** | 0 | 0 |
+
+`QF_LRA` is the pure control — the lever cannot reach a linear division — and it
+moved **nothing at all**.
+
+`QF_NIA`'s single `sat → unknown` is **ambient, not a loss**, and the three-pass
+recheck is what says so (`recheck-qfnia.tsv`):
+
+    A: unknown unknown unknown    B: unknown unknown unknown    NEITHER-DECIDES
+
+Arm A's lone `sat` in the sweep arrived at **23,225 ms of a 24,000 ms budget**,
+and under recheck neither arm decides the file at all. Reporting the raw column
+would have published a stable loss that does not exist — which is precisely the
+failure mode the recheck protocol was written for.
+
+So across the three divisions: **+4, and 0 STABLE-LOSS.**
+
 ### The sizing did not predict the movers, and that is the finding
 
 §1 sized this lever at 7 files, 6 of them `unknown`. The A/B gained 4. Those two
@@ -198,3 +221,23 @@ The rule this instance teaches: **a sweep output file must not be a fixed name
 that two runs of the same command both write**, and a row count that decreases
 is the cheapest possible detector for it. Checking `pgrep` after a launch says
 whether *a* process is running, not whether *exactly one* is.
+
+## 6. What did NOT run
+
+Named rather than elided, because an unfinished check reported as absent is the
+only honest form:
+
+* **The held-out 200-file QF_NRA draw — NOT COMPLETE.** It was started and had
+  reached 23 of 200 files (0 movers) when the round closed. The A/B protocol and
+  the draw are unchanged from ADR-2126's, so the run is a re-execution of
+  `ab-sweep.sh`'s `heldout` population and nothing new has to be decided to
+  finish it.
+* **The binary-against-binary A/B that prices the `sign_at` exactness fix — NOT
+  RUN.** `ab-run.sh --binary-a` exists and `ab-sweep.sh` queues it; it had not
+  started. What is unmeasured is how many verdicts the stricter (sound) sign
+  decision costs. It cannot cost a WRONG verdict — the change only converts an
+  accept into a decline — so the risk it carries is lost coverage, not
+  correctness. The QF_NRA and QF_LRA numbers above were taken with the fix
+  already in BOTH arms, so they do not price it.
+
+Both are sized at roughly 60 minutes per population on two pinned core pairs.
