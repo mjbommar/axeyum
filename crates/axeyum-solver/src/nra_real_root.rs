@@ -8766,10 +8766,10 @@ pub(crate) fn multipoly_to_cert(p: &MultiPoly) -> crate::nra_cell_cert::CertPoly
 /// polynomials in the remaining variables (LSB-first by the exponent of `elim`).
 ///
 /// Every one of them goes into the single-cell projection. That is deliberately
-/// more than McCallum's operator asks for (which takes only the leading
+/// more than `McCallum`'s operator asks for (which takes only the leading
 /// coefficient, plus a non-vanishing witness): with **all** coefficients
 /// sign-invariant on a cell, non-nullification at one point of the cell implies
-/// non-nullification on the whole cell, which is the hypothesis McCallum's
+/// non-nullification on the whole cell, which is the hypothesis `McCallum`'s
 /// delineability theorem needs and the hole the "nullification problem" opens.
 /// z3 reaches for the same escape hatch when its own witness search fails
 /// (`m_add_all_coeffs`, `references/z3/src/nlsat/nlsat_explain.cpp:50`, and

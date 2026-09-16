@@ -3,7 +3,7 @@
 //!
 //! # Why this exists
 //!
-//! ADR-2110 measured the QF_NRA gap and split it in two. Of the 83 files the
+//! ADR-2110 measured the `QF_NRA` gap and split it in two. Of the 83 files the
 //! 2026-09-15 board leaves undecided, **45 are decided by z3's CAD arm and not
 //! by its incremental-linearization arm**, 44 of them in under a second (median
 //! 108 ms). It then named the design difference with `file:line` on both sides:
@@ -58,7 +58,7 @@
 //!   not represented: a cell that satisfies every atom only at an irrational
 //!   point makes the route decline ([`CadDecline::AlgebraicCoarsening`]) rather
 //!   than round it.
-//! * **The projection is nullification-complete.** McCallum's operator is valid
+//! * **The projection is nullification-complete.** `McCallum`'s operator is valid
 //!   over a cell on which no eliminated polynomial is nullified; this one adds
 //!   *every* coefficient in the eliminated variable (not only the leading one),
 //!   so non-nullification at the sample plus sign-invariance of the coefficients
@@ -256,7 +256,7 @@ pub(crate) fn decide_single_cell(
         cells_seen: 0,
     };
 
-    match solve_level(&mut ctx, 0, Vec::new())? {
+    match solve_level(&mut ctx, 0, &[])? {
         LevelOutcome::Sat(sample) => {
             let model = replay_rational_model(arena, assertions, &sample)?;
             Some(CheckResult::Sat(model))
@@ -310,7 +310,7 @@ fn atom_level(atom: &CertAtom, order: &[SymbolId]) -> Option<usize> {
 fn solve_level(
     ctx: &mut Ctx<'_>,
     level: usize,
-    sample: Vec<(SymbolId, Rational)>,
+    sample: &[(SymbolId, Rational)],
 ) -> Option<LevelOutcome> {
     if ctx.out_of_time() {
         record_cad_decline(CadDecline::Deadline);
@@ -354,9 +354,13 @@ fn solve_level(
             // 1. Is one of THIS level's atoms violated here? The atom is in the
             //    boundary set, so it has no root inside the cell and the
             //    violation holds across the whole cell.
-            if let Some(i) = violated_atom(ctx, level, cell, &sample_map, var)? {
-                reasons.push(CellReason::Atom { atom_index: i });
-                continue;
+            match violated_atom(ctx, level, cell, &sample_map, var) {
+                AtomCheck::Violated(i) => {
+                    reasons.push(CellReason::Atom { atom_index: i });
+                    continue;
+                }
+                AtomCheck::Declined => return None,
+                AtomCheck::AllHold => {}
             }
             // 2. Every atom of this level holds here. To go deeper we need a
             //    RATIONAL point inside an OPEN cell: the certificate's `Deeper`
@@ -373,7 +377,7 @@ fn solve_level(
                 return None;
             };
             if level + 1 == ctx.order.len() {
-                let mut full = sample.clone();
+                let mut full = sample.to_vec();
                 full.push((var, x));
                 return Some(LevelOutcome::Sat(full));
             }
@@ -384,9 +388,9 @@ fn solve_level(
             // this route's first measured cause of death on the real corpus --
             // `indeterminate-sign` on every conjunctive `meti-tarski` file in
             // the in-bounds set.
-            let mut deeper = sample.clone();
+            let mut deeper = sample.to_vec();
             deeper.push((var, x));
-            match solve_level(ctx, level + 1, deeper)? {
+            match solve_level(ctx, level + 1, &deeper)? {
                 LevelOutcome::Sat(m) => return Some(LevelOutcome::Sat(m)),
                 LevelOutcome::Refuted { covering, polys } => {
                     // 3. Project what the conflict used past the next variable,
@@ -420,7 +424,7 @@ fn solve_level(
         // Fixpoint: a complete scan that added nothing. Every reason above was
         // produced under THIS boundary set, which is what makes the cells the
         // reasons refer to the cells the certificate lists.
-        let covering = CellCovering::new(var, sample.clone(), boundary.clone(), reasons);
+        let covering = CellCovering::new(var, sample.to_vec(), boundary.clone(), reasons);
         return Some(LevelOutcome::Refuted {
             covering,
             polys: boundary,
@@ -497,43 +501,56 @@ fn arrangement_cells(roots: &[Root]) -> Option<Vec<ArrangementCell>> {
     Some(out)
 }
 
-/// The index of an atom of `level` violated at the cell's representative point,
-/// if any. Exact in both arms: a rational point evaluates directly, an algebraic
-/// one through `RealAlgebraic::sign_at`.
+/// Whether some atom of `level` is violated at the cell's representative point.
+///
+/// Three outcomes, named rather than nested in an `Option<Option<_>>`: an atom
+/// is violated, no atom is, or the sign could not be determined exactly — and
+/// the third is a DECLINE, which a nested `None` made easy to read as "no atom
+/// is violated". Exact in both arms: a rational point evaluates directly, an
+/// algebraic one through `RealAlgebraic::sign_at`.
+enum AtomCheck {
+    /// Atom at this index is violated across the cell.
+    Violated(usize),
+    /// Every atom of the level holds here.
+    AllHold,
+    /// A sign could not be determined; the cause is already recorded.
+    Declined,
+}
+
 fn violated_atom(
     ctx: &Ctx<'_>,
     level: usize,
     cell: &ArrangementCell,
     sample: &BTreeMap<SymbolId, Rational>,
     var: SymbolId,
-) -> Option<Option<usize>> {
+) -> AtomCheck {
     for &i in &ctx.by_level[level] {
         let atom = &ctx.atoms[i];
         let Some(uni) = substitute_to_int_univariate(atom.poly(), sample, var) else {
             record_cad_decline(CadDecline::CoefficientRange);
-            return None;
+            return AtomCheck::Declined;
         };
         let sign = match &cell.rep {
             CellRep::Rational(q) => {
                 let Some(v) = eval_int_poly(&uni, *q) else {
                     record_cad_decline(CadDecline::IndeterminateSign);
-                    return None;
+                    return AtomCheck::Declined;
                 };
                 axeyum_ir::poly::sign_of_rational(v)
             }
             CellRep::Algebraic(a) => {
                 let Some(s) = a.sign_at(&uni) else {
                     record_cad_decline(CadDecline::IndeterminateSign);
-                    return None;
+                    return AtomCheck::Declined;
                 };
                 s
             }
         };
         if !cert_cmp_holds(atom.cmp(), sign) {
-            return Some(Some(i));
+            return AtomCheck::Violated(i);
         }
     }
-    Some(None)
+    AtomCheck::AllHold
 }
 
 fn cert_cmp_holds(cmp: CertCmp, s: Sign) -> bool {
@@ -587,9 +604,9 @@ fn substitute_to_int_univariate(
 /// DECLINES.** `sample` binds every variable up to and including the one this
 /// level samples, so substituting it leaves a univariate polynomial in `elim`;
 /// if that polynomial is identically zero, `p` is nullified at the sample,
-/// McCallum's delineability theorem does not apply, and the route refuses.
+/// `McCallum`'s delineability theorem does not apply, and the route refuses.
 ///
-/// The operator itself is McCallum's, widened at exactly the point the theorem
+/// The operator itself is `McCallum`'s, widened at exactly the point the theorem
 /// is fragile: **every** coefficient in `elim` is projected, not only the
 /// leading one. With all coefficients sign-invariant on the cell, a polynomial
 /// that is not nullified at one point of the cell is not nullified anywhere on
@@ -690,7 +707,7 @@ fn project_level(
 /// Whether `p` is nullified at `sample`: every coefficient in `elim` vanishes,
 /// so `p(sample, ·)` is the zero polynomial and its "roots" are the whole line.
 ///
-/// This is the condition McCallum's projection may not cross. A `true` here is a
+/// This is the condition `McCallum`'s projection may not cross. A `true` here is a
 /// refusal, never a workaround.
 fn is_nullified_at(p: &MultiPoly, elim: SymbolId, sample: &BTreeMap<SymbolId, Rational>) -> bool {
     let cert = multipoly_to_cert(p);
@@ -747,12 +764,9 @@ fn replay_rational_model(
         model.set(v, Value::Real(q));
     }
     for &a in assertions {
-        match eval(arena, a, &asg) {
-            Ok(Value::Bool(true)) => {}
-            _ => {
-                record_cad_decline(CadDecline::IndeterminateSign);
-                return None;
-            }
+        if !matches!(eval(arena, a, &asg), Ok(Value::Bool(true))) {
+            record_cad_decline(CadDecline::IndeterminateSign);
+            return None;
         }
     }
     Some(model)
@@ -772,11 +786,11 @@ mod tests {
         (out, cad_decline().name())
     }
 
-    fn is_unsat(r: &Option<CheckResult>) -> bool {
+    fn is_unsat(r: Option<&CheckResult>) -> bool {
         matches!(r, Some(CheckResult::Unsat))
     }
 
-    fn is_sat(r: &Option<CheckResult>) -> bool {
+    fn is_sat(r: Option<&CheckResult>) -> bool {
         matches!(r, Some(CheckResult::Sat(_)))
     }
 
@@ -784,10 +798,12 @@ mod tests {
 
     #[test]
     fn a_one_variable_contradiction_is_refuted_and_the_certificate_is_checked() {
-        let (r, cause) = decide(&format!(
-            "(declare-fun x () Real)\n(assert (> x 0))\n(assert (< x 0))\n(check-sat)\n"
-        ));
-        assert!(is_unsat(&r), "expected unsat, got {r:?} (cause {cause})");
+        let (r, cause) =
+            decide("(declare-fun x () Real)\n(assert (> x 0))\n(assert (< x 0))\n(check-sat)\n");
+        assert!(
+            is_unsat(r.as_ref()),
+            "expected unsat, got {r:?} (cause {cause})"
+        );
     }
 
     #[test]
@@ -796,7 +812,10 @@ mod tests {
         let (r, cause) = decide(&format!(
             "{DECL2}(assert (< (+ (* x x) (* y y)) 1))\n(assert (> x 2))\n(check-sat)\n"
         ));
-        assert!(is_unsat(&r), "expected unsat, got {r:?} (cause {cause})");
+        assert!(
+            is_unsat(r.as_ref()),
+            "expected unsat, got {r:?} (cause {cause})"
+        );
     }
 
     #[test]
@@ -807,7 +826,7 @@ mod tests {
             "{DECL2}(assert (< (+ (* x x) (* y y)) 4))\n(assert (> x 0))\n(check-sat)\n"
         ));
         assert!(
-            !is_unsat(&r),
+            !is_unsat(r.as_ref()),
             "a satisfiable system was REFUTED: {r:?} (cause {cause})"
         );
     }
@@ -818,7 +837,7 @@ mod tests {
             "{DECL2}(assert (> (* x x) 4))\n(assert (> y x))\n(check-sat)\n"
         ));
         assert!(
-            is_sat(&r) || r.is_none(),
+            is_sat(r.as_ref()) || r.is_none(),
             "must not refute: {r:?} ({cause})"
         );
     }
@@ -829,17 +848,20 @@ mod tests {
         // samples only, so it must DECLINE -- never `unsat`.
         let (r, cause) = decide("(declare-fun x () Real)\n(assert (= (* x x) 2))\n(check-sat)\n");
         assert!(
-            !is_unsat(&r),
+            !is_unsat(r.as_ref()),
             "x^2 = 2 is SATISFIABLE and must never be refuted: {r:?} ({cause})"
         );
     }
 
     #[test]
     fn more_than_four_variables_refuses_by_declaration() {
-        let decls: String = (0..5)
-            .map(|i| format!("(declare-fun v{i} () Real)\n"))
-            .collect();
-        let body: String = (0..5).map(|i| format!("(assert (> v{i} 0))\n")).collect();
+        let mut decls = String::new();
+        let mut body = String::new();
+        for i in 0..5 {
+            use core::fmt::Write as _;
+            let _ = writeln!(decls, "(declare-fun v{i} () Real)");
+            let _ = writeln!(body, "(assert (> v{i} 0))");
+        }
         let (r, cause) = decide(&format!("{decls}{body}(check-sat)\n"));
         assert!(r.is_none(), "expected a decline, got {r:?}");
         assert_eq!(cause, "slice-bounds");
@@ -856,7 +878,7 @@ mod tests {
 
     #[test]
     fn a_degree_nine_atom_refuses_by_declaration() {
-        let pow: String = "(* x x x x x x x x x)".to_string();
+        let pow = "(* x x x x x x x x x)";
         let (r, cause) = decide(&format!(
             "(declare-fun x () Real)\n(assert (> {pow} 1))\n(check-sat)\n"
         ));
@@ -880,9 +902,36 @@ mod tests {
         // outcome here is a verdict OR a decline -- what must never happen is a
         // wrong `sat`.
         assert!(
-            !is_sat(&r),
+            !is_sat(r.as_ref()),
             "an unsatisfiable system was reported SAT: {r:?} ({cause})"
         );
+    }
+
+    /// The named fixture for the delineability mutation.
+    ///
+    /// `x*y^2 - x` is the ZERO polynomial in `y` at `x = 0`: every coefficient
+    /// in `y` vanishes there, so it has no roots to delineate and `McCallum`'s
+    /// projection theorem does not apply over any cell containing that point.
+    /// Both atoms are level 1, so level 0 has no boundary at all and its single
+    /// cell's sample IS `x = 0` -- the route reaches the nullified point by
+    /// construction, not by luck.
+    ///
+    /// The assertion is on the CAUSE, not on the verdict, and deliberately: the
+    /// system is unsatisfiable either way, so a verdict assertion would pass
+    /// with the guard deleted. `scripts/tests/mutation_controls.py` suite
+    /// `nra-single-cell` turns `if is_nullified_at(..)` into `if false` and
+    /// requires exactly this test to die.
+    #[test]
+    fn a_nullified_projection_polynomial_declines_with_its_own_cause() {
+        let (r, cause) = decide(&format!(
+            "{DECL2}(assert (< (- (* x (* y y)) x) 0))\n\
+             (assert (> (- (* x (* y y)) x) 0))\n(check-sat)\n"
+        ));
+        assert_eq!(
+            cause, "nullified-residual",
+            "the delineability guard must be what stopped this, got {r:?}"
+        );
+        assert!(r.is_none(), "a declined route returns no verdict: {r:?}");
     }
 
     #[test]
@@ -900,21 +949,23 @@ mod tests {
         // Derived from the constants, not from a literal a maintainer keeps in
         // step by hand: a query with exactly MAX_CELL_VARS variables must NOT be
         // refused for bounds, and one with a variable more must be.
-        let decls: String = (0..MAX_CELL_VARS)
-            .map(|i| format!("(declare-fun v{i} () Real)\n"))
-            .collect();
-        let body: String = (0..MAX_CELL_VARS)
-            .map(|i| format!("(assert (> v{i} 0))\n"))
-            .collect();
+        let mut decls = String::new();
+        let mut body = String::new();
+        for i in 0..MAX_CELL_VARS {
+            use core::fmt::Write as _;
+            let _ = writeln!(decls, "(declare-fun v{i} () Real)");
+            let _ = writeln!(body, "(assert (> v{i} 0))");
+        }
         let (_, cause) = decide(&format!("{decls}{body}(check-sat)\n"));
         assert_ne!(cause, "slice-bounds", "MAX_CELL_VARS must be accepted");
 
-        let decls: String = (0..=MAX_CELL_VARS)
-            .map(|i| format!("(declare-fun v{i} () Real)\n"))
-            .collect();
-        let body: String = (0..=MAX_CELL_VARS)
-            .map(|i| format!("(assert (> v{i} 0))\n"))
-            .collect();
+        let mut decls = String::new();
+        let mut body = String::new();
+        for i in 0..=MAX_CELL_VARS {
+            use core::fmt::Write as _;
+            let _ = writeln!(decls, "(declare-fun v{i} () Real)");
+            let _ = writeln!(body, "(assert (> v{i} 0))");
+        }
         let (_, cause) = decide(&format!("{decls}{body}(check-sat)\n"));
         assert_eq!(cause, "slice-bounds", "one more must be refused");
     }
@@ -940,7 +991,7 @@ mod tests {
         let parsed = axeyum_smtlib::parse_script(&script).expect("parse");
         reset_cad_decline();
         let out = decide_single_cell(&parsed.arena, &parsed.assertions, None);
-        assert!(is_unsat(&out), "expected unsat, got {out:?}");
+        assert!(is_unsat(out.as_ref()), "expected unsat, got {out:?}");
         // And the checker accepts a non-vacuous amount of work.
         let atoms = collect_cert_atoms(&parsed.arena, &parsed.assertions).expect("atoms");
         assert_eq!(atoms.len(), 2, "two atoms in the fixture");

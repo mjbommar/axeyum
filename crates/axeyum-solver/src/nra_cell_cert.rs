@@ -51,7 +51,7 @@
 //!    at the witness. A change in root count over the cell is exactly a
 //!    delineability failure, and it is rejected here.
 //!
-//! **Check 6 is a sampling check, not a proof.** McCallum's projection is valid
+//! **Check 6 is a sampling check, not a proof.** `McCallum`'s projection is valid
 //! over a cell on which no projection polynomial is nullified and every one is
 //! sign-invariant; the producer enforces the non-nullification condition at the
 //! sample and adds *every* coefficient of each eliminated polynomial to the
@@ -585,12 +585,12 @@ struct IsoRoot {
 impl IsoRoot {
     /// A rational strictly below the root, for cell-sample construction.
     fn strict_lower(&self) -> Rational {
-        self.exact.map_or(self.lo, |q| q)
+        self.exact.unwrap_or(self.lo)
     }
 
     /// A rational at or above the root.
     fn upper(&self) -> Rational {
-        self.exact.map_or(self.hi, |q| q)
+        self.exact.unwrap_or(self.hi)
     }
 }
 
@@ -694,41 +694,42 @@ fn compare_iso(a: &IsoRoot, b: &IsoRoot) -> Option<Ordering> {
     if let (Some(x), Some(y)) = (a.exact, b.exact) {
         return x.checked_cmp(&y);
     }
-    let mut x = a.clone();
-    let mut y = b.clone();
+    let mut left = a.clone();
+    let mut right = b.clone();
     for _ in 0..REFINE_DEPTH {
-        if let (Some(p), Some(q)) = (x.exact, y.exact) {
-            return p.checked_cmp(&q);
+        if let (Some(lq), Some(rq)) = (left.exact, right.exact) {
+            return lq.checked_cmp(&rq);
         }
-        // Disjoint brackets settle it. `(lo, hi]` half-open: `x.hi <= y.lo` means
-        // x's root is at most x.hi and y's is strictly above y.lo >= x.hi.
-        if x.upper().checked_cmp(&y.strict_lower())? != Ordering::Greater {
+        // Disjoint brackets settle it. `(lo, hi]` half-open: `left.hi <= right.lo`
+        // means left's root is at most left.hi and right's is strictly above
+        // right.lo >= left.hi.
+        if left.upper().checked_cmp(&right.strict_lower())? != Ordering::Greater {
             return Some(Ordering::Less);
         }
-        if y.upper().checked_cmp(&x.strict_lower())? != Ordering::Greater {
+        if right.upper().checked_cmp(&left.strict_lower())? != Ordering::Greater {
             return Some(Ordering::Greater);
         }
         // Overlapping. A shared root would be a root of the gcd inside the
         // overlap; if the gcd has one there, the two roots ARE that root.
-        let g = rat_gcd(&x.poly, &y.poly, CERT_MAX_DEGREE)?;
-        if rat_degree(&g).is_some_and(|d| d >= 1) {
-            let g_sf = squarefree_part(&g, CERT_MAX_DEGREE)?;
-            let g_chain = sturm_chain(&g_sf, CERT_MAX_DEGREE)?;
-            let lo = max_rat(x.strict_lower(), y.strict_lower())?;
-            let hi = min_rat(x.upper(), y.upper())?;
+        let shared = rat_gcd(&left.poly, &right.poly, CERT_MAX_DEGREE)?;
+        if rat_degree(&shared).is_some_and(|d| d >= 1) {
+            let shared_sf = squarefree_part(&shared, CERT_MAX_DEGREE)?;
+            let shared_chain = sturm_chain(&shared_sf, CERT_MAX_DEGREE)?;
+            let lo = max_rat(left.strict_lower(), right.strict_lower())?;
+            let hi = min_rat(left.upper(), right.upper())?;
             if lo.checked_cmp(&hi)? == Ordering::Less
-                && count_roots_in(&g_chain, lo, hi)? == 1
+                && count_roots_in(&shared_chain, lo, hi)? == 1
                 // Both brackets hold exactly one root, and the overlap holds a
                 // common root of both defining polynomials: that root is the
                 // unique one in each bracket, so the two are equal.
-                && count_roots_in(&x.chain, lo, hi)? == 1
-                && count_roots_in(&y.chain, lo, hi)? == 1
+                && count_roots_in(&left.chain, lo, hi)? == 1
+                && count_roots_in(&right.chain, lo, hi)? == 1
             {
                 return Some(Ordering::Equal);
             }
         }
-        refine(&mut x)?;
-        refine(&mut y)?;
+        refine(&mut left)?;
+        refine(&mut right)?;
     }
     None
 }
@@ -892,19 +893,17 @@ impl Cell<'_> {
         // `lo.upper()` is at or above the lower root, `hi.strict_lower()` is
         // strictly below the upper root -- so we start one unit outside and walk
         // in, which is exact and needs no refinement.
-        let a = match lo {
-            Some(r) => r.upper(),
-            None => {
-                let h = hi.map_or(Rational::zero(), IsoRoot::strict_lower);
-                h.checked_sub(Rational::integer(2))?
-            }
+        let a = if let Some(r) = lo {
+            r.upper()
+        } else {
+            let above = hi.map_or_else(Rational::zero, IsoRoot::strict_lower);
+            above.checked_sub(Rational::integer(2))?
         };
-        let b = match hi {
-            Some(r) => r.strict_lower(),
-            None => {
-                let l = lo.map_or(Rational::zero(), IsoRoot::upper);
-                l.checked_add(Rational::integer(2))?
-            }
+        let b = if let Some(r) = hi {
+            r.strict_lower()
+        } else {
+            let below = lo.map_or_else(Rational::zero, IsoRoot::upper);
+            below.checked_add(Rational::integer(2))?
         };
         if a.checked_cmp(&b)? != Ordering::Less {
             // The bracket endpoints touch: the cell is too narrow to name a
@@ -929,11 +928,12 @@ impl Cell<'_> {
     /// root to BE that rational).
     fn admits_witness(&self, q: Rational) -> Option<bool> {
         match self {
-            Cell::Point(r) => match r.exact {
-                Some(x) => Some(q.checked_cmp(&x)? == Ordering::Equal),
-                // An irrational root is not any rational. Refine once to try to
-                // discover the root is rational after all, then decide.
-                None => {
+            Cell::Point(r) => {
+                if let Some(x) = r.exact {
+                    Some(q.checked_cmp(&x)? == Ordering::Equal)
+                } else {
+                    // An irrational root is not any rational. Refine to try to
+                    // discover the root is rational after all, then decide.
                     let mut work = (*r).clone();
                     for _ in 0..REFINE_DEPTH {
                         if let Some(x) = work.exact {
@@ -948,7 +948,7 @@ impl Cell<'_> {
                     }
                     Some(false)
                 }
-            },
+            }
             Cell::Open { lo, hi } => {
                 if let Some(r) = lo {
                     // q must be strictly above the root. `r.upper()` is at or
@@ -1018,23 +1018,23 @@ fn has_root_strictly_inside(q_sf: &[Rational], cell: &Cell<'_>) -> Option<bool> 
     // Narrow both bracket endpoints until they are strictly inside their own
     // bracket relative to `q`: i.e. until `q` has no root inside the bracket, or
     // until we can attribute the root to the cell boundary itself.
-    let mut l = lo.cloned();
-    let mut h = hi.cloned();
+    let mut lower = lo.cloned();
+    let mut upper = hi.cloned();
     for _ in 0..REFINE_DEPTH {
-        let a = match &l {
+        let a = match &lower {
             Some(r) => r.upper(),
             None => bound_below(q_sf)?,
         };
-        let b = match &h {
+        let b = match &upper {
             Some(r) => r.strict_lower(),
             None => bound_above(q_sf)?,
         };
         if a.checked_cmp(&b)? != Ordering::Less {
             // Brackets still overlap the interior; refine and retry.
-            if let Some(r) = l.as_mut() {
+            if let Some(r) = lower.as_mut() {
                 refine(r)?;
             }
-            if let Some(r) = h.as_mut() {
+            if let Some(r) = upper.as_mut() {
                 refine(r)?;
             }
             continue;
@@ -1046,7 +1046,7 @@ fn has_root_strictly_inside(q_sf: &[Rational], cell: &Cell<'_>) -> Option<bool> 
         // `b` IS the upper root, which `strict_lower()` excludes unless the root
         // is exact -- handled by subtracting an exact endpoint root below.
         let mut n = count_roots_in(&chain, a, b)?;
-        if let Some(r) = &h
+        if let Some(r) = &upper
             && let Some(x) = r.exact
             && x.checked_cmp(&b)? == Ordering::Equal
             && eval_rat_poly(q_sf, x)?.is_zero()
@@ -1056,21 +1056,21 @@ fn has_root_strictly_inside(q_sf: &[Rational], cell: &Cell<'_>) -> Option<bool> 
         // Roots of `q` in the slivers `(lower root, a]` and `(b, upper root)` are
         // missed by this count. Close the gap by refining until the slivers are
         // root-free.
-        let sliver_low = match &l {
+        let sliver_low = match &lower {
             Some(r) if r.exact.is_none() => count_roots_in(&chain, r.lo, a)?,
             _ => 0,
         };
-        let sliver_high = match &h {
+        let sliver_high = match &upper {
             Some(r) if r.exact.is_none() => count_roots_in(&chain, b, r.hi)?,
             _ => 0,
         };
         if sliver_low == 0 && sliver_high == 0 {
             return Some(n > 0);
         }
-        if let Some(r) = l.as_mut() {
+        if let Some(r) = lower.as_mut() {
             refine(r)?;
         }
-        if let Some(r) = h.as_mut() {
+        if let Some(r) = upper.as_mut() {
             refine(r)?;
         }
     }
