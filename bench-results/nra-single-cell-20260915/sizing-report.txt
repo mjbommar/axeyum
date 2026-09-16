@@ -1,0 +1,27 @@
+population: 83 undecided QF_NRA files (ADR-2110 census)
+
+ADR-2110's CAD-only set (nlsat decides, lin does not): 45
+  control: reproduces ADR-2110's 45
+
+== the ceiling ==
+  bounds: vars <= 4, degree <= 8, |coeff| <= 1<<40
+  inside the BOUND ceiling : 24 of 45
+  inside the SHAPE ceiling : 24 of 45   (also 1 assertion, no top-level or)
+
+== why the rest are out (bound reasons only) ==
+  IN-BOUNDS                 24
+  degree                     8
+  degree+coeff               8
+  vars                       4
+  coeff                      1
+
+  excluded by the 1<<40 coefficient clearing alone: 9 of 45
+
+== the in-bounds files, by declared status ==
+  sat         13
+  unknown      3
+  unsat        8
+
+  z3 nlsat on the in-bounds set: median 108 ms, max 109 ms, 24 of 24 under 1 s
+
+wrote bench-results/nra-single-cell-20260915/sizing-45.tsv

@@ -11197,6 +11197,24 @@ SUITES["nra-cad-attribution"] = (
             "        cell_cap: MAX_CAD_CELLS * 16,",
             "        cell_cap: MAX_CAD_CELLS,",
         ),
+        (
+            # ADR-2121's arm, same hazard one level along: an A/B whose two arms
+            # carry the SAME `single_cell` value measures nothing and reports 0
+            # movement, which reads exactly like a real null.
+            "the `single-cell` arm actually turns the route on",
+            '        arm: "single-cell",\n        cell_cap: MAX_CAD_CELLS,\n'
+            "        single_cell: true,",
+            '        arm: "single-cell",\n        cell_cap: MAX_CAD_CELLS,\n'
+            "        single_cell: false,",
+        ),
+        (
+            # Drop the arm from the PARSER. `AXEYUM_NRA_CAD=single-cell` then
+            # falls through to `default`, the treatment arm never runs, and the
+            # A/B is one binary measured against itself -- with no error anywhere.
+            "`AXEYUM_NRA_CAD=single-cell` actually selects the single-cell arm",
+            '    } else if value.eq_ignore_ascii_case("single-cell") {',
+            "    } else if false {",
+        ),
     ],
 )
 
@@ -11346,6 +11364,87 @@ SUITES["int-blast-width-floor"] = (
             "                    if width > axeyum_rewrite::MAX_INT_BLAST_WIDTH {",
             "                    width += 2;\n"
             "                    if width > axeyum_rewrite::MAX_INT_BLAST_WIDTH {",
+        ),
+    ],
+)
+
+
+# `nra-single-cell-delineability` -- the one guard ADR-2121's soundness rests on.
+#
+# `nra_single_cell::project_level` applies McCallum's projection operator, which
+# is valid over a cell only when no eliminated polynomial is NULLIFIED on it.
+# The route checks that at the sample and declines; the projection is also
+# widened to carry EVERY coefficient in the eliminated variable, so
+# non-nullification at one point plus sign-invariance of the coefficients gives
+# it on the whole cell.
+#
+# The mutation deletes the check. Note what it does NOT do: the fixture's system
+# is unsatisfiable either way, and the route still reaches `unsat` through a
+# refined arrangement, so a test asserting the VERDICT passes on the mutant. The
+# named fixture asserts the recorded CAUSE, which is the only observable that
+# distinguishes "the guard stopped this" from "something else did". That is why
+# the test is written the way it is, and why exactly one test dies.
+# --------------------------------------------------------------------------
+
+SUITES["nra-single-cell-delineability"] = (
+    "crates/axeyum-solver/src/nra_single_cell.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "nra_single_cell::tests"),
+        "nra-single-cell-delineability",
+    ),
+    [
+        (
+            # Without the nullification check the route projects through a point
+            # where the polynomial has no roots to delineate, so the learned cell
+            # is derived from a projection whose theorem does not apply there.
+            "a nullified polynomial stops the projection",
+            "        if is_nullified_at(p, elim, sample) {",
+            "        if false {",
+        ),
+    ],
+)
+
+
+# `nra-single-cell-certificate` -- the checker that gates every `unsat`.
+#
+# `nra_cell_cert::check_delineability` is the sampling half of the certificate
+# check: at further interior points of a `Deeper` cell, every boundary
+# polynomial of the sub-covering must keep the same distinct-real-root count. A
+# projection that OMITS a polynomial, or is skipped entirely, makes the learned
+# cell too wide, and a too-wide cell crosses a root-count change -- which is the
+# only thing this check can see and the only thing it needs to.
+#
+# Two mutations, one test each, and they are separated on purpose: a single test
+# asserting both "the probe compares" and "an unrunnable probe is a rejection"
+# would pass on either deletion whenever the other assertion fired first.
+# --------------------------------------------------------------------------
+
+SUITES["nra-single-cell-certificate"] = (
+    "crates/axeyum-solver/src/nra_cell_cert.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "nra_cell_cert::tests"),
+        "nra-single-cell-certificate",
+    ),
+    [
+        (
+            # Stop comparing the probe against the witness. The checker then
+            # ACCEPTS a covering whose cells span a delineability boundary --
+            # which is precisely the wrong-`unsat` this whole module exists to
+            # refuse -- while still counting the probes it made, so a test that
+            # only read `delineability_probes` would not notice.
+            "the delineability probe compares the root counts it collected",
+            "            if at_probe != at_witness {",
+            "            if false {",
+        ),
+        (
+            # Turn a cell the certificate itself marks undecided into an accepted
+            # one. A producer that gave up mid-covering could then have its
+            # partial refutation accepted as a complete one.
+            "a cell the certificate admits it did not decide is rejected",
+            "            CellReason::Undecided => {\n"
+            "                return Err(CellCheckFailure::UndecidedCell { level, cell: idx });\n"
+            "            }",
+            "            CellReason::Undecided => {}",
         ),
     ],
 )
