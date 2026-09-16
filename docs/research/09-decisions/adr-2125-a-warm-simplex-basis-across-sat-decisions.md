@@ -470,7 +470,7 @@ The rest, each with a nonzero count confirmed:
 | `scripts/check-links.sh` | all links ok |
 | `check-config-registry-staleness.py` | 0 unexplained |
 | the 22 dispatch/reason suites | **all 22 green**, every count nonzero (7, 10, 20, 11, 12, 3, 3, 12, 12, 9, 6, 6, 6, 6, 7, 18, 13, 2, 20, 6, 7, 15) |
-| `--lib --features full -- --skip reconstruct::` | **DID NOT COMPLETE** — see §8 |
+| `--lib --features full -- --skip reconstruct::` | **1,576 passed, 1 failed** — the one red is the reference frame, measured; see §5.7 |
 | `progress_frontier --features full -- --test-threads=1` | **DID NOT COMPLETE** — see §8 |
 
 The 22 dispatch suites are read out of `hooks/pre-push` **at run time**, not
@@ -515,6 +515,31 @@ The second run, 43-test baseline, exit 0:
 names. The sets are **not all disjoint and this says so**: guards 1 and 3 each
 kill a proper subset of guard 2's three, so they are separated in one direction
 only; guard 4's set is disjoint from all of them.
+
+### 5.7 The lib sweep's one red is the box, and it was MEASURED rather than assumed
+
+```text
+test result: FAILED. 1576 passed; 1 failed; 0 ignored; 320 filtered out; 372.09s
+  auto::tests::pathological_overbound_stays_terminal_under_every_policy
+```
+
+**Re-run alone on the same tree: `ok`, 4.26 s.**
+
+That reasoning is a hypothesis until it is measured, so it was measured — which
+is the whole rule this repository keeps about red gates. And it is not a fresh
+hypothesis: [ADR-2111] §5a hit **this exact test**, by name, on a host at load 49,
+and recorded the same isolated result at **6.28 s**. Two lanes, two trees, two
+loaded boxes, the same name, the same resolution.
+
+The shape is the one that box-load breaks: `auto::tests` is a `QF_UF` test
+asserting something *about a budget* ("stays terminal under every policy"), and
+it touches no simplex. Ambient load was 9–24 throughout, with three peer-lane
+jobs OOM-killed at their own 24 GiB scope ceilings while this sweep queued.
+
+What is NOT claimed: that a green isolated run proves the sweep would be green
+on a quiet box. It proves this test's red is not this tree's defect, which is
+the question that was asked. A successor seeing the same name should re-run it
+alone before spending a bisect — that is why both this ADR and ADR-2111 name it.
 
 ## 6. The A/B
 
@@ -745,17 +770,16 @@ Named with what is known about each, rather than left implied.
 2. **Four exposure divisions did not run**, and `QF_LIA` ran 7 rows. A division
    with no rows is not a division with no movement. `QF_LIA` is the one that
    matters most — it drives the same simplex — and 7 rows is not a sample of it.
-3. **Two gates did not complete**: the `--skip reconstruct::` lib sweep and
-   `progress_frontier`. They were queued behind the mutation run and other lanes'
+3. **One gate did not complete**: `progress_frontier`. They were queued behind the mutation run and other lanes'
    jobs on the shared `cargo-serialized` flock, on a box that OOM-killed three of
    those lanes' jobs at their own 24 GiB scope ceilings while this lane waited.
-   `run-gates.sh` is committed and runs them by name.
+   `run-gates.sh` is committed and runs it by name.
 
    This is a real gap in the evidence, not a formality: **`progress_frontier` is
    the capability ratchet, and a solver-route change is exactly what it exists to
-   watch.** The 22 dispatch/reason suites DID complete and are green (§5.5); they
-   were in this list until they did, which is the right direction for a list like
-   this to move.
+   watch.** The 22 dispatch/reason suites and the lib sweep were both in this
+   list until they completed (§5.5, §5.7); a gap list is only worth having if it
+   shrinks when the gaps close.
 4. **The builds-per-file screen** (§7.3). The stable loss and the stable gain lie
    on one axis the lever is already instrumented for, and a decider that consults
    `simplex_cold_builds` is the obvious next increment. It is not built here
