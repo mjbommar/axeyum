@@ -5,8 +5,9 @@ Index-summary: ADR-2110 measured 45 of 83 undecided QF_NRA files as decided by
 z3's CAD arm and not by its linearization arm, and named the design difference:
 we enumerate the arrangement, z3 and cvc5 build one cell per conflict. This
 builds the second shape as a bounded slice. The lever `AXEYUM_NRA_CAD=single-cell`
-is measured at +6 on QF_NRA with 0 losses and 0 flips, and its baseline arm
-reproduces the board's own 117; an `unsat` is emitted only after an independent cell-covering
+is measured at +6 on QF_NRA with 0 losses and 0 flips (of which +4 is
+attributable to the route itself and 2 are budget-boundary files it declined),
+and its baseline arm reproduces the board's own 117; an `unsat` is emitted only after an independent cell-covering
 checker accepts it, and the honest label on that checker is CHECKED, not proved,
 because its delineability test is sampling. The sizing correction matters more
 than the +6: this lane's own first ceiling of 24 was wrong, and the corrected
@@ -225,21 +226,39 @@ division — the control on the A/B is that its baseline arm reproduces the boar
 Arm B is also the *faster* arm by 87 s, so the route is not buying decisions with
 time.
 
-The six gains, all `meti-tarski`:
+### Four of the six gains are the route. Two are not, and saying so is the point.
 
-| file | A | B |
-|---|---|---|
-| `sin/problem/7/weak/sin-problem-7-weak-chunk-0131` | `unknown` | `sat` |
-| `sqrt/1mcosq/8/sqrt-1mcosq-8-chunk-0562` | `unknown` | `sat` |
-| `sin/cos/sin-cos-346-b-chunk-0147` | `unknown` | `unsat` |
-| `atan/vega/3/weak/atan-vega-3-weak-chunk-0243` | `unknown` | `sat` |
-| `sin/problem/7/sin-problem-7-chunk-0124` | `unknown` | `sat` |
-| `exp/problem/10/3/weak/exp-problem-10-3-weak-chunk-0081` | `unknown` | `unsat` |
+Every mover was re-run with `--trace` and attributed to the rung that answered
+(`cause-movers-8.tsv`), and joined against the four nested populations
+(`mover-population.py`, which refuses to report unless they are 83 / 45 / 24 / 12
+and nested):
 
-Two of them are outside ADR-2110's 45, so the route's reach is not confined to
-the population that motivated it — and only two of the six are in the 24-file
-in-bounds set, which is the reason the ceiling must not be read as a forecast in
-either direction.
+| file | A → B | in 83 / 45 / 24 / 12 | who decided it |
+|---|---|:---:|---|
+| `sqrt/1mcosq/8/…-chunk-0562` | `unknown` → `sat` | 1 / 0 / 0 / 0 | **the route** |
+| `sin/cos/sin-cos-346-b-chunk-0147` | `unknown` → `unsat` | 1 / 1 / 1 / 1 | **the route** |
+| `sin/problem/7/sin-problem-7-chunk-0124` | `unknown` → `sat` | 1 / 1 / 1 / 1 | **the route** |
+| `exp/problem/10/3/weak/…-chunk-0081` | `unknown` → `unsat` | 1 / 0 / 0 / 0 | **the route** |
+| `sin/problem/7/weak/…-chunk-0131` | `unknown` → `sat` | 1 / 1 / 1 / 0 | a later rung — the route declined `non-conjunctive` |
+| `atan/vega/3/weak/…-chunk-0243` | `unknown` → `sat` | 1 / 1 / 1 / 0 | a later rung — the route declined `non-conjunctive` |
+
+**So the route's own attributable effect on QF_NRA is +4, not +6.** The other two
+are budget-boundary files that moved because the arm-B binary spends a little
+time declining before the ladder continues; the three-pass recheck below is what
+decides whether they are effects at all. Reporting the raw +6 as the route's
+result would have overstated it by two.
+
+Two things this table settles that no static count could:
+
+- **Two of the four route-decided files are outside ADR-2110's 45** — z3's
+  linearization arm decides them too, so they were never part of the CAD-shaped
+  population. The route reaches past the population that motivated it, and the
+  ceiling is not a forecast in either direction.
+- **`conjunctivity.py` agrees with the solver, 2 for 2.** The exact two movers it
+  marked non-conjunctive are the exact two the route declined as
+  `non-conjunctive`. That is the control on this lane's own sizing correction:
+  the corrected 12 is a measurement of the same thing the route sees, not another
+  proxy for it.
 
 **QF_NIA, 200 files** — the nonlinear code is shared, so the division that did
 not motivate the route is where a regression would show:
@@ -253,9 +272,11 @@ not motivate the route is where a regression would show:
 | gains / losses / flips | 1 / 1 / **0** |
 | vs declared `:status` | **0 disagreements over 162 comparable verdicts** |
 
-Both QF_NIA movers went through the three-pass recheck, and the gain is the same
-file ADR-2110 classified `UNSTABLE` on its own A/B — which is the reason the raw
-`1 gain / 1 loss` column must not be reported as the result.
+**Neither QF_NIA mover reached this route at all**: `--trace` shows no
+`nra-real-root` attempt in either file's trail (`cause-movers-8.tsv`), so both
+are budget-boundary effects and neither is attributable to the lever. The gain is
+also the same file ADR-2110 classified `UNSTABLE` on its own A/B. That is the
+reason the raw `1 gain / 1 loss` column must not be reported as the result.
 
 <!-- AB-LRA -->
 
