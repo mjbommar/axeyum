@@ -4102,7 +4102,7 @@ impl CadPolicy {
 /// only as an independent cross-check (6b), and a covering whose generalisation
 /// would reach past the argument is REJECTED rather than assumed (6c).
 ///
-/// The measured basis, on two independent 200-file QF_NRA draws:
+/// The measured basis, on two independent 200-file `QF_NRA` draws:
 ///
 /// * pinned draw 121 → 122, and the three-pass recheck classifies every mover —
 ///   **2 STABLE-GAIN, 0 STABLE-LOSS, 1 BOTH-DECIDE**, exit status 0 on all 18
@@ -4112,7 +4112,7 @@ impl CadPolicy {
 ///   rung at 18.8 s of a 24 s budget;
 /// * held-out draw (fresh 200, seeded, disjoint — checked) 109 → 109 with
 ///   **zero movers of any kind**;
-/// * QF_NIA 79 → 79 and the QF_LRA control 107 → 107, neither moving a row;
+/// * `QF_NIA` 79 → 79 and the `QF_LRA` control 107 → 107, neither moving a row;
 /// * **0 `sat`↔`unsat` flips and 0 disagreements against declared `:status`
 ///   over 809 comparable verdicts** across all four sweeps.
 ///

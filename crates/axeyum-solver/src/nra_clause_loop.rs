@@ -1,4 +1,4 @@
-//! CDCL(T) over polynomial sign atoms: the **clause loop** for QF_NRA
+//! CDCL(T) over polynomial sign atoms: the **clause loop** for `QF_NRA`
 //! (ADR-2126, lane `NRA-CELL-EXACT`).
 //!
 //! # Why this exists, with the number
@@ -299,16 +299,15 @@ impl Builder {
     }
 
     fn atom_lit(&mut self, atom: CertAtom) -> Option<CnfLit> {
-        let idx = match self.atoms.iter().position(|a| *a == atom) {
-            Some(i) => i,
-            None => {
-                if self.atoms.len() >= MAX_CLAUSE_ATOMS {
-                    record_cad_decline(CadDecline::ClauseLoopShape);
-                    return None;
-                }
-                self.atoms.push(atom);
-                self.atoms.len() - 1
+        let idx = if let Some(i) = self.atoms.iter().position(|a| *a == atom) {
+            i
+        } else {
+            if self.atoms.len() >= MAX_CLAUSE_ATOMS {
+                record_cad_decline(CadDecline::ClauseLoopShape);
+                return None;
             }
+            self.atoms.push(atom);
+            self.atoms.len() - 1
         };
         Some(CnfLit::positive(CnfVar::new(idx).ok()?))
     }
@@ -360,12 +359,11 @@ impl Builder {
         // shape the loop abstracts. A Boolean VARIABLE lands here too, and
         // declining on it is deliberate -- it would be a propositional variable
         // with no theory meaning, and this slice does not claim to handle one.
-        match cert_atom_of(arena, term) {
-            Some(atom) => self.atom_lit(atom),
-            None => {
-                record_cad_decline(CadDecline::ClauseLoopShape);
-                None
-            }
+        if let Some(atom) = cert_atom_of(arena, term) {
+            self.atom_lit(atom)
+        } else {
+            record_cad_decline(CadDecline::ClauseLoopShape);
+            None
         }
     }
 

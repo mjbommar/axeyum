@@ -51,15 +51,15 @@
 //!    itself free — which is the entire difference between this and a probe at a
 //!    point. Over the open interval the cell denotes, three things are required,
 //!    each by exact root counting (Sturm bisection) against the cell's own
-//!    algebraic endpoints:
+//!    algebraic endpoints.
 //!
-//!    a. the leading coefficient in `v` has no root strictly inside the cell —
-//!       so `deg_v` cannot drop across it (no root escapes to infinity) and no
-//!       polynomial can be nullified on it;
-//!    b. the discriminant `Res_v(p, ∂p/∂v)` has no root strictly inside — so no
-//!       two roots of one polynomial merge there;
-//!    c. every pairwise resultant `Res_v(p, q)` has no root strictly inside — so
-//!       no root of one polynomial crosses a root of another.
+//!    **(a)** The leading coefficient in `v` has no root strictly inside the
+//!    cell — so `deg_v` cannot drop across it (no root escapes to infinity) and
+//!    no polynomial can be nullified on it. **(b)** The discriminant
+//!    `Res_v(p, ∂p/∂v)` has no root strictly inside — so no two roots of one
+//!    polynomial merge there. **(c)** Every pairwise resultant `Res_v(p, q)` has
+//!    no root strictly inside — so no root of one polynomial crosses a root of
+//!    another.
 //!
 //!    (a) and (b) give each polynomial a *constant* distinct-real-root count over
 //!    the cell; (c) gives the merged ordering of all of them. So the whole 1-D
@@ -1643,6 +1643,12 @@ fn vanishes_inside(
 /// Delineability over a 2-dimensional region. See
 /// [`CellCheckFailure::NestedOpenGeneralization`], which is check 6c and is the
 /// scope boundary of this one.
+#[allow(
+    clippy::too_many_lines,
+    reason = "one delineability argument, three conditions: splitting them apart \
+              would put the substituted boundary set they all read behind a \
+              borrow dance, and the conditions are only meaningful together"
+)]
 fn check_delineability_exact(
     sub: &CellCovering,
     cell: &Cell<'_>,
