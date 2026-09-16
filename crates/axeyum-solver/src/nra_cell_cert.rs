@@ -1686,7 +1686,14 @@ fn check_delineability_exact(
             .last()
             .ok_or(CellCheckFailure::RefinementExhausted { level })?
             .clone();
-        if vanishes_inside(&lead, cell, level, stats)? {
+        // The test and the ACT are separate lines on purpose. `vanishes_inside`
+        // is what bumps `delineability_exact_tests`, so a mutation that stops
+        // acting on the answer must not also stop the counter -- otherwise the
+        // fixture asserting "the exact check ran" dies alongside the fixture
+        // asserting "the exact check refuses", and one mutation kills two tests
+        // instead of naming one guard.
+        let degree_drops = vanishes_inside(&lead, cell, level, stats)?;
+        if degree_drops {
             return Err(CellCheckFailure::DelineabilityDegreeDrop {
                 level,
                 cell: cell_idx,
@@ -1716,7 +1723,8 @@ fn check_delineability_exact(
                 step: "discriminant-identically-zero",
             });
         }
-        if vanishes_inside(&disc, cell, level, stats)? {
+        let roots_collide = vanishes_inside(&disc, cell, level, stats)?;
+        if roots_collide {
             return Err(CellCheckFailure::DelineabilityRootCollision {
                 level,
                 cell: cell_idx,
@@ -1747,7 +1755,8 @@ fn check_delineability_exact(
                     step: "resultant-identically-zero",
                 });
             }
-            if vanishes_inside(&res, cell, level, stats)? {
+            let roots_cross = vanishes_inside(&res, cell, level, stats)?;
+            if roots_cross {
                 return Err(CellCheckFailure::DelineabilityCrossing {
                     level,
                     cell: cell_idx,

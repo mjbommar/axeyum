@@ -11519,6 +11519,90 @@ SUITES["nra-single-cell-delineability"] = (
 # would pass on either deletion whenever the other assertion fired first.
 # --------------------------------------------------------------------------
 
+# --------------------------------------------------------------------------
+# `nra-cell-exact-delineability` -- the EXACT check that replaced the sample.
+#
+# ADR-2121 shipped the single-cell route's `unsat` half OFF for one reason: the
+# checker's delineability test was SAMPLING, and sampling can falsify
+# delineability but never establish it. ADR-2126 replaced it with
+# `nra_cell_cert::check_delineability_exact`, whose first and strongest
+# condition is that each boundary polynomial's LEADING coefficient in the next
+# variable has no root strictly inside the cell. That one condition does two
+# jobs: the degree cannot drop across the cell (no root escapes to infinity) and
+# no polynomial can be nullified on it.
+#
+# The mutation makes that condition accept everything. Note what makes the
+# fixture non-vacuous: the cell it uses is one the SAMPLING check ACCEPTS --
+# `t*y - 1` loses its root only at the single point `t = 0`, and no probe lands
+# there -- so the surviving sampling cross-check does NOT rescue it, and the
+# named test is the only thing standing between the checker and a non-delineable
+# cell. A verdict-only test would pass on the mutant.
+#
+# The anchor is the `if`, not the `vanishes_inside` call, and the call is bound
+# to a local for exactly that reason. Mutating the CALL away would also stop
+# `delineability_exact_tests` counting, killing the separate fixture that asserts
+# the exact check RAN -- two tests for one guard, which says the suite is coarse
+# rather than that the guard is covered. Acting on the answer and performing the
+# test are different lines so they have different killers.
+# --------------------------------------------------------------------------
+
+SUITES["nra-cell-exact-delineability"] = (
+    "crates/axeyum-solver/src/nra_cell_cert.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "nra_cell_cert::tests"),
+        "nra-cell-exact-delineability",
+    ),
+    [
+        (
+            # Accept a cell across which the degree in the next variable drops.
+            # The arrangement above the cell is then not the one the
+            # sub-covering was built from, and the refutation generalises from
+            # its witness to points it does not cover.
+            "the exact check refuses a leading coefficient that vanishes inside the cell",
+            "        if degree_drops {",
+            "        if false {",
+        ),
+    ],
+)
+
+# --------------------------------------------------------------------------
+# `nra-cell-exact-clause-loop` -- the loop must SAY it reached a refutation.
+#
+# `nra_clause_loop` withholds every `unsat`, so the only observable that
+# distinguishes "the Boolean abstraction was refuted and this arm does not emit
+# it" from "the loop ran out of budget" is the recorded CAUSE. That distinction
+# is load-bearing twice over: it is what a later lane reads to size the
+# certified-`unsat` work, and it is the difference between `clause-loop`'s
+# decline being a capability statement and being a shrug. ADR-2110 exists
+# because a bundled cause is an upper bound on each of its members and a
+# measurement of none.
+#
+# The mutation reports the refutation as a budget exhaustion. Every verdict is
+# unchanged -- the arm answers nothing either way -- so nothing that reads a
+# verdict could notice.
+# --------------------------------------------------------------------------
+
+SUITES["nra-cell-exact-clause-loop"] = (
+    "crates/axeyum-solver/src/nra_clause_loop.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "nra_clause_loop::tests"),
+        "nra-cell-exact-clause-loop",
+    ),
+    [
+        (
+            "a refuted abstraction is recorded as a refutation, not as a budget",
+            "                record_cad_decline(CadDecline::ClauseLoopUnsatUncertified);\n"
+            "                return None;\n"
+            "            }\n"
+            "            Ok(SatResult::Unknown(_)) | Err(_) => {",
+            "                record_cad_decline(CadDecline::ClauseLoopBudget);\n"
+            "                return None;\n"
+            "            }\n"
+            "            Ok(SatResult::Unknown(_)) | Err(_) => {",
+        ),
+    ],
+)
+
 SUITES["nra-single-cell-certificate"] = (
     "crates/axeyum-solver/src/nra_cell_cert.rs",
     Cargo(
