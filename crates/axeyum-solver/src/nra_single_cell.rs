@@ -1081,24 +1081,6 @@ mod tests {
         assert!(decide_single_cell(&arena, &[], None, true).is_none());
     }
 
-    /// The `single-cell-sat` arm withholds the refutation it would otherwise
-    /// emit, and says so with its own cause.
-    ///
-    /// The SAME fixture is `unsat` under the full arm two tests up, so this
-    /// pair is what makes the withholding visible: one arm answers, the other
-    /// declines, and the only difference is `emit_unsat`.
-    #[test]
-    fn the_sat_only_arm_withholds_the_refutation_it_would_have_emitted() {
-        let script =
-            format!("{DECL2}(assert (< (+ (* x x) (* y y)) 1))\n(assert (> x 2))\n(check-sat)\n");
-        let (full, _) = decide(&script);
-        assert!(is_unsat(full.as_ref()), "the full arm refutes it: {full:?}");
-
-        let (held, cause) = decide_sat_only(&script);
-        assert!(held.is_none(), "the sat-only arm must withhold: {held:?}");
-        assert_eq!(cause, "unsat-withheld-sampled-delineability");
-    }
-
     /// And it keeps the half that IS exact.
     ///
     /// A `sat` from this route is a rational model replayed through the ground
@@ -1125,6 +1107,15 @@ mod tests {
     /// Derived over every fixture in this module rather than asserted on one:
     /// for each, the sat-only arm's outcome must be the full arm's outcome with
     /// `Unsat` replaced by a decline, and nothing else.
+    ///
+    /// This is the SOLE killer of the `if !emit_unsat` mutation in
+    /// `scripts/tests/mutation_controls.py`. A second test asserting the same
+    /// property on one fixture lived here briefly and was removed rather than
+    /// kept: it died on the same mutation, and two tests dying on one guard
+    /// deletion means one of them was measuring nothing the other did not. The
+    /// contrast it existed for — the same fixture answering `unsat` under the
+    /// full arm — is inside the loop below, which runs both arms on every
+    /// fixture and branches on what the full arm said.
     #[test]
     fn withholding_removes_unsat_and_changes_nothing_else() {
         let scripts = [
