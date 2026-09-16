@@ -441,9 +441,83 @@ reproduced rather than inherited.
 `off` decides **107 of 200**, which is the board's standing `QF_LRA` figure to
 the row.
 
-### 6.3 `QF_LRA` held-out 200
+### 6.3 `QF_LRA` held-out 200 — complete
 
-PLACEHOLDER — filled in when the shard finishes.
+```text
+comparison         rows  off  arm  net  gain  LOSS  FLIP  rc!=0  cmp  DIS
+off vs screened     200   93   93   +0     1     1     0      0  174    0
+off vs on           200   93   92   -1     0     1     0      0  173    0
+
+  raw GAIN (off->screened)   sc/sc-18.induction.cvc
+  raw LOSS (off->screened)   uart/uart-8.induction.cvc
+  raw LOSS (off->on)         uart/uart-8.induction.cvc
+```
+
+**The screen does not remove the held-out loss, and §2 said so before this code
+existed.** `uart-8.induction.cvc` is 1,598 builds at 1.04 ms each, so the screen
+admits it — 1,872 cubes answered warm — and the loss survives unchanged.
+
+The screen also picks up a raw GAIN the unscreened arm does not
+(`sc-18.induction.cvc`, 1,685 builds; `off` and `on` both `unknown`, `screened`
+`sat`). A raw mover is not a finding and it goes to §6.7 with the rest.
+
+`off` decides 93 of 200 on this draw.
+
+#### What ADR-2125's three published movers did here
+
+```text
+     off       on  screened  builds  scr_cubes   what
+     sat  unknown       sat      28          0   pinned STABLE-LOSS  -- REMOVED
+     sat      sat       sat   1,815      1,106   held STABLE-GAIN    -- not a gain here
+     sat  unknown   unknown   1,598      1,872   held STABLE-LOSS    -- NOT removed
+```
+
+The middle row is worth stating plainly rather than leaving for a reader to
+notice. **ADR-2125's held-out GAIN is not a gain in this run at all**, because
+this lane's `off` arm decides it. That is not a contradiction: it is a boundary
+file, and §6.6's control already shows one row in 120 moving in BOTH arms between
+the two runs. But it means the gain that motivated the screen is not present in
+this population to be kept, so the screen's case here rests on the pinned loss it
+removes and not on a gain it preserves.
+
+#### Mechanism, held-out
+
+```text
+arm         rows `built`   cubes answered   cold tableaux left   cold_restarts
+on                    79           59,320                7,869               0
+screened              66           53,516               11,664               0
+off                    -                -               58,874               -
+```
+
+The screen refused 13 of the 79 rows `on` kept a basis on and opened on 0 that
+`on` did not. `cold_restarts = 0` in both arms.
+
+```text
+population          rows all 3 decide   off          on           screened
+QF_LRA held-out                    92   97,533 ms    85,406 ms    85,710 ms
+                                             ---      -12.4 %      -12.1 %
+```
+
+#### A defect in this lane's own launch, and why the shard is still trusted
+
+The held-out shard's log is **empty**. Its launch redirected stdout twice —
+`> LRAheld.log 2>&1 … > /dev/null 2>&1` — and the last redirection wins, so every
+line the runner printed, including its closing `AB3-DONE`, went to `/dev/null`.
+The chain waiting on that marker would have waited out its six-hour timeout on a
+shard that had already finished.
+
+**The marker was not written by hand to satisfy the guard.** A guard satisfied by
+hand is not a guard. Completeness was established from the artifact instead,
+which is a stronger check than the marker anyway — the marker only says the loop
+exited:
+
+```text
+held TSV data rows                        200
+list rows                                 200
+rows with all three verdicts non-empty    200
+distinct files in TSV                     200
+files in the list but NOT in the TSV        0
+```
 
 ### 6.4 The mechanism, and the prediction it confirms exactly
 
