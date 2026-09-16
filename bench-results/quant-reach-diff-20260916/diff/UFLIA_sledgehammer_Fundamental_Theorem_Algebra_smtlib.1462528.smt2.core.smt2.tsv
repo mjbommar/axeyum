@@ -1,0 +1,6 @@
+class	reason	detail	body	params
+NEVER-MATCHED	missing-term	missing=['(f13 (f113 f114 f115) f7)'] nested_product=False	(ite (= (f13 (f113 f114 f115) f7) f7) (= (f8 f83 (f13 (f113 f114 f115) f7)) (f11 f12 0)) (= (f8 f83 (f13 (f113 f114 f115) f7)) (f11 f12 (+ 1 (f84 f85 (f8 f86 (f13 (f113 f114 f115) f7)))))))	["(f13 (f113 f114 f115) f7)"]
+NEVER-MATCHED	missing-term	missing=['1'] nested_product=False	(or (not (>= 1 0)) (= (f84 f85 (f11 f12 1)) 1))	["1"]
+NEVER-MATCHED	missing-term	missing=['0'] nested_product=False	(or (not (>= 0 0)) (= (f84 f85 (f11 f12 0)) 0))	["0"]
+NEVER-MATCHED	missing-term	missing=['(f13 (f113 f114 f115) f7)'] nested_product=False	(or (= (f103 (f4 f5 (f13 (f113 f114 f115) f7))) f1) (>= (f84 f85 (f8 f83 (f13 (f113 f114 f115) f7))) 2))	["(f13 (f113 f114 f115) f7)"]
+NESTED	unresolved-outer-bound-var		(= (f3 (f4 f5 f112) ?v0!3) (f3 (f4 f5 f112) ?v1!2))	["?v0!3", "?v1!2"]

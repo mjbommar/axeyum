@@ -1,0 +1,2 @@
+class	reason	detail	body	params
+MATCHED-REJECTED	rej_poscap	core-dominant-rej=rej_poscap n=1990296	(or (= this nullObject) (not (= (select2 Heap_ this (AsNonNullRefField Chunker.src System.String)) nullObject)) (not (= (IsHeap Heap_) Smt.true)) (not (or (not (= this BeingConstructed_)) (= (select2 Heap_ BeingConstructed_ NonNullFieldsAreInitialized_) Smt.true))))	["Heap_", "this", "Chunker.src", "System.String"]

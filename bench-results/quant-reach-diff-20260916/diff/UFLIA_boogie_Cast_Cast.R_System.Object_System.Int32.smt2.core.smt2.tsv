@@ -1,0 +1,4 @@
+class	reason	detail	body	params
+MATCHED-REJECTED	rej_nocontext	core-dominant-rej=rej_nocontext n=7260	(= (= (Is_ nullObject (RefArray System.Object 1)) Smt.true) (or (= nullObject nullObject) (subtypes (typeof_ nullObject) (RefArray System.Object 1))))	["nullObject", "(RefArray System.Object 1)"]
+MATCHED-REJECTED	rej_nocontext	core-dominant-rej=rej_nocontext n=7260	(= (= (Is_ nullObject J) Smt.true) (or (= nullObject nullObject) (subtypes (typeof_ nullObject) J)))	["nullObject", "J"]
+MATCHED-REJECTED	rej_nocontext	core-dominant-rej=rej_nocontext n=7260	(= (= (Is_ nullObject System.String) Smt.true) (or (= nullObject nullObject) (subtypes (typeof_ nullObject) System.String)))	["nullObject", "System.String"]

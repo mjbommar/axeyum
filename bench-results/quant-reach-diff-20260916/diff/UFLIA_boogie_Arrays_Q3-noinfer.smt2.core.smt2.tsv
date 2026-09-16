@@ -1,0 +1,3 @@
+class	reason	detail	body	params
+NEVER-MATCHED	missing-term	missing=['(store2 B o F (+ (select2 B o F) y))', 'q', 'G', 'o', 'F', '(select2 B q G)'] nested_product=False	(or (= q o) (= (select2 (store2 (store2 B o F (+ (select2 B o F) y)) q G (select2 B q G)) o F) (select2 (store2 B o F (+ (select2 B o F) y)) o F)))	["(store2 B o F (+ (select2 B o F) y))", "q", "G", "o", "F", "(select2 B q G)"]
+NEVER-MATCHED	missing-term	missing=['B', 'o', 'F', '(+ (select2 B o F) y)'] nested_product=False	(= (select2 (store2 B o F (+ (select2 B o F) y)) o F) (+ (select2 B o F) y))	["B", "o", "F", "(+ (select2 B o F) y)"]

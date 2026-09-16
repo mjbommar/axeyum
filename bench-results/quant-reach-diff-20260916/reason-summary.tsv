@@ -1,0 +1,9 @@
+class	reason	count
+NESTED	unresolved-outer-bound-var	476
+NEVER-MATCHED	missing-term	236
+NEVER-MATCHED	trigger-did-not-fire	133
+MATCHED-REJECTED	rej_nocontext	101
+MATCHED-REJECTED	rej_seen	27
+MATCHED-REJECTED	rej_true	26
+MATCHED-REJECTED	rej_flood	14
+MATCHED-REJECTED	rej_poscap	1

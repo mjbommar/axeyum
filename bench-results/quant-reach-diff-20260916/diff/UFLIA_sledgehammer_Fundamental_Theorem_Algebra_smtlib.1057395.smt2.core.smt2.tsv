@@ -1,0 +1,6 @@
+class	reason	detail	body	params
+NEVER-MATCHED	missing-term	missing=['(f19 (f20 f21 f22) f23)', 'f24', 'f25'] nested_product=False	(= (f13 (f14 f15 (f16 (f17 f18 (f19 (f20 f21 f22) f23)) f24)) f25) (f13 (f26 f27 (f13 (f14 f15 (f19 (f20 f21 f22) f23)) f25)) (f13 (f14 f15 f24) f25)))	["(f19 (f20 f21 f22) f23)", "f24", "f25"]
+NEVER-MATCHED	missing-term	missing=['f22'] nested_product=False	(= (f13 (f26 f27 f22) f22) f22)	["f22"]
+NEVER-MATCHED	missing-term	missing=['f22', '(f28 (f29 f30 f25) f23)', 'f22'] nested_product=False	(= (f13 (f26 f27 f22) (f13 (f26 f27 (f28 (f29 f30 f25) f23)) f22)) (f13 (f26 f27 (f28 (f29 f30 f25) f23)) (f13 (f26 f27 f22) f22)))	["f22", "(f28 (f29 f30 f25) f23)", "f22"]
+NEVER-MATCHED	missing-term	missing=['(f28 (f29 f30 f25) f23)'] nested_product=False	(= (f13 (f26 f27 (f28 (f29 f30 f25) f23)) f22) (f28 (f29 f30 f25) f23))	["(f28 (f29 f30 f25) f23)"]
+NEVER-MATCHED	missing-term	missing=['f22', 'f23', 'f25'] nested_product=False	(= (f13 (f14 f15 (f19 (f20 f21 f22) f23)) f25) (f13 (f26 f27 f22) (f28 (f29 f30 f25) f23)))	["f22", "f23", "f25"]

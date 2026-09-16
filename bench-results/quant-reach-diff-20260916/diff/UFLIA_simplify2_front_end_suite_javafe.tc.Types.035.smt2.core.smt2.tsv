@@ -1,0 +1,9 @@
+class	reason	detail	body	params
+NEVER-MATCHED	missing-term	missing=['RES_426.17_426.17'] nested_product=False	(or (not (= Smt.true (is RES_426.17_426.17 T_javafe.tc.TypeSig))) (= (cast RES_426.17_426.17 T_javafe.tc.TypeSig) RES_426.17_426.17))	["RES_426.17_426.17", "T_javafe.tc.TypeSig"]
+MATCHED-REJECTED	rej_nocontext	core-dominant-rej=rej_nocontext n=36252	(or (not (= Smt.true (is y_420.24 T_javafe.ast.TypeName))) (= (cast y_420.24 T_javafe.ast.TypeName) y_420.24))	["y_420.24", "T_javafe.ast.TypeName"]
+MATCHED-REJECTED	rej_nocontext	core-dominant-rej=rej_nocontext n=36252	(or (not (= Smt.true (is x_419.59 T_javafe.tc.TypeSig))) (= (cast x_419.59 T_javafe.tc.TypeSig) x_419.59))	["x_419.59", "T_javafe.tc.TypeSig"]
+MATCHED-REJECTED	rej_nocontext	core-dominant-rej=rej_nocontext n=36252	(or (= x_419.59 null) (not (= (select1 elemType_28.18.28 x_419.59) null)))	["x_419.59"]
+MATCHED-REJECTED	rej_nocontext	core-dominant-rej=rej_nocontext n=36252	(or (not (= Smt.true (is x_419.59 T_javafe.ast.ArrayType))) (= (cast x_419.59 T_javafe.ast.ArrayType) x_419.59))	["x_419.59", "T_javafe.ast.ArrayType"]
+MATCHED-REJECTED	rej_nocontext	core-dominant-rej=rej_nocontext n=36252	(or (= y_420.24 null) (not (= (select1 elemType_28.18.28 y_420.24) null)))	["y_420.24"]
+MATCHED-REJECTED	rej_nocontext	core-dominant-rej=rej_nocontext n=36252	(or (not (= Smt.true (is y_420.24 T_javafe.ast.ArrayType))) (= (cast y_420.24 T_javafe.ast.ArrayType) y_420.24))	["y_420.24", "T_javafe.ast.ArrayType"]
+MATCHED-REJECTED	rej_nocontext	core-dominant-rej=rej_nocontext n=36252	(or (not (= Smt.true (is x_419.59 T_javafe.ast.TypeName))) (= (cast x_419.59 T_javafe.ast.TypeName) x_419.59))	["x_419.59", "T_javafe.ast.TypeName"]
