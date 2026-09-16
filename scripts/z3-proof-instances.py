@@ -62,8 +62,22 @@ self-check and is exercised in `scripts/tests/test_z3_proof_instances.py`.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from typing import Optional
+
+# z3 renders a BOUND variable introduced by an quantifier it has not (yet)
+# instantiated as `?x!3` / `?p_!9` (same convention `ground-membership.py`
+# already documented). A `quant-inst` step's recovered body can still contain
+# one of these when the instantiation is NESTED -- max-generation >= 2 on 11
+# of ADR-2113's 53 cores -- because the substituted term for the OUTER
+# quantifier is itself parameterized by an inner quantifier's own bound
+# variable, resolved only by a LATER, separate `quant-inst` step elsewhere in
+# the same proof. A body carrying one of these tokens is not ground: it
+# cannot be `assert`ed as-is (the token is an unbound identifier to any SMT-LIB
+# parser), so it is reported separately rather than silently emitted as if it
+# were usable.
+BOUND_VAR = re.compile(r"\?[A-Za-z_][A-Za-z0-9_.]*!")
 
 
 def tokenize(text: str) -> list:
@@ -242,14 +256,24 @@ def applications(node, out: set) -> None:
 def extract(text: str) -> dict:
     """Returns a dict: `raw_count` (occurrences of the `(_ quant-inst ..)`
     node shape, comparable to `proof-instances.py`), `bodies` (ordered,
-    DEDUPED, rendered `body[t]` strings this tool could recover), and
-    `unmatched` (count of quant-inst applications whose conclusion was not
-    the expected `(or (not F) body)` shape -- reported, not hidden)."""
+    DEDUPED, rendered GROUND `body[t]` strings this tool could recover and
+    that a caller can `assert` as-is), `not_ground` (ordered, deduped,
+    rendered bodies that still carry an unresolved outer bound variable --
+    see `BOUND_VAR` -- kept separate because they are recovered correctly but
+    not directly assertable), and `unmatched` (count of quant-inst
+    applications whose conclusion was not the expected `(or (not F) body)`
+    shape -- reported, not hidden)."""
     start = text.find("(proof")
     if start < 0:
         start = text.find("(let ")
     if start < 0:
-        return {"raw_count": 0, "bodies": [], "unmatched": 0, "error": "NO-PROOF"}
+        return {
+            "raw_count": 0,
+            "bodies": [],
+            "not_ground": [],
+            "unmatched": 0,
+            "error": "NO-PROOF",
+        }
 
     tokens = tokenize(text[start:])
     tree = parse(tokens)
@@ -260,7 +284,9 @@ def extract(text: str) -> dict:
     apps = find_quant_inst_applications(tree)
 
     bodies: list = []
+    not_ground: list = []
     seen: set = set()
+    seen_ng: set = set()
     unmatched = 0
     for _params, formula in apps:
         conclusion = expand(formula, env)
@@ -269,11 +295,21 @@ def extract(text: str) -> dict:
             unmatched += 1
             continue
         rendered = render(body)
+        if BOUND_VAR.search(rendered):
+            if rendered not in seen_ng:
+                seen_ng.add(rendered)
+                not_ground.append(rendered)
+            continue
         if rendered not in seen:
             seen.add(rendered)
             bodies.append(rendered)
 
-    return {"raw_count": raw_count, "bodies": bodies, "unmatched": unmatched}
+    return {
+        "raw_count": raw_count,
+        "bodies": bodies,
+        "not_ground": not_ground,
+        "unmatched": unmatched,
+    }
 
 
 def main(argv: list) -> int:
@@ -324,10 +360,18 @@ def main(argv: list) -> int:
 
     for b in result["bodies"]:
         print(f"(assert {b})")
+    total_apps = (
+        result["unmatched"] + len(result["bodies"]) + len(result["not_ground"])
+    )
+    if result["not_ground"]:
+        sys.stderr.write(
+            f"NOT-GROUND {len(result['not_ground'])} of {total_apps} recovered "
+            "bodies still carry an unresolved outer bound variable and were "
+            "NOT printed as asserts (nested instantiation; see BOUND_VAR)\n"
+        )
     if result["unmatched"]:
         sys.stderr.write(
-            f"UNMATCHED {result['unmatched']} of "
-            f"{result['unmatched'] + len(result['bodies'])} quant-inst "
+            f"UNMATCHED {result['unmatched']} of {total_apps} quant-inst "
             "applications did not have the expected (or (not F) body) shape\n"
         )
     return 0

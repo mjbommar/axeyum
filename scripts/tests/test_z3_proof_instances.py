@@ -187,6 +187,61 @@ class ExtractDedupeTests(unittest.TestCase):
         self.assertEqual(result.get("error"), "NO-PROOF")
 
 
+class NotGroundTests(unittest.TestCase):
+    """A nested instantiation (max-generation >= 2, measured on 11 of
+    ADR-2113's 53 cores) can recover a body that still names an OUTER
+    quantifier's own bound variable, e.g. `?p_!4`, resolved only by a
+    SEPARATE `quant-inst` step elsewhere in the proof. Such a body is not
+    ground and must never be emitted as an `(assert ...)` line -- it would be
+    an unbound identifier to any SMT-LIB parser."""
+
+    def test_bound_var_body_is_reported_separately_not_as_ground(self) -> None:
+        text = (
+            "(proof ((_ quant-inst 4) "
+            "(or (not F) (= (select2 Heap_ ?p_!4 ownerRef_) this)))"
+            ")"
+        )
+        result = MODULE.extract(text)
+        self.assertEqual(result["bodies"], [])
+        self.assertEqual(len(result["not_ground"]), 1)
+        self.assertIn("?p_!4", result["not_ground"][0])
+
+    def test_a_mix_of_ground_and_not_ground_is_split_correctly(self) -> None:
+        text = (
+            "(proof (and "
+            "((_ quant-inst 5) (or (not F) (p 5))) "
+            "((_ quant-inst 6) (or (not G) (q ?x!9)))"
+            "))"
+        )
+        result = MODULE.extract(text)
+        self.assertEqual(result["bodies"], ["(p 5)"])
+        self.assertEqual(result["not_ground"], ["(q ?x!9)"])
+
+    def test_cli_default_mode_omits_not_ground_bodies(self) -> None:
+        # Built directly rather than via the fixture: the fixture's own
+        # instantiation is single-level and has no not-ground case to show.
+        import contextlib
+        import io
+        import tempfile
+
+        text = (
+            "(proof ((_ quant-inst 4) "
+            "(or (not F) (= (select2 Heap_ ?p_!4 ownerRef_) this))))"
+        )
+        with tempfile.NamedTemporaryFile("w", suffix=".proof", delete=False) as fh:
+            fh.write(text)
+            path = fh.name
+        try:
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                rc = MODULE.main(["z3-proof-instances.py", path])
+            self.assertEqual(rc, 0)
+            self.assertEqual(out.getvalue(), "")
+            self.assertIn("NOT-GROUND 1 of 1", err.getvalue())
+        finally:
+            Path(path).unlink()
+
+
 class MainCliTests(unittest.TestCase):
     def _run(self, argv):
         import contextlib
