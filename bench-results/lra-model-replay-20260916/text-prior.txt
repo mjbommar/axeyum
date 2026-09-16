@@ -1,0 +1,11 @@
+files scanned: 200
+construct                 files  occurrences
+ite                          49         1381
+div-slash                    64         2661
+distinct                      0            0
+not-eq                       24          440
+to_real                       0            0
+to_int                        0            0
+is_int                        0            0
+bare-eq                     141      1536610
+declare-fun-arity>0          13        86883
