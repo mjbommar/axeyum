@@ -62594,7 +62594,7 @@ wrong sign in the trusted evaluator, fixed and not behind any lever.
 | 3. lever, exact replay, root objects, three fixtures, fuzz nonzero | **MET** — fuzz `algebraic_models=855`, 855 agreements, 0 disagreements |
 | 4. interleaved A/B | **PARTIAL** — QF_NRA pinned 200 done and clean (+4, 4 STABLE-GAIN, 0 STABLE-LOSS, 0 flips, 4/4 replays accepted); QF_NIA, QF_LRA and held-out still running |
 | 5. mutation | **MET** — 14 mutations across 4 suites, every one killed, `--check-anchors` 1130 anchors stale=0 |
-| 6. gates | **PARTIAL** — clippy 903/903 targets 0 diagnostics, default-features workspace check 0, fmt 0, `config_registry` 18/0, staleness 0 unexplained, 29 dispatch suites green (none inert); lib sweep and `progress_frontier` still running |
+| 6. gates | **MET** — see the table below |
 
 ## The finding
 
@@ -62669,6 +62669,30 @@ census attributes the file to a rung the lever does not help.
 **A first-wins decline slot makes a cause census non-predictive of a lever's
 effect whenever the same decider is reachable from more than one rung.** The
 ceiling of 6 above is neither an upper nor a lower bound on the measured +4.
+
+## Gates (criterion 6)
+
+| gate | result |
+| --- | --- |
+| `scripts/check-clippy-complete.sh` | **903 of 903 workspace targets across 27 of 27 crates, all 903 compiled by this run, 0 diagnostics** |
+| default-features `cargo check --workspace --all-targets` | 0, 56 s of real checking |
+| `bench-results/real-opaque-20260914/run-dispatch-reason-suites.sh` | **29 suites green, none inert, 0 failures** — including the newly registered `nra_algebraic_witness` (4 passed) |
+| `cargo test -p axeyum-solver --features full --lib -- --skip reconstruct::` | **1637 passed, 0 failed** |
+| `progress_frontier --features full -- --test-threads=1` | **12 passed, 0 failed, no REGRESSION**, run pinned to `taskset -c 0-7` at host load 5.09 |
+| `cargo fmt --all --check` | 0 |
+| `config_registry` tests | 18 passed, 0 failed |
+| `check-config-registry-staleness.py` | 0 unexplained (33 stale rows, all accepted with written reasons) |
+| `scripts/tests/mutation_controls.py --check-anchors` | 1130 anchors, **stale=0** |
+| `check-merge-hygiene.sh` | PASS |
+| `scripts/check-links.sh` | all links ok |
+
+The bare `cargo clippy --workspace --all-targets --all-features -- -D warnings`
+returned green in **0.70 s** on this tree — the shape CLAUDE.md warns about, a
+gate passing over code it never compiled. The 903/903 above is the wrapper's
+number, and the wrapper had to touch all 14,392 build inputs to get it.
+
+`bench-results/frontier/*.json` are modified by the ratchet run and deliberately
+**not committed**.
 
 ## Landed changes
 
