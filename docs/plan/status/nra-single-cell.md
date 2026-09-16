@@ -3,7 +3,9 @@
 <!-- plan-section: lane-status -->
 
 Status: the route, its certificate checker, its fuzz seed class and its mutation
-suites are landed. The lever `AXEYUM_NRA_CAD=single-cell` ships **OFF**.
+suites are landed. The lever `AXEYUM_NRA_CAD=single-cell` ships **OFF** — the A/B
+would permit ON, and the reason it does not is the assurance level of the
+checker, not the numbers.
 
 ## What this lane was
 
@@ -22,8 +24,12 @@ variables, total degree ≤ 8, conjunctive, coefficients inside the existing
 | excluded by the `1<<40` coefficient clearing alone | 9 |
 | of the 24, decided by the route | 2 |
 | QF_NRA A/B: A `default` → B `single-cell` | **117 → 123 (+6)** |
-| stable losses / `sat`↔`unsat` flips | 0 / 0 |
-| vs declared `:status` | 0 disagreements over 238 comparable verdicts |
+| of that, attributable to the route deciding | **+4** (2 gains are files it declines) |
+| 3x recheck: STABLE-GAIN / STABLE-LOSS / UNSTABLE | **6 / 0 / 2** |
+| QF_NIA | 81 → 81, both movers UNSTABLE |
+| QF_LRA control | 107 → 107, **0 movement of any kind** |
+| `sat`↔`unsat` flips, all three divisions | **0** |
+| vs declared `:status` | 0 disagreements over 594 comparable verdicts |
 | differential fuzz | 1500 instances, 239 decided (237 sat / 2 unsat), 0 disagreements |
 
 ## The two things worth carrying forward

@@ -5,9 +5,10 @@ Index-summary: ADR-2110 measured 45 of 83 undecided QF_NRA files as decided by
 z3's CAD arm and not by its linearization arm, and named the design difference:
 we enumerate the arrangement, z3 and cvc5 build one cell per conflict. This
 builds the second shape as a bounded slice. The lever `AXEYUM_NRA_CAD=single-cell`
-is measured at +6 on QF_NRA with 0 losses and 0 flips (of which +4 is
-attributable to the route itself and 2 are budget-boundary files it declined),
-and its baseline arm reproduces the board's own 117; an `unsat` is emitted only after an independent cell-covering
+is measured at +6 on QF_NRA (6 STABLE-GAIN, 0 STABLE-LOSS, 0 flips on a 3x
+recheck, of which +4 is the route deciding and 2 are files it declines), +0 on
+QF_NIA and 0 movement on the QF_LRA control, with its baseline arm reproducing
+the board's own 117; an `unsat` is emitted only after an independent cell-covering
 checker accepts it, and the honest label on that checker is CHECKED, not proved,
 because its delineability test is sampling. The sizing correction matters more
 than the +6: this lane's own first ceiling of 24 was wrong, and the corrected
@@ -278,9 +279,59 @@ are budget-boundary effects and neither is attributable to the lever. The gain i
 also the same file ADR-2110 classified `UNSTABLE` on its own A/B. That is the
 reason the raw `1 gain / 1 loss` column must not be reported as the result.
 
-<!-- AB-LRA -->
+**QF_LRA, 200 files — the CONTROL.** Nothing linear goes near this route, so a
+mover here would be a finding about the harness and not about the lever:
 
-<!-- AB-RECHECK -->
+| | |
+|---|---:|
+| rows | 200 |
+| A (`default`) | **107** |
+| B (`single-cell`) | **107** |
+| gains / losses / flips | **0 / 0 / 0** |
+| vs declared `:status` | **0 disagreements over 194 comparable verdicts** |
+
+`ab-report.py` exits non-zero if the control moves, so this is a check and not a
+printout. Across all three divisions: **0 `sat`↔`unsat` flips, 0 disagreements
+against declared `:status` over 594 comparable verdicts, and 0 rows where either
+arm failed to produce a verdict token.**
+
+### Every mover re-run three times per arm
+
+`bench-results/route-ownership-20260915/recheck-movers.sh`, one pinned core,
+arms alternating within the three passes, the SAME binary both sides through two
+wrapper scripts so the script's same-binary guard still means something. Exit
+status is recorded per pass as its own column, because a `losses=0` by verdict
+can sit on top of new aborts.
+
+| file | A × 3 | B × 3 | class |
+|---|---|---|---|
+| `sin-problem-7-weak-chunk-0131` | `unknown` ×3 | `sat` ×3 | **STABLE-GAIN** |
+| `sqrt-1mcosq-8-chunk-0562` | `unknown` ×3 | `sat` ×3 | **STABLE-GAIN** |
+| `sin-cos-346-b-chunk-0147` | `unknown` ×3 | `unsat` ×3 | **STABLE-GAIN** |
+| `atan-vega-3-weak-chunk-0243` | `unknown` ×3 | `sat` ×3 | **STABLE-GAIN** |
+| `sin-problem-7-chunk-0124` | `unknown` ×3 | `sat` ×3 | **STABLE-GAIN** |
+| `exp-problem-10-3-weak-chunk-0081` | `unknown` ×3 | `unsat` ×3 | **STABLE-GAIN** |
+| `Stroeder_15__NonTermination2…edge_closing_0` | `sat`/`sat`/`unknown` | `unknown`/`sat`/`unknown` | UNSTABLE |
+| `From_T2__n-21.t2__p3959_terminationG_0` | `unsat` ×3 | `unknown`/`unsat`/`unsat` | UNSTABLE |
+
+**6 STABLE-GAIN, 0 STABLE-LOSS, 2 UNSTABLE, 0 flips, and exit status 0 on all 48
+runs.** The QF_NIA "loss" the raw column showed is UNSTABLE — arm B decides it
+in two of three passes — so it is not a loss, and the QF_NIA gain is the same
+file ADR-2110 classified UNSTABLE on its own A/B. Both QF_NIA movers are ambient
+in the recheck exactly as they are unattributable in the trace.
+
+**The decomposition that matters, and it is not the same as the gain count.** Of
+the six stable QF_NRA gains:
+
+- **four are the route deciding** (`--trace` shows `nra-real-root` `decided`);
+- **two are stable but NOT the route's verdict** —
+  `sin-problem-7-weak-chunk-0131` and `atan-vega-3-weak-chunk-0243` are files the
+  route DECLINES `non-conjunctive`, and their gain is a later rung reaching a
+  different point in its budget because arm B spent a little time declining
+  first. It reproduces 3 of 3, so it is not noise; it is also not this route's
+  capability, and counting it as such would be the mistake.
+
+So: the board number moves +6 and the route's own capability accounts for +4.
 
 The **QF_LRA control** exists because nothing linear goes near this route: a
 mover there would be a finding about the harness and not about the lever, and
@@ -308,11 +359,14 @@ decline causes: nullified-residual 671, non-conjunctive 311, projection 188,
                 certificate-rejected 9, root-isolation 6, root-ordering 2
 ```
 
-Three assertions keep it from passing vacuously: `decided > 0`, **both**
+Four assertions keep it from passing vacuously: `decided > 0`; **both**
 directions exercised (a sweep that only refutes never touches the sat replay; one
-that only satisfies never touches the certificate checker), and
-`agreements == decided - z3_unknown`. Every `sat` model is replayed against the
-original assertions in the fuzz as well as inside the route.
+that only satisfies never touches the certificate checker);
+`agreements == decided - z3_unknown`; and **every `unsat` must carry a non-vacuous
+record of what the CHECKER examined**, because counting `unsat` verdicts alone
+cannot tell an accepted certificate from a checker that stopped looking
+(`checked_cells=11` over the two refutations). Every `sat` model is replayed
+against the original assertions in the fuzz as well as inside the route.
 
 The histogram found **195 unattributed declines** (`not-attempted`) on its first
 run — four `?` sites returning `None` without recording a cause, which is exactly
@@ -331,8 +385,22 @@ z3 control confirming the fixture tests a real property.
 | `nra-single-cell-delineability` | green, **16 tests** | `if is_nullified_at(p, elim, sample)` → `if false` | **exactly 1**: `a_nullified_projection_polynomial_declines_with_its_own_cause` |
 | `nra-single-cell-certificate` | green, **15 tests** | `if at_probe != at_witness` → `if false` | **exactly 1**: `delineability_sampling_rejects_a_cell_whose_root_count_changes` |
 | `nra-single-cell-certificate` | green, **15 tests** | `CellReason::Undecided => Err(..)` → `=> {}` | **exactly 1**: `an_undecided_cell_is_rejected` |
+| `nra-cad-attribution` | green, **44 tests** | `single_cell: true` → `false` on the arm | **exactly 1**: `the_single_cell_arm_differs_in_exactly_the_route` |
+| `nra-cad-attribution` | green, **44 tests** | drop `"single-cell"` from the arm parser | **exactly 1**: `every_arm_name_is_a_value_the_parser_accepts` |
 
-`--check-anchors`: `suites=147 anchors=1085 stale=0`.
+`--check-anchors`: `suites=147 anchors=1087 stale=0`.
+
+The last two extend ADR-2110's own suite, and they close a hole it left one level
+along. That ADR guards `wide` against carrying the same cap as `default` —
+"an A/B whose two arms carry the same value measures nothing and reports 0
+movement, which is indistinguishable from a real null". The `single-cell` arm has
+**two** ways to become vacuous and neither raises an error: the arm carrying
+`single_cell: false` so the treatment IS the control, and `cad_policy` not
+recognising the string the runner exports, so `AXEYUM_NRA_CAD=single-cell` falls
+through to `default` and the treatment arm never runs. Both would print a clean
+`+0`. The arm parser is split out of `cad_policy` for exactly this: the policy is
+read once per process through a `OnceLock`, so a test that set the variable would
+measure whichever test ran first.
 
 The delineability fixture asserts the recorded **cause**, not the verdict, and
 the suite comment says why: the fixture's system is unsatisfiable either way and
@@ -362,8 +430,10 @@ assertion would pass on the mutant. `x·y² − x` is the zero polynomial in `y`
 
 ## Why the default does not move
 
-The A/B result is positive and the cost is not adverse. The default stays off
-anyway, for one reason that is not about the numbers: **the `unsat` side of this
+The A/B result is positive (6 stable gains, 0 stable losses, 0 flips, 0
+`:status` disagreements over 594 comparable verdicts, a clean control, and arm B
+the faster arm on the target division). By the numbers alone it would ship ON.
+It stays off anyway, for one reason that is not about the numbers: **the `unsat` side of this
 route is gated by a checker whose delineability test is sampling.** Every other
 `unsat` producer in this tree is gated by something exact. Making this route the
 default would make a sampling check load-bearing on the default path, and that is
