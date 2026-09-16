@@ -61,7 +61,7 @@ guard that is real instead.
 
 <!-- plan-section: landed-changes -->
 
-| when | what | where |
-|---|---|---|
-| 2026-09-15 | ADR-2122 implied-bound propagation: `ImpliedBounds` column table, `note_decision` driver hook, six additive trail counters, five registered caps, the simplex-backed explanation checker, and the lever `AXEYUM_LRA_BOUND_PROPAGATION` shipping `off` | `crates/axeyum-solver/src/lra_online.rs`, `crates/axeyum-cnf/src/proof_sat{,/theory}.rs`, `crates/axeyum-solver/src/{euf_egraph,layers,cdclt,native_cdclt,lra_theory,config_registry}.rs`, `crates/axeyum-bench/examples/smtcomp_cli.rs` |
-| 2026-09-15 | the sizing sweep: the ceiling is **24.5 %** of tracked decisions, with the per-row spread and the two rows the lever cannot reach | `bench-results/lra-propagation-20260915/` |
+| 2026-09-15 | `03dc0e33c` | lra-propagation: implied-bound propagation into the SAT core -- `ImpliedBounds` column table, the `note_decision` driver hook, six additive trail counters, five registered caps, the simplex-backed explanation checker, lever `off` |
+| 2026-09-15 | `ef4492312` | lra-propagation: the sizing sweep -- the ceiling is **24.5 %** of tracked decisions, with the per-row spread and the two rows the lever provably cannot reach |
+| 2026-09-15 | `cc949ea74` | lra-propagation: the scratch reset was half the propagator's cost, and one guard the mutation run found was decoration |
+| 2026-09-15 | `4f8ebf8cd` | lra-propagation: two A/B runner defects that let an EMPTY run print `AB-DONE`, and the workspace gate script |
