@@ -61797,9 +61797,10 @@ scratch copy and restoring). Folding it in is the coordinator's step.
 | 2026-09-07 | Merge of local `main` (ADR index regenerated to resolve); post-merge workspace `check` and `clippy -D warnings` both green | `1c078316b` |
 
 Status: the route, its certificate checker, its fuzz seed class and its mutation
-suites are landed. The lever `AXEYUM_NRA_CAD=single-cell` ships **OFF** — the A/B
-would permit ON, and the reason it does not is the assurance level of the
-checker, not the numbers.
+suites are landed. **`AXEYUM_NRA_CAD=single-cell-sat` is now the shipped
+default** — it runs the route and keeps only its exact `sat` half. The full
+`single-cell` arm ships **OFF**, because its `unsat` is the half gated on a
+sampling delineability check.
 
 ## What this lane was
 
@@ -61825,6 +61826,40 @@ variables, total degree ≤ 8, conjunctive, coefficients inside the existing
 | `sat`↔`unsat` flips, all three divisions | **0** |
 | vs declared `:status` | 0 disagreements over 594 comparable verdicts |
 | differential fuzz | 1500 instances, 239 decided (237 sat / 2 unsat), 0 disagreements |
+
+## The sat-only arm — what actually shipped
+
+The reason the full route stays off applies to **one of its two halves**. A
+`sat` is a rational model replayed exactly against the original assertions; only
+the `unsat` is gated on a sampling delineability check. `single-cell-sat` runs
+the route and withholds every `unsat` as
+`CadDecline::UnsatWithheldSampledDelineability`, keeping the exact half.
+
+| | |
+|---|---:|
+| QF_NRA: A `default` → B `single-cell-sat` | **117 → 121 (+4)** |
+| gains / losses / flips | **4 / 0 / 0** |
+| 3× recheck | **4 STABLE-GAIN, 0 STABLE-LOSS, 0 UNSTABLE** |
+| vs declared `:status` | 0 disagreements over 236 comparable verdicts |
+| wall clock | A 1,224 s, B **1,184 s** — the withholding arm is still faster |
+
+The four gains are exactly the full arm's four `sat` verdicts; its two `unsat`
+gains are gone, which is the arm doing what it was built to do — confirmed from
+the mover list, not asserted from the design.
+
+| QF_NIA | 82 → 81; the one row rechecks **BOTH-DECIDE** (`unsat` ×3 both arms) |
+| QF_LRA control | 107 → 107, **0 movement of any kind** |
+| flips / `:status` disagreements, all three divisions | **0 / 0 over 593 comparable verdicts** |
+
+**Shipped.** `CAD_DEFAULT` moved from `CadPolicy::DEFAULT` to
+`CadPolicy::SINGLE_CELL_SAT` — the first time this entry's shipped value has
+changed. `AXEYUM_NRA_CAD=default` still selects the pre-ADR-2121 engine, through
+an explicit arm in `parse_cad_arm` rather than the catch-all.
+
+The trade is deliberate and worth stating plainly: the sat-only arm gives up
+**two** stable gains the full arm had (its two `unsat` verdicts), in exchange for
+a default on which **no verdict rests on a finite sample**.
+
 
 ## Gates
 

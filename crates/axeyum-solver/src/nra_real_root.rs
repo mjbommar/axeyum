@@ -407,7 +407,12 @@ pub fn decide_real_poly_constraint(
     // from the enumerative path below. On the shipped arms this is one bool test.
     if cad_policy().single_cell
         && let Some(res @ (CheckResult::Unsat | CheckResult::Sat(_))) =
-            crate::nra_single_cell::decide_single_cell(arena, assertions, deadline)
+            crate::nra_single_cell::decide_single_cell(
+                arena,
+                assertions,
+                deadline,
+                cad_policy().emit_unsat,
+            )
     {
         return Ok(Some(res));
     }
@@ -3797,6 +3802,19 @@ pub(crate) enum CadDecline {
     /// The single-cell route built a refutation and its own certificate checker
     /// REJECTED it. The verdict is dropped and the route declines (ADR-2121).
     CertificateRejected,
+    /// The single-cell route built a covering -- it would have gone on to check
+    /// it and, if the checker accepted, answered `unsat` -- but the arm in force
+    /// forbids emitting `unsat` at all, so the verdict is withheld and the query
+    /// falls through to the rest of the ladder (ADR-2121, the `single-cell-sat`
+    /// arm).
+    ///
+    /// Read this cause precisely: it means "a covering was reached and this arm
+    /// does not emit `unsat`". It does **not** mean a checked refutation was
+    /// discarded -- the checker is not run, because running a checker whose
+    /// result is thrown away is pure cost on a default path. Whether the
+    /// certificate would have been accepted is unknown at this point and must
+    /// not be claimed.
+    UnsatWithheldSampledDelineability,
     /// A cell whose only satisfying points are ALGEBRAIC: every atom of the
     /// level holds at an irrational root, so a model exists there but the
     /// single-cell slice carries rational samples only and cannot descend into
@@ -3827,6 +3845,7 @@ impl CadDecline {
             Self::SliceBounds => "slice-bounds",
             Self::CertificateRejected => "certificate-rejected",
             Self::AlgebraicWitness => "algebraic-witness",
+            Self::UnsatWithheldSampledDelineability => "unsat-withheld-sampled-delineability",
         }
     }
 
@@ -3849,6 +3868,7 @@ impl CadDecline {
         Self::SliceBounds,
         Self::CertificateRejected,
         Self::AlgebraicWitness,
+        Self::UnsatWithheldSampledDelineability,
     ];
 }
 
@@ -3900,8 +3920,17 @@ pub(crate) struct CadPolicy {
     /// Total cells the whole recursion may produce.
     pub(crate) cell_cap: usize,
     /// Whether the model-constructing single-cell route (ADR-2121) runs ahead of
-    /// the enumerative decomposition. `false` on every shipped arm.
+    /// the enumerative decomposition.
     pub(crate) single_cell: bool,
+    /// Whether that route may emit `unsat`.
+    ///
+    /// The two halves of the route have different assurance levels and this is
+    /// what separates them. A `sat` is a rational model replayed through the
+    /// ground evaluator against the original assertions -- **exact**. An `unsat`
+    /// is gated on `nra_cell_cert`, whose delineability test is **sampling**. So
+    /// an arm can take the exact half and leave the sampled half behind, and the
+    /// `single-cell-sat` arm is exactly that.
+    pub(crate) emit_unsat: bool,
 }
 
 impl CadPolicy {
@@ -3910,6 +3939,7 @@ impl CadPolicy {
         arm: "default",
         cell_cap: MAX_CAD_CELLS,
         single_cell: false,
+        emit_unsat: true,
     };
 
     /// 16x the cells. Raising the cap can only let the decomposition VISIT more
@@ -3921,6 +3951,7 @@ impl CadPolicy {
         arm: "wide",
         cell_cap: MAX_CAD_CELLS * 16,
         single_cell: false,
+        emit_unsat: true,
     };
 
     /// ADR-2121's arm: run [`crate::nra_single_cell`] ahead of the enumerative
@@ -3931,15 +3962,40 @@ impl CadPolicy {
         arm: "single-cell",
         cell_cap: MAX_CAD_CELLS,
         single_cell: true,
+        emit_unsat: true,
+    };
+
+    /// The **exact half only**: run the route, take its `sat` (a rational model
+    /// replayed against the original assertions), and withhold its `unsat` (which
+    /// is gated on a sampling delineability check) as a typed decline.
+    ///
+    /// This is not a weaker `single-cell`; it is a differently-assured one. It
+    /// adds no verdict whose justification is a finite sample, so it can carry a
+    /// default in a way the full arm cannot.
+    pub(crate) const SINGLE_CELL_SAT: Self = Self {
+        arm: "single-cell-sat",
+        cell_cap: MAX_CAD_CELLS,
+        single_cell: true,
+        emit_unsat: false,
     };
 }
 
 /// The arm used when `AXEYUM_NRA_CAD` is unset or unrecognized.
 ///
-/// Byte-identical to the pre-ADR-2110 engine: its `cell_cap` IS
-/// [`MAX_CAD_CELLS`], which is what makes the A/B one binary. See the
-/// `CAD_DEFAULT` row of `config_registry`.
-pub(crate) const CAD_DEFAULT: CadPolicy = CadPolicy::DEFAULT;
+/// **ADR-2121 moved this from [`CadPolicy::DEFAULT`] to
+/// [`CadPolicy::SINGLE_CELL_SAT`]**, on a measured +4 with 0 stable losses, 0
+/// flips and 0 `:status` disagreements — and, decisively, on the fact that every
+/// verdict the new default adds is a `sat` replayed exactly against the original
+/// assertions. The half of that route whose justification is a finite sample
+/// (`unsat`, gated on `nra_cell_cert`'s sampling delineability check) is
+/// withheld here as [`CadDecline::UnsatWithheldSampledDelineability`] and reaches
+/// no default.
+///
+/// The cell cap is unchanged at [`MAX_CAD_CELLS`], so this is a route change and
+/// not a budget change. `AXEYUM_NRA_CAD=default` still selects the pre-ADR-2121
+/// engine, by an EXPLICIT arm in [`parse_cad_arm`] rather than by the fallback.
+/// See the `CAD_DEFAULT` row of `config_registry`.
+pub(crate) const CAD_DEFAULT: CadPolicy = CadPolicy::SINGLE_CELL_SAT;
 
 /// The CAD policy in force, read once from `AXEYUM_NRA_CAD`.
 pub(crate) fn cad_policy() -> CadPolicy {
@@ -3960,6 +4016,15 @@ fn parse_cad_arm(value: &str) -> CadPolicy {
         CadPolicy::WIDE
     } else if value.eq_ignore_ascii_case("single-cell") {
         CadPolicy::SINGLE_CELL
+    } else if value.eq_ignore_ascii_case("single-cell-sat") {
+        CadPolicy::SINGLE_CELL_SAT
+    } else if value.eq_ignore_ascii_case("default") {
+        // EXPLICIT, not a fallback. `CAD_DEFAULT` is `SINGLE_CELL_SAT` as of
+        // ADR-2121, so without this arm `AXEYUM_NRA_CAD=default` would resolve
+        // through the catch-all below to the NEW default and every A/B's arm A
+        // would silently become its arm B. `every_arm_name_is_a_value_the_parser_accepts`
+        // is what holds this.
+        CadPolicy::DEFAULT
     } else {
         CAD_DEFAULT
     }
@@ -8137,8 +8202,12 @@ mod tests {
         // three constants the compiler folds away (clippy rejects the folded
         // form, and it is right to: a const assertion is a compile-time claim
         // about a literal, not a test of the table).
-        let arms: Vec<CadPolicy> =
-            vec![CadPolicy::DEFAULT, CadPolicy::WIDE, CadPolicy::SINGLE_CELL];
+        let arms: Vec<CadPolicy> = vec![
+            CadPolicy::DEFAULT,
+            CadPolicy::WIDE,
+            CadPolicy::SINGLE_CELL,
+            CadPolicy::SINGLE_CELL_SAT,
+        ];
 
         let routed: Vec<&str> = arms
             .iter()
@@ -8147,23 +8216,64 @@ mod tests {
             .collect();
         assert_eq!(
             routed,
-            vec!["single-cell"],
-            "exactly one arm turns the single-cell route on"
+            vec!["single-cell", "single-cell-sat"],
+            "exactly the two single-cell arms turn the route on"
+        );
+
+        // The `unsat`-withholding arm is the ONLY one that withholds. An arm
+        // that ran the route and silently kept its `unsat` would make the
+        // sat-only A/B measure the full route instead.
+        let withholding: Vec<&str> = arms
+            .iter()
+            .filter(|p| !p.emit_unsat)
+            .map(|p| p.arm)
+            .collect();
+        assert_eq!(
+            withholding,
+            vec!["single-cell-sat"],
+            "exactly one arm withholds `unsat`"
         );
 
         let default = arms[0];
-        let single = arms[2];
         assert_eq!(
-            single.cell_cap, default.cell_cap,
+            arms[2].cell_cap, default.cell_cap,
             "the single-cell A/B must isolate the ROUTE, not the cell budget"
         );
+        assert_eq!(
+            arms[3].cell_cap, default.cell_cap,
+            "the sat-only A/B must isolate the ROUTE, not the cell budget"
+        );
+        // The two single-cell arms differ in EXACTLY `emit_unsat`, so an A/B
+        // between them prices the `unsat` half on its own.
+        assert_eq!(arms[2].single_cell, arms[3].single_cell);
+        assert_ne!(arms[2].emit_unsat, arms[3].emit_unsat);
 
         let mut names: Vec<&str> = arms.iter().map(|p| p.arm).collect();
         let total = names.len();
         names.sort_unstable();
         names.dedup();
         assert_eq!(names.len(), total, "two arms share a name: {names:?}");
-        assert_eq!(default.arm, "default", "the shipped arm keeps its name");
+        assert_eq!(
+            default.arm, "default",
+            "the pre-ADR-2121 arm keeps its name, so an A/B can still ask for it"
+        );
+        // And the shipped default is the sat-only arm, which must never emit an
+        // `unsat` justified by a sample. Read through the arm list rather than
+        // asserted on the constant: a const assertion is a compile-time claim
+        // about a literal, which clippy rejects and which would not fail if the
+        // default were repointed at an arm that DOES emit one.
+        let shipped: Vec<&str> = arms
+            .iter()
+            .filter(|p| p.arm == CAD_DEFAULT.arm)
+            .filter(|p| !p.emit_unsat)
+            .map(|p| p.arm)
+            .collect();
+        assert_eq!(
+            shipped,
+            vec![CAD_DEFAULT.arm],
+            "the shipped default ({}) must not emit a sampled `unsat`",
+            CAD_DEFAULT.arm
+        );
     }
 
     /// The string `AXEYUM_NRA_CAD` accepts for each arm is the string the A/B
@@ -8174,7 +8284,12 @@ mod tests {
     /// under a treatment label.
     #[test]
     fn every_arm_name_is_a_value_the_parser_accepts() {
-        for policy in [CadPolicy::DEFAULT, CadPolicy::WIDE, CadPolicy::SINGLE_CELL] {
+        for policy in [
+            CadPolicy::DEFAULT,
+            CadPolicy::WIDE,
+            CadPolicy::SINGLE_CELL,
+            CadPolicy::SINGLE_CELL_SAT,
+        ] {
             let parsed = parse_cad_arm(policy.arm);
             assert_eq!(
                 parsed.arm, policy.arm,
@@ -8182,6 +8297,7 @@ mod tests {
                 policy.arm
             );
             assert_eq!(parsed.single_cell, policy.single_cell);
+            assert_eq!(parsed.emit_unsat, policy.emit_unsat);
             assert_eq!(parsed.cell_cap, policy.cell_cap);
         }
         // An unrecognised value is the shipped arm, never a treatment.

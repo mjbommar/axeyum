@@ -85,9 +85,18 @@
 //!   constraint on high per-variable degree and ADR-2121 records how much of the
 //!   slice it costs.
 //!
-//! The route ships **OFF**: [`crate::nra_real_root::cad_policy`]'s arm must be
-//! `single-cell` (`AXEYUM_NRA_CAD=single-cell`) for it to run at all, so the A/B
-//! is one binary and one environment variable.
+//! # Two arms, two assurance levels
+//!
+//! The route's halves are not equally justified, and the lever separates them:
+//!
+//! * `AXEYUM_NRA_CAD=single-cell` runs it whole;
+//! * `AXEYUM_NRA_CAD=single-cell-sat` runs it and **withholds every `unsat`** as
+//!   [`CadDecline::UnsatWithheldSampledDelineability`], keeping only the `sat`
+//!   side — a rational model replayed through the ground evaluator against the
+//!   original assertions, which is exact and rests on no sample.
+//!
+//! That is the whole difference between them: the cell cap is identical on both
+//! and on `default`, so an A/B between any two isolates exactly one thing.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::time::Instant;
@@ -211,6 +220,7 @@ pub(crate) fn decide_single_cell(
     arena: &TermArena,
     assertions: &[TermId],
     deadline: Option<Instant>,
+    emit_unsat: bool,
 ) -> Option<CheckResult> {
     LAST_CELL_CHECK.with(|slot| slot.set(None));
     let atoms = collect_cert_atoms(arena, assertions)?;
@@ -282,6 +292,17 @@ pub(crate) fn decide_single_cell(
             Some(CheckResult::Sat(model))
         }
         LevelOutcome::Refuted { covering, .. } => {
+            if !emit_unsat {
+                // The `single-cell-sat` arm: the exact half of this route only.
+                // Withheld BEFORE the checker runs, deliberately -- running a
+                // checker whose result is thrown away is pure cost on a default
+                // path, and the cause says "a covering was reached and this arm
+                // does not emit `unsat`", not "a checked refutation was
+                // discarded". The second would be a claim about the checker that
+                // this branch has no evidence for.
+                record_cad_decline(CadDecline::UnsatWithheldSampledDelineability);
+                return None;
+            }
             let refutation = CellRefutation::new(order.clone(), atoms.clone(), covering);
             match check_cell_refutation(&refutation) {
                 Ok(stats) => {
@@ -805,7 +826,16 @@ mod tests {
         let parsed = axeyum_smtlib::parse_script(script).expect("parse");
         let (arena, assertions) = (parsed.arena, parsed.assertions);
         reset_cad_decline();
-        let out = decide_single_cell(&arena, &assertions, None);
+        let out = decide_single_cell(&arena, &assertions, None, true);
+        (out, cad_decline().name())
+    }
+
+    /// The same, under the `single-cell-sat` arm: the route runs, its `unsat` is
+    /// withheld.
+    fn decide_sat_only(script: &str) -> (Option<CheckResult>, &'static str) {
+        let parsed = axeyum_smtlib::parse_script(script).expect("parse");
+        reset_cad_decline();
+        let out = decide_single_cell(&parsed.arena, &parsed.assertions, None, false);
         (out, cad_decline().name())
     }
 
@@ -1015,7 +1045,7 @@ mod tests {
             format!("{DECL2}(assert (< (+ (* x x) (* y y)) 1))\n(assert (> x 2))\n(check-sat)\n");
         let parsed = axeyum_smtlib::parse_script(&script).expect("parse");
         reset_cad_decline();
-        let out = decide_single_cell(&parsed.arena, &parsed.assertions, None);
+        let out = decide_single_cell(&parsed.arena, &parsed.assertions, None, true);
         assert!(is_unsat(out.as_ref()), "expected unsat, got {out:?}");
         let stats = last_cell_check().expect("an accepted `unsat` records its check");
         assert!(
@@ -1048,7 +1078,80 @@ mod tests {
     fn an_empty_query_declines() {
         let arena = TermArena::new();
         reset_cad_decline();
-        assert!(decide_single_cell(&arena, &[], None).is_none());
+        assert!(decide_single_cell(&arena, &[], None, true).is_none());
+    }
+
+    /// And it keeps the half that IS exact.
+    ///
+    /// A `sat` from this route is a rational model replayed through the ground
+    /// evaluator against the original assertions, so withholding it would give
+    /// up capability for nothing.
+    #[test]
+    fn the_sat_only_arm_keeps_the_sat_it_can_replay() {
+        let script = format!("{DECL2}(assert (> (* x x) 4))\n(assert (> y x))\n(check-sat)\n");
+        let (full, _) = decide(&script);
+        let (held, cause) = decide_sat_only(&script);
+        assert_eq!(
+            format!("{:?}", full.is_some()),
+            format!("{:?}", held.is_some()),
+            "the two arms must agree on a SAT query: {full:?} vs {held:?} ({cause})"
+        );
+        assert!(
+            !matches!(held, Some(CheckResult::Unsat)),
+            "the sat-only arm must never emit `unsat`: {held:?}"
+        );
+    }
+
+    /// The withholding arm must never CHANGE a verdict, only remove one.
+    ///
+    /// Derived over every fixture in this module rather than asserted on one:
+    /// for each, the sat-only arm's outcome must be the full arm's outcome with
+    /// `Unsat` replaced by a decline, and nothing else.
+    ///
+    /// This is the SOLE killer of the `if !emit_unsat` mutation in
+    /// `scripts/tests/mutation_controls.py`. A second test asserting the same
+    /// property on one fixture lived here briefly and was removed rather than
+    /// kept: it died on the same mutation, and two tests dying on one guard
+    /// deletion means one of them was measuring nothing the other did not. The
+    /// contrast it existed for — the same fixture answering `unsat` under the
+    /// full arm — is inside the loop below, which runs both arms on every
+    /// fixture and branches on what the full arm said.
+    #[test]
+    fn withholding_removes_unsat_and_changes_nothing_else() {
+        let scripts = [
+            format!("{DECL2}(assert (< (+ (* x x) (* y y)) 1))\n(assert (> x 2))\n(check-sat)\n"),
+            format!("{DECL2}(assert (< (+ (* x x) (* y y)) 4))\n(assert (> x 0))\n(check-sat)\n"),
+            format!("{DECL2}(assert (> (* x x) 4))\n(assert (> y x))\n(check-sat)\n"),
+            format!("{DECL2}(assert (or (> x 0) (> y 0)))\n(check-sat)\n"),
+            "(declare-fun x () Real)\n(assert (> x 0))\n(assert (< x 0))\n(check-sat)\n".to_owned(),
+            "(declare-fun x () Real)\n(assert (= (* x x) 2))\n(check-sat)\n".to_owned(),
+        ];
+        let mut withheld = 0usize;
+        for script in &scripts {
+            let (full, _) = decide(script);
+            let (held, cause) = decide_sat_only(script);
+            match &full {
+                Some(CheckResult::Unsat) => {
+                    assert!(held.is_none(), "an `unsat` must become a decline: {held:?}");
+                    assert_eq!(cause, "unsat-withheld-sampled-delineability");
+                    withheld += 1;
+                }
+                Some(CheckResult::Sat(_)) => {
+                    assert!(
+                        is_sat(held.as_ref()),
+                        "a `sat` must survive withholding: {held:?} ({cause})"
+                    );
+                }
+                _ => assert!(
+                    held.is_none(),
+                    "a decline must stay a decline: {held:?} ({cause})"
+                ),
+            }
+        }
+        assert!(
+            withheld > 0,
+            "no fixture exercised the withholding path: the test is vacuous"
+        );
     }
 
     #[test]

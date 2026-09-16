@@ -29,9 +29,10 @@ DECIDED = ("sat", "unsat")
 STATUS_RE = re.compile(rb"\(\s*set-info\s+:status\s+(sat|unsat|unknown)\s*\)")
 
 
-def read_shards(root: Path, division: str) -> list[dict[str, str]]:
+def read_shards(root: Path, division: str, tag: str = "") -> list[dict[str, str]]:
+    prefix = f"ab-{tag}-" if tag else "ab-"
     rows: list[dict[str, str]] = []
-    for path in sorted(root.glob(f"ab-{division}-shard*.tsv")):
+    for path in sorted(root.glob(f"{prefix}{division}-shard*.tsv")):
         lines = path.read_text(encoding="utf-8").splitlines()
         if not lines:
             continue
@@ -63,15 +64,21 @@ def main() -> int:
         default="/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental",
     )
     ap.add_argument("--movers", help="write the mover list here")
+    ap.add_argument(
+        "--tag",
+        default="",
+        help="arm tag in the shard filenames (`ab-<tag>-<division>-shard<N>.tsv`); empty for the original untagged sweep",
+    )
     args = ap.parse_args()
 
     root = Path(args.root)
     corpus = Path(args.corpus_root)
+    arm_label = args.tag or "single-cell"
     rc = 0
     movers: list[tuple[str, str, str, str]] = []
 
     for div in args.divisions:
-        rows = read_shards(root, div)
+        rows = read_shards(root, div, args.tag)
         if not rows:
             print(f"\n== {div}: NO SHARD ROWS -- the sweep did not run ==")
             rc = 1
@@ -90,7 +97,7 @@ def main() -> int:
         print(f"\n== {div} ==")
         print(f"  rows                       {len(rows)}")
         print(f"  A (default)                {a_dec}")
-        print(f"  B (single-cell)            {b_dec}")
+        print(f"  B ({arm_label})".ljust(29) + f"{b_dec}")
         print(f"  net                        {b_dec - a_dec:+d}")
         print(f"  gains / losses / flips     {len(gains)} / {len(losses)} / {len(flips)}")
         print(f"  rows where an arm produced no verdict token   {none_rows}")

@@ -11,6 +11,8 @@ set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 BIN="${1:?usage: ab-sweep.sh /path/to/smtcomp_cli}"
+ARM_B="${2:-single-cell}"
+TAG="${3:-$ARM_B}"
 CORES=(1 9 3 11)
 
 for div in qfnra qfnia qflra; do
@@ -19,10 +21,10 @@ for div in qfnra qfnia qflra; do
   for i in 0 1 2 3; do
     "$HERE/ab-run.sh" \
       --list "$HERE/shard$i-$div.txt" \
-      --out "$HERE/ab-$div-shard$i.tsv" \
+      --out "$HERE/ab-$TAG-$div-shard$i.tsv" \
       --shard "$i" --core "${CORES[$i]}" \
-      --binary "$BIN" --arm-b single-cell --budget-s 24 \
-      > "$HERE/ab-$div-shard$i.log" 2>&1 &
+      --binary "$BIN" --arm-b "${ARM_B:-single-cell}" --budget-s 24 \
+      > "$HERE/ab-$TAG-$div-shard$i.log" 2>&1 &
     pids+=($!)
   done
   rc=0

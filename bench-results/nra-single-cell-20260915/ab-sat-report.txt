@@ -1,0 +1,40 @@
+
+== qfnra ==
+  rows                       200
+  A (default)                117
+  B (sat)                    121
+  net                        +4
+  gains / losses / flips     4 / 0 / 0
+  rows where an arm produced no verdict token   0
+  vs declared :status        0 disagreements over 236 comparable verdicts
+  wall clock                 A 1224 s, B 1184 s
+    GAIN   A=unknown -> B=sat   QF_NRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0131.smt2
+    GAIN   A=unknown -> B=sat   QF_NRA/meti-tarski/sqrt/1mcosq/8/sqrt-1mcosq-8-chunk-0562.smt2
+    GAIN   A=unknown -> B=sat   QF_NRA/meti-tarski/atan/vega/3/weak/atan-vega-3-weak-chunk-0243.smt2
+    GAIN   A=unknown -> B=sat   QF_NRA/meti-tarski/sin/problem/7/sin-problem-7-chunk-0124.smt2
+
+== qfnia ==
+  rows                       200
+  A (default)                82
+  B (sat)                    81
+  net                        -1
+  gains / losses / flips     0 / 1 / 0
+  rows where an arm produced no verdict token   0
+  vs declared :status        0 disagreements over 163 comparable verdicts
+  wall clock                 A 3075 s, B 3098 s
+    LOSS   A=unsat -> B=unknown   QF_NIA/20170427-VeryMax/ITS/From_T2__n-21.t2__p3959_terminationG_0.smt2
+
+== qflra ==
+  rows                       200
+  A (default)                107
+  B (sat)                    107
+  net                        +0
+  gains / losses / flips     0 / 0 / 0
+  rows where an arm produced no verdict token   0
+  vs declared :status        0 disagreements over 194 comparable verdicts
+  wall clock                 A 2295 s, B 2294 s
+  CONTROL: the linear division moved 0 rows -- as expected
+
+wrote bench-results/nra-single-cell-20260915/movers-sat-all.txt (5 movers)
+
+movers per division: qfnia=1, qfnra=4
