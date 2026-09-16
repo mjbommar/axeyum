@@ -34,8 +34,12 @@ for arm in off on screened; do
   total=0
   for suite in $SUITES; do
     log="$(mktemp)"
+    # Through `cargo-serialized.sh`, not bare cargo: two dev boxes have been
+    # taken down by concurrent lane builds here and a kernel OOM killed a live
+    # session. Bare cargo in a runner that loops eighteen times is the shape
+    # that does it.
     AXEYUM_LRA_WARM_CUBE="$arm" \
-      cargo test -p axeyum-solver --features z3,full --test "$suite" \
+      scripts/cargo-serialized.sh test -p axeyum-solver --features z3,full --test "$suite" \
       > "$log" 2>&1
     rc=$?
     # The harness's own count. `grep -c` inside arithmetic is banned here and a
