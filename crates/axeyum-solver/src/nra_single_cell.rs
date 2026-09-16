@@ -345,7 +345,12 @@ fn solve_level(
             //    must be rational because this slice does not carry algebraic
             //    coordinates into a lower level.
             let CellRep::Rational(x) = cell.rep else {
-                record_cad_decline(CadDecline::AlgebraicCoarsening);
+                // Every atom of this level holds at an IRRATIONAL root. A model
+                // may well live there; this slice carries rational samples only,
+                // so it refuses rather than round. Recorded apart from
+                // `AlgebraicCoarsening` because the two say different things
+                // about what would fix them.
+                record_cad_decline(CadDecline::AlgebraicWitness);
                 return None;
             };
             if level + 1 == ctx.order.len() {
@@ -353,14 +358,13 @@ fn solve_level(
                 full.push((var, x));
                 return Some(LevelOutcome::Sat(full));
             }
-            if !cell.open {
-                // A rational point cell satisfying every atom of this level. It
-                // may well extend to a model, but a point cell has no interior
-                // and the certificate cannot express a witness in one, so this
-                // route refuses rather than answer without evidence.
-                record_cad_decline(CadDecline::IndeterminateSign);
-                return None;
-            }
+            // A RATIONAL point cell is descended into exactly like an open one.
+            // The certificate distinguishes the two: on a point cell the witness
+            // must BE the root, and no delineability generalisation is needed
+            // because the cell is that single point. Refusing here instead was
+            // this route's first measured cause of death on the real corpus --
+            // `indeterminate-sign` on every conjunctive `meti-tarski` file in
+            // the in-bounds set.
             let mut deeper = sample.clone();
             deeper.push((var, x));
             match solve_level(ctx, level + 1, deeper)? {

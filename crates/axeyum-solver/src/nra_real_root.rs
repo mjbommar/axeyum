@@ -3797,6 +3797,14 @@ pub(crate) enum CadDecline {
     /// The single-cell route built a refutation and its own certificate checker
     /// REJECTED it. The verdict is dropped and the route declines (ADR-2121).
     CertificateRejected,
+    /// A cell whose only satisfying points are ALGEBRAIC: every atom of the
+    /// level holds at an irrational root, so a model exists there but the
+    /// single-cell slice carries rational samples only and cannot descend into
+    /// it. Distinct from [`Self::AlgebraicCoarsening`], which is a bracket that
+    /// could not be narrowed -- this one is a representable answer the slice
+    /// declines to represent, and it is the route's dominant cause on the real
+    /// corpus (ADR-2121).
+    AlgebraicWitness,
 }
 
 impl CadDecline {
@@ -3818,6 +3826,7 @@ impl CadDecline {
             Self::IndeterminateSign => "indeterminate-sign",
             Self::SliceBounds => "slice-bounds",
             Self::CertificateRejected => "certificate-rejected",
+            Self::AlgebraicWitness => "algebraic-witness",
         }
     }
 
@@ -3839,6 +3848,7 @@ impl CadDecline {
         Self::IndeterminateSign,
         Self::SliceBounds,
         Self::CertificateRejected,
+        Self::AlgebraicWitness,
     ];
 }
 

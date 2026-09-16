@@ -6184,32 +6184,40 @@ pub static REGISTRY: &[ConfigEntry] = &[
         name: "CAD_DEFAULT",
         module: "crates/axeyum-solver/src/nra_real_root.rs",
         value: "CadPolicy::DEFAULT",
-        unit: "policy arm for the N-variable cylindrical decomposition's cell cap",
+        unit: "policy arm for the N-variable cylindrical decomposition: cell cap, and whether the single-cell route runs",
         protects: Protects::Memory,
         on_exceed: OnExceed::RefuseUnknown,
         signal: Signal::ToCaller,
         guarded_by: "",
         env_override: Some("AXEYUM_NRA_CAD"),
         justification: dated(
-            "docs/research/09-decisions/adr-2110-qf-nra-what-decides-the-seventy.md",
+            "docs/research/09-decisions/adr-2121-single-cell-cad-for-nra.md",
             "2026-09-15",
             None,
-            // The measurement is "on the 83 QF_NRA files the 2026-09-15 board
-            // leaves undecided, the `nra-real-root` rung declines with a cause
-            // that is NOT the cell cap". It rests on the attribution existing
-            // (`cad_decline`) and on the budget still being what the recursion
-            // charges against.
+            // Two measurements now. ADR-2110: "on the 83 QF_NRA files the
+            // 2026-09-15 board leaves undecided, the `nra-real-root` rung
+            // declines with a cause that is NOT the cell cap". ADR-2121 adds the
+            // `single-cell` arm, whose `cell_cap` is IDENTICAL to `default`'s --
+            // so the third arm's A/B isolates the route, not the budget. Both
+            // rest on the attribution existing (`cad_decline`) and on the budget
+            // still being what the recursion charges against.
             &[
                 sym("crates/axeyum-solver/src/nra_real_root.rs", "cad_decline"),
                 sym("crates/axeyum-solver/src/nra_real_root.rs", "CellBudget"),
+                sym("crates/axeyum-solver/src/nra_real_root.rs", "SINGLE_CELL"),
             ],
             &[
                 live("cad_policy", "crates/axeyum-solver/src/nra_real_root.rs"),
                 live("note", "crates/axeyum-solver/src/nra_real_root.rs"),
+                live(
+                    "decide_single_cell",
+                    "crates/axeyum-solver/src/nra_single_cell.rs",
+                ),
                 doc("bench-results/nra-trace-20260915/README.md"),
+                doc("bench-results/nra-single-cell-20260915/README.md"),
             ],
         ),
-        note: "Whether the N-variable CAD gets the shipped cell budget or 16x it. DEFAULT is the shipped arm and is byte-identical to the pre-ADR-2110 engine (`CadPolicy::DEFAULT.cell_cap` IS `MAX_CAD_CELLS`), so the A/B is one binary and one env var. Raising the cap can only let the decomposition VISIT more cells before declining, and a definite verdict is returned only after COMPLETE coverage of the arrangement -- so `wide` can turn an `unknown` into a verdict and can never flip one; `the_wide_arm_only_raises_the_cap` holds that the two arms differ in exactly the cap and nothing else. It ships OFF because the cost was unmeasured when it landed, not because the verdict was in doubt. The lever exists because the ADR-2110 census could not otherwise tell a cell-cap decline from a projection decline: measured 2026-09-15, the exact decider's OWN recorded cause on the largest bucket is `non-conjunctive` and `projection`, NOT `cell-budget`, which is what this lever was built to test and is why the A/B is expected to move little. Read the A/B in `bench-results/nra-trace-20260915/README.md` before raising the default.",
+        note: "Whether the N-variable CAD gets the shipped cell budget or 16x it. DEFAULT is the shipped arm and is byte-identical to the pre-ADR-2110 engine (`CadPolicy::DEFAULT.cell_cap` IS `MAX_CAD_CELLS`), so the A/B is one binary and one env var. Raising the cap can only let the decomposition VISIT more cells before declining, and a definite verdict is returned only after COMPLETE coverage of the arrangement -- so `wide` can turn an `unknown` into a verdict and can never flip one; `the_wide_arm_only_raises_the_cap` holds that the two arms differ in exactly the cap and nothing else. It ships OFF because the cost was unmeasured when it landed, not because the verdict was in doubt. The lever exists because the ADR-2110 census could not otherwise tell a cell-cap decline from a projection decline: measured 2026-09-15, the exact decider's OWN recorded cause on the largest bucket is `non-conjunctive` and `projection`, NOT `cell-budget`, which is what this lever was built to test and is why the A/B is expected to move little. Read the A/B in `bench-results/nra-trace-20260915/README.md` before raising the default. ADR-2121 adds a THIRD arm, `single-cell`, which leaves the cap at `MAX_CAD_CELLS` and instead offers the query to `nra_single_cell::decide_single_cell` -- the model-constructing CDCAC route that builds one cell per conflict instead of enumerating the arrangement -- before the enumerative decomposition. Its `cell_cap` is IDENTICAL to `default`'s, so an A/B between `default` and `single-cell` isolates the ROUTE and not the budget, and the two levers do not interact. It also ships OFF, and its `unsat` is emitted only after `nra_cell_cert::check_cell_refutation` accepts the covering, so a bug in it declines rather than answers. Read `bench-results/nra-single-cell-20260915/README.md` for that arm's A/B.",
     },
     ConfigEntry {
         name: "COARSEN_MAX_EXP",

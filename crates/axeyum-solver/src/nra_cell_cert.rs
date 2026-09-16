@@ -195,9 +195,17 @@ pub enum CellReason {
         atom_index: usize,
     },
     /// Every value of the next variable is refuted above this cell. `witness` is
-    /// the interior rational at which the sub-covering was built.
+    /// the rational at which the sub-covering was built.
+    ///
+    /// On an **open** cell the witness must be strictly interior, and the
+    /// sub-covering is generalised from it to the whole cell by the
+    /// delineability check. On a **point** cell the witness must be the root
+    /// itself, exactly — and then no generalisation is needed at all, because
+    /// the cell IS that point. The checker decides which case applies from the
+    /// arrangement it recomputed, so a producer cannot choose the cheaper one.
     Deeper {
-        /// An interior rational of this cell. Point cells may not carry one.
+        /// A rational of this cell: strictly interior if open, the root itself
+        /// if the cell is a point.
         witness: Rational,
         /// The covering one level down.
         sub: Box<CellCovering>,
@@ -318,6 +326,11 @@ pub struct CellCheckStats {
     pub atom_cells: usize,
     /// Cells closed by a sub-covering.
     pub deeper_cells: usize,
+    /// Of those, the ones that were POINT cells, where the delineability probe
+    /// is skipped because a single point needs no generalisation. Counted apart
+    /// so a test can tell "the probe did not need to run" from "the probe did
+    /// not run".
+    pub point_deeper_cells: usize,
     /// Root-count comparisons made by the delineability sampling (check 6).
     pub delineability_probes: usize,
     /// The deepest level reached.
@@ -911,10 +924,31 @@ impl Cell<'_> {
         Some(pts)
     }
 
-    /// Whether the rational `q` lies strictly inside this cell.
-    fn contains_strictly(&self, q: Rational) -> Option<bool> {
+    /// Whether the rational `q` is this cell's witness point: strictly interior
+    /// for an open cell, exactly the root for a point cell (which requires the
+    /// root to BE that rational).
+    fn admits_witness(&self, q: Rational) -> Option<bool> {
         match self {
-            Cell::Point(_) => Some(false),
+            Cell::Point(r) => match r.exact {
+                Some(x) => Some(q.checked_cmp(&x)? == Ordering::Equal),
+                // An irrational root is not any rational. Refine once to try to
+                // discover the root is rational after all, then decide.
+                None => {
+                    let mut work = (*r).clone();
+                    for _ in 0..REFINE_DEPTH {
+                        if let Some(x) = work.exact {
+                            return Some(q.checked_cmp(&x)? == Ordering::Equal);
+                        }
+                        if q.checked_cmp(&work.strict_lower())? != Ordering::Greater
+                            || q.checked_cmp(&work.upper())? == Ordering::Greater
+                        {
+                            return Some(false); // outside the bracket: not the root
+                        }
+                        refine(&mut work)?;
+                    }
+                    Some(false)
+                }
+            },
             Cell::Open { lo, hi } => {
                 if let Some(r) = lo {
                     // q must be strictly above the root. `r.upper()` is at or
@@ -1241,11 +1275,14 @@ fn check_covering(
             }
             CellReason::Deeper { witness, sub } => {
                 stats.deeper_cells += 1;
-                // 5a: the witness is strictly inside an OPEN cell.
-                let inside = cell
-                    .contains_strictly(*witness)
+                // 5a: the witness belongs to this cell -- strictly interior if
+                // the cell is open, EXACTLY the root if it is a point. The cell
+                // kind comes from the arrangement recomputed above, not from the
+                // certificate, so this is not the producer's choice to make.
+                let admitted = cell
+                    .admits_witness(*witness)
                     .ok_or(CellCheckFailure::RefinementExhausted { level })?;
-                if !inside {
+                if !admitted {
                     return Err(CellCheckFailure::WitnessOutsideCell { level, cell: idx });
                 }
                 // 5b: the sub-covering extends this sample by exactly (var, witness).
@@ -1254,8 +1291,16 @@ fn check_covering(
                 if sub.sample != expected_sample {
                     return Err(CellCheckFailure::SubSampleMismatch { level, cell: idx });
                 }
-                // 6: delineability, by sampling.
-                check_delineability(sub, cell, level, idx, stats)?;
+                // 6: delineability, by sampling -- and ONLY on an open cell. A
+                // point cell has no interior to probe, and needs none: the cell
+                // is the single point the sub-covering was built at, so
+                // refutation there IS refutation on the whole cell. Skipping the
+                // probe here is not a weakening; running it would be vacuous.
+                if matches!(cell, Cell::Open { .. }) {
+                    check_delineability(sub, cell, level, idx, stats)?;
+                } else {
+                    stats.point_deeper_cells += 1;
+                }
                 // 5c: recurse.
                 check_covering(refutation, sub, level + 1, stats)?;
             }

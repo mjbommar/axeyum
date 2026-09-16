@@ -1408,6 +1408,36 @@ macro_rules! full_exports {
             AffineSkolemWitness, QuantifiedSkolemSatCertificate, check_quantified_skolem_sat,
         };
         pub use quant_sat_cert::{check_model, check_model_with_assignment};
+
+        /// Run the ADR-2121 single-cell CAD route DIRECTLY, bypassing the
+        /// `AXEYUM_NRA_CAD` dispatch gate.
+        ///
+        /// This exists for the differential fuzz. The route ships OFF behind an
+        /// environment variable read once per process, so a fuzz that relied on
+        /// setting that variable would be a gate on one shell -- and setting it
+        /// from inside a test is both racy and (in edition 2024) `unsafe`, which
+        /// is denied workspace-wide. An explicit entry point is the honest
+        /// alternative: the fuzz exercises exactly the code the lever enables,
+        /// with no ambient state, and the count of tests it runs is visible.
+        ///
+        /// This is NOT a dispatch entry point and nothing in the solver calls it.
+        #[doc(hidden)]
+        #[must_use]
+        pub fn single_cell_decide_for_testing(
+            arena: &axeyum_ir::TermArena,
+            assertions: &[axeyum_ir::TermId],
+        ) -> Option<crate::backend::CheckResult> {
+            crate::nra_real_root::reset_cad_decline();
+            crate::nra_single_cell::decide_single_cell(arena, assertions, None)
+        }
+
+        /// The cause the single-cell route last recorded, as a stable key.
+        /// Reset by every [`single_cell_decide_for_testing`] call.
+        #[doc(hidden)]
+        #[must_use]
+        pub fn single_cell_decline_cause() -> &'static str {
+            crate::nra_real_root::cad_decline().name()
+        }
         #[doc(hidden)]
         pub use quant_uf_model_sat_cert::{
             QUANTIFIED_UF_BINDER_CAP, QUANTIFIED_UF_PROFILE_CAP, QuantifiedUfModelSatCertificate,
