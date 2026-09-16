@@ -1,0 +1,81 @@
+=== STEP clippy-workspace ===
+    Blocking waiting for file lock on build directory
+    Checking axeyum-py v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-py)
+    Checking axeyum-solver v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-solver)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 51.64s
+=== RC clippy-workspace = 0 ===
+=== STEP cert ===
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.10s
+     Running tests/quant_session_arith_certificate.rs (target/debug/deps/quant_session_arith_certificate-e8167f2de991f65b)
+
+running 3 tests
+test the_subject_function_is_present_and_substantial ... ok
+test the_candidate_fixpoint_refutation_exit_is_certified ... ok
+test every_instance_set_unsat_exit_assigns_a_certificate ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+=== RC cert = 0 ===
+=== STEP session-theory ===
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on build directory
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.09s
+     Running unittests src/lib.rs (target/debug/deps/axeyum_solver-acf47eaa496561d6)
+
+running 8 tests
+test qinst_session_theory::tests::only_order_atoms_are_pulled_back_from_the_abstraction ... ok
+test qinst_session_theory::tests::the_euf_only_arm_hosts_no_arithmetic_and_never_rebuilds ... ok
+test qinst_session_theory::tests::a_flush_with_no_pending_atom_is_a_no_op ... ok
+test qinst_session_theory::tests::take_new_atoms_is_always_zero_because_the_driver_registers ... ok
+test qinst_session_theory::tests::pop_retracts_an_arithmetic_bound_a_backjump_undid ... ok
+test qinst_session_theory::tests::hosting_never_manufactures_a_conflict_on_a_satisfiable_assignment ... ok
+test qinst_session_theory::tests::a_rebuild_replays_the_root_assignments_into_the_new_sub_theory ... ok
+test qinst_session_theory::tests::hosting_refutes_an_arithmetic_conflict_the_euf_half_cannot_see ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 1941 filtered out; finished in 0.00s
+
+=== RC session-theory = 0 ===
+=== STEP ground-session ===
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running unittests src/lib.rs (target/debug/deps/axeyum_solver-acf47eaa496561d6)
+
+running 6 tests
+test qinst_egraph::tests::ground_session_level_1_declines_a_ground_set_with_no_theory_atom ... ok
+test qinst_egraph::tests::ground_session_level_1_reuses_one_variable_per_abstracted_term ... ok
+test qinst_egraph::tests::ground_session_level_1_hosts_an_arithmetic_ground_set_level_0_refuses ... ok
+test qinst_egraph::tests::ground_session_level_2_hosts_the_comparison_level_1_abstracts ... ok
+test qinst_egraph::tests::ground_session_level_2_refutes_an_arithmetic_ground_set_level_1_cannot ... ok
+test qinst_egraph::tests::ground_session_level_1_never_manufactures_an_unsat_on_a_satisfiable_set ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 1943 filtered out; finished in 0.01s
+
+=== RC ground-session = 0 ===
+=== STEP schedule ===
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running unittests src/lib.rs (target/debug/deps/axeyum_solver-acf47eaa496561d6)
+
+running 12 tests
+test qinst_egraph::tests::the_historical_helper_agrees_with_the_named_schedule ... ok
+test qinst_egraph::tests::the_two_ground_check_schedules_differ_by_exactly_the_leading_rounds ... ok
+test abv::tests::lazy_ext_branch_schedule_repairs_select_backed_scalar_literals ... ok
+test abv::tests::lazy_ext_branch_schedule_rejects_scalar_closure_loop ... ok
+test euf::tests::lazy_function_consistency_schedules_unary_int_siblings_after_violation ... ok
+test abv::tests::lazy_ext_projection_repairs_multi_literal_branch_schedule ... ok
+test ufbv_online::tests::merged_array_parents_schedule_select_congruence ... ok
+test ufbv_online::tests::transitive_parent_merge_schedules_only_the_violated_endpoint_reads ... ok
+test abv::tests::lazy_ext_branch_beam_allows_temporary_uphill_schedule ... ok
+test ufbv_online::tests::parent_select_pair_reschedules_for_an_alternate_equality_explanation ... ok
+test ufbv_online::tests::one_store_parent_schedules_equal_candidate_indices ... ok
+test ufbv_online::tests::congruent_store_parents_schedule_select_congruence ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 1937 filtered out; finished in 0.01s
+
+=== RC schedule = 0 ===
+=== STEP fmt ===
+=== RC fmt = 0 ===
+ALL-STEPS-DONE

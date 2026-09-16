@@ -175,6 +175,7 @@ macro_rules! full_modules {
         mod qfufbv_alethe;
         mod qfuflia_alethe;
         mod qinst_egraph;
+        mod qinst_session_theory;
         mod quant_affine_growth_cert;
         mod quant_alethe;
         mod quant_bool_model_sat;

@@ -1,0 +1,170 @@
+=== STEP check-default ===
+    Checking axeyum-solver v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-solver)
+    Checking axeyum-property v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-property)
+    Checking axeyum-machine-evidence v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-machine-evidence)
+    Checking axeyum-bench v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-bench)
+    Checking axeyum-verify v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-verify)
+    Checking axeyum-evm v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-evm)
+    Checking axeyum-py v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-py)
+    Checking axeyum-wasm v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-wasm)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 10s
+=== RC check-default = 0 ===
+=== STEP config-registry ===
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.04s
+     Running unittests src/lib.rs (target/debug/deps/axeyum_solver-acf47eaa496561d6)
+
+running 18 tests
+test config_registry::tests::recording_is_opt_in_and_restores ... ok
+test config_registry::tests::an_instrumented_gate_records_through_the_real_path ... ok
+test config_registry::tests::dated_justifications_are_well_formed ... ok
+test config_registry::tests::dated_justifications_declare_a_basis ... ok
+test config_registry::tests::the_dated_count_only_rises ... ok
+test config_registry::tests::unsignalled_relaxations_name_their_guard ... ok
+test config_registry::tests::registry_is_sorted_and_unique ... ok
+test config_registry::tests::uninstrumentable_bounds_are_outside_this_crate ... ok
+test config_registry::tests::the_trace_line_reports_what_is_unmeasured ... ok
+test config_registry::tests::trace_line_is_deterministic ... ok
+test config_registry::tests::exemptions_are_real_and_disjoint ... ok
+test config_registry::tests::registry_len_matches_its_own_source ... ok
+test config_registry::tests::every_silent_admission_bound_is_instrumented ... ok
+test config_registry::tests::the_unattributed_backlog_only_shrinks ... ok
+test config_registry::tests::consulted_keys_are_registered ... ok
+test config_registry::tests::every_governing_constant_is_registered ... ok
+test config_registry::tests::every_env_override_is_read_by_the_code ... ok
+test config_registry::tests::every_entry_names_a_live_constant ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 1931 filtered out; finished in 1.89s
+
+=== RC config-registry = 0 ===
+=== STEP quantified_route_trace ===
+   Compiling axeyum-solver v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-solver)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.75s
+     Running tests/quantified_route_trace.rs (target/debug/deps/quantified_route_trace-fe2d54097dbada71)
+
+running 6 tests
+test a_reduce_to_qf_rung_keeps_the_dispatch_detail ... ok
+test decider_agrees_with_the_verdict ... ok
+test every_quantified_file_records_at_least_one_rung has been running for over 60 seconds
+test nat_induction_names_itself has been running for over 60 seconds
+test the_finder_keeps_only_its_own_segment has been running for over 60 seconds
+test the_full_mbqi_rung_is_charged_its_own_wall_clock has been running for over 60 seconds
+test every_quantified_file_records_at_least_one_rung ... ok
+test nat_induction_names_itself ... ok
+test the_finder_keeps_only_its_own_segment ... ok
+test the_full_mbqi_rung_is_charged_its_own_wall_clock ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 66.77s
+
+=== RC quantified_route_trace = 0 ===
+=== STEP quantifier_positive_path ===
+   Compiling axeyum-solver v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-solver)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.78s
+     Running tests/quantifier_positive_path.rs (target/debug/deps/quantifier_positive_path-18aa6db8de40af30)
+
+running 15 tests
+test a_replacement_whose_owner_is_not_trusted_is_refused ... ok
+test a_correct_positive_replacement_certificate_is_accepted ... ok
+test a_replacement_at_a_negative_position_is_refused ... ok
+test the_bare_instance_is_refused_as_a_replacement_conclusion ... ok
+test a_universal_at_a_negative_position_is_never_registered ... ok
+test the_level_guard_restores_the_previous_setting ... ok
+test a_shape_the_widening_does_not_reach_is_identical_at_both_levels ... ok
+test the_positive_path_guard_does_not_cross_a_thread_boundary ... ok
+test the_registration_set_is_deterministic_across_runs ... ok
+test the_unsat_control_is_actually_refuted ... ok
+test the_converted_refutation_carries_its_replacement_derivation ... ok
+test the_widened_level_converts_a_refutation_the_shipped_level_cannot_reach ... ok
+test a_refutation_the_shipped_level_finds_survives_the_raised_level ... ok
+test a_satisfiable_query_is_not_refuted_at_any_level ... ok
+test the_front_door_also_refuses_the_satisfiable_queries_at_a_raised_level ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+
+=== RC quantifier_positive_path = 0 ===
+=== STEP quantifier_trigger_alternatives ===
+   Compiling axeyum-solver v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-solver)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.76s
+     Running tests/quantifier_trigger_alternatives.rs (target/debug/deps/quantifier_trigger_alternatives-cbbc9d3547bdbdfe)
+
+running 7 tests
+test the_guard_does_not_cross_a_thread_boundary ... ok
+test the_alternative_set_is_deterministic_across_runs ... ok
+test a_body_with_no_full_cover_candidate_falls_back_identically ... ok
+test the_cap_guard_restores_the_previous_setting ... ok
+test a_refutation_the_shipped_cap_finds_survives_every_raised_cap ... ok
+test the_front_door_also_refuses_the_satisfiable_query_at_a_raised_cap ... ok
+test a_satisfiable_query_is_not_refuted_at_any_cap ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
+
+=== RC quantifier_trigger_alternatives = 0 ===
+=== STEP quant_ground_session_soundness ===
+   Compiling axeyum-solver v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-solver)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.81s
+     Running tests/quant_ground_session_soundness.rs (target/debug/deps/quant_ground_session_soundness-df4d7b50c84f2d26)
+
+running 3 tests
+test a_refutable_query_is_still_refuted_at_level_1 ... ok
+test the_two_levels_never_disagree_on_a_decided_verdict ... ok
+test a_satisfiable_query_is_never_refuted_at_either_level ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 24.12s
+
+=== RC quant_ground_session_soundness = 0 ===
+=== STEP mutation-session-arith ===
+qinst-session-arith: baseline green, 8 tests (scripts/cargo-serialized.sh test -p axeyum-solver --features full --lib qinst_session_theory)
+  pop forwards to the arithmetic sub-theory, retracting its bounds killed 1: qinst_session_theory::tests::pop_retracts_an_arithmetic_bound_a_backjump_undid
+  assert reaches the arithmetic sub-theory at all killed 2: qinst_session_theory::tests::a_rebuild_replays_the_root_assignments_into_the_new_sub_theory, qinst_session_theory::tests::hosting_refutes_an_arithmetic_conflict_the_euf_half_cannot_see
+  a rebuild replays the root assignments into the replacement killed 1: qinst_session_theory::tests::a_rebuild_replays_the_root_assignments_into_the_new_sub_theory
+  only order atoms are pulled back from the abstraction killed 1: qinst_session_theory::tests::only_order_atoms_are_pulled_back_from_the_abstraction
+  take_new_atoms stays zero on the driver-registered route SURVIVED — 8 tests ran, none depend on this guard
+qinst-session-arith: 1 guard(s) not covered by any test
+=== RC mutation-session-arith = 1 ===
+=== STEP mutation-certificate ===
+qinst-refuted-certificate: baseline green, 3 tests (scripts/cargo-serialized.sh test -p axeyum-solver --features full --test quant_session_arith_certificate)
+  the fixpoint refutation exit collects an instance-set certificate killed 2: the_candidate_fixpoint_refutation_exit_is_certified, every_instance_set_unsat_exit_assigns_a_certificate
+=== RC mutation-certificate = 0 ===
+=== STEP z3:qf_uflra_differential_fuzz ===
+   Compiling z3-sys v0.11.0
+   Compiling log v0.4.32
+   Compiling z3 v0.20.0
+   Compiling axeyum-solver v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-solver)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 23.15s
+     Running tests/qf_uflra_differential_fuzz.rs (target/debug/deps/qf_uflra_differential_fuzz-72cd5fc8efcb2293)
+
+running 1 test
+test qf_uflra_differential_fuzz_disagree_zero ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.80s
+
+=== RC z3:qf_uflra_differential_fuzz = 0 ===
+=== STEP z3:qf_lia_differential_fuzz ===
+   Compiling axeyum-solver v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-solver)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.86s
+     Running tests/qf_lia_differential_fuzz.rs (target/debug/deps/qf_lia_differential_fuzz-93dd01e04a5354e2)
+
+running 4 tests
+test generation_is_reproducible_from_the_seed ... ok
+test corner_coverage_is_total ... ok
+test named_degenerate_cases_match_z3 ... ok
+test qf_lia_matches_z3 ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 26.11s
+
+=== RC z3:qf_lia_differential_fuzz = 0 ===
+=== STEP z3:qf_lra_differential_fuzz ===
+   Compiling axeyum-solver v0.1.0 (/home/mjbommar/projects/personal/axeyum/.claude/worktrees/agent-aab5bcce36337be61/crates/axeyum-solver)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.93s
+     Running tests/qf_lra_differential_fuzz.rs (target/debug/deps/qf_lra_differential_fuzz-8c641cc98162f08c)
+
+running 5 tests
+test seed_realdiv_zero_over_zero_is_free ... ok
+test seed_realdiv_const_zero_free_value_is_sat ... ok
+test seed_realdiv_const_zero_congruence_is_unsat ... ok
+test seed_realdiv_symbolic_divisor_pinned_zero ... ok
+test qf_lra_differential_fuzz_disagree_zero ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.07s
+
+=== RC z3:qf_lra_differential_fuzz = 0 ===
+ALL-STEPS-DONE

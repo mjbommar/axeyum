@@ -1,0 +1,6 @@
+qinst-session-arith: baseline green, 8 tests (scripts/cargo-serialized.sh test -p axeyum-solver --features full --lib qinst_session_theory)
+  pop forwards to the arithmetic sub-theory, retracting its bounds killed 1: qinst_session_theory::tests::pop_retracts_an_arithmetic_bound_a_backjump_undid
+  assert reaches the arithmetic sub-theory at all killed 2: qinst_session_theory::tests::hosting_refutes_an_arithmetic_conflict_the_euf_half_cannot_see, qinst_session_theory::tests::a_rebuild_replays_the_root_assignments_into_the_new_sub_theory
+  a rebuild replays the root assignments into the replacement killed 1: qinst_session_theory::tests::a_rebuild_replays_the_root_assignments_into_the_new_sub_theory
+  only order atoms are pulled back from the abstraction killed 1: qinst_session_theory::tests::only_order_atoms_are_pulled_back_from_the_abstraction
+  take_new_atoms stays zero on the driver-registered route killed 1: qinst_session_theory::tests::take_new_atoms_is_always_zero_because_the_driver_registers
