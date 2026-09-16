@@ -61,6 +61,17 @@
 #
 # Install (per checkout): git config core.hooksPath hooks
 set -euo pipefail
+# `-E` so the ERR trap below also fires inside FUNCTIONS (gate_root,
+# step_seconds, gated_test): without errtrace a `set -e` exit from a function
+# body bypasses the trap, which is how a fourth 17-second silent death got past
+# the trap on 2026-09-16. And an xtrace of the whole hook goes to a per-run
+# file so the next one is a line number, not a guess.
+set -E
+_pp_trace="${TMPDIR:-/tmp}/axeyum-prepush-trace.$$.$(date +%s)"
+exec 7>"$_pp_trace"
+BASH_XTRACEFD=7
+set -x
+echo "pre-push: xtrace -> $_pp_trace" >&2
 # Name the line on any `set -e` exit. Three push batteries on 2026-09-15 died
 # 17 s in -- ~3 s after the L0 block, before any named step -- with nothing in
 # the log but git's own `failed to push some refs`, and an unchanged retry
