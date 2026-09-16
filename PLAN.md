@@ -62016,6 +62016,22 @@ and it is worth two files where its shape appears.
 
 `AXEYUM_NRA_CAD=clause-loop` ships **OFF**, unmeasured on any corpus.
 
+## Gates
+
+`nra_cell_cert` 20 / `nra_clause_loop` 7 / `nra_single_cell` 19 /
+`config_registry` 18 passed; lib sweep `--skip reconstruct::` **1,586 passed, 0
+failed**; the 22 dispatch suites all green (211 tests); `progress_frontier` 12
+passed with no REGRESSION; the **8** nonlinear z3 fuzzes green on the SHIPPED
+tree (re-run after the default moved, because four had passed against the old
+one); default-features workspace check, clippy `-D warnings` on solver+bench
+`--features full`, and `cargo fmt --all --check` all exit 0; staleness 0
+unexplained; `check-links` and `check-merge-hygiene` pass; `--check-anchors`
+stale=0.
+
+Clippy was **red with 14 lints on this lane's own code** while `cargo check` was
+green on all of it — recorded because they are different gates and only one
+fires.
+
 ## What this lane did not do
 
 - **Lazard evaluation.** ADR-2126 §2 prices it: minimal-polynomial extraction, a

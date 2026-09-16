@@ -715,6 +715,41 @@ would fail rather than silently agree.
 4. The fraction-free determinant is **1 file of 24**, measured, and belongs after
    all three.
 
+## The gates, with their counts
+
+Counts, not exit statuses: a feature-gated suite compiles to nothing and exits 0.
+
+| gate | result |
+|---|---|
+| `nra_cell_cert::tests` | **20 passed**, 0 failed |
+| `nra_clause_loop::tests` | **7 passed**, 0 failed |
+| `nra_single_cell::tests` | **19 passed**, 0 failed |
+| `config_registry::tests` | **18 passed**, 0 failed |
+| lib sweep `--skip reconstruct::` | **1,586 passed**, 0 failed |
+| the 22 dispatch/reason suites | all green, **211 tests** total, 0 failed |
+| `progress_frontier --test-threads=1` | **12 passed**, 0 failed — `frontier_nra_degree` and `frontier_nia_unsat` included, no REGRESSION |
+| the 8 nonlinear z3 differential fuzzes | all green on the **shipped** tree |
+| `cargo check --workspace --all-targets`, default features | exit 0 |
+| clippy `-p axeyum-solver -p axeyum-bench --all-targets --features full -- -D warnings` | exit 0 |
+| `cargo fmt --all --check` | exit 0 |
+| `check-config-registry-staleness.py` | 32 stale, 32 accepted, **0 unexplained**, exit 0 |
+| `check-links.sh`, `check-merge-hygiene.sh` | `all links ok`, `PASS` |
+| `mutation_controls.py --check-anchors` | `suites=151 anchors=1100 stale=0` |
+
+The eight fuzzes were run **twice**: once before `CAD_DEFAULT` moved and once
+after. Only the second run is quoted. Four of the eight had already passed
+against the old default, and "the eight are green" has to mean green against the
+code that ships — a battery split across two source versions is a measurement of
+neither.
+
+**Two gate findings worth keeping.** Clippy was **red with 14 lints on this
+lane's own code** while `cargo check` was green on all of it the whole time;
+they are different gates and only one of them fires. And the battery's own first
+step passed two filters to `cargo test`, which measures nothing — cargo refused
+outright here rather than passing vacuously, but the only reason that hid
+nothing is that the battery also runs each suite separately. Those separate runs
+are the evidence; the combined step is not.
+
 ## Evidence
 
 - `bench-results/nra-cell-exact-20260916/` — the sizing, the re-bucketing and its
