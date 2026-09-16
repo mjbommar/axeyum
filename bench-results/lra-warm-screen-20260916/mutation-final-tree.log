@@ -1,0 +1,4 @@
+lra-warm-screen: baseline green, 3 tests (scripts/cargo-serialized.sh test --release -p axeyum-solver --features full --test lra_warm_screen_2132)
+  the builds threshold the screen opens at killed 2: a_file_below_the_threshold_keeps_no_basis_at_all, a_file_that_crosses_the_threshold_mid_run_decides_what_off_decides
+lra-screen-counter: baseline green, 15 tests (scripts/cargo-serialized.sh test -p axeyum-solver --lib --features full dpll_t::tests)
+  the screen counter's bump on the UNTRACED path killed 1: dpll_t::tests::a_screen_count_and_the_traced_count_are_the_same_number

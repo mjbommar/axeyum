@@ -49,3 +49,27 @@ The guards that are MISSING. It measures the ones that exist. The adversarial
 question -- for every distinction the PRODUCER makes, is there a fixture over a
 satisfiable query that can see it -- is answered separately by ADR-2125's
 soundness-negative pair, which this lane left untouched and green.
+
+
+RE-RUN ON THE FINAL TREE
+=========================
+
+The run above predates the clippy fixes, which changed the fixture file and
+deleted one `dpll_t::tests` test (its two constant assertions became
+`const _: () = assert!(..)` beside the constant, where the compiler enforces
+them). A mutation result measured on a tree that no longer exists is not
+evidence about the tree that does, so both suites were re-run at HEAD:
+
+    lra-warm-screen:   baseline green, 3 tests
+      the builds threshold the screen opens at            killed 2
+        a_file_below_the_threshold_keeps_no_basis_at_all
+        a_file_that_crosses_the_threshold_mid_run_decides_what_off_decides
+
+    lra-screen-counter: baseline green, 15 tests
+      the screen counter's bump on the UNTRACED path      killed 1
+        dpll_t::tests::a_screen_count_and_the_traced_count_are_the_same_number
+
+**Identical kill sets.** The `lra-screen-counter` baseline moved 16 -> 15,
+which is the deleted test and nothing else; the kill is the same one.
+
+Kept at `mutation-final-tree.log`.
