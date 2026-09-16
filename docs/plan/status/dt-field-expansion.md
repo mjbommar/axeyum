@@ -109,40 +109,70 @@ unrelated `(Uninterpreted 6)` sort the BV backend cannot bit-blast. **The
 exactness refusal is gone under the arm and the verdict is `unknown` under
 both** — the lever MOVES THE BLOCKER without moving the verdict here.
 
-**A/B, PARTIAL: 82 of 200 `AUFDTLIRA` files — 1 GAIN, 0 losses, 0 flips**
-(`census/ab-AUFDTLIRA-partial.txt`; base `unsat` 52 / `unknown` 30, arm 53/29;
-base-first 40 / arm-first 42). No soundness incident. The run was then STOPPED
-BY THE COORDINATOR at 82 rows, on this lane's own "harvest it or kill those
-PIDs" note and on a verdict-only zero-diff read from the first 50 rows; the
-next 32 held the mover. Relaunched from row 1.
+**THE A/B IS COMPLETE AND THE HELD-OUT DRAW REVERSES IT.**
 
-The mover is `O512-022__stacks__stacks.ads_84_58_index_check___00.smt2`,
-`unknown` → `unsat`, and it is verified
-(`census/mover-O512-022-stacks.txt`): **stable 3 of 3 per arm**, and its
-`unsat` agrees with the file's own `(set-info :status unsat)` AND with
-`z3 -T:60`.
+Pinned lists (the set this lane measured on), one binary, two env values, arms
+back to back per file on one core, order alternated, 24 s, pinned pairs on s7:
 
-**It does not come from the bucket this lane predicted.** Its census row is
-`quant:time-budget` (`total_ms=24577`), not one of the three datatype buckets;
-under the base it gives up on the watchdog, under the arm it is
-`decided_by=q:mbqi-quick` in **337 ms**. The lever made the ground sub-solves
-inside the quantifier loop stronger rather than removing a refusal. **So the
-`CLEAN` count above must not be quoted as a forecast of gains** — it was built
-as one and the single observed gain came from outside it.
+| division | base | arm | gains | losses | flips |
+|---|---|---|---:|---:|---:|
+| `AUFDTLIRA` | unsat 119, unk 81 | unsat 122, unk 78 | 3 | 0 | 0 |
+| `UFDTLIRA` | unsat 138, unk 56, sat 6 | unsat 139, unk 55, sat 6 | 1 | 0 | 0 |
+| `QF_DT` | unsat 107, unk 29, sat 64 | identical | 0 | 0 | 0 |
+| **total (600)** | | | **4** | **0** | **0** |
 
-`UFDTLIRA` and `QF_DT` did not run, and neither did the held-out draw.
+Held-out draw, 200 fresh files per moving division (seeded, pools of 10,843 and
+7,549, pinned + ledger paths excluded and the exclusion checked at 0 leaked):
 
-**Ship decision: NOT TAKEN.** The lever stays OFF, which is what it ships as.
-`ab-run.sh`, `ab-summarize.py` and the three 200-file lists are committed, so
-the measurement is a re-run rather than a re-derivation. `ab-summarize.py`
-prints a NOTE on a zero-diff — "consistent with the lever changing nothing AND
-with the arm never having been enabled" — and exits 3 on a flip, 2 on a loss,
-so it cannot report a pass by doing nothing.
+| division | base | arm | gains | losses | flips |
+|---|---|---|---:|---:|---:|
+| `AUFDTLIRA`-heldout | unsat 134, unk 66 | unsat 133, unk 67 | 1 | **2** | 0 |
+| `UFDTLIRA`-heldout | unsat 132, unk 68 | unsat 134, unk 66 | 2 | 0 | 0 |
+
+All nine movers and both losses rechecked **3x per arm** plus `z3 -T:60` and
+`:status`. **Both losses are STABLE 3 of 3.** 0 flips across all 1,000 A/B rows
+— the lever never produced a wrong verdict, only fewer verdicts on files it had
+not been measured on.
+
+**SHIP DECISION: DO NOT SHIP.** The criterion (0 stable losses, 0 flips, >=1
+stable gain, on the pinned list AND the held-out draw) is not met. The lever
+stays OFF and ADR-2128 stays `proposed`. The pinned 600 would have shipped on
+its own numbers; the held-out draw is the only reason it does not.
+
+**Why it costs as well as pays — one mechanism seen twice.** On the loss
+`N624-020__perm_rem__perm.adb_252_25_precondition` the base is
+`decided_by=q:mbqi-quick` in 1,736 ms and the arm hits the watchdog at 24 s; on
+the gain `O512-022__stacks` the base hits the watchdog and the arm decides in
+337 ms. The nested expansion changes the ground closure inside the quantifier
+loop in both strength and cost, and nothing measured here predicts which side a
+file falls on — **`CLEAN` in particular does not**. A follow-up needs a COST
+model, not more coverage.
+
+**Gates.**
+
+| gate | result |
+|---|---|
+| dispatch/reason block (whole hook list) | 23 suites, 219 tests, 0 failed, 0 inert |
+| `progress_frontier` | 12 tests, 0 failed, no REGRESSION; pins restored, `git status` 0 dirty |
+| lib sweep `--skip reconstruct::` | 1579 passed, 1 failed — **PRE-EXISTING** |
+| `config_registry::tests` | 18 green |
+| 12 DT suites | 113 tests green, nonzero counts |
+| mutation `dt-nested-field-2128` | 2 guards, each killing exactly one DIFFERENT test |
+| `--check-anchors` | `suites=150 anchors=1100 stale=0` |
+| `check-merge-hygiene.sh` / `check-links.sh` | PASS / all links ok |
+
+The lib-sweep failure is `auto::tests::pathological_overbound_stays_terminal_under_every_policy`
+in `auto.rs`, a file this lane does not touch. **Measured, not asserted:** the
+same sweep on a `lane-snapshot.sh` tree of the merge base (confirmed to lack
+`datatype_expansion_is_exact_to_depth` before being trusted) fails that test
+**and** `arithmetic_uf_overbound_pre_lia_probe_decides_on_clone` — 2 failures on
+the base against 1 here.
 
 <!-- plan-section: landed-changes -->
 
 | 2026-09-16 | `09d03cc2e` | `expansion-reach.py` + the seven-population reach census, with three committed controls (fires on ADR-2114's own `ground.smt2`, not on either negative). |
 | 2026-09-16 | `cb60fb9ba` | ADR-2128: nested datatype field expansion behind `AXEYUM_DT_NESTED_FIELD_DEPTH` (default 0 = OFF); depth-aware exactness, cyclic-closure detector, demand-seeded materialiser, 16 tests, a new pre-push-gated suite. |
 | 2026-09-16 | `9fe46e8c3` | The observed blocker census (318 undecided files, 0 unmatched sentences), clippy clean, and the `dt-nested-field-2128` mutation suite. |
+| 2026-09-16 | `35b27b5ed` | The pinned A/B, all three divisions: 600 files, 4 gains, 0 losses, 0 flips; the seeded held-out draw. |
 | 2026-09-16 | `70c50a703` | ADR-2128 §5, the lane status, and a mutant replaced because it CRASHED rather than failed. |
 | 2026-09-16 | `2943e88c2` | The end-to-end lever probe (the arm clears the exactness refusal on a real corpus file) and `ab-summarize.py`, whose exit status depends on the finding. |

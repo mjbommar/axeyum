@@ -1,7 +1,7 @@
 # ADR-2128: nested datatype field expansion — the lever's two preconditions are ANTI-CORRELATED, and the site the probe named is not the one the representation reaches
 
 Status: proposed
-Index-summary: [ADR-2114] §4 named recursive tag/field expansion of a datatype-typed field as the repair for the `INEXACT` datatype bucket, and DT-GROUND-PROBE pointed the next build lane at it after finding **8 of 14** undecided files at `register_datatype` (`datatype_native.rs:1511-1518`). **Sizing first found the two lanes name two different sites.** `register_datatype` ALREADY walks into a `Sort::Datatype` field (`:1508-1511`); its refusal fires on the first non-datatype, non-expanding sort in the closure, which on the probe's bucket is `(Array Int <datatype>)` on **8 of 8** files and **142 of 142** refused sorts across that population -- depth unrolling reaches none of it, as [ADR-2114] §4 itself says about the `W1` arm. And where the target bucket IS the blocker, `QF_DT`, the field closure is CYCLIC on **29 of 29** undecided files (`nat = succ(pred nat)`, `list = cons(car tree, cdr list)`, blocksworld's `Tower` reached through a non-recursive `Record`), so no finite unrolling of them is exact and the lever converts 0. What the lever DOES reach is the ACKERMANN EXACTNESS PRECONDITION rather than the `==` encoding -- a different and larger population: **55 of 82** undecided `AUFDTLIRA`, **29 of 57** `UFDTLIRA`, **39 of 127** datatype-declaring `UFDT` files are CLEAN (a convertible datatype, no cyclic and no `W1`-refused datatype anywhere in the file), 410/315/158 datatypes against 0 of 96 in `QF_DT`. THE `==` ENCODING IS NOT WHERE THE GAP IS, which is the most useful thing about the existing code this lane found and makes [ADR-2114] §4's framing half true: `expand_datatype_equalities` already compares one nesting level and `unfold_traversals` already gives it children, so a free-variable `a != b` is decided with the lever OFF; the discriminator is [ADR-2114]'s own `repro/ground.smt2` UF-congruence shape, which OFF refuses BY NAME and ON answers `unsat`. THE REFERENCES: neither builds an expansion variable per field and neither bounds depth -- cvc5's member map is `d_selector_apps` (`theory_datatypes.h:145-146`, not `d_sels`, which is gone: control `grep -rn d_sels src/` = 6, all in strings) and `collectTerms` is the generic `Theory::collectTerms` (`theory.cpp:356-382`) with NO sort test; a nested field becomes one `APPLY_SELECTOR` per field with no branch on its sort (`theory_datatypes_utils.cpp:43-57`) and unrolling is gated on DEMAND (`theory_datatypes.cpp:1932-1948`, "if there are no selectors for this equivalence class, and its possible values are infinite, then do not split"), with acyclicity a colour-marked DFS over EXISTING constructor terms (`:1735-1808`) and depth/unroll/fuel/sizeBound all 0 against controls of 2/5/17/37; z3 the same, `apply_sort_cnstr:432-436` ("If s is an infinite sort, then it is not necessary to create a theory variable"), depth 0 against `mk_var` 9 / `is_datatype` 23 / `occurs_check` 11, and [ADR-2114]'s recorded lines re-verified (`:140`, `:167`, `:1009` called at `:765` CONFIRMED; `internalize_term` MOVED to `:315-405` and its "we must create a theory variable for each argument that has sort datatype" comment to `:332`). So OUR eager expansion needs a bound where both references need none, and what is copyable is the DEMAND rule -- the materialiser is seeded from the EQUALITY SITES, not from every declared variable. SHIPS OFF (`AXEYUM_DT_NESTED_FIELD_DEPTH`, default 0, clamped at 8, both bounds registered in `config_registry.rs` along with `MAX_ACK_PAIRS`, unregistered since [ADR-1935] because `datatype_native.rs` is not in `GOVERNED_FILES`): one depth-aware `datatype_expansion_is_exact_to_depth` whose `k == 0` is the pre-change predicate verbatim and which terminates on its OWN decreasing budget, so no detector is load-bearing for soundness; `materialize_nested_children` reusing `unfold_traversals`'s child NAMES so a slot that is both traversed and compared is one child; `nested_child_eq` recursing on a budget one smaller. Exactness is load-bearing for `unsat` through exactly ONE route -- the congruence antecedent, whose weakening is the [ADR-1920] shape -- and not at all for `sat`, which the replay against the original assertions checks unconditionally. [ADR-1942]'s `reject_datatype_constructor_argument` fence is deliberately NOT lifted: its doc comment demanded that a future widening "trip over a refusal rather than silently produce one", and it does. 16 tests, 8 of them a new pre-push-gated suite whose OFF arm asserts the refusal AND ITS WORDING so the ON arm's success cannot be explained by something else, with soundness-negative fixtures at several depths on both sides including two symbols sharing a child COORDINATE that must not share a child VARIABLE; the cyclic-guard tests COUNT CHILDREN rather than assert a verdict, because the guard is a cost decision resting on a soundness fact established independently and a verdict assertion would survive its deletion. **PROPOSED, NOT ACCEPTED: no default moved.** The lever ships OFF and the ship criterion (0 stable losses, 0 flips, >=1 stable gain, on the pinned list AND the held-out draw) is not met -- the interleaved A/B reached 82 of 200 `AUFDTLIRA` files on its first run (1 gain, 0 losses, 0 flips; the mover rechecked 3x per arm and agreeing with both the file's `:status` and `z3 -T:60`), and `UFDTLIRA`, `QF_DT` and the held-out draw have not run. `accepted` is reserved for a default that moved under the criterion.
+Index-summary: [ADR-2114] §4 named recursive tag/field expansion of a datatype-typed field as the repair for the `INEXACT` datatype bucket, and DT-GROUND-PROBE pointed the next build lane at it after finding **8 of 14** undecided files at `register_datatype` (`datatype_native.rs:1511-1518`). **Sizing first found the two lanes name two different sites.** `register_datatype` ALREADY walks into a `Sort::Datatype` field (`:1508-1511`); its refusal fires on the first non-datatype, non-expanding sort in the closure, which on the probe's bucket is `(Array Int <datatype>)` on **8 of 8** files and **142 of 142** refused sorts across that population -- depth unrolling reaches none of it, as [ADR-2114] §4 itself says about the `W1` arm. And where the target bucket IS the blocker, `QF_DT`, the field closure is CYCLIC on **29 of 29** undecided files (`nat = succ(pred nat)`, `list = cons(car tree, cdr list)`, blocksworld's `Tower` reached through a non-recursive `Record`), so no finite unrolling of them is exact and the lever converts 0. What the lever DOES reach is the ACKERMANN EXACTNESS PRECONDITION rather than the `==` encoding -- a different and larger population: **55 of 82** undecided `AUFDTLIRA`, **29 of 57** `UFDTLIRA`, **39 of 127** datatype-declaring `UFDT` files are CLEAN (a convertible datatype, no cyclic and no `W1`-refused datatype anywhere in the file), 410/315/158 datatypes against 0 of 96 in `QF_DT`. THE `==` ENCODING IS NOT WHERE THE GAP IS, which is the most useful thing about the existing code this lane found and makes [ADR-2114] §4's framing half true: `expand_datatype_equalities` already compares one nesting level and `unfold_traversals` already gives it children, so a free-variable `a != b` is decided with the lever OFF; the discriminator is [ADR-2114]'s own `repro/ground.smt2` UF-congruence shape, which OFF refuses BY NAME and ON answers `unsat`. THE REFERENCES: neither builds an expansion variable per field and neither bounds depth -- cvc5's member map is `d_selector_apps` (`theory_datatypes.h:145-146`, not `d_sels`, which is gone: control `grep -rn d_sels src/` = 6, all in strings) and `collectTerms` is the generic `Theory::collectTerms` (`theory.cpp:356-382`) with NO sort test; a nested field becomes one `APPLY_SELECTOR` per field with no branch on its sort (`theory_datatypes_utils.cpp:43-57`) and unrolling is gated on DEMAND (`theory_datatypes.cpp:1932-1948`, "if there are no selectors for this equivalence class, and its possible values are infinite, then do not split"), with acyclicity a colour-marked DFS over EXISTING constructor terms (`:1735-1808`) and depth/unroll/fuel/sizeBound all 0 against controls of 2/5/17/37; z3 the same, `apply_sort_cnstr:432-436` ("If s is an infinite sort, then it is not necessary to create a theory variable"), depth 0 against `mk_var` 9 / `is_datatype` 23 / `occurs_check` 11, and [ADR-2114]'s recorded lines re-verified (`:140`, `:167`, `:1009` called at `:765` CONFIRMED; `internalize_term` MOVED to `:315-405` and its "we must create a theory variable for each argument that has sort datatype" comment to `:332`). So OUR eager expansion needs a bound where both references need none, and what is copyable is the DEMAND rule -- the materialiser is seeded from the EQUALITY SITES, not from every declared variable. SHIPS OFF (`AXEYUM_DT_NESTED_FIELD_DEPTH`, default 0, clamped at 8, both bounds registered in `config_registry.rs` along with `MAX_ACK_PAIRS`, unregistered since [ADR-1935] because `datatype_native.rs` is not in `GOVERNED_FILES`): one depth-aware `datatype_expansion_is_exact_to_depth` whose `k == 0` is the pre-change predicate verbatim and which terminates on its OWN decreasing budget, so no detector is load-bearing for soundness; `materialize_nested_children` reusing `unfold_traversals`'s child NAMES so a slot that is both traversed and compared is one child; `nested_child_eq` recursing on a budget one smaller. Exactness is load-bearing for `unsat` through exactly ONE route -- the congruence antecedent, whose weakening is the [ADR-1920] shape -- and not at all for `sat`, which the replay against the original assertions checks unconditionally. [ADR-1942]'s `reject_datatype_constructor_argument` fence is deliberately NOT lifted: its doc comment demanded that a future widening "trip over a refusal rather than silently produce one", and it does. 16 tests, 8 of them a new pre-push-gated suite whose OFF arm asserts the refusal AND ITS WORDING so the ON arm's success cannot be explained by something else, with soundness-negative fixtures at several depths on both sides including two symbols sharing a child COORDINATE that must not share a child VARIABLE; the cyclic-guard tests COUNT CHILDREN rather than assert a verdict, because the guard is a cost decision resting on a soundness fact established independently and a verdict assertion would survive its deletion. **PROPOSED, NOT ACCEPTED, AND THE HELD-OUT DRAW IS WHY.** The PINNED A/B over all three divisions (600 files, one binary two env values, arms back to back per file on one core, order alternated) is **4 gains, 0 losses, 0 flips** -- `AUFDTLIRA` 3, `UFDTLIRA` 1, `QF_DT` **0 of 200, which is the prediction §1a made and it held** (all 29 undecided `QF_DT` files declare a cyclic closure, so no finite unrolling of them is exact). On its own that ships. The SEEDED HELD-OUT DRAW -- 200 fresh files per moving division from pools of 10,843 and 7,549, pinned and ledger paths excluded and the exclusion checked at 0 leaked -- does not: `AUFDTLIRA`-heldout is 1 gain and **2 LOSSES**, both **STABLE 3 of 3** on recheck, against `UFDTLIRA`-heldout's 2 gains and 0 losses. So the criterion (0 stable losses, 0 flips, >=1 stable gain, on the pinned list AND the held-out draw) FAILS and the lever stays OFF. The losses are not wrong answers -- the arm returns `unknown` and there were **0 flips across all 1,000 A/B rows** -- they are files the base decides and the arm does not. WHY, traced: on the loss the base is `decided_by=q:mbqi-quick` in 1,736 ms and the arm hits the watchdog at 24 s; on the traced gain the base hits the watchdog and the arm decides in 337 ms. **One mechanism seen twice** -- the nested expansion changes the ground closure inside the quantifier loop in both STRENGTH and COST -- and nothing measured here predicts which side a file falls on, §1b's `CLEAN` count least of all: it was built as a forecast of gains, the first traced gain came from outside it, and both losses are in no datatype bucket. A follow-up needs a COST MODEL, not more coverage. `accepted` is reserved for a default that moved under the criterion.
 Index-status: proposed
 Date: 2026-09-16
 
@@ -376,52 +376,93 @@ reader:
   the next rung. Moving a blocker is progress only if the next rung can do
   something with it; on this file it cannot.
 
-## 5b. The A/B, PARTIAL -- and no ship decision
+## 5b. The A/B, complete: the pinned list says ship, the held-out draw says no
 
-**The interleaved A/B did not complete in this lane, so no ship decision is
-taken and the lever stays OFF -- which is what it ships as.** What ran is the
-first **82 of 200** `AUFDTLIRA` files (`census/ab-AUFDTLIRA-partial*`; the run
-was then STOPPED BY THE COORDINATOR at 82 rows -- deliberately, on this lane's
-own "harvest it or kill those PIDs" note, and recorded as a misjudgment once
-the 82 rows turned out to hold the mover -- and relaunched). One binary,
-two env values, the two arms back to back per file on one core, order
-alternated per file, 24 s, this lane's pinned pairs on s7:
+One binary (`smtcomp_cli-arm2`), two env values, the two arms back to back per
+file on one core so load cancels in the difference, order alternated per file
+so a first-run penalty cannot land on one arm, 24 s, this lane's pinned pairs
+on s7, divisions serial.
 
-    rows=82  (base-first 40 / arm-first 42)
-    base : unsat 52  unknown 30
-    arm  : unsat 53  unknown 29
-    GAINS 1   LOSSES 0   sat<->unsat FLIPS 0
-      +unsat  O512-022__stacks__stacks.ads_84_58_index_check___00.smt2
+**The pinned lists -- the set this lane measured on:**
 
-**1 gain, 0 losses, 0 flips of 82, and no soundness incident.** The mover is
-rechecked and verified (`census/mover-O512-022-stacks.txt`): stable 3 of 3 per
-arm on one core, and its `unsat` agrees with the file's own
-`(set-info :status unsat)` AND with `z3 -T:60` -- two sources that do not share
-an origin.
+| division | base | arm | gains | losses | flips |
+|---|---|---|---:|---:|---:|
+| `AUFDTLIRA` | unsat 119, unk 81 | unsat 122, unk 78 | 3 | 0 | 0 |
+| `UFDTLIRA` | unsat 138, unk 56, sat 6 | unsat 139, unk 55, sat 6 | 1 | 0 | 0 |
+| `QF_DT` | unsat 107, unk 29, sat 64 | identical | 0 | 0 | 0 |
+| **total (600)** | | | **4** | **0** | **0** |
 
-**AND THE MOVER DOES NOT COME FROM THE BUCKET THIS ADR PREDICTED.** It is not
-in any of §5's three datatype buckets: its census row is `quant:time-budget`
-("quantified solve time budget exhausted after MBQI and the finite-model
-finder", `total_ms=24577`), and under the base arm it gives up on the watchdog.
-Under the arm it is `decided_by=q:mbqi-quick` in **337 ms**. So what the lever
-did here was make the GROUND SUB-SOLVES INSIDE THE QUANTIFIER LOOP stronger --
-`decide_instantiation`'s `check_auto` on a quantifier-free query, the path §1
-of [ADR-2114] traced -- not remove a refusal and let the verdict follow.
+**`QF_DT`'s exact zero is the prediction §1a made, and it held.** All 29
+undecided `QF_DT` files declare a cyclic datatype-field closure, so no finite
+unrolling of them is exact and the lever converts none. That is the one place
+the shape census WAS predictive -- unlike `CLEAN`, which §5c corrects.
 
-That is recorded as observed rather than fitted to the story that preceded it.
-**§1b's `CLEAN` count was built as a predictor of where gains would come from
-and the one observed gain came from outside it**, so `CLEAN` must not be quoted
-as a forecast of gains until something has measured that it is one. One mover
-is one mover.
+`UFDTLIRA` is the soundness-load-bearing division: the only one with `sat` rows
+on BOTH arms (6 and 6), hence the only one where the lever had the OPPORTUNITY
+to turn a `sat` into an `unsat`. It did not.
 
-It is a PARTIAL and it is labelled as one: 82 of 200 in one of three divisions
-is not a division result, `UFDTLIRA` and `QF_DT` did not run at all, and the
-held-out draw did not happen. The runner (`ab-run.sh`), the summariser
-(`ab-summarize.py`, whose exit status depends on the finding) and the three
-200-file lists are committed, so the measurement is a re-run rather than a
-re-derivation.
+**The held-out draw -- 200 fresh files per moving division**
+(`draw-heldout.py` reused, seed a constant in its source so it cannot be
+re-rolled after a result; pools of 10,843 and 7,549; the pinned list and every
+committed ledger path excluded, and the exclusion CHECKED at 0 of 200 leaked;
+the pinned lists first confirmed byte-identical as SETS to this lane's own):
 
-[ADR-2020]: adr-2020-giveup-census-buckets.md
+| division | base | arm | gains | losses | flips |
+|---|---|---|---:|---:|---:|
+| `AUFDTLIRA`-heldout | unsat 134, unk 66 | unsat 133, unk 67 | 1 | **2** | 0 |
+| `UFDTLIRA`-heldout | unsat 132, unk 68 | unsat 134, unk 66 | 2 | 0 | 0 |
+
+**Every mover and every loss rechecked 3x per arm**, plus `z3 -T:60` and the
+benchmark author's `:status`. Both losses are **STABLE 3 of 3**
+(`base=unsat`, `arm=unknown`, every run), and all five files' correct verdict
+is `unsat` by both independent sources.
+
+### The decision
+
+> **THE SHIP CRITERION -- 0 stable losses, 0 flips, at least one stable gain, on
+> the pinned list AND the held-out draw -- IS NOT MET. DO NOT SHIP.** The lever
+> stays OFF (`AXEYUM_DT_NESTED_FIELD_DEPTH` default 0) and this ADR stays
+> `proposed`.
+
+**The held-out draw is the only reason that is the answer.** The pinned 600
+showed 4 gains, 0 losses, 0 flips and would have shipped on its own numbers.
+The fresh 400 shows the lever also COSTS files. This is Phase 4's named risk --
+"Phase 4 optimises the sample" -- landing on a real change.
+
+What the losses are NOT: wrong answers. The arm returns `unknown`, a
+first-class result, and there were **0 flips across all 1,000 A/B rows** this
+lane ran. The lever never produced a wrong verdict. It produced fewer verdicts
+on files it had not been measured on.
+
+## 5c. Why it costs as well as pays -- one mechanism seen twice
+
+Traced on the loss `N624-020__perm_rem__perm.adb_252_25_precondition`:
+
+    BASE  ; route decided_by=q:mbqi-quick bound_by=q:mbqi-quick
+            last=q:mbqi-quick bound_ms=52 total_ms=1736 attempts=230
+    ARM   (no route line)
+          ; give-up kind=Watchdog detail=watchdog fired before the worker
+            thread returned
+
+The base decides it in **1.7 s**; the arm never returns and burns the whole
+24 s. Set that beside the traced gain `O512-022__stacks`, where the base hits
+the watchdog at 24 s and the arm is `decided_by=q:mbqi-quick` in **337 ms**.
+
+**These are the same mechanism.** The nested expansion changes the ground
+closure inside the quantifier loop, in both strength and cost. Where the
+stronger closure converges the loop, the file is a gain; where the bigger
+encoding blows the budget, it is a loss. Nothing this lane measured predicts
+which side a given file falls on -- and in particular **§1b's `CLEAN` count does
+not**: it was built as a forecast of gains, the first traced gain came from
+outside it, and both losses are files no datatype bucket named either.
+
+So the work a follow-up needs is not more coverage of the same lever. It is a
+COST model: the lever must be applied where the closure gets stronger without
+the encoding getting bigger, and that discrimination does not exist yet. A
+plausible first cut is to bound materialisation by the materialised child COUNT
+per query rather than by depth alone -- `MAX_NESTED_CHILDREN` exists and is
+never approached on these files -- but that is a hypothesis, not a measurement,
+and it should be measured on the held-out draw before the pinned one.
 
 ## Tests
 

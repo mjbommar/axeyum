@@ -1,0 +1,85 @@
+DT-FIELD-EXPANSION -- THE HELD-OUT DRAW, AND IT REVERSES THE SHIP DECISION.
+
+The pinned 200 per division IS the set this lane measured on, so an A/B over it
+is an A/B over the training set. `draw-heldout.py` (reused from
+`bench-results/derived-order-20260915/`, seed 20260915 a constant in its source
+so the draw cannot be re-rolled after seeing a result) drew 200 fresh files per
+moving division from pools of 10,843 and 7,549, excluding the pinned list and
+every path any committed ledger row carries. The exclusion was CHECKED: 0 of
+200 held-out paths appear in either training list, and the pinned lists were
+first confirmed byte-identical as SETS to this lane's own (200/200, both
+divisions).
+
+########## AUFDTLIRA-heldout ##########
+rows=200  (base-first 100 / arm-first 100)
+base : {'unsat': 134, 'unknown': 66}
+arm  : {'unsat': 133, 'unknown': 67}
+GAINS  (unknown -> decided): 1 of 200
+   +unsat  Q930-002__itp__bounded_dynamic_arrays.adb_173_9_bounded_dynamic_strings.ads_5_1_predicate_check___00.smt2
+LOSSES (decided -> unknown): 2 of 200
+   -unsat  N624-020__perm_rem__perm.adb_252_25_precondition___00.smt2
+   -unsat  N624-020__perm_rem__perm.adb_247_50_precondition3___00.smt2
+sat<->unsat FLIPS: 0
+summarize_rc=2
+
+########## UFDTLIRA-heldout ##########
+rows=200  (base-first 100 / arm-first 100)
+base : {'unsat': 132, 'unknown': 68}
+arm  : {'unsat': 134, 'unknown': 66}
+GAINS  (unknown -> decided): 2 of 200
+   +unsat  L719-025__lists_equal__a-cfdlli.ads_1029_43_p.ads_7_4_overflow_check___00.smt2
+   +unsat  O428-055__formal_vector__a-cfdlli.ads_1029_43_loop_types.ads_15_4_overflow_check___00.smt2
+LOSSES (decided -> unknown): 0 of 200
+sat<->unsat FLIPS: 0
+summarize_rc=0
+
+EVERY MOVER AND EVERY LOSS RECHECKED 3x PER ARM, on one core, back to back,
+plus `z3 -T:60` and the benchmark author's declared status:
+
+| file | kind | z3 | `:status` | base x3 | arm x3 | stable? |
+|---|---|---|---|---|---|---|
+| `N624-020__perm_rem__perm.adb_252_25_precondition` | LOSS | unsat | unsat | `unsat` x3 | `unknown` x3 | **STABLE** |
+| `N624-020__perm_rem__perm.adb_247_50_precondition3` | LOSS | unsat | unsat | `unsat` x3 | `unknown` x3 | **STABLE** |
+| `Q930-002__itp__bounded_dynamic_arrays...predicate_check` | gain | unsat | unsat | `unknown` x3 | `unsat` x3 | stable |
+| `L719-025__lists_equal__a-cfdlli...overflow_check` | gain | unsat | unsat | `unknown` x3 | `unsat` x3 | stable |
+| `O428-055__formal_vector__a-cfdlli...overflow_check` | gain | unsat | unsat | `unknown` x3 | `unsat` x3 | stable |
+
+**2 STABLE LOSSES.** Three runs per arm rather than one because a single
+`base=unsat, arm=unknown` on a 24 s budget is equally consistent with the lever
+costing the file AND with the arm being unlucky on a loaded box. It is not
+luck: 3 of 3, both files.
+
+Note what the losses are NOT: they are not wrong answers. `z3` and `:status`
+both say `unsat`, and the arm returns `unknown`, which is a first-class result.
+0 flips across all 1,000 A/B rows this lane ran. The lever never produced a
+wrong verdict; it produced fewer verdicts on fresh files.
+
+WHY, MEASURED RATHER THAN GUESSED. Traced on
+`N624-020__perm_rem__perm.adb_252_25_precondition`:
+
+    BASE  ; route decided_by=q:mbqi-quick bound_by=q:mbqi-quick
+            last=q:mbqi-quick bound_ms=52 total_ms=1736 attempts=230
+    ARM   (no route line)
+          ; give-up kind=Watchdog detail=watchdog fired before the worker
+            thread returned
+
+The base decides it in **1.7 s**; the arm never returns and burns the whole
+24 s. So the lever's cost and its benefit are the SAME mechanism seen twice.
+Nested expansion changes the ground closure inside the quantifier loop: where
+the stronger closure converges the loop, the file is a gain (this is exactly
+`O512-022__stacks`, base watchdog -> arm 337 ms); where the bigger encoding
+blows the budget, the file is a loss. Which side a file falls on is not
+predicted by anything this lane measured.
+
+THE SHIP CRITERION -- 0 stable losses, 0 flips, >=1 stable gain, on the pinned
+list AND the held-out draw -- IS NOT MET. The held-out `AUFDTLIRA` draw has two
+stable losses.
+
+**DECISION: DO NOT SHIP. The lever stays OFF (`AXEYUM_DT_NESTED_FIELD_DEPTH`
+default 0) and ADR-2128 stays `proposed`.**
+
+AND THE HELD-OUT DRAW IS THE ONLY REASON THAT IS THE ANSWER. The pinned 600
+showed **4 gains, 0 losses, 0 flips** and would have shipped on its own numbers.
+The fresh 400 shows the lever also costs files. This is Phase 4's named risk --
+"Phase 4 optimises the sample" -- landing on a real change, and it is the whole
+return on running the draw rather than trusting the pinned lists.

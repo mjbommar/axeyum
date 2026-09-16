@@ -1,0 +1,46 @@
+=== [LOSS] N624-020__perm_rem__perm.adb_252_25_precondition___00.smt2 ===
+:status : (set-info :status unsat)
+z3      : unsat
+run1 base=unsat
+run1 arm =unknown
+run2 base=unsat
+run2 arm =unknown
+run3 base=unsat
+run3 arm =unknown
+=== [LOSS] N624-020__perm_rem__perm.adb_247_50_precondition3___00.smt2 ===
+:status : (set-info :status unsat)
+z3      : unsat
+run1 base=unsat
+run1 arm =unknown
+run2 base=unsat
+run2 arm =unknown
+run3 base=unsat
+run3 arm =unknown
+=== [GAIN] Q930-002__itp__bounded_dynamic_arrays.adb_173_9_bounded_dynamic_strings.ads_5_1_predicate_check___00.smt2 ===
+:status : (set-info :status unsat)
+z3      : unsat
+run1 base=unknown
+run1 arm =unsat
+run2 base=unknown
+run2 arm =unsat
+run3 base=unknown
+run3 arm =unsat
+=== [GAIN] L719-025__lists_equal__a-cfdlli.ads_1029_43_p.ads_7_4_overflow_check___00.smt2 ===
+:status : (set-info :status unsat)
+z3      : unsat
+run1 base=unknown
+run1 arm =unsat
+run2 base=unknown
+run2 arm =unsat
+run3 base=unknown
+run3 arm =unsat
+=== [GAIN] O428-055__formal_vector__a-cfdlli.ads_1029_43_loop_types.ads_15_4_overflow_check___00.smt2 ===
+:status : (set-info :status unsat)
+z3      : unsat
+run1 base=unknown
+run1 arm =unsat
+run2 base=unknown
+run2 arm =unsat
+run3 base=unknown
+run3 arm =unsat
+HELDOUT_RECHECK_DONE
