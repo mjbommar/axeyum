@@ -394,7 +394,90 @@ to compile until each was named and rendered.
 
 ### 5.3 The gates
 
-PLACEHOLDER — filled in at the end of the lane.
+Every `cargo test` line below has a **nonzero** count confirmed, because a
+feature-gated suite compiles to nothing and exits 0.
+
+| gate | measured |
+|---|---|
+| `cargo fmt --all --check` | ok |
+| `cargo check --workspace --all-targets` (default features) | ok |
+| **`clippy --workspace --all-targets --all-features -- -D warnings`** | **ok** |
+| `--lib --features full lra` | **145 passed**, 0 failed |
+| `--lib --features full simplex` | **41 passed**, 0 failed |
+| `--lib --features full config_registry::tests` | **18 passed**, 0 failed |
+| `--lib --features full lazy_smt_counters` | **6 passed**, 0 failed |
+| `--lib --features full dpll_t::tests` | **15 passed**, 0 failed |
+| `--test lra_warm_screen_2132` (release) | **3 passed**, 0 failed |
+| the dispatch/reason suites, via the shared runner | ok |
+| `check-suite-gating.py` | PASS (348 suites, 47 gated, 303 excused) |
+| `check-config-registry-staleness.py` | 0 unexplained |
+| `check-merge-hygiene.sh` | PASS |
+| `check-links.sh` | all links ok |
+| `mutation_controls.py --check-anchors` | 158 suites, 1,102→1,114 anchors, **stale = 0** |
+| the six z3 fuzzes × three arms | **17 per arm, 51 total**, 0 failed (§5.5) |
+| `--lib --features full -- --skip reconstruct::` | **1,613 passed, 6 failed** — see below |
+| `progress_frontier --features full -- --test-threads=1` | **12 passed, 0 failed, 0 REGRESSION** |
+
+**The clippy line is the battery's own, at full scope**, not the three-crate
+narrowing ADR-2125 used — and getting there cost three lints of this lane's own
+(§5.3.1).
+
+**The ratchet is clean and its marks are read rather than its pass count.**
+`nra_degree` 12.1 ms against a 23.0 ms ceiling and `string_bound` PROGRESS
+(+32, ratchetable) are both **enforced**; `bv_reduction`, `lia_cuts` and
+`nia_unsat` are marked NOT COMPARABLE, so their ratchets are enforced on nothing
+here. The marks carry their own reason and it is the same reason the lib sweep's
+six reds have:
+
+```text
+NOT COMPARABLE [bv_reduction]: throughput moved 109 % during the sweep (125.6 ms -> 262.8 ms)
+NOT COMPARABLE [lia_cuts]:     throughput moved  46 % during the sweep (255.1 ms -> 137.0 ms)
+NOT COMPARABLE [nia_unsat]:    throughput moved  75 % during the sweep (136.3 ms -> 238.4 ms)
+```
+
+**The machine did not hold still while this battery ran**, measured by the
+ratchet's own calibration rather than inferred from a load average. That is
+independent evidence for §5.3.1's reading of the six reds, and it is worth more
+than the isolated re-run because it comes from a different instrument.
+
+**No baseline is raised from this run**,
+including `string_bound`'s ratchetable progress: that is not this lane's change
+to make. ADR-2125 had two such families on its idle run and this has three, which
+is a worse frame, not a better one — said here rather than left to a reader who
+counts `12 passed` and stops.
+
+#### 5.3.1 The lib sweep's six reds are the load-sensitive budget family
+
+```text
+array_bv_abs::tests::refutes_rw213_by_bv_abstraction
+auto::tests::arithmetic_uf_overbound_pre_lia_probe_decides_on_clone
+auto::tests::cap_overflowing_skolemized_chain_is_refuted_via_the_egraph_loop
+auto::tests::every_policy_gives_the_same_verdict_on_an_overbound_query
+auto::tests::negated_quantified_implication_exposes_counterexample_witness
+auto::tests::top_level_negated_universal_exposes_counterexample_witness
+```
+
+**Re-run together, serialized, on the same tree: 6 passed, 0 failed, in 0.49 s**
+— against failing inside a 525 s parallel sweep.
+
+Their failure messages are budget-shaped, e.g.
+`Unknown(ResourceLimit, "quantified solve time budget exhausted after checked
+fast paths")` where `Unsat` was expected. **None is on the offline linear loop
+this lane changed**; they are quantified/Ackermann routes in `auto.rs` and a
+bit-vector abstraction in `array_bv_abs.rs`.
+
+And the family is already on the record. [ADR-2114] names
+`auto::tests::arithmetic_uf_overbound_pre_lia_probe_decides_on_clone` —
+one of these six, by name — with the identical resolution: *"re-run
+individually: 2/2 pass"*. [ADR-2125] hit a sibling in the same file
+(`pathological_overbound_stays_terminal_under_every_policy`) and [ADR-2111] hit
+that one before it.
+
+**What is NOT claimed**: that six is the same reading as ADR-2125's one. It is
+six, that is more, and this lane did not establish why more failed this time —
+the sweep ran immediately after 23 dispatch suites on a box that had been at
+load 135 earlier in the session. A re-run of the whole sweep on a quiet box is
+reported in §5.3.2 rather than argued for here.
 
 ### 5.4 Mutation: two guards, two suites, and one honest disagreement with the brief
 
