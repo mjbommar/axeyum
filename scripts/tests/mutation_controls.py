@@ -11834,6 +11834,112 @@ SUITES["qinst-ground-session"] = (
 )
 
 
+# ADR-2130 -- the quantifier session HOSTS the arithmetic theory.
+#
+# Every guard below is aimed at a WRONG ANSWER or at an inert lever, not at a
+# stylistic preference. The arithmetic sub-theory is the first thing in this
+# session that can REFUTE, so it is the first thing that can refute something
+# true.
+SUITES["qinst-session-arith"] = (
+    "crates/axeyum-solver/src/qinst_session_theory.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--lib",
+            "qinst_session_theory",
+        ),
+        "qinst-session-arith",
+    ),
+    [
+        (
+            # THE SOUNDNESS GUARD. An arithmetic bound asserted under a decision
+            # must be gone once that decision is backjumped over. There is no
+            # bound trail to unwind -- `IntSimplexEngine::sync` re-derives the
+            # imposed bounds from the live assignment set on every check -- so
+            # the retraction IS this forwarded `pop` unassigning the atom.
+            # Without it a branch the search abandoned keeps constraining the
+            # theory and the next check refutes a set nobody asserted.
+            "pop forwards to the arithmetic sub-theory, retracting its bounds",
+            "    fn pop(&mut self) {\n        self.euf.pop();\n        if let Some(lia) = self.lia.as_mut() {\n            lia.pop();\n        }\n    }",
+            "    fn pop(&mut self) {\n        self.euf.pop();\n    }",
+        ),
+        (
+            # Drop the arithmetic half of `assert`. The theory stops refuting
+            # through arithmetic entirely -- level 1's behaviour wearing level
+            # 2's name. Not a wrong answer, but an INERT lever, which is the
+            # failure mode the engagement probe exists to catch and which a
+            # verdict-only A/B would have reported as "hosting does not help".
+            "assert reaches the arithmetic sub-theory at all",
+            "            lia.assert(atom, value)?;",
+            "            let _ = (lia, atom, value);",
+        ),
+        (
+            # Skip the root-assignment replay on a rebuild. The rebuilt theory
+            # forgets every root-level bound, so a refutation available before
+            # an instance landed is silently unavailable after it.
+            "a rebuild replays the root assignments into the replacement",
+            "        for &(atom, value) in &root_assignments {",
+            "        for &(atom, value) in &root_assignments[..0] {",
+        ),
+        (
+            # Host the equality atoms too. An integer equality already reaches
+            # the theory as an EUF atom, so pulling it out of the abstraction
+            # here is a SECOND route to the same atom.
+            "only order atoms are pulled back from the abstraction",
+            "            op: Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe,",
+            "            op: Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe | Op::Eq,",
+        ),
+        (
+            # Report the driver-registered atoms through `take_new_atoms`. The
+            # core then appends a SECOND SAT variable for an atom that already
+            # has one and every later atom index is off by one -- a silent
+            # misattribution of asserted literals, not a crash.
+            "take_new_atoms stays zero on the driver-registered route",
+            "    fn take_new_atoms(&mut self) -> usize {\n        0\n    }",
+            "    fn take_new_atoms(&mut self) -> usize {\n        self.lia_pending\n    }",
+        ),
+    ],
+)
+
+
+# ADR-2130 -- the certificate ADR-2124 repaired and left covered by NOTHING.
+#
+# ADR-2124 section 8 measured its own gap: it removed this exact collection and
+# ran the whole `quant_instance_set_cert::` surface against the mutant, and 9
+# tests ran and SURVIVED. So the repair's presence in a diff was the only thing
+# keeping it there.
+#
+# `quant_session_arith_certificate` is what notices now. It is a SOURCE
+# invariant, not a behavioural fixture, and ADR-2130 section 8 says so plainly:
+# reaching `CandidateFixpointStep::Refuted` needs the candidate-equality
+# fixpoint to produce a session `Unsat` on a query small enough to be a fixture,
+# and neither lane found one.
+SUITES["qinst-refuted-certificate"] = (
+    "crates/axeyum-solver/src/qinst_egraph.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--test",
+            "quant_session_arith_certificate",
+        ),
+        "qinst-refuted-certificate",
+    ),
+    [
+        (
+            "the fixpoint refutation exit collects an instance-set certificate",
+            "                    // which is why the gap had to close with it.\n                    *certificate =\n                        collect_ground_derivations(arena, anchor, &ground, &ground_derivations);",
+            "                    // which is why the gap had to close with it.",
+        ),
+    ],
+)
+
+
 # ADR-2124, the mutation that SURVIVED and what its survival measured.
 #
 # `add_checked_batch`'s `unwind_to_root()` was expected to be the stale-clause

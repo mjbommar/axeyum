@@ -49,7 +49,8 @@ QF_CHECK_RE = re.compile(
 SESSION_RE = re.compile(
     r"^\[qtrace\]\s+ground-session\s+\+(?P<secs>[0-9.]+)s\s+built=(?P<built>\d+)\s+"
     r"level=(?P<level>\d+)\s+round=(?P<round>\d+)\s+ground=(?P<ground>\d+)\s+"
-    r"atoms=(?P<atoms>\d+)\s+hosted=(?P<hosted>\d+)\s+opaque=(?P<opaque>\d+)"
+    r"atoms=(?P<atoms>\d+)\s+hosted=(?P<hosted>\d+)\s+abstracted=(?P<abstracted>\d+)\s+"
+    r"gates=(?P<gates>\d+)\s+shapes=(?P<shapes>\S+)"
 )
 
 
@@ -98,7 +99,9 @@ def qtrace(path):
                     "level": int(m.group("level")),
                     "atoms": int(m.group("atoms")),
                     "hosted": int(m.group("hosted")),
-                    "opaque": int(m.group("opaque")),
+                    "abstracted": int(m.group("abstracted")),
+                    "gates": int(m.group("gates")),
+                    "shapes": m.group("shapes"),
                     "ground": int(m.group("ground")),
                 }
     return (checks, total, largest, session)
@@ -136,9 +139,9 @@ def main(argv=None):
     with open(tsv, "w") as fh:
         fh.write(
             "core\toff_verdict\toff_route\toff_reason\toff_checks\toff_qf_secs\toff_ground"
-            "\toff_built\toff_hosted\toff_opaque"
+            "\toff_built\toff_hosted\toff_abstracted"
             "\ton_verdict\ton_route\ton_reason\ton_checks\ton_qf_secs\ton_ground"
-            "\ton_built\ton_hosted\ton_opaque\n"
+            "\ton_built\ton_hosted\ton_abstracted\n"
         )
         for row in rows:
             cells = [row["core"]]
@@ -154,7 +157,7 @@ def main(argv=None):
                     str(a["ground"]),
                     str(sess.get("built", "-")),
                     str(sess.get("hosted", "-")),
-                    str(sess.get("opaque", "-")),
+                    str(sess.get("abstracted", "-")),
                 ]
             fh.write("\t".join(cells) + "\n")
 
@@ -194,7 +197,7 @@ def main(argv=None):
         reached = [r[arm] for r in rows if r[arm]["session"] is not None]
         built = [a for a in reached if a["session"]["built"] == 1]
         host = [a for a in built if a["session"]["hosted"] == 1]
-        opaque = sum(a["session"]["opaque"] for a in built)
+        opaque = sum(a["session"]["abstracted"] for a in built)
         atoms = sum(a["session"]["atoms"] for a in built)
         engagement[arm] = len(host)
         print(
