@@ -4124,21 +4124,36 @@ impl CadPolicy {
         clause_loop: false,
     };
 
-    /// ADR-2126's arm: the shipped `single-cell-sat` route PLUS the clause loop
+    /// ADR-2126's arm: the shipped route PLUS the clause loop
     /// ([`crate::nra_clause_loop`]) behind it, for the queries the conjunctive
-    /// route refuses as `non-conjunctive` — 12 of ADR-2121's 24 in-bounds files,
-    /// half the slice.
+    /// route refuses as `non-conjunctive`.
     ///
-    /// It differs from [`Self::SINGLE_CELL_SAT`] in exactly `clause_loop`: same
-    /// cell cap, same `single_cell`, same `emit_unsat`. So an A/B between the two
-    /// prices the loop alone, and the loop runs only where the conjunctive route
-    /// has already refused — strictly additive, and its `unsat` is withheld, so
-    /// it cannot flip a verdict.
+    /// **ADR-2131 rebased this arm from [`Self::SINGLE_CELL_SAT`] onto
+    /// [`Self::SINGLE_CELL`]** by flipping `emit_unsat` to `true`, and the reason
+    /// is that the A/B was otherwise CONFOUNDED. ADR-2126 built the arm when
+    /// `CAD_DEFAULT` was `SINGLE_CELL_SAT`; ADR-2126 then moved the default to
+    /// `SINGLE_CELL`. From that moment an A/B of default-against-`clause-loop`
+    /// differed in TWO fields -- `emit_unsat` AND `clause_loop` -- so the
+    /// single-cell route's `unsat` half would have been switched OFF in the
+    /// treatment arm and every verdict it contributes would have read as a loss
+    /// caused by the loop.
+    ///
+    /// It now differs from [`Self::SINGLE_CELL`], which IS the shipped default,
+    /// in exactly `clause_loop`: same cell cap, same `single_cell`, same
+    /// `emit_unsat`. So an A/B between them prices the loop alone, and the loop
+    /// runs only where the conjunctive route has already refused with
+    /// [`CadDecline::NonConjunctive`] — strictly additive.
+    ///
+    /// Its `unsat` is no longer withheld. It is emitted only when
+    /// [`crate::nra_clause_cert::check_clause_refutation`] accepts a certificate
+    /// covering the abstraction, every theory lemma and the propositional
+    /// refutation (ADR-2131), so the arm cannot widen what is answered without
+    /// widening what is checked.
     pub(crate) const CLAUSE_LOOP: Self = Self {
         arm: "clause-loop",
         cell_cap: MAX_CAD_CELLS,
         single_cell: true,
-        emit_unsat: false,
+        emit_unsat: true,
         clause_loop: true,
     };
 }
@@ -8475,7 +8490,7 @@ mod tests {
         );
 
         // ADR-2126's arm turns the clause loop on and NOTHING else does, so an
-        // A/B against `single-cell-sat` prices the loop alone.
+        // A/B against the shipped default prices the loop alone.
         let looping: Vec<&str> = arms
             .iter()
             .filter(|p| p.clause_loop)
@@ -8490,6 +8505,10 @@ mod tests {
         // The `unsat`-withholding arm is the ONLY one that withholds. An arm
         // that ran the route and silently kept its `unsat` would make the
         // sat-only A/B measure the full route instead.
+        //
+        // ADR-2131 removed `clause-loop` from this list: its `unsat` is emitted,
+        // certificate-gated, and keeping it withheld would have left the arm one
+        // field away from the SHIPPED DEFAULT in two directions at once.
         let withholding: Vec<&str> = arms
             .iter()
             .filter(|p| !p.emit_unsat)
@@ -8497,21 +8516,35 @@ mod tests {
             .collect();
         assert_eq!(
             withholding,
-            vec!["single-cell-sat", "clause-loop"],
-            "exactly the two sat-only arms withhold `unsat`"
+            vec!["single-cell-sat"],
+            "exactly the sat-only arm withholds `unsat`"
         );
 
-        // `clause-loop` differs from `single-cell-sat` in EXACTLY `clause_loop`.
-        // The two ways this A/B could go vacuous are the arm carrying
-        // `clause_loop: false` (the treatment IS the control) and the arm
-        // carrying a different cell cap or `emit_unsat` (the A/B measures two
-        // things at once). Both would print a clean number.
-        let sat_only = arms[3];
+        // `clause-loop` differs from the SHIPPED DEFAULT in EXACTLY
+        // `clause_loop`, and this is the assertion that keeps its A/B honest.
+        //
+        // ADR-2131 rebased it. It used to compare against `single-cell-sat`,
+        // which WAS the default when ADR-2126 wrote it -- but ADR-2126 also
+        // moved the default to `single-cell`, and from that moment an A/B of
+        // default-against-`clause-loop` differed in `emit_unsat` as well. The
+        // treatment arm would have had the single-cell route's `unsat` half
+        // switched OFF, and every verdict that half contributes would have read
+        // as a loss caused by the loop: a confounded A/B that prints a clean
+        // number. So the comparison is against the arm the runner's control arm
+        // actually selects, and it is read out of `CAD_DEFAULT` rather than
+        // named, so repointing the default without rebasing the arm fails here.
+        let shipped = *arms
+            .iter()
+            .find(|p| p.arm == CAD_DEFAULT.arm)
+            .expect("the shipped default must be one of the arms");
         let looped = arms[4];
-        assert_eq!(sat_only.cell_cap, looped.cell_cap);
-        assert_eq!(sat_only.single_cell, looped.single_cell);
-        assert_eq!(sat_only.emit_unsat, looped.emit_unsat);
-        assert_ne!(sat_only.clause_loop, looped.clause_loop);
+        assert_eq!(shipped.cell_cap, looped.cell_cap);
+        assert_eq!(shipped.single_cell, looped.single_cell);
+        assert_eq!(
+            shipped.emit_unsat, looped.emit_unsat,
+            "the clause-loop A/B must isolate the LOOP, not the `unsat` half"
+        );
+        assert_ne!(shipped.clause_loop, looped.clause_loop);
 
         let default = arms[0];
         assert_eq!(

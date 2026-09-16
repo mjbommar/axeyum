@@ -9037,6 +9037,18 @@ pub static GOVERNED_FILES: &[&str] = &[
     "crates/axeyum-solver/src/memory_budget.rs",
     "crates/axeyum-solver/src/nia_linearize.rs",
     "crates/axeyum-solver/src/nra.rs",
+    // ADR-2131. ADR-2126 measured that `GOVERNED_FILES` named `nra.rs` and
+    // NOTHING else from the NRA route, so `every_governing_constant_is_registered`
+    // could never ask about the cell caps, the slice bounds, the refinement
+    // depths or the clause-loop budgets -- every one of which DECLINES a query
+    // when crossed. The five files join together rather than one at a time: the
+    // route is one decision procedure, and registering a third of its bounds
+    // would be worse than registering none because the gap would look closed.
+    "crates/axeyum-solver/src/nra_cell_cert.rs",
+    "crates/axeyum-solver/src/nra_clause_cert.rs",
+    "crates/axeyum-solver/src/nra_clause_loop.rs",
+    "crates/axeyum-solver/src/nra_real_root.rs",
+    "crates/axeyum-solver/src/nra_single_cell.rs",
     // Joined the governed set on 2026-09-09 with the fused portfolio. It has
     // exactly one constant and that constant is a stack RESERVATION whose
     // failure mode is a process abort rather than a decline, which is the kind

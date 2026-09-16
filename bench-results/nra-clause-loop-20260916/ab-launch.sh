@@ -27,7 +27,7 @@
 # about the harness and not about the lever. The held-out QF_NRA draw is
 # ADR-2126's, reused with its own seed and checked disjoint from the pinned one.
 #
-# Usage: ab-launch.sh <dir-on-the-sweep-host> [tag]
+# Usage: ab-launch.sh [tag]   (run FROM the staged directory; `ab-stage.sh` does that)
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
