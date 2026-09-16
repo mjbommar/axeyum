@@ -56,17 +56,34 @@ def bucket_order():
 
 
 def read(paths):
+    """Rows from either a `sizing-run.sh` TSV or an `ab3-run.sh` TSV.
+
+    The two carry the same counter under different names because they were
+    written for different questions: the sizing runner has one arm and calls it
+    `cold_builds`, the A/B runner has three and calls the `off` arm's
+    `a_cold_builds`.  Reading both here is what lets criterion 1's histograms
+    cover every division without a second 24-second pass over 1,400 files --
+    the A/B's `off` arm IS the sizing, and it already runs with `--trace`.
+    """
     rows = []
     for p in paths:
         with open(p, encoding="utf-8", errors="replace") as fh:
             head = fh.readline().rstrip("\n").split("\t")
-            try:
-                ib = head.index("cold_builds")
-            except ValueError:
-                print(f"   (no `cold_builds` column in {p})")
+            if "cold_builds" in head:
+                ib, iv, it = (
+                    head.index("cold_builds"),
+                    head.index("verdict"),
+                    head.index("total_ms"),
+                )
+            elif "a_cold_builds" in head:
+                ib, iv, it = (
+                    head.index("a_cold_builds"),
+                    head.index("a_verdict"),
+                    head.index("a_total_ms"),
+                )
+            else:
+                print(f"   (no builds column in {p})")
                 continue
-            iv = head.index("verdict")
-            it = head.index("total_ms")
             for line in fh:
                 f = line.rstrip("\n").split("\t")
                 if len(f) <= ib:
