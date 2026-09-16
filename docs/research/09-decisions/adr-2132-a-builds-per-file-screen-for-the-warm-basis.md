@@ -887,8 +887,19 @@ the threshold it runs the `off` route with one thread-local read per round added
 The mover is ambient **by construction**, and it doubles as a clean calibration —
 1 in 200 is **0.5 %**, inside the documented 1–1.5 % ambient flip rate for these
 boxes at a 24 s budget, measured on an arm where the treatment provably did
-nothing. It still goes to the 3× recheck, because "the mechanism says it cannot
-be real" is an argument and the recheck is a measurement.
+nothing. It still went to the 3× recheck, because "the mechanism says it cannot
+be real" is an argument and the recheck is a measurement — and the measurement
+agrees:
+
+```text
+file                                          off (3x)                screened (3x)           verdict
+QF_IDL/asp/Solitaire/solitaire-edge-time=29   unknown unknown unknown unknown unknown unknown NEITHER-DECIDES
+```
+
+**It does not reproduce at all**, 0 of 3 in both arms. So criterion 4 is met in
+its strong form: **0 stable losses AND 0 stable gains** across all five
+divisions. The derivation over all 1,000 rows and both comparisons found exactly
+this one mover.
 
 ## 7. Decision
 
@@ -951,8 +962,9 @@ Against §7.1's six criteria, in order:
    `uart-8.induction.cvc` is a STABLE-LOSS, 3/3 in both directions. It is 1,598
    builds, the many-small shape, and no threshold in the sizing window separates
    it from the family the lever wins on.
-4. **No stable loss in the five exposure divisions** — **MET.** All five at 200
-   rows: 0 stable losses, 0 flips, 0 soundness disagreements over 1,000 rows at
+4. **No stable loss in the five exposure divisions** — **MET**, and in the
+   strong form: 0 stable losses AND 0 stable gains. All five at 200
+   rows: 0 flips, 0 soundness disagreements over 1,000 rows at
    a comparable denominator of 1,387, `cold_restarts = 0` throughout. Read §6.8
    before quoting that total, though: THREE of the five are divisions the lever
    cannot act on at all, so their zeros are evidence about the population rather

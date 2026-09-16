@@ -176,3 +176,28 @@ table that prevents it.
 
 The one raw gain (`QF_IDL`, an inert division) is ambient by construction and
 goes to the 3x recheck with any other exposure mover.
+
+
+THE ONE EXPOSURE MOVER, RE-CHECKED 3x PER ARM
+==============================================
+
+The derivation over all 1,000 exposure rows and both comparisons found exactly
+ONE mover, and the recheck settles it:
+
+    file                                       A1..A3 (off)              B1..B3 (screened)         verdict
+    QF_IDL/asp/Solitaire/solitaire-edge-time=29  unknown unknown unknown   unknown unknown unknown  NEITHER-DECIDES
+
+**It does not reproduce at all** -- 0 of 3 in both arms, where the A/B saw it
+decided once under `screened`. Exactly what the mechanism argument predicted: the
+screened arm answered zero cubes warm anywhere in `QF_IDL`, so it could not have
+moved that verdict, and the raw gain was the ambient flip rate showing up once in
+200 rows.
+
+The mechanism said it and the recheck measured it. Both are kept, because the
+argument would have been worth nothing if the recheck had disagreed -- and a
+lane that only publishes the arguments that were later confirmed is not doing
+either.
+
+    CRITERION 4: 0 STABLE LOSSES **and** 0 STABLE GAINS across all five
+    divisions, 1,000 rows, 0 soundness disagreements at a comparable denominator
+    of 1,387.
