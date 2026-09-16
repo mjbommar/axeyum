@@ -46,6 +46,22 @@ needs `references/z3` and `references/cvc5` populated
 fails loudly rather than silently passing on a host without them — an absent
 clone reports `FAIL … No such file`, never `BAD=0`.
 
+## The checkers are shown to fail, not assumed to
+
+A checker that cannot fail is worse than none, so each was mutated by ONE
+line-number digit and required to die:
+
+| mutant | result |
+|---|---|
+| `check-our-citations.py`: `qinst_egraph.rs` `1948 -> 1947` (the `None` that drops polarity tracking) | exit **1**, **exactly 1** `FAIL`, naming `:1947  prefix.extend(inner_vars);` and pointing at the true `:1948` |
+| `check-reference-citations.py`: `smt_context.cpp` `1482 -> 1481` (the `l_true` activation gate) | exit **1**, **exactly 1** `FAIL`, naming `:1481  SASSERT(is_quantifier(...))` |
+
+Unmutated, both exit **0** at `BAD=0`. The mutants were run from copies in a
+scratch directory, never in the shared worktree. Note the `-> actually at`
+hint is best-effort (it scans +/-6 lines and takes the first match, so a needle
+that also occurs in a nearby comment can be pointed at the wrong one); the
+PASS/FAIL verdict does not depend on it.
+
 ## The headline numbers, re-derived
 
 | division | ours | z3 | cvc5 | best-ref (union) |

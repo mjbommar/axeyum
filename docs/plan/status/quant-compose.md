@@ -274,6 +274,15 @@ any miss. Both now report `BAD=0`.
   begins at **`:173`** (not `:174`, its second parameter). A verification claim
   I did not run myself was wrong at 8.8 %.
 
+**And both are shown to fail, not assumed to.** Each was mutated by ONE
+line-number digit and required to die: `check-our-citations.py`
+`qinst_egraph.rs` `1948 -> 1947`, and `check-reference-citations.py`
+`smt_context.cpp` `1482 -> 1481` — the two lines the §3 argument actually
+rests on. Both mutants exit **1** with **exactly one** `FAIL`, naming the
+wrong line's real content (`prefix.extend(inner_vars);` and
+`SASSERT(is_quantifier(...))`). Run from scratch copies, never in the shared
+worktree.
+
 ## 4. Deliverables: MET / NOT MET
 
 | # | deliverable | status | the number that says so |
@@ -340,6 +349,4 @@ claim. `s5`'s physical pairing was confirmed rather than assumed:
 
 <!-- plan-section: landed-changes -->
 
-| date | lane | change | evidence |
-|---|---|---|---|
-| 2026-09-16 | quant-compose | Sized the four OFF quantifier levers and read nested activation on both references; **no lever moved, no Rust, no ADR** (round closed early). Corrected the standing `UFLIA` gap statement: cvc5 alone decides **142**, not 144 — 144 is the z3∪cvc5 union. Found `AXEYUM_MACRO_INLINE` carries **no `config_registry` row** (it is a `OnceLock` bool, not a `cap_lever!` int, so the coverage scanner cannot name it). Named the nested-activation gap at `qinst_egraph.rs:1948` (polarity forced `None` on entering a `forall` body) → `:2186` (discovery skips a context-less registration) → `:7294` (`inactive_dropped`), against z3 `qi_queue.cpp:336` and cvc5 `theory_quantifiers.cpp:182`, which both get it free by asserting the instance back. | `docs/plan/status/quant-compose.md`, `bench-results/quant-compose-20260916/` |
+| 2026-09-16 | `4d864e677` | Sized the four OFF quantifier levers and read nested activation on both references; **no lever moved, no Rust, no ADR** (round closed early). Corrected the standing `UFLIA` gap statement: cvc5 alone decides **142**, not 144 — 144 is the z3∪cvc5 union. Found `AXEYUM_MACRO_INLINE` carries **no `config_registry` row** (it is a `OnceLock` bool, not a `cap_lever!` int, so the coverage scanner cannot name it). Named the nested-activation gap at `qinst_egraph.rs:1948` (polarity forced `None` on entering a `forall` body) → `:2186` (discovery skips a context-less registration) → `:7294` (`inactive_dropped`), against z3 `qi_queue.cpp:336` and cvc5 `theory_quantifiers.cpp:182`, which both get it free by asserting the instance back. | `docs/plan/status/quant-compose.md`, `bench-results/quant-compose-20260916/` |
