@@ -32,6 +32,32 @@ variables, total degree ≤ 8, conjunctive, coefficients inside the existing
 | vs declared `:status` | 0 disagreements over 594 comparable verdicts |
 | differential fuzz | 1500 instances, 239 decided (237 sat / 2 unsat), 0 disagreements |
 
+## Gates
+
+`clippy -D warnings` on solver + bench with `--features full`: exit 0.
+`cargo fmt --all --check`: clean. `cargo check --workspace --all-targets` on
+default features: clean. Solver lib sweep (`--skip reconstruct::`): **1562
+passed, 0 failed**. `corpus_regression`: 2 passed. All **eight** nonlinear z3
+differential fuzzes green with nonzero counts. `config_registry::tests`: 18
+passed. Merge hygiene, links, `gen-plan --check`, `gen-adr-index`: PASS.
+Holdout isolation: PASS at 206 held-out. `progress_frontier` (`--features full`,
+`--test-threads=1`, load 2.9-3.3): **12 passed, 0 failed, no REGRESSION**, with
+`frontier_nia_unsat` and `frontier_nra_degree` — the two families this route
+could touch — both green. The five `bench-results/frontier/*.json` files the run
+rewrites were restored and are NOT committed.
+
+The route/dispatch integration suites (`route_trace`, `route_attribution`,
+`dispatch_rung_refusal_declines`, `nra_fbbt_route`, `ufnra_route`,
+`cas_ideal_route`, `decision_and_evidence_routes_agree`,
+`math_resource_lra_routes`, `quantified_route_trace`): all green.
+
+**Two suites failed on the first pass and both were load, not code.**
+`auto::tests::pathological_overbound_stays_terminal_under_every_policy` and
+`route_attribution::attribution_does_not_change_any_verdict` both assert inside a
+5-second budget, and both were run in a parallel sweep on a box carrying a
+four-core benchmark. Each passes on a quiet box at the same HEAD, and neither is
+on a code path this lane touches. The number reported above is the quiet run.
+
 ## The two things worth carrying forward
 
 **This lane's first sizing was wrong, and the way it was wrong generalises.** It

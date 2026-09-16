@@ -490,4 +490,17 @@ Not "improve the CAD". Three things, in order of measured blocking power:
 - `bench-results/nra-single-cell-20260915/` — sizing, the conjunctivity
   correction, the cause scan, the A/B and its report, and the runner for each.
 - `scripts/tests/mutation_controls.py` suites `nra-single-cell-delineability`
-  and `nra-single-cell-certificate`.
+  and `nra-single-cell-certificate`, plus two new mutations in
+  `nra-cad-attribution`.
+- `bench-results/nra-single-cell-20260915/recheck-movers.tsv` — every mover
+  three times per arm, with the per-pass exit status.
+
+**Two instruments in this lane reported a clean-looking null before they were
+right, and both are recorded beside their data rather than quietly fixed.**
+`cause-scan.sh` printed "no `nra-real-root` attempt in the trail" for the three
+files where the route actually worked — an attempt that DECIDES carries no
+`detail` field, and an empty grep was read as a negative result. And the first
+`recheck-movers.sh` run returned `NEITHER-DECIDES` on all eight movers because
+the script takes absolute paths and the list was corpus-relative; the per-pass
+exit status (`none/2`) is what made that visible, which is why that script
+records it.
