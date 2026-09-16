@@ -548,8 +548,8 @@ pub mod certificates {
     /// Quantifier certificate families and their independent checkers.
     pub mod quantifiers {
         pub use crate::qinst_egraph::{
-            GroundBudget, GroundBudgetGuard, GroundSessionLevelGuard, InstantiationLoopExit,
-            PositivePathLevelGuard, QuantifierClausePropagationCertificate,
+            GenerationLadderGuard, GroundBudget, GroundBudgetGuard, GroundSessionLevelGuard,
+            InstantiationLoopExit, PositivePathLevelGuard, QuantifierClausePropagationCertificate,
             QuantifierFalseSiblingJustification, QuantifierGroundDerivation,
             QuantifierInstanceCertificate, QuantifierPositiveReplacementCertificate,
             RelevanceCriterion, RelevanceFunnel, RelevancePolicy, RelevancePolicyGuard,
@@ -1321,8 +1321,8 @@ macro_rules! full_exports {
         pub use qfuflia_alethe::prove_qf_uflia_unsat_alethe;
         #[doc(hidden)]
         pub use qinst_egraph::{
-            GroundBudget, GroundBudgetGuard, GroundSessionLevelGuard, InstantiationLoopExit,
-            PositivePathLevelGuard, QuantifierClausePropagationCertificate,
+            GenerationLadderGuard, GroundBudget, GroundBudgetGuard, GroundSessionLevelGuard,
+            InstantiationLoopExit, PositivePathLevelGuard, QuantifierClausePropagationCertificate,
             QuantifierFalseSiblingJustification, QuantifierGroundDerivation,
             QuantifierInstanceCertificate, QuantifierPositiveReplacementCertificate,
             RelevanceCriterion, RelevanceFunnel, RelevancePolicy, RelevancePolicyGuard,

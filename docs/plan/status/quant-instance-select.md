@@ -1,11 +1,10 @@
-# Lane QUANT-INSTANCE-SELECT
+# Lane: quant-instance-select — the selection lever already shipped, and it acts on 0.30 % of the rejected traffic (ADR-2133)
 
-<!-- status-block -->
-- **Lane**: `quant-instance-select`
-- **ADR**: [ADR-2133](../../research/09-decisions/adr-2133-generation-bounded-instance-selection.md)
-- **Status**: sizing landed; the briefed lever's ceiling measured at **0 cores**
-- **Artifacts**: `bench-results/quant-instance-select-20260916/`
-<!-- /status-block -->
+<!-- plan-section: lane-status -->
+
+**Lane QUANT-INSTANCE-SELECT (`DONE`, quant-instance-select, 2026-09-16).**
+[ADR-2133](../../research/09-decisions/adr-2133-generation-bounded-instance-selection.md);
+artifacts in `bench-results/quant-instance-select-20260916/`.
 
 ## What this lane was asked to build, and why it did not
 

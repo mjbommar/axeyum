@@ -884,6 +884,21 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #   quantifier_trigger_alternatives
   #                            — ADR-2113: the trigger-alternative lever's soundness-
   #                              negative fixtures over satisfiable queries at six caps.
+  #   quant_generation_ladder
+  #                            — ADR-2133: the generation ladder on the final
+  #                              refutation check, at levels 0 and 1. The lever is
+  #                              strictly ADDITIVE (every layer is a subset of the
+  #                              conjunction the full check already takes), so it has
+  #                              no `sat` path and the usual "a sat claimed too early"
+  #                              fixture has no analogue; the failure mode it really
+  #                              has is a ladder whose non-refutation SWALLOWS the
+  #                              full check, which is what the two `UNSAT_` fixtures
+  #                              are for — and those are simultaneously the positive
+  #                              controls that stop the two satisfiable fixtures
+  #                              passing against an engine that decides nothing.
+  #                              Layer PRECISION is pinned in `qinst_egraph`'s unit
+  #                              tests, where generations can be constructed exactly;
+  #                              mutation-checked at `quant-generation-ladder`.
   #   decline_detail_typed
   #                            — ADR-2104: every DeclineReason detail is a closed
   #                              enum with an exhaustive name(); this suite DRIVES
@@ -931,7 +946,7 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
                lra_opaque_real_apps decline_detail_typed \
                quantifier_trigger_alternatives quantifier_positive_path \
                dt_nested_field_2128 quant_macro_inline_route quant_ground_session_soundness \
-               quant_session_arith_certificate; do
+               quant_session_arith_certificate quant_generation_ladder; do
     gated_test "dispatch/reason: $suite" \
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
   done

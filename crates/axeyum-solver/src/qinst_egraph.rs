@@ -1250,6 +1250,114 @@ const FLOOD_FINAL_SUBSET_CHECK_MIN_GROUND: usize = 2048;
 /// (generation 0) plus instances derived purely from source terms.
 const FLOOD_FINAL_SUBSET_MAX_GENERATION: u32 = 1;
 
+/// Dated lever, 2026-09-16 (ADR-2133), **OFF in the shipped configuration**:
+/// the generation LADDER for the final refutation check.
+///
+/// The shipped final check is one flat refutation over the whole accumulated
+/// ground set, with a single shallow pre-check at generation
+/// [`FLOOD_FINAL_SUBSET_MAX_GENERATION`] taken only when the set is already
+/// [`FLOOD_FINAL_SUBSET_CHECK_MIN_GROUND`] terms or larger. Measured on
+/// ADR-2113's 53 reference-minimal UFLIA cores
+/// (`bench-results/quant-instance-select-20260916/`): the dumped ground sets
+/// have a **median of 1061** terms, so that pre-check does not run on **26 of
+/// 37** of them, and when it does run it admits **69.5 %** of the terms — a
+/// weak reduction — while z3's own refutation needs generation **>= 3 on 25 of
+/// 53** cores.
+///
+/// The ladder instead tries `gen <= 0`, `gen <= 1`, … in ascending order,
+/// stopping at the first `unsat`, and falls through to the unchanged full
+/// check when no layer refutes.
+///
+/// # Why this cannot produce a wrong verdict, in either direction
+///
+/// Every layer is a SUBSET of the conjunction the full check would take, and
+/// every member of that conjunction is either an original assertion or an
+/// admitted instance of an asserted universal. A subset being `unsat` therefore
+/// refutes the whole conjunction — the ladder is **strictly additive**: it can
+/// turn an `unknown` into an `unsat` and nothing else. It never claims `sat`
+/// (a non-`unsat` layer is discarded, not believed), and it never replaces the
+/// full check — a ladder that exhausts its budget falls through to it. So the
+/// soundness-negative fixture for this lever is not "a `sat` claimed too early"
+/// but "a layer's non-`unsat` swallowed the full check"; see
+/// `tests/quant_generation_ladder.rs`.
+const GENERATION_LADDER_LEVEL: usize = 0;
+
+/// Ground-set floor for the generation ladder when it is on. `0` — unlike the
+/// shipped single-layer pre-check, the ladder is meant to reach the small sets
+/// that are the measured majority of this population, and its cost is bounded
+/// by its own fractional budget rather than by a size gate.
+const GENERATION_LADDER_MIN_GROUND: usize = 0;
+
+/// Generation ceiling for the ladder: it builds at most this many layers above
+/// generation 0, whatever the ground set's depth. `4` covers every generation
+/// present in the measured dumps (max observed: 4).
+const GENERATION_LADDER_MAX_GENERATION: u32 = 4;
+
+/// The whole ladder runs under `remaining / this` of the shared budget, split
+/// across its layers, so turning the lever on costs no more wall clock before
+/// the full check than the shipped single-layer pre-check already could.
+const GENERATION_LADDER_BUDGET_DIVISOR: u32 = 4;
+
+axeyum_ir::cap_lever! {
+    /// The process-wide generation-ladder level: [`GENERATION_LADDER_LEVEL`],
+    /// or `AXEYUM_QINST_GEN_LADDER`.
+    ///
+    /// `0` is the shipped behaviour, byte for byte — the single
+    /// `FLOOD_FINAL_SUBSET_MAX_GENERATION` pre-check. `1` engages the ladder.
+    ///
+    /// Read through [`generation_ladder_level`], never directly — a live
+    /// [`GenerationLadderGuard`] outranks it.
+    fn process_generation_ladder_level() -> usize =
+        "AXEYUM_QINST_GEN_LADDER" or GENERATION_LADDER_LEVEL;
+}
+
+std::thread_local! {
+    /// A per-thread override of the process generation-ladder level, set by
+    /// [`GenerationLadderGuard`]. Same reason and same shape as
+    /// [`GROUND_SESSION_OVERRIDE`]: the process level resolves ONCE into a
+    /// `OnceLock`, so without this no test in a process could exercise both
+    /// arms, and a lever whose ON arm is reachable only by re-launching the
+    /// binary has no in-process soundness test at all.
+    static GENERATION_LADDER_OVERRIDE: std::cell::Cell<Option<usize>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Forces a generation-ladder level on this thread for the guard's lifetime,
+/// restoring the previous setting on drop.
+///
+/// **It does not cross a thread boundary**, and `smtcomp_cli` solves on a
+/// watchdog worker thread — so an A/B must use `AXEYUM_QINST_GEN_LADDER`, not
+/// this guard.
+pub struct GenerationLadderGuard(Option<usize>);
+
+impl GenerationLadderGuard {
+    /// Overrides the process level on this thread.
+    #[must_use]
+    pub fn set(level: usize) -> Self {
+        GenerationLadderGuard(GENERATION_LADDER_OVERRIDE.with(|cell| cell.replace(Some(level))))
+    }
+}
+
+impl Drop for GenerationLadderGuard {
+    fn drop(&mut self) {
+        GENERATION_LADDER_OVERRIDE.with(|cell| cell.set(self.0));
+    }
+}
+
+/// The generation-ladder level in force on this thread: a live
+/// [`GenerationLadderGuard`]'s choice, else the process level.
+fn generation_ladder_level() -> usize {
+    if let Some(level) = GENERATION_LADDER_OVERRIDE.with(std::cell::Cell::get) {
+        return level;
+    }
+    process_generation_ladder_level()
+}
+
+/// Whether the generation ladder is engaged on this run.
+fn generation_ladder_enabled() -> bool {
+    generation_ladder_level() >= 1
+}
+
 /// Internal tuple-join cap per retained matching round. This prevents a
 /// multi-pattern Cartesian product from allocating beyond the solver's own
 /// accumulated-ground budget. The public one-shot witness API remains complete.
@@ -2420,6 +2528,17 @@ struct QuantifierLoopStats {
     candidate_instances: usize,
     candidate_pattern_executions: usize,
     candidate_applications_scanned: usize,
+    /// ADR-2133: how many generation layers actually ran a refutation check.
+    /// `0` when the ladder is off, when the ground set is all one generation,
+    /// or when every layer was a duplicate of the one below it.
+    ladder_layers_checked: usize,
+    /// The layer whose subset refuted, if one did. `None` after a ladder that
+    /// ran and refuted nothing — which is NOT a verdict, and the caller must
+    /// still run the full check.
+    ladder_refuted_at: Option<u32>,
+    /// Total conjuncts examined across every layer the ladder checked. Pins
+    /// that the layers are proper subsets and that they ascend.
+    ladder_subset_terms: usize,
 }
 
 /// Memoized "contains a quantifier" test over the shared term DAG. The
@@ -5210,6 +5329,74 @@ fn collect_generated_ground(
 }
 
 #[allow(clippy::too_many_arguments)]
+/// The ADR-2133 generation ladder: try the accumulated ground set restricted to
+/// generation `<= 0`, then `<= 1`, … stopping at the first layer that refutes.
+///
+/// Returns `Some(CheckResult::Unsat)` when a layer refuted, and `None`
+/// otherwise — `None` means "no layer refuted", NOT "the conjunction is
+/// satisfiable", and the caller must go on to the full check. That is the whole
+/// soundness contract of this function and it is what
+/// `tests/quant_generation_ladder.rs` mutates.
+///
+/// Determinism: layers ascend, and each subset preserves `ground`'s own order
+/// (no hash iteration), so the sequence of checks is a function of the input.
+#[allow(clippy::too_many_arguments)]
+fn generation_ladder_check(
+    arena: &mut TermArena,
+    ground: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+    stats: &mut QuantifierLoopStats,
+    cache: &mut QuantifierTermCache,
+    generations: &TermGenerations,
+) -> Result<Option<CheckResult>, SolverError> {
+    let deepest = ground
+        .iter()
+        .map(|&term| generations.generation(term))
+        .max()
+        .unwrap_or(0)
+        .min(GENERATION_LADDER_MAX_GENERATION);
+    // A set that is all one generation has no proper layer, so the ladder has
+    // nothing to add over the full check and must not spend budget pretending
+    // otherwise.
+    if deepest == 0 {
+        return Ok(None);
+    }
+    let ladder_deadline = fractional_deadline(deadline, GENERATION_LADDER_BUDGET_DIVISOR);
+    let mut previous = 0usize;
+    for layer in 0..deepest {
+        let subset: Vec<TermId> = ground
+            .iter()
+            .copied()
+            .filter(|&term| generations.generation(term) <= layer)
+            .collect();
+        // Skip a layer that adds nothing over the previous one, and never run
+        // the full set here — that is the caller's unchanged check.
+        if subset.len() == previous || subset.len() >= ground.len() {
+            previous = subset.len();
+            continue;
+        }
+        previous = subset.len();
+        if ladder_deadline.is_some_and(|end| Instant::now() >= end) {
+            break;
+        }
+        // Each layer gets an equal share of what is left of the ladder's own
+        // budget, so one expensive shallow layer cannot consume the ladder.
+        let layers_left = u32::try_from(deepest - layer).unwrap_or(1).max(1);
+        let layer_deadline = fractional_deadline(ladder_deadline, layers_left);
+        stats.ladder_layers_checked += 1;
+        stats.ladder_subset_terms += subset.len();
+        if matches!(
+            quantifier_qf_refutation_check(arena, &subset, config, layer_deadline, stats, cache)?,
+            CheckResult::Unsat
+        ) {
+            stats.ladder_refuted_at = Some(layer);
+            return Ok(Some(CheckResult::Unsat));
+        }
+    }
+    Ok(None)
+}
+
 fn finish_quantified_ground_check(
     arena: &mut TermArena,
     ground: &[TermId],
@@ -5221,6 +5408,17 @@ fn finish_quantified_ground_check(
     loop_exit: InstantiationLoopExit,
     rounds_entered: usize,
 ) -> Result<CheckResult, SolverError> {
+    // ADR-2133 lever, OFF by default: the same subset argument, run as a
+    // LADDER over generations instead of at one fixed depth and one fixed
+    // ground-set floor. Ascending order, first `unsat` wins, and no layer can
+    // stop the full check below from running.
+    if generation_ladder_enabled()
+        && ground.len() >= GENERATION_LADDER_MIN_GROUND
+        && let Some(result) =
+            generation_ladder_check(arena, ground, config, deadline, stats, cache, generations)?
+    {
+        return Ok(result);
+    }
     // Flood regime: the full-set final check over a near-cap conjunction is
     // itself a wall (measured 26.7s-then-unknown over 8192 conjuncts on
     // `uf.1158058`). First try the shallow-generation subset — sources plus
@@ -5228,7 +5426,7 @@ fn finish_quantified_ground_check(
     // subset unsat refutes the conjunction (every conjunct is asserted or an
     // admitted instance of an asserted universal), so this is strictly
     // additive: it can only turn an unknown into unsat.
-    if ground.len() >= FLOOD_FINAL_SUBSET_CHECK_MIN_GROUND {
+    if !generation_ladder_enabled() && ground.len() >= FLOOD_FINAL_SUBSET_CHECK_MIN_GROUND {
         let subset: Vec<TermId> = ground
             .iter()
             .copied()
@@ -13360,6 +13558,175 @@ mod tests {
         assert_eq!(seen, HashSet::from([instance_one]));
         assert_eq!(retained.len(), 1);
         assert!(retained.contains_key(&instance_one));
+    }
+
+    /// Builds a ground set whose members sit at three distinct generations,
+    /// returning `(arena, ground, generations)` with `ground[i]` at generation
+    /// `i`. The shape is the same in every ladder test so the tests differ only
+    /// in what they assert.
+    fn ladder_fixture(
+        conjuncts: &dyn Fn(&mut TermArena, TermId, TermId, TermId) -> Vec<TermId>,
+    ) -> (TermArena, Vec<TermId>, TermGenerations) {
+        let mut arena = TermArena::new();
+        let carrier = arena.declare_uninterpreted_sort("LadS");
+        let sort = Sort::Uninterpreted(carrier);
+        let sym_a = arena.declare("lad_a", sort).unwrap();
+        let sym_b = arena.declare("lad_b", sort).unwrap();
+        let sym_c = arena.declare("lad_c", sort).unwrap();
+        let a = arena.var(sym_a);
+        let b = arena.var(sym_b);
+        let c = arena.var(sym_c);
+        let terms = conjuncts(&mut arena, a, b, c);
+        assert_eq!(
+            terms.len(),
+            3,
+            "the fixture is three conjuncts, one per generation"
+        );
+        // Generation 0 is seeded from the first conjunct alone, so the other
+        // two are genuinely deeper rather than incidentally source vocabulary.
+        let mut generations = TermGenerations::seed_sources(&arena, &terms[..1]);
+        generations.record_admitted(&arena, terms[1], 1);
+        generations.record_admitted(&arena, terms[2], 2);
+        assert_eq!(generations.generation(terms[0]), 0);
+        assert_eq!(generations.generation(terms[1]), 1);
+        assert_eq!(generations.generation(terms[2]), 2);
+        (arena, terms, generations)
+    }
+
+    /// ADR-2133. The ladder ascends and stops at the FIRST layer that refutes:
+    /// here generation 0 alone is satisfiable and generation <= 1 is not, so
+    /// exactly two layers run and the second one wins.
+    ///
+    /// A mutant that filters on the deepest generation instead of the layer
+    /// (`<= deepest` for `<= layer`) refutes at layer 0 and dies here.
+    #[test]
+    fn the_generation_ladder_refutes_at_the_shallowest_layer_that_can() {
+        let (mut arena, ground, generations) = ladder_fixture(&|arena, a, b, c| {
+            let a_eq_b = arena.eq(a, b).unwrap();
+            let not_a_eq_b = arena.not(a_eq_b).unwrap();
+            let c_eq_c = arena.eq(c, c).unwrap();
+            vec![a_eq_b, not_a_eq_b, c_eq_c]
+        });
+        let mut stats = QuantifierLoopStats::default();
+        let mut cache = QuantifierTermCache::default();
+        let outcome = generation_ladder_check(
+            &mut arena,
+            &ground,
+            &SolverConfig::default(),
+            None,
+            &mut stats,
+            &mut cache,
+            &generations,
+        )
+        .unwrap();
+        assert_eq!(outcome, Some(CheckResult::Unsat));
+        assert_eq!(
+            stats.ladder_refuted_at,
+            Some(1),
+            "generation 0 alone is satisfiable"
+        );
+        assert_eq!(
+            stats.ladder_layers_checked, 2,
+            "layers 0 and 1, and no more"
+        );
+        // Layer 0 is one conjunct, layer 1 is two: proper, ascending subsets.
+        assert_eq!(stats.ladder_subset_terms, 3);
+    }
+
+    /// ADR-2133's soundness contract, and the reason it is not the brief's
+    /// "a `sat` claimed with a non-empty lazy queue": this ladder never claims
+    /// `sat` at all. What it must never do is let a layer's NON-refutation
+    /// stand in for the full check. Here no proper layer refutes and the whole
+    /// set does, so the ladder must report "nothing refuted" and
+    /// `finish_quantified_ground_check` must still return `Unsat`.
+    ///
+    /// A mutant that returns `Some(CheckResult::Unknown(..))` instead of `None`
+    /// when no layer refutes — i.e. swallows the full check — dies here.
+    #[test]
+    fn a_generation_ladder_that_refutes_nothing_must_not_swallow_the_full_check() {
+        let (mut arena, ground, generations) = ladder_fixture(&|arena, a, b, c| {
+            let a_eq_b = arena.eq(a, b).unwrap();
+            let b_eq_c = arena.eq(b, c).unwrap();
+            let a_eq_c = arena.eq(a, c).unwrap();
+            let not_a_eq_c = arena.not(a_eq_c).unwrap();
+            vec![a_eq_b, b_eq_c, not_a_eq_c]
+        });
+        let mut stats = QuantifierLoopStats::default();
+        let mut cache = QuantifierTermCache::default();
+        let outcome = generation_ladder_check(
+            &mut arena,
+            &ground,
+            &SolverConfig::default(),
+            None,
+            &mut stats,
+            &mut cache,
+            &generations,
+        )
+        .unwrap();
+        assert_eq!(outcome, None, "no proper layer refutes this set");
+        assert_eq!(stats.ladder_refuted_at, None);
+        assert_eq!(
+            stats.ladder_layers_checked, 2,
+            "both proper layers were tried"
+        );
+
+        // The whole point: the caller still reaches the full check and the
+        // verdict is the one the full set licenses.
+        let _guard = GenerationLadderGuard::set(1);
+        let mut stats = QuantifierLoopStats::default();
+        let mut cache = QuantifierTermCache::default();
+        assert_eq!(
+            finish_quantified_ground_check(
+                &mut arena,
+                &ground,
+                &SolverConfig::default(),
+                None,
+                &mut stats,
+                &mut cache,
+                &generations,
+                InstantiationLoopExit::Fixpoint,
+                1,
+            )
+            .unwrap(),
+            CheckResult::Unsat,
+        );
+    }
+
+    /// ADR-2133 is OFF by default: with no guard and no environment override
+    /// the ladder does not run, so the shipped path is unchanged.
+    #[test]
+    fn the_generation_ladder_is_off_in_the_shipped_configuration() {
+        assert_eq!(GENERATION_LADDER_LEVEL, 0);
+        let _guard = GenerationLadderGuard::set(0);
+        assert!(!generation_ladder_enabled());
+        let (mut arena, ground, generations) = ladder_fixture(&|arena, a, b, c| {
+            let a_eq_b = arena.eq(a, b).unwrap();
+            let not_a_eq_b = arena.not(a_eq_b).unwrap();
+            let c_eq_c = arena.eq(c, c).unwrap();
+            vec![a_eq_b, not_a_eq_b, c_eq_c]
+        });
+        let mut stats = QuantifierLoopStats::default();
+        let mut cache = QuantifierTermCache::default();
+        assert_eq!(
+            finish_quantified_ground_check(
+                &mut arena,
+                &ground,
+                &SolverConfig::default(),
+                None,
+                &mut stats,
+                &mut cache,
+                &generations,
+                InstantiationLoopExit::Fixpoint,
+                1,
+            )
+            .unwrap(),
+            CheckResult::Unsat,
+        );
+        assert_eq!(
+            stats.ladder_layers_checked, 0,
+            "the ladder must not have run"
+        );
+        assert_eq!(stats.ladder_refuted_at, None);
     }
 
     /// Z3-style instantiation generations (T2.6.4, `qi_queue.cpp` cost
