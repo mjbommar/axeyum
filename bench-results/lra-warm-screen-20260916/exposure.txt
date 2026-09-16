@@ -18,7 +18,7 @@ that never started is a different fact from an arm that answered nothing.
     QF_LIA      200  127       127   +0     0     0     0      0  248    0
     QF_UFLRA    200  149       149   +0     0     0     0      0  298    0
     QF_UFLIA    200  162       162   +0     0     0     0      0  324    0
-    QF_IDL      198  108       109   +1     1     0     0      0  217    0
+    QF_IDL      200  109       110   +1     1     0     0      0  219    0
     QF_RDL            RUNNING
 
 QF_LIA: ZERO MOVEMENT, AND THE ARM IS INERT -- BOTH, NOT ONE
@@ -117,7 +117,7 @@ the division, so it cannot have caused a verdict to move: below the threshold it
 runs the `off` route with one thread-local read per round added. A raw mover
 here is ambient by construction.
 
-It is a useful calibration, though. **1 raw mover in 198 rows is 0.5 %**, which
+It is a useful calibration, though. **1 raw mover in 200 rows is 0.5 %**, which
 sits inside the 1-1.5 % ambient flip rate these boxes are documented to carry at
 a 24 s budget, and it is measured on an arm where the treatment provably did
 nothing. That is about as clean an estimate of the floor as this harness can

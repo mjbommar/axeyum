@@ -1,0 +1,101 @@
+file	order	a_rc	a_ms	a_verdict	a_total_ms	b_rc	b_ms	b_verdict	b_total_ms	c_rc	c_ms	c_verdict	c_total_ms	a_cold_builds	b_cold_builds	c_cold_builds	a_cube_collect_ms	a_cube_simplex_ms	b_cube_collect_ms	b_cube_simplex_ms	b_warm_solve_ms	b_warm_sync_ms	b_warm_checks	b_warm_build	b_warm_restarts	b_warm_fill_peak	c_cube_collect_ms	c_cube_simplex_ms	c_warm_solve_ms	c_warm_sync_ms	c_warm_checks	c_warm_build	c_warm_restarts	c_warm_fill_peak	status
+QF_IDL/asp/TravellingSalesperson/tsp_rand_70_300_1155482584_12.lp.smt2	AC	0	21324	unknown	21195					0	21325	unknown	21199	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/asp/SchurNumbers/15.3.schur.lp.smt2	CA	0	21322	unknown	21265					0	21325	unknown	21269	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/queens_bench/n_queen/queen31-1.smt2	AC	0	13317	sat	13215					0	13116	sat	13029	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/mathsat/fischer/FISCHER11-3-ninc.smt2	CA	0	106	unsat	48					0	106	unsat	49	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/20210312-Bouvier/vlsat3_i56.smt2	AC	0	25329	unknown						0	25328	unknown																							sat
+QF_IDL/20210312-Bouvier/vlsat3_c84.smt2	CA	0	24127	unknown	21212					0	24226	unknown	21207	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/planning/plan-9.cvc.smt2	AC	0	106	unsat	35					0	106	unsat	35	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/mathsat/fischer/FISCHER13-13-ninc.smt2	CA	0	25027	unknown						0	25227	unknown																							unsat
+QF_IDL/Averest/parallel_search/ParallelSearch_safe_bgmc000.smt2	AC	0	106	unsat	2					0	106	unsat	1	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/Averest/sorting_network/SortingNetwork4_live_bgmc003.smt2	CA	0	106	sat	6					0	106	sat	6	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/queens_bench/super_queen/super_queen94-1.smt2	AC	0	21424	unknown	21354					0	21425	unknown	21353	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/queens_bench/n_queen/queen97-1.smt2	CA	0	21426	unknown	21371					0	21425	unknown	21369	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/Averest/buble_sort/BubbleSort_live_blmc003.smt2	AC	0	407	sat	306					0	407	sat	305	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/planning/plan-18.cvc.smt2	CA	0	206	unsat	130					0	206	unsat	129	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/parity/01.500.graph.smt2	AC	0	2308	unsat	2128					0	2309	unsat	2126	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/diamonds/diamonds.18.2.i.a.u.smt2	CA	0	4711	unsat	4655					0	4711	unsat	4661	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/mathsat/fischer/FISCHER12-2-ninc.smt2	AC	0	106	unsat	34					0	106	unsat	33	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/schedulingIDL/tai_10x10_7_mkspan617.smt2	CA	0	25029	unknown						0	25028	unknown																							sat
+QF_IDL/RTCL/b13_tf_15/ckt_PROP3_tf_15.smt2	AC	0	106	unsat	21					0	106	unsat	21	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/asp/Hanoi/mgs_towers-hanoi.73_7.smt2	CA	0	22126	unknown	21927					0	22226	unknown	21985	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/job_shop/jobshop44-2-22-22-4-4-11.smt2	AC	0	25027	unknown						0	25029	unknown																							unknown
+QF_IDL/asp/GraphColouring/graph-colouring-nodes=140-density=0.1-instance=9.smt2	CA	0	21224	unknown	21169					0	21226	unknown	21182	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/schedulingIDL/j7_per10_0_mkspan1013.smt2	AC	0	3809	sat	3709					0	3709	sat	3658	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/qlock/qlock-4-10-39.induction.cvc.smt2	CA	0	21524	unknown	21420					0	21524	unknown	21397	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/20210312-Bouvier/vlsat3_i68.smt2	AC	0	25129	unknown						0	25128	unknown																							sat
+QF_IDL/job_shop/jobshop28-2-14-14-4-4-11.smt2	CA	0	25027	unknown						0	25027	unknown																							unknown
+QF_IDL/20220214-jobshop-BohanLi/jobshop26-2-13-13-4-4-16.smt2	AC	0	25026	unknown						0	25027	unknown																							sat
+QF_IDL/parity/12.100.graph.smt2	CA	0	106	sat	77					0	206	sat	76	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/20210312-Bouvier/vlsat3_c72.smt2	AC	0	20421	unknown	9225					0	20024	unknown	8809	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/Averest/selection_sort/SelectionSort_safe_blmc007.smt2	CA	0	1008	sat	889					0	1007	sat	895	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/queens_bench/n_queen/queen86-1.smt2	AC	0	21323	unknown	21249					0	21323	unknown	21245	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/20210312-Bouvier/vlsat3_i44.smt2	CA	0	25128	unknown						0	25129	unknown																							sat
+QF_IDL/job_shop/jobshop34-2-17-17-4-4-11.smt2	AC	0	25027	unknown						0	25026	unknown																							unknown
+QF_IDL/RTCL/b01_tf_20/ckt_PROP0_tf_20.smt2	CA	0	106	unsat	8					0	106	unsat	8	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/DTP/DTP_k2_n35_c245_s18.smt2	AC	0	506	unsat	471					0	506	unsat	470	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/asp/GraphColouring/graph-colouring-nodes=130-density=0.1-instance=10.smt2	CA	0	21224	unknown	21127					0	21224	unknown	21159	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/asp/GeneralizedSlitherlink/trisquares.41.asp.smt2	AC	0	3509	sat	3353					0	3809	sat	3691	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/asp/Sokoban/dimitri_yorick.59.steps.8.asp.smt2	CA	0	1007	unsat	958					0	1107	unsat	966	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/sal/bakery/inf-bakery-invalid-3.smt2	AC	0	106	sat	3					0	106	sat	2	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/asp/WeightBoundedDominatingSet/rand_150_600_1159731678_6.lp.smt2	CA	0	21224	unknown	21109					0	21225	unknown	21096	0		0	0	0									0	0	0	0	0	off	0	0	unknown
+QF_IDL/schedulingIDL/j8_per0_1_mkspan1053.smt2	AC	0	25026	unknown						0	25026	unknown																							sat
+QF_IDL/mathsat/fischer/FISCHER9-5-ninc.smt2	CA	0	106	unsat	78					0	106	unsat	78	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/parity/22.500.graph.smt2	AC	0	2909	sat	2623					0	2909	sat	2625	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/Averest/linear_search/LinearSearch_live_bgmc005.smt2	CA	0	106	unsat	8					0	107	unsat	8	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/20210312-Bouvier/vlsat3_i80.smt2	AC	0	25130	unknown						0	25130	unknown																							sat
+QF_IDL/mathsat/post_office/PO3-10-PO3.smt2	CA	0	207	sat	138					0	207	sat	141	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/queens_bench/toroidal_bench/toroidal_queen26-1.smt2	AC	0	25028	unknown						0	25026	unknown																							unsat
+QF_IDL/sal/bakery/inf-bakery-mutex-14.smt2	CA	0	105	unsat	38					0	106	unsat	38	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/DTP/DTP_k2_n35_c210_s7.smt2	AC	0	306	sat	260					0	306	sat	262	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/parity/10.500.graph.smt2	CA	0	2508	sat	2259					0	2508	sat	2257	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/queens_bench/toroidal_bench/toroidal_queen15-1.smt2	AC	0	25124	unknown						0	25027	unknown																							unsat
+QF_IDL/cellar/scen09.smt2	CA	0	4409	unsat	4348					0	4510	unsat	4436	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/asp/GeneralizedSlitherlink/penrose.34.asp.smt2	AC	0	1307	sat	1187					0	1307	sat	1180	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/queens_bench/toroidal_bench/toroidal_queen80-1.smt2	CA	0	21523	unknown	21449					0	21524	unknown	21450	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/planning/plan-30.cvc.smt2	AC	0	306	unsat	268					0	306	unsat	267	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/mathsat/post_office/PO4-3-PO4.smt2	CA	0	206	unsat	137					0	206	unsat	140	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/asp/HierarchicalClustering/xy.12.x.12.r.3.274440616.806497.data_k=3_l=4_sat.gph.smt2	AC	0	9314	sat	9240					0	9515	sat	9384	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/asp/Labyrinth/laby_18_18_14.lp.smt2	CA	0	25229	unknown						0	25229	unknown																							sat
+QF_IDL/asp/ChannelRouting/channelRoute.in9.smt2	AC	0	11718	sat	11427					0	11217	sat	10931	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/20220214-jobshop-BohanLi/jobshop38-2-19-19-4-4-16.smt2	CA	0	21226	unknown	21173					0	21224	unknown	21179	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/schedulingIDL/j7_per10_2_mkspan1013.smt2	AC	0	25126	unknown						0	25028	unknown																							sat
+QF_IDL/Averest/binary_search/BinarySearch_live_bgmc002.smt2	CA	0	107	sat	4					0	106	sat	4	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/asp/SchurNumbers/20.18.schur.lp.smt2	AC	0	5311	unsat	5257					0	4911	unsat	4789	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/parity/21.100.graph.smt2	CA	0	107	sat	63					0	106	sat	61	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/planning/plan-42.cvc.smt2	AC	0	707	unsat	616					0	707	unsat	612	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/queens_bench/super_queen/super_queen29-1.smt2	CA	0	25028	unknown						0	25029	unknown																							sat
+QF_IDL/queens_bench/n_queen/queen20-1.smt2	AC	0	607	sat	481					0	507	sat	474	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/schedulingIDL/tai_15x15_2_mkspan933.smt2	CA	0	25029	unknown						0	25130	unknown																							sat
+QF_IDL/asp/DisjunctiveScheduling/disjunctiveScheduling.in7.smt2	AC	0	25330	unknown						0	25330	unknown																							sat
+QF_IDL/queens_bench/super_queen/super_queen18-1.smt2	CA	0	607	sat	554					0	607	sat	550	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/parity/24.100.graph.smt2	AC	0	206	unsat	77					0	107	unsat	74	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/Averest/insertion_sort/InsertionSort_safe_bgmc005.smt2	CA	0	307	sat	201					0	307	sat	205	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/schedulingIDL/j7_per0_1_mkspan1055.smt2	AC	0	11917	sat	11849					0	12018	sat	11956	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/diamonds/diamonds.12.2.i.a.u.smt2	CA	0	308	unsat	247					0	307	unsat	250	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/asp/TravellingSalesperson/rand_80_340_1159656267_0.lp.smt2	AC	0	21322	unknown	21261					0	21325	unknown	21228	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/parity/25.500.graph.smt2	CA	0	5112	sat	4713					0	5111	sat	4730	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/schedulingIDL/tai_15x15_1_mkspan1140.smt2	AC	0	25028	unknown						0	25029	unknown																							sat
+QF_IDL/Averest/sorting_network/SortingNetwork8_live_blmc003.smt2	CA	0	607	sat	511					0	607	sat	505	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/asp/Sokoban/duthen-990602.51.steps.12.asp.smt2	AC	0	1608	unsat	1541					0	1608	unsat	1546	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/asp/WeightBoundedDominatingSet/rand_100_400_1159666138_5.lp.smt2	CA	0	25033	unknown						0	25131	unknown																							sat
+QF_IDL/20220214-jobshop-BohanLi/jobshop32-2-16-16-4-4-16.smt2	AC	0	25131	unknown						0	25029	unknown																							sat
+QF_IDL/job_shop/jobshop4-2-2-2-4-4-11.smt2	CA	0	106	unsat	1					0	106	unsat	1	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/asp/BlockedNQueens/156.48.1960.36.1721347806.dat.smt2	AC	0	21327	unknown	21199					0	21228	unknown	21161	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/parity/09.100.graph.smt2	CA	0	108	sat	62					0	108	sat	59	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/queens_bench/super_queen/super_queen83-1.smt2	AC	0	21327	unknown	21272					0	21423	unknown	21277	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/schedulingIDL/tai_15x15_5_mkspan1174.smt2	CA	0	25032	unknown						0	25030	unknown																							sat
+QF_IDL/Averest/min_max/MinMax_safe_bgmc000.smt2	AC	0	107	unsat	1					0	107	unsat	0	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/Averest/buble_sort/BubbleSort_live_bgmc002.smt2	CA	0	107	sat	48					0	108	sat	43	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/mathsat/fischer/FISCHER14-11-ninc.smt2	AC	0	25030	unknown						0	25029	unknown																							unsat
+QF_IDL/queens_bench/toroidal_bench/toroidal_queen91-1.smt2	CA	0	21828	unknown	21658					0	21827	unknown	21668	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/qlock/qlock-4-10-9.induction.cvc.smt2	AC	0	2509	sat	2482					0	2509	sat	2406	0		0	0	0									0	0	0	0	0	off	0	0	sat
+QF_IDL/asp/ConnectedDominatingSet/rand_55_250_1235855873_0_k=8_sat.gph.smt2	CA	0	25030	unknown						0	25131	unknown																							sat
+QF_IDL/20220214-jobshop-BohanLi/jobshop20-2-10-10-4-4-16.smt2	AC	0	25031	unknown						0	25030	unknown																							sat
+QF_IDL/20210312-Bouvier/vlsat3_c48.smt2	CA	0	25029	unknown						0	25029	unknown																							unsat
+QF_IDL/asp/KnightTour/knightTour.in05.smt2	AC	0	21827	unknown	21611					0	21727	unknown	21618	0		0	0	0									0	0	0	0	0	off	0	0	unknown
+QF_IDL/Averest/sorting_network/SortingNetwork4_safe_blmc002.smt2	CA	0	107	unsat	17					0	107	unsat	18	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/Averest/buble_sort/BubbleSort_safe_bgmc004.smt2	AC	0	108	unsat	77					0	108	unsat	81	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/diamonds/diamonds.15.2.i.a.u.smt2	CA	0	3010	unsat	2959					0	3010	unsat	2911	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/parity/13.500.graph.smt2	AC	0	2909	unsat	2688					0	3009	unsat	2743	0		0	0	0									0	0	0	0	0	off	0	0	unsat
+QF_IDL/20210312-Bouvier/vlsat3_c60.smt2	CA	0	25029	unknown						0	25024	unknown																							unsat
