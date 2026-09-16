@@ -3785,8 +3785,36 @@ pub(crate) enum CadDecline {
     RootIsolation,
     /// Two critical values could not be ordered exactly.
     RootOrdering,
-    /// The projection (discriminants / pairwise resultants) declined.
+    /// The projection (discriminants / pairwise resultants) declined. Recorded
+    /// by the **enumerative** decider's `project_strict` only. The single-cell
+    /// route's own projection records one of the four `Projection*` causes below
+    /// instead: ADR-2121 flagged this one as a bundle whose members have
+    /// different fixes, so its count was an upper bound on each of them and a
+    /// measurement of none (ADR-2126).
     Projection,
+    /// The single-cell projection needed a resultant whose Sylvester dimension
+    /// (`deg_elim(p) + deg_elim(q)`) exceeds `MAX_MULTI_SYLVESTER_DIM`.
+    ///
+    /// **This is the cause a fraction-free (Bareiss) determinant over the
+    /// [`MultiPoly`] ring would remove**, and it is the only one of the four that
+    /// it would: the cap exists only to bound the factorial cost of the exact
+    /// Leibniz expansion, not because the resultant does not exist (ADR-2126).
+    ProjectionSylvesterDim,
+    /// The single-cell projection produced an IDENTICALLY ZERO discriminant or
+    /// pairwise resultant: the two polynomials share a factor in the eliminated
+    /// variable for *every* value of the remaining ones, so the projection cannot
+    /// isolate where they meet. A wider determinant does not fix this; a
+    /// squarefree decomposition or a content/primitive-part split would
+    /// (ADR-2126).
+    ProjectionResultantZero,
+    /// The single-cell projection could not form `∂p/∂elim`: the coefficient
+    /// multiply by the exponent overflowed (ADR-2126).
+    ProjectionDerivative,
+    /// The single-cell projection ran out of exact arithmetic somewhere other
+    /// than the dimension cap: a degree overflow while viewing a polynomial in
+    /// the eliminated variable, or a coefficient overflow inside the determinant
+    /// (ADR-2126).
+    ProjectionArithmetic,
     /// A polynomial was nullified at the base point, so delineability fails.
     NullifiedResidual,
     /// An algebraic critical value could not be coarsened to a safe bracket.
@@ -3839,6 +3867,10 @@ impl CadDecline {
             Self::RootIsolation => "root-isolation",
             Self::RootOrdering => "root-ordering",
             Self::Projection => "projection",
+            Self::ProjectionSylvesterDim => "projection-sylvester-dim",
+            Self::ProjectionResultantZero => "projection-resultant-zero",
+            Self::ProjectionDerivative => "projection-derivative",
+            Self::ProjectionArithmetic => "projection-arithmetic",
             Self::NullifiedResidual => "nullified-residual",
             Self::AlgebraicCoarsening => "algebraic-coarsening",
             Self::IndeterminateSign => "indeterminate-sign",
@@ -3862,6 +3894,10 @@ impl CadDecline {
         Self::RootIsolation,
         Self::RootOrdering,
         Self::Projection,
+        Self::ProjectionSylvesterDim,
+        Self::ProjectionResultantZero,
+        Self::ProjectionDerivative,
+        Self::ProjectionArithmetic,
         Self::NullifiedResidual,
         Self::AlgebraicCoarsening,
         Self::IndeterminateSign,
@@ -4373,16 +4409,70 @@ pub(crate) fn multi_resultant(
     q: &MultiPoly,
     elim: SymbolId,
 ) -> Option<ResultantOutcome> {
-    let pc = multipoly_in_elim(p, elim)?; // Vec<MultiPoly>, LSB-first in elim
-    let qc = multipoly_in_elim(q, elim)?;
-    let m = pc.len().checked_sub(1)?; // deg_elim(p)
-    let n = qc.len().checked_sub(1)?; // deg_elim(q)
-    if m == 0 || n == 0 {
-        return None; // not genuinely of positive e-degree
+    multi_resultant_classified(p, q, elim).ok()
+}
+
+/// Why [`multi_resultant_classified`] could not produce a resultant at all.
+///
+/// [`multi_resultant`] collapses all three into `None`. They are kept apart here
+/// because they say **different things about what would fix them**, and a bundle
+/// whose members have different fixes is an upper bound on each of them rather
+/// than a measurement of any (ADR-2126, splitting ADR-2121's
+/// `CadDecline::Projection`).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum ResultantDecline {
+    /// `deg_elim(p) + deg_elim(q)` exceeds [`MAX_MULTI_SYLVESTER_DIM`]. **This is
+    /// the one a fraction-free (Bareiss) determinant over the [`MultiPoly`] ring
+    /// would remove**, because the cap exists only to bound the factorial cost of
+    /// the exact Leibniz expansion.
+    SylvesterDim,
+    /// One of the two arguments does not genuinely have positive degree in
+    /// `elim`, so there is no Sylvester matrix to build. A caller that filtered
+    /// on `degree_in(..) > 0` cannot reach this.
+    Degenerate,
+    /// Exact arithmetic ran out: a degree overflow while viewing a polynomial in
+    /// `elim`, or a coefficient overflow inside the determinant. A wider
+    /// determinant would NOT fix this one.
+    Arithmetic,
+}
+
+impl ResultantDecline {
+    /// A stable, matchable key.
+    pub(crate) const fn name(self) -> &'static str {
+        match self {
+            Self::SylvesterDim => "sylvester-dim",
+            Self::Degenerate => "degenerate",
+            Self::Arithmetic => "arithmetic",
+        }
     }
-    let dim = m.checked_add(n)?;
+}
+
+/// [`multi_resultant`], but reporting **which** of the three declines fired.
+///
+/// The classification is the whole point: the dimension cap is a bounded-cost
+/// refusal a better determinant removes, and an overflow is not.
+pub(crate) fn multi_resultant_classified(
+    p: &MultiPoly,
+    q: &MultiPoly,
+    elim: SymbolId,
+) -> Result<ResultantOutcome, ResultantDecline> {
+    // Vec<MultiPoly>, LSB-first in elim.
+    let pc = multipoly_in_elim(p, elim).ok_or(ResultantDecline::Arithmetic)?;
+    let qc = multipoly_in_elim(q, elim).ok_or(ResultantDecline::Arithmetic)?;
+    let m = pc
+        .len()
+        .checked_sub(1)
+        .ok_or(ResultantDecline::Degenerate)?; // deg_elim(p)
+    let n = qc
+        .len()
+        .checked_sub(1)
+        .ok_or(ResultantDecline::Degenerate)?; // deg_elim(q)
+    if m == 0 || n == 0 {
+        return Err(ResultantDecline::Degenerate); // not genuinely of positive e-degree
+    }
+    let dim = m.checked_add(n).ok_or(ResultantDecline::Arithmetic)?;
     if dim > MAX_MULTI_SYLVESTER_DIM {
-        return None;
+        return Err(ResultantDecline::SylvesterDim);
     }
     // Build the (m+n) × (m+n) Sylvester matrix of `pc` (MSB-first rows) over `qc`.
     // Mirror the univariate layout: `n` shifted rows of `p`'s coefficients, then
@@ -4399,14 +4489,14 @@ pub(crate) fn multi_resultant(
             mat[n + row][slot + i] = c.clone();
         }
     }
-    let det = multipoly_determinant(&mat)?;
+    let det = multipoly_determinant(&mat).ok_or(ResultantDecline::Arithmetic)?;
     if det.is_zero() {
-        return Some(ResultantOutcome::Zero);
+        return Ok(ResultantOutcome::Zero);
     }
     if det.vars().is_empty() {
-        return Some(ResultantOutcome::NonzeroConstant);
+        return Ok(ResultantOutcome::NonzeroConstant);
     }
-    Some(ResultantOutcome::Poly(det))
+    Ok(ResultantOutcome::Poly(det))
 }
 
 /// View `p` as a univariate polynomial in `elim` with [`MultiPoly`] coefficients
@@ -8324,6 +8414,80 @@ mod tests {
             "two CadDecline causes share a wire name: {names:?}"
         );
         assert!(total >= 12, "the taxonomy lost causes: only {total} left");
+    }
+
+    /// Every resultant decline has its own wire name (ADR-2126).
+    ///
+    /// The three exist because they have DIFFERENT fixes: only `SylvesterDim`
+    /// is what a fraction-free determinant would remove. A shared name would
+    /// re-merge exactly the bundle this ADR split.
+    #[test]
+    fn every_resultant_decline_has_its_own_name() {
+        let all = [
+            ResultantDecline::SylvesterDim,
+            ResultantDecline::Degenerate,
+            ResultantDecline::Arithmetic,
+        ];
+        let mut names: Vec<&str> = all.iter().map(|d| d.name()).collect();
+        let total = names.len();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(
+            names.len(),
+            total,
+            "two ResultantDecline causes share a name"
+        );
+    }
+
+    /// The dimension cap is reported AS the dimension cap, and a pair inside it
+    /// is not reported as a decline at all.
+    ///
+    /// Both halves matter. ADR-2121's `CadDecline::Projection` could not tell
+    /// this apart from an overflow, so its count was an upper bound on what a
+    /// better determinant would buy. The positive control is the other half: a
+    /// classifier that returned `SylvesterDim` for everything would pass a
+    /// negative-only test (ADR-2126).
+    #[test]
+    fn the_sylvester_dimension_cap_is_reported_as_itself() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Real).expect("declare x");
+        let y = arena.declare("y", Sort::Real).expect("declare y");
+
+        // `p = x^d + y`, `q = x^d - y`: Sylvester dimension in `x` is `2d`.
+        let power = |d: u32| {
+            let mut p = MultiPoly::zero();
+            p.add_term(vec![(x, d)], Rational::integer(1)).expect("x^d");
+            p
+        };
+        let with_y = |mut p: MultiPoly, sign: i128| {
+            p.add_term(vec![(y, 1)], Rational::integer(sign))
+                .expect("y term");
+            p
+        };
+
+        // dim = 2*2 = 4 <= MAX_MULTI_SYLVESTER_DIM: a real resultant comes back.
+        let inside = multi_resultant_classified(&with_y(power(2), 1), &with_y(power(2), -1), x);
+        assert!(
+            matches!(
+                inside,
+                Ok(ResultantOutcome::Poly(_) | ResultantOutcome::NonzeroConstant)
+            ),
+            "a pair inside the cap must not decline"
+        );
+
+        // dim = 2*4 = 8 > MAX_MULTI_SYLVESTER_DIM.
+        let outside = multi_resultant_classified(&with_y(power(4), 1), &with_y(power(4), -1), x);
+        assert_eq!(
+            outside.err(),
+            Some(ResultantDecline::SylvesterDim),
+            "the dimension cap must be reported as the dimension cap, not as arithmetic"
+        );
+
+        // And `multi_resultant` still collapses it, so no existing caller moved.
+        assert!(
+            multi_resultant(&with_y(power(4), 1), &with_y(power(4), -1), x).is_none(),
+            "the Option wrapper must keep its old contract"
+        );
     }
 
     /// `note` is the identity on `Some`, and a `Some` records nothing.

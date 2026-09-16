@@ -81,9 +81,13 @@
 //!   [`CadDecline::NonConjunctive`];
 //! * a resultant whose Sylvester dimension exceeds `nra_real_root`'s
 //!   `MAX_MULTI_SYLVESTER_DIM` (6), because the multivariate determinant is an
-//!   exact Leibniz expansion — [`CadDecline::Projection`]. This is the binding
-//!   constraint on high per-variable degree and ADR-2121 records how much of the
-//!   slice it costs.
+//!   exact Leibniz expansion — [`CadDecline::ProjectionSylvesterDim`]. This is
+//!   the binding constraint on high per-variable degree. ADR-2121 recorded it
+//!   inside a single `Projection` bucket that also held an identically-zero
+//!   resultant, a derivative overflow and a coefficient overflow; ADR-2126 split
+//!   the four apart, because only this one is what a fraction-free determinant
+//!   would remove, and a bundle is an upper bound on each member and a
+//!   measurement of none.
 //!
 //! # Two arms, two assurance levels
 //!
@@ -113,9 +117,10 @@ use crate::nra_cell_cert::{
     check_cell_refutation,
 };
 use crate::nra_real_root::{
-    CadDecline, MAX_ABS_COEFF, MultiPoly, ResultantOutcome, Root, cell_samples, coeffs_in_elim,
-    collect_cert_atoms, dedup_sorted_roots, degree_in, derivative_in, isolate_roots,
-    multi_resultant, multipoly_from_cert, multipoly_to_cert, record_cad_decline, sort_roots,
+    CadDecline, MAX_ABS_COEFF, MultiPoly, ResultantDecline, ResultantOutcome, Root, cell_samples,
+    coeffs_in_elim, collect_cert_atoms, dedup_sorted_roots, degree_in, derivative_in,
+    isolate_roots, multi_resultant_classified, multipoly_from_cert, multipoly_to_cert,
+    record_cad_decline, sort_roots,
 };
 
 /// Most variables the slice accepts. Four covers ADR-2110's largest CAD-decided
@@ -663,6 +668,24 @@ fn project_level(
     elim: SymbolId,
     sample: &BTreeMap<SymbolId, Rational>,
 ) -> Option<Vec<CertPoly>> {
+    /// Map a resultant decline onto the attribution cause it belongs to.
+    ///
+    /// The split exists so the counts can be read: only
+    /// [`CadDecline::ProjectionSylvesterDim`] is what a fraction-free
+    /// determinant would remove, and ADR-2121's single `Projection` bucket was
+    /// an upper bound on it rather than a measurement (ADR-2126).
+    const fn projection_cause(why: ResultantDecline) -> CadDecline {
+        match why {
+            ResultantDecline::SylvesterDim => CadDecline::ProjectionSylvesterDim,
+            // `Degenerate` is unreachable from here (both callers filter on
+            // positive degree in `elim` first), and if it ever were reached it is
+            // an arithmetic-shaped surprise, not a dimension cap.
+            ResultantDecline::Degenerate | ResultantDecline::Arithmetic => {
+                CadDecline::ProjectionArithmetic
+            }
+        }
+    }
+
     let multi: Vec<MultiPoly> = polys
         .iter()
         .map(|p| {
@@ -701,7 +724,7 @@ fn project_level(
         }
         // Every coefficient in `elim`, not only the leading one.
         let Some(coeffs) = coeffs_in_elim(p, elim) else {
-            record_cad_decline(CadDecline::Projection);
+            record_cad_decline(CadDecline::ProjectionArithmetic);
             return None;
         };
         for c in &coeffs {
@@ -712,18 +735,22 @@ fn project_level(
         // The discriminant, `Res_elim(p, dp/d elim)`.
         if degree_in(p, elim) >= 2 {
             let Some(dp) = derivative_in(p, elim) else {
-                record_cad_decline(CadDecline::Projection);
+                record_cad_decline(CadDecline::ProjectionDerivative);
                 return None;
             };
             if degree_in(&dp, elim) > 0 {
-                match multi_resultant(p, &dp, elim) {
-                    Some(ResultantOutcome::Poly(disc)) => push(&disc, &mut out),
-                    Some(ResultantOutcome::NonzeroConstant) => {}
+                match multi_resultant_classified(p, &dp, elim) {
+                    Ok(ResultantOutcome::Poly(disc)) => push(&disc, &mut out),
+                    Ok(ResultantOutcome::NonzeroConstant) => {}
                     // An identically-zero discriminant means a repeated root for
                     // every value of the remaining variables -- the projection
                     // cannot separate them.
-                    Some(ResultantOutcome::Zero) | None => {
-                        record_cad_decline(CadDecline::Projection);
+                    Ok(ResultantOutcome::Zero) => {
+                        record_cad_decline(CadDecline::ProjectionResultantZero);
+                        return None;
+                    }
+                    Err(why) => {
+                        record_cad_decline(projection_cause(why));
                         return None;
                     }
                 }
@@ -734,11 +761,15 @@ fn project_level(
     // Pairwise resultants: where two of them collide.
     for i in 0..elim_bearing.len() {
         for j in (i + 1)..elim_bearing.len() {
-            match multi_resultant(elim_bearing[i], elim_bearing[j], elim) {
-                Some(ResultantOutcome::Poly(res)) => push(&res, &mut out),
-                Some(ResultantOutcome::NonzeroConstant) => {}
-                Some(ResultantOutcome::Zero) | None => {
-                    record_cad_decline(CadDecline::Projection);
+            match multi_resultant_classified(elim_bearing[i], elim_bearing[j], elim) {
+                Ok(ResultantOutcome::Poly(res)) => push(&res, &mut out),
+                Ok(ResultantOutcome::NonzeroConstant) => {}
+                Ok(ResultantOutcome::Zero) => {
+                    record_cad_decline(CadDecline::ProjectionResultantZero);
+                    return None;
+                }
+                Err(why) => {
+                    record_cad_decline(projection_cause(why));
                     return None;
                 }
             }
