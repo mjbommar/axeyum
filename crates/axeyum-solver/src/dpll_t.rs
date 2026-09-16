@@ -51,6 +51,7 @@ use crate::lra::{
     FarkasCertificate, check_with_lra, check_with_lra_within_certified,
     lra_farkas_certificate_within,
 };
+use crate::lra_online::{CubeVerdict, LraTheory};
 use crate::model::Model;
 use crate::sat_bv_backend::SatBvBackend;
 
@@ -433,6 +434,9 @@ pub fn check_with_lra_dpll_within(
     // or it hands it nearly the same one and pays a cold decision for it. Only
     // allocated when counting is armed.
     let mut previous_cube: Option<Vec<bool>> = None;
+    // ADR-2125: built once, over the atoms every cube will ever assign, and
+    // `None` when the lever is off.
+    let mut warm = warm_cube_decider(arena, &ctx, deadline);
     // The route trail labels this whole function `nra` and reports its share of
     // the budget; nothing said how that time divides between the two halves of
     // a round, or how many rounds there were. On the 22 `QF_LRA` files that
@@ -502,6 +506,63 @@ pub fn check_with_lra_dpll_within(
         }
 
         record_cube_churn(&assignment, &mut previous_cube);
+
+        // ADR-2125. The warm decider can only SHORTCUT: every outcome it does
+        // not produce falls through to exactly the cold decision that would have
+        // run, so a verdict this route reaches today cannot be lost to it. A
+        // `Feasible` whose model does not replay falls through for the same
+        // reason — the cold decider replay-checks its own witness and may still
+        // answer, and declining here on its behalf would be a verdict thrown
+        // away rather than a shortcut declined.
+        if let Some(theory) = warm.as_mut() {
+            let truths: Vec<bool> = assignment.iter().map(|&(_, truth)| truth).collect();
+            let started = crate::lazy_smt_counters::enabled().then(Instant::now);
+            let verdict = theory.cube_check(&truths);
+            crate::lazy_smt_counters::record_warm_cube(
+                !matches!(verdict, CubeVerdict::Decline),
+                theory.warm_engine_churn(),
+            );
+            if let Some(started) = started {
+                let outcome = match &verdict {
+                    CubeVerdict::Feasible(_) => RoundOutcome::Sat,
+                    CubeVerdict::Unsat(_) => RoundOutcome::Unsat,
+                    CubeVerdict::Decline => RoundOutcome::Unknown,
+                };
+                crate::lazy_smt_counters::record_theory(started.elapsed(), outcome);
+            }
+            match verdict {
+                CubeVerdict::Feasible(theory_model) => {
+                    let finished =
+                        finish_sat(arena, assertions, &ctx, &propositional, &theory_model)?;
+                    if matches!(finished, CheckResult::Sat(_)) {
+                        return Ok(finished);
+                    }
+                }
+                CubeVerdict::Unsat(core) => {
+                    // The core is the atoms carrying a nonzero, self-verified
+                    // Farkas multiplier, in the theory's own atom indexing, which
+                    // is `ctx.atoms` order — the same indexing `conflict_core`
+                    // reads a carried certificate through. Mapped back to
+                    // `(prop, truth)` pairs so the clause is built by the one
+                    // function that builds every blocking clause on this route.
+                    let blocked: Vec<(SymbolId, bool)> = core
+                        .iter()
+                        .filter_map(|lit| {
+                            assignment.get(lit.atom).map(|&(prop, _)| (prop, lit.value))
+                        })
+                        .collect();
+                    if !blocked.is_empty() {
+                        crate::lazy_smt_counters::record_blocking(
+                            blocked.len() as u64,
+                            Duration::ZERO,
+                        );
+                        blocking.push(block_clause(arena, &blocked)?);
+                        continue;
+                    }
+                }
+                CubeVerdict::Decline => {}
+            }
+        }
 
         let (verdict, carried) = decide_cube(arena, &theory_lits, deadline)?;
         match verdict {
@@ -1004,6 +1065,63 @@ fn is_pure_bool_real(arena: &TermArena, term: TermId) -> bool {
         }
     }
     true
+}
+
+/// Lever (`AXEYUM_LRA_WARM_CUBE=on`): decide the offline lazy-SMT loop's cubes on
+/// a simplex whose tableau and basis PERSIST across rounds, instead of building
+/// a fresh tableau per cube (ADR-2125).
+///
+/// **It ships `off` until the A/B has been read**, which is this repository's
+/// standing rule for a route change that cannot be argued from a verdict count
+/// alone. The risk a default-off lever carries is [ADR-2055]'s: a path defaulting
+/// `off` is exercised by no gate. That is why the five z3 differential fuzzes are
+/// run in BOTH arms for this change and why the mutation suite targets the warm
+/// decider rather than the route around it.
+///
+/// Read once into a `OnceLock`, so the process answers one way for its whole
+/// life and a mid-run change cannot produce two halves of one measurement.
+fn warm_cube_enabled() -> bool {
+    /// The lever's environment variable, and the `config_registry` entry's name.
+    ///
+    /// A named constant rather than a literal at the two use sites: the registry
+    /// requires every entry to name a LIVE constant in the module it claims, so
+    /// a lever renamed in the code and not in the registry fails
+    /// `every_entry_names_a_live_constant` instead of silently becoming a lever
+    /// nothing can turn on.
+    const AXEYUM_LRA_WARM_CUBE: &str = "AXEYUM_LRA_WARM_CUBE";
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        crate::config_registry::note_consulted(
+            "crates/axeyum-solver/src/dpll_t.rs::AXEYUM_LRA_WARM_CUBE",
+        );
+        std::env::var(AXEYUM_LRA_WARM_CUBE).is_ok_and(|value| value.trim() == "on")
+    })
+}
+
+/// The persistent theory the offline loop decides its cubes on, or `None` when
+/// the lever is off or the warm engine declined to exist (ADR-2125).
+///
+/// Built ONCE per entry into the loop, over the abstraction's atom terms, which
+/// is the whole mechanism: every cube the loop will ever produce is an
+/// assignment to exactly these atoms, so one tableau with one row per constraint
+/// template serves all of them and only the row BOUNDS move between rounds.
+///
+/// Returns `None` rather than a Fourier–Motzkin-backed theory when the tableau
+/// declines: that fallback is a different engine, and answering from it would
+/// make an A/B of this lever an A/B of two engines instead. The same reasoning
+/// [ADR-2111] had to apply to `TableauReserve`, whose arm was INERT on the
+/// population it was aimed at and would have printed `net +0` by construction.
+fn warm_cube_decider(
+    arena: &TermArena,
+    ctx: &Abstractor,
+    deadline: Option<Instant>,
+) -> Option<LraTheory> {
+    if !warm_cube_enabled() {
+        return None;
+    }
+    let atom_terms: Vec<TermId> = ctx.atoms.iter().map(|a| a.term).collect();
+    let theory = LraTheory::try_new_with_deadline(arena, &atom_terms, deadline).ok()?;
+    theory.has_warm_engine().then_some(theory)
 }
 
 /// Builds the final `sat` model (real values + original Boolean values) and

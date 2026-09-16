@@ -495,6 +495,38 @@ pub struct LazySmtCounters {
     /// a pristine basis.
     pub simplex_cold_pivots: u64,
 
+    /// Cubes the ADR-2125 warm decider ANSWERED — a verdict, either side.
+    ///
+    /// The mechanism counter. [ADR-2111] shipped a lever whose arm was INERT on
+    /// the population it was aimed at, and recorded that `net +0` from an inert
+    /// arm is indistinguishable from `net +0` from a working one that does not
+    /// help. These five fields are what tells the two apart from the trail
+    /// alone: a run whose `warm_cube_checks` is 0 measured nothing about the
+    /// warm basis, whatever its verdict column says.
+    pub warm_cube_checks: u64,
+    /// Cubes the warm decider DECLINED, which fall through to the cold decision
+    /// that would otherwise have run.
+    ///
+    /// Read against [`Self::warm_cube_checks`]: at a ratio near 1 the lever is
+    /// paying for a warm engine and deciding nothing on it, which is a cost with
+    /// no verdict attached and the shape a `net +0` would otherwise hide.
+    pub warm_cube_declines: u64,
+    /// Row bounds the warm engine has RETRACTED over its whole life.
+    /// Cumulative on the engine, so this is SET rather than added to.
+    pub warm_cube_retractions: u64,
+    /// Row bounds the warm engine has (re-)ASSERTED over its whole life.
+    /// Cumulative on the engine, so this is SET rather than added to.
+    pub warm_cube_assertions: u64,
+    /// Checks that discarded the basis and restarted from the pristine one.
+    ///
+    /// **The tripwire this lever lives or dies by.** A warm basis is only warm
+    /// if it is not being rebuilt, and a rebuild here is invisible in every
+    /// other column: the verdicts are identical, the retraction counts are
+    /// identical, and only the clock moves. Any nonzero reading means the engine
+    /// was not warm for that many checks and the measurement is about something
+    /// else.
+    pub warm_cube_cold_restarts: u64,
+
     /// What the online CDCL(T) LRA probe at the head of the linear loop did.
     ///
     /// The loop below that probe is the WEAK route: offline lazy SMT with total
@@ -691,7 +723,9 @@ impl LazySmtCounters {
              cube_flips={} cube_identical={} cube_decisions={} cube_collect_ms={} \
              cube_fm_ms={} cube_fm_declines={} cube_simplex_ms={} cube_simplex_calls={} \
              cube_matrices={} simplex_cold_builds={} simplex_cold_build_ms={} \
-             simplex_cold_ms={} simplex_cold_pivots={} online_probe={}",
+             simplex_cold_ms={} simplex_cold_pivots={} warm_cube_checks={} \
+             warm_cube_declines={} warm_cube_retractions={} warm_cube_assertions={} \
+             warm_cube_cold_restarts={} online_probe={}",
             self.reading().label(),
             self.lra_entries,
             self.lra_rounds,
@@ -733,6 +767,11 @@ impl LazySmtCounters {
             self.simplex_cold_build.as_millis(),
             self.simplex_cold.as_millis(),
             self.simplex_cold_pivots,
+            self.warm_cube_checks,
+            self.warm_cube_declines,
+            self.warm_cube_retractions,
+            self.warm_cube_assertions,
+            self.warm_cube_cold_restarts,
             self.online_probe.label(),
         )
     }
@@ -815,6 +854,11 @@ const fn zero_counters() -> LazySmtCounters {
         simplex_cold_build: Duration::ZERO,
         simplex_cold: Duration::ZERO,
         simplex_cold_pivots: 0,
+        warm_cube_checks: 0,
+        warm_cube_declines: 0,
+        warm_cube_retractions: 0,
+        warm_cube_assertions: 0,
+        warm_cube_cold_restarts: 0,
         online_probe: OnlineProbe::NotProbed,
     }
 }
@@ -1196,6 +1240,30 @@ pub(crate) fn record_cold_simplex(total: Duration, build: Duration, built: bool,
     });
 }
 
+/// One cube decided — or declined — by the ADR-2125 warm decider, with the
+/// engine's cumulative churn.
+///
+/// `churn` is `(retractions, assertions, cold_restarts)` read from the engine,
+/// which accumulates them over its whole life, so those three are ASSIGNED and
+/// not added to. Passing them every round rather than once at the end is
+/// deliberate: the loop has several exits, and a counter written only on the
+/// orderly one reads as zero on exactly the budget-bound rows this lever is
+/// aimed at.
+pub(crate) fn record_warm_cube(answered: bool, churn: Option<(u64, u64, u64)>) {
+    record(|c| {
+        if answered {
+            c.warm_cube_checks = c.warm_cube_checks.saturating_add(1);
+        } else {
+            c.warm_cube_declines = c.warm_cube_declines.saturating_add(1);
+        }
+        if let Some((retractions, assertions, cold_restarts)) = churn {
+            c.warm_cube_retractions = retractions;
+            c.warm_cube_assertions = assertions;
+            c.warm_cube_cold_restarts = cold_restarts;
+        }
+    });
+}
+
 /// What the online CDCL(T) LRA probe did with the query; see [`OnlineProbe`].
 pub(crate) fn record_online_probe(outcome: OnlineProbe) {
     record(|c| c.online_probe = outcome);
@@ -1315,6 +1383,11 @@ mod tests {
             simplex_cold_build,
             simplex_cold,
             simplex_cold_pivots,
+            warm_cube_checks,
+            warm_cube_declines,
+            warm_cube_retractions,
+            warm_cube_assertions,
+            warm_cube_cold_restarts,
             online_probe: _,
         } = counters;
 
@@ -1362,6 +1435,14 @@ mod tests {
             ),
             ("simplex_cold_ms", simplex_cold.as_millis().to_string()),
             ("simplex_cold_pivots", simplex_cold_pivots.to_string()),
+            ("warm_cube_checks", warm_cube_checks.to_string()),
+            ("warm_cube_declines", warm_cube_declines.to_string()),
+            ("warm_cube_retractions", warm_cube_retractions.to_string()),
+            ("warm_cube_assertions", warm_cube_assertions.to_string()),
+            (
+                "warm_cube_cold_restarts",
+                warm_cube_cold_restarts.to_string(),
+            ),
         ];
 
         for (key, value) in &expected {
@@ -1444,6 +1525,11 @@ mod tests {
         c.simplex_cold_build = Duration::from_millis(135);
         c.simplex_cold = Duration::from_millis(136);
         c.simplex_cold_pivots = 137;
+        c.warm_cube_checks = 138;
+        c.warm_cube_declines = 139;
+        c.warm_cube_retractions = 140;
+        c.warm_cube_assertions = 141;
+        c.warm_cube_cold_restarts = 142;
         c
     }
 

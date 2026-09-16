@@ -4415,6 +4415,28 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "ACCOUNTING, NOT ADMISSION. Until 2026-08-21 the same constant was an admission width-gate; the doc records why that was the wrong direction. It now only decides whether a retained core counts against `MAX_DYNAMIC_LARGE_CORE_LITERALS`. Registered because a reader who greps the name will otherwise assume the old contract.",
     },
     ConfigEntry {
+        name: "AXEYUM_LRA_WARM_CUBE",
+        module: "crates/axeyum-solver/src/dpll_t.rs",
+        value: "off",
+        unit: "lever: `on` decides the offline lazy-SMT loop's cubes on a persistent tableau and basis",
+        protects: Protects::Time,
+        on_exceed: OnExceed::SearchEvent,
+        signal: Signal::None,
+        guarded_by: "lra_online::tests::a_warm_cube_sequence_decides_exactly_what_a_cold_one_does_and_keeps_the_invariant -- every cube of a 32-cube sequence is compared against a theory rebuilt for that cube alone, and the tableau invariant (every basic variable's value equals its row) is required to hold Some(true) after each; plus lra_online::tests::a_stale_bound_from_a_popped_cube_would_refute_a_satisfiable_one, the soundness-negative pair",
+        env_override: Some("AXEYUM_LRA_WARM_CUBE"),
+        justification: dated(
+            "docs/research/09-decisions/adr-2125-a-warm-simplex-basis-across-sat-decisions.md",
+            "2026-09-16",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/dpll_t.rs",
+                "warm_cube_enabled",
+            )],
+            &[adr("ADR-2125")],
+        ),
+        note: "ADR-2125. [ADR-2111] measured `cube_simplex_calls=651` with `cube_matrices=0` on one `QF_LRA` row -- 651 simplex solves FROM SCRATCH, one per SAT model -- against four references that keep the basis across every backjump and trail only the bounds (z3 `lar_core_solver::push` saves the strategy scalar and the column types and NOTHING else, `lar_core_solver.h:123-130`, and `m_r_pushed_basis` is declared at `:35` and referenced nowhere in `src/`; cvc5 gives its bound journal the SAT context and default-constructs the tableau without one, `theory_arith_private.cpp:117,122`). `on` builds ONE tableau per entry into the loop and moves only row bounds between cubes. It ships `off` until the A/B is read. The decider can only SHORTCUT -- every outcome it does not produce falls through to exactly the cold decision that would have run -- so the risk it carries is cost, not correctness, and the cost is what the A/B prices.",
+    },
+    ConfigEntry {
         name: "MAX_CERTIFIABLE_BOOLS",
         module: "crates/axeyum-solver/src/dpll_t.rs",
         value: "22",

@@ -2061,6 +2061,71 @@ impl Incremental {
         self.cold_restarts
     }
 
+    /// Whether the tableau invariant holds RIGHT NOW: every basic variable's
+    /// value equals its row evaluated over the other variables, the basic /
+    /// nonbasic split is internally consistent, and no row stores a coefficient
+    /// for its own basic column.
+    ///
+    /// This is what "the basis persists across pops" has to MEAN to be checkable
+    /// (ADR-2125). A warm engine that keeps a basis it has corrupted is worse
+    /// than one that rebuilds: the pivot loop repairs bound violations, it does
+    /// not repair a row that no longer expresses its basic variable, and the
+    /// result of pivoting from such a row is an unsound verdict rather than a
+    /// slow one.
+    ///
+    /// Three distinct answers, and the distinction is the point:
+    ///
+    /// * `Some(true)` — checked and holds.
+    /// * `Some(false)` — checked and VIOLATED.
+    /// * `None` — the check's own exact arithmetic overflowed, so nothing was
+    ///   established. A caller that folded this into `true` would have a
+    ///   verifier that passes hardest exactly where the numbers are most
+    ///   extreme, which is the shape of a control that cannot fail.
+    ///
+    /// `O(nnz)`, so a test may call it after every bound move; nothing on the
+    /// solve path does.
+    #[cfg(any(test, feature = "bench-internals"))]
+    #[must_use]
+    pub(crate) fn tableau_invariant_holds(&self) -> Option<bool> {
+        let t = &self.tab;
+        // The split itself, before any arithmetic: `basic` and `is_basic` are two
+        // encodings of one fact, and a disagreement between them is a defect the
+        // value check below could mask (a row whose "basic" variable is also
+        // nonbasic evaluates to whatever it evaluates to).
+        let mut flagged = vec![false; t.n];
+        for i in 0..t.m {
+            let b = t.basic[i];
+            if b >= t.n || !t.is_basic[b] || flagged[b] {
+                return Some(false);
+            }
+            flagged[b] = true;
+        }
+        if t.is_basic.iter().filter(|&&f| f).count() != t.m {
+            return Some(false);
+        }
+        for i in 0..t.m {
+            let b = t.basic[i];
+            // A row must not store a coefficient for its own basic column:
+            // `update_nonbasic` scales by `cell(i, v)` for nonbasic `v` only, so
+            // a stored self-coefficient would be silently ignored there and
+            // silently counted here -- the two would disagree for a reason no
+            // verdict could show.
+            if t.row_nz[i].contains(&b) {
+                return Some(false);
+            }
+            let mut acc = Delta::zero();
+            for k in 0..t.row_nz[i].len() {
+                let j = t.row_nz[i][k];
+                let term = t.value[j].scale(t.row_val[i][k]).ok()?;
+                acc = acc.add(term).ok()?;
+            }
+            if acc.cmp(t.value[b]) != core::cmp::Ordering::Equal {
+                return Some(false);
+            }
+        }
+        Some(true)
+    }
+
     /// A concrete rational point for the problem variables after a
     /// [`Status::Feasible`] check, or `None` on overflow. The caller replays it
     /// against the original assertions — that replay, not this function, is what
