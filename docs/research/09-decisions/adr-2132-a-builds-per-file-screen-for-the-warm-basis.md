@@ -402,7 +402,129 @@ PLACEHOLDER — filled in at the end of the lane.
 
 ## 6. The A/B
 
-PLACEHOLDER — filled in at the end of the lane.
+### 6.1 One binary, three arms, and the guard that has fired before
+
+`axeyum.v1` (sha256 `91675258916e4aeb`), three values of
+`AXEYUM_LRA_WARM_CUBE`, arms back to back on the same file on the same pinned
+core with the order **rotating three ways** per file. 24 s / 8 GiB, s5 core
+pairs `5,13` and `6,14`, nothing else on the box.
+
+[ADR-2100]'s runner refuses unless its two BINARIES hash differently, because two
+identical arms give a perfect zero that looks exactly like agreement. With one
+binary the risk moves to "the binary never reads the variable", and ADR-2125
+proved that risk is real here — its first mechanism check read
+`warm_cube_checks = 0` in both arms. `--mechanism-check` is where that is
+refused, and it now checks the screened arm too, which has a way of being inert
+that `on` does not: the file can simply never cross the threshold.
+
+```text
+mechanism-check: off=0/928 on=996/built screened=953/built
+mechanism-check OK: all three arms distinguishable on this file
+```
+
+### 6.2 `QF_LRA` pinned 200 — complete
+
+```text
+comparison         rows  off  arm  net  gain  LOSS  FLIP  rc!=0  cmp  DIS
+off vs screened     200  107  107   +0     0     0     0      0  194    0
+off vs on           200  107  107   +0     1     1     0      0  194    0
+
+  raw GAIN (off->on)   sc/sc-7.base.cvc
+  raw LOSS (off->on)   latendresse/ecoliMILPglycerolYices3-50000
+```
+
+**The screen removes ADR-2125's pinned stable loss.** That row is 28 builds — a
+handful of enormous solves — and the screen refuses it at any threshold above 42.
+The `on` arm still takes it on this binary and this run, so ADR-2125's result is
+reproduced rather than inherited.
+
+`off` decides **107 of 200**, which is the board's standing `QF_LRA` figure to
+the row.
+
+### 6.3 `QF_LRA` held-out 200
+
+PLACEHOLDER — filled in when the shard finishes.
+
+### 6.4 The mechanism, and the prediction it confirms exactly
+
+```text
+arm         rows `built`   cubes answered   cold tableaux left   cold_restarts
+on                    71           38,344                    0               0
+screened              51           32,742                3,871               0
+off                    -                -               33,158               -
+```
+
+`cold_restarts = 0` in both treatment arms is the tripwire: a warm basis quietly
+being rebuilt gives identical verdicts, identical churn counts, and differs only
+in the clock. The screen refused **20 of the 71** rows `on` kept a basis on and
+opened on **0** that `on` did not — the second number is the one that would
+indicate a bug. 51 < 71 with both nonzero, so criterion 5 is met by the run
+rather than by assertion.
+
+**The admitted set was predicted exactly, and not merely its size.** §1.4 derived
+from ADR-2125's committed sizing — a different lane, a different binary, a
+different day — that 51 of the pinned 200 sit at or above 64 builds. Measured:
+
+```text
+predicted from ADR-2125's sizing (builds >= 64):   51
+screened arm built a decider on:                   51
+screened arm answered >=1 cube warm on:            51
+  predicted but NOT built:                          0
+  built but NOT predicted:                          0
+```
+
+Same count and the **same set**. That is the sizing axis being reproducible
+enough to route on, which is a stronger claim than the histogram alone supports,
+and it is why the threshold could be fixed before the code existed.
+
+### 6.5 What it costs
+
+```text
+population        rows all 3 decide   off         on          screened
+QF_LRA pinned                  106   61,555 ms   51,727 ms   53,003 ms
+                                          ---     -16.0 %     -13.9 %
+```
+
+The screen keeps about seven eighths of the unscreened arm's speed while
+refusing 20 of its 71 rows — the rows it refuses are the cheap ones, which is
+what a threshold at 64 builds selects for.
+
+A useful noise floor falls out of the same data. On rows where the screen never
+opens, `screened` runs the `off` route with one thread-local read per round
+added, so the arm-to-arm difference there is the measurement's noise: over the
+rows both decide at ≥50 ms it is at most **2.4 %** (on an 85 ms file) and at most
+**0.4 %** above 500 ms. Nothing below that is a finding.
+
+### 6.6 The reproducibility control
+
+ADR-2125 ran the same two arms on the same corpus at the same envelope on the
+same core pairs, on a different day from a different branch base, and committed
+its per-file verdicts. Over the 120 rows the two runs share:
+
+```text
+`off` arm agrees on   119 / 120
+`on`  arm agrees on   119 / 120
+```
+
+The one difference — `clock_synchro/clocksynchro_7clocks.worst_case_skew.induct`,
+`unknown` in both of ADR-2125's arms and `unsat` in both of mine — **moves both
+arms together**, so it cancels in the difference either A/B reports and is
+attributable to the lever in neither. It is either the ambient 1–1.5 % flip rate
+at a 24 s budget on a boundary file or a change on `main` between the two branch
+bases; this lane does not say which, because it did not measure it.
+
+This licenses reading the two lanes' numbers as one series. It does **not**
+license carrying ADR-2125's mover CLASSIFICATIONS forward — a stable loss is a
+claim about a 3× recheck on a specific binary — which is why §6.7 re-checks this
+lane's own.
+
+### 6.7 The mover recheck
+
+PLACEHOLDER — filled in when the rechecks finish.
+
+### 6.8 The exposure divisions
+
+PLACEHOLDER — filled in when the queues finish.
 
 ## 7. Decision
 
