@@ -160,3 +160,74 @@ after a null A/B:
 - **The first three drafts of the soundness-negative fixture** were green
   having built no lemma: the relaxation's first model was faithful every time.
   `LEMMAS_BUILT` is now asserted by that fixture and by the fuzz seed class.
+
+## 5. Mutation (exit criterion 5)
+
+`scripts/tests/mutation_controls.py nia-order-lemmas`, which copies the tree to
+a scratch root (never mutating the shared worktree). Baseline **27 tests
+green**. `--check-anchors`: `suites=162 anchors=1124 stale=0`.
+
+| mutation | outcome | tests killed |
+|---|---|---|
+| the order lemma's conclusion follows the SIGN of the shared factor (`==` → `!=`) | **killed 5** | `order_lemma_covers_all_four_sign_cases_and_each_is_discriminated`, `order_lemma_emits_nothing_when_the_model_already_satisfies_it`, `three_armed_solves_of_one_query_build_the_same_lemmas`, `shared_factor_systems_agree_across_both_arms_and_keep_their_witness`, **`a_negative_shared_factor_must_not_cut_away_a_satisfiable_systems_models`** |
+| the monotonicity `gt` hypothesis must PIN THE SIGN, not only the magnitude | **killed 2** | `shared_factor_systems_agree_across_both_arms_and_keep_their_witness`, `monotone_lemmas_are_valid_in_every_quadrant_in_both_directions` |
+
+**The brief asked for exactly one named fixture per mutation and that is NOT
+what happened: 5 and 2.** It is the honest outcome rather than a shortfall. A
+sign flip in either class IS a wrong-verdict bug, so every test that checks
+validity should die on it, and a mutation narrow enough to kill only one would
+have to be narrow enough that the schema tests could not see it — which would
+be a finding about the schema tests, not about the lemma. What the table has to
+show instead, and does:
+
+- the soundness-negative fixture is in the first kill set — it is not decorative;
+- the two kill sets are **different** (they share one test), so the two
+  mutations are not both being caught by one shared check, which is the shape
+  CLAUDE.md warns about (six of seven guards in one suite were removable
+  because they all rejected through one check);
+- `monotone_lemmas_are_valid_in_every_quadrant_in_both_directions` dies **only**
+  to the monotonicity mutation, and three of the order mutation's five die only
+  to it.
+
+**A mutation the harness refused to call a result.** The first run reported the
+order mutation `NOT APPLIED — the anchor text is not in the subject`. The cause
+was my own `rustfmt`: a clippy fix had renamed the two bindings the anchor
+quoted. The harness is right to refuse — a `killed 0` on an unapplied mutation
+is how a mutation table starts overstating coverage.
+
+## 6. Gates, with counts (exit criterion 6)
+
+A count for every suite, because a feature-gated suite compiles to nothing and
+exits 0 — the shape that left one gate inert for 15 days here.
+
+| gate | result |
+|---|---|
+| `cargo fmt --all --check` | clean |
+| `cargo-serialized.sh clippy --workspace --all-targets --all-features -- -D warnings` | **clean** (the battery's exact lint; `z3-sys` fetched its asset in this worktree, so the narrower fallback was not needed) |
+| `cargo check --workspace --all-targets` (default features) | clean |
+| `run-dispatch-reason-suites.sh` | **28 of 28 suites green**, every one with a nonzero count; `ALL dispatch/reason SUITES GREEN` |
+| `cargo test -p axeyum-solver --lib --features full -- --skip reconstruct::` | 1644 passed, **2 failed** — see below |
+| `cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1` | **12 passed, 0 failed**, including `frontier_nia_unsat`; no `REGRESSION` |
+| `config_registry::tests` | **18 passed, 0 failed** |
+| mutation `nia-order-lemmas` | baseline **27 green**; 2 mutations, both MEASURED, killing 5 and 2; `--check-anchors` `suites=162 anchors=1124 stale=0` |
+| `check-config-registry-staleness.py` | 516 entries, **0 unexplained** |
+| `check-merge-hygiene.sh` | PASS |
+| `check-links.sh` | `all links ok`, plus both reference-style definitions in ADR-2136 hand-checked (the script reads INLINE links only — ADR-2112 recorded it printing "all links ok" over a dangling reference target) |
+| `gen-plan.py` / `gen-adr-index.py` | regenerated; `duplicate_numbers=0166,0167` is pre-existing and not this lane's |
+
+**The two lib failures, and why they are not this lane's.**
+`auto::tests::arithmetic_uf_overbound_pre_lia_probe_decides_on_clone` and
+`auto::tests::pathological_overbound_stays_terminal_under_every_policy`. Both
+live in `auto.rs`, which this lane does not touch; both are wall-clock-bounded
+(10 s and 20 s `SolverConfig` timeouts); the sweep ran at load average 31–46
+with other lanes building; and ADR-2055 and ADR-2112 each record this exact
+pair of tests flaking under load. Re-run **alone** with the lever unset they
+are **2 passed, 0 failed in 4.70 s**. The lever cannot reach either in any
+case: at `0` the shared-factor index is never built, so `timed_refine` does not
+call the new pass at all.
+
+`gen-plan.py` refused this lane's status file on its first run
+(`landed-changes row is not '| YYYY-MM-DD | … | … |'`): the two reference-style
+link definitions at the bottom sat after the `landed-changes` marker, where the
+generator takes data rows only. Inlined. Recorded because the failure surfaces
+at whoever regenerates `PLAN.md`, not at the lane that wrote the file.
