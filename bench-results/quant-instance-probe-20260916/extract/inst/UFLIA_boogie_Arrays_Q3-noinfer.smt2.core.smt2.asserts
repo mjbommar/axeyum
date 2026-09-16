@@ -1,0 +1,2 @@
+(assert (or (= q o) (= (select2 (store2 (store2 B o F (+ (select2 B o F) y)) q G (select2 B q G)) o F) (select2 (store2 B o F (+ (select2 B o F) y)) o F))))
+(assert (= (select2 (store2 B o F (+ (select2 B o F) y)) o F) (+ (select2 B o F) y)))

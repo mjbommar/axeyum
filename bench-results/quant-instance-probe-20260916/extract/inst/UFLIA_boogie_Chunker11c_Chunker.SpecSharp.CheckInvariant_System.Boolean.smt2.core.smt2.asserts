@@ -1,0 +1,1 @@
+(assert (or (= this nullObject) (not (= (select2 Heap_ this (AsNonNullRefField Chunker.src System.String)) nullObject)) (not (= (IsHeap Heap_) Smt.true)) (not (or (not (= this BeingConstructed_)) (= (select2 Heap_ BeingConstructed_ NonNullFieldsAreInitialized_) Smt.true)))))

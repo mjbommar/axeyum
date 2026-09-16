@@ -1,0 +1,7 @@
+(assert (or (not (= (select1 (select1 elems args_154.37) 0) null)) (not (>= 0 0)) (not (<= (+ 0 (* (- 1) (arrayLength args_154.37))) 0))))
+(assert (or (not (= Smt.true (is RES_169.5_0_171.32_171.32 T_javafe.filespace.Tree))) (= (cast RES_169.5_0_171.32_171.32 T_javafe.filespace.Tree) RES_169.5_0_171.32_171.32)))
+(assert (or (= RES_169.26_169.26 null) (not (= Smt.true (select1 returnsNull_23.79.29 RES_169.26_169.26))) (not (= Smt.true (is RES_169.26_169.26 T_javafe.filespace.TreeWalker)))))
+(assert (or (= RES_169.26_169.26 null) (= (select1 elementType_23.74.27 RES_169.26_169.26) T_javafe.filespace.Tree) (not (= Smt.true (is RES_169.26_169.26 T_javafe.filespace.TreeWalker)))))
+(assert (or (not (subtypes T_javafe.filespace.Tree T_java.lang.Object)) (= (= Smt.true (is RES_169.5_0_171.32_171.32 T_javafe.filespace.Tree)) (or (= RES_169.5_0_171.32_171.32 null) (subtypes (typeof RES_169.5_0_171.32_171.32) T_javafe.filespace.Tree)))))
+(assert (or (subtypes (typeof XRES_165.14_165.14) T_java.lang.Exception) (not (subtypes T_java.io.IOException T_java.lang.Exception)) (not (subtypes (typeof XRES_165.14_165.14) T_java.io.IOException))))
+(assert (or (subtypes (typeof XRES_165.14_165.14) T_java.io.IOException) (not (subtypes T_java.util.zip.ZipException T_java.io.IOException)) (not (subtypes (typeof XRES_165.14_165.14) T_java.util.zip.ZipException))))

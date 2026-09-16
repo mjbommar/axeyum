@@ -35,6 +35,7 @@ _spec = importlib.util.spec_from_file_location(
 )
 assert _spec is not None and _spec.loader is not None
 ol = importlib.util.module_from_spec(_spec)
+sys.modules[_spec.name] = ol  # dataclasses needs sys.modules[cls.__module__]
 _spec.loader.exec_module(ol)
 
 
@@ -50,7 +51,9 @@ def read_tsv(path: Path) -> dict[str, dict]:
 
 def ledger_rows(ledger_dir: Path, sweep_id: str, arm: str) -> dict[str, "ol.LedgerRow"]:
     try:
-        rows, _flagged = ol.load(sweep_id, ledger_dir=str(ledger_dir), allow_branch=True)
+        # `load` takes an ITERABLE of sweep ids -- a bare string is iterable
+        # too (character by character), so this must be a one-element list.
+        rows, _flagged = ol.load([sweep_id], ledger_dir=str(ledger_dir), allow_branch=True)
     except ol.LedgerError as exc:
         print(f"LEDGER-LOAD-FAILED: {exc}", file=sys.stderr)
         return {}

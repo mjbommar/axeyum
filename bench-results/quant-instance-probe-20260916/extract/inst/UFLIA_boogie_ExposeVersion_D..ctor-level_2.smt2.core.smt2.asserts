@@ -1,0 +1,4 @@
+(assert (or (= inv_ localinv_) (= (select2 (store2 Heap_0_ this inv_ D) this localinv_) (select2 Heap_0_ this localinv_))))
+(assert (or (= inv_ sharingMode_) (= (select2 (store2 Heap_0_ this inv_ D) this sharingMode_) (select2 Heap_0_ this sharingMode_))))
+(assert (= (select2 (store2 Heap_0_ this inv_ D) this inv_) D))
+(assert (or (= this nullObject) (not (= (select2 Heap_ this allocated_) Smt.true)) (not (or (not (= (select2 Heap_ this ownerRef_) (select2 Heap_1_ this ownerRef_))) (not (= (select2 Heap_ this ownerFrame_) (select2 Heap_1_ this ownerFrame_)))))))

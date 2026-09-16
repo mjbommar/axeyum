@@ -36,7 +36,16 @@ while IFS= read -r p; do
   else
     : > "$OUTDIR/inst/$b.lastblock"
   fi
-  rows=$(grep -c '^GROUND ' "$OUTDIR/inst/$b.lastblock" 2>/dev/null || echo 0)
+  # `grep -c` exits 1 (not 0) when the count is zero even though it still
+  # PRINTS "0" -- `grep -c PATTERN file || echo 0` therefore prints "0" TWICE
+  # on a file with no GROUND lines, splitting one logical TSV row across two
+  # physical lines. Piping through `wc -l` (always exit 0) is the fix, same
+  # as `admitted` below already does; this exact bug produced doubled rows
+  # in this file's own first run -- see qip-repair-dump-summary.py, which
+  # rebuilds the summary from the untouched *.lastblock files rather than
+  # re-running the expensive solver sweep.
+  rows=$(grep -c '^GROUND ' "$OUTDIR/inst/$b.lastblock" 2>/dev/null | tr -d ' ')
+  rows=${rows:-0}
   # gen=0 rows are original ground assertions; gen>=1 rows are ADMITTED
   # instances (qinst_egraph.rs's own comment: "a source subterm (generation
   # 0)" vs "one an admitted instance introduced").

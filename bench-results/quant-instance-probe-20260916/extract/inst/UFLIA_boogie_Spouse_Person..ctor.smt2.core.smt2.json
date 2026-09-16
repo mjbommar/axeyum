@@ -1,0 +1,20 @@
+{
+ "raw_count": 13,
+ "bodies": [
+  "(or (= System.Object Person) (not (subtypes Person System.Object)) (not (subtypes System.Object Person)))",
+  "(or (= this nullObject) (= Person.spouse inv_) (= Person.spouse localinv_) (= Person.spouse FirstConsistentOwner_) (= (select2 Heap_ this Person.spouse) (select2 Heap_0_ this Person.spouse)) (not (or (not (= (IsStaticField Person.spouse) Smt.true)) (not (= (IsDirectlyModifiableField Person.spouse) Smt.true)))) (not (= (select2 Heap_ this allocated_) Smt.true)) (not (or (= (select2 Heap_ this ownerFrame_) PeerGroupPlaceholder_) (not (subtypes (select2 Heap_ (select2 Heap_ this ownerRef_) inv_) (select2 Heap_ this ownerFrame_))) (= (select2 Heap_ (select2 Heap_ this ownerRef_) localinv_) (BaseClass_ (select2 Heap_ this ownerFrame_))))) (not (or (not (= this this)) (not (subtypes System.Object (DeclType Person.spouse))))))",
+  "(or (= inv_ localinv_) (= (select2 (store2 Heap_0_ this inv_ Person) this localinv_) (select2 Heap_0_ this localinv_)))",
+  "(= (select2 (store2 Heap_0_ this inv_ Person) this inv_) Person)",
+  "(or (= this nullObject) (not (= (select2 Heap_ this allocated_) Smt.true)) (not (or (not (= (select2 Heap_ this ownerRef_) (select2 Heap_1_ this ownerRef_))) (not (= (select2 Heap_ this ownerFrame_) (select2 Heap_1_ this ownerFrame_))))))",
+  "(or (= inv_ sharingMode_) (= (select2 (store2 Heap_0_ this inv_ Person) this sharingMode_) (select2 Heap_0_ this sharingMode_)))"
+ ],
+ "not_ground": [
+  "(or (= ?p_!5 this) (not (= (select2 Heap_ ?p_!5 ownerRef_) this)))",
+  "(or (= ?p_!5 nullObject) (not (= (select2 Heap_ ?p_!5 allocated_) Smt.true)) (not (or (not (= (select2 Heap_ ?p_!5 ownerRef_) (select2 Heap_0_ ?p_!5 ownerRef_))) (not (= (select2 Heap_ ?p_!5 ownerFrame_) (select2 Heap_0_ ?p_!5 ownerFrame_))))))",
+  "(or (= ?p_!5 nullObject) (= (select2 Heap_ ?p_!5 allocated_) Smt.true) (not (= (select2 Heap_0_ ?p_!5 allocated_) Smt.true)) (not (or (not (= (select2 Heap_0_ ?p_!5 inv_) (typeof_ ?p_!5))) (not (= (select2 Heap_0_ ?p_!5 localinv_) (typeof_ ?p_!5))))))",
+  "(or (= inv_ ownerFrame_) (= (select2 (store2 Heap_0_ this inv_ Person) ?o_!6 ownerFrame_) (select2 Heap_0_ ?o_!6 ownerFrame_)))",
+  "(or (= ?o_!6 nullObject) (not (= (select2 Heap_ ?o_!6 allocated_) Smt.true)) (not (or (not (= (select2 Heap_ ?o_!6 ownerRef_) (select2 Heap_0_ ?o_!6 ownerRef_))) (not (= (select2 Heap_ ?o_!6 ownerFrame_) (select2 Heap_0_ ?o_!6 ownerFrame_))))))",
+  "(or (= inv_ ownerRef_) (= (select2 (store2 Heap_0_ this inv_ Person) ?o_!6 ownerRef_) (select2 Heap_0_ ?o_!6 ownerRef_)))"
+ ],
+ "unmatched": 1
+}

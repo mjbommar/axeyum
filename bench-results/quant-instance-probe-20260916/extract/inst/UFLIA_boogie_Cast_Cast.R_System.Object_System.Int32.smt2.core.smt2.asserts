@@ -1,0 +1,3 @@
+(assert (= (= (Is_ nullObject (RefArray System.Object 1)) Smt.true) (or (= nullObject nullObject) (subtypes (typeof_ nullObject) (RefArray System.Object 1)))))
+(assert (= (= (Is_ nullObject J) Smt.true) (or (= nullObject nullObject) (subtypes (typeof_ nullObject) J))))
+(assert (= (= (Is_ nullObject System.String) Smt.true) (or (= nullObject nullObject) (subtypes (typeof_ nullObject) System.String))))

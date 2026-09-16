@@ -1,0 +1,25 @@
+{
+ "raw_count": 17,
+ "bodies": [
+  "(= (select1 (store1 (asField elementType_8.26.25 T_.TYPE) (select1 edges_37.24_2_ RES_48.1_48.1) T_javafe.filespace.Tree) (select1 edges_37.24_2_ RES_48.1_48.1)) T_javafe.filespace.Tree)",
+  "(= (select1 (store1 (asField keyType_8.16.25 T_.TYPE) (select1 edges_37.24_2_ RES_48.1_48.1) T_java.lang.String) (select1 edges_37.24_2_ RES_48.1_48.1)) T_java.lang.String)",
+  "(or (= data_47.27 null) (= data_47.27 objectToBeConstructed) (not (= (select1 edges_37.24 data_47.27) null)) (not (= Smt.true (is data_47.27 T_javafe.filespace.HashTree))))",
+  "(or (= data_47.27 null) (= data_47.27 objectToBeConstructed) (= (select1 keyType_8.16.25 (select1 edges_37.24 data_47.27)) T_java.lang.String) (not (= Smt.true (is data_47.27 T_javafe.filespace.HashTree))))",
+  "(or (= data_47.27 null) (= data_47.27 objectToBeConstructed) (= (select1 elementType_8.26.25 (select1 edges_37.24 data_47.27)) T_javafe.filespace.Tree) (not (= Smt.true (is data_47.27 T_javafe.filespace.HashTree))))",
+  "(= (select1 (store1 (store1 edges_37.24 RES_48.1_48.1 null) RES_48.1_48.1 RES_37.32_37.32) RES_48.1_48.1) RES_37.32_37.32)"
+ ],
+ "not_ground": [
+  "(or (= RES_48.1_48.1 ?brokenObj!11) (= (select1 (store1 (asField edges_37.24 T_java.util.Hashtable) RES_48.1_48.1 null) ?brokenObj!11) (select1 (asField edges_37.24 T_java.util.Hashtable) ?brokenObj!11)))",
+  "(or (= RES_48.1_48.1 ?brokenObj!11) (= (select1 (store1 (store1 edges_37.24 RES_48.1_48.1 null) RES_48.1_48.1 (select1 edges_37.24_2_ RES_48.1_48.1)) ?brokenObj!11) (select1 (store1 edges_37.24 RES_48.1_48.1 null) ?brokenObj!11)))",
+  "(or (= ?brokenObj!11 null) (= ?brokenObj!11 objectToBeConstructed) (= (select1 elementType_8.26.25 (select1 edges_37.24 ?brokenObj!11)) T_javafe.filespace.Tree) (not (= Smt.true (is ?brokenObj!11 T_javafe.filespace.HashTree))))",
+  "(or (= ?brokenObj_1_!12 null) (= ?brokenObj_1_!12 objectToBeConstructed) (not (= (select1 edges_37.24 ?brokenObj_1_!12) null)) (not (= Smt.true (is ?brokenObj_1_!12 T_javafe.filespace.HashTree))))",
+  "(or (= RES_48.1_48.1 ?brokenObj_1_!12) (= (select1 (store1 (asField edges_37.24 T_java.util.Hashtable) RES_48.1_48.1 null) ?brokenObj_1_!12) (select1 (asField edges_37.24 T_java.util.Hashtable) ?brokenObj_1_!12)))",
+  "(or (= RES_48.1_48.1 ?brokenObj_1_!12) (= (select1 (store1 (store1 edges_37.24 RES_48.1_48.1 null) RES_48.1_48.1 (select1 edges_37.24_2_ RES_48.1_48.1)) ?brokenObj_1_!12) (select1 (store1 edges_37.24 RES_48.1_48.1 null) ?brokenObj_1_!12)))",
+  "(or (= (select1 edges_37.24_2_ RES_48.1_48.1) (select1 edges_37.24_2_ ?brokenObj_2_!13)) (= (select1 (store1 (asField keyType_8.16.25 T_.TYPE) (select1 edges_37.24_2_ RES_48.1_48.1) T_java.lang.String) (select1 edges_37.24_2_ ?brokenObj_2_!13)) (select1 (asField keyType_8.16.25 T_.TYPE) (select1 edges_37.24_2_ ?brokenObj_2_!13))))",
+  "(or (= RES_48.1_48.1 ?brokenObj_2_!13) (= (select1 (store1 (store1 edges_37.24 RES_48.1_48.1 null) RES_48.1_48.1 (select1 edges_37.24_2_ RES_48.1_48.1)) ?brokenObj_2_!13) (select1 (store1 edges_37.24 RES_48.1_48.1 null) ?brokenObj_2_!13)))",
+  "(or (= RES_48.1_48.1 ?brokenObj_2_!13) (= (select1 (store1 (asField edges_37.24 T_java.util.Hashtable) RES_48.1_48.1 null) ?brokenObj_2_!13) (select1 (asField edges_37.24 T_java.util.Hashtable) ?brokenObj_2_!13)))",
+  "(or (= ?brokenObj_2_!13 null) (= ?brokenObj_2_!13 objectToBeConstructed) (= (select1 keyType_8.16.25 (select1 edges_37.24 ?brokenObj_2_!13)) T_java.lang.String) (not (= Smt.true (is ?brokenObj_2_!13 T_javafe.filespace.HashTree))))",
+  "(or (= (select1 edges_37.24_2_ RES_48.1_48.1) (select1 edges_37.24_2_ ?brokenObj!11)) (= (select1 (store1 (asField elementType_8.26.25 T_.TYPE) (select1 edges_37.24_2_ RES_48.1_48.1) T_javafe.filespace.Tree) (select1 edges_37.24_2_ ?brokenObj!11)) (select1 (asField elementType_8.26.25 T_.TYPE) (select1 edges_37.24_2_ ?brokenObj!11))))"
+ ],
+ "unmatched": 0
+}

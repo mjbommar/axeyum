@@ -1,0 +1,6 @@
+(assert (= (select1 (store1 (asField elementType_8.26.25 T_.TYPE) (select1 edges_37.24_2_ RES_48.1_48.1) T_javafe.filespace.Tree) (select1 edges_37.24_2_ RES_48.1_48.1)) T_javafe.filespace.Tree))
+(assert (= (select1 (store1 (asField keyType_8.16.25 T_.TYPE) (select1 edges_37.24_2_ RES_48.1_48.1) T_java.lang.String) (select1 edges_37.24_2_ RES_48.1_48.1)) T_java.lang.String))
+(assert (or (= data_47.27 null) (= data_47.27 objectToBeConstructed) (not (= (select1 edges_37.24 data_47.27) null)) (not (= Smt.true (is data_47.27 T_javafe.filespace.HashTree)))))
+(assert (or (= data_47.27 null) (= data_47.27 objectToBeConstructed) (= (select1 keyType_8.16.25 (select1 edges_37.24 data_47.27)) T_java.lang.String) (not (= Smt.true (is data_47.27 T_javafe.filespace.HashTree)))))
+(assert (or (= data_47.27 null) (= data_47.27 objectToBeConstructed) (= (select1 elementType_8.26.25 (select1 edges_37.24 data_47.27)) T_javafe.filespace.Tree) (not (= Smt.true (is data_47.27 T_javafe.filespace.HashTree)))))
+(assert (= (select1 (store1 (store1 edges_37.24 RES_48.1_48.1 null) RES_48.1_48.1 RES_37.32_37.32) RES_48.1_48.1) RES_37.32_37.32))

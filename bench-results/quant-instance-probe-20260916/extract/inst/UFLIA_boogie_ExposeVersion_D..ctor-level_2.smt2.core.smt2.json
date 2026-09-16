@@ -1,0 +1,21 @@
+{
+ "raw_count": 14,
+ "bodies": [
+  "(or (= inv_ localinv_) (= (select2 (store2 Heap_0_ this inv_ D) this localinv_) (select2 Heap_0_ this localinv_)))",
+  "(or (= inv_ sharingMode_) (= (select2 (store2 Heap_0_ this inv_ D) this sharingMode_) (select2 Heap_0_ this sharingMode_)))",
+  "(= (select2 (store2 Heap_0_ this inv_ D) this inv_) D)",
+  "(or (= this nullObject) (not (= (select2 Heap_ this allocated_) Smt.true)) (not (or (not (= (select2 Heap_ this ownerRef_) (select2 Heap_1_ this ownerRef_))) (not (= (select2 Heap_ this ownerFrame_) (select2 Heap_1_ this ownerFrame_))))))"
+ ],
+ "not_ground": [
+  "(or (subtypes D (DeclType ?f_!5)) (not (subtypes System.Object (DeclType ?f_!5))) (not (subtypes D System.Object)))",
+  "(or (= ?o_!6 nullObject) (= ?f_!5 inv_) (= ?f_!5 localinv_) (= ?f_!5 FirstConsistentOwner_) (= (select2 Heap_ ?o_!6 ?f_!5) (select2 Heap_0_ ?o_!6 ?f_!5)) (not (= (select2 Heap_ ?o_!6 allocated_) Smt.true)) (not (or (not (= (IsStaticField ?f_!5) Smt.true)) (not (= (IsDirectlyModifiableField ?f_!5) Smt.true)))) (not (or (= (select2 Heap_ ?o_!6 ownerFrame_) PeerGroupPlaceholder_) (not (subtypes (select2 Heap_ (select2 Heap_ ?o_!6 ownerRef_) inv_) (select2 Heap_ ?o_!6 ownerFrame_))) (= (select2 Heap_ (select2 Heap_ ?o_!6 ownerRef_) localinv_) (BaseClass_ (select2 Heap_ ?o_!6 ownerFrame_))))) (not (or (not (= ?o_!6 this)) (not (subtypes System.Object (DeclType ?f_!5))))))",
+  "(or (= inv_ ?f_!5) (= (select2 (store2 Heap_0_ this inv_ D) ?o_!6 ?f_!5) (select2 Heap_0_ ?o_!6 ?f_!5)))",
+  "(or (= inv_ ownerRef_) (= (select2 (store2 Heap_0_ this inv_ D) ?o_!7 ownerRef_) (select2 Heap_0_ ?o_!7 ownerRef_)))",
+  "(or (= ?o_!7 nullObject) (not (= (select2 Heap_ ?o_!7 allocated_) Smt.true)) (not (or (not (= (select2 Heap_ ?o_!7 ownerRef_) (select2 Heap_0_ ?o_!7 ownerRef_))) (not (= (select2 Heap_ ?o_!7 ownerFrame_) (select2 Heap_0_ ?o_!7 ownerFrame_))))))",
+  "(or (= inv_ ownerFrame_) (= (select2 (store2 Heap_0_ this inv_ D) ?o_!7 ownerFrame_) (select2 Heap_0_ ?o_!7 ownerFrame_)))",
+  "(or (= ?p_!4 this) (not (= (select2 Heap_ ?p_!4 ownerRef_) this)))",
+  "(or (= ?p_!4 nullObject) (not (= (select2 Heap_ ?p_!4 allocated_) Smt.true)) (not (or (not (= (select2 Heap_ ?p_!4 ownerRef_) (select2 Heap_0_ ?p_!4 ownerRef_))) (not (= (select2 Heap_ ?p_!4 ownerFrame_) (select2 Heap_0_ ?p_!4 ownerFrame_))))))",
+  "(or (= ?p_!4 nullObject) (= (select2 Heap_ ?p_!4 allocated_) Smt.true) (not (= (select2 Heap_0_ ?p_!4 allocated_) Smt.true)) (not (or (not (= (select2 Heap_0_ ?p_!4 inv_) (typeof_ ?p_!4))) (not (= (select2 Heap_0_ ?p_!4 localinv_) (typeof_ ?p_!4))))))"
+ ],
+ "unmatched": 1
+}

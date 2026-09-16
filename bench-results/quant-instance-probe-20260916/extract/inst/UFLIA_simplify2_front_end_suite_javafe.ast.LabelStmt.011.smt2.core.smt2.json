@@ -1,0 +1,8 @@
+{
+ "raw_count": 1,
+ "bodies": [
+  "(or (= this null) (not (= (select1 label_15.34 this) null)))"
+ ],
+ "not_ground": [],
+ "unmatched": 0
+}
