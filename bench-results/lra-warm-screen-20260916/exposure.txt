@@ -18,8 +18,8 @@ that never started is a different fact from an arm that answered nothing.
     QF_LIA      200  127       127   +0     0     0     0      0  248    0
     QF_UFLRA    200  149       149   +0     0     0     0      0  298    0
     QF_UFLIA    200  162       162   +0     0     0     0      0  324    0
-    QF_IDL            RUNNING
-    QF_RDL            PENDING
+    QF_IDL      198  108       109   +1     1     0     0      0  217    0
+    QF_RDL            RUNNING
 
 QF_LIA: ZERO MOVEMENT, AND THE ARM IS INERT -- BOTH, NOT ONE
 -------------------------------------------------------------
@@ -98,3 +98,33 @@ So of the three divisions measured so far, ONE (`QF_UFLRA`) has the lever active
 and two do not. A reader adding up "three divisions, 0 gains, 0 losses" would be
 counting two populations where nothing was exercised alongside one where
 something was, and the mechanism columns are what stops that.
+
+
+QF_IDL: A RAW GAIN ON AN ARM THAT IS PROVABLY INERT
+-----------------------------------------------------
+
+    screened: rows `built` 0   cubes answered 0   cold tableaux left 0
+    off:      cold tableaux 0
+
+    raw GAIN (off->screened)  QF_IDL/asp/Solitaire/solitaire-edge-time=29.smt2
+
+The lever is INERT on this division -- not one file reaches the offline linear
+loop's cold simplex -- and the screened arm still picked up a raw gain.
+
+**That is not a result, and the mechanism columns are what say so rather than a
+3x recheck.** The screened arm answered zero cubes on a warm basis anywhere in
+the division, so it cannot have caused a verdict to move: below the threshold it
+runs the `off` route with one thread-local read per round added. A raw mover
+here is ambient by construction.
+
+It is a useful calibration, though. **1 raw mover in 198 rows is 0.5 %**, which
+sits inside the 1-1.5 % ambient flip rate these boxes are documented to carry at
+a 24 s budget, and it is measured on an arm where the treatment provably did
+nothing. That is about as clean an estimate of the floor as this harness can
+produce.
+
+The row still goes to the 3x recheck, because "the mechanism says it cannot be
+real" is an argument and the recheck is a measurement -- and this lane has spent
+the whole day preferring the second.
+
+Cost -0.3 %, inside the noise floor.
