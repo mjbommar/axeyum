@@ -144,6 +144,7 @@ now. Nothing was deleted.
 | 2026-09-16 | `70c50a703` | ADR-2128 §5, the lane status, and a mutant replaced because it CRASHED rather than failed. |
 | 2026-09-16 | `2943e88c2` | The end-to-end lever probe (the arm clears the exactness refusal on a real corpus file) and `ab-summarize.py`, whose exit status depends on the finding. |
 | 2026-09-16 | `10aff7750` | `scripts/strip-quantified-assertions.py` + 18 unit tests: byte-verbatim quantifier-assert stripping, iterative tokenizer/parser (no recursive `let` expansion). |
+| 2026-09-16 | `5c46365f6` | `measure(nia)`: the sizing census — order lemmas apply to 111 of 116 undecided `QF_NIA` rows, monotonicity to 115; 8 fixture controls plus an independent cross-check against the engine's own cross-product count (89 of 89 nonzero, ratio median 1.00). |
 | 2026-09-16 | quant-ground-incremental | ADR-2124: the interleaved cold ground check fires behind `online_clauses.is_none()`, so one integer comparison in the ground set puts the whole run in the re-solve regime — the mechanism behind ADR-2120 §7's block, located at `file:line` |
 | 2026-09-16 | quant-ground-incremental | sizing before code: 493 cold checks over sets up to 8,019 terms on 53 cores (6.1x more terms re-solved than asserted once); 101 of 1,400 Tier 1 rows end `unknown` with the quantifier route's own last decline naming the check |
 | 2026-09-16 | quant-ground-incremental | `AXEYUM_QINST_GROUND_SESSION` (OFF): the retained session hosts an arithmetic ground set by abstracting the unencodable Boolean-position term, with a vacuous-session guard and a no-connective guard |
@@ -62325,6 +62326,36 @@ merge to `b4d0f2c33`).
 **Next action:** none — the probe ADR-2112 handed forward is answered and
 closed. A future lane should not re-open the admission gate on this evidence
 without a new reason to expect a different corpus shape.
+
+**Lane nia-order-lemmas (`WIP`, nia-order-lemmas, 2026-09-16).** [ADR-2112](docs/research/09-decisions/adr-2112-qf-nia-what-the-clause-estimate-counts.md)
+Part E measured **order lemmas** (`nla_order_lemmas.cpp`) and **monotonicity
+lemmas** (`nla_monotone_lemmas.cpp`) absent from `nia_linearize.rs`, and its
+Part D ablation measured that neither is load-bearing for **z3** on more than 3
+of the 75 files z3 decides — because z3 runs a redundant portfolio of seven and
+66 of 75 files survive every single-class removal. That is a statement about
+z3's portfolio, not ours: we have four classes, and the one that couples
+magnitudes (`mccormick_lemmas`) fires only for factors with bounds the
+relaxation entails. This lane measures what the two absent classes are worth
+**to us**, behind one dated lever shipped DISARMED
+([ADR-2136](docs/research/09-decisions/adr-2136-order-and-monotonicity-lemmas-for-nia.md), artifacts in
+[`bench-results/nia-order-lemmas-20260916/`](bench-results/nia-order-lemmas-20260916/README.md)).
+
+**Sizing, landed first because the design depends on it.** All 116 undecided
+`QF_NIA` T1 rows, 0 errored: the order lemma's step is available on **111**,
+monotonicity's on **115**. The candidate set is enormous — median **2,249**
+shared-factor product pairs per file, max **9,407,886** — which rules out
+static enumeration and forces the model-driven, per-round-capped shape z3 uses.
+And `unbounded_products` equals `products` at every quantile: **no product on
+this population has both factors two-sidedly bounded**, so the entailed-bound
+passes produce nothing and `RefinementSetup::refine` is false — the refinement
+loop runs ONE round on exactly the files this lane is aimed at. Arming
+therefore has to widen that predicate too, which is stated in [ADR-2136](docs/research/09-decisions/adr-2136-order-and-monotonicity-lemmas-for-nia.md) §C
+rather than buried.
+
+**Next:** the interleaved A/B (one binary, two env values) on `QF_NIA`,
+`QF_NRA` (control) and `UFNIA`, 200 files each at 24 s / 8 GiB on s6 cores 5
+and 6, movers re-checked 3x, then the held-out 200-file `QF_NIA` draw. Ships ON
+only with 0 stable losses and 0 flips on both.
 
 **Lane nia-trace (`DONE`, nia-trace, 2026-09-15).** [ADR-2112] — `proposed`.
 The question was why `QF_NIA` refuses ~42 files on

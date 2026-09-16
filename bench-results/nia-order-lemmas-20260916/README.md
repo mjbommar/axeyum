@@ -114,3 +114,49 @@ decides. The sizing says the class is not structurally inapplicable to this
 corpus — which was a live possibility, since 42 of the 116 never reach
 `cas-ideal-refuter` at all — and it says the emission must be model-driven and
 capped. It is the denominator for §4's A/B, not a prediction of it.
+
+## 2. The design claims, at `file:line` on all three sides (exit criterion 2)
+
+Read the STEP, not the name.
+
+| step | z3 | cvc5 | ours |
+|---|---|---|---|
+| **order**: couple two products that SHARE a factor | `nla_order_lemmas.cpp::generate_ol` `:286-310`; which of the four is emitted is decided at the model by `order_lemma_on_ac_and_bc_and_factors` `:322-341`; the equality case `generate_ol_eq` `:265-284`; entry points `order_lemma` `:19`, `order_lemma_on_monic` `:38`, `order_lemma_on_binomial` `:55` | `monomial_bounds_check.cpp:308-325` — multiply an asserted inequality through by a term whose model sign is known, REVERSING the relation when that sign is negative (`infer_type`, `:308`), and emit only when the inferred fact is FALSE at the current abstract model (`:317`) | `order_lemma_at_model`, `order_eq_lemma_at_model` (`nia_linearize.rs`) |
+| **monotonicity**: magnitude cuts at the current assignment | `nla_monotone_lemmas.cpp::monotonicity_lemma_lt` `:80-90`, `::monotonicity_lemma_gt` `:61-72`, dispatched by `::monotonicity_lemma(monic const&)` `:23-39` | `monomial_check.cpp::checkMagnitude` `:193`, ordering monomials by the ABSOLUTE value of their abstract model values (`assignOrderIds(..., isAbsolute=true)`, `:202`), emitted through `compareMonomial` `:517` | `monotone_lemmas_at_model` |
+| magnitude atom **without** an `abs` term | `nla_basics_lemmas.cpp::negate_strict_sign` `:202-216` — the magnitude atom becomes a STRICT SIGN literal keyed off the current value's sign | — | the same: plain linear atoms against integer constants read from the model |
+| tangent planes (**already present**) | `nla_tangent_lemmas.cpp` | `tangent_plane_check.cpp:37` | `tangent_lemmas` (`nia_linearize.rs:1732`) |
+
+The magnitude point is the one that made the build possible. ADR-2112 §E1
+noted that `nia_linearize.rs` has **no IR magnitude term at all** and that both
+absent classes are stated on `|·|`. z3 does not build one either: the
+hypotheses it emits pin the SIGN as well as the magnitude, so the product's
+sign is determined and the two-sided `|m| ≥ |p|` collapses to one linear
+comparison. The sign-pinning half is load-bearing, not decoration —
+`monotone_gt_without_the_sign_pin_is_refutable` builds the weakened lemma by
+hand and the validity checker refutes it.
+
+## 3. Reachability — the arm is WIRED, and it also RUNS
+
+Two different claims, and only the first is usually checked.
+
+**Wired.** `AXEYUM_NIA_ORDER_LEMMAS=notanumber` makes `config_lever.rs:124`
+panic (`is not a valid u32 ... refusing rather than silently measuring the
+shipped default`), so the lever is read. This is ADR-2112's own method: a lever
+proved by a panic rather than by a null result.
+
+**Runs.** That says nothing about the code behind it executing. The pass lives
+in the refinement loop's round ≥ 1, which is entered only when round 0 returns
+a SPURIOUS `sat` — a round-0 `unsat` decides the file and a round-0 `unknown`
+(the linear relaxation running out of budget) ends the loop. `reachability.sh`
+classifies every file from its `--trace`-style debug lines rather than from its
+verdict. Numbers in §3.1.
+
+Two things had to change for it to run at all, both found here rather than
+after a null A/B:
+
+- **`RefinementSetup::refine`** gates the loop on the entailed-bound passes
+  having produced something, and §1 measured that this population produces
+  nothing. Arming now also widens that predicate (ADR-2136 §C).
+- **The first three drafts of the soundness-negative fixture** were green
+  having built no lemma: the relaxation's first model was faithful every time.
+  `LEMMAS_BUILT` is now asserted by that fixture and by the fuzz seed class.

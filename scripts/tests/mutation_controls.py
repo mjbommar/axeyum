@@ -1908,6 +1908,63 @@ SUITES["nra-monomial-bound-cert"] = (
 
 
 # --------------------------------------------------------------------------
+# `nia-order-lemmas` — ADR-2136's two new nonlinear lemma classes.
+#
+# Every lemma this pass emits is claimed VALID over the integers: true in every
+# model of the original query, so adding it can only shrink the relaxation and
+# an `unsat` still transfers. A sign-case error breaks that claim silently --
+# the lemma still type-checks, still has the right shape, and still looks like
+# a cut. What it does is remove the query's real models, which surfaces as a
+# SATISFIABLE system returning `unsat`.
+#
+# Two mutations, one per class, each removing exactly one sign distinction:
+#
+#   * the order lemma's conclusion direction, which the sign of the shared
+#     factor decides (`c > 0 ∧ ac ≥ bc → a ≥ b` versus `c < 0 ∧ ac ≥ bc → a ≤ b`);
+#   * the SIGN-PINNING half of the monotonicity `gt` hypothesis
+#     (`nla_monotone_lemmas.cpp:66-68`), without which the hypothesis admits a
+#     factor of the opposite sign and unbounded magnitude.
+#
+# Neither is expected to kill exactly one test, and that is the honest outcome
+# rather than a shortfall: a sign flip here IS a wrong-verdict bug, so every
+# test that checks validity should die on it. A mutation narrow enough to kill
+# only one would have to be narrow enough that the schema tests could not see
+# it, which would be a statement about the schema tests rather than about the
+# lemma. The kill SETS are recorded in
+# `bench-results/nia-order-lemmas-20260916/README.md`; what matters there is
+# that the soundness-negative fixture is in both of them, and that the two sets
+# are different.
+# --------------------------------------------------------------------------
+
+SUITES["nia-order-lemmas"] = (
+    "crates/axeyum-solver/src/nia_linearize.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "nia_linearize"),
+        "nia-order-lemmas",
+    ),
+    [
+        (
+            # `c > 0 ∧ ac ≥ bc → a ≥ b` becomes `→ a ≤ b`, and the sibling with
+            # `c < 0` flips with it. The lemma is still well-formed and still
+            # only emitted at a model that violates it; it is simply false.
+            "the order lemma's conclusion follows the SIGN of the shared factor",
+            "    let conclude_a_ge_b = (ac.value > bc.value) == c_positive;",
+            "    let conclude_a_ge_b = (ac.value > bc.value) != c_positive;",
+        ),
+        (
+            # Drops the `x ≤ 0` half of the `x_val < 0` interval hypothesis by
+            # making both halves the same literal, leaving `x ≥ x_val` alone --
+            # which a factor of the opposite sign and unbounded magnitude
+            # satisfies, and there the conclusion is false.
+            "the monotonicity `gt` hypothesis must PIN THE SIGN, not only the magnitude",
+            "            arena.int_le(x, zero).map_err(err)?,\n            arena.int_ge(x, x_const).map_err(err)?,",
+            "            arena.int_ge(x, x_const).map_err(err)?,\n            arena.int_ge(x, x_const).map_err(err)?,",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
 # `array-bv-abstraction-walk` — the SIXTH time a term-DAG walk here recursed as
 # a tree.
 #

@@ -2,7 +2,7 @@
 
 <!-- plan-section: lane-status -->
 
-**Lane nia-order-lemmas (`WIP`, nia-order-lemmas, 2026-09-16).** [ADR-2112]
+**Lane nia-order-lemmas (`WIP`, nia-order-lemmas, 2026-09-16).** [ADR-2112](../../research/09-decisions/adr-2112-qf-nia-what-the-clause-estimate-counts.md)
 Part E measured **order lemmas** (`nla_order_lemmas.cpp`) and **monotonicity
 lemmas** (`nla_monotone_lemmas.cpp`) absent from `nia_linearize.rs`, and its
 Part D ablation measured that neither is load-bearing for **z3** on more than 3
@@ -12,7 +12,7 @@ z3's portfolio, not ours: we have four classes, and the one that couples
 magnitudes (`mccormick_lemmas`) fires only for factors with bounds the
 relaxation entails. This lane measures what the two absent classes are worth
 **to us**, behind one dated lever shipped DISARMED
-([ADR-2136], artifacts in
+([ADR-2136](../../research/09-decisions/adr-2136-order-and-monotonicity-lemmas-for-nia.md), artifacts in
 [`bench-results/nia-order-lemmas-20260916/`](../../../bench-results/nia-order-lemmas-20260916/README.md)).
 
 **Sizing, landed first because the design depends on it.** All 116 undecided
@@ -24,7 +24,7 @@ And `unbounded_products` equals `products` at every quantile: **no product on
 this population has both factors two-sidedly bounded**, so the entailed-bound
 passes produce nothing and `RefinementSetup::refine` is false — the refinement
 loop runs ONE round on exactly the files this lane is aimed at. Arming
-therefore has to widen that predicate too, which is stated in [ADR-2136] §C
+therefore has to widen that predicate too, which is stated in [ADR-2136](../../research/09-decisions/adr-2136-order-and-monotonicity-lemmas-for-nia.md) §C
 rather than buried.
 
 **Next:** the interleaved A/B (one binary, two env values) on `QF_NIA`,
@@ -35,6 +35,3 @@ only with 0 stable losses and 0 flips on both.
 <!-- plan-section: landed-changes -->
 
 | 2026-09-16 | `5c46365f6` | `measure(nia)`: the sizing census — order lemmas apply to 111 of 116 undecided `QF_NIA` rows, monotonicity to 115; 8 fixture controls plus an independent cross-check against the engine's own cross-product count (89 of 89 nonzero, ratio median 1.00). |
-
-[ADR-2112]: ../../research/09-decisions/adr-2112-qf-nia-what-the-clause-estimate-counts.md
-[ADR-2136]: ../../research/09-decisions/adr-2136-order-and-monotonicity-lemmas-for-nia.md

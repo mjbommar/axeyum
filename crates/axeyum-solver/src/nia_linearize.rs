@@ -1981,6 +1981,23 @@ struct CheckedLemma {
     depends_on: Vec<usize>,
 }
 
+/// One abstracted product as the current relaxation model sees it: the fresh
+/// variable standing for `a·b`, and the value the model gave THAT variable —
+/// which is the whole point of the abstraction and need not equal `a·b`.
+///
+/// A pair rather than two loose arguments because the order lemma takes two of
+/// them, and `rac_val` / `rbc_val` side by side are one character apart: a
+/// transposition there silently swaps which product the lemma is about, and it
+/// is exactly the kind of error the four sign cases already make easy to
+/// commit.
+#[derive(Clone, Copy)]
+struct AbstractedAt {
+    /// The abstraction variable.
+    var: TermId,
+    /// Its value under the current relaxation model.
+    value: i128,
+}
+
 /// The **order** lemma for two abstracted products sharing the factor `c`, at
 /// the current relaxation model — or `None` when the model does not violate
 /// any of the four implications.
@@ -2004,23 +2021,21 @@ fn order_lemma_at_model(
     c: TermId,
     a: TermId,
     b: TermId,
-    rac: TermId,
-    rbc: TermId,
+    ac: AbstractedAt,
+    bc: AbstractedAt,
     c_val: i128,
     a_val: i128,
     b_val: i128,
-    rac_val: i128,
-    rbc_val: i128,
     zero: TermId,
 ) -> Result<Option<TermId>, SolverError> {
-    if c_val == 0 || rac_val == rbc_val {
+    if c_val == 0 || ac.value == bc.value {
         return Ok(None);
     }
     let c_positive = c_val > 0;
     // `c > 0 ∧ ac ≥ bc → a ≥ b` and its three siblings collapse to this: the
     // conclusion points the same way as the abstraction values when `c > 0`
     // and the opposite way when `c < 0`.
-    let conclude_a_ge_b = (rac_val > rbc_val) == c_positive;
+    let conclude_a_ge_b = (ac.value > bc.value) == c_positive;
     let violated = if conclude_a_ge_b {
         a_val < b_val
     } else {
@@ -2034,10 +2049,10 @@ fn order_lemma_at_model(
     } else {
         arena.int_lt(c, zero).map_err(err)?
     };
-    let hyp_r = if rac_val > rbc_val {
-        arena.int_ge(rac, rbc).map_err(err)?
+    let hyp_r = if ac.value > bc.value {
+        arena.int_ge(ac.var, bc.var).map_err(err)?
     } else {
-        arena.int_le(rac, rbc).map_err(err)?
+        arena.int_le(ac.var, bc.var).map_err(err)?
     };
     let concl = if conclude_a_ge_b {
         arena.int_ge(a, b).map_err(err)?
@@ -2061,16 +2076,14 @@ fn order_eq_lemma_at_model(
     c: TermId,
     a: TermId,
     b: TermId,
-    rac: TermId,
-    rbc: TermId,
+    ac: AbstractedAt,
+    bc: AbstractedAt,
     c_val: i128,
     a_val: i128,
     b_val: i128,
-    rac_val: i128,
-    rbc_val: i128,
     zero: TermId,
 ) -> Result<Option<TermId>, SolverError> {
-    if c_val == 0 || rac_val != rbc_val || a_val == b_val {
+    if c_val == 0 || ac.value != bc.value || a_val == b_val {
         return Ok(None);
     }
     // `c ≠ 0` as a disjunction rather than a negated equality: the relaxation's
@@ -2078,7 +2091,7 @@ fn order_eq_lemma_at_model(
     let c_neg = arena.int_lt(c, zero).map_err(err)?;
     let c_pos = arena.int_gt(c, zero).map_err(err)?;
     let c_nonzero = arena.or(c_neg, c_pos).map_err(err)?;
-    let same_product = arena.eq(rac, rbc).map_err(err)?;
+    let same_product = arena.eq(ac.var, bc.var).map_err(err)?;
     let concl = arena.eq(a, b).map_err(err)?;
     let hyp = arena.and(c_nonzero, same_product).map_err(err)?;
     Ok(Some(arena.implies(hyp, concl).map_err(err)?))
@@ -2109,14 +2122,12 @@ fn order_eq_lemma_at_model(
 /// and z3 likewise routes a zero through `mon_has_zero` before it reaches here.
 fn monotone_lemmas_at_model(
     arena: &mut TermArena,
-    a: TermId,
-    b: TermId,
-    r: TermId,
-    a_val: i128,
-    b_val: i128,
-    r_val: i128,
+    triple: (TermId, TermId, TermId),
+    values: (i128, i128, i128),
     zero: TermId,
 ) -> Result<Vec<TermId>, SolverError> {
+    let (a, b, r) = triple;
+    let (a_val, b_val, r_val) = values;
     if a_val == 0 || b_val == 0 {
         return Ok(Vec::new());
     }
@@ -2376,10 +2387,40 @@ fn order_and_monotone_lemmas(
         })
         .collect();
 
-    // --- monotonicity: one product at a time, at the current assignment.
-    let mut monotone = 0usize;
+    append_monotone_lemmas(arena, triples, &values, zero, &mut out)?;
+    append_order_lemmas(arena, triples, index, &values, zero, &mut out)?;
+
+    // Every lemma this pass emits claims to be valid in every integer model of
+    // the original query. In a debug build, CHECK that rather than assert it.
+    #[cfg(debug_assertions)]
+    for cl in &out {
+        if let Err(why) = lemma_holds_at_faithful_points(
+            arena,
+            cl.lemma,
+            triples,
+            &cl.depends_on,
+            LEMMA_CHECK_POINTS,
+        ) {
+            debug_assert!(false, "ADR-2136 emitted an INVALID lemma: {why}");
+        }
+    }
+
+    Ok(out)
+}
+
+/// The **monotonicity** half: one product at a time, at the current assignment,
+/// for every product the model gets wrong. Walks `triples` in index order and
+/// stops at [`MAX_MONOTONE_LEMMAS_PER_ROUND`].
+fn append_monotone_lemmas(
+    arena: &mut TermArena,
+    triples: &[(TermId, TermId, TermId)],
+    values: &[Option<(i128, i128, i128)>],
+    zero: TermId,
+    out: &mut Vec<CheckedLemma>,
+) -> Result<(), SolverError> {
+    let mut emitted = 0usize;
     for (i, &(a, b, r)) in triples.iter().enumerate() {
-        if monotone >= MAX_MONOTONE_LEMMAS_PER_ROUND {
+        if emitted >= MAX_MONOTONE_LEMMAS_PER_ROUND {
             break;
         }
         let Some((av, bv, rv)) = values[i] else {
@@ -2388,16 +2429,34 @@ fn order_and_monotone_lemmas(
         if av * bv == rv {
             continue; // already faithful — nothing to cut off
         }
-        for lemma in monotone_lemmas_at_model(arena, a, b, r, av, bv, rv, zero)? {
+        for lemma in monotone_lemmas_at_model(arena, (a, b, r), (av, bv, rv), zero)? {
             out.push(CheckedLemma {
                 lemma,
                 depends_on: vec![i],
             });
-            monotone += 1;
+            emitted += 1;
         }
     }
+    Ok(())
+}
 
-    // --- order: two products sharing a factor.
+/// The **order** half: pairs of products that share a factor.
+///
+/// Walks the shared-factor index in `BTreeMap` key order and, within a factor,
+/// in ascending triple-index pairs — so emission order is stable, which the
+/// determinism promise requires. It caps what it EXAMINES
+/// ([`MAX_ORDER_PAIRS_EXAMINED_PER_ROUND`]) as well as what it emits
+/// ([`MAX_ORDER_LEMMAS_PER_ROUND`]): the sizing census found a file with
+/// 9,407,886 shared-factor pairs, and an emission cap alone would still walk
+/// all of them.
+fn append_order_lemmas(
+    arena: &mut TermArena,
+    triples: &[(TermId, TermId, TermId)],
+    index: &BTreeMap<TermId, Vec<usize>>,
+    values: &[Option<(i128, i128, i128)>],
+    zero: TermId,
+    out: &mut Vec<CheckedLemma>,
+) -> Result<(), SolverError> {
     let mut examined = 0usize;
     let mut emitted = 0usize;
     'factors: for (&c, ids) in index {
@@ -2420,15 +2479,18 @@ fn order_and_monotone_lemmas(
                 let c_val = if triples[i].0 == c { ai } else { bi };
                 let a_val = if triples[i].0 == c { bi } else { ai };
                 let b_val = if triples[j].0 == c { bj } else { aj };
-                let (rac, rbc) = (triples[i].2, triples[j].2);
+                let ac = AbstractedAt {
+                    var: triples[i].2,
+                    value: ri,
+                };
+                let bc = AbstractedAt {
+                    var: triples[j].2,
+                    value: rj,
+                };
                 let built = if ri == rj {
-                    order_eq_lemma_at_model(
-                        arena, c, a, b, rac, rbc, c_val, a_val, b_val, ri, rj, zero,
-                    )?
+                    order_eq_lemma_at_model(arena, c, a, b, ac, bc, c_val, a_val, b_val, zero)?
                 } else {
-                    order_lemma_at_model(
-                        arena, c, a, b, rac, rbc, c_val, a_val, b_val, ri, rj, zero,
-                    )?
+                    order_lemma_at_model(arena, c, a, b, ac, bc, c_val, a_val, b_val, zero)?
                 };
                 if let Some(lemma) = built {
                     out.push(CheckedLemma {
@@ -2440,23 +2502,7 @@ fn order_and_monotone_lemmas(
             }
         }
     }
-
-    // Every lemma this pass emits claims to be valid in every integer model of
-    // the original query. In a debug build, CHECK that rather than assert it.
-    #[cfg(debug_assertions)]
-    for cl in &out {
-        if let Err(why) = lemma_holds_at_faithful_points(
-            arena,
-            cl.lemma,
-            triples,
-            &cl.depends_on,
-            LEMMA_CHECK_POINTS,
-        ) {
-            debug_assert!(false, "ADR-2136 emitted an INVALID lemma: {why}");
-        }
-    }
-
-    Ok(out)
+    Ok(())
 }
 
 /// Appends this round's order and monotonicity lemmas, skipping any already
@@ -3163,11 +3209,20 @@ mod tests {
         for (c_val, rac_val, rbc_val, a_val, b_val, expect_a_ge_b) in cases {
             let (mut arena, syms, [a, b, c, rac, rbc], triples) = order_setup();
             let zero = arena.int_const(0);
-            let lemma = order_lemma_at_model(
-                &mut arena, c, a, b, rac, rbc, c_val, a_val, b_val, rac_val, rbc_val, zero,
-            )
-            .unwrap()
-            .unwrap_or_else(|| panic!("no order lemma at c={c_val} rac={rac_val} rbc={rbc_val}"));
+            let ac = AbstractedAt {
+                var: rac,
+                value: rac_val,
+            };
+            let bc = AbstractedAt {
+                var: rbc,
+                value: rbc_val,
+            };
+            let lemma =
+                order_lemma_at_model(&mut arena, c, a, b, ac, bc, c_val, a_val, b_val, zero)
+                    .unwrap()
+                    .unwrap_or_else(|| {
+                        panic!("no order lemma at c={c_val} rac={rac_val} rbc={rbc_val}")
+                    });
 
             lemma_holds_at_faithful_points(&arena, lemma, &triples, &[0, 1], 400)
                 .unwrap_or_else(|why| panic!("order lemma at c={c_val} is not valid: {why}"));
@@ -3201,21 +3256,22 @@ mod tests {
     fn order_lemma_emits_nothing_when_the_model_already_satisfies_it() {
         let (mut arena, _syms, [a, b, c, rac, rbc], _t) = order_setup();
         let zero = arena.int_const(0);
+        let at = |var, value| AbstractedAt { var, value };
         // c > 0, rac > rbc ⇒ a ≥ b, and the model HAS a ≥ b.
         assert!(
-            order_lemma_at_model(&mut arena, c, a, b, rac, rbc, 2, 5, 1, 7, 1, zero)
+            order_lemma_at_model(&mut arena, c, a, b, at(rac, 7), at(rbc, 1), 2, 5, 1, zero)
                 .unwrap()
                 .is_none()
         );
         // c = 0: every implication is vacuous, nothing to cut.
         assert!(
-            order_lemma_at_model(&mut arena, c, a, b, rac, rbc, 0, 1, 3, 7, 1, zero)
+            order_lemma_at_model(&mut arena, c, a, b, at(rac, 7), at(rbc, 1), 0, 1, 3, zero)
                 .unwrap()
                 .is_none()
         );
         // rac = rbc: the four ordered cases do not apply (the EQ lemma does).
         assert!(
-            order_lemma_at_model(&mut arena, c, a, b, rac, rbc, 2, 1, 3, 4, 4, zero)
+            order_lemma_at_model(&mut arena, c, a, b, at(rac, 4), at(rbc, 4), 2, 1, 3, zero)
                 .unwrap()
                 .is_none()
         );
@@ -3228,9 +3284,11 @@ mod tests {
     fn the_order_equality_lemma_covers_what_the_four_cannot() {
         let (mut arena, syms, [a, b, c, rac, rbc], triples) = order_setup();
         let zero = arena.int_const(0);
-        let lemma = order_eq_lemma_at_model(&mut arena, c, a, b, rac, rbc, -3, 1, 3, 4, 4, zero)
-            .unwrap()
-            .expect("rac = rbc with a != b and c != 0 must produce the equality lemma");
+        let at = |var, value| AbstractedAt { var, value };
+        let lemma =
+            order_eq_lemma_at_model(&mut arena, c, a, b, at(rac, 4), at(rbc, 4), -3, 1, 3, zero)
+                .unwrap()
+                .expect("rac = rbc with a != b and c != 0 must produce the equality lemma");
         lemma_holds_at_faithful_points(&arena, lemma, &triples, &[0, 1], 400).unwrap();
 
         // Hypotheses met, conclusion broken.
@@ -3242,7 +3300,7 @@ mod tests {
 
         // And it emits nothing where it does not apply.
         assert!(
-            order_eq_lemma_at_model(&mut arena, c, a, b, rac, rbc, -3, 2, 2, 4, 4, zero)
+            order_eq_lemma_at_model(&mut arena, c, a, b, at(rac, 4), at(rbc, 4), -3, 2, 2, zero)
                 .unwrap()
                 .is_none(),
             "a = b in the model: the conclusion is not violated"
@@ -3264,7 +3322,7 @@ mod tests {
                 let triples = vec![(a, b, r)];
                 let zero = arena.int_const(0);
                 let lemmas =
-                    monotone_lemmas_at_model(&mut arena, a, b, r, a_val, b_val, r_val, zero)
+                    monotone_lemmas_at_model(&mut arena, (a, b, r), (a_val, b_val, r_val), zero)
                         .unwrap();
                 assert_eq!(
                     lemmas.len(),
@@ -3287,13 +3345,13 @@ mod tests {
         let r = arena.var(sr);
         let zero = arena.int_const(0);
         assert!(
-            monotone_lemmas_at_model(&mut arena, a, b, r, 3, 5, 15, zero)
+            monotone_lemmas_at_model(&mut arena, (a, b, r), (3, 5, 15), zero)
                 .unwrap()
                 .is_empty(),
             "r = a·b exactly: nothing to cut off"
         );
         assert!(
-            monotone_lemmas_at_model(&mut arena, a, b, r, 0, 5, 99, zero)
+            monotone_lemmas_at_model(&mut arena, (a, b, r), (0, 5, 99), zero)
                 .unwrap()
                 .is_empty(),
             "a zero factor belongs to the sign lemmas"
@@ -3335,7 +3393,7 @@ mod tests {
         // The shipped builder's version of the same case IS valid.
         let zero = arena.int_const(0);
         let lemmas =
-            monotone_lemmas_at_model(&mut arena, a, b, r, a_val, b_val, p * 4, zero).unwrap();
+            monotone_lemmas_at_model(&mut arena, (a, b, r), (a_val, b_val, p * 4), zero).unwrap();
         assert_eq!(lemmas.len(), 1);
         lemma_holds_at_faithful_points(&arena, lemmas[0], &triples, &[0], 400).unwrap();
     }
@@ -3377,9 +3435,9 @@ mod tests {
             again.keys().copied().collect::<Vec<_>>()
         );
         assert_eq!(first.get(&c).map(Vec::len), Some(2), "c is shared by two");
-        assert!(first.get(&a).is_none(), "`a` is in one product only");
+        assert!(!first.contains_key(&a), "`a` is in one product only");
         assert!(
-            first.get(&d).is_none(),
+            !first.contains_key(&d),
             "`d·d` is ONE monomial: a lone square is not a pair, so `d` must not \
              enter the index (the same distinction the sizing census's \
              `lone-square-is-not-a-pair` control pins)"
@@ -3518,7 +3576,7 @@ mod tests {
     /// The generator's shape is taken from the sizing census rather than from
     /// convenience. The factors are **not** two-sidedly bounded, because on the
     /// 116 undecided `QF_NIA` rows `unbounded_products` equals `products` at
-    /// every quantile -- with a bounded box the McCormick envelopes make the
+    /// every quantile -- with a bounded box the `McCormick` envelopes make the
     /// very first relaxation model faithful, the replay accepts it, and the
     /// pass under test never runs at all. An earlier draft of this test did
     /// exactly that and was green over 48 systems having built zero lemmas,
@@ -3652,6 +3710,58 @@ mod tests {
             gained > 0,
             "the armed arm decided nothing the shipped arm did not on any of the \
              {cases} shared-factor systems"
+        );
+    }
+
+    /// **Determinism is a public API promise**, and this pass is where it is
+    /// easiest to lose: the shared-factor index is keyed by `TermId` and the
+    /// pair walk is nested, so one `HashMap` in the wrong place would make the
+    /// emission order depend on hash seeding — visible only as an A/B whose
+    /// two runs of the SAME arm disagree.
+    ///
+    /// Three armed solves of one query must agree on the verdict AND on how
+    /// many lemmas were built. The lemma COUNT is the discriminating half: a
+    /// verdict can agree while the pass emitted a different set in a different
+    /// order.
+    #[test]
+    fn three_armed_solves_of_one_query_build_the_same_lemmas() {
+        let mut arena = TermArena::new();
+        let sx = arena.declare("x", Sort::Int).unwrap();
+        let sy = arena.declare("y", Sort::Int).unwrap();
+        let sz = arena.declare("z", Sort::Int).unwrap();
+        let (x, y, z) = (arena.var(sx), arena.var(sy), arena.var(sz));
+        let four = arena.int_const(4);
+        let eight = arena.int_const(8);
+        let zero = arena.int_const(0);
+        let mut assertions = Vec::new();
+        let diff = arena.int_sub(x, y).unwrap();
+        assertions.push(arena.eq(diff, four).unwrap());
+        assertions.push(arena.int_gt(z, zero).unwrap());
+        let xz = arena.int_mul(x, z).unwrap();
+        let yz = arena.int_mul(y, z).unwrap();
+        let delta = arena.int_sub(xz, yz).unwrap();
+        assertions.push(arena.eq(delta, eight).unwrap());
+
+        let config = SolverConfig::default().with_timeout(Duration::from_millis(1_500));
+        let mut seen: Vec<(bool, bool, usize)> = Vec::new();
+        for _ in 0..3 {
+            LEMMAS_BUILT.with(|n| n.set(0));
+            let mut why = None;
+            let mut work = arena.clone();
+            let got = check_with_nia_armed(&mut work, &assertions, &config, &mut why, true)
+                .expect("no solver error");
+            seen.push((
+                matches!(got, Some(CheckResult::Sat(_))),
+                matches!(got, Some(CheckResult::Unsat)),
+                LEMMAS_BUILT.with(std::cell::Cell::get),
+            ));
+        }
+        assert_eq!(seen[0], seen[1], "run 1 and run 2 disagree: {seen:?}");
+        assert_eq!(seen[1], seen[2], "run 2 and run 3 disagree: {seen:?}");
+        assert!(
+            seen[0].2 > 0,
+            "no lemma was built on ANY of the three runs, so this test agrees \
+             about nothing: {seen:?}"
         );
     }
 
