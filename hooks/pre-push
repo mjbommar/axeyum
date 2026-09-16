@@ -1016,4 +1016,6 @@ if [ "$(git rev-parse HEAD)" != "$CALLER_HEAD" ] \
   exit 1
 fi
 echo "pre-push: gate green (pushed SHA compiles, is formatted, corpus- and unit-sound)" >&2
+  # A run that reached here has nothing to debug; keep traces only for deaths.
+  rm -f -- "$_pp_trace"
 echo "pre-push: total ${SECONDS}s" >&2
