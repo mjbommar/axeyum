@@ -1,0 +1,5 @@
+file	A1	A2	A3	B1	B2	B3	verdict
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__ex36.t2__p29986_safety_0.smt2	unsat/0	unsat/0	unsat/0	unknown/0	unknown/0	unknown/0	STABLE-LOSS
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__n-7.t2_fixed__p4922_terminationG_0.smt2	unsat/0	unsat/0	unsat/0	unknown/0	unknown/0	unknown/0	STABLE-LOSS
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__streamserver-succeed.t2__p24602_terminationG_0.smt2	sat/0	sat/0	sat/0	sat/0	sat/0	sat/0	UNSTABLE
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/UltimateLassoRanker/LarrazOliverasRodriguez-CarbonellRubio-2013FMCAD-Fig1-alloca_unknown-termination.c.i_Iteration6_Lasso+nonterminationTemplate.smt2	unknown/0	unknown/0	unknown/0	unsat/0	unsat/0	unsat/0	STABLE-GAIN

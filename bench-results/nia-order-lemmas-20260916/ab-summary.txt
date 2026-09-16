@@ -1,0 +1,25 @@
+division            list   rows   A-dec   B-dec   none/err
+QF_NIA               200    200      82      80          0
+QF_NRA               200    200     124     124          0
+UFNIA                200    200      54      61          0
+QF_NIA-heldout       200    200      85      85          0
+
+raw movers: 15  (10 raw gains, 5 raw losses)
+  -> bench-results/nia-order-lemmas-20260916/movers-pinned.txt  (re-check every one of them 3x per arm)
+  LOSS [QF_NIA] A=unsat    B=unknown  From_T2__ex36.t2__p29986_safety_0.smt2
+  LOSS [QF_NIA] A=unsat    B=unknown  From_T2__n-7.t2_fixed__p4922_terminationG_0.smt2
+  LOSS [QF_NIA] A=sat      B=unknown  From_T2__streamserver-succeed.t2__p24602_terminationG_0.smt2
+  GAIN [QF_NIA] A=unknown  B=unsat    LarrazOliverasRodriguez-CarbonellRubio-2013FMCAD-Fig1-alloca_unknown-termination.c.i_Iteration6_Lasso+nonterminationTemplate.smt2
+  LOSS [QF_NIA-heldout] A=unsat    B=unknown  Stroeder_15__Middle.c__p24288_terminationG_0.smt2
+  LOSS [QF_NIA-heldout] A=unsat    B=unknown  From_T2__n-21.t2__p3984_terminationG_0.smt2
+  GAIN [QF_NIA-heldout] A=unknown  B=sat      305.smt2
+  GAIN [QF_NIA-heldout] A=unknown  B=sat      39.smt2
+  GAIN [UFNIA] A=unknown  B=unsat    f2_rw160.smt2
+  GAIN [UFNIA] A=unknown  B=unsat    t3_rw96.smt2
+  GAIN [UFNIA] A=unknown  B=unsat    f2_rw120.smt2
+  GAIN [UFNIA] A=unknown  B=unsat    t3_rw25.smt2
+  GAIN [UFNIA] A=unknown  B=unsat    t3_rw21.smt2
+  GAIN [UFNIA] A=unknown  B=unsat    f2_rw163.smt2
+  GAIN [UFNIA] A=unknown  B=unsat    int_check_bvugt_bvneg_ltr_inv_g.smt2
+
+DISAGREEMENTS (one arm sat, the other unsat): 0

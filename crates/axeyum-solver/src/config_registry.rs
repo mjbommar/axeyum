@@ -5981,6 +5981,103 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Above it the McCormick envelope pass is skipped wholesale.",
     },
     ConfigEntry {
+        name: "MAX_MONOTONE_LEMMAS_PER_ROUND",
+        module: "crates/axeyum-solver/src/nia_linearize.rs",
+        value: "64",
+        unit: "lemmas per refinement round",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::None,
+        guarded_by: "an unemitted valid lemma cannot be wrong; the relaxation is only less tightly cut",
+        env_override: None,
+        justification: dated(
+            "ADR-2136",
+            "2026-09-16",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/nia_linearize.rs",
+                "order_and_monotone_lemmas",
+            )],
+            &[
+                adr("ADR-2136"),
+                doc("bench-results/nia-order-lemmas-20260916/README.md"),
+            ],
+        ),
+        note: "Matches `MAX_REFINED_PER_ROUND` (64), the tangent pass's cap, because the two passes walk the same triple list. Only reachable when `NIA_ORDER_LEMMAS_ARMED` is 1.",
+    },
+    ConfigEntry {
+        name: "MAX_ORDER_ABS_VALUE",
+        module: "crates/axeyum-solver/src/nia_linearize.rs",
+        value: "1 << 40",
+        unit: "absolute model-value magnitude",
+        protects: Protects::Soundness,
+        on_exceed: OnExceed::Relax,
+        signal: Signal::None,
+        guarded_by: "the triple is skipped, and an unemitted valid lemma cannot be wrong",
+        env_override: None,
+        justification: dated(
+            "ADR-2136",
+            "2026-09-16",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/nia_linearize.rs",
+                "order_and_monotone_lemmas",
+            )],
+            &[adr("ADR-2136")],
+        ),
+        note: "Keeps every product of two model values exact in `i128` (|a*b| <= 2^80), the same guard and the same value as `MAX_TANGENT_ABS_VALUE` on the tangent pass. Crossing it is recorded through `note_crossed` rather than being an invisible `continue`.",
+    },
+    ConfigEntry {
+        name: "MAX_ORDER_LEMMAS_PER_ROUND",
+        module: "crates/axeyum-solver/src/nia_linearize.rs",
+        value: "64",
+        unit: "lemmas per refinement round",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::None,
+        guarded_by: "an unemitted valid lemma cannot be wrong; the relaxation is only less tightly cut",
+        env_override: None,
+        justification: dated(
+            "ADR-2136",
+            "2026-09-16",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/nia_linearize.rs",
+                "order_and_monotone_lemmas",
+            )],
+            &[
+                adr("ADR-2136"),
+                doc("bench-results/nia-order-lemmas-20260916/README.md"),
+            ],
+        ),
+        note: "Only reachable when `NIA_ORDER_LEMMAS_ARMED` is 1. Paired with `MAX_ORDER_PAIRS_EXAMINED_PER_ROUND`: an emission cap alone bounds the relaxation's growth but not the WALK, and the sizing census found a file with 9,407,886 shared-factor pairs.",
+    },
+    ConfigEntry {
+        name: "MAX_ORDER_PAIRS_EXAMINED_PER_ROUND",
+        module: "crates/axeyum-solver/src/nia_linearize.rs",
+        value: "4_096",
+        unit: "shared-factor product pairs per refinement round",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::None,
+        guarded_by: "an unexamined pair emits no lemma, and an unemitted valid lemma cannot be wrong",
+        env_override: None,
+        justification: dated(
+            "ADR-2136",
+            "2026-09-16",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/nia_linearize.rs",
+                "order_and_monotone_lemmas",
+            )],
+            &[
+                adr("ADR-2136"),
+                doc("bench-results/nia-order-lemmas-20260916/README.md"),
+            ],
+        ),
+        note: "THE CAP ON WHAT IS LOOKED AT, not on what is emitted. Measured over all 116 undecided QF_NIA T1 rows (`bench-results/nia-order-lemmas-20260916/census-undecided-116.tsv`): the median file has 2,249 shared-factor product pairs and one has 9,407,886, so a pass capped only on emissions would still walk ten million pairs on the worst file before emitting its 64th lemma. Only reachable when `NIA_ORDER_LEMMAS_ARMED` is 1.",
+    },
+    ConfigEntry {
         name: "MAX_REFINED_PER_ROUND",
         module: "crates/axeyum-solver/src/nia_linearize.rs",
         value: "64",
@@ -6085,6 +6182,42 @@ pub static REGISTRY: &[ConfigEntry] = &[
             ],
         ),
         note: "MEASURED, AND THE MEASUREMENT DID NOT MOVE IT. First 50 files of the committed `QF_NIA` parity list, 24 s budget, one process per host on idle s6/s7. At 3 the loop gets a median 6.65 s slice, runs 1-15 rounds (median 1, 26 of 50 files exactly one) and emits 2,476 tangent lemmas. The `AXEYUM_NIA_REFINEMENT=1/1` arm hands it the whole remaining budget (median 19.96 s): 22 files get more rounds, 1,280 more tangent lemmas are emitted, and TWO files move `unknown` -> `sat` -- neither reproducibly (file 13 sat in 3 of 4 repeats, file 30 in 1 of 7). The inner search consumes whatever budget it is given rather than converging, exactly as `OVERSIZED_ADMISSION_PROBE_BUDGET`'s justification already records, so a larger slice moves which states are visited and not how deep the search goes. Left at 3; the lever ships OFF so the next A/B needs no rebuild.",
+    },
+    ConfigEntry {
+        name: "NIA_ORDER_LEMMAS_ARMED",
+        module: "crates/axeyum-solver/src/nia_linearize.rs",
+        value: "0",
+        unit: "armed (1) or disarmed (0)",
+        protects: Protects::Completeness,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::NotApplicable,
+        guarded_by: "",
+        env_override: Some("AXEYUM_NIA_ORDER_LEMMAS"),
+        justification: dated(
+            "ADR-2136",
+            "2026-09-16",
+            None,
+            &[
+                sym(
+                    "crates/axeyum-solver/src/nia_linearize.rs",
+                    "order_lemma_at_model",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/nia_linearize.rs",
+                    "monotone_lemmas_at_model",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/nia_linearize.rs",
+                    "order_and_monotone_lemmas",
+                ),
+            ],
+            &[
+                adr("ADR-2136"),
+                adr("ADR-2112"),
+                doc("bench-results/nia-order-lemmas-20260916/README.md"),
+            ],
+        ),
+        note: "SHIPPED DISARMED, and 0 leaves the refinement round byte for byte: `solve_with_refinement` never builds the shared-factor index, so `timed_refine` cannot reach the pass. Armed, the loop also emits ADR-2112 Part E's two ABSENT lemma classes -- z3's `nla_order_lemmas.cpp:286-310` (four sign cases coupling two products that share a factor) and `nla_monotone_lemmas.cpp:61-90` (magnitude cuts at the current assignment) -- both model-driven, both capped per round. WHAT IT IS WORTH, said before the change: applicability is near-total but that is not decidability. The sizing census measured the order lemma applicable on 111 of 116 undecided QF_NIA T1 rows and monotonicity on 115, while ADR-2112 Part D's ablation measured z3's OWN order class load-bearing on 3 of the 75 files z3 decides and its tangent class on 3. SOUNDNESS is not in the lever: every lemma is a consequence of `r = a*b` alone, so it is valid in every integer model of the original query and can only shrink the relaxation; `order_lemma_covers_all_four_sign_cases_and_each_is_discriminated`, `monotone_lemmas_are_valid_in_every_quadrant_in_both_directions` and `a_negative_shared_factor_must_not_cut_away_a_satisfiable_systems_models` assert that rather than assume it. ARMING ALSO WIDENS `refine`: the entailed-bound passes produce nothing on this population (the census measured `unbounded_products == products` at every quantile), so without the second disjunct at the `RefinementSetup` construction the loop does one round and the pass is unreachable.",
     },
     ConfigEntry {
         name: "NIA_SLICE_MS",
@@ -9623,6 +9756,15 @@ pub static EXEMPT: &[(&str, &str, &str)] = &[
         "Paired with MIN_EQUALITY_GATES in the same syntactic route predicate. Registered \
          nowhere because crossing it changes no resource, only which of two equally \
          complete probes runs first.",
+    ),
+    (
+        "crates/axeyum-solver/src/nia_linearize.rs",
+        "LEMMA_CHECK_POINTS",
+        "How many random integer points the DEBUG-BUILD lemma validity checker samples \
+         (`#[cfg(debug_assertions)]`). It meters a `debug_assert!`, not the search: it does \
+         not exist in a release build, and no verdict in any build depends on it -- crossing \
+         it cannot admit or refuse anything, only sample fewer points before concluding the \
+         lemma it just built is valid.",
     ),
     (
         "crates/axeyum-solver/src/nia_linearize.rs",

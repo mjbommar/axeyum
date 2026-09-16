@@ -1,0 +1,371 @@
+# NIA-ORDER-LEMMAS — what order and monotonicity lemmas are worth to OUR portfolio
+
+Lane NIA-ORDER-LEMMAS, ADR-2136. ADR-2112 Part E named two lemma classes
+present in z3 and **absent** from `nia_linearize.rs` — order lemmas
+(`nla_order_lemmas.cpp`) and monotonicity lemmas (`nla_monotone_lemmas.cpp`) —
+and its ablation measured what removing each is worth **to z3**, whose portfolio
+is redundant enough that 66 of 75 files decide under every single-class removal.
+That does not say what the two classes are worth to **us**. This lane measures
+that.
+
+Status: see §5 for the ship decision.
+
+## 1. Sizing — the ceiling in files, per class (exit criterion 1)
+
+`census_shared_factor.py` over all 116 undecided `QF_NIA` T1 rows
+(`bench-results/nia-trace-20260915/undecided-116.txt`), **116 files, 0
+errored**. Applicability is defined by the STEP each lemma takes, not by a name:
+
+- **order** needs two DISTINCT nonlinear products sharing an operand term
+  (`a·c` and `b·c`) — z3's `ac`/`bc`. A file with no such pair cannot emit one,
+  whatever the model says.
+- **monotonicity** needs a product at least one of whose factors carries no
+  two-sided constant bound entailed by the top-level conjuncts. For a factor
+  that IS two-sidedly bounded, `mccormick_lemmas` (`nia_linearize.rs:724`)
+  already couples the magnitude and the monotonicity lemma adds nothing we
+  have not got. This is exactly the population ADR-2112 §E1 claim 2 is about.
+
+| | files of 116 |
+|---|---:|
+| **order lemma applicable** (≥ 1 shared-factor product pair) | **111** |
+| **monotonicity applicable** (≥ 1 product with an unbounded factor) | **115** |
+| both | 111 |
+| neither | 1 (`ReachSafety-Loops/array_3-1-O0.smt2`, the word-only-fallback file ADR-2112 §A already excludes) |
+
+Per-file shape, same 116 rows:
+
+| column | min | median | p90 | max |
+|---|---:|---:|---:|---:|
+| nonlinear products | 0 | **242** | 1,911 | 38,472 |
+| distinct product operands | 0 | 71 | 273 | 6,011 |
+| operands shared by ≥ 2 products | 0 | **53** | 239 | 2,924 |
+| shared-factor product PAIRS | 0 | **2,249** | 44,415 | **9,407,886** |
+| most products on one operand | 0 | 14 | 52 | 574 |
+| two-sidedly bounded terms | 0 | 26 | 107 | 16,529 |
+| products with an unbounded factor | 0 | **242** | 1,911 | 38,472 |
+
+Four files carry products but no shared factor at all
+(`ps2-ll_unwindbound50-O0` 2 products, `MS_06` 36, `geo1-u_valuebound2-O0` 7,
+`sqrtStep6a` 4).
+
+**The two numbers that decide the design.** Applicability is nearly total
+(111/116, 115/116), and the candidate set is enormous — the median file has
+2,249 shared-factor pairs and one has 9.4 million. `unbounded_products` equals
+`products` at every quantile: on this population **no product has both factors
+two-sidedly bounded**, which is ADR-2112's "median 16 bounded symbols against
+289 unbounded" restated per-product. So a static enumeration is out on both
+counts, and a model-driven emission with a hard per-round cap is the only
+shape that fits — which is also what z3 does (`order::order_lemma` runs off
+`check_monomial` at the current assignment).
+
+### 1.1 The census's controls
+
+`--controls` runs 8 fixtures before any corpus file is read, and the census
+REFUSES to run if one fails (exit 2):
+
+| control | products | order | monotone |
+|---|---:|---:|---:|
+| `shared-factor-pair` (`a·c`, `b·c`) | 2 | 1 | 1 |
+| `no-shared-factor` (`a·b`, `c·d`) | 2 | 0 | 1 |
+| `linear-only-negative-control` | 0 | 0 | 0 |
+| `lone-square-is-not-a-pair` (`a·a` alone) | 1 | **0** | 1 |
+| `square-and-product-share-a-factor` (`a·a`, `a·b`) | 2 | **1** | 1 |
+| `nary-left-assoc` (`(* a b c)` → two products) | 2 | 0 | 1 |
+| `bounded-both-sides-no-monotone-need` | 1 | 0 | **0** |
+| `let-bound-shared-factor` | 2 | 1 | 1 |
+
+The last four are the discriminating ones: rows 4/5 separate "a lone square is
+one monomial" from "the census never finds a shared factor", row 7 is the only
+`monotone=0` with a product in it, and row 8 proves `let` is resolved rather
+than treated as an opaque symbol.
+
+`lone-square-is-not-a-pair` was written expecting `order=1` and the census said
+`0`. The **expectation** was wrong, not the census: the order lemma couples two
+DISTINCT monomials, and `a·a` against itself is vacuous. The expectation was
+corrected and `square-and-product-share-a-factor` added beside it so the pair
+still distinguishes.
+
+### 1.2 The census against the engine's own count
+
+The census is a text walk; the engine's count is computed on the normalized
+polynomial. They are independent implementations of "how many nonlinear
+products does this file have", so they are a control on each other. 89 of the
+116 rows carry a `nonlinear abstraction: N cross-products` detail in
+`bench-results/ledger/t1-QF_NIA-db31113fa.tsv` (`nra.rs:567`):
+
+| | |
+|---|---:|
+| files where both counts are available | 89 |
+| both nonzero | **89** |
+| disagreements on nonzero-ness | **0** |
+| census/engine ratio, min / median / max | 1.00 / **1.00** / 1.03 |
+
+The first join of these two files matched **0 rows**, because the ledger's
+`corpus_path` is corpus-relative and the undecided list is absolute. An empty
+overlap would have read exactly like "the census disagrees with the engine
+everywhere"; it was a join bug. Recorded because the difference between the two
+readings is invisible in the output.
+
+### 1.3 What the sizing does NOT say
+
+Applicability is not decidability. 111 of 116 files CAN emit an order lemma;
+ADR-2112 §D measured z3's own order class as load-bearing on 3 of 75 files it
+decides. The sizing says the class is not structurally inapplicable to this
+corpus — which was a live possibility, since 42 of the 116 never reach
+`cas-ideal-refuter` at all — and it says the emission must be model-driven and
+capped. It is the denominator for §4's A/B, not a prediction of it.
+
+## 2. The design claims, at `file:line` on all three sides (exit criterion 2)
+
+Read the STEP, not the name.
+
+| step | z3 | cvc5 | ours |
+|---|---|---|---|
+| **order**: couple two products that SHARE a factor | `nla_order_lemmas.cpp::generate_ol` `:286-310`; which of the four is emitted is decided at the model by `order_lemma_on_ac_and_bc_and_factors` `:322-341`; the equality case `generate_ol_eq` `:265-284`; entry points `order_lemma` `:19`, `order_lemma_on_monic` `:38`, `order_lemma_on_binomial` `:55` | `monomial_bounds_check.cpp:308-325` — multiply an asserted inequality through by a term whose model sign is known, REVERSING the relation when that sign is negative (`infer_type`, `:308`), and emit only when the inferred fact is FALSE at the current abstract model (`:317`) | `order_lemma_at_model`, `order_eq_lemma_at_model` (`nia_linearize.rs`) |
+| **monotonicity**: magnitude cuts at the current assignment | `nla_monotone_lemmas.cpp::monotonicity_lemma_lt` `:80-90`, `::monotonicity_lemma_gt` `:61-72`, dispatched by `::monotonicity_lemma(monic const&)` `:23-39` | `monomial_check.cpp::checkMagnitude` `:193`, ordering monomials by the ABSOLUTE value of their abstract model values (`assignOrderIds(..., isAbsolute=true)`, `:202`), emitted through `compareMonomial` `:517` | `monotone_lemmas_at_model` |
+| magnitude atom **without** an `abs` term | `nla_basics_lemmas.cpp::negate_strict_sign` `:202-216` — the magnitude atom becomes a STRICT SIGN literal keyed off the current value's sign | — | the same: plain linear atoms against integer constants read from the model |
+| tangent planes (**already present**) | `nla_tangent_lemmas.cpp` | `tangent_plane_check.cpp:37` | `tangent_lemmas` (`nia_linearize.rs:1732`) |
+
+The magnitude point is the one that made the build possible. ADR-2112 §E1
+noted that `nia_linearize.rs` has **no IR magnitude term at all** and that both
+absent classes are stated on `|·|`. z3 does not build one either: the
+hypotheses it emits pin the SIGN as well as the magnitude, so the product's
+sign is determined and the two-sided `|m| ≥ |p|` collapses to one linear
+comparison. The sign-pinning half is load-bearing, not decoration —
+`monotone_gt_without_the_sign_pin_is_refutable` builds the weakened lemma by
+hand and the validity checker refutes it.
+
+## 3. Reachability — the arm is WIRED, and it also RUNS
+
+Two different claims, and only the first is usually checked.
+
+**Wired.** `AXEYUM_NIA_ORDER_LEMMAS=notanumber` makes `config_lever.rs:124`
+panic (`is not a valid u32 ... refusing rather than silently measuring the
+shipped default`), so the lever is read. This is ADR-2112's own method: a lever
+proved by a panic rather than by a null result.
+
+**Runs.** That says nothing about the code behind it executing. The pass lives
+in the refinement loop's round ≥ 1, which is entered only when round 0 returns
+a SPURIOUS `sat` — a round-0 `unsat` decides the file and a round-0 `unknown`
+(the linear relaxation running out of budget) ends the loop. `reachability.sh`
+classifies every file from its `--trace`-style debug lines rather than from its
+verdict. Numbers in §3.1.
+
+Two things had to change for it to run at all, both found here rather than
+after a null A/B:
+
+- **`RefinementSetup::refine`** gates the loop on the entailed-bound passes
+  having produced something, and §1 measured that this population produces
+  nothing. Arming now also widens that predicate (ADR-2136 §C).
+- **The first three drafts of the soundness-negative fixture** were green
+  having built no lemma: the relaxation's first model was faithful every time.
+  `LEMMAS_BUILT` is now asserted by that fixture and by the fuzz seed class.
+
+## 5. Mutation (exit criterion 5)
+
+`scripts/tests/mutation_controls.py nia-order-lemmas`, which copies the tree to
+a scratch root (never mutating the shared worktree). Baseline **27 tests
+green**. `--check-anchors`: `suites=162 anchors=1124 stale=0`.
+
+| mutation | outcome | tests killed |
+|---|---|---|
+| the order lemma's conclusion follows the SIGN of the shared factor (`==` → `!=`) | **killed 5** | `order_lemma_covers_all_four_sign_cases_and_each_is_discriminated`, `order_lemma_emits_nothing_when_the_model_already_satisfies_it`, `three_armed_solves_of_one_query_build_the_same_lemmas`, `shared_factor_systems_agree_across_both_arms_and_keep_their_witness`, **`a_negative_shared_factor_must_not_cut_away_a_satisfiable_systems_models`** |
+| the monotonicity `gt` hypothesis must PIN THE SIGN, not only the magnitude | **killed 2** | `shared_factor_systems_agree_across_both_arms_and_keep_their_witness`, `monotone_lemmas_are_valid_in_every_quadrant_in_both_directions` |
+
+**The brief asked for exactly one named fixture per mutation and that is NOT
+what happened: 5 and 2.** It is the honest outcome rather than a shortfall. A
+sign flip in either class IS a wrong-verdict bug, so every test that checks
+validity should die on it, and a mutation narrow enough to kill only one would
+have to be narrow enough that the schema tests could not see it — which would
+be a finding about the schema tests, not about the lemma. What the table has to
+show instead, and does:
+
+- the soundness-negative fixture is in the first kill set — it is not decorative;
+- the two kill sets are **different** (they share one test), so the two
+  mutations are not both being caught by one shared check, which is the shape
+  CLAUDE.md warns about (six of seven guards in one suite were removable
+  because they all rejected through one check);
+- `monotone_lemmas_are_valid_in_every_quadrant_in_both_directions` dies **only**
+  to the monotonicity mutation, and three of the order mutation's five die only
+  to it.
+
+**A mutation the harness refused to call a result.** The first run reported the
+order mutation `NOT APPLIED — the anchor text is not in the subject`. The cause
+was my own `rustfmt`: a clippy fix had renamed the two bindings the anchor
+quoted. The harness is right to refuse — a `killed 0` on an unapplied mutation
+is how a mutation table starts overstating coverage.
+
+## 6. Gates, with counts (exit criterion 6)
+
+A count for every suite, because a feature-gated suite compiles to nothing and
+exits 0 — the shape that left one gate inert for 15 days here.
+
+| gate | result |
+|---|---|
+| `cargo fmt --all --check` | clean |
+| `cargo-serialized.sh clippy --workspace --all-targets --all-features -- -D warnings` | **clean** (the battery's exact lint; `z3-sys` fetched its asset in this worktree, so the narrower fallback was not needed) |
+| `cargo check --workspace --all-targets` (default features) | clean |
+| `run-dispatch-reason-suites.sh` | **28 of 28 suites green**, every one with a nonzero count; `ALL dispatch/reason SUITES GREEN` |
+| `cargo test -p axeyum-solver --lib --features full -- --skip reconstruct::` | 1644 passed, **2 failed** — see below |
+| `cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1` | **12 passed, 0 failed**. Re-run with `--nocapture` on a QUIET frame (load 5.5 → 6.5, calibration scale 1.08x) to read the frames rather than infer them: **`FRONTIER nia_unsat = 40 (baseline 40)`** — the family that once regressed 17 points, holding — plus `nra_degree` 40/40 and three `PROGRESS` rows (`bv_reduction` +6, `lia_cuts` +9, `string_bound` +32) that predate this lane. **No `REGRESSION` anywhere.** `bench-results/frontier/*.json` deliberately NOT committed. |
+| `config_registry::tests` | **18 passed, 0 failed** |
+| mutation `nia-order-lemmas` | baseline **27 green**; 2 mutations, both MEASURED, killing 5 and 2; `--check-anchors` `suites=162 anchors=1124 stale=0` |
+| `check-config-registry-staleness.py` | 516 entries, **0 unexplained** |
+| `check-merge-hygiene.sh` | PASS |
+| `check-links.sh` | `all links ok`, plus both reference-style definitions in ADR-2136 hand-checked (the script reads INLINE links only — ADR-2112 recorded it printing "all links ok" over a dangling reference target) |
+| `gen-plan.py` / `gen-adr-index.py` | regenerated; `duplicate_numbers=0166,0167` is pre-existing and not this lane's |
+
+**The two lib failures, and why they are not this lane's.**
+`auto::tests::arithmetic_uf_overbound_pre_lia_probe_decides_on_clone` and
+`auto::tests::pathological_overbound_stays_terminal_under_every_policy`. Both
+live in `auto.rs`, which this lane does not touch; both are wall-clock-bounded
+(10 s and 20 s `SolverConfig` timeouts); the sweep ran at load average 31–46
+with other lanes building; and ADR-2055 and ADR-2112 each record this exact
+pair of tests flaking under load. Re-run **alone** with the lever unset they
+are **2 passed, 0 failed in 4.70 s**. The lever cannot reach either in any
+case: at `0` the shared-factor index is never built, so `timed_refine` does not
+call the new pass at all.
+
+`gen-plan.py` refused this lane's status file on its first run
+(`landed-changes row is not '| YYYY-MM-DD | … | … |'`): the two reference-style
+link definitions at the bottom sat after the `landed-changes` marker, where the
+generator takes data rows only. Inlined. Recorded because the failure surfaces
+at whoever regenerates `PLAN.md`, not at the lane that wrote the file.
+
+### 3.1 Reachability, all 116 undecided rows
+
+`reachability.sh lists/undecided-116.txt out/reach-116.tsv ./smtcomp_cli 24 5`,
+armed arm, 24 s / 8 GiB, s6 core 5. **116 files, 0 dropped**
+(`reach-116.tsv`).
+
+| | files of 116 |
+|---|---:|
+| round 0 returned a spurious `sat` (the only way into the refinement loop) | 47 |
+| round 0 returned `unknown` — the linear relaxation ran out of budget, loop ends | 67 |
+| no round-0 line at all (parse fallback) | 2 |
+| **built ≥ 1 order or monotonicity lemma** | **59** |
+
+| when it runs | min | median | max |
+|---|---:|---:|---:|
+| lemmas built per file | 21 | **76** | 603 |
+| refinement rounds | 3 | 13 | 47 |
+
+**All 47 round-0-`sat` files built lemmas, and 12 more did too** — those are
+files whose round 0 was `unknown` on the FIRST attempt of one internal probe
+and `sat` on a later one, so the loop was entered anyway.
+
+**The pass is reached on 59 of 116 (50.9 %) and the ceiling is the relaxation,
+not the lemma.** 67 files never get a spurious model to cut, because the linear
+DPLL(T) cannot even solve the relaxation inside the slice. That is a different
+problem from the one this lane is about, and it bounds everything below: a
+lemma class cannot decide a file whose relaxation never returns.
+
+**One file is decided by the armed arm in this single-arm probe**, and it is
+worth naming because it is the first evidence the classes are worth anything to
+our portfolio:
+
+```
+QF_NIA/UltimateLassoRanker/LarrazOliverasRodriguez-CarbonellRubio-2013FMCAD-
+  Fig1-alloca_unknown-termination.c.i_Iteration6_Lasso+nonterminationTemplate.smt2
+```
+
+Paired directly, same binary, same file, 24 s each: `AXEYUM_NIA_ORDER_LEMMAS=0`
+→ **`unknown`**, `AXEYUM_NIA_ORDER_LEMMAS=1` → **`unsat`**, and the benchmark's
+own `(set-info :status unsat)` agrees with the armed arm. One file is one file;
+§4's interleaved A/B is what sizes it.
+
+## 4. The interleaved A/B (exit criterion 4)
+
+One binary (`smtcomp_cli`, release, sha256 `bc8adc98…59e32`), two env values:
+`AXEYUM_NIA_ORDER_LEMMAS=0` (A, the shipped arm) and `=1` (B, armed). Both arms
+run back to back on the SAME file on the SAME pinned core, and the arm order
+alternates per file, so ambient load cancels in the difference. 24 s / 8 GiB
+`ulimit -v`. `ab-run-env.sh` refuses to start if the two arms are equal.
+
+**Cores, and the honest part.** s6, this lane's pairs `5,13` and `6,14`. The
+brief's plan was one shard per PHYSICAL core, which would have taken about
+eight hours serially. To fit the window, **all four logical cores ran at once**:
+`QF_NIA` on 5, `QF_NRA` on 6, `UFNIA` on 13, the held-out draw on 14 — so each
+physical core carried two sweeps. That inflates timeouts on both arms of every
+file, which can only make a decision HARDER to obtain and a loss EASIER to
+observe, so it is conservative for a ship gate; it is not conservative for a
+gain, and every gain below is re-checked 3× per arm before being counted.
+
+### 4.1 Coverage and verdicts, all four populations complete
+
+| division | list | rows | A decided | B decided | malformed |
+|---|---:|---:|---:|---:|---:|
+| **QF_NIA** (pinned target) | 200 | **200** | **82** | **80** | 0 |
+| **QF_NRA** (control) | 200 | **200** | 124 | 124 | 0 |
+| **UFNIA** (target) | 200 | **200** | **54** | **61** | 0 |
+| **QF_NIA held-out draw** | 200 | **200** | 85 | 85 | 0 |
+
+**DISAGREEMENTS (one arm `sat`, the other `unsat`): 0 of 800.** There is no
+ambient-noise story for a disagreement — the two arms are the same binary on
+the same file on the same core — so any nonzero count would be a soundness
+finding. The analyser exits nonzero on one.
+
+**The control behaves as a control.** `QF_NRA` moves nothing: 124 decided in
+both arms, 0 movers. The lever sits in the INTEGER nonlinear route, and a
+Real-sorted query does not reach it.
+
+### 4.2 Movers, re-checked 3× per arm
+
+15 raw movers. Each was re-run three times per arm on one pinned core at the
+same envelope (`recheck-movers-env.sh`), and classified only when all three
+passes agree.
+
+| division | STABLE-GAIN | STABLE-LOSS | UNSTABLE |
+|---|---:|---:|---:|
+| QF_NIA (pinned) | 1 | **2** | 1 |
+| QF_NRA (control) | 0 | 0 | 0 |
+| UFNIA | **7** | 0 | 0 |
+| QF_NIA held-out | 2 | **1** | 1 |
+| **total** | **10** | **3** | **2** |
+
+Named, because a count is not a finding:
+
+- **UFNIA, 7 stable gains**, all `unknown → unsat`: `f2_rw160`, `f2_rw120`,
+  `f2_rw163`, `t3_rw96`, `t3_rw25`, `t3_rw21`,
+  `int_check_bvugt_bvneg_ltr_inv_g`. This is the largest single effect the lane
+  measured, and it is in the division where `q:skolem-qf` hands the nonlinear
+  integer tail to the quantifier-free ladder.
+- **QF_NIA pinned, 1 stable gain**:
+  `LarrazOliverasRodriguez-CarbonellRubio-2013FMCAD-Fig1-alloca_unknown-termination.c.i_Iteration6_Lasso+nonterminationTemplate.smt2`,
+  `unknown → unsat`, agreeing with the benchmark's own `(set-info :status unsat)`.
+- **QF_NIA pinned, 2 stable losses**: `From_T2__ex36.t2__p29986_safety_0.smt2`
+  and `From_T2__n-7.t2_fixed__p4922_terminationG_0.smt2`, both `unsat → unknown`.
+- **QF_NIA held-out, 2 stable gains** (`305.smt2`, `39.smt2`, `unknown → sat`)
+  **and 1 stable loss** (`From_T2__n-21.t2__p3984_terminationG_0.smt2`,
+  `unsat → unknown`).
+- 2 UNSTABLE, reported as ambient rather than as an effect.
+
+## 5. The ship decision
+
+**The lever stays DISARMED. `NIA_ORDER_LEMMAS_ARMED` remains `0`.**
+
+The criterion was *0 stable losses and 0 flips, with at least one stable gain,
+on the pinned list AND on the held-out draw*. Flips: **0 of 800**, met. Stable
+gains: **10**, met on both `QF_NIA` populations and on `UFNIA`. Stable losses:
+**2 on pinned and 1 on held-out**, so the criterion is **NOT met** and nothing
+ships ON.
+
+**Why the losses are the right thing to stop on, and what they are.** All three
+are `unsat → unknown`: files the shipped arm refutes and the armed arm does
+not. Nothing unsound happened — the armed arm returned `unknown`, which is a
+first-class result. What it lost is TIME. Arming does two things to the
+refinement loop: it emits lemmas (median 76 per reached file, over up to 47
+rounds), and it widens `RefinementSetup::refine`, which also grants the loop a
+larger share of the caller's remaining budget. On a file the shipped arm
+refutes by some LATER route in the ladder, spending that budget in the
+relaxation starves the route that was going to decide it. That is a scheduling
+cost, not a lemma defect, and it is the thing a follow-up has to fix before
+this can ship.
+
+**What the measurement does establish.** ADR-2112's decision 4 said not to
+build a single nonlinear lemma class, on the evidence that z3's own order class
+is load-bearing on 3 of the 75 files z3 decides. Built and measured on OUR
+portfolio, the two classes are worth **10 stable gains across 800 files**, with
+**7 of them in one division** (`UFNIA`, 54 → 61, +13 %) and **zero flips**. The
+classes are not worthless to us; the loop that hosts them costs more than they
+pay on `QF_NIA`.
