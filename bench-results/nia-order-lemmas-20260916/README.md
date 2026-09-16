@@ -231,3 +231,45 @@ call the new pass at all.
 link definitions at the bottom sat after the `landed-changes` marker, where the
 generator takes data rows only. Inlined. Recorded because the failure surfaces
 at whoever regenerates `PLAN.md`, not at the lane that wrote the file.
+
+### 3.1 Reachability, all 116 undecided rows
+
+`reachability.sh lists/undecided-116.txt out/reach-116.tsv ./smtcomp_cli 24 5`,
+armed arm, 24 s / 8 GiB, s6 core 5. **116 files, 0 dropped**
+(`reach-116.tsv`).
+
+| | files of 116 |
+|---|---:|
+| round 0 returned a spurious `sat` (the only way into the refinement loop) | 47 |
+| round 0 returned `unknown` — the linear relaxation ran out of budget, loop ends | 67 |
+| no round-0 line at all (parse fallback) | 2 |
+| **built ≥ 1 order or monotonicity lemma** | **59** |
+
+| when it runs | min | median | max |
+|---|---:|---:|---:|
+| lemmas built per file | 21 | **76** | 603 |
+| refinement rounds | 3 | 13 | 47 |
+
+**All 47 round-0-`sat` files built lemmas, and 12 more did too** — those are
+files whose round 0 was `unknown` on the FIRST attempt of one internal probe
+and `sat` on a later one, so the loop was entered anyway.
+
+**The pass is reached on 59 of 116 (50.9 %) and the ceiling is the relaxation,
+not the lemma.** 67 files never get a spurious model to cut, because the linear
+DPLL(T) cannot even solve the relaxation inside the slice. That is a different
+problem from the one this lane is about, and it bounds everything below: a
+lemma class cannot decide a file whose relaxation never returns.
+
+**One file is decided by the armed arm in this single-arm probe**, and it is
+worth naming because it is the first evidence the classes are worth anything to
+our portfolio:
+
+```
+QF_NIA/UltimateLassoRanker/LarrazOliverasRodriguez-CarbonellRubio-2013FMCAD-
+  Fig1-alloca_unknown-termination.c.i_Iteration6_Lasso+nonterminationTemplate.smt2
+```
+
+Paired directly, same binary, same file, 24 s each: `AXEYUM_NIA_ORDER_LEMMAS=0`
+→ **`unknown`**, `AXEYUM_NIA_ORDER_LEMMAS=1` → **`unsat`**, and the benchmark's
+own `(set-info :status unsat)` agrees with the armed arm. One file is one file;
+§4's interleaved A/B is what sizes it.
