@@ -1,0 +1,43 @@
+
+== qfnra ==
+  rows                       200
+  A (default)                117
+  B (single-cell)            123
+  net                        +6
+  gains / losses / flips     6 / 0 / 0
+  rows where an arm produced no verdict token   0
+  vs declared :status        0 disagreements over 238 comparable verdicts
+  wall clock                 A 1259 s, B 1172 s
+    GAIN   A=unknown -> B=sat   QF_NRA/meti-tarski/sin/problem/7/weak/sin-problem-7-weak-chunk-0131.smt2
+    GAIN   A=unknown -> B=sat   QF_NRA/meti-tarski/sqrt/1mcosq/8/sqrt-1mcosq-8-chunk-0562.smt2
+    GAIN   A=unknown -> B=unsat   QF_NRA/meti-tarski/sin/cos/sin-cos-346-b-chunk-0147.smt2
+    GAIN   A=unknown -> B=sat   QF_NRA/meti-tarski/atan/vega/3/weak/atan-vega-3-weak-chunk-0243.smt2
+    GAIN   A=unknown -> B=sat   QF_NRA/meti-tarski/sin/problem/7/sin-problem-7-chunk-0124.smt2
+    GAIN   A=unknown -> B=unsat   QF_NRA/meti-tarski/exp/problem/10/3/weak/exp-problem-10-3-weak-chunk-0081.smt2
+
+== qfnia ==
+  rows                       200
+  A (default)                81
+  B (single-cell)            81
+  net                        +0
+  gains / losses / flips     1 / 1 / 0
+  rows where an arm produced no verdict token   0
+  vs declared :status        0 disagreements over 162 comparable verdicts
+  wall clock                 A 3099 s, B 3116 s
+    GAIN   A=unknown -> B=sat   QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__NonTermination2_false-termination.c__p24932_edge_closing_0.smt2
+    LOSS   A=unsat -> B=unknown   QF_NIA/20170427-VeryMax/ITS/From_T2__n-21.t2__p3959_terminationG_0.smt2
+
+== qflra ==
+  rows                       200
+  A (default)                107
+  B (single-cell)            107
+  net                        +0
+  gains / losses / flips     0 / 0 / 0
+  rows where an arm produced no verdict token   0
+  vs declared :status        0 disagreements over 194 comparable verdicts
+  wall clock                 A 2311 s, B 2320 s
+  CONTROL: the linear division moved 0 rows -- as expected
+
+wrote bench-results/nra-single-cell-20260915/movers-all.txt (8 movers)
+
+movers per division: qfnia=2, qfnra=6

@@ -159,6 +159,12 @@ now. Nothing was deleted.
 | 2026-09-15 | `e75f85413` | [ADR-2114]: no datatype lever is built — of the 4 undecided ORIGINALS we refuse on a datatype construct, 1 is ground-convertible. §4 names and sizes the representation anyway so the next lane need not re-derive it. |
 | 2026-09-15 | `3d8435c2f` | The same four z3 configurations on the 79 undecided ORIGINALS, which is the measurement the cores could not give: 39 GROUND (49.4 %), 16 EMATCHING, 0 MBQI, 24 z3 cannot refute either. Half the gap is ground — but only 1 of the 4 datatype-refused originals is, so the bucket converts at most 1 of 79. |
 | 2026-09-15 | `d53c89e8e` | Verdict invariance measured rather than argued: 0 verdict changes of 134, 0 flips, non-vacuity in both directions. The checker was wrong before the code was — it demanded the correction on a row that never entered the quantified arm. |
+| 2026-09-15 | `4447b5a14` | Exit criterion 1, committed before any code: the slice ceiling is 24 of ADR-2110's 45, and 9 are lost to the `i128` clearing. |
+| 2026-09-15 | `c03bf39f7` | `nra_cell_cert.rs` — the cell-covering certificate and an independent checker, landed BEFORE the producer so the format is fixed by what can be checked. |
+| 2026-09-15 | `31e150738` | `nra_single_cell.rs` — CDCAC behind `AXEYUM_NRA_CAD=single-cell`, OFF. `unsat` gated on the checker, `sat` on a rational model replay. |
+| 2026-09-15 | `5755582bf` | Rational point cells are descended into; `algebraic-witness` split out of `algebraic-coarsening`; the conjunctivity correction (24 → 12) and the cause scan. |
+| 2026-09-15 | `4ff928964` | The `generate_single_cell_shape` fuzz seed class and a route-level differential test; 195 unattributed declines found and closed. |
+| 2026-09-15 | `db89894c9` | Two mutation suites (3 mutations, 3 kills, one named test each); clippy clean on solver+bench. |
 | 2026-09-15 | `4a9638930` | Census of the 83 undecided QF_NRA files: 83 of 83 outcome-ledger rows, buckets keyed on the route that held the budget, shape features from a parser rather than a grep. Records the two wrong readings the instruments gave first. |
 | 2026-09-15 | `4def0b025` | `nra_real_root::CadDecline` — twelve causes behind what was one `not-applicable` for 78 of 83 files — plus the `AXEYUM_NRA_CAD` lever registered dated, and the three-arm z3 + cvc5 reference trace that sizes the gap. |
 | 2026-09-15 | `40b99ced8` | ADR-2110: the CAD-versus-linearization split, two design-difference claims with `file:line` on both sides, the QF_NRA A/B (+2, 0 losses, 0 flips), and the `nra-cad-attribution` mutation suite (three guards, each deletion killing exactly one named test). |
@@ -61706,6 +61712,92 @@ scratch copy and restoring). Folding it in is the coordinator's step.
 | 2026-09-07 | Backtick logic names in the new doc comments (workspace clippy) | `f27b1dbd1` |
 | 2026-09-07 | The 200-file confirming run, the census correction block, the family-doc follow-up, and the capability entry's measured boundary | `0857e419c` |
 | 2026-09-07 | Merge of local `main` (ADR index regenerated to resolve); post-merge workspace `check` and `clippy -D warnings` both green | `1c078316b` |
+
+Status: the route, its certificate checker, its fuzz seed class and its mutation
+suites are landed. The lever `AXEYUM_NRA_CAD=single-cell` ships **OFF** — the A/B
+would permit ON, and the reason it does not is the assurance level of the
+checker, not the numbers.
+
+## What this lane was
+
+ADR-2110 ended with "the model-constructing nlsat/CAD route is the
+recommendation, not this lane's build". This is that build, bounded: ≤ 4
+variables, total degree ≤ 8, conjunctive, coefficients inside the existing
+`i128` clearing.
+
+## The numbers
+
+| | |
+|---|---:|
+| ADR-2110's CAD-only population | 45 |
+| inside the slice's BOUND ceiling (≤4 vars, degree ≤8, coeff ≤ `1<<40`) | 24 |
+| **corrected** shape ceiling (also genuinely conjunctive after `let` expansion) | **12** |
+| excluded by the `1<<40` coefficient clearing alone | 9 |
+| of the 24, decided by the route | 2 |
+| QF_NRA A/B: A `default` → B `single-cell` | **117 → 123 (+6)** |
+| of that, attributable to the route deciding | **+4** (2 gains are files it declines) |
+| 3x recheck: STABLE-GAIN / STABLE-LOSS / UNSTABLE | **6 / 0 / 2** |
+| QF_NIA | 81 → 81, both movers UNSTABLE |
+| QF_LRA control | 107 → 107, **0 movement of any kind** |
+| `sat`↔`unsat` flips, all three divisions | **0** |
+| vs declared `:status` | 0 disagreements over 594 comparable verdicts |
+| differential fuzz | 1500 instances, 239 decided (237 sat / 2 unsat), 0 disagreements |
+
+## Gates
+
+`clippy -D warnings` on solver + bench with `--features full`: exit 0.
+`cargo fmt --all --check`: clean. `cargo check --workspace --all-targets` on
+default features: clean. Solver lib sweep (`--skip reconstruct::`): **1562
+passed, 0 failed**. `corpus_regression`: 2 passed. All **eight** nonlinear z3
+differential fuzzes green with nonzero counts. `config_registry::tests`: 18
+passed. Merge hygiene, links, `gen-plan --check`, `gen-adr-index`: PASS.
+Holdout isolation: PASS at 206 held-out. `progress_frontier` (`--features full`,
+`--test-threads=1`, load 2.9-3.3): **12 passed, 0 failed, no REGRESSION**, with
+`frontier_nia_unsat` and `frontier_nra_degree` — the two families this route
+could touch — both green. The five `bench-results/frontier/*.json` files the run
+rewrites were restored and are NOT committed.
+
+The route/dispatch integration suites (`route_trace`, `route_attribution`,
+`dispatch_rung_refusal_declines`, `nra_fbbt_route`, `ufnra_route`,
+`cas_ideal_route`, `decision_and_evidence_routes_agree`,
+`math_resource_lra_routes`, `quantified_route_trace`): all green.
+
+**Two suites failed on the first pass and both were load, not code.**
+`auto::tests::pathological_overbound_stays_terminal_under_every_policy` and
+`route_attribution::attribution_does_not_change_any_verdict` both assert inside a
+5-second budget, and both were run in a parallel sweep on a box carrying a
+four-core benchmark. Each passes on a quiet box at the same HEAD, and neither is
+on a code path this lane touches. The number reported above is the quiet run.
+
+## The two things worth carrying forward
+
+**This lane's first sizing was wrong, and the way it was wrong generalises.** It
+read `has_top_or` from ADR-2110's shape table — a column computed at the
+**outermost node** of each assertion. `meti-tarski` files are one enormous
+`let`-bound `and` tree, so an `or` six levels inside does not move it. The
+ceiling was not a guess that came out high; it was the wrong question answered
+exactly. A column computed at the top of a term is not a statement about the
+term.
+
+**An `unsat` from this route is CHECKED, not PROVED.** The certificate checker
+establishes atom-cell sign-invariance exactly (no root strictly inside the cell,
+by an independent Sturm count) but tests *delineability* by sampling three
+further interior points. That is why the default does not move: every other
+`unsat` producer here is gated by something exact, and making a sampling check
+load-bearing on the default path is a decision to take deliberately.
+
+## What was left undone, and why
+
+- **The held-out 200-file QF_NRA draw was NOT run.** It is the gate for shipping
+  ON; the decision is OFF, so spending a blind population on a lever that is not
+  moving would spend it for nothing.
+- **Lazard evaluation** (`references/cvc5/src/theory/arith/nl/coverings/lazard_evaluation.cpp:590`)
+  is the named way to stop declining on a nullified polynomial. Not built.
+- The three blockers, in measured order: a **clause loop** over sign atoms
+  (`non-conjunctive`, 12 of 24 and 311 of 1500), an **algebraic sample**
+  (`algebraic-witness`, 6 of 24), and a **fraction-free multivariate
+  determinant** so the projection is not capped at Sylvester dimension 6
+  (`projection`, 2 of 24 and 188 of 1500).
 
 **The QF_NRA gap is sized and split** (`DONE`, nra-trace, 2026-09-15). The board
 records 117 of 200 against z3's 187. The 83 undecided files were censused

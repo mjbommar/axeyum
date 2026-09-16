@@ -1,0 +1,9 @@
+files examined                      : 24
+CONJUNCTIVE after `let` expansion   : 12
+carrying a non-conjunctive connective: 12
+
+connectives found (total occurrences):
+  or                     17
+  not-nonatomic           3
+
+wrote bench-results/nra-single-cell-20260915/conjunctivity-24.tsv

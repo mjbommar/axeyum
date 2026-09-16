@@ -1,0 +1,11 @@
+control: 83 / 45 / 24 / 12, nested
+
+mover                                                           83  45  24  12
+sin-problem-7-weak-chunk-0131.smt2                               1   1   1   0
+sqrt-1mcosq-8-chunk-0562.smt2                                    1   0   0   0
+sin-cos-346-b-chunk-0147.smt2                                    1   1   1   1
+atan-vega-3-weak-chunk-0243.smt2                                 1   1   1   0
+sin-problem-7-chunk-0124.smt2                                    1   1   1   1
+exp-problem-10-3-weak-chunk-0081.smt2                            1   0   0   0
+
+of 6 movers: 6 in the 83, 4 in the 45, 4 in the 24, 2 in the 12

@@ -1,0 +1,2 @@
+qfnia	QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__NonTermination2_false-termination.c__p24932_edge_closing_0.smt2	unknown	sat
+qfnia	QF_NIA/20170427-VeryMax/ITS/From_T2__n-21.t2__p3959_terminationG_0.smt2	unsat	unknown
