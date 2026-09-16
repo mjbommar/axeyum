@@ -11638,5 +11638,35 @@ SUITES["qinst-online-session-epoch"] = (
 )
 
 
+# ADR-2124, the certificate the session route did not collect.
+#
+# `CandidateFixpointStep::Refuted` returned `Ok(CheckResult::Unsat)` with NO
+# `*certificate`, while the two cold-check exits beside it both collect one from
+# the same `(anchor, ground, ground_derivations)` triple. This suite asks the
+# only question that matters about the repair: is there ANY test in the
+# instance-set certificate surface that notices when it is taken away again?
+#
+# If the answer is SURVIVED, that is the finding and it is recorded rather than
+# papered over: the repair is correct by construction (that exit is reached only
+# through `replay_online_refutation`, so the derivations describe exactly the
+# refutation the cold route just re-established) but it is NOT covered, and
+# nobody should read its presence in the diff as evidence that a later change
+# could not silently undo it.
+SUITES["qinst-session-refutation-certificate"] = (
+    "crates/axeyum-solver/src/qinst_egraph.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "quant_instance_set_cert::"),
+        "qinst-session-refutation-certificate",
+    ),
+    [
+        (
+            "a refutation reached through the retained session still carries its instance set",
+            "                    // which is why the gap had to close with it.\n                    *certificate =\n                        collect_ground_derivations(arena, anchor, &ground, &ground_derivations);\n                    return Ok(CheckResult::Unsat);",
+            "                    // which is why the gap had to close with it.\n                    return Ok(CheckResult::Unsat);",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
