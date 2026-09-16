@@ -13286,9 +13286,10 @@ mod tests {
     ///
     /// The shipped level declines a ground set the moment an integer comparison
     /// appears in it, which is why `online_clauses` stays `None` on every UFLIA
-    /// file and the instantiation loop pays a FULL COLD RE-SOLVE of the whole
-    /// accumulated ground set on every due round. Level 1 abstracts the
-    /// comparison and the session exists.
+    /// file and the loop takes the COLD branch of the interleaved check for its
+    /// whole run — re-solving the accumulated set on each of its first seven
+    /// rounds and then on 7, 15, 31, … Level 1 abstracts the comparison, the
+    /// session exists, and the first seven per-round re-solves go away.
     ///
     /// Both halves are asserted here on purpose: a test that only showed level 1
     /// working would pass just as well if level 0 had silently started working
@@ -13309,7 +13310,8 @@ mod tests {
         assert!(
             session.is_some(),
             "level 1 must host an arithmetic ground set -- otherwise the loop \
-             re-solves the accumulated set from scratch every due round"
+             re-solves the accumulated set from scratch on each of its first \
+             seven rounds"
         );
         let session = session.unwrap();
         assert_eq!(

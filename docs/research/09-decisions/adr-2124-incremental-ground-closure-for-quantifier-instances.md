@@ -1,7 +1,7 @@
 # ADR-2124: incremental ground closure for quantifier instances — one gate, `online_clauses.is_none()`, puts every arithmetic file in the re-solve regime
 
 Status: proposed
-Index-summary: [ADR-2120] §7 located the quantified divisions' block at the **ground closure over the instance set**, and this lane found the whole mechanism is ONE `if`. The interleaved cold ground check fires behind `online_clauses.is_none()` (`qinst_egraph.rs`), so the retained CDCL(T) session and the from-scratch re-solve are **alternatives, not companions**: when the session exists the loop updates it, and when it does not, every due round re-solves the WHOLE accumulated ground set. `OnlineQuantifierClauseSession::new` builds its encoder without opaque abstraction, so one integer comparison anywhere in the ground set refuses the session — which is why UFLIA (and AUFDTLIRA, UFDTLIRA, AUFLIRA) are in the re-solve regime for their entire run. **Sizing, before code:** on ADR-2120's 53 reference-minimal UFLIA cores the check ran on 45 of 53, **493 calls**, median 11 and max 29 per core, over sets whose per-core maximum has median 1,356 and max **8,019** terms; 33 of 53 died on the clock and 32 of those had run it. Asserting each term ONCE is 71,127 against a linear-growth estimate of 437,373 re-solved — **6.1x**. On the Tier 1 ledger the quantifier route's own last decline names the interleaved check on **108 of 1,400**, **101** of them ending `unknown` (UFNIA 44/200, UFLIA 28/200, AUFDTLIRA 18/200, AUFLIRA 6/200, UF 4/200, UFDTLIRA 1/200). Level 1 (`AXEYUM_QINST_GROUND_SESSION=1`) abstracts the unencodable Boolean-position term to a free propositional variable so the session exists; the abstraction is a **weakening** (it only adds models) and, independently, the session's `Unsat` is **never the verdict** — it is re-established by `replay_online_refutation` over the same ground set with the ordinary cold route. **A certificate hole is closed in the same change**: the `CandidateFixpointStep::Refuted` exit returned `unsat` with NO instance-set certificate while the two cold-check exits beside it both collect one — invisible while the session declined every arithmetic file, load-bearing the moment it stops.
+Index-summary: [ADR-2120] §7 located the quantified divisions' block at the **ground closure over the instance set**, and this lane found the mechanism: `online_clauses.is_none()` selects between TWO interleaved-check sites that differ by **seven rounds** — the no-session branch re-solves the whole accumulated ground set on rounds 0-6 and then on 7, 15, 31, …, while a live session skips to the exponential schedule alone. (An earlier draft of this ADR said a live session suppresses the check outright; **38 of 53 cores ran an identical number of cold checks in both arms**, which suppression cannot produce, and §2.1.1 records the correction.) `OnlineQuantifierClauseSession::new` builds its encoder without opaque abstraction, so one integer comparison anywhere in the ground set refuses the session — which is why UFLIA (and AUFDTLIRA, UFDTLIRA, AUFLIRA) are in the re-solve regime for their entire run. **Sizing, before code:** on ADR-2120's 53 reference-minimal UFLIA cores the check ran on 45 of 53, **493 calls**, median 11 and max 29 per core, over sets whose per-core maximum has median 1,356 and max **8,019** terms; 33 of 53 died on the clock and 32 of those had run it. Asserting each term ONCE is 71,127 against a linear-growth estimate of 437,373 re-solved — **6.1x**. On the Tier 1 ledger the quantifier route's own last decline names the interleaved check on **108 of 1,400**, **101** of them ending `unknown` (UFNIA 44/200, UFLIA 28/200, AUFDTLIRA 18/200, AUFLIRA 6/200, UF 4/200, UFDTLIRA 1/200). Level 1 (`AXEYUM_QINST_GROUND_SESSION=1`) abstracts the unencodable Boolean-position term to a free propositional variable so the session exists; the abstraction is a **weakening** (it only adds models) and, independently, the session's `Unsat` is **never the verdict** — it is re-established by `replay_online_refutation` over the same ground set with the ordinary cold route. **A certificate hole is closed in the same change**: the `CandidateFixpointStep::Refuted` exit returned `unsat` with NO instance-set certificate — and it is one of a MATCHED PAIR, because the session's OTHER refutation exit (the batch path) already collected one through the identical replay over the identical ground set, with a comment saying why it is certifiable. Three of four sites were right.
 Index-status: proposed
 Date: 2026-09-16
 
@@ -350,6 +350,42 @@ instances abstract to opaque variables, and an opaque variable needs no epoch.
 The statement that survives is therefore narrower and true: **there is no
 retraction, so no learned clause can go stale**, and the root discipline that
 makes that so lives one layer down and is not this session's to lose.
+
+### 5.2 Verification
+
+Everything below ran with a **nonzero** test count, which is checked because a
+feature-gated suite compiles to nothing and exits 0.
+
+| gate | result |
+|---|---|
+| `--test quant_ground_session_soundness` (`--features full`) | **3 passed, 0 failed** |
+| `--lib ground_session` (`--features full`) | **4 passed, 0 failed** |
+| `--lib config_registry::` | **18 passed, 0 failed** — three of them failed on the first attempt and each named a real omission (unsorted entry, a `dated` basis naming a document that did not yet exist, and an admission-class bound with no crossing record; the last was a misclassification, and the lever is `OnExceed::Truncate`) |
+| the 55 quantified suites (`quantified_route_trace`, `quantifier_trigger_alternatives`, `quantifier_positive_path`, and every `tests/*` matching `quant\|mbqi\|egraph\|inst`) | **54 green.** `quantified_route_trace` is treated separately below |
+| the **23** `dispatch/reason:` suites, read out of `hooks/pre-push` rather than retyped | **all green**, this lane's new suite among them |
+| `--features z3 --test qf_uflra_differential_fuzz` | **1 passed, 0 failed** |
+| `--features z3 --test qf_lia_differential_fuzz` | **4 passed, 0 failed** |
+| `clippy -p axeyum-solver -p axeyum-bench --all-targets --features full -- -D warnings` | clean |
+| `cargo check --workspace --all-targets`, default features | clean |
+| `cargo fmt --all --check` | clean |
+| `check-config-registry-staleness.py` | **PASS**, 0 unexplained |
+| `check-suite-gating.py` | **PASS**, the new suite gated |
+| `check-merge-hygiene.sh`, `check-links.sh` | PASS / all links ok |
+
+**`quantified_route_trace` is load-sensitive and is reported as such rather than
+as green or red.** It failed once in the battery and, on re-runs, gave 6/6 green,
+then 2 failed, then 3 failed — **a varying failure set at fixed code**, which a
+deterministic regression cannot produce. The assertion that fires is the suite's
+own non-vacuity guard:
+
+> *"only 3 quantified corpus files were decided; with fewer than 4 this gate
+> cannot distinguish a correct attribution from an absent one"*
+
+— a statement about how many corpus files finished inside their budget, not about
+attribution. Those runs were on s4 at **load average 42–44 on 16 cores**, with a
+second lane's `nra_differential_fuzz` and its own mutation sweep on the same box.
+It is re-run on a quiet box and the load each run saw is printed beside its
+result.
 
 ## 6. Measurement
 
