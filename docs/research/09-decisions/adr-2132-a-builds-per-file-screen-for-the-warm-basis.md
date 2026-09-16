@@ -396,9 +396,50 @@ to compile until each was named and rendered.
 
 PLACEHOLDER — filled in at the end of the lane.
 
-### 5.4 Mutation
+### 5.4 Mutation: two guards, two suites, and one honest disagreement with the brief
 
-PLACEHOLDER — filled in at the end of the lane.
+Two suites, because the guards live in different files and are seen by different
+fixtures. Both baselines are **nonzero** — 3 tests and 16 — so neither result is
+the "suite compiled to nothing" reading exiting 0.
+
+| guard removed | kind of damage | killed |
+|---|---|---:|
+| the builds threshold the screen opens at | the screen becomes `on` under another name | **2** |
+| the screen counter's bump on the UNTRACED path | routes one way under `--trace`, another without | **1** |
+
+`mutation_controls.py --check-anchors`: 158 suites, 1,114 anchors, **stale = 0**.
+
+**Admitting at 0 builds makes `screened` byte-for-byte `on`** — same verdicts,
+same counters, same clock — so no verdict comparison anywhere in this ADR could
+see it. Two fixtures can, and both die:
+
+* `a_file_below_the_threshold_keeps_no_basis_at_all` — the direct guard. At a
+  threshold of 0 the screen opens on a 34-build file, so `warm_checks == 0`
+  fails and so does the `("off", "below-screen")` label pair.
+* `a_file_that_crosses_the_threshold_mid_run_decides_what_off_decides` — the
+  signature. At 0 the screened arm answers exactly as many cubes as `on`, so
+  `on.warm_checks > screened.warm_checks` fails.
+
+**This lane's brief asked for exactly ONE named fixture to die, and it is two.**
+The mutation registration said so before the run rather than after. The honest
+reading is that the two observe ONE defect from two sides, with **nested** kill
+sets rather than disjoint ones — and the only way to get a single kill would
+have been to weaken the signature assertion, which is precisely the assertion
+that distinguishes this lane's arm from ADR-2125's. That is not a trade worth
+making for a tidier number, and [ADR-2125] §5.6 set the precedent by reporting
+its own non-disjoint sets rather than a coverage figure.
+
+The second mutation does kill exactly one, and it does so for a reason worth
+keeping: `a_screen_count_and_the_traced_count_are_the_same_number` asserts the
+**unarmed half first and separately**. A test that compared the two counters only
+while armed would have survived this mutation — and an earlier draft of that test
+did exactly that, which is how the ordering got written down.
+
+**What mutation testing does not show is the guards that are missing.** It
+measures the ones that exist. The adversarial question — for every distinction
+the producer makes, is there a fixture over a *satisfiable* query that can see it
+— is answered separately by [ADR-2125]'s soundness-negative pair, which this lane
+left untouched and green.
 
 ## 6. The A/B
 
