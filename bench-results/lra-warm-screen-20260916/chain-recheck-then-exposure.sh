@@ -42,8 +42,15 @@ echo "CHAIN: both QF_LRA shards done after ${waited}s $(date -Is)"
 # The movers, derived. A row MOVED if exactly one of the two arms decided it, or
 # if both decided it differently.
 derive() {  # $1 = treatment column prefix (b|c)
+  # `FNR==1`, not `NR==1`. With two input files `NR` is cumulative, so `NR==1`
+  # skips only the FIRST header and feeds the second one through as a data row.
+  # It happens to be inert here -- a row whose `a_verdict` is the literal string
+  # `a_verdict` is decided by neither arm, so no branch fires -- and the
+  # derivation was verified to produce exactly the right movers with it. It is
+  # corrected anyway, because "inert by luck" is a defect a reader has to
+  # re-derive to trust, and the next column added could break the luck.
   awk -F'\t' -v arm="$1" '
-    NR==1 { for (i=1;i<=NF;i++) h[$i]=i; next }
+    FNR==1 { for (i=1;i<=NF;i++) h[$i]=i; next }
     {
       a=$(h["a_verdict"]); t=$(h[arm "_verdict"]);
       ad = (a=="sat" || a=="unsat"); td = (t=="sat" || t=="unsat");
