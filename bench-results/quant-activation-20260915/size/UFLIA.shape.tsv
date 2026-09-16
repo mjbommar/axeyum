@@ -1,201 +1,201 @@
-file	status	asserts	pos_forall_unit	pos_forall_split	split_whitelisted	split_refused	forall_under_binder	exists_pos	any_quant	multi_binder_unit	mbqi_exit_pred	activation_target	widen_target
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/FormulaTerm_plus-noinfer_2.smt2	OK	23	19	0	0	0	0	0	19	17	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/loopinv1_LoopInv1.Test1a_F_notnull-infer_eh.smt2	OK	232	124	52	0	52	5	5	181	97	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.ast.GenericBlockStmt.168.smt2	OK	86	73	4	0	4	3	0	80	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.util.ErrorSet.781.smt2	OK	86	76	1	0	1	3	0	80	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.Identifier.010.smt2	OK	202	87	8	0	8	3	0	98	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.TypeObjectDesignator.010.smt2	OK	591	89	17	0	17	3	0	109	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.tc.ConstantExpr.001.smt2	OK	623	90	145	0	145	10	0	245	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Arrow_Order/smtlib.650920.smt2	OK	330	320	0	0	0	143	26	495	248	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1282463.smt2	OK	456	435	0	0	0	22	13	473	295	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.932420.smt2	OK	456	414	0	0	0	6	13	435	260	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/NS_Shared/smtlib.803649.smt2	OK	499	482	0	0	0	46	23	551	378	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.927783.smt2	OK	463	438	0	0	0	69	65	572	378	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.821153.smt2	OK	134	78	0	0	0	1	12	91	64	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/auditlog/init-31.smt2	OK	129	33	0	0	0	0	2	35	20	quantifier-below-top-level	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/enclave/startadminactivity-7.smt2	OK	104	33	0	0	0	0	0	33	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/screen/writestatsdata-4.smt2	OK	122	26	0	0	0	0	0	26	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/20230314-Jaroslav-Bendik-Certora/52759_b3ecd2335fd16ec2eee2_9_UFLIA.smt2	OK	1582	0	4	0	4	2	0	6	0	quantifier-below-top-level	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Interval_Cell.Shift_System.Int32.smt2	OK	237	125	3	0	3	5	2	133	98	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/grasshopper/instantiated/delete_check_heap_access_53_12.smt2	OK	246	69	0	0	0	0	0	69	12	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.ast.LexicalPragmaVec.219.smt2	OK	86	77	7	0	7	5	3	92	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/tohtml.Java2Html.832.smt2	OK	86	77	23	0	23	16	0	116	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.ImportDeclVec.015.smt2	OK	159	86	12	0	12	8	10	116	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.VariableAccess.001.smt2	OK	591	89	21	0	21	3	0	113	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.tc.EnvForLocals.007.smt2	OK	252	85	7	0	7	3	0	95	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Arrow_Order/smtlib.775208.smt2	OK	273	265	0	0	0	91	34	390	220	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1331541.smt2	OK	267	238	0	0	0	24	7	270	148	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.972059.smt2	OK	358	296	0	0	0	10	21	328	166	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.1005883.smt2	OK	369	355	0	0	0	73	18	446	278	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.990093.smt2	OK	113	104	0	0	0	19	0	123	66	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.851746.smt2	OK	6	3	0	0	0	0	0	3	0	refutation-loop	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/auditlog/truncatelog-1.smt2	OK	107	32	0	0	0	0	0	32	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/enrolment/validate-11.smt2	OK	71	24	0	0	0	0	0	24	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/tokenreader/getcertificate-11.smt2	OK	150	45	0	0	0	1	1	47	20	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/AdvancedTypes_InternalSubClass..ctor-orderStrength_1.smt2	OK	328	161	12	0	12	5	2	178	97	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/LocalExpose_T.V1.smt2	OK	326	131	11	0	11	5	2	147	101	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/grasshopper/instantiated/insertion_sort_postcondition_of_insertion_sort_63_1.smt2	OK	116	56	0	0	0	0	0	56	10	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.ast.NewInstanceExpr.271.smt2	OK	86	80	30	0	30	4	0	114	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.PrintSpec.012.smt2	OK	230	88	4	0	4	3	0	95	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.LabelStmt.011.smt2	OK	591	89	18	0	18	3	0	110	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.Visitor.041.smt2	OK	278	84	0	0	0	3	0	87	48	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.tc.FlowInsensitiveChecks.017.smt2	OK	673	90	108	0	108	3	0	201	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Arrow_Order/smtlib.832901.smt2	OK	514	459	0	0	0	116	43	618	325	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1372826.smt2	OK	332	288	0	0	0	2	4	294	199	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.1019713.smt2	OK	357	337	0	0	0	31	23	391	284	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.1065390.smt2	OK	504	474	0	0	0	85	36	595	333	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/StrongNorm/smtlib.613065.smt2	OK	500	475	0	0	0	42	26	543	347	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.881298.smt2	OK	5	3	0	0	0	0	0	3	0	refutation-loop	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/cert_/attr_/priv/extract-1.smt2	OK	252	40	0	0	0	0	0	40	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/enrolment/validate/validateandaddkey-8.smt2	OK	152	33	0	0	0	0	0	33	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/tokenreader/init-38.smt2	OK	265	53	0	0	0	3	5	61	22	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Arrays_Q3-noinfer.smt2	OK	23	19	0	0	0	0	0	19	17	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/MultipleErrors_P-showErrorTrace-vc_local_1.smt2	OK	23	19	0	0	0	0	0	19	17	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/grasshopper/instantiated/reverse_loop_check_heap_access_35_4.smt2	OK	48	25	0	0	0	0	0	25	10	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.ast.StandardPrettyPrint.322.smt2	OK	86	82	96	0	96	3	0	181	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.AmbiguousVariableAccess.004.smt2	OK	589	89	17	0	17	3	0	109	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.MethodDecl.005.smt2	OK	601	89	139	0	139	10	0	238	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.VisitorArgResult.016.smt2	OK	278	84	0	0	0	3	0	87	48	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.tc.OutsideEnv.011.smt2	OK	268	87	7	0	7	3	0	97	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/FFT/smtlib.1015458.smt2	OK	448	428	0	0	0	14	2	444	341	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1419033.smt2	OK	333	314	0	0	0	18	8	340	202	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.1095947.smt2	OK	522	509	1	0	1	67	47	624	442	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.1120322.smt2	OK	368	348	0	0	0	128	18	494	267	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/StrongNorm/smtlib.686273.smt2	OK	499	474	0	0	0	48	41	563	360	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.916972.smt2	OK	296	259	0	0	0	2	10	271	211	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/certificatestore/updatestore-8.smt2	OK	114	29	0	0	0	0	0	29	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/keystore/digest-127.smt2	OK	263	39	0	0	0	0	0	39	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/tokenreader/poll/checkcardstate-7.smt2	OK	193	51	0	0	0	3	5	59	20	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/AssignToRepField_AssignToRepField.N.smt2	OK	218	122	5	0	5	5	2	132	97	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Passification_good1-noinfer.smt2	OK	23	19	0	0	0	0	0	19	17	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/grasshopper/instantiated/union_check_heap_access_38_21.smt2	OK	61	23	0	0	0	0	0	23	9	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.ast.TypeDeclElemPragma.373.smt2	OK	86	73	2	0	2	3	1	79	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.BinaryExpr.010.smt2	OK	591	89	18	0	18	3	0	110	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.Modifiers.012.smt2	OK	138	84	0	0	0	3	0	87	48	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.VisitorArgResult.067.smt2	OK	278	84	0	0	0	3	0	87	48	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.tc.TypeSig.001.smt2	OK	689	93	36	0	36	3	0	132	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/FFT/smtlib.594705.smt2	OK	69	66	0	0	0	0	0	67	51	quantifier-below-top-level	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1462528.smt2	OK	42	39	0	0	0	7	1	47	11	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.1175889.smt2	OK	536	519	1	0	1	55	32	607	415	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.1180449.smt2	OK	505	475	0	0	0	90	36	601	332	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/StrongNorm/smtlib.749048.smt2	OK	103	80	0	0	0	3	15	98	75	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TypeSafe/smtlib.1133139.smt2	OK	359	321	0	0	0	90	4	415	265	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/configdata/init/setdefaults-12.smt2	OK	97	29	0	0	0	0	0	29	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/keystore/digest-173.smt2	OK	279	40	0	0	0	0	0	40	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/userentry/progress-12.smt2	OK	76	33	0	0	0	0	0	33	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Bag2_Bag.Add_System.Int32.smt2	OK	218	124	13	0	13	5	3	142	98	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/PureAxioms_B.Dummy2-level_2.smt2	OK	252	136	4	0	4	11	2	151	106	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/grasshopper/uninstantiated/difference_check_heap_access_41_8.smt2	OK	67	37	2	2	0	0	0	39	22	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.ast.UnaryExpr.424.smt2	OK	86	80	19	0	19	3	2	104	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.CatchClauseVec.004.smt2	OK	159	86	7	0	7	4	0	97	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.ParenExpr.006.smt2	OK	589	89	19	0	19	3	0	111	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.filespace.HashTree.001.smt2	OK	116	83	3	0	3	3	3	92	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.tc.TypeSigVec.005.smt2	OK	191	86	27	0	27	12	3	128	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/FFT/smtlib.725125.smt2	OK	130	127	0	0	0	0	0	127	104	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1523261.smt2	OK	455	416	0	0	0	7	15	438	262	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.581330.smt2	OK	11	8	0	0	0	3	0	11	5	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.1237382.smt2	OK	5	3	0	0	0	3	1	7	3	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/StrongNorm/smtlib.812524.smt2	OK	134	117	0	0	0	21	13	151	94	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TypeSafe/smtlib.704617.smt2	OK	332	324	0	0	0	126	45	495	243	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/configdata/validatefile-11.smt2	OK	81	29	0	0	0	0	0	29	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/keystore/digest-219.smt2	OK	248	40	0	0	0	0	0	40	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/userentry/validateentry-8.smt2	OK	186	42	0	0	0	0	0	42	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/BasicMethodology_SubClass..ctor.smt2	OK	302	130	14	0	14	5	4	149	101	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Quantifiers_V1-noinfer.smt2	OK	28	25	0	0	0	0	0	25	19	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/grasshopper/uninstantiated/merge_loop_check_heap_access_60_6.smt2	OK	64	26	6	6	0	0	0	32	21	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.filespace.LookAheadEnum.474.smt2	OK	86	73	4	0	4	3	0	80	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.CompilationUnit.001.smt2	OK	599	89	26	0	26	4	0	119	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.RoutineDecl.002.smt2	OK	133	82	9	0	9	3	0	94	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.filespace.Resolve.010.smt2	OK	156	86	1	0	1	3	0	90	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.tc.Types.035.smt2	OK	626	91	45	0	45	3	0	139	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/FFT/smtlib.898060.smt2	OK	179	156	0	0	0	8	0	164	109	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.596470.smt2	OK	48	33	0	0	0	0	1	34	19	quantifier-below-top-level	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.660667.smt2	OK	78	75	0	0	0	12	2	89	54	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.609781.smt2	OK	76	65	0	0	0	0	3	68	50	quantifier-below-top-level	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/StrongNorm/smtlib.889061.smt2	OK	456	434	0	0	0	55	28	517	347	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TypeSafe/smtlib.822202.smt2	OK	334	330	0	0	0	87	57	480	303	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/configdata/validatefile/readclearance-1.smt2	OK	66	27	0	0	0	0	0	27	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/keystore/digest-36.smt2	OK	249	38	0	0	0	0	0	38	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/usertoken/addauthcert-19.smt2	OK	272	56	0	0	0	0	0	56	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Cast_Cast.R_System.Object_System.Int32.smt2	OK	198	124	3	0	3	5	2	132	97	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Spouse_Person..ctor.smt2	OK	261	125	12	0	12	5	2	142	98	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/grasshopper/uninstantiated/sls_insert_loop_check_heap_access_38_6.smt2	OK	49	22	3	3	0	0	0	25	18	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.filespace.ZipTree.525.smt2	OK	86	77	2	0	2	3	0	82	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.ConstructorDecl.007.smt2	OK	601	89	22	0	22	3	0	114	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.StandardPrettyPrint.008.smt2	OK	633	91	101	0	101	4	0	196	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.filespace.ZipTree.005.smt2	OK	180	86	14	0	14	3	0	103	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.test.SuperlinksTest.004.smt2	OK	185	86	31	0	31	8	0	125	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/FFT/smtlib.994522.smt2	OK	12	6	0	0	0	0	0	6	1	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.651310.smt2	OK	268	256	0	0	0	20	0	276	193	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.755963.smt2	OK	115	109	0	0	0	21	5	135	91	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.670697.smt2	OK	169	165	0	0	0	8	4	177	120	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.618605.smt2	OK	285	275	0	0	0	4	4	283	223	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TypeSafe/smtlib.952809.smt2	OK	151	133	0	0	0	64	4	201	88	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/configdata/validatefile/readworkinghours-4.smt2	OK	73	21	0	0	0	0	0	21	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/keystore/digest-81.smt2	OK	240	39	0	0	0	0	0	39	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/usertoken/readandcheck/checkprivcert-2.smt2	OK	146	38	0	0	0	0	1	39	20	quantifier-below-top-level	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Chunker11c_Chunker.SpecSharp.CheckInvariant_System.Boolean.smt2	OK	235	129	18	0	18	9	1	156	102	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/StrictReadOnly_C1.Z1.smt2	OK	271	138	10	0	10	9	1	157	101	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/misc/list4.smt2	OK	6	4	0	0	0	0	1	5	4	quantifier-below-top-level	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.parser.TokenQueue.576.smt2	OK	86	79	4	0	4	3	0	86	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.DefaultVisitor.028.smt2	OK	393	89	77	0	77	3	0	169	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.SuperObjectDesignator.008.smt2	OK	589	89	16	0	16	3	0	108	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.parser.Parse.005.smt2	OK	376	122	102	0	102	12	0	236	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.util.ErrorSet.009.smt2	OK	163	85	1	0	1	3	0	89	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1057395.smt2	OK	456	433	0	0	0	26	12	479	314	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.718896.smt2	OK	448	424	0	0	0	120	29	585	361	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.820036.smt2	OK	122	115	0	0	0	12	3	130	101	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.730254.smt2	OK	253	244	0	0	0	36	3	283	200	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.672156.smt2	OK	278	251	0	0	0	4	8	263	207	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/admintoken/clear-6.smt2	OK	100	33	0	0	0	0	0	33	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/configdata/writefile-8.smt2	OK	171	37	0	0	0	0	0	37	24	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/keystore/dofind-32.smt2	OK	230	35	0	0	0	0	0	35	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tptp/NUM860=1.smt2	OK	9	8	0	0	0	2	2	12	8	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/DefaultLoopInv0_A.M-modifiesOnLoop-noinfer.smt2	OK	209	122	12	0	12	5	2	139	97	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/StructTests_St.S_System.Int32.ptr_System.Int32.ptr-level_2.smt2	OK	189	125	2	0	2	5	2	132	97	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.SrcTool.15.smt2	OK	86	79	22	0	22	7	0	108	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.reader.StandardTypeReader.628.smt2	OK	86	78	1	0	1	3	0	82	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.DelegatingPrettyPrint.010.smt2	OK	168	84	1	0	1	3	0	88	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.ThrowStmt.004.smt2	OK	589	89	17	0	17	3	0	109	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.parser.TagConstants.001.smt2	OK	392	84	2	0	2	3	0	89	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.util.LocationManagerCorrelatedReader.011.smt2	OK	168	85	2	0	2	3	0	90	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1127270.smt2	OK	147	134	0	0	0	17	10	162	91	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.775573.smt2	OK	128	105	0	0	0	0	4	110	84	quantifier-below-top-level	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.894255.smt2	OK	210	198	1	0	1	31	15	245	157	quantifier-below-top-level	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.783502.smt2	OK	509	479	0	0	0	85	32	597	326	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.711545.smt2	OK	279	252	0	0	0	4	8	265	208	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/auditlog/addelementtofile-16.smt2	OK	165	33	0	0	0	0	0	33	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/display/updatedevice-1.smt2	OK	169	41	0	0	0	0	0	41	24	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/keystore/init-8.smt2	OK	218	36	0	0	0	0	0	36	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Ensures_Q-noinfer_8.smt2	OK	23	19	1	0	1	0	1	20	17	quantifier-below-top-level	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Unsigned_test.Conversions_System.UInt32_System.Double.smt2	OK	194	126	2	0	2	5	1	133	97	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.ast.CatchClauseVec.66.smt2	OK	86	77	9	0	9	5	5	96	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.tc.FlowInsensitiveChecks.679.smt2	OK	86	81	95	0	95	3	3	182	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.ExprVec.004.smt2	OK	159	86	7	0	7	4	0	97	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.TypeDeclElemVec.006.smt2	OK	154	86	7	0	7	4	0	97	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.parser.test.TestLex.030.smt2	OK	588	89	17	0	17	3	0	109	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/tohtml.DeclLinks.009.smt2	OK	267	85	17	0	17	3	0	105	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1185183.smt2	OK	456	426	0	0	0	19	20	465	295	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.824330.smt2	OK	287	264	0	0	0	18	5	287	172	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.993567.smt2	OK	499	482	0	0	0	51	19	552	406	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.830613.smt2	OK	379	344	0	0	0	79	79	502	221	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.753723.smt2	OK	130	87	0	0	0	2	12	101	72	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/auditlog/addelementtologfile/addelementtonextfile/setcurrentfiletonextfreefile-4.smt2	OK	58	26	0	0	0	0	0	26	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/enclave/adminlogout-5.smt2	OK	152	37	0	0	0	0	0	37	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/latch/updateinternallatch-5.smt2	OK	115	33	0	0	0	0	0	33	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/ExposeVersion_D..ctor-level_2.smt2	OK	342	143	13	0	13	11	3	167	109	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/WhereMotivation_Types.MLoop0.smt2	OK	226	123	18	0	18	5	4	146	97	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.ast.DelegatingPrettyPrint.117.smt2	OK	86	75	1	0	1	3	0	79	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.tc.TypeSig.730.smt2	OK	86	84	59	0	59	3	13	159	39	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.ForStmt.009.smt2	OK	593	89	21	0	21	3	0	113	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.TypeModifierPragmaVec.013.smt2	OK	157	86	10	0	10	8	6	110	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.reader.CachedReader.003.smt2	OK	127	83	4	0	4	3	0	90	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/small_suite/getRootInterface.smt2	OK	660	93	123	0	123	13	0	229	48	nested-binder-in-matrix	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1234945.smt2	OK	456	397	0	0	0	4	7	408	300	quantifier-below-top-level	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.874641.smt2	OK	455	446	0	0	0	4	5	455	364	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/NS_Shared/smtlib.657037.smt2	OK	478	465	1	0	1	17	11	500	413	quantifier-below-top-level	1	1
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.876524.smt2	OK	133	108	0	0	0	15	14	137	72	nested-binder-in-matrix	1	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.788343.smt2	OK	8	3	0	0	0	0	0	3	0	refutation-loop	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/auditlog/clearlogentries-11.smt2	OK	184	41	0	0	0	0	4	45	20	quantifier-below-top-level	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/enclave/enrolop-3.smt2	OK	57	25	0	0	0	0	0	25	20	multi-binder-prefix	0	0
-/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/screen/writealarms-9.smt2	OK	95	29	0	0	0	0	0	29	20	multi-binder-prefix	0	0
+file	status	asserts	pos_forall_unit	pos_forall_split	split_whitelisted	split_refused	forall_under_binder	exists_pos	any_quant	multi_binder_unit	mbqi_exit_pred	activation_target	widen_target	engine_wl	engine_refused	engine_widen_target
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/FormulaTerm_plus-noinfer_2.smt2	OK	23	19	0	0	0	0	0	19	17	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/loopinv1_LoopInv1.Test1a_F_notnull-infer_eh.smt2	OK	232	124	52	0	52	5	5	181	97	nested-binder-in-matrix	1	1	0	56	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.ast.GenericBlockStmt.168.smt2	OK	86	73	4	0	4	3	0	80	39	nested-binder-in-matrix	1	1	0	4	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.util.ErrorSet.781.smt2	OK	86	76	1	0	1	3	0	80	39	nested-binder-in-matrix	1	1	3	1	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.Identifier.010.smt2	OK	202	87	8	0	8	3	0	98	48	nested-binder-in-matrix	1	1	0	8	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.TypeObjectDesignator.010.smt2	OK	591	89	17	0	17	3	0	109	48	nested-binder-in-matrix	1	1	0	17	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.tc.ConstantExpr.001.smt2	OK	623	90	145	0	145	10	0	245	48	nested-binder-in-matrix	1	1	0	145	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Arrow_Order/smtlib.650920.smt2	OK	330	320	0	0	0	143	26	495	248	quantifier-below-top-level	1	0	0	2	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1282463.smt2	OK	456	435	0	0	0	22	13	473	295	quantifier-below-top-level	1	0	0	3	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.932420.smt2	OK	456	414	0	0	0	6	13	435	260	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/NS_Shared/smtlib.803649.smt2	OK	499	482	0	0	0	46	23	551	378	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.927783.smt2	OK	463	438	0	0	0	69	65	572	378	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.821153.smt2	OK	134	78	0	0	0	1	12	91	64	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/auditlog/init-31.smt2	OK	129	33	0	0	0	0	2	35	20	quantifier-below-top-level	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/enclave/startadminactivity-7.smt2	OK	104	33	0	0	0	0	0	33	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/screen/writestatsdata-4.smt2	OK	122	26	0	0	0	0	0	26	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/20230314-Jaroslav-Bendik-Certora/52759_b3ecd2335fd16ec2eee2_9_UFLIA.smt2	OK	1582	0	4	0	4	2	0	6	0	quantifier-below-top-level	1	1	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Interval_Cell.Shift_System.Int32.smt2	OK	237	125	3	0	3	5	2	133	98	nested-binder-in-matrix	1	1	0	7	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/grasshopper/instantiated/delete_check_heap_access_53_12.smt2	OK	246	69	0	0	0	0	0	69	12	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.ast.LexicalPragmaVec.219.smt2	OK	86	77	7	0	7	5	3	92	39	nested-binder-in-matrix	1	1	4	7	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/tohtml.Java2Html.832.smt2	OK	86	77	23	0	23	16	0	116	39	nested-binder-in-matrix	1	1	4	23	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.ImportDeclVec.015.smt2	OK	159	86	12	0	12	8	10	116	48	nested-binder-in-matrix	1	1	0	12	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.VariableAccess.001.smt2	OK	591	89	21	0	21	3	0	113	48	nested-binder-in-matrix	1	1	0	21	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.tc.EnvForLocals.007.smt2	OK	252	85	7	0	7	3	0	95	48	nested-binder-in-matrix	1	1	0	7	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Arrow_Order/smtlib.775208.smt2	OK	273	265	0	0	0	91	34	390	220	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1331541.smt2	OK	267	238	0	0	0	24	7	270	148	quantifier-below-top-level	1	0	0	1	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.972059.smt2	OK	358	296	0	0	0	10	21	328	166	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.1005883.smt2	OK	369	355	0	0	0	73	18	446	278	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.990093.smt2	OK	113	104	0	0	0	19	0	123	66	nested-binder-in-matrix	1	0	0	2	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.851746.smt2	OK	6	3	0	0	0	0	0	3	0	refutation-loop	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/auditlog/truncatelog-1.smt2	OK	107	32	0	0	0	0	0	32	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/enrolment/validate-11.smt2	OK	71	24	0	0	0	0	0	24	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/tokenreader/getcertificate-11.smt2	OK	150	45	0	0	0	1	1	47	20	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/AdvancedTypes_InternalSubClass..ctor-orderStrength_1.smt2	OK	328	161	12	0	12	5	2	178	97	nested-binder-in-matrix	1	1	0	16	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/LocalExpose_T.V1.smt2	OK	326	131	11	0	11	5	2	147	101	nested-binder-in-matrix	1	1	0	15	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/grasshopper/instantiated/insertion_sort_postcondition_of_insertion_sort_63_1.smt2	OK	116	56	0	0	0	0	0	56	10	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.ast.NewInstanceExpr.271.smt2	OK	86	80	30	0	30	4	0	114	39	nested-binder-in-matrix	1	1	7	30	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.PrintSpec.012.smt2	OK	230	88	4	0	4	3	0	95	48	nested-binder-in-matrix	1	1	0	4	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.LabelStmt.011.smt2	OK	591	89	18	0	18	3	0	110	48	nested-binder-in-matrix	1	1	0	18	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.Visitor.041.smt2	OK	278	84	0	0	0	3	0	87	48	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.tc.FlowInsensitiveChecks.017.smt2	OK	673	90	108	0	108	3	0	201	48	nested-binder-in-matrix	1	1	0	108	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Arrow_Order/smtlib.832901.smt2	OK	514	459	0	0	0	116	43	618	325	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1372826.smt2	OK	332	288	0	0	0	2	4	294	199	quantifier-below-top-level	1	0	0	1	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.1019713.smt2	OK	357	337	0	0	0	31	23	391	284	nested-binder-in-matrix	1	0	0	1	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.1065390.smt2	OK	504	474	0	0	0	85	36	595	333	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/StrongNorm/smtlib.613065.smt2	OK	500	475	0	0	0	42	26	543	347	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.881298.smt2	OK	5	3	0	0	0	0	0	3	0	refutation-loop	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/cert_/attr_/priv/extract-1.smt2	OK	252	40	0	0	0	0	0	40	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/enrolment/validate/validateandaddkey-8.smt2	OK	152	33	0	0	0	0	0	33	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/tokenreader/init-38.smt2	OK	265	53	0	0	0	3	5	61	22	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Arrays_Q3-noinfer.smt2	OK	23	19	0	0	0	0	0	19	17	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/MultipleErrors_P-showErrorTrace-vc_local_1.smt2	OK	23	19	0	0	0	0	0	19	17	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/grasshopper/instantiated/reverse_loop_check_heap_access_35_4.smt2	OK	48	25	0	0	0	0	0	25	10	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.ast.StandardPrettyPrint.322.smt2	OK	86	82	96	0	96	3	0	181	39	nested-binder-in-matrix	1	1	9	96	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.AmbiguousVariableAccess.004.smt2	OK	589	89	17	0	17	3	0	109	48	nested-binder-in-matrix	1	1	0	17	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.MethodDecl.005.smt2	OK	601	89	139	0	139	10	0	238	48	nested-binder-in-matrix	1	1	0	139	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.VisitorArgResult.016.smt2	OK	278	84	0	0	0	3	0	87	48	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.tc.OutsideEnv.011.smt2	OK	268	87	7	0	7	3	0	97	48	nested-binder-in-matrix	1	1	0	7	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/FFT/smtlib.1015458.smt2	OK	448	428	0	0	0	14	2	444	341	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1419033.smt2	OK	333	314	0	0	0	18	8	340	202	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.1095947.smt2	OK	522	509	1	0	1	67	47	624	442	nested-binder-in-matrix	1	1	0	1	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.1120322.smt2	OK	368	348	0	0	0	128	18	494	267	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/StrongNorm/smtlib.686273.smt2	OK	499	474	0	0	0	48	41	563	360	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.916972.smt2	OK	296	259	0	0	0	2	10	271	211	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/certificatestore/updatestore-8.smt2	OK	114	29	0	0	0	0	0	29	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/keystore/digest-127.smt2	OK	263	39	0	0	0	0	0	39	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/tokenreader/poll/checkcardstate-7.smt2	OK	193	51	0	0	0	3	5	59	20	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/AssignToRepField_AssignToRepField.N.smt2	OK	218	122	5	0	5	5	2	132	97	nested-binder-in-matrix	1	1	0	9	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Passification_good1-noinfer.smt2	OK	23	19	0	0	0	0	0	19	17	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/grasshopper/instantiated/union_check_heap_access_38_21.smt2	OK	61	23	0	0	0	0	0	23	9	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.ast.TypeDeclElemPragma.373.smt2	OK	86	73	2	0	2	3	1	79	39	nested-binder-in-matrix	1	1	0	2	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.BinaryExpr.010.smt2	OK	591	89	18	0	18	3	0	110	48	nested-binder-in-matrix	1	1	0	18	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.Modifiers.012.smt2	OK	138	84	0	0	0	3	0	87	48	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.VisitorArgResult.067.smt2	OK	278	84	0	0	0	3	0	87	48	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.tc.TypeSig.001.smt2	OK	689	93	36	0	36	3	0	132	48	nested-binder-in-matrix	1	1	0	36	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/FFT/smtlib.594705.smt2	OK	69	66	0	0	0	0	0	67	51	quantifier-below-top-level	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1462528.smt2	OK	42	39	0	0	0	7	1	47	11	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.1175889.smt2	OK	536	519	1	0	1	55	32	607	415	nested-binder-in-matrix	1	1	0	1	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.1180449.smt2	OK	505	475	0	0	0	90	36	601	332	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/StrongNorm/smtlib.749048.smt2	OK	103	80	0	0	0	3	15	98	75	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TypeSafe/smtlib.1133139.smt2	OK	359	321	0	0	0	90	4	415	265	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/configdata/init/setdefaults-12.smt2	OK	97	29	0	0	0	0	0	29	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/keystore/digest-173.smt2	OK	279	40	0	0	0	0	0	40	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/userentry/progress-12.smt2	OK	76	33	0	0	0	0	0	33	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Bag2_Bag.Add_System.Int32.smt2	OK	218	124	13	0	13	5	3	142	98	nested-binder-in-matrix	1	1	0	17	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/PureAxioms_B.Dummy2-level_2.smt2	OK	252	136	4	0	4	11	2	151	106	nested-binder-in-matrix	1	1	0	8	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/grasshopper/uninstantiated/difference_check_heap_access_41_8.smt2	OK	67	37	2	2	0	0	0	39	22	quantifier-below-top-level	1	0	2	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.ast.UnaryExpr.424.smt2	OK	86	80	19	0	19	3	2	104	39	nested-binder-in-matrix	1	1	7	19	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.CatchClauseVec.004.smt2	OK	159	86	7	0	7	4	0	97	48	nested-binder-in-matrix	1	1	0	7	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.ParenExpr.006.smt2	OK	589	89	19	0	19	3	0	111	48	nested-binder-in-matrix	1	1	0	19	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.filespace.HashTree.001.smt2	OK	116	83	3	0	3	3	3	92	48	nested-binder-in-matrix	1	1	0	3	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.tc.TypeSigVec.005.smt2	OK	191	86	27	0	27	12	3	128	48	nested-binder-in-matrix	1	1	0	27	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/FFT/smtlib.725125.smt2	OK	130	127	0	0	0	0	0	127	104	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1523261.smt2	OK	455	416	0	0	0	7	15	438	262	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.581330.smt2	OK	11	8	0	0	0	3	0	11	5	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.1237382.smt2	OK	5	3	0	0	0	3	1	7	3	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/StrongNorm/smtlib.812524.smt2	OK	134	117	0	0	0	21	13	151	94	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TypeSafe/smtlib.704617.smt2	OK	332	324	0	0	0	126	45	495	243	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/configdata/validatefile-11.smt2	OK	81	29	0	0	0	0	0	29	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/keystore/digest-219.smt2	OK	248	40	0	0	0	0	0	40	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/userentry/validateentry-8.smt2	OK	186	42	0	0	0	0	0	42	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/BasicMethodology_SubClass..ctor.smt2	OK	302	130	14	0	14	5	4	149	101	nested-binder-in-matrix	1	1	0	18	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Quantifiers_V1-noinfer.smt2	OK	28	25	0	0	0	0	0	25	19	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/grasshopper/uninstantiated/merge_loop_check_heap_access_60_6.smt2	OK	64	26	6	6	0	0	0	32	21	quantifier-below-top-level	1	0	6	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.filespace.LookAheadEnum.474.smt2	OK	86	73	4	0	4	3	0	80	39	nested-binder-in-matrix	1	1	0	4	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.CompilationUnit.001.smt2	OK	599	89	26	0	26	4	0	119	48	nested-binder-in-matrix	1	1	0	26	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.RoutineDecl.002.smt2	OK	133	82	9	0	9	3	0	94	48	nested-binder-in-matrix	1	1	0	9	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.filespace.Resolve.010.smt2	OK	156	86	1	0	1	3	0	90	48	nested-binder-in-matrix	1	1	0	1	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.tc.Types.035.smt2	OK	626	91	45	0	45	3	0	139	48	nested-binder-in-matrix	1	1	0	45	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/FFT/smtlib.898060.smt2	OK	179	156	0	0	0	8	0	164	109	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.596470.smt2	OK	48	33	0	0	0	0	1	34	19	quantifier-below-top-level	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.660667.smt2	OK	78	75	0	0	0	12	2	89	54	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.609781.smt2	OK	76	65	0	0	0	0	3	68	50	quantifier-below-top-level	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/StrongNorm/smtlib.889061.smt2	OK	456	434	0	0	0	55	28	517	347	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TypeSafe/smtlib.822202.smt2	OK	334	330	0	0	0	87	57	480	303	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/configdata/validatefile/readclearance-1.smt2	OK	66	27	0	0	0	0	0	27	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/keystore/digest-36.smt2	OK	249	38	0	0	0	0	0	38	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/usertoken/addauthcert-19.smt2	OK	272	56	0	0	0	0	0	56	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Cast_Cast.R_System.Object_System.Int32.smt2	OK	198	124	3	0	3	5	2	132	97	nested-binder-in-matrix	1	1	0	7	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Spouse_Person..ctor.smt2	OK	261	125	12	0	12	5	2	142	98	nested-binder-in-matrix	1	1	0	16	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/grasshopper/uninstantiated/sls_insert_loop_check_heap_access_38_6.smt2	OK	49	22	3	3	0	0	0	25	18	quantifier-below-top-level	1	0	3	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.filespace.ZipTree.525.smt2	OK	86	77	2	0	2	3	0	82	39	nested-binder-in-matrix	1	1	4	2	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.ConstructorDecl.007.smt2	OK	601	89	22	0	22	3	0	114	48	nested-binder-in-matrix	1	1	0	22	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.StandardPrettyPrint.008.smt2	OK	633	91	101	0	101	4	0	196	48	nested-binder-in-matrix	1	1	0	101	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.filespace.ZipTree.005.smt2	OK	180	86	14	0	14	3	0	103	48	nested-binder-in-matrix	1	1	0	14	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.test.SuperlinksTest.004.smt2	OK	185	86	31	0	31	8	0	125	48	nested-binder-in-matrix	1	1	0	31	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/FFT/smtlib.994522.smt2	OK	12	6	0	0	0	0	0	6	1	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.651310.smt2	OK	268	256	0	0	0	20	0	276	193	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.755963.smt2	OK	115	109	0	0	0	21	5	135	91	quantifier-below-top-level	1	0	0	2	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.670697.smt2	OK	169	165	0	0	0	8	4	177	120	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.618605.smt2	OK	285	275	0	0	0	4	4	283	223	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TypeSafe/smtlib.952809.smt2	OK	151	133	0	0	0	64	4	201	88	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/configdata/validatefile/readworkinghours-4.smt2	OK	73	21	0	0	0	0	0	21	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/keystore/digest-81.smt2	OK	240	39	0	0	0	0	0	39	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/usertoken/readandcheck/checkprivcert-2.smt2	OK	146	38	0	0	0	0	1	39	20	quantifier-below-top-level	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Chunker11c_Chunker.SpecSharp.CheckInvariant_System.Boolean.smt2	OK	235	129	18	0	18	9	1	156	102	nested-binder-in-matrix	1	1	0	24	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/StrictReadOnly_C1.Z1.smt2	OK	271	138	10	0	10	9	1	157	101	nested-binder-in-matrix	1	1	0	16	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/misc/list4.smt2	OK	6	4	0	0	0	0	1	5	4	quantifier-below-top-level	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.parser.TokenQueue.576.smt2	OK	86	79	4	0	4	3	0	86	39	nested-binder-in-matrix	1	1	6	4	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.DefaultVisitor.028.smt2	OK	393	89	77	0	77	3	0	169	48	nested-binder-in-matrix	1	1	0	77	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.SuperObjectDesignator.008.smt2	OK	589	89	16	0	16	3	0	108	48	nested-binder-in-matrix	1	1	0	16	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.parser.Parse.005.smt2	OK	376	122	102	0	102	12	0	236	48	nested-binder-in-matrix	1	1	0	102	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.util.ErrorSet.009.smt2	OK	163	85	1	0	1	3	0	89	48	nested-binder-in-matrix	1	1	0	1	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1057395.smt2	OK	456	433	0	0	0	26	12	479	314	nested-binder-in-matrix	1	0	0	2	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.718896.smt2	OK	448	424	0	0	0	120	29	585	361	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.820036.smt2	OK	122	115	0	0	0	12	3	130	101	nested-binder-in-matrix	1	0	0	1	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.730254.smt2	OK	253	244	0	0	0	36	3	283	200	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.672156.smt2	OK	278	251	0	0	0	4	8	263	207	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/admintoken/clear-6.smt2	OK	100	33	0	0	0	0	0	33	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/configdata/writefile-8.smt2	OK	171	37	0	0	0	0	0	37	24	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/keystore/dofind-32.smt2	OK	230	35	0	0	0	0	0	35	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tptp/NUM860=1.smt2	OK	9	8	0	0	0	2	2	12	8	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/DefaultLoopInv0_A.M-modifiesOnLoop-noinfer.smt2	OK	209	122	12	0	12	5	2	139	97	nested-binder-in-matrix	1	1	0	16	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/StructTests_St.S_System.Int32.ptr_System.Int32.ptr-level_2.smt2	OK	189	125	2	0	2	5	2	132	97	nested-binder-in-matrix	1	1	0	6	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.SrcTool.15.smt2	OK	86	79	22	0	22	7	0	108	39	nested-binder-in-matrix	1	1	6	22	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.reader.StandardTypeReader.628.smt2	OK	86	78	1	0	1	3	0	82	39	nested-binder-in-matrix	1	1	5	1	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.DelegatingPrettyPrint.010.smt2	OK	168	84	1	0	1	3	0	88	48	nested-binder-in-matrix	1	1	0	1	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.ThrowStmt.004.smt2	OK	589	89	17	0	17	3	0	109	48	nested-binder-in-matrix	1	1	0	17	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.parser.TagConstants.001.smt2	OK	392	84	2	0	2	3	0	89	48	nested-binder-in-matrix	1	1	0	2	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.util.LocationManagerCorrelatedReader.011.smt2	OK	168	85	2	0	2	3	0	90	48	nested-binder-in-matrix	1	1	0	2	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1127270.smt2	OK	147	134	0	0	0	17	10	162	91	quantifier-below-top-level	1	0	0	6	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.775573.smt2	OK	128	105	0	0	0	0	4	110	84	quantifier-below-top-level	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.894255.smt2	OK	210	198	1	0	1	31	15	245	157	quantifier-below-top-level	1	1	0	1	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.783502.smt2	OK	509	479	0	0	0	85	32	597	326	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.711545.smt2	OK	279	252	0	0	0	4	8	265	208	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/auditlog/addelementtofile-16.smt2	OK	165	33	0	0	0	0	0	33	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/display/updatedevice-1.smt2	OK	169	41	0	0	0	0	0	41	24	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/keystore/init-8.smt2	OK	218	36	0	0	0	0	0	36	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Ensures_Q-noinfer_8.smt2	OK	23	19	1	0	1	0	1	20	17	quantifier-below-top-level	1	1	0	1	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/Unsigned_test.Conversions_System.UInt32_System.Double.smt2	OK	194	126	2	0	2	5	1	133	97	nested-binder-in-matrix	1	1	0	6	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.ast.CatchClauseVec.66.smt2	OK	86	77	9	0	9	5	5	96	39	nested-binder-in-matrix	1	1	4	9	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.tc.FlowInsensitiveChecks.679.smt2	OK	86	81	95	0	95	3	3	182	39	nested-binder-in-matrix	1	1	8	95	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.ExprVec.004.smt2	OK	159	86	7	0	7	4	0	97	48	nested-binder-in-matrix	1	1	0	7	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.TypeDeclElemVec.006.smt2	OK	154	86	7	0	7	4	0	97	48	nested-binder-in-matrix	1	1	0	7	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.parser.test.TestLex.030.smt2	OK	588	89	17	0	17	3	0	109	48	nested-binder-in-matrix	1	1	0	17	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/tohtml.DeclLinks.009.smt2	OK	267	85	17	0	17	3	0	105	48	nested-binder-in-matrix	1	1	0	17	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1185183.smt2	OK	456	426	0	0	0	19	20	465	295	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.824330.smt2	OK	287	264	0	0	0	18	5	287	172	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Hoare/smtlib.993567.smt2	OK	499	482	0	0	0	51	19	552	406	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.830613.smt2	OK	379	344	0	0	0	79	79	502	221	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.753723.smt2	OK	130	87	0	0	0	2	12	101	72	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/auditlog/addelementtologfile/addelementtonextfile/setcurrentfiletonextfreefile-4.smt2	OK	58	26	0	0	0	0	0	26	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/enclave/adminlogout-5.smt2	OK	152	37	0	0	0	0	0	37	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/latch/updateinternallatch-5.smt2	OK	115	33	0	0	0	0	0	33	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/ExposeVersion_D..ctor-level_2.smt2	OK	342	143	13	0	13	11	3	167	109	nested-binder-in-matrix	1	1	0	17	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/boogie/WhereMotivation_Types.MLoop0.smt2	OK	226	123	18	0	18	5	4	146	97	nested-binder-in-matrix	1	1	0	22	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.ast.DelegatingPrettyPrint.117.smt2	OK	86	75	1	0	1	3	0	79	39	nested-binder-in-matrix	1	1	2	1	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify/javafe.tc.TypeSig.730.smt2	OK	86	84	59	0	59	3	13	159	39	nested-binder-in-matrix	1	1	11	59	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.ForStmt.009.smt2	OK	593	89	21	0	21	3	0	113	48	nested-binder-in-matrix	1	1	0	21	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.ast.TypeModifierPragmaVec.013.smt2	OK	157	86	10	0	10	8	6	110	48	nested-binder-in-matrix	1	1	0	10	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/front_end_suite/javafe.reader.CachedReader.003.smt2	OK	127	83	4	0	4	3	0	90	48	nested-binder-in-matrix	1	1	0	4	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/simplify2/small_suite/getRootInterface.smt2	OK	660	93	123	0	123	13	0	229	48	nested-binder-in-matrix	1	1	0	123	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.1234945.smt2	OK	456	397	0	0	0	4	7	408	300	quantifier-below-top-level	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/Fundamental_Theorem_Algebra/smtlib.874641.smt2	OK	455	446	0	0	0	4	5	455	364	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/NS_Shared/smtlib.657037.smt2	OK	478	465	1	0	1	17	11	500	413	quantifier-below-top-level	1	1	0	1	1
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/QEpres/smtlib.876524.smt2	OK	133	108	0	0	0	15	14	137	72	nested-binder-in-matrix	1	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/sledgehammer/TwoSquares/smtlib.788343.smt2	OK	8	3	0	0	0	0	0	3	0	refutation-loop	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/auditlog/clearlogentries-11.smt2	OK	184	41	0	0	0	0	4	45	20	quantifier-below-top-level	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/enclave/enrolop-3.smt2	OK	57	25	0	0	0	0	0	25	20	multi-binder-prefix	0	0	0	0	0
+/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/UFLIA/tokeneer/screen/writealarms-9.smt2	OK	95	29	0	0	0	0	0	29	20	multi-binder-prefix	0	0	0	0	0

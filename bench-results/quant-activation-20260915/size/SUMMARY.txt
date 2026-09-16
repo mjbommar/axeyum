@@ -1,15 +1,16 @@
 == ACTIVATION CEILING IN FILES, per division ==
 
-division   T1   undec  u_target  u_share  dec  d_target  d_share  u_widen  w_share  d_widen  dw_share  u_split_wl  u_underbinder  u_multi  parse_fail
-AUFDTLIRA  200  81     81        100.0%   119  119       100.0%   4        4.9%     7        5.9%      0           81             81       0         
-AUFLIRA    200  22     21        95.5%    178  154       86.5%    11       50.0%    53       29.8%     0           21             19       0         
-UF         200  106    94        88.7%    94   70        74.5%    6        5.7%     3        3.2%      2           92             106      0         
-UFDTLIRA   200  56     35        62.5%    144  98        68.1%    1        1.8%     5        3.5%      0           35             19       0         
-UFLIA      200  114    99        86.8%    86   49        57.0%    52       45.6%    30       34.9%     1           97             113      0         
-UFNIA      200  146    38        26.0%    54   9         16.7%    23       15.8%    5        9.3%      0           30             23       0         
+division   T1   undec  u_target  u_share  dec  d_target  d_share  u_widen  w_share  d_widen  dw_share  u_eng  e_share  d_eng  de_share  u_split_wl  u_multi  parse_fail
+AUFDTLIRA  200  81     81        100.0%   119  119       100.0%   4        4.9%     7        5.9%      81     100.0%   119    100.0%    0           81       0         
+AUFLIRA    200  22     21        95.5%    178  154       86.5%    11       50.0%    53       29.8%     14     63.6%    63     35.4%     0           19       0         
+UF         200  106    94        88.7%    94   70        74.5%    6        5.7%     3        3.2%      22     20.8%    26     27.7%     2           106      0         
+UFDTLIRA   200  56     35        62.5%    144  98        68.1%    1        1.8%     5        3.5%      14     25.0%    40     27.8%     0           19       0         
+UFLIA      200  114    99        86.8%    86   49        57.0%    52       45.6%    30       34.9%     60     52.6%    31     36.0%     1           113      0         
+UFNIA      200  146    38        26.0%    54   9         16.7%    23       15.8%    5        9.3%      27     18.5%    6      11.1%     0           23       0         
 
 TOTAL undecided 525, activation target 368 (70.1%), widen target 97 (18.5%)
       decided   675, activation target 499 (73.9%), widen target 103 (15.3%)
+      ENGINE widen target: undecided 218 (41.5%), decided 285 (42.2%)
       unjoined / parse-fail 0
 
 == PREDICTED mbqi_exit on the UNDECIDED rows ==

@@ -47,7 +47,8 @@ def main(argv):
     print('')
     hdr = ('division', 'T1', 'undec', 'u_target', 'u_share',
            'dec', 'd_target', 'd_share', 'u_widen', 'w_share', 'd_widen',
-           'dw_share', 'u_split_wl', 'u_underbinder', 'u_multi', 'parse_fail')
+           'dw_share', 'u_eng', 'e_share', 'd_eng', 'de_share',
+           'u_split_wl', 'u_multi', 'parse_fail')
     rows = []
     exits = {}
     for d in DIVS:
@@ -58,6 +59,7 @@ def main(argv):
                 verdicts[p] = v
         undec = dec = u_target = d_target = 0
         u_widen = d_widen = 0
+        u_eng = d_eng = 0
         u_split_wl = u_under = u_multi = 0
         bad = 0
         ex = collections.Counter()
@@ -72,10 +74,12 @@ def main(argv):
             is_undec = (v == 'unknown')
             tgt = r['activation_target'] == '1'
             wid = r['widen_target'] == '1'
+            eng = r['engine_widen_target'] == '1'
             if is_undec:
                 undec += 1
                 u_target += tgt
                 u_widen += wid
+                u_eng += eng
                 u_split_wl += 1 if int(r['split_whitelisted']) > 0 else 0
                 u_under += 1 if int(r['forall_under_binder']) > 0 else 0
                 u_multi += 1 if int(r['multi_binder_unit']) > 0 else 0
@@ -84,6 +88,7 @@ def main(argv):
                 dec += 1
                 d_target += tgt
                 d_widen += wid
+                d_eng += eng
         exits[d] = ex
         grand['undec'] += undec
         grand['u_target'] += u_target
@@ -91,6 +96,8 @@ def main(argv):
         grand['dec'] += dec
         grand['d_target'] += d_target
         grand['d_widen'] += d_widen
+        grand['u_eng'] += u_eng
+        grand['d_eng'] += d_eng
         grand['bad'] += bad
         rows.append((d, undec + dec + bad, undec, u_target,
                      '%.1f%%' % (100.0 * u_target / undec) if undec else 'NA',
@@ -100,7 +107,11 @@ def main(argv):
                      '%.1f%%' % (100.0 * u_widen / undec) if undec else 'NA',
                      d_widen,
                      '%.1f%%' % (100.0 * d_widen / dec) if dec else 'NA',
-                     u_split_wl, u_under, u_multi, bad))
+                     u_eng,
+                     '%.1f%%' % (100.0 * u_eng / undec) if undec else 'NA',
+                     d_eng,
+                     '%.1f%%' % (100.0 * d_eng / dec) if dec else 'NA',
+                     u_split_wl, u_multi, bad))
     widths = [max(len(str(x)) for x in [h] + [r[i] for r in rows])
               for i, h in enumerate(hdr)]
     print('  '.join(h.ljust(w) for h, w in zip(hdr, widths)))
@@ -117,6 +128,11 @@ def main(argv):
              100.0 * grand['d_target'] / grand['dec'] if grand['dec'] else 0.0,
              grand['d_widen'],
              100.0 * grand['d_widen'] / grand['dec'] if grand['dec'] else 0.0))
+    print('      ENGINE widen target: undecided %d (%.1f%%), decided %d (%.1f%%)'
+          % (grand['u_eng'],
+             100.0 * grand['u_eng'] / grand['undec'] if grand['undec'] else 0.0,
+             grand['d_eng'],
+             100.0 * grand['d_eng'] / grand['dec'] if grand['dec'] else 0.0))
     print('      unjoined / parse-fail %d' % grand['bad'])
     print('')
     print('== PREDICTED mbqi_exit on the UNDECIDED rows ==')

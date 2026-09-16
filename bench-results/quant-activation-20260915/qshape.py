@@ -349,10 +349,116 @@ def predict_mbqi_exit(asserts, env0):
     return 'refutation-loop'
 
 
+# ---------------------------------------------------------------- the ENGINE's
+# own walk, simulated faithfully.
+#
+# THE COLUMNS ABOVE UNDERCOUNT, and this is a correction to this file's first
+# reading rather than an extra view of it.  `qshape.py` treated every universal
+# inside another binder as `forall_under_binder` and therefore outside the
+# lever's reach.  The engine does not: `extract_entailed` peels each assertion's
+# TOP-LEVEL `forall` prefix and starts `collect_nested_registrations` at the
+# MATRIX, with the whole `forall x-vec. matrix` as the OWNER and polarity
+# positive.  So a universal sitting in that matrix under a `=>` is at a positive
+# position OF ITS OWNER and is exactly what the widening reaches --- while the
+# columns above call it `under_binder` and score it 0.
+#
+# How the error surfaced: both of the A/B's raw LOSSES scored `widen_target=0`
+# and yet moved, which is a combination the sizing says cannot happen.  A file
+# that moves under a lever it is not a target of is either noise or a wrong
+# classifier, and here it was the classifier.
+#
+# Only a binder crossed BELOW the owner's own prefix drops tracking, which is
+# what `collect_nested_registrations_rec` does when it recurses into a nested
+# `forall`'s body with `None`.
+
+
+def engine_walk(asserts, env0):
+    """Registrations the ENGINE would give a context, at each level.
+
+    Returns `(whitelisted, refused)`: binder node identities the shipped
+    `and`/`or` whitelist reaches, and the additional ones polarity tracking
+    reaches. `refused` is the lever's real target."""
+    wl = set()
+    widened = set()
+    seen = set()
+
+    def walk(node, env, pol, on_wl):
+        key = (id(node), pol, on_wl)
+        if key in seen:
+            return
+        seen.add(key)
+        if not isinstance(node, list):
+            b = env.get(node)
+            if b is not None:
+                walk(b[0], b[1], pol, on_wl)
+            return
+        if not node:
+            return
+        head = node[0]
+        if isinstance(head, list):
+            return
+        if head == 'let':
+            if len(node) >= 3:
+                env2 = dict(env)
+                for binding in node[1]:
+                    if isinstance(binding, list) and len(binding) == 2:
+                        env2[binding[0]] = (binding[1], env)
+                walk(node[2], env2, pol, on_wl)
+            return
+        if head in BINDERS:
+            if len(node) < 3:
+                return
+            if head == 'forall' and pol == 1:
+                (wl if on_wl else widened).add(id(node))
+            # Descent past a binder drops tracking entirely, at every level.
+            walk(node[2], env, None, False)
+            return
+        if head == 'and' or head == 'or':
+            for a in node[1:]:
+                walk(a, env, pol, on_wl)
+            return
+        # Every remaining connective leaves the shipped whitelist. At level 1
+        # the polarity rule decides; at level 0 nothing below is tracked.
+        if head == 'not':
+            for a in node[1:]:
+                walk(a, env, None if pol is None else -pol, False)
+            return
+        if head == '=>':
+            for a in node[1:-1]:
+                walk(a, env, None if pol is None else -pol, False)
+            if len(node) >= 2:
+                walk(node[-1], env, pol, False)
+            return
+        if head == 'ite':
+            if len(node) >= 2:
+                walk(node[1], env, None, False)
+            for a in node[2:]:
+                walk(a, env, pol, False)
+            return
+        if head == '!':
+            if len(node) > 1:
+                walk(node[1], env, pol, on_wl)
+            for a in node[2:]:
+                walk(a, env, None, False)
+            return
+        for a in node[1:]:
+            walk(a, env, None, False)
+
+    for a in asserts:
+        # Peel the assertion's own top-level `forall` prefix: the engine's owner
+        # is the whole chain and its walk starts at the matrix.
+        _, matrix, menv, ok = strip_forall_prefix(a, env0)
+        if not ok:
+            continue
+        walk(matrix, menv, 1, True)
+    return wl, widened - wl
+
+
 COLS = ('file', 'status', 'asserts', 'pos_forall_unit', 'pos_forall_split',
         'split_whitelisted', 'split_refused', 'forall_under_binder',
         'exists_pos', 'any_quant', 'multi_binder_unit',
-        'mbqi_exit_pred', 'activation_target', 'widen_target')
+        'mbqi_exit_pred', 'activation_target', 'widen_target',
+        'engine_wl', 'engine_refused', 'engine_widen_target')
 
 
 def _na(path, status, asserts='NA'):
@@ -397,9 +503,15 @@ def classify(path):
     # context for, so its tuples are dropped outright today.  `activation_target`
     # is the shape ceiling; `widen_target` is what this lane's lever can reach.
     widen = 1 if n['split_refused'] > 0 else 0
+    try:
+        engine_wl, engine_refused = engine_walk(asserts, env0)
+    except RecursionError:
+        return _na(path, 'RECURSION-OVERFLOW', len(asserts))
     row = dict(file=path, status='OK', asserts=len(asserts),
                mbqi_exit_pred=exit_pred, activation_target=target,
-               widen_target=widen)
+               widen_target=widen,
+               engine_wl=len(engine_wl), engine_refused=len(engine_refused),
+               engine_widen_target=1 if engine_refused else 0)
     row.update(n)
     return row
 

@@ -141,7 +141,56 @@ rows:
 MBQI's refutation loop is reached**, which is [ADR-2114]'s 127-of-134 finding
 re-derived independently across all six divisions.
 
-### 1a. The classifier is joined to a run that happened
+### 1a. The `widen target` column was WRONG, and the A/B found it
+
+**The 97 above is an undercount, by more than half, and the correction is
+recorded rather than quietly substituted.**
+
+`qshape.py`'s first `widen_target` scored every universal inside another binder
+as `forall_under_binder` and therefore outside the lever's reach. The engine does
+not agree: `extract_entailed` peels each assertion's **top-level `forall`
+prefix** and starts `collect_nested_registrations` at the **matrix**, with the
+whole `∀x⃗. matrix` as the OWNER and polarity positive. So a universal sitting in
+that matrix under a `=>` is at a positive position *of its owner* and is exactly
+what the widening reaches — while the first column called it `under_binder` and
+scored it 0. Only a binder crossed BELOW the owner's own prefix drops tracking.
+
+**How the error surfaced, and it was not by re-reading the code.** Both of the
+A/B's raw LOSSES scored `widen_target=0` and yet moved. A file that moves under a
+lever it is not a target of is either ambient noise or a wrong classifier, and
+checking which is what a sizing column is for. The two files have 28 and 341
+top-level universals and `split_refused=0` — so nothing the first column
+measured could have moved them, and something the engine does was missing from
+the model.
+
+`engine_walk` simulates the engine's own walk instead of approximating it.
+`c4-nested-binder-in-matrix` is the control: `engine_refused=1` where
+`widen_target=0`, on the SPARK shape that is 81 of `AUFDTLIRA`'s 81 undecided
+files.
+
+| division | undec | **engine widen target** | share | decided | share |
+|---|---:|---:|---:|---:|---:|
+| `AUFDTLIRA` | 81 | **81** | 100.0 % | 119 | 100.0 % |
+| `AUFLIRA` | 22 | **14** | 63.6 % | 63 | 35.4 % |
+| `UF` | 106 | **22** | 20.8 % | 26 | 27.7 % |
+| `UFDTLIRA` | 56 | **14** | 25.0 % | 40 | 27.8 % |
+| `UFLIA` | 114 | **60** | 52.6 % | 31 | 36.0 % |
+| `UFNIA` | 146 | **27** | 18.5 % | 6 | 11.1 % |
+| **total** | **525** | **218** | **41.5 %** | **285** | **42.2 %** |
+
+**And the discrimination control still refuses the reading.** 41.5 % undecided
+against 42.2 % decided is flat, `AUFDTLIRA` is 100 % on both sides, and `UF` and
+`UFDTLIRA` run the wrong way. The corrected ceiling is more than twice the size
+and no more predictive, which is the honest summary of both columns: **the shape
+is everywhere in this corpus and its presence says nothing about whether we
+decide the file.** Three divisions separate — `UFLIA` 52.6 % against 36.0 %,
+`AUFLIRA` 63.6 % against 35.4 %, `UFNIA` 18.5 % against 11.1 % — and those are
+where a conversion could come from.
+
+Both columns are kept in the TSV. Deleting the wrong one would remove the only
+evidence that the ceiling moved and why.
+
+### 1b. The classifier is joined to a run that happened
 
 A classifier only ever compared against itself is the un-failable checker this
 repository keeps deleting. `exit-agreement.py` joins the predicted `mbqi_exit` to
@@ -169,7 +218,7 @@ subset is printed beside it and carries the real number.
 rung saw, which is what preprocessing does. There are **zero** in the direction
 "the run took an exit the classifier said was impossible".
 
-### 1b. The instrument's own controls
+### 1c. The instrument's own controls
 
 Seven fixtures under `bench-results/quant-activation-20260915/controls/`, each
 carrying its expected row in its header, and every one matches:
