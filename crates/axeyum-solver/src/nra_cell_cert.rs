@@ -2215,6 +2215,63 @@ mod tests {
         );
     }
 
+    /// **The second thing sampling cannot see**: two roots that CROSS.
+    ///
+    /// `y - t` and `y + t` each have exactly one root in `y` for every `t`, so
+    /// every per-polynomial root count is 1 everywhere and the sampling check
+    /// cannot fail no matter where it probes — it counts roots per polynomial
+    /// and has no way to observe their ORDER. But the two roots swap at `t = 0`,
+    /// so the merged arrangement above the cell `(-1, 5)` is not the arrangement
+    /// at the witness, and a sub-covering built at `t = 1` does not describe
+    /// `t = -1/2`.
+    ///
+    /// This is condition (3) of check 6a and NOTHING else can fire here: both
+    /// leading coefficients are the constant 1, and both are linear in `y` so
+    /// there is no discriminant. So the fixture isolates the pairwise resultant,
+    /// which would otherwise be a guard with no test.
+    ///
+    /// Both halves are asserted, for the same reason as the degree-drop fixture:
+    /// a test that stops demonstrating the gap must fail rather than go quiet.
+    #[test]
+    fn two_roots_that_cross_are_invisible_to_sampling_and_refused_by_the_exact_check() {
+        let (t, y) = two_syms();
+        let parent: RatVec = vec![r(-5), r(-4), r(1)]; // (t + 1)(t - 5)
+        let roots = merge_roots(isolate_roots_sturm(&parent).expect("isolate")).expect("merge");
+        assert_eq!(roots.len(), 2);
+        let cells = cells_of(&roots);
+        let cell = &cells[2]; // the open cell (-1, 5), which contains 0
+
+        let minus: CertPoly = canonicalize(vec![(vec![(y, 1)], r(1)), (vec![(t, 1)], r(-1))]);
+        let plus: CertPoly = canonicalize(vec![(vec![(y, 1)], r(1)), (vec![(t, 1)], r(1))]);
+        let sub = CellCovering::new(
+            y,
+            vec![(t, r(1))],
+            vec![minus, plus],
+            // Two boundary polynomials with distinct roots at t = 1 give five cells.
+            vec![
+                CellReason::Atom { atom_index: 0 },
+                CellReason::Atom { atom_index: 0 },
+                CellReason::Atom { atom_index: 0 },
+                CellReason::Atom { atom_index: 0 },
+                CellReason::Atom { atom_index: 0 },
+            ],
+        );
+
+        let mut sampled = CellCheckStats::default();
+        let sampled_verdict = check_delineability(&sub, cell, 0, 2, &mut sampled);
+        assert!(
+            sampled_verdict.is_ok(),
+            "the fixture stops showing the gap if sampling rejects: {sampled_verdict:?}"
+        );
+        assert!(sampled.delineability_probes > 0, "{sampled:?}");
+
+        let mut exact = CellCheckStats::default();
+        let err = check_delineability_exact(&sub, cell, 0, 2, &mut exact)
+            .expect_err("two roots crossing inside the cell must be refused");
+        assert_eq!(err.name(), "delineability-crossing", "got {err:?}");
+        assert!(exact.delineability_exact_tests > 0, "{exact:?}");
+    }
+
     /// A generalisation resting on another generalisation is refused, and the
     /// SAME shape over a point cell is not.
     ///

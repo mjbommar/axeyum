@@ -151,7 +151,16 @@ pub(crate) fn decide_clause_loop(
         let mut conj: Vec<CertAtom> = Vec::with_capacity(skeleton.atoms.len());
         let mut polarity: Vec<bool> = Vec::with_capacity(skeleton.atoms.len());
         for (i, atom) in skeleton.atoms.iter().enumerate() {
-            let asserted = values.get(i).copied().unwrap_or(false);
+            // A REFUSAL, not a default. `sat.reserve` covers every atom variable,
+            // so a short model means the core returned an assignment over a
+            // different formula than the one it was given -- and defaulting to
+            // `false` there would hand the theory a conjunction the Boolean model
+            // never asked for, silently. A tool that omits rather than refuses
+            // turns its output into a measurement of the part it understood.
+            let Some(asserted) = values.get(i).copied() else {
+                record_cad_decline(CadDecline::ClauseLoopBudget);
+                return None;
+            };
             polarity.push(asserted);
             conj.push(if asserted {
                 atom.clone()
