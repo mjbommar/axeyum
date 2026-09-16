@@ -25,6 +25,25 @@
 # `losses=0` by verdict and five new ABORTS underneath it.
 #
 # Usage: recheck-movers.sh <list> <out.tsv> <cores> <bin> <valueB> [budget_s]
+# STDIN DISCIPLINE. The first run of this script wrote exactly ONE row and then
+# ended, with no error line after the self-check. A loop that ends early looks
+# identical to a loop that finished, which is why this is worth a comment.
+#
+# TWO CANDIDATE CAUSES, AND THIS DOES NOT CLAIM WHICH. (1) The loop read the
+# mover list on stdin and the solver it spawns inherited that stdin; a child that
+# reads it consumes the rest of the list and the next `read` hits EOF. (2) This
+# lane killed leftover solver processes two minutes into the run to free a pinned
+# core, and its exclusion pattern did not match -- the wrapper is
+# `timeout N taskset -c 1,9 bash -c '... exec "$0" "$1"'`, so the EXEC'd process's
+# command line is just `<binary> <file>` with no `taskset` in it, and an operator
+# filtering on `taskset` sees none of them.
+#
+# The evidence does not separate the two: ADR-2120's copy of this script, with
+# the same stdin shape, processed all four of its movers. So (1) is a real hazard
+# that did not fire there, and (2) is a real thing this lane did. The fix below
+# removes (1) by construction -- the list is read on fd 3 and every child gets
+# `</dev/null` -- and (2) is an operator discipline, recorded here so the next
+# person filtering processes by their wrapper knows the wrapper is gone by then.
 set -u
 LIST="$1"; OUT="$2"; PIN="$3"; AX="$4"; VB="$5"; BUDGET="${6:-24}"
 HEADROOM=16
@@ -49,12 +68,12 @@ one() {  # $1 = "" for the shipped arm, else the level value
     raw=$(env -u AXEYUM_QINST_GROUND_SESSION \
             timeout $((BUDGET + HEADROOM)) taskset -c "$PIN" \
             bash -c "ulimit -v $VLIM; exec \"\$0\" \"\$1\" --timeout-ms $((BUDGET * 1000))" \
-            "$AX" "$f" 2>/dev/null)
+            "$AX" "$f" 2>/dev/null </dev/null)
   else
     raw=$(AXEYUM_QINST_GROUND_SESSION="$1" \
             timeout $((BUDGET + HEADROOM)) taskset -c "$PIN" \
             bash -c "ulimit -v $VLIM; exec \"\$0\" \"\$1\" --timeout-ms $((BUDGET * 1000))" \
-            "$AX" "$f" 2>/dev/null)
+            "$AX" "$f" 2>/dev/null </dev/null)
   fi
   rc=$?
   v=$(printf '%s\n' "$raw" | grep -m1 -oE '^(sat|unsat|unknown)$')
@@ -62,7 +81,7 @@ one() {  # $1 = "" for the shipped arm, else the level value
 }
 
 printf 'file\tA1\tA2\tA3\tB1\tB2\tB3\tverdict\n' > "$OUT"
-while read -r f; do
+while read -r f <&3; do
   [ -z "$f" ] && continue
   case "$f" in
     /*) : ;;
@@ -84,5 +103,5 @@ while read -r f; do
   fi
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
     "${f#"$CORPUS"}" "$a1" "$a2" "$a3" "$b1" "$b2" "$b3" "$cls" >> "$OUT"
-done < "$LIST"
+done 3< "$LIST"
 echo "RECHECK-DONE -> $OUT"

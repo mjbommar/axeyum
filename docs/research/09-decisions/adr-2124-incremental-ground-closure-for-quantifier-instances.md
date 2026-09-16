@@ -387,6 +387,48 @@ second lane's `nra_differential_fuzz` and its own mutation sweep on the same box
 It is re-run on a quiet box and the load each run saw is printed beside its
 result.
 
+### 5.3 Three red gates, and none of them is this lane — measured, not argued
+
+Three gates came back red and each is reported with the control that attributes
+it, because a red gate is not evidence until you check its own query.
+
+**(a) `-p axeyum-solver --lib --features full -- --skip reconstruct::` — 3 failed,
+then 2, then 1, then 0.** The failing set VARIES at fixed code, which a
+deterministic regression cannot produce. Four arms, and the load each run saw:
+
+| tree | `--test-threads` | load | failed |
+|---|---|---:|---|
+| **this lane, serialized** | **1** | 6.3 → 3.6 | **0 of 1576** |
+| this lane | default | 9.5 → 30 | 1 (`pathological_overbound_stays_terminal_under_every_policy`) |
+| this lane | default | 72 → 92 | 1 (same) |
+| **this lane, its 4 new fixtures SKIPPED** | default | 30 → 72 | **3** |
+| this lane, its 4 new fixtures SKIPPED | default | 92 → 6.3 | 0 |
+| **main** (snapshot `e85bb86f0`) | default | 15.5 → 7.3 | 0 |
+| **main** | default | 107 → 5.3 | **1 (the same test)** |
+| main | default | 5.3 → 4.4 | 0 |
+| main | default | 4.4 → 3.9 | 0 |
+
+Three things fall out and each rules out a different explanation. **Serialized,
+this tree is 1576 / 0** — so nothing is deterministically broken. **Main flakes on
+the same test** — so it is not this diff. And **removing this lane's four fixtures
+made it WORSE, not better** (3 failures against 1) — so it is not this lane's
+fixtures crowding the pool either. What remains is what the numbers show: two
+`auto::tests::*overbound*` tests and one `euf_egraph` timeout test are
+concurrency- and load-sensitive on this box, on main and on this branch alike.
+
+**(b) `cargo test --workspace --lib`, default features — 1 failed at load ~90, 0
+failed at load 10.7 → 23.4.** Every binary green on the quiet run.
+
+**(c) `--test quantified_route_trace` — 1 of 3 red at load 8–18 on this tree, and
+1 of 3 red on MAIN at load 9–10, the same test both times
+(`decider_agrees_with_the_verdict`).** Its assertion is the suite's own
+non-vacuity guard, *"only 3 quantified corpus files were decided; with fewer than
+4 this gate cannot distinguish a correct attribution from an absent one"* — a
+statement about how many files finished inside a budget. Pre-existing.
+
+**`progress_frontier` is green twice** (12 passed, 0 failed, pinned to the P-cores,
+`--test-threads=1`): no REGRESSION.
+
 ## 6. Measurement
 
 ### 6.1 The 53-core probe — the cores move, and nothing flips
@@ -458,22 +500,105 @@ atom and the session refuses, so it cannot displace the cold check for nothing.
 `AUFDTLIRA` and `UFDTLIRA` are both in the divisional A/B, which measures this
 directly rather than sizing an exclusion that does not exist.
 
+### 6.3 The six-division A/B — −4 over 1,200, and five of the losses are stable
+
+One binary at two env values, arms back to back on the SAME file on the SAME
+pinned s6 core with the arm ORDER alternating per file, 24 s / 8 GiB, four shards
+over physical pairs 1,9 / 3,11 / 5,13 / 6,14, files interleaved ACROSS divisions
+so a partial read is a fair sample of all six rather than a prefix of one.
+
+| division | n | A (shipped) | B (level 1) | delta | A rc≠0 | B rc≠0 |
+|---|---:|---:|---:|---:|---:|---:|
+| AUFDTLIRA | 200 | 119 | 118 | −1 | 0 | 0 |
+| AUFLIRA | 200 | 178 | 177 | −1 | 0 | 0 |
+| UF | 200 | 90 | 90 | +0 | 3 | 3 |
+| UFDTLIRA | 200 | 144 | 142 | −2 | 0 | 0 |
+| UFLIA | 200 | 85 | 85 | +0 | 0 | 0 |
+| UFNIA | 200 | 54 | 54 | +0 | 0 | 0 |
+| **total** | **1200** | **670** | **666** | **−4** | 3 | 3 |
+
+**Verdict disagreements (`sat` on one arm, `unsat` on the other): 0 of 1,200.**
+The nonzero exit statuses are 3 on *each* arm, so the lever created none.
+
+**The re-check is what the decision rests on.** Every one of the 8 raw movers, 3
+passes per arm, arms alternating within the row, on one pinned core with nothing
+else on it:
+
+| | count |
+|---|---:|
+| STABLE-GAIN | **1** |
+| STABLE-LOSS | **5** |
+| UNSTABLE | 2 |
+
+The single stable gain is `UFLIA/simplify/javafe.ast.TypeDeclElemPragma.373` —
+`unknown` 3/3 on the shipped arm, `unsat` 3/3 at level 1 — and it is the **same
+file the 53-core probe moved**, which is the only agreement between the two
+populations in this whole measurement. Every stable loss is the same shape in
+reverse: `unsat` 3/3 shipped, `unknown` 3/3 at level 1.
+
+The raw column would have misled: two raw gains re-check as one stable and one
+ambient, six raw losses as five stable and one ambient.
+
+### 6.4 The self-check could not use a verdict fixture, and says so
+
+ADR-2120's lever was a CAPABILITY lever — level 1 refutes a five-line query level
+0 returns `unknown` on, so a fixture separates the arms by verdict. This one is a
+REGIME lever: it changes nothing about what the loop can conclude, only whether
+the accumulated ground set is re-solved on the loop's first seven rounds. Every
+query small enough to be a self-check fixture decides before the difference can
+show, and the one place the arms separated on the 53-core probe is a 24-second
+core.
+
+So the hard gate is a direct observation that the variable ARRIVED, taken from
+the binary's own `; config digest=` line: the two arms must resolve DIFFERENT
+configurations, arm B's line must NAME the override, and arm A's must not. That
+is not a behaviour ambient load could imitate. It additionally refuses if the
+arms DECIDE the control query differently.
+
 ## 7. Decision
 
-_(Filled in with the ship decision once the divisional A/B closes.)_
+**The lever ships OFF (`GROUND_SESSION_LEVEL = 0`), and the ship criterion was
+not met by a wide margin.**
+
+| criterion | result |
+|---|---|
+| 0 verdict flips (`sat` ↔ `unsat`) | **MET** — 0 of 1,200, and 0 of 53 on the cores |
+| 0 stable losses | **NOT MET** — **5** |
+| net decided over 1,200 | **−4** |
+
+**What the lever does buy, measured, is real but small and the losses swamp it.**
+On the 53 cores it removed 48.4 s of 452.4 s of ground re-solve (10.7 %), moved
+five cores out of "died on the clock" into an honest fixpoint, and produced one
+gain that survives a 3× re-check on both populations. On the divisions it also
+produced five losses that survive the same re-check. **The single stable gain and
+the five stable losses are the same mechanism seen from both sides**: skipping the
+first seven per-round cold checks returns budget to the instantiation loop on a
+file whose refutation needs more rounds, and removes a refutation from a file
+whose ground set was already refutable in those rounds.
+
+**The held-out draw was not run.** It confirms a lever that has passed its A/B;
+with 5 stable losses there is nothing to confirm, and drawing a blind population
+to score a lever that is not shipping spends the population for nothing.
 
 ## 8. What this lane did not do
 
-**The certificate repair has no fixture.** §4.4's fix is correct by construction
-— the `Refuted` exit is reached only through `replay_online_refutation`, so the
-derivations describe exactly the refutation the cold route just re-established —
-but reaching that exit requires the candidate-equality fixpoint to produce a
-session `Unsat` on a query small enough to be a fixture, and this lane did not
-build one. The mutation suite `qinst-session-refutation-certificate` asks
-whether anything in the instance-set certificate surface notices the repair being
-taken away; its outcome is recorded in §5.1 rather than assumed. **Nobody should
-read the repair's presence in the diff as evidence that a later change could not
-silently undo it.**
+**The certificate repair has no fixture, and that is now MEASURED rather than
+suspected.** §4.4's fix is correct by construction — the `Refuted` exit is reached
+only through `replay_online_refutation`, and its sibling exit collects the same
+certificate on the same facts — but reaching it requires the candidate-equality
+fixpoint to produce a session `Unsat` on a query small enough to be a fixture,
+and this lane did not build one. The mutation suite
+`qinst-session-refutation-certificate` removes the repair and runs the whole
+`quant_instance_set_cert::` surface against it: **9 tests ran and SURVIVED**. So
+nothing in the instance-set certificate surface notices the repair being taken
+away, and **nobody should read its presence in the diff as evidence that a later
+change could not silently undo it.**
+
+**The `unwind_to_root()` call is covered by nothing either.** The second mutation
+suite, `qinst-online-session-epoch`, aims the removal at a fixture whose batch
+registers a real `EUF` atom (`instance_provenance`, 1 test) and it **SURVIVED**
+too. So the liveness purpose §5.1 attributes to that call is read off
+`incremental.rs:515-520`'s own doc comment, not off a test.
 
 **The session still falls back rather than growing its theory.** Level 1 hosts an
 arithmetic ground set by ABSTRACTING the arithmetic, not by hosting

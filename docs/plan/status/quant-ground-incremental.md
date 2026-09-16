@@ -2,7 +2,7 @@
 
 <!-- plan-section: lane-status -->
 
-**Lane QUANT-GROUND-INCREMENTAL (`IN PROGRESS`, quant-ground-incremental,
+**Lane QUANT-GROUND-INCREMENTAL (`DONE`, quant-ground-incremental,
 2026-09-16).** [ADR-2120] §7 named the ground closure as the quantified
 divisions' block. The mechanism turns out to be one `if`.
 
@@ -88,8 +88,30 @@ fixpoint, and the detail naming the interleaved ground check drops from 13 rows
 to 8. A file reporting a fixpoint has the instance SET as its next blocker rather
 than the clock.
 
-**Ship decision: OFF pending the divisional A/B**, whose criterion is 0 stable
-losses and 0 flips over 1,200 rows.
+**The six-division A/B: −4 over 1,200 rows, 0 verdict disagreements.** AUFDTLIRA
+−1, AUFLIRA −1, UFDTLIRA −2, UF/UFLIA/UFNIA +0; nonzero exit statuses 3 on EACH
+arm, so the lever created none. Every one of the 8 raw movers re-checked 3× per
+arm on one pinned core: **1 STABLE-GAIN, 5 STABLE-LOSS, 2 UNSTABLE.** The single
+stable gain is `UFLIA/simplify/javafe.ast.TypeDeclElemPragma.373` — the **same
+file the 53-core probe moved**, the only agreement between the two populations.
+
+**Ship decision: OFF.** 0 flips MET; **0 stable losses NOT MET (5)**. The gain and
+the losses are the same mechanism from both sides: skipping the first seven
+per-round cold checks returns budget to a loop that needs more rounds, and
+removes a refutation from a file whose ground set was already refutable in those
+rounds. **The held-out draw was not run** — it confirms a lever that passed its
+A/B, and drawing a blind population to score one that is not shipping spends the
+population for nothing.
+
+**Three red gates, all attributed to the box and not to this diff, with control
+distributions on BOTH trees.** Serialized (`--test-threads=1`) this tree is
+**1576 / 0**. Main flakes on the same test
+(`auto::tests::pathological_overbound_stays_terminal_under_every_policy`, 1 of 4
+main runs). And removing this lane's four fixtures made the sweep WORSE, not
+better (3 failures against 1) — so it is not this lane's fixtures crowding the
+pool either. `quantified_route_trace` is 1-of-3 red on main at load 9–10 and its
+assertion is its own non-vacuity guard. `progress_frontier` is green twice, 12
+passed, no REGRESSION.
 
 [ADR-2120]: ../../research/09-decisions/adr-2120-quantifier-activation-by-assignment.md
 
@@ -101,4 +123,7 @@ losses and 0 flips over 1,200 rows.
 | 2026-09-16 | quant-ground-incremental | `CandidateFixpointStep::Refuted` shipped `unsat` with no instance-set certificate while the two cold exits beside it collected one — closed on the same facts (that exit is reached only through the cold replay) |
 | 2026-09-16 | quant-ground-incremental | 53-core probe: **+1 decided, 0 losses, 0 flips**; 48.4 s of 452.4 s of ground re-solve removed (20 cores gain, **11 lose**), and five cores leave the clock for an honest fixpoint (`budget` 29 → 24) |
 | 2026-09-16 | quant-ground-incremental | the mutation that SURVIVED is the finding: `unwind_to_root` is not the stale-clause guard — `NativeIncrementalCdcl::add_clause` unwinds unconditionally — it is the theory-epoch close, and the overclaim is corrected in place |
+| 2026-09-16 | quant-ground-incremental | six-division A/B **−4 over 1,200, 0 verdict disagreements**; movers re-checked 3x/arm: **1 STABLE-GAIN, 5 STABLE-LOSS, 2 UNSTABLE** — ship criterion NOT met, lever stays OFF, held-out draw not spent |
+| 2026-09-16 | quant-ground-incremental | three red gates attributed to the BOX with control distributions on both trees: serialized this tree is 1576/0, main flakes on the same test, and REMOVING this lane's fixtures made the sweep worse (3 vs 1) |
+| 2026-09-16 | quant-ground-incremental | the certificate repair and the `unwind_to_root` call are both measured UNCOVERED (two mutation suites, 9 and 1 tests, both SURVIVED) — recorded rather than assumed |
 
