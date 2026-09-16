@@ -281,17 +281,21 @@ fn z3_decide(inst: &Instance) -> Verdict {
 /// Checked as arithmetic on two named constants rather than as a comment: the
 /// screen lives in another module, and a budget change there would otherwise
 /// redirect every instance below to a different engine with nothing going red.
+// A relation between two constants is a compile-time fact, so it is checked at
+// compile time: a budget change in the other module fails the BUILD of this
+// suite, which is louder than a red test. (clippy: `assertions_on_constants`
+// rejects the runtime form for exactly this reason.)
+const _: () = assert!(
+    ATOMS > ONLINE_ADMITTED_ATOMS,
+    "ATOMS does not exceed the online engine's admission screen; every instance \
+     would be decided by the online CDCL(T) engine and this suite would be a \
+     second copy of `qf_lra_differential_fuzz`"
+);
+
 #[test]
 fn the_generator_outruns_the_online_admission_screen() {
-    assert!(
-        ATOMS > ONLINE_ADMITTED_ATOMS,
-        "ATOMS={ATOMS} does not exceed the online engine's admission screen of \
-         {ONLINE_ADMITTED_ATOMS}; every instance would be decided by the online \
-         CDCL(T) engine and this suite would be a second copy of \
-         `qf_lra_differential_fuzz`"
-    );
-    // And the generator must actually build that many, which is a different
-    // claim from the constant being large.
+    // The generator must actually build that many, which is a different claim
+    // from the constant being large (that one is the `const _` above).
     let inst = Instance::generate(&mut Lcg::new(0));
     assert_eq!(
         inst.atoms.len(),
