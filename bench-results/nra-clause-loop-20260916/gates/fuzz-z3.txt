@@ -1,0 +1,5 @@
+FUZZ rc=0 :: test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1396.91s
+clause-loop fuzz: total=1500 decided=373 sat_decided=368 unsat_decided=5 agreements=373 declined=1127 z3_unknown_skipped=0 certificate_cells=53 disjunctive_instances=1485
+  decline causes: clause-loop-certificate-rejected 1, indeterminate-sign 17, not-attempted 1109
+[single-cell-fuzz] decline causes:
+FUZZ_PASS

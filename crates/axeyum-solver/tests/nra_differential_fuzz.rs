@@ -1638,17 +1638,33 @@ fn single_cell_differential_fuzz_disagree_zero() {
 /// setting `AXEYUM_NRA_CAD`, for the reason ADR-2121 records: the lever is read
 /// once per process, so a fuzz that set it would be a gate on one shell.
 ///
-/// Four assertions keep this from passing vacuously, and they are the same four
-/// the single-cell sweep carries because the same three ways to be vacuous
-/// apply:
+/// **ADR-2131 changed this sweep's premise.** ADR-2126 wrote it when the arm
+/// withheld every `unsat`, and its `Unsat` arm was therefore a `panic!` reading
+/// "reaching one here means the withholding was removed and an uncertified
+/// refutation is on a decision path". The withholding IS removed, and the
+/// refutation is no longer uncertified: `certify_unsat` emits `unsat` only when
+/// `nra_clause_cert::check_clause_refutation` accepts. So the panic fired on the
+/// first certified `unsat` and was a stale premise rather than a finding.
+///
+/// An `unsat` is now ADJUDICATED rather than forbidden, which is strictly more
+/// work than the old arm did: z3 decides the same instance, `unsat` is an
+/// agreement, **`sat` is a `CLAUSE-LOOP WRONG UNSAT` panic with the dump**, and
+/// `unknown` is skipped and counted.
+///
+/// Five assertions keep this from passing vacuously:
 ///
 /// * `decided > 0` — a sweep that declines everything agrees with everything;
-/// * every `sat` is REPLAYED here against the original assertions, not only
-///   inside the route, because "the route checked it" is exactly the claim a
-///   fuzz exists to doubt;
-/// * `agreements == decided` (the loop never emits `unsat`, so a z3 `unknown`
-///   can only meet a `sat`, which z3 does not report `unknown` for after
-///   deciding — the tally is asserted rather than assumed);
+/// * `unsat_decided > 0` — the half this lane added. Without it a generator that
+///   never produces a refutable instance would exercise the certified-`unsat`
+///   path zero times and still pass, which is exactly the shape the old panic
+///   arm was hiding;
+/// * every `sat` is REPLAYED here against the original assertions, and every
+///   `unsat` has its CERTIFICATE re-read here, because "the route checked it" is
+///   exactly the claim a fuzz exists to doubt. An accepted certificate that
+///   examined no lemma, no gate and no proof step is the vacuous pass a boolean
+///   cannot distinguish, so the counts are asserted, not the acceptance;
+/// * `agreements == decided - z3_unknown_skipped` — the tally is asserted rather
+///   than assumed;
 /// * the class must actually produce **disjunctions**: the generator's
 ///   skeleton is checked for a clause of width ≥ 2, because a CNF of units is a
 ///   conjunction wearing a hat and would leave this sweep measuring the
@@ -1657,6 +1673,9 @@ fn single_cell_differential_fuzz_disagree_zero() {
 fn clause_loop_differential_fuzz_disagree_zero() {
     let mut total = 0u64;
     let mut decided = 0u64;
+    let mut sat_decided = 0u64;
+    let mut unsat_decided = 0u64;
+    let mut certificate_cells = 0usize;
     let mut agreements = 0u64;
     let mut declined = 0u64;
     let mut z3_unknown_skipped = 0u64;
@@ -1692,16 +1711,15 @@ fn clause_loop_differential_fuzz_disagree_zero() {
                         dump_model(&syms, model)
                     );
                 }
+                sat_decided += 1;
                 decided += 1;
                 Verdict::Sat
             }
             Some(CheckResult::Unsat) => {
-                panic!(
-                    "CLAUSE-LOOP EMITTED UNSAT: seed {seed}. The arm withholds every \
-                     `unsat` (ADR-2126); reaching one here means the withholding was \
-                     removed and an uncertified refutation is on a decision path.\n{}",
-                    inst.dump()
-                );
+                unsat_decided += 1;
+                certificate_cells += certificate_cells_of(seed, &inst);
+                decided += 1;
+                Verdict::Unsat
             }
         };
 
@@ -1710,6 +1728,17 @@ fn clause_loop_differential_fuzz_disagree_zero() {
             z3_unknown_skipped += 1;
             continue;
         }
+        // A WRONG UNSAT is the soundness event this whole sweep exists for, so
+        // it gets its own message rather than being folded into the generic
+        // disagreement: "we refuted something z3 satisfies" is a different
+        // sentence from "the two arms differ", and the instance dump is what
+        // makes it actionable.
+        assert!(
+            !(ax == Verdict::Unsat && z3 == Verdict::Sat),
+            "CLAUSE-LOOP WRONG UNSAT: seed {seed} -- the loop refuted an instance \
+             z3 satisfies. This is a soundness finding, not a tuning issue.\n{}",
+            inst.dump()
+        );
         assert!(
             ax == z3 || not_a_disagreement(ax, z3),
             "CLAUSE-LOOP DISAGREEMENT: seed {seed} axeyum={ax:?} z3={z3:?}\n{}",
@@ -1720,8 +1749,9 @@ fn clause_loop_differential_fuzz_disagree_zero() {
 
     let cause_summary: Vec<String> = causes.iter().map(|(k, v)| format!("{k} {v}")).collect();
     println!(
-        "clause-loop fuzz: total={total} decided={decided} agreements={agreements} \
-         declined={declined} z3_unknown_skipped={z3_unknown_skipped} \
+        "clause-loop fuzz: total={total} decided={decided} sat_decided={sat_decided} \
+         unsat_decided={unsat_decided} agreements={agreements} declined={declined} \
+         z3_unknown_skipped={z3_unknown_skipped} certificate_cells={certificate_cells} \
          disjunctive_instances={with_a_real_disjunction}\n  decline causes: {}",
         cause_summary.join(", ")
     );
@@ -1729,6 +1759,21 @@ fn clause_loop_differential_fuzz_disagree_zero() {
     assert!(
         decided > 0,
         "the clause-loop sweep decided NOTHING, so it agreed with z3 vacuously"
+    );
+    // ADR-2131. The certified-`unsat` path is the half this lane added, and a
+    // sweep that never reaches a refutation exercises it ZERO times while
+    // passing every other assertion here. If this fires, the generator cannot
+    // produce an instance the loop refutes and it needs widening -- say that
+    // rather than deleting the assertion.
+    assert!(
+        unsat_decided > 0,
+        "the clause-loop sweep reached NO certified `unsat` in {total} instances, \
+         so the certificate path was never exercised; widen the generator"
+    );
+    assert!(
+        certificate_cells > 0,
+        "every accepted certificate examined ZERO cells across {unsat_decided} \
+         `unsat` verdicts -- the checker accepted without looking"
     );
     assert_eq!(
         agreements,
@@ -1740,6 +1785,38 @@ fn clause_loop_differential_fuzz_disagree_zero() {
         "fewer than half the instances carry a real disjunction ({with_a_real_disjunction} \
          of {total}); this class would be measuring the conjunctive route"
     );
+}
+
+/// The certificate the clause loop left behind for an `unsat`, re-read here.
+///
+/// ADR-2131. The route emits `unsat` only when
+/// `nra_clause_cert::check_clause_refutation` accepts, so this DOUBTS the
+/// certificate rather than trusting the route -- the same obligation
+/// `every_unsat_leaves_an_accepted_certificate` carries, applied to every
+/// instance the sweep refutes instead of to one fixture.
+///
+/// The counts are what is asserted, not the acceptance: an accepted certificate
+/// that examined no lemma, no proof step and no assertion root is the vacuous
+/// pass a boolean cannot distinguish. Returns the cells examined so the caller
+/// can assert the sweep as a whole looked at something.
+fn certificate_cells_of(seed: u64, inst: &Instance) -> usize {
+    let stats = axeyum_solver::clause_loop_last_check().unwrap_or_else(|| {
+        panic!(
+            "CLAUSE-LOOP UNCERTIFIED UNSAT: seed {seed} produced `unsat` with NO \
+             certificate stats, so nothing was checked.\n{}",
+            inst.dump()
+        )
+    });
+    assert!(
+        stats.lemmas > 0 && stats.drat_steps > 0 && stats.roots > 0,
+        "CLAUSE-LOOP VACUOUS CERTIFICATE: seed {seed} accepted with lemmas={} \
+         drat_steps={} roots={} -- an acceptance that examined nothing.\n{}",
+        stats.lemmas,
+        stats.drat_steps,
+        stats.roots,
+        inst.dump()
+    );
+    stats.lemma_cells
 }
 
 #[test]
