@@ -11781,5 +11781,123 @@ SUITES["nra-single-cell-certificate"] = (
 )
 
 
+# ADR-2124. The retained CDCL(T) ground session, and the four guards that make
+# hosting an arithmetic ground set in it sound rather than merely faster.
+#
+# The filter is `ground_session`, so the measured suite is this lane's own four
+# fixtures and the kill counts below are against that denominator. A mutation
+# that a wider sweep would also catch is not less killed for it; the point of
+# the narrow filter is that "exactly one died" names WHICH one.
+SUITES["qinst-ground-session"] = (
+    "crates/axeyum-solver/src/qinst_egraph.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "ground_session"),
+        "qinst-ground-session",
+    ),
+    [
+        (
+            # Route an abstracted comparison to the THEORY. `EufTheory::
+            # add_atom_at_root` rejects it, `ensure_atom` returns `None`, and
+            # the session disables itself -- the exact refusal this lane
+            # removes, reintroduced one level down where no verdict changes and
+            # only the accelerator is lost.
+            "an abstracted atom never reaches the EUF theory",
+            "        if online_opaque_clause_atom(arena, atom_term) {\n            return self.ensure_opaque_variable(atom_term);\n        }",
+            "        if false {\n            return self.ensure_opaque_variable(atom_term);\n        }",
+        ),
+        (
+            # Allocate a FRESH variable per occurrence. Still sound -- two free
+            # variables are weaker than one -- but the abstraction becomes
+            # vacuous, and a session that cannot relate two occurrences of one
+            # comparison cannot refute anything that needs them to agree.
+            "one variable per abstracted term, reused across occurrences",
+            "        if let Some(&variable) = self.opaque_variables.get(&atom_term) {\n            return Some(variable);\n        }\n        if self.solver.variable_count() >= self.limits.variables {",
+            "        if self.solver.variable_count() >= self.limits.variables {",
+        ),
+        (
+            # Keep the atom-free session. It is a pure Boolean skeleton that
+            # refutes nothing the cold route's own skeleton would not -- and
+            # because an existing session SUPPRESSES the interleaved cold check,
+            # keeping it trades a real check for a vacuous one.
+            "a session with no theory atom is declined, not kept",
+            "        if abstracts && atom_terms.is_empty() {\n            return None;\n        }",
+            "        if false {\n            return None;\n        }",
+        ),
+        (
+            # Stop abstracting. Level 1 collapses onto level 0 and the session
+            # refuses every arithmetic ground set again.
+            "level 1 actually turns the abstraction on",
+            "            .with_opaque_bool_atoms(abstracts);",
+            "            .with_opaque_bool_atoms(false);",
+        ),
+    ],
+)
+
+
+# ADR-2124, the mutation that SURVIVED and what its survival measured.
+#
+# `add_checked_batch`'s `unwind_to_root()` was expected to be the stale-clause
+# guard -- insert a permanent clause while the previous solve's decisions are
+# still on the trail and a fact holding only under those decisions is recorded
+# at level 0, surviving the next backjump. Removing it killed NOTHING in the
+# `ground_session` fixtures, and the reason is that the hazard has no mechanism
+# at this layer: `NativeIncrementalCdcl::add_clause`
+# (`crates/axeyum-cnf/src/proof_sat/incremental.rs:486`) calls `between_solves()`
+# ITSELF, unconditionally, before touching the database. A clause is always
+# registered into an unassigned solver whether or not the caller asked.
+#
+# What the session's own call is for is stated in that method's doc comment
+# (`incremental.rs:515-520`) and it is LIVENESS, not soundness: it closes the
+# previous solve's theory epoch, so `EufTheory::add_atom_at_root` -- reached from
+# `ensure_atom` BEFORE the batch's first `add_clause` -- will accept a
+# registration instead of refusing it. This suite measures that, on a fixture
+# whose batch registers a real EUF atom. The `ground_session` fixtures cannot:
+# their instances abstract to opaque variables, which need no theory epoch.
+SUITES["qinst-online-session-epoch"] = (
+    "crates/axeyum-solver/src/qinst_egraph.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "instance_provenance"),
+        "qinst-online-session-epoch",
+    ),
+    [
+        (
+            "the batch closes the previous solve's theory epoch before registering an atom",
+            "        self.solver.unwind_to_root();\n        for &term in terms {",
+            "        for &term in terms {",
+        ),
+    ],
+)
+
+
+# ADR-2124, the certificate the session route did not collect.
+#
+# `CandidateFixpointStep::Refuted` returned `Ok(CheckResult::Unsat)` with NO
+# `*certificate`, while the two cold-check exits beside it both collect one from
+# the same `(anchor, ground, ground_derivations)` triple. This suite asks the
+# only question that matters about the repair: is there ANY test in the
+# instance-set certificate surface that notices when it is taken away again?
+#
+# If the answer is SURVIVED, that is the finding and it is recorded rather than
+# papered over: the repair is correct by construction (that exit is reached only
+# through `replay_online_refutation`, so the derivations describe exactly the
+# refutation the cold route just re-established) but it is NOT covered, and
+# nobody should read its presence in the diff as evidence that a later change
+# could not silently undo it.
+SUITES["qinst-session-refutation-certificate"] = (
+    "crates/axeyum-solver/src/qinst_egraph.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "quant_instance_set_cert::"),
+        "qinst-session-refutation-certificate",
+    ),
+    [
+        (
+            "a refutation reached through the retained session still carries its instance set",
+            "                    // which is why the gap had to close with it.\n                    *certificate =\n                        collect_ground_derivations(arena, anchor, &ground, &ground_derivations);\n                    return Ok(CheckResult::Unsat);",
+            "                    // which is why the gap had to close with it.\n                    return Ok(CheckResult::Unsat);",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))

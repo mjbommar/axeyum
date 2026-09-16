@@ -6845,6 +6845,46 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "RE-MEASURED 2026-09-10 on the 32-file UF parity-loss slice, post-`d910fa590`: 878 deferred-pool releases, of which only 262 (29.8 %) happened at or past this threshold -- 70.2 % of this population's releases are below it and behave as the historical dump-everything admission. 25 of 32 files engage the throttle at some point. The threshold is not idle, but it sees under a third of the releases. Doc comment measures the risk of setting this too low: `uf.1001519`'s ~7000-candidate release at ground=1150 is what main refutes from in 4.4s, and throttling its deep tail changed which instances filled the cap and lost the file.",
     },
     ConfigEntry {
+        name: "GROUND_SESSION_LEVEL",
+        module: "crates/axeyum-solver/src/qinst_egraph.rs",
+        value: "0",
+        unit: "whether the retained CDCL(T) session may abstract a Boolean-position term its EUF encoder has no arm for",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::None,
+        guarded_by: "the abstraction is a WEAKENING, so it cannot manufacture a refutation: replacing an atom by a free propositional variable only ADDS models (every model of the original extends to one of the skeleton by giving the variable the atom's truth value), `unsat` of the skeleton therefore transfers back and `sat` says nothing. SECOND AND INDEPENDENT: the session's `Unsat` is never the verdict -- `scoped_candidate_fixpoint_step` reaches `Refuted` only through `replay_online_refutation`, which re-establishes the refutation over the same ground set with the ordinary cold quantifier-free route. `quant_ground_session_soundness.rs` tries to REFUTE the rule over SATISFIABLE UFLIA queries at levels 0 and 1, including two comparisons a collapsing abstraction would merge, and requires the two levels never to disagree on a DECIDED verdict",
+        env_override: Some("AXEYUM_QINST_GROUND_SESSION"),
+        justification: dated(
+            "doc comment",
+            "2026-09-16",
+            None,
+            &[
+                sym(
+                    "crates/axeyum-solver/src/qinst_egraph.rs",
+                    "online_opaque_clause_atom",
+                ),
+                sym(
+                    "crates/axeyum-solver/src/qinst_egraph.rs",
+                    "ensure_opaque_variable",
+                ),
+            ],
+            &[
+                doc(
+                    "docs/research/09-decisions/adr-2124-incremental-ground-closure-for-quantifier-instances.md",
+                ),
+                live(
+                    "GroundSessionLevelGuard",
+                    "crates/axeyum-solver/src/qinst_egraph.rs",
+                ),
+                live(
+                    "OnlineQuantifierClauseSession",
+                    "crates/axeyum-solver/src/qinst_egraph.rs",
+                ),
+            ],
+        ),
+        note: "SHIPPED `0`, which is byte for byte the historical behaviour: `OnlineQuantifierClauseSession::new` builds its encoder with `with_opaque_bool_atoms(false)`, so a Boolean-position term the encoder has no arm for still refuses the whole construction. WHAT LEVEL 1 CHANGES, and why it is a TIME lever and not a capability one: the loop has TWO interleaved-check sites, selected by `online_clauses.is_none()`, and they differ by SEVEN ROUNDS -- the no-session branch re-solves the whole accumulated ground set on rounds 0-6 and then on 7, 15, 31, ..., while a live session skips to the exponential schedule alone. An integer comparison in the ground set is enough to decline the session, so on UFLIA (and AUFDTLIRA, UFDTLIRA, AUFLIRA) the loop takes the cold branch for its entire run. A LIVE SESSION DOES NOT SUPPRESS THE CHECK OUTRIGHT, and an earlier version of this entry said it did: measured 2026-09-16, 38 of 53 cores ran an IDENTICAL number of cold checks in both arms, which suppression could not produce. On top of the cadence a live session changes what each round DOES (candidate equalities on a starved round), so the arms' round sequences diverge and counts can differ by more, in either direction. MEASURED 2026-09-16 (ADR-2124) on ADR-2120's 53 reference-minimal UFLIA cores: the check ran on 45 of 53, 493 calls, median 11 and max 29 per core, over sets whose per-core maximum has median 1,356 and max 8,019 terms; 33 of 53 died on the clock and 32 of those had run it. Asserting each term ONCE is 71,127 terms against a linear-growth estimate of 437,373 re-solved, a 6.1x. On the Tier 1 ledger (t1-<DIV>-db31113fa, 200 per division) the quantifier route's own last decline names the interleaved check on 108 of 1,400 and 101 of those ended `unknown`: UFNIA 44/200, UFLIA 28/200, AUFDTLIRA 18/200, AUFLIRA 6/200, UF 4/200, UFDTLIRA 1/200. TWO GUARDS AT LEVEL 1, both because a session that EXISTS suppresses the cold check: a ground set with no theory atom at all is declined (a pure Boolean skeleton refutes nothing the cold route's own skeleton would not, so keeping it trades a real check for a vacuous one), and a Boolean CONNECTIVE is never abstracted (it has a Tseitin arm, and abstracting it would drop the clause structure while its subterms stayed separately constrained). Determinism: the abstraction is keyed on the hash-consed `TermId` and allocates variables in encode order, so no hash iteration reaches the variable numbering.",
+    },
+    ConfigEntry {
         name: "INVENTION_GROUND_CEILING",
         module: "crates/axeyum-solver/src/qinst_egraph.rs",
         value: "MAX_GROUND_TERMS / 2",

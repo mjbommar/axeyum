@@ -547,16 +547,17 @@ pub mod certificates {
     /// Quantifier certificate families and their independent checkers.
     pub mod quantifiers {
         pub use crate::qinst_egraph::{
-            GroundBudget, GroundBudgetGuard, InstantiationLoopExit, PositivePathLevelGuard,
-            QuantifierClausePropagationCertificate, QuantifierFalseSiblingJustification,
-            QuantifierGroundDerivation, QuantifierInstanceCertificate,
-            QuantifierPositiveReplacementCertificate, RelevanceCriterion, RelevanceFunnel,
-            RelevancePolicy, RelevancePolicyGuard, RoundCeilingGuard, SkolemPrimeGuard,
-            TriggerAlternativeCapGuard, check_quantifier_clause_propagation,
-            check_quantifier_clause_propagations, check_quantifier_ground_derivation,
-            ground_budget, instantiate_forall_via_egraph, positive_context_registrations,
-            prove_quantified_unsat_via_egraph, prove_quantified_unsat_via_egraph_with_instances,
-            relevance_policy, skolem_prime_budget, witness_tuples_via_egraph,
+            GroundBudget, GroundBudgetGuard, GroundSessionLevelGuard, InstantiationLoopExit,
+            PositivePathLevelGuard, QuantifierClausePropagationCertificate,
+            QuantifierFalseSiblingJustification, QuantifierGroundDerivation,
+            QuantifierInstanceCertificate, QuantifierPositiveReplacementCertificate,
+            RelevanceCriterion, RelevanceFunnel, RelevancePolicy, RelevancePolicyGuard,
+            RoundCeilingGuard, SkolemPrimeGuard, TriggerAlternativeCapGuard,
+            check_quantifier_clause_propagation, check_quantifier_clause_propagations,
+            check_quantifier_ground_derivation, ground_budget, instantiate_forall_via_egraph,
+            positive_context_registrations, prove_quantified_unsat_via_egraph,
+            prove_quantified_unsat_via_egraph_with_instances, relevance_policy,
+            skolem_prime_budget, witness_tuples_via_egraph,
         };
         pub use crate::quant_affine_growth_cert::{
             IntAffineGrowthRefutationCertificate, int_affine_growth_refutation,
@@ -1319,16 +1320,17 @@ macro_rules! full_exports {
         pub use qfuflia_alethe::prove_qf_uflia_unsat_alethe;
         #[doc(hidden)]
         pub use qinst_egraph::{
-            GroundBudget, GroundBudgetGuard, InstantiationLoopExit, PositivePathLevelGuard,
-            QuantifierClausePropagationCertificate, QuantifierFalseSiblingJustification,
-            QuantifierGroundDerivation, QuantifierInstanceCertificate,
-            QuantifierPositiveReplacementCertificate, RelevanceCriterion, RelevanceFunnel,
-            RelevancePolicy, RelevancePolicyGuard, RoundCeilingGuard, SkolemPrimeGuard,
-            TriggerAlternativeCapGuard, check_quantifier_clause_propagation,
-            check_quantifier_clause_propagations, check_quantifier_ground_derivation,
-            ground_budget, instantiate_forall_via_egraph, positive_context_registrations,
-            prove_quantified_unsat_via_egraph, prove_quantified_unsat_via_egraph_with_instances,
-            relevance_policy, skolem_prime_budget, witness_tuples_via_egraph,
+            GroundBudget, GroundBudgetGuard, GroundSessionLevelGuard, InstantiationLoopExit,
+            PositivePathLevelGuard, QuantifierClausePropagationCertificate,
+            QuantifierFalseSiblingJustification, QuantifierGroundDerivation,
+            QuantifierInstanceCertificate, QuantifierPositiveReplacementCertificate,
+            RelevanceCriterion, RelevanceFunnel, RelevancePolicy, RelevancePolicyGuard,
+            RoundCeilingGuard, SkolemPrimeGuard, TriggerAlternativeCapGuard,
+            check_quantifier_clause_propagation, check_quantifier_clause_propagations,
+            check_quantifier_ground_derivation, ground_budget, instantiate_forall_via_egraph,
+            positive_context_registrations, prove_quantified_unsat_via_egraph,
+            prove_quantified_unsat_via_egraph_with_instances, relevance_policy,
+            skolem_prime_budget, witness_tuples_via_egraph,
         };
         #[doc(hidden)]
         pub use quant_affine_growth_cert::{

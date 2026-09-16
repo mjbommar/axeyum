@@ -1,0 +1,37 @@
+== SIZING (1b): what the interleaved ground check DID on ADR-2120's 53 UFLIA cores (ON arm) ==
+source: bench-results/quant-activation-20260915/cores/cores.tsv  (53 rows)
+NOTE  : the raw per-core capture (`cores/raw/`) was NOT committed, so per-core qf-check WALL TIME
+        is not recoverable from the ledger.  Calls and ground-set size are; time is measured in
+        this lane's own probe (exit 4) and reported there.  This is a stated absence, not a zero.
+
+cores: 53
+qf-check ran on            : 45 of 53
+total qf-check CALLS       : 493  over 45 cores
+calls per core (where ran) : min 1  median 11  mean 11.0  max 29
+largest ground set handed  : min 2  median 1356  mean 1581  max 8019
+
+-- the re-solve cost this lane removes: SUM over calls of the set size re-solved from scratch --
+   (lower bound: `on_qf_ground` is the LARGEST set a core's qf-check reported, and the set GROWS,
+    so calls*max OVER-counts and calls*1 UNDER-counts.  Both bounds are printed; neither is a claim.)
+   terms re-solved, UPPER bound (calls x max)      : 874,747
+   terms re-solved, linear-growth estimate (/2)    : 437,373
+   an INCREMENTAL session asserts each term ONCE   : 71,127 (sum of max ground sets)
+   ratio (linear estimate / incremental)           : 6.1x
+
+-- top 10 cores by qf-check calls --
+ calls  maxground  verdict     reason  core
+    29       1811  unknown     budget  UFLIA_simplify2_front_end_suite_javafe.filespace.HashTree.
+    28       1582  unknown     budget  UFLIA_simplify_javafe.ast.TypeDeclElemPragma.373.smt2.core
+    23       1860  unknown     budget  UFLIA_simplify2_front_end_suite_javafe.ast.TypeModifierPra
+    22       1884  unknown     budget  UFLIA_simplify2_front_end_suite_javafe.tc.TypeSigVec.005.s
+    21        839    unsat    decided  UFLIA_simplify_javafe.parser.TokenQueue.576.smt2.core.smt2
+    20       1213  unknown     budget  UFLIA_boogie_Chunker11c_Chunker.SpecSharp.CheckInvariant_S
+    19       2838    unsat    decided  UFLIA_grasshopper_instantiated_insertion_sort_postconditio
+    18       1582  unknown     budget  UFLIA_simplify2_front_end_suite_javafe.ast.ImportDeclVec.0
+    18       3760  unknown     budget  UFLIA_simplify2_front_end_suite_javafe.test.SuperlinksTest
+    18        337  unknown     budget  UFLIA_tokeneer_auditlog_init-31.smt2.core.smt2
+
+-- the ceiling: cores that died on the clock --
+   on_reason == budget                       : 33 of 53
+   decided (either arm, ON)                  : 15 of 53
+   qf-check ran AND died on the clock        : 32 of 53

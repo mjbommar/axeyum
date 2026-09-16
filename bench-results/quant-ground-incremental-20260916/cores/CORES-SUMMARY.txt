@@ -1,0 +1,84 @@
+== 53 UFLIA CORES, GROUND-SESSION LEVER OFF vs ON (ADR-2124) ==
+
+cores                          : 53
+OFF decided                    : 15
+ON  decided                    : 16
+verdict moved                  : 1
+  of which GAIN (unknown->dec) : 1
+  of which LOSS (dec->unknown) : 0
+  of which FLIP (sat<->unsat)  : 0   <-- any nonzero here is a SOUNDNESS defect
+
+-- the interleaved cold ground check, from the loop's own qtrace line --
+   OFF  ran on 45 of 53   calls  513   total    452.4s   max ground 7895
+   ON   ran on 45 of 53   calls  450   total    404.0s   max ground 7895
+
+   seconds of ground re-solve REMOVED by the lever : 48.4s
+   as a fraction of what OFF spent there           : 10.7%
+   as a fraction of the whole 24s x 53 budget     : 3.8%
+
+-- the ON arm's TERMINAL typed reason, bucketed --
+     23  fd:bounded-completeness-unsat=budget
+     12  q:mbqi-quick=decided
+      8  fd:bounded-completeness-unsat=incomplete
+      3  q:mbqi-quick=incomplete
+      2  q:egraph=decided
+      2  q:egraph=incomplete
+      1  q:bool-skeleton=decided
+      1  q:mbqi-quick=budget
+      1  q:mbqi=decided
+
+-- its details, VERBATIM and unbucketed (a bucket's LABEL hides four causes) --
+     13  quantified solve time budget exhausted after MBQI and the finite-model finder
+      8  e-matching: instantiation time budget exhausted mid-round (the interleaved ground check did not decide the set inside 
+      2  e-matching: instantiation time budget exhausted at a round head (no final ground check ran on the accumulated set)
+      1  combined theories: eager Ackermann elimination would emit 398989 congruence constraints, exceeding the deterministic a
+      1  e-matching instantiation reached fixpoint without refuting after 14 rounds (no further instance to admit; more rounds 
+      1  e-matching instantiation reached fixpoint without refuting after 18 rounds (no further instance to admit; more rounds 
+      1  e-matching instantiation reached fixpoint without refuting after 265 rounds (no further instance to admit; more rounds
+      1  e-matching instantiation reached fixpoint without refuting after 6 rounds (no further instance to admit; more rounds c
+      1  e-matching instantiation reached fixpoint without refuting after 75 rounds (no further instance to admit; more rounds 
+      1  e-matching instantiation reached fixpoint without refuting after 80 rounds (no further instance to admit; more rounds 
+      1  e-matching instantiation stopped after 2 rounds: the remaining budget could not fit another round with growth headroom
+      1  e-matching instantiation stopped after 3 rounds: the remaining budget could not fit another round with growth headroom
+      1  e-matching instantiation stopped after 4 rounds: the remaining budget could not fit another round with growth headroom
+      1  e-matching instantiation stopped after 51 rounds: the remaining budget could not fit another round with growth headroo
+      1  mbqi declined an unsupported fragment: term #161 has sort (Uninterpreted 0) that the pure-Rust BV backend cannot bit-b
+      1  mbqi declined an unsupported fragment: term #379 has sort (Uninterpreted 0) that the pure-Rust BV backend cannot bit-b
+      1  mbqi declined an unsupported fragment: term #74 has sort (Uninterpreted 4) that the pure-Rust BV backend cannot bit-bl
+
+-- every core whose verdict MOVED --
+   unknown -> unsat    (off fd:bounded-completeness-unsat=budget / on q:mbqi-quick=decided)  UFLIA_simplify_javafe.ast.TypeDeclElemPragma.373.smt2.core.s
+
+rows written to bench-results/quant-ground-incremental-20260916/cores/cores.tsv
+
+-- where the removed seconds are, per core (OFF qf-secs minus ON qf-secs) --
+ delta_s   off_s    on_s off_n  on_n   off_v    on_v  core
+    12.6    13.8     1.2    29    15 unknown unknown  UFLIA_simplify2_front_end_suite_javafe.filespace.Has
+    11.9    12.7     0.7    27     1 unknown   unsat  UFLIA_simplify_javafe.ast.TypeDeclElemPragma.373.smt
+    11.1    11.8     0.8    21    11 unknown unknown  UFLIA_simplify2_front_end_suite_javafe.test.Superlin
+     8.7    12.7     4.0     4     3 unknown unknown  UFLIA_simplify_javafe.ast.NewInstanceExpr.271.smt2.c
+     2.7    21.6    18.9     4     3 unknown unknown  UFLIA_simplify_tohtml.Java2Html.832.smt2.core.smt2
+     2.3     7.1     4.7     8     7 unknown unknown  UFLIA_simplify2_front_end_suite_javafe.tc.Types.035.
+     1.6    12.3    10.7     3     3 unknown unknown  UFLIA_simplify2_front_end_suite_javafe.ast.ParenExpr
+     1.6    10.8     9.2    16    16 unknown unknown  UFLIA_simplify2_front_end_suite_javafe.reader.Cached
+     1.5     9.5     8.0    12    12 unknown unknown  UFLIA_simplify2_front_end_suite_javafe.tc.TypeSig.00
+     1.4     2.4     1.0    15    12 unknown unknown  UFLIA_simplify_javafe.ast.LexicalPragmaVec.219.smt2.
+  ... tail (the lever COSTS time on these) ...
+    -0.2    20.6    20.8    15    15 unknown unknown  UFLIA_boogie_Spouse_Person..ctor.smt2.core.smt2
+    -0.3    24.4    24.7    18    18 unknown unknown  UFLIA_tokeneer_auditlog_init-31.smt2.core.smt2
+    -0.8    16.6    17.4     3     3 unknown unknown  UFLIA_simplify2_front_end_suite_javafe.parser.TagCon
+    -1.0     9.4    10.4    11    13 unknown unknown  UFLIA_simplify_javafe.ast.CatchClauseVec.66.smt2.cor
+    -6.2    10.4    16.6    15    15 unknown unknown  UFLIA_simplify_javafe.ast.UnaryExpr.424.smt2.core.sm
+
+cores where the lever REMOVED ground-check time : 20  (total    57.3s, max 12.6s)
+cores where it ADDED ground-check time          : 11  (total    -9.1s, min -6.2s)
+cores unchanged (|delta| <= 0.05s)              : 22
+
+-- calls: did the session actually suppress the cold check? --
+   ON ran FEWER cold checks than OFF : 13 of 53
+   the same                          : 38 of 53
+   MORE                              : 2 of 53
+
+-- the regime change the seconds understate: how each arm ENDED --
+   OFF  budget=29  decided=15  incomplete=9
+   ON   budget=24  decided=16  incomplete=13

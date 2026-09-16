@@ -1,0 +1,22 @@
+== SIZING (1a): the interleaved ground check as a per-division block ==
+source   : bench-results/ledger/t1-<DIV>-db31113fa.tsv, binary db31113fa, 200 benchmarks per division
+terminal : the LAST `q:`-route decline pair (core-census.py:96 `terminal()` takes the last decline of ANY
+           route; on these rows that is always a downstream `fd:` route inheriting the same clock, so the
+           quantifier route's own last word is the honest subject and is reported separately below).
+
+division       n  unsat   unk |  qGROUND  qGROUND&unk  boundByQ  qG&boundQ
+--------------------------------------------------------------------------
+AUFDTLIRA    200    119    81 |       18           18       198         18
+AUFLIRA      200    178    22 |        6            6       185          6
+QF_NIA       200      6   116 |        0            0         0          0
+UF           200     68   106 |        4            4       193          4
+UFDTLIRA     200    138    56 |        1            1       192          1
+UFLIA        200     86   114 |       34           28       197         34
+UFNIA        200     33   146 |       45           44       165         45
+--------------------------------------------------------------------------
+TOTAL       1400    628   641 |      108          101      1130        108
+
+qGROUND      : the quantifier route's OWN last decline detail names the interleaved ground check
+qGROUND&unk  : ...and the whole query ended `unknown` -- the population this lane can move
+boundByQ     : `bound_by` is a `q:` route -- the quantifier loop consumed the most wall clock
+qG&boundQ    : both -- the ground check is named AND the quantifier loop is where the clock went

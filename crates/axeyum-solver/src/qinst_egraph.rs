@@ -328,6 +328,100 @@ fn positive_path_level() -> usize {
     process_positive_path_level()
 }
 
+/// The shipped ground-session level (ADR-2124): `0`, the historical behaviour.
+///
+/// At `0` [`OnlineQuantifierClauseSession::new`] declines any ground set holding
+/// a Boolean-position term its `EUF` encoder has no arm for — an arithmetic
+/// comparison, a datatype tester, a `distinct` — so `online_clauses` stays
+/// `None` and the loop takes the cold branch of the interleaved ground check for
+/// its whole run. At `1` those terms are abstracted to opaque propositional
+/// variables and the session exists.
+///
+/// # What the gate selects, precisely
+///
+/// The loop has TWO interleaved-check sites, one per branch, and they differ by
+/// **seven rounds and nothing else**:
+///
+/// - no session: `interleaved_check_due(round)` =
+///   `round < instantiation_cadence() || (round + 1).is_power_of_two()`, so
+///   rounds **0,1,2,3,4,5,6**, then 7, 15, 31, 63, …
+/// - live session: a separate
+///   `round + 1 >= instantiation_cadence() && (round + 1).is_power_of_two()`, so
+///   7, 15, 31, 63, … only.
+///
+/// So by CADENCE the lever removes exactly the first seven per-round cold
+/// re-solves. It is not the whole difference — a live session also changes what
+/// each round does, because `scoped_candidate_fixpoint_step` proposes candidate
+/// equalities on a round that admitted nothing, so the two arms' round SEQUENCES
+/// diverge — but it is the part that is forced rather than measured, and an
+/// earlier draft of this comment claimed the cold check was suppressed outright.
+/// Measured 2026-09-16 (ADR-2124): 38 of 53 cores run an IDENTICAL number of
+/// cold checks in both arms, which suppression could not produce.
+const GROUND_SESSION_LEVEL: usize = 0;
+
+axeyum_ir::cap_lever! {
+    /// The process-wide ground-session level: [`GROUND_SESSION_LEVEL`], or
+    /// `AXEYUM_QINST_GROUND_SESSION`.
+    ///
+    /// Unset is the shipped `0`, byte for byte. Read through
+    /// [`ground_session_level`], never directly — a live
+    /// [`GroundSessionLevelGuard`] outranks it.
+    fn process_ground_session_level() -> usize =
+        "AXEYUM_QINST_GROUND_SESSION" or GROUND_SESSION_LEVEL;
+}
+
+std::thread_local! {
+    /// A per-thread override of the process ground-session level, set by
+    /// [`GroundSessionLevelGuard`].
+    ///
+    /// Same reason and same shape as [`POSITIVE_PATH_OVERRIDE`]: the process
+    /// level resolves ONCE into a `OnceLock`, so without this no test in a
+    /// process could exercise more than one arm, and a lever whose ON arm is
+    /// reachable only by re-launching the binary has no in-process soundness
+    /// test at all.
+    static GROUND_SESSION_OVERRIDE: std::cell::Cell<Option<usize>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Forces a ground-session level on this thread for the guard's lifetime,
+/// restoring the previous setting on drop.
+///
+/// **It does not cross a thread boundary**, and `smtcomp_cli` solves on a
+/// watchdog worker thread — so an A/B must use the environment variable, not
+/// this guard.
+pub struct GroundSessionLevelGuard(Option<usize>);
+
+impl GroundSessionLevelGuard {
+    /// Overrides the process level on this thread.
+    #[must_use]
+    pub fn set(level: usize) -> Self {
+        GroundSessionLevelGuard(GROUND_SESSION_OVERRIDE.with(|cell| cell.replace(Some(level))))
+    }
+}
+
+impl Drop for GroundSessionLevelGuard {
+    fn drop(&mut self) {
+        GROUND_SESSION_OVERRIDE.with(|cell| cell.set(self.0));
+    }
+}
+
+/// The ground-session level in force on this thread: a live
+/// [`GroundSessionLevelGuard`]'s choice, else the process level.
+#[must_use]
+fn ground_session_level() -> usize {
+    if let Some(level) = GROUND_SESSION_OVERRIDE.with(std::cell::Cell::get) {
+        return level;
+    }
+    process_ground_session_level()
+}
+
+/// Whether the retained session may abstract a Boolean-position term its `EUF`
+/// encoder has no arm for (ADR-2124).
+#[must_use]
+fn ground_session_abstracts() -> bool {
+    ground_session_level() >= 1
+}
+
 /// Polarity at the `index`-th argument of `op`, given the polarity at `op`
 /// itself — or `None` when the step leaves the monotone fragment and no
 /// position below it may be replaced.
@@ -2834,7 +2928,35 @@ fn prove_quantified_unsat_via_egraph_impl(
                 stats,
                 &mut quantifier_cache,
             )? {
-                CandidateFixpointStep::Refuted => return Ok(CheckResult::Unsat),
+                CandidateFixpointStep::Refuted => {
+                    // ADR-2124. THIS EXIT USED TO RETURN `Unsat` WITH NO
+                    // CERTIFICATE, and it is one of a MATCHED PAIR whose other
+                    // half was already right.
+                    //
+                    // The session has two refutation exits. The batch path
+                    // (`add_checked_batch` -> `Some(CdcltOutcome::Unsat)` ->
+                    // `replay_online_refutation`) collects the certificate and
+                    // carries a comment saying why: "the online CDCL(T) session
+                    // found the conflict, but `replay_online_refutation`
+                    // re-established it against `ground` -- so this is a ground
+                    // refutation by the same instances as every other exit, and
+                    // is certifiable." This path reaches `Refuted` through the
+                    // IDENTICAL `replay_online_refutation` over the IDENTICAL
+                    // `ground`, and collected nothing. The two cold-check exits
+                    // make it four sites, three of which were right.
+                    //
+                    // So the session's verdict is never the evidence; the replay
+                    // is, exactly as at the other three.
+                    //
+                    // Before this lane the gap was nearly invisible, because the
+                    // session declined every ground set with an arithmetic atom
+                    // and this exit was reachable only on `EUF`-only files. At
+                    // level 1 the session exists on UFLIA,
+                    // which is why the gap had to close with it.
+                    *certificate =
+                        collect_ground_derivations(arena, anchor, &ground, &ground_derivations);
+                    return Ok(CheckResult::Unsat);
+                }
                 CandidateFixpointStep::Added(terms) => admitted = terms,
                 CandidateFixpointStep::Disable => candidate_equalities_enabled = false,
                 CandidateFixpointStep::NoProgress => {}
@@ -4352,6 +4474,26 @@ struct OnlineQuantifierClauseSession {
     solver: WarmNativeCdclT<EufTheory>,
     atom_terms: Vec<TermId>,
     atom_variables: HashMap<TermId, usize>,
+    /// ADR-2124. Boolean-position terms the `EUF` encoder has no arm for — an
+    /// arithmetic comparison, a datatype tester, a `distinct` — mapped to the
+    /// **free propositional** variable that abstracts them.
+    ///
+    /// Separate from `atom_variables` on purpose, and the separation is
+    /// load-bearing twice. (1) [`Self::ensure_atom`] must not hand one of these
+    /// to `EufTheory::add_atom_at_root`, which would reject it and disable the
+    /// session — they get [`WarmNativeCdclT::add_variable`] instead, which
+    /// allocates no theory atom index. (2) [`Self::true_equality_terms`] reads
+    /// `atom_terms` to propose candidate equalities to the matcher; an
+    /// abstracted comparison is not an equality the e-graph may merge, and a map
+    /// that could not tell the two apart would feed it one.
+    ///
+    /// Keyed on the hash-consed [`TermId`], so a repeated or negated occurrence
+    /// of the same term reuses the same variable. Consistency is not what makes
+    /// this sound — a *fresh* variable per occurrence is also a weakening — but
+    /// it is what makes the abstraction useful rather than vacuous.
+    ///
+    /// Empty unless [`ground_session_abstracts`].
+    opaque_variables: HashMap<TermId, usize>,
     inserted_clauses: usize,
     inserted_literals: usize,
     solve_calls: usize,
@@ -4398,7 +4540,16 @@ impl OnlineQuantifierClauseSession {
             .enumerate()
             .map(|(variable, term)| (term, variable))
             .collect();
-        let mut encoder = EufEncoder::new(&atom_terms).with_bool_apply_atoms();
+        // ADR-2124. At level 0 the encoder REFUSES a Boolean-position term it has
+        // no arm for and this constructor returns `None` — which is why a UFLIA
+        // ground set could never reach the warm path, and why the loop took the
+        // cold branch of the interleaved check (its first seven rounds
+        // per-round, see `GROUND_SESSION_LEVEL`) for its whole run. At level 1
+        // the same term becomes a free propositional variable.
+        let abstracts = ground_session_abstracts();
+        let mut encoder = EufEncoder::new(&atom_terms)
+            .with_bool_apply_atoms()
+            .with_opaque_bool_atoms(abstracts);
         let mut clauses = Vec::new();
         for &assertion in ground {
             if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
@@ -4409,6 +4560,16 @@ impl OnlineQuantifierClauseSession {
                 var: top,
                 positive: true,
             }]);
+        }
+        // A session with NO theory atom at all is a pure Boolean skeleton: it can
+        // refute nothing the cold route's own skeleton would not, and because its
+        // existence SUPPRESSES the interleaved cold check (the loop's gate is
+        // `online_clauses.is_none()`), keeping it would trade a real check for a
+        // vacuous one. Decline instead, so the cold cadence stays live. Level 0
+        // cannot reach this: without abstraction an atom-free ground set has no
+        // encodable Boolean structure and the encoder has already refused.
+        if abstracts && atom_terms.is_empty() {
+            return None;
         }
         let literal_count = clauses.iter().map(Vec::len).sum::<usize>();
         if encoder.var_count > limits.variables
@@ -4449,6 +4610,22 @@ impl OnlineQuantifierClauseSession {
                     .collect()
             })
             .collect();
+        // ADR-2124. Carry the encoder's variable for every term it abstracted, so
+        // a later instance naming the SAME comparison reuses the SAME variable
+        // rather than abstracting it a second time. `term_var` also holds the
+        // theory atoms and the Tseitin gates; the atoms are filtered out (they
+        // belong to `atom_variables`) and a gate is keyed on a term that is not
+        // an online clause atom, so it is never looked up here.
+        let opaque_variables: HashMap<TermId, usize> = if abstracts {
+            encoder
+                .term_var
+                .iter()
+                .filter(|(term, _)| !atom_variables.contains_key(*term))
+                .map(|(&term, &variable)| (term, variable))
+                .collect()
+        } else {
+            HashMap::new()
+        };
         let theory = EufTheory::new(arena, &atom_terms).with_deadline(deadline);
         let solver = WarmNativeCdclT::new(
             encoder.var_count,
@@ -4461,6 +4638,7 @@ impl OnlineQuantifierClauseSession {
             solver,
             atom_terms,
             atom_variables,
+            opaque_variables,
             inserted_clauses: 0,
             inserted_literals: 0,
             solve_calls: 0,
@@ -4575,6 +4753,14 @@ impl OnlineQuantifierClauseSession {
         if let Some(&variable) = self.atom_variables.get(&atom_term) {
             return Some(variable);
         }
+        // ADR-2124. A term the theory cannot represent gets a FREE propositional
+        // variable and no atom index. This branch is before the theory branch
+        // because `EufTheory::add_atom_at_root` would reject the term and the
+        // rejection disables the whole session — the exact refusal this lane
+        // exists to remove.
+        if online_opaque_clause_atom(arena, atom_term) {
+            return self.ensure_opaque_variable(atom_term);
+        }
         if self.solver.variable_count() >= self.limits.variables {
             return None;
         }
@@ -4589,6 +4775,25 @@ impl OnlineQuantifierClauseSession {
         }
         self.atom_terms.push(atom_term);
         self.atom_variables.insert(atom_term, variable);
+        Some(variable)
+    }
+
+    /// The free propositional variable abstracting `atom_term`, allocating one
+    /// on first sight (ADR-2124).
+    ///
+    /// `atom_terms` is deliberately NOT extended: it is the theory's atom list
+    /// and is read by [`Self::true_equality_terms`] to propose merges to the
+    /// e-matcher. An abstracted comparison is not an equality and must never
+    /// reach that proposal.
+    fn ensure_opaque_variable(&mut self, atom_term: TermId) -> Option<usize> {
+        if let Some(&variable) = self.opaque_variables.get(&atom_term) {
+            return Some(variable);
+        }
+        if self.solver.variable_count() >= self.limits.variables {
+            return None;
+        }
+        let variable = self.solver.add_variable();
+        self.opaque_variables.insert(atom_term, variable);
         Some(variable)
     }
 }
@@ -4614,10 +4819,15 @@ fn equality_clause_atoms(arena: &TermArena, term: TermId) -> OnlineClauseShape {
             TermNode::App {
                 op: Op::BoolNot,
                 args,
-            } if args.len() == 1 && online_clause_atom(arena, args[0]) => {
+            } if args.len() == 1
+                && (online_clause_atom(arena, args[0])
+                    || online_opaque_clause_atom(arena, args[0])) =>
+            {
                 atoms.push((args[0], false));
             }
-            _ if online_clause_atom(arena, literal) => {
+            _ if online_clause_atom(arena, literal)
+                || online_opaque_clause_atom(arena, literal) =>
+            {
                 atoms.push((literal, true));
             }
             _ => return OnlineClauseShape::Unsupported,
@@ -4636,6 +4846,54 @@ fn online_clause_atom(arena: &TermArena, term: TermId) -> bool {
         TermNode::App {
             op: Op::Apply(_), ..
         } => arena.sort_of(term) == Sort::Bool,
+        _ => false,
+    }
+}
+
+/// Whether `term` is a Boolean-position shape the session may ABSTRACT to a free
+/// propositional variable at ground-session level 1 (ADR-2124).
+///
+/// Exactly the complement of what the session can do better: an
+/// [`online_clause_atom`] belongs to the `EUF` theory and must not be abstracted
+/// (that would throw away the congruence reasoning the session exists for), and
+/// a Boolean **connective** has a Tseitin arm in [`EufEncoder`] and must not be
+/// abstracted either (that would throw away the clause structure). What is left
+/// is the set this predicate names: an arithmetic comparison, a `distinct`, a
+/// datatype tester, an `is_int` — Boolean-sorted applications the encoder has no
+/// arm for and the theory cannot represent.
+///
+/// # Why the connective exclusion is not merely tidiness
+///
+/// `collect_clause_literals` splits a generated term on `or` and `not` only, so
+/// an `and`, an `=>`, an `ite` or an `xor` still arrives here as a literal.
+/// Admitting one would map a *compound* to a free variable while its own
+/// subterms stay separately constrained, which is sound (weaker is always sound)
+/// but silently drops the strongest thing the session knew about that clause.
+/// Refusing keeps the historical `Unsupported` → session-disabled → cold-route
+/// behaviour for those shapes, which is the conservative arm.
+///
+/// **The list is exactly `EufEncoder::encode_app`'s connective arms**, and it
+/// has to be read off that function rather than recalled: `BoolXor` and `Ite`
+/// were missing from the first version of this predicate, so a generated `xor`
+/// or Boolean `ite` would have been abstracted even though the encoder has a
+/// Tseitin arm for it. That is sound — every abstraction is — which is exactly
+/// why nothing would have failed and the loss would have been silent.
+fn online_opaque_clause_atom(arena: &TermArena, term: TermId) -> bool {
+    if !ground_session_abstracts() || arena.sort_of(term) != Sort::Bool {
+        return false;
+    }
+    match arena.node(term) {
+        TermNode::App { op, .. } => !matches!(
+            op,
+            Op::Eq
+                | Op::Apply(_)
+                | Op::BoolNot
+                | Op::BoolAnd
+                | Op::BoolOr
+                | Op::BoolImplies
+                | Op::BoolXor
+                | Op::Ite
+        ),
         _ => false,
     }
 }
@@ -13007,6 +13265,215 @@ mod tests {
             )
             .unwrap(),
             "an online outcome cannot bypass a non-refuting final QF query"
+        );
+    }
+
+    /// A ground set holding ONE `EUF` equality and ONE integer comparison — the
+    /// UFLIA shape ADR-2113's 53 cores are made of, in miniature.
+    fn ground_session_arithmetic_fixture(arena: &mut TermArena) -> (Vec<TermId>, TermId, TermId) {
+        let sort = Sort::Int;
+        let f = arena.declare_fun("qgs_f", &[sort], sort).unwrap();
+        let a = arena.declare("qgs_a", sort).unwrap();
+        let av = arena.var(a);
+        let fa = arena.apply(f, &[av]).unwrap();
+        let one = arena.int_const(1);
+        let fa_eq_a = arena.eq(fa, av).unwrap();
+        let a_lt_one = arena.int_lt(av, one).unwrap();
+        (vec![fa_eq_a, a_lt_one], fa_eq_a, a_lt_one)
+    }
+
+    /// ADR-2124, the whole point of the lane in one assertion.
+    ///
+    /// The shipped level declines a ground set the moment an integer comparison
+    /// appears in it, which is why `online_clauses` stays `None` on every UFLIA
+    /// file and the loop takes the COLD branch of the interleaved check for its
+    /// whole run — re-solving the accumulated set on each of its first seven
+    /// rounds and then on 7, 15, 31, … Level 1 abstracts the comparison, the
+    /// session exists, and the first seven per-round re-solves go away.
+    ///
+    /// Both halves are asserted here on purpose: a test that only showed level 1
+    /// working would pass just as well if level 0 had silently started working
+    /// too, and then the A/B's OFF arm would not be the shipped behaviour.
+    #[test]
+    fn ground_session_level_1_hosts_an_arithmetic_ground_set_level_0_refuses() {
+        let mut arena = TermArena::new();
+        let (ground, _, _) = ground_session_arithmetic_fixture(&mut arena);
+
+        assert_eq!(ground_session_level(), 0, "the shipped level must be 0");
+        assert!(
+            OnlineQuantifierClauseSession::new(&arena, &ground, None).is_none(),
+            "level 0 must keep refusing an arithmetic ground set, byte for byte"
+        );
+
+        let _guard = GroundSessionLevelGuard::set(1);
+        let session = OnlineQuantifierClauseSession::new(&arena, &ground, None);
+        assert!(
+            session.is_some(),
+            "level 1 must host an arithmetic ground set -- otherwise the loop \
+             re-solves the accumulated set from scratch on each of its first \
+             seven rounds"
+        );
+        let session = session.unwrap();
+        assert_eq!(
+            session.opaque_variables.len(),
+            1,
+            "exactly the one integer comparison should have been abstracted"
+        );
+    }
+
+    /// The abstraction is a WEAKENING and must never manufacture a refutation.
+    ///
+    /// The ground set below is satisfiable, and it stays satisfiable as checked
+    /// instances arrive across three separate batches, each after the previous
+    /// solve has left a trail behind it.
+    ///
+    /// **THE STALE-CLAUSE HAZARD HAS NO MECHANISM HERE, AND THAT IS A MEASURED
+    /// RESULT RATHER THAN AN ASSUMPTION.** Removing `add_checked_batch`'s
+    /// `unwind_to_root()` — the call that looks like the guard against
+    /// inserting a permanent clause under a live trail — kills nothing in this
+    /// module (ADR-2124, mutation `qinst-ground-session`, SURVIVED).
+    /// `NativeIncrementalCdcl::add_clause`
+    /// (`crates/axeyum-cnf/src/proof_sat/incremental.rs:486`) calls
+    /// `between_solves()` itself, unconditionally, so a clause is always
+    /// registered into an unassigned solver whether or not the caller asked.
+    /// What the session's own call buys is LIVENESS: it closes the previous
+    /// solve's theory epoch so `EufTheory::add_atom_at_root`, reached from
+    /// `ensure_atom` before the batch's first `add_clause`, accepts a
+    /// registration instead of refusing it. The mutation that measures THAT is
+    /// `qinst-online-session-epoch`, against a fixture whose batch registers a
+    /// real EUF atom — which this one cannot, because its instances abstract to
+    /// opaque variables and those need no epoch.
+    ///
+    /// The independent `check_auto` at the end is the control: it says the set
+    /// really is satisfiable, so an `Unsat` from the session would be a
+    /// manufactured one and not a correct verdict on a set the fixture got
+    /// wrong.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn ground_session_level_1_never_manufactures_an_unsat_on_a_satisfiable_set() {
+        let _guard = GroundSessionLevelGuard::set(1);
+        let mut arena = TermArena::new();
+        let sort = Sort::Int;
+        let f = arena.declare_fun("qgs_sat_f", &[sort], sort).unwrap();
+        let a = arena.declare("qgs_sat_a", sort).unwrap();
+        let b = arena.declare("qgs_sat_b", sort).unwrap();
+        let c = arena.declare("qgs_sat_c", sort).unwrap();
+        let (av, bv, cv) = (arena.var(a), arena.var(b), arena.var(c));
+        let ten = arena.int_const(10);
+        let fa = arena.apply(f, &[av]).unwrap();
+        let fb = arena.apply(f, &[bv]).unwrap();
+        let fc = arena.apply(f, &[cv]).unwrap();
+        // The seed: one EUF equality and one comparison, both satisfiable.
+        let fa_eq_fb = arena.eq(fa, fb).unwrap();
+        let a_lt_ten = arena.int_lt(av, ten).unwrap();
+        let ground = vec![fa_eq_fb, a_lt_ten];
+        let mut session = OnlineQuantifierClauseSession::new(&arena, &ground, None)
+            .expect("level 1 hosts the arithmetic seed");
+
+        // Three batches of checked instances of ONE asserted universal, each
+        // arriving after the previous solve has put decisions on the trail.
+        let x = arena.declare("qgs_sat_x", sort).unwrap();
+        let xv = arena.var(x);
+        let fx = arena.apply(f, &[xv]).unwrap();
+        let body = arena.int_lt(fx, ten).unwrap();
+        let universal = arena.forall(x, body).unwrap();
+        let assertions = vec![fa_eq_fb, a_lt_ten, universal];
+
+        for (round, &argument) in [av, bv, cv].iter().enumerate() {
+            let fx_at = arena.apply(f, &[argument]).unwrap();
+            let instance = arena.int_lt(fx_at, ten).unwrap();
+            let certificate = QuantifierInstanceCertificate {
+                assertion: universal,
+                bindings: vec![argument],
+                instance,
+            };
+            let derivation = QuantifierGroundDerivation::Instance(certificate);
+            assert!(
+                check_quantifier_ground_derivation(&mut arena, &assertions, &derivation),
+                "round {round}: the fixture's own instance must be a checked consequence"
+            );
+            let derivations = HashMap::from([(instance, derivation)]);
+            let outcome =
+                session.add_checked_batch(&mut arena, &assertions, &[instance], &derivations);
+            assert_eq!(
+                outcome,
+                Some(CdcltOutcome::Sat),
+                "round {round}: the abstraction may only WEAKEN, so a satisfiable \
+                 accumulated set must never come back refuted"
+            );
+        }
+        assert_eq!(session.solve_calls, 3);
+
+        // Independent control: the set really is satisfiable, so the `Sat`
+        // above is the right answer and not a coincidence of a vacuous session.
+        let mut full = ground.clone();
+        full.push(arena.int_lt(fc, ten).unwrap());
+        assert_ne!(
+            check_auto(&mut arena, &full, &SolverConfig::default()).unwrap(),
+            CheckResult::Unsat,
+            "the fixture's ground set must be satisfiable for the assertion above \
+             to mean anything"
+        );
+    }
+
+    /// One abstracted term, one variable — across the construction boundary.
+    ///
+    /// The comparison in the SEED is abstracted by `EufEncoder`; the same
+    /// comparison arriving later inside an instance is abstracted by
+    /// `ensure_opaque_variable`. Those are two different code paths, and if they
+    /// disagreed the session would hold two unrelated variables for one term:
+    /// still sound (two free variables are weaker than one), but it would lose
+    /// every refutation that needs the two occurrences to agree.
+    #[test]
+    fn ground_session_level_1_reuses_one_variable_per_abstracted_term() {
+        let _guard = GroundSessionLevelGuard::set(1);
+        let mut arena = TermArena::new();
+        let (ground, _, a_lt_one) = ground_session_arithmetic_fixture(&mut arena);
+        let session = OnlineQuantifierClauseSession::new(&arena, &ground, None).unwrap();
+        let seeded = *session
+            .opaque_variables
+            .get(&a_lt_one)
+            .expect("the seed's comparison is abstracted at construction");
+
+        let mut session = session;
+        assert_eq!(
+            session.ensure_opaque_variable(a_lt_one),
+            Some(seeded),
+            "the later path must reuse the variable the encoder already allocated"
+        );
+        assert_eq!(
+            session.opaque_variables.len(),
+            1,
+            "reuse must not allocate a second variable for one term"
+        );
+        // And it is NOT a theory atom: handing it to `EufTheory` is the failure
+        // this routing exists to avoid.
+        assert!(
+            !session.atom_variables.contains_key(&a_lt_one),
+            "an abstracted comparison must never enter the theory's atom map"
+        );
+        assert!(
+            !session.atom_terms.contains(&a_lt_one),
+            "an abstracted comparison must never be proposed as a candidate equality"
+        );
+    }
+
+    /// A ground set with NO `EUF` atom is declined even at level 1.
+    ///
+    /// Such a session is a pure Boolean skeleton: it can refute nothing the cold
+    /// route's own skeleton would not, and because its mere EXISTENCE suppresses
+    /// the interleaved cold check (`online_clauses.is_none()` is the loop's
+    /// gate), keeping it would trade a real check for a vacuous one.
+    #[test]
+    fn ground_session_level_1_declines_a_ground_set_with_no_theory_atom() {
+        let _guard = GroundSessionLevelGuard::set(1);
+        let mut arena = TermArena::new();
+        let a = arena.int_var("qgs_bare_a").unwrap();
+        let one = arena.int_const(1);
+        let comparison = arena.int_lt(a, one).unwrap();
+        assert!(
+            OnlineQuantifierClauseSession::new(&arena, &[comparison], None).is_none(),
+            "a purely propositional session must not displace the cold check"
         );
     }
 

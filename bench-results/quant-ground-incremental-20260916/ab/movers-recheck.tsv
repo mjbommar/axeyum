@@ -1,0 +1,9 @@
+file	A1	A2	A3	B1	B2	B3	verdict
+UFLIA/simplify/javafe.ast.TypeDeclElemPragma.373.smt2	unknown/0	unknown/0	unknown/0	unsat/0	unsat/0	unsat/0	STABLE-GAIN
+UFLIA/sledgehammer/FFT/smtlib.1015458.smt2	unknown/0	unknown/0	unknown/0	unknown/0	unknown/0	unknown/0	UNSTABLE
+AUFDTLIRA/20200306-Kanig/spark2014bench/N902-010__a_stack_no_spark_contracts_with_body.adb_25_18_index_check___00.smt2	unsat/0	unsat/0	unsat/0	unknown/0	unknown/0	unknown/0	STABLE-LOSS
+UFLIA/simplify/javafe.SrcTool.15.smt2	unsat/0	unsat/0	unsat/0	unknown/0	unknown/0	unknown/0	STABLE-LOSS
+UFDTLIRA/20200306-Kanig/spark2014bench/NB19-026__flow_formal_vectors__indefinite_bounded.adb_30_22_assert___00.smt2	unsat/0	unsat/0	unsat/0	unknown/0	unsat/0	unsat/0	UNSTABLE
+UFLIA/simplify/javafe.filespace.ZipTree.525.smt2	unsat/0	unsat/0	unsat/0	unknown/0	unknown/0	unknown/0	STABLE-LOSS
+AUFLIRA/nasa/fol_simplify_array_only/quaternion_ds1_init_0082.fof.smt2	unsat/0	unsat/0	unsat/0	unknown/0	unknown/0	unknown/0	STABLE-LOSS
+UFDTLIRA/20200306-Kanig/spark2014bench/O217-033__liskov__dispatch_in_contract.adb_16_20_overflow_check___00.smt2	unsat/0	unsat/0	unsat/0	unknown/0	unknown/0	unknown/0	STABLE-LOSS

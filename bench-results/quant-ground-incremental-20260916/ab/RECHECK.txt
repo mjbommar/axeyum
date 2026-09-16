@@ -1,0 +1,38 @@
+== MOVER RE-CHECK, 3 passes per arm, arms alternating WITHIN the row ==
+   one pinned physical core (s6 1,9), 24 s / 8 GiB, nothing else on it
+
+movers re-checked : 8 of 8 raw movers
+  STABLE-GAIN : 1
+  STABLE-LOSS : 5
+  UNSTABLE    : 2
+
+A row is classified only if all three passes of BOTH arms agree; anything
+else is UNSTABLE and is reported as ambient, not as an effect.
+
+STABLE-GAIN  A=unknown/0,unknown/0,unknown/0  B=unsat/0,unsat/0,unsat/0
+             UFLIA/simplify/javafe.ast.TypeDeclElemPragma.373.smt2
+STABLE-LOSS  A=unsat/0,unsat/0,unsat/0  B=unknown/0,unknown/0,unknown/0
+             AUFDTLIRA/20200306-Kanig/spark2014bench/N902-010__a_stack_no_spark_contracts_with_body.adb_25_18_index_check___00.smt2
+STABLE-LOSS  A=unsat/0,unsat/0,unsat/0  B=unknown/0,unknown/0,unknown/0
+             UFLIA/simplify/javafe.SrcTool.15.smt2
+STABLE-LOSS  A=unsat/0,unsat/0,unsat/0  B=unknown/0,unknown/0,unknown/0
+             UFLIA/simplify/javafe.filespace.ZipTree.525.smt2
+STABLE-LOSS  A=unsat/0,unsat/0,unsat/0  B=unknown/0,unknown/0,unknown/0
+             AUFLIRA/nasa/fol_simplify_array_only/quaternion_ds1_init_0082.fof.smt2
+STABLE-LOSS  A=unsat/0,unsat/0,unsat/0  B=unknown/0,unknown/0,unknown/0
+             UFDTLIRA/20200306-Kanig/spark2014bench/O217-033__liskov__dispatch_in_contract.adb_16_20_overflow_check___00.smt2
+UNSTABLE     A=unknown/0,unknown/0,unknown/0  B=unknown/0,unknown/0,unknown/0
+             UFLIA/sledgehammer/FFT/smtlib.1015458.smt2
+UNSTABLE     A=unsat/0,unsat/0,unsat/0  B=unknown/0,unsat/0,unsat/0
+             UFDTLIRA/20200306-Kanig/spark2014bench/NB19-026__flow_formal_vectors__indefinite_bounded.adb_30_22_assert___00.smt2
+
+SHIP CRITERION: 0 stable losses and 0 verdict flips.
+  verdict flips (sat <-> unsat) over the 1,200 A/B rows : 0
+  STABLE LOSSES                                         : 5
+  => NOT MET. The lever ships OFF.
+
+WHY THE RAW COLUMN WOULD HAVE MISLED IN BOTH DIRECTIONS. The A/B's two raw
+GAINS re-check as one stable and one ambient; five of its six raw LOSSES are
+stable and one is ambient. So the raw column overstated the gain by half and
+understated nothing about the losses -- but it could not have told you which,
+and ADR-1966 lost 11 of its 18 movers to exactly this check.

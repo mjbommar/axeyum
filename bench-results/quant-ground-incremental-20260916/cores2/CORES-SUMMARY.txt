@@ -1,0 +1,53 @@
+== 53 UFLIA CORES, GROUND-SESSION LEVER OFF vs ON (ADR-2124) ==
+
+cores                          : 53
+OFF decided                    : 15
+ON  decided                    : 16
+verdict moved                  : 1
+  of which GAIN (unknown->dec) : 1
+  of which LOSS (dec->unknown) : 0
+  of which FLIP (sat<->unsat)  : 0   <-- any nonzero here is a SOUNDNESS defect
+
+-- the interleaved cold ground check, from the loop's own qtrace line --
+   OFF  ran on 45 of 53   calls  530   total    453.1s   max ground 7895
+   ON   ran on 45 of 53   calls  467   total    403.1s   max ground 7895
+
+   seconds of ground re-solve REMOVED by the lever : 50.0s
+   as a fraction of what OFF spent there           : 11.0%
+   as a fraction of the whole 24s x 53 budget     : 3.9%
+
+-- the ON arm's TERMINAL typed reason, bucketed --
+     22  fd:bounded-completeness-unsat=budget
+     12  q:mbqi-quick=decided
+      8  fd:bounded-completeness-unsat=incomplete
+      3  q:egraph=incomplete
+      3  q:mbqi-quick=incomplete
+      2  q:egraph=decided
+      1  q:bool-skeleton=decided
+      1  q:mbqi-quick=budget
+      1  q:mbqi=decided
+
+-- its details, VERBATIM and unbucketed (a bucket's LABEL hides four causes) --
+     10  e-matching: instantiation time budget exhausted mid-round (the interleaved ground check did not decide the set inside 
+     10  quantified solve time budget exhausted after MBQI and the finite-model finder
+      2  e-matching: instantiation time budget exhausted at a round head (no final ground check ran on the accumulated set)
+      1  combined theories: eager Ackermann elimination would emit 398989 congruence constraints, exceeding the deterministic a
+      1  e-matching instantiation reached fixpoint without refuting after 14 rounds (no further instance to admit; more rounds 
+      1  e-matching instantiation reached fixpoint without refuting after 18 rounds (no further instance to admit; more rounds 
+      1  e-matching instantiation reached fixpoint without refuting after 265 rounds (no further instance to admit; more rounds
+      1  e-matching instantiation reached fixpoint without refuting after 3 rounds (no further instance to admit; more rounds c
+      1  e-matching instantiation reached fixpoint without refuting after 6 rounds (no further instance to admit; more rounds c
+      1  e-matching instantiation reached fixpoint without refuting after 74 rounds (no further instance to admit; more rounds 
+      1  e-matching instantiation reached fixpoint without refuting after 75 rounds (no further instance to admit; more rounds 
+      1  e-matching instantiation reached fixpoint without refuting after 80 rounds (no further instance to admit; more rounds 
+      1  e-matching instantiation stopped after 2 rounds: the remaining budget could not fit another round with growth headroom
+      1  e-matching instantiation stopped after 3 rounds: the remaining budget could not fit another round with growth headroom
+      1  e-matching instantiation stopped after 65 rounds: the remaining budget could not fit another round with growth headroo
+      1  mbqi declined an unsupported fragment: term #161 has sort (Uninterpreted 0) that the pure-Rust BV backend cannot bit-b
+      1  mbqi declined an unsupported fragment: term #379 has sort (Uninterpreted 0) that the pure-Rust BV backend cannot bit-b
+      1  mbqi declined an unsupported fragment: term #74 has sort (Uninterpreted 4) that the pure-Rust BV backend cannot bit-bl
+
+-- every core whose verdict MOVED --
+   unknown -> unsat    (off fd:bounded-completeness-unsat=budget / on q:mbqi-quick=decided)  UFLIA_simplify_javafe.ast.TypeDeclElemPragma.373.smt2.core.s
+
+rows written to bench-results/quant-ground-incremental-20260916/cores2/cores.tsv

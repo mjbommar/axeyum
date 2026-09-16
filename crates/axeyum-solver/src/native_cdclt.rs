@@ -729,6 +729,42 @@ impl<T: TheorySolver> WarmNativeCdclT<T> {
         (variable, atom)
     }
 
+    /// Appends one SAT variable that is **not** a theory atom, returning it
+    /// (ADR-2124).
+    ///
+    /// The sibling of [`Self::add_theory_variable`] for a literal the session
+    /// carries propositionally and hands no theory: an arithmetic comparison, a
+    /// datatype tester, an array `select` equality — anything the wrapped
+    /// `TheorySolver` has no arm for. The variable is appended
+    /// **non-branchable**, exactly as `add_theory_variable` appends its own; the
+    /// `add_permanent_clause` that names it is what makes it decidable.
+    ///
+    /// # Why this is not `add_theory_variable` with a registration skipped
+    ///
+    /// `NativeTheoryAdapter::register_atom_variable` **asserts** that a variable
+    /// is claimed at most once and pushes it onto `var_for_atom`, so an atom
+    /// index is allocated whether or not the theory can represent the term. A
+    /// caller that claimed one and then failed to give the theory a matching
+    /// atom would leave `var_for_atom` one longer than the theory's own atom
+    /// list and every later index off by one — a silent misattribution of
+    /// asserted literals, which is a wrong-answer defect and not a missing
+    /// optimisation. This entry point never touches the map, so the theory's
+    /// atom numbering is untouched by construction.
+    ///
+    /// # Soundness
+    ///
+    /// A variable no theory constrains is a free propositional variable, so
+    /// every clause naming it is **weaker** than the term it abstracts: every
+    /// model of the original extends to one of the skeleton by giving the
+    /// variable the atom's truth value. `Unsat` therefore transfers back to the
+    /// original and `Sat` says nothing about it — the caller must replay.
+    pub(crate) fn add_variable(&mut self) -> usize {
+        let variable = self.solver.variable_count();
+        self.solver.reserve(variable + 1);
+        self.occurring.push(false);
+        variable
+    }
+
     /// The SAT variable aligned with `atom`, when registered.
     pub(crate) fn theory_variable(&self, atom: usize) -> Option<usize> {
         self.solver.theory().theory_variable(atom)

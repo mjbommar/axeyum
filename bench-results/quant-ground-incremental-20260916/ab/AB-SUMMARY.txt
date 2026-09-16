@@ -1,0 +1,26 @@
+== INTERLEAVED A/B, one binary at two env values ==
+A = AXEYUM_QINST_GROUND_SESSION unset (shipped)   B = 1
+
+division   n     A    B    delta  A_rc!=0  B_rc!=0
+AUFDTLIRA  200   119  118  -1     0        0      
+AUFLIRA    200   178  177  -1     0        0      
+UF         200   90   90   +0     3        3      
+UFDTLIRA   200   144  142  -2     0        0      
+UFLIA      200   85   85   +0     0        0      
+UFNIA      200   54   54   +0     0        0      
+TOTAL      1200  670  666  -4     3        3      
+
+VERDICT DISAGREEMENTS (sat on one arm, unsat on the other): 0 of 1200
+
+RAW movers, NOT re-checked -- a single 24 s pairing carries a measured
+1-1.5 % ambient flip rate and ADR-1966 lost 11 of 18 movers to a re-check.
+  gains  2
+    GAIN UFLIA/simplify/javafe.ast.TypeDeclElemPragma.373.smt2
+    GAIN UFLIA/sledgehammer/FFT/smtlib.1015458.smt2
+  losses 6
+    LOSS AUFDTLIRA/20200306-Kanig/spark2014bench/N902-010__a_stack_no_spark_contracts_with_body.adb_25_18_index_check___00.smt2
+    LOSS UFLIA/simplify/javafe.SrcTool.15.smt2
+    LOSS UFDTLIRA/20200306-Kanig/spark2014bench/NB19-026__flow_formal_vectors__indefinite_bounded.adb_30_22_assert___00.smt2
+    LOSS UFLIA/simplify/javafe.filespace.ZipTree.525.smt2
+    LOSS AUFLIRA/nasa/fol_simplify_array_only/quaternion_ds1_init_0082.fof.smt2
+    LOSS UFDTLIRA/20200306-Kanig/spark2014bench/O217-033__liskov__dispatch_in_contract.adb_16_20_overflow_check___00.smt2
