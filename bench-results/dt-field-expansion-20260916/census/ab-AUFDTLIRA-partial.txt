@@ -1,7 +1,7 @@
-rows=50  (base-first 24 / arm-first 26)
-base : {'unsat': 33, 'unknown': 17}
-arm  : {'unsat': 33, 'unknown': 17}
-GAINS  (unknown -> decided): 0 of 50
-LOSSES (decided -> unknown): 0 of 50
+rows=82  (base-first 40 / arm-first 42)
+base : {'unsat': 52, 'unknown': 30}
+arm  : {'unsat': 53, 'unknown': 29}
+GAINS  (unknown -> decided): 1 of 82
+   +unsat  O512-022__stacks__stacks.ads_84_58_index_check___00.smt2
+LOSSES (decided -> unknown): 0 of 82
 sat<->unsat FLIPS: 0
-NOTE: the two arms agree on every row. That is consistent with the lever changing nothing on this population AND with the arm never having been enabled -- the two are not distinguishable from this file. Check the runner's env and the suite's off_arm/on_arm pair before reading it as a null result.

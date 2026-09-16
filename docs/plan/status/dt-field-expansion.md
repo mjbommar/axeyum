@@ -109,11 +109,26 @@ unrelated `(Uninterpreted 6)` sort the BV backend cannot bit-blast. **The
 exactness refusal is gone under the arm and the verdict is `unknown` under
 both** — the lever MOVES THE BLOCKER without moving the verdict here.
 
-**A/B, PARTIAL: 50 of 200 `AUFDTLIRA` files, 0 disagreements, 0 flips, 0
-losses** (`census/ab-AUFDTLIRA-partial.txt`; base `unsat` 33 / `unknown` 17,
-arm identical; base-first 24 / arm-first 26). No soundness incident.
-`UFDTLIRA` and `QF_DT` did not run, and neither did the movers recheck or the
-held-out draw.
+**A/B, PARTIAL: 82 of 200 `AUFDTLIRA` files — 1 GAIN, 0 losses, 0 flips**
+(`census/ab-AUFDTLIRA-partial.txt`; base `unsat` 52 / `unknown` 30, arm 53/29;
+base-first 40 / arm-first 42). No soundness incident. The run then DIED without
+writing its `DONE` marker and was relaunched.
+
+The mover is `O512-022__stacks__stacks.ads_84_58_index_check___00.smt2`,
+`unknown` → `unsat`, and it is verified
+(`census/mover-O512-022-stacks.txt`): **stable 3 of 3 per arm**, and its
+`unsat` agrees with the file's own `(set-info :status unsat)` AND with
+`z3 -T:60`.
+
+**It does not come from the bucket this lane predicted.** Its census row is
+`quant:time-budget` (`total_ms=24577`), not one of the three datatype buckets;
+under the base it gives up on the watchdog, under the arm it is
+`decided_by=q:mbqi-quick` in **337 ms**. The lever made the ground sub-solves
+inside the quantifier loop stronger rather than removing a refusal. **So the
+`CLEAN` count above must not be quoted as a forecast of gains** — it was built
+as one and the single observed gain came from outside it.
+
+`UFDTLIRA` and `QF_DT` did not run, and neither did the held-out draw.
 
 **Ship decision: NOT TAKEN.** The lever stays OFF, which is what it ships as.
 `ab-run.sh`, `ab-summarize.py` and the three 200-file lists are committed, so

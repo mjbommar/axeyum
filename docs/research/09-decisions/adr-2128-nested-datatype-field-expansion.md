@@ -373,22 +373,44 @@ reader:
 
 **The interleaved A/B did not complete in this lane, so no ship decision is
 taken and the lever stays OFF -- which is what it ships as.** What ran is the
-first **50 of 200** `AUFDTLIRA` files (`census/ab-AUFDTLIRA-partial*`), one
-binary, two env values, the two arms back to back per file on one core, order
+first **82 of 200** `AUFDTLIRA` files (`census/ab-AUFDTLIRA-partial*`; the run
+then DIED without writing its `DONE` marker and was relaunched). One binary,
+two env values, the two arms back to back per file on one core, order
 alternated per file, 24 s, this lane's pinned pairs on s7:
 
-    rows=50  (base-first 24 / arm-first 26)
-    base : unsat 33  unknown 17
-    arm  : unsat 33  unknown 17
-    GAINS 0   LOSSES 0   sat<->unsat FLIPS 0
+    rows=82  (base-first 40 / arm-first 42)
+    base : unsat 52  unknown 30
+    arm  : unsat 53  unknown 29
+    GAINS 1   LOSSES 0   sat<->unsat FLIPS 0
+      +unsat  O512-022__stacks__stacks.ads_84_58_index_check___00.smt2
 
-**0 disagreements of 50, and no soundness incident** -- consistent with §5a's
-probe, which says the lever moves the blocker and not the verdict here. It is
-a PARTIAL and it is labelled as one: 50 of 200 in one of three divisions is not
-a division result, `UFDTLIRA` and `QF_DT` did not run at all, and the movers
-recheck and the held-out draw did not happen. The runner (`ab-run.sh`) and the
-three 200-file lists are committed, so the measurement is a re-run rather than
-a re-derivation.
+**1 gain, 0 losses, 0 flips of 82, and no soundness incident.** The mover is
+rechecked and verified (`census/mover-O512-022-stacks.txt`): stable 3 of 3 per
+arm on one core, and its `unsat` agrees with the file's own
+`(set-info :status unsat)` AND with `z3 -T:60` -- two sources that do not share
+an origin.
+
+**AND THE MOVER DOES NOT COME FROM THE BUCKET THIS ADR PREDICTED.** It is not
+in any of §5's three datatype buckets: its census row is `quant:time-budget`
+("quantified solve time budget exhausted after MBQI and the finite-model
+finder", `total_ms=24577`), and under the base arm it gives up on the watchdog.
+Under the arm it is `decided_by=q:mbqi-quick` in **337 ms**. So what the lever
+did here was make the GROUND SUB-SOLVES INSIDE THE QUANTIFIER LOOP stronger --
+`decide_instantiation`'s `check_auto` on a quantifier-free query, the path §1
+of [ADR-2114] traced -- not remove a refusal and let the verdict follow.
+
+That is recorded as observed rather than fitted to the story that preceded it.
+**§1b's `CLEAN` count was built as a predictor of where gains would come from
+and the one observed gain came from outside it**, so `CLEAN` must not be quoted
+as a forecast of gains until something has measured that it is one. One mover
+is one mover.
+
+It is a PARTIAL and it is labelled as one: 82 of 200 in one of three divisions
+is not a division result, `UFDTLIRA` and `QF_DT` did not run at all, and the
+held-out draw did not happen. The runner (`ab-run.sh`), the summariser
+(`ab-summarize.py`, whose exit status depends on the finding) and the three
+200-file lists are committed, so the measurement is a re-run rather than a
+re-derivation.
 
 [ADR-2020]: adr-2020-giveup-census-buckets.md
 
