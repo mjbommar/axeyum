@@ -1,0 +1,8 @@
+host=server6 idx=2 pin=1,9 start=2026-09-17T11:32:22Z
+load=0.00 0.00 0.00 smtcomp_before=0
+clock_selfcheck_200ms_read=205ms
+binA=f75fe25088ad40fdda11cf28e38b6075dda49819f0a609d1ec9872583c628d7f
+binB=101ef322b4abdd7deee6badd6712dc3fb5913b0a0840775cebffcc3b3d5749ae
+AB_TWO_BINS_COMPLETE shard2 rows=800
+end=2026-09-17T14:15:39Z load=1.04 1.43 1.75
+BOARD_AB_DRIVER_FINISHED idx=2
