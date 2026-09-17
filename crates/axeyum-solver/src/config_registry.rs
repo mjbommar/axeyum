@@ -10443,7 +10443,7 @@ pub fn undated_count() -> usize {
 ///
 /// Raise it when dates are added. Lowering it is the edit that needs an
 /// argument, and the test says so in its failure message.
-pub const DATED_FLOOR: usize = 77;
+pub const DATED_FLOOR: usize = 142;
 
 /// The one-line configuration summary a `--trace` run prints.
 ///
