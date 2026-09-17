@@ -659,7 +659,7 @@ fn every_engine_counter_reaches_the_trace_line() {
     let counters = distinct_engine_counters();
     let stats =
         super::theory_layer_stats(&axeyum_cnf::NativeLayerStats::default(), Some(&counters));
-    for (name, got, want) in forwarding_table(&stats, counters) {
+    for (name, got, want) in forwarding_table(&stats, &counters) {
         assert_eq!(
             got,
             Some(want),
@@ -714,6 +714,9 @@ fn distinct_engine_counters() -> crate::euf_egraph::TheoryEngineCounters {
         implied_bound_propagations: 30,
         decisions_on_tracked_atoms: 31,
         decisions_on_implied_atoms: 32,
+        diseq_splits: 33,
+        diseq_split_conflicts: 34,
+        fill_cap_declines: 35,
     }
 }
 
@@ -730,9 +733,9 @@ fn distinct_engine_counters() -> crate::euf_egraph::TheoryEngineCounters {
 #[allow(clippy::too_many_lines)]
 fn forwarding_table(
     stats: &crate::layers::TheoryLayerStats,
-    counters: crate::euf_egraph::TheoryEngineCounters,
-) -> [(&'static str, Option<u64>, u64); 32] {
-    let crate::euf_egraph::TheoryEngineCounters {
+    counters: &crate::euf_egraph::TheoryEngineCounters,
+) -> [(&'static str, Option<u64>, u64); 35] {
+    let &crate::euf_egraph::TheoryEngineCounters {
         simplex_pivots,
         simplex_checks,
         simplex_cold_restarts,
@@ -765,6 +768,9 @@ fn forwarding_table(
         implied_bound_propagations,
         decisions_on_tracked_atoms,
         decisions_on_implied_atoms,
+        diseq_splits,
+        diseq_split_conflicts,
+        fill_cap_declines,
     } = counters;
 
     [
@@ -887,6 +893,17 @@ fn forwarding_table(
             "decisions_on_implied_atoms",
             stats.decisions_on_implied_atoms,
             decisions_on_implied_atoms,
+        ),
+        ("diseq_splits", stats.diseq_splits, diseq_splits),
+        (
+            "diseq_split_conflicts",
+            stats.diseq_split_conflicts,
+            diseq_split_conflicts,
+        ),
+        (
+            "fill_cap_declines",
+            stats.fill_cap_declines,
+            fill_cap_declines,
         ),
     ]
 }

@@ -1,0 +1,3 @@
+file	A1	A2	A3	B1	B2	B3	verdict	status
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.minepump_spec3_product41_true-unreach-call.cil.c.smt2	unknown/0	unknown/0	unknown/0	unsat/0	unsat/0	unsat/0	STABLE-GAIN	unsat
+QF_UFLRA/cpachecker-induction-svcomp14/cpachecker-induction.minepump_spec4_product53_true-unreach-call.cil.c.smt2	unknown/0	unknown/0	unknown/0	unsat/0	unsat/0	unsat/0	STABLE-GAIN	unsat

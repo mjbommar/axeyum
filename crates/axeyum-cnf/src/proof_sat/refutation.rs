@@ -129,27 +129,44 @@ impl TheoryRefutation {
     /// extended formula as `cnf ++ lemmas` — the shape a well-behaved producer
     /// emits.
     ///
+    /// The extended formula's variable set is the CNF's WIDENED to the largest
+    /// variable any lemma names. A theory may register atoms mid-search
+    /// (`NativeTheory::take_new_atoms`; ADR-2147's disequality split does, for
+    /// the two strict halves of a violated `x ≠ y`), and the core appends those
+    /// as the search's own variables after the CNF's. A lemma over them is a
+    /// clause over variables the CNF never declared, and it extends the
+    /// formula's VARIABLE set, never its clause set: the lemma list still says
+    /// exactly which clauses are theory-trusted, and the checker still replays
+    /// the Boolean stream over `cnf ++ lemmas`. Until 2026-09-17 this
+    /// constructor sized the extension at the CNF's count and PANICKED on such
+    /// a lemma, on the stated grounds that no producer could emit one.
+    ///
     /// # Panics
     ///
-    /// Panics if a lemma names a variable outside the CNF's variable count,
-    /// which no producer in this crate can do (a lemma is a clause over the
-    /// search's own variables).
+    /// Only if a clause cannot be added to a formula that was sized to hold it,
+    /// which the widening above makes impossible for any lemma.
     #[must_use]
     pub fn from_cnf_and_lemmas(
         cnf: CnfFormula,
         lemmas: Vec<Vec<CnfLit>>,
         boolean_stream: Vec<DratStep>,
     ) -> Self {
-        let mut extended = CnfFormula::new(cnf.variable_count());
+        let widest_lemma_var = lemmas
+            .iter()
+            .flatten()
+            .map(|lit| lit.var().index() + 1)
+            .max()
+            .unwrap_or(0);
+        let mut extended = CnfFormula::new(cnf.variable_count().max(widest_lemma_var));
         for clause in cnf.clauses() {
             extended
                 .add_clause(CnfClause::new(clause.lits().to_vec()))
-                .expect("the extended formula has the CNF's variable count");
+                .expect("the extended formula has at least the CNF's variable count");
         }
         for lemma in &lemmas {
             extended
                 .add_clause(CnfClause::new(lemma.clone()))
-                .expect("a theory lemma is a clause over the search's own variables");
+                .expect("the extended formula was widened to every lemma's variables");
         }
         Self::new(cnf, lemmas, extended, boolean_stream)
     }

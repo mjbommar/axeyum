@@ -537,7 +537,8 @@ fn theory_layer_report_line(
          farkas_declined_nonbasic_problem_var={} farkas_declined_self_check={} \
          implied_bound_passes={} implied_bound_rows_scanned={} \
          implied_bounds_derived={} implied_bound_propagations={} \
-         decisions_on_tracked_atoms={} decisions_on_implied_atoms={}",
+         decisions_on_tracked_atoms={} decisions_on_implied_atoms={} \
+         diseq_splits={} diseq_split_conflicts={} fill_cap_declines={}",
         stats.boolean_propagate.as_millis(),
         stats.theory_assert.as_millis(),
         stats.theory_propagate.as_millis(),
@@ -585,6 +586,9 @@ fn theory_layer_report_line(
         optional(stats.implied_bound_propagations),
         optional(stats.decisions_on_tracked_atoms),
         optional(stats.decisions_on_implied_atoms),
+        optional(stats.diseq_splits),
+        optional(stats.diseq_split_conflicts),
+        optional(stats.fill_cap_declines),
     )
 }
 

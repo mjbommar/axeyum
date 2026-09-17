@@ -1,0 +1,7 @@
+QF_LRA/latendresse/ecoliMILPglycerolYices3-50000.smt2
+QF_LRA/sc/sc-11.base.cvc.smt2
+QF_LRA/sc/sc-13.base.cvc.smt2
+QF_LRA/sc/sc-15.base.cvc.smt2
+QF_LRA/sc/sc-17.base.cvc.smt2
+QF_LRA/sc/sc-7.base.cvc.smt2
+QF_LRA/sc/sc-9.base.cvc.smt2

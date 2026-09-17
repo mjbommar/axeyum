@@ -1178,6 +1178,9 @@ fn theory_layer_stats(
         farkas_declined_nonbasic_problem_var: engine
             .map(|e| e.farkas_declined_nonbasic_problem_var),
         farkas_declined_self_check: engine.map(|e| e.farkas_declined_self_check),
+        diseq_splits: engine.map(|e| e.diseq_splits),
+        diseq_split_conflicts: engine.map(|e| e.diseq_split_conflicts),
+        fill_cap_declines: engine.map(|e| e.fill_cap_declines),
     }
 }
 

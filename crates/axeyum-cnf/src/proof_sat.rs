@@ -3978,7 +3978,42 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                     } else {
                         FinalCheckOutcome::Sat
                     } {
-                        FinalCheckOutcome::Sat => {}
+                        FinalCheckOutcome::Sat => {
+                            // ADR-2147: a theory may answer `Sat` having just
+                            // REGISTERED atoms it needs decided before the
+                            // assignment is a model -- an LRA disequality split
+                            // discovers its two strict halves at exactly this
+                            // check, because the violated hyperplane is a
+                            // property of the feasible point and the point
+                            // exists only here. The fixpoint poll in
+                            // `theory_round` ran BEFORE this check, so it
+                            // cannot have seen them. Poll once more: fresh
+                            // atoms re-open the assignment (they are
+                            // unassigned and branchable), and the loop decides
+                            // them and reaches a complete check again. A
+                            // theory that registers nothing takes the branch
+                            // it always took.
+                            if T::HAS_THEORY {
+                                let next_var = self.assign.len();
+                                let fresh = self.theory.take_new_atoms(next_var);
+                                if fresh != 0 {
+                                    self.register_theory_atoms(fresh);
+                                    // Decided at the route's initial phase, as
+                                    // the construction-time atoms were: a
+                                    // split's strict halves are useful TRUE
+                                    // (each imposes a bound; false imposes
+                                    // nothing), and `ensure_vars` seeds a fresh
+                                    // variable's saved phase `false`. Only this
+                                    // path is touched, so the fixpoint
+                                    // registration route keeps its trajectory.
+                                    for var in next_var..next_var + fresh {
+                                        self.phase[var] = self.initial_phase;
+                                        self.best_phase[var] = self.initial_phase;
+                                    }
+                                    continue;
+                                }
+                            }
+                        }
                         // `Unknown` is undecided by definition: the theory
                         // could not complete its check, so neither can we.
                         FinalCheckOutcome::Unknown => {

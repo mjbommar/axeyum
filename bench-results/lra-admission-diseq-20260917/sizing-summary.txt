@@ -1,0 +1,10 @@
+===== head-shipped: 38 rows
+  no-tableau-27:
+     27  ('unknown', '0', 'admission-screen', 'none')
+  diseq-11:
+     11  ('unknown', '0', 'model-did-not-replay', 'lra_theory:model-built-but-does-not-replay=1;')
+===== head-screen16: 38 rows
+  no-tableau-27:
+     27  ('unknown', '0', 'model-did-not-replay', 'fm-fallback-declined=1;lra_theory:no-model-reconstructed=1;')
+  diseq-11:
+     11  ('unknown', '0', 'model-did-not-replay', 'lra_theory:model-built-but-does-not-replay=1;')

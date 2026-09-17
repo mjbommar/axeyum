@@ -1,0 +1,7 @@
+file	A1	A2	A3	B1	B2	B3	verdict	status
+QF_LRA/sc/sc-11.base.cvc.smt2	unknown/0	unknown/0	unknown/0	unsat/0	unsat/0	unsat/0	STABLE-GAIN	unsat
+QF_LRA/sc/sc-13.base.cvc.smt2	unknown/0	unknown/0	unknown/0	unsat/0	unsat/0	unsat/0	STABLE-GAIN	unsat
+QF_LRA/sc/sc-15.base.cvc.smt2	unknown/0	unknown/0	unknown/0	unsat/0	unsat/0	unsat/0	STABLE-GAIN	unsat
+QF_LRA/sc/sc-17.base.cvc.smt2	unknown/0	unknown/0	unknown/0	unsat/0	unsat/0	unknown/0	UNSTABLE	unsat
+QF_LRA/sc/sc-7.base.cvc.smt2	unknown/0	unknown/0	unknown/0	unsat/0	unsat/0	unsat/0	STABLE-GAIN	unsat
+QF_LRA/sc/sc-9.base.cvc.smt2	unknown/0	unknown/0	unknown/0	unsat/0	unsat/0	unsat/0	STABLE-GAIN	unsat

@@ -360,6 +360,20 @@ pub struct TheoryEngineCounters {
     /// distinct from the two structural arms, and the one that would point at
     /// arithmetic rather than shape.
     pub farkas_declined_self_check: u64,
+    /// ADR-2147: disequalities (`x = y` asserted FALSE) the theory found
+    /// violated at a feasible point and SPLIT by registering the two strict
+    /// atoms `x < y` / `x > y` — once per equality atom, ever. 0 with the
+    /// lever off, which is what makes an inert arm readable as inert.
+    pub diseq_splits: u64,
+    /// ADR-2147: complete checks that answered the trichotomy conflict
+    /// `¬(¬eq ∧ ¬lt ∧ ¬gt)` because a split equality was false with both of
+    /// its strict halves false and the point still on the hyperplane.
+    pub diseq_split_conflicts: u64,
+    /// ADR-2146: `Tableau::run` calls that declined at
+    /// `MAX_TABLEAU_FILL_NONZEROS` — a pivot whose worst-case fill-in would
+    /// have carried the live nonzeros past the cap. Always 0 for a tableau
+    /// admitted on dense cells.
+    pub fill_cap_declines: u64,
 }
 
 /// An opaque, theory-owned handle to an explanation the theory has **not**
