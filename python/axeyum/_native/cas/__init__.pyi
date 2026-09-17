@@ -2113,7 +2113,11 @@ class ZeroTest:
     @property
     def kind(self) -> builtins.str:
         r"""
-        `"certified"` or `"unknown"` — the variant tag.
+        `"certified"`, `"certified-big"` or `"unknown"` — the variant tag.
+        
+        `"certified-big"` is the same strength as `"certified"`; it says the
+        certificate's coefficients do not fit `i128`, so `witness` is `None`
+        even though the test decided (ADR-1670 wave two).
         """
     @property
     def equal(self) -> typing.Optional[builtins.bool]:
@@ -2129,6 +2133,10 @@ class ZeroTest:
         
         `None` on `Unknown`. This is the certificate — re-normalize the
         difference yourself and confirm it agrees.
+        
+        Also `None` on `"certified-big"`, whose certificate does not fit this
+        bounded polynomial type; read `kind` rather than treating a `None`
+        witness as an undecided test.
         """
     def is_decided(self) -> builtins.bool:
         r"""

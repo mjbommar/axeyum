@@ -263,7 +263,8 @@ class GeometryDecline:
     def name(self) -> builtins.str:
         r"""
         The variant name: one of `Reduction`, `TooManyConditions`,
-        `UnverifiedWitness`, `UndividableMultiplier`, `RefutedByOwnWitness`.
+        `UnverifiedWitness`, `UndividableMultiplier`, `UncombinableMultipliers`,
+        `RefutedByOwnWitness`.
         """
     @property
     def reduction_reason(self) -> typing.Optional[groebner.DeclineReason]:

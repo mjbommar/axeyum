@@ -103,7 +103,7 @@ class Candidate:
     r"""
     A bounded-induction candidate: a proposed proof term plus the search shape
     that produced it.
-
+    
     `inductions_used == 0` means the goal closed by plain reflexivity. Nothing
     here is checked: `proof` is untrusted until `Kernel.add_declaration` accepts
     it as the value of a theorem whose type is the goal.
@@ -182,7 +182,7 @@ class CandidateTransportError(_native.AxeyumError):
 class CircularityAudit:
     r"""
     The mechanical circularity/trust audit an admitted candidate must pass.
-
+    
     Computed **only** from `declaration_dependency_closure`, `axiom_footprint`
     and `theorem_dependencies` — never from a doc comment, never from a
     head-symbol text match on a rendered name. The three counts are exposed
@@ -199,7 +199,7 @@ class CircularityAudit:
     def axiom_footprint(self) -> builtins.int:
         r"""
         How many `Axiom`/`Opaque`/`Quotient` declarations the candidate reaches.
-
+        
         Zero is this project's headline claim, so it is reported as a count and
         never collapsed into `passes()` alone.
         """
@@ -235,7 +235,7 @@ class DeclarationDependency:
 class DeclarationIdentity:
     r"""
     Canonical identity for one independently admitted declaration.
-
+    
     `content_sha256` is what a family manifest's `target_content_sha256` pins:
     it is arena-independent, so two imports of the same bytes agree.
     """
@@ -270,7 +270,7 @@ class DeclarationIdentity:
 class DeclineReason:
     r"""
     Why a bounded producer declined, as its own typed enum variant.
-
+    
     `kind` is the Rust variant name verbatim (`"BinderBudgetExceeded"`,
     `"NotEqualityGoal"`, …) and `detail` its payload, or `None` for a variant
     that carries none. `producer` says which producer's vocabulary `kind` comes
@@ -317,7 +317,7 @@ class ImportLimits:
     r"""
     Resource limits applied before a stream can grow the kernel arenas without
     bound.
-
+    
     The defaults are the Rust `ImportLimits::default()` values quoted:
     `max_line_bytes = 16 * 1024 * 1024` (16 MiB) and `max_records = 2_000_000`.
     `producers::tests::binding_defaults_match_rust` pins them, so a drift on
@@ -346,7 +346,7 @@ class ImportLimits:
 class ImportReport:
     r"""
     Counts and provenance for a successfully admitted stream.
-
+    
     `substituted_theorems` is the field that tells "our own re-derivation" apart
     from "an admitted trusted declaration": every name in it still reports
     `kind == "theorem"` in `declaration_identities`, which is structurally true
@@ -431,7 +431,7 @@ class ModEqCandidate:
     r"""
     A `ModEq`-family candidate: a proposed proof term plus the binder depth the
     search reached.
-
+    
     Deliberately **not** the same class as [`PyCandidate`]. The two producers
     measure different quantities against different budgets, and a single class
     with `inductions_used = None` would make "this producer performs no
@@ -454,14 +454,14 @@ class StatementImport:
     r"""
     One proof-isolated proposition imported as the value of a transparent
     `definition : Prop`.
-
+    
     The kernel, the goal and the target name are one unit: the handles are
     indices into *this* import's kernel and mean nothing anywhere else. So
     `kernel()` returns the **same** `Kernel` object every time — a producer
     mutates it (interning the proof term, admitting the candidate) and the goal
     stays valid across that. Getting a fresh copy each call would silently
     invalidate every handle already handed out.
-
+    
     The Rust `into_parts` is deliberately not bound: it consumes the import, and
     the four non-consuming accessors give the same values.
     """
@@ -481,7 +481,7 @@ class StatementImport:
         r"""
         The independently checked environment holding the goal's definitional
         dependencies and no proof of the goal.
-
+        
         The same object on every call: handles stay valid across a producer's
         mutations.
         """
@@ -505,33 +505,33 @@ class StatementImportError(_native.AxeyumError):
 def audit_circularity(kernel: kernel.Kernel, candidate: kernel.NameId, target: kernel.NameId) -> CircularityAudit:
     r"""
     Audits an already-admitted `candidate` against its `target`.
-
+    
     A pure function of the kernel's own dependency graph: the same check the
     `modeq_family_operation` driver runs, and the same one the adversarial
     fixture in `tests/modeq_family_operation.rs` proves actually rejects a
     candidate built to cite its own target.
-
+    
     # Errors
-
+    
     Raises `EpochError` if either name was interned by another kernel.
     """
 
 def import_candidate_statement_ndjson(source: typing.Any, limits: typing.Optional[ImportLimits], target: builtins.str, candidates: typing.Sequence[builtins.str]) -> StatementImport:
     r"""
     Imports a proof-free target plus an exact axiom-free theorem candidate set.
-
+    
     Unlike [`import_statement_ndjson`], this capsule may carry proof-bearing
     declarations, but only those whose exact names occur in `candidates`; every
     one is independently kernel-checked and must have an empty measured axiom
     footprint. The target remains a transparent `definition : Prop`, never a
     theorem. The bounded-application producer must still receive the same names
     explicitly and cannot scan the returned environment.
-
+    
     `source` is a path (`str` / `os.PathLike`) or the NDJSON `bytes`. `limits`
     of `None` uses the Rust `ImportLimits::default()`.
-
+    
     # Errors
-
+    
     Raises `TypeError` for an invalid source, `OSError` for an unreadable path,
     and `StatementImportError` for any wire, target-isolation, candidate-identity
     or axiom-footprint failure.
@@ -540,17 +540,17 @@ def import_candidate_statement_ndjson(source: typing.Any, limits: typing.Optiona
 def import_statement_ndjson(source: typing.Any, limits: typing.Optional[ImportLimits], target: builtins.str) -> StatementImport:
     r"""
     Imports one proof-isolated proposition from a `lean4export` NDJSON stream.
-
+    
     This is the front door for "hand an untrusted producer a goal". It rejects
     every axiom, theorem, opaque and quotient declaration in the stream except
     the ones this import itself reconstructed (`report.substituted_theorems`),
     so the returned kernel can define the goal but cannot prove it.
-
+    
     `source` is a path (`str` / `os.PathLike`) or the NDJSON `bytes`. `limits`
     of `None` uses the Rust `ImportLimits::default()`.
-
+    
     # Errors
-
+    
     Raises `TypeError` for a `source` that is neither, `OSError` if the file
     cannot be opened, and `StatementImportError` if the stream fails the
     proof-isolation contract.
@@ -559,13 +559,13 @@ def import_statement_ndjson(source: typing.Any, limits: typing.Optional[ImportLi
 def propose_bounded_application(kernel: kernel.Kernel, goal: kernel.ExprId, declarations: typing.Sequence[kernel.NameId]) -> ApplicationCandidate:
     r"""
     Proposes a bounded type-directed application proof from exact declarations.
-
+    
     `declarations` is the retrieval boundary: the producer does not scan the
     environment. Do not include the target theorem. The returned proof remains
     untrusted until the same kernel admits it as a theorem of `goal`.
-
+    
     # Errors
-
+    
     Raises `EpochError` for a foreign goal/name handle and `Declined` with a
     typed bounded-application reason when the fixed search budget finds no term.
     """
@@ -573,20 +573,20 @@ def propose_bounded_application(kernel: kernel.Kernel, goal: kernel.ExprId, decl
 def propose_bounded_induction(kernel: kernel.Kernel, goal: kernel.ExprId) -> Candidate:
     r"""
     Proposes a bounded structural-induction proof of `goal`.
-
+    
     `Eq.refl`, and where that is stuck, a bounded induction over a discovered
     zero/succ-shaped binder plus congruence rewrites driven by the induction
     hypothesis. Target-agnostic: it never dispatches on a declaration name or a
     fact id, and every structural fact it uses is discovered from `kernel`'s own
     declarations.
-
+    
     The returned proof is **untrusted**. Admit it with
     `Kernel.add_declaration(Declaration.theorem(name, [], goal, candidate.proof))`
     and read `Kernel.axiom_footprint` afterwards; the kernel, not this call, is
     what decides.
-
+    
     # Errors
-
+    
     Raises `EpochError` if `goal` was interned by another kernel, and `Declined`
     carrying a typed `.reason` when the bounded search does not close the goal.
     """
@@ -595,13 +595,13 @@ def propose_bounded_induction_with_rewrites(kernel: kernel.Kernel, goal: kernel.
     r"""
     Proposes bounded induction with exact retrieved declarations available for
     typed equality rewriting in the current induction scope.
-
+    
     `declarations` is an explicit retrieval boundary, not proof authority. The
     producer preserves caller order, ignores unusable candidates, applies fixed
     Rust-side budgets, and returns an untrusted term for same-kernel admission.
-
+    
     # Errors
-
+    
     Raises `EpochError` for a foreign goal/name handle and `Declined` with the
     bounded-induction reason when the combined grammar cannot close the goal.
     """
@@ -609,17 +609,17 @@ def propose_bounded_induction_with_rewrites(kernel: kernel.Kernel, goal: kernel.
 def propose_modeq_family(kernel: kernel.Kernel, goal: kernel.ExprId) -> ModEqCandidate:
     r"""
     Proposes a bounded `Eq`/`Iff`-combinator proof of `goal`.
-
+    
     The `ModEq` definitional-equivalence family: `ModEq n a b` unfolds
     transparently to `a % n = b % n`, so every lemma this schema targets is a
     plain `Eq`/`Iff` combinator once that unfolding is taken. The producer never
     names `Int`, `Nat`, `ModEq`, `%`, or any target or sibling declaration.
-
+    
     The returned proof is **untrusted**; see
     [`propose_bounded_induction`](fn.propose_bounded_induction.html).
-
+    
     # Errors
-
+    
     Raises `EpochError` if `goal` was interned by another kernel, and `Declined`
     carrying a typed `.reason` when the bounded search does not close the goal.
     """
@@ -627,7 +627,7 @@ def propose_modeq_family(kernel: kernel.Kernel, goal: kernel.ExprId) -> ModEqCan
 def transport_native_candidate(statement: StatementImport, candidate: builtins.str) -> CandidateTransport:
     r"""
     Check one retrieved native theorem into an imported goal's private kernel.
-
+    
     The candidate namespace deterministically selects the independently rebuilt
     native prelude (`Nat`, `Int`, `Rat`, `CReal`, or `Complex`). Existing target
     theorems are compatibility-checked; absent ones go through checked theorem
@@ -635,10 +635,11 @@ def transport_native_candidate(statement: StatementImport, candidate: builtins.s
     authority is granted. The statement import keeps the same Python `Kernel`
     object and epoch because composition clones and only extends its arenas, so
     all previously issued goal/name handles remain valid.
-
+    
     # Errors
-
+    
     Raises `CandidateTransportError` with `.variant` and `.debug` when the
     namespace is unsupported or the exact source root cannot be safely reused
     or composed. A failure never changes the statement import's kernel.
     """
+
