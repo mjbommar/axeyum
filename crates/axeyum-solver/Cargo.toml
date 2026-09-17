@@ -173,3 +173,8 @@ required-features = ["full"]
 [[example]]
 name = "nra_algebraic_witness_replay"
 required-features = ["full"]
+
+# The warm-session-age oracle parses a replay stream with `axeyum-smtlib`.
+[[example]]
+name = "warm_session_age"
+required-features = ["full"]

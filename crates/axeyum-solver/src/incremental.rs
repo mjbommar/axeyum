@@ -978,6 +978,22 @@ impl IncrementalBvSolver {
         self.cnf.variable_count()
     }
 
+    /// Live learned clauses the retained SAT core holds right now.
+    ///
+    /// Session-age diagnostic (`examples/warm_session_age.rs`): read it beside
+    /// [`Self::retained_sat_conflicts`] to tell a learned-clause leak from a
+    /// per-check cost that scales with the retained database.
+    #[must_use]
+    pub fn retained_learned_clause_count(&self) -> usize {
+        self.cnf.learned_clause_count()
+    }
+
+    /// Conflicts the retained SAT core has analysed over the session.
+    #[must_use]
+    pub fn retained_sat_conflicts(&self) -> usize {
+        self.cnf.total_conflicts()
+    }
+
     /// Total AIG nodes lowered so far, including nodes not reachable from the
     /// final asserted slice.
     ///
