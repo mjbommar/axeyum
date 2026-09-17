@@ -379,6 +379,13 @@ pub struct SearchCounters {
     pub target_phase_snapshots: u64,
     /// Fresh high-water marks recorded for the long-run *best* phase archive.
     pub best_phase_snapshots: u64,
+    /// Trail entries copied into the target and best phase vectors, summed
+    /// over every snapshot. The cost of the snapshots, as opposed to their
+    /// count: bounded by `2 * (assignments + backtracked entries)` since the
+    /// walks resume at the stable prefix, so on a conflict-free descent it is
+    /// linear in the trail. The pre-2026-09-17 full walk made it quadratic —
+    /// see [`Cdcl::target_stable`] and the test that pins the linear bound.
+    pub phase_snapshot_entries: u64,
     /// Times the target-phase high-water mark was reset so the ratchet could
     /// release. Zero means the target is a monotone mark that never releases.
     pub target_phase_resets: u64,
@@ -2074,6 +2081,31 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     /// and larger targets between rephases, and the largest is what lands in the
     /// archive.
     target_trail_len: usize,
+    /// How much of the trail's prefix [`Cdcl::target_phase`] already reflects:
+    /// every `trail[i]` for `i < target_stable` was copied into `target_phase`
+    /// by a snapshot and has not been unassigned since. A snapshot therefore
+    /// copies only `trail[target_stable..]`, which makes the walk amortised
+    /// O(assignments) instead of O(trail) **per decision**.
+    ///
+    /// Why that matters, measured 2026-09-17 on a retained session
+    /// (`examples/warm_session_age.rs`): a conflict-free descent sets a fresh
+    /// high-water mark at EVERY decision, so the full-trail walk ran once per
+    /// decision — with ~60k retained level-zero assignments and thousands of
+    /// decisions per check, the p90 per check grew from 0.2 ms to 270 ms over
+    /// 1,200 checks, quadratic in the session's variable count. The vectors
+    /// this produces are byte-identical to the full walk's (a prefix that has
+    /// not been unassigned has the same polarities it had when it was copied),
+    /// so no decision, verdict or model changes.
+    ///
+    /// Lowered by [`Cdcl::backtrack_to`] to the surviving trail length, and
+    /// zeroed wherever the vector or the trail is replaced wholesale
+    /// ([`Cdcl::apply_rephase`], [`Cdcl::reset_search_state`]).
+    target_stable: usize,
+    /// The same prefix mark for [`Cdcl::best_phase`]. Kept separately because
+    /// the two vectors are copied on different high-water marks
+    /// (`fresh_target` and `fresh_best` are independent), so one can lag the
+    /// other.
+    best_stable: usize,
     /// Phase installed by an `Original` rephase and used before any variable has
     /// been assigned. `false` unless the caller asked for an all-true initial
     /// phase.
@@ -2477,6 +2509,8 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             best_trail_len: 0,
             target_phase: vec![false; n],
             target_trail_len: 0,
+            target_stable: 0,
+            best_stable: 0,
             initial_phase: false,
             forced_phase: None,
             // The shipped defaults live in one place; see `SearchPolicies`.
@@ -2721,6 +2755,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         self.restart_count = 1;
         self.best_trail_len = 0;
         self.target_trail_len = 0;
+        // The trail was just cleared: nothing of it is reflected anywhere.
+        self.target_stable = 0;
+        self.best_stable = 0;
         self.phase_policy.reset();
         self.restart_policy.reset();
         self.sync_restart_schedule();
@@ -3101,8 +3138,15 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
     /// Snapshot the current conflict-free assignment as the target phase when it is
     /// the deepest (largest-trail) one seen so far — the polarities "closest to a
     /// model" (T1.3.1). Reads `assign` directly (a disjoint field from `best_phase`),
-    /// and only walks the trail on a fresh high-water mark, so the amortized cost is
-    /// negligible.
+    /// and only walks the trail on a fresh high-water mark.
+    ///
+    /// "Only on a fresh high-water mark" is NOT rare: a conflict-free descent
+    /// sets one at every decision. So the walk starts at the vector's stable
+    /// prefix ([`Cdcl::target_stable`] / [`Cdcl::best_stable`]) rather than at
+    /// zero — the prefix below it was copied by an earlier snapshot and has not
+    /// been unassigned since, so it already holds exactly what a full walk would
+    /// write. Same vectors, amortised O(assignments) instead of O(trail) per
+    /// decision.
     fn snapshot_target_phase(&mut self) {
         let depth = self.trail.len();
         let fresh_target = depth > self.target_trail_len;
@@ -3115,22 +3159,30 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             if self.count_search {
                 self.counters.target_phase_snapshots += 1;
             }
+            for idx in self.target_stable..depth {
+                let var = self.trail[idx];
+                self.target_phase[var] = self.assign[var] == Some(true);
+                // Counted per entry, inside the loop, so the counter measures
+                // the walk that ran and not the walk this code intends.
+                if self.count_search {
+                    self.counters.phase_snapshot_entries += 1;
+                }
+            }
+            self.target_stable = depth;
         }
         if fresh_best {
             self.best_trail_len = depth;
             if self.count_search {
                 self.counters.best_phase_snapshots += 1;
             }
-        }
-        for idx in 0..depth {
-            let var = self.trail[idx];
-            let polarity = self.assign[var] == Some(true);
-            if fresh_target {
-                self.target_phase[var] = polarity;
+            for idx in self.best_stable..depth {
+                let var = self.trail[idx];
+                self.best_phase[var] = self.assign[var] == Some(true);
+                if self.count_search {
+                    self.counters.phase_snapshot_entries += 1;
+                }
             }
-            if fresh_best {
-                self.best_phase[var] = polarity;
-            }
+            self.best_stable = depth;
         }
     }
 
@@ -3167,6 +3219,9 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         // the run's best -- becomes the new target.
         self.target_phase.copy_from_slice(&self.phase);
         self.target_trail_len = 0;
+        // The vector was just replaced wholesale: no trail prefix is reflected
+        // in it any more. `best_phase` was only READ above, so its mark stands.
+        self.target_stable = 0;
     }
 
     fn decision_level(&self) -> usize {
@@ -4936,6 +4991,10 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                 }
             }
             let bound = self.trail_lim[level];
+            // Everything above `bound` is about to be unassigned, so the phase
+            // vectors reflect at most the surviving prefix.
+            self.target_stable = self.target_stable.min(bound);
+            self.best_stable = self.best_stable.min(bound);
             while self.trail.len() > bound {
                 let var = self.trail.pop().expect("trail not empty above bound");
                 self.assign[var] = None;
@@ -7157,6 +7216,57 @@ mod tests {
             reducing_instances > 0,
             "no instance in the sweep reduced, so nothing about the clause \
              database was tested"
+        );
+    }
+
+    /// The phase snapshot's cost is linear in the trail, not quadratic.
+    ///
+    /// A conflict-free descent sets a fresh high-water mark at EVERY decision,
+    /// so a snapshot that re-walks the whole trail each time copies
+    /// `1 + 2 + ... + n` entries over `n` decisions. That is what made a
+    /// retained warm session's per-check latency grow ~1,000x with its age
+    /// (`axeyum-solver/examples/warm_session_age.rs`, 2026-09-17). The walk
+    /// now resumes at the stable prefix, so the entries copied are bounded by
+    /// twice the assignments (target and best vectors), and this pins that.
+    ///
+    /// The formula: `n` independent clauses `(a_i ∨ b_i)`. Every decision
+    /// `a_i = false` propagates `b_i`; nothing conflicts; the trail grows by
+    /// two per decision. Under the quadratic walk `phase_snapshot_entries` is
+    /// on the order of `n^2` (2 * sum of depths), far above the bound.
+    #[test]
+    fn phase_snapshot_cost_is_linear_in_the_trail_on_a_conflict_free_descent() {
+        let n = 400usize;
+        let mut clauses: Vec<Vec<i64>> = Vec::with_capacity(n);
+        for i in 0..n {
+            let a = i64::try_from(2 * i + 1).expect("small literal index");
+            clauses.push(vec![a, a + 1]);
+        }
+        let borrowed: Vec<&[i64]> = clauses.iter().map(Vec::as_slice).collect();
+        let f = formula(2 * n, &borrowed);
+        let mut sink = VecProofSink::new();
+        let (outcome, counters) =
+            solve_with_drat_proof_counted(&f, None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, &mut sink);
+        assert!(
+            matches!(outcome, StreamingProofOutcome::Sat(_)),
+            "{outcome:?}"
+        );
+        assert_eq!(counters.conflicts, 0, "the descent must be conflict-free");
+        assert!(
+            counters.target_phase_snapshots >= counters.decisions,
+            "every decision must set a fresh high-water mark: {} snapshots for {} decisions",
+            counters.target_phase_snapshots,
+            counters.decisions
+        );
+        let assignments = counters.decisions + counters.propagations;
+        // Two vectors, each copied at most once per assignment, plus the
+        // level-zero prefix (none here) — anything above this is a re-walk.
+        let bound = 2 * assignments + 2 * u64::try_from(2 * n).expect("small");
+        assert!(
+            counters.phase_snapshot_entries <= bound,
+            "phase snapshots copied {} entries for {} assignments (bound {bound}): the \
+             walk is re-reading the trail on every high-water mark",
+            counters.phase_snapshot_entries,
+            assignments
         );
     }
 

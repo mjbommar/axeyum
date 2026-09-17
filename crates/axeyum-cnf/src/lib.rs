@@ -752,6 +752,12 @@ impl IncrementalSat {
         self.solver.learned_clause_count()
     }
 
+    /// Conflicts summed over every solve so far.
+    #[must_use]
+    pub fn total_conflicts(&self) -> usize {
+        self.solver.total_conflicts()
+    }
+
     /// Copies the persistent input-clause database into a standalone formula.
     ///
     /// Learned clauses are intentionally absent: this is the stable problem
@@ -1328,6 +1334,22 @@ impl IncrementalCnf {
     /// Number of clauses in the persistent database.
     pub fn clause_count(&self) -> usize {
         self.sat.clause_count()
+    }
+
+    /// Live learned clauses the retained SAT core currently holds.
+    ///
+    /// A session-age diagnostic (`examples/warm_session_age.rs`): a warm
+    /// engine whose per-check latency grows should show whether that growth
+    /// tracks the learned-clause population or something else.
+    #[must_use]
+    pub fn learned_clause_count(&self) -> usize {
+        self.sat.learned_clause_count()
+    }
+
+    /// Conflicts the retained SAT core has analysed over every solve so far.
+    #[must_use]
+    pub fn total_conflicts(&self) -> usize {
+        self.sat.total_conflicts()
     }
 
     /// Copies the persistent clause database and activates `assumptions` as

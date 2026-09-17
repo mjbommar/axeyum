@@ -149,6 +149,7 @@ now. Nothing was deleted.
 | 2026-09-17 | `3425a51ab` | ax-lifter: the cindergraph-defects pipeline over cindergraph's fixtures and Glaurung's decompiler output with the refusal histogram; replay must name the finding's kind; per-function refusal on a cindergraph diagnostic; multi-declarator declarations (item 12). |
 | 2026-09-17 | `8bdccc57b` | ax-lifter: `strcpy`/`strcat`/`strlen` with `// axeyum: strlen`, `malloc`-sized locals with `alloc-size-wrap`, `free`/use-after-free, uninitialised reads under MSan/valgrind/no-oracle; samples 11–12 (item 11). |
 | 2026-09-17 | ax-policy | ADR-2140: `ModelPreference` on `SolverConfig` (SAT-core forced phase + replay-checked shrink), `solve_smtlib_least_witness`, `:model-preference` option, `AXEYUM_MODEL_PREFERENCE` lever, `smt.least_witness`, typed `IncrementalStats`; `tests/model_preference_2140.rs` (identity, non-vacuity, determinism, replay) + mutation controls; three model-choice seeds in `corpus/regression/qf_bv/`. |
+| 2026-09-17 | ax-warm | `warm_session_age` reproducer (verbatim trace replay + synthetic explorer walk, verdict+model digest), the `snapshot_target_phase` stable-prefix fix in `axeyum-cnf`, `phase_snapshot_entries` counter and its linear-bound test, `retained_learned_clause_count`/`retained_sat_conflicts` gauges, ADR-2142. |
 | 2026-09-16 | `5bd0e77c4` | `axeyum-bench` gains a `full` feature forwarding to `axeyum-solver/full`; doc lines updated to the new flag spelling. |
 | 2026-09-16 | `a306a017b` | `cindergraph_defects/lift.py` uses SMT-LIB 2.6 overflow predicates instead of a double-width shadow computation; documented in `smtlib-support.md`. |
 | 2026-09-16 | `68f8887c9` | `cindergraph_defects/check.py` calls `axeyum.smt.solve` by default; `axeyum_cli` subprocess kept as an explicit `--cli` fallback. |
@@ -46846,6 +46847,24 @@ SAT-core phase ships off behind `AXEYUM_MODEL_PREFERENCE_PHASE=on`. Next: the
 defects example (`check.py`) can drop its `BOUNDS` loop for `smt.least_witness`
 once item 1 (call the library, not the subprocess) lands; Glaurung's
 concretization sweep is now a one-variable experiment.
+
+**AX-WARM (`landed`, ax-warm, 2026-09-17).** Glaurung's six-cell rerun found
+the warm session's per-check p90 growing 0.1 → 178 ms with session age.
+`examples/warm_session_age.rs` replays one real DptfDevGen owner session
+verbatim (1,206 checks, 0 verdict disagreements, every `sat` replayed) and
+reproduced 0.24 → 269 ms p90; `git bisect` (5,804 commits, 13 steps) landed
+on `f019d503f` (ADR-1703: native core becomes the warm engine); the hot frame
+was `proof_sat.rs::snapshot_target_phase` re-walking the whole trail at every
+decision of a conflict-free descent (O(decisions × retained trail)). Fixed
+with stable-prefix marks per phase vector — byte-identical vectors, identical
+verdict+model digest, identical conflict counts — the replayed session's last
+band is 306 → 7.5 ms p90 back to back (total 34.9 → 1.66 s); the July BatSat
+engine measures 3.7 ms / 0.87 s on the same stream. A counter test pins the
+linear bound and dies alone on the revert. ADR-2142. **Next:** a Glaurung
+re-pin and campaign rerun (not run here); and the remaining linear-in-database
+term — the warm core re-derives the whole assignment every solve by design
+where z3's `sat::solver::pop` keeps surviving scopes — which changes
+trajectories and so needs the pinned-list A/B.
 
 **`WIP`, bench-boolean-core, 2026-09-07.** The native core's per-conflict cost is
 now instrumented and decomposed, closing the gap the

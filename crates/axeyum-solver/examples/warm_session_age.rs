@@ -166,24 +166,36 @@ fn synthetic_constraint(
 ) -> TermId {
     let x = syms[(step % syms.len() as u128) as usize];
     let y = syms[((step / 3) % syms.len() as u128) as usize];
-    let k = arena.bv_const(64, (step * 8) % 4096).unwrap();
+    // A small set of offsets, so the 64-bit adders below are shared between
+    // constraints (the arena interns them) the way the drivers' constraints
+    // share their `bvneg`/`extract`/`zero_extend` prefixes and differ only in
+    // the constant compared at the end. Each new constraint then costs a few
+    // hundred clauses, as in the trace (~250 per assertion), not a fresh adder.
+    let k = arena.bv_const(64, (step % 8) * 8).unwrap();
     let sum = arena.bv_add(x, k).unwrap();
     let low = arena.extract(31, 0, sum).unwrap();
-    let mask = arena.bv_const(32, 0xffff_ff00 | (step & 0x7f)).unwrap();
+    let mask = arena.bv_const(32, 0xffff_ff00 | (step % 4)).unwrap();
     let masked = arena.bv_and(low, mask).unwrap();
     let wide = arena.zero_ext(32, masked).unwrap();
     let ysh = arena.extract(15, 0, y).unwrap();
     let ywide = arena.zero_ext(48, ysh).unwrap();
     let mixed = arena.bv_add(wide, ywide).unwrap();
-    let bound = arena.bv_const(64, 0x1000 + step * 40).unwrap();
+    // Loose bounds and byte disequalities: mostly feasible branches, as the
+    // explorer's are (the trace is 60% sat), with a conflict now and then.
     let cmp = match step % 3 {
-        0 => arena.bv_ult(mixed, bound).unwrap(),
-        1 => arena.bv_ule(bound, mixed).unwrap(),
-        _ => {
+        0 => {
+            let bound = arena.bv_const(64, 0x8000_0000 + step * 40).unwrap();
+            arena.bv_ult(mixed, bound).unwrap()
+        }
+        1 => {
             let bit = arena.extract(7, 0, mixed).unwrap();
             let c = arena.bv_const(8, (step * 37) & 0xff).unwrap();
             let eq = arena.eq(bit, c).unwrap();
             arena.not(eq).unwrap()
+        }
+        _ => {
+            let floor = arena.bv_const(64, step & 0xff).unwrap();
+            arena.bv_ule(floor, mixed).unwrap()
         }
     };
     if polarity {
@@ -208,54 +220,122 @@ fn synthetic_probe(arena: &mut TermArena, syms: &[TermId], step: u128) -> TermId
     arena.and(ovf, hz).unwrap()
 }
 
-fn build_synthetic(checks: usize) -> Stream {
-    let mut arena = TermArena::new();
-    let syms: Vec<TermId> = ["sym0_64", "sym1_64", "sym2_64"]
-        .iter()
-        .map(|n| {
-            let id = arena.declare(n, Sort::BitVec(64)).unwrap();
-            arena.var(id)
-        })
-        .collect();
-    let mut assertions = Vec::new();
-    let mut ops = Vec::new();
-    // Depth-first walk: a path grows to `depth` constraints, then backtracks
-    // `back` levels and takes the other polarity, so consecutive checks share
-    // a long prefix (as sibling paths do in the explorer).
-    let mut stack: Vec<usize> = Vec::new();
-    let mut step: u128 = 0;
-    let depth = 40;
-    while ops.len() < checks {
-        if stack.len() >= depth {
-            let back = 1 + (step % 5) as usize;
-            for _ in 0..back {
-                stack.pop();
-            }
+/// An explorer-shaped stream generated on the fly: the next check depends on
+/// the last verdict, as a symbolic executor's does.
+///
+/// A path grows one branch constraint per feasible check (`sat`), with an
+/// overflow-probe assumption every third step; an infeasible branch (`unsat`)
+/// is abandoned — the constraint is popped and the sibling polarity is taken;
+/// a path that reaches `DEPTH` is finished and the walk backtracks a few
+/// levels to fork a sibling. Consecutive checks therefore share a long prefix,
+/// the retained solver keeps every constraint ever asserted (as Glaurung's
+/// arena and solver do), and most checks are conflict-free `sat` descents.
+struct Synthetic {
+    syms: Vec<TermId>,
+    stack: Vec<usize>,
+    /// Per stack level: the step that produced it and whether the sibling
+    /// polarity is still untried.
+    frames: Vec<(u128, bool)>,
+    step: u128,
+    remaining: usize,
+    /// A probe is pending on the current (feasible) path.
+    probe_pending: bool,
+}
+
+const DEPTH: usize = 40;
+
+impl Synthetic {
+    fn new(arena: &mut TermArena, checks: usize) -> Self {
+        let syms = ["sym0_64", "sym1_64", "sym2_64"]
+            .iter()
+            .map(|n| {
+                let id = arena.declare(n, Sort::BitVec(64)).unwrap();
+                arena.var(id)
+            })
+            .collect();
+        Self {
+            syms,
+            stack: Vec::new(),
+            frames: Vec::new(),
+            step: 0,
+            remaining: checks,
+            probe_pending: false,
         }
-        let polarity = (step / 7) % 2 == 0;
-        let t = synthetic_constraint(&mut arena, &syms, step, polarity);
+    }
+
+    fn push_constraint(
+        &mut self,
+        arena: &mut TermArena,
+        assertions: &mut Vec<TermId>,
+        step: u128,
+        polarity: bool,
+        sibling_untried: bool,
+    ) {
+        let t = synthetic_constraint(arena, &self.syms, step, polarity);
         assertions.push(t);
-        stack.push(assertions.len() - 1);
-        ops.push(Op {
-            persistent: stack.clone(),
-            temporary: Vec::new(),
-            expected: None,
-        });
-        if step % 3 == 0 && ops.len() < checks {
-            let p = synthetic_probe(&mut arena, &syms, step);
+        self.stack.push(assertions.len() - 1);
+        self.frames.push((step, sibling_untried));
+    }
+
+    /// The next check given the previous one's verdict (`None` before the
+    /// first check or after a probe, whose verdict does not steer the walk).
+    fn next(
+        &mut self,
+        arena: &mut TermArena,
+        assertions: &mut Vec<TermId>,
+        last: Option<bool>,
+    ) -> Option<Op> {
+        if self.remaining == 0 {
+            return None;
+        }
+        self.remaining -= 1;
+        if self.probe_pending {
+            // The path was feasible: probe it once under a temporary
+            // assumption, then keep extending.
+            self.probe_pending = false;
+            let p = synthetic_probe(arena, &self.syms, self.step);
             assertions.push(p);
-            ops.push(Op {
-                persistent: stack.clone(),
+            return Some(Op {
+                persistent: self.stack.clone(),
                 temporary: vec![assertions.len() - 1],
                 expected: None,
             });
         }
-        step += 1;
-    }
-    Stream {
-        arena,
-        assertions,
-        ops,
+        match last {
+            Some(false) => {
+                // Infeasible branch: try the sibling polarity if untried,
+                // else abandon this level and try the sibling one up.
+                loop {
+                    let Some((step, untried)) = self.frames.pop() else {
+                        break;
+                    };
+                    self.stack.pop();
+                    if untried {
+                        self.push_constraint(arena, assertions, step, false, false);
+                        break;
+                    }
+                }
+            }
+            _ => {
+                if self.stack.len() >= DEPTH {
+                    // Path finished: fork a sibling a few levels up.
+                    let back = 1 + (self.step % 5) as usize;
+                    for _ in 0..back {
+                        self.frames.pop();
+                        self.stack.pop();
+                    }
+                }
+                let step = self.step;
+                self.step += 1;
+                self.push_constraint(arena, assertions, step, true, true);
+                self.probe_pending = step % 3 == 0;
+            }
+        }
+        Some(Op {
+            persistent: self.stack.clone(),
+            temporary: Vec::new(),
+            expected: None,
+        })
     }
 }
 
@@ -282,29 +362,34 @@ fn main() {
             std::process::exit(2);
         }
     };
-    let (stream, source) = match &opts.replay {
+    let (mut arena, mut assertions, replay_ops, mut synthetic, source) = match &opts.replay {
         Some(prefix) => match load_replay(prefix) {
-            Ok(s) => (s, format!("replay {prefix}")),
+            Ok(s) => (
+                s.arena,
+                s.assertions,
+                Some(s.ops),
+                None,
+                format!("replay {prefix}"),
+            ),
             Err(e) => {
                 eprintln!("warm_session_age: {e}");
                 std::process::exit(2);
             }
         },
-        None => (
-            build_synthetic(opts.synthetic),
-            format!("synthetic {} checks", opts.synthetic),
-        ),
+        None => {
+            let mut arena = TermArena::new();
+            let synthetic = Synthetic::new(&mut arena, opts.synthetic);
+            (
+                arena,
+                Vec::new(),
+                None,
+                Some(synthetic),
+                format!("synthetic {} checks", opts.synthetic),
+            )
+        }
     };
-    let Stream {
-        arena,
-        assertions,
-        ops,
-    } = stream;
-    println!(
-        "source: {source}; distinct assertions {}; checks {}",
-        assertions.len(),
-        ops.len()
-    );
+    let planned = replay_ops.as_ref().map_or(opts.synthetic, Vec::len);
+    println!("source: {source}; checks {planned}");
 
     let config = SolverConfig::new()
         .with_timeout(opts.timeout)
@@ -318,15 +403,36 @@ fn main() {
     }
 
     let mut live: Vec<usize> = Vec::new();
-    let mut times_us: Vec<f64> = Vec::with_capacity(ops.len());
+    let mut times_us: Vec<f64> = Vec::with_capacity(planned);
+    // Per-check gauges of the retained SAT core, read after each check.
+    let mut learned: Vec<usize> = Vec::with_capacity(planned);
+    let mut conflicts: Vec<usize> = Vec::with_capacity(planned);
     let mut sat = 0usize;
     let mut unsat = 0usize;
     let mut unknown = 0usize;
     let mut disagreements = 0usize;
     let mut replay_failures = 0usize;
     let mut errors = 0usize;
+    // FNV-1a over every verdict and every sat model's values, in order: two
+    // builds that print the same digest took the same decisions (a heuristic
+    // change that preserved verdicts but moved a model would still move it).
+    let mut digest: u64 = 0xcbf2_9ce4_8422_2325;
+    let mut fnv = |bytes: &[u8]| {
+        for &b in bytes {
+            digest ^= u64::from(b);
+            digest = digest.wrapping_mul(0x0000_0100_0000_01b3);
+        }
+    };
     let total_started = Instant::now();
-    for (i, op) in ops.iter().enumerate() {
+    let mut replay_iter = replay_ops.into_iter().flatten();
+    let mut last_verdict: Option<bool> = None;
+    let mut i = 0usize;
+    loop {
+        let op = match synthetic.as_mut() {
+            Some(walk) => walk.next(&mut arena, &mut assertions, last_verdict),
+            None => replay_iter.next(),
+        };
+        let Some(op) = op else { break };
         let common = live
             .iter()
             .zip(&op.persistent)
@@ -353,6 +459,8 @@ fn main() {
         };
         let elapsed = started.elapsed();
         times_us.push(elapsed.as_secs_f64() * 1e6);
+        learned.push(solver.retained_learned_clause_count());
+        conflicts.push(solver.retained_sat_conflicts());
         let verdict = match result {
             Ok(CheckResult::Sat(model)) => {
                 sat += 1;
@@ -366,10 +474,15 @@ fn main() {
                     replay_failures += 1;
                     eprintln!("check {i}: sat model does not replay");
                 }
+                fnv(b"sat");
+                for (symbol, value) in model.iter() {
+                    fnv(format!("{}={value};", symbol.index()).as_bytes());
+                }
                 Some(true)
             }
             Ok(CheckResult::Unsat) => {
                 unsat += 1;
+                fnv(b"unsat");
                 Some(false)
             }
             Ok(CheckResult::Unknown(reason)) => {
@@ -383,12 +496,26 @@ fn main() {
                 None
             }
         };
+        if std::env::var_os("WARM_SESSION_AGE_TRACE").is_some() {
+            eprintln!(
+                "check {i}: live {} temps {} -> {verdict:?}",
+                live.len(),
+                temps.len()
+            );
+        }
         if let (Some(v), Some(e)) = (verdict, op.expected)
             && v != e
         {
             disagreements += 1;
             eprintln!("check {i}: verdict {v} disagrees with recorded {e}");
         }
+        // A probe's verdict does not steer the synthetic walk.
+        last_verdict = if op.temporary.is_empty() {
+            verdict
+        } else {
+            None
+        };
+        i += 1;
     }
     let total = total_started.elapsed();
 
@@ -396,14 +523,17 @@ fn main() {
         "verdicts: sat {sat} unsat {unsat} unknown {unknown} errors {errors}; disagreements {disagreements}; replay failures {replay_failures}; total {:.3} s",
         total.as_secs_f64()
     );
+    println!("verdict+model digest: {digest:016x}");
     println!(
-        "retained: clauses {} vars {} aig {} depth {}",
+        "retained: clauses {} vars {} aig {} depth {} learned {} conflicts {}",
         solver.encoded_clause_count(),
         solver.encoded_variable_count(),
         solver.lowered_aig_node_count(),
-        solver.scope_depth()
+        solver.scope_depth(),
+        solver.retained_learned_clause_count(),
+        solver.retained_sat_conflicts()
     );
-    println!("band  checks    p50_ms    p90_ms    max_ms    sum_ms");
+    println!("band  checks    p50_ms    p90_ms    max_ms    sum_ms   learned  conflicts");
     let mut first_p90 = None;
     let mut last_p90 = 0.0;
     for (b, chunk) in times_us.chunks(BAND).enumerate() {
@@ -413,14 +543,17 @@ fn main() {
         let p90 = percentile(&sorted, 0.9) / 1e3;
         let max = sorted.last().copied().unwrap_or(0.0) / 1e3;
         let sum: f64 = chunk.iter().sum::<f64>() / 1e3;
+        let last = (b * BAND + chunk.len()).saturating_sub(1);
         println!(
-            "{:>4} {:>7} {:>9.3} {:>9.3} {:>9.3} {:>9.1}",
+            "{:>4} {:>7} {:>9.3} {:>9.3} {:>9.3} {:>9.1} {:>9} {:>10}",
             b * BAND,
             chunk.len(),
             p50,
             p90,
             max,
-            sum
+            sum,
+            learned[last],
+            conflicts[last]
         );
         if chunk.len() == BAND {
             if first_p90.is_none() {
