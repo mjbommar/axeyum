@@ -2,7 +2,7 @@
 
 <!-- plan-section: lane-status -->
 
-Status: **all three lists complete and pushed, 2026-09-17 afternoon** — cindergraph 16/16 (`8bd2051` on GitHub), Glaurung 10/10 on the GitHub cindergraph crate (`d61be9ba`), Axeyum 16/16 (`178639959`). The A13 solver queue continues: item 1 closed (the algebraic witness's held-out draw refused it), items 2–4 in flight. The user's goal is to
+Status: **paused by the user, 2026-09-17 evening; every lane closed and merged**. cindergraph 16/16 (`8bd2051` on GitHub), Glaurung 10/10 on the GitHub cindergraph crate (`d61be9ba`), Axeyum 16/16 plus the whole A13 solver queue measured: item 1 refused by its held-out draw, item 2 shipped the disequality split (ADR-2147, QF_LRA 107 → 113), item 3 shipped the iterating refinement loop (ADR-2148, UFNIA 54 → 61), item 4 measured and OFF (ADR-2149). Nothing is in flight. The user's goal is to
 work through the three lists written the same afternoon:
 [Axeyum](../improvement-list-2026-09-16.md) (committed, `8df853252`),
 cindergraph `docs/improvement-list-2026-09-16.md` and Glaurung
@@ -49,13 +49,15 @@ commit there, and never push; Axeyum lanes use the usual isolated worktrees.
 | GL-CINDER2 | Glaurung | re-pinned to `8bd2051`; projection byte-identical; nothing waits on cindergraph | `d61be9ba`, pushed |
 | AX-GATE | Axeyum | item 16: the defects example is a gate (`scripts/check-cindergraph-defects.sh`, in `just py-check` and `check.sh`), cindergraph pinned in the dev group, three subject mutations each kill one test | `178639959`, pushed |
 
-## In flight (the A13 solver queue)
+## The A13 solver queue (landed)
 
-| lane | items |
-|---|---|
-| A13-LRA | ADR-2146 tableau admission on nonzeros, ADR-2147 the disequality split lemma (s5/s6) |
-| A13-NIA | ADR-2148 lemma emission separated from the refine share (s7) |
-| A13-QUANT | ADR-2149 nested-binder activation: fixtures, per-core split, lever OFF, 53-core sweep with a threshold (s6 spare cores) |
+| lane | result | where |
+|---|---|---|
+| A13-LRA | **ADR-2147 ships ON**: a violated disequality is a case split (cvc5's shape); QF_LRA 107 → 113 pinned, 93 → 97 held-out, QF_UFLRA 148 → 150, 0 losses / flips / disagreements / aborts. ADR-2146 (admission on nonzeros) inert at the shipped atom screen, OFF. The census's 27 no-tableau files all sit above the 1,024-atom screen | `aa4ea0b6b` |
+| A13-NIA | **ADR-2148 ships**: ADR-2136's losses were the lemmas inside the slice, not a starved route, and eight of its ten gains were the loop merely iterating; "iterate with tangents only" + share 3 gives UFNIA 54 → 61 pinned and 51 → 58 held-out, QF_NIA +2 pinned / +0 held-out, 0 stable losses over 1,800 file-runs. The lemma classes stay OFF (worth 2, cost 2) | `aab5d2db7` |
+| A13-QUANT | **ADR-2149 OFF**: the nested-binder reading holds for the static registration and fails for the engine — instances already expose nested universals (ADR-2120 slice 3); crossed-binder drops are 0.7 % of the shipped arm's; the composed arm trades one core for one; the A/B was not run at the pause | `4d7c61ad5` |
+
+Scoreboard movement from the queue, on the pinned lists: QF_LRA 107 → 113, QF_UFLRA 148 → 150, UFNIA 54 → 61, QF_NIA 84 → 86 (plus the ADR-2142 board gains: QF_UFLIA +5, QF_ABV +1, QF_BV +1, QF_NIA +1).
 | AX-CACHE | Axeyum | item 8 done: the canonical constraint cache in the engine, OFF (ADR-2144); 49 % hits on a real driver session, flat QF_BV A/B | `1f23fa26a`, pushed |
 | AX-WARM2 | Axeyum | the warm residual: keep surviving scopes' trail across solves, **ON** (ADR-2145 accepted); replayed session 1.21 → 0.45 s; new incremental z3 fuzz in the hook | `43f1e0f90`, pushed |
 | AX-BOARD-2142 | Axeyum | the user's question: the ADR-2142 fix on the 16-division board is +8 stable gains, 0 losses, 0 flips (QF_UFLIA +5, QF_ABV +1, QF_BV +1, QF_NIA +1); QF_ABV decided files 2× faster | `5d21c9db7` |

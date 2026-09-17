@@ -160,11 +160,15 @@ merge (one stale fuzz premise sat red on main for 40 minutes).
    `AXEYUM_NIA_REFINE_SHARE` = 3 — 0 stable losses on 1,800 file-runs, UFNIA
    54 → 61 pinned and 51 → 58 on a disjoint held-out draw, QF_NIA +1 pinned /
    +0 held-out. The classes stay OFF (worth `305`/`39`, cost `ex36`/`n-7`).
-4. **Nested-binder activation** for UFLIA/AUFDTLIRA: two fixtures deciding
-   whether a universal inside another binder can be activated at all, a
-   per-core split of `inactive_dropped` into crossed-binder versus other, then
-   the levers-composed sweep with a threshold above ±1. Largest gap, deepest
-   work.
+4. ~~**Nested-binder activation** for UFLIA/AUFDTLIRA~~ Measured 2026-09-17
+   (ADR-2149, `bench-results/quant-nested-activation-20260917/`): the fixtures
+   show the engine already exposes a nested universal through the outer
+   instance (ADR-2120 slice 3), so the static registration's crossed-binder
+   drops — 0.7 % of the shipped arm's — were never the block; at the positive
+   path they are 1.6 M tuples on nine cores and the block is the handoff
+   budgets and self-binding handoffs the checker refuses. A three-level lever
+   is registered OFF; the six-arm 53-core sweep found the composed arm trading
+   one core for one; no A/B at the pause.
 5. **Re-measure the board** on current head before any of the above is
    scored against it.
 
