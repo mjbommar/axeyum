@@ -1,0 +1,9 @@
+7	type '…' is not in the scalar subset
+6	local pointer '…': only `T *p = malloc(...)` is modelled
+4	call to '…' is not modelled (only ['…', '…', '…', '…', '…', '…', '…', '…'])
+3	cindergraph diagnostic outside every exported function: newline in literal (N such; a function the parser gave up on is not exported)
+1	cindergraph diagnostic inside this function: expected `;`, found `identifier` (N in the function)
+1	unknown name '…'
+1	parameter '…' is not a scalar or pointer declaration
+1	assignment to unknown '…'
+1	cindergraph diagnostic outside every exported function: malformed register annotation: expected `@<reg>` or `@reg` (N such; a function the parser gave up on is not exported)

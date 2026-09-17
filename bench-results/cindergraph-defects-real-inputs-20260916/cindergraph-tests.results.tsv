@@ -1,0 +1,90 @@
+arith.c	addmul	signed-overflow	line 1	`a * b` with a=(-9223372036854775807L - 1), b=(-9223372036854775807L - 1), c=0L	REPLAYED: arith.c:1:48: runtime error: signed integer overflow: -9223372036854775808 * -9223372036854775808 cannot be represented in type 'long' (line 1)
+arith.c	shifts	shift	line 2	`x << n` with x=1u, n=-1	REPLAYED: arith.c:2:48: runtime error: shift exponent -1 is negative (line 2)
+arith.c	signs	signed-overflow	line 3	`-a` with a=(-2147483647 - 1), b=0	REPLAYED: arith.c:3:43: runtime error: negation of -2147483648 cannot be represented in type 'int'; cast to an unsigned type to negate this value to itself (line 3)
+arrays.c	sum_array	refused	-	-	line 1: subscript on 'a' without a known capacity
+arrays.c	max_array	refused	-	-	line 2: subscript on 'a' without a known capacity
+arrays.c	reverse	refused	-	-	line 3: subscript on 'a' without a known capacity
+branches.c	classify	signed-overflow	line 1	`a-b` with a=0, b=(-2147483647 - 1)	REPLAYED: branches.c:1:44: runtime error: signed integer overflow: 0 - -2147483648 cannot be represented in type 'int' (line 1)
+branches.c	nested	signed-overflow	line 2	`-z` with x=-1, y=0, z=(-2147483647 - 1)	REPLAYED: branches.c:2:67: runtime error: negation of -2147483648 cannot be represented in type 'int'; cast to an unsigned type to negate this value to itself (line 2)
+checksum.c	crc32_step	clean	-	17 obligations over 9 paths, all unsat; unrolled to 8	no witness within the model
+checksum.c	fletcher16	refused	-	-	line 4: subscript on 'd' without a known capacity
+fixedpoint.c	fp_mul	clean	-	2 obligations over 1 paths, all unsat	no witness within the model
+fixedpoint.c	fp_div	shift	line 2	`(long)a<<16` with a=-1, b=0	REPLAYED: fixedpoint.c:2:47: runtime error: left shift of negative value -1 (line 2)
+fixedpoint.c	fp_div	divide	line 2	`((long)a<<16)/b` with a=0, b=0	REPLAYED: fixedpoint.c:2:52: runtime error: division by zero (line 2)
+fixedpoint.c	isqrt	signed-overflow	line 3	`x+1` with n=9223372036854775807L; unrolled to 8	REPLAYED: fixedpoint.c:3:34: runtime error: signed integer overflow: 9223372036854775807 + 1 cannot be represented in type 'long' (line 3)
+fixedpoint.c	isqrt	bounded	line 3	`y<x` can still hold after 8 iterations	bounded: no witness within 8 iterations
+linkedlist.c	list_sum	refused	-	-	line 2: postfix form 'member_suffix'
+linkedlist.c	list_find	refused	-	-	line 3: postfix form 'member_suffix'
+loops.c	sum_to	bounded	line 1	`i<n` can still hold after 8 iterations	bounded: no witness within 8 iterations
+loops.c	factorial	signed-overflow	line 2	`f*=n` with n=1073741824; unrolled to 8	REPLAYED: loops.c:2:47: runtime error: signed integer overflow: 1152921503533105152 * 1073741822 cannot be represented in type 'long' (line 2)
+loops.c	factorial	bounded	line 2	`n>1` can still hold after 8 iterations	bounded: no witness within 8 iterations
+loops.c	count_bits	bounded	line 3	`x` can still hold after 8 iterations	bounded: no witness within 8 iterations
+matrix.c	matmul	refused	-	-	line 3: subscript on 'A' without a known capacity
+recursion.c	fib	refused	-	-	line 1: call to 'fib' is not modelled (only ['free', 'memcpy', 'memmove', 'memset', 'strcat', 'strcpy', 'strlen', 'strncpy'])
+recursion.c	ackermann	refused	-	-	line 2: call to 'ackermann' is not modelled (only ['free', 'memcpy', 'memmove', 'memset', 'strcat', 'strcpy', 'strlen', 'strncpy'])
+sort.c	bubble	refused	-	-	line 2: subscript on 'a' without a known capacity
+sort.c	bsearch_i	refused	-	-	line 4: subscript on 'a' without a known capacity
+statemachine.c	fsm	refused	-	-	line 2: subscript on 'in' without a known capacity
+strops.c	str_len	refused	-	-	line 1: subscript on 's' without a known capacity
+strops.c	str_cmp	refused	-	-	line 2: unary '*' on '*a': pointers are opaque here
+strops.c	hash_djb2	refused	-	-	line 3: unary '*' on '*s++': pointers are opaque here
+structs.c	dist2	refused	-	-	line 2: type 'struct pt' is not in the scalar subset
+structs.c	rect_area	refused	-	-	line 3: subscript on 'p' without a known capacity
+switch_jt.c	dispatch	refused	-	-	line 2: statement form 'switch_stmt'
+comma_value.c	discard	refused	-	-	line 1: expression form 'comma_expr': 'x, 0'
+comma_value.c	keep	refused	-	-	line 2: expression form 'comma_expr': '0, x'
+comma_value.c	overwrite	refused	-	-	line 3: expression form 'comma_expr': 'y = x, y = 0'
+comma_value.c	side_effect	refused	-	-	line 4: expression form 'comma_expr': 'y = x, y'
+comma_value.c	conditional_effect	refused	-	-	line 5: expression form 'comma_expr': 'x ? (y = 1) : (y = 2), y'
+comma_value.c	short_circuit_effect	refused	-	-	line 6: expression form 'comma_expr': 'x && (y = 1), y'
+comma_value.c	main	refused	-	-	line 9: call to 'discard' is not modelled (only ['free', 'memcpy', 'memmove', 'memset', 'strcat', 'strcpy', 'strlen', 'strncpy'])
+angr.c	bi_reverse	signed-overflow	line 40	`i -= 1` with a0=0u, a1=(-2147483647 - 1); unrolled to 8	NO RUNTIME ORACLE: no runtime oracle available: the input does not compile as C (17 errors generated.)
+angr.c	bi_reverse	uninitialized	line 43	`v5` with a0=1u, a1=0; unrolled to 8	NO RUNTIME ORACLE: no runtime oracle available: the input does not compile as C (17 errors generated.)
+angr.c	bi_reverse	bounded	line 35	`i > 0` can still hold after 8 iterations	bounded: no witness within 8 iterations
+angr.c	usage	refused	-	-	line 59: local pointer '*v3': only `T *p = malloc(...)` is modelled
+angr.c	history_def_last	refused	-	-	line 88: local pointer '*v1': only `T *p = malloc(...)` is modelled
+angr.c	<file>	refused	-	-	line 52: cindergraph diagnostic outside every exported function: newline in literal (3 such; a function the parser gave up on is not exported)
+binja.c	history_def_last	refused	-	-	line 26: local pointer '* rax': only `T *p = malloc(...)` is modelled
+binja.c	usage	refused	-	-	line 54: call to '__fprintf_chk' is not modelled (only ['free', 'memcpy', 'memmove', 'memset', 'strcat', 'strcpy', 'strlen', 'strncpy'])
+binja.c	bi_reverse	refused	-	-	line 80: cindergraph diagnostic inside this function: expected `;`, found `identifier` (1 in the function)
+binja.c	handler	refused	-	-	line 98: call to '__longjmp_chk' is not modelled (only ['free', 'memcpy', 'memmove', 'memset', 'strcat', 'strcpy', 'strlen', 'strncpy'])
+binja.c	<file>	refused	-	-	line 93: cindergraph diagnostic outside every exported function: newline in literal (3 such; a function the parser gave up on is not exported)
+dewolf.c	history_def_last	refused	-	-	line 26: local pointer '* var_0': only `T *p = malloc(...)` is modelled
+dewolf.c	usage	refused	-	-	line 49: local pointer '* var_3': only `T *p = malloc(...)` is modelled
+dewolf.c	bi_reverse	refused	-	-	line 65: unknown name 'true'
+ghidra.c	parse_record	refused	-	-	line 30: type 'byte' is not in the scalar subset
+ghidra.c	_start	refused	-	-	line 67: type 'undefined8' is not in the scalar subset
+ghidra.c	switchD_001011b2::caseD_0	refused	-	-	line 87: type 'undefined8' is not in the scalar subset
+ghidra.c	FUN_00108540	refused	-	-	line 107: type 'undefined1' is not in the scalar subset
+ghidra.c	DllCanUnloadNow	refused	-	-	line 125: type 'HRESULT' is not in the scalar subset
+ghidra.c	Base::op	signed-overflow	line 147	`param_1 + 1000` with param_1=2147483136	NO RUNTIME ORACLE: no runtime oracle available: the input does not compile as C (16 errors generated.)
+ghidra.c	<file>	refused	-	-	line 25: cindergraph diagnostic outside every exported function: newline in literal (5 such; a function the parser gave up on is not exported)
+ida.c	bi_reverse	signed-overflow	line 43	`--a2` with a1=0u, a2=(-2147483647 - 1); unrolled to 8	NO RUNTIME ORACLE: no runtime oracle available: the input does not compile as C (20 errors generated.)
+ida.c	bi_reverse	bounded	line 38	`a2 > 0` can still hold after 8 iterations	bounded: no witness within 8 iterations
+ida.c	history_def_last	refused	-	-	line 58: local pointer '*v2': only `T *p = malloc(...)` is modelled
+ida.c	dis_func1	refused	-	-	line 88: call to 'sub_8006EC8' is not modelled (only ['free', 'memcpy', 'memmove', 'memset', 'strcat', 'strcpy', 'strlen', 'strncpy'])
+ida.c	raw_hexrays_fastcall	refused	-	-	line 100: type 'unsigned __int8' is not in the scalar subset
+ida.c	raw_hexrays_usercall	refused	-	-	line 123: parameter 'int a1@<ecx>' is not a scalar or pointer declaration
+r2dec.c	bi_reverse	refused	-	-	line 28: type 'signed int64_t' is not in the scalar subset
+r2dec.c	usage	refused	-	-	line 64: assignment to unknown 'edx'
+r2dec.c	<file>	refused	-	-	line 86: cindergraph diagnostic outside every exported function: malformed register annotation: expected `@<reg>` or `@reg` (2 such; a function the parser gave up on is not exported)
+retdec.c	function_401000	signed-overflow	line 38	`v2 += v1 & a2` with a1=1610612736, a2=1610612736; unrolled to 8	NO RUNTIME ORACLE: no runtime oracle available: the input calls undefined ['__asm_cpuid', '__pseudo_cond_branch']
+retdec.c	function_401000	bounded	line 37	`v1 > 0` can still hold after 8 iterations	bounded: no witness within 8 iterations
+retdec.c	function_401050	refused	-	-	line 54: call to '__asm_cpuid' is not modelled (only ['free', 'memcpy', 'memmove', 'memset', 'strcat', 'strcpy', 'strlen', 'strncpy'])
+initializer_order.c	chain	clean	-	0 obligations over 1 paths, all unsat	no witness within the model
+initializer_order.c	independent	clean	-	2 obligations over 1 paths, all unsat	no witness within the model
+initializer_order.c	identity	clean	-	0 obligations over 1 paths, all unsat	no witness within the model
+initializer_order.c	drop	refused	-	-	line 5: type 'void' is not in the scalar subset
+initializer_order.c	calls	refused	-	-	line 7: call to 'identity' is not modelled (only ['free', 'memcpy', 'memmove', 'memset', 'strcat', 'strcpy', 'strlen', 'strncpy'])
+initializer_order.c	main	refused	-	-	line 12: call to 'chain' is not modelled (only ['free', 'memcpy', 'memmove', 'memset', 'strcat', 'strcpy', 'strlen', 'strncpy'])
+parameter_address.c	replace_scalar	refused	-	-	line 3: local pointer '*p': only `T *p = malloc(...)` is modelled
+parameter_address.c	replace_pointer	refused	-	-	line 8: local pointer '**q': only one level of indirection
+parameter_address.c	main	refused	-	-	line 14: local pointer '*p': only `T *p = malloc(...)` is modelled
+sizeof_local.c	scalar	clean	-	0 obligations over 1 paths, all unsat	no witness within the model
+sizeof_local.c	pointer	refused	-	-	line 5: type 'x' is not in the scalar subset
+sizeof_local.c	pointee	refused	-	-	line 6: pointer type '*x' is opaque here; only its capacity is modelled
+sizeof_local.c	pointee_chain	refused	-	-	line 7: pointer type '*((*(x)))' is opaque here; only its capacity is modelled
+sizeof_local.c	nested	refused	-	-	line 8: type 'double' is not in the scalar subset
+sizeof_local.c	sink	refused	-	-	line 10: ++ on unknown 'touched'
+sizeof_local.c	compound	refused	-	-	line 13: type 'void' is not in the scalar subset
+sizeof_local.c	main	refused	-	-	line 23: call to 'scalar' is not modelled (only ['free', 'memcpy', 'memmove', 'memset', 'strcat', 'strcpy', 'strlen', 'strncpy'])

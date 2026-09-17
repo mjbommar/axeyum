@@ -1,0 +1,33 @@
+angr.c	bi_reverse	signed-overflow	line 40	`i -= 1` with a0=0u, a1=(-2147483647 - 1); unrolled to 8	NO RUNTIME ORACLE: no runtime oracle available: the input does not compile as C (17 errors generated.)
+angr.c	bi_reverse	uninitialized	line 43	`v5` with a0=1u, a1=0; unrolled to 8	NO RUNTIME ORACLE: no runtime oracle available: the input does not compile as C (17 errors generated.)
+angr.c	bi_reverse	bounded	line 35	`i > 0` can still hold after 8 iterations	bounded: no witness within 8 iterations
+angr.c	usage	refused	-	-	line 59: local pointer '*v3': only `T *p = malloc(...)` is modelled
+angr.c	history_def_last	refused	-	-	line 88: local pointer '*v1': only `T *p = malloc(...)` is modelled
+angr.c	<file>	refused	-	-	line 52: cindergraph diagnostic outside every exported function: newline in literal (3 such; a function the parser gave up on is not exported)
+binja.c	history_def_last	refused	-	-	line 26: local pointer '* rax': only `T *p = malloc(...)` is modelled
+binja.c	usage	refused	-	-	line 55: call to '__fprintf_chk' is not modelled (only ['free', 'memcpy', 'memmove', 'memset', 'strcat', 'strcpy', 'strlen', 'strncpy'])
+binja.c	bi_reverse	refused	-	-	line 82: cindergraph diagnostic inside this function: expected `;`, found `identifier` (1 in the function)
+binja.c	handler	refused	-	-	line 101: call to '__longjmp_chk' is not modelled (only ['free', 'memcpy', 'memmove', 'memset', 'strcat', 'strcpy', 'strlen', 'strncpy'])
+binja.c	<file>	refused	-	-	line 96: cindergraph diagnostic outside every exported function: newline in literal (3 such; a function the parser gave up on is not exported)
+dewolf.c	history_def_last	refused	-	-	line 27: local pointer '* var_0': only `T *p = malloc(...)` is modelled
+dewolf.c	usage	refused	-	-	line 51: local pointer '* var_3': only `T *p = malloc(...)` is modelled
+dewolf.c	bi_reverse	refused	-	-	line 68: unknown name 'true'
+ghidra.c	parse_record	refused	-	-	line 30: type 'byte' is not in the scalar subset
+ghidra.c	_start	refused	-	-	line 68: type 'undefined8' is not in the scalar subset
+ghidra.c	switchD_001011b2::caseD_0	refused	-	-	line 89: type 'undefined8' is not in the scalar subset
+ghidra.c	FUN_00108540	refused	-	-	line 110: type 'undefined1' is not in the scalar subset
+ghidra.c	DllCanUnloadNow	refused	-	-	line 128: type 'HRESULT' is not in the scalar subset
+ghidra.c	Base::op	signed-overflow	line 151	`param_1 + 1000` with param_1=2147483136	NO RUNTIME ORACLE: no runtime oracle available: the input does not compile as C (16 errors generated.)
+ghidra.c	<file>	refused	-	-	line 25: cindergraph diagnostic outside every exported function: newline in literal (5 such; a function the parser gave up on is not exported)
+ida.c	bi_reverse	signed-overflow	line 43	`--a2` with a1=0u, a2=(-2147483647 - 1); unrolled to 8	NO RUNTIME ORACLE: no runtime oracle available: the input does not compile as C (20 errors generated.)
+ida.c	bi_reverse	bounded	line 38	`a2 > 0` can still hold after 8 iterations	bounded: no witness within 8 iterations
+ida.c	history_def_last	refused	-	-	line 58: local pointer '*v2': only `T *p = malloc(...)` is modelled
+ida.c	dis_func1	refused	-	-	line 89: call to 'sub_8006EC8' is not modelled (only ['free', 'memcpy', 'memmove', 'memset', 'strcat', 'strcpy', 'strlen', 'strncpy'])
+ida.c	raw_hexrays_fastcall	refused	-	-	line 101: type 'unsigned __int8' is not in the scalar subset
+ida.c	raw_hexrays_usercall	refused	-	-	line 124: parameter 'int a1@<ecx>' is not a scalar or pointer declaration
+r2dec.c	bi_reverse	refused	-	-	line 28: type 'signed int64_t' is not in the scalar subset
+r2dec.c	usage	refused	-	-	line 64: assignment to unknown 'edx'
+r2dec.c	<file>	refused	-	-	line 86: cindergraph diagnostic outside every exported function: malformed register annotation: expected `@<reg>` or `@reg` (2 such; a function the parser gave up on is not exported)
+retdec.c	function_401000	signed-overflow	line 38	`v2 += v1 & a2` with a1=1610612736, a2=1610612736; unrolled to 8	NO RUNTIME ORACLE: no runtime oracle available: the input calls undefined ['__asm_cpuid', '__pseudo_cond_branch']
+retdec.c	function_401000	bounded	line 37	`v1 > 0` can still hold after 8 iterations	bounded: no witness within 8 iterations
+retdec.c	function_401050	refused	-	-	line 54: call to '__asm_cpuid' is not modelled (only ['free', 'memcpy', 'memmove', 'memset', 'strcat', 'strcpy', 'strlen', 'strncpy'])
