@@ -2643,10 +2643,14 @@ mod tests {
 
         let mut theory = LiaTheory::new(&arena, &[eq]);
         assert!(!theory.tracks(0));
+        theory.push();
         assert!(
             theory.assert(0, true).is_ok(),
             "no-op assert never conflicts"
         );
+        // ADR-2143: the polarities are separated by a `pop` — an untracked
+        // atom is still an assertion, and `a ∧ ¬a` at one level is a conflict.
+        theory.pop();
         assert!(theory.assert(0, false).is_ok());
     }
 
