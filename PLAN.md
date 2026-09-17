@@ -146,6 +146,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-09-17 | ax-cache | `CanonicalConstraintCache` in `incremental.rs` (exact / superset-unsat / replay-guarded model reuse, deterministic LRU), `SolverConfig::canonical_constraint_cache` + `AXEYUM_CANONICAL_CACHE` (config registry), `stats()` cache counters, Python `Config`/`Incremental`/`IncrementalStats` surface with stubs, `tests/canonical_constraint_cache_2144.rs` (13 tests, pre-push, two mutation controls), `warm_session_age --canonical-cache` + verdict digest, the DptfDevGen replay and the `QF_BV` A/B (`bench-results/canonical-cache-20260917/`), sizing note, ADR-2144. |
 | 2026-09-17 | `ax-lia-pop` | ADR-2143: `LiaTheory`/`LraTheory` reject an opposite-polarity re-assert as a conflict instead of overwriting (the ax-proptest STOP finding); `pop` exact by construction with a `debug_assert` invariant; red schedule fuzz green + LRA twin (finalized LCG) + core-polarity checks + three-step unit tests; `corpus/incremental/13-*`, `14-*` front-door fixtures; four mutation controls; corpus census (67 public scripts with the shape, 0 disagreements with z3); 800-file A/B (`bench-results/lia-pop-20260917/`). No wrong verdict shipped or could ship. |
 | 2026-09-17 | `3425a51ab` | ax-lifter: the cindergraph-defects pipeline over cindergraph's fixtures and Glaurung's decompiler output with the refusal histogram; replay must name the finding's kind; per-function refusal on a cindergraph diagnostic; multi-declarator declarations (item 12). |
 | 2026-09-17 | `8bdccc57b` | ax-lifter: `strcpy`/`strcat`/`strlen` with `// axeyum: strlen`, `malloc`-sized locals with `alloc-size-wrap`, `free`/use-after-free, uninitialised reads under MSan/valgrind/no-oracle; samples 11–12 (item 11). |
@@ -46778,6 +46779,24 @@ pre-existing prose/table mismatch, not introduced here and not one of this
 lane's five items; left as-is (frozen measurement snapshot).
 
 **Next.** Items 5–12, 14+ of the same improvement list are unclaimed.
+
+**AX-CACHE (`landed`, ax-cache, 2026-09-17).** `IncrementalBvSolver` owns a
+`CanonicalConstraintCache` keyed by the sorted, duplicate-elided set of live
+assertion identities (stack plus assumptions; order, frame shape and repeats
+do not matter), behind `SolverConfig::canonical_constraint_cache` /
+`AXEYUM_CANONICAL_CACHE` (registered, OFF as shipped). Exact `sat` is served
+only after the cached model replays against the live set; `unsat` for the same
+set or any superset; a cached model of a subset when it replays; `unknown`
+never cached; deterministic 4,096-entry LRU. Two mutation controls each kill
+exactly one test (the subset soundness-negative; the shipped default).
+Replaying the DptfDevGen owner-1 session: 589 of 1,206 checks (48.8 %) served
+from the cache, verdict digest byte-identical on and off, 0 disagreements, 0
+replay failures, wall 1.19–1.31 s → 0.77–0.83 s. `QF_BV` pinned-list A/B as
+the regression control (see ADR-2144). Python `Config`/`Incremental`/
+`IncrementalStats` carry it. ADR-2144. **Next:** Glaurung consumes it for its
+path-owned warm solver (item 5 on its list) and re-runs ADR-0303's mode matrix
+with the library cache as the `exact`/`structural` arms; a cross-solver
+variant needs a structural term hash in `axeyum-ir` and a name-keyed model.
 
 **Repaired, gated, A/B'd (`DONE`, ax-lia-pop, 2026-09-17).** The ax-proptest
 audit's STOP finding: `LiaTheory::assert` overwrote a live atom's polarity in

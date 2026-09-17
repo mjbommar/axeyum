@@ -1868,6 +1868,51 @@ SUITES["model-preference-2140"] = (
     ],
 )
 
+# --------------------------------------------------------------------------
+# ADR-2144: the canonical constraint cache. Two mutations, two subjects, each of
+# which must kill EXACTLY one test of the suite:
+#
+#  * deleting the SUBSET test from the structural lookup (every entry in a
+#    live member's `by_max` bucket is treated as a subset) must kill
+#    `unsat_is_never_served_for_a_subset` and nothing else -- it is the
+#    soundness-negative: `{a, c}` cached unsat, live `{b, c}` satisfiable,
+#    `c` the largest member of both, and the mutant answers `unsat`. The other
+#    tests survive because their structural probes either find no bucket
+#    (nothing cached under the live set's members) or are `sat` candidates
+#    guarded by replay;
+#  * flipping the shipped DEFAULT to `true` must kill
+#    `the_lever_ships_off_and_the_explicit_config_turns_it_on` and nothing
+#    else -- every other test enables the cache explicitly.
+# --------------------------------------------------------------------------
+
+SUITES["canonical-constraint-cache-2144"] = (
+    "crates/axeyum-solver/src/incremental.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--test",
+            "canonical_constraint_cache_2144",
+        ),
+        "canonical-constraint-cache-2144",
+    ),
+    [
+        (
+            "a cached unsat set answers only a SUPERSET live set",
+            "                if accept(&entry.result) && sorted_is_subset(&entry.key, key) {",
+            "                if accept(&entry.result) {",
+        ),
+        (
+            "the shipped default is off",
+            "pub const DEFAULT_CANONICAL_CACHE: bool = false;",
+            "pub const DEFAULT_CANONICAL_CACHE: bool = true;",
+            "crates/axeyum-solver/src/backend.rs",
+        ),
+    ],
+)
+
 SUITES["dt-nested-field-2128"] = (
     "crates/axeyum-solver/src/datatype_native.rs",
     Cargo(

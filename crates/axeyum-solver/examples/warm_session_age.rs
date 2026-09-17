@@ -32,6 +32,13 @@
 //! original assertions; a replay failure or an outcome that disagrees with the
 //! stream's recorded verdict is counted and fails the run.
 //!
+//! `--canonical-cache` turns on ADR-2144's canonical constraint cache on the
+//! retained solver (the `AXEYUM_CANONICAL_CACHE=on` lever does the same
+//! through `SolverConfig::default()`); the summary then prints its hit
+//! classes. Two digests are printed: `verdict digest` over the verdicts
+//! alone, which the cache must not move, and `verdict+model digest`, which a
+//! served (cached) model legitimately can.
+//!
 //! ```sh
 //! cargo run --release -p axeyum-solver --features full \
 //!     --example warm_session_age -- --synthetic 1200 --assert-flat 10
@@ -52,6 +59,7 @@ struct Options {
     assert_flat: Option<f64>,
     timeout: Duration,
     replay_cache: bool,
+    canonical_cache: bool,
 }
 
 fn parse_args() -> Result<Options, String> {
@@ -61,6 +69,7 @@ fn parse_args() -> Result<Options, String> {
         assert_flat: None,
         timeout: Duration::from_millis(2_000),
         replay_cache: true,
+        canonical_cache: false,
     };
     let mut args = std::env::args().skip(1);
     let mut mode_set = false;
@@ -88,6 +97,7 @@ fn parse_args() -> Result<Options, String> {
                     Duration::from_millis(v.parse().map_err(|e| format!("--timeout-ms {v}: {e}"))?);
             }
             "--no-replay-cache" => opts.replay_cache = false,
+            "--canonical-cache" => opts.canonical_cache = true,
             other => return Err(format!("unknown argument {other}")),
         }
     }
@@ -397,7 +407,20 @@ fn main() {
     let config = SolverConfig::new()
         .with_timeout(opts.timeout)
         .with_preprocess(false);
+    let config = if opts.canonical_cache {
+        config.with_canonical_constraint_cache(true)
+    } else {
+        config
+    };
     let mut solver = IncrementalBvSolver::with_config(config);
+    println!(
+        "canonical constraint cache: {}",
+        if solver.canonical_constraint_cache_enabled() {
+            "on"
+        } else {
+            "off"
+        }
+    );
     if opts.replay_cache {
         // Glaurung's production bounds (axeyum_backend.rs DEFAULT_REPLAY_SAT_CACHE_*).
         solver
@@ -420,10 +443,19 @@ fn main() {
     // builds that print the same digest took the same decisions (a heuristic
     // change that preserved verdicts but moved a model would still move it).
     let mut digest: u64 = 0xcbf2_9ce4_8422_2325;
+    // FNV-1a over the verdicts alone: the cache may change which model a
+    // repeated `sat` returns, never a verdict, so this one must not move.
+    let mut verdict_digest: u64 = 0xcbf2_9ce4_8422_2325;
     let mut fnv = |bytes: &[u8]| {
         for &b in bytes {
             digest ^= u64::from(b);
             digest = digest.wrapping_mul(0x0000_0100_0000_01b3);
+        }
+    };
+    let mut fnv_verdict = |bytes: &[u8]| {
+        for &b in bytes {
+            verdict_digest ^= u64::from(b);
+            verdict_digest = verdict_digest.wrapping_mul(0x0000_0100_0000_01b3);
         }
     };
     let total_started = Instant::now();
@@ -478,6 +510,7 @@ fn main() {
                     eprintln!("check {i}: sat model does not replay");
                 }
                 fnv(b"sat");
+                fnv_verdict(b"sat");
                 for (symbol, value) in model.iter() {
                     fnv(format!("{}={value};", symbol.index()).as_bytes());
                 }
@@ -486,10 +519,12 @@ fn main() {
             Ok(CheckResult::Unsat) => {
                 unsat += 1;
                 fnv(b"unsat");
+                fnv_verdict(b"unsat");
                 Some(false)
             }
             Ok(CheckResult::Unknown(reason)) => {
                 unknown += 1;
+                fnv_verdict(b"unknown");
                 eprintln!("check {i}: unknown ({reason:?}) after {elapsed:?}");
                 None
             }
@@ -526,7 +561,25 @@ fn main() {
         "verdicts: sat {sat} unsat {unsat} unknown {unknown} errors {errors}; disagreements {disagreements}; replay failures {replay_failures}; total {:.3} s",
         total.as_secs_f64()
     );
+    println!("verdict digest: {verdict_digest:016x}");
     println!("verdict+model digest: {digest:016x}");
+    if solver.canonical_constraint_cache_enabled() {
+        let c = solver.canonical_constraint_cache_stats();
+        println!(
+            "canonical cache: hits {} (exact sat {} / exact unsat {} / superset {} / model reuse {}) misses {} replay rejections {} insertions {} evictions {} entries {} model values {}",
+            c.hits,
+            c.exact_sat_hits,
+            c.exact_unsat_hits,
+            c.superset_hits,
+            c.model_reuse_hits,
+            c.misses,
+            c.replay_rejections,
+            c.insertions,
+            c.evictions,
+            c.entries,
+            c.model_values
+        );
+    }
     println!(
         "retained: clauses {} vars {} aig {} depth {} learned {} conflicts {}",
         solver.encoded_clause_count(),

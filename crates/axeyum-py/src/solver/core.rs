@@ -8,8 +8,8 @@
 )]
 
 use axeyum_solver::{
-    Evidence, EvidenceCheck, EvidenceReport, IncrementalBvSolver, IncrementalBvStats, ProofOutcome,
-    ReplayCheckedSatCachePolicy, SolverConfig, Strategy,
+    CanonicalConstraintCachePolicy, Evidence, EvidenceCheck, EvidenceReport, IncrementalBvSolver,
+    IncrementalBvStats, ProofOutcome, ReplayCheckedSatCachePolicy, SolverConfig, Strategy,
 };
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyModule};
@@ -776,6 +776,33 @@ impl PyIncrementalStats {
         self.stats.cnf_clauses
     }
 
+    /// Checks the canonical constraint cache answered (ADR-2144); zero
+    /// unless the cache is on. Always current, not profiling-gated.
+    #[getter]
+    fn cache_hits(&self) -> u64 {
+        self.stats.cache_hits
+    }
+
+    /// Checks the canonical constraint cache could not answer.
+    #[getter]
+    fn cache_misses(&self) -> u64 {
+        self.stats.cache_misses
+    }
+
+    /// Cached models refused because they did not replay against the live
+    /// set -- each was solved fresh instead, never served.
+    #[getter]
+    fn cache_replay_rejections(&self) -> u64 {
+        self.stats.cache_replay_rejections
+    }
+
+    /// `unsat` verdicts served because a cached `unsat` set was a subset of
+    /// the live set.
+    #[getter]
+    fn cache_superset_hits(&self) -> u64 {
+        self.stats.cache_superset_hits
+    }
+
     /// The work between `earlier` and this snapshot, component-wise and
     /// saturating -- one check's cost when the two bracket it.
     fn delta_since(&self, earlier: &Self) -> Self {
@@ -806,6 +833,13 @@ impl PyIncrementalStats {
         dict.set_item("aig_nodes", self.stats.aig_nodes)?;
         dict.set_item("cnf_variables", self.stats.cnf_variables)?;
         dict.set_item("cnf_clauses", self.stats.cnf_clauses)?;
+        dict.set_item("cache_hits", self.stats.cache_hits)?;
+        dict.set_item("cache_misses", self.stats.cache_misses)?;
+        dict.set_item(
+            "cache_replay_rejections",
+            self.stats.cache_replay_rejections,
+        )?;
+        dict.set_item("cache_superset_hits", self.stats.cache_superset_hits)?;
         Ok(dict)
     }
 
@@ -969,6 +1003,67 @@ impl PyIncremental {
     /// Turns the replay-checked `sat` model cache off.
     fn disable_replay_checked_sat_cache(&mut self) {
         self.solver.disable_replay_checked_sat_cache();
+    }
+
+    /// Turns on the canonical constraint cache (ADR-2144): decided queries
+    /// keyed by the sorted, duplicate-elided SET of live assertions, so
+    /// order, scope shape and repeats do not matter. A cached `sat` is served
+    /// only after its model replays against the live set; a cached `unsat`
+    /// only for a superset of the cached set. Enabling clears entries.
+    #[pyo3(signature = (max_entries = 4096, max_values = 262_144, max_bits = 16_777_216))]
+    fn enable_canonical_constraint_cache(
+        &mut self,
+        max_entries: usize,
+        max_values: usize,
+        max_bits: usize,
+    ) -> PyResult<()> {
+        self.solver
+            .enable_canonical_constraint_cache(CanonicalConstraintCachePolicy::new(
+                max_entries,
+                max_values,
+                max_bits,
+            ))
+            .map_err(|error| map_solver_error(&error))
+    }
+
+    /// Turns the canonical constraint cache off and drops its entries.
+    fn disable_canonical_constraint_cache(&mut self) {
+        self.solver.disable_canonical_constraint_cache();
+    }
+
+    /// Whether the canonical constraint cache is on for this solver.
+    #[getter]
+    fn canonical_constraint_cache_enabled(&self) -> bool {
+        self.solver.canonical_constraint_cache_enabled()
+    }
+
+    /// Canonical-cache counters by hit class, every DECLINE class, and the
+    /// current storage gauges.
+    fn canonical_constraint_cache_stats<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        let stats = self.solver.canonical_constraint_cache_stats();
+        let dict = PyDict::new(py);
+        dict.set_item("hits", stats.hits)?;
+        dict.set_item("exact_sat_hits", stats.exact_sat_hits)?;
+        dict.set_item("exact_unsat_hits", stats.exact_unsat_hits)?;
+        dict.set_item("superset_hits", stats.superset_hits)?;
+        dict.set_item("model_reuse_hits", stats.model_reuse_hits)?;
+        dict.set_item("misses", stats.misses)?;
+        dict.set_item("replay_rejections", stats.replay_rejections)?;
+        dict.set_item("insertions", stats.insertions)?;
+        dict.set_item("evictions", stats.evictions)?;
+        dict.set_item("declined_unknown", stats.declined_unknown)?;
+        dict.set_item("declined_oversized_models", stats.declined_oversized_models)?;
+        dict.set_item(
+            "declined_non_scalar_models",
+            stats.declined_non_scalar_models,
+        )?;
+        dict.set_item("entries", stats.entries)?;
+        dict.set_item("model_values", stats.model_values)?;
+        dict.set_item("model_bits", stats.model_bits)?;
+        Ok(dict)
     }
 
     /// Cache counters, including every DECLINE class.
