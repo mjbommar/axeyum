@@ -93,15 +93,7 @@ pub fn check_qf_bv_faithfulness(
         symbols.insert(input.symbol, input.sort);
     }
 
-    // A small linear-congruential generator keeps the sampling deterministic
-    // (so the check is exactly reproducible — `seed` is part of the certificate).
-    let mut state = seed | 1;
-    let mut next = || {
-        state = state
-            .wrapping_mul(6_364_136_223_846_793_005)
-            .wrapping_add(1_442_695_040_888_963_407);
-        state
-    };
+    let mut next = sample_stream(seed);
 
     for _ in 0..samples {
         let mut assignment = Assignment::new();
@@ -125,6 +117,32 @@ pub fn check_qf_bv_faithfulness(
     Ok(FaithfulnessOutcome::Agreed { samples })
 }
 
+/// The deterministic sample stream behind `seed`: a linear-congruential
+/// generator (so the check is exactly reproducible — `seed` is part of the
+/// certificate) whose OUTPUT is passed through SplitMix64's finalizer.
+///
+/// The raw state is never handed out. Bit `k` of an LCG modulo `2^64` has
+/// period `2^(k+1)`, so bit 0 alternates on every draw and, with two draws per
+/// bit-vector symbol, every symbol's low bit landed on the same parity on every
+/// sample: measured 2026-09-16 (lane ax-proptest), across 1000 samples of two
+/// 6-bit symbols the divisor was never zero, no operand was ever odd, and only
+/// 16 of the 64 values were ever drawn per symbol — at every seed, because
+/// `seed | 1` fixes the starting parity. A checker whose sampler cannot reach
+/// bit 0 cannot see a bit-0 lowering defect, and this one carried a seed in its
+/// certificate as if it could. The finalizer makes every output bit depend on
+/// the whole state.
+fn sample_stream(seed: u64) -> impl FnMut() -> u64 {
+    let mut state = seed | 1;
+    move || {
+        state = state
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        let z = (state ^ (state >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
+    }
+}
+
 /// A random value of the given (finite, bit-blastable) sort.
 fn random_value(sort: Sort, next: &mut impl FnMut() -> u64) -> Value {
     match sort {
@@ -144,5 +162,51 @@ fn random_value(sort: Sort, next: &mut impl FnMut() -> u64) -> Value {
         // `lower_terms` would have failed for any other sort, so this is
         // unreachable in practice; fall back to a Boolean to stay total.
         _ => Value::Bool(false),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The sampler must be able to put BOTH values into the low bit of every
+    /// symbol, on the draw schedule the checker uses (two draws per bit-vector
+    /// symbol, symbols in a fixed order). Before the output mixer this was
+    /// false at every seed: the first of the two draws always landed on an
+    /// even LCG state, so bit 0 of every symbol was 0 on every sample, and a
+    /// bit-0 lowering defect (a dropped carry out of bit 0, the LSB of a
+    /// multiplier) was invisible to a check that carries a seed as evidence.
+    #[test]
+    fn the_sampler_reaches_both_low_bit_values_of_every_symbol() {
+        for seed in [0xABCD_u64, 0x1234, 1, u64::MAX] {
+            // The checker's own stream, not a copy of it: a probe over a
+            // replica would stay green while the shipped sampler regressed.
+            let mut next = sample_stream(seed);
+            let symbols = 2usize;
+            let mut low_bits_seen = vec![[false; 2]; symbols];
+            let mut zero_seen = false;
+            // The same sample count `tests/faithfulness.rs` configures for the
+            // division test, so "never produced 0" is a statement about the
+            // run that carries the seed, not about a shorter one.
+            for _ in 0..1000 {
+                for seen in &mut low_bits_seen {
+                    let Value::Bv { value, .. } = random_value(Sort::BitVec(6), &mut next) else {
+                        panic!("a bit-vector sort samples a bit-vector value");
+                    };
+                    seen[usize::try_from(value & 1).expect("one bit")] = true;
+                    zero_seen |= value == 0;
+                }
+            }
+            for (symbol, seen) in low_bits_seen.iter().enumerate() {
+                assert!(
+                    seen[0] && seen[1],
+                    "seed {seed:#x}: symbol {symbol} never took both low-bit values: {seen:?}"
+                );
+            }
+            assert!(
+                zero_seen,
+                "seed {seed:#x}: 2000 draws of a 6-bit symbol never produced 0 (the bvudiv totality corner)"
+            );
+        }
     }
 }

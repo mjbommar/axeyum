@@ -12471,5 +12471,92 @@ SUITES["nra-algebraic-witness-printer"] = (
     ],
 )
 
+
+# --------------------------------------------------------------------------
+# Property-test box audit (2026-09-16, lane ax-proptest, improvement-list item
+# 5). The ADR-2134 incident generalized: a generator whose box cannot reach the
+# class of counterexample the property's negation needs is green over the
+# defect it exists to catch. Each suite below pairs a generator that was made
+# able to reach such a class with a mutant the OLD generator could not see.
+#
+# The recurring mechanism, found in six crates: a raw MMIX LCG state read at
+# its low bits. Bit `k` of `state = state * a + c mod 2^64` (a, c odd) has
+# period `2^(k+1)`, so `state & 1` alternates on every draw and two
+# consecutive `below(2)` draws are anti-correlated with certainty. Any binary
+# decision made at a fixed draw stride is therefore CONSTANT, not random.
+#
+# `check_qf_bv_faithfulness` is production code (its seed is part of the
+# certificate). Its sampler took two draws per bit-vector symbol, so the first
+# draw of every symbol landed on an even state and bit 0 of every symbol was
+# 0 on every sample at every seed. A defect confined to bit 0 of the lowering
+# was invisible to it. The first mutation reverts the fix (the SplitMix64
+# finalizer) and must kill exactly the probe that consumes the shipped
+# stream; the second plants a bit-0-only defect in the adder and must be
+# caught by the checker's own integration test, which the old sampler could
+# not do (the class needs two odd operands).
+# --------------------------------------------------------------------------
+
+SUITES["proptest-box-faithfulness-sampler"] = (
+    "crates/axeyum-solver/src/faithfulness.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--lib", "faithfulness"),
+        "proptest-box-faithfulness-sampler",
+    ),
+    [
+        (
+            # THE DEFECT ITSELF: hand out the raw LCG state, whose low bits
+            # are locked to the draw parity.
+            "the sample stream must mix the LCG state before handing it out",
+            "        let z = (state ^ (state >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n        z ^ (z >> 31)",
+            "        state",
+        ),
+    ],
+)
+
+# `axeyum-ir/src/wide.rs`'s test generator advanced the LCG twice per 128-bit
+# draw and masked the LOW bits: at width 1 all 200 pairs were `(0, 0)`, at
+# width 2 all 200 were `(2, 0)`. The fix mixes the output and adds a seed
+# class of degenerate pairs (both zero, both ones, `INT_MIN / -1`, `x / 0`)
+# ahead of the random draws in every width. The first mutation reverts the
+# mixer and must kill exactly the population probe; the second deletes the
+# negative-dividend branch of division by zero, which the seed class reaches
+# at every width (the old random draw produced a zero divisor 0 times in 300
+# at every width >= 13, and only with a locked dividend below that).
+
+SUITES["proptest-box-wide-generator"] = (
+    "crates/axeyum-ir/src/wide.rs",
+    Cargo(("-p", "axeyum-ir", "--lib", "wide::tests"), "proptest-box-wide-generator"),
+    [
+        (
+            "the test generator must mix the LCG state before masking it",
+            "            let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);\n            let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);\n            z ^ (z >> 31)",
+            "            self.0",
+        ),
+        (
+            "bvsdiv by zero of a negative dividend is 1, not all-ones",
+            "            return if self.is_negative() {\n                Self::from_u128(1, self.width)\n            } else {\n                Self::ones(self.width)\n            };",
+            "            return Self::ones(self.width);",
+        ),
+    ],
+)
+
+SUITES["proptest-box-faithfulness-lsb-defect"] = (
+    "crates/axeyum-bv/src/lib.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--test", "faithfulness"),
+        "proptest-box-faithfulness-lsb-defect",
+    ),
+    [
+        (
+            # A lowering defect confined to bit 0: the carry out of the least
+            # significant full adder is dropped. Visible only when BOTH
+            # operands are odd, which the pre-fix sampler never produced.
+            "the carry out of bit 0 must be generated like every other carry",
+            "            let carry_from_pair = self.aig.and(lhs, rhs);",
+            "            let carry_from_pair = if index == 0 {\n                AigLit::FALSE\n            } else {\n                self.aig.and(lhs, rhs)\n            };",
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
