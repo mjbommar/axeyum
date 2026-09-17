@@ -111,11 +111,14 @@ pinned by a test in `test_lift.py`.
 query but does not reproduce under the sanitizer at the finding's line means
 the lifter's model of C is wrong somewhere, and the run says so instead of
 reporting a finding. Each finding kind is replayed under the one sanitizer that
-can observe it (`SANITIZER_FOR` in `check.py`), so the report is evidence for
-that finding and not for whichever undefined behaviour happens first on the
-path. When no oracle exists on the host for a kind — `uninitialized` needs
-clang's MemorySanitizer, or valgrind — the row says `NO RUNTIME ORACLE` and is
-counted apart from the replayed ones, never as a replay.
+can observe it (`SANITIZER_FOR` in `check.py`), and the report must name that
+kind at that line (`REPORT_FOR`), so the report is evidence for that finding
+and not for whichever undefined behaviour happens first on the path — a shift
+report at the line of a signed-overflow finding is `DID NOT REPLAY`. When no
+oracle exists on the host for a kind — `uninitialized` needs clang's
+MemorySanitizer, or valgrind — or the input itself cannot be compiled and
+linked as C (captured decompiler output), the row says `NO RUNTIME ORACLE` and
+is counted apart from the replayed ones, never as a replay.
 
 ## Sinks and what "clean" means
 
@@ -135,11 +138,14 @@ counted apart from the replayed ones, never as a replay.
 
 A sink's query asserts the path conditions that lead to it, assumes every
 earlier obligation whose violation would stop the program (a memory fault, a
-division trap) so that execution actually reaches the sink, and negates the
-sink's own obligation. It does not assume the earlier obligations the program
-survives (a narrowing store, a signed overflow at `-O0`), because the textbook
-bugs are exactly the ones where that survived violation defeats a later check:
-sample 06's overflow at line 18 needs the truncation at line 15.
+division trap) — or that the sink's own sanitizer would abort on first, since
+the replay runs under one sanitizer with no recovery (`ORACLE_GROUP` in
+`lift.py`: `x << n` before `32 - n` on one line) — so that execution actually
+reaches the sink, and negates the sink's own obligation. It does not assume
+the earlier obligations the program survives under that oracle (a narrowing
+store or a signed overflow before a `memcpy`), because the textbook bugs are
+exactly the ones where that survived violation defeats a later check: sample
+06's overflow at line 18 needs the truncation at line 15.
 
 **Clean** means every obligation on every path is `unsat` inside this model:
 scalar integer parameters; opaque pointers whose capacities are declared by the

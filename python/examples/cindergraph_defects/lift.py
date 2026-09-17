@@ -293,6 +293,23 @@ _SINK_CALLS = {"memcpy", "memmove", "memset", "strncpy", "strcpy", "strcat"}
 _OTHER_CALLS = {"strlen", "free"}
 _ALLOC_CALLS = {"malloc", "calloc"}
 STOPPING = {"buffer", "buffer-read", "index-negative", "index-high", "divide", "use-after-free"}
+# Kinds that share a runtime oracle. The replay compiles with ONE sanitizer and
+# no recovery, so an earlier violation of a kind in the sink's own group aborts
+# the run before the sink: the witness must satisfy those earlier obligations
+# or it cannot reach the sink under the oracle that would observe it.
+ORACLE_GROUP = {
+    "buffer": "address",
+    "buffer-read": "address",
+    "index-negative": "address",
+    "index-high": "address",
+    "use-after-free": "address",
+    "divide": "undefined",
+    "shift": "undefined",
+    "signed-overflow": "undefined",
+    "narrowing": "implicit-conversion",
+    "alloc-size-wrap": "unsigned-overflow",
+    "uninitialized": "memory",
+}
 _CAP_RE = re.compile(r"//\s*axeyum:\s*capacity\((\w+)\)\s*=\s*(\w+)")
 _STRLEN_RE = re.compile(r"//\s*axeyum:\s*strlen\((\w+)\)\s*=\s*(\w+)")
 _UNROLL_RE = re.compile(r"//\s*axeyum:\s*unroll\s*=\s*(\d+)")
@@ -1081,11 +1098,22 @@ class Lifter:
         return out
 
     def decl(self, i: int, state: PathState) -> PathState:
+        """``T a = x, b = a, c;``: each declarator in order, its initializer after the previous."""
         a = self.ast
         kids = a.children(i)
         spec = next(k for k in kids if a.tag(k) == "decl_specifiers")
-        declarator = next(k for k in kids if a.tag(k) == "declarator")
-        init = next((k for k in kids if a.tag(k) == "initializer"), None)
+        declarators = [k for k in kids if a.tag(k) == "declarator"]
+        for declarator in declarators:
+            # The initializer, if any, is the sibling right after its declarator.
+            following = kids[kids.index(declarator) + 1 :]
+            init = following[0] if following and a.tag(following[0]) == "initializer" else None
+            state = self.one_declarator(i, spec, declarator, init, state)
+        return state
+
+    def one_declarator(
+        self, i: int, spec: int, declarator: int, init: int | None, state: PathState
+    ) -> PathState:
+        a = self.ast
         dtext = a.text(declarator).strip()
         m = _ARRAY_RE.match(dtext)
         if m:
@@ -1223,15 +1251,22 @@ class Lifter:
         for c in st.conds[: ob.path_len]:
             lines.append(f"(assert {c})")
         # Execution must REACH this sink: every earlier obligation whose
-        # violation stops the program (a memory fault, a division trap) is
-        # assumed to hold. Ones the program survives — a narrowing store, a
-        # signed overflow at -O0, a bad shift — are not, because the textbook
-        # bugs are exactly the ones where that survived violation defeats a
-        # later check.
+        # violation stops the program (a memory fault, a division trap), or
+        # that the sink's own sanitizer would abort on first (`32 - n` after
+        # `x << n` on one line, both under -fsanitize=undefined), is assumed
+        # to hold. Ones the program survives under that oracle — a narrowing
+        # store or a signed overflow before a memcpy — are not, because the
+        # textbook bugs are exactly the ones where that survived violation
+        # defeats a later check.
+        group = ORACLE_GROUP.get(ob.kind)
         for earlier in st.obligations:
             if earlier is ob:
                 break
-            if earlier.kind in STOPPING and earlier.path_len <= ob.path_len:
+            if earlier.path_len > ob.path_len:
+                continue
+            if earlier.kind in STOPPING or (
+                group is not None and ORACLE_GROUP.get(earlier.kind) == group
+            ):
                 lines.append(f"(assert {earlier.holds})")
         lines.append(f"(assert (not {ob.holds}))")
         lines.append("(check-sat)")
@@ -1262,14 +1297,20 @@ def lift_source(src: str, unroll: int = DEFAULT_UNROLL) -> list[Lifted | tuple[s
 
     Loops are unrolled to ``unroll`` iterations, unless the file says
     ``// axeyum: unroll = N``, in which case ``N`` wins for that file.
+
+    A cindergraph diagnostic (it parses tolerantly and reports what it could
+    not make sense of, with a byte span) refuses the function whose span holds
+    it; functions elsewhere in the file are lifted. Diagnostics outside every
+    exported function — a header comment the lexer disliked, a function it gave
+    up on entirely and so never exported — are returned as one refusal named
+    ``"<file>"`` so the file's coverage is visible.
     """
     if _cg is None:
         raise RuntimeError(
             "cindergraph is not installed: uv pip install 'cindergraph @ git+https://github.com/mjbommar/cindergraph.git@main'"
         )
     report = _cg.analyze(src)
-    if report.diagnostics:
-        raise RuntimeError(f"cindergraph diagnostics: {[str(d) for d in report.diagnostics]}")
+    diags = [(int(d.start), int(d.end), str(d.message)) for d in report.diagnostics]
     bound = file_unroll(src)
     if bound is None:
         bound = unroll
@@ -1277,10 +1318,22 @@ def lift_source(src: str, unroll: int = DEFAULT_UNROLL) -> list[Lifted | tuple[s
     cfgs = {
         name: json.loads(doc) for name, doc in _cg.export_graphs(src, repr="cfg", format="json")
     }
+    covered: set[int] = set()
+    raw = src.encode("utf-8")
     for name, doc in _cg.export_graphs(src, repr="ast", format="json"):
         ast = _Ast(src, json.loads(doc))
         root = next(i for i in ast.nodes if ast.tag(i) == "func_def")
+        start, end = ast.span(root)
         try:
+            inside = [k for k, (ds, de, _) in enumerate(diags) if ds < end and de > start]
+            covered.update(inside)
+            if inside:
+                ds, _, msg = diags[inside[0]]
+                raise Refused(
+                    raw.count(b"\n", 0, ds) + 1,
+                    f"cindergraph diagnostic inside this function: {msg} "
+                    f"({len(inside)} in the function)",
+                )
             back = [e for e in cfgs[name]["edges"] if e.get("back") not in (None, "false", False)]
             lifter = Lifter(src, ast, root, unroll=bound)
             lifted = lifter.run()
@@ -1293,4 +1346,17 @@ def lift_source(src: str, unroll: int = DEFAULT_UNROLL) -> list[Lifted | tuple[s
             out.append(lifted)
         except Refused as r:
             out.append((name, r))
+    outside = [k for k in range(len(diags)) if k not in covered]
+    if outside:
+        ds, _, msg = diags[outside[0]]
+        out.append(
+            (
+                "<file>",
+                Refused(
+                    raw.count(b"\n", 0, ds) + 1,
+                    f"cindergraph diagnostic outside every exported function: {msg} "
+                    f"({len(outside)} such; a function the parser gave up on is not exported)",
+                ),
+            )
+        )
     return out

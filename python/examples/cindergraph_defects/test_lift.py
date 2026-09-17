@@ -255,6 +255,27 @@ class Obligations(unittest.TestCase):
         self.assertEqual(lifter.pointer_arith(0, _state(k=INT))[2], 1)
 
 
+class Declarations(unittest.TestCase):
+    def test_every_declarator_is_declared_with_its_own_initializer(self) -> None:
+        #  int a = 1, b;   (one decl node, two declarators, one initializer)
+        text = "int a = 1, b;"
+        nodes = [
+            (0, "decl", text, 0, 13, None),
+            (1, "decl_specifiers", "int", 0, 3, 0),
+            (2, "declarator", "declarator", 4, 5, 0),
+            (3, "decl_name", "a", 4, 5, 2),
+            (4, "initializer", "initializer", 6, 9, 0),
+            (5, "literal", "1", 8, 9, 4),
+            (6, "declarator", "declarator", 11, 12, 0),
+            (7, "decl_name", "b", 11, 12, 6),
+        ]
+        st = _fake(text, nodes).decl(0, _state())
+        self.assertEqual(st.env["a"], Term("a_1", INT))
+        self.assertEqual(st.defs, [("a_1", INT, "(_ bv1 32)")])
+        self.assertEqual(st.env["b"], Term("b_uninit", INT))
+        self.assertEqual(st.uninit, {"b"})  # `b` has no initializer; `a` is not uninitialised
+
+
 class Annotations(unittest.TestCase):
     def test_file_level_unroll(self) -> None:
         from lift import file_unroll

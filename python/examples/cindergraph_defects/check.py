@@ -44,7 +44,21 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 DEFAULT_CLI = REPO / "target" / "release" / "examples" / "axeyum_cli"
 CLI_BUILD_LINE = "cargo build --release -p axeyum-bench --example axeyum_cli --features full"
-COMMON = ["-fno-sanitize-recover=all", "-fno-omit-frame-pointer", "-O0", "-g", "-w"]
+COMMON = [
+    "-fno-sanitize-recover=all",
+    "-fno-omit-frame-pointer",
+    "-O0",
+    "-g",
+    "-w",
+    # Real inputs (decompiler output, fixtures without prototypes) call
+    # functions they never declare; that is an error in clang >= 16 and would
+    # otherwise make every such file "not compilable" before the sink is reached.
+    "-Wno-error=implicit-function-declaration",
+    "-Wno-error=int-conversion",
+]
+# Headers the harness includes BEFORE the sample, so a fixture that uses
+# `int32_t` or `size_t` without including anything still compiles.
+STD_HEADERS = "#include <stddef.h>\n#include <stdint.h>\n#include <stdlib.h>\n#include <string.h>\n"
 # The sanitizer that can observe each finding kind — and only that one, so the
 # replay's report is evidence for THIS finding rather than for whichever
 # undefined behaviour happens first on the path. `uninitialized` is resolved at
@@ -71,6 +85,22 @@ NO_ORACLE = "no runtime oracle available"
 _VALUE_RE = re.compile(r"\((\w+)\s+(#b[01]+|#x[0-9a-fA-F]+|\(_ bv(\d+) \d+\))\)")
 _LINE_RE = re.compile(r":(\d+):\d+: runtime error")
 _REPORT_MARKS = ("ERROR: AddressSanitizer", "WARNING: MemorySanitizer", "runtime error")
+# What the sanitizer's report must say for it to be evidence for THIS kind. A
+# report of another kind at the same line (`x << n` aborting before `32 - n`
+# on one line) is not a replay of the finding, whatever the line number says.
+REPORT_FOR = {
+    "buffer": ("AddressSanitizer",),
+    "buffer-read": ("AddressSanitizer",),
+    "index-negative": ("AddressSanitizer",),
+    "index-high": ("AddressSanitizer",),
+    "use-after-free": ("heap-use-after-free", "double-free", "attempting free"),
+    "divide": ("division by zero", "division of"),
+    "shift": ("shift exponent", "left shift of"),
+    "signed-overflow": ("signed integer overflow", "negation of"),
+    "narrowing": ("implicit conversion",),
+    "alloc-size-wrap": ("unsigned integer overflow",),
+    "uninitialized": ("use-of-uninitialized-value", "uninitialised value"),
+}
 BOUNDS = (1, 16, 256, 4096)  # smallest witness first: it is the one a reader can check by hand
 
 
@@ -184,7 +214,9 @@ def harness(sample: Path, lifted: Lifted, values: dict[str, int]) -> str:
     setup = []
     for p in lifted.params:
         if p in lifted.pointer_params:
-            n = resolve(lifted.capacities[p], values)
+            # A pointer with no annotation and no modelled use (or it would have
+            # been refused) gets a small zeroed block: the model never read it.
+            n = resolve(lifted.capacities[p], values) if p in lifted.capacities else 64
             size = max(n, 1)
             setup.append(f"    unsigned char *{p} = malloc({size}); memset({p}, 0, {size});")
             if p in lifted.strlens:
@@ -196,7 +228,7 @@ def harness(sample: Path, lifted: Lifted, values: dict[str, int]) -> str:
             t = dict(lifted.scalar_params)[p]
             args.append(c_literal(values.get(p, 0), t))
     return (
-        f'#include "{sample.resolve()}"\n#include <stdlib.h>\n#include <string.h>\n'
+        f'{STD_HEADERS}#include "{sample.resolve()}"\n'
         f"int main(void) {{\n"
         + "\n".join(setup)
         + f"\n    volatile long r = (long){lifted.function}({', '.join(args)});\n    (void)r;\n    return 0;\n}}\n"
@@ -237,8 +269,8 @@ def uninit_oracle(cc: str) -> str | None:
     return oracle
 
 
-def sanitizer_report(err: str, sample_name: str, line: int) -> tuple[bool, str]:
-    """The first sanitizer report in ``err``; True only if it names ``line``."""
+def sanitizer_report(err: str, sample_name: str, kind: str, line: int) -> tuple[bool, str]:
+    """The first sanitizer report in ``err``; True only if it is ``kind``'s report at ``line``."""
     frame_re = re.compile(r"#\d+ .*?" + re.escape(sample_name) + r":(\d+)")
     for report in err.splitlines():
         if any(mark in report for mark in _REPORT_MARKS):
@@ -255,6 +287,11 @@ def sanitizer_report(err: str, sample_name: str, line: int) -> tuple[bool, str]:
                 return (
                     False,
                     f"sanitizer fired at line {where}, not the finding's line {line}: {report[:120]}",
+                )
+            if not any(mark in report for mark in REPORT_FOR[kind]):
+                return (
+                    False,
+                    f"sanitizer fired for a different defect at line {where}, not {kind}: {report[:120]}",
                 )
             return True, f"{report[:150]} (line {where})" if where is not None else report[:160]
     return False, ""
@@ -295,7 +332,25 @@ def replay(
         [cc, *flags, *COMMON, str(source), "-o", str(exe)], capture_output=True, text=True
     )
     if comp.returncode != 0:
-        return False, "compile failed: " + comp.stderr.strip().splitlines()[-1][:160]
+        last = comp.stderr.strip().splitlines()[-1][:160]
+        # Whose fault: the input's, or the harness's? A sample that does not
+        # compile on its own (decompiler pseudo-types, missing prototypes) has
+        # no runtime oracle; a sample that does, wrapped in a main that does
+        # not, is a harness bug and a failed replay.
+        alone = subprocess.run(
+            [cc, "-fsyntax-only", *COMMON, "-x", "c", "-"],
+            input=source.read_text().split("\nint main(void)", 1)[0],
+            capture_output=True,
+            text=True,
+        )
+        if alone.returncode != 0:
+            return None, f"{NO_ORACLE}: the input does not compile as C ({last})"
+        undefined = re.findall(r"undefined reference to `([^']+)'", comp.stderr)
+        if undefined:
+            # It compiles but calls functions nothing defines (decompiler
+            # pseudo-calls, other translation units): no program to run.
+            return None, f"{NO_ORACLE}: the input calls undefined {sorted(set(undefined))}"
+        return False, f"harness compile failed: {last}"
     if san == "valgrind":
         run = subprocess.run(
             ["valgrind", "-q", "--error-exitcode=99", str(exe)],
@@ -306,7 +361,7 @@ def replay(
         ok, report = valgrind_report(run.stderr, sample_name, line)
     else:
         run = subprocess.run([str(exe)], capture_output=True, text=True, timeout=60)
-        ok, report = sanitizer_report(run.stderr, sample_name, line)
+        ok, report = sanitizer_report(run.stderr, sample_name, kind, line)
     if report:
         return ok, report
     return False, f"exit {run.returncode}, no sanitizer report"
@@ -440,7 +495,7 @@ def main() -> int:
                 caps = ", ".join(
                     f"cap({p})={resolve(lifted.capacities[p], values)}"
                     for p in lifted.pointer_params
-                    if not lifted.capacities[p].startswith("(_ bv")
+                    if p in lifted.capacities and not lifted.capacities[p].startswith("(_ bv")
                 )
                 status = (
                     "REPLAYED: "
