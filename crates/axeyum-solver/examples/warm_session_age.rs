@@ -398,6 +398,7 @@ fn main() {
         .with_timeout(opts.timeout)
         .with_preprocess(false);
     let mut solver = IncrementalBvSolver::with_config(config);
+    solver.enable_sat_search_counters();
     if opts.replay_cache {
         // Glaurung's production bounds (axeyum_backend.rs DEFAULT_REPLAY_SAT_CACHE_*).
         solver
@@ -416,6 +417,10 @@ fn main() {
     let mut vars: Vec<usize> = Vec::with_capacity(planned);
     let mut trail: Vec<usize> = Vec::with_capacity(planned);
     let mut reused: Vec<usize> = Vec::with_capacity(planned);
+    // Per-check deltas of the core's counters: what the check re-derived.
+    let mut decisions: Vec<usize> = Vec::with_capacity(planned);
+    let mut propagations: Vec<usize> = Vec::with_capacity(planned);
+    let mut last_counters = solver.sat_search_counters();
     let mut sat = 0usize;
     let mut unsat = 0usize;
     let mut unknown = 0usize;
@@ -474,6 +479,10 @@ fn main() {
         vars.push(solver.encoded_variable_count());
         trail.push(solver.retained_sat_trail_len());
         reused.push(solver.last_check_reused_trail_len());
+        let counters = solver.sat_search_counters();
+        decisions.push((counters.decisions - last_counters.decisions) as usize);
+        propagations.push((counters.propagations - last_counters.propagations) as usize);
+        last_counters = counters;
         let verdict = match result {
             Ok(CheckResult::Sat(model)) => {
                 sat += 1;
@@ -551,7 +560,7 @@ fn main() {
         solver.warm_keep_trail()
     );
     println!(
-        "band  checks    p50_ms    p90_ms    max_ms    sum_ms   learned  conflicts   clauses     vars    trail   reused"
+        "band  checks    p50_ms    p90_ms    max_ms    sum_ms   learned  conflicts   clauses     vars    trail   reused   decis   props"
     );
     let mut first_p90 = None;
     let mut last_p90 = 0.0;
@@ -570,7 +579,7 @@ fn main() {
             slice.iter().sum::<usize>() / slice.len().max(1)
         };
         println!(
-            "{:>4} {:>7} {:>9.3} {:>9.3} {:>9.3} {:>9.1} {:>9} {:>10} {:>9} {:>8} {:>8} {:>8}",
+            "{:>4} {:>7} {:>9.3} {:>9.3} {:>9.3} {:>9.1} {:>9} {:>10} {:>9} {:>8} {:>8} {:>8} {:>7} {:>7}",
             b * BAND,
             chunk.len(),
             p50,
@@ -582,7 +591,9 @@ fn main() {
             clauses[last],
             vars[last],
             band_mean(&trail),
-            band_mean(&reused)
+            band_mean(&reused),
+            band_mean(&decisions),
+            band_mean(&propagations)
         );
         if chunk.len() == BAND {
             if first_p90.is_none() {

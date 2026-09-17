@@ -13231,15 +13231,29 @@ SUITES["warm-keep-trail-2145"] = (
             "crates/axeyum-cnf/src/proof_sat.rs",
         ),
         (
-            # The mutant backtracks only when the literal is already assigned
-            # above the implied level, and enqueues an UNASSIGNED one at the
-            # current level: a later backtrack that keeps the implied level
-            # and drops the current one then loses the propagation.  (Deleting
-            # the backtrack outright makes the assigned-above case spin, which
-            # is a hang and names nothing.)
-            "a clause unit at a retained level is propagated AT that level, not at the current one",
-            "                    if self.decision_level() > implied_level {",
-            "                    if self.assign[var].is_some() {",
+            # Without the registration the implied literal is enqueued at the
+            # current level and never re-propagated once that level unwinds:
+            # BCP is incomplete at the retained level, which the directed test
+            # measures as a reused-trail count of 2 where 3 is owed.
+            "a clause unit against a live trail is registered for re-examination",
+            "                            self.enqueue(lit, Reason::clause(cid));\n                            if self.decision_level() > 0 {\n                                self.reinit.push((cid, self.decision_level()));\n                            }",
+            "                            self.enqueue(lit, Reason::clause(cid));",
+            "crates/axeyum-cnf/src/proof_sat.rs",
+        ),
+        (
+            "the re-init replay re-propagates a clause that is unit again at the new level",
+            "                None => self.enqueue(l0, Reason::clause(cid)),\n                Some(_) => {}",
+            "                None | Some(_) => {}",
+            "crates/axeyum-cnf/src/proof_sat.rs",
+        ),
+        (
+            # The replay can assign the asserting variable at the backjump
+            # level before the learned clause's own enqueue; enqueueing over
+            # it puts the variable on the trail twice. `enqueue`'s debug
+            # assertion is the observer.
+            "the backjump does not enqueue an asserting literal the re-init replay already assigned",
+            "        match self.value(asserting) {\n            None => self.enqueue(asserting, Reason::clause(clause_id)),",
+            "        match None::<bool> {\n            None => self.enqueue(asserting, Reason::clause(clause_id)),",
             "crates/axeyum-cnf/src/proof_sat.rs",
         ),
     ],

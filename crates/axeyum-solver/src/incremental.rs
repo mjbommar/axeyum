@@ -1018,6 +1018,20 @@ impl IncrementalBvSolver {
         self.cnf.last_solve_reused_trail_len()
     }
 
+    /// Switches the retained SAT core's cumulative search counters on
+    /// (decisions, propagations, watch visits; a diagnostic that does not
+    /// change the trajectory). Read them with [`Self::sat_search_counters`].
+    pub fn enable_sat_search_counters(&mut self) {
+        self.cnf.enable_search_counters();
+    }
+
+    /// The retained SAT core's cumulative search counters (zero unless
+    /// [`Self::enable_sat_search_counters`] was called).
+    #[must_use]
+    pub fn sat_search_counters(&self) -> axeyum_cnf::SearchCounters {
+        self.cnf.search_counters()
+    }
+
     /// Total AIG nodes lowered so far, including nodes not reachable from the
     /// final asserted slice.
     ///

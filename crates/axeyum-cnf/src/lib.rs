@@ -783,6 +783,18 @@ impl IncrementalSat {
         self.solver.last_solve_reused_trail_len()
     }
 
+    /// Switches the core's cumulative search counters on (diagnostics only;
+    /// see [`NativeIncrementalCdcl::enable_search_counters`]).
+    pub fn enable_search_counters(&mut self) {
+        self.solver.enable_search_counters();
+    }
+
+    /// The core's cumulative search counters (zero unless enabled).
+    #[must_use]
+    pub fn search_counters(&self) -> SearchCounters {
+        self.solver.search_counters()
+    }
+
     /// Copies the persistent input-clause database into a standalone formula.
     ///
     /// Learned clauses are intentionally absent: this is the stable problem
@@ -1402,6 +1414,18 @@ impl IncrementalCnf {
     #[must_use]
     pub fn last_solve_reused_trail_len(&self) -> usize {
         self.sat.last_solve_reused_trail_len()
+    }
+
+    /// Switches the retained core's cumulative search counters on
+    /// (diagnostics only; see [`NativeIncrementalCdcl::enable_search_counters`]).
+    pub fn enable_search_counters(&mut self) {
+        self.sat.enable_search_counters();
+    }
+
+    /// The retained core's cumulative search counters (zero unless enabled).
+    #[must_use]
+    pub fn search_counters(&self) -> SearchCounters {
+        self.sat.search_counters()
     }
 
     /// Copies the persistent clause database and activates `assumptions` as

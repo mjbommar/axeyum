@@ -49,11 +49,20 @@ use web_time::Instant;
 
 use super::theory::{NativeTheory, NullTheory};
 use super::{
-    Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, NativeLayerStats, SearchOutcome, TheoryRefutation,
-    TheorySolveOptions,
+    Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, NativeLayerStats, SearchCounters, SearchOutcome,
+    TheoryRefutation, TheorySolveOptions,
 };
 use crate::drat::{DratSink, DratStep, ProofSinkError, VecProofSink};
 use crate::{CnfAssignment, CnfClause, CnfFormula, CnfLit};
+
+/// The least share of the held trail that a resumed solve must keep for the
+/// `keep_trail` schedule to resume rather than reset (ADR-2145), as a
+/// fraction `(numerator, denominator)`: one half.
+///
+/// A cost threshold, never a semantics: both branches reach an assignment a
+/// fresh propagation of the surviving clauses would produce. See
+/// [`NativeIncrementalCdcl::resume_for_solve`] for the measurement.
+pub const KEEP_TRAIL_MIN_REUSE_SHARE: (usize, usize) = (1, 2);
 
 /// Where an incremental solver's DRAT steps go.
 ///
@@ -548,6 +557,23 @@ impl<T: NativeTheory> NativeIncrementalCdcl<T> {
         self.last_solve_reused_trail
     }
 
+    /// Switches the core's search counters on for the life of this object
+    /// (decisions, propagations, watch visits, ...; cumulative over solves).
+    ///
+    /// Off by default because the hot paths pay a branch per event; a
+    /// diagnostic such as `examples/warm_session_age.rs` turns it on to say
+    /// what a check re-derived. Counting does not change the trajectory.
+    pub fn enable_search_counters(&mut self) {
+        self.cdcl.count_search = true;
+    }
+
+    /// The cumulative search counters (all zero unless
+    /// [`NativeIncrementalCdcl::enable_search_counters`] was called).
+    #[must_use]
+    pub fn search_counters(&self) -> SearchCounters {
+        self.cdcl.counters
+    }
+
     /// Makes variable indices `0 .. count` legal without adding any clause.
     ///
     /// Reserved-but-unused variables are not branchable: they never delay a
@@ -634,6 +660,18 @@ impl<T: NativeTheory> NativeIncrementalCdcl<T> {
     /// common prefix of the two assumption sequences -- bounded by the level
     /// the core is actually at, since an `add_clause` in between may already
     /// have backtracked below it. Returns the trail length reused.
+    ///
+    /// Resuming is not free: the unwound suffix is popped entry by entry and
+    /// its variables re-inserted into the order heap in trail order, where a
+    /// full reset re-inserts every variable in index order, which is one
+    /// sequential pass. When the surviving prefix is less than
+    /// [`KEEP_TRAIL_MIN_REUSE_SHARE`] of the held trail, the reset is the
+    /// cheaper way to reach (almost) the same state and is taken instead.
+    /// Measured on the synthetic explorer stream (`warm_session_age
+    /// --synthetic`, ~94 of 19k entries reusable per check because every
+    /// check re-decides its path): resuming unconditionally cost +15 % over
+    /// the shipped schedule with identical decision and propagation counts;
+    /// the DptfDevGen replay reuses ~80 % and is never near the threshold.
     fn resume_for_solve(&mut self, assumptions: &[CnfLit]) -> usize {
         let common = self
             .retained_assumptions
@@ -642,6 +680,13 @@ impl<T: NativeTheory> NativeIncrementalCdcl<T> {
             .take_while(|(held, next)| held == next)
             .count();
         let level = common.min(self.cdcl.decision_level());
+        let kept = self.cdcl.trail_len_at_level(level);
+        if kept * KEEP_TRAIL_MIN_REUSE_SHARE.1
+            < self.cdcl.trail_len() * KEEP_TRAIL_MIN_REUSE_SHARE.0
+        {
+            self.between_solves();
+            return 0;
+        }
         self.cdcl.resume_search_state(level);
         self.cdcl.trail_len()
     }
@@ -1139,52 +1184,67 @@ mod tests {
     }
 
     #[test]
-    fn keep_trail_a_clause_unit_at_a_retained_level_is_propagated_there() {
-        // [s1, s2]: s1 -> x. Then add (-x or y): unit at level 1, so y must be
-        // implied at level 1 and survive a later solve that keeps level 1.
+    fn keep_trail_a_clause_unit_at_a_retained_level_is_re_propagated_when_its_level_unwinds() {
+        // [s1, s2]: s1 -> x -> w1 -> w2, s2 -> z. Then add (-x or y): unit
+        // under the retained assignment. It is enqueued at the CURRENT level
+        // (2) and registered for re-examination, so nothing retained is
+        // unwound. Level 1 is made deep enough (4 of the 6 entries) that the
+        // resume clears `KEEP_TRAIL_MIN_REUSE_SHARE`.
         let mut solver = NativeIncrementalCdcl::new();
         solver.set_keep_trail(true);
         solver.add_clause(&lits(&[-1, 3])); // s1 -> x
-        solver.add_clause(&lits(&[-2, 5])); // s2 -> z (so level 2 is non-empty)
+        solver.add_clause(&lits(&[-3, 6])); // x -> w1
+        solver.add_clause(&lits(&[-6, 7])); // w1 -> w2
+        solver.add_clause(&lits(&[-2, 5])); // s2 -> z
         let first = solver.solve(&lits(&[1, 2]), None, budget());
         assert!(
             matches!(first, IncrementalSolveOutcome::Sat(_)),
             "{first:?}"
         );
         let held = solver.retained_trail_len();
+        assert_eq!(held, 6, "s1 x w1 w2 s2 z");
 
-        solver.add_clause(&lits(&[-3, 4])); // -x or y: unit at level 1 -> y
-        // The live attach backtracked to level 1 (level 2's z is gone) and
-        // enqueued y there: strictly fewer entries than the full trail, and
-        // strictly more than none -- a full reset here would be the shipped
-        // schedule wearing the lever's name.
-        let after = solver.retained_trail_len();
-        assert!(after < held, "level 2 must be unwound: {after} vs {held}");
-        assert!(
-            after >= 3,
-            "s1, x and the implied y must still be held, got {after}"
+        solver.add_clause(&lits(&[-3, 4])); // -x or y: unit -> y at level 2
+        assert_eq!(
+            solver.retained_trail_len(),
+            held + 1,
+            "the implied literal joins the trail and nothing retained is unwound \
+             (a full reset here would be the shipped schedule wearing the lever's name)"
         );
 
-        // Now forbid y under s2: (-s2 or -y) is CONFLICTING once level 2 is
-        // re-installed, so [s1, s2] is unsat under assumptions with a core
-        // inside {s1, s2}; [s1] alone stays sat with y true.
+        // Solve under [s1] only: level 2 is unwound, which unassigns y; the
+        // re-examination must put y back at level 1, because -x is still
+        // false there. The reused count is the measurement: s1, x, w1, w2
+        // and y = 5, where a schedule that dropped the clause on the floor
+        // reuses 4.
+        let second = solver.solve(&lits(&[1]), None, budget());
+        let IncrementalSolveOutcome::Sat(model) = second else {
+            panic!("expected sat under s1 alone, got {second:?}");
+        };
+        assert!(model.values()[3], "y must be implied under s1");
+        assert_eq!(
+            solver.last_solve_reused_trail_len(),
+            5,
+            "s1, x, w1, w2 and the re-propagated y must all be reused"
+        );
+
+        // Now forbid y under s2: (-s2 or -y) is unit under the retained
+        // level-1 assignment (y true), so -s2 is implied there and [s1, s2]
+        // is unsat under assumptions with a core inside {s1, s2}.
         solver.add_clause(&lits(&[-2, -4]));
-        let second = solver.solve(&lits(&[1, 2]), None, budget());
-        let IncrementalSolveOutcome::UnsatUnderAssumptions(core) = second else {
-            panic!("expected unsat under s1 s2, got {second:?}");
+        let third = solver.solve(&lits(&[1, 2]), None, budget());
+        let IncrementalSolveOutcome::UnsatUnderAssumptions(core) = third else {
+            panic!("expected unsat under s1 s2, got {third:?}");
         };
         assert!(
             core.iter().all(|l| *l == lit(1) || *l == lit(2)),
             "{core:?}"
         );
-        let third = solver.solve(&lits(&[1]), None, budget());
-        let IncrementalSolveOutcome::Sat(model) = third else {
-            panic!("expected sat under s1 alone, got {third:?}");
-        };
-        assert!(model.values()[3], "y must be implied under s1");
+        // And the control: without s1 the same assumptions are consistent.
+        let fourth = solver.solve(&lits(&[2]), None, budget());
         assert!(
-            solver.last_solve_reused_trail_len() > 0,
-            "level 1 survived the unsat-under-assumptions solve"
+            matches!(fourth, IncrementalSolveOutcome::Sat(_)),
+            "{fourth:?}"
         );
     }
 
@@ -1327,13 +1387,14 @@ mod tests {
     /// additions relative to solves, which is what the schedule is about.
     #[test]
     fn keep_trail_random_sessions_agree_with_a_fresh_solver_and_every_model_replays() {
-        const VARS: u64 = 8;
-        const SESSIONS: u64 = 400;
+        const VARS: u64 = 10;
+        const SESSIONS: u64 = 1_000;
         let mut mismatches = Vec::new();
         let mut sat_seen = 0usize;
         let mut unsat_assumed_seen = 0usize;
         let mut unsat_seen = 0usize;
         let mut reused_total = 0usize;
+        let mut conflicts_total = 0usize;
         for session in 0..SESSIONS {
             let mut rng = Mix(0x5eed_2145 ^ session.wrapping_mul(0x9e37_79b9));
             let mut warm = NativeIncrementalCdcl::new();
@@ -1356,7 +1417,7 @@ mod tests {
                 }
                 // Add a few clauses, units included, so level-zero facts and
                 // conflicting clauses arrive against a live trail.
-                let adds = rng.below(3);
+                let adds = rng.below(4);
                 for _ in 0..adds {
                     let len = 1 + rng.below(3);
                     let mut clause = Vec::new();
@@ -1370,6 +1431,7 @@ mod tests {
                 let assumptions = lits(&stack);
                 let outcome = warm.solve(&assumptions, None, budget());
                 reused_total += warm.last_solve_reused_trail_len();
+                conflicts_total += warm.last_solve_conflicts();
 
                 let mut fresh = NativeIncrementalCdcl::new();
                 load(&mut fresh, &clauses);
@@ -1431,6 +1493,11 @@ mod tests {
         assert!(
             reused_total > 0,
             "the schedule under test never reused a trail entry -- the test is not exercising it"
+        );
+        assert!(
+            conflicts_total > 0,
+            "no session ever analysed a conflict, so the backjump path never ran over a re-init \
+             clause -- the population is too easy to be a control"
         );
         assert!(
             mismatches.is_empty(),
