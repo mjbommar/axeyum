@@ -48917,7 +48917,7 @@ Also: an entering rule is a **search-trajectory** change whose effect is
 uncorrelated with per-pivot cost and core width — both refuted by counters. Same
 shape as the clause database's 25% fewer conflicts at 28% more work.
 
-Status: **rounds one and two landed and pushed (`11b895a35`), round three in flight, 2026-09-17 morning**. The user's goal is to
+Status: **rounds one to three landed and pushed (`43f1e0f90`), round four in flight, 2026-09-17 midday**. The user's goal is to
 work through the three lists written the same afternoon:
 [Axeyum](docs/plan/improvement-list-2026-09-16.md) (committed, `8df853252`),
 cindergraph `docs/improvement-list-2026-09-16.md` and Glaurung
@@ -48958,8 +48958,13 @@ commit there, and never push; Axeyum lanes use the usual isolated worktrees.
 
 | lane | repo | items |
 |---|---|---|
-| GL-REPIN | Glaurung | pin → `11b895a35`, the warm fix measured on the capture tier (solver-035), item 4 (model preference env) |
-| AX-CACHE | Axeyum | item 8, the canonical constraint cache in the incremental engine (ADR-2144, OFF) |
+| AX-2134-HELDOUT | Axeyum | A13 item 1: the algebraic-witness held-out draw on s7; ships if the criterion holds |
+| GL-CINDER | Glaurung | **the user's instruction**: Glaurung on the GitHub cindergraph crate, the 42,950-line embedded copy removed (Milestone H / Glaurung item 10) |
+| AX-CACHE | Axeyum | item 8 done: the canonical constraint cache in the engine, OFF (ADR-2144); 49 % hits on a real driver session, flat QF_BV A/B | `1f23fa26a`, pushed |
+| AX-WARM2 | Axeyum | the warm residual: keep surviving scopes' trail across solves, **ON** (ADR-2145 accepted); replayed session 1.21 → 0.45 s; new incremental z3 fuzz in the hook | `43f1e0f90`, pushed |
+| AX-BOARD-2142 | Axeyum | the user's question: the ADR-2142 fix on the 16-division board is +8 stable gains, 0 losses, 0 flips (QF_UFLIA +5, QF_ABV +1, QF_BV +1, QF_NIA +1); QF_ABV decided files 2× faster | `5d21c9db7` |
+| GL-REPIN | Glaurung | pin → `11b895a35`; DptfDevGen sizing 59.5 s → 6.0 s, 0 Axeyum splits; `GLAURUNG_AXEYUM_MODEL_PREFERENCE` (item 4; solver-035) | `12a8c088` on local `master` |
+| GL-CACHE | Glaurung | pin → `43f1e0f90`; warm same-stream 1,516 → 517 ms; the library cache consumed and shown to dominate Glaurung's own (item 5; solver-036); **9 of 10 done** | `af9f826d` |
 
 Still to launch: AX-GATE (item 16, after cindergraph is pushed so the gate can pin it); Glaurung item 5 after the cache is pushed; the warm residual (keep surviving scopes' assignments on `pop`) after GL-REPIN's numbers; A13 last.
 

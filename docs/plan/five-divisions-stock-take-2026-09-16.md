@@ -16,9 +16,19 @@ does neither arithmetic nor quantifiers and is not a reference here.
 |---|---:|---:|---:|---:|
 | QF_NRA | 117 | **122** | z3 187 | 65 |
 | QF_LRA | 107 | 107 | z3 166 | 59 |
-| QF_NIA | 84 | 84 | z3 144 | 60 |
+| QF_NIA | 84 | 84 (**87** on the parity list after ADR-2142, see below) | z3 144 | 60 |
 | UFLIA | 86 | 86 | z3 ∪ cvc5 144 (cvc5 alone 142, z3 139) | 58 |
 | AUFDTLIRA | 119 | 119 | z3 176 | 57 |
+
+**Addendum, 2026-09-17.** A regression in the native CDCL core's target-phase
+snapshot (ADR-2142, found through Glaurung's warm-session timing) was fixed with
+byte-identical search trajectories, and a 16-division board A/B of the fix
+(`bench-results/board-ab-20260917-adr2142/`) moved **8 of 3,200 files, all
+stable gains, 0 losses, 0 flips**: QF_UFLIA +5, QF_ABV +1, QF_BV +1, QF_NIA +1
+(the parity-lists population; QF_NIA 86 → 87 there). Every parity number
+quoted for those four divisions before 2026-09-17 undercounts by those
+amounts; the five divisions above are otherwise unchanged, and QF_ABV's
+decided files now run in half the time.
 
 Nineteen lanes moved one division by five points (ADR-2121, ADR-2126). Two
 more lanes hold measured gains that did not clear the ship bar:
