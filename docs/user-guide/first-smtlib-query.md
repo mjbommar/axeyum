@@ -1,6 +1,6 @@
 # Your First SMT-LIB Query
 
-Three ways to run a query, from least to most setup. They all solve the same
+Four ways to run a query, from least to most setup. They all solve the same
 tiny bit-vector problem: *is there an 8-bit `x` with `x + 1 = 0`?*
 
 ```smt2
@@ -73,7 +73,28 @@ see [installation and build profiles](installation.md).
 > does not return or write the proof artifact. To export independently
 > re-checkable files, use the [QF_BV proof exporter](unsat-evidence.md).
 
-## 3. A whole corpus (the benchmark harness)
+## 3. From the command line
+
+For running scripts the way you would run `z3 file.smt2`, build `axeyum_cli`
+and hand it the query above:
+
+```sh
+cargo build --release -p axeyum-bench --example axeyum_cli --features full
+./target/release/examples/axeyum_cli query.smt2
+```
+
+It answers every output command in the script, in order — `check-sat`,
+`get-model`, `get-value`, `get-unsat-core`, `get-proof`, `echo` — and honors
+`push`/`pop` scoping and `check-sat-assuming`, so it is the entry point for
+reading a model back or working a script interactively. `smtcomp_cli`, built
+the same way, is a *different* tool: it prints exactly one verdict word and
+nothing else, matching the SMT-COMP competition interface (stray output there
+is a reported result, not a convenience) — reach for it only when a harness
+needs that single-word contract, never as the first thing you run by hand. See
+[Runnable Examples](../reference/examples.md) for both, plus every other
+checked-in example.
+
+## 4. A whole corpus (the benchmark harness)
 
 To run many queries with budgets, replay checks, and JSON artifacts, use
 `axeyum-bench`. The committed micro corpus is a good smoke test:
