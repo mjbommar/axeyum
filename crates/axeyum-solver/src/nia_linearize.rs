@@ -1254,20 +1254,29 @@ impl NiaRefinementPolicy {
             && self.round_floor_ms == Self::OFF.round_floor_ms
     }
 
-    /// The loop's slice out of `remaining`, given whether the entailed-bound
-    /// pass emitted anything.
+    /// The loop's slice out of `remaining`, given which budget it was granted
+    /// (see [`SliceGrant`]).
     ///
-    /// Without envelopes the slice is [`NIA_SLICE_MS`] regardless of policy:
-    /// that arm is the pre-ladder hang guard, not a search budget, and moving
-    /// it is a different decision from moving this one.
+    /// Under [`SliceGrant::HangGuard`] the slice is [`NIA_SLICE_MS`]
+    /// regardless of policy: that arm is the pre-ladder hang guard, not a
+    /// search budget, and moving it is a different decision from moving this
+    /// one. [`SliceGrant::Envelopes`] draws `remaining / slice_denominator`,
+    /// the committed share; [`SliceGrant::ProductShare`] draws
+    /// `remaining / share` with ADR-2148's own denominator, so the two shares
+    /// can be moved independently.
     fn slice(
         self,
         remaining: Option<std::time::Duration>,
-        has_envelopes: bool,
+        grant: SliceGrant,
     ) -> std::time::Duration {
         let base = std::time::Duration::from_millis(NIA_SLICE_MS);
-        let slice = match (has_envelopes, remaining) {
-            (true, Some(total)) => base.max(total / self.slice_denominator.max(1)),
+        let denominator = match grant {
+            SliceGrant::HangGuard => None,
+            SliceGrant::Envelopes => Some(self.slice_denominator),
+            SliceGrant::ProductShare(share) => Some(share),
+        };
+        let slice = match (denominator, remaining) {
+            (Some(d), Some(total)) => base.max(total / d.max(1)),
             _ => base,
         };
         remaining.map_or(slice, |t| t.min(slice))
@@ -1284,6 +1293,90 @@ impl NiaRefinementPolicy {
     }
 }
 
+/// Which budget the relaxation slice is drawn from. ADR-2148 split this out of
+/// `RefinementSetup::refine`, which until then decided BOTH whether the loop
+/// iterates past a spurious model AND how much of the caller's remaining
+/// budget it may spend — so arming ADR-2136's lemma pass, which needs the
+/// first, silently bought the second, and the three `unsat → unknown` losses
+/// in that A/B were a later ladder route starved of the budget the loop took.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SliceGrant {
+    /// No entailed-bound structure and no share lever: [`NIA_SLICE_MS`], the
+    /// pre-ladder hang guard.
+    HangGuard,
+    /// The entailed-bound passes produced `McCormick` envelopes or exact
+    /// splits: the committed share, `remaining / slice_denominator`.
+    Envelopes,
+    /// Products but no envelopes, and ADR-2148's [`NIA_REFINE_SHARE`] lever
+    /// is nonzero: `remaining / share`. The denominator is the lever's own,
+    /// not the policy's, so the two can be A/B'd independently.
+    ProductShare(u32),
+}
+
+/// The slice grant for a query, from what the passes found and what the share
+/// lever says. Pure, and it does NOT take the lemma lever: ADR-2148's whole
+/// point is that "emit the lemmas" and "widen the slice" are two decisions.
+fn slice_grant(has_envelopes: bool, has_products: bool, refine_share: u32) -> SliceGrant {
+    if has_envelopes {
+        SliceGrant::Envelopes
+    } else if has_products && refine_share > 0 {
+        SliceGrant::ProductShare(refine_share)
+    } else {
+        SliceGrant::HangGuard
+    }
+}
+
+/// The two ADR-2136/ADR-2148 levers, read ONCE at [`check_with_nia`] and
+/// carried explicitly, so a test can select any of the four arms of the 2×2
+/// without touching a process-lifetime `OnceLock`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct NiaArms {
+    /// ADR-2136: emit the order/monotonicity classes, and let the loop
+    /// iterate on a product-bearing query so they are reachable.
+    pub(crate) order_lemmas: bool,
+    /// ADR-2148: the budget share on a product-bearing query without
+    /// envelopes; `0` keeps the hang guard. See [`NIA_REFINE_SHARE`].
+    pub(crate) refine_share: u32,
+}
+
+/// The loop's setup from what the passes found and which arms are selected.
+/// Pure, so the 2×2 of ADR-2148 can be asserted directly: the grant must not
+/// depend on `arms.order_lemmas`, and `refine` must not depend on
+/// `arms.refine_share`.
+///
+/// `refine` is the "this query has structure for a lemma to bite on" signal;
+/// without it the loop is a pure budget tax (see [`RefinementSetup::refine`]).
+/// ADR-2136 added the second disjunct, and it is the difference between the
+/// armed arm running and the armed arm being unreachable: the entailed-bound
+/// passes both need a factor with a two-sided constant bound, and the sizing
+/// census measured that the undecided `QF_NIA` population has essentially
+/// none (`unbounded_products` equals `products` at every quantile over the
+/// 116 rows), so `mccormick + splits` is 0 and the loop did ONE round on
+/// exactly the files that lane was aimed at. The order and monotonicity
+/// lemmas need no static bound at all — ADR-2112 E1's second design claim —
+/// so on an armed run a product is itself structure.
+///
+/// ADR-2148: that disjunct decides ITERATION only. Until then `refine` also
+/// selected the slice, so arming the lemmas bought the loop a third of the
+/// remaining budget on every product-bearing query, and the three
+/// `unsat → unknown` losses in ADR-2136's A/B were a later ladder route
+/// starved of exactly that. The slice is [`slice_grant`], which the lemma
+/// lever does not reach.
+fn refinement_setup(
+    policy: NiaRefinementPolicy,
+    has_envelopes: bool,
+    has_products: bool,
+    arms: NiaArms,
+) -> RefinementSetup {
+    RefinementSetup {
+        policy,
+        refine: has_envelopes || (arms.order_lemmas && has_products),
+        grant: slice_grant(has_envelopes, has_products, arms.refine_share),
+        // ADR-2136, SHIPPED DISARMED (the caller reads the lever).
+        order_lemmas: arms.order_lemmas,
+    }
+}
+
 /// Everything [`solve_with_refinement`] needs that is not a term: the policy in
 /// force and whether this query has entailed-bound structure at all.
 ///
@@ -1294,11 +1387,17 @@ impl NiaRefinementPolicy {
 struct RefinementSetup {
     /// See [`NiaRefinementPolicy`].
     policy: NiaRefinementPolicy,
-    /// Whether the entailed-bound pass emitted anything. Without it a spurious
-    /// model ends the loop instead of being cut off, because there is no
-    /// structure for a tangent lemma to bite on and the loop would be a pure
-    /// budget tax.
+    /// Whether the loop iterates past a spurious model at all: the
+    /// entailed-bound pass emitted something, or ADR-2136's pass is armed on a
+    /// product-bearing query. Without either a spurious model ends the loop
+    /// instead of being cut off, because there is no structure for a lemma to
+    /// bite on and the loop would be a pure budget tax.
+    ///
+    /// This decides ITERATION only. The slice is [`RefinementSetup::grant`],
+    /// which ADR-2148 separated from it.
     refine: bool,
+    /// Which budget the slice is drawn from — see [`SliceGrant`].
+    grant: SliceGrant,
     /// ADR-2136's order/monotonicity pass. Read from the lever ONCE, at the
     /// call site, and carried here rather than consulted inside the loop: the
     /// lever is a process-lifetime `OnceLock` (determinism is a public API
@@ -1360,28 +1459,34 @@ pub(crate) fn check_with_nia(
     config: &SolverConfig,
     why: &mut Option<DeclineReason>,
 ) -> Result<Option<CheckResult>, SolverError> {
-    // ADR-2136's arm is read ONCE here and threaded down, so the only thing
-    // that separates the shipped route from the armed one is this argument.
+    // ADR-2136's and ADR-2148's levers are read ONCE here and threaded down,
+    // so the only thing that separates the shipped route from any of the
+    // other three arms is this argument.
     check_with_nia_armed(
         arena,
         assertions,
         config,
         why,
-        nia_order_lemmas_enabled() == 1,
+        NiaArms {
+            order_lemmas: nia_order_lemmas_enabled() == 1,
+            refine_share: nia_refine_share(),
+        },
     )
 }
 
-/// [`check_with_nia`] with ADR-2136's order/monotonicity arm passed explicitly.
+/// [`check_with_nia`] with ADR-2136's order/monotonicity arm and ADR-2148's
+/// slice share passed explicitly.
 ///
-/// Split out because the lever is a process-lifetime `OnceLock` — determinism
-/// is a public API promise, so it cannot be toggled between two solves in one
-/// process, and a test of the armed arm would otherwise have no way in.
+/// Split out because the levers are process-lifetime `OnceLock`s — determinism
+/// is a public API promise, so they cannot be toggled between two solves in
+/// one process, and a test of any non-shipped arm would otherwise have no way
+/// in.
 fn check_with_nia_armed(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
     why: &mut Option<DeclineReason>,
-    order_lemmas: bool,
+    arms: NiaArms,
 ) -> Result<Option<CheckResult>, SolverError> {
     let mut counter = 0u32;
     // 0. Abstract `int.pow2` terms to fresh integer variables + theory-valid
@@ -1477,30 +1582,6 @@ fn check_with_nia_armed(
     //     switches these benchmarks assert explicitly), the product linearizes
     //     EXACTLY by a case split, no relaxation involved.
     let (mccormick, splits) = add_entailed_bound_lemmas(arena, &rewritten_triples, &mut relaxed)?;
-    if std::env::var_os("AXEYUM_NIA_DEBUG").is_some() {
-        eprintln!(
-            "[nia] products={} mccormick={} splits={} relaxed={} timeout={:?} policy={}",
-            rewritten_triples.len(),
-            mccormick,
-            splits,
-            relaxed.len(),
-            config.timeout,
-            // Printed, not assumed: an A/B whose lever failed to parse is
-            // `OFF`, and a sweep that cannot see that reports an arm it never
-            // ran. `is_off` is the only thing that distinguishes them.
-            if refinement_policy().is_off() {
-                "off".to_owned()
-            } else {
-                format!(
-                    "{}/{}/{}",
-                    refinement_policy().slice_denominator,
-                    refinement_policy().round_denominator,
-                    refinement_policy().round_floor_ms
-                )
-            }
-        );
-    }
-
     // 4. Solve the relaxation over the integer DPLL(T), under a bounded slice.
     //    `unsat` transfers soundly. `sat` is accepted only after the model replays
     //    against the ORIGINAL assertions (with div/mod intact) under the ground
@@ -1520,30 +1601,44 @@ fn check_with_nia_armed(
     //    answer, and 600 ms is far too short for a system with thousands of
     //    products. Grant it a SHARE of the caller's REMAINING budget in that case
     //    (never more than the caller allows), and keep the tiny default slice
-    //    everywhere else so the ladder is never starved.
-    let setup = RefinementSetup {
-        policy: refinement_policy(),
-        // The "this query has entailed-bound structure" signal: without it the
-        // loop is a pure budget tax (see `RefinementSetup::refine`).
-        //
-        // ADR-2136 adds the second disjunct, and it is the difference between
-        // the armed arm running and the armed arm being unreachable. `refine`
-        // gates the loop on the entailed-bound passes having produced
-        // something, and both of those need a factor with a two-sided constant
-        // bound. The sizing census measured that this population has
-        // essentially none: `unbounded_products` equals `products` at every
-        // quantile over the 116 undecided rows, so `mccormick + splits` is 0
-        // and the loop does ONE round on exactly the files this lane is aimed
-        // at. The order and monotonicity lemmas need no static bound at all --
-        // that is ADR-2112 E1's second design claim -- so on an armed run a
-        // product is itself structure for a lemma to bite on.
-        refine: mccormick + splits > 0 || (order_lemmas && !rewritten_triples.is_empty()),
-        // ADR-2136, SHIPPED DISARMED (the caller reads the lever).
-        order_lemmas,
-    };
+    //    everywhere else so the ladder is never starved. What the loop is granted
+    //    and whether it iterates are decided in [`refinement_setup`], separately.
+    let setup = refinement_setup(
+        refinement_policy(),
+        mccormick + splits > 0,
+        !rewritten_triples.is_empty(),
+        arms,
+    );
+    if std::env::var_os("AXEYUM_NIA_DEBUG").is_some() {
+        eprintln!(
+            "[nia] products={} mccormick={} splits={} relaxed={} timeout={:?} policy={} \
+             order_lemmas={} refine={} grant={:?}",
+            rewritten_triples.len(),
+            mccormick,
+            splits,
+            relaxed.len(),
+            config.timeout,
+            // Printed, not assumed: an A/B whose lever failed to parse is
+            // `OFF`, and a sweep that cannot see that reports an arm it never
+            // ran. `is_off` is the only thing that distinguishes them.
+            if refinement_policy().is_off() {
+                "off".to_owned()
+            } else {
+                format!(
+                    "{}/{}/{}",
+                    refinement_policy().slice_denominator,
+                    refinement_policy().round_denominator,
+                    refinement_policy().round_floor_ms
+                )
+            },
+            arms.order_lemmas,
+            setup.refine,
+            setup.grant,
+        );
+    }
     let capped = config
         .clone()
-        .with_timeout(setup.policy.slice(config.timeout, setup.refine));
+        .with_timeout(setup.policy.slice(config.timeout, setup.grant));
     //
     // 5. **Refinement loop (incremental linearization).** A one-shot relaxation is
     //    hopeless on a Farkas/ranking system: the products whose factors are only
@@ -1668,6 +1763,7 @@ fn solve_with_refinement(
     let RefinementSetup {
         policy,
         refine,
+        grant: _,
         order_lemmas,
     } = setup;
     // ADR-2136's shared-factor index, built once per call (the triple list is
@@ -1951,6 +2047,24 @@ axeyum_ir::cap_lever! {
     /// [`NIA_ORDER_LEMMAS_ARMED`], or `AXEYUM_NIA_ORDER_LEMMAS`.
     pub(crate) fn nia_order_lemmas_enabled() -> u32 =
         "AXEYUM_NIA_ORDER_LEMMAS" or NIA_ORDER_LEMMAS_ARMED;
+}
+
+/// ADR-2148's slice share for a product-bearing query whose entailed bounds
+/// produced NOTHING: the denominator of the caller's remaining budget the
+/// refinement loop may spend there, or `0` to keep the [`NIA_SLICE_MS`] hang
+/// guard.
+///
+/// Until ADR-2148 this share did not exist as its own decision: arming
+/// [`NIA_ORDER_LEMMAS_ARMED`] widened `RefinementSetup::refine`, and `refine`
+/// selected the slice as well as the iteration, so the lemma pass bought
+/// `remaining / NIA_MCCORMICK_BUDGET_SHARE` on every such query. `3` here with
+/// the lemmas armed is byte for byte ADR-2136's B arm; `0` with the lemmas
+/// armed is the arm that ADR could not run.
+const NIA_REFINE_SHARE: u32 = 0;
+
+axeyum_ir::cap_lever! {
+    /// [`NIA_REFINE_SHARE`], or `AXEYUM_NIA_REFINE_SHARE`.
+    pub(crate) fn nia_refine_share() -> u32 = "AXEYUM_NIA_REFINE_SHARE" or NIA_REFINE_SHARE;
 }
 
 /// Largest number of shared-factor product PAIRS examined in one refinement
@@ -2602,8 +2716,13 @@ mod tests {
                     base
                 };
                 let want = total.min(want_slice);
+                let grant = if has_envelopes {
+                    SliceGrant::Envelopes
+                } else {
+                    SliceGrant::HangGuard
+                };
                 assert_eq!(
-                    NiaRefinementPolicy::OFF.slice(Some(total), has_envelopes),
+                    NiaRefinementPolicy::OFF.slice(Some(total), grant),
                     want,
                     "OFF must reproduce the committed slice at {total_ms} ms, \
                      envelopes={has_envelopes}"
@@ -2616,7 +2735,7 @@ mod tests {
         }
         // No caller budget: the pre-ladder hang guard, unchanged.
         assert_eq!(
-            NiaRefinementPolicy::OFF.slice(None, true),
+            NiaRefinementPolicy::OFF.slice(None, SliceGrant::Envelopes),
             Duration::from_millis(NIA_SLICE_MS)
         );
     }
@@ -2633,12 +2752,12 @@ mod tests {
         assert!(!whole.is_off());
         let total = Duration::from_secs(24);
         assert_eq!(
-            whole.slice(Some(total), true),
+            whole.slice(Some(total), SliceGrant::Envelopes),
             total,
             "slice_denominator=1 must hand the loop the whole remaining budget"
         );
         assert_eq!(
-            NiaRefinementPolicy::OFF.slice(Some(total), true),
+            NiaRefinementPolicy::OFF.slice(Some(total), SliceGrant::Envelopes),
             Duration::from_secs(8),
             "and OFF must not, or the two arms are the same experiment"
         );
@@ -3656,7 +3775,11 @@ mod tests {
                 LEMMAS_BUILT.with(|n| n.set(0));
                 let mut why = None;
                 let mut work = arena.clone();
-                let got = check_with_nia_armed(&mut work, &assertions, &config, &mut why, armed)
+                let arms = NiaArms {
+                    order_lemmas: armed,
+                    refine_share: NIA_REFINE_SHARE,
+                };
+                let got = check_with_nia_armed(&mut work, &assertions, &config, &mut why, arms)
                     .expect("no solver error");
                 assert!(
                     !matches!(got, Some(CheckResult::Unsat)),
@@ -3748,7 +3871,11 @@ mod tests {
             LEMMAS_BUILT.with(|n| n.set(0));
             let mut why = None;
             let mut work = arena.clone();
-            let got = check_with_nia_armed(&mut work, &assertions, &config, &mut why, true)
+            let arms = NiaArms {
+                order_lemmas: true,
+                refine_share: NIA_REFINE_SHARE,
+            };
+            let got = check_with_nia_armed(&mut work, &assertions, &config, &mut why, arms)
                 .expect("no solver error");
             seen.push((
                 matches!(got, Some(CheckResult::Sat(_))),
@@ -3773,6 +3900,234 @@ mod tests {
         assert_eq!(
             NIA_ORDER_LEMMAS_ARMED, 0,
             "ADR-2136 ships DISARMED until an interleaved A/B says otherwise"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // ADR-2148: "emit the lemmas" and "widen the slice" are two levers.
+    // -----------------------------------------------------------------------
+
+    /// **The slice grant does not read the lemma lever.** ADR-2136's single
+    /// lever widened `refine`, and `refine` selected the slice, so arming the
+    /// lemmas bought the loop a third of the remaining budget on every
+    /// product-bearing query. The grant is now a function of what the passes
+    /// found and the SHARE lever only; flipping the lemma lever across the
+    /// whole cube must leave it byte-identical.
+    ///
+    /// DIES ON: the grant taking `arms.order_lemmas` into account again
+    /// (`slice_grant(has_envelopes || (arms.order_lemmas && has_products), …)`).
+    #[test]
+    fn the_slice_grant_does_not_read_the_lemma_lever() {
+        let mut product_only_widened = 0usize;
+        for has_envelopes in [false, true] {
+            for has_products in [false, true] {
+                for refine_share in [0_u32, 1, 3, 7] {
+                    let grants: Vec<SliceGrant> = [false, true]
+                        .into_iter()
+                        .map(|order_lemmas| {
+                            refinement_setup(
+                                NiaRefinementPolicy::OFF,
+                                has_envelopes,
+                                has_products,
+                                NiaArms {
+                                    order_lemmas,
+                                    refine_share,
+                                },
+                            )
+                            .grant
+                        })
+                        .collect();
+                    assert_eq!(
+                        grants[0], grants[1],
+                        "envelopes={has_envelopes} products={has_products} \
+                         share={refine_share}: the lemma lever moved the grant"
+                    );
+                    // The expectation, written out rather than recomputed
+                    // through `slice_grant`.
+                    let want = if has_envelopes {
+                        SliceGrant::Envelopes
+                    } else if has_products && refine_share > 0 {
+                        SliceGrant::ProductShare(refine_share)
+                    } else {
+                        SliceGrant::HangGuard
+                    };
+                    assert_eq!(grants[0], want);
+                    if !has_envelopes && has_products && refine_share > 0 {
+                        product_only_widened += 1;
+                    }
+                }
+            }
+        }
+        assert_eq!(
+            product_only_widened, 3,
+            "the share lever must widen the product-only quadrant at every \
+             nonzero value, or the lever is inert"
+        );
+    }
+
+    /// **The iteration gate does not read the share lever.** The loop
+    /// iterates past a spurious model when there is structure for a lemma to
+    /// bite on — envelopes, or the ADR-2136 pass armed on a product-bearing
+    /// query — and the budget share cannot buy iteration on its own: a wider
+    /// slice with nothing to cut is the "pure budget tax" the gate exists to
+    /// refuse.
+    ///
+    /// DIES ON: `refine` gaining a `|| arms.refine_share > 0` disjunct.
+    #[test]
+    fn the_iteration_gate_does_not_read_the_share_lever() {
+        for has_envelopes in [false, true] {
+            for has_products in [false, true] {
+                for order_lemmas in [false, true] {
+                    let refines: Vec<bool> = [0_u32, 1, 3, 7]
+                        .into_iter()
+                        .map(|refine_share| {
+                            refinement_setup(
+                                NiaRefinementPolicy::OFF,
+                                has_envelopes,
+                                has_products,
+                                NiaArms {
+                                    order_lemmas,
+                                    refine_share,
+                                },
+                            )
+                            .refine
+                        })
+                        .collect();
+                    assert!(
+                        refines.iter().all(|&r| r == refines[0]),
+                        "envelopes={has_envelopes} products={has_products} \
+                         lemmas={order_lemmas}: the share lever moved `refine`: \
+                         {refines:?}"
+                    );
+                    assert_eq!(
+                        refines[0],
+                        has_envelopes || (order_lemmas && has_products),
+                        "envelopes={has_envelopes} products={has_products} \
+                         lemmas={order_lemmas}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// **The share lever draws a real slice, with its own denominator.**
+    /// `ProductShare(3)` under `OFF` is byte for byte the slice ADR-2136's
+    /// armed arm was granted (`remaining / NIA_MCCORMICK_BUDGET_SHARE`), which
+    /// is what makes `AXEYUM_NIA_ORDER_LEMMAS=1 AXEYUM_NIA_REFINE_SHARE=3` a
+    /// faithful reproduction of that ADR's B arm; `ProductShare(1)` is the
+    /// whole remaining budget; `HangGuard` is the 600 ms floor whatever the
+    /// caller has left.
+    ///
+    /// DIES ON: `ProductShare` falling through to the hang guard, or reading
+    /// the policy's denominator instead of its own.
+    #[test]
+    fn the_share_lever_draws_its_own_slice() {
+        let total = Duration::from_secs(24);
+        let off = NiaRefinementPolicy::OFF;
+        assert_eq!(
+            off.slice(Some(total), SliceGrant::ProductShare(3)),
+            off.slice(Some(total), SliceGrant::Envelopes),
+            "share 3 must reproduce ADR-2136's armed slice exactly"
+        );
+        assert_eq!(
+            off.slice(Some(total), SliceGrant::ProductShare(3)),
+            Duration::from_secs(8)
+        );
+        assert_eq!(
+            off.slice(Some(total), SliceGrant::ProductShare(1)),
+            total,
+            "share 1 hands the loop everything the caller has left"
+        );
+        assert_eq!(
+            off.slice(Some(total), SliceGrant::ProductShare(8)),
+            Duration::from_secs(3),
+            "the denominator is the lever's own, not the policy's"
+        );
+        assert_eq!(
+            off.slice(Some(total), SliceGrant::HangGuard),
+            Duration::from_millis(NIA_SLICE_MS)
+        );
+        // Never above the caller's own budget, whatever the grant.
+        let tiny = Duration::from_millis(50);
+        for grant in [
+            SliceGrant::HangGuard,
+            SliceGrant::Envelopes,
+            SliceGrant::ProductShare(1),
+        ] {
+            assert_eq!(off.slice(Some(tiny), grant), tiny, "{grant:?}");
+        }
+    }
+
+    /// **The lemma count is unchanged by the share.** On a query the armed
+    /// pass decides well inside the hang guard, the share lever changes how
+    /// much budget the loop MAY spend and nothing about what it emits: three
+    /// shares, one lemma count, one verdict. The count is the discriminating
+    /// half — a verdict can agree while the pass emitted a different set.
+    ///
+    /// DIES ON: the share lever reaching the emission (a cap keyed off the
+    /// grant), or the product-only grant disabling the pass.
+    #[test]
+    fn the_lemma_count_is_unchanged_by_the_share() {
+        let mut arena = TermArena::new();
+        let sx = arena.declare("x", Sort::Int).unwrap();
+        let sy = arena.declare("y", Sort::Int).unwrap();
+        let sz = arena.declare("z", Sort::Int).unwrap();
+        let (x, y, z) = (arena.var(sx), arena.var(sy), arena.var(sz));
+        let four = arena.int_const(4);
+        let eight = arena.int_const(8);
+        let zero = arena.int_const(0);
+        let mut assertions = Vec::new();
+        let diff = arena.int_sub(x, y).unwrap();
+        assertions.push(arena.eq(diff, four).unwrap());
+        assertions.push(arena.int_gt(z, zero).unwrap());
+        let xz = arena.int_mul(x, z).unwrap();
+        let yz = arena.int_mul(y, z).unwrap();
+        let delta = arena.int_sub(xz, yz).unwrap();
+        assertions.push(arena.eq(delta, eight).unwrap());
+
+        let config = SolverConfig::default().with_timeout(Duration::from_millis(1_500));
+        let mut seen: Vec<(u32, bool, bool, usize)> = Vec::new();
+        for refine_share in [0_u32, 3, 1] {
+            LEMMAS_BUILT.with(|n| n.set(0));
+            let mut why = None;
+            let mut work = arena.clone();
+            let arms = NiaArms {
+                order_lemmas: true,
+                refine_share,
+            };
+            let got = check_with_nia_armed(&mut work, &assertions, &config, &mut why, arms)
+                .expect("no solver error");
+            seen.push((
+                refine_share,
+                matches!(got, Some(CheckResult::Sat(_))),
+                matches!(got, Some(CheckResult::Unsat)),
+                LEMMAS_BUILT.with(std::cell::Cell::get),
+            ));
+        }
+        assert!(
+            seen[0].3 > 0,
+            "no lemma was built under the shipped share, so this test compares \
+             nothing: {seen:?}"
+        );
+        for row in &seen[1..] {
+            assert_eq!(
+                (row.1, row.2, row.3),
+                (seen[0].1, seen[0].2, seen[0].3),
+                "share {} differs from share {}: {seen:?}",
+                row.0,
+                seen[0].0
+            );
+        }
+    }
+
+    /// **The share lever ships at its ADR-2148 default**, and the only thing
+    /// that separates the shipped route from a widened one is that lever.
+    #[test]
+    fn the_share_lever_ships_at_its_default() {
+        assert_eq!(
+            NIA_REFINE_SHARE, 0,
+            "ADR-2148: the product-only slice stays the hang guard until the \
+             interleaved A/B moves it"
         );
     }
 }
