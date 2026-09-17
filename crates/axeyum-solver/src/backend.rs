@@ -352,6 +352,21 @@ pub struct SolverConfig {
     /// has `AXEYUM_CANONICAL_CACHE=on`, the one-binary A/B lever, read once;
     /// a malformed value is a hard error. The one-shot backends ignore it.
     pub canonical_constraint_cache: bool,
+    /// Whether the warm engine ([`crate::IncrementalBvSolver`]) keeps the
+    /// surviving scopes' SAT trail across `pop`/`check` instead of unwinding
+    /// and re-propagating it every check (ADR-2145).
+    ///
+    /// A schedule, not a semantics: the assignment at every kept level equals
+    /// what a fresh propagation of the surviving clauses produces, every
+    /// `sat` still replays, and every `unsat` still carries what it carried.
+    /// What moves is the search trajectory of a check that needs decisions,
+    /// and so its time and which model comes back.
+    ///
+    /// The default is [`DEFAULT_WARM_KEEP_TRAIL`] (on) unless the process
+    /// has `AXEYUM_WARM_KEEP_TRAIL` set (`on`/`off`), the one-binary A/B
+    /// lever; a malformed value is a hard error rather than a silent default
+    /// arm.
+    pub warm_keep_trail: bool,
 }
 
 /// Whether a warm solver keeps the canonical constraint cache (ADR-2144) when
@@ -495,6 +510,35 @@ fn process_model_preference_phase() -> bool {
     })
 }
 
+/// Whether the warm engine keeps the surviving scopes' trail across checks
+/// when nothing chose (ADR-2145): ON, by measurement. The replayed
+/// `DptfDevGen` session (1,206 checks) runs 1.21 -> 0.45 s with the same
+/// verdict+model digest; the `QF_BV` and `QF_ABV` pinned lists (200 files
+/// each, 24 s, interleaved per file) show 0 verdict movers, 0 flips and 0
+/// `:status` disagreements, with 9 files stably faster and 1 stably slower
+/// on `QF_ABV` at three runs per arm. `AXEYUM_WARM_KEEP_TRAIL=off` is the
+/// pre-ADR-2145 schedule. A `const` so it is one named, registered value
+/// (`config_registry`) a mutation can flip.
+pub const DEFAULT_WARM_KEEP_TRAIL: bool = true;
+
+/// [`DEFAULT_WARM_KEEP_TRAIL`] unless `AXEYUM_WARM_KEEP_TRAIL` is set to
+/// `on` or `off`; read once, a malformed value refuses.
+fn process_warm_keep_trail() -> bool {
+    use std::sync::OnceLock;
+    static KEEP: OnceLock<bool> = OnceLock::new();
+    *KEEP.get_or_init(|| match std::env::var("AXEYUM_WARM_KEEP_TRAIL") {
+        Ok(text) => match text.trim() {
+            "on" => true,
+            "off" => false,
+            _ => panic!(
+                "AXEYUM_WARM_KEEP_TRAIL={text:?} is not `on` or `off`; refusing to run the \
+                 default arm under a lever that was set"
+            ),
+        },
+        Err(_) => DEFAULT_WARM_KEEP_TRAIL,
+    })
+}
+
 /// The model preference a [`SolverConfig`] carries when nothing chose one:
 /// [`ModelPreference::Any`], the search exactly as shipped before ADR-2140.
 ///
@@ -628,6 +672,7 @@ impl Default for SolverConfig {
             check_progress: None,
             model_preference: process_model_preference(),
             canonical_constraint_cache: process_canonical_cache(),
+            warm_keep_trail: process_warm_keep_trail(),
         }
     }
 }

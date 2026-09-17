@@ -1004,6 +1004,19 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
       cargo test -p axeyum-solver --features full --quiet --test dt_array_element_2135 \
         -- --skip off_
 
+  # ADR-2145's session fuzz for the INCREMENTAL QF_BV path: random
+  # push/assert/check/pop streams over one retained `IncrementalBvSolver`,
+  # every verdict against a fresh one-shot solve of the live set (and z3 when
+  # that feature is on, which it is not here), every `sat` replayed. Both arms
+  # of `warm_keep_trail` run from one binary (the field is set explicitly, so
+  # the process-wide lever is not what selects them). Until 2026-09-17 no gate
+  # compared the warm engine's verdicts on a SEQUENCE against anything -- the
+  # one-shot fuzzes cannot reach a popped scope leaking into the next check.
+  # 60 sessions per arm here (~25 s); the committed default is 150.
+  gated_test "dispatch/reason: incremental_bv_session_fuzz (AXEYUM_INCR_SESSIONS=60)" \
+    env AXEYUM_INCR_SESSIONS=60 \
+      cargo test -p axeyum-solver --features full --quiet --test incremental_bv_session_fuzz
+
   # The GOLDEN LEAN MODULE pins, diff-scoped to the crate that renders them.
   #
   # Every module the kernel renders opens with a fixed banner, and until

@@ -1,0 +1,15 @@
+file	A1	B1	B2	A2	A3	B3
+QF_ABV/dwp_formulas/try4_difret_functions_disjunctions_cut.close_stdout_set_file_name.il.disjunctions_0.smt2	sat/807/0	sat/506/0	sat/406/0	sat/805/0	sat/807/0	sat/405/0
+QF_ABV/dwp_formulas/try4_difret_functions_disjunctions_mknod.close_stdout_set_file_name.il.disjunctions_0.smt2	sat/806/0	sat/407/0	sat/406/0	sat/806/0	sat/807/0	sat/506/0
+QF_ABV/dwp_formulas/try4_difret_functions_disjunctions_sha1sum.close_stdout_set_file_name.il.disjunctions_0.smt2	sat/806/0	sat/506/0	sat/506/0	sat/806/0	sat/807/0	sat/506/0
+QF_ABV/dwp_formulas/try4_difret_functions_disjunctions_touch.set_quoting_style.il.disjunctions_1.smt2	sat/607/0	sat/306/0	sat/306/0	sat/606/0	sat/606/0	sat/307/0
+QF_ABV/dwp_formulas/try5_small_difret_functions_dwp_mkfifo.get_quoting_style.il.dwp.smt2	unsat/7211/0	unsat/7114/0	unsat/7011/0	unsat/7010/0	unsat/7013/0	unsat/7112/0
+QF_ABV/dwp_formulas/try5_small_difret_functions_flanagansaxe_chroot.get_quoting_style.il.flanagansaxe.smt2	sat/1710/0	sat/1710/0	sat/1710/0	sat/1709/0	sat/1709/0	sat/1709/0
+QF_ABV/dwp_formulas/try5_small_difret_functions_flanagansaxe_id.close_stdout_set_file_name.il.flanagansaxe.smt2	sat/409/0	sat/309/0	sat/309/0	sat/408/0	sat/409/0	sat/308/0
+QF_ABV/dwp_formulas/try5_small_difret_functions_flanagansaxe_printf.get_quoting_style.il.flanagansaxe.smt2	sat/1711/0	sat/1709/0	sat/1710/0	sat/1710/0	sat/1710/0	sat/1710/0
+QF_ABV/dwp_formulas/try5_small_difret_functions_fse-bfs_mkdir.close_stdout_set_file_name.il.fse-bfs.smt2	sat/809/0	sat/408/0	sat/409/0	sat/810/0	sat/808/0	sat/409/0
+QF_ABV/dwp_formulas/try5_small_difret_functions_fse-bfs_stat.close_stdout_set_file_name.il.fse-bfs.smt2	sat/808/0	sat/408/0	sat/409/0	sat/809/0	sat/808/0	sat/408/0
+QF_ABV/dwp_formulas/try5_small_difret_functions_wp_dd.advance_input_offset.il.wp.smt2	sat/5010/0	sat/6313/0	sat/6412/0	sat/5011/0	sat/5011/0	sat/6412/0
+QF_ABV/dwp_formulas/try5_small_difret_functions_wp_test.close_stdout_set_file_name.il.wp.smt2	sat/810/0	sat/409/0	sat/408/0	sat/707/0	sat/808/0	sat/409/0
+QF_ABV/egt/egt-1098.smt2	sat/108/0	sat/108/0	sat/108/0	sat/108/0	sat/108/0	sat/110/0
+QF_ABV/platania/copy_array/copy_array11.c.smt2	sat/1009/0	sat/609/0	sat/609/0	sat/1009/0	sat/1009/0	sat/610/0
