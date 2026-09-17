@@ -64,7 +64,17 @@ impl Lcg {
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        self.0
+        // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+        // has period 2^(k+1), so `state & 1` alternates on every draw and a
+        // decision made at a fixed draw offset is a constant, not a coin.
+        // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+        // audit-20260916): `Lin` atoms only ever drew `{!=, <=, >=}` and
+        // `Quad`/`Bound` only `{=, <, >}` — no linear EQUALITY (the
+        // `2x + 2y = 1` GCD-infeasible shape) in 1500 seeds.
+        // SplitMix64's finalizer makes every output bit depend on the state.
+        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
     fn below(&mut self, n: u64) -> usize {
         usize::try_from(self.next_u64() % n).expect("modulus fits usize")
@@ -621,4 +631,90 @@ fn qf_nia_divmod_var_differential_fuzz_disagree_zero() {
         jointly_decided > 100,
         "too few jointly-decided instances ({jointly_decided}); gate not exercised"
     );
+}
+
+/// Coverage guard for the comparator arms the raw-state LCG could not reach.
+/// Measured 2026-09-16 under the old generator (lane ax-proptest,
+/// bench-results/proptest-box-audit-20260916), over the same 1500 seeds this
+/// sweep runs: the `Lin` branch's `below(6)` sat at an odd parity offset, so
+/// all 294 `Lin` atoms drew `{!=, <=, >=}` and **0** drew `=` — the
+/// GCD-infeasible linear equality (`2x + 2y = 1`) was never asserted; by the
+/// same lock, `Quad` and `Bound` atoms drew only `{=, <, >}`.
+///
+/// Regenerates the population without a solver and requires each dead arm at
+/// a floor about a quarter of what the mixed generator produces.
+#[test]
+fn the_generator_reaches_linear_equalities() {
+    let mut lin_atoms = 0u64;
+    let mut lin_eq = 0u64;
+    let mut lin_eq_gcd_infeasible = 0u64;
+    let mut quad_odd_cmp = 0u64;
+    let mut bound_odd_cmp = 0u64;
+    let is_odd_cmp = |cmp: Cmp| matches!(cmp, Cmp::Ne | Cmp::Le | Cmp::Ge);
+    let gcd = |mut a: i64, mut b: i64| {
+        while b != 0 {
+            (a, b) = (b, a % b);
+        }
+        a.abs()
+    };
+    for seed in 0..INSTANCES {
+        let mut rng = Lcg::new(seed);
+        let inst = Instance::generate(&mut rng);
+        for atom in &inst.atoms {
+            match *atom {
+                GAtom::Lin {
+                    c0,
+                    c1,
+                    i,
+                    c2,
+                    j,
+                    rhs,
+                    cmp,
+                } => {
+                    lin_atoms += 1;
+                    if matches!(cmp, Cmp::Eq) {
+                        lin_eq += 1;
+                        // `c1·v[i] + c2·v[j] = rhs - c0` has no integer
+                        // solution when the coefficient gcd does not divide
+                        // the constant (a same-variable pair sums its
+                        // coefficients first).
+                        let g = if i == j { gcd(c1 + c2, 0) } else { gcd(c1, c2) };
+                        let target = rhs - c0;
+                        let infeasible = if g == 0 { target != 0 } else { target % g != 0 };
+                        if infeasible {
+                            lin_eq_gcd_infeasible += 1;
+                        }
+                    }
+                }
+                GAtom::Quad { cmp, .. } => {
+                    if is_odd_cmp(cmp) {
+                        quad_odd_cmp += 1;
+                    }
+                }
+                GAtom::Bound { cmp, .. } => {
+                    if is_odd_cmp(cmp) {
+                        bound_odd_cmp += 1;
+                    }
+                }
+                GAtom::DivMod { .. } => {}
+            }
+        }
+    }
+    let counts = [
+        ("Lin atoms with `=`", lin_eq, 10),
+        ("Lin `=` that is GCD-infeasible", lin_eq_gcd_infeasible, 3),
+        ("Quad atoms with `!=`/`<=`/`>=`", quad_odd_cmp, 25),
+        ("Bound atoms with `!=`/`<=`/`>=`", bound_odd_cmp, 30),
+    ];
+    eprintln!("  Lin atoms in the sweep: {lin_atoms}");
+    for (name, n, floor) in counts {
+        eprintln!("  {name:<34} {n:>5} (floor {floor})");
+    }
+    for (name, n, floor) in counts {
+        assert!(
+            n >= floor,
+            "{name}: {n} over {INSTANCES} seeds (floor {floor}) — measured 0 under the \
+             raw-state LCG; the comparator draw is parity-locked again"
+        );
+    }
 }

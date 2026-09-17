@@ -48,7 +48,17 @@ impl Lcg {
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        self.0
+        // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+        // has period 2^(k+1), so `state & 1` alternates on every draw and a
+        // decision made at a fixed draw offset is a constant, not a coin.
+        // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+        // audit-20260916): `ALPHABET[below(2)]` read that bit, so every
+        // literal strictly alternated `abab...` and 0/1500 scripts contained
+        // a repeated adjacent letter (`"aa"` / `"bb"`).
+        // SplitMix64's finalizer makes every output bit depend on the state.
+        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
     fn below(&mut self, n: u64) -> usize {
         usize::try_from(self.next_u64() % n).expect("modulus fits usize")
@@ -312,5 +322,57 @@ fn online_string_front_door_fuzz_disagree_zero() {
     assert_eq!(
         agreements, jointly_decided,
         "a disagreement escaped the gate"
+    );
+}
+
+/// Does the expression contain a literal with a repeated adjacent letter?
+fn expr_has_repeated_letter(e: &Expr) -> bool {
+    match e {
+        Expr::Var(_) => false,
+        Expr::Lit(s) => s.contains("aa") || s.contains("bb"),
+        Expr::Cat(a, b) => expr_has_repeated_letter(a) || expr_has_repeated_letter(b),
+    }
+}
+
+fn form_has_repeated_letter(f: &Form) -> bool {
+    match f {
+        Form::Atom(a, b, _) => expr_has_repeated_letter(a) || expr_has_repeated_letter(b),
+        Form::Or(a, b) | Form::And(a, b) => {
+            form_has_repeated_letter(a) || form_has_repeated_letter(b)
+        }
+    }
+}
+
+/// Coverage guard for the generator box (lane ax-proptest, 2026-09-16).
+///
+/// Under the raw-state LCG the audit measured **0/1500** scripts containing a
+/// literal with a repeated adjacent letter (`"aa"` / `"bb"`): `ALPHABET` has
+/// two entries indexed by `below(2)`, the LCG low bit, which alternates on
+/// every draw, so every literal was a prefix of `abab...` or `baba...` and no
+/// periodic shape (`(= (str.++ x0 x0) "aa")`) ever reached the front door.
+/// This regenerates the same population (the same `seed ^ 0x5eed_f00d`
+/// seeding) without any solver.
+///
+/// Two neighbouring classes stay unreachable for STRUCTURAL reasons, not the
+/// PRNG, and are not widened here: the empty literal `""` (`gen_literal` is
+/// `1 + below(3)` long) and `\u{...}` escapes / code points above 0xFF (the
+/// alphabet literal `b"ab"`; CLAUDE.md: string fuzz generators must cover the
+/// full SMT-LIB literal grammar, ba0d9149).
+#[test]
+fn the_generator_reaches_repeated_adjacent_letters() {
+    let mut repeated = 0u64;
+    for seed in 0..INSTANCES {
+        let inst = Instance::generate(&mut Lcg::new(seed ^ 0x5eed_f00d));
+        repeated += u64::from(inst.asserts.iter().any(form_has_repeated_letter));
+    }
+    eprintln!(
+        "front-door generator coverage over {INSTANCES} seeds: scripts with a repeated \
+         adjacent letter in a literal {repeated}"
+    );
+    // Old generator: 0. New generator measured 2026-09-16: 1474; the floor is
+    // about a quarter of that count.
+    assert!(
+        repeated >= 350,
+        "literals with a repeated adjacent letter reached only {repeated}/{INSTANCES} scripts (old generator: 0)"
     );
 }

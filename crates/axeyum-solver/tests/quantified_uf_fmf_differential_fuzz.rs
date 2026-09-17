@@ -47,7 +47,18 @@ impl Lcg {
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        self.0
+        // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+        // has period 2^(k+1), so `state & 1` alternates on every draw and a
+        // decision made at a fixed draw offset is a constant, not a coin.
+        // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+        // audit-20260916): every generated quantifier body was a single
+        // `Pred`/`EqT` atom (never a connective, never a nested quantifier),
+        // 103/150 instances needed the appended tautology, and no instance
+        // had a minimal model of size 3.
+        // SplitMix64's finalizer makes every output bit depend on the state.
+        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
     fn below(&mut self, n: u64) -> usize {
         usize::try_from(self.next_u64() % n).expect("modulus fits usize")
@@ -228,7 +239,13 @@ fn eval_formula(
 /// formula — the independent reference decision (complete for "has a model of
 /// size <= 3", silent beyond).
 fn brute_force_has_small_model(formulas: &[F]) -> bool {
-    for size in 1..=MAX_BRUTE_SIZE {
+    (1..=MAX_BRUTE_SIZE).any(|size| brute_force_has_model_of_size(formulas, size))
+}
+
+/// Whether some structure of carrier size exactly `size` satisfies every
+/// formula (the per-size step of [`brute_force_has_small_model`]).
+fn brute_force_has_model_of_size(formulas: &[F], size: usize) -> bool {
+    {
         let mut constants = [0usize; 2];
         loop {
             let mut function = vec![0usize; size];
@@ -539,37 +556,145 @@ fn quantified(formula: &F) -> bool {
     }
 }
 
+/// The instance for one seed: 1..=3 generated formulas, plus a tautological
+/// universal when none of them carried a quantifier. Returns the formulas and
+/// whether the tautology was appended.
+fn gen_instance(seed: u64) -> (Vec<F>, bool) {
+    let mut rng = Lcg::new(seed);
+    let count = 1 + rng.below(3);
+    let mut formulas = Vec::with_capacity(count);
+    let mut next_binder = 0usize;
+    for _ in 0..count {
+        let depth = 2 + rng.below(2);
+        formulas.push(gen_formula(
+            &mut rng,
+            depth,
+            &mut Vec::new(),
+            &mut Vec::new(),
+            &mut next_binder,
+        ));
+    }
+    // At least one quantifier so the finite-model route is exercised.
+    let appended = !formulas.iter().any(quantified);
+    if appended {
+        let binder = next_binder;
+        formulas.push(F::Forall(
+            binder,
+            Box::new(F::Or(
+                Box::new(F::Pred(T::Bound(binder))),
+                Box::new(F::Not(Box::new(F::Pred(T::Bound(binder))))),
+            )),
+        ));
+    }
+    (formulas, appended)
+}
+
 #[test]
 fn quantified_pure_uf_matches_brute_force_reference() {
     for seed in 0..INSTANCES {
-        let mut rng = Lcg::new(seed);
-        let count = 1 + rng.below(3);
-        let mut formulas = Vec::with_capacity(count);
-        let mut next_binder = 0usize;
-        for _ in 0..count {
-            let depth = 2 + rng.below(2);
-            formulas.push(gen_formula(
-                &mut rng,
-                depth,
-                &mut Vec::new(),
-                &mut Vec::new(),
-                &mut next_binder,
-            ));
-        }
-        // At least one quantifier so the finite-model route is exercised.
-        if !formulas.iter().any(quantified) {
-            let binder = next_binder;
-            formulas.push(F::Forall(
-                binder,
-                Box::new(F::Or(
-                    Box::new(F::Pred(T::Bound(binder))),
-                    Box::new(F::Not(Box::new(F::Pred(T::Bound(binder))))),
-                )),
-            ));
-        }
+        let (formulas, _) = gen_instance(seed);
         run_instance(&formulas, seed);
     }
 }
+
+/// Does the tree contain a quantifier whose body is NOT a single atom?
+fn has_quantifier_with_compound_body(formula: &F) -> bool {
+    match formula {
+        F::Forall(_, body) | F::Exists(_, body) | F::ForallBool(_, body) => {
+            !matches!(**body, F::EqT(..) | F::Pred(..) | F::BoolVar(..))
+                || has_quantifier_with_compound_body(body)
+        }
+        F::Not(inner) => has_quantifier_with_compound_body(inner),
+        F::And(left, right) | F::Or(left, right) | F::Implies(left, right) => {
+            has_quantifier_with_compound_body(left) || has_quantifier_with_compound_body(right)
+        }
+        F::EqT(..) | F::Pred(..) | F::BoolVar(..) => false,
+    }
+}
+
+/// Does the tree contain a quantifier inside the body of another quantifier?
+fn has_nested_quantifier(formula: &F) -> bool {
+    match formula {
+        F::Forall(_, body) | F::Exists(_, body) | F::ForallBool(_, body) => {
+            quantified(body) || has_nested_quantifier(body)
+        }
+        F::Not(inner) => has_nested_quantifier(inner),
+        F::And(left, right) | F::Or(left, right) | F::Implies(left, right) => {
+            has_nested_quantifier(left) || has_nested_quantifier(right)
+        }
+        F::EqT(..) | F::Pred(..) | F::BoolVar(..) => false,
+    }
+}
+
+/// Coverage guard for the LCG-driven sweep above (no solver).
+///
+/// Regenerates exactly the population `quantified_pure_uf_matches_brute_force_reference`
+/// runs (seeds `0..INSTANCES` through `gen_instance`) and counts the classes
+/// the 2026-09-16 box audit measured at ZERO under the raw-state LCG:
+///
+/// - a generated quantifier whose body is NOT a single atom (audit: 0/150 —
+///   the body's head draw sat two draws after the quantifier draw on the
+///   period-8 residue cycle and always landed on `Pred`/`EqT`);
+/// - a nested quantifier, a quantifier inside another's body (audit: 0/150).
+///
+/// Printed but NOT floored: the appended-tautology count (audit: 103/150)
+/// and the minimal model size by the brute-force reference (audit: 1:109,
+/// 2:26, none:15). A minimal model of size exactly 3 (R507) stayed at 0/150
+/// with the mixed generator too — that is the box (one unary `f`, two
+/// constants, one predicate, depth <= 3), not the LCG, and widening the box
+/// is a separate decision.
+#[test]
+fn the_generator_reaches_compound_bodies_and_nested_quantifiers() {
+    let mut compound_body = 0u64;
+    let mut nested = 0u64;
+    let mut tautology_appended = 0u64;
+    let mut min_size = [0u64; MAX_BRUTE_SIZE + 1];
+    let mut no_small_model = 0u64;
+    for seed in 0..INSTANCES {
+        let (formulas, appended) = gen_instance(seed);
+        if appended {
+            tautology_appended += 1;
+        }
+        // Classify the GENERATED formulas only (the appended tautology is a
+        // fixed shape and would count as a compound body).
+        let generated = if appended {
+            &formulas[..formulas.len() - 1]
+        } else {
+            &formulas[..]
+        };
+        if generated.iter().any(has_quantifier_with_compound_body) {
+            compound_body += 1;
+        }
+        if generated.iter().any(has_nested_quantifier) {
+            nested += 1;
+        }
+        match (1..=MAX_BRUTE_SIZE).find(|&size| brute_force_has_model_of_size(&formulas, size)) {
+            Some(size) => min_size[size] += 1,
+            None => no_small_model += 1,
+        }
+    }
+
+    eprintln!(
+        "quantified-UF FMF generator coverage: compound_body={compound_body}/{INSTANCES}, \
+         nested_quantifier={nested}/{INSTANCES}, tautology_appended={tautology_appended}/{INSTANCES}, \
+         min_model_size 1:{} 2:{} 3:{} none<=3:{no_small_model}",
+        min_size[1], min_size[2], min_size[3]
+    );
+    assert!(
+        compound_body >= FLOOR_COMPOUND_BODY,
+        "instances with a compound quantifier body: {compound_body}/{INSTANCES} (audit measured 0)"
+    );
+    assert!(
+        nested >= FLOOR_NESTED,
+        "instances with a nested quantifier: {nested}/{INSTANCES} (audit measured 0)"
+    );
+}
+
+// Measured with the mixed generator (2026-09-16): compound_body 41, nested 8,
+// tautology_appended 72, min sizes 1:116 2:22 3:0 none:12. Floors at about a
+// quarter.
+const FLOOR_COMPOUND_BODY: u64 = 10;
+const FLOOR_NESTED: u64 = 2;
 
 /// The deterministic degenerate seed shapes the hard rule demands, pinned so
 /// no generator drift can stop emitting them.

@@ -46,7 +46,17 @@ impl Lcg {
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        self.0
+        // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+        // has period 2^(k+1), so `state & 1` alternates on every draw and a
+        // decision made at a fixed draw offset is a constant, not a coin.
+        // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+        // audit-20260916): the pure-EUF term language collapsed to four atom
+        // shapes (`x = g(.,.)`, `f(.) = g(.,.)`, `c != f(.)`, `g(.,.) != f(.)`)
+        // so no `x = y`, no `f(f(t))` and no `f(s) != f(t)` was ever emitted.
+        // SplitMix64's finalizer makes every output bit depend on the state.
+        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
     fn below(&mut self, n: u64) -> usize {
         usize::try_from(self.next_u64() % n).expect("modulus fits usize")
@@ -668,3 +678,199 @@ fn qf_uf_ite_uninterpreted_sort_fuzz_disagree_zero() {
         ITE_INSTANCES / 4
     );
 }
+
+// ---------------------------------------------------------------------------
+// Generator coverage guard (no solver, no Z3).
+// ---------------------------------------------------------------------------
+
+impl Term {
+    /// Is this term a bare variable? Returns its index.
+    fn as_var(&self) -> Option<usize> {
+        match self {
+            Term::Var(i) => Some(*i),
+            _ => None,
+        }
+    }
+
+    /// Does this term contain `f(f(t))` anywhere?
+    fn has_ff(&self) -> bool {
+        match self {
+            Term::Const(_) | Term::Var(_) => false,
+            Term::F(t) => matches!(**t, Term::F(_)) || t.has_ff(),
+            Term::G(a, b) => a.has_ff() || b.has_ff(),
+        }
+    }
+}
+
+impl UTerm {
+    fn as_var(&self) -> Option<usize> {
+        match self {
+            UTerm::Var(i) => Some(*i),
+            _ => None,
+        }
+    }
+
+    /// `h(x)` for a bare variable `x`: returns the index.
+    fn as_h_var(&self) -> Option<usize> {
+        match self {
+            UTerm::H(t) => t.as_var(),
+            _ => None,
+        }
+    }
+}
+
+/// Coverage guard for both LCG-driven sweeps above.
+///
+/// Regenerates exactly the populations `qf_uf_differential_fuzz_disagree_zero`
+/// (seeds `0..INSTANCES`) and `qf_uf_ite_uninterpreted_sort_fuzz_disagree_zero`
+/// (seeds `0..ITE_INSTANCES` xor the offset) run, and counts the classes the
+/// 2026-09-16 box audit measured at ZERO under the raw-state LCG:
+///
+/// - a `x = y` atom between two DISTINCT bare variables (audit: 0/1500 — the
+///   term language had collapsed to four atom shapes, none var-var);
+/// - an `f(f(t))` nesting anywhere in an atom (audit: 0/1500 — two
+///   consecutive residue-2 draws were impossible on the period-4 cycle);
+/// - an instance carrying both `x = y` and `f(s) != f(t)` — the congruence
+///   trap `x = y ∧ f(x) != f(y)` (audit: 0/1500);
+/// - in the ITE sweep, an instance carrying `x = y` (bare `U` variables) and
+///   `h(x) != h(y)` over the SAME pair (audit: 0/1500).
+///
+/// Also printed, not floored: three pairwise var-var disequalities under a
+/// conjunction (R475) — a box-probability question, not an LCG one.
+#[test]
+#[allow(clippy::too_many_lines)]
+fn the_generator_reaches_var_equalities_and_nested_f() {
+    let mut var_eq = 0u64;
+    let mut ff_nesting = 0u64;
+    let mut var_eq_and_f_ne = 0u64;
+    let mut var_eq_and_f_ne_same_pair = 0u64;
+    for seed in 0..INSTANCES {
+        let inst = Instance::generate(&mut Lcg::new(seed));
+        let eq_pairs: Vec<(usize, usize)> = inst
+            .atoms
+            .iter()
+            .filter(|atom| !atom.ne)
+            .filter_map(|atom| Some((atom.lhs.as_var()?, atom.rhs.as_var()?)))
+            .filter(|(i, j)| i != j)
+            .collect();
+        let f_ne_pairs: Vec<Option<(usize, usize)>> = inst
+            .atoms
+            .iter()
+            .filter(|atom| atom.ne)
+            .filter_map(|atom| match (&atom.lhs, &atom.rhs) {
+                (Term::F(s), Term::F(t)) => Some(Some((s.as_var()?, t.as_var()?))),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        // `f(s) != f(t)` for ANY s, t (the closure above only keeps var-var
+        // pairs, so count the shape separately).
+        let has_f_ne = inst
+            .atoms
+            .iter()
+            .any(|atom| atom.ne && matches!((&atom.lhs, &atom.rhs), (Term::F(_), Term::F(_))));
+        if !eq_pairs.is_empty() {
+            var_eq += 1;
+        }
+        if inst
+            .atoms
+            .iter()
+            .any(|atom| atom.lhs.has_ff() || atom.rhs.has_ff())
+        {
+            ff_nesting += 1;
+        }
+        if !eq_pairs.is_empty() && has_f_ne {
+            var_eq_and_f_ne += 1;
+        }
+        if eq_pairs.iter().any(|&(i, j)| {
+            f_ne_pairs
+                .iter()
+                .flatten()
+                .any(|&(s, t)| (s == i && t == j) || (s == j && t == i))
+        }) {
+            var_eq_and_f_ne_same_pair += 1;
+        }
+    }
+
+    let mut ite_var_eq_and_h_ne_same_pair = 0u64;
+    let mut ite_var_eq_and_h_ne = 0u64;
+    let mut ite_three_pairwise_ne_under_and = 0u64;
+    for seed in 0..ITE_INSTANCES {
+        let inst = IteInstance::generate(&mut Lcg::new(seed ^ 0xA5A5_A5A5));
+        let eq_pairs: Vec<(usize, usize)> = inst
+            .atoms
+            .iter()
+            .filter(|atom| !atom.ne)
+            .filter_map(|atom| Some((atom.lhs.as_var()?, atom.rhs.as_var()?)))
+            .filter(|(i, j)| i != j)
+            .collect();
+        let h_ne_pairs: Vec<(usize, usize)> = inst
+            .atoms
+            .iter()
+            .filter(|atom| atom.ne)
+            .filter_map(|atom| Some((atom.lhs.as_h_var()?, atom.rhs.as_h_var()?)))
+            .collect();
+        let has_h_ne = inst
+            .atoms
+            .iter()
+            .any(|atom| atom.ne && matches!((&atom.lhs, &atom.rhs), (UTerm::H(_), UTerm::H(_))));
+        if !eq_pairs.is_empty() && has_h_ne {
+            ite_var_eq_and_h_ne += 1;
+        }
+        if eq_pairs.iter().any(|&(i, j)| {
+            h_ne_pairs
+                .iter()
+                .any(|&(s, t)| (s == i && t == j) || (s == j && t == i))
+        }) {
+            ite_var_eq_and_h_ne_same_pair += 1;
+        }
+        let ne_pairs: Vec<(usize, usize)> = inst
+            .atoms
+            .iter()
+            .filter(|atom| atom.ne)
+            .filter_map(|atom| Some((atom.lhs.as_var()?, atom.rhs.as_var()?)))
+            .map(|(i, j)| (i.min(j), i.max(j)))
+            .filter(|(i, j)| i != j)
+            .collect();
+        if inst.num_vars == 3
+            && inst.ops.iter().all(|&o| o)
+            && [(0, 1), (1, 2), (0, 2)]
+                .iter()
+                .all(|pair| ne_pairs.contains(pair))
+        {
+            ite_three_pairwise_ne_under_and += 1;
+        }
+    }
+
+    eprintln!(
+        "qf_uf generator coverage: var_eq={var_eq}/{INSTANCES}, ff_nesting={ff_nesting}/{INSTANCES}, \
+         var_eq_and_f_ne={var_eq_and_f_ne}/{INSTANCES}, \
+         var_eq_and_f_ne_same_pair={var_eq_and_f_ne_same_pair}/{INSTANCES}; \
+         ite: var_eq_and_h_ne={ite_var_eq_and_h_ne}/{ITE_INSTANCES}, \
+         var_eq_and_h_ne_same_pair={ite_var_eq_and_h_ne_same_pair}/{ITE_INSTANCES}, \
+         three_pairwise_ne_under_and={ite_three_pairwise_ne_under_and}/{ITE_INSTANCES}"
+    );
+    assert!(
+        var_eq >= FLOOR_VAR_EQ,
+        "instances with a bare `x = y` atom: {var_eq}/{INSTANCES} (audit measured 0)"
+    );
+    assert!(
+        ff_nesting >= FLOOR_FF,
+        "instances with an `f(f(t))` nesting: {ff_nesting}/{INSTANCES} (audit measured 0)"
+    );
+    assert!(
+        var_eq_and_f_ne >= FLOOR_VAR_EQ_AND_F_NE,
+        "instances with both `x = y` and `f(s) != f(t)`: {var_eq_and_f_ne}/{INSTANCES} (audit measured 0)"
+    );
+    assert!(
+        ite_var_eq_and_h_ne >= FLOOR_ITE_VAR_EQ_AND_H_NE,
+        "ite instances with both `x = y` and `h(s) != h(t)`: {ite_var_eq_and_h_ne}/{ITE_INSTANCES} (audit measured 0)"
+    );
+}
+
+// Measured with the mixed generator (2026-09-16): var_eq 74, ff_nesting 558,
+// var_eq_and_f_ne 5, ite var_eq_and_h_ne 13. Floors sit at about a quarter
+// (the rare two-atom conjunctions keep the load-bearing `>= 1`).
+const FLOOR_VAR_EQ: u64 = 18;
+const FLOOR_FF: u64 = 130;
+const FLOOR_VAR_EQ_AND_F_NE: u64 = 1;
+const FLOOR_ITE_VAR_EQ_AND_H_NE: u64 = 3;

@@ -125,6 +125,17 @@ fn corpus() -> Vec<(String, CnfFormula)> {
             "unit-contradiction".to_owned(),
             formula(1, vec![vec![pos(0)], vec![neg(0)]]),
         ),
+        // An EMPTY clause in the input. The doc comment above listed this
+        // shape from the day the corpus was written, and the corpus did not
+        // contain one until 2026-09-16 (lane ax-proptest): a unit
+        // contradiction is two units, which the prelude refutes by
+        // propagation, not an empty clause, which it must refute at level 0
+        // before any pass runs. `the_corpus_carries_the_shapes_its_doc_names`
+        // pins the member so the doc cannot drift from the corpus again.
+        (
+            "empty-clause".to_owned(),
+            formula(2, vec![vec![pos(0), pos(1)], vec![], vec![neg(1)]]),
+        ),
         (
             "tautology-and-duplicates".to_owned(),
             formula(
@@ -173,6 +184,49 @@ fn corpus() -> Vec<(String, CnfFormula)> {
         ));
     }
     out
+}
+
+/// A formula the one-step proof `[Add([])]` already refutes: it contains the
+/// empty clause, or units that propagate to a conflict at level zero. On such
+/// an input no derivation is load-bearing, so the "silent passes" corruption
+/// below cannot be observed and is not a defect. (The checker requires the
+/// refutation to be an explicit step, so the probe is the bare empty-clause
+/// step rather than the empty proof.)
+fn refuted_by_the_empty_proof(f: &CnfFormula) -> bool {
+    check_drat(f, &[DratStep::Add(Vec::new())]) == Ok(true)
+}
+
+/// The corpus must contain every degenerate shape its doc comment names —
+/// duplicate literals, a tautology, an EMPTY clause, a level-zero
+/// contradiction. Derived from the corpus, not from a list of names: a name
+/// list would measure the maintainer's memory, and the empty clause was
+/// named in prose for the corpus's whole life without being present.
+#[test]
+fn the_corpus_carries_the_shapes_its_doc_names() {
+    let corpus = corpus();
+    let has = |pred: &dyn Fn(&[CnfLit]) -> bool| {
+        corpus
+            .iter()
+            .any(|(_, f)| f.clauses().iter().any(|c| pred(c.lits())))
+    };
+    assert!(
+        has(&|c| c.is_empty()),
+        "no corpus member carries an empty clause"
+    );
+    assert!(
+        has(&|c| c
+            .iter()
+            .any(|a| c.iter().any(|b| a.var() == b.var() && a != b))),
+        "no corpus member carries a tautology"
+    );
+    assert!(
+        has(&|c| (0..c.len()).any(|i| c[i + 1..].contains(&c[i]))),
+        "no corpus member carries a duplicate literal"
+    );
+    assert!(
+        has(&|c| c.len() == 1),
+        "no corpus member carries a unit clause"
+    );
 }
 
 /// The pass combinations under test, plus the `OFF` control.
@@ -282,12 +336,13 @@ fn every_unsat_proof_checks_against_the_original_formula() {
     // nothing. Pin the count so that shrinking the corpus, or an inprocessing
     // change that turns refutations into `ResourceOut`, breaks this test instead
     // of quietly emptying it.
-    // 9 of the 19 corpus instances are unsatisfiable, times 6 arms. Pinned at the
-    // measured value rather than at a comfortable round number: an inprocessing
-    // change that turns a refutation into a `ResourceOut` has to break this test
-    // rather than quietly emptying it.
+    // 10 of the 20 corpus instances are unsatisfiable, times 6 arms. Pinned at
+    // the measured value rather than at a comfortable round number: an
+    // inprocessing change that turns a refutation into a `ResourceOut` has to
+    // break this test rather than quietly emptying it. (54 before the
+    // `empty-clause` member landed, 2026-09-16.)
     assert_eq!(
-        checked, 54,
+        checked, 60,
         "the number of checked refutations moved; recount before adjusting"
     );
 }
@@ -397,6 +452,7 @@ fn a_pass_that_does_not_record_its_derivations_is_rejected() {
     let mut control_checked = 0usize;
     let mut corruption_caught = 0usize;
     let mut corruption_built = 0usize;
+    let mut self_refuting_skipped = 0usize;
     let mut per_arm: Vec<(&'static str, usize, usize)> = Vec::new();
 
     for (arm, options) in adding_option_sets() {
@@ -422,6 +478,15 @@ fn a_pass_that_does_not_record_its_derivations_is_rejected() {
             if !prefix.iter().any(is_add) {
                 continue; // nothing was derived here; silence is not a defect
             }
+            if refuted_by_the_empty_proof(&f) {
+                // The input already contains the contradiction (an empty clause,
+                // or units that propagate to one): no derivation can be
+                // load-bearing, so an accepted silent proof is correct, not a
+                // certificate that ignores the passes. Counted, so the corpus
+                // member that exercises this branch is known to exist.
+                self_refuting_skipped += 1;
+                continue;
+            }
             let mut silent: Vec<DratStep> = prefix.iter().filter(|s| !is_add(s)).cloned().collect();
             silent.extend(search.iter().cloned());
             arm_built += 1;
@@ -444,6 +509,11 @@ fn a_pass_that_does_not_record_its_derivations_is_rejected() {
     assert!(
         corruption_built >= 20,
         "too few corrupted proofs ({corruption_built}) for this to be evidence"
+    );
+    assert!(
+        self_refuting_skipped >= 1,
+        "no corpus member refutes itself with the empty proof: the empty-clause \
+         shape the corpus documents is missing"
     );
     assert_eq!(
         corruption_caught,
@@ -729,8 +799,8 @@ fn the_backward_checker_agrees_on_every_proof_and_every_corruption() {
             );
             agreed += 1;
 
-            if !prefix.iter().any(is_add) {
-                continue;
+            if !prefix.iter().any(is_add) || refuted_by_the_empty_proof(&f) {
+                continue; // nothing derived, or nothing a derivation could add
             }
             let mut silent: Vec<DratStep> = prefix.iter().filter(|s| !is_add(s)).cloned().collect();
             silent.extend(search.iter().cloned());
@@ -812,7 +882,7 @@ fn every_inprocessed_proof_still_elaborates_to_checkable_lrat() {
         }
     }
     assert_eq!(
-        elaborated, 54,
+        elaborated, 60,
         "the number of elaborated refutations moved; recount before adjusting"
     );
 }

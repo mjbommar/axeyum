@@ -149,6 +149,7 @@ now. Nothing was deleted.
 | 2026-09-17 | `3425a51ab` | ax-lifter: the cindergraph-defects pipeline over cindergraph's fixtures and Glaurung's decompiler output with the refusal histogram; replay must name the finding's kind; per-function refusal on a cindergraph diagnostic; multi-declarator declarations (item 12). |
 | 2026-09-17 | `8bdccc57b` | ax-lifter: `strcpy`/`strcat`/`strlen` with `// axeyum: strlen`, `malloc`-sized locals with `alloc-size-wrap`, `free`/use-after-free, uninitialised reads under MSan/valgrind/no-oracle; samples 11–12 (item 11). |
 | 2026-09-17 | ax-policy | ADR-2140: `ModelPreference` on `SolverConfig` (SAT-core forced phase + replay-checked shrink), `solve_smtlib_least_witness`, `:model-preference` option, `AXEYUM_MODEL_PREFERENCE` lever, `smt.least_witness`, typed `IncrementalStats`; `tests/model_preference_2140.rs` (identity, non-vacuity, determinism, replay) + mutation controls; three model-choice seeds in `corpus/regression/qf_bv/`. |
+| 2026-09-17 | `ax-proptest` | Property-test box audit: 599-row inventory, LCG output finalizer in 24 generators + the production faithfulness sampler, one reachability probe and one mutation control each, seed classes in `wide.rs` and the inprocessing corpus, `check-lcg-raw-state.py` ratchet (81 → 56 files) in pre-push L0, ADR-2141. STOP finding: `LiaTheory` loses a shadowed assertion on `pop`; `tests/lia_online.rs` left red by design. |
 | 2026-09-16 | `5bd0e77c4` | `axeyum-bench` gains a `full` feature forwarding to `axeyum-solver/full`; doc lines updated to the new flag spelling. |
 | 2026-09-16 | `a306a017b` | `cindergraph_defects/lift.py` uses SMT-LIB 2.6 overflow predicates instead of a double-width shadow computation; documented in `smtlib-support.md`. |
 | 2026-09-16 | `68f8887c9` | `cindergraph_defects/check.py` calls `axeyum.smt.solve` by default; `axeyum_cli` subprocess kept as an explicit `--cli` fallback. |
@@ -46846,6 +46847,31 @@ SAT-core phase ships off behind `AXEYUM_MODEL_PREFERENCE_PHASE=on`. Next: the
 defects example (`check.py`) can drop its `BOUNDS` loop for `smt.least_witness`
 once item 1 (call the library, not the subprocess) lands; Glaurung's
 concretization sweep is now a one-variable experiment.
+
+**Audit complete, controls landed, one STOP finding open (`WIP`, ax-proptest, 2026-09-17).**
+Inventory: 599 box-sampling tests in six crates; 328 cannot reach a known
+counterexample class; the bulk share one mechanism — a raw MMIX LCG state read
+at its low bits, so `flip()`/`below(2)` at a fixed draw offset is a constant.
+The P0 fuzz's `(div p 0)` corner was asserted in one polarity for all 80 of its
+seeds; 0 of 600 quantified-BV bodies mentioned a bound variable; the production
+faithfulness sampler gave every symbol a low bit of 0 at every seed. 24
+generators + the production sampler fixed (output finalizer), one reachability
+probe each, one mutation control each; 24 oracle sweeps re-run with 0
+disagreements; a ratchet (`check-lcg-raw-state.py`, 81 → 56 files) in the
+pre-push L0 block. **Open:** `LiaTheory` loses a shadowed assertion on `pop`
+(`tests/lia_online.rs` push/pop fuzz is RED on this branch by design — the
+subject is untouched per the brief; `LraTheory` has the same shape); 273
+structural box gaps recorded per row, not widened. Details:
+`bench-results/proptest-box-audit-20260916/README.md`.
+
+| exit criterion | state |
+| --- | --- |
+| 1. inventory, counted | **MET** — 599 rows, method per row (`read`/`derived`/`ran hits=N/M`) |
+| 2. reachability measured per row | **MET** — 244 yes / 328 no / 27 n/a |
+| 3. controls with mutation proof | **MET for the LCG mechanism and two seed classes** — 33 suites / 38 mutations, all `killed`; 273 structural rows left open by decision (ADR-2141 §4) |
+| 4. defects reported, not fixed | **MET** — `LiaTheory::pop` (exact sequence in the README); a test-reference overflow at `(i128::MIN, i128::MIN)` fixed in the reference |
+| 5. README + status + gen-plan | **MET** |
+| gates | fmt clean; merge-hygiene PASS; suite-gating PASS; lcg-raw-state PASS; anchors stale=0; workspace clippy `--all-targets --all-features -D warnings` Finished, 0 warnings |
 
 **`WIP`, bench-boolean-core, 2026-09-07.** The native core's per-conflict cost is
 now instrumented and decomposed, closing the gap the

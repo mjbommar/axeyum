@@ -2521,7 +2521,16 @@ mod termination_tests {
                 .0
                 .wrapping_mul(6_364_136_223_846_793_005)
                 .wrapping_add(1_442_695_040_888_963_407);
-            self.0
+            // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+            // has period 2^(k+1), so `state & 1` alternates on every draw and a
+            // decision made at a fixed draw offset is a constant, not a coin.
+            // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+            // audit-20260916): a literal costs two draws (below, coin), so 0 of
+            // 7019 clauses and 0 of 3452 cubes mixed polarities.
+            // SplitMix64's finalizer makes every output bit depend on the state.
+            let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+            let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+            z ^ (z >> 31)
         }
         fn below(&mut self, n: usize) -> usize {
             usize::try_from(self.next_u64() % (n as u64)).expect("modulus fits usize")
@@ -2852,6 +2861,69 @@ mod termination_tests {
         assert!(
             sat > 0 && unsat > 0,
             "degenerate sweep: sat={sat} unsat={unsat} — expected a mix",
+        );
+    }
+
+    /// Coverage guard for `non_monotone_theory_terminates_and_is_sound` (same
+    /// seed range `0..2000`, same `Lcg::new`, same `gen_instance`; the driver is
+    /// never run).
+    ///
+    /// Classes: a mixed-polarity clause (a Horn implication `x0 ∨ ¬x1`) and a
+    /// mixed-value forbidden cube (`{(0,true),(1,false)}`). With the raw-state
+    /// LCG every literal of one clause or cube drew the same coin: measured
+    /// 2026-09-16, 0 of 7019 clauses and 0 of 3452 cubes were mixed (lane
+    /// ax-proptest, `bench-results/proptest-box-audit-20260916`).
+    ///
+    /// Not guarded here because it is structural, not an LCG artefact: with
+    /// `n <= 6` atoms a Luby restart (100 conflicts) or a learnt-DB reduction
+    /// (2000 learnts) cannot fire; the sibling example tests cover those.
+    #[test]
+    fn the_generator_reaches_mixed_polarity_clauses_and_cubes() {
+        let mut clauses_total = 0usize;
+        let mut clauses_mixed = 0usize;
+        let mut cubes_total = 0usize;
+        let mut cubes_mixed = 0usize;
+        let mut instances_with_both = 0usize;
+        for seed in 0..2000u64 {
+            let mut rng = Lcg::new(seed);
+            let inst = gen_instance(&mut rng);
+            let mut any_clause = false;
+            for clause in &inst.clauses {
+                clauses_total += 1;
+                if clause.iter().any(|l| l.positive) && clause.iter().any(|l| !l.positive) {
+                    clauses_mixed += 1;
+                    any_clause = true;
+                }
+            }
+            let mut any_cube = false;
+            for cube in &inst.forbidden {
+                cubes_total += 1;
+                if cube.iter().any(|&(_, v)| v) && cube.iter().any(|&(_, v)| !v) {
+                    cubes_mixed += 1;
+                    any_cube = true;
+                }
+            }
+            if any_clause && any_cube {
+                instances_with_both += 1;
+            }
+        }
+        eprintln!(
+            "cdclt gen_instance coverage: mixed clauses {clauses_mixed}/{clauses_total}, \
+             mixed cubes {cubes_mixed}/{cubes_total}, instances with both \
+             {instances_with_both}/2000"
+        );
+        assert!(
+            clauses_mixed >= 500,
+            "only {clauses_mixed}/{clauses_total} clauses mix polarities (old generator: 0)"
+        );
+        assert!(
+            cubes_mixed >= 250,
+            "only {cubes_mixed}/{cubes_total} forbidden cubes mix values (old generator: 0)"
+        );
+        assert!(
+            instances_with_both >= 100,
+            "only {instances_with_both}/2000 instances carry both a mixed clause and a \
+             mixed cube (old generator: 0)"
         );
     }
 

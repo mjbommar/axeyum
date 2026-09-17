@@ -97,7 +97,18 @@ impl Lcg {
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        self.0
+        // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+        // has period 2^(k+1), so `state & 1` alternates on every draw and a
+        // decision made at a fixed draw offset is a constant, not a coin.
+        // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+        // audit-20260916): `ArrTerm::generate` gates each nesting level on
+        // `below(2) == 0`, so the draw that chose `Store` was always followed
+        // by the draw that chose `Var` and `store(store(..))` was built in
+        // 0/2500 instances.
+        // SplitMix64's finalizer makes every output bit depend on the state.
+        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
 
     /// A uniform integer in `0..n` (`n > 0`), returned as a `usize`.
@@ -1010,4 +1021,76 @@ fn dump_model(esyms: &[SymbolId], model: &axeyum_solver::Model) -> String {
         parts.push(format!("{}={:?}", enames[i], v));
     }
     parts.join(", ")
+}
+
+/// Store-nesting depth of an array term (`Var` = 0, `store(Var, ..)` = 1, ...).
+fn store_nesting(t: &ArrTerm) -> usize {
+    match t {
+        ArrTerm::Var(_) => 0,
+        ArrTerm::Store { base, .. } => 1 + store_nesting(base),
+    }
+}
+
+/// Deepest store nesting of any array term appearing directly under a
+/// `select` inside an element term.
+fn deepest_store_under_select(t: &ElemTerm) -> usize {
+    match t {
+        ElemTerm::Var(_) | ElemTerm::Const(_) => 0,
+        ElemTerm::Select(arr, idx) => store_nesting(arr).max(deepest_store_under_select(idx)),
+        ElemTerm::Bin(_, a, b) => deepest_store_under_select(a).max(deepest_store_under_select(b)),
+        ElemTerm::Not(a) => deepest_store_under_select(a),
+    }
+}
+
+/// Coverage guard for the generator box (lane ax-proptest, 2026-09-16).
+///
+/// Under the raw-state LCG the audit measured **0/2500** instances containing
+/// a nested store `store(store(a, i, v), j, w)`: `ArrTerm::generate` gates
+/// each nesting level on `rng.below(2) == 0`, and the LCG low bit alternates,
+/// so the depth-2 draw that picked `Store` was always followed by a depth-1
+/// draw that picked `Var`. This regenerates the same population without any
+/// solver and requires nested stores to be present in the array-level atoms.
+///
+/// The stricter shape "two stores under one `select`" stays at 0 for a
+/// STRUCTURAL reason unrelated to the PRNG: `ElemTerm::Select` generates its
+/// array with the literal depth `1`. That count is printed, not asserted;
+/// widening the box is a separate decision.
+#[test]
+fn the_generator_reaches_nested_stores() {
+    let mut nested_store_any = 0u64;
+    let mut nested_store_under_select = 0u64;
+    let mut single_store_under_select = 0u64;
+    for seed in 0..INSTANCES {
+        let inst = Instance::generate(&mut Lcg::new(seed));
+        let mut any = false;
+        let mut under_select = 0usize;
+        for atom in &inst.atoms {
+            match atom {
+                Atom::Arr { lhs, rhs, .. } => {
+                    if store_nesting(lhs) >= 2 || store_nesting(rhs) >= 2 {
+                        any = true;
+                    }
+                }
+                Atom::Elem { lhs, rhs, .. } => {
+                    under_select = under_select
+                        .max(deepest_store_under_select(lhs))
+                        .max(deepest_store_under_select(rhs));
+                }
+            }
+        }
+        nested_store_any += u64::from(any);
+        single_store_under_select += u64::from(under_select >= 1);
+        nested_store_under_select += u64::from(under_select >= 2);
+    }
+    eprintln!(
+        "abv generator coverage over {INSTANCES} seeds: nested store in an array atom \
+         {nested_store_any} | single store under select {single_store_under_select} | \
+         nested store under select {nested_store_under_select} (structural: Select depth literal 1)"
+    );
+    // Old generator: 0. New generator measured 2026-09-16: 611 (single store
+    // under select 1574); the floor is about a quarter of that count.
+    assert!(
+        nested_store_any >= 150,
+        "nested `store(store(..))` reached only {nested_store_any}/{INSTANCES} instances (old generator: 0)"
+    );
 }

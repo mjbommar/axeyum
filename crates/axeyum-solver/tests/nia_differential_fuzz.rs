@@ -75,13 +75,23 @@ impl Lcg {
             .wrapping_add(1_442_695_040_888_963_407))
     }
 
-    /// Advance and return the next 64-bit state.
+    /// Advance the state and return a mixed 64-bit output.
     fn next_u64(&mut self) -> u64 {
         self.0 = self
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        self.0
+        // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+        // has period 2^(k+1), so `state & 1` alternates on every draw and a
+        // decision made at a fixed draw offset is a constant, not a coin.
+        // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+        // audit-20260916): the `div`/`mod` op draw was ALWAYS `Div` and the
+        // divisor sign draw ALWAYS positive — 0 `mod` atoms and 0 negative
+        // divisors in 2500 seeds, although the doc and `DivMod` both name `Mod`.
+        // SplitMix64's finalizer makes every output bit depend on the state.
+        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
 
     /// A uniform integer in `0..n` (`n > 0`), returned as a `usize`.
@@ -642,6 +652,64 @@ fn nia_differential_fuzz_disagree_zero() {
         "too few jointly-decided instances ({jointly_decided}); the differential \
          gate is not meaningfully exercised"
     );
+}
+
+/// Coverage guard for the two arms the raw-state LCG could not reach.
+/// Measured 2026-09-16 under the old generator (lane ax-proptest,
+/// bench-results/proptest-box-audit-20260916), over the same 2500 seeds this
+/// sweep runs:
+///
+/// - `Mod` wraps: **0** (`div_positive=692, mod_*=0`) — the op draw at a
+///   fixed parity offset always yielded `Div`, so the `(mod -7 -2) = 1`
+///   family and plain `(mod x 3)` were never in the population;
+/// - NEGATIVE constant divisors: **0/2500** (`div_negative=0`) — the sign
+///   draw sat exactly two draws after the op draw and copied its low bit.
+///
+/// Regenerates the population without a solver and requires each arm at a
+/// floor about a quarter of what the mixed generator produces.
+#[test]
+fn the_generator_reaches_mod_and_negative_divisors() {
+    let mut wrapped = 0u64;
+    let mut mod_ops = 0u64;
+    let mut negative_divisors = 0u64;
+    let mut mod_by_negative = 0u64;
+    for seed in 0..INSTANCES {
+        let mut rng = Lcg::new(seed);
+        let inst = Instance::generate(&mut rng);
+        for atom in &inst.atoms {
+            for m in &atom.monomials {
+                if let Some((op, d)) = m.divmod {
+                    wrapped += 1;
+                    let is_mod = matches!(op, DivMod::Mod);
+                    if is_mod {
+                        mod_ops += 1;
+                    }
+                    if d < 0 {
+                        negative_divisors += 1;
+                    }
+                    if is_mod && d < 0 {
+                        mod_by_negative += 1;
+                    }
+                }
+            }
+        }
+    }
+    let counts = [
+        ("div/mod-wrapped monomials", wrapped, 175),
+        ("`mod` ops", mod_ops, 100),
+        ("negative constant divisors", negative_divisors, 90),
+        ("`mod` by a NEGATIVE constant", mod_by_negative, 45),
+    ];
+    for (name, n, floor) in counts {
+        eprintln!("  {name:<32} {n:>5} (floor {floor})");
+    }
+    for (name, n, floor) in counts {
+        assert!(
+            n >= floor,
+            "{name}: {n} over {INSTANCES} seeds (floor {floor}) — measured 0 under the \
+             raw-state LCG; the op/sign draws are parity-locked again"
+        );
+    }
 }
 
 /// Pretty-print an axeyum model's bindings for the named symbols.

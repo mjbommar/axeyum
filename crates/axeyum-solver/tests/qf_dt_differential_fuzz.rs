@@ -46,7 +46,17 @@ impl Lcg {
             .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        self.0
+        // The raw state is never handed out: bit `k` of an LCG modulo 2^64
+        // has period 2^(k+1), so `state & 1` alternates on every draw and a
+        // decision made at a fixed draw offset is a constant, not a coin.
+        // Measured 2026-09-16 (lane ax-proptest, bench-results/proptest-box-
+        // audit-20260916): the `kind` flip and the `neg` flip three draws
+        // later always had opposite parity, so every equality was negated and
+        // every tester positive (0/1500 `v0 = v1`, 0/1500 `(not (is-c v))`).
+        // SplitMix64's finalizer makes every output bit depend on the state.
+        let z = (self.0 ^ (self.0 >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        let z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
     }
     fn below(&mut self, n: u64) -> usize {
         usize::try_from(self.next_u64() % n).expect("modulus fits usize")
@@ -289,5 +299,63 @@ fn qf_dt_differential_fuzz_disagree_zero() {
         agree >= INSTANCES / 2,
         "expected >= {} agreements, got {agree} (axeyum-unknown {ax_unknown}) — datatype dispatch regression?",
         INSTANCES / 2
+    );
+}
+
+/// Coverage guard for the generator box (lane ax-proptest, 2026-09-16).
+///
+/// Under the raw-state LCG the audit measured, over seeds `0..INSTANCES`,
+/// **0/1500** instances with a positive variable equality `v_i = v_j` and
+/// **0/1500** with a negated tester `(not ((_ is c) v))`: the `kind` flip and
+/// the `neg` flip sat three draws apart, so their low bits always disagreed.
+/// This regenerates the same population without any solver and requires both
+/// classes to be present.
+#[test]
+fn the_generator_reaches_positive_equalities_and_negated_testers() {
+    let mut positive_eq = 0u64;
+    let mut negated_test = 0u64;
+    let mut positive_eq_distinct = 0u64;
+    for seed in 0..INSTANCES {
+        let inst = Instance::generate(&mut Lcg::new(seed));
+        let mut has_pos_eq = false;
+        let mut has_pos_eq_distinct = false;
+        let mut has_neg_test = false;
+        for atom in &inst.atoms {
+            match atom {
+                Atom::Eq {
+                    lhs,
+                    rhs,
+                    neg: false,
+                } => {
+                    has_pos_eq = true;
+                    if lhs != rhs {
+                        has_pos_eq_distinct = true;
+                    }
+                }
+                Atom::Test { neg: true, .. } => has_neg_test = true,
+                _ => {}
+            }
+        }
+        positive_eq += u64::from(has_pos_eq);
+        positive_eq_distinct += u64::from(has_pos_eq_distinct);
+        negated_test += u64::from(has_neg_test);
+    }
+    eprintln!(
+        "qf_dt generator coverage over {INSTANCES} seeds: positive equality {positive_eq} \
+         (between distinct vars {positive_eq_distinct}) | negated tester {negated_test}"
+    );
+    // Old generator: 0 and 0. New generator measured 2026-09-16: 948 / 653 /
+    // 950; floors are about a quarter of those counts.
+    assert!(
+        positive_eq >= 200,
+        "positive `v_i = v_j` atoms reached only {positive_eq}/{INSTANCES} instances (old generator: 0)"
+    );
+    assert!(
+        positive_eq_distinct >= 150,
+        "positive `v_i = v_j` with i != j reached only {positive_eq_distinct}/{INSTANCES} instances (old generator: 0)"
+    );
+    assert!(
+        negated_test >= 200,
+        "negated testers reached only {negated_test}/{INSTANCES} instances (old generator: 0)"
     );
 }
