@@ -1,0 +1,5 @@
+STABLE-GAIN QF_NRA/meti-tarski/atan/problem/2/weak/atan-problem-2-weak-chunk-0089.smt2
+STABLE-GAIN QF_NRA/meti-tarski/atan/problem/2/weak/atan-problem-2-weak-chunk-0018.smt2
+STABLE-GAIN QF_NRA/meti-tarski/atan/problem/2/atan-problem-2-chunk-0014.smt2
+STABLE-GAIN QF_NRA/meti-tarski/atan/problem/2/weak/atan-problem-2-weak-chunk-0159.smt2
+RECHECK-DONE -> /nas3/data/axeyum/harness/nra-algebraic-witness-heldout-2134/out/recheck-qfnra.tsv

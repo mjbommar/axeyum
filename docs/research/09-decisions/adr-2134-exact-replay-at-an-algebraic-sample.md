@@ -21,6 +21,10 @@ check. It is fixed by an exact Sturm root count over the bracket, not by a
 smaller interval — a small interval is not evidence, a root count is. The
 existing float-oracle property test structurally could not have found it: its
 coefficient box has no integer solution satisfying the trap's three constraints.
+**Ship decision, completed 2026-09-17:** pinned 124 → 128 (4 STABLE-GAIN, 0
+loss, 0 flips) reproduces at head, but the 200-file held-out draw is 109 → 109
+with zero movers, so the `≥ 1 stable gain on BOTH lists` clause fails and
+`CAD_DEFAULT` stays `SINGLE_CELL`; the arm remains selectable, OFF.
 Index-status: proposed
 
 ## Context
@@ -355,23 +359,74 @@ measured +4. The A/B is the sizing. Any future lane sizing an NRA lever from
 
 ## Status of the ship decision
 
-**Not `accepted`, and the lever ships OFF.**
+**Not `accepted`, and the lever ships OFF — now by a completed measurement,
+not by an incomplete one.**
 
-The criterion for a default move is 0 stable losses on the pinned draw **and** on
-the held-out draw, with the QF_NIA and QF_LRA controls flat. Three of those four
-are in and clean: pinned QF_NRA +4 with 4 STABLE-GAIN / 0 STABLE-LOSS / 0
-UNSTABLE, QF_NIA flat after recheck, QF_LRA flat with zero movers, 0 flips
-anywhere, 0 arm runs without a verdict token.
+The criterion for a default move is **0 stable losses AND 0 flips AND ≥ 1
+stable gain on BOTH the pinned draw and the held-out draw**, with the QF_NIA
+and QF_LRA controls flat.
 
-**The held-out 200-file QF_NRA draw did not complete** — it reached 23 of 200
-files (0 movers) before the round closed. One quarter of the shipping criterion
-is therefore unmeasured, and a default move on three of four is not the
-criterion. `Status:` stays `proposed`.
+### 2026-09-16, this ADR's own round (s5, `df2dfc0f…`)
 
-Also unmeasured: the binary-against-binary A/B that prices the `sign_at`
-exactness fix. That fix is not behind a lever and is already in both arms above,
-so those numbers say nothing about its cost. It can only convert an accept into a
-decline, never a correct verdict into a wrong one, so what is unknown is lost
-coverage rather than soundness.
+Pinned QF_NRA +4 with 4 STABLE-GAIN / 0 STABLE-LOSS / 0 UNSTABLE, QF_NIA flat
+after recheck, QF_LRA flat with zero movers, 0 flips anywhere, 0 arm runs
+without a verdict token. **The held-out draw reached 23 of 200 files** (0
+movers) before the round closed, so the criterion was not evaluated.
+
+### 2026-09-17, the completion (lane `AX-2134-HELDOUT`, s7, head `43f1e0f90`)
+
+`bench-results/nra-algebraic-witness-heldout-20260917/README.md` carries the
+protocol and every row. One `smtcomp_cli` built `--release --features full`
+from a snapshot of `43f1e0f90` (sha256 `d3606850…`; main had moved 60+
+commits past this ADR's A/B, including the SAT-core changes of ADR-2142 and
+ADR-2145), two `AXEYUM_NRA_CAD` values (`single-cell`, which IS `CAD_DEFAULT`
+at that head, against `algebraic-witness`), interleaved per file on s7 core
+pairs `1,9` / `3,11`, 24 s / 8 GiB, `$EPOCHREALTIME` timing with the 200 ms
+self-check reading 203–205 ms.
+
+| list | A `single-cell` | B `algebraic-witness` | delta | movers | flips | `:status` disagreements |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| pinned 200, re-run at head | 124 | **128** | **+4** | 4 (all `unknown → sat`) | 0 | 0 of 250 |
+| **held-out 200** | 109 | **109** | **0** | **0** | 0 | 0 of 216 |
+
+* **Pinned, at head:** the SAME four files as on 2026-09-16, every one in
+  `meti-tarski/atan/problem/2/`; three-pass recheck 3× per arm with the arms
+  alternating within the passes: **4 STABLE-GAIN, 0 STABLE-LOSS, 0 UNSTABLE,
+  exit 0 on all 24 runs.** The SAT-core changes between the two heads moved
+  neither arm's count.
+* **Held-out:** the population is ADR-2126's held-out draw (same script,
+  same `SEED = 20260916`, re-drawn at head to the byte-identical list);
+  overlap with the pinned list checked at **0 of 200**. **Zero movers of any
+  kind**, so there was nothing to recheck: 0 raw gains, 0 raw losses, 0
+  flips, 0 nonzero exits. Arm A's 109 reproduces ADR-2126's own arm A on this
+  population. The held-out list holds 4 `atan/problem/2` files and both arms
+  decide all four in under 210 ms; the 91 files both arms leave `unknown`
+  are 33 other `meti-tarski`, 21 `LassoRanker`, 11 `hycomp`, 9 `Sturm-MBO`
+  and 17 more.
+
+| criterion clause | pinned | held-out |
+| --- | --- | --- |
+| 0 stable losses | holds (0) | holds (0) |
+| 0 flips | holds (0) | holds (0) |
+| ≥ 1 stable gain | holds (4) | **fails (0)** |
+
+**Decision: `CAD_DEFAULT` stays `CadPolicy::SINGLE_CELL`.** The
+`algebraic-witness` arm remains selectable by name and OFF by default; this
+ADR stays `proposed`. The lever is a real, reproducible, loss-free +4 on one
+narrow shape and a null on the one population it was not built against, and
+the criterion exists precisely so that a default move is earned on the second
+of those. A lane re-opening this must draw a NEW held-out population (change
+the seed in `draw-heldout-qfnra.py` and say so): this one has now been scored
+twice and is no longer blind.
+
+### Still unmeasured
+
+* The binary-against-binary A/B that prices the `sign_at` exactness fix. That
+  fix is not behind a lever and is in BOTH arms of every number above, so those
+  numbers say nothing about its cost. It can only convert an accept into a
+  decline, never a correct verdict into a wrong one, so what is unknown is lost
+  coverage rather than soundness.
+* The eight nonlinear z3 differential fuzzes were NOT RUN on 2026-09-17: they
+  are mandatory only when the default moves, and it did not.
 
 `docs/plan/status/nra-algebraic-witness.md` carries the per-criterion state.
