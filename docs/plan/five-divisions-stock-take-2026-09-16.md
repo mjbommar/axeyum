@@ -134,9 +134,16 @@ merge (one stale fuzz premise sat red on main for 40 minutes).
    replay-gate detection at `lra_theory.rs:498` into `(or (<= x y) (>= x y))`
    the way cvc5 does. Both mechanism-named, both small, both with the five
    LRA/DL/LIA z3 fuzzes mandatory.
-3. **QF_NIA lemmas versus budget**: separate "emit the two lemma classes" from
-   "widen `RefinementSetup::refine`'s slice"; the three losing files score it
-   directly. On 0 stable losses, arm `AXEYUM_NIA_ORDER_LEMMAS`.
+3. ~~**QF_NIA lemmas versus budget**~~ Done 2026-09-17 (ADR-2148,
+   `bench-results/nia-refine-share-20260917/`): the three losses were never
+   the slice — the losing files already had it, and the shipped arm decides
+   them inside the refinement loop itself; the lemma classes reshape that
+   relaxation and cost `ex36`/`n-7` in every combination that emits them.
+   Eight of ADR-2136's ten gains were the loop merely ITERATING (tangent
+   planes, no class lemma). That arm ships: `AXEYUM_NIA_ORDER_LEMMAS` = 4,
+   `AXEYUM_NIA_REFINE_SHARE` = 3 — 0 stable losses on 1,800 file-runs, UFNIA
+   54 → 61 pinned and 51 → 58 on a disjoint held-out draw, QF_NIA +1 pinned /
+   +0 held-out. The classes stay OFF (worth `305`/`39`, cost `ex36`/`n-7`).
 4. **Nested-binder activation** for UFLIA/AUFDTLIRA: two fixtures deciding
    whether a universal inside another binder can be activated at all, a
    per-core split of `inactive_dropped` into crossed-binder versus other, then

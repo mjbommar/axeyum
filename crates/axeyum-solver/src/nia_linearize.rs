@@ -1400,6 +1400,17 @@ pub(crate) struct NiaArms {
     pub(crate) refine_share: u32,
 }
 
+impl NiaArms {
+    /// `mode` with the share at its shipped constant.
+    #[cfg(test)]
+    pub(crate) const fn lemmas(mode: OrderLemmas) -> Self {
+        Self {
+            order_lemmas: mode,
+            refine_share: NIA_REFINE_SHARE,
+        }
+    }
+}
+
 /// The loop's setup from what the passes found and which arms are selected.
 /// Pure, so the 2×2 of ADR-2148 can be asserted directly: the grant must not
 /// depend on `arms.order_lemmas`, and `refine` must not depend on
@@ -2102,15 +2113,16 @@ fn refine_with_tangents(
 // tests drive every sign case through it.
 // ---------------------------------------------------------------------------
 
-/// ADR-2136's order/monotonicity lemma pass, SHIPPED DISARMED.
+/// ADR-2136's order/monotonicity lemma pass and ADR-2148's iteration arm —
+/// the value of `AXEYUM_NIA_ORDER_LEMMAS`, see [`OrderLemmas`].
 ///
-/// `0` is the shipped arm and leaves the refinement loop byte-identical;
-/// `AXEYUM_NIA_ORDER_LEMMAS=1` arms both classes (ADR-2136's arm), `2` the
-/// order class alone, `3` the monotonicity class alone and `4` neither —
-/// iteration with tangent planes only, the control (ADR-2148) — see
-/// [`OrderLemmas`]. Anything else is the shipped arm, so a typo cannot select
-/// an arm nobody chose.
-const NIA_ORDER_LEMMAS_ARMED: u32 = 0;
+/// SHIPS AT `4` (ADR-2148, accepted): the refinement loop iterates past a
+/// spurious model on every product-bearing query, cutting with tangent planes
+/// only; the two lemma classes stay OFF. `0` is the pre-ADR-2148 arm (one
+/// round, then decline); `1` arms both classes (ADR-2136's arm, 10 gains and 3
+/// losses over 800 files); `2` and `3` one class each. Anything else is `0`,
+/// so a typo cannot select an arm nobody chose.
+const NIA_ORDER_LEMMAS_ARMED: u32 = 4;
 
 axeyum_ir::cap_lever! {
     /// [`NIA_ORDER_LEMMAS_ARMED`], or `AXEYUM_NIA_ORDER_LEMMAS`.
@@ -2126,10 +2138,13 @@ axeyum_ir::cap_lever! {
 /// Until ADR-2148 this share did not exist as its own decision: arming
 /// [`NIA_ORDER_LEMMAS_ARMED`] widened `RefinementSetup::refine`, and `refine`
 /// selected the slice as well as the iteration, so the lemma pass bought
-/// `remaining / NIA_MCCORMICK_BUDGET_SHARE` on every such query. `3` here with
-/// the lemmas armed is byte for byte ADR-2136's B arm; `0` with the lemmas
-/// armed is the arm that ADR could not run.
-const NIA_REFINE_SHARE: u32 = 0;
+/// `remaining / NIA_MCCORMICK_BUDGET_SHARE` on every such query. `3` with the
+/// lemmas armed is byte for byte ADR-2136's B arm.
+///
+/// SHIPS AT `3` (ADR-2148, accepted): the same third of the remaining budget
+/// the envelope case has always had, now also on a product-only query, where
+/// the loop iterates (mode 4) and has something to cut.
+const NIA_REFINE_SHARE: u32 = 3;
 
 axeyum_ir::cap_lever! {
     /// [`NIA_REFINE_SHARE`], or `AXEYUM_NIA_REFINE_SHARE`.
@@ -3848,27 +3863,19 @@ mod tests {
             );
 
             let mut verdicts = Vec::new();
-            for armed in [false, true] {
+            for mode in [OrderLemmas::Off, OrderLemmas::Both] {
                 LEMMAS_BUILT.with(|n| n.set(0));
                 let mut why = None;
                 let mut work = arena.clone();
-                let arms = NiaArms {
-                    order_lemmas: if armed {
-                        OrderLemmas::Both
-                    } else {
-                        OrderLemmas::Off
-                    },
-                    refine_share: NIA_REFINE_SHARE,
-                };
+                let arms = NiaArms::lemmas(mode);
                 let got = check_with_nia_armed(&mut work, &assertions, &config, &mut why, arms)
                     .expect("no solver error");
                 assert!(
                     !matches!(got, Some(CheckResult::Unsat)),
-                    "armed={armed}: ({xv},{yv},{zv}) has a witness and was refuted \
-                     (why={why:?})"
+                    "{mode:?}: ({xv},{yv},{zv}) has a witness and was refuted (why={why:?})"
                 );
                 let built = LEMMAS_BUILT.with(std::cell::Cell::get);
-                if armed {
+                if mode.armed() {
                     reached_the_pass += usize::from(built > 0);
                 } else {
                     assert_eq!(
@@ -3973,15 +3980,21 @@ mod tests {
         );
     }
 
-    /// **The disarmed lever changes nothing.** `0` is the shipped arm and the
-    /// refinement round must be the round it is today — the index is never
-    /// built, so `timed_refine` cannot reach the new pass at all.
+    /// **The shipped mode iterates and emits NO class.** ADR-2148 ships mode
+    /// 4: the loop iterates past a spurious model on every product-bearing
+    /// query, with tangent planes only — the shared-factor index is never
+    /// built, so `timed_refine` cannot reach the order/monotonicity pass, and
+    /// ADR-2136's two classes stay off (they cost `ex36` and `n-7` in every
+    /// combination that emits them).
     #[test]
-    fn the_disarmed_lever_is_the_shipped_arm() {
+    fn the_shipped_mode_iterates_and_emits_no_class() {
         assert_eq!(
-            NIA_ORDER_LEMMAS_ARMED, 0,
-            "ADR-2136 ships DISARMED until an interleaved A/B says otherwise"
+            NIA_ORDER_LEMMAS_ARMED, 4,
+            "ADR-2148 ships mode 4 (iterate, tangents only)"
         );
+        let mode = OrderLemmas::from_lever(NIA_ORDER_LEMMAS_ARMED);
+        assert_eq!(mode, OrderLemmas::TangentsOnly);
+        assert!(mode.armed() && !mode.order() && !mode.monotone());
     }
 
     // -----------------------------------------------------------------------
@@ -4211,14 +4224,20 @@ mod tests {
         }
     }
 
-    /// **The share lever ships at its ADR-2148 default**, and the only thing
-    /// that separates the shipped route from a widened one is that lever.
+    /// **The share lever ships at its ADR-2148 default**: the product-only
+    /// slice is the same third the envelope case draws, so
+    /// `ProductShare(NIA_REFINE_SHARE)` and `Envelopes` are one slice under
+    /// the committed policy.
     #[test]
     fn the_share_lever_ships_at_its_default() {
         assert_eq!(
-            NIA_REFINE_SHARE, 0,
-            "ADR-2148: the product-only slice stays the hang guard until the \
-             interleaved A/B moves it"
+            NIA_REFINE_SHARE, 3,
+            "ADR-2148: a third of the remaining budget"
+        );
+        let total = Duration::from_secs(24);
+        assert_eq!(
+            NiaRefinementPolicy::OFF.slice(Some(total), SliceGrant::ProductShare(NIA_REFINE_SHARE)),
+            NiaRefinementPolicy::OFF.slice(Some(total), SliceGrant::Envelopes),
         );
     }
 

@@ -146,4 +146,134 @@ seven UFNIA gains are decided by ONE lemma per round (1–2); `305`/`39` by
 26–28 at round 0; `Larraz…` by 51; the three losses build 20–39 at round 0.
 A per-round cap cannot separate them. Whether one CLASS can is §4.1.
 
-(§4.1 and the A/B follow below once the class 2×2 completes.)
+### 4.1 The class 2×2 (`quad-classes.sh`, `quadc-a.tsv`, `quadc-b.tsv`) and the iteration control (`tangents-a.tsv`, `tangents-b.tsv`)
+
+`770d23545` makes the lever a mode: `2` = order class only, `3` = monotonicity
+only, `4` = NEITHER class — the loop iterates on a product-bearing query
+exactly as the armed arms do, cutting spurious models with tangent planes
+only. Mode 4 is the control ADR-2136 §C introduced inside its one lever and
+never measured apart. Class runs on cores 1/3 (binary `150fedb9…8384`), mode
+4 on cores 5/7 (`72816651…eaab`, `recheck-movers-env.sh` with A = share 0,
+B = share 3), 3× per arm.
+
+| file | Order S0 | Order S3 | Monotone S0 | Monotone S3 | Tangents S0 | Tangents S3 |
+|---|---|---|---|---|---|---|
+| `n-21` (loss) | ✓ 10.7 s | ✓ | ✓ 9.3 s | ✓ | edge (0/3) | edge (1/3) |
+| `305` (gain) | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |
+| `39` (gain) | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ |
+| `f2_rw160` (gain) | ✓ | ✓ | ✓ | ✓ | **✓** | **✓** |
+| `t3_rw96` (gain) | ✓ | ✓ | ✓ | ✓ | **✓** | **✓** |
+| `f2_rw120` (gain) | ✓ | ✓ | ✓ | ✓ | **✓** | **✓** |
+| `t3_rw25` (gain) | 2/3 | ✓ | ✗ | ✓ | **✓** | **✓** |
+| `t3_rw21` (gain) | ✓ | ✓ | ✓ | ✓ | **✓** | **✓** |
+| `f2_rw163` (gain) | ✓ | ✓ | ✓ | ✓ | **✓** | **✓** |
+| `int_check…` (gain) | ✓ | ✓ | ✓ | ✓ | **✓** | **✓** |
+| `ex36` (loss) | ✗ | ✗ | ✗ | ✗ | **✓ kept** | **✓ kept** |
+| `n-7` (loss) | ✗ | ✗ | ✗ | ✗ | **✓ kept** | **✓ kept** |
+| `Larraz…` (gain) | ✗ | ✓ | ✗ | ✓ | ✗ | **✓** |
+
+**Eight of the ten ADR-2136 gains are iteration gains, not class gains.** The
+seven UFNIA files and `t3_rw25` decide under mode 4 with no class lemma at
+all (their per-round logs under the ADR-2136 arm show ONE order/monotone lemma
+per round, which was never the cut that mattered); `Larraz…` decides under
+mode 4 with share 3. The classes are worth `305` and `39`, both of which need
+the ORDER class. **The losses are the classes**: either class alone keeps
+`n-21` (≤ 20 lemmas instead of 39) and still loses `ex36` and `n-7`; mode 4
+loses nothing, because on an envelope file it IS the shipped code.
+
+A third arm was written and rejected before it was measured on files: emit
+the classes only in a round where the tangent pass added nothing
+(`NiaRefinementNoNewLemma`, the round the shipped loop would have left). It
+was unit-tested, then checked against the T1 ledgers: that decline occurs on
+**0 of 200 `QF_NIA` and 0 of 200 `UFNIA` rows** (`bench-results/ledger/t1-*-db31113fa.tsv`) —
+the tangent loop never stalls, it runs its slice out — so the arm is inert on
+the corpus and was removed rather than shipped as a mode nothing reaches.
+
+## 5. The A/B of mode 4 against the shipped default (`launch-ab.sh`)
+
+Two A/Bs, one binary (`72816651…eaab`), the shipped setting
+(`AXEYUM_NIA_ORDER_LEMMAS=0 AXEYUM_NIA_REFINE_SHARE=0`) against mode 4 with
+the hang guard (`=4 =0`, s7 cores 1, 9, 3, 11) and against mode 4 with share
+3 (`=4 =3`, cores 5, 13, 7, 15), interleaved per file, 24 s / 8 GiB, all
+eight logical cores of four physical ones at once — conservative for a ship
+gate and not for a gain, so every mover is re-checked 3× per arm afterwards.
+Pinned `QF_NIA`, `QF_NRA` (control), `UFNIA`, and the held-out `QF_NIA` draw
+ADR-2136 used (overlap with pinned 0/200).
+
+### 5.1 Coverage and verdicts (`summarize-ab.py`, exits nonzero on a short sweep, a disagreement, or a `:status` contradiction)
+
+| division | rows | shipped | **mode 4, hang guard** | shipped | **mode 4, share 3** |
+|---|---:|---:|---:|---:|---:|
+| `QF_NIA` (pinned) | 200/200 | 83 | 85 | 82 | 84 |
+| `QF_NRA` (control) | 200/200 | 123 | 123 | 122 | 122 |
+| `UFNIA` (pinned) | 200/200 | 54 | **60** | 54 | **61** |
+| `QF_NIA` held-out | 200/200 | 81 | 81 | 82 | 81 |
+
+**Disagreements (one arm `sat`, the other `unsat`): 0 of 800 in each A/B.
+Verdicts contradicting the benchmark's own `(set-info :status)`: 0 of 800 in
+each.** The control moves nothing (123 → 123, 122 → 122; the two shipped
+columns differ by one because the two A/Bs ran on different core pairs at
+the same time, and that file is the shipped arm at a budget edge, not a
+mover in either A/B). Exit status of every run 0.
+
+### 5.2 Movers, re-checked 3× per arm on a quiet core (`recheck-L4S0.tsv`, `recheck-L4S3.tsv`)
+
+| | raw movers | STABLE-GAIN | STABLE-LOSS | UNSTABLE |
+|---|---:|---:|---:|---:|
+| **mode 4, hang guard** | 8 | **6** (all `UFNIA`) | **0** | 2 (`DivMinus…`, `Stroeder_15__NonTermination2…`: `sat` 6/6 on the quiet core — both arms decide them; the raw gain was load) |
+| **mode 4, share 3** | 10 | **8** (`Larraz…` + 7 `UFNIA`) | **0** | 2 (`DivMinus…` `sat` 6/6; `529.smt2` — the one raw held-out LOSS — `sat` 6/6 in both arms) |
+
+The eight stable gains of the share-3 arm are exactly the eight files the
+13-file 2×2 predicted (§4.1): the seven `UFNIA` files ADR-2136 credited to
+the lemma classes plus `t3_rw25`, and `Larraz…` which needs the share. **No
+stable loss in either arm, across 800 files each.** The held-out `QF_NIA`
+draw has no stable mover in either arm.
+
+### 5.3 The held-out draw for the division that moved (`ab-L4S3-ufnia-heldout/`)
+
+The criterion asks for a stable gain on a held-out list, and the held-out
+draw ADR-2136 used is `QF_NIA`, where mode 4's effect is +0 on 200 pinned and
++0 on 200 held-out — the pinned gain it does show (`Larraz…`) is one file. The
+division mode 4 moves is `UFNIA` (+7, 54 → 61), which had no held-out draw. So
+the share-3 arm was run against the shipped default on the seeded, disjoint
+200-file `UFNIA` held-out list ADR-2106's lane drew
+(`bench-results/derived-order-20260915/heldout-lists/UFNIA.txt`, seed
+20260915, excluding every pinned path and every ledger row; overlap with the
+pinned list 0/200), four shards of 50 on cores 1, 3, 5, 7, same envelope.
+
+| | rows | shipped | mode 4, share 3 | disagreements | `:status` contradictions | raw movers |
+|---|---:|---:|---:|---:|---:|---|
+| `UFNIA` held-out (`ab-L4S3-ufnia-heldout/ab-UFNIA-heldout.tsv`) | 200/200 | 51 | **58** | 0 | 0 | 7 gains, 0 losses |
+
+Re-checked 3× per arm on a quiet core (`recheck-L4S3-ufnia-heldout.tsv`):
+**6 STABLE-GAIN** (`f2_rw166`, `f2_rw292`, `f2_rw268`, `f2_rw290`, `f2_rw62`,
+`t3_rw62`, all `unknown → unsat`), **0 STABLE-LOSS**, 1 UNSTABLE
+(`test14-Microsoft.Boogie…get_IsAddrOf`, `unsat` 6/6 in both arms — the
+shipped arm decides it too, at the budget edge). Every exit code 0.
+
+## 6. The ship decision
+
+**Mode 4 with share 3 ships**: `NIA_ORDER_LEMMAS_ARMED = 4`,
+`NIA_REFINE_SHARE = 3`, ADR-2148 `accepted`. Against the criterion:
+
+- **0 stable losses** — on 800 pinned+held-out files in each of two A/Bs and
+  200 more on the UFNIA held-out draw, every raw loss re-ran as `sat`/`unsat`
+  in both arms on a quiet core.
+- **0 flips** (one arm `sat`, the other `unsat`): 0 of 1,800 rows.
+- **0 `:status` disagreements**: 0 of 1,800 rows, checked by `summarize-ab.py`
+  against each benchmark's `(set-info :status)`.
+- **≥ 1 stable gain on pinned AND held-out**: pinned **8** (`Larraz…` in
+  `QF_NIA`, 7 in `UFNIA`), held-out **6** on the `UFNIA` draw. On the `QF_NIA`
+  held-out draw the arm has **0** stable movers, and that is stated rather than
+  absorbed: mode 4's measurable effect is in `UFNIA` (54 → 61 pinned, 51 → 58
+  held-out, +13 % each), where `q:skolem-qf` hands the nonlinear integer tail
+  to the quantifier-free ladder; on `QF_NIA` it is +1 pinned, +0 held-out, and
+  the control `QF_NRA` is +0/+0.
+
+What does NOT ship, and why: ADR-2136's two lemma classes (modes 1–3). They
+are worth `305` and `39` on the `QF_NIA` held-out draw and cost `ex36` and
+`n-7` on the pinned list in every combination that emits them — a 2-for-2
+trade with the losses on the `splits > 0` Farkas/template family the tangent
+loop refutes alone. The classes stay behind the lever (`=1`, `=2`, `=3`) for
+the lane that finds the shape on which they do not reshape a refutable
+relaxation.
