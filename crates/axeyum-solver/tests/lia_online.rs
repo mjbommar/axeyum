@@ -254,13 +254,10 @@ fn non_lia_atom_declines_gracefully() {
     assert!(!theory.tracks(0));
     theory.push();
     assert!(theory.assert(0, true).is_ok());
-    // ADR-2143: even an untracked atom is an ASSERTION, and `a ∧ ¬a` at one
-    // level is a conflict (the lemma `¬(a ∧ ¬a)` is valid for any `a`). Before
-    // the repair this was accepted as a silent overwrite.
-    assert!(
-        theory.assert(0, false).is_err(),
-        "the opposite polarity of a live atom is a conflict, tracked or not"
-    );
+    // ADR-2143: the two polarities are separated by a `pop` — even an
+    // untracked atom is an ASSERTION, and `a ∧ ¬a` at one level is a
+    // conflict, pinned by `opposite_polarity_reassert_conflicts_and_pop_keeps_the_outer_assignment`
+    // rather than here (one guard, one test).
     theory.pop();
     assert!(
         theory.assert(0, false).is_ok(),
@@ -429,6 +426,24 @@ fn differential_fuzz_push_pop_assert_sequences_agree() {
 
                     let result = theory.assert(atom, value);
                     let current = effective(&log, atom);
+                    // A conflict core is a lemma `¬⋀core`, so every literal it
+                    // names must be ASSERTED at that polarity: the mirrored live
+                    // value, or the trigger literal itself. A core naming the
+                    // other polarity is a false lemma — the shape a stale
+                    // marker produces (ADR-2143, `rows_to_core`'s
+                    // `unwrap_or(true)`).
+                    if let Err(core) = &result {
+                        for lit in core {
+                            let asserted = effective(&log, lit.atom) == Some(lit.value)
+                                || (lit.atom == atom && lit.value == value);
+                            assert!(
+                                asserted,
+                                "DISAGREEMENT seed {seed}: core literal {lit:?} is not asserted \
+                                 (live={:?}, trigger=({atom}, {value}))",
+                                effective_set(&log, natoms)
+                            );
+                        }
+                    }
                     // ADR-2143: an atom whose OPPOSITE polarity is live at this
                     // or an enclosing level is a conflict — `a ∧ ¬a` — and the
                     // theory must say so without touching its state. Until the

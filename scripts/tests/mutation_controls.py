@@ -13105,5 +13105,85 @@ SUITES["proptest-box-bounded-completeness"] = (
     ],
 )
 
+
+# --------------------------------------------------------------------------
+# ADR-2143 -- an opposite-polarity re-assert is a conflict, never an overwrite
+# (`LiaTheory` / `LraTheory`, `crates/axeyum-solver/src/{lia,lra}_online.rs`).
+#
+# Two mutants per theory, each the pre-repair code brought back:
+#
+#   conflict-check  the `Some(current)` arm reverts to the silent overwrite
+#                   (`Some(_) => {}`), so `a ∧ ¬a` records `¬a` in place and
+#                   logs the index a second time;
+#   pop-restore     `pop` stops writing `None` back, so nothing a level
+#                   asserted is ever undone.
+#
+# Each suite runs its whole integration file, so the kill count is a count over
+# every guard in that file, not a filter that can only see one. Expected: the
+# conflict mutant dies at the direct three-step unit test and the schedule fuzz
+# (in LRA the fuzz dies on the core-polarity check, since `live` still yields a
+# conflict there); the pop mutant dies at the three-step unit test, the existing
+# push/assert/pop round trip, and every fuzz that pops.
+
+SUITES["lia-pop-conflict-check-lia"] = (
+    "crates/axeyum-solver/src/lia_online.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--test", "lia_online"),
+        "lia-pop",
+    ),
+    [
+        (
+            "an atom live at the opposite polarity must be reported as a conflict, not overwritten",
+            "            Some(current) => {\n                return Err(vec![\n                    TheoryLit {\n                        atom: index,\n                        value: current,\n                    },\n                    TheoryLit { atom: index, value },\n                ]);\n            }\n            None => {}\n        }\n        self.assigned[index] = Some(value);\n        self.assigned_log.push(index);\n        // The theory group's entry counter",
+            "            Some(_) | None => {}\n        }\n        self.assigned[index] = Some(value);\n        self.assigned_log.push(index);\n        // The theory group's entry counter",
+        ),
+    ],
+)
+
+SUITES["lia-pop-pop-restore-lia"] = (
+    "crates/axeyum-solver/src/lia_online.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--test", "lia_online"),
+        "lia-pop",
+    ),
+    [
+        (
+            "pop must restore every atom the popped level assigned",
+            "            let atom = self.assigned_log.pop().expect(\"log non-empty above marker\");\n            debug_assert!(\n                self.assigned[atom].is_some(),\n                \"assigned_log entry for atom {atom} without a live assignment\"\n            );\n            self.assigned[atom] = None;\n        }\n    }\n\n    fn propagate(&self) -> Vec<TheoryProp> {\n        LiaTheory::propagate(self)",
+            "            let _atom = self.assigned_log.pop().expect(\"log non-empty above marker\");\n        }\n    }\n\n    fn propagate(&self) -> Vec<TheoryProp> {\n        LiaTheory::propagate(self)",
+        ),
+    ],
+)
+
+SUITES["lia-pop-conflict-check-lra"] = (
+    "crates/axeyum-solver/src/lra_online.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--test", "lra_online"),
+        "lia-pop",
+    ),
+    [
+        (
+            "an atom live at the opposite polarity must be reported as a conflict, not overwritten",
+            "            Some(current) => {\n                return Err(vec![\n                    TheoryLit {\n                        atom: index,\n                        value: current,\n                    },\n                    TheoryLit { atom: index, value },\n                ]);\n            }\n            None => {}\n        }\n        self.assigned[index] = Some(value);\n        self.assigned_log.push(index);\n\n        let added: Vec<Constraint>",
+            "            Some(_) | None => {}\n        }\n        self.assigned[index] = Some(value);\n        self.assigned_log.push(index);\n\n        let added: Vec<Constraint>",
+        ),
+    ],
+)
+
+SUITES["lia-pop-pop-restore-lra"] = (
+    "crates/axeyum-solver/src/lra_online.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--test", "lra_online"),
+        "lia-pop",
+    ),
+    [
+        (
+            "pop must restore every atom the popped level assigned",
+            "            let atom = self.assigned_log.pop().expect(\"log non-empty above marker\");\n            debug_assert!(\n                self.assigned[atom].is_some(),\n                \"assigned_log entry for atom {atom} without a live assignment\"\n            );\n            self.assigned[atom] = None;\n        }\n        if self.deferred_final_check {\n            self.undo_bounds(live_len);",
+            "            let _atom = self.assigned_log.pop().expect(\"log non-empty above marker\");\n        }\n        if self.deferred_final_check {\n            self.undo_bounds(live_len);",
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))

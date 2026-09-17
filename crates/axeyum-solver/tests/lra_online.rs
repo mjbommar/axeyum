@@ -594,6 +594,24 @@ fn differential_fuzz_push_pop_assert_sequences_agree() {
 
                     let result = theory.assert(atom, value);
                     let current = effective(&log, atom);
+                    // A conflict core is a lemma `¬⋀core`, so every literal it
+                    // names must be ASSERTED at that polarity: the mirrored live
+                    // value, or the trigger literal itself. A core naming the
+                    // other polarity is a false lemma — the shape a stale
+                    // marker produces (ADR-2143, `rows_to_core`'s
+                    // `unwrap_or(true)`).
+                    if let Err(core) = &result {
+                        for lit in core {
+                            let asserted = effective(&log, lit.atom) == Some(lit.value)
+                                || (lit.atom == atom && lit.value == value);
+                            assert!(
+                                asserted,
+                                "DISAGREEMENT seed {seed}: core literal {lit:?} is not asserted \
+                                 (live={:?}, trigger=({atom}, {value}))",
+                                effective_set(&log, natoms)
+                            );
+                        }
+                    }
                     if current == Some(!value) {
                         assert!(
                             result.is_err(),
