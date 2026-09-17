@@ -329,6 +329,106 @@ fn positive_path_level() -> usize {
     process_positive_path_level()
 }
 
+/// The shipped nested-activation level (ADR-2149): `0`, the historical
+/// behaviour of lazy discovery.
+///
+/// At `0` [`NestedDiscovery`] scans every newly trusted formula WHOLE — an
+/// admitted instance, a staged positive replacement, a promoted universal —
+/// and registers every positive-position universal it finds, up to
+/// `MAX_DISCOVERED_REGISTRATIONS` per attempt with one matcher rebuild per
+/// round that grew, up to `MAX_DISCOVERY_REBUILDS`.
+///
+/// At `1` an admitted INSTANCE is not scanned and a staged replacement is
+/// scanned only INSIDE its replaced subtree. The universals a plain instance
+/// of `∀x⃗. M` exposes sit at the same positions in `M` where the static walk
+/// (`extract_entailed` → `collect_nested_registrations`) already registered
+/// them with the same [`PositiveContext`] and a strictly larger tuple set
+/// (the static registration binds `x⃗ ∪ y⃗`, the discovered one `y⃗` with `x⃗`
+/// fixed; every ground match of the latter is a ground match of the former,
+/// and `positive_instance_formula` returns the same interned conclusion for
+/// both). So at level 0 those registrations are duplicates: measured on
+/// ADR-2113's 53 `UFLIA` cores they fill the 256-registration cap on 8 of 26
+/// cores in the FIRST round at the shipped arm and on 13 of 25 at
+/// `AXEYUM_QINST_POSITIVE_PATH=1`, and the cap then refuses the one class of
+/// registration nothing else produces — a universal under a binder the
+/// replacement instantiated (`InertReason::CrossedBinder`, 380,131 tuples
+/// dropped on `ImportDeclVec.015` alone). Level 1 keeps exactly that class.
+///
+/// Level 1 also stops a RE-DERIVED conclusion from spending
+/// `MAX_POSITIVE_INSTANCES` again: the matcher re-emits a registration's
+/// tuples after every rebuild, `produced` deduplicates the conclusion, and at
+/// level 0 the counter had already moved.
+///
+/// At `2`, in addition, [`InstBridge::add_term`] adds a `Forall`/`Exists`
+/// node inside a ground formula as ONE opaque leaf and never walks its body.
+/// A term under a binder carries a bound variable and is not ground; walking
+/// it let a registration's trigger match its own body inside an admitted
+/// instance and hand off, every round, a tuple binding a variable to itself,
+/// which `positive_instance_formula` refuses after the handoff slot is spent
+/// (`rejected_by_checker`: 17,600 on the 53 cores at
+/// `AXEYUM_QINST_POSITIVE_PATH=1`). z3 internalizes a nested quantifier as one
+/// Boolean variable (`smt_internalizer.cpp:656`) and its body not at all until
+/// instantiated; this is the same rule.
+///
+/// Soundness does not depend on the level: every registration any level
+/// compiles goes through the same `positive_instance_formula` producer and
+/// `check_positive_replacement` checker (ADR-2120); level 1 only ever
+/// registers a SUBSET of what level 0 registers; and level 2 only ever offers
+/// the matcher a SUBSET of the terms level 1 offers — a match on a non-ground
+/// term was never a sound instance, which is why the checker refused every
+/// one of them.
+const NESTED_ACTIVATION_LEVEL: usize = 0;
+
+axeyum_ir::cap_lever! {
+    /// The process-wide nested-activation level: [`NESTED_ACTIVATION_LEVEL`],
+    /// or `AXEYUM_QINST_NESTED_ACTIVATION`.
+    ///
+    /// Read through [`nested_activation_level`], never directly — a live
+    /// [`NestedActivationLevelGuard`] outranks it.
+    fn process_nested_activation_level() -> usize =
+        "AXEYUM_QINST_NESTED_ACTIVATION" or NESTED_ACTIVATION_LEVEL;
+}
+
+std::thread_local! {
+    /// A per-thread override of the process nested-activation level, set by
+    /// [`NestedActivationLevelGuard`]. Same shape and same reason as
+    /// [`POSITIVE_PATH_OVERRIDE`].
+    static NESTED_ACTIVATION_OVERRIDE: std::cell::Cell<Option<usize>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// Forces a nested-activation level on this thread for the guard's lifetime,
+/// restoring the previous setting on drop. Does not cross a thread boundary —
+/// an A/B through `smtcomp_cli`'s watchdog worker must use the environment
+/// variable, exactly as for [`PositivePathLevelGuard`].
+pub struct NestedActivationLevelGuard(Option<usize>);
+
+impl NestedActivationLevelGuard {
+    /// Overrides the process level on this thread.
+    #[must_use]
+    pub fn set(level: usize) -> Self {
+        NestedActivationLevelGuard(
+            NESTED_ACTIVATION_OVERRIDE.with(|cell| cell.replace(Some(level))),
+        )
+    }
+}
+
+impl Drop for NestedActivationLevelGuard {
+    fn drop(&mut self) {
+        NESTED_ACTIVATION_OVERRIDE.with(|cell| cell.set(self.0));
+    }
+}
+
+/// The nested-activation level in force on this thread: a live
+/// [`NestedActivationLevelGuard`]'s choice, else the process level.
+#[must_use]
+fn nested_activation_level() -> usize {
+    if let Some(level) = NESTED_ACTIVATION_OVERRIDE.with(std::cell::Cell::get) {
+        return level;
+    }
+    process_nested_activation_level()
+}
+
 /// What the e-matching loop did with its NESTED universals — the registrations
 /// that are matched but never asserted — read back in-process (ADR-2149).
 ///
@@ -394,6 +494,13 @@ pub struct NestedActivationStats {
     /// The `rejected` subset the checker itself (`positive_instance_formula`)
     /// refused, as opposed to an untrusted owner or an arity mismatch.
     pub rejected_by_checker: usize,
+    /// Registrations level 1 of `AXEYUM_QINST_NESTED_ACTIVATION` skipped as
+    /// duplicates because they sat outside a staged replacement's replaced
+    /// subtree. Always `0` at level 0.
+    pub discovered_outside_scope: usize,
+    /// Admitted instances level 1 of the lever did not scan at all. Always
+    /// `0` at level 0.
+    pub instances_unscanned: usize,
     /// Loop invocations this reading sums over.
     pub invocations: usize,
 }
@@ -420,6 +527,8 @@ impl NestedActivationStats {
         self.rebuilds += other.rebuilds;
         self.rejected += other.rejected;
         self.rejected_by_checker += other.rejected_by_checker;
+        self.discovered_outside_scope += other.discovered_outside_scope;
+        self.instances_unscanned += other.instances_unscanned;
         self.invocations += other.invocations;
     }
 }
@@ -544,6 +653,8 @@ fn record_nested_activation_stats(
         snapshot.rebuilds = discovery.rebuilds;
         snapshot.rejected = discovery.rejected;
         snapshot.rejected_by_checker = discovery.rejected_by_checker;
+        snapshot.discovered_outside_scope = discovery.discovered_outside_scope;
+        snapshot.instances_unscanned = discovery.instances_unscanned;
     }
     NESTED_ACTIVATION_STATS.with(|cell| {
         let mut entries = cell.borrow_mut();
@@ -2444,6 +2555,14 @@ struct NestedDiscovery {
     /// The `rejected` subset [`positive_instance_formula`] itself refused (as
     /// opposed to an untrusted owner or an arity mismatch) -- ADR-2149.
     rejected_by_checker: usize,
+    /// Registrations `scan_replaced` skipped because they sat OUTSIDE the
+    /// replaced subtree of a staged replacement (ADR-2149, level 1) -- the
+    /// duplicates level 0 would have compiled.
+    discovered_outside_scope: usize,
+    /// Admitted instances level 1 did not scan at all (ADR-2149): their
+    /// positive-position universals are the assertion's own, already
+    /// registered by the static walk.
+    instances_unscanned: usize,
 }
 
 impl NestedDiscovery {
@@ -2477,33 +2596,73 @@ impl NestedDiscovery {
     ) -> usize {
         let mut added = 0;
         for &formula in formulas {
+            added += self.scan_one(arena, formula, None, retained);
+        }
+        added
+    }
+
+    /// As [`Self::scan`], but registers only the universals INSIDE the
+    /// replaced subtree of each staged replacement — the positions the static
+    /// walk could not reach because they sat under the binder the replacement
+    /// instantiated (ADR-2149, `NESTED_ACTIVATION_LEVEL` 1).
+    ///
+    /// Everything outside that subtree is a copy of the owner's other
+    /// positions, whose universals the owner's own registrations already
+    /// cover, so registering them again is a duplicate that costs a rebuild
+    /// and a slot of `MAX_DISCOVERED_REGISTRATIONS` and produces conclusions
+    /// `produced` then deduplicates.
+    fn scan_replaced(
+        &mut self,
+        arena: &mut TermArena,
+        staged: &[(TermId, Vec<u32>)],
+        retained: &HashMap<TermId, QuantifierGroundDerivation>,
+    ) -> usize {
+        let mut added = 0;
+        for (formula, path) in staged {
+            added += self.scan_one(arena, *formula, Some(path), retained);
+        }
+        added
+    }
+
+    fn scan_one(
+        &mut self,
+        arena: &mut TermArena,
+        formula: TermId,
+        scope: Option<&[u32]>,
+        retained: &HashMap<TermId, QuantifierGroundDerivation>,
+    ) -> usize {
+        if self.discovered_registrations >= MAX_DISCOVERED_REGISTRATIONS {
+            return 0;
+        }
+        if !self.is_trusted(formula, retained) || !self.scanned.insert(formula) {
+            return 0;
+        }
+        let (prefix, matrix) = peel_foralls(arena, formula);
+        let mut found = Vec::new();
+        collect_nested_registrations(
+            arena,
+            matrix,
+            &mut prefix.clone(),
+            formula,
+            &mut Vec::new(),
+            Some(true),
+            &mut found,
+        );
+        let mut added = 0;
+        for registration in found {
+            let Some(context) = &registration.context else {
+                continue;
+            };
+            if scope.is_some_and(|scope| !context.path.starts_with(scope)) {
+                self.discovered_outside_scope += 1;
+                continue;
+            }
             if self.discovered_registrations >= MAX_DISCOVERED_REGISTRATIONS {
                 break;
             }
-            if !self.is_trusted(formula, retained) || !self.scanned.insert(formula) {
-                continue;
-            }
-            let (prefix, matrix) = peel_foralls(arena, formula);
-            let mut found = Vec::new();
-            collect_nested_registrations(
-                arena,
-                matrix,
-                &mut prefix.clone(),
-                formula,
-                &mut Vec::new(),
-                Some(true),
-                &mut found,
-            );
-            for registration in found {
-                if registration.context.is_none()
-                    || self.discovered_registrations >= MAX_DISCOVERED_REGISTRATIONS
-                {
-                    continue;
-                }
-                self.discovered_registrations += 1;
-                added += 1;
-                self.pending_registrations.push(registration);
-            }
+            self.discovered_registrations += 1;
+            added += 1;
+            self.pending_registrations.push(registration);
         }
         added
     }
@@ -2524,7 +2683,7 @@ impl NestedDiscovery {
         seen: &mut HashSet<TermId>,
         ground: &mut Vec<TermId>,
         generations: &mut TermGenerations,
-    ) -> (Vec<TermId>, Vec<TermId>) {
+    ) -> (Vec<(TermId, Vec<u32>)>, Vec<TermId>) {
         let pending = std::mem::take(&mut matcher.pending_positive);
         let mut admitted = Vec::new();
         let mut promoted = Vec::new();
@@ -2550,8 +2709,18 @@ impl NestedDiscovery {
                 self.rejected_by_checker += 1;
                 continue;
             };
-            self.positive_instances += 1;
-            if !self.produced.insert(formula) {
+            // ADR-2149: at level 0 a re-derived conclusion spends a slot of
+            // `MAX_POSITIVE_INSTANCES` every time the matcher re-emits its
+            // tuple (every round after a rebuild, since the fresh session
+            // re-ingests the ground set), which is how a fixture with 248
+            // distinct replacements reached the 4,096 cap. At level 1 only a
+            // conclusion produced for the FIRST time counts, which is what the
+            // cap's own doc says it bounds.
+            let fresh = self.produced.insert(formula);
+            if fresh || nested_activation_level() == 0 {
+                self.positive_instances += 1;
+            }
+            if !fresh {
                 continue;
             }
             // ADR-2120: record HOW this conclusion was derived, at the moment it
@@ -2601,7 +2770,7 @@ impl NestedDiscovery {
                     // later replay names for no gain.
                     retained.entry(formula).or_insert(replacement);
                     self.admitted_ground += 1;
-                    admitted.push(formula);
+                    admitted.push((formula, context.path.clone()));
                 }
             } else if self.promoted < MAX_PROMOTED_UNIVERSALS {
                 self.promoted += 1;
@@ -2648,8 +2817,26 @@ fn nested_discovery_step(
     generations: &mut TermGenerations,
 ) -> DiscoveryOutcome {
     let (staged, promoted) = discovery.stage(arena, matcher, retained, seen, ground, generations);
-    let mut found = discovery.scan(arena, admitted, retained);
-    found += discovery.scan(arena, &staged, retained);
+    // ADR-2149. At level 0 every newly trusted formula is scanned whole -- an
+    // admitted instance, a staged replacement, a promotion. At level 1 an
+    // admitted instance is not scanned at all and a staged replacement only
+    // inside its replaced subtree: the universals a plain instance exposes sit
+    // at the same positions in the assertion's own matrix, where the static
+    // walk already registered them with the same context and a strictly
+    // larger tuple set, so scanning them again duplicates registrations into
+    // `MAX_DISCOVERED_REGISTRATIONS` and rebuilds the matcher for nothing.
+    // What the static walk could NOT reach is exactly what sits under the
+    // binder a replacement instantiated -- the crossed-binder class -- and
+    // that is the scope level 1 keeps.
+    let mut found = if nested_activation_level() >= 1 {
+        discovery.instances_unscanned += admitted.len();
+        discovery.scan_replaced(arena, &staged, retained)
+    } else {
+        let mut found = discovery.scan(arena, admitted, retained);
+        let staged_formulas: Vec<TermId> = staged.iter().map(|(formula, _)| *formula).collect();
+        found += discovery.scan(arena, &staged_formulas, retained);
+        found
+    };
     // A promoted universal joins the trust anchor *before* it is scanned or
     // compiled, so its own instances take the ordinary certificate route. Past
     // the rebuild budget it is never compiled and is simply inert: it is a
@@ -2696,7 +2883,7 @@ fn nested_discovery_step(
         );
     }
     DiscoveryOutcome {
-        admitted: staged,
+        admitted: staged.into_iter().map(|(formula, _)| formula).collect(),
         rebuilt,
     }
 }
@@ -3188,6 +3375,7 @@ fn prove_quantified_unsat_via_egraph_impl(
             qgrounddump(arena, &ground, &generations, site.census_kind());
             timeout_exit_probe(site, rounds_entered, ground.len());
             matcher.qprobe_universal_census("timeout");
+            qprobe_discovery_census(discovery.as_ref(), "timeout");
             record_nested_activation_stats(&matcher, discovery.as_ref());
             held_set_replay_probe(
                 arena,
@@ -3257,6 +3445,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                     ground.len(),
                 );
                 matcher.qprobe_universal_census("ground-ceiling");
+                qprobe_discovery_census(discovery.as_ref(), "ground-ceiling");
             }
             record_nested_activation_stats(&matcher, discovery.as_ref());
             return Ok(egraph_ground_limit());
@@ -3300,6 +3489,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                 qgrounddump(arena, &ground, &generations, site.census_kind());
                 timeout_exit_probe(site, rounds_entered, ground.len());
                 matcher.qprobe_universal_census("timeout");
+                qprobe_discovery_census(discovery.as_ref(), "timeout");
                 record_nested_activation_stats(&matcher, discovery.as_ref());
                 held_set_replay_probe(
                     arena,
@@ -3564,6 +3754,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                         matcher.admission_census.flood_deep_seen,
                     );
                     matcher.qprobe_universal_census("fixpoint");
+                    qprobe_discovery_census(discovery.as_ref(), "fixpoint");
                 }
                 record_nested_activation_stats(&matcher, discovery.as_ref());
                 if floodprobe_enabled() {
@@ -3685,6 +3876,7 @@ fn prove_quantified_unsat_via_egraph_impl(
             InstantiationLoopExit::Fixpoint | InstantiationLoopExit::GroundSaturated
         ) {
             matcher.qprobe_universal_census(loop_exit.census_kind());
+            qprobe_discovery_census(discovery.as_ref(), loop_exit.census_kind());
         }
     }
     if !matches!(
@@ -3970,6 +4162,35 @@ impl InstantiationTimeoutSite {
 /// three of the loop's seven exits and would report the deadline exits as
 /// "did not reach an exit". An instrument blind to four of seven exits names
 /// whichever cause it can see rather than the binding one.
+/// The `AXEYUM_QPROBE` line for the lazy-discovery driver at a loop exit
+/// (ADR-2149): how many registrations instantiation exposed, how many of them
+/// were never compiled because the rebuild budget was spent first, and what
+/// the staged replacements amounted to. `none` when the loop held no
+/// registrations and so allocated no driver.
+fn qprobe_discovery_census(discovery: Option<&NestedDiscovery>, exit: &str) {
+    if !qprobe_enabled() {
+        return;
+    }
+    match discovery {
+        Some(discovery) => eprintln!(
+            "QPROBE nested-discovery exit={exit} registered={} uncompiled={} rebuilds={} \
+             positive={} staged={} promoted={} rejected={} rejected_checker={} \
+             outside_scope={} unscanned={}",
+            discovery.discovered_registrations,
+            discovery.pending_registrations.len(),
+            discovery.rebuilds,
+            discovery.positive_instances,
+            discovery.admitted_ground,
+            discovery.promoted,
+            discovery.rejected,
+            discovery.rejected_by_checker,
+            discovery.discovered_outside_scope,
+            discovery.instances_unscanned,
+        ),
+        None => eprintln!("QPROBE nested-discovery exit={exit} none"),
+    }
+}
+
 fn timeout_exit_probe(site: InstantiationTimeoutSite, rounds_entered: usize, ground: usize) {
     if qprobe_enabled() {
         eprintln!(
@@ -10986,6 +11207,17 @@ struct InstBridge {
     /// it also makes the selector testable without an ambient variable -- a test
     /// that only passes under one is a gate on one shell.
     smallest_witness: bool,
+    /// ADR-2149 level 2: a `Forall`/`Exists` node is added as an OPAQUE LEAF
+    /// keyed by its term, and its body is never walked. A term under a binder
+    /// carries a bound variable and is not ground; ingesting it lets a
+    /// registration's trigger match its OWN body inside an admitted
+    /// instance, and every such tuple binds a variable to itself and is
+    /// refused by `positive_instance_formula` -- after spending a handoff
+    /// slot, every round (`rejected_by_checker`). z3 internalizes a nested
+    /// quantifier as one Boolean variable (`smt_internalizer.cpp:656`) and
+    /// its body not at all until it is instantiated. Resolved once at
+    /// construction, like `smallest_witness`, for the same reason.
+    opaque_binders: bool,
     next_decl: u32,
 }
 
@@ -11067,6 +11299,7 @@ impl InstBridge {
             repr_term: HashMap::new(),
             witness_pool: Vec::new(),
             smallest_witness: smallest_witness_enabled(),
+            opaque_binders: nested_activation_level() >= 2,
             next_decl: 0,
         }
     }
@@ -11120,6 +11353,17 @@ impl InstBridge {
                     args.iter().map(|&a| self.add_term(arena, a)).collect();
                 let decl = self.func_decl(func);
                 self.egraph.add(decl, &children)
+            }
+            TermNode::App {
+                op: Op::Forall(_) | Op::Exists(_),
+                ..
+            } if self.opaque_binders => {
+                // ADR-2149 level 2: the quantifier is one leaf, its body is not
+                // ground and is not walked. Keyed by the term so two occurrences
+                // of the same (interned) quantifier share a class.
+                let key = format!("q:{}", term.index());
+                let decl = self.op_decl(&key);
+                self.egraph.add(decl, &[])
             }
             TermNode::App { op, args } => {
                 // Other interpreted operators are treated as uninterpreted for the

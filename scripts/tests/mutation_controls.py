@@ -11830,6 +11830,93 @@ SUITES["qinst-positive-path"] = (
 )
 
 # --------------------------------------------------------------------------
+# `qinst-nested-activation` -- ADR-2149's nested-binder activation: the split
+# of `inactive_dropped` by the first refusal on the registration's path, and
+# the lever `AXEYUM_QINST_NESTED_ACTIVATION` that stops lazy discovery
+# spending its budgets on duplicates (level 1) and stops the matcher walking
+# quantifier bodies inside ground formulas (level 2).
+#
+# The soundness of every level is inherited from ADR-2120's producer/checker
+# pair (`qinst-positive-path` above): a level only decides which duplicate
+# registrations are NOT compiled and which non-ground terms are NOT matched.
+# So the guards below are ATTRIBUTION and REACH guards, and each mutation
+# either mislabels a drop (the census then names the wrong obstacle) or makes
+# a raised level behave like the shipped one (the conversion then vanishes).
+# --------------------------------------------------------------------------
+
+SUITES["qinst-nested-activation"] = (
+    "crates/axeyum-solver/src/qinst_egraph.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--features",
+            "full",
+            "--test",
+            "quant_nested_activation_2149",
+        ),
+        "qinst-nested-activation",
+    ),
+    [
+        (
+            # Entering a `forall` body is what loses tracking here; charging it
+            # to the connective class would make the crossed-binder column of
+            # the census read zero on every core.
+            "crossing a binder is attributed to the binder",
+            "            PathTracking::Polarity(_) => PathTracking::Lost(InertReason::CrossedBinder),",
+            "            PathTracking::Polarity(_) => PathTracking::Lost(InertReason::Untracked),",
+        ),
+        (
+            # First cause wins. Re-attributing a loss below a crossed binder
+            # would name the binder on a path whose real obstacle is the
+            # connective above it.
+            "the first refusal on the path is the one attributed",
+            "            lost @ PathTracking::Lost(_) => lost,",
+            "            PathTracking::Lost(_) => PathTracking::Lost(InertReason::CrossedBinder),",
+        ),
+        (
+            # The drop counter's split. Charging a crossed-binder drop to the
+            # untracked class keeps `rej_nocontext` right and the split wrong.
+            "a crossed-binder drop is charged to the crossed-binder class",
+            "                        Some(InertReason::CrossedBinder) => {\n"
+            "                            &mut batch.rejects.inactive_dropped_crossed\n"
+            "                        }",
+            "                        Some(InertReason::CrossedBinder) => {\n"
+            "                            &mut batch.rejects.inactive_dropped_untracked\n"
+            "                        }",
+        ),
+        (
+            # Level 1's scope rule. Skipping EVERYTHING in a staged replacement
+            # loses the one class discovery exists for.
+            "level 1 keeps the universals inside the replaced subtree",
+            "            if scope.is_some_and(|scope| !context.path.starts_with(scope)) {",
+            "            if scope.is_some() {",
+        ),
+        (
+            # Level 1's dispatch. Without it the raised level scans every
+            # instance exactly as the shipped one does.
+            "level 1 does not scan admitted instances",
+            "    let mut found = if nested_activation_level() >= 1 {",
+            "    let mut found = if false {",
+        ),
+        (
+            # Level 1's budget rule. Counting a re-derived conclusion again
+            # spends MAX_POSITIVE_INSTANCES on duplicates.
+            "a re-derived conclusion does not spend the positive-instance cap again",
+            "            if fresh || nested_activation_level() == 0 {",
+            "            if true {",
+        ),
+        (
+            # Level 2's ingestion rule. Walking the body of a quantifier inside
+            # a ground formula hands the matcher non-ground terms.
+            "level 2 adds a quantifier as an opaque leaf",
+            "            } if self.opaque_binders => {",
+            "            } if false => {",
+        ),
+    ],
+)
+
+# --------------------------------------------------------------------------
 # `int-blast-width-floor` (ADR-2112) -- the ladder's admissible-width floor.
 #
 # The floor skips int-blast rungs whose width cannot hold the query's own

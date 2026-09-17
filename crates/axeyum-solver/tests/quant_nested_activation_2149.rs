@@ -44,10 +44,11 @@ use std::time::Duration;
 
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
-    CheckResult, NestedActivationStats, NestedActivationStatsGuard, PositivePathLevelGuard,
-    QuantifierGroundDerivation, SolverConfig, check_quantifier_ground_derivation,
-    last_nested_activation_stats, prove_quantified_unsat_via_egraph,
-    prove_quantified_unsat_via_egraph_with_instances, solve_smtlib,
+    CheckResult, NestedActivationLevelGuard, NestedActivationStats, NestedActivationStatsGuard,
+    PositivePathLevelGuard, QuantifierGroundDerivation, SolverConfig,
+    check_quantifier_ground_derivation, last_nested_activation_stats,
+    prove_quantified_unsat_via_egraph, prove_quantified_unsat_via_egraph_with_instances,
+    solve_smtlib,
 };
 
 /// Level 0 is the shipped arm of ADR-2120's lever; level 1 is its ON arm.
@@ -361,13 +362,15 @@ fn the_flat_prefix_control_refutes_at_both_levels_with_no_registration() {
 /// its tuples ARE dropped (`dropped_crossed_binder == dropped > 0`); the
 /// refutation comes through the registrations discovery adds from the
 /// enclosing universal's instance and the staged replacement (`discovered >= 2`).
+const CROSSED_CASES: [(&str, &str, usize); 3] = [
+    ("CROSSED_BINDER_UNSAT", CROSSED_BINDER_UNSAT, 1),
+    ("CROSSED_BINDER_OR_UNSAT", CROSSED_BINDER_OR_UNSAT, 0),
+    ("CROSSED_BINDER_OR_UNSAT", CROSSED_BINDER_OR_UNSAT, 1),
+];
+
 #[test]
 fn a_crossed_binder_universal_is_activated_by_discovery_not_by_its_static_registration() {
-    for (name, text, level) in [
-        ("CROSSED_BINDER_UNSAT", CROSSED_BINDER_UNSAT, 1),
-        ("CROSSED_BINDER_OR_UNSAT", CROSSED_BINDER_OR_UNSAT, 0),
-        ("CROSSED_BINDER_OR_UNSAT", CROSSED_BINDER_OR_UNSAT, 1),
-    ] {
+    for (name, text, level) in CROSSED_CASES {
         let (verdict, stats) = at_level(level, || ematch(text));
         assert!(
             matches!(verdict, CheckResult::Unsat),
@@ -379,16 +382,6 @@ fn a_crossed_binder_universal_is_activated_by_discovery_not_by_its_static_regist
              missing, so this fixture does not exercise the shape ({stats:?})"
         );
         assert!(
-            stats.dropped > 0,
-            "{name} at level {level}: the static registration never matched, so \
-             the crossed-binder drop is not exercised ({stats:?})"
-        );
-        assert_eq!(
-            stats.dropped_crossed_binder, stats.dropped,
-            "{name} at level {level}: a drop on this shape that is NOT the \
-             crossed-binder class ({stats:?})"
-        );
-        assert!(
             stats.discovered >= 2,
             "{name} at level {level}: discovery did not register both the \
              middle universal (from the outer instance) and the inner one (from \
@@ -397,6 +390,27 @@ fn a_crossed_binder_universal_is_activated_by_discovery_not_by_its_static_regist
         assert!(
             stats.handed_off >= 1 && stats.staged_ground >= 1,
             "{name} at level {level}: nothing handed off or staged ({stats:?})"
+        );
+    }
+}
+
+/// The DROP half of the same shape, as its own test so a mutation of the drop
+/// charging is attributable apart from one of the registration attribution:
+/// the static crossed-binder registration matched, every one of its tuples was
+/// dropped, and every drop is charged to the crossed-binder class.
+#[test]
+fn the_static_crossed_binder_registration_drops_in_the_crossed_binder_class() {
+    for (name, text, level) in CROSSED_CASES {
+        let (_, stats) = at_level(level, || ematch(text));
+        assert!(
+            stats.dropped > 0,
+            "{name} at level {level}: the static registration never matched, so \
+             the crossed-binder drop is not exercised ({stats:?})"
+        );
+        assert_eq!(
+            stats.dropped_crossed_binder, stats.dropped,
+            "{name} at level {level}: a drop on this shape that is NOT charged to \
+             the crossed-binder class ({stats:?})"
         );
     }
 }
@@ -588,4 +602,349 @@ fn a_nested_refutation_carries_a_checked_replacement_chain() {
             "a derivation in the certificate does not check: {derivation:?}"
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// The lever: `AXEYUM_QINST_NESTED_ACTIVATION` / `NestedActivationLevelGuard`.
+//
+// Level 0 is the shipped discovery. Level 1 stops spending discovery's
+// budgets on DUPLICATES: an admitted instance is not scanned (its universals
+// are the assertion's own, already registered by the static walk), a staged
+// replacement is scanned only inside its replaced subtree, and a re-derived
+// conclusion does not spend `MAX_POSITIVE_INSTANCES` again. Level 2 adds the
+// reference solvers' ingestion rule: a quantifier inside a ground formula is
+// ONE opaque leaf of the e-graph and its body is never walked, so a
+// registration's trigger can no longer match its own body inside an admitted
+// instance and hand off a tuple that binds a variable to itself.
+//
+// The fixture below is the failure all three levels are measured on: enough
+// duplicate exposures to fill every discovery budget, then one crossed-binder
+// refutation whose only route is a discovered registration.
+// ---------------------------------------------------------------------------
+
+const NESTED_LEVELS: [usize; 3] = [0, 1, 2];
+
+/// `forall x. (¬P(x) ∨ forall y. Q(x,y))` with `P(a_1) … P(a_n)`, beside
+/// `forall x. (¬S(x) ∨ forall u. (¬R(x,u) ∨ forall y. T(u,y)))`, `S(d)`,
+/// `¬T(c,b)` and — for the UNSAT twin — `R(d,c)`.
+///
+/// The `n` instances of the first universal each carry a residual
+/// `forall y. Q(a_i, y)` into the ground set. At level 0 every one of them is
+/// scanned into a duplicate registration (256 cap), its body is ingested so
+/// the static `forall x y. Q(x,y)` matches `Q(a_i, y)` and hands off a tuple
+/// binding `y` to itself every round (refused by the checker), and the
+/// replacements that do check are re-derived every round until the 4,096
+/// positive-instance cap is spent — after which `stage` breaks before it
+/// reaches the one tuple that matters, `T(c, b)` against the discovered
+/// `forall y. T(c,y)`.
+fn crossed_after_duplicates(n: usize, unsat: bool) -> String {
+    let mut text = String::from(
+        "(set-logic UF)\n(declare-sort U 0)\n\
+         (declare-fun P (U) Bool)\n(declare-fun Q (U U) Bool)\n\
+         (declare-fun S (U) Bool)\n(declare-fun R (U U) Bool)\n(declare-fun T (U U) Bool)\n\
+         (declare-const b U)\n(declare-const c U)\n(declare-const d U)\n\
+         (assert (forall ((x U)) (or (not (P x)) (forall ((y U)) (Q x y)))))\n\
+         (assert (forall ((x U)) (or (not (S x)) (forall ((u U)) (or (not (R x u)) (forall ((y U)) (T u y)))))))\n\
+         (assert (S d))\n(assert (not (T c b)))\n",
+    );
+    text.push_str(if unsat {
+        "(assert (R d c))\n"
+    } else {
+        "(assert (not (R d c)))\n"
+    });
+    for i in 0..n {
+        text.push_str(&format!("(declare-const a{i} U)\n(assert (P a{i}))\n"));
+    }
+    text.push_str("(check-sat)\n");
+    text
+}
+
+/// Enough duplicates to exceed `MAX_DISCOVERED_REGISTRATIONS` (256) in one
+/// round with margin.
+const DUPLICATES: usize = 300;
+
+fn at_nested_level<T>(level: usize, run: impl FnOnce() -> T) -> T {
+    let _guard = NestedActivationLevelGuard::set(level);
+    run()
+}
+
+/// The shipped level fails the cap fixture, and the counters say on what: the
+/// registration cap, the positive-instance cap, and the self-binding handoffs
+/// the checker refuses — all three at once.
+#[test]
+fn the_shipped_level_spends_every_discovery_budget_on_duplicates() {
+    let text = crossed_after_duplicates(DUPLICATES, true);
+    let (verdict, stats) = at_level(0, || at_nested_level(0, || ematch(&text)));
+    assert!(
+        !matches!(verdict, CheckResult::Unsat),
+        "the shipped level refuted the cap fixture, so it does not exercise the \
+         caps and the conversions below prove nothing ({stats:?})"
+    );
+    assert!(
+        stats.discovered >= 256,
+        "MAX_DISCOVERED_REGISTRATIONS was not hit ({stats:?})"
+    );
+    assert!(
+        stats.positive_instances >= 4096,
+        "MAX_POSITIVE_INSTANCES was not hit ({stats:?})"
+    );
+    assert!(
+        stats.rejected_by_checker > 0,
+        "no self-binding tuple was handed off and refused ({stats:?})"
+    );
+    assert!(
+        stats.dropped_crossed_binder > 0,
+        "the static crossed-binder registration never matched ({stats:?})"
+    );
+}
+
+/// THE conversion: level 2 refutes the cap fixture, through a discovered
+/// registration, with no budget touched and no tuple refused.
+#[test]
+fn level_2_reaches_the_crossed_universal_the_shipped_budgets_refuse() {
+    let text = crossed_after_duplicates(DUPLICATES, true);
+    let (verdict, stats) = at_level(0, || at_nested_level(2, || ematch(&text)));
+    assert!(
+        matches!(verdict, CheckResult::Unsat),
+        "level 2 did not refute the cap fixture ({verdict:?}, {stats:?})"
+    );
+    assert!(
+        stats.discovered >= 1,
+        "no discovered registration ({stats:?})"
+    );
+    assert!(
+        stats.discovered < 256 && stats.positive_instances < 4096,
+        "level 2 hit a cap too, so the conversion is not attributable to the \
+         duplicates it stops spending on ({stats:?})"
+    );
+    assert_eq!(
+        stats.rejected_by_checker, 0,
+        "level 2 still handed off a tuple that binds a variable to itself, so \
+         the opaque-binder ingestion did not take ({stats:?})"
+    );
+    assert!(
+        stats.handed_off >= 1 && stats.staged_ground >= 1,
+        "the refutation did not pass through a staged replacement ({stats:?})"
+    );
+}
+
+/// Level 1's two halves, each read from its own counter on the cap fixture:
+/// the instances are not scanned, and a re-derived conclusion no longer spends
+/// the positive-instance cap. Level 1 alone does NOT convert the fixture —
+/// the self-binding handoffs still flood the per-round cap — which is why
+/// level 2 exists and is stated here rather than left to be inferred.
+#[test]
+fn level_1_stops_spending_the_budgets_on_duplicates_but_the_flood_remains() {
+    let text = crossed_after_duplicates(DUPLICATES, true);
+    let (_, stats) = at_level(0, || at_nested_level(1, || ematch(&text)));
+    assert!(
+        stats.instances_unscanned >= DUPLICATES,
+        "level 1 scanned the admitted instances ({stats:?})"
+    );
+    assert!(
+        stats.discovered < 256,
+        "level 1 hit MAX_DISCOVERED_REGISTRATIONS ({stats:?})"
+    );
+    assert!(
+        stats.positive_instances < 4096,
+        "level 1 spent MAX_POSITIVE_INSTANCES on re-derived conclusions ({stats:?})"
+    );
+    assert!(
+        stats.rejected_by_checker > 0,
+        "level 1 handed off no self-binding tuple; then the flood level 2 \
+         removes is not exercised here ({stats:?})"
+    );
+}
+
+/// The SAT twin of the cap fixture at every level of both levers. Level 2 is
+/// the arm that reaches the crossed universal, so it is the arm where a
+/// replacement admitted without its activation literal would show.
+#[test]
+fn the_cap_fixtures_satisfiable_twin_is_not_refuted_at_any_level_of_either_lever() {
+    let text = crossed_after_duplicates(DUPLICATES, false);
+    for positive in LEVELS {
+        for nested in NESTED_LEVELS {
+            let (verdict, stats) = at_level(positive, || at_nested_level(nested, || ematch(&text)));
+            assert!(
+                !matches!(verdict, CheckResult::Unsat),
+                "positive-path {positive}, nested-activation {nested}: a \
+                 SATISFIABLE query was refuted ({stats:?})"
+            );
+        }
+    }
+}
+
+/// Every satisfiable fixture in this file, at every level of BOTH levers,
+/// through the loop and the front door.
+#[test]
+fn a_satisfiable_nested_shape_is_not_refuted_at_any_nested_activation_level() {
+    for positive in LEVELS {
+        for nested in NESTED_LEVELS {
+            for (name, text) in SAT_FIXTURES {
+                let (verdict, stats) =
+                    at_level(positive, || at_nested_level(nested, || ematch(text)));
+                assert!(
+                    !matches!(verdict, CheckResult::Unsat),
+                    "loop, {name} at positive-path {positive} / nested-activation \
+                     {nested}: a SATISFIABLE query was refuted ({stats:?})"
+                );
+                let (verdict, _) =
+                    at_level(positive, || at_nested_level(nested, || front_door(text)));
+                assert!(
+                    !matches!(verdict, CheckResult::Unsat),
+                    "front door, {name} at positive-path {positive} / \
+                     nested-activation {nested}: a SATISFIABLE query was refuted"
+                );
+            }
+        }
+    }
+}
+
+/// Level 1 registers a strict SUBSET of level 0's registrations: on the
+/// crossed shape it skips the outer instance's exposure of the middle
+/// universal (a duplicate of the static registration) and keeps the one
+/// crossed universal. This is the test a mutation that makes level 1 behave
+/// like level 0 has to fail.
+#[test]
+fn level_1_registers_a_strict_subset_and_counts_what_it_skipped() {
+    let (_, shipped) = at_level(0, || at_nested_level(0, || ematch(CROSSED_BINDER_OR_UNSAT)));
+    let (verdict, raised) = at_level(0, || at_nested_level(1, || ematch(CROSSED_BINDER_OR_UNSAT)));
+    assert!(
+        matches!(verdict, CheckResult::Unsat),
+        "level 1 lost the refutation"
+    );
+    assert_eq!(
+        shipped.instances_unscanned + shipped.discovered_outside_scope,
+        0,
+        "level 0 skipped something; it has no scope rule ({shipped:?})"
+    );
+    assert!(
+        raised.discovered < shipped.discovered,
+        "level 1 did not register strictly fewer than level 0 ({raised:?} vs {shipped:?})"
+    );
+    assert!(
+        raised.discovered >= 1,
+        "level 1 registered nothing, so the refutation did not come through a \
+         discovered registration ({raised:?})"
+    );
+    assert!(
+        raised.instances_unscanned >= 1,
+        "level 1 registered fewer but scanned every instance, so the difference \
+         is not the rule under test ({raised:?})"
+    );
+}
+
+/// Level 2's ingestion rule, read on the crossed shape: the same refutation,
+/// and not one self-binding tuple handed off, where levels 0 and 1 hand off
+/// several and have them refused.
+#[test]
+fn level_2_hands_off_no_tuple_that_binds_a_variable_to_itself() {
+    let (_, shipped) = at_level(0, || at_nested_level(0, || ematch(CROSSED_BINDER_OR_UNSAT)));
+    assert!(
+        shipped.rejected_by_checker > 0,
+        "the shipped level refused nothing on this shape, so the rule has \
+         nothing to remove here ({shipped:?})"
+    );
+    let (verdict, opaque) = at_level(0, || at_nested_level(2, || ematch(CROSSED_BINDER_OR_UNSAT)));
+    assert!(
+        matches!(verdict, CheckResult::Unsat),
+        "level 2 lost the refutation"
+    );
+    assert_eq!(opaque.rejected_by_checker, 0, "{opaque:?}");
+    assert!(
+        opaque.joined < shipped.joined,
+        "level 2 joined no fewer tuples than level 0 ({opaque:?} vs {shipped:?})"
+    );
+}
+
+/// What level 0 refutes, levels 1 and 2 refute: the lever removes duplicates
+/// and non-ground matches, never a route. Every UNSAT fixture in this file,
+/// at both positive-path levels.
+#[test]
+fn a_refutation_the_shipped_nested_level_finds_survives_the_raised_levels() {
+    for positive in LEVELS {
+        for (name, text) in UNSAT_FIXTURES {
+            let shipped = at_level(positive, || at_nested_level(0, || ematch(text))).0;
+            if !matches!(shipped, CheckResult::Unsat) {
+                continue;
+            }
+            for nested in [1, 2] {
+                let raised = at_level(positive, || at_nested_level(nested, || ematch(text))).0;
+                assert!(
+                    matches!(raised, CheckResult::Unsat),
+                    "{name} at positive-path {positive}: nested-activation 0 refutes \
+                     and {nested} does not"
+                );
+            }
+        }
+    }
+}
+
+/// The cap fixture's refutation at level 2 carries the same certificate chain
+/// as every other nested refutation: a replacement whose owner is itself
+/// derived, every link checked. The lever changes what is REGISTERED and
+/// INGESTED, not what is trusted.
+#[test]
+fn the_level_2_refutation_carries_a_checked_replacement_chain() {
+    let _positive = PositivePathLevelGuard::set(0);
+    let _nested = NestedActivationLevelGuard::set(2);
+    let text = crossed_after_duplicates(DUPLICATES, true);
+    let mut script = parse_script(&text).expect("parses");
+    let mut certificate = None;
+    let verdict = prove_quantified_unsat_via_egraph_with_instances(
+        &mut script.arena,
+        &script.assertions,
+        &config(),
+        &mut certificate,
+    )
+    .expect("no solver error");
+    assert!(
+        matches!(verdict, CheckResult::Unsat),
+        "not refuted: {verdict:?}"
+    );
+    let derivations = certificate.expect("the level-2 refutation carried no derivations");
+    assert!(
+        derivations.iter().any(|derivation| matches!(
+            derivation,
+            QuantifierGroundDerivation::PositiveReplacement(replacement)
+                if replacement.owner_derivation.is_some()
+        )),
+        "no replacement with a derived owner: {derivations:?}"
+    );
+    for derivation in &derivations {
+        assert!(
+            check_quantifier_ground_derivation(&mut script.arena, &script.assertions, derivation),
+            "a derivation does not check: {derivation:?}"
+        );
+    }
+}
+
+#[test]
+fn the_nested_activation_guard_restores_and_does_not_cross_a_thread_boundary() {
+    let text = crossed_after_duplicates(DUPLICATES, true);
+    let outer = NestedActivationLevelGuard::set(2);
+    let inside_worker = std::thread::spawn({
+        let text = text.clone();
+        move || at_level(0, || ematch(&text)).1.discovered
+    })
+    .join()
+    .expect("worker finished");
+    drop(outer);
+    let shipped = at_level(0, || ematch(&text)).1.discovered;
+    assert_eq!(
+        inside_worker, shipped,
+        "the worker thread saw a level the guard set on another thread"
+    );
+    {
+        let _raised = NestedActivationLevelGuard::set(2);
+        assert!(
+            at_level(0, || ematch(&text)).1.discovered < shipped,
+            "the guard did not take effect on its own thread"
+        );
+    }
+    assert_eq!(
+        at_level(0, || ematch(&text)).1.discovered,
+        shipped,
+        "the guard leaked past its own lifetime"
+    );
 }

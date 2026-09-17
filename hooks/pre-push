@@ -926,7 +926,14 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #                              instance. Four SAT twins at both levels through
   #                              the loop and the front door; the flat-prefix
   #                              positive control; the split's partition
-  #                              invariants; the certificate chain check.
+  #                              invariants; the certificate chain check. Plus
+  #                              the lever `AXEYUM_QINST_NESTED_ACTIVATION`
+  #                              (levels 0/1/2, ships 0): a cap fixture the
+  #                              shipped discovery fails by spending every
+  #                              budget on duplicates and level 2 refutes, its
+  #                              SAT twin at every level of both levers, and
+  #                              no-loss across levels. Mutation-checked at
+  #                              `qinst-nested-activation`.
   #   decline_detail_typed
   #                            — ADR-2104: every DeclineReason detail is a closed
   #                              enum with an exhaustive name(); this suite DRIVES
