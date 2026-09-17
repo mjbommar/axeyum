@@ -3314,14 +3314,16 @@ SUITES["lra-warm-cube-basis"] = (
             # FALSE both add no constraint, so without this the engine answers
             # about a relaxation and the caller reads it as the cube.
             "the refusal of a cube naming an atom the theory cannot represent",
-            "                (AtomKind::Equality { .. }, false) | (AtomKind::Unsupported, _) => {"
+            "                (AtomKind::Equality { .. }, false)"
+            "\n                | (AtomKind::Unsupported | AtomKind::Split { .. }, _) => {"
             "\n                    self.live.clear();"
             "\n                    while let Some(atom) = self.assigned_log.pop() {"
             "\n                        self.assigned[atom] = None;"
             "\n                    }"
             "\n                    return CubeVerdict::Decline;"
             "\n                }",
-            "                (AtomKind::Equality { .. }, false) | (AtomKind::Unsupported, _) => {}",
+            "                (AtomKind::Equality { .. }, false)"
+            "\n                | (AtomKind::Unsupported | AtomKind::Split { .. }, _) => {}",
         ),
     ],
 )
@@ -13335,6 +13337,253 @@ SUITES["warm-keep-trail-2145-session-fuzz"] = (
             "pub const DEFAULT_WARM_KEEP_TRAIL: bool = true;",
             "pub const DEFAULT_WARM_KEEP_TRAIL: bool = false;",
             "crates/axeyum-solver/src/backend.rs",
+        ),
+    ],
+)
+
+# --------------------------------------------------------------------------
+# ADR-2147 -- the disequality split. Every suite below is filtered to ONE test,
+# so a kill names exactly one test and a mutation that kills a second suite's
+# test is a different suite's claim. All share one target-dir slug: the tree
+# is the same modulo one mutation, and the cold solver build is paid once.
+#
+# The mutations are the ways the split can be present and wrong:
+#   * it registers nothing (the arm is inert while looking armed -- ADR-2125's
+#     own failure shape), at three sites: the theory's registration, the
+#     adapter that forwards `take_new_atoms`, and the core's re-poll after a
+#     `Sat` final check;
+#   * the point evaluation never sees a violation;
+#   * the trichotomy core drops the equality -- the clause the driver learns
+#     becomes `lt ∨ gt`, i.e. `x ≠ y` asserted outright, a WRONG `unsat` on a
+#     query whose only model has `x = y`;
+#   * a strict half asserted true imposes no bound -- the split's `x < y`
+#     branch does not move the point, so the "witness" still sits on the
+#     hyperplane and the infeasible case cannot be refuted;
+#   * the refutation artifact is not widened to the fresh atoms.
+# --------------------------------------------------------------------------
+
+_A13_SLUG = "a13-lra"
+
+SUITES["lra-diseq-split-registers"] = (
+    "crates/axeyum-solver/src/lra_online.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            "lra_theory::tests::a_bare_disequality_is_unknown_shipped_and_sat_split",
+        ),
+        _A13_SLUG,
+    ),
+    [
+        (
+            "the violated disequality registers its two strict halves",
+            "            fresh.push((eq, lt, gt));",
+            "            let _ = (eq, lt, gt);",
+        ),
+        (
+            "the point evaluation sees a violation",
+            "            if !value.is_zero() {\n                continue; // the point already satisfies `e ≠ c`",
+            "            if true {\n                continue; // the point already satisfies `e ≠ c`",
+        ),
+        (
+            "the adapter forwards the registration to the driver",
+            "        self.inner.take_new_atoms()\n    }",
+            "        let _ = self.inner.take_new_atoms();\n        0\n    }",
+            "crates/axeyum-solver/src/lra_theory.rs",
+        ),
+        (
+            "the core re-polls for fresh atoms after a Sat final check",
+            "                                if fresh != 0 {\n                                    self.register_theory_atoms(fresh);",
+            "                                if fresh != 0 && false {\n                                    self.register_theory_atoms(fresh);",
+            "crates/axeyum-cnf/src/proof_sat.rs",
+        ),
+    ],
+)
+
+SUITES["lra-diseq-split-keeps-eq"] = (
+    "crates/axeyum-solver/src/lra_online.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            "lra_theory::tests::a_split_lemma_must_keep_the_equality_or_it_refutes_a_satisfiable_query",
+        ),
+        _A13_SLUG,
+    ),
+    [
+        (
+            # SOUNDNESS: `eq ∨ lt ∨ gt` minus `eq` is `x ≠ y` learned as a fact.
+            "the trichotomy core keeps the equality literal",
+            "                    return Some(vec![\n                        TheoryLit {\n                            atom: eq,\n                            value: false,\n                        },\n                        TheoryLit {\n                            atom: lt,",
+            "                    return Some(vec![\n                        TheoryLit {\n                            atom: lt,",
+        ),
+    ],
+)
+
+SUITES["lra-diseq-split-strict-half-binds"] = (
+    "crates/axeyum-solver/src/lra_online.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            "lra_theory::tests::a_split_never_manufactures_a_model_for_an_infeasible_disequality",
+        ),
+        _A13_SLUG,
+    ),
+    [
+        (
+            "a strict half asserted true imposes its bound",
+            "            (AtomKind::Order { when_true, .. } | AtomKind::Split { when_true }, true) => {\n                vec![tag(when_true, index)]\n            }",
+            "            (AtomKind::Order { when_true, .. }, true) => vec![tag(when_true, index)],\n            (AtomKind::Split { .. }, true) => Vec::new(),",
+        ),
+    ],
+)
+
+SUITES["lra-diseq-split-artifact"] = (
+    "crates/axeyum-cnf/src/proof_sat/refutation.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            "lra_theory::tests::an_unsat_after_a_split_lemma_still_carries_the_two_stream_artifact",
+        ),
+        _A13_SLUG,
+    ),
+    [
+        (
+            "the extended formula is widened to the lemmas' fresh variables",
+            "        let mut extended = CnfFormula::new(cnf.variable_count().max(widest_lemma_var));",
+            "        let _ = widest_lemma_var;\n        let mut extended = CnfFormula::new(cnf.variable_count());",
+        ),
+    ],
+)
+
+# --------------------------------------------------------------------------
+# ADR-2146 -- the online nonzero admission and its two ceilings. One test per
+# suite, as above. The lever that selects DenseCells whatever the arm is the
+# inert-arm shape; the two construction ceilings and the run-time fill cap
+# each have a fixture that straddles them by ONE unit; the live nonzero count
+# the fill cap reads is checked against a full recount after every pivot.
+# --------------------------------------------------------------------------
+
+SUITES["lra-admit-nonzeros-lever"] = (
+    "crates/axeyum-solver/src/lra_online.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            "lra_online::tests::the_nonzero_admission_builds_the_tableau_the_dense_cap_refuses",
+        ),
+        _A13_SLUG,
+    ),
+    [
+        (
+            "the lever selects the nonzero admission",
+            "        let admission = if levers.admit_nonzeros {",
+            "        let admission = if levers.admit_nonzeros && false {",
+        ),
+    ],
+)
+
+SUITES["lra-admit-nonzeros-row-cap"] = (
+    "crates/axeyum-solver/src/simplex.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            "lra_online::tests::the_online_admission_refuses_on_rows_alone",
+        ),
+        _A13_SLUG,
+    ),
+    [
+        (
+            "the row ceiling refuses",
+            "        if m > MAX_ONLINE_TABLEAU_ROWS {",
+            "        if m > MAX_ONLINE_TABLEAU_ROWS && false {",
+        ),
+    ],
+)
+
+SUITES["lra-admit-nonzeros-nnz-cap"] = (
+    "crates/axeyum-solver/src/simplex.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            "lra_online::tests::the_online_admission_refuses_on_nonzeros_alone",
+        ),
+        _A13_SLUG,
+    ),
+    [
+        (
+            "the nonzero ceiling refuses",
+            "        if nnz > MAX_ONLINE_TABLEAU_NONZEROS {",
+            "        if nnz > MAX_ONLINE_TABLEAU_NONZEROS && false {",
+        ),
+    ],
+)
+
+SUITES["lra-admit-nonzeros-fill-cap"] = (
+    "crates/axeyum-solver/src/simplex.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            "simplex::tests::the_fill_cap_declines_before_the_pivot_that_would_cross_it",
+        ),
+        _A13_SLUG,
+    ),
+    [
+        (
+            "the run-time fill cap is consulted before the pivot",
+            "            if let Some(cap) = self.fill_cap {",
+            "            if let Some(cap) = self.fill_cap.filter(|_| false) {",
+        ),
+    ],
+)
+
+SUITES["lra-admit-nonzeros-live-count"] = (
+    "crates/axeyum-solver/src/simplex.rs",
+    Cargo(
+        (
+            "-p",
+            "axeyum-solver",
+            "--lib",
+            "--features",
+            "full",
+            "simplex::tests::the_live_nonzero_count_matches_the_recount_after_every_pivot",
+        ),
+        _A13_SLUG,
+    ),
+    [
+        (
+            "the live nonzero count follows every inserted cell",
+            "                self.col_nnz[v] += 1;\n                self.nnz_live += 1;",
+            "                self.col_nnz[v] += 1;",
         ),
     ],
 )

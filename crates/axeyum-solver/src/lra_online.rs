@@ -82,13 +82,16 @@ use crate::simplex;
 /// different work, so a lane sizing the wall from the message alone cannot tell
 /// what to build. Printed, never acted on: nothing branches on this.
 pub(crate) fn model_probe(site: &str) {
-    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    if !*ENABLED
-        .get_or_init(|| std::env::var("AXEYUM_LRAMODELPROBE").is_ok_and(|v| v.trim() == "1"))
-    {
+    if !model_probe_enabled() {
         return;
     }
     eprintln!("; LRAMODELPROBE site={site}");
+}
+
+/// Whether `AXEYUM_LRAMODELPROBE=1` is set, read once.
+fn model_probe_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var("AXEYUM_LRAMODELPROBE").is_ok_and(|v| v.trim() == "1"))
 }
 
 /// Hard ceiling on constraints produced by a single Fourier–Motzkin elimination
@@ -378,6 +381,23 @@ enum AtomKind {
     /// A non-LRA atom (BV / disequality / nonlinear / non-real): asserting it is a
     /// no-op, keeping atom indices aligned with the caller's numbering.
     Unsupported,
+    /// ADR-2147: one STRICT half of a split disequality, registered mid-search
+    /// by [`LraTheory::split_violated_disequalities`] — `e < c` or `e > c` for
+    /// an equality atom `e = c` the search asserted FALSE while the feasible
+    /// point sat exactly on the hyperplane.
+    ///
+    /// Asserting it true imposes `when_true`; asserting it **false imposes
+    /// nothing**, and that is complete rather than lossy because the three
+    /// trichotomy conflicts the theory raises (`{eq, lt}`, `{eq, gt}` from the
+    /// form-bound crossing at `assert`; `{¬eq, ¬lt, ¬gt}` at `final_check`)
+    /// leave `¬lt` entailed by whichever of `eq`/`gt` is true whenever the
+    /// assignment is total. It rides the equality's OWN tableau row (`e ≤ c`
+    /// for `lt`, `−e ≤ −c` for `gt`) at the strict relation, so no row is
+    /// added mid-search and no row is ever bounded twice: the conflict fires at
+    /// `assert`, before any `sync`. cvc5's `Constraint::split`
+    /// (`constraint.cpp:1265`) is the model; z3 does the same split EAGERLY at
+    /// internalization (`arith_eq_adapter.cpp:208-210`).
+    Split { when_true: Constraint },
 }
 
 /// The warm general-simplex engine [`LraTheory`] decides feasibility with, plus the
@@ -680,6 +700,21 @@ pub struct LraTheory {
     /// ADR-2122's implied-bound propagator. Inert unless
     /// `AXEYUM_LRA_BOUND_PROPAGATION` says otherwise; see [`ImpliedBounds`].
     implied: Option<Box<ImpliedBounds>>,
+    /// ADR-2147: whether [`TheorySolver::final_check`] splits a violated
+    /// disequality. Meaningful only with [`Self::deferred_final_check`]; see
+    /// [`Self::with_diseq_split`].
+    diseq_split: bool,
+    /// ADR-2147: per split equality atom, the indices of its `lt` and `gt`
+    /// halves. Keyed by the equality; an entry is written once and never
+    /// removed, because the atoms it names are registered with the driver for
+    /// the rest of the search.
+    split_of: BTreeMap<usize, (usize, usize)>,
+    /// ADR-2147: atoms registered by a split that the driver has not yet been
+    /// told about. Drained by [`TheorySolver::take_new_atoms`].
+    pending_new_atoms: usize,
+    /// ADR-2147 counters; see [`TheoryEngineCounters`].
+    diseq_splits: u64,
+    diseq_split_conflicts: u64,
 }
 
 /// A bound on one linear form, currently asserted, with the atom that imposed
@@ -1302,18 +1337,48 @@ impl LraTheory {
         deadline: Option<Instant>,
         budget_bytes: usize,
     ) -> Result<Self, LraTheoryBuildStop> {
+        Self::try_new_with_budget_and_levers(
+            arena,
+            atom_terms,
+            deadline,
+            budget_bytes,
+            LraOnlineLevers::from_env(),
+        )
+    }
+
+    /// [`Self::try_new_with_budget`] with the ADR-2146 admission arm named by
+    /// the caller instead of read from the environment.
+    ///
+    /// Only the admission half of `levers` is consumed here: the ADR-2147
+    /// split is a property of the DEFERRED mode and is switched on beside it
+    /// by [`Self::with_diseq_split`], because a split registers atoms the
+    /// driver must poll for, and only the `CdclT`-driven adapter does.
+    pub(crate) fn try_new_with_budget_and_levers(
+        arena: &TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+        budget_bytes: usize,
+        levers: LraOnlineLevers,
+    ) -> Result<Self, LraTheoryBuildStop> {
+        let admission = if levers.admit_nonzeros {
+            TableauAdmission::OnlineNonzeros
+        } else {
+            TableauAdmission::DenseCells
+        };
         Self::try_new_with_budget_and_admission(
             arena,
             atom_terms,
             deadline,
             budget_bytes,
-            TableauAdmission::DenseCells,
+            admission,
         )
     }
 
     /// The same construction, admitting the tableau on the currency the caller
-    /// names (ADR-2125). The online route keeps [`TableauAdmission::DenseCells`]
-    /// byte for byte; only the warm cube decider asks the other question.
+    /// names (ADR-2125). The online route asks [`TableauAdmission::DenseCells`]
+    /// unless `AXEYUM_LRA_ADMIT_NONZEROS` is set (ADR-2146), in which case it
+    /// asks [`TableauAdmission::OnlineNonzeros`]; the warm cube decider asks
+    /// [`TableauAdmission::Nonzeros`].
     pub(crate) fn try_new_with_budget_and_admission(
         arena: &TermArena,
         atom_terms: &[TermId],
@@ -1401,6 +1466,11 @@ impl LraTheory {
             final_check_core_widenings: 0,
             final_check_live_rows: 0,
             implied,
+            diseq_split: false,
+            split_of: BTreeMap::new(),
+            pending_new_atoms: 0,
+            diseq_splits: 0,
+            diseq_split_conflicts: 0,
         })
     }
 
@@ -1438,6 +1508,160 @@ impl LraTheory {
     pub(crate) fn with_deferred_final_check(mut self) -> Self {
         self.deferred_final_check = true;
         self
+    }
+
+    /// ADR-2147: at a complete check whose feasible point violates an equality
+    /// atom the search asserted FALSE, register the two strict halves of that
+    /// equality as fresh atoms and let the SAT search split on them, instead of
+    /// answering `Sat` with a model the replay gate will reject.
+    ///
+    /// Requires the deferred mode — a split is discovered at `final_check` and
+    /// registers atoms through [`TheorySolver::take_new_atoms`], which only a
+    /// driver that polls it (the native core under `CdcltLraTheory`) can act
+    /// on. Under a driver that never polls, a registered pair sits unclaimed
+    /// and the route behaves exactly as it does with the lever off: the model
+    /// is built, fails to replay, and the verdict is `unknown`.
+    ///
+    /// # Panics
+    ///
+    /// If called before [`Self::with_deferred_final_check`]: the split's three
+    /// conflicts are raised by the deferred mode's form-bound check, and a
+    /// theory in the eager mode would instead reach `sync` with one row bounded
+    /// twice.
+    #[must_use]
+    pub(crate) fn with_diseq_split(mut self, on: bool) -> Self {
+        assert!(
+            self.deferred_final_check || !on,
+            "the disequality split needs the deferred final check; enable that first"
+        );
+        self.diseq_split = on;
+        self
+    }
+
+    /// ADR-2147: whether the split lever is armed on this instance.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn diseq_split_armed(&self) -> bool {
+        self.diseq_split
+    }
+
+    /// ADR-2147: disequalities split so far, and trichotomy conflicts raised.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn diseq_split_counts(&self) -> (u64, u64) {
+        (self.diseq_splits, self.diseq_split_conflicts)
+    }
+
+    /// ADR-2147: evaluates `expr` at `point` in checked arithmetic; `None` on
+    /// overflow, which the caller treats as "cannot tell" and does not split.
+    fn eval_at(expr: &LinExpr, point: &[Rational]) -> Option<Rational> {
+        let mut acc = expr.constant;
+        for (&j, &a) in &expr.coeffs {
+            if a.is_zero() {
+                continue;
+            }
+            acc = acc.checked_add(a.checked_mul(*point.get(j)?)?)?;
+        }
+        Some(acc)
+    }
+
+    /// ADR-2147, the cvc5 shape (`splitDisequalities`,
+    /// `theory_arith_private.cpp:4251-4286`): after the simplex has answered
+    /// FEASIBLE, walk every equality atom currently asserted false, evaluate its
+    /// functional at the materialized point, and for each one that sits
+    /// EXACTLY on the hyperplane either
+    ///
+    /// * register its two strict halves as fresh atoms (once per equality,
+    ///   ever), so the driver decides them and the next complete check runs
+    ///   under `e < c` or `e > c`; or
+    /// * if the halves already exist and the assignment set BOTH false, answer
+    ///   the trichotomy conflict `{¬eq, ¬lt, ¬gt}` — every literal currently
+    ///   asserted, so `¬(¬eq ∧ ¬lt ∧ ¬gt) = eq ∨ lt ∨ gt` is the clause the
+    ///   driver learns, and it is an LRA tautology.
+    ///
+    /// Returns the conflict core when one was found. A registration alone
+    /// returns `None`; the caller then answers `Sat`, and the native core polls
+    /// [`TheorySolver::take_new_atoms`] before it believes a `Sat` that arrived
+    /// with fresh atoms behind it.
+    ///
+    /// The point is read from the warm engine the check just ran on (`sync`ed
+    /// to `live`, `Feasible`), so it is the same point [`Self::model`] will
+    /// materialize for the replay. A disequality the point satisfies costs one
+    /// evaluation and nothing else — the same relevancy the replay gate has.
+    /// No engine (Fourier–Motzkin fallback) or a point outside `i128` means no
+    /// split: the route then behaves as it did before this lever existed.
+    fn split_violated_disequalities(&mut self) -> Option<Vec<TheoryLit>> {
+        let point = {
+            let cell = self.simplex.as_ref()?;
+            let engine = cell.borrow();
+            engine.inner.point()?
+        };
+        let mut fresh: Vec<(usize, Constraint, Constraint)> = Vec::new();
+        for (eq, kind) in self.atoms.iter().enumerate() {
+            let AtomKind::Equality { when_true } = kind else {
+                continue;
+            };
+            if self.assigned.get(eq).copied().flatten() != Some(false) {
+                continue;
+            }
+            // `when_true[0]` is `e − c ≤ 0`; on the hyperplane it is exactly 0.
+            let Some(value) = Self::eval_at(&when_true[0].expr, &point) else {
+                continue;
+            };
+            if !value.is_zero() {
+                continue; // the point already satisfies `e ≠ c`
+            }
+            if let Some((lt, gt)) = self.split_of.get(&eq).copied() {
+                let lt_false = self.assigned.get(lt).copied().flatten() == Some(false);
+                let gt_false = self.assigned.get(gt).copied().flatten() == Some(false);
+                if lt_false && gt_false {
+                    self.diseq_split_conflicts += 1;
+                    return Some(vec![
+                        TheoryLit {
+                            atom: eq,
+                            value: false,
+                        },
+                        TheoryLit {
+                            atom: lt,
+                            value: false,
+                        },
+                        TheoryLit {
+                            atom: gt,
+                            value: false,
+                        },
+                    ]);
+                }
+                // A half is true, so its strict bound is live and the engine's
+                // point cannot sit on the hyperplane. Reaching here means the
+                // check did not run on the live system (an `Unknown` the
+                // caller mapped to `Sat`); nothing to learn from, and never a
+                // conflict on a guess.
+                continue;
+            }
+            // `e < c` rides row 0 (`e ≤ c`) at `<`; `e > c` rides row 1
+            // (`−e ≤ −c`) at `<` on the negated functional. Same form ids, so
+            // the form-bound crossing raises `{eq, lt}`, `{eq, gt}` and
+            // `{lt, gt}` at `assert` with no simplex.
+            let mut lt = when_true[0].clone();
+            let mut gt = when_true[1].clone();
+            lt.strict = true;
+            gt.strict = true;
+            lt.row = lt.row.map(|(row, _, rhs)| (row, simplex::Rel::Lt, rhs));
+            gt.row = gt.row.map(|(row, _, rhs)| (row, simplex::Rel::Lt, rhs));
+            fresh.push((eq, lt, gt));
+        }
+        for (eq, lt, gt) in fresh {
+            let lt_index = self.atoms.len();
+            let gt_index = lt_index + 1;
+            self.atoms.push(AtomKind::Split { when_true: lt });
+            self.atoms.push(AtomKind::Split { when_true: gt });
+            self.assigned.push(None);
+            self.assigned.push(None);
+            self.split_of.insert(eq, (lt_index, gt_index));
+            self.pending_new_atoms += 2;
+            self.diseq_splits += 1;
+        }
+        None
     }
 
     /// Replaces the ADR-2122 propagator's mode, for tests.
@@ -1957,7 +2181,9 @@ impl LraTheory {
                     v,
                 ) => Some(if v { when_true } else { when_false }),
                 (AtomKind::Equality { when_true }, true) => Some(&when_true[0]),
-                (AtomKind::Equality { .. }, false) | (AtomKind::Unsupported, _) => None,
+                (AtomKind::Split { when_true }, true) => Some(when_true),
+                (AtomKind::Equality { .. } | AtomKind::Split { .. }, false)
+                | (AtomKind::Unsupported, _) => None,
             }
         }
         let mut rows = Vec::with_capacity(reason.len() + 2);
@@ -2079,9 +2305,13 @@ impl LraTheory {
                     self.live.push(tag(&when_true[0], index));
                     self.live.push(tag(&when_true[1], index));
                 }
-                // The two shapes that add NOTHING, and so would leave the engine
-                // deciding a weaker system than the cube. See the doc above.
-                (AtomKind::Equality { .. }, false) | (AtomKind::Unsupported, _) => {
+                // The shapes that add NOTHING, and so would leave the engine
+                // deciding a weaker system than the cube. See the doc above. A
+                // split atom never exists on this route (it is registered only
+                // under the deferred mode), so it is refused rather than
+                // reasoned about.
+                (AtomKind::Equality { .. }, false)
+                | (AtomKind::Unsupported | AtomKind::Split { .. }, _) => {
                     self.live.clear();
                     while let Some(atom) = self.assigned_log.pop() {
                         self.assigned[atom] = None;
@@ -2297,6 +2527,9 @@ impl LraTheory {
                 .counters()
                 .farkas_declined_nonbasic_problem_var,
             farkas_declined_self_check: engine.inner.counters().farkas_declined_self_check,
+            diseq_splits: self.diseq_splits,
+            diseq_split_conflicts: self.diseq_split_conflicts,
+            fill_cap_declines: engine.inner.counters().fill_cap_declines,
         })
     }
 
@@ -2478,6 +2711,32 @@ impl LraTheory {
             };
             values
         };
+        // ADR-2147's sizing probe: how many equality atoms the search set
+        // FALSE at the moment the witness is read out, against how many there
+        // are, and how many of those the point violates. Read under
+        // `AXEYUM_LRAMODELPROBE=1` only; the census this repairs counted the
+        // same thing from a patched tree, and a shipped route should be able
+        // to say it about itself.
+        if model_probe_enabled() {
+            let (mut equalities, mut asserted_false, mut violated) = (0u64, 0u64, 0u64);
+            for (index, kind) in self.atoms.iter().enumerate() {
+                let AtomKind::Equality { when_true } = kind else {
+                    continue;
+                };
+                equalities += 1;
+                if self.assigned.get(index).copied().flatten() == Some(false) {
+                    asserted_false += 1;
+                    if Self::eval_at(&when_true[0].expr, &values).is_some_and(Rational::is_zero) {
+                        violated += 1;
+                    }
+                }
+            }
+            eprintln!(
+                "; LRAMODELPROBE equalities={equalities} eq_asserted_false={asserted_false} \
+                 diseq_violated_at_point={violated} splits={} split_conflicts={}",
+                self.diseq_splits, self.diseq_split_conflicts
+            );
+        }
         let mut model = Model::new();
         for (index, &symbol) in builder_vars.iter().enumerate() {
             model.set(symbol, Value::Real(values[index]));
@@ -2591,9 +2850,17 @@ impl TheorySolver for LraTheory {
     /// An equality atom asserted **false** is a disjunction the conjunctive
     /// theory cannot represent; rather than over- or under-constrain, the theory
     /// records the assignment but adds no constraint (a sound no-op — it never
-    /// makes a feasible state infeasible, so it cannot cause a wrong `unsat`; the
-    /// driver only ever sets equality atoms *true* anyway, since
-    /// [`check_qf_lra_online`] does not abstract bare equalities).
+    /// makes a feasible state infeasible, so it cannot cause a wrong `unsat`).
+    ///
+    /// THIS CASE ARISES, and the sentence that used to stand here said it did
+    /// not. The offline [`check_qf_lra_online`] driver never abstracts a bare
+    /// equality, but the CDCL(T) driver's `is_lra_atom` admits every real
+    /// `Op::Eq`, so the SAT solver sets equality atoms either way: the
+    /// LRA-MODEL-REPLAY census counted **371 of 776** equality atoms asserted
+    /// false on `QF_LRA/sc/sc-25.base.cvc.smt2` and 11 pinned files losing
+    /// their verdict to exactly this drop. Under the deferred mode with
+    /// [`Self::with_diseq_split`] the drop is repaired at `final_check`
+    /// (ADR-2147); here it stays a no-op.
     fn assert(&mut self, index: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
         match self.assigned.get(index).copied().flatten() {
             // Idempotent re-assert at the same value.
@@ -2623,13 +2890,19 @@ impl TheorySolver for LraTheory {
         self.assigned_log.push(index);
 
         let added: Vec<Constraint> = match (&self.atoms[index], value) {
-            (AtomKind::Order { when_true, .. }, true) => vec![tag(when_true, index)],
+            // ADR-2147: a strict half imposes its bound when true, exactly as
+            // an order atom does, and nothing when false (see `AtomKind::Split`
+            // for why that is complete).
+            (AtomKind::Order { when_true, .. } | AtomKind::Split { when_true }, true) => {
+                vec![tag(when_true, index)]
+            }
             (AtomKind::Order { when_false, .. }, false) => vec![tag(when_false, index)],
             (AtomKind::Equality { when_true }, true) => {
                 vec![tag(&when_true[0], index), tag(&when_true[1], index)]
             }
             // Equality-false (disjunction) and unsupported atoms add nothing.
-            (AtomKind::Equality { .. }, false) | (AtomKind::Unsupported, _) => Vec::new(),
+            (AtomKind::Equality { .. } | AtomKind::Split { .. }, false)
+            | (AtomKind::Unsupported, _) => Vec::new(),
         };
         let first_new = self.live.len();
         for c in added {
@@ -2702,6 +2975,18 @@ impl TheorySolver for LraTheory {
         }
         self.final_check_live_rows += self.live.len() as u64;
         match self.feasibility() {
+            // ADR-2147: a FEASIBLE system whose point violates a disequality is
+            // not yet a model. `Unknown` is left alone: with no trustworthy
+            // point there is nothing to split on, and the replay gate keeps
+            // the verdict honest exactly as before.
+            Feasibility::Sat if self.diseq_split => match self.split_violated_disequalities() {
+                Some(core) => {
+                    self.final_check_conflicts += 1;
+                    self.final_check_core_literals += core.len() as u64;
+                    FinalCheckOutcome::Conflict(TheoryExplanation::Eager(core))
+                }
+                None => FinalCheckOutcome::Sat,
+            },
             Feasibility::Sat | Feasibility::Unknown => FinalCheckOutcome::Sat,
             Feasibility::Unsat(rows) => {
                 let core = self.rows_to_core(&rows);
@@ -2738,6 +3023,13 @@ impl TheorySolver for LraTheory {
 
     fn engine_counters(&self) -> Option<TheoryEngineCounters> {
         LraTheory::engine_counters(self)
+    }
+
+    /// ADR-2147: the strict halves registered since the last poll, as
+    /// consecutive atom indices from the previous atom count — the whole
+    /// registration signal the driver needs.
+    fn take_new_atoms(&mut self) -> usize {
+        std::mem::take(&mut self.pending_new_atoms)
     }
 
     /// ADR-2122's ceiling, counted rather than estimated: of the decisions the
@@ -2819,7 +3111,8 @@ fn propagatable_atoms(atoms: &[AtomKind], forms: usize) -> Vec<usize> {
                 when_false,
             } => [when_true, when_false],
             AtomKind::Equality { when_true } => [&when_true[0], &when_true[1]],
-            AtomKind::Unsupported => return,
+            // Registered after this scan runs, so never seen here.
+            AtomKind::Unsupported | AtomKind::Split { .. } => return,
         };
         for c in constraints {
             if let Some((form, _, _)) = c.form {
@@ -2942,7 +3235,9 @@ fn assign_forms(atoms: &mut [AtomKind]) -> usize {
                 canonicalize(&mut when_true[0], &mut forms);
                 canonicalize(&mut when_true[1], &mut forms);
             }
-            AtomKind::Unsupported => {}
+            // A split atom is cloned from an equality's already-canonical
+            // templates AFTER this pass, so it carries its form from there.
+            AtomKind::Unsupported | AtomKind::Split { .. } => {}
         }
     }
     forms.len()
@@ -2971,6 +3266,95 @@ pub(crate) enum TableauAdmission {
     /// Stored nonzeros against a cap. What the ADR-2125 warm cube decider uses,
     /// because that is what the sparse tableau costs.
     Nonzeros(usize),
+    /// ADR-2146: the ONLINE engine's admission under
+    /// `AXEYUM_LRA_ADMIT_NONZEROS=1` — entry nonzeros against
+    /// [`simplex::MAX_ONLINE_TABLEAU_NONZEROS`], rows against
+    /// [`simplex::MAX_ONLINE_TABLEAU_ROWS`], and fill-in bounded at run time
+    /// by [`simplex::MAX_TABLEAU_FILL_NONZEROS`]. See
+    /// [`simplex::Incremental::with_online_admission`].
+    OnlineNonzeros,
+}
+
+/// The two ADR-2146 / ADR-2147 levers of the online CDCL(T) `QF_LRA` route,
+/// as VALUES rather than as environment reads, so one process can run every
+/// arm (the ADR-2132 fixture shape: a lever memoised per process can be
+/// compared against its other arms only if the arm is an argument).
+///
+/// The production caller is [`LraOnlineLevers::from_env`]; every other
+/// constructor is a test or a fixture naming its arm explicitly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct LraOnlineLevers {
+    /// ADR-2146: admit the warm tableau on stored nonzeros
+    /// ([`TableauAdmission::OnlineNonzeros`]) instead of dense cells.
+    pub admit_nonzeros: bool,
+    /// ADR-2147: split a violated disequality into its two strict halves
+    /// instead of reporting a model that will not replay.
+    pub diseq_split: bool,
+}
+
+impl LraOnlineLevers {
+    /// Both levers OFF: the shipped route, byte for byte.
+    #[must_use]
+    pub const fn shipped() -> Self {
+        Self {
+            admit_nonzeros: false,
+            diseq_split: false,
+        }
+    }
+
+    /// The process-wide arms, read ONCE each from `AXEYUM_LRA_ADMIT_NONZEROS`
+    /// and `AXEYUM_LRA_DISEQ_SPLIT`.
+    #[must_use]
+    pub fn from_env() -> Self {
+        Self {
+            admit_nonzeros: admit_nonzeros_lever(),
+            diseq_split: diseq_split_lever(),
+        }
+    }
+}
+
+/// The lever spellings: `1` and `on` (case-insensitive, trimmed) arm a lever;
+/// **everything else, the empty string included, is OFF.** A lever is the only
+/// difference between two arms of an A/B, so a typo must produce the shipped
+/// route and not a third behaviour — the ADR-2125 rule, kept here verbatim.
+#[must_use]
+pub(crate) fn parse_lever(value: Option<&str>) -> bool {
+    matches!(
+        value.map(|v| v.trim().to_ascii_lowercase()).as_deref(),
+        Some("1" | "on")
+    )
+}
+
+/// Lever (`AXEYUM_LRA_ADMIT_NONZEROS`, ADR-2146): admit the online engine's
+/// warm tableau on stored nonzeros rather than on `m × (nvars+m)` dense cells.
+///
+/// Read once into a `OnceLock`, so a process answers one way for its whole
+/// life and a mid-run change cannot produce two halves of one measurement.
+fn admit_nonzeros_lever() -> bool {
+    /// The lever's environment variable, and the `config_registry` entry's name.
+    const AXEYUM_LRA_ADMIT_NONZEROS: &str = "AXEYUM_LRA_ADMIT_NONZEROS";
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| {
+        crate::config_registry::note_consulted(
+            "crates/axeyum-solver/src/lra_online.rs::AXEYUM_LRA_ADMIT_NONZEROS",
+        );
+        parse_lever(std::env::var(AXEYUM_LRA_ADMIT_NONZEROS).ok().as_deref())
+    })
+}
+
+/// Lever (`AXEYUM_LRA_DISEQ_SPLIT`, ADR-2147): turn a disequality the
+/// candidate model violates into a case split the SAT search does, instead of
+/// an `unknown`. Read once, as above.
+fn diseq_split_lever() -> bool {
+    /// The lever's environment variable, and the `config_registry` entry's name.
+    const AXEYUM_LRA_DISEQ_SPLIT: &str = "AXEYUM_LRA_DISEQ_SPLIT";
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| {
+        crate::config_registry::note_consulted(
+            "crates/axeyum-solver/src/lra_online.rs::AXEYUM_LRA_DISEQ_SPLIT",
+        );
+        parse_lever(std::env::var(AXEYUM_LRA_DISEQ_SPLIT).ok().as_deref())
+    })
 }
 
 fn build_simplex_engine(
@@ -3040,7 +3424,9 @@ fn build_simplex_engine(
                 open_row(&mut when_true[0], atom, &mut rows_sparse, &mut row_atom)?;
                 open_row(&mut when_true[1], atom, &mut rows_sparse, &mut row_atom)?;
             }
-            AtomKind::Unsupported => {}
+            // A split atom is registered AFTER the tableau exists and rides
+            // its equality's rows; construction never sees one.
+            AtomKind::Unsupported | AtomKind::Split { .. } => {}
         }
     }
     if rows_sparse.is_empty() {
@@ -3050,6 +3436,9 @@ fn build_simplex_engine(
         TableauAdmission::DenseCells => simplex::Incremental::new(nvars, rows_sparse)?,
         TableauAdmission::Nonzeros(max) => {
             simplex::Incremental::with_nonzero_admission(nvars, rows_sparse, max)?
+        }
+        TableauAdmission::OnlineNonzeros => {
+            simplex::Incremental::with_online_admission(nvars, rows_sparse)?
         }
     };
     debug_assert_eq!(inner.rows(), row_atom.len());
@@ -5844,6 +6233,11 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
         final_check_core_widenings: 0,
         final_check_live_rows: 0,
         implied,
+        diseq_split: false,
+        split_of: BTreeMap::new(),
+        pending_new_atoms: 0,
+        diseq_splits: 0,
+        diseq_split_conflicts: 0,
     };
     let mut solver = Dpll::new(enc.var_count, atom_count, clauses);
     let _ = solver.solve(&mut theory);
@@ -7676,6 +8070,11 @@ mod tests {
             final_check_core_widenings: 0,
             final_check_live_rows: 0,
             implied,
+            diseq_split: false,
+            split_of: BTreeMap::new(),
+            pending_new_atoms: 0,
+            diseq_splits: 0,
+            diseq_split_conflicts: 0,
         };
         let solver = Dpll::new(enc.var_count, atom_count, clauses);
         (solver, theory)
@@ -8385,6 +8784,384 @@ mod tests {
             verified >= 200,
             "the generator produced too few entailed literals for this to be \
              checking anything: verified={verified} inconclusive={inconclusive}"
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // ADR-2147: the disequality split, at the theory level.
+    // ------------------------------------------------------------------
+
+    /// `x ≠ y` alone, in the deferred mode. The warm engine's pristine point
+    /// is the origin, which sits ON the hyperplane `x = y`; with the split
+    /// armed the complete check must register the two strict halves rather
+    /// than answer `Sat` over a point the replay gate would reject.
+    #[test]
+    fn a_violated_disequality_registers_its_two_strict_halves_once() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let eq = arena.eq(x, y).expect("x=y");
+        let mut theory = LraTheory::new(&arena, &[eq])
+            .with_deferred_final_check()
+            .with_diseq_split(true);
+        assert!(theory.diseq_split_armed());
+        theory.push();
+        assert!(
+            theory.assert(0, false).is_ok(),
+            "a false equality adds nothing"
+        );
+        assert!(matches!(theory.final_check(), FinalCheckOutcome::Sat));
+        assert_eq!(theory.take_new_atoms(), 2, "exactly the two strict halves");
+        assert_eq!(
+            theory.take_new_atoms(),
+            0,
+            "drained: a second poll is empty"
+        );
+        assert_eq!(theory.diseq_split_counts(), (1, 0));
+        assert!(
+            theory.tracks(1) && theory.tracks(2),
+            "the halves are tracked atoms at the next two indices"
+        );
+        // A second complete check at the SAME assignment (both halves still
+        // unassigned) must not register again: one split per equality, ever.
+        assert!(matches!(theory.final_check(), FinalCheckOutcome::Sat));
+        assert_eq!(theory.take_new_atoms(), 0, "never a second registration");
+        assert_eq!(theory.diseq_split_counts(), (1, 0));
+    }
+
+    /// The trichotomy: with `x = y` false and BOTH halves false the point is
+    /// still on the hyperplane and the check must answer the three-literal
+    /// conflict `{¬eq, ¬lt, ¬gt}` — every literal asserted, so the clause the
+    /// driver learns is `eq ∨ lt ∨ gt`, a tautology of real arithmetic.
+    #[test]
+    fn both_halves_false_is_the_trichotomy_conflict_and_a_true_half_is_a_model() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let eq = arena.eq(x, y).expect("x=y");
+        let mut theory = LraTheory::new(&arena, &[eq])
+            .with_deferred_final_check()
+            .with_diseq_split(true);
+        theory.push();
+        assert!(theory.assert(0, false).is_ok());
+        assert!(matches!(theory.final_check(), FinalCheckOutcome::Sat));
+        assert_eq!(theory.take_new_atoms(), 2);
+        let (lt, gt) = (1, 2);
+        theory.push();
+        assert!(theory.assert(lt, false).is_ok());
+        assert!(theory.assert(gt, false).is_ok());
+        let FinalCheckOutcome::Conflict(TheoryExplanation::Eager(core)) = theory.final_check()
+        else {
+            panic!("both halves false on the hyperplane must be a conflict");
+        };
+        let mut atoms: Vec<(usize, bool)> = core.iter().map(|l| (l.atom, l.value)).collect();
+        atoms.sort_unstable();
+        assert_eq!(
+            atoms,
+            vec![(0, false), (lt, false), (gt, false)],
+            "the core is exactly the three asserted literals"
+        );
+        assert_eq!(theory.diseq_split_counts(), (1, 1));
+        // Backjump and take the `x < y` branch: the strict bound is live, the
+        // point leaves the hyperplane, and the witness replays.
+        theory.pop();
+        theory.push();
+        assert!(theory.assert(lt, true).is_ok());
+        assert!(theory.assert(gt, false).is_ok());
+        assert!(matches!(theory.final_check(), FinalCheckOutcome::Sat));
+        assert_eq!(
+            theory.take_new_atoms(),
+            0,
+            "no new registration on the split branch"
+        );
+        let model = theory
+            .real_model()
+            .expect("a feasible strict system has a witness");
+        let neq = arena.not(eq).expect("x!=y");
+        assert!(
+            replays(&arena, &[neq], &model),
+            "the witness satisfies x ≠ y"
+        );
+    }
+
+    /// The two remaining trichotomy edges fire at `assert`, from the
+    /// form-bound crossing, before any tableau row is bounded twice: a strict
+    /// half asserted true against its equality asserted true is `{eq, half}`,
+    /// and both halves true is `{lt, gt}`.
+    #[test]
+    fn a_strict_half_against_its_equality_conflicts_at_assert() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let eq = arena.eq(x, y).expect("x=y");
+        let mut theory = LraTheory::new(&arena, &[eq])
+            .with_deferred_final_check()
+            .with_diseq_split(true);
+        theory.push();
+        assert!(theory.assert(0, false).is_ok());
+        assert!(matches!(theory.final_check(), FinalCheckOutcome::Sat));
+        assert_eq!(theory.take_new_atoms(), 2);
+        let (lt, gt) = (1, 2);
+        theory.pop();
+        // eq true, then lt true: the pair is the core.
+        theory.push();
+        assert!(theory.assert(0, true).is_ok());
+        let core = theory.assert(lt, true).expect_err("x = y and x < y cross");
+        let mut atoms: Vec<usize> = core.iter().map(|l| l.atom).collect();
+        atoms.sort_unstable();
+        assert_eq!(atoms, vec![0, lt]);
+        theory.pop();
+        // The other order: lt true, then eq true.
+        theory.push();
+        assert!(theory.assert(lt, true).is_ok());
+        let core = theory.assert(0, true).expect_err("x < y and x = y cross");
+        let mut atoms: Vec<usize> = core.iter().map(|l| l.atom).collect();
+        atoms.sort_unstable();
+        assert_eq!(atoms, vec![0, lt]);
+        theory.pop();
+        // Both halves: `x < y` and `x > y`.
+        theory.push();
+        assert!(theory.assert(0, false).is_ok());
+        assert!(theory.assert(lt, true).is_ok());
+        let core = theory.assert(gt, true).expect_err("x < y and x > y cross");
+        let mut atoms: Vec<usize> = core.iter().map(|l| l.atom).collect();
+        atoms.sort_unstable();
+        assert_eq!(atoms, vec![lt, gt]);
+        theory.pop();
+        // And the SATISFIABLE neighbour of each: eq true with both halves
+        // false imposes the same two bounds twice and is feasible.
+        theory.push();
+        assert!(theory.assert(0, true).is_ok());
+        assert!(theory.assert(lt, false).is_ok());
+        assert!(theory.assert(gt, false).is_ok());
+        assert!(matches!(theory.final_check(), FinalCheckOutcome::Sat));
+        assert!(theory.real_model().is_some());
+    }
+
+    /// The lever OFF is the route as it was: a violated disequality registers
+    /// nothing, and the complete check answers `Sat` over the hyperplane point
+    /// (which the route's replay gate then turns into `unknown`).
+    #[test]
+    fn with_the_split_off_a_violated_disequality_registers_nothing() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let eq = arena.eq(x, y).expect("x=y");
+        let mut theory = LraTheory::new(&arena, &[eq]).with_deferred_final_check();
+        assert!(!theory.diseq_split_armed());
+        theory.push();
+        assert!(theory.assert(0, false).is_ok());
+        assert!(matches!(theory.final_check(), FinalCheckOutcome::Sat));
+        assert_eq!(theory.take_new_atoms(), 0, "OFF registers nothing");
+        assert_eq!(theory.diseq_split_counts(), (0, 0));
+        let model = theory.real_model().expect("the origin is feasible");
+        let neq = arena.not(eq).expect("x!=y");
+        assert!(
+            !replays(&arena, &[neq], &model),
+            "and the origin does NOT satisfy x ≠ y: this is the wall the lever removes"
+        );
+    }
+
+    /// A disequality the point already satisfies costs nothing: `x ≠ y` with
+    /// `x ≥ 1` moves the point off the hyperplane before the split is asked,
+    /// so nothing is registered. Relevancy by the point, as cvc5 does it.
+    #[test]
+    fn a_disequality_the_point_satisfies_is_not_split() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let one = rconst(&mut arena, 1);
+        let eq = arena.eq(x, y).expect("x=y");
+        let ge = arena.real_ge(x, one).expect("x>=1");
+        let mut theory = LraTheory::new(&arena, &[eq, ge])
+            .with_deferred_final_check()
+            .with_diseq_split(true);
+        theory.push();
+        assert!(theory.assert(1, true).is_ok());
+        assert!(theory.assert(0, false).is_ok());
+        assert!(matches!(theory.final_check(), FinalCheckOutcome::Sat));
+        assert_eq!(
+            theory.take_new_atoms(),
+            0,
+            "the point is off the hyperplane"
+        );
+        assert_eq!(theory.diseq_split_counts(), (0, 0));
+        let model = theory.real_model().expect("feasible");
+        let neq = arena.not(eq).expect("x!=y");
+        assert!(replays(&arena, &[neq, ge], &model));
+    }
+
+    /// Arming the split without the deferred mode is refused, not silently
+    /// accepted: the eager mode has no `final_check` to split in and would
+    /// reach `sync` with one row bounded twice.
+    #[test]
+    #[should_panic(expected = "needs the deferred final check")]
+    fn the_split_refuses_the_eager_mode() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let eq = arena.eq(x, y).expect("x=y");
+        let _ = LraTheory::new(&arena, &[eq]).with_diseq_split(true);
+    }
+
+    // ------------------------------------------------------------------
+    // ADR-2146: the online nonzero admission, at the theory level.
+    // ------------------------------------------------------------------
+
+    /// A system whose DENSE cell count exceeds `MAX_TABLEAU_CELLS` while its
+    /// nonzero count is tiny: `k` atoms `xᵢ ≥ 0`, one variable each, so the
+    /// tableau is `k` rows over `k + k` columns — `2k²` cells against `k`
+    /// nonzeros. At `k = 1_500` that is 4,500,000 cells (over the 4,000,000
+    /// cap) and 1,500 nonzeros.
+    fn wide_shallow_atoms(arena: &mut TermArena, k: usize) -> (Vec<TermId>, Vec<TermId>) {
+        let zero = rconst(arena, 0);
+        let vars: Vec<TermId> = (0..k).map(|i| rvar(arena, &format!("w{i}"))).collect();
+        let atoms = vars
+            .iter()
+            .map(|&x| arena.real_ge(x, zero).expect("x>=0"))
+            .collect();
+        (atoms, vars)
+    }
+
+    /// The dense admission refuses the wide-shallow system and the nonzero
+    /// admission builds it — the mechanism, read from `uses_simplex`, not
+    /// inferred from the source. The arithmetic of the two currencies is
+    /// asserted from the constants so a moved cap fails HERE.
+    #[test]
+    fn the_nonzero_admission_builds_the_tableau_the_dense_cap_refuses() {
+        const K: usize = 1_500;
+        const _: () = assert!(2 * K * K > simplex::MAX_TABLEAU_CELLS);
+        const _: () = assert!(K <= simplex::MAX_ONLINE_TABLEAU_NONZEROS);
+        const _: () = assert!(K <= simplex::MAX_ONLINE_TABLEAU_ROWS);
+        let mut arena = TermArena::new();
+        let (atoms, _vars) = wide_shallow_atoms(&mut arena, K);
+        let budget = 4096 * 1024 * 1024;
+        let dense = LraTheory::try_new_with_budget_and_levers(
+            &arena,
+            &atoms,
+            None,
+            budget,
+            LraOnlineLevers::shipped(),
+        )
+        .expect("built");
+        assert!(
+            !dense.uses_simplex(),
+            "the dense-cell admission must refuse 2k² > MAX_TABLEAU_CELLS, or this \
+             fixture straddles nothing"
+        );
+        let sparse = LraTheory::try_new_with_budget_and_levers(
+            &arena,
+            &atoms,
+            None,
+            budget,
+            LraOnlineLevers {
+                admit_nonzeros: true,
+                diseq_split: false,
+            },
+        )
+        .expect("built");
+        assert!(
+            sparse.uses_simplex(),
+            "the nonzero admission must build the same system: k nonzeros is under the cap"
+        );
+    }
+
+    /// Both admissions decide the same thing on the same wide-shallow system,
+    /// on BOTH sides: the feasible one has a witness that replays, and the
+    /// infeasible one (`x₀ ≥ 0` against `x₀ < 0`) is refuted with a core
+    /// naming both atoms. The dense arm decides by Fourier–Motzkin and the
+    /// sparse arm by the tableau; a wrong tableau would disagree here.
+    #[test]
+    fn the_two_admissions_agree_on_a_satisfiable_and_an_infeasible_system() {
+        const K: usize = 1_500;
+        let mut arena = TermArena::new();
+        let (mut atoms, vars) = wide_shallow_atoms(&mut arena, K);
+        let w0 = vars[0];
+        let zero = rconst(&mut arena, 0);
+        let neg = arena.real_lt(w0, zero).expect("w0<0");
+        atoms.push(neg);
+        let neg_index = atoms.len() - 1;
+        let budget = 4096 * 1024 * 1024;
+        for admit_nonzeros in [false, true] {
+            let mut theory = LraTheory::try_new_with_budget_and_levers(
+                &arena,
+                &atoms,
+                None,
+                budget,
+                LraOnlineLevers {
+                    admit_nonzeros,
+                    diseq_split: false,
+                },
+            )
+            .expect("built")
+            .with_deferred_final_check();
+            assert_eq!(theory.uses_simplex(), admit_nonzeros, "mechanism per arm");
+            theory.push();
+            for index in 0..K {
+                assert!(theory.assert(index, true).is_ok());
+            }
+            assert!(matches!(theory.final_check(), FinalCheckOutcome::Sat));
+            let model = theory.real_model().expect("feasible");
+            assert!(
+                replays(&arena, &atoms[..K], &model),
+                "arm admit_nonzeros={admit_nonzeros}: the witness must satisfy every atom"
+            );
+            theory.push();
+            let outcome = match theory.assert(neg_index, true) {
+                Err(core) => core,
+                Ok(()) => match theory.final_check() {
+                    FinalCheckOutcome::Conflict(TheoryExplanation::Eager(core)) => core,
+                    other => panic!("w0 ≥ 0 and w0 < 0 must be refuted, got {other:?}"),
+                },
+            };
+            assert!(
+                outcome.iter().any(|l| l.atom == neg_index) && outcome.iter().any(|l| l.atom == 0),
+                "arm admit_nonzeros={admit_nonzeros}: the core names both crossing atoms: {outcome:?}"
+            );
+        }
+    }
+
+    /// The nonzero ceiling is a refusal in its own right: ONE row under the row
+    /// cap carrying one nonzero more than `MAX_ONLINE_TABLEAU_NONZEROS` builds
+    /// no tableau, and one nonzero fewer does.
+    #[test]
+    fn the_online_admission_refuses_on_nonzeros_alone() {
+        let over = simplex::MAX_ONLINE_TABLEAU_NONZEROS + 1;
+        let row: Vec<(usize, Rational)> = (0..over).map(|j| (j, Rational::integer(1))).collect();
+        assert!(
+            simplex::Incremental::with_online_admission(over, vec![row]).is_none(),
+            "one nonzero over the ceiling is refused"
+        );
+        let at = simplex::MAX_ONLINE_TABLEAU_NONZEROS;
+        let row: Vec<(usize, Rational)> = (0..at).map(|j| (j, Rational::integer(1))).collect();
+        assert!(
+            simplex::Incremental::with_online_admission(at, vec![row]).is_some(),
+            "at the ceiling it is admitted"
+        );
+    }
+
+    /// The row ceiling is a refusal in its own right: a system under the
+    /// nonzero cap but over `MAX_ONLINE_TABLEAU_ROWS` builds no tableau.
+    #[test]
+    fn the_online_admission_refuses_on_rows_alone() {
+        let m = simplex::MAX_ONLINE_TABLEAU_ROWS + 1;
+        let rows: Vec<Vec<(usize, Rational)>> = (0..m)
+            .map(|_| vec![(0usize, Rational::integer(1))])
+            .collect();
+        assert!(
+            rows.iter().map(Vec::len).sum::<usize>() <= simplex::MAX_ONLINE_TABLEAU_NONZEROS,
+            "the fixture must be under the nonzero cap so the ROW cap is what refuses"
+        );
+        assert!(
+            simplex::Incremental::with_online_admission(1, rows).is_none(),
+            "one row over the ceiling is refused"
+        );
+        let rows: Vec<Vec<(usize, Rational)>> = (0..m - 1)
+            .map(|_| vec![(0usize, Rational::integer(1))])
+            .collect();
+        assert!(
+            simplex::Incremental::with_online_admission(1, rows).is_some(),
+            "at the ceiling it is admitted"
         );
     }
 }

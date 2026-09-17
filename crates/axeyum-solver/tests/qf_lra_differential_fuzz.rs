@@ -25,8 +25,8 @@ use std::sync::mpsc;
 use std::time::Duration;
 
 use axeyum_ir::{Rational, Sort, TermArena, TermId};
-use axeyum_solver::{CheckResult, SolverConfig, solve};
-use z3::ast::{Bool, Real};
+use axeyum_solver::{CheckResult, SolverConfig, distinct, solve};
+use z3::ast::{Ast, Bool, Real};
 use z3::{Params, SatResult, Solver};
 
 const INSTANCES: u64 = 1500;
@@ -154,12 +154,20 @@ struct LinAtom {
 }
 
 /// A generated instance: linear atoms folded into a Boolean formula by `ops`
-/// (`true` = `and`, `false` = `or`), left-associatively. Plain data → `Send`.
+/// (`true` = `and`, `false` = `or`), left-associatively, then conjoined with
+/// an optional `distinct` over some of the variables. Plain data → `Send`.
 #[derive(Clone)]
 struct Instance {
     num_vars: usize,
     atoms: Vec<LinAtom>,
     ops: Vec<bool>,
+    /// ADR-2147's seed class: the variables of one `(distinct v₁ … vₖ)`, `k ≥ 2`,
+    /// or empty. The front door lowers `distinct` to the `k(k−1)/2` pairwise
+    /// `(not (= vᵢ vⱼ))` (`axeyum_smtlib::parse`; `axeyum_solver::distinct` is
+    /// the same lowering), so this is the MUTUAL-disequality shape — several
+    /// disequalities over shared variables, where a split on one can paint the
+    /// next into a corner — and z3 sees it as its own `distinct`.
+    distinct: Vec<usize>,
 }
 
 impl Instance {
@@ -199,10 +207,27 @@ impl Instance {
             });
         }
         let ops = (0..num_atoms - 1).map(|_| rng.flip()).collect();
+        // ADR-2147: about a third of the instances carry a `distinct` over 2..=all
+        // of the variables. Drawn AFTER the atoms so the atom population of the
+        // seeds before this class existed is unchanged.
+        let distinct = if rng.below(3) == 0 {
+            let k = rng.below(num_vars as u64 - 1) + 2; // 2..=num_vars
+            let mut picked: Vec<usize> = (0..num_vars).collect();
+            // Fisher-Yates prefix of length `k`, deterministic in the LCG.
+            for i in 0..k {
+                let j = i + rng.below((num_vars - i) as u64);
+                picked.swap(i, j);
+            }
+            picked.truncate(k);
+            picked
+        } else {
+            Vec::new()
+        };
         Instance {
             num_vars,
             atoms,
             ops,
+            distinct,
         }
     }
 
@@ -249,6 +274,11 @@ impl Instance {
                 a.or(acc, b).unwrap()
             };
         }
+        if self.distinct.len() >= 2 {
+            let members: Vec<TermId> = self.distinct.iter().map(|&v| vars[v]).collect();
+            let d = distinct(&mut a, &members).unwrap();
+            acc = a.and(acc, d).unwrap();
+        }
         (a, vec![acc])
     }
 
@@ -290,6 +320,10 @@ impl Instance {
                 Bool::or(&[acc, b.clone()])
             };
         }
+        if self.distinct.len() >= 2 {
+            let members: Vec<Real> = self.distinct.iter().map(|&v| vars[v].clone()).collect();
+            acc = Bool::and(&[acc, Real::distinct(&members)]);
+        }
         acc
     }
 
@@ -323,6 +357,16 @@ impl Instance {
                 .collect::<Vec<_>>()
                 .join(", ")
         ));
+        if self.distinct.len() >= 2 {
+            lines.push(format!(
+                "  distinct: {}",
+                self.distinct
+                    .iter()
+                    .map(|&v| names[v])
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
         lines.join("\n")
     }
 }
@@ -427,6 +471,12 @@ fn the_generator_reaches_positive_equalities_and_strict_atoms() {
     let mut le_negated = 0u64;
     let mut ge_negated = 0u64;
     let mut ne_negated = 0u64;
+    // ADR-2147's hard-rule seed classes: a disequality is `!=` asserted
+    // positively OR `=` negated -- both reach the theory as an equality atom
+    // the SAT solver sets FALSE -- and a `distinct` is the mutual shape.
+    let mut disequalities = 0u64;
+    let mut instances_with_distinct = 0u64;
+    let mut distinct_pairs = 0u64;
     for seed in 0..INSTANCES {
         let inst = Instance::generate(&mut Lcg::new(seed));
         for atom in &inst.atoms {
@@ -440,6 +490,14 @@ fn the_generator_reaches_positive_equalities_and_strict_atoms() {
                 (Cmp::Ne, true) => ne_negated += 1,
                 _ => {}
             }
+            if matches!((atom.cmp, atom.neg), (Cmp::Ne, false) | (Cmp::Eq, true)) {
+                disequalities += 1;
+            }
+        }
+        let k = inst.distinct.len() as u64;
+        if k >= 2 {
+            instances_with_distinct += 1;
+            distinct_pairs += k * (k - 1) / 2;
         }
     }
     let counts = [
@@ -449,6 +507,21 @@ fn the_generator_reaches_positive_equalities_and_strict_atoms() {
         ("`<=` negated", le_negated, 100),
         ("`>=` negated", ge_negated, 100),
         ("`!=` negated (an equality)", ne_negated, 100),
+        (
+            "disequalities (`!=` positive or `=` negated)",
+            disequalities,
+            400,
+        ),
+        (
+            "instances carrying a `distinct`",
+            instances_with_distinct,
+            300,
+        ),
+        (
+            "pairwise disequalities from `distinct`",
+            distinct_pairs,
+            600,
+        ),
     ];
     eprintln!("  atoms in the sweep: {atoms_total}");
     for (name, n, floor) in counts {
@@ -461,6 +534,241 @@ fn the_generator_reaches_positive_equalities_and_strict_atoms() {
              the raw-state LCG; `cmp`/`neg` are parity-locked again"
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// ADR-2146 — the tableau admission boundary. The main sweep's instances have
+// 2..=4 variables, so their tableaux are tiny and the dense-cell admission
+// (`MAX_TABLEAU_CELLS = 4,000,000` over `m × (nvars+m)`) never refuses one; a
+// lever that changes WHAT IS ADMITTED is invisible to it. These seeds are wide
+// and shallow -- one variable per atom, `ATOMS` atoms under the online
+// route's 1,024-atom screen, with equality/disequality atoms at two rows each
+// -- so the dense count crosses the cap while the nonzero count stays in the
+// low thousands, which is exactly the shape the census found 27 pinned files
+// in. Under `AXEYUM_LRA_ADMIT_NONZEROS=1` they run on the warm tableau; with
+// it unset they run the shipped route (Fourier-Motzkin for the witness). The
+// gate runs this file under BOTH.
+// ---------------------------------------------------------------------------
+
+/// Wide-shallow seeds: below the online atom screen, above the dense cap.
+const BOUNDARY_ATOMS: usize = 1_000;
+const BOUNDARY_SEEDS: u64 = 12;
+const BOUNDARY_TIMEOUT: Duration = Duration::from_secs(20);
+
+/// The online route's atom screen at the default budget, restated so a moved
+/// screen fails HERE (the seeds would silently take the offline route).
+const ONLINE_ADMITTED_ATOMS: usize = 1_024;
+const _: () = assert!(BOUNDARY_ATOMS <= ONLINE_ADMITTED_ATOMS);
+/// The dense cap the seeds must cross, restated from `simplex::MAX_TABLEAU_CELLS`.
+const MAX_TABLEAU_CELLS: usize = 4_000_000;
+
+/// One wide-shallow instance: `BOUNDARY_ATOMS` atoms `xᵢ ⋈ cᵢ` over their own
+/// variables (a `⋈` drawn with `=`/`!=` at two thirds so the row count
+/// crosses the cap), a handful of two-variable linking atoms, and a Boolean
+/// spine of `and`s with a few `or`s so the skeleton is not one cube.
+struct Boundary {
+    atoms: Vec<LinAtom>,
+    ops: Vec<bool>,
+}
+
+impl Boundary {
+    fn generate(rng: &mut Lcg) -> Self {
+        let mut atoms = Vec::with_capacity(BOUNDARY_ATOMS + 16);
+        for v in 0..BOUNDARY_ATOMS {
+            let cmp = match rng.below(6) {
+                0 | 1 => Cmp::Eq,
+                2 | 3 => Cmp::Ne,
+                4 => Cmp::Le,
+                _ => Cmp::Ge,
+            };
+            atoms.push(LinAtom {
+                terms: vec![(1, v)],
+                constant: rng.in_range(-3, 3),
+                cmp,
+                neg: rng.below(4) == 0,
+                divisor: None,
+            });
+        }
+        for _ in 0..16 {
+            let u = rng.below(BOUNDARY_ATOMS as u64);
+            let w = rng.below(BOUNDARY_ATOMS as u64);
+            atoms.push(LinAtom {
+                terms: vec![(rng.in_range(-2, 2) | 1, u), (rng.in_range(-2, 2) | 1, w)],
+                constant: rng.in_range(-3, 3),
+                cmp: Cmp::pick(rng),
+                neg: rng.flip(),
+                divisor: None,
+            });
+        }
+        // Mostly `and`; one `or` in eight keeps the skeleton disjunctive.
+        let ops = (0..atoms.len() - 1).map(|_| rng.below(8) != 0).collect();
+        Self { atoms, ops }
+    }
+
+    /// Rows the online tableau opens: one per order atom, two per equality --
+    /// the layout `lra_online::build_simplex_engine` documents.
+    fn dense_cells(&self) -> usize {
+        let rows: usize = self
+            .atoms
+            .iter()
+            .map(|a| {
+                if matches!(a.cmp, Cmp::Eq | Cmp::Ne) {
+                    2
+                } else {
+                    1
+                }
+            })
+            .sum();
+        rows * (BOUNDARY_ATOMS + rows)
+    }
+
+    fn build(&self) -> (TermArena, Vec<TermId>) {
+        let mut a = TermArena::new();
+        let vars: Vec<TermId> = (0..BOUNDARY_ATOMS)
+            .map(|i| {
+                let s = a.declare(&format!("b{i}"), Sort::Real).unwrap();
+                a.var(s)
+            })
+            .collect();
+        let zero = a.real_const(Rational::zero());
+        let bools: Vec<TermId> = self
+            .atoms
+            .iter()
+            .map(|atom| {
+                let mut poly: Option<TermId> = None;
+                for &(coeff, v) in &atom.terms {
+                    let c = a.real_const(Rational::integer(i128::from(coeff)));
+                    let term = a.real_mul(c, vars[v]).unwrap();
+                    poly = Some(poly.map_or(term, |acc| a.real_add(acc, term).unwrap()));
+                }
+                let c = a.real_const(Rational::integer(i128::from(atom.constant)));
+                let lhs = poly.map_or(c, |acc| a.real_add(acc, c).unwrap());
+                let b = atom.cmp.build_ir(&mut a, lhs, zero);
+                if atom.neg { a.not(b).unwrap() } else { b }
+            })
+            .collect();
+        let mut acc = bools[0];
+        for (i, &b) in bools.iter().enumerate().skip(1) {
+            acc = if self.ops[i - 1] {
+                a.and(acc, b).unwrap()
+            } else {
+                a.or(acc, b).unwrap()
+            };
+        }
+        (a, vec![acc])
+    }
+
+    fn to_z3(&self) -> Bool {
+        let vars: Vec<Real> = (0..BOUNDARY_ATOMS)
+            .map(|i| Real::new_const(format!("b{i}")))
+            .collect();
+        let zero = Real::from_rational(0, 1);
+        let bools: Vec<Bool> = self
+            .atoms
+            .iter()
+            .map(|atom| {
+                let mut poly: Option<Real> = None;
+                for &(coeff, v) in &atom.terms {
+                    let term = Real::from_rational(coeff, 1) * vars[v].clone();
+                    poly = Some(poly.map_or(term.clone(), |acc| acc + term));
+                }
+                let c = Real::from_rational(atom.constant, 1);
+                let lhs = poly.map_or(c.clone(), |acc| acc + c);
+                let b = atom.cmp.build_z3(&lhs, &zero);
+                if atom.neg { b.not() } else { b }
+            })
+            .collect();
+        let mut acc = bools[0].clone();
+        for (i, b) in bools.iter().enumerate().skip(1) {
+            acc = if self.ops[i - 1] {
+                Bool::and(&[acc, b.clone()])
+            } else {
+                Bool::or(&[acc, b.clone()])
+            };
+        }
+        acc
+    }
+}
+
+/// Every boundary seed must actually cross the dense cap, or the class tests
+/// the same admission the main sweep does. Solver-free, so it cannot be
+/// satisfied by a route that never ran.
+#[test]
+fn the_boundary_seeds_cross_the_dense_cap() {
+    for seed in 0..BOUNDARY_SEEDS {
+        let inst = Boundary::generate(&mut Lcg::new(seed ^ 0xB0DA));
+        let cells = inst.dense_cells();
+        assert!(
+            cells > MAX_TABLEAU_CELLS,
+            "seed {seed}: {cells} dense cells does not cross the {MAX_TABLEAU_CELLS} cap; \
+             the seed class is not on the boundary"
+        );
+        assert!(
+            inst.atoms.len() <= ONLINE_ADMITTED_ATOMS,
+            "seed {seed}: {} atoms would be refused by the online screen",
+            inst.atoms.len()
+        );
+    }
+}
+
+/// The boundary seeds against z3, in whichever admission arm the environment
+/// selects. Disagreement is a panic; `unknown` on our side is allowed but the
+/// class must decide MOST of them, or the arm under test never reached a
+/// verdict and the gate is measuring nothing.
+#[test]
+fn boundary_tableaux_agree_with_z3() {
+    let mut agree = 0u64;
+    let mut ax_unknown = 0u64;
+    let mut z3_unknown = 0u64;
+    for seed in 0..BOUNDARY_SEEDS {
+        let inst = Boundary::generate(&mut Lcg::new(seed ^ 0xB0DA));
+        let z3 = {
+            let solver = Solver::new();
+            let mut params = Params::new();
+            params.set_u32("timeout", 10_000);
+            solver.set_params(&params);
+            solver.assert(inst.to_z3());
+            match solver.check() {
+                SatResult::Sat => Verdict::Sat,
+                SatResult::Unsat => Verdict::Unsat,
+                SatResult::Unknown => Verdict::Unknown,
+            }
+        };
+        let (tx, rx) = mpsc::channel();
+        std::thread::Builder::new()
+            .stack_size(256 * 1024 * 1024)
+            .spawn(move || {
+                let (mut a, assertions) = inst.build();
+                let v = match solve(&mut a, &assertions, &SolverConfig::default()) {
+                    Ok(CheckResult::Sat(_)) => Verdict::Sat,
+                    Ok(CheckResult::Unsat) => Verdict::Unsat,
+                    Ok(CheckResult::Unknown(_)) | Err(_) => Verdict::Unknown,
+                };
+                let _ = tx.send(v);
+            })
+            .expect("spawn solver thread");
+        let ax = rx
+            .recv_timeout(BOUNDARY_TIMEOUT)
+            .unwrap_or(Verdict::Unknown);
+        match (ax, z3) {
+            (Verdict::Sat, Verdict::Unsat) | (Verdict::Unsat, Verdict::Sat) => {
+                panic!("BOUNDARY DISAGREEMENT (seed {seed}): axeyum = {ax:?}, Z3 = {z3:?}");
+            }
+            (Verdict::Unknown, _) => ax_unknown += 1,
+            (_, Verdict::Unknown) => z3_unknown += 1,
+            _ => agree += 1,
+        }
+    }
+    println!(
+        "qf_lra boundary: {BOUNDARY_SEEDS} seeds | {agree} agree | {ax_unknown} axeyum-unknown | \
+         {z3_unknown} z3-unknown | 0 DISAGREE (AXEYUM_LRA_ADMIT_NONZEROS={:?})",
+        std::env::var("AXEYUM_LRA_ADMIT_NONZEROS").ok()
+    );
+    assert!(
+        agree >= BOUNDARY_SEEDS / 2,
+        "expected >= {} boundary agreements, got {agree} (axeyum-unknown {ax_unknown})",
+        BOUNDARY_SEEDS / 2
+    );
 }
 
 // ---------------------------------------------------------------------------

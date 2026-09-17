@@ -72,7 +72,9 @@ use crate::euf_egraph::{
     FinalCheckOutcome, PropagationQueue, TheoryEngineCounters, TheoryLit, TheoryProp, TheorySolver,
 };
 use crate::lazy_smt_counters::OnlineProbe;
-use crate::lra_online::{Encoder, Lit, LraTheory, LraTheoryBuildStop, collect_lra_atoms, replays};
+use crate::lra_online::{
+    Encoder, Lit, LraOnlineLevers, LraTheory, LraTheoryBuildStop, collect_lra_atoms, replays,
+};
 use crate::model::Model;
 use crate::native_cdclt::{NativeModel, NativeSolveOutcome};
 
@@ -213,20 +215,48 @@ struct CdcltLraTheory {
 
 impl CdcltLraTheory {
     /// Wraps a fresh [`LraTheory`] over `atom_terms` (per-assert exact-rational
-    /// feasibility), bounded by the online driver's absolute `deadline`.
+    /// feasibility), bounded by the online driver's absolute `deadline`, under
+    /// the process-wide lever arms.
+    #[cfg(test)]
     fn new(
         arena: &TermArena,
         atom_terms: &[TermId],
         deadline: Option<Instant>,
         budget_bytes: usize,
     ) -> Result<Self, LraTheoryBuildStop> {
+        Self::new_with_levers(
+            arena,
+            atom_terms,
+            deadline,
+            budget_bytes,
+            LraOnlineLevers::from_env(),
+        )
+    }
+
+    /// [`Self::new`] with the ADR-2146 / ADR-2147 arms named by the caller.
+    fn new_with_levers(
+        arena: &TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+        budget_bytes: usize,
+        levers: LraOnlineLevers,
+    ) -> Result<Self, LraTheoryBuildStop> {
         Ok(Self {
             // ADR-1701: this adapter is driven by `CdclT`, which calls
             // `final_check` at every total Boolean assignment, so the wrapped
             // theory may keep only the cheap bound check on `assert` and run
             // the complete simplex decision once per candidate model.
-            inner: LraTheory::try_new_with_budget(arena, atom_terms, deadline, budget_bytes)?
-                .with_deferred_final_check(),
+            // ADR-2147: the split is switched on HERE and nowhere else, because
+            // this is the one adapter whose driver polls `take_new_atoms`.
+            inner: LraTheory::try_new_with_budget_and_levers(
+                arena,
+                atom_terms,
+                deadline,
+                budget_bytes,
+                levers,
+            )?
+            .with_deferred_final_check()
+            .with_diseq_split(levers.diseq_split),
         })
     }
 
@@ -284,6 +314,13 @@ impl TheorySolver for CdcltLraTheory {
     fn note_decision(&mut self, atom: usize, value: bool) {
         self.inner.note_decision(atom, value);
     }
+
+    /// Forwards the ADR-2147 split registrations. Without this forwarder the
+    /// trait default answers `0`, the driver never learns of the strict halves,
+    /// and the lever is inert while looking armed — the ADR-2125 failure shape.
+    fn take_new_atoms(&mut self) -> usize {
+        self.inner.take_new_atoms()
+    }
 }
 
 /// Decides a `QF_LRA` query (an arbitrary Boolean combination of linear real
@@ -318,6 +355,24 @@ pub fn check_qf_lra_online_cdclt(
     arena: &TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    check_qf_lra_online_cdclt_with_levers(arena, assertions, config, LraOnlineLevers::from_env())
+}
+
+/// [`check_qf_lra_online_cdclt`] with the ADR-2146 / ADR-2147 arms passed as a
+/// value, so one process can run every arm of both levers against each other
+/// (the ADR-2132 fixture shape). The production caller reads the environment
+/// once and calls this.
+///
+/// # Errors
+///
+/// As [`check_qf_lra_online_cdclt`]: never, in practice.
+#[allow(clippy::too_many_lines)]
+pub fn check_qf_lra_online_cdclt_with_levers(
+    arena: &TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    levers: LraOnlineLevers,
 ) -> Result<CheckResult, SolverError> {
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     // Distinct real atoms — the theory's atom indices and the first `atom_count`
@@ -394,7 +449,13 @@ pub fn check_qf_lra_online_cdclt(
             ),
         }));
     }
-    let mut theory = match CdcltLraTheory::new(arena, &atom_terms, deadline, budget_bytes) {
+    let mut theory = match CdcltLraTheory::new_with_levers(
+        arena,
+        &atom_terms,
+        deadline,
+        budget_bytes,
+        levers,
+    ) {
         Ok(theory) => theory,
         Err(LraTheoryBuildStop::Deadline) => {
             return Ok(CheckResult::Unknown(UnknownReason {
@@ -1065,5 +1126,318 @@ mod tests {
             "expected the LRA propagation path to fire"
         );
         assert_eq!(solver.value(1), Some(true), "x>0 should be propagated");
+    }
+
+    // ------------------------------------------------------------------
+    // ADR-2147: the disequality split, through the CDCL(T) route, both arms
+    // in ONE process.
+    // ------------------------------------------------------------------
+
+    const SPLIT_ON: LraOnlineLevers = LraOnlineLevers {
+        admit_nonzeros: false,
+        diseq_split: true,
+    };
+
+    /// `(not (= x y))` alone. The shipped arm builds the origin, which fails
+    /// the replay gate, and answers `unknown` with the census's sentence; the
+    /// split arm answers `sat` with a witness that replays. This is the 11-file
+    /// wall in one line.
+    #[test]
+    fn a_bare_disequality_is_unknown_shipped_and_sat_split() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let eq = arena.eq(x, y).expect("x=y");
+        let neq = arena.not(eq).expect("x!=y");
+        let config = SolverConfig::default();
+        let shipped = check_qf_lra_online_cdclt_with_levers(
+            &arena,
+            &[neq],
+            &config,
+            LraOnlineLevers::shipped(),
+        )
+        .expect("result");
+        let CheckResult::Unknown(reason) = shipped else {
+            panic!("the shipped arm must not decide a bare disequality: {shipped:?}");
+        };
+        assert!(
+            reason.detail.contains("did not replay"),
+            "and it must stop at the replay gate, not elsewhere: {reason:?}"
+        );
+        let split = check_qf_lra_online_cdclt_with_levers(&arena, &[neq], &config, SPLIT_ON)
+            .expect("result");
+        let CheckResult::Sat(model) = split else {
+            panic!("the split arm must decide x ≠ y: {split:?}");
+        };
+        assert!(
+            replays(&arena, &[neq], &model),
+            "and its witness must replay"
+        );
+    }
+
+    /// SOUNDNESS-NEGATIVE, the `unsat` side: `x ≠ y ∧ x ≤ y ∧ x ≥ y` is
+    /// infeasible. The split arm must refute it — and a split that turned the
+    /// disequality into anything weaker than `x < y ∨ x > y`, or dropped the
+    /// bound a true half imposes, would find a "model" here instead. The
+    /// shipped arm cannot refute it at all (the dropped disequality leaves
+    /// `x = y` feasible and the replay gate says `unknown`), which is the wall
+    /// itself; what it must never do is say `sat`.
+    #[test]
+    fn a_split_never_manufactures_a_model_for_an_infeasible_disequality() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let eq = arena.eq(x, y).expect("x=y");
+        let neq = arena.not(eq).expect("x!=y");
+        let le = arena.real_le(x, y).expect("x<=y");
+        let ge = arena.real_ge(x, y).expect("x>=y");
+        let config = SolverConfig::default();
+        let shipped = check_qf_lra_online_cdclt_with_levers(
+            &arena,
+            &[neq, le, ge],
+            &config,
+            LraOnlineLevers::shipped(),
+        )
+        .expect("result");
+        assert!(
+            matches!(shipped, CheckResult::Unknown(_)),
+            "the shipped arm stops at the replay gate on this shape: {shipped:?}"
+        );
+        let split =
+            check_qf_lra_online_cdclt_with_levers(&arena, &[neq, le, ge], &config, SPLIT_ON)
+                .expect("result");
+        assert!(
+            matches!(split, CheckResult::Unsat),
+            "the split arm refutes x ≠ y with x ≤ y and x ≥ y, got {split:?}"
+        );
+    }
+
+    /// SOUNDNESS-NEGATIVE, the `sat` side, and the one that pins the SHAPE of
+    /// the trichotomy clause: `(= x y) ∨ (x ≠ y ∧ x < 0 ∧ x > 0)`. The right
+    /// disjunct is infeasible, so the only model has `x = y`. A search that
+    /// tries the disequality branch first splits it, learns `eq ∨ lt ∨ gt`,
+    /// and must still find `x = y` afterwards. A split whose learned clause
+    /// dropped `eq` (learning `lt ∨ gt`, i.e. asserting `x ≠ y` outright) would
+    /// refute this satisfiable query.
+    #[test]
+    fn a_split_lemma_must_keep_the_equality_or_it_refutes_a_satisfiable_query() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let zero = rconst(&mut arena, 0);
+        let eq = arena.eq(x, y).expect("x=y");
+        let neq = arena.not(eq).expect("x!=y");
+        let lt0 = arena.real_lt(x, zero).expect("x<0");
+        let gt0 = arena.real_gt(x, zero).expect("x>0");
+        let infeasible = arena.and(neq, lt0).expect("and");
+        let infeasible = arena.and(infeasible, gt0).expect("and");
+        let query = arena.or(eq, infeasible).expect("or");
+        let config = SolverConfig::default();
+        for levers in [LraOnlineLevers::shipped(), SPLIT_ON] {
+            let verdict = check_qf_lra_online_cdclt_with_levers(&arena, &[query], &config, levers)
+                .expect("result");
+            let CheckResult::Sat(model) = verdict else {
+                panic!("arm {levers:?}: x = y is a model, got {verdict:?}");
+            };
+            assert!(
+                replays(&arena, &[query], &model),
+                "arm {levers:?}: the witness replays"
+            );
+        }
+    }
+
+    /// Several disequalities over shared variables, where a GREEDY choice of
+    /// sides can paint itself into a corner: `a ≠ b`, `b ≠ c`, `a ≠ c` with
+    /// `0 ≤ a, b, c ≤ 1`. The search must backtrack over the halves it
+    /// registered and still find three distinct values; every one of the
+    /// three splits is exercised and the model replays against all of them.
+    #[test]
+    fn three_mutual_disequalities_are_decided_by_backtracking_over_the_halves() {
+        let mut arena = TermArena::new();
+        let a = rvar(&mut arena, "a");
+        let b = rvar(&mut arena, "b");
+        let c = rvar(&mut arena, "c");
+        let zero = rconst(&mut arena, 0);
+        let one = rconst(&mut arena, 1);
+        let mut assertions = Vec::new();
+        for (p, q) in [(a, b), (b, c), (a, c)] {
+            let eq = arena.eq(p, q).expect("eq");
+            assertions.push(arena.not(eq).expect("neq"));
+        }
+        for v in [a, b, c] {
+            assertions.push(arena.real_ge(v, zero).expect(">=0"));
+            assertions.push(arena.real_le(v, one).expect("<=1"));
+        }
+        let config = SolverConfig::default();
+        let verdict = check_qf_lra_online_cdclt_with_levers(&arena, &assertions, &config, SPLIT_ON)
+            .expect("result");
+        let CheckResult::Sat(model) = verdict else {
+            panic!("three distinct reals in [0, 1] exist: {verdict:?}");
+        };
+        assert!(replays(&arena, &assertions, &model));
+    }
+
+    /// An `unsat` that FOLLOWS a split lemma carries what it carried before:
+    /// the ADR-1704 two-stream artifact, checked `CheckedModuloLemmas` and not
+    /// `Failed`. The split's clauses are theory lemmas like every Farkas core,
+    /// enumerated in the same list and read by the same checker — and they
+    /// mention variables the CNF did not declare (the strict halves), which is
+    /// exactly what this pins: the extended formula must carry them, or the
+    /// Boolean stream fails to check and a verdict this route used to certify
+    /// modulo lemmas would silently lose its artifact.
+    #[test]
+    fn an_unsat_after_a_split_lemma_still_carries_the_two_stream_artifact() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let eq = arena.eq(x, y).expect("x=y");
+        let neq = arena.not(eq).expect("x!=y");
+        let le = arena.real_le(x, y).expect("x<=y");
+        let ge = arena.real_ge(x, y).expect("x>=y");
+        let config = SolverConfig::default();
+        let verdict = crate::native_cdclt::with_artifact_recording(|| {
+            check_qf_lra_online_cdclt_with_levers(&arena, &[neq, le, ge], &config, SPLIT_ON)
+        })
+        .expect("result");
+        assert!(matches!(verdict, CheckResult::Unsat), "got {verdict:?}");
+        let artifact = crate::native_cdclt::take_last_theory_refutation()
+            .expect("the native core recorded the refutation");
+        assert!(
+            artifact.theory_lemma_count() > 0,
+            "a split refutation uses theory lemmas; a lemma-free artifact here means the \
+             split never ran"
+        );
+        let check = artifact.check();
+        assert!(
+            matches!(
+                check,
+                axeyum_cnf::TheoryRefutationCheck::CheckedModuloLemmas { .. }
+            ),
+            "the artifact must check modulo its enumerated lemmas, got {check:?}"
+        );
+        let step = crate::trust::theory_refutation_trust_step(&artifact);
+        assert_eq!(
+            step.id,
+            crate::trust::TrustId::SatRefutationModuloTheory,
+            "the grade this route has always carried for a lemma-bearing refutation"
+        );
+    }
+
+    /// The shipped arm is the ENVIRONMENT's arm when nothing is set, and the
+    /// spellings are what the registry says: `1` and `on` arm a lever, and
+    /// anything else — a typo, the empty string — is OFF.
+    #[test]
+    fn the_lever_spellings_and_the_default_are_off() {
+        use crate::lra_online::parse_lever;
+        assert!(parse_lever(Some("1")));
+        assert!(parse_lever(Some("on")));
+        assert!(parse_lever(Some(" ON ")));
+        assert!(!parse_lever(Some("")));
+        assert!(!parse_lever(Some("0")));
+        assert!(!parse_lever(Some("off")));
+        assert!(!parse_lever(Some("yes")));
+        assert!(!parse_lever(Some("true")));
+        assert!(!parse_lever(None));
+        if std::env::var_os("AXEYUM_LRA_ADMIT_NONZEROS").is_none()
+            && std::env::var_os("AXEYUM_LRA_DISEQ_SPLIT").is_none()
+        {
+            assert_eq!(
+                LraOnlineLevers::from_env(),
+                LraOnlineLevers::shipped(),
+                "with both variables unset the route must be the shipped one"
+            );
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // ADR-2146: the nonzero admission, through the CDCL(T) route.
+    // ------------------------------------------------------------------
+
+    /// A wide-shallow query (one variable per atom) under the online route's
+    /// screen (`k ≤ 1_024`) whose dense tableau exceeds `MAX_TABLEAU_CELLS`
+    /// only with the rows doubled — so equality atoms, two rows each:
+    /// `k = 1_000` equalities is 2,000 rows over 3,000 columns, 6,000,000
+    /// cells against 2,000 nonzeros. Both arms must decide it, and agree; the
+    /// dense arm decides by Fourier–Motzkin over 1,000 variables (which the
+    /// route's budget admits) and the sparse arm by the tableau.
+    #[test]
+    fn the_admission_arms_agree_through_the_route_on_a_query_the_dense_cap_refuses() {
+        const K: usize = 1_000;
+        const _: () = assert!(K <= MAX_ONLINE_LRA_ATOMS);
+        const _: () = assert!(2 * K * (K + 2 * K) > crate::simplex::MAX_TABLEAU_CELLS);
+        let mut arena = TermArena::new();
+        let mut assertions = Vec::with_capacity(K);
+        for i in 0..K {
+            let x = rvar(&mut arena, &format!("e{i}"));
+            let c = rconst(&mut arena, i128::try_from(i).expect("small"));
+            assertions.push(arena.eq(x, c).expect("x=i"));
+        }
+        // Mechanism first: the two admissions really do differ on this shape.
+        let dense = LraTheory::try_new_with_budget_and_levers(
+            &arena,
+            &assertions,
+            None,
+            DEFAULT_ONLINE_LRA_BUDGET_BYTES,
+            LraOnlineLevers::shipped(),
+        )
+        .expect("built");
+        assert!(
+            !dense.uses_simplex(),
+            "the dense cap must refuse 6,000,000 cells"
+        );
+        let sparse = LraTheory::try_new_with_budget_and_levers(
+            &arena,
+            &assertions,
+            None,
+            DEFAULT_ONLINE_LRA_BUDGET_BYTES,
+            LraOnlineLevers {
+                admit_nonzeros: true,
+                diseq_split: false,
+            },
+        )
+        .expect("built");
+        assert!(
+            sparse.uses_simplex(),
+            "the nonzero admission must build 2,000 nonzeros"
+        );
+        let config = SolverConfig::default();
+        for levers in [
+            LraOnlineLevers::shipped(),
+            LraOnlineLevers {
+                admit_nonzeros: true,
+                diseq_split: false,
+            },
+        ] {
+            let verdict =
+                check_qf_lra_online_cdclt_with_levers(&arena, &assertions, &config, levers)
+                    .expect("result");
+            let CheckResult::Sat(model) = verdict else {
+                panic!("arm {levers:?}: 1,000 independent equalities are satisfiable: {verdict:?}");
+            };
+            assert!(
+                replays(&arena, &assertions, &model),
+                "arm {levers:?}: the witness replays"
+            );
+        }
+        // And the infeasible neighbour: `e0 = 0` with `e0 > 0`.
+        let e0 = arena.var(arena.find_symbol("e0").expect("declared"));
+        let zero = rconst(&mut arena, 0);
+        let mut infeasible = assertions.clone();
+        infeasible.push(arena.real_gt(e0, zero).expect("e0>0"));
+        for levers in [
+            LraOnlineLevers::shipped(),
+            LraOnlineLevers {
+                admit_nonzeros: true,
+                diseq_split: false,
+            },
+        ] {
+            let verdict =
+                check_qf_lra_online_cdclt_with_levers(&arena, &infeasible, &config, levers)
+                    .expect("result");
+            assert!(
+                matches!(verdict, CheckResult::Unsat),
+                "arm {levers:?}: e0 = 0 and e0 > 0 is unsat, got {verdict:?}"
+            );
+        }
     }
 }

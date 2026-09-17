@@ -121,6 +121,60 @@ pub(crate) const MAX_TABLEAU_CELLS: usize = 4_000_000;
 /// this is stated rather than implied.
 pub(crate) const MAX_WARM_CUBE_NONZEROS: usize = 400_000;
 
+/// Entry nonzeros the ONLINE CDCL(T) engine's warm tableau admits under
+/// `AXEYUM_LRA_ADMIT_NONZEROS=1` (ADR-2146) — the currency the sparse tableau
+/// is stored in, ~40 B each, so 16 MiB at construction.
+///
+/// The same figure as [`MAX_WARM_CUBE_NONZEROS`], on purpose: two doors onto one
+/// structure should not disagree about what it costs. It is a separate constant
+/// because the two call sites are separate levers with separate A/Bs, and a
+/// lane that moves one owes a measurement the other does not.
+///
+/// What this replaces, and why: the shipped [`Incremental::new`] admits on
+/// `m × (nvars+m)` dense cells, a count over storage ADR-2111 made sparse. The
+/// LRA-MODEL-REPLAY census (`bench-results/lra-model-replay-20260916/`) found
+/// **27 of 47** undecided `QF_LRA` rows at the census screen had NO tableau for
+/// exactly this reason and fell to the Fourier–Motzkin witness extraction
+/// (`lra_online::solve_values`), which keeps a clone of the whole system per
+/// variable and declines. [`Incremental::with_online_admission`] asks the
+/// nonzero question at construction and bounds fill-in at RUN time
+/// ([`MAX_TABLEAU_FILL_NONZEROS`]), which the entry count alone cannot: ADR-2132
+/// measured fill-in growing a warm tableau **21x** (`sc-39` enters at 4,688
+/// nonzeros and peaks at 98,572).
+pub(crate) const MAX_ONLINE_TABLEAU_NONZEROS: usize = 400_000;
+
+/// Rows the online nonzero admission (ADR-2146) will build a tableau over.
+///
+/// The dense-cell cap bounded rows implicitly — `m × (nvars+m) ≤ 4,000,000`
+/// caps `m` at 2,000 even with no problem variables — and a nonzero count does
+/// not: a row costs its nonzeros in storage but a whole slot in every per-row
+/// scan (`Tableau::run`'s leaving-variable scan, `SimplexEngine::row_bounded`,
+/// the bound vectors), so the row count needs its own ceiling. 65,536 is 32x
+/// the dense cap's implicit maximum and 2x the largest row count the census
+/// population would reach (`LassoRanker` `queens`, 15,647 atoms, at most two rows
+/// each); it exists to refuse the absurd, not to screen the measured.
+pub(crate) const MAX_ONLINE_TABLEAU_ROWS: usize = 65_536;
+
+/// Run-time ceiling on the tableau's LIVE nonzeros under the online nonzero
+/// admission (ADR-2146): a pivot that would carry the stored set past it makes
+/// [`Tableau::run`] answer `RunOutcome::Unknown` instead — a sound "don't
+/// know", never a verdict.
+///
+/// This is [`MAX_TABLEAU_CELLS`] restated in the currency the tableau is stored
+/// in, and it is what makes the nonzero admission a memory bound rather than a
+/// hope: under the dense admission `nnz ≤ cells ≤ 4,000,000` held by
+/// construction, so fill-in could never exceed what admission had priced;
+/// under a nonzero admission it can (21x measured, see
+/// [`MAX_ONLINE_TABLEAU_NONZEROS`]), so the bound moves to where the growth
+/// happens. At ~40 B per stored nonzero plus the column index this is about
+/// 190 MiB, the same order as the 128 MiB the dense cap meant.
+///
+/// Consulted only by a tableau built through
+/// [`Incremental::with_online_admission`]: every other constructor leaves
+/// `Tableau::fill_cap` unset, so the shipped `AXEYUM_LRA_ADMIT_NONZEROS` OFF
+/// arm runs the identical pivot loop it ran before.
+pub(crate) const MAX_TABLEAU_FILL_NONZEROS: u64 = 4_000_000;
+
 /// Diagnostic (`AXEYUM_LRADENSEPROBE=1`): report resident-set size at each of the
 /// four points on the offline dense LRA route where a large allocation either
 /// lands or is released, so the 5.07 GiB median [ADR-2045] measured over this
@@ -389,6 +443,11 @@ pub struct TableauCounters {
     ///
     /// Set once, at construction, and never added to.
     pub entry_nnz: u64,
+    /// [`Tableau::run`] calls that declined at [`MAX_TABLEAU_FILL_NONZEROS`]
+    /// (ADR-2146) — a pivot whose worst-case fill-in would have carried the
+    /// live nonzeros past the cap. Always 0 for a tableau built by any
+    /// constructor but [`Incremental::with_online_admission`].
+    pub fill_cap_declines: u64,
     /// The LARGEST of those samples (ADR-2132).
     ///
     /// The mean beside it answers "how sparse is this tableau typically"; this
@@ -1048,6 +1107,17 @@ struct Tableau {
     /// Deterministic LCG state for [`EnteringRule::MinimiseFillIn`]'s tie-break.
     /// Seeded from [`PivotPolicy::tie_break_seed`], never from a clock.
     tie_break_state: u64,
+    /// Live nonzeros across every row, maintained at [`Tableau::set_cell`] and
+    /// recounted by [`Tableau::recount_columns`] — the same two writers that
+    /// keep `col_nnz` exact, so this is `Σ col_nnz` without the `O(n)` sum.
+    /// `the_live_nonzero_count_matches_the_recount_after_every_pivot` pins
+    /// the agreement.
+    nnz_live: u64,
+    /// ADR-2146: the run-time fill-in ceiling, or `None` for every tableau not
+    /// built by [`Incremental::with_online_admission`]. `Some` makes
+    /// [`Tableau::run`] decline BEFORE a pivot whose fill-in could carry the
+    /// stored set past the cap; `None` is byte-identical to the loop as it was.
+    fill_cap: Option<u64>,
 }
 
 impl Tableau {
@@ -1084,6 +1154,8 @@ impl Tableau {
             policy,
             counters: TableauCounters::default(),
             tie_break_state: policy.tie_break_seed,
+            nnz_live: 0,
+            fill_cap: None,
         };
         t.reset_structure();
         // ADR-2132. The DENOMINATOR `fill_nnz_peak` is meaningless without: a
@@ -1218,6 +1290,7 @@ impl Tableau {
                 self.col_rows[j].push(i);
             }
         }
+        self.nnz_live = self.total_nnz();
     }
 
     /// The coefficient at cell `(i, v)`, zero when the column is not stored.
@@ -1258,6 +1331,7 @@ impl Tableau {
                 self.row_nz[i].remove(k);
                 self.row_val[i].remove(k);
                 self.col_nnz[v] -= 1;
+                self.nnz_live -= 1;
                 if let Ok(at) = self.col_rows[v].binary_search(&i) {
                     self.col_rows[v].remove(at);
                 }
@@ -1267,6 +1341,7 @@ impl Tableau {
                 self.row_nz[i].insert(at, v);
                 self.row_val[i].insert(at, value);
                 self.col_nnz[v] += 1;
+                self.nnz_live += 1;
                 let cat = self.col_rows[v].partition_point(|&r| r < i);
                 self.col_rows[v].insert(cat, i);
             }
@@ -1520,6 +1595,24 @@ impl Tableau {
             } else {
                 self.upper[b].expect("violated upper ⇒ bound exists")
             };
+            // ADR-2146: refuse BEFORE the pivot whose fill-in could pass the
+            // cap, not after. A pivot on `(r, j)` rewrites every row in column
+            // `j` by a multiple of row `r`, so its fill-in is at most
+            // `col_nnz[j] × nnz(row r)` new cells; a check after the pivot
+            // would let one pivot overshoot by that much. `None` (every
+            // constructor but `with_online_admission`) skips the whole test.
+            if let Some(cap) = self.fill_cap {
+                let worst = u64::from(self.col_nnz[j]).saturating_mul(self.row_nz[r].len() as u64);
+                if self.nnz_live.saturating_add(worst) > cap {
+                    crate::config_registry::note_crossed(
+                        "crates/axeyum-solver/src/simplex.rs::MAX_TABLEAU_FILL_NONZEROS",
+                        self.nnz_live.saturating_add(worst),
+                        cap,
+                    );
+                    self.counters.fill_cap_declines += 1;
+                    break RunOutcome::Unknown;
+                }
+            }
             self.total_pivots += 1;
             self.pivot_and_update(r, j, target)?;
         };
@@ -2063,6 +2156,57 @@ impl Incremental {
         }
         Some(Incremental {
             tab: Tableau::new_rows_with_policy(nvars, rows_sparse, configured_policy()),
+            poisoned: false,
+            checks: 0,
+            cold_restarts: 0,
+        })
+    }
+
+    /// ADR-2146: the ONLINE CDCL(T) engine's tableau, admitted on the currency
+    /// it is stored in — entry nonzeros against [`MAX_ONLINE_TABLEAU_NONZEROS`]
+    /// and rows against [`MAX_ONLINE_TABLEAU_ROWS`] — with fill-in bounded at
+    /// RUN time by [`MAX_TABLEAU_FILL_NONZEROS`].
+    ///
+    /// Three questions where [`Incremental::new`] asks one, and each is a
+    /// different bound: the entry count is what construction allocates, the
+    /// row count is what every per-row scan costs, and the fill cap is what
+    /// pivoting can grow the first into. [`Incremental::with_nonzero_admission`]
+    /// asks only the first; it serves the offline cube decider, whose tableau
+    /// lives for one loop and whose fill-in ADR-2132 measured rather than
+    /// bounded. This one serves a search that can pivot for the whole budget.
+    ///
+    /// Reached only under `AXEYUM_LRA_ADMIT_NONZEROS=1`; the OFF arm is
+    /// [`Incremental::new`] byte for byte.
+    pub(crate) fn with_online_admission(
+        nvars: usize,
+        rows_sparse: Vec<Vec<(usize, Rational)>>,
+    ) -> Option<Self> {
+        crate::config_registry::note_consulted(
+            "crates/axeyum-solver/src/simplex.rs::MAX_ONLINE_TABLEAU_NONZEROS",
+        );
+        let m = rows_sparse.len();
+        let _n = nvars.checked_add(m)?;
+        if m > MAX_ONLINE_TABLEAU_ROWS {
+            crate::config_registry::note_crossed(
+                "crates/axeyum-solver/src/simplex.rs::MAX_ONLINE_TABLEAU_ROWS",
+                m as u64,
+                MAX_ONLINE_TABLEAU_ROWS as u64,
+            );
+            return None;
+        }
+        let nnz: usize = rows_sparse.iter().map(Vec::len).sum();
+        if nnz > MAX_ONLINE_TABLEAU_NONZEROS {
+            crate::config_registry::note_crossed(
+                "crates/axeyum-solver/src/simplex.rs::MAX_ONLINE_TABLEAU_NONZEROS",
+                nnz as u64,
+                MAX_ONLINE_TABLEAU_NONZEROS as u64,
+            );
+            return None;
+        }
+        let mut tab = Tableau::new_rows_with_policy(nvars, rows_sparse, configured_policy());
+        tab.fill_cap = Some(MAX_TABLEAU_FILL_NONZEROS);
+        Some(Incremental {
+            tab,
             poisoned: false,
             checks: 0,
             cold_restarts: 0,
@@ -3675,6 +3819,128 @@ mod tests {
         assert!(
             pivots_seen > 50,
             "the population must actually pivot for this to check anything; saw {pivots_seen}"
+        );
+    }
+
+    /// ADR-2146: the live nonzero count the fill cap reads must equal a full
+    /// recount after every pivot, over the same random population as the
+    /// column-count check. A drifted count would make the cap fire early (a
+    /// lost verdict) or late (the memory it exists to bound).
+    #[test]
+    fn the_live_nonzero_count_matches_the_recount_after_every_pivot() {
+        let mut pivots_seen = 0u32;
+        for seed in 0..200u64 {
+            let (nvars, cs) = random_system(seed);
+            let mut tab = Tableau::new(nvars, &cs);
+            for v in 0..tab.n {
+                if tab.clamp_nonbasic(v).is_err() {
+                    break;
+                }
+            }
+            assert_eq!(
+                tab.nnz_live,
+                tab.total_nnz(),
+                "seed {seed}: at construction"
+            );
+            let mut steps = 0u32;
+            loop {
+                let before = tab.total_pivots;
+                match tab.run(None, 1) {
+                    Ok(RunOutcome::Feasible | RunOutcome::Infeasible(_)) | Err(Overflow) => break,
+                    Ok(RunOutcome::Unknown) => {}
+                }
+                if tab.total_pivots > before {
+                    pivots_seen += 1;
+                }
+                assert_eq!(
+                    tab.nnz_live,
+                    tab.total_nnz(),
+                    "seed {seed}: the live nonzero count drifted after pivot {steps}"
+                );
+                steps += 1;
+                if steps > 60 {
+                    break;
+                }
+            }
+        }
+        assert!(
+            pivots_seen > 50,
+            "the population must actually pivot for this to check anything; saw {pivots_seen}"
+        );
+    }
+
+    /// ADR-2146: a tableau whose pivots would carry the live nonzeros past its
+    /// fill cap answers `Unknown` BEFORE that pivot, and the identical system
+    /// with no cap is decided. Also the OFF-arm control: `fill_cap = None` is
+    /// the pivot loop as it was, with `fill_cap_declines` staying 0.
+    ///
+    /// The system is a dense one whose first pivot must fill in: three
+    /// constraints over three variables with every coefficient nonzero, so a
+    /// pivot rewrites two other rows by a full row and the count grows unless
+    /// cancellation happens to strike. The cap is set to the ENTRY count, so
+    /// any growth at all crosses it; a seed on which no pivot grows the count
+    /// is skipped by the search below, and at least one seed must not be.
+    #[test]
+    fn the_fill_cap_declines_before_the_pivot_that_would_cross_it() {
+        let mut declined_somewhere = false;
+        for seed in 0..64u64 {
+            let (nvars, cs) = random_system(seed);
+            // Uncapped: the reference verdict and its pivot count.
+            let mut free = Tableau::new(nvars, &cs);
+            for v in 0..free.n {
+                if free.clamp_nonbasic(v).is_err() {
+                    break;
+                }
+            }
+            let free_outcome = free.run(None, MAX_PIVOTS);
+            assert_eq!(free.counters.fill_cap_declines, 0, "no cap, no decline");
+            let entry = free.counters.entry_nnz;
+            if free.counters.fill_nnz_peak <= entry || free.total_pivots == 0 {
+                continue; // this seed never grows; it cannot exercise the cap
+            }
+            // Capped at the entry count: growth of any kind must decline first.
+            let mut capped = Tableau::new(nvars, &cs);
+            capped.fill_cap = Some(entry);
+            for v in 0..capped.n {
+                if capped.clamp_nonbasic(v).is_err() {
+                    break;
+                }
+            }
+            let capped_outcome = capped.run(None, MAX_PIVOTS);
+            match (capped_outcome, free_outcome) {
+                (Ok(RunOutcome::Unknown), _) => {
+                    assert_eq!(
+                        capped.counters.fill_cap_declines, 1,
+                        "seed {seed}: the decline must be counted exactly once"
+                    );
+                    assert!(
+                        capped.nnz_live <= entry,
+                        "seed {seed}: the cap held the live count at or under the entry count \
+                         ({} vs {entry}) -- it refused BEFORE the pivot, not after",
+                        capped.nnz_live
+                    );
+                    declined_somewhere = true;
+                }
+                // The capped run decided: then no pivot needed more than the
+                // worst-case bound allowed, and the verdict must be the free one.
+                (Ok(a), Ok(b)) => {
+                    assert_eq!(
+                        capped.counters.fill_cap_declines, 0,
+                        "seed {seed}: a decided run declined nowhere"
+                    );
+                    assert_eq!(
+                        std::mem::discriminant(&a),
+                        std::mem::discriminant(&b),
+                        "seed {seed}: capped and free runs must agree when both decide"
+                    );
+                }
+                (Err(Overflow), _) | (_, Err(Overflow)) => {}
+            }
+        }
+        assert!(
+            declined_somewhere,
+            "no seed exercised the cap: the population never grew its nonzeros, so \
+             this test proved nothing about the decline"
         );
     }
 

@@ -694,8 +694,14 @@ pub mod theories {
         pub use crate::lra::{
             check_with_lia_simplex, check_with_lra, check_with_lra_simplex, lra_unsat_core,
         };
-        pub use crate::lra_online::{LraTheory, check_qf_lra_online};
-        pub use crate::lra_theory::check_qf_lra_online_cdclt;
+        pub use crate::lra_online::{LraOnlineLevers, LraTheory, check_qf_lra_online};
+        // ADR-2146 / ADR-2147. Exported for the same reason as `WarmCubeMode`
+        // above: both levers are memoised per process, and the fixture that
+        // proves the OFF arm is the shipped route and the ON arm decides what
+        // it claims needs every arm in ONE process.
+        pub use crate::lra_theory::{
+            check_qf_lra_online_cdclt, check_qf_lra_online_cdclt_with_levers,
+        };
         pub use crate::nra::check_with_nra;
     }
 

@@ -933,6 +933,12 @@ pub struct TheoryLayerStats {
     pub farkas_declined_nonbasic_problem_var: Option<u64>,
     /// Farkas declines because the candidate failed its own self-check.
     pub farkas_declined_self_check: Option<u64>,
+    /// ADR-2147: disequalities split into their two strict halves.
+    pub diseq_splits: Option<u64>,
+    /// ADR-2147: trichotomy conflicts answered at a complete check.
+    pub diseq_split_conflicts: Option<u64>,
+    /// ADR-2146: pivot-loop declines at the run-time fill-in cap.
+    pub fill_cap_declines: Option<u64>,
 }
 
 impl TheoryLayerStats {
