@@ -1213,37 +1213,55 @@ mod tests {
     }
 
     /// SOUNDNESS-NEGATIVE, the `sat` side, and the one that pins the SHAPE of
-    /// the trichotomy clause: `(= x y) ∨ (x ≠ y ∧ x < 0 ∧ x > 0)`. The right
-    /// disjunct is infeasible, so the only model has `x = y`. A search that
-    /// tries the disequality branch first splits it, learns `eq ∨ lt ∨ gt`,
-    /// and must still find `x = y` afterwards. A split whose learned clause
-    /// dropped `eq` (learning `lt ∨ gt`, i.e. asserting `x ≠ y` outright) would
-    /// refute this satisfiable query.
+    /// the trichotomy clause: `x ≤ y`, `x ≥ y`, and `x < 0 → x ≠ y`. The only
+    /// models have `x = y ≥ 0`. The search decides atoms in collection order
+    /// and true first, so it takes `x < 0` FIRST, which propagates `x ≠ y`;
+    /// the point sits on the hyperplane, the halves are registered, each is
+    /// refuted by a level-zero bound, and the trichotomy conflict fires with
+    /// both halves false at level zero. The clause it learns must therefore
+    /// carry `eq`: `eq ∨ lt ∨ gt` reduces to the unit `eq`, which refutes
+    /// `x < 0` and the search finds `x = y`. A split whose clause dropped `eq`
+    /// learns `lt ∨ gt` over two level-zero-false literals -- the empty clause
+    /// -- and refutes a satisfiable query.
+    ///
+    /// The first fixture written for this ((x = y) ∨ (x ≠ y ∧ x < 0 ∧ x > 0))
+    /// SURVIVED the mutation it was meant to catch: `eq` is decided true first
+    /// and the disequality branch is never explored, so the split never runs.
+    /// The mutation control is what said so.
     #[test]
     fn a_split_lemma_must_keep_the_equality_or_it_refutes_a_satisfiable_query() {
         let mut arena = TermArena::new();
         let x = rvar(&mut arena, "x");
         let y = rvar(&mut arena, "y");
         let zero = rconst(&mut arena, 0);
-        let eq = arena.eq(x, y).expect("x=y");
-        let neq = arena.not(eq).expect("x!=y");
         let lt0 = arena.real_lt(x, zero).expect("x<0");
-        let gt0 = arena.real_gt(x, zero).expect("x>0");
-        let infeasible = arena.and(neq, lt0).expect("and");
-        let infeasible = arena.and(infeasible, gt0).expect("and");
-        let query = arena.or(eq, infeasible).expect("or");
+        let eq = arena.eq(x, y).expect("x=y");
+        let not_lt0 = arena.not(lt0).expect("not");
+        let neq = arena.not(eq).expect("x!=y");
+        let guard = arena.or(not_lt0, neq).expect("x<0 -> x!=y");
+        let le = arena.real_le(x, y).expect("x<=y");
+        let ge = arena.real_ge(x, y).expect("x>=y");
+        let assertions = [guard, le, ge];
         let config = SolverConfig::default();
-        for levers in [LraOnlineLevers::shipped(), SPLIT_ON] {
-            let verdict = check_qf_lra_online_cdclt_with_levers(&arena, &[query], &config, levers)
-                .expect("result");
-            let CheckResult::Sat(model) = verdict else {
-                panic!("arm {levers:?}: x = y is a model, got {verdict:?}");
-            };
-            assert!(
-                replays(&arena, &[query], &model),
-                "arm {levers:?}: the witness replays"
-            );
-        }
+        // The shipped arm takes the same first branch, builds the hyperplane
+        // point, and stops at the replay gate: `unknown`, and never `unsat`.
+        let shipped = check_qf_lra_online_cdclt_with_levers(
+            &arena,
+            &assertions,
+            &config,
+            LraOnlineLevers::shipped(),
+        )
+        .expect("result");
+        assert!(
+            matches!(shipped, CheckResult::Unknown(_)),
+            "the shipped arm stops at the replay gate on this shape: {shipped:?}"
+        );
+        let split = check_qf_lra_online_cdclt_with_levers(&arena, &assertions, &config, SPLIT_ON)
+            .expect("result");
+        let CheckResult::Sat(model) = split else {
+            panic!("the split arm must find x = y ≥ 0, got {split:?}");
+        };
+        assert!(replays(&arena, &assertions, &model), "the witness replays");
     }
 
     /// Several disequalities over shared variables, where a GREEDY choice of
@@ -1365,6 +1383,23 @@ mod tests {
         const K: usize = 1_000;
         const _: () = assert!(K <= MAX_ONLINE_LRA_ATOMS);
         const _: () = assert!(2 * K * (K + 2 * K) > crate::simplex::MAX_TABLEAU_CELLS);
+        // The DENSE arm decides by the Fourier–Motzkin fallback, whose every
+        // step polls the process-global memory watchdog; a concurrent test
+        // that trips it for its own purposes (`trip_watchdog_for_test`, or a
+        // real 1 GiB budget under a 4-thread sweep whose resident set is
+        // mostly other tests) would make this arm decline for a reason that
+        // has nothing to do with the admission. Serialized the way every
+        // watchdog-touching test in `lra.rs` is.
+        let _lock = crate::memory_budget::WATCHDOG_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        // ...and against the SCRIPTED resident-set probes (`sat_bv_backend`'s
+        // memory tests install a real 1 GiB watchdog over scripted readings
+        // that trip it), which serialize on the other lock. No test takes
+        // both, so this order cannot deadlock.
+        let _probe = crate::memory_budget::PROBE_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let mut arena = TermArena::new();
         let mut assertions = Vec::with_capacity(K);
         for i in 0..K {

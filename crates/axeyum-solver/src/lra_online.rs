@@ -1593,7 +1593,15 @@ impl LraTheory {
     fn split_violated_disequalities(&mut self) -> Option<Vec<TheoryLit>> {
         let point = {
             let cell = self.simplex.as_ref()?;
-            let engine = cell.borrow();
+            let mut engine = cell.borrow_mut();
+            // `feasibility` answers `Sat` for an EMPTY live system without
+            // touching the engine, whose bounds may then still be a popped
+            // scope's. Reconciling here is a no-op when the check just ran
+            // (the shared prefix is the whole stack) and otherwise makes the
+            // point the one `model` will materialize for the replay.
+            if !engine.sync(&self.live) {
+                return None;
+            }
             engine.inner.point()?
         };
         let mut fresh: Vec<(usize, Constraint, Constraint)> = Vec::new();
@@ -2859,8 +2867,8 @@ impl TheorySolver for LraTheory {
     /// LRA-MODEL-REPLAY census counted **371 of 776** equality atoms asserted
     /// false on `QF_LRA/sc/sc-25.base.cvc.smt2` and 11 pinned files losing
     /// their verdict to exactly this drop. Under the deferred mode with
-    /// [`Self::with_diseq_split`] the drop is repaired at `final_check`
-    /// (ADR-2147); here it stays a no-op.
+    /// `with_diseq_split` the drop is repaired at `final_check` (ADR-2147);
+    /// here it stays a no-op.
     fn assert(&mut self, index: usize, value: bool) -> Result<(), Vec<TheoryLit>> {
         match self.assigned.get(index).copied().flatten() {
             // Idempotent re-assert at the same value.
@@ -3285,7 +3293,7 @@ pub(crate) enum TableauAdmission {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct LraOnlineLevers {
     /// ADR-2146: admit the warm tableau on stored nonzeros
-    /// ([`TableauAdmission::OnlineNonzeros`]) instead of dense cells.
+    /// (`TableauAdmission::OnlineNonzeros`) instead of dense cells.
     pub admit_nonzeros: bool,
     /// ADR-2147: split a violated disequality into its two strict halves
     /// instead of reporting a model that will not replay.
@@ -9074,6 +9082,23 @@ mod tests {
     #[test]
     fn the_two_admissions_agree_on_a_satisfiable_and_an_infeasible_system() {
         const K: usize = 1_500;
+        // The DENSE arm decides by the Fourier–Motzkin fallback, whose every
+        // step polls the process-global memory watchdog; a concurrent test
+        // that trips it for its own purposes (`trip_watchdog_for_test`, or a
+        // real 1 GiB budget under a 4-thread sweep whose resident set is
+        // mostly other tests) would make this arm decline for a reason that
+        // has nothing to do with the admission. Serialized the way every
+        // watchdog-touching test in `lra.rs` is.
+        let _lock = crate::memory_budget::WATCHDOG_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        // ...and against the SCRIPTED resident-set probes (`sat_bv_backend`'s
+        // memory tests install a real 1 GiB watchdog over scripted readings
+        // that trip it), which serialize on the other lock. No test takes
+        // both, so this order cannot deadlock.
+        let _probe = crate::memory_budget::PROBE_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let mut arena = TermArena::new();
         let (mut atoms, vars) = wide_shallow_atoms(&mut arena, K);
         let w0 = vars[0];
