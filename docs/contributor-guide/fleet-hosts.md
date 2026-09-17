@@ -139,7 +139,8 @@ reports a result from one.
 | `just` | `just check` is the only full aggregate gate | `just --version` |
 | `cargo-deny` | `cargo deny check` is a `just check` step | `cargo-deny --version` |
 | `bubblewrap` | Autogenesis proposers receive a catalog without gaining checkout, proof-body, or network access | `bwrap --version`; provisioning also executes a minimal sandbox |
-| `uv` | `just py-check` — the Python binding gate (build, pytest, stub drift, ruff); `scripts/check.sh` SKIPS its Python steps without it | `uv --version`; then `uv sync --dev` for the `.venv` the steps need |
+| `uv` | `just py-check` — the Python binding gate (build, pytest, stub drift, ruff, the C-defect gate); `scripts/check.sh` SKIPS its Python steps without it | `uv --version`; then `uv sync --dev` for the `.venv` the steps need (it also installs the pinned `cindergraph`) |
+| `clang` | `scripts/check-cindergraph-defects.sh` replays every C witness under `-fsanitize=…`; three finding kinds exist only in clang's sanitizers. Absent, the gate SKIPS loudly | `clang --version` |
 | Lean at the **repo pin** (`lean-toolchain`) | the axiom ledger, `check-lean-gate.sh`, and export verification all shell out to a real `lean` | run the binary — see the two layouts below |
 | the `z3` **executable** (not just `libz3`) | the thirteen differential fuzz suites *exec* `/usr/bin/z3`; they are the only checks here that compare our verdicts against an independent solver, and without it they used to pass having adjudicated nothing | `AXEYUM_REQUIRE_Z3=1 scripts/check-z3-differential-gate.sh` — or `/usr/bin/z3 --version`; `apt-get install z3 libz3-dev` needs root, so provisioning reports it and cannot fix it |
 | `core.hooksPath=hooks` in the checkout | `hooks/commit-msg` stamps the `Agent:` trailer; `hooks/pre-push` is the pre-merge gate | `git config --get core.hooksPath` |
@@ -232,6 +233,7 @@ the left column must run on a host that satisfies the right one.
 | **anything merged to `main`** | `scripts/local-ci.sh` — hosted CI calls this *the authoritative gate for main* | `cargo-nextest`, rust **stable**, rust **1.88.0**, `z3` |
 | Autogenesis proposer isolation | `scripts/check-autogenesis-proposer-isolation.sh` | Python + `bubblewrap` |
 | the Python bindings (`crates/axeyum-py`, `python/`) | `just py-check` | `uv`, a synced `.venv` (`uv sync --dev`), and a writable `TMPDIR` off `/tmp` |
+| the C-defect example (`python/examples/cindergraph_defects/`) | `scripts/check-cindergraph-defects.sh` (a `just py-check` step) | the synced `.venv` above **with the pinned `cindergraph`** (`uv sync --dev` builds it from git, so a Rust toolchain and network on first sync) and a **`clang`** with `-fsanitize=address,undefined,memory` (`clang --version`; MemorySanitizer needs x86-64 or AArch64 Linux). Without `clang` the gate prints `CINDERGRAPH_DEFECTS\|SKIPPED\|…` and exits 0 — skipped, never passed; `AXEYUM_REQUIRE_CINDERGRAPH_DEFECTS=1` makes absence a failure. Measured 2026-09-17: s4 has clang 21.1.8; no other host has been probed |
 
 The `local-ci.sh` row was added on 2026-08-18, after measuring that **no host in
 this fleet could run it** — including the dev box. `cargo nextest --version`

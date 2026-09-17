@@ -283,6 +283,114 @@ class Annotations(unittest.TestCase):
         self.assertEqual(file_unroll("// axeyum: unroll = 17\nint f(void) {}"), 17)
         self.assertIsNone(file_unroll("// axeyum: capacity(p) = n\n"))
 
+    def test_function_unroll_fact_wins_over_the_file_bound(self) -> None:
+        from lift import function_unroll
+
+        text = "int f(void) {}"
+        nodes = [(0, "func_def", text, 0, len(text), None)]
+        self.assertEqual(function_unroll(_fake(text, nodes).ast, 0, 8), 8)  # no fact: the file's
+        with_fact = _fake(text, nodes, {0: {"facts": "unroll=17", "facts_source": "comment"}})
+        self.assertEqual(function_unroll(with_fact.ast, 0, 8), 17)
+
+    def _params(self, attrs: dict | None = None):
+        #  // axeyum: capacity(dst) = n  /  // axeyum: strlen(s) = m   above  f(char *dst, size_t n, char *s, size_t m)
+        text = (
+            "// axeyum: capacity(dst) = n\n// axeyum: strlen(s) = m\n"
+            "int f(char *dst, size_t n, const char *s, size_t m) {}"
+        )
+        start = text.index("int f")
+        nodes = [
+            (0, "func_def", "f", start, len(text), None),
+            (1, "declarator", "declarator", start + 4, start + 46, 0),
+            (2, "decl_name", "f", start + 4, start + 5, 1),
+            (3, "param_list", "param_list", start + 5, start + 46, 1),
+            (4, "param_decl", "char *dst", start + 6, start + 15, 3),
+            (5, "param_decl", "size_t n", start + 17, start + 25, 3),
+            (6, "param_decl", "const char *s", start + 27, start + 40, 3),
+            (7, "param_decl", "size_t m", start + 42, start + 50, 3),
+            (8, "compound_stmt", "compound_stmt", start + 52, start + 54, 0),
+        ]
+        lifter = _fake(text, nodes, attrs)
+        lifter.declare_params()
+        lifter.read_annotations()
+        return lifter
+
+    def test_annotations_are_read_from_the_comment_without_facts(self) -> None:
+        lifter = self._params()
+        self.assertEqual(lifter.capacities, {"dst": "n", "s": "s_cap"})
+        self.assertEqual(lifter.strlens, {"s": "m"})
+
+    def test_facts_attribute_wins_over_the_comment(self) -> None:
+        # The export says the comment binds `strlen` to `n`, not `m`; the
+        # export is the parser's own resolution and it is what gets read.
+        attrs = {
+            4: {"facts": "capacity=n", "facts_source": "comment"},
+            6: {"facts": "strlen=n", "facts_source": "comment"},
+        }
+        lifter = self._params(attrs)
+        self.assertEqual(lifter.capacities, {"dst": "n", "s": "s_cap"})
+        self.assertEqual(lifter.strlens, {"s": "n"})
+
+
+class ExportedAttributes(unittest.TestCase):
+    """What the lifter reads off cindergraph's export before re-deriving it."""
+
+    def test_line_attribute_wins_over_the_newline_count(self) -> None:
+        text = "\n\nx"
+        nodes = [(0, "name_ref", "x", 2, 3, None)]
+        self.assertEqual(_fake(text, nodes).ast.line(0), 3)  # counted: two newlines before it
+        self.assertEqual(_fake(text, nodes, {0: {"line": "7", "column": "1"}}).ast.line(0), 7)
+
+    def test_facts_parse_and_absent_facts_are_none(self) -> None:
+        text = "p"
+        nodes = [(0, "param_decl", text, 0, 1, None)]
+        self.assertIsNone(_fake(text, nodes).ast.facts(0))
+        ast = _fake(text, nodes, {0: {"facts": "capacity=dst_len,strlen=n"}}).ast
+        self.assertEqual(ast.facts(0), {"capacity": "dst_len", "strlen": "n"})
+
+    def test_loop_info_reads_the_metadata_and_is_none_without_it(self) -> None:
+        from lift import LoopInfo
+
+        text = "for (i = 0; i < 8; i++) ;"
+        nodes = [(0, "for_stmt", text, 0, len(text), None)]
+        self.assertIsNone(_fake(text, nodes).ast.loop_info(0))
+        attrs = {
+            0: {
+                "loop_kind": "for",
+                "bound_kind": "constant",
+                "bound_expr": "i < 8",
+                "induction": "i",
+                "step": "+1",
+                "init_value": "0",
+                "bound_value": "8",
+            }
+        }
+        self.assertEqual(
+            _fake(text, nodes, attrs).ast.loop_info(0), LoopInfo("for", "constant", "i", "+1", "8")
+        )
+
+    def test_loop_kind_picks_the_form_before_the_tag(self) -> None:
+        #  while (c) ;   exported with `loop_kind=while`: cond then body.
+        text = "while (c) ;"
+        nodes = [
+            (0, "while_stmt", text, 0, len(text), None),
+            (1, "name_ref", "c", 7, 8, 0),
+            (2, "expr_stmt", ";", 10, 11, 0),
+        ]
+        for attrs in (None, {0: {"loop_kind": "while"}}):
+            lifter = _fake(text, nodes, attrs)
+            lifter.unroll = 2
+            out = lifter.loop(0, _state(c=INT))
+            self.assertEqual(len(out), 3)  # exits after 0, 1, 2 iterations
+            self.assertEqual(
+                lifter.loop_infos, [None] if attrs is None else [lifter.ast.loop_info(0)]
+            )
+        # A `loop_kind` the lifter does not know is refused, not guessed.
+        from lift import Refused
+
+        with self.assertRaises(Refused):
+            _fake(text, nodes, {0: {"loop_kind": "computed_goto"}}).loop(0, _state(c=INT))
+
 
 if __name__ == "__main__":
     unittest.main()

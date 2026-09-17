@@ -1803,6 +1803,16 @@ if [ "$list_only" = "1" ] || { command -v uv >/dev/null 2>&1 && [ -d .venv ]; };
   step py-types           uv run --no-sync python tools/check_types.py
   step py-ruff-check      uv run --no-sync ruff check python/ tools/
   step py-ruff-format     uv run --no-sync ruff format --check python/ tools/
+  # The C-defect example as a gate (improvement-list item 16). `uv sync --dev`
+  # installs the cindergraph commit pyproject's dev group pins; the gate
+  # REFUSES (exit 2) when that or the native module is missing, SKIPS loudly
+  # when there is no clang, and otherwise re-derives its verdict from the
+  # driver's `results.tsv` -- `CINDERGRAPH_DEFECTS|rows=N|...|PASS`. Controls
+  # first: the reader's guards on synthetic rows, then one live sweep read back
+  # one failure class at a time (`scripts/tests/mutation_controls.py
+  # cindergraph-defects` is the three subject mutations, each killing one).
+  step py-cindergraph-defects-tests python3 -m unittest scripts.tests.test_check_cindergraph_defects
+  step py-cindergraph-defects bash scripts/check-cindergraph-defects.sh
 step_prefix=""
 elif [ "$list_only" != "1" ]; then
   # SKIPPED, not passed. Named on stdout so a reader of the log can see which

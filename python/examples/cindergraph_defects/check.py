@@ -20,8 +20,16 @@ not met within the unrolling is ``bounded``, never ``clean``. A refused
 function is listed with its reason, and the refusal reasons are histogrammed at
 the end: on inputs nobody wrote to be lifted, that histogram is what says what
 to build next. Exit status is 1 if any witness fails to replay, or any sample's
-expected verdict (from the ``// expect:`` lines) is not met; that is what makes
-the run a check rather than a demo.
+expected verdict (from the ``// expect:`` lines) is not met, or the replay
+control (the first replayed harness judged at the line after its finding) is
+not refused; that is what makes the run a check rather than a demo.
+
+The first line of stdout says what the run parsed C with —
+``cindergraph|version=…|commit=…|pinned=…|match=yes`` — and the last two are
+machine-readable: ``CINDERGRAPH_DEFECTS_REPLAY_CONTROL|…`` and
+``CINDERGRAPH_DEFECTS_RUN|rows=…|…|failures=…``.
+``scripts/check-cindergraph-defects.sh`` is the gate that runs this and then
+re-derives the verdict from ``results.tsv`` rather than from this exit status.
 
     python3 check.py --samples samples --out /tmp/cdefects
 """
@@ -29,12 +37,15 @@ the run a check rather than a demo.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 from collections import Counter
+from importlib import metadata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -102,6 +113,53 @@ REPORT_FOR = {
     "uninitialized": ("use-of-uninitialized-value", "uninitialised value"),
 }
 BOUNDS = (1, 16, 256, 4096)  # smallest witness first: it is the one a reader can check by hand
+PYPROJECT = REPO / "pyproject.toml"
+_PIN_RE = re.compile(r"^cindergraph\s*@\s*git\+\S+@([0-9a-f]{7,40})$")
+# The two lines the gate (`scripts/check-cindergraph-defects.sh`) reads. `RUN`
+# carries this driver's own counts so a second reading of `results.tsv` can be
+# checked against them; `REPLAY_CONTROL` says whether the replay check refused
+# a deliberately wrong line on THIS run.
+RUN_LINE = "CINDERGRAPH_DEFECTS_RUN"
+CONTROL_LINE = "CINDERGRAPH_DEFECTS_REPLAY_CONTROL"
+
+
+def pinned_cindergraph() -> str:
+    """The commit ``pyproject.toml``'s dev group pins cindergraph to, or ``unknown``."""
+    try:
+        groups = tomllib.loads(PYPROJECT.read_text()).get("dependency-groups", {})
+    except (OSError, tomllib.TOMLDecodeError):
+        return "unknown"
+    for entry in groups.get("dev", []):
+        m = _PIN_RE.match(str(entry).strip())
+        if m:
+            return m.group(1)
+    return "unknown"
+
+
+def cindergraph_provenance() -> tuple[str, str, str]:
+    """``(version, installed commit, pinned commit)``: what this run parsed C with.
+
+    The installed commit comes from the distribution's PEP 610
+    ``direct_url.json`` (a git install records ``vcs_info.commit_id``); the
+    pinned one from the ``cindergraph @ git+...@<sha>`` entry in
+    ``pyproject.toml``'s dev group. Either is ``unknown`` when absent — a wheel
+    from an index has no commit, a checkout with the pin removed has nothing to
+    compare against — and the gate treats ``unknown`` as a mismatch, never as a
+    match.
+    """
+    try:
+        import cindergraph as _cg
+    except ImportError:
+        return "not-installed", "unknown", pinned_cindergraph()
+    version = str(getattr(_cg, "__version__", "unversioned"))
+    installed = "unknown"
+    try:
+        raw = metadata.distribution("cindergraph").read_text("direct_url.json")
+        if raw:
+            installed = str(json.loads(raw).get("vcs_info", {}).get("commit_id", "unknown"))
+    except metadata.PackageNotFoundError:
+        pass
+    return version, installed, pinned_cindergraph()
 
 
 class Backend:
@@ -434,8 +492,19 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 2
+    version, installed, pinned = cindergraph_provenance()
+    # The first line of a run says what it ran against: the parser's version,
+    # the commit it was installed from, and the commit `pyproject.toml` pins.
+    # Nothing here refuses a mismatch -- this is an example that should run
+    # against a local cindergraph checkout too -- but the gate does.
+    print(
+        f"cindergraph|version={version}|commit={installed}|pinned={pinned}"
+        f"|match={'yes' if installed != 'unknown' and installed == pinned else 'no'}"
+    )
     args.out.mkdir(parents=True, exist_ok=True)
     rows: list[tuple[str, ...]] = []
+    # The first replayed witness's harness, kept for the control after the sweep.
+    control: tuple[Path, str, int, str] | None = None
     failures = 0
     replayed = 0
     unoracled = 0
@@ -521,6 +590,8 @@ def main() -> int:
                 )
                 if ok:
                     replayed += 1
+                    if control is None:
+                        control = (hsrc, ob.kind, ob.line, sample.name)
                 elif ok is None:
                     unoracled += 1
                 else:
@@ -583,12 +654,36 @@ def main() -> int:
                         "",
                     )
                 )
+    # The control on the replay check itself: the same harness, judged against
+    # the line AFTER its finding, must come back refused. A `replay()` that
+    # always says yes, or one that stopped reading the line out of the report,
+    # passes every row above and fails exactly here. Without a replayed
+    # witness there is nothing to control, and that is printed as NOT-RUN, not
+    # as a pass; the gate requires `refused`.
+    if control is not None:
+        hsrc, kind, line, sample_name = control
+        accepted, why = replay(
+            args.cc, hsrc, hsrc.with_suffix(".ctl.bin"), kind, line + 1, sample_name
+        )
+        verdict = "refused" if accepted is False else "ACCEPTED" if accepted else "NO-ORACLE"
+        if accepted is not False:
+            failures += 1
+        print(
+            f"{CONTROL_LINE}|witness={sample_name}:{line}|judged_at={line + 1}|{verdict}|{why[:100]}"
+        )
+    else:
+        print(f"{CONTROL_LINE}|witness=none|judged_at=-|NOT-RUN|no replayed witness to control")
     print("| sample | function | finding | where | witness | replay |")
     print("|---|---|---|---|---|---|")
     for r in rows:
         print("| " + " | ".join(str(c).replace("|", "\\|") for c in r) + " |")
     (args.out / "results.tsv").write_text("\n".join("\t".join(r) for r in rows) + "\n")
     kinds = Counter(r[2] for r in rows)
+    print(
+        f"{RUN_LINE}|rows={len(rows)}|replayed={replayed}|dead={kinds.get('dead-branch', 0)}"
+        f"|clean={kinds.get('clean', 0)}|bounded={kinds.get('bounded', 0)}"
+        f"|no_oracle={unoracled}|refused={kinds.get('refused', 0)}|failures={failures}"
+    )
     print(
         f"\n{len(rows)} rows ({', '.join(f'{k} {n}' for k, n in sorted(kinds.items()))}); "
         f"{replayed} replayed, {unoracled} without a runtime oracle, {failures} failure(s); "

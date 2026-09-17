@@ -14,16 +14,38 @@ and fails the run.
 ```sh
 # /tmp is a RAM tmpfs on this fleet; point maturin's wheel output at real disk
 export TMPDIR=/data0/axeyum/scratch/py-tmp-$USER && mkdir -p "$TMPDIR"
-uv sync --dev
+uv sync --dev                                   # installs cindergraph at the commit pyproject.toml pins
 uv run --no-sync maturin develop --release      # builds axeyum._native into .venv
-uv pip install "cindergraph @ git+https://github.com/mjbommar/cindergraph.git@main"
 .venv/bin/python python/examples/cindergraph_defects/check.py --out /tmp/cindergraph-defects
 python3 python/examples/cindergraph_defects/test_lift.py     # the C-semantics rules, stdlib only
+bash scripts/check-cindergraph-defects.sh                    # the gate: the same sweep, read twice
 ```
+
+`cindergraph` is a dev-group dependency pinned to a commit (`pyproject.toml`,
+`uv.lock`), not to `@main`: the table below depends on the parser's AST shape,
+and a run's first line says what it ran against —
+`cindergraph|version=0.1.0|commit=8bd20512…|pinned=8bd20512…|match=yes`. Move
+the pin deliberately and re-run the sweep.
 
 Exit status is 0 only when every witness replays at its own line and every
 `// expect:` line in the samples is met. Queries and harnesses land in `--out`,
-with `results.tsv` and, when anything was refused, `refusals.tsv`.
+with `results.tsv` and, when anything was refused, `refusals.tsv`. The run
+also judges its first replayed harness against the line *after* its finding
+and prints the refusal (`CINDERGRAPH_DEFECTS_REPLAY_CONTROL|…|refused|…`):
+a `replay()` that says yes to everything passes every row and fails there.
+
+`scripts/check-cindergraph-defects.sh` is what `just py-check` runs. It
+refuses (exit 2) without the native module or cindergraph, skips loudly
+without `clang`, runs this sweep once, and then has
+`scripts/check-cindergraph-defects.py` re-derive the verdict from
+`results.tsv` and the samples' `// expect:` lines — one failure class each for
+an expectation not met, a witness not replayed at its own line, the control
+not refused, an unpinned cindergraph, and a driver whose counts disagree with
+its own table — printing
+`CINDERGRAPH_DEFECTS|rows=33|replayed=18|dead=2|clean=13|bounded=0|no_oracle=0|failures=0|PASS`.
+Its controls (`python3 scripts/tests/mutation_controls.py cindergraph-defects`)
+delete a sample's bounds check, break the lifter's `int`-against-`size_t`
+rule, and make `replay()` accept every report; each kills exactly one test.
 
 `check.py` calls straight into the compiled extension by default. A checkout
 that has not built it (or does not want to) can pass `--cli` to shell out to
@@ -94,10 +116,23 @@ of the file (see `check.py`'s docstring).
 binding's declared type (`size_t`, `unsigned short`, `int`), an AST whose
 expression nodes are typed by construct (`binary_expr`, `cast_expr`,
 `cond_expr`, `for_init`/`for_cond`/`for_step`), and a CFG whose back edges say
-where the loops are. Its spans are byte offsets; the lifter recovers each
-operator from the bytes between two sibling spans, or from the node's own `op`
-attribute when the export carries one (cindergraph's local main does; the
-GitHub main installed above does not yet).
+where the loops are. At the pinned commit every node also carries its `line`
+and `column`, an expression node its operator token (`op`, and `ops` on a flat
+chain), a loop statement its `loop_kind`, `bound_kind`, `induction`, `step`
+and `bound_value`, and the parser resolves the `// axeyum:` (alias of its own
+`// @cindergraph`) annotations itself and writes them on the nodes as
+`facts="capacity=dst_len"` (a parameter) and `facts="unroll=17"` (the function
+the comment precedes). The lifter reads each of those from the export when it
+is there — the line before counting newlines, `op` before the bytes between
+two sibling spans, `facts` before re-reading the comment, `loop_kind` before
+the statement tag — and falls back to its own reading when it is not, so an
+older export or a synthetic AST in `test_lift.py` still lifts. Measured at the
+pin: 356 queries and 18 harnesses byte-identical either way. What cindergraph
+does not know stays the lifter's: `size_t` and `uint32_t` come back as
+`type="unknown"` (typedefs from headers it never saw), so the parameter types
+are still parsed from the declaration text; and its `unroll` fact is scoped to
+one function where the lifter's comment is file-wide, so the second function
+in sample 09 keeps the file's bound.
 
 **Axeyum** decides the query and hands back a model. The lifter's job is to
 make the query mean what C means: integer promotion (`unsigned short`

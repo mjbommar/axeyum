@@ -124,6 +124,7 @@ agent = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "cindergraph" },
     { name = "hypothesis" },
     { name = "maturin" },
     { name = "mypy" },
@@ -143,6 +144,7 @@ provides-extras = ["agent"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "cindergraph", git = "https://github.com/mjbommar/cindergraph.git?rev=8bd20512158d19d4cf632caba4bbed629271a3e5" },
     { name = "hypothesis", specifier = ">=6.165.10" },
     { name = "maturin", specifier = ">=1.15,<2" },
     { name = "mypy", specifier = ">=1.14" },
@@ -150,6 +152,11 @@ dev = [
     { name = "ruff" },
     { name = "ty", specifier = ">=0.0.74" },
 ]
+
+[[package]]
+name = "cindergraph"
+version = "0.1.0"
+source = { git = "https://github.com/mjbommar/cindergraph.git?rev=8bd20512158d19d4cf632caba4bbed629271a3e5#8bd20512158d19d4cf632caba4bbed629271a3e5" }
 
 [[package]]
 name = "colorama"

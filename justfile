@@ -2452,6 +2452,15 @@ py-check:
     uv run --no-sync python tools/check_types.py
     uv run --no-sync ruff check python/ tools/
     uv run --no-sync ruff format --check python/ tools/
+    # The C-defect example as a gate (improvement-list item 16): twelve C
+    # samples through the PINNED cindergraph (pyproject's dev group) into
+    # QF_BV, every witness replayed under a sanitizer at its own line. The
+    # controls first (the reader's guards on synthetic rows, then one live
+    # sweep read back per failure class), then the gate itself. It REFUSES
+    # without the native module or cindergraph, SKIPS loudly without clang,
+    # and prints `CINDERGRAPH_DEFECTS|rows=N|...|PASS`. ~15 s each.
+    python3 -m unittest scripts.tests.test_check_cindergraph_defects
+    bash scripts/check-cindergraph-defects.sh
 
 # The Python coverage ledger (docs/python-2026-08/09-coverage-plan.md).
 #

@@ -48,6 +48,15 @@ bytes) and ``// axeyum: strlen(s) = n`` (the length of the NUL-terminated string
 ``T buf[N]`` declares its own capacity, and ``T *p = malloc(size)`` gives ``p``
 the capacity ``size``. A file-level ``// axeyum: unroll = N`` overrides the
 driver's unrolling bound for every function in that file.
+
+cindergraph (from its 2026-09-17 export) resolves those same comments itself —
+``// @cindergraph`` is its marker and ``// axeyum:`` an alias — and writes the
+result on the nodes: ``facts="capacity=dst_len"`` on a ``param_decl``,
+``facts="unroll=17"`` on the ``func_def`` the comment precedes. The lifter reads
+the attribute when the export carries it and re-reads the comment when it does
+not (an older cindergraph, a synthetic AST). Likewise every node's ``line`` is
+read from the export before it is counted, and a loop's ``loop_kind`` picks its
+form before the statement tag does.
 """
 
 from __future__ import annotations
@@ -272,6 +281,25 @@ class Query:
     capacities: dict[str, str]  # pointer parameter -> capacity symbol
 
 
+@dataclass(frozen=True)
+class LoopInfo:
+    """What cindergraph says about one loop: its form and, when it can tell, its bound.
+
+    ``kind`` is ``for``/``while``/``do_while``; ``bound_kind`` is ``constant``
+    (``bound_value`` holds the literal), ``parameter`` (the bound is a parameter
+    the body leaves alone), ``runtime`` or absent; ``induction`` and ``step``
+    name the counter and its increment (``+1``). The lifter unrolls every loop
+    the same way whatever this says — the metadata is carried so a ``bounded``
+    verdict can say what kind of bound was not reached.
+    """
+
+    kind: str
+    bound_kind: str | None = None
+    induction: str | None = None
+    step: str | None = None
+    bound_value: str | None = None
+
+
 @dataclass
 class Lifted:
     function: str
@@ -284,6 +312,7 @@ class Lifted:
     queries: list[Query]
     strlens: dict[str, str] = field(default_factory=dict)  # pointer parameter -> length term
     unrolled: int | None = None  # the bound every loop in this function was unrolled to
+    loops: list[LoopInfo | None] = field(default_factory=list)  # per unrolled loop, source order
 
 
 # --------------------------------------------------------------------------
@@ -350,7 +379,55 @@ class _Ast:
         return self.nodes[i]["label"].split("\n", 1)[-1]
 
     def line(self, i: int) -> int:
+        """The 1-based line a node starts on: the export's ``line``, else counted.
+
+        cindergraph writes ``line`` and ``column`` on every node since its
+        2026-09-17 export; measured identical to the newline count on all
+        1,100 nodes of the sample set. The count stays as the fallback for an
+        older export or a synthetic node.
+        """
+        line = self.attr(i, "line")
+        if line is not None and line.isdigit():
+            return int(line)
         return self.raw.count(b"\n", 0, self.span(i)[0]) + 1
+
+    def attr(self, i: int, key: str) -> str | None:
+        """A string attribute cindergraph put on node ``i``, or ``None``."""
+        value = self.nodes[i].get(key)
+        return value if isinstance(value, str) else None
+
+    def facts(self, i: int) -> dict[str, str] | None:
+        """The external facts cindergraph attached to node ``i``, or ``None`` when it carries none.
+
+        The export writes ``facts="capacity=dst_len,strlen=n"`` on a
+        ``param_decl`` and ``facts="unroll=17"`` on the ``func_def`` it resolved
+        the ``// @cindergraph`` / ``// axeyum:`` comments against. ``None`` (no
+        attribute) and ``{}`` are different: the former means an older export
+        or a node the parser attached nothing to, and the lifter then falls
+        back to reading the comment itself.
+        """
+        raw = self.attr(i, "facts")
+        if raw is None:
+            return None
+        out: dict[str, str] = {}
+        for item in raw.split(","):
+            key, sep, value = item.partition("=")
+            if sep and key.strip():
+                out[key.strip()] = value.strip()
+        return out
+
+    def loop_info(self, i: int) -> LoopInfo | None:
+        """cindergraph's loop metadata on a loop statement, or ``None`` on an older export."""
+        kind = self.attr(i, "loop_kind")
+        if kind is None:
+            return None
+        return LoopInfo(
+            kind,
+            self.attr(i, "bound_kind"),
+            self.attr(i, "induction"),
+            self.attr(i, "step"),
+            self.attr(i, "bound_value"),
+        )
 
     def children(self, i: int) -> list[int]:
         return self.kids.get(i, [])
@@ -406,8 +483,10 @@ class Lifter:
         self.params: list[str] = []
         self.loop_depth = 0
         self.loops: list[int] = []  # lines of the loops that were unrolled
+        self.loop_infos: list[LoopInfo | None] = []  # cindergraph's metadata per unrolled loop
         self.parked: list[PathState] = []  # states that ran a loop past the bound
         self.alloc_depth = 0  # >0 while lifting a malloc/calloc size argument
+        self.param_nodes: dict[str, int] = {}  # parameter name -> its param_decl node
 
     # -- declarations ------------------------------------------------------
 
@@ -427,6 +506,7 @@ class Lifter:
                 )
             tname, stars, pname = m.group(1), m.group(2), m.group(3)
             self.params.append(pname)
+            self.param_nodes[pname] = p
             if stars or "*" in tname:
                 self.pointers.add(pname)
                 base = tname.replace("*", " ").strip()
@@ -439,19 +519,37 @@ class Lifter:
                 self.types[pname] = t
                 self.consts.append((pname, t))
 
-    def read_annotations(self) -> None:
+    def annotations(self) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+        """``(capacities, strlens)`` as ``(pointer, value)`` pairs, from the export or the comment.
+
+        cindergraph resolves the ``// axeyum:`` / ``// @cindergraph`` comments
+        itself and writes the result on the ``param_decl`` nodes as
+        ``facts="capacity=dst_len"``; when any parameter of this function
+        carries that attribute, the export is the source and the comment is not
+        re-read. An export without the attribute (an older cindergraph) falls
+        back to the comment on the lines immediately above the function.
+        """
+        exported = {p: self.ast.facts(node) for p, node in self.param_nodes.items()}
+        if any(f is not None for f in exported.values()):
+            caps = [(p, f["capacity"]) for p, f in exported.items() if f and "capacity" in f]
+            lens = [(p, f["strlen"]) for p, f in exported.items() if f and "strlen" in f]
+            return caps, lens
         start = self.ast.span(self.root)[0]
         head = self.ast.slice(0, start)
-        # Annotations sit on the lines immediately above the function.
         tail = "\n".join(head.rstrip().splitlines()[-6:])
+        return (
+            [(m.group(1), m.group(2)) for m in _CAP_RE.finditer(tail)],
+            [(m.group(1), m.group(2)) for m in _STRLEN_RE.finditer(tail)],
+        )
+
+    def read_annotations(self) -> None:
         line = self.ast.line(self.root)
-        for m in _CAP_RE.finditer(tail):
-            ptr, cap = m.group(1), m.group(2)
+        caps, lens = self.annotations()
+        for ptr, cap in caps:
             if ptr not in self.pointers:
                 raise Refused(line, f"capacity annotation names {ptr!r}, not a pointer parameter")
             self.capacities[ptr] = self.annotation_term(cap, ptr, "capacity", line)
-        for m in _STRLEN_RE.finditer(tail):
-            ptr, n = m.group(1), m.group(2)
+        for ptr, n in lens:
             if ptr not in self.pointers:
                 raise Refused(line, f"strlen annotation names {ptr!r}, not a pointer parameter")
             length = self.annotation_term(n, ptr, "strlen", line)
@@ -1017,7 +1115,12 @@ class Lifter:
         bound, which the driver reports rather than calling the function clean.
         """
         a = self.ast
-        tag = a.tag(i)
+        info = a.loop_info(i)
+        # The loop's form: cindergraph's `loop_kind` when the export carries
+        # it (`for`/`while`/`do_while`), else the statement tag it mirrors.
+        tag = f"{info.kind}_stmt" if info is not None else a.tag(i)
+        if tag not in _LOOP_TAGS:
+            raise Refused(a.line(i), f"loop form {tag!r}")
         kids = a.children(i)
         init = cond = step = body = None
         if tag == "for_stmt":
@@ -1041,6 +1144,7 @@ class Lifter:
         elif init is not None:
             self.expr(init, state)
         self.loops.append(a.line(i))
+        self.loop_infos.append(info)
         self.loop_depth += 1
         bound = self.unroll
         out: list[PathState] = []
@@ -1225,6 +1329,7 @@ class Lifter:
             queries,
             dict(self.strlens),
             self.unroll if self.loops else None,
+            list(self.loop_infos),
         )
 
     def query(self, st: PathState, ob: Obligation) -> Query:
@@ -1293,6 +1398,21 @@ def file_unroll(src: str) -> int | None:
     return int(m.group(1)) if m else None
 
 
+def function_unroll(ast: _Ast, root: int, default: int) -> int:
+    """The unrolling bound for one function: cindergraph's ``unroll`` fact, else ``default``.
+
+    cindergraph attaches ``// axeyum: unroll = N`` to the function the comment
+    precedes and writes it as ``facts="unroll=N"`` on that ``func_def``. The
+    lifter's own reading is file-wide (``default`` is :func:`file_unroll` or the
+    driver's bound), so a function the parser attached nothing to — the second
+    function in a file whose comment sits above the first — keeps the file's
+    bound, and the two readings agree wherever both exist.
+    """
+    facts = ast.facts(root)
+    value = facts.get("unroll") if facts else None
+    return int(value) if value is not None and value.isdigit() else default
+
+
 def lift_source(src: str, unroll: int = DEFAULT_UNROLL) -> list[Lifted | tuple[str, Refused]]:
     """Every function in ``src``: a :class:`Lifted`, or ``(name, Refused)``.
 
@@ -1308,7 +1428,8 @@ def lift_source(src: str, unroll: int = DEFAULT_UNROLL) -> list[Lifted | tuple[s
     """
     if _cg is None:
         raise RuntimeError(
-            "cindergraph is not installed: uv pip install 'cindergraph @ git+https://github.com/mjbommar/cindergraph.git@main'"
+            "cindergraph is not installed: `uv sync --dev` installs the commit "
+            "pyproject.toml pins in its dev group"
         )
     report = _cg.analyze(src)
     diags = [(int(d.start), int(d.end), str(d.message)) for d in report.diagnostics]
@@ -1336,7 +1457,7 @@ def lift_source(src: str, unroll: int = DEFAULT_UNROLL) -> list[Lifted | tuple[s
                     f"({len(inside)} in the function)",
                 )
             back = [e for e in cfgs[name]["edges"] if e.get("back") not in (None, "false", False)]
-            lifter = Lifter(src, ast, root, unroll=bound)
+            lifter = Lifter(src, ast, root, unroll=function_unroll(ast, root, bound))
             lifted = lifter.run()
             if back and not lifter.loops:
                 raise Refused(
