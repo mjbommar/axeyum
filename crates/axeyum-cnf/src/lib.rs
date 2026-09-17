@@ -758,6 +758,31 @@ impl IncrementalSat {
         self.solver.total_conflicts()
     }
 
+    /// Keeps the surviving scopes' trail across solves (ADR-2145); `false`
+    /// is the shipped schedule. See [`NativeIncrementalCdcl::set_keep_trail`].
+    pub fn set_keep_trail(&mut self, keep: bool) {
+        self.solver.set_keep_trail(keep);
+    }
+
+    /// Whether the retained-trail schedule (ADR-2145) is in force.
+    #[must_use]
+    pub fn keep_trail(&self) -> bool {
+        self.solver.keep_trail()
+    }
+
+    /// Trail entries the core holds right now (ADR-2145 gauge).
+    #[must_use]
+    pub fn retained_trail_len(&self) -> usize {
+        self.solver.retained_trail_len()
+    }
+
+    /// Trail entries the most recent solve reused instead of re-deriving
+    /// (ADR-2145 gauge); zero on the shipped schedule.
+    #[must_use]
+    pub fn last_solve_reused_trail_len(&self) -> usize {
+        self.solver.last_solve_reused_trail_len()
+    }
+
     /// Copies the persistent input-clause database into a standalone formula.
     ///
     /// Learned clauses are intentionally absent: this is the stable problem
@@ -1350,6 +1375,33 @@ impl IncrementalCnf {
     #[must_use]
     pub fn total_conflicts(&self) -> usize {
         self.sat.total_conflicts()
+    }
+
+    /// Keeps the surviving scopes' trail across solves (ADR-2145); `false`
+    /// is the shipped schedule. Reaches only the retained core's solve
+    /// boundary: the encoding, the node-to-variable map and the replay maps
+    /// are untouched. See [`NativeIncrementalCdcl::set_keep_trail`].
+    pub fn set_keep_trail(&mut self, keep: bool) {
+        self.sat.set_keep_trail(keep);
+    }
+
+    /// Whether the retained-trail schedule (ADR-2145) is in force.
+    #[must_use]
+    pub fn keep_trail(&self) -> bool {
+        self.sat.keep_trail()
+    }
+
+    /// Trail entries the retained core holds right now (ADR-2145 gauge).
+    #[must_use]
+    pub fn retained_trail_len(&self) -> usize {
+        self.sat.retained_trail_len()
+    }
+
+    /// Trail entries the most recent solve reused instead of re-deriving
+    /// (ADR-2145 gauge); zero on the shipped schedule.
+    #[must_use]
+    pub fn last_solve_reused_trail_len(&self) -> usize {
+        self.sat.last_solve_reused_trail_len()
     }
 
     /// Copies the persistent clause database and activates `assumptions` as

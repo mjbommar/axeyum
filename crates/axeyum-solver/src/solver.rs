@@ -1072,6 +1072,9 @@ fn warm_config_is_honored(config: &SolverConfig) -> bool {
         // Read by both routes (ADR-2140): the one-shot backend hands it to the
         // core per check and the warm engine installs it at construction.
         model_preference: _,
+        // Read by the warm engine only (ADR-2145): the one-shot backend has
+        // no trail to keep, so the two routes agree on it trivially.
+        warm_keep_trail: _,
         // Read by neither route: `SatBvBackend::check` does not consult
         // `preprocess` either (the auto-dispatcher does), and the warm route
         // asserts raw for the same reason, so the two agree.

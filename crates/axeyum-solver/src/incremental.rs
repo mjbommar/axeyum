@@ -888,6 +888,8 @@ impl IncrementalBvSolver {
         // ADR-2140: the model preference reaches the retained core as a forced
         // decision polarity; `Any` sets `None`, which is the core as built.
         cnf.set_forced_phase(config.model_preference.forced_phase());
+        // ADR-2145: keep the surviving scopes' trail across checks, or not.
+        cnf.set_keep_trail(config.warm_keep_trail);
         Self {
             lowering: IncrementalLowering::new(),
             cnf,
@@ -939,6 +941,7 @@ impl IncrementalBvSolver {
         solver
             .cnf
             .set_forced_phase(solver.config.model_preference.forced_phase());
+        solver.cnf.set_keep_trail(solver.config.warm_keep_trail);
         solver
     }
 
@@ -992,6 +995,27 @@ impl IncrementalBvSolver {
     #[must_use]
     pub fn retained_sat_conflicts(&self) -> usize {
         self.cnf.total_conflicts()
+    }
+
+    /// Whether the retained SAT core keeps the surviving scopes' trail across
+    /// checks (ADR-2145, `SolverConfig::warm_keep_trail`).
+    #[must_use]
+    pub fn warm_keep_trail(&self) -> bool {
+        self.cnf.keep_trail()
+    }
+
+    /// Trail entries the retained SAT core holds right now (ADR-2145 gauge):
+    /// after a check, that check's final assignment on either schedule.
+    #[must_use]
+    pub fn retained_sat_trail_len(&self) -> usize {
+        self.cnf.retained_trail_len()
+    }
+
+    /// Trail entries the most recent check's SAT solve reused instead of
+    /// re-deriving (ADR-2145 gauge); zero on the shipped schedule.
+    #[must_use]
+    pub fn last_check_reused_trail_len(&self) -> usize {
+        self.cnf.last_solve_reused_trail_len()
     }
 
     /// Total AIG nodes lowered so far, including nodes not reachable from the

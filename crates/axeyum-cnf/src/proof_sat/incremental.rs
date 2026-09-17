@@ -146,6 +146,19 @@ pub struct NativeIncrementalCdcl<T: NativeTheory = NullTheory> {
     /// reset so a run of `add_clause` calls costs one reset, not one per clause
     /// (the reset re-populates the order heap, which is O(variables)).
     needs_reset: bool,
+    /// ADR-2145: keep the previous solve's trail across the solve boundary
+    /// instead of unwinding it. See [`NativeIncrementalCdcl::set_keep_trail`].
+    keep_trail: bool,
+    /// The assumption sequence the retained trail's decision levels `1..` were
+    /// installed from, in order (ADR-2145). Empty whenever the trail was
+    /// unwound. Level `i + 1` of the retained trail is the level opened for
+    /// `retained_assumptions[i]`, which is what makes the longest common
+    /// prefix with the next solve's assumptions the surviving-scope count.
+    retained_assumptions: Vec<CnfLit>,
+    /// Trail entries the most recent solve started from (ADR-2145 gauge):
+    /// zero on the shipped schedule, the surviving scopes' assignment under
+    /// `keep_trail`.
+    last_solve_reused_trail: usize,
 }
 
 impl<T: NativeTheory> core::fmt::Debug for NativeIncrementalCdcl<T> {
@@ -192,6 +205,9 @@ impl NativeIncrementalCdcl<NullTheory> {
             last_solve_conflicts: 0,
             solves: 0,
             needs_reset: false,
+            keep_trail: false,
+            retained_assumptions: Vec::new(),
+            last_solve_reused_trail: 0,
         }
     }
 }
@@ -261,6 +277,9 @@ impl<T: NativeTheory> NativeIncrementalCdcl<T> {
             last_solve_conflicts: 0,
             solves: 0,
             needs_reset: false,
+            keep_trail: false,
+            retained_assumptions: Vec::new(),
+            last_solve_reused_trail: 0,
         }
     }
 
@@ -482,6 +501,53 @@ impl<T: NativeTheory> NativeIncrementalCdcl<T> {
         self.cdcl.forced_phase
     }
 
+    /// Keeps the surviving scopes' trail across the solve boundary
+    /// (ADR-2145); `false` is the shipped schedule, which unwinds the whole
+    /// trail between solves and re-propagates it from scratch.
+    ///
+    /// With this on, a solve starts by backtracking to the longest common
+    /// prefix of the previous solve's assumption sequence and the new one
+    /// (CaDiCaL's `ilb=1`, `assume.cpp::sort_and_reuse_assumptions`), so the
+    /// assignment implied by the scopes both solves share is reused instead
+    /// of re-derived; clauses added in between are registered against the
+    /// live assignment (`Cdcl::add_input_clause_live`). The invariant kept:
+    /// the assignment at every retained level equals what a fresh propagation
+    /// of the surviving clauses produces, and every retained learned clause
+    /// is entailed by the clause database alone (1-UIP never resolves an
+    /// assumption away -- it appears in the learned clause as a literal), so
+    /// nothing derived under a popped scope survives it.
+    ///
+    /// A theory-carrying object (`T::HAS_THEORY`) ignores the setting: its
+    /// per-solve theory epoch is what `reset_search_state` closes, and the
+    /// retained-trail schedule has no epoch discipline yet. Switching it OFF
+    /// while a trail is held takes effect at the next boundary through the
+    /// ordinary reset.
+    pub fn set_keep_trail(&mut self, keep: bool) {
+        self.keep_trail = keep && !T::HAS_THEORY;
+    }
+
+    /// Whether the retained-trail schedule (ADR-2145) is in force.
+    #[must_use]
+    pub fn keep_trail(&self) -> bool {
+        self.keep_trail
+    }
+
+    /// Trail entries the core holds right now (ADR-2145 gauge). After a solve
+    /// this is that solve's final assignment on either schedule; between
+    /// solves it is what the next solve can reuse.
+    #[must_use]
+    pub fn retained_trail_len(&self) -> usize {
+        self.cdcl.trail_len()
+    }
+
+    /// Trail entries the most recent solve started from instead of
+    /// re-deriving (ADR-2145 gauge): the surviving scopes' assignment under
+    /// `keep_trail`, always zero on the shipped schedule.
+    #[must_use]
+    pub fn last_solve_reused_trail_len(&self) -> usize {
+        self.last_solve_reused_trail
+    }
+
     /// Makes variable indices `0 .. count` legal without adding any clause.
     ///
     /// Reserved-but-unused variables are not branchable: they never delay a
@@ -496,13 +562,6 @@ impl<T: NativeTheory> NativeIncrementalCdcl<T> {
     /// Duplicated literals are removed and a tautology is dropped; both are
     /// logic-preserving. The variable namespace grows to cover the literals.
     pub fn add_clause(&mut self, lits: &[CnfLit]) {
-        // A clause is always registered into an unassigned solver: unwind first
-        // so `add_input_clause`'s "watch the first two literals" is correct.
-        // For a warm CDCL(T) this is also what closes the previous solve's
-        // theory epoch, so the theory is told about this clause's literals from
-        // a clean assertion state on the next solve rather than on top of the
-        // last one's.
-        self.between_solves();
         if let Some(retained) = self.retained_cnf.as_mut() {
             retained.push(lits.to_vec());
         }
@@ -515,7 +574,21 @@ impl<T: NativeTheory> NativeIncrementalCdcl<T> {
             .max()
             .unwrap_or(0);
         self.grow_to(needed);
-        self.cdcl.add_input_clause(lits);
+        if self.keep_trail && self.needs_reset {
+            // ADR-2145: the trail is kept, so the clause is classified against
+            // the live assignment and the core backtracks only as far as the
+            // clause forces (to the level it is unit at, if any).
+            self.cdcl.add_input_clause_live(lits);
+        } else {
+            // A clause is always registered into an unassigned solver: unwind
+            // first so `add_input_clause`'s "watch the first two literals" is
+            // correct. For a warm CDCL(T) this is also what closes the
+            // previous solve's theory epoch, so the theory is told about this
+            // clause's literals from a clean assertion state on the next solve
+            // rather than on top of the last one's.
+            self.between_solves();
+            self.cdcl.add_input_clause(lits);
+        }
         self.added_clauses += 1;
     }
 
@@ -549,7 +622,28 @@ impl<T: NativeTheory> NativeIncrementalCdcl<T> {
         if self.needs_reset {
             self.cdcl.reset_search_state();
             self.needs_reset = false;
+            self.retained_assumptions.clear();
         }
+    }
+
+    /// ADR-2145: instead of unwinding, backtrack to the deepest decision level
+    /// whose assumptions the coming solve installs again, in the same order.
+    ///
+    /// Level `i + 1` of the held trail was opened for
+    /// `retained_assumptions[i]`, so the surviving-scope count is the longest
+    /// common prefix of the two assumption sequences -- bounded by the level
+    /// the core is actually at, since an `add_clause` in between may already
+    /// have backtracked below it. Returns the trail length reused.
+    fn resume_for_solve(&mut self, assumptions: &[CnfLit]) -> usize {
+        let common = self
+            .retained_assumptions
+            .iter()
+            .zip(assumptions)
+            .take_while(|(held, next)| held == next)
+            .count();
+        let level = common.min(self.cdcl.decision_level());
+        self.cdcl.resume_search_state(level);
+        self.cdcl.trail_len()
     }
 
     /// Solves the accumulated database under `assumptions`, which hold for this
@@ -575,7 +669,12 @@ impl<T: NativeTheory> NativeIncrementalCdcl<T> {
             .unwrap_or(0);
         self.grow_to(needed);
 
-        self.between_solves();
+        if self.keep_trail && self.needs_reset {
+            self.last_solve_reused_trail = self.resume_for_solve(assumptions);
+        } else {
+            self.between_solves();
+            self.last_solve_reused_trail = 0;
+        }
         // Open this solve's theory epoch: one `push` below decision level zero,
         // closed by the next `between_solves`. A no-op for `NullTheory`, whose
         // `HAS_THEORY` is false, so the Boolean warm object's trajectory is
@@ -583,6 +682,20 @@ impl<T: NativeTheory> NativeIncrementalCdcl<T> {
         self.cdcl.open_theory_epoch();
         let outcome = self.cdcl.run(assumptions, deadline, max_conflicts);
         self.needs_reset = true;
+        if self.keep_trail {
+            self.retained_assumptions.clear();
+            self.retained_assumptions.extend_from_slice(assumptions);
+            if matches!(outcome, Ok(SearchOutcome::Unsat)) {
+                // The database is monotone and now entails the empty clause,
+                // so every later solve is `Unsat` whatever it assumes. Pin
+                // that: the level-zero conflict that produced this verdict
+                // was consumed by `propagate` (its queue head moved past the
+                // literal whose watch list held it), so a RESUMED search would
+                // not rediscover it, where the shipped schedule re-derives it
+                // from `initial_units` on every solve.
+                self.cdcl.has_empty_clause = true;
+            }
+        }
         self.last_solve_conflicts = self.cdcl.conflicts;
         self.total_conflicts += self.cdcl.conflicts;
         self.solves += 1;

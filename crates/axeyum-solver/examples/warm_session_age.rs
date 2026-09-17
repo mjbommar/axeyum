@@ -410,6 +410,12 @@ fn main() {
     // Per-check gauges of the retained SAT core, read after each check.
     let mut learned: Vec<usize> = Vec::with_capacity(planned);
     let mut conflicts: Vec<usize> = Vec::with_capacity(planned);
+    // ADR-2145: the retained database and the trail, per check, so a band
+    // row says what the check had to re-derive (or reuse).
+    let mut clauses: Vec<usize> = Vec::with_capacity(planned);
+    let mut vars: Vec<usize> = Vec::with_capacity(planned);
+    let mut trail: Vec<usize> = Vec::with_capacity(planned);
+    let mut reused: Vec<usize> = Vec::with_capacity(planned);
     let mut sat = 0usize;
     let mut unsat = 0usize;
     let mut unknown = 0usize;
@@ -464,6 +470,10 @@ fn main() {
         times_us.push(elapsed.as_secs_f64() * 1e6);
         learned.push(solver.retained_learned_clause_count());
         conflicts.push(solver.retained_sat_conflicts());
+        clauses.push(solver.encoded_clause_count());
+        vars.push(solver.encoded_variable_count());
+        trail.push(solver.retained_sat_trail_len());
+        reused.push(solver.last_check_reused_trail_len());
         let verdict = match result {
             Ok(CheckResult::Sat(model)) => {
                 sat += 1;
@@ -501,9 +511,12 @@ fn main() {
         };
         if std::env::var_os("WARM_SESSION_AGE_TRACE").is_some() {
             eprintln!(
-                "check {i}: live {} temps {} -> {verdict:?}",
+                "check {i}: live {} temps {} common {common} -> {verdict:?} {:.3} ms trail {} reused {}",
                 live.len(),
-                temps.len()
+                temps.len(),
+                elapsed.as_secs_f64() * 1e3,
+                solver.retained_sat_trail_len(),
+                solver.last_check_reused_trail_len()
             );
         }
         if let (Some(v), Some(e)) = (verdict, op.expected)
@@ -528,15 +541,18 @@ fn main() {
     );
     println!("verdict+model digest: {digest:016x}");
     println!(
-        "retained: clauses {} vars {} aig {} depth {} learned {} conflicts {}",
+        "retained: clauses {} vars {} aig {} depth {} learned {} conflicts {} keep_trail {}",
         solver.encoded_clause_count(),
         solver.encoded_variable_count(),
         solver.lowered_aig_node_count(),
         solver.scope_depth(),
         solver.retained_learned_clause_count(),
-        solver.retained_sat_conflicts()
+        solver.retained_sat_conflicts(),
+        solver.warm_keep_trail()
     );
-    println!("band  checks    p50_ms    p90_ms    max_ms    sum_ms   learned  conflicts");
+    println!(
+        "band  checks    p50_ms    p90_ms    max_ms    sum_ms   learned  conflicts   clauses     vars    trail   reused"
+    );
     let mut first_p90 = None;
     let mut last_p90 = 0.0;
     for (b, chunk) in times_us.chunks(BAND).enumerate() {
@@ -547,8 +563,14 @@ fn main() {
         let max = sorted.last().copied().unwrap_or(0.0) / 1e3;
         let sum: f64 = chunk.iter().sum::<f64>() / 1e3;
         let last = (b * BAND + chunk.len()).saturating_sub(1);
+        // Trail and reuse are averaged over the band (they vary per check);
+        // the database gauges are read at the band's last check.
+        let band_mean = |xs: &[usize]| {
+            let slice = &xs[b * BAND..b * BAND + chunk.len()];
+            slice.iter().sum::<usize>() / slice.len().max(1)
+        };
         println!(
-            "{:>4} {:>7} {:>9.3} {:>9.3} {:>9.3} {:>9.1} {:>9} {:>10}",
+            "{:>4} {:>7} {:>9.3} {:>9.3} {:>9.3} {:>9.1} {:>9} {:>10} {:>9} {:>8} {:>8} {:>8}",
             b * BAND,
             chunk.len(),
             p50,
@@ -556,7 +578,11 @@ fn main() {
             max,
             sum,
             learned[last],
-            conflicts[last]
+            conflicts[last],
+            clauses[last],
+            vars[last],
+            band_mean(&trail),
+            band_mean(&reused)
         );
         if chunk.len() == BAND {
             if first_p90.is_none() {

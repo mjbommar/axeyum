@@ -2770,6 +2770,248 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
         }
     }
 
+    /// Registers one **problem** clause into a solver that still HOLDS a trail
+    /// from the previous solve (ADR-2145, the `keep_trail` warm schedule).
+    ///
+    /// [`Cdcl::add_input_clause`] requires an empty trail so that watching the
+    /// first two literals is correct. Here the clause is classified against the
+    /// live assignment instead and the solver is put into exactly the state a
+    /// fresh propagation of the surviving clauses would reach:
+    ///
+    /// * two or more non-false literals: watch two of them (a true one first
+    ///   when there is one, so the blocker fast path fires); nothing moves;
+    /// * exactly one non-false literal `l`, the rest false with highest false
+    ///   level `L`: the clause is UNIT at level `L`. If `l` is unassigned, or
+    ///   was assigned ABOVE `L`, backtrack to `L` and enqueue `l` there with
+    ///   this clause as its reason; if `l` is already true at or below `L` the
+    ///   clause is satisfied and needs only its watches;
+    /// * no non-false literal, highest false level `L > 0`: the clause is
+    ///   CONFLICTING. Backtrack to `L - 1`, which unassigns at least one of
+    ///   its literals, and classify again;
+    /// * no non-false literal at level 0: the database entails the empty
+    ///   clause (`has_empty_clause`), which the next [`Cdcl::run`] emits; it is
+    ///   RUP against the proof stream because the level-zero units propagate
+    ///   to this clause.
+    ///
+    /// Why backtrack rather than enqueue at the current level: a literal
+    /// implied at level `L` but recorded above it is unassigned by a backtrack
+    /// that keeps `L`, and its clause -- one watch false at `L`, the other
+    /// unassigned -- is then never visited again, so BCP would miss a unit. The
+    /// backtrack keeps the two-watched-literal invariant exact, and because the
+    /// unit-propagation fixpoint is unique, the assignment at every surviving
+    /// level equals the one a from-scratch propagation produces. CaDiCaL's
+    /// `handle_external_clause` (`external_propagate.cpp`) under `elevate == -1`
+    /// makes the same choice; MiniSat and z3 only add clauses at the base
+    /// level, which is why their warm objects re-propagate every assumption
+    /// level per call.
+    ///
+    /// Same normalisation as `add_input_clause` (duplicates dropped, a
+    /// tautology returns `None`); a unit clause is also appended to
+    /// [`Cdcl::initial_units`] so a later full reset re-derives it.
+    fn add_input_clause_live(&mut self, lits: &[CnfLit]) -> Option<CRef> {
+        let mut normalized: Vec<CnfLit> = Vec::with_capacity(lits.len());
+        for &lit in lits {
+            if normalized.contains(&lit) {
+                continue;
+            }
+            if normalized.contains(&lit.negated()) {
+                return None; // tautology: satisfied by every assignment
+            }
+            normalized.push(lit);
+        }
+        let needed = normalized
+            .iter()
+            .map(|lit| lit.var().index() + 1)
+            .max()
+            .unwrap_or(0);
+        self.ensure_vars(needed);
+
+        let cid = self.alloc_clause(&normalized);
+        self.lbd.push(0);
+        self.cla_activity.push(0.0);
+        self.used.push(0);
+        self.deleted.push(false);
+        self.learned.push(false);
+        for lit in &normalized {
+            let var = lit.var().index();
+            if !self.branchable[var] {
+                self.branchable[var] = true;
+                if !self.heap_contains(var) {
+                    self.heap_insert(var);
+                }
+            }
+        }
+        match normalized.len() {
+            0 => {
+                self.has_empty_clause = true;
+                return Some(cid);
+            }
+            1 => self.initial_units.push(normalized[0]),
+            _ => {}
+        }
+        self.attach_input_clause_live(cid);
+        Some(cid)
+    }
+
+    /// The classification loop of [`Cdcl::add_input_clause_live`]: puts the
+    /// solver at the level where clause `cid` is at most unit, enqueues its
+    /// implied literal if it has one, and installs its watches.
+    fn attach_input_clause_live(&mut self, cid: CRef) {
+        let off = self.headers[cid].offset;
+        let len = self.headers[cid].len;
+        loop {
+            // One pass: the first two non-false slots, the first TRUE slot,
+            // and the highest level among the false literals.
+            let mut non_false = 0usize;
+            let mut free: [usize; 2] = [0, 0];
+            let mut true_slot: Option<usize> = None;
+            let mut false_top: Option<(usize, usize)> = None; // (level, slot)
+            for k in 0..len {
+                let lit = self.arena[off + k];
+                match self.value(lit) {
+                    Some(false) => {
+                        let level = self.level[lit.var().index()];
+                        if false_top.is_none_or(|(top, _)| level > top) {
+                            false_top = Some((level, k));
+                        }
+                    }
+                    value => {
+                        if non_false < 2 {
+                            free[non_false] = k;
+                        }
+                        non_false += 1;
+                        if value == Some(true) && true_slot.is_none() {
+                            true_slot = Some(k);
+                        }
+                    }
+                }
+            }
+            let implied_level = false_top.map_or(0, |(level, _)| level);
+            match non_false {
+                0 => {
+                    if implied_level == 0 {
+                        self.has_empty_clause = true;
+                        return;
+                    }
+                    self.backtrack_to(implied_level - 1);
+                }
+                1 => {
+                    let slot = free[0];
+                    let lit = self.arena[off + slot];
+                    let var = lit.var().index();
+                    let false_slot = false_top.map(|(_, k)| k);
+                    if self.assign[var].is_some() && self.level[var] <= implied_level {
+                        // Satisfied at or below the level the clause would
+                        // have implied it at: watches only.
+                        self.install_live_watches(cid, slot, false_slot);
+                        return;
+                    }
+                    if self.decision_level() > implied_level {
+                        // Unassigned above `implied_level`, or assigned above
+                        // it: either way the clause belongs at `implied_level`.
+                        self.backtrack_to(implied_level);
+                        if self.assign[var].is_some() {
+                            // Still assigned after the backtrack means it was
+                            // assigned at or below `implied_level` after all
+                            // (a level-zero literal, say): classify again.
+                            continue;
+                        }
+                    }
+                    debug_assert!(self.assign[var].is_none());
+                    if len == 1 {
+                        // A unit clause: a level-zero fact with no antecedent,
+                        // exactly as `run` installs `initial_units`.
+                        debug_assert_eq!(self.decision_level(), 0);
+                        self.enqueue(lit, Reason::DECISION);
+                        return;
+                    }
+                    self.install_live_watches(cid, slot, false_slot);
+                    self.enqueue(lit, Reason::clause(cid));
+                    return;
+                }
+                _ => {
+                    let a = true_slot.unwrap_or(free[0]);
+                    let b = if free[0] == a { free[1] } else { free[0] };
+                    self.install_live_watches(cid, a, Some(b));
+                    return;
+                }
+            }
+        }
+    }
+
+    /// Moves slot `a` (the literal that must end at slot 0: the implied or a
+    /// true one) and slot `b` (the other watch; for a unit clause the
+    /// highest-level false literal) to the front of clause `cid` and pushes
+    /// its two watches. `b` is `None` only for a clause of length one, which
+    /// carries no watches.
+    fn install_live_watches(&mut self, cid: CRef, a: usize, b: Option<usize>) {
+        let off = self.headers[cid].offset;
+        let len = self.headers[cid].len;
+        if len < 2 {
+            return;
+        }
+        let b = b.expect("a clause of length >= 2 has a second watch");
+        debug_assert_ne!(a, b);
+        // `a` to slot 0; then `b` -- which the first swap moved to `a` if it
+        // was at slot 0 -- to slot 1.
+        self.arena.swap(off, off + a);
+        let b = if b == 0 { a } else { b };
+        self.arena.swap(off + 1, off + b);
+        let (l0, l1) = (self.arena[off], self.arena[off + 1]);
+        let binary = len == 2;
+        self.watches[lit_code(l0)].push(Watch::new(cid, l1, binary));
+        self.watches[lit_code(l1)].push(Watch::new(cid, l0, binary));
+    }
+
+    /// The `keep_trail` counterpart of [`Cdcl::reset_search_state`]
+    /// (ADR-2145): keeps decision levels `0..=level` of the previous solve's
+    /// trail and zeroes only the per-solve counters and schedules.
+    ///
+    /// The caller has established that levels `1..=level` were opened for the
+    /// same assumption literals, in the same order, that the coming solve will
+    /// install -- so the assumption-installation loop in
+    /// [`Cdcl::search_loop`] resumes at `decision_level()` and finds every
+    /// retained level already in place. Everything above `level` is unwound by
+    /// [`Cdcl::backtrack_to`], which also returns those variables to the order
+    /// heap; the variables that stay assigned stay out of it, and every
+    /// unassigned branchable variable is already in it (the invariant
+    /// `pick_branch`'s lazy deletion maintains), so no O(variables) rebuild is
+    /// owed -- that rebuild and the from-scratch propagation are the linear
+    /// per-check cost this schedule removes.
+    ///
+    /// What is NOT touched is exactly what `reset_search_state` keeps: the
+    /// clause database, learned clauses, activities and the phase vectors. The
+    /// phase high-water marks are released so the first fixpoint of the new
+    /// solve snapshots again from the stable prefix `backtrack_to` left.
+    fn resume_search_state(&mut self, level: usize) {
+        debug_assert!(!T::HAS_THEORY, "keep_trail is a Boolean-core schedule");
+        self.backtrack_to(level);
+        self.conflicts = 0;
+        self.theory_steps = 0;
+        self.loop_iterations = 0;
+        self.conflicts_since_restart = 0;
+        self.restart_count = 1;
+        self.best_trail_len = 0;
+        self.target_trail_len = 0;
+        self.phase_policy.reset();
+        self.restart_policy.reset();
+        self.sync_restart_schedule();
+        self.reduce_backoff_until = 0;
+        self.next_reduce_conflicts = self.db_policy.next_reduce_limit(0, 0);
+        #[cfg(debug_assertions)]
+        for var in 0..self.branchable.len() {
+            debug_assert!(
+                !self.branchable[var] || self.assign[var].is_some() || self.heap_contains(var),
+                "unassigned branchable variable {var} missing from the order heap"
+            );
+        }
+    }
+
+    /// The number of trail entries currently held (ADR-2145 gauge).
+    fn trail_len(&self) -> usize {
+        self.trail.len()
+    }
+
     /// Installs the clause-database and phase policies. Called before
     /// [`Cdcl::solve`]; the default entry points leave the defaults in place.
     fn set_policies(&mut self, policies: &SearchPolicies) {
@@ -5009,7 +5251,15 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             }
             self.trail_lim.truncate(level);
         }
-        self.qhead = self.trail.len();
+        // Clamp rather than reset. On the search's own calls the two are the
+        // same value: every level below the bound was propagated to fixpoint
+        // before the level above it opened, so `qhead >= bound` already. The
+        // clamp matters for ADR-2145's live clause attach, which may enqueue
+        // an implied literal at the CURRENT level between solves and then be
+        // followed by a `backtrack_to` of that same level (a later clause, or
+        // the resume at the next solve): a reset would skip that literal's
+        // propagation and leave BCP incomplete; a clamp keeps it queued.
+        self.qhead = self.qhead.min(self.trail.len());
         // The theory's cursor can never point past the trail; clamping it here
         // (rather than only inside the `if`) also covers `backtrack_to(level)`
         // at `level == trail_lim.len()`, which is a no-op for the trail.

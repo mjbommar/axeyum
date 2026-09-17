@@ -339,6 +339,20 @@ pub struct SolverConfig {
     /// shipped value, and a malformed value is a hard error rather than a
     /// silent default arm (`axeyum_ir::config_lever`'s contract).
     pub model_preference: ModelPreference,
+    /// Whether the warm engine ([`crate::IncrementalBvSolver`]) keeps the
+    /// surviving scopes' SAT trail across `pop`/`check` instead of unwinding
+    /// and re-propagating it every check (ADR-2145).
+    ///
+    /// A schedule, not a semantics: the assignment at every kept level equals
+    /// what a fresh propagation of the surviving clauses produces, every
+    /// `sat` still replays, and every `unsat` still carries what it carried.
+    /// What moves is the search trajectory of a check that needs decisions,
+    /// and so its time and which model comes back.
+    ///
+    /// The default is [`DEFAULT_WARM_KEEP_TRAIL`] unless the process has
+    /// `AXEYUM_WARM_KEEP_TRAIL` set (`on`/`off`), the one-binary A/B lever;
+    /// a malformed value is a hard error rather than a silent default arm.
+    pub warm_keep_trail: bool,
 }
 
 /// Which model a `sat` returns when several satisfy (ADR-2140).
@@ -454,6 +468,30 @@ fn process_model_preference_phase() -> bool {
             ),
         },
         Err(_) => DEFAULT_MODEL_PREFERENCE_PHASE,
+    })
+}
+
+/// Whether the warm engine keeps the surviving scopes' trail across checks
+/// when nothing chose (ADR-2145): OFF, the schedule as shipped before the
+/// lever existed. A `const` so it is one named, registered value
+/// (`config_registry`) a mutation can flip.
+pub const DEFAULT_WARM_KEEP_TRAIL: bool = false;
+
+/// [`DEFAULT_WARM_KEEP_TRAIL`] unless `AXEYUM_WARM_KEEP_TRAIL` is set to
+/// `on` or `off`; read once, a malformed value refuses.
+fn process_warm_keep_trail() -> bool {
+    use std::sync::OnceLock;
+    static KEEP: OnceLock<bool> = OnceLock::new();
+    *KEEP.get_or_init(|| match std::env::var("AXEYUM_WARM_KEEP_TRAIL") {
+        Ok(text) => match text.trim() {
+            "on" => true,
+            "off" => false,
+            _ => panic!(
+                "AXEYUM_WARM_KEEP_TRAIL={text:?} is not `on` or `off`; refusing to run the \
+                 default arm under a lever that was set"
+            ),
+        },
+        Err(_) => DEFAULT_WARM_KEEP_TRAIL,
     })
 }
 
@@ -589,6 +627,7 @@ impl Default for SolverConfig {
             proof_progress: None,
             check_progress: None,
             model_preference: process_model_preference(),
+            warm_keep_trail: process_warm_keep_trail(),
         }
     }
 }
