@@ -915,6 +915,25 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
   #                              Layer PRECISION is pinned in `qinst_egraph`'s unit
   #                              tests, where generations can be constructed exactly;
   #                              mutation-checked at `quant-generation-ladder`.
+  #   quant_nested_activation_2149
+  #                            — ADR-2149: a universal nested INSIDE another
+  #                              universal's body, step by step through the
+  #                              in-process `NestedActivationStats` counters:
+  #                              the static crossed-binder registration is inert
+  #                              and its tuples dropped in the `crossed-binder`
+  #                              class, while the refutation comes through the
+  #                              registrations discovery adds from the enclosing
+  #                              instance. Four SAT twins at both levels through
+  #                              the loop and the front door; the flat-prefix
+  #                              positive control; the split's partition
+  #                              invariants; the certificate chain check. Plus
+  #                              the lever `AXEYUM_QINST_NESTED_ACTIVATION`
+  #                              (levels 0/1/2, ships 0): a cap fixture the
+  #                              shipped discovery fails by spending every
+  #                              budget on duplicates and level 2 refutes, its
+  #                              SAT twin at every level of both levers, and
+  #                              no-loss across levels. Mutation-checked at
+  #                              `qinst-nested-activation`.
   #   decline_detail_typed
   #                            — ADR-2104: every DeclineReason detail is a closed
   #                              enum with an exhaustive name(); this suite DRIVES
@@ -979,7 +998,7 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$GATE_ROOT/target}"
                nra_clause_cert_2131 \
                quant_session_arith_certificate quant_generation_ladder lra_warm_screen_2132 \
                nra_algebraic_witness model_preference_2140 \
-               canonical_constraint_cache_2144; do
+               canonical_constraint_cache_2144 quant_nested_activation_2149; do
     gated_test "dispatch/reason: $suite" \
       cargo test -p axeyum-solver --features full --quiet --test "$suite"
   done

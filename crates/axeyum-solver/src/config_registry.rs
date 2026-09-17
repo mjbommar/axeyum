@@ -8042,6 +8042,30 @@ pub static REGISTRY: &[ConfigEntry] = &[
         note: "Mid-loop (extended-cadence) ground checks run under `remaining / divisor` of the shared budget via `fractional_deadline`, so one large mid-loop check cannot starve later rounds or the final check.",
     },
     ConfigEntry {
+        name: "NESTED_ACTIVATION_LEVEL",
+        module: "crates/axeyum-solver/src/qinst_egraph.rs",
+        value: "0",
+        unit: "nested-activation level (0 = admitted instances are scanned before staged replacements and every re-derived conclusion spends MAX_POSITIVE_INSTANCES; 1 = staged replacements are scanned first, so the registration cap goes to the crossed-binder class before the instance-exposed one, and only a first-time conclusion spends the cap; 2 = level 1 plus a quantifier inside a ground formula is one opaque e-graph leaf whose body is never walked)",
+        protects: Protects::Time,
+        on_exceed: OnExceed::Truncate,
+        signal: Signal::None,
+        guarded_by: "level 1 changes only the ORDER in which discovery scans its two sources under the registration cap and which conclusions a budget counter counts (nothing is skipped -- a first version that skipped the instance-exposed registrations as duplicates lost `TokenQueue.576` on the 53-core sweep and was removed), level 2 offers the matcher a strict SUBSET of the terms level 1 offers (a term under a binder is not ground, and every match on one was refused by the checker before this level existed), and every registration any level compiles reaches the ground set only through `positive_instance_formula` (the producer) and `check_positive_replacement` (the checker) of ADR-2120 -- so no level can admit anything level 0 could not; `quant_nested_activation_2149.rs` tries to refute it over five satisfiable shapes at every level of both levers, through the loop and the front door",
+        env_override: Some("AXEYUM_QINST_NESTED_ACTIVATION"),
+        justification: dated(
+            "docs/research/09-decisions/adr-2149-nested-binder-activation.md",
+            "2026-09-17",
+            None,
+            &[sym(
+                "crates/axeyum-solver/src/qinst_egraph.rs",
+                "NESTED_ACTIVATION_LEVEL",
+            )],
+            &[doc(
+                "docs/research/09-decisions/adr-2149-nested-binder-activation.md",
+            )],
+        ),
+        note: "OFF in the shipped configuration (`0`), so this entry describes an A/B arm. Measured 2026-09-17 on ADR-2113's 53 UFLIA cores: MAX_DISCOVERED_REGISTRATIONS (256) was hit on 11 of 53 shipped-arm cores and 26 of 53 at AXEYUM_QINST_POSITIVE_PATH=1, and the scan order at level 0 (instances first) decides which class the budget goes to; the one class nothing but discovery produces -- a universal under a binder the replacement instantiated (`InertReason::CrossedBinder`) -- was dropped 1,611,516 times over 9 cores at that arm (`TypeSigVec.005` 942,980). Level 1 scans the staged replacements first and counts only first-time conclusions against MAX_POSITIVE_INSTANCES (4,096, hit on 19 of 53 cores at that arm, in part by re-derived conclusions). Level 2 additionally stops the matcher walking quantifier bodies inside ground formulas: 17,600 handed-off tuples on the same cores at that arm bound a variable to itself and were refused by the checker after spending a handoff slot.",
+    },
+    ConfigEntry {
         name: "ONLINE_QUANTIFIER_LIMITS",
         module: "crates/axeyum-solver/src/qinst_egraph.rs",
         value: "variables 65_536 / clauses 262_144 / literals 262_144",
