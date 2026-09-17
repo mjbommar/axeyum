@@ -165,3 +165,13 @@ exact over Q; an undecided `Equal` raises rather than answering `False`.
 Every result is still a `cas.Expr` with its Rust certificates reachable, and
 `None` means the Rust side declined (multivariate `Factor`, a symbolic
 exponent -- `CasExpr::Pow` is `u32` -- and similar gaps are real and stated).
+
+## See also: C defects through cindergraph
+
+[`python/examples/cindergraph_defects/`](../../python/examples/cindergraph_defects/README.md)
+lifts scalar, loop-free C functions from cindergraph's typed AST into QF_BV
+queries, has `axeyum_cli` find a witness per sink (buffer length, array index,
+divisor, shift amount, signed overflow, narrowing store, dead branch), and
+replays every witness under AddressSanitizer or UBSan at the finding's line.
+Eight textbook defect/fix pairs ship with it; the run's exit status depends on
+every witness reproducing.
