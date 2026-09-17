@@ -201,11 +201,103 @@ one test; the rest are reported as measured rather than trimmed.
 
 ## 6. The 53-core sweep
 
-SWEEP-PLACEHOLDER
+One binary (`smtcomp_cli-2149-d5`, built at `26c81da53`'s Rust — the lever
+as committed; sha256 `9c715f6b…`), six environment arms, 24 s / 8 GiB, s6
+physical pairs `5,13` / `6,14` (run 1, then run 3) and `1,9` / `3,11` (run 2).
+**Runs 1 and 2 are complete for all six arms (636 rows). Run 3 was stopped by
+the coordinator's wrap-up at 32 of 53 `off` rows and 28 of 53 `on` rows, and
+its other four arms did not start**; `sweep.tsv` labels each row `complete`
+or `partial`. A core MOVES only if it decides in every run of one arm and in
+no run of the other, so with two complete runs the threshold below is 2/2
+against 0/2 — one recheck short of the brief's 3/3, and stated as such.
+
+Arms: `off` = every lever variable unset (the shipped arm); `on` =
+`AXEYUM_QINST_POSITIVE_PATH=1` (ADR-2120); `nested1` / `nested2` = this
+lever alone at that level; `nested2-on` = level 2 + ADR-2120's level 1;
+`nested2-composed` = those two + `AXEYUM_QINST_GROUND_SESSION=2` (ADR-2130),
+the composition QUANT-COMPOSE sized.
+
+| arm | runs | decided per run | sat/unsat flips |
+|---|---:|---|---:|
+| `off` | 2 (+ 32 of 53 in run 3) | 15 / 16 (+ 9 of 32) | 0 |
+| `on` | 2 (+ 28 of 53 in run 3) | 15 / 15 (+ 8 of 28) | 0 |
+| `nested1` | 2 | 15 / 15 | 0 |
+| `nested2` | 2 | 15 / 15 | 0 |
+| `nested2-on` | 2 | 15 / 15 | 0 |
+| `nested2-composed` | 2 | 16 / 16 | 0 |
+
+Movers against `off` at the 2/2-vs-0/2 threshold:
+
+| core | arm | `off` | arm | class |
+|---|---|---|---|---|
+| `boogie_Cast_Cast.R_System.Object_System.Int32` | every arm | unknown, unsat (run 3: unknown) | unknown, unknown | UNSTABLE — the ±1 the three ADRs' OFF arms already spread |
+| `simplify2_front_end_suite_javafe.reader.CachedReader.003` | `nested2-on`, `nested2-composed` | unknown, unknown (run 3: **unsat** at 4.0 s) | unsat, unsat | UNSTABLE — `off` decides it in run 3; it sits on the clock (15–16 s of 24 in the census) |
+| `simplify_javafe.ast.TypeDeclElemPragma.373` | `nested2-composed` | unknown, unknown (run 3: unknown) | unsat, unsat | **STABLE-GAIN at 2/2 vs 0/3** — the one gain, on the composed arm only |
+| `simplify_javafe.parser.TokenQueue.576` | `nested2-on`, `nested2-composed` | unsat, unsat (run 3: unsat) | unknown, unknown | **STABLE-LOSS at 0/2 vs 3/3** — see below |
+
+`nested1` and `nested2` alone move nothing: 15/15 against `off`'s 15/16.
+
+**The `TokenQueue.576` loss is an interaction, and it is located.** The core
+is `unsat` by `q:mbqi` in 4 s at `off`, at `on`, at `nested1`, at `nested2`,
+and at `on + nested1` (local probe, pinned, 6.1 / 7.2 s) — and `unknown` at
+24 s at `on + nested2`. So level 2's opaque-binder ingestion loses it only
+when ADR-2120's level 1 is also armed. A refinement that kept the GROUND
+subterms of a quantifier body (only bound-variable-carrying subterms opaque)
+was built, passed the 22 tests, and did **not** rescue it (`unknown` at 24 s
+on the same probe); it is not committed, and the code the sweep ran is the
+code on the branch. The core's z3 refutation is one instance
+(QUANT-REACH-DIFF: `z3_uniq=1`, MATCHED-REJECTED); which term under a binder
+that one instance needs at `on` is the next single question.
+
+**Ship decision: `AXEYUM_QINST_NESTED_ACTIVATION` stays `0`; ADR-2149 stays
+`proposed`.** No arm meets the criterion on this population: alone the lever
+moves nothing, composed it has one stable gain against one stable loss. The
+pinned `UFLIA` / `AUFDTLIRA` A/B, the `UFNIA` control and the held-out draws
+**did not run** — the composed arm's 1 gain / 1 loss does not clear the bar
+that would have started them, and the coordinator paused the campaign before
+run 3 completed.
 
 ## Consequences
 
-CONSEQUENCES-PLACEHOLDER
+- **The reading is decided.** A universal nested inside another universal's
+  binder IS activated today, through `NestedDiscovery::scan` over the
+  enclosing universal's instance and the staged replacement (ADR-2120 slice
+  3) — the z3/cvc5 route. Its static registration is inert and drops its
+  tuples in the `crossed-binder` class, which the census can now count. The
+  brief's fixture (a) is the `⇒` whitelist (ADR-2120), not the binder; the
+  front door refutes it at level 0.
+- **The crossed-binder class is small on the shipped arm (0.7 % of drops, 5
+  cores) and 1.6 M tuples on 9 simplify/ESC-Java cores at ADR-2120's level
+  1.** At that level the budgets are the block: 13.7 M contextful tuples cut
+  by the per-round handoff cap, the registration cap hit on 26 cores, the
+  positive-instance cap on 19, 17,600 handoffs refused for binding a
+  variable to itself. Every one of those is now a counter on the
+  `AXEYUM_QPROBE` line, printed at every loop exit.
+- **`AXEYUM_QINST_NESTED_ACTIVATION` ships `0`, `proposed`.** Alone it moves
+  nothing on the 53 cores (15/15 vs 15/16 over two runs); composed with
+  ADR-2120 and ADR-2130 it gains `TypeDeclElemPragma.373` (2/2 vs 0/3) and
+  loses `TokenQueue.576` (0/2 vs 3/3) — one for one, and the loss is an
+  interaction between level 2's ingestion and ADR-2120's level 1, located
+  to that pair and not yet explained.
+- **Two rules this lane built and the sweep refuted are recorded** (§4):
+  skipping instance-exposed registrations as duplicates, in two forms, each
+  losing `TokenQueue.576`. Trigger selection over the instantiated body is
+  not the static one's. An instance-exposed registration is a handle.
+- **Instrument fixes that outlive the lever**: the per-universal table at
+  every loop exit (37 of 53 cores, was 18), counters carried across discovery
+  rebuilds re-keyed by assertion, the `nested-discovery` line, the
+  `InertReason` split, `NestedActivationStatsGuard`, and the re-derived
+  conclusions counted before the dedup at level 0 (a real defect against the
+  cap's own doc, fixed only behind the lever until it is measured).
+- **Not run**: sweep run 3 beyond 32/28 rows of `off`/`on`; the pinned
+  `UFLIA`/`AUFDTLIRA` A/B, the `UFNIA` control, the held-out draws; the
+  refinement that keeps ground subterms under binders (built, tested, did not
+  rescue `TokenQueue.576`, not committed).
+- **Next single increment**: name the one term under a binder that
+  `TokenQueue.576`'s single z3 instance needs at ADR-2120's level 1 and that
+  level 2's ingestion removes; the `AXEYUM_QGROUNDDUMP` diff between the `on`
+  and `nested2-on` arms on that core is the instrument, and it is a one-core
+  question before any further sweep.
 
 [ADR-2113]: adr-2113-uflia-the-instance-we-never-produce.md
 [ADR-2120]: adr-2120-quantifier-activation-by-assignment.md
