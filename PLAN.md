@@ -148,6 +148,7 @@ now. Nothing was deleted.
 |---|---|---|
 | 2026-09-17 | ax-board-2142 | ADR-2142 board A/B (`bench-results/board-ab-20260917-adr2142/`): +8 of 3,200 (8 stable gains / 0 stable losses / 0 flips / 0 disagreements over 4,380), `QF_ABV` both-decided wall −49 %; scripts, shard rows, `board.tsv`, 3× mover rechecks. |
 | 2026-09-17 | ax-cache | `CanonicalConstraintCache` in `incremental.rs` (exact / superset-unsat / replay-guarded model reuse, deterministic LRU), `SolverConfig::canonical_constraint_cache` + `AXEYUM_CANONICAL_CACHE` (config registry), `stats()` cache counters, Python `Config`/`Incremental`/`IncrementalStats` surface with stubs, `tests/canonical_constraint_cache_2144.rs` (13 tests, pre-push, two mutation controls), `warm_session_age --canonical-cache` + verdict digest, the DptfDevGen replay and the `QF_BV` A/B (`bench-results/canonical-cache-20260917/`), sizing note, ADR-2144. |
+| 2026-09-17 | `8ac48b6fa` | ax-gate: cindergraph pinned at `8bd20512`; `check.py` gated by `scripts/check-cindergraph-defects.sh` in `py-check` and `check.sh`; three subject mutations each kill one test; lifter reads `line`, `facts`, `loop_kind` with fallbacks (item 16 done). |
 | 2026-09-17 | `ax-lia-pop` | ADR-2143: `LiaTheory`/`LraTheory` reject an opposite-polarity re-assert as a conflict instead of overwriting (the ax-proptest STOP finding); `pop` exact by construction with a `debug_assert` invariant; red schedule fuzz green + LRA twin (finalized LCG) + core-polarity checks + three-step unit tests; `corpus/incremental/13-*`, `14-*` front-door fixtures; four mutation controls; corpus census (67 public scripts with the shape, 0 disagreements with z3); 800-file A/B (`bench-results/lia-pop-20260917/`). No wrong verdict shipped or could ship. |
 | 2026-09-17 | `3425a51ab` | ax-lifter: the cindergraph-defects pipeline over cindergraph's fixtures and Glaurung's decompiler output with the refusal histogram; replay must name the finding's kind; per-function refusal on a cindergraph diagnostic; multi-declarator declarations (item 12). |
 | 2026-09-17 | `8bdccc57b` | ax-lifter: `strcpy`/`strcat`/`strlen` with `// axeyum: strlen`, `malloc`-sized locals with `alloc-size-wrap`, `free`/use-after-free, uninitialised reads under MSan/valgrind/no-oracle; samples 11–12 (item 11). |
@@ -46823,6 +46824,58 @@ the regression control (see ADR-2144). Python `Config`/`Incremental`/
 path-owned warm solver (item 5 on its list) and re-runs ADR-0303's mode matrix
 with the library cache as the `exact`/`structural` arms; a cross-solver
 variant needs a structural term hash in `axeyum-ir` and a name-keyed model.
+
+**Lane ax-gate (`DONE`, ax-gate, 2026-09-17).** Item 16 of
+[improvement-list-2026-09-16](docs/plan/improvement-list-2026-09-16.md) is closed:
+`check.py` is a gate, not an example with an exit status.
+
+- **Pinned.** `cindergraph` is in `pyproject.toml`'s dev group at
+  `8bd20512158d19d4cf632caba4bbed629271a3e5` (`uv.lock` relocked; `uv sync
+  --dev` builds it from git — first sync needs a Rust toolchain and network).
+  Installed `__version__` is `0.1.0`; `check.py`'s first line prints
+  `cindergraph|version=0.1.0|commit=8bd20512…|pinned=8bd20512…|match=yes`,
+  read from the distribution's PEP 610 `direct_url.json` and from
+  `pyproject.toml`, so a run says what it ran against.
+- **The gate.** `scripts/check-cindergraph-defects.sh` (a step of `just
+  py-check` and of `scripts/check.sh`'s Python block) refuses (exit 2)
+  without an importable `axeyum._native` or `cindergraph`, SKIPS loudly and
+  never passes without `clang` (`AXEYUM_REQUIRE_CINDERGRAPH_DEFECTS=1` makes
+  that a failure), runs the sweep once, and has
+  `scripts/check-cindergraph-defects.py` re-derive the verdict from
+  `results.tsv` and the samples' `// expect:` lines under five failure
+  classes (expectation, replay, control, provenance, inconsistent). Measured:
+  `CINDERGRAPH_DEFECTS|rows=33|replayed=18|dead=2|clean=13|bounded=0|no_oracle=0|failures=0|PASS`,
+  ~15 s. The driver itself now judges its first replayed harness at the line
+  AFTER its finding and must see it refused — the check on the replay check.
+- **Controls.** `scripts/tests/test_check_cindergraph_defects.py` (21 tests:
+  15 reader guards on synthetic rows + 6 live) and
+  `mutation_controls.py cindergraph-defects`: a sample's bounds check
+  deleted → `killed 1: test_every_expectation_in_the_samples_is_met`; the
+  `int`-against-`size_t` usual-arithmetic rule broken → `killed 1:
+  test_every_witness_replayed_at_its_own_line` (a bogus signed-overflow
+  witness in `pack_bug` that `DID NOT REPLAY`); `replay()` accepting every
+  report → `killed 1: test_the_replay_check_refuses_a_wrong_line`.
+- **cindergraph attributes the lifter now reads** (each with a synthetic-node
+  unit test in `test_lift.py`, 35 tests; the old reading kept as fallback):
+  `line` on every node (counted newlines otherwise; identical on all 1,100
+  sample nodes), `facts` on `param_decl` / `func_def` for capacity, strlen
+  and unroll (the comment regexes otherwise), and `loop_kind` for the loop
+  form (the statement tag otherwise) with `bound_kind` / `induction` /
+  `step` / `bound_value` carried as `LoopInfo` on `Lifted.loops`. Honest
+  note: the lifter has no loop classification beyond for/while/do, so the
+  bound metadata deletes nothing; it is carried for a `bounded` verdict to
+  cite. All 356 queries and 18 harnesses are byte-identical to the
+  pre-change sweep at the pin; only ASLR addresses in ASan reports move.
+- **Not done, deliberately.** cindergraph's `type` attribute is `unknown` for
+  `size_t`/`uint32_t` (typedefs it never saw), so parameter types are still
+  parsed from the declaration text; and its `unroll` fact is function-scoped
+  where the file comment is file-wide, so the second function in sample 09
+  keeps the file's bound through the fallback.
+
+Next for whoever picks this up: the `bounded` row could cite `LoopInfo`
+(`constant bound 8: raise unroll to 9`) once a sample pins a `bounded`
+verdict; and a fleet probe for `clang` on s2/s5–s7 would turn the SKIPPED
+path from a documented possibility into a measured one.
 
 **Repaired, gated, A/B'd (`DONE`, ax-lia-pop, 2026-09-17).** The ax-proptest
 audit's STOP finding: `LiaTheory::assert` overwrote a live atom's polarity in
