@@ -1171,14 +1171,18 @@ class Lifter:
         body = next(c for c in self.ast.children(self.root) if self.ast.tag(c) == "compound_stmt")
         finals = self.stmt(body, state)
         queries: list[Query] = []
-        seen: set[str] = set()
+        seen: set[tuple[str, int, str, str]] = set()
         for st in finals + self.parked:
             for ob in st.obligations:
                 q = self.query(st, ob)
                 # The same construct reached on two paths that fork AFTER it
-                # yields the same query; ask it once.
-                if q.smtlib not in seen:
-                    seen.add(q.smtlib)
+                # yields the same query; ask it once. The key carries the
+                # obligation's identity too: a feasibility question (`holds`
+                # is `false`) reads the same for a dead branch and for an
+                # uninitialised read on the same path, and they are not one.
+                key = (ob.kind, ob.line, ob.note, q.smtlib)
+                if key not in seen:
+                    seen.add(key)
                     queries.append(q)
         scalar = [(p, self.types[p]) for p in self.params if p in self.types]
         return Lifted(
