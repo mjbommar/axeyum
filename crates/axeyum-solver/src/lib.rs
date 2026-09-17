@@ -939,8 +939,9 @@ pub use axeyum_fp as fp;
 
 pub use axeyum_cnf::IncrementalCnfStats;
 pub use backend::{
-    BitLoweringMode, Capabilities, CheckProgress, CheckResult, ProofProgress, SolveStats,
-    SolverBackend, SolverConfig, SolverError, UnknownKind, UnknownReason,
+    BitLoweringMode, Capabilities, CheckProgress, CheckResult, DEFAULT_MODEL_PREFERENCE,
+    ModelPreference, ProofProgress, SolveStats, SolverBackend, SolverConfig, SolverError,
+    UnknownKind, UnknownReason,
 };
 pub use config_registry::{
     Basis, ConfigEntry, ConfigTraceGuard, ConfigTraceMirror, DATED_FLOOR, Dependency, EXEMPT,

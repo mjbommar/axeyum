@@ -512,8 +512,29 @@ pub fn solve_with_drat_proof_with_limits(
     deadline: Option<Instant>,
     max_conflicts: usize,
 ) -> ProofSolveOutcome {
+    solve_with_drat_proof_with_limits_and_phase(formula, deadline, max_conflicts, None)
+}
+
+/// [`solve_with_drat_proof_with_limits`] with a forced decision polarity
+/// (ADR-2140).
+///
+/// `forced_phase = None` is byte-for-byte the plain entry point -- it is what
+/// that function now calls. `Some(false)` makes every decision `false` (z3's
+/// `phase=always_false`), so a returned model has a `0` on every input bit the
+/// search decided rather than propagated; this is the SAT-core half of
+/// `ModelPreference::PreferZero`. It is a decision-order heuristic and nothing
+/// else: the verdict, the proof stream and every budget behave exactly as they
+/// do without it. What it changes is the trajectory, and therefore the time.
+pub fn solve_with_drat_proof_with_limits_and_phase(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    max_conflicts: usize,
+    forced_phase: Option<bool>,
+) -> ProofSolveOutcome {
     let mut sink = VecProofSink::new();
-    match Cdcl::new(formula, &mut sink).solve(deadline, max_conflicts) {
+    let mut cdcl = Cdcl::new(formula, &mut sink);
+    cdcl.forced_phase = forced_phase;
+    match cdcl.solve(deadline, max_conflicts) {
         StreamingProofOutcome::Sat(model) => ProofSolveOutcome::Sat(model),
         StreamingProofOutcome::Unsat => ProofSolveOutcome::Unsat(sink.into_steps()),
         StreamingProofOutcome::ResourceOut => ProofSolveOutcome::ResourceOut,
@@ -2057,6 +2078,19 @@ struct Cdcl<'progress, S: DratSink, T: NativeTheory = NullTheory> {
     /// been assigned. `false` unless the caller asked for an all-true initial
     /// phase.
     initial_phase: bool,
+    /// A polarity every decision takes REGARDLESS of the saved phase (ADR-2140).
+    ///
+    /// `None` is the shipped search: decide at `phase[var]`, which phase saving,
+    /// target rephasing and the rephase schedule all write. `Some(p)` is z3's
+    /// `phase=always_false` / `CaDiCaL`'s `forcephase`: the decision site reads
+    /// `p` instead of `phase[var]`, and nothing else in the search changes --
+    /// `phase` is still saved, still rephased, and still what `initial_phase`
+    /// installs, it is simply not what a decision consults. This is the
+    /// mechanism behind a model PREFERENCE (a `sat` whose free bits are `0`),
+    /// which is why it is a decision-polarity override and not a verdict input:
+    /// propagation, conflict analysis, the clause database and the proof
+    /// stream do not read it.
+    forced_phase: Option<bool>,
     /// Phase-policy state: the rephase schedule and its conflict interval.
     phase_policy: PhasePolicy,
     /// When set (the default), restarts rephase [`Cdcl::phase`] to
@@ -2444,6 +2478,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
             target_phase: vec![false; n],
             target_trail_len: 0,
             initial_phase: false,
+            forced_phase: None,
             // The shipped defaults live in one place; see `SearchPolicies`.
             phase_policy: policies.phase,
             use_target_rephase: true,
@@ -3514,8 +3549,12 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                     self.push_level();
                     let positive =
                         CnfLit::positive(CnfVar::new(var).expect("variable index in range"));
-                    // Phase saving: decide the variable's last-seen polarity.
-                    let decision = if self.phase[var] {
+                    // Phase saving: decide the variable's last-seen polarity --
+                    // unless a forced phase (ADR-2140) overrides it. The
+                    // `None` arm is the branch as it was before the override
+                    // existed.
+                    let polarity = self.forced_phase.unwrap_or(self.phase[var]);
+                    let decision = if polarity {
                         positive
                     } else {
                         positive.negated()
@@ -3530,7 +3569,7 @@ impl<'progress, S: DratSink, T: NativeTheory> Cdcl<'progress, S, T> {
                     // body is empty, so a theory that does not override this
                     // is byte-identical too.
                     if T::HAS_THEORY {
-                        self.theory.note_decision(var, self.phase[var]);
+                        self.theory.note_decision(var, polarity);
                     }
                 } else {
                     // Total Boolean assignment: the one moment a theory's
@@ -5225,6 +5264,58 @@ mod tests {
     #[test]
     fn unit_contradiction_is_unsat_with_checked_proof() {
         assert_unsat_with_checked_proof(&formula(1, &[&[1], &[-1]]));
+    }
+
+    /// ADR-2140: a forced phase overrides PHASE SAVING, which is the only
+    /// thing that puts a `true` on a free variable in this core (the initial
+    /// phase is already `false`).
+    ///
+    /// `(a | b) & (a | -b)` forces `a`. The shipped search decides `a = false`
+    /// first, propagates `b = true`, conflicts, learns the unit `a`, and then
+    /// decides `b` at its SAVED phase -- `true`, from the retracted branch. The
+    /// forced-`false` search reaches the same learned unit and decides
+    /// `b = false`. Both are models; the second is the prefer-zero one. The
+    /// `None` arm is asserted equal to the plain entry point, which is the
+    /// identity this override promises.
+    #[test]
+    fn forced_false_phase_overrides_the_saved_phase_and_none_is_the_plain_search() {
+        let f = formula(2, &[&[1, 2], &[1, -2]]);
+        let plain = match solve_with_drat_proof_with_limits(&f, None, 1_000) {
+            ProofSolveOutcome::Sat(m) => m,
+            other => panic!("expected sat, got {other:?}"),
+        };
+        let none = match super::solve_with_drat_proof_with_limits_and_phase(&f, None, 1_000, None) {
+            ProofSolveOutcome::Sat(m) => m,
+            other => panic!("expected sat, got {other:?}"),
+        };
+        let forced = match super::solve_with_drat_proof_with_limits_and_phase(
+            &f,
+            None,
+            1_000,
+            Some(false),
+        ) {
+            ProofSolveOutcome::Sat(m) => m,
+            other => panic!("expected sat, got {other:?}"),
+        };
+        assert_eq!(
+            plain.values(),
+            none.values(),
+            "`None` must be the plain search"
+        );
+        assert_eq!(
+            plain.values(),
+            &[true, true],
+            "phase saving keeps the retracted `b = true`"
+        );
+        assert_eq!(
+            forced.values(),
+            &[true, false],
+            "forced `false` decides the free `b` at 0"
+        );
+        assert!(
+            f.evaluate(forced.values()).unwrap(),
+            "the forced-phase model must still satisfy"
+        );
     }
 
     #[test]

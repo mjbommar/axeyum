@@ -138,10 +138,10 @@ pub use proof_sat::{
     solve_with_drat_proof_counted_inprocessed, solve_with_drat_proof_counted_with_policies,
     solve_with_drat_proof_inprocessed, solve_with_drat_proof_mode_traced,
     solve_with_drat_proof_streaming, solve_with_drat_proof_streaming_with_progress,
-    solve_with_drat_proof_with_limits, solve_with_drat_proof_with_limits_and_progress,
-    solve_with_drat_proof_within, solve_with_theory_and_drat_proof,
-    solve_with_theory_and_drat_proof_mirrored, solve_with_theory_and_drat_proof_traced,
-    solve_with_theory_and_drat_proof_with_options,
+    solve_with_drat_proof_with_limits, solve_with_drat_proof_with_limits_and_phase,
+    solve_with_drat_proof_with_limits_and_progress, solve_with_drat_proof_within,
+    solve_with_theory_and_drat_proof, solve_with_theory_and_drat_proof_mirrored,
+    solve_with_theory_and_drat_proof_traced, solve_with_theory_and_drat_proof_with_options,
 };
 pub use reduction_link::{
     LiftingSink, LinkedProofCheck, ProofCoverage, ReducedReason, ReductionLink,
@@ -717,6 +717,21 @@ impl IncrementalSat {
         Self::default()
     }
 
+    /// Forces every decision to `polarity` (ADR-2140); `None` restores the
+    /// shipped phase-saving search.
+    ///
+    /// Takes effect at the next solve, learned clauses and saved phases
+    /// untouched. See [`NativeIncrementalCdcl::set_forced_phase`].
+    pub fn set_forced_phase(&mut self, polarity: Option<bool>) {
+        self.solver.set_forced_phase(polarity);
+    }
+
+    /// The forced decision polarity in force, if any.
+    #[must_use]
+    pub fn forced_phase(&self) -> Option<bool> {
+        self.solver.forced_phase()
+    }
+
     /// Number of variables reserved so far.
     pub fn variable_count(&self) -> usize {
         self.variable_count
@@ -1244,6 +1259,22 @@ impl IncrementalCnf {
     /// Creates an empty incremental encoder.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Forces every SAT decision to `polarity` (ADR-2140); `None` restores
+    /// the shipped phase-saving search. See [`IncrementalSat::set_forced_phase`].
+    ///
+    /// The encoding is untouched: this reaches only the retained core's
+    /// decision site, so the CNF, the node-to-variable map and the replay maps
+    /// are exactly what they are without it.
+    pub fn set_forced_phase(&mut self, polarity: Option<bool>) {
+        self.sat.set_forced_phase(polarity);
+    }
+
+    /// The forced decision polarity in force, if any.
+    #[must_use]
+    pub fn forced_phase(&self) -> Option<bool> {
+        self.sat.forced_phase()
     }
 
     /// Creates an encoder with experimental bounded positive internal AND-tree

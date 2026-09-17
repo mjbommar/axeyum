@@ -8,7 +8,7 @@
 )]
 
 use axeyum_solver::{
-    Evidence, EvidenceCheck, EvidenceReport, IncrementalBvSolver, ProofOutcome,
+    Evidence, EvidenceCheck, EvidenceReport, IncrementalBvSolver, IncrementalBvStats, ProofOutcome,
     ReplayCheckedSatCachePolicy, SolverConfig, Strategy,
 };
 use pyo3::prelude::*;
@@ -661,20 +661,200 @@ pub fn prove(
 pub struct PyIncremental {
     solver: IncrementalBvSolver,
     epoch: u64,
+    profiled: bool,
+}
+
+/// A snapshot of a warm solver's retained work: per-phase wall time and the
+/// structural gauges (ADR-2140, item 9 of the 2026-09-16 list).
+///
+/// **The timers are zero unless the solver was built with `profile=True`.**
+/// That is the Rust contract (`IncrementalBvSolver::with_config_and_profiling`
+/// reads the clock; the ordinary constructor never does), and it is why
+/// `profiled` is a field: a consumer reading `solve_ns == 0` from an
+/// unprofiled solver would otherwise conclude the check was free. The counts
+/// `aig_nodes`, `cnf_variables` and `cnf_clauses` are always current gauges;
+/// `checks` and `root_encodings` are also profiling-gated.
+///
+/// Snapshots are monotone, so `later.delta_since(earlier)` isolates one check
+/// or one retained path segment.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.solver")
+)]
+#[pyclass(frozen, module = "axeyum", name = "IncrementalStats")]
+pub struct PyIncrementalStats {
+    stats: IncrementalBvStats,
+    profiled: bool,
+}
+
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
+#[pymethods]
+impl PyIncrementalStats {
+    /// Whether the solver was built with `profile=True`; when `False` every
+    /// timer and the `checks`/`root_encodings` counts are zero BY CONTRACT.
+    #[getter]
+    fn profiled(&self) -> bool {
+        self.profiled
+    }
+
+    /// Nanoseconds in word-level canonicalization (`preprocess`).
+    #[getter]
+    fn word_rewrite_ns(&self) -> u128 {
+        self.stats.word_rewrite.as_nanos()
+    }
+
+    /// Nanoseconds bit-blasting newly asserted terms.
+    #[getter]
+    fn bit_blast_ns(&self) -> u128 {
+        self.stats.bit_blast.as_nanos()
+    }
+
+    /// Nanoseconds Tseitin-encoding newly lowered nodes.
+    #[getter]
+    fn cnf_encode_ns(&self) -> u128 {
+        self.stats.cnf_encode.as_nanos()
+    }
+
+    /// Nanoseconds inside the retained SAT core.
+    #[getter]
+    fn solve_ns(&self) -> u128 {
+        self.stats.solve.as_nanos()
+    }
+
+    /// Nanoseconds lifting a CNF assignment to a term-level model.
+    #[getter]
+    fn model_lift_ns(&self) -> u128 {
+        self.stats.model_lift.as_nanos()
+    }
+
+    /// Nanoseconds replaying a `sat` model against the original terms.
+    #[getter]
+    fn replay_ns(&self) -> u128 {
+        self.stats.replay.as_nanos()
+    }
+
+    /// Seconds of the phases above, summed, as a float (lossy; prefer the
+    /// `_ns` fields for arithmetic).
+    #[getter]
+    fn total_seconds(&self) -> f64 {
+        (self.stats.word_rewrite
+            + self.stats.bit_blast
+            + self.stats.cnf_encode
+            + self.stats.solve
+            + self.stats.model_lift
+            + self.stats.replay)
+            .as_secs_f64()
+    }
+
+    /// Root literals encoded so far (profiling-gated).
+    #[getter]
+    fn root_encodings(&self) -> u64 {
+        self.stats.root_encodings
+    }
+
+    /// Checks performed so far (profiling-gated).
+    #[getter]
+    fn checks(&self) -> u64 {
+        self.stats.checks
+    }
+
+    /// AIG nodes lowered so far; always current.
+    #[getter]
+    fn aig_nodes(&self) -> u64 {
+        self.stats.aig_nodes
+    }
+
+    /// CNF variables encoded so far; always current.
+    #[getter]
+    fn cnf_variables(&self) -> u64 {
+        self.stats.cnf_variables
+    }
+
+    /// CNF clauses encoded so far; always current.
+    #[getter]
+    fn cnf_clauses(&self) -> u64 {
+        self.stats.cnf_clauses
+    }
+
+    /// The work between `earlier` and this snapshot, component-wise and
+    /// saturating -- one check's cost when the two bracket it.
+    fn delta_since(&self, earlier: &Self) -> Self {
+        Self {
+            stats: self.stats.delta_since(earlier.stats),
+            profiled: self.profiled && earlier.profiled,
+        }
+    }
+
+    /// The same numbers as a `dict` -- the shape `stats()` returned before
+    /// this type existed, with the timers in microseconds (not nanoseconds) under their old
+    /// keys, plus `profiled`.
+    ///
+    /// # Errors
+    ///
+    /// Propagates any Python error raised while building the dictionary.
+    fn as_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        let dict = PyDict::new(py);
+        dict.set_item("profiled", self.profiled)?;
+        dict.set_item("word_rewrite_us", self.stats.word_rewrite.as_micros())?;
+        dict.set_item("bit_blast_us", self.stats.bit_blast.as_micros())?;
+        dict.set_item("cnf_encode_us", self.stats.cnf_encode.as_micros())?;
+        dict.set_item("solve_us", self.stats.solve.as_micros())?;
+        dict.set_item("model_lift_us", self.stats.model_lift.as_micros())?;
+        dict.set_item("replay_us", self.stats.replay.as_micros())?;
+        dict.set_item("root_encodings", self.stats.root_encodings)?;
+        dict.set_item("checks", self.stats.checks)?;
+        dict.set_item("aig_nodes", self.stats.aig_nodes)?;
+        dict.set_item("cnf_variables", self.stats.cnf_variables)?;
+        dict.set_item("cnf_clauses", self.stats.cnf_clauses)?;
+        Ok(dict)
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "IncrementalStats(profiled={}, checks={}, solve_ns={}, cnf_clauses={})",
+            self.profiled,
+            self.stats.checks,
+            self.stats.solve.as_nanos(),
+            self.stats.cnf_clauses
+        )
+    }
 }
 
 #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl PyIncremental {
     /// Creates a warm solver bound to `arena`.
+    ///
+    /// `profile=True` builds the solver with phase profiling on, so `stats()`
+    /// carries real per-phase wall time and check counts; without it those
+    /// fields are zero by contract (see `IncrementalStats.profiled`). The
+    /// solving policy is identical either way -- profiling only reads clocks.
     #[new]
-    #[pyo3(signature = (arena, config = None))]
-    fn new(arena: PyRef<'_, Arena>, config: Option<&Config>) -> Self {
+    #[pyo3(signature = (arena, config = None, *, profile = false))]
+    fn new(arena: PyRef<'_, Arena>, config: Option<&Config>, profile: bool) -> Self {
         let config: SolverConfig = Config::resolve(config);
+        let solver = if profile {
+            IncrementalBvSolver::with_config_and_profiling(config)
+        } else {
+            IncrementalBvSolver::with_config(config)
+        };
         Self {
-            solver: IncrementalBvSolver::with_config(config),
+            solver,
             epoch: arena.epoch,
+            profiled: profile,
         }
+    }
+
+    /// Whether this solver records per-phase timing (`profile=True`).
+    #[getter]
+    fn profiled(&self) -> bool {
+        self.profiled
+    }
+
+    /// Which model a `sat` prefers (ADR-2140), as configured.
+    #[getter]
+    fn model_preference(&self) -> &'static str {
+        self.solver.model_preference().as_str()
     }
 
     /// The arena epoch this solver is bound to.
@@ -737,22 +917,14 @@ impl PyIncremental {
         Ok(PyCheckResult::build(self.epoch, &result))
     }
 
-    /// Retained-encoding and timing counters.
-    fn stats<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        let stats = self.solver.stats();
-        let dict = PyDict::new(py);
-        dict.set_item("word_rewrite_us", stats.word_rewrite.as_micros())?;
-        dict.set_item("bit_blast_us", stats.bit_blast.as_micros())?;
-        dict.set_item("cnf_encode_us", stats.cnf_encode.as_micros())?;
-        dict.set_item("solve_us", stats.solve.as_micros())?;
-        dict.set_item("model_lift_us", stats.model_lift.as_micros())?;
-        dict.set_item("replay_us", stats.replay.as_micros())?;
-        dict.set_item("root_encodings", stats.root_encodings)?;
-        dict.set_item("checks", stats.checks)?;
-        dict.set_item("aig_nodes", stats.aig_nodes)?;
-        dict.set_item("cnf_variables", stats.cnf_variables)?;
-        dict.set_item("cnf_clauses", stats.cnf_clauses)?;
-        Ok(dict)
+    /// A monotone snapshot of retained work: per-phase timing (only with
+    /// `profile=True`) and the structural gauges. `IncrementalStats.as_dict()`
+    /// is the `dict` this used to return.
+    fn stats(&self) -> PyIncrementalStats {
+        PyIncrementalStats {
+            stats: self.solver.stats(),
+            profiled: self.profiled,
+        }
     }
 
     /// Retained CNF clause count.
@@ -882,6 +1054,7 @@ pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<PyEvidenceReport>()?;
     module.add_class::<PyProofOutcome>()?;
     module.add_class::<PyIncremental>()?;
+    module.add_class::<PyIncrementalStats>()?;
     module.add_function(wrap_pyfunction!(solve, module)?)?;
     module.add_function(wrap_pyfunction!(check_auto_explained, module)?)?;
     module.add_function(wrap_pyfunction!(unsat_core, module)?)?;

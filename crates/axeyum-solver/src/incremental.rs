@@ -47,6 +47,20 @@ const MAX_WARM_ARRAY_UF_APPS_PER_ROOT: usize = 64;
 // next root starts fresh once this threshold is reached.
 const MAX_REPLAY_SHARED_MEMO_ENTRIES: usize = 4_096;
 
+/// The evaluator calls the replay-checked model shrink of ADR-2140 may spend
+/// per `sat` before it stops and keeps whatever it has.
+///
+/// Each call re-evaluates every active assertion and assumption against a
+/// candidate model with one more bit cleared, so the pass costs
+/// `evaluations x |assertion DAG|`. The budget bounds the pass on a query
+/// with thousands of symbols; it never bounds the verdict, which was decided
+/// before the pass began, and a pass cut short leaves a model that is still
+/// a model -- only less small than it could have been. Also cut short by the
+/// check's own deadline. Shared with the text front door
+/// (`smtlib::shrink_model_toward_zero`), which is the same pass over a
+/// `Script`.
+pub const MODEL_SHRINK_EVALUATIONS: usize = 4_096;
+
 /// Monotone phase attribution for one incremental bit-vector solver.
 ///
 /// When constructed with
@@ -833,11 +847,14 @@ impl IncrementalBvSolver {
     /// [`Self::assert_configured`]; structural admission budgets remain a
     /// one-shot-backend concern.
     pub fn with_config(config: SolverConfig) -> Self {
-        let cnf = if config.incremental_positive_and_flattening {
+        let mut cnf = if config.incremental_positive_and_flattening {
             IncrementalCnf::with_internal_positive_and_flattening()
         } else {
             IncrementalCnf::new()
         };
+        // ADR-2140: the model preference reaches the retained core as a forced
+        // decision polarity; `Any` sets `None`, which is the core as built.
+        cnf.set_forced_phase(config.model_preference.forced_phase());
         Self {
             lowering: IncrementalLowering::new(),
             cnf,
@@ -886,6 +903,15 @@ impl IncrementalBvSolver {
             IncrementalCnf::with_profiling()
         };
         solver
+            .cnf
+            .set_forced_phase(solver.config.model_preference.forced_phase());
+        solver
+    }
+
+    /// Which model a `sat` prefers (ADR-2140), as configured.
+    #[must_use]
+    pub fn model_preference(&self) -> crate::backend::ModelPreference {
+        self.config.model_preference
     }
 
     /// Replaces the wall-clock allowance used by the next warm SAT check.
@@ -3924,7 +3950,96 @@ impl IncrementalBvSolver {
         if let Some(reason) = replay? {
             return Ok(WarmCandidateCheck::Unknown(reason));
         }
+        // ADR-2140: a preference other than `Any` finishes the model here, on
+        // the lifted values where the input bits are visible (the forced SAT
+        // phase alone does not reach them through the gate variables the
+        // search actually decides). Only the MODEL changes, and only to a
+        // candidate this same `replay` accepted.
+        let mut model = model;
+        if self.config.model_preference.forced_phase().is_some() {
+            self.shrink_model_toward_zero(arena, &original_assumptions, &mut model, deadline);
+        }
         Ok(WarmCandidateCheck::Sat(model))
+    }
+
+    /// Greedily clears bits of a replayed model while it still replays
+    /// (ADR-2140's `PreferZero`/`LeastUnsigned` finishing pass on the warm
+    /// engine), returning how many bits were cleared.
+    ///
+    /// Deterministic: symbols in the model's own (sorted) order, internal
+    /// symbols skipped, bits from the most significant down, a `Bool` tried
+    /// `false`; a candidate is kept iff [`Self::replay`] accepts it against
+    /// every active assertion plus `assumptions`. Bounded by
+    /// [`MODEL_SHRINK_EVALUATIONS`] and by `deadline`. A local minimum in the
+    /// unsigned order, never claimed as the global one.
+    fn shrink_model_toward_zero(
+        &self,
+        arena: &TermArena,
+        assumptions: &[TermId],
+        model: &mut Model,
+        deadline: Option<Instant>,
+    ) -> usize {
+        let mut evaluations = 0usize;
+        let mut cleared = 0usize;
+        let out_of_budget = |evaluations: usize| {
+            evaluations >= MODEL_SHRINK_EVALUATIONS
+                || deadline.is_some_and(|at| Instant::now() >= at)
+        };
+        let accepts = |model: &Model| matches!(self.replay(arena, assumptions, model), Ok(None));
+        let symbols: Vec<(SymbolId, Value)> = model
+            .iter()
+            .filter(|(symbol, _)| !self.internal_symbols.contains(symbol))
+            .collect();
+        for (symbol, value) in symbols {
+            match value {
+                Value::Bool(true) => {
+                    if out_of_budget(evaluations) {
+                        return cleared;
+                    }
+                    evaluations += 1;
+                    model.set(symbol, Value::Bool(false));
+                    if accepts(model) {
+                        cleared += 1;
+                    } else {
+                        model.set(symbol, Value::Bool(true));
+                    }
+                }
+                Value::Bv { width, value } if value != 0 => {
+                    let mut current = value;
+                    for bit in (0..width).rev() {
+                        if current & (1u128 << bit) == 0 {
+                            continue;
+                        }
+                        if out_of_budget(evaluations) {
+                            return cleared;
+                        }
+                        evaluations += 1;
+                        let candidate = current & !(1u128 << bit);
+                        model.set(
+                            symbol,
+                            Value::Bv {
+                                width,
+                                value: candidate,
+                            },
+                        );
+                        if accepts(model) {
+                            current = candidate;
+                            cleared += 1;
+                        } else {
+                            model.set(
+                                symbol,
+                                Value::Bv {
+                                    width,
+                                    value: current,
+                                },
+                            );
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        cleared
     }
 
     fn activate_warm_array_semantics(

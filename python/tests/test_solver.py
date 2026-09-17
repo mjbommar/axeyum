@@ -306,13 +306,53 @@ def test_incremental_stats_are_returned_data() -> None:
     warm.check(arena)
     stats = warm.stats()
     # Gauges, not just timers: an encoding actually happened.
-    assert stats["cnf_clauses"] > 0
-    assert stats["cnf_variables"] > 0
-    assert stats["aig_nodes"] > 0
-    assert {"checks", "root_encodings", "solve_us", "replay_us"} <= set(stats)
+    assert stats.cnf_clauses > 0
+    assert stats.cnf_variables > 0
+    assert stats.aig_nodes > 0
+    # Unprofiled: the timers and the check count are zero BY CONTRACT, and the
+    # object says so rather than letting a zero read as "free".
+    assert stats.profiled is False
+    assert warm.profiled is False
+    assert stats.solve_ns == 0 and stats.checks == 0
+    as_dict = stats.as_dict()
+    assert {"checks", "root_encodings", "solve_us", "replay_us", "profiled"} <= set(as_dict)
+    assert as_dict["cnf_clauses"] == stats.cnf_clauses
     assert warm.encoded_clause_count > 0
     assert warm.encoded_variable_count > 0
     assert warm.lowered_aig_node_count > 0
+
+
+def test_incremental_profile_records_per_phase_timing() -> None:
+    """ADR-2140 item 9: `profile=True` is what makes the timers measurements."""
+    arena = ir.Arena()
+    x = arena.bv_var("x", 16)
+    y = arena.bv_var("y", 16)
+    warm = solver.Incremental(arena, profile=True)
+    assert warm.profiled is True
+    assert warm.model_preference == "any"
+    warm.assert_(arena, arena.bvult(arena.bvmul(x, y), arena.bv_const(16, 1000)))
+    before = warm.stats()
+    assert before.checks == 0
+    warm.check(arena)
+    after = warm.stats()
+    assert after.profiled is True
+    assert after.checks == 1
+    assert after.root_encodings >= 1
+    # A measured phase: the solve took SOME nanoseconds, and the phases sum.
+    assert after.solve_ns > 0
+    assert after.total_seconds > 0.0
+    delta = after.delta_since(before)
+    assert delta.checks == 1
+    assert delta.solve_ns == after.solve_ns
+    assert delta.cnf_clauses == after.cnf_clauses - before.cnf_clauses
+    assert "profiled=True" in repr(after)
+    # A second check adds one more, monotone.
+    warm.check(arena)
+    assert warm.stats().checks == 2
+    assert warm.stats().solve_ns >= after.solve_ns
+    # The policy is visible on the warm solver too.
+    zero = solver.Incremental(arena, solver.Config(model_preference="zero"))
+    assert zero.model_preference == "zero"
 
 
 def test_replay_checked_sat_cache_reports_every_decline_class() -> None:

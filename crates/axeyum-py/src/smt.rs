@@ -24,7 +24,8 @@ use axeyum_smtlib::{
 use axeyum_solver::smtlib::{
     SmtLibSolved, solve_smtlib_get_assertions, solve_smtlib_get_assignment, solve_smtlib_get_info,
     solve_smtlib_get_option, solve_smtlib_get_proof, solve_smtlib_get_value,
-    solve_smtlib_incremental, solve_smtlib_unsat_core, solve_smtlib_with_model,
+    solve_smtlib_incremental, solve_smtlib_least_witness, solve_smtlib_unsat_core,
+    solve_smtlib_with_model,
 };
 use axeyum_solver::{
     BitLoweringMode, CheckResult, Model, SmtLibResponse, SolverConfig, SolverError, check_model,
@@ -36,6 +37,7 @@ use pyo3::types::{PyDict, PyList, PyModule};
 use crate::convert::{model_dict, value_to_py};
 use crate::error::{AxeyumError, BudgetExceeded, SmtLibParseError};
 use crate::ir::types::check_epoch;
+use crate::solver::results::parse_model_preference;
 
 /// Script epochs come from a range disjoint from `Arena`'s, so a `Term` and a
 /// `ScriptTerm` can never be silently interchanged even by hand-built handles.
@@ -265,6 +267,7 @@ fn optional_repr(value: Option<&str>) -> String {
     cnf_clause_budget = None,
     prove_unsat = false,
     preprocess = true,
+    model_preference = "any",
 ))]
 #[allow(clippy::fn_params_excessive_bools, clippy::too_many_arguments)]
 fn solve(
@@ -278,6 +281,7 @@ fn solve(
     cnf_clause_budget: Option<u64>,
     prove_unsat: bool,
     preprocess: bool,
+    model_preference: &str,
 ) -> PyResult<Outcome> {
     let config = script_config(
         timeout_ms,
@@ -288,7 +292,8 @@ fn solve(
         cnf_clause_budget,
         prove_unsat,
         preprocess,
-    );
+    )
+    .with_model_preference(parse_model_preference(model_preference)?);
     // ONE front-door call. `solve_smtlib_with_model` IS the front door --
     // `solve_smtlib` is a projection of it -- and it hands back the arena the
     // decided terms live in, the assertion stack that was decided, and that run's
@@ -319,6 +324,133 @@ fn solve(
         replay,
         replay_unavailable,
     })
+}
+
+/// A decided script with the smallest-magnitude witness the bounded re-solve
+/// ladder found (ADR-2140, item 7 of the 2026-09-16 list).
+///
+/// `outcome` is an ordinary `Outcome` -- same `status`, and `model` /
+/// `replay()` describe the RETURNED witness -- and `bound` is the magnitude
+/// bound that witness satisfies (`1`, `16`, `256` or `4096`: every bounded
+/// symbol `x` has `-bound <= x <= bound` in two's complement), or `None` when
+/// no rung applied or succeeded and the unbounded model was returned.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyclass(module = "axeyum._native.smt")
+)]
+#[pyclass(frozen, module = "axeyum", name = "Witness")]
+pub struct Witness {
+    outcome: Py<Outcome>,
+    bound: Option<u128>,
+}
+
+#[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
+#[pymethods]
+impl Witness {
+    /// The verdict and the returned witness.
+    #[getter]
+    fn outcome(&self, py: Python<'_>) -> Py<Outcome> {
+        self.outcome.clone_ref(py)
+    }
+
+    /// `"sat"`, `"unsat"`, or `"unknown"` -- `outcome.status`, for convenience.
+    #[getter]
+    fn status(&self, py: Python<'_>) -> &'static str {
+        self.outcome.bind(py).get().status
+    }
+
+    /// The magnitude bound the witness satisfies, or `None` (unbounded).
+    #[getter]
+    fn bound(&self) -> Option<u128> {
+        self.bound
+    }
+
+    fn __repr__(&self, py: Python<'_>) -> String {
+        format!(
+            "Witness(status={:?}, bound={:?})",
+            self.outcome.bind(py).get().status,
+            self.bound
+        )
+    }
+}
+
+/// Decides an SMT-LIB 2 script and, on `sat`, re-solves under growing
+/// magnitude bounds (1, 16, 256, 4096) on `symbols` -- every declared
+/// bit-vector constant when `symbols` is empty -- returning the first bounded
+/// witness, else the unbounded one, with the bound reported (ADR-2140).
+///
+/// This is the ladder `python/examples/cindergraph_defects/check.py` used to
+/// run by hand with up to five subprocess solves per finding. The verdict is
+/// the unbounded one; a rung can only replace the MODEL, and the returned
+/// model always replays against the script's own assertions.
+///
+/// # Errors
+///
+/// As `solve`: `SmtLibParseError` for malformed text, `AxeyumError` for any
+/// other solver failure.
+#[cfg_attr(
+    feature = "stub-gen",
+    pyo3_stub_gen::derive::gen_stub_pyfunction(module = "axeyum._native.smt")
+)]
+#[pyfunction]
+#[pyo3(signature = (
+    script,
+    symbols = Vec::new(),
+    *,
+    timeout_ms = 10_000,
+    resource_limit = None,
+    memory_limit_mb = None,
+    preprocess = true,
+))]
+fn least_witness(
+    py: Python<'_>,
+    script: &str,
+    symbols: Vec<String>,
+    timeout_ms: u64,
+    resource_limit: Option<u64>,
+    memory_limit_mb: Option<u64>,
+    preprocess: bool,
+) -> PyResult<Witness> {
+    let config = script_config(
+        timeout_ms,
+        resource_limit,
+        memory_limit_mb,
+        None,
+        None,
+        None,
+        false,
+        preprocess,
+    );
+    let names: Vec<&str> = symbols.iter().map(String::as_str).collect();
+    let (finished, bound) = py
+        .detach(|| {
+            let witness = solve_smtlib_least_witness(script, &names, &config)?;
+            let bound = witness.bound;
+            Ok::<_, SolverError>((finish(witness.solved, script, &config), bound))
+        })
+        .map_err(map_solver_error)?;
+    let Finished {
+        status,
+        logic,
+        expected_status,
+        detail,
+        replay,
+        replay_unavailable,
+        named,
+    } = finished;
+    let outcome = Py::new(
+        py,
+        Outcome {
+            status,
+            logic,
+            expected_status,
+            detail,
+            model: model_dict(py, &named)?.unbind(),
+            replay,
+            replay_unavailable,
+        },
+    )?;
+    Ok(Witness { outcome, bound })
 }
 
 /// Everything `solve` derives from one front-door run without holding the GIL.
@@ -1391,7 +1523,9 @@ pub(crate) fn register<'py>(parent: &Bound<'py, PyModule>) -> PyResult<Bound<'py
     module.add_class::<Response>()?;
     module.add_class::<PyScript>()?;
     module.add_class::<ScriptTerm>()?;
+    module.add_class::<Witness>()?;
     module.add_function(wrap_pyfunction!(solve, &module)?)?;
+    module.add_function(wrap_pyfunction!(least_witness, &module)?)?;
     module.add_function(wrap_pyfunction!(session, &module)?)?;
     module.add_function(wrap_pyfunction!(incremental, &module)?)?;
     module.add_function(wrap_pyfunction!(get_value, &module)?)?;

@@ -462,6 +462,26 @@ impl<T: NativeTheory> NativeIncrementalCdcl<T> {
         }
     }
 
+    /// Forces every decision to `polarity` regardless of the saved phase
+    /// (ADR-2140); `None` restores the shipped phase-saving search.
+    ///
+    /// z3's `phase=always_false` and `CaDiCaL`'s `forcephase`. A decision-order
+    /// heuristic only: it is read at the one decision site and nowhere else,
+    /// so the verdict, the proof stream, the learned clauses and every budget
+    /// are unaffected; the trajectory -- and so the time and WHICH model a
+    /// `sat` returns -- is what moves. Takes effect at the next solve; the
+    /// saved phases keep being recorded underneath it, so clearing it resumes
+    /// phase saving from where the search actually is.
+    pub fn set_forced_phase(&mut self, polarity: Option<bool>) {
+        self.cdcl.forced_phase = polarity;
+    }
+
+    /// The forced decision polarity in force, if any.
+    #[must_use]
+    pub fn forced_phase(&self) -> Option<bool> {
+        self.cdcl.forced_phase
+    }
+
     /// Makes variable indices `0 .. count` legal without adding any clause.
     ///
     /// Reserved-but-unused variables are not branchable: they never delay a

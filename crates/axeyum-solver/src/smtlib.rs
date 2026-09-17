@@ -30,7 +30,9 @@ use std::fmt::Write as _;
 use std::time::Duration;
 
 use crate::auto::{solve, unsat_core};
-use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
+use crate::backend::{
+    CheckResult, ModelPreference, SolverConfig, SolverError, UnknownKind, UnknownReason,
+};
 use crate::model::Model;
 use crate::optimize::{OptOutcome, maximize_bv, maximize_lia, minimize_bv, minimize_lia};
 use crate::route_trace::{front_door_stage, record_front_door_result};
@@ -2002,7 +2004,390 @@ pub fn solve_smtlib_with_model(
         .timeout
         .and_then(|t| std::time::Instant::now().checked_add(t));
     let solved = solve_smtlib_at_string_bound(input, config, DEFAULT_STRING_BOUND)?;
-    Ok(apply_string_bound_ladder(input, config, deadline, solved))
+    let mut solved = apply_string_bound_ladder(input, config, deadline, solved);
+    // ADR-2140: a preference other than `Any` finishes the model here -- the
+    // magnitude ladder under `LeastUnsigned`, the replay-checked shrink under
+    // both. Over every declared constant, because the config has no way to
+    // name a subset; `solve_smtlib_least_witness` is the entry that takes one.
+    apply_model_preference(&mut solved, config, deadline);
+    Ok(solved)
+}
+
+/// The evaluator-call budget of the replay-checked model shrink (ADR-2140);
+/// one constant for both the warm engine and this front door.
+pub use crate::incremental::MODEL_SHRINK_EVALUATIONS;
+
+/// Finishes a decided query's model according to `config.model_preference`
+/// (ADR-2140): nothing under `Any`; the replay-checked shrink under
+/// `PreferZero`; the magnitude ladder over every declared bit-vector constant
+/// and then the shrink within the winning rung under `LeastUnsigned`.
+///
+/// Only the MODEL can change. A verdict other than `sat`, or a `sat` from a
+/// route that never built the flat view, passes through untouched.
+fn apply_model_preference(
+    solved: &mut SmtLibSolved,
+    config: &SolverConfig,
+    deadline: Option<std::time::Instant>,
+) {
+    match config.model_preference {
+        ModelPreference::Any => {}
+        ModelPreference::PreferZero => {
+            if !matches!(solved.outcome.result, CheckResult::Sat(_)) || solved.assertions.is_empty()
+            {
+                return;
+            }
+            let symbols = preference_symbols(&solved.script);
+            let Some(mut model) = solved.model.clone() else {
+                return;
+            };
+            shrink_model_toward_zero(
+                &solved.script.arena,
+                &solved.assertions,
+                &symbols,
+                &mut model,
+                deadline,
+            );
+            solved.outcome.result = CheckResult::Sat(model.clone());
+            solved.model = Some(model);
+        }
+        ModelPreference::LeastUnsigned => {
+            let symbols = default_least_witness_symbols(&solved.script);
+            apply_least_witness(solved, &symbols, config, deadline);
+        }
+    }
+}
+
+/// The symbols a preference may rewrite: every declared `Bool` or bit-vector
+/// constant of width `<= 128` that is not a packed `String`.
+fn preference_symbols(script: &Script) -> Vec<SymbolId> {
+    script
+        .model_symbols
+        .iter()
+        .copied()
+        .filter(|&s| matches!(script.arena.symbol(s).1, Sort::Bool | Sort::BitVec(1..=128)))
+        .filter(|&s| !script.declared_strings.iter().any(|&(t, _)| t == s))
+        .collect()
+}
+
+/// Greedily clears bits of `model` while the assertions still replay
+/// (ADR-2140's `PreferZero` finishing pass), returning how many were cleared.
+///
+/// # Why this pass exists, and why the forced SAT phase alone was not enough
+///
+/// The SAT-core half of `PreferZero` decides every variable `false`. Measured
+/// 2026-09-16 over the 15 `sat` fixtures of the committed `QF_BV` corpora,
+/// that moved **0** models: the variables the search decides are Tseitin
+/// GATE variables far more often than symbol input bits, and a gate decided
+/// `false` propagates a `1` into an input through any negated AIG edge
+/// (`v <-> (!a & b)` false, with `b` known true, forces `a = 1`). The
+/// polarity a bit-blasted model shows on its INPUTS is therefore not the
+/// polarity the core decided, and "prefer zero" has to be finished where the
+/// inputs are visible: on the lifted model, against the original assertions.
+///
+/// Deterministic: symbols in declaration order, bits from the most
+/// significant down, a `Bool` tried `false`; a candidate is kept iff
+/// [`crate::check_model`] accepts it (an evaluator error counts as a
+/// rejection). Bounded by [`MODEL_SHRINK_EVALUATIONS`] and by `deadline`.
+/// Greedy from the top bit, this reaches the least UNSIGNED value obtainable
+/// by clearing bits of the found witness -- a local minimum, never claimed as
+/// the global one (`crate::optimize::minimize_bv` is the exact answer for one
+/// objective).
+fn shrink_model_toward_zero(
+    arena: &TermArena,
+    assertions: &[TermId],
+    symbols: &[SymbolId],
+    model: &mut Model,
+    deadline: Option<std::time::Instant>,
+) -> usize {
+    let mut evaluations = 0usize;
+    let mut cleared = 0usize;
+    let out_of_budget = |evaluations: usize| {
+        evaluations >= MODEL_SHRINK_EVALUATIONS
+            || deadline.is_some_and(|at| std::time::Instant::now() >= at)
+    };
+    for &symbol in symbols {
+        match model.get(symbol) {
+            Some(Value::Bool(true)) => {
+                if out_of_budget(evaluations) {
+                    return cleared;
+                }
+                evaluations += 1;
+                model.set(symbol, Value::Bool(false));
+                if crate::check_model(arena, assertions, model).unwrap_or(false) {
+                    cleared += 1;
+                } else {
+                    model.set(symbol, Value::Bool(true));
+                }
+            }
+            Some(Value::Bv { width, value }) if value != 0 => {
+                let mut current = value;
+                for bit in (0..width).rev() {
+                    if current & (1u128 << bit) == 0 {
+                        continue;
+                    }
+                    if out_of_budget(evaluations) {
+                        return cleared;
+                    }
+                    evaluations += 1;
+                    let candidate = current & !(1u128 << bit);
+                    model.set(
+                        symbol,
+                        Value::Bv {
+                            width,
+                            value: candidate,
+                        },
+                    );
+                    if crate::check_model(arena, assertions, model).unwrap_or(false) {
+                        current = candidate;
+                        cleared += 1;
+                    } else {
+                        model.set(
+                            symbol,
+                            Value::Bv {
+                                width,
+                                value: current,
+                            },
+                        );
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    cleared
+}
+
+/// The magnitude bounds [`solve_smtlib_least_witness`] tries, smallest first
+/// (ADR-2140).
+///
+/// The same ladder `python/examples/cindergraph_defects/check.py` re-solved
+/// with by hand before this existed. Sparse and short on purpose: a rung is a
+/// full re-solve, and the point of the ladder is a witness a reader can check
+/// by hand -- a witness of magnitude 5,000 is not usefully smaller than one of
+/// magnitude 50,000, so the ladder stops at 4,096 and returns the unbounded
+/// model above it.
+pub const LEAST_WITNESS_BOUNDS: [u128; 4] = [1, 16, 256, 4096];
+
+/// A front-door verdict with the smallest-magnitude witness the bounded
+/// re-solve ladder found (ADR-2140).
+#[derive(Debug)]
+pub struct LeastWitness {
+    /// The verdict and model. On a `sat` where a rung succeeded, `outcome.result`
+    /// and `model` are the RUNG's model -- one that satisfies the script's
+    /// assertions AND the magnitude bound -- and `bound` says which rung. On a
+    /// `sat` where no rung succeeded (or none applied), this is exactly what
+    /// [`solve_smtlib_with_model`] returned.
+    pub solved: SmtLibSolved,
+    /// The magnitude bound the returned model satisfies: every bounded symbol
+    /// `x` has `-bound <= x <= bound` as a two's-complement integer. `None`
+    /// when the model is the unbounded one, or the verdict is not `sat`.
+    pub bound: Option<u128>,
+}
+
+/// Decides `input` and, on a `sat`, re-solves under growing magnitude bounds
+/// on `symbols` to return the smallest witness within
+/// [`LEAST_WITNESS_BOUNDS`] (ADR-2140).
+///
+/// `symbols` names declared bit-vector constants; empty means every declared
+/// bit-vector constant that is not a packed `String`. A name that is not a
+/// declared bit-vector constant is ignored, not an error: the bound is a
+/// preference over the witness, and a preference that cannot be expressed is
+/// simply not applied. Each rung asserts `x ∈ [-b, b]` in two's complement for
+/// every bounded symbol whose width admits it (a rung at or above `2^(w-1)`
+/// bounds nothing on a `w`-bit symbol and is not asserted), and the first
+/// rung whose extended query is `sat` wins; a rung's `unsat` or `unknown`
+/// moves to the next. The rungs share `config.timeout` with the unbounded
+/// solve, so the whole call is one budget.
+///
+/// **The verdict is the unbounded one.** A rung can only replace the MODEL of
+/// a query already decided `sat`, and a rung's model satisfies the original
+/// assertions by construction (it satisfies a superset), which is re-checked
+/// with [`crate::check_model`] before it is accepted; a rung that fails that
+/// check is skipped as if it had been `unsat`. An `unsat` or `unknown` is
+/// returned untouched with `bound: None`.
+///
+/// Why two's-complement magnitude and not unsigned order: the witnesses a
+/// defect reader wants are the wrap cases -- `a = 0xFFFFFFFF, b = 1` for
+/// `a + b < a`, `len = -1` for a `len > 256` check that passes signed and
+/// fails unsigned -- and those are magnitude 1, unreachable under an
+/// unsigned bound of any size below the width.
+///
+/// # Errors
+///
+/// As [`solve_smtlib_with_model`]: the parse and the unbounded solve. A rung's
+/// error is treated as that rung declining.
+pub fn solve_smtlib_least_witness(
+    input: &str,
+    symbols: &[&str],
+    config: &SolverConfig,
+) -> Result<LeastWitness, SolverError> {
+    let deadline = config
+        .timeout
+        .and_then(|t| std::time::Instant::now().checked_add(t));
+    // The unbounded solve runs under `Any`/`PreferZero` as configured, but
+    // never under `LeastUnsigned` -- that would run the ladder inside
+    // `solve_smtlib_with_model` over ALL symbols and then again here over the
+    // caller's subset, paying two ladders for one witness.
+    let inner = if config.model_preference == ModelPreference::LeastUnsigned {
+        config
+            .clone()
+            .with_model_preference(ModelPreference::PreferZero)
+    } else {
+        config.clone()
+    };
+    let mut solved = solve_smtlib_with_model(input, &inner)?;
+    let chosen: Vec<SymbolId> = if symbols.is_empty() {
+        default_least_witness_symbols(&solved.script)
+    } else {
+        default_least_witness_symbols(&solved.script)
+            .into_iter()
+            .filter(|&s| symbols.contains(&solved.script.arena.symbol(s).0))
+            .collect()
+    };
+    let bound = apply_least_witness(&mut solved, &chosen, config, deadline);
+    Ok(LeastWitness { solved, bound })
+}
+
+/// The symbols the ladder bounds when the caller names none: every declared
+/// constant of a bit-vector sort of width `<= 128` that is not a packed
+/// `String` (ADR-0029 stores those as bit-vectors, and a string's "magnitude"
+/// is not a thing a reader checks by hand).
+fn default_least_witness_symbols(script: &Script) -> Vec<SymbolId> {
+    script
+        .model_symbols
+        .iter()
+        .copied()
+        .filter(|&s| matches!(script.arena.symbol(s).1, Sort::BitVec(w) if w <= 128))
+        .filter(|&s| !script.declared_strings.iter().any(|&(t, _)| t == s))
+        .collect()
+}
+
+/// Runs the ladder over a decided [`SmtLibSolved`], replacing its model in
+/// place when a rung succeeds; returns the rung's bound.
+fn apply_least_witness(
+    solved: &mut SmtLibSolved,
+    symbols: &[SymbolId],
+    config: &SolverConfig,
+    deadline: Option<std::time::Instant>,
+) -> Option<u128> {
+    if !matches!(solved.outcome.result, CheckResult::Sat(_)) || solved.assertions.is_empty() {
+        // Not `sat`, or decided by a route that never built the flat view
+        // (see `SmtLibSolved`): there is no assertion stack to extend.
+        return None;
+    }
+    let assertions = solved.assertions.clone();
+    if let Some((model, bound)) =
+        least_witness_ladder(&mut solved.script, &assertions, symbols, config, deadline)
+    {
+        solved.outcome.result = CheckResult::Sat(model.clone());
+        solved.model = Some(model);
+        return Some(bound);
+    }
+    // No rung applied or succeeded: the unbounded model, finished the way
+    // `PreferZero` finishes it, so `LeastUnsigned` is never WORSE than
+    // `PreferZero` on a witness the ladder cannot bound.
+    if let Some(mut model) = solved.model.clone() {
+        let shrinkable = preference_symbols(&solved.script);
+        shrink_model_toward_zero(
+            &solved.script.arena,
+            &assertions,
+            &shrinkable,
+            &mut model,
+            deadline,
+        );
+        solved.outcome.result = CheckResult::Sat(model.clone());
+        solved.model = Some(model);
+    }
+    None
+}
+
+/// The bounded re-solve ladder itself, over an arena and an assertion stack.
+///
+/// Returns the first rung's model and bound, or `None` when no rung applied
+/// or succeeded. Shared by [`solve_smtlib_least_witness`] and the session's
+/// `(set-option :model-preference least-unsigned)`.
+fn least_witness_ladder(
+    script: &mut Script,
+    assertions: &[TermId],
+    symbols: &[SymbolId],
+    config: &SolverConfig,
+    deadline: Option<std::time::Instant>,
+) -> Option<(Model, u128)> {
+    // The rungs themselves solve under `PreferZero`: a rung is a search for a
+    // small witness, and `LeastUnsigned` here would recurse into nothing (the
+    // dispatcher does not read it) but is the wrong name for what a rung does.
+    let base = config
+        .clone()
+        .with_model_preference(ModelPreference::PreferZero);
+    for &bound in &LEAST_WITNESS_BOUNDS {
+        let rung = match deadline {
+            Some(at) => {
+                let remaining = at.saturating_duration_since(std::time::Instant::now());
+                if remaining < MIN_RUNG_BUDGET {
+                    return None;
+                }
+                base.clone().with_timeout(remaining)
+            }
+            None => base.clone(),
+        };
+        let mut extended = assertions.to_vec();
+        let mut bounded_any = false;
+        for &symbol in symbols {
+            let Sort::BitVec(width) = script.arena.symbol(symbol).1 else {
+                continue;
+            };
+            if width > 128 || width == 1 || bound >= (1u128 << (width - 1)) {
+                // A rung at or above `2^(w-1)` admits every value: asserting it
+                // would be a re-solve that bounds nothing.
+                continue;
+            }
+            let x = script.arena.var(symbol);
+            let mask = if width == 128 {
+                u128::MAX
+            } else {
+                (1u128 << width) - 1
+            };
+            let (Ok(hi), Ok(neg)) = (
+                script.arena.bv_const(width, bound),
+                script.arena.bv_const(width, bound.wrapping_neg() & mask),
+            ) else {
+                continue;
+            };
+            let (Ok(le), Ok(ge)) = (script.arena.bv_sle(x, hi), script.arena.bv_sge(x, neg)) else {
+                continue;
+            };
+            extended.push(le);
+            extended.push(ge);
+            bounded_any = true;
+        }
+        if !bounded_any {
+            // Every wider rung bounds the same nothing.
+            return None;
+        }
+        if let Ok(CheckResult::Sat(mut model)) = solve(&mut script.arena, &extended, &rung) {
+            // Defence in depth: the rung's model satisfies a SUPERSET of the
+            // original assertions, so it satisfies them -- and the check is
+            // cheap next to the solve, so it is made rather than argued.
+            if crate::check_model(&script.arena, assertions, &model).unwrap_or(false) {
+                // Finish INSIDE the rung: the shrink replays against the
+                // extended stack, so a bit it clears cannot push a symbol
+                // past the magnitude the rung promised (`-1` stays `-1`
+                // rather than becoming the unsigned-smaller `INT_MIN`).
+                let shrinkable = preference_symbols(script);
+                shrink_model_toward_zero(
+                    &script.arena,
+                    &extended,
+                    &shrinkable,
+                    &mut model,
+                    deadline,
+                );
+                if crate::check_model(&script.arena, assertions, &model).unwrap_or(false) {
+                    return Some((model, bound));
+                }
+            }
+        }
+    }
+    None
 }
 
 /// The declared-string window the ordinary front door parses at — `axeyum_smtlib`'s
@@ -3526,9 +3911,9 @@ enum SessionPolicy {
 /// which is the whole point: an option that is accepted and ignored is a lie the
 /// consumer cannot see.
 #[derive(Debug, Clone)]
-// Five independent SMT-LIB options, not one state machine: `:produce-models`
-// does not constrain `:produce-proofs`, and folding any pair into an enum would
-// invent a relationship the standard does not have.
+// Six independent options, not one state machine: `:produce-models` does not
+// constrain `:produce-proofs`, and folding any pair into an enum would invent a
+// relationship the standard does not have.
 #[allow(clippy::struct_excessive_bools)]
 struct SessionOptions {
     /// `:produce-models`. Defaults to **true**: Z3 4.13.3 and cvc5 1.3.4 both
@@ -3545,6 +3930,11 @@ struct SessionOptions {
     print_success: bool,
     /// `:timeout`, in milliseconds.
     timeout_ms: Option<u64>,
+    /// `:model-preference` (ADR-2140): `any`, `zero` or `least-unsigned`.
+    /// `None` until the script sets it, and then the caller's
+    /// [`SolverConfig::model_preference`] stands -- a script that says nothing
+    /// gets exactly the configured search.
+    model_preference: Option<ModelPreference>,
 }
 
 impl Default for SessionOptions {
@@ -3555,7 +3945,29 @@ impl Default for SessionOptions {
             produce_proofs: false,
             print_success: false,
             timeout_ms: None,
+            model_preference: None,
         }
+    }
+}
+
+impl SessionOptions {
+    /// The configuration a `check-sat` runs under: the caller's, with the
+    /// script's `:timeout` folded in under the caller's ceiling and its
+    /// `:model-preference` (if set) replacing the caller's.
+    fn effective(&self, config: &SolverConfig, ceiling: Option<Duration>) -> SolverConfig {
+        let mut effective = match self.timeout_ms {
+            Some(ms) => {
+                let asked = Duration::from_millis(ms);
+                config
+                    .clone()
+                    .with_timeout(ceiling.map_or(asked, |cap| cap.min(asked)))
+            }
+            None => config.clone(),
+        };
+        if let Some(preference) = self.model_preference {
+            effective = effective.with_model_preference(preference);
+        }
+        effective
     }
 }
 
@@ -3764,6 +4176,7 @@ fn run_session(
                 let result = gate.confirm(&mut script.arena, &stack, &effective, result)?;
                 let proof_eligible = !gate.active || matches!(result, CheckResult::Unsat);
                 let result = apply_word_route(script, &effective, result);
+                let result = session_model_preference(script, &stack, &effective, result);
                 last = Some(DecidedQuery {
                     result: result.clone(),
                     assertions: stack.clone(),
@@ -3785,6 +4198,7 @@ fn run_session(
                 // uses `check-sat-assuming` (see `build_word_problem`), so this is
                 // a plain pass-through here; kept uniform with the other queries.
                 let result = apply_word_route(script, &effective, result);
+                let result = session_model_preference(script, &with, &effective, result);
                 let mut with_names = names.clone();
                 with_names.resize(with.len(), None);
                 last = Some(DecidedQuery {
@@ -3833,15 +4247,7 @@ fn run_session(
                     continue;
                 }
                 responses.extend(apply_set_option(&mut options, key, value));
-                effective = match options.timeout_ms {
-                    Some(ms) => {
-                        let asked = Duration::from_millis(ms);
-                        config
-                            .clone()
-                            .with_timeout(ceiling.map_or(asked, |cap| cap.min(asked)))
-                    }
-                    None => config.clone(),
-                };
+                effective = options.effective(config, ceiling);
             }
             ScriptCommand::Echo(text) => {
                 if full {
@@ -3948,6 +4354,24 @@ fn apply_set_option(
                 message: format!(":timeout expects milliseconds, got `{value}`"),
             }),
         },
+        // ADR-2140. Not an SMT-LIB standard option; a solver-specific one in
+        // the way `:timeout` is, honored because a consumer that sets it and
+        // reads `success` must get the policy it asked for. A value outside
+        // the three is an ERROR, not `unsupported`: the option is honored and
+        // the value is wrong, which is the `:timeout expects milliseconds`
+        // case, not the `:foo is not honored` one.
+        ":model-preference" => match ModelPreference::parse(value) {
+            Some(preference) => {
+                options.model_preference = Some(preference);
+                Ok(())
+            }
+            None => Err(SmtLibResponse::Error {
+                command: "set-option".to_owned(),
+                message: format!(
+                    ":model-preference expects `any`, `zero` or `least-unsigned`, got `{value}`"
+                ),
+            }),
+        },
         other => {
             return Some(SmtLibResponse::Unsupported {
                 command: "set-option".to_owned(),
@@ -3958,6 +4382,49 @@ fn apply_set_option(
     match set {
         Ok(()) => session_ack(options),
         Err(error) => Some(error),
+    }
+}
+
+/// The session's half of `(set-option :model-preference …)` (ADR-2140): on a
+/// `sat`, finish the model the way the configured preference says --
+/// `apply_model_preference` for the single-query front door, applied to the
+/// assertion stack this `check-sat` decided.
+///
+/// Every other verdict passes through untouched. A rung's model satisfies the
+/// query's assertions by construction and is re-checked before it replaces the
+/// search's (`least_witness_ladder`); the shrink keeps only candidates that
+/// replay. So a `get-model` after this answers with a model of exactly the
+/// assertions the `check-sat` decided.
+fn session_model_preference(
+    script: &mut Script,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    result: CheckResult,
+) -> CheckResult {
+    let CheckResult::Sat(mut model) = result else {
+        return result;
+    };
+    let deadline = config
+        .timeout
+        .and_then(|t| std::time::Instant::now().checked_add(t));
+    match config.model_preference {
+        ModelPreference::Any => CheckResult::Sat(model),
+        ModelPreference::PreferZero => {
+            let symbols = preference_symbols(script);
+            shrink_model_toward_zero(&script.arena, assertions, &symbols, &mut model, deadline);
+            CheckResult::Sat(model)
+        }
+        ModelPreference::LeastUnsigned => {
+            let symbols = default_least_witness_symbols(script);
+            if let Some((bounded, _bound)) =
+                least_witness_ladder(script, assertions, &symbols, config, deadline)
+            {
+                return CheckResult::Sat(bounded);
+            }
+            let shrinkable = preference_symbols(script);
+            shrink_model_toward_zero(&script.arena, assertions, &shrinkable, &mut model, deadline);
+            CheckResult::Sat(model)
+        }
     }
 }
 

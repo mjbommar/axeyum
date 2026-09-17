@@ -530,3 +530,108 @@ def test_solve_accepts_the_full_budget_keyword_set() -> None:
     # A budget miss is an `unknown` VALUE with a reason, never an exception.
     assert outcome.status == "unknown"
     assert outcome.detail != ""
+
+
+# --- ADR-2140: which model a `sat` returns is a policy --------------------
+
+WRAP_ADD = """(set-logic QF_BV)
+(declare-const a (_ BitVec 32))
+(declare-const b (_ BitVec 32))
+(assert (bvult (bvadd a b) a))
+(check-sat)
+"""
+
+SIGNED_CHECK_BYPASS = """(set-logic QF_BV)
+(declare-const len (_ BitVec 32))
+(assert (bvsle len (_ bv256 32)))
+(assert (bvugt len (_ bv256 32)))
+(check-sat)
+"""
+
+FREE_BITS = """(set-logic QF_BV)
+(declare-const x (_ BitVec 8))
+(declare-const y (_ BitVec 8))
+(declare-const z (_ BitVec 8))
+(assert (or (= x #x05) (bvult y #x10)))
+(assert (or (= x #x05) (bvuge y #x10)))
+(assert (or (= z #x07) (bvult y #xf0)))
+(assert (or (= z #x07) (bvuge y #xf0)))
+(assert (bvult (bvadd x y z) #x03))
+(check-sat)
+"""
+
+
+def _magnitude32(value: int) -> int:
+    return (1 << 32) - value if value >= 1 << 31 else value
+
+
+def test_least_witness_finds_the_magnitude_one_wrap() -> None:
+    witness = smt.least_witness(WRAP_ADD, timeout_ms=TIMEOUT_MS)
+    assert witness.status == "sat"
+    assert witness.bound == 1
+    model = witness.outcome.model
+    a, b = model["a"], model["b"]
+    assert (a, b) in {(0xFFFFFFFF, 1), (1, 0xFFFFFFFF)}, (hex(a), hex(b))
+    # The bounded witness still replays against the ORIGINAL assertions.
+    assert witness.outcome.replay() is True
+
+
+def test_least_witness_finds_the_negative_length_and_honors_symbols() -> None:
+    witness = smt.least_witness(SIGNED_CHECK_BYPASS, ["len"], timeout_ms=TIMEOUT_MS)
+    assert witness.bound == 1
+    assert witness.outcome.model["len"] == 0xFFFFFFFF
+    assert witness.outcome.replay() is True
+    # A symbol that is not declared is ignored, not an error: the bound is a
+    # preference, and one that names nothing bounds nothing.
+    nothing = smt.least_witness(SIGNED_CHECK_BYPASS, ["no_such"], timeout_ms=TIMEOUT_MS)
+    assert nothing.status == "sat"
+    assert nothing.bound is None
+
+
+def test_least_witness_reports_no_bound_when_every_rung_fails() -> None:
+    script = """(set-logic QF_BV)
+(declare-const x (_ BitVec 32))
+(assert (= x (_ bv100000 32)))
+(check-sat)
+"""
+    witness = smt.least_witness(script, timeout_ms=TIMEOUT_MS)
+    assert witness.status == "sat"
+    assert witness.bound is None
+    assert witness.outcome.model["x"] == 100_000
+    assert "bound=None" in repr(witness)
+
+
+def test_least_witness_passes_unsat_through() -> None:
+    witness = smt.least_witness(
+        "(set-logic QF_BV)(declare-const x (_ BitVec 8))(assert (bvult x #x00))(check-sat)",
+        timeout_ms=TIMEOUT_MS,
+    )
+    assert witness.status == "unsat"
+    assert witness.bound is None
+    assert witness.outcome.model == {}
+
+
+def test_model_preference_zero_shrinks_a_free_witness_and_any_is_the_default() -> None:
+    default = smt.solve(FREE_BITS, timeout_ms=TIMEOUT_MS)
+    any_ = smt.solve(FREE_BITS, timeout_ms=TIMEOUT_MS, model_preference="any")
+    zero = smt.solve(FREE_BITS, timeout_ms=TIMEOUT_MS, model_preference="zero")
+    assert default.status == any_.status == zero.status == "sat"
+    assert default.model == any_.model
+    # `y` has three witnesses (0xF4, 0xF5, 0xF6); the zero preference returns
+    # the smallest reachable one and the verdict does not move.
+    assert zero.model["y"] == 0xF4
+    assert zero.model["x"] == 5 and zero.model["z"] == 7
+    assert zero.replay() is True
+    least = smt.solve(FREE_BITS, timeout_ms=TIMEOUT_MS, model_preference="least-unsigned")
+    assert least.status == "sat"
+    assert _magnitude32(least.model["y"] | (0xFFFFFF00 if least.model["y"] >= 0x80 else 0)) <= 16
+    assert least.replay() is True
+
+
+def test_model_preference_rejects_a_misspelling() -> None:
+    with pytest.raises(axeyum.AxeyumError, match="model_preference"):
+        smt.solve(FREE_BITS, timeout_ms=TIMEOUT_MS, model_preference="smallest")
+    with pytest.raises(axeyum.AxeyumError, match="model_preference"):
+        axeyum.solver.Config(model_preference="smallest")
+    assert axeyum.solver.Config(model_preference="zero").model_preference == "zero"
+    assert axeyum.solver.Config().model_preference == "any"

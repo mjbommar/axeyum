@@ -1829,6 +1829,44 @@ SUITES["dt-array-element-2135"] = (
     ],
 )
 
+# --------------------------------------------------------------------------
+# ADR-2140: which model a `sat` returns is a policy, and the shipped policy is
+# today's search. Two mutations, two different subjects, each of which must kill
+# EXACTLY one of the suite's tests:
+#
+#  * flipping the DEFAULT to `PreferZero` must kill the identity test and
+#    nothing else -- every other test in the suite sets its policy explicitly,
+#    so a default that moved is visible to exactly the test that measures it;
+#  * removing the forced-phase read at the SAT core's decision site must kill
+#    `prefer_zero_reaches_the_one_shot_backend` and nothing else -- the one test
+#    that observes the SAT-core half directly. The corpus non-vacuity test
+#    SURVIVES this mutation by design: `PreferZero`'s finishing shrink moves the
+#    three-witness fixture whether or not the core's phase was forced, which is
+#    exactly the finding ADR-2140 records (the forced phase alone moved 0 of 15
+#    corpus models). Measured 2026-09-17: killed 1 / killed 1.
+# --------------------------------------------------------------------------
+
+SUITES["model-preference-2140"] = (
+    "crates/axeyum-solver/src/backend.rs",
+    Cargo(
+        ("-p", "axeyum-solver", "--features", "full", "--test", "model_preference_2140"),
+        "model-preference-2140",
+    ),
+    [
+        (
+            "the shipped default is `Any`",
+            "pub const DEFAULT_MODEL_PREFERENCE: ModelPreference = ModelPreference::Any;",
+            "pub const DEFAULT_MODEL_PREFERENCE: ModelPreference = ModelPreference::PreferZero;",
+        ),
+        (
+            "the SAT core reads the forced phase at its decision site",
+            "                    let polarity = self.forced_phase.unwrap_or(self.phase[var]);",
+            "                    let polarity = self.phase[var];",
+            "crates/axeyum-cnf/src/proof_sat.rs",
+        ),
+    ],
+)
+
 SUITES["dt-nested-field-2128"] = (
     "crates/axeyum-solver/src/datatype_native.rs",
     Cargo(

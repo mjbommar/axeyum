@@ -10,7 +10,8 @@
 use std::time::Duration;
 
 use axeyum_solver::{
-    BitLoweringMode, CheckResult, Model, SolverConfig, SolverError, UnknownKind, check_model,
+    BitLoweringMode, CheckResult, Model, ModelPreference, SolverConfig, SolverError, UnknownKind,
+    check_model,
 };
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -83,6 +84,16 @@ impl Config {
     }
 }
 
+/// Parses a `model_preference` keyword (ADR-2140): the three spellings the
+/// SMT-LIB option takes, and nothing else -- a typo must not select `any`.
+pub(crate) fn parse_model_preference(text: &str) -> PyResult<ModelPreference> {
+    ModelPreference::parse(text).ok_or_else(|| {
+        AxeyumError::new_err(format!(
+            "unknown model_preference {text:?}; expected 'any', 'zero' or 'least-unsigned'"
+        ))
+    })
+}
+
 #[cfg_attr(feature = "stub-gen", pyo3_stub_gen::derive::gen_stub_pymethods)]
 #[pymethods]
 impl Config {
@@ -108,6 +119,7 @@ impl Config {
         lazy_bv = false,
         native_cdcl = false,
         lazy_bv_abstract_ite = false,
+        model_preference = "any",
     ))]
     #[allow(clippy::fn_params_excessive_bools, clippy::too_many_arguments)]
     fn new(
@@ -129,7 +141,9 @@ impl Config {
         lazy_bv: bool,
         native_cdcl: bool,
         lazy_bv_abstract_ite: bool,
+        model_preference: &str,
     ) -> PyResult<Self> {
+        let preference = parse_model_preference(model_preference)?;
         let mode = match bit_lowering_mode {
             "eager" => BitLoweringMode::Eager,
             "demand_sliced" => BitLoweringMode::DemandSliced,
@@ -159,7 +173,15 @@ impl Config {
         config.lazy_bv = lazy_bv;
         config.native_cdcl = native_cdcl;
         config.lazy_bv_abstract_ite = lazy_bv_abstract_ite;
+        config.model_preference = preference;
         Ok(Self { config })
+    }
+
+    /// Which model a `sat` prefers (ADR-2140): `"any"`, `"zero"` or
+    /// `"least-unsigned"`.
+    #[getter]
+    fn model_preference(&self) -> &'static str {
+        self.config.model_preference.as_str()
     }
 
     /// The wall-clock budget in milliseconds, or `None`.

@@ -322,6 +322,122 @@ pub struct SolverConfig {
     /// checking gives up early (reported as `Inconclusive`, never as a
     /// timeout-shaped `Proved`), never what a completed check accepts.
     pub check_progress: Option<CheckProgress>,
+
+    /// Which model a `sat` should return, when more than one satisfies
+    /// (ADR-2140). [`ModelPreference::Any`] — the shipped default, and
+    /// byte-for-byte the search as it was before the field existed — leaves
+    /// it to the search. A preference is a decision-order heuristic plus, for
+    /// [`ModelPreference::LeastUnsigned`], a bounded re-solve in the front
+    /// door; it can change WHICH model comes back and how long the search
+    /// takes, and it cannot change a verdict: every `sat` still replays
+    /// against the original assertions and every `unsat` still carries the
+    /// proof it always did.
+    ///
+    /// The default is taken from [`DEFAULT_MODEL_PREFERENCE`] unless the
+    /// process has `AXEYUM_MODEL_PREFERENCE` set (`any`, `zero`,
+    /// `least-unsigned`), which is the one-binary A/B lever; unset is the
+    /// shipped value, and a malformed value is a hard error rather than a
+    /// silent default arm (`axeyum_ir::config_lever`'s contract).
+    pub model_preference: ModelPreference,
+}
+
+/// Which model a `sat` returns when several satisfy (ADR-2140).
+///
+/// A **preference**, never a promise: the search is free to return any
+/// satisfying assignment under every variant, and a consumer that needs a
+/// property of the witness checks the witness. What each variant does:
+///
+/// | variant | SAT core | front door |
+/// | --- | --- | --- |
+/// | `Any` | phase saving as shipped | nothing |
+/// | `PreferZero` | every decision is `false` (z3 `phase=always_false`) | nothing |
+/// | `LeastUnsigned` | as `PreferZero` | after a `sat`, re-solve under `x ∈ [-b, b]` for `b ∈ {1, 16, 256, 4096}` and return the first bounded model, else the unbounded one ([`crate::solve_smtlib_least_witness`]) |
+///
+/// The two consumers this exists for: a symbolic-execution client that
+/// concretizes on the model and wants backends to concretize alike (Glaurung
+/// measured 79 % of both-sat queries returning different valid models between
+/// z3 and this solver), and a defect-witness pipeline that wants a value a
+/// reader can check by hand (`python/examples/cindergraph_defects`, which
+/// re-solved under growing bounds itself before this existed).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ModelPreference {
+    /// Whatever the search finds first. The shipped default.
+    #[default]
+    Any,
+    /// Decide every SAT variable `false` first, so every input bit the search
+    /// DECIDED (rather than propagated) is `0`. Costs whatever the changed
+    /// trajectory costs; ADR-2140 records the measured price on `QF_BV`.
+    PreferZero,
+    /// [`Self::PreferZero`] plus, in the SMT-LIB front door, the bounded
+    /// re-solve ladder that returns the smallest-magnitude witness within
+    /// `4096`, else the unbounded one. Named for the ordering it approximates;
+    /// the bound is two's-complement MAGNITUDE (`0xFFFF…F` is magnitude 1),
+    /// because the wrap witnesses a defect reader wants are negative.
+    LeastUnsigned,
+}
+
+impl ModelPreference {
+    /// The `(set-option :model-preference …)` / `AXEYUM_MODEL_PREFERENCE`
+    /// spelling of each variant.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Any => "any",
+            Self::PreferZero => "zero",
+            Self::LeastUnsigned => "least-unsigned",
+        }
+    }
+
+    /// Parses the option spelling; `None` for anything else (the caller
+    /// decides whether that is `unsupported` or a hard error).
+    #[must_use]
+    pub fn parse(text: &str) -> Option<Self> {
+        match text.trim() {
+            "any" => Some(Self::Any),
+            "zero" | "prefer-zero" => Some(Self::PreferZero),
+            "least-unsigned" => Some(Self::LeastUnsigned),
+            _ => None,
+        }
+    }
+
+    /// The decision polarity the SAT core is told to force: `None` under
+    /// [`Self::Any`], `Some(false)` otherwise.
+    #[must_use]
+    pub const fn forced_phase(self) -> Option<bool> {
+        match self {
+            Self::Any => None,
+            Self::PreferZero | Self::LeastUnsigned => Some(false),
+        }
+    }
+}
+
+/// The model preference a [`SolverConfig`] carries when nothing chose one:
+/// [`ModelPreference::Any`], the search exactly as shipped before ADR-2140.
+///
+/// A `const` rather than the enum's `Default` so it is one named, registered
+/// value (`config_registry`) that a mutation can flip and exactly one test —
+/// the `Any`-is-today identity over the `QF_BV` corpus — dies.
+pub const DEFAULT_MODEL_PREFERENCE: ModelPreference = ModelPreference::Any;
+
+/// The process-wide model preference: [`DEFAULT_MODEL_PREFERENCE`] unless
+/// `AXEYUM_MODEL_PREFERENCE` is set, read once.
+///
+/// Read once into a `OnceLock`, like every lever in this tree: determinism is
+/// a public API promise, so the preference cannot change between two solves
+/// in one process. A set-but-malformed value panics naming the variable, so a
+/// typo cannot measure the shipped arm and report it as the other.
+fn process_model_preference() -> ModelPreference {
+    use std::sync::OnceLock;
+    static PREFERENCE: OnceLock<ModelPreference> = OnceLock::new();
+    *PREFERENCE.get_or_init(|| match std::env::var("AXEYUM_MODEL_PREFERENCE") {
+        Ok(text) => ModelPreference::parse(&text).unwrap_or_else(|| {
+            panic!(
+                "AXEYUM_MODEL_PREFERENCE={text:?} is not one of `any`, `zero`, `least-unsigned`; \
+                 refusing to run the default arm under a lever that was set"
+            )
+        }),
+        Err(_) => DEFAULT_MODEL_PREFERENCE,
+    })
 }
 
 /// A progress sink installed on [`SolverConfig::proof_progress`]. `sink` is a
@@ -426,6 +542,7 @@ impl Default for SolverConfig {
             native_cdcl: false,
             proof_progress: None,
             check_progress: None,
+            model_preference: process_model_preference(),
         }
     }
 }
@@ -434,6 +551,13 @@ impl SolverConfig {
     /// An empty configuration with no budgets (same as `Default`).
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Sets which model a `sat` should prefer (ADR-2140).
+    #[must_use]
+    pub fn with_model_preference(mut self, preference: ModelPreference) -> Self {
+        self.model_preference = preference;
+        self
     }
 
     /// Sets the wall-clock timeout.
