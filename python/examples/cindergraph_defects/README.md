@@ -4,20 +4,37 @@ Eight small C files, each with the defective function and its fixed twin side
 by side. For every function, [cindergraph](https://github.com/mjbommar/cindergraph)
 parses the C into a typed AST with declared types and a CFG; `lift.py` walks
 that AST with C's own integer semantics and emits one QF_BV query per reachable
-sink; `axeyum_cli` answers each query; and a `sat` model becomes a C `main` that
-calls the function with exactly those arguments under AddressSanitizer or UBSan.
-The sanitizer's report at the finding's line is the evidence. A witness that
-does not reproduce is printed as `DID NOT REPLAY` and fails the run.
+sink; `axeyum.smt.solve` (the native Python bindings) answers each query; and a
+`sat` model becomes a C `main` that calls the function with exactly those
+arguments under AddressSanitizer or UBSan. The sanitizer's report at the
+finding's line is the evidence. A witness that does not reproduce is printed as
+`DID NOT REPLAY` and fails the run.
 
 ```sh
-uv venv && uv pip install "cindergraph @ git+https://github.com/mjbommar/cindergraph.git@main"
-cargo build --release -p axeyum-bench --example axeyum_cli --features axeyum-solver/full
+# /tmp is a RAM tmpfs on this fleet; point maturin's wheel output at real disk
+export TMPDIR=/data0/axeyum/scratch/py-tmp-$USER && mkdir -p "$TMPDIR"
+uv sync --dev
+uv run --no-sync maturin develop --release      # builds axeyum._native into .venv
+uv pip install "cindergraph @ git+https://github.com/mjbommar/cindergraph.git@main"
 .venv/bin/python python/examples/cindergraph_defects/check.py --out /tmp/cindergraph-defects
 python3 python/examples/cindergraph_defects/test_lift.py     # the C-semantics rules, stdlib only
 ```
 
 Exit status is 0 only when every witness replays at its own line and every
 `// expect:` line in the samples is met. Queries and harnesses land in `--out`.
+
+`check.py` calls straight into the compiled extension by default. A checkout
+that has not built it (or does not want to) can pass `--cli` to shell out to
+the `axeyum_cli` example binary instead:
+
+```sh
+cargo build --release -p axeyum-bench --example axeyum_cli --features full
+.venv/bin/python python/examples/cindergraph_defects/check.py --cli --out /tmp/cindergraph-defects
+```
+
+Both routes decide the same queries and produce the same findings — the
+switch changes how the verdict and model cross into Python, not what gets
+asked of the solver.
 
 ## Results, 2026-09-16 (clang 21, `axeyum_cli` at `16087e477`)
 
