@@ -266,6 +266,26 @@ checked-in file under `examples/`, not only the runnable targets.
 | [`support/fib_gcd_shift.rs`](../../crates/axeyum-lean-import/examples/support/fib_gcd_shift.rs) | `nat_gcd_succ_specialization` | Fixed support constructors for the Fibonacci gcd-shift operation, plus the canonical declaration/expression SHA-256 pins that bind them to their source. |
 | [`support/official_gcd_balanced_bezout.rs`](../../crates/axeyum-lean-import/examples/support/official_gcd_balanced_bezout.rs) | `official_gcd_balanced_bezout_composition`, `official_coprime_factor_cancellation_composition` | The shared balanced-Bézout composition body. It lived directly in `examples/` until 2026-08-21, which auto-registered it as a Cargo target — and that target could not satisfy `missing_docs` while also being `include!`d, because `//!` lands mid-file in the including example (`E0753`). Two requirements, one file, contradictory; it moved here and each caller carries its own docs. |
 
+## Python examples
+
+`python/examples/` is not part of the Cargo target population below — nothing
+here changes the `N`-example inventory count or its markers, which are
+generated from `cargo metadata` alone (`scripts/gen-example-inventory.py`).
+Two examples, both requiring the built native module
+([Python bindings](../user-guide/python.md)):
+
+| Example | Run with | Classification | What it demonstrates |
+|---|---|---|---|
+| [`gallery.py`](../../python/examples/gallery.py) | `uv run --no-sync python python/examples/gallery.py` | Learning | One short, real-output demo per `axeyum` submodule (`smt`, `ir`, `solver`, `cas`, `kernel`, `knowledge`, the `m` Mathematica-shaped layer) — prints every result, including the certificate check behind a CAS answer, never a mocked value. |
+| [`cindergraph_defects/check.py`](../../python/examples/cindergraph_defects/check.py) | `.venv/bin/python python/examples/cindergraph_defects/check.py --out <dir>` (README has the full `cindergraph` + `axeyum_cli` setup) | Artifact generator | Lifts eight textbook C defect/fix pairs through [cindergraph](https://github.com/mjbommar/cindergraph)'s typed AST into QF_BV queries, decides each with `axeyum.smt.solve` (or, with `--cli`, the `axeyum_cli` subprocess), and replays every `sat` witness under AddressSanitizer/UBSan at the finding's own line. Writes queries, harness sources, and `results.tsv` under `--out`; the Markdown table in the README is a reviewed, hand-refreshed copy of that output, not a mocked one. Exit status depends on every witness replaying and every sample's `// expect:` line being met — a check, not a demo. |
+
+[`lift.py`](../../python/examples/cindergraph_defects/lift.py) (the C-to-QF_BV
+lifter) and [`test_lift.py`](../../python/examples/cindergraph_defects/test_lift.py)
+(its stdlib-only unit tests for the C integer-semantics rules) are support
+modules for `check.py`, not standalone examples — listed here because the
+Python inventory, like the Cargo one, should name every checked-in file under
+`examples/`, not only the runnable entry point.
+
 ## Inventory and validation
 
 The authoritative target list comes from Cargo metadata, including required
