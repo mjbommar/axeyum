@@ -329,6 +329,231 @@ fn positive_path_level() -> usize {
     process_positive_path_level()
 }
 
+/// What the e-matching loop did with its NESTED universals — the registrations
+/// that are matched but never asserted — read back in-process (ADR-2149).
+///
+/// This exists because the question "was the tuple computed, and then where
+/// did it go?" was previously answerable only by parsing `AXEYUM_QPROBE_CENSUS`
+/// stderr, and only at the fixpoint exit, which 35 of 53 reference-minimal
+/// `UFLIA` cores never reach (ADR-2120 §7a). A fixture that asserts a verdict
+/// alone cannot distinguish "the inner universal was activated and refuted"
+/// from "some other route refuted it", and one that asserts a registration
+/// count cannot distinguish "registered and dropped" from "registered and
+/// handed off". These counters can.
+///
+/// Every field is a SUM over the loop invocations that ran while a
+/// [`NestedActivationStatsGuard`] was live on this thread. The ladder re-enters
+/// the loop several times per query, so a per-invocation reading would be a
+/// sample; the sum is the population.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct NestedActivationStats {
+    /// Compiled registrations (`!active` universals) across all invocations.
+    pub registrations: usize,
+    /// Registrations carrying a [`PositiveContext`] — the ones whose tuples are
+    /// handed off rather than dropped.
+    pub with_context: usize,
+    /// Registrations inert because their path crosses another universal's
+    /// binder below the owner's own prefix.
+    pub inert_crossed_binder: usize,
+    /// Registrations inert because they sit at a tracked negative position.
+    pub inert_negative: usize,
+    /// Registrations inert because a connective on the path is refused at the
+    /// level in force.
+    pub inert_untracked: usize,
+    /// Tuples the join emitted for inactive registrations (contextful or not).
+    pub joined: usize,
+    /// Tuples handed to the discovery driver as positive replacements.
+    pub handed_off: usize,
+    /// Contextful tuples dropped by the per-round handoff cap.
+    pub positive_capped: usize,
+    /// Tuples dropped because the registration has no context.
+    pub dropped: usize,
+    /// The `dropped` subset under a crossed binder.
+    pub dropped_crossed_binder: usize,
+    /// The `dropped` subset at a negative position.
+    pub dropped_negative: usize,
+    /// The `dropped` subset behind a refused connective.
+    pub dropped_untracked: usize,
+    /// Registrations lazy discovery added from admitted instances and staged
+    /// replacements (the reference solvers' "instance exposes a universal").
+    pub discovered: usize,
+    /// Discovered registrations never compiled because the rebuild budget
+    /// (`MAX_DISCOVERY_REBUILDS`) was spent first. Nonzero means the loop
+    /// held registrations it could not match on.
+    pub discovered_uncompiled: usize,
+    /// Positive replacements the driver produced from handed-off tuples.
+    pub positive_instances: usize,
+    /// Binder-free replacements admitted to the ground set.
+    pub staged_ground: usize,
+    /// Replacements that kept binders and were promoted to universals.
+    pub promoted: usize,
+    /// Matcher rebuilds discovery caused.
+    pub rebuilds: usize,
+    /// Replacements the checker refused (a defect signal, never a soundness one).
+    pub rejected: usize,
+    /// The `rejected` subset the checker itself (`positive_instance_formula`)
+    /// refused, as opposed to an untrusted owner or an arity mismatch.
+    pub rejected_by_checker: usize,
+    /// Loop invocations this reading sums over.
+    pub invocations: usize,
+}
+
+impl NestedActivationStats {
+    fn add(&mut self, other: &Self) {
+        self.registrations += other.registrations;
+        self.with_context += other.with_context;
+        self.inert_crossed_binder += other.inert_crossed_binder;
+        self.inert_negative += other.inert_negative;
+        self.inert_untracked += other.inert_untracked;
+        self.joined += other.joined;
+        self.handed_off += other.handed_off;
+        self.positive_capped += other.positive_capped;
+        self.dropped += other.dropped;
+        self.dropped_crossed_binder += other.dropped_crossed_binder;
+        self.dropped_negative += other.dropped_negative;
+        self.dropped_untracked += other.dropped_untracked;
+        self.discovered += other.discovered;
+        self.discovered_uncompiled += other.discovered_uncompiled;
+        self.positive_instances += other.positive_instances;
+        self.staged_ground += other.staged_ground;
+        self.promoted += other.promoted;
+        self.rebuilds += other.rebuilds;
+        self.rejected += other.rejected;
+        self.rejected_by_checker += other.rejected_by_checker;
+        self.invocations += other.invocations;
+    }
+}
+
+std::thread_local! {
+    static COLLECT_NESTED_ACTIVATION_STATS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// One entry per loop invocation since the guard was enabled; the last
+    /// entry is overwritten at every recording point of the running
+    /// invocation, so a reading mid-loop is that invocation's latest snapshot.
+    static NESTED_ACTIVATION_STATS: std::cell::RefCell<Vec<NestedActivationStats>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+fn nested_activation_stats_collecting() -> bool {
+    COLLECT_NESTED_ACTIVATION_STATS.with(std::cell::Cell::get)
+}
+
+/// Enables [`NestedActivationStats`] collection on this thread for the guard's
+/// lifetime, restoring the previous setting on drop. Resets the accumulator on
+/// `enable()` — the same convention as the other opt-in, off-by-default,
+/// thread-local diagnostics (`DlOnlineStatsGuard`, `BvLayerStatsGuard`).
+///
+/// While live it also switches the loop's per-universal
+/// [`AdmissionCensus`] on, which `AXEYUM_QPROBE_CENSUS` otherwise gates: the
+/// counters are read from that census, and a guard that read an unarmed census
+/// would report a zero indistinguishable from "nothing was dropped".
+pub struct NestedActivationStatsGuard(bool);
+
+impl NestedActivationStatsGuard {
+    /// Enables collection for the lifetime of the returned guard.
+    #[must_use]
+    pub fn enable() -> Self {
+        let previous = COLLECT_NESTED_ACTIVATION_STATS.with(|cell| cell.replace(true));
+        NESTED_ACTIVATION_STATS.with(|cell| cell.borrow_mut().clear());
+        NestedActivationStatsGuard(previous)
+    }
+}
+
+impl Drop for NestedActivationStatsGuard {
+    fn drop(&mut self) {
+        COLLECT_NESTED_ACTIVATION_STATS.with(|cell| cell.set(self.0));
+    }
+}
+
+/// This thread's summed [`NestedActivationStats`] since the active (or most
+/// recently dropped) [`NestedActivationStatsGuard`] was created. All zeros
+/// when collection was never enabled OR the query never entered the e-matching
+/// loop; `invocations` is what tells those two apart from "entered and found
+/// nothing nested".
+#[must_use]
+pub fn last_nested_activation_stats() -> NestedActivationStats {
+    NESTED_ACTIVATION_STATS.with(|cell| {
+        let mut total = NestedActivationStats::default();
+        for entry in cell.borrow().iter() {
+            total.add(entry);
+        }
+        total
+    })
+}
+
+/// Opens a new per-invocation entry. Called once at the loop's entry, before
+/// any recording point, so the entry every later `record` overwrites exists.
+fn open_nested_activation_invocation() {
+    if !nested_activation_stats_collecting() {
+        return;
+    }
+    NESTED_ACTIVATION_STATS.with(|cell| {
+        cell.borrow_mut().push(NestedActivationStats {
+            invocations: 1,
+            ..NestedActivationStats::default()
+        });
+    });
+}
+
+/// Overwrites the running invocation's entry with the matcher's and the
+/// discovery driver's current counters. Idempotent, so it is called at every
+/// round end AND at every exit: a refutation that returns from the middle of a
+/// round still carries that round's handoffs.
+fn record_nested_activation_stats(
+    matcher: &IncrementalEmatchSession,
+    discovery: Option<&NestedDiscovery>,
+) {
+    if !nested_activation_stats_collecting() {
+        return;
+    }
+    let mut snapshot = NestedActivationStats {
+        invocations: 1,
+        ..NestedActivationStats::default()
+    };
+    for (index, quantifier) in matcher.quantifiers.iter().enumerate() {
+        if quantifier.active {
+            continue;
+        }
+        snapshot.registrations += 1;
+        match (quantifier.context.is_some(), quantifier.inert) {
+            (true, _) => snapshot.with_context += 1,
+            (false, Some(InertReason::CrossedBinder)) => snapshot.inert_crossed_binder += 1,
+            (false, Some(InertReason::Negative)) => snapshot.inert_negative += 1,
+            (false, Some(InertReason::Untracked) | None) => snapshot.inert_untracked += 1,
+        }
+        let (emitted, _) = matcher.join_stats.get(index).copied().unwrap_or((0, 0));
+        snapshot.joined += emitted;
+        let rejects = matcher
+            .admission_census
+            .per_universal
+            .get(index)
+            .copied()
+            .unwrap_or_default();
+        snapshot.handed_off += rejects.inactive_handed_off;
+        snapshot.positive_capped += rejects.inactive_positive_capped;
+        snapshot.dropped += rejects.inactive_dropped;
+        snapshot.dropped_crossed_binder += rejects.inactive_dropped_crossed;
+        snapshot.dropped_negative += rejects.inactive_dropped_negative;
+        snapshot.dropped_untracked += rejects.inactive_dropped_untracked;
+    }
+    if let Some(discovery) = discovery {
+        snapshot.discovered = discovery.discovered_registrations;
+        snapshot.discovered_uncompiled = discovery.pending_registrations.len();
+        snapshot.positive_instances = discovery.positive_instances;
+        snapshot.staged_ground = discovery.admitted_ground;
+        snapshot.promoted = discovery.promoted;
+        snapshot.rebuilds = discovery.rebuilds;
+        snapshot.rejected = discovery.rejected;
+        snapshot.rejected_by_checker = discovery.rejected_by_checker;
+    }
+    NESTED_ACTIVATION_STATS.with(|cell| {
+        let mut entries = cell.borrow_mut();
+        match entries.last_mut() {
+            Some(last) => *last = snapshot,
+            None => entries.push(snapshot),
+        }
+    });
+}
+
 /// The shipped ground-session level (ADR-2124): `0`, the historical behaviour.
 ///
 /// At `0` [`OnlineQuantifierClauseSession::new`] declines any ground set holding
@@ -1696,6 +1921,80 @@ struct NestedRegistration {
     /// binder sits on the path (see [`PositiveContext`]) — such a registration
     /// stays inert exactly as in slice 2.
     context: Option<PositiveContext>,
+    /// Why `context` is `None`, when it is (ADR-2149). `None` exactly when
+    /// `context` is `Some`. Recorded at registration so the drop at the join
+    /// (`inactive_dropped`) can be attributed to the FIRST refusal on the
+    /// path rather than reported as one undifferentiated bucket.
+    inert: Option<InertReason>,
+}
+
+/// The first reason a nested universal's path lost its positive-position
+/// tracking, i.e. why a [`NestedRegistration`] carries no [`PositiveContext`]
+/// (ADR-2149).
+///
+/// These are the three causes `collect_nested_registrations_rec` has, and they
+/// have three different remedies, which is why `inactive_dropped` is split by
+/// them:
+///
+/// * [`CrossedBinder`](Self::CrossedBinder) — the path entered another
+///   universal's BODY below the owner's own prefix. A replacement here is
+///   unsound in general (see [`PositiveContext`]), and the sound route is the
+///   reference solvers': the enclosing universal is instantiated first, the
+///   instance is scanned, and the inner universal is re-registered against the
+///   instance as owner ([`NestedDiscovery::scan`]).
+/// * [`Negative`](Self::Negative) — the path arrived at a tracked NEGATIVE
+///   position. The universal is effectively existential there; nothing to do.
+/// * [`Untracked`](Self::Untracked) — the path took a connective step
+///   [`positive_path_step`] refuses at the level in force: everything but
+///   `and`/`or` at level 0; the `ite` condition and boolean `=`/`xor` at any
+///   level. ADR-2120's lever is what widens this class.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum InertReason {
+    CrossedBinder,
+    Negative,
+    Untracked,
+}
+
+/// The polarity bookkeeping of one path in `collect_nested_registrations_rec`:
+/// a tracked polarity, or the first reason tracking was lost. Loss is sticky,
+/// and the FIRST cause wins, so a binder crossed under a refused connective is
+/// attributed to the connective and a connective under a crossed binder to the
+/// binder — the attribution names the outermost obstacle, which is the one a
+/// remedy has to remove first.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PathTracking {
+    Polarity(bool),
+    Lost(InertReason),
+}
+
+impl PathTracking {
+    /// The registration fields for a universal reached at this tracking state.
+    fn registration_context(
+        self,
+        owner: TermId,
+        path: &[u32],
+    ) -> (Option<PositiveContext>, Option<InertReason>) {
+        match self {
+            Self::Polarity(true) => (
+                Some(PositiveContext {
+                    owner,
+                    path: path.to_vec(),
+                }),
+                None,
+            ),
+            Self::Polarity(false) => (None, Some(InertReason::Negative)),
+            Self::Lost(reason) => (None, Some(reason)),
+        }
+    }
+
+    /// One argument step through `op`, at `index` of `arity`, at `level`.
+    fn step(self, op: &Op, arity: usize, index: usize, level: usize) -> Self {
+        match self {
+            Self::Polarity(polarity) => positive_path_step(op, arity, index, polarity, level)
+                .map_or(Self::Lost(InertReason::Untracked), Self::Polarity),
+            lost @ Self::Lost(_) => lost,
+        }
+    }
 }
 
 /// Where a [`NestedRegistration`] sits inside a formula that is already trusted
@@ -1855,7 +2154,14 @@ fn collect_nested_registrations(
         out,
         has_forall: HashMap::new(),
     };
-    collect_nested_registrations_rec(arena, term, prefix, path, polarity, &mut scan);
+    // A caller passing `None` starts the walk already untracked; that is a
+    // connective-class loss (no binder has been crossed yet), so it lands in
+    // `Untracked` rather than in the crossed-binder split.
+    let tracking = polarity.map_or(
+        PathTracking::Lost(InertReason::Untracked),
+        PathTracking::Polarity,
+    );
+    collect_nested_registrations_rec(arena, term, prefix, path, tracking, &mut scan);
 }
 
 /// The parts of a [`collect_nested_registrations`] walk that do not change as it
@@ -1895,7 +2201,7 @@ fn collect_nested_registrations_rec(
     term: TermId,
     prefix: &mut Vec<SymbolId>,
     path: &mut Vec<u32>,
-    polarity: Option<bool>,
+    tracking: PathTracking,
     scan: &mut NestedRegistrationScan<'_>,
 ) {
     // The arena is a shared DAG, and this walk is indexed by *position* (`path`),
@@ -1926,34 +2232,38 @@ fn collect_nested_registrations_rec(
         let mut vars = used_prefix(arena, inner_body, prefix);
         vars.extend(inner_vars.iter().copied());
         if let Some(quantifier) = wrap_foralls(arena, inner_body, &vars) {
+            // A context exists exactly at a tracked POSITIVE position.
+            // `Polarity(false)` — a tracked NEGATIVE one — is not a context:
+            // the universal there is effectively existential and replacing it
+            // by an instance would strengthen, not weaken, the owner. The
+            // `inert` half records WHICH refusal applied (ADR-2149).
+            let (context, inert) = tracking.registration_context(scan.owner, path);
             scan.out.push(NestedRegistration {
                 quantifier,
                 vars,
                 body: inner_body,
-                // A context exists exactly at a tracked POSITIVE position.
-                // `Some(false)` — a tracked NEGATIVE one — is not a context: the
-                // universal there is effectively existential and replacing it by
-                // an instance would strengthen, not weaken, the owner.
-                context: (polarity == Some(true)).then(|| PositiveContext {
-                    owner: scan.owner,
-                    path: path.clone(),
-                }),
+                context,
+                inert,
             });
         }
         // Keep descending: a universal may nest further universals, and those
         // see this chain's binders too. The path would now cross this binder, so
-        // tracking is dropped (see `PositiveContext`).
+        // tracking is dropped (see `PositiveContext`) -- attributed to the
+        // binder only if nothing above it had already dropped it.
         let depth = prefix.len();
         prefix.extend(inner_vars);
-        collect_nested_registrations_rec(arena, inner_body, prefix, path, None, scan);
+        let below = match tracking {
+            PathTracking::Polarity(_) => PathTracking::Lost(InertReason::CrossedBinder),
+            lost @ PathTracking::Lost(_) => lost,
+        };
+        collect_nested_registrations_rec(arena, inner_body, prefix, path, below, scan);
         prefix.truncate(depth);
         return;
     }
     let level = positive_path_level();
     let arity = args.len();
     for (index, arg) in args.into_iter().enumerate() {
-        let step =
-            polarity.and_then(|polarity| positive_path_step(&op, arity, index, polarity, level));
+        let step = tracking.step(&op, arity, index, level);
         path.push(u32::try_from(index).unwrap_or(u32::MAX));
         collect_nested_registrations_rec(arena, arg, prefix, path, step, scan);
         path.pop();
@@ -2131,6 +2441,9 @@ struct NestedDiscovery {
     /// Replacements the checker refused. Non-zero is a defect signal, not a
     /// soundness one — a refusal is always fail-closed.
     rejected: usize,
+    /// The `rejected` subset [`positive_instance_formula`] itself refused (as
+    /// opposed to an untrusted owner or an arity mismatch) -- ADR-2149.
+    rejected_by_checker: usize,
 }
 
 impl NestedDiscovery {
@@ -2234,6 +2547,7 @@ impl NestedDiscovery {
                 positive_instance_formula(arena, context.owner, &context.path, &vars, &tuple)
             else {
                 self.rejected += 1;
+                self.rejected_by_checker += 1;
                 continue;
             };
             self.positive_instances += 1;
@@ -2349,7 +2663,18 @@ fn nested_discovery_step(
     let mut rebuilt = false;
     if grew && discovery.rebuilds < MAX_DISCOVERY_REBUILDS {
         nested.append(&mut discovery.pending_registrations);
-        *matcher = IncrementalEmatchSession::new_with_nested(arena, foralls, nested);
+        // The census and the join counters survive the rebuild (ADR-2149),
+        // re-keyed by each universal's assertion term: a promotion inserts
+        // into the `foralls` half, which shifts every registration's index, so
+        // carrying the vectors by position would misattribute. Before this a
+        // rebuild started both from zero and the fixpoint table reported only
+        // the LAST matcher's counts — on a core with eight rebuilds, a small
+        // fraction of what the loop had actually done.
+        let previous = std::mem::replace(
+            matcher,
+            IncrementalEmatchSession::new_with_nested(arena, foralls, nested),
+        );
+        matcher.carry_counters_from(&previous);
         discovery.rebuilds += 1;
         rebuilt = true;
     }
@@ -2781,6 +3106,7 @@ fn prove_quantified_unsat_via_egraph_impl(
     // position — so an empty registration set means there is nothing to discover,
     // and the default (prenexed) path never allocates this at all.
     let mut discovery = (!nested.is_empty()).then(|| NestedDiscovery::new(&assertions));
+    open_nested_activation_invocation();
     let mut matcher = IncrementalEmatchSession::new_with_nested(arena, &foralls, &nested);
     if !nested.is_empty() {
         let detail: Vec<String> = matcher
@@ -2861,6 +3187,8 @@ fn prove_quantified_unsat_via_egraph_impl(
             let site = InstantiationTimeoutSite::RoundHead;
             qgrounddump(arena, &ground, &generations, site.census_kind());
             timeout_exit_probe(site, rounds_entered, ground.len());
+            matcher.qprobe_universal_census("timeout");
+            record_nested_activation_stats(&matcher, discovery.as_ref());
             held_set_replay_probe(
                 arena,
                 &ground,
@@ -2928,7 +3256,9 @@ fn prove_quantified_unsat_via_egraph_impl(
                     "QPROBE loop-exit kind=ground-ceiling exit=GroundCeiling rounds={rounds_entered} ground={}",
                     ground.len(),
                 );
+                matcher.qprobe_universal_census("ground-ceiling");
             }
+            record_nested_activation_stats(&matcher, discovery.as_ref());
             return Ok(egraph_ground_limit());
         }
         // The first round and accelerator fallbacks use the full QF route. The
@@ -2969,6 +3299,8 @@ fn prove_quantified_unsat_via_egraph_impl(
                 let site = InstantiationTimeoutSite::MidRound;
                 qgrounddump(arena, &ground, &generations, site.census_kind());
                 timeout_exit_probe(site, rounds_entered, ground.len());
+                matcher.qprobe_universal_census("timeout");
+                record_nested_activation_stats(&matcher, discovery.as_ref());
                 held_set_replay_probe(
                     arena,
                     &ground,
@@ -3096,6 +3428,7 @@ fn prove_quantified_unsat_via_egraph_impl(
             // read as a fixpoint.
             let rebuilt = outcome.rebuilt;
             admitted.extend(outcome.admitted);
+            record_nested_activation_stats(&matcher, Some(&*discovery));
             admitted.sort_by_key(|term| term.index());
             admitted.dedup();
             if admitted.is_empty() && rebuilt {
@@ -3230,54 +3563,9 @@ fn prove_quantified_unsat_via_egraph_impl(
                         matcher.admission_census.flood_eager_kept,
                         matcher.admission_census.flood_deep_seen,
                     );
-                    let mut admitted_per_universal: Vec<usize> = vec![0; matcher.quantifiers.len()];
-                    for derivation in matcher.ground_derivations.values() {
-                        if let QuantifierGroundDerivation::Instance(certificate) = derivation
-                            && let Some(index) = matcher
-                                .quantifiers
-                                .iter()
-                                .position(|q| q.assertion == certificate.assertion)
-                        {
-                            admitted_per_universal[index] += 1;
-                        }
-                    }
-                    for (index, quantifier) in matcher.quantifiers.iter().enumerate() {
-                        let (emitted, starved) =
-                            matcher.join_stats.get(index).copied().unwrap_or((0, 0));
-                        let rejects = matcher
-                            .admission_census
-                            .per_universal
-                            .get(index)
-                            .copied()
-                            .unwrap_or_default();
-                        eprintln!(
-                            "QPROBE   universal[{index}] vars={} patterns={} joined={emitted} \
-                             starved_joins={starved} admitted={} \
-                             rej_handoff={} rej_poscap={} rej_nocontext={} \
-                             rej_expired={} rej_subst={} rej_true={} \
-                             rej_unreleased={} rej_flood={} rej_ceiling={} rej_check={} \
-                             rej_seen={} rej_dupother={} rej_true_newterm={} \
-                             census_admitted={}",
-                            quantifier.vars.len(),
-                            quantifier.pattern_indices.len(),
-                            admitted_per_universal[index],
-                            rejects.inactive_handed_off,
-                            rejects.inactive_positive_capped,
-                            rejects.inactive_dropped,
-                            rejects.expired,
-                            rejects.subst_failed,
-                            rejects.redundant_true,
-                            rejects.pool_unreleased,
-                            rejects.flood_truncated,
-                            rejects.ground_ceiling,
-                            rejects.check_failed,
-                            rejects.already_seen,
-                            rejects.duplicate_of_other_universal,
-                            rejects.redundant_true_term_introducing,
-                            rejects.admitted,
-                        );
-                    }
+                    matcher.qprobe_universal_census("fixpoint");
                 }
+                record_nested_activation_stats(&matcher, discovery.as_ref());
                 if floodprobe_enabled() {
                     eprintln!("FLOODPROBE fixpoint round={round} ground={}", ground.len());
                     floodprobe_cap_census(arena, &matcher, &ground_derivations, &assertions);
@@ -3388,6 +3676,22 @@ fn prove_quantified_unsat_via_egraph_impl(
             loop_exit.census_kind(),
             ground.len(),
         );
+        // The fixpoint exit prints its own table before `break`ing here; the
+        // other two breaks (`GrowthHeadroom`, the round ceiling) used to print
+        // none, which is why ADR-2120 §7a found 35 of 53 cores with no
+        // per-universal row at all. One table per loop exit, never two.
+        if !matches!(
+            loop_exit,
+            InstantiationLoopExit::Fixpoint | InstantiationLoopExit::GroundSaturated
+        ) {
+            matcher.qprobe_universal_census(loop_exit.census_kind());
+        }
+    }
+    if !matches!(
+        loop_exit,
+        InstantiationLoopExit::Fixpoint | InstantiationLoopExit::GroundSaturated
+    ) {
+        record_nested_activation_stats(&matcher, discovery.as_ref());
     }
     let finished = finish_quantified_ground_check(
         arena,
@@ -5579,6 +5883,17 @@ struct AdmissionRejects {
     /// The universal is a non-asserted registration with NO context. Its tuples
     /// are joined and then discarded outright — nothing downstream sees them.
     inactive_dropped: usize,
+    /// The `inactive_dropped` subset whose registration sits under another
+    /// universal's binder ([`InertReason::CrossedBinder`], ADR-2149). These are
+    /// the tuples no level of ADR-2120's lever can hand off, because the walk
+    /// dropped tracking at the binder before any level was consulted.
+    inactive_dropped_crossed: usize,
+    /// The `inactive_dropped` subset at a tracked NEGATIVE position
+    /// ([`InertReason::Negative`]) — effectively existential, correctly inert.
+    inactive_dropped_negative: usize,
+    /// The `inactive_dropped` subset whose path took a connective the level in
+    /// force refuses ([`InertReason::Untracked`]) — ADR-2120's target class.
+    inactive_dropped_untracked: usize,
     /// The round's deadline expired before this universal's tuples were
     /// materialized (`match_witness_tuples` had already joined them).
     expired: usize,
@@ -5634,6 +5949,9 @@ impl AdmissionRejects {
         self.inactive_handed_off += other.inactive_handed_off;
         self.inactive_positive_capped += other.inactive_positive_capped;
         self.inactive_dropped += other.inactive_dropped;
+        self.inactive_dropped_crossed += other.inactive_dropped_crossed;
+        self.inactive_dropped_negative += other.inactive_dropped_negative;
+        self.inactive_dropped_untracked += other.inactive_dropped_untracked;
         self.expired += other.expired;
         self.subst_failed += other.subst_failed;
         self.redundant_true += other.redundant_true;
@@ -5685,7 +6003,8 @@ impl AdmissionCensus {
     /// adds universals mid-run) and resolves the probe flag once.
     fn ensure(&mut self, quantifiers: &[CompiledUniversal]) {
         if self.per_universal.is_empty() && !quantifiers.is_empty() {
-            self.enabled = qprobe_enabled() && census_enabled();
+            self.enabled =
+                (qprobe_enabled() && census_enabled()) || nested_activation_stats_collecting();
         }
         while self.per_universal.len() < quantifiers.len() {
             let index = self.per_universal.len();
@@ -5777,6 +6096,9 @@ struct CompiledUniversal {
     /// owner[∀y.B := B(t)]` applies; the driver turns each matched tuple into
     /// that replacement instead of the (unentailed) bare instance.
     context: Option<PositiveContext>,
+    /// For a registration without a `context`, the first refusal on its path
+    /// (ADR-2149); read at the join so a dropped tuple is charged to its cause.
+    inert: Option<InertReason>,
 }
 
 /// The source trigger a compiled [`Pattern`] came from, kept so term invention
@@ -6528,7 +6850,14 @@ enum MergeInvalidationMode {
 /// `(assertion, binder prefix, body, admissible, positive-replacement context)`
 /// — the per-universal input [`IncrementalEmatchSession::new_with_nested`]
 /// compiles, before triggers are selected.
-type CompiledUniversalSpec = (TermId, Vec<SymbolId>, TermId, bool, Option<PositiveContext>);
+type CompiledUniversalSpec = (
+    TermId,
+    Vec<SymbolId>,
+    TermId,
+    bool,
+    Option<PositiveContext>,
+    Option<InertReason>,
+);
 
 struct IncrementalEmatchSession {
     bridge: InstBridge,
@@ -6609,7 +6938,7 @@ impl IncrementalEmatchSession {
             .iter()
             .map(|&forall_term| {
                 let (vars, body) = peel_foralls(arena, forall_term);
-                (forall_term, vars, body, true, None)
+                (forall_term, vars, body, true, None, None)
             })
             .chain(nested.iter().map(|registration| {
                 (
@@ -6618,6 +6947,7 @@ impl IncrementalEmatchSession {
                     registration.body,
                     false,
                     registration.context.clone(),
+                    registration.inert,
                 )
             }))
             .collect();
@@ -6628,12 +6958,12 @@ impl IncrementalEmatchSession {
         // equal — it would compile and then never fire, starving the universal
         // where auto-selection would have worked.
         let mut binders: HashSet<SymbolId> = HashSet::new();
-        for (assertion, _, body, _, _) in &compiled {
+        for (assertion, _, body, _, _, _) in &compiled {
             collect_binder_symbols(arena, *assertion, &mut binders);
             collect_binder_symbols(arena, *body, &mut binders);
         }
 
-        for (assertion, vars, body, active, context) in compiled {
+        for (assertion, vars, body, active, context, inert) in compiled {
             let var_terms = vars.iter().map(|&var| arena.var(var)).collect();
             let var_index: HashMap<SymbolId, u32> = vars
                 .iter()
@@ -6751,6 +7081,7 @@ impl IncrementalEmatchSession {
                 pattern_groups,
                 active,
                 context,
+                inert,
             });
         }
 
@@ -7228,6 +7559,142 @@ impl IncrementalEmatchSession {
         }
     }
 
+    /// Carries `previous`'s per-universal admission census and join counters
+    /// into this freshly rebuilt session, matched by assertion term rather
+    /// than by index (ADR-2149). A universal `previous` did not compile starts
+    /// at zero; a universal it compiled keeps its counts. The census's
+    /// population-wide totals (`unattributed`, `releases`, …) are copied over,
+    /// and its `enabled` flag with them, so a rebuild neither re-resolves the
+    /// probe environment nor loses the arm it was running under.
+    fn carry_counters_from(&mut self, previous: &Self) {
+        let mut previous_index: HashMap<TermId, usize> = HashMap::new();
+        for (index, quantifier) in previous.quantifiers.iter().enumerate() {
+            previous_index.entry(quantifier.assertion).or_insert(index);
+        }
+        let old = &previous.admission_census;
+        if !old.per_universal.is_empty() {
+            let mut census = AdmissionCensus {
+                enabled: old.enabled,
+                per_universal: Vec::with_capacity(self.quantifiers.len()),
+                index_by_assertion: HashMap::new(),
+                shared_assertion_universals: 0,
+                unattributed: old.unattributed,
+                releases: old.releases,
+                releases_at_throttle: old.releases_at_throttle,
+                flood_slices: old.flood_slices,
+                flood_eager_kept: old.flood_eager_kept,
+                flood_deep_seen: old.flood_deep_seen,
+            };
+            for (index, quantifier) in self.quantifiers.iter().enumerate() {
+                let carried = previous_index
+                    .get(&quantifier.assertion)
+                    .and_then(|&old_index| old.per_universal.get(old_index))
+                    .copied()
+                    .unwrap_or_default();
+                census.per_universal.push(carried);
+                match census.index_by_assertion.entry(quantifier.assertion) {
+                    std::collections::hash_map::Entry::Occupied(_) => {
+                        census.shared_assertion_universals += 1;
+                    }
+                    std::collections::hash_map::Entry::Vacant(slot) => {
+                        slot.insert(index);
+                    }
+                }
+            }
+            self.admission_census = census;
+        }
+        if !previous.join_stats.is_empty() {
+            self.join_stats = self
+                .quantifiers
+                .iter()
+                .map(|quantifier| {
+                    previous_index
+                        .get(&quantifier.assertion)
+                        .and_then(|&old_index| previous.join_stats.get(old_index))
+                        .copied()
+                        .unwrap_or((0, 0))
+                })
+                .collect();
+        }
+    }
+
+    /// The `AXEYUM_QPROBE` per-universal admission table, one line per
+    /// compiled universal, labelled with the loop exit that printed it.
+    ///
+    /// Printed at EVERY loop exit rather than at the fixpoint alone (ADR-2149):
+    /// ADR-2120 §7a found the table missing on 35 of 53 reference-minimal
+    /// cores because every one of them left the loop on a clock or a ceiling.
+    /// The `rej_nocontext_*` columns split `rej_nocontext` by the first
+    /// refusal on the registration's path ([`InertReason`]); the three sum to
+    /// it.
+    fn qprobe_universal_census(&self, exit: &str) {
+        if !qprobe_enabled() {
+            return;
+        }
+        let mut admitted_per_universal: Vec<usize> = vec![0; self.quantifiers.len()];
+        for derivation in self.ground_derivations.values() {
+            if let QuantifierGroundDerivation::Instance(certificate) = derivation
+                && let Some(index) = self
+                    .quantifiers
+                    .iter()
+                    .position(|q| q.assertion == certificate.assertion)
+            {
+                admitted_per_universal[index] += 1;
+            }
+        }
+        for (index, quantifier) in self.quantifiers.iter().enumerate() {
+            let (emitted, starved) = self.join_stats.get(index).copied().unwrap_or((0, 0));
+            let rejects = self
+                .admission_census
+                .per_universal
+                .get(index)
+                .copied()
+                .unwrap_or_default();
+            let inert = match (
+                quantifier.active,
+                quantifier.context.is_some(),
+                quantifier.inert,
+            ) {
+                (true, _, _) => "asserted",
+                (false, true, _) => "context",
+                (false, false, Some(InertReason::CrossedBinder)) => "crossed-binder",
+                (false, false, Some(InertReason::Negative)) => "negative",
+                (false, false, Some(InertReason::Untracked) | None) => "untracked",
+            };
+            eprintln!(
+                "QPROBE   universal[{index}] vars={} patterns={} joined={emitted} \
+                 starved_joins={starved} admitted={} \
+                 rej_handoff={} rej_poscap={} rej_nocontext={} \
+                 rej_expired={} rej_subst={} rej_true={} \
+                 rej_unreleased={} rej_flood={} rej_ceiling={} rej_check={} \
+                 rej_seen={} rej_dupother={} rej_true_newterm={} \
+                 census_admitted={} exit={exit} kind={inert} \
+                 rej_nocontext_crossed={} rej_nocontext_negative={} \
+                 rej_nocontext_untracked={}",
+                quantifier.vars.len(),
+                quantifier.pattern_indices.len(),
+                admitted_per_universal[index],
+                rejects.inactive_handed_off,
+                rejects.inactive_positive_capped,
+                rejects.inactive_dropped,
+                rejects.expired,
+                rejects.subst_failed,
+                rejects.redundant_true,
+                rejects.pool_unreleased,
+                rejects.flood_truncated,
+                rejects.ground_ceiling,
+                rejects.check_failed,
+                rejects.already_seen,
+                rejects.duplicate_of_other_universal,
+                rejects.redundant_true_term_introducing,
+                rejects.admitted,
+                rejects.inactive_dropped_crossed,
+                rejects.inactive_dropped_negative,
+                rejects.inactive_dropped_untracked,
+            );
+        }
+    }
+
     #[allow(
         clippy::too_many_lines,
         reason = "one tuple-materialization loop; the added lines are the \
@@ -7292,6 +7759,24 @@ impl IncrementalEmatchSession {
                     }
                 } else if census_on {
                     batch.rejects.inactive_dropped += tuples.len();
+                    // ADR-2149: charge the drop to the first refusal on the
+                    // registration's path, so a census can say how much of
+                    // this bucket sits under a crossed binder (which no level
+                    // of ADR-2120's lever reaches) versus a refused connective.
+                    let slot = match quantifier.inert {
+                        Some(InertReason::CrossedBinder) => {
+                            &mut batch.rejects.inactive_dropped_crossed
+                        }
+                        Some(InertReason::Negative) => &mut batch.rejects.inactive_dropped_negative,
+                        // A registration without a context always carries a
+                        // reason; `None` here would be a construction defect
+                        // and is counted with the connective class rather than
+                        // silently omitted.
+                        Some(InertReason::Untracked) | None => {
+                            &mut batch.rejects.inactive_dropped_untracked
+                        }
+                    };
+                    *slot += tuples.len();
                 }
                 batches.push(batch);
                 continue;
@@ -16241,6 +16726,7 @@ mod tests {
             vars: vec![x_sym, y_sym],
             body: qxy,
             context: None,
+            inert: Some(InertReason::Untracked),
         };
         let ground = vec![qab];
 
