@@ -2,7 +2,7 @@
 
 <!-- plan-section: lane-status -->
 
-Status: **rounds one to three landed and pushed (`43f1e0f90`), round four in flight, 2026-09-17 midday**. The user's goal is to
+Status: **all three lists complete and pushed, 2026-09-17 afternoon** — cindergraph 16/16 (`8bd2051` on GitHub), Glaurung 10/10 on the GitHub cindergraph crate (`d61be9ba`), Axeyum 16/16 (`178639959`). The A13 solver queue continues: item 1 closed (the algebraic witness's held-out draw refused it), items 2–4 in flight. The user's goal is to
 work through the three lists written the same afternoon:
 [Axeyum](../improvement-list-2026-09-16.md) (committed, `8df853252`),
 cindergraph `docs/improvement-list-2026-09-16.md` and Glaurung
@@ -39,19 +39,30 @@ commit there, and never push; Axeyum lanes use the usual isolated worktrees.
 | AX-WARM | Axeyum | the warm regression bisected to the native core becoming the engine; the target-phase snapshot re-walked the trail per decision; fixed, trajectories byte-identical, 306 → 7.5 ms per check (ADR-2142) | `d9907b3c2`, pushed |
 | AX-PROPTEST + AX-LIA-POP | Axeyum | 599 boxed generators audited, 328 unreachable, 24 fixed with a ratchet (ADR-2141); the LIA/LRA shadowed-assertion `pop` defect fixed, no wrong verdict could ship (ADR-2143) (item 5) | `11b895a35`, pushed |
 
-## Round three (in flight)
+## Round three and four (landed)
 
-| lane | repo | items |
-|---|---|---|
-| AX-2134-HELDOUT | Axeyum | A13 item 1: the algebraic-witness held-out draw on s7; ships if the criterion holds |
-| GL-CINDER | Glaurung | **the user's instruction**: Glaurung on the GitHub cindergraph crate, the 42,950-line embedded copy removed (Milestone H / Glaurung item 10) |
+| lane | repo | result | where |
+|---|---|---|---|
+| AX-2134-HELDOUT | Axeyum | A13 item 1: pinned +4 stable held, held-out 109 → 109 with zero movers; the lever stays OFF by the criterion | `f7cd4195f`, pushed |
+| GL-CINDER | Glaurung | **the user's instruction**: Glaurung on the GitHub cindergraph crate at `ed5e55e`, 32,872 embedded lines deleted, suite identical by name; four Sep-13 parity corrections found missing upstream (source-001) | `3be252e5`, pushed |
+| CG-PARITY | cindergraph | those four corrections ported with their tests and mutation kills; projection byte-identical on 930 functions; the `for (;;)` empty-body case undecided by any recorded Joern output | `8bd2051`, pushed |
+| GL-CINDER2 | Glaurung | re-pinned to `8bd2051`; projection byte-identical; nothing waits on cindergraph | `d61be9ba`, pushed |
+| AX-GATE | Axeyum | item 16: the defects example is a gate (`scripts/check-cindergraph-defects.sh`, in `just py-check` and `check.sh`), cindergraph pinned in the dev group, three subject mutations each kill one test | `178639959`, pushed |
+
+## In flight (the A13 solver queue)
+
+| lane | items |
+|---|---|
+| A13-LRA | ADR-2146 tableau admission on nonzeros, ADR-2147 the disequality split lemma (s5/s6) |
+| A13-NIA | ADR-2148 lemma emission separated from the refine share (s7) |
+| A13-QUANT | ADR-2149 nested-binder activation: fixtures, per-core split, lever OFF, 53-core sweep with a threshold (s6 spare cores) |
 | AX-CACHE | Axeyum | item 8 done: the canonical constraint cache in the engine, OFF (ADR-2144); 49 % hits on a real driver session, flat QF_BV A/B | `1f23fa26a`, pushed |
 | AX-WARM2 | Axeyum | the warm residual: keep surviving scopes' trail across solves, **ON** (ADR-2145 accepted); replayed session 1.21 → 0.45 s; new incremental z3 fuzz in the hook | `43f1e0f90`, pushed |
 | AX-BOARD-2142 | Axeyum | the user's question: the ADR-2142 fix on the 16-division board is +8 stable gains, 0 losses, 0 flips (QF_UFLIA +5, QF_ABV +1, QF_BV +1, QF_NIA +1); QF_ABV decided files 2× faster | `5d21c9db7` |
 | GL-REPIN | Glaurung | pin → `11b895a35`; DptfDevGen sizing 59.5 s → 6.0 s, 0 Axeyum splits; `GLAURUNG_AXEYUM_MODEL_PREFERENCE` (item 4; solver-035) | `12a8c088` on local `master` |
 | GL-CACHE | Glaurung | pin → `43f1e0f90`; warm same-stream 1,516 → 517 ms; the library cache consumed and shown to dominate Glaurung's own (item 5; solver-036); **9 of 10 done** | `af9f826d` |
 
-Still to launch: AX-GATE (item 16, after cindergraph is pushed so the gate can pin it); Glaurung item 5 after the cache is pushed; the warm residual (keep surviving scopes' assignments on `pop`) after GL-REPIN's numbers; A13 last.
+Next after these, in order: a same-day z3/cvc5 reference board on the parity-lists population (the 09-14 totals differ in four divisions' membership); Glaurung's ADR-0272 campaign re-registered with a work-bounded budget (the default-backend decision); the defects pipeline over a real C library; cindergraph's `for (;;)` empty-body policy needs a Joern run; Glaurung's `benches/ir_dataflow.rs` is broken on master.
 
 ## Round two (after round one lands)
 
