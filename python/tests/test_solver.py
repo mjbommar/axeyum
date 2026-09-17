@@ -379,6 +379,72 @@ def test_replay_checked_sat_cache_reports_every_decline_class() -> None:
     assert warm.replay_checked_sat_cache_stats()["entries"] == 0
 
 
+def test_canonical_constraint_cache_is_off_by_default_and_keys_on_the_set() -> None:
+    """ADR-2144: the canonical cache ships off; on, a re-check of the same SET
+    (any order, any scope shape) is a hit whose model replays; the counters
+    ride `stats()` and the detailed dict names every hit and decline class."""
+    arena = ir.Arena()
+    x = arena.bv_var("x", 8)
+    under_ten = arena.bvult(x, arena.bv_const(8, 10))
+    is_one = arena.eq(x, arena.bv_const(8, 1))
+
+    off = solver.Incremental(arena)
+    assert off.canonical_constraint_cache_enabled is False
+    assert solver.Config().canonical_constraint_cache is False
+    off.assert_(arena, under_ten)
+    off.check(arena)
+    off.check(arena)
+    assert off.stats().cache_hits == 0 and off.stats().cache_misses == 0
+
+    on = solver.Incremental(arena, solver.Config(canonical_constraint_cache=True))
+    assert on.canonical_constraint_cache_enabled is True
+    on.push()
+    on.assert_(arena, under_ten)
+    on.assert_(arena, is_one)
+    first = on.check(arena)
+    assert first.status == "sat"
+    on.pop()
+    on.push()
+    on.assert_(arena, is_one)
+    on.push()
+    on.assert_(arena, under_ten)
+    second = on.check(arena)
+    assert second.status == "sat"
+    assert int(second.model(arena)["x"]) == int(first.model(arena)["x"]) == 1
+    stats = on.stats()
+    assert (stats.cache_hits, stats.cache_misses) == (1, 1)
+    assert {"cache_hits", "cache_misses", "cache_replay_rejections", "cache_superset_hits"} <= set(
+        stats.as_dict()
+    )
+    detail = on.canonical_constraint_cache_stats()
+    assert detail["exact_sat_hits"] == 1 and detail["entries"] == 1
+    for key in (
+        "superset_hits",
+        "model_reuse_hits",
+        "replay_rejections",
+        "declined_unknown",
+        "declined_oversized_models",
+        "declined_non_scalar_models",
+        "evictions",
+    ):
+        assert key in detail
+
+    # A superset of a cached unsat set is unsat from the cache; a subset is not.
+    is_two = arena.eq(x, arena.bv_const(8, 2))
+    on.pop()
+    on.pop()
+    assert on.check_assuming(arena, [is_one, is_two]).status == "unsat"
+    assert on.check_assuming(arena, [is_two, under_ten, is_one]).status == "unsat"
+    assert on.stats().cache_superset_hits == 1
+    assert on.check_assuming(arena, [is_two]).status == "sat"
+
+    on.disable_canonical_constraint_cache()
+    assert on.canonical_constraint_cache_enabled is False
+    assert on.canonical_constraint_cache_stats()["entries"] == 0
+    with pytest.raises(axeyum.AxeyumError):
+        on.enable_canonical_constraint_cache(max_entries=0)
+
+
 # ---------------------------------------------------------------- evidence
 
 

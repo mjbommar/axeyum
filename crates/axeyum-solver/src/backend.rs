@@ -339,6 +339,44 @@ pub struct SolverConfig {
     /// shipped value, and a malformed value is a hard error rather than a
     /// silent default arm (`axeyum_ir::config_lever`'s contract).
     pub model_preference: ModelPreference,
+    /// Whether a warm [`IncrementalBvSolver`](crate::IncrementalBvSolver)
+    /// built from this configuration keeps ADR-2144's canonical constraint
+    /// cache: decided queries keyed by the sorted, duplicate-elided set of
+    /// live assertion identities, a cached `sat` served only after its model
+    /// replays against the live set and a cached `unsat` only for a superset
+    /// of the cached set. It cannot move a verdict; what it changes is WHICH
+    /// model a repeated `sat` returns (the cached one) and how much work a
+    /// repeated check does.
+    ///
+    /// The default is [`DEFAULT_CANONICAL_CACHE`] (off) unless the process
+    /// has `AXEYUM_CANONICAL_CACHE=on`, the one-binary A/B lever, read once;
+    /// a malformed value is a hard error. The one-shot backends ignore it.
+    pub canonical_constraint_cache: bool,
+}
+
+/// Whether a warm solver keeps the canonical constraint cache (ADR-2144) when
+/// nothing chose: **`false` as shipped**. The cache is a consumer-facing
+/// feature for repeated checks over one retained session, and turning it on
+/// process-wide is a decision the QF_BV pinned-list A/B (ADR-2144) prices.
+/// `AXEYUM_CANONICAL_CACHE=on` turns it on for a process.
+pub const DEFAULT_CANONICAL_CACHE: bool = false;
+
+/// [`DEFAULT_CANONICAL_CACHE`] unless `AXEYUM_CANONICAL_CACHE` is set to `on`
+/// or `off`; read once, a malformed value refuses.
+fn process_canonical_cache() -> bool {
+    use std::sync::OnceLock;
+    static CACHE: OnceLock<bool> = OnceLock::new();
+    *CACHE.get_or_init(|| match std::env::var("AXEYUM_CANONICAL_CACHE") {
+        Ok(text) => match text.trim() {
+            "on" => true,
+            "off" => false,
+            _ => panic!(
+                "AXEYUM_CANONICAL_CACHE={text:?} is not `on` or `off`; refusing to run the \
+                 default arm under a lever that was set"
+            ),
+        },
+        Err(_) => DEFAULT_CANONICAL_CACHE,
+    })
 }
 
 /// Which model a `sat` returns when several satisfy (ADR-2140).
@@ -589,6 +627,7 @@ impl Default for SolverConfig {
             proof_progress: None,
             check_progress: None,
             model_preference: process_model_preference(),
+            canonical_constraint_cache: process_canonical_cache(),
         }
     }
 }
@@ -603,6 +642,14 @@ impl SolverConfig {
     #[must_use]
     pub fn with_model_preference(mut self, preference: ModelPreference) -> Self {
         self.model_preference = preference;
+        self
+    }
+
+    /// Turns ADR-2144's canonical constraint cache on or off for warm solvers
+    /// built from this configuration.
+    #[must_use]
+    pub fn with_canonical_constraint_cache(mut self, enabled: bool) -> Self {
+        self.canonical_constraint_cache = enabled;
         self
     }
 

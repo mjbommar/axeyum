@@ -139,6 +139,18 @@ pub struct IncrementalBvStats {
     pub cnf_clauses: u64,
     /// Opt-in incremental CNF gate-family and direct-root attribution.
     pub cnf_gate_mix: IncrementalCnfStats,
+    /// Checks answered by the canonical constraint cache (ADR-2144): exact
+    /// `sat`/`unsat`, superset `unsat`, and replayed model reuse together.
+    /// Zero unless the cache is enabled.
+    pub cache_hits: u64,
+    /// Checks the canonical constraint cache could not answer.
+    pub cache_misses: u64,
+    /// Cached models the canonical cache refused to serve because they did
+    /// not replay against the live set (each one was solved fresh instead).
+    pub cache_replay_rejections: u64,
+    /// `unsat` verdicts served because a cached `unsat` set was a subset of
+    /// the live set.
+    pub cache_superset_hits: u64,
 }
 
 /// Opt-in attribution for incremental SAT model reconstruction.
@@ -446,6 +458,460 @@ fn scalar_model_cost(model: &Model) -> Option<(usize, usize)> {
     Some((values, bits))
 }
 
+/// Storage bounds for the opt-in canonical constraint cache (ADR-2144).
+///
+/// The cache is enabled by [`SolverConfig::canonical_constraint_cache`] (the
+/// `AXEYUM_CANONICAL_CACHE` lever, OFF as shipped) with [`Self::DEFAULT`], or
+/// explicitly through
+/// [`IncrementalBvSolver::enable_canonical_constraint_cache`]. `max_entries`
+/// bounds decided queries (`sat` and `unsat` alike); `max_model_values` and
+/// `max_model_bits` bound the scalar `(SymbolId, Value)` payload of every
+/// retained `sat` model together, exactly as [`ReplayCheckedSatCachePolicy`]
+/// does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CanonicalConstraintCachePolicy {
+    /// Maximum number of decided canonical sets retained.
+    pub max_entries: usize,
+    /// Maximum total number of scalar model values retained.
+    pub max_model_values: usize,
+    /// Maximum total Bool/BV payload bits retained.
+    pub max_model_bits: usize,
+}
+
+impl CanonicalConstraintCachePolicy {
+    /// ADR-0303's frozen capacity, carried over: 4,096 decided entries and
+    /// 262,144 model values; the bit bound is those values at 64 bits each.
+    pub const DEFAULT: Self = Self {
+        max_entries: 4_096,
+        max_model_values: 262_144,
+        max_model_bits: 262_144 * 64,
+    };
+
+    /// Creates explicit cache bounds.
+    #[must_use]
+    pub const fn new(max_entries: usize, max_model_values: usize, max_model_bits: usize) -> Self {
+        Self {
+            max_entries,
+            max_model_values,
+            max_model_bits,
+        }
+    }
+}
+
+/// Monotone telemetry plus current gauges for the canonical constraint cache
+/// (ADR-2144). The four headline counters also ride
+/// [`IncrementalBvStats`] as `cache_hits`, `cache_misses`,
+/// `cache_replay_rejections` and `cache_superset_hits`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct CanonicalConstraintCacheStats {
+    /// Checks answered from the cache: the sum of the four hit classes below.
+    pub hits: u64,
+    /// Exact canonical-set hits whose cached model replayed against the live set.
+    pub exact_sat_hits: u64,
+    /// Exact canonical-set hits on a cached `unsat`.
+    pub exact_unsat_hits: u64,
+    /// `unsat` served because a cached `unsat` set is a SUBSET of the live set.
+    pub superset_hits: u64,
+    /// `sat` served because a cached model of a SUBSET of the live set
+    /// replayed against the whole live set (model reuse).
+    pub model_reuse_hits: u64,
+    /// Checks for which nothing in the cache answered.
+    pub misses: u64,
+    /// Cached models that did NOT replay against the live set: an exact entry
+    /// that failed is dropped; a model-reuse candidate that failed is kept
+    /// (it is still a model of its own set). Never a served `sat`.
+    pub replay_rejections: u64,
+    /// Fresh decided results inserted.
+    pub insertions: u64,
+    /// Entries removed by deterministic least-recently-used eviction.
+    pub evictions: u64,
+    /// Fresh `Unknown` results deliberately not cached.
+    pub declined_unknown: u64,
+    /// SAT models larger than the configured total bounds.
+    pub declined_oversized_models: u64,
+    /// SAT models containing values outside scalar `Bool`/`QF_BV`.
+    pub declined_non_scalar_models: u64,
+    /// Current retained entry count.
+    pub entries: u64,
+    /// Current total scalar model-value count.
+    pub model_values: u64,
+    /// Current total Bool/BV payload-bit count.
+    pub model_bits: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum CanonicalCachedResult {
+    Sat {
+        model: Model,
+        model_values: usize,
+        model_bits: usize,
+    },
+    Unsat,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CanonicalCacheEntry {
+    /// The sorted, duplicate-elided live assertion identities (ADR-0303's key).
+    key: Vec<TermId>,
+    result: CanonicalCachedResult,
+    last_used: u64,
+}
+
+/// What a canonical probe found for one live set, before any replay.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum CanonicalProbe {
+    /// The live set is cached exactly, as `sat` with this model (slot index).
+    ExactSat(usize, Model),
+    /// The live set is cached exactly as `unsat`.
+    ExactUnsat,
+    /// A cached `unsat` set is a subset of the live set.
+    SubsetUnsat,
+    /// Nothing cached decides the live set without a replay.
+    Miss,
+}
+
+/// The canonical constraint cache (ADR-2144): decided canonical assertion sets
+/// of one arena-bound solver, with sound exact, superset-`unsat` and
+/// replay-guarded model reuse. Slots are a free-listed `Vec` so an index is
+/// stable until its entry is removed; `exact` and `by_max` are indexes over
+/// slots, and every hit or insertion stamps a monotone logical clock for the
+/// deterministic LRU (least stamp, then lowest slot, is evicted).
+#[derive(Debug, Default)]
+struct CanonicalConstraintCache {
+    policy: Option<CanonicalConstraintCachePolicy>,
+    slots: Vec<Option<CanonicalCacheEntry>>,
+    free: Vec<usize>,
+    exact: HashMap<Vec<TermId>, usize>,
+    /// Slots keyed by the LARGEST term id in their key: `C ⊆ Q` implies
+    /// `max(C) ∈ Q`, so a subset probe walks the buckets of `Q`'s members
+    /// instead of every entry.
+    by_max: HashMap<TermId, Vec<usize>>,
+    live: usize,
+    total_model_values: usize,
+    total_model_bits: usize,
+    clock: u64,
+    stats: CanonicalConstraintCacheStats,
+}
+
+/// How many subset-model candidates one check may replay before it gives up
+/// and solves fresh. Each candidate costs one evaluator pass over the live
+/// set, so this bounds the hit path's cost on a live set no cached model fits.
+const MAX_CANONICAL_MODEL_REUSE_REPLAYS: usize = 4;
+
+/// `subset ⊆ superset` for two sorted, duplicate-free slices (one merge walk).
+fn sorted_is_subset(subset: &[TermId], superset: &[TermId]) -> bool {
+    let mut outer = superset.iter();
+    'members: for member in subset {
+        for candidate in outer.by_ref() {
+            match candidate.cmp(member) {
+                std::cmp::Ordering::Less => {}
+                std::cmp::Ordering::Equal => continue 'members,
+                std::cmp::Ordering::Greater => return false,
+            }
+        }
+        return false;
+    }
+    true
+}
+
+impl CanonicalConstraintCache {
+    fn enable(&mut self, policy: CanonicalConstraintCachePolicy) -> Result<(), SolverError> {
+        if policy.max_entries == 0 || policy.max_model_values == 0 || policy.max_model_bits == 0 {
+            return Err(SolverError::Backend(
+                "canonical constraint cache bounds must all be nonzero".to_owned(),
+            ));
+        }
+        *self = Self {
+            policy: Some(policy),
+            ..Self::default()
+        };
+        Ok(())
+    }
+
+    fn disable(&mut self) {
+        *self = Self::default();
+    }
+
+    fn is_enabled(&self) -> bool {
+        self.policy.is_some()
+    }
+
+    fn stats(&self) -> CanonicalConstraintCacheStats {
+        CanonicalConstraintCacheStats {
+            entries: usize_to_u64(self.live),
+            model_values: usize_to_u64(self.total_model_values),
+            model_bits: usize_to_u64(self.total_model_bits),
+            ..self.stats
+        }
+    }
+
+    fn entry(&self, slot: usize) -> Option<&CanonicalCacheEntry> {
+        self.slots.get(slot).and_then(Option::as_ref)
+    }
+
+    /// Decides what the cache holds for `key` WITHOUT replaying anything: an
+    /// exact entry first, then any cached `unsat` subset (monotonicity: a
+    /// superset of an unsatisfiable set is unsatisfiable).
+    fn probe(&mut self, key: &[TermId]) -> CanonicalProbe {
+        if let Some(&slot) = self.exact.get(key) {
+            let stamp = self.next_stamp();
+            let Some(entry) = self.slots[slot].as_mut() else {
+                return CanonicalProbe::Miss;
+            };
+            entry.last_used = stamp;
+            return match &entry.result {
+                CanonicalCachedResult::Sat { model, .. } => {
+                    CanonicalProbe::ExactSat(slot, model.clone())
+                }
+                CanonicalCachedResult::Unsat => {
+                    self.stats.exact_unsat_hits = self.stats.exact_unsat_hits.saturating_add(1);
+                    self.stats.hits = self.stats.hits.saturating_add(1);
+                    CanonicalProbe::ExactUnsat
+                }
+            };
+        }
+        if let Some(slot) = self.find_subset_skipping(key, &[], |result| {
+            matches!(result, CanonicalCachedResult::Unsat)
+        }) {
+            let stamp = self.next_stamp();
+            if let Some(entry) = self.slots[slot].as_mut() {
+                entry.last_used = stamp;
+            }
+            self.stats.superset_hits = self.stats.superset_hits.saturating_add(1);
+            self.stats.hits = self.stats.hits.saturating_add(1);
+            return CanonicalProbe::SubsetUnsat;
+        }
+        CanonicalProbe::Miss
+    }
+
+    /// The first cached slot whose key is a subset of `key` and whose result
+    /// satisfies `accept`, walking the live set's `by_max` buckets from the
+    /// LARGEST member down (the most recently interned assertion is the most
+    /// specific), and skipping `skip` slots already tried. Lowest slot wins a
+    /// bucket so the walk is deterministic.
+    fn find_subset_skipping(
+        &self,
+        key: &[TermId],
+        skip: &[usize],
+        accept: impl Fn(&CanonicalCachedResult) -> bool,
+    ) -> Option<usize> {
+        for member in key.iter().rev() {
+            let Some(bucket) = self.by_max.get(member) else {
+                continue;
+            };
+            let mut bucket = bucket.clone();
+            bucket.sort_unstable();
+            for slot in bucket {
+                if skip.contains(&slot) {
+                    continue;
+                }
+                let Some(entry) = self.entry(slot) else {
+                    continue;
+                };
+                if accept(&entry.result) && sorted_is_subset(&entry.key, key) {
+                    return Some(slot);
+                }
+            }
+        }
+        None
+    }
+
+    /// The `sat` entries whose keys are subsets of `key`, at most
+    /// [`MAX_CANONICAL_MODEL_REUSE_REPLAYS`] of them, in probe order.
+    fn model_reuse_candidates(&self, key: &[TermId]) -> Vec<(usize, Model)> {
+        let mut found = Vec::new();
+        let mut skip = Vec::new();
+        while found.len() < MAX_CANONICAL_MODEL_REUSE_REPLAYS {
+            let Some(slot) = self.find_subset_skipping(key, &skip, |result| {
+                matches!(result, CanonicalCachedResult::Sat { .. })
+            }) else {
+                break;
+            };
+            skip.push(slot);
+            if let Some(CanonicalCacheEntry {
+                result: CanonicalCachedResult::Sat { model, .. },
+                ..
+            }) = self.entry(slot)
+            {
+                found.push((slot, model.clone()));
+            }
+        }
+        found
+    }
+
+    fn record_exact_sat_hit(&mut self) {
+        self.stats.exact_sat_hits = self.stats.exact_sat_hits.saturating_add(1);
+        self.stats.hits = self.stats.hits.saturating_add(1);
+    }
+
+    fn record_model_reuse_hit(&mut self, slot: usize) {
+        let stamp = self.next_stamp();
+        if let Some(entry) = self.slots.get_mut(slot).and_then(Option::as_mut) {
+            entry.last_used = stamp;
+        }
+        self.stats.model_reuse_hits = self.stats.model_reuse_hits.saturating_add(1);
+        self.stats.hits = self.stats.hits.saturating_add(1);
+    }
+
+    fn record_miss(&mut self) {
+        self.stats.misses = self.stats.misses.saturating_add(1);
+    }
+
+    /// A cached model did not replay against the live set. An EXACT entry
+    /// that fails is dropped: its set has not changed, so the model was never
+    /// one. A reuse candidate is kept: it is still a model of its own set.
+    fn record_replay_rejection(&mut self, slot: usize, exact: bool) {
+        self.stats.replay_rejections = self.stats.replay_rejections.saturating_add(1);
+        if exact {
+            self.remove(slot);
+        }
+    }
+
+    fn observe_fresh(&mut self, key: &[TermId], result: &CheckResult) {
+        let Some(policy) = self.policy else {
+            return;
+        };
+        let cached = match result {
+            CheckResult::Unsat => CanonicalCachedResult::Unsat,
+            CheckResult::Unknown(_) => {
+                self.stats.declined_unknown = self.stats.declined_unknown.saturating_add(1);
+                return;
+            }
+            CheckResult::Sat(model) => {
+                let Some((model_values, model_bits)) = scalar_model_cost(model) else {
+                    self.stats.declined_non_scalar_models =
+                        self.stats.declined_non_scalar_models.saturating_add(1);
+                    return;
+                };
+                if model_values > policy.max_model_values || model_bits > policy.max_model_bits {
+                    self.stats.declined_oversized_models =
+                        self.stats.declined_oversized_models.saturating_add(1);
+                    return;
+                }
+                CanonicalCachedResult::Sat {
+                    model: model.clone(),
+                    model_values,
+                    model_bits,
+                }
+            }
+        };
+        self.insert(key, cached, policy);
+    }
+
+    fn insert(
+        &mut self,
+        key: &[TermId],
+        result: CanonicalCachedResult,
+        policy: CanonicalConstraintCachePolicy,
+    ) {
+        if let Some(&existing) = self.exact.get(key) {
+            self.remove(existing);
+        }
+        let (model_values, model_bits) = match &result {
+            CanonicalCachedResult::Sat {
+                model_values,
+                model_bits,
+                ..
+            } => (*model_values, *model_bits),
+            CanonicalCachedResult::Unsat => (0, 0),
+        };
+        while self.live >= policy.max_entries
+            || self.total_model_values.saturating_add(model_values) > policy.max_model_values
+            || self.total_model_bits.saturating_add(model_bits) > policy.max_model_bits
+        {
+            if !self.evict_lru() {
+                break;
+            }
+        }
+        let last_used = self.next_stamp();
+        let entry = CanonicalCacheEntry {
+            key: key.to_vec(),
+            result,
+            last_used,
+        };
+        let slot = if let Some(slot) = self.free.pop() {
+            self.slots[slot] = Some(entry);
+            slot
+        } else {
+            self.slots.push(Some(entry));
+            self.slots.len() - 1
+        };
+        self.exact.insert(key.to_vec(), slot);
+        if let Some(&max) = key.last() {
+            self.by_max.entry(max).or_default().push(slot);
+        }
+        self.live += 1;
+        self.total_model_values = self.total_model_values.saturating_add(model_values);
+        self.total_model_bits = self.total_model_bits.saturating_add(model_bits);
+        self.stats.insertions = self.stats.insertions.saturating_add(1);
+    }
+
+    fn remove(&mut self, slot: usize) {
+        let Some(entry) = self.slots.get_mut(slot).and_then(Option::take) else {
+            return;
+        };
+        if self.exact.get(&entry.key) == Some(&slot) {
+            self.exact.remove(&entry.key);
+        }
+        if let Some(&max) = entry.key.last() {
+            let empty = self.by_max.get_mut(&max).is_some_and(|bucket| {
+                bucket.retain(|&candidate| candidate != slot);
+                bucket.is_empty()
+            });
+            if empty {
+                self.by_max.remove(&max);
+            }
+        }
+        if let CanonicalCachedResult::Sat {
+            model_values,
+            model_bits,
+            ..
+        } = entry.result
+        {
+            self.total_model_values = self.total_model_values.saturating_sub(model_values);
+            self.total_model_bits = self.total_model_bits.saturating_sub(model_bits);
+        }
+        self.live = self.live.saturating_sub(1);
+        self.free.push(slot);
+    }
+
+    fn evict_lru(&mut self) -> bool {
+        let victim = self
+            .slots
+            .iter()
+            .enumerate()
+            .filter_map(|(slot, entry)| entry.as_ref().map(|entry| (entry.last_used, slot)))
+            .min();
+        let Some((_, slot)) = victim else {
+            return false;
+        };
+        self.remove(slot);
+        self.stats.evictions = self.stats.evictions.saturating_add(1);
+        true
+    }
+
+    fn next_stamp(&mut self) -> u64 {
+        if self.clock == u64::MAX {
+            let mut order = self
+                .slots
+                .iter()
+                .enumerate()
+                .filter_map(|(slot, entry)| entry.as_ref().map(|entry| (entry.last_used, slot)))
+                .collect::<Vec<_>>();
+            order.sort_unstable();
+            for (rank, (_, slot)) in order.into_iter().enumerate() {
+                if let Some(entry) = self.slots[slot].as_mut() {
+                    entry.last_used = usize_to_u64(rank).saturating_add(1);
+                }
+            }
+            self.clock = usize_to_u64(self.live);
+        }
+        self.clock += 1;
+        self.clock
+    }
+}
+
 impl IncrementalBvStats {
     /// Returns the saturating component-wise delta from `earlier` to `self`.
     ///
@@ -469,6 +935,14 @@ impl IncrementalBvStats {
             cnf_variables: self.cnf_variables.saturating_sub(earlier.cnf_variables),
             cnf_clauses: self.cnf_clauses.saturating_sub(earlier.cnf_clauses),
             cnf_gate_mix: self.cnf_gate_mix.delta_since(earlier.cnf_gate_mix),
+            cache_hits: self.cache_hits.saturating_sub(earlier.cache_hits),
+            cache_misses: self.cache_misses.saturating_sub(earlier.cache_misses),
+            cache_replay_rejections: self
+                .cache_replay_rejections
+                .saturating_sub(earlier.cache_replay_rejections),
+            cache_superset_hits: self
+                .cache_superset_hits
+                .saturating_sub(earlier.cache_superset_hits),
         }
     }
 
@@ -856,6 +1330,7 @@ pub struct IncrementalBvSolver {
     last_profiled_cnf_assumptions: Option<Vec<CnfVar>>,
     stats: IncrementalBvStats,
     replay_checked_sat_cache: ReplayCheckedSatCache,
+    canonical_constraint_cache: CanonicalConstraintCache,
     /// When the check in progress began; the model shrink's time budget is
     /// what the check has spent so far (ADR-2140, [`shrink_deadline`]).
     check_started: Option<Instant>,
@@ -888,7 +1363,7 @@ impl IncrementalBvSolver {
         // ADR-2140: the model preference reaches the retained core as a forced
         // decision polarity; `Any` sets `None`, which is the core as built.
         cnf.set_forced_phase(config.model_preference.forced_phase());
-        Self {
+        let mut solver = Self {
             lowering: IncrementalLowering::new(),
             cnf,
             config,
@@ -917,8 +1392,16 @@ impl IncrementalBvSolver {
             last_profiled_cnf_assumptions: None,
             stats: IncrementalBvStats::default(),
             replay_checked_sat_cache: ReplayCheckedSatCache::default(),
+            canonical_constraint_cache: CanonicalConstraintCache::default(),
             check_started: None,
+        };
+        if solver.config.canonical_constraint_cache {
+            // The bounds are `DEFAULT`, all nonzero, so this cannot fail.
+            let _ = solver
+                .canonical_constraint_cache
+                .enable(CanonicalConstraintCachePolicy::DEFAULT);
         }
+        solver
     }
 
     /// Creates an empty incremental solver with opt-in phase profiling.
@@ -1018,6 +1501,10 @@ impl IncrementalBvSolver {
             cnf_variables: usize_to_u64(self.cnf.variable_count()),
             cnf_clauses: usize_to_u64(self.cnf.clause_count()),
             cnf_gate_mix: self.cnf.stats(),
+            cache_hits: self.canonical_constraint_cache.stats.hits,
+            cache_misses: self.canonical_constraint_cache.stats.misses,
+            cache_replay_rejections: self.canonical_constraint_cache.stats.replay_rejections,
+            cache_superset_hits: self.canonical_constraint_cache.stats.superset_hits,
             ..self.stats
         }
     }
@@ -1073,6 +1560,43 @@ impl IncrementalBvSolver {
     #[must_use]
     pub fn replay_checked_sat_cache_stats(&self) -> ReplayCheckedSatCacheStats {
         self.replay_checked_sat_cache.stats()
+    }
+
+    /// Enables ADR-2144's canonical constraint cache with explicit bounds.
+    ///
+    /// The key is the sorted, duplicate-elided set of live assertion
+    /// identities (every open frame's assertions plus the check's
+    /// assumptions), so assertion order, frame boundaries and repeated
+    /// assertions do not matter. A cached `sat` is served only after its
+    /// model replays against the live set; a cached `unsat` is served for the
+    /// same set or any superset of it. `unknown` is never cached. Enabling or
+    /// reconfiguring clears entries and telemetry.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Backend`] if any bound is zero.
+    pub fn enable_canonical_constraint_cache(
+        &mut self,
+        policy: CanonicalConstraintCachePolicy,
+    ) -> Result<(), SolverError> {
+        self.canonical_constraint_cache.enable(policy)
+    }
+
+    /// Disables the canonical constraint cache and drops its entries/telemetry.
+    pub fn disable_canonical_constraint_cache(&mut self) {
+        self.canonical_constraint_cache.disable();
+    }
+
+    /// Whether the canonical constraint cache is on for this solver.
+    #[must_use]
+    pub fn canonical_constraint_cache_enabled(&self) -> bool {
+        self.canonical_constraint_cache.is_enabled()
+    }
+
+    /// Returns canonical-cache counters and current retained-storage gauges.
+    #[must_use]
+    pub fn canonical_constraint_cache_stats(&self) -> CanonicalConstraintCacheStats {
+        self.canonical_constraint_cache.stats()
     }
 
     /// Number of unique observed array reads represented by retained warm
@@ -1904,7 +2428,7 @@ impl IncrementalBvSolver {
     ///
     /// Returns [`SolverError::Backend`] for an adapter or lift failure.
     pub fn check(&mut self, arena: &TermArena) -> Result<CheckResult, SolverError> {
-        self.check_with_replay_cache(arena, &[])
+        self.check_with_canonical_cache(arena, &[])
     }
 
     /// Checks active warm assertions and returns the SAT solver's failed-frame
@@ -1989,7 +2513,7 @@ impl IncrementalBvSolver {
         arena: &TermArena,
         assumptions: &[TermId],
     ) -> Result<CheckResult, SolverError> {
-        self.check_with_replay_cache(arena, assumptions)
+        self.check_with_canonical_cache(arena, assumptions)
     }
 
     /// Checks one-shot assumptions after applying the same narrow warm-safe
@@ -3656,6 +4180,103 @@ impl IncrementalBvSolver {
             })
             .collect::<Vec<_>>();
         self.solve_with_encoded_extra(arena, &assumptions)
+    }
+
+    /// ADR-0303's key for the live set: every open frame's assertions plus
+    /// the check's assumptions, sorted and duplicate-elided. Frame boundaries
+    /// and order are not part of it (conjunction is commutative and
+    /// idempotent), and a hash-consed arena makes a `TermId` a structural
+    /// identity, so the same assertion re-asserted after a pop keys the same.
+    fn canonical_cache_key(&self, assumptions: &[TermId]) -> Vec<TermId> {
+        let mut key = self
+            .frames
+            .iter()
+            .flat_map(|frame| frame.assertions.iter().copied())
+            .chain(assumptions.iter().copied())
+            .collect::<Vec<_>>();
+        key.sort_unstable();
+        key.dedup();
+        key
+    }
+
+    /// Replays `model` against the live set for the canonical cache: `true`
+    /// only when every live original and assumption evaluates to `true`. A
+    /// `false`, non-Boolean or failed evaluation is a rejection, never an
+    /// error: a model-reuse candidate is EXPECTED to fail on a live set that
+    /// extends its own, and the check is simply solved fresh.
+    fn canonical_model_replays(
+        &mut self,
+        arena: &TermArena,
+        assumptions: &[TermId],
+        model: &Model,
+    ) -> bool {
+        let started = self.profiling_enabled.then(Instant::now);
+        let replayed = matches!(self.replay(arena, assumptions, model), Ok(None));
+        if let Some(started) = started {
+            self.stats.replay += started.elapsed();
+        }
+        replayed
+    }
+
+    /// The canonical constraint cache (ADR-2144) in front of the ordered
+    /// replay-checked cache and the fresh solve. Bypassed whenever a deferred
+    /// theory assertion or assumption is active (those checks refuse on the
+    /// warm path, and the refusal must not depend on the cache).
+    fn check_with_canonical_cache(
+        &mut self,
+        arena: &TermArena,
+        assumptions: &[TermId],
+    ) -> Result<CheckResult, SolverError> {
+        if !self.canonical_constraint_cache.is_enabled()
+            || self.has_deferred_theory_assertions()
+            || assumptions.iter().any(|&assumption| {
+                arena.sort_of(assumption) != Sort::Bool || needs_deferred_theory(arena, assumption)
+            })
+        {
+            return self.check_with_replay_cache(arena, assumptions);
+        }
+        let key = self.canonical_cache_key(assumptions);
+        match self.canonical_constraint_cache.probe(&key) {
+            CanonicalProbe::ExactUnsat => {
+                self.record_profiled_check();
+                return Ok(CheckResult::Unsat);
+            }
+            CanonicalProbe::SubsetUnsat => {
+                self.record_profiled_check();
+                // The live set gets its own exact entry (a superset of an
+                // unsat set is unsat), so its repeat is an exact hit.
+                self.canonical_constraint_cache
+                    .observe_fresh(&key, &CheckResult::Unsat);
+                return Ok(CheckResult::Unsat);
+            }
+            CanonicalProbe::ExactSat(slot, model) => {
+                if self.canonical_model_replays(arena, assumptions, &model) {
+                    self.record_profiled_check();
+                    self.canonical_constraint_cache.record_exact_sat_hit();
+                    return Ok(CheckResult::Sat(model));
+                }
+                self.canonical_constraint_cache
+                    .record_replay_rejection(slot, true);
+            }
+            CanonicalProbe::Miss => {}
+        }
+        for (slot, model) in self.canonical_constraint_cache.model_reuse_candidates(&key) {
+            if self.canonical_model_replays(arena, assumptions, &model) {
+                self.record_profiled_check();
+                self.canonical_constraint_cache.record_model_reuse_hit(slot);
+                // The live set now has its own exact entry, so the next
+                // identical check is an exact hit rather than a replay walk.
+                self.canonical_constraint_cache
+                    .observe_fresh(&key, &CheckResult::Sat(model.clone()));
+                return Ok(CheckResult::Sat(model));
+            }
+            self.canonical_constraint_cache
+                .record_replay_rejection(slot, false);
+        }
+        self.canonical_constraint_cache.record_miss();
+        let result = self.check_with_replay_cache(arena, assumptions)?;
+        self.canonical_constraint_cache.observe_fresh(&key, &result);
+        Ok(result)
     }
 
     fn check_with_replay_cache(
@@ -7963,6 +8584,68 @@ mod tests {
         assert_eq!(stats.hits, 0);
         assert_eq!(stats.replay_failures, 1);
         assert_eq!(stats.entries, 0);
+    }
+
+    /// ADR-2144, invariant 1 at the EXACT key: a private cache entry whose
+    /// model is not a model of its own set (corruption, or a bug upstream) is
+    /// rejected on replay, dropped, and the check is solved fresh -- the
+    /// verdict is the true `sat` with a replaying model, never the cached one.
+    #[test]
+    fn corrupted_canonical_exact_entry_is_rejected_and_resolved_fresh() {
+        let mut arena = TermArena::new();
+        let symbol = arena
+            .declare("canonical_corruption_x", Sort::BitVec(8))
+            .unwrap();
+        let variable = arena.var(symbol);
+        let expected = arena.bv_const(8, 1).unwrap();
+        let assertion = arena.eq(variable, expected).unwrap();
+        let mut solver = IncrementalBvSolver::new();
+        solver
+            .enable_canonical_constraint_cache(CanonicalConstraintCachePolicy::new(2, 8, 64))
+            .unwrap();
+        solver.assert(&arena, assertion).unwrap();
+
+        let mut corrupted = Model::new();
+        corrupted.set(symbol, Value::Bv { width: 8, value: 2 });
+        solver
+            .canonical_constraint_cache
+            .observe_fresh(&[assertion], &CheckResult::Sat(corrupted));
+        assert_eq!(solver.canonical_constraint_cache_stats().entries, 1);
+
+        let CheckResult::Sat(model) = solver.check(&arena).unwrap() else {
+            panic!("the true verdict is sat");
+        };
+        assert_eq!(model.get(symbol), Some(Value::Bv { width: 8, value: 1 }));
+        let stats = solver.canonical_constraint_cache_stats();
+        assert_eq!(stats.hits, 0);
+        assert_eq!(stats.replay_rejections, 1);
+        assert_eq!(stats.misses, 1);
+        assert_eq!(
+            stats.entries, 1,
+            "the corrupt entry was dropped and the fresh one inserted"
+        );
+        // And now the fresh entry is a real hit.
+        let CheckResult::Sat(again) = solver.check(&arena).unwrap() else {
+            panic!("sat");
+        };
+        assert_eq!(again, model);
+        assert_eq!(solver.canonical_constraint_cache_stats().exact_sat_hits, 1);
+    }
+
+    #[test]
+    fn sorted_is_subset_is_a_merge_walk() {
+        let mut arena = TermArena::new();
+        let t: Vec<TermId> = (0..5u128).map(|i| arena.bv_const(8, i).unwrap()).collect();
+        assert!(
+            t.windows(2).all(|w| w[0] < w[1]),
+            "dense ids in build order"
+        );
+        assert!(sorted_is_subset(&[], &[t[1]]));
+        assert!(sorted_is_subset(&[t[2]], &[t[1], t[2], t[3]]));
+        assert!(sorted_is_subset(&[t[1], t[3]], &[t[1], t[2], t[3]]));
+        assert!(!sorted_is_subset(&[t[1], t[4]], &[t[1], t[2], t[3]]));
+        assert!(!sorted_is_subset(&[t[0]], &[t[1], t[2], t[3]]));
+        assert!(!sorted_is_subset(&[t[1]], &[]));
     }
 
     #[test]

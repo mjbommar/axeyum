@@ -939,9 +939,9 @@ pub use axeyum_fp as fp;
 
 pub use axeyum_cnf::IncrementalCnfStats;
 pub use backend::{
-    BitLoweringMode, Capabilities, CheckProgress, CheckResult, DEFAULT_MODEL_PREFERENCE,
-    DEFAULT_MODEL_PREFERENCE_PHASE, ModelPreference, ProofProgress, SolveStats, SolverBackend,
-    SolverConfig, SolverError, UnknownKind, UnknownReason,
+    BitLoweringMode, Capabilities, CheckProgress, CheckResult, DEFAULT_CANONICAL_CACHE,
+    DEFAULT_MODEL_PREFERENCE, DEFAULT_MODEL_PREFERENCE_PHASE, ModelPreference, ProofProgress,
+    SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind, UnknownReason,
 };
 pub use config_registry::{
     Basis, ConfigEntry, ConfigTraceGuard, ConfigTraceMirror, DATED_FLOOR, Dependency, EXEMPT,
@@ -951,8 +951,9 @@ pub use config_registry::{
     note_consulted, note_crossed, undated_count,
 };
 pub use incremental::{
-    AssumptionOutcome, IncrementalBvSolver, IncrementalBvStats, IncrementalModelLiftStats,
-    IncrementalSolver, ReplayCheckedSatCachePolicy, ReplayCheckedSatCacheStats,
+    AssumptionOutcome, CanonicalConstraintCachePolicy, CanonicalConstraintCacheStats,
+    IncrementalBvSolver, IncrementalBvStats, IncrementalModelLiftStats, IncrementalSolver,
+    ReplayCheckedSatCachePolicy, ReplayCheckedSatCacheStats,
 };
 pub use layers::{
     BvLayerStats, BvLayerStatsGuard, BvStage, BvStageMirror, LiveBvReading,

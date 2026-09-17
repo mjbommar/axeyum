@@ -120,6 +120,7 @@ impl Config {
         native_cdcl = false,
         lazy_bv_abstract_ite = false,
         model_preference = "any",
+        canonical_constraint_cache = false,
     ))]
     #[allow(clippy::fn_params_excessive_bools, clippy::too_many_arguments)]
     fn new(
@@ -142,6 +143,7 @@ impl Config {
         native_cdcl: bool,
         lazy_bv_abstract_ite: bool,
         model_preference: &str,
+        canonical_constraint_cache: bool,
     ) -> PyResult<Self> {
         let preference = parse_model_preference(model_preference)?;
         let mode = match bit_lowering_mode {
@@ -174,7 +176,15 @@ impl Config {
         config.native_cdcl = native_cdcl;
         config.lazy_bv_abstract_ite = lazy_bv_abstract_ite;
         config.model_preference = preference;
+        config.canonical_constraint_cache = canonical_constraint_cache;
         Ok(Self { config })
+    }
+
+    /// Whether a warm `Incremental` built from this config keeps the
+    /// canonical constraint cache (ADR-2144). Off by default.
+    #[getter]
+    fn canonical_constraint_cache(&self) -> bool {
+        self.config.canonical_constraint_cache
     }
 
     /// Which model a `sat` prefers (ADR-2140): `"any"`, `"zero"` or

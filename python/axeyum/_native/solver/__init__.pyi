@@ -218,6 +218,12 @@ class Config:
     [`CheckResult`](axeyum.solver.CheckResult), never as an exception.
     """
     @property
+    def canonical_constraint_cache(self) -> builtins.bool:
+        r"""
+        Whether a warm `Incremental` built from this config keeps the
+        canonical constraint cache (ADR-2144). Off by default.
+        """
+    @property
     def model_preference(self) -> builtins.str:
         r"""
         Which model a `sat` prefers (ADR-2140): `"any"`, `"zero"` or
@@ -243,7 +249,7 @@ class Config:
         r"""
         The translation node budget, or `None`.
         """
-    def __new__(cls, *, timeout_ms: typing.Optional[builtins.int] = None, resource_limit: typing.Optional[builtins.int] = None, memory_limit_mb: typing.Optional[builtins.int] = None, node_budget: typing.Optional[builtins.int] = None, cnf_variable_budget: typing.Optional[builtins.int] = None, cnf_clause_budget: typing.Optional[builtins.int] = None, prove_unsat: builtins.bool = False, cnf_inprocessing: builtins.bool = False, cnf_vivify: builtins.bool = False, preprocess: builtins.bool = True, profile_bit_demand: builtins.bool = False, profile_cnf_construction: builtins.bool = False, bit_lowering_mode: builtins.str = 'eager', incremental_positive_and_flattening: builtins.bool = False, xor_cdcl_fallback: builtins.bool = False, lazy_bv: builtins.bool = False, native_cdcl: builtins.bool = False, lazy_bv_abstract_ite: builtins.bool = False, model_preference: builtins.str = 'any') -> Config:
+    def __new__(cls, *, timeout_ms: typing.Optional[builtins.int] = None, resource_limit: typing.Optional[builtins.int] = None, memory_limit_mb: typing.Optional[builtins.int] = None, node_budget: typing.Optional[builtins.int] = None, cnf_variable_budget: typing.Optional[builtins.int] = None, cnf_clause_budget: typing.Optional[builtins.int] = None, prove_unsat: builtins.bool = False, cnf_inprocessing: builtins.bool = False, cnf_vivify: builtins.bool = False, preprocess: builtins.bool = True, profile_bit_demand: builtins.bool = False, profile_cnf_construction: builtins.bool = False, bit_lowering_mode: builtins.str = 'eager', incremental_positive_and_flattening: builtins.bool = False, xor_cdcl_fallback: builtins.bool = False, lazy_bv: builtins.bool = False, native_cdcl: builtins.bool = False, lazy_bv_abstract_ite: builtins.bool = False, model_preference: builtins.str = 'any', canonical_constraint_cache: builtins.bool = False) -> Config:
         r"""
         Builds a configuration. Every argument defaults to the Rust default.
         """
@@ -399,6 +405,11 @@ class Incremental:
         r"""
         Retained AIG node count.
         """
+    @property
+    def canonical_constraint_cache_enabled(self) -> builtins.bool:
+        r"""
+        Whether the canonical constraint cache is on for this solver.
+        """
     def __new__(cls, arena: ir.Arena, config: typing.Optional[Config] = None, *, profile: builtins.bool = False) -> Incremental:
         r"""
         Creates a warm solver bound to `arena`.
@@ -446,6 +457,23 @@ class Incremental:
     def disable_replay_checked_sat_cache(self) -> None:
         r"""
         Turns the replay-checked `sat` model cache off.
+        """
+    def enable_canonical_constraint_cache(self, max_entries: builtins.int = 4096, max_values: builtins.int = 262144, max_bits: builtins.int = 16777216) -> None:
+        r"""
+        Turns on the canonical constraint cache (ADR-2144): decided queries
+        keyed by the sorted, duplicate-elided SET of live assertions, so
+        order, scope shape and repeats do not matter. A cached `sat` is served
+        only after its model replays against the live set; a cached `unsat`
+        only for a superset of the cached set. Enabling clears entries.
+        """
+    def disable_canonical_constraint_cache(self) -> None:
+        r"""
+        Turns the canonical constraint cache off and drops its entries.
+        """
+    def canonical_constraint_cache_stats(self) -> dict:
+        r"""
+        Canonical-cache counters by hit class, every DECLINE class, and the
+        current storage gauges.
         """
     def replay_checked_sat_cache_stats(self) -> dict:
         r"""
@@ -536,6 +564,29 @@ class IncrementalStats:
     def cnf_clauses(self) -> builtins.int:
         r"""
         CNF clauses encoded so far; always current.
+        """
+    @property
+    def cache_hits(self) -> builtins.int:
+        r"""
+        Checks the canonical constraint cache answered (ADR-2144); zero
+        unless the cache is on. Always current, not profiling-gated.
+        """
+    @property
+    def cache_misses(self) -> builtins.int:
+        r"""
+        Checks the canonical constraint cache could not answer.
+        """
+    @property
+    def cache_replay_rejections(self) -> builtins.int:
+        r"""
+        Cached models refused because they did not replay against the live
+        set -- each was solved fresh instead, never served.
+        """
+    @property
+    def cache_superset_hits(self) -> builtins.int:
+        r"""
+        `unsat` verdicts served because a cached `unsat` set was a subset of
+        the live set.
         """
     def delta_since(self, earlier: IncrementalStats) -> IncrementalStats:
         r"""
