@@ -38,12 +38,63 @@ features. z3 is 4.13.3 (`/usr/bin/z3` on s5/s6).
 
 ## Shape census
 
-CENSUS-TABLE
+Rows: one per file — `logic`, `pushes`, `asserts`, `shadow_pairs` (asserts
+that arrived while their negation was live in an enclosing scope).
+
+| population | files scanned | with the shape | skipped (> 50 MB, named) |
+| --- | ---: | ---: | ---: |
+| `corpus/incremental/` (committed) | 14 | 2 (the ADR-2143 fixtures, the positive control) | 0 |
+| public QF_LIA | 40 | 6 | 29 |
+| public QF_LRA | 2 | 0 | 8 |
+| public LIA | 6 | 5 | 0 |
+| public LRA | 5 | 0 | 0 |
+| public QF_UFLIA | 771 | 0 | 2 |
+| public QF_UFLRA | 3027 | 0 | 31 |
+| public QF_ALIA | 37 | 37 | 7 |
+| public QF_AUFLIA | 52 | 19 | 20 |
+| **public, all** | **3940** | **67** | **97** |
 
 ## Shape sweep (the 67 scripts through A, B and z3)
 
-SWEEP-TABLE
+Budget 600 s per solver per file for the first 7 (run1), 300 s for the rest
+(run2, 8 shards on s5/s6); 8 GiB, pinned; verdict streams compared on their
+common prefix, `unknown` never a disagreement.
+
+| logic | files | A agrees with z3 | B agrees with z3 | A agrees with B | no `axeyum` output in budget (both arms) | disagreements | verdicts A / B / z3 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| LIA | 5 | 5 | 5 | 5 | 0 | 0 | 22,831 / 22,831 / 22,831 |
+| QF_LIA | 6 | 1 | 1 | 1 | 5 | 0 | 30,044 / 30,044 / 472,781 |
+| QF_ALIA | 37 | 7 | 7 | 7 | 30 | 0 | 60,654 / 60,654 / 300,529 |
+| QF_AUFLIA | 19 | 18 | 18 | 18 | 1 | 0 | 16,392 / 16,392 / 21,059 |
+| **all** | **67** | **31** | **31** | **31** | **36** | **0** | **129,921 / 129,921 / 817,200** |
+
+Controls: `13-shadowed-polarity-lia.smt2` and `14-shadowed-polarity-lra.smt2`
+answer `unsat unsat sat` in both arms and in z3. The 36 no-output files are
+rc 124 in BOTH arms: the front door parses the whole script before answering
+and these carry 6,500–20,000 `check-sat`s; z3 streams its answers. That is a
+capability gap of the incremental front door, identical before and after, and
+not a verdict.
 
 ## A/B on the pinned lists
 
-AB-TABLE
+Two binaries (`smtcomp_cli`, sha256 above),
+interleaved per file, order alternating, s7 core pairs `1,9` / `3,11`, 24 s
+wall, 8 GiB `ulimit -v`, `$EPOCHREALTIME` with the 200 ms self-check
+(read 205 ms on both shards).
+
+| division | files | A decided | B decided | movers | `:status` disagreements A / B | non-zero exits A / B | wall A / B (s) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| QF_LIA | 200 | 120 | 120 | 0 | 0 / 0 | 0 / 0 | 1927 / 1926 |
+| QF_LRA | 200 | 107 | 107 | 0 | 0 / 0 | 0 / 0 | 2286 / 2286 |
+| QF_UFLIA | 200 | 161 | 161 | 0 | 0 / 0 | 0 / 0 | 1566 / 1567 |
+| QF_IDL | 200 | 111 | 112 | 1 | 0 / 0 | 0 / 0 | 2295 / 2291 |
+| **all** | 800 | 499 | 500 | 1 | 0 / 0 | 0 / 0 | 8073 / 8070 |
+
+The one raw mover (`QF_IDL/asp/WireRouting/wire.10.x.10.b.5.a.20_unsat`, A
+`unknown` at 21.7 s, B `unsat` at 20.8 s) was re-run three times per arm on
+one pinned core: `unsat` 6 of 6 — BOTH-DECIDE, ambient, not an effect. So:
+**0 stable losses, 0 stable gains, 0 new `:status` disagreements** — the
+shipped search is byte-for-byte the same behaviour, as the driver analysis
+predicts.
+
+Rows: `ab/<DIV>.shard<N>.tsv`; summary: `ab/summary.md`; recheck: `ab/recheck-movers.tsv`.

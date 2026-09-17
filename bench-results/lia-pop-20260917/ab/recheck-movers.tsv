@@ -1,0 +1,2 @@
+file	A1	A2	A3	B1	B2	B3	verdict
+QF_IDL/asp/WireRouting/wire.10.x.10.b.5.a.20_unsat.data.smt2	unsat/0	unsat/0	unsat/0	unsat/0	unsat/0	unsat/0	BOTH-DECIDE
